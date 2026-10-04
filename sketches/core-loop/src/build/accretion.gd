@@ -29,10 +29,10 @@ const FLING_SECONDS := 0.45
 
 const RARITY_COLORS := {
 	"common": Palette.COPPER,
-	"uncommon": Palette.ARC,
 	"rare": Palette.AMBER,
-	# Red is only for what hurts you (DESIGN-V2 section 11): rare-plus is amber.
-	"rare_plus": Palette.AMBER,
+	# Red is only for what hurts you (DESIGN-V2 section 11).
+	"relic": Palette.ARC,
+	"evolved": Palette.ANCIENT,
 }
 const ICE := Color("c8f0ff")
 # One colour per tag, so a synergy's ring says what it is made of.

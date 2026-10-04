@@ -71,11 +71,11 @@ func _check_slice_hints() -> void:
 
 func _check_tiers() -> void:
 	var cases := [
-		["common", {}, "common"], ["uncommon", {}, "common"], ["rare", {}, "rare"], ["rare_plus", {}, "reveal"],
-		["evolution", {}, "ceremony"], ["common", {"first": true}, "reveal"], ["rare", {"synergy": "storm_lattice"}, "reveal"],
+		["common", {}, "common"], ["rare", {}, "rare"], ["relic", {}, "reveal"],
+		["evolved", {}, "ceremony"], ["common", {"first": true}, "reveal"], ["rare", {"synergy": "storm_lattice"}, "reveal"],
 		["common", {"source": "gate"}, "ceremony"], ["rare", {"source": "vault"}, "ceremony"], ["common", {"source": "boss"}, "ceremony"],
-		["rare_plus", {"source": "gate", "short": true}, "rare"], ["common", {"first": true, "short": true}, "rare"],
-		["rare_plus", {"source": "shop"}, "reveal"], ["uncommon", {"source": "fabricator"}, "common"],
+		["relic", {"source": "gate", "short": true}, "rare"], ["common", {"first": true, "short": true}, "rare"],
+		["relic", {"source": "shop"}, "reveal"], ["common", {"source": "fabricator"}, "common"],
 	]
 	var wrong: Array = []
 	for c in cases:

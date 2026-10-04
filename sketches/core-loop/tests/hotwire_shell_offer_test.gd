@@ -89,11 +89,12 @@ func _offer() -> void:
 
 
 # A digest over ids, rows, offer pools and 50 seeded rolls. The same code run on base
-# 39b0f3f printed the same value; a hot-wired row in rows() or a pool moves it.
+# 39b0f3f printed the same value until 2026-10-03, when RR1 re-pinned it on purpose (rarity
+# weights 87/10/3 and the folded ids changed the fixed-seed rolls and the pool list); a hot-wired row in rows() or a pool moves it.
 func _loot_parity() -> void:
 	var text := "%d|%d|" % [Parts.ids().size(), Parts.rows().size()]
 	text += ",".join(Parts.ids())
-	for rarities in [["common"], ["uncommon"], ["rare"], ["rare_plus"], ["common", "uncommon"], ["uncommon", "rare"], ["rare", "rare_plus"]]:
+	for rarities in [["common"], ["rare"], ["relic"], ["common", "rare"], ["rare", "relic"]]:
 		text += "|" + ",".join(Parts.offer_pool("sable", rarities))
 	for seed_value in range(1000, 1050):
 		var rng := RandomNumberGenerator.new()
@@ -102,7 +103,7 @@ func _loot_parity() -> void:
 	var digest := text.sha256_text()
 	_check("loot", not "riveted_shell" in text, "riveted_shell absent from ids, rows, pools and 50 rolls")
 	print("[loot digest] ids %d rows %d sha256 %s" % [Parts.ids().size(), Parts.rows().size(), digest])
-	_check("loot parity", digest == "2218300fa16da97d1e3d7dbdff7f1c23d90fca01fcd0315c0efaded9762d9e37", "digest matches base 39b0f3f")
+	_check("loot parity", digest == "e65c5020297b4b84f58c0b12d0029a4e2bdc224260f9172fa7b78084aeca56d4", "digest matches the RR1 pin")
 
 
 func _preview() -> void:

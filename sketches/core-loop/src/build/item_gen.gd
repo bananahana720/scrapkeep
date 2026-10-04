@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Triggers := preload("res://src/build/triggers.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # The item generator: base x affix x element x trigger (I2 section 2, DESIGN-V2 section
 # 7). Every axis is a lookup, never a formula with a hidden constant, so a generated
@@ -8,8 +9,8 @@ const Triggers := preload("res://src/build/triggers.gd")
 #
 # - base: the family archetype. It names the noun, the cat_ icon, the accretion family
 #   and the stat every copy brings (punch for a weapon, health for defense...).
-# - affix: the catalogue's existing tier scaling, set by rarity: +12%, +25%, +50%, and
-#   rare_plus doubles.
+# - affix: the catalogue's existing tier scaling, set by rarity: +12% common, +50% rare,
+#   and relic doubles.
 # - element: frost, arc, kinetic or none (TADR-009). It colours the effect and applies
 #   the element table where the effect lands.
 # - trigger: one of the twelve kinds, with its effect template.
@@ -22,12 +23,21 @@ const Triggers := preload("res://src/build/triggers.gd")
 # icon, family and tags a row leaves out, and holds every description to eight words.
 
 const PREFIX := "gen"
-const RARITIES := ["common", "uncommon", "rare", "rare_plus"]
-# The existing rarity weights (DESIGN-V2 section 7): common 60, uncommon 27, rare 10,
-# rare_plus 3.
-const RARITY_WEIGHTS := {"common": 60.0, "uncommon": 27.0, "rare": 10.0, "rare_plus": 3.0}
-const TIER := {"common": 1, "uncommon": 2, "rare": 3, "rare_plus": 3}
-const AFFIX := {"common": 1.12, "uncommon": 1.25, "rare": 1.5, "rare_plus": 2.0}
+# The one rarity table (RR1). Every reader resolves a rarity through it: colour, roll
+# weight, stamp glyph, ladder rung 0..3, tier and the affix scale. Uncommon folded into
+# common and rare_plus became relic; evolved is the top rung, reserved for the two
+# evolutions a later unit builds, so it carries weight 0 and nothing rolls it yet.
+const RARITY := {
+	"common": {"color": Palette.SANDSTONE, "weight": 87.0, "stamp": "COMMON", "rung": 0, "tier": 1, "affix": 1.12},
+	"rare": {"color": Palette.AMBER, "weight": 10.0, "stamp": "RARE", "rung": 1, "tier": 3, "affix": 1.5},
+	"relic": {"color": Palette.ARC, "weight": 3.0, "stamp": "RELIC", "rung": 2, "tier": 3, "affix": 2.0},
+	"evolved": {"color": Palette.ANCIENT, "weight": 0.0, "stamp": "EVOLVED", "rung": 3, "tier": 3, "affix": 2.0},
+}
+const RARITIES := ["common", "rare", "relic", "evolved"]
+# Old ids that a saved recipe id or a stale caller may still carry, resolved on read.
+const RARITY_ALIASES := {"uncommon": "common", "rare_plus": "relic", "evolution": "evolved"}
+# Authored uncommon rows keep the tier they had before they folded into common.
+const LEGACY_TIER := {"uncommon": 2}
 const ELEMENTS := ["", "frost", "arc", "kinetic"]
 const MAX_WORDS := 8
 
@@ -88,16 +98,33 @@ static func make_id(base: String, rarity: String, element: String, trigger: Stri
 	return ":".join([PREFIX, base, rarity, element if element != "" else "none", trigger])
 
 
+# A rarity id or an old alias to one of RARITIES; "" when it is neither.
+static func resolve_rarity(rarity: String) -> String:
+	var id: String = RARITY_ALIASES.get(rarity, rarity)
+	return id if RARITY.has(id) else ""
+
+
+# A list of rarity ids or aliases as RARITIES ids, no repeats, unknown ids dropped.
+static func resolve_rarities(rarities: Array) -> Array:
+	var out: Array = []
+	for r in rarities:
+		var id := resolve_rarity(String(r))
+		if id != "" and not id in out:
+			out.append(id)
+	return out
+
+
 # Parses a recipe id; {} when it is not a well-formed recipe.
 static func parse(part_id: String) -> Dictionary:
 	var bits := part_id.split(":")
 	if bits.size() != 5 or bits[0] != PREFIX:
 		return {}
 	var element := bits[3] if bits[3] != "none" else ""
-	if not bits[1] in GENERATED_BASES or not bits[2] in RARITIES or not element in ELEMENTS \
+	var rarity := resolve_rarity(bits[2])
+	if not bits[1] in GENERATED_BASES or rarity == "" or not element in ELEMENTS \
 			or Triggers.kind_of(bits[4]) < 0:
 		return {}
-	return {"base": bits[1], "rarity": bits[2], "element": element, "trigger": bits[4]}
+	return {"base": bits[1], "rarity": rarity, "element": element, "trigger": bits[4]}
 
 
 # A new recipe at this rarity, drawn from rng: a base, an element, a trigger.
@@ -108,14 +135,17 @@ static func roll_id(rng: RandomNumberGenerator, rarity: String) -> String:
 	return make_id(base, rarity, element, trigger)
 
 
-# A rarity from the allowed list, weighted by RARITY_WEIGHTS.
+# A rarity from the allowed list, weighted by RARITY.
 static func pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
+	allowed = resolve_rarities(allowed)
+	if allowed.is_empty():
+		return "common"
 	var total := 0.0
 	for r in allowed:
-		total += RARITY_WEIGHTS.get(r, 0.0)
+		total += RARITY[r]["weight"]
 	var x := rng.randf() * total
 	for r in allowed:
-		x -= RARITY_WEIGHTS.get(r, 0.0)
+		x -= RARITY[r]["weight"]
 		if x < 0.0:
 			return r
 	return allowed[-1]
@@ -142,7 +172,7 @@ static func generated_row(part_id: String) -> Dictionary:
 
 static func scaled_effect(template: Dictionary, rarity: String) -> Dictionary:
 	var out := template.duplicate()
-	var affix: float = AFFIX[rarity]
+	var affix: float = RARITY[rarity]["affix"]
 	for key in SCALED:
 		if out.has(key):
 			var v: float = out[key] * affix
@@ -150,11 +180,11 @@ static func scaled_effect(template: Dictionary, rarity: String) -> Dictionary:
 	return out
 
 
-# "{modifier} {noun}": the element's word, else the trigger's; rare_plus takes Core or
+# "{modifier} {noun}": the element's word, else the trigger's; relic takes Core or
 # Heart as its noun, like Sunforged Core and Rime Heart.
 static func name_for(base: String, rarity: String, element: String, trigger: String) -> String:
 	var modifier: String = ELEMENT_WORDS.get(element, TRIGGER_WORDS.get(trigger, "Plain"))
-	var nouns: Array = PLUS_NOUNS if rarity == "rare_plus" else BASES[base]["nouns"]
+	var nouns: Array = PLUS_NOUNS if rarity == "relic" else BASES[base]["nouns"]
 	var noun: String = nouns[(trigger.length() + element.length()) % nouns.size()]
 	return "%s %s" % [modifier, noun]
 
@@ -219,9 +249,13 @@ static func finish(part_id: String, spec: Dictionary) -> Dictionary:
 	var row := spec.duplicate(true)
 	var base: String = spec.get("base", "utility")
 	var b: Dictionary = BASES.get(base, BASES["utility"])
-	var rarity: String = spec.get("rarity", "common")
+	var raw: String = spec.get("rarity", "common")
+	var rarity := resolve_rarity(raw)
+	if rarity == "":
+		rarity = "common"
+	row["rarity"] = rarity
 	row["name"] = spec.get("name", part_id.replace("_", " ").capitalize())
-	row["tier"] = TIER.get(rarity, 1)
+	row["tier"] = LEGACY_TIER.get(raw, RARITY[rarity]["tier"])
 	row["family"] = b["family"]
 	row["icon"] = b["icon"]
 	row["text"] = clip(spec.get("text", ""))
@@ -243,7 +277,7 @@ static func finish(part_id: String, spec: Dictionary) -> Dictionary:
 # adds health), so every generated part hits harder or helps outright, not only when
 # its trigger fires.
 static func _apply_base_stat(row: Dictionary, b: Dictionary, rarity: String) -> void:
-	var tier: int = TIER[rarity]
+	var tier: int = RARITY[rarity]["tier"]
 	var stat: Dictionary = b["stat"]
 	for key in stat:
 		var value: float = stat[key][tier - 1]

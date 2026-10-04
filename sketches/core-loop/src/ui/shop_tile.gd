@@ -21,9 +21,9 @@ const PRICE_FONT := 18
 const COG := 16.0
 const RARITY := {
 	"common": {"color": Palette.SAND, "width": 2.0, "double": false, "notches": false},
-	"uncommon": {"color": Palette.ARC, "width": 5.0, "double": false, "notches": false},
 	"rare": {"color": Palette.AMBER, "width": 3.0, "double": true, "notches": false},
-	"rare_plus": {"color": Palette.AMBER, "width": 3.0, "double": true, "notches": true},
+	"relic": {"color": Palette.ARC, "width": 3.0, "double": true, "notches": true},
+	"evolved": {"color": Palette.ANCIENT, "width": 4.0, "double": true, "notches": true},
 }
 
 var rec := {}

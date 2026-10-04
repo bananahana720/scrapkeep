@@ -13,7 +13,7 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 #     calm no other way (a source scan);
 #   - a first find in the fight draws no ceremony card and no banner card for 300 physics
 #     frames, the part's name shows at the ball, and no hit-stop is asked for it;
-#   - a repeat find, common or rare_plus, shows no card and no pop in the fight;
+#   - a repeat find, common or relic, shows no card and no pop in the fight;
 #   - when the Warden dies the held card opens within 60 frames, once, and the part is seen in
 #     both records only then; a repeat out of the fight shows nothing either;
 #   - a second fight: three first finds are held and a fourth shows its name only; in the banner
@@ -61,17 +61,17 @@ func _initialize() -> void:
 
 
 func _pick_parts() -> void:
-	var rare_plus: Array = []
+	var relic: Array = []
 	var common: Array = []
 	for id in Parts.ids():
 		var rarity := String(Parts.def(id).rarity)
-		if rarity == "rare_plus":
-			rare_plus.append(id)
+		if rarity == "relic":
+			relic.append(id)
 		elif rarity == "common":
 			common.append(id)
-	_first = rare_plus[0]
-	_repeat_rare = rare_plus[1]
-	_boss_part = rare_plus[2]
+	_first = relic[0]
+	_repeat_rare = relic[1]
+	_boss_part = relic[2]
 	_repeat_common = common[0]
 	_held = [common[1], common[2], common[3], common[4]]
 
@@ -189,7 +189,7 @@ func _physics_process(_delta: float) -> bool:
 				_report("a repeat in a fight shows nothing", _banner().cards_shown == _cards_before and _banner().queued() == 1
 						and _ceremony()._cards.size() == 1 and _ceremony().queued() == 0 and _name_showing()
 						and presented.all(func(p: Array): return p[1] in ["common", "rare"]),
-					"common and rare_plus repeats for %d frames in a fight: no card, no pop; tiers %s" % [QUIET_FRAMES, presented.map(func(p: Array): return p[1])])
+					"common and relic repeats for %d frames in a fight: no card, no pop; tiers %s" % [QUIET_FRAMES, presented.map(func(p: Array): return p[1])])
 				_game.flow.warden._die()
 				_next("open")
 		"open":
@@ -213,7 +213,7 @@ func _physics_process(_delta: float) -> bool:
 				var tiers: Array = _ceremony().presented.slice(tiers_before).map(func(p: Array): return p[1])
 				_report("a repeat out of a fight queues nothing", _ceremony()._cards.is_empty() and _ceremony().queued() == 0 and _banner().queued() == 0
 						and _banner().cards_shown == _cards_before and tiers.size() == 2 and tiers.all(func(t: String): return t in ["common", "rare"]),
-					"common and rare_plus repeats with the Warden dead: ceremony cards %d, queue %d, banner queued %d, presented tiers %s"
+					"common and relic repeats with the Warden dead: ceremony cards %d, queue %d, banner queued %d, presented tiers %s"
 						% [_ceremony()._cards.size(), _ceremony().queued(), _banner().queued(), tiers])
 				_next("repeat_calm")
 		"repeat_calm":
@@ -222,7 +222,7 @@ func _physics_process(_delta: float) -> bool:
 				_report("a repeat out of a fight shows nothing", false, "a card for %s was up %d frames after a repeat find" % [shown, _wait])
 				return _finish()
 			if _wait == QUIET_FRAMES:
-				_report("a repeat out of a fight shows nothing", true, "common and rare_plus repeats with the Warden dead: no card, no pop for %d frames" % QUIET_FRAMES)
+				_report("a repeat out of a fight shows nothing", true, "common and relic repeats with the Warden dead: no card, no pop for %d frames" % QUIET_FRAMES)
 				_game.flow.retry_stage()
 				_next("refight")
 		"refight":

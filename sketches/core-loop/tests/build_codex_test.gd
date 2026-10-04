@@ -203,6 +203,6 @@ func _check_gate_tier() -> void:
 	_game.events.flow_changed.emit("gates")
 	var low: Array = _offers.map(func(o): return o["rarity"])
 	_build.gates.close()
-	_report("gate tier follows cores", high.all(func(r): return r in ["rare", "rare_plus"]) and low.all(func(r): return r in ["common", "uncommon"])
+	_report("gate tier follows cores", high.all(func(r): return r in ["rare", "relic"]) and low.all(func(r): return r in ["common"])
 			and high.size() == 2 and low.size() == 2 and run.gate_tier_bonus() == 0,
 		"with 3 bonus cores the gates offered %s; after a retry to 0 cores, %s" % [high, low])

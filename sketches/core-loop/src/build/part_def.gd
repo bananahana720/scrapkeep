@@ -4,11 +4,11 @@ extends Resource
 # how many copies are held, and build_sheet.gd folds every held copy into one derived
 # sheet. A new value is a row edit in parts.gd; a new kind of effect is a code change.
 
-# Rarity is set by where a part comes from (DEMO-SPEC): gates offer common and
-# uncommon (higher with bonus cores), fabricators uncommon, vaults rare, won events
-# rare_plus. It is shown twice, as a colour and as a topper shape, so colour never
+# Rarity is set by where a part comes from (DEMO-SPEC): gates offer common
+# (rare and relic with bonus cores), fabricators common, vaults rare, won events
+# relic. It is shown twice, as a colour and as a topper shape, so colour never
 # carries it alone.
-const RARITIES := ["common", "uncommon", "rare", "rare_plus"]
+const RARITIES := ["common", "rare", "relic", "evolved"]
 # The tag vocabulary. Every part carries one or two; named synergies are tag pairs, so
 # a combination makes sense before you try it.
 const TAGS := ["frost", "arc", "kinetic", "split", "spiral", "chain", "anchor", "speed", "mass"]

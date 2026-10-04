@@ -228,7 +228,7 @@ func _check_models() -> void:
 	for n in ["Arch", "GlyphPlate0", "GlyphPlate1", "GlyphPlate2"]:
 		var mi := gate.find_child(n, true, false) as MeshInstance3D
 		base += tris(mi.mesh) if mi != null else 0
-	for rarity in ["common", "uncommon", "rare", "rare_plus"]:
+	for rarity in ["common", "rare", "relic", "evolved"]:
 		var top := gate.find_child("Topper_" + rarity, true, false) as MeshInstance3D
 		_band("gate " + rarity, base + (tris(top.mesh) if top != null else 0), GATE_TRIS)
 	gate.free()

@@ -726,7 +726,7 @@ const LOOT_ROWS := {
 		"tier": "rare", "pause": "never", "stop_ms": 45.0, "ring_m": 4.5, "flare_s": 0.5},
 	"reward_reveal": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "reveal_clank", "sound_snap": "synergy_hit", "hud": "", "objective": "", "priority": 2,
 		"tier": "reveal", "pause": "never", "heart": Palette.ARC, "in_s": 0.22, "hold_s": 2.4, "out_s": 0.25, "snap_s": 0.18, "words": 6,
-		"stamps": {"common": "COMMON", "uncommon": "UNCOMMON", "rare": "RARE", "rare_plus": "RARE+", "evolution": "EVOLVED", "first": "NEW"}},
+		"stamps": {"common": "COMMON", "rare": "RARE", "relic": "RELIC", "evolved": "EVOLVED", "evolution": "EVOLVED", "first": "NEW"}},
 	"reward_ceremony": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "ceremony_build", "sound_burst": "ceremony_resolve", "hud": "", "objective": "", "priority": 3,
 		"tier": "ceremony", "pause": "calm", "burst_role": "class", "in_s": 0.25, "build_s": 1.4, "hold_s": 1.8, "out_s": 0.25,
 		"calm_hold_s": 0.4, "threat_m": 30.0, "enemy_m": 24.0, "fall_speed": 4.0, "hull_slots": 8},
@@ -749,13 +749,13 @@ const LOOT_ROWS := {
 # find's context raises it (a first find or a completed synergy raises common and rare
 # to the reveal card). Evolution is the ladder's top rung, a ceremony wherever it drops.
 const REWARD_TIERS := ["common", "rare", "reveal", "ceremony"]
-const REWARD_TIER_BY_RARITY := {"common": "common", "uncommon": "common", "rare": "rare", "rare_plus": "reveal", "evolution": "ceremony"}
+const REWARD_TIER_BY_RARITY := {"common": "common", "rare": "rare", "relic": "reveal", "evolved": "ceremony", "evolution": "ceremony"}
 # part_gained sources that are a ceremony whatever the rarity: the gate the Warden's break
 # opens, Brindle's crest, a vault, and the cracked-wall cache, the cage on the mast and
 # evolution rewards once their sources publish.
 const CEREMONY_SOURCES := ["gate", "boss", "vault", "cache", "cage", "warden", "evolution"]
 # Each rarity's bell on the reward ladder (Harmony.pentatonic_step), so a rarer find rings higher.
-const REWARD_RUNGS := {"common": 0, "uncommon": 2, "rare": 4, "rare_plus": 5, "evolution": 7}
+const REWARD_RUNGS := {"common": 0, "rare": 4, "relic": 5, "evolved": 7, "evolution": 7}
 
 
 static func reward_row(tier: String) -> Dictionary:

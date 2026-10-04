@@ -22,7 +22,7 @@ const Parts := preload("res://src/build/parts.gd")
 #           part from `rarities`, as a pickup at `where`: the altar, the pedestal or the
 #           place the brute fell. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
 #           EventKinds.CEREMONY_SOURCES, so no ceremony pauses the game for it.
-const PAY_RARITIES := ["uncommon", "rare"]
+const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
 const RULES := {
 	"ambush_altar": {
