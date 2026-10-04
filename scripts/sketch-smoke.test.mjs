@@ -1,11 +1,20 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { once } from "node:events";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
   MISSING_VERDICT,
+  acquireSlot,
   binary,
   buildReceipt,
   countChecks,
@@ -15,6 +24,7 @@ import {
   hasVerdictLine,
   judge,
   matchesGlob,
+  machineSlotCount,
   namedRunMustWait,
   noMatchMessage,
   parseArgs,
@@ -118,19 +128,240 @@ test("verdict lines and check counts are detected tolerantly", () => {
   assert.deepEqual(countChecks("x: PASS\n"), { passes: 0, fails: 0 });
 });
 
-test("a named run waits only while a live pid holds the lock", async () => {
-  assert.equal(namedRunMustWait(() => 0), false);
-  assert.equal(namedRunMustWait(() => 4242), true);
-  const holders = [4242, 4242, 0];
-  const sleeps = [];
-  const waited = await waitForMachine({
-    pollMs: 1,
-    holderCheck: () => holders.shift() ?? 0,
-    sleep: async (ms) => sleeps.push(ms),
+// Rule: a child's verdict for another file cannot satisfy the parent's file stem.
+test("a child's other_test PASS does not satisfy the parent", () => {
+  const child = spawnSync(
+    process.execPath,
+    ["-e", 'console.log("other_test: PASS")'],
+    { encoding: "utf8" },
+  );
+  assert.equal(child.status, 0);
+  const parent = judge({
+    test: "res://tests/parent_test.gd",
+    status: child.status,
+    output: child.stdout,
   });
-  assert.equal(sleeps.length, 1);
-  assert.equal(typeof waited, "number");
-  assert.equal(await waitForMachine({ holderCheck: () => 0, sleep: async () => assert.fail("slept") }), 0);
+  assert.equal(parent.ok, false);
+  assert.equal(parent.verdict, false);
+  assert.equal(parent.reason, MISSING_VERDICT);
+  assert.equal(
+    judge({
+      test: "res://tests/parent_test.gd",
+      status: 0,
+      output: "other_test: PASS\nparent_test: PASS (2 checks)\r\n",
+    }).ok,
+    true,
+  );
+  assert.equal(
+    judge({
+      test: "res://tests/parent_test.gd",
+      status: 0,
+      output: "parent_test_extra: PASS\n",
+    }).ok,
+    false,
+  );
+  assert.equal(
+    hasVerdictLine("parent.test: PASS\n", "res://tests/parent.test.gd"),
+    true,
+  );
+  assert.equal(
+    hasVerdictLine("parentXtest: PASS\n", "res://tests/parent.test.gd"),
+    false,
+  );
+});
+
+// Rule: all run types share N slots, with a positive integer machine-wide override.
+test("the machine pool defaults to two slots and validates SMOKE_SLOTS", () => {
+  assert.equal(machineSlotCount({}), 2);
+  assert.equal(machineSlotCount({ SMOKE_SLOTS: "3" }), 3);
+  for (const value of ["0", "-1", "1.5", "nope", "", "Infinity"]) {
+    assert.throws(
+      () => machineSlotCount({ SMOKE_SLOTS: value }),
+      /positive integer/,
+    );
+  }
+});
+
+// Rule: two claims fit; a third yields until a slot is released, without a timed assertion.
+test("two runs acquire two slots and a third waits", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-slots-"));
+  const leases = [];
+  const options = {
+    directory,
+    slots: 2,
+    log: () => {},
+    sleep: async () => assert.fail("unexpected wait"),
+  };
+  try {
+    leases.push(await acquireSlot(options));
+    assert.equal(namedRunMustWait(options), false);
+    leases.push(await acquireSlot(options));
+    assert.notEqual(leases[0].slot, leases[1].slot);
+    assert.equal(namedRunMustWait(options), true);
+    let sleeps = 0;
+    leases.push(
+      await acquireSlot({
+        ...options,
+        pollMs: 7,
+        sleep: async (ms) => {
+          assert.equal(ms, 7);
+          assert.equal(++sleeps, 1);
+          assert.equal(namedRunMustWait(options), true);
+          leases[0].release();
+        },
+      }),
+    );
+    assert.equal(sleeps, 1);
+    assert.equal(leases[2].slot, leases[0].slot);
+    assert.equal(typeof leases[2].waitMs, "number");
+    leases[0].release();
+    assert.equal(
+      namedRunMustWait(options),
+      true,
+      "an old release cannot delete the new claim",
+    );
+  } finally {
+    for (const lease of leases) lease.release();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+// Rule: only a dead positive pid is reclaimable; re-use the pid of an exited child.
+test("a dead pid slot is reclaimed without waiting", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-dead-slot-"));
+  let lease;
+  try {
+    const dead = spawnSync(process.execPath, ["-e", ""], { encoding: "utf8" });
+    assert.equal(dead.status, 0);
+    assert.throws(() => process.kill(dead.pid, 0), { code: "ESRCH" });
+    const slot = path.join(directory, "slot-0");
+    mkdirSync(slot);
+    writeFileSync(path.join(slot, "claim-dead"), String(dead.pid));
+    lease = await acquireSlot({
+      directory,
+      slots: 1,
+      sleep: async () => assert.fail("dead pid made us wait"),
+    });
+    assert.equal(lease.slot, slot);
+    assert.equal(existsSync(path.join(slot, "claim-dead")), false);
+    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+    lease.release();
+    assert.equal(namedRunMustWait({ directory, slots: 1 }), false);
+    assert.deepEqual(readdirSync(directory), []);
+  } finally {
+    lease?.release();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+// Rule: named runs acquire a slot, rather than just observing the pool.
+test("waitForMachine claims a slot and records wait duration", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-named-slot-"));
+  const exitsBefore = new Set(process.listeners("exit"));
+  try {
+    const waited = await waitForMachine({
+      directory,
+      slots: 1,
+      sleep: async () => assert.fail("unexpected wait"),
+    });
+    assert.equal(typeof waited, "number");
+    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+  } finally {
+    for (const listener of process.listeners("exit")) {
+      if (!exitsBefore.has(listener)) {
+        listener();
+        process.removeListener("exit", listener);
+      }
+    }
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+// Rule: independent processes publish complete claims and release them on exit.
+test(
+  "independent runs share slots and reclaim a killed holder",
+  { timeout: 10_000 },
+  async () => {
+    const directory = mkdtempSync(
+      path.join(os.tmpdir(), "smoke-process-slots-"),
+    );
+    const children = [];
+    const source = `
+    import { acquireMachine } from ${JSON.stringify(new URL("./sketch-smoke.mjs", import.meta.url).href)};
+    console.log = () => process.send({ kind: "waiting" });
+    process.on("message", () => process.exit(0));
+    const waitMs = await acquireMachine(5);
+    process.send({ kind: "acquired", waitMs });
+  `;
+    const start = () => {
+      const child = spawn(
+        process.execPath,
+        ["--input-type", "module", "-e", source],
+        {
+          env: {
+            ...process.env,
+            SCRAPKEEP_LOCK_DIR: directory,
+            SMOKE_SLOTS: "2",
+          },
+          stdio: ["ignore", "pipe", "pipe", "ipc"],
+        },
+      );
+      const closed = once(child, "close");
+      children.push({ child, closed });
+      return child;
+    };
+    try {
+      const first = start();
+      assert.equal((await once(first, "message"))[0].kind, "acquired");
+      const second = start();
+      assert.equal((await once(second, "message"))[0].kind, "acquired");
+      const third = start();
+      assert.equal((await once(third, "message"))[0].kind, "waiting");
+      const acquired = once(third, "message");
+      first.kill("SIGKILL");
+      assert.equal((await acquired)[0].kind, "acquired");
+      assert.equal(
+        readdirSync(
+          path.join(directory, "scrapkeep-sketch-smoke.slots"),
+        ).filter((name) => name.startsWith("slot-")).length,
+        2,
+      );
+      second.send("release");
+      third.send("release");
+      await Promise.all(children.map(({ closed }) => closed));
+      assert.deepEqual(
+        readdirSync(path.join(directory, "scrapkeep-sketch-smoke.slots")),
+        [],
+      );
+    } finally {
+      for (const { child } of children) {
+        if (child.exitCode === null && child.signalCode === null)
+          child.kill("SIGKILL");
+      }
+      await Promise.all(children.map(({ closed }) => closed));
+      rmSync(directory, { recursive: true, force: true });
+    }
+  },
+);
+
+// Rule: the receipt preserves measured lock_wait_ms for its existing readers.
+test("the receipt keeps a nonzero lock wait", () => {
+  const receipt = buildReceipt({
+    label: "gate",
+    argv: [],
+    root: "/r",
+    git: null,
+    godot: {},
+    sketches: [],
+    flags: [],
+    width: 2,
+    lockWaitMs: 17,
+    startedAt: "t",
+    wallMs: 0,
+    stems: {},
+    results: [],
+  });
+  assert.equal(receipt.lock_wait_ms, 17);
 });
 
 test("the receipt carries every field and its totals", () => {
