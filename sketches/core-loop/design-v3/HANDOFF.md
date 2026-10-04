@@ -2,6 +2,24 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 3 merged (4 October, proto/alpha 13fe55a)
+
+Twelve units merged after two gate runs; gate 2 passed except the quarantined build_power_curve_test. Receipts: `artifacts/local/alpha/wave3/gate1.log` and `gate2.log`; ledger rows in `tools/coordinator/lane-ledger.tsv`, design calls in `DESIGN-NOTES.md`, rulings in `docs/decisions.tsv`. Units: F1 boss contract, ZS-B alpha table, RS1 entrance document, RR1 rarity ladder, META-4 companion model, C3 wind-up rows, C4 lore rows, F3b guard-rack burst, C1 hero asset guards, ZS-A Spillway zone 1-1, T8 nightly runner, D1 DESIGN-V3.
+
+**Wave 4 is in flight** from base 13fe55a: Claude units F2a, RS2, CG1, F4, B1; Sol units ZS-D, ZS-C, D2, C5, C8, B2, TR1.
+
+**Wave 5 candidates:** F5, F6, RS3, RS6, CG2, META-1..3, HW1, EV1, RL1, RL2, SC1..3, C2, C6, C7, T1b, T5, T6, T7a/b, IN1..4.
+
+### Open after wave 3
+
+- spine_crush_test and spine_heft_test still drive from (-110,-120) across the new causeway and strike slower; they pass, but it is no longer flat ground.
+- No test runs the alpha swarm Warden end to end through flow; the rack's proximity-scatter path is untested.
+- T8 has had no real nightly run (dry-run only).
+- DESIGN-V3 needs a line per later wave.
+- The entrance document, cogs, companion and run_seed have no consumer yet.
+- shop.gd fallback once minted old-id recipes (fixed in the review round).
+- Playtest entry 12 lacks Andrew's hand label; `npm test` fails on it. Pre-existing, Andrew's.
+
 ## Wave 2 merged (3 October, proto/alpha fbd6bc6)
 
 HC2 (readout) and HC3 (chain log and codex card) are in: gate 2 on tree 0f36041, 295 runs, 0 unquarantined failures; receipts in `artifacts/local/alpha/wave2/`. The hook chain is complete as specified; Andrew has not played it. Open after this wave: a still of combo 4 with its rings and counter (needs the GPU and workspace 10), the bot band after HC3 (skipper smash damage per fight up no more than 10%; explorer best_combo median ≥ 2 over 16 seeds with a two-hook script), and the HC2 debt in the ledger. Next per ALPHA-PLAN: M2 world one, Spillway as zone 1-1, both Wardens on the posture contract, Brindle, rescue progression, run save. Performance claims wait for a GPU-free measurement.

@@ -2839,3 +2839,47 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 - **Call.** The combo reads from one source, `player.chain`, in every layer: a counter right of the ability bar from combo 2 that swells on each link and falls on the end; one collar ring per link up to six; the link bite a semitone up per link past the first, the smash at the root; the chain end heard only when it had a combo of 2 or more; one dry tick per miss. The run record carries `chains`, `best_combo`, `misses`, arena included. The codex card "Chain" opens at the first combo of 3. Principle: one meaning across every abstraction, the floor is today's game. Spec `design-v3/HOOK-CHAIN.md`.
 - **Debt.** No still of combo 4 yet; the digit pulse runs on its own timer rather than the hit-stop clock; combo knock and shake feel is not built. The gate found and fixed a zip at combo 1 before merge.
 - **Test.** `tests/chain_readout_test.gd` (links-1 suppression and combo-2 zip mutants red), `tests/chain_log_test.gd` (codex threshold mutant red).
+
+## The boss contract (alpha full-send wave 3, 4 October)
+
+- **Call.** `src/boss/boss_contract.gd` names what a boss must expose. TARGET carries the enemy-protocol methods and a TARGET_PROPERTIES list (review round fix). Unit F1.
+
+## The alpha table (alpha full-send wave 3, 4 October)
+
+- **Call.** `src/core/alpha_defs.gd`, registered as "alpha": the world-one stage table. The Reach stage 2 row has an empty warden_lesson because the caps lesson does nothing under posture; revisit when caps feed posture. The default table still holds the Weir until ZS-D. Unit ZS-B.
+
+## The rarity ladder (alpha full-send wave 3, 4 October)
+
+- **Call.** Common / rare / relic / evolved with weights 87 / 10 / 3 / 0; relic is ARC, evolved is ANCIENT; aliases fold the old ids; hot-wired is a stripe, wired live. Relic and evolved gate toppers use Topper_rare_plus until reward_gate.py is regenerated. Unit RR1.
+
+## The guard-rack burst (alpha full-send wave 3, 4 October)
+
+- **Call.** A swarm guard-rack burst pays 25 posture once per scatter. The proximity-scatter path has no test yet. Unit F3b.
+
+## Wind-up rows (alpha full-send wave 3, 4 October)
+
+- **Call.** `src/presentation/windup_rows.gd` holds the wind-up cue rows; listeners guard with has_method (gate fix). Unit C3.
+
+## Spillway zone 1-1 pieces (alpha full-send wave 3, 4 October)
+
+- **Call.** Halfpipe x[-74,-50] z[-140,-82], relay mesa at (10,-84), causeway at x about -94. Fixtures moved to flat top-shelf ground (combat_seams_test DRIVE_FROM (50,-108), world_interact_test LANE_START (54,-104)); spine_crush_test and spine_heft_test still drive across the causeway. Unit ZS-A.
+
+## Lore rows (alpha full-send wave 3, 4 October)
+
+- **Call.** `src/core/lore_rows.gd`, data only, word caps 14 / 40 / 12; the catastrophe stays unexplained. Unit C4.
+
+## Hero asset guards (alpha full-send wave 3, 4 October)
+
+- **Call.** Hero asset loads are null-guarded so a missing import no longer crashes headless runs. Unit C1.
+
+## The nightly runner (alpha full-send wave 3, 4 October)
+
+- **Call.** `npm run sketch:nightly` runs the gate unattended. Dry-run verified only; no real nightly run yet. Unit T8.
+
+## The companion model (alpha full-send wave 3, 4 October)
+
+- **Call.** `src/core/companion.gd` is the companion data model; no consumer yet. Unit META-4.
+
+## The entrance document (alpha full-send wave 3, 4 October)
+
+- **Call.** run_state.gd carries an entrance document; no caller yet, RS3 wires it. Unit RS1.
