@@ -13,6 +13,7 @@ const Bay := preload("res://src/world/bay.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Interact := preload("res://src/world/interact.gd")
 const Activities := preload("res://src/world/activities.gd")
+const RescueSite := preload("res://src/world/rescue_site.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
@@ -55,6 +56,8 @@ var ride
 var interact
 # The map's standing activities (activities.gd).
 var activities
+# The map's world rescue (rescue_site.gd).
+var rescue
 # What Moss said last (the shop's result record), for the shop UI.
 var bay_bark := {}
 # The height band the ball last settled in, and each terrain swap's cost.
@@ -125,6 +128,9 @@ func setup(ctx_ref) -> void:
 	activities = Activities.new()
 	ctx.root.add_child(activities)
 	activities.setup(ctx)
+	rescue = RescueSite.new()
+	ctx.root.add_child(rescue)
+	rescue.setup(ctx, interact)
 
 
 func _setup_gorge() -> void:
