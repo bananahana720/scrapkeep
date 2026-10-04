@@ -19,12 +19,16 @@ const Parts := preload("res://src/build/parts.gd")
 # finishes: "pack_dead" (every enemy the ring spawned is dead), "wall_broken" (the cache's wall
 #           goes to a ram at cruise or a slam of at least that strength) or "brute_dead".
 # pay:      `scrap` (180, so three activities lift the ball two heft classes), taken with one
-#           part from `rarities`, as a pickup at `where`: the altar, the pedestal or the
+#           part from `rarities` or an authored `named` part id, as a pickup at `where`: the altar, the pedestal or the
 #           place the brute fell. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
 #           EventKinds.CEREMONY_SOURCES, so no ceremony pauses the game for it.
 const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
 const RULES := {
+	"enemy_camp": {
+		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "chaser"], "finishes": "pack_dead",
+		"pay": {"scrap": PAY_SCRAP, "named": "hot_rivets", "rarities": PAY_RARITIES, "source": "activity_camp", "where": "camp"},
+	},
 	"ambush_altar": {
 		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "lobber"], "finishes": "pack_dead",
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_ambush", "where": "altar"},
@@ -104,7 +108,7 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 		# Calm mode spawns nothing, so the ambush and the bounty could never be paid there.
 		if ctx.calm and String(RULES[id]["finishes"]) != "wall_broken":
 			continue
-		sites.append(_build(id, spec["at"]))
+		sites.append(_build(id, spec["at"], spec))
 	_pending_stage = true
 
 
@@ -132,10 +136,14 @@ func standing() -> int:
 	return n
 
 
-func _build(id: String, at: Vector2) -> Site:
+func _build(id: String, at: Vector2, spec := {}) -> Site:
 	var s := Site.new()
 	s.id = id
 	s.rule = RULES[id]
+	if id == "enemy_camp":
+		s.rule = s.rule.duplicate(true)
+		s.rule["pack"] = spec.get("pack", s.rule["pack"])
+		s.rule["pay"] = s.rule["pay"].merged(spec.get("pay", {}), true)
 	s.name = "Activity_" + id
 	add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
@@ -332,12 +340,18 @@ func _bounty_died(s: Site, where: Vector3) -> void:
 # ---- The pay ----
 
 func _finish(s: Site, at: Vector3) -> void:
+	if s.done:
+		return
 	s.done = true
 	s.view.finish()
 	if s.cap != null:
 		s.cap.visible = false
 	var pay: Dictionary = s.rule["pay"]
-	s.pickup_part = _roll(s.id, pay["rarities"])
+	if pay.has("named"):
+		var named := String(pay["named"])
+		s.pickup_part = named if Parts.rows().has(named) else ""
+	else:
+		s.pickup_part = _roll(s.id, pay["rarities"])
 	if s.pickup_part != "":
 		s.pickup = ActivityView.gem(s.id)
 		s.add_child(s.pickup)

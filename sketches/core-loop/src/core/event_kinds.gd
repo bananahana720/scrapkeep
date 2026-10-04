@@ -573,6 +573,7 @@ const TAG_GLYPHS := {
 # start with the family glyph on top. No timer and no toast.
 const ACTIVITY_FIELDS := ["color", "motion", "shape", "sound", "word"]
 const ACTIVITY_ROWS := {
+	"enemy_camp": {"color": "amber", "motion": "steady", "shape": "cross", "sound": "found_chime", "word": "Camp"},
 	"surge_run": {"color": "amber", "motion": "steady", "shape": "chevron", "sound": "found_chime", "word": "Surge"},
 	"ambush_altar": {"color": "amber", "motion": "steady", "shape": "cross", "sound": "found_chime", "word": "Ambush"},
 	"cracked_cache": {"color": "amber", "motion": "steady", "shape": "diamond", "sound": "found_chime", "word": "Cache"},
