@@ -24,8 +24,9 @@ const SettingsPages := preload("res://src/ui/settings_pages.gd")
 # and punch, Hit-stop every freeze, through juice.set_comfort(), saved beside the volumes.
 # With --music=ace the Breath row (B) flips the Warden open's held breath, raw, hard or
 # gentle, and the open sounding now changes with it, so it can be judged mid-fight.
-# The Settings row (O) swaps the column for settings_pages.gd (fullscreen, quality, key
-# rebinding) and Back, Esc or P returns to the column with Settings focused.
+# The Settings row (O) swaps the column for settings_pages.gd (Display, Controls and Look
+# pages, opening on the page last used) and Back, Esc or P returns to the column with
+# Settings focused.
 
 const LAYER := 6
 const FADE_IN := 0.16
@@ -244,7 +245,7 @@ func _enter_settings() -> void:
 		_rows[id].visible = false
 	_page.refresh()
 	_page.visible = true
-	_page.focus("fullscreen")
+	_page.focus_first()
 
 
 func _leave_settings(focus_settings: bool) -> void:
