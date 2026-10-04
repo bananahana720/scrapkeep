@@ -11,6 +11,7 @@ const LESSON_RANGE := 40.0
 const LESSON_ROWS := {"plate": "lesson_plate", "caps": "lesson_caps", "magnet": "lesson_magnet"}
 
 const ROWS := {
+	"find_activity": {"glyph": "obj_event", "words": "Find an activity"},
 	"find_warden": {"glyph": "obj_warden", "words": "Find the Warden"},
 	"break_guard": {"glyph": "cat_defense", "words": "Break its guard"},
 	"smash_core": {"glyph": "cat_damage", "words": "Smash the core"},
@@ -28,7 +29,7 @@ const ROWS := {
 # What choose() reads. state is flow.state_name(); card is true while the stage card owns
 # the launch moment; distance is the ball's metres to the Warden.
 const EMPTY_READING := {"state": "", "sealed": false, "engaged": false, "fight": "plating", "staggered": false,
-	"struggling": false, "lesson": "plate", "distance": INF, "card": false}
+	"struggling": false, "lesson": "plate", "distance": INF, "card": false, "activities_left": 0}
 
 
 static func glyph(id: String) -> String:
@@ -47,6 +48,8 @@ static func choose(reading: Dictionary) -> String:
 		"stage", "beacon":
 			if not r["sealed"]:
 				return "charge_beacon"
+			if not r["engaged"] and int(r["activities_left"]) > 0:
+				return "find_activity"
 			if r["fight"] == "posture":
 				if not r["engaged"]:
 					return "find_warden"

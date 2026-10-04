@@ -21,6 +21,8 @@ const FAR := 180.0
 var game
 # The objective row the plate shows now, set by the HUD each frame.
 var objective_id := ""
+# Whether the Warden fight is engaged, set by the HUD each frame; activity markers hide while it is.
+var engaged := false
 var gate_points: Array[Vector3] = []
 var _shown: Array[Dictionary] = []
 
@@ -49,14 +51,30 @@ func targets() -> Array[Dictionary]:
 				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": _glyph("obj_warden")})
 			elif game.beacon != null:
 				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "state": game.beacon.state_id(), "icon": _glyph("obj_beacon")})
+			if not engaged:
+				for site in unfinished_sites():
+					out.append({"at": site.global_position, "kind": site.id, "activity": site.id, "icon": Objectives.glyph("find_activity")})
 		"gates":
 			for at in gate_points:
 				out.append({"at": at, "kind": "reward_offered", "icon": _glyph("obj_gate")})
 	return out
 
 
+# The activity sites still standing: built, valid and not done.
+func unfinished_sites() -> Array:
+	var out: Array = []
+	if game == null or game.world == null or game.world.activities == null:
+		return out
+	for site in game.world.activities.sites:
+		if is_instance_valid(site) and not site.done:
+			out.append(site)
+	return out
+
+
+# The plate's glyph for the Warden and beacon markers; the activity row's own glyph belongs
+# to the activity markers, so it never stands in for the Warden's.
 func _glyph(fallback: String) -> String:
-	return Objectives.glyph(objective_id) if objective_id != "" else fallback
+	return Objectives.glyph(objective_id) if objective_id != "" and objective_id != "find_activity" else fallback
 
 
 # The play view markers stay inside: clear of the top, toast and bottom bands.
@@ -99,6 +117,8 @@ func markers(size: Vector2) -> Array[Dictionary]:
 
 
 static func marker_color(target: Dictionary) -> Color:
+	if target.has("activity"):
+		return EventKinds.activity_color(target["activity"])
 	return EventKinds.state_color(target["state"]) if target.has("state") else EventKinds.color(target["kind"])
 
 
