@@ -6,6 +6,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -117,10 +118,11 @@ var _posture_seen := {}
 # True from a charge cue the Warden began until vent_erupted or a stagger cuts it.
 var _warden_charging := false
 var engine: MusicEngine
-# The ACE band (--music=ace): stage 1 plays the ACE takes through the sequencer and the
-# synth band stays muted; every other stage, and any missing file, plays the synth.
+# The ACE band (--music=ace): the zone's music row selects its manifest; a zone with
+# no pack, or any missing file, plays the synth.
 var ace: AceSequencer
-var ace_manifest := AceSequencer.MANIFEST
+var ace_manifest := ""
+var _ace_from := ""
 # The file a failed load named, "" when the package loaded or was never asked for.
 var ace_missing := ""
 var _ace_failed := false
@@ -240,6 +242,7 @@ func setup(ctx_ref) -> void:
 	_make_overlay()
 	_connect_all(ctx.events)
 	_start_bake()
+	ace_manifest = _music_row(1)["ace_manifest"]
 	_start_ace_load()
 
 
@@ -293,7 +296,7 @@ static func _poll_bake() -> bool:
 
 
 func _start_ace_load() -> void:
-	if _ace_task >= 0 or _ace_loaded != null or ace != null or _ace_failed or not ace_wanted():
+	if ace_manifest == "" or _ace_task >= 0 or _ace_loaded != null or ace != null or _ace_failed or not ace_wanted():
 		return
 	_ace_loaded_from = ace_manifest
 	_ace_task = WorkerThreadPool.add_task(_load_ace, false, "presentation ACE stems")
@@ -588,7 +591,9 @@ func ace_wanted() -> bool:
 # Loads the ACE package on first need. A missing manifest or stem is one warning naming
 # the file, and the synth plays on.
 func ace_ready() -> bool:
-	if ace != null:
+	if ace_manifest == "":
+		return false
+	if ace != null and _ace_from == ace_manifest:
 		return true
 	if _ace_failed or not ace_wanted():
 		return false
@@ -608,15 +613,11 @@ func ace_ready() -> bool:
 		push_warning("ACE music: missing %s; playing the synth engine instead" % ace_missing)
 		return false
 	ace = loaded
+	_ace_from = ace_manifest
 	ace.clock = engine.clock
 	ace.set_breath(breath())
 	return true
 
-
-# The ACE packages this module can load, by the id a stage row's music.ace names.
-const ACE_PACKAGES := ["spillway"]
-# Without a stage table in the context (a test's stand-in), today's picks stand.
-const FALLBACK_ACE_STAGE := 1
 
 var _music_warned := {}
 
@@ -632,18 +633,20 @@ func _emit_music_warning(message: String) -> void:
 	push_warning(message)
 
 
-# The music row of a stage: {"theme": int, "ace": String}.
-func _music_row(stage: int) -> Dictionary:
+func _music_stages():
 	var stages = ctx.get("stages") if ctx != null else null
-	if stages != null:
-		var row: Dictionary = stages.of(stage)
-		if row.has("music"):
-			return row["music"]
-	return {"theme": clampi(stage - 1, 0, 2), "ace": "spillway" if stage == FALLBACK_ACE_STAGE else ""}
+	return stages if stages != null else MusicRows.StageDefs
+
+
+# Resolve both choices through the same zone row, preserving legacy music overrides.
+func _music_row(stage: int) -> Dictionary:
+	var stages = _music_stages()
+	return MusicRows.resolve(stages.of(stage), "", stages)
 
 
 func _stage_theme(stage: int) -> int:
-	return clampi(int(_music_row(stage).get("theme", 0)), 0, 2)
+	var stages = _music_stages()
+	return MusicRows.stage_theme(stages.of(stage), stages)
 
 
 # The boss track for the world being fought: its row's music, or Brindle's when the
@@ -666,18 +669,24 @@ func _boss_track() -> String:
 
 # The stage's row names the ACE package to play, or "" for the synth band.
 func _ace_package_for(stage: int) -> String:
-	var package := str(_music_row(stage).get("ace", ""))
-	if package == "":
-		return ""
-	if not package in ACE_PACKAGES:
+	var manifest: String = _music_row(stage)["ace_manifest"]
+	if manifest != "":
+		return manifest.get_base_dir().get_file()
+	var row: Dictionary = _music_stages().of(stage)
+	var package := str(row.get("music", {}).get("ace", ""))
+	if package != "":
 		_warn_music_once("ace_" + package, "music: ACE package '%s' is not loadable; playing the synth band" % package)
-		return ""
-	return package
+	return ""
 
 
 # A stage whose row names an ACE package starts the ACE band at transport sample at; any
 # other stage hands back to the synth, except that the band held through a launch's flight waits for the landing.
 func _ace_stage(stage: int, at: int) -> void:
+	var manifest: String = _music_row(stage)["ace_manifest"]
+	if manifest != ace_manifest:
+		ace_manifest = manifest
+		_ace_failed = false
+		ace_missing = ""
 	if _ace_package_for(stage) != "" and ace_ready():
 		_ace_flight = false
 		_handover_at = -1

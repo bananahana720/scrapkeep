@@ -7,6 +7,7 @@ const Ace := preload("res://src/presentation/ace_sequencer.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const DefaultStages := preload("res://src/core/stage_defs.gd")
 const AlphaStages := preload("res://src/core/alpha_defs.gd")
+const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
 
 var _failures := 0
 
@@ -24,6 +25,11 @@ func _valid(pack: Dictionary) -> bool:
 
 
 func _initialize() -> void:
+	for stage in range(1, TwoWorld.COUNT + 1):
+		var zone := "%d-%d" % [1 if stage <= 3 else 2, (stage - 1) % 3 + 1]
+		_report("world-local zone id", Rows.zone_id(stage, TwoWorld) == zone, "stage %d -> %s, want %s" % [stage, Rows.zone_id(stage, TwoWorld), zone])
+		_report("two-world override preserved", Rows.stage_theme(TwoWorld.of(stage), TwoWorld) == TwoWorld.of(stage)["music"]["theme"], "stage %d" % stage)
+	_report("second world starts at 2-1", Rows.zone_id(4, TwoWorld) == "2-1", Rows.zone_id(4, TwoWorld))
 	for table in [DefaultStages, AlphaStages]:
 		for row in table.DEFS:
 			var pack := Rows.resolve(row)
@@ -56,9 +62,12 @@ func _initialize() -> void:
 		quiet = quiet and not band.ready() and band.missing == "" and Rows.resolve(missing_override) == {"synth_theme": 1, "ace_manifest": ""}
 	_report("repeated missing override is quiet", quiet, "five unready bands without loading a missing file")
 	var reach = Ace.from_stage("1-2")
-	_report("empty manifest is quiet", not reach.ready() and reach.missing == "", "Reach has no ACE package")
+	_report("empty manifest is quiet", not reach.ready() and reach.missing == "" and reach.manifest_source == "", "Reach has no ACE package")
 	var band = Ace.from_stage("1-1")
+	_report("ACE uses resolved row path", band.manifest_source == spillway["ace_manifest"], band.manifest_source)
 	_report("ACE stage factory reads Spillway", band.manifest.get("theme") == "spillway" and (band.ready() or band.missing.ends_with(".ogg")), "ready=%s missing=%s" % [band.ready(), band.missing])
+	var later = Ace.from_stage(4, "", TwoWorld)
+	_report("ACE accepts the active table", later.manifest_source == Rows.resolve(TwoWorld.of(4), "", TwoWorld)["ace_manifest"], later.manifest_source)
 	_sidecar()
 	print("music_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

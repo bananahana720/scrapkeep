@@ -63,6 +63,8 @@ class Voice:
 
 
 var manifest := {}
+# The resolved manifest selected for this band, even when its Oggs are absent.
+var manifest_source := ""
 var clips := {}
 var sections := {}
 var streams := {}
@@ -119,8 +121,8 @@ static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String
 	return MusicRows.resolve_manifest(manifest_path, sidecar_dir)
 
 
-static func from_stage(stage = "default", sidecar_dir := "") -> RefCounted:
-	var pack := MusicRows.resolve(stage, sidecar_dir)
+static func from_stage(stage = "default", sidecar_dir := "", stages = MusicRows.StageDefs) -> RefCounted:
+	var pack := MusicRows.resolve(stage, sidecar_dir, stages)
 	return load("res://src/presentation/ace_sequencer.gd").new(pack["ace_manifest"], sidecar_dir)
 
 
@@ -129,6 +131,7 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 	if manifest_path == "":
 		return
 	var path := resolve_manifest(manifest_path, sidecar_dir)
+	manifest_source = path
 	if path == "":
 		missing = ProjectSettings.globalize_path(manifest_path)
 		_report()
