@@ -20,6 +20,8 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
 # same args (tuning.gd's FLAGS).
+# --from-stage=N continues a matching RunStore entrance in --out/entrance.json;
+# otherwise it starts normally, then enters stage N for a bounded world run.
 # The game runs in test mode (no keyboard, no mouse capture) and its codex and run log
 # are pointed at --out, the way test mode points them at a per-process folder; --out may
 # be an absolute path or a user:// path. Next to the spine's two logs the runner writes:
@@ -27,8 +29,8 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 #                        reached, ticks, game and wall seconds, and per-stage bot notes.
 #   codex-entries.json   every declared codex entry (id, category, name, clue), so the
 #                        report can name entries no run discovered.
-# A run ends at stage-3 clear, death, a "boss" flow state or a stalled stage; a stalled
-# or boss run has no spine record (the run log writes only at death and run end), so
+# A run ends on run_ended (won or lost), death, stall, or --until/--stages; a stalled
+# or missing-boss run has no spine record (the run log writes only at death and run end), so
 # its bots.ndjson line is the only trace. Each seed gets a fresh process and data folder,
 # seeded RNG streams, spawn-order signs instead of object-ID-dependent choices, a
 # completed audio bake, and physics-tick hit-stop gates (src/core/sim_clock.gd).
@@ -137,6 +139,7 @@ func _next() -> void:
 	seed(_seeds[_index])
 	_game = Game.new()
 	_game.test_mode = true
+	_game.run_store_path = _out.path_join("entrance.json")
 	root.add_child(_game)
 	_driver = null
 	if _settings.has("trace-ticks"):
@@ -152,10 +155,18 @@ func _physics_process(delta: float) -> bool:
 		_game.run_log.storage_dir = _out
 		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), _seeds[_index])
 		_driver.trace = _settings.has("trace")
+		if _driver.trace:
+			_game.events.world_entered.connect(func(world: int): print("  trace world %d entered" % world))
 		_driver.chain_hand_enabled = String(_settings.get("chain-hand", "1")) != "0"
 		_game.presentation.audio.bake_now()
 		_started_msec = Time.get_ticks_msec()
-		_driver.start()
+		var resume := false
+		if _settings.has("from-stage"):
+			var entrance: Dictionary = _game.flow.saved_run()
+			resume = int(entrance.get("stage", 0)) == int(_settings["from-stage"])
+		_driver.start(resume)
+		if _settings.has("from-stage") and not resume and int(_settings["from-stage"]) != 1:
+			_game.flow.enter_stage(int(_settings["from-stage"]), Vector3.ZERO, false)
 		return false
 	if _tick_trace != null:
 		_tick_trace.store_line(JSON.stringify(_snapshot(delta)))
