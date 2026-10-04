@@ -49,7 +49,7 @@ const TRIM_DB := {
 	"stinger_run_end": -2.0, "stinger_milestone": -2.0, "gates_open": -4.0,
 	"music_pressure": -9.0,
 	"stinger_unseal": -3.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
-	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "element_resolved": -8.0,
+	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "achievement_chime": -6.0, "rescue_fanfare": -3.0, "element_resolved": -8.0,
 	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -6.0, "class_down": -6.0,
 	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "boss_weak_hit": -7.0,
 	"stinger_boss_defeated": -1.0,
@@ -366,6 +366,12 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _core_socket()
 		"synergy_fanfare":
 			return Synth.render_score(_score_synergy(), 1.4)
+		"achievement_chime":
+			return _mix([[_cut(_n("bell", 84), 0.45), 0, 0.8], [_cut(_n("bell", 91), 0.4), Synth.seconds(0.08), 0.6]])
+		"rescue_fanfare":
+			return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.07, 220.0, 110.0, "square_dark", 30.0), 0, 0.7],
+				[_cut(_n("bell", 74), 0.35), Synth.seconds(0.08), 0.6], [_cut(_n("bell", 79), 0.35), Synth.seconds(0.17), 0.6],
+				[_cut(_n("bell", 83), 0.35), Synth.seconds(0.26), 0.65], [_cut(_n("bell", 86), 0.45), Synth.seconds(0.35), 0.7]])
 		"found_chime":
 			return _mix([[_cut(_n("mallet", 77), 0.35), 0, 0.8], [_fm(0.5, _hz(86), 3.5, 1.2, 6.0, 0.3), Synth.seconds(0.12), 0.7]])
 		"element_resolved":

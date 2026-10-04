@@ -42,7 +42,8 @@ const POLYPHONY := 32
 const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
-	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60}
+	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60,
+	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
 # their streaks, whose windows are in EventKinds.JUICE.
@@ -86,7 +87,7 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "p
 	"sable_break", "rivet_break", "kest_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "hold_pit", "hold_bola", "hold_tether", "hold_net",
 	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "reveal_clank", "ceremony_build",
-	"ceremony_resolve", "line_bite", "smash_crack",
+	"ceremony_resolve", "line_bite", "smash_crack", "achievement_chime", "rescue_fanfare",
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
@@ -904,6 +905,8 @@ func _connect_all(events) -> void:
 	events.beacon_charge_changed.connect(_on_beacon)
 	events.scrap_collected.connect(_on_scrap)
 	events.cogs_collected.connect(_on_cogs)
+	events.achievement_earned.connect(func(_id: String): play("achievement_earned"))
+	events.rescue_completed.connect(func(_quest: String): play("rescue_completed"))
 	events.part_gained.connect(func(_part: String, _source: String): play("part_gained"))
 	events.player_hit.connect(_on_player_hit)
 	events.player_died.connect(_on_died)
