@@ -11,8 +11,8 @@ extends Node
 #
 # Each record also carries the traversal facts (design-v3/TRAVERSAL.md): flow_share and
 # dead_stops from the stage's spawn to the Warden's engagement, the harpoon's bites,
-# smashes, breaks by cause and failed verbs by verb, and prompts_shown (zero until a
-# prompt publishes a fact). events_joined holds only the opt-in events the ball entered:
+# smashes, breaks by cause and failed verbs by verb, and prompts_shown (one per key prompt
+# drawn, counted on its rising edge, from prompt_shown). events_joined holds only the opt-in events the ball entered:
 # the director publishes event_started for a participatory event when the ball reaches
 # its ring, but also for the ambient flood, squall and terrain changes, which the player
 # does not choose and which are left out.
