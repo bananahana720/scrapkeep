@@ -25,6 +25,11 @@ const ENTRY_LIFT := 14.0
 # Stage 1 has no launch behind it; it drops you in rolling at this share of cruise.
 const FIRST_DROP_SPEED := 0.8
 const RESCUE_DEPTH := 14.0
+# A map that declares net_deck_height() catches a fall below it: the ball is set on the
+# deck, NET_DECK_SLACK metres past it counts as fallen, and the horizontal speed keeps
+# NET_DAMP of itself.
+const NET_DECK_SLACK := 2.0
+const NET_DAMP := 0.5
 
 var ctx
 var beacon
@@ -758,11 +763,19 @@ func _on_player_died() -> void:
 
 
 # A fall through the geometry is the map's fault, not the player's, so the rescue
-# costs nothing and keeps the horizontal speed.
+# costs nothing and keeps the horizontal speed. A map with a net deck catches the fall
+# on the deck at damped speed instead, before the ground rule is asked.
 func _rescue_if_fallen(ball: Vector3) -> void:
+	var v: Vector3 = ctx.player.state.velocity
+	var map = ctx.terrain.map()
+	if map.has_method("net_deck_height"):
+		var deck: float = map.net_deck_height()
+		if ball.y < deck - NET_DECK_SLACK:
+			var radius: float = preload("res://src/movement/tuning.gd").RADIUS
+			ctx.player.reset_to(Vector3(ball.x, deck + radius, ball.z), Vector3(v.x, 0.0, v.z) * NET_DAMP)
+			return
 	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.height(ball.x, ball.z) - RESCUE_DEPTH:
 		return
-	var v: Vector3 = ctx.player.state.velocity
 	ctx.player.reset_to(ctx.terrain.rescue_point(ball), Vector3(v.x, 0.0, v.z))
 
 
