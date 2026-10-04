@@ -88,7 +88,14 @@ func _check_stage(stage: int) -> void:
 	var drop: float = terrain.height(spawn.x, spawn.z) - last
 	# The Spillway is the opening map: it has no landing hill and no momentum kit wherever its row sits.
 	var opening: bool = String(_game.ctx.stages.of(stage)["map"]) == String(_game.ctx.stages.of(1)["map"])
-	if not opening:
+	# 2026-10-04 (wave 9): the landing hill, momentum kit and event-ring checks are world one's
+	# grammar (gorge and reach). The Dig and the Highdraft have their own: breach plates, floor
+	# drops, barges and thermals, pinned by dig_zone_test, highdraft_zone_test and
+	# highdraft_lift_test. Here they get the spawn, beacon and heading checks only.
+	var world_one: bool = int(_game.ctx.stages.of(stage).get("world", 1)) == 1
+	if not world_one:
+		print("[skip] stage %d is a world %d map (%s): world-one hill, kit and ring checks do not apply" % [stage, int(_game.ctx.stages.of(stage).get("world", 1)), map.title])
+	if not opening and world_one:
 		_report("stage %d landing hill" % stage, falls and drop >= HILL_DROP,
 			"the ground falls %.1f m over the 64 m ahead of the spawn along the entry heading, never rising: %s" % [drop, falls])
 		var entry := spawn + Vector3.UP * 14.0
@@ -132,10 +139,12 @@ func _check_stage(stage: int) -> void:
 		for gzi in range(-7, 8):
 			grid.append(terrain.height(gxi * GRID, gzi * GRID))
 	_grids[stage] = grid
-	if not opening:
+	if not opening and world_one:
 		_report("stage %d momentum kit" % stage, pylon_cells >= MIN_PYLON_CELLS and posts >= MIN_POSTS and walls >= MIN_POSTS,
 			"%d ground cells steep enough for a pylon, %d grapple posts, %d pylon walls" % [pylon_cells, posts, walls])
 
+	if not world_one:
+		return
 	var off_ground: Array[String] = []
 	for id in map.sites:
 		var ring: Vector2 = map.sites[id]["ring"]
