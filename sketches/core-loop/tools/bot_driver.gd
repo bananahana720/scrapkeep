@@ -259,6 +259,8 @@ var _last_press_tick := -1000000
 
 func _init(game_ref, policy_name: String, seed_number: int) -> void:
 	game = game_ref
+	# No human answers the hot-wire screen in a bot run; tick answers the offer instead.
+	game.bot_driven = true
 	profile = policy_name if policy_name in PROFILES else ""
 	var named: String = PROFILES.get(policy_name, policy_name)
 	policy = named if named in POLICIES else "skipper"
@@ -405,6 +407,7 @@ func tick(delta: float) -> bool:
 			print("    boss phase %s %s hp %.0f; ball r %.1f above arena ground %.1f, grounded %s, body velocity %s" % [boss.phase,
 				boss.state_name(), boss.hp, boss.arena.radius_of(b), b.y - boss.arena.ground(b), game.player.state.grounded,
 				game.player.body().linear_velocity])
+	_answer_hotwire()
 	match state:
 		"stage", "beacon":
 			_roam(delta)
@@ -419,6 +422,18 @@ func tick(delta: float) -> bool:
 		_:
 			source.hold = {}
 	return outcome != ""
+
+
+# A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
+# fits the part (it takes every optional thing), every other policy recycles it for cogs.
+func _answer_hotwire() -> void:
+	var build = game.build
+	if build == null or build.hotwire_pending().get("state", "") != "open":
+		return
+	if policy == "completionist":
+		build.hotwire_fit()
+	else:
+		build.hotwire_recycle()
 
 
 # The fight clock starts at the later of the bot's turn to the Warden and the Warden's

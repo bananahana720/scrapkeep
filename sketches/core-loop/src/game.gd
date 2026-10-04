@@ -44,7 +44,14 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const TABLES := {"default": StageDefs, "slice": SliceDefs, "alpha": AlphaDefs}
 
 # The headless tests drive the same scene with a scripted source and no mouse capture.
-var test_mode := false
+var test_mode := false:
+	set(value):
+		test_mode = value
+		bot_driven = value
+# No human answers a prompt: a bot (tools/bot_driver.gd sets it) or a headless test (test_mode
+# sets it; a test that plays the human clears it after). The hot-wire screen never opens or
+# pauses while it is set.
+var bot_driven := false
 # The stage table's id (a key of TABLES), set before the game enters the tree; empty reads
 # --table= from the launch args, and no argument is the default table.
 var table := ""

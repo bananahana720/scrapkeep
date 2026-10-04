@@ -18,7 +18,10 @@ const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
 # event) closes it and the HUD toasts the result in one line.
 #
 # It pauses through game.toggle_pause() as pause_menu.gd does, and the pause menu stands aside
-# while this is open (pause_menu.can_open), so Escape reaches only this screen.
+# while this is open (pause_menu.can_open), so Escape reaches only this screen. With no human at
+# the keys (game.bot_driven) it never opens or pauses; the bot driver answers the offer itself.
+# It is mounted beside the pause menu, not under the HUD: a modal over the paused sim is not
+# the play view, so the HUD word budget never reads it.
 
 const LAYER := 7
 const WIDTH := 520.0
@@ -139,7 +142,7 @@ func _on_flow_changed(state: String) -> void:
 
 func _can_open() -> bool:
 	var menu = game.get_node_or_null("PauseMenu")
-	return game.flow.in_play() and not game.get_meta("menu_held", false) and not game.notes_held() \
+	return not game.bot_driven and game.flow.in_play() and not game.get_meta("menu_held", false) and not game.notes_held() \
 		and not game.pause_toggled() and (menu == null or not menu.is_open())
 
 

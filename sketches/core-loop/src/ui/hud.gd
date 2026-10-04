@@ -272,11 +272,14 @@ func setup(game_ref) -> void:
 	layout(_screen_size())
 
 
-# The hot-wired Fit / Recycle screen (hotwire_screen.gd) lives under the HUD, so it hides with it
-# outside play; it opens itself from build's hotwire_offered.
+# The hot-wired Fit / Recycle screen (hotwire_screen.gd) is a modal like the pause menu, so it
+# sits beside it on the game, out of the HUD's play-view word budget; the HUD keeps the handle
+# and hides it outside play. It opens itself from build's hotwire_offered. Deferred so it lands
+# after the game's own children: inserted mid-setup it shifted their order, and growth_pays_test
+# saw cracked_cache pay its part twice.
 func _mount_hotwire_screen() -> void:
 	hotwire_screen = HotwireScreen.new()
-	add_child(hotwire_screen)
+	game.add_child.call_deferred(hotwire_screen)
 	hotwire_screen.setup(game)
 
 
