@@ -1,4 +1,4 @@
-// Threat marks drawn once and driven per frame (E1-DENSITY.md section 1). The colour and
+// Threat marks drawn once and driven per frame (design-v3/archive/E1-DENSITY.md section 1). The colour and
 // stripe code is StandardMaterial3D's generated code for the Painter's materials (Godot
 // 4.7.2 BaseMaterial3D::_update_shader: unshaded, alpha, no depth test, cull disabled,
 // sRGB vertex colour as albedo; STRIPES adds the world-triplanar stripe texture), so a

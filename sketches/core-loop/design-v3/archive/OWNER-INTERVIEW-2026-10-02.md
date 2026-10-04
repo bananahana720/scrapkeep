@@ -1,6 +1,6 @@
 # Owner interview, 2026-10-02 (three rounds through AskUserQuestion)
 
-The table preserves the 2 October interview. The implementation request on 3 October adds the refinements below; use them with the current [alpha plan](ALPHA-PLAN.md).
+The table preserves the 2 October interview. The implementation request on 3 October adds the refinements below; use them with the current [alpha plan](../ALPHA-PLAN.md).
 
 | # | Question | Andrew's answer |
 | --- | --- | --- |

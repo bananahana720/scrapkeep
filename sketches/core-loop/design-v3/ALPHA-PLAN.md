@@ -1,6 +1,6 @@
 # Scrapkeep full alpha plan
 
-Status: authorized and in progress. The 3 October 2026 implementation request refines the existing program using the owner interview, accepted kits and recovered Claude session. Historical unit lists below preserve planning provenance; LEGIBILITY and the current amendments control execution. Checkpoint 1 still awaits Andrew's play verdict.
+Status: authorized and in progress; wave 3 landed. [DESIGN-V3.md](DESIGN-V3.md) is the single current gameplay design. This plan retains program scope and milestones; historical unit lists below preserve planning provenance. Andrew accepted checkpoint 1's Cable Reach sitting and requested the fuller three-world game; the alpha remains in progress.
 
 ## What approving this plan authorizes
 
@@ -58,7 +58,7 @@ He played drop, laps and the harpoon build that evening. His opinion of the whol
 
 ### The legibility spec (2026-10-01 night)
 
-Andrew then gave the coordinator creative charge: decide, fill gaps and cut, and bring him a veto list. [LEGIBILITY.md](LEGIBILITY.md) is the result and is the build spec for the waves after A1. Where it differs from M1 below, it wins: one fight (the posture chassis) with no Hunt or Duel arm and no `--variant=` row, 9 verbs, 6 enemy kinds, standing activities in place of timed events, and its own unit list and gate order (the visual merge, G1, wave R1, B0b, B0a, wave R2, wave R3, then checkpoint 1). The read sheet (ER) covers only what the visual branch has not built: that branch holds nine enemy models, merged in unit AR.
+Andrew then gave the coordinator creative charge: decide, fill gaps and cut, and bring him a veto list. [LEGIBILITY.md](archive/LEGIBILITY.md) is the result and is the build spec for the waves after A1. Where it differs from M1 below, it wins: one fight (the posture chassis) with no Hunt or Duel arm and no `--variant=` row, 9 verbs, 6 enemy kinds, standing activities in place of timed events, and its own unit list and gate order (the visual merge, G1, wave R1, B0b, B0a, wave R2, wave R3, then checkpoint 1). The read sheet (ER) covers only what the visual branch has not built: that branch holds nine enemy models, merged in unit AR.
 
 ## Current alpha refinements (3 October 2026)
 

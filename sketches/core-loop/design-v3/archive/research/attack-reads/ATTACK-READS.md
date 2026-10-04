@@ -4,7 +4,7 @@ Source inspection, 28 September 2026, checkout `f86f24a75cf9357f12b98d2de61548e9
 
 Scope is the current three-stage run through Brindle: Spillway, Cable Reach and Weir, not only stage 1. See `core/stage_defs.gd:18` and `world/director.gd:35`. All eleven counter types are included because unlocks increase with stage and effective tier, `world/director.gd:241`. Vault never attacks, `combat/roster.gd:65`. Environmental events are outside this attacker inventory.
 
-Andrew's [Feedback and discovery](../../ROADMAP.md#feedback-and-discovery-andrew-2026-09-28) governs: body and sound announce the attack; thin floor support preserves its true footprint. [FEEL-READABILITY](../../FEEL-READABILITY.md) §§1, 6.4 and 7 retain threat priority, visible escapes and audible warnings. Its older broad-fill prescription yields to this later direction. These are build briefs for approval, not another execution board.
+Andrew's [Feedback and discovery](../../../ROADMAP.md#feedback-and-discovery-andrew-2026-09-28) governs: body and sound announce the attack; thin floor support preserves its true footprint. [FEEL-READABILITY](../../FEEL-READABILITY.md) §§1, 6.4 and 7 retain threat priority, visible escapes and audible warnings. Its older broad-fill prescription yields to this later direction. These are build briefs for approval, not another execution board.
 
 ## One fact through every layer
 

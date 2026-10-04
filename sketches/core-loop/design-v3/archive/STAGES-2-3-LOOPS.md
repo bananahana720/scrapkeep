@@ -4,7 +4,7 @@ Design handoff, 28 September 2026. Build on the existing Cable Reach and Weir. K
 
 This is a design candidate for ROADMAP row 1, conditional on the lab's spine decision and the coordinator's build authorization. No gameplay implementation, playtest verdict or canonical board update accompanies it. Workspace identity `proto/core-loop-v3-stages` at `494cd44` is supplied by the assignment, not independently verified. The only Git operation used was the explicitly requested read of `3c219ab` in `core-loop-v2`. Stage 1 is the reference and is not redesigned.
 
-Source contracts: [Drop Loop and stage brief](LOOP-REDESIGN.md), [review findings 1–5](research/CODEX-REVIEW-1.md), [roadmap](ROADMAP.md), [Layered Spillway study](../design-v2/visual-development/LAYERED-SPILLWAY.md), [W6 notes 1–12](../DESIGN-NOTES.md#v2-w6-stage-and-world). Script paths below are relative to `sketches/core-loop/`.
+Source contracts: [Drop Loop and stage brief](LOOP-REDESIGN.md), [review findings 1–5](research/CODEX-REVIEW-1.md), [roadmap](../ROADMAP.md), [Layered Spillway study](../../design-v2/visual-development/LAYERED-SPILLWAY.md), [W6 notes 1–12](../../DESIGN-NOTES.md#v2-w6-stage-and-world). Script paths below are relative to `sketches/core-loop/`.
 
 ## Geometry and evidence conventions
 

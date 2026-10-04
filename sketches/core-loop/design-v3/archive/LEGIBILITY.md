@@ -1,6 +1,6 @@
 # Legibility spec for the click slice
 
-This is the build spec for the two waves after A1. It answers playtest entry 10, where Andrew said the Warden fight, the harpoon latch, synergies, map mechanics and enemies all lack a visible "why". It supersedes the matching parts of [ALPHA-PLAN.md](ALPHA-PLAN.md) section M1 where they differ; the differences are listed under "Changes to the plan".
+This is the build spec for the two waves after A1. It answers playtest entry 10, where Andrew said the Warden fight, the harpoon latch, synergies, map mechanics and enemies all lack a visible "why". It supersedes the matching parts of [ALPHA-PLAN.md](../ALPHA-PLAN.md) section M1 where they differ; the differences are listed under "Changes to the plan".
 
 **How it was made.** Six read-only audits (enemies, world events, build systems, controls and HUD, harpoon and traversal, the Warden) judged what the player can see of each mechanic at `07d5a86`. One design lead wrote a spec from them. Two critics, a player walk-through and a builder check, both failed that draft and named fixes. This file is the draft with those fixes applied. Nothing here has been built or played. Claims about today's code come from the audits and carry their file references in the session's evidence folder (`artifacts/local/alpha/legibility/`).
 

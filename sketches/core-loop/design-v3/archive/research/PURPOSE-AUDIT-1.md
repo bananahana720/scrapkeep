@@ -141,7 +141,7 @@ The matrix is not a ranking by total. A small system can earn its place by doing
 
 **Verdict: protect the choices; merge redundant delivery.** Give each source a job: routine growth, targeted correction, or risky discovery.
 
-The roadmap’s “2.5–3 free picks per minute” is a **design target**, not a measured property of this implementation. The referenced cadence appears in the laps proposal; current gate code opens offers on the `gates` flow state. `design-v3/SYSTEMS-CHAOS.md:412–421`; `src/build/build.gd:600–607`.
+The roadmap’s “2.5–3 free picks per minute” is a **design target**, not a measured property of this implementation. The referenced cadence appears in the laps proposal; current gate code opens offers on the `gates` flow state. `design-v3/archive/SYSTEMS-CHAOS.md:412–421`; `src/build/build.gd:600–607`.
 
 **7. Fabricators**
 
@@ -205,7 +205,7 @@ The roadmap’s “2.5–3 free picks per minute” is a **design target**, not 
 
 **12. Evolutions — planned**
 
-**Design status:** The proposal consumes ripe copies at a break, preserves heft, requires another part’s tag, and limits evolutions per break/run. The roadmap narrows the candidate set to four. I found no implemented evolution acquisition path in the reviewed build catalogue and reward routes. `design-v3/SYSTEMS-CHAOS.md:15–28`; `design-v3/ROADMAP.md:63–74`; `src/build/parts.gd:159–174`; `src/build/build.gd:600–622`.
+**Design status:** The proposal consumes ripe copies at a break, preserves heft, requires another part’s tag, and limits evolutions per break/run. The roadmap narrows the candidate set to four. I found no implemented evolution acquisition path in the reviewed build catalogue and reward routes. `design-v3/archive/SYSTEMS-CHAOS.md:15–28`; `design-v3/ROADMAP.md:63–74`; `src/build/parts.gd:159–174`; `src/build/build.gd:600–622`.
 
 **Decision:** “Do I specialize this established behavior into its evolved form?”
 

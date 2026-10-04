@@ -14,7 +14,7 @@ HC1, AS and RL are in. Gate 3 on tree d67fc25: 293 runs, 0 unquarantined failure
 
 | Unit | Spec | Owner files | Tier |
 | --- | --- | --- | --- |
-| HC1 hook chain state and rule | [HOOK-CHAIN.md](HOOK-CHAIN.md) | `src/combat/chain.gd` (new), `src/movement/player_ball.gd`, `src/core/event_kinds.gd` chain rows | medium (worker), alone and first |
+| HC1 hook chain state and rule | [HOOK-CHAIN.md](../HOOK-CHAIN.md) | `src/combat/chain.gd` (new), `src/movement/player_ball.gd`, `src/core/event_kinds.gd` chain rows | medium (worker), alone and first |
 | AS activity signposting | scout read, 3 Oct: `ui/edge_markers.gd:43-55` `targets()` returns Warden else beacon only; `core/objectives.gd:15-27` has no activity row; the sites are `ctx.activities.sites` with `done` flags (`world/activities.gd:119-133`) | `src/ui/edge_markers.gd` (one amber marker per unfinished site, from drop-in, hidden while the Warden fight is engaged), `src/core/objectives.gd` (nearest-activity row before the Warden row) | medium (worker) |
 | RL run-log instrumentation | scout reads, 3 Oct: `prompts_shown` is initialised at `run_log.gd:160` and never incremented; `key_glyphs.gd` has no hook; `packs` appends the faction at `run_log.gd:283`, kinds are in the signal | `src/core/run_log.gd`, `src/ui/key_glyphs.gd` (rising-edge `prompt_shown(verb)` on `game.events`), `src/core/game_events.gd`, tests `spine_run_log_test.gd:96`, `traversal_measure_test.gd:164` | easy (hand) |
 
@@ -24,7 +24,7 @@ Housekeeping owed when no agent is live: 69 worktrees, 112 unmerged branches (mo
 
 ## Recovery record (historical, 3 October)
 
-Continue the existing [alpha plan](ALPHA-PLAN.md) and [roadmap](ROADMAP.md). The old v3 resume queue is historical at Git base 619b8f4 and in the recovery evidence; its music, performance and ledger work has already been integrated or given a recorded disposition. Do not restart those units.
+Continue the existing [alpha plan](../ALPHA-PLAN.md) and [roadmap](../ROADMAP.md). The old v3 resume queue is historical at Git base 619b8f4 and in the recovery evidence; its music, performance and ledger work has already been integrated or given a recorded disposition. Do not restart those units.
 
 ## Current authority and location
 

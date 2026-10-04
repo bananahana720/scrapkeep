@@ -1,6 +1,6 @@
 # Audio v3: the Drop Loop as music
 
-Design for music and sound in core-loop v3 (`design-v3/LOOP-REDESIGN.md`). It applies `SOUND-STORY.md` (registers, motifs, mix, Moss) and `src/presentation/MUSIC-GEMS.md` (G1 to G11, R1 and R2) to the fun lab's Drop Loop, and says what changes under Laps. Nothing here swaps a gem; every new element is a layer on a named game-state threshold, and every payoff lands on the gameplay moment (G11). The audio lead owns this file; the coordinator integrates.
+Design for music and sound in core-loop v3 (`design-v3/archive/LOOP-REDESIGN.md`). It applies `SOUND-STORY.md` (registers, motifs, mix, Moss) and `src/presentation/MUSIC-GEMS.md` (G1 to G11, R1 and R2) to the fun lab's Drop Loop, and says what changes under Laps. Nothing here swaps a gem; every new element is a layer on a named game-state threshold, and every payoff lands on the gameplay moment (G11). The audio lead owns this file; the coordinator integrates.
 
 Sources read: `SOUND-STORY.md` in full; `MUSIC-GEMS.md`; `music_engine.gd` (layer setters at 660 to 695, `escalate` 596 to 627, `_trigger_house` 1556 to 1612, `_trigger_break` 1613, `_retarget` 1309, `_mix` 2106, `_soft` 2251); `audio.gd` (25 to 60, 774 to 846); `harmony.gd` (1 to 60, 128 to 197); `sfx_bank.gd` (hold loops 878 onward); `DESIGN-NOTES.md` writer C, W5, W5b, W9; `LOOP-REDESIGN.md` §2, §6, §7, §8, §9; playtest entries 7 and 8. Receipts are in §9.
 
@@ -124,7 +124,7 @@ A ride that does not feel like a ride is a stop (LOOP-REDESIGN §7). The lift is
 
 ### 2.5 What the research gave this design
 
-`design-v3/research/R3-adaptive-music.md` (Haiku web scout, this session, 104 lines; web summaries, leads not facts). Taken, adapted or refused:
+`design-v3/archive/research/R3-adaptive-music.md` (Haiku web scout, this session, 104 lines; web summaries, leads not facts). Taken, adapted or refused:
 
 | Lead (R3 section) | Verdict | Where it lands |
 | --- | --- | --- |

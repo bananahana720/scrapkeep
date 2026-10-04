@@ -1,6 +1,6 @@
 The design has a promising snowball, but **it does not yet establish escalating power over 20–30 minutes**. My prediction, still speculative, is uneven growth: late transformations for some runs, projectile saturation for others, and combinations that collapse Warden fights before players enjoy their rewards.
 
-Read-only review of clean `7144a9e`, spikes `1cb5f7c` and `daf58c4`, and the loop/review documents at `494cd44`. No files edited or gameplay tests run. **S** below means [SYSTEMS-CHAOS.md](/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-systems/sketches/core-loop/design-v3/SYSTEMS-CHAOS.md).
+Read-only review of clean `7144a9e`, spikes `1cb5f7c` and `daf58c4`, and the loop/review documents at `494cd44`. No files edited or gameplay tests run. **S** below means [SYSTEMS-CHAOS.md](/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-systems/sketches/core-loop/design-v3/archive/SYSTEMS-CHAOS.md).
 
 1. **Blocker — The simulator does not validate the proposed snowball.**  
    S §§1.2, 14 reports 47.5% lapper and 84% completionist reach by break 2. But S1 allows self-pairing, checks eligibility **after break rewards and shop purchases**, never consumes evolved ingredients, and uses the superseded bait/Meteor rules. Its 15/27 picks also differ from the design’s 25–30/40–45. These numbers establish availability under another contract, not completed evolutions or DPS. S2 proves injected-event plumbing, not physical 95% restitution.  

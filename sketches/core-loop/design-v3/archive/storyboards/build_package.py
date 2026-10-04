@@ -8,7 +8,7 @@ import struct
 import subprocess
 
 HERE = pathlib.Path(__file__).resolve().parent
-ROOT = HERE.parents[3]
+ROOT = HERE.parents[4]
 COORD = pathlib.Path("/home/andrew/Projects/scrapkeep-worktrees/core-loop-v2")
 CATALOG = json.loads((HERE / "catalog.json").read_text())
 STYLE = ROOT / "sketches/core-loop/design-v2/visual-development/images/style-a.png"

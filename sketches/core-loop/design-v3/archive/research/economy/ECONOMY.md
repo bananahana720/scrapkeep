@@ -6,7 +6,7 @@ Proposal, 2026-09-28. Static inspection at `f86f24a75cf9357f12b98d2de61548e93d5e
 
 Scrap asks, "Can I take that line and keep my size?" Cogs ask, "Which missing piece should I buy?" Scrap cannot buy anything or become cogs. Cogs never add mass, spill, wear or get stolen with armour. Both reset on a fresh run.
 
-The audit rejected the wallet before Andrew ruled that cogs buy dependable build control (`design-v3/research/PURPOSE-AUDIT-1.md:72-82,556-557`; `design-v3/ROADMAP.md:160-174`). Free loot supplies growth; money corrects its direction.
+The audit rejected the wallet before Andrew ruled that cogs buy dependable build control (`design-v3/archive/research/PURPOSE-AUDIT-1.md:72-82,556-557`; `design-v3/ROADMAP.md:160-174`). Free loot supplies growth; money corrects its direction.
 
 | Core option | Reason |
 |---|---|
