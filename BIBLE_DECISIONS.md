@@ -6,7 +6,7 @@ This is the historical BD source list. [BACKLOG.md](BACKLOG.md#open-questions) d
 
 Andrew approved BIBLE.md as the source of truth for what the game is. This list retains choices explicitly left open in that document. The approval does not supply missing A/B/C picks, budgets or implementation rules.
 
-The steam-cyberpunk junkyard direction, electromagnetic collection and fabrication, Southwest inspiration and the exact Section 7 style block are approved. The established four-world run, four slot trees, milestone progression and revival structure are also settled. Andrew also settled recursive binary branching during this review: one root → two → four → eight endpoints. They are not on this decision list.
+The steam-cyberpunk junkyard direction, electromagnetic collection and fabrication, Southwest inspiration and Section 7 style remain approved. Alpha amendments on 1 to 3 October replace the former four-world, four-tree and single-revival structure: three worlds in fixed order, one four-pick binary tree per pilot with sixteen endpoints, and one death retry per world. This historical comparison list does not re-open those settled alpha decisions.
 
 ## Character direction picks
 
@@ -20,7 +20,7 @@ The A/B/C sheets compare construction, not upgrade stages. Each choice retains t
 | BD-04 | Fuse, squirrel chaos caster | Pressure-canister stack | Low switchboard collar | Cable hoop and separate discharge heads | Open |
 | BD-05 | Rivet, mole laser machinist | Straight optical bench | Split-yoke collimator | Articulated mirror tower | Open |
 
-BD-06 is the cast decision above these individual picks. Keep animals as the working cast and select among these five candidates, revise particular species/roles, or revisit an animal-only cast. The images do not choose a launch roster. Sable, Kest and Tarn are new candidate names; Fuse and Rivet adapt earlier proposals. Earlier Pip/Vane mappings are not silently reassigned.
+BD-06 was the historical cast comparison. The approved exported alpha roster is Sable, Rivet, Kest, Tarn, Tally the pack-rat caster and the unnamed remembered cannon. Fuse remains outside alpha. Approved kit concepts and the 3 October implementation request settle this roster; placeholder probes refine the kits rather than reduce the six-pilot target.
 
 ## World and fiction choices
 
@@ -37,12 +37,12 @@ These need bounded design before implementation. They do not require an arbitrar
 | ID | Gap | Boundary already established |
 | --- | --- | --- |
 | BD-10 | Material conversion and milestone supply | Scrap grows the mech and is recycled internally into upgrades. Progression remains gameplay-earned. Costs, supply guarantees and any visible mass consumption are unspecified. |
-| BD-11 | Final tree structures and character kits | Four slots and binary branching (one root → two → four → eight endpoints) are settled, with one connected lineage selected per slot. Node effects, costs, exact milestones and which slot owns each device remain open. The prototype's five-action input layout must be deliberately mapped into the future four-tree design. |
-| BD-12 | Route and final encounter details | Four worlds and two next-world offers are established. Starting world, catalogue/repeat rules, levels per world and final-boss placement remain open. |
+| BD-11 | Alpha tree and kits | Settled for alpha: one four-pick binary tree per pilot, thirty nodes and sixteen endpoints; depths one and two in world one, deeper choices in later worlds. Six complete pilots; use the accepted mechanical kits and safe growth-offer timing. Older four-slot trees remain historical. |
+| BD-12 | Route and final encounter | Settled: Spillway Works, Dig, Highdraft in fixed order; every run starts in world one; two zones and a boss per world; Mind ends the run. A victorious run targets 30 to 45 minutes. Additional worlds and a boss after Mind are outside alpha. |
 | BD-13 | Chaos limits | Directed fire, short automatic field, multiple effects and occasional harmful/inconvenient miscasts are established. Element pool, warning design, frequency, severity and which actions can miscast remain open. |
 | BD-14 | Loot, attunement and secret recipes | World-themed items and fixed endpoint-combination bonuses are established. Exact recipes, eligibility, disclosure and harmful combinations remain open. |
-| BD-15 | Companion and device lifecycle | One main assembled companion, useful autonomous support and quick class deployment are established. Component structure, commands, recall, persistence and caps outside the prototype remain open. |
-| BD-16 | Revival and interruption behavior | One standard revival and completed-level resume at the next entrance are established. Revival health/placement and unfinished-level quit/crash behavior remain open. |
+| BD-15 | Alpha companion | Approved default: one SPIL-9 hover chassis, two unordered sockets, any two different conductive-primer, ram-brace and escape-corridor modules found in run loot; intermission assembly, no new combat key or health economy. Escape never reverses lethal damage or grants a retry. Exact tuning remains measured work. |
+| BD-16 | Retry and interruption | Settled: one death retry per world; second death there ends the run. Quit or crash replays the same saved zone entrance free, with stable offers and seed decisions. Retry expenditure and terminal state are durable; rewards and unlocks settle once. |
 
 ## Sound and presentation proposal
 

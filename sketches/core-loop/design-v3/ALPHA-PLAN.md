@@ -1,6 +1,6 @@
 # Scrapkeep full alpha plan
 
-Status: ready for review. Built from three explorations, one architecture design, a five-lane design workflow with three critics, and a testing workflow with two critics. Nothing was run or changed.
+Status: authorized and in progress. The 3 October 2026 implementation request refines the existing program using the owner interview, accepted kits and recovered Claude session. Historical unit lists below preserve planning provenance; LEGIBILITY and the current amendments control execution. Checkpoint 1 still awaits Andrew's play verdict.
 
 ## What approving this plan authorizes
 
@@ -14,7 +14,7 @@ It does not authorize promotion to `native/`, new dependencies, paid services, a
 
 ## Context
 
-Andrew played the lab builds on main (`f5848c7`) and found the game "okay" but "hollow and shallow". He wants a full early-access alpha he can sit with: three worlds, four pilots, item systems, achievements, customization, story, art, animation and music at one consistent level.
+Andrew played the lab builds on main (`f5848c7`) and found the game "okay" but "hollow and shallow". He wants a full early-access alpha he can sit with: three worlds, six pilots, one assembled combat companion, item systems, achievements, customization, story, art, animation and music at one consistent level.
 
 His answers on 2026-10-01 changed the brief.
 
@@ -30,8 +30,8 @@ So the program makes one zone click first, proves it with his play, then scales 
 | --- | --- |
 | Genre | Roguelite run, action-RPG feel, zonal open stages. The pilot stays in the ball. |
 | Worlds | Spillway Works, then the Dig (underground), then the Highdraft (floating flotilla). Two big zones plus a world boss each. |
-| Run | One run crosses all three worlds, about 60 to 70 minutes, saved at each zone entrance. Death restarts the zone with one key. |
-| Roster | Sable at start. Rivet and Kest unlock through play. Tally is a late secret unlock. |
+| Run | Three worlds in fixed order; 30 to 45 minutes. One death retry per world, then death ends the run. Quit/crash replays the same zone entrance free; stable offers and spent retry facts survive reload. |
+| Roster | Six pilots: Sable initially; Rivet by world-one rescue; Tarn by Brindle; Kest by Dig rescue; Tally by three ledger leaves returned to Moss; remembered cannon by Mind. Newly earned pilots are selectable next run; existing profile unlocks survive migration. |
 | Harpoon | Every pilot's right-click verb, soft-lock. |
 | Lab extras | All become defaults. Flags and old paths get deleted. |
 | Warden loop | Drop, laps and v2 all lost. Maps and boss fights are redesigned and judged by play. |
@@ -49,7 +49,7 @@ He played drop, laps and the harpoon build that evening. His opinion of the whol
 
 | What he said | What changes |
 | --- | --- |
-| He liked the v2 loop but could not tell how the Warden fight works, how much health it has, or how to beat it. | The slice's default fight is the v2 structure made readable (the posture chassis, the boss plate, state on the body). Hunt and Duel are the arms compared against it, so the `--variant=` row has three fight values. The boss plate (B3) moves up to land with the chassis (B0). |
+| He liked the v2 loop but could not tell how the Warden fight works, how much health it has, or how to beat it. | The slice's default fight is the v2 structure made readable (the posture chassis, the boss plate, state on the body). The later LEGIBILITY ruling supersedes comparison arms: the posture fight is the only slice fight and no variant row is built. The boss plate (B3) moves up to land with the chassis (B0). |
 | The grapple hook with the homing smash was "super fun". | The harpoon ruling is now a play verdict. |
 | He cannot tell when he is hooked, grappling does not feel satisfying, and no keys are shown. | The wave after A1 is the harpoon and readability wave: line states with a visible latch, bite feedback from the impact table, and on-screen prompts for the next action read from the bindings table. |
 | The map is not fun to traverse, and traversal at speed is the point of the game. | The zone retrofit (Z3) must show a measured traversal line per pilot: a bot holds speed tier 2 or better along it with no dead stop, and harpoon anchors are spaced for a swing chain. It also authors a bay dock at each Warden site, after the bay failed to dock in his third run. |
@@ -60,20 +60,31 @@ He played drop, laps and the harpoon build that evening. His opinion of the whol
 
 Andrew then gave the coordinator creative charge: decide, fill gaps and cut, and bring him a veto list. [LEGIBILITY.md](LEGIBILITY.md) is the result and is the build spec for the waves after A1. Where it differs from M1 below, it wins: one fight (the posture chassis) with no Hunt or Duel arm and no `--variant=` row, 9 verbs, 6 enemy kinds, standing activities in place of timed events, and its own unit list and gate order (the visual merge, G1, wave R1, B0b, B0a, wave R2, wave R3, then checkpoint 1). The read sheet (ER) covers only what the visual branch has not built: that branch holds nine enemy models, merged in unit AR.
 
+## Current alpha refinements (3 October 2026)
+
+These implement Andrew's approved refinement. They supersede stale historical rows below without authorizing later-world construction before the first sitting.
+
+- **Progression:** one tree per pilot, four safe growth picks, thirty nodes and sixteen endpoints; world-one depth cap two, later worlds depths three and four. Path, Relic and Parts; Common, Rare, Relic, Evolved plus the hot-wired stripe. Scrap is size/temporary armour, Cogs spend, cores zone-local. No permanent stat boosts.
+- **Companion:** one SPIL-9 hover chassis, two unordered module sockets and any two different conductive-primer, ram-brace and escape-corridor families. Run-found pieces; acquire without auto-equipping, assemble at intermission. No new combat key or companion health economy. Escape acts after a survived low-hull hit, never revives or spends/refills a retry. Body/chirp cues expose ready/spent state; no recursive procs. Camp pet is separate.
+- **Camp:** reuse the approved layout; launch gate, lockers, Moss, achievements, settings, one skee-ball lane, pet/toys, time-trial ghost/medals and any-enemy sandbox. Camp is between runs only. Target roll launch within five seconds or shortcut within two; interim menus support unlocks, ledger returns and assembly before full camp construction.
+- **World and story:** reuse the approved Arizona world keyframes, enemy read sheets and terrain probes. Breakable enemy homes stop that kind's stage arrivals and pay scrap. Short skippable Moss/crew exchanges, field notes and item text; the ancient catastrophe stays ambiguous.
+- **Look and audio:** approved Sol concepts replace older stills as the look target. Reuse rigs, recipes and existing music gems. Synth composes guides and keyed SFX; ACE performs music; runtime controls dynamics. Your play/listen remains the acceptance verdict.
+- **Order:** recover pending candidates and records; freeze Cable Reach and get the sitting verdict; finish world one alongside the new-kit probes; settle persistence and companion before rewards freeze; build later-world greybox; dress worlds and camp; cold-export the complete alpha.
+
 ## Program shape
 
 The vehicle is `sketches/core-loop` under the light play lane. Nothing is promoted to `native/`. The integration branch is `proto/alpha`, cut from `f5848c7`. The coordinator alone merges to main.
 
 | Milestone | What lands | Done when | Estimate |
 | --- | --- | --- | --- |
-| **M1 Click slice** | One zone (the Cable Reach) that feels good, with two fight structures to compare | 22 units merged, admission bands green, perf in budget, sitting sheet ready. Andrew plays. This is the hard gate. | 6 waves |
+| **M1 Click slice** | One Cable Reach zone with the accepted posture fight, harpoon and legible activities | 22 units merged, admission bands green, perf in budget, sitting sheet ready. Andrew plays. This is the hard gate. | 6 waves |
 | **Track A** | Structure, test tooling, records, asset reconcile, two terrain probes | Runs beside M1 from day one. Touches no file the slice touches. | 4 waves |
-| **M2 World one** | Two zones, two Wardens, Brindle on the new fight, three pilots, Rivet's unlock, world-one items, relics, achievements, lore, art and music, gamepad, run save | Checkpoint 2 on main. A full world-one run with a profile. | about 55 units |
+| **M2 World one** | Two zones, two Wardens, Brindle on the new fight, existing pilots, Rivet/Tarn unlock progression, world-one items, relics, achievements, lore, art and music, gamepad, run save | Checkpoint 2 on main. A full world-one run with a profile. | about 55 units |
 | **M3a Worlds in greybox** | The Dig and the Highdraft playable end to end. Mechanics, four zones, six enemies, four Wardens, two world bosses | Checkpoint 3 on main. A full three-world run in greybox. | about 55 units |
 | **M3b Worlds dressed** | Art, textures, wind-ups, music and lore for worlds two and three, by layer across both | Checkpoint 4 on main. | about 55 units |
-| **M4 Alpha** | Tally, cosmetics, full achievements, home codex, ending, export, how-to-play | The exported Linux build launches cold and a run can be won. | about 35 units |
+| **M4 Alpha** | Six complete pilots, assembled companion, camp with practice and recreation, cosmetics, full achievements, codex, ending, export and how-to-play | The exported Linux build launches cold and a run can be won. | about 35 units |
 
-About 235 units. At 4 to 5 merged units per wave and 5 waves per coordinator day that is 11 to 14 working days plus Andrew's sittings. This is an estimate. The binding limits are his play time and the single GPU, not writers.
+The former 235-unit and 11-to-14-day estimate is retired. Recovery found three of six playable pilots and zero of three complete worlds; shared infrastructure is substantially ahead of world content. Recount remaining bounded units after recovery, separated by systems, worlds, pilots, presentation and packaging. Report built, integrated, automatically checked and human-accepted status separately; no completion percentage is established.
 
 Worlds two and three go greybox first, then art by layer. Past asset batches accepted about half of builds on the first pass, so a cut at any date must still leave a consistent game.
 
@@ -136,7 +147,7 @@ Every other choice ships as one opinionated default, logged in `docs/decisions.t
 **Admission to play.** Bots and fixed checks only decide whether the build is worth Andrew's time. Each band must be red on the three rejected builds (v2 at `19fc173`, drop, laps) before it counts.
 
 - The hold-fire camper cannot win. An arena-only player can, slower than the explorer.
-- The lair-chaser, the real skipper under Hunt, pays a measured cost.
+- The skipper wins more slowly than the completionist on the current posture fight; no Hunt arm is required.
 - The explorer wins at least 60 percent of 16 seeds with more heft and more parts.
 - Perf on the densest fight at 1080p. CPU main thread p99 at most 10 ms, GPU p99 at most 7 ms.
 - Smoke green on the checkpoint SHA and one Fable integrated read.
@@ -147,9 +158,9 @@ Every other choice ships as one opinionated default, logged in `docs/decisions.t
 - He lands harpoon smashes into packs and keeps doing it.
 - He spends time in the zone before the Warden in at least one run.
 - He starts a second run without being asked.
-- The five sitting questions per arm, then which arms win.
+- The existing five sitting questions on the single current slice: loop, best moment, worst frustration, play-again verdict, and difficulty/pacing/clarity.
 
-The first five minutes of the sitting are harpoon into an ordinary pack, since no harpoon play is on record.
+Start the sitting with harpoon into an ordinary pack to judge the revised feedback. Entry 10 already records Andrew finding homing smash super fun; this sitting tests the current implementation.
 
 **If the verdict is "still not there".** One more slice round of at most ten units aimed at his worst frustration, then a second sitting. A third round stops the program for a re-plan with him.
 
@@ -174,15 +185,15 @@ Not in Track A. World two and three music, direction sheets and story arcs wait 
 
 ## M2. World one complete
 
-- **Fight.** The winning structure extends to both zones' Wardens and to Brindle through a frozen boss contract and a contract test. The losing arm is deleted.
+- **Fight.** The accepted posture structure extends to both zones' Wardens and Brindle through one frozen boss contract and contract tests. Retire unreachable lab alternatives after the checkpoint verdict; do not build comparison arms.
 - **Zones.** The Spillway is rebuilt as zone 1-1 by merging in the Weir's halfpipe, mesa and causeway. `map_weir.gd` and `map_sluice.gd` are deleted. The Cable Reach is zone 1-2.
 - **Structure.** Flow across worlds, lazy terrain per world, director and Warden family from the stage row, music and HUD from rows (architecture units W1 to W6). A stub boss keeps later worlds completable.
 - **Build.** Three layers. Path is the kit tree by level-up. Relics rewrite one slot each and are found on the map. Parts stack tags toward synergies and two evolutions.
 - **Economy.** Scrap is size and armour. Cogs are the only spend currency. Cores stay zone-local. One damage order.
 - **Rarity.** Common, Rare, Relic, Evolved, with a hot-wired stripe. Scalar-only rows leave everything above Common.
-- **Meta.** Profile wired in. Rivet unlocks by a rescue camp quest in world one. About 20 achievement rows. Locked class cards show the achievement text.
+- **Meta.** Profile wired in. Rivet unlocks by a world-one rescue quest and Tarn by Brindle; Kest unlocks by the Dig rescue. Locked cards show truthful conditions. Preserve existing earned unlocks; commit new quest and boss rewards exactly once.
 - **Side content.** Combat challenges, contraption secrets and one camp per zone with a named reward.
-- **Run save.** The existing `run_state.gd` snapshot is written at each zone entrance through `safe_store.gd`. Fable review.
+- **Run save.** Extend `run_state.gd` and `safe_store.gd` for versioned durable zone-entrance snapshots, per-world retry expenditure, stable offers/generation, Cogs, path and inventory, and companion assembly. Free quit/crash replay restores the entrance; unlocks settle once. Consequential review covers migrations and interrupted transitions.
 - **Input.** Gamepad bindings, stick look with aim assist, paged settings, rebinding, fullscreen and a quality switch.
 - **Content.** World-one asset waves from the clone's 67-unit sheet at its minimum set, painted tileables, wind-up rows, zone and boss music, lore rows with word caps.
 - **Docs.** One `DESIGN-V3.md` of 400 lines or fewer, written after the verdict. The other design docs move to `archive/`.
@@ -205,7 +216,7 @@ Each world boss is capped at Brindle's phase count and built on the M2 boss cont
 
 ## M4. Alpha
 
-Tally (ball-only base kit, equips any pilot's relics and transmogs to match), cosmetics and the loadout row, the full achievement set, the home-menu codex, the ending as three fragment cards, title and summary music, the Linux export with stems beside the binary, a README and an in-game how-to-play. Pressure valves and modifiers are the first cut if time runs short.
+Complete Tarn's claw kit, Tally's mechanical Gather/Link/Balance Due card kit and the remembered cannon. Reuse their six placeholder probes after checkpoint 1; weak results refine a required pilot. Mind and cannon share the four lane/split-lane/rush/plate attack families. Finish the assembled companion, camp, cosmetics, full achievements, discoveries, ending, title/summary music, Linux package with required stems, README and in-game how-to-play. Additional lounge games and decorative expansion remain optional; no fourth world or extra final boss is added.
 
 ## Testing method
 
@@ -297,8 +308,8 @@ T5 merges before the first content wave. T6 merges before the first pilot or bos
 ## Verification
 
 - Per unit. Its own headless test, red then green for fixes, one broken-rule check per new test.
-- Per wave. `npm run sketch:smoke -- --sketch core-loop` once on the candidate, the gate's read of the diff and receipts.
-- Per checkpoint. `tools/coordinator/checkpoint.sh` runs smoke, 16-seed bots, the report bands, item fuzz and a native perf capture, and writes one receipt under `artifacts/local/checkpoint-<sha>/`. Then the Fable integrated read, the merge to main, `npm run verify` and `check:skills` on main, and the push.
+- Per wave. `npm run sketch:gate` once on the combined candidate, followed by the independent read of the diff and receipts. A documentation commit changes the admitted tree, so ORCHESTRATOR requires a new gate for that tree.
+- Per checkpoint. After the exact candidate has its gate receipt, `npm run sketch:checkpoint -- --before` runs sixteen seeds for each existing bot policy, checks the fixed posture bands and captures native 1080p performance. Its results are under `artifacts/local/checkpoint/`. After Andrew plays, `npm run sketch:checkpoint -- --after <runs.ndjson>` reads his run log; the five answers and fun verdict remain human evidence. Main integration, applicable browser-proof checks and checkpoint push follow the verdict.
 - Never claimed without Andrew's play. That it is fun, that it reads, that the look hits the concept art, that the music works in a fight.
 
 ## Risks
@@ -326,8 +337,8 @@ T5 merges before the first content wave. T6 merges before the first pilot or bos
 
 ## What needs Andrew's hands
 
-1. Play checkpoint 1 with `scrapkeep core-loop` and the four variant combinations on `SITTING.md`.
-2. Answer the five sitting questions per arm and pick the winners.
+1. Play checkpoint 1 with the fresh-save command in `SITTING.md`, one Cable Reach table and one posture fight.
+2. Answer the five sitting questions for the single Cable Reach slice.
 3. Approve a ten-line tone sample of lore per world when it appears in a checkpoint note.
 4. Approve keyframe sheets for new enemy and boss forms, batched per sitting.
 5. Judge music in play at each checkpoint.

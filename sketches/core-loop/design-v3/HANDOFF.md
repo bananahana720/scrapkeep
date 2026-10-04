@@ -1,54 +1,36 @@
-# Handoff: core-loop v3, 2026-09-28 (reset onto Sonnet 5.5)
+# Alpha handoff: recovery on 3 October 2026
 
-Read this first, then `ROADMAP.md` in this folder (the canonical wave plan and every Andrew ruling). The previous session settled its in-flight work before Andrew reset onto Sonnet 5.5. Nothing is lost: each unit below is committed on its own branch, with its next step named.
+Continue the existing [alpha plan](ALPHA-PLAN.md) and [roadmap](ROADMAP.md). The old v3 resume queue is historical at Git base 619b8f4 and in the recovery evidence; its music, performance and ledger work has already been integrated or given a recorded disposition. Do not restart those units.
 
-## Where things live
-- **Integration branch:** `proto/core-loop-v3`, worktree `/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3`. It holds the whole lab: drop, laps and interact modes, juice, class cards, the ceremony and the AU2 sound bank. Smoke: 192 of 192. The coordinator alone merges into it.
-- **The visual track:** a separate clone at `/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/workspace`, branch `codex/visual-development`. Codex works there, and it's the only trusted Codex project (see Gotchas).
-- **Main:** holds the launcher (`scrapkeep <sketch> -- <godot args>`) and the project desk.
-- **Coordinator tools:** `sketches/core-loop/tools/coordinator/`:
-  - `lab_capture.sh`: rendered stills on hidden workspace 10, GPU-polite.
-  - `watch_codex.sh`: waits for a Codex job.
-  - `keep_both.py`: resolves append-only doc conflicts.
-- **Reusable workflow briefs** (full prompts for every unit below) are in `~/.claude/projects/-home-andrew-Projects-scrapkeep--claude-worktrees-game-repo-status-fork-3e5a69/7a71845f-f352-4263-acb1-425711da4701/workflows/scripts/`.
+## Current authority and location
 
-## Waiting on Andrew
-1. **The lab sitting:** four modes, about 10 minutes each. The sheet is `/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3/artifacts/local/LAB-SITTING.md`; launch with `scrapkeep core-loop-v3 -- --loop=drop --gun=hold`. His verdict becomes playtest entry 9, which decides the loop and starts wave B.
-2. **Blind music pack 4** (optional, curiosity): `/home/andrew/Projects/scrapkeep/artifacts/local/music-ab-4/` Z1 to Z5, with the key in `.key.json`.
+- Integration: proto/alpha in /home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776. Recovery started at 619b8f43c60ef1033825815f5661d48c05af434f; main remains f5848c7 until the human checkpoint.
+- Andrew approved implementation of the refined completion plan on 3 October. Three worlds, six pilots, modular SPIL-9, between-run camp, 30-to-45-minute run, one death retry per world, free unfinished-zone quit/crash replay. Mind ends the campaign.
+- Hard gate: Andrew plays the checked Cable Reach before any Dig/Highdraft map or encounter is constructed. Existing concepts and probes are reusable evidence, not complete worlds.
+- Dirty owner edits to Bible, decision list, persistence ADR and sitting sheet were copied and hashed under artifacts/local/alpha/recovery-2026-10-03/owner-baseline.json before reconciliation. The untracked verifier configuration is preserved.
 
-## Resume queue (in this order)
+## Immediate recovery queue
 
-| # | Unit | Branch, head | Done | Next |
-| --- | --- | --- | --- | --- |
-| 1 | M0 delivered-damage ledger | `proto/core-loop-v3-m0` 4237a8a | Merged v3. drops_to_break now counts `warden_drop_landed` (one per landing) and `warden_slam_hits` is separate. The report's null crash is fixed. | Independent verify (brief: `m0-finish-*.js`, VERIFY), then merge into v3 and rerun smoke. |
-| 2 | ACE music in the game | `proto/core-loop-v3-acemusic` 7772dad | Built. The stem sequencer from the PoC; `--music=ace`, `--breath=raw|hard|gentle`; a pause-menu Breath row; the Warden break as a directed set piece; synth fallback. | Verifier plus the audio-timing review (brief: `ace-music-in-game-*.js`, VERIFY and REVIEW), then merge and let Andrew play it. Assets are git-ignored under `assets/music_ace/`; rebuild them with `tools/ace/package_music.py`. |
-| 3 | E1 telegraph perf plus readable density | `proto/core-loop-v3-e1` 51ace3b | Design `design-v3/E1-DENSITY.md` (1a7b54d): static telegraphs, a stencil fill union, the kill-pop budget. The perf bench is merged. | Build, verify and review per the doc (brief: `e1-telegraph-perf-and-density-*.js`, BUILD onward). Target: native s3 p99 at least 10 ms lower with the look unchanged. F1a (`proto/core-loop-v3-f1a`) was rejected; its findings are in `core-loop-v3-f1a/artifacts/local/f1a-review-findings.json`. |
-| 4 | Pilot reactions | visual clone b6a595e | Four clips (big_cheer 2.8 s, wince 0.5 s, slump 1.5 s, phew 0.8 s) for all three pilots, plus a side-on Sable point. `pilot_reactions_test` passes. | Rerun the full smoke (stopped at 88 PASS, 0 FAIL). Time perf on hidden workspace 10; don't use `run_host.py perf`, which opens a window on Andrew's screen. Merge the clone into v3 when the look pass and v3 align. |
-| 5 | Look pass 3 (Codex) | visual clone | Pass 2 (d9f1625) scored 52 to 62 against the 80 target. Draws p99 are 1,409 against the 1,389 cap. | (a) The lighting and post stack: warm sun, AO/GI, AgX, fog, a vivid sky; there's about 5 ms of GPU headroom. (b) Painted tileable textures from Codex imagegen. (c) Cut draws under the cap. The empty play floor is gameplay geometry, which belongs to wave C. |
-| 6 | Perf E2 and E3 | after E1 | | One enemy snapshot per tick (about 1 ms), and HUD redraw on change (about 0.5 ms). See `perf-lab/ledger.md` on `proto/core-loop-v3-perf`. |
+| Work | Exact source | Disposition |
+| --- | --- | --- |
+| Gamepad through menus | codex/job-522d27958f71f23dce5a-83d4eaf1db at 286327f | Fresh source review and clean executable gate passed; fast-forwarded into proto/alpha. Final combined tree qualification is recorded in the recovery record. Physical controller still pending |
+| Shared beds on probe pieces | codex/job-2ec11c941dc3cff32a9a-6326a97874 at 515f919 | Reuse selected shader/material method after scoped admission; old probe game.gd must not replace current routing |
+| Sculpted rock round four | codex/job-6ed433780b1c4b65e634-93e2af44ab at f14cb70 | Preserve recipes and assets; look and collision/integration still need their own evidence |
+| DEM Reach probe | codex/job-f5d2ad54607f25e58070-f7b5ee946f at e24de55 | Throwaway terrain experiment; reuse feasibility findings, not whole-branch gameplay |
 
-After the lab verdict comes wave B: one-page `DESIGN-V3.md`, archive the rest, and delete the losing loop mode and the v2 fallbacks.
+The three visual branches share older base a56959e; their changed assets and probe paths differ from current alpha. No new look rounds before the sitting, per the existing decision trail.
 
-## Rulings this session (all in ROADMAP or the design-principles memory)
-- **Music is full ACE-Step.**
-  - The screens only reject broken takes; Andrew's ear ranks. His pack-3 favourite was the planted "weak" raw take.
-  - Judge music in play, where nuance gets lost moment to moment. Moments that carry game information must be unmistakable.
-  - **Directed A-to-B set pieces** get composed, nuanced passages.
-  - Parked: contraption flight times land on the downbeat.
-- **Pilots react** to actions, achievements and failures. Length follows what the motion communicates, and poses must read from the rear chase camera.
-- **The look target** is 80 to 90% of the concept art, in look and feel only. It must hold 60 FPS at 1080p on a mid-range PC; the dev-box proxy is CPU p99 ≤ 10 ms and GPU p99 ≤ 7 ms.
+## Next dependency-ready work
 
-## Gotchas
-- **Codex:**
-  - Launch from inside the visual clone (`env -C <clone> node .../codex-companion.mjs task --background --write --fresh --model gpt-6-astra --effort high --cwd <clone> --prompt-file <f>`). Only that clone is a trusted Codex project.
-  - Even there, the sandbox sometimes lacks the systemd user bus and the GPU. When that happens, run its prepared host stages from Claude.
-  - Codex can't use git, so the coordinator commits.
-  - Never add Codex trust entries without asking Andrew.
-- **GPU:** every GPU job takes `flock /tmp/scrapkeep-gpu.lock` and waits while any process holds over 3 GB. ACE-Step peaks around 13 GB and TRELLIS at 13.3 GB on the 16 GB card.
-- **Windows:** native Godot runs go through `claude-open` onto workspace 10, never Andrew's screen.
-- **Licensing:**
-  - Qwen-Image-2.1 is non-commercial, so it's not for shipped assets. Use Codex imagegen references.
-  - TRELLIS v1 is MIT. Its trial is `proto/core-loop-v3-img3d` 829e549: props come out clean; the cliff reads as masonry and isn't proven.
-- **Model routing:** commit c6d5f05 on main (session-scoped) pins Opus 5.5 at medium for `scrapkeep-writer-low` and `scrapkeep-explorer`. With Sonnet 5.5 out, confirm its model ID, then repin those two agents to it or revert c6d5f05. That's Andrew's call.
-- **Andrew's hands (optional):** request DINOv3 access on Hugging Face (`facebook/dinov3-vitl16-pretrain-lvd1689m`), only if TRELLIS.2 is wanted.
-- **Housekeeping noticed:** 25 stale `blender-mcp` server processes from the 3D-printing-hub project are running, some for 15 hours. They belong to another project, so they were left alone.
+1. Freeze the combined recovery tree, finish its exact-tree gate and Cable Reach checkpoint, then record the sitting status in artifacts/local/alpha/recovery-2026-10-03/RECOVERY.md. The 286327f source gate already passed; documentation reconciliation changes the final tree and requires another gate.
+2. Ask for the existing five sitting answers. A miss allows at most ten corrective units and one more sitting; further misses require a re-plan.
+3. After the verdict, finish world one while reusing the six new-kit probes. Build Tarn, Tally and cannon; a weak probe refines the required kit.
+4. Settle durable run continuity and companion assembly before freezing world rewards. Then build the later-world greybox, dress the campaign, finish camp and export.
+
+## Verification and limits
+
+Use the approved sketch:gate and sketch:checkpoint commands and source-bound receipts. The one known build_power_curve_test quarantine belongs to the M2 Warden conversion; do not loosen its bands. Physical gamepad, current alpha fun, look/audio in play and mid-tier hardware remain unqualified. A full cold exported campaign is not yet available.
+
+The reviewed 286327f gate ran 289 checks with zero unquarantined failures, one expected headless audio skip and the existing power-curve quarantine. Documentation checks passed after reconciliation. Eight dependency-hash mismatches predate recovery; their baseline comparison is retained rather than repinning old contract claims. Final integrated checks and the exact launch candidate are in the recovery record.
+
+Use current runtime capabilities and pinned model roles. Historical claims that Codex cannot use Git or must run only in a visual clone are superseded. Native windows stay off Andrew's workspace; GPU work takes the existing lock. Preserve both browser proofs and all unrelated owner changes.

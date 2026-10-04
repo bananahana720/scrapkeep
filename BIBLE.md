@@ -2,7 +2,7 @@
 
 **Approved product reference · 6 September 2026**
 
-Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work. Throwaway Godot sketches under `sketches/` run separately in the [light play lane](ORCHESTRATOR.md#light-play-lane) that Andrew authorized on 22 September 2026 ([TRACKING](TRACKING.md) line 12, EV-0479, EV-0480); promoting a sketch into this Bible remains a heavy-lane decision. On 26 September 2026 this edition was harmonized in place (card DF-04, TRACKING EV-0579) with Andrew's verdicts in the [playtest log](docs/playtests/PLAYTEST-LOG.md), entries 1 to 5, and with the [accepted engineering ADRs](adr/README.md) TADR-006 to TADR-010: the run's level unit is now the open stage, and orchard-era material is marked superseded prototype evidence where it stands.
+Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work. Throwaway Godot sketches under `sketches/` run separately in the [light play lane](ORCHESTRATOR.md#light-play-lane) that Andrew authorized on 22 September 2026 ([TRACKING](TRACKING.md) line 12, EV-0479, EV-0480); promoting a sketch into this Bible remains a heavy-lane decision. On 26 September 2026 this edition was harmonized in place (card DF-04, TRACKING EV-0579) with Andrew's verdicts in the [playtest log](docs/playtests/PLAYTEST-LOG.md), entries 1 to 5, and with the [accepted engineering ADRs](adr/README.md) TADR-006 to TADR-010: the run's level unit is now the open stage, and orchard-era material is marked superseded prototype evidence where it stands. On 2 October 2026 the run rules were harmonized in place with Andrew's rulings of 1 and 2 October 2026 ([alpha plan](sketches/core-loop/design-v3/ALPHA-PLAN.md), [owner interview](sketches/core-loop/design-v3/OWNER-INTERVIEW-2026-10-02.md)): a run crosses three worlds in a fixed order, a winning run targets 30 to 45 minutes, and each world allows one retry.
 
 Start with the three pillars, then read the section relevant to your work. Use the same names, material language and system rules across disciplines. The [cohesion report](COHESION_REPORT.md) records image and text review; the [decisions list](BIBLE_DECISIONS.md) collects the choices still belonging to Andrew.
 
@@ -15,7 +15,7 @@ Start with the three pillars, then read the section relevant to your work. Use t
 | Open detail | A consequential rule or content choice the planning sources do not settle. The decisions list names it. |
 | Prototype example | Behavior or terminology from a bounded existing proof. It illustrates a relationship without defining the full game's final rules. Text marked "superseded prototype evidence" comes from the orchard proof Andrew played and set aside on 22 September 2026 (playtest entry 1); it stays readable as history and no longer guides direction. |
 
-The five regions are a candidate catalogue. A successful run visits four worlds; neither this catalogue nor its map chooses a fixed start, order or finale. The five highlighted animal characters are visual candidates. Their species, names and A/B/C designs remain choices, and an animal-only cast is not locked.
+The five regions are a candidate catalogue. The run crosses three worlds in a fixed order: Spillway Works from this catalogue, then the Dig and the Highdraft, two new worlds outside it. The other four regions stay candidates. The five highlighted animal characters are visual candidates. Their species, names and A/B/C designs remain choices, and an animal-only cast is not locked.
 
 The weapon and three skills are the four established slots: weapon, main hero skill, mobility and ultimate. Electromagnetic collection and internal recycling explain how salvage becomes growth and mechanical advancement. They do not silently replace gameplay milestones with a new priced economy or required loss of body mass.
 
@@ -41,7 +41,7 @@ This is a design reference. The game code and its existing verification records 
 
 SCRAPKEEP is a solo-first, close-third-person action roguelite about piloting an improvised electromagnetic mech through a greasy, inhabited steam-cyberpunk Southwest. Roll into trouble, aim through it, collect the wreckage and build something outrageous inside the machine you are driving. The mech's irregular mass records the run in dented tanks, welded repairs and recovered tools. A protected cockpit keeps the pilot recognizable through that growth.
 
-The target is a standalone PC/controller game. A successful run crosses four worlds through open stages, each a bounded 3D space on momentum terrain that the player enters, roams for loot, secrets and threats, and leaves through an exit, with a boss in each world. The 60–75 minute length is a target to be measured in open-stage play. Transitions offer two random next-world destinations. The catalogue, starting world, route order and final-boss placement remain open. The browser prototypes test parts of the experience; they do not establish the full run or choose the production engine.
+The target is a standalone PC/controller game. A successful run crosses three worlds in a fixed order (Spillway Works, the Dig, the Highdraft) through open stages, each a bounded 3D space on momentum terrain that the player enters, roams for loot, secrets and threats, and leaves through an exit, with a boss in each world. Every run starts in world one. A winning run targets 30 to 45 minutes, about 10 to 15 per world, to be measured in play. The Highdraft's boss, the Mind, ends the run. The browser prototypes test parts of the experience; they do not establish the full run or choose the production engine.
 
 Combat power is rebuilt each run. Permanent discoveries and unlocks broaden future options. The four build slots are weapon, main hero skill, mobility and ultimate, with themed loot, quick autonomous devices and one main assembled companion adding combinations around them. The game must earn interest through its own movement, decisions and replay value.
 
@@ -62,7 +62,7 @@ Use these decision tests:
 
 Collecting scrap should feel like taking possession of the fight. Electromagnetic coils pull material into the mech's growing body; internal recycling turns that material into working changes to weapons and skills. Show both parts of the process. A fuller silhouette conveys accumulation; a changed mechanism explains its new action.
 
-Each slot follows one route through a binary tree: one root forks to two upgrade nodes, those fork to four, and those fork to eight endpoints. The selected route stays within one lineage, without crosspathing. Milestones during play open and deepen those routes. Loot can change how compatible attacks, devices and the main companion work together; exceptional combinations may become overwhelming. Growth still fits ordinary routes, while enemies, surroundings and battle consequences can become enormous. Material prices and the supply needed to meet milestones are still design work.
+For the exported alpha, each pilot follows one connected route through one binary tree: four choices through two, four, eight and sixteen possible nodes at successive depths, with sixteen endpoints and no crosspathing. Growth milestones offer choices at safe grounded moments; world one reaches depths one and two, and the Dig and Highdraft open depths three and four. Path, Relic and Parts combine into the build. Scrap provides size and temporary armour; Cogs are the spend currency and cores stay zone-local. Compatible loot can change attacks and the main companion; exceptional combinations may dominate without changing ordinary handling or collision size.
 
 Use these decision tests:
 
@@ -118,7 +118,7 @@ The five area candidates give the world distinct kinds of work. Yard Commons sit
 
 These places exchange skills and components without becoming interchangeable. A river mechanic spots water wear that a basin scavenger might overlook. A mountain shop knows how to move a heavy load along a narrow ledge. An orchard repairer values a mechanism that can repeat a delicate action all season. Themed discoveries should carry that work into a player's build through their construction and behavior.
 
-The accepted run visits four worlds, with two random destination choices at transitions; its 60–75 minute length is a target to be measured in open-stage play. Five comparison pages do not choose the catalogue size, starting world, route order or finale. Every region must introduce its local conflict clearly even when it appears first.
+The accepted run visits three worlds in a fixed order: Spillway Works, then the Dig underground, then the Highdraft's floating flotilla. A winning run targets 30 to 45 minutes, to be measured in play. The other comparison pages stay candidates for later worlds. Every world must introduce its local conflict clearly on its own.
 
 ![An inhabited scrapyard settlement in cactus foothills](docs/bible/images/W02-v1.png)
 
@@ -166,7 +166,7 @@ Source context: [Publisher discovery](docs/DISCOVERY.md), [character development
 
 ### Reading the catalogue
 
-These five area pages compare possible worlds for SCRAPKEEP. They are a creative review catalogue, not a selected launch roster. A successful run visits four worlds through open stages, with a world boss and two random destination offers when another world remains. The number of available worlds, repeat policy, starting world and final-boss placement remain open. No page here claims a compulsory place in that sequence.
+These five area pages compare possible worlds for SCRAPKEEP. They are a creative review catalogue, not a selected launch roster. The run visits three worlds in a fixed order (section 2). Of these pages only Spillway Works is in it, as world one. The other pages claim no place in that sequence.
 
 The overview is a conceptual catalogue map, explicitly **not a fixed route or geographic survey**. Its separated landform samples express differences in terrain, work and atmosphere. Their positions carry no travel distance, adjacency or astronomical meaning. Read the individual key art for natural scale and the prose for proposed play.
 
@@ -270,7 +270,7 @@ Source basis: [Publisher discovery](docs/DISCOVERY.md), [world environment candi
 
 The pilot gives a growing pile of machinery a face. The machine explains how that person works. 
 
-These five pages are creative proposals for comparison, not a selected launch roster. An animal-only cast remains open. Sable, Kest and Tarn develop the newly requested civilization examples; Fuse and Rivet adapt earlier character work. Each A/B/C sheet holds the pilot identity constant and changes construction. None is a progression sequence or a chosen winner.
+These five pages remain the historical character comparison catalogue, not the alpha roster. The exported alpha has six pilots: Sable, Rivet, Kest, Tarn, Tally the pack-rat caster and an unnamed rebuilt ancient known during development as the remembered cannon. Tarn uses the approved close-contact claw kit, Tally selects three fitted mechanical program cards with 1, 2 and 3, and the cannon mirrors the Mind. Fuse remains a catalogue proposal. The pilot stays inside the ball; the A/B/C sheets are construction alternatives, not progression sequences.
 
 Every candidate retains an irregular rolling salvage body, electromagnetic collection and internal fabrication. The weapon and special mobility work at run entry; the main hero skill and ultimate unlock through play during world one. The kit sketches below describe a starting fantasy and directions for visible change. The movement abilities Andrew played in the mobility-kit sketch already have candidate homes in these mobility rows (playtest entry 3; TADR-008): the grapple he kept in Sable's grapple, the glide in Kest's brief lift, the slam, with the anchor beat he asked for, in Tarn's planted claw pull, the air dash in Fuse's vent-assisted burst, and the pylon mount he requested in place of mag-cling in Rivet's braced reposition or Sable's planted anchor hardware. These are candidates, not assignments. Whether each is a tree root, a node or an item stays open under Q-P11, since transformative items may also replace movement, and whether the pylon mount is a mobility action or a deployed device stays open under Q-P15. 
 
@@ -429,7 +429,7 @@ The four paired studies suggest how a Fuse-like emitter family could change thro
 
 The same principle extends to the other candidates. New cable guides can change Sable's release, a revised cradle can change Kest's firing geometry, a new linkage can change Tarn's claw arc, and an optical assembly can change Rivet's beam route. The player should see the reason for the new behavior before needing to read a stat panel.
 
-Each of the four character slots has its own binary tree: one root, then two upgrade nodes, then four, then eight possible endpoints. A run follows one route per slot, without crosspathing. Combat, encounters, objectives, events and area milestones advance those routes. Normal successful play should reach all four endpoints by the final boss, a pacing target to be measured in open-stage play. Recycling gives that advancement a physical construction language. It does not introduce an elapsed-time gate (time may scale threat, never progression; TADR-010), a required collection threshold, an external crafting station or mandatory sacrifice of accumulated mass. Costs, supply and milestone allocation still need design together.
+The exported alpha uses one character-specific binary tree per pilot, with four successive binary picks, thirty authored nodes and sixteen endpoints. Each run owns one connected path without crosspathing; growth earned through play opens choices at safe grounded moments. World one is capped at depth two; later worlds open depths three and four. Path, Relic and Parts provide distinct build layers. This supersedes the older four-slot-tree progression for the alpha while retaining the original dashboard art as historical concept evidence.
 
 ### 5.3 Finds that belong to their area
 
@@ -462,7 +462,7 @@ The future build can include transformative items that replace movement or attac
 | Fixed secret bonus | A repeatable effect earned by a particular eligible combination of selected slot endpoints. Its reward is fixed, rather than rerolled. | Recipe knowledge can persist; its bonus requires the eligible current-run build again. |
 | Permanent unlock | An expanded option, discovery or challenge beyond the completed run. | The option persists without accumulating permanent combat-stat advantage. |
 
-A saved ongoing run preserves its acquired equipment and selected paths at the next level entrance. Loading does not duplicate rewards, refill a spent revival or add another copy of a recipe effect. Reconfiguring items changes the current build; it does not quietly respec a tree. These distinctions let the player enjoy an outrageous combination now and still have a new machine to build next time.
+A saved ongoing run preserves its acquired equipment and selected paths at the next level entrance. Loading does not duplicate rewards, refill a spent world retry or add another copy of a recipe effect. Reconfiguring items changes the current build; it does not quietly respec a tree. These distinctions let the player enjoy an outrageous combination now and still have a new machine to build next time.
 
 Source basis: [publisher discovery](docs/DISCOVERY.md), [runtime blueprint](docs/RUNTIME-BLUEPRINT.md), [lightning contract](docs/project/INCREMENT-01-lightning-playtest.md), [prototype play guide](docs/LIGHTNING-PLAYGUIDE.md), and [approved art direction](docs/bible/ART-DIRECTION-LOCK.md).
 
@@ -470,9 +470,9 @@ Source basis: [publisher discovery](docs/DISCOVERY.md), [runtime blueprint](docs
 
 ### The complete loop
 
-SCRAPKEEP asks the player to drive a machine, read a fight and build an increasingly personal answer to it. Enter an open stage, roam it, move and aim through its threats and events, collect recoverable metal, earn progression and inspect discoveries. Between fights, reconfigure acquired equipment. Leave through the stage's exit, choose an onward exit and carry the build into the next stage. A world boss tests that build before the next world choice changes the surroundings and available discoveries.
+SCRAPKEEP asks the player to drive a machine, read a fight and build an increasingly personal answer to it. Enter an open stage, roam its threats, activities, enemy homes and secrets, collect recoverable metal and earned progression, and inspect discoveries. Between fights, reconfigure acquired equipment. Each world has two zones with a Warden each and then a world boss. Clearing the boss carries the build through the fixed sequence Spillway Works, the Dig and the Highdraft; the Mind ends the successful run.
 
-The intended successful run lasts 60–75 minutes, a target to be measured in open-stage play, and crosses four worlds. Combat power is rebuilt each run; discoveries expand future options. This is the target design. (Superseded prototype evidence, 22 Sep 2026; see TADR-010.) The current orchard proves a bounded lightning encounter with movement, committed attacks, three waves, equipment changes and a dashboard. It does not implement the complete run, four progression trees, world routing, fixed secret recipes or the new checkpoint lifecycle.
+The intended successful run lasts 30 to 45 minutes, about 10 to 15 per world, measured in play across the fixed three-world order. Andrew targets a first victory in three to five attempts. Unlocks, discoveries and cosmetics persist; combat power is rebuilt each run without permanent stat boosts. The orchard remains bounded prototype evidence and does not establish this full run, the alpha tree progression or its durable checkpoint lifecycle.
 
 These systems answer the three pillars together. Joyful physical mastery makes each fight worth playing. Scrap becomes your build connects the wreckage to working changes. A world worth crossing makes route choices and discoveries matter beyond a change of backdrop.
 
@@ -526,7 +526,7 @@ Arrivals should be legible, overlapping commitments should leave usable response
 
 ### Four slots and milestone progression
 
-Every character has four character-specific binary trees. Each starts at one root that forks to two upgrade nodes; each of those forks to two more, producing four nodes; a further pair of choices at each node produces eight endpoints. Every nonterminal node has exactly two children. The player selects one connected root-to-endpoint lineage per slot, with three successive binary choices and no crosspathing or reconverging branches. Andrew specified this branching shape while reviewing the dashboard image. Exact node effects remain content work.
+Alpha amendment, 3 October 2026: every pilot has one character-specific binary tree, with four connected binary picks through depths containing two, four, eight and sixteen nodes. Every nonterminal node has exactly two children, for thirty authored nodes and sixteen endpoints. World one permits depths one and two; the Dig and Highdraft open depths three and four. The slot labels below classify kit actions, not four separately upgraded alpha trees. The older four-tree contract and eight-endpoint dashboard are historical production design.
 
 | Slot | Access | Purpose in the build |
 | --- | --- | --- |
@@ -535,7 +535,7 @@ Every character has four character-specific binary trees. Each starts at one roo
 | Mobility | Special mobility available at run start | Changes positioning and traversal around always-available ordinary movement. The movement abilities played in playtest entry 3 are candidates for this slot (see Characters); class versus item stays open. |
 | Ultimate | Unlocks through play during world one | Converts useful class-specific contributions into a major payoff. |
 
-Combat, encounters, events, objectives and area milestones advance access and deeper upgrades. A normal successful route reaches an endpoint in every tree by the final boss, a pacing target to be measured in open-stage play. Exact node effects, costs and milestone allocation remain open; binary branching and the eight-endpoint shape are settled. Elapsed time is not the progression gate. Stage time may scale threat, such as spawn pressure or event intensity, but never opens an exit, advances a tree, prices an upgrade or cache, or otherwise gates progression (TADR-010). Whether a stage uses a threat clock at all stays open until a stage explains its economy (playtest entry 5).
+Growth earned through combat, activities and exploration opens tree offers at safe grounded moments. A successful run reaches its fourth pick by the final boss. Elapsed time never advances a tree, opens an exit or prices an offer (TADR-010). The first two depths belong to world one, and deeper offers wait for their eligible worlds. Exact node effects remain authored content; retries and reloads cannot award another pick for the same growth milestone.
 
 The choice loop is understand a route, select its next step, construct the change and use it. Significant upgrades should alter visible hardware or effects along with behavior. A player comparing two branches needs to understand the action each develops, not decode a list of unexplained percentages.
 
@@ -547,7 +547,7 @@ Changing a selected branch requires a special respec opportunity, such as a stag
 
 Acquisition and equipment are separate states. Inventory records what the run has obtained; equipped selections determine which effects currently operate. Between fights, the player can reconfigure acquired items and inspect how the resulting build changes. This permits experimentation with discoveries while preserving the distinct permission required for tree respec.
 
-The loop is inspect a discovery, compare its effects, equip or retain it, then test the changed build in the next fight. The dashboard should explain current effects and compatibility, including what will stop working when an item is removed. Exact inventory capacity, equipment slot limits and replacement rules are not established by the four progression slots.
+The loop is inspect a discovery, compare its effects, equip or retain it, then test the changed build in the next fight. The dashboard should explain current effects and compatibility, including what will stop working when an item is removed. Inventory capacity and item replacement rules remain content work; companion assembly has two interchangeable module sockets in the alpha.
 
 Optional transformations can replace attacks or movement. Shared modifiers can affect compatible player, device and companion actions. Compatibility needs explicit content rules; every effect does not automatically apply to every source. Reconfiguration should rebuild the effective result from current selections, so removed equipment stops contributing and repeated swaps do not accumulate accidental bonuses.
 
@@ -559,7 +559,7 @@ Rare enemies, events, secret rooms and bosses can award randomly encountered ite
 
 Attunement expresses compatibility with a character, another item or both. It is a build relationship whose exact rules remain to be written. Avoid treating the word as an established currency, level requirement or upgrade ceremony. The useful question is what changes when this piece joins this particular machine.
 
-Fixed secret bonuses arise from eligible combinations of selected slot endpoints. The same eligible combination produces the same effect. Surprise comes from discovering the recipe, not rerolling its reward. This chapter deliberately supplies no final recipes or endpoint catalogue.
+Fixed secret bonuses in the alpha arise from eligible current-path and equipped-item combinations. The same eligible combination produces the same effect; surprise comes from discovering the recipe, not rerolling its reward. The older combinations of four selected slot endpoints are superseded for alpha by its one-tree Path, Relic and Parts build. Exact recipes remain authored content.
 
 Discovery can persist as knowledge between runs. The active combat effect still depends on the current run's eligible selections. Respeccing out of that combination removes the derived bonus while retaining its discovery. Reloading or re-equipping cannot stack another copy. Feedback should explain a newly discovered relationship without revealing every undiscovered recipe. Exact disclosure and eligibility remain open content work.
 
@@ -567,37 +567,37 @@ Discovery can persist as knowledge between runs. The active combat effect still 
 
 Devices extend the character's reach through quick autonomous deployment. They should do useful work independently and leave opportunities for deliberate intervention. Position, attack geometry and compatible equipment connect them to the player's decisions. Capacity, lifetime, recall, resource rules and persistence across levels remain open; the prototype's conductor limits are not full-game rules.
 
-One main companion anchors the run's assembled support build. Loot acquisition and assembly can change how it primes enemies, buffs the player or creates a clutch escape opportunity. Temporary helper effects are possible, but they do not establish a second companion management roster. Exact chassis and assembly rules remain unresolved.
+One main companion anchors the run's assembled support build. The alpha default is one SPIL-9 hover chassis with two interchangeable sockets holding any two different support-module families: conductive priming, a brief defensive ram brace, and a clutch escape corridor. Run loot supplies the chassis and modules; acquire without auto-equipping and reconfigure at intermission. No new combat key, companion health economy or second companion is added. Compatible effects rebuild from selected components. Body gestures and chirps show availability and recovery.
 
-The desired loop is notice the companion's contribution, exploit the opportunity and learn when its help is available again. A rescue should give the player a recoverable moment. It does not silently grant another standard revival. Readable animation and effects make support dependable without turning the pilot into a passenger.
+The desired loop is notice the companion's contribution, exploit the opportunity and learn when its help is available again. A rescue should give the player a recoverable moment. It does not silently grant another world retry. Readable animation and effects make support dependable without turning the pilot into a passenger.
 
 The orchard's priming companion demonstrates one contribution and supports intermission reconfiguration. Its automatic acquisition through prototype Shear progression does not decide the future loot-assembly process.
 
 ### Runs, regions, exits and saves
 
-A world is a run-region in this Bible. An open stage is one part of that region; where this Bible says "level" for a part of a world, read "stage" (TADR-010). Four worlds define a successful run's length, while the five illustrated area candidates form a comparison catalogue. No starting world, fixed order, repeat policy or final destination is selected by that catalogue.
+A world is a run-region in this Bible. An open stage is one part of that region; where this Bible says "level" for a part of a world, read "stage" (TADR-010). Three worlds in a fixed order make a successful run: Spillway Works, the Dig and the Highdraft. The five illustrated area candidates remain a comparison catalogue for later worlds.
 
-After clearing a level, the player chooses an onward exit. At a transition to another world, the game offers two randomly selected eligible destinations. That is a world choice, independent of the number or format of item rewards. Exact levels per world and procedural technique remain open. Seeded authored encounter assembly and procedural terrain assembly are still candidate approaches.
+After clearing a stage, the player takes its exit to the next stage. Each world holds two zones and a world boss. Beating the boss carries the build into the next world in the fixed order; there is no random world offer. Procedural technique remains open. Seeded authored encounter assembly and procedural terrain assembly are still candidate approaches.
 
-One standard revival is available per run. The first lethal defeat consumes it; a subsequent death ends the run. Revival health, placement and unfinished-level interruption behavior remain unresolved. A final encounter completes a successful run, but whether it is world four's boss or a separate encounter is not yet decided.
+Each world allows one death retry. The first lethal defeat commits that world's spent flag and restarts its current zone from its entrance save; a second death in that world ends the run. Quit or crash before zone completion replays the same entrance free, preserving stable offers and seed decisions. Transient acquisitions roll back; permanent unlock and discovery transactions commit once. Reload never refills a spent retry or resurrects a terminal run. Beating the Mind completes a successful run and unlocks the remembered cannon for later runs.
 
-Completed levels preserve the build and resolved rewards, with resume at the next entrance. Already offered choices must remain stable. Reloading cannot duplicate completed rewards, refill a spent revival or resurrect a terminal run. Pausing the dashboard is not itself a completed-level checkpoint.
+Completed levels preserve the build and resolved rewards, with resume at the next entrance. Already offered choices must remain stable. Reloading cannot duplicate completed rewards, refill a spent world retry or resurrect a terminal run. Pausing the dashboard is not itself a completed-level checkpoint.
 
 Permanent discoveries, learned recipes, options and challenges survive defeat. The next run rebuilds equipment power, tree progress and active secret bonuses. This preserves learning and future variety without requiring permanent combat-stat grinding.
 
 ### HUD, dashboard and settings
 
-The combat HUD answers immediate questions: health, remaining standard revival, current objective, aim, available actions, cooldowns and ultimate charge. Threat cues should be selective and visible around the action. Collection feedback can acknowledge an intake without turning the center of the screen into a reward ticker.
+The combat HUD answers immediate questions: health, the world's remaining retry, current objective, aim, available actions, cooldowns and ultimate charge. Threat cues should be selective and visible around the action. Collection feedback can acknowledge an intake without turning the center of the screen into a reward ticker.
 
 ![Chase-view combat HUD with health, objective and four action slots.](docs/bible/images/U01-v2.png)
 
-*U01. Combat HUD mockup, creative proposal. The four labeled cells are Weapon, Hero Skill, Mobility and Ultimate. The corrected mockup uses one AVAILABLE revival indicator, an assembled mechanical companion and a strongly irregular rolling scrap core. Layout and anonymous hardware remain proposals.*
+*U01. Combat HUD mockup, creative proposal. The four labeled cells are Weapon, Hero Skill, Mobility and Ultimate. The historical corrected mockup uses one AVAILABLE revival indicator; alpha displays the current world's retry instead, alongside an assembled mechanical companion and a strongly irregular rolling scrap core. Layout and anonymous hardware remain proposals.*
 
 The dashboard gives more space to the character, equipment, companion, map and settings. Its states must distinguish locked slot, unavailable upgrade, permitted equipment swap and special tree respec. The comparison below proposes those distinctions. Its map expresses a four-world journey and two destination options without selecting a canonical route. Between the HUD and the dashboard sits a proposed third state, a hold-to-view overlay: while the player holds a control it shows the current objective, what collected scrap does for the build and, during playtests, notes, and it can grow into the dashboard. A pause lets the player get their bearings (playtest entry 5). The overlay follows the AD-08 interface rules; its control, layout and contents remain open (Q-P30).
 
 ![Three dashboard states separate equipment swaps, special tree respec and next-world selection.](docs/bible/images/U02-v3.png)
 
-*U02. Dashboard mockups, creative proposal. Equipment is reconfigured between fights; tree respec requires a special opportunity; Map shows a separate destination choice. Andrew's requested revision shows the accepted binary tree: one root branches to two nodes, then four, then eight endpoints, with one connected route selected. Exact node effects and milestone allocation remain open. Comparison bars and anonymous hardware are layout studies.*
+*U02. Dashboard mockups, creative proposal. Equipment is reconfigured between fights; tree respec requires a special opportunity; Map shows a separate destination choice. The historical revision shows the former eight-endpoint tree; the alpha uses four picks and sixteen endpoints, with one connected route selected. Exact node effects and milestone allocation remain open. Comparison bars and anonymous hardware are layout studies.*
 
 Readable workshop instrumentation uses solid dark backing, clear labels and restrained indicators. Grime belongs at the border. Settings include sensitivity, sound, UI scale and impact shake, as demonstrated in the orchard. Keyboard navigation, focus restoration and pointer recapture must avoid accidental casts. Controller mappings need hardware evidence, and final production layouts need testing at actual viewing distances.
 
@@ -605,9 +605,9 @@ Readable workshop instrumentation uses solid dark backing, clear labels and rest
 
 The orchard keeps authoritative combat in `src/orchard/simulation.js`, rendering in `scene.js`, procedural models in `models.js`, and input/UI orchestration in `main.js` (this file map is superseded prototype evidence, 22 Sep 2026, and describes the browser proof only). Damage and telegraphs share committed geometry. Both `/` and `/orchard.html` remain available. The current locked Three.js/Vite stack supports the prototypes. The [accepted engineering ADRs](adr/README.md) define the separate production direction without changing what these proofs currently implement.
 
-Future content definitions describe possible characters, trees, items, encounters and recipes. Encounter simulation owns immediate actions and outcomes. Run state carries selections, inventory, route choices, companion, revival and checkpoint status. Permanent progression stores discoveries and unlocked options. Rendering consumes those decisions; it must not reroll loot, miscasts or route offers.
+Content definitions describe pilots, trees, items, encounters and recipes. Encounter simulation owns immediate actions and outcomes. Run state carries path selections, inventory, fixed world position, companion assembly, world retry and checkpoint status. Permanent progression stores unlocked options and discoveries. Rendering consumes these facts; it must not reroll loot, offers or committed attacks. Mind and the remembered cannon consume the same four attack-family definitions for geometry, timing, poses and cues.
 
-The next systems design work should settle milestone and material allocation, route policy, respec scope, attunement and recipe disclosure, plus revival and interruption behavior. These unresolved details constrain implementation; the approved Bible is not approval to code them. Full-run progression and saving require their own scenario tests and human play, beyond the existing encounter evidence.
+The approved alpha plan supplies the world order, four-pick tree, six-pilot target, companion assembly default, retries and unfinished-zone replay policy. Implementation still needs authored content and measured tuning, with scenario tests for saves, unlocks, compatibility and one-time rewards. The current authorization remains the light play lane; production migration and the untouched historical engineering sections are separate work.
 
 Source basis: [Publisher discovery](docs/DISCOVERY.md), [runtime blueprint](docs/RUNTIME-BLUEPRINT.md), [requirements](docs/project/REQUIREMENTS.md), [current lightning contract](docs/project/INCREMENT-01-lightning-playtest.md), and [approved art direction](docs/bible/ART-DIRECTION-LOCK.md).
 
@@ -776,7 +776,7 @@ The following palette is a creative proposal. Start with the working object befo
 | Weapons and class identity | Sable's compact winches use muffled tension and a decisive catch. Kest's lift machinery breathes beneath mortar recoil. Tarn's articulated claws build through tooth engagement and cutting contact. Fuse's unstable electrical pitches distinguish directed casts, automatic field activity and harmful miscasts. Rivet's alignment ticks resolve into a controlled beam tone. These remain candidate identities. |
 | Enemies and telegraphs | Give threats preparation, commitment and release cues. Orchard cutters suggest teeth and closing joints; a Pruner arm suggests a large linkage taking load. Preparation helps locate danger, while shape and motion explain its exact area. Machinery ambience must not duplicate these warnings. |
 | UI and build choices | Short switch clicks and latch tones confirm navigation or a committed selection. A denied action uses one dry interruption, not a damage alarm. Keep route selection, an equipment swap and an available respec audibly distinguishable without requiring sound to understand them. |
-| Revival | Loss of machine rhythm gives way to a relay catch, renewed coil pulse and motor recovery. The run's single standard revival needs a different resolution from terminal defeat. A companion rescue cue must not promise another revival. |
+| World retry | Loss of machine rhythm gives way to a relay catch, renewed coil pulse and motor recovery. The world's single retry needs a different resolution from terminal defeat. A companion rescue cue must not promise another retry. |
 | Discovery | Quiet local detail draws attention before acquisition. A compact, original musical phrase can mark a meaningful secret or new option; ordinary scrap should not spend that same sense of occasion. |
 
 ### Movement, impacts and combat rhythm
@@ -891,13 +891,13 @@ These definitions record how this Bible uses a reference. They grant no permissi
 | --- | --- |
 | A world worth crossing | Pillar requiring distinct landforms, inhabited places, local engineering and discoveries worth traveling for. |
 | Attunement | Compatibility between an item and a character, another item, or both. Exact eligibility remains open. |
-| Endpoint | One possible terminal outcome of a slot tree. Each binary tree has eight, reached through successive 1-to-2-to-4-to-8 branching; a run follows one connected route per slot without crosspathing. |
+| Endpoint | One possible terminal outcome of a pilot's alpha tree. Four binary picks pass through two, four, eight and sixteen nodes, yielding sixteen endpoints. A run selects one connected path without crosspathing. |
 | Fixed secret bonus | Repeatable result of an eligible endpoint combination. Knowledge may persist; its active effect requires the current run's eligible build. |
 | Joyful physical mastery | Pillar requiring satisfying movement, active aim, understandable threats and a useful starting kit. |
 | Respec | A branch change permitted through a special opportunity. Ordinary between-fight equipment reconfiguration is separate. |
 | Scrap becomes your build | Pillar connecting electromagnetic accumulation and internal fabrication to visibly changed working equipment and earned combinations. |
-| Standard revival | The run's single recovery from lethal defeat. A later death ends the run; companion rescue does not silently replenish it. |
-| World | Run-region containing open stages and a boss. Four worlds form a successful run; five catalogue candidates do not select its route. A stage is one bounded 3D space on momentum terrain, entered, roamed and left through an exit; it replaces the earlier compact encounter level. |
+| World | Run-region containing open stages and a boss. Three worlds in a fixed order form a successful run; the other catalogue candidates stay out of it. A stage is one bounded 3D space on momentum terrain, entered, roamed and left through an exit; it replaces the earlier compact encounter level. |
+| World retry | Each world's single recovery from lethal defeat: the current zone restarts from its entrance save. A second death in the same world ends the run; companion rescue does not silently replenish it. |
 
 Definitions follow the corresponding sections above. Prototype aliases are reconciled against the [lightning play guide](docs/LIGHTNING-PLAYGUIDE.md) and [character planning](docs/CHARACTER-BIBLE.md); external reference boundaries follow the approved Art Direction and Appendix B.
 

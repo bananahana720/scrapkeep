@@ -15,6 +15,22 @@ About 30 to 40 minutes. One zone, one Warden, the slice table. This is the first
 - **The map has three lines down it,** one per pilot, and a shared ramp that throws you at the Warden.
 - **Reaching a new ball size opens one upgrade pick** once you are on the ground and out of the fight.
 
+## Added after this sheet was first written (3 October)
+
+None of these change the fight. They are there if you want them.
+
+- **Settings** from the title (S) or the pause menu: fullscreen, quality, and a rebind row for every verb. A key that another verb already uses reads "Taken".
+- **Pilot cards show the unlock for a locked pilot.** Sable, Rivet and Kest are open on a fresh save. Press P on a card to change its paint.
+- **Achievements** open from the title with A. Earning one shows a short note in play.
+- **Key prompts follow your device and your bindings.** Pick up a gamepad and the prompts switch to pad buttons.
+- **The recovered gamepad-menu changes passed independent source review and the executable gate at 286327f.** Physical controller operation still needs checking. A jumps and confirms; B boosts and backs out. Judge keyboard and mouse first.
+
+## Checked candidate
+
+The gamepad changes are integrated into `proto/alpha`. The recovery record at `artifacts/local/alpha/recovery-2026-10-03/RECOVERY.md` gives the final source identity, integrated gate and checkpoint results. Check its sitting status before launching. The current reconciliation also changes documentation, so the earlier 286327f gate alone does not qualify the final tree.
+
+The game still opens Sable, Rivet and Kest on a fresh profile. Their campaign unlock conditions are approved future work. This sitting judges the Cable Reach loop, not the finished campaign or durable active-run saves.
+
 ## Steps
 
 1. Open a terminal.
@@ -22,12 +38,12 @@ About 30 to 40 minutes. One zone, one Warden, the slice table. This is the first
 2. Launch the slice with a fresh save folder, so the first-time key prompts show again. The first launch builds shaders and takes longer than usual.
 
    ```bash
-   XDG_DATA_HOME="$HOME/.local/share/scrapkeep-sitting-1" scrapkeep game-completion-plan-75f776/core-loop -- --table=slice
+   XDG_DATA_HOME="$HOME/.local/share/scrapkeep-alpha-sitting-2026-10-03" scrapkeep game-completion-plan-75f776/core-loop -- --table=slice
    ```
 
 3. Pick any pilot.
 
-4. For the first five minutes, harpoon into an ordinary pack of enemies. No harpoon play is on record yet, so this is the part I most need.
+4. For the first five minutes, harpoon into an ordinary pack of enemies. Your earlier homing-smash verdict was super fun; judge whether the current latch, prompts and impact make that action clear and satisfying.
 
 5. Then play however you like. Hold R to restart a run. Play at least two runs if you feel like it.
 

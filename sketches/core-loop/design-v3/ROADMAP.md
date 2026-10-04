@@ -1,4 +1,50 @@
-# Roadmap to the final draft v2
+# Roadmap to the exported alpha
+
+Updated 3 October 2026 from the approved refinement of [ALPHA-PLAN](ALPHA-PLAN.md), the [owner interview](OWNER-INTERVIEW-2026-10-02.md), [LEGIBILITY](LEGIBILITY.md) and playtest entry 11. This is the current completion roadmap. The former world-one limit and alternative-loop queue below are preserved as historical direction, not assignments.
+
+## Definition of done
+
+One exported Linux alpha with Spillway Works, Dig and Highdraft in that fixed order; two zones and a world boss each; six Wardens, Brindle, Waking and Mind. Mind ends the run. Six full pilots, one assembled combat companion, a between-run camp, and a 30-to-45-minute victorious run. One death retry per world; free unfinished-zone quit/crash replay from the saved entrance. No permanent combat-stat boosts.
+
+| Checkpoint | Delivery | Acceptance |
+| --- | --- | --- |
+| Cable Reach | One readable posture fight, meaningful growth, activities and flowing harpoon traversal | Checked candidate, existing bot bands and performance evidence; Andrew's sitting verdict before any later-world map or encounter |
+| World one | Spillway plus Cable Reach, two Wardens, Brindle, rescue progression, rewards and durable run continuity | Complete world-one run; saves, retries, one-time rewards and existing profile migrations checked |
+| New pilots and companion | Tarn first, Tally next, cannon last; reused six probes; one modular SPIL-9 | Each full kit/tree/model/animation/sound; three module pairs useful and legible; no extra revival |
+| Three-world greybox | Four later zones, Breach and Lift, six new enemy kinds, four Wardens, Waking and Mind | Complete campaign without boss stubs; every pilot traverses both later mechanics |
+| Dressed campaign and camp | Approved world art, animation, effects, music/lore; five menu stations, skee-ball, pet/toys, ghost/medals and enemy sandbox | Captures and frame times on the same build; in-play look/audio verdict; launch budgets checked |
+| Exported alpha | Achievements, cosmetics, codex, discoveries/recipes, ending, how-to-play and bundled assets/music | Fresh-profile unlock sequence, another run with cannon, cold Linux launch and durable resume |
+
+## Content and progression
+
+| Pilot | Unlock |
+| --- | --- |
+| Sable | Initially available |
+| Rivet | World-one rescue quest |
+| Tarn | Defeat Brindle |
+| Kest | Dig rescue quest |
+| Tally | Return one ledger leaf from each world to Moss; collection spans runs |
+| Remembered cannon | Defeat Mind once |
+
+Unlocks become selectable next run; existing earned profile unlocks remain. The three existing pilots are still starters in today's data until the unlock achievements are wired.
+
+One binary tree per pilot has four connected picks and sixteen endpoints; world one opens depths one/two and later worlds depths three/four. Preserve Path/Relic/Parts and the two initial evolutions. Rarity is Common/Rare/Relic/Evolved plus hot-wired. Cogs spend, scrap supplies size and armour, cores stay zone-local. Three companion module families fit two unordered sockets on one SPIL-9 chassis; run loot and intermission reconfiguration form the assembly loop.
+
+## Execution and evidence
+
+Continue proto/alpha; coordinator-only serial integration and canonical records. Recover the pending gamepad-menu fix at 286327f before replacement work. Existing rock/terrain candidates remain scoped experiments until their selected pieces pass admission; do not merge an old probe branch wholesale into the current slice. Preserve their sources and receipts.
+
+Use small waves within the host's four-agent ceiling: coordinator, up to two disjoint writers, one reviewer. Pin delegates by the active Codex map, preserving the stricter project judgment rules and approved GPT-6.1 Sol high asset/animation lane. Shared gate once per combined candidate; serialize GPU work.
+
+Current reconstruction: three of six pilots playable, zero of three worlds complete, first alpha sitting pending. No reliable overall percentage. The old 235-unit/11-to-14-day estimate is retired; recount bounded remaining units after recovery. Report built, integrated, automated and human-accepted separately.
+
+The Cable Reach miss policy remains one correction round of at most ten units and a second sitting; further work needs a re-plan. Optional extras are additional lounge games/decorations. Production migration, dependencies/services, more worlds and a boss after Mind are outside this alpha.
+
+## Historical roadmap (28 September 2026)
+
+The following preserves the earlier design and its observations. Its old scope, phases, assignments, model pins and deferred roster do not override the current roadmap above.
+
+### Historical roadmap to the final draft v2
 
 Andrew, 2026-09-28: "shoot for the stars ... in a reasonable manner ... take this super serious mode ... have fun and let's try to cook something up that's like a well-polished final draft V2." The build is the core-loop sketch's v3 code line. The end state is one run you want to replay, one you'd show someone.
 

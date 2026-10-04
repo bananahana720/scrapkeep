@@ -1,5 +1,7 @@
 # Owner interview, 2026-10-02 (three rounds through AskUserQuestion)
 
+The table preserves the 2 October interview. The implementation request on 3 October adds the refinements below; use them with the current [alpha plan](ALPHA-PLAN.md).
+
 | # | Question | Andrew's answer |
 | --- | --- | --- |
 | 1 | Run shape | All three worlds in a row; every run starts in world one; death ends the run (default) |
@@ -18,3 +20,12 @@
 | 14 | Practice yard | A time-trial course with ghost and medals, plus a sandbox where any enemy can be spawned (default) |
 | 15 | What makes a synergy great | A big visible effect on the world, and chains where synergies feed each other |
 | 16 | What a great line feels like | All four: speed and flow, big air, threading gaps, hidden routes |
+
+## Refinements authorized on 3 October
+
+- Mind ends the three-world campaign. Six full pilots are required. Rivet retains the world-one rescue, Tarn unlocks after Brindle, Kest retains the Dig rescue, Tally returns the three ledger leaves to Moss, and the remembered cannon unlocks after Mind. Earned pilots become selectable next run; preserve existing profile unlocks.
+- The first death in a world spends its one retry. The next death there ends the run. Quit or crash replays the saved zone entrance without spending the retry. Restore stable offers and prevent duplicate transient rewards or permanent transactions.
+- One binary tree per pilot has four picks and sixteen endpoints. World one opens depths one and two; later worlds open three and four. Scrap supplies size and temporary armour, Cogs supply spending agency, and cores remain zone-local.
+- The combat companion is one SPIL-9 hover chassis with two unordered sockets. Fit any two different support families from conductive priming, a brief ram brace and a clutch escape corridor at intermission. Run-found pieces do not auto-equip. No additional combat key, companion health economy, revival or extra retry. Camp pets remain separate.
+- The required camp has the launch gate, lockers, Moss, achievements, settings, one working skee-ball lane, pet and toys, a saved-ghost time trial with medals, and an any-enemy sandbox. Additional lounge games and decorative expansion are optional. Launch targets remain five seconds by rolling or two through the shortcut.
+- Andrew's Cable Reach sitting comes before any Dig or Highdraft map or encounter construction. Reuse the approved kit and terrain probes. A weak kit probe refines the required pilot rather than reducing the six-pilot target.
