@@ -105,7 +105,13 @@ func _check_stage(stage: int) -> void:
 	_report(label + " flow row", _game.flow.stage_def() == row, "selected table row")
 	var audio = _game.presentation.audio
 	var music: Dictionary = row["music"]
-	_report(label + " music row", audio._music_row(stage) == music, str(music))
+	# 2026-10-04 (fix round D): since C8b, audio._music_row returns music_rows' resolved pack
+	# {synth_theme, ace_manifest}, not the row's {theme, ace}; compare the row through it.
+	var pack: Dictionary = audio._music_row(stage)
+	var manifest: String = pack["ace_manifest"]
+	var pack_ace: String = manifest.get_base_dir().get_file() if manifest != "" else ""
+	_report(label + " music row", pack["synth_theme"] == music["theme"] and pack_ace == music["ace"],
+		"%s resolves to %s" % [music, pack])
 	_report(label + " music id", audio._ace_package_for(stage) == music["ace"],
 		"ACE '%s', synth theme %d" % [audio._ace_package_for(stage), audio._stage_theme(stage)])
 	_report(label + " music theme", audio._stage_theme(stage) == music["theme"], str(music["theme"]))
