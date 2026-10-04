@@ -1,6 +1,7 @@
 extends "res://src/world/device.gd"
 
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 
 # A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
 # section 9): a verdigris concrete pocket with a charcoal groove, its open side walled
@@ -26,12 +27,19 @@ const PICK_RARITIES := ["common", "rare"]
 # that stopped to open it is clear of all three.
 const PEDESTALS := [Vector3(-4.0, 0.0, -3.0), Vector3(0.0, 0.0, -3.5), Vector3(4.0, 0.0, -3.0)]
 const PEDESTAL_REACH := 1.7
+# RL2: the chance a cache's last pedestal holds a relic for a slot the pilot has not
+# filled, instead of a part. Drawn from the device's own luck stream under another key,
+# so the parts roll above it consumes exactly what it did before relics.
+const RELIC_CHANCE := 0.2
 
 enum { SEALED, OPEN, PICKING, TAKEN }
 
 var state := SEALED
 var offers: Array = []
 var taken := ""
+# An authored cache can set relic_guaranteed to always hold one; relic_chance is the test seam.
+var relic_guaranteed := false
+var relic_chance := RELIC_CHANCE
 var _wall: Node3D
 var _lid: Node3D
 var _pedestals: Array = []
@@ -157,6 +165,12 @@ func fire() -> bool:
 	_lid.position += Vector3(0.0, 0.6, -0.4)
 	_lid.rotation.x = -0.9
 	offers = Parts.roll(system.luck(id), PICK_RARITIES, ctx.run.class_id(), ctx.run.parts, PICKS)
+	var relic := _relic_offer()
+	if relic != "":
+		if offers.size() < PICKS:
+			offers.append(relic)
+		else:
+			offers[offers.size() - 1] = relic
 	var ball: Vector3 = ctx.player.ball_position()
 	_inside.clear()
 	for i in _pedestals.size():
@@ -166,13 +180,27 @@ func fire() -> bool:
 		_inside.append(_on(p, ball))
 		if not shown:
 			continue
-		var d: Resource = Parts.def(offers[i])
+		var is_relic := Relics.has(offers[i])
+		var d: Resource = Parts.def(Relics.part_of(offers[i]) if is_relic else offers[i])
 		var rarity: String = d.rarity if d != null else "common"
 		p["gem"].material_override = Palette.solid(Palette.BRASS if rarity.begins_with("rare") else Palette.ARC, 2.0)
-		var words := Parts.display_name(offers[i]).split(" ", false)
+		var words := (Relics.name_of(offers[i]) if is_relic else Parts.display_name(offers[i])).split(" ", false)
 		var icon: String = "cat_" + (d.icon_category if d != null and d.icon_category != "" else "utility")
 		p["label"].set_parts(" ".join(words.slice(0, WorldPrompt.TITLE_WORDS)), "", icon)
 	return true
+
+
+# The relic this cache holds, or "". Only a relic the pilot can use for an empty slot.
+func _relic_offer() -> String:
+	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics)
+	if pool.is_empty():
+		return ""
+	var rng: RandomNumberGenerator = system.luck(id + ":relic")
+	var roll := rng.randf()
+	var pick := rng.randi()
+	if not relic_guaranteed and roll >= relic_chance:
+		return ""
+	return pool[pick % pool.size()]
 
 
 func _on(p: Dictionary, ball: Vector3) -> bool:
@@ -198,4 +226,7 @@ func take(index: int) -> void:
 	spent = true
 	for p in _pedestals:
 		p["node"].visible = false
-	ctx.run.add_part(taken, "cache")
+	if Relics.has(taken):
+		ctx.run.add_relic(taken, "cache")
+	else:
+		ctx.run.add_part(taken, "cache")
