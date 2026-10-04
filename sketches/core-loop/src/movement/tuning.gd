@@ -57,6 +57,9 @@ const SPECS := [
 	# harpoon_lock_deg and flying the ball in.
 	{"key": "harpoon_smash_speed", "label": "Harpoon smash speed", "min": 10.0, "max": 45.0, "step": 1.0, "value": 24.0},
 	{"key": "harpoon_lock_deg", "label": "Harpoon lock (deg)", "min": 0.0, "max": 25.0, "step": 0.5, "value": 10.0},
+	# Debug stand-in for run-found companion pieces: on grants one piece per family at run start,
+	# so the intermission assembly screen has something to assemble. Off leaves run.companion {}.
+	{"key": "companion_stub", "label": "Companion stub pieces", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "harpoon_rewind", "label": "Harpoon rewind (s)", "min": 0.0, "max": 3.0, "step": 0.1, "value": 1.0},
 ]
 
@@ -119,6 +122,7 @@ const FLAGS := {
 	"world-one-builds": ["world_one_builds", "option", "launch"],
 	"hotwire-shell": ["hotwire_shell", "option", "launch"],
 	"hotwire-tread": ["hotwire_tread", "option", "launch"],
+	"companion-stub": ["companion_stub", "option", "launch"],
 }
 
 

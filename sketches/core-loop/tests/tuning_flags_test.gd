@@ -20,6 +20,7 @@ const EXPECTED := {
 	"world-one-builds": ["world_one_builds", "on", "bogus", "launch"],
 	"hotwire-shell": ["hotwire_shell", "on", "bogus", "launch"],
 	"hotwire-tread": ["hotwire_tread", "on", "bogus", "launch"],
+	"companion-stub": ["companion_stub", "on", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.
