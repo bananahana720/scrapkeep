@@ -92,7 +92,7 @@ Grid: plating 70, 90, 110, 130; `curve` 1, 2; `ram_shatters` true, false; five s
 
 Reading it: below plating 110 the grown ball arrives with so much heft (2.20) that it breaks the Warden in under 25 s whatever the curve. Curve 1 never separates the arms by 2.0 times at a plating a grown ball can still fight in 25 s or more. Curve 2 does, because it squares the ratio of punch to plating: a small ball's rams fall under the plating and gain little, a grown ball's land above it. At plating 130 curve 2 pushes the small median past 120 s.
 
-`pin`: `tests/posture_bands_test.gd` plays the slice row on seeds 1 to 3 for small, grown and camper and holds the bands and the picked medians for those seeds (small 91.8 s, grown 25.2 s) to within 10 percent.
+`pin`: `tests/posture_bands_test.gd` plays the slice row on seeds 1 to 3 for small, grown and camper and holds the bands and the picked medians for those seeds (small 82.4 s, grown 39.2 s, re-pinned 2026-10-04, wave 9, after the bot_driver and warden_variant changes) to within 10 percent.
 
 ## Superseded: the first sweep (unit BN)
 
