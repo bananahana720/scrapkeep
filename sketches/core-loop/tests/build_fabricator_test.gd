@@ -4,9 +4,10 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 
-# A fabricator is drive-through: roll through its hoop at speed with enough scrap and
-# it grants its part, spends the price, and the ball keeps its horizontal speed within
-# 15%. Rolling through short of scrap grants nothing and costs nothing. The ball is
+# A fabricator is drive-through: roll through its hoop at speed with enough cogs and
+# it grants its part, spends the price in cogs and no mass, and the ball keeps its
+# horizontal speed within 15%. Rolling through short of cogs grants nothing and costs
+# nothing. The rich pass clears the field first, so no gear on the lane moves the wallet. The ball is
 # driven through two hoops on the flat top shelf with ctx.calm set, so the speed checks
 # measure the ball and the fabricator alone.
 
@@ -30,7 +31,8 @@ var _gained: Array = []
 var _fab := {}
 var _before := 0.0
 var _after := 0.0
-var _scrap_before := 0
+var _cogs_before := 0
+var _mass_before := 0.0
 var _range_before := 0.0
 var _pieces_before := 0
 var _poor := {}
@@ -117,8 +119,10 @@ func _start_rich_pass() -> void:
 	_build.fabricators.clear()
 	var at: Vector3 = _game.ctx.terrain.drop_point(LANE_X, HOOP_Z, 0.0)
 	_fab = _build.fabricators.add_at(at, Vector3(0.0, 0.0, 1.0), PART)
-	_game.run.add_scrap(60, Vector3.ZERO)
-	_scrap_before = _game.run.scrap
+	_build.scrap.clear()
+	_game.run.add_cogs(60)
+	_cogs_before = _game.run.cogs
+	_mass_before = _game.run.mass
 	_range_before = _game.player.grapple_range()
 	_pieces_before = _build.accretion.piece_count()
 	_gained.clear()
@@ -131,9 +135,10 @@ func _check_rich() -> void:
 	var price := Fabricators.price(PART, 0)
 	var granted: bool = _gained.size() == 1 and _gained[0] == [PART, "fabricator"]
 	_report("fabricator grants", granted and _game.run.parts.has(PART),
-		"rolled through the %s hoop with %d scrap: part_gained %s, run parts %s" % [PART, _scrap_before, _gained, _game.run.parts])
-	_report("fabricator spends", _game.run.scrap == _scrap_before + _collected - price,
-		"price %d: scrap %d before, %d picked up on the lane, %d after" % [price, _scrap_before, _collected, _game.run.scrap])
+		"rolled through the %s hoop with %d cogs: part_gained %s, run parts %s" % [PART, _cogs_before, _gained, _game.run.parts])
+	_report("fabricator spends", _game.run.cogs == _cogs_before - price and is_equal_approx(_game.run.mass, _mass_before + _collected),
+		"price %d: cogs %d before, %d after; mass %.1f before, %.1f after (%d scrap picked up on the lane)"
+			% [price, _cogs_before, _game.run.cogs, _mass_before, _game.run.mass, _collected])
 	_report("fabricator momentum", _kept(_before, _after),
 		"%.2f m/s horizontal before the hoop, %.2f m/s after (within %d%%)" % [_before, _after, int(TOLERANCE * 100.0)])
 	_report("fabricated part works", _game.player.grapple_range() > _range_before * 1.29,
@@ -145,7 +150,7 @@ func _check_rich() -> void:
 
 func _start_poor_pass() -> void:
 	# Spend down to nothing so the next hoop is out of reach.
-	_game.run.spend_scrap(_game.run.scrap)
+	_game.run.spend_cogs(_game.run.cogs)
 	_build.fabricators.clear()
 	var at: Vector3 = _game.ctx.terrain.drop_point(POOR_X, HOOP_Z, 0.0)
 	_poor = _build.fabricators.add_at(at, Vector3(0.0, 0.0, 1.0), "hot_rivets")
@@ -158,9 +163,9 @@ func _start_poor_pass() -> void:
 func _check_poor() -> void:
 	var before: float = _poor.get("before", 0.0)
 	var after: float = _poor.get("after", 0.0)
-	_report("short of scrap", _gained.is_empty() and _game.run.parts.size() == _poor["parts_before"],
-		"rolled through with %d scrap against a price of %d: part_gained %s" % [_game.run.scrap, Fabricators.price("hot_rivets", _poor["parts_before"]), _gained])
-	_report("short of scrap momentum", _kept(before, after),
+	_report("short of cogs", _gained.is_empty() and _game.run.parts.size() == _poor["parts_before"],
+		"rolled through with %d cogs against a price of %d: part_gained %s" % [_game.run.cogs, Fabricators.price("hot_rivets", _poor["parts_before"]), _gained])
+	_report("short of cogs momentum", _kept(before, after),
 		"%.2f m/s before, %.2f m/s after (within %d%%)" % [before, after, int(TOLERANCE * 100.0)])
 
 

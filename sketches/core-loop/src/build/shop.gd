@@ -18,14 +18,10 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const SHELF_SIZE := 3
 const SHELF_RARITIES := ["common", "rare"]
 const TOP_RARITIES := ["relic"]
-# The reroll costs this at the first visit and rises by REROLL_GROWTH each visit after.
-const REROLL_BASE := 12
-const REROLL_GROWTH := 1.5
+# Prices are cogs, from Fabricators.COG_PRICES: the reroll costs reroll_base at the first
+# visit and rises by reroll_growth each visit after; a charge cell costs cell_base, rising
+# by cell_growth for each cell already in that slot; a sale pays sell_share of the price.
 const REROLLS_PER_VISIT := 1
-# A charge cell costs CELL_BASE, rising by CELL_GROWTH for each cell already in that slot.
-const CELL_BASE := 20
-const CELL_GROWTH := 1.6
-const SELL_SHARE := 0.5
 const TOP_CLASS_MAX := 5
 const SEED := 4242
 
@@ -168,9 +164,9 @@ func clock_paused() -> bool:
 
 
 # The run's death: dying after leaving empty-handed while holding a shelf part's worth
-# of scrap is what Moss notices next time (callback C14).
-func note_death(scrap_held: int) -> void:
-	if _left_empty and _cheapest_left > 0 and scrap_held >= _cheapest_left:
+# of cogs is what Moss notices next time (callback C14).
+func note_death(cogs_held: int) -> void:
+	if _left_empty and _cheapest_left > 0 and cogs_held >= _cheapest_left:
 		neglected = true
 
 
@@ -201,7 +197,7 @@ func buy(index: int) -> Dictionary:
 		return _result(false, SOLD_OUT)
 	var part_id: String = shelf[index]["part_id"]
 	var cost: int = price(part_id)
-	if not ctx.run.spend_scrap(cost):
+	if not ctx.run.spend_cogs(cost):
 		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", part_id, cost)
 	shelf[index]["sold"] = true
 	bought_this_visit += 1
@@ -210,7 +206,7 @@ func buy(index: int) -> Dictionary:
 
 
 func reroll_price() -> int:
-	return int(round(REROLL_BASE * pow(REROLL_GROWTH, maxi(0, visit - 1))))
+	return int(round(Fabricators.COG_PRICES["reroll_base"] * pow(Fabricators.COG_PRICES["reroll_growth"], maxi(0, visit - 1))))
 
 
 func reroll() -> Dictionary:
@@ -219,7 +215,7 @@ func reroll() -> Dictionary:
 	if rerolls_left <= 0:
 		return _result(false, NO_REROLL)
 	var cost: int = reroll_price()
-	if not ctx.run.spend_scrap(cost):
+	if not ctx.run.spend_cogs(cost):
 		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", "", cost)
 	rerolls_left -= 1
 	shelf = _stock()
@@ -247,7 +243,7 @@ func charge_offers() -> Array:
 
 func cell_price(slot: String) -> int:
 	var cells: int = ctx.run.parts.count(Items.CELLS_FOR.get(slot, ""))
-	return int(round(CELL_BASE * pow(CELL_GROWTH, cells) * _price_scale()))
+	return int(round(Fabricators.COG_PRICES["cell_base"] * pow(Fabricators.COG_PRICES["cell_growth"], cells) * _price_scale()))
 
 
 func buy_charge(slot: String) -> Dictionary:
@@ -259,7 +255,7 @@ func buy_charge(slot: String) -> Dictionary:
 			offer = o
 	if offer.is_empty() or not offer["can"]:
 		return _result(false, CAPPED)
-	if not ctx.run.spend_scrap(offer["price"]):
+	if not ctx.run.spend_cogs(offer["price"]):
 		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", offer["part_id"], offer["price"])
 	bought_this_visit += 1
 	ctx.run.add_part(offer["part_id"], "shop")
@@ -275,7 +271,7 @@ func sell_quote(part_id: String) -> int:
 	if not _can_remove(part_id):
 		return -1
 	var held: int = ctx.run.parts.size() - 1
-	return int(floor(Fabricators.price(part_id, held) * _price_scale() * SELL_SHARE))
+	return int(floor(Fabricators.price(part_id, held) * _price_scale() * Fabricators.COG_PRICES["sell_share"]))
 
 
 # Every held part with its quote, for the UI: {part_id, name, quote, icon}.
@@ -322,7 +318,7 @@ func buy_top() -> Dictionary:
 		return _result(false, SOLD_OUT)
 	if t["locked"]:
 		return _result(false, LOCKED, "moss.refuse.2", t["part_id"])
-	if not ctx.run.spend_scrap(t["price"]):
+	if not ctx.run.spend_cogs(t["price"]):
 		return _result(false, CANT_AFFORD, "moss.bark.cant_afford", t["part_id"], t["price"])
 	top["sold"] = true
 	bought_this_visit += 1
@@ -400,11 +396,11 @@ func _offer(part_id: String, sold: bool, index: int) -> Dictionary:
 		"icon": "cat_" + (d.icon_category if d != null else "utility"),
 		"trigger_icon": "trg_" + d.trigger if d != null and d.trigger != "" else "",
 		"element_icon": "el_" + d.element if d != null and d.element != "" else "",
-		"affordable": ctx.run.scrap >= price(part_id)}
+		"affordable": ctx.run.cogs >= price(part_id)}
 
 
 func _result(ok: bool, reason: String, line_id := "", part_id := "", cost := 0) -> Dictionary:
-	var out := {"ok": ok, "reason": reason, "part_id": part_id, "price": cost, "scrap": ctx.run.scrap}
+	var out := {"ok": ok, "reason": reason, "part_id": part_id, "price": cost, "cogs": ctx.run.cogs, "scrap": ctx.run.scrap}
 	if line_id != "":
 		out["bark"] = line(line_id)
 	return out
@@ -467,7 +463,4 @@ func _remove_part(part_id: String) -> void:
 func _refund(amount: int) -> void:
 	if amount <= 0:
 		return
-	if ctx.run.has_method("refund_scrap"):
-		ctx.run.refund_scrap(amount)
-	else:
-		ctx.run.scrap += amount
+	ctx.run.add_cogs(amount)

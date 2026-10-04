@@ -43,8 +43,23 @@ signal recovered(value: int)
 var recovered_values: Array[int] = []
 var expired_values: Array[int] = []
 
+# Cogs (CG1): the spend wallet's pickups, brass gears that share the magnet and the arc
+# pull but never add mass. A scrap line lays one gear worth COG_LINE_VALUE beside every
+# COG_LINE_EVERY-th piece, and a kill drops one 1-cog gear per scrap unit it drops, so a
+# run earns about the cogs it once earned as wallet scrap from lines and kills. Gears are
+# placed without the rng, so the loot stream draws what it drew before.
+const COG_LINE_EVERY := 2
+const COG_LINE_VALUE := 2
+const COG_LINE_SIDE := 1.5
+const COG_RING := 1.8
+# What the last step() collected as cogs, one value per gear.
+var cog_values: Array[int] = []
+
 var _value := {}
 var _age := {}
+var _cogs := {}
+var _cog_material: StandardMaterial3D
+var _cog_mesh: CylinderMesh
 var _cluster_material: StandardMaterial3D
 var _cluster_mesh: BoxMesh
 var _items: Array[MeshInstance3D] = []
@@ -61,6 +76,12 @@ func setup() -> void:
 	_cluster_material = Palette.solid(Palette.AMBER, 2.2)
 	_cluster_mesh = BoxMesh.new()
 	_cluster_mesh.size = Vector3(1.4, 1.4, 1.4)
+	_cog_material = Palette.solid(Palette.BRASS, 1.8)
+	_cog_mesh = CylinderMesh.new()
+	_cog_mesh.top_radius = 0.45
+	_cog_mesh.bottom_radius = 0.45
+	_cog_mesh.height = 0.18
+	_cog_mesh.radial_segments = 8
 
 
 func lay_out(terrain, lines: Array, density: float, rng: RandomNumberGenerator) -> void:
@@ -74,6 +95,10 @@ func lay_out(terrain, lines: Array, density: float, rng: RandomNumberGenerator) 
 			var spot := from.lerp(to, t)
 			spot += Vector2(rng.randf_range(-3.0, 3.0), rng.randf_range(-3.0, 3.0))
 			_add(terrain.drop_point(spot.x, spot.y, 1.4))
+			if i % COG_LINE_EVERY == COG_LINE_EVERY - 1:
+				var across := (to - from).orthogonal().normalized() * COG_LINE_SIDE
+				var gear := spot + across
+				_add_cog(terrain.drop_point(gear.x, gear.y, 1.4), COG_LINE_VALUE)
 
 
 func clear() -> void:
@@ -83,10 +108,40 @@ func clear() -> void:
 	_caught.clear()
 	_value.clear()
 	_age.clear()
+	_cogs.clear()
 
 
+# Scrap pieces and recovery clusters on the field; gears are counted apart.
 func count() -> int:
-	return _items.size()
+	return _items.size() - _cogs.size()
+
+
+func cog_count() -> int:
+	return _cogs.size()
+
+
+# The cogs the field's gears hold.
+func cog_value() -> int:
+	var total := 0
+	for v in _cogs.values():
+		total += int(v)
+	return total
+
+
+# `amount` 1-cog gears in a ring around `at`, placed without the rng.
+func drop_cogs(at: Vector3, amount: int) -> void:
+	for i in amount:
+		var angle := TAU * i / float(maxi(1, amount))
+		_add_cog(at + Vector3(cos(angle) * COG_RING, 1.2, sin(angle) * COG_RING), 1)
+
+
+# A Warden's cogs along the same line as its scrap, offset to one side.
+func drop_cogs_line(at: Vector3, heading: Vector3, length: float, amount: int) -> void:
+	var flat := Vector3(heading.x, 0.0, heading.z).normalized()
+	var side := flat.cross(Vector3.UP).normalized() * COG_LINE_SIDE
+	for i in amount:
+		var t := (i + 0.5) / float(maxi(1, amount))
+		_add_cog(at + flat * length * t + side + Vector3.UP * 1.2, 1)
 
 
 # Live recovery clusters, and the scrap they hold.
@@ -155,6 +210,7 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 	_spin += delta * 2.4
 	recovered_values.clear()
 	expired_values.clear()
+	cog_values.clear()
 	var taken: Array[Vector3] = []
 	var reach := magnet_reach(ball_speed)
 	var home := (HOME_SPEED + ball_speed * HOME_OVER_BALL) * pull_scale()
@@ -176,6 +232,8 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 			if _value.has(item):
 				recovered_values.append(int(_value[item]))
 				recovered.emit(int(_value[item]))
+			elif _cogs.has(item):
+				cog_values.append(int(_cogs[item]))
 			else:
 				taken.append(item.global_position)
 			_forget(item)
@@ -200,6 +258,11 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 func _forget(item: MeshInstance3D) -> void:
 	_value.erase(item)
 	_age.erase(item)
+	_cogs.erase(item)
+
+
+func _add_cog(at: Vector3, value: int) -> void:
+	_cogs[_add(at, _cog_mesh, _cog_material)] = value
 
 
 func _add(at: Vector3, mesh: Mesh = null, material: Material = null) -> MeshInstance3D:

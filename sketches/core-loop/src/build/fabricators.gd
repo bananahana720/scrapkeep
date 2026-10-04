@@ -5,9 +5,9 @@ const Palette := preload("res://src/core/palette.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 # Drive-through fabricators: hoops standing across the scrap lines. Each shows the part
-# it makes and its price while you approach; roll through the hoop with enough scrap
-# and it spends the scrap and bolts the part on, at full speed. There is no collider,
-# no stop and no menu (momentum is sacred). Short of scrap, you roll through and
+# it makes and its price while you approach; roll through the hoop with enough cogs
+# and it spends the cogs and bolts the part on, at full speed. There is no collider,
+# no stop and no menu (momentum is sacred). Short of cogs, you roll through and
 # nothing happens; the hoop says how much more you need. After a sale it restocks
 # with a new part after a short beat.
 #
@@ -17,9 +17,13 @@ const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const RING := 5.0
 const SINK := 1.5
 const WIDTH := 8.0
-const BASE_PRICE := 10.0
-const TIER_PRICE := {1: 1.0, 2: 1.6, 3: 2.6}
-const PRICE_GROWTH := 1.15
+# Every cog price in one table (CG1), so a retune is one edit. Provisional: the values
+# are the scrap prices they replace. A part costs part_base x part_tier[tier] x
+# part_growth^parts_held; the shop's reroll, charge cells and sell-back read the rest.
+const COG_PRICES := {
+	"part_base": 10.0, "part_tier": {1: 1.0, 2: 1.6, 3: 2.6}, "part_growth": 1.15,
+	"reroll_base": 12, "reroll_growth": 1.5, "cell_base": 20, "cell_growth": 1.6, "sell_share": 0.5,
+}
 const RESTOCK := 2.5
 const AVOID_BEACON := 55.0
 const AVOID_SPAWN := 25.0
@@ -38,7 +42,7 @@ var mark_for: Callable
 static func price(part_id: String, parts_held: int) -> int:
 	var d: Resource = Parts.def(part_id)
 	var tier: int = d.tier if d != null else 1
-	return int(round(BASE_PRICE * TIER_PRICE.get(tier, 1.0) * pow(PRICE_GROWTH, parts_held)))
+	return int(round(COG_PRICES["part_base"] * COG_PRICES["part_tier"].get(tier, 1.0) * pow(COG_PRICES["part_growth"], parts_held)))
 
 
 # Stands count hoops across the scrap lines, away from the beacon and the spawn.
@@ -112,9 +116,9 @@ func _roll(held: Array) -> String:
 	return picks[0] if not picks.is_empty() else "hot_rivets"
 
 
-# Returns the part ids bought this tick. The caller spends the scrap through the run
-# state first; buy() is told whether the spend went through.
-func step(ball: Vector3, delta: float, scrap: int, held: Array) -> Array[Dictionary]:
+# Returns the part ids bought this tick. The caller spends the cogs through the run
+# state first; buy() is told whether the spend went through. `cogs` is the wallet.
+func step(ball: Vector3, delta: float, cogs: int, held: Array) -> Array[Dictionary]:
 	var crossings: Array[Dictionary] = []
 	for fab in _fabs:
 		if fab["restock"] > 0.0:
@@ -131,7 +135,7 @@ func step(ball: Vector3, delta: float, scrap: int, held: Array) -> Array[Diction
 		var crossed: bool = signf(was) != signf(along) and was != 0.0
 		if crossed and side <= WIDTH * 0.5 + 0.5 and rel.y > -1.5 and rel.y < RING * 2.0 - SINK and fab["restock"] <= 0.0:
 			crossings.append(fab)
-		_refresh_label(fab, scrap, held)
+		_refresh_label(fab, cogs, held)
 	return crossings
 
 

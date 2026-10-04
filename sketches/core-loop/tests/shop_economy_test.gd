@@ -4,6 +4,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Shop := preload("res://src/build/shop.gd")
 const Items := preload("res://src/build/items.gd")
+const Fabricators := preload("res://src/build/fabricators.gd")
+const REROLL_BASE: int = Fabricators.COG_PRICES["reroll_base"]
 
 # Moss's workshop economy (DESIGN-V2 section 12), as Rivet, whose sprint and special
 # both recharge:
@@ -100,32 +102,32 @@ func _check_paused() -> void:
 
 func _check_shelf() -> void:
 	var broke: Dictionary = _shop.buy(0)
-	_game.run.add_scrap(60, Vector3.ZERO)
+	_game.run.add_cogs(60)
 	var before: int = _game.run.parts.size()
 	var price: int = _shop.shelf_offers()[0]["price"]
-	var wallet: int = _game.run.scrap
+	var wallet: int = _game.run.cogs
 	var bought: Dictionary = _shop.buy(0)
 	var again: Dictionary = _shop.buy(0)
 	_report("shelf", not broke["ok"] and broke["reason"] == Shop.CANT_AFFORD and broke["bark"]["line_id"] == "moss.bark.cant_afford"
-			and bought["ok"] and _game.run.parts.size() == before + 1 and _game.run.scrap == wallet - price
+			and bought["ok"] and _game.run.parts.size() == before + 1 and _game.run.cogs == wallet - price
 			and bought["bark"]["line_id"] == "moss.bark.buy" and again["reason"] == Shop.SOLD_OUT,
-		"broke: %s '%s'; bought %s for %d scrap ('%s'); the same slot again: %s"
+		"broke: %s '%s'; bought %s for %d cogs ('%s'); the same slot again: %s"
 			% [broke["reason"], broke["bark"]["text"], bought["part_id"], price, bought["bark"]["text"], again["reason"]])
 
 
 func _check_reroll() -> void:
-	_game.run.add_scrap(40, Vector3.ZERO)
+	_game.run.add_cogs(40)
 	var price: int = _shop.reroll_price()
 	var first: Dictionary = _shop.reroll()
 	var second: Dictionary = _shop.reroll()
 	var fresh: bool = _shop.shelf_offers().all(func(o): return not o["sold"])
-	_report("one reroll", first["ok"] and first["price"] == Shop.REROLL_BASE and price == Shop.REROLL_BASE and fresh
+	_report("one reroll", first["ok"] and first["price"] == REROLL_BASE and price == REROLL_BASE and fresh
 			and not second["ok"] and second["reason"] == Shop.NO_REROLL and first["bark"]["line_id"] == "moss.bark.reroll",
 		"reroll for %d: %s ('%s'), a fresh shelf %s; a second: %s" % [price, first["ok"], first["bark"]["text"], fresh, second["reason"]])
 
 
 func _check_charges() -> void:
-	_game.run.add_scrap(200, Vector3.ZERO)
+	_game.run.add_cogs(200)
 	var slots: Array = _shop.charge_offers().map(func(o): return o["slot"])
 	var prices: Array = []
 	var maxes: Array = []
@@ -139,7 +141,7 @@ func _check_charges() -> void:
 	var line: String = _shop.LINES["moss.bark.charge"]
 	_report("charge cells", "movement" in slots and "special" in slots and not "weapon" in slots
 			and results == [Shop.OK, Shop.OK, Shop.CAPPED] and maxes == [2, 3, 3] and prices[1] > prices[0],
-		"Rivet can stock %s; three buys %s at %s scrap; movement max_charges %s; bark '%s'" % [slots, results, prices, maxes, line])
+		"Rivet can stock %s; three buys %s at %s cogs; movement max_charges %s; bark '%s'" % [slots, results, prices, maxes, line])
 
 
 func _check_sell() -> void:
@@ -148,11 +150,11 @@ func _check_sell() -> void:
 	run.add_part("cross_split", "test")
 	var heft: float = run.heft()
 	var parts: int = run.parts.size()
-	var wallet: int = run.scrap
+	var wallet: int = run.cogs
 	var quote: int = _shop.sell_quote("light_frame")
 	var sold: Dictionary = _shop.sell("light_frame")
 	var welded: Dictionary = _shop.sell("cross_split")
-	_report("sell-back", sold["ok"] and quote > 0 and run.scrap == wallet + quote and run.parts.size() == parts - 1
+	_report("sell-back", sold["ok"] and quote > 0 and run.cogs == wallet + quote and run.parts.size() == parts - 1
 			and absf(run.heft() - heft) < 0.001 and sold["bark"]["line_id"] == "moss.bark.sell"
 			and not welded["ok"] and welded["reason"] == Shop.WELDED,
 		"sold Light Frame for %d (half of %d): heft %.2f -> %.2f (unchanged under armour), '%s'; Cross Split: %s"
@@ -192,7 +194,7 @@ func _check_relent() -> void:
 	var locked_buy: Dictionary = _locked_buy
 	while run.heft_class() < need:
 		run.add_scrap(40, Vector3.ZERO)
-	run.add_scrap(400, Vector3.ZERO)
+	run.add_cogs(400)
 	var t: Dictionary = _shop.talk()
 	var top: Dictionary = _shop.top_shelf()
 	var known: bool = _game.codex.known(Shop.CODEX_ID)
@@ -213,11 +215,11 @@ func _check_neglect() -> void:
 	_shop.enter()
 	var cheapest: int = _shop.shelf_offers().map(func(o): return o["price"]).min()
 	_shop.leave()
-	_game.run.add_scrap(cheapest + 5, Vector3.ZERO)
-	_shop.note_death(_game.run.scrap)
+	_game.run.add_cogs(cheapest + 5)
+	_shop.note_death(_game.run.cogs)
 	var greeting: Dictionary = _shop.enter()
 	_report("neglect callback", greeting["line_id"] == "moss.remember.neglected",
-		"left empty-handed, died holding %d scrap (a shelf part is %d): next visit '%s'" % [_game.run.scrap, cheapest, greeting["text"]])
+		"left empty-handed, died holding %d cogs (a shelf part is %d): next visit '%s'" % [_game.run.cogs, cheapest, greeting["text"]])
 
 
 func _finish() -> bool:
