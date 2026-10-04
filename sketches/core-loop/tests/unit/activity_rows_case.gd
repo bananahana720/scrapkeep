@@ -24,7 +24,7 @@ func run(t) -> void:
 			no_rule.append(id)
 		if EventKinds.activity_row(id).is_empty():
 			no_row.append(id)
-	t.check("the Reach stands three activities", site_ids.size() == 3, "sites: %s" % [site_ids])
+	t.check("the Reach stands four activities", site_ids.size() == 4, "sites: %s" % [site_ids])
 	t.check("every site on the Reach has a rule", no_rule.is_empty(), "no rule: %s" % [no_rule])
 	t.check("every site on the Reach has a row", no_row.is_empty(), "no row: %s" % [no_row])
 

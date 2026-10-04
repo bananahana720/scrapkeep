@@ -128,7 +128,7 @@ func _run() -> void:
 func _lit() -> void:
 	var world = _game.world
 	var map = _game.ctx.terrain.map()
-	_t.eq("three activity nodes stand at the first frame", world.activities.sites.size(), 3)
+	_t.eq("four activity nodes stand at the first frame", world.activities.sites.size(), 4)
 	_t.eq("no device stands", world.interact.devices.size(), 0)
 	for spec in map.activity_sites:
 		var id := String(spec["id"])
@@ -373,7 +373,7 @@ func _retry() -> void:
 	_game.flow.retry_stage()
 	await _frames(3)
 	var sites: Array = _game.world.activities.sites
-	_t.eq("a retry builds three activities", sites.size(), 3)
+	_t.eq("a retry builds four activities", sites.size(), 4)
 	_t.check("each is unfinished and lit", sites.all(func(s): return not s.done and s.view.lit()), "done flags %s" % [sites.map(func(s): return s.done)])
 	var s = _site("hauler_bounty")
 	_t.check("the bounty's brute stands again", s != null and s.brute != null and is_instance_valid(s.brute) and not s.brute.is_dead(), "brute %s" % [s.brute if s != null else null])
@@ -417,7 +417,7 @@ func _lifetime() -> void:
 	_game.flow.retry_stage()
 	await _frames(3)
 	var now: Array = _game.world.activities.sites
-	_t.check("after a death and a retry no site of the old stage stands", now.size() == 3 and now.all(func(x): return not old.has(x)), "sites %d, reused %s" % [now.size(), now.filter(func(x): return old.has(x)).size()])
+	_t.check("after a death and a retry no site of the old stage stands", now.size() == 4 and now.all(func(x): return not old.has(x)), "sites %d, reused %s" % [now.size(), now.filter(func(x): return old.has(x)).size()])
 	_t.check("and the old stage's enemy is gone", brutes.all(func(b): return not is_instance_valid(b) or b.is_dead()), "old brute alive")
 	_t.eq("one activity enemy stands, the new bounty's", _game.world.activities.standing(), 1)
 
@@ -437,8 +437,8 @@ func _default_table() -> void:
 	await _frames(3)
 	var maps: Array = _game.ctx.terrain.maps
 	var counts: Array = maps.map(func(m): return m.activity_sites.size() if "activity_sites" in m else 0)
-	_t.check("the default alpha maps carry their authored activity sites", counts == [0, 3], "sites per stage %s" % [counts])
-	_t.eq("Spillway has no activity sites on its current authored map", _game.world.activities.sites.size(), 0)
+	_t.check("the default alpha maps carry their authored activity sites", counts == [1, 4], "sites per stage %s" % [counts])
+	_t.eq("Spillway stands its one enemy camp site", _game.world.activities.sites.size(), 1)
 	_t.eq("its three Spillway devices stand", _game.world.interact.devices.size(), 3)
 	_game.free()
 	await _frames(2)

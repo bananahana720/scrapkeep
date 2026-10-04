@@ -1075,6 +1075,7 @@ func _physics_process(delta: float) -> void:
 			# Gears fill the wallet only: no mass, no scrap_collected and no pickup procs.
 			for value in scrap.cog_values:
 				ctx.run.add_cogs(value)
+				ctx.events.cogs_collected.emit(value, ctx.run.cogs)
 			_step_fabricators(ball, delta)
 		if ctx.run.armor_mode:
 			_step_armor(ball, delta)
