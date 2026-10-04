@@ -313,14 +313,24 @@ func _targets(runs: Array[Dictionary], band: Dictionary) -> void:
 func _runs_table(runs: Array[Dictionary]) -> void:
 	_lines.append("## Runs")
 	_lines.append("")
-	_lines.append("| Policy | Seed | Class | Outcome | Stage reached | Game s | Wall s | Spine record | Codex found |")
-	_lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	_lines.append("| Policy | Seed | Class | Outcome | Stage reached | Game s | Wall s | Spine record | Codex found | Smash damage HP | Smash HP per fight (mean) | Fight slots | Chains | Best combo | Misses |")
+	_lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for run in runs:
 		var b: Dictionary = run["bot"]
-		_lines.append("| %s | %d | %s | %s | %d | %.1f | %.1f | %s | %d |" % [b.get("policy", "?"), int(b.get("seed", 0)),
+		var record: Dictionary = run["spine"]
+		var fights = record.get("smash_damage_by_fight")
+		var chains = record.get("chains")
+		var fight_mean := "-"
+		if fights is Array and not fights.is_empty():
+			fight_mean = "%.2f" % _mean(fights)
+		_lines.append("| %s | %d | %s | %s | %d | %.1f | %.1f | %s | %d | %s | %s | %s | %s | %s | %s |" % [b.get("policy", "?"), int(b.get("seed", 0)),
 			b.get("class", "?"), b.get("outcome", "?"), int(b.get("stage_reached", 0)), float(b.get("game_seconds", 0.0)),
 			float(b.get("wall_seconds", 0.0)), "yes" if not (run["spine"] as Dictionary).is_empty() else "no",
-			(run["found"] as Dictionary).size()])
+			(run["found"] as Dictionary).size(),
+			"%.2f" % float(record["smash_damage"]) if record.has("smash_damage") else "-", fight_mean,
+			str(fights.size()) if fights is Array else "-", str(chains.size()) if chains is Array else "-",
+			str(int(record["best_combo"])) if record.has("best_combo") else "-",
+			str(int(record["misses"])) if record.has("misses") else "-"])
 	_lines.append("")
 
 
