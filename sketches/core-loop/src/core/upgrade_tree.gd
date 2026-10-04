@@ -32,9 +32,8 @@ const SIZE := 30
 const WORLD_ONE_DEPTHS := 2
 const WORLD_ONE_SIZE := 6
 const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES}
-# A pilot may declare NODES_WORLD_ONE (same heap order); with the tree's world_one flag on, every
-# reader sees it in place of NODES. A pilot without one keeps NODES on both sides of the flag.
-const WORLD_ONE_TABLES := {"pylon_engineer": Sable}
+# Each pilot declares NODES_WORLD_ONE in the same heap order as its full tree.
+const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest}
 const KEYS := ["weapon", "movement", "special", "smash"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.
@@ -85,10 +84,10 @@ var class_id := ""
 var picks: Array[String] = []
 # How many picks the run has opened so far: the start, then each workshop visit.
 var allowed := 0
-# The most picks a run may take: DEPTHS, or WORLD_ONE_DEPTHS under the world-one profile.
-# world.gd sets it from the tuning flag; a new run leaves it alone.
+# The deepest pick currently open to the run: worlds one, two and three allow 2, 3 and 4.
+# world.gd sets it from the stage table's world index; flag off keeps the legacy four depths.
 var max_depth := DEPTHS
-# The world-one node tables in force (--world-one-builds=on); world.gd sets it beside max_depth.
+# The world-one node tables in force; world.gd sets it beside max_depth only in world one.
 var world_one := false
 var events
 
@@ -107,6 +106,10 @@ func _init(events_ref = null) -> void:
 
 # Pilot ids with no tree, already warned about this session.
 static var unknown_warned := {}
+
+
+static func depth_cap(world_index: int) -> int:
+	return clampi(world_index + 1, WORLD_ONE_DEPTHS, DEPTHS)
 
 
 static func nodes(for_class: String, world_one := false) -> Array:
@@ -286,6 +289,10 @@ func offered(for_class: String, depth: int) -> Array:
 	var pair := [0, 1]
 	if depth > 1:
 		pair = children_of(index_of(for_class, picks[depth - 2], world_one))
+	# A retained id may occupy another depth after a profile change (Sable's Face Runner).
+	# Refuse that route until it is migrated instead of offering children beyond this depth.
+	if not pair.all(func(i): return i >= 0 and i < list.size() and depth_of(i) == depth):
+		return []
 	return pair.map(func(i): return list[i])
 
 
