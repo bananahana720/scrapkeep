@@ -252,8 +252,12 @@ static func hide_placeholder(mi: GeometryInstance3D) -> void:
 
 func _scene(path: String) -> Node:
 	if not _scenes.has(path):
-		_scenes[path] = load(path)
-	return (_scenes[path] as PackedScene).instantiate()
+		_scenes[path] = load(path) as PackedScene if ResourceLoader.exists(path) else null
+	var packed := _scenes[path] as PackedScene
+	if packed == null:
+		_warn_once("scene:" + path, "hero_assets: scene '%s' unavailable; keeping primitive fallback" % path)
+		return null
+	return packed.instantiate()
 
 
 # The mesh of the named node in a glb, loaded once.
@@ -261,6 +265,8 @@ func mesh_named(path: String, node_name: String) -> Mesh:
 	var key := path + "#" + node_name
 	if not _meshes.has(key):
 		var scene := _scene(path)
+		if scene == null:
+			return null
 		var found := scene.find_child(node_name, true, false) as MeshInstance3D
 		_meshes[key] = found.mesh if found != null else null
 		scene.free()
@@ -276,7 +282,9 @@ func _warn_once(key: String, text: String) -> void:
 # --- the player's shell ------------------------------------------------------------
 
 func attach_player(player: Node3D) -> void:
-	_players[player.get_instance_id()] = {"player": player, "class": "", "core": null, "pod": null}
+	var rolling := player.roll_node().get_parent() as MeshInstance3D
+	_players[player.get_instance_id()] = {"player": player, "class": "", "core": null, "pod": null,
+		"layers": rolling.layers, "shadow": rolling.cast_shadow}
 	_fit(_players[player.get_instance_id()])
 	for chunk in player.roll_node().get_children():
 		if chunk.get_script() == Accretion:
@@ -332,11 +340,22 @@ func _fit(rec: Dictionary) -> void:
 		if old != null and is_instance_valid(old):
 			old.get_parent().remove_child(old)
 			old.queue_free()
+		rec[key] = null
+	rec["animator"] = null
+	rec["class"] = id
+	rec["tint"] = tint
 	var rolling := player.roll_node().get_parent() as MeshInstance3D
-	hide_placeholder(rolling)
+	rolling.layers = rec.layers
+	rolling.cast_shadow = rec.shadow
 	var shell := _scene(SHELLS[id])
+	if shell == null:
+		return
 	var core := shell.find_child("Core", true, false) as Node3D
 	var pod := shell.find_child("Pod", true, false) as Node3D
+	if core == null or pod == null:
+		shell.free()
+		_warn_once("scene:" + SHELLS[id], "hero_assets: scene '%s' lacks Core/Pod; keeping primitive fallback" % SHELLS[id])
+		return
 	core.get_parent().remove_child(core)
 	pod.get_parent().remove_child(pod)
 	shell.free()
@@ -347,10 +366,9 @@ func _fit(rec: Dictionary) -> void:
 		tints["paint"] = tint
 	paint(core, tints)
 	paint(pod, tints)
+	hide_placeholder(rolling)
 	rolling.add_child(core)
 	player.juice_node().add_child(pod)
-	rec["class"] = id
-	rec["tint"] = tint
 	rec["core"] = core
 	rec["pod"] = pod
 	_fit_pilot(rec)
@@ -418,6 +436,8 @@ func air_cue(_factor: float, rose: bool) -> Node3D:
 
 func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	var pod: Node3D = rec["pod"]
+	if pod == null:
+		return
 	var v: Vector3 = player.state.velocity
 	var flat := Vector2(v.x, v.z)
 	if flat.length() > POD_TURN_SPEED:
@@ -444,6 +464,8 @@ func shell_of(player: Node) -> Dictionary:
 
 func _fit_pilot(rec: Dictionary) -> void:
 	var pilot := _scene(PILOTS[rec["class"]])
+	if pilot == null:
+		return
 	pilot.name = "AnimatedPilot"
 	var pod: Node3D = rec.pod
 	var placeholder := pod.find_child("Pilot", true, false) as GeometryInstance3D
@@ -602,30 +624,38 @@ func _dress_gate(gate: Node3D) -> void:
 			rarity = offer["rarity"]
 	if rarity == "":
 		return
+	var arch_mesh := mesh_named(GATE_PATH, "Arch")
+	if arch_mesh == null:
+		return
 	var tints := {"rarity": RewardGates.rarity_color(rarity)}
 	var topper := gate.get_node_or_null("Topper") as MeshInstance3D
 	for child in gate.get_children():
-		if child is MeshInstance3D:
+		if child is MeshInstance3D and child != topper:
 			hide_placeholder(child)
 	var arch := MeshInstance3D.new()
 	arch.name = "HeroArch"
-	arch.mesh = mesh_named(GATE_PATH, "Arch")
+	arch.mesh = arch_mesh
 	gate.add_child(arch)
 	paint(arch, tints)
-	if topper != null:
+	var topper_mesh := mesh_named(GATE_PATH, "Topper_" + rarity) if topper != null else null
+	if topper != null and topper_mesh != null:
+		hide_placeholder(topper)
 		for child in topper.get_children():
 			if child is GeometryInstance3D:
 				hide_placeholder(child)
 		var hero_topper := MeshInstance3D.new()
 		hero_topper.name = "HeroTopper"
-		hero_topper.mesh = mesh_named(GATE_PATH, "Topper_" + rarity)
+		hero_topper.mesh = topper_mesh
 		topper.add_child(hero_topper)
 		paint(hero_topper, tints)
 	for child in gate.get_children():
 		if child is Sprite3D and String(child.name).begins_with("Glyph"):
+			var plate_mesh := mesh_named(GATE_PATH, "GlyphPlate1")
+			if plate_mesh == null:
+				continue
 			var plate := MeshInstance3D.new()
 			plate.name = "HeroPlate" + String(child.name).trim_prefix("Glyph")
-			plate.mesh = mesh_named(GATE_PATH, "GlyphPlate1")
+			plate.mesh = plate_mesh
 			plate.position = (child as Sprite3D).position + Vector3(0.0, 0.0, -0.14)
 			gate.add_child(plate)
 			paint(plate, tints)
@@ -1255,6 +1285,8 @@ func _dress_shelter(barge: Node) -> void:
 	if barge.has_node("HeroShelter"):
 		return
 	var shelter := _scene("res://assets/models/moss_shelter.glb")
+	if shelter == null:
+		return
 	shelter.name = "HeroShelter"
 	if not _materials.has("moss_sandstone"):
 		var stone := ShaderMaterial.new()
@@ -1278,6 +1310,8 @@ func _dress_bay() -> void:
 	if cabin == null or barge == null or barge.has_node("HeroWorkshop"):
 		return
 	var workshop := _scene("res://assets/models/moss_workshop.glb")
+	if workshop == null:
+		return
 	workshop.name = "HeroWorkshop"
 	paint(workshop, {"class": Palette.AMBER})
 	barge.add_child(workshop)

@@ -126,11 +126,21 @@ func _build_stage() -> void:
 
 
 func _build_shell() -> void:
-	_painter = HeroAssets.new()
-	var shell: Node = load(HeroAssets.SHELLS[def.id]).instantiate()
+	if _painter == null:
+		_painter = HeroAssets.new()
 	ball = Node3D.new()
 	ball.name = "Shell"
 	_viewport.add_child(ball)
+	var shell: Node = _painter._scene(HeroAssets.SHELLS[def.id])
+	if shell == null:
+		_build_primitive_shell()
+		return
+	if (shell.find_child("Core", true, false) as Node3D) == null or (shell.find_child("Pod", true, false) as Node3D) == null:
+		shell.free()
+		_painter._warn_once("scene:" + HeroAssets.SHELLS[def.id],
+			"hero_assets: scene '%s' lacks Core/Pod; keeping primitive fallback" % HeroAssets.SHELLS[def.id])
+		_build_primitive_shell()
+		return
 	for part in ["Core", "Pod"]:
 		var node := shell.find_child(part, true, false) as Node3D
 		node.get_parent().remove_child(node)
@@ -140,6 +150,20 @@ func _build_shell() -> void:
 	_pod = ball.get_node("Pod")
 	shell.free()
 	_paint_shell()
+
+
+func _build_primitive_shell() -> void:
+	var core := MeshInstance3D.new()
+	core.name = "Core"
+	core.mesh = _sphere(0.98)
+	var mat := _mat(def.color, 0.0, 1.0, false)
+	mat.resource_name = "class_accent"
+	core.mesh.material = mat
+	ball.add_child(core)
+	_core = core
+	_pod = Node3D.new()
+	_pod.name = "Pod"
+	ball.add_child(_pod)
 
 
 func _paint_shell() -> void:
