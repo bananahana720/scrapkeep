@@ -156,6 +156,7 @@ const PAY_BACKOFF := 6.0
 # The high ground goes first: a ball cannot climb back out of the trough, so a site on a shelf is
 # worked before the ones below it, ties nearest first. Sites are ranked by ground height in bands.
 const LEVEL_BAND := 8.0
+const CAMP_LAST := 1000.0
 # On a map with standing activities the explorer stops its other rolling (scrap lines, events, the
 # vault) at this stage second and goes to the Warden, so the fight has the rest of STAGE_LIMIT.
 const ENGAGE_BY := 140.0
@@ -808,6 +809,10 @@ func _activity_goal(delta: float) -> bool:
 			if not is_instance_valid(c) or not _activity_open(c):
 				continue
 			var level := roundf(c.global_position.y / LEVEL_BAND)
+			# The alpha maps' camp comes after the slice's standing sites, wherever it stands:
+			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
+			if c.id == "enemy_camp":
+				level -= CAMP_LAST
 			var d := _flat(ball, c.global_position)
 			if level > best_level or (level == best_level and d < best):
 				best_level = level
@@ -837,7 +842,8 @@ func _activity_goal(delta: float) -> bool:
 		_pay_roll(s, ball, delta)
 		return true
 	match s.id:
-		"ambush_altar":
+		# The alpha maps' enemy camp is the altar's rule: a ring that starts a pack, done when it dies.
+		"ambush_altar", "enemy_camp":
 			var foe := _pack_foe(s, ball)
 			if foe != null:
 				_goal = "activity %s fight" % s.id
