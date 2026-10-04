@@ -8,6 +8,8 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Flow := preload("res://src/core/flow.gd")
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
+const BossRules := preload("res://src/boss/boss_rules.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
@@ -123,30 +125,29 @@ func _fight_checks() -> void:
 	_game.flow.enter_stage(3, Vector3(0.0, 0.0, 16.0), false)
 	_game.flow._finish_stage()
 	var boss = _game.boss
-	var rules: Dictionary = Audio._boss_rules(boss)
-	_t.check("W5-5 the boss has the rules the reflection needs", not rules.is_empty(), "no Rules constants")
-	_compare("phase 1 start", boss, rules)
+	# Repointed 2026-10-04 (F2a fix round): Brindle's health is posture chunks, so
+	# music_state follows the posture bar and the held chunk, not HP floors.
+	_t.check("W5-5 the boss has the rules music_state reads", BossRules.PHASE_MIN_SECONDS.size() == 3 and BossRules.POSTURE.has("curve"),
+		"phase minimums %s, posture %s" % [BossRules.PHASE_MIN_SECONDS, BossRules.POSTURE])
+	_compare("phase 1 start", boss)
 	boss.jump_to_phase(2)
-	boss.hp = boss.max_hp * 0.5
+	boss._posture.posture = 50.0
 	boss.phase_clock = 9.0
-	_compare("mid phase 2", boss, rules)
-	boss.hp = boss.max_hp * float(rules["PHASE_FLOORS"][1])
-	boss.phase_clock = 31.0
-	_compare("after a hold", boss, rules)
+	_compare("mid phase 2", boss)
+	boss._posture.chunks = BossPosture.CHUNKS - 2
+	boss.phase_clock = 20.0
+	_compare("after a hold", boss)
 
 
-# The numbers the reflection computed in audio.gd before music_state existed.
-func _compare(label: String, boss, rules: Dictionary) -> void:
-	var phase := int(Audio._num(boss, "phase", 0.0))
-	var floors: Array = rules["PHASE_FLOORS"]
-	var mins: Array = rules["PHASE_MIN_SECONDS"]
-	var hp: float = Audio._num(boss, "hp", 1.0) / maxf(Audio._num(boss, "max_hp", 1.0), 1.0)
-	var top := 1.0 if phase == 1 else float(floors[phase - 2])
-	var floor_hp := float(floors[phase - 1])
+# What music_state must say: the bar's share toward this phase's stagger, 1 and held
+# once the phase's chunk is broken, and the share of the phase's minimum time run.
+func _compare(label: String, boss) -> void:
+	var phase: int = boss.phase
+	var held: bool = BossPosture.CHUNKS - boss.chunks_left() >= phase
 	var want := {
-		"in_phase": clampf((top - hp) / maxf(top - floor_hp, 0.01), 0.0, 1.0),
-		"held": hp <= floor_hp + 0.001,
-		"phase_seconds": Audio._num(boss, "phase_clock", 0.0) / maxf(float(mins[phase - 1]), 1.0),
+		"in_phase": 1.0 if held else clampf(boss.posture() / BossPosture.FULL, 0.0, 1.0),
+		"held": held,
+		"phase_seconds": boss.phase_clock / float(BossRules.PHASE_MIN_SECONDS[phase - 1]),
 	}
 	var got: Dictionary = boss.music_state()
 	_t.check("W5-5 %s: music_state matches the reflection" % label,

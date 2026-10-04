@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const Palette := preload("res://src/core/palette.gd")
 
@@ -12,7 +13,9 @@ const Palette := preload("res://src/core/palette.gd")
 # clear of the ball and aim at the arena's ground; the crust draws under telegraphs and
 # the slag leaves the quenched span open; a landing needs the ball on top; the chase
 # pays drone scrap; the clash preview counts ram punch only; and the boss publishes a
-# live objective and plating for the HUD.
+# live objective and plating for the HUD. Repointed 2026-10-04 (F2a fix round): Brindle
+# is a posture body, so a cap landing and a stunned hull are measured as posture gain
+# on the hull's bar, not as HP lost from a pool.
 
 const DT := 1.0 / 90.0
 const DRONE_CLEAR := 8.0
@@ -148,20 +151,24 @@ func _furnace_checks() -> void:
 	var cap = _boss.ship.caps[0]
 	var beside: Vector3 = _boss.ship.hull.to_global(Vector3(5.6, -2.0, 0.0))
 	Harness.put_ball(_game, Vector3(beside.x, _boss.arena.ground(beside) + 1.0, beside.z))
-	var before: float = _boss.hp
+	var chunks: int = _boss.chunks_left()
+	var before: float = _boss.posture()
 	_double.strike(cap, "slam", 40.0)
-	var from_floor: float = before - _boss.hp
+	var from_floor: float = _boss.posture() - before
 	Harness.put_ball(_game, cap.global_position + Vector3.UP * 1.6)
-	before = _boss.hp
+	before = _boss.posture()
 	_double.strike(cap, "slam", 40.0)
-	var on_top: float = before - _boss.hp
-	before = _boss.hp
+	var on_top: float = _boss.posture() - before
+	before = _boss.posture()
 	_double.strike(cap, "synergy", 48.0)
-	var synergy_on_top: float = before - _boss.hp
-	_report("synergy is not a landing", is_equal_approx(synergy_on_top, 48.0 * 0.2),
-		"a synergy strike of 48 on a cap with the ball on top chipped %.1f against the hull's plating" % synergy_on_top)
-	_report("landing needs the ball on top", is_equal_approx(from_floor, 40.0 * 1.2 * _game.run.heft() * 0.2) and is_equal_approx(on_top, 40.0 * 1.2 * _game.run.heft() * Rules.CAP_MULT),
-		"a slam-kind strike on a cap with the ball on the floor beside the hull chipped %.1f; with the ball on the cap it took %.1f" % [from_floor, on_top])
+	var synergy_on_top: float = _boss.posture() - before
+	# A landing meets the open cap: the rule's slam base at its top ratio.
+	var landing_gain: float = BossPosture.BASE["slam"] * pow(BossPosture.MULT_MAX, float(Rules.POSTURE["curve"]))
+	_report("synergy is not a landing", synergy_on_top == 0.0 and _boss.chunks_left() == chunks,
+		"a synergy strike of 48 on a cap with the ball on top, short of the hull's plating, moved the bar %.1f" % synergy_on_top)
+	_report("landing needs the ball on top", from_floor == 0.0 and is_equal_approx(on_top, landing_gain) and _boss.chunks_left() == chunks,
+		"a slam-kind strike on a cap with the ball on the floor beside the hull moved the bar %.1f; with the ball on the cap %.1f (want %.1f); chunks %d"
+			% [from_floor, on_top, landing_gain, _boss.chunks_left()])
 
 
 func _charge_checks() -> void:
@@ -191,12 +198,14 @@ func _charge_checks() -> void:
 	var stunned: bool = _boss.stunned()
 	var crushable: bool = hull.crushable() if hull.has_method("crushable") else true
 	var would: bool = _double.would_crush(hull, "ram", 500.0)
-	var before: float = _boss.hp
+	var before: float = _boss.posture()
 	_double.strike(hull, "arc", 5.0)
-	var open_hit: float = before - _boss.hp
+	var open_hit: float = _boss.posture() - before
+	var open_gain: float = BossPosture.OTHER_BASE * pow(BossPosture.MULT_MAX, float(Rules.POSTURE["curve"]))
 	var live: float = _boss.live_plating() if _has("live_plating") else -1.0
-	_report("stunned hull uncrushable", stunned and not crushable and not would and is_equal_approx(open_hit, 5.0) and live < 1.0,
-		"stunned %s: crushable() %s, would_crush on a 500 ram %s, a 5 shot still landed %.1f, live plating %.2f" % [stunned, crushable, would, open_hit, live])
+	_report("stunned hull uncrushable", stunned and not crushable and not would and is_equal_approx(open_hit, open_gain) and live < 1.0,
+		"stunned %s: crushable() %s, would_crush on a 500 ram %s, a 5 shot pressed the bar %.3f at the top ratio (want %.3f), live plating %.2f"
+			% [stunned, crushable, would, open_hit, open_gain, live])
 
 
 func _ground_checks() -> void:

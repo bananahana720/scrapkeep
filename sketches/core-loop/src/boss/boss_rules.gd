@@ -1,13 +1,20 @@
 extends RefCounted
 
 # Admiral Brindle's numbers in one table (DEMO-SPEC Brindle, BOSS-BRINDLE). Every value
-# is a starting point for play to tune; tuning edits this file and nothing else. HP is
-# fixed: the fight never reads the run's parts or heft (R-10).
+# is a starting point for play to tune; tuning edits this file and nothing else. Health
+# is fixed: the fight never reads the run's parts or heft (R-10).
 
-const MAX_HP := 22000.0
-# Each phase ends when HP reaches its floor (a share of MAX_HP) and its set piece has
-# played for its minimum time. The third floor is the eject.
-const PHASE_FLOORS := [0.66, 0.33, 0.10]
+# The posture fight (boss_posture.gd) on the hull, overriding the rule's constants as a
+# stage row's "posture" dictionary does for a Warden. The slice Warden's numbers: a
+# glancing hit fills the bar on the square of its ratio, and only a smash shatters an
+# open core on the first contact, so every other opening is crack, then shatter.
+const POSTURE := {"curve": 2.0, "ram_shatters": false}
+# Health is the posture rule's four chunks, one per phase: the first three shattered on
+# the hull end Requisition, Furnace and Scuttle, and the fourth is the scooter, taken by
+# the catch. hp reads the chunks left, so MAX_HP is the chunk count.
+const MAX_HP := 4.0
+# A phase ends when its chunk is shattered and its set piece has played for its minimum
+# time; a chunk lost earlier holds the phase, and the hull takes no posture, until then.
 const PHASE_NAMES := ["Requisition", "Furnace", "Scuttle"]
 const PHASE_MIN_SECONDS := [28.0, 24.0, 22.0]
 # No attack lands before this, so the entry and the hull readout are free to read.

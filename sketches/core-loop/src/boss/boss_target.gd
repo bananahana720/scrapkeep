@@ -6,8 +6,9 @@ const Palette := preload("res://src/core/palette.gd")
 # scooter. It speaks combat's enemy protocol (src/combat/README.md on the combat
 # branch: plating_now, plating_for, hit_mult, contact_part, on_struck, take_damage,
 # set_tint) so ctx.spawner.strike resolves it with the one plating rule, and it speaks
-# the spine's contact hooks (knock, flash). It decides nothing: every answer comes from
-# boss.gd, and every piece shares the boss's one HP pool.
+# the spine's contact hooks (knock, flash) and the posture fight (BossContract.TARGET).
+# It decides nothing: every answer comes from boss.gd, and every piece shares the
+# boss's one posture bar and four chunks.
 
 const SLATE := Color("5d6b78")
 
@@ -19,6 +20,9 @@ var kind := "brindle_hull"
 var radius := 1.0
 var half_height := 1.0
 var tint_state := ""
+# A wear-trail patch tags the body it hits for the length of the hit (wear_trail.gd), so
+# a kill it makes procs no on-kill effect. boss.gd hands it to run_state on the defeat.
+var last_damage_source := ""
 # Read by combat's integrity_of and tint loop; all three come from the boss.
 var hp: float:
 	get:
@@ -73,8 +77,9 @@ func is_dead() -> bool:
 	return boss == null or not boss.target_live(self)
 
 
-# The crush seam: no piece of Brindle is ever crushed. His HP is held at phase floors,
-# so a crush exception on him would end with the ball inside a body that never died.
+# The crush seam: no piece of Brindle is ever crushed. His health is chunks that only a
+# contact in a stagger removes, so a crush exception on him would end with the ball
+# inside a body that never died.
 func crushable() -> bool:
 	return false
 
@@ -107,6 +112,44 @@ func hit_mult(strike_kind: String, part: String) -> float:
 
 func weak_points() -> Array:
 	return []
+
+
+func unplated_by_magnet() -> bool:
+	return false
+
+
+# --- The posture fight (BossContract.TARGET), all answered by boss.gd -----------------
+
+func fight() -> String:
+	return boss.fight(self) if boss != null else "plating"
+
+
+func posture() -> float:
+	return boss.posture() if boss != null else 0.0
+
+
+func staggered() -> bool:
+	return boss != null and boss.staggered()
+
+
+func stagger_left() -> float:
+	return boss.stagger_left() if boss != null else 0.0
+
+
+func chunks_left() -> int:
+	return boss.chunks_left() if boss != null else 0
+
+
+func glances() -> int:
+	return boss.glances() if boss != null else 0
+
+
+func chunk_cracked() -> bool:
+	return boss != null and boss.chunk_cracked()
+
+
+func judge_hit(strike_kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
+	return boss.judge_hit(self, strike_kind, punch, smash, tier) if boss != null else {}
 
 
 func contact_part(ball: Vector3, strike_kind: String) -> String:

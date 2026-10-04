@@ -16,8 +16,10 @@ const Warden := preload("res://src/combat/warden.gd")
 # 4. Decay. Fire stops, and shred is back to 0 within DECAY_MAX seconds.
 # 5. Synergy and weak points. A synergy strike shreds by its punch; a weak point that
 #    reads 0 stays 0 under shred.
-# 6. Brindle. The real boss module's hull sheds by the same path, and its crane magnet
-#    (0 to a weapon) stays 0.
+# 6. Brindle. The real boss module's hull is a posture body and builds no shred, so its
+#    plating holds; its crane magnet (0 to a weapon) stays 0. Ruling (coordinator,
+#    2026-10-04, veto-listed for Andrew): decision row 107, no shred on a posture body,
+#    wins over the 2026-09-27 rule that the hull sheds.
 # 7. Vault. A stage-3 vault is plated above stage 3's Warden, and it sheds too.
 
 const ENGAGED := ["hot_rivets", "cross_split", "loose_trigger", "slag_rounds", "double_feed",
@@ -248,8 +250,7 @@ func _check_brindle() -> void:
 		_combat.strike(hull, "runner", 16.0)
 	var shred: float = _combat.shred_of(hull)
 	var met: Dictionary = _combat.resolve(hull, "runner", 16.0)
-	_report("brindle", shred > 0.0 and absf(met["plating"] - maxf(0.0, base - shred)) < 0.001
-			and absf(_combat.plating_of(hull) - maxf(0.0, base - shred)) < 0.001,
+	_report("brindle", shred == 0.0 and absf(met["plating"] - base) < 0.001 and absf(_combat.plating_of(hull) - base) < 0.001,
 		"real boss hull (plating %.0f) after %d 16-damage hits: shred %.1f, resolve met %.1f, plating_of %.1f"
 			% [base, BRINDLE_HITS, shred, met["plating"], _combat.plating_of(hull)])
 	var magnet: Node3D = boss.ship.magnets[0]

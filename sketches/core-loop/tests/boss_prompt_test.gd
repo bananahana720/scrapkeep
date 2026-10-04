@@ -76,10 +76,10 @@ func _finish() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-# Combat's own shred strips the hull's plating (README.md, Andrew 2026-09-27), and the
-# plate must read the same number the tint already uses. Strike the real hull through
-# the game's own combat module (not the punch-override double) until shred builds,
-# then check that hull_plating_now() and the plate text both dropped by that shred.
+# Ruling (coordinator, 2026-10-04, veto-listed for Andrew): decision row 107, no shred on
+# a posture body, wins over the 2026-09-27 rule that combat's shred strips the hull's
+# plating. Brindle's hull is a posture body (F2a), so rams through the game's own
+# combat module build no shred and the plate holds at 120, the number the tint uses.
 func _check_shred() -> void:
 	var hull = _boss.ship.hull
 	var real = _game.combat
@@ -87,12 +87,11 @@ func _check_shred() -> void:
 	for _i in 8:
 		real.strike(hull, "ram", 40.0)
 	var shred: float = real.shred_of(hull)
-	var want: float = maxf(0.0, 120.0 - shred)
 	var got: float = _boss.hull_plating_now()
 	_boss._update_readout()
 	var text: String = _plate().text
-	_report("plate drops under shred", shred > 0.0 and absf(got - want) < 0.01 and text.contains("plating %d" % int(want)),
-		"after 8 ram strikes shred %.2f: hull_plating_now %.2f (want %.2f), plate \"%s\"" % [shred, got, want, text])
+	_report("plate holds under rams", shred == 0.0 and absf(got - 120.0) < 0.01 and text.contains("plating 120"),
+		"after 8 ram strikes shred %.2f: hull_plating_now %.2f (want 120), plate \"%s\"" % [shred, got, text])
 	_game.ctx.spawner = _double
 
 

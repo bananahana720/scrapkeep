@@ -7,10 +7,12 @@ const Rules := preload("res://src/boss/boss_rules.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 
-# Brindle does not scale: his HP is the same for a bare ball and a built one. The hull
-# plate follows the one plating rule (98 chips, 144 lands in full) and the arena says
-# so at entry. A crane catch takes mass and heft, the spill trail pays it back, and a
-# shot on a magnet that still holds scrap drops the rest. Driven tick by tick.
+# Brindle does not scale: his four chunks are the same for a bare ball and a built one.
+# The hull plate is the posture rule's plating (98 glances short of 120 and moves the bar
+# less than 144; a gun never takes a chunk) and the arena says so at entry. A crane
+# catch takes mass and heft, the spill trail pays it back, and a shot on a magnet that
+# still holds scrap drops the rest and presses the hull's bar. Driven tick by tick.
+# Repointed 2026-10-03 (F2a): HP floors gave way to the posture chunk count.
 
 const DT := 1.0 / 90.0
 const TRAIL_WINDOW := 8.0
@@ -81,15 +83,16 @@ func _run_checks() -> void:
 	_double.punch_override = -1.0
 
 	var hull = _boss.ship.hull
-	var before: float = _boss.hp
+	var before: float = _boss.posture()
 	_double.strike(hull, "arc", 98.0)
-	var chip: float = before - _boss.hp
+	var chip: float = _boss.posture() - before
 	var deflected_98: bool = _deflected.size() == 1 and is_equal_approx(_deflected[0][0], 98.0) and _deflected[0][1] == 120.0
-	before = _boss.hp
+	before = _boss.posture()
 	_double.strike(hull, "arc", 144.0)
-	var full: float = before - _boss.hp
-	_report("hull plating 120", is_equal_approx(chip, 19.6) and deflected_98 and is_equal_approx(full, 144.0) and _deflected.size() == 1,
-		"punch 98 chipped %.1f (deflected against %s), punch 144 took %.1f in full" % [chip, str(_deflected[0]) if _deflected.size() > 0 else "none", full])
+	var full: float = _boss.posture() - before
+	_report("hull plating 120", chip > 0.0 and full > chip and deflected_98 and _deflected.size() == 1 and _boss.chunks_left() == 4 and _boss.hp == bare,
+		"punch 98 moved the bar %.2f (deflected against %s), punch 144 moved it %.2f; chunks left %d, hp %.0f"
+			% [chip, str(_deflected[0]) if _deflected.size() > 0 else "none", full, _boss.chunks_left(), _boss.hp])
 
 	_game.flow.new_run()
 	for i in 12:
@@ -148,14 +151,15 @@ func _crane_checks() -> void:
 		return
 	var held: int = _boss._cranes[1]["held"]
 	var hp_before: float = _boss.hp
+	var posture_before: float = _boss.posture()
 	_double.strike(_boss.ship.magnets[1], "arc", 12.0)
 	var piled := 0
 	for p in _boss.pickups_left():
 		piled += p["value"]
 	_report("crane drop", held > 0 and _boss._cranes[1]["held"] == 0 and _game.codex.known(CodexEntries.CRANE_DROP)
-			and _weak == ["magnet_starboard"] and is_equal_approx(hp_before - _boss.hp, 12.0) and _lost.size() > lost_count,
-		"a 12-damage shot on the starboard magnet holding %d dropped it (pickups now %d), hit the ship for %.0f, published %s, codex %s"
-			% [held, piled, hp_before - _boss.hp, str(_weak), _game.codex.known(CodexEntries.CRANE_DROP)])
+			and _weak == ["magnet_starboard"] and _boss.hp == hp_before and _boss.posture() > posture_before and _lost.size() > lost_count,
+		"a 12-damage shot on the starboard magnet holding %d dropped it (pickups now %d), took %.0f chunks, pressed the bar %.2f, published %s, codex %s"
+			% [held, piled, hp_before - _boss.hp, _boss.posture() - posture_before, str(_weak), _game.codex.known(CodexEntries.CRANE_DROP)])
 	var crane_warns: Array = _telegraphs.filter(func(t): return t[0] == "crane_sweep")
 	_report("crane telegraph", not crane_warns.is_empty() and crane_warns.all(func(t): return t[1] >= 1.0),
 		"%d crane sweeps announced, each at least 1.0 s ahead: %s" % [crane_warns.size(), str(crane_warns.map(func(t): return snappedf(t[1], 0.01)))])
