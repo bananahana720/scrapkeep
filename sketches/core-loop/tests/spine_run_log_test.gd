@@ -110,7 +110,7 @@ func _finish() -> bool:
 	_game.run.damage(9999.0, "test")
 	var after := _lines()
 	var death = JSON.parse_string(after[-1]) if after.size() == 2 else null
-	var died: bool = death is Dictionary and death["outcome"] == "died" and death["run_id"] != record.get("run_id", "") \
+	var died: bool = death is Dictionary and death["outcome"] == "died" and death["run_id"] != (record.get("run_id", "") if ok else "") \
 		and (death["stages"] as Array).size() == 1 and (death["stages"][0]["deaths"] as Array).size() == 1
 	_report("death line", died, "%d line(s); the death record %s" % [after.size(), after[-1] if after.size() > 0 else "none"])
 	print("spine_run_log_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

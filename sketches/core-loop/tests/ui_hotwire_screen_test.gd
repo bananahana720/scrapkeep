@@ -33,6 +33,8 @@ var _cogs_before := 0
 func _initialize() -> void:
 	_game = Game.new()
 	_game.test_mode = true
+	# This test plays the human who answers the screen.
+	_game.bot_driven = false
 	root.add_child(_game)
 
 
