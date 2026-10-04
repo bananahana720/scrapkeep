@@ -2833,3 +2833,9 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 - **Call.** One amber edge marker per unfinished activity site from drop-in, coloured by the site's own activity row, hidden while the Warden fight is engaged; the plate says "Find an activity" (glyph `obj_event`) while the beacon is sealed, the fight is not engaged and a site is left, then the Warden rows as before. The plate and the markers read one count, `edge_markers.unfinished_sites()`. Principle: readability first, one meaning per layer.
 - **Debt.** The marker is chevron-only; the site row's shape is not drawn. On Andrew's veto list: the plate pointing at activities before the Warden.
 - **Test.** `tests/activity_signpost_test.gd` (done-filter mutant red).
+
+## The hook chain, readout, log and card (alpha full-send wave 2, HC2 and HC3)
+
+- **Call.** The combo reads from one source, `player.chain`, in every layer: a counter right of the ability bar from combo 2 that swells on each link and falls on the end; one collar ring per link up to six; the link bite a semitone up per link past the first, the smash at the root; the chain end heard only when it had a combo of 2 or more; one dry tick per miss. The run record carries `chains`, `best_combo`, `misses`, arena included. The codex card "Chain" opens at the first combo of 3. Principle: one meaning across every abstraction, the floor is today's game. Spec `design-v3/HOOK-CHAIN.md`.
+- **Debt.** No still of combo 4 yet; the digit pulse runs on its own timer rather than the hit-stop clock; combo knock and shake feel is not built. The gate found and fixed a zip at combo 1 before merge.
+- **Test.** `tests/chain_readout_test.gd` (links-1 suppression and combo-2 zip mutants red), `tests/chain_log_test.gd` (codex threshold mutant red).

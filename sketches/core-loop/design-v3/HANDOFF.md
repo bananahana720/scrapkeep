@@ -2,6 +2,10 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 2 merged (3 October, proto/alpha fbd6bc6)
+
+HC2 (readout) and HC3 (chain log and codex card) are in: gate 2 on tree 0f36041, 295 runs, 0 unquarantined failures; receipts in `artifacts/local/alpha/wave2/`. The hook chain is complete as specified; Andrew has not played it. Open after this wave: a still of combo 4 with its rings and counter (needs the GPU and workspace 10), the bot band after HC3 (skipper smash damage per fight up no more than 10%; explorer best_combo median ≥ 2 over 16 seeds with a two-hook script), and the HC2 debt in the ledger. Next per ALPHA-PLAN: M2 world one, Spillway as zone 1-1, both Wardens on the posture contract, Brindle, rescue progression, run save. Performance claims wait for a GPU-free measurement.
+
 ## Wave 1 merged (3 October, proto/alpha 8601e9e)
 
 HC1, AS and RL are in. Gate 3 on tree d67fc25: 293 runs, 0 unquarantined failures; receipts and the Opus gate's findings in `artifacts/local/alpha/wave1/RECEIPT.md`, ledger rows in `tools/coordinator/lane-ledger.tsv`, design calls in `DESIGN-NOTES.md`. Three brief-caused gate failures taught the invariants every wave 2+ brief now names: a verdict line `name: PASS|FAIL`, a ROWS row plus `GRAMMAR_SIGNALS` and an `attack_rows_test` hash re-pin for every new bus signal, the `legibility_rows_case` LINE_ROWS set and the `objectives_case` walk. Wave 2 is HC2 (readout) and HC3 (chain log and codex card) on `wt/alpha-w2-hc2` and `wt/alpha-w2-hc3`, dispatched 3 October. Veto list for Andrew: the plate says "Find an activity" until every site is done; a rewind press is not a miss; the combo pays the chained enemy only.
