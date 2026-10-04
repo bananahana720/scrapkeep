@@ -541,6 +541,7 @@ func summary() -> Dictionary:
 		"class": class_def.display_name if class_def != null else "",
 		"stages": stage,
 		"scrap": scrap,
+		"cogs": cogs,
 		"mass": mass,
 		"heft": heft(),
 		"parts": parts.duplicate(),

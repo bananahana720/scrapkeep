@@ -10,6 +10,7 @@ const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const Gauge := preload("res://src/ui/gauge.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const SpeedGlyph := preload("res://src/ui/speed_glyph.gd")
 const RunStatus := preload("res://src/ui/run_status.gd")
 const ObjectiveView := preload("res://src/ui/objective_view.gd")
@@ -26,6 +27,30 @@ const PartName := preload("res://src/ui/part_name.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 
+# The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
+# shows because it is what the next roll through a hoop spends.
+class CogChip extends Control:
+	var amount := 0
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = Vector2(72.0, 24.0)
+		size = custom_minimum_size
+
+	func set_amount(value: int) -> void:
+		if value != amount:
+			amount = value
+			queue_redraw()
+
+	func drawn_words() -> PackedStringArray:
+		return PackedStringArray([str(amount)])
+
+	func _draw() -> void:
+		var mid := size.y * 0.5
+		draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), false, Icons.tint("res_scrap", Palette.BRASS))
+		UiDraw.text(self, 26.0, mid, str(amount), 18, Palette.SAND, true)
+
+
 # The spine's HUD, built to a word budget (playtest entry 7): icons, gauges and keycaps
 # carry the facts, and words appear only where nothing else can say it. Top band: the
 # run status (stage pips, threat), a boss plate when one is mounted (mount_plate) and the
@@ -35,7 +60,7 @@ const ChainCounter := preload("res://src/ui/chain_counter.gd")
 # reticle, contextual key glyphs, the name of a part just gained above the ball and edge
 # markers. Colour and shape come from event_kinds.gd, and where each piece sits from
 # screen_regions.gd. Scrap, heft, the punch and plating bars, core pips and the run clock
-# are not shown in play; the workshop shows what scrap can buy.
+# are not shown in play; the one number shown is the cog wallet, beside the speed glyph.
 
 # Toast timing (VISUAL-LANGUAGE.md section 7): in over 0.12 s, held 2.4 s for a critical
 # fact and 1.6 s for a notable one, out over 0.2 s.
@@ -139,6 +164,7 @@ const ARMOR_BAR := 120.0
 const ARMOR_FLASH := 0.35
 const ARMOR_PEAK_FLOOR := 100.0
 var _armor: Control
+var _cogs: CogChip
 var chain_counter: Control
 var _armor_flash := 0.0
 var _armor_peak := ARMOR_PEAK_FLOOR
@@ -204,6 +230,8 @@ func setup(game_ref) -> void:
 	_armor = Gauge.new("res_scrap", ARMOR_BAR, true)
 	add_child(_armor)
 	_armor.visible = false
+	_cogs = CogChip.new()
+	add_child(_cogs)
 	chain_counter = ChainCounter.new()
 	add_child(chain_counter)
 	game.run.armor_hit.connect(func(_removed: float, _spill: int, _source: String): _armor_flash = ARMOR_FLASH)
@@ -542,6 +570,7 @@ func layout(size: Vector2) -> void:
 	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.size.y * 0.5)
 	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
+	_cogs.position = Vector2(_speed.position.x + _speed.size.x + BOTTOM_GAP, slot_mid - _cogs.size.y * 0.5)
 	chain_counter.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - chain_counter.size.y * 0.5)
 
 
@@ -586,6 +615,11 @@ func piece_rects() -> Dictionary:
 		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_speed)]
 			+ ([_rect_of(_armor)] if _armor.visible else []),
 	}
+
+
+# The wallet the HUD shows: the cogs the run holds.
+func wallet_cogs() -> int:
+	return _cogs.amount
 
 
 # The beacon row reads the beacon's own state row, so the HUD, the ring and the edge marker
@@ -702,7 +736,7 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, reticle, key_glyphs, edge_markers, why_callout]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, edge_markers, why_callout]:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing
@@ -734,6 +768,7 @@ func _process(delta: float) -> void:
 		_armor.set_reading(clampf(run.mass / _armor_peak, 0.0, 1.0), EventKinds.color("scrap_collected"),
 			"", _armor_flash > 0.0, Palette.AMBER)
 	_speed.set_tier(game.player.state.tier)
+	_cogs.set_amount(run.cogs)
 
 	var tint: Color = run.class_def.color if run.class_def != null else Palette.SAND
 	var shape: String = run.class_def.shape if run.class_def != null else "ring"

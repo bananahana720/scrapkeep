@@ -210,17 +210,17 @@ static func _rarity_color(rarity: String) -> Color:
 	return Palette.SANDSTONE
 
 
-func _refresh_label(fab: Dictionary, scrap: int, held: Array) -> void:
+func _refresh_label(fab: Dictionary, cogs: int, held: Array) -> void:
 	var part_id: String = fab["part_id"]
 	var cost := price(part_id, held.size())
 	var text := ""
-	var ready: bool = fab["restock"] <= 0.0 and scrap >= cost
+	var ready: bool = fab["restock"] <= 0.0 and cogs >= cost
 	if fab["restock"] > 0.0:
 		text = "FABRICATING..."
 	else:
 		var d: Resource = Parts.def(part_id)
 		text = "%s\n%s\n%s" % [Parts.headline(part_id), d.text if d != null else "",
-			"ROLL THROUGH: %d scrap" % cost if ready else "need %d scrap (have %d)" % [cost, scrap]]
+			"ROLL THROUGH: %d cogs" % cost if ready else "need %d cogs (have %d)" % [cost, cogs]]
 		var mark: String = mark_for.call(part_id) if mark_for.is_valid() else ""
 		if mark != "":
 			text += "\n" + mark
