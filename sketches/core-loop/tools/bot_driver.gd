@@ -1307,6 +1307,17 @@ func _boss():
 	return boss
 
 
+# A boss without a ship is the stub's one posture Warden on a flat pad (stub_boss.gd, its
+# `warden` field). The bot fights it with the routine it uses on a stage Warden.
+func _fight_posture_boss(boss, delta: float) -> void:
+	var target = boss.get("warden")
+	if not boss.has_method("active") or not boss.active() or target == null or not is_instance_valid(target):
+		_goal = "boss wait"
+		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
+		return
+	_fight(target, delta)
+
+
 # Phase 1: guns on the live crane magnets from the orbit, chasing any stolen scrap.
 # Phase 2: up a ramp and slam a vent cap when punch is short of the hull, else ram.
 # Phase 3: bait charges into the rim wall and ram the stunned ship; clash head-on when
@@ -1317,6 +1328,9 @@ func _fight_boss(delta: float) -> void:
 		_on_boss_entered()
 	var ship = boss.get("ship")
 	var arena = boss.get("arena")
+	if ship == null:
+		_fight_posture_boss(boss, delta)
+		return
 	if not boss.has_method("active") or not boss.active() or ship == null or not is_instance_valid(arena):
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
