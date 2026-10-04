@@ -39,6 +39,7 @@ const GUARD_OFFSET := 9.0
 const GUARD_RACK_POSTURE := 25.0
 const FAMILY_POINT_RADIUS := 1.3
 const FAMILY_REACH := 3.2
+const FAMILY_POINTS := {Roster.REACTOR: "core", Roster.SWARM: "queen", Roster.MIND: "lens"}
 const CONTACT_KINDS := ["stomp", "slam"]
 
 var stage := 1
@@ -116,9 +117,9 @@ func weak_points() -> Array:
 
 # --- The family kit (v2 W7) ---------------------------------------------------------
 
-# The kit's weak point: the core, open for the length of a stagger.
+# The kit's weak point, named by family, open for the length of a stagger.
 func family_point() -> String:
-	return "core"
+	return FAMILY_POINTS.get(family, "core")
 
 
 func family_point_at() -> Vector3:
@@ -319,7 +320,7 @@ func chunk_cracked() -> bool:
 # What the rule says a hit does.
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
 	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating, "smash": smash, "tier": tier,
-			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp})
+			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point()})
 	if hit_kind == "guard_rack":
 		# A rack is posture pressure, not a contact on the core. Keep judge/apply's
 		# stagger and shatter-frame boundaries while fixing its gain independently of heft.
@@ -357,7 +358,7 @@ func _begin_stagger() -> void:
 	_core_ring = null
 	family_opens += 1
 	if fleet != null:
-		fleet.events().weak_point_opened.emit("core", family_point_at(), BossPosture.STAGGER_SECONDS)
+		fleet.events().weak_point_opened.emit(family_point(), family_point_at(), BossPosture.STAGGER_SECONDS)
 
 
 func _posture_signature() -> Array:

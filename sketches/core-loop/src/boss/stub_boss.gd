@@ -98,7 +98,7 @@ func _publish_posture() -> void:
 	_posture_seen = now
 	ctx.events.posture_changed.emit(warden, warden.posture(), warden.staggered())
 	if opened:
-		ctx.events.weak_point_opened.emit("core", warden.family_point_at(), BossPosture.STAGGER_SECONDS)
+		ctx.events.weak_point_opened.emit(warden.family_point(), warden.family_point_at(), BossPosture.STAGGER_SECONDS)
 
 
 func _posture_signature() -> Array:

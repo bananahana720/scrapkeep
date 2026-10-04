@@ -83,7 +83,7 @@ func judge(hit: Dictionary) -> Dictionary:
 			"gain": 0.0, "glance": glance, "shatter": false, "crack": false, "contact": contact}
 	if staggered:
 		if contact and frame > stagger_frame:
-			result["part"] = "core"
+			result["part"] = String(hit.get("point", "core"))
 			_judge_core(result, hit)
 		return result
 	if contact and frame == shatter_frame:
