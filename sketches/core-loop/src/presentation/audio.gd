@@ -90,7 +90,7 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "p
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring"]
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer"]
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
 # row's sound, a shattered chunk plays its row's sound over a low hit.
@@ -973,6 +973,10 @@ func wire_optional() -> void:
 	# rise and down a fourth on the return, so the two read apart without looking.
 	if ctx.get("build") != null and ctx.build.has_signal("shell_air_changed") and not ctx.build.shell_air_changed.is_connected(_on_shell_air):
 		ctx.build.shell_air_changed.connect(_on_shell_air)
+	# The hot-wired Fit / Recycle offer is build-local (no bus signal, no event row): one brass
+	# pair per offer, played by name.
+	if ctx.get("build") != null and ctx.build.has_signal("hotwire_offered") and not ctx.build.hotwire_offered.is_connected(_on_hotwire_offered):
+		ctx.build.hotwire_offered.connect(_on_hotwire_offered)
 	# v3 interact: each fact in its family's sound register (world/interactables.gd), so
 	# a bet's drum roll, clunk and crack and an altar's anvil and riser come from the row.
 	_listen(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
@@ -1279,6 +1283,10 @@ const SHELL_RETURN_SEMITONES := -5.0
 
 func _on_shell_air(_factor: float, rose: bool) -> void:
 	play("world_fact", 0.0, Harmony.ratio(SHELL_RISE_SEMITONES if rose else SHELL_RETURN_SEMITONES), "SFX", Rows.heard(EventKinds.world_row("shell_air_shift"), cue_context()))
+
+
+func _on_hotwire_offered(_part_id: String, _recycle: int) -> void:
+	play("hotwire_offer", 0.0, 1.0, "SFX", "hotwire_offer")
 
 
 func _on_event_started(event_id: String) -> void:

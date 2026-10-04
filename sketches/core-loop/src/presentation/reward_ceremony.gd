@@ -2,6 +2,7 @@ extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
@@ -180,6 +181,14 @@ static func card_words(part_id: String) -> String:
 	var words := line.split(" ", false)
 	var limit := int(EventKinds.reward_row("reveal").get("words", 6))
 	return " ".join(words.slice(0, mini(words.size(), limit)))
+
+
+# The relic a part stands for, or "" for an ordinary part: a relic card names the relic.
+static func relic_of(part_id: String) -> String:
+	for id in Relics.ids():
+		if Relics.part_of(id) == part_id:
+			return String(id)
+	return ""
 
 
 static func icon_of(part_id: String) -> String:
@@ -367,7 +376,10 @@ func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
 	var stamps: Dictionary = row["stamps"]
 	var stamp: String = stamps["first"] if find["first"] and rarity in ["common", "rare"] else stamps.get(rarity, "")
 	var element := String(d.element) if d != null else ""
-	return {"part": find["part"], "name": Parts.display_name(find["part"]), "verb": card_words(find["part"]), "stamp": stamp,
+	var relic := relic_of(find["part"])
+	var title: String = Relics.name_of(relic) if relic != "" else Parts.display_name(find["part"])
+	var body: String = String(Relics.row(relic).get("text", "")) if relic != "" else card_words(find["part"])
+	return {"part": find["part"], "name": title, "verb": body, "stamp": stamp,
 		"icon": icon_of(find["part"]), "element_icon": "el_" + element if element != "" else "",
 		"tint": RewardGates.rarity_color(rarity), "heart": row["heart"] if rarity == "relic" else false,
 		"partner_icon": icon_of(find["partner"]) if String(find["partner"]) != "" else "", "link": find["link"],

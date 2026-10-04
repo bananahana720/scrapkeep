@@ -96,6 +96,7 @@ func _run() -> void:
 	_game.run.damage(12.0, "test")
 	_game.run.mass += 40.0
 	_game.run.add_cogs(7)
+	_game.run.settled.append("resume_marker")
 	var grown: float = _game.run.mass
 	_game.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
 	var saved := _state(_game)
@@ -118,6 +119,8 @@ func _run() -> void:
 		and back["cogs"] == saved["cogs"] and back["parts"] == saved["parts"] and back["picks"] == saved["picks"]
 	_report("resume at the entrance", offered and resumed and picked and same and pose_gap < POSE_TOLERANCE and _game.flow.state_name() == "stage",
 		"continue offered %s, resumed %s: %s against saved %s (mass before entry %.0f), ball %.3f m from the entry" % [offered, resumed, back, saved, grown, pose_gap])
+	_report("resume reconciles the settled ledger", _game.ctx.profile.is_settled("resume_marker") and _game.run.settled.has("resume_marker"),
+		"run settled %s, profile settled %s" % [_game.run.settled, _game.ctx.profile.settled_ids()])
 	_report("continue spends nothing", back["spent"] == {1: 1} and int(_disk().get("retries_spent", {}).get("1", 0)) == 1,
 		"retries_spent after the continue %s, on disk %s" % [back["spent"], _disk().get("retries_spent")])
 

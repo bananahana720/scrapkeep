@@ -1021,7 +1021,7 @@ func _apply_route() -> void:
 # --companion-stub=on: one piece per family owned at run start, none assembled, until the
 # pickup table is placed on a map.
 func _grant_companion_stub() -> void:
-	if ctx.tuning == null or ctx.tuning.option("companion_stub") != "on":
+	if ctx.tuning == null or ctx.tuning.option("companion_stub") != "on" or not ctx.run.companion.is_empty():
 		return
 	var model := Companion.new()
 	for id in ["primer_coil", "ram_prow", "escape_vent"]:
