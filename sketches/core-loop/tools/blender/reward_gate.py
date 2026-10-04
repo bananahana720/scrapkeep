@@ -2,11 +2,13 @@
 # salvaged box sections with angle-iron corners, an I-beam lintel with rarity trim, a
 # diamond keystone with a mint field core, a gantry that hangs the trigger and element
 # glyph plates, and one rarity topper per rarity whose shape matches the section 5
-# frames (common a bar, uncommon a bold-rimmed diamond, rare a double-outlined star,
-# rare_plus a tall double-outlined star with four bolt notches and a mint heart).
+# frames (common a bar, rare a bold-rimmed diamond, relic a tall double-outlined star
+# with four bolt notches and a mint heart, evolved a taller double-outlined crown).
 # Provenance: authored procedurally here from Blender primitives and bmesh operators;
 # no external assets. Measured tris, arch plus three plates plus one topper: common
-# 1848, uncommon 1828, rare 2048, rare_plus 2288 (target 1500 to 2500).
+# 1848, rare 1828, relic 2288, evolved 2048 (target 1500 to 2500).
+# 2026-10-04: new rarity names; evolved raises the star prism and both outlines to
+# 2.0x height, without relic's bolts/heart, keeping the file at 2,696 tris (cap 2,700).
 #
 # Frame: matches reward_gates.gd, ground centre at the origin, posts at x = +-WIDTH/2
 # (8 m apart), lintel at HEIGHT (7 m), topper centre at HEIGHT + 1.2, glyph row at
@@ -31,7 +33,7 @@ GLYPH_Z = HEIGHT + 2.9
 GANTRY_Z = GLYPH_Z + 0.95
 PLATE_X = (-1.5, 0.0, 1.5)
 BAND = (1500, 2500)
-RAMP = {"common": "bone", "uncommon": "mint", "rare": "amber", "rare_plus": "amber"}
+RAMP = {"common": "bone", "rare": "amber", "relic": "mint", "evolved": "ancient"}
 
 
 def post(p, rng, x):
@@ -128,17 +130,17 @@ def topper(rarity):
         for sx in (-1, 1):
             t.box("bare_metal", (0.12, 0.46, 0.46), loc=c + Vector((sx * 0.8, 0, 0)))
             t.bolt(c + Vector((sx * 0.5, -0.2, 0)), (0, -1, 0), r=0.05, h=0.04)
-    elif rarity == "uncommon":
+    elif rarity == "rare":
         diamond(t, "rarity", (0.8, 0.25, 1.0), c)
         rim = [(0.95, 0.0), (0.0, 1.18), (-0.95, 0.0), (0.0, -1.18)]
         outline_loop(t, rim, 0.18)
     else:
-        tall = 1.55 if rarity == "rare_plus" else 1.0
+        tall = 1.55 if rarity == "relic" else 2.0
         pts = [(x, y * tall) for x, y in star(5, 1.0, 0.45)]
         t.prism("rarity", pts, 0.34, matrix=upright)
         outline_loop(t, star(5, 1.14, 0.53), 0.07, tall)
         outline_loop(t, star(5, 1.3, 0.62), 0.07, tall)
-        if rarity == "rare_plus":
+        if rarity == "relic":
             for k in range(4):
                 a = math.pi / 4 + k * math.pi / 2
                 t.bolt(c + Vector((0.75 * math.cos(a), -0.19, 0.75 * math.sin(a) * tall * 0.8)), (0, -1, 0),
