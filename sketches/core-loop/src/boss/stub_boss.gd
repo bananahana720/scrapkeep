@@ -3,6 +3,7 @@ extends Node
 const Warden := preload("res://src/combat/warden.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Arena := preload("res://src/boss/arena.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 # The stand-in boss for a world whose own boss is not written yet (Worlds.BOSSES rows
 # whose script is this file). It answers BossContract.MODULE the way Brindle does, but the
@@ -26,6 +27,8 @@ var state := IDLE
 var clock := 0.0
 var pad: StaticBody3D
 var warden: Node3D
+# The Warden's posture as last published; the stub has no fleet to publish it for the Warden.
+var _posture_seen: Array = []
 
 
 func setup(ctx_ref) -> void:
@@ -51,6 +54,8 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	warden.global_position = center
 	warden.setup(ctx.player, self, ctx.root, Callable(ctx.flow, "in_play"), 1.0, _warden_spec())
 	warden.died.connect(_on_warden_died)
+	warden.set_meta("plate_name", String(ctx.flow.boss_row(ctx.stages.world_of(ctx.run.stage)).get("name", "Warden")))
+	_posture_seen = _posture_signature()
 	state = FIGHT
 	clock = 0.0
 	_place_ball(center, entry_velocity)
@@ -75,6 +80,30 @@ func _physics_process(delta: float) -> void:
 	if active():
 		clock += delta
 		ctx.flow.boss_plating = live_plating()
+		_publish_posture()
+
+
+# A stage Warden publishes posture_changed and weak_point_opened through its fleet; the
+# stub's has none, so the stub does it on the same signature, as Brindle does for his hull.
+# That is what the ring, the stagger chord and the plate's redraw listen for. The run log
+# ignores it because the arena is open (run_log's _in_arena).
+func _publish_posture() -> void:
+	if not is_instance_valid(warden) or not warden.has_method("posture"):
+		return
+	var now := _posture_signature()
+	if now == _posture_seen:
+		return
+	var opened: bool = warden.staggered() and not _posture_seen[1]
+	_posture_seen = now
+	ctx.events.posture_changed.emit(warden, warden.posture(), warden.staggered())
+	if opened:
+		ctx.events.weak_point_opened.emit("core", warden.family_point_at(), BossPosture.STAGGER_SECONDS)
+
+
+func _posture_signature() -> Array:
+	if not is_instance_valid(warden) or not warden.has_method("posture"):
+		return [0, false, BossPosture.CHUNKS, false]
+	return [floori(warden.posture()), warden.staggered(), warden.chunks_left(), warden.chunk_cracked()]
 
 
 func _warden_spec() -> Dictionary:

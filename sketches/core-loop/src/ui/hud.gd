@@ -398,8 +398,8 @@ func _begin_engagement(engaged: bool) -> void:
 	_seat_boss_plate()
 
 
-# The boss plate is up while a Warden on the posture rule is engaged, or Brindle's hull is
-# live in the arena, bound to it.
+# The boss plate is up while a Warden on the posture rule is engaged, or the arena's boss
+# is live (Brindle's hull, or a stub boss's Warden), bound to its posture body.
 func _seat_boss_plate() -> void:
 	var warden = game.flow.warden if _engaged else _brindle_hull()
 	if is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture":
@@ -415,12 +415,17 @@ func _seat_boss_plate() -> void:
 		boss_plate = null
 
 
-# Brindle's hull while his arena fight is live, else null.
+# The posture body of the arena fight that is live, else null: Brindle's hull, or the
+# Warden a stub boss stands. It reads ctx.boss, which flow points at the entered arena's
+# module, so worlds whose boss is the stub get the plate too.
 func _brindle_hull():
-	var boss = game.boss
-	if boss != null and boss.has_method("active") and boss.active() and is_instance_valid(boss.get("ship")):
+	var boss = game.ctx.boss
+	if boss == null or not boss.has_method("active") or not boss.active():
+		return null
+	if is_instance_valid(boss.get("ship")):
 		return boss.ship.hull
-	return null
+	var stub_warden = boss.get("warden")
+	return stub_warden if is_instance_valid(stub_warden) else null
 
 
 func _exit_tree() -> void:

@@ -73,8 +73,11 @@ func drawn_words() -> Array:
 func plate_name() -> String:
 	if not active():
 		return ""
-	# A Warden names itself by family; any other posture body (Brindle's hull) is the
-	# boss arena's own row.
+	# A stub boss names its Warden after the world's boss row ("plate_name" meta); a stage
+	# Warden names itself by family; any other posture body (Brindle's hull) is the boss
+	# arena's own row.
+	if _warden.has_meta("plate_name"):
+		return String(_warden.get_meta("plate_name"))
 	if _warden.get("family") == null:
 		return String(EventKinds.hud("boss_arena_entered"))
 	return String(NAMES.get(_warden.family, NAME_FALLBACK))
