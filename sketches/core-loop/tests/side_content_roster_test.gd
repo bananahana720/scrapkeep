@@ -73,12 +73,17 @@ func _run() -> void:
 	_game.world.activities.set_physics_process(false)
 	var seen := []
 	var checked := 0
+	var real := 0
 	for row in _game.ctx.stages.DEFS:
 		var stage: int = row["stage"]
 		var key := "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
 		seen.append(key)
 		var map = _game.ctx.terrain.map_for(stage)
 		var errors := _errors(map)
+		if String(row["name"]).contains("placeholder"):
+			print("[skip %s: %s] placeholder row on a reused map; no authored side content yet" % [key, row["name"]])
+			continue
+		real += 1
 		if PENDING.has(key):
 			var pending: Dictionary = PENDING[key]
 			_report("pending %s: %s" % [key, row["name"]], pending.name == row["name"] and not pending.unit.is_empty()
@@ -91,6 +96,7 @@ func _run() -> void:
 			_negative_cases(map)
 	for key in PENDING:
 		_report("pending row exists", key in seen, key)
+	_report("at least two authored zones checked", real >= 2, "%d non-placeholder zones checked" % real)
 	_report("at least one complete zone", checked > 0, "%d zones checked without waiver" % checked)
 	_game.free()
 	print("side_content_roster_test: %s" % ("PASS (Spillway zone 1-1 pending: SC4 proposed challenge and secret)" if _failures == 0 else "FAIL (%d)" % _failures))

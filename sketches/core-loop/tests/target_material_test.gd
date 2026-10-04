@@ -89,7 +89,12 @@ func _run() -> void:
 				check(material.get_shader_parameter("detail_enabled") == true and material.get_shader_parameter("relief_enabled") == true, "target detail and relief enabled")
 				var parameters := material.shader.get_shader_uniform_list()
 				check(parameters.any(func(p): return p.name == "detail_enabled"), "engine parses target shader uniforms and include")
-	check(roles.ground == 2 and roles.rock >= 1 and roles.dam >= 4, "two alpha terrain grounds, rock and merged/imported dam surfaces use target materials")
+	var built := 0
+	for i in game.ctx.terrain.maps.size():
+		if game.ctx.terrain.is_built(i + 1):
+			built += 1
+	check(built >= 2 and roles.ground == built and roles.rock >= 1 and roles.dam >= 4,
+		"every built alpha terrain ground (%d built, %s), rock and merged/imported dam surfaces use target materials" % [built, roles])
 	for row in before:
 		check(row.view.mesh == row.mesh and row.view.cast_shadow == row.cast_shadow, "target keeps mesh and shadow-caster state for " + str(row.view.name))
 		if not Preset._materials.any(func(binding): return binding.view.get_ref() == row.view):
