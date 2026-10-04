@@ -15,8 +15,9 @@ const PENDING := {
 }
 const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal"]
 # 2026-10-04 (wave 9): the Dig and Highdraft are greybox zones that get their side content in
-# wave 10 (the deep-Dig and Highdraft-crown map units remove them from this list).
-const SIDE_CONTENT_PENDING := ["dig", "highdraft"]
+# wave 10 (the deep-Dig and Highdraft-crown map units remove them from this list). The
+# Highdraft's side content landed in wave 10.
+const SIDE_CONTENT_PENDING := ["dig"]
 var _game
 var _failures := 0
 

@@ -45,22 +45,23 @@ var hard_points: Array = []
 
 func _init() -> void:
 	title = "Highdraft"
-	spawn = ISLANDS["spawn"]["at"]
+	spawn = _islands()["spawn"]["at"]
 	heading = Vector3(0.0, 0.0, -1.0)
-	beacon = ISLANDS["beacon"]["at"]
-	beacon_floor = ISLANDS["beacon"]["top"]
-	vault = ISLANDS["vault"]["at"]
+	beacon = _islands()["beacon"]["at"]
+	beacon_floor = _islands()["beacon"]["top"]
+	vault = _islands()["vault"]["at"]
 	gate_slots = [
 		{"at": Vector2(-10.0, -74.0), "facing": Vector3(0.0, 0.0, -1.0)},
 		{"at": Vector2(0.0, -74.0), "facing": Vector3(0.0, 0.0, -1.0)},
 		{"at": Vector2(10.0, -74.0), "facing": Vector3(0.0, 0.0, -1.0)},
 	]
-	var mid: Dictionary = ISLANDS["mid"]
-	var vault_isle: Dictionary = ISLANDS["vault"]
-	var spawn_isle: Dictionary = ISLANDS["spawn"]
-	var west: Dictionary = ISLANDS["west"]
-	var beacon_isle: Dictionary = ISLANDS["beacon"]
-	for post in POSTS:
+	var isles := _islands()
+	var mid: Dictionary = isles["mid"]
+	var vault_isle: Dictionary = isles["vault"]
+	var spawn_isle: Dictionary = isles["spawn"]
+	var west: Dictionary = isles["west"]
+	var beacon_isle: Dictionary = isles["beacon"]
+	for post in _posts():
 		hard_points.append({"at": post["at"]})
 	contraptions = [
 		{"kind": "thermal", "id": "thermal_a", "at": THERMAL_A, "radius": 5.0, "height": 40.0},
@@ -75,10 +76,31 @@ func _init() -> void:
 			"b": Vector3(-48.0, float(west["top"]) - BARGE_SIZE.y * 0.5, -32.5),
 			"size": BARGE_SIZE, "travel": 10.0, "dwell": 3.0, "offset": 0.0},
 	]
+	# 2026-10-04 (wave 10): side content. The camp holds the west island (cable or barge out),
+	# the bounty brute guards the vault on its island, 7 m off the vault beside the barge dock.
+	activity_sites = [
+		{"id": "enemy_camp", "at": Vector2(-70.0, -20.0), "pack": ["chaser", "chaser", "lobber"], "pay": {"named": "rivet_plating"}},
+		{"id": "hauler_bounty", "at": Vector2(70.0, 47.0)},
+	]
+
+
+# The island, bridge and post tables every method reads, so a variant zone (map_highdraft_crown.gd)
+# swaps the tables and keeps the shape code. GDScript refuses a subclass const named like the
+# parent's, so the variant overrides these instead.
+func _islands() -> Dictionary:
+	return ISLANDS
+
+
+func _bridges() -> Array:
+	return BRIDGES
+
+
+func _posts() -> Array:
+	return POSTS
 
 
 func build_props(parent: Node3D, ground: Callable) -> void:
-	for post in POSTS:
+	for post in _posts():
 		var at: Vector2 = post["at"]
 		grapple_post(parent, ground.call(at.x, at.y, -0.5), post["height"])
 
@@ -91,17 +113,18 @@ func sample(x: float, z: float) -> Array:
 	var p := Vector2(x, z)
 	var h := NET_H
 	var tint := Palette.CHARCOAL
-	for id in ISLANDS:
-		var isle: Dictionary = ISLANDS[id]
+	var isles := _islands()
+	for id in isles:
+		var isle: Dictionary = isles[id]
 		var top: float = isle["top"]
 		var d: float = p.distance_to(isle["at"]) - float(isle["radius"])
 		var ih := _skirt(top, d, SKIRT)
 		if ih > h:
 			h = ih
 			tint = Palette.SAND
-	for pair in BRIDGES:
-		var a: Dictionary = ISLANDS[pair[0]]
-		var b: Dictionary = ISLANDS[pair[1]]
+	for pair in _bridges():
+		var a: Dictionary = isles[pair[0]]
+		var b: Dictionary = isles[pair[1]]
 		var dir: Vector2 = ((b["at"] as Vector2) - (a["at"] as Vector2)).normalized()
 		var from: Vector2 = (a["at"] as Vector2) + dir * float(a["radius"])
 		var to: Vector2 = (b["at"] as Vector2) - dir * float(b["radius"])
