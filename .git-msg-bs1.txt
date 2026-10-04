@@ -1,0 +1,6 @@
+feat(alpha): BS1 tree safe picks, no dead-end offers
+
+Codex gpt-6.1-sol high via codex exec, alpha wave 6, base b927aec.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012wAr5UJTetz863nBCpbRyp

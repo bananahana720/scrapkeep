@@ -1,6 +1,7 @@
 extends RefCounted
 
 const AbilityState := preload("res://src/core/ability_state.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Sable := preload("res://src/core/trees/sable.gd")
 const Rivet := preload("res://src/core/trees/rivet.gd")
@@ -164,6 +165,80 @@ static func icon_of(for_class: String, node_id: String, world_one := false) -> D
 	if i < 0:
 		return {}
 	return {"id": nodes(for_class, world_one)[i]["icon"], "notch": depth_of(i)}
+
+
+# Four safe growth picks preserve the untouched kit AND earlier picks on their route.
+# This is a conservative data check for swaps and knobs, separate from structural
+# problems(): existing tradeoff nodes remain playable and are reported, never edited.
+# Any different ability id replaces the old action, even if its variant adds power.
+# Any numeric reduction is flagged pending decision 3, including lower drain/timers;
+# false cannot disable an enabled knob. Ram Fins explicitly removes enemy rebound.
+# Other ops and runtime effectiveness are outside this check; [] is not a feel verdict.
+static func safe_pick_problems(for_class: String, n: Dictionary, earlier: Array = []) -> Array[String]:
+	var out: Array[String] = []
+	var id: String = n.get("id", "<fixture>")
+	var def := ClassDef.by_id(for_class)
+	if def == null:
+		out.append("%s: unknown pilot '%s'" % [id, for_class])
+		return out
+	var slots := {}
+	var knobs := {}
+	for slot in AbilityState.SLOTS:
+		slots[slot] = def.get("%s_id" % slot)
+	for k in KNOBS:
+		knobs[k] = KNOBS[k]["default"]
+	for prior in earlier:
+		for slot in prior.get("swap", {}):
+			slots[slot] = prior["swap"][slot]
+		for k in prior.get("knob", {}):
+			knobs[k] = prior["knob"][k]
+	for slot in n.get("swap", {}):
+		var replacement = n["swap"][slot]
+		if not slots.has(slot) or not AbilityState.ABILITIES.has(replacement):
+			out.append("%s: swap %s -> %s removes a valid slot ability" % [id, slot, replacement])
+		elif replacement != slots[slot] or replacement != def.get("%s_id" % slot):
+			out.append("%s: swap %s -> %s replaces ability %s" % [id, slot, replacement, slots[slot]])
+	for k in n.get("knob", {}):
+		if not KNOBS.has(k):
+			out.append("%s: unknown knob '%s' cannot be certified safe" % [id, k])
+			continue
+		var value = n["knob"][k]
+		var base = KNOBS[k]["default"]
+		var previous = knobs[k]
+		if typeof(base) == TYPE_BOOL:
+			if typeof(value) != TYPE_BOOL:
+				out.append("%s: knob %s is not a boolean" % [id, k])
+			elif not value and (base or previous):
+				out.append("%s: knob %s disables an enabled ability" % [id, k])
+			elif k == "sprint_no_rebound" and value:
+				out.append("%s: knob sprint_no_rebound removes enemy rebound" % id)
+		elif typeof(value) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(value)):
+			out.append("%s: knob %s is not a finite number" % [id, k])
+		elif float(value) < float(base):
+			out.append("%s: knob %s lowers default %s to %s" % [id, k, base, value])
+		elif float(value) < float(previous):
+			out.append("%s: knob %s lowers earlier pick %s to %s" % [id, k, previous, value])
+	return out
+
+
+# Visit every node with its actual ancestor picks. The world-one offer profile has
+# only six reachable nodes; the full profile checks all thirty, including Tarn's copy.
+static func safe_growth_problems(for_class: String, world_one := false) -> Array[String]:
+	var out: Array[String] = []
+	var list := nodes(for_class, world_one)
+	if list.is_empty():
+		out.append("%s: no growth tree" % for_class)
+		return out
+	if world_one:
+		list = list.slice(0, WORLD_ONE_SIZE)
+	for i in list.size():
+		var earlier: Array = []
+		var parent: int = (i - 2) / 2 if i >= 2 else -1
+		while parent >= 0:
+			earlier.push_front(list[parent])
+			parent = (parent - 2) / 2 if parent >= 2 else -1
+		out.append_array(safe_pick_problems(for_class, list[i], earlier))
+	return out
 
 
 # Everything wrong with a class's tree, as sentences; empty when it is sound.
