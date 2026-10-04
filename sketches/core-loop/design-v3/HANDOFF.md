@@ -6,25 +6,25 @@
 
 Eighteen units merged plus four fix rounds and two coordinator commits; gate 3 at 1fe63fd: 340 pass, 1 red fixed as f1f753b (test-only), quarantine build_power_curve; Opus gate read PASS+NOTES after fix B.
 
-- HW2: hot-wire choice screen.
-- META-6: companion pickups and panel.
-- META-7: companion persistence.
-- IN2+IN3+IN4: input and settings units.
-- F7: stub boss plate and chord.
-- META-3: rescue_completed emitted.
-- EV1: events unit.
-- RL1+RL2: run-log units.
-- RS4+RS5: run-save units.
-- REC: recorder unit.
-- B3: Sol lane.
-- C6: Sol lane.
-- C8b: music_rows routed by audio.
-- BS1: Sol lane.
-- SC2+SC3: Sol lane.
-- T1b: Sol lane.
-- T5: Sol lane.
-- T7a: Sol lane.
-- ZS-E: Sol lane.
+- HW2: hot-wired Fit / Recycle screen in play.
+- META-6: companion assembly screen on the death screen (--companion-stub).
+- META-7: RS4 settle-once ledger for one-time grants.
+- IN2+IN3+IN4: aim assist, pad rebind rows and paged settings.
+- F7: the stub boss fight reads like a fight (plate, ring, chord).
+- META-3: world-one rescue quest, a caged runner on the Spillway.
+- EV1: two evolutions: Wrecking Ball and Pinwheel become Evolved parts.
+- RL1+RL2: relics found in cracked caches, held per slot in the run.
+- RS4+RS5: run_save_interrupt_test, interrupted run-save transitions.
+- REC: wave 5 records (ledger rows, decisions, handoff).
+- B3: balance report and checkpoint bands for the alpha table (Sol).
+- C6: tile check tool for texture tiling (Sol).
+- C8b: audio routes stage music through music_rows (Sol).
+- BS1: tree safe picks, no dead-end offers (Sol).
+- SC2+SC3: Reach secret and side-content roster (Sol).
+- T1b: smoke runner tags and per-test timing (Sol).
+- T5: content registry with fixtures and unit case (Sol).
+- T7a: presentation tests on the alpha table, lint baseline (Sol).
+- ZS-E: structure rows test for the second zone (Sol).
 - Fix rounds A-D (A, B Sonnet; C, D Opus) and two coordinator commits (1fe63fd hot-wire mount, f1f753b growth test).
 
 ### Open after wave 6
@@ -92,7 +92,7 @@ Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, the
 - Hero gate toppers for relic and evolved map to Topper_rare_plus until tools/blender/reward_gate.py is regenerated.
 - run_seed is unused by offers.
 - No field note can be unlocked in play (lore collection triggers).
-- music_rows.gd is not routed by audio.gd.
+- music_rows.gd is not routed by audio.gd (landed in wave 6 as C8b).
 - TR1's world.gd:610 stage schedule and the Sable route migration.
 - Default table swap re-queued as ZS-D2 with its failure list.
 - B2 explorer chain band unmet (5/16 seeds reach combo 2).
