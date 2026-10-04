@@ -170,6 +170,11 @@ func _exchange_input(event: InputEvent) -> void:
 		_end_exchange()
 
 
+# Ends a zone-entry exchange early, as the fire and hook keys do. Public so a test can clear it.
+func dismiss_exchange() -> void:
+	_end_exchange()
+
+
 func row() -> Dictionary:
 	return EventKinds.LOOT_ROWS.get(kind, EventKinds.LOOT_ROWS["moss_beat"])
 

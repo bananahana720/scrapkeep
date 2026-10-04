@@ -79,7 +79,8 @@ func _checks() -> void:
 	var world_cards: int = notes.render_page("world")
 	notes.show_page(3)
 	var tabs: String = notes.tab_label()
-	_report("codex page", notes.pages() == ["keys", "hurts", "grow", "build", "world", "enemy", "found"] and cards == base_build + 1 and world_cards == base_world + 1
+	# 2026-10-04: wave 4 (C5) added the Notes page after found.
+	_report("codex page", notes.pages() == ["keys", "hurts", "grow", "build", "world", "enemy", "found", "notes"] and cards == base_build + 1 and world_cards == base_world + 1
 			and tabs == "Build %d%%" % int(codex.completion("build") * 100.0),
 		"pages %s; build shows %d card, world %d; open tab \"%s\"" % [notes.pages(), cards, world_cards, tabs])
 

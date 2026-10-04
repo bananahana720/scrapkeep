@@ -223,6 +223,8 @@ func _run() -> void:
 	# At Moss's hatch with the counter closed, Y is the play verb (interact), so it does not
 	# also talk. The talk key is shown by hand for the ball standing there; the push is
 	# read at once, before the next frame recomputes it.
+	# 2026-10-04: the zone-entry exchange (wave 4, C5) answers interact, so end it first.
+	ws.bubble.dismiss_exchange()
 	var beat_closed: String = ws.bubble.text
 	ws.talk.visible = true
 	Push.pad(root, JOY_BUTTON_Y)
