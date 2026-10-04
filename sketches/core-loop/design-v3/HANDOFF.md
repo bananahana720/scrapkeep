@@ -1,4 +1,20 @@
-# Alpha handoff: recovery on 3 October 2026
+# Alpha handoff: checkpoint 1 passed, 3 October 2026
+
+**Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
+
+## First wave of the full-send round (ready to brief)
+
+| Unit | Spec | Owner files | Tier |
+| --- | --- | --- | --- |
+| HC1 hook chain state and rule | [HOOK-CHAIN.md](HOOK-CHAIN.md) | `src/combat/chain.gd` (new), `src/movement/player_ball.gd`, `src/core/event_kinds.gd` chain rows | medium (worker), alone and first |
+| AS activity signposting | scout read, 3 Oct: `ui/edge_markers.gd:43-55` `targets()` returns Warden else beacon only; `core/objectives.gd:15-27` has no activity row; the sites are `ctx.activities.sites` with `done` flags (`world/activities.gd:119-133`) | `src/ui/edge_markers.gd` (one amber marker per unfinished site, from drop-in, hidden while the Warden fight is engaged), `src/core/objectives.gd` (nearest-activity row before the Warden row) | medium (worker) |
+| RL run-log instrumentation | scout reads, 3 Oct: `prompts_shown` is initialised at `run_log.gd:160` and never incremented; `key_glyphs.gd` has no hook; `packs` appends the faction at `run_log.gd:283`, kinds are in the signal | `src/core/run_log.gd`, `src/ui/key_glyphs.gd` (rising-edge `prompt_shown(verb)` on `game.events`), `src/core/game_events.gd`, tests `spine_run_log_test.gd:96`, `traversal_measure_test.gd:164` | easy (hand) |
+
+HC2 and HC3 (readout, miss cost and log) follow HC1 in one wave. Then M2 world one per ALPHA-PLAN: Spillway as zone 1-1, both Wardens on the posture contract, Brindle, rescue progression, run save. Performance must be re-measured with the GPU free before any perf claim: the sitting ran beside a GPU research loop and the ACE ring ran dry three times.
+
+Housekeeping owed when no agent is live: 69 worktrees, 112 unmerged branches (most `codex/job-*` of 2 October), 23 untracked `.uid` files on `main`.
+
+## Recovery record (historical, 3 October)
 
 Continue the existing [alpha plan](ALPHA-PLAN.md) and [roadmap](ROADMAP.md). The old v3 resume queue is historical at Git base 619b8f4 and in the recovery evidence; its music, performance and ledger work has already been integrated or given a recorded disposition. Do not restart those units.
 
