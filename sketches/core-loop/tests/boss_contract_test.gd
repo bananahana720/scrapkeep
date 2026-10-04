@@ -108,7 +108,8 @@ func _run() -> void:
 	var missing: Array = BossContract.conforms(warden, BossContract.TARGET)
 	_report("warden conforms to TARGET", missing.is_empty(), "missing %s" % [missing])
 	var args := {"judge_hit": ["ram", 0.0, false, 0], "take_damage": [0.0], "plating_for": ["ram", ""],
-			"hit_mult": ["ram", ""], "contact_part": [Vector3.ZERO, "ram"]}
+			"hit_mult": ["ram", ""], "contact_part": [Vector3.ZERO, "ram"],
+			"knock": [Vector3.FORWARD, 0.0], "set_tint": ["calm"]}
 	var typed := true
 	var wrong: Array = []
 	for row in BossContract.TARGET:
