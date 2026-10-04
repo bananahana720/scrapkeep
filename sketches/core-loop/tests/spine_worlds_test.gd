@@ -10,9 +10,9 @@ const Worlds := preload("res://src/core/worlds.gd")
 # that world's boss, the next world's first stage follows, and the run ends won after
 # the last world's boss. Scenario A builds both boss rows; scenario B marks world two's
 # row unbuilt, so its stages run with no arena. Scenario C runs three one-stage worlds
-# with the real modules: Brindle (the scene's boss.gd) ends world one and the stub
-# (stub_boss.gd, picked from the Waking's and the Mind's rows) ends worlds two and three,
-# its posture Warden broken chunk by chunk. Each stage is cleared by calling flow's own
+# with the real modules: Brindle (the scene's boss.gd) ends world one, and worlds two and
+# three run waking.gd and mind.gd (picked from the Waking's and the Mind's rows), which
+# extend the stub, its posture Warden broken chunk by chunk. Each stage is cleared by calling flow's own
 # finish step, so the test pins the flow's routing, not the beacon, which spine_run_test
 # covers.
 
@@ -194,7 +194,7 @@ func _conclude_three() -> bool:
 	var flow = _game.flow
 	_t.eq("three: world_entered", _worlds, [1, 2, 3])
 	_t.eq("three: order", _events, ["world 1", "stage 1", "arena", "world 2", "stage 2", "arena", "world 3", "stage 3", "arena"])
-	_t.eq("three: Brindle ends world one, the stub worlds two and three", _modules, ["boss.gd", "stub_boss.gd", "stub_boss.gd"])
+	_t.eq("three: Brindle ends world one, the Waking and the Mind worlds two and three", _modules, ["boss.gd", "waking.gd", "mind.gd"])
 	_t.eq("three: each stub Warden lost its four chunks", _chunks, [0, 4, 4])
 	_t.eq("three: three bosses defeated", _boss_kills, 3)
 	_t.check("three: run ends won in the summary", _ended and _won and flow.state_name() == "summary",

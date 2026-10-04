@@ -186,10 +186,16 @@ func _single_step(label: String, stage: int) -> bool:
 		_game.hud._process(0.0)
 		var status = _game.hud._status
 		_t.eq("%s: the pips read stage %d" % [label, stage], status.stage, stage)
-		_t.eq("%s: the pips count the table's stages" % label, status.stages, _game.ctx.stages.COUNT)
-		_t.check("%s: no world card" % label, not _titles.has("Spillway Works"), "cards seen %s" % [_titles])
+		var tbl = _game.ctx.stages
+		var world: int = tbl.world_of(stage)
+		_t.eq("%s: the pips count the current world's stages" % label, status.stages, tbl.last_of(world) - tbl.first_of(world) + 1)
+		var multi: bool = tbl.worlds().size() > 1
+		_t.check("%s: the world card shows only on a multi-world table" % label,
+			_titles.has("Spillway Works") == multi, "multi-world %s, cards seen %s" % [multi, _titles])
 	if _ticks == 20:
-		_t.check("%s: a stage card shows" % label, not _titles.is_empty() and _titles[0] == _game.ctx.stages.of(1)["name"], "cards seen %s" % [_titles])
+		var first_card: String = "Spillway Works" if _game.ctx.stages.worlds().size() > 1 else String(_game.ctx.stages.of(1)["name"])
+		_t.check("%s: the first card up is the world card on a multi-world table, else the stage card" % label,
+			not _titles.is_empty() and _titles[0] == first_card, "cards seen %s" % [_titles])
 		_game.free()
 		if _phase == "default":
 			_phase = "slice"

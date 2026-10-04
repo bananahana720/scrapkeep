@@ -186,7 +186,7 @@ func _finish() -> bool:
 		var miss := Vector2(pad.x - down.x, pad.z - down.z).length()
 		_report("landing mark in stage %d" % stage, miss <= PAD_TOLERANCE,
 			"the pad marked (%.0f, %.0f); the ball touched down %.1f m from it" % [pad.x, pad.z, miss])
-	_report("launches measured", _records.size() == _launches_wanted(), "%d of %d stage-to-stage launches measured" % [_records.size(), _launches_wanted()])
+	_report("launches measured", _records.size() == _launches_wanted(), "%d of %d same-world stage-to-stage launches measured (world one rows minus one)" % [_records.size(), _launches_wanted()])
 	print("world_launch_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -200,4 +200,5 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 
 func _launches_wanted() -> int:
-	return mini(LAUNCH_SAMPLE, _game.ctx.stages.COUNT - 1)
+	var tbl = _game.ctx.stages
+	return mini(LAUNCH_SAMPLE, tbl.last_of(1) - tbl.first_of(1))
