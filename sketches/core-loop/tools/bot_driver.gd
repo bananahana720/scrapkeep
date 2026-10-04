@@ -157,6 +157,14 @@ const PAY_BACKOFF := 6.0
 # worked before the ones below it, ties nearest first. Sites are ranked by ground height in bands.
 const LEVEL_BAND := 8.0
 const CAMP_LAST := 1000.0
+# A site more than LEVEL_BAND above the ball is not rolled at straight: the cliff under its shelf
+# wedges the ball (the Reach camp stands 22 m over the trough). The way up is planned once on the
+# ground's heights, a CLIMB_STEP grid within CLIMB_PAD of both ends that never rises steeper than
+# CLIMB_SLOPE, and followed point by point.
+const CLIMB_STEP := 4.0
+const CLIMB_PAD := 100.0
+const CLIMB_SLOPE := 0.5
+const CLIMB_REACHED := 6.0
 # On a map with standing activities the explorer stops its other rolling (scrap lines, events, the
 # vault) at this stage second and goes to the Warden, so the fight has the rest of STAGE_LIMIT.
 const ENGAGE_BY := 140.0
@@ -222,6 +230,8 @@ var _activity_time := {}
 var _activity_skip := {}
 var _cache_phase := "runup"
 var _cache_clock := 0.0
+var _climb: Array[Vector3] = []
+var _climb_for := ""
 var _ignore_walls := false
 # Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
 var _seen := {}
@@ -492,6 +502,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_activity_skip = {}
 	_cache_phase = "runup"
 	_cache_clock = 0.0
+	_climb = []
+	_climb_for = ""
 	_wander_clock = 0.0
 	_committed = policy == "skipper"
 	_planned = false
@@ -865,7 +877,7 @@ func _activity_goal(delta: float) -> bool:
 				_fight(foe, delta)
 			else:
 				_goal = "activity %s" % s.id
-				_act(s.global_position, _nearest_enemy(), delta)
+				_act(_approach(s, ball), _nearest_enemy(), delta)
 		"cracked_cache":
 			_cache_ram(s, ball, delta)
 		"hauler_bounty":
@@ -877,6 +889,60 @@ func _activity_goal(delta: float) -> bool:
 				_activity = ""
 				return false
 	return true
+
+
+# The next point on the way to a site: the site itself, or the climb route when it stands on a
+# shelf above the ball.
+func _approach(s, ball: Vector3) -> Vector3:
+	var at: Vector3 = s.global_position
+	if _climb_for != s.id:
+		_climb_for = s.id
+		_climb.clear()
+		if at.y - ball.y > LEVEL_BAND:
+			_climb = _climb_route(ball, at)
+	while not _climb.is_empty() and _flat(ball, _climb[0]) < CLIMB_REACHED:
+		_climb.pop_front()
+	return at if _climb.is_empty() else _climb[0]
+
+
+# A grid path over the terrain's heights from the ball to the site that never climbs a step
+# steeper than CLIMB_SLOPE (falling is free), every other cell kept. Empty when there is none.
+func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
+	var terrain = game.ctx.terrain
+	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD
+	var hi := Vector2(maxf(from.x, to.x), maxf(from.z, to.z)) + Vector2.ONE * CLIMB_PAD
+	var nx := int(ceilf((hi.x - lo.x) / CLIMB_STEP)) + 1
+	var nz := int(ceilf((hi.y - lo.y) / CLIMB_STEP)) + 1
+	var graph := AStar2D.new()
+	graph.reserve_space(nx * nz)
+	var heights := PackedFloat32Array()
+	heights.resize(nx * nz)
+	for j in nz:
+		for i in nx:
+			var p := lo + Vector2(i, j) * CLIMB_STEP
+			heights[j * nx + i] = terrain.height(p.x, p.y)
+			graph.add_point(j * nx + i, p)
+	for j in nz:
+		for i in nx:
+			var a := j * nx + i
+			for step in [Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(-1, 1)]:
+				var bi: int = i + step.x
+				var bj: int = j + step.y
+				if bi < 0 or bi >= nx or bj >= nz:
+					continue
+				var b := bj * nx + bi
+				var rise: float = (heights[b] - heights[a]) / (Vector2(step).length() * CLIMB_STEP)
+				if absf(rise) <= CLIMB_SLOPE:
+					graph.connect_points(a, b)
+				elif rise > 0.0:
+					graph.connect_points(b, a, false)
+				else:
+					graph.connect_points(a, b, false)
+	var path := graph.get_point_path(graph.get_closest_point(Vector2(from.x, from.z)), graph.get_closest_point(Vector2(to.x, to.z)))
+	var out: Array[Vector3] = []
+	for k in range(1, path.size(), 2):
+		out.append(_ground_point(path[k].x, path[k].y))
+	return out
 
 
 # Past ENGAGE_BY on a map with standing activities, only the Warden is left to do.
