@@ -3,6 +3,8 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # The cracked wall behind stage 1's vault plinth and the cache in its pocket
 # (LOOP-REDESIGN section 9), in the running game as Kest in calm. Rolled into at
@@ -160,6 +162,24 @@ func _check_open() -> void:
 			shown += 1
 	_report("E opens the chest", _cache.state == CrackedCache.PICKING and _cache.offers.size() == CrackedCache.PICKS and shown == CrackedCache.PICKS,
 		"E inside the pocket: state %d, %d parts offered %s, %d pedestals up" % [_cache.state, _cache.offers.size(), _cache.offers, shown])
+	_check_gem_colours()
+
+
+# Every pedestal gem takes its colour from the item ladder (a relic is not painted as arc by
+# default, a rare is not brass): the shown gems match their part's rarity rung.
+func _check_gem_colours() -> void:
+	var ok := true
+	var seen := []
+	for i in _cache.offers.size():
+		var rarity: String = Parts.def(_cache.offers[i]).rarity
+		var gem: Color = _cache._pedestals[i]["gem"].material_override.albedo_color
+		seen.append(rarity)
+		ok = ok and gem == ItemGen.RARITY[rarity]["color"]
+	var ladder := true
+	for rarity in ItemGen.RARITIES:
+		ladder = ladder and CrackedCache.gem_color(rarity) == ItemGen.RARITY[rarity]["color"]
+	_report("gems wear the ladder colour", ok and ladder and CrackedCache.gem_color("relic") == ItemGen.RARITY["relic"]["color"],
+		"offered rarities %s, every rung read from ItemGen.RARITY" % [seen])
 
 
 func _onto_pedestal() -> void:

@@ -6,6 +6,7 @@ const Relics := preload("res://src/build/relics.gd")
 const Parts := preload("res://src/build/parts.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 
 # RL2: a relic found in a cracked cache is held in the run, one per slot, rewrites its
@@ -130,3 +131,31 @@ func _run() -> void:
 	old_doc.erase("relics")
 	var old := RunState.new(null)
 	_report("a doc without relics loads empty", old.from_entrance_doc(old_doc) and old.relics.is_empty(), "older save")
+	_tree_pick_survives_undo(run, abilities)
+
+
+# Crater Heart and Crater Slam (tree node s_crater) swap the smash slot to the same row. With
+# both gained in one stage a retry undoes the relic and must leave the pick's swap in place,
+# and a relic the tree already gave is not offered.
+func _tree_pick_survives_undo(run, abilities) -> void:
+	var build = _game.ctx.build
+	var tree = _game.player.tree
+	run.relics.clear()
+	build.sync_relics()
+	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
+	var smash_before: String = abilities.id_of(AbilityState.SMASH)
+	run.add_relic("crater_heart", "cache")
+	var path := UpgradeTree.path_to(run.class_id(), "s_crater")
+	var picked_all := not path.is_empty()
+	for depth in range(1, path.size() + 1):
+		while tree.picks.size() < depth and not tree.pending():
+			tree.open_checkpoint()
+		picked_all = tree.pick(path[depth - 1]) and picked_all
+	_report("relic and tree pick both land", picked_all and tree.gives_swap(AbilityState.SMASH, "crater_slam") and abilities.id_of(AbilityState.SMASH) == "crater_slam",
+		"path %s picks %s smash %s" % [path, tree.picks, abilities.id_of(AbilityState.SMASH)])
+	_report("a relic the tree gave is not offered", not "crater_heart" in Relics.eligible(run.class_id(), {}, tree) and "crater_heart" in Relics.eligible(run.class_id(), {}),
+		"eligible with the tree %s" % [Relics.eligible(run.class_id(), {}, tree)])
+	_game.flow.retry_stage()
+	_report("retry took the relic back", run.relics.is_empty() and not build._relic_fx.has(AbilityState.SMASH), "relics %s" % [run.relics])
+	_report("retry keeps the tree pick's swap", abilities.id_of(AbilityState.SMASH) == "crater_slam" and smash_before != "crater_slam",
+		"smash %s (was %s), picks %s" % [abilities.id_of(AbilityState.SMASH), smash_before, tree.picks])

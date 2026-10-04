@@ -75,12 +75,16 @@ static func fits(relic_id: String, pilot: String) -> bool:
 
 
 # Relic ids a pilot may still find: the pilot's rows whose slot holds nothing yet, in
-# table order. `held` is slot to relic id.
-static func eligible(pilot: String, held: Dictionary) -> Array:
+# table order. `held` is slot to relic id. A relic whose swap the upgrade tree already gave
+# (`tree`, optional) is not offered: it would change nothing.
+static func eligible(pilot: String, held: Dictionary, tree = null) -> Array:
 	var out := []
 	for id in ROWS:
-		if fits(id, pilot) and not held.has(ROWS[id]["slot"]):
-			out.append(id)
+		if not fits(id, pilot) or held.has(ROWS[id]["slot"]):
+			continue
+		if tree != null and swap_of(id) != "" and tree.gives_swap(ROWS[id]["slot"], swap_of(id)):
+			continue
+		out.append(id)
 	return out
 
 

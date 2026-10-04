@@ -25,6 +25,7 @@ func _initialize() -> void:
 	_union_when_run_doc_and_profile_disagree()
 	_grant_fires_once_across_runs()
 	_entrance_doc_field()
+	_grant_saves_once_never_the_middle()
 	_events.free()
 	_clear_dir()
 	quit(_t.verdict())
@@ -145,3 +146,41 @@ func _entrance_doc_field() -> void:
 	_t.check("RS4 a wrong-typed settled is refused", RunState.validate_entrance_doc(bad) != "")
 	var back := RunState.new()
 	_t.check("RS4 settled round trips through the doc", back.from_entrance_doc(doc) and back.settled == ["a"] and not back.extra.has("settled"))
+
+
+# A store double that records the document at every save. A crash that drops the first save
+# leaves the disk as it was (nothing) or as that snapshot holds; the snapshot must be whole.
+class SaveSpy:
+	extends Profile
+	var snaps: Array = []
+
+	func save() -> bool:
+		snaps.append(_doc.duplicate(true))
+		return true
+
+
+func _spy() -> SaveSpy:
+	var spy := SaveSpy.new(_path())
+	spy.load_profile()
+	return spy
+
+
+func _grant_saves_once_never_the_middle() -> void:
+	var spy := _spy()
+	var progress := _progress(spy, RunState.new())
+	_t.check("RS4 grant_once true", progress.grant_once("grant:paint_z", "cosmetic", "paint_z"))
+	_t.check("RS4 exactly one save per grant", spy.snaps.size() == 1, str(spy.snaps.size()))
+	var snap: Dictionary = spy.snaps[0]
+	_t.check("RS4 the one save holds settled and unlocked together", snap["settled"].has("grant:paint_z") and snap["cosmetics"].has("paint_z"), str(snap))
+	progress.free()
+	var earn_spy := _spy()
+	var earner := _progress(earn_spy, RunState.new())
+	earner.rows = {"row_z": {"on": "run_ended", "reward": {"pilot": "pilot_z"}}}
+	earner.setup(_events, RunState.new(), earn_spy, func(): return 5.0)
+	earner._evaluate("row_z", {})
+	var first: Dictionary = earn_spy.snaps[0]
+	var whole: bool = first["achievements"].has("row_z") and first["settled"].has("reward:row_z:pilot") and first["pilots"].has("pilot_z")
+	var none: bool = not first["achievements"].has("row_z") and not first["settled"].has("reward:row_z:pilot")
+	_t.check("RS4 the first save of an earn is all or nothing", whole or none, str(first))
+	_t.check("RS4 an earn with a reward saves the grant once, then the earn", earn_spy.snaps.size() == 2, str(earn_spy.snaps.size()))
+	earner.free()

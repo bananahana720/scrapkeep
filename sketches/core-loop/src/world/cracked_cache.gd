@@ -2,6 +2,7 @@ extends "res://src/world/device.gd"
 
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
 
 # A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
 # section 9): a verdigris concrete pocket with a charcoal groove, its open side walled
@@ -183,16 +184,22 @@ func fire() -> bool:
 		var is_relic := Relics.has(offers[i])
 		var d: Resource = Parts.def(Relics.part_of(offers[i]) if is_relic else offers[i])
 		var rarity: String = d.rarity if d != null else "common"
-		p["gem"].material_override = Palette.solid(Palette.BRASS if rarity.begins_with("rare") else Palette.ARC, 2.0)
+		p["gem"].material_override = Palette.solid(gem_color(rarity), 2.0)
 		var words := (Relics.name_of(offers[i]) if is_relic else Parts.display_name(offers[i])).split(" ", false)
 		var icon: String = "cat_" + (d.icon_category if d != null and d.icon_category != "" else "utility")
 		p["label"].set_parts(" ".join(words.slice(0, WorldPrompt.TITLE_WORDS)), "", icon)
 	return true
 
 
+# A pedestal gem wears its rarity's rung of the item ladder, the colour the reward card uses.
+static func gem_color(rarity: String) -> Color:
+	var id := ItemGen.resolve_rarity(rarity)
+	return ItemGen.RARITY[id if id != "" else "common"]["color"]
+
+
 # The relic this cache holds, or "". Only a relic the pilot can use for an empty slot.
 func _relic_offer() -> String:
-	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics)
+	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics, ctx.player.tree if ctx.player != null else null)
 	if pool.is_empty():
 		return ""
 	var rng: RandomNumberGenerator = system.luck(id + ":relic")

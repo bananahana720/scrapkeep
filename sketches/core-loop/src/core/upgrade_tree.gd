@@ -392,6 +392,16 @@ func path() -> Array[String]:
 	return picks.duplicate()
 
 
+# True when a held pick swaps this slot to this ability row. A relic that duplicates a pick's
+# swap reads this so it neither undoes the pick nor is offered on top of it.
+func gives_swap(slot: String, ability: String) -> bool:
+	for node_id in picks:
+		var n := node(class_id, node_id, world_one)
+		if n.get("swap", {}).get(slot, "") == ability:
+			return true
+	return false
+
+
 func knob(name: String):
 	return _knobs.get(name, KNOBS[name]["default"])
 

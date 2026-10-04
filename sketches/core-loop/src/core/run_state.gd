@@ -534,6 +534,9 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"relics": relics.duplicate(),
 		"kills": kills,
 		"events_won": events_won.duplicate(),
+		# The hot-wired offer (id, state, spent) rides the checkpoint with the cogs a Recycle
+		# pays, so a retry returns both to the pre-choice state together.
+		"hotwire": (extra.get("hotwire", {}) as Dictionary).duplicate(true),
 		"entry_position": entry_position,
 		"entry_velocity": entry_velocity,
 		"camera_yaw": camera_yaw,
@@ -587,6 +590,11 @@ func restore() -> void:
 	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
 	kills = _snapshot["kills"]
 	events_won.assign(_snapshot["events_won"])
+	var hotwire: Dictionary = _snapshot.get("hotwire", {})
+	if hotwire.is_empty():
+		extra.erase("hotwire")
+	else:
+		extra["hotwire"] = hotwire.duplicate(true)
 	stage_time = 0.0
 	since_damage = 99.0
 	retries += 1

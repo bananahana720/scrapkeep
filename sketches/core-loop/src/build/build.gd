@@ -505,13 +505,17 @@ func recompute() -> void:
 	effects.apply_abilities(ctx.player)
 	scrap.magnet_scale = sheet.magnet
 	field.shatter_scale = sheet.dial("shatter_damage")
+	# A synergy folded into an Evolved part still acts, so it keeps its fired flag: erasing it
+	# would tell the codex the pair was discovered again.
 	for synergy_id in _live:
-		if not synergy_id in sheet.synergies:
+		if not synergy_id in sheet.synergies and not synergy_id in sheet.consumed:
 			_fired.erase(synergy_id)
 	for synergy_id in sheet.synergies:
 		if not synergy_id in _live:
 			_on_synergy_live(synergy_id)
 	_live = sheet.synergies.duplicate()
+	for synergy_id in sheet.consumed:
+		_live.append(synergy_id)
 	_redraw()
 
 
@@ -625,8 +629,17 @@ func _hotwire_save() -> void:
 		ctx.run.extra["hotwire"] = {"id": _hotwire_id, "state": _hotwire_state, "spent": _hotwire_spent}
 
 
-func _hotwire_restore() -> void:
-	if _hotwire_spent or ctx == null or ctx.run == null or not ctx.run.extra.has("hotwire"):
+func _hotwire_restore(retry := false) -> void:
+	if ctx == null or ctx.run == null:
+		return
+	# A retry rewinds the offer with the snapshot (run.restore put its saved fields back, or
+	# erased them): a Recycle taken after the checkpoint is undone with its cogs.
+	if retry and not ctx.run.extra.has("hotwire"):
+		_hotwire_id = ""
+		_hotwire_state = ""
+		_hotwire_spent = false
+		return
+	if (_hotwire_spent and not retry) or not ctx.run.extra.has("hotwire"):
 		return
 	var saved: Dictionary = ctx.run.extra["hotwire"]
 	_hotwire_id = String(saved.get("id", ""))
@@ -717,7 +730,7 @@ func _apply_shell() -> void:
 
 
 func _redraw() -> void:
-	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies, ctx.run.heft_class())
+	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies + sheet.consumed, ctx.run.heft_class())
 
 
 func _codex():
@@ -851,7 +864,7 @@ func _on_run_started(_class_id_value: String) -> void:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	sync_relics()
-	_hotwire_restore()
+	_hotwire_restore(retry)
 	if retry:
 		_fired.clear()
 	gates.close()
@@ -1203,6 +1216,21 @@ func consumed_synergies() -> Array:
 	return sheet.consumed.duplicate()
 
 
+# The HUD's synergy list: each live synergy by name, then each consumed one as folded into
+# the Evolved part that took it over, so Wrecking Ball stays listed while it still acts.
+func synergy_read() -> Array:
+	var read: Array = []
+	for key in sheet.synergies:
+		read.append({"id": key, "name": Synergies.ROWS[key]["name"], "into": ""})
+	for key in sheet.consumed:
+		var into: String = Synergies.ROWS[key]["evolution"]["into"]
+		var part: Resource = Parts.def(into)
+		var part_name: String = part.display_name if part != null else into
+		read.append({"id": key, "name": Synergies.ROWS[key]["name"], "into": into,
+			"text": "%s (folded into %s)" % [Synergies.ROWS[key]["name"], part_name]})
+	return read
+
+
 # ---- Named synergy behaviours ----
 
 func _step_synergies(ball: Vector3, delta: float) -> void:
@@ -1356,5 +1384,9 @@ func _relic_undo(abilities, slot: String, fx: Dictionary) -> void:
 	if fx["charges"] > 0:
 		abilities.set_max_charges(slot, s.max_charges - fx["charges"])
 	abilities.set_cooldown_scale(slot, s.cooldown_scale / fx["cooldown"])
-	if fx["swapped"] and abilities.id_of(slot) == Relics.swap_of(fx["relic"]):
+	# A tree pick that swaps the slot to the same row keeps it: undoing the relic must not
+	# strip a pick the player made (the swap relics duplicate a tree node on purpose).
+	var tree = ctx.player.tree if ctx.player != null else null
+	var tree_owns: bool = tree != null and tree.gives_swap(slot, Relics.swap_of(fx["relic"]))
+	if fx["swapped"] and abilities.id_of(slot) == Relics.swap_of(fx["relic"]) and not tree_owns:
 		abilities.swap(slot, fx["prev"])
