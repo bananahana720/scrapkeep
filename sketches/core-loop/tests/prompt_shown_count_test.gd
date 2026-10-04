@@ -85,6 +85,6 @@ func _physics_process(_delta: float) -> bool:
 	glyphs.step(0.016, _view([], at))
 	glyphs.step(0.016, _view(["harpoon"], at))
 	_report("(f) arena does not count", _emitted == 7 and _count() == 6, "emitted %d, prompts_shown %d" % [_emitted, _count()])
-	print("prompt_shown_count: %d failure(s)" % _failures)
+	print("prompt_shown_count_test: %s" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures])
 	quit(1 if _failures > 0 else 0)
 	return true

@@ -247,5 +247,5 @@ func _run() -> void:
 			and _player._harpoon_refusal() == "" and not _ids().has("chain_miss") and single == 1.0 and not _fails.has("cooldown"),
 		"combo %d, no cooldown, the harpoon still fires, refusal '%s'" % [_chain().combo, _player._harpoon_refusal()])
 
-	print("hook_chain_test: %d sequences, %s" % [_count - 1, "PASS" if _failures == 0 else "FAIL (%d)" % _failures])
+	print("hook_chain_test: %s, %d sequences" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, _count - 1])
 	quit(0 if _failures == 0 else 1)

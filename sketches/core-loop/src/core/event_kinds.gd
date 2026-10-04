@@ -156,6 +156,8 @@ const ROWS := {
 	# schema asks for.
 	"line_state_changed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"verb_failed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# The key-prompt rising edge the run log counts; the prompt has its own HUD motion, so the row is quiet (no listener, listed in GRAMMAR_SIGNALS).
+	"prompt_shown": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"cause_armed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"cause_fired": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"posture_changed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
@@ -163,7 +165,7 @@ const ROWS := {
 
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list.
-const GRAMMAR_SIGNALS := ["world_entered", "achievement_earned"]
+const GRAMMAR_SIGNALS := ["world_entered", "achievement_earned", "prompt_shown"]
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,

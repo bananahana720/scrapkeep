@@ -16,6 +16,7 @@ const DT := 0.1
 
 # The reading that reaches each row, and nothing else does.
 const CASES := {
+	"find_activity": {"state": "stage", "sealed": true, "engaged": false, "activities_left": 1, "fight": "posture"},
 	"find_warden": {"state": "stage", "sealed": true, "fight": "posture", "engaged": false},
 	"break_guard": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true},
 	"smash_core": {"state": "beacon", "sealed": true, "fight": "posture", "engaged": true, "staggered": true},
@@ -66,9 +67,11 @@ func _reached_once(t) -> void:
 						for struggling in [false, true]:
 							for lesson in Objectives.LESSON_ROWS:
 								for distance in [5.0, 39.9, 40.0, 200.0]:
-									var id := Objectives.choose({"state": state, "sealed": sealed, "fight": fight, "engaged": engaged,
-										"staggered": staggered, "struggling": struggling, "lesson": lesson, "distance": distance})
-									reached[id] = true
+									for activities_left in [0, 1]:
+										var id := Objectives.choose({"state": state, "sealed": sealed, "fight": fight, "engaged": engaged,
+											"staggered": staggered, "struggling": struggling, "lesson": lesson, "distance": distance,
+											"activities_left": activities_left})
+										reached[id] = true
 	var missing := Objectives.ROWS.keys().filter(func(id): return not reached.has(id))
 	var stray := reached.keys().filter(func(id): return id != "" and not Objectives.ROWS.has(id))
 	t.eq("the walk reaches every row", missing, [])

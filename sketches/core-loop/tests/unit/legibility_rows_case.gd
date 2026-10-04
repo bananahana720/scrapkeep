@@ -142,9 +142,9 @@ func run(t) -> void:
 
 	var states: Array = EventKinds.LINE_ROWS.keys()
 	states.sort()
-	var want_states := ["searching", "locked", "dry_fire", "latched_world", "latched_body", "smash_committed", "smash_lands", "rewinding", "let_go", "broke"]
+	var want_states := ["searching", "locked", "dry_fire", "latched_world", "latched_body", "smash_committed", "smash_lands", "rewinding", "let_go", "broke", "chain_link", "chain_pivot", "chain_end", "chain_miss"]
 	want_states.sort()
-	t.check("LINE_ROWS holds the ten harpoon states", states == want_states, "states: %s" % [states])
+	t.check("LINE_ROWS holds the ten harpoon states and four chain states", states == want_states, "states: %s" % [states])
 
 	var cause_ids: Array = EventKinds.CAUSE_ROWS.keys()
 	cause_ids.sort()
