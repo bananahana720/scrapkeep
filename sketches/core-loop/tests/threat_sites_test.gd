@@ -47,6 +47,11 @@ const FACTORIES := {
 	"res://src/combat/enemy.gd": ["_commit_ring", "_commit_lane"],
 }
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _failures := 0
 var _step := 0
@@ -56,7 +61,7 @@ func _initialize() -> void:
 	_check_sources()
 	_check_factories()
 	_check_sounds()
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 
@@ -74,7 +79,7 @@ func _physics_process(_delta: float) -> bool:
 		_step = 1
 		_check_boss()
 		_game.free()
-		_game = Game.new()
+		_game = LegacyGame.new()
 		_game.test_mode = true
 		root.add_child(_game)
 		return false

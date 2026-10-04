@@ -28,6 +28,11 @@ class LiveBoss:
 		return chase
 
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _boss
 var _failures := 0
@@ -39,7 +44,7 @@ var _s := {}
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

@@ -3,11 +3,10 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
-const Weir := preload("res://src/world/map_weir.gd")
 const Reach := preload("res://src/world/map_reach.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
-const MAPS := {"spillway": Spillway, "gorge": Gorge, "weir": Weir, "reach": Reach}
+const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach}
 
 # Owned by writer D (world). The spine reads only the terrain API block below.
 #

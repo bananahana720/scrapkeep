@@ -21,6 +21,11 @@ const FLOOR_FLAT := 0.35
 const TICK_LIMIT := 90 * 90
 const RAM := 400.0
 
+# The legacy final-stage rule runs on a three-stage double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _double
 var _boss
@@ -41,7 +46,7 @@ var _checked: Array[Dictionary] = []
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

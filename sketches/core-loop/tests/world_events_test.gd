@@ -1,11 +1,11 @@
 extends SceneTree
 
-const StageDefs := preload("res://src/core/stage_defs.gd")
+const StageDefs := preload("res://tests/doubles/two_world_defs.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
-const Sluice := preload("res://src/world/map_sluice.gd")
-const Weir := preload("res://src/world/map_weir.gd")
+const Gorge := preload("res://src/world/map_gorge.gd")
 
+# The legacy three-stage event rule uses the multiworld double on surviving maps.
 # The event director stepped headless at a fixed h with no wall clock (TADR-010):
 # every stage's events announce with their lead before they go live, a player who
 # opts in can win each participatory event and it publishes a milestone, a player
@@ -24,10 +24,12 @@ const EXPECTED := {
 }
 
 var _failures := 0
-var _maps := [Spillway.new(), Sluice.new(), Weir.new()]
+var _maps := [Spillway.new(), Gorge.new(), Spillway.new()]
 
 
 func _initialize() -> void:
+	# The merged Spillway keeps the relay; the gorge supplies a surviving surge route.
+	_maps[2].sites["surge_run"] = _maps[1].sites["surge_run"].duplicate(true)
 	for stage in [1, 2, 3]:
 		_check_stage(stage)
 	_check_skip()
@@ -40,7 +42,10 @@ func _initialize() -> void:
 func _director(stage: int, seed_value: int) -> RefCounted:
 	var map = _maps[stage - 1]
 	var height := func(x: float, z: float) -> float: return map.sample(x, z)[0]
-	return EventDirector.new(seed_value, StageDefs.of(stage), map, CRUISE, height)
+	var row: Dictionary = StageDefs.of(stage).duplicate(true)
+	for id in EXPECTED[stage]:
+		row["event_mix"][id] = 1.0
+	return EventDirector.new(seed_value, row, map, CRUISE, height)
 
 
 # Plays the opted-in player: into a ring once it is armed, then onto whatever the live
@@ -170,7 +175,7 @@ func _check_miniboss_seeds() -> void:
 		if fresh:
 			distinct += 1
 		spots.append(spot)
-		var d := spot.distance_to(Weir.RELAY)
+		var d := spot.distance_to(Spillway.RELAY)
 		if d < 30.0 or d > 48.0:
 			in_zone = false
 	var again := _miniboss_spot(SEEDS[0])

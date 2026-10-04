@@ -79,7 +79,7 @@ func _one_world(table, label: String) -> void:
 	for i in table.DEFS.size():
 		_t.check("%s: stage %d built at setup" % [label, i + 1], terrain.is_built(i + 1))
 		var row: Dictionary = table.DEFS[i]
-		var want = {"spillway": "map_spillway", "gorge": "map_gorge", "weir": "map_weir", "reach": "map_reach"}[row["map"]]
+		var want = {"spillway": "map_spillway", "gorge": "map_gorge", "reach": "map_reach"}[row["map"]]
 		_t.check("%s: map %d is %s in table order" % [label, i + 1, want], String(terrain.maps[i].get_script().resource_path).ends_with(want + ".gd"))
 	world.free()
 
@@ -90,7 +90,7 @@ func _out_of_range() -> void:
 	var terrain := Terrain.new(StageDefs)
 	terrain.error_sink = func(text: String): _errors.append(text)
 	terrain.build(world)
-	var last := terrain.spawn_point(3)
+	var last := terrain.spawn_point(StageDefs.COUNT)
 	var far := terrain.spawn_point(9)
 	_t.eq("out of range: one error logged", _errors.size(), 1)
 	_t.check("out of range: stage 9 reads the clamped stage's data", far == last)

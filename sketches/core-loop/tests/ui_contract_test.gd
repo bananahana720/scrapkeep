@@ -103,7 +103,7 @@ func _check_wording() -> void:
 			long_objectives.append(id)
 	for i in StageDefs.COUNT:
 		var lesson: String = StageDefs.of(i + 1)["warden_lesson"]
-		if not Objectives.LESSON_ROWS.has(lesson):
+		if lesson != "" and not Objectives.LESSON_ROWS.has(lesson):
 			long_objectives.append(lesson)
 	var bad_rows := []
 	for kind in EventKinds.UI_ROWS:

@@ -17,6 +17,11 @@ const MIN_MOVE := 0.5
 const MAX_VY := 30.0
 const RADII := [40.0, 44.0, 47.0, 50.0, 52.0]
 
+# The legacy final-stage rule runs on a three-stage double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _boss
 var _source := Intent.Scripted.new()
@@ -24,7 +29,7 @@ var _failures := 0
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	_run()

@@ -23,6 +23,11 @@ const TOLERANCE := 0.15
 const CLIMB_TOLERANCE := 0.75
 const SETTLE_TICKS := 9
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _build
 var _boss
@@ -40,7 +45,7 @@ var _ended := false
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

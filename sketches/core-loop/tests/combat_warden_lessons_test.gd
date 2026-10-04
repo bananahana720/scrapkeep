@@ -1,9 +1,11 @@
 extends SceneTree
 
+# Legacy plating/third-stage rule: use the multiworld double, not the alpha route.
+
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Warden := preload("res://src/combat/warden.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
+const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 # The Warden's per-stage lessons, as data, and the event miniboss's plating.
 # - Stage 2, "caps": a stomp of force 10 at heft 1 (punch 41) lands on a vent cap at
@@ -18,6 +20,10 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const WAIT_SCALE := 3.0
 const STAND_OFF := 12.0
 const TICK := 1.0 / 90.0
+
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 var _game
 var _combat
@@ -38,7 +44,7 @@ var _clock := 0.0
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

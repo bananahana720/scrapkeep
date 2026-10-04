@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
+const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 # The spine's Warden gate, objective line and crush pass-through, run against the real
 # combat spawner instead of the spine's test double (spine_warden_gate_test,
@@ -28,6 +28,11 @@ const HEAVY_MASS := 300
 const KEEP := 0.95
 const WINDOW := 150
 
+# Plating seam coverage uses the legacy table rather than posture rows.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _combat
 var _source := Intent.Scripted.new()
@@ -46,7 +51,7 @@ var _warden_ref: Node3D
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

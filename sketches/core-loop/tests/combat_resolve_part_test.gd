@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
+const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 # Presentation gates hit-stop on ctx.spawner.resolve(enemy, kind, force), called from
 # its enemy_struck handler before the damage lands. That query must return the plating
@@ -12,6 +12,11 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const FORCE := 12.0
 
+# Plating seam coverage uses the legacy table rather than posture rows.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _combat
 var _failures := 0
@@ -19,7 +24,7 @@ var _seen: Array = []
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

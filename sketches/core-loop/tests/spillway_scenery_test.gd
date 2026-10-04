@@ -9,7 +9,9 @@ var failures := 0
 # Re-pinned 2026-10-04 for alpha unit ZS-A: zone 1-1 adds the halfpipe, relay mesa and causeway,
 # which reshape the terrain and its collider on purpose (spillway_zone_test checks the new pieces).
 const TERRAIN_HASH := 2890712666
-const COLLIDER_HASH := 2175922435
+# Re-pinned 2026-10-04 for ZS-D: this hashes all default roots, now Spillway + Reach.
+# The Spillway terrain hash is unchanged; the third map and old gorge root are gone.
+const COLLIDER_HASH := 1738491003
 
 
 func _initialize() -> void:

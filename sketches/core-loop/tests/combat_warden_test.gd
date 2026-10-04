@@ -24,6 +24,11 @@ const ORBIT := 12.0
 const ORBIT_SPEED := 9.0
 const STAND_OFF := 14.0
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _combat
 var _source := Intent.Scripted.new()
@@ -46,7 +51,7 @@ var _stuns := 0
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

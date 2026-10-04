@@ -4,6 +4,11 @@ const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Warden := preload("res://src/combat/warden.gd")
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var game
 var ticks := 0
 var failures := 0
@@ -15,7 +20,7 @@ var prior_support: Node3D
 
 
 func _initialize() -> void:
-	game = Game.new()
+	game = LegacyGame.new()
 	game.test_mode = true
 	root.add_child(game)
 

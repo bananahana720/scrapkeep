@@ -20,6 +20,11 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # stage 2 each open a pair; stage 3 re-offers the still-unpicked depth 3.
 const BASE_OFFER_DEPTHS := [1, 2, 3, 3]
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _done := false
 var _failures := 0
@@ -27,7 +32,7 @@ var _offers: Array = []
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

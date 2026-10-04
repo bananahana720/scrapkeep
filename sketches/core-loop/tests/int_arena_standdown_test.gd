@@ -43,6 +43,11 @@ class PushProbe:
 		worst = maxf(worst, (player.body().external_accel as Vector3).length())
 
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _boss
 var _probe := PushProbe.new()
@@ -65,7 +70,7 @@ var _discoveries := 0
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	_probe.process_physics_priority = 1000

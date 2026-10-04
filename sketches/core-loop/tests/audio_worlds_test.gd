@@ -80,7 +80,7 @@ func _row_checks() -> void:
 	var picks := func(audio, stages: Array) -> Array:
 		return stages.map(func(s: int): return [audio._stage_theme(s), audio._ace_package_for(s)])
 	var base := _director(StageDefs)
-	_t.eq("W5-1 default table: themes and ACE by stage", picks.call(base, [1, 2, 3]), [[0, "spillway"], [1, ""], [2, ""]])
+	_t.eq("W5-1 default table: themes and ACE by stage", picks.call(base, [1, 2]), [[0, "spillway"], [1, ""]])
 	var slice := _director(SliceDefs)
 	_t.eq("W5-1 slice: stage 1 runs ACE with theme 0", picks.call(slice, [1]), [[0, "spillway"]])
 	var two := _director(TwoWorld, 4)

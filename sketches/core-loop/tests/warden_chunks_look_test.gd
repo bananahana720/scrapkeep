@@ -11,6 +11,13 @@ const T := preload("res://tests/support/t.gd")
 # All waits are physics frames. The fourth copy must survive the Warden's own deletion.
 # The default table, retries, stages and a fresh run are exercised through real flow.
 
+# Posture still uses the selected table; legacy plating coverage uses the double.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		if table.is_empty():
+			return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+		return super._chosen_table()
+
 var _t := T.new("warden_chunks_look_test")
 var _game
 var _warden
@@ -34,7 +41,7 @@ func _seconds(seconds: float) -> void:
 
 
 func _start(table: String) -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	_game.table = table
 	root.add_child(_game)
@@ -225,7 +232,7 @@ func _plating() -> void:
 			await _seconds(0.4)
 			_bind()
 		var rec: Dictionary = _hook.warden_of(_warden)
-		_t.eq("default table fights by plating", _warden.fight(), "plating")
+		_t.eq("legacy double fights by plating", _warden.fight(), "plating")
 		_segments(rec, 4, "plating spawn %d" % stage)
 		_t.check("new core and inner damage stay hidden on plating", not rec.core.visible and not rec.base.get_node("JawL/InnerL").visible and not rec.base.get_node("JawR/InnerR").visible)
 		_t.eq("plating has no health crack marks", rec.chunk_marks.size(), 0)

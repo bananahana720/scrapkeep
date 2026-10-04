@@ -1,7 +1,9 @@
 extends SceneTree
 
+# Legacy plating/third-stage rule: use the multiworld double, not the alpha route.
+
 const Game := preload("res://src/game.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
+const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 const Intent := preload("res://src/movement/intent.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const Objectives := preload("res://src/core/objectives.gd")
@@ -12,6 +14,10 @@ const Objectives := preload("res://src/core/objectives.gd")
 # family (v2 W10): stage 1's reactor is the one that vents, and stage 2's hive is beaten
 # through its guard, never its "vents".
 
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _frames := 0
 var _failures := 0
@@ -19,7 +25,7 @@ var _stage_one := ""
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

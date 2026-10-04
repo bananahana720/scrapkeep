@@ -32,6 +32,11 @@ class FakeSpawner extends Node:
 		pass
 
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _world
 var _source := Intent.Scripted.new()
@@ -49,7 +54,7 @@ var _fake := FakeSpawner.new()
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

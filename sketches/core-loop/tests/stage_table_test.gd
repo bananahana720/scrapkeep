@@ -5,15 +5,13 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Reach := preload("res://src/world/map_reach.gd")
-const Gorge := preload("res://src/world/map_gorge.gd")
-const Weir := preload("res://src/world/map_weir.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 
 # The stage table is chosen when the game is built. The slice table plays the Cable Reach
-# as stage 1 and ends the run won at its gate with no arena; no choice keeps the three
-# stages. Phases advance one physics frame at a time.
+# as stage 1 and ends the run won at its gate with no arena; no choice plays world one as two posture zones. Phases advance one physics frame at a time.
 
 var _game
 var _boss
@@ -90,9 +88,12 @@ func _slice_checks() -> void:
 
 func _default_checks() -> void:
 	var maps: Array = _game.ctx.terrain.maps
-	var order: bool = maps.size() == 3 and maps[0].get_script() == Spillway and maps[1].get_script() == Gorge and maps[2].get_script() == Weir
-	_report("default maps", order, "terrain maps are spillway, gorge, weir in order: %s" % order)
-	_report("default count", _game.ctx.stages.COUNT == 3 and _game.ctx.stages == StageDefs,
+	var order: bool = maps.size() == 2 and maps[0].get_script() == Spillway and maps[1].get_script() == Reach
+	_report("default maps", order, "terrain maps are spillway, reach in order: %s" % order)
+	_report("default count", _game.ctx.stages.COUNT == 2 and _game.ctx.stages == StageDefs,
 		"ctx.stages.COUNT is %d" % _game.ctx.stages.COUNT)
 	_report("default scenery", _game.ctx.terrain.geometry_root(1).get_node_or_null("SpillwayScenery") != null,
 		"the Spillway's root carries its dam")
+
+	_report("default alpha rows", StageDefs.DEFS == AlphaDefs.DEFS and StageDefs.BOSS == AlphaDefs.BOSS,
+		"default re-exports the alpha rows and Brindle")
