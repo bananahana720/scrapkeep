@@ -17,7 +17,7 @@ const ICON := 46.0
 const FONT := 19
 # id -> {at, icon, kind, words}; kind is the event_kinds row whose colour and shape it wears.
 const NODES := {
-	"scrap": {"at": Vector2(90.0, 84.0), "icon": "res_scrap", "kind": "scrap_collected", "words": "roll scrap"},
+	"scrap": {"at": Vector2(90.0, 84.0), "icon": "res_mass", "kind": "scrap_collected", "words": "roll scrap"},
 	"heft": {"at": Vector2(390.0, 84.0), "icon": "res_heft", "kind": "heft_class_changed", "words": "heft grows"},
 	"punch": {"at": Vector2(690.0, 84.0), "icon": "cat_damage", "kind": "beacon_unsealed", "words": "outpunch plating"},
 	"warden": {"at": Vector2(990.0, 84.0), "icon": "obj_warden", "kind": "warden_engaged", "words": "break Warden"},

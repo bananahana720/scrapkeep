@@ -31,6 +31,9 @@ const HotwireScreen := preload("res://src/ui/hotwire_screen.gd")
 # The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
 # shows because it is what the next roll through a hoop spends.
 class CogChip extends Control:
+	const ICON := "res_scrap"
+	const COLOR := Palette.BRASS
+
 	var amount := 0
 
 	func _init() -> void:
@@ -48,7 +51,7 @@ class CogChip extends Control:
 
 	func _draw() -> void:
 		var mid := size.y * 0.5
-		draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), false, Icons.tint("res_scrap", Palette.BRASS))
+		draw_texture_rect(Icons.texture(ICON), Rect2(Vector2(0.0, mid - 10.0), Vector2(20.0, 20.0)), false, Icons.tint(ICON, COLOR))
 		UiDraw.text(self, 26.0, mid, str(amount), 18, Palette.SAND, true)
 
 
@@ -155,7 +158,7 @@ var boss_plate: Control
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
 var _struggle := Objectives.Struggle.new()
-# The armour gauge (scrap mode `armor`): the scrap layer over the hull, left of the hull
+# The armour gauge (scrap mode `armor`): the mass heap and the scrap layer over the hull, left of the hull
 # gauge, in the scrap colour where the hull is sand. A hit that reached the scrap flashes
 # its edge amber for ARMOR_FLASH seconds; the hull gauge turns rust only at low health.
 # Wear draws nothing but the bar sinking. The bar is mass against the run's peak, with no
@@ -227,7 +230,7 @@ func setup(game_ref) -> void:
 	add_child(_speed)
 	_health = Gauge.new("res_health", HEALTH_BAR, true)
 	add_child(_health)
-	_armor = Gauge.new("res_scrap", ARMOR_BAR, true)
+	_armor = Gauge.new("res_mass", ARMOR_BAR, true)
 	add_child(_armor)
 	_armor.visible = false
 	_cogs = CogChip.new()

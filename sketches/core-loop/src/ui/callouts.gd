@@ -18,7 +18,7 @@ const ICON := 28.0
 # callout id: the icons before and after its words. A {key_...} in the row's wording
 # draws as that keycap where it stands.
 const PARTS := {
-	"callout_scrap": {"before": ["res_scrap"], "after": ["res_heft"]},
+	"callout_scrap": {"before": ["res_mass"], "after": ["res_heft"]},
 	"callout_warden": {"before": ["obj_warden"], "after": []},
 	"callout_gates": {"before": ["obj_gate"], "after": []},
 	"callout_notes": {"before": [], "after": []},
