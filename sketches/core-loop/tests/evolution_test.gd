@@ -102,6 +102,7 @@ func _check_case(c: Dictionary) -> void:
 	_report(into + " pair consumed", syn in _build.consumed_synergies() and not syn in _build.active_synergies()
 			and _build.sheet.transformers.count(syn) == 1,
 		"consumed %s, live %s, %s transformer folded %d time(s)" % [_build.consumed_synergies(), _build.active_synergies(), syn, _build.sheet.transformers.count(syn)])
+	_check_not_rediscovered(c)
 	var after: float = _build.weapon_mod("weapon_damage") * _build.weapon_mod("weapon_rate") + float(_build.pattern_level("spiral_wave"))
 	_report(into + " effect measurable", after > before + 0.1 or _build.punch_bonus() > punch_before + 1.0,
 		"knob product plus spiral level %.3f to %.3f, punch %.1f to %.1f" % [before, after, punch_before, _build.punch_bonus()])
@@ -125,6 +126,28 @@ func _check_case(c: Dictionary) -> void:
 	run.add_part(c["parts"][1], "test")
 	_report(into + " dropped ingredient", dormant and dormant_mods_lower and run.parts.count(into) == 1 and syn in _build.consumed_synergies(),
 		"dormant %s (effect lower %s); regained: held %d, consumed %s" % [dormant, dormant_mods_lower, run.parts.count(into), _build.consumed_synergies()])
+
+
+# A consumed pair still acts: its fired flag survives the next recompute (so the codex is not
+# told it was discovered again), and the HUD synergy read keeps it, naming the evolved part.
+func _check_not_rediscovered(c: Dictionary) -> void:
+	var syn: String = c["synergy"]
+	var into: String = c["into"]
+	var found := []
+	var count := func(id: String, _category: String, _first: bool): found.append(id)
+	_game.events.synergy_discovered.connect(count)
+	_build._fire(syn, null, Vector3.ZERO)
+	var after_first: int = found.count(syn)
+	_build.recompute()
+	var kept: bool = _build._fired.has(syn)
+	_build._fire(syn, null, Vector3.ZERO)
+	_game.events.synergy_discovered.disconnect(count)
+	_report(syn + " not rediscovered", kept and found.count(syn) == after_first, "fired flag kept %s, discoveries %d then %d" % [kept, after_first, found.count(syn)])
+	var read: Array = _build.synergy_read()
+	var row := read.filter(func(r): return r["id"] == syn)
+	var name_of_into: String = Parts.def(into).display_name
+	_report(syn + " HUD read names the evolved part", row.size() == 1 and row[0]["into"] == into and name_of_into in String(row[0]["text"]) and _build.accretion.halo_visible(syn),
+		"read %s, halo %s" % [row, _build.accretion.halo_visible(syn)])
 
 
 func _check_never_rolls() -> void:

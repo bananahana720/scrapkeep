@@ -505,13 +505,17 @@ func recompute() -> void:
 	effects.apply_abilities(ctx.player)
 	scrap.magnet_scale = sheet.magnet
 	field.shatter_scale = sheet.dial("shatter_damage")
+	# A synergy folded into an Evolved part still acts, so it keeps its fired flag: erasing it
+	# would tell the codex the pair was discovered again.
 	for synergy_id in _live:
-		if not synergy_id in sheet.synergies:
+		if not synergy_id in sheet.synergies and not synergy_id in sheet.consumed:
 			_fired.erase(synergy_id)
 	for synergy_id in sheet.synergies:
 		if not synergy_id in _live:
 			_on_synergy_live(synergy_id)
 	_live = sheet.synergies.duplicate()
+	for synergy_id in sheet.consumed:
+		_live.append(synergy_id)
 	_redraw()
 
 
@@ -717,7 +721,7 @@ func _apply_shell() -> void:
 
 
 func _redraw() -> void:
-	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies, ctx.run.heft_class())
+	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies + sheet.consumed, ctx.run.heft_class())
 
 
 func _codex():
@@ -1201,6 +1205,21 @@ func _grant_evolutions() -> void:
 # Synergies consumed into a held Evolved part.
 func consumed_synergies() -> Array:
 	return sheet.consumed.duplicate()
+
+
+# The HUD's synergy list: each live synergy by name, then each consumed one as folded into
+# the Evolved part that took it over, so Wrecking Ball stays listed while it still acts.
+func synergy_read() -> Array:
+	var read: Array = []
+	for key in sheet.synergies:
+		read.append({"id": key, "name": Synergies.ROWS[key]["name"], "into": ""})
+	for key in sheet.consumed:
+		var into: String = Synergies.ROWS[key]["evolution"]["into"]
+		var part: Resource = Parts.def(into)
+		var part_name: String = part.display_name if part != null else into
+		read.append({"id": key, "name": Synergies.ROWS[key]["name"], "into": into,
+			"text": "%s (folded into %s)" % [Synergies.ROWS[key]["name"], part_name]})
+	return read
 
 
 # ---- Named synergy behaviours ----
