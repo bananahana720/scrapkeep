@@ -43,12 +43,15 @@ func _physics_process(_delta: float) -> bool:
 	var audio = _game.presentation.audio
 	audio.set_process(false)
 	audio.bake_now()
-	_report("default alpha table", _game.ctx.stages == StageDefs and StageDefs.COUNT == 2, "two-zone default table")
+	_report("default alpha table", _game.ctx.stages == StageDefs and _game.ctx.stages.COUNT == StageDefs.COUNT, "%d-zone default table" % StageDefs.COUNT)
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
-	_check_stage(1, 0, audio)
-	_game.flow.enter_stage(2, Vector3.ZERO, false)
-	_check_stage(2, 1, audio)
+	for stage in range(1, StageDefs.COUNT + 1):
+		if stage > 1:
+			_game.flow.enter_stage(stage, Vector3.ZERO, false)
+		var world: int = StageDefs.world_of(stage)
+		var theme := StageDefs.local(stage) - 1 if world == 1 else world - 1
+		_check_stage(stage, theme, audio)
 	_game.free()
 	print("audio_music_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

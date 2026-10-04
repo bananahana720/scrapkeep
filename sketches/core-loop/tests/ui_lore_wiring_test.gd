@@ -150,7 +150,7 @@ func _check_notes() -> void:
 	var ordered: bool = entries.size() == lore_notes.size()
 	for i in mini(entries.size(), lore_notes.size()):
 		ordered = ordered and entries[i]["id"] == lore_notes[i]["id"]
-	_report("notes keep row order", ordered, "%d rows from two zones" % entries.size())
+	_report("notes keep row order", ordered, "%d declared note rows" % entries.size())
 	_game.hold_notes(true)
 	notes.show_page(notes.pages().find("notes"))
 	var lines = notes._codex_page.get_child(0).get_child(0)

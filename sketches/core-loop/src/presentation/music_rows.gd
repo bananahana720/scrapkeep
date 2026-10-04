@@ -7,6 +7,11 @@ const ROWS := {
 	"default": {"synth_theme": 0, "ace_manifest": ""},
 	"1-1": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/spillway/manifest.json"},
 	"1-2": {"synth_theme": 1, "ace_manifest": ""},
+	# Tone-pending synth placeholders; authored ACE takes arrive after listening approval.
+	"2-1": {"synth_theme": 1, "ace_manifest": ""},
+	"2-2": {"synth_theme": 1, "ace_manifest": ""},
+	"3-1": {"synth_theme": 2, "ace_manifest": ""},
+	"3-2": {"synth_theme": 2, "ace_manifest": ""},
 	"brindle": {"synth_theme": 0, "ace_manifest": ""},
 }
 
