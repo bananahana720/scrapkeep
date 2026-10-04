@@ -94,6 +94,10 @@ func _run() -> void:
 		and Parts.def(fired[0][0]).rarity == "relic" and RewardCeremony.rarity_of(fired[0][0]) == "relic",
 		"gained %s" % [fired])
 
+	var card: Dictionary = _game.presentation.ceremony.card_state(_game.presentation.ceremony.find_of(fired[0][0], "cache"), 0, false)
+	_report("the card names the relic", card["name"] == Relics.name_of(_relic) and card["verb"] == String(row["text"]),
+		"card '%s' / '%s' for %s" % [card["name"], card["verb"], _relic])
+
 	# The one-per-slot rule: the same slot is refused, nothing changes, nothing is announced.
 	var count := _gained.size()
 	var refused: bool = not run.add_relic(_relic, "cache")
