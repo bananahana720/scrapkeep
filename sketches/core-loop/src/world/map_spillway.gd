@@ -54,6 +54,9 @@ const CAUSEWAY_X := -94.0
 const CAUSEWAY_Z := Vector2(-132.0, -18.0)
 const CAUSEWAY_H := 6.0
 
+# Where a world rescue stands, each {"id", "quest", "at", "face"} (rescue_site.gd). Only maps that have one declare it.
+var rescue_sites: Array = []
+
 
 func _init() -> void:
 	title = "Spillway: the top shelf"
@@ -85,6 +88,8 @@ func _init() -> void:
 	}
 	unique_events = ["scrap_stampede", "hold_the_relay"]
 	activity_sites = [{"id": "enemy_camp", "at": Vector2(96.0, -120.0), "pack": ["chaser", "chaser", "chaser"], "pay": {"named": "hot_rivets"}}]
+	# The world-one runner's cage on the open top shelf, east of the pump house: flat ground clear of every route and site.
+	rescue_sites = [{"id": "rivet_cage", "quest": "rivet", "at": Vector2(60.0, -150.0), "face": Vector2(-1.0, 0.0)}]
 
 
 func sample(x: float, z: float) -> Array:
