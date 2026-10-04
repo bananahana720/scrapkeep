@@ -24,6 +24,8 @@ signal stage_content_cleared(reason: String)
 signal scrap_collected(amount: int, at: Vector3, total: int)
 signal part_gained(part_id: String, source: String)
 signal player_hit(amount: float, source: String)
+# Run state committed the companion's once-per-zone escape charge and brief window.
+signal escape_window(seconds: float)
 signal player_died
 signal enemy_killed(kind: String, at: Vector3, scrap_value: int)
 signal milestone_won(event_id: String)

@@ -21,7 +21,8 @@ const DOC := "res://design-v3/research/attack-reads/ATTACK-READS.md"
 # and again for the run log's quiet prompt_shown row (alpha wave 1, 2026-10-03).
 const THREAT_ROWS_HASH := 952578719
 const FIELDS_HASH := 4081964357
-const ROWS_HASH := 2687167995
+# 2026-10-04: META-5 adds the quiet escape_window bus row for the companion hook.
+const ROWS_HASH := 2708307214
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]

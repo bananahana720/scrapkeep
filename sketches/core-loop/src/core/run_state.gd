@@ -5,9 +5,14 @@ extends RefCounted
 # publishes its fact on the bus after the change is made, so the HUD and the numbers
 # here cannot disagree. Flow alone calls begin(), snapshot() and restore().
 
+const Companion := preload("res://src/core/companion.gd")
 const MAX_HP := 100.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
+# Match HUD.LOW_HEALTH. Two seconds allows a clutch move before the 5 s regen delay;
+# player code will consume the window, without changing the hit's damage or retries.
+const ESCAPE_LOW_HULL := 0.25
+const ESCAPE_WINDOW_SECONDS := 2.0
 # Heft is the growth number (DEMO-SPEC): scrap rolled up becomes mass, parts add more.
 # It scales punch and never touches handling. Classes I to V start at these values.
 const HEFT_PER_MASS := 1.0 / 450.0
@@ -85,6 +90,10 @@ var world := 0
 # Damage, theft, wear and mass recovery never touch it; only add_cogs and spend_cogs do.
 var cogs := 0
 var companion := {}
+var escape_window_left := 0.0
+var escape_window_active: bool:
+	get:
+		return escape_window_left > 0.0 and alive()
 # World id to retries spent there, merged by max so a reload never hands retries back.
 var retries_spent := {}
 # Keys a newer build wrote that this one does not know; they ride through a round trip.
@@ -108,6 +117,8 @@ static func roman(n: int) -> String:
 func _init(events_ref = null) -> void:
 	events = events_ref
 	reset_metrics()
+	if events != null:
+		events.stage_entered.connect(_on_stage_entered)
 
 
 # The highest heft class this run has been rewarded for (the slice table opens one tree pick
@@ -133,6 +144,7 @@ func begin(chosen_class: Resource) -> void:
 	world = 0
 	cogs = 0
 	companion = {}
+	escape_window_left = 0.0
 	retries_spent = {}
 	extra = {}
 	_loaded_class_id = ""
@@ -165,6 +177,7 @@ func advance(delta: float) -> void:
 		return
 	run_time += delta
 	stage_time += delta
+	escape_window_left = maxf(0.0, escape_window_left - maxf(0.0, delta))
 	since_damage += delta
 	if since_damage > REGEN_DELAY and hp < max_hp:
 		hp = minf(max_hp, hp + REGEN_RATE * delta)
@@ -338,6 +351,7 @@ func damage(amount: float, source: String) -> void:
 		return
 	hp = maxf(0.0, hp - amount)
 	since_damage = 0.0
+	_try_escape_window()
 	events.player_hit.emit(amount, source)
 	if hp <= 0.0:
 		events.player_died.emit()
@@ -354,6 +368,7 @@ func _damage_armored(amount: float, source: String) -> void:
 	var left := 0.0 if deflected else amount * (1.0 - share)
 	since_damage = 0.0
 	if left <= 0.0:
+		_try_escape_window()
 		events.player_hit.emit(amount, source)
 		return
 	var absorbed := minf(left, mass / scrap_per_hp)
@@ -377,9 +392,37 @@ func _damage_armored(amount: float, source: String) -> void:
 			after = maxf(after, float(ward_hook.call(after)))
 		metrics["hull_damage"] += hp - after
 		hp = after
+	_try_escape_window()
 	events.player_hit.emit(amount, source)
 	if hp <= 0.0:
 		events.player_died.emit()
+
+
+func _try_escape_window() -> void:
+	if not alive():
+		escape_window_left = 0.0
+		return
+	if hp > max_hp * ESCAPE_LOW_HULL:
+		return
+	var model := Companion.new()
+	if not model.from_dict(companion) or not model.spend_escape():
+		return
+	# Keep the entrance document's companion opaque; only its charge changes here.
+	companion["escape_ready"] = false
+	companion["escape_spent"] = true
+	escape_window_left = ESCAPE_WINDOW_SECONDS
+	events.escape_window.emit(ESCAPE_WINDOW_SECONDS)
+
+
+func _on_stage_entered(_index: int, retry: bool) -> void:
+	escape_window_left = 0.0
+	if retry:
+		return
+	var model := Companion.new()
+	if model.from_dict(companion):
+		model.reset_escape()
+		companion["escape_ready"] = true
+		companion["escape_spent"] = false
 
 
 # Spilled scrap picked back up: mass returns, but it is not a fresh pickup, so no
@@ -513,6 +556,7 @@ func snapshot_value(key: String):
 
 
 func restore() -> void:
+	escape_window_left = 0.0
 	stage = _snapshot["stage"]
 	max_hp = _snapshot["max_hp"]
 	hp = _snapshot["hp"]
@@ -680,6 +724,7 @@ static func validate_entrance_doc(doc) -> String:
 func from_entrance_doc(doc) -> bool:
 	if validate_entrance_doc(doc) != "":
 		return false
+	escape_window_left = 0.0
 	run_id = doc["run_id"]
 	_loaded_class_id = doc["class_id"]
 	if class_def != null and class_def.id != _loaded_class_id:
