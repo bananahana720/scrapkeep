@@ -22,6 +22,8 @@ signal stage_content_cleared(reason: String)
 
 # Run state (spine; emitted by run_state.gd's mutators, called by the modules).
 signal scrap_collected(amount: int, at: Vector3, total: int)
+# A gear pickup filled the wallet (build.gd): the amount just banked and the wallet after it.
+signal cogs_collected(amount: int, total: int)
 signal part_gained(part_id: String, source: String)
 signal player_hit(amount: float, source: String)
 # Run state committed the companion's once-per-zone escape charge and brief window.

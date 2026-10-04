@@ -94,6 +94,10 @@ func _run() -> void:
 	for action in ["cl_look_left", "cl_look_right", "cl_look_up", "cl_look_down"]:
 		_near("boot applies deadzone to %s" % action, InputMap.action_get_deadzone(action), 0.3)
 	_near("look deadzone leaves roll alone", InputMap.action_get_deadzone("cl_right"), 0.2)
+	# Reset keys recreates every action; the saved look deadzone must hold through it.
+	_game.reset_bindings()
+	for action in ["cl_look_left", "cl_look_right", "cl_look_up", "cl_look_down"]:
+		_near("reset keys keeps the deadzone on %s" % action, InputMap.action_get_deadzone(action), 0.3)
 	var saved_turn := _turn(camera, Vector2(0.6, 0.4))
 	_near("saved stick yaw rate", saved_turn.x, -pow(0.6, 3.0) * 3.9 * 0.1)
 	_near("saved stick pitch scales and inverts", saved_turn.y, pow(0.4, 3.0) * 2.4 * 0.1)

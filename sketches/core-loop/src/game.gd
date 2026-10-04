@@ -493,6 +493,8 @@ func reset_bindings() -> void:
 	for action in store.bindings.keys():
 		store.clear_binding(action)
 	_register_actions()
+	# Recreating the actions put the default deadzone back on the look axes.
+	camera.apply_look_settings(store)
 
 
 # One settings store for the pause menu and the settings page, so neither saves over the

@@ -38,9 +38,9 @@ const POLYPHONY := 32
 # heard once per adaptation: mind_adapted and the hand's telegraph layers (its voice and
 # its tag are both the quote) land on one frame, and the first one sounds. The harpoon's
 # bite, release and smash are heard from line_state_changed alone, so each is heard once.
-const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
+const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
-const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
+const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
@@ -78,7 +78,7 @@ const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
 	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "sable_ready", "rivet_ready", "kest_ready",
@@ -187,6 +187,7 @@ var _notes: Array = []
 # The pickup streak and the kill chain. Audio bumps them as it plays each rung; juice
 # reads the same records at the end of the frame to draw the chain and the pulse.
 var scrap_streak := Streak.for_kind("scrap_collected")
+var cog_streak := Streak.for_kind("cogs_collected")
 var kill_streak := Streak.for_kind("enemy_killed")
 # Armour mode only: recovered spill clusters climb like a pickup streak, and the hull
 # damage already heard, so a hit is hurt only when the hull took some.
@@ -887,6 +888,7 @@ func _connect_all(events) -> void:
 		_flow_queue.append(["end", won]))
 	events.beacon_charge_changed.connect(_on_beacon)
 	events.scrap_collected.connect(_on_scrap)
+	events.cogs_collected.connect(_on_cogs)
 	events.part_gained.connect(func(_part: String, _source: String): play("part_gained"))
 	events.player_hit.connect(_on_player_hit)
 	events.player_died.connect(_on_died)
@@ -1413,6 +1415,12 @@ func _on_spill_recovered(value: int) -> void:
 func _on_scrap(amount: int, _at: Vector3, _total: int) -> void:
 	var rung: int = scrap_streak.bump(Time.get_ticks_msec())
 	play("scrap_collected", minf(amount, 5.0) * 0.6, Harmony.ratio(Harmony.pentatonic_step(rung)))
+
+
+# Gears climb their own pentatonic run, apart from scrap's.
+func _on_cogs(amount: int, _total: int) -> void:
+	var rung: int = cog_streak.bump(Time.get_ticks_msec())
+	play("cogs_collected", minf(amount, 5.0) * 0.6, Harmony.ratio(Harmony.pentatonic_step(rung)))
 
 
 # The growl is the Fleet's voice: an ancient (a relic, a drone, a hand, a Warden) never

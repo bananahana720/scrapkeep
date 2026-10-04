@@ -29,6 +29,7 @@ var _wait := 0
 var _before := {}
 var _fab := {}
 var _gained: Array = []
+var _cogs_heard: Array = []
 
 
 func _initialize() -> void:
@@ -47,6 +48,7 @@ func _physics_process(_delta: float) -> bool:
 	match _phase:
 		"boot":
 			_game.ctx.calm = true
+			_game.events.cogs_collected.connect(func(amount: int, total: int): _cogs_heard.append([amount, total]))
 			_game.events.part_gained.connect(func(id: String, source: String): _gained.append([id, source]))
 			_game.flow.press_start()
 			_game.flow.choose_class(0)
@@ -71,6 +73,8 @@ func _physics_process(_delta: float) -> bool:
 						and r.scrap == _before["scrap"],
 					"cogs %d -> %d, mass %.1f -> %.1f, scrap %d -> %d"
 						% [_before["cogs"], r.cogs, _before["mass"], r.mass, _before["scrap"], r.scrap])
+				_report("cog pickup announces itself", _cogs_heard == [[1, _game.run.cogs]], "cogs_collected %s, wallet %d" % [_cogs_heard, _game.run.cogs])
+				_check_cog_sound()
 				_check_spend()
 				_check_shop()
 				_check_recover()
@@ -101,6 +105,18 @@ func _drop(kind: String) -> void:
 
 func _snap() -> void:
 	_before = {"mass": _game.run.mass, "cogs": _game.run.cogs, "scrap": _game.run.scrap}
+
+
+# Repeated gears climb their own streak and sound as cog_tick, apart from scrap's.
+func _check_cog_sound() -> void:
+	var audio = _game.presentation.audio
+	audio.cue_log.clear()
+	audio.cog_streak.reset()
+	_game.events.cogs_collected.emit(1, 2)
+	_game.events.cogs_collected.emit(1, 3)
+	var cues: Array = audio.cue_log.filter(func(c: Array): return c[0] == "cogs_collected")
+	var rose: bool = cues.size() == 2 and float(cues[1][4]) > float(cues[0][4])
+	_report("gears climb the pentatonic", rose, "cues %s" % [cues])
 
 
 func _check_spend() -> void:

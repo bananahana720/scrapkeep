@@ -43,7 +43,7 @@ const TRIM_DB := {
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
 	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0,
 	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -8.0, "hurt": -3.0,
-	"death": 0.0, "scrap_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
+	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
 	"gate_through": -3.0, "launch_roar": -2.0, "event_start": -3.0, "event_end": -6.0,
 	"klaxon": -3.0, "stinger_run": -3.0, "stinger_stage": -4.0, "stinger_clear": -2.0,
 	"stinger_run_end": -2.0, "stinger_milestone": -2.0, "gates_open": -4.0,
@@ -307,6 +307,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _death()
 		"scrap_tick":
 			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.2]])
+		"cog_tick":
+			# scrap_tick's shape in brass: the bell's attack over a short brass body, a touch lower in the noise.
+			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_cut(_n("brass", 62), 0.09), 0, 0.45], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.15]])
 		"part_get":
 			return _arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8)
 		"beacon_hum":

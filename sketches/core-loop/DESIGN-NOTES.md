@@ -2959,3 +2959,51 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 ## The default-table retirement of the Weir (alpha wave 4, ZS-D)
 
 - **Call.** The Weir leaves the alpha stage path; the default table swap itself was pulled at gate 1 and is re-queued as ZS-D2 in wave 5.
+
+## Brindle on one posture contract for every wearer (alpha wave 5, F2b)
+
+- **Call.** One posture contract drives one plate, ring and chord, whoever wears it; Brindle's name comes from his own arena row.
+
+## The run flow owns the save (alpha wave 5, RS3)
+
+- **Call.** Flow owns the save: each zone entrance is the checkpoint doc with its placed pose; the second death in a world ends the run and leaves a tombstone.
+
+## Title Continue (alpha wave 5, RS6)
+
+- **Call.** The title offers Continue first when a saved run exists; a file this build cannot use shows its cause and offers New run only.
+
+## One brass cog for the wallet (alpha wave 5, CG2)
+
+- **Call.** The wallet is one number in one brass cog in the shop, HUD and summary; mass keeps the weight icon. A gear pickup emits cogs_collected and plays cog_tick on its own climbing streak.
+
+## The hot-wired choice is a gate (alpha wave 5, HW1)
+
+- **Call.** The hot-wired choice is a held striped gate, not an equip, so taking it costs the ordinary pick.
+
+## Boss selection by script path (alpha wave 5, F5)
+
+- **Call.** Boss selection is by script path per world row; Brindle's single-slot setup stays.
+
+## Unlocks live in achievement rows (alpha wave 5, META-1)
+
+- **Call.** An unlock lives only in an achievement row's pilot reward; Sable alone starts open.
+
+## Locked cards read the counted row (alpha wave 5, META-2)
+
+- **Call.** A locked card reads the row the unlock listener counts.
+
+## SPIL-9 escape window (alpha wave 5, META-5)
+
+- **Call.** SPIL-9 escape opens a two-second window after a survived hit at or below 25% hull, once per zone, never revives.
+
+## Enemy camps (alpha wave 5, SC1)
+
+- **Call.** Each zone gains an amber enemy camp paying its named common part after three same-kind guards die.
+
+## Reward-gate model (alpha wave 5, C2)
+
+- **Call.** The reward-gate glb exports common, rare, relic and evolved directly: 2,696 triangles under the 2,700 cap.
+
+## Saved look settings (alpha wave 5, IN1)
+
+- **Call.** Four saved look settings are applied at boot and again after Reset keys; invert affects stick pitch only.

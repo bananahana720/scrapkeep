@@ -1113,6 +1113,9 @@ func _update_warden_chunks(rec: Dictionary) -> void:
 
 func _throw_warden_segment(rec: Dictionary, index: int) -> void:
 	var segment: MeshInstance3D = rec.segments[index]
+	# A stub boss's Warden can die while its body is out of the tree: there is nothing to throw from.
+	if not is_inside_tree() or not is_instance_valid(segment) or not segment.is_inside_tree():
+		return
 	var fragment := MeshInstance3D.new()
 	fragment.name = "WardenFragment%d" % index
 	fragment.mesh = segment.mesh

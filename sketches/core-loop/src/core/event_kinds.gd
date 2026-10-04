@@ -41,6 +41,7 @@ const ROWS := {
 	"stage_content_cleared": {"group": "flow", "color": Palette.SAND, "shape": "none", "sound": "stage_fade", "hud": "", "objective": "", "priority": 0},
 	"beacon_unsealed": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_unseal", "hud": "Warden broken: gates open", "objective": "Charge the beacon", "priority": 3},
 	"scrap_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "scrap_tick", "hud": "", "objective": "", "priority": 1},
+	"cogs_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "cog_tick", "hud": "", "objective": "", "priority": 1},
 	"part_gained": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "hud": "+ {part}", "objective": "", "priority": 2},
 	"player_hit": {"group": "combat", "color": Palette.RUST, "shape": "burst", "sound": "hurt", "hud": "", "objective": "", "priority": 2},
 	# META-5: the player/body/chirp consumer lands later; this bus fact is quiet for now.
