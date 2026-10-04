@@ -15,6 +15,8 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const Parts := preload("res://src/build/parts.gd")
+const WindupRows := preload("res://src/presentation/windup_rows.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -51,6 +53,7 @@ var set_dressing: Node3D
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
+var _windup_states := {}
 # Screens a queued discovery never plays over.
 const BANNER_SCREENS := ["title", "class_select", "summary", "dead", "victory"]
 
@@ -98,6 +101,7 @@ func setup(ctx_ref) -> void:
 		get_tree().node_added.connect(_on_node_added)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		_ring_warden.call_deferred(enemy)
+		_read_windups(enemy)
 
 
 func _exit_tree() -> void:
@@ -108,6 +112,52 @@ func _exit_tree() -> void:
 func _on_node_added(node: Node) -> void:
 	if node.get_script() == WardenScript:
 		_ring_warden.call_deferred(node)
+	if node.has_signal("attack_phase"):
+		_read_windups.call_deferred(node)
+
+
+func _read_windups(enemy) -> void:
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
+		return
+	var listener := _on_windup_phase.bind(enemy)
+	if not enemy.is_connected("attack_phase", listener):
+		enemy.connect("attack_phase", listener)
+		_on_windup_phase(enemy.attack_facts(), enemy)
+
+
+func _on_windup_phase(facts: Dictionary, enemy: Node) -> void:
+	if facts.get("phase", "") != "windup":
+		return
+	_show_windup(enemy, facts)
+
+
+func _show_windup(enemy: Node, facts: Dictionary) -> void:
+	var cue := WindupRows.row(String(enemy.get("kind")), enemy, String(facts.row))
+	if cue.is_empty() or cue.phase == "none":
+		return
+	var remaining: float = cue.lead_seconds * (1.0 - clampf(float(facts.get("progress", 0.0)), 0.0, 1.0))
+	if remaining <= 0.0:
+		return
+	vfx.glyph("enemy_spawned", facts.at, 1.0, 1.0, remaining, Vector3.ZERO,
+		cue.shape, EventKinds.role_color(cue.color_role), "P1")
+	if cue.sound != EventKinds.NONE:
+		audio.play("threat_projectile", 0.0, 1.0, "SFX", cue.sound)
+
+
+func _physics_process(_delta: float) -> void:
+	if ctx == null or not ctx.flow.in_play():
+		_windup_states.clear()
+		return
+	var active := {}
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.get("kind") not in ["warden", "swarm_remnant"] or enemy.is_dead():
+			continue
+		for facts in WindupRows.state_facts(enemy):
+			var key := "%d:%s" % [enemy.get_instance_id(), facts.row]
+			active[key] = true
+			if not _windup_states.has(key):
+				_show_windup(enemy, facts)
+	_windup_states = active
 
 
 # One ring per posture Warden, a child of it so it is freed with it; a plating Warden has none.
@@ -128,6 +178,8 @@ func wire_optional() -> void:
 	juice.wire_optional()
 	vfx.wire_optional()
 	var events = ctx.events
+	if not events.is_connected("enemy_spawned", _on_enemy_windups):
+		events.connect("enemy_spawned", _on_enemy_windups)
 	if events.has_signal("synergy_discovered") and not events.is_connected("synergy_discovered", _on_synergy):
 		events.connect("synergy_discovered", _on_synergy)
 	if events.has_signal("part_gained") and not events.is_connected("part_gained", _on_part):
@@ -141,6 +193,10 @@ func wire_optional() -> void:
 			events.connect(signal_name, _dismiss_banner.unbind(argc) if argc > 0 else _dismiss_banner)
 	if not events.is_connected("flow_changed", _on_flow_changed):
 		events.connect("flow_changed", _on_flow_changed)
+
+
+func _on_enemy_windups(enemy: Node3D, _kind: String) -> void:
+	_read_windups(enemy)
 
 
 func _dismiss_banner() -> void:
