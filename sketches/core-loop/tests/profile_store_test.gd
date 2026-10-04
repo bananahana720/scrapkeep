@@ -6,13 +6,15 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 
 const FIXTURES := "res://tests/fixtures/profile/"
 const DIR := "user://profile_store_test/"
-const KNOWN_FIELDS := ["schema", "generation", "pilots", "worlds", "achievements", "cosmetics", "equipped", "stats", "last_pilot"]
+const KNOWN_FIELDS := ["schema", "generation", "pilots", "worlds", "achievements", "cosmetics", "equipped", "stats", "last_pilot", "settled", "companion", "rewards_settled"]
+const V1_FIXTURE := "res://tests/fixtures/profile_v1.json"
 
 var _t := T.new("profile_store_test")
 var _n := 0
 
 
 func _initialize() -> void:
+	_clear_dir()
 	DirAccess.make_dir_recursive_absolute(DIR)
 	_round_trip()
 	_rule_1_missing()
@@ -31,8 +33,27 @@ func _initialize() -> void:
 	_numbers_round_trip()
 	_errors_name_their_cause()
 	_fixtures()
+	_v1_migrates_to_2()
+	_companion_and_settled_round_trip()
+	_schema_3_never_saves()
 	_source_is_clean()
+	_clear_dir()
 	quit(_t.verdict())
+
+
+func _clear_dir() -> void:
+	if not DirAccess.dir_exists_absolute(DIR):
+		return
+	for file_name in DirAccess.get_files_at(DIR):
+		DirAccess.remove_absolute(DIR + file_name)
+	DirAccess.remove_absolute(DIR)
+
+
+# The shipped future fixture was schema 2; this build reads 2, so the future file is schema 3.
+func _future_bytes() -> PackedByteArray:
+	var doc: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(FIXTURES + "future.json"))
+	doc["schema"] = Profile.SCHEMA + 1
+	return JSON.stringify(doc).to_utf8_buffer()
 
 
 func _fresh_path() -> String:
@@ -42,7 +63,7 @@ func _fresh_path() -> String:
 
 func _copy_fixture(name: String) -> String:
 	var dest := _fresh_path()
-	_write(dest, FileAccess.get_file_as_bytes(FIXTURES + name))
+	_write(dest, _future_bytes() if name == "future.json" else FileAccess.get_file_as_bytes(FIXTURES + name))
 	return dest
 
 
@@ -170,6 +191,7 @@ func _rule_6_every_known_field() -> void:
 	var wrong := {
 		"schema": "one", "generation": "two", "pilots": "runner_gunner", "worlds": [4], "cosmetics": {"a": "b"},
 		"achievements": {"a": "late"}, "equipped": {"a": 4}, "stats": {"a": "many"}, "last_pilot": 4,
+		"settled": [3], "companion": [], "rewards_settled": "yes",
 	}
 	for field in KNOWN_FIELDS:
 		_t.check("F3-4 rule 6 has a case for %s" % field, wrong.has(field))
@@ -215,7 +237,7 @@ func _earn_and_idempotence() -> void:
 
 func _save_needs_a_load() -> void:
 	var cases := {
-		"newer-schema": _bytes(FIXTURES + "future.json"),
+		"newer-schema": _future_bytes(),
 		"unparseable": _bytes(FIXTURES + "broken.json"),
 		"good": JSON.stringify({"schema": 1, "generation": 7, "pilots": ["keeper"]}).to_utf8_buffer(),
 	}
@@ -269,7 +291,7 @@ func _two_stores_one_path() -> void:
 	var d := Profile.new(path)
 	d.load_profile()
 	d.unlock_world("orchard")
-	var future_bytes := _bytes(FIXTURES + "future.json")
+	var future_bytes := _future_bytes()
 	_write(path, future_bytes)
 	_t.check("F3-2 newer schema since load refuses", not d.save() and _bytes(path) == future_bytes and d.last_error.contains("newer build"), d.last_error)
 	var broken_bytes := _bytes(FIXTURES + "broken.json")
@@ -400,6 +422,74 @@ func _fixtures() -> void:
 			_t.check("A2-5 %s plays read-only" % file_name, not loaded and not p.can_save)
 		else:
 			_t.check("A2-5 %s loads" % file_name, loaded and p.can_save, p.last_error)
+
+
+func _v1_migrates_to_2() -> void:
+	var path := _fresh_path()
+	var original := FileAccess.get_file_as_bytes(V1_FIXTURE)
+	_write(path, original)
+	var p := Profile.new(path)
+	_t.check("META-7 v1 loads", p.load_profile(), p.last_error)
+	_t.check("META-7 v1 pilots kept", p.has_pilot("pylon_engineer") and p.has_pilot("runner_gunner"))
+	_t.check("META-7 v1 worlds kept", p.has_world("orchard") and p.has_world("slag_bowl"))
+	_t.check("META-7 v1 achievements kept", p.earned("rout_brindle") and p.earned("first_win") and p.earned_at("first_win") == 1790000500 and p._doc["achievements"].size() == 2)
+	_t.check("META-7 v1 cosmetics kept", p.has_cosmetic("paint_verdigris") and p.has_cosmetic("paint_rust") and p._doc["cosmetics"].size() == 2)
+	_t.check("META-7 v1 equipped, stats, last pilot kept", p.equipped("pylon_engineer", "paint") == "paint_verdigris" and p.stat("runs") == 9.0 and p.stat("ach.rout_brindle") == 1.0 and p.last_pilot() == "runner_gunner")
+	_t.check("META-7 v1 gets the new fields empty", p.companion().is_empty() and p.settled_ids().is_empty() and not p.rewards_settled())
+	_t.check("META-7 v1 no backup before save", not FileAccess.file_exists(path + ".v1"))
+	_t.check("META-7 v1 saves", p.save(), p.last_error)
+	_t.check("META-7 v1 backup holds the original bytes", _bytes(path + ".v1") == original)
+	var saved = JSON.parse_string(FileAccess.get_file_as_string(path))
+	_t.check("META-7 v1 file is now schema 2, generation 13, unknown key kept", saved is Dictionary and saved.get("schema") == 2 and saved.get("generation") == 13 and saved.get("kept_from_a_tool", {}).get("note") == "unknown keys ride through", str(saved))
+	var q := Profile.new(path)
+	q.load_profile()
+	_t.check("META-7 v2 reload keeps every unlock", q.has_pilot("runner_gunner") and q.has_cosmetic("paint_rust") and q.earned("first_win") and q.has_world("slag_bowl"))
+	_t.check("META-7 v2 resave needs no second backup", q.save() and _bytes(path + ".v1") == original and not FileAccess.file_exists(path + ".v1.1"))
+
+
+func _companion_and_settled_round_trip() -> void:
+	var path := _fresh_path()
+	var p := Profile.new(path)
+	p.load_profile()
+	var comp := {"chassis": "spil9", "owned": ["primer_coil", "escape_vent", "ram_prow"], "sockets": ["primer_coil", "escape_vent"], "escape_ready": false, "escape_spent": true}
+	p.set_companion(comp)
+	_t.check("RS4 settle is true once", p.settle("first_win_paint") and not p.settle("first_win_paint"))
+	p.settle("hotwire_offer")
+	_t.check("META-7 rewards_settled marks once", p.mark_rewards_settled() and not p.mark_rewards_settled())
+	_t.check("META-7 companion save", p.save(), p.last_error)
+	var q := Profile.new(path)
+	q.load_profile()
+	_t.eq("META-7 companion round trip", q.companion(), comp)
+	_t.eq("META-7 owned pieces", q.companion()["owned"], ["primer_coil", "escape_vent", "ram_prow"])
+	_t.eq("META-7 sockets", q.companion()["sockets"], ["primer_coil", "escape_vent"])
+	_t.check("META-7 escape flag", q.companion()["escape_spent"] == true and q.companion()["escape_ready"] == false)
+	_t.eq("RS4 settled list round trip", q.settled_ids(), ["first_win_paint", "hotwire_offer"])
+	_t.check("META-7 rewards_settled round trip", q.rewards_settled())
+	var a := Profile.new(path)
+	var b := Profile.new(path)
+	a.load_profile()
+	b.load_profile()
+	a.settle("only_a")
+	a.set_companion({"chassis": "spil9", "owned": ["primer_coil", "escape_vent", "ram_prow", "ram_spring"], "sockets": [], "escape_ready": true, "escape_spent": false})
+	b.settle("only_b")
+	a.save()
+	b.save()
+	var c := Profile.new(path)
+	c.load_profile()
+	_t.check("RS4 two writers union their settled ids", c.is_settled("only_a") and c.is_settled("only_b") and c.is_settled("hotwire_offer"), str(c.settled_ids()))
+	_t.check("META-7 two writers union owned pieces and keep an assembly", c.companion()["owned"].size() == 4 and c.companion()["sockets"].size() == 2, str(c.companion()))
+
+
+func _schema_3_never_saves() -> void:
+	var path := _fresh_path()
+	var bytes := _future_bytes()
+	_write(path, bytes)
+	var p := Profile.new(path)
+	p.load_profile()
+	p.settle("x")
+	p.set_companion({"chassis": "spil9"})
+	_t.check("META-7 schema 3 refuses to save", not p.can_save and not p.save() and p.last_error.contains("newer build"), p.last_error)
+	_t.check("META-7 schema 3 bytes and backups untouched", _bytes(path) == bytes and not FileAccess.file_exists(path + ".v2") and not FileAccess.file_exists(path + ".v1"))
 
 
 func _source_is_clean() -> void:

@@ -46,6 +46,7 @@ static func parse(text: String, type: int, shape := {}) -> Variant:
 const STRINGS := "strings"
 const NUMBERS := "numbers"
 const STRING_MAP := "string_map"
+const DICT := "dict"
 
 
 static func is_strings(value: Variant) -> bool:
@@ -59,6 +60,8 @@ static func _shape_ok(value: Variant, kind: String) -> bool:
 		return value is Dictionary and _all(value.values(), TYPE_FLOAT, TYPE_INT)
 	if kind == STRING_MAP:
 		return value is Dictionary and _all(value.values(), TYPE_STRING)
+	if kind == DICT:
+		return value is Dictionary
 	return false
 
 
