@@ -5,6 +5,7 @@ const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Habits := preload("res://src/combat/habits.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -49,6 +50,8 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 # and a charge in flight is cancelled, the reactor's own post-pulse window does not open,
 # shred does not build, the shell never tints amber and take_damage removes only the
 # chunk the last strike armed.
+# The swarm's rack instead pays GUARD_RACK_POSTURE once for the cruise-or-faster
+# ram that scatters it. It keeps its existing reform and respawn clocks.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -85,6 +88,7 @@ const CORE_WINDOW := 2.5
 const QUEEN_WINDOW := 4.0
 const GUARD_RESPAWN := 10.0
 const GUARD_OFFSET := 9.0
+const GUARD_RACK_POSTURE := 25.0
 const ADAPT_CYCLE := 10.0
 const ADAPT_WARN := 1.2
 const BRACE := 5.0
@@ -134,6 +138,8 @@ var _charge_len := PULSE_TELEGRAPH
 var _fight := "plating"
 var _posture: BossPosture
 var _armed := 0.0
+var _guard_scatter_frame := -1
+var _guard_paid_scatters := 0
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -148,6 +154,8 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 		_posture = BossPosture.new(spec.get("posture", {}))
 	faction = family
 	fleet = spec.get("fleet")
+	if _posture != null and family == Roster.SWARM and fleet != null:
+		fleet.events().enemy_struck.connect(_on_guard_struck)
 	plating = spec.get("plating", 30.0)
 	_set_health(spec.get("hp", 400.0))
 	scrap_value = 30 * stage
@@ -237,7 +245,22 @@ func adapting() -> bool:
 
 func on_guard_scattered(swarm, _at: Vector3) -> void:
 	if swarm == guard and family == Roster.SWARM:
+		_guard_scatter_frame = Engine.get_physics_frames()
 		_open(QUEEN_WINDOW)
+
+
+# Both ball contacts and weapon knocks scatter before enemy_struck. Only the ram
+# on that scatter's frame earns the lesson, never a later hit on following drones.
+func _on_guard_struck(enemy: Node3D, hit_kind: String, force: float) -> void:
+	if hit_kind != "ram" or guard == null or not is_instance_valid(enemy):
+		return
+	if enemy.get("swarm") != guard or not guard.following() \
+			or _guard_scatter_frame != Engine.get_physics_frames() or guard.scatters <= _guard_paid_scatters:
+		return
+	if SpeedTier.of(force, target.tuning.f("cruise")) < SpeedTier.CRUISE:
+		return
+	_guard_paid_scatters = guard.scatters
+	_apply_posture(judge_hit("guard_rack", 0.0, false, 0))
 
 
 func _open(seconds: float) -> void:
@@ -270,6 +293,8 @@ func _step_guard(delta: float) -> void:
 	var out := flat_to_ball()
 	var at := global_position + (out.normalized() if out.length() > 0.1 else Vector3.FORWARD) * GUARD_OFFSET
 	guard = fleet.spawn_guard(global_position, terrain.drop_point(at.x, at.z, 1.4))
+	_guard_scatter_frame = -1
+	_guard_paid_scatters = 0
 
 
 func _step_mind(delta: float, inside: bool) -> void:
@@ -549,8 +574,15 @@ func chunk_cracked() -> bool:
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
 	if _posture == null:
 		return {}
-	return _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating, "smash": smash, "tier": tier,
+	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating, "smash": smash, "tier": tier,
 			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp})
+	if hit_kind == "guard_rack":
+		# A rack is posture pressure, not a contact on the core. Keep judge/apply's
+		# stagger and shatter-frame boundaries while fixing its gain independently of heft.
+		result["gain"] = GUARD_RACK_POSTURE if not staggered() and Engine.get_physics_frames() != _posture.shatter_frame else 0.0
+		result["glance"] = false
+		result["full"] = true
+	return result
 
 
 func _apply_posture(result: Dictionary) -> void:
