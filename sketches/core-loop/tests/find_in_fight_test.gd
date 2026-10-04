@@ -49,6 +49,10 @@ var _words_in_hold := 0
 var _name_up := false
 var _clock_ms := 0
 var _calm_run := 0
+# Drawn frames. The card closes in the ceremony's _process, and under load several physics
+# ticks can run back to back before the next one, so a close is read after a drawn frame.
+var _drawn := 0
+var _engaged_at := 0
 
 
 func _initialize() -> void:
@@ -132,6 +136,11 @@ func _engage() -> void:
 
 func _fight_on() -> bool:
 	return _game.flow.sealed and _game.flow.engaged() and is_instance_valid(_game.flow.warden)
+
+
+func _process(_delta: float) -> bool:
+	_drawn += 1
+	return false
 
 
 func _physics_process(_delta: float) -> bool:
@@ -264,12 +273,13 @@ func _physics_process(_delta: float) -> bool:
 				_report("the next first find shows its card", _ceremony().view.card.get("part", "") == _held[0] and _seen_both(_held[0]) and not _fight_on(),
 					"%s found out of a fight after the retry shows its card at frame %d and is seen" % [_held[0], _wait])
 				_engage()
+				_engaged_at = _drawn
 				_next("engaged")
 			if _wait == OPEN_WITHIN:
 				_report("the next first find shows its card", false, "no card for %s within %d frames out of a fight" % [_held[0], OPEN_WITHIN])
 				return _finish()
 		"engaged":
-			if _wait == 2:
+			if _wait >= 2 and (_drawn > _engaged_at or _wait == OPEN_WITHIN):
 				_report("a reveal card closes when the fight goes live", _fight_on() and _ceremony().view.card.is_empty() and not _banner().showing() and _seen_both(_held[0]),
 					"a reveal card up as the Warden engages: card %s, banner showing %s, %s still seen in both records" % [_ceremony().view.card.get("part", "none"), _banner().showing(), _held[0]])
 				_game.flow.retry_stage()
