@@ -148,6 +148,42 @@ func _wear_checks() -> void:
 		"10 s grounded at cruise: wear %.0f unfitted, %.0f fitted" % [losses[0], losses[1]])
 
 
+# Wave 6 fix: a Recycle taken after the stage checkpoint pays cogs the retry rolls back, so the
+# offer rolls back with them. The checkpoint holds the offer pending; a retry after Recycle puts
+# the cogs and the open offer back and the choice can be made again (and pays once).
+func _retry_checks() -> void:
+	_game.free()
+	var game := Game.new()
+	game.test_mode = true
+	root.add_child(game)
+	_game = game
+	await process_frame
+	game.ctx.calm = true
+	game.player.source = Intent.Scripted.new()
+	game.flow.press_start()
+	game.flow.choose_class(0)
+	for i in 5:
+		await process_frame
+	var build = game.build
+	var run = game.run
+	game.events.beacon_unsealed.emit(1)
+	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
+	var cogs_snap: int = run.cogs
+	var paid: int = build.hotwire_recycle()
+	_check("recycle paid before the retry", paid > 0 and run.cogs == cogs_snap + paid and build.hotwire_pending()["state"] == "recycle",
+		"paid %d, cogs %d, state %s" % [paid, run.cogs, build.hotwire_pending()["state"]])
+	game.flow.retry_stage()
+	for i in 3:
+		await process_frame
+	var pending: Dictionary = build.hotwire_pending()
+	_check("retry returns the cogs and the pending offer", run.cogs == cogs_snap and pending["state"] == "open" and pending["part_id"] == "riveted_shell"
+		and build._hotwire_spent and run.extra["hotwire"]["state"] == "open",
+		"cogs %d against snapshot %d, offer %s" % [run.cogs, cogs_snap, pending])
+	var again: int = build.hotwire_recycle()
+	_check("the choice pays once after the retry", again == paid and run.cogs == cogs_snap + paid, "paid %d, cogs %d" % [again, run.cogs])
+	_resume_checks.call_deferred()
+
+
 # 2026-10-04: a resolved Recycle survives Continue. resume_run emits run_started, which
 # clears the offer's fields; the saved ones come back so Warden I does not offer twice.
 func _resume_checks() -> void:
@@ -258,6 +294,6 @@ func _physics_process(delta: float) -> bool:
 				_wear_checks()
 				_take_checks()
 				_phase = "resume"
-				_resume_checks.call_deferred()
+				_retry_checks.call_deferred()
 				return false
 	return false

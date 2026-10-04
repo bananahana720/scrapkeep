@@ -629,8 +629,17 @@ func _hotwire_save() -> void:
 		ctx.run.extra["hotwire"] = {"id": _hotwire_id, "state": _hotwire_state, "spent": _hotwire_spent}
 
 
-func _hotwire_restore() -> void:
-	if _hotwire_spent or ctx == null or ctx.run == null or not ctx.run.extra.has("hotwire"):
+func _hotwire_restore(retry := false) -> void:
+	if ctx == null or ctx.run == null:
+		return
+	# A retry rewinds the offer with the snapshot (run.restore put its saved fields back, or
+	# erased them): a Recycle taken after the checkpoint is undone with its cogs.
+	if retry and not ctx.run.extra.has("hotwire"):
+		_hotwire_id = ""
+		_hotwire_state = ""
+		_hotwire_spent = false
+		return
+	if (_hotwire_spent and not retry) or not ctx.run.extra.has("hotwire"):
 		return
 	var saved: Dictionary = ctx.run.extra["hotwire"]
 	_hotwire_id = String(saved.get("id", ""))
@@ -855,7 +864,7 @@ func _on_run_started(_class_id_value: String) -> void:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	sync_relics()
-	_hotwire_restore()
+	_hotwire_restore(retry)
 	if retry:
 		_fired.clear()
 	gates.close()
