@@ -9,7 +9,9 @@ const recordedBinary =
   "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 export const binary = process.env.GODOT_BIN || recordedBinary;
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
-const TIMEOUT_MS = 120_000;
+// 180 s since 2026-10-04: the solo bot bands (alpha_posture_bands_test, bot_chain_hand_test)
+// legitimately run 110 to 120 s on a loaded machine; a hang still fails, three minutes later.
+const TIMEOUT_MS = 180_000;
 const SLOWEST = 10;
 const RECEIPT_SCHEMA = "scrapkeep-smoke-receipt/1";
 const NAMED_WIDTH = 2;

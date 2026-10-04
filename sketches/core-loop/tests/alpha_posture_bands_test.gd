@@ -12,6 +12,7 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 # Warden (warden_fight_s). The bots.ndjson stage notes carry both. Seeds 1 to 3, 30000 ticks (enough
 # to clear stage 2 for both policies: the two-hook completionist breaks seed 2's Reach Warden at about
 # 26700); the window is the sweep's three-seed median, widened.
+# Three seeds take about 118 s solo; the smoke's per-test cap is 180 s (2026-10-04).
 const ALPHA_SEEDS := [1, 2, 3]
 const ALPHA_TICKS := 30000
 const SPILLWAY_SKIPPER_S := Vector2(45.0, 90.0)
