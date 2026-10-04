@@ -121,12 +121,23 @@ func _check_shell() -> void:
 
 func _check_warden_line() -> void:
 	var scrap = _build.scrap
-	var before: int = scrap.count()
+	# _items holds gears too (CG1), so slice by the item list, not count().
+	var before: int = scrap._items.size()
+	var cogs_before: int = scrap.cog_count()
 	var at: Vector3 = _game.player.ball_position() + Vector3(0.0, 0.0, 30.0)
 	_game.run.record_kill("warden", at, 12)
-	var added: Array = scrap._items.slice(before)
+	var pieces := 0
 	var far := 0.0
-	for item in added:
-		far = maxf(far, Vector2((item as Node3D).global_position.x - at.x, (item as Node3D).global_position.z - at.z).length())
-	_report("warden scrap lines out", added.size() == 12 and far >= 15.0 and far <= 23.0,
-		"a Warden worth 12 scrap dropped %d pieces reaching %.1f m along the heading" % [added.size(), far])
+	var gear_far := 0.0
+	for item in scrap._items.slice(before):
+		var reach := Vector2((item as Node3D).global_position.x - at.x, (item as Node3D).global_position.z - at.z).length()
+		if scrap._cogs.has(item):
+			gear_far = maxf(gear_far, reach)
+		else:
+			pieces += 1
+			far = maxf(far, reach)
+	_report("warden scrap lines out", pieces == 12 and far >= 15.0 and far <= 23.0,
+		"a Warden worth 12 scrap dropped %d pieces reaching %.1f m along the heading" % [pieces, far])
+	var gears: int = scrap.cog_count() - cogs_before
+	_report("warden gears line out", gears == 12 and gear_far <= 23.0,
+		"the same Warden laid %d one-cog gears reaching %.1f m" % [gears, gear_far])
