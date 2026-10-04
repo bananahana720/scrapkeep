@@ -93,11 +93,15 @@ func _run() -> void:
 			% [Route.TURN_FRAMES, on_rows[0]["heading"], on_rows[1]["heading"], on_rows[2]["heading"], spread])
 
 	var same := true
+	# 2026-10-04: name the first differing row and key, so a rare gate red carries its cause.
+	var first_diff := ""
 	for i in on_rows.size():
 		for key in ["heft", "ram_dealt", "ram_delivered", "smash_dealt", "heading"]:
 			if absf(on_rows[i][key] - off_rows[i][key]) > 0.0001:
 				same = false
-	_report("flag off matches", same, "rows with --world-one-builds on and off are identical: %s" % same)
+				if first_diff == "":
+					first_diff = " (row %d %s: on %.4f, off %.4f)" % [i, key, on_rows[i][key], off_rows[i][key]]
+	_report("flag off matches", same, "rows with --world-one-builds on and off are identical: %s%s" % [same, first_diff])
 
 	print("world_one_mass_r_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
