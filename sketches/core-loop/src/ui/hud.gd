@@ -274,11 +274,12 @@ func setup(game_ref) -> void:
 
 # The hot-wired Fit / Recycle screen (hotwire_screen.gd) is a modal like the pause menu, so it
 # sits beside it on the game, out of the HUD's play-view word budget; the HUD keeps the handle
-# and hides it outside play. It opens itself from build's hotwire_offered. Deferred so it lands
-# after the game's own children, as the pause menu does, and leaves their order as it was.
+# and hides it outside play. It opens itself from build's hotwire_offered. Added at once, as the
+# pause menu is: a deferred add left the screen unparented when a test freed the game in the same
+# frame, and its labels then leaked at exit (2026-10-04, wave 6 gate 2 flagged 24 tests).
 func _mount_hotwire_screen() -> void:
 	hotwire_screen = HotwireScreen.new()
-	game.add_child.call_deferred(hotwire_screen)
+	game.add_child(hotwire_screen)
 	hotwire_screen.setup(game)
 
 
