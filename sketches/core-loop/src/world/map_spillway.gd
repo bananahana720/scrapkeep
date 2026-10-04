@@ -56,7 +56,7 @@ const CAUSEWAY_H := 6.0
 
 
 func _init() -> void:
-	title = "The Spillway"
+	title = "Spillway: the top shelf"
 	spawn = SPAWN
 	heading = Vector3(0.0, 0.0, 1.0)
 	beacon = BEACON
