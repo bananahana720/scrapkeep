@@ -114,6 +114,8 @@ var packs: Array[Dictionary] = []
 var authored: Array = []
 var elite := {}
 var elite_arrival := 0
+# Pack kind names KIND_NAMES lacks, each warned once and never spawned.
+var unknown_kinds := {}
 
 var _timer := FIRST_SPAWN
 var _rng := RandomNumberGenerator.new()
@@ -220,10 +222,16 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> void:
 	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
 	var side := Vector2(-heading.y, heading.x)
 	for i in kinds.size():
+		var kind := KIND_NAMES.find(kinds[i])
+		if kind == -1:
+			if not unknown_kinds.has(kinds[i]):
+				unknown_kinds[kinds[i]] = true
+				push_warning("director: pack kind %s is not an enemy; skipped" % kinds[i])
+			continue
 		var spot: Vector2 = at + side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
 		spot.x = clampf(spot.x, play_rect.position.x, play_rect.end.x)
 		spot.y = clampf(spot.y, play_rect.position.y, play_rect.end.y)
-		arrivals.append({"kind": KIND_NAMES.find(kinds[i]), "at": spot, "left": ARRIVAL, "pack": _pack_seq})
+		arrivals.append({"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq})
 	_pack_seq += 1
 
 

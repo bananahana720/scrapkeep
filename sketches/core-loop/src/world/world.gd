@@ -194,7 +194,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	var map = terrain.map()
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
 	director = Director.new(_stage_seed ^ 0x5eed)
-	_author_director()
+	_author_director(def)
 	director.use_row(def)
 	director.threat = def["threat"]
 	director.play_rect = map.play_rect
@@ -414,11 +414,12 @@ func _spawn_vault() -> void:
 		view.set_vault(at, true, ctx.spawner.plating_of(node) if ctx.spawner.has_method("plating_of") else -1.0)
 
 
-# The stage table's authored packs, if it has any; the director spawns nothing else then.
-func _author_director() -> void:
-	director.authored = ctx.stages.packs()
-	director.elite = ctx.stages.elite()
-	director.elite_arrival = ctx.stages.elite_arrival()
+# The stage's authored packs, if it has any; the director spawns nothing else then. A row's
+# own packs, elite and elite_arrival win over the table's.
+func _author_director(def := {}) -> void:
+	director.authored = def.get("packs", ctx.stages.packs())
+	director.elite = def.get("elite", ctx.stages.elite())
+	director.elite_arrival = int(def.get("elite_arrival", ctx.stages.elite_arrival()))
 
 
 # The enemy count the director is given: the group less the activities' standing enemies.
