@@ -170,6 +170,18 @@ const HOTWIRED := {
 # One common part's recycle value in cogs (design-v3/research/economy/ECONOMY.md, Cogs: recycling).
 const RECYCLE_COMMON := 10
 
+# The two Evolved parts (Synergies rows with "evolution"). Not in CATALOGUE, so they never
+# enter rows(), ids(), offer_pool(), roll() or roll_gate(): build.gd grants one when both
+# ingredients are held (source "evolution"). Rarity evolved carries roll weight 0 too.
+const EVOLVED := {
+	"breaker_drive": {"name": "Breaker Drive", "verb": "Wreck what you ram", "text": "Wrecking Ball evolved: +8 punch, +35% weapon damage",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["kinetic", "speed"], "punch": 8.0,
+		"mods": {"weapon_damage": 1.35}},
+	"bladestorm_rotor": {"name": "Bladestorm Rotor", "verb": "Spin up a storm", "text": "Pinwheel evolved: spiral level +1, +20% fire rate",
+		"rarity": "evolved", "tier": 3, "family": "pattern", "tags": ["spiral", "speed"], "patterns": {"spiral_wave": 1},
+		"mods": {"weapon_rate": 1.2}},
+}
+
 static var _defs := {}
 static var _rows := {}
 # Seams other modules offer ("spawner.extend_cloak"). A row whose needs is not here is
@@ -211,6 +223,8 @@ static func row(part_id: String) -> Dictionary:
 	var authored: Dictionary = rows().get(part_id, {})
 	if not authored.is_empty():
 		return authored
+	if EVOLVED.has(part_id):
+		return _settled(EVOLVED[part_id])
 	var generated := ItemGen.generated_row(part_id)
 	return _settled(generated) if not generated.is_empty() else generated
 
@@ -225,7 +239,7 @@ static func def(part_id: String) -> Resource:
 
 
 static func has(part_id: String) -> bool:
-	return rows().has(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
+	return rows().has(part_id) or EVOLVED.has(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
 
 
 # The authored pool, catalogue first. Generated recipes are unbounded and not listed.

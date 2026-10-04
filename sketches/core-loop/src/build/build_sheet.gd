@@ -26,6 +26,8 @@ var kill_scrap := 1.0
 var max_hp_bonus := 0.0
 var dials := {}
 var synergies: Array = []
+# Synergies consumed into a held Evolved part: folded once through the evolution, not live.
+var consumed: Array = []
 # Unnamed tag rules live right now (Synergies.TAG_RULES).
 var rules: Array = []
 # Flat per-hit weapon damage from parts, before the weapon multipliers.
@@ -36,9 +38,13 @@ static func from_parts(held: Array) -> RefCounted:
 	var sheet: RefCounted = load("res://src/build/build_sheet.gd").new()
 	sheet.parts = held.duplicate()
 	var counted := {}
+	sheet.consumed = Synergies.consumed(held)
 	for part_id in held:
 		var d: Resource = Parts.def(part_id)
 		if d == null:
+			continue
+		# An Evolved part gives nothing while an ingredient is missing.
+		if d.rarity == "evolved" and not Synergies.evolution_of(part_id) in sheet.consumed:
 			continue
 		# A linear or capped row stops adding at stack_cap copies (v2 W4 loot); the
 		# catalogue's first rows carry no cap, so their copies all count as before.
@@ -52,10 +58,14 @@ static func from_parts(held: Array) -> RefCounted:
 		sheet.max_hp_bonus += d.max_hp_bonus
 		sheet.punch += d.punch
 	var sets := Parts.tag_sets(held)
-	sheet.synergies = Synergies.active(held, sets)
+	var live := Synergies.active(held, sets)
+	for key in sheet.consumed:
+		if not key in live:
+			live.append(key)
+	sheet.synergies = live.filter(func(key): return not key in sheet.consumed)
 	sheet.rules = Synergies.active_rules(sets)
 	var rows: Array = []
-	for key in sheet.synergies:
+	for key in live:
 		rows.append(Synergies.ROWS[key])
 	for key in sheet.rules:
 		rows.append(Synergies.TAG_RULES[key])

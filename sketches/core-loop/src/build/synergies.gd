@@ -62,6 +62,7 @@ const ROWS := {
 		"name": "Wrecking Ball", "tags": ["speed", "kinetic"], "shown": "double_feed",
 		"text": "Rams send out a shockwave that hits everything around the target.",
 		"transformers": ["wrecking_ball"],
+		"evolution": {"parts": ["double_feed", "hot_rivets"], "into": "breaker_drive"},
 	},
 	"shrapnel_bloom": {
 		"name": "Shrapnel Bloom", "tags": ["split", "kinetic"], "shown": "cross_split",
@@ -77,6 +78,7 @@ const ROWS := {
 		"name": "Pinwheel", "tags": ["spiral", "speed"], "shown": "spiral_wave",
 		"text": "At fast speed and above you spin a blade ring that cuts the enemies you pass.",
 		"transformers": ["pinwheel"],
+		"evolution": {"parts": ["spiral_wave", "loose_trigger"], "into": "bladestorm_rotor"},
 	},
 }
 
@@ -132,6 +134,55 @@ static func active_rules(tag_sets: Array) -> Array:
 		if in_play(key) and pair_live(tag_sets, TAG_RULES[key]["tags"]):
 			live.append(key)
 	return live
+
+
+# Evolutions: a named synergy row that carries "evolution" {parts, into} turns into an
+# Evolved part once both ingredient parts are held. The Evolved part is held in the run's
+# part list like any part (so a retry restores it); while it and both ingredients are
+# held, the pair synergy is consumed into it: its effect folds once, never twice.
+
+# The synergy ids that are evolutions, in row order.
+static func evolution_ids() -> Array:
+	var ids: Array = []
+	for key in ROWS:
+		if ROWS[key].has("evolution") and in_play(key):
+			ids.append(key)
+	return ids
+
+
+# The synergy an Evolved part belongs to, or "".
+static func evolution_of(part_id: String) -> String:
+	for key in ROWS:
+		if ROWS[key].has("evolution") and ROWS[key]["evolution"]["into"] == part_id:
+			return key
+	return ""
+
+
+static func _holds_all(held: Array, parts: Array) -> bool:
+	for part_id in parts:
+		if not part_id in held:
+			return false
+	return true
+
+
+# The Evolved part ids that should be gained now: both ingredients held, evolved part not.
+static func evolutions_ready(held: Array) -> Array:
+	var ready: Array = []
+	for key in evolution_ids():
+		var evo: Dictionary = ROWS[key]["evolution"]
+		if not evo["into"] in held and _holds_all(held, evo["parts"]):
+			ready.append(evo["into"])
+	return ready
+
+
+# The synergies consumed into a held Evolved part (its ingredients still held).
+static func consumed(held: Array) -> Array:
+	var out: Array = []
+	for key in evolution_ids():
+		var evo: Dictionary = ROWS[key]["evolution"]
+		if evo["into"] in held and _holds_all(held, evo["parts"]):
+			out.append(key)
+	return out
 
 
 # The named synergy that adding this part would bring live, or "".

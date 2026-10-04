@@ -792,6 +792,7 @@ func _class_id() -> String:
 
 func _on_part_gained(part_id: String, _source: String) -> void:
 	recompute()
+	_grant_evolutions()
 	var d: Resource = Parts.def(part_id)
 	if d != null and d.effect.get("do", "") == "ballast":
 		ctx.run.add_scrap(int(d.effect.get("mass", 0)), ctx.player.ball_position())
@@ -1168,6 +1169,20 @@ func _frost_ring(at: Vector3) -> void:
 	for i in 6:
 		var angle := TAU * float(i) / 6.0
 		field.apply("frost", at + Vector3(cos(angle), 0.0, sin(angle)) * REFREEZE_RING, "slam")
+
+
+# ---- Evolutions ----
+
+# Both ingredients of an evolution held: the run gains its Evolved part once, announced as
+# part_gained with source "evolution". Nested gains recompute and find nothing more ready.
+func _grant_evolutions() -> void:
+	for part_id in Synergies.evolutions_ready(ctx.run.parts):
+		ctx.run.add_part(part_id, "evolution")
+
+
+# Synergies consumed into a held Evolved part.
+func consumed_synergies() -> Array:
+	return sheet.consumed.duplicate()
 
 
 # ---- Named synergy behaviours ----
