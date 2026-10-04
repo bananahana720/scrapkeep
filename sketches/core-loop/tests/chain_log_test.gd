@@ -118,6 +118,12 @@ func _physics_process(_delta: float) -> bool:
 	line = JSON.parse_string(lines[lines.size() - 1]) if lines.size() > 0 else {}
 	_report("(h) written line", line.has("smash_damage") and float(line["smash_damage"]) == 23.5 and line.get("smash_damage_by_fight") == [17.5, 4.0],
 		"smash_damage %s, by fight %s" % [line.get("smash_damage"), line.get("smash_damage_by_fight")])
+	# A retry that does not go through death re-enters the stage: its smashes are not the old fight's.
+	_game.events.warden_engaged.emit(2)
+	_smash(1.0, true)
+	_game.events.stage_entered.emit(2, true)
+	_smash(3.0, true)
+	_report("(h) re-entering the stage closes the fight slot", rec["smash_damage_by_fight"] == [17.5, 4.0, 1.0] and rec["smash_damage"] == 27.5, "by fight %s, total %s" % [rec["smash_damage_by_fight"], rec["smash_damage"]])
 	# (g) below three: a fresh codex run state
 	_game.events.run_started.emit("runner_gunner")
 	_game.player.chain.reset()

@@ -7,7 +7,7 @@ const Codex := preload("res://src/core/codex.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # Lore wiring rule: zone-entry exchanges follow row order, wait for advance, end on
-# one cancel, play once per zone per run and stay silent in Warden fights. Notes show
+# the interact key (never Escape or jump), dismiss at cruise speed, play once per zone per run and stay silent in Warden fights. Notes show
 # only saved codex discoveries, with locked empty-text rows in lore-table order.
 # This exercises the real game's bus, input dispatch and rendered Notes labels.
 
@@ -76,15 +76,25 @@ func _physics_process(_delta: float) -> bool:
 			_report("Spillway entry", _said(spillway[0]) and _bubble.showing(), _bubble.text)
 			_bubble._process(30.0)
 			_report("waits for advance", _said(spillway[0]), "simulated 30 seconds without input")
-			Push.key(root, KEY_ENTER)
+			_press("cl_jump")
+			_press("ui_accept")
+			_report("jump does not advance", _said(spillway[0]), _bubble.text)
+			_press("cl_interact")
 			_report("advance second line", _said(spillway[1]), _bubble.text)
 			Push.key(root, KEY_ESCAPE)
-			_report("one skip ends exchange", not _bubble.visible and _bubble.text == "", "visible %s; text '%s'" % [_bubble.visible, _bubble.text])
-			_report("skip does not open pause", not _game.pause_toggled() and not paused, "Escape belongs to the exchange while it is playing")
-			_press("ui_accept")
+			_report("Escape leaves the exchange alone", _said(spillway[1]), _bubble.text)
+			_next("pause")
+		"pause":
+			_report("Escape pauses", _game.pause_toggled() or paused, "pause_toggled %s; paused %s" % [_game.pause_toggled(), paused])
+			Push.key(root, KEY_ESCAPE)
+			_game.player.state.velocity = Vector3(0.0, 0.0, _game.ctx.tuning.f("cruise") + 2.0)
+			_bubble._process(0.016)
+			_report("moving at cruise dismisses", not _bubble.visible and _bubble.text == "", "visible %s; text '%s'" % [_bubble.visible, _bubble.text])
+			_game.player.state.velocity = Vector3.ZERO
+			_press("cl_interact")
 			_next("skipped")
 		"skipped":
-			_report("skip has no next line", not _bubble.visible and _bubble.text == "", _bubble.text)
+			_report("dismissed has no next line", not _bubble.visible and _bubble.text == "", _bubble.text)
 			_game.flow.enter_stage(1, Vector3.ZERO, true)
 			_next("retry")
 		"retry":
@@ -95,11 +105,11 @@ func _physics_process(_delta: float) -> bool:
 		"reach":
 			var reach := _lines("1-2", "exchange")
 			_report("Reach entry", _said(reach[0]), _bubble.text)
-			_press("ui_accept")
+			_press("cl_interact")
 			_report("action advances", _said(reach[1]), _bubble.text)
-			_press("ui_accept")
+			_press("cl_interact")
 			_report("third row in order", _said(reach[2]), _bubble.text)
-			_press("ui_accept")
+			_press("cl_interact")
 			_report("last line ends exchange", not _bubble.visible and _bubble.text == "", "all three lines completed")
 			_game.flow.enter_stage(2, Vector3.ZERO, true)
 			_next("completed")
@@ -112,7 +122,7 @@ func _physics_process(_delta: float) -> bool:
 			_report("note survives new run", _game.notes.note_entries()[0]["known"], "saved codex id remains known")
 			_game.flow._engage()
 			_report("Warden engagement hides lore", not _bubble.visible and _bubble.text == "", "warden_engaged through flow")
-			_press("ui_accept")
+			_press("cl_interact")
 			_game.flow.enter_stage(2, Vector3.ZERO, false)
 			_game.flow._engage()
 			_next("fight")

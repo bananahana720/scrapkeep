@@ -5,6 +5,8 @@ extends RefCounted
 # flow. The file is {"schema", "generation", "run": <entrance doc>}; the writes go through
 # SafeStore like the profile's. The terminal flags live in the run doc as the extra keys
 # "ended" (bool) and "worlds_cleared" (array of world ints); the merge never lowers them.
+# clear() leaves a tombstone {"schema", "generation", "ended": true} instead of a missing
+# file, so a second store still holding an older generation cannot save the ended run back.
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 
@@ -17,6 +19,7 @@ const REFUSED_QUARANTINE := "quarantine_failed"
 const REFUSED_CHANGED := "changed_on_disk"
 const REFUSED_BACKUP := "backup_failed"
 const REFUSED_WRITE := "write_failed"
+const REFUSED_ENDED := "run_ended"
 
 var path := "user://run.json"
 var last_error := ""
@@ -52,6 +55,10 @@ func load() -> Dictionary:
 		return {}
 	if state == "newer":
 		return _refuse(REFUSED_NEWER, read["why"])
+	if state == "tombstone":
+		_generation = int(read["generation"])
+		_doc = {}
+		return {}
 	if state != "ok":
 		var bad := SafeStore.quarantine(path)
 		if bad.is_empty():
@@ -85,7 +92,10 @@ func save(doc: Dictionary) -> String:
 	if state == "newer":
 		_refuse(REFUSED_NEWER, read["why"])
 		return REFUSED_NEWER
-	if state != "missing" and state != "ok":
+	if state == "tombstone" and int(read["generation"]) > _generation:
+		last_error = "not saving: the run in %s was ended at generation %d; this store holds %d" % [path, read["generation"], _generation]
+		return REFUSED_ENDED
+	if state != "missing" and state != "ok" and state != "tombstone":
 		last_error = "not saving: %s changed since it was loaded (%s)" % [path, read["why"]]
 		return REFUSED_CHANGED
 	var next := doc.duplicate(true)
@@ -117,9 +127,13 @@ func save(doc: Dictionary) -> String:
 	return ""
 
 
-# The run ended: removes the file (also the way out of a newer-schema refusal) and forgets
-# the held document. True when nothing is left on disk.
+# The run ended: a readable file becomes a tombstone one generation past the newest seen, so
+# a stale store's save is refused (run_ended); a missing file stays missing, and an
+# unreadable or newer-schema file is removed (the way out of a newer-schema refusal). Forgets
+# the held document. True when no run is left on disk.
 func clear() -> bool:
+	var read := _read()
+	var seen := maxi(_generation, int(read.get("generation", 0)))
 	_doc = {}
 	_generation = 0
 	refusal = ""
@@ -127,6 +141,14 @@ func clear() -> bool:
 	_backup_path = ""
 	_backup_bytes = PackedByteArray()
 	if not FileAccess.file_exists(path):
+		return true
+	if read["state"] == "ok" or read["state"] == "tombstone":
+		var tomb := {"schema": SCHEMA, "generation": seen + 1, "ended": true}
+		var wrote := SafeStore.write_atomic(path, JSON.stringify(tomb, "  ", true, true))
+		if wrote != OK:
+			last_error = "could not write %s: %s" % [path, error_string(wrote)]
+			return false
+		_generation = seen + 1
 		return true
 	var err := DirAccess.remove_absolute(path)
 	if err != OK:
@@ -185,6 +207,8 @@ func _read() -> Dictionary:
 	while version < SCHEMA:
 		parsed = call(MIGRATIONS[version], parsed)
 		version += 1
+	if bool(parsed.get("ended", false)) and not parsed.has("run") and typeof(parsed.get("generation", 0)) in [TYPE_INT, TYPE_FLOAT]:
+		return {"state": "tombstone", "generation": int(parsed.get("generation", 0))}
 	if not (parsed.get("run") is Dictionary) or not (typeof(parsed.get("generation", 0)) in [TYPE_INT, TYPE_FLOAT]):
 		return {"state": "unreadable", "why": "%s has no run document" % path}
 	_whole_numbers(parsed["run"])
