@@ -44,8 +44,9 @@ func _stage_one(table: String) -> Dictionary:
 func _run() -> void:
 	var first: Dictionary = await _stage_one("")
 	_t.eq("the default table's stage 1 is the Spillway", first["map"], "spillway")
-	_t.eq("it gets the Spillway's devices", first["count"], (Interactables.PLACEMENTS["spillway"] as Array).size())
-	_t.check("three of them", first["count"] == 3, "devices %s" % [first["ids"]])
+	# META-3 (2026-10-04): the Rivet rescue cage registers as a fourth device beside the three placements.
+	_t.eq("it gets the Spillway's devices plus the rescue cage", first["count"], (Interactables.PLACEMENTS["spillway"] as Array).size() + 1)
+	_t.check("four of them", first["count"] == 4, "devices %s" % [first["ids"]])
 	var slice: Dictionary = await _stage_one("slice")
 	_t.check("the slice's stage 1 is another map", slice["map"] != "spillway", "map %s" % slice["map"])
 	_t.eq("it gets none of the Spillway's devices", slice["count"], 0)
