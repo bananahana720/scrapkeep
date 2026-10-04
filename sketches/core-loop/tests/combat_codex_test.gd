@@ -24,6 +24,9 @@ var _failures := 0
 var _step := 0
 var _clock := 0.0
 var _lobber: Node3D
+# The wave 9 units still waiting on the ball's teleport, and where the ball started.
+var _w9_units := {}
+var _w9_home := Vector3.ZERO
 # Set by the last case; a script error that aborts a case leaves it false.
 var _last_case_ran := false
 
@@ -49,9 +52,22 @@ func _physics_process(delta: float) -> bool:
 			_data()
 			_instant_tricks()
 			_w7_tricks()
-			_start_shell()
+			_w9_settle()
 			_step = 1
 		1:
+			# The ball's teleports land on a physics tick: first onto the floor, then off the
+			# lane and the mark at cruise.
+			_clock += delta
+			if _game.player.ball_position().distance_to(_w9_home) < 0.5 or _clock > 1.0:
+				_w9_tricks()
+				_step = 2
+		2:
+			_clock += delta
+			if _game.player.ball_position().distance_to(_w9_home) > 3.0 or _clock > 1.0:
+				_w9_after_move()
+				_start_shell()
+				_step = 3
+		3:
 			_clock += delta
 			if _combat.discovered.has("shell_return") or _clock > 4.0:
 				_report("shell_return", _combat.discovered.has("shell_return"),
@@ -149,6 +165,101 @@ func _w7_tricks() -> void:
 	for drone in lead.swarm.drones:
 		if is_instance_valid(drone):
 			drone.queue_free()
+
+
+# Wave 9: the Dig and Highdraft units, each driven through its own attack. The drill,
+# cutter and anchor finish now; the burrower, kite and lamps finish once the ball has
+# moved off the lane and the mark at cruise speed (_w9_after_move).
+func _w9_settle() -> void:
+	var home: Vector3 = _game.player.ball_position()
+	_w9_home = _game.ctx.terrain.drop_point(home.x, home.z, 1.05)
+	_game.player.reset_to(_w9_home)
+	_clock = 0.0
+
+
+func _w9_tricks() -> void:
+	var ctx = _game.ctx
+	var fleet = _combat.fleet
+	var home: Vector3 = _game.player.ball_position()
+
+	var rig: Node3D = _w9_spawn("drill_crew", home + Vector3(10.0, 0.0, 6.0))
+	rig._warn(_w9_to(rig))
+	_combat.strike(rig, "slam", 14.0)
+	_report("bore_breach", _combat.discovered.has("bore_breach") and rig.stopped == 1,
+		"a slam on a drill crew mid-bore stopped it (stopped %d)" % rig.stopped)
+
+	var cutter: Node3D = _w9_spawn("line_cutter", home + Vector3(-10.0, 0.0, 8.0))
+	cutter._warn(_w9_to(cutter))
+	cutter.phase = cutter.Phase.LIVE
+	cutter._go_live()
+	cutter._t = cutter.FLIGHT + 0.01
+	cutter._live(0.0)
+	_report("line_cut", _combat.discovered.has("line_cut") and cutter.dodged == 1,
+		"an unhooked ball in the landing ring dodged the cutter (dodged %d)" % cutter.dodged)
+
+	var crew: Node3D = _w9_spawn("anchor_crew", home + Vector3(0.0, 0.0, 10.0))
+	crew._warn(_w9_to(crew))
+	crew.phase = crew.Phase.LIVE
+	crew._go_live()
+	var hooked: bool = fleet.holds.held(crew)
+	fleet.holds.snap(crew, "jump")
+	_report("deck_winch", _combat.discovered.has("deck_winch") and hooked and crew.broken_by == "jump",
+		"an anchor crew hooked the ball (%s), then a jump slipped it (%s)" % [hooked, crew.broken_by])
+	for node in [rig, cutter, crew]:
+		if is_instance_valid(node):
+			node.queue_free()
+
+	var burrower: Node3D = _w9_spawn("burrower", home + Vector3(8.0, 0.0, 0.0))
+	burrower._warn(_w9_to(burrower))
+	var kite: Node3D = _w9_spawn("kite_drone", home + Vector3(0.0, 0.0, 8.0))
+	kite._warn(_w9_to(kite))
+	var lamps: Node3D = _w9_spawn("lamp_swarm", home + Vector3(-5.0, 0.0, 0.0))
+	lamps._warn(_w9_to(lamps))
+	lamps.phase = lamps.Phase.LIVE
+	lamps._go_live()
+	_w9_units = {"burrower": burrower, "kite": kite, "lamps": lamps,
+		"lane_had_ball": burrower._lane_had_ball, "mark_had_ball": kite.telegraph().contains(home)}
+	var away := Vector3(0.0, 0.0, -4.0)
+	_game.player.reset_to(home + away, away.normalized() * 1.2 * ctx.tuning.f("cruise"))
+	_clock = 0.0
+
+
+func _w9_after_move() -> void:
+	var burrower: Node3D = _w9_units["burrower"]
+	burrower.phase = burrower.Phase.LIVE
+	burrower._go_live()
+	_report("burrow_lane", _combat.discovered.has("burrow_lane") and _w9_units["lane_had_ball"] and burrower.bursts == 1,
+		"the lane held the ball at commit (%s) and the burst came up empty" % _w9_units["lane_had_ball"])
+
+	var kite: Node3D = _w9_units["kite"]
+	kite.phase = kite.Phase.LIVE
+	kite._go_live()
+	kite._t = kite.DIVE + 0.01
+	kite._live(0.0)
+	_report("thermal_dive", _combat.discovered.has("thermal_dive") and _w9_units["mark_had_ball"] and kite.dives == 1,
+		"the mark held the ball (%s) and the dive landed after it left" % _w9_units["mark_had_ball"])
+
+	var lamps: Node3D = _w9_units["lamps"]
+	if lamps.phase == lamps.Phase.LIVE:
+		lamps._live(1.0 / 90.0)
+	_report("lure_bloom", _combat.discovered.has("lure_bloom"),
+		"a ball at cruise inside the bloom went through the light (tier %d)" % _game.player.speed_tier())
+	for key in ["burrower", "kite", "lamps"]:
+		if is_instance_valid(_w9_units[key]):
+			_w9_units[key].queue_free()
+	_w9_units.clear()
+	_game.player.reset_to(_w9_home)
+
+
+func _w9_spawn(kind: String, at: Vector3) -> Node3D:
+	var ctx = _game.ctx
+	return ctx.spawner.spawn_enemy(kind, ctx.terrain.drop_point(at.x, at.z, 1.6))
+
+
+func _w9_to(unit: Node3D) -> Vector3:
+	var to: Vector3 = _game.player.ball_position() - unit.global_position
+	to.y = 0.0
+	return to
 
 
 func _start_shell() -> void:

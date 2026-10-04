@@ -75,6 +75,8 @@ func on_struck(kind_hit: String, _part: String, result: Dictionary) -> void:
 			_plate.visible = false
 	if kind_hit == "slam" and phase == Phase.WARN:
 		stopped += 1
+		if fleet != null:
+			fleet.discover("bore_breach", _real_ball())
 		_end()
 
 

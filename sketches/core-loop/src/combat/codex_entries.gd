@@ -108,7 +108,7 @@ const ENTRIES := [
 # 2026-10-04 (wave 9): entries whose in-play detector has not landed yet. Their hints show in
 # the codex; combat_codex_test's "every entry discovered in one run" check skips them until the
 # enemy that fires each one exists. Remove an id here when its detector lands.
-const DETECTOR_PENDING := ["burrow_lane", "bore_breach", "lure_bloom", "line_cut", "deck_winch", "thermal_dive"]
+const DETECTOR_PENDING := []
 
 
 static func all() -> Array:

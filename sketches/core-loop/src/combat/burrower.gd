@@ -17,6 +17,8 @@ const SINK := 3.0
 var hidden := true
 var bursts := 0
 var slam_kills := 0
+# The committed lane contained the ball: rolling off it before the burst is burrow_lane.
+var _lane_had_ball := false
 var _marker: MeshInstance3D
 
 
@@ -68,7 +70,9 @@ func _set_hidden(value: bool) -> void:
 
 func _commit(to_ball: Vector3) -> Node3D:
 	_facing(to_ball)
-	return _commit_lane(Threat.Type.LANE, global_position, to_ball, LANE_LENGTH, LANE_WIDTH)
+	var lane := _commit_lane(Threat.Type.LANE, global_position, to_ball, LANE_LENGTH, LANE_WIDTH)
+	_lane_had_ball = lane != null and lane.contains(_real_ball())
+	return lane
 
 
 func _go_live() -> void:
@@ -77,6 +81,8 @@ func _go_live() -> void:
 	var lane := telegraph()
 	if lane != null and lane.contains(_real_ball()):
 		hit_player.emit(BURST_DAMAGE, lane.dir * SHOVE + Vector3.UP * 4.0)
+	elif lane != null and _lane_had_ball and fleet != null:
+		fleet.discover("burrow_lane", _real_ball())
 
 
 func _live_motion(_to_ball: Vector3) -> Vector3:

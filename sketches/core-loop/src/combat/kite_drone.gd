@@ -74,6 +74,8 @@ func _live(_delta: float) -> bool:
 			dir.y = 0.0
 			dir = dir.normalized() if dir.length() > 0.01 else Vector3.FORWARD
 			hit_player.emit(DIVE_DAMAGE, dir * 6.0 + Vector3.UP * 3.0)
+		elif fleet != null:
+			fleet.discover("thermal_dive", ball)
 	return false
 
 
@@ -86,6 +88,8 @@ func on_struck(kind: String, _part: String, _result: Dictionary) -> void:
 		batted += 1
 		broken_by = "batted"
 		knock(Vector3.UP + (_dive_from - global_position).normalized(), BAT_KICK)
+	elif kind != "ram" and kind != "slam" and not _diving() and fleet != null:
+		fleet.discover("thermal_dive", global_position)
 
 
 func _move(delta: float, desired: Vector3) -> void:

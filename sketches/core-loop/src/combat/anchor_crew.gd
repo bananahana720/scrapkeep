@@ -66,4 +66,4 @@ func _live(_delta: float) -> bool:
 
 func _on_broken(_method: String) -> void:
 	if fleet != null:
-		fleet.discover("tether_snap", _real_ball())
+		fleet.discover("deck_winch", _real_ball())
