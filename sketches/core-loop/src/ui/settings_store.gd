@@ -17,13 +17,16 @@ const STICK_SENSITIVITY := "stick_sensitivity"
 const INVERT_Y := "invert_y"
 const STICK_DEADZONE := "stick_deadzone"
 const MOUSE_SENSITIVITY := "mouse_sensitivity"
+const AIM_ASSIST := "aim_assist"
 # Stick sensitivity is the full-deflection yaw rate in rad/s; pitch keeps its 1.6/2.6 ratio.
-# Invert uses the comfort rows' numeric toggle convention, 0 off and 1 on.
+# Invert uses the comfort rows' numeric toggle convention, 0 off and 1 on. Aim assist is how hard
+# the stick turn slows over a hookable target, 0 off to 1 full (stick only, never the mouse).
 const LOOK_DEFAULTS := {
 	STICK_SENSITIVITY: 2.6,
 	INVERT_Y: 0.0,
 	STICK_DEADZONE: 0.2,
 	MOUSE_SENSITIVITY: 0.0022,
+	AIM_ASSIST: 0.5,
 }
 
 var path := ""
@@ -103,10 +106,14 @@ func mouse_sensitivity() -> float:
 	return float(look.get(MOUSE_SENSITIVITY, LOOK_DEFAULTS[MOUSE_SENSITIVITY]))
 
 
+func aim_assist() -> float:
+	return float(look.get(AIM_ASSIST, LOOK_DEFAULTS[AIM_ASSIST]))
+
+
 func _look_value(id: String, value: float) -> float:
 	if not is_finite(value):
 		return float(LOOK_DEFAULTS.get(id, 0.0))
-	if id == INVERT_Y or id == STICK_DEADZONE:
+	if id == INVERT_Y or id == STICK_DEADZONE or id == AIM_ASSIST:
 		return clampf(value, 0.0, 1.0)
 	if id == STICK_SENSITIVITY or id == MOUSE_SENSITIVITY:
 		return maxf(0.0, value)

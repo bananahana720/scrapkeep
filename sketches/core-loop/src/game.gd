@@ -14,6 +14,7 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
+const Augments := preload("res://src/movement/augments.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
@@ -283,7 +284,18 @@ func _process(delta: float) -> void:
 func step_stick_look(delta: float) -> void:
 	var stick := Input.get_vector("cl_look_left", "cl_look_right", "cl_look_up", "cl_look_down")
 	if stick != Vector2.ZERO:
-		camera.look_stick(stick, delta)
+		camera.look_stick(stick, delta, stick_on_target())
+
+
+# True while the crosshair is on a hookable surface or enemy: the harpoon's aim record, which
+# the physics step refreshes in play, holds a target. Aim assist reads it for the stick only.
+func stick_on_target() -> bool:
+	return player != null and player.kit.aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE
+
+
+# Pushes the saved look settings to the camera; the settings page calls it after each step.
+func apply_look() -> void:
+	camera.apply_look_settings(settings_store())
 
 
 # Hold R in play to retry. One retry per press: after any retry, from the hold or from
