@@ -39,7 +39,7 @@ Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, the
 
 Twelve units merged after two gate runs; gate 2 passed except the quarantined build_power_curve_test. Receipts: `artifacts/local/alpha/wave3/gate1.log` and `gate2.log`; ledger rows in `tools/coordinator/lane-ledger.tsv`, design calls in `DESIGN-NOTES.md`, rulings in `docs/decisions.tsv`. Units: F1 boss contract, ZS-B alpha table, RS1 entrance document, RR1 rarity ladder, META-4 companion model, C3 wind-up rows, C4 lore rows, F3b guard-rack burst, C1 hero asset guards, ZS-A Spillway zone 1-1, T8 nightly runner, D1 DESIGN-V3.
 
-**Wave 4 is in flight** from base 13fe55a: Claude units F2a, RS2, CG1, F4, B1; Sol units ZS-D, ZS-C, D2, C5, C8, B2, TR1.
+**Wave 4 ran** from base 13fe55a (landed at aee2242, see above): Claude units F2a, RS2, CG1, F4, B1; Sol units ZS-D, ZS-C, D2, C5, C8, B2, TR1.
 
 **Wave 5 candidates:** F5, F6, RS3, RS6, CG2, META-1..3, HW1, EV1, RL1, RL2, SC1..3, C2, C6, C7, T1b, T5, T6, T7a/b, IN1..4.
 
