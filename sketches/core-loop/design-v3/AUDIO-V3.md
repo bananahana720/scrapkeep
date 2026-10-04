@@ -124,7 +124,7 @@ A ride that does not feel like a ride is a stop (LOOP-REDESIGN §7). The lift is
 
 ### 2.5 What the research gave this design
 
-`design-v3/research/R3-adaptive-music.md` (Haiku web scout, this session, 104 lines; web summaries, leads not facts). Taken, adapted or refused:
+[design-v3/research/R3-adaptive-music.md](archive/research/R3-adaptive-music.md) (Haiku web scout, this session, 104 lines; web summaries, leads not facts). Taken, adapted or refused:
 
 | Lead (R3 section) | Verdict | Where it lands |
 | --- | --- | --- |
@@ -315,7 +315,7 @@ A worker is retiming the existing cover per bar and rendering the pair: `hybrid-
 
 ## 13. Systems' asks, folded in
 
-From `SYSTEMS-CHAOS.md` §9 (7144a9e). Each lands in a section above or is answered here.
+From [SYSTEMS-CHAOS.md](archive/SYSTEMS-CHAOS.md) §9 (7144a9e). Each lands in a section above or is answered here.
 
 | Ask | Answer | Where |
 | --- | --- | --- |

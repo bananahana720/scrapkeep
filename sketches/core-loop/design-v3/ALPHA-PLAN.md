@@ -1,6 +1,6 @@
 # Scrapkeep full alpha plan
 
-Status: authorized and in progress. The 3 October 2026 implementation request refines the existing program using the owner interview, accepted kits and recovered Claude session. Historical unit lists below preserve planning provenance; LEGIBILITY and the current amendments control execution. Checkpoint 1 still awaits Andrew's play verdict.
+Status: authorized and in progress. Waves 1 to 4 landed. [DESIGN-V3](DESIGN-V3.md) owns the current gameplay design; [HANDOFF](HANDOFF.md) owns the live coordinator handoff. Historical unit lists below preserve planning provenance.
 
 ## What approving this plan authorizes
 
