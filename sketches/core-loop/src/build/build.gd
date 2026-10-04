@@ -1375,5 +1375,9 @@ func _relic_undo(abilities, slot: String, fx: Dictionary) -> void:
 	if fx["charges"] > 0:
 		abilities.set_max_charges(slot, s.max_charges - fx["charges"])
 	abilities.set_cooldown_scale(slot, s.cooldown_scale / fx["cooldown"])
-	if fx["swapped"] and abilities.id_of(slot) == Relics.swap_of(fx["relic"]):
+	# A tree pick that swaps the slot to the same row keeps it: undoing the relic must not
+	# strip a pick the player made (the swap relics duplicate a tree node on purpose).
+	var tree = ctx.player.tree if ctx.player != null else null
+	var tree_owns: bool = tree != null and tree.gives_swap(slot, Relics.swap_of(fx["relic"]))
+	if fx["swapped"] and abilities.id_of(slot) == Relics.swap_of(fx["relic"]) and not tree_owns:
 		abilities.swap(slot, fx["prev"])

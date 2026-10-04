@@ -192,7 +192,7 @@ func fire() -> bool:
 
 # The relic this cache holds, or "". Only a relic the pilot can use for an empty slot.
 func _relic_offer() -> String:
-	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics)
+	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics, ctx.player.tree if ctx.player != null else null)
 	if pool.is_empty():
 		return ""
 	var rng: RandomNumberGenerator = system.luck(id + ":relic")
