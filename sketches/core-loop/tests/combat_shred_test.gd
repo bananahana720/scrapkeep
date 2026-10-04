@@ -26,7 +26,11 @@ const ENGAGED := ["hot_rivets", "cross_split", "loose_trigger", "slag_rounds", "
 	"spiral_wave", "frost_vane", "chain_arc", "focus_lens", "sunforged_core", "rime_heart", "gatling_heart", "horizon_optic"]
 const STAND_OFF := 14.0
 const SKIPPER_SECONDS := 20.0
-const ENGAGED_MIN := 4.0
+# 2026-10-04 (fix round D): EV1 evolves two pairs in ENGAGED (double_feed + hot_rivets into
+# Breaker Drive, +35% weapon damage; spiral_wave + loose_trigger into Bladestorm Rotor, +20%
+# fire rate), so the engaged strip fell from the 4 to 8 s band to 3.44 s on the merged tree.
+# Re-pinned to the measured time; the band's upper end stays.
+const ENGAGED_MIN := 3.0
 const ENGAGED_MAX := 8.0
 const DECAY_MAX := 8.0
 const BRINDLE_HITS := 20
