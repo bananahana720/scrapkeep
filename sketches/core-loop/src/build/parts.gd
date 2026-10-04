@@ -152,15 +152,23 @@ const GENERATED_SHARE := 0.25
 # Hot-wired parts (BUILD-SYSTEMS.md, Two hot-wired parts). Not in CATALOGUE, so they never
 # enter rows(), ids(), offer_pool() or roll(): a hot-wired part is offered by authorship,
 # never drawn as loot. Each row names both consequences with an icon id and at most three
-# words; "{armor}", "{armor_x}" and "{steer}" are resolved from Build and RunState by hotwire_choice.gd,
-# so the words follow the tuning. Fitting still comes from --hotwire-shell; nothing here
-# equips a part.
+# words; "{armor}", "{armor_x}", "{steer}", "{bonus}", "{wear}" and "{wear_x}" are resolved from
+# Build, RunState and HotwireRules by hotwire_choice.gd, so the words follow the tuning. Nothing
+# here equips a part: build.gd offers one after Warden I as a Fit / Recycle choice. Recycle pays
+# recycle_commons common-part recycle values (BUILD-SYSTEMS.md: two for H1, three for H2).
+# Spark Tread needs armour mode too: its cost is rolling wear, which only armour mode takes.
 const HOTWIRED := {
-	"riveted_shell": {"name": "Riveted Shell", "tags": ["mass"], "needs_armor": true,
+	"riveted_shell": {"name": "Riveted Shell", "tags": ["mass"], "needs_armor": true, "recycle_commons": 2,
 		"label": "{armor} armour. Air steering \u2212{steer}%.",
 		"upside": {"icon": "cat_defense", "words": "{armor_x}x armour"},
 		"downside": {"icon": "cat_mobility", "words": "Air steering \u2212{steer}%"}},
+	"spark_tread": {"name": "Spark Tread", "tags": ["kinetic", "arc"], "needs_armor": true, "recycle_commons": 3,
+		"label": "Big signature hits. {wear} rolling wear.",
+		"upside": {"icon": "cat_damage", "words": "+{bonus}% signature hit"},
+		"downside": {"icon": "cat_defense", "words": "{wear_x}x rolling wear"}},
 }
+# One common part's recycle value in cogs (design-v3/research/economy/ECONOMY.md, Cogs: recycling).
+const RECYCLE_COMMON := 10
 
 static var _defs := {}
 static var _rows := {}
@@ -243,6 +251,11 @@ static func hotwire_offer(armor_mode: bool, held: Array = []) -> Array:
 			continue
 		out.append(key)
 	return out
+
+
+# Cogs a hot-wired part recycles for; 0 for an id that is not hot-wired.
+static func hotwire_recycle(part_id: String) -> int:
+	return int(hotwired(part_id).get("recycle_commons", 0)) * RECYCLE_COMMON
 
 
 static func seam_met(need: String) -> bool:

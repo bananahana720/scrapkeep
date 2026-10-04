@@ -3,6 +3,7 @@ extends VBoxContainer
 const Parts := preload("res://src/build/parts.gd")
 const Build := preload("res://src/build/build.gd")
 const RunState := preload("res://src/core/run_state.gd")
+const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -11,7 +12,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # parts): two rows, the upside then the downside, each one icon and a few words. The rows
 # are built by one function from one style, so neither can weigh more than the other. The
 # numbers come from Build and RunState, never from typed text, so a tuning change moves
-# the words. Preview only: no Fit or Recycle, no cue, no equip (unit V's later half).
+# the words. The Fit / Recycle transaction is build.gd's (hotwire_fit, hotwire_recycle); this
+# shows both consequences and the recycle price before the choice. No cue, no equip.
 
 const ICON_PX := 40.0
 const ROW_H := 48.0
@@ -22,24 +24,33 @@ var part_id := ""
 var rows: Array[Control] = []
 
 
-# The part's resolved copy: {"name", "label", "upside": {"icon", "words"}, "downside": {...}}.
-# {} for an id that is not hot-wired. Only riveted_shell has numbers to resolve today.
+# The part's resolved copy: {"name", "label", "upside": {"icon", "words"}, "downside": {...},
+# "recycle": cogs}. {} for an id that is not hot-wired.
 static func resolve(id: String) -> Dictionary:
 	var row := Parts.hotwired(id)
 	if row.is_empty():
 		return {}
 	var mult: float = RunState.SCRAP_PER_HP / Build.SHELL_SCRAP_PER_HP
 	var steer := int(round((1.0 - Build.SHELL_AIR_FACTOR) * 100.0))
-	var mult_text := "%d" % int(mult) if is_equal_approx(mult, round(mult)) else "%.1f" % mult
+	var mult_text := _times(mult)
+	var wear_text := _times(HotwireRules.WEAR_SCALE)
+	var bonus := int(round(HotwireRules.BONUS * 100.0))
 	var fill := func(text: String) -> String:
 		return text.replace("{armor}", "Double" if is_equal_approx(mult, 2.0) else mult_text + "x") \
-			.replace("{armor_x}", mult_text).replace("{steer}", str(steer))
+			.replace("{armor_x}", mult_text).replace("{steer}", str(steer)) \
+			.replace("{wear}", "Double" if is_equal_approx(HotwireRules.WEAR_SCALE, 2.0) else wear_text + "x") \
+			.replace("{wear_x}", wear_text).replace("{bonus}", str(bonus))
 	return {
 		"name": row["name"],
 		"label": fill.call(row["label"]),
 		"upside": {"icon": row["upside"]["icon"], "words": fill.call(row["upside"]["words"])},
 		"downside": {"icon": row["downside"]["icon"], "words": fill.call(row["downside"]["words"])},
+		"recycle": Parts.hotwire_recycle(id),
 	}
+
+
+static func _times(value: float) -> String:
+	return "%d" % int(value) if is_equal_approx(value, round(value)) else "%.1f" % value
 
 
 func _init(id := "") -> void:
