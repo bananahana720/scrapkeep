@@ -1128,15 +1128,30 @@ func _pressure(kind: String, result: Dictionary) -> void:
 
 
 func _apply_posture(result: Dictionary) -> void:
+	var before := _posture_signature()
 	var was_staggered: bool = _posture.staggered
 	_posture.apply(result, Engine.get_physics_frames())
 	_sync_stagger(was_staggered)
+	_publish_posture(before)
 
 
 func _step_posture(delta: float) -> void:
+	var before := _posture_signature()
 	var was_staggered: bool = _posture.staggered
 	_posture.step(delta)
 	_sync_stagger(was_staggered)
+	_publish_posture(before)
+
+
+func _posture_signature() -> Array:
+	return [floori(_posture.posture), _posture.staggered, _posture.chunks, _posture.cracked]
+
+
+# The hull's bar moved: the same bus signal a Warden's does, so the stagger chord plays and
+# the plate and ring redraw. The run log ignores a body that carries a boss.
+func _publish_posture(before: Array) -> void:
+	if before != _posture_signature() and is_instance_valid(ship) and is_instance_valid(ship.hull):
+		ctx.events.posture_changed.emit(ship.hull, _posture.posture, _posture.staggered)
 
 
 # A stagger opens the cockpit for its window; from Scuttle on the cockpit stays open.

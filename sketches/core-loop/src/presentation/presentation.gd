@@ -110,7 +110,7 @@ func _exit_tree() -> void:
 
 
 func _on_node_added(node: Node) -> void:
-	if node.get_script() == WardenScript:
+	if node.get_script() == WardenScript or (node.get("role") == "hull" and node.get("boss") != null):
 		_ring_warden.call_deferred(node)
 	if node.has_signal("attack_phase"):
 		_read_windups.call_deferred(node)
@@ -164,7 +164,9 @@ func _physics_process(_delta: float) -> void:
 
 # One ring per posture Warden, a child of it so it is freed with it; a plating Warden has none.
 func _ring_warden(warden: Node) -> void:
-	if not is_instance_valid(warden) or warden.get_script() != WardenScript or not warden.is_inside_tree():
+	if not is_instance_valid(warden) or not warden.is_inside_tree():
+		return
+	if warden.get_script() != WardenScript and not (warden.get("role") == "hull" and warden.get("boss") != null):
 		return
 	if warden.fight() != "posture" or warden.has_node("WardenRing"):
 		return

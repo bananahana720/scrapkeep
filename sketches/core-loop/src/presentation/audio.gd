@@ -1664,7 +1664,7 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 
 func _on_posture_fight(enemy: Node3D) -> bool:
 	return is_instance_valid(enemy) and enemy.has_method("fight") and enemy.fight() == "posture" \
-			and ctx.flow != null and ctx.flow.get("warden") == enemy
+			and ctx.flow != null and (ctx.flow.get("warden") == enemy or enemy.get("boss") != null)
 
 
 # The pitch of the phrase's note for the guard's quarter: under 25 the first, 75 and over

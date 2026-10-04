@@ -362,7 +362,8 @@ func _on_cause_fired(id: String, _target: Node3D, _at: Vector3) -> void:
 # The Warden's bar moved. A stagger is the bar going from open to staggered; the rest is
 # read from the Warden when the line is written, because no bus signal says a hit glanced.
 func _on_posture_changed(enemy: Node3D, _posture: float, staggered: bool) -> void:
-	if _record.is_empty() or not is_instance_valid(enemy):
+	# Brindle's hull also publishes its bar; it belongs to no stage's Warden row.
+	if _record.is_empty() or not is_instance_valid(enemy) or _in_arena or enemy.get("boss") != null:
 		return
 	var stage: int = run.stage
 	var row := _stage(stage)
