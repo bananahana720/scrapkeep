@@ -21,7 +21,7 @@ const HALF_D := 5.0
 const HEIGHT := 6.0
 const SINK := 1.5
 const PICKS := 3
-const PICK_RARITIES := ["uncommon", "rare"]
+const PICK_RARITIES := ["common", "rare"]
 # Left of the chest, the chest itself, right of it: along the back wall, so the ball
 # that stopped to open it is clear of all three.
 const PEDESTALS := [Vector3(-4.0, 0.0, -3.0), Vector3(0.0, 0.0, -3.5), Vector3(4.0, 0.0, -3.0)]
@@ -167,7 +167,7 @@ func fire() -> bool:
 		if not shown:
 			continue
 		var d: Resource = Parts.def(offers[i])
-		var rarity: String = d.rarity if d != null else "uncommon"
+		var rarity: String = d.rarity if d != null else "common"
 		p["gem"].material_override = Palette.solid(Palette.BRASS if rarity.begins_with("rare") else Palette.ARC, 2.0)
 		var words := Parts.display_name(offers[i]).split(" ", false)
 		var icon: String = "cat_" + (d.icon_category if d != null and d.icon_category != "" else "utility")

@@ -61,14 +61,14 @@ func _draw() -> Dictionary:
 		shop._rng.seed = seed_at
 		for entry in shop._stock():
 			out["shelf"].append(entry["part_id"])
-		out["reroll"].append(shop._roll_one(["common", "uncommon", "rare"]))
-		out["reroll"].append(shop._roll_one(["rare_plus"]))
+		out["reroll"].append(shop._roll_one(["common", "rare"]))
+		out["reroll"].append(shop._roll_one(["relic"]))
 		for bonus in 3:
 			out["gate"].append_array(Parts.roll_gate(rng, Parts.gate_rarities(bonus), class_id, held, 2, 1))
 		out["vault"].append_array(Parts.roll(rng, Parts.SOURCE_RARITIES["vault"], class_id, held, 1))
 		out["fabricator"].append_array(Parts.roll(rng, Parts.SOURCE_RARITIES["fabricator"], class_id, held, 1))
-		out["cache"].append_array(Parts.roll(rng, ["uncommon", "rare"], class_id, held, 3))
-		out["activity"].append_array(Parts.roll(rng, ["uncommon", "rare"], class_id, held, 1))
+		out["cache"].append_array(Parts.roll(rng, ["common", "rare"], class_id, held, 3))
+		out["activity"].append_array(Parts.roll(rng, ["common", "rare"], class_id, held, 1))
 	return out
 
 
@@ -117,11 +117,11 @@ func _list() -> void:
 		and StageDefs.part_in_play("tempest_core") and not StageDefs.parts_listed(), "list, a milestone and the default table")
 	var harder := ids.filter(func(id): return Parts.def(id).hits_harder())
 	_t.check("at least two hit harder", harder.size() >= 2, "hits harder: %s" % [harder])
-	for rarity in ["common", "uncommon", "rare"]:
+	for rarity in ["common", "rare"]:
 		var at := ids.filter(func(id): return Parts.def(id).rarity == rarity)
 		_t.check("at least two %s" % rarity, at.size() >= 2, "%s: %s" % [rarity, at])
 	for pilot in ClassDef.all():
-		var pool: Array = Parts.offer_pool(pilot.id, ["common", "uncommon", "rare", "rare_plus"])
+		var pool: Array = Parts.offer_pool(pilot.id, ["common", "rare", "relic"])
 		for synergy in SliceDefs.SYNERGIES:
 			var row: Dictionary = Synergies.ROWS[synergy]
 			var done := false

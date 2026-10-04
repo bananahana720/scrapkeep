@@ -197,12 +197,12 @@ func _refresh_glyph(fab: Dictionary) -> void:
 
 static func _rarity_color(rarity: String) -> Color:
 	match rarity:
-		"uncommon":
-			return Palette.ARC
 		"rare":
 			return Palette.AMBER
-		"rare_plus":
-			return Palette.AMBER
+		"relic":
+			return Palette.ARC
+		"evolved":
+			return Palette.ANCIENT
 	return Palette.SANDSTONE
 
 

@@ -365,11 +365,11 @@ func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
 	var d: Resource = Parts.def(find["part"])
 	var rarity: String = find["rarity"]
 	var stamps: Dictionary = row["stamps"]
-	var stamp: String = stamps["first"] if find["first"] and rarity in ["common", "uncommon", "rare"] else stamps.get(rarity, "")
+	var stamp: String = stamps["first"] if find["first"] and rarity in ["common", "rare"] else stamps.get(rarity, "")
 	var element := String(d.element) if d != null else ""
 	return {"part": find["part"], "name": Parts.display_name(find["part"]), "verb": card_words(find["part"]), "stamp": stamp,
 		"icon": icon_of(find["part"]), "element_icon": "el_" + element if element != "" else "",
-		"tint": RewardGates.rarity_color(rarity), "heart": row["heart"] if rarity == "rare_plus" else false,
+		"tint": RewardGates.rarity_color(rarity), "heart": row["heart"] if rarity == "relic" else false,
 		"partner_icon": icon_of(find["partner"]) if String(find["partner"]) != "" else "", "link": find["link"],
 		"class_color": _class_color(), "start_ms": start, "in_s": row["in_s"], "hold_s": row["hold_s"], "out_s": row["out_s"],
 		"snap_s": row["snap_s"], "seed": absi(String(find["part"]).hash()), "ceremony": in_ceremony, "find": find}
