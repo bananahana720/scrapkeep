@@ -4,7 +4,8 @@ const Worlds := preload("res://src/core/worlds.gd")
 
 # The alpha table: three worlds of two zones each, every zone ending at a posture-fight
 # Warden, then Brindle as the boss. World one is the Spillway (1-1) then the Cable Reach (1-2);
-# worlds two and three reuse the surviving maps under placeholder names. The default table:
+# stages 3 and 5 are the real first zones of worlds two and three (the Dig, the Highdraft) with
+# their own packs and Warden variant keys; stages 4 and 6 stay placeholders on the reach. The default table:
 # stage_defs.gd re-exports these rows, and `--table=alpha` picks this file directly.
 # Same shape as slice_defs.gd. It repeats that file's two lookups because a base script's
 # static functions would read the base's own DEFS, not this one's. Rows 3 to 6 scale rows 1
@@ -48,32 +49,46 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 90.0, "warden_hp": 650.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core."},
+		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
+		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
 	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": ""}, "warden_family": "swarm", "name": "The Cable Reach", "map": "reach", "threat": 1.0,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Bowl through its guard rack, then smash the core."},
-	{"stage": 3, "world": 2, "music": {"theme": 1, "ace": ""}, "warden_family": "reactor", "name": "The Dig: placeholder on the gorge", "map": "gorge", "threat": 1.1,
+		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
+	{"stage": 3, "world": 2, "music": {"theme": 1, "ace": ""}, "warden_family": "reactor", "name": "Dig: the upper bench", "map": "dig", "threat": 1.1,
 		"unlock_base": 2, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 130.0, "warden_hp": 950.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core."},
+		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
+		"packs": [
+			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
+			{"id": "dig_bore", "kinds": ["drill_crew", "burrower"]},
+			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
+		], "elite": ELITE, "warden_variant": "meltdown"},
 	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": ""}, "warden_family": "swarm", "name": "The High Cables: placeholder on the reach", "map": "reach", "threat": 1.2,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 150.0, "warden_hp": 1100.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Bowl through its guard rack, then smash the core."},
-	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": ""}, "warden_family": "mind", "name": "The Flood Shelf: placeholder on the spillway", "map": "spillway", "threat": 1.3,
+		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
+	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": ""}, "warden_family": "mind", "name": "Highdraft", "map": "highdraft", "threat": 1.3,
 		"unlock_base": 2, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 170.0, "warden_hp": 1250.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core."},
+		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
+		"packs": [
+			{"id": "draft_cut", "kinds": ["line_cutter", "line_cutter", "kite_drone"]},
+			{"id": "draft_anchor", "kinds": ["anchor_crew", "line_cutter"]},
+			{"id": "draft_kites", "kinds": ["kite_drone", "kite_drone", "anchor_crew"]},
+		], "elite": ELITE, "warden_variant": "choir"},
 	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": ""}, "warden_family": "mind", "name": "The Last Span: placeholder on the reach", "map": "reach", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 190.0, "warden_hp": 1400.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core."},
+		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
+		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
 ]
 
 

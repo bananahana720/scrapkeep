@@ -37,9 +37,12 @@ extends RefCounted
 # a pack arrives only when the cap has room for all of it.
 enum { CHASER, LOBBER }
 
+const Roster := preload("res://src/combat/roster.gd")
+
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
-	"swarm_remnant", "mind_hand"]
+	"swarm_remnant", "mind_hand", "burrower", "drill_crew", "lamp_swarm", "line_cutter", "anchor_crew",
+	"kite_drone"]
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const FAMILY_ANCIENT := ["reactor_relic", "swarm_remnant", "mind_hand"]
@@ -227,6 +230,11 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> void:
 			if not unknown_kinds.has(kinds[i]):
 				unknown_kinds[kinds[i]] = true
 				push_warning("director: pack kind %s is not an enemy; skipped" % kinds[i])
+			continue
+		if not Roster.built(kinds[i]):
+			if not unknown_kinds.has(kinds[i]):
+				unknown_kinds[kinds[i]] = true
+				push_warning("director: pack kind %s is not built yet; skipped" % kinds[i])
 			continue
 		var spot: Vector2 = at + side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
 		spot.x = clampf(spot.x, play_rect.position.x, play_rect.end.x)

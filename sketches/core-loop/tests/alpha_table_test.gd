@@ -5,6 +5,8 @@ const Game := preload("res://src/game.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const Roster := preload("res://src/combat/roster.gd")
+const Director := preload("res://src/world/director.gd")
 
 # The alpha table: three worlds of two zones each on the surviving maps, every Warden on
 # the posture fight, Brindle as the boss. The row keys are every key a src/ reader
@@ -15,7 +17,7 @@ const ROW_KEYS := [
 	"stage", "world", "music", "warden_family", "name", "map", "threat",
 	"unlock_base", "ancient", "event_mix", "scrap_density", "kill_scrap",
 	"beacon_seconds", "beacon_radius", "warden_plating", "warden_hp",
-	"warden_lesson", "posture", "warden_hint",
+	"warden_lesson", "posture", "warden_hint", "packs", "elite", "warden_variant",
 ]
 
 var _failures := 0
@@ -56,7 +58,7 @@ func _initialize() -> void:
 		_check("is_run_last %d" % s, A.is_run_last(s) == (s == 6), "stage %d: %s" % [s, A.is_run_last(s)])
 	# Naming all six maps keeps a swapped or placeholder map from shipping without this list changing.
 	var maps: Array = A.DEFS.map(func(row): return row["map"])
-	_check("maps", maps == ["spillway", "reach", "gorge", "reach", "spillway", "reach"], str(maps))
+	_check("maps", maps == ["spillway", "reach", "dig", "reach", "highdraft", "reach"], str(maps))
 	for i in A.DEFS.size():
 		var row: Dictionary = A.DEFS[i]
 		_check("row %d keys" % (i + 1), _missing(row).is_empty(), "missing %s" % str(_missing(row)))
@@ -65,6 +67,19 @@ func _initialize() -> void:
 	# Every row's map builds from the table without error.
 	var terrain = Terrain.new(AlphaDefs)
 	_check("terrain maps", terrain.maps.size() == A.COUNT, "%d maps" % terrain.maps.size())
+	for i in A.DEFS.size():
+		var row: Dictionary = A.DEFS[i]
+		var placeholder := String(row["name"]).contains("placeholder")
+		_check("row %d placeholder name" % (i + 1), placeholder == (i in [3, 5]), String(row["name"]))
+		if not placeholder:
+			_check("row %d title" % (i + 1), String(terrain.maps[i].title) == String(row["name"]), "%s vs %s" % [terrain.maps[i].title, row["name"]])
+		var want := {2: "meltdown", 4: "choir"}.get(i, "") as String
+		_check("row %d variant" % (i + 1), String(row["warden_variant"]) == want, String(row["warden_variant"]))
+	for pair in [[2, 2], [4, 3]]:
+		var world_kinds := Roster.world_kinds(pair[1])
+		for pack in A.DEFS[pair[0]]["packs"]:
+			for kind in pack["kinds"]:
+				_check("row %d kind %s" % [pair[0] + 1, kind], world_kinds.has(kind) and Director.KIND_NAMES.has(kind), "world %d" % pair[1])
 	# --table=alpha resolves through the game's selection; no choice stays the default.
 	var game = Game.new()
 	game.test_mode = true
