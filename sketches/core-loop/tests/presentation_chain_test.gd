@@ -11,11 +11,33 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 # climbs in pitch piece by piece, and each piece swells the shell. Every kill gets a pop
 # and a debris burst from the pools.
 
+# Audio and juice currently pass wall time to Streak. This adapter replaces only
+# that input; bump/live and the row's window/cap still use the production rule.
+class ClockedStreak extends "res://src/presentation/streak.gd":
+	var now: Callable
+
+	func bump(_now_ms: int) -> int:
+		return super.bump(int(now.call()))
+
+	func live(_now_ms: int) -> bool:
+		return super.live(int(now.call()))
+
+
+func _clocked_streak(kind: String) -> RefCounted:
+	var streak := ClockedStreak.new()
+	var row := EventKinds.juice(kind)
+	streak.window_ms = int(row.get("chain_ms", 700))
+	streak.cap = int(row.get("chain_cap", 9))
+	streak.now = func() -> int: return int(_clock_ms)
+	return streak
+
+
 var _game
 var _audio
 var _juice
 var _vfx
 var _failures := 0
+var _clock_ms := 0.0
 var _t0 := 0
 var _plan: Array = []
 var _marks := {}
@@ -28,22 +50,33 @@ func _initialize() -> void:
 	root.add_child(_game)
 
 
-func _process(_delta: float) -> bool:
+func _physics_process(_delta: float) -> bool:
+	_clock_ms += 1000.0 / Engine.physics_ticks_per_second
 	if _game == null or _game.flow == null:
 		return false
 	var events = _game.events
 	if _audio == null:
+		_game.tuning.set_option("music", "synth")
 		_audio = _game.presentation.audio
+		_audio.bake_now()
+		_audio.set_process(false)
+		# Keep production streak rules, with every caller reading the same sim tick.
+		_audio.kill_streak = _clocked_streak("enemy_killed")
+		_audio.scrap_streak = _clocked_streak("scrap_collected")
 		_juice = _game.presentation.juice
+		_juice.set_process(false)
 		_vfx = _game.presentation.vfx
 		_game.ctx.calm = true
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
-		_t0 = Time.get_ticks_msec()
+		_t0 = int(_clock_ms)
 		var at: Vector3 = _game.player.ball_position() + Vector3(0.0, 0.0, -5.0)
 		_marks["rungs"] = []
 		for i in 5:
 			_plan.append([100 + i * 150, func():
+				# Simulated gaps expire the voice gate without waiting for the device.
+				_audio.stop("kill_pop")
+				_audio._last_start.erase("kill_pop")
 				events.enemy_killed.emit("chaser", at, 1)
 				_juice.flush()
 				_marks["rungs"].append(_audio.kill_streak.rung)])
@@ -75,7 +108,8 @@ func _process(_delta: float) -> bool:
 				_marks["shell_v"].append(_juice._shell_velocity - before)])
 		_plan.append([850 + window + 1200, func(): pass])
 		return false
-	var elapsed := Time.get_ticks_msec() - _t0
+	_juice._process(1.0 / Engine.physics_ticks_per_second)
+	var elapsed := int(_clock_ms) - _t0
 	while not _plan.is_empty() and elapsed >= _plan[0][0]:
 		var item: Array = _plan.pop_front()
 		(item[1] as Callable).call()

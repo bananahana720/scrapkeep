@@ -14,7 +14,7 @@ var _game
 var _audio
 var _failures := 0
 var _step := 0
-var _wait_until := 0
+var _wait_frames := 0
 var _player: AudioStreamPlayer
 
 
@@ -27,12 +27,15 @@ func _initialize() -> void:
 func _process(_delta: float) -> bool:
 	if _step < 4 and (_game == null or _game.flow == null):
 		return false
-	if Time.get_ticks_msec() < _wait_until:
+	if _wait_frames > 0:
+		_wait_frames -= 1
 		return false
 	match _step:
 		0:
+			_game.tuning.set_option("music", "synth")
 			_audio = _game.presentation.audio
 			_audio.bake_now()
+			_audio.set_process(false)
 			_game.ctx.calm = true
 			_game.flow.press_start()
 			_game.flow.choose_class(0)
@@ -135,7 +138,11 @@ func _cues(kind: String) -> Array:
 
 func _next(wait_ms: int) -> void:
 	_step += 1
-	_wait_until = Time.get_ticks_msec() + wait_ms
+	# Render the wait in samples; only deferred tree cleanup needs idle frames.
+	if _step < 4:
+		_audio._flush_flow()
+		_audio.engine.render(int(wait_ms * Harmony.RATE / 1000.0))
+	_wait_frames = 3
 
 
 func _check(label: String, ok: bool, detail: String) -> void:
