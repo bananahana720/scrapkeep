@@ -4,8 +4,7 @@ const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Warden := preload("res://src/combat/warden.gd")
 
-# Preserve the legacy three-stage rule on a double using surviving maps.
-# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+# F6 2026-10-04: caps, magnet, brace, tint and shred checks are gone; the weak point opens on a stagger.
 class LegacyGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
@@ -128,30 +127,10 @@ func check_family() -> void:
 	for entry in rec.hidden:
 		check("placeholder hidden without deletion", is_instance_valid(entry.mesh) and entry.mesh.layers == 0 and entry.mesh.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 	check("badge remains", warden._look._badge.visible)
-	if warden.lesson == "caps":
-		check("lesson caps remain", warden._look.cap_material() == warden._cap_material and warden.cap_points().size() == 3)
-		var brood: Node3D = warden._look.get_node("BroodCells")
-		for i in 3:
-			var cell: Node3D = brood.get_node("BroodCap_%d" % i)
-			var membrane: MeshInstance3D = cell.get_node("Membrane")
-			var marker: Node3D = brood.get_node("BroodMarker_%d" % i)
-			check("brood membrane at gameplay cap", cell.global_position.distance_to(warden.cap_points()[i]) < 0.0001)
-			check("hex membrane and open marker replace heat column", membrane.mesh is CylinderMesh and membrane.mesh.radial_segments == 6 and membrane.mesh.height < 0.3 and marker.get_child_count() == 6)
-			check("brood cue remains visible with GLB", membrane.layers != 0 and marker.visible and membrane.material_override == warden._cap_material)
-		warden.on_struck("stomp", "cap", {})
-		check("brood membrane flashes on hit", is_equal_approx(warden._cap_material.emission_energy_multiplier, 5.0))
-		warden._look._update_caps(1.0)
-		check("brood membrane returns to idle", is_equal_approx(warden._cap_material.emission_energy_multiplier, 2.2))
-	if warden.lesson == "magnet":
-		warden.magnet_state = Warden.Magnet.TUG
-		warden._magnet_time = 0.3
-		warden._look.update(0.0)
-		check("magnet cue remains", warden._look._arm.layers != 0 and warden._look._head.visible)
-		check("mind icon remains", is_instance_valid(warden._kit._icon) and warden._kit._icon.get_parent() == warden._kit._lens)
 	var other := Warden.new()
 	game.add_child(other)
 	other.position = warden.position + Vector3(20, 0, 0)
-	other.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0, {"family": warden.family, "stage": warden.stage, "lesson": warden.lesson})
+	other.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0, {"family": warden.family, "stage": warden.stage})
 	var fit_started := Time.get_ticks_usec()
 	hook._dress_warden(other)
 	hook._dress_mast(other)
@@ -161,8 +140,7 @@ func check_family() -> void:
 	check("independent materials", rec.materials.ancient_light != second.materials.ancient_light and rec.materials.ancient_enamel != second.materials.ancient_enamel and rec.materials.ancient_light_jaw != second.materials.ancient_light_jaw)
 	check("immutable ribbons cached with private animated materials", rec.seams[0].node.mesh == second.seams[0].node.mesh and rec.seams[0].node.material_override != second.seams[0].node.material_override)
 	check("independent tower mesh", rec.base.get_node("Tower").mesh != second.base.get_node("Tower").mesh)
-	warden._open_left = 2.0
-	warden._brace_left = 2.0
+	warden._posture.staggered = true
 	warden._kit.update(0.0)
 	hook._update_warden(rec)
 	check("weak point opening", rec.weak.scale.is_equal_approx(Vector3.ONE * 1.3) and rec.materials.ancient_light.emission_energy_multiplier == warden._kit.SEAM_OPEN)
@@ -170,27 +148,13 @@ func check_family() -> void:
 		check("queen hatch exposes core while open", rec.queen_hatch != null and is_equal_approx(rec.queen_hatch.rotation.z, -PI * 0.5))
 		check("other queen hatch stays closed", is_zero_approx(second.queen_hatch.rotation.z))
 	check("other stays closed", second.weak.scale.is_equal_approx(Vector3.ONE) and is_equal_approx(second.materials.ancient_light.emission_energy_multiplier, other._kit.SEAM_DIM))
-	warden.set_tint("amber")
-	hook._update_warden(rec)
-	check("plating rim and crack", rec.materials.ancient_light_jaw.emission == warden.rim_color and rec.cracks[0].visible)
-	warden.set_tint("slate")
-	hook._update_warden(rec)
-	check("a glancing rim reads on the model as it does on the plate", rec.materials.ancient_light_jaw.emission == warden._look.plate_material.emission
-		and rec.materials.ancient_light_jaw.emission != Palette.ANCIENT)
-	warden.set_tint("amber")
-	hook._update_warden(rec)
-	warden.shred = warden.plating * 0.8
-	warden._look.update(0.0)
-	hook._update_warden(rec)
-	check("shred follows source", rec.seams[0].node.visible == rec.seams[0].source.visible)
 	warden.flash()
 	warden._update_flash(0.01)
 	hook._update_warden(rec)
 	check("damage flash isolated", rec.materials.ancient_enamel.emission_enabled and not second.materials.ancient_enamel.emission_enabled)
 	var point: Vector3 = warden.family_point_at()
 	check("open weak point hit contract", warden.plating_for("runner", warden.family_point()) == 0.0 and warden.weak_points().any(func(p): return p.id == warden.family_point() and p.at == point))
-	warden._open_left = 0.0
-	warden._brace_left = 0.0
+	warden._posture.staggered = false
 	warden._kit.update(0.0)
 	hook._update_warden(rec)
 	check("weak point recloses", rec.weak.scale.is_equal_approx(Vector3.ONE))

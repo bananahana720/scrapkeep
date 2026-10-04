@@ -57,7 +57,7 @@ func _process(_delta: float) -> bool:
 	if _frames < 4:
 		return false
 	var hud = _game.hud
-	_report("stage 1 objective", _stage_one.contains("Warden") and _stage_one.contains("plating %d" % int(StageDefs.of(1)["warden_plating"])) and _stage_one.contains("Ram it hard, right after it vents.") and not _stage_one.to_lower().contains("optional"),
+	_report("stage 1 objective", _stage_one.contains("Warden") and _stage_one.contains("plating %d" % int(StageDefs.of(1)["warden_plating"])) and _stage_one.contains("Break its guard, then smash the core.") and not _stage_one.to_lower().contains("optional"),
 		"\"%s\"" % _stage_one)
 	var reading: Dictionary = hud.objective_reading()
 	_report("hud objective", reading["words"] == "Break the Warden" and reading["icon"] == "obj_warden"
@@ -65,7 +65,7 @@ func _process(_delta: float) -> bool:
 		"the HUD shows \"%s\" with glyph %s and no bars, pips or heft dial" % [reading["words"], reading["icon"]])
 	_game.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
 	var stage_two: String = _game.flow.objective_text()
-	_report("stage 2 objective", stage_two.contains("plating %d" % int(StageDefs.of(2)["warden_plating"])) and stage_two.contains("guard rack") and stage_two.contains("caps") and not stage_two.contains("vent") and not stage_two.to_lower().contains("optional"),
+	_report("stage 2 objective", stage_two.contains("plating %d" % int(StageDefs.of(2)["warden_plating"])) and stage_two.contains("guard rack") and stage_two.contains("smash the core") and not stage_two.contains("caps") and not stage_two.contains("vent") and not stage_two.to_lower().contains("optional"),
 		"\"%s\"" % stage_two)
 	print("spine_objective_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()

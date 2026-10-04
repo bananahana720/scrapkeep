@@ -76,8 +76,6 @@ var plate_material: StandardMaterial3D
 
 var _ground := 0.0
 var _jaws: Node3D
-# The magnet arm left with F6 (2026-10-04); hero_assets._dress_warden still compares against it.
-var _arm: MeshInstance3D = null
 var _core_material: StandardMaterial3D
 var _badge: Node3D
 var _segments: Array = []

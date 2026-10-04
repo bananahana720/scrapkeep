@@ -40,12 +40,6 @@ const ENTRIES := [
 		"clue": "a slingshot + a kill",
 		"text": "Kill an enemy within a second of slingshotting off a pylon.",
 	},
-	{
-		"id": "pulse_stomp", "name": "Pulse Return",
-		"hint": "What goes up can come down on a cap.",
-		"clue": "a Warden pulse + a vent cap",
-		"text": "Ride a Warden's pulse up and stomp one of its vent caps on the way down.",
-	},
 	# v2 W7 enemies: the counters' opportunities and the ancients' secrets.
 	{
 		"id": "tether_snap", "name": "Slingshot Snap",

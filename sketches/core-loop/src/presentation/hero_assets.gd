@@ -759,7 +759,7 @@ func _dress_warden(warden) -> void:
 	cool.position = Vector3(-4.5, 3.5, -5.5)
 	base.add_child(cool)
 	for child in warden._look.get_children():
-		if child is MeshInstance3D and child.material_override == warden._look.body_material and child != warden._look._arm:
+		if child is MeshInstance3D and child.material_override == warden._look.body_material:
 			_hide_warden_mesh(child, rec)
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)

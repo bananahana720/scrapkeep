@@ -66,7 +66,8 @@ func _check_ids() -> void:
 		if seen.has(id):
 			dup_doc.append(id)
 		seen[id] = true
-	_report("doc ids", doc.size() == 43 and dup_doc.is_empty(), "%d ids parsed from the document, %d repeated %s" % [doc.size(), dup_doc.size(), dup_doc])
+	# F6 2026-10-04: W05 left the document with the magnet, so it names 42 ids.
+	_report("doc ids", doc.size() == 42 and dup_doc.is_empty(), "%d ids parsed from the document, %d repeated %s" % [doc.size(), dup_doc.size(), dup_doc])
 	var missing: Array[String] = []
 	for id in doc:
 		if not EventKinds.has_attack(id):

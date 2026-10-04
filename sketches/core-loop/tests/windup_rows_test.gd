@@ -126,13 +126,12 @@ func _state_path() -> void:
 	var before := _glyphs()
 	_game.presentation._physics_process(0.0)
 	_game.presentation._physics_process(0.0)
-	_report("state entry only", _glyphs() == before + 2, "two warnings draw once each across repeated state reads")
+	_report("state entry only", _glyphs() == before + 1, "the warning draws once across repeated state reads")
 	warden._charging = false
-	warden.magnet_state = warden.Magnet.IDLE
 	_game.presentation._physics_process(0.0)
 	warden._charging = true
 	_game.presentation._physics_process(0.0)
-	_report("state re-entry", _glyphs() == before + 3, "a later pulse warns again")
+	_report("state re-entry", _glyphs() == before + 2, "a later pulse warns again")
 	warden.free()
 	var drone = _game.combat.spawn_enemy("swarm_remnant", _game.ctx.terrain.drop_point(-70.0, -70.0, 2.0))
 	var swarm = drone.swarm

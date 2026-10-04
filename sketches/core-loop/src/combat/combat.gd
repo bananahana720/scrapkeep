@@ -86,7 +86,6 @@ const MINIBOSS_PLATING_SCALE := 1.25
 const SHELL_RETURN_DAMAGE := 40.0
 const BAT_REACH := 2.4
 const PARTING_WINDOW := 1.0
-const PULSE_STOMP_WINDOW := 1.5
 const CRUSH_WINDOW := 1.0
 const CRUSH_CHAIN := 3
 const SHRED_PER_PUNCH := 0.017
@@ -1817,13 +1816,10 @@ func _on_chain_state(state: String, _target: Node3D, at: Vector3, _cause: String
 
 
 # Tricks that read the target's state before the hit lands.
-func _detect_before(enemy: Node3D, kind: String, result: Dictionary) -> void:
+func _detect_before(enemy: Node3D, kind: String, _result: Dictionary) -> void:
 	var target_kind = enemy.get("kind")
 	if kind == "ram" and target_kind == "chaser" and enemy.state_name() == "windup":
 		_discover("counter_ram", enemy.global_position)
-	if kind == "stomp" and result["part"] == "cap" and target_kind == "warden" \
-			and enemy.seconds_since_pulse() <= PULSE_STOMP_WINDOW:
-		_discover("pulse_stomp", enemy.global_position)
 
 
 # Tricks that read the outcome.

@@ -139,7 +139,7 @@ func _run() -> void:
 	_game.player._on_enemy_touched(contact, Vector3.LEFT)
 	_report("player ram contact earns the burst", _warden.guard.following()
 		and is_equal_approx(_warden.posture(), Warden.GUARD_RACK_POSTURE), "posture %.1f" % _warden.posture())
-	_reactor._step_guard(Warden.GUARD_RESPAWN)
+	_reactor._physics_process(Warden.GUARD_RESPAWN)
 	_reactor.on_guard_scattered(_warden.guard, Vector3.ZERO)
 	_report("reactor is unchanged without a rack", _reactor.guard == null and _reactor.posture() == 0.0
 		and not _reactor.family_open() and _reactor.family_opens == 0, "guard %s, posture %.1f" % [_reactor.guard, _reactor.posture()])
