@@ -16,6 +16,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
 # writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
 # diagnostic run. --fixed-fps 90 makes one frame one physics tick, faster than real time.
+# --chain-hand=0 turns off the explorer's two-hook hand (bot_driver's control switch).
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
 # same args (tuning.gd's FLAGS).
@@ -151,6 +152,7 @@ func _physics_process(delta: float) -> bool:
 		_game.run_log.storage_dir = _out
 		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), _seeds[_index])
 		_driver.trace = _settings.has("trace")
+		_driver.chain_hand_enabled = String(_settings.get("chain-hand", "1")) != "0"
 		_game.presentation.audio.bake_now()
 		_started_msec = Time.get_ticks_msec()
 		_driver.start()

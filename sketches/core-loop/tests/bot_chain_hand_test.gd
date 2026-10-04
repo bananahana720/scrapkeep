@@ -6,7 +6,9 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
 
 # Rule: the explorer re-bites a different enemy during airborne grace and pays a
-# two-link chain; the seed repeats and the skipper/camper keep their base run records.
+# two-link chain; the seed repeats and the skipper/camper records are the same with the
+# two-hook hand on and off (an in-tree control, so sibling changes to the record do not
+# read as the hand leaking into other policies).
 # Children use bot_run.gd's Game.new(), test_mode and ordinary scripted input.
 # Only physics frames bound play; this test does not read a wall clock.
 # A separate hand case stages the grounded start, apex and reticle, then sends the
@@ -19,7 +21,6 @@ const EXPLORER_TICKS := 2700
 # one-link chains that touch ground before another anchor can be locked.
 const MIN_CHAIN_SEEDS := 5
 const PARALLEL := 4
-const BASE_CONTROLS := '{"skipper":[{"abandoned_in":"stage","anomalies":[],"best_combo":2,"bites":27,"breaks":{},"brindle_phase_reached":null,"chains":[{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":2,"links":2,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0}],"class":"runner_gunner","codex":[],"dead_stops":0,"delivered_damage":{"by_action":{"pin":17.90407371521,"ram":444.010973170598,"runner":93.9890268294016,"slam":17.27591196039},"by_range":{"far":0.0,"mid":113.248012257606,"near":459.931973417994},"by_source":{"drop_or_slam":17.27591196039,"ram_or_contact":461.915046885808,"special":93.9890268294016,"weapon":0.0},"by_target_class":{"Warden":400.0,"adds":65.27591196039,"enemy":107.90407371521},"hits":830,"overkill":14.0109731705984,"retirements":{"adds":1,"enemy":1},"total":573.1799856756,"warden_slam_hits":{},"zero_damage_hits":810},"durability":{"arena_destroyed":0.0,"class_changes":0,"class_drops":0,"destroyed":3.0,"expired":0.0,"fresh":29.0,"heft_at_hits":[1.0],"hit_loss":12.0,"hull_damage":9.59999999999999,"mass_end":18.0,"min_heft":1.0,"recovered":9.0,"reverse_seconds":0.0,"scrap_mode":"armor","wear":"on","wear_loss":8.0},"flow_share":0.958077709611452,"misses":0,"outcome":"abandoned","prompts_shown":6,"run_id":"1791092399-935087","smashes":26,"stages":[{"attempts":1,"bonus_cores":0,"causes":{},"deaths":[],"events_joined":[],"events_won":[],"heft_at_engage":1.00222222222222,"heft_at_exit":null,"heft_class_at_engage":1,"mass_at_engage":1.0,"packs":["fleet","fleet","fleet","fleet","fleet"],"part_ids_at_exit":null,"posture":{"chunks_lost":2,"fight_ticks":4170,"glances":771,"staggers":2},"stage":1,"ticks_to_warden_break":null,"ticks_to_warden_engaged":978}],"table":"slice","verb_fails":{}}],"camper":[{"abandoned_in":"stage","anomalies":[],"best_combo":0,"bites":0,"breaks":{},"brindle_phase_reached":null,"chains":[],"class":"runner_gunner","codex":["shell_return"],"dead_stops":0,"delivered_damage":{"by_action":{"pin":11.0185887813568,"runner":227.036585488564,"shell":26.0,"slam":2.96341451143618},"by_range":{"far":86.0185887813568,"mid":142.8,"near":38.1999999999999},"by_source":{"drop_or_slam":2.96341451143618,"ram_or_contact":37.0185887813568,"special":83.0,"weapon":144.036585488564},"by_target_class":{"Warden":0.0,"adds":151.018588781357,"enemy":116.0},"hits":754,"overkill":33.1634145114363,"retirements":{"adds":2,"enemy":2},"total":267.018588781357,"warden_slam_hits":{},"zero_damage_hits":669},"durability":{"arena_destroyed":0.0,"class_changes":0,"class_drops":0,"destroyed":0.0,"expired":0.0,"fresh":69.0,"heft_at_hits":[],"hit_loss":0.0,"hull_damage":0.0,"mass_end":68.0,"min_heft":-1.0,"recovered":0.0,"reverse_seconds":0.0,"scrap_mode":"armor","wear":"on","wear_loss":1.0},"flow_share":0.958077709611452,"misses":0,"outcome":"abandoned","prompts_shown":6,"run_id":"1791092400-935087","smashes":0,"stages":[{"attempts":1,"bonus_cores":0,"causes":{},"deaths":[],"events_joined":[],"events_won":[],"heft_at_engage":1.00222222222222,"heft_at_exit":null,"heft_class_at_engage":1,"mass_at_engage":1.0,"packs":["fleet","fleet","fleet","fleet","fleet"],"part_ids_at_exit":null,"posture":{"chunks_lost":0,"fight_ticks":4282,"glances":665,"staggers":0},"stage":1,"ticks_to_warden_break":null,"ticks_to_warden_engaged":978}],"table":"slice","verb_fails":{}}]}'
 
 var _pending: Array[Dictionary] = []
 var _active: Array[Dictionary] = []
@@ -42,7 +43,8 @@ func _initialize() -> void:
 		_pending.append({"id": "explorer-%d" % number, "policy": "completionist", "seed": number})
 	_pending.append({"id": "repeat", "policy": "completionist", "seed": 2})
 	for policy in ["skipper", "camper"]:
-		_pending.append({"id": policy, "policy": policy, "seed": 1})
+		for hand in ["0", "1"]:
+			_pending.append({"id": "%s-hand-%s" % [policy, hand], "policy": policy, "seed": 1, "chain_hand": hand})
 	_hand_game = Game.new()
 	_hand_game.test_mode = true
 	_hand_game.table = "slice"
@@ -70,7 +72,7 @@ func _launch() -> void:
 			ProjectSettings.globalize_path("res://"), "--log-file", folder.path_join("engine.log"),
 			"--script", "res://tools/bot_run.gd", "--",
 			"--out=" + folder, "--policy=" + trial["policy"], "--seeds=%d" % trial["seed"],
-			"--table=slice", "--ticks=%d" % trial["ticks"]])
+			"--table=slice", "--ticks=%d" % trial["ticks"], "--chain-hand=" + String(trial.get("chain_hand", "1"))])
 		trial["pid"] = OS.create_process(OS.get_executable_path(), args)
 		for key in previous:
 			if previous[key].is_empty():
@@ -215,10 +217,11 @@ func _check() -> void:
 		and first["best_combo"] == repeat["best_combo"]
 		and first["chains"].size() == repeat["chains"].size() and first["misses"] == repeat["misses"],
 		"seed 2 repeats best_combo, chains.size and misses")
-	var controls: Dictionary = JSON.parse_string(BASE_CONTROLS)
 	for policy in ["skipper", "camper"]:
-		_report(policy + " base record", JSON.stringify(_stable(_records[policy])) == JSON.stringify(_stable(controls[policy])),
-			"all gameplay fields and seeded id match base 13fe55af, seed 1, %d frames" % TICKS)
+		var off: Array = _records.get(policy + "-hand-0", [])
+		var on: Array = _records.get(policy + "-hand-1", [])
+		_report(policy + " hand control", not off.is_empty() and JSON.stringify(_stable(off)) == JSON.stringify(_stable(on)),
+			"all gameplay fields and seeded id match with the two-hook hand off and on, seed 1, %d frames" % TICKS)
 
 
 # RunState names a run with wall seconds plus a seeded suffix. Only that clock prefix
