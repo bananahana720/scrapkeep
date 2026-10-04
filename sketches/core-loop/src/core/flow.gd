@@ -511,6 +511,7 @@ const BURST_PER_STAGE := 20
 func discovery_burst(at: Vector3) -> void:
 	ctx.run.add_scrap(BURST_PER_STAGE * ctx.run.stage, at)
 	ctx.run.add_cogs(BURST_PER_STAGE * ctx.run.stage)
+	ctx.events.cogs_collected.emit(BURST_PER_STAGE * ctx.run.stage, ctx.run.cogs)
 
 
 func can_replay_final_stage() -> bool:

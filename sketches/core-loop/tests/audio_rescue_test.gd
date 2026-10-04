@@ -42,8 +42,11 @@ func _initialize() -> void:
 	_t.check("row is not a quiet grammar signal", not EventKinds.GRAMMAR_SIGNALS.has("rescue_completed"), str(EventKinds.GRAMMAR_SIGNALS))
 	_t.eq("row names the fanfare", EventKinds.ROWS["rescue_completed"]["sound"], "rescue_fanfare")
 	_t.check("row priority is at least 2", int(EventKinds.ROWS["rescue_completed"]["priority"]) >= 2, "")
+	var emitted := [0]
+	events.rescue_completed.connect(func(_q): emitted[0] += 1)
 	site.complete("rivet")
 	site.complete("rivet")
+	_t.eq("two completions of one quest emit rescue_completed once", emitted[0], 1)
 	_t.eq("two completions of one quest request the fanfare once", audio.started.count("rescue_fanfare"), 1)
 	audio.free()
 	site.free()
