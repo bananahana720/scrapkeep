@@ -51,6 +51,8 @@ HC1 lands first and alone (it touches the harpoon). HC2 and HC3 follow in one wa
 - The combo pays the chained enemy only (coordinator, 3 Oct, gate review). The landing's shockwave, its bystanders and the `slammed` strength other systems threshold on (activity walls) stay at the plain smash. Shake and knock feel for a big combo belong to HC2's presentation, not to the physics.
 - A press during the rewind is not a miss (coordinator, 3 Oct, gate review). Only a press with nothing under the reticle is a dry fire that ends the chain and costs the cooldown; the post-smash rewind already refuses the press, and Andrew keeps the spam.
 - Chain rows are silent and invisible until HC2 (gate review). The line view, the audio and the enemy reaction listeners skip `chain_*` ids, because they otherwise read a chain fact as the line's state and hid the lock brackets at combo 1.
+- The chain end is heard only when it had a combo of 2 or more (coordinator, 3 Oct, wave 2 gate). A one-bite chain or a lone pivot ends silently, so a plain wall grapple then landing sounds as it always did.
+- Arena chains count (coordinator, 3 Oct, wave 2 gate). The run log's chains, best_combo and misses count in the Brindle fight like bites and smashes do.
 - Payout is damage, not scrap. Scrap is size and armour; making the chain pay scrap would bend the economy around a movement verb.
 - The combo caps at 6. Past six the counter is noise and the multiplier would outrun the Warden's chunk size.
 - The pivot adds nothing. Walls are routing, enemies are the beat.
