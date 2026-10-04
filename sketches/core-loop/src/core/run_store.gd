@@ -1,0 +1,215 @@
+extends RefCounted
+
+# One run document on disk (RS2), so a run can continue from its last zone entrance. Pure file
+# logic: it takes and returns the Dictionary RunState.to_entrance_doc() makes and does not know
+# flow. The file is {"schema", "generation", "run": <entrance doc>}; the writes go through
+# SafeStore like the profile's. The terminal flags live in the run doc as the extra keys
+# "ended" (bool) and "worlds_cleared" (array of world ints); the merge never lowers them.
+
+const SafeStore := preload("res://src/core/safe_store.gd")
+
+const SCHEMA := 1
+const MIGRATIONS := {0: "_migrate_0"}
+
+# Named causes `save` returns ("" is success); `last_error` has the sentence.
+const REFUSED_NEWER := "newer_schema"
+const REFUSED_QUARANTINE := "quarantine_failed"
+const REFUSED_CHANGED := "changed_on_disk"
+const REFUSED_BACKUP := "backup_failed"
+const REFUSED_WRITE := "write_failed"
+
+var path := "user://run.json"
+var last_error := ""
+var refusal := ""
+var _refusal_why := ""
+
+var _doc := {}  # the run doc last loaded or saved; {} for none
+var _generation := 0  # the file's generation when we last loaded or saved
+var _backup_path := ""
+var _backup_bytes := PackedByteArray()
+
+
+func _init(file_path := "user://run.json") -> void:
+	path = file_path
+
+
+func generation() -> int:
+	return _generation
+
+
+# The run doc on disk, or {} for no run. A document older than the one held in memory is
+# merged under it (see merge). An unreadable file is moved to .bad and loads as no run; a
+# newer schema is left alone and refuses `save` until clear().
+func load() -> Dictionary:
+	last_error = ""
+	refusal = ""
+	_backup_path = ""
+	_backup_bytes = PackedByteArray()
+	var read := _read()
+	var state: String = read["state"]
+	if state == "missing":
+		_generation = 0
+		return {}
+	if state == "newer":
+		return _refuse(REFUSED_NEWER, read["why"])
+	if state != "ok":
+		var bad := SafeStore.quarantine(path)
+		if bad.is_empty():
+			return _refuse(REFUSED_QUARANTINE, "%s and could not be moved aside" % read["why"])
+		last_error = "%s; kept as %s" % [read["why"], bad]
+		_doc = {}
+		_generation = 0
+		return {}
+	var disk_gen: int = read["generation"]
+	var run: Dictionary = read["run"]
+	if not _doc.is_empty() and disk_gen < _generation:
+		run = merge(_doc, run)
+	else:
+		_generation = disk_gen
+	if read["from_version"] < SCHEMA:
+		_backup_path = "%s.v%d" % [path, read["from_version"]]
+		_backup_bytes = read["bytes"]
+	_doc = run.duplicate(true)
+	return run.duplicate(true)
+
+
+# "" when saved, else the named cause. A file another writer advanced since our load is
+# merged in; a file that cannot be read or is newer is never written over.
+func save(doc: Dictionary) -> String:
+	last_error = ""
+	if refusal != "":
+		last_error = "not saving: %s" % _refusal_why
+		return refusal
+	var read := _read()
+	var state: String = read["state"]
+	if state == "newer":
+		_refuse(REFUSED_NEWER, read["why"])
+		return REFUSED_NEWER
+	if state != "missing" and state != "ok":
+		last_error = "not saving: %s changed since it was loaded (%s)" % [path, read["why"]]
+		return REFUSED_CHANGED
+	var next := doc.duplicate(true)
+	var generation_now := _generation
+	var backup_path := _backup_path
+	var backup_bytes := _backup_bytes
+	if state == "ok":
+		if int(read["generation"]) > _generation:
+			next = merge(next, read["run"])
+			generation_now = int(read["generation"])
+		if backup_path.is_empty() and read["from_version"] < SCHEMA:
+			backup_path = "%s.v%d" % [path, read["from_version"]]
+			backup_bytes = read["bytes"]
+	if not backup_path.is_empty():
+		if not FileAccess.file_exists(backup_path):
+			var kept := SafeStore.write_atomic(backup_path, backup_bytes.get_string_from_utf8())
+			if kept != OK:
+				last_error = "could not keep the old run as %s: %s" % [backup_path, error_string(kept)]
+				return REFUSED_BACKUP
+		_backup_path = ""
+		_backup_bytes = PackedByteArray()
+	var file_doc := {"schema": SCHEMA, "generation": generation_now + 1, "run": next}
+	var err := SafeStore.write_atomic(path, JSON.stringify(file_doc, "  ", true, true))
+	if err != OK:
+		last_error = "could not write %s: %s" % [path, error_string(err)]
+		return REFUSED_WRITE
+	_generation = generation_now + 1
+	_doc = next
+	return ""
+
+
+# The run ended: removes the file (also the way out of a newer-schema refusal) and forgets
+# the held document. True when nothing is left on disk.
+func clear() -> bool:
+	_doc = {}
+	_generation = 0
+	refusal = ""
+	last_error = ""
+	_backup_path = ""
+	_backup_bytes = PackedByteArray()
+	if not FileAccess.file_exists(path):
+		return true
+	var err := DirAccess.remove_absolute(path)
+	if err != OK:
+		last_error = "could not remove %s: %s" % [path, error_string(err)]
+		return false
+	return true
+
+
+# Two copies of one run as one: ours with, per world, the larger retries_spent, and the
+# terminal flags ("ended", "worlds_cleared") true when either side has them.
+static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
+	var out := ours.duplicate(true)
+	var spent: Dictionary = out.get("retries_spent", {}).duplicate()
+	var other: Dictionary = theirs.get("retries_spent", {})
+	for w in other:
+		spent[str(w)] = maxi(int(spent.get(str(w), 0)), int(other[w]))
+	if not spent.is_empty() or out.has("retries_spent"):
+		out["retries_spent"] = spent
+	if bool(theirs.get("ended", false)):
+		out["ended"] = true
+	var cleared: Array = out.get("worlds_cleared", []).duplicate()
+	for w in theirs.get("worlds_cleared", []):
+		if not cleared.has(w):
+			cleared.append(w)
+	if not cleared.is_empty() or out.has("worlds_cleared"):
+		out["worlds_cleared"] = cleared
+	return out
+
+
+func _refuse(cause: String, why: String) -> Dictionary:
+	refusal = cause
+	_refusal_why = why
+	last_error = "not saving: %s" % why
+	return {}
+
+
+# The file as a state: missing, unreadable, newer or ok. Ok carries the migrated run doc,
+# its generation, the schema it was written at and the bytes it came from.
+func _read() -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {"state": "missing"}
+	var bytes := FileAccess.get_file_as_bytes(path)
+	var parsed = SafeStore.parse(bytes.get_string_from_utf8(), TYPE_DICTIONARY)
+	if parsed == null:
+		return {"state": "unreadable", "why": "unreadable %s" % path}
+	var version := 0
+	if parsed.has("schema"):
+		if not (typeof(parsed["schema"]) in [TYPE_INT, TYPE_FLOAT]):
+			return {"state": "unreadable", "why": "%s has a schema that is not a number" % path}
+		version = int(parsed["schema"])
+	if version > SCHEMA:
+		return {"state": "newer", "why": "%s is schema %d, written by a newer build; this build reads up to %d" % [path, version, SCHEMA]}
+	if version < 0:
+		return {"state": "unreadable", "why": "%s has schema %d" % [path, version]}
+	var from_version := version
+	while version < SCHEMA:
+		parsed = call(MIGRATIONS[version], parsed)
+		version += 1
+	if not (parsed.get("run") is Dictionary) or not (typeof(parsed.get("generation", 0)) in [TYPE_INT, TYPE_FLOAT]):
+		return {"state": "unreadable", "why": "%s has no run document" % path}
+	_whole_numbers(parsed["run"])
+	return {"state": "ok", "run": parsed["run"], "generation": int(parsed.get("generation", 0)), "from_version": from_version, "bytes": bytes}
+
+
+# v0 kept retries_spent as [world, count] pairs beside the run and had no generation; v1
+# keeps the string-keyed map the entrance doc uses and counts saves.
+func _migrate_0(doc: Dictionary) -> Dictionary:
+	var run: Dictionary = doc.get("run", {}).duplicate(true) if doc.get("run") is Dictionary else {}
+	var pairs = run.get("retries_spent")
+	if pairs is Array:
+		var spent := {}
+		for pair in pairs:
+			if pair is Array and pair.size() == 2:
+				spent[str(int(pair[0]))] = int(pair[1])
+		run["retries_spent"] = spent
+	return {"schema": 1, "generation": int(doc.get("generation", 0)), "run": run}
+
+
+# JSON numbers come back as floats; the two fields the merge compares are whole numbers.
+static func _whole_numbers(run: Dictionary) -> void:
+	if run.get("retries_spent") is Dictionary:
+		for w in run["retries_spent"]:
+			run["retries_spent"][w] = int(run["retries_spent"][w])
+	if run.get("worlds_cleared") is Array:
+		for i in run["worlds_cleared"].size():
+			run["worlds_cleared"][i] = int(run["worlds_cleared"][i])
