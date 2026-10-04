@@ -137,7 +137,6 @@ Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, the
 - A brief's file:line citations drift when the base moves; say so in the header.
 - A smoke test runs without --fixed-fps, so a physics-stepped test runs near real time against the 180 s cap.
 - A golden hash in content_registry.gd is a second pin beside ROWS_HASH; the coordinator re-pins it once on the candidate.
-- Count parts by id when a pickup can complete an evolution.
 
 ## Wave 3 merged (4 October, proto/alpha 13fe55a)
 
