@@ -1,5 +1,6 @@
 extends Node
 
+const Companion := preload("res://src/core/companion.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
@@ -837,6 +838,7 @@ func _on_run_started(_class_id_value: String) -> void:
 	ctx.run.set_meta("run_tags", clock.tags())
 	_sync_scrap_flags()
 	_apply_route()
+	_grant_companion_stub()
 	shop.reset_run()
 	lanes.reset()
 	recompute()
@@ -1008,6 +1010,17 @@ func _apply_route() -> void:
 	var start := float(ctx.tuning.base("start_mass"))
 	if start > 0.0:
 		ctx.run.grant_start_mass(start)
+
+
+# --companion-stub=on: one piece per family owned at run start, none assembled, until the
+# pickup table is placed on a map.
+func _grant_companion_stub() -> void:
+	if ctx.tuning == null or ctx.tuning.option("companion_stub") != "on":
+		return
+	var model := Companion.new()
+	for id in ["primer_coil", "ram_prow", "escape_vent"]:
+		model.acquire(id)
+	ctx.run.companion = model.to_dict()
 
 
 # A hit removed scrap: SPILL_CLUSTERS at most, ahead of or beside the outgoing line.

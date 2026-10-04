@@ -158,6 +158,8 @@ func _on_flow_changed(state: String) -> void:
 			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.ctx.stages.local(game.run.stage))
 			_action("new", "key_n", "New run")
 			_action("class", "key_c", "Choose class")
+			if not game.run.companion.is_empty():
+				_companion_action()
 			if game.flow.can_replay_final_stage():
 				_action("replay", "key_t", "Replay stage %d" % game.ctx.stages.local(game.flow.final_stage()))
 			_guard = CLICK_GUARD
@@ -314,6 +316,14 @@ func _show(title: String, color: Color, body: String) -> void:
 func _action(id: String, key: String, words: String) -> void:
 	var button := ChoiceButton.new(id, key, words)
 	button.pressed.connect(_press.bind(key))
+	_actions.add_child(button)
+
+
+# The death screen's way into the companion screen (workshop.gd owns the M key); it is
+# offered only when the run carries a companion.
+func _companion_action() -> void:
+	var button := ChoiceButton.new("companion", "key_m", "Companion")
+	button.pressed.connect(func(): game.get_node("Workshop").open_companion())
 	_actions.add_child(button)
 
 

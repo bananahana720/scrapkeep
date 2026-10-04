@@ -7,6 +7,7 @@ const TreePick := preload("res://src/ui/tree_pick.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const CompanionPanel := preload("res://src/ui/companion_panel.gd")
 
 # The workshop's screens, the calm between fights: the upgrade pick, Moss's counter and
 # Moss's voice. This layer decides when each opens and what a choice does; the three
@@ -42,6 +43,7 @@ var armed := true
 var pick
 var counter
 var bubble
+var companion_panel
 var talk: Button
 var _counter_ready := true
 var _ball_parked := false
@@ -115,6 +117,9 @@ func setup(game_ref) -> void:
 	add_child(pick)
 	pick.chosen.connect(choose)
 	pick.later.connect(close_pick)
+	companion_panel = CompanionPanel.new()
+	add_child(companion_panel)
+	companion_panel.setup(game)
 	game.events.tree_offered.connect(func(_c: String, _d: int, _choices: Array): _offer_later())
 	game.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _offer_later())
 	game.events.bay_entered.connect(func(_banked: float): _speak_world_bark("shop_entered"))
@@ -125,8 +130,10 @@ func setup(game_ref) -> void:
 	game.events.flow_changed.connect(func(_s: String):
 		if not game.flow.in_play():
 			close_all()
-		elif _held:
-			_enforce_hold())
+		else:
+			companion_panel.close()
+			if _held:
+				_enforce_hold())
 
 
 func shop():
@@ -292,6 +299,16 @@ func _enforce_hold() -> void:
 		get_tree().paused = true
 
 
+# ---- The companion screen ----
+
+# The companion assembly screen opens between attempts, on the death screen, and never in
+# play. False when the run is in play or carries no companion.
+func open_companion() -> bool:
+	if game.flow.in_play() or game.run.companion.is_empty():
+		return false
+	return companion_panel.open()
+
+
 # ---- Moss's voice ----
 
 func say_next() -> Dictionary:
@@ -396,6 +413,14 @@ func _update_talk(shown: bool) -> void:
 func _input(event: InputEvent) -> void:
 	if not armed:
 		return
+	if companion_panel.is_open():
+		if companion_panel.handle(event):
+			get_viewport().set_input_as_handled()
+		return
+	if _companion_wanted(event):
+		open_companion()
+		get_viewport().set_input_as_handled()
+		return
 	if pick.is_open():
 		if _pick_key(event):
 			get_viewport().set_input_as_handled()
@@ -407,6 +432,15 @@ func _input(event: InputEvent) -> void:
 	if talk.visible and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == TALK_KEY:
 		say_next()
 		get_viewport().set_input_as_handled()
+
+
+# M, or the pad's left bumper, on the death screen.
+func _companion_wanted(event: InputEvent) -> bool:
+	if game.flow.state_name() != "dead" or game.run.companion.is_empty():
+		return false
+	if event is InputEventKey:
+		return event.pressed and not event.echo and event.physical_keycode == KEY_M
+	return event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_LEFT_SHOULDER
 
 
 func _pick_key(event: InputEvent) -> bool:
