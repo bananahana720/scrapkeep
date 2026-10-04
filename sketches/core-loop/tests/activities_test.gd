@@ -198,10 +198,14 @@ func _bounty() -> void:
 	var at: Vector3 = s.pickup.global_position
 	var line_start := _ground(at + Vector3(0.0, 0.0, 6.0))
 	var heading := Vector3(0.0, 0.0, -1.0) * PICKUP_SPEED
+	# 2026-10-04 (gate read N1): a gem's part may complete an evolution pair, which grants a
+	# second part through add_part, so the gem's own part is counted by id (as growth_pays_test).
+	var own_before: int = _game.run.parts.count(s.pickup_part)
 	var through: Dictionary = await _line(line_start, heading, PICKUP_FRAMES)
-	_t.eq("touching the pickup adds exactly one part", _game.run.parts.size(), parts + 1)
+	_t.eq("touching the pickup adds exactly one part", _game.run.parts.count(s.pickup_part), own_before + 1)
+	var own_after: int = _game.run.parts.size()
 	var control: Dictionary = await _line(line_start, heading, PICKUP_FRAMES)
-	_t.eq("a second pass adds nothing", _game.run.parts.size(), parts + 1)
+	_t.eq("a second pass adds nothing", _game.run.parts.size(), own_after)
 	_t.check("the pickup does not take the ball's speed", through["after"] >= through["before"] - (control["before"] - control["after"]) - SPEED_SLACK,
 		"through %.2f to %.2f, control %.2f to %.2f" % [through["before"], through["after"], control["before"], control["after"]])
 	_t.eq("the bounty still finished once", _done.count("hauler_bounty"), 1)
@@ -259,8 +263,9 @@ func _ambush() -> void:
 	_t.eq("nothing is added until the ball touches it", _game.run.parts.size(), parts)
 	var at: Vector3 = s.pickup.global_position
 	var start := _ground(at + dir * 6.0)
+	var own_before: int = _game.run.parts.count(s.pickup_part)
 	var pass_a: Dictionary = await _line(start, -dir * PICKUP_SPEED, PICKUP_FRAMES)
-	_t.eq("touching it adds exactly one part", _game.run.parts.size(), parts + 1)
+	_t.eq("touching it adds exactly one part", _game.run.parts.count(s.pickup_part), own_before + 1)
 	var control: Dictionary = await _line(line_start, -dir * 10.0, LINE_FRAMES)
 	_t.eq("the ambush finished once", _done.count("ambush_altar"), 1)
 	_t.check("the ring start does not take the ball's speed", through["after"] >= through["before"] - (control["before"] - control["after"]) - SPEED_SLACK,
@@ -314,11 +319,12 @@ func _cache() -> void:
 		"ram %.2f to %.2f, same line with the wall gone %.2f to %.2f; slow ram stopped at %.2f" % [fast["before"], fast["after"], control["before"], control["after"], slow["after"]])
 	_put(_ground(s.pedestal + back * 3.0))
 	await _hold(3)
-	var parts: int = _game.run.parts.size()
+	var own_before: int = _game.run.parts.count(s.pickup_part)
 	var onto: Dictionary = await _line(_ground(s.pedestal + back * 4.0), heading * 8.0, 40)
-	_t.eq("touching the pedestal's pickup adds exactly one part", _game.run.parts.size(), parts + 1)
+	_t.eq("touching the pedestal's pickup adds exactly one part", _game.run.parts.count(s.pickup_part), own_before + 1)
+	var own_after: int = _game.run.parts.size()
 	var onto_control: Dictionary = await _line(_ground(s.pedestal + back * 4.0), heading * 8.0, 40)
-	_t.eq("a second pass adds nothing", _game.run.parts.size(), parts + 1)
+	_t.eq("a second pass adds nothing", _game.run.parts.size(), own_after)
 	_t.check("the pickup cost no speed beyond the line", onto["after"] >= onto["before"] - (onto_control["before"] - onto_control["after"]) - SPEED_SLACK,
 		"through %.2f to %.2f, control %.2f to %.2f" % [onto["before"], onto["after"], onto_control["before"], onto_control["after"]])
 	_t.eq("the cache finished once", _done.count("cracked_cache"), 1)

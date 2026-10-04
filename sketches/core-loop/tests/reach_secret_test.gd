@@ -138,10 +138,15 @@ func _cache(c) -> void:
 	_report("cache pays once", s.pickup_taken and s.pickup == null and _gained == [rolled]
 		and _game.run.parts.size() == parts_before + 1 and _cache_cogs() == cogs_before + Activities.PAY_SCRAP,
 		"one part, %d cogs (burst paid %d apart)" % [Activities.PAY_SCRAP, _burst_cogs])
+	# 2026-10-04 (gate read): the burst itself is pinned, so a duplicate burst cannot hide behind
+	# the subtraction in _cache_cogs. One codex fact, one burst of BURST_PER_STAGE * stage.
+	var burst_want: int = _game.flow.BURST_PER_STAGE * _game.run.stage
+	_report("the discovery burst paid once", _burst_cogs == burst_want, "burst %d, want %d" % [_burst_cogs, burst_want])
 	await _tick(c, at, velocity, 2)
 	await _tick(c, s.pedestal + Vector3.UP, velocity, 2)
 	_report("repeat trigger cannot repay", _gained == [rolled] and _done.count("cracked_cache") == 1
-		and _cache_cogs() == cogs_before + Activities.PAY_SCRAP, "one completion and one payment")
+		and _cache_cogs() == cogs_before + Activities.PAY_SCRAP and _burst_cogs == burst_want,
+		"one completion and one payment, burst still %d" % _burst_cogs)
 	_report("no interaction prompt", not _prompts.has("interact"), str(_prompts))
 	_game.flow.retry_stage()
 	_burst_cogs = 0
