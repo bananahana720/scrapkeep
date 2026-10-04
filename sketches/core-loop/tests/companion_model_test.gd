@@ -50,12 +50,12 @@ func _initialize() -> void:
 	_check(c.sockets.is_empty() and c.owned.size() == 4, "unassemble keeps owned")
 
 	c.assemble(["ram_prow", "escape_vent"])
-	c.escape_ready = false
+	c.spend_escape()
 	var parsed = JSON.parse_string(JSON.stringify(c.to_dict()))
 	var r := Companion.new()
 	_check(typeof(parsed) == TYPE_DICTIONARY and r.from_dict(parsed), "round trip loads")
 	_check(_sorted(r.owned) == _sorted(c.owned) and r.sockets == c.sockets, "round trip arrays")
-	_check(r.escape_ready == false, "round trip flag")
+	_check(r.escape_spent() and not r.escape_ready(), "round trip flag")
 	_check(typeof(r.owned) == TYPE_ARRAY and r.owned.size() == 4, "owned size int")
 
 	var before := r.to_dict()
@@ -72,7 +72,7 @@ func _initialize() -> void:
 	_check(r.to_dict() == before, "bad dicts change nothing")
 
 	r.reset()
-	_check(r.owned.is_empty() and r.sockets.is_empty() and r.escape_ready, "reset")
+	_check(r.owned.is_empty() and r.sockets.is_empty() and not r.escape_spent() and not r.escape_ready(), "reset")
 
 	_check(Companion.validate().is_empty(), "shipped table valid: %s" % str(Companion.validate()))
 	var bad := [

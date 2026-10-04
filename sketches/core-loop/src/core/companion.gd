@@ -2,8 +2,8 @@ extends RefCounted
 
 # The SPIL-9 companion as pure data: one hover chassis, two unordered module sockets, and
 # any two different families. Pieces are found in runs and acquired without equipping;
-# assemble() runs at intermission. Effects are text only here; nothing reads this in play
-# yet. The escape corridor acts after a survived low-hull hit, never revives and never
+# assemble() runs at intermission. Run state consumes the escape corridor after a
+# survived low-hull hit; it never revives and never
 # spends or refills a retry; the ready/spent flag is what the body and chirp cues will show.
 
 const CHASSIS := "spil9"
@@ -31,7 +31,7 @@ const PIECES := [
 
 var owned: Array[String] = []
 var sockets: Array[String] = []
-var escape_ready := true
+var _escape_spent := false
 
 
 static func _row(id: String) -> Dictionary:
@@ -79,7 +79,6 @@ func assemble(ids: Array) -> String:
 		if ids.has(p["id"]):
 			next.append(p["id"])
 	sockets = next
-	escape_ready = true
 	return ""
 
 
@@ -87,10 +86,30 @@ func unassemble() -> void:
 	sockets.clear()
 
 
+func escape_ready() -> bool:
+	return has_family(ESCAPE_CORRIDOR) and not _escape_spent
+
+
+func escape_spent() -> bool:
+	return _escape_spent
+
+
+# Commit before run state publishes the window, so a listener cannot spend it twice.
+func spend_escape() -> bool:
+	if not escape_ready():
+		return false
+	_escape_spent = true
+	return true
+
+
+func reset_escape() -> void:
+	_escape_spent = false
+
+
 func reset() -> void:
 	owned.clear()
 	sockets.clear()
-	escape_ready = true
+	reset_escape()
 
 
 # Problems in the PIECES table, empty when it is sound.
@@ -121,7 +140,7 @@ static func validate(table: Array = PIECES) -> Array:
 
 func to_dict() -> Dictionary:
 	return {"chassis": CHASSIS, "owned": owned.duplicate(), "sockets": sockets.duplicate(),
-		"escape_ready": escape_ready}
+		"escape_ready": not _escape_spent, "escape_spent": _escape_spent}
 
 
 # Loads a saved dict. False, with nothing changed, when any field is the wrong type or
@@ -129,6 +148,11 @@ func to_dict() -> Dictionary:
 func from_dict(d: Dictionary) -> bool:
 	if d.get("chassis", "") != CHASSIS or typeof(d.get("escape_ready")) != TYPE_BOOL:
 		return false
+	# Wave 3 documents stored only escape_ready, independent of whether it was assembled.
+	var spent: bool = not d["escape_ready"]
+	if d.has("escape_spent"):
+		if typeof(d["escape_spent"]) != TYPE_BOOL or d["escape_spent"] != spent:
+			return false
 	var o: Array[String] = []
 	var s: Array[String] = []
 	for pair in [["owned", o], ["sockets", s]]:
@@ -147,5 +171,5 @@ func from_dict(d: Dictionary) -> bool:
 			return false
 	owned = o
 	sockets = s
-	escape_ready = d["escape_ready"]
+	_escape_spent = spent
 	return true

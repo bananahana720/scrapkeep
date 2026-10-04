@@ -21,7 +21,8 @@ const DOC := "res://design-v3/research/attack-reads/ATTACK-READS.md"
 # and again for the run log's quiet prompt_shown row (alpha wave 1, 2026-10-03).
 const THREAT_ROWS_HASH := 952578719
 const FIELDS_HASH := 4081964357
-const ROWS_HASH := 1601865513  # re-pinned 2026-10-04 for the rescue_completed row (alpha wave 5 META-1)
+# 2026-10-04: re-pinned once at integration for the rescue_completed (META-1) and escape_window (META-5) rows (alpha wave 5).
+const ROWS_HASH := 3143694620
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]
