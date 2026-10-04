@@ -160,6 +160,7 @@ func _ready() -> void:
 	progress = Progress.new()
 	progress.name = "Progress"
 	add_child(progress)
+	ctx.progress = progress
 
 	world = _module(World)
 	for row in ctx.stages.DEFS:

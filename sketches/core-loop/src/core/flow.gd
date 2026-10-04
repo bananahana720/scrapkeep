@@ -286,6 +286,9 @@ func resume_run() -> bool:
 	ctx.run.begin(chosen)
 	ctx.events.run_started.emit(chosen.id)
 	ctx.run.from_entrance_doc(doc)
+	# The run document's settled ids and the profile's become one set again.
+	if ctx.progress != null:
+		ctx.progress.reconcile_settled()
 	_apply_tree_picks()
 	var p: Array = doc["entry_velocity"]
 	enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)

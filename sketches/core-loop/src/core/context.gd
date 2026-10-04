@@ -37,6 +37,8 @@ var run_log: Node
 # The player profile (src/core/profile.gd), loaded by the game at boot. Only the game, the UI and
 # core read it; movement, combat, build, world and boss never do (profile_purity_test).
 var profile: RefCounted
+# The settle-once ledger (src/core/progress.gd), set by the game; flow reconciles it on resume.
+var progress: Node
 # The boss module (wave 4), set by src/boss/boss.gd's setup when that file exists.
 # Flow calls enter_arena(entry_velocity) on it after stage 3's launch.
 var boss: Node
