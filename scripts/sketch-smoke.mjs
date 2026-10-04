@@ -1,5 +1,16 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmdirSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,10 +90,13 @@ export function skipLines(output) {
 
 // CONTRACTS.md: a test prints one line per check ending in "-> PASS" or "-> FAIL" and a
 // final "NAME: PASS" line. Some tests print no check lines, so the counts are tolerant.
-const verdictLine = /^[\w.-]+: (PASS|FAIL)\b/m;
+const verdictLine = /^([\w.-]+): (PASS|FAIL)\b/gm;
 
-export function hasVerdictLine(output) {
-  return verdictLine.test(output.replace(/\r/g, ""));
+export function hasVerdictLine(output, script) {
+  const name = script ? path.posix.basename(script, ".gd") : null;
+  return [...output.replace(/\r/g, "").matchAll(verdictLine)].some(
+    (match) => name === null || match[1] === name,
+  );
 }
 
 export function countChecks(output) {
@@ -147,60 +161,125 @@ export function noMatchMessage(sketch, globs) {
   return `sketch:smoke found no test in ${sketch} matching ${globs.join(", ")}`;
 }
 
-// Parallel lanes share one machine. Each run sizes its pool from the idle cores, so
-// several runs starting together all see idle cores and overload it (load 73 on 32
-// threads, 2026-09-29, turned healthy tests into timeouts). One full run holds the machine
-// at a time; the others wait, then size their pool from the load they find. The directory
-// is fixed to /tmp, not os.tmpdir(), so agents with different TMPDIR values share it.
-function lockPath() {
-  return path.join(process.env.SCRAPKEEP_LOCK_DIR || "/tmp", "scrapkeep-sketch-smoke.lock");
+// Gates and named runs use the same pool. Keep its root independent of TMPDIR so
+// worktrees share the limit; all participants must use the same SMOKE_SLOTS value.
+function slotRoot() {
+  return path.join(
+    process.env.SCRAPKEEP_LOCK_DIR || "/tmp",
+    "scrapkeep-sketch-smoke.slots",
+  );
 }
 
-function lockHolder() {
+export function machineSlotCount(env = process.env) {
+  const slots = Number(env.SMOKE_SLOTS ?? 2);
+  if (!Number.isSafeInteger(slots) || slots < 1)
+    throw new Error("SMOKE_SLOTS must be a positive integer");
+  return slots;
+}
+
+function slotOwner(slot) {
   try {
-    const pid = Number(readFileSync(path.join(lockPath(), "pid"), "utf8"));
-    process.kill(pid, 0);
-    return pid;
-  } catch {
-    return 0;
+    const owner = readdirSync(slot).find((name) => name.startsWith("claim-"));
+    if (!owner) return null;
+    const pid = Number(readFileSync(path.join(slot, owner), "utf8"));
+    if (!Number.isSafeInteger(pid) || pid < 1)
+      throw new Error(`invalid slot pid in ${slot}`);
+    try {
+      process.kill(pid, 0);
+      return { owner, alive: true };
+    } catch (error) {
+      if (error.code !== "ESRCH") throw error;
+      return { owner, alive: false };
+    }
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+// Remove only this claim's file, then an empty directory. A racing reclaimer or
+// delayed release cannot recursively delete a replacement owner's populated slot.
+function releaseSlot(slot, owner) {
+  try {
+    unlinkSync(path.join(slot, owner));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  try {
+    rmdirSync(slot);
+  } catch (error) {
+    if (!["ENOENT", "ENOTEMPTY", "EEXIST"].includes(error.code)) throw error;
+  }
+}
+
+export async function acquireSlot({
+  directory = slotRoot(),
+  slots = machineSlotCount(),
+  pollMs = 2000,
+  sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+  log = console.log,
+} = {}) {
+  if (!Number.isSafeInteger(slots) || slots < 1)
+    throw new Error("slots must be a positive integer");
+  mkdirSync(directory, { recursive: true });
+  const started = Date.now();
+  const claim = mkdtempSync(path.join(directory, `claim-${process.pid}-`));
+  const owner = path.basename(claim);
+  let told = false;
+  try {
+    writeFileSync(path.join(claim, owner), String(process.pid));
+    for (;;) {
+      for (let index = 0; index < slots; index++) {
+        const slot = path.join(directory, `slot-${index}`);
+        const holder = slotOwner(slot);
+        if (holder && !holder.alive) releaseSlot(slot, holder.owner);
+        try {
+          // Publish an already populated directory atomically: no pid-write gap.
+          renameSync(claim, slot);
+          let released = false;
+          return {
+            slot,
+            waitMs: Date.now() - started,
+            release: () => {
+              if (released) return;
+              releaseSlot(slot, owner);
+              released = true;
+            },
+          };
+        } catch (error) {
+          if (!["EEXIST", "ENOTEMPTY"].includes(error.code)) throw error;
+        }
+      }
+      if (!told)
+        log(`sketch:smoke waiting for a machine slot (${slots} occupied)`);
+      told = true;
+      await sleep(pollMs);
+    }
+  } finally {
+    rmSync(claim, { recursive: true, force: true });
   }
 }
 
 export async function acquireMachine(pollMs = 2000) {
-  const lock = lockPath();
-  const started = Date.now();
-  let told = false;
-  for (;;) {
-    try {
-      mkdirSync(lock);
-      writeFileSync(path.join(lock, "pid"), String(process.pid));
-      process.on("exit", () => rmSync(lock, { recursive: true, force: true }));
-      return Date.now() - started;
-    } catch (error) {
-      if (error.code !== "EEXIST") throw error;
-      const holder = lockHolder();
-      if (!holder && Date.now() - started > pollMs) rmSync(lock, { recursive: true, force: true });
-      if (!told) console.log(`sketch:smoke waiting for another run to finish (pid ${holder || "unknown"})`);
-      told = true;
-      await new Promise((resolve) => setTimeout(resolve, pollMs));
-    }
-  }
+  const lease = await acquireSlot({ pollMs });
+  process.once("exit", lease.release);
+  return lease.waitMs;
 }
 
-// A named run never takes the lock; it only yields while a live full run holds it.
-export function namedRunMustWait(holderCheck = lockHolder) {
-  return holderCheck() > 0;
+export function namedRunMustWait({
+  directory = slotRoot(),
+  slots = machineSlotCount(),
+} = {}) {
+  return Array.from({ length: slots }, (_, index) =>
+    slotOwner(path.join(directory, `slot-${index}`)),
+  ).every((holder) => holder?.alive);
 }
 
-export async function waitForMachine({ pollMs = 2000, holderCheck = lockHolder, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
-  const started = Date.now();
-  let told = false;
-  while (namedRunMustWait(holderCheck)) {
-    if (!told) console.log(`sketch:smoke waiting for a full run to finish (pid ${holderCheck()})`);
-    told = true;
-    await sleep(pollMs);
-  }
-  return Date.now() - started;
+// Retained API: named runs now acquire a slot too, rather than bypassing the limit.
+export async function waitForMachine(options = {}) {
+  const lease = await acquireSlot(options);
+  process.once("exit", lease.release);
+  return lease.waitMs;
 }
 
 function git(args) {
@@ -347,7 +426,12 @@ const failVerdictLine = /^[\w.-]+: FAIL\b/m;
 // A test ends with one verdict line. A skip line exempts it only when no check ran. A FAIL
 // verdict fails the test whatever the exit code. The reason names the cause that applies.
 export function judge({ test, status, output }) {
-  const verdict = test ? hasVerdictLine(output) : null;
+  // A script path binds the verdict to its file stem. Boolean callers retain the
+  // legacy API until their owners supply the path (play.mjs and sketch-nightly.mjs).
+  const verdict = test
+    ? hasVerdictLine(output, typeof test === "string" ? test : undefined)
+    : null;
+
   const skips = skipLines(output);
   const { passes, fails } = countChecks(output);
   const missing = verdict === false && (skips.length === 0 || passes + fails > 0);
@@ -451,7 +535,7 @@ async function main() {
     console.error(noMatchMessage(path.basename(plans[0].directory), options.tests));
     process.exit(2);
   }
-  const waited = named ? await waitForMachine() : await acquireMachine();
+  const waited = await acquireMachine();
   if (waited > 0) console.log(`sketch:smoke waited ${(waited / 1000).toFixed(0)}s for the machine`);
   const width = named ? Math.min(NAMED_WIDTH, jobCount()) : jobCount();
   const startedAt = new Date().toISOString();
@@ -468,7 +552,7 @@ async function main() {
     if (!named) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
-      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: true, solo: isSoloJob, quarantined: quarantine.has(path.posix.basename(script, ".gd")) };
+      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: script, solo: isSoloJob, quarantined: quarantine.has(path.posix.basename(script, ".gd")) };
       (isSoloJob ? solo : jobs).push(job);
     }
   }
