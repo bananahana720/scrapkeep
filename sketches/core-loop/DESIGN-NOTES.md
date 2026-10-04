@@ -2955,3 +2955,7 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 
 - **Call.** Tree cap setters read the stage table's world index for depths 2/3/4, every pilot declares NODES_WORLD_ONE, and offers reject mismatched-depth retained paths.
 - **Debt.** Rivet's stale absence assertion and Sable's route and schedule migration remain with the coordinator; the workshop schedule still uses global stage numbers.
+
+## The default-table retirement of the Weir (alpha wave 4, ZS-D)
+
+- **Call.** The Weir leaves the alpha stage path; the default table swap itself was pulled at gate 1 and is re-queued as ZS-D2 in wave 5.

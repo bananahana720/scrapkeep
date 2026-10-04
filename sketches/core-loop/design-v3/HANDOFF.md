@@ -2,6 +2,39 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 4 landed (2026-10-04, aee2242)
+
+Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, then the Opus gate read. Default table swap (D2) was pulled from the candidate and re-queued as ZS-D2 in wave 5 with its gate-1 failure list. Wave 5 is in flight from aee2242.
+
+- F2a: Brindle's hull is a posture body on the boss contract.
+- RS2: run store on disk with a tombstone on clear and a stale-save refusal (cause run_ended).
+- CG1: the cog wallet; shop and fabricators spend cogs, scrap raises mass only.
+- F4: world-one Warden fights tested on real maps.
+- B1: smash damage per fight in the run log.
+- ZS-C: zone schema and test-time zone slots for world-one maps.
+- ZS-D: the Weir retired from the alpha table path (default swap itself is ZS-D2).
+- C5: lore wiring; zone-entry exchanges advance on interact only.
+- C8: music rows and a pack resolver (data layer).
+- B2: the explorer bot's two-hook hand.
+- TR1: tree depth cap follows the stage table's world index.
+
+### Open after wave 4
+
+- Shop UI still says scrap (CG2, wave 5).
+- Brindle has no plate/arc/chord read and emits no posture signal (F2b).
+- A stagger does not cancel a Brindle charge in flight (design call, open).
+- Hero gate toppers for relic and evolved map to Topper_rare_plus until tools/blender/reward_gate.py is regenerated.
+- run_seed is unused by offers.
+- No field note can be unlocked in play (lore collection triggers).
+- music_rows.gd is not routed by audio.gd.
+- TR1's world.gd:610 stage schedule and the Sable route migration.
+- Default table swap re-queued as ZS-D2 with its failure list.
+- B2 explorer chain band unmet (5/16 seeds reach combo 2).
+
+### Lessons for briefs
+
+- Name every suite-wide invariant (bus signal rows plus the ROWS_HASH re-pin, pinned sets, has_method guards on enemy calls, the verdict line format, the per-test 180 s cap) and ask writers to run the sibling tests their fence can break.
+
 ## Wave 3 merged (4 October, proto/alpha 13fe55a)
 
 Twelve units merged after two gate runs; gate 2 passed except the quarantined build_power_curve_test. Receipts: `artifacts/local/alpha/wave3/gate1.log` and `gate2.log`; ledger rows in `tools/coordinator/lane-ledger.tsv`, design calls in `DESIGN-NOTES.md`, rulings in `docs/decisions.tsv`. Units: F1 boss contract, ZS-B alpha table, RS1 entrance document, RR1 rarity ladder, META-4 companion model, C3 wind-up rows, C4 lore rows, F3b guard-rack burst, C1 hero asset guards, ZS-A Spillway zone 1-1, T8 nightly runner, D1 DESIGN-V3.
