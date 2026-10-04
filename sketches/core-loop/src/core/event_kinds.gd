@@ -518,6 +518,11 @@ const LINE_ROWS := {
 	"rewinding": {"color": "live", "motion": "none", "shape": "chevron", "sound": "dock_click", "verb": NONE, "word": ""},
 	"let_go": {"color": "live", "motion": "none", "shape": "chevron", "sound": "line_zip", "verb": "harpoon", "word": ""},
 	"broke": {"color": "rust", "motion": "none", "shape": "burst", "sound": "line_twang", "verb": NONE, "word": ""},
+	# The harpoon chain (HOOK-CHAIN.md), published by the player from its ChainState.
+	"chain_link": {"color": "live", "motion": "none", "shape": "diamond", "sound": "line_bite", "verb": NONE, "word": ""},
+	"chain_pivot": {"color": "live", "motion": "none", "shape": "square", "sound": NONE, "verb": NONE, "word": ""},
+	"chain_end": {"color": "slate", "motion": "none", "shape": "chevron", "sound": "line_zip", "verb": NONE, "word": ""},
+	"chain_miss": {"color": "slate", "motion": "none", "shape": "bar", "sound": "dry_tick", "verb": NONE, "word": ""},
 }
 # Bus signals whose presentation is a LINE_ROWS state; row() and has() answer for them.
 const LINE_SIGNALS := {"harpoon_bit": "latched_body", "harpoon_smashed": "smash_lands"}
