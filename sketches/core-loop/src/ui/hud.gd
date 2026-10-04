@@ -26,6 +26,7 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const PartName := preload("res://src/ui/part_name.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
+const HotwireScreen := preload("res://src/ui/hotwire_screen.gd")
 
 # The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
 # shows because it is what the next roll through a hoop spends.
@@ -126,6 +127,7 @@ var part_name
 var launch_card
 var _world_card_at := -1
 var why_callout
+var hotwire_screen
 # Where each prompt went this frame, for tests: prompt node to its screen rect.
 var prompt_rects := {}
 
@@ -244,6 +246,7 @@ func setup(game_ref) -> void:
 	why_callout.setup(game, profile)
 	part_name = PartName.new()
 	add_child(part_name)
+	_mount_hotwire_screen()
 
 	_build_ach_toast()
 	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(String(Achievements.row(id).get("name", id))))
@@ -267,6 +270,14 @@ func setup(game_ref) -> void:
 		_begin_engagement(false)
 		_armor_peak = ARMOR_PEAK_FLOOR)
 	layout(_screen_size())
+
+
+# The hot-wired Fit / Recycle screen (hotwire_screen.gd) lives under the HUD, so it hides with it
+# outside play; it opens itself from build's hotwire_offered.
+func _mount_hotwire_screen() -> void:
+	hotwire_screen = HotwireScreen.new()
+	add_child(hotwire_screen)
+	hotwire_screen.setup(game)
 
 
 func _build_ach_toast() -> void:
@@ -736,7 +747,7 @@ func _process(delta: float) -> void:
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, edge_markers, why_callout]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, edge_markers, why_callout, hotwire_screen]:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing
