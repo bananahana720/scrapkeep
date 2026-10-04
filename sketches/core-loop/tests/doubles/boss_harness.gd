@@ -36,3 +36,9 @@ static func ground_spot(boss, angle: float, r: float, lift := 1.0) -> Vector3:
 
 static func planar(game) -> float:
 	return game.player.planar_velocity().length()
+
+
+# Brindle's own defeat step (boss.gd _defeat), for a test that walks a run past the fight
+# rather than through it: the last chunk taken by a ram where the ball stands.
+static func defeat(game) -> void:
+	game.boss._defeat("ram", game.player.ball_position())
