@@ -8,16 +8,20 @@ const Hazard := preload("res://src/boss/hazard.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
 # Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
-# launch; everything from there to boss_defeated happens here. The fight uses the
-# Warden grammar with fixed HP: the hull is plated 120, each weak point opens to one
-# verb, and every attack is a committed hazard that is drawn before it can hit.
+# launch; everything from there to boss_defeated happens here. The hull is fought as a
+# posture Warden (boss_posture.gd, BossContract.TARGET): hits fill its bar, a full bar
+# staggers him and opens the cockpit, and a contact in the opening cracks, then
+# shatters, one of four chunks. Each weak point opens to one verb and adds to the bar,
+# and every attack is a committed hazard that is drawn before it can hit.
 #
-# Phases 1 to 3 end at fixed HP floors, but never before their set piece has played,
-# so the fight lasts at least 75 s however hard the ball hits. Damage past a floor is
-# held there until the set piece ends: a grown ball routs him, it does not skip him.
+# Each shattered chunk ends a phase, but never before its set piece has played, so the
+# fight lasts at least 75 s however hard the ball hits. A chunk lost early holds the
+# phase until its set piece ends: a grown ball routs him, it does not skip him. The
+# fourth chunk is the scooter, taken by the catch.
 
 enum { IDLE, FIGHT, EJECT, DEFEATED }
 const STATE_NAMES := ["idle", "fight", "eject", "defeated"]
@@ -64,6 +68,7 @@ var _drones: Array = []
 # While set, the hull ignores the ball: a charge hit's shove must clear the lane before
 # the bow can touch it again.
 var _ghost_until := -1.0
+var _posture := BossPosture.new(Rules.POSTURE)
 
 
 func setup(ctx_ref) -> void:
@@ -111,6 +116,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	arena.add_child(ship)
 	ship.build(self)
 	state = FIGHT
+	_posture = BossPosture.new(Rules.POSTURE)
 	hp = Rules.MAX_HP
 	max_hp = Rules.MAX_HP
 	clock = 0.0
@@ -189,6 +195,7 @@ func advance(delta: float) -> void:
 	_step_trail(ball)
 	_step_drones(delta)
 	if state == FIGHT:
+		_step_posture(delta)
 		match phase:
 			1:
 				_step_cranes(delta, ball)
@@ -205,7 +212,7 @@ func advance(delta: float) -> void:
 
 
 func _maybe_turn_phase() -> void:
-	if state != FIGHT or hp > _floor_hp() + 0.001 or phase_clock < Rules.PHASE_MIN_SECONDS[phase - 1]:
+	if state != FIGHT or _chunks_lost() < phase or phase_clock < Rules.PHASE_MIN_SECONDS[phase - 1]:
 		return
 	if phase < 3:
 		_enter_phase(phase + 1)
@@ -213,26 +220,28 @@ func _maybe_turn_phase() -> void:
 		_begin_eject()
 
 
-# What the music follows in the fight: how far through this phase's hp band the boss is,
-# whether it sits on the band's floor, and how much of the phase's minimum time has run.
-# Empty outside phases 1 to 3.
+# What the music follows in the fight: how full the posture bar is toward the stagger
+# that breaks this phase's chunk (1 once it is broken), whether the phase is held on a
+# broken chunk, and how much of the phase's minimum time has run. Empty outside phases
+# 1 to 3.
 func music_state() -> Dictionary:
 	if phase < 1 or phase > 3:
 		return {}
-	var floors: Array = Rules.PHASE_FLOORS
-	var mins: Array = Rules.PHASE_MIN_SECONDS
-	var ratio := hp / maxf(max_hp, 1.0)
-	var top := 1.0 if phase == 1 else float(floors[phase - 2])
-	var floor_hp := float(floors[phase - 1])
+	var held := _held()
 	return {
-		"in_phase": clampf((top - ratio) / maxf(top - floor_hp, 0.01), 0.0, 1.0),
-		"held": ratio <= floor_hp + 0.001,
-		"phase_seconds": phase_clock / maxf(float(mins[phase - 1]), 1.0),
+		"in_phase": 1.0 if held else clampf(_posture.posture / BossPosture.FULL, 0.0, 1.0),
+		"held": held,
+		"phase_seconds": phase_clock / maxf(float(Rules.PHASE_MIN_SECONDS[phase - 1]), 1.0),
 	}
 
 
-func _floor_hp() -> float:
-	return Rules.PHASE_FLOORS[phase - 1] * max_hp
+func _chunks_lost() -> int:
+	return BossPosture.CHUNKS - _posture.chunks
+
+
+# This phase's chunk is broken and its set piece has not finished playing.
+func _held() -> bool:
+	return state == FIGHT and _chunks_lost() >= phase
 
 
 func _enter_phase(next: int) -> void:
@@ -263,7 +272,8 @@ func jump_to_phase(next: int) -> void:
 	if not active():
 		return
 	if next > 1:
-		hp = minf(hp, Rules.PHASE_FLOORS[next - 2] * max_hp)
+		_posture.chunks = mini(_posture.chunks, BossPosture.CHUNKS - (next - 1))
+		hp = float(_posture.chunks)
 	if next > 3:
 		_begin_eject()
 	else:
@@ -786,13 +796,19 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	if enemy == null or enemy != scooter or not scooter_landed():
 		return
 	if kind in Rules.CONTACT_KINDS and ctx.player.ball_position().distance_to(scooter.global_position) <= Rules.SCOOTER_TOUCH:
-		_defeat("stomp" if kind == "stomp" or _from_above(scooter) else kind, scooter.global_position)
+		_defeat("stomp" if kind == "stomp" or _from_above(scooter) else kind, scooter.global_position, scooter.last_damage_source)
 	else:
 		_eject["slow_until"] = clock + Rules.SCOOTER_SLOW_SECONDS
 
 
-func _defeat(kind: String, at: Vector3) -> void:
+# The one way Brindle dies: the catch takes the last chunk. `source` is the killing
+# piece's damage tag ("spark" for a wear-trail patch), so run_state can tell build that
+# the kill procs nothing, as combat's own kills do.
+func _defeat(kind: String, at: Vector3, source := "") -> void:
+	if state == DEFEATED:
+		return
 	state = DEFEATED
+	_posture.chunks = 0
 	hp = 0.0
 	_cancel_hazards()
 	if is_instance_valid(scooter):
@@ -801,7 +817,7 @@ func _defeat(kind: String, at: Vector3) -> void:
 	_publish("boss_weak_point_hit", ["scooter"])
 	if kind == "stomp":
 		_discover(CodexEntries.SCOOTER_STOMP, at)
-	ctx.run.record_kill("brindle", at, 0)
+	ctx.run.record_kill("brindle", at, 0, source)
 	ctx.run.add_part(Rules.CREST_PART, "boss")
 	_sync_crest()
 	ctx.flow.boss_active = false
@@ -1006,18 +1022,31 @@ func _cap(part: String):
 	return ship.caps[0]
 
 
-# The clash: a ram into the charging bow that meets plating 150 stops the charge.
-func on_struck(target, kind: String, _part: String, result: Dictionary) -> void:
-	if target.role == "hull" and kind == "ram" and charging() and bool(result.get("full", false)):
+# The clash: a ram into the charging bow that meets plating 150 stops the charge. Then
+# the hit moves the posture bar: a hull hit by the rule judge_hit() answered (or, from
+# a striker that skipped it, judged here), a weak point's hit as pressure on the bar.
+func on_struck(target, kind: String, part: String, result: Dictionary) -> void:
+	if target.role == "hull" and kind == "ram" and charging() \
+			and float(result.get("punch", 0.0)) >= float(result.get("plating", INF)):
 		clashes += 1
 		_stun(Rules.CLASH_STUN)
+	if state != FIGHT:
+		return
+	if target.role == "hull" and result.has("gain"):
+		_apply_posture(result)
+	elif target.role == "hull" and not part.begins_with("cap_"):
+		_apply_posture(judge_hit(target, kind, float(result.get("punch", 0.0)), false, 0))
+	elif target.role in ["magnet", "cap"] or part.begins_with("cap_"):
+		_pressure(kind, result)
 
 
-func take_damage(target, amount: float, full: bool, part: String) -> float:
-	if state != FIGHT or amount <= 0.0 or not target_live(target):
+# Health falls only by the chunks the posture rule shattered; `amount` moves nothing.
+# hp is read back from the chunk count, so the delivered-damage ledger sees one per chunk.
+func take_damage(target, _amount: float, full: bool, part: String) -> float:
+	if state != FIGHT or not target_live(target):
 		return 0.0
 	var before := hp
-	hp = maxf(_floor_hp(), hp - amount)
+	hp = float(_posture.chunks)
 	if full:
 		match target.role:
 			"magnet":
@@ -1030,10 +1059,91 @@ func take_damage(target, amount: float, full: bool, part: String) -> float:
 			"hull":
 				if part.begins_with("cap_"):
 					_publish("boss_weak_point_hit", [part])
-				elif stunned():
+				elif hp < before:
 					_publish("boss_weak_point_hit", ["cockpit"])
 	_maybe_turn_phase()
 	return before - hp
+
+
+# --- The posture fight on the hull (boss_posture.gd; boss_target.gd forwards here) ----
+
+# Only the hull is fought on posture. The magnets, caps and scooter keep combat's
+# plating rule, which their crane, furnace and chase mechanics read.
+func fight(target) -> String:
+	return "posture" if target.role == "hull" else "plating"
+
+
+func posture() -> float:
+	return _posture.posture
+
+
+func staggered() -> bool:
+	return state == FIGHT and _posture.staggered
+
+
+func stagger_left() -> float:
+	return _posture.stagger_left if staggered() else 0.0
+
+
+func chunks_left() -> int:
+	return _posture.chunks
+
+
+func glances() -> int:
+	return _posture.glances
+
+
+func chunk_cracked() -> bool:
+	return _posture.cracked
+
+
+# What the rule says a hit on the hull does, or {} for any other piece so combat's own
+# rule runs. Out of a stagger a slam on a vent cap meets the cap's plating; in one any
+# contact meets the open cockpit. A held phase answers with the hit and no effect.
+func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
+	if target.role != "hull" or state != FIGHT:
+		return {}
+	var part := ""
+	if not _posture.staggered and kind in Rules.CONTACT_KINDS:
+		part = contact_part(target, ctx.player.ball_position(), kind)
+	var result := _posture.judge({"kind": kind, "punch": punch, "plating": plating_for(target, kind, part), "smash": smash,
+			"tier": tier, "charging": charging(), "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp})
+	if part != "":
+		result["part"] = part
+	if _held():
+		result["gain"] = 0.0
+		result["crack"] = false
+		result["shatter"] = false
+		result["dealt"] = 0.0
+	return result
+
+
+# A weak point's full hit adds to the hull's bar as the rule would weigh it on a body of
+# that plating. It never touches the open cockpit: only a contact on the hull does.
+func _pressure(kind: String, result: Dictionary) -> void:
+	if _posture.staggered or _held() or not bool(result.get("full", false)):
+		return
+	_apply_posture(_posture.judge({"kind": kind, "punch": float(result.get("punch", 0.0)),
+			"plating": float(result.get("plating", 0.0)), "charging": charging(), "frame": Engine.get_physics_frames()}))
+
+
+func _apply_posture(result: Dictionary) -> void:
+	var was_staggered: bool = _posture.staggered
+	_posture.apply(result, Engine.get_physics_frames())
+	_sync_stagger(was_staggered)
+
+
+func _step_posture(delta: float) -> void:
+	var was_staggered: bool = _posture.staggered
+	_posture.step(delta)
+	_sync_stagger(was_staggered)
+
+
+# A stagger opens the cockpit for its window; from Scuttle on the cockpit stays open.
+func _sync_stagger(was_staggered: bool) -> void:
+	if _posture.staggered == was_staggered or not is_instance_valid(ship):
+		return
+	ship.cockpit_open(_posture.staggered or phase >= 3)
 
 
 # --- Readout, publishing, codex ---------------------------------------------------------

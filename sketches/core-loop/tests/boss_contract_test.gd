@@ -6,8 +6,9 @@ const BossContract := preload("res://src/boss/boss_contract.gd")
 # The frozen boss contract (src/boss/boss_contract.gd): the posture Warden built on the
 # slice table conforms to TARGET and each method answers its declared type; a double
 # missing one method is named; two module doubles satisfy MODULE side by side without
-# touching ctx.boss; describe() names every method once. Brindle (F2a) and the later-world
-# stub (F5) are pending and not checked here.
+# touching ctx.boss; describe() names every method once. Brindle (F2a) is live: his hull
+# conforms to TARGET and his module to MODULE, each answering its declared type in the
+# arena. The later-world stub (F5) is pending and not checked here.
 #
 # Evidence limit: this checks the surface and return types, not the fight's behaviour.
 
@@ -141,6 +142,36 @@ func _run() -> void:
 	_report("module doubles conform", BossContract.conforms(one, BossContract.MODULE).is_empty() \
 			and BossContract.conforms(two, BossContract.MODULE).is_empty(), "")
 	_report("two modules stand side by side", one.active() and not two.active() and after == before, "ctx.boss unchanged %s" % [after == before])
+
+	# (e) Brindle, live in the arena: the hull conforms to TARGET, the module to MODULE.
+	# The slice table routes no world boss through flow, so the module is entered directly.
+	var brindle = _game.ctx.boss if "boss" in _game.ctx else _game.ctx.get_meta("boss", null)
+	if brindle != null:
+		brindle.enter_arena(Vector3.ZERO)
+	await _frames(2)
+	var hull = brindle.ship.hull if brindle != null and is_instance_valid(brindle.ship) else null
+	var hull_missing: Array = BossContract.conforms(hull, BossContract.TARGET)
+	_report("brindle hull conforms to TARGET", hull_missing.is_empty() and hull.fight() == "posture", "missing %s" % [hull_missing])
+	var hull_wrong: Array = []
+	if hull != null:
+		for row in BossContract.TARGET:
+			if row[0] == "on_struck":
+				continue
+			var got = hull.callv(row[0], args.get(row[0], []))
+			if typeof(got) != int(row[2]):
+				hull_wrong.append("%s %d" % [row[0], typeof(got)])
+	_report("brindle hull returns the declared types", hull != null and hull_wrong.is_empty(), "wrong %s" % [hull_wrong])
+	var module_missing: Array = BossContract.conforms(brindle, BossContract.MODULE)
+	var module_args := {"enter_arena": null, "exit_arena": null, "ground_height_at": [Vector3.ZERO]}
+	var module_wrong: Array = []
+	for row in BossContract.MODULE:
+		if module_args.has(row[0]) and module_args[row[0]] == null:
+			continue
+		var got = brindle.callv(row[0], module_args.get(row[0], []))
+		if typeof(got) != int(row[2]):
+			module_wrong.append("%s %d" % [row[0], typeof(got)])
+	_report("brindle module conforms to MODULE", module_missing.is_empty() and module_wrong.is_empty(),
+		"missing %s, wrong %s" % [module_missing, module_wrong])
 
 	# (d) describe() names every method once, and the lists keep their size.
 	var text: String = BossContract.describe()
