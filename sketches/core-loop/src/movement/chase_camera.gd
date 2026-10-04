@@ -32,6 +32,9 @@ var tuning
 # Spawn looks down the run, so W drives you into the hill rather than up it.
 var yaw := PI
 var pitch := -0.30
+var stick_sensitivity := STICK_YAW
+var mouse_sensitivity := SENSITIVITY
+var invert_y := false
 
 # Hooks for the modules; see CONTRACTS.md. Combat sets shoulder_target (0..1) while
 # mounted, presentation calls punch_fov, kick and shake. Nothing else writes the rig.
@@ -87,18 +90,30 @@ func setup(target_ref, tuning_ref) -> void:
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 
 
+func apply_look_settings(store) -> void:
+	stick_sensitivity = store.stick_sensitivity()
+	mouse_sensitivity = store.mouse_sensitivity()
+	invert_y = store.invert_y()
+	# Input.get_vector applies the radial deadzone once, before look_stick cubes the axes.
+	for action in ["cl_look_left", "cl_look_right", "cl_look_up", "cl_look_down"]:
+		if InputMap.has_action(action):
+			InputMap.action_set_deadzone(action, store.stick_deadzone())
+
+
 func look(relative: Vector2) -> void:
-	yaw -= relative.x * SENSITIVITY
-	pitch = clampf(pitch - relative.y * SENSITIVITY, -1.25, 0.55)
+	yaw -= relative.x * mouse_sensitivity
+	pitch = clampf(pitch - relative.y * mouse_sensitivity, -1.25, 0.55)
 
 
 # The right stick, read each frame: `stick` is the look vector (x right, y down, as the mouse),
 # each axis cubed so a small push aims finely; full deflection turns STICK_YAW and STICK_PITCH
-# rad/s. Up is a negative y and looks up, as the mouse does (not inverted).
+# rad/s at the default sensitivity. Invert Y reverses stick pitch only.
 func look_stick(stick: Vector2, delta: float) -> void:
 	var shaped := Vector2(pow(stick.x, 3.0), pow(stick.y, 3.0))
-	yaw -= shaped.x * STICK_YAW * delta
-	pitch = clampf(pitch - shaped.y * STICK_PITCH * delta, -1.25, 0.55)
+	yaw -= shaped.x * stick_sensitivity * delta
+	var pitch_rate := STICK_PITCH * (stick_sensitivity / STICK_YAW)
+	var pitch_sign := -1.0 if invert_y else 1.0
+	pitch = clampf(pitch - shaped.y * pitch_rate * delta * pitch_sign, -1.25, 0.55)
 
 
 func yaw_basis() -> Basis:

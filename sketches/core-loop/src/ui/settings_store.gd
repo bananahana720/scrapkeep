@@ -1,8 +1,8 @@
 extends RefCounted
 
 # The viewer's settings, saved beside the codex and the UI profile as settings.json:
-# the music and effects levels and the comfort levels (screen shake, hit-stop) the pause
-# menu set. Only levels a player chose are stored, so an untouched game keeps the
+# the music and effects levels, comfort levels (screen shake, hit-stop) and look settings.
+# Only levels a player chose are stored, so an untouched game keeps the
 # defaults. Storage failures never throw; the settings keep working in memory, as the
 # UI profile does.
 
@@ -13,10 +13,23 @@ const FILE := "settings.json"
 # Comfort numbers the settings page keeps: fullscreen 0 off, 1 on; quality 0 High, 1 Low.
 const FULLSCREEN := "fullscreen"
 const QUALITY := "quality"
+const STICK_SENSITIVITY := "stick_sensitivity"
+const INVERT_Y := "invert_y"
+const STICK_DEADZONE := "stick_deadzone"
+const MOUSE_SENSITIVITY := "mouse_sensitivity"
+# Stick sensitivity is the full-deflection yaw rate in rad/s; pitch keeps its 1.6/2.6 ratio.
+# Invert uses the comfort rows' numeric toggle convention, 0 off and 1 on.
+const LOOK_DEFAULTS := {
+	STICK_SENSITIVITY: 2.6,
+	INVERT_Y: 0.0,
+	STICK_DEADZONE: 0.2,
+	MOUSE_SENSITIVITY: 0.0022,
+}
 
 var path := ""
 var volumes := {}
 var comfort := {}
+var look := {}
 # Action name to a comma-separated token list (Bindings.encode); only actions a player rebound.
 var bindings := {}
 var last_error := ""
@@ -31,10 +44,11 @@ func _init(storage_dir := "user://") -> void:
 func load_saved() -> void:
 	volumes = {}
 	comfort = {}
+	look = {}
 	bindings = {}
 	if not FileAccess.file_exists(path):
 		return
-	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"volumes": SafeStore.NUMBERS, "comfort": SafeStore.NUMBERS, "bindings": SafeStore.STRING_MAP})
+	var parsed = SafeStore.parse(FileAccess.get_file_as_string(path), TYPE_DICTIONARY, {"volumes": SafeStore.NUMBERS, "comfort": SafeStore.NUMBERS, "look": SafeStore.NUMBERS, "bindings": SafeStore.STRING_MAP})
 	if parsed == null:
 		var kept := SafeStore.quarantine(path)
 		if kept.is_empty():
@@ -50,6 +64,9 @@ func load_saved() -> void:
 	var feel: Dictionary = parsed.get("comfort", {})
 	for id in feel:
 		comfort[String(id)] = clampf(float(feel[id]), 0.0, 1.0)
+	var aiming: Dictionary = parsed.get("look", {})
+	for id in aiming:
+		look[String(id)] = _look_value(String(id), float(aiming[id]))
 	var rebound: Dictionary = parsed.get("bindings", {})
 	for action in rebound:
 		bindings[String(action)] = String(rebound[action])
@@ -63,6 +80,37 @@ func set_volume(bus: String, level: float) -> void:
 func set_comfort(id: String, level: float) -> void:
 	comfort[id] = clampf(level, 0.0, 1.0)
 	save()
+
+
+func set_look(id: String, value: float) -> void:
+	look[id] = _look_value(id, value)
+	save()
+
+
+func stick_sensitivity() -> float:
+	return float(look.get(STICK_SENSITIVITY, LOOK_DEFAULTS[STICK_SENSITIVITY]))
+
+
+func invert_y() -> bool:
+	return float(look.get(INVERT_Y, LOOK_DEFAULTS[INVERT_Y])) >= 0.5
+
+
+func stick_deadzone() -> float:
+	return float(look.get(STICK_DEADZONE, LOOK_DEFAULTS[STICK_DEADZONE]))
+
+
+func mouse_sensitivity() -> float:
+	return float(look.get(MOUSE_SENSITIVITY, LOOK_DEFAULTS[MOUSE_SENSITIVITY]))
+
+
+func _look_value(id: String, value: float) -> float:
+	if not is_finite(value):
+		return float(LOOK_DEFAULTS.get(id, 0.0))
+	if id == INVERT_Y or id == STICK_DEADZONE:
+		return clampf(value, 0.0, 1.0)
+	if id == STICK_SENSITIVITY or id == MOUSE_SENSITIVITY:
+		return maxf(0.0, value)
+	return value
 
 
 func fullscreen() -> bool:
@@ -106,6 +154,8 @@ func save() -> void:
 	if _save_blocked:
 		return
 	var data := {"volumes": volumes, "comfort": comfort}
+	if not look.is_empty():
+		data["look"] = look
 	if not bindings.is_empty():
 		data["bindings"] = bindings
 	var err := SafeStore.write_atomic(path, JSON.stringify(data, "  "))
