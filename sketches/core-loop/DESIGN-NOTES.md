@@ -2821,3 +2821,15 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 - **`ui_accept` / `ui_cancel` readers, all gated by an open menu.** `pause_menu.gd:373,376` inside `_menu_key`, reached only when `_open` (line 309). `workshop.gd:432,441` inside `_pick_key`, reached only when `pick.is_open()`; `workshop.gd:471,478` inside `_counter_key`, only when `counter.is_open()`; both after `armed`. `class_card.gd:452` in `_unhandled_input`, only for the visible card 0 with no focus owner, so it needs the class-select screen on. `settings_pages.gd:245,247` inside `handle`, only while the page is visible. Plus the GUI's own button press, which needs a focused Control.
 - **Not changed.** The play pad table, keyboard and mouse behaviour, the pause menu, settings pages, reward ceremony and discovery cards (a discovery card still passes its dismissing A through, as Space does).
 - **Test.** `tests/input_pad_menus_test.gd`. Red: with `UI_PAD` empty, 16 checks fail (S5-1, the title press, class select A, the screens that follow); restored, 44 pass.
+
+## The hook chain, state and rule (alpha full-send wave 1, HC1)
+
+- **Call.** A chain is harpoon bites with no ground contact between them; an enemy bite is a link, a surface bite a pivot, a smash pays 1 + 0.3 per link beyond the first, capped at six (x2.5). Combo 1 is today's game: the ceiling is new, the floor is not lower. Principle: momentum is sacred, opt-in layers. Spec `design-v3/HOOK-CHAIN.md`.
+- **Rulings from the gate.** The combo pays the chained enemy only, never the shockwave or bystanders, so a combo cannot break an activity wall a plain smash would not. A rewind press is not a miss (Andrew keeps the spam). Chain rows ride `line_state_changed` but every presentation listener skips `chain_*` until HC2 draws them.
+- **Test.** `tests/hook_chain_test.gd` (14 sequences; cap mutant red), `tests/chain_listeners_test.gd` (guard mutant red).
+
+## Activity signposting (alpha full-send wave 1, AS)
+
+- **Call.** One amber edge marker per unfinished activity site from drop-in, coloured by the site's own activity row, hidden while the Warden fight is engaged; the plate says "Find an activity" (glyph `obj_event`) while the beacon is sealed, the fight is not engaged and a site is left, then the Warden rows as before. The plate and the markers read one count, `edge_markers.unfinished_sites()`. Principle: readability first, one meaning per layer.
+- **Debt.** The marker is chevron-only; the site row's shape is not drawn. On Andrew's veto list: the plate pointing at activities before the Warden.
+- **Test.** `tests/activity_signpost_test.gd` (done-filter mutant red).
