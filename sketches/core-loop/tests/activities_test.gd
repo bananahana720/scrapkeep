@@ -439,6 +439,6 @@ func _default_table() -> void:
 	var counts: Array = maps.map(func(m): return m.activity_sites.size() if "activity_sites" in m else 0)
 	_t.check("the default alpha maps carry their authored activity sites", counts == [1, 4], "sites per stage %s" % [counts])
 	_t.eq("Spillway stands its one enemy camp site", _game.world.activities.sites.size(), 1)
-	_t.eq("its three Spillway devices stand", _game.world.interact.devices.size(), 3)
+	_t.eq("its four Spillway devices stand (three plus the rescue cage, META-3 2026-10-04)", _game.world.interact.devices.size(), 4)
 	_game.free()
 	await _frames(2)
