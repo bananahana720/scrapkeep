@@ -17,6 +17,8 @@ var _failures := 0
 var _step := 0
 var _clock := 0.0
 var _lobber: Node3D
+# Set by the last case; a script error that aborts a case leaves it false.
+var _last_case_ran := false
 
 
 func _initialize() -> void:
@@ -161,7 +163,11 @@ func _warden_tricks() -> void:
 	_game.run.set_max_hp(99999.0)
 	var ctx = _game.ctx
 	var warden: Node3D = ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(2))
-	var cap: Vector3 = warden.cap_points()[0]
+	var caps: Array = warden.cap_points()
+	if caps.is_empty():
+		_report("warden caps", false, "the stage 2 Warden has no cap points to stomp")
+		return
+	var cap: Vector3 = caps[0]
 	_game.player.reset_to(cap + Vector3.UP * 1.3)
 	_game.player.body().global_position = cap + Vector3.UP * 1.3
 	warden._since_pulse = 0.6
@@ -180,9 +186,12 @@ func _warden_tricks() -> void:
 	for id in CodexEntries.ids():
 		all_found = all_found and _combat.discovered.has(id)
 	_report("all", all_found, "discovered this run: %s" % [_combat.discovery_log])
+	_last_case_ran = true
 
 
 func _finish() -> bool:
+	if not _last_case_ran:
+		_report("ran to the end", false, "the Warden cases aborted before the last check")
 	var ok := _failures == 0
 	print("combat_codex_test: %s" % ("PASS" if ok else "FAIL"))
 	_game.free()
