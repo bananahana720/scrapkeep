@@ -11,7 +11,8 @@ const CodexEntries := preload("res://src/boss/codex_entries.gd")
 # arena publishes its facts on time, the clash threshold sits at 150, set pieces hold
 # the fight to 75 s even against infinite damage, the win hangs the crest on the ball
 # and leads to victory and the summary, and the death screen's T and R both work.
-# Driven tick by tick.
+# Driven tick by tick. Repointed 2026-10-04 (F2a fix round): Brindle is a posture body,
+# so the fight is driven by staggers and contacts, not by gun damage on an HP pool.
 
 const DT := 1.0 / 90.0
 const MIN_FIGHT := 75.0
@@ -54,11 +55,17 @@ func _physics_process(_delta: float) -> bool:
 	events.boss_defeated.connect(func(): _log.append("defeated@%.2f" % _boss.clock))
 	events.flow_changed.connect(func(s: String): _states.append(s))
 	events.player_hit.connect(_on_hit)
-	_run_checks()
+	_run_all()
+	return false
+
+
+# The fight to the end waits physics frames (the posture rule keys a contact to its
+# frame), so the checks run as a coroutine and the verdict follows them.
+func _run_all() -> void:
+	await _run_checks()
 	print("boss_flow_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
-	return false
 
 
 func _on_phase(phase: int, phase_name: String) -> void:
@@ -98,7 +105,7 @@ func _run_checks() -> void:
 	_clash_checks()
 	_quench_checks()
 	_death_checks()
-	_fight_to_the_end()
+	await _fight_to_the_end()
 
 
 # Stage 3 is entered and its launch flight finished, the way a run reaches the arena.
@@ -191,11 +198,23 @@ func _fight_to_the_end() -> void:
 	_states.append(flow.state_name())
 	var above: Vector3 = _boss.arena.global_position + Vector3.UP * 40.0
 	var defeated_at := -1.0
+	var rammed := -1
+	var hull = _boss.ship.hull
 	while _boss.clock < LIMIT:
 		Harness.put_ball(_game, above)
-		for target in [_boss.ship.hull] + _boss.ship.magnets + _boss.ship.caps:
+		for target in _boss.ship.magnets + _boss.ship.caps:
 			if not target.is_dead():
 				_double.strike(target, "arc", 1.0e9)
+		# Guns press the bar to a stagger; one ram per opening, a frame after it opened,
+		# cracks the chunk and the ram in the next opening shatters it.
+		if not hull.is_dead():
+			if not _boss.staggered():
+				_double.strike(hull, "arc", 1.0e9)
+			elif _boss._posture.staggers != rammed:
+				rammed = _boss._posture.staggers
+				await physics_frame
+				Harness.put_ball(_game, above)
+				_double.strike(hull, "ram", 150.0)
 		if _boss.scooter_landed():
 			Harness.put_ball(_game, _boss.scooter.global_position + Vector3.UP * 1.8)
 			_double.strike(_boss.scooter, "ram", 20.0)

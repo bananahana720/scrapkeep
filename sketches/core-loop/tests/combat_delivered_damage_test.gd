@@ -25,6 +25,8 @@ const Game := preload("res://src/game.gd")
 var _game
 var _combat
 var _failures := 0
+var _started := false
+var _boss_hull_strikes := 0
 
 
 func _initialize() -> void:
@@ -40,14 +42,21 @@ func _report(check: String, ok: bool, detail: String) -> void:
 
 
 func _physics_process(_delta: float) -> bool:
-	if _game.flow == null:
+	if _game.flow == null or _started:
 		return false
-	_run_all()
+	_started = true
+	_finish()
+	return false
+
+
+# The boss case waits one physics frame (a posture contact must land after the frame
+# its stagger opened), so the checks run as a coroutine and the verdict follows them.
+func _finish() -> void:
+	await _run_all()
 	var ok := _failures == 0
 	print("combat_delivered_damage_test: %s" % ("PASS" if ok else "FAIL"))
 	_game.free()
 	quit(0 if ok else 1)
-	return true
 
 
 func _sum(map: Dictionary) -> float:
@@ -213,25 +222,45 @@ func _run_all() -> void:
 	_report("warden_slam_hits_zero", int(slam_hits_2.get("2", -1)) == 0,
 		"stage 2 broke with no hit on the Warden: warden_slam_hits %s (needs 0)" % [slam_hits_2])
 
-	# Boss (finding 4, fix round 1): boss.gd clamps to a phase floor instead of to 0,
-	# and that path was never exercised. Enter the arena, strike the hull once inside
-	# the phase-1 floor headroom, then again hard enough to hit the floor, and check
-	# the ledger's own boss bucket against what boss.gd itself reports losing.
+	# Boss. Repointed 2026-10-04 (F2a fix round): Brindle's health is four posture
+	# chunks, hp reads the chunks left, and guns never remove one. Guns stagger the
+	# hull, a smash a frame later shatters one chunk, and the ledger's boss bucket must
+	# rise by exactly that one, which is what boss.gd itself reports losing.
+	# The field's real HP lost is read before the arena: the boss case awaits a frame,
+	# and the arena entry frees the stage's enemies at that frame's end.
+	var field_lost := 0.0
+	for e in [enemy_a, warden, adds, lobber, vault]:
+		var id: int = e.get_instance_id()
+		# enemy.gd's own take_damage() subtracts past 0 rather than clamping (hp -=
+		# amount, unlike the removed value it returns), so a dead target's hp can read
+		# negative; the real HP it had to lose bottoms out at 0, same as removed did.
+		var after: float = maxf(0.0, e.hp) if is_instance_valid(e) else 0.0
+		field_lost += float(hp_before[id]) - after
 	_game.flow.enter_boss(Vector3.ZERO)
 	var boss = ctx.boss
 	var hull = boss.ship.hull
 	var boss_hp_before: float = boss.hp
 	var boss_bucket_before: float = float(_combat.delivered_damage()["by_target_class"].get("boss", 0.0))
-	_combat.strike(hull, "arc", 5000.0, "", "weapon")
-	_combat.strike(hull, "arc", boss.max_hp * 5.0, "", "weapon")
+	var shots := 0
+	while not boss.staggered() and shots < 200:
+		_combat.strike(hull, "arc", 5000.0, "", "weapon")
+		shots += 1
+	var guns_took: float = boss_hp_before - boss.hp
+	var opened_on: int = Engine.get_physics_frames()
+	while Engine.get_physics_frames() == opened_on:
+		await physics_frame
+	ctx.player.smash_landing = hull
+	_combat.strike(hull, "ram", 150.0)
+	ctx.player.smash_landing = null
+	_boss_hull_strikes = shots + 1
 	var boss_hp_after: float = boss.hp
 	var real_boss_loss: float = boss_hp_before - boss_hp_after
 	var boss_bucket_after: float = float(_combat.delivered_damage()["by_target_class"].get("boss", 0.0))
-	_report("boss_floor_clamped", boss_hp_after > 0.0 and boss_hp_after < boss_hp_before,
-		"the second hull hit was sized to blow past the phase-1 floor; boss.hp landed at %.1f (needs clamped above 0, below %.1f)"
-			% [boss_hp_after, boss_hp_before])
-	_report("boss_target_class", absf(boss_bucket_after - boss_bucket_before - real_boss_loss) < 0.05,
-		"two hull hits (the second past the phase-1 floor) dropped the boss %.1f hp; by_target_class.boss rose by %.1f (need equal)"
+	_report("boss_chunk_lost", guns_took == 0.0 and real_boss_loss == 1.0 and boss.chunks_left() == 3,
+		"%d shots staggered the hull and took %.1f hp; a smash in the opening took %.1f (needs one chunk), %d chunks left"
+			% [shots, guns_took, real_boss_loss, boss.chunks_left()])
+	_report("boss_target_class", absf(boss_bucket_after - boss_bucket_before - 1.0) < 0.05,
+		"one chunk lost dropped the boss %.1f hp; by_target_class.boss rose by %.1f (needs 1)"
 			% [real_boss_loss, boss_bucket_after - boss_bucket_before])
 
 	# review finding 1, fix round 2: the scooter catch removes the rest of the boss's HP
@@ -267,13 +296,7 @@ func _run_all() -> void:
 	# with the ledger's own total, independent of the by_* buckets below. The scooter
 	# catch's own loss (finding 1, fix round 2) folds in here too.
 	var real_total_lost := real_boss_loss + boss_hp_before_catch
-	for e in [enemy_a, warden, adds, lobber, vault]:
-		var id: int = e.get_instance_id()
-		# enemy.gd's own take_damage() subtracts past 0 rather than clamping (hp -=
-		# amount, unlike the removed value it returns), so a dead target's hp can read
-		# negative; the real HP it had to lose bottoms out at 0, same as removed did.
-		var after: float = maxf(0.0, e.hp) if is_instance_valid(e) else 0.0
-		real_total_lost += float(hp_before[id]) - after
+	real_total_lost += field_lost
 	_report("total_matches_real_hp_lost", absf(float(_combat.delivered_damage()["total"]) - real_total_lost) < 0.5,
 		"ledger total %.2f vs the sum of real HP lost across every struck target %.2f (need equal)"
 			% [float(_combat.delivered_damage()["total"]), real_total_lost])
@@ -296,7 +319,8 @@ func _run_all() -> void:
 
 	# No double counting: exactly the strike() calls made above, once each (chaser,
 	# 4x warden [1 v2-mode slam, 2 drop-mode slam, 1 drop-mode stomp], adds, lobber,
-	# vault, 2x boss hull, the scooter catch; the two scenery/proc-only calls above
-	# never reach take_damage() and are not in this count).
-	_report("hit_count", int(ledger["hits"]) == 11,
-		"11 strike() calls above produced %d ledger hits (needs 11, one per call, none doubled)" % [int(ledger["hits"])])
+	# vault, the boss hull's gun shots and its smash, the scooter catch; the two
+	# scenery/proc-only calls above never reach take_damage() and are not in this count).
+	var calls := 9 + _boss_hull_strikes
+	_report("hit_count", int(ledger["hits"]) == calls,
+		"%d strike() calls above produced %d ledger hits (needs %d, one per call, none doubled)" % [calls, int(ledger["hits"]), calls])
