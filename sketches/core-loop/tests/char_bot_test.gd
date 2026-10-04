@@ -64,6 +64,7 @@ func _physics_process(delta: float) -> bool:
 		return false
 	_ticks += 1
 	var over: bool = _driver.tick(delta)
+	# stage 2 means "the second stage", whatever the table size, so the literal stays
 	var in_stage_two: bool = _game.run.stage == 2 and _game.flow.state_name() == "stage"
 	if in_stage_two or over or _ticks > TICK_LIMIT:
 		return _finish(in_stage_two)
@@ -102,6 +103,7 @@ func _finish(reached: bool) -> bool:
 		% [ticks_to_break, float(ticks_to_break if ticks_to_break != null else 0) / 90.0, heft, parts,
 			first.get("bonus_cores", "?"), first.get("events_joined", "?")])
 	var second: Dictionary = stages[1] if stages.size() > 1 and stages[1] is Dictionary else {}
+	# the bot ends in the second stage, so the record holds stage 1 and stage 2 whatever the table size; 2 is a count of visited stages, not the table size
 	var death_logged: bool = stages.size() == 2 and int(second.get("stage", 0)) == 2 and second.get("deaths") is Array \
 		and (second["deaths"] as Array).size() == 1
 	_report("death carried", death_logged, "%d stage record(s); stage 2 deaths %s" % [stages.size(), second.get("deaths", "none")])

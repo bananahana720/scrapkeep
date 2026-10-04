@@ -20,6 +20,8 @@ const TOLERANCE := 0.15
 const ROLL_ON := 45
 const PAD_TOLERANCE := 6.0
 const TICK_LIMIT := 90 * 60
+# a wide table is sampled twice, a narrow one at every stage-to-stage launch it has
+const LAUNCH_SAMPLE := 2
 
 var _game
 var _source := Intent.Scripted.new()
@@ -116,7 +118,7 @@ func _step() -> void:
 				_record["roll_on"] = _planar()
 				_records.append(_record)
 				_record = {}
-				if _records.size() == 2:
+				if _records.size() == _launches_wanted():
 					_finish()
 					return
 				_phase = "to_beacon"
@@ -184,7 +186,7 @@ func _finish() -> bool:
 		var miss := Vector2(pad.x - down.x, pad.z - down.z).length()
 		_report("landing mark in stage %d" % stage, miss <= PAD_TOLERANCE,
 			"the pad marked (%.0f, %.0f); the ball touched down %.1f m from it" % [pad.x, pad.z, miss])
-	_report("launches measured", _records.size() == _game.ctx.stages.COUNT - 1, "%d of 1 stage-to-stage launches measured" % _records.size())
+	_report("launches measured", _records.size() == _launches_wanted(), "%d of %d stage-to-stage launches measured" % [_records.size(), _launches_wanted()])
 	print("world_launch_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -195,3 +197,7 @@ func _report(label: String, ok: bool, detail: String) -> void:
 	if not ok:
 		_failures += 1
 	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+func _launches_wanted() -> int:
+	return mini(LAUNCH_SAMPLE, _game.ctx.stages.COUNT - 1)
