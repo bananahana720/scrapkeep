@@ -48,6 +48,9 @@ HC1 lands first and alone (it touches the harpoon). HC2 and HC3 follow in one wa
 ## Open calls, decided here
 
 - The first link pays nothing extra (coordinator, 3 Oct, HC1 build). The first draft paid combo 1 at ×1.25, which contradicted "combo 1 is exactly today's game" and broke the harpoon canon test by killing its chaser on a plain smash. The multiplier counts links beyond the first, 0.3 each, so the floor is today's game and the cap is still ×2.5 at six.
+- The combo pays the chained enemy only (coordinator, 3 Oct, gate review). The landing's shockwave, its bystanders and the `slammed` strength other systems threshold on (activity walls) stay at the plain smash. Shake and knock feel for a big combo belong to HC2's presentation, not to the physics.
+- A press during the rewind is not a miss (coordinator, 3 Oct, gate review). Only a press with nothing under the reticle is a dry fire that ends the chain and costs the cooldown; the post-smash rewind already refuses the press, and Andrew keeps the spam.
+- Chain rows are silent and invisible until HC2 (gate review). The line view, the audio and the enemy reaction listeners skip `chain_*` ids, because they otherwise read a chain fact as the line's state and hid the lock brackets at combo 1.
 - Payout is damage, not scrap. Scrap is size and armour; making the chain pay scrap would bend the economy around a movement verb.
 - The combo caps at 6. Past six the counter is noise and the multiplier would outrun the Warden's chunk size.
 - The pivot adds nothing. Walls are routing, enemies are the beat.
