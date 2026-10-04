@@ -27,10 +27,11 @@ const TOLERANCE := 0.10
 # alpha rows are played by tools/bot_run.gd on --table=alpha, one process per seed and policy, from
 # the run's start: the skipper goes straight to each Warden, the completionist does each stage's
 # activities first. A fight's seconds are the stage clock at the break less the bot's turn to the
-# Warden (warden_fight_s). The bots.ndjson stage notes carry both. Seeds 1 to 3, 24000 ticks (enough
-# to clear stage 2 for both policies); the window is the sweep's three-seed median, widened.
+# Warden (warden_fight_s). The bots.ndjson stage notes carry both. Seeds 1 to 3, 30000 ticks (enough
+# to clear stage 2 for both policies: the two-hook completionist breaks seed 2's Reach Warden at about
+# 26700); the window is the sweep's three-seed median, widened.
 const ALPHA_SEEDS := [1, 2, 3]
-const ALPHA_TICKS := 24000
+const ALPHA_TICKS := 30000
 const SPILLWAY_SKIPPER_S := Vector2(45.0, 90.0)
 const REACH_SKIPPER_S := Vector2(30.0, 80.0)
 # The Reach completionist's median fight is at most this many times the skipper's.
