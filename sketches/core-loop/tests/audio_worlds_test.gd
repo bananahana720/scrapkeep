@@ -1,5 +1,6 @@
 extends SceneTree
 
+const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Ctx := preload("res://src/core/context.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
@@ -26,6 +27,20 @@ const T := preload("res://tests/support/t.gd")
 #   - a world whose boss row names a track the engine lacks plays Brindle's and warns once;
 #   - Brindle's music_state() gives the numbers the reflection gave, at three points of a
 #     real fight.
+
+# The pending six-zone route: no legacy stage music overrides conceal missing rows.
+class SixZones extends RefCounted:
+	const COUNT := 6
+
+	static func world_of(stage: int) -> int:
+		return (stage - 1) / 2 + 1
+
+	static func local(stage: int) -> int:
+		return (stage - 1) % 2 + 1
+
+	static func of(stage: int) -> Dictionary:
+		return {"stage": stage, "world": world_of(stage)}
+
 
 # Counts the warnings the director would push.
 class CountingAudio extends "res://src/presentation/audio.gd":
@@ -89,6 +104,11 @@ func _row_checks() -> void:
 	_t.eq("W5-2 two-world double: stages 4 to 6", picks.call(two, [4, 5, 6]), [[0, "spillway"], [1, ""], [2, ""]])
 	_t.eq("W5-2 no warning for known packages and synth rows", base.warnings.size() + two.warnings.size(), 0)
 
+	var six := _director(SixZones)
+	var route: Array = range(1, SixZones.COUNT + 1)
+	_t.eq("six-zone route resolves every zone", picks.call(six, route), [[0, "spillway"], [1, ""], [1, ""], [1, ""], [2, ""], [2, ""]])
+	_t.eq("six-zone route has no missing music warnings", six.warnings.size(), 0)
+
 	var odd := _director(StageDefs)
 	odd.ctx.stages = _NopeTable.new()
 	var first: String = odd._ace_package_for(1)
@@ -100,15 +120,27 @@ func _row_checks() -> void:
 	_t.eq("W5-4 world one's arena starts brindle", arena._boss_track(), "brindle")
 	_t.eq("W5-4 no warning for brindle", arena.warnings.size(), 0)
 	arena.ctx.run.stage = 6
-	arena.ctx.flow.boss_row_override[2] = {"music": "mind", "built": true}
-	_t.eq("W5-4 a boss row naming mind plays brindle", arena._boss_track(), "brindle")
+	for track in ["waking", "mind"]:
+		arena.ctx.flow.boss_row_override[2] = {"music": track, "built": false}
+		_t.eq("stub boss has no Brindle fallback " + track, arena._boss_track(), track)
+		arena._boss_track()
+		_t.eq("stub boss resolves without warning " + track, arena.warnings.size(), 0)
+		var band := MusicEngine.new()
+		band.force_track(track, 0, "1")
+		_t.eq("variant keeps boss id " + track, band.track, track)
+		_t.eq("variant reuses Brindle score " + track, band._progression(), MusicEngine.Harmony.BRINDLE)
+		_t.eq("variant lead timbre " + track, band._lead_voice, "mallet" if track == "waking" else "talk")
+		_t.check("variant phase resolves " + track, band.brindle_section("2") >= 0)
+		if arena.sound_ready:
+			arena.ctx.events.boss_arena_entered.emit()
+			_t.eq("stub arena starts its own track " + track, arena.engine.track, track)
+		else:
+			print("[audio] sound is not ready headless; the arena start check -> SKIP")
+	arena.ctx.flow.boss_row_override[2] = {"music": "genuinely_missing_track", "built": false}
+	_t.eq("missing boss track plays Brindle", arena._boss_track(), "brindle")
 	arena._boss_track()
-	_t.eq("W5-4 one warning for that id", arena.warnings.size(), 1)
-	if arena.sound_ready:
-		arena.ctx.events.boss_arena_entered.emit()
-		_t.eq("W5-4 entering that arena starts the brindle track", arena.engine.track, "brindle")
-	else:
-		print("[audio] sound is not ready headless; the arena start check -> SKIP")
+	_t.eq("missing boss track warns once", arena.warnings.size(), 1)
+
 
 
 # A stage table whose rows name packages the module does not have.

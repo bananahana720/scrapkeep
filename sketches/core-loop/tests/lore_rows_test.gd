@@ -3,10 +3,24 @@ extends SceneTree
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 
-# World-one lore has unique line ids, capped words, one skippable 2-4-line
-# Moss/crew exchange and 6-8 scraps per zone, and Warden and Brindle intros.
+# Every declared zone has unique ids, capped words, three skippable exchange
+# lines, seven scraps, and Warden/world-boss intros.
 # This pure data check does not instantiate the game or approve the writing's tone.
-const ZONES := ["1-1", "1-2"]
+const StageDefs := preload("res://src/core/stage_defs.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
+
+# Three worlds of two zones, independent of the live table's current COUNT.
+class SixZones extends RefCounted:
+	const COUNT := 6
+
+	static func world_of(stage: int) -> int:
+		return (stage - 1) / 2 + 1
+
+	static func local(stage: int) -> int:
+		return (stage - 1) % 2 + 1
+
+
+var ZONES: Array = []
 const CAPS := {"exchange": 14, "field_note": 40, "intro": 12}
 
 var _failures := 0
@@ -19,13 +33,23 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 
 func _initialize() -> void:
+	for table in [StageDefs, SixZones]:
+		for stage in range(1, table.COUNT + 1):
+			var zone := MusicRows.zone_id(stage, table)
+			if not ZONES.has(zone):
+				ZONES.append(zone)
 	_report("exchange cap", LoreRows.EXCHANGE_LINE_WORD_CAP == CAPS["exchange"], "14 words per line")
 	_report("note cap", LoreRows.FIELD_NOTE_WORD_CAP == CAPS["field_note"], "40 words per scrap")
 	_report("intro cap", LoreRows.INTRO_LINE_WORD_CAP == CAPS["intro"], "12 words per line")
 	var ids := {}
-	var notes := {"1-1": 0, "1-2": 0}
-	var exchanges := {"1-1": {}, "1-2": {}}
-	var intros := {"1-1": {"warden": 0, "brindle": 0}, "1-2": {"warden": 0, "brindle": 0}}
+	var notes := {}
+	var exchanges := {}
+	var intros := {}
+	for zone in ZONES:
+		notes[zone] = 0
+		exchanges[zone] = {}
+		var boss: String = {"1": "brindle", "2": "waking", "3": "mind"}[zone.split("-")[0]]
+		intros[zone] = {"warden": 0, boss: 0}
 	for value in LoreRows.ROWS:
 		_report("row dictionary", value is Dictionary, str(value))
 		if not value is Dictionary:
@@ -63,11 +87,11 @@ func _initialize() -> void:
 				if intros[zone].has(subject):
 					intros[zone][subject] += 1
 	for zone in ZONES:
-		_report(zone + " notes", notes[zone] >= 6 and notes[zone] <= 8, "%d notes; need 6-8" % notes[zone])
+		_report(zone + " notes", notes[zone] == 7, "%d notes; need 7" % notes[zone])
 		_report(zone + " one exchange", exchanges[zone].size() == 1, "%d exchanges" % exchanges[zone].size())
 		for exchange in exchanges[zone]:
 			var speakers: Array = exchanges[zone][exchange]
-			_report(exchange + " length", speakers.size() >= 2 and speakers.size() <= 4, "%d lines; need 2-4" % speakers.size())
+			_report(exchange + " length", speakers.size() == 3, "%d lines; need 3" % speakers.size())
 			_report(exchange + " Moss and crew", speakers.has("Moss") and speakers.any(func(speaker): return speaker.ends_with("crew")), str(speakers))
 		for subject in intros[zone]:
 			_report(zone + " " + subject + " intro", intros[zone][subject] == 1, "%d intros; need one" % intros[zone][subject])

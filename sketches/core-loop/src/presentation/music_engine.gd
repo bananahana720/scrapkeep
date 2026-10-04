@@ -33,8 +33,9 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 # grid-locked wobble is kept only inside the Warden and Brindle drops.
 
 enum { KEYS, SUB, HATS, KICK, SNARE, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER, FLEET }
-# The boss tracks this engine has content for; a world row naming another plays Brindle's.
-const BOSS_TRACKS := ["brindle"]
+# Tone-pending placeholders reuse Brindle's score with a different lead timbre.
+const BOSS_TRACKS := ["brindle", "waking", "mind"]
+const BOSS_LEAD_VOICES := {"brindle": "brass", "waking": "mallet", "mind": "talk"}
 
 const LAYER_NAMES := ["keys", "sub", "hats", "kick", "snare", "bass", "lead", "arp", "warm", "wobble", "pad", "choir", "echo", "counter", "fleet"]
 # gain = floor + (1 - floor) * smoothstep(from, to, pressure). Each curve is monotonic.
@@ -896,11 +897,11 @@ func end_boss() -> int:
 # rising to 150 across the build, the chase back up to 172, and the victory the
 # biggest drop of the game, resolving home in D.
 func brindle_section(name: String) -> int:
-	if track != "brindle":
+	if not track in BOSS_TRACKS:
 		return -1
 	# The payoff lands on the gameplay moment: the phase change (or the catch) drops on
 	# the next beat. The in-phase build (brindle_hp) has already done the building.
-	var change := {"track": "brindle", "section": name, "key": BRINDLE_KEY.get(name, 0)}
+	var change := {"track": track, "section": name, "key": BRINDLE_KEY.get(name, 0)}
 	var weight := 0.9
 	match name:
 		"3":
@@ -920,7 +921,7 @@ func brindle_section(name: String) -> int:
 # to its floor, and whether the floor is held for the set piece (with its clock, 0..1).
 # Half way lifts; the held floor is the sinister break tightening with the set piece.
 func brindle_hp(in_phase: float, floor_held := false, piece := 0.0) -> void:
-	if track != "brindle" or not section in ["1", "2", "3"]:
+	if not track in BOSS_TRACKS or not section in ["1", "2", "3"]:
 		return
 	if floor_held:
 		escalate(WARDEN_BUILD_FROM + (1.0 - WARDEN_BUILD_FROM) * clampf(piece, 0.0, 1.0))
@@ -931,7 +932,7 @@ func brindle_hp(in_phase: float, floor_held := false, piece := 0.0) -> void:
 # The chase: the heartbeat climbs as the scooter's lead shrinks (closed 0..1). No
 # sinister break: the chase is the run home.
 func chase(closed: float) -> void:
-	if track != "brindle" or section != "chase":
+	if not track in BOSS_TRACKS or section != "chase":
 		return
 	escalate(closed, false)
 
@@ -989,7 +990,7 @@ func force_track(next_track: String, next_theme: int, next_section := "", boss_t
 	theme = clampi(next_theme, 0, 2)
 	var action := {"type": "track", "track": next_track, "section": "build" if next_section == "drop" else next_section}
 	action["step"] = Harmony.BOSS_STEP if boss_tempo else Harmony.STEP
-	if next_track == "brindle":
+	if next_track in BOSS_TRACKS:
 		action["key"] = BRINDLE_KEY.get(next_section, 0)
 		if next_section == "3":
 			action["step"] = PHASE3_STEP
@@ -1171,7 +1172,7 @@ func _on_step() -> void:
 	if _cadence_bar >= 0:
 		_trigger_dnb(bar, s, chord)
 		return
-	match track:
+	match _score_track():
 		"warden":
 			if section == "break":
 				_trigger_break(bar, s, chord)
@@ -1407,7 +1408,7 @@ func _on_bar() -> void:
 		else:
 			_reset_bar()
 			_new_phrase()
-	elif track == "brindle" and section == "victory" and _drop.is_empty() and bar >= Harmony.VICTORY.size():
+	elif track in BOSS_TRACKS and section == "victory" and _drop.is_empty() and bar >= Harmony.VICTORY.size():
 		_run({"type": "track", "track": "level", "section": "", "step": Harmony.STEP})
 		mode = IDLE
 	# Bar-queued changes: a pickup bar, then the change on the next bar line.
@@ -1461,10 +1462,16 @@ func _on_bar() -> void:
 		_groove = _rng.randi() % 3
 
 
+# Resolve only the score source; transport and director retain the selected boss id.
+func _score_track() -> String:
+	return "brindle" if track in BOSS_TRACKS else track
+
+
 func _floor() -> float:
 	if not _drop.is_empty():
 		return 1.0
-	var key_name := track if not track in ["warden", "brindle"] else "%s:%s" % [track, section]
+	var score := _score_track()
+	var key_name := score if not score in ["warden", "brindle"] else "%s:%s" % [score, section]
 	if track == "miniboss":
 		key_name = "miniboss"
 	return PRESSURE_FLOOR.get(key_name, 0.0)
@@ -1484,13 +1491,13 @@ func _retarget() -> void:
 	if track == "warden" and section == "drop":
 		warm = maxf(warm, 0.8)
 	_targets[WARM] = warm * MODE_MASK[mode][WARM]
-	_targets[WOB] = WOB_DROP_GAIN * MODE_MASK[mode][WOB] if not _drop.is_empty() and track == "brindle" else 0.0
+	_targets[WOB] = WOB_DROP_GAIN * MODE_MASK[mode][WOB] if not _drop.is_empty() and track in BOSS_TRACKS else 0.0
 	# The sidechain pump is the club: the Warden's build, lift and drop, Brindle's set.
 	_pump_depth = 0.0
 	if mode == PLAY and _cadence_bar < 0:
 		if track == "warden" and section != "break":
 			_pump_depth = 0.8 if rules & RULE_DEEP_PUMP else 0.65
-		elif track == "brindle":
+		elif track in BOSS_TRACKS:
 			_pump_depth = 0.4
 	if _lounge_live() and mode == PLAY and _drop.is_empty() and _cadence_bar < 0:
 		for layer in LOUNGE_GAINS.size():
@@ -1514,7 +1521,7 @@ func set_overcharge(count: int) -> void:
 
 
 func _progression() -> Array:
-	match track:
+	match _score_track():
 		"miniboss":
 			return Harmony.minor_progression(theme)
 		"brindle":
@@ -1546,7 +1553,7 @@ func _chord(bar: int) -> Dictionary:
 	if _dominant_held:
 		return _held_chord()
 	var progression := _progression()
-	if track == "brindle" and section == "victory" and _drop.is_empty():
+	if track in BOSS_TRACKS and section == "victory" and _drop.is_empty():
 		return progression[mini(bar, progression.size() - 1)]
 	return progression[bar % progression.size()]
 
@@ -1588,9 +1595,9 @@ func _chord_key() -> int:
 
 
 func _make_track_lead() -> Array:
-	match track:
+	match _score_track():
 		"brindle":
-			_lead_voice = "brass"
+			_lead_voice = BOSS_LEAD_VOICES.get(track, "brass")
 			if section == "victory":
 				return VICTORY_LEAD
 			if section == "chase":
@@ -1851,7 +1858,7 @@ func _trigger_drop(bar: int, s: int, chord: Dictionary) -> void:
 	if track == "warden":
 		_trigger_house(bar, s, chord)
 		return
-	if track != "brindle":
+	if not track in BOSS_TRACKS:
 		if s == 0 and (bar == 0 or bar % 4 == 0):
 			_hit("crash", HATS, 1.0, -0.2)
 		if s == 0 and bar == 0:

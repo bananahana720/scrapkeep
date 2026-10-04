@@ -6,10 +6,18 @@ extends RefCounted
 const Registry := preload("res://src/core/content_registry.gd")
 const FIXTURES := "res://tests/fixtures/content_registry/"
 const TABLE_COUNT := 25
+# These two content pins exclude the stage table; unrelated registry pins stay canonical.
+const CONTENT_HASHES := {
+	"lore_rows.ROWS": "30da687b1495dfca3232cd4b2829e30acfad8841e9bdf9c5da36a9e82f268238",
+	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
+}
 
 
 func run(t) -> void:
 	var tables := Registry.snapshot()
+	for name in CONTENT_HASHES:
+		t.eq("assigned content pin " + name, Registry.digest(tables[name]), CONTENT_HASHES[name])
+		t.eq("canonical content pin " + name, Registry.GOLDEN_HASHES[name], CONTENT_HASHES[name])
 	t.eq("content registry has all assigned tables", tables.size(), TABLE_COUNT)
 	t.eq("registration matches loaded tables", _sorted(Registry.TABLES.keys()), _sorted(tables.keys()))
 	t.eq("golden pins match registration", _sorted(Registry.GOLDEN_HASHES.keys()), _sorted(tables.keys()))

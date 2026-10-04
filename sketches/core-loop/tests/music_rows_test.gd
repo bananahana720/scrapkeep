@@ -44,6 +44,13 @@ func _initialize() -> void:
 	_report("Spillway keeps ACE name and theme", spillway["synth_theme"] == 0 and spillway["ace_manifest"] == Ace.resolve_manifest(Ace.MANIFEST), str(spillway))
 	_report("Reach uses synth theme 1", Rows.resolve("1-2") == {"synth_theme": 1, "ace_manifest": ""}, str(Rows.resolve("1-2")))
 
+	for zone in ["2-1", "2-2", "3-1", "3-2"]:
+		var theme := int(zone.split("-")[0]) - 1
+		_report("placeholder zone declared", Rows.ROWS.has(zone), zone)
+		_report("placeholder synth theme", Rows.resolve(zone) == {"synth_theme": theme, "ace_manifest": ""}, zone)
+		var synth = Ace.from_stage(zone)
+		_report("placeholder manifest is quiet", not synth.ready() and synth.missing == "" and synth.manifest_source == "", zone)
+
 	var override := {"world": 1, "stage": 1, "music": {"theme": 2, "ace": ""}}
 	_report("override wins over Spillway", Rows.resolve(override) == {"synth_theme": 2, "ace_manifest": ""} and MusicEngine.stage_theme(override) == 2, str(Rows.resolve(override)))
 	var other := {"world": 1, "stage": 2, "music": {"theme": 0, "ace": "spillway"}}
