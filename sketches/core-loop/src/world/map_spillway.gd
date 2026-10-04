@@ -2,12 +2,14 @@ extends "res://src/world/stage_map.gd"
 
 const Features := preload("res://src/world/features.gd")
 
-# Stage 1, the Spillway's top shelf: the wave-1 shelves, chutes, flooding basin and
+# Zone 1-1, the Spillway: the wave-1 shelves, chutes, flooding basin and
 # dry east bypass, laid on a fall line. You drop onto a deck on the top shelf, roll
 # down the west chute and meet the Warden in a banked bowl at the foot of the riser.
 # Its own event is the Scrap Stampede: a hauler bolts from the pump house, down the
 # east chute and into the basin, and you run it down. The vault sits on a plinth on
-# the top shelf, east of the line.
+# the top shelf, east of the line. The Weir's pumpable halfpipe cuts the approach
+# to the west chute, a relay mesa shoulders it on the east, and a dry causeway
+# follows the same descent on the west. All three meet the existing ground.
 
 const TOP_H := 30.0
 const MID_H := 15.0
@@ -39,10 +41,22 @@ const BEACON := Vector2(-46.0, -12.0)
 const DECK := {"top": 10.0, "foot": 44.0, "height": 10.0}
 const PLINTH := {"top": 6.0, "foot": 20.0, "height": 3.0}
 const STAMPEDE_RING := Vector2(14.0, -112.0)
+const PIPE_X := -62.0
+const PIPE_Z := Vector2(-128.0, -82.0)
+const PIPE_DEPTH := 12.0
+const PIPE_FADE := 40.0
+const PIPE_HEAD_FADE := 32.0
+const RELAY := Vector2(10.0, -84.0)
+const MESA_TOP := 18.0
+const MESA_FOOT := 40.0
+const MESA_H := 10.0
+const CAUSEWAY_X := -94.0
+const CAUSEWAY_Z := Vector2(-132.0, -18.0)
+const CAUSEWAY_H := 6.0
 
 
 func _init() -> void:
-	title = "Spillway: the top shelf"
+	title = "The Spillway"
 	spawn = SPAWN
 	heading = Vector3(0.0, 0.0, 1.0)
 	beacon = BEACON
@@ -59,6 +73,7 @@ func _init() -> void:
 		[Vector2(-72.0, -112.0), Vector2(-70.0, -74.0)],
 	]
 	sites = {
+		"hold_the_relay": {"ring": RELAY, "relay": RELAY},
 		"scrap_stampede": {
 			"ring": STAMPEDE_RING,
 			"route": PackedVector2Array([
@@ -68,7 +83,7 @@ func _init() -> void:
 			]),
 		},
 	}
-	unique_events = ["scrap_stampede"]
+	unique_events = ["scrap_stampede", "hold_the_relay"]
 
 
 func sample(x: float, z: float) -> Array:
@@ -77,9 +92,18 @@ func sample(x: float, z: float) -> Array:
 	h = lerpf(h, by[0], by[1])
 	var ch := _chutes(x, z)
 	h = lerpf(h, ch[0], ch[1])
-	h += Features.ripple(x, z) * (1.0 - maxf(by[1], ch[1]))
+	var cw := _causeway(x, z)
+	h = lerpf(h, _bypass_deck(z) + CAUSEWAY_H, cw)
+	var pipe := _halfpipe(x, z)
+	var pipe_weight := 0.0
+	if pipe < h:
+		pipe_weight = clampf((h - pipe) / 1.5, 0.0, 1.0)
+		h = pipe
+	h += Features.ripple(x, z) * (1.0 - maxf(maxf(by[1], ch[1]), maxf(cw, pipe_weight)))
 	var deck := Features.mesa(x, z, SPAWN, DECK["top"], DECK["foot"], DECK["height"])
 	h += deck
+	var mesa := Features.mesa(x, z, RELAY, MESA_TOP, MESA_FOOT, MESA_H)
+	h += mesa
 	for spot in [vault, STAMPEDE_RING]:
 		h += Features.mesa(x, z, spot, PLINTH["top"], PLINTH["foot"], PLINTH["height"])
 	h = Features.beacon_bowl(x, z, BEACON, beacon_floor, h)
@@ -87,15 +111,34 @@ func sample(x: float, z: float) -> Array:
 	var bank := clampf((Vector2(x, z).distance_to(BEACON) - Features.BOWL_FLAT) / 16.0, 0.0, 1.0) \
 		* (1.0 - smoothstep(Features.BOWL_RIM, Features.BOWL_OUT, Vector2(x, z).distance_to(BEACON)))
 	var tint: Color = Palette.SAND.lerp(Palette.SANDSTONE, 0.35)
-	tint = tint.lerp(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.45), ch[1] * 0.9)
-	tint = tint.lerp(Palette.SANDSTONE.lerp(Palette.RUST, 0.3), by[1] * 0.85)
+	tint = tint.lerp(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.45), maxf(ch[1], pipe_weight) * 0.9)
+	tint = tint.lerp(Palette.SANDSTONE.lerp(Palette.RUST, 0.3), maxf(by[1], cw) * 0.85)
 	tint = tint.lerp(Palette.SANDSTONE.lerp(Palette.AMBER, 0.25), clampf(deck / 4.0, 0.0, 0.7))
+	tint = tint.lerp(Palette.AMBER.lerp(Palette.SANDSTONE, 0.35), clampf(mesa / MESA_H, 0.0, 1.0) * 0.7)
 	tint = tint.lerp(Palette.AMBER.lerp(Palette.SANDSTONE, 0.35), bank * 0.8)
 	return [h, tint]
 
 
 func material_at(x: float, z: float) -> String:
-	return "concrete" if _chutes(x, z)[1] > 0.5 or _bypass(x, z)[1] > 0.5 else "sand"
+	return "concrete" if _chutes(x, z)[1] > 0.5 or _bypass(x, z)[1] > 0.5 \
+		or _causeway(x, z) > 0.5 or _halfpipe(x, z) < _shelf(z) - 0.5 else "sand"
+
+
+# The shared quarter-circle cut, with an eased head along the fall line. Its steep
+# transverse lips remain pumpable; the longitudinal entry has no vertical seam.
+static func _halfpipe(x: float, z: float) -> float:
+	var floor_h := Features.halfpipe(x, z, PIPE_X, PIPE_Z.x, PIPE_Z.y, _shelf, PIPE_DEPTH, PIPE_FADE)
+	if floor_h == INF:
+		return INF
+	return lerpf(_shelf(z), floor_h, smoothstep(PIPE_Z.x - PIPE_DEPTH, PIPE_Z.x - PIPE_DEPTH + PIPE_HEAD_FADE, z))
+
+
+# The Weir's causeway span weight (7 m flat half-width, 12 m shoulder), fitted to
+# the Spillway's bypass profile so it bridges the shelf riser instead of copying it.
+static func _causeway(x: float, z: float) -> float:
+	return (1.0 - smoothstep(7.0, 12.0, absf(x - CAUSEWAY_X))) \
+		* smoothstep(CAUSEWAY_Z.x, CAUSEWAY_Z.x + 32.0, z) \
+		* (1.0 - smoothstep(CAUSEWAY_Z.y - 24.0, CAUSEWAY_Z.y, z))
 
 
 static func _shelf(z: float) -> float:
@@ -187,3 +230,9 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	# Two mid-shelf benches, clear of the beacon bowl: low lips to launch off.
 	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(24.0, 22.0, 0.6), concrete)
 	box(parent, Vector3(26.0, 3.0, 9.0), ground.call(66.0, 2.0, 0.6), concrete)
+
+	# The relay's tangent walls leave its downhill shoulder open to roll back in.
+	for i in 4:
+		var angle := PI * 0.25 + i * PI * 0.5
+		var at := RELAY + Vector2(cos(angle), sin(angle)) * (MESA_TOP + 2.0)
+		pylon_wall(parent, ground.call(at.x, at.y, 0.0), 12.0, 6.0, -angle + PI * 0.5)
