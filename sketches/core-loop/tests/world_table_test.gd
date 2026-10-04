@@ -19,17 +19,19 @@ func _initialize() -> void:
 
 
 func _default(t) -> void:
-	t.eq("default maps are world one", StageDefs.DEFS.map(func(row): return row["map"]), ["spillway", "reach"])
+	t.eq("default maps", StageDefs.DEFS.map(func(row): return row["map"]), ["spillway", "reach", "gorge", "reach", "spillway", "reach"])
+	t.eq("default count", StageDefs.COUNT, StageDefs.DEFS.size())
 	for s in range(1, StageDefs.COUNT + 1):
-		t.eq("default world_of %d" % s, StageDefs.world_of(s), 1)
-		t.eq("default local %d" % s, StageDefs.local(s), s)
+		var w := ceili(s / 2.0)
+		t.eq("default world_of %d" % s, StageDefs.world_of(s), w)
+		t.eq("default local %d" % s, StageDefs.local(s), (s - 1) % 2 + 1)
+		t.eq("default is_world_last %d" % s, StageDefs.is_world_last(s), s % 2 == 0)
+		t.eq("default is_run_last %d" % s, StageDefs.is_run_last(s), s == StageDefs.COUNT)
 		t.eq("default is_run_last == is_last %d" % s, StageDefs.is_run_last(s), StageDefs.is_last(s))
-	t.eq("default first_of 1", StageDefs.first_of(1), 1)
-	t.eq("default last_of 1", StageDefs.last_of(1), 2)
-	t.eq("default worlds", StageDefs.worlds(), [1])
-	t.eq("default is_world_last 1", StageDefs.is_world_last(1), false)
-	t.eq("default is_world_last 2", StageDefs.is_world_last(2), true)
-	t.eq("default is_run_last 2", StageDefs.is_run_last(2), true)
+	for w in StageDefs.worlds():
+		t.eq("default first_of %d" % w, StageDefs.first_of(w), 2 * w - 1)
+		t.eq("default last_of %d" % w, StageDefs.last_of(w), 2 * w)
+	t.eq("default worlds", StageDefs.worlds(), [1, 2, 3])
 
 
 func _slice(t) -> void:

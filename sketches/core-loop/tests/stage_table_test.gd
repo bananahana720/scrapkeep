@@ -5,6 +5,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Reach := preload("res://src/world/map_reach.gd")
+const Terrain := preload("res://src/world/terrain.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
@@ -88,9 +89,12 @@ func _slice_checks() -> void:
 
 func _default_checks() -> void:
 	var maps: Array = _game.ctx.terrain.maps
-	var order: bool = maps.size() == 2 and maps[0].get_script() == Spillway and maps[1].get_script() == Reach
-	_report("default maps", order, "terrain maps are spillway, reach in order: %s" % order)
-	_report("default count", _game.ctx.stages.COUNT == 2 and _game.ctx.stages == StageDefs,
+	var names: Array = StageDefs.DEFS.map(func(row): return row["map"])
+	var order: bool = maps.size() == names.size()
+	for i in mini(maps.size(), names.size()):
+		order = order and maps[i].get_script() == Terrain.MAPS[names[i]]
+	_report("default maps", order, "terrain maps are %s in order: %s" % [", ".join(names), order])
+	_report("default count", _game.ctx.stages.COUNT == StageDefs.DEFS.size() and _game.ctx.stages == StageDefs,
 		"ctx.stages.COUNT is %d" % _game.ctx.stages.COUNT)
 	_report("default scenery", _game.ctx.terrain.geometry_root(1).get_node_or_null("SpillwayScenery") != null,
 		"the Spillway's root carries its dam")
