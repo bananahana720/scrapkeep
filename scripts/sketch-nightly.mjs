@@ -11,7 +11,14 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as smoke from "./sketch-smoke.mjs";
-import { BANDS, TABLE, evaluateBots, median, summarizeRun } from "./checkpoint.mjs";
+import {
+  BANDS,
+  TABLE,
+  checkpointPassed,
+  evaluateBots,
+  median,
+  summarizeRun,
+} from "./checkpoint.mjs";
 
 // Plan thresholds. Perf measurements are recorded, never gated without a baseline.
 export const MAX_WALL_MS = 60 * 60_000;
@@ -350,7 +357,19 @@ export function buildReceipt({
   const grouped = { completionist: [], skipper: [], camper: [] };
   for (const row of results)
     if (row.bot && row.ok) grouped[row.bot.policy].push(row.bot);
-  const bands = evaluateBots(grouped);
+  // 2026-10-04: nightly has no stored pre-chain smash-damage baseline (that comes from
+  // checkpoint --before --baseline). evaluateBots fails that row without one, which
+  // failed every nightly run; report it as ungated "no baseline" like perf instead.
+  const bands = evaluateBots(grouped).map((row) =>
+    row.band === "skipper smash damage per fight"
+      ? {
+          ...row,
+          threshold: "not gated: no pre-chain baseline in nightly",
+          pass: true,
+          gated: false,
+        }
+      : row,
+  );
   const fullMatrix = Object.values(grouped).every(
     (runs) => runs.length === BOT_SEEDS,
   );
@@ -375,7 +394,8 @@ export function buildReceipt({
     git.clean === true &&
     Boolean(git.tree) &&
     fullMatrix &&
-    bands.every((r) => r.pass) &&
+    // 2026-10-04: watch rows keep their verdict but do not block, as in checkpoint.
+    checkpointPassed(bands) &&
     scripts.length > 0 &&
     flakes.every((r) => r.ok) &&
     failed.length === 0 &&

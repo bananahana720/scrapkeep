@@ -43,6 +43,7 @@ const botData = (step) => ({
   outcome: step.policy === "camper" ? "died" : "won",
   heft: step.policy === "completionist" ? 2 : 1,
   parts: step.policy === "completionist" ? 8 : 2,
+  bestCombo: 2,
   fightSeconds: step.policy === "completionist" ? 20 : 90,
 });
 const data = (step) => {
