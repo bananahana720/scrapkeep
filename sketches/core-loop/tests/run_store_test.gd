@@ -53,6 +53,7 @@ func _initialize() -> void:
 		DirAccess.remove_absolute(DIR + name)
 	_missing()
 	_round_trip()
+	_stale_save()
 	_unreadable()
 	_newer()
 	_migration()
@@ -86,8 +87,24 @@ func _round_trip() -> void:
 	var back := RunState.new(null)
 	_check(back.from_entrance_doc(got), "loaded doc passes RunState")
 	_check(back.world == 2 and back.stage == 4 and back.retries_spent == {1: 2, 2: 1}, "RunState fields back")
-	_check(t.clear() and not FileAccess.file_exists(p), "clear removes the file")
+	_check(t.clear() and FileAccess.file_exists(p), "clear leaves a tombstone")
 	_check(t.load().is_empty(), "no run after clear")
+	_check(t.save(doc) == "" and not RunStore.new(p).load().is_empty(), "a new run saves over the tombstone")
+
+
+# A second store holding an older generation cannot resurrect an ended run.
+func _stale_save() -> void:
+	var p := _path()
+	var a := RunStore.new(p)
+	a.save(_doc())
+	a.save(_doc())
+	_check(a.save(_doc()) == "" and a.generation() == 3, "A saves generation 3")
+	var b := RunStore.new(p)
+	b.load()
+	_check(b.clear(), "B clears the run")
+	var late := a.save(_doc())
+	_check(late == RunStore.REFUSED_ENDED, "A's stale save is refused as run_ended, got '%s'" % late)
+	_check(RunStore.new(p).load().is_empty(), "load shows no run after the stale save")
 
 
 func _unreadable() -> void:

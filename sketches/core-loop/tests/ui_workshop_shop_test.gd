@@ -10,9 +10,9 @@ const Push := preload("res://tests/workshop/push.gd")
 # armed. The bay's catch is the shop's own enter(), the call world makes.
 #   - Pulling up opens the counter: the ball parks and the mouse and keys are held.
 #   - Its words stay inside the calm-screen budget on both faces.
-#   - A click on a shelf plate buys: scrap drops by the record's price, the part is held,
+#   - A click on a shelf plate buys: cogs drop by the record's price, the part is held,
 #     and the bubble says the record's bark. Too poor: nothing changes but the bark.
-#   - The reroll by keys and a sell by click change scrap and parts as their records say.
+#   - The reroll by keys and a sell by click change cogs and parts as their records say.
 #   - The waiting pick's plate opens the pick in the counter's place and hands back.
 #   - T plays the six beats with rising exasperation, then the restart, and once the ball
 #     is heavy enough (scrap mass; under armour parts add no heft) the relent, which unlocks the hook.
@@ -60,6 +60,7 @@ func _process(_delta: float) -> bool:
 				_shop = _game.build.shop
 				_shop.enter()
 				_game.run.scrap = 400
+				_game.run.cogs = 400
 				_ws.counter.acted.connect(func(fact: String, record: Dictionary): _acted.append([fact, record]))
 				_report("pull up", _ws.should_open_counter(true, true, 1.0) and not _ws.should_open_counter(true, true, 9.0)
 						and not _ws.should_open_counter(true, false, 1.0), "slow in reach opens; fast or out of reach does not")
@@ -73,16 +74,17 @@ func _process(_delta: float) -> bool:
 			if _wait == SETTLE:
 				var tile: Control = _ws.counter.tile_for("shelf", 0)
 				var part_id: String = tile.rec["part_id"]
-				var scrap: int = _game.run.scrap
+				var cogs: int = _game.run.cogs
 				var held: int = _game.run.part_count(part_id)
 				Push.click(root, tile)
 				var record: Dictionary = _acted.back()[1] if not _acted.is_empty() else {}
-				_report("buy by click", record.get("ok", false) and _game.run.scrap == scrap - int(record["price"])
+				_report("buy by click", record.get("ok", false) and _game.run.cogs == cogs - int(record["price"])
 						and _game.run.part_count(part_id) == held + 1 and _ws.bubble.text == record["bark"]["text"]
 						and _ws.counter.tile_for("shelf", 0).state() == "sold",
-					"%s for %d: scrap %d to %d, held %d to %d, bubble \"%s\""
-						% [part_id, record.get("price", -1), scrap, _game.run.scrap, held, _game.run.part_count(part_id), _ws.bubble.text])
+					"%s for %d: cogs %d to %d, held %d to %d, bubble \"%s\""
+						% [part_id, record.get("price", -1), cogs, _game.run.cogs, held, _game.run.part_count(part_id), _ws.bubble.text])
 				_game.run.scrap = 0
+				_game.run.cogs = 0
 				_ws.counter.refresh()
 				tile = _ws.counter.tile_for("shelf", 1)
 				var poor_state: String = tile.state()
@@ -90,24 +92,25 @@ func _process(_delta: float) -> bool:
 				Push.click(root, tile)
 				record = _acted.back()[1]
 				_report("too poor", poor_state == "poor" and not record["ok"] and record["reason"] == Shop.CANT_AFFORD
-						and _game.run.scrap == 0 and _game.run.parts.size() == parts_before and _ws.bubble.text == Shop.LINES["moss.bark.cant_afford"]
+						and _game.run.cogs == 0 and _game.run.parts.size() == parts_before and _ws.bubble.text == Shop.LINES["moss.bark.cant_afford"]
 						and _acted.back()[0] == "shop_refused",
 					"plate %s, reason %s, bubble \"%s\"" % [poor_state, record["reason"], _ws.bubble.text])
 				_game.run.scrap = 400
+				_game.run.cogs = 400
 				_ws.counter.refresh()
 				_next("reroll")
 		"reroll":
 			if _wait == 5:
 				_words("buy face")
 				var before: Array = _shop.shelf.map(func(s): return s["part_id"])
-				var scrap: int = _game.run.scrap
+				var cogs: int = _game.run.cogs
 				var tile: Control = _ws.counter.tile_for("reroll")
 				tile.grab_focus()
 				Push.key(root, KEY_ENTER)
 				var record: Dictionary = _acted.back()[1]
-				_report("reroll by keys", _acted.back()[0] == "shop_rerolled" and record["ok"] and _game.run.scrap == scrap - int(record["price"])
+				_report("reroll by keys", _acted.back()[0] == "shop_rerolled" and record["ok"] and _game.run.cogs == cogs - int(record["price"])
 						and _shop.shelf.map(func(s): return s["part_id"]) != before and _ws.counter.tile_for("reroll").state() == "spent",
-					"paid %d, scrap %d to %d, shelf %s to %s" % [record["price"], scrap, _game.run.scrap, before, _shop.shelf.map(func(s): return s["part_id"])])
+					"paid %d, cogs %d to %d, shelf %s to %s" % [record["price"], cogs, _game.run.cogs, before, _shop.shelf.map(func(s): return s["part_id"])])
 				Push.click(root, _ws.counter.face_button("sell"))
 				_next("sell")
 		"sell":
@@ -119,7 +122,7 @@ func _process(_delta: float) -> bool:
 						break
 				var part_id: String = tile.rec["part_id"] if tile != null else ""
 				var quote: int = int(tile.rec["price"]) if tile != null else -1
-				var scrap: int = _game.run.scrap
+				var cogs: int = _game.run.cogs
 				var count: int = _game.run.parts.size()
 				_words("sell face")
 				var screen: Rect2 = root.get_visible_rect()
@@ -131,8 +134,8 @@ func _process(_delta: float) -> bool:
 				Push.click(root, tile)
 				var record: Dictionary = _acted.back()[1]
 				_report("sell by click", _acted.back()[0] == "shop_sold" and record["ok"] and record["price"] == -quote
-						and _game.run.scrap == scrap + quote and _game.run.parts.size() == count - 1,
-					"%s quoted %d: scrap %d to %d, parts %d to %d" % [part_id, quote, scrap, _game.run.scrap, count, _game.run.parts.size()])
+						and _game.run.cogs == cogs + quote and _game.run.parts.size() == count - 1,
+					"%s quoted %d: cogs %d to %d, parts %d to %d" % [part_id, quote, cogs, _game.run.cogs, count, _game.run.parts.size()])
 				Push.click(root, _ws.counter.face_button("buy"))
 				_next("plate")
 		"plate":

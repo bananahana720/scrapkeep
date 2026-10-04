@@ -217,6 +217,7 @@ func _ticks() -> int:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_in_arena = false
+	_fight_open = false
 	_dirty = true
 	var row := _stage(stage)
 	row["attempts"] = int(row["attempts"]) + 1

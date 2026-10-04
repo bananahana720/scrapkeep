@@ -82,13 +82,16 @@ func _ready() -> void:
 	_game.events.run_started.connect(_on_run_started)
 	_game.events.stage_entered.connect(_on_stage_entered)
 	_game.events.warden_engaged.connect(func(_stage: int): _end_exchange())
+	# Reading is optional and momentum is sacred: firing or hooking walks away from it.
+	_game.events.shot_fired.connect(func(_w: String, _from: Vector3, _to: Vector3): _end_exchange())
+	_game.events.grapple_fired.connect(func(_anchor: Vector3): _end_exchange())
 	_game.events.flow_changed.connect(func(_state: String):
 		if not _game.flow.in_stage():
 			_end_exchange())
 
 
 func _install_exchange_input() -> void:
-	# Listen after the game's overlays are built, so Escape skips before it pauses.
+	# Listen after the game's overlays are built. The exchange only reads the interact key.
 	var listener := ExchangeInput.new()
 	listener.name = "LoreExchangeInput"
 	listener.bubble = self
@@ -155,15 +158,16 @@ func _end_exchange() -> void:
 	modulate.a = 0.0
 
 
+# Only the interact key advances; Escape and ui_accept (Space and pad A are jump) are never
+# read. Fire and hook dismiss silently, and so does cruise speed (see _process).
 func _exchange_input(event: InputEvent) -> void:
 	if _exchange.is_empty() or get_tree().paused:
 		return
-	if event.is_action_pressed("ui_cancel"):
-		_end_exchange()
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_accept"):
+	if event.is_action_pressed("cl_interact"):
 		_advance_exchange()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
+		_end_exchange()
 
 
 func row() -> Dictionary:
@@ -259,6 +263,10 @@ func _process(delta: float) -> void:
 		return
 	_clock += delta
 	_gesture_clock += delta
+	if not _exchange.is_empty() and _game.player != null \
+			and _game.player.state.velocity.length() > _game.ctx.tuning.f("cruise"):
+		_end_exchange()
+		return
 	# A line waits out a pause (the pick screen over the bay's greeting) instead of
 	# expiring unread behind it.
 	if _exchange.is_empty() and not sticky and _hold > 0.0 and not get_tree().paused:
