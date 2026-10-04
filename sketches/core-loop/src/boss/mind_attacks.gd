@@ -1,0 +1,242 @@
+extends RefCounted
+
+const Hazard := preload("res://src/boss/hazard.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const Arena := preload("res://src/boss/arena.gd")
+const Rules := preload("res://src/boss/boss_rules.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+
+# The Mind's four attack families as pure rules: each commit turns a seed, the ball, the
+# floor centre and the phase into hazard descriptors, the arguments hazard.gd's
+# commit_lane, commit_sector and commit_annulus take plus warn and live seconds. Nothing
+# here touches the tree; build() lays a descriptor onto a real Hazard.
+#
+# Every family leaves a way out: escape_point() finds a floor point outside every region,
+# reachable at cruise before the shortest warn ends. Phase k exposes families 1..k.
+#
+# Descriptor fields:
+#   family, family_index (1-based), id, shape ("lane", "sector" or "annulus"), type
+#   (threat_grammar Type), warn, live, height
+#   lane:    from, dir, behind, ahead, half
+#   sector:  at, band (Vector2 r_in, r_out), from_angle, to_angle
+#   annulus: at, band
+#   plate also carries the brace: verb, hit_mult_floor, weak_window
+
+const FAMILIES := ["lane", "split_lane", "rush", "plate"]
+# Floors the brief fixes for the Mind: no warn under the Warden's adapt warn, and a
+# braced verb never meets more than BRACE_MULT times plating.
+const WARN_FLOOR := 1.2
+const BRACE_MULT := 1.4
+const VERBS := Rules.CONTACT_KINDS
+const CLEAR := Tuning.RADIUS
+const HEIGHT := 3.0
+# Later phases tighten each warn by this much per phase; base warns keep phase 3 at or
+# above WARN_FLOOR.
+const PHASE_TIGHTEN := 0.1
+
+const LANE_HALF := 1.6
+const LANE_WARN := 1.4
+const LANE_LIVE := 0.8
+const SPLIT_WARN := 1.6
+const SPLIT_LIVE := 0.8
+# The second lane's bearing off the first, radians.
+const SPLIT_OFF := Vector2(0.35, 0.7)
+const RUSH_WARN := 1.5
+const RUSH_LIVE := 0.6
+const RUSH_HALF_BAND := 4.0
+const PLATE_WARN := 1.8
+const PLATE_LIVE := 1.0
+const PLATE_HALF_BAND := 4.0
+const PLATE_HALF_SPAN := PI / 4.0
+const PLATE_WINDOW := 2.5
+
+const SEARCH_STEP := 0.5
+const SEARCH_BEARINGS := 72
+
+
+static func phase_cap() -> int:
+	return Rules.PHASE_NAMES.size()
+
+
+static func exposed(phase: int) -> Array:
+	return FAMILIES.slice(0, clampi(phase, 1, phase_cap()))
+
+
+static func choose(seed: int, phase: int) -> String:
+	var open := exposed(phase)
+	var rng := _rng(seed)
+	return open[rng.randi() % open.size()]
+
+
+static func commit_any(seed: int, ball: Vector3, center: Vector3, phase: int) -> Array:
+	return commit(choose(seed, phase), seed, ball, center, phase)
+
+
+static func commit(family: String, seed: int, ball: Vector3, center: Vector3, phase: int) -> Array:
+	match family:
+		"lane":
+			return lane(seed, ball, center, phase)
+		"split_lane":
+			return split_lane(seed, ball, center, phase)
+		"rush":
+			return rush(seed, ball, center, phase)
+		"plate":
+			return plate(seed, ball, center, phase)
+	push_error("mind_attacks: unknown family %s" % family)
+	return []
+
+
+# One lane from the Mind at the centre straight down the ball's bearing.
+static func lane(seed: int, ball: Vector3, center: Vector3, phase: int) -> Array:
+	var rng := _rng(seed)
+	var bearing := _bearing(rng, ball, center)
+	return [_lane_desc("lane", 0, center, bearing, _warn(LANE_WARN, phase), LANE_LIVE)]
+
+
+# The ball's lane plus a second one off to a seeded side, so one sidestep is cut.
+static func split_lane(seed: int, ball: Vector3, center: Vector3, phase: int) -> Array:
+	var rng := _rng(seed)
+	var bearing := _bearing(rng, ball, center)
+	var off := rng.randf_range(SPLIT_OFF.x, SPLIT_OFF.y) * (1.0 if rng.randf() < 0.5 else -1.0)
+	var warn := _warn(SPLIT_WARN, phase)
+	return [_lane_desc("split_lane", 0, center, bearing, warn, SPLIT_LIVE),
+		_lane_desc("split_lane", 1, center, bearing + off, warn, SPLIT_LIVE)]
+
+
+# A ring about the centre whose band holds the ball's radius: step in or out of it.
+static func rush(_seed: int, ball: Vector3, center: Vector3, phase: int) -> Array:
+	var rb := _flat(ball - center).length()
+	var d := _base("rush", 0, "annulus", Threat.Type.INSTANT, _warn(RUSH_WARN, phase), RUSH_LIVE)
+	d["at"] = center
+	d["band"] = Vector2(maxf(0.0, rb - RUSH_HALF_BAND), minf(Arena.FLOOR_R, rb + RUSH_HALF_BAND))
+	return [d]
+
+
+# The brace: a sector sweep over the ball's band, then a named verb meets more plating
+# while the weak point stays open for weak_window seconds.
+static func plate(seed: int, ball: Vector3, center: Vector3, phase: int) -> Array:
+	var rng := _rng(seed)
+	var bearing := _bearing(rng, ball, center)
+	var rb := _flat(ball - center).length()
+	var d := _base("plate", 0, "sector", Threat.Type.WAVE, _warn(PLATE_WARN, phase), PLATE_LIVE)
+	d["at"] = center
+	d["band"] = Vector2(maxf(0.0, rb - PLATE_HALF_BAND), minf(Arena.FLOOR_R, rb + PLATE_HALF_BAND))
+	d["from_angle"] = bearing - PLATE_HALF_SPAN
+	d["to_angle"] = bearing + PLATE_HALF_SPAN
+	d["verb"] = VERBS[rng.randi() % VERBS.size()]
+	d["hit_mult_floor"] = 1.0 / BRACE_MULT
+	d["weak_window"] = PLATE_WINDOW
+	return [d]
+
+
+# What a hit of this verb is worth against the plate's brace.
+static func hit_mult(d: Dictionary, verb: String) -> float:
+	return float(d["hit_mult_floor"]) if verb == d.get("verb", "") else 1.0
+
+
+# A Hazard laid from a descriptor, not yet in the tree.
+static func build(d: Dictionary) -> Node3D:
+	var h := Hazard.new()
+	match d["shape"]:
+		"lane":
+			h.commit_lane(d["id"], d["type"], d["from"], d["dir"], d["behind"], d["ahead"], d["half"], d["height"], d["warn"], d["live"])
+		"sector":
+			h.commit_sector(d["id"], d["type"], d["at"], d["band"], d["from_angle"], d["to_angle"], d["height"], d["warn"], d["live"])
+		"annulus":
+			h.commit_annulus(d["id"], d["type"], d["at"], d["band"], d["height"], d["warn"], d["live"])
+	return h
+
+
+# The nearest floor point inside FLOOR_R, at least CLEAR outside every region, that the
+# ball reaches at cruise before the shortest warn ends; null when there is none.
+static func escape_point(descriptors: Array, ball: Vector3, cruise_speed: float, center := Vector3.ZERO):
+	var warn := INF
+	for d in descriptors:
+		warn = minf(warn, float(d["warn"]))
+	var reach := cruise_speed * warn
+	var start := Vector3(ball.x, center.y, ball.z)
+	if _clear(descriptors, start, center):
+		return start
+	var r := SEARCH_STEP
+	while r <= reach:
+		for i in SEARCH_BEARINGS:
+			var a := TAU * i / SEARCH_BEARINGS
+			var p := start + Vector3(cos(a), 0.0, sin(a)) * r
+			if _clear(descriptors, p, center):
+				return p
+		r += SEARCH_STEP
+	return null
+
+
+static func _clear(descriptors: Array, p: Vector3, center: Vector3) -> bool:
+	if _flat(p - center).length() > Arena.FLOOR_R - CLEAR:
+		return false
+	for d in descriptors:
+		if covers(d, p, CLEAR):
+			return false
+	return true
+
+
+# The descriptor's region grown by pad metres, on the flat; mirrors Hazard.contains().
+static func covers(d: Dictionary, p: Vector3, pad := 0.0) -> bool:
+	match d["shape"]:
+		"lane":
+			var dir: Vector3 = _flat(d["dir"]).normalized()
+			var local := _flat(p - d["from"])
+			var along := local.dot(dir)
+			var lateral := local.dot(Vector3.UP.cross(dir).normalized())
+			return along >= -float(d["behind"]) - pad and along <= float(d["ahead"]) + pad and absf(lateral) <= float(d["half"]) + pad
+		"annulus":
+			var r := _flat(p - d["at"]).length()
+			return r >= d["band"].x - pad and r <= d["band"].y + pad
+		"sector":
+			var v := _flat(p - d["at"])
+			var r := v.length()
+			if r < d["band"].x - pad or r > d["band"].y + pad:
+				return false
+			if r <= pad and d["band"].x <= pad:
+				return true
+			var a0: float = d["from_angle"]
+			var a1: float = d["to_angle"]
+			var sgn := signf(a1 - a0) if a1 != a0 else 1.0
+			var u := wrapf((atan2(v.z, v.x) - a0) * sgn, -PI, PI)
+			var margin := (1.0 + pad) / maxf(r, 1.0)
+			return u >= -margin and u <= absf(a1 - a0) + margin
+	return false
+
+
+static func _lane_desc(family: String, n: int, center: Vector3, bearing: float, warn: float, live: float) -> Dictionary:
+	var d := _base(family, n, "lane", Threat.Type.LANE, warn, live)
+	d["from"] = center
+	d["dir"] = Vector3(cos(bearing), 0.0, sin(bearing))
+	d["behind"] = 0.0
+	# The far corners sit on the floor: sqrt(ahead^2 + half^2) < FLOOR_R.
+	d["ahead"] = Arena.FLOOR_R - LANE_HALF
+	d["half"] = LANE_HALF
+	return d
+
+
+static func _base(family: String, n: int, shape: String, type: int, warn: float, live: float) -> Dictionary:
+	return {"family": family, "family_index": FAMILIES.find(family) + 1, "id": "mind_%s_%d" % [family, n], "shape": shape,
+		"type": type, "warn": warn, "live": live, "height": HEIGHT}
+
+
+static func _warn(base: float, phase: int) -> float:
+	return base - PHASE_TIGHTEN * (clampi(phase, 1, phase_cap()) - 1)
+
+
+static func _bearing(rng: RandomNumberGenerator, ball: Vector3, center: Vector3) -> float:
+	var v := _flat(ball - center)
+	if v.length() < CLEAR:
+		return rng.randf() * TAU
+	return atan2(v.z, v.x)
+
+
+static func _rng(seed: int) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	return rng
+
+
+static func _flat(v: Vector3) -> Vector3:
+	return Vector3(v.x, 0.0, v.z)
