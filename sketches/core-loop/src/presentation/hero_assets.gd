@@ -15,6 +15,7 @@ const PILOTS := {
 	"runner_gunner": "res://assets/models/pilot_rivet_anim.glb",
 	"pylon_engineer": "res://assets/models/pilot_sable_anim.glb",
 	"demolitions_caster": "res://assets/models/pilot_kest_anim.glb",
+	"tarn": "res://assets/models/pilot_rivet_anim.glb",  # placeholder: Tarn wears Rivet's pilot until the claw kit lands
 }
 
 # VD-01 clear sphere slice. Dresses the greybox in the procedural
@@ -38,6 +39,7 @@ const SHELLS := {
 	"pylon_engineer": "res://assets/models/world_one/shell_sable.glb",
 	"runner_gunner": "res://assets/models/world_one/shell_rivet.glb",
 	"demolitions_caster": "res://assets/models/world_one/shell_kest.glb",
+	"tarn": "res://assets/models/world_one/shell_rivet.glb",  # placeholder: Rivet's shell
 }
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"

@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 # ctx.profile sits under storage_dir, loaded and able to save, and the game's Progress
 # earns a row into it from the bus (P2-1). A key or a card click on a locked pilot starts
 # nothing, an unlocked or starter pilot starts (P2-2); flow.choose_class stays ungated.
-# Every class row is a starter or named by exactly one achievement pilot reward (P2-3).
+# Sable is the only starter and each other pilot is named by exactly one pilot reward (P2-3).
 
 const STEPS := ["key_locked", "click_locked", "direct", "die_a", "back_a", "key_unlocked", "die_b", "back_b", "key_starter"]
 
@@ -115,11 +115,12 @@ func _p3() -> void:
 			owners[pilot] = owners.get(pilot, 0) + 1
 	for def in ClassDef.all():
 		var named: int = owners.get(def.id, 0)
-		_t.check("P2-3 %s is a starter or named by exactly one pilot reward" % def.id, def.starter or named == 1, "starter %s, rewards %d" % [def.starter, named])
+		_t.check("P2-3 %s is the starter or named by exactly one pilot reward" % def.id, def.starter != (named == 1), "starter %s, rewards %d" % [def.starter, named])
 	var starters := 0
 	for def in ClassDef.all():
 		starters += 1 if def.starter else 0
-	_t.eq("P2-3 today all three are starters", starters, 3)
+	_t.eq("P2-3 Sable is the only starter", starters, 1)
+	_t.check("P2-3 and the starter is Sable", ClassDef.all()[0].starter and ClassDef.all()[0].id == "pylon_engineer", "first row")
 
 
 func _click(control: Control) -> void:

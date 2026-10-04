@@ -15,12 +15,13 @@ const T := preload("res://tests/support/t.gd")
 # select, with Rivet swapped for a locked copy of its row (as profile_unlock_gate_test does):
 #   - the locked card stays clickable (not disabled), wears the slate plate, greys its
 #     preview, shows a lock, and shows its hint only when open; a click starts nothing and
-#     shakes it; the calm screen still reads in 40 words or fewer;
+#     shakes it; the calm screen still reads in 50 words or fewer;
 #   - unlocking the pilot clears the look on the next visit to the screen;
 #   - a card's paint cycle (swatch click or P on the open card) offers only the paints this
 #     profile owns plus none, saves each pick, and the preview wears the equipped one.
 
-const CALM_BUDGET := 40
+# 50 since Tarn made four cards (wave 5).
+const CALM_BUDGET := 50
 const HINT := "Unlock: Win a run."
 
 var _t := T.new("ui_locked_card_test")
@@ -65,11 +66,14 @@ func _run() -> void:
 	for prop in ["role", "species", "pitch", "weapon_id", "movement_id", "special_id", "smash_id", "color", "shape", "motif", "sound", "bible_home", "synergy_hooks"]:
 		locked_def.set(prop, rivet.get(prop))
 	_game.flow.classes[1] = locked_def
+	# Sable is the only starter: earn Kest and Tarn so only the second card is locked.
+	for i in [2, 3]:
+		_game.ctx.profile.unlock_pilot(_game.flow.classes[i].id)
 	_game.flow.open_class_select()
 	await _settle(0.7)
 	var cards: Array = _game.screens.class_cards()
 	var card = cards[1]
-	_t.check("P3-1 the locked card is flagged", card.locked and not cards[0].locked and not cards[2].locked, "locked %s" % [cards.map(func(c): return c.locked)])
+	_t.check("P3-1 the locked card is flagged", card.locked and not cards[0].locked and not cards[2].locked and not cards[3].locked, "locked %s" % [cards.map(func(c): return c.locked)])
 	_t.check("P3-1 the locked card is not disabled", not card.disabled, "disabled %s" % card.disabled)
 	var slate: Color = card.get_theme_stylebox("normal").border_color
 	var other: Color = cards[0].get_theme_stylebox("normal").border_color
@@ -77,11 +81,11 @@ func _run() -> void:
 		is_equal_approx(slate.r, Palette.SLATE.r) and is_equal_approx(slate.g, Palette.SLATE.g) and not is_equal_approx(other.r, Palette.SLATE.r), "slate %s other %s" % [slate, other])
 	_t.check("P3-1 the locked preview is greyed", card.preview.material != null and cards[0].preview.material == null, "material")
 	_t.check("P3-1 the lock replaces the role glyph", card._lock.visible and not card._glyph.visible and not cards[0]._lock.visible, "lock")
-	_t.check("P3-1 no pilot-reward row, so the hint reads Locked", card._hint.text == "Locked", "hint %s" % card._hint.text)
+	_t.check("P3-1 the hint reads the pilot's reward row text", card._hint.text == "Rescue the stranded runner in world one.", "hint %s" % card._hint.text)
 	card.set_locked(true, HINT)
 	await _settle(0.5)
 	var calm := WordBudget.count(_game.screens)
-	_t.check("P3-2 class select at rest reads in 40 words or fewer with a locked card", calm["hud"] > 0 and calm["hud"] <= CALM_BUDGET, "%d words: %s" % [calm["hud"], _text_of("calm")])
+	_t.check("P3-2 class select at rest reads in 50 words or fewer with a locked card", calm["hud"] > 0 and calm["hud"] <= CALM_BUDGET, "%d words: %s" % [calm["hud"], _text_of("calm")])
 	_t.check("P3-1 the hint is not shown at rest", not _text_of("calm").contains("Unlock"), _text_of("calm"))
 	Push.hover(root, card)
 	await _settle(0.7)

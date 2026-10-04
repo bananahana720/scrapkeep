@@ -297,6 +297,23 @@ func _show_paint() -> void:
 	_swatch.queue_redraw()
 
 
+# What a locked pilot's card says: the reward row's text, with the lifetime count when the row
+# needs more than one. Empty when no row rewards the pilot or the row is hidden, so the card
+# says only "Locked" and never something false. progress may be null (count 0).
+static func unlock_hint(def, progress) -> String:
+	var id := Achievements.for_pilot(def.id)
+	if id == "":
+		return ""
+	var r: Dictionary = Achievements.row(id)
+	if r.get("hidden", false):
+		return ""
+	var need := int(r.get("count", 1))
+	if need <= 1:
+		return str(r["text"])
+	var have := mini(int(progress.count_of(id)) if progress != null else 0, need)
+	return "%s (%d/%d)" % [r["text"], have, need]
+
+
 func _on_pressed() -> void:
 	if locked:
 		_shake = SHAKE

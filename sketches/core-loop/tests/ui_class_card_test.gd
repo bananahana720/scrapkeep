@@ -8,18 +8,21 @@ const Bindings := preload("res://src/core/bindings.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const Push := preload("res://tests/workshop/push.gd")
+const ClassCard := preload("res://src/ui/class_card.gd")
+const Achievements := preload("res://src/core/achievements.gd")
 
 # The class cards that sell a pilot (v3 W12, playtest entry 8). On the real class
 # select, driven by pushed mouse and key events:
 #   - every card shows its class row's four slots (LMB, then RMB or Shift by pilot, F, Ctrl) with the row's
 #     ability icons, plus its Space extra, and wears the row's colour;
-#   - at rest the whole screen reads in 40 words or fewer;
+#   - at rest the whole screen reads in 50 words or fewer;
 #   - hovering a card opens that card alone: it lifts, its words fade in, its preview
 #     plays and moves, the others step back; the extra words all belong to it;
 #   - with nothing focused, Right opens the first card, Right again the second, and
 #     Enter starts that class.
 
-const CALM_BUDGET := 40
+# 50 since the fourth pilot (Tarn, wave 5) joined the row; each card rests at 9 to 13 words.
+const CALM_BUDGET := 50
 const SETTLE := 0.5
 
 var _game
@@ -68,6 +71,9 @@ func _process(delta: float) -> bool:
 		"boot":
 			_game.ctx.calm = true
 			_game.player.source = Intent.Scripted.new()
+			_check_hints()
+			for def in _game.flow.classes:
+				_game.ctx.profile.unlock_pilot(def.id)
 			_game.flow.press_start()
 			_next("rows")
 		"rows":
@@ -84,13 +90,13 @@ func _process(delta: float) -> bool:
 		"hover_check":
 			var open: Array = cards.map(func(c): return c.is_open())
 			var moved := _travel > 2.0
-			_report("hover opens one", open == [false, true, false] and cards[1].openness > 0.95 and cards[1].scale.x > cards[0].scale.x
+			_report("hover opens one", open == [false, true, false, false] and cards[1].openness > 0.95 and cards[1].scale.x > cards[0].scale.x
 					and cards[1].preview.playing() and not cards[0].preview.playing() and moved,
 				"open %s, openness %.2f, scale %.3f vs %.3f, preview playing %s, the shell travelled %.1f m over a loop"
 					% [open, cards[1].openness, cards[1].scale.x, cards[0].scale.x, cards[1].preview.playing(), _travel])
 			var open_words := _words("open words")
 			var now: Array = cards.map(func(c): return WordBudget.count(c)["hud"])
-			_report("open words", open_words > _calm and now[0] == _calm_cards[0] and now[2] == _calm_cards[2]
+			_report("open words", open_words > _calm and now[0] == _calm_cards[0] and now[2] == _calm_cards[2] and now[3] == _calm_cards[3]
 					and open_words - _calm == now[1] - _calm_cards[1],
 				"%d words with Rivet open (%d at rest); per card %s at rest, %s now" % [open_words, _calm, _calm_cards, now])
 			var away := InputEventMouseMotion.new()
@@ -104,10 +110,10 @@ func _process(delta: float) -> bool:
 			var first: Array = cards.map(func(c): return c.is_open())
 			Push.key(root, KEY_RIGHT)
 			_next("second_key")
-			_report("arrow lands", first == [true, false, false], "the first Right with nothing focused opens %s" % [first])
+			_report("arrow lands", first == [true, false, false, false], "the first Right with nothing focused opens %s" % [first])
 		"second_key":
 			var second: Array = cards.map(func(c): return c.is_open())
-			_report("arrow moves", second == [false, true, false], "Right again opens %s" % [second])
+			_report("arrow moves", second == [false, true, false, false], "Right again opens %s" % [second])
 			Push.key(root, KEY_ENTER)
 			_next("picked")
 		"picked":
@@ -118,6 +124,28 @@ func _process(delta: float) -> bool:
 			quit(0 if _failures == 0 else 1)
 			return true
 	return false
+
+
+# A locked card's hint is the pilot's reward row text (with the lifetime count when the row
+# needs several), empty only for a pilot no row rewards (the starters) or a hidden row.
+func _check_hints() -> void:
+	for def in _game.flow.classes:
+		var hint: String = ClassCard.unlock_hint(def, _game.progress)
+		var id := Achievements.for_pilot(def.id)
+		if def.starter:
+			_report("hint %s" % def.display_name, hint == "" and id == "", "starter hint \"%s\"" % hint)
+		else:
+			_report("hint %s" % def.display_name, id != "" and hint == Achievements.row(id)["text"], "hint \"%s\" for row %s" % [hint, id])
+		_report("screen hint %s" % def.display_name, _game.screens._unlock_hint(def) == hint, "screens agree")
+	_report("hint with no row", ClassCard.unlock_hint(_stub("no_such_pilot"), null) == "", "unknown pilot")
+	_report("hint Rivet text", ClassCard.unlock_hint(_game.flow.classes[1], _game.progress) == "Rescue the stranded runner in world one.", "row text")
+	_report("hint Tarn text", ClassCard.unlock_hint(_game.flow.classes[3], _game.progress) == "Rout Admiral Brindle.", "row text")
+
+
+func _stub(id: String) -> Resource:
+	var def: Resource = load("res://src/core/class_def.gd").new()
+	def.id = id
+	return def
 
 
 # Each card's keys are its class row's slots, in the bar's order, with the ability
