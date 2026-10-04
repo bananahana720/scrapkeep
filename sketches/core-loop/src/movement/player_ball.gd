@@ -17,6 +17,8 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const ChainState := preload("res://src/combat/chain.gd")
+const CombatRules := preload("res://src/combat/combat.gd")
 
 # Rigid physics only (TADR-006; entry 6 kept it for its arcade weight). The ball owns
 # movement and publishes each movement fact on the bus; what a collision does to an
@@ -92,6 +94,10 @@ var immune_left := 0.0
 var _smashes := {}
 # The enemy a harpoon smash is landing on while that landing's strikes resolve; combat reads it.
 var smash_landing: Node3D
+# The harpoon chain; this player is its only writer (HOOK-CHAIN.md).
+var chain := ChainState.new()
+# The chain's multiplier while a smash landing resolves; 1.0 otherwise.
+var _landing_mult := 1.0
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -153,6 +159,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
+		chain.reset()
 		tree.open_checkpoint())
 	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
 	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
@@ -266,6 +273,7 @@ func frozen() -> bool:
 func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	state.reset()
 	kit.clear_runtime()
+	chain.clear_active()
 	_roll = Basis.IDENTITY
 	_was_hooked = false
 	_brake_was_held = false
@@ -384,6 +392,7 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		if body.has_method("flash"):
 			body.flash()
 		events.harpoon_bit.emit(body, point)
+	_publish_chain(chain.link(body != null, state.grounded), body, point)
 
 
 func release_grapple() -> void:
@@ -419,6 +428,7 @@ func _physics_process(delta: float) -> void:
 		events.grapple_released.emit()
 	_was_hooked = kit.hooked
 	_publish_line(delta)
+	_tick_chain(delta)
 	_recheck_bow()
 	_tick_face_tags(delta)
 	_mark_slots()
@@ -499,7 +509,7 @@ func verb_ready(verb: String) -> bool:
 	match verb:
 		"harpoon":
 			return not _frozen and kit.on(Augments.GRAPPLE) and not kit.hooked and not _charging() \
-					and not Augments.holding(kit) and _harpoon_refusal() == ""
+					and not Augments.holding(kit) and _harpoon_refusal() == "" and chain.miss_left <= 0.0
 		"interact":
 			if _frozen or kit.mounted:
 				return false
@@ -537,12 +547,16 @@ func _harpoon_refusal() -> String:
 
 
 func _press_harpoon() -> void:
+	if chain.miss_left > 0.0:
+		_fail("harpoon", "cooldown")
+		return
 	var reason := _harpoon_refusal()
 	if reason == "":
 		grapple_to(kit.aim["point"], kit.aim["normal"], kit.aim.get("body"))
 		return
 	if not kit.hooked:
 		_emit_line("dry_fire", null, ball_position(), "", DRY_FIRE_HOLD)
+		_publish_chain(chain.dry_fire(), null, ball_position())
 	_fail("harpoon", reason)
 
 
@@ -574,12 +588,25 @@ func _emit_line(id: String, target: Node3D, at: Vector3, cause := "", hold := 0.
 	events.line_state_changed.emit(id, target, at, cause)
 
 
+# Chain events go straight to the bus: _emit_line would take over the steady line state
+# that _publish_line tracks, and a chain fact is not a line state.
+func _publish_chain(emitted: Array, target: Node3D, at: Vector3) -> void:
+	for e in emitted:
+		events.line_state_changed.emit(e["id"], target, at, e["cause"])
+
+
+func _tick_chain(delta: float) -> void:
+	_publish_chain(chain.tick(delta, state.grounded, kit.hooked), null, ball_position())
+
+
 # Publishes how the line that stood has ended: a let-go or a break with its cause. A landing
 # or a reset publishes nothing here.
 func _publish_end() -> void:
 	_line_standing = false
 	var end: String = kit.line_end
 	kit.line_end = ""
+	if end != "landed" and end != "reset" and end != "":
+		chain.let_go()
 	if end == "let_go":
 		_emit_line("let_go", _line_target_alive(), _line_anchor, "", LET_GO_HOLD)
 	elif end != "landed" and end != "reset" and end != "":
@@ -755,7 +782,7 @@ func _try_crush(body: Node3D) -> void:
 	_rigid.add_collision_exception_with(body)
 	var closing := kit.line_closing
 	var landing := _begin_landing(body)
-	struck.emit(body, RAM, speed)
+	struck.emit(body, RAM, _landing_force(RAM, speed))
 	if landing:
 		_finish_landing(body, closing)
 	get_tree().create_timer(CRUSH_PASS, false, true).timeout.connect(_end_crush.bind(id))
@@ -839,7 +866,7 @@ static func slam_strength(speed: float, flatness := 1.0) -> float:
 # next to nothing when the slam went into a launch.
 # Every class slams the same way; the landing then takes the class's flavour.
 func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
-	var strength := slam_strength(speed, flatness)
+	var strength := slam_strength(speed, flatness) * _landing_mult
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
@@ -981,17 +1008,17 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		kit.rewind_left = 0.0
 		state.impact = maxf(state.impact, -before.y)
 		set_velocity_now(Vector3(before.x, tuning.f("jump_speed") * 0.95, before.z))
-		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0)
+		enemy.knock(away * 0.6 + Vector3.DOWN * 0.2, 7.0 * _landing_mult)
 		shockwave.emit(enemy.global_position, 0.6)
-		struck.emit(enemy, STOMP, -before.y)
+		struck.emit(enemy, STOMP, _landing_force(STOMP, -before.y))
 	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
 		_rebound(enemy, normal, before, planar, away)
 	elif SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
-		enemy.knock(away + Vector3.UP * 0.35, Augments.RAM_KNOCK)
+		enemy.knock(away + Vector3.UP * 0.35, Augments.RAM_KNOCK * _landing_mult)
 		enemy.flash()
 		shockwave.emit(enemy.global_position, 1.0)
 		# Planar speed, the same measure punch_now and the crush check use (one query).
-		struck.emit(enemy, RAM, planar)
+		struck.emit(enemy, RAM, _landing_force(RAM, planar))
 	if landing:
 		_finish_landing(enemy, closing)
 	smash_landing = null
@@ -1005,7 +1032,19 @@ func _begin_landing(enemy: Node3D) -> bool:
 		return false
 	kit.drop_line("landed")
 	kit.rewind_left = tuning.f("harpoon_rewind")
+	var paid: Dictionary = chain.pay()
+	_landing_mult = paid["mult"]
+	_publish_chain(paid["events"], enemy, ball_position())
 	return true
+
+
+# A landing contact's force, raised so the damage combat derives from it is the chain's
+# multiplier times the plain landing (combat's rows are linear in force: a + force * b).
+func _landing_force(kind: String, force: float) -> float:
+	if _landing_mult == 1.0 or not CombatRules.STRIKE_DAMAGE.has(kind):
+		return force
+	var row: Array = CombatRules.STRIKE_DAMAGE[kind]
+	return (_landing_mult * (row[0] + force * row[1]) - row[0]) / row[1]
 
 
 # What the haul adds to that contact: the smash's shockwave, pins and this pilot's
@@ -1016,6 +1055,7 @@ func _finish_landing(enemy: Node3D, closing: float) -> void:
 	var landed_on: Node3D = enemy if is_instance_valid(enemy) else null
 	events.harpoon_smashed.emit(landed_on, ball_position(), closing)
 	_emit_line("smash_lands", landed_on, ball_position(), "", LANDS_HOLD)
+	_landing_mult = 1.0
 
 
 # Only a body that says what it weighs can bounce you; a boss piece without a weight
@@ -1035,9 +1075,9 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 	set_velocity_now(out)
 	refresh_air()
 	state.impact = maxf(state.impact, -before.dot(normal))
-	enemy.knock(away + Vector3.UP * 0.2, 6.0)
+	enemy.knock(away + Vector3.UP * 0.2, 6.0 * _landing_mult)
 	enemy.flash()
 	shockwave.emit(enemy.global_position, 0.8)
 	if SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
-		struck.emit(enemy, RAM, planar)
+		struck.emit(enemy, RAM, _landing_force(RAM, planar))
 	events.enemy_rebounded.emit(enemy, out.length())
