@@ -135,7 +135,7 @@ test("plan matches checkpoint commands, optional import and serial wall-clock te
       `--out=${outDir}/bots/completionist-1`,
       "--policy=completionist",
       "--seeds=1",
-      "--table=slice",
+      "--table=default",
     ]);
     assert.equal(
       plan.find((s) => s.kind === "fuzz").args.includes("--seeds=1-200"),
@@ -430,7 +430,7 @@ test("artifact validation rejects missing seeds and hard fuzz violations", async
       path.join(botDir, "runs.ndjson"),
       JSON.stringify({
         run_id: "run",
-        table: "slice",
+        table: "default",
         stages: [
           {
             heft_at_engage: 1,
@@ -478,6 +478,22 @@ test("artifact validation rejects missing seeds and hard fuzz violations", async
     rows[0].seed = 2;
     fuzz();
     assert.throws(() => artifacts({ kind: "fuzz", out: outDir }), /incomplete/);
+  }));
+
+test("artifact validation rejects retired slice run-log records", async () =>
+  fixture(({ outDir }) => {
+    writeFileSync(
+      path.join(outDir, "bots.ndjson"),
+      JSON.stringify({ policy: "skipper", seed: 1, run_id: "run" }) + "\n",
+    );
+    writeFileSync(
+      path.join(outDir, "runs.ndjson"),
+      JSON.stringify({ run_id: "run", table: "slice", stages: [] }) + "\n",
+    );
+    assert.throws(
+      () => artifacts({ kind: "bot", policy: "skipper", seed: 1, out: outDir }),
+      /missing default run-log record/,
+    );
   }));
 
 // Rule: process execution captures exits and output, isolates saves and enforces timeouts.

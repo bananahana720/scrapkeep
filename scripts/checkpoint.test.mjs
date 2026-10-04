@@ -339,7 +339,7 @@ test("perf bands: CPU 10 ms and GPU 7 ms at the edge, and an invalid run misses"
     size: [1920, 1080],
     display: "wayland",
     scene: "s3",
-    table: "slice",
+    table: "default",
     stats: { process_ms: { p99: cpu }, gpu_ms: { p99: gpu } },
   });
   assert.deepEqual(
@@ -355,6 +355,18 @@ test("perf bands: CPU 10 ms and GPU 7 ms at the edge, and an invalid run misses"
     false,
   );
   assert.equal(evaluatePerf(null)[1].pass, false);
+});
+
+test("perf validity rejects the retired slice table", () => {
+  const rows = evaluatePerf({
+    valid: true,
+    size: [1920, 1080],
+    display: "wayland",
+    scene: "s3",
+    table: "slice",
+    stats: { process_ms: { p99: 1 }, gpu_ms: { p99: 1 } },
+  });
+  assert.equal(rows[0].pass, false);
 });
 
 test("sweep line is the slice cell's pass column; the receipt must match HEAD", () => {
@@ -419,7 +431,7 @@ test("the table prints a pass, a miss, a skip and a by-hand row", () => {
 
 const line = (id, extra) =>
   JSON.stringify({
-    table: "slice",
+    table: "default",
     outcome: "running",
     bites: 0,
     smashes: 0,
@@ -455,11 +467,11 @@ const fixture = [
     smashes: 2,
     stages: [{ events_joined: [], ticks_to_warden_engaged: 900, attempts: 1 }],
   }),
-  JSON.stringify({ run_id: "old", table: "default", stages: [] }),
+  JSON.stringify({ run_id: "old", table: "slice", stages: [] }),
   "not json",
 ].join("\n");
 
-test("readRunLog keeps the last line of each slice run and drops other tables", () => {
+test("readRunLog keeps the last line of each default run and drops other tables", () => {
   const runs = readRunLog(fixture);
   assert.deepEqual(
     runs.map((r) => [r.run_id, r.outcome]),
