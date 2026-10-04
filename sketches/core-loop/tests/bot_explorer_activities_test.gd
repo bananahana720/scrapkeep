@@ -58,7 +58,9 @@ func _physics_process(delta: float) -> bool:
 
 func _finish(over: bool) -> void:
 	_done = true
-	_t.check("the slice builds its three activity sites", _site_ids.size() == 3, "sites %s" % [_site_ids])
+	# 2026-10-04: the alpha maps add an enemy_camp site beside the slice's three, so four.
+	_t.check("the stage builds its four activity sites", _site_ids.size() == 4 and "enemy_camp" in _site_ids,
+		"sites %s" % [_site_ids])
 	_t.check("the first target is an activity site, not the Warden",
 		_first_target in _site_ids and _first_goal.begins_with("activity "),
 		"first target '%s', first goal '%s', sites %s" % [_first_target, _first_goal, _site_ids])
