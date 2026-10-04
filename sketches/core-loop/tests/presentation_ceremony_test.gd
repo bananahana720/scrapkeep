@@ -43,7 +43,7 @@ var _started := ""
 var _revealed := ""
 var _v0 := Vector3.ZERO
 var _s0 := Vector3.ZERO
-var _t0 := 0
+var _clock_ms := 0.0
 var _card_after := false
 
 
@@ -53,7 +53,6 @@ func _initialize() -> void:
 	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
-	_t0 = Time.get_ticks_msec()
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -103,19 +102,23 @@ func _check_tiers() -> void:
 
 func _next(phase: String) -> void:
 	_phase = phase
-	_since = Time.get_ticks_msec()
+	_since = int(_clock_ms)
 
 
 func _elapsed() -> int:
-	return Time.get_ticks_msec() - _since
+	return int(_clock_ms) - _since
 
 
-func _process(_delta: float) -> bool:
+func _physics_process(_delta: float) -> bool:
+	# Fixed simulation ticks continue through the ceremony's tree pause.
+	_clock_ms += 1000.0 / Engine.physics_ticks_per_second
 	if _game == null or _game.flow == null:
 		return false
-	if Time.get_ticks_msec() - _t0 > DEADLINE_MS:
+	if int(_clock_ms) > DEADLINE_MS:
 		_report("deadline", false, "stuck in phase %s" % _phase)
 		return _finish()
+	if _ceremony != null:
+		_ceremony._process(1.0 / Engine.physics_ticks_per_second)
 	match _phase:
 		"boot":
 			_game.ctx.calm = true
@@ -123,6 +126,8 @@ func _process(_delta: float) -> bool:
 			_game.flow.press_start()
 			_game.flow.choose_class(0)
 			_ceremony = _game.presentation.ceremony
+			_ceremony.set_process(false)
+			_ceremony.now_ms = func() -> int: return int(_clock_ms)
 			_ceremony.pause_armed = true
 			_ceremony.started.connect(func(part: String): _on_started(part))
 			_ceremony.revealed.connect(func(part: String): _revealed = part)
@@ -194,7 +199,7 @@ func _process(_delta: float) -> bool:
 				_game.run.add_part("chain_arc", "test")
 				_game.run.add_part("cross_split", "test")
 				var wired: Dictionary = _ceremony.find_of("cross_split", "test")
-				var card: Dictionary = _ceremony.card_state(wired, Time.get_ticks_msec(), false)
+				var card: Dictionary = _ceremony.card_state(wired, int(_clock_ms), false)
 				_report("synergy snaps", wired["link"] == "lit" and wired["tier"] == "reveal" and card["partner_icon"] == Ceremony.icon_of("chain_arc"),
 					"cross_split after chain_arc completes %s: link %s, tier %s, partner glyph %s"
 						% [wired["synergy"], wired["link"], wired["tier"], card["partner_icon"]])
@@ -218,7 +223,7 @@ func _process(_delta: float) -> bool:
 				var ball: Vector3 = _game.player.ball_position()
 				_enemy = _game.ctx.spawner.spawn_enemy("chaser", _game.ctx.terrain.drop_point(ball.x - 6.0, ball.z + 6.0, 1.0))
 				_game.run.add_part("rime_heart", "cache")
-				_ceremony.now_ms = func() -> int: return Time.get_ticks_msec() + 11000
+				_ceremony.now_ms = func() -> int: return int(_clock_ms) + 11000
 				_next("demoted")
 		"demoted":
 			if _elapsed() > 200:

@@ -36,7 +36,6 @@ var _skipped := 0
 
 
 func _initialize() -> void:
-	var t0 := Time.get_ticks_msec()
 	_fallback()
 	var probe := Ace.new()
 	if not probe.ready():
@@ -50,7 +49,10 @@ func _initialize() -> void:
 		_set_piece()
 		_joins()
 		_begun_joins()
-	print("presentation_ace_test: %s (%.1f s, %d skipped)" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, (Time.get_ticks_msec() - t0) / 1000.0, _skipped])
+	if _failures == 0:
+		print("presentation_ace_test: PASS (%d skipped)" % _skipped)
+	else:
+		print("presentation_ace_test: FAIL (%d)" % _failures)
 	quit(0 if _failures == 0 else 1)
 
 
@@ -58,6 +60,8 @@ func _initialize() -> void:
 func _fallback() -> void:
 	var none := Ace.new("res://tests/no_such_package/manifest.json")
 	var dir := OS.get_user_data_dir().path_join("ace_fallback_test")
+	# The fallback fixture owns this folder; clear a previous interrupted run first.
+	DirAccess.remove_absolute(dir.path_join("manifest.json"))
 	DirAccess.make_dir_recursive_absolute(dir)
 	var src := ProjectSettings.globalize_path(Ace.MANIFEST)
 	var copied := DirAccess.copy_absolute(src, dir.path_join("manifest.json")) == OK
