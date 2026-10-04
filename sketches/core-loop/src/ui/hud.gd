@@ -225,6 +225,7 @@ func setup(game_ref) -> void:
 	game.events.event_ended.connect(_on_event_ended)
 	game.events.part_gained.connect(func(part_id: String, _source: String): part_name.show_part(part_id))
 	game.events.warden_engaged.connect(func(_stage: int): _begin_engagement(true))
+	game.events.boss_arena_entered.connect(_seat_boss_plate)
 	game.events.beacon_unsealed.connect(func(_stage: int): _begin_engagement(false))
 	game.events.posture_changed.connect(_on_posture)
 	game.events.launched.connect(_on_launched)
@@ -369,10 +370,11 @@ func _begin_engagement(engaged: bool) -> void:
 	_seat_boss_plate()
 
 
-# The boss plate is up while a Warden on the posture rule is engaged, bound to it.
+# The boss plate is up while a Warden on the posture rule is engaged, or Brindle's hull is
+# live in the arena, bound to it.
 func _seat_boss_plate() -> void:
-	var warden = game.flow.warden
-	if _engaged and is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture":
+	var warden = game.flow.warden if _engaged else _brindle_hull()
+	if is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture":
 		if boss_plate == null:
 			boss_plate = BossPlate.new()
 		boss_plate.bind(warden)
@@ -383,6 +385,14 @@ func _seat_boss_plate() -> void:
 		boss_plate.unbind()
 		boss_plate.queue_free()
 		boss_plate = null
+
+
+# Brindle's hull while his arena fight is live, else null.
+func _brindle_hull():
+	var boss = game.boss
+	if boss != null and boss.has_method("active") and boss.active() and is_instance_valid(boss.get("ship")):
+		return boss.ship.hull
+	return null
 
 
 func _exit_tree() -> void:

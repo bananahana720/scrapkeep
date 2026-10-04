@@ -4,7 +4,7 @@ const BossPlate := preload("res://src/ui/boss_plate.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const WardenBody := preload("res://src/combat/warden.gd")
 
-# The posture Warden's health as a ring on the ground round its foot (LEGIBILITY section 4):
+# The posture fight's health (a Warden's, or Brindle's hull's) as a ring on the ground round its foot (LEGIBILITY section 4):
 # four arcs, one per chunk, lit for each chunk left and lost in a fixed order from the start
 # angle, so the lit ones stay a run like the plate's pips from the left. Every colour is a
 # boss_plate.gd reader, so the ring and the plate cannot disagree. It is a floor marking:
@@ -186,10 +186,15 @@ func _sync() -> void:
 
 
 func _radius() -> float:
-	return float(WardenBody.CORE_RADIUS) + CLEARANCE + BACKING * 0.5 + BAND * 0.5
+	# A Warden's ring clears its core pulse; Brindle's hull has no core, so it clears the hull.
+	var body := float(WardenBody.CORE_RADIUS) if _warden.get("boss") == null else float(_warden.get("radius"))
+	return body + CLEARANCE + BACKING * 0.5 + BAND * 0.5
 
 
 func _ground(x: float, z: float) -> float:
+	var boss = _warden.get("boss")
+	if boss != null and boss.has_method("ground_height_at"):
+		return boss.ground_height_at(Vector3(x, 0.0, z))
 	var terrain = _warden.get("terrain")
 	if terrain == null:
 		return _warden.global_position.y - _warden.HALF_HEIGHT

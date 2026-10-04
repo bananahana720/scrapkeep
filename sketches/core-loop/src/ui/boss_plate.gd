@@ -7,8 +7,8 @@ const Roster := preload("res://src/combat/roster.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The posture Warden's fight as one plate (LEGIBILITY section 4): its name, four health
-# chunks, the guard bar and one state glyph. It draws itself and reads one Warden; it
-# draws nothing for a Warden that is gone or fights on the plating rule. Every colour is a
+# chunks, the guard bar and one state glyph. It draws itself and reads one posture body (a
+# Warden, or Brindle's hull); it draws nothing for one that is gone or fights on the plating rule. Every colour is a
 # STATE_ROWS row or a role, and no number is drawn.
 
 const SIZE := Vector2(420.0, 44.0)
@@ -71,7 +71,13 @@ func drawn_words() -> Array:
 
 
 func plate_name() -> String:
-	return String(NAMES.get(_warden.family, NAME_FALLBACK)) if active() else ""
+	if not active():
+		return ""
+	# A Warden names itself by family; any other posture body (Brindle's hull) is the
+	# boss arena's own row.
+	if _warden.get("family") == null:
+		return String(EventKinds.hud("boss_arena_entered"))
+	return String(NAMES.get(_warden.family, NAME_FALLBACK))
 
 
 # Four pips, the first ones filled for each chunk left; the last filled one shows the
