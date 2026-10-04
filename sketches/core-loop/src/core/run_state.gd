@@ -78,9 +78,11 @@ var _wear_accum := 0.0
 var metrics := {}
 
 # The entrance document layer (RS1): fields a zone-entrance save carries that the live run did
-# not hold. Unit RS3 wires `world` (nothing sets it yet); `cogs` and `companion` are reserved for later units.
+# not hold. Unit RS3 wires `world` (nothing sets it yet); `companion` is reserved for a later unit.
 var run_seed := 0
 var world := 0
+# The spend wallet (CG1): shop, fabricator, sell and refund move cogs and nothing else.
+# Damage, theft, wear and mass recovery never touch it; only add_cogs and spend_cogs do.
 var cogs := 0
 var companion := {}
 # World id to retries spent there, merged by max so a reload never hands retries back.
@@ -278,7 +280,23 @@ func gate_tier_bonus() -> int:
 	return mini(bonus_cores, CORE_TIER_CAP)
 
 
-# Build spends scrap at fabricators; a failed spend changes nothing.
+# A cog pickup or a sale: the wallet only, never mass, heft or a pickup proc.
+func add_cogs(amount: int) -> void:
+	if amount <= 0 or not alive():
+		return
+	cogs += amount
+
+
+# Shop and fabricator buys spend cogs; short of the price, nothing is spent.
+func spend_cogs(amount: int) -> bool:
+	if amount < 0 or cogs < amount:
+		return false
+	cogs -= amount
+	return true
+
+
+# The old scrap wallet: only world devices still charge it until they move to cogs.
+# A failed spend changes nothing.
 func spend_scrap(amount: int) -> bool:
 	if amount < 0 or scrap < amount:
 		return false
@@ -446,6 +464,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"max_hp": max_hp,
 		"hp": hp,
 		"scrap": scrap,
+		"cogs": cogs,
 		"mass": mass,
 		"heft_class": _heft_class,
 		"wear_accum": _wear_accum,
@@ -498,6 +517,7 @@ func restore() -> void:
 	max_hp = _snapshot["max_hp"]
 	hp = _snapshot["hp"]
 	scrap = _snapshot["scrap"]
+	cogs = int(_snapshot.get("cogs", 0))
 	mass = _snapshot["mass"]
 	bonus_cores = _snapshot["bonus_cores"]
 	parts.assign(_snapshot["parts"])

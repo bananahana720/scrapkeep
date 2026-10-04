@@ -208,7 +208,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
 	_connect_triggers()
 	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
-	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.scrap))
+	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
 
 
 # ---- Build API (for combat, presentation and world; see SEAMS.md) ----
@@ -754,10 +754,13 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	# The stage row's kill_scrap (the slice's 4.0; a row without one pays 1.0) scales a kill on top of the sheet's.
 	var stage_pay := float(ctx.flow.stage_def().get("kill_scrap", 1.0))
 	var amount := int(round(scrap_value * sheet.kill_scrap * stage_pay)) if not scrapless() else 0
+	# A kill pays mass as scrap and the wallet as an equal count of 1-cog gears (CG1).
 	if kind == "warden":
 		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, ctx.rng)
+		scrap.drop_cogs_line(at, _heading(), WARDEN_LINE, amount)
 	else:
 		scrap.drop(at, amount, ctx.rng)
+		scrap.drop_cogs(at, amount)
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
 		var picks: Array = Parts.roll(ctx.rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
@@ -948,6 +951,9 @@ func _physics_process(delta: float) -> void:
 				_post(Triggers.Kind.ON_PICKUP, "scrap", Triggers.DISCRETE_PROC, at)
 				if has_transformer("lightning_rod"):
 					_lightning_rod(ball)
+			# Gears fill the wallet only: no mass, no scrap_collected and no pickup procs.
+			for value in scrap.cog_values:
+				ctx.run.add_cogs(value)
 			_step_fabricators(ball, delta)
 		if ctx.run.armor_mode:
 			_step_armor(ball, delta)
@@ -964,9 +970,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _step_fabricators(ball: Vector3, delta: float) -> void:
-	for fab in fabricators.step(ball, delta, ctx.run.scrap, ctx.run.parts):
+	for fab in fabricators.step(ball, delta, ctx.run.cogs, ctx.run.parts):
 		var part_id: String = fab["part_id"]
-		if ctx.run.spend_scrap(Fabricators.price(part_id, ctx.run.parts.size())):
+		if ctx.run.spend_cogs(Fabricators.price(part_id, ctx.run.parts.size())):
 			fabricators.sold(fab)
 			ctx.run.add_part(part_id, "fabricator")
 

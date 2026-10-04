@@ -88,8 +88,10 @@ Every number there is a starting value; tuning edits `stage_defs.gd`, the heft c
 
 | Call | Effect | Publishes |
 | --- | --- | --- |
-| `add_scrap(amount, at)` | adds to the wallet and to mass | `scrap_collected(amount, at, total)`, then `heft_class_changed` if the class rose |
-| `spend_scrap(amount) -> bool` | spends from the wallet if affordable; mass is unchanged | nothing (the part it buys publishes `part_gained`) |
+| `add_scrap(amount, at)` | adds to mass and to the `scrap` tally; never to `cogs` | `scrap_collected(amount, at, total)`, then `heft_class_changed` if the class rose |
+| `add_cogs(amount)` | adds to the `cogs` wallet only; mass, heft and procs are unchanged | nothing |
+| `spend_cogs(amount) -> bool` | spends cogs if affordable; short of the price, or a negative amount, spends nothing; mass is unchanged | nothing (the part it buys publishes `part_gained`) |
+| `spend_scrap(amount) -> bool` | spends the old `scrap` tally if affordable; only world devices whose `cost` is `scrap` still call it | nothing |
 | `lose_scrap(amount, at, cause) -> int` | lowers mass by `amount` (not below 0) and the wallet by what it holds; returns the mass taken | `scrap_lost(taken, at, wallet_total, cause)`, then `heft_class_dropped` if the class fell |
 | `add_part(part_id, source)` | appends to `parts` | `part_gained(part_id, source)`, then `heft_class_changed` if the class rose |
 | `add_core(source, at)` | adds a stage-scoped bonus core | `core_gained(source, at, count)` |
@@ -102,7 +104,7 @@ Every number there is a starting value; tuning edits `stage_defs.gd`, the heft c
 These fields and methods are readable:
 
 - `class_def`, a `ClassDef` resource with `id`, `display_name`, `weapon_id`, `special_id`, `color` and `pitch`.
-- `run_id`, `stage`, `hp`, `max_hp`, `scrap` (the wallet), `mass`, `parts` (an array of part ids, one entry per stack), `bonus_cores`, `kills`, `events_won`, `run_time`, `stage_time` and `retries`.
+- `run_id`, `stage`, `hp`, `max_hp`, `cogs` (the spend wallet), `scrap` (the old wallet, now a tally nothing in build spends), `mass`, `parts` (an array of part ids, one entry per stack), `bonus_cores`, `kills`, `events_won`, `run_time`, `stage_time` and `retries`.
 - `heft()`, which is `1 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size()`, currently `1 + mass/450 + 0.2 * parts.size()`.
 - `heft_class()`, which returns 1 to 5 (classes start at heft 1.0, 1.5, 2.2, 3.2 and 4.6), and `heft_progress()`, the share of the way to the next class.
 - `gate_tier_bonus()`, which returns 0, 1 or 2 for 0, 1 or 2+ bonus cores. Build reads it when it builds its offers.
@@ -110,7 +112,9 @@ These fields and methods are readable:
 
 Only flow calls `begin`, `enter_stage`, `snapshot`, `restore`, `use_stage_start` and `advance`.
 
-The stage-start snapshot holds `max_hp`, `hp`, `scrap`, `mass`, `bonus_cores`, `parts`, `kills`, `events_won`, the entry position, the entry velocity and the camera yaw. A retry restores all of them, and it changes the heft class silently, with no stinger. The run also keeps the first start of each stage, which `flow.replay_stage(index)` restores. Bonus cores reset when a stage begins. Anything a module derives from parts, such as tuning mods or max HP, must be recomputable from `run.parts`. Make that recompute idempotent. `tuning.clear_mods()` followed by reapplying every part is the pattern.
+Cogs (CG1) are the only build currency: Moss's shelf, hook, reroll and charge cells, the drive-through fabricators, and sell-back all move `cogs` through `spend_cogs` and `add_cogs`, priced from the one table `Fabricators.COG_PRICES`. Damage, theft (`lose_scrap`), wear and `recover_mass` never change `cogs`. A scrap piece the magnet takes calls `add_scrap(1, at)`; a gear calls `add_cogs(value)` with no proc and no `scrap_collected` (`scrap_field.cog_values`).
+
+The stage-start snapshot holds `max_hp`, `hp`, `scrap`, `cogs`, `mass`, `bonus_cores`, `parts`, `kills`, `events_won`, the entry position, the entry velocity and the camera yaw. A retry restores all of them, and it changes the heft class silently, with no stinger. The run also keeps the first start of each stage, which `flow.replay_stage(index)` restores. Bonus cores reset when a stage begins. Anything a module derives from parts, such as tuning mods or max HP, must be recomputable from `run.parts`. Make that recompute idempotent. `tuning.clear_mods()` followed by reapplying every part is the pattern.
 
 ## GameEvents signals (`src/core/game_events.gd`)
 
