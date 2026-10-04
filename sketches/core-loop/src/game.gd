@@ -140,6 +140,7 @@ func _ready() -> void:
 		storage_dir = "user://test-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	apply_saved_bindings()
+	camera.apply_look_settings(settings_store())
 	codex = Codex.new()
 	add_child(codex)
 	codex.setup(events, run, flow, storage_dir)
