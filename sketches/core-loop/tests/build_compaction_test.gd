@@ -136,8 +136,11 @@ func _check_warden_line() -> void:
 		else:
 			pieces += 1
 			far = maxf(far, reach)
-	_report("warden scrap lines out", pieces == 12 and far >= 15.0 and far <= 23.0,
-		"a Warden worth 12 scrap dropped %d pieces reaching %.1f m along the heading" % [pieces, far])
+	# 2026-10-04: the default table is now the alpha's, whose stage rows pay kill_scrap
+	# 4.0 (build.gd scales a kill by it), so a 12-scrap Warden lays 12 x the row's pay.
+	var want := int(round(12 * _build.sheet.kill_scrap * float(_game.flow.stage_def().get("kill_scrap", 1.0))))
+	_report("warden scrap lines out", pieces == want and far >= 15.0 and far <= 23.0,
+		"a Warden worth 12 scrap (%d at the stage's pay) dropped %d pieces reaching %.1f m along the heading" % [want, pieces, far])
 	var gears: int = scrap.cog_count() - cogs_before
-	_report("warden gears line out", gears == 12 and gear_far <= 23.0,
-		"the same Warden laid %d one-cog gears reaching %.1f m" % [gears, gear_far])
+	_report("warden gears line out", gears == want and gear_far <= 23.0,
+		"the same Warden laid %d one-cog gears (want %d) reaching %.1f m" % [gears, want, gear_far])
