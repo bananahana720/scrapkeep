@@ -3,6 +3,7 @@ extends "res://src/combat/enemy.gd"
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Habits := preload("res://src/combat/habits.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -24,6 +25,14 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 #   pulse, the swarm keeps a guard rack of drones that pays GUARD_RACK_POSTURE once for
 #   the cruise-or-faster ram that scatters it (reform and respawn on GUARD_RESPAWN), the
 #   mind's lens follows you and opens on a stagger.
+# - The variant (a stage row's "warden_variant", through fleet.dress) changes one thing
+#   per family; "" changes nothing. meltdown (reactor): every vent pulse leaves a slag
+#   lane toward the ball that burns a grounded ball, and the core window lasts
+#   MELTDOWN_WINDOW times longer. brood (swarm): the guard is a lamp_swarm once that
+#   enemy is built, else the drone rack. choir (mind): the open lens moves among three
+#   seats every ADAPT_CYCLE and a stagger braces against the ball's top habit, as a
+#   Mind hand does. The point keeps the name "lens"; drawing three lenses is
+#   warden_kit's job and is not done here.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -41,6 +50,19 @@ const FAMILY_POINT_RADIUS := 1.3
 const FAMILY_REACH := 3.2
 const FAMILY_POINTS := {Roster.REACTOR: "core", Roster.SWARM: "queen", Roster.MIND: "lens"}
 const CONTACT_KINDS := ["stomp", "slam"]
+const VARIANTS := ["", "meltdown", "brood", "choir"]
+const VARIANT_FAMILIES := {"meltdown": Roster.REACTOR, "brood": Roster.SWARM, "choir": Roster.MIND}
+const MELTDOWN_WINDOW := 1.5
+const SLAG_LENGTH := 14.0
+const SLAG_WIDTH := 4.0
+const SLAG_SECONDS := 6.0
+const SLAG_DAMAGE := 4.0
+const ADAPT_CYCLE := 8.0
+const CHOIR_RADIUS := 1.6
+const CHOIR_BRACE_MULT := 1.6
+
+# Variant values already warned about, so a bad row warns once, not once per Warden.
+static var warned_variants := {}
 
 var stage := 1
 var reach := DEFAULT_REACH
@@ -52,6 +74,12 @@ var family := Roster.REACTOR
 var fleet
 var guard
 var family_opens := 0
+var variant := ""
+# meltdown: [{from, dir, length, width, left, node}], newest last.
+var slag_lanes: Array = []
+# choir: the lens seat open now (0..2) and the strike kinds the stagger braces against.
+var open_lens := 0
+var braced_kinds: Array = []
 
 var _pulse_clock := 0.0
 var _charging := false
@@ -66,6 +94,8 @@ var _posture: BossPosture
 var _armed := 0.0
 var _guard_scatter_frame := -1
 var _guard_paid_scatters := 0
+var _slag_burn := 0.0
+var _lens_clock := 0.0
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -74,7 +104,12 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	stage = spec.get("stage", 1)
 	reach = spec.get("reach", DEFAULT_REACH)
 	family = spec.get("family", Roster.warden_family(stage))
-	_posture = BossPosture.new(spec.get("posture", {}))
+	variant = _read_variant(String(spec.get("variant", "")))
+	var numbers: Dictionary = spec.get("posture", {})
+	if variant == "meltdown" and not numbers.has("stagger_seconds"):
+		numbers = numbers.duplicate()
+		numbers["stagger_seconds"] = BossPosture.STAGGER_SECONDS * MELTDOWN_WINDOW
+	_posture = BossPosture.new(numbers)
 	faction = family
 	fleet = spec.get("fleet")
 	if family == Roster.SWARM and fleet != null:
@@ -102,10 +137,23 @@ func seconds_since_pulse() -> float:
 	return _since_pulse
 
 
-func plating_for(_hit_kind: String, part: String) -> float:
+func plating_for(hit_kind: String, part: String) -> float:
 	if part == family_point() and family_open():
 		return 0.0
+	if family_open() and hit_kind in braced_kinds:
+		return plating * CHOIR_BRACE_MULT
 	return plating
+
+
+func _read_variant(value: String) -> String:
+	if value == "":
+		return ""
+	if value in VARIANTS and VARIANT_FAMILIES[value] == family:
+		return value
+	if not warned_variants.has(value):
+		warned_variants[value] = true
+		push_warning("warden: variant '%s' does not fit a %s Warden, reading it as ''" % [value, family])
+	return ""
 
 
 func weak_points() -> Array:
@@ -123,7 +171,10 @@ func family_point() -> String:
 
 
 func family_point_at() -> Vector3:
-	return global_position + (_kit.point_offset() if _kit != null else Vector3.UP * 4.0)
+	var at: Vector3 = global_position + (_kit.point_offset() if _kit != null else Vector3.UP * 4.0)
+	if variant == "choir":
+		at += (Vector3.RIGHT * CHOIR_RADIUS).rotated(Vector3.UP, open_lens * TAU / 3.0)
+	return at
 
 
 func family_open() -> bool:
@@ -160,9 +211,15 @@ func _step_guard(delta: float) -> void:
 	_guard_wait = GUARD_RESPAWN
 	var out := flat_to_ball()
 	var at := global_position + (out.normalized() if out.length() > 0.1 else Vector3.FORWARD) * GUARD_OFFSET
-	guard = fleet.spawn_guard(global_position, terrain.drop_point(at.x, at.z, 1.4))
+	guard = fleet.spawn_guard(global_position, terrain.drop_point(at.x, at.z, 1.4), guard_kind())
 	_guard_scatter_frame = -1
 	_guard_paid_scatters = 0
+
+
+func guard_kind() -> String:
+	if variant == "brood" and fleet != null and fleet.makes("lamp_swarm"):
+		return "lamp_swarm"
+	return "swarm_remnant"
 
 
 func contact_part(ball: Vector3, hit_kind: String) -> String:
@@ -187,6 +244,59 @@ func _physics_process(delta: float) -> void:
 	if family == Roster.SWARM:
 		_step_guard(delta)
 	_step_pulse(delta, inside)
+	_step_slag(delta)
+	_step_choir(delta)
+
+
+# meltdown: lanes age out; a grounded ball inside one burns while the Warden stands.
+func _step_slag(delta: float) -> void:
+	for lane in slag_lanes.duplicate():
+		lane["left"] = float(lane["left"]) - delta
+		if float(lane["left"]) <= 0.0:
+			if is_instance_valid(lane["node"]):
+				lane["node"].queue_free()
+			slag_lanes.erase(lane)
+	if slag_lanes.is_empty() or staggered() or target == null:
+		_slag_burn = 0.0
+		return
+	var ball_state = target.get("state")
+	if ball_state == null or not ball_state.grounded or not in_slag(_ball()):
+		_slag_burn = 0.0
+		return
+	# One hit per SLAG_DAMAGE burned, so the burn is SLAG_DAMAGE a second without a hit
+	# (and its interrupt) every tick.
+	_slag_burn += SLAG_DAMAGE * delta
+	if _slag_burn >= SLAG_DAMAGE:
+		_slag_burn -= SLAG_DAMAGE
+		hit_player.emit(SLAG_DAMAGE, Vector3.ZERO)
+
+
+func in_slag(point: Vector3) -> bool:
+	for lane in slag_lanes:
+		var flat := Vector3(point.x, 0.0, point.z) - Vector3(lane["from"].x, 0.0, lane["from"].z)
+		var along: float = flat.dot(lane["dir"])
+		if along >= 0.0 and along <= float(lane["length"]) and (flat - lane["dir"] * along).length() <= float(lane["width"]) * 0.5:
+			return true
+	return false
+
+
+func _leave_slag() -> void:
+	var out := flat_to_ball()
+	var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
+	var node := Telegraph.lane(world_root, terrain, Threat.Type.LANE, global_position, dir, SLAG_LENGTH, SLAG_WIDTH)
+	node.set_progress(1.0)
+	slag_lanes.append({"from": global_position, "dir": dir, "length": SLAG_LENGTH, "width": SLAG_WIDTH,
+			"left": SLAG_SECONDS, "node": node})
+
+
+# choir: the open lens moves to the next seat every ADAPT_CYCLE while the Warden stands.
+func _step_choir(delta: float) -> void:
+	if variant != "choir" or staggered():
+		return
+	_lens_clock += delta
+	while _lens_clock >= ADAPT_CYCLE:
+		_lens_clock -= ADAPT_CYCLE
+		open_lens = (open_lens + 1) % 3
 
 
 # The pulse cycle runs while you are in reach; once charging starts it is committed and
@@ -230,6 +340,8 @@ func _pulse() -> void:
 	if family == Roster.REACTOR:
 		if fleet != null:
 			fleet.events().vent_erupted.emit(global_position)
+		if variant == "meltdown":
+			_leave_slag()
 	min_pulse_telegraph = minf(min_pulse_telegraph, _charge_time)
 	_since_pulse = 0.0
 	_charging = false
@@ -244,6 +356,9 @@ func _exit_tree() -> void:
 	super._exit_tree()
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()
+	for lane in slag_lanes:
+		if is_instance_valid(lane["node"]):
+			lane["node"].queue_free()
 
 
 func _build_body() -> void:
@@ -345,6 +460,8 @@ func _apply_posture(result: Dictionary) -> void:
 func _step_posture(delta: float) -> void:
 	var before := _posture_signature()
 	_posture.step(delta)
+	if not _posture.staggered:
+		braced_kinds = []
 	_publish_posture(before)
 
 
@@ -357,8 +474,14 @@ func _begin_stagger() -> void:
 		_core_ring.queue_free()
 	_core_ring = null
 	family_opens += 1
+	if variant == "choir" and fleet != null:
+		var habit: String = fleet.habits.top()
+		if habit != "":
+			var brace: Dictionary = Habits.BRACES[habit]
+			braced_kinds = brace["kinds"]
+			fleet.mind_adapt(habit, String(brace["icon"]), family_point_at())
 	if fleet != null:
-		fleet.events().weak_point_opened.emit(family_point(), family_point_at(), BossPosture.STAGGER_SECONDS)
+		fleet.events().weak_point_opened.emit(family_point(), family_point_at(), _posture.stagger_seconds)
 
 
 func _posture_signature() -> Array:

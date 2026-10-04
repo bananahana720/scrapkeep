@@ -43,6 +43,21 @@ const SCRIPTS := {
 const PLATING_SCALE := {"plated_brute": 0.6, "mind_hand": 0.5}
 const PIN_WINDOW_FRAMES := 60
 
+
+# The guard shape the Warden reads (alive, following, scatters) around one enemy.
+class SingleGuard extends RefCounted:
+	var scatters := 0
+	var _enemy: Node3D
+
+	func _init(enemy: Node3D) -> void:
+		_enemy = enemy
+
+	func alive() -> Array:
+		return [_enemy] if is_instance_valid(_enemy) and not _enemy.is_dead() else []
+
+	func following() -> bool:
+		return false
+
 var ctx
 var combat
 var holds
@@ -114,6 +129,8 @@ func dress(kind: String, spec: Dictionary) -> Dictionary:
 	if PLATING_SCALE.has(kind):
 		var stage: int = ctx.flow.stage()
 		out["plating"] = float(roundi(PLATING_SCALE[kind] * float(combat.warden_spec(stage)["plating"])))
+	if kind == "warden" and ctx.flow != null:
+		out["variant"] = String(ctx.flow.stage_def().get("warden_variant", ""))
 	if kind == "swarm_remnant":
 		if _joining == null:
 			_joining = Swarm.new(self)
@@ -140,8 +157,11 @@ func on_spawned(enemy: Node3D, kind: String) -> void:
 	_batch.append({"kind": kind, "at": enemy.global_position})
 
 
-# A hive Warden's guard: a full rack of drones kept between the hive and the ball.
-func spawn_guard(home: Vector3, at: Vector3) -> Object:
+# A hive Warden's guard: a full rack of drones kept between the hive and the ball. Any
+# other kind (a brood Warden's lamp_swarm) is one enemy behind a guard that never follows.
+func spawn_guard(home: Vector3, at: Vector3, kind := "swarm_remnant") -> Object:
+	if kind != "swarm_remnant":
+		return SingleGuard.new(combat.spawn_enemy(kind, at))
 	_joining = Swarm.new(self, home)
 	swarms.append(_joining)
 	var swarm = _joining
