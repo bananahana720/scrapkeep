@@ -5,12 +5,13 @@ const Roster := preload("res://src/combat/roster.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 
-# The stand-in boss for a world whose own boss is not written yet (Worlds.BOSSES rows
-# whose script is this file). It answers BossContract.MODULE the way Brindle does, but the
-# whole fight is one posture Warden on a flat pad: hits fill its bar, a full bar staggers
-# it and opens its core, and a contact on the open core takes one of four chunks. The
-# last chunk is the win. Flow builds this module itself, so setup never claims ctx.boss;
-# flow points ctx.boss here only while this module's arena is the one entered.
+# The stand-in fight for a boss whose own fight is not written yet. The Waking (waking.gd)
+# and the Mind (mind.gd) extend this file and run its fight until theirs land; test doubles
+# use it directly. It answers BossContract.MODULE the way Brindle does, but the whole fight
+# is one posture Warden on a flat pad: hits fill its bar, a full bar staggers it and opens
+# its core, and a contact on the open core takes one of four chunks. The last chunk is the
+# win. Flow builds this module itself, so setup never claims ctx.boss; flow points ctx.boss
+# here only while this module's arena is the one entered.
 
 enum { IDLE, FIGHT, DEFEATED }
 const PAD_RADIUS := 36.0
@@ -54,7 +55,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	warden.global_position = center
 	warden.setup(ctx.player, self, ctx.root, Callable(ctx.flow, "in_play"), 1.0, _warden_spec())
 	warden.died.connect(_on_warden_died)
-	warden.set_meta("plate_name", String(ctx.flow.boss_row(ctx.stages.world_of(ctx.run.stage)).get("name", "Warden")))
+	warden.set_meta("plate_name", String(_row().get("name", "Warden")))
 	_posture_seen = _posture_signature()
 	state = FIGHT
 	clock = 0.0
@@ -104,6 +105,12 @@ func _posture_signature() -> Array:
 	if not is_instance_valid(warden) or not warden.has_method("posture"):
 		return [0, false, BossPosture.CHUNKS, false]
 	return [floori(warden.posture()), warden.staggered(), warden.chunks_left(), warden.chunk_cracked()]
+
+
+# The boss row this fight names and narrates: the current world's row as flow reads it. A
+# boss that extends the stub answers its own Worlds.BOSSES row instead.
+func _row() -> Dictionary:
+	return ctx.flow.boss_row(ctx.stages.world_of(ctx.run.stage))
 
 
 func _warden_spec() -> Dictionary:
@@ -214,7 +221,7 @@ func music_state() -> Dictionary:
 
 
 func objective_text() -> String:
-	var row: Dictionary = ctx.flow.boss_row(ctx.stages.world_of(ctx.run.stage))
+	var row := _row()
 	var who := String(row.get("name", "the boss"))
 	match state:
 		DEFEATED:
