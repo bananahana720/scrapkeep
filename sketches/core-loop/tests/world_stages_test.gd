@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Launch := preload("res://src/world/launch.gd")
 
-# The two default zones as built in the real scene: each spawn and beacon stands on solid,
+# Every default zone as built in the real scene: each spawn and beacon stands on solid,
 # level ground that the physics world agrees with; the Reach has different
 # ground from the Spillway; each opens on a landing hill that falls
 # away along its entry heading; each carries the momentum kit (pylon faces, grapple
@@ -86,7 +86,9 @@ func _check_stage(stage: int) -> void:
 			falls = false
 		last = h
 	var drop: float = terrain.height(spawn.x, spawn.z) - last
-	if stage > 1:
+	# The Spillway is the opening map: it has no landing hill and no momentum kit wherever its row sits.
+	var opening: bool = String(_game.ctx.stages.of(stage)["map"]) == String(_game.ctx.stages.of(1)["map"])
+	if not opening:
 		_report("stage %d landing hill" % stage, falls and drop >= HILL_DROP,
 			"the ground falls %.1f m over the 64 m ahead of the spawn along the entry heading, never rising: %s" % [drop, falls])
 		var entry := spawn + Vector3.UP * 14.0
@@ -130,7 +132,7 @@ func _check_stage(stage: int) -> void:
 		for gzi in range(-7, 8):
 			grid.append(terrain.height(gxi * GRID, gzi * GRID))
 	_grids[stage] = grid
-	if stage > 1:
+	if not opening:
 		_report("stage %d momentum kit" % stage, pylon_cells >= MIN_PYLON_CELLS and posts >= MIN_POSTS and walls >= MIN_POSTS,
 			"%d ground cells steep enough for a pylon, %d grapple posts, %d pylon walls" % [pylon_cells, posts, walls])
 
@@ -145,6 +147,8 @@ func _check_stage(stage: int) -> void:
 
 
 func _check_distinct() -> void:
+	# World one's two zones. The Reach extends the Gorge's heightmap, so a gorge row next to a
+	# reach row differs by under a metre on this grid and is not compared here.
 	var pairs := [[1, 2]]
 	var detail := []
 	var ok := true

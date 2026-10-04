@@ -6,8 +6,8 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 
-# The alpha table: world one as the Spillway then the Cable Reach, both Wardens on the
-# posture fight, Brindle as the world boss. The row keys are every key a src/ reader
+# The alpha table: three worlds of two zones each on the surviving maps, every Warden on
+# the posture fight, Brindle as the boss. The row keys are every key a src/ reader
 # pulls from a stage row (flow, world, combat, build, hud, objectives, audio, director,
 # event director, vfx, game); a reader added later has to be added here and to the rows.
 
@@ -37,25 +37,34 @@ func _missing(row: Dictionary) -> Array:
 
 func _initialize() -> void:
 	var A = AlphaDefs
-	_check("count", A.COUNT == 2 and A.DEFS.size() == 2 and A.BOSS == "brindle", "COUNT %d BOSS %s" % [A.COUNT, A.BOSS])
-	for s in [1, 2]:
-		_check("world_of %d" % s, A.world_of(s) == 1, str(A.world_of(s)))
+	_check("count", A.COUNT == 6 and A.DEFS.size() == A.COUNT and A.BOSS == "brindle", "COUNT %d rows %d BOSS %s" % [A.COUNT, A.DEFS.size(), A.BOSS])
+	var want_world := [1, 1, 2, 2, 3, 3]
+	for s in range(1, A.COUNT + 1):
+		_check("world_of %d" % s, A.world_of(s) == want_world[s - 1], str(A.world_of(s)))
+	_check("world_of(3) == 2", A.world_of(3) == 2, str(A.world_of(3)))
+	_check("world_of(5) == 3", A.world_of(5) == 3, str(A.world_of(5)))
 	_check("first_of 1", A.first_of(1) == 1, str(A.first_of(1)))
 	_check("last_of 1", A.last_of(1) == 2, str(A.last_of(1)))
-	_check("worlds", A.worlds() == [1], str(A.worlds()))
-	_check("is_world_last 1", not A.is_world_last(1), "stage 1")
-	_check("is_world_last 2", A.is_world_last(2), "stage 2")
-	_check("is_run_last 1", not A.is_run_last(1), "stage 1")
-	_check("is_run_last 2", A.is_run_last(2), "stage 2")
-	_check("maps", A.of(1)["map"] == "spillway" and A.of(2)["map"] == "reach", "%s %s" % [A.of(1)["map"], A.of(2)["map"]])
+	_check("last_of last world", A.last_of(A.worlds().back()) == A.COUNT, str(A.last_of(A.worlds().back())))
+	# Three worlds of two rows each: a row moved to another world fails here even when every world id still appears.
+	var spans := []
+	for w in A.worlds():
+		spans.append([A.first_of(w), A.last_of(w)])
+	_check("worlds", A.worlds() == [1, 2, 3] and spans == [[1, 2], [3, 4], [5, 6]], "%s spans %s" % [A.worlds(), spans])
+	for s in range(1, A.COUNT + 1):
+		_check("is_world_last %d" % s, A.is_world_last(s) == (s in [2, 4, 6]), "stage %d: %s" % [s, A.is_world_last(s)])
+		_check("is_run_last %d" % s, A.is_run_last(s) == (s == 6), "stage %d: %s" % [s, A.is_run_last(s)])
+	# Naming all six maps keeps a swapped or placeholder map from shipping without this list changing.
+	var maps: Array = A.DEFS.map(func(row): return row["map"])
+	_check("maps", maps == ["spillway", "reach", "gorge", "reach", "spillway", "reach"], str(maps))
 	for i in A.DEFS.size():
 		var row: Dictionary = A.DEFS[i]
 		_check("row %d keys" % (i + 1), _missing(row).is_empty(), "missing %s" % str(_missing(row)))
 		_check("row %d stage number" % (i + 1), int(row.get("stage", 0)) == i + 1, str(row.get("stage", 0)))
 	_check("packs", A.packs().size() == 3 and not A.elite().is_empty(), "%d packs" % A.packs().size())
-	# Both maps build from the table without error.
+	# Every row's map builds from the table without error.
 	var terrain = Terrain.new(AlphaDefs)
-	_check("terrain maps", terrain.maps.size() == 2, "%d maps" % terrain.maps.size())
+	_check("terrain maps", terrain.maps.size() == A.COUNT, "%d maps" % terrain.maps.size())
 	# --table=alpha resolves through the game's selection; no choice stays the default.
 	var game = Game.new()
 	game.test_mode = true
