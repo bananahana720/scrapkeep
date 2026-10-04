@@ -734,3 +734,13 @@ E is interact everywhere (`design-v3/LOOP-REDESIGN.md` section 9). World owns th
 Who conforms: the posture Warden (slice table) conforms to `TARGET` now. The Slag Bowl module (`boss.gd`) has the `MODULE` methods but is not yet checked by the test. Pending: Brindle on the posture rule (unit F2a, through `boss_target.gd`) and the later-world stub (unit F5).
 
 Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The test only shows two conforming doubles can exist side by side without touching it; a real multi-module slot is not built.
+
+## Run store (RS2)
+
+`src/core/run_store.gd` (`RunStore.new(path = "user://run.json")`) keeps one run document on disk. It is pure file logic: it takes and returns the Dictionary `RunState.to_entrance_doc()` makes and does not know flow.
+
+- **File.** `{"schema": 1, "generation": n, "run": <entrance doc>}`, written through `SafeStore.write_atomic`. `MIGRATIONS` maps a schema to its step (`0` rewrites v0's `[world, count]` retry pairs into the string-keyed map). A migrated file is kept as `run.json.v0` on the next save.
+- **Calls.** `load() -> Dictionary` (`{}` for no run), `save(doc) -> String` (`""` saved, else a named cause: `newer_schema`, `quarantine_failed`, `changed_on_disk`, `backup_failed`, `write_failed`; `last_error` has the sentence), `clear() -> bool`, `generation()`, and static `merge(ours, theirs)`.
+- **Failure rules.** An unreadable file moves to `run.json.bad` with its bytes and loads as no run; the next save proceeds. A newer schema is left untouched, `load` returns `{}` and `save` refuses with `newer_schema` until `clear()`.
+- **Merge.** A save whose file has a higher generation than the one we hold, and a load of a lower generation than the doc held in memory, merge: per world `retries_spent` takes the larger, and the run doc's extra keys `ended` (bool) and `worlds_cleared` (world ints) never go back (true stays true, lists union). A caller that sets those flags writes them into the doc it saves.
+- **Caller (RS3).** `load()` once when continuing, `save(doc)` at each zone entrance and when a retry is spent, `clear()` when the run ends for good (set `ended` first if a save must precede it). Test: `run_store_test`.
