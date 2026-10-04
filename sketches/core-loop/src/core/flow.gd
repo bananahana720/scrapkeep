@@ -4,6 +4,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const RunState := preload("res://src/core/run_state.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
@@ -70,6 +72,22 @@ var _world := 0
 var _launched := false
 var _flight := 0.0
 var _last_percent := -1
+
+# Run saves (RS3): game hands flow a RunStore in play. Every zone entrance is written to it,
+# a death in a world may be retried once, and the second death there ends the run. A flow
+# with no store (the tests and bots that do not opt in) keeps unlimited death retries.
+const WORLD_RETRIES := 1
+var store = null
+# The cause the last store write was refused with ("" when it saved); the run plays on.
+var store_error := ""
+# What the title offers (RS6), from saved_run(): a run to continue, or the named cause a
+# saved file could not be used ("" when there is simply none).
+var continue_ready := false
+var saved_run_cause := ""
+var saved_run_why := ""
+var run_won := false
+# The entrance doc last written, kept so a spent retry rewrites the entrance, never the arena.
+var _entrance := {}
 
 
 func setup(ctx_ref, beacon_ref) -> void:
@@ -213,10 +231,112 @@ func _begin_run(chosen: Resource) -> void:
 	_world = 0
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
+	run_won = false
 	ctx.run.begin(chosen)
 	ctx.events.run_started.emit(chosen.id)
 	var heading: Vector3 = ctx.terrain.entry_heading(1)
 	enter_stage(1, heading * ctx.tuning.f("cruise") * FIRST_DROP_SPEED, false)
+
+
+# The saved run the title can offer, or {} with saved_run_cause naming why not: "" for no
+# run, the store's refusal (newer_schema, quarantine_failed), "unreadable" for a file moved
+# aside as .bad, or "invalid_run" for a document this build cannot apply. saved_run_why has
+# the sentence.
+func saved_run() -> Dictionary:
+	continue_ready = false
+	saved_run_cause = ""
+	saved_run_why = ""
+	if store == null:
+		return {}
+	var doc: Dictionary = store.load()
+	if doc.is_empty():
+		if store.refusal != "":
+			saved_run_cause = store.refusal
+		elif store.last_error != "":
+			saved_run_cause = "unreadable"
+		saved_run_why = store.last_error
+		return {}
+	var why := RunState.validate_entrance_doc(doc)
+	if why == "" and ClassDef.by_id(String(doc["class_id"])) == null:
+		why = "unknown pilot %s" % doc["class_id"]
+	if why != "":
+		saved_run_cause = "invalid_run"
+		saved_run_why = why
+		return {}
+	continue_ready = true
+	return doc
+
+
+# Continue (RS6): the saved run from its last zone entrance, free. The world's spent
+# retries come back as saved and none is spent; the tree picks are put back on the live
+# tree. False when there is nothing valid to continue.
+func resume_run() -> bool:
+	if in_play():
+		return false
+	var doc := saved_run()
+	if doc.is_empty():
+		return false
+	var chosen: Resource = ClassDef.by_id(String(doc["class_id"]))
+	in_arena = false
+	boss_active = false
+	run_won = false
+	_world = 0
+	if ctx.run_log != null:
+		ctx.run_log.abandon_open_run()
+	ctx.run.begin(chosen)
+	ctx.events.run_started.emit(chosen.id)
+	ctx.run.from_entrance_doc(doc)
+	_apply_tree_picks()
+	var p: Array = doc["entry_velocity"]
+	enter_stage(ctx.run.stage, Vector3(p[0], p[1], p[2]), false)
+	return true
+
+
+func _tree():
+	return ctx.player.get("tree") if ctx.player != null else null
+
+
+# Puts the loaded picks on the live tree through tree.pick, so the kit and combat hear
+# tree_picked as they did the first time. The depth cap and world-one flag follow world.gd's
+# _open_pick for the stage resumed at. A pick owed at the save is offered again.
+func _apply_tree_picks() -> void:
+	var tree = _tree()
+	if tree == null:
+		return
+	var world: int = ctx.stages.world_of(ctx.run.stage)
+	tree.max_depth = UpgradeTree.depth_cap(world) if ctx.tuning.world_one() else UpgradeTree.DEPTHS
+	tree.world_one = ctx.tuning.world_one() and world == 1
+	var saved: Array[String] = ctx.run.tree_picks.duplicate()
+	var allowed: int = ctx.run.tree_allowed
+	tree.allowed = saved.size()
+	for id in saved:
+		if not tree.pick(id):
+			warn_once("resume_pick", "flow: saved tree pick %s does not fit the tree; later picks dropped" % id)
+			break
+	if allowed > tree.picks.size():
+		tree.allowed = allowed - 1
+		tree.open_checkpoint()
+	else:
+		tree.allowed = maxi(allowed, tree.picks.size())
+
+
+# A retry after a death spends the world's one retry; the entrance is saved again with it.
+func _spend_world_retry() -> void:
+	if store == null:
+		return
+	var world: int = ctx.run.world
+	ctx.run.retries_spent[world] = int(ctx.run.retries_spent.get(world, 0)) + 1
+	if _entrance.is_empty():
+		return
+	var spent: Dictionary = _entrance["retries_spent"]
+	spent[str(world)] = int(ctx.run.retries_spent[world])
+	_save(_entrance)
+
+
+func _save(doc: Dictionary) -> void:
+	store_error = store.save(doc)
+	if store_error != "":
+		warn_once("run_save_" + store_error, "flow: run not saved (%s): %s" % [store_error, store.last_error])
 
 
 # carried is the velocity the ball arrives with: its horizontal speed is kept exactly
@@ -224,6 +344,7 @@ func _begin_run(chosen: Resource) -> void:
 func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	ctx.run.enter_stage(index)
 	var world: int = ctx.stages.world_of(index)
+	ctx.run.world = world
 	if not retry and world != _world:
 		_world = world
 		ctx.events.world_entered.emit(world)
@@ -232,8 +353,10 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	_last_percent = -1
 	# The checkpoint is taken before stage_entered, so nothing a module grants inside
 	# its handler is folded into the stage start. The entry pose is filled in after,
-	# because world may swap the geometry inside that handler.
+	# because world may swap the geometry inside that handler. The entrance doc is read at
+	# the same moment as the checkpoint and gets the same pose.
 	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
+	var doc: Dictionary = ctx.run.to_entrance_doc(_tree()) if store != null else {}
 	ctx.events.stage_entered.emit(index, retry)
 	var heading: Vector3 = ctx.terrain.entry_heading(index)
 	var flat := Vector2(carried.x, carried.z).length()
@@ -242,6 +365,12 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	_place_ball(at, velocity, heading)
 	_place_beacon()
 	ctx.run.set_snapshot_entry(at, velocity, ctx.camera.yaw)
+	if store != null:
+		doc["entry_position"] = [at.x, at.y, at.z]
+		doc["entry_velocity"] = [velocity.x, velocity.y, velocity.z]
+		doc["camera_yaw"] = ctx.camera.yaw
+		_entrance = doc
+		_save(doc)
 	_set_state(STAGE)
 
 
@@ -250,6 +379,8 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 func retry_stage() -> void:
 	if not ctx.run.has_snapshot() or state == TITLE or state == CLASS_SELECT or state == SUMMARY or state == VICTORY:
 		return
+	if state == DEAD:
+		_spend_world_retry()
 	if in_arena:
 		_retry_arena()
 		return
@@ -512,10 +643,21 @@ func _on_boss_defeated() -> void:
 
 
 func _end_run_won() -> void:
+	_end_run(true)
+
+
+# The run is over for good, won or lost: the saved run becomes a tombstone so no Continue
+# can bring it back.
+func _end_run(won: bool) -> void:
 	ctx.run.over = true
+	run_won = won
 	ctx.player.set_frozen(true)
+	_entrance = {}
+	if store != null and not store.clear():
+		store_error = "clear_failed"
+		push_warning("flow: run save not cleared: %s" % store.last_error)
 	_set_state(SUMMARY)
-	ctx.events.run_ended.emit(true)
+	ctx.events.run_ended.emit(won)
 
 
 func _on_reward_chosen(_part_id: String) -> void:
@@ -584,6 +726,9 @@ func _on_player_died() -> void:
 		return
 	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	ctx.player.set_frozen(true)
+	if store != null and int(ctx.run.retries_spent.get(ctx.run.world, 0)) >= WORLD_RETRIES:
+		_end_run(false)
+		return
 	_set_state(DEAD)
 
 

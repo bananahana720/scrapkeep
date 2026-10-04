@@ -126,8 +126,17 @@ func _on_flow_changed(state: String) -> void:
 			child.queue_free()
 	match state:
 		"title":
-			_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
-			_action("start", "key_space", "Start")
+			# Continue (RS6) leads when a saved run is valid, so a pad's first focus lands on
+			# it; a saved file this build cannot use names its cause and leaves New run only.
+			game.flow.saved_run()
+			var body: String = FieldNotes.OBJECTIVE
+			if game.flow.saved_run_cause != "":
+				body = "Saved run not loaded (%s): %s\n\n%s" % [game.flow.saved_run_cause, game.flow.saved_run_why, body]
+			_show(TITLE, Palette.AMBER, body)
+			if game.flow.continue_ready:
+				_action("continue", "key_c", "Continue")
+			var saved: bool = game.flow.continue_ready or game.flow.saved_run_cause != ""
+			_action("start", "key_space", "New run" if saved else "Start")
 			_action("help", "key_h", "Help")
 			_action("achievements", "key_a", "Achievements")
 			_action("settings", "key_s", "Settings")
@@ -162,7 +171,7 @@ func _on_flow_changed(state: String) -> void:
 			if epitaph != "":
 				body += "\n" + epitaph
 			_victory_boss = {}
-			_show("RUN COMPLETE", EventKinds.color("run_ended"), body)
+			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
 			_summary_stats()
 			_action("again", "key_n", "Run again")
 			_action("class", "key_space", "Choose class")

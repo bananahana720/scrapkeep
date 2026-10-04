@@ -25,6 +25,7 @@ const Presentation := preload("res://src/presentation/presentation.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
+const RunStore := preload("res://src/core/run_store.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
 # one context to the four modules in a fixed order, then owns input, pause, hit-stop
@@ -79,6 +80,9 @@ var _progress_ready := false
 # Where the codex and the run log write: user:// in play, a per-process folder the
 # tests clean up when the game leaves the tree.
 var storage_dir := "user://"
+# The run save's file (RS3). Play keeps it at user://run.json; a test names its own file to
+# turn run saves on, and with none set a test runs without them (unlimited death retries).
+var run_store_path := ""
 var _settings_store
 
 var _pause_toggled := false
@@ -177,6 +181,8 @@ func _ready() -> void:
 		return ctx.spawner.would_crush(enemy, kind, force)
 
 	flow.setup(ctx, beacon)
+	if not test_mode or run_store_path != "":
+		flow.store = RunStore.new(run_store_path if run_store_path != "" else storage_dir.path_join("run.json"))
 	events.flow_changed.connect(_on_flow_changed)
 
 	hud = Hud.new()
@@ -641,6 +647,9 @@ func _screen_key(key: int) -> bool:
 		"title":
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()
+				return true
+			if key == KEY_C and flow.continue_ready:
+				flow.resume_run()
 				return true
 			if key == KEY_H:
 				screens.toggle_help()
