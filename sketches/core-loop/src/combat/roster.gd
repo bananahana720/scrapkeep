@@ -3,6 +3,8 @@ extends RefCounted
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const RosterDig := preload("res://src/combat/roster_dig.gd")
+const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 
 # The enemy roster (DESIGN-V2 sections 10, 11 and 15): one row per spawnable kind, and
 # the one source for what each enemy is. The spawner, the director's pack names, the
@@ -22,6 +24,8 @@ const Worlds := preload("res://src/core/worlds.gd")
 #   standing in until W5 bakes `tag_next`. hold: the hold loop's stand-in.
 # - tests: the build axis it tests, which the director weights against the player's
 #   build ("air", "speed", "heft", "contact", "weapon", "steer", "habit").
+# - script, world: a declared later-world kind's behaviour file and world (roster_dig.gd,
+#   roster_highdraft.gd). Such a kind is built, so spawnable, once its script exists.
 
 const FLEET := "fleet"
 const REACTOR := "reactor"
@@ -52,7 +56,7 @@ const T_WAVE := Threat.Type.WAVE
 const T_PROJECTILE := Threat.Type.PROJECTILE
 const T_LANE := Threat.Type.LANE
 
-const ROWS := {
+const BASE_ROWS := {
 	# The first cut's roster, kept: each already owns its mechanic.
 	"chaser": {"faction": FLEET, "role": "punisher", "mechanic": "lunge_lane", "telegraph": T_LANE, "holds": false,
 		"breaks": [], "tag": "", "tests": "speed",
@@ -125,6 +129,33 @@ const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "net
 const ANCIENTS := ["reactor_relic", "swarm_remnant", "mind_hand"]
 # The family ancient per Warden family.
 const FAMILY_ANCIENT := {REACTOR: "reactor_relic", SWARM: "swarm_remnant", MIND: "mind_hand"}
+
+# Every row: the base roster plus the declared world 2 and 3 kinds.
+static var ROWS: Dictionary = _all_rows()
+
+
+static func _all_rows() -> Dictionary:
+	var rows := BASE_ROWS.duplicate()
+	for table in [RosterDig.ROWS, RosterHighdraft.ROWS]:
+		for id in table:
+			assert(not rows.has(id), "roster id declared twice: %s" % id)
+			rows[id] = table[id]
+	return rows
+
+
+# A kind is built when it needs no script of its own or its script file exists.
+static func built(kind: String) -> bool:
+	var path := String(row(kind).get("script", ""))
+	return path == "" or ResourceLoader.exists(path)
+
+
+# The kinds declared for a world, in declaration order.
+static func world_kinds(world: int) -> Array:
+	var kinds: Array = []
+	for id in ROWS:
+		if int(ROWS[id].get("world", 0)) == world:
+			kinds.append(id)
+	return kinds
 
 
 static func has(id: String) -> bool:

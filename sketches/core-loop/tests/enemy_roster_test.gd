@@ -89,6 +89,11 @@ func _data() -> void:
 			unbreakable.append([id, "no boost, jump or smash"])
 	_report("every hold breaks", unbreakable.is_empty(), "holding rows whose breaks are not the player's own: %s" % [unbreakable])
 
+	# 2026-10-04, alpha wave 8: the world 2 and 3 kinds are declared ahead of their scripts.
+	var declared: Array = Roster.world_kinds(2) + Roster.world_kinds(3)
+	var built: Array = declared.filter(func(id): return Roster.built(id))
+	_report("declared kinds are unbuilt", declared.size() == 6 and built.is_empty(), "declared %s; built %s" % [declared, built])
+
 
 func _physics_process(_delta: float) -> bool:
 	if _game.flow == null:
@@ -103,13 +108,14 @@ func _physics_process(_delta: float) -> bool:
 			_game.run.set_max_hp(99999.0)
 			_game.events.pack_arrived.connect(func(faction: String, at: Vector3, kinds: Array): _packs.append([faction, kinds, at]))
 			var wrong: Array = []
-			for i in (Roster.COUNTERS + Roster.ANCIENTS).size():
-				var kind: String = (Roster.COUNTERS + Roster.ANCIENTS)[i]
+			var kinds: Array = Roster.ROWS.keys().filter(func(id): return Roster.built(id))
+			for i in kinds.size():
+				var kind: String = kinds[i]
 				var at: Vector3 = ball + Vector3(cos(i * 0.6) * 40.0, 0.0, sin(i * 0.6) * 40.0)
 				var unit: Node3D = ctx.spawner.spawn_enemy(kind, ctx.terrain.drop_point(at.x, at.z, 2.0))
 				if unit == null or unit.kind != kind or unit.faction != Roster.faction_of(kind) or not unit.is_in_group("enemy"):
 					wrong.append(kind)
-			_report("every kind spawns as itself", wrong.is_empty(), "%d reinforcements spawned; wrong %s" % [(Roster.COUNTERS + Roster.ANCIENTS).size(), wrong])
+			_report("every kind spawns as itself", wrong.is_empty(), "%d built kinds spawned; wrong %s" % [kinds.size(), wrong])
 			_step = 1
 		1:
 			var factions := {}

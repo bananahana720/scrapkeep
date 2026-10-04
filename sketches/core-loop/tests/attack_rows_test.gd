@@ -74,9 +74,11 @@ func _check_ids() -> void:
 		if not EventKinds.has_attack(id):
 			missing.append(id)
 	_report("every id has a row", missing.is_empty(), "%d of %d document ids without a row %s" % [missing.size(), doc.size(), missing])
+	# 2026-10-04, alpha wave 8: an id owned by a declared later-world roster kind (a row with
+	# a "world", roster_dig.gd and roster_highdraft.gd) is reserved ahead of the document.
 	var extra: Array[String] = []
 	for id in EventKinds.ATTACK_ROWS:
-		if not seen.has(id):
+		if not seen.has(id) and not _reserved(id):
 			extra.append(id)
 	_report("no invented ids", extra.is_empty(), "%d rows the document does not name %s" % [extra.size(), extra])
 	# A dictionary literal cannot hold a key twice, so a shared ID also shows as two rows
@@ -94,6 +96,11 @@ func _check_ids() -> void:
 		poses[pose] = id
 		labels[label] = id
 	_report("ids unique", shared.is_empty() and EventKinds.attack_ids().size() == EventKinds.ATTACK_ROWS.size(), "%d rows share a pose key or label %s" % [shared.size(), shared])
+
+
+func _reserved(id: String) -> bool:
+	var row := EventKinds.attack_row(id)
+	return row["owner_kind"] == "roster" and Roster.row(String(row["owner"])).has("world")
 
 
 func _check_fields() -> void:

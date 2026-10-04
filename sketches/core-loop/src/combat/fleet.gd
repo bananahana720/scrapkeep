@@ -58,6 +58,8 @@ var follower_pins := 0
 var _batch: Array = []
 var _joining = null
 var _launched := {}
+# Roster-row scripts loaded by make, by kind.
+var _loaded := {}
 
 
 func setup(ctx_ref, combat_ref) -> void:
@@ -84,12 +86,20 @@ func reset_run() -> void:
 	last_pack = {}
 
 
+# A declared later-world kind is made from its roster row's script once that file exists;
+# until then it is unmakeable and must not reach a spawn table.
 func makes(kind: String) -> bool:
-	return SCRIPTS.has(kind)
+	return SCRIPTS.has(kind) or (Roster.row(kind).has("script") and Roster.built(kind))
 
 
 func make(kind: String) -> Node3D:
-	return SCRIPTS[kind].new() if SCRIPTS.has(kind) else null
+	if SCRIPTS.has(kind):
+		return SCRIPTS[kind].new()
+	if not makes(kind):
+		return null
+	if not _loaded.has(kind):
+		_loaded[kind] = load(String(Roster.row(kind)["script"]))
+	return _loaded[kind].new()
 
 
 # The spec a W7 unit is set up with: the kind, the holds, this node, a plated unit's
