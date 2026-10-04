@@ -65,7 +65,7 @@ func _run() -> void:
 		if stage == 2:
 			_game.flow.enter_stage(2, Vector3.ZERO, false)
 		await physics_frame
-		await _camp(stage, "chaser" if stage == 1 else "lobber", "hot_rivets" if stage == 1 else "long_spool")
+		await _camp(stage, "chaser" if stage == 1 else "lobber", "hot_rivets" if stage == 1 else "loose_trigger")
 	_game.free()
 	print("activities_camp_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

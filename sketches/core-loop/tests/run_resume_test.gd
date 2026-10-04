@@ -167,6 +167,26 @@ func _run() -> void:
 	_report("new world fresh retry", world_two_dead and spent_two == {1: 1, 2: 1} and _game.flow.state_name() == "summary" and _disk().is_empty(),
 		"world 2 first death dead screen %s, spent %s, second death flow %s" % [world_two_dead, spent_two, _game.flow.state_name()])
 
+	# (e) a save this build never owned survives a lost run's end byte for byte.
+	_game.free()
+	for name in DirAccess.get_files_at(DIR):
+		DirAccess.remove_absolute(DIR + name)
+	var future := '{"schema": 9, "generation": 4, "run": {"x": 1}}'.to_utf8_buffer()
+	var out := FileAccess.open(PATH, FileAccess.WRITE)
+	out.store_buffer(future)
+	out.close()
+	_game = _boot()
+	await _frames(2)
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	await _frames(5)
+	_kill(_game)
+	_game.flow.retry_stage()
+	_kill(_game)
+	var kept := FileAccess.get_file_as_bytes(PATH)
+	_report("newer-schema save survives a lost run", _game.flow.state_name() == "summary" and kept == future,
+		"flow %s, file %s" % [_game.flow.state_name(), kept.get_string_from_utf8()])
+
 	_game.free()
 	for name in DirAccess.get_files_at(DIR):
 		DirAccess.remove_absolute(DIR + name)

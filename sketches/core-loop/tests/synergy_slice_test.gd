@@ -10,7 +10,8 @@ const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 # or carded. Every named synergy announces itself when armed and publishes cause_fired
 # from the one place its effect resolves; the first firing of an activation is its
 # discovery. FIRING_SITES is the table of row id to the function that emits for it, and
-# each row is driven through its real trigger on the default table: a row with no case
+# each row is driven through its real trigger with the table filter off (the default table is
+# the alpha ruleset since 2026-10-04): a row with no case
 # here, or whose trigger never produces cause_fired, fails.
 
 const KEPT := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
@@ -89,6 +90,9 @@ func _physics_process(_delta: float) -> bool:
 			_slice_cuts()
 			_queue = KEPT.duplicate()
 		else:
+			# 2026-10-04: the default table now takes the alpha ruleset (it keeps five synergies), so the
+			# control for "every row fires" runs with the synergy filter off, the unfiltered rule.
+			Synergies.table = null  # the codex cards were declared under the alpha filter, so only the live rule is checked
 			_default_cuts()
 			_queue = Synergies.ROWS.keys()
 		return false
@@ -142,14 +146,14 @@ func _default_cuts() -> void:
 	var hand := _hand("storm_lattice")
 	_hold(hand)
 	var cards: Array = _game.ctx.codex.entries("build").map(func(e): return e["id"])
-	_report("default keeps storm_lattice", "storm_lattice" in _build.active_synergies() and "storm_lattice" in cards,
-		"the same parts %s on the default table give %s and the card is there %s" % [hand, _build.active_synergies(), "storm_lattice" in cards])
+	_report("unfiltered keeps storm_lattice", "storm_lattice" in _build.active_synergies(),
+		"the same parts %s with no table filter give %s and the card is there %s" % [hand, _build.active_synergies(), "storm_lattice" in cards])
 	_hold([hand[1]])
 	var completes: String = _build.offer_mark(hand[0])
 	_hold([])
 	var ingredient: String = _build.offer_mark(hand[0])
-	_report("default offers storm_lattice", completes == "* completes Storm Lattice *" and ingredient == "* ingredient: ??? *",
-		"on the default table %s reads '%s' with its partner held and '%s' with nothing held" % [hand[0], completes, ingredient])
+	_report("unfiltered offers storm_lattice", completes == "* completes Storm Lattice *" and ingredient == "* ingredient: ??? *",
+		"with no table filter %s reads '%s' with its partner held and '%s' with nothing held" % [hand[0], completes, ingredient])
 	_hold([])
 
 

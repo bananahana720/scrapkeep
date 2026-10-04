@@ -148,8 +148,59 @@ func _wear_checks() -> void:
 		"10 s grounded at cruise: wear %.0f unfitted, %.0f fitted" % [losses[0], losses[1]])
 
 
+# 2026-10-04: a resolved Recycle survives Continue. resume_run emits run_started, which
+# clears the offer's fields; the saved ones come back so Warden I does not offer twice.
+func _resume_checks() -> void:
+	var dir := "user://hotwire_offer_flow_test/"
+	DirAccess.make_dir_recursive_absolute(dir)
+	for name in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir + name)
+	_game.free()
+	var first := Game.new()
+	first.test_mode = true
+	first.run_store_path = dir + "run.json"
+	root.add_child(first)
+	_game = first
+	await process_frame
+	first.ctx.calm = true
+	first.player.source = Intent.Scripted.new()
+	first.flow.press_start()
+	first.flow.choose_class(0)
+	for i in 5:
+		await process_frame
+	first.events.beacon_unsealed.emit(1)
+	var paid: int = first.build.hotwire_recycle()
+	first.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
+	var cogs_saved: int = first.run.cogs
+	first.free()
+	var second := Game.new()
+	second.test_mode = true
+	second.run_store_path = dir + "run.json"
+	root.add_child(second)
+	_game = second
+	await process_frame
+	second.ctx.calm = true
+	second.player.source = Intent.Scripted.new()
+	var offers := [0]
+	second.build.hotwire_offered.connect(func(_id: String, _cogs: int): offers[0] += 1)
+	var resumed: bool = second.flow.resume_run()
+	for i in 3:
+		await process_frame
+	var pending: Dictionary = second.build.hotwire_pending()
+	second.events.beacon_unsealed.emit(1)
+	second.events.beacon_unsealed.emit(2)
+	_check("recycle survives continue", paid > 0 and resumed and offers[0] == 0 and pending["state"] == "recycle"
+		and second.build.hotwire_pending()["state"] == "recycle" and second.run.cogs == cogs_saved,
+		"paid %d, resumed %s, offers after resume %d, state %s, cogs %d against saved %d" % [paid, resumed, offers[0], pending["state"], second.run.cogs, cogs_saved])
+	second.free()
+	for name in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir + name)
+	print("hotwire_offer_flow_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	quit(0 if _failures == 0 else 1)
+
+
 func _physics_process(delta: float) -> bool:
-	if _game.flow == null:
+	if _phase == "resume" or _game.flow == null:
 		return false
 	_ticks += 1
 	_clock += delta
@@ -206,8 +257,7 @@ func _physics_process(delta: float) -> bool:
 				_check("off at zero mass", _game.build.tread_fires == 2, "fires %d at mass 0" % _game.build.tread_fires)
 				_wear_checks()
 				_take_checks()
-				print("hotwire_offer_flow_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-				_game.free()
-				quit(0 if _failures == 0 else 1)
-				return true
+				_phase = "resume"
+				_resume_checks.call_deferred()
+				return false
 	return false

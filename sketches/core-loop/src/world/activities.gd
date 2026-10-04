@@ -349,7 +349,11 @@ func _finish(s: Site, at: Vector3) -> void:
 	var pay: Dictionary = s.rule["pay"]
 	if pay.has("named"):
 		var named := String(pay["named"])
-		s.pickup_part = named if Parts.rows().has(named) else ""
+		# A named part the table does not offer (not in ctx.stages.part_in_play) rolls like any other pay.
+		if Parts.rows().has(named) and ctx.stages.part_in_play(named):
+			s.pickup_part = named
+		else:
+			s.pickup_part = _roll(s.id, pay.get("rarities", ["common"]))
 	else:
 		s.pickup_part = _roll(s.id, pay["rarities"])
 	if s.pickup_part != "":

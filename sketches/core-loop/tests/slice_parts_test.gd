@@ -97,11 +97,13 @@ func _sources() -> void:
 		shop.leave()
 	_t.check("slice top shelf never repeats a shelf part or holds an empty id", repeats == 0 and empty_ids == 0,
 		"%d visits: %d repeats, %d empty ids" % [DRAWS, repeats, empty_ids])
-	Synergies.table = StageDefs
+	# 2026-10-04: the default table takes the alpha ruleset, so it no longer reaches parts outside
+	# the twelve; the control is an unfiltered table (null), which still does.
+	Synergies.table = null
 	var base := _draw()
 	for source in SOURCES:
 		if source == "shelf" or source == "reroll" or source == "gate" or source == "cache":
-			_t.check("default %s reaches parts outside the twelve" % source, not _outside(base[source]).is_empty(),
+			_t.check("unfiltered %s reaches parts outside the twelve" % source, not _outside(base[source]).is_empty(),
 				"%d offers, %d outside" % [base[source].size(), _outside(base[source]).size()])
 	Synergies.table = SliceDefs
 
@@ -114,7 +116,7 @@ func _list() -> void:
 	_t.check("twelve distinct real ids", ids.size() == 12 and seen.size() == 12 and ids.all(func(id): return Parts.rows().has(id)),
 		"%d ids, %d distinct" % [ids.size(), seen.size()])
 	_t.check("part_in_play follows the list", ids.all(func(id): return SliceDefs.part_in_play(id)) and not SliceDefs.part_in_play("tempest_core")
-		and StageDefs.part_in_play("tempest_core") and not StageDefs.parts_listed(), "list, a milestone and the default table")
+		and not StageDefs.part_in_play("tempest_core") and StageDefs.parts_listed(), "list, a milestone and the default table (alpha ruleset since 2026-10-04)")
 	var harder := ids.filter(func(id): return Parts.def(id).hits_harder())
 	_t.check("at least two hit harder", harder.size() >= 2, "hits harder: %s" % [harder])
 	for rarity in ["common", "rare"]:

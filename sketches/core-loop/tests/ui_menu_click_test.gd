@@ -42,8 +42,6 @@ func _process(delta: float) -> bool:
 			_wait = 0
 		"title":
 			if _wait == 30:
-				# Sable is the only starter: the class click needs Rivet earned in the profile.
-				_game.ctx.profile.unlock_pilot(_game.flow.classes[1].id)
 				var start: Button = _game.screens.button_for("start")
 				_hover(start)
 				var lit: bool = start != null and start.is_hovered()
