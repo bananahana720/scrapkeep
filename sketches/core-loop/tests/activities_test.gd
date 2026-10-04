@@ -28,9 +28,7 @@ const LEASH_FRAMES := 300
 const SPEED_SLACK := 0.1
 const RAM_BELOW := 0.7
 const RAM_AT := 1.3
-# 2026-10-04 (wave 9): the Dig and Highdraft are greybox zones that get their activity sites in
-# wave 10 (the deep-Dig and Highdraft-crown map units remove them from this list).
-const SIDE_CONTENT_PENDING := ["dig", "highdraft"]
+const SIDE_CONTENT_PENDING := preload("res://src/core/pending_content.gd").SIDE_CONTENT_PENDING
 const LINE_FRAMES := 24
 const PICKUP_FRAMES := 40
 const PICKUP_SPEED := 14.0
