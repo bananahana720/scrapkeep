@@ -58,6 +58,7 @@ const TRIM_DB := {
 	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
+	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0,
 	"sable_ready": -9.0, "rivet_ready": -9.0, "kest_ready": -8.0,
@@ -446,6 +447,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warn_winch()
 		"warn_dive":
 			return _warn_dive()
+		"breach_crack":
+			return _breach_crack()
 		"sable_arpeggio":
 			return _sable_release()
 		"rivet_hihat_roll":
@@ -1109,6 +1112,14 @@ static func _warn_bore() -> PackedFloat32Array:
 		parts.append([_tone(0.06, _hz(44), _hz(44), "square_dark", 35.0), Synth.seconds(at), 0.5])
 	parts.append([_fm(0.18, _hz(56), 1.41, 3.0, 16.0), Synth.seconds(0.28), 1.0])
 	return _mix(parts)
+
+
+# Breach: a dry crack across the plate, then the rubble falling away into a low Eb rumble.
+static func _breach_crack() -> PackedFloat32Array:
+	return _mix([[_noise(0.03, 5200.0, 2400.0, 90.0), 0, 0.9],
+		[_fm(0.08, _hz(63), 2.3, 4.0, 30.0), 0, 0.55],
+		[_noise(0.36, 1400.0, 220.0, 6.0, 0.02), Synth.seconds(0.06), 0.75],
+		[_tone(0.34, _hz(46), _hz(39), "saw_dark", 5.0), Synth.seconds(0.1), 0.8]])
 
 
 # Lure: a slow bloom of air over the beating Ab/Eb pair, with no reward bell.
