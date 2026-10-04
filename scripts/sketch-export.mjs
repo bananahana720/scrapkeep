@@ -41,6 +41,17 @@ export function bootFailures(output) {
   return failures;
 }
 
+export function releaseGateFailures(output, status) {
+  const lines = output.split("\n").map((line) => line.trim());
+  const failed = lines.filter((line) => /-> FAIL$|: FAIL\b/.test(line));
+  if (status !== 0 || failed.length > 0) {
+    return failed.length > 0 ? failed : [`release gate exited ${status} with no FAIL line`];
+  }
+  return lines.some((line) => /^release_gate_placeholder_test: PASS\b/.test(line))
+    ? []
+    : ["no release_gate_placeholder_test PASS line in the gate output"];
+}
+
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
     encoding: "utf8",
@@ -71,6 +82,14 @@ async function main() {
   const imported = run(binary, ["--headless", "--path", project, "--editor", "--import"]);
   if (imported.status !== 0 || errorLine.test(imported.stdout + imported.stderr))
     fail("editor import failed\n" + (imported.stdout + imported.stderr).slice(-2000));
+
+  const gate = run(
+    binary,
+    ["--headless", "--path", project, "--script", "res://tests/release_gate_placeholder_test.gd"],
+    { env: { ...process.env, SCRAPKEEP_RELEASE_GATE: "1" } },
+  );
+  const gateFailures = releaseGateFailures(gate.stdout + gate.stderr, gate.status);
+  if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
   const outDir = path.join(root, "artifacts/local/core-loop-export", stamp);

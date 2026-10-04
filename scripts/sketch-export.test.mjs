@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bootFailures, missingStems } from "./sketch-export.mjs";
+import { bootFailures, missingStems, releaseGateFailures } from "./sketch-export.mjs";
 
 const manifest = {
   stems: ["drums", "bass"],
@@ -29,4 +29,22 @@ test("boot output passes only with a ready ACE_CHECK and no error line", () => {
   assert.equal(bootFailures("SCRIPT ERROR: x\nACE_CHECK ready=true clips=9 streams=27").length, 1);
   assert.equal(bootFailures("ACE_CHECK ready=false clips=0 streams=0 missing=/x").length, 1);
   assert.equal(bootFailures("nothing").length, 1);
+});
+
+test("release gate output passes only with exit 0 and a PASS line", () => {
+  assert.deepEqual(releaseGateFailures("[skip] x\nrelease_gate_placeholder_test: PASS (3 checks)\n", 0), []);
+});
+
+test("release gate FAIL lines are returned", () => {
+  const out = [
+    "[placeholder row 3] The Dig: placeholder on the gorge -> FAIL",
+    "[placeholder row 4] The High Cables: placeholder on the reach -> FAIL",
+    "release_gate_placeholder_test: FAIL (2 of 5 checks)",
+  ].join("\n");
+  assert.equal(releaseGateFailures(out, 1).length, 3);
+});
+
+test("release gate with status 1 fails even beside a PASS line", () => {
+  assert.equal(releaseGateFailures("release_gate_placeholder_test: PASS (3 checks)\n", 1).length, 1);
+  assert.equal(releaseGateFailures("nothing", 0).length, 1);
 });
