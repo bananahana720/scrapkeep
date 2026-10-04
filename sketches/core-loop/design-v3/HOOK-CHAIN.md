@@ -10,7 +10,7 @@ A **chain** is a sequence of harpoon bites with no ground contact between them. 
 | --- | --- | --- |
 | bite an enemy | +1 | the existing `latched_body` |
 | bite a surface (post, wall hook, wall) | +0, keeps the chain alive | a **pivot**; the kicker Andrew described: enemy → wall → enemy |
-| smash lands on a chained enemy | pays the combo | damage × (1 + 0.25 × combo), capped at combo 6 (×2.5) |
+| smash lands on a chained enemy | pays the combo | damage × (1 + 0.3 × (combo − 1)), capped at combo 6 (×2.5); combo 1 pays ×1.0, today's game |
 | dry fire | ends the chain, **miss cost**: 0.6 s harpoon cooldown and a dull `dry_tick` | today a dry fire costs nothing, which is the spam he called too easy |
 | ground contact | ends the chain | the rhythm is airborne |
 
@@ -47,6 +47,7 @@ HC1 lands first and alone (it touches the harpoon). HC2 and HC3 follow in one wa
 
 ## Open calls, decided here
 
+- The first link pays nothing extra (coordinator, 3 Oct, HC1 build). The first draft paid combo 1 at ×1.25, which contradicted "combo 1 is exactly today's game" and broke the harpoon canon test by killing its chaser on a plain smash. The multiplier counts links beyond the first, 0.3 each, so the floor is today's game and the cap is still ×2.5 at six.
 - Payout is damage, not scrap. Scrap is size and armour; making the chain pay scrap would bend the economy around a movement verb.
 - The combo caps at 6. Past six the counter is noise and the multiplier would outrun the Warden's chunk size.
 - The pivot adds nothing. Walls are routing, enemies are the beat.
