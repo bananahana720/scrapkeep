@@ -44,7 +44,7 @@ class PushProbe:
 
 
 # Preserve the legacy three-stage rule on a double using surviving maps.
-# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+# F6 2026-10-04: the Warden break arms its whole health before the strike, as only a shatter may.
 class LegacyGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
@@ -142,6 +142,8 @@ func _on_cleared(reason: String) -> void:
 func _break_warden() -> void:
 	var warden = _game.flow.warden
 	if is_instance_valid(warden):
+		# F6 2026-10-04: a posture Warden loses health only to what a shatter armed; arm it all.
+		warden._armed = warden.max_hp
 		_game.ctx.spawner.strike(warden, "arc", 1000000.0)
 
 

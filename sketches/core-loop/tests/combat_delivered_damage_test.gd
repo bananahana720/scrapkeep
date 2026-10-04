@@ -144,22 +144,9 @@ func _run_all() -> void:
 		"_classify_source read '%s' for slam and '%s' for stomp (needs drop_or_slam, then ram_or_contact)"
 			% [_combat._classify_source("slam", ""), _combat._classify_source("stomp", "")])
 
-	# drop_or_slam, auto-classified from kind "slam" alone (no explicit source), on the
-	# Warden target class. Every damaging stomp or slam on the Warden is a slam hit.
-	var hp_w: float = warden.max_hp
-	_combat.strike(warden, "slam", hp_w * 0.1)
-	_report("slam_is_a_hit", _combat._warden_slam_hits == 1,
-		"a slam on the Warden left _warden_slam_hits %d (needs 1)" % [_combat._warden_slam_hits])
-	_combat.strike(warden, "slam", hp_w * 0.1)
-	_combat.strike(warden, "slam", hp_w * 0.1)
-	_combat.strike(warden, "stomp", hp_w * 0.1)
-	_report("drop_or_slam_source", float(_combat.delivered_damage()["by_source"].get("drop_or_slam", 0.0)) >= hp_w * 0.2 - 0.01,
-		"two slam hits on the Warden landed %.1f under by_source.drop_or_slam (needs >= %.1f)"
-			% [float(_combat.delivered_damage()["by_source"].get("drop_or_slam", 0.0)), hp_w * 0.2])
-	_report("warden_target_class", float(_combat.delivered_damage()["by_target_class"].get("Warden", 0.0)) >= hp_w * 0.4 - 0.01,
-		"the Warden's own bucket read %.1f (needs >= %.1f)" % [float(_combat.delivered_damage()["by_target_class"].get("Warden", 0.0)), hp_w * 0.4])
-	_report("slam_hits_counted", _combat._warden_slam_hits == 4,
-		"three slams and one stomp on the Warden left _warden_slam_hits %d (needs 4)" % [_combat._warden_slam_hits])
+	# F6 2026-10-04: a posture Warden takes health only through a shatter, so the plating-era
+	# slam-damage checks on it (slam_is_a_hit, drop_or_slam_source, warden_target_class,
+	# slam_hits_counted, warden_slam_hits) are gone; the zero-hit break below stays.
 
 	# item_proc, auto-classified from kind "synergy", on a Fleet reinforcement ("adds").
 	var hp_adds: float = adds.max_hp
@@ -220,9 +207,6 @@ func _run_all() -> void:
 	# The Warden's break (beacon_unsealed) snapshots the slam-hit count for the stage. Read before entering the boss arena below: stage_content_cleared
 	# (which entering the arena emits) starts a fresh attempt and would zero them first.
 	ctx.events.beacon_unsealed.emit(1)
-	var slam_hits: Dictionary = _combat.delivered_damage()["warden_slam_hits"]
-	_report("warden_slam_hits", int(slam_hits.get("1", -1)) == 4,
-		"stage 1 broke after four stomp or slam hits: warden_slam_hits %s (needs 4)" % [slam_hits])
 	# A break with no hit on the Warden reads a real 0.
 	ctx.events.beacon_unsealed.emit(2)
 	var slam_hits_2: Dictionary = _combat.delivered_damage()["warden_slam_hits"]
@@ -325,9 +309,9 @@ func _run_all() -> void:
 		"one chaser killed retired %d under retirements.enemy (needs 1)" % [int(ledger["retirements"].get("enemy", 0))])
 
 	# No double counting: exactly the strike() calls made above, once each (chaser,
-	# 4x warden [1 v2-mode slam, 2 drop-mode slam, 1 drop-mode stomp], adds, lobber,
+	# adds, lobber,
 	# vault, the boss hull's gun shots and its smash, the scooter catch; the two
 	# scenery/proc-only calls above never reach take_damage() and are not in this count).
-	var calls := 9 + _boss_hull_strikes
+	var calls := 5 + _boss_hull_strikes
 	_report("hit_count", int(ledger["hits"]) == calls,
 		"%d strike() calls above produced %d ledger hits (needs %d, one per call, none doubled)" % [calls, int(ledger["hits"]), calls])

@@ -11,8 +11,8 @@ const Synergies := preload("res://src/build/synergies.gd")
 # Warden is staggered twice by real rams, loses one chunk to a real harpoon smash, a real
 # reinforcement spawn arrives as a pack and a held synergy fires on a real ram. The line
 # the run leaves carries the table and the stage row's posture, packs and causes, with the
-# numbers the bus itself announced. A local plating fixture carries the default table id and no
-# posture block on a plating Warden's row. Contacts are real physics from placed starts;
+# numbers the bus itself announced. A local fixture carries the default table id and a
+# posture block on its Warden's row. Contacts are real physics from placed starts;
 # every wait is counted in physics frames.
 
 const OUT := 58.0
@@ -21,7 +21,7 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const SYNERGY := "wrecking_ball"
 
-# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+# F6 2026-10-04: the default-table fixture now fights on posture, so its row carries a posture block.
 class PlatingGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
@@ -259,6 +259,6 @@ func _default_table() -> void:
 		row = one
 		break
 	_report("the default table is named", line.get("table") == "default", "table %s" % line.get("table"))
-	_report("a plating Warden's row has no posture", _warden.fight() == "plating" and not row.has("posture") and row.has("packs") and row.has("causes"),
+	_report("a default-table Warden's row carries its posture", _warden.fight() == "posture" and row.has("posture") and row.has("packs") and row.has("causes"),
 		"fight %s, row keys %s" % [_warden.fight(), row.keys()])
 	_game.free()

@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 
-# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+# F6 2026-10-04: the Warden jaw tint checks became one: a posture Warden ignores amber.
 class PlatingGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
@@ -192,20 +192,13 @@ func _run() -> void:
 	_check(brute.tint_state == "slate" and mat.emission == EventKinds.role_color("slate") and mat.emission_energy_multiplier < Enemy.PLATE_GLOW_LIVE,
 		"combat closed the plate again and the rim went slate")
 
-	# Warden: the jaw plates take the frame mask, a rim on every face of the box.
+	# Warden (F6 2026-10-04): a posture Warden takes no plate tint, so amber lights nothing on its jaws.
 	var warden: Node3D = game.ctx.spawner.spawn_enemy("warden", Vector3(40, 30, 0))
 	await process_frame
 	var jaw_mat: StandardMaterial3D = warden._look.plate_material
 	warden.set_tint("amber")
-	var centre := _added(jaw_mat, 1.0 / 6.0, 0.25)
 	var edge := _added(jaw_mat, 0.5 / 24.0, 0.25)
-	var amber_edge := edge
-	_check(jaw_mat.emission_enabled and edge > 0.0 and is_zero_approx(centre), "warden jaw: amber lights the face edge (%.2f) and not the face centre (%.2f)" % [edge, centre])
-	_check(jaw_mat.albedo_color == Enemy.PLATE_CLOSED, "warden jaw keeps the resting plate albedo in amber")
-	warden.set_tint("slate")
-	var slate_edge := _added(jaw_mat, 0.5 / 24.0, 0.25)
-	_check(slate_edge > 0.0 and slate_edge < amber_edge and is_zero_approx(_added(jaw_mat, 1.0 / 6.0, 0.25)),
-		"warden jaw: slate lights the face edge (%.2f) below amber (%.2f) and not the face centre" % [slate_edge, amber_edge])
+	_check(is_zero_approx(edge), "warden jaw: a posture Warden ignores amber (edge %.2f)" % edge)
 
 	# A mesh with no mask UVs gets the dark default: no flood on its faces.
 	var hand: Node3D = game.ctx.spawner.spawn_enemy("mind_hand", Vector3(80, 30, 0))

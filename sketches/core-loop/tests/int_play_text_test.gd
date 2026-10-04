@@ -17,7 +17,7 @@ const EventView := preload("res://src/world/event_view.gd")
 #   - stage 3's hint says when the magnet can be shot.
 
 # Legacy three-stage wording and event signs use the event-enabled double.
-# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+# F6 2026-10-04: the stage 3 hint is the posture line, not the magnet lesson.
 class LegacyGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
@@ -80,7 +80,7 @@ func _check_words() -> void:
 	_report("clue printed once", build_card.count("something that splits") == 1 and enemy_card.split("\n").size() == 3,
 		"build card \"%s\"; enemy card \"%s\"" % [build_card.replace("\n", " / "), enemy_card.replace("\n", " / ")])
 	var hint: String = StageDefs.of(3)["warden_hint"]
-	_report("stage 3 hint", hint.contains("while it pulls you"), "stage 3's Warden hint reads \"%s\"" % hint)
+	_report("stage 3 hint", hint.contains("smash the core"), "stage 3's Warden hint reads \"%s\"" % hint)
 
 
 func _check_toasts() -> void:

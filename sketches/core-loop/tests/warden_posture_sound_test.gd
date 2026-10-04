@@ -15,8 +15,7 @@ const T := preload("res://tests/support/t.gd")
 #   B3-3  four hits that cross the guard's marks play four rising pitches, the phrase's
 #         notes in the live key; the stagger plays the chord once; a shatter plays its sound
 #         and the low hit once each; two seconds of drain play nothing; a charge cue playing
-#         when the stagger begins is stopped on that tick, and another enemy's charge cue is not. A glance keeps its clank, and a
-#         plating Warden's hit is pitched by its health as before.
+#         when the stagger begins is stopped on that tick, and another enemy's charge cue is not. A glance keeps its clank.
 
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
@@ -24,10 +23,7 @@ const CURVE: float = SliceDefs.DEFS[0]["posture"]["curve"]
 const FIGHT_SOUNDS := ["hit_thwack", "boss_weak_hit", "shatter", "chunk_low", "clank"]
 
 var _t := T.new("warden_posture_sound_test")
-# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
-class PlatingGame extends "res://src/game.gd":
-	func _chosen_table():
-		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+# F6 2026-10-04: the plating Warden case is gone; every hit sound here is posture.
 
 var _game
 var _audio
@@ -135,7 +131,6 @@ func _run() -> void:
 	await _foreign_charge()
 	await _foreign_eruption()
 	_game.free()
-	await _plating()
 	quit(_t.verdict())
 
 
@@ -269,24 +264,3 @@ func _foreign_eruption() -> void:
 		guard += 1
 	_t.check("it staggered a third time", _warden.staggered())
 	_t.check("the Warden's own charge cue was stopped", _entries(charge, "stop").size() >= 1, "%d stops" % _entries(charge, "stop").size())
-
-
-# A plating Warden's hit is pitched by its health, as on the base.
-func _plating() -> void:
-	_game = PlatingGame.new()
-	_game.test_mode = true
-	root.add_child(_game)
-	if not await _start():
-		_t.check("the default table has a Warden", false)
-		return
-	_t.check("the local Warden fights by plating", _warden.fight() == "plating")
-	_player.reset_to(_ground(58.0))
-	await _seconds(0.3)
-	_warden.hp = _warden.max_hp * 0.5
-	_audio.cue_log.clear()
-	await _hit("ram", _force_for(1.0))
-	var want: float = Harmony.ratio(Harmony.pentatonic_step(3)) * _key()
-	var heard := _pitches("hit_thwack")
-	_t.check("a hit at half health is pitched by its health, rung 3", heard.size() == 1 and is_equal_approx(heard[0], want), "heard %s, want %.3f" % [heard, want])
-	_t.eq("and plays no chord", _fight_cues().filter(func(entry): return entry[1] != "hit_thwack").size(), 0)
-	_game.free()

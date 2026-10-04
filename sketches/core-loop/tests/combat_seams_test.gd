@@ -7,9 +7,8 @@ const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 # The spine's Warden gate, objective line and crush pass-through, run against the real
 # combat spawner instead of the spine's test double (spine_warden_gate_test,
 # spine_objective_test and spine_crush_test swap one in). Same method as those tests.
-# 1. Gate: with force_warden, flow spawns combat's real Warden. A chip below plating
-#    publishes strike_deflected on the bus; a real strike to half health shows 0.5 on
-#    the beacon the next tick; the killing strike, 60 m outside the ring, opens the gates
+# 1. Gate (F6 2026-10-04: the plating chip and health-charge checks are gone): with force_warden, flow spawns combat's real Warden.
+#    The killing strike, 60 m outside the ring, opens the gates
 #    at once and fires beacon_unsealed once.
 #    enemy_killed(warden) arrives while the Warden is still in the tree, already
 #    colliding with nothing and reading integrity 0: the kill path, not a free.
@@ -120,17 +119,11 @@ func _gate() -> void:
 	if not real:
 		return
 	_warden_ref = warden
-	_combat.strike(warden, "runner", 10.0)
-	_report("deflect_on_bus", _deflected == 1, "a 10-punch shot on plating %.0f published strike_deflected %d time(s) on the real bus" % [warden.plating, _deflected])
-	warden.hp = warden.max_hp
-	_combat.strike(warden, "runner", warden.max_hp * 0.5)
-	flow.physics_step(DT)
-	var half: float = flow.beacon.fraction()
-	_report("charge_is_damage", absf(half - 0.5) <= 0.02 and absf(_charges[-1] - 0.5) <= 0.02,
-		"a real strike to half health: beacon %.3f on the next tick, published %.3f" % [half, _charges[-1]])
 	var mast: Vector3 = flow.beacon.global_position
 	var away := mast + Vector3(flow.beacon.radius + OUTSIDE, 0.0, 0.0)
 	_put_ball(_game.ctx.terrain.drop_point(away.x, away.z, 1.0))
+	# A posture Warden loses health only to what a shatter armed; arm the whole bar so one strike runs the real kill path.
+	warden._armed = warden.max_hp
 	_combat.strike(warden, "runner", warden.max_hp)
 	var at_once: String = flow.state_name()
 	flow.physics_step(DT)

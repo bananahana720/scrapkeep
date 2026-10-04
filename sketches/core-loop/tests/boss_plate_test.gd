@@ -14,7 +14,7 @@ const T := preload("res://tests/support/t.gd")
 #         after a chunk shatters through the rule; the crack mark on a cracked chunk; the
 #         bar fills to posture / 100; staggered the bar is the live colour and follows
 #         stagger_left; a glance shows the slate glyph for 0.6 s of stepped time; bound to
-#         a plating Warden or to nothing it draws nothing and reports no words.
+#         nothing it draws nothing and reports no words.
 #         The crack mark is the live colour while the core is open and the neutral role while
 #         it is closed; a dead or freed Warden is never held.
 #   B3-5  boss_plate.gd and the posture code added to or branched inside warden_look.gd and
@@ -24,21 +24,18 @@ const T := preload("res://tests/support/t.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const ADDED_CODE := {
-	"res://src/combat/warden_look.gd": ["posture_fight", "_rest_core_color", "_update_open", "_update_body_glow", "_update_guard_seams"],
+	"res://src/combat/warden_look.gd": ["posture_fight", "_rest_core_color", "_update_open", "_update_body_glow", "_update_guard_seams", "_build_seams"],
 	"res://src/presentation/hero_assets.gd": ["_rig_warden_jaws", "_update_warden_open", "_warden_chunk_mark", "_update_warden_chunks", "_throw_warden_segment", "_paint_warden_inner"],
 }
 # Existing functions with a posture branch inside them: only the posture arm is scanned,
 # because the plating arm keeps its amber.
 const BRANCHED_CODE := {
-	"res://src/combat/warden_look.gd": ["_build_seams", "_build_badge", "_update_core"],
+	"res://src/combat/warden_look.gd": ["_build_badge", "_update_core"],
 	"res://src/presentation/hero_assets.gd": ["_dress_warden"],
 }
 
 var _t := T.new("boss_plate_test")
-# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
-class PlatingGame extends "res://src/game.gd":
-	func _chosen_table():
-		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+# F6 2026-10-04: the plating-table case is gone, and _build_seams has no plating arm left to skip.
 
 var _game
 var _combat
@@ -194,7 +191,6 @@ func _run() -> void:
 	_t.check("a dead, unfreed posture Warden: not active", not _plate.active())
 	_plate.unbind()
 	_game.free()
-	await _plating_table()
 	_t.verdict()
 	quit(1 if _t.failures > 0 else 0)
 
@@ -274,27 +270,3 @@ func _stagger_bar() -> void:
 	_t.eq("open outranks a glance", _plate.glyph_id(), "open")
 	await _seconds(BossPosture.STAGGER_SECONDS)
 	_t.check("after the stagger the bar is the guard in the neutral colour", not _warden.staggered() and _plate.bar_color() == EventKinds.role_color("neutral"))
-
-
-func _plating_table() -> void:
-	_game = PlatingGame.new()
-	_game.test_mode = true
-	root.add_child(_game)
-	while _game.flow == null:
-		await physics_frame
-	_game.ctx.calm = true
-	_game.flow.force_warden = true
-	_game.flow.press_start()
-	_game.flow.choose_class(1)
-	await _seconds(0.4)
-	var warden = _game.flow.warden
-	_t.check("the local row's Warden fights by plating", is_instance_valid(warden) and warden.fight() == "plating")
-	_plate.bind(warden)
-	_t.eq("a plating Warden: no words", _plate.drawn_words(), [])
-	_t.eq("a plating Warden: no pips", _plate.pips().size(), 0)
-	_t.check("a plating Warden: not active", not _plate.active() and _plate.glyph_id() == "" and _plate.bar_fraction() == 0.0)
-	warden.free()
-	_t.eq("a freed Warden: no words", _plate.drawn_words(), [])
-	_t.check("the plate lets go of a freed Warden and of its events", not _plate.active() and _plate._warden == null and _plate._events == null)
-	_plate.unbind()
-	_game.free()
