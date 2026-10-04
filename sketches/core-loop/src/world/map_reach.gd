@@ -1,5 +1,7 @@
 extends "res://src/world/map_gorge.gd"
 
+const CodexWorld := preload("res://src/world/codex_world.gd")
+
 # The slice table's Cable Reach: the gorge's own ground, towers, bridges and tunnels, with
 # three authored lines of chained rides from the spawn to the Warden. Sable glides down the
 # deck, rides a banked sweeper round the west shelf and dives down an open ramp through the
@@ -226,9 +228,7 @@ func _reach_specs() -> void:
 		{"kind": "valve", "id": "reach_cache_valve", "at": SECRET_VALVE,
 			"door": {"at": SECRET_CACHE, "size": Vector3(12.0, 6.0, 1.0), "turn": 0.0},
 			"cache": {"at": SECRET_CACHE},
-			"codex": {"id": "reach_pressure_cache", "category": "world", "name": "Pressure keeps the change",
-				"hint": "A cracked wheel beside a copper door.",
-				"text": "A rolling ram turns the old valve. Behind the sinking door, the crew's spare parts wait."}},
+			"codex": CodexWorld.entry("reach_pressure_cache")},
 	]
 
 
