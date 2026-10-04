@@ -20,7 +20,8 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const DT := 1.0 / 90.0
 const OUTSIDE := 60.0
-const DRIVE_FROM := Vector2(-110.0, -120.0)
+# Flat top shelf east of the stampede ring; the wave-3 causeway now crosses x -106..-82 (2026-10-03).
+const DRIVE_FROM := Vector2(50.0, -108.0)
 const AHEAD := 14.0
 const SPEED := 20.0
 const HEAVY_MASS := 300

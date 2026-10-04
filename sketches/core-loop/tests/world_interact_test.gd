@@ -30,7 +30,8 @@ class Probe:
 
 
 const SABLE := 0
-const LANE_START := Vector2(-20.0, -100.0)
+# Flat top shelf clear of the vault, stampede ring and wave-3 relay mesa (2026-10-03).
+const LANE_START := Vector2(54.0, -104.0)
 const LANE_SPEED := 30.0
 const PASS_SPEED := 40.0
 const PASS_AHEAD := 10.0
