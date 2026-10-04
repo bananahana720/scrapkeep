@@ -2,7 +2,7 @@
 # Rule: the CPU tile gate rejects mismatched edges, oversized textures and registry drift.
 """Synthetic, lossless WebP fixtures; no game, GPU, wall clock or user:// writes.
 
-python3 tests/tile_check_selftest.py
+python3 tools/tile_check_selftest.py
 Exit 0 = PASS; 1 = FAIL; 2 = dependencies missing (explicit SKIP).
 A black/white hard edge must fail the checker; the self-test passes only when
 that rejection occurs. --help on tile_check.py documents thresholds and metrics.
@@ -18,7 +18,7 @@ import unittest
 import sys
 
 
-CHECKER = Path(__file__).resolve().parents[1] / "tools/tile_check.py"
+CHECKER = Path(__file__).resolve().parent / "tile_check.py"
 spec = importlib.util.spec_from_file_location("tile_check", CHECKER)
 tile_check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tile_check)
