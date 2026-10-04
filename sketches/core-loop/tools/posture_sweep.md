@@ -105,3 +105,18 @@ The first sweep's repeatability note is also superseded: unit SD found the cause
 The first pick was made before growth pays (`kill_scrap` 4.0 on the slice row) joined it. With both in, kills during the fight pay four times the scrap, so a small ball grows mid-fight, and the picked cell's small median fell from 91.8 s to 85.8 s. The same grid was rerun on the merged build (320 runs, six processes, the machine otherwise idle). The pick rule chose the same cell, plating 110, `curve` 2, `ram_shatters` false: grown 25.5 s, mid 54.5 s, small 85.8 s, camper 0 of 5, ratio 3.36. The two tables in `tools/` are this rerun's.
 
 Grown seed 2 broke the Warden only after 94.1 s, against 23.6 to 36.1 s for the other four seeds, so three-seed medians that include it sit under the 25 s floor. `tests/posture_bands_test.gd` therefore checks the bands on this five-seed table and pins its live seeds 1 to 3 to this rerun's medians for the same seeds (small 73.75 s, grown 24.66 s). Why grown seed 2 is slow is not yet traced.
+
+## Alpha Wardens, 2026-10-03
+
+The alpha table's two zone Wardens (Spillway reactor, plating 90, hp 650; Cable Reach swarm, plating 110, hp 800; posture `{curve 2.0, ram_shatters false}` on both) are not swept over the plating grid. They are played as they stand by `tools/bot_run.gd --table=alpha --policy=skipper|completionist --seeds=N --ticks=24000`, one process per seed and policy, and read from `bots.ndjson`. A fight is the stage clock at `warden_broken_s` less `warden_fight_s`, the bot's turn to the Warden. This is not the sweep's clock (it has no first-strike term), so the numbers are comparable among alpha rows only. The skipper goes straight to each Warden; the completionist does each stage's activities first (it turned to the Reach Warden at about 140 s). Runs repeat exactly in a fresh process.
+
+Seeds 1, 2, 3, fight seconds (stage 1 / stage 2 skipper, stage 2 completionist):
+
+| Seed | Spillway skipper | Reach skipper | Reach completionist |
+| --- | --- | --- | --- |
+| 1 | 66.50 | 41.95 | 29.01 |
+| 2 | 63.90 | 64.99 | 26.16 |
+| 3 | 67.16 | 40.07 | 20.35 |
+| median | 66.5 | 42.0 | 26.2 |
+
+Bands in `tests/posture_bands_test.gd`, set from these medians with room for a changed build: Spillway skipper median 45 to 90 s; Reach skipper median 30 to 80 s; Reach completionist median at most 1.25 times the Reach skipper's (measured 0.62). The completionist is faster, not slower, because it arrives with heft 2.8 to 3.0 against the skipper's 1.3 to 1.5; the factor only guards against a regression where doing the activities makes the fight longer. The Reach skipper's seed 2 (65 s) sits well above seeds 1 and 3 (about 40 s), so the three-seed median is not a tight estimate. No alpha camper arm: the slice camper row still holds the range-only rule on the same posture chassis.
