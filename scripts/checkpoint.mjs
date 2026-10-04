@@ -2,7 +2,7 @@
 // The alpha checkpoint in one command (design-v3/ALPHA-PLAN.md, "Admission to play").
 //
 //   npm run sketch:checkpoint -- --before [--quick]
-//       bots and fixed checks: is the slice worth Andrew's time. One table, a pass or
+//       bots and fixed checks: is the alpha worth Andrew's time. One table, a pass or
 //       miss per band, exit 1 on any miss.
 //   npm run sketch:checkpoint -- --after <runs.ndjson>
 //       reads his sitting from the game's own run log, one verdict per question.
@@ -30,6 +30,8 @@ import { binary as GODOT } from "./sketch-smoke.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");
 const sketch = path.join(root, "sketches", "core-loop");
+
+export const TABLE = "default";
 
 // The thresholds, as written in ALPHA-PLAN before anything was built.
 export const BANDS = {
@@ -218,10 +220,10 @@ export function evaluatePerf(bench) {
     ? `${bench.size?.join("x")} ${bench.display}, scene ${bench.scene}, table ${bench.table || "default"}`
     : "no result";
   rows.push({
-    band: "perf valid (1080p, slice, native)",
+    band: `perf valid (1080p, ${TABLE}, native)`,
     measured: where,
     threshold: "valid run at 1920x1080",
-    pass: valid && bench.table === "slice" && bench.display !== "headless",
+    pass: valid && bench.table === TABLE && bench.display !== "headless",
   });
   rows.push({
     band: "perf CPU main thread p99",
@@ -238,7 +240,7 @@ export function evaluatePerf(bench) {
   return rows;
 }
 
-// The slice row's Warden numbers, read from the game's table so the sweep line is the picked cell.
+// The sweep still measures the historical slice cell's Warden numbers.
 export function sliceCell(defsText) {
   const plating = /"warden_plating":\s*([\d.]+)/.exec(defsText);
   const curve = /"curve":\s*([\d.]+)/.exec(defsText);
@@ -270,7 +272,7 @@ export function evaluateSweep(tsvText, cell) {
   if (!hit) {
     return {
       band: "posture sweep, picked cell",
-      measured: "no row for the slice cell",
+      measured: "no row for the historical sweep cell",
       threshold: "pass",
       pass: false,
     };
@@ -344,7 +346,7 @@ export function readRunLog(text) {
     }
     if (record && record.run_id !== undefined) byRun.set(record.run_id, record); // lines are cumulative: the last one wins
   }
-  return [...byRun.values()].filter((r) => r.table === "slice");
+  return [...byRun.values()].filter((r) => r.table === TABLE);
 }
 
 const joinedEvents = (run) =>
@@ -398,7 +400,7 @@ export const QUESTIONS = [
     fields: ["run_id"],
     read: () => 1,
     verdict: (values) => values.length >= 2,
-    note: "two distinct slice runs in the log; whether he was asked is not recorded",
+    note: `two distinct ${TABLE} runs in the log; whether he was asked is not recorded`,
   },
 ];
 
@@ -596,7 +598,7 @@ async function runBots(outDir, seedCount) {
           `--out=${dir}`,
           `--policy=${policy}`,
           `--seeds=${seed}`,
-          "--table=slice",
+          `--table=${TABLE}`,
         ];
         const result = await runProcess(GODOT, args, { env, cwd: root });
         writeFileSync(path.join(dir, "log.txt"), result.output);
@@ -647,7 +649,7 @@ async function runPerf(outDir) {
     "res://tools/perf_bench.gd",
     "--",
     "--scene=s3",
-    "--table=slice",
+    `--table=${TABLE}`,
     `--out=${out}`,
   ];
   const load = os.loadavg();
@@ -796,7 +798,7 @@ function after(file) {
   const outDir = newestDirOutput();
   const runs = readRunLog(readFileSync(file, "utf8"));
   const verdicts = evaluateSitting(runs);
-  console.log(`${runs.length} slice run(s) in ${file}\n`);
+  console.log(`${runs.length} ${TABLE} run(s) in ${file}\n`);
   console.log(formatSitting(runs, verdicts));
   writeFileSync(
     path.join(outDir, "summary.json"),
