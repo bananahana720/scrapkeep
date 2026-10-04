@@ -23,7 +23,8 @@ const THREAT_ROWS_HASH := 952578719
 const FIELDS_HASH := 4081964357
 # 2026-10-04: re-pinned once at integration for the rescue_completed (META-1) and escape_window (META-5) rows (alpha wave 5).
 # 2026-10-04: re-pinned again for the cogs_collected row (CG2, alpha wave 5 fix round).
-const ROWS_HASH := 4260259328
+# 2026-10-04: re-pinned for the achievement_earned and rescue_completed rows hearing their own cues (alpha wave 7, snd-achievement-rescue).
+const ROWS_HASH := 1515112826
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]
