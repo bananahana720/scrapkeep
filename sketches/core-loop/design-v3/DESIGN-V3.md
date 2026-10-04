@@ -320,24 +320,24 @@ The coordinator's later archive unit performs the moves and repairs incoming lin
 | [LOOP-REDESIGN.md](LOOP-REDESIGN.md) | superseded by this document, to archive | Drop and laps alternatives were retired. |
 | [OWNER-INTERVIEW-2026-10-02.md](OWNER-INTERVIEW-2026-10-02.md) | superseded by this document, to archive | Accepted answers now live in the current run, camp and progression rules. |
 | [ROADMAP.md](ROADMAP.md) | current spec, kept | Completion checkpoints and required unlock sequence remain useful. |
-| [STAGES-2-3-LOOPS.md](STAGES-2-3-LOOPS.md) | superseded by this document, to archive | Historical world-one loop layouts do not define the three-world alpha. |
+| [STAGES-2-3-LOOPS.md](archive/STAGES-2-3-LOOPS.md) | superseded by this document, to archive | Historical world-one loop layouts do not define the three-world alpha. |
 | [STRATEGY-SPINE.md](STRATEGY-SPINE.md) | superseded by this document, to archive | Retained build relationships are consolidated; old rarity labels are superseded. |
-| [STRESS-CAPTURE-1.md](STRESS-CAPTURE-1.md) | superseded by this document, to archive | Historical stress evidence is preserved without claiming current performance. |
-| [SYSTEMS-CHAOS.md](SYSTEMS-CHAOS.md) | superseded by this document, to archive | Older systems proposals no longer provide independent alpha scope. |
+| [STRESS-CAPTURE-1.md](archive/STRESS-CAPTURE-1.md) | superseded by this document, to archive | Historical stress evidence is preserved without claiming current performance. |
+| [SYSTEMS-CHAOS.md](archive/SYSTEMS-CHAOS.md) | superseded by this document, to archive | Older systems proposals no longer provide independent alpha scope. |
 | [TESTING.md](TESTING.md) | current spec, kept | Historical runner measurements explain the current test method. |
 | [TRAVERSAL.md](TRAVERSAL.md) | superseded by this document, to archive | Historical line measurements remain evidence, not a second design. |
 | [research/CODEX-REVIEW-1.md](research/CODEX-REVIEW-1.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
 | [research/CODEX-REVIEW-2-systems.md](research/CODEX-REVIEW-2-systems.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/PURPOSE-AUDIT-1.md](research/PURPOSE-AUDIT-1.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/R1-why-stay-and-windows.md](research/R1-why-stay-and-windows.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/R2-five-games-replay-juice.md](research/R2-five-games-replay-juice.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/R3-adaptive-music.md](research/R3-adaptive-music.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/R3-tools-and-expertise.md](research/R3-tools-and-expertise.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| [research/PURPOSE-AUDIT-1.md](archive/research/PURPOSE-AUDIT-1.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| [research/R1-why-stay-and-windows.md](archive/research/R1-why-stay-and-windows.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| [research/R2-five-games-replay-juice.md](archive/research/R2-five-games-replay-juice.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| [research/R3-adaptive-music.md](archive/research/R3-adaptive-music.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| [research/R3-tools-and-expertise.md](archive/research/R3-tools-and-expertise.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
 | [research/attack-reads/ATTACK-READS.md](research/attack-reads/ATTACK-READS.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
 | [research/build-systems/BUILD-SYSTEMS.md](research/build-systems/BUILD-SYSTEMS.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/economy/ECONOMY.md](research/economy/ECONOMY.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [stages/stage2.svg](stages/stage2.svg) | superseded by this document, to archive | Diagram of the retired world-one loop layout. |
-| [stages/stage3.svg](stages/stage3.svg) | superseded by this document, to archive | Diagram of the retired world-one loop layout. |
+| [research/economy/ECONOMY.md](archive/research/economy/ECONOMY.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| [stages/stage2.svg](archive/stages/stage2.svg) | superseded by this document, to archive | Diagram of the retired world-one loop layout. |
+| [stages/stage3.svg](archive/stages/stage3.svg) | superseded by this document, to archive | Diagram of the retired world-one loop layout. |
 | [storyboards/.gitignore](storyboards/.gitignore) | superseded by this document, to archive | Archive it with the historical storyboard package rules. |
 | [storyboards/CRITIQUE.md](storyboards/CRITIQUE.md) | superseded by this document, to archive | Historical storyboard guidance or review evidence stays with its package. |
 | [storyboards/HANDOFF.md](storyboards/HANDOFF.md) | superseded by this document, to archive | Historical storyboard guidance or review evidence stays with its package. |

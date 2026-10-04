@@ -184,7 +184,7 @@ Andrew wants feedback solid enough for an alpha in a game about timing, dodging 
 
 ## Scrap is size, and every system earns its place (Andrew, 2026-09-28)
 
-**The finding.** Scrap drove almost no decisions. Every pickup silently raised two numbers, the wallet and mass (`run_state.gd:98-104`). Spending the wallet kept mass, so it cost nothing felt (`:25-26`, `:177-181`). Free picks arrive at about 2.5 to 3 a minute (`SYSTEMS-CHAOS.md:416`), so buying was rarely a real choice. Andrew: "what's the point of me accumulating this currency?"
+**The finding.** Scrap drove almost no decisions. Every pickup silently raised two numbers, the wallet and mass (`run_state.gd:98-104`). Spending the wallet kept mass, so it cost nothing felt (`:25-26`, `:177-181`). Free picks arrive at about 2.5 to 3 a minute ([SYSTEMS-CHAOS.md:416](archive/SYSTEMS-CHAOS.md)), so buying was rarely a real choice. Andrew: "what's the point of me accumulating this currency?"
 
 **The ruling.**
 - **Scrap is your size:** the Katamari number that already drives punch against plating, the magnet and the heft class.
@@ -224,7 +224,7 @@ Andrew wants feedback solid enough for an alpha in a game about timing, dodging 
   - the cog prices, drop rates and the steering cost, tuned against the chosen loop's free-pick cadence;
   - whether a voluntary melt of weight into a part in Moss's calm bay earns its place.
 
-**The purpose audit landed** (`research/PURPOSE-AUDIT-1.md`, Codex, 2026-09-28).
+**The purpose audit landed** ([research/PURPOSE-AUDIT-1.md](archive/research/PURPOSE-AUDIT-1.md), Codex, 2026-09-28).
 - **Recommendation: Option A, recoverable plating over the hull.** Scrap absorbs damage before the hull, and a hit spills 75% as at most six recoverable clusters ahead of the ball's line. Wear is slow and quiet. There is one damage order (mitigation, then scrap, then hull). Recovered scrap never retriggers pickup bonuses. The hidden 0.2 heft per part goes (`run_state.gd:120-121`), so size comes from scrap alone.
 - **Its biggest risk is a downward spiral.** One hit cuts protection, punch, contact advantage and magnet reach at once, and wear drains the same pool. Any build of Option A must tune against that.
 - **Crowded areas to resolve in `DESIGN-V3.md`:**
