@@ -10,6 +10,12 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 
 const REQUIRED := ["id", "category", "name", "hint", "clue", "text", "owner", "participants"]
 
+# 2026-10-04: the default alpha table's stage 2 Warden fights by posture with no lesson,
+# so it has no caps; the cap-stomp trick runs on the legacy table's caps Warden.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _combat
 var _source := Intent.Scripted.new()
@@ -22,7 +28,7 @@ var _last_case_ran := false
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 
