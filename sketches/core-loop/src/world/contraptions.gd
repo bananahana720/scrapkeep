@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const SteamCycle := preload("res://src/world/steam_cycle.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
+const Activities := preload("res://src/world/activities.gd")
 
 # The gorge's contraptions, built from the map's specs and run from world's physics
 # tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
@@ -61,6 +62,7 @@ var _band_mat: Material
 var _ring_mat: Material
 var _hook_mat: Material
 var _steam_mat: Material
+var _cache_rules
 
 
 func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void:
@@ -93,7 +95,27 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 				walls.append(_build_wall(spec))
 			"thermal":
 				thermals.append(_build_thermal(spec))
+	_setup_caches()
 	reset()
+
+
+# World attaches this owner beneath a stage root. Only cache-bearing specs need the
+# game's existing context; standalone contraption geometry keeps its four-argument API.
+func _setup_caches() -> void:
+	if not valves.any(func(v): return v["spec"].has("cache")):
+		return
+	var owner_node := get_parent()
+	while owner_node != null and not "ctx" in owner_node:
+		owner_node = owner_node.get_parent()
+	if owner_node == null or owner_node.get("ctx") == null:
+		return
+	_cache_rules = Activities.new()
+	_cache_rules.ctx = owner_node.get("ctx")
+	_cache_rules.set_physics_process(false)
+	add_child(_cache_rules)
+	for v in valves:
+		if v["spec"].has("cache") and v["spec"].has("codex"):
+			_cache_rules.ctx.codex.declare(v["spec"]["codex"])
 
 
 # Back to the stage start: cycles on their seeded offsets, doors shut, walls whole.
@@ -115,6 +137,22 @@ func reset() -> void:
 		v["open"] = false
 		v["sink"] = 0.0
 		v["door"].position = v["door_home"]
+		v["wheel"].rotation.z = 0.0
+		if _cache_rules != null and v["spec"].has("cache"):
+			if is_instance_valid(v.get("cache_site")):
+				v["cache_site"].free()
+			v.erase("cache_site")
+			# Activities builds on the active terrain. A parked zone must not put
+			# its pocket's colliders on the currently active zone's ground.
+			if _cache_rules.ctx.terrain.map() != map:
+				continue
+			var s = _cache_rules._build("cracked_cache", v["spec"]["cache"]["at"])
+			# The valve's door is this pocket's face. Keep the cache's side walls,
+			# pedestal, seeded part roll and pickup rule, without an activity prompt.
+			s.wall.free()
+			s.wall = null
+			s.view.hide()
+			v["cache_site"] = s
 		if v["plume"] != null:
 			v["plume"].visible = false
 	for w in walls:
@@ -580,6 +618,8 @@ func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, fact
 		if v["sink"] < 1.0:
 			v["sink"] = minf(1.0, v["sink"] + delta / DOOR_SECONDS)
 			v["door"].position = (v["door_home"] as Vector3) + Vector3.DOWN * DOOR_SINK * v["sink"]
+		if v["sink"] >= 1.0 and _cache_rules != null and v.has("cache_site"):
+			_cache_rules._watch_pickup(v["cache_site"], ball)
 		return
 	var at: Vector3 = v["at"]
 	var smashed := planar >= cruise and Vector2(ball.x - at.x, ball.z - at.z).length() <= RAM_REACH and absf(ball.y - at.y) < 3.0
@@ -592,6 +632,11 @@ func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, fact
 	v["wheel"].rotation.z = 0.8
 	facts.append({"kind": "fact", "fact": "valve_smashed", "at": at})
 	facts.append({"kind": "fact", "fact": "route_opened", "at": v["door_home"]})
+	if _cache_rules != null and v.has("cache_site"):
+		var s = v["cache_site"]
+		_cache_rules._finish(s, s.pedestal)
+		if v["spec"].has("codex"):
+			facts.append({"kind": "codex", "id": v["spec"]["codex"]["id"], "at": at})
 	_puff(at, 5.0)
 	var vent = v["spec"].get("vent")
 	if vent != null:

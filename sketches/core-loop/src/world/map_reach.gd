@@ -8,8 +8,8 @@ extends "res://src/world/map_gorge.gd"
 # the bowl's bank. Both low lines share one kicker on the bowl's north bank that throws the
 # ball at the Warden. The Warden's site has four swing pillars, and the reward gates stand
 # in a fixed row south of it where the workshop bay always docks. The barges, lifts, cannon,
-# trebuchet, geyser, sky dish, valves and terrain events are not built here; the three-stage
-# game's gorge is unchanged (map_gorge.gd).
+# trebuchet, geyser, sky dish and terrain events are not built here. One valve opens a
+# cache pocket off the west shelf; the three-stage game's gorge is unchanged (map_gorge.gd).
 
 # Sable's strand: a sweeper on the west shelf, one left-hand turn of radius SWEEP_LINE about
 # SWEEP_CENTRE from the deck's edge to the line of tunnel w1, with a banked arc on its outside,
@@ -42,6 +42,8 @@ const DIVE_HALF := 6.0
 const DIVE_SIDE := 8.0
 const DIVE_OUT := 10.0
 const DROPPED_SATELLITE := Vector2(-72.0, -16.0)
+const SECRET_CACHE := Vector2(-100.0, 64.0)
+const SECRET_VALVE := Vector2(-100.0, 54.0)
 
 const BERM_CENTRE := Vector2(29.0, 90.0)
 const BERM_RADIUS := 40.0
@@ -221,6 +223,12 @@ func _reach_specs() -> void:
 		wall,
 		{"kind": "thermal", "id": "thermal_a", "at": THERMAL_A, "radius": 5.0, "height": 40.0},
 		{"kind": "thermal", "id": "thermal_b", "at": THERMAL_B, "radius": 5.0, "height": 40.0},
+		{"kind": "valve", "id": "reach_cache_valve", "at": SECRET_VALVE,
+			"door": {"at": SECRET_CACHE, "size": Vector3(12.0, 6.0, 1.0), "turn": 0.0},
+			"cache": {"at": SECRET_CACHE},
+			"codex": {"id": "reach_pressure_cache", "category": "world", "name": "Pressure keeps the change",
+				"hint": "A cracked wheel beside a copper door.",
+				"text": "A rolling ram turns the old valve. Behind the sinking door, the crew's spare parts wait."}},
 	]
 
 
