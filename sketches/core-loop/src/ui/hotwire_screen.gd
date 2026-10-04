@@ -167,7 +167,6 @@ func open() -> void:
 	_set_live(true)
 	_root.visible = true
 	_fit.grab_focus()
-	_cue(1.0)
 
 
 # Closing leaves the offer where it was; only choose() resolves it.
@@ -236,7 +235,7 @@ func _process(_delta: float) -> void:
 			open()
 
 
-# The same UI note the pause menu uses: open on the root, close a fifth-and-a-bit up.
+# The pause menu's UI note, a fifth-and-a-bit up, on close. Opening is the audio's hotwire_offer cue.
 func _cue(pitch: float) -> void:
 	var presentation = game.presentation
 	var audio = presentation.get("audio") if presentation != null else null

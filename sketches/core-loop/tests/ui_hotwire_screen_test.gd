@@ -100,12 +100,16 @@ func _process(_delta: float) -> bool:
 			_game.flow.choose_class(0)
 			_wait = SETTLE
 		1:
+			if not _game.presentation.audio.sound_ready:
+				return false
 			_check("no offer, no screen", _pending()["state"] == "" and not _screen().is_open() and not paused,
 				"state \"%s\", open %s, paused %s" % [_pending()["state"], _screen().is_open(), paused])
 			_offer()
 			_wait = GAP
 		2:
 			_opened("offer")
+			var cues: Array = _game.presentation.audio.cue_log.filter(func(c: Array) -> bool: return c[1] == "hotwire_offer" and c[2] == "now")
+			_check("one offer cue", cues.size() == 1, "cues %s" % [cues])
 			Push.key(root, KEY_E)
 			_wait = GAP
 		3:

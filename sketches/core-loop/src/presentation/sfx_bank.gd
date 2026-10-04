@@ -85,6 +85,8 @@ const TRIM_DB := {
 	# The shell's air factor moved: a released spring, an up-and-settle boing (audio.gd plays it
 	# up a fifth for the rise and down a fourth for the return).
 	"shell_spring": -9.0,
+	# The hot-wired offer: two rising brass notes, under 0.4 s (audio.gd, Build.hotwire_offered).
+	"hotwire_offer": -6.0,
 	# The harpoon line's states (design-v3/LEGIBILITY.md section 3), its hum, and one refusal per
 	# verb. The bite (line_bite, -7) is the reference: the dry tick sits 14 dB under it by RMS, the
 	# lock tick and the refusals under that, the world clunk under the bite.
@@ -303,6 +305,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _sputter()
 		"shell_spring":
 			return _shell_spring()
+		"hotwire_offer":
+			return _hotwire_offer()
 		"death":
 			return _death()
 		"scrap_tick":
@@ -1392,6 +1396,12 @@ static func _drop_landing() -> PackedFloat32Array:
 static func _shell_spring() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, 240.0, 620.0, "sine", 14.0), 0, 0.9], [_tone(0.22, 620.0, 410.0, "sine", 16.0), Synth.seconds(0.05), 0.6],
 		[_noise(0.02, 4500.0, 3000.0, 200.0), 0, 0.3]])
+
+
+# The hot-wired offer: two brass notes a fifth apart, D4 to A4, the second riding the first's tail.
+static func _hotwire_offer() -> PackedFloat32Array:
+	return _mix([[_cut(_n("brass", 62), 0.14), 0, 0.8], [_cut(_n("brass", 69), 0.22), Synth.seconds(0.12), 0.95],
+		[_noise(0.012, 4500.0, 3000.0, 250.0), 0, 0.2]])
 
 
 # The held-door ready pulse, class-independent: a bright blip on the next sixteenth, so
