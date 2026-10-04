@@ -152,6 +152,9 @@ signal bet_resolved(device_id: String, won: bool, stake: int, at: Vector3)
 # carries the Warden's posture bar.
 signal line_state_changed(state: String, target: Node3D, at: Vector3, cause: String)
 signal verb_failed(verb: String, reason: String, at: Vector3)
+# A key prompt (ui/key_glyphs.gd) began to be drawn: once per rising edge, not per frame. verb is
+# the prompt id, LET GO included. The run log counts them as prompts_shown.
+signal prompt_shown(verb: String)
 signal cause_armed(id: String)
 signal cause_fired(id: String, target: Node3D, at: Vector3)
 signal posture_changed(enemy: Node3D, posture: float, staggered: bool)
