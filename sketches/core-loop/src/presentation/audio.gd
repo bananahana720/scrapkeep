@@ -62,7 +62,7 @@ const FAIL_GAP := 0.25
 const DRY_TICK_GAP := 0.1
 # Semitones a chain link's bite can climb: link six is five above the root.
 const CHAIN_STEPS := 5
-const CHAIN_BITE_HOLD_MS := 250
+const CHAIN_BITE_HOLD_S := 0.25
 const CAUSE_RESOLVE_GAP := 4.0
 const NOTE_SPACING := 0.14
 # The hum stands while the line does, and climbs an octave as the gap closes from far to near.
@@ -179,7 +179,7 @@ var hum_on := false
 # The line state before the current one, so the dock click plays when the hook leaves rewinding.
 var _line_was := ""
 var hum_pitch := 1.0
-var _chain_bite_ms := -100000
+var _chain_bite_ms := -100000.0
 var _hum_voice := -1
 var _gates := {}
 var _fired_this_run := {}
@@ -1101,9 +1101,15 @@ func _on_chain_state(state: String, cause: String) -> void:
 				return
 			var steps := mini(links - 1, CHAIN_STEPS)
 			if _grammar_cue("line_state_changed", sound, "SFX", Harmony.ratio(float(steps))):
-				_chain_bite_ms = Time.get_ticks_msec()
+				_chain_bite_ms = clock
 		"chain_end":
 			if cause == "paid":
+				return
+			# Combo 1 is exactly today's game: only a chain that reached 2 zips.
+			var ender = ctx.get("player")
+			if ender == null or ender.get("chain") == null or ender.chain.finished.is_empty():
+				return
+			if int(ender.chain.finished.back()["combo"]) < 2:
 				return
 			var sound := EventKinds.line_sound(state)
 			if sound != EventKinds.NONE and sound != "":
@@ -1141,8 +1147,10 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String)
 				return
 		"latched_body":
 			# A chained bite already sounded, pitched, a frame ago.
-			if Time.get_ticks_msec() - _chain_bite_ms > CHAIN_BITE_HOLD_MS:
+			if clock - _chain_bite_ms > CHAIN_BITE_HOLD_S:
 				_grammar_cue("harpoon_bit", sound)
+			else:
+				_chain_bite_ms = -100000.0
 			return
 		"smash_lands":
 			if _recent_ms("slam_boom") > MIN_GAP_MS["slam_boom"]:

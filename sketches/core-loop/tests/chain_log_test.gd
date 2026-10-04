@@ -71,12 +71,12 @@ func _physics_process(_delta: float) -> bool:
 	log._in_arena = true
 	_game.events.line_state_changed.emit("chain_miss", null, Vector3.ZERO, "")
 	_end(4, 4, true)
-	_report("(e) arena", rec["misses"] == 2 and rec["chains"].size() == 2 and rec["best_combo"] == 3, "misses %s, chains %d, best_combo %s" % [rec["misses"], rec["chains"].size(), rec["best_combo"]])
+	_report("(e) counts in the arena", rec["misses"] == 3 and rec["chains"].size() == 3 and rec["best_combo"] == 4, "misses %s, chains %d, best_combo %s" % [rec["misses"], rec["chains"].size(), rec["best_combo"]])
 	log._in_arena = false
 	log._write("died")
 	var lines := FileAccess.get_file_as_string(log.storage_dir.path_join(log.LOG_FILE)).strip_edges().split("\n")
 	var line: Dictionary = JSON.parse_string(lines[lines.size() - 1]) if lines.size() > 0 else {}
-	_report("(f) written line", line.has("chains") and line.has("best_combo") and line.has("misses") and int(line["best_combo"]) == 3 and int(line["misses"]) == 2 and line["chains"].size() == 2,
+	_report("(f) written line", line.has("chains") and line.has("best_combo") and line.has("misses") and int(line["best_combo"]) == 4 and int(line["misses"]) == 3 and line["chains"].size() == 3,
 		"chains %s, best_combo %s, misses %s" % [line.get("chains"), line.get("best_combo"), line.get("misses")])
 	# (g) below three: a fresh codex run state
 	_game.events.run_started.emit("runner_gunner")

@@ -701,6 +701,7 @@ func _process(delta: float) -> void:
 	if not playing:
 		_restart.set_fraction(0.0)
 		chain_counter.step(delta, 0)
+		chain_counter.visible = false
 		return
 	chain_counter.step(delta, game.player.chain.combo)
 

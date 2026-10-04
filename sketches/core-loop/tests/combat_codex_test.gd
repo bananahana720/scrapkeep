@@ -175,6 +175,7 @@ func _warden_tricks() -> void:
 	_game.player.chain.combo = 3
 	_game.events.line_state_changed.emit("chain_link", null, Vector3.ZERO, "")
 	_report("chain", _combat.discovered.has("chain"), "a third link in one chain")
+	_game.player.chain.combo = 0
 	var all_found := true
 	for id in CodexEntries.ids():
 		all_found = all_found and _combat.discovered.has(id)

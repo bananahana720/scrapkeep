@@ -54,8 +54,8 @@ func _run() -> void:
 	var heard: Array = []
 	for entry in audio.cue_log:
 		heard.append(entry[1])
-	_t.check("b chain rows play only the end zip and the miss tick, and keep the hum",
-		audio.hum_on and heard.all(func(sound): return sound in ["line_zip", "dry_tick"]) and not ("line_bite" in heard),
+	_t.check("b chain rows at no links play only the miss tick, no zip, and keep the hum",
+		audio.hum_on and heard.all(func(sound): return sound in ["dry_tick"]) and not ("line_bite" in heard),
 		"cues %s, hum_on %s" % [audio.cue_log, audio.hum_on])
 	audio._stop_hum()
 

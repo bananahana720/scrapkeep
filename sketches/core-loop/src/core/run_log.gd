@@ -264,8 +264,7 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String)
 		"chain_end":
 			_on_chain_end()
 		"chain_miss":
-			if not _in_arena:
-				_record["misses"] += 1
+			_record["misses"] += 1
 		"latched_body":
 			_record["bites"] += 1
 		"smash_lands":
@@ -277,7 +276,7 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String)
 # The player's chain appends its finished row before it publishes chain_end, so the last
 # row is the chain that just ended. Without a player or a row nothing is recorded.
 func _on_chain_end() -> void:
-	if _in_arena or player == null or player.get("chain") == null:
+	if player == null or player.get("chain") == null:
 		return
 	var done: Array = player.chain.finished
 	if done.is_empty():

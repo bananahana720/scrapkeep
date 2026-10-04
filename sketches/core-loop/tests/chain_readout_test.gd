@@ -9,7 +9,7 @@ const T := preload("res://tests/support/t.gd")
 #   b  the counter falls and hides after the chain ends
 #   c  the collar carries min(links, 6) rings, none at one link, cleared on chain_end
 #   d  chain_link plays line_bite a semitone higher per link, none at one link, capped at six links
-#   e  chain_end plays one line_zip, none when the smash paid
+#   e  chain_end plays one line_zip only for a combo of 2 or more, none when the smash paid
 #   f  a dry_fire and a chain_miss together make one dry_tick
 #   g  no chain id changes the line view's state or stops the hum
 
@@ -39,7 +39,7 @@ func _fresh(audio) -> void:
 	audio.cue_log.clear()
 	audio._last_start.clear()
 	audio._gates.clear()
-	audio._chain_bite_ms = -100000
+	audio._chain_bite_ms = -100000.0
 
 
 func _cues(audio, sound: String) -> Array:
@@ -76,6 +76,14 @@ func _run() -> void:
 	_t.check("b counter still falls 0.1 s after the end", counter.visible, "visible %s" % counter.visible)
 	counter.step(0.4, 0)
 	_t.check("b counter hidden after the fall", not counter.visible, "visible %s" % counter.visible)
+
+	# a: not playing, the counter is hidden over the pause or death screen
+	counter.step(0.016, 3)
+	var was_state: int = _game.flow.state
+	_game.flow.state = 7  # DEAD
+	_game.hud._process(0.016)
+	_t.check("a counter hidden while not playing", not _game.hud.chain_counter.visible, "visible %s, in_play %s" % [counter.visible, _game.flow.in_play()])
+	_game.flow.state = was_state
 
 	# c: the collar rings
 	var want := {1: 0, 2: 2, 3: 3, 6: 6, 7: 6}
@@ -118,9 +126,27 @@ func _run() -> void:
 	_fresh(audio)
 	events.line_state_changed.emit("chain_end", null, Vector3.ZERO, "paid")
 	_t.eq("e paid end plays no zip", _cues(audio, "line_zip").size(), 0)
+	for combo in [0, 1]:
+		_fresh(audio)
+		_player.chain.finished.append({"links": combo, "pivots": 0, "combo": combo, "paid": false, "cause": "ground"})
+		events.line_state_changed.emit("chain_end", null, Vector3.ZERO, "ground")
+		_t.eq("e no zip at combo %d" % combo, _cues(audio, "line_zip").size(), 0)
 	_fresh(audio)
+	_player.chain.finished.append({"links": 2, "pivots": 0, "combo": 2, "paid": false, "cause": "ground"})
 	events.line_state_changed.emit("chain_end", null, Vector3.ZERO, "ground")
-	_t.eq("e ground end plays one zip", _cues(audio, "line_zip").size(), 1)
+	_t.eq("e one zip at combo 2 on ground", _cues(audio, "line_zip").size(), 1)
+	_fresh(audio)
+	_player.chain.finished.append({"links": 2, "pivots": 0, "combo": 2, "paid": true, "cause": "paid"})
+	events.line_state_changed.emit("chain_end", null, Vector3.ZERO, "paid")
+	_t.eq("e no zip when paid at combo 2", _cues(audio, "line_zip").size(), 0)
+	_fresh(audio)
+	_set_chain(2)
+	events.line_state_changed.emit("chain_link", null, Vector3.ZERO, "")
+	events.line_state_changed.emit("latched_body", null, Vector3.ZERO, "")
+	audio._last_start.clear()
+	events.line_state_changed.emit("latched_body", null, Vector3.ZERO, "")
+	_t.eq("e the hold is consumed once", _cues(audio, "line_bite").size(), 2)
+	_set_chain(0)
 
 	# f: one tick per miss, in either order
 	for order in [["dry_fire", "chain_miss"], ["chain_miss", "dry_fire"]]:
