@@ -77,6 +77,21 @@ var _wear_accum := 0.0
 # The armour metrics the run log carries; a retry adds to them, they are never restored.
 var metrics := {}
 
+# The entrance document layer (RS1): fields a zone-entrance save carries that the live run did
+# not hold. Flow sets `world`; `cogs` and `companion` are reserved for later units.
+var run_seed := 0
+var world := 0
+var cogs := 0
+var companion := {}
+# World id to retries spent there, merged by max so a reload never hands retries back.
+var retries_spent := {}
+# Keys a newer build wrote that this one does not know; they ride through a round trip.
+var extra := {}
+# Upgrade-tree picks and the opened-pick count as last read from the tree or a loaded doc.
+var tree_picks: Array[String] = []
+var tree_allowed := 0
+var _loaded_class_id := ""
+
 var _snapshot := {}
 var _heft_class := 1
 # The first stage-start snapshot of each stage in this run, kept for a replay of that
@@ -111,6 +126,16 @@ func begin(chosen_class: Resource) -> void:
 	class_rewarded = 1
 	_stage_starts = {}
 	run_id = "%d-%06d" % [int(Time.get_unix_time_from_system()), randi() % 1000000]
+	# Derived from the run id so it draws nothing from the global RNG.
+	run_seed = hash(run_id)
+	world = 0
+	cogs = 0
+	companion = {}
+	retries_spent = {}
+	extra = {}
+	_loaded_class_id = ""
+	tree_picks.clear()
+	tree_allowed = 0
 	parts.clear()
 	kills = 0
 	events_won.clear()
@@ -130,7 +155,7 @@ func alive() -> bool:
 
 
 func class_id() -> String:
-	return class_def.id if class_def != null else ""
+	return class_def.id if class_def != null else _loaded_class_id
 
 
 func advance(delta: float) -> void:
@@ -504,3 +529,182 @@ func summary() -> Dictionary:
 		"time": run_time,
 		"retries": retries,
 	}
+
+
+# ---- Entrance document (RS1): a pure, versioned Dictionary of the zone-entrance state. ----
+# JSON loses Vector3 and typed arrays, so vectors are [x, y, z] and arrays are plain.
+
+const ENTRANCE_SCHEMA := 1
+# key: expected kind. "int" accepts a whole float, "num" any number, "vec3" three numbers,
+# "strs" an array of strings, "dict" a Dictionary, "str" a String.
+const ENTRANCE_KEYS := {
+	"schema": "int", "run_id": "str", "class_id": "str", "seed": "int", "stage": "int",
+	"world": "int", "max_hp": "num", "hp": "num", "mass": "num", "scrap": "int",
+	"heft_class": "int", "wear_accum": "num", "bonus_cores": "int", "class_rewarded": "int",
+	"parts": "strs", "kills": "int", "events_won": "strs", "run_time": "num", "retries": "int",
+	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
+	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
+}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict"}
+
+
+# `tree` is optional: when given, its picks and allowed count are read the way world.gd
+# reads them; otherwise the last values held here (from a load) are written.
+func to_entrance_doc(tree = null) -> Dictionary:
+	if tree != null:
+		tree_picks.assign(tree.picks)
+		tree_allowed = int(tree.allowed)
+	var pos := Vector3.ZERO
+	var vel := Vector3.ZERO
+	var yaw := 0.0
+	if not _snapshot.is_empty():
+		pos = _snapshot["entry_position"]
+		vel = _snapshot["entry_velocity"]
+		yaw = _snapshot["camera_yaw"]
+	var spent := {}
+	for w in retries_spent:
+		spent[str(int(w))] = int(retries_spent[w])
+	var doc := {}
+	for key in extra:
+		doc[key] = extra[key]
+	doc.merge({
+		"schema": ENTRANCE_SCHEMA,
+		"run_id": run_id,
+		"class_id": class_id(),
+		"seed": run_seed,
+		"stage": stage,
+		"world": world,
+		"max_hp": max_hp,
+		"hp": hp,
+		"mass": mass,
+		"scrap": scrap,
+		"heft_class": _heft_class,
+		"wear_accum": _wear_accum,
+		"bonus_cores": bonus_cores,
+		"class_rewarded": class_rewarded,
+		"parts": Array(parts),
+		"kills": kills,
+		"events_won": Array(events_won),
+		"run_time": run_time,
+		"retries": retries,
+		"entry_position": [pos.x, pos.y, pos.z],
+		"entry_velocity": [vel.x, vel.y, vel.z],
+		"camera_yaw": yaw,
+		"tree_picks": Array(tree_picks),
+		"tree_allowed": tree_allowed,
+		"retries_spent": spent,
+		"cogs": cogs,
+		"companion": companion.duplicate(true),
+	}, true)
+	return doc
+
+
+static func _entrance_kind_ok(value, kind: String) -> bool:
+	var t := typeof(value)
+	var is_num := t == TYPE_INT or t == TYPE_FLOAT
+	match kind:
+		"int":
+			return t == TYPE_INT or (t == TYPE_FLOAT and is_finite(value) and value == floorf(value))
+		"num":
+			return is_num and is_finite(value)
+		"str":
+			return t == TYPE_STRING
+		"dict":
+			return t == TYPE_DICTIONARY
+		"vec3", "strs":
+			if t != TYPE_ARRAY:
+				return false
+			if kind == "vec3":
+				if value.size() != 3:
+					return false
+				for n in value:
+					if not (typeof(n) == TYPE_INT or typeof(n) == TYPE_FLOAT) or not is_finite(n):
+						return false
+				return true
+			for item in value:
+				if typeof(item) != TYPE_STRING:
+					return false
+			return true
+	return false
+
+
+# "" when the document can be applied, else the first problem.
+static func validate_entrance_doc(doc) -> String:
+	if typeof(doc) != TYPE_DICTIONARY:
+		return "entrance doc is not a Dictionary"
+	if not doc.has("schema"):
+		return "missing key: schema"
+	if not _entrance_kind_ok(doc["schema"], "int"):
+		return "wrong type for schema"
+	if int(doc["schema"]) > ENTRANCE_SCHEMA:
+		return "schema %d is newer than known schema %d" % [int(doc["schema"]), ENTRANCE_SCHEMA]
+	if int(doc["schema"]) < 1:
+		return "schema %d is invalid" % int(doc["schema"])
+	for key in ENTRANCE_KEYS:
+		if not doc.has(key):
+			return "missing key: %s" % key
+		if not _entrance_kind_ok(doc[key], ENTRANCE_KEYS[key]):
+			return "wrong type for %s (expected %s)" % [key, ENTRANCE_KEYS[key]]
+	for key in ENTRANCE_OPTIONAL:
+		if doc.has(key) and not _entrance_kind_ok(doc[key], ENTRANCE_OPTIONAL[key]):
+			return "wrong type for %s (expected %s)" % [key, ENTRANCE_OPTIONAL[key]]
+	for w in doc["retries_spent"]:
+		if not str(w).is_valid_int():
+			return "retries_spent key %s is not a world id" % str(w)
+		if not _entrance_kind_ok(doc["retries_spent"][w], "int"):
+			return "wrong type for retries_spent[%s]" % str(w)
+	return ""
+
+
+# Validates first; on any problem nothing is applied. Returns true when applied.
+func from_entrance_doc(doc) -> bool:
+	if validate_entrance_doc(doc) != "":
+		return false
+	run_id = doc["run_id"]
+	_loaded_class_id = doc["class_id"]
+	if class_def != null and class_def.id != _loaded_class_id:
+		class_def = null
+	run_seed = int(doc["seed"])
+	stage = int(doc["stage"])
+	world = int(doc["world"])
+	max_hp = float(doc["max_hp"])
+	hp = float(doc["hp"])
+	mass = float(doc["mass"])
+	scrap = int(doc["scrap"])
+	_heft_class = int(doc["heft_class"])
+	_wear_accum = float(doc["wear_accum"])
+	bonus_cores = int(doc["bonus_cores"])
+	class_rewarded = int(doc["class_rewarded"])
+	parts.assign(doc["parts"])
+	kills = int(doc["kills"])
+	events_won.assign(doc["events_won"])
+	run_time = float(doc["run_time"])
+	retries = int(doc["retries"])
+	tree_picks.assign(doc["tree_picks"])
+	tree_allowed = int(doc["tree_allowed"])
+	retries_spent = {}
+	for w in doc["retries_spent"]:
+		retries_spent[int(str(w))] = int(doc["retries_spent"][w])
+	cogs = int(doc.get("cogs", 0))
+	companion = (doc["companion"] as Dictionary).duplicate(true) if doc.has("companion") else {}
+	extra = {}
+	for key in doc:
+		if not ENTRANCE_KEYS.has(key) and not ENTRANCE_OPTIONAL.has(key):
+			extra[key] = doc[key]
+	var p: Array = doc["entry_position"]
+	var v: Array = doc["entry_velocity"]
+	over = false
+	stage_time = 0.0
+	since_damage = 99.0
+	# The loaded entrance is the checkpoint a retry rewinds to.
+	_stage_starts = {}
+	_snapshot = {}
+	snapshot(Vector3(p[0], p[1], p[2]), Vector3(v[0], v[1], v[2]), float(doc["camera_yaw"]))
+	return true
+
+
+# Max per world; a world absent from `other` keeps its count, and nothing ever decreases.
+func merge_retries_spent(other: Dictionary) -> void:
+	for w in other:
+		var id := int(str(w))
+		retries_spent[id] = maxi(int(retries_spent.get(id, 0)), int(other[w]))
