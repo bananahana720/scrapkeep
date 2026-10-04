@@ -152,6 +152,20 @@ func set_binding(action: String, events: Array) -> void:
 	save()
 
 
+# Saves `events` over the saved events of the same kind only (keys and mouse buttons, pad
+# buttons, trigger axes), so a pad rebind keeps a saved key rebind and the reverse.
+func merge_binding(action: String, events: Array) -> void:
+	var kept := []
+	for old in binding_events(action):
+		var replaced := false
+		for event in events:
+			replaced = replaced or Bindings.kind_of(old) == Bindings.kind_of(event)
+		if not replaced:
+			kept.append(old)
+	kept.append_array(events)
+	set_binding(action, kept)
+
+
 func clear_binding(action: String) -> void:
 	bindings.erase(action)
 	save()

@@ -479,21 +479,25 @@ func apply_saved_bindings() -> void:
 
 
 # Puts `events` on `action` in the InputMap: keys and mouse buttons together replace the
-# desk events, pad buttons replace the pad events, axes stay. Boot and the settings page
+# desk events, pad buttons replace the pad events, a trigger axis replaces the action's
+# trigger, sticks stay. Boot and the settings page
 # both call this, so a live rebind and a saved one cannot differ.
 func apply_binding(action: String, events: Array) -> void:
 	if events.is_empty() or not InputMap.has_action(action):
 		return
 	var has_pad := false
 	var has_desk := false
+	var has_axis := false
 	for event in events:
 		if event is InputEventJoypadButton:
 			has_pad = true
+		elif event is InputEventJoypadMotion:
+			has_axis = true
 		else:
 			has_desk = true
 	for old in InputMap.action_get_events(action):
 		var desk: bool = old is InputEventKey or old is InputEventMouseButton
-		if (has_desk and desk) or (has_pad and old is InputEventJoypadButton):
+		if (has_desk and desk) or (has_pad and old is InputEventJoypadButton) or (has_axis and old is InputEventJoypadMotion):
 			InputMap.action_erase_event(action, old)
 	for event in events:
 		InputMap.action_add_event(action, event)
