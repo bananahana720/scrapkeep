@@ -1083,6 +1083,8 @@ func _grammar_cue(kind: String, sound: String, bus := "SFX") -> bool:
 
 
 func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String) -> void:
+	if state.begins_with("chain_"):
+		return
 	if state in HUM_STATES:
 		_start_hum()
 	else:

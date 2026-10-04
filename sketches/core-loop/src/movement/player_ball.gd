@@ -556,7 +556,8 @@ func _press_harpoon() -> void:
 		return
 	if not kit.hooked:
 		_emit_line("dry_fire", null, ball_position(), "", DRY_FIRE_HOLD)
-		_publish_chain(chain.dry_fire(), null, ball_position())
+		if reason == "no_aim":
+			_publish_chain(chain.dry_fire(), null, ball_position())
 	_fail("harpoon", reason)
 
 
@@ -866,7 +867,7 @@ static func slam_strength(speed: float, flatness := 1.0) -> float:
 # next to nothing when the slam went into a launch.
 # Every class slams the same way; the landing then takes the class's flavour.
 func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
-	var strength := slam_strength(speed, flatness) * _landing_mult
+	var strength := slam_strength(speed, flatness)
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)

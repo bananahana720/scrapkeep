@@ -166,6 +166,8 @@ func _advance(delta: float) -> void:
 
 
 func _on_line_state(state: String, target: Node3D, at: Vector3, _cause: String) -> void:
+	if state.begins_with("chain_"):
+		return
 	if state == "locked" and (_state != "locked" or target != _lock_target):
 		_lock_age = 0.0
 	if state == "locked":

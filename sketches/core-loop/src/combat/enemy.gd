@@ -165,6 +165,8 @@ func _reaction_ball() -> Vector3:
 
 
 func _on_reaction_line(state: String, held: Node3D, _at: Vector3, _cause: String) -> void:
+	if state.begins_with("chain_"):
+		return
 	if not reactions_enabled or _dead or not _ordinary_reaction():
 		return
 	if state == "latched_body":
