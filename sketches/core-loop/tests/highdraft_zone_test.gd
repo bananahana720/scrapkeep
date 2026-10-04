@@ -113,8 +113,8 @@ func _build_contraptions(map) -> void:
 	_contraptions = Contraptions.new()
 	_terrain.geometry_root(1).add_child(_contraptions)
 	_contraptions.setup(map, _terrain.ground_callable(1), 14.0, GRAVITY)
-	_t.eq("(6) thermals built", _contraptions.thermals.size(), 2)
-	_t.eq("(6) barges built", _contraptions.barges.size(), 1)
+	_t.eq("(6) thermals built", _contraptions.thermals.size(), 3)
+	_t.eq("(6) barges built", _contraptions.barges.size(), 2)
 	_t.eq("(6) cables built", _contraptions.cables.size(), 1)
 	var spec: Dictionary = _contraptions.barges[0]["spec"]
 	_barge_ticks = int(2.0 * (float(spec["travel"]) + float(spec["dwell"])) * _hz) + 2
@@ -148,8 +148,9 @@ func _plan_falls(map) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = FALL_SEED
 	var ids: Array = Highdraft.ISLANDS.keys()
-	var barge: Dictionary = map.contraptions.filter(func(s): return s["kind"] == "barge")[0]
-	var lane := AABB((barge["a"] as Vector3) - Highdraft.BARGE_SIZE * 0.5, Vector3.ZERO).expand((barge["b"] as Vector3) + Highdraft.BARGE_SIZE * 0.5).grow(2.0)
+	var lanes: Array[AABB] = []
+	for barge in map.contraptions.filter(func(s): return s["kind"] == "barge"):
+		lanes.append(AABB((barge["a"] as Vector3) - Highdraft.BARGE_SIZE * 0.5, Vector3.ZERO).expand((barge["b"] as Vector3) + Highdraft.BARGE_SIZE * 0.5).grow(2.0))
 	var tries := 0
 	while _drops.size() < FALLS and tries < 1000:
 		tries += 1
@@ -158,7 +159,7 @@ func _plan_falls(map) -> void:
 		if not _open_deck(map, flat):
 			continue
 		var at := Vector3(flat.x, float(isle["top"]) + Tuning.RADIUS, flat.y)
-		if lane.has_point(Vector3(at.x, lane.get_center().y, at.z)):
+		if lanes.any(func(lane: AABB): return lane.has_point(Vector3(at.x, lane.get_center().y, at.z))):
 			continue
 		_drops.append(at)
 	_t.eq("(5) drop spots found off island rims", _drops.size(), FALLS)
