@@ -521,4 +521,4 @@ func _check_frozen(world: Node3D) -> void:
 			collider.append_array(shape.get_debug_mesh().surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
 	var collider_hash := hash(collider.to_byte_array())
 	print("terrain hash %d collider hash %d (%d collider vertices)" % [terrain_hash, collider_hash, collider.size()])
-	_check(terrain_hash == TERRAIN_HASH and collider_hash == COLLIDER_HASH, "terrain samples and collider shapes unchanged from the round 1 base")
+	_check(terrain_hash == TERRAIN_HASH and collider_hash == COLLIDER_HASH, "terrain samples and collider shapes unchanged from the pinned base")

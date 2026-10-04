@@ -91,6 +91,15 @@ var _reaction_clock := 0.0
 var _reaction_connections: Array = []
 
 
+# The gate glb still names its toppers by the pre-wave-3 ladder. Relic and evolved reuse
+# Topper_rare_plus until tools/blender/reward_gate.py is regenerated with the new names (follow-up).
+const TOPPER_NAMES := {"relic": "rare_plus", "evolved": "rare_plus"}
+
+
+static func topper_name(rarity: String) -> String:
+	return "Topper_" + String(TOPPER_NAMES.get(rarity, rarity))
+
+
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	if ctx != null and ctx.get("profile") != null:
@@ -637,7 +646,7 @@ func _dress_gate(gate: Node3D) -> void:
 	arch.mesh = arch_mesh
 	gate.add_child(arch)
 	paint(arch, tints)
-	var topper_mesh := mesh_named(GATE_PATH, "Topper_" + rarity) if topper != null else null
+	var topper_mesh := mesh_named(GATE_PATH, topper_name(rarity)) if topper != null else null
 	if topper != null and topper_mesh != null:
 		hide_placeholder(topper)
 		for child in topper.get_children():

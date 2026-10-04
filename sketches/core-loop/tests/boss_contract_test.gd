@@ -11,7 +11,8 @@ const BossContract := preload("res://src/boss/boss_contract.gd")
 #
 # Evidence limit: this checks the surface and return types, not the fight's behaviour.
 
-const TARGET_COUNT := 14
+const TARGET_COUNT := 19
+const PROPERTY_COUNT := 6
 const MODULE_COUNT := 6
 
 var _game
@@ -21,6 +22,17 @@ var _failures := 0
 # A TARGET double that answers everything except what it is told to drop.
 class TargetDouble:
 	extends RefCounted
+	var plating := 0.0
+	var hp := 10.0
+	var max_hp := 10.0
+	var radius := 1.0
+	var half_height := 1.0
+	var kind := "warden"
+	func knock(_direction: Vector3, _force: float) -> void: pass
+	func flash() -> void: pass
+	func set_tint(_state: String) -> void: pass
+	func plating_now() -> float: return 0.0
+	func unplated_by_magnet() -> bool: return false
 	func fight() -> String: return "posture"
 	func posture() -> float: return 0.0
 	func staggered() -> bool: return false
@@ -34,6 +46,12 @@ class TargetDouble:
 	func hit_mult(_kind: String, _part: String) -> float: return 1.0
 	func contact_part(_ball: Vector3, _kind: String) -> String: return ""
 	func on_struck(_kind: String, _part: String, _result: Dictionary) -> void: pass
+
+
+# A double that lacks the properties combat reads.
+class NoPropsDouble:
+	extends RefCounted
+	func fight() -> String: return "posture"
 
 
 # The same, with judge_hit: the full conforming double.
@@ -105,6 +123,11 @@ func _run() -> void:
 	# (b) a double missing judge_hit is named; the full double conforms.
 	var short_missing: Array = BossContract.conforms(TargetDouble.new(), BossContract.TARGET)
 	_report("double without judge_hit is named", short_missing == ["judge_hit"], "missing %s" % [short_missing])
+	var no_props: Array = BossContract.conforms(NoPropsDouble.new(), BossContract.TARGET)
+	var props_named := true
+	for row in BossContract.TARGET_PROPERTIES:
+		props_named = props_named and row[0] in no_props
+	_report("double without properties is named", props_named, "missing %s" % [no_props])
 	_report("full double conforms", BossContract.conforms(FullDouble.new(), BossContract.TARGET).is_empty(), "")
 	_report("null conforms to nothing", BossContract.conforms(null, BossContract.MODULE).size() == MODULE_COUNT, "")
 
@@ -125,8 +148,9 @@ func _run() -> void:
 		if text.count("  %s(" % row[0]) != 1:
 			once = false
 	_report("describe names each method once", once, "")
-	_report("list sizes", BossContract.TARGET.size() == TARGET_COUNT and BossContract.MODULE.size() == MODULE_COUNT,
-			"%d and %d" % [BossContract.TARGET.size(), BossContract.MODULE.size()])
+	_report("list sizes", BossContract.TARGET.size() == TARGET_COUNT and BossContract.MODULE.size() == MODULE_COUNT \
+			and BossContract.TARGET_PROPERTIES.size() == PROPERTY_COUNT,
+			"%d, %d and %d" % [BossContract.TARGET.size(), BossContract.MODULE.size(), BossContract.TARGET_PROPERTIES.size()])
 
 	print("boss_contract_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

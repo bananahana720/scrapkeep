@@ -11,7 +11,9 @@ extends RefCounted
 #
 # Each row is [name, argument count, declared return type]. TYPE_NIL means no return value.
 # The type is checked from the method's declaration when it has one, and by the test
-# against a live call.
+# against a live call. A call may leave optional parameters off, so a method conforms when
+# the count sits between its required and its declared parameters. TARGET_PROPERTIES lists
+# [name, type] for the fields combat reads or writes on any struck body without a guard.
 
 const TARGET := [
 	# The posture fight (warden.gd, "The posture fight").
@@ -30,6 +32,22 @@ const TARGET := [
 	["hit_mult", 2, TYPE_FLOAT],
 	["contact_part", 2, TYPE_STRING],
 	["on_struck", 3, TYPE_NIL],
+	# What combat calls on any struck body with no has_method guard (combat.gd strike, the
+	# plate tint, the pin carry, the magnet-break discovery).
+	["knock", 2, TYPE_NIL],
+	["flash", 0, TYPE_NIL],
+	["set_tint", 1, TYPE_NIL],
+	["plating_now", 0, TYPE_FLOAT],
+	["unplated_by_magnet", 0, TYPE_BOOL],
+]
+
+const TARGET_PROPERTIES := [
+	["plating", TYPE_FLOAT],
+	["hp", TYPE_FLOAT],
+	["max_hp", TYPE_FLOAT],
+	["radius", TYPE_FLOAT],
+	["half_height", TYPE_FLOAT],
+	["kind", TYPE_STRING],
 ]
 
 const MODULE := [
@@ -44,11 +62,12 @@ const MODULE := [
 
 # The missing or mistyped names in obj against a surface (TARGET or MODULE). Empty means
 # it conforms. A wrong argument count or a declared return type that differs reports the
-# name with the reason.
+# name with the reason. The TARGET surface also checks TARGET_PROPERTIES.
 static func conforms(obj, surface: Array) -> Array:
 	var missing: Array = []
+	var props: Array = TARGET_PROPERTIES if surface == TARGET else []
 	if obj == null:
-		for row in surface:
+		for row in surface + props:
 			missing.append(row[0])
 		return missing
 	var declared := {}
@@ -60,12 +79,22 @@ static func conforms(obj, surface: Array) -> Array:
 			missing.append(method_name)
 			continue
 		var info: Dictionary = declared[method_name]
-		if info["args"].size() != int(row[1]):
-			missing.append("%s (takes %d arguments, contract says %d)" % [method_name, info["args"].size(), int(row[1])])
+		var most: int = info["args"].size()
+		var fewest: int = most - info["default_args"].size()
+		if int(row[1]) < fewest or int(row[1]) > most:
+			missing.append("%s (takes %d to %d arguments, contract says %d)" % [method_name, fewest, most, int(row[1])])
 			continue
 		var ret_type: int = info["return"]["type"]
 		if int(row[2]) != TYPE_NIL and ret_type != TYPE_NIL and ret_type != int(row[2]):
 			missing.append("%s (returns type %d, contract says %d)" % [method_name, ret_type, int(row[2])])
+	var have := {}
+	for prop in obj.get_property_list():
+		have[prop["name"]] = prop["type"]
+	for row in props:
+		if not have.has(row[0]):
+			missing.append(row[0])
+		elif int(have[row[0]]) != int(row[1]) and int(have[row[0]]) != TYPE_NIL:
+			missing.append("%s (property type %d, contract says %d)" % [row[0], have[row[0]], int(row[1])])
 	return missing
 
 
@@ -74,6 +103,8 @@ static func describe() -> String:
 	lines.append("TARGET")
 	for row in TARGET:
 		lines.append("  %s(%d) -> %s" % [row[0], row[1], type_string(row[2]) if row[2] != TYPE_NIL else "void"])
+	for row in TARGET_PROPERTIES:
+		lines.append("  property %s: %s" % [row[0], type_string(row[1])])
 	lines.append("MODULE")
 	for row in MODULE:
 		lines.append("  %s(%d) -> %s" % [row[0], row[1], type_string(row[2]) if row[2] != TYPE_NIL else "void"])

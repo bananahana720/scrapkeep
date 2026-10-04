@@ -1,6 +1,7 @@
 # Scrapkeep alpha design
 
 Current gameplay design after checkpoint 1, as of base `981214373fecdad3c53be83b242993b62a1aa5ef`.
+Refresh: written against base `981214373fecdad3c53be83b242993b62a1aa5ef` before wave 3 landed. Wave 3 added the boss contract, the alpha table, the entrance document, the rarity ladder, the companion model, the guard-rack burst, hero asset guards, wind-up rows, lore rows, Spillway zone 1-1 and the nightly runner.
 [Playtest entry 12](../../../docs/playtests/PLAYTEST-LOG.md#12-checkpoint-1-the-cable-reach-first-human-play) and EV-0624 record the verdict.
 [Decision trail](../../../docs/decisions.tsv) row numbers below are physical file lines, including its header.
 The later 4 October UTC rulings win over the 3 October plans' pending-sitting text.

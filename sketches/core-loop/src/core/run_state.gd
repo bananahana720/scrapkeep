@@ -78,7 +78,7 @@ var _wear_accum := 0.0
 var metrics := {}
 
 # The entrance document layer (RS1): fields a zone-entrance save carries that the live run did
-# not hold. Flow sets `world`; `cogs` and `companion` are reserved for later units.
+# not hold. Unit RS3 wires `world` (nothing sets it yet); `cogs` and `companion` are reserved for later units.
 var run_seed := 0
 var world := 0
 var cogs := 0

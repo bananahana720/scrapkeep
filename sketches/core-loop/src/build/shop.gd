@@ -16,8 +16,8 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 # shop_lines_test fails if a line is missing from that file or runs past 12 words.
 
 const SHELF_SIZE := 3
-const SHELF_RARITIES := ["common", "uncommon", "rare"]
-const TOP_RARITIES := ["rare_plus"]
+const SHELF_RARITIES := ["common", "rare"]
+const TOP_RARITIES := ["relic"]
 # The reroll costs this at the first visit and rises by REROLL_GROWTH each visit after.
 const REROLL_BASE := 12
 const REROLL_GROWTH := 1.5
