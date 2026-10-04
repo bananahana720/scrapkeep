@@ -24,6 +24,7 @@ const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const PartName := preload("res://src/ui/part_name.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
+const ChainCounter := preload("res://src/ui/chain_counter.gd")
 
 # The spine's HUD, built to a word budget (playtest entry 7): icons, gauges and keycaps
 # carry the facts, and words appear only where nothing else can say it. Top band: the
@@ -138,6 +139,7 @@ const ARMOR_BAR := 120.0
 const ARMOR_FLASH := 0.35
 const ARMOR_PEAK_FLOOR := 100.0
 var _armor: Control
+var chain_counter: Control
 var _armor_flash := 0.0
 var _armor_peak := ARMOR_PEAK_FLOOR
 var _threat := 0
@@ -202,6 +204,8 @@ func setup(game_ref) -> void:
 	_armor = Gauge.new("res_scrap", ARMOR_BAR, true)
 	add_child(_armor)
 	_armor.visible = false
+	chain_counter = ChainCounter.new()
+	add_child(chain_counter)
 	game.run.armor_hit.connect(func(_removed: float, _spill: int, _source: String): _armor_flash = ARMOR_FLASH)
 
 	reticle = AimReticle.new()
@@ -528,6 +532,7 @@ func layout(size: Vector2) -> void:
 	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.size.y * 0.5)
 	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
+	chain_counter.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - chain_counter.size.y * 0.5)
 
 
 # The sizes layout() depends on. Relayout when one changes, not every frame: each
@@ -695,7 +700,9 @@ func _process(delta: float) -> void:
 	_armor.visible = playing and game.run.armor_mode
 	if not playing:
 		_restart.set_fraction(0.0)
+		chain_counter.step(delta, 0)
 		return
+	chain_counter.step(delta, game.player.chain.combo)
 
 	var run = game.run
 	var reading := objective_reading()

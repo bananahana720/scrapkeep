@@ -3,9 +3,9 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The hook chain rides line_state_changed, but its presentation is not built yet (design-v3/HOOK-CHAIN.md):
+# The hook chain rides line_state_changed (design-v3/HOOK-CHAIN.md); chain_readout_test covers what it shows and plays:
 #   a  the line view keeps its state across every chain_ row
-#   b  the audio plays no cue and keeps the hum for a chain_ row
+#   b  the audio keeps the hum for a chain_ row and plays only the chain's own end and miss cues
 #   c  a press during the post-smash rewind is no chain miss and starts no cooldown
 #   d  a combo smash does not scale the slammed strength
 
@@ -48,9 +48,14 @@ func _run() -> void:
 	audio.hum_on = true
 	audio.cue_log.clear()
 	audio._last_start.clear()
+	_player.chain.links = 0
 	for id in ["chain_miss", "chain_end", "chain_link", "chain_pivot"]:
 		events.line_state_changed.emit(id, null, Vector3.ZERO, "ground")
-	_t.check("b chain rows play no cue and keep the hum", audio.cue_log.is_empty() and audio.hum_on,
+	var heard: Array = []
+	for entry in audio.cue_log:
+		heard.append(entry[1])
+	_t.check("b chain rows play only the end zip and the miss tick, and keep the hum",
+		audio.hum_on and heard.all(func(sound): return sound in ["line_zip", "dry_tick"]) and not ("line_bite" in heard),
 		"cues %s, hum_on %s" % [audio.cue_log, audio.hum_on])
 	audio._stop_hum()
 

@@ -38,6 +38,8 @@ const COLLAR_MIN := 0.9
 const COLLAR_MAX := 3.2
 const COLLAR_PER_METRE := 0.07
 const POST_RING := 1.1
+const RING_CAP := 6
+const RING_STEP := 0.22
 const BARB_SIZE := 0.55
 
 const DRY_DART := 8.0
@@ -62,6 +64,8 @@ var barb: MeshInstance3D
 var collar: MeshInstance3D
 var collar_radius := 0.0
 var collar_scale := 1.0
+# Rings stacked on the collar, one per chain link up to RING_CAP; none at a single bite.
+var collar_rings := 0
 var post_ring: MeshInstance3D
 var pop: MeshInstance3D
 
@@ -167,6 +171,11 @@ func _advance(delta: float) -> void:
 
 func _on_line_state(state: String, target: Node3D, at: Vector3, _cause: String) -> void:
 	if state.begins_with("chain_"):
+		# A chain fact is not the line's state: it feeds the collar's rings and nothing else.
+		if state == "chain_link":
+			_set_rings(player.chain.links)
+		elif state == "chain_end":
+			_set_rings(0)
 		return
 	if state == "locked" and (_state != "locked" or target != _lock_target):
 		_lock_age = 0.0
@@ -186,6 +195,11 @@ func _on_line_state(state: String, target: Node3D, at: Vector3, _cause: String) 
 		"smash_lands":
 			_pop_age = 0.0
 			_pop_at = at
+
+
+# One ring per link up to RING_CAP; a single bite draws none, so it looks as it always has.
+func _set_rings(links: int) -> void:
+	collar_rings = mini(links, RING_CAP) if links >= 2 else 0
 
 
 func _aim_direction(from: Vector3) -> Vector3:
@@ -343,6 +357,8 @@ func _seat_barb(kit, ball: Vector3) -> void:
 	var mesh: ImmediateMesh = collar.mesh
 	mesh.clear_surfaces()
 	_circle(mesh, kit.anchor, collar_radius * collar_scale, ball)
+	for i in collar_rings:
+		_circle(mesh, kit.anchor, collar_radius * collar_scale * (1.0 + RING_STEP * float(i + 1)), ball)
 
 
 func _free_barb() -> void:

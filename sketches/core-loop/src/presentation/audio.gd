@@ -60,6 +60,9 @@ const VOLUME_STEP := 0.1
 const LOCK_TICK_GAP := 0.25
 const FAIL_GAP := 0.25
 const DRY_TICK_GAP := 0.1
+# Semitones a chain link's bite can climb: link six is five above the root.
+const CHAIN_STEPS := 5
+const CHAIN_BITE_HOLD_MS := 250
 const CAUSE_RESOLVE_GAP := 4.0
 const NOTE_SPACING := 0.14
 # The hum stands while the line does, and climbs an octave as the gap closes from far to near.
@@ -176,6 +179,7 @@ var hum_on := false
 # The line state before the current one, so the dock click plays when the hook leaves rewinding.
 var _line_was := ""
 var hum_pitch := 1.0
+var _chain_bite_ms := -100000
 var _hum_voice := -1
 var _gates := {}
 var _fired_this_run := {}
@@ -1078,12 +1082,42 @@ func _gate(key: String, gap: float) -> bool:
 
 # A grammar cue at its trim: the row's priority offset is taken back out, so the level is the
 # bank's own, which is what the table of levels in sfx_bank.gd is written against.
-func _grammar_cue(kind: String, sound: String, bus := "SFX") -> bool:
-	return play(kind, -PRIORITY_DB[Rows.priority(kind)], 1.0, bus, sound)
+func _grammar_cue(kind: String, sound: String, bus := "SFX", pitch := 1.0) -> bool:
+	return play(kind, -PRIORITY_DB[Rows.priority(kind)], pitch, bus, sound)
 
 
-func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String) -> void:
+# The chain's link bite rises a semitone per link beyond the first, up to CHAIN_STEPS (six
+# links), and the smash that pays it lands at the root. Links 1 plays nothing here: the line's
+# own latched_body bite is the combo-1 sound, exactly as without a chain.
+func _on_chain_state(state: String, cause: String) -> void:
+	match state:
+		"chain_link":
+			var chaser = ctx.get("player")
+			var links: int = chaser.chain.links if chaser != null and chaser.get("chain") != null else 0
+			if links < 2:
+				return
+			var sound := EventKinds.line_sound(state)
+			if sound == EventKinds.NONE or sound == "":
+				return
+			var steps := mini(links - 1, CHAIN_STEPS)
+			if _grammar_cue("line_state_changed", sound, "SFX", Harmony.ratio(float(steps))):
+				_chain_bite_ms = Time.get_ticks_msec()
+		"chain_end":
+			if cause == "paid":
+				return
+			var sound := EventKinds.line_sound(state)
+			if sound != EventKinds.NONE and sound != "":
+				_grammar_cue("line_state_changed", sound)
+		"chain_miss":
+			var sound := EventKinds.line_sound(state)
+			if sound != EventKinds.NONE and sound != "" and _gate("dry_tick", DRY_TICK_GAP):
+				_grammar_cue("line_state_changed", sound)
+
+
+func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String) -> void:
 	if state.begins_with("chain_"):
+		# A chain fact is not the line's state: no hum, no _line_was.
+		_on_chain_state(state, cause)
 		return
 	if state in HUM_STATES:
 		_start_hum()
@@ -1106,7 +1140,9 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String
 			if not _gate("dry_tick", DRY_TICK_GAP):
 				return
 		"latched_body":
-			_grammar_cue("harpoon_bit", sound)
+			# A chained bite already sounded, pitched, a frame ago.
+			if Time.get_ticks_msec() - _chain_bite_ms > CHAIN_BITE_HOLD_MS:
+				_grammar_cue("harpoon_bit", sound)
 			return
 		"smash_lands":
 			if _recent_ms("slam_boom") > MIN_GAP_MS["slam_boom"]:
