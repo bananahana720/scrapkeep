@@ -2,6 +2,32 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 8 landed (2026-10-04, aa1b56e)
+
+Nine units merged, one held, plus fix round A. Gate 1 at aa1b56e: 360 pass, 0 fail; eight adversarial verifiers PASS+NOTES, no fence breach.
+
+- director-row-packs (a1bf49c): a stage row may carry its own packs, elite and elite_arrival.
+- warden-posture-point-and-brace (f8dd3a1): name the family weak point everywhere it opens; pin the Mind brace.
+- module-harness (33ef0b4): module harness drives any BossContract module to victory.
+- net-deck-fall (f5f9ecd, Sonnet): a fall below a declared net deck lands on the deck at half speed.
+- roster-world-rows (431b1e8): the world 2 and 3 kinds as roster, fleet and wind-up rows; the wave's single ROWS_HASH writer (E19-E24).
+- w2-dig-map (1fd7d17): greybox Dig zone map with two tiers, breach plates and Kest's cage.
+- w3-highdraft-map (a218262): greybox Highdraft zone map and its zone test.
+- waking-floors-rule (a0acc42): waking_floors, the Waking's floor-by-floor rule on the posture contract.
+- w23-codex-entries (d65fa29, Sol): W23 codex entries for the Dig, the Highdraft, the Waking and the Mind.
+- bot-run-to-run-ended (f73dc8e, Sol, held): skipper seeds 1 and 2 win a full six-stage run (384 simulated s) but regress bot_chain_hand_test (0/16 seeds reach the two-hook chain); fix round B on cand/alpha-w8.
+- Fix round A (aa1b56e, Sonnet): dig and highdraft in Terrain.MAPS, map_dig overlays id+_before, guard posture pin to family_point, roster unbuilt check derives from script existence.
+
+### Open after wave 8
+
+- The bot unit's chain-hand regression (fix round B in flight).
+- The thermal glide rule (wave 9 lift unit).
+- The module harness's own damage path is not distinguishable from other damage (boss tests assert hits == 2 * CHUNKS).
+- windup_rows_test would pass for a reskinned counter; each wave 9 enemy test asserts its own E-id attack phase.
+- No release-gate check on placeholder names yet (wave 9 unit).
+- World 2's placeholder maps are near-identical until the wave 9 table swap.
+- Nothing played by a human yet.
+
 ## Wave 7 landed (2026-10-04, 0a18382)
 
 Fourteen units merged and one probe kept unmerged, plus five fix rounds and two coordinator commits. Gate 1 at 5690d47: 8 reds (5 two-stage pins, 3 unit regressions); gate 2 at f758211: 350 pass, 1 flake (world_cache relic rarity) fixed test-only; Opus gate read PASS+NOTES, no blockers.
@@ -24,7 +50,7 @@ Fourteen units merged and one probe kept unmerged, plus five fix rounds and two 
 
 ### Open after wave 7
 
-- The Brindle full-run bot stall: the skipper stalls in the stage 2 arena after about 420 s; owned by the wave 8 bot unit.
+- The Brindle full-run bot stall: fixed on the bot side in f73dc8e (held for the chain regression, fix round B).
 - Continue is proven on world 1 only on the default table (wave 11 run-save-worlds).
 - No release-gate check on placeholder names yet.
 - target_material no longer covers lazily built later worlds.
@@ -137,6 +163,9 @@ Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, the
 - A brief's file:line citations drift when the base moves; say so in the header.
 - A smoke test runs without --fixed-fps, so a physics-stepped test runs near real time against the 180 s cap.
 - A golden hash in content_registry.gd is a second pin beside ROWS_HASH; the coordinator re-pins it once on the candidate.
+- A brief's acceptance that contradicts a golden hash or registry check must name the re-pin.
+- When several authors write one unit, the coordinator settles the design in an amendment before launch.
+- A verifier that must stay read-only applies mutants in a scratch copy.
 
 ## Wave 3 merged (4 October, proto/alpha 13fe55a)
 
