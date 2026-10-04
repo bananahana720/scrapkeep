@@ -26,12 +26,12 @@ const ROWS := {
 	"swarm_remnant": {"color_role": "hazard", "shape": "arrow", "sound": "none", "attacks": {"E17": ["LOCK_WARN"]}},
 	"mind_hand": {"color_role": "hazard", "shape": "bar", "sound": "none", "attacks": {"E18": ["warn_seconds"]}},
 	# Declared world 2 and 3 kinds: reserved attack ids, live once each kind is built.
-	"burrower": {"color_role": "hazard", "shape": "bar", "sound": "none", "attacks": {"E19": ["warn_seconds"]}},
-	"drill_crew": {"color_role": "hazard", "shape": "square", "sound": "none", "attacks": {"E20": ["warn_seconds"]}},
-	"lamp_swarm": {"color_role": "hazard", "shape": "wave", "sound": "none", "attacks": {"E21": ["warn_seconds"]}},
-	"line_cutter": {"color_role": "hazard", "shape": "cross", "sound": "none", "attacks": {"E22": ["warn_seconds"]}},
-	"anchor_crew": {"color_role": "hazard", "shape": "arrow", "sound": "none", "attacks": {"E23": ["warn_seconds"]}},
-	"kite_drone": {"color_role": "hazard", "shape": "diamond", "sound": "none", "attacks": {"E24": ["warn_seconds"]}},
+	"burrower": {"color_role": "hazard", "shape": "bar", "sound": "warn_burrow", "attacks": {"E19": ["warn_seconds"]}},
+	"drill_crew": {"color_role": "hazard", "shape": "square", "sound": "warn_bore", "attacks": {"E20": ["warn_seconds"]}},
+	"lamp_swarm": {"color_role": "hazard", "shape": "wave", "sound": "warn_lure", "attacks": {"E21": ["warn_seconds"]}},
+	"line_cutter": {"color_role": "hazard", "shape": "cross", "sound": "warn_cut", "attacks": {"E22": ["warn_seconds"]}},
+	"anchor_crew": {"color_role": "hazard", "shape": "arrow", "sound": "warn_winch", "attacks": {"E23": ["warn_seconds"]}},
+	"kite_drone": {"color_role": "hazard", "shape": "diamond", "sound": "warn_dive", "attacks": {"E24": ["warn_seconds"]}},
 }
 
 

@@ -176,9 +176,15 @@ func _warden_tricks() -> void:
 	_report("chain", _combat.discovered.has("chain"), "a third link in one chain")
 	_game.player.chain.combo = 0
 	var all_found := true
+	var pending_ok := true
 	for id in CodexEntries.ids():
+		# 2026-10-04 (wave 9): detector-pending entries declare a hint but no enemy fires them yet.
+		if CodexEntries.DETECTOR_PENDING.has(id):
+			pending_ok = pending_ok and not _combat.discovered.has(id)
+			continue
 		all_found = all_found and _combat.discovered.has(id)
 	_report("all", all_found, "discovered this run: %s" % [_combat.discovery_log])
+	_report("pending stay undiscovered", pending_ok, "detector-pending: %s" % [CodexEntries.DETECTOR_PENDING])
 	_last_case_ran = true
 
 

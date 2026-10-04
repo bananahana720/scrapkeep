@@ -56,6 +56,8 @@ const TRIM_DB := {
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
 	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
+	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
+	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0,
 	"sable_ready": -9.0, "rivet_ready": -9.0, "kest_ready": -8.0,
@@ -432,6 +434,18 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _threat_whistle()
 		"threat_hum":
 			return _threat_hum()
+		"warn_burrow":
+			return _warn_burrow()
+		"warn_bore":
+			return _warn_bore()
+		"warn_lure":
+			return _warn_lure()
+		"warn_cut":
+			return _warn_cut()
+		"warn_winch":
+			return _warn_winch()
+		"warn_dive":
+			return _warn_dive()
 		"sable_arpeggio":
 			return _sable_release()
 		"rivet_hihat_roll":
@@ -1078,6 +1092,51 @@ static func _threat_hum() -> PackedFloat32Array:
 	var tear := Synth.seconds(0.42)
 	return _mix([[_tone(0.45, _hz(44), _hz(44), "saw_dark", 0.4), 0, 0.8], [_tone(0.45, _hz(56), _hz(56), "square_dark", 0.6), 0, 0.5],
 		[_noise(0.18, 1800.0, 5200.0, 10.0), tear, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), tear, 0.6]], true)
+
+
+# Burrow: a low Eb rumble with two muffled knocks under the floor.
+static func _warn_burrow() -> PackedFloat32Array:
+	return _mix([[_tone(0.38, _hz(39), _hz(51), "saw_dark", 3.0), 0, 0.8],
+		[_noise(0.09, 350.0, 180.0, 35.0), 0, 0.7],
+		[_noise(0.1, 500.0, 250.0, 28.0), Synth.seconds(0.14), 1.0]])
+
+
+# Bore: three accelerating teeth, then a short Ab rig clang.
+static func _warn_bore() -> PackedFloat32Array:
+	var parts := []
+	for at in [0.0, 0.12, 0.2]:
+		parts.append([_noise(0.035, 1800.0, 800.0, 80.0), Synth.seconds(at), 0.7])
+		parts.append([_tone(0.06, _hz(44), _hz(44), "square_dark", 35.0), Synth.seconds(at), 0.5])
+	parts.append([_fm(0.18, _hz(56), 1.41, 3.0, 16.0), Synth.seconds(0.28), 1.0])
+	return _mix(parts)
+
+
+# Lure: a slow bloom of air over the beating Ab/Eb pair, with no reward bell.
+static func _warn_lure() -> PackedFloat32Array:
+	return _mix([[_noise(0.52, 250.0, 1400.0, 3.0, 0.18), 0, 0.9],
+		[_tone(0.52, _hz(44), _hz(44), "sine", 2.0), 0, 0.65],
+		[_tone(0.4, _hz(51), _hz(51), "sine", 3.0), Synth.seconds(0.08), 0.45]])
+
+
+# Cutter: a dry snip followed by a fast, falling metallic spin on Bb.
+static func _warn_cut() -> PackedFloat32Array:
+	return _mix([[_noise(0.025, 4200.0, 1800.0, 120.0), 0, 0.8],
+		[_fm(0.29, _hz(58), 2.71, 5.0, 12.0, -12.0), 0, 1.0]])
+
+
+# Winch: three evenly spaced cable pawls over a low Bb tension buzz.
+static func _warn_winch() -> PackedFloat32Array:
+	var parts := [[_tone(0.43, _hz(46), _hz(46), "square_dark", 2.0), 0, 0.6]]
+	for at in [0.0, 0.13, 0.26]:
+		parts.append([_fm(0.1, _hz(46), 3.5, 4.0, 28.0), Synth.seconds(at), 1.0])
+		parts.append([_noise(0.03, 1200.0, 500.0, 90.0), Synth.seconds(at), 0.45])
+	return _mix(parts)
+
+
+# Dive: a breath at the crest, then a sustained Bb-to-Eb falling whistle.
+static func _warn_dive() -> PackedFloat32Array:
+	return _mix([[_noise(0.56, 1800.0, 350.0, 4.0, 0.06), 0, 0.45],
+		[_tone(0.56, _hz(58), _hz(51), "sine", 1.8), 0, 1.0]])
 
 
 # --- The leitmotifs (SOUND-STORY.md section 2) ------------------------------------------
