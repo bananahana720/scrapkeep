@@ -229,7 +229,8 @@ func _check_models() -> void:
 		var mi := gate.find_child(n, true, false) as MeshInstance3D
 		base += tris(mi.mesh) if mi != null else 0
 	for rarity in ["common", "rare", "relic", "evolved"]:
-		var top := gate.find_child("Topper_" + rarity, true, false) as MeshInstance3D
+		var top := gate.find_child(HeroAssets.topper_name(rarity), true, false) as MeshInstance3D
+		_report("gate topper " + rarity, top != null and top.mesh != null, "%s resolves to a mesh" % HeroAssets.topper_name(rarity))
 		_band("gate " + rarity, base + (tris(top.mesh) if top != null else 0), GATE_TRIS)
 	gate.free()
 

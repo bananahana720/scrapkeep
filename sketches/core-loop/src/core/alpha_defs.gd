@@ -51,7 +51,7 @@ const DEFS := [
 	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": ""}, "warden_family": "swarm", "name": "The Cable Reach", "map": "reach", "threat": 1.0,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
-		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "caps", "warden_fight": "posture",
+		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "", "warden_fight": "posture",
 		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Bowl through its guard rack, then smash the core."},
 ]
 

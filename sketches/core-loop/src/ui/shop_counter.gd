@@ -259,7 +259,7 @@ func _build_buy() -> void:
 	if not top.is_empty():
 		var state := "sold" if top["sold"] else ("locked" if top["locked"] else ("ok" if game.run.scrap >= top["price"] else "poor"))
 		var rec := _part_rec("top", top["part_id"], top["price"], state)
-		rec["rarity"] = "rare_plus"
+		rec["rarity"] = "relic"
 		rec["needs_class"] = top["needs_class"]
 		rec["heft_class"] = top["heft_class"]
 		rec["classes"] = RunState.HEFT_CLASS_AT.size()
