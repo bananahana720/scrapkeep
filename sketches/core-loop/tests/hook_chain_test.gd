@@ -216,9 +216,9 @@ func _run() -> void:
 		"ended %s cause %s, cooldown %.2f, harpoon refused while it runs (%s), a second press adds no miss" % [not _chain().active(), _end_cause(), cooldown, not ready_while])
 
 	var m1 := _paid_ratio_for(1)
-	_check("9 payout combo 1", absf(m1 - 1.25) < 0.001, "combo 1 pays x%.3f" % m1)
+	_check("9 payout combo 1", absf(m1 - 1.0) < 0.001, "combo 1 pays x%.3f" % m1)
 	var m4 := _paid_ratio_for(4)
-	_check("10 payout combo 4", absf(m4 - 2.0) < 0.001, "combo 4 pays x%.3f" % m4)
+	_check("10 payout combo 4", absf(m4 - 1.9) < 0.001, "combo 4 pays x%.3f" % m4)
 	var m6 := _paid_ratio_for(6)
 	_check("11 payout combo 6", absf(m6 - 2.5) < 0.001, "combo 6 pays x%.3f" % m6)
 	var m8 := _paid_ratio_for(8)

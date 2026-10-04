@@ -14,8 +14,9 @@ const PIVOT := "chain_pivot"
 const END := "chain_end"
 const MISS := "chain_miss"
 
-# The multiplier a combo pays: 1 + PER_LINK per link, counted up to COMBO_CAP links.
-const PER_LINK := 0.25
+# The multiplier a combo pays: 1 + PER_LINK for each link beyond the first, counted up to
+# COMBO_CAP links. A combo of 1 pays x1.0, exactly the game without a chain.
+const PER_LINK := 0.3
 const COMBO_CAP := 6
 # A let-go keeps the chain this long, counted in airtime.
 const GRACE := 0.8
@@ -46,7 +47,7 @@ func active() -> bool:
 
 # Damage and knock multiplier for a smash landing now.
 func multiplier() -> float:
-	return 1.0 + PER_LINK * minf(float(combo), float(COMBO_CAP))
+	return 1.0 + PER_LINK * maxf(0.0, minf(float(combo), float(COMBO_CAP)) - 1.0)
 
 
 func link(on_enemy: bool, grounded: bool) -> Array:
