@@ -12,7 +12,9 @@ extends Node
 # Each record also carries the traversal facts (design-v3/TRAVERSAL.md): flow_share and
 # dead_stops from the stage's spawn to the Warden's engagement, the harpoon's bites,
 # smashes, breaks by cause and failed verbs by verb, and prompts_shown (one per key prompt
-# drawn, counted on its rising edge, from prompt_shown). events_joined holds only the opt-in events the ball entered:
+# drawn, counted on its rising edge, from prompt_shown), and the harpoon chain's record (HOOK-CHAIN.md):
+# chains (one {links, pivots, combo, paid} per chain_end, read from the last row of
+# player.chain.finished), best_combo and misses (chain_miss count). events_joined holds only the opt-in events the ball entered:
 # the director publishes event_started for a participatory event when the ball reaches
 # its ring, but also for the ambient flood, squall and terrain changes, which the player
 # does not choose and which are left out.
@@ -158,7 +160,8 @@ func _on_run_started(class_id: String) -> void:
 	_posture_wardens = {}
 	_posture_open = {}
 	_record = {"run_id": run.run_id, "class": class_id, "table": _table_id(), "outcome": "running", "brindle_phase_reached": null,
-		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0}
+		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0,
+		"chains": [], "best_combo": 0, "misses": 0}
 	_traversal = null
 	_measuring = false
 	_stage_clock = -1.0
@@ -258,12 +261,30 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String)
 	if _record.is_empty():
 		return
 	match state:
+		"chain_end":
+			_on_chain_end()
+		"chain_miss":
+			if not _in_arena:
+				_record["misses"] += 1
 		"latched_body":
 			_record["bites"] += 1
 		"smash_lands":
 			_record["smashes"] += 1
 		"broke":
 			_count_in("breaks", cause if cause != "" else UNKNOWN_CAUSE)
+
+
+# The player's chain appends its finished row before it publishes chain_end, so the last
+# row is the chain that just ended. Without a player or a row nothing is recorded.
+func _on_chain_end() -> void:
+	if _in_arena or player == null or player.get("chain") == null:
+		return
+	var done: Array = player.chain.finished
+	if done.is_empty():
+		return
+	var row: Dictionary = done.back()
+	_record["chains"].append({"links": int(row["links"]), "pivots": int(row["pivots"]), "combo": int(row["combo"]), "paid": bool(row["paid"])})
+	_record["best_combo"] = maxi(int(_record["best_combo"]), int(row["combo"]))
 
 
 func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:

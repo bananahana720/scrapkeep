@@ -281,6 +281,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.arc_slammed.connect(func(at: Vector3, _faces: int): effects.ring(at, 12.0, ClassDef.SABLE_COLOR))
 	ctx.events.skid_smashed.connect(func(at: Vector3, _hits: int): effects.ring(at, 4.0, ClassDef.RIVET_COLOR))
 	ctx.events.blink_used.connect(_on_blink)
+	ctx.events.line_state_changed.connect(_on_chain_state)
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_started.connect(func(_class_id: String):
@@ -1807,6 +1808,12 @@ func _discover(id: String, at: Vector3) -> void:
 	var codex = _codex()
 	if codex != null and codex.has_method("mark_discovered"):
 		codex.mark_discovered(id, at, ["player"])
+
+
+# The chain card: the player's chain reached three links. The codex dedupes per run.
+func _on_chain_state(state: String, _target: Node3D, at: Vector3, _cause: String) -> void:
+	if state == "chain_link" and ctx.player.chain.combo >= 3:
+		_discover("chain", at)
 
 
 # Tricks that read the target's state before the hit lands.
