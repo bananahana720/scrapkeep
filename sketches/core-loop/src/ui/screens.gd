@@ -339,7 +339,7 @@ func _beaten_boss() -> Dictionary:
 	return game.flow.boss_row(game.ctx.stages.world_of(game.run.stage))
 
 
-# The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the weight), parts, kills, events won and
+# The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
 # retries, each on its own icon.
 func _summary_stats() -> void:
 	var s: Dictionary = game.run.summary()
@@ -347,7 +347,7 @@ func _summary_stats() -> void:
 		["res_timer", "%d:%02d" % [int(s["time"]) / 60, int(s["time"]) % 60]],
 		["obj_beacon", "%d/%d" % [s["stages"], game.ctx.stages.COUNT]],
 		["res_scrap", str(s["cogs"])],
-		["res_heft", str(s["scrap"])],
+		["res_mass", str(s["scrap"])],
 		["cat_transform", str((s["parts"] as Array).size())],
 		["thr_instant", str(s["kills"])],
 		["obj_event", str(s["events_won"])],
