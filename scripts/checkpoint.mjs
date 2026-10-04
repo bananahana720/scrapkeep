@@ -187,7 +187,7 @@ export function evaluateReceipt(receipts, head) {
 // ALPHA-PLAN lines this script does not check. They print as "by hand" and do not count
 // toward the bots-and-fixed-checks verdict, so an ADMIT here never claims them.
 export const BY_HAND = [
-  { band: "each band red on the rejected builds (v2 at 19fc173, drop, laps)", measured: "drop and laps are deleted from the code; v2 needs its own run", threshold: "coordinator records it" },
+  { band: "each band fails its deliberately failing calibration case (checkpoint.test.mjs)", measured: "the test suite is the record; the rejected builds (v2 at 19fc173, drop, laps) are historical evidence only (EV-0623)", threshold: "coordinator records the suite run" },
   { band: "lair-chaser pays a measured cost", measured: "Hunt is parked (LEGIBILITY decision 4), so no lair-chaser exists on the slice", threshold: "not applicable while Hunt is parked" },
   { band: "one Fable integrated read on the checkpoint SHA", measured: "a review, not a measurement", threshold: "coordinator records it" },
   { band: "five sitting questions per arm", measured: "the slice ships one fight, no arms", threshold: "not applicable" },

@@ -144,7 +144,7 @@ Every other choice ships as one opinionated default, logged in `docs/decisions.t
 | 5 | BT | Bot policies (camper, lair-chaser, brawler, explorer), admission bands, checkpoint script | `tools/bot_driver.gd`, `balance_report.gd`, `tools/coordinator/checkpoint.sh` (new) | medium |
 | 5 | SS | Sitting sheet and the one `--variant=` row | `SITTING.md` (new), `tuning.gd` | easy |
 
-**Admission to play.** Bots and fixed checks only decide whether the build is worth Andrew's time. Each band must be red on the three rejected builds (v2 at `19fc173`, drop, laps) before it counts.
+**Admission to play.** Bots and fixed checks only decide whether the build is worth Andrew's time. They verify movement-dependent victory, the value of exploration and growth, and native resource budgets. Every numerical threshold stays. Each band is verified against the existing passing and deliberately failing calibration cases (`scripts/checkpoint.test.mjs`) before its measured result counts. The three rejected builds (v2 at `19fc173`, drop, laps) remain historical evidence; no automatic band establishes fun, and Andrew's five sitting answers and play verdict stay required before later-world construction. (Andrew, 3 October 2026, EV-0623; this supersedes the earlier "red on the three rejected builds" rule, which was never executed because drop and laps are deleted and v2 predates the harness.)
 
 - The hold-fire camper cannot win. An arena-only player can, slower than the explorer.
 - The skipper wins more slowly than the completionist on the current posture fight; no Hunt arm is required.
@@ -319,7 +319,7 @@ T5 merges before the first content wave. T6 merges before the first pilot or bos
 | Flipping defaults breaks tests that never mention a flag | K0 first runs every test with each winning flag on and counts failures before any default changes |
 | B0 is wide and touches the run spine | Merged alone and first in its wave, Fable review, camper assertion re-homed before the loop tests go |
 | The Hunt arm needs a Warden that moves, and it is built as a fixed clamp | A one-day stand-in that carries the existing node along a route polyline before VH is briefed |
-| Admission bands pass a hollow build again | Each band must be red on the three rejected builds |
+| Admission bands pass a hollow build again | Each band is checked against the deliberately failing calibration cases; a hollow build is caught by Andrew's sitting, which no band replaces (EV-0623; formerly "red on the three rejected builds") |
 | Caves and floating islands fight a one-height terrain model | Probes P1 and P2 during M1 |
 | The visual clone forked 315 commits ago and holds uncommitted sheets | AR copies the sheets first and merges as one serial unit |
 | ACE stems are gitignored and the packaging path is dead | AM and A5. Writers test on synth and the checkpoint build verifies ACE at the point of use. |
