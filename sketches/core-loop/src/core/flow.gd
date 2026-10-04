@@ -233,6 +233,7 @@ func _begin_run(chosen: Resource) -> void:
 		ctx.run_log.abandon_open_run()
 	run_won = false
 	ctx.run.begin(chosen)
+	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
 	var heading: Vector3 = ctx.terrain.entry_heading(1)
 	enter_stage(1, heading * ctx.tuning.f("cruise") * FIRST_DROP_SPEED, false)
@@ -336,7 +337,23 @@ func _spend_world_retry() -> void:
 	_save(_entrance)
 
 
+# Pieces found carry across runs: a run that starts with no companion takes the profile's.
+func _seed_companion() -> void:
+	if ctx.profile != null and ctx.run.companion.is_empty():
+		ctx.run.companion = ctx.profile.companion()
+
+
+# Writes the run's companion to the profile when it has one and the profile's differs.
+func _persist_companion() -> void:
+	if ctx.profile == null or ctx.run.companion.is_empty() or ctx.profile.companion() == ctx.run.companion:
+		return
+	ctx.profile.set_companion(ctx.run.companion)
+	if ctx.profile.can_save and not ctx.profile.save():
+		warn_once("profile_companion_save", "flow: companion not saved to the profile: %s" % ctx.profile.last_error)
+
+
 func _save(doc: Dictionary) -> void:
+	_persist_companion()
 	store_error = store.save(doc)
 	if store_error != "":
 		warn_once("run_save_" + store_error, "flow: run not saved (%s): %s" % [store_error, store.last_error])
@@ -656,6 +673,7 @@ func _end_run(won: bool) -> void:
 	run_won = won
 	ctx.player.set_frozen(true)
 	_entrance = {}
+	_persist_companion()
 	# A save this build never owned (store refused it: newer_schema) is not ours to delete.
 	if store != null and store.refusal == "" and not store.clear():
 		store_error = "clear_failed"
