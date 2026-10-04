@@ -65,8 +65,9 @@ func count_of(id: String) -> float:
 
 # The settle-once ledger (RS4). True the first time an id is settled, false after. The run
 # document's settled list and the profile's are one set: an id known to either is settled,
-# and both end up holding it. A fresh settle saves the profile.
-func settle(id: String) -> bool:
+# and both end up holding it. A fresh settle saves the profile unless save is false; a
+# caller that applies something right after settling saves once itself (grant_once).
+func settle(id: String, save := true) -> bool:
 	var fresh := true
 	if _run != null:
 		if _run.settled.has(id):
@@ -76,7 +77,7 @@ func settle(id: String) -> bool:
 	if _profile != null:
 		if not _profile.settle(id):
 			fresh = false
-		elif fresh and _profile.can_save and not _profile.save():
+		elif fresh and save and _profile.can_save and not _profile.save():
 			warnings += 1
 			push_warning("progress: %s settled but not saved: %s" % [id, _profile.last_error])
 	return fresh
@@ -100,7 +101,8 @@ func reconcile_settled() -> void:
 # A profile-level one-time grant: kind is pilot, cosmetic or world. True when this call
 # made the grant, false when the id was settled before.
 func grant_once(id: String, kind: String, target: String) -> bool:
-	if not settle(id):
+	# One save after the unlock: a save between settle and unlock could lose the grant.
+	if not settle(id, false):
 		return false
 	match kind:
 		"pilot":
