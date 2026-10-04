@@ -3,6 +3,7 @@ extends RefCounted
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
 
 # The band. A sample-exact sequencer that mixes pre-rendered notes from synth.gd on a
 # grid it can re-tempo and re-key. It knows nothing about the game: the audio director
@@ -550,6 +551,10 @@ func schedule_stinger(id: String, db := 0.0, lane := false, repeats := 1) -> int
 
 func schedule_stinger_at(id: String, at: int, db := 0.0) -> void:
 	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false})
+
+
+static func stage_theme(stage = "default") -> int:
+	return int(MusicRows.resolve(stage)["synth_theme"])
 
 
 # The phrase restarts from bar 1 at a beat, in a mode, back on the level track at the
