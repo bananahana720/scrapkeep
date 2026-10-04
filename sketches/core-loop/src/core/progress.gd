@@ -63,6 +63,58 @@ func count_of(id: String) -> float:
 	return _profile.stat(STAT_PREFIX + id) if _profile != null else 0.0
 
 
+# The settle-once ledger (RS4). True the first time an id is settled, false after. The run
+# document's settled list and the profile's are one set: an id known to either is settled,
+# and both end up holding it. A fresh settle saves the profile.
+func settle(id: String) -> bool:
+	var fresh := true
+	if _run != null:
+		if _run.settled.has(id):
+			fresh = false
+		else:
+			_run.settled.append(id)
+	if _profile != null:
+		if not _profile.settle(id):
+			fresh = false
+		elif fresh and _profile.can_save and not _profile.save():
+			warnings += 1
+			push_warning("progress: %s settled but not saved: %s" % [id, _profile.last_error])
+	return fresh
+
+
+# Unions a loaded run document's settled ids and the profile's, so neither forgets a grant.
+func reconcile_settled() -> void:
+	if _run == null or _profile == null:
+		return
+	for id in _profile.settled_ids():
+		if not _run.settled.has(id):
+			_run.settled.append(id)
+	var added := false
+	for id in _run.settled:
+		if _profile.settle(id):
+			added = true
+	if added and _profile.can_save:
+		_profile.save()
+
+
+# A profile-level one-time grant: kind is pilot, cosmetic or world. True when this call
+# made the grant, false when the id was settled before.
+func grant_once(id: String, kind: String, target: String) -> bool:
+	if not settle(id):
+		return false
+	match kind:
+		"pilot":
+			_profile.unlock_pilot(target)
+		"cosmetic":
+			_profile.unlock_cosmetic(target)
+		"world":
+			_profile.unlock_world(target)
+	if _profile.can_save and not _profile.save():
+		warnings += 1
+		push_warning("progress: %s granted but not saved: %s" % [id, _profile.last_error])
+	return true
+
+
 # When a row was earned, as unix seconds, or 0 if it has not been.
 func earned_at(id: String) -> int:
 	if _profile == null:
@@ -160,14 +212,7 @@ func _earn(id: String, row: Dictionary) -> void:
 		return
 	var reward: Dictionary = row.get("reward", {})
 	for kind in reward:
-		var target := String(reward[kind])
-		match kind:
-			"pilot":
-				_profile.unlock_pilot(target)
-			"cosmetic":
-				_profile.unlock_cosmetic(target)
-			"world":
-				_profile.unlock_world(target)
+		grant_once("reward:%s:%s" % [id, kind], String(kind), String(reward[kind]))
 	if not _profile.save():
 		warnings += 1
 		push_warning("progress: %s earned but not saved: %s" % [id, _profile.last_error])

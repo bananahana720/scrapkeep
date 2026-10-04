@@ -90,6 +90,9 @@ var world := 0
 # Damage, theft, wear and mass recovery never touch it; only add_cogs and spend_cogs do.
 var cogs := 0
 var companion := {}
+# One-time grant ids already settled (RS4); the profile keeps the same set and Progress
+# unions the two. Optional in the entrance doc.
+var settled: Array[String] = []
 var escape_window_left := 0.0
 var escape_window_active: bool:
 	get:
@@ -144,6 +147,7 @@ func begin(chosen_class: Resource) -> void:
 	world = 0
 	cogs = 0
 	companion = {}
+	settled.clear()
 	escape_window_left = 0.0
 	retries_spent = {}
 	extra = {}
@@ -610,7 +614,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -660,6 +664,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"retries_spent": spent,
 		"cogs": cogs,
 		"companion": companion.duplicate(true),
+		"settled": Array(settled),
 	}, true)
 	return doc
 
@@ -753,6 +758,7 @@ func from_entrance_doc(doc) -> bool:
 		retries_spent[int(str(w))] = int(doc["retries_spent"][w])
 	cogs = int(doc.get("cogs", 0))
 	companion = (doc["companion"] as Dictionary).duplicate(true) if doc.has("companion") else {}
+	settled.assign(doc.get("settled", []))
 	extra = {}
 	for key in doc:
 		if not ENTRANCE_KEYS.has(key) and not ENTRANCE_OPTIONAL.has(key):
