@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 
 # The cracked wall behind stage 1's vault plinth and the cache in its pocket
 # (LOOP-REDESIGN section 9), in the running game as Kest in calm. Rolled into at
@@ -171,7 +172,10 @@ func _check_gem_colours() -> void:
 	var ok := true
 	var seen := []
 	for i in _cache.offers.size():
-		var rarity: String = Parts.def(_cache.offers[i]).rarity
+		# 2026-10-04: a cache may offer a relic (RL2); resolve its rarity the way cracked_cache.gd does.
+		var offer: String = _cache.offers[i]
+		var d: Resource = Parts.def(Relics.part_of(offer) if Relics.has(offer) else offer)
+		var rarity: String = d.rarity if d != null else "common"
 		var gem: Color = _cache._pedestals[i]["gem"].material_override.albedo_color
 		seen.append(rarity)
 		ok = ok and gem == ItemGen.RARITY[rarity]["color"]
