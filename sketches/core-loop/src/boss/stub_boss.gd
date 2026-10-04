@@ -1,0 +1,198 @@
+extends Node
+
+const Warden := preload("res://src/combat/warden.gd")
+const Roster := preload("res://src/combat/roster.gd")
+const Arena := preload("res://src/boss/arena.gd")
+
+# The stand-in boss for a world whose own boss is not written yet (Worlds.BOSSES rows
+# whose script is this file). It answers BossContract.MODULE the way Brindle does, but the
+# whole fight is one posture Warden on a flat pad: hits fill its bar, a full bar staggers
+# it and opens its core, and a contact on the open core takes one of four chunks. The
+# last chunk is the win. Flow builds this module itself, so setup never claims ctx.boss;
+# flow points ctx.boss here only while this module's arena is the one entered.
+
+enum { IDLE, FIGHT, DEFEATED }
+const PAD_RADIUS := 36.0
+const PAD_THICK := 2.0
+# The ball lands this far from the Warden, rolling at it.
+const ENTRY_R := 26.0
+const ENTRY_LIFT := 2.0
+const RESCUE_DEPTH := 10.0
+# The Warden's numbers when the spawner has no warden_spec for this stage.
+const FALLBACK_SPEC := {"plating": 120.0, "hp": 1200.0}
+
+var ctx
+var state := IDLE
+var clock := 0.0
+var pad: StaticBody3D
+var warden: Node3D
+
+
+func setup(ctx_ref) -> void:
+	ctx = ctx_ref
+	name = "StubBoss"
+	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): exit_arena())
+	ctx.events.run_started.connect(func(_class_id: String): exit_arena())
+	ctx.events.flow_changed.connect(func(flow_state: String):
+		if flow_state in ["title", "class_select", "summary"]:
+			exit_arena())
+
+
+func active() -> bool:
+	return state == FIGHT
+
+
+func enter_arena(entry_velocity: Vector3) -> void:
+	exit_arena()
+	var center := Arena.place(ctx.terrain, ctx.run.stage)
+	_build_pad(center)
+	warden = Warden.new()
+	ctx.root.add_child(warden)
+	warden.global_position = center
+	warden.setup(ctx.player, self, ctx.root, Callable(ctx.flow, "in_play"), 1.0, _warden_spec())
+	warden.died.connect(_on_warden_died)
+	state = FIGHT
+	clock = 0.0
+	_place_ball(center, entry_velocity)
+	ctx.flow.boss_active = true
+	ctx.flow.boss_plating = live_plating()
+	ctx.events.boss_arena_entered.emit()
+
+
+func exit_arena() -> void:
+	if is_instance_valid(warden):
+		warden.queue_free()
+	warden = null
+	if is_instance_valid(pad):
+		pad.collision_layer = 0
+		pad.queue_free()
+	pad = null
+	if state != DEFEATED:
+		state = IDLE
+
+
+func _physics_process(delta: float) -> void:
+	if active():
+		clock += delta
+		ctx.flow.boss_plating = live_plating()
+
+
+func _warden_spec() -> Dictionary:
+	var spec: Dictionary = FALLBACK_SPEC.duplicate()
+	if ctx.spawner != null and ctx.spawner.has_method("warden_spec"):
+		spec = ctx.spawner.warden_spec(ctx.run.stage).duplicate()
+	spec["stage"] = ctx.run.stage
+	spec["fight"] = "posture"
+	spec["lesson"] = "plate"
+	spec["family"] = Roster.REACTOR
+	spec["reach"] = PAD_RADIUS
+	return spec
+
+
+func _build_pad(center: Vector3) -> void:
+	pad = StaticBody3D.new()
+	pad.name = "StubBossPad"
+	pad.collision_layer = 1
+	pad.collision_mask = 0
+	var shape := CollisionShape3D.new()
+	var cylinder := CylinderShape3D.new()
+	cylinder.radius = PAD_RADIUS
+	cylinder.height = PAD_THICK
+	shape.shape = cylinder
+	pad.add_child(shape)
+	var mesh := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = PAD_RADIUS
+	disc.bottom_radius = PAD_RADIUS
+	disc.height = PAD_THICK
+	mesh.mesh = disc
+	pad.add_child(mesh)
+	ctx.root.add_child(pad)
+	pad.global_position = center - Vector3.UP * PAD_THICK * 0.5
+
+
+func _place_ball(center: Vector3, entry_velocity: Vector3) -> void:
+	var at := center + Vector3(0.0, ENTRY_LIFT, ENTRY_R)
+	var heading := Vector3.FORWARD
+	var flat := maxf(Vector2(entry_velocity.x, entry_velocity.z).length(), ctx.tuning.f("cruise"))
+	ctx.player.reset_to(at, heading * flat)
+	ctx.player.body().global_position = at
+	if ctx.camera != null and ctx.camera.has_method("snap"):
+		ctx.camera.snap(heading)
+
+
+func _on_warden_died(_at: Vector3, _scrap: int) -> void:
+	if state != FIGHT:
+		return
+	state = DEFEATED
+	warden = null
+	ctx.flow.boss_active = false
+	ctx.events.boss_defeated.emit()
+
+
+# --- The terrain the Warden stands on, and combat's arena ground -----------------------
+
+func _top() -> float:
+	return pad.global_position.y + PAD_THICK * 0.5 if is_instance_valid(pad) else -INF
+
+
+func height(x: float, z: float) -> float:
+	return ground_height_at(Vector3(x, 0.0, z))
+
+
+func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
+	return Vector3(x, height(x, z) + clearance, z)
+
+
+func ground_height_at(point: Vector3) -> float:
+	if is_instance_valid(pad):
+		return _top()
+	if ctx.terrain != null and ctx.terrain.has_method("height"):
+		return ctx.terrain.height(point.x, point.z)
+	return point.y
+
+
+# --- Flow's arena rescue and the HUD's live read ----------------------------------------
+
+func floor_y() -> float:
+	return _top() - RESCUE_DEPTH
+
+
+func rescue_point(near = null) -> Vector3:
+	var from: Vector3 = near if near is Vector3 else ctx.player.ball_position()
+	if not is_instance_valid(pad):
+		return from
+	var center := pad.global_position
+	var flat := Vector2(from.x - center.x, from.z - center.z)
+	flat = flat.normalized() * ENTRY_R if flat.length() > 0.01 else Vector2(0.0, ENTRY_R)
+	return Vector3(center.x + flat.x, _top() + ENTRY_LIFT, center.z + flat.y)
+
+
+func live_plating() -> float:
+	if not is_instance_valid(warden) or warden.staggered():
+		return 0.0
+	return warden.plating_now()
+
+
+func music_state() -> Dictionary:
+	if not active() or not is_instance_valid(warden):
+		return {}
+	return {
+		"in_phase": 1.0 if warden.staggered() else clampf(warden.posture() / 100.0, 0.0, 1.0),
+		"held": false,
+		"phase_seconds": 0.0,
+	}
+
+
+func objective_text() -> String:
+	var row: Dictionary = ctx.flow.boss_row(ctx.stages.world_of(ctx.run.stage))
+	var who := String(row.get("name", "the boss"))
+	match state:
+		DEFEATED:
+			return String(row.get("victory", "%s is down." % who))
+		FIGHT:
+			if is_instance_valid(warden) and warden.staggered():
+				return "%s is staggered: hit its open core." % who
+			var chunks: int = warden.chunks_left() if is_instance_valid(warden) else 0
+			return "Fill %s's bar to stagger it. %d chunks left." % [who, chunks]
+	return ""

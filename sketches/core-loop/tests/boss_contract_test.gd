@@ -2,13 +2,16 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const BossContract := preload("res://src/boss/boss_contract.gd")
+const StubBoss := preload("res://src/boss/stub_boss.gd")
 
 # The frozen boss contract (src/boss/boss_contract.gd): the posture Warden built on the
 # slice table conforms to TARGET and each method answers its declared type; a double
 # missing one method is named; two module doubles satisfy MODULE side by side without
 # touching ctx.boss; describe() names every method once. Brindle (F2a) is live: his hull
 # conforms to TARGET and his module to MODULE, each answering its declared type in the
-# arena. The later-world stub (F5) is pending and not checked here.
+# arena. The later-world stub (stub_boss.gd, F5) is live too: its module conforms to MODULE
+# and its posture Warden to TARGET, each answering its declared type, and setting it up
+# leaves ctx.boss on Brindle.
 #
 # Evidence limit: this checks the surface and return types, not the fight's behaviour.
 
@@ -172,6 +175,42 @@ func _run() -> void:
 			module_wrong.append("%s %d" % [row[0], typeof(got)])
 	_report("brindle module conforms to MODULE", module_missing.is_empty() and module_wrong.is_empty(),
 		"missing %s, wrong %s" % [module_missing, module_wrong])
+
+	# (f) the later-world stub, live on its pad: the module conforms to MODULE, its Warden to
+	# TARGET, and neither setup nor entry claims ctx.boss.
+	if brindle != null:
+		brindle.exit_arena()
+	var stub := StubBoss.new()
+	_game.add_child(stub)
+	stub.setup(_game.ctx)
+	stub.enter_arena(Vector3.ZERO)
+	await _frames(2)
+	var stub_target = stub.warden
+	var stub_target_missing: Array = BossContract.conforms(stub_target, BossContract.TARGET)
+	_report("stub target conforms to TARGET", stub_target != null and stub_target_missing.is_empty() and stub_target.fight() == "posture",
+		"missing %s" % [stub_target_missing])
+	var stub_target_wrong: Array = []
+	if stub_target != null:
+		for row in BossContract.TARGET:
+			if row[0] == "on_struck":
+				continue
+			var got = stub_target.callv(row[0], args.get(row[0], []))
+			if typeof(got) != int(row[2]):
+				stub_target_wrong.append("%s %d" % [row[0], typeof(got)])
+	_report("stub target returns the declared types", stub_target != null and stub_target_wrong.is_empty(), "wrong %s" % [stub_target_wrong])
+	var stub_missing: Array = BossContract.conforms(stub, BossContract.MODULE)
+	var stub_wrong: Array = []
+	for row in BossContract.MODULE:
+		if module_args.has(row[0]) and module_args[row[0]] == null:
+			continue
+		var got = stub.callv(row[0], module_args.get(row[0], []))
+		if typeof(got) != int(row[2]):
+			stub_wrong.append("%s %d" % [row[0], typeof(got)])
+	_report("stub module conforms to MODULE", stub_missing.is_empty() and stub_wrong.is_empty() and stub.active(),
+		"missing %s, wrong %s, active %s" % [stub_missing, stub_wrong, stub.active()])
+	var slot = _game.ctx.boss if "boss" in _game.ctx else _game.ctx.get_meta("boss", null)
+	_report("the stub leaves ctx.boss on Brindle", slot == brindle, "")
+	stub.exit_arena()
 
 	# (d) describe() names every method once, and the lists keep their size.
 	var text: String = BossContract.describe()

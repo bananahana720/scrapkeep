@@ -16,13 +16,15 @@ const ROWS := [
 
 # One row per boss. kind is the prefix of the boss's piece kinds ("brindle_hull"); music
 # is the music engine's id. title is the victory screen's heading; victory its body. built false means the script does not exist yet.
+# script is the module flow runs for that world's arena. The Waking and the Mind are not
+# written yet: their rows run stub_boss.gd, one posture Warden on a flat pad, until they are.
 const BOSSES := {
 	"brindle": {"name": "Admiral Brindle", "title": "BRINDLE ROUTED", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
 		"built": true, "victory": "Brindle is routed.", "epitaph": "Brindle, routed in the Slag Bowl."},
-	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
-		"built": false, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig."},
-	"mind": {"name": "The Mind", "title": "THE MIND IS QUIET", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
-		"built": false, "victory": "The Mind is quiet.", "epitaph": "The Mind, quieted in the Highdraft."},
+	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/stub_boss.gd", "kind": "waking", "music": "waking",
+		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig."},
+	"mind": {"name": "The Mind", "title": "THE MIND IS QUIET", "script": "res://src/boss/stub_boss.gd", "kind": "mind", "music": "mind",
+		"built": true, "victory": "The Mind is quiet.", "epitaph": "The Mind, quieted in the Highdraft."},
 }
 
 
