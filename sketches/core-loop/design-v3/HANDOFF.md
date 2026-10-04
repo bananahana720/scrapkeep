@@ -35,7 +35,7 @@ Twelve units merged; gate 3 receipt `artifacts/local/alpha/wave5/gate3.log`, Opu
 
 ## Wave 4 landed (2026-10-04, aee2242)
 
-Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, then the Opus gate read. Default table swap (D2) was pulled from the candidate and re-queued as ZS-D2 in wave 5 with its gate-1 failure list. Wave 5 is in flight from aee2242.
+Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, then the Opus gate read. Default table swap (D2) was pulled from the candidate and re-queued as ZS-D2 in wave 5 with its gate-1 failure list. Wave 5 landed at b927aec (see above).
 
 - F2a: Brindle's hull is a posture body on the boss contract.
 - RS2: run store on disk with a tombstone on clear and a stale-save refusal (cause run_ended).
