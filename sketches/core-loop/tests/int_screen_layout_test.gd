@@ -157,7 +157,7 @@ func _check_names() -> void:
 		var shown: String = StageDefs.of(stage + 1)["name"]
 		names.append(shown)
 		ok = ok and shown == terrain.map_for(stage + 1).title
-	_report("stage names", ok and names.size() == 2 and not names[1].begins_with("Spillway"),
+	_report("stage names", ok and names.size() == StageDefs.COUNT and not names[1].begins_with("Spillway"),
 		"stage names %s match the world's map titles" % [names])
 
 
