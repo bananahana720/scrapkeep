@@ -119,6 +119,7 @@ func _take(id: String) -> Dictionary:
 	acts._finish(s, at)
 	await _frames(3)
 	var finished := {"mass": run.mass, "scrap": run.scrap, "parts": run.parts.size()}
+	var own_before: int = run.parts.count(s.pickup_part)
 	var start := _ground(at + Vector3(0.0, 0.0, 6.0))
 	_game.player.reset_to(start, Vector3(0.0, 0.0, -PICKUP_SPEED))
 	_game.player.set_velocity_now(Vector3(0.0, 0.0, -PICKUP_SPEED))
@@ -126,7 +127,10 @@ func _take(id: String) -> Dictionary:
 		_game.build.scrap.clear()
 		await physics_frame
 	var after := {"mass": run.mass, "scrap": run.scrap, "parts": run.parts.size(), "ups": _class_ups}
-	return {"before": before, "finished": finished, "after": after, "had_gem": s.pickup_part != ""}
+	# 2026-10-04 (EV1): a gem's part may complete an evolution pair, which grants a second part
+	# through add_part. So the gem's own part is counted by id, not by the parts list length.
+	after["own"] = run.parts.count(s.pickup_part)
+	return {"before": before, "finished": finished, "after": after, "had_gem": s.pickup_part != "", "own_before": own_before}
 
 
 func _activities() -> void:
@@ -142,7 +146,7 @@ func _activities() -> void:
 			"mass %s to %s, scrap %s to %s" % [b["mass"], f["mass"], b["scrap"], f["scrap"]])
 		_t.eq("%s: the gem raises mass by 180, once" % id, a["mass"] - b["mass"], float(PAY))
 		_t.eq("%s: the gem raises scrap by 180, once" % id, a["scrap"] - b["scrap"], PAY)
-		_t.eq("%s: the gem still adds its part" % id, a["parts"] - b["parts"], 1)
+		_t.eq("%s: the gem still adds its part" % id, a["own"] - r["own_before"], 1)
 	_t.eq("three gems from mass 0 reach heft class 3", _game.run.heft_class(), 3)
 	_t.eq("and heft_class_changed fired twice", _class_ups, 2)
 
