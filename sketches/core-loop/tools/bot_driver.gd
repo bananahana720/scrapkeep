@@ -36,7 +36,7 @@ const Augments := preload("res://src/movement/augments.gd")
 #   camper         holds the gun on the Warden from CAMP_RANGE and never closes.
 # The fight profiles for the Warden bands, by name: brawler is the completionist (it
 # fights with every verb it has), skipper is the skipper, camper is the camper.
-# All of them fight Brindle the same way once a boss module exists (see _boss).
+# All of them fight the boss module's posture target or Brindle's parts (see _boss).
 #
 # The hands every policy shares, so a measured cost is the game's and not a blind spot:
 #   - Telegraph reading. A committed ring or lane (combat's telegraph.gd, the boss's
@@ -56,9 +56,9 @@ const Augments := preload("res://src/movement/augments.gd")
 #     keep the untouched kit; "random" takes one of the two offered on each tree_offered
 #     from its own seeded stream, so the rest of the bot's choices are unchanged.
 #
-# A run ends at stage-3 clear or a boss victory (outcome "won"), death ("died"), a
-# "boss" flow state with no boss module ("boss"), or a stage or fight that runs past its
-# limit ("stalled", "boss_stalled"). The sweep adds "fight_capped" (the fight ran past
+# A run ends on run_ended ("won" or "lost"), death ("died"), a missing boss module
+# ("boss"), a stall ("stalled", "boss_stalled"), or the runner's --until/--stages cap.
+# The sweep adds "fight_capped" (the fight ran past
 # fight_limit) and "broken" (the Warden broke; it ends the run there).
 
 const POLICIES := ["skipper", "completionist", "random", "camper", "traversal"]
@@ -283,7 +283,7 @@ func _init(game_ref, policy_name: String, seed_number: int) -> void:
 # Call once the game's flow exists. Reseeding the run's stream makes each seed its own
 # stage plan (events, scrap, spawns); the base seed alone would give every run of a
 # policy the same map draw.
-func start() -> void:
+func start(resume := false) -> void:
 	game.ctx.rng.seed = 20260926 + seed_value * 7919
 	game.player.source = source
 	var events = game.events
@@ -327,6 +327,8 @@ func start() -> void:
 			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
 	if tree_policy == "random":
 		_connect_optional("tree_offered", _on_tree_offered)
+	if resume and game.flow.resume_run():
+		return
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
 
@@ -375,7 +377,7 @@ func tick(delta: float) -> bool:
 			_end("died")
 			return true
 		"summary":
-			_end("won")
+			_end("won" if flow.run_won else "lost")
 			return true
 		"victory":
 			source.hold = {}
@@ -417,6 +419,9 @@ func tick(delta: float) -> bool:
 			print("    boss phase %s %s hp %.0f; ball r %.1f above arena ground %.1f, grounded %s, body velocity %s" % [boss.phase,
 				boss.state_name(), boss.hp, boss.arena.radius_of(b), b.y - boss.arena.ground(b), game.player.state.grounded,
 				game.player.body().linear_velocity])
+			print("    posture %.1f stagger %s; hull=%s distance=%.1f; line=%s hooked=%s on_body=%s" % [boss.posture(), boss.staggered(),
+				boss.ship.hull.global_position, _flat(b, boss.ship.hull.global_position), game.player.kit.line_state,
+				game.player.kit.hooked, game.player.kit.on_body])
 	_answer_hotwire()
 	match state:
 		"stage", "beacon":
@@ -547,7 +552,7 @@ func _boss_add(key: String, value) -> void:
 
 
 func _in_boss() -> bool:
-	return not boss_note.is_empty() and not boss_note.has("outcome")
+	return game.flow.state_name() == "boss" and not boss_note.is_empty() and not boss_note.has("outcome")
 
 
 func _on_player_hit(amount: float, source_id: String) -> void:
@@ -838,7 +843,7 @@ func _activity_goal(delta: float) -> bool:
 			var level := roundf(c.global_position.y / LEVEL_BAND)
 			# The alpha maps' camp comes after the slice's standing sites, wherever it stands:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
-			if c.id == "enemy_camp":
+			if _site_has_authored_pack(c):
 				level -= CAMP_LAST
 			var d := _flat(ball, c.global_position)
 			if level > best_level or (level == best_level and d < best):
@@ -868,16 +873,17 @@ func _activity_goal(delta: float) -> bool:
 		_goal = "activity %s pay" % s.id
 		_pay_roll(s, ball, delta)
 		return true
+	# Authored camp packs use the altar's ring fight, regardless of the site's id.
+	if _site_has_authored_pack(s) or s.id == "ambush_altar":
+		var foe := _pack_foe(s, ball)
+		if foe != null:
+			_goal = "activity %s fight" % s.id
+			_fight(foe, delta)
+		else:
+			_goal = "activity %s" % s.id
+			_act(_approach(s, ball), _nearest_enemy(), delta)
+		return true
 	match s.id:
-		# The alpha maps' enemy camp is the altar's rule: a ring that starts a pack, done when it dies.
-		"ambush_altar", "enemy_camp":
-			var foe := _pack_foe(s, ball)
-			if foe != null:
-				_goal = "activity %s fight" % s.id
-				_fight(foe, delta)
-			else:
-				_goal = "activity %s" % s.id
-				_act(_approach(s, ball), _nearest_enemy(), delta)
 		"cracked_cache":
 			_cache_ram(s, ball, delta)
 		"hauler_bounty":
@@ -889,6 +895,18 @@ func _activity_goal(delta: float) -> bool:
 				_activity = ""
 				return false
 	return true
+
+
+# Site.pack holds live enemies only after the ring starts on this base. The map
+# row distinguishes an authored camp from the altar's default pack before entry.
+func _site_has_authored_pack(s) -> bool:
+	var map = game.ctx.terrain.map()
+	if not "activity_sites" in map:
+		return false
+	for spec in map.activity_sites:
+		if String(spec.get("id", "")) == s.id:
+			return not spec.get("pack", []).is_empty()
+	return false
 
 
 # The next point on the way to a site: the site itself, or the climb route when it stands on a
@@ -1092,7 +1110,7 @@ func _fight(target: Node3D, delta: float) -> void:
 		_note["warden_fight_heft"] = snappedf(game.run.heft(), 0.001)
 	var short: bool = _punch_seen < _plating(target)
 	if short:
-		_note["punch_short_s"] = float(_note.get("punch_short_s", 0.0)) + delta
+		_count("punch_short_s", delta)
 	_note_shred(target, delta)
 	var caps: bool = target.has_method("cap_points") and not (target.cap_points() as Array).is_empty()
 	if caps and short:
@@ -1128,9 +1146,20 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
 	_harpoon_commit = false
 	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > LINE_REACH else _off_line + delta
-	if kit.hooked and kit.anchor_body == target:
+	# The reticle may reach scenery before the press is consumed. Let that line
+	# go explicitly; withholding RMB alone leaves a world rope standing forever.
+	if kit.hooked and not kit.on_body:
+		source.press["harpoon_released"] = true
+		_harpoon_held = false
+		return
+	# Aim can move from the hull to a cap between the decision and the bite.
+	# Finish the body line that actually landed before taking another target.
+	if kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
 		_harpoon_held = true
-		_harpoon_commit = true
+		# A body-line smash needs a fresh Ctrl press after the bite. Read the
+		# consumed key state, so hit-stop cannot swallow alternating presses.
+		_harpoon_commit = not (kit.on_body and kit.line_state == Augments.LINE_LATCHED \
+			and game.player._brake_was_held)
 		return
 	_harpoon_held = false
 	var swallowed: bool = game.player.frozen() or kit.slingshot.charging
@@ -1238,9 +1267,14 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 	var ball: Vector3 = game.player.ball_position()
 	var at: Vector3 = target.global_position
 	var distance := _flat(ball, at)
+	# A latched body line releases inside MIN_ROPE plus both body radii. Give
+	# the wide hull a runup outside that distance so a bite can become a smash.
+	var close := CHARGE_CLOSE
+	if target.get("role") == "hull":
+		close = maxf(close, float(target.get("radius")) + Augments.MIN_ROPE + 3.0)
 	match _fight_phase:
 		"charge":
-			if distance < CHARGE_CLOSE:
+			if distance < close:
 				_fight_phase = "runup"
 				_runup_time = 0.0
 				var away := Vector3(ball.x - at.x, 0.0, ball.z - at.z)
@@ -1311,7 +1345,7 @@ func _boss():
 # `warden` field). The bot fights it with the routine it uses on a stage Warden.
 func _fight_posture_boss(boss, delta: float) -> void:
 	var target = boss.get("warden")
-	if not boss.has_method("active") or not boss.active() or target == null or not is_instance_valid(target):
+	if not boss.has_method("active") or not boss.active() or not is_instance_valid(target) or not target is Node3D:
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
 		return
@@ -1342,10 +1376,32 @@ func _fight_boss(delta: float) -> void:
 	var scooter = boss.get("scooter")
 	if scooter != null and is_instance_valid(scooter):
 		_goal = "boss scooter"
-		var lead: Vector3 = scooter.global_position
-		_act(lead, scooter, delta, scooter)
+		_ram_laps(scooter, scooter, delta)
 		return
 	var pickup := _nearest_pickup(boss, ball)
+	# Posture opens through repeated hits even below plating. Orbiting the magnets
+	# never makes the hull contacts that crack and shatter its cockpit.
+	if hull.has_method("fight") and hull.fight() == "posture":
+		# Crane theft drains punch below the plated hull's posture curve. Recover
+		# the dropped scrap between openings, including after the crane phase.
+		if pickup != Vector3.INF and not hull.staggered():
+			_goal = "boss pickup"
+			if game.player.kit.hooked:
+				source.press["harpoon_released"] = true
+			_act(pickup, hull, delta)
+			return
+		if hull.staggered():
+			_goal = "boss open cockpit"
+			_harpoon_hand(hull, delta)
+			_act(hull.global_position, hull, delta, hull, false)
+			if not game.player.kit.hooked and _flat(ball, hull.global_position) < hull.radius + 3.0:
+				if game.player.state.grounded:
+					source.press["jump_pressed"] = true
+				else:
+					source.hold["brake_held"] = true
+			return
+		_fight(hull, delta)
+		return
 	match phase:
 		1:
 			var magnet := _live_part(boss, ship.magnets, ball)
@@ -1765,6 +1821,12 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		hold["harpoon_held"] = true
 	if _harpoon_commit:
 		hold["brake_held"] = true
+	# Jump, boost and movement abilities cancel a committed body-line haul.
+	if _harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH):
+		source.press.erase("jump_pressed")
+		source.press.erase("shift_pressed")
+		source.press.erase("movement_pressed")
+		hold.erase("shift_held")
 	source.hold = hold
 
 
