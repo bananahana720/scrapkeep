@@ -2,6 +2,36 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 7 landed (2026-10-04, 0a18382)
+
+Fourteen units merged and one probe kept unmerged, plus five fix rounds and two coordinator commits. Gate 1 at 5690d47: 8 reds (5 two-stage pins, 3 unit regressions); gate 2 at f758211: 350 pass, 1 flake (world_cache relic rarity) fixed test-only; Opus gate read PASS+NOTES, no blockers.
+
+- w23-tests-derive (955201d): stage-count tests read the table, stay green on six stages.
+- alpha-retry-continue-test (7899f7b): one retry per world and Continue on the default table.
+- burst-pays-cogs (f4fb4c5): the first-discovery burst pays cogs beside mass.
+- snd-achievement-rescue (1e086f2): hear achievement_earned and rescue_completed.
+- w23-table (254db18): six-stage default table across three worlds on the surviving maps.
+- w23-boss-files (7300f19): the Waking and the Mind get their own module files.
+- probe-dig-floor-drop (fe3ac52): Dig floor drop probe, an overlay floor parks under the ball (PASS).
+- mind-attack-families (fb67a4c): four attack families as pure rules with a tested escape guarantee.
+- alpha-e2e-flow (29b943b): walk the default table end to end, title to tombstone.
+- explorer-camp-wedge (ea09f8c): the explorer climbs the dive ramp to the Reach camp.
+- mass-icon-split (431b00f): mass gets its own heap icon; the cog means money alone.
+- spill-pays-cogs (aebfa62): spill and drone-kill pickups pay cogs; the crane trail pays mass only.
+- w23-zone-rows (6d0125d, Sol): W23 zone rows, music for 2-1 to 3-2, Waking and Mind tracks, placeholder lore and tone sample.
+- probe-highdraft-island-net (279e25d, not merged): measured FAIL kept as evidence, a free ball falls off a moving island (drift 15.6 m); islands become barge-carry bodies, thermals need a glide-rule change (wave 9 lift unit).
+- Fix rounds A-E: A generic posture-boss bot path (2edf8ae); B four table tests (397eee8); C cogs_collected on bursts, rescue once-guard test, music theme per row (f8dd282); D five two-stage pins repointed (d29e169); E audio_worlds, reach_secret, hud words, then count-by-id and burst pin (b7e0b46, 60a8e70). Coordinator commits: a07d989 golden hashes, 0a18382 world_cache relic rarity.
+
+### Open after wave 7
+
+- The Brindle full-run bot stall: the skipper stalls in the stage 2 arena after about 420 s; owned by the wave 8 bot unit.
+- Continue is proven on world 1 only on the default table (wave 11 run-save-worlds).
+- No release-gate check on placeholder names yet.
+- target_material no longer covers lazily built later worlds.
+- World 2's two placeholder maps (gorge, reach) are near-identical terrains.
+- Music and lore for worlds 2 and 3 are synth and tone-pending placeholders.
+- Nothing has been played by a human yet.
+
 ## Wave 6 landed (2026-10-04, f1f753b)
 
 Eighteen units merged plus four fix rounds and two coordinator commits; gate 3 at 1fe63fd: 340 pass, 1 red fixed as f1f753b (test-only), quarantine build_power_curve; Opus gate read PASS+NOTES after fix B.
@@ -30,7 +60,7 @@ Eighteen units merged plus four fix rounds and two coordinator commits; gate 3 a
 ### Open after wave 6
 
 - Plating retirement landed at 656fded (gate 2 green after one env timeout rerun).
-- Worlds two and three as real build tracks, per Andrew's ruling that the alpha is three worlds plus the final boss.
+- Worlds two and three as real build tracks, per Andrew's ruling that the alpha is three worlds plus the final boss. The track started in wave 7 (six-stage table, boss files, probes) and continues in wave 8.
 - The field-note collection triggers: none is unlockable in play.
 - The hero relic and evolved toppers are still mapped to rare_plus.
 - The explorer bot wedges on the Reach camp path.
@@ -104,6 +134,10 @@ Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, the
 - A modal that pauses the tree must check game.bot_driven.
 - A deferred add_child on the game leaks at exit when a test frees the game the same frame.
 - A gem's part can complete an evolution, so count parts by id.
+- A brief's file:line citations drift when the base moves; say so in the header.
+- A smoke test runs without --fixed-fps, so a physics-stepped test runs near real time against the 180 s cap.
+- A golden hash in content_registry.gd is a second pin beside ROWS_HASH; the coordinator re-pins it once on the candidate.
+- Count parts by id when a pickup can complete an evolution.
 
 ## Wave 3 merged (4 October, proto/alpha 13fe55a)
 
