@@ -17,6 +17,8 @@ const RunClock := preload("res://src/build/run_clock.gd")
 const Shop := preload("res://src/build/shop.gd")
 const Lanes := preload("res://src/build/lanes.gd")
 const RunState := preload("res://src/core/run_state.gd")
+const Relics := preload("res://src/build/relics.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -213,6 +215,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.part_gained.connect(_on_part_gained)
+	ctx.events.part_gained.connect(_on_relic_gained)
 	ctx.events.scrap_collected.connect(_on_scrap_collected)
 	ctx.events.milestone_won.connect(_on_milestone_won)
 	ctx.events.dashed.connect(_on_dashed)
@@ -813,6 +816,7 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 
 
 func _on_run_started(_class_id_value: String) -> void:
+	_relic_fx.clear()
 	_live = []
 	_armed.clear()
 	_fired.clear()
@@ -843,6 +847,7 @@ func _on_run_started(_class_id_value: String) -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	sync_relics()
 	_hotwire_restore()
 	if retry:
 		_fired.clear()
@@ -1267,3 +1272,61 @@ func _strike(enemy: Node3D, kind: String, force: float) -> void:
 func _synergy_hit(enemy: Node3D, force: float, synergy_id: String) -> void:
 	_strike(enemy, SYNERGY_KIND, force * SYNERGY_PUNCH * ctx.run.heft())
 	_fire(synergy_id, enemy, enemy.global_position)
+
+
+# ---- RL2: relics on the kit. -------------------------------------------------------------
+# What each slot's held relic did to the kit: slot to {relic, prev (the ability id the
+# swap replaced), swapped, cooldown, charges}. sync_relics() makes the kit match
+# run.relics from this record, so a gain, a stage entry, a retry and a loaded entrance
+# all land on the same kit and none applies a row twice.
+var _relic_fx := {}
+
+
+func _on_relic_gained(_part_id: String, _source: String) -> void:
+	sync_relics()
+
+
+func sync_relics() -> void:
+	var abilities = ctx.player.get("abilities") if ctx.player != null else null
+	if abilities == null:
+		return
+	var touched := false
+	for slot in AbilityState.SLOTS:
+		var want: String = ctx.run.relics.get(slot, "")
+		if not Relics.has(want):
+			want = ""
+		var fx: Dictionary = _relic_fx.get(slot, {})
+		if String(fx.get("relic", "")) == want:
+			continue
+		if not fx.is_empty():
+			_relic_undo(abilities, slot, fx)
+			_relic_fx.erase(slot)
+		if want != "":
+			_relic_fx[slot] = _relic_apply(abilities, slot, want)
+		touched = true
+	if touched and ctx.player.has_method("_refit"):
+		ctx.player._refit()
+
+
+func _relic_apply(abilities, slot: String, relic_id: String) -> Dictionary:
+	var row := Relics.row(relic_id)
+	var fx := {"relic": relic_id, "prev": abilities.id_of(slot), "swapped": false,
+		"cooldown": float(row.get("cooldown", 1.0)), "charges": int(row.get("charges", 0))}
+	if Relics.swap_of(relic_id) != "":
+		abilities.swap(slot, Relics.swap_of(relic_id))
+		fx["swapped"] = true
+	var s = abilities.slot(slot)
+	abilities.set_cooldown_scale(slot, s.cooldown_scale * fx["cooldown"])
+	if fx["charges"] > 0:
+		abilities.set_max_charges(slot, s.max_charges + fx["charges"])
+		abilities.grant(slot, fx["charges"])
+	return fx
+
+
+func _relic_undo(abilities, slot: String, fx: Dictionary) -> void:
+	var s = abilities.slot(slot)
+	if fx["charges"] > 0:
+		abilities.set_max_charges(slot, s.max_charges - fx["charges"])
+	abilities.set_cooldown_scale(slot, s.cooldown_scale / fx["cooldown"])
+	if fx["swapped"] and abilities.id_of(slot) == Relics.swap_of(fx["relic"]):
+		abilities.swap(slot, fx["prev"])

@@ -6,6 +6,7 @@ extends RefCounted
 # here cannot disagree. Flow alone calls begin(), snapshot() and restore().
 
 const Companion := preload("res://src/core/companion.gd")
+const Relics := preload("res://src/build/relics.gd")
 const MAX_HP := 100.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
@@ -51,6 +52,8 @@ var mass := 0.0
 var bonus_cores := 0
 var run_id := ""
 var parts: Array[String] = []
+# RL2: the relic held in each kit slot, slot name to relic id. One per slot (Relics.can_hold).
+var relics := {}
 var kills := 0
 var events_won: Array[String] = []
 var run_time := 0.0
@@ -151,6 +154,7 @@ func begin(chosen_class: Resource) -> void:
 	tree_picks.clear()
 	tree_allowed = 0
 	parts.clear()
+	relics = {}
 	kills = 0
 	events_won.clear()
 	run_time = 0.0
@@ -321,6 +325,16 @@ func add_part(part_id: String, source: String) -> void:
 	parts.append(part_id)
 	events.part_gained.emit(part_id, source)
 	_publish_heft_class()
+
+
+# RL2: holds a relic in its slot and announces it as a relic-rarity find. False, and
+# nothing changes, when the pilot cannot use it or the slot already holds one.
+func add_relic(relic_id: String, source: String) -> bool:
+	if not Relics.can_hold(relic_id, class_id(), relics):
+		return false
+	relics[Relics.slot_of(relic_id)] = relic_id
+	events.part_gained.emit(Relics.part_of(relic_id), source)
+	return true
 
 
 func part_count(part_id: String) -> int:
@@ -513,6 +527,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"wear_accum": _wear_accum,
 		"bonus_cores": bonus_cores,
 		"parts": parts.duplicate(),
+		"relics": relics.duplicate(),
 		"kills": kills,
 		"events_won": events_won.duplicate(),
 		"entry_position": entry_position,
@@ -565,6 +580,7 @@ func restore() -> void:
 	mass = _snapshot["mass"]
 	bonus_cores = _snapshot["bonus_cores"]
 	parts.assign(_snapshot["parts"])
+	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
 	kills = _snapshot["kills"]
 	events_won.assign(_snapshot["events_won"])
 	stage_time = 0.0
@@ -610,7 +626,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "relics": "dict"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -660,6 +676,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"retries_spent": spent,
 		"cogs": cogs,
 		"companion": companion.duplicate(true),
+		"relics": relics.duplicate(),
 	}, true)
 	return doc
 
@@ -742,6 +759,7 @@ func from_entrance_doc(doc) -> bool:
 	bonus_cores = int(doc["bonus_cores"])
 	class_rewarded = int(doc["class_rewarded"])
 	parts.assign(doc["parts"])
+	relics = (doc["relics"] as Dictionary).duplicate() if doc.has("relics") else {}
 	kills = int(doc["kills"])
 	events_won.assign(doc["events_won"])
 	run_time = float(doc["run_time"])
