@@ -23,6 +23,12 @@ const ENTRIES := [
 		"text": "Ram a chaser while its lunge lane is still filling and the lunge never happens.",
 	},
 	{
+		"id": "chain", "name": "Chain",
+		"hint": "Why let go of the floor when the next enemy is right there?",
+		"clue": "a hooked enemy + a wall + another enemy, feet off the floor",
+		"text": "Hook an enemy, swing off a wall, hook another, and stay in the air. A smash pays the chain: 30% more per link past the first, up to six.",
+	},
+	{
 		"id": "crush_chain", "name": "Rolling Tide",
 		"hint": "Heavy enough, and they stop being obstacles.",
 		"clue": "heft + three rams in a heartbeat",

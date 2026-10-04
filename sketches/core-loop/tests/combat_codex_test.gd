@@ -172,6 +172,9 @@ func _warden_tricks() -> void:
 	warden.hp = 5.0
 	_combat.strike(warden, "runner", 10.0)
 	_report("magnet_break", _combat.discovered.has("magnet_break"), "the Warden broken while its magnet had it unplated")
+	_game.player.chain.combo = 3
+	_game.events.line_state_changed.emit("chain_link", null, Vector3.ZERO, "")
+	_report("chain", _combat.discovered.has("chain"), "a third link in one chain")
 	var all_found := true
 	for id in CodexEntries.ids():
 		all_found = all_found and _combat.discovered.has(id)
