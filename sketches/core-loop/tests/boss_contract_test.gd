@@ -15,7 +15,7 @@ const StubBoss := preload("res://src/boss/stub_boss.gd")
 #
 # Evidence limit: this checks the surface and return types, not the fight's behaviour.
 
-const TARGET_COUNT := 19
+const TARGET_COUNT := 18
 const PROPERTY_COUNT := 6
 const MODULE_COUNT := 6
 
@@ -36,7 +36,6 @@ class TargetDouble:
 	func flash() -> void: pass
 	func set_tint(_state: String) -> void: pass
 	func plating_now() -> float: return 0.0
-	func unplated_by_magnet() -> bool: return false
 	func fight() -> String: return "posture"
 	func posture() -> float: return 0.0
 	func staggered() -> bool: return false

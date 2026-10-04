@@ -1,4 +1,5 @@
 # smoke: solo (six bot runs in child processes at once, 30000 ticks each; a loaded machine slows them)
+# F6 2026-10-04: no row picks a fight; posture is the only rule.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -70,7 +71,7 @@ func _alpha(t, folder: String, results: Array) -> void:
 	var reach_full := _fights(folder, "completionist", 2)
 	t.check("every alpha fight broke its Warden", not spillway.has(-1.0) and not reach.has(-1.0) and not reach_full.has(-1.0),
 		"spillway %s, reach %s, reach completionist %s" % [spillway, reach, reach_full])
-	var posture_rows := AlphaDefs.DEFS.all(func(row): return row["warden_fight"] == "posture")
+	var posture_rows := AlphaDefs.DEFS.all(func(row): return not row.has("warden_fight"))
 	t.check("both alpha Wardens are posture rows", posture_rows, "alpha rows")
 	var spillway_median := _median(spillway)
 	var reach_median := _median(reach)

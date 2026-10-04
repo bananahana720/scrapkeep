@@ -33,12 +33,11 @@ const TARGET := [
 	["contact_part", 2, TYPE_STRING],
 	["on_struck", 3, TYPE_NIL],
 	# What combat calls on any struck body with no has_method guard (combat.gd strike, the
-	# plate tint, the pin carry, the magnet-break discovery).
+	# plate tint, the pin carry).
 	["knock", 2, TYPE_NIL],
 	["flash", 0, TYPE_NIL],
 	["set_tint", 1, TYPE_NIL],
 	["plating_now", 0, TYPE_FLOAT],
-	["unplated_by_magnet", 0, TYPE_BOOL],
 ]
 
 const TARGET_PROPERTIES := [

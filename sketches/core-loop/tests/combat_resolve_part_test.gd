@@ -1,19 +1,16 @@
 extends SceneTree
+# F6 2026-10-04: the Warden has no vent caps; the seam is checked on its posture body.
 
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 # Presentation gates hit-stop on ctx.spawner.resolve(enemy, kind, force), called from
 # its enemy_struck handler before the damage lands. That query must return the plating
-# the strike actually meets, weak point included, even when the strike named its part
-# (a Brindle cap, a bolt on the magnet) rather than finding it from the ball. A stomp on
-# a Warden II vent cap reads plating 0 inside the handler; a body stomp reads the body
-# plating less the shred the cap stomp left.
+# the strike actually meets. A body stomp on a Warden II reads its stage plating inside
+# the handler, and the answer matches the same query made before the strike.
 
 const FORCE := 12.0
 
-# Plating seam coverage uses the legacy table rather than posture rows.
-# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
 class LegacyGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
@@ -48,22 +45,16 @@ func _physics_process(_delta: float) -> bool:
 	_combat.heft_override = 1.0
 	var ctx = _game.ctx
 	var warden: Node3D = ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(2))
-	warden.hp = 99999.0
-	warden.max_hp = 99999.0
 	_game.events.enemy_struck.connect(func(enemy: Node3D, kind: String, force: float):
 		var r: Dictionary = _combat.resolve(enemy, kind, force)
 		_seen.append({"plating": r["plating"], "full": r["full"]}))
-	var ball_to_cap: float = _game.player.ball_position().distance_to(warden.cap_points()[0])
-	_combat.strike(warden, "stomp", FORCE, "cap")
-	var body_plating: float = warden.plating - _combat.shred_of(warden)
+	var before: Dictionary = _combat.resolve(warden, "stomp", FORCE)
 	_combat.strike(warden, "stomp", FORCE)
-	var cap: Dictionary = _seen[0] if _seen.size() > 0 else {"plating": -1.0, "full": false}
-	var body: Dictionary = _seen[1] if _seen.size() > 1 else {"plating": -1.0, "full": false}
-	_report("cap", cap["plating"] == 0.0 and cap["full"],
-		"a stomp that named the vent cap (ball %.0f m from it): resolve in enemy_struck reads plating %.0f, full %s" % [ball_to_cap, cap["plating"], cap["full"]])
-	_report("body", warden.plating == StageDefs.of(2)["warden_plating"] and is_equal_approx(body["plating"], body_plating) and not body["full"],
-		"a body stomp on Warden II: resolve in enemy_struck reads plating %.2f (plating %.0f less shred %.2f), full %s"
-			% [body["plating"], warden.plating, warden.plating - body_plating, body["full"]])
+	var body: Dictionary = _seen[0] if _seen.size() > 0 else {"plating": -1.0, "full": false}
+	_report("fight", warden.fight() == "posture", "the Warden fights %s" % warden.fight())
+	_report("body", warden.plating == StageDefs.of(2)["warden_plating"] and body["plating"] == before["plating"] and body["full"] == before["full"],
+		"a body stomp on Warden II: resolve in enemy_struck reads plating %.2f, full %s; before the strike %.2f, %s"
+			% [body["plating"], body["full"], before["plating"], before["full"]])
 	var ok := _failures == 0
 	print("combat_resolve_part_test: %s" % ("PASS" if ok else "FAIL"))
 	_game.free()

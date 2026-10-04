@@ -352,8 +352,6 @@ const ATTACK_ROWS := {
 		"pose": "w03_cells_direct", "warn": "atk_e17_warn", "release": "atk_e17_release", "floor": "B", "open": []},
 	"W04": {"label": "Mind Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w04_mast_telescope", "warn": "atk_w04_warn", "release": "atk_w04_release", "floor": "B", "open": []},
-	"W05": {"label": "Mind Warden magnet tug", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "hostile", "threat": "threat_lane", "glyph": "chevron", "color": Palette.HAZARD,
-		"pose": "w05_arm_swing", "warn": "atk_w05_warn", "release": "atk_w05_release", "floor": "L", "open": []},
 	"W06": {"label": "Mind Warden adaptation", "group": "warden", "owner_kind": "faction", "owner": "mind", "allegiance": "neutral", "threat": "", "glyph": "core", "color": Palette.SAND,
 		"pose": "w06_lens_stare", "warn": "atk_w06_warn", "release": "atk_w06_release", "floor": "none", "open": ["color"]},
 	"W07": {"label": "Caught-pulse crater", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "", "glyph": "burst", "color": Palette.HAZARD,

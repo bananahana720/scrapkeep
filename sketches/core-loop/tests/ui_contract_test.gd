@@ -1,4 +1,5 @@
 extends SceneTree
+# F6 2026-10-04: no stage row carries a lesson, so the lesson-row check is removed.
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
@@ -101,10 +102,6 @@ func _check_wording() -> void:
 		var shown := Objectives.words(id)
 		if WordBudget.words_in(shown) == 0 or WordBudget.words_in(shown) > Hud.OBJECTIVE_WORDS or Objectives.glyph(id) == "":
 			long_objectives.append(id)
-	for i in StageDefs.COUNT:
-		var lesson: String = StageDefs.of(i + 1)["warden_lesson"]
-		if lesson != "" and not Objectives.LESSON_ROWS.has(lesson):
-			long_objectives.append(lesson)
 	var bad_rows := []
 	for kind in EventKinds.UI_ROWS:
 		var row: Dictionary = EventKinds.UI_ROWS[kind]

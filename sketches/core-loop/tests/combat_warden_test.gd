@@ -6,26 +6,25 @@ const Warden := preload("res://src/combat/warden.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The Warden, spawned at the beacon through ctx.spawner.spawn_enemy("warden", at).
-# 1. A stage-1 Warden (plating 45) takes a blazing ram at heft 1 in full: "Ram it hard".
+# 1. A stage-1 Warden fights on posture: a blazing ram at heft 1 fills its bar and takes no health.
 # 2. Pulses: the ball circles inside its reach for PULSE_SIM seconds. Every pulse
 #    follows a telegraph of at least 2.0 s, adds lift only (planar speed across the
 #    pulse changes by less than 3%), and the Warden never moves.
-# 3. Break time with base bolts and no parts: warden I within 60 s of continuous
-#    runner fire. Warden III must NOT break within 90 s of the same fire on its body:
-#    since the tuning pass (plating 140, HP 7500) stage 3 needs its magnet, the lesson. The ball is held still and aimed at it.
+# 3. Continuous base runner fire on the body for FIRE_SIM seconds takes no health: only a
+#    shatter does. The ball is held still and aimed at it.
 # Long spans run at Engine.time_scale, and every duration is measured in simulated
 # seconds (the sum of physics deltas), so the numbers are game time, not wall time.
 
 const PULSE_SIM := 30.0
 const PULSE_SCALE := 2.0
 const FIRE_SCALE := 6.0
-const LIMITS := {1: 60.0, 3: 90.0}
+const FIRE_SIM := 20.0
 const ORBIT := 12.0
 const ORBIT_SPEED := 9.0
 const STAND_OFF := 14.0
 
-# Preserve the legacy three-stage rule on a double using surviving maps.
-# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+# F6 2026-10-04: blazing_ram and break_1/break_3 became posture checks; magnet stuns are gone.
+# The double table keeps a stage-1 Warden at the surviving map.
 class LegacyGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
@@ -47,8 +46,6 @@ var _vy_prev := 0.0
 var _missed_pulses := 0
 var _anchor := Vector3.ZERO
 var _kills := []
-var _fire_stage := 1
-var _stuns := 0
 
 
 func _initialize() -> void:
@@ -81,20 +78,12 @@ func _physics_process(delta: float) -> bool:
 			_game.player.reset_to(_anchor)
 			if is_instance_valid(_warden):
 				_aim_at(_warden.global_position)
-				_stuns = _warden.magnet_stuns
-			var broke: bool = not _kills.is_empty()
-			if broke or _sim > LIMITS[_fire_stage] + 5.0:
-				# Stage 1 must break inside its limit; stage 3 must hold out past it on bare bolts.
-				var ok: bool = (broke and _sim <= LIMITS[_fire_stage]) if _fire_stage == 1 else not broke
-				_report("break_%d" % _fire_stage, ok,
-					"warden %s broke %s %.1f s of continuous base runner fire (%s %.0f s)%s"
-						% ["I" if _fire_stage == 1 else "III", "after" if broke else "not within", _sim,
-							"limit" if _fire_stage == 1 else "must outlast", LIMITS[_fire_stage],
-							"; aimed at the body, magnet stuns %d" % _stuns])
-				if _fire_stage == 1:
-					_start_fire(3)
-				else:
-					return _finish()
+			if not _kills.is_empty() or _sim > FIRE_SIM:
+				# Health falls only through a shatter, and bolts never arm one.
+				_report("bolts_no_health", _kills.is_empty() and is_instance_valid(_warden) and _warden.hp == _warden.max_hp,
+					"%.1f s of continuous base runner fire on the body: killed %s, health %.1f of %.1f"
+						% [_sim, not _kills.is_empty(), _warden.hp if is_instance_valid(_warden) else 0.0, _warden.max_hp if is_instance_valid(_warden) else 0.0])
+				return _finish()
 	return false
 
 
@@ -118,9 +107,11 @@ func _setup() -> void:
 	var blazing: float = ctx.tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.BLAZING]
 	var before: float = _warden.hp
 	var deflections: int = _combat.deflections
+	var posture_before: float = _warden.posture()
 	_combat.strike(_warden, "ram", blazing)
-	_report("blazing_ram", before - _warden.hp >= _warden.plating and _combat.deflections == deflections,
-		"a blazing ram (%.1f m/s, punch %.1f) on plating %.0f dealt %.1f in full" % [blazing, _combat.punch_of("ram", blazing), _warden.plating, before - _warden.hp])
+	_report("posture_ram", _warden.fight() == "posture" and _warden.hp == before and _warden.posture() > posture_before and _combat.deflections == deflections,
+		"a blazing ram (%.1f m/s, punch %.1f) on fight %s filled posture %.1f to %.1f and took %.1f health"
+			% [blazing, _combat.punch_of("ram", blazing), _warden.fight(), posture_before, _warden.posture(), before - _warden.hp])
 	_combat.heft_override = -1.0
 	_warden.hp = _warden.max_hp
 
@@ -191,7 +182,6 @@ func _finish_pulse() -> void:
 
 
 func _start_fire(stage: int) -> void:
-	_fire_stage = stage
 	_kills.clear()
 	var ctx = _game.ctx
 	if stage != 1:

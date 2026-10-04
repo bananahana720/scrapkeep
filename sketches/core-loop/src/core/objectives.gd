@@ -6,9 +6,6 @@ extends RefCounted
 # and the long `objective` strings in event_kinds.gd stay the full readout the HUD does not show.
 
 const MAX_WORDS := 5
-# A plating Warden's lesson shows once the ball is this close, as it always has.
-const LESSON_RANGE := 40.0
-const LESSON_ROWS := {"plate": "lesson_plate", "caps": "lesson_caps", "magnet": "lesson_magnet"}
 
 const ROWS := {
 	"find_activity": {"glyph": "obj_event", "words": "Find an activity"},
@@ -17,9 +14,6 @@ const ROWS := {
 	"smash_core": {"glyph": "cat_damage", "words": "Smash the core"},
 	"grow_return": {"glyph": "res_heft", "words": "Grow, then return"},
 	"break_warden": {"glyph": "obj_warden", "words": "Break the Warden"},
-	"lesson_plate": {"glyph": "obj_warden", "words": "Ram it as it vents"},
-	"lesson_caps": {"glyph": "obj_warden", "words": "Bowl its guard, slam caps"},
-	"lesson_magnet": {"glyph": "obj_warden", "words": "Shoot its magnet while pulled"},
 	"charge_beacon": {"glyph": "obj_beacon", "words": "Charge the beacon"},
 	"roll_gate": {"glyph": "obj_gate", "words": "Roll through a gate"},
 	"hold_line": {"glyph": "obj_gate", "words": "Hold your line"},
@@ -29,7 +23,7 @@ const ROWS := {
 # What choose() reads. state is flow.state_name(); card is true while the stage card owns
 # the launch moment; distance is the ball's metres to the Warden.
 const EMPTY_READING := {"state": "", "sealed": false, "engaged": false, "fight": "plating", "staggered": false,
-	"struggling": false, "lesson": "plate", "distance": INF, "card": false, "activities_left": 0}
+	"struggling": false, "distance": INF, "card": false, "activities_left": 0}
 
 
 static func glyph(id: String) -> String:
@@ -56,8 +50,6 @@ static func choose(reading: Dictionary) -> String:
 				if r["staggered"]:
 					return "smash_core"
 				return "grow_return" if r["struggling"] else "break_guard"
-			if r["distance"] < LESSON_RANGE:
-				return LESSON_ROWS.get(r["lesson"], "break_warden")
 			return "break_warden"
 		"gates":
 			return "roll_gate"

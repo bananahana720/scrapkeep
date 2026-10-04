@@ -1,4 +1,5 @@
 extends RefCounted
+# F6 2026-10-04: the lesson rows are gone; every Warden fights on posture.
 
 const Objectives := preload("res://src/core/objectives.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
@@ -22,9 +23,6 @@ const CASES := {
 	"smash_core": {"state": "beacon", "sealed": true, "fight": "posture", "engaged": true, "staggered": true},
 	"grow_return": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true, "struggling": true},
 	"break_warden": {"state": "stage", "sealed": true, "fight": "plating", "distance": 90.0},
-	"lesson_plate": {"state": "stage", "sealed": true, "fight": "plating", "distance": 12.0, "lesson": "plate"},
-	"lesson_caps": {"state": "stage", "sealed": true, "fight": "plating", "distance": 12.0, "lesson": "caps"},
-	"lesson_magnet": {"state": "stage", "sealed": true, "fight": "plating", "distance": 12.0, "lesson": "magnet"},
 	"charge_beacon": {"state": "stage", "sealed": false},
 	"roll_gate": {"state": "gates"},
 	"hold_line": {"state": "launch"},
@@ -50,8 +48,8 @@ func _rows(t) -> void:
 	var lessons := []
 	for stage in StageDefs.COUNT:
 		var row: Dictionary = StageDefs.of(stage + 1)
-		lessons.append(row.get("warden_fight", "plating") == "posture" and row["warden_lesson"] == "" or Objectives.LESSON_ROWS.has(row["warden_lesson"]))
-	t.eq("every stage's lesson has a row", lessons.all(func(ok): return ok), true)
+		lessons.append(not row.has("warden_fight") and row.get("warden_lesson", "") == "")
+	t.eq("no stage row picks a fight or a lesson", lessons.all(func(ok): return ok), true)
 	t.eq("the HUD colours every row from an event row that exists", Objectives.ROWS.keys().filter(func(id): return not Hud.ROW_COLOR.has(id) or EventKinds.row(Hud.ROW_COLOR[id]).is_empty()), [])
 	t.eq("the HUD rings only rows the table has", Hud.RING_ROWS.filter(func(id): return not Objectives.ROWS.has(id)), [])
 
@@ -66,7 +64,7 @@ func _reached_once(t) -> void:
 				for engaged in [false, true]:
 					for staggered in [false, true]:
 						for struggling in [false, true]:
-							for lesson in Objectives.LESSON_ROWS:
+							for lesson in [""]:
 								for distance in [5.0, 39.9, 40.0, 200.0]:
 									for activities_left in [0, 1]:
 										var id := Objectives.choose({"state": state, "sealed": sealed, "fight": fight, "engaged": engaged,
@@ -79,8 +77,6 @@ func _reached_once(t) -> void:
 	t.eq("the walk reaches no row the table lacks", stray, [])
 	t.eq("the stage card holds the launch row back", Objectives.choose({"state": "launch", "card": true}), "")
 	t.eq("a menu state shows no row", Objectives.choose({"state": "dead"}), "")
-	t.eq("the lesson shows inside 40 m and not at 40", [Objectives.choose(CASES["lesson_plate"].merged({"distance": 39.9}, true)),
-		Objectives.choose(CASES["lesson_plate"].merged({"distance": 40.0}, true))], ["lesson_plate", "break_warden"])
 
 
 func _fights(t) -> void:
@@ -90,7 +86,7 @@ func _fights(t) -> void:
 		for engaged in [false, true]:
 			for staggered in [false, true]:
 				for struggling in [false, true]:
-					for lesson in Objectives.LESSON_ROWS:
+					for lesson in [""]:
 						for distance in [5.0, 200.0]:
 							var posture := Objectives.choose({"state": "stage", "sealed": sealed, "fight": "posture", "engaged": engaged,
 								"staggered": staggered, "struggling": struggling, "lesson": lesson, "distance": distance})

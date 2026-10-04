@@ -12,16 +12,12 @@ const T := preload("res://tests/support/t.gd")
 # with a real fight driven through combat.strike() and a real harpoon smash: lit arcs equal
 # chunks_left() after each shatter; the crack sits on the next arc to go exactly when
 # chunk_cracked(); lit arcs take the open colour exactly while staggered(); every arc colour
-# equals the plate's own reader for that state; the ring is freed with its Warden; a plating
-# Warden has no ring.
+# equals the plate's own reader for that state; the ring is freed with its Warden.
 
 const PLATING := 45.0
 
 var _t := T.new("warden_ring_test")
-# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
-class PlatingGame extends "res://src/game.gd":
-	func _chosen_table():
-		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+# F6 2026-10-04: the plating Warden case is gone; every Warden fights on posture and wears a ring.
 
 var _game
 var _combat
@@ -247,18 +243,5 @@ func _run() -> void:
 	_t.check("the ring is freed with its Warden", not is_instance_valid(ring))
 	_plate.free()
 	_game.free()
-	await _plating()
 	quit(_t.verdict())
 
-
-func _plating() -> void:
-	_game = PlatingGame.new()
-	_game.test_mode = true
-	root.add_child(_game)
-	if not await _start("plating"):
-		_t.check("a Warden stands on the default table", false)
-		return
-	await _seconds(0.3)
-	_t.eq("the local Warden fights by plating", _warden.fight(), "plating")
-	_t.check("a plating Warden has no ring", _warden.get_node_or_null("WardenRing") == null)
-	_game.free()

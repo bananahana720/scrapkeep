@@ -114,10 +114,6 @@ func weak_points() -> Array:
 	return []
 
 
-func unplated_by_magnet() -> bool:
-	return false
-
-
 # --- The posture fight (BossContract.TARGET), all answered by boss.gd -----------------
 
 func fight() -> String:

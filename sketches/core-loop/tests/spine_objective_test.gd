@@ -1,4 +1,5 @@
 extends SceneTree
+# F6 2026-10-04: the lesson rows are gone, so the lesson-words check is removed.
 
 # Legacy plating/third-stage rule: use the multiworld double, not the alpha route.
 
@@ -66,10 +67,6 @@ func _process(_delta: float) -> bool:
 	var stage_two: String = _game.flow.objective_text()
 	_report("stage 2 objective", stage_two.contains("plating %d" % int(StageDefs.of(2)["warden_plating"])) and stage_two.contains("guard rack") and stage_two.contains("caps") and not stage_two.contains("vent") and not stage_two.to_lower().contains("optional"),
 		"\"%s\"" % stage_two)
-	var short_one: String = Objectives.words(Objectives.LESSON_ROWS[StageDefs.of(1)["warden_lesson"]])
-	var short_two: String = Objectives.words(Objectives.LESSON_ROWS[StageDefs.of(2)["warden_lesson"]])
-	_report("lesson words fit the family", short_one.contains("vents") and short_two.contains("guard") and not short_two.contains("vent"),
-		"stage 1 (reactor) near the Warden reads \"%s\"; stage 2 (hive) \"%s\"" % [short_one, short_two])
 	print("spine_objective_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)

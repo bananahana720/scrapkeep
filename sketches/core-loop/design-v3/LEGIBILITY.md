@@ -150,7 +150,7 @@ The bola thrower is a seventh card on Andrew's read sheet. He chooses whether it
 | The loot pool of about 90 rows, generated recipes, item procs | Simplified to about 12 authored parts, each with a visible effect | Too many rows for any part to be learned | Pool grows in M2 |
 | The heft dial, punch and plating bars, the scrap number, core pips, the fight clock | Merged | Ball size and one armour bar carry it. Frees an estimated 8 to 12 fight words. | No |
 | Shred, the 20 percent health chip, the amber and slate plating tint | Merged into posture | Three overlapping pressure models | No |
-| Warden caps, guard rack, magnet tug, mind brace | Deferred | Seven rules on the first Warden he meets | The guard rack as the Reach's own lesson in M2 |
+| Warden caps, guard rack, magnet tug, mind brace | Caps, magnet tug and mind brace retired by F6 (2026-10-04); the guard rack burst stays | Seven rules on the first Warden he meets | The guard rack as the Reach's own lesson in M2 |
 | Q reel, the mouse wheel, the C dash, RMB cancel, title L and G, dev keys in play | Cut | 24 inputs become 9 verbs | The wheel as a Sable upgrade |
 | Shift's boost or burst swap | Merged | One key, one state, two outcomes on an invisible charge. Shift is each pilot's one go verb. | No |
 | Harpoon lab modes, and the hold-to-reel against auto-winch comparison | Cut | A held body line already winches, so there is nothing to compare | No |

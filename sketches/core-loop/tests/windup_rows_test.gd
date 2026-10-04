@@ -1,4 +1,5 @@
 extends SceneTree
+# F6 2026-10-04: the W05 magnet row is gone; the Warden warns once.
 
 # Rule: every roster kind has a valid wind-up row whose lead is its own attack's
 # phase length. Presentation reads that row from the real phase publication/state.
@@ -29,7 +30,7 @@ func _expected(enemy, attack: String) -> float:
 		"chaser": return enemy.WINDUP
 		"lobber": return enemy.TELEGRAPH
 		"miniboss": return enemy.SLAM_CROUCH + enemy.SLAM_LEAP if attack == "E03" else enemy.CHARGE_BRACE
-		"warden": return enemy.MAGNET_TELEGRAPH if attack == "W05" else enemy.PULSE_TELEGRAPH
+		"warden": return enemy.PULSE_TELEGRAPH
 		"swarm_remnant": return enemy.swarm.LOCK_WARN
 	return enemy.warn_seconds
 
@@ -120,10 +121,8 @@ func _state_path() -> void:
 	warden.family = "mind"
 	warden._charging = true
 	warden._charge_time = 0.0
-	warden.magnet_state = warden.Magnet.TELEGRAPH
-	warden._magnet_time = 0.0
 	var facts := WindupRows.state_facts(warden)
-	_report("simultaneous warden warnings", facts.size() == 2 and facts[0].row == "W04" and facts[1].row == "W05", "pulse and magnet remain separate reads")
+	_report("warden pulse warning", facts.size() == 1 and facts[0].row == "W04", "the pulse is the Warden's one wind-up read")
 	var before := _glyphs()
 	_game.presentation._physics_process(0.0)
 	_game.presentation._physics_process(0.0)

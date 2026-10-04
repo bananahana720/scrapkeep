@@ -1,4 +1,5 @@
 extends SceneTree
+# F6 2026-10-04: magnet_break and the Warden cap stomp are gone with the plating fight.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -169,21 +170,7 @@ func _warden_tricks() -> void:
 	_game.run.set_max_hp(99999.0)
 	var ctx = _game.ctx
 	var warden: Node3D = ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(2))
-	var caps: Array = warden.cap_points()
-	if caps.is_empty():
-		_report("warden caps", false, "the stage 2 Warden has no cap points to stomp")
-		return
-	var cap: Vector3 = caps[0]
-	_game.player.reset_to(cap + Vector3.UP * 1.3)
-	_game.player.body().global_position = cap + Vector3.UP * 1.3
-	warden._since_pulse = 0.6
-	_combat.strike(warden, "stomp", 12.0)
-	_report("pulse_stomp", _combat.discovered.has("pulse_stomp"), "a cap stomp 0.6 s after a pulse")
-
-	warden._unplated = 2.0
-	warden.hp = 5.0
-	_combat.strike(warden, "runner", 10.0)
-	_report("magnet_break", _combat.discovered.has("magnet_break"), "the Warden broken while its magnet had it unplated")
+	_report("posture warden", warden.fight() == "posture", "the stage 2 Warden fights on posture; caps and the magnet are gone")
 	_game.player.chain.combo = 3
 	_game.events.line_state_changed.emit("chain_link", null, Vector3.ZERO, "")
 	_report("chain", _combat.discovered.has("chain"), "a third link in one chain")

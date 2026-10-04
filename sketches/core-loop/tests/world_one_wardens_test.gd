@@ -1,4 +1,5 @@
 extends SceneTree
+# F6 2026-10-04: the family step is now _step_guard; the plating fight is gone.
 
 const Game := preload("res://src/game.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
@@ -322,7 +323,7 @@ func _no_rack(stage: int) -> void:
 	if not await _start(stage):
 		return
 	_warden.set_physics_process(false)
-	_warden._step_family(Warden.GUARD_RESPAWN, true)
+	_warden._physics_process(Warden.GUARD_RESPAWN)
 	_report("stage 1 reactor Warden has no rack", _warden.family == "reactor" and _warden.guard == null,
 		"family %s, guard %s" % [_warden.family, _warden.guard])
 	_warden.on_guard_scattered(null, Vector3.ZERO)

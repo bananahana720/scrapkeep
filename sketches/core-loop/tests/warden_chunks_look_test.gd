@@ -11,8 +11,7 @@ const T := preload("res://tests/support/t.gd")
 # All waits are physics frames. The fourth copy must survive the Warden's own deletion.
 # The default table, retries, stages and a fresh run are exercised through real flow.
 
-# Posture still uses the selected table; legacy plating coverage uses the double.
-# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+# F6 2026-10-04: the legacy plating cases are gone; the double table still runs posture.
 class LegacyGame extends "res://src/game.gd":
 	func _chosen_table():
 		if table.is_empty():
@@ -225,29 +224,6 @@ func _shatters() -> void:
 	_t.check("four real shatters unsealed the stage", not is_instance_valid(_game.flow.warden))
 
 
-func _plating() -> void:
-	await _start("")
-	for stage in range(1, 4):
-		if stage > 1:
-			_game.flow.enter_stage(stage, Vector3.ZERO, false)
-			await _seconds(0.4)
-			_bind()
-		var rec: Dictionary = _hook.warden_of(_warden)
-		_t.eq("legacy double fights by plating", _warden.fight(), "plating")
-		_segments(rec, 4, "plating spawn %d" % stage)
-		_t.check("new core and inner damage stay hidden on plating", not rec.core.visible and not rec.base.get_node("JawL/InnerL").visible and not rec.base.get_node("JawR/InnerR").visible)
-		_t.eq("plating has no health crack marks", rec.chunk_marks.size(), 0)
-		_combat.strike(_warden, "ram", 200.0)
-		_hook._update_warden(rec)
-		_segments(rec, 4, "plating damaged %d" % stage)
-		_t.eq("plating damage throws no segment", rec.flights.size(), 0)
-		_warden.died.connect(func(_at: Vector3, _scrap: int): _segments(rec, 4, "plating death %d" % stage))
-		_warden.take_damage(999999.0)
-		await _frames(2)
-		_t.check("plating Warden died through ordinary health damage", not is_instance_valid(_warden))
-	_game.free()
-
-
 func _run() -> void:
 	await _start("slice")
 	_t.eq("slice uses posture", _warden.fight(), "posture")
@@ -273,5 +249,4 @@ func _run() -> void:
 	await _shatters()
 	_game.free()
 	await _frames(2)
-	await _plating()
 	quit(_t.verdict())

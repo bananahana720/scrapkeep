@@ -3,14 +3,14 @@ extends RefCounted
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # One row per roster kind. Timing names read the actor's attack clock; no duration
-# is copied here. A miniboss has two attacks and a Warden can warn twice at once.
+# is copied here. A miniboss has two attacks.
 # The committed telegraph already sounds, except the Lobber's uncommitted charge.
 const ROWS := {
 	"chaser": {"color_role": "hazard", "shape": "bar", "sound": "none", "attacks": {"E01": ["WINDUP"]}},
 	"lobber": {"color_role": "hazard", "shape": "cross", "sound": "threat_whistle", "attacks": {"E02": ["TELEGRAPH"]}},
 	"miniboss": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E03": ["SLAM_CROUCH", "SLAM_LEAP"], "E04": ["CHARGE_BRACE"]}},
 	"vault": {"color_role": "neutral", "shape": "none", "sound": "none", "attacks": {"none": []}},
-	"warden": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"W01": ["PULSE_TELEGRAPH"], "W02": ["PULSE_TELEGRAPH"], "W04": ["PULSE_TELEGRAPH"], "W05": ["MAGNET_TELEGRAPH"]}},
+	"warden": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"W01": ["PULSE_TELEGRAPH"], "W02": ["PULSE_TELEGRAPH"], "W04": ["PULSE_TELEGRAPH"]}},
 	"mag_trapper": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E05": ["warn_seconds"]}},
 	"hooker": {"color_role": "hazard", "shape": "bar", "sound": "none", "attacks": {"E06": ["warn_seconds"]}},
 	"netcaster": {"color_role": "hazard", "shape": "star", "sound": "none", "attacks": {"E07": ["warn_seconds"]}},
@@ -48,7 +48,7 @@ static func row(kind: String, enemy: Object, attack: String) -> Dictionary:
 
 
 # These actors have no Enemy.attack_phase publication. Read their existing state,
-# including simultaneous Warden pulse and magnet warnings and the shared rack lane.
+# including the Warden pulse warning and the shared rack lane.
 static func state_facts(enemy: Object) -> Array[Dictionary]:
 	var facts: Array[Dictionary] = []
 	var kind: String = enemy.get("kind")
@@ -57,8 +57,6 @@ static func state_facts(enemy: Object) -> Array[Dictionary]:
 			var family: String = enemy.get("family")
 			var attack := "W01" if family == "reactor" else ("W02" if family == "swarm" else "W04")
 			facts.append({"row": attack, "phase": "windup", "progress": enemy.charge_fraction(), "at": enemy.global_position})
-		if enemy.get("magnet_state") == 1:
-			facts.append({"row": "W05", "phase": "windup", "progress": enemy.magnet_out(), "at": enemy.global_position})
 	elif kind == "swarm_remnant":
 		var swarm = enemy.get("swarm")
 		if swarm != null and swarm.state == swarm.State.LOCKED and swarm.lane() == enemy.telegraph():

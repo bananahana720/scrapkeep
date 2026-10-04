@@ -94,12 +94,10 @@ const NOTABLE := ["scrap_lost"]
 const RETIRED_TOASTS := ["part_gained", "reward_chosen", "heft_class_changed", "heft_class_dropped"]
 # The event_kinds row whose colour each objective row wears.
 const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_engaged", "smash_core": "warden_engaged",
-	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "lesson_plate": "warden_engaged",
-	"lesson_caps": "warden_engaged", "lesson_magnet": "warden_engaged", "charge_beacon": "beacon_charge_changed",
+	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "charge_beacon": "beacon_charge_changed",
 	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered"}
 # The rows whose glyph is ringed by how much of the Warden is broken.
-const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "lesson_plate",
-	"lesson_caps", "lesson_magnet", "charge_beacon"]
+const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
@@ -667,7 +665,6 @@ func objective_reading() -> Dictionary:
 		"fight": warden.fight() if warden != null and warden.has_method("fight") else "plating",
 		"staggered": warden != null and warden.has_method("staggered") and warden.staggered(),
 		"struggling": _struggle.struggling,
-		"lesson": flow.stage_def()["warden_lesson"],
 		"distance": distance,
 		"card": launch_card.showing(),
 		"activities_left": edge_markers.unfinished_sites().size(),

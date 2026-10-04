@@ -97,11 +97,6 @@ func knock(_direction: Vector3, _force: float) -> void:
 	pass
 
 
-# The boss TARGET contract's member (boss_contract.gd); no Warden is ever unplated.
-func unplated_by_magnet() -> bool:
-	return false
-
-
 func seconds_since_pulse() -> float:
 	return _since_pulse
 

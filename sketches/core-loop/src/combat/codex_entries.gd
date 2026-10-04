@@ -46,12 +46,6 @@ const ENTRIES := [
 		"clue": "a Warden pulse + a vent cap",
 		"text": "Ride a Warden's pulse up and stomp one of its vent caps on the way down.",
 	},
-	{
-		"id": "magnet_break", "name": "Demagnetized",
-		"hint": "Its pull is also its weakness.",
-		"clue": "a Warden's magnet + a shot during the tug",
-		"text": "Shoot the Warden's magnet mid-tug and break the Warden before its plating comes back.",
-	},
 	# v2 W7 enemies: the counters' opportunities and the ancients' secrets.
 	{
 		"id": "tether_snap", "name": "Slingshot Snap",

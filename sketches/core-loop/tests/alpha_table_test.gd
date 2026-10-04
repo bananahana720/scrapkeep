@@ -1,4 +1,5 @@
 extends SceneTree
+# F6 2026-10-04: the rows no longer carry warden_fight; every Warden fights on posture.
 
 const Game := preload("res://src/game.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
@@ -14,7 +15,7 @@ const ROW_KEYS := [
 	"stage", "world", "music", "warden_family", "name", "map", "threat",
 	"unlock_base", "ancient", "event_mix", "scrap_density", "kill_scrap",
 	"beacon_seconds", "beacon_radius", "warden_plating", "warden_hp",
-	"warden_lesson", "warden_fight", "posture", "warden_hint",
+	"warden_lesson", "posture", "warden_hint",
 ]
 
 var _failures := 0
@@ -50,7 +51,6 @@ func _initialize() -> void:
 	for i in A.DEFS.size():
 		var row: Dictionary = A.DEFS[i]
 		_check("row %d keys" % (i + 1), _missing(row).is_empty(), "missing %s" % str(_missing(row)))
-		_check("row %d warden_fight" % (i + 1), row.get("warden_fight", "") == "posture", str(row.get("warden_fight", "")))
 		_check("row %d stage number" % (i + 1), int(row.get("stage", 0)) == i + 1, str(row.get("stage", 0)))
 	_check("packs", A.packs().size() == 3 and not A.elite().is_empty(), "%d packs" % A.packs().size())
 	# Both maps build from the table without error.

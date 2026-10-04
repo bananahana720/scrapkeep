@@ -8,8 +8,8 @@ const Intent := preload("res://src/movement/intent.gd")
 # (LEGIBILITY section 4): rams fill the bar and posture_changed goes out; a full bar
 # staggers the Warden, opens its core once and stops the pulse; a charge in flight is
 # cancelled; health falls only through a shatter, and a harpoon smash on the open core
-# removes exactly one chunk; four chunks kill it and the stage unseals. A local row
-# retains the plating regression until F6. Contacts are real physics from placed starts, not a
+# removes exactly one chunk; four chunks kill it and the stage unseals.
+# Contacts are real physics from placed starts, not a
 # player's run; every wait is counted in physics frames.
 
 const OUT := 58.0
@@ -18,10 +18,7 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const HP := 800.0
 
-# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
-class PlatingGame extends "res://src/game.gd":
-	func _chosen_table():
-		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+# F6 2026-10-04: the local plating regression is gone; every Warden fights on posture.
 
 var _game
 var _combat
@@ -144,7 +141,6 @@ func _run() -> void:
 	await _filling_smash()
 	await _chunks()
 	_game.free()
-	await _default_table()
 	print("warden_posture_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -285,30 +281,3 @@ func _chunks() -> void:
 	await _seconds(0.5)
 	_report("four chunks kill it and the stage unseals", _kills.has("warden") and _unsealed == 1 and _offered >= 1,
 		"kills %s, beacon_unsealed %d, reward_offered %d" % [_kills, _unsealed, _offered])
-
-
-func _default_table() -> void:
-	_game = PlatingGame.new()
-	_game.test_mode = true
-	root.add_child(_game)
-	_posture_events = 0
-	_kills.clear()
-	_hits = 0
-	if not await _start():
-		_failures += 1
-		return
-	var plain: Dictionary = {}
-	_warden.hp = HP
-	var force := _matched_force()
-	var result: Dictionary = _combat.resolve(_warden, "ram", force)
-	var punch: float = _combat.punch_of("ram", force)
-	_report("local Warden fights by plating", _warden.fight() == "plating" and _warden.chunks_left() == 0 and not _warden.staggered(),
-		"fight %s" % _warden.fight())
-	plain = {"punch": punch, "plating": _warden.plating, "full": punch >= _warden.plating, "dealt": punch, "part": ""}
-	_report("a matched ram resolves as before", result == plain, "got %s, want %s" % [result, plain])
-	var before: float = _warden.hp
-	for i in 6:
-		await _ram()
-	_report("plating hits take health and never raise posture_changed", _warden.hp < before and _posture_events == 0 and _warden.shred_fraction() > 0.0,
-		"hp %.1f to %.1f, %d posture_changed, shred %.2f" % [before, _warden.hp, _posture_events, _warden.shred_fraction()])
-	_game.free()

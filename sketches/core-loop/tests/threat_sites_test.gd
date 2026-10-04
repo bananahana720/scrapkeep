@@ -1,4 +1,5 @@
 extends SceneTree
+# F6 2026-10-04: the Warden magnet ring is gone; the pulse and core rings stay.
 
 const Game := preload("res://src/game.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -172,19 +173,15 @@ func _check_combat() -> void:
 	miniboss._begin_attack(ball - miniboss.global_position)
 	tags["miniboss charge"] = miniboss.telegraph()
 	var warden: Node3D = ctx.spawner.spawn_enemy("warden", ball + Vector3(0.0, 0.0, 12.0))
-	warden.lesson = "magnet"
 	warden._pulse_clock = Warden.PULSE_CYCLE - Warden.PULSE_TELEGRAPH
-	warden._magnet_clock = Warden.MAGNET_CYCLE - Warden.MAGNET_TELEGRAPH
 	warden._step_pulse(DT, true)
-	warden._step_magnet(DT, true)
 	tags["warden pulse"] = warden.telegraph()
 	tags["warden core"] = warden.get("_core_ring")
-	tags["warden magnet"] = warden.get("_magnet_ring")
 	ctx.spawner._on_lobber_fired(ball + Vector3(20.0, 3.0, 0.0), ball, 1.9, null)
 	for shell in _game.get_tree().get_nodes_in_group("enemy_shot"):
 		tags["lobber shell"] = shell.ring
 	var want := {"chaser lunge": "LANE", "miniboss leap slam": "PROJECTILE", "miniboss charge": "LANE", "warden pulse": "INSTANT",
-		"warden core": "INSTANT", "warden magnet": "LANE", "lobber shell": "PROJECTILE"}
+		"warden core": "INSTANT", "lobber shell": "PROJECTILE"}
 	var got := {}
 	for key in want:
 		var node = tags.get(key)
