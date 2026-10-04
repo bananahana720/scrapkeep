@@ -1,5 +1,7 @@
 extends RefCounted
 
+const StageDefs := preload("res://src/core/stage_defs.gd")
+
 const THEME_COUNT := 3
 const ROWS := {
 	"default": {"synth_theme": 0, "ace_manifest": ""},
@@ -10,11 +12,13 @@ const ROWS := {
 
 
 # A zone/boss id or a stage row. Existing {theme, ace} stage music overrides the pack.
-static func resolve(stage = "default", sidecar_dir := "") -> Dictionary:
+static func resolve(stage = "default", sidecar_dir := "", stages = StageDefs) -> Dictionary:
+	if stage is int:
+		stage = stages.of(stage)
 	var id := str(stage)
 	var override := {}
 	if stage is Dictionary:
-		id = "%d-%d" % [int(stage.get("world", 1)), int(stage["stage"])] if stage.has("stage") else "default"
+		id = zone_id(int(stage["stage"]), stages) if stage.has("stage") else "default"
 		id = str(stage.get("id", id))
 		if stage.get("music") is Dictionary:
 			override = stage["music"]
@@ -24,6 +28,14 @@ static func resolve(stage = "default", sidecar_dir := "") -> Dictionary:
 		var ace := str(override["ace"])
 		pack["ace_manifest"] = "" if ace == "" else "res://assets/music_ace/%s/manifest.json" % ace
 	return resolve_pack(pack, sidecar_dir)
+
+
+static func zone_id(stage: int, stages = StageDefs) -> String:
+	return "%d-%d" % [stages.world_of(stage), stages.local(stage)]
+
+
+static func stage_theme(stage = "default", stages = StageDefs) -> int:
+	return int(resolve(stage, "", stages)["synth_theme"])
 
 
 static func resolve_pack(row: Dictionary, sidecar_dir := "") -> Dictionary:
