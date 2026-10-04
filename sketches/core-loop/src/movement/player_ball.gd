@@ -159,6 +159,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
+		chain.reset()
 		tree.open_checkpoint())
 	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
 	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
