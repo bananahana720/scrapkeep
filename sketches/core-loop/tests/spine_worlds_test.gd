@@ -32,10 +32,10 @@ class ThreeWorld extends RefCounted:
 		{"stage": 1, "world": 1, "music": {"theme": 0, "ace": "spillway"}, "warden_family": "reactor", "name": "Spillway: the top shelf", "map": "spillway", "threat": 1.0, "unlock_base": 2, "ancient": "reactor_relic",
 			"event_mix": {"flood": 1.0}, "scrap_density": 1.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 			"warden_plating": 45.0, "warden_hp": 800.0, "warden_lesson": "plate", "warden_hint": "Ram it hard, right after it vents."},
-		{"stage": 2, "world": 2, "music": {"theme": 1, "ace": ""}, "warden_family": "swarm", "name": "Triple: the Cable Reach", "map": "gorge", "threat": 1.25, "unlock_base": 4, "ancient": "swarm_remnant",
+		{"stage": 2, "world": 2, "music": {"theme": 1, "ace": ""}, "warden_family": "swarm", "name": "Triple: the Cable Reach", "map": "reach", "threat": 1.25, "unlock_base": 4, "ancient": "swarm_remnant",
 			"event_mix": {"flood": 1.0}, "scrap_density": 1.2, "beacon_seconds": 30.0, "beacon_radius": 30.0,
 			"warden_plating": 80.0, "warden_hp": 2200.0, "warden_lesson": "caps", "warden_hint": "Bowl through its guard rack and slam its caps."},
-		{"stage": 3, "world": 3, "music": {"theme": 2, "ace": ""}, "warden_family": "mind", "name": "Triple: the Weir", "map": "weir", "threat": 2.1, "unlock_base": 6, "ancient": "mind_hand",
+		{"stage": 3, "world": 3, "music": {"theme": 2, "ace": ""}, "warden_family": "mind", "name": "Triple: the Weir", "map": "reach", "threat": 2.1, "unlock_base": 6, "ancient": "mind_hand",
 			"event_mix": {"flood": 1.0}, "scrap_density": 1.4, "beacon_seconds": 35.0, "beacon_radius": 28.0,
 			"warden_plating": 140.0, "warden_hp": 7500.0, "warden_lesson": "magnet", "warden_hint": "In its ring, shoot the magnet while it pulls you."},
 	]
