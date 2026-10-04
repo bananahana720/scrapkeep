@@ -56,6 +56,7 @@ const MELTDOWN_WINDOW := 1.5
 const SLAG_LENGTH := 14.0
 const SLAG_WIDTH := 4.0
 const SLAG_SECONDS := 6.0
+const SLAG_WARN := 1.0
 const SLAG_DAMAGE := 4.0
 const ADAPT_CYCLE := 8.0
 const CHOIR_RADIUS := 1.6
@@ -75,7 +76,7 @@ var fleet
 var guard
 var family_opens := 0
 var variant := ""
-# meltdown: [{from, dir, length, width, left, node}], newest last.
+# meltdown: [{from, dir, length, width, left, age, phase, instance, node}], newest last.
 var slag_lanes: Array = []
 # choir: the lens seat open now (0..2) and the strike kinds the stagger braces against.
 var open_lens := 0
@@ -248,11 +249,21 @@ func _physics_process(delta: float) -> void:
 	_step_choir(delta)
 
 
-# meltdown: lanes age out; a grounded ball inside one burns while the Warden stands.
+# meltdown: a lane fills over SLAG_WARN, then burns a grounded ball it contains until it
+# ages out. The lane publishes one attack (windup, strike, recover) as the W01 row, since
+# the roster lookup in enemy.gd finds no row for a Warden; it keeps its own instance
+# because the Warden's pulse owns the single _atk slot.
 func _step_slag(delta: float) -> void:
 	for lane in slag_lanes.duplicate():
 		lane["left"] = float(lane["left"]) - delta
+		lane["age"] = float(lane["age"]) + delta
+		if lane["phase"] == PHASE_WINDUP:
+			if is_instance_valid(lane["node"]):
+				lane["node"].set_progress(float(lane["age"]) / SLAG_WARN)
+			if float(lane["age"]) >= SLAG_WARN:
+				_slag_phase(lane, PHASE_STRIKE)
 		if float(lane["left"]) <= 0.0:
+			_slag_phase(lane, PHASE_RECOVER)
 			if is_instance_valid(lane["node"]):
 				lane["node"].queue_free()
 			slag_lanes.erase(lane)
@@ -260,7 +271,7 @@ func _step_slag(delta: float) -> void:
 		_slag_burn = 0.0
 		return
 	var ball_state = target.get("state")
-	if ball_state == null or not ball_state.grounded or not in_slag(_ball()):
+	if ball_state == null or not ball_state.grounded or not _slag_burns(_ball()):
 		_slag_burn = 0.0
 		return
 	# One hit per SLAG_DAMAGE burned, so the burn is SLAG_DAMAGE a second without a hit
@@ -271,22 +282,45 @@ func _step_slag(delta: float) -> void:
 		hit_player.emit(SLAG_DAMAGE, Vector3.ZERO)
 
 
+# True where a lane's footprint lies, by the lane node's own hit test, whether or not it
+# has finished filling.
 func in_slag(point: Vector3) -> bool:
 	for lane in slag_lanes:
-		var flat := Vector3(point.x, 0.0, point.z) - Vector3(lane["from"].x, 0.0, lane["from"].z)
-		var along: float = flat.dot(lane["dir"])
-		if along >= 0.0 and along <= float(lane["length"]) and (flat - lane["dir"] * along).length() <= float(lane["width"]) * 0.5:
+		var node = lane["node"]
+		if is_instance_valid(node) and node.contains(Vector3(point.x, node.ground_under(node.terrain, point), point.z)):
 			return true
 	return false
+
+
+# True where a lane that has finished filling contains the point.
+func _slag_burns(point: Vector3) -> bool:
+	for lane in slag_lanes:
+		if lane["phase"] == PHASE_STRIKE and is_instance_valid(lane["node"]) and lane["node"].contains(point):
+			return true
+	return false
+
+
+func _slag_phase(lane: Dictionary, phase: String) -> void:
+	if lane["phase"] == phase:
+		return
+	lane["phase"] = phase
+	var node = lane["node"]
+	var geometry: Dictionary = node.descriptor() if is_instance_valid(node) else {}
+	attack_phase.emit({"instance": lane["instance"], "row": "W01", "owner": kind, "phase": phase,
+		"committed": not geometry.is_empty(), "progress": 1.0 if phase != PHASE_WINDUP else 0.0,
+		"geometry": geometry, "at": global_position})
 
 
 func _leave_slag() -> void:
 	var out := flat_to_ball()
 	var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
 	var node := Telegraph.lane(world_root, terrain, Threat.Type.LANE, global_position, dir, SLAG_LENGTH, SLAG_WIDTH)
-	node.set_progress(1.0)
-	slag_lanes.append({"from": global_position, "dir": dir, "length": SLAG_LENGTH, "width": SLAG_WIDTH,
-			"left": SLAG_SECONDS, "node": node})
+	node.set_progress(0.0)
+	_attack_serial += 1
+	var lane := {"from": global_position, "dir": dir, "length": SLAG_LENGTH, "width": SLAG_WIDTH,
+			"left": SLAG_SECONDS, "age": 0.0, "phase": "", "instance": _attack_serial, "node": node}
+	slag_lanes.append(lane)
+	_slag_phase(lane, PHASE_WINDUP)
 
 
 # choir: the open lens moves to the next seat every ADAPT_CYCLE while the Warden stands.
