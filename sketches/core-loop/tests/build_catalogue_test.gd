@@ -29,6 +29,11 @@ const Icons := preload("res://src/ui/icons.gd")
 # class, a part waiting on a missing seam is never offered, generated recipes rebuild
 # identically from their id, and the rarity weights hold.
 
+# 2026-10-04: the default table is the alpha ruleset (twelve parts, five synergies, class pick on); this test checks the full catalogue so it runs on the legacy FirstWorld table.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _failures := 0
 var _ticks := 0
@@ -36,7 +41,7 @@ var _gained: Array = []
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

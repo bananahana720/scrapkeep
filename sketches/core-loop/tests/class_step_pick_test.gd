@@ -7,7 +7,7 @@ const T := preload("res://tests/support/t.gd")
 # On the slice table each heft class the run reaches for the first time opens one upgrade
 # tree pick, once the ball is on the ground and no Warden fight is live. The run keeps the
 # highest class rewarded: a drop and a re-rise open nothing, a new run resets it and a retry
-# keeps it, as it keeps the tree. The default table opens none on a rise. Mass is set through
+# keeps it, as it keeps the tree. The legacy table opens none on a rise; the default (alpha) table opens one. Mass is set through
 # the real run state (scrap pickups and thefts), so the class moves by the real heft rule:
 # 225 mass is class II, 540 class III, 990 class IV. The workshop screen is not under test;
 # the tree's own pick allowance is. The tree stops at four depths, or two under the
@@ -20,6 +20,12 @@ const IV := 990
 
 
 # A Warden that is awake and standing, as far as the fight test reads it.
+# 2026-10-04: the default table is the alpha ruleset (twelve parts, five synergies, class pick on); this test checks the full catalogue so it runs on the legacy FirstWorld table.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
+
 class FightWarden extends Node3D:
 	func is_dead() -> bool:
 		return false
@@ -51,6 +57,7 @@ func _physics_process(_delta: float) -> bool:
 	_world_one_cap()
 	_game.ctx.tuning.apply_args(PackedStringArray(["--world-one-builds=off"]), "launch")
 	_default()
+	_alpha_default()
 	_game.free()
 	quit(_t.verdict())
 	return true
@@ -144,14 +151,30 @@ func _world_one_cap() -> void:
 
 func _default() -> void:
 	_game.free()
+	_game = LegacyGame.new()
+	_game.test_mode = true
+	root.add_child(_game)
+	_game.ctx.calm = true
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	_t.check("the legacy table has no class pick", not _game.ctx.stages.PICK_ON_CLASS_UP, "PICK_ON_CLASS_UP %s" % [_game.ctx.stages.PICK_ON_CLASS_UP])
+	_game.player.state.grounded = true
+	var before := _allowed()
+	_to(III)
+	_t.eq("on the legacy table a class rise opens no pick", [_allowed(), _run().heft_class()], [before, 3])
+
+
+func _alpha_default() -> void:
+	_game.free()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	_game.ctx.calm = true
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
-	_t.check("the default table has no class pick", not _game.ctx.stages.PICK_ON_CLASS_UP, "PICK_ON_CLASS_UP %s" % [_game.ctx.stages.PICK_ON_CLASS_UP])
+	_t.check("the default table has the alpha class pick", _game.ctx.stages.PICK_ON_CLASS_UP, "PICK_ON_CLASS_UP %s" % [_game.ctx.stages.PICK_ON_CLASS_UP])
 	_game.player.state.grounded = true
 	var before := _allowed()
 	_to(III)
-	_t.eq("on the default table a class rise opens no pick", [_allowed(), _run().heft_class()], [before, 3])
+	_game.world._deliver_class_picks()
+	_t.eq("on the default table a class rise opens a pick", [_allowed(), _run().heft_class()], [before + 1, 3])

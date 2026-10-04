@@ -28,6 +28,11 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 const SETTLE_MS := 1500
 const DEADLINE_MS := 45000
 
+# 2026-10-04: the default table is the alpha ruleset (twelve parts, five synergies, class pick on); this test checks the full catalogue so it runs on the legacy FirstWorld table.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _ceremony
 var _failures := 0
@@ -45,7 +50,7 @@ var _card_after := false
 func _initialize() -> void:
 	_check_tiers()
 	_check_slice_hints()
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	_t0 = Time.get_ticks_msec()
