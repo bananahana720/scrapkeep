@@ -11,10 +11,10 @@ extends RefCounted
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 
-const SCHEMA := 1
+const SCHEMA := 2
 
 # From-version to the method that returns the document one version up.
-const MIGRATIONS := {0: "_migrate_0"}
+const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1"}
 
 const SHAPE := {
 	"pilots": SafeStore.STRINGS,
@@ -23,6 +23,8 @@ const SHAPE := {
 	"achievements": SafeStore.NUMBERS,
 	"equipped": SafeStore.STRING_MAP,
 	"stats": SafeStore.NUMBERS,
+	"settled": SafeStore.STRINGS,
+	"companion": SafeStore.DICT,
 }
 
 var path := ""
@@ -109,13 +111,32 @@ func save() -> bool:
 # What two writers of one file both did, as one document: lists are the union,
 # achievements keep the earliest time and stats the larger value, an equipped slot
 # both hold and last_pilot are the saver's, and a slot or key only the other side
-# holds is kept. The generation is the larger of the two.
+# holds is kept. Settled ids are a union and rewards_settled never goes back to false.
+# The companion keeps the union of owned pieces, the saver's assembly when it has one
+# (else theirs) and the saver's escape flag. The generation is the larger of the two.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
-	for key in ["pilots", "worlds", "cosmetics"]:
+	for key in ["pilots", "worlds", "cosmetics", "settled"]:
+		if not out.has(key):
+			out[key] = []
 		for id in theirs.get(key, []):
 			if not out[key].has(id):
 				out[key].append(id)
+	if bool(theirs.get("rewards_settled", false)):
+		out["rewards_settled"] = true
+	var mine: Dictionary = out.get("companion", {})
+	var other: Dictionary = theirs.get("companion", {})
+	if mine.is_empty():
+		out["companion"] = other.duplicate(true)
+	elif not other.is_empty():
+		var owned: Array = mine.get("owned", []).duplicate()
+		for id in other.get("owned", []):
+			if not owned.has(id):
+				owned.append(id)
+		mine["owned"] = owned
+		if mine.get("sockets", []).is_empty() and not other.get("sockets", []).is_empty():
+			mine["sockets"] = other["sockets"].duplicate()
+		out["companion"] = mine
 	var times: Dictionary = theirs.get("achievements", {})
 	for id in times:
 		if not out["achievements"].has(id) or times[id] < out["achievements"][id]:
@@ -206,6 +227,42 @@ func set_last_pilot(id: String) -> void:
 	_doc["last_pilot"] = id
 
 
+# The companion as the dictionary Companion.to_dict makes; {} until one is stored.
+func companion() -> Dictionary:
+	return _doc["companion"].duplicate(true)
+
+
+func set_companion(doc: Dictionary) -> void:
+	_doc["companion"] = doc.duplicate(true)
+
+
+func is_settled(id: String) -> bool:
+	return _doc["settled"].has(id)
+
+
+# True the first time an id is settled, false after. Memory only; save() writes.
+func settle(id: String) -> bool:
+	if is_settled(id):
+		return false
+	_doc["settled"].append(id)
+	return true
+
+
+func settled_ids() -> Array:
+	return _doc["settled"].duplicate()
+
+
+func rewards_settled() -> bool:
+	return bool(_doc["rewards_settled"])
+
+
+func mark_rewards_settled() -> bool:
+	if rewards_settled():
+		return false
+	_doc["rewards_settled"] = true
+	return true
+
+
 func _add(list: Array, id: String) -> void:
 	if not list.has(id):
 		list.append(id)
@@ -281,6 +338,8 @@ func _shape_ok(doc: Dictionary) -> bool:
 		return false
 	if doc.has("generation") and not (typeof(doc["generation"]) in [TYPE_INT, TYPE_FLOAT]):
 		return false
+	if doc.has("rewards_settled") and typeof(doc["rewards_settled"]) != TYPE_BOOL:
+		return false
 	return true
 
 
@@ -295,6 +354,9 @@ func _defaults() -> Dictionary:
 		"equipped": {},
 		"stats": {},
 		"last_pilot": "",
+		"settled": [],
+		"companion": {},
+		"rewards_settled": false,
 	}
 
 
@@ -303,4 +365,14 @@ func _migrate_0(doc: Dictionary) -> Dictionary:
 	for key in doc:
 		out[key] = doc[key]
 	out["schema"] = 1
+	return out
+
+
+# Schema 1 to 2 adds the companion, the settled ids and the rewards_settled marker;
+# every v1 field passes through untouched.
+func _migrate_1(doc: Dictionary) -> Dictionary:
+	var out := _defaults()
+	for key in doc:
+		out[key] = doc[key]
+	out["schema"] = 2
 	return out
