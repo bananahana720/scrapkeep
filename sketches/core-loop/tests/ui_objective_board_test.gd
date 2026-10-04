@@ -112,6 +112,10 @@ func _plate_state() -> Dictionary:
 
 
 func _before_the_warden() -> void:
+	# While an activity is left the plate points at it first (activity_signpost_test); the
+	# Warden's find row is what shows once every site is finished.
+	for site in _game.world.activities.sites:
+		site.done = true
 	var state := _plate_state()
 	var metres := int(_game.player.ball_position().distance_to(_warden.global_position))
 	_report("O1-3 find", state["words"] == "Find the Warden" and state["metres"] == metres and metres > 0

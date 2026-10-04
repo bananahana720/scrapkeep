@@ -69,7 +69,7 @@ const RETIRED_TOASTS := ["part_gained", "reward_chosen", "heft_class_changed", "
 const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_engaged", "smash_core": "warden_engaged",
 	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "lesson_plate": "warden_engaged",
 	"lesson_caps": "warden_engaged", "lesson_magnet": "warden_engaged", "charge_beacon": "beacon_charge_changed",
-	"roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered"}
+	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered"}
 # The rows whose glyph is ringed by how much of the Warden is broken.
 const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "lesson_plate",
 	"lesson_caps", "lesson_magnet", "charge_beacon"]
@@ -602,6 +602,7 @@ func objective_reading() -> Dictionary:
 		"lesson": flow.stage_def()["warden_lesson"],
 		"distance": distance,
 		"card": launch_card.showing(),
+		"activities_left": edge_markers.unfinished_sites().size(),
 	})
 	if id == "":
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
@@ -700,6 +701,7 @@ func _process(delta: float) -> void:
 	var reading := objective_reading()
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"])
 	edge_markers.objective_id = reading["id"]
+	edge_markers.engaged = _engaged
 	var tbl = game.ctx.stages
 	var world: int = tbl.world_of(run.stage)
 	var world_stages: int = tbl.last_of(world) - tbl.first_of(world) + 1
