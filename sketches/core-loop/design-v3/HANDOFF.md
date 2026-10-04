@@ -29,7 +29,7 @@ Eighteen units merged plus four fix rounds and two coordinator commits; gate 3 a
 
 ### Open after wave 6
 
-- Plating retirement landing (branch wt/alpha-w6-f6 at 6677330, own gate running).
+- Plating retirement landed at 656fded (gate 2 green after one env timeout rerun).
 - Worlds two and three as real build tracks, per Andrew's ruling that the alpha is three worlds plus the final boss.
 - The field-note collection triggers: none is unlockable in play.
 - The hero relic and evolved toppers are still mapped to rare_plus.
