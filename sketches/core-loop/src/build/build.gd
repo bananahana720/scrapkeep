@@ -7,6 +7,7 @@ const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const Parts := preload("res://src/build/parts.gd")
+const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -48,6 +49,11 @@ const SHELL_AIR_FACTOR_SPRINT := 1.0
 # The resolved shell factor moved between two fitted values: `rose` is true above the base
 # factor (an inversion is live), false on the return to it. Presentation reads only this.
 signal shell_air_changed(factor: float, rose: bool)
+# The hot-wired Fit / Recycle choice (BUILD-SYSTEMS.md, Two hot-wired parts): offered once a
+# run, after Warden I; resolved by hotwire_fit() ("fit") or hotwire_recycle() ("recycle", with
+# the cogs paid). Build-local like shell_air_changed, not a bus fact.
+signal hotwire_offered(part_id: String, recycle: int)
+signal hotwire_resolved(part_id: String, choice: String, cogs: int)
 const PARTICIPANTS := ["player"]
 # The dash leaves frost this long, and drops a visible puff every few ticks of it.
 const FROST_TRAIL := 0.7
@@ -138,6 +144,19 @@ var _air_seen := 0.0
 var _sprint_seen := false
 # Likewise for kit.gliding (K5).
 var _glide_seen := false
+# The run's hot-wired offer: the part id, its state ("" none yet, "open", "fit", "recycle") and
+# whether Warden I has been broken this run (the offer comes once, whatever it held).
+var _hotwire_id := ""
+var _hotwire_state := ""
+var _hotwire_spent := false
+# Spark Tread: sim seconds left in the recovery, the frame and kind of the last activation
+# (one activation per attack), bonus strikes waiting for the physics step, and a count of
+# activations this run.
+var _tread_recovery := 0.0
+var _tread_frame := -1
+var _tread_kind := ""
+var _tread_hits: Array[Dictionary] = []
+var tread_fires := 0
 var _tesla_clock := 0.0
 var _pinwheel_clock := 0.0
 # Pinwheel cuts each enemy at most once per PINWHEEL_EVERY: instance id to time left.
@@ -208,6 +227,8 @@ func setup(ctx_ref) -> void:
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
 	_connect_triggers()
 	ctx.events.beacon_unsealed.connect(func(_stage: int): clock.warden_broken())
+	ctx.events.beacon_unsealed.connect(_on_warden_broken_hotwire)
+	ctx.events.enemy_struck.connect(_on_tread_struck)
 	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
 
 
@@ -573,6 +594,95 @@ func shell_scrap_per_hp() -> float:
 	return SHELL_SCRAP_PER_HP if shell_fitted() else RunState.SCRAP_PER_HP
 
 
+# ---- Hot-wired offer (unit V's Fit / Recycle) and Spark Tread (H2) ----
+
+# Warden I is the first Warden broken in a run. Its unseal offers the first part
+# Parts.hotwire_offer allows; later Wardens offer nothing (the stage-2 discovery offer is
+# authored elsewhere).
+func _on_warden_broken_hotwire(_stage: int) -> void:
+	if _hotwire_spent:
+		return
+	_hotwire_spent = true
+	var ids := Parts.hotwire_offer(ctx.run.armor_mode, ctx.run.parts)
+	if ids.is_empty():
+		return
+	_hotwire_id = ids[0]
+	_hotwire_state = "open"
+	hotwire_offered.emit(_hotwire_id, Parts.hotwire_recycle(_hotwire_id))
+
+
+# {part_id, state, recycle}; part_id "" when nothing was offered this run.
+func hotwire_pending() -> Dictionary:
+	return {"part_id": _hotwire_id, "state": _hotwire_state, "recycle": Parts.hotwire_recycle(_hotwire_id)}
+
+
+# Fit: the part becomes the held offer, standing as a striped gate the player rolls through
+# like any other; nothing is added to run.parts here. Open gates are put up again with it.
+func hotwire_fit() -> bool:
+	if _hotwire_state != "open":
+		return false
+	_hotwire_state = "fit"
+	if gates.is_open():
+		var ids: Array = gates.offers.map(func(offer): return offer["part_id"])
+		ids.append(_hotwire_id)
+		ctx.events.reward_offered.emit(gates.open(ids, ctx.player.ball_position(), _heading(), ctx.run.parts))
+	hotwire_resolved.emit(_hotwire_id, "fit", 0)
+	return true
+
+
+# Recycle: the offer pays its stated cogs once and is gone. Returns the cogs paid (0 when
+# there was nothing open to recycle).
+func hotwire_recycle() -> int:
+	if _hotwire_state != "open":
+		return 0
+	_hotwire_state = "recycle"
+	var cogs := Parts.hotwire_recycle(_hotwire_id)
+	ctx.run.add_cogs(cogs)
+	hotwire_resolved.emit(_hotwire_id, "recycle", cogs)
+	return cogs
+
+
+# The held hot-wired offer a gate opening adds after its rolled picks, until it is taken.
+func _hotwire_gate_ids() -> Array:
+	if _hotwire_state == "fit" and not _hotwire_id in ctx.run.parts:
+		return [_hotwire_id]
+	return []
+
+
+func tread_fitted() -> bool:
+	return ctx != null and ctx.run != null and ctx.tuning != null \
+		and HotwireRules.fitted(ctx.run.parts, ctx.tuning.option("hotwire_tread"))
+
+
+# A struck enemy: the first eligible attack after the recovery queues the bonus, and so does
+# every strike of that attack (same kind, same frame). Resolved in the physics step, never
+# inside combat's own strike.
+func _on_tread_struck(enemy: Node3D, kind: String, force: float) -> void:
+	if _own_strikes > 0 or not tread_fitted() or not is_instance_valid(enemy):
+		return
+	var frame := Engine.get_physics_frames()
+	if frame != _tread_frame or kind != _tread_kind:
+		var speed: float = ctx.player.planar_velocity().length()
+		if not HotwireRules.eligible(kind, _tread_recovery, speed, ctx.tuning.f("cruise"), ctx.run.mass):
+			return
+		_tread_frame = frame
+		_tread_kind = kind
+		_tread_recovery = HotwireRules.RECOVERY
+		tread_fires += 1
+	var punch: float = ctx.spawner.punch_of(kind, force) if ctx.spawner != null and ctx.spawner.has_method("punch_of") else force
+	_tread_hits.append({"enemy": enemy, "damage": HotwireRules.bonus_damage(punch)})
+
+
+func _step_tread(delta: float) -> void:
+	_tread_recovery = maxf(0.0, _tread_recovery - delta)
+	var hits := _tread_hits
+	_tread_hits = []
+	_own_strikes += 1
+	for hit in hits:
+		_strike(hit["enemy"], SYNERGY_KIND, hit["damage"])
+	_own_strikes -= 1
+
+
 # After sheet.apply has cleared and refilled the mods, so the penalty survives every recompute.
 func _apply_shell() -> void:
 	ctx.run.scrap_per_hp = shell_scrap_per_hp()
@@ -688,6 +798,13 @@ func _on_run_started(_class_id_value: String) -> void:
 	_mass_hp = 0.0
 	_shell_window = 0.0
 	_air_seen = 0.0
+	_hotwire_id = ""
+	_hotwire_state = ""
+	_hotwire_spent = false
+	_tread_recovery = 0.0
+	_tread_frame = -1
+	_tread_hits = []
+	tread_fires = 0
 	_discovered.clear()
 	_found.clear()
 	_refresh_seams()
@@ -780,6 +897,7 @@ func _on_flow_changed(state: String) -> void:
 	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
+	picks += _hotwire_gate_ids()
 	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))
 
 
@@ -904,7 +1022,9 @@ func _step_armor(ball: Vector3, delta: float) -> void:
 	run.ward_hook = effects.ward_floor_for
 	var grounded: bool = ctx.player.state.grounded and ctx.flow.state in [ctx.flow.STAGE, ctx.flow.BEACON, ctx.flow.GATES]
 	var planar: Vector3 = ctx.player.planar_velocity()
-	run.wear_step(delta, planar.length(), ctx.tuning.f("cruise"), grounded and not get_tree().paused and not shop.clock_paused())
+	# Spark Tread doubles ordinary wear by doubling the accrual, through the one wear path.
+	var wear_delta := delta * HotwireRules.wear_scale(tread_fitted())
+	run.wear_step(wear_delta, planar.length(), ctx.tuning.f("cruise"), grounded and not get_tree().paused and not shop.clock_paused())
 	# Seconds reversing toward a spill (an approximation): a spill is live and the ball
 	# is moving against the stage's entry heading, the route's forward direction.
 	if scrap.recovery_count() > 0 and planar.length() > 1.0 and planar.dot(ctx.terrain.entry_heading(run.stage)) < 0.0:
@@ -938,6 +1058,7 @@ func _physics_process(delta: float) -> void:
 		_glide_seen = gliding_now
 		if shell_fitted():
 			_refresh_air_mod()
+	_step_tread(delta)
 	_rod_budget = minf(ROD_PER_SECOND, _rod_budget + ROD_PER_SECOND * delta)
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
 	scrap.magnet_scale = sheet.magnet * effects.magnet_boost()
