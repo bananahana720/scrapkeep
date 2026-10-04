@@ -154,7 +154,9 @@ func _fight_checks() -> void:
 	_game.ctx.calm = true
 	_game.player.source = Intent.Scripted.new()
 	Harness.start_run(_game)
-	_game.flow.enter_stage(StageDefs.COUNT, Vector3(0.0, 0.0, 16.0), false)
+	# World one's last stage, not COUNT: since 254db18 (six-stage table, 2026-10-04) the
+	# run's last stage closes the Mind's world, and this check reads Brindle.
+	_game.flow.enter_stage(StageDefs.last_of(1), Vector3(0.0, 0.0, 16.0), false)
 	_game.flow._finish_stage()
 	var boss = _game.boss
 	# Repointed 2026-10-04 (F2a fix round): Brindle's health is posture chunks, so

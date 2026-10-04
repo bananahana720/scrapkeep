@@ -14,6 +14,10 @@ var _gained: Array = []
 var _done: Array = []
 var _prompts: Array = []
 var _facts: Array = []
+# Cogs the first-discovery burst paid (f4fb4c5, 2026-10-04: one cog per scrap unit). The
+# burst announces them on cogs_collected; the cache pays silently, so its payment is the
+# wallet change less these.
+var _burst_cogs := 0
 
 
 func _initialize() -> void:
@@ -71,6 +75,7 @@ func _run() -> void:
 	_game.events.activity_done.connect(func(id: String, _at: Vector3): _done.append(id))
 	_game.events.prompt_shown.connect(func(verb: String): _prompts.append(verb))
 	_game.events.world_fact.connect(func(kind: String, _at: Vector3): _facts.append(kind))
+	_game.events.cogs_collected.connect(func(amount: int, _total: int): _burst_cogs += amount)
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	var parked = _game.world.contraptions.get(2)
@@ -85,6 +90,10 @@ func _run() -> void:
 	_game.free()
 	print("reach_secret_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
+
+
+func _cache_cogs() -> int:
+	return _game.run.cogs - _burst_cogs
 
 
 func _cache(c) -> void:
@@ -110,13 +119,14 @@ func _cache(c) -> void:
 	_report("only own trigger opens", not v["open"] and not s.done and s.pickup == null and _gained.is_empty(),
 		"slow ram, remote ram, airborne ram and pedestal visit pay nothing")
 	var cogs_before: int = _game.run.cogs
+	_burst_cogs = 0
 	var parts_before: int = _game.run.parts.size()
 	await _tick(c, at, velocity)
 	var rolled: String = s.pickup_part
 	_report("cruise ram opens", v["open"] and s.done and s.pickup != null and _facts.has("valve_smashed")
 		and _facts.has("route_opened"), "wheel ram opens door and reveals cache pickup")
 	_report("real part waits", Parts.rows().has(rolled) and _game.ctx.stages.part_in_play(rolled)
-		and _game.run.parts.size() == parts_before and _game.run.cogs == cogs_before, "rolled %s, unpaid until collection" % rolled)
+		and _game.run.parts.size() == parts_before and _cache_cogs() == cogs_before, "rolled %s, unpaid until collection" % rolled)
 	_report("codex line", _game.codex.known(codex_id) and _game.codex.name_of(codex_id) == "Pressure keeps the change"
 		and _game.codex.entries("world").any(func(entry): return entry.id == codex_id and not entry.text.is_empty()), codex_id)
 	await _tick(c, s.pedestal + Vector3.UP, velocity)
@@ -126,14 +136,15 @@ func _cache(c) -> void:
 		"door sank below pocket floor")
 	await _tick(c, s.pedestal + Vector3.UP, velocity, 2)
 	_report("cache pays once", s.pickup_taken and s.pickup == null and _gained == [rolled]
-		and _game.run.parts.size() == parts_before + 1 and _game.run.cogs == cogs_before + Activities.PAY_SCRAP,
-		"one part, %d cogs" % Activities.PAY_SCRAP)
+		and _game.run.parts.size() == parts_before + 1 and _cache_cogs() == cogs_before + Activities.PAY_SCRAP,
+		"one part, %d cogs (burst paid %d apart)" % [Activities.PAY_SCRAP, _burst_cogs])
 	await _tick(c, at, velocity, 2)
 	await _tick(c, s.pedestal + Vector3.UP, velocity, 2)
 	_report("repeat trigger cannot repay", _gained == [rolled] and _done.count("cracked_cache") == 1
-		and _game.run.cogs == cogs_before + Activities.PAY_SCRAP, "one completion and one payment")
+		and _cache_cogs() == cogs_before + Activities.PAY_SCRAP, "one completion and one payment")
 	_report("no interaction prompt", not _prompts.has("interact"), str(_prompts))
 	_game.flow.retry_stage()
+	_burst_cogs = 0
 	await physics_frame
 	v = _secret(c)
 	s = v["cache_site"]
@@ -144,5 +155,5 @@ func _cache(c) -> void:
 	_report("retry repeats seeded pickup", s.pickup_part == rolled and s.pickup != null, s.pickup_part)
 	await _tick(c, at + Vector3.RIGHT * 12.0, Vector3.ZERO, 40)
 	await _tick(c, s.pedestal + Vector3.UP, velocity, 2)
-	_report("retry can pay once again", _gained == [rolled, rolled] and _game.run.cogs == cogs_before + Activities.PAY_SCRAP,
+	_report("retry can pay once again", _gained == [rolled, rolled] and _cache_cogs() == cogs_before + Activities.PAY_SCRAP,
 		"rewound attempt earns one fresh payment")
