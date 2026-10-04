@@ -69,3 +69,7 @@ const NODES := [
 	{"id": "k_nightfall", "name": "Nightfall", "effect": "Cloak holds while you roll fast", "key": "movement",
 		"icon": "ab_kest_cloak", "tags": ["stealth", "mobility"], "knob": {"cloak_hold_fast": true}},
 ]
+
+
+# Kest's world-one profile retains every node in the full tree's heap order.
+const NODES_WORLD_ONE := NODES

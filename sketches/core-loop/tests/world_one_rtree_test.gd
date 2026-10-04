@@ -481,7 +481,9 @@ func _flag_off() -> void:
 	var tree_ok := true
 	for i in UpgradeTree.nodes(CLASS).size():
 		tree_ok = tree_ok and UpgradeTree.nodes(CLASS, false)[i] == UpgradeTree.nodes(CLASS, true)[i]
-	_check("flag off tree is the base table", tree_ok and not UpgradeTree.WORLD_ONE_TABLES.has(CLASS), "Rivet has no world-one table")
+	# TR1 (2026-10-04): every pilot now declares NODES_WORLD_ONE, so Rivet has a table; the
+	# flag-off tree must still equal the base table.
+	_check("flag off tree is the base table", tree_ok and UpgradeTree.WORLD_ONE_TABLES.has(CLASS), "Rivet has a world-one table and the flag-off tree is unchanged")
 
 
 func _identities() -> void:

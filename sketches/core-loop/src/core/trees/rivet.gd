@@ -72,3 +72,7 @@ const NODES := [
 	{"id": "r_hammer_drop", "name": "Hammer Drop", "effect": "Skids end in an overdrive blast", "key": "smash",
 		"icon": "ab_rivet_smash", "tags": ["air", "burst"], "proc": [{"on": "skid_smashed", "do": "blast", "scale": 0.6, "gap": 1.0}]},
 ]
+
+
+# Rivet's world-one profile retains every node in the full tree's heap order.
+const NODES_WORLD_ONE := NODES
