@@ -119,7 +119,7 @@ func _walk() -> void:
 	for n in Waking.FLOOR_NAMES:
 		var named := false
 		for text in objectives.keys():
-			named = named or String(text).begins_with(n)
+			named = named or String(text).contains("%s floor" % n)
 		_t.check("objective named the %s floor" % n, named, str(objectives.keys()))
 
 	await _until(func(): return flow.state_name() != "boss")

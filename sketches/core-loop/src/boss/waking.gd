@@ -124,5 +124,5 @@ func music_state() -> Dictionary:
 
 func objective_text() -> String:
 	if state == FIGHT and floors != null:
-		return floors.objective()
+		return "%s, %s" % [String(_row().get("name", "The Waking")), floors.objective()]
 	return super()
