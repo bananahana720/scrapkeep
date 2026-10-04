@@ -6,7 +6,7 @@ const Palette := preload("res://src/core/palette.gd")
 # The world rescues (DESIGN-V3, pilots): a caged pilot on a map, freed by the player. The
 # map says where (StageMap.rescue_sites: id, at, quest), the cage is an ally-family device
 # in the interact system's hold consent, and finishing it emits rescue_completed(quest) on
-# the bus; achievements.gd earns the pilot's row from that fact. A quest is rescued once
+# the bus; the profile layer earns the pilot's row from that fact. A quest is rescued once
 # per run: a stage entry, so a retry, rebuilds an unfinished cage and keeps a freed one
 # open. A new run clears the record.
 
