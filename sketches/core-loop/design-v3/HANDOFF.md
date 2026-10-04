@@ -2,6 +2,71 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 9 landed (2026-10-04, aec5d2e)
+
+Fourteen units merged and one retired, plus fix rounds F and G and three coordinator commits. proto/alpha went 62a0dd4 to aec5d2e. Gate 1 had 6 reds; gate 2: 373 runs, 0 fail; Opus gate read PASS+NOTES.
+
+- enemy-burrower (9d8f68f, Sonnet): the world 2 burrower, hidden marker, lane burst and slam kill.
+- enemy-drill-crew (c810d17, Sonnet): a plated rig that bores where the ball will be.
+- enemy-lamp-swarm (4e7e27d, Sonnet): a lure bloom that bends a slow ball toward three lamps.
+- enemy-line-cutter (7632a48, Sonnet): a thrown disc that severs a hooked harpoon line.
+- enemy-anchor-crew (f0f1968, Sonnet): the deck winch.
+- enemy-kite-drone (30ebd02, Sonnet): hovers above the ball, marks and dives, bat at cruise.
+- table-swap-first-zones (f14bd6e, Sonnet): stages 3 and 5 move onto the Dig and Highdraft maps.
+- placeholder-release-gate (171bf12, Sonnet): release gate for placeholder stage rows.
+- breach-system (0b03d69, Opus): Dig breach plates break on a slam landing.
+- highdraft-lift-specs (31069b7, Opus): the Lift as data, with a headless lift test.
+- warden-family-variants (d04c692, Opus): stage-row warden_variant reaches the Warden.
+- nightly-alpha-table (66d1631, Sol): fake-fixture receipt passes; smash row ungated without baseline, watch rows do not block.
+- enemy-codex-and-sounds (0458c2a, Sol): codex entries and warn cues for the six world-two and world-three enemies.
+- w23-bot-seed-run (Sol): retired, not written; the wave 8 Sol bot unit (f73dc8e) covered it.
+- Fix round F (9a14cef, Sonnet): five tests updated for Dig, Highdraft and the six new enemies.
+- Fix round G (c827108, Opus): re-pin posture_bands_test and refresh the picked-cell sweep row.
+- Coordinator: f9372c3 world-one hill/kit/ring checks apply to world-one rows only; 171b3c5 chain-guard patch (delta of cand/alpha-w8 14be04a..48e4e74, Opus fix of the Sol bot unit); DETECTOR_PENDING list in codex_entries.gd plus the combat_codex_test skip (inside 0458c2a).
+
+### Gate story
+
+Gate 1 reds and causes: build_gate_props (index 2 on fewer than 3 gate slots: test); side_content_roster and activities (Dig and Highdraft greybox lack side content: SIDE_CONTENT_PENDING skip, wave 10 map units own its removal); threat_sites (six new enemy files plus the warden slag LANE: pin); bot_run_end (189 s over the 180 s cap under load: one seed child per world); posture_bands (bot_driver changes moved the medians: picked cell re-swept, small 73.75 to 82.4, grown 24.66 to 39.2, bands unchanged; full 16-cell sweep owed to wave 10 posture-sweep-full).
+
+### Rulings (docs/decisions.tsv)
+
+- world_stages_test's landing hill, momentum kit and event-ring checks are world one's grammar; worlds 2 and 3 pin their own via zone tests.
+- Greybox zones may be non-placeholder rows while SIDE_CONTENT_PENDING names them; the release gate must read the pending lists before export.
+- Codex entries may ship with DETECTOR_PENDING until wave 10; the gate must fail on a non-empty list at release.
+- bot_run_end_test runs one seed child per world in the gate; the nightly matrix is the breadth.
+- Posture bands: the fight did not change, the bot did; re-pin accepted, full sweep owed; a grown-ball median near 43 s would fail the 2x band (owner's eye).
+- The haul-guard input erasure stays on for skipper and camper everywhere and for every policy in a boss fight; the completionist chain hand is exempt outside boss fights.
+- The Meltdown slag lane needs its own telegraph and attack phase; the lamp_swarm lure must gate hit_player on the committed wave's contains().
+- w23-bot-seed-run retired.
+
+### Open after wave 9
+
+Wave 10 is in flight from aec5d2e (thirteen units): waking-fight, mind-fight, w2-dig-deep-map, w3-highdraft-crown-map, breach-attack-and-cue, enemy-codex-detectors (Opus); w2-dig-rescue, tree-depth-by-world, meltdown-slag-telegraph, release-gate-pending-lists (Sonnet); bot-breach-and-lift, alpha-bot-sweep-default, posture-sweep-full (Sol).
+
+Owed:
+
+- The full 16-cell posture sweep (posture-sweep-full).
+- The release gate reading the pending lists (SIDE_CONTENT_PENDING, DETECTOR_PENDING) before export (release-gate-pending-lists).
+- Detectors for the six new enemies' codex entries (enemy-codex-detectors).
+- The Meltdown slag telegraph and attack phase (meltdown-slag-telegraph).
+- The lamp swarm lure gating hit_player on the committed wave's contains() (inside enemy-codex-detectors).
+
+### Hands checklist (never blocks; carry forward)
+
+1. Play the title to RUN COMPLETE across three worlds.
+2. Music in fights.
+3. Cog versus mass glyph read.
+4. Hot-wire cues by ear.
+5. Physical gamepad.
+6. Cold launch of the exported Linux build.
+7. The Dig and Highdraft greybox feel: floor drops, barge carries, thermals.
+
+### Lessons for briefs
+
+- A test that pins world-one map grammar must key on the row's world, not "every non-opening stage".
+- When a bot driver changes, the posture sweep pins move: rerun the picked cell before the gate, not after.
+- A unit brief written before its base's fix round should say the base is "candidate after fix round", and the writer re-reads cited lines.
+
 ## Wave 8 landed (2026-10-04, aa1b56e)
 
 Nine units merged, one held, plus fix round A. Gate 1 at aa1b56e: 360 pass, 0 fail; eight adversarial verifiers PASS+NOTES, no fence breach.
