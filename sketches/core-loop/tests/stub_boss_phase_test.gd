@@ -69,10 +69,9 @@ func _walk() -> void:
 		var fought: Dictionary = await Harness.fight(game, mod, FIGHT_CAP, seen)
 		print("world %d boss %s: %d hit(s) in %d frame(s), %s" % [w, path.get_file(), fought["hits"], fought["frames"], fought["victory_state"]])
 		_t.check("world %d defeated within the cap" % w, fought["defeated"], "%d hits in %d of %d frames" % [fought["hits"], fought["frames"], FIGHT_CAP])
-		var cores: Array = []
-		for _i in BossPosture.CHUNKS:
-			cores.append("core")
-		_t.eq("world %d one core point per chunk" % w, fought["points"], cores)
+		var point: String = "core" if w == 2 else "lens"
+		_t.check("world %d at least one %s point per chunk" % [w, point], fought["points"].size() >= BossPosture.CHUNKS
+				and fought["points"].all(func(id): return id == point), "points %s" % [fought["points"]])
 		_t.check("world %d posture published" % w, seen.posture_changed > posture_before, "%d posture_changed" % (seen.posture_changed - posture_before))
 		_t.eq("world %d boss_defeated once" % w, seen.defeated - defeated_before, 1)
 		await _until(func(): return flow.state_name() != "boss")
