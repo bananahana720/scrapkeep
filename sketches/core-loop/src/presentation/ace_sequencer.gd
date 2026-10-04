@@ -1,5 +1,7 @@
 extends RefCounted
 
+const MusicRows := preload("res://src/presentation/music_rows.gd")
+
 # The ACE band for Spillway (design-v3 ACE-MUSIC-SYSTEM; the runtime rules proven by the
 # POC sequencer, core-loop-v3-seq 43453ab). ACE-Step performed the music; this plays its
 # Demucs stems (drums, bass, other) from the clips tools/ace/package_music.py cut, and
@@ -27,7 +29,7 @@ const RATE := 44100
 const LEAD_IN := 2
 const GEN_LEAD := 130
 const QUEUE_TARGET := 3072
-const MANIFEST := "res://assets/music_ace/spillway/manifest.json"
+const MANIFEST: String = MusicRows.ROWS["1-1"]["ace_manifest"]
 const BREATHS := ["raw", "hard", "gentle"]
 # The render head goes quiet over this many frames when a contact starts the gap.
 const GAP_RAMP := 96
@@ -114,20 +116,18 @@ var _serial := 0
 # music_ace/ folder beside the executable (an exported game keeps res:// inside its pack,
 # so the stems ship beside it, scripts/sketch-export.mjs). "" when neither exists.
 static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
-	var source := ProjectSettings.globalize_path(manifest_path)
-	if FileAccess.file_exists(source):
-		return source
-	var prefix := "res://assets/music_ace/"
-	if manifest_path.begins_with(prefix):
-		var base := sidecar_dir if sidecar_dir != "" else OS.get_executable_path().get_base_dir()
-		var sidecar := base.path_join("music_ace").path_join(manifest_path.trim_prefix(prefix))
-		if FileAccess.file_exists(sidecar):
-			return sidecar
-	return ""
+	return MusicRows.resolve_manifest(manifest_path, sidecar_dir)
+
+
+static func from_stage(stage = "default", sidecar_dir := "") -> RefCounted:
+	var pack := MusicRows.resolve(stage, sidecar_dir)
+	return load("res://src/presentation/ace_sequencer.gd").new(pack["ace_manifest"], sidecar_dir)
 
 
 func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 	rate_scale = AudioServer.get_mix_rate() / float(RATE)
+	if manifest_path == "":
+		return
 	var path := resolve_manifest(manifest_path, sidecar_dir)
 	if path == "":
 		missing = ProjectSettings.globalize_path(manifest_path)
