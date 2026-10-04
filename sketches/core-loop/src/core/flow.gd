@@ -503,12 +503,14 @@ func _rescue_in_arena(ball: Vector3) -> void:
 
 
 # The treasure burst for a first discovery in a run: scrap at the spot, which feeds
-# heft, so exploring feeds growth (DEMO-SPEC). The codex calls it once per entry per run.
+# heft, so exploring feeds growth (DEMO-SPEC), and the same amount in cogs, one per scrap
+# unit as kills and activities pay. The codex calls it once per entry per run.
 const BURST_PER_STAGE := 20
 
 
 func discovery_burst(at: Vector3) -> void:
 	ctx.run.add_scrap(BURST_PER_STAGE * ctx.run.stage, at)
+	ctx.run.add_cogs(BURST_PER_STAGE * ctx.run.stage)
 
 
 func can_replay_final_stage() -> bool:
