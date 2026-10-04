@@ -436,8 +436,11 @@ func _default_table() -> void:
 	await _boot("")
 	await _frames(3)
 	var maps: Array = _game.ctx.terrain.maps
-	var counts: Array = maps.map(func(m): return m.activity_sites.size() if "activity_sites" in m else 0)
-	_t.check("the default alpha maps carry their authored activity sites", counts == [1, 4], "sites per stage %s" % [counts])
+	var counts := []
+	for i in maps.size():
+		if not String(_game.ctx.stages.DEFS[i]["name"]).contains("placeholder"):
+			counts.append(maps[i].activity_sites.size() if "activity_sites" in maps[i] else 0)
+	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4], "sites per authored stage %s" % [counts])
 	_t.eq("Spillway stands its one enemy camp site", _game.world.activities.sites.size(), 1)
 	_t.eq("its four Spillway devices stand (three plus the rescue cage, META-3 2026-10-04)", _game.world.interact.devices.size(), 4)
 	_game.free()

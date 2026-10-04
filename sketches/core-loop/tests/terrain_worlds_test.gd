@@ -76,9 +76,11 @@ func _one_world(table, label: String) -> void:
 	var terrain := Terrain.new(table)
 	terrain.build(world)
 	_t.eq("%s: one map object per row" % label, terrain.maps.size(), table.DEFS.size())
+	var first_world := int(table.DEFS[0].get("world", 1))
 	for i in table.DEFS.size():
-		_t.check("%s: stage %d built at setup" % [label, i + 1], terrain.is_built(i + 1))
 		var row: Dictionary = table.DEFS[i]
+		var eager := int(row.get("world", 1)) == first_world
+		_t.check("%s: stage %d built at setup is %s" % [label, i + 1, eager], terrain.is_built(i + 1) == eager)
 		var want = {"spillway": "map_spillway", "gorge": "map_gorge", "reach": "map_reach"}[row["map"]]
 		_t.check("%s: map %d is %s in table order" % [label, i + 1, want], String(terrain.maps[i].get_script().resource_path).ends_with(want + ".gd"))
 	world.free()

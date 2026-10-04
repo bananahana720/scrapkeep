@@ -41,6 +41,12 @@ const AUDIT := {
 	"res://src/combat/swarm_remnant.gd": ["LANE"],
 	"res://src/combat/mind_hand.gd": ["LANE"],
 	"res://src/combat/bola_thrower.gd": ["PROJECTILE"],
+	# alpha w7 Mind: build() lays each descriptor's own type; DESCRIPTORS audits where it is named.
+	"res://src/boss/mind_attacks.gd": ["descriptor", "descriptor", "descriptor"],
+}
+# Descriptor-built hazards: file -> the type each _base( descriptor names, in source order.
+const DESCRIPTORS := {
+	"res://src/boss/mind_attacks.gd": ["INSTANT", "WAVE", "LANE"],
 }
 const FACTORIES := {
 	"res://src/combat/telegraph.gd": ["ring", "lane", "wedge"],
@@ -121,6 +127,9 @@ func _check_sources() -> void:
 				if hit.get_string(2) == "wave":
 					(found.get_or_add(path, []) as Array).append("WAVE")
 					continue
+				if line.contains("d[\"type\"]"):
+					(found.get_or_add(path, []) as Array).append("descriptor")
+					continue
 				var tag := named.search(line.substr(hit.get_end()))
 				(found.get_or_add(path, []) as Array).append(tag.get_string(1) if tag != null and tag.get_string(1) != "" else ("threat_type" if tag != null else "none (%s:%d)" % [file, i + 1]))
 	var sites := 0
@@ -128,6 +137,16 @@ func _check_sources() -> void:
 		sites += (found[path] as Array).size()
 	_report("explicit type at every site", _same(found, AUDIT),
 		"%d creation sites in combat and boss, each naming its type: %s" % [sites, found])
+	var described := {}
+	for path in DESCRIPTORS:
+		for line in FileAccess.get_file_as_string(path).split("\n"):
+			line = line.strip_edges()
+			if line.begins_with("static func ") or line.begins_with("func ") or not line.contains("_base("):
+				continue
+			var tag := named.search(line)
+			(described.get_or_add(path, []) as Array).append(tag.get_string(1) if tag != null and tag.get_string(1) != "" else "none")
+	_report("explicit type in every descriptor", _same(described, DESCRIPTORS),
+		"each hazard descriptor names its type: %s" % [described])
 
 
 func _check_factories() -> void:
