@@ -32,6 +32,7 @@ const ROWS := {
 	"flow_changed": {"group": "flow", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"world_entered": {"group": "flow", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"achievement_earned": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"rescue_completed": {"group": "flow", "color": Palette.AMBER, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"stage_entered": {"group": "flow", "color": Palette.SAND, "shape": "chevron", "sound": "stinger_stage", "hud": "Stage {stage}", "objective": "Break the Warden at the beacon ({distance} m). Punch {punch} / plating {plating}. {hint}", "priority": 3},
 	"stage_cleared": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_clear", "hud": "Stage {stage} clear", "objective": "", "priority": 3},
 	"run_ended": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_run_end", "hud": "Run complete", "objective": "", "priority": 3},
@@ -165,7 +166,7 @@ const ROWS := {
 
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list.
-const GRAMMAR_SIGNALS := ["world_entered", "achievement_earned", "prompt_shown"]
+const GRAMMAR_SIGNALS := ["world_entered", "achievement_earned", "prompt_shown", "rescue_completed"]
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,

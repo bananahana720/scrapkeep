@@ -63,9 +63,10 @@ func _rows() -> void:
 			and AbilityState.ABILITIES.has(def.special_id) and AbilityState.ABILITIES.has(def.smash_id)
 		colours[def.color.to_html()] = true
 	var motifs := rows.map(func(d): return d.motif)
-	_report("three rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster"] and complete and colours.size() == 3 \
-			and motifs == ["sable", "rivet", "kest"],
-		"classes %s, every field set, shapes from the event vocabulary, three colours, none HAZARD, motif ids %s" % [ids, motifs])
+	# Tarn (wave 5) is the fourth row, a placeholder on Rivet's motif and ability shell, in its own colour.
+	_report("four rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn"] and complete and colours.size() == 4 \
+			and motifs == ["sable", "rivet", "kest", "rivet"],
+		"classes %s, every field set, shapes from the event vocabulary, four colours, none HAZARD, motif ids %s" % [ids, motifs])
 	var one_source := EventKinds.color("vault_kicked") == ClassDef.SABLE_COLOR \
 		and EventKinds.color("sprint_started") == ClassDef.RIVET_COLOR and EventKinds.color("sticky_detonated") == ClassDef.KEST_COLOR
 	_report("one colour source", one_source and Weapons.color(Weapons.RAPID_LASER) == ClassDef.RIVET_COLOR \

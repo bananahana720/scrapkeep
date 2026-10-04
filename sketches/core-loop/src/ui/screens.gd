@@ -233,10 +233,9 @@ func achievements_page():
 	return _achievements
 
 
-# The words on a locked pilot's card: what unlocks it, from the achievement row.
+# The words on a locked pilot's card: the pilot's reward row text and lifetime count.
 func _unlock_hint(def) -> String:
-	var id := Achievements.for_pilot(def.id)
-	return "Unlock: %s" % Achievements.row(id)["text"] if id != "" else ""
+	return ClassCard.unlock_hint(def, game.progress)
 
 
 # With --music=ace the title's B cycles the Warden open's held breath; the button

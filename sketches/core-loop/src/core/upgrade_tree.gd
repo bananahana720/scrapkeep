@@ -31,9 +31,10 @@ const SIZE := 30
 # workshop after stage 1. Deeper nodes stay in the data and are never offered.
 const WORLD_ONE_DEPTHS := 2
 const WORLD_ONE_SIZE := 6
-const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES}
+const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES,
+	"tarn": Rivet.NODES}  # placeholder: Tarn borrows Rivet's tree until the claw kit lands
 # Each pilot declares NODES_WORLD_ONE in the same heap order as its full tree.
-const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest}
+const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Rivet}
 const KEYS := ["weapon", "movement", "special", "smash"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.

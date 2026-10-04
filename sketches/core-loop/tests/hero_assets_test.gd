@@ -279,6 +279,9 @@ func _check_stub() -> void:
 			"shell fitted: core under the rolling mesh, pod on the juice node, placeholder hidden")
 		var accent := _accent_color(pod)
 		_report("stub " + def.id + " accent", accent.is_equal_approx(def.color), "class_accent wears the class row colour")
+	# The vane check below is Kest's, so end the loop on Kest whatever order the roster ends in.
+	stub.class_def = ClassDef.by_id("demolitions_caster")
+	hook._process(0.016)
 	var resting_gyro: Node3D = hook.shell_of(stub)["pod"].get_node("Gyro")
 	var resting_basis := resting_gyro.basis
 	hook._process(0.5)

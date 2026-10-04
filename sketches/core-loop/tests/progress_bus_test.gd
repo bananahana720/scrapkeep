@@ -5,6 +5,7 @@ const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The achievement listener on a real Game bus: a row's trigger fact earns it once, the
@@ -33,6 +34,7 @@ func _physics_process(_delta: float) -> bool:
 	_p2()
 	_p3()
 	_p4()
+	_p5()
 	_game.queue_free()
 	quit(_t.verdict())
 	return true
@@ -183,4 +185,31 @@ func _p4() -> void:
 	_t.eq("P1-4 warns once", progress.warnings, 1)
 	_t.eq("P1-4 still emits", _earned, ["warden_broken"])
 	_t.check("P1-4 nothing on disk", not FileAccess.file_exists(path), "no file written")
+	progress.free()
+
+
+# Pilot rewards on the real table: Brindle's kill unlocks Tarn once and it survives a
+# reload; rescue_completed("rivet") earns rivet_rescued once, "dig" only dig_rescued.
+func _p5() -> void:
+	_t.eq("P5 table validates", Achievements.validate(Achievements.ROWS, Achievements.bus_signals(), ClassDef.all().map(func(d): return d.id), Cosmetics.ids()), [])
+	var path := _path()
+	var profile := _profile(path)
+	var progress := _progress(profile)
+	_begin()
+	_collect()
+	_game.events.enemy_killed.emit("brindle", Vector3.ZERO, 0)
+	_game.events.enemy_killed.emit("brindle", Vector3.ZERO, 0)
+	_t.eq("P5 brindle_routed earned once", _earned.count("brindle_routed"), 1)
+	_t.check("P5 tarn unlocked in the profile", profile.has_pilot("tarn"), "has_pilot tarn")
+	_t.check("P5 no cosmetic from brindle_routed", not profile.has_cosmetic("paint_kest_dusk"), "paint_kest_dusk")
+	_t.check("P5 tarn survives save and reload", _profile(path).has_pilot("tarn"), "second Profile reads tarn")
+	_collect()
+	_game.events.rescue_completed.emit("dig")
+	_t.eq("P5 dig earns only dig_rescued", _earned, ["dig_rescued"])
+	_t.check("P5 dig does not unlock Rivet", not profile.has_pilot("runner_gunner"), "runner_gunner")
+	_collect()
+	_game.events.rescue_completed.emit("rivet")
+	_game.events.rescue_completed.emit("rivet")
+	_t.eq("P5 rivet earns rivet_rescued once", _earned, ["rivet_rescued"])
+	_t.check("P5 Rivet unlocked", profile.has_pilot("runner_gunner"), "runner_gunner")
 	progress.free()

@@ -109,8 +109,14 @@ func _initialize() -> void:
 func _class_cues() -> void:
 	var heard: Array = []
 	var ok := true
+	var seen := {}
 	for def in ClassDef.all():
 		var motif: String = def.motif
+		# Tarn borrows Rivet's motif (wave 5 placeholder); the Mind's quote has a 600 ms
+		# repeat guard, so a shared motif is heard once, by its first pilot.
+		if seen.has(motif):
+			continue
+		seen[motif] = true
 		_events.run_started.emit(def.id)
 		var band: String = _audio.engine.class_motif
 		_events.gauge_released.emit(def.special_id, 1.0)

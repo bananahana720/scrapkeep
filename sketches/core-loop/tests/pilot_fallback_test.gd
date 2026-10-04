@@ -10,7 +10,7 @@ const ClassKit := preload("res://src/ui/class_kit.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const T := preload("res://tests/support/t.gd")
 
-# A pilot row the per-pilot tables do not know (T0). The probe is Rivet's row under a
+# A pilot row the per-pilot tables do not know (T0; fifth since Tarn joined, wave 5). The probe is Rivet's row under a
 # new id, name and motif; it joins flow.classes here and never ClassDef.all(). The run
 # selects it from class select, plays stage 1 to the Warden's break and the reward, and
 # opens the workshop. The ability bar, the tree pick, the class card row, sound and music
@@ -52,7 +52,7 @@ func _run() -> void:
 	while _game.flow == null:
 		await physics_frame
 	var probe := probe_row()
-	_t.check("probe stays out of the roster", ClassDef.all().size() == 3 and ClassDef.by_id(PROBE_ID) == null,
+	_t.check("probe stays out of the roster", ClassDef.all().size() == 4 and ClassDef.by_id(PROBE_ID) == null,
 		"ClassDef.all() holds %d rows and does not know %s" % [ClassDef.all().size(), PROBE_ID])
 	var flow = _game.flow
 	_ws = _game.get_node("Workshop")
@@ -64,10 +64,10 @@ func _run() -> void:
 	_game.events.reward_chosen.connect(func(part_id: String): _chosen = part_id)
 	flow.classes.append(probe)
 	flow.press_start()
-	_t.check("class select lists four", flow.state_name() == "class_select" and flow.classes.size() == 4,
+	_t.check("class select lists five", flow.state_name() == "class_select" and flow.classes.size() == 5,
 		"state %s, %d classes" % [flow.state_name(), flow.classes.size()])
 	await _frames(2)
-	flow.choose_class(3)
+	flow.choose_class(flow.classes.size() - 1)
 	# The ball fits its kit from ClassDef.by_id on run_started (player_ball.gd), which does
 	# not know the probe; a real pilot is in ClassDef.all(), so the test fits it by hand.
 	_game.player.fit_class(probe)

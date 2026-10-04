@@ -13,6 +13,7 @@ const Palette := preload("res://src/core/palette.gd")
 const SABLE_COLOR := Palette.ARC
 const RIVET_COLOR := Palette.COPPER
 const KEST_COLOR := Palette.AMBER
+const TARN_COLOR := Palette.RUST
 
 @export var id := ""
 @export var display_name := ""
@@ -34,8 +35,8 @@ const KEST_COLOR := Palette.AMBER
 @export var sound := ""
 @export var bible_home := ""
 @export var synergy_hooks: PackedStringArray = []
-# Playable from a fresh profile. All three pilots are starters for now: a pilot is locked only
-# once an achievement row rewards it (Rivet's lands with world one's content).
+# Playable from a fresh profile. Sable is the only starter; every other pilot is named by one
+# achievement row's pilot reward (achievements.gd).
 @export var starter := false
 
 
@@ -59,13 +60,22 @@ static func all() -> Array[Resource]:
 			"weapon_id": "rapid_laser", "movement_id": "overdrive_sprint", "special_id": "overdrive_blast", "smash_id": "shockwave_skid",
 			"color": RIVET_COLOR, "shape": "chevron", "motif": "rivet", "sound": "boost_whoosh",
 			"bible_home": "Rivet, precision and controlled corridors",
-			"starter": true, "synergy_hooks": PackedStringArray(["on_sprint_start", "on_blast_release", "on_cc_ignored"])}),
+			"starter": false, "synergy_hooks": PackedStringArray(["on_sprint_start", "on_blast_release", "on_cc_ignored"])}),
 		make({"id": "demolitions_caster", "display_name": "Kest", "role": "Demolitions caster", "species": "bird",
 			"pitch": "Vanish in your own smoke, then drop a line of fire where they least expect it.",
 			"weapon_id": "sticky_charge", "movement_id": "smoke_blink", "special_id": "detonation_line", "smash_id": "demo_slam",
 			"color": KEST_COLOR, "shape": "burst", "motif": "kest", "sound": "slam_boom",
 			"bible_home": "Fuse, directed casting and local pressure",
-			"starter": true, "synergy_hooks": PackedStringArray(["on_cloak_crit", "on_rocket_jump", "on_chain_detonation"])}),
+			"starter": false, "synergy_hooks": PackedStringArray(["on_cloak_crit", "on_rocket_jump", "on_chain_detonation"])}),
+		# PLACEHOLDER (alpha wave 5): Tarn's articulated-claw kit is not built. The row borrows
+		# Rivet's accepted kit shell (abilities, shape, sound) under its own name and colour
+		# until the claw kit lands; it is locked behind Brindle (achievements.gd).
+		make({"id": "tarn", "display_name": "Tarn", "role": "Claw bruiser (placeholder kit)", "species": "badger",
+			"pitch": "Placeholder kit on Rivet's shell. The claw arrives later.",
+			"weapon_id": "rapid_laser", "movement_id": "overdrive_sprint", "special_id": "overdrive_blast", "smash_id": "shockwave_skid",
+			"color": TARN_COLOR, "shape": "chevron", "motif": "rivet", "sound": "boost_whoosh",
+			"bible_home": "Tarn, articulated claw melee (placeholder shell)",
+			"starter": false, "synergy_hooks": PackedStringArray(["on_sprint_start", "on_blast_release", "on_cc_ignored"])}),
 	]
 	return list
 

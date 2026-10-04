@@ -46,11 +46,12 @@ const FANTASY := {
 	"pylon_engineer": "Plant a beachhead, launch like a cannonball.",
 	"runner_gunner": "Unstoppable sprinter. Crowd control is fuel.",
 	"demolitions_caster": "Vanish in smoke. Drop a line of fire.",
+	"tarn": "Claw kit coming. Rivet's sprint stands in.",  # placeholder
 }
 
 # 1 to 3: how many things the pilot juggles. Rivet holds sprint and fires; Kest times
 # charges against a detonation line; Sable hooks, plants, mounts and slingshots.
-const DIFFICULTY := {"pylon_engineer": 3, "runner_gunner": 1, "demolitions_caster": 2}
+const DIFFICULTY := {"pylon_engineer": 3, "runner_gunner": 1, "demolitions_caster": 2, "tarn": 1}
 const DIFFICULTY_MAX := 3
 
 

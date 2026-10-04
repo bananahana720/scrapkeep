@@ -18,7 +18,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 const LOOP := 3.6
 # The loop phase each card holds at rest: the key art's moment.
-const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64}
+const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64, "tarn": 0.3}
 const BOB := 0.08
 const REST_SPIN := 2.5
 # How far the resting pilot turns from its heading toward the camera.
@@ -193,7 +193,7 @@ func _build_props() -> void:
 			for i in 3:
 				_prop("trail%d" % i, _torus(0.5, 0.62), def.color, 1.4)
 				_prop("dust%d" % i, _sphere(0.5), Palette.SAND, 0.0)
-		"runner_gunner":
+		"runner_gunner", "tarn":
 			for i in 3:
 				var box := BoxMesh.new()
 				box.size = Vector3(0.9, 1.2, 0.9)
@@ -246,7 +246,7 @@ func _pose(t: float) -> void:
 	match def.id:
 		"pylon_engineer":
 			_sable(t)
-		"runner_gunner":
+		"runner_gunner", "tarn":
 			_rivet(t)
 		"demolitions_caster":
 			_kest(t)
