@@ -113,6 +113,8 @@ var storage_dir := "user://"
 var records_written := 0
 
 var _record := {}
+var _fight_open := false
+var _smash_base := -1.0
 var _stages := {}
 var _in_arena := false
 var _phase := 0
@@ -145,6 +147,7 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	events.boss_phase_changed.connect(_on_boss_phase)
 	events.stage_content_cleared.connect(_on_stage_content_cleared)
 	events.line_state_changed.connect(_on_line_state)
+	events.enemy_struck.connect(_on_enemy_struck)
 	events.verb_failed.connect(_on_verb_failed)
 	events.pack_arrived.connect(_on_pack_arrived)
 	events.prompt_shown.connect(_on_prompt_shown)
@@ -161,7 +164,9 @@ func _on_run_started(class_id: String) -> void:
 	_posture_open = {}
 	_record = {"run_id": run.run_id, "class": class_id, "table": _table_id(), "outcome": "running", "brindle_phase_reached": null,
 		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0,
-		"chains": [], "best_combo": 0, "misses": 0}
+		"chains": [], "best_combo": 0, "misses": 0, "smash_damage": 0.0, "smash_damage_by_fight": []}
+	_fight_open = false
+	_smash_base = -1.0
 	_traversal = null
 	_measuring = false
 	_stage_clock = -1.0
@@ -235,6 +240,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 func _on_warden_engaged(stage: int) -> void:
 	var row := _stage(stage)
 	row["ticks_to_warden_engaged"] = _ticks()
+	_open_fight()
 	row["mass_at_engage"] = run.mass
 	row["heft_at_engage"] = run.heft()
 	row["heft_class_at_engage"] = run.heft_class()
@@ -257,6 +263,40 @@ func _on_event_started(id: String) -> void:
 		_stage_list("events_joined").append(id)
 
 
+# Smash damage (HOOK-CHAIN.md measurement line). A smash landing's contact strike and its
+# shockwave publish enemy_struck while player.smash_landing is set, and smash_lands follows
+# once they are done. The first such strike marks combat's delivered-damage ledger total
+# (run meta, read-only; its hit is recorded after the emit); smash_lands takes the
+# difference. A fight is the span from warden_engaged (or the arena's entry) to the next
+# stage_cleared or death; a smash outside one counts in the run total only.
+func _on_enemy_struck(_enemy: Node3D, _kind: String, _force: float) -> void:
+	if _record.is_empty() or _smash_base >= 0.0 or player == null or player.get("smash_landing") == null:
+		return
+	_smash_base = _ledger_total()
+
+
+func _on_smash_lands() -> void:
+	if _smash_base < 0.0:
+		return
+	var dealt := maxf(0.0, _ledger_total() - _smash_base)
+	_smash_base = -1.0
+	_record["smash_damage"] = float(_record["smash_damage"]) + dealt
+	if _fight_open:
+		var fights: Array = _record["smash_damage_by_fight"]
+		fights[fights.size() - 1] = float(fights.back()) + dealt
+
+
+func _ledger_total() -> float:
+	return float((run.get_meta("delivered_damage", {}) as Dictionary).get("total", 0.0))
+
+
+func _open_fight() -> void:
+	if _record.is_empty():
+		return
+	_fight_open = true
+	(_record["smash_damage_by_fight"] as Array).append(0.0)
+
+
 func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String) -> void:
 	if _record.is_empty():
 		return
@@ -269,6 +309,7 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String)
 			_record["bites"] += 1
 		"smash_lands":
 			_record["smashes"] += 1
+			_on_smash_lands()
 		"broke":
 			_count_in("breaks", cause if cause != "" else UNKNOWN_CAUSE)
 
@@ -353,6 +394,7 @@ func _close_posture(stage: int) -> void:
 
 
 func _on_stage_cleared(stage: int) -> void:
+	_fight_open = false
 	_close_posture(stage)
 	var row := _stage(stage)
 	row["heft_at_exit"] = run.heft()
@@ -368,6 +410,7 @@ func _on_event_ended(id: String, outcome: String) -> void:
 # A death in the arena goes in the arena's own record, on the arena's clock and the
 # run's, with Brindle's phase; the stage rows keep only deaths on their own maps.
 func _on_player_died() -> void:
+	_fight_open = false
 	var at: Vector3 = player.ball_position()
 	var death := {"x": at.x, "y": at.y, "z": at.z, "ticks": _ticks()}
 	if _in_arena:
@@ -385,6 +428,7 @@ func _on_stage_content_cleared(reason: String) -> void:
 	_in_arena = true
 	_dirty = true
 	_phase = 0
+	_open_fight()
 	if not _record.has("arena"):
 		_record["arena"] = {"entries": 0, "deaths": []}
 	_record["arena"]["entries"] += 1
