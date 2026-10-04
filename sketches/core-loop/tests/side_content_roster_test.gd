@@ -14,6 +14,9 @@ const PENDING := {
 		"missing": ["combat challenge", "contraption or cache secret"]},
 }
 const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal"]
+# 2026-10-04 (wave 9): the Dig and Highdraft are greybox zones that get their side content in
+# wave 10 (the deep-Dig and Highdraft-crown map units remove them from this list).
+const SIDE_CONTENT_PENDING := ["dig", "highdraft"]
 var _game
 var _failures := 0
 
@@ -80,6 +83,10 @@ func _run() -> void:
 		seen.append(key)
 		var map = _game.ctx.terrain.map_for(stage)
 		var errors := _errors(map)
+		if SIDE_CONTENT_PENDING.has(String(row["map"])):
+			# 2026-10-04 (wave 9): greybox zone, its side content lands in wave 10.
+			print("[skip %s: %s] greybox map %s; side content pending wave 10" % [key, row["name"], row["map"]])
+			continue
 		if String(row["name"]).contains("placeholder"):
 			print("[skip %s: %s] placeholder row on a reused map; no authored side content yet" % [key, row["name"]])
 			continue

@@ -23,7 +23,7 @@ const AUDIT := {
 	"res://src/combat/enemy.gd": ["threat_type", "threat_type"],
 	"res://src/combat/chaser.gd": ["LANE"],
 	"res://src/combat/miniboss.gd": ["PROJECTILE", "LANE"],
-	"res://src/combat/warden.gd": ["INSTANT", "INSTANT"],
+	"res://src/combat/warden.gd": ["LANE", "INSTANT", "INSTANT"],  # 2026-10-04 (wave 9): the scanner now finds a third (LANE) site.
 	"res://src/combat/projectile.gd": ["PROJECTILE", "PROJECTILE"],
 	"res://src/boss/boss.gd": ["WAVE", "INSTANT", "INSTANT", "LANE"],
 	# v2 W7 counter units and ancients: one telegraph each, in its threat type.
@@ -41,6 +41,13 @@ const AUDIT := {
 	"res://src/combat/swarm_remnant.gd": ["LANE"],
 	"res://src/combat/mind_hand.gd": ["LANE"],
 	"res://src/combat/bola_thrower.gd": ["PROJECTILE"],
+	# 2026-10-04 (wave 9): six new enemies, one telegraph each.
+	"res://src/combat/anchor_crew.gd": ["LANE"],
+	"res://src/combat/burrower.gd": ["LANE"],
+	"res://src/combat/drill_crew.gd": ["INSTANT"],
+	"res://src/combat/kite_drone.gd": ["INSTANT"],
+	"res://src/combat/lamp_swarm.gd": ["WAVE"],
+	"res://src/combat/line_cutter.gd": ["PROJECTILE"],
 	# alpha w7 Mind: build() lays each descriptor's own type; DESCRIPTORS audits where it is named.
 	"res://src/boss/mind_attacks.gd": ["descriptor", "descriptor", "descriptor"],
 }

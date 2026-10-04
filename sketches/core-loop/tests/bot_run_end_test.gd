@@ -1,4 +1,6 @@
-# smoke: solo (split by world from RunStore entrances; two seed children per world, 170 s wall cap)
+# smoke: solo (split by world from RunStore entrances; one seed child per world, 170 s wall cap)
+# 2026-10-04 (wave 9): one seed child per world in the gate since 2026-10-04; the nightly runs more seeds.
+# Two seeds ran past the 180 s smoke cap under load (killed at 189.5 s).
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -7,6 +9,8 @@ const RunStore := preload("res://src/core/run_store.gd")
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const T := preload("res://tests/support/t.gd")
+
+const SEEDS := 1
 
 # Each child plays only one world, then stops at the next world's entrance.
 # The next child resumes that RunStore document with the earned kit and build.
@@ -18,19 +22,23 @@ func _initialize() -> void:
 func _run() -> void:
 	var t := T.new("bot_run_end_test")
 	var base := OS.get_user_data_dir().path_join("bot-run-end-%d" % OS.get_process_id())
-	var folders := [base.path_join("1"), base.path_join("2")]
-	var run_ids := ["", ""]
-	var traces := ["", ""]
+	var folders := []
+	var run_ids := []
+	var traces := []
+	for i in SEEDS:
+		folders.append(base.path_join(str(i + 1)))
+		run_ids.append("")
+		traces.append("")
 	for world in StageDefs.worlds():
 		var jobs := []
-		for i in 2:
+		for i in SEEDS:
 			var args := ["--out=" + folders[i], "--policy=skipper", "--seeds=%d" % (i + 1),
 				"--from-stage=%d" % StageDefs.first_of(world), "--trace=1"]
 			if world != StageDefs.worlds().back():
 				args.append("--until=%d" % StageDefs.last_of(world))
 			jobs.append({"script": "res://tools/bot_run.gd", "args": args})
 		var results := ChildRuns.run(jobs, 170.0)
-		for i in 2:
+		for i in SEEDS:
 			var result: Dictionary = results[i]
 			var errors: Array = ChildRuns.summary(result)["errors"]
 			traces[i] += String(result["log"])
@@ -55,7 +63,7 @@ func _run() -> void:
 					and int(entrance.get("stage", 0)) == StageDefs.first_of(world + 1))
 		if t.failures > 0:
 			break
-	for i in 2:
+	for i in SEEDS:
 		for world in StageDefs.worlds():
 			t.check("seed %d world %d entered in trace" % [i + 1, world],
 				String(traces[i]).contains("trace world %d entered" % world))

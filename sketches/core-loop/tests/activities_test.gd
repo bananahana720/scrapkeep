@@ -28,6 +28,9 @@ const LEASH_FRAMES := 300
 const SPEED_SLACK := 0.1
 const RAM_BELOW := 0.7
 const RAM_AT := 1.3
+# 2026-10-04 (wave 9): the Dig and Highdraft are greybox zones that get their activity sites in
+# wave 10 (the deep-Dig and Highdraft-crown map units remove them from this list).
+const SIDE_CONTENT_PENDING := ["dig", "highdraft"]
 const LINE_FRAMES := 24
 const PICKUP_FRAMES := 40
 const PICKUP_SPEED := 14.0
@@ -444,9 +447,20 @@ func _default_table() -> void:
 	var maps: Array = _game.ctx.terrain.maps
 	var counts := []
 	for i in maps.size():
-		if not String(_game.ctx.stages.DEFS[i]["name"]).contains("placeholder"):
+		var row: Dictionary = _game.ctx.stages.DEFS[i]
+		if SIDE_CONTENT_PENDING.has(String(row["map"])):
+			# 2026-10-04 (wave 9): greybox zone, activity sites land in wave 10.
+			print("[skip stage %d: %s] greybox map %s; activity sites pending wave 10" % [i + 1, row["name"], row["map"]])
+			continue
+		if not String(row["name"]).contains("placeholder"):
 			counts.append(maps[i].activity_sites.size() if "activity_sites" in maps[i] else 0)
 	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4], "sites per authored stage %s" % [counts])
+	var pending_named := true
+	for row in _game.ctx.stages.DEFS:
+		if SIDE_CONTENT_PENDING.has(String(row["map"])) and String(row["name"]).contains("placeholder"):
+			pending_named = false
+	# 2026-10-04 (wave 9): the pending list is about greybox content, not placeholders.
+	_t.check("every pending map's row is greybox content, not a placeholder", pending_named, "pending %s" % [SIDE_CONTENT_PENDING])
 	_t.eq("Spillway stands its one enemy camp site", _game.world.activities.sites.size(), 1)
 	_t.eq("its four Spillway devices stand (three plus the rescue cage, META-3 2026-10-04)", _game.world.interact.devices.size(), 4)
 	_game.free()

@@ -138,7 +138,8 @@ func _check_sweep() -> void:
 		var heading := Vector3(cos(angle), 0.0, sin(angle))
 		if not map.gate_slots.is_empty():
 			# Approach each occupied slot from 8-24 m north in its clear corridor.
-			var slot: Dictionary = map.gate_slots[0 if seed_value % 4 == 1 else 2]
+			# 2026-10-04 (wave 9): the Dig and Highdraft have fewer than three gate slots.
+			var slot: Dictionary = map.gate_slots[0 if seed_value % 4 == 1 else mini(2, map.gate_slots.size() - 1)]
 			x = slot["at"].x + rng.randf_range(-3.0, 3.0)
 			z = slot["at"].y - rng.randf_range(8.0, 24.0)
 			heading = Vector3(0.0, 0.0, 1.0)
