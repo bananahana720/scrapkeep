@@ -2,9 +2,44 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 6 landed (2026-10-04, f1f753b)
+
+Eighteen units merged plus four fix rounds and two coordinator commits; gate 3 at 1fe63fd: 340 pass, 1 red fixed as f1f753b (test-only), quarantine build_power_curve; Opus gate read PASS+NOTES after fix B.
+
+- HW2: hot-wire choice screen.
+- META-6: companion pickups and panel.
+- META-7: companion persistence.
+- IN2+IN3+IN4: input and settings units.
+- F7: stub boss plate and chord.
+- META-3: rescue_completed emitted.
+- EV1: events unit.
+- RL1+RL2: run-log units.
+- RS4+RS5: run-save units.
+- REC: recorder unit.
+- B3: Sol lane.
+- C6: Sol lane.
+- C8b: music_rows routed by audio.
+- BS1: Sol lane.
+- SC2+SC3: Sol lane.
+- T1b: Sol lane.
+- T5: Sol lane.
+- T7a: Sol lane.
+- ZS-E: Sol lane.
+- Fix rounds A-D (A, B Sonnet; C, D Opus) and two coordinator commits (1fe63fd hot-wire mount, f1f753b growth test).
+
+### Open after wave 6
+
+- Plating retirement landing (branch wt/alpha-w6-f6 at 6677330, own gate running).
+- Worlds two and three as real build tracks, per Andrew's ruling that the alpha is three worlds plus the final boss.
+- The field-note collection triggers: none is unlockable in play.
+- The hero relic and evolved toppers are still mapped to rare_plus.
+- The explorer bot wedges on the Reach camp path.
+- Tally and the remembered cannon are out of this candidate.
+- Nothing has been played by a human yet.
+
 ## Wave 5 landed (2026-10-04, b927aec)
 
-Twelve units merged; gate 3 receipt `artifacts/local/alpha/wave5/gate3.log`, Opus gate read, fix rounds A-D. Wave 6 is in flight from b927aec.
+Twelve units merged; gate 3 receipt `artifacts/local/alpha/wave5/gate3.log`, Opus gate read, fix rounds A-D.
 
 - F2b: Brindle plate, ring and chord.
 - RS3+RS6: the run save lives in the run flow, one retry per world, Continue on the title.
@@ -22,14 +57,14 @@ Twelve units merged; gate 3 receipt `artifacts/local/alpha/wave5/gate3.log`, Opu
 ### Open after wave 5
 
 - The hot-wire choice has no screen (HW2, wave 6).
-- The stub boss has no plate or chord (F7, wave 6).
-- Nothing emits rescue_completed (META-3, wave 6).
+- The stub boss has no plate or chord (landed in wave 6 as F7).
+- Nothing emits rescue_completed (landed in wave 6 as META-3).
 - The companion has no pickups or panel (META-6) and is not persisted (META-7).
 - Death, then quit, then Continue costs no retry (owner call).
 - The explorer bot wedges at (63,28.5,3) walking to the Reach camp (driver pathing).
 - The cog icon still means mass in the armour gauge (icon decision).
 - Discovery burst and boss spill pay no cogs.
-- music_rows is not routed by audio (C8b, wave 6).
+- music_rows is not routed by audio (landed in wave 6 as C8b).
 - Plating-fight code is still present (F6, wave 6).
 - The build_power_curve quarantine is still open (F6).
 
@@ -66,6 +101,9 @@ Eleven units merged; gate 2 receipt `artifacts/local/alpha/wave4/gate2.log`, the
 
 - Name every suite-wide invariant (bus signal rows plus the ROWS_HASH re-pin, pinned sets, has_method guards on enemy calls, the verdict line format, the per-test 180 s cap) and ask writers to run the sibling tests their fence can break.
 - Name which table a test runs on (the default table is now the alpha ruleset; legacy FirstWorld holds the full catalogue). Any test asserting counts of sites, pilots, trees or parts must derive them from the table.
+- A modal that pauses the tree must check game.bot_driven.
+- A deferred add_child on the game leaks at exit when a test frees the game the same frame.
+- A gem's part can complete an evolution, so count parts by id.
 
 ## Wave 3 merged (4 October, proto/alpha 13fe55a)
 
