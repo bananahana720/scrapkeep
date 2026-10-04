@@ -84,6 +84,7 @@ func _init() -> void:
 		},
 	}
 	unique_events = ["scrap_stampede", "hold_the_relay"]
+	activity_sites = [{"id": "enemy_camp", "at": Vector2(96.0, -120.0), "pack": ["chaser", "chaser", "chaser"], "pay": {"named": "hot_rivets"}}]
 
 
 func sample(x: float, z: float) -> Array:
