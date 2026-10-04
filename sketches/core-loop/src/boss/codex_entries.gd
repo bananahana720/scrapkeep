@@ -37,3 +37,83 @@ const ENTRIES := [
 		"text": "Catch Brindle's scooter by landing on it from above instead of ramming it.",
 	},
 ]
+
+const WAKING_FLOOR_DROP := "waking_floor_drop"
+const WAKING_BREACH_SLAM := "waking_breach_slam"
+const WAKING_FLOOR_CHAIN := "waking_floor_chain"
+const WAKING_FINAL_FLOOR := "waking_final_floor"
+
+const MIND_LANE := "mind_lane"
+const MIND_SPLIT_LANE := "mind_split_lane"
+const MIND_RUSH := "mind_rush"
+const MIND_PLATE := "mind_plate"
+
+# Future fights declare their own rows through for_boss(); ENTRIES stays Brindle's pin.
+const WAKING := [
+	{
+		"id": WAKING_FLOOR_DROP, "name": "Going Down",
+		"hint": "Wake it enough and the room loses its footing.",
+		"clue": "a Waking damage chunk + the next floor down",
+		"text": "Break a chunk of the Waking's health and follow the fight as it drops a floor.",
+	},
+	{
+		"id": WAKING_BREACH_SLAM, "name": "Knock Downstairs",
+		"hint": "A ceiling can deliver more than dust.",
+		"clue": "a marked breach floor + a slam onto the Waking below",
+		"text": "Slam through a marked floor and land the breach attack on the Waking beneath it.",
+	},
+	{
+		"id": WAKING_FLOOR_CHAIN, "name": "Repeat Descent",
+		"hint": "The first broken floor is only the beginning.",
+		"clue": "successive Waking floors + a breach slam on each",
+		"text": "Keep the descent going by breaching successive floors as the Waking fight moves downward.",
+	},
+	{
+		"id": WAKING_FINAL_FLOOR, "name": "Rock Bottom",
+		"hint": "Sooner or later, there is nowhere deeper to hide.",
+		"clue": "the Waking's final floor + the finishing hit",
+		"text": "Follow the Waking to its final floor and finish the fight there.",
+	},
+]
+
+const MIND := [
+	{
+		"id": MIND_LANE, "name": "A Different Line",
+		"hint": "A straight thought has room on either side.",
+		"clue": "the Mind's lane + a sidestep outside it before release",
+		"text": "Read the committed lane and leave its width before the Mind releases it.",
+	},
+	{
+		"id": MIND_SPLIT_LANE, "name": "Third Opinion",
+		"hint": "Two answers can still leave a third way out.",
+		"clue": "the Mind's split_lane + an escape outside both lanes",
+		"text": "Find a route clear of both committed lanes when the Mind splits its attack.",
+	},
+	{
+		"id": MIND_RUSH, "name": "Change of Radius",
+		"hint": "A circle knows your distance, not your destination.",
+		"clue": "the Mind's rush ring + move inward or outward before release",
+		"text": "Leave the rush ring's band by changing your distance from the Mind before it releases.",
+	},
+	{
+		"id": MIND_PLATE, "name": "Second Tool",
+		"hint": "A guarded answer leaves another question open.",
+		"clue": "the Mind's plate brace + a different contact verb during its weak window",
+		"text": "Hit the open weak point with a contact verb different from the one the Mind's plate has braced against.",
+	},
+]
+
+
+static func for_boss(id: String) -> Array:
+	match id:
+		"brindle":
+			return ENTRIES
+		"waking":
+			return WAKING
+		"mind":
+			return MIND
+	return []
+
+
+static func all() -> Array:
+	return ENTRIES + WAKING + MIND

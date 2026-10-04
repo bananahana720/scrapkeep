@@ -57,6 +57,24 @@ const ENTRIES := [
 		"hint": "A cracked wheel beside a copper door.",
 		"clue": "Ram the valve on the Reach's west shelf + the copper door",
 		"text": "A rolling ram turns the old valve. Behind the sinking door, the crew's spare parts wait."},
+	# world.gd declares every row at setup: these appear as undiscovered hints next build.
+	# The Dig and Highdraft detectors will wire these recipes later; note() does not fire them.
+	{"id": "breach_plate", "category": "world", "name": "Down Payment",
+		"hint": "Some floors are waiting for a heavier answer.",
+		"clue": "The Dig's marked breach plate + a slam through to the floor below",
+		"text": "Slam a marked breach plate in the Dig to break through and open the route below."},
+	{"id": "net_deck", "category": "world", "name": "The Safety Net",
+		"hint": "The sky has a basement. It catches its visitors.",
+		"clue": "A fall from a Highdraft island + landing on the net deck",
+		"text": "A missed island landing ends on the Highdraft's net deck, giving you a route back up."},
+	{"id": "thermal_lift", "category": "world", "name": "Updraft Fare",
+		"hint": "An invisible staircase carries the patient traveller.",
+		"clue": "Ride a Highdraft thermal + reach an island above",
+		"text": "Ride the Highdraft's rising air to an island above. This is an island crossing, separate from gliding in a steam vent."},
+	{"id": "moving_island", "category": "world", "name": "All Aboard",
+		"hint": "Some destinations come to meet you.",
+		"clue": "Board a moving Highdraft island + ride it to a crossing",
+		"text": "Let a moving island carry you across the Highdraft to your next crossing."},
 ]
 
 
