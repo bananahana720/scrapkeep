@@ -23,6 +23,12 @@ const SPEED := 22.0
 const TOLERANCE := 0.15
 const SIM_SCALE := 2.0
 
+# Preserve the legacy three-stage rule on a double using surviving maps.
+# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _failures := 0
 var _phase := "boot"
@@ -41,7 +47,7 @@ var _allowed_before := -1
 
 func _initialize() -> void:
 	_check_lap()
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

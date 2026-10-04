@@ -198,7 +198,7 @@ func _finish() -> bool:
 			missing.append(s)
 	_report("flow states", missing.is_empty() and _states[0] == "title" and _states[-1] == "summary",
 		"reached %s in order %s; missing %s" % [wanted, " > ".join(_states), missing])
-	_report("stages", _entered == [1, 2, 3] and _cleared == [1, 2, 3] and _ended,
+	_report("stages", _entered == [1, 2] and _cleared == [1, 2] and _ended,
 		"entered %s, cleared %s, run_ended %s" % [_entered, _cleared, _ended])
 	_report("summary", _game.flow.state_name() == "summary" and _game.run.parts.size() == StageDefs.COUNT,
 		"flow ends in %s with %d gate parts %s" % [_game.flow.state_name(), _game.run.parts.size(), _game.run.parts])
@@ -214,8 +214,8 @@ func _finish() -> bool:
 	_report("launches", _launches.size() == StageDefs.COUNT - 1, "%d stage-to-stage launches measured" % _launches.size())
 	var text: String = _arena.get("dead_text", "")
 	_report("arena entry momentum", _kept(_arena.get("before", 0.0), _arena.get("after", 0.0)) and _boss.entry_speeds.size() >= 1,
-		"left stage 3 at %.2f m/s horizontal, %.2f m/s in the arena" % [_arena.get("before", -1.0), _arena.get("after", -1.0)])
-	_report("boss death screen", _arena.get("dead_state", "") == "dead" and text.contains("R   retry the arena") and text.contains("T   replay stage 3")
+		"left stage 2 at %.2f m/s horizontal, %.2f m/s in the arena" % [_arena.get("before", -1.0), _arena.get("after", -1.0)])
+	_report("boss death screen", _arena.get("dead_state", "") == "dead" and text.contains("R   retry the arena") and text.contains("T   replay stage 2")
 			and text.contains("N   new run") and text.contains("plating 120"),
 		"death in the arena reads \"%s\"" % text.replace("\n", " | "))
 	_report("arena retry and victory", _arena.get("retried_state", "") == "boss" and _boss.entries == 2 and _arena.get("retried_hp", 0.0) == _arena.get("hp", -1.0)

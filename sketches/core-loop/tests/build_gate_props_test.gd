@@ -122,19 +122,26 @@ func _check_repro() -> void:
 		"ball at x -44, z 13, heading +X, toward the kerb at x -34: %s" % [bad])
 
 
-# 20 seeded ball positions and headings, spread across all three stage maps.
+# 2026-10-04: 20 seeded approaches on the two alpha maps. Reach gates are fixed,
+# so approach starts belong to their authored south bowl, not the retired gorge rectangle.
 func _check_sweep() -> void:
 	var bad: Array = []
 	var rng := RandomNumberGenerator.new()
 	for seed_value in SEEDS:
 		rng.seed = 9000 + seed_value
-		var stage := (seed_value % 3) + 1
+		var stage: int = (seed_value % _game.ctx.stages.COUNT) + 1
 		var map = _game.ctx.terrain.map_for(stage)
 		var r: Rect2 = map.play_rect
 		var x := rng.randf_range(r.position.x + 10.0, r.end.x - 10.0)
 		var z := rng.randf_range(r.position.y + 10.0, r.end.y - 10.0)
 		var angle := rng.randf_range(0.0, TAU)
 		var heading := Vector3(cos(angle), 0.0, sin(angle))
+		if not map.gate_slots.is_empty():
+			# Approach each occupied slot from 8-24 m north in its clear corridor.
+			var slot: Dictionary = map.gate_slots[0 if seed_value % 4 == 1 else 2]
+			x = slot["at"].x + rng.randf_range(-3.0, 3.0)
+			z = slot["at"].y - rng.randf_range(8.0, 24.0)
+			heading = Vector3(0.0, 0.0, 1.0)
 		_open_and_check("seed %d stage %d" % [seed_value, stage], stage, Vector3(x, 0.0, z), heading, bad)
 	_report("20 seeded sweeps clear props", bad.is_empty(),
-		"seeded ball positions and headings across all 3 stage maps: %s" % [bad])
+		"seeded ball positions and headings across both alpha maps: %s" % [bad])

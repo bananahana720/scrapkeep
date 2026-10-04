@@ -24,6 +24,11 @@ const CURVE: float = SliceDefs.DEFS[0]["posture"]["curve"]
 const FIGHT_SOUNDS := ["hit_thwack", "boss_weak_hit", "shatter", "chunk_low", "clank"]
 
 var _t := T.new("warden_posture_sound_test")
+# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+class PlatingGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _audio
 var _combat
@@ -268,13 +273,13 @@ func _foreign_eruption() -> void:
 
 # A plating Warden's hit is pitched by its health, as on the base.
 func _plating() -> void:
-	_game = Game.new()
+	_game = PlatingGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	if not await _start():
 		_t.check("the default table has a Warden", false)
 		return
-	_t.check("the default Warden fights by plating", _warden.fight() == "plating")
+	_t.check("the local Warden fights by plating", _warden.fight() == "plating")
 	_player.reset_to(_ground(58.0))
 	await _seconds(0.3)
 	_warden.hp = _warden.max_hp * 0.5

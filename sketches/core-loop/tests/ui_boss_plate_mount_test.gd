@@ -10,9 +10,14 @@ const T := preload("res://tests/support/t.gd")
 #   bound to that Warden, with the objective plate under it;
 # - a retry takes it down, and engaging again puts it back;
 # - breaking the Warden takes it down;
-# - on the default table the plating Warden never gets one.
+# - on the local plating row the Warden never gets one.
 
 var _t := T.new("ui_boss_plate_mount_test")
+# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+class PlatingGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _source := Intent.Scripted.new()
 
@@ -27,7 +32,7 @@ func _frames(count: int) -> void:
 
 
 func _start(table: String) -> Node3D:
-	_game = Game.new()
+	_game = PlatingGame.new() if table == "" else Game.new()
 	_game.test_mode = true
 	if table != "":
 		_game.table = table
@@ -92,7 +97,7 @@ func _slice() -> void:
 
 func _default_table() -> void:
 	var warden: Node3D = await _start("")
-	_t.check("the default Warden fights by plating", is_instance_valid(warden) and warden.fight() == "plating")
+	_t.check("the local Warden fights by plating", is_instance_valid(warden) and warden.fight() == "plating")
 	await _strike(warden)
 	_t.eq("a plating Warden gets no plate", _plates().size(), 0)
 	_game.free()

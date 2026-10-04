@@ -2,6 +2,13 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 
+# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+class PlatingGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
+
+
 # M0: the delivered-damage baseline and provenance (design-v3/STRATEGY-SPINE.md §7 row
 # M0, §8 row 1). Every assertion reads combat's own ledger (delivered_damage(), mirrored
 # onto ctx.run's meta for run_log), never a re-derivation, so a pass here is a pass on
@@ -30,7 +37,7 @@ var _boss_hull_strikes := 0
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = PlatingGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

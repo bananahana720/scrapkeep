@@ -18,6 +18,12 @@ const DT := 1.0 / 90.0
 const MIN_FIGHT := 75.0
 const LIMIT := 200.0
 
+# The legacy final-stage rule runs on a three-stage double using surviving maps.
+# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _double
 var _boss
@@ -30,7 +36,7 @@ var _slag_hits: Array = []
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

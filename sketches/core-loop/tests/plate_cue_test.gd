@@ -1,6 +1,13 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+
+# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+class PlatingGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
+
 const Enemy := preload("res://src/combat/enemy.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
@@ -25,7 +32,7 @@ var game
 
 
 func _initialize() -> void:
-	game = Game.new()
+	game = PlatingGame.new()
 	game.test_mode = true
 	root.add_child(game)
 	_run.call_deferred()

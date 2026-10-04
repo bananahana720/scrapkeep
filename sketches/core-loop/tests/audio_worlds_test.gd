@@ -82,7 +82,7 @@ func _row_checks() -> void:
 	var picks := func(audio, stages: Array) -> Array:
 		return stages.map(func(s: int): return [audio._stage_theme(s), audio._ace_package_for(s)])
 	var base := _director(StageDefs)
-	_t.eq("W5-1 default table: themes and ACE by stage", picks.call(base, [1, 2, 3]), [[0, "spillway"], [1, ""], [2, ""]])
+	_t.eq("W5-1 default table: themes and ACE by stage", picks.call(base, [1, 2]), [[0, "spillway"], [1, ""]])
 	var slice := _director(SliceDefs)
 	_t.eq("W5-1 slice: stage 1 runs ACE with theme 0", picks.call(slice, [1]), [[0, "spillway"]])
 	var two := _director(TwoWorld, 4)
@@ -122,7 +122,7 @@ func _fight_checks() -> void:
 	_game.ctx.calm = true
 	_game.player.source = Intent.Scripted.new()
 	Harness.start_run(_game)
-	_game.flow.enter_stage(3, Vector3(0.0, 0.0, 16.0), false)
+	_game.flow.enter_stage(StageDefs.COUNT, Vector3(0.0, 0.0, 16.0), false)
 	_game.flow._finish_stage()
 	var boss = _game.boss
 	# Repointed 2026-10-04 (F2a fix round): Brindle's health is posture chunks, so

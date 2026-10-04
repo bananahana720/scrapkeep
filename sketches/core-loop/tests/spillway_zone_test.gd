@@ -72,13 +72,15 @@ func _check_pieces(terrain, map) -> void:
 	_report("relay mesa carries its site", relay.get("ring") == Vector2(10.0, -84.0) \
 		and relay.get("relay") == relay.get("ring") and mesa_h >= 39.0,
 		"relay at (10,-84), built top %.2f m; 18 m top and 40 m foot radii" % mesa_h)
-	var director := EventDirector.new(77, _game.ctx.stages.of(1), map, 16.0, terrain.height)
+	var row: Dictionary = _game.ctx.stages.of(1).duplicate(true)
+	row["event_mix"] = {"hold_the_relay": 1.0}
+	var director := EventDirector.new(77, row, map, 16.0, terrain.height)
 	var relay_offer := false
 	for offer in director.offers:
 		if offer["id"] == "hold_the_relay":
 			var ring: Vector2 = offer["model"].ring
 			relay_offer = ring == Vector2(10.0, -84.0) and absf(offer["model"]._relay_y - mesa_h) <= 0.05
-	_report("relay event reader", relay_offer, "the unchanged stage-1 table offers the relay on its built mesa through unique_events")
+	_report("relay event reader", relay_offer, "an event-enabled row offers the relay on its built mesa through unique_events")
 	var span_ok := true
 	var worst := 0.0
 	for z in range(-100, -59, 2):

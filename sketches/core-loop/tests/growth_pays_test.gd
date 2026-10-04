@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Growth pays on the slice (wave R4, unit GR), on a live game:
-# - a chaser's kill drops 12 scrap and a lobber's 16 on the slice table, 3 and 4 on the default
+# - a chaser's kill drops 12 scrap and a lobber's 16 on the slice and default alpha
 #   table, and a build sheet kill_scrap of 2.0 doubles both;
 # - taking each activity's gem raises run.mass and run.scrap by exactly 180, once, and still adds
 #   the part; a finished activity whose gem is not yet taken adds nothing; a retry restores the
@@ -86,9 +86,9 @@ func _run() -> void:
 # ---- Kills ----
 
 func _kills(label: String) -> void:
-	var slice: bool = label == "the slice"
-	var chaser := 12 if slice else 3
-	var lobber := 16 if slice else 4
+	# 2026-10-04: both posture tables pay the alpha kill_scrap multiplier of 4.0.
+	var chaser := 12
+	var lobber := 16
 	_t.eq("a chaser's kill drops %d on %s" % [chaser, label], _drop_count("chaser", 3), chaser)
 	_t.eq("a lobber's kill drops %d on %s" % [lobber, label], _drop_count("lobber", 4), lobber)
 	var sheet = _game.build.sheet

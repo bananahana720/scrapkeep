@@ -21,6 +21,12 @@ const SIM_SCALE := 2.0
 const APPROACH := 14.0
 const SPEED := 18.0
 
+# 2026-10-04: the authored gorge route remains on a test double after the alpha repoint.
+# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _failures := 0
 var _source := Intent.Scripted.new()
@@ -32,7 +38,7 @@ var _probe := {}
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

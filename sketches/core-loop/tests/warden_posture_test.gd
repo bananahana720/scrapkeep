@@ -8,8 +8,8 @@ const Intent := preload("res://src/movement/intent.gd")
 # (LEGIBILITY section 4): rams fill the bar and posture_changed goes out; a full bar
 # staggers the Warden, opens its core once and stops the pulse; a charge in flight is
 # cancelled; health falls only through a shatter, and a harpoon smash on the open core
-# removes exactly one chunk; four chunks kill it and the stage unseals. The default table's
-# Warden keeps the plating fight. Contacts are real physics from placed starts, not a
+# removes exactly one chunk; four chunks kill it and the stage unseals. A local row
+# retains the plating regression until F6. Contacts are real physics from placed starts, not a
 # player's run; every wait is counted in physics frames.
 
 const OUT := 58.0
@@ -17,6 +17,11 @@ const NEAR := 5.0
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const HP := 800.0
+
+# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+class PlatingGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 var _game
 var _combat
@@ -283,7 +288,7 @@ func _chunks() -> void:
 
 
 func _default_table() -> void:
-	_game = Game.new()
+	_game = PlatingGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	_posture_events = 0
@@ -297,7 +302,7 @@ func _default_table() -> void:
 	var force := _matched_force()
 	var result: Dictionary = _combat.resolve(_warden, "ram", force)
 	var punch: float = _combat.punch_of("ram", force)
-	_report("default Warden fights by plating", _warden.fight() == "plating" and _warden.chunks_left() == 0 and not _warden.staggered(),
+	_report("local Warden fights by plating", _warden.fight() == "plating" and _warden.chunks_left() == 0 and not _warden.staggered(),
 		"fight %s" % _warden.fight())
 	plain = {"punch": punch, "plating": _warden.plating, "full": punch >= _warden.plating, "dealt": punch, "part": ""}
 	_report("a matched ram resolves as before", result == plain, "got %s, want %s" % [result, plain])

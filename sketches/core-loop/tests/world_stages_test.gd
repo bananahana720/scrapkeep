@@ -3,9 +3,9 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Launch := preload("res://src/world/launch.gd")
 
-# The three stages as built in the real scene: each spawn and beacon stands on solid,
-# level ground that the physics world agrees with; stages 2 and 3 are different
-# ground from stage 1 and from each other; each opens on a landing hill that falls
+# The two default zones as built in the real scene: each spawn and beacon stands on solid,
+# level ground that the physics world agrees with; the Reach has different
+# ground from the Spillway; each opens on a landing hill that falls
 # away along its entry heading; each carries the momentum kit (pylon faces, grapple
 # posts); and every event ring sits on ground inside the playable floor.
 
@@ -42,7 +42,7 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	_check_stage(_stage)
 	_stage += 1
-	if _stage > 3:
+	if _stage > _game.ctx.stages.COUNT:
 		_check_distinct()
 		print("world_stages_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 		_game.free()
@@ -145,7 +145,7 @@ func _check_stage(stage: int) -> void:
 
 
 func _check_distinct() -> void:
-	var pairs := [[1, 2], [2, 3], [1, 3]]
+	var pairs := [[1, 2]]
 	var detail := []
 	var ok := true
 	for p in pairs:
@@ -158,9 +158,9 @@ func _check_distinct() -> void:
 		ok = ok and mean >= DISTINCT_METRES
 		detail.append("stages %d and %d differ by %.1f m on average" % [p[0], p[1], mean])
 	var t = _game.ctx.terrain
-	var apart: float = t.spawn_point(2).distance_to(t.spawn_point(3))
+	var apart: float = t.spawn_point(1).distance_to(t.spawn_point(2))
 	_report("distinct stages", ok and apart > 25.0,
-		"%s over a %d m grid; stages 2 and 3 enter %.0f m apart" % ["; ".join(detail), int(GRID), apart])
+		"%s over a %d m grid; zones 1 and 2 enter %.0f m apart" % ["; ".join(detail), int(GRID), apart])
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
