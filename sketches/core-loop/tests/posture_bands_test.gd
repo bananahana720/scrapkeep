@@ -17,8 +17,9 @@ const T := preload("res://tests/support/t.gd")
 # A run that breaks before the cap measures the same at any cap.
 const SEEDS := "1,2,3"
 const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
-const EXPECT_SMALL_S := 73.75
-const EXPECT_GROWN_S := 24.66
+# 2026-10-04 (wave 9): re-pinned after the bot_driver and warden_variant changes; bands unchanged
+const EXPECT_SMALL_S := 82.4
+const EXPECT_GROWN_S := 39.2
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
