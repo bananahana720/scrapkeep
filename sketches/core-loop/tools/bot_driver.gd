@@ -241,6 +241,8 @@ var _warden_kinds := {}
 var _harpoon_held := false
 var _harpoon_commit := false
 # Only the explorer changes hands: bite, jump, release at the apex, bite again, haul.
+# chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
+var chain_hand_enabled := true
 var _chain_phase := ""
 var _chain_first: Node3D = null
 var _chain_second: Node3D = null
@@ -1053,7 +1055,7 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
 		_count("harpoon_bites")
-		if policy == "completionist" and target.is_in_group("enemy") and game.player.verb_ready("jump"):
+		if chain_hand_enabled and policy == "completionist" and target.is_in_group("enemy") and game.player.verb_ready("jump"):
 			var second := _chain_partner(target)
 			if second != null:
 				_chain_phase = "first"
