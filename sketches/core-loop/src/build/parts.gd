@@ -52,38 +52,38 @@ const CATALOGUE := {
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
 	"slag_rounds": {"name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
-		"rarity": "uncommon", "tier": 2, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 10.0,
+		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 10.0,
 		"mods": {"weapon_damage": 1.25}},
 	"double_feed": {"name": "Double Feed", "verb": "Feed two rounds a trigger", "text": "+3 punch, +25% fire rate",
-		"rarity": "uncommon", "tier": 2, "family": "weapon", "tags": ["speed", "split"], "punch": 3.0,
+		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["speed", "split"], "punch": 3.0,
 		"mods": {"weapon_rate": 1.25}},
 	"focus_lens": {"name": "Focus Lens", "verb": "Focus the beam", "text": "+6 punch, +25% weapon range",
-		"rarity": "uncommon", "tier": 2, "family": "weapon", "tags": ["anchor"], "punch": 6.0,
+		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["anchor"], "punch": 6.0,
 		"mods": {"weapon_range": 1.25}},
 	# Pattern transformers. The part id is the pattern id, and each copy adds a level.
 	"cross_split": {"name": "Cross Split", "verb": "Split shots into a cross", "text": "shots split four ways on impact",
-		"rarity": "uncommon", "tier": 2, "family": "pattern", "tags": ["split"],
+		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["split"],
 		"patterns": {"cross_split": 1}},
 	"spiral_wave": {"name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
-		"rarity": "uncommon", "tier": 2, "family": "pattern", "tags": ["spiral"],
+		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["spiral"],
 		"patterns": {"spiral_wave": 1}},
 	"chain_arc": {"name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
-		"rarity": "uncommon", "tier": 2, "family": "pattern", "tags": ["chain", "arc"],
+		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["chain", "arc"],
 		"patterns": {"chain_arc": 1}},
 	"frost_vane": {"name": "Frost Vane", "verb": "Dash trails frost", "text": "air dash freezes water into road",
-		"element": "frost", "rarity": "uncommon", "tier": 2, "family": "mobility", "tags": ["frost", "speed"],
+		"element": "frost", "rarity": "common", "tier": 2, "family": "mobility", "tags": ["frost", "speed"],
 		"elements": {"dash": "frost"}, "mods": {"dash_impulse": 1.1}},
 	# Arc Coil and Runner Overclock carry one tag: kinetic was not their identity, and on
 	# them it put Wrecking Ball over the 60% discovery cap (balance loop, B4).
 	"arc_coil": {"name": "Arc Coil", "verb": "Slam discharges an arc", "text": "slams burst arc at everything near",
-		"element": "arc", "rarity": "uncommon", "tier": 2, "family": "mobility", "tags": ["arc"],
+		"element": "arc", "rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"elements": {"slam": "arc"}},
 	# Class mods: offered only to their class.
 	"pylon_capacitor": {"name": "Pylon Capacitor", "verb": "Bank a bigger plant", "text": "+8 punch, slingshot +50% boost",
-		"icon": "mobility", "rarity": "uncommon", "tier": 2, "family": "class", "class_id": "pylon_engineer", "tags": ["anchor", "arc"],
+		"icon": "mobility", "rarity": "common", "tier": 2, "family": "class", "class_id": "pylon_engineer", "tags": ["anchor", "arc"],
 		"punch": 8.0, "mods": {"slingshot_boost": 1.5, "slingshot_keep": 1.1, "turret_damage": 1.4}},
 	"runner_overclock": {"name": "Runner Overclock", "verb": "Overclock the gun on the run", "text": "+4 punch, +35% fire rate",
-		"icon": "damage", "rarity": "uncommon", "tier": 2, "family": "class", "class_id": "runner_gunner", "tags": ["speed"],
+		"icon": "damage", "rarity": "common", "tier": 2, "family": "class", "class_id": "runner_gunner", "tags": ["speed"],
 		"punch": 4.0, "mods": {"weapon_rate": 1.35}, "cooldown_scale": 0.8},
 
 	# Rare: vaults, and gates with one bonus core.
@@ -108,21 +108,21 @@ const CATALOGUE := {
 
 	# Rare-plus: won events, and gates with two or more bonus cores.
 	"tempest_core": {"name": "Tempest Core", "verb": "Call a spiral storm", "text": "spiral +2, chain +1, +30% fire rate",
-		"rarity": "rare_plus", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["spiral", "chain"],
+		"rarity": "relic", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["spiral", "chain"],
 		"patterns": {"spiral_wave": 2, "chain_arc": 1}, "mods": {"weapon_rate": 1.3}},
 	"rime_heart": {"name": "Rime Heart", "verb": "Freeze the water you roll on", "text": "water under you turns to ice",
-		"icon": "mobility", "element": "frost", "rarity": "rare_plus", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["frost", "mass"],
+		"icon": "mobility", "element": "frost", "rarity": "relic", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["frost", "mass"],
 		"elements": {"roll_on_water": "frost"}, "mods": {"cruise": 1.1}},
 	"scrap_gravity": {"name": "Scrap Gravity", "verb": "Drag the scrapfield in", "text": "+8 punch, magnet x2.5, double kill scrap",
-		"icon": "utility", "rarity": "rare_plus", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["mass"],
+		"icon": "utility", "rarity": "relic", "tier": 3, "family": "milestone", "milestone_only": true, "tags": ["mass"],
 		"punch": 8.0, "magnet": 2.5, "kill_scrap": 2.0},
 }
 
 # Which rarities each source grants (DEMO-SPEC "Engagement tiers" and "Cores").
 const SOURCE_RARITIES := {
-	"fabricator": ["uncommon"],
+	"fabricator": ["common"],
 	"vault": ["rare"],
-	"milestone": ["rare_plus"],
+	"milestone": ["relic"],
 }
 
 # Which milestone part each participatory event awards. An event not listed here
@@ -174,17 +174,37 @@ static var seams := {}
 static func rows() -> Dictionary:
 	if _rows.is_empty():
 		for key in CATALOGUE:
-			_rows[key] = CATALOGUE[key]
+			_rows[key] = _settled(CATALOGUE[key])
 		for key in Items.TABLE:
-			_rows[key] = ItemGen.finish(key, Items.TABLE[key])
+			_rows[key] = _settled(ItemGen.finish(key, Items.TABLE[key]))
 		for key in Items.CELLS:
-			_rows[key] = ItemGen.finish(key, Items.CELLS[key])
+			_rows[key] = _settled(ItemGen.finish(key, Items.CELLS[key]))
 	return _rows
+
+
+# The one place a row's rarity is settled, authored or generated: an old id resolves
+# through RARITY_ALIASES, and a row whose effects are only percentage scalars cannot sit
+# above common (DEMO-SPEC), so it drops to common.
+static func _settled(spec: Dictionary) -> Dictionary:
+	var out := spec.duplicate(true)
+	var rarity := ItemGen.resolve_rarity(String(spec.get("rarity", "common")))
+	out["rarity"] = rarity if rarity != "" else "common"
+	if out["rarity"] != "common" and PartDef.from_row("_", out).percentage_only():
+		out["rarity"] = "common"
+	return out
+
+
+# A part's rarity, always one of ItemGen.RARITIES; common for an id the build does not know.
+static func rarity_of(part_id: String) -> String:
+	return String(row(part_id).get("rarity", "common"))
 
 
 static func row(part_id: String) -> Dictionary:
 	var authored: Dictionary = rows().get(part_id, {})
-	return authored if not authored.is_empty() else ItemGen.generated_row(part_id)
+	if not authored.is_empty():
+		return authored
+	var generated := ItemGen.generated_row(part_id)
+	return _settled(generated) if not generated.is_empty() else generated
 
 
 static func def(part_id: String) -> Resource:
@@ -289,14 +309,14 @@ static func ingredient_of(part_id: String, held: Array) -> String:
 	return ""
 
 
-# Gate tiers by overcharge: 0 bonus cores offer common or uncommon, 1 uncommon or
-# rare, 2 or more rare or rare-plus.
+# Gate tiers by overcharge: 0 bonus cores offer common, 1 common or rare, 2 or more
+# rare or relic.
 static func gate_rarities(bonus_cores: int) -> Array:
 	if bonus_cores >= 2:
-		return ["rare", "rare_plus"]
+		return ["rare", "relic"]
 	if bonus_cores == 1:
-		return ["uncommon", "rare"]
-	return ["common", "uncommon"]
+		return ["common", "rare"]
+	return ["common"]
 
 
 # True while the build runs on a table that names its parts (the slice). Then the pool is
@@ -307,6 +327,7 @@ static func listed_only() -> bool:
 
 # The parts a source may offer this class, at these rarities. Never another class's mod.
 static func offer_pool(class_id: String, rarities: Array) -> Array:
+	rarities = ItemGen.resolve_rarities(rarities)
 	var pool: Array = []
 	var all := rows()
 	var listed := listed_only()
@@ -334,13 +355,14 @@ static func milestone_for(event_id: String, held: Array) -> String:
 
 # Picks count distinct parts from the pool at these rarities. One slot may go to the
 # part that completes a synergy the run is one piece from. Every other slot draws its
-# rarity by the rarity weights (common 60, uncommon 27, rare 10, rare_plus 3), then is
+# rarity by the rarity weights (common 87, rare 10, relic 3), then is
 # a generated recipe GENERATED_SHARE of the time, else an authored row of that rarity,
 # weighted down by how often offered (id to count this stage) has shown it, so a stage
 # rarely shows the same part twice. A pair always holds at least one part that raises
 # punch or transforms a pattern.
 static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
 		exclude: Array = [], offered: Dictionary = {}) -> Array:
+	rarities = ItemGen.resolve_rarities(rarities)
 	var pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude)
 	var picks: Array = []
 	var bait: String = completing_part(held, pool)
@@ -390,11 +412,12 @@ static func holds_pattern(held: Array) -> bool:
 # transforms a pattern and neither offer is a pattern part, the last slot becomes one.
 # That slot is never the synergy bait (always first), and a pattern part hits harder, so
 # the pair keeps both rules. The pattern part comes from the gate's own rarities when one
-# fits; at two or more bonus cores (rare and rare-plus) none does, and only that slot
-# drops to uncommon. Any other stage, or a build that already holds a pattern, gets
+# fits; at two or more bonus cores (rare and relic) none does, and only that slot
+# drops to common. Any other stage, or a build that already holds a pattern, gets
 # exactly what roll() gives for the same seed.
 static func roll_gate(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
 		stage: int, offered: Dictionary = {}) -> Array:
+	rarities = ItemGen.resolve_rarities(rarities)
 	var picks: Array = roll(rng, rarities, class_id, held, count, [], offered)
 	if stage != PATTERN_GUARANTEE_STAGE or count < 1 or holds_pattern(held) \
 			or picks.any(func(key): return key in PATTERN_PARTS):

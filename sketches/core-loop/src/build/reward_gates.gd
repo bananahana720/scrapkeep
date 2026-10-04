@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Parts := preload("res://src/build/parts.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -16,9 +17,9 @@ const Icons := preload("res://src/ui/icons.gd")
 # "{name}: {verb}. Punch +{n}", its effect in one line, and a star line when it would
 # complete a named synergy ("* completes Storm Lattice *") or is a known ingredient
 # ("* ingredient: ??? *"). Rarity shows twice: the arch's colour and the topper's shape
-# (a bar for common, a diamond for uncommon, a star for rare, a tall star with a mint
-# heart for rare-plus), so colour never carries it alone. Red is only for what hurts
-# you (DESIGN-V2 section 11), so rare-plus is amber with the mint heart.
+# (a bar for common, a star for rare, a tall star with a mint
+# heart for relic), so colour never carries it alone. Red is only for what hurts
+# you (DESIGN-V2 section 11), so relic is mint with its own heart. A hot-wired offer adds an amber stripe.
 #
 # v2 W4: a gate also reads without words, as its family glyph (cat_), trigger glyph
 # (trg_) and element glyph (el_) beside the topper, the same ids the shop and the
@@ -149,6 +150,7 @@ func _place(ball: Vector3, heading: Vector3) -> void:
 			"punch": d.punch if d != null else 0.0,
 			"text": d.text if d != null else "",
 			"rarity": d.rarity if d != null else "common",
+			"hotwired": not Parts.hotwired(part_id).is_empty(),
 			"tier": d.tier if d != null else 1,
 			"synergy": Synergies.ROWS[completes]["name"] if completes != "" else "",
 			"mark": mark_for.call(part_id) if mark_for.is_valid() else "",
@@ -273,14 +275,8 @@ func _segment_blocked(from_xz: Vector3, to_xz: Vector3, exclude: Array) -> bool:
 
 
 static func rarity_color(rarity: String) -> Color:
-	match rarity:
-		"uncommon":
-			return Palette.ARC
-		"rare":
-			return Palette.AMBER
-		"rare_plus":
-			return Palette.AMBER
-	return Palette.SANDSTONE
+	var id := ItemGen.resolve_rarity(rarity)
+	return ItemGen.RARITY[id]["color"] if id != "" else ItemGen.RARITY["common"]["color"]
 
 
 # The glyphs a gate wears, left to right: family, trigger, element.
@@ -329,7 +325,9 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	topper.name = "Topper"
 	topper.position = Vector3(0.0, HEIGHT + 1.2, 0.0)
 	gate.add_child(topper)
-	if offer["rarity"] == "rare_plus":
+	if offer.get("hotwired", false):
+		topper.add_child(_stripe())
+	if offer["rarity"] == "relic":
 		var heart := MeshInstance3D.new()
 		var core := SphereMesh.new()
 		core.radius = 0.45
@@ -364,19 +362,25 @@ func _build_gate(at: Vector3, facing: Vector3, offer: Dictionary) -> Node3D:
 	return gate
 
 
+# The hot-wired flag, drawn as a thin diagonal amber band across the topper. It does not
+# change the rarity or its colour.
+static func _stripe() -> MeshInstance3D:
+	var band := MeshInstance3D.new()
+	band.name = "Stripe"
+	var box := BoxMesh.new()
+	box.size = Vector3(2.4, 0.18, 0.5)
+	band.mesh = box
+	band.rotation = Vector3(0.0, 0.0, deg_to_rad(35.0))
+	band.material_override = Palette.solid(Palette.AMBER, 3.2)
+	return band
+
+
 static func _topper(rarity: String, mat: Material) -> MeshInstance3D:
 	var node := MeshInstance3D.new()
-	match rarity:
-		"uncommon":
-			var gem := SphereMesh.new()
-			gem.radius = 0.8
-			gem.height = 2.0
-			gem.radial_segments = 4
-			gem.rings = 2
-			node.mesh = gem
-		"rare", "rare_plus":
+	match ItemGen.resolve_rarity(rarity):
+		"rare", "relic", "evolved":
 			var star := PrismMesh.new()
-			star.size = Vector3(1.8, 2.8 if rarity == "rare_plus" else 1.8, 0.4)
+			star.size = Vector3(1.8, 2.8 if rarity != "rare" else 1.8, 0.4)
 			node.mesh = star
 		_:
 			var slab := BoxMesh.new()

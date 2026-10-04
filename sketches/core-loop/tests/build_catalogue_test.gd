@@ -14,7 +14,7 @@ const Icons := preload("res://src/ui/icons.gd")
 # verb, a punch value and one or two known tags; only common rows may be
 # percentage-only; of 50 seeded gate pairs each holds a part that raises punch or
 # transforms a pattern; rarity follows source (gate tiers by bonus cores, fabricator
-# uncommon, vault rare, milestone rare-plus); a vault kill adds exactly one rare part
+# common, vault rare, milestone relic); a vault kill adds exactly one rare part
 # with source "vault"; and the gate label reads "{name}: {verb}. Punch +{n}".
 # Balance loop B4: the tag table is pinned (parts per tag, kinetic down from 8 to 6),
 # and over 50 seeds every stage-2 gate pair for a build with no pattern transformer
@@ -86,7 +86,7 @@ func _check_rows() -> void:
 	var tags_used := {}
 	for part_id in Parts.ids():
 		var d: Resource = Parts.def(part_id)
-		if d.verb == "" or d.punch < 0.0 or d.tags.is_empty() or d.tags.size() > 2 or not d.rarity in PartDef.RARITIES:
+		if d.verb == "" or d.punch < 0.0 or d.tags.is_empty() or d.tags.size() > 2 or not d.rarity in ItemGen.RARITIES:
 			bad.append(part_id)
 		for tag in d.tags:
 			if not tag in PartDef.TAGS:
@@ -98,7 +98,7 @@ func _check_rows() -> void:
 		"%d rows; rows missing a verb or with 0 or 3+ tags or an unknown tag %s; %d of %d tags in use"
 			% [Parts.ids().size(), bad, tags_used.size(), PartDef.TAGS.size()])
 	_report("no plain rows above common", plain_above_common.is_empty(),
-		"uncommon, rare and rare-plus rows that only scale numbers: %s" % [plain_above_common])
+		"rare, relic and evolved rows that only scale numbers: %s" % [plain_above_common])
 
 
 func _check_gate_pairs() -> void:
@@ -118,7 +118,7 @@ func _check_sources() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	var wrong: Array = []
-	var expect := {0: ["common", "uncommon"], 1: ["uncommon", "rare"], 2: ["rare", "rare_plus"], 3: ["rare", "rare_plus"]}
+	var expect := {0: ["common"], 1: ["common", "rare"], 2: ["rare", "relic"], 3: ["rare", "relic"]}
 	for cores in expect:
 		if Parts.gate_rarities(cores) != expect[cores]:
 			wrong.append("gate %d cores %s" % [cores, Parts.gate_rarities(cores)])
@@ -131,7 +131,7 @@ func _check_sources() -> void:
 				wrong.append("%s gave %s" % [source, picks])
 				break
 	_report("rarity by source", wrong.is_empty(),
-		"gates: 0 cores common/uncommon, 1 uncommon/rare, 2+ rare/rare-plus; fabricator uncommon, vault rare, milestone rare-plus; wrong %s" % [wrong])
+		"gates: 0 cores common, 1 common/rare, 2+ rare/relic; fabricator common, vault rare, milestone relic; wrong %s" % [wrong])
 
 
 func _check_vault() -> void:
@@ -308,12 +308,12 @@ func _check_rarity_weights() -> void:
 		var r := ItemGen.pick_rarity(rng, ItemGen.RARITIES)
 		counts[r] = counts.get(r, 0) + 1
 	var off: Array = []
-	for r in ItemGen.RARITY_WEIGHTS:
-		var want: float = ItemGen.RARITY_WEIGHTS[r] / 100.0
+	for r in ItemGen.RARITY:
+		var want: float = ItemGen.RARITY[r]["weight"] / 100.0
 		var got: float = counts.get(r, 0) / float(n)
 		if absf(got - want) > 0.015:
 			off.append("%s %.3f vs %.2f" % [r, got, want])
-	_report("rarity weights", off.is_empty(), "20000 draws over all four rarities %s against 60/27/10/3; off %s" % [counts, off])
+	_report("rarity weights", off.is_empty(), "20000 draws over all four rarities %s against 87/10/3/0; off %s" % [counts, off])
 
 
 func _is_pattern(key: String) -> bool:
