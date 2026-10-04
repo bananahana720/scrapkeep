@@ -231,7 +231,7 @@ func _check_models() -> void:
 	for rarity in ["common", "rare", "relic", "evolved"]:
 		var top := gate.find_child(HeroAssets.topper_name(rarity), true, false) as MeshInstance3D
 		_report("gate topper " + rarity, top != null and top.mesh != null, "%s resolves to a mesh" % HeroAssets.topper_name(rarity))
-		_band("gate " + rarity, base + (tris(top.mesh) if top != null else 0), GATE_TRIS)
+		_band("gate " + rarity, base + (tris(top.mesh) if top != null and top.mesh != null else 0), GATE_TRIS)
 	gate.free()
 
 	var warden: Node = (load(MODELS + "warden_clamp_base.glb") as PackedScene).instantiate()

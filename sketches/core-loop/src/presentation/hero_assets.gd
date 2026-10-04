@@ -91,13 +91,8 @@ var _reaction_clock := 0.0
 var _reaction_connections: Array = []
 
 
-# The gate glb still names its toppers by the pre-wave-3 ladder. Relic and evolved reuse
-# Topper_rare_plus until tools/blender/reward_gate.py is regenerated with the new names (follow-up).
-const TOPPER_NAMES := {"relic": "rare_plus", "evolved": "rare_plus"}
-
-
 static func topper_name(rarity: String) -> String:
-	return "Topper_" + String(TOPPER_NAMES.get(rarity, rarity))
+	return "Topper_" + rarity
 
 
 func setup(ctx_ref) -> void:
