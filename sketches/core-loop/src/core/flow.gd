@@ -60,6 +60,12 @@ var _warned := {}
 
 # Test seam: a boss row per world standing in for Worlds.boss_of.
 var boss_row_override := {}
+# The scene's own boss module script (game.gd sets it up as ctx.boss), the modules flow
+# built for other rows' scripts keyed by path, and the scene module while ctx.boss names
+# another.
+const SCENE_BOSS := "res://src/boss/boss.gd"
+var _row_modules := {}
+var _home_boss: Node = null
 var _world := 0
 var _launched := false
 var _flight := 0.0
@@ -97,13 +103,40 @@ func in_stage() -> bool:
 	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH
 
 
-# The boss module (ctx.boss, set by src/boss/boss.gd) runs the arena; without one, or on
-# a stage table that names no boss, the run ends on the summary after the last stage.
+# The boss module for the current world runs the arena; without one, or on a stage table
+# that names no boss, the run ends on the summary after the last stage.
 func _boss_module() -> Node:
 	if ctx.stages.BOSS == "":
 		return null
-	var boss: Node = ctx.boss if "boss" in ctx else null
+	return _module_for(ctx.stages.world_of(ctx.run.stage))
+
+
+# The module a world's boss row names. A row with the scene's own script (or none, as a
+# test's stand-in row) is answered by the scene's module, ctx.boss as game.gd or a test
+# set it up. Any other script is loaded and set up here once, kept beside flow and shared
+# by every row that names it.
+func _module_for(world: int) -> Node:
+	var path := String(boss_row(world).get("script", SCENE_BOSS))
+	if path == SCENE_BOSS:
+		return _scene_boss()
+	if not _row_modules.has(path):
+		_row_modules[path] = _load_module(path)
+	return _row_modules[path]
+
+
+func _scene_boss() -> Node:
+	var boss: Node = _home_boss if is_instance_valid(_home_boss) else (ctx.boss if "boss" in ctx else null)
 	return boss if boss != null and boss.has_method("enter_arena") else null
+
+
+func _load_module(path: String) -> Node:
+	if not ResourceLoader.exists(path):
+		warn_once("boss_script_" + path, "flow: boss script %s does not exist" % path)
+		return null
+	var module: Node = load(path).new()
+	add_child(module)
+	module.setup(ctx)
+	return module
 
 
 # The boss row that runs at the end of a world. Tests set boss_row_override[world] to stand
@@ -116,13 +149,13 @@ func boss_row(world: int) -> Dictionary:
 # built, or the scene has no module. A one-world table that names no boss ends with the
 # summary as before.
 func _world_boss(world: int) -> Node:
-	var module := _boss_module()
 	if ctx.stages.BOSS == "":
 		return null
 	var row: Dictionary = boss_row(world)
 	if not bool(row.get("built", false)):
 		warn_once("boss_unbuilt_%d" % world, "flow: world %d's boss is not built; skipping to the next world" % world)
 		return null
+	var module := _module_for(world)
 	if module == null and ctx.stages.worlds().size() > 1:
 		warn_once("boss_module_%d" % world, "flow: no boss module in the scene for world %d; skipping to the next world" % world)
 	return module
@@ -248,6 +281,12 @@ func replay_stage(index: int) -> bool:
 # snapshot), which R restores on the boss death screen.
 func enter_boss(carried: Vector3) -> void:
 	var boss := _boss_module()
+	# Combat's arena ground and the music read ctx.boss, so it names the module whose
+	# arena this is; the scene's own module is kept to answer its rows again later.
+	if "boss" in ctx and ctx.boss != boss:
+		if not is_instance_valid(_home_boss):
+			_home_boss = ctx.boss
+		ctx.boss = boss
 	in_arena = true
 	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
 	_set_state(BOSS)
