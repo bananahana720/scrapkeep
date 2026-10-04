@@ -402,7 +402,7 @@ func _drip(c: Dictionary) -> void:
 	if k >= c["trail"].size():
 		c["held"] = 0
 		return
-	_spawn_pickup(c["trail"][k], c["values"][k])
+	_spawn_pickup(c["trail"][k], c["values"][k], "returned")
 	c["held"] -= c["values"][k]
 	c["dripped"] = k + 1
 
@@ -423,11 +423,11 @@ func _drop_held(i: int) -> void:
 	for k in piles:
 		var value := rest / piles + (1 if k < rest % piles else 0)
 		if value > 0:
-			_spawn_pickup(ground + Arena.dir(TAU * k / piles) * 1.2, value)
+			_spawn_pickup(ground + Arena.dir(TAU * k / piles) * 1.2, value, "returned")
 	_discover(CodexEntries.CRANE_DROP, ground)
 
 
-func _spawn_pickup(at: Vector3, value: int) -> void:
+func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 	var node := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE * 0.7
@@ -436,10 +436,12 @@ func _spawn_pickup(at: Vector3, value: int) -> void:
 	arena.add_child(node)
 	node.global_position = at
 	node.rotation = Vector3(0.6, clock * 3.0, 0.3)
-	_pickups.append({"node": node, "value": value, "at": at, "age": 0.0})
+	_pickups.append({"node": node, "value": value, "at": at, "age": 0.0, "source": source})
 
 
 # The spill trail pays stolen mass back through add_scrap, the one way scrap is gained.
+# Spill and kill pickups also pay cogs one for one; a returned pickup is the ball's own
+# stolen mass, so it pays mass only and never mints cogs.
 func _step_trail(ball: Vector3) -> void:
 	var kept: Array = []
 	for p in _pickups:
@@ -447,6 +449,9 @@ func _step_trail(ball: Vector3) -> void:
 		var node: Node3D = p["node"]
 		if ball.distance_to(p["at"]) <= Rules.PICKUP_REACH:
 			ctx.run.add_scrap(p["value"], p["at"])
+			if p["source"] != "returned":
+				ctx.run.add_cogs(p["value"])
+				ctx.events.cogs_collected.emit(p["value"], ctx.run.cogs)
 			node.queue_free()
 			continue
 		if p["age"] >= Rules.PICKUP_LIFE:
@@ -463,7 +468,7 @@ func _spill_break() -> void:
 	for k in Rules.BREAK_PICKUPS:
 		var p: Vector3 = at + Arena.dir(TAU * k / Rules.BREAK_PICKUPS) * Rules.BREAK_RADIUS
 		var value := Rules.BREAK_SPILL / Rules.BREAK_PICKUPS + (1 if k < Rules.BREAK_SPILL % Rules.BREAK_PICKUPS else 0)
-		_spawn_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value)
+		_spawn_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value, "spill")
 
 
 # The scrap field is stage content and idles in the arena, so a drone killed here drops
@@ -471,7 +476,7 @@ func _spill_break() -> void:
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	if not active() or kind != "lobber" or not is_instance_valid(arena):
 		return
-	_spawn_pickup(Vector3(at.x, arena.ground(at) + 0.9, at.z), maxi(1, scrap_value))
+	_spawn_pickup(Vector3(at.x, arena.ground(at) + 0.9, at.z), maxi(1, scrap_value), "kill")
 
 
 func pickups_left() -> Array:
