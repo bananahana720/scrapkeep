@@ -4,7 +4,7 @@
 
 ## Wave 9 landed (2026-10-04, aec5d2e)
 
-Fourteen units merged and one retired, plus fix rounds F and G and three coordinator commits. proto/alpha went 62a0dd4 to aec5d2e. Gate 1 had 6 reds; gate 2: 373 runs, 0 fail; Opus gate read PASS+NOTES.
+Thirteen units merged (eleven Claude, two Sol) and one retired, plus fix rounds F and G and three coordinator commits. proto/alpha went 62a0dd4 to aec5d2e. Gate 1 had 6 reds; gate 2: 373 runs, 0 fail; Opus gate read PASS+NOTES.
 
 - enemy-burrower (9d8f68f, Sonnet): the world 2 burrower, hidden marker, lane burst and slam kill.
 - enemy-drill-crew (c810d17, Sonnet): a plated rig that bores where the ball will be.
