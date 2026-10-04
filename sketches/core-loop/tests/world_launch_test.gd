@@ -10,7 +10,8 @@ const Launch := preload("res://src/world/launch.gd")
 # touchdown and half a second after. It may lose no more than 15% anywhere; a gain is
 # a gift (the rail pushing a slow ball up to cruise, the landing hill), but the flight
 # never runs faster than the launch it was given. The landing pad must mark where the
-# ball actually comes down.
+# ball actually comes down. The measurement ends at boss entry: a launch into the boss
+# is no stage-to-stage launch, and a gun-only ball never ends a posture fight.
 
 const BEACON_SECONDS := 0.6
 const APPROACH := 16.0
@@ -87,6 +88,9 @@ func _planar() -> float:
 
 
 func _step() -> void:
+	if _game.flow.state_name() == "boss":
+		_finish()
+		return
 	var player = _game.player
 	match _phase:
 		"to_beacon":
