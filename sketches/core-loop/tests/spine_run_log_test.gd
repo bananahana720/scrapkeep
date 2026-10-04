@@ -95,7 +95,7 @@ func _finish() -> bool:
 	var traversal_keys := true
 	for key in ["flow_share", "dead_stops", "bites", "smashes", "breaks", "verb_fails", "prompts_shown"]:
 		traversal_keys = traversal_keys and ok and record.has(key)
-	_report("traversal fields", traversal_keys and int(record.get("prompts_shown", -1)) == 0 and record.get("breaks") is Dictionary and record.get("verb_fails") is Dictionary,
+	_report("traversal fields", traversal_keys and float(record.get("prompts_shown", -1)) >= 0.0 and float(record.get("prompts_shown", -1)) == floorf(float(record.get("prompts_shown", -1))) and record.get("breaks") is Dictionary and record.get("verb_fails") is Dictionary,
 		"flow share %s, dead stops %s, bites %s, smashes %s" % [record.get("flow_share", "?") if ok else "?", record.get("dead_stops", "?") if ok else "?", record.get("bites", "?") if ok else "?", record.get("smashes", "?") if ok else "?"])
 	_report("three stages", complete,
 		"%d stage record(s); stage 1 %s" % [stages.size(), JSON.stringify(stages[0]) if stages.size() > 0 else "none"])

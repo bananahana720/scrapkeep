@@ -161,7 +161,7 @@ func _check_run_log() -> void:
 	_t.eq("breaks by cause", [int(breaks.get("wall", 0)), int(breaks.get("slack", 0)), breaks.size()], [2, 1, 2])
 	var fails: Dictionary = record.get("verb_fails", {})
 	_t.eq("verb fails by verb", [int(fails.get("harpoon", 0)), int(fails.get("haul", 0)), fails.size()], [3, 1, 2])
-	_t.eq("prompts shown", int(record.get("prompts_shown", -1)), 0)
+	_t.check("prompts shown", float(record.get("prompts_shown", -1)) >= 0.0 and float(record.get("prompts_shown", -1)) == floorf(float(record.get("prompts_shown", -1))), "prompts_shown %s" % record.get("prompts_shown"))
 	var share = record.get("flow_share")
 	_t.check("flow share and dead stops ride the record", share is float and share >= 0.0 and share <= 1.0 and record.has("dead_stops"),
 		"flow share %s, dead stops %s" % [share, record.get("dead_stops")])

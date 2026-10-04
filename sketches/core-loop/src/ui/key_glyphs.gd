@@ -58,6 +58,7 @@ var _line := ""
 var _points := {}
 var _vault := Vector3.INF
 var _placed: Array = []
+var _was_drawn := {}
 
 
 func setup(game_ref, profile_ref) -> void:
@@ -90,6 +91,7 @@ func new_run() -> void:
 	_winch_held = false
 	_letgo_latch = 0
 	shown = []
+	_was_drawn = {}
 
 
 func _on_line_state(state: String, _target, _at: Vector3, _cause: String) -> void:
@@ -235,6 +237,14 @@ func step(delta: float, view: Dictionary) -> void:
 				_revived[verb] = false
 				_free[verb] = 0.0
 				_unused[verb] = 0.0
+	var drawn_now := {}
+	for prompt in shown:
+		var verb: String = prompt["verb"]
+		if _drawn(prompt):
+			drawn_now[verb] = true
+			if not _was_drawn.has(verb):
+				game.events.prompt_shown.emit(verb)
+	_was_drawn = drawn_now
 
 
 # The dish an open deflector vault window points the jump prompt at, or Vector3.INF.

@@ -145,6 +145,7 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	events.line_state_changed.connect(_on_line_state)
 	events.verb_failed.connect(_on_verb_failed)
 	events.pack_arrived.connect(_on_pack_arrived)
+	events.prompt_shown.connect(_on_prompt_shown)
 	events.cause_fired.connect(_on_cause_fired)
 	events.posture_changed.connect(_on_posture_changed)
 
@@ -283,6 +284,11 @@ func _on_beacon_unsealed(stage: int) -> void:
 func _on_pack_arrived(faction: String, _at: Vector3, _kinds: Array) -> void:
 	if not _record.is_empty() and not _in_arena:
 		_stage_list("packs").append(faction)
+
+
+func _on_prompt_shown(_verb: String) -> void:
+	if not _record.is_empty() and not _in_arena:
+		_record["prompts_shown"] += 1
 
 
 func _on_cause_fired(id: String, _target: Node3D, _at: Vector3) -> void:
