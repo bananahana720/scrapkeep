@@ -1,0 +1,230 @@
+# smoke: solo (four isolated seeded bot children at a time)
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
+const Augments := preload("res://src/movement/augments.gd")
+
+# Rule: the explorer re-bites a different enemy during airborne grace and pays a
+# two-link chain; the seed repeats and the skipper/camper keep their base run records.
+# Children use bot_run.gd's Game.new(), test_mode and ordinary scripted input.
+# Only physics frames bound play; this test does not read a wall clock.
+# A separate hand case stages the grounded start, apex and reticle, then sends the
+# driver's inputs through the real player's grammar. It proves the new second press
+# rather than treating combos that the ordinary hand already makes as its evidence.
+const TICKS := 5400
+const EXPLORER_TICKS := 2700
+# 2026-10-04 B2: measured 5/16 in 2700 frames; lower band authorized by the unit.
+# Report separates no-bite seeds from
+# one-link chains that touch ground before another anchor can be locked.
+const MIN_CHAIN_SEEDS := 5
+const PARALLEL := 4
+const BASE_CONTROLS := '{"skipper":[{"abandoned_in":"stage","anomalies":[],"best_combo":2,"bites":27,"breaks":{},"brindle_phase_reached":null,"chains":[{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":2,"links":2,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0},{"combo":1,"links":1,"paid":true,"pivots":0}],"class":"runner_gunner","codex":[],"dead_stops":0,"delivered_damage":{"by_action":{"pin":17.90407371521,"ram":444.010973170598,"runner":93.9890268294016,"slam":17.27591196039},"by_range":{"far":0.0,"mid":113.248012257606,"near":459.931973417994},"by_source":{"drop_or_slam":17.27591196039,"ram_or_contact":461.915046885808,"special":93.9890268294016,"weapon":0.0},"by_target_class":{"Warden":400.0,"adds":65.27591196039,"enemy":107.90407371521},"hits":830,"overkill":14.0109731705984,"retirements":{"adds":1,"enemy":1},"total":573.1799856756,"warden_slam_hits":{},"zero_damage_hits":810},"durability":{"arena_destroyed":0.0,"class_changes":0,"class_drops":0,"destroyed":3.0,"expired":0.0,"fresh":29.0,"heft_at_hits":[1.0],"hit_loss":12.0,"hull_damage":9.59999999999999,"mass_end":18.0,"min_heft":1.0,"recovered":9.0,"reverse_seconds":0.0,"scrap_mode":"armor","wear":"on","wear_loss":8.0},"flow_share":0.958077709611452,"misses":0,"outcome":"abandoned","prompts_shown":6,"run_id":"1791092399-935087","smashes":26,"stages":[{"attempts":1,"bonus_cores":0,"causes":{},"deaths":[],"events_joined":[],"events_won":[],"heft_at_engage":1.00222222222222,"heft_at_exit":null,"heft_class_at_engage":1,"mass_at_engage":1.0,"packs":["fleet","fleet","fleet","fleet","fleet"],"part_ids_at_exit":null,"posture":{"chunks_lost":2,"fight_ticks":4170,"glances":771,"staggers":2},"stage":1,"ticks_to_warden_break":null,"ticks_to_warden_engaged":978}],"table":"slice","verb_fails":{}}],"camper":[{"abandoned_in":"stage","anomalies":[],"best_combo":0,"bites":0,"breaks":{},"brindle_phase_reached":null,"chains":[],"class":"runner_gunner","codex":["shell_return"],"dead_stops":0,"delivered_damage":{"by_action":{"pin":11.0185887813568,"runner":227.036585488564,"shell":26.0,"slam":2.96341451143618},"by_range":{"far":86.0185887813568,"mid":142.8,"near":38.1999999999999},"by_source":{"drop_or_slam":2.96341451143618,"ram_or_contact":37.0185887813568,"special":83.0,"weapon":144.036585488564},"by_target_class":{"Warden":0.0,"adds":151.018588781357,"enemy":116.0},"hits":754,"overkill":33.1634145114363,"retirements":{"adds":2,"enemy":2},"total":267.018588781357,"warden_slam_hits":{},"zero_damage_hits":669},"durability":{"arena_destroyed":0.0,"class_changes":0,"class_drops":0,"destroyed":0.0,"expired":0.0,"fresh":69.0,"heft_at_hits":[],"hit_loss":0.0,"hull_damage":0.0,"mass_end":68.0,"min_heft":-1.0,"recovered":0.0,"reverse_seconds":0.0,"scrap_mode":"armor","wear":"on","wear_loss":1.0},"flow_share":0.958077709611452,"misses":0,"outcome":"abandoned","prompts_shown":6,"run_id":"1791092400-935087","smashes":0,"stages":[{"attempts":1,"bonus_cores":0,"causes":{},"deaths":[],"events_joined":[],"events_won":[],"heft_at_engage":1.00222222222222,"heft_at_exit":null,"heft_class_at_engage":1,"mass_at_engage":1.0,"packs":["fleet","fleet","fleet","fleet","fleet"],"part_ids_at_exit":null,"posture":{"chunks_lost":0,"fight_ticks":4282,"glances":665,"staggers":0},"stage":1,"ticks_to_warden_break":null,"ticks_to_warden_engaged":978}],"table":"slice","verb_fails":{}}]}'
+
+var _pending: Array[Dictionary] = []
+var _active: Array[Dictionary] = []
+var _records := {}
+var _bots := {}
+var _failures := 0
+var _folder := ""
+var _finished := false
+var _hand_game
+
+
+func _initialize() -> void:
+	_folder = ProjectSettings.globalize_path("res://../../artifacts/local/sol/chain-hand")
+	var suffix := 0
+	while DirAccess.dir_exists_absolute(_folder + "-%d" % suffix):
+		suffix += 1
+	_folder += "-%d" % suffix
+	DirAccess.make_dir_recursive_absolute(_folder)
+	for number in range(1, 17):
+		_pending.append({"id": "explorer-%d" % number, "policy": "completionist", "seed": number})
+	_pending.append({"id": "repeat", "policy": "completionist", "seed": 2})
+	for policy in ["skipper", "camper"]:
+		_pending.append({"id": policy, "policy": policy, "seed": 1})
+	_hand_game = Game.new()
+	_hand_game.test_mode = true
+	_hand_game.table = "slice"
+	root.add_child(_hand_game)
+
+
+func _report(label: String, ok: bool, detail: String) -> void:
+	if not ok:
+		_failures += 1
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+func _launch() -> void:
+	while _active.size() < PARALLEL and not _pending.is_empty():
+		var trial: Dictionary = _pending.pop_front()
+		trial["ticks"] = EXPLORER_TICKS if trial["policy"] == "completionist" else TICKS
+		var folder: String = _folder.path_join(trial["id"])
+		DirAccess.make_dir_recursive_absolute(folder)
+		var previous := {}
+		for kind in ["DATA", "CONFIG", "CACHE"]:
+			var key: String = "XDG_%s_HOME" % kind
+			previous[key] = OS.get_environment(key)
+			OS.set_environment(key, folder.path_join(kind.to_lower()))
+		var args := PackedStringArray(["--headless", "--quiet", "--fixed-fps", "90", "--path",
+			ProjectSettings.globalize_path("res://"), "--log-file", folder.path_join("engine.log"),
+			"--script", "res://tools/bot_run.gd", "--",
+			"--out=" + folder, "--policy=" + trial["policy"], "--seeds=%d" % trial["seed"],
+			"--table=slice", "--ticks=%d" % trial["ticks"]])
+		trial["pid"] = OS.create_process(OS.get_executable_path(), args)
+		for key in previous:
+			if previous[key].is_empty():
+				OS.unset_environment(key)
+			else:
+				OS.set_environment(key, previous[key])
+		trial["folder"] = folder
+		_active.append(trial)
+
+
+func _physics_process(_delta: float) -> bool:
+	if _finished:
+		return true
+	if _hand_game != null:
+		if _hand_game.flow == null:
+			return false
+		_check_hand()
+		_hand_game.free()
+		_hand_game = null
+		Engine.time_scale = 1.0
+		if OS.get_cmdline_user_args().has("--hand-only"):
+			_finish()
+			return true
+		_launch()
+		return false
+	for index in range(_active.size() - 1, -1, -1):
+		var trial: Dictionary = _active[index]
+		if OS.is_process_running(trial["pid"]):
+			continue
+		var rows := _read_rows(trial["folder"].path_join("runs.ndjson"))
+		var bots := _read_rows(trial["folder"].path_join("bots.ndjson"))
+		var log := FileAccess.get_file_as_string(trial["folder"].path_join("engine.log"))
+		var code := OS.get_process_exit_code(trial["pid"])
+		var complete: bool = not rows.is_empty() and bots.size() == 1 and int(bots[0].get("ticks", 0)) > 0 \
+			and int(bots[0].get("ticks", 0)) <= trial["ticks"] and code == 0 and not "SCRIPT ERROR:" in log and not "ERROR:" in log
+		_report(trial["id"] + " completed", complete, "exit %d, %d logged records, %d bot records" % [code, rows.size(), bots.size()])
+		_records[trial["id"]] = rows
+		_bots[trial["id"]] = bots.back() if not bots.is_empty() else {}
+		_active.remove_at(index)
+	_launch()
+	if not _active.is_empty() or not _pending.is_empty():
+		return false
+	_finished = true
+	_check()
+	_finish()
+	return true
+
+
+func _finish() -> void:
+	print("bot_chain_hand_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	quit(0 if _failures == 0 else 1)
+
+
+func _check_hand() -> void:
+	_hand_game.ctx.calm = true
+	var driver := BotDriver.new(_hand_game, "completionist", 2)
+	driver.start()
+	var player = _hand_game.player
+	var first := StaticBody3D.new()
+	var second := StaticBody3D.new()
+	for anchor in [first, second]:
+		anchor.collision_layer = Augments.ENEMY_MASK
+		anchor.add_to_group("enemy")
+		root.add_child(anchor)
+	first.global_position = player.ball_position() + Vector3(0.0, 0.0, -20.0)
+	second.global_position = player.ball_position() + Vector3(12.0, 0.0, -22.0)
+	player.state.grounded = true
+	player.kit.aim = {"body": first, "point": first.global_position, "normal": Vector3.UP, "state": Augments.AIM_BODY}
+	driver._off_line = 99.0
+	driver._harpoon_hand(first, 1.0 / 90.0)
+	driver._act(player.ball_position(), first, 1.0 / 90.0)
+	_report("hand first bite", driver._chain_phase == "first" and driver._chain_second == second
+		and driver.source.press.get("jump_pressed", false), "two anchors arm the explorer's jump and first bite")
+	driver.source.poll(player.intent)
+	player._read_grammar()
+	_report("hand anchor A", player.kit.hooked and player.kit.anchor_body == first, "first input bites A")
+	# Staged apex and reticle isolate the hand from terrain, camera and jump physics.
+	player.state.grounded = false
+	player.body().linear_velocity = Vector3.ZERO
+	driver._chain_rose = true
+	driver._explorer_chain(1.0 / 90.0)
+	driver.source.poll(player.intent)
+	player._read_grammar()
+	player._publish_end()
+	_report("hand apex release", not player.kit.hooked and player.chain.grace_left > 0.0,
+		"the apex sends an explicit release and starts grace")
+	player.kit.aim = {"body": second, "point": second.global_position, "normal": Vector3.UP, "state": Augments.AIM_BODY}
+	driver._explorer_chain(1.0 / 90.0)
+	driver.source.poll(player.intent)
+	player._read_grammar()
+	_report("hand two-hook combo", player.chain.combo == 2 and player.kit.anchor_body == second,
+		"the second input bites B inside grace and raises combo to 2")
+	driver._explorer_chain(1.0 / 90.0)
+	driver.source.poll(player.intent)
+	player._read_grammar()
+	_report("hand smash", player.kit.line_state == Augments.LINE_SMASH, "Ctrl commits the second anchor's smash")
+	first.free()
+	second.free()
+
+
+func _read_rows(path: String) -> Array:
+	var rows := []
+	if FileAccess.file_exists(path):
+		for line in FileAccess.get_file_as_string(path).split("\n", false):
+			var row = JSON.parse_string(line)
+			if row is Dictionary:
+				rows.append(row)
+	return rows
+
+
+func _last(id: String) -> Dictionary:
+	var rows: Array = _records.get(id, [])
+	return rows.back() if not rows.is_empty() else {}
+
+
+func _check() -> void:
+	var chained := 0
+	var paid := 0
+	var released := 0
+	for number in range(1, 17):
+		var row := _last("explorer-%d" % number)
+		var combo := int(row.get("best_combo", 0))
+		var lets_go := 0
+		for stage in _bots["explorer-%d" % number].get("stages", []):
+			lets_go += int(stage.get("chain_releases", 0))
+		if lets_go > 0:
+			released += 1
+		if combo >= 2:
+			chained += 1
+		for chain in row.get("chains", []):
+			if chain["combo"] >= 2 and chain["paid"]:
+				paid += 1
+				break
+		print("seed %d: best_combo=%d chains=%d misses=%d releases=%d" % [number, combo,
+			row.get("chains", []).size(), int(row.get("misses", -1)), lets_go])
+	_report("two-hook combo", chained >= MIN_CHAIN_SEEDS, "%d/16 seeds reach combo 2, require %d" % [chained, MIN_CHAIN_SEEDS])
+	_report("two-hook smash", paid > 0, "%d/16 seeds log a paid two-link chain" % paid)
+	_report("apex release", released > 0, "%d/16 seeds observe the hand's let_go event" % released)
+	var first := _last("explorer-2")
+	var repeat := _last("repeat")
+	_report("seed repeats", not first.is_empty() and not repeat.is_empty()
+		and first["best_combo"] == repeat["best_combo"]
+		and first["chains"].size() == repeat["chains"].size() and first["misses"] == repeat["misses"],
+		"seed 2 repeats best_combo, chains.size and misses")
+	var controls: Dictionary = JSON.parse_string(BASE_CONTROLS)
+	for policy in ["skipper", "camper"]:
+		_report(policy + " base record", JSON.stringify(_stable(_records[policy])) == JSON.stringify(_stable(controls[policy])),
+			"all gameplay fields and seeded id match base 13fe55af, seed 1, %d frames" % TICKS)
+
+
+# RunState names a run with wall seconds plus a seeded suffix. Only that clock prefix
+# is identity rather than behavior; every other field and every logged record is pinned.
+func _stable(rows: Array) -> Array:
+	var stable := rows.duplicate(true)
+	for row in stable:
+		row["run_id"] = "clock-" + String(row["run_id"]).get_slice("-", 1)
+	return stable

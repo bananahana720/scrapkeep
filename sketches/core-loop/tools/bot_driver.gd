@@ -7,6 +7,7 @@ const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -239,6 +240,11 @@ var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
 var _harpoon_commit := false
+# Only the explorer changes hands: bite, jump, release at the apex, bite again, haul.
+var _chain_phase := ""
+var _chain_first: Node3D = null
+var _chain_second: Node3D = null
+var _chain_rose := false
 # Seconds since the ball was last beyond the drop line of its fight target.
 var _off_line := 0.0
 var _out: Array[Dictionary] = []
@@ -266,6 +272,8 @@ func start() -> void:
 	game.ctx.rng.seed = 20260926 + seed_value * 7919
 	game.player.source = source
 	var events = game.events
+	if policy == "completionist":
+		events.line_state_changed.connect(_on_explorer_line)
 	events.stage_entered.connect(_on_stage_entered)
 	events.stage_cleared.connect(func(_s: int): _close_note())
 	events.reward_offered.connect(_on_offers)
@@ -364,6 +372,8 @@ func tick(delta: float) -> bool:
 	if not flow.in_play():
 		source.hold = {}
 		return false
+	if policy == "completionist" and state not in ["stage", "beacon"]:
+		_clear_chain_hand()
 	# Every stage state, the gates included: a gate the bot cannot reach (seed 5 random put
 	# gate 1 behind a Spillway chute kerb) once ran a process forever, since only the
 	# Warden fight had a limit. stall_state says which state ran out.
@@ -444,6 +454,7 @@ func _end(why: String) -> void:
 # --- bookkeeping -----------------------------------------------------------------------
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
+	_clear_chain_hand()
 	_close_note()
 	_stage = stage
 	_offers = []
@@ -611,6 +622,9 @@ static func _along(line: Array, spawn: Vector3, axis: Vector2) -> float:
 # --- the roam: what to go for now ------------------------------------------------------
 
 func _roam(delta: float) -> void:
+	if policy == "completionist" and _chain_phase != "":
+		_explorer_chain(delta)
+		return
 	if not _planned:
 		_plan()
 	_welcome_ring_at = Vector3.INF
@@ -1039,6 +1053,95 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
 		_count("harpoon_bites")
+		if policy == "completionist" and target.is_in_group("enemy") and game.player.verb_ready("jump"):
+			var second := _chain_partner(target)
+			if second != null:
+				_chain_phase = "first"
+				_chain_first = target
+				_chain_second = second
+				_chain_rose = false
+				source.press["jump_pressed"] = true
+
+
+func _clear_chain_hand() -> void:
+	_chain_phase = ""
+	_chain_first = null
+	_chain_second = null
+	_chain_rose = false
+
+
+func _on_explorer_line(state: String, _target: Node3D, _at: Vector3, _cause: String) -> void:
+	if state == "let_go" and _chain_phase == "second":
+		_count("chain_releases")
+	elif state == "broke" and _chain_phase in ["first", "rise"]:
+		_count("chain_breaks_" + _cause)
+	elif state == "chain_end" and not game.player.chain.finished.is_empty():
+		_count("chain_ends_" + String(game.player.chain.finished.back()["cause"]))
+
+
+# Tree order breaks equal-distance ties; no object ids or extra RNG draws affect a seed.
+func _chain_partner(first: Node3D) -> Node3D:
+	var ball: Vector3 = game.player.ball_position()
+	var nearest: float = game.player.tuning.f("rope_range")
+	var second: Node3D = null
+	for enemy in game.get_tree().get_nodes_in_group("enemy"):
+		if enemy == first or not enemy is Node3D or not is_instance_valid(enemy):
+			continue
+		if not Augments.hookable_body(enemy):
+			continue
+		var distance := ball.distance_to(enemy.global_position)
+		if distance < nearest:
+			nearest = distance
+			second = enemy
+	return second
+
+
+# The hand reads the same lock and airborne grace the pilot sees. It sends only input,
+# never attaches a line or writes the chain. Turning during the rise saves the grace
+# for the second bite; withholding fire and specials keeps the selected anchor alive.
+func _explorer_chain(delta: float) -> void:
+	var player = game.player
+	var kit = player.kit
+	if not is_instance_valid(_chain_second) or (_chain_second.has_method("is_dead") and _chain_second.is_dead()):
+		var first: Node3D = _chain_first if is_instance_valid(_chain_first) else null
+		_chain_second = _chain_partner(first)
+	if _chain_second == null or player.frozen() or not player.chain.active():
+		_clear_chain_hand()
+		source.hold = {}
+		return
+	_goal = "two-hook %s" % _chain_phase
+	_harpoon_held = false
+	_harpoon_commit = false
+	match _chain_phase:
+		"first", "rise":
+			_chain_phase = "rise"
+			var up: float = player.body().linear_velocity.y
+			_chain_rose = _chain_rose or (not player.state.grounded and up > 0.0)
+			if not kit.hooked or (_chain_rose and up <= 0.0):
+				if kit.hooked:
+					source.press["harpoon_released"] = true
+				_chain_phase = "second"
+			else:
+				_harpoon_held = true
+		"second":
+			if kit.hooked and kit.anchor_body == _chain_second:
+				_chain_phase = "smash"
+				_harpoon_held = true
+				_harpoon_commit = true
+			elif player.chain.grace_left > 0.0 and not player.state.grounded \
+					and kit.aim.get("body") == _chain_second and player.verb_ready("harpoon"):
+				source.press["harpoon_pressed"] = true
+				_harpoon_held = true
+				_count("harpoon_bites")
+		"smash":
+			_harpoon_held = kit.hooked
+			_harpoon_commit = kit.hooked
+			if not kit.hooked:
+				_clear_chain_hand()
+	_drive(player.ball_position(), _chain_second, delta)
+	source.hold.erase("fire_held")
+	source.hold.erase("shift_held")
+	source.press.erase("shift_pressed")
 
 
 func _ram_laps(target: Node3D, aim, delta: float) -> void:
@@ -1303,6 +1406,12 @@ func _to_gate(delta: float) -> void:
 # specials). evade false rolls straight on, as a clash does.
 func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true) -> void:
 	var player = game.player
+	if policy == "completionist" and _chain_phase != "":
+		_drive(player.ball_position(), _chain_second, delta)
+		source.hold.erase("fire_held")
+		source.hold.erase("shift_held")
+		source.press.erase("shift_pressed")
+		return
 	if player.kit.mounted:
 		_turret(aim, delta)
 		return
