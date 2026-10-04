@@ -4,11 +4,12 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
 
 # Moss is never seen (DESIGN-V2 sections 12 and 15): a voice from the hatch and a pair
 # of hands. His line is a speech bubble whose tail runs off the screen's left edge, the
 # side his counter is on, with a hand below it that gestures what he just did. The line
-# is his own words from shop.gd and nothing else.
+# comes from shop.gd at his counter and lore_rows.gd on zone entry.
 #
 # Exasperation lives in the bubble, not in extra words: each beat of the conversation
 # loop sharpens the bubble's corners, cuts teeth into its edge and shakes it harder,
@@ -48,6 +49,17 @@ var _body := Vector2.ZERO
 var _spin := 0.0
 var _pop := 1.0
 var _tween: Tween
+var _game
+var _exchange: Array = []
+var _exchange_index := 0
+var _zones_played := {}
+
+
+class ExchangeInput extends Node:
+	var bubble
+
+	func _input(event: InputEvent) -> void:
+		bubble._exchange_input(event)
 
 
 func _init() -> void:
@@ -64,6 +76,96 @@ func _init() -> void:
 	add_child(_label)
 
 
+func _ready() -> void:
+	_game = get_parent().game
+	_install_exchange_input.call_deferred()
+	_game.events.run_started.connect(_on_run_started)
+	_game.events.stage_entered.connect(_on_stage_entered)
+	_game.events.warden_engaged.connect(func(_stage: int): _end_exchange())
+	_game.events.flow_changed.connect(func(_state: String):
+		if not _game.flow.in_stage():
+			_end_exchange())
+
+
+func _install_exchange_input() -> void:
+	# Listen after the game's overlays are built, so Escape skips before it pauses.
+	var listener := ExchangeInput.new()
+	listener.name = "LoreExchangeInput"
+	listener.bubble = self
+	listener.process_mode = Node.PROCESS_MODE_ALWAYS
+	_game.add_child(listener)
+
+
+func _on_run_started(_class_id: String) -> void:
+	_end_exchange()
+	_zones_played.clear()
+
+
+func _on_stage_entered(stage: int, _retry: bool) -> void:
+	_end_exchange()
+	# Flow places the new Warden after this signal, clearing the previous engagement.
+	_begin_exchange.call_deferred(stage)
+
+
+func _begin_exchange(stage: int) -> void:
+	if stage != _game.run.stage or not _game.flow.in_stage() or _game.flow.engaged():
+		return
+	var zone := "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
+	if _zones_played.has(zone):
+		return
+	var exchange_id := ""
+	for row in LoreRows.ROWS:
+		if row["kind"] == "exchange" and row["zone"] == zone:
+			if exchange_id == "":
+				exchange_id = row["exchange"]
+			if row["exchange"] == exchange_id:
+				_exchange.append(row)
+	if _exchange.is_empty():
+		return
+	_zones_played[zone] = true
+	_exchange_index = 0
+	position = Vector2(0.0, get_viewport().get_visible_rect().size.y * 0.30)
+	_show_exchange_line()
+
+
+func _show_exchange_line() -> void:
+	var line: Dictionary = _exchange[_exchange_index]
+	_say("%s: %s" % [line["speaker"], line["text"]], "moss_beat", "exchange", 0.0, false, "")
+
+
+func _advance_exchange() -> void:
+	_exchange_index += 1
+	if _exchange_index >= _exchange.size():
+		_end_exchange()
+	else:
+		_show_exchange_line()
+
+
+func _end_exchange() -> void:
+	if _exchange.is_empty():
+		return
+	_exchange.clear()
+	_exchange_index = 0
+	if _tween != null:
+		_tween.kill()
+	_hold = 0.0
+	text = ""
+	_label.text = ""
+	visible = false
+	modulate.a = 0.0
+
+
+func _exchange_input(event: InputEvent) -> void:
+	if _exchange.is_empty() or get_tree().paused:
+		return
+	if event.is_action_pressed("ui_cancel"):
+		_end_exchange()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_accept"):
+		_advance_exchange()
+		get_viewport().set_input_as_handled()
+
+
 func row() -> Dictionary:
 	return EventKinds.LOOT_ROWS.get(kind, EventKinds.LOOT_ROWS["moss_beat"])
 
@@ -76,6 +178,7 @@ func showing() -> bool:
 func beat(record: Dictionary) -> void:
 	if record.is_empty():
 		return
+	_end_exchange()
 	var mood_now := "beat"
 	if record.get("relent", false):
 		mood_now = "relent"
@@ -90,12 +193,14 @@ func beat(record: Dictionary) -> void:
 func bark(line: Dictionary, fact: String) -> void:
 	if line.is_empty():
 		return
+	_end_exchange()
 	var refused := fact == "shop_refused"
 	_say(String(line.get("text", "")), fact, "refuse" if refused else "bark", 0.0, refused,
 		"refuse" if refused else ("give" if fact in ["shop_bought", "shop_charge", "shop_sold"] else ""))
 
 
 func hush() -> void:
+	_end_exchange()
 	_hold = 0.0
 	if not visible:
 		return
@@ -156,7 +261,7 @@ func _process(delta: float) -> void:
 	_gesture_clock += delta
 	# A line waits out a pause (the pick screen over the bay's greeting) instead of
 	# expiring unread behind it.
-	if not sticky and _hold > 0.0 and not get_tree().paused:
+	if _exchange.is_empty() and not sticky and _hold > 0.0 and not get_tree().paused:
 		_hold -= delta
 		if _hold <= 0.0:
 			hush()

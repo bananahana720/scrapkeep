@@ -1,0 +1,151 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
+const Codex := preload("res://src/core/codex.gd")
+const Push := preload("res://tests/workshop/push.gd")
+
+# Lore wiring rule: zone-entry exchanges follow row order, wait for advance, end on
+# one cancel, play once per zone per run and stay silent in Warden fights. Notes show
+# only saved codex discoveries, with locked empty-text rows in lore-table order.
+# This exercises the real game's bus, input dispatch and rendered Notes labels.
+
+const SETTLE_FRAMES := 12
+
+var _game
+var _bubble
+var _phase := "boot"
+var _frames := 0
+var _failures := 0
+
+
+func _initialize() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	_game.table = "alpha"
+	root.add_child(_game)
+
+
+func _report(label: String, ok: bool, detail: String) -> void:
+	if not ok:
+		_failures += 1
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+func _next(phase: String) -> void:
+	_phase = phase
+	_frames = 0
+
+
+func _lines(zone: String, kind: String) -> Array:
+	return LoreRows.ROWS.filter(func(row): return row["zone"] == zone and row["kind"] == kind)
+
+
+func _said(row: Dictionary) -> bool:
+	return _bubble.visible and _bubble.text == "%s: %s" % [row["speaker"], row["text"]]
+
+
+func _press(action: String) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	root.push_input(event, true)
+	event = InputEventAction.new()
+	event.action = action
+	event.pressed = false
+	root.push_input(event, true)
+
+
+func _physics_process(_delta: float) -> bool:
+	if _game.flow == null:
+		return false
+	_frames += 1
+	if _phase != "boot" and _frames < SETTLE_FRAMES:
+		return false
+	var spillway := _lines("1-1", "exchange")
+	match _phase:
+		"boot":
+			_game.ctx.calm = true
+			_game.player.source = Intent.Scripted.new()
+			_bubble = _game.get_node("Workshop").bubble
+			_game.flow.press_start()
+			_game.flow.choose_class(0)
+			_next("entry")
+		"entry":
+			_report("Spillway entry", _said(spillway[0]) and _bubble.showing(), _bubble.text)
+			_bubble._process(30.0)
+			_report("waits for advance", _said(spillway[0]), "simulated 30 seconds without input")
+			Push.key(root, KEY_ENTER)
+			_report("advance second line", _said(spillway[1]), _bubble.text)
+			Push.key(root, KEY_ESCAPE)
+			_report("one skip ends exchange", not _bubble.visible and _bubble.text == "", "visible %s; text '%s'" % [_bubble.visible, _bubble.text])
+			_report("skip does not open pause", not _game.pause_toggled() and not paused, "Escape belongs to the exchange while it is playing")
+			_press("ui_accept")
+			_next("skipped")
+		"skipped":
+			_report("skip has no next line", not _bubble.visible and _bubble.text == "", _bubble.text)
+			_game.flow.enter_stage(1, Vector3.ZERO, true)
+			_next("retry")
+		"retry":
+			_report("same zone stays silent", not _bubble.visible and _bubble.text == "", "retry within the same run")
+			_check_notes()
+			_game.flow.enter_stage(2, Vector3.ZERO, false)
+			_next("reach")
+		"reach":
+			var reach := _lines("1-2", "exchange")
+			_report("Reach entry", _said(reach[0]), _bubble.text)
+			_press("ui_accept")
+			_report("action advances", _said(reach[1]), _bubble.text)
+			_press("ui_accept")
+			_report("third row in order", _said(reach[2]), _bubble.text)
+			_press("ui_accept")
+			_report("last line ends exchange", not _bubble.visible and _bubble.text == "", "all three lines completed")
+			_game.flow.enter_stage(2, Vector3.ZERO, true)
+			_next("completed")
+		"completed":
+			_report("completed zone stays silent", not _bubble.visible, "Reach retry within the same run")
+			_game.flow.new_run()
+			_next("new_run")
+		"new_run":
+			_report("new run restores exchange", _said(spillway[0]), _bubble.text)
+			_report("note survives new run", _game.notes.note_entries()[0]["known"], "saved codex id remains known")
+			_game.flow._engage()
+			_report("Warden engagement hides lore", not _bubble.visible and _bubble.text == "", "warden_engaged through flow")
+			_press("ui_accept")
+			_game.flow.enter_stage(2, Vector3.ZERO, false)
+			_game.flow._engage()
+			_next("fight")
+		"fight":
+			_report("no lore during Warden fight", not _bubble.visible and _bubble.text == "", "advance and entry signal cannot resume lore")
+			print("ui_lore_wiring_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+			quit(0 if _failures == 0 else 1)
+			return true
+	return false
+
+
+func _check_notes() -> void:
+	var lore_notes := LoreRows.ROWS.filter(func(row): return row["kind"] == "field_note")
+	var found: Dictionary = lore_notes[0]
+	_game.codex.declare({"id": found["id"], "category": "world", "name": "Field note", "text": found["text"]})
+	_game.codex.mark_discovered(found["id"])
+	var saved := Codex.new()
+	saved.setup(_game.events, _game.run, null, _game.storage_dir)
+	_report("note saved in profile codex", _game.codex.last_error == "" and saved.known(found["id"]), "fresh codex reads the discovered lore id")
+	saved.free()
+	var notes = _game.notes
+	var entries: Array = notes.note_entries()
+	_report("found note uses codex", entries[0]["known"] and entries[0]["text"] == found["text"], entries[0]["text"])
+	_report("unfound text is empty", not entries[1]["known"] and entries[1]["text"] == "", str(entries[1]))
+	var ordered: bool = entries.size() == lore_notes.size()
+	for i in mini(entries.size(), lore_notes.size()):
+		ordered = ordered and entries[i]["id"] == lore_notes[i]["id"]
+	_report("notes keep row order", ordered, "%d rows from two zones" % entries.size())
+	_game.hold_notes(true)
+	notes.show_page(notes.pages().find("notes"))
+	var lines = notes._codex_page.get_child(0).get_child(0)
+	_report("Notes page renders found text", notes.current_page() == "notes" and notes.tab_label() == "Notes"
+			and lines.get_child_count() == entries.size() and lines.get_child(0).text.contains(found["text"]), lines.get_child(0).text)
+	_report("locked line renders no lore", lines.get_child(1).text == "2. Locked"
+			and not lines.get_child(1).text.contains(lore_notes[1]["text"]), lines.get_child(1).text)
+	_game.hold_notes(false)

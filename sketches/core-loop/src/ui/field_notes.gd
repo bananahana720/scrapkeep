@@ -10,6 +10,7 @@ const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const ThreatSheet := preload("res://src/ui/threat_sheet.gd")
 const GrowthSheet := preload("res://src/ui/growth_sheet.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
 
 # Tab's field notes are pictures (playtest entry 8: the old page was "a whole essay of
 # text"): the controls as a keyboard and mouse with your pilot's keys lit, what hurts
@@ -187,7 +188,7 @@ func setup(game_ref) -> void:
 
 
 # The picture pages first, then one page per codex category (reserved ones only once
-# they hold entries), then the Found list.
+# they hold entries), then the Found list and lore Notes.
 func pages() -> Array[String]:
 	var list: Array[String] = []
 	list.append_array(PICTURE_PAGES.keys())
@@ -196,6 +197,7 @@ func pages() -> Array[String]:
 		if not reserved or (_codex() != null and not _codex().entries(id).is_empty()):
 			list.append(id)
 	list.append("found")
+	list.append("notes")
 	return list
 
 
@@ -230,6 +232,8 @@ func tab_label(page := "") -> String:
 		page = current_page()
 	if PICTURE_PAGES.has(page):
 		return PICTURE_PAGES[page]["label"]
+	if page == "notes":
+		return "Notes"
 	if page == "found":
 		return "Found %d" % (_codex().found().size() if _codex() != null else 0)
 	return "%s %d%%" % [EventKinds.category(page)["label"], int(_codex().completion(page) * 100.0) if _codex() != null else 0]
@@ -238,7 +242,7 @@ func tab_label(page := "") -> String:
 func _tab_icon(page: String) -> Texture2D:
 	if PICTURE_PAGES.has(page):
 		return Icons.texture(PICTURE_PAGES[page]["icon"])
-	if page == "found":
+	if page in ["found", "notes"]:
 		return Icons.shape("star")
 	return Icons.shape(EventKinds.category(page)["shape"])
 
@@ -251,7 +255,7 @@ func _tab_color(page: String) -> Color:
 	if page == "keys":
 		var def = game.run.class_def if game != null and game.run != null else null
 		return def.color if def != null else Palette.SAND
-	if page == "found":
+	if page in ["found", "notes"]:
 		return Palette.SAND
 	return EventKinds.category(page)["color"]
 
@@ -314,7 +318,10 @@ class TabStrip:
 # Builds one codex page and returns how many cards or lines it shows.
 func render_page(page: String) -> int:
 	for child in _codex_page.get_children():
+		_codex_page.remove_child(child)
 		child.queue_free()
+	if page == "notes":
+		return _render_notes()
 	var codex = _codex()
 	if codex == null:
 		return 0
@@ -340,6 +347,40 @@ func render_page(page: String) -> int:
 	_codex_page.add_child(grid)
 	for entry in listed:
 		grid.add_child(_card(entry, style))
+	return listed.size()
+
+
+# Saved codex ids are the only found-state; locked rows never expose their words.
+func note_entries() -> Array:
+	var listed := []
+	var codex = _codex()
+	for row in LoreRows.ROWS:
+		if row["kind"] != "field_note":
+			continue
+		var known: bool = codex != null and codex.known(row["id"])
+		listed.append({"id": row["id"], "known": known, "text": row["text"] if known else ""})
+	return listed
+
+
+func _render_notes() -> int:
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_codex_page.add_child(scroll)
+	var lines := VBoxContainer.new()
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.add_theme_constant_override("separation", 12)
+	scroll.add_child(lines)
+	var listed := note_entries()
+	for i in listed.size():
+		var entry: Dictionary = listed[i]
+		var line := Label.new()
+		line.name = entry["id"]
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		line.add_theme_font_size_override("font_size", 16)
+		line.add_theme_color_override("font_color", Palette.SAND if entry["known"] else Color(Palette.SAND, 0.45))
+		line.text = "%d. %s" % [i + 1, entry["text"] if entry["known"] else "Locked"]
+		lines.add_child(line)
 	return listed.size()
 
 
