@@ -723,3 +723,14 @@ E is interact everywhere (`design-v3/LOOP-REDESIGN.md` section 9). World owns th
 - **Sources.** A module that grants a ceremonial find calls `run.add_part(id, source)` with a source from `CEREMONY_SOURCES` (`cache`, `cage`, `warden` and `evolution` are reserved for sources not yet on this base). Nothing else is needed.
 - **Reads, never decides.** The ceremony reads `part_gained`, the payoff facts and `build.item_procs()`. It pauses the tree only when calm, sets `menu_held` while it holds, and hands back the ball's exact velocity. `presentation.ceremony.pause_armed` is off in test mode.
 - **Audio.** `audio.stop(sound)` cuts every SFX voice of a sound (a skipped build). Tested by `presentation_ceremony_test`.
+
+## Boss contract
+
+`src/boss/boss_contract.gd` (`BossContract`) lists the duck-typed surface a boss answers, and `tests/boss_contract_test.gd` checks it. `BossContract.conforms(obj, surface)` returns the missing or mistyped names (empty means conforming) and `describe()` prints both lists. Each row is a name, an argument count and a return type.
+
+- `TARGET` is the boss body, an enemy node, as combat, the plate, the ring, audio and the run log call it: `fight`, `posture`, `staggered`, `stagger_left`, `chunks_left`, `glances`, `chunk_cracked`, `judge_hit(kind, punch, smash, tier)`, `take_damage`, `is_dead`, plus the enemy protocol combat reads (`plating_for`, `hit_mult`, `contact_part`, `on_struck`). `combat.resolve()` sends any enemy whose `fight()` is `"posture"` through `judge_hit` before the plating rule.
+- `MODULE` is the module on `ctx.boss`, as flow and the HUD call it: `enter_arena(entry_velocity)`, `exit_arena`, `active`, `ground_height_at`, `music_state`, `objective_text`.
+
+Who conforms: the posture Warden (slice table) conforms to `TARGET` now. The Slag Bowl module (`boss.gd`) has the `MODULE` methods but is not yet checked by the test. Pending: Brindle on the posture rule (unit F2a, through `boss_target.gd`) and the later-world stub (unit F5).
+
+Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The test only shows two conforming doubles can exist side by side without touching it; a real multi-module slot is not built.
