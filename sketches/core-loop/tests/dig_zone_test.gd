@@ -64,20 +64,20 @@ func _run() -> void:
 		var r: Rect2 = plate["rect"]
 		var drop_to: float = plate["drop_to"]
 		t.check("%s: rect at least 8 m a side" % id, r.size.x >= 8.0 and r.size.y >= 8.0, str(r.size))
-		t.check("%s: id in start_overlays" % id, m.start_overlays.has(id), str(m.start_overlays))
+		t.check("%s: id in start_overlays" % id, m.start_overlays.has(id + "_before"), str(m.start_overlays))
 		var floor_rect := r.grow(-DigMap.PIT_WALL)
 		var points := [r.get_center(), floor_rect.position, floor_rect.end,
 			Vector2(floor_rect.position.x, floor_rect.end.y), Vector2(floor_rect.end.x, floor_rect.position.y)]
 		var covered := 0.0
 		for p in points:
 			covered = maxf(covered, absf(terrain.height(p.x, p.y) - DigMap.UPPER_H))
-		var had: bool = terrain.overlays.has(id)
-		terrain.overlays.erase(id)
+		var had: bool = terrain.overlays.has(id + "_before")
+		terrain.overlays.erase(id + "_before")
 		var dropped := 0.0
 		for p in points:
 			dropped = maxf(dropped, absf(terrain.height(p.x, p.y) - drop_to))
 		if had:
-			terrain.overlays.append(id)
+			terrain.overlays.append(id + "_before")
 		t.check("%s: upper tier while live" % id, covered <= 0.001, "worst gap %.4f" % covered)
 		t.check("%s: drop_to %.1f once erased" % [id, drop_to], dropped <= 0.001, "worst gap %.4f" % dropped)
 
@@ -107,7 +107,7 @@ func _run() -> void:
 	var gap_before := at.y - radius - upper
 	t.check("%s: ball rests on the cover" % pid, absf(gap_before) <= TOLERANCE,
 		"y %.3f, terrain.height %.3f, gap %.3f" % [at.y, upper, gap_before])
-	terrain.overlays.erase(pid)
+	terrain.overlays.erase(pid + "_before")
 	m.apply_swap(pid, true)
 	var reached := -1
 	var gap := INF
@@ -122,7 +122,7 @@ func _run() -> void:
 		"first agreeing frame %d, terrain.height %.3f (was %.3f)" % [reached, lower, upper])
 	t.check("%s: ball agrees with the floor at frame %d" % [pid, DROP_FRAMES], absf(gap) <= TOLERANCE,
 		"y %.3f, terrain.height %.3f, gap %.3f" % [at.y, lower, gap])
-	terrain.overlays.append(pid)
+	terrain.overlays.append(pid + "_before")
 	m.apply_swap(pid, false)
 
 	# (5) The ground route: sampled every 1 m, never uphill over the bot's grade, never on a plate.

@@ -122,7 +122,8 @@ func _run() -> void:
 	await physics_frame
 	var hp_before: float = _warden.hp
 	_hit("runner", 9999.0)
-	_combat.strike(_warden, "runner", 9999.0, "core")
+	# 2026-10-04: the swarm's open point is "queen" (warden.gd FAMILY_POINTS), so strike family_point().
+	_combat.strike(_warden, "runner", 9999.0, _warden.family_point())
 	_report("guns cannot crack an open core through the rack", _warden.staggered() and not _warden.chunk_cracked()
 		and _warden.hp == hp_before and _warden.chunks_left() == 4, "hp %.1f, chunks %d, cracked %s" % [_warden.hp, _warden.chunks_left(), _warden.chunk_cracked()])
 	await _reform()

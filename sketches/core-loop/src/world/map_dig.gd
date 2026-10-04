@@ -68,7 +68,8 @@ func _init() -> void:
 	rescue_sites = [{"id": "kest_cage", "quest": "dig", "at": Vector2(-60.0, 90.0), "face": Vector2(1.0, 0.0)}]
 	breach_plates = BREACH_PLATES.duplicate(true)
 	for plate in breach_plates:
-		start_overlays.append(plate["id"])
+		# 2026-10-04: id + "_before" is the pre-break overlay, as map_gorge.gd and world._swap use it.
+		start_overlays.append(plate["id"] + "_before")
 
 
 # The two tiers, the ramp, the pits under the plates, and the shared rim walls.
@@ -95,7 +96,7 @@ func material_at(x: float, z: float) -> String:
 # A plate's cover reads as the upper tier over its whole rect while its id is live.
 func overlay_height(id: String, x: float, z: float, _ground: float) -> float:
 	for plate in breach_plates:
-		if plate["id"] == id and _inside(plate["rect"], x, z):
+		if plate["id"] + "_before" == id and _inside(plate["rect"], x, z):
 			return UPPER_H
 	return -INF
 

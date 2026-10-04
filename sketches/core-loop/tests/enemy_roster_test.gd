@@ -91,8 +91,16 @@ func _data() -> void:
 
 	# 2026-10-04, alpha wave 8: the world 2 and 3 kinds are declared ahead of their scripts.
 	var declared: Array = Roster.world_kinds(2) + Roster.world_kinds(3)
-	var built: Array = declared.filter(func(id): return Roster.built(id))
-	_report("declared kinds are unbuilt", declared.size() == 6 and built.is_empty(), "declared %s; built %s" % [declared, built])
+	# 2026-10-04: built tracks the script file, so a wave 9 unit that adds one needs no edit here.
+	var mismatched: Array = []
+	var built: Array = []
+	for id in declared:
+		var has_script := ResourceLoader.exists(String(Roster.row(id).get("script", "")))
+		if Roster.built(id):
+			built.append(id)
+		if Roster.built(id) != has_script:
+			mismatched.append(id)
+	_report("declared kinds are built exactly when their script exists", declared.size() == 6 and mismatched.is_empty(), "declared %s; built %s; mismatched %s" % [declared, built, mismatched])
 
 
 func _physics_process(_delta: float) -> bool:
