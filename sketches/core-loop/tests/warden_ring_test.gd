@@ -18,6 +18,11 @@ const T := preload("res://tests/support/t.gd")
 const PLATING := 45.0
 
 var _t := T.new("warden_ring_test")
+# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+class PlatingGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _combat
 var _player
@@ -247,13 +252,13 @@ func _run() -> void:
 
 
 func _plating() -> void:
-	_game = Game.new()
+	_game = PlatingGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	if not await _start("plating"):
 		_t.check("a Warden stands on the default table", false)
 		return
 	await _seconds(0.3)
-	_t.eq("the default Warden fights by plating", _warden.fight(), "plating")
+	_t.eq("the local Warden fights by plating", _warden.fight(), "plating")
 	_t.check("a plating Warden has no ring", _warden.get_node_or_null("WardenRing") == null)
 	_game.free()

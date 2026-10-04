@@ -18,7 +18,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # - calm mode builds the cache alone;
 # - no activity changes the ball's planar speed beyond what the same line costs with none;
 # - with all three finished no timed event starts in 60 simulated seconds;
-# - a retry restores three unfinished activities, and the default three-stage table builds none.
+# - a retry restores three unfinished activities, and the default alpha table builds its authored activity sites.
 # Every wait is counted in physics frames; none reads the wall clock.
 
 const SEED := 11
@@ -437,8 +437,8 @@ func _default_table() -> void:
 	await _frames(3)
 	var maps: Array = _game.ctx.terrain.maps
 	var counts: Array = maps.map(func(m): return m.activity_sites.size() if "activity_sites" in m else 0)
-	_t.check("the default table's maps carry no activity sites", counts.all(func(n): return n == 0), "sites per stage %s" % [counts])
-	_t.eq("the default table builds no activity on its first stage", _game.world.activities.sites.size(), 0)
+	_t.check("the default alpha maps carry their authored activity sites", counts == [0, 3], "sites per stage %s" % [counts])
+	_t.eq("Spillway has no activity sites on its current authored map", _game.world.activities.sites.size(), 0)
 	_t.eq("its three Spillway devices stand", _game.world.interact.devices.size(), 3)
 	_game.free()
 	await _frames(2)

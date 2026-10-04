@@ -11,7 +11,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 # Warden is staggered twice by real rams, loses one chunk to a real harpoon smash, a real
 # reinforcement spawn arrives as a pack and a held synergy fires on a real ram. The line
 # the run leaves carries the table and the stage row's posture, packs and causes, with the
-# numbers the bus itself announced. A default-table run carries its own table id and no
+# numbers the bus itself announced. A local plating fixture carries the default table id and no
 # posture block on a plating Warden's row. Contacts are real physics from placed starts;
 # every wait is counted in physics frames.
 
@@ -20,6 +20,11 @@ const NEAR := 5.0
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const SYNERGY := "wrecking_ball"
+
+# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+class PlatingGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 var _game
 var _combat
@@ -239,7 +244,7 @@ func _retry_row() -> void:
 
 
 func _default_table() -> void:
-	_game = Game.new()
+	_game = PlatingGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	if not await _start("default"):

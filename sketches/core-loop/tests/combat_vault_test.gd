@@ -1,19 +1,26 @@
 extends SceneTree
 
+# Legacy plating/third-stage rule: use the multiworld double, not the alpha route.
+
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
+const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 # The vault: a static plated cache. It never moves and never attacks (no player_hit in
 # HOLD seconds with the ball parked beside it and rammed into it), its plating is the
 # next stage's Warden plating (StageDefs: 80 on stage 1, 140 on stage 2) and combat's
-# VAULT_TOP_SCALE (1.2) times its own Warden's on stage 3 (168). Hits land in full only
+# VAULT_TOP_SCALE (1.2) times its own Warden's on the final stage. Hits land in full only
 # when punch reaches the plating (probed just under and just over it at heft 1, against
 # the live plating, since each probe's shred lowers it for the next), and breaking it
 # publishes enemy_killed with kind "vault".
 
 const HOLD := 10.0
 const SCALE := 3.0
+
+# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
 var _game
 var _combat
@@ -29,7 +36,7 @@ var _kills: Array = []
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 
@@ -116,17 +123,17 @@ func _plating_rule() -> void:
 
 func _plating_by_stage() -> void:
 	var seen := []
-	for stage in [2, 3]:
+	for stage in [2, StageDefs.COUNT]:
 		_game.flow.enter_stage(stage, Vector3.ZERO, false)
 		var ctx = _game.ctx
 		var at: Vector3 = ctx.terrain.spawn_point(stage) + ctx.terrain.entry_heading(stage) * 20.0
 		var vault: Node3D = ctx.spawner.spawn_enemy("vault", at)
 		seen.append([_combat.plating_of(vault), vault.max_hp])
 	var want_2: float = StageDefs.of(3)["warden_plating"]
-	var want_3: float = roundf(_combat.VAULT_TOP_SCALE * StageDefs.of(3)["warden_plating"])
-	_report("by_stage", seen == [[want_2, 800.0], [want_3, 1200.0]] and want_3 > StageDefs.of(3)["warden_plating"],
-		"stage 2 vault plating %.0f / hp %.0f, stage 3 plating %.0f / hp %.0f (needs %.0f/800 and %.0f/1200, above Warden III's %.0f)"
-			% [seen[0][0], seen[0][1], seen[1][0], seen[1][1], want_2, want_3, StageDefs.of(3)["warden_plating"]])
+	var want_3: float = roundf(_combat.VAULT_TOP_SCALE * StageDefs.of(StageDefs.COUNT)["warden_plating"])
+	_report("by_stage", seen == [[want_2, 800.0], [want_3, 400.0 * StageDefs.COUNT]] and want_3 > StageDefs.of(StageDefs.COUNT)["warden_plating"],
+		"stage 2 vault plating %.0f / hp %.0f, final stage plating %.0f / hp %.0f (needs %.0f/800 and %.0f/1200, above final Warden's %.0f)"
+			% [seen[0][0], seen[0][1], seen[1][0], seen[1][1], want_2, want_3, StageDefs.of(StageDefs.COUNT)["warden_plating"]])
 
 
 func _finish() -> bool:

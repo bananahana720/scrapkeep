@@ -35,6 +35,11 @@ const BRANCHED_CODE := {
 }
 
 var _t := T.new("boss_plate_test")
+# 2026-10-04: retire with F6. The plating regression uses explicit test-only rows.
+class PlatingGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _combat
 var _player
@@ -272,7 +277,7 @@ func _stagger_bar() -> void:
 
 
 func _plating_table() -> void:
-	_game = Game.new()
+	_game = PlatingGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 	while _game.flow == null:
@@ -283,7 +288,7 @@ func _plating_table() -> void:
 	_game.flow.choose_class(1)
 	await _seconds(0.4)
 	var warden = _game.flow.warden
-	_t.check("the default table's Warden fights by plating", is_instance_valid(warden) and warden.fight() == "plating")
+	_t.check("the local row's Warden fights by plating", is_instance_valid(warden) and warden.fight() == "plating")
 	_plate.bind(warden)
 	_t.eq("a plating Warden: no words", _plate.drawn_words(), [])
 	_t.eq("a plating Warden: no pips", _plate.pips().size(), 0)

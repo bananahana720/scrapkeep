@@ -89,7 +89,7 @@ func _run() -> void:
 				check(material.get_shader_parameter("detail_enabled") == true and material.get_shader_parameter("relief_enabled") == true, "target detail and relief enabled")
 				var parameters := material.shader.get_shader_uniform_list()
 				check(parameters.any(func(p): return p.name == "detail_enabled"), "engine parses target shader uniforms and include")
-	check(roles.ground == 3 and roles.rock >= 1 and roles.dam >= 4, "three terrain grounds, rock and merged/imported dam surfaces use target materials")
+	check(roles.ground == 2 and roles.rock >= 1 and roles.dam >= 4, "two alpha terrain grounds, rock and merged/imported dam surfaces use target materials")
 	for row in before:
 		check(row.view.mesh == row.mesh and row.view.cast_shadow == row.cast_shadow, "target keeps mesh and shadow-caster state for " + str(row.view.name))
 		if not Preset._materials.any(func(binding): return binding.view.get_ref() == row.view):

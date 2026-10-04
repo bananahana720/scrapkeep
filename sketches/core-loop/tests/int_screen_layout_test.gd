@@ -14,7 +14,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 #   - reward-gate prompts and a prompt whose anchor stands high above the camera are
 #     placed inside the prompts band, apart from one another;
 #   - the field notes legend shows each shape's glyph, not its key word;
-#   - stages 2 and 3 carry the world's map titles.
+#   - the two zones carry the world's map titles.
 
 const SIZES := [Vector2(1600.0, 900.0), Vector2(1280.0, 720.0)]
 const KEY_WORDS := ["star", "chevron", "cross", "diamond", "wave", "core", "burst", "arrow", "ring", "square", "bar"]
@@ -157,7 +157,7 @@ func _check_names() -> void:
 		var shown: String = StageDefs.of(stage + 1)["name"]
 		names.append(shown)
 		ok = ok and shown == terrain.map_for(stage + 1).title
-	_report("stage names", ok and not names[1].begins_with("Spillway") and not names[2].begins_with("Spillway"),
+	_report("stage names", ok and names.size() == 2 and not names[1].begins_with("Spillway"),
 		"stage names %s match the world's map titles" % [names])
 
 

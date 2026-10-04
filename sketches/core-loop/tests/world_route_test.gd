@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 
-# The fall-line layout on all three stages, in the real physics world: the beacon's
+# The fall-line layout on the legacy double stages, in the real physics world: the beacon's
 # mast top is in clear sight from the 14 m entry drop, the spawn is above the beacon,
 # every scrap line (so every fabricator B stands on one) lies within 25 m of the
 # spawn-to-beacon line, the vault and each event ring sit 40 m or more off it with a
@@ -20,6 +20,13 @@ const BANK_DEG := 20.0
 const BANK_SHARE := 0.5
 const MAX_PILLARS := 3
 
+# The straight fall-line rule predates the Reach's authored routes. Keep it on the
+# double's gorge; reach_gates_test covers the current Reach's fixed gate placement.
+# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _failures := 0
 var _stage := 0
@@ -29,7 +36,7 @@ var _frames := 0
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 
@@ -58,7 +65,7 @@ func _physics_process(_delta: float) -> bool:
 			_check_layout(_stage)
 			_stage += 1
 			_wait = 0
-			if _stage <= 3:
+			if _stage <= _game.ctx.stages.COUNT:
 				_game.ctx.terrain.use(_stage)
 			else:
 				_stage = 0
@@ -72,7 +79,7 @@ func _physics_process(_delta: float) -> bool:
 				_stage += 1
 				_wait = 0
 				_frames = 0
-				if _stage > 3:
+				if _stage > _game.ctx.stages.COUNT:
 					return _finish()
 				_game.flow.enter_stage(_stage, Vector3(0.0, 0.0, 18.0), false)
 				for offer in _game.world.events.offers:

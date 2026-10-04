@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
-const StageDefs := preload("res://src/core/stage_defs.gd")
+const StageDefs := preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 const EventView := preload("res://src/world/event_view.gd")
 
 # The words Andrew reads in play (FIXWAVE spine, build and world minors), checked on
@@ -16,6 +16,12 @@ const EventView := preload("res://src/world/event_view.gd")
 #     event sign names the bonus core;
 #   - stage 3's hint says when the magnet can be shot.
 
+# Legacy three-stage wording and event signs use the event-enabled double.
+# 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
+class LegacyGame extends "res://src/game.gd":
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
 var _game
 var _failures := 0
 var _phase := "boot"
@@ -24,7 +30,7 @@ var _s := {}
 
 
 func _initialize() -> void:
-	_game = Game.new()
+	_game = LegacyGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
 

@@ -49,7 +49,8 @@ func _rows(t) -> void:
 	t.eq("the chooser has a case for every row", CASES.keys().size(), Objectives.ROWS.size())
 	var lessons := []
 	for stage in StageDefs.COUNT:
-		lessons.append(Objectives.LESSON_ROWS.has(StageDefs.of(stage + 1)["warden_lesson"]))
+		var row: Dictionary = StageDefs.of(stage + 1)
+		lessons.append(row.get("warden_fight", "plating") == "posture" and row["warden_lesson"] == "" or Objectives.LESSON_ROWS.has(row["warden_lesson"]))
 	t.eq("every stage's lesson has a row", lessons.all(func(ok): return ok), true)
 	t.eq("the HUD colours every row from an event row that exists", Objectives.ROWS.keys().filter(func(id): return not Hud.ROW_COLOR.has(id) or EventKinds.row(Hud.ROW_COLOR[id]).is_empty()), [])
 	t.eq("the HUD rings only rows the table has", Hud.RING_ROWS.filter(func(id): return not Objectives.ROWS.has(id)), [])
