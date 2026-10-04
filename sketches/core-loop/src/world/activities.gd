@@ -349,10 +349,13 @@ func _finish(s: Site, at: Vector3) -> void:
 
 
 # The rule's scrap, through the run's own add_scrap so it grows the ball and publishes a class up.
+# The same amount lands in the cog wallet (CG2, one cog per scrap unit as on kills), so the
+# activity still pays what it paid when scrap was the money.
 func _pay_scrap(s: Site, at: Vector3) -> void:
 	var amount := int(s.rule["pay"].get("scrap", 0))
 	if amount > 0:
 		ctx.run.add_scrap(amount, at)
+		ctx.run.add_cogs(amount)
 
 
 func _roll(id: String, rarities: Array) -> String:

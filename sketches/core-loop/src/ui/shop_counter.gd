@@ -223,7 +223,7 @@ func refresh() -> void:
 	for row in _rows.get_children():
 		_rows.remove_child(row)
 		row.queue_free()
-	_scrap.amount = game.run.scrap
+	_scrap.amount = game.run.cogs
 	_scrap.queue_redraw()
 	var cls: int = game.run.heft_class()
 	_heft.set_reading(cls, RunState.HEFT_CLASS_AT.size(), game.run.heft_progress(), RunState.roman(cls), EventKinds.color("heft_class_changed"))
@@ -249,7 +249,7 @@ func _build_buy() -> void:
 			"price": offer["price"], "state": state}, SHELF_TILE)
 	var cost: int = shop.reroll_price()
 	_tile(shelf, {"kind": "reroll", "price": cost,
-		"state": "spent" if shop.rerolls_left <= 0 else ("ok" if game.run.scrap >= cost else "poor")}, SHELF_TILE)
+		"state": "spent" if shop.rerolls_left <= 0 else ("ok" if game.run.cogs >= cost else "poor")}, SHELF_TILE)
 	var tree = game.player.get("tree") if game.player != null else null
 	if tree != null and tree.pending():
 		var pair: Array = tree.offered(tree.class_id, tree.path().size() + 1)
@@ -257,7 +257,7 @@ func _build_buy() -> void:
 	var lower := _row()
 	var top: Dictionary = shop.top_shelf()
 	if not top.is_empty():
-		var state := "sold" if top["sold"] else ("locked" if top["locked"] else ("ok" if game.run.scrap >= top["price"] else "poor"))
+		var state := "sold" if top["sold"] else ("locked" if top["locked"] else ("ok" if game.run.cogs >= top["price"] else "poor"))
 		var rec := _part_rec("top", top["part_id"], top["price"], state)
 		rec["rarity"] = "relic"
 		rec["needs_class"] = top["needs_class"]
@@ -269,7 +269,7 @@ func _build_buy() -> void:
 		slots[s["slot"]] = AbilitySlots.normalized(s, game.run.class_def)
 	for offer in shop.charge_offers():
 		var slot: Dictionary = slots.get(offer["slot"], {})
-		var state := "capped" if not offer["can"] else ("ok" if game.run.scrap >= offer["price"] else "poor")
+		var state := "capped" if not offer["can"] else ("ok" if game.run.cogs >= offer["price"] else "poor")
 		_tile(lower, {"kind": "cell", "slot": offer["slot"], "part_id": offer["part_id"], "icon": slot.get("icon", offer["icon"]),
 			"key": slot.get("key", ""), "color": _class_color(), "cells": offer["cells"], "cap": offer["cap"],
 			"price": offer["price"], "state": state}, CELL_TILE)

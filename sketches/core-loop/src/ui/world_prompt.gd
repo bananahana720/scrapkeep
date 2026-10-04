@@ -23,10 +23,10 @@ const DETAIL_SIZE := 15
 const ICON := 24.0
 const ICON_GAP := 6.0
 const LINE_GAP := 2.0
-# A parsed prompt's icon: the vault by its title, a fabricator by its price in scrap,
+# A parsed prompt's icon: the vault by its title, a fabricator by its price in cogs,
 # and anything else is a reward gate's offer.
 const TITLE_ICONS := {"vault": "obj_vault", "fabricating...": "obj_fabricator"}
-const PRICE_WORD := " scrap"
+const PRICE_WORD := " cogs"
 const DEFAULT_ICON := "obj_gate"
 
 # The node the prompt follows, the offset above it, and how far away it still shows.
