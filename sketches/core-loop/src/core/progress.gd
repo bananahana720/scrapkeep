@@ -56,6 +56,23 @@ func setup(events, run, profile, now := Callable()) -> void:
 	for signal_name in wanted:
 		if arg_names.has(signal_name):
 			_connect(signal_name, arg_names[signal_name])
+	backfill_rewards()
+
+
+# Pays the reward of every row the profile already earned, once per reward (the settle-once
+# ledger keys it), so a reward changed after the earn still lands. Returns the number of grants made.
+func backfill_rewards() -> int:
+	if _profile == null:
+		return 0
+	var granted := 0
+	for id in rows:
+		if not _profile.earned(id):
+			continue
+		var reward: Dictionary = rows[id].get("reward", {})
+		for kind in reward:
+			if grant_once("reward:%s:%s" % [id, kind], String(kind), String(reward[kind])):
+				granted += 1
+	return granted
 
 
 # The saved count toward a row (read-only), for the achievements page.

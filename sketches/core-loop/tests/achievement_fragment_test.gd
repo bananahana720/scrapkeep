@@ -10,10 +10,13 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The Highdraft fragment: beating the Mind (world three's boss_defeated) earns mind_quieted
-# once per profile. Isolated part: a fresh profile and the real bus, world two then three.
+# The remembered cannon: beating the Mind (world three's boss_defeated) earns mind_quieted
+# once per profile and unlocks pilot remembered_cannon, granted once and kept on reload.
+# Isolated part: a fresh profile and the real bus, world two then three.
 # Live part: the default table, the Mind fought with paced hits, an arena retry mid-fight,
 # then a second run's win earns nothing new.
+# Backfill part: a profile that earned mind_quieted when its reward was {} gets the pilot at
+# the next boot, keeps its other unlocks, and a second boot grants nothing.
 #
 # Evidence limit: hits are TARGET calls, not ball contacts.
 
@@ -42,6 +45,7 @@ func _run() -> void:
 	await _live()
 	_isolated()
 	_page()
+	_backfill()
 	_game.free()
 	quit(_t.verdict())
 
@@ -61,14 +65,65 @@ func _isolated() -> void:
 	_game.events.world_entered.emit(2)
 	_game.events.boss_defeated.emit()
 	_t.check("P1 a world-two boss does not earn it", not profile.earned("mind_quieted"), "world 2")
+	_t.check("P1 a world-two boss unlocks no cannon", not profile.has_pilot("remembered_cannon"), "world 2")
 	_t.eq("P1 nothing announced for world two", _count("mind_quieted"), 0)
 	_game.events.world_entered.emit(3)
 	_game.events.boss_defeated.emit()
 	_t.check("P1 the world-three boss earns it", profile.earned("mind_quieted"), "world 3")
 	_t.eq("P1 announced once", _count("mind_quieted"), 1)
+	_t.check("P1 remembered_cannon unlocked", profile.has_pilot("remembered_cannon"), "world 3")
+	var reloaded := Profile.new(profile.path)
+	reloaded.load_profile()
+	_t.check("P1 the unlock survives reload", reloaded.has_pilot("remembered_cannon"), "reloaded")
 	_game.events.boss_defeated.emit()
 	_t.eq("P1 a second win announces nothing", _count("mind_quieted"), 1)
+	var again := Profile.new(profile.path)
+	again.load_profile()
+	_t.eq("P1 the pilot is granted once", _pilot_count(profile.path, "remembered_cannon"), 1)
+	_t.eq("P1 the reward is settled once", again.settled_ids().count("reward:mind_quieted:pilot"), 1)
 	progress.free()
+
+
+# Counts a pilot id in the saved profile's pilots list, read from the JSON itself.
+func _pilot_count(path: String, id: String) -> int:
+	var doc = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not (doc is Dictionary):
+		return -1
+	return Array(doc.get("pilots", [])).count(id)
+
+
+func _backfill() -> void:
+	var path := "%s/fragment_backfill.json" % _game.storage_dir
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)
+	var old := Profile.new(path)
+	old.load_profile()
+	old.earn("mind_quieted", NOW)
+	old.unlock_pilot("tarn")
+	old.unlock_cosmetic("paint_kest_dusk")
+	old.settle("reward:brindle_routed:pilot")
+	if not _t.check("B0 the waves 11-13 profile saved without the cannon", old.save() and not old.has_pilot("remembered_cannon"), old.last_error):
+		return
+	var profile := Profile.new(path)
+	profile.load_profile()
+	var before := _count("mind_quieted")
+	var progress := Progress.new()
+	_game.add_child(progress)
+	progress.setup(_game.events, null, profile, func(): return NOW)
+	_t.check("B1 backfill grants remembered_cannon", profile.has_pilot("remembered_cannon"), "after setup")
+	_t.check("B1 earlier unlocks kept", profile.has_pilot("tarn") and profile.has_cosmetic("paint_kest_dusk"), "tarn, paint_kest_dusk")
+	_t.eq("B1 no announcement", _count("mind_quieted"), before)
+	progress.free()
+	var reloaded := Profile.new(path)
+	reloaded.load_profile()
+	_t.check("B1 survives reload", reloaded.has_pilot("remembered_cannon"), "reloaded")
+	var second := Progress.new()
+	_game.add_child(second)
+	second.setup(_game.events, null, reloaded, func(): return NOW)
+	_t.eq("B1 second boot grants nothing", second.backfill_rewards(), 0)
+	_t.eq("B1 the settled key is held once", reloaded.settled_ids().count("reward:mind_quieted:pilot"), 1)
+	_t.eq("B1 the pilot is held once", _pilot_count(path, "remembered_cannon"), 1)
+	second.free()
 
 
 func _page() -> void:
@@ -80,6 +135,8 @@ func _page() -> void:
 	var problems := Achievements.validate(Achievements.ROWS, Achievements.bus_signals(),
 		ClassDef.all().map(func(d): return d.id), Cosmetics.ids())
 	_t.eq("P2 the table validates", problems, [])
+	var hint := String(Achievements.row("mind_quieted")["text"])
+	_t.check("P2 the hint is 12 words or fewer", hint.split(" ", false).size() <= 12, hint)
 
 
 func _pace(mod) -> int:
@@ -124,6 +181,7 @@ func _live() -> void:
 	var at: int = profile.earned_at("mind_quieted")
 	_t.check("L3 earned_at recorded", at > 0, "at %d" % at)
 	_t.eq("L3 announced once", _count("mind_quieted"), 1)
+	_t.check("L3 remembered_cannon unlocked", profile.has_pilot("remembered_cannon"), "ctx.profile")
 
 	flow.new_run()
 	Harness.boot(game)

@@ -15,7 +15,8 @@ extends RefCounted
 # need     optional: a run summary key (SUMMARY_KEYS) or one of class, won, world
 # min,max  optional numbers compared with the need key
 # hidden   optional: the card shows no text until it is earned
-# reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id}
+# reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id};
+#          a pilot id is a ClassDef id or a PENDING_PILOTS id
 
 const FIELDS := ["name", "text", "on", "where", "sum", "count", "need", "min", "max", "hidden", "reward"]
 const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries"]
@@ -24,6 +25,9 @@ const REWARD_KINDS := ["pilot", "cosmetic", "world"]
 const NAME_WORDS := 3
 const TEXT_WORDS := 12
 const MIN_ROWS := 8
+# Pilot ids a row may reward before their ClassDef row exists. The save records the unlock;
+# the card appears when the row lands, and that unit removes the id here.
+const PENDING_PILOTS := ["remembered_cannon"]
 
 const ROWS := {
 	"warden_broken": {"name": "Warden Breaker", "text": "Break your first Warden.", "on": "beacon_unsealed",
@@ -48,9 +52,9 @@ const ROWS := {
 		"count": 1, "reward": {}},
 	"ten_events": {"name": "Event Regular", "text": "Win 10 world events across all your runs.", "on": "milestone_won",
 		"count": 10, "reward": {}},
-	# Placeholder reward until Tally's kit lands (owner question 4).
-	"mind_quieted": {"name": "Third Fragment", "text": "Quiet the Mind in the Highdraft for Tally's third fragment.",
-		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+	# Beating the Mind remembers the cannon (ROADMAP:27); remembered_cannon is pending until its kit lands.
+	"mind_quieted": {"name": "Mind Quieted", "text": "Quiet the Mind. An old cannon in the Highdraft remembers.",
+		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {"pilot": "remembered_cannon"}},
 	"full_rack": {"name": "Full Rack", "text": "Finish a run holding 10 parts.", "on": "run_ended",
 		"count": 1, "need": "parts", "min": 10, "reward": {}},
 }
@@ -144,8 +148,10 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 			if not REWARD_KINDS.has(kind):
 				problems.append("%s: reward kind %s is unknown" % [id, kind])
 			elif kind == "pilot":
-				if not pilots.has(target):
+				if not pilots.has(target) and not PENDING_PILOTS.has(target):
 					problems.append("%s: reward pilot %s does not resolve" % [id, target])
+				elif pilots.has(target) and PENDING_PILOTS.has(target):
+					problems.append("%s: reward pilot %s has a ClassDef row; remove it from PENDING_PILOTS" % [id, target])
 				elif pilot_rewards.has(target):
 					problems.append("%s: reward pilot %s is already the reward of %s" % [id, target, pilot_rewards[target]])
 				else:

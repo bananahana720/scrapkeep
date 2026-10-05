@@ -68,7 +68,7 @@ const TABLES := {
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "97d479d2603d5f3cde4061761c404cf093f2e61b0ddcb0dfa5ece1774a1fc065",  # 2026-10-04 (wave 11): mind_quieted row
+	"achievements.ROWS": "93df95e40d9e7d81662ca0221b56fd76cf2b0a7bfeab91e0b11ef9a3aab2bb0a",  # 2026-10-05 (wave 14): mind_quieted rewards remembered_cannon
 	"cosmetics.ROWS": "168acf8b01f15d1c573cfc4c696c41cc439e167ca137ad81174b532519cd7f08",
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
@@ -194,7 +194,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			if row.has("sum"):
 				_ref(issues, name, id, "sum", row.sum, bus.get(row.on, []))
 			for reward in row.reward:
-				var targets = pilots if reward == "pilot" else _ids(tables.get("cosmetics.ROWS", {}))
+				var targets = (pilots + Achievements.PENDING_PILOTS) if reward == "pilot" else _ids(tables.get("cosmetics.ROWS", {}))
 				if reward == "world":
 					targets = Worlds.ROWS.map(func(w): return str(w.id))
 				_ref(issues, name, id, "reward kind", reward, Achievements.REWARD_KINDS)
