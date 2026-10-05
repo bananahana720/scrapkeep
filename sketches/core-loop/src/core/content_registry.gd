@@ -80,7 +80,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.WORLD_ROWS": "799b6e7c924f4ca210f4eb4fa452e51bea451dc5c48cfa9e2726454592a02d09",  # 2026-10-04 (wave 10): breach_opened row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
-	"event_kinds.IMPACT": "480bce14f4ace39fb09b787961787a72362ffc1455125222dbb310a02eb83f1e",
+	"event_kinds.IMPACT": "6eb2d2a7620d340c801c4ebb4b7c79668a963867c5941590fe1909fc2080dab4",  # 2026-10-05 (alpha wave 14 tarn-kit): claw and clamp rows
 	"event_kinds.REACTIONS": "d69f61edda9075f25e0724226f87be0d35cb9688f1d840b76da4003371b92189",
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",

@@ -16,6 +16,7 @@ const VAULT := "vault"
 const SPRINT := "sprint"
 const BLINK := "blink"
 const GLIDE := "glide"
+const CLAW_PULL := "claw_pull"
 const SLAM := "slam"
 
 const SPECS := [
@@ -25,6 +26,7 @@ const SPECS := [
 	{"key": SPRINT, "label": "Overdrive sprint", "hint": "hold Shift; crowd control slides off"},
 	{"key": BLINK, "label": "Smoke blink", "hint": "Shift; 8 m through your own smoke"},
 	{"key": GLIDE, "label": "Glide", "hint": "hold Space falling, after the air jump"},
+	{"key": CLAW_PULL, "label": "Claw pull", "hint": "Shift; a planted claw pulls you along the aim"},
 	{"key": SLAM, "label": "Smash", "hint": "Ctrl while airborne; plants on flat, launches on slopes"},
 ]
 const SHARED := [SLAM]
@@ -95,6 +97,11 @@ const VAULT_FACE_COOLDOWN := 1.5
 const SPRINT_CRUISE := 1.25
 # Kest's blink: this far along the aim, stopping short of the world.
 const BLINK_DISTANCE := 8.0
+# Tarn's claw pull: Shift plants a claw up to CLAW_PULL_REACH along the aim and pulls the
+# ball at CLAW_PULL_SCALE times the dash floor, always with a little lift, so it lands as a ram.
+const CLAW_PULL_REACH := 12.0
+const CLAW_PULL_SCALE := 1.5
+const CLAW_PULL_LIFT := 2.0
 # Rivet's skid turns the slam's fall into forward speed instead of a plant; Bulldozer
 # raises the share through the skid_keep knob.
 const SKID_KEEP := 0.6
@@ -113,6 +120,7 @@ static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 		return
 	_vault(kit, state, tuning, aim, body_state)
 	_blink(kit, tuning, intent, aim, body_state)
+	_claw_pull(kit, tuning, intent, aim, body_state)
 	_slam(kit, state, tuning, intent, body_state, step)
 	if kit.plant_time > 0.0:
 		return
@@ -251,6 +259,30 @@ static func _blink(kit, tuning, intent, aim: Basis, body_state) -> void:
 	var speed := maxf(Vector2(v.x, v.z).length(), tuning.f("dash_impulse"))
 	body_state.linear_velocity = Vector3(dir.x * speed, maxf(v.y, 0.0), dir.z * speed)
 	kit.facts.append(["blink_used", [from, to]])
+	kit.facts.append(["dashed", [dir]])
+
+
+# Tarn's claw pull: Shift plants a claw where the aim meets the world within
+# CLAW_PULL_REACH (or reaches along the flat aim) and pulls the ball toward it.
+static func _claw_pull(kit, tuning, intent, aim: Basis, body_state) -> void:
+	if not kit.on(CLAW_PULL) or not intent.movement_pressed:
+		return
+	if not kit.abilities.spend(AbilityState.MOVEMENT):
+		return
+	var v: Vector3 = body_state.linear_velocity
+	var dir := _flat_forward(aim, v)
+	var from: Vector3 = body_state.transform.origin
+	var pull := dir
+	var query := PhysicsRayQueryParameters3D.create(from, from + dir * CLAW_PULL_REACH, WORLD_MASK)
+	var hit: Dictionary = body_state.get_space_state().intersect_ray(query)
+	if not hit.is_empty():
+		var to_plant: Vector3 = (hit["position"] as Vector3) - from
+		if to_plant.length_squared() > 0.0001:
+			pull = to_plant.normalized()
+	var speed := maxf(Vector2(v.x, v.z).length(), tuning.f("dash_impulse") * CLAW_PULL_SCALE)
+	var velocity := pull * speed
+	velocity.y = maxf(pull.y * speed, CLAW_PULL_LIFT)
+	body_state.linear_velocity = velocity
 	kit.facts.append(["dashed", [dir]])
 
 

@@ -58,6 +58,10 @@ const ABILITIES := {
 	"smoke_blink": {"icon": "ab_kest_move", "cooldown": 4.0, "augments": ["blink", "glide"], "rocket": true, "cloak": true},
 	"detonation_line": {"icon": "ab_kest_special", "cooldown": 6.0, "charge_max": 0.8},
 	"demo_slam": {"icon": "ab_kest_smash", "cooldown": 0.0, "flavour": "demo"},
+	"claw_sweep": {"icon": "ab_tarn_weapon", "cooldown": 0.0},
+	"claw_pull": {"icon": "ab_tarn_move", "cooldown": 3.0, "augments": ["claw_pull"]},
+	"clamp": {"icon": "ab_tarn_special", "cooldown": 6.0, "charge_max": 0.8},
+	"rend_slam": {"icon": "ab_tarn_smash", "cooldown": 0.0, "flavour": "rend"},
 }
 const ICON_DIR := "res://assets/icons/"
 

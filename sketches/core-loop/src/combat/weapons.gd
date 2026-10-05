@@ -13,8 +13,9 @@ const RAPID_LASER := "rapid_laser"
 const ARC_CASTER := "arc_caster"
 const PYLON_TURRET := "pylon_turret"
 const STICKY_CHARGE := "sticky_charge"
+const CLAW_SWEEP := "claw_sweep"
 
-const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE]
+const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE, CLAW_SWEEP]
 
 # Runner-gunner: tight, fast and laser-true. Small damage, high rate, no spread, a thin
 # hit radius: it rewards aim and never stops firing.
@@ -36,9 +37,14 @@ const BASE := {
 	# longest throw; the throw cadence is the weapon slot's cooldown, not the rate.
 	STICKY_CHARGE: {"damage": 16.0, "rate": 1.0, "range_m": 30.0, "speed": 22.0, "bolt_radius": 3.0,
 		"knock": EventKinds.IMPACT["sticky"]["knock"]},
+	# Tarn's claw sweep: short, heavy and slow, one fat bolt that lands in full on
+	# world-one plating where a gun only chips.
+	CLAW_SWEEP: {"damage": 32.0, "rate": 2.0, "range_m": 5.0, "speed": 140.0, "bolt_radius": 1.1,
+		"knock": EventKinds.IMPACT["claw"]["knock"]},
 }
 
-const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky"}
+const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky",
+	CLAW_SWEEP: "claw"}
 
 # Overdrive (runner special): a ring blast that throws everything off you, then a few
 # seconds of faster fire. Surrounded is when a runner most needs to keep rolling.
@@ -67,6 +73,16 @@ const BURST_DAMAGE_PER_SPEED := 1.4
 const BURST_KNOCK := EventKinds.IMPACT["burst"]["knock"]
 # Kest's detonation line: a bomb's shove along the line, radial from each charge.
 const LINE_KNOCK := EventKinds.IMPACT["line"]["knock"]
+# Tarn's clamp: the gauge scales the ring, its damage and how long the catch holds;
+# every enemy in the ring is dragged in and takes CLAMP_BONUS from claw sweeps.
+const CLAMP_RADIUS_MIN := 4.0
+const CLAMP_RADIUS_MAX := 7.0
+const CLAMP_DAMAGE_MIN := 14.0
+const CLAMP_DAMAGE_MAX := 24.0
+const CLAMP_SECONDS_MIN := 1.5
+const CLAMP_SECONDS_MAX := 3.0
+const CLAMP_BONUS := 1.5
+const CLAMP_KNOCK := EventKinds.IMPACT["clamp"]["knock"]
 
 
 static func base(weapon_id: String) -> Resource:
@@ -78,6 +94,8 @@ static func color(weapon_id: String) -> Color:
 		return ClassDef.KEST_COLOR
 	if weapon_id == RAPID_LASER:
 		return ClassDef.RIVET_COLOR
+	if weapon_id == CLAW_SWEEP:
+		return ClassDef.TARN_COLOR
 	if weapon_id == PYLON_TURRET:
 		return Palette.ARC.lightened(0.25)
 	return Palette.ARC

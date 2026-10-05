@@ -45,6 +45,9 @@ const FACE_TAG_RAYS := 16
 const SKID_REACH := 10.0
 const SKID_CONE := 0.35
 const SKID_REFUND := 0.5
+# Tarn's rend turns the slam's outward shove into an inward pull this strong, so the
+# crowd lands in claw reach.
+const REND_PULL := 0.8
 const AIM_CONE_LENGTH := 5.0
 const AIM_CONE_HALF := 0.3
 # How long a transient line state stands before the steady one is published again.
@@ -156,7 +159,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	tree.picked.connect(_on_tree_picked)
 	events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): kit.rewind_left = 0.0)
 	events.player_died.connect(func(): kit.drop_line("reset"))
-	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo}
+	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo, "rend": _smash_rend}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
 		chain.reset()
@@ -475,10 +478,10 @@ func _burst_key() -> String:
 	return AbilityState.KEYS[AbilityState.MOVEMENT] if kit.movement_id == Augments.GRAPPLE else Bindings.label("boost")
 
 
-# The pilot's class burst is on Shift (Rivet's sprint, Kest's blink); Sable's Shift is the
+# The pilot's class burst is on Shift (Rivet's sprint, Kest's blink, Tarn's claw pull); Sable's Shift is the
 # boost. The keyboard fills shift_*; a scripted source fills boost_* and movement_* itself.
 func _burst_pilot() -> bool:
-	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK)
+	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL)
 
 
 func _read_shift() -> void:
@@ -886,6 +889,21 @@ func _smash_skid(at: Vector3, speed: float) -> void:
 
 func _smash_demo(at: Vector3, _speed: float) -> void:
 	events.demo_slammed.emit(at)
+
+
+# The shared slam already struck these enemies; the rend only pulls, so no second strike.
+func _smash_rend(at: Vector3, speed: float) -> void:
+	var strength := clampf(speed / 30.0, 0.4, 1.6)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.has_method("is_dead") and enemy.is_dead():
+			continue
+		var inward: Vector3 = at - enemy.global_position
+		if inward.length() > Augments.SLAM_RADIUS:
+			continue
+		inward.y = 0.0
+		inward = inward.normalized() if inward.length() > 0.01 else Vector3.FORWARD
+		enemy.knock(inward + Vector3.UP * 0.2, Augments.SLAM_KNOCK * strength * REND_PULL)
+		enemy.flash()
 
 
 # Sable's arc slam marks every steep face within FACE_TAG_REACH for a vault.

@@ -207,6 +207,8 @@ var _proc_ready := {}
 var _echo := {}
 var _echoing := false
 var _marks := {}
+# Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps.
+var _clamped := {}
 # The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
 # presentation's edge flash. last_impact names the IMPACT row and the enemy of the strike
 # whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
@@ -257,6 +259,7 @@ func setup(ctx_ref) -> void:
 		"overdrive_blast": {"geometry": _overdrive_geometry, "fire": _fire_overdrive},
 		"detonation_line": {"geometry": _line_geometry, "fire": _fire_line},
 		"point_blank": {"geometry": _point_blank_geometry, "fire": _fire_point_blank},
+		"clamp": {"geometry": _clamp_geometry, "fire": _fire_clamp},
 	}
 	_actions = _proc_actions()
 	# Every bus fact any tree's procs listen for, connected once; the tree decides who fires.
@@ -288,6 +291,7 @@ func setup(ctx_ref) -> void:
 		_proc_ready = {}
 		_echo = {}
 		_marks = {}
+		_clamped = {}
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
@@ -888,7 +892,14 @@ func _fire(weapon: String, source := "weapon") -> void:
 func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -> void:
 	effects.spark(point, bolt["color"])
 	var from: Vector3 = enemy.global_position
-	_hit(enemy, bolt["kind"], bolt["damage"], bolt["dir"], bolt["knock"], part, bolt.get("source", "weapon"))
+	var damage: float = bolt["damage"]
+	if bolt["kind"] == "claw":
+		var id := enemy.get_instance_id()
+		if float(_clamped.get(id, -INF)) > _clock:
+			damage *= Weapons.CLAMP_BONUS
+		else:
+			_clamped.erase(id)
+	_hit(enemy, bolt["kind"], damage, bolt["dir"], bolt["knock"], part, bolt.get("source", "weapon"))
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
 
@@ -1121,6 +1132,33 @@ func _fire_point_blank(f: float, shape: Dictionary) -> void:
 	_forced_source = "special"
 	_overdrive_blast(ctx.player.ball_position(), AbilityState.Gauge.scaled(f, 1.0, Weapons.OVERDRIVE_FULL), shape,
 		Weapons.POINT_BLANK_RADIUS, Weapons.POINT_BLANK_DAMAGE)
+	_forced_source = prev_source
+
+
+# Tarn's clamp: the ring catches every enemy in it, drags it in and holds it for claw sweeps.
+func _clamp_geometry(f: float) -> Dictionary:
+	return ctx.player.yours({"kind": "ring", "centre": _ground_under(ctx.player.ball_position()),
+		"radius": AbilityState.Gauge.scaled(f, Weapons.CLAMP_RADIUS_MIN, Weapons.CLAMP_RADIUS_MAX),
+		"full_radius": Weapons.CLAMP_RADIUS_MAX, "fill": f})
+
+
+func _fire_clamp(f: float, shape: Dictionary) -> void:
+	var prev_source := _forced_source
+	_forced_source = "special"
+	var ball: Vector3 = ctx.player.ball_position()
+	var centre: Vector3 = shape["centre"]
+	var radius: float = shape["radius"]
+	var damage := AbilityState.Gauge.scaled(f, Weapons.CLAMP_DAMAGE_MIN, Weapons.CLAMP_DAMAGE_MAX) * _damage_mod(Weapons.CLAW_SWEEP)
+	var seconds := AbilityState.Gauge.scaled(f, Weapons.CLAMP_SECONDS_MIN, Weapons.CLAMP_SECONDS_MAX)
+	var hit := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.is_dead() or not in_ring(centre, radius, enemy):
+			continue
+		_hit(enemy, "claw", damage, ball - enemy.global_position, Weapons.CLAMP_KNOCK, "", "special", "clamp")
+		_clamped[enemy.get_instance_id()] = _clock + seconds
+		hit += 1
+	effects.ring(centre, radius, ClassDef.TARN_COLOR)
+	last_burst = {"at": centre, "radius": radius, "damage": damage, "hit": hit, "kind": "clamp"}
 	_forced_source = prev_source
 
 

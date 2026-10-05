@@ -236,6 +236,8 @@ const IMPACT := {
 	"ram": {"knock": 24.0, "lift": 0.35, "stop": "heavy", "shake": 0.3, "react": "launch"},
 	"slam": {"knock": 26.0, "lift": 0.5, "stop": "heavy", "shake": 0.3, "react": "launch"},
 	"stomp": {"knock": 7.0, "lift": 0.0, "stop": "heavy", "shake": 0.3, "react": "stagger"},
+	"claw": {"knock": 8.0, "lift": 0.3, "stop": "hit", "shake": 0.1, "react": "stagger"},
+	"clamp": {"knock": 10.0, "lift": 0.1, "stop": "hit", "shake": 0.1, "react": "stagger"},
 }
 # Degrees and seconds; enemy weight divides angles by sqrt(max(weight, 1)).
 const REACTIONS := {
