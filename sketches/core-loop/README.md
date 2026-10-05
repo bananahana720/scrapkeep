@@ -2,9 +2,9 @@
 
 **Can one run through three worlds, six zones and three bosses keep you rolling the whole way?**
 
-This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from [playtest entry 6](../../docs/playtests/PLAYTEST-LOG.md#6-mobility-kit-v2-first-human-play-and-design-principles). Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code. The pilots load `.glb` models; the rest of the world is built in script.
+This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from [playtest entry 6](../../docs/playtests/PLAYTEST-LOG.md#6-mobility-kit-v2-first-human-play-and-design-principles). Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code. Models, textures, fonts and the recorded music stems load from `assets/`; the rest of the world is built in script.
 
-Play it with `scrapkeep core-loop`, from any directory: the name is this sketch's directory, so it opens the main checkout's copy, or the current worktree's copy when typed inside one; a worktree's own name (`scrapkeep <worktree>`) opens its `core-loop` too, and `scrapkeep <worktree>/<sketch>` opens exactly one. Add `--table=slice` after the name for the slice table. After a sitting, `node scripts/run-summary.mjs --last 5` prints one line per run (table, outcome, stage, posture fight, packs and synergies) from the game's `runs.ndjson`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the field notes below, which keep the full list. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
+Play it with `scrapkeep core-loop`, from any directory: the name is this sketch's directory, so it opens the main checkout's copy, or the current worktree's copy when typed inside one; a worktree's own name (`scrapkeep <worktree>`) opens its `core-loop` too, and `scrapkeep <worktree>/<sketch>` opens exactly one. Add `--table=slice` after the name for the slice table. After a sitting, `node scripts/run-summary.mjs --last 5` prints one line per run (table, outcome, stage, posture fight, packs and synergies) from the game's `runs.ndjson`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the controls and codex pages. The tester notes below are no longer drawn there. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
 
 ## What this build is
 
@@ -26,17 +26,17 @@ Tally and the remembered cannon are not in this alpha.
 
 ## The loop
 
-1. **Title.** Continue appears first when a saved run is valid. Start (Space) begins a run, and the menu also offers Help (H), Achievements (A) and Settings (S).
-2. **Class.** Press 1, 2 or 3, or click a card: Sable, Rivet or Kest. A locked pilot's card names what unlocks it. Each pilot has its own movement, special and smash on the same keys.
+1. **Title.** Continue appears first when a saved run is valid. Start (Space; the button reads New run when a saved run exists) begins a run, and the menu also offers Help (H), Achievements (A) and Settings (S).
+2. **Class.** Press 1 to 4, or click a card: Sable, Rivet, Kest or Tarn. A locked pilot's card names what unlocks it. Each pilot has its own movement, special and smash on the same keys.
 3. **Upgrade pick.** The run opens with an upgrade pick; Esc is "Later" and keeps the pick waiting.
 4. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next; under it, your punch bar races the Warden's plating.
 5. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks.
 6. **Reward gates and Moss's bay.** Roll through one of two arches to take its part. A hover barge, Moss's workshop bay, docks beside the gates: an opt-in pit stop with a shop and a practice yard.
 7. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
-8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it.
-9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts and kills. N runs again as the same class.
+8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A VICTORY screen follows, and the run continues into the next world's first stage; the last world's boss ends the run.
+9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and retries. N runs again as the same class.
 
-If you are scrapped, press R to retry the stage from its start, N for a new run, or C to choose a class. M opens the companion panel from the death screen when the run holds pieces.
+If you are scrapped, press R to retry the stage from its start (each world allows one retry; a death after it ends the run as RUN OVER), N for a new run, or C to choose a class. M opens the companion panel from the death screen when the run holds pieces.
 
 ## Controls
 
@@ -70,7 +70,7 @@ On the screens outside play, every choice is also a button: click it, or press t
 | H                                | title: the how-to-play page; H or Esc closes it                                                                        |
 | 1, 2, ...                        | class select: one number per class card, left to right                                                                 |
 | R                                | death screen: retry the stage, or the fight in the arena                                                               |
-| T                                | arena death screen: replay stage 3 from its start                                                                      |
+| T                                | arena death screen: replay the world's last stage from its start                                                       |
 | N                                | death or summary: new run as the same class                                                                            |
 | C                                | death screen: choose a class                                                                                           |
 | 1 or 2, A/D then Enter, or click | upgrade pick (run start, Moss's bay, or stage clear if you skipped the bay); Esc is "Later" and keeps the pick waiting |
@@ -78,11 +78,11 @@ On the screens outside play, every choice is also a button: click it, or press t
 
 ## Field notes
 
-These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
+These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 
 ### Testing in this build
 
-- One run: title, class, then the stages of each world. A Warden clamps each stage's beacon. Break it, roll through a reward gate, and launch into the next stage. A summary follows stage 3.
+- One run: title, class, then the stages of each world. A Warden clamps each stage's beacon. Break it, roll through a reward gate, and launch into the next stage. A boss victory launches the next world; the summary follows the last world's boss.
 - Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.
 - Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores, the diamonds beside the objective, which raise the gate tiers.
 - Sable's pylon banks the speed you plant with. Space slingshots you off along the face with that speed plus a boost, and E drops off where you are. The camera goes to the shoulder while you are mounted.
@@ -118,8 +118,8 @@ A built package is a `scrapkeep-core-loop-<sha7>.tar.gz`, where `<sha7>` is the 
 
 `npm run sketch:export` builds a Linux x86_64 release of this sketch and boots it headless for 300 frames. It writes `artifacts/local/core-loop-export/<stamp>/` with `core-loop.x86_64`, `music_ace/`, `BUILD.txt` and `HOW-TO-RUN.txt`, and the `scrapkeep-core-loop-<sha7>.tar.gz` beside that folder.
 
-- `--stems-from=<music_ace folder>` names where the recorded stems are copied from. The default is the main checkout's `sketches/core-loop/assets/music_ace`. The stems are gitignored and cannot be regenerated, so the export fails if the folder lacks any stem the manifest names; point the flag at a folder that holds `spillway/*.ogg`.
-- `--win-proof` also exports the "Linux x64 proof" pack into a sibling `<stamp>-win-proof/` folder and plays one skipper-bot run on it from a fresh `user://`. It fails unless the bot wins the run, so a passing line proves the exported pack finishes a run, not that the release template's runtime does.
+- `npm run sketch:export -- --stems-from=<music_ace folder>` names where the recorded stems are copied from. The default is the main checkout's `sketches/core-loop/assets/music_ace`. The stems are gitignored and cannot be regenerated, so the export fails if the folder lacks any stem the manifest names; point the flag at a folder that holds `spillway/*.ogg`.
+- `npm run sketch:export -- --win-proof` (flags go after `--`) also exports the "Linux x64 proof" pack into a sibling `<stamp>-win-proof/` folder and plays one skipper-bot run on it from a fresh `user://`. It fails unless the bot wins the run, so a passing line proves the exported pack finishes a run, not that the release template's runtime does.
 
 ## Layout
 
