@@ -91,6 +91,71 @@ func _run() -> void:
 	t.check("d) restored generation is above both earlier files", gen_back > gen_second and gen_back > gen_prev and gen_back > gen_first,
 		"first %d second %d prev %d restored %d" % [gen_first, gen_second, gen_prev, gen_back])
 
+	_probes()
 	_wipe()
 	DirAccess.remove_absolute(DIR)
 	quit(t.verdict())
+
+
+func _put(path: String, text: String) -> void:
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(text)
+	f.close()
+
+
+func _doc_text(schema: int, gen: int, id: String) -> String:
+	return JSON.stringify({"schema": schema, "generation": gen, "run": {"run_id": id}})
+
+
+func _probes() -> void:
+	_wipe()
+	var newer := _doc_text(99, 7, "newer")
+	_put(PATH, newer)
+	_put(PATH + ".prev", _doc_text(1, 3, "old"))
+	var store := RunStore.new(PATH)
+	var ok := store.restore_prev()
+	t.check("P2) restore_prev leaves a newer-schema run.json and its .prev alone",
+		not ok and FileAccess.get_file_as_string(PATH) == newer and _run_id(PATH + ".prev") == "old" and store.last_error != "",
+		"ok %s file %s prev %s err %s" % [ok, FileAccess.get_file_as_string(PATH), _run_id(PATH + ".prev"), store.last_error])
+
+	_wipe()
+	_put(PATH, "{garbage")
+	_put(PATH + ".prev", _doc_text(1, 3, "old"))
+	store = RunStore.new(PATH)
+	ok = store.restore_prev()
+	var bad := false
+	for name in DirAccess.get_files_at(DIR):
+		if name.begins_with("run.json.bad"):
+			bad = FileAccess.get_file_as_string(DIR + name) == "{garbage"
+	t.check("P3) restore_prev quarantines an unreadable run.json before replacing it",
+		ok and bad and _run_id(PATH) == "old",
+		"ok %s bad kept %s file %s err %s" % [ok, bad, _run_id(PATH), store.last_error])
+
+	_wipe()
+	_put(PATH, _doc_text(1, 5, "live"))
+	_put(PATH + ".prev", _doc_text(1, 3, "old"))
+	store = RunStore.new(PATH)
+	ok = store.restore_prev()
+	t.check("P4) restore_prev swaps both runs, none lost, no temp left, generation up",
+		ok and _run_id(PATH) == "old" and _run_id(PATH + ".prev") == "live" and not FileAccess.file_exists(PATH + ".prev.tmp") and _gen(PATH) == 6,
+		"ok %s file %s prev %s gen %d err %s" % [ok, _run_id(PATH), _run_id(PATH + ".prev"), _gen(PATH), store.last_error])
+	_wipe()
+	_put(PATH, _doc_text(1, 5, "live"))
+	_put(PATH + ".prev", _doc_text(1, 3, "old"))
+	DirAccess.make_dir_recursive_absolute(PATH + ".prev.tmp")
+	store = RunStore.new(PATH)
+	ok = store.restore_prev()
+	t.check("P4) a failed first write returns false with nothing changed",
+		not ok and _run_id(PATH) == "live" and _run_id(PATH + ".prev") == "old",
+		"ok %s file %s prev %s" % [ok, _run_id(PATH), _run_id(PATH + ".prev")])
+	DirAccess.remove_absolute(PATH + ".prev.tmp")
+
+	_wipe()
+	var newer_prev := _doc_text(99, 4, "newer-prev")
+	_put(PATH, _doc_text(1, 2, "live"))
+	_put(PATH + ".prev", newer_prev)
+	store = RunStore.new(PATH)
+	ok = store.keep_prev()
+	t.check("P5) keep_prev does not overwrite a newer-schema .prev",
+		not ok and FileAccess.get_file_as_string(PATH + ".prev") == newer_prev and store.last_error != "",
+		"ok %s prev %s err %s" % [ok, FileAccess.get_file_as_string(PATH + ".prev"), store.last_error])

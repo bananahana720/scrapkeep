@@ -136,6 +136,10 @@ func keep_prev() -> bool:
 	var read := _read()
 	if read["state"] != "ok":
 		return true
+	var held = get_script().new(path + ".prev")._read()
+	if held["state"] == "newer":
+		last_error = "kept the newer-schema %s.prev: %s" % [path, held["why"]]
+		return false
 	var err := SafeStore.write_atomic(path + ".prev", read["bytes"].get_string_from_utf8())
 	if err != OK:
 		last_error = "could not keep the old run as %s.prev: %s" % [path, error_string(err)]
@@ -156,19 +160,33 @@ func restore_prev() -> bool:
 		last_error = "no run to restore from %s.prev: %s" % [path, back.get("why", back["state"])]
 		return false
 	var current := _read()
+	if current["state"] == "newer":
+		last_error = "kept the newer-schema run: %s" % current["why"]
+		return false
+	if current["state"] == "unreadable":
+		var bad := SafeStore.quarantine(path)
+		if bad.is_empty():
+			last_error = "%s and could not be moved aside" % current["why"]
+			return false
 	var generation := maxi(int(back["generation"]), int(current.get("generation", 0))) + 1
 	var file_doc := {"schema": SCHEMA, "generation": generation, "run": back["run"]}
+	var tmp := path + ".prev.tmp"
+	if current["state"] == "ok":
+		var held := SafeStore.write_atomic(tmp, current["bytes"].get_string_from_utf8())
+		if held != OK:
+			last_error = "could not keep the replaced run as %s: %s" % [tmp, error_string(held)]
+			return false
 	var err := SafeStore.write_atomic(path, JSON.stringify(file_doc, "  ", true, true))
 	if err != OK:
+		DirAccess.remove_absolute(tmp)
 		last_error = "could not write %s: %s" % [path, error_string(err)]
 		return false
 	_doc = {}
 	_generation = 0
 	refusal = ""
 	if current["state"] == "ok":
-		var kept := SafeStore.write_atomic(path + ".prev", current["bytes"].get_string_from_utf8())
-		if kept != OK:
-			last_error = "restored the run but could not keep the replaced one as %s.prev: %s" % [path, error_string(kept)]
+		if DirAccess.rename_absolute(tmp, path + ".prev") != OK:
+			last_error = "restored the run but could not keep the replaced one as %s.prev" % path
 			return false
 	else:
 		DirAccess.remove_absolute(path + ".prev")
