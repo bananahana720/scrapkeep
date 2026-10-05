@@ -21,6 +21,8 @@ import { fileURLToPath } from "node:url";
 // sibling <run>-win-proof/ and plays one skipper bot run on it from a fresh user:// with the
 // editor binary, which fails unless the run is won. Release templates refuse --main-pack and
 // --script, so this proves the exported pack, not the release template's runtime.
+// The proof runs before packaging, so a failed proof leaves no tarball. BUILD.txt records the
+// proof line, or "win proof: not run" without the flag. A dirty tree adds -dirty to the package name.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
@@ -176,7 +178,15 @@ export function winProofFailures(output, status, rowsText) {
   return failures;
 }
 
-export function buildStamp({ sha, dirty, stamp, godot, stems, stemsFrom }) {
+export function buildStamp({
+  sha,
+  dirty,
+  stamp,
+  godot,
+  stems,
+  stemsFrom,
+  winProof,
+}) {
   return (
     [
       "commit: " + sha,
@@ -184,6 +194,7 @@ export function buildStamp({ sha, dirty, stamp, godot, stems, stemsFrom }) {
       "built: " + stamp,
       "godot: " + godot,
       "stems: " + stems + " from " + stemsFrom,
+      winProof ?? "win proof: not run (pass --win-proof)",
     ].join("\n") + "\n"
   );
 }
@@ -202,14 +213,18 @@ export function howToRun({ sha7 }) {
   );
 }
 
-export function packageName(sha7) {
-  return "scrapkeep-core-loop-" + sha7;
+export function packageName(sha7, dirty = false) {
+  return "scrapkeep-core-loop-" + sha7 + (dirty ? "-dirty" : "");
 }
 
-export function tarArgs(outDir, sha7) {
+export function winProofLine(row, pack) {
+  return `win proof: ${row.outcome} at stage ${row.stage_reached}, ${row.ticks} ticks, ${row.wall_seconds} s wall, policy ${WIN_POLICY} seed ${WIN_SEED}, pack ${pack}`;
+}
+
+export function tarArgs(outDir, sha7, dirty = false) {
   const parent = path.dirname(outDir);
   const stamp = path.basename(outDir);
-  const name = packageName(sha7);
+  const name = packageName(sha7, dirty);
   return [
     "-czf",
     path.join(parent, name + ".tar.gz"),
@@ -323,6 +338,8 @@ async function main() {
   ]);
   if (status.status !== 0) fail("git status failed\n" + status.stderr);
   const dirty = status.stdout.trim() !== "";
+  const version = sha7 + (dirty ? "-dirty" : "");
+  const proofLine = args.winProof ? await winProof(outDir) : null;
   await writeFile(
     path.join(outDir, "BUILD.txt"),
     buildStamp({
@@ -332,18 +349,22 @@ async function main() {
       godot: "4.7.2.stable",
       stems: stemCount,
       stemsFrom,
+      winProof: proofLine,
     }),
   );
-  await writeFile(path.join(outDir, "HOW-TO-RUN.txt"), howToRun({ sha7 }));
-  const tar = run("tar", tarArgs(outDir, sha7));
+  await writeFile(
+    path.join(outDir, "HOW-TO-RUN.txt"),
+    howToRun({ sha7: version }),
+  );
+  const tar = run("tar", tarArgs(outDir, sha7, dirty));
   if (tar.status !== 0) fail("tar failed\n" + tar.stderr);
   const tarball = path.join(
     path.dirname(outDir),
-    packageName(sha7) + ".tar.gz",
+    packageName(sha7, dirty) + ".tar.gz",
   );
 
   const size = (await stat(exe)).size;
-  console.log("version: " + sha7 + (dirty ? "-dirty" : "") + " " + stamp);
+  console.log("version: " + version + " " + stamp);
   console.log(
     "package: " +
       tarball +
@@ -356,7 +377,7 @@ async function main() {
   console.log("stems from: " + stemsFrom);
   console.log("sidecar stems: " + stemCount + " in " + path.join(outDir, "music_ace"));
   console.log("boot tail:\n" + bootText.trim().split("\n").slice(-6).join("\n"));
-  if (args.winProof) await winProof(outDir);
+  if (proofLine) console.log(proofLine);
 }
 
 async function winProof(outDir) {
@@ -419,10 +440,7 @@ async function winProof(outDir) {
   const failures = winProofFailures(botText, bot.status, rowsText);
   if (failures.length > 0)
     fail("win proof\n" + failures.join("\n") + "\n" + botText.slice(-2000));
-  const row = JSON.parse(rowsText.trim());
-  console.log(
-    `win proof: ${row.outcome} at stage ${row.stage_reached}, ${row.ticks} ticks, ${row.wall_seconds} s wall, policy ${WIN_POLICY} seed ${WIN_SEED}, pack ${pack}`,
-  );
+  return winProofLine(JSON.parse(rowsText.trim()), pack);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

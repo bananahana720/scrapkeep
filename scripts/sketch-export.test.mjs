@@ -15,6 +15,7 @@ import {
   releaseGateFailures,
   tarArgs,
   winProofFailures,
+  winProofLine,
 } from "./sketch-export.mjs";
 
 const manifest = {
@@ -212,4 +213,56 @@ test("packageName and tarArgs", () => {
     "--transform=s,^20261005T051752,scrapkeep-core-loop-abc1234,",
     "20261005T051752",
   ]);
+});
+
+test("packageName and tarArgs add -dirty on a dirty tree", () => {
+  assert.equal(
+    packageName("abc1234", true),
+    "scrapkeep-core-loop-abc1234-dirty",
+  );
+  assert.equal(packageName("abc1234", false), "scrapkeep-core-loop-abc1234");
+  assert.deepEqual(tarArgs("/a/b/20261005T051752", "abc1234", true), [
+    "-czf",
+    "/a/b/scrapkeep-core-loop-abc1234-dirty.tar.gz",
+    "-C",
+    "/a/b",
+    "--transform=s,^20261005T051752,scrapkeep-core-loop-abc1234-dirty,",
+    "20261005T051752",
+  ]);
+});
+
+test("buildStamp records the win proof line or says it did not run", () => {
+  const base = {
+    sha: "abc1234def",
+    dirty: false,
+    stamp: "20261005T051752",
+    godot: "4.7.2.stable",
+    stems: 24,
+    stemsFrom: "/m/music_ace",
+  };
+  const line =
+    "win proof: won at stage 6, 100 ticks, 1.5 s wall, policy skipper seed 1, pack /x/proof.pck";
+  assert.ok(
+    buildStamp({ ...base, winProof: line })
+      .split("\n")
+      .includes(line),
+  );
+  assert.ok(
+    buildStamp(base)
+      .split("\n")
+      .includes("win proof: not run (pass --win-proof)"),
+  );
+});
+
+test("winProofLine formats a won row", () => {
+  const won = {
+    outcome: "won",
+    stage_reached: 6,
+    ticks: 34170,
+    wall_seconds: 86.65,
+  };
+  assert.equal(
+    winProofLine(won, "/x/proof.pck"),
+    "win proof: won at stage 6, 34170 ticks, 86.65 s wall, policy skipper seed 1, pack /x/proof.pck",
+  );
 });
