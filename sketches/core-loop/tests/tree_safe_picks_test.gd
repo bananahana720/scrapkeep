@@ -4,9 +4,12 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+const Relics := preload("res://src/build/relics.gd")
 
 # Rule: four safe growth picks cannot replace an ability, disable it, lower a knob's
-# default, or undo an earlier pick. Validate all 120 distinct nodes across four pilots.
+# default, or undo an earlier pick. Validate all 120 distinct nodes (four pilots' own trees).
+# Tarn's nodes and relics are also checked for dead offers (STRATEGY-SPINE.md:175).
 # Existing tradeoffs are findings, not permission to change content.
 # Decision 3 is pending: numerical decreases are conservatively flagged even when
 # they help. These tests prove detection, not that the present trees are all safe.
@@ -70,6 +73,7 @@ func _initialize() -> void:
 		_report("%s data preserved" % def.display_name, list == before, "validator never edits nodes")
 	_report("all four pilots", pilots == UNSAFE.keys() and checked == 120 and distinct.size() == 120,
 		"%d rows, %d distinct nodes, pilots %s" % [checked, distinct.size(), pilots])
+	_dead_offers()
 	_fixtures()
 	_tarn_rows()
 	print("tree_safe_picks_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
@@ -85,7 +89,114 @@ func _earlier(list: Array, index: int) -> Array:
 	return out
 
 
+# Bus facts every class's own special or slam emits (combat.gd special_used after any gauge release,
+# player_ball.gd slammed for every slam), so a proc on them is live whatever the kit.
+const KIT_AGNOSTIC_ON := ["special_used", "slammed"]
+
+
+func _class_kit(pilot: String) -> Dictionary:
+	var def: Resource = ClassDef.by_id(pilot)
+	return {"weapon": def.weapon_id, "movement": def.movement_id, "special": def.special_id, "smash": def.smash_id}
+
+
+# The class row's four ids with the swaps of every earlier node on the route applied.
+func _kit_before(pilot: String, node_id: String, world_one: bool) -> Dictionary:
+	var kit := _class_kit(pilot)
+	var path := UpgradeTree.path_to(pilot, node_id, world_one)
+	for id in path.slice(0, path.size() - 1):
+		for slot in UpgradeTree.node(pilot, id, world_one).get("swap", {}):
+			kit[slot] = UpgradeTree.node(pilot, id, world_one)["swap"][slot]
+	return kit
+
+
+# Other pilots' (slot, class ability) pairs for every node that sets a knob or proc token.
+func _token_pairs(pilot: String, token: String) -> Array:
+	var pairs := []
+	for other in UpgradeTree.TREES:
+		if other == pilot:
+			continue
+		var kit := _class_kit(other)
+		for m in UpgradeTree.TREES[other]:
+			var uses: bool = m.get("knob", {}).has(token)
+			for p in m.get("proc", []):
+				uses = uses or "proc:" + String(p["on"]) == token
+			if uses:
+				pairs.append([String(m["key"]), kit[m["key"]]])
+	return pairs
+
+
+func _token_live(pilot: String, token: String, kit: Dictionary) -> bool:
+	var pairs := _token_pairs(pilot, token)
+	if pairs.is_empty():
+		return true
+	return pairs.any(func(pr): return kit[pr[0]] == pr[1])
+
+
+func _op_live(pilot: String, n: Dictionary, kit: Dictionary) -> bool:
+	for slot in n.get("swap", {}):
+		if n["swap"][slot] != kit[slot]:
+			return true
+	for op in ["charges", "cooldown"]:
+		for slot in n.get(op, {}):
+			if float(AbilityState.ABILITIES[kit[slot]]["cooldown"]) > 0.0:
+				return true
+	var row: Dictionary = AbilityState.ABILITIES[kit["weapon"]]
+	for w in n.get("pattern", {}):
+		if w == row.get("pattern", kit["weapon"]) or w == row.get("mounted", ""):
+			return true
+	for name in n.get("knob", {}):
+		if _token_live(pilot, name, kit):
+			return true
+	for p in n.get("proc", []):
+		if String(p["on"]) in UpgradeTree.DAMAGE_FACTS or String(p["on"]) in KIT_AGNOSTIC_ON or _token_live(pilot, "proc:" + String(p["on"]), kit):
+			return true
+	return false
+
+
+# A relic's swap, charges or cooldown is live under the class kit; one that also fits Rivet is a
+# stale alias unless Tarn's slot ability is Rivet's. Relic parts are not judged.
+func _relic_live(pilot: String, id: String) -> bool:
+	var r: Dictionary = Relics.row(id)
+	var kit := _class_kit(pilot)
+	var slot := String(r["slot"])
+	var as_node := {}
+	if r.has("swap"):
+		as_node["swap"] = {slot: r["swap"]}
+	if r.has("cooldown"):
+		as_node["cooldown"] = {slot: r["cooldown"]}
+	if r.has("charges"):
+		as_node["charges"] = {slot: r["charges"]}
+	if not as_node.is_empty() and Relics.fits(id, "runner_gunner") and kit[slot] != _class_kit("runner_gunner")[slot]:
+		return false
+	return _op_live(pilot, as_node, kit)
+
+
+func _dead_offers() -> void:
+	var dead := []
+	var checked := 0
+	for world_one in [false, true]:
+		for n in UpgradeTree.nodes("tarn", world_one).slice(0, 6 if world_one else 30):
+			checked += 1
+			if not _op_live("tarn", n, _kit_before("tarn", n["id"], world_one)):
+				dead.append("%s%s" % [n["id"], " (world one)" if world_one else ""])
+	_report("Tarn no dead tree rows", checked == 36 and dead.is_empty(), "%d nodes checked (30 full, 6 world one); dead %s" % [checked, dead])
+	var fitting := Relics.ids().filter(func(id): return Relics.fits(id, "tarn"))
+	var dead_relics := fitting.filter(func(id): return not _relic_live("tarn", id))
+	_report("Tarn no dead relics", not fitting.is_empty() and dead_relics.is_empty(),
+		"%d fitting relics %s; dead %s; relic parts not judged" % [fitting.size(), fitting, dead_relics])
+
+
 func _fixtures() -> void:
+	var tarn_kit := _class_kit("tarn")
+	var laser_kit := tarn_kit.duplicate()
+	laser_kit["weapon"] = "rapid_laser"
+	_report("dead-row fixtures",
+		not _op_live("tarn", {"key": "movement", "knob": {"sprint_punch": 9.0}}, tarn_kit)
+		and not _op_live("tarn", {"key": "weapon", "swap": {"weapon": "claw_sweep"}}, tarn_kit)
+		and not _op_live("tarn", {"key": "weapon", "charges": {"weapon": 1}}, laser_kit)
+		and not _op_live("tarn", {"key": "weapon", "pattern": {"sticky_charge": {"add": {"count": 1}}}}, tarn_kit)
+		and _op_live("tarn", {"key": "weapon", "knob": {"tarn_only_fixture": 2.0}}, tarn_kit),
+		"under Tarn's kit a foreign knob, identity swap, charges on a zero-cooldown weapon and a foreign pattern are dead; a Tarn-owned knob is live")
 	var pilot := "pylon_engineer"
 	var bad := {"id": "bad_fixture", "swap": {"movement": "rapid_laser"}, "knob": {"mount_reach": 0.5}}
 	var issues := UpgradeTree.safe_pick_problems(pilot, bad)
