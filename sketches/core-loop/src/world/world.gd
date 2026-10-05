@@ -376,17 +376,35 @@ func _on_enemy_killed(_kind: String, at: Vector3, _scrap: int) -> void:
 		_discover(codex_world.note("kill", {"at": at, "in_water": flood.submersion(at) > 0.0}))
 
 
-func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
+func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if contraptions.has(ctx.flow.stage()):
 		contraptions[ctx.flow.stage()].note_slam(at)
 	if ctx.flow.in_stage():
 		_discover(codex_world.note("slam", {"at": at}))
-	# A slam landing breaks the plate under it. No world_fact: the kind has no
-	# WORLD_ROWS row yet, so its cue waits for one (audio.gd would play the generic tick).
+	# A slam landing breaks the plate under it, sends one breach_opened fact per plate
+	# (its WORLD_ROWS row carries the crack-and-fall cue) and lands on whatever stands
+	# in the pit below.
 	if breach != null and ctx.flow.in_stage():
-		for id in breach.slam(at):
+		var opened: Array[String] = breach.slam(at)
+		for id in opened:
 			_swap(id)
 			_mark("breach_plate", at)
+			ctx.events.world_fact.emit(Breach.FACT, at)
+		if not opened.is_empty():
+			_breach_strike(opened, at, strength)
+
+
+# The slam goes through the broken plates onto the tier below: every live enemy inside
+# their rects and more than 2 m under the landing takes the slam as a contact hit.
+func _breach_strike(opened: Array[String], at: Vector3, strength: float) -> void:
+	const Augments := preload("res://src/movement/augments.gd")
+	var enemies := get_tree().get_nodes_in_group("enemy").filter(func(e):
+		return is_instance_valid(e) and not (e.has_method("is_dead") and e.is_dead()) and e.global_position.y < at.y - 2.0)
+	var force := Augments.SLAM_KNOCK * strength
+	for i in breach.under(opened, enemies.map(func(e): return e.global_position)):
+		var enemy: Node3D = enemies[i]
+		var flat := Vector3(enemy.global_position.x - at.x, 0.0, enemy.global_position.z - at.z)
+		ctx.spawner._hit(enemy, "slam", force, flat, force, "", "drop_or_slam", "slam")
 
 
 func _on_jumped(_air: bool) -> void:

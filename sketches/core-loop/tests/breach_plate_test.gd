@@ -4,7 +4,7 @@ extends SceneTree
 # breaks it once per stage entry. Its overlay is erased so the ground reads drop_to, its
 # cover box parks, swap_log records it and the codex marks "breach_plate". A slam
 # elsewhere, a second slam or no slam leaves the plates alone; a stage entry restores
-# them. No world_fact fires: the kind has no WORLD_ROWS row yet (event_kinds.gd).
+# them. The break sends exactly one world_fact("breach_opened") (event_kinds.gd WORLD_ROWS).
 # Evidence limit: live headless Game on a one-stage Dig table; no camera or feel claim.
 
 const DigTable := preload("res://tests/doubles/dig_table_defs.gd")
@@ -24,6 +24,7 @@ class DigGame extends "res://src/game.gd":
 var _game
 var _failures := 0
 var _facts := 0
+var _kinds: Array[String] = []
 
 
 func _initialize() -> void:
@@ -49,7 +50,9 @@ func _run() -> void:
 		waited += 1
 		await physics_frame
 	_report("in stage", _game.flow.in_stage(), "after %d frames" % waited)
-	_game.events.world_fact.connect(func(_kind: String, _at: Vector3): _facts += 1)
+	_game.events.world_fact.connect(func(kind: String, _at: Vector3):
+		_facts += 1
+		_kinds.append(kind))
 	var world = _game.world
 	var terrain = _game.ctx.terrain
 	var m = terrain.map()
@@ -66,13 +69,14 @@ func _run() -> void:
 
 	# (b) a slam on the plate breaks it.
 	_facts = 0
+	_kinds.clear()
 	world._on_slammed(Vector3(c.x, 13.0, c.y), 20.0, 1.0)
 	_report("(b) height drops to drop_to", is_equal_approx(terrain.height(c.x, c.y), drop_to), "height %.3f, drop_to %.1f" % [terrain.height(c.x, c.y), drop_to])
 	_report("(b) overlay erased", not terrain.overlays.has(id + "_before"), str(terrain.overlays))
 	_report("(b) cover parked", cover.position.y < -300.0, "cover y %.1f" % cover.position.y)
 	_report("(b) one swap logged", world.swap_log.size() == 1 and world.swap_log[0]["id"] == id, str(world.swap_log))
 	_report("(b) codex marked", world.discoveries.any(func(d): return d["id"] == "breach_plate"), "%d discoveries" % world.discoveries.size())
-	_report("(b) no world_fact (no WORLD_ROWS row)", _facts == 0, "%d facts" % _facts)
+	_report("(b) one world_fact breach_opened", _facts == 1 and _kinds == ["breach_opened"], "%d facts %s" % [_facts, _kinds])
 
 	# (c) the same slam again changes nothing.
 	world._on_slammed(Vector3(c.x, 13.0, c.y), 20.0, 1.0)
