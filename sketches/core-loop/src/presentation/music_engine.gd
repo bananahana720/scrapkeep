@@ -120,6 +120,27 @@ const WARDEN_BUILD_FROM := 0.75
 const HEFT_STEP := 0.12
 # Brindle's key per section, in semitones above D: each phase lifts it.
 const BRINDLE_KEY := {"1": 0, "2": 1, "3": 2, "chase": 2, "victory": 0}
+const BOSS_SECTIONS := {
+	"brindle": {
+		"1": {"key": 0, "step": Harmony.BOSS_STEP},
+		"2": {"key": 1, "step": Harmony.BOSS_STEP},
+		"3": {"key": 2, "step": PHASE3_STEP},
+		"chase": {"key": 2, "step": Harmony.STEP},
+		"victory": {"key": 0, "step": Harmony.STEP},
+	},
+	"waking": {
+		"1": {"key": 0, "step": Harmony.BOSS_STEP},
+		"2": {"key": 0, "step": PHASE3_STEP},
+		"3": {"key": 1, "step": Harmony.STEP},
+		"victory": {"key": 0, "step": PHASE3_STEP},
+	},
+	"mind": {
+		"1": {"key": 2, "step": PHASE3_STEP},
+		"2": {"key": 1, "step": Harmony.BOSS_STEP},
+		"3": {"key": 0, "step": PHASE3_STEP},
+		"victory": {"key": 2, "step": Harmony.STEP},
+	},
+}
 
 # Wobble rates in LFO cycles per beat. Each bar takes the next rate in its list.
 const RATES := {"1/4": 1, "1/8": 2, "1/16": 4, "1/8T": 3, "1/16T": 6}
@@ -897,24 +918,36 @@ func end_boss() -> int:
 # rising to 150 across the build, the chase back up to 172, and the victory the
 # biggest drop of the game, resolving home in D.
 func brindle_section(name: String) -> int:
-	if not track in BOSS_TRACKS:
+	if not track in BOSS_TRACKS or not BOSS_SECTIONS[track].has(name):
 		return -1
 	# The payoff lands on the gameplay moment: the phase change (or the catch) drops on
 	# the next beat. The in-phase build (brindle_hp) has already done the building.
-	var change := {"track": track, "section": name, "key": BRINDLE_KEY.get(name, 0)}
+	var change: Dictionary = BOSS_SECTIONS[track][name].duplicate()
+	change.merge({"track": track, "section": name})
+	if track == "brindle" and name in ["1", "2"] and not boss_pivot:
+		change["step"] = step_len
 	var weight := 0.9
 	match name:
-		"3":
-			change["step"] = PHASE3_STEP
 		"chase":
-			change["step"] = Harmony.STEP
 			weight = 0.95
 		"victory":
-			change["step"] = Harmony.STEP
 			weight = 1.2
-		_:
-			change["step"] = Harmony.BOSS_STEP if boss_pivot else step_len
 	return drop_now(4, weight, {}, -1, change)
+
+
+func set_boss_state(state: String) -> int:
+	var parts := state.split(":")
+	if parts.size() != 2 or parts[0] != track or not BOSS_SECTIONS.has(parts[0]):
+		return -1
+	var next_section := parts[1]
+	if not BOSS_SECTIONS[track].has(next_section) or next_section == section:
+		return -1
+	for action in _actions:
+		if action["type"] == "drop":
+			var change: Dictionary = action.get("set", {})
+			if change.get("track", "") == track and change.get("section", "") == next_section:
+				return -1
+	return brindle_section(next_section)
 
 
 # Brindle's HP inside the current phase, as a fraction of the way from the phase's top
@@ -991,7 +1024,7 @@ func force_track(next_track: String, next_theme: int, next_section := "", boss_t
 	var action := {"type": "track", "track": next_track, "section": "build" if next_section == "drop" else next_section}
 	action["step"] = Harmony.BOSS_STEP if boss_tempo else Harmony.STEP
 	if next_track in BOSS_TRACKS:
-		action["key"] = BRINDLE_KEY.get(next_section, 0)
+		action["key"] = BOSS_SECTIONS[next_track].get(next_section, {}).get("key", 0)
 		if next_section == "3":
 			action["step"] = PHASE3_STEP
 	_run(action)
@@ -1263,6 +1296,11 @@ func _run(action: Dictionary) -> void:
 			events_log.append(["theme", clock, theme])
 			_new_phrase()
 		"track":
+			var next_track: String = action["track"]
+			var next_section: String = action.get("section", "")
+			if next_track in ["waking", "mind"]:
+				action = action.duplicate()
+				action.merge(BOSS_SECTIONS[next_track].get(next_section, {}), true)
 			if action.has("step"):
 				_set_grid(int(action["step"]))
 			track = action["track"]

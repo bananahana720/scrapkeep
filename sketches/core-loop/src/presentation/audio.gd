@@ -1613,7 +1613,7 @@ func _follow_escalation() -> void:
 		"miniboss":
 			if is_instance_valid(_miniboss) and ctx.spawner != null and ctx.spawner.has_method("integrity_of"):
 				engine.escalate(1.0 - float(ctx.spawner.integrity_of(_miniboss)))
-		"brindle":
+		"brindle", "waking", "mind":
 			_follow_brindle()
 		"level":
 			if _event_id != "" and not _event_progress_live:
@@ -1637,6 +1637,10 @@ func _follow_brindle() -> void:
 	if boss.has_method("music_state"):
 		var state: Dictionary = boss.music_state()
 		if not state.is_empty():
+			var next_phase := int(state.get("phase", _boss_phase))
+			if next_phase > _boss_phase and next_phase <= 3:
+				_boss_phase = next_phase
+				engine.set_boss_state("%s:%d" % [String(state.get("id", engine.track)), _boss_phase])
 			engine.brindle_hp(float(state["in_phase"]), bool(state["held"]), float(state["phase_seconds"]))
 		return
 	var rules := _boss_rules(boss)
