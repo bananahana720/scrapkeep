@@ -13,12 +13,19 @@ const RAM_BRACE := "ram_brace"
 const ESCAPE_CORRIDOR := "escape_corridor"
 const FAMILIES := [CONDUCTIVE_PRIMER, RAM_BRACE, ESCAPE_CORRIDOR]
 const MAX_NAME_WORDS := 3
+# Conductive primer (combat.gd): a weapon hit primes a foe for PRIMER_SECONDS; the next ball
+# contact or special on it consumes the prime. Coil scales that hit, Mesh shares it out.
+const PRIMER_SECONDS := 3.0
+const PRIMER_COIL_MULT := 1.5
+const PRIMER_MESH_SHARE := 0.4
+const PRIMER_MESH_TARGETS := 2
+const PRIMER_MESH_RANGE := 6.0
 
 const PIECES := [
 	{"id": "primer_coil", "family": CONDUCTIVE_PRIMER, "name": "Primer Coil",
-		"effect": "Primes struck foes so the next arc hits harder."},
+		"effect": "Shots prime a foe; your next ram, slam or special on it hits half again as hard."},
 	{"id": "primer_mesh", "family": CONDUCTIVE_PRIMER, "name": "Conductive Mesh",
-		"effect": "Primed foes pass a share of arc damage to neighbours."},
+		"effect": "Shots prime a foe; your next ram, slam or special on it arcs to two neighbours."},
 	{"id": "ram_prow", "family": RAM_BRACE, "name": "Ram Prow",
 		"effect": "Ram hits stagger what they strike."},
 	{"id": "ram_spring", "family": RAM_BRACE, "name": "Brace Spring",
@@ -45,6 +52,17 @@ static func _row(id: String) -> Dictionary:
 
 static func family_of(id: String) -> String:
 	return String(_row(id).get("family", ""))
+
+
+# The seated piece of `family` in a to_dict document, or "" (also for a malformed doc).
+static func seated(doc: Dictionary, family: String) -> String:
+	var sockets_v = doc.get("sockets")
+	if typeof(sockets_v) != TYPE_ARRAY:
+		return ""
+	for id in sockets_v:
+		if typeof(id) == TYPE_STRING and family_of(id) == family:
+			return id
+	return ""
 
 
 func has_family(family: String) -> bool:
