@@ -1,11 +1,14 @@
-# smoke: solo (world 2 stage entrance, gate and posture boss; 120 s simulated budget)
+# smoke: solo (world 2 stage entrance, gate and posture boss; 200 s simulated budget)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const T := preload("res://tests/support/t.gd")
-const BUDGET := 120.0
+# 2026-10-05: the Waking (waking.gd) drops a floor per chunk and re-seats the Warden. Sable
+# (class 0) breaks it in 150.7 s of boss time, 155.1 s in all, following every drop; 120 s
+# predated the floors. bot_posture_boss_test's seed-1 class wins in 87.5 s.
+const BUDGET := 200.0
 
 # Only the stage Warden is broken through the spawner seam. The gate, launch and
 # boss are driven by ordinary inputs; no test strike ever touches the boss Warden.
