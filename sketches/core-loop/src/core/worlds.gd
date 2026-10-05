@@ -29,6 +29,20 @@ const BOSSES := {
 }
 
 
+# The page shown once when the summary opens after a win over the final world's boss, before
+# the stats (screens.gd). title is the heading, log the crew-log lines, sign the closing line.
+# Draft copy; prog-G6 writes the approved crew-log passage.
+const ENDING := {
+	"title": "SHIFT LOG CLOSED",
+	"log": [
+		"Final shift log: the Mind is quiet. Highdraft wind dropped to a working breeze.",
+		"Tally: everyone came home. Brindle's anchors returned, the Dig stopped knocking, the wrench came back.",
+		"Harnesses mended and hung. One hook left empty. Nobody remembers whose it was.",
+		"Next shift starts at dawn. The board already lists our names.",
+	],
+	"sign": "Filed by the keeper, Spillway Works.",
+}
+
 static func row(world: int) -> Dictionary:
 	for r in ROWS:
 		if int(r["id"]) == world:

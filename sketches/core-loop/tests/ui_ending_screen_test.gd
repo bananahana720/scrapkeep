@@ -1,0 +1,150 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
+const Worlds := preload("res://src/core/worlds.gd")
+const Push := preload("res://tests/workshop/push.gd")
+const T := preload("res://tests/support/t.gd")
+
+# The ending page (prog-G5): a win over the final world's boss opens the summary on
+# Worlds.ENDING before the stats. Keys are pushed into the viewport for the screens; the game
+# skips its own _input in test mode, so each press is also fed to _screen_key the way the
+# game would read it. Checks:
+#   a final win shows the page with the summary actions hidden; Space inside ENDING_HOLD
+#   neither closes it nor starts a run; Space after closes it onto RUN COMPLETE with the
+#   Mind's epitaph, still in summary, run_ended fired once;
+#   pad A just after closing does not restart within SUMMARY_GUARD;
+#   with bot_driven set the page closes itself after ENDING_HOLD;
+#   a loss, a Brindle win on the alpha table that ends at stage 2, and a world-1 win on the
+#   slice table show no page;
+#   the copy caps prog-G6 writes to.
+
+var _t := T.new("ui_ending_screen_test")
+var _game
+var _ended := 0
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _boot(table: String):
+	var game = Game.new()
+	game.table = table
+	game.test_mode = true
+	root.add_child(game)
+	while game.flow == null:
+		await process_frame
+	for i in 5:
+		await process_frame
+	game.ctx.calm = true
+	game.bot_driven = false
+	return game
+
+
+func _settle(seconds: float) -> void:
+	var left := seconds
+	while left > 0.0:
+		await process_frame
+		left -= _game.get_process_delta_time()
+
+
+func _key(code: Key) -> void:
+	Push.key(root, code)
+	_game._screen_key(code)
+
+
+# Beat the boss of the world `stage` sits in, then end the run as the flow would.
+func _end_at(stage: int, won: bool) -> void:
+	_game.run.stage = stage
+	_game.flow._set_state(_game.flow.VICTORY)
+	_game.flow._end_run(won)
+
+
+func _run() -> void:
+	_game = await _boot("")
+	var flow = _game.flow
+	var screens = _game.screens
+	_game.events.run_ended.connect(func(_won): _ended += 1)
+	var mind: Dictionary = Worlds.BOSSES["mind"]
+
+	# A final win, played by a human.
+	_end_at(StageDefs.COUNT, true)
+	_t.eq("final win: state is summary", flow.state_name(), "summary")
+	_t.check("final win: the ending page is open", screens.ending_open(), "closed")
+	_t.eq("final win: the page title is ENDING's", screens._ending_title.text, String(Worlds.ENDING["title"]))
+	_t.check("final win: the summary actions are hidden", not screens._actions.visible, "actions visible")
+	_t.check("final win: the stats are hidden", not screens._stats.visible, "stats visible")
+	_key(KEY_SPACE)
+	await process_frame
+	_t.check("Space inside the hold leaves the page open", screens.ending_open(), "closed early")
+	_t.eq("Space inside the hold starts no run", flow.state_name(), "summary")
+	await _settle(screens.ENDING_HOLD + 0.1)
+	_t.check("the page waits for a human after the hold", screens.ending_open(), "closed with no press")
+	_key(KEY_SPACE)
+	await process_frame
+	_t.check("Space after the hold closes the page", not screens.ending_open(), "still open")
+	_t.eq("closing leaves the state in summary", flow.state_name(), "summary")
+	_t.check("the summary reads RUN COMPLETE", screens._title.text.contains("RUN COMPLETE"), screens._title.text)
+	_t.check("the summary holds the Mind's epitaph", screens._body.text.contains(String(mind["epitaph"])), screens._body.text)
+	_t.check("the summary actions are back", screens._actions.visible and screens._actions.get_child_count() > 0, "hidden")
+	_t.eq("run_ended fired once", _ended, 1)
+	Push.pad(root, JOY_BUTTON_A)
+	_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_A)))
+	await process_frame
+	_t.eq("pad A just after closing does not restart", flow.state_name(), "summary")
+
+	# A final win with a bot driving: the page closes itself.
+	_game.bot_driven = true
+	_end_at(StageDefs.COUNT, true)
+	_t.check("bot: the page opens", screens.ending_open(), "closed")
+	await _settle(screens.ENDING_HOLD + 0.1)
+	_t.check("bot: the page closes itself after the hold", not screens.ending_open(), "still open")
+	_t.check("bot: the summary reads RUN COMPLETE", screens._title.text.contains("RUN COMPLETE"), screens._title.text)
+	_game.bot_driven = false
+
+	# A loss after the final boss's victory screen.
+	_end_at(StageDefs.COUNT, false)
+	_t.eq("loss: state is summary", flow.state_name(), "summary")
+	_t.check("loss: no ending page", not screens.ending_open(), "open")
+	_t.check("loss: the actions show", screens._actions.visible, "hidden")
+
+	# Brindle beaten on the alpha table, with the run ending at stage 2.
+	_end_at(2, true)
+	_t.eq("brindle at stage 2: the victory row was Brindle's", String(screens._body.text).contains(String(Worlds.BOSSES["brindle"]["epitaph"])), true)
+	_t.check("brindle at stage 2: no ending page", not screens.ending_open(), "open")
+
+	# A world-1 win on the slice table.
+	_game.free()
+	_game = await _boot("slice")
+	_end_at(1, true)
+	_t.eq("slice win: state is summary", _game.flow.state_name(), "summary")
+	_t.check("slice win: no ending page", not _game.screens.ending_open(), "open")
+
+	_copy_caps()
+	quit(_t.verdict())
+
+
+func _pad(button: int) -> InputEventJoypadButton:
+	var event := InputEventJoypadButton.new()
+	event.button_index = button
+	event.pressed = true
+	return event
+
+
+func _words(text: String) -> int:
+	return text.split(" ", false).size()
+
+
+func _copy_caps() -> void:
+	var total := _words(String(Worlds.ENDING["sign"]))
+	for line in Worlds.ENDING["log"]:
+		_t.check("copy: log line has 20 words or fewer", _words(line) <= 20, "%d: %s" % [_words(line), line])
+		total += _words(line)
+	_t.check("copy: log lines number 3 to 5", Worlds.ENDING["log"].size() >= 3 and Worlds.ENDING["log"].size() <= 5, str(Worlds.ENDING["log"].size()))
+	_t.check("copy: log plus sign is 40 to 80 words", total >= 40 and total <= 80, str(total))
+	_t.check("copy: title is 4 words or fewer", _words(Worlds.ENDING["title"]) <= 4, Worlds.ENDING["title"])
+	for id in Worlds.BOSSES:
+		for field in ["victory", "epitaph"]:
+			var line := String(Worlds.BOSSES[id][field])
+			_t.check("copy: %s %s is 12 words or fewer" % [id, field], _words(line) <= 12, line)
