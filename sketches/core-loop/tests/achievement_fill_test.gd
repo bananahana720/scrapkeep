@@ -10,7 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Every achievement pays a reward, and every earned paint has exactly one earner (alpha wave 14).
-#   F1 the table sizes: 16 achievements, 17 paints, no empty reward;
+#   F1 the table sizes: 16 achievements, 18 paints, no empty reward;
 #   F2 waking_stilled: only the world-two boss earns it, and it pays Dig Ochre;
 #   F3 highdraft_reached: entering world three earns it, and it pays Highdraft Sky;
 #   F4 codex_keeper: ten first-time discoveries earn it; a repeat discovery does not count;
@@ -63,7 +63,7 @@ func _fresh():
 
 func _tables() -> void:
 	_t.eq("F1 sixteen achievements", Achievements.ids().size(), 16)
-	_t.eq("F1 seventeen paints", Cosmetics.ids().size(), 17)  # 2026-10-05 (alpha wave 15 tally-kit): Tally's starter paint
+	_t.eq("F1 eighteen paints", Cosmetics.ids().size(), 18)  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon's starter paint
 	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty())
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 
@@ -138,5 +138,5 @@ func _mind() -> void:
 	_t.eq("F7 mind_quieted keeps its text", Achievements.row("mind_quieted")["text"], MIND_TEXT)
 	_t.eq("F7 mind_quieted pays the remembered cannon", Achievements.reward_of("mind_quieted"), {"pilot": "remembered_cannon"})
 	_t.eq("F7 ledger_balanced pays Tally", Achievements.reward_of("ledger_balanced"), {"pilot": "tally"})
-	_t.check("F7 cannon stays pending, tally has a class row and is not pending", Achievements.PENDING_PILOTS.has("remembered_cannon")
-			and not Achievements.PENDING_PILOTS.has("tally") and ClassDef.by_id("tally") != null, "%s" % [Achievements.PENDING_PILOTS])
+	_t.check("F7 no pilot stays pending; the cannon and Tally have class rows", Achievements.PENDING_PILOTS.is_empty()
+			and ClassDef.by_id("remembered_cannon") != null and ClassDef.by_id("tally") != null, "%s" % [Achievements.PENDING_PILOTS])

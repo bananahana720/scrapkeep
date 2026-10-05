@@ -18,7 +18,8 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 const LOOP := 3.6
 # The loop phase each card holds at rest: the key art's moment.
-const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64, "tarn": 0.3}
+const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64, "tarn": 0.3,
+	"remembered_cannon": 0.64}  # remembered cannon: Kest's stand-in until pil-G11
 const BOB := 0.08
 const REST_SPIN := 2.5
 # How far the resting pilot turns from its heading toward the camera.
@@ -203,7 +204,7 @@ func _build_props() -> void:
 			for i in 4:
 				_prop("chevron%d" % i, _chevron(), def.color, 1.6)
 			_prop("blast", _torus(0.9, 1.05), def.color, 1.8)
-		"demolitions_caster":
+		"demolitions_caster", "remembered_cannon":  # remembered cannon: Kest's stand-in until pil-G11
 			for i in 3:
 				_prop("charge%d" % i, _sphere(0.24), def.color, 2.0)
 				_prop("boom%d" % i, _burst(), def.color, 2.2)
@@ -248,7 +249,7 @@ func _pose(t: float) -> void:
 			_sable(t)
 		"runner_gunner", "tarn":
 			_rivet(t)
-		"demolitions_caster":
+		"demolitions_caster", "remembered_cannon":  # remembered cannon: Kest's stand-in until pil-G11
 			_kest(t)
 	_roll()
 

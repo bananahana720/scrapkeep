@@ -71,7 +71,7 @@ const TABLES := {
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "6fa241c5a4dc54f16834cba7b0b64e80f0ee026a8d3f15d669d509857ac225e7",  # 2026-10-05 (alpha wave 14 achievements-fill): paint rewards on four rows; waking_stilled, highdraft_reached, codex_keeper
-	"cosmetics.ROWS": "2b6c3205f6862f05ff17f8b9ee931c25adf9e19dfb9c6667452eb0e940fefaeb",  # 2026-10-05 (alpha wave 15 tally-kit): Tally's starter paint, Ledger Cream
+	"cosmetics.ROWS": "1ac417c448fbade3d9c156d383b072da5bb669f1bf4027680b1fe7ebd274c868",  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon starter paint, Old Verdigris
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
@@ -82,15 +82,15 @@ const GOLDEN_HASHES := {
 	"event_kinds.WORLD_ROWS": "686afd81f6d889e71870e154c32759dbf7bd738dd309c20b69567810ebbe0a4f",  # 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
-	"event_kinds.IMPACT": "7dc6c9e46c78c4df0299be1ecacb92b49ba6577f863e16edcfd9bc7f08d1e0d5",  # 2026-10-05 (alpha wave 15 tally-kit): ledger row
+	"event_kinds.IMPACT": "6131066a6305444600f0678a8f8dc9aaae7212e9f4581cc4f58c3e293067052c",  # 2026-10-05 (alpha wave 15 cannon-kit): cannon row
 	"event_kinds.REACTIONS": "d69f61edda9075f25e0724226f87be0d35cb9688f1d840b76da4003371b92189",
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
-	"upgrade_tree.TREES": "2aceac8718536c82d640b9831304112661ae5886ae52695e9cf4ab4bd6870b6b",  # 2026-10-05 (alpha wave 15 tally-tree): Tally's own tree
-	"upgrade_tree.WORLD_ONE_NODES": "8532902bcf5042b247ce6d4ac33ccb5b629031f1c2ab3ca35fe903368c8be60e",  # 2026-10-05 (alpha wave 15 tally-tree): Tally's own tree
+	"upgrade_tree.TREES": "62a8ded1a34c63e13f91ca0838555b3e475a98739aa76322656b829ce77c888d",  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon aliases Kest's tree until pil-G11
+	"upgrade_tree.WORLD_ONE_NODES": "89795a17e8ea7f421669d58793296881ee105c7108af1377eca4debf1ad17a0c",  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon aliases Kest's tree until pil-G11
 	"combat.codex_entries.ENTRIES": "d30ff6f6b6d5e2069a71c218f5665edbcfab0761d77754ed4bd90f9b295b3ca4",
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned

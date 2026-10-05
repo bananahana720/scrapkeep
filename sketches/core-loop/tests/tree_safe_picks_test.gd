@@ -8,7 +8,8 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Relics := preload("res://src/build/relics.gd")
 
 # Rule: four safe growth picks cannot replace an ability, disable it, lower a knob's
-# default, or undo an earlier pick. Validate all 150 distinct nodes (five pilots' own trees).
+# default, or undo an earlier pick. Validate all 150 distinct nodes (five pilots' own trees;
+# the remembered cannon borrows Kest's tree until pil-G11, so it adds rows, not nodes).
 # Tarn's nodes and relics are also checked for dead offers (STRATEGY-SPINE.md:175).
 # Existing tradeoffs are findings, not permission to change content.
 # Decision 3 is pending: numerical decreases are conservatively flagged even when
@@ -21,6 +22,7 @@ const UNSAFE := {
 	"demolitions_caster": ["k_ghost", "k_heavy_charge", "k_sticky_rain"],
 	"tarn": [],
 	"tally": [],
+	"remembered_cannon": ["k_ghost", "k_heavy_charge", "k_sticky_rain"],  # remembered cannon: Kest's stand-in until pil-G11
 }
 
 var _failures := 0
@@ -72,7 +74,7 @@ func _initialize() -> void:
 		_report("%s world one" % def.display_name,
 			UpgradeTree.safe_growth_problems(def.id, true) == world_one, "%d reachable-node findings" % world_one.size())
 		_report("%s data preserved" % def.display_name, list == before, "validator never edits nodes")
-	_report("all five pilots", pilots == UNSAFE.keys() and checked == 30 * UNSAFE.size() and distinct.size() == 150,
+	_report("all six pilots", pilots == UNSAFE.keys() and checked == 30 * UNSAFE.size() and distinct.size() == 150,
 		"%d rows, %d distinct nodes, pilots %s" % [checked, distinct.size(), pilots])
 	_dead_offers()
 	_fixtures()

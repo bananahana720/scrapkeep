@@ -52,7 +52,7 @@ func _run() -> void:
 	while _game.flow == null:
 		await physics_frame
 	var probe := probe_row()
-	_t.check("probe stays out of the roster", ClassDef.all().size() == 5 and ClassDef.by_id(PROBE_ID) == null,
+	_t.check("probe stays out of the roster", not _roster_ids().has(PROBE_ID) and ClassDef.by_id(PROBE_ID) == null,
 		"ClassDef.all() holds %d rows and does not know %s" % [ClassDef.all().size(), PROBE_ID])
 	var flow = _game.flow
 	_ws = _game.get_node("Workshop")
@@ -151,3 +151,7 @@ func _finish() -> void:
 	print("pilot_fallback_test: %d checks" % _t.checks)
 	_game.free()
 	quit(_t.verdict())
+
+
+func _roster_ids() -> Array:
+	return ClassDef.all().map(func(def): return def.id)

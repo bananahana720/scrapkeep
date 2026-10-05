@@ -22,8 +22,9 @@ const Achievements := preload("res://src/core/achievements.gd")
 #     Enter starts that class.
 
 # 13 words a card at rest (each card rests at 9 to 13 words), so the fifth pilot (Tally,
-# wave 15) raises it from 50 to 65 without loosening any one card.
-const CALM_BUDGET := 65
+# wave 15) raised it from 50 to 65 and the sixth (the remembered cannon, wave 15) to 78,
+# without loosening any one card.
+const CALM_BUDGET := 78
 const SETTLE := 0.5
 
 var _game

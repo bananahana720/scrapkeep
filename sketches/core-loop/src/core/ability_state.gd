@@ -44,6 +44,7 @@ const FORGIVENESS := 0.18
 #   movement  augments (the movement kit it fits), rocket, cloak (Kest's passives)
 #   special   plant_discharge (planting a pylon fires it free)
 #   smash     flavour (arc, skid or demo landing), spends_special
+#   any slot  family (lane, split_lane, plate or rush: the Mind family this slot commits)
 const ABILITIES := {
 	"arc_caster": {"icon": "ab_sable_weapon", "cooldown": 0.0, "mounted": "pylon_turret"},
 	"grapple": {"icon": "ab_sable_move", "cooldown": 0.0, "augments": ["grapple", "pylon", "vault"]},
@@ -68,6 +69,10 @@ const ABILITIES := {
 	"flywheel_surge": {"icon": "ab_tally_move", "cooldown": 4.0, "augments": ["surge"]},
 	"plate_return": {"icon": "ab_tally_special", "cooldown": 6.0, "charge_max": 0.4},
 	"stamp_slam": {"icon": "ab_tally_smash", "cooldown": 0.0, "flavour": "stamp"},
+	"cannon_lane": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane"},
+	"cannon_recoil": {"icon": "ab_cannon_move", "cooldown": 3.5, "augments": ["recoil"], "family": "split_lane"},
+	"cannon_plate": {"icon": "ab_cannon_special", "cooldown": 6.0, "charge_max": 0.8, "family": "plate"},
+	"cannon_rush": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush"},
 }
 const ICON_DIR := "res://assets/icons/"
 
