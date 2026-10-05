@@ -160,7 +160,7 @@ func _check_names() -> void:
 		if not shown.contains("placeholder"):
 			compared += 1
 			ok = ok and shown == terrain.map_for(stage + 1).title
-	_report("stage names", ok and compared >= 2 and not names[1].begins_with("Spillway"),
+	_report("stage names", ok and compared == StageDefs.COUNT and not names[1].begins_with("Spillway"),
 		"stage names %s: %d non-placeholder rows match the world's map titles" % [names, compared])
 
 
