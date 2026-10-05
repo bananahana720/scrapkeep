@@ -113,9 +113,10 @@ func _check_codex() -> void:
 		declared_by[entry["id"]] = "enemy"
 	for entry in WorldCodex.ENTRIES:
 		declared_by[entry["id"]] = "world"
-	# Brindle's tricks are enemy tricks that E declares (BOSS-BRINDLE.md, wave 4 packet).
+	# Boss tricks are enemy tricks that E declares (BOSS-BRINDLE.md, wave 4 packet); all() spans
+	# the Brindle, Waking and Mind tables since wave 13.
 	var boss_ids := {}
-	for entry in BossCodex.ENTRIES:
+	for entry in BossCodex.all():
 		declared_by[entry["id"]] = BossCodex.CATEGORY
 		boss_ids[entry["id"]] = true
 	var build = _game.ctx.build
