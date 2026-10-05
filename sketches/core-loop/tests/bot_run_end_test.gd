@@ -9,9 +9,14 @@ const RunStore := preload("res://src/core/run_store.gd")
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const T := preload("res://tests/support/t.gd")
+const BossCodex := preload("res://src/boss/codex_entries.gd")
+const Worlds := preload("res://src/core/worlds.gd")
+const Achievements := preload("res://src/core/achievements.gd")
 
 const SEEDS := 1
 
+# 2026-10-05 (wave 14, prog-G10): the file also pins a final win's progression end state, in process,
+# because a bot child's profile dies with the child; the child supplies the played-win codex only.
 # Each child plays only one world, then stops at the next world's entrance.
 # The next child resumes that RunStore document with the earned kit and build.
 # Only the final world's run_ended may produce won. This is automated native play.
@@ -57,6 +62,11 @@ func _run() -> void:
 			t.eq("seed %d world %d reached" % [i + 1, world], int(row["stage_reached"]),
 				StageDefs.COUNT if final else StageDefs.first_of(world + 1))
 			print("seed %d world %d: %s, %.2f wall seconds" % [i + 1, world, row["outcome"], row["wall_seconds"]])
+			if final:
+				var listed = JSON.parse_string(FileAccess.get_file_as_string(folders[i].path_join("codex-entries.json")))
+				var entries: Array = listed if listed is Array else []
+				t.check("seed %d codex has every Waking entry once" % (i + 1), _once(entries, BossCodex.WAKING), "%s" % [entries.size()])
+				t.check("seed %d codex has every Mind entry once" % (i + 1), _once(entries, BossCodex.MIND), "%s" % [entries.size()])
 			if not final:
 				var entrance := RunStore.new(folders[i].path_join("entrance.json")).load()
 				t.check("seed %d next entrance saved" % (i + 1), entrance.get("run_id") == run_ids[i]
@@ -104,4 +114,64 @@ func _run() -> void:
 	driver.tick(1.0 / 90.0)
 	t.eq("lost summary fallback", driver.outcome, "lost")
 	game.free()
+	# 2026-10-05 (wave 14, prog-G10): a final win driven through the real flow, in process.
+	var won := Game.new()
+	won.table = ""
+	won.test_mode = true
+	root.add_child(won)
+	while won.flow == null:
+		await physics_frame
+	for i in 3:
+		await physics_frame
+	won.ctx.calm = true
+	var earns := []
+	var ended := [0]
+	won.events.achievement_earned.connect(func(id): earns.append(id))
+	won.events.run_ended.connect(func(_won): ended[0] += 1)
+	won.flow.press_start()
+	won.flow.choose_class(0)
+	for i in 2:
+		await physics_frame
+	won.flow.enter_stage(StageDefs.COUNT, Vector3.ZERO, false)
+	won.flow._set_state(won.flow.BOSS)
+	won.events.boss_defeated.emit()
+	var frames := 0
+	while won.flow.state_name() != "summary" and frames < 90 * 6:
+		await physics_frame
+		frames += 1
+	t.check("final win fixture reaches summary", won.flow.state_name() == "summary", "state %s after %d frames" % [won.flow.state_name(), frames])
+	t.eq("run_ended fired once", ended[0], 1)
+	t.check("won_final", won.flow.won_final(), "run_won %s" % won.flow.run_won)
+	t.check("the ending page opens", won.screens.ending_open(), "closed")
+	t.eq("the ending title is ENDING's", won.screens._ending_title.text, String(Worlds.ENDING["title"]))
+	var waited := 0.0
+	while won.screens.ending_open() and waited < won.screens.ENDING_HOLD + 1.0:
+		await process_frame
+		waited += won.get_process_delta_time()
+	t.check("the bot closes the ending page", not won.screens.ending_open(), "open after %.2f s" % waited)
+	t.check("the summary title reads RUN COMPLETE", won.screens._title.text.contains("RUN COMPLETE"), won.screens._title.text)
+	t.check("the summary body holds the Mind's epitaph", won.screens._body.text.contains(String(Worlds.BOSSES["mind"]["epitaph"])), won.screens._body.text)
+	var profile = won.ctx.profile
+	t.check("first_win earned once", profile.earned("first_win") and earns.count("first_win") == 1, "earned %s count %d" % [profile.earned("first_win"), earns.count("first_win")])
+	t.check("first_win unlocks paint_kest_dusk", profile.has_cosmetic("paint_kest_dusk")
+		and Achievements.reward_of("first_win") == {"cosmetic": "paint_kest_dusk"}, "%s" % [Achievements.reward_of("first_win")])
+	t.check("mind_quieted earned once", profile.earned("mind_quieted") and earns.count("mind_quieted") == 1, "earned %s count %d" % [profile.earned("mind_quieted"), earns.count("mind_quieted")])
+	t.check("mind_quieted unlocks remembered_cannon", profile.has_pilot("remembered_cannon")
+		and Achievements.reward_of("mind_quieted") == {"pilot": "remembered_cannon"}, "%s" % [Achievements.reward_of("mind_quieted")])
+	var live: Array = won.codex.entries("enemy")
+	t.check("codex holds every Waking and Mind entry once", _once(live, BossCodex.WAKING) and _once(live, BossCodex.MIND), "%d enemy entries" % live.size())
+	t.eq("no store error after the win", won.flow.store_error, "")
+	won.free()
 	quit(t.verdict())
+
+
+# True when every row of `ids` (codex rows) has its id exactly once among the entries' ids, in category enemy.
+func _once(entries: Array, ids: Array) -> bool:
+	for row in ids:
+		var n := 0
+		for e in entries:
+			if e is Dictionary and e.get("id") == row["id"] and e.get("category") == "enemy":
+				n += 1
+		if n != 1:
+			return false
+	return true

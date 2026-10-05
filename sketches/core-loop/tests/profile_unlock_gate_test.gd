@@ -126,6 +126,17 @@ func _p3() -> void:
 		starters += 1 if def.starter else 0
 	_t.eq("P2-3 Sable and Rivet are the starters", starters, 2)
 	_t.check("P2-3 and the starter is Sable", ClassDef.all()[0].starter and ClassDef.all()[0].id == "pylon_engineer", "first row")
+	var class_ids: Array = ClassDef.all().map(func(d): return d.id)
+	var unresolved: Array = []
+	for pilot in owners:
+		if not class_ids.has(pilot) and not Achievements.PENDING_PILOTS.has(pilot):
+			unresolved.append(pilot)
+	_t.eq("P2-3 every pilot reward resolves", unresolved, [])
+	var pending_with_row: Array = Achievements.PENDING_PILOTS.filter(func(p): return class_ids.has(p))
+	_t.eq("P2-3 pending pilots have no class row", pending_with_row, [])
+	_t.check("P2-3 remembered_cannon is mind_quieted's alone",
+		Achievements.for_pilot("remembered_cannon") == "mind_quieted" and owners.get("remembered_cannon", 0) == 1,
+		"for_pilot %s, rewards %d" % [Achievements.for_pilot("remembered_cannon"), owners.get("remembered_cannon", 0)])
 
 
 func _p4() -> void:

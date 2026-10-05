@@ -70,8 +70,8 @@ const TABLES := {
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "97d479d2603d5f3cde4061761c404cf093f2e61b0ddcb0dfa5ece1774a1fc065",  # 2026-10-04 (wave 11): mind_quieted row
-	"cosmetics.ROWS": "168acf8b01f15d1c573cfc4c696c41cc439e167ca137ad81174b532519cd7f08",
+	"achievements.ROWS": "6fa241c5a4dc54f16834cba7b0b64e80f0ee026a8d3f15d669d509857ac225e7",  # 2026-10-05 (alpha wave 14 achievements-fill): paint rewards on four rows; waking_stilled, highdraft_reached, codex_keeper
+	"cosmetics.ROWS": "5403cc5bfe4b8a30a3f4884bb4fac4275a41987d7d46a01e8d5337ede5f40ca5",  # 2026-10-05 (alpha wave 14 achievements-fill): seven earned paints, one per achievement reward
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
@@ -79,7 +79,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.ACTIVITY_ROWS": "3b128af84df85ddccc150f1d6f5847b194a39dd1625cd0c8a1d2c2c3b4ae2607",
 	"event_kinds.LOOT_ROWS": "1d99aa491419dc9a8bbd2da1cfd747d991c3848e5cf01e7cc8e099698d8b3b6e",
 	"event_kinds.UI_ROWS": "c6a2047c965432db5eed87fba48ff0e1da8cf49b85d6731c4f8622322c529595",  # 2026-10-05 (alpha wave 13 companion-cues): companion_ready and companion_spent rows
-	"event_kinds.WORLD_ROWS": "799b6e7c924f4ca210f4eb4fa452e51bea451dc5c48cfa9e2726454592a02d09",  # 2026-10-04 (wave 10): breach_opened row
+	"event_kinds.WORLD_ROWS": "686afd81f6d889e71870e154c32759dbf7bd738dd309c20b69567810ebbe0a4f",  # 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
 	"event_kinds.IMPACT": "480bce14f4ace39fb09b787961787a72362ffc1455125222dbb310a02eb83f1e",
@@ -200,7 +200,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			if row.has("sum"):
 				_ref(issues, name, id, "sum", row.sum, bus.get(row.on, []))
 			for reward in row.reward:
-				var targets = pilots if reward == "pilot" else _ids(tables.get("cosmetics.ROWS", {}))
+				var targets = (pilots + Achievements.PENDING_PILOTS) if reward == "pilot" else _ids(tables.get("cosmetics.ROWS", {}))
 				if reward == "world":
 					targets = Worlds.ROWS.map(func(w): return str(w.id))
 				_ref(issues, name, id, "reward kind", reward, Achievements.REWARD_KINDS)
@@ -214,8 +214,6 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			_ref(issues, name, id, "slot", row.slot, Cosmetics.SLOTS)
 			if row.pilot != "":
 				_ref(issues, name, id, "pilot", row.pilot, pilots)
-			if row.get("mesh") is String and not ResourceLoader.exists(row.mesh):
-				_issue(issues, name, "references", id, "mesh resource does not exist")
 			for problem in Cosmetics.validate({id: row}, pilots):
 				if not str(problem).begins_with("table:"):
 					_issue(issues, name, "well_formed", id, problem)

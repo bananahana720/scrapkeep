@@ -6,14 +6,14 @@ const Palette := preload("res://src/core/palette.gd")
 # cannot ride in on a cosmetic. A tint is a new colour, never a hostile hue: those mean
 # danger on screen (Palette.HAZARD for threats, BRASS for the boss).
 #
-# slot    one of SLOTS
+# slot    always "paint": trail and topper were cut 2026-10-05 (alpha wave 14)
 # pilot   a pilot id, or "" for any pilot
-# name    the label shown in the wardrobe
+# name    the label shown on the class card's paint picker
 # starter owned from the first run
-# tint    a Color, or mesh: a res:// path (none exist yet); exactly one of the two
+# tint    a Color, required
 
-const SLOTS := ["paint", "trail", "topper"]
-const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "mesh"]
+const SLOTS := ["paint"]
+const ALLOWED := ["slot", "pilot", "name", "starter", "tint"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
 const MIN_ROWS := 6
@@ -27,6 +27,14 @@ const ROWS := {
 	"paint_rivet_forge": {"slot": "paint", "pilot": "runner_gunner", "name": "Forge Blue", "starter": false, "tint": Color("3a6fb0")},
 	"paint_kest_plum": {"slot": "paint", "pilot": "demolitions_caster", "name": "Ember Plum", "starter": true, "tint": Color("8a3f6e")},
 	"paint_kest_dusk": {"slot": "paint", "pilot": "demolitions_caster", "name": "Dusk Pink", "starter": false, "tint": Color("d68ab0")},
+	"paint_tarn_ash": {"slot": "paint", "pilot": "tarn", "name": "Redjaw Ash", "starter": true, "tint": Color("5e5a54")},
+	"paint_tarn_dig": {"slot": "paint", "pilot": "tarn", "name": "Dig Ochre", "starter": false, "tint": Color("9a6a32")},
+	"paint_any_kelp": {"slot": "paint", "pilot": "", "name": "Kelp", "starter": false, "tint": Color("3f6b4f")},
+	"paint_any_cobalt": {"slot": "paint", "pilot": "", "name": "Cobalt", "starter": false, "tint": Color("2a4fd6")},
+	"paint_any_brine": {"slot": "paint", "pilot": "", "name": "Brine", "starter": false, "tint": Color("7fb8c4")},
+	"paint_any_ink": {"slot": "paint", "pilot": "", "name": "Ink", "starter": false, "tint": Color("1c1f2b")},
+	"paint_any_sky": {"slot": "paint", "pilot": "", "name": "Highdraft Sky", "starter": false, "tint": Color("8fc4ec")},
+	"paint_any_moth": {"slot": "paint", "pilot": "", "name": "Moth Grey", "starter": false, "tint": Color("a39cb3")},
 }
 
 
@@ -76,17 +84,12 @@ static func validate(rows: Dictionary, pilots: Array) -> Array:
 			problems.append("%s: name is empty" % id)
 		if not (r.get("starter") is bool):
 			problems.append("%s: starter must be a bool" % id)
-		var has_tint: bool = r.has("tint")
-		var has_mesh: bool = r.has("mesh")
-		if has_tint == has_mesh:
-			problems.append("%s: needs exactly one of tint or mesh" % id)
-		if has_tint:
-			if not (r["tint"] is Color):
-				problems.append("%s: tint must be a Color" % id)
-			elif is_hostile(r["tint"]):
-				problems.append("%s: tint is a hostile hue" % id)
-		if has_mesh and not str(r["mesh"]).begins_with("res://"):
-			problems.append("%s: mesh must be a res:// path" % id)
+		if not r.has("tint"):
+			problems.append("%s: needs a tint" % id)
+		elif not (r["tint"] is Color):
+			problems.append("%s: tint must be a Color" % id)
+		elif is_hostile(r["tint"]):
+			problems.append("%s: tint is a hostile hue" % id)
 		if r.get("slot", "") == "paint" and r.get("starter", false) == true:
 			starter_paints += 1
 	if starter_paints < 1:

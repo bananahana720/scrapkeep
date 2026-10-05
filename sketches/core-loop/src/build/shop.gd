@@ -88,6 +88,9 @@ const LINES := {
 	"moss.remember.skipped_visits": "Three launches past my door. Bell still works.",
 	"moss.remember.relented_before": "Heavy again. Hook's already yours, don't act surprised.",
 	"moss.remember.neglected": "Died holding scrap. Scrap that could've been plating. Hm.",
+	"moss.ledger.1": "A ledger leaf. Tally's scrawl. Pinned it by the shelf.",
+	"moss.ledger.2": "Second leaf. Tally's been counting on you. Literally. One more.",
+	"moss.ledger.3": "Three leaves. Balance due. Tally's at the gate, pockets full.",
 }
 # Which remembers-you line wins when several keys hold, first match first.
 const REMEMBER_ORDER := ["neglected", "relented_before", "died_last_run", "won_last_run", "class_changed",
@@ -106,6 +109,7 @@ var bought_this_visit := 0
 var history := {}
 var neglected := false
 var talks := {"beat": -1, "used": {}, "loops": 0, "relented": false}
+var leaves_this_visit: Array = []
 
 var _rng := RandomNumberGenerator.new()
 var _left_empty := false
@@ -148,6 +152,10 @@ func enter() -> Dictionary:
 	top = {"part_id": top_id, "lock_class": lock_class, "sold": false} if top_id != "" else {}
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
 	var greeting: Dictionary = greeting_line()
+	# Moss takes every carried ledger leaf on entry; the greeting says so.
+	leaves_this_visit = _return_leaves()
+	if not leaves_this_visit.is_empty():
+		greeting = line("moss.ledger.%d" % clampi(ctx.progress.leaves_returned(), 1, 3))
 	neglected = false
 	return greeting
 
@@ -157,6 +165,12 @@ func leave() -> Dictionary:
 	_left_empty = bought_this_visit == 0
 	_cheapest_left = _cheapest_price()
 	return line("moss.bark.leaving")
+
+
+func _return_leaves() -> Array:
+	if ctx.progress == null or not ctx.progress.has_method("return_leaves"):
+		return []
+	return ctx.progress.return_leaves(ctx.player.ball_position() if ctx.player != null else Vector3.ZERO)
 
 
 func clock_paused() -> bool:

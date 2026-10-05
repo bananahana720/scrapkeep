@@ -15,7 +15,8 @@ extends RefCounted
 # need     optional: a run summary key (SUMMARY_KEYS) or one of class, won, world
 # min,max  optional numbers compared with the need key
 # hidden   optional: the card shows no text until it is earned
-# reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id}
+# reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id};
+#          a pilot id is a ClassDef id or a PENDING_PILOTS id
 
 const FIELDS := ["name", "text", "on", "where", "sum", "count", "need", "min", "max", "hidden", "reward"]
 const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries"]
@@ -24,6 +25,9 @@ const REWARD_KINDS := ["pilot", "cosmetic", "world"]
 const NAME_WORDS := 3
 const TEXT_WORDS := 12
 const MIN_ROWS := 8
+# Pilot ids a row may reward before their ClassDef row exists. The save records the unlock;
+# the card appears when the row lands, and that unit removes the id here.
+const PENDING_PILOTS := ["remembered_cannon", "tally"]
 
 const ROWS := {
 	"warden_broken": {"name": "Warden Breaker", "text": "Break your first Warden.", "on": "beacon_unsealed",
@@ -43,16 +47,27 @@ const ROWS := {
 	"first_win": {"name": "Run Won", "text": "Win a run.", "on": "run_ended",
 		"where": {"won": true}, "count": 1, "reward": {"cosmetic": "paint_kest_dusk"}},
 	"clean_win": {"name": "Clean Run", "text": "Win a run without retrying a stage.", "on": "run_ended",
-		"where": {"won": true}, "count": 1, "need": "retries", "max": 0, "hidden": true, "reward": {}},
+		"where": {"won": true}, "count": 1, "need": "retries", "max": 0, "hidden": true, "reward": {"cosmetic": "paint_any_ink"}},
 	"first_event": {"name": "Event Won", "text": "Win a world event.", "on": "milestone_won",
-		"count": 1, "reward": {}},
+		"count": 1, "reward": {"cosmetic": "paint_any_kelp"}},
 	"ten_events": {"name": "Event Regular", "text": "Win 10 world events across all your runs.", "on": "milestone_won",
-		"count": 10, "reward": {}},
-	# Placeholder reward until Tally's kit lands (owner question 4).
-	"mind_quieted": {"name": "Third Fragment", "text": "Quiet the Mind in the Highdraft for Tally's third fragment.",
-		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+		"count": 10, "reward": {"cosmetic": "paint_any_cobalt"}},
+	# Beating the Mind remembers the cannon (ROADMAP:27); remembered_cannon is pending until its kit lands.
+	"mind_quieted": {"name": "Mind Quieted", "text": "Quiet the Mind. An old cannon in the Highdraft remembers.",
+		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {"pilot": "remembered_cannon"}},
+	# Tally: three ledger leaves handed to Moss (progress.gd return_leaves); pil-G7 adds her ClassDef row.
+	"ledger_balanced": {"name": "Ledger Balanced", "text": "Return one ledger leaf per world to Moss.", "on": "world_fact",
+		"where": {"kind": "ledger_returned"}, "count": 3, "reward": {"pilot": "tally"}},
 	"full_rack": {"name": "Full Rack", "text": "Finish a run holding 10 parts.", "on": "run_ended",
-		"count": 1, "need": "parts", "min": 10, "reward": {}},
+		"count": 1, "need": "parts", "min": 10, "reward": {"cosmetic": "paint_any_brine"}},
+	# boss_defeated fires for every boss; the world bound keeps this to the Waking (Worlds.ROWS id 2).
+	"waking_stilled": {"name": "Waking Stilled", "text": "Still the Waking in the Dig.", "on": "boss_defeated",
+		"count": 1, "need": "world", "min": 2, "max": 2, "reward": {"cosmetic": "paint_tarn_dig"}},
+	"highdraft_reached": {"name": "Highdraft Reached", "text": "Reach the Highdraft.", "on": "world_entered",
+		"where": {"world": 3}, "count": 1, "reward": {"cosmetic": "paint_any_sky"}},
+	# codex.gd sets first_time once per synergy for the player, so the count is distinct synergies.
+	"codex_keeper": {"name": "Codex Keeper", "text": "Discover 10 synergies across all your runs.", "on": "synergy_discovered",
+		"where": {"first_time": true}, "count": 10, "reward": {"cosmetic": "paint_any_moth"}},
 }
 
 
@@ -144,8 +159,10 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 			if not REWARD_KINDS.has(kind):
 				problems.append("%s: reward kind %s is unknown" % [id, kind])
 			elif kind == "pilot":
-				if not pilots.has(target):
+				if not pilots.has(target) and not PENDING_PILOTS.has(target):
 					problems.append("%s: reward pilot %s does not resolve" % [id, target])
+				elif pilots.has(target) and PENDING_PILOTS.has(target):
+					problems.append("%s: reward pilot %s has a ClassDef row; remove it from PENDING_PILOTS" % [id, target])
 				elif pilot_rewards.has(target):
 					problems.append("%s: reward pilot %s is already the reward of %s" % [id, target, pilot_rewards[target]])
 				else:

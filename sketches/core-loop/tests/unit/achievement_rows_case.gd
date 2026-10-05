@@ -58,6 +58,11 @@ func run(t) -> void:
 	_bad(t, "bad: two reward kinds are refused", {"reward": {"cosmetic": "paint_any_salt", "world": "gorge"}}, "at most one kind")
 	_bad(t, "bad: an unknown cosmetic reward is refused", {"reward": {"cosmetic": "nope"}}, "does not resolve")
 	_bad(t, "bad: an unknown pilot reward is refused", {"reward": {"pilot": "nobody"}}, "does not resolve")
+	var pending := _base_rows()
+	pending["pad_0"]["reward"] = {"pilot": "remembered_cannon"}
+	var pending_problems := Achievements.validate(pending, signals, _pilots(), Cosmetics.ids())
+	t.check("good: a pending pilot reward validates", pending_problems.is_empty(), "problems %s" % [pending_problems])
+	_bad(t, "bad: a pending pilot with a class row is refused", {"reward": {"pilot": "remembered_cannon"}}, "PENDING_PILOTS", _pilots() + ["remembered_cannon"])
 	_bad(t, "bad: a long name is refused", {"name": "One Two Three Four"}, "name")
 	_bad(t, "bad: a long text is refused", {"text": "one two three four five six seven eight nine ten eleven twelve thirteen"}, "text")
 

@@ -11,6 +11,7 @@ const Game := preload("res://src/game.gd")
 #   - an owned paint multiplies the lifted paint slot on Pod and Core; class_accent, class_color()
 #     and the ball's heft stay put;
 #   - an empty, unknown, other-pilot, unowned or non-paint id gives no tint and one warning each;
+#   - Tarn's own starter paint applies to Tarn and is refused on another pilot;
 #   - a paint equipped on a live shell repaints at the next fit;
 #   - a ClassPreview with paint_id tints only its shell's paint slot.
 
@@ -141,6 +142,9 @@ func _check_refusals() -> void:
 		_report("P4-2 " + cases[id], got == null and hook._warned.has("paint:" + id), "no tint and a warning for '%s'" % id)
 	_report("P4-2 starter", hook.paint_tint(SABLE, "paint_sable_lagoon") != null, "a starter needs no unlock")
 	_report("P4-2 any", hook.paint_tint(SABLE, "paint_any_salt") != null, "an any-pilot row applies")
+	var tarn_tint = hook.paint_tint("tarn", "paint_tarn_ash")
+	_report("P4-2 tarn starter", tarn_tint != null and tarn_tint == Color("5e5a54"), "Tarn's starter applies with its own tint, got %s" % [tarn_tint])
+	_report("P4-2 tarn paint stays Tarn's", hook.paint_tint(SABLE, "paint_tarn_ash") == null, "Sable cannot wear Tarn's paint")
 	var before: int = hook._warned.size()
 	hook.paint_tint(SABLE, "paint_nope")
 	_report("P4-2 once", hook._warned.size() == before, "one warning per id")
