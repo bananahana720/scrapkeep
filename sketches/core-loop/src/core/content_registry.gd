@@ -68,7 +68,7 @@ const TABLES := {
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "c427ff324f2a2f1eeafd67036438e50b928ffe2b455639f06446b11048639795",
+	"achievements.ROWS": "97d479d2603d5f3cde4061761c404cf093f2e61b0ddcb0dfa5ece1774a1fc065",  # 2026-10-04 (wave 11): mind_quieted row
 	"cosmetics.ROWS": "168acf8b01f15d1c573cfc4c696c41cc439e167ca137ad81174b532519cd7f08",
 	"event_kinds.ROWS": "0194eb1b6ee7d7d7948dc4a92711e439576dd63711143c0178e5e355a826fd65",
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
@@ -84,7 +84,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.REACTIONS": "d69f61edda9075f25e0724226f87be0d35cb9688f1d840b76da4003371b92189",
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
-	"lore_rows.ROWS": "30da687b1495dfca3232cd4b2829e30acfad8841e9bdf9c5da36a9e82f268238",
+	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
 	"upgrade_tree.TREES": "30202fb50a25f663f44faf5e70a5de0aeea8f37614ac8cbef68d9005334d1412",
