@@ -166,8 +166,9 @@ func active_profiles() -> Array:
 	return rows
 
 
+# The lens rest, before jitter and kick (:239): shots never move with the picture (W16-1).
 func aim_origin() -> Vector3:
-	return cam.global_position
+	return (cam.get_parent() as Node3D).global_position
 
 
 func aim_forward() -> Vector3:

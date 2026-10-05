@@ -68,6 +68,7 @@ func build_module() -> Node:
 	return get_meta("build") if has_meta("build") else null
 
 
+# Shots aim from the lens rest: kick, shake and the Screen shake row move the picture, never the aim (W16-1).
 func aim_origin() -> Vector3:
 	return camera.aim_origin()
 
