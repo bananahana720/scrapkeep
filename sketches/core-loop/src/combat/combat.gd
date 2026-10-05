@@ -1430,7 +1430,7 @@ func _fire_cannon_lane(weapon: String) -> void:
 	var point: Vector3 = aim["point"]
 	var centre := _ground_under(ball)
 	var target := point
-	if Vector2(point.x - centre.x, point.z - centre.z).length() < MUZZLE * 1.5:
+	if Vector2(point.x - centre.x, point.z - centre.z).length() < 1.5:
 		target = centre + _flat_aim() * 10.0
 	var entry := _commit_cannon("lane", target, centre, reach, Weapons.LANE_DAMAGE, "weapon")
 	var h = entry["hazards"][0]
