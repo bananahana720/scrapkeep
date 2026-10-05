@@ -21,10 +21,8 @@ const Achievements := preload("res://src/core/achievements.gd")
 #   - with nothing focused, Right opens the first card, Right again the second, and
 #     Enter starts that class.
 
-# 13 words a card at rest (each card rests at 9 to 13 words), so the fifth pilot (Tally,
-# wave 15) raised it from 50 to 65 and the sixth (the remembered cannon, wave 15) to 78,
-# without loosening any one card.
-const CALM_BUDGET := 78
+# 75 since six pilots (wave 15 roster, 2026-10-05); each card rests at 13 words or fewer.
+const CALM_BUDGET := 75
 const SETTLE := 0.5
 
 var _game
@@ -98,7 +96,7 @@ func _process(delta: float) -> bool:
 					% [open, cards[1].openness, cards[1].scale.x, cards[0].scale.x, cards[1].preview.playing(), _travel])
 			var open_words := _words("open words")
 			var now: Array = cards.map(func(c): return WordBudget.count(c)["hud"])
-			_report("open words", open_words > _calm and now[0] == _calm_cards[0] and now[2] == _calm_cards[2] and now[3] == _calm_cards[3]
+			_report("open words", open_words > _calm and range(now.size()).all(func(j): return j == 1 or now[j] == _calm_cards[j])
 					and open_words - _calm == now[1] - _calm_cards[1],
 				"%d words with Rivet open (%d at rest); per card %s at rest, %s now" % [open_words, _calm, _calm_cards, now])
 			var away := InputEventMouseMotion.new()
@@ -148,6 +146,11 @@ func _check_hints() -> void:
 	_report("hint Rivet starter", ClassCard.unlock_hint(_game.flow.classes[1], _game.progress) == "", "Rivet is a starter until a rescue emitter exists")
 	_report("hint Kest text", ClassCard.unlock_hint(_game.flow.classes[2], _game.progress) == Achievements.row(Achievements.for_pilot("demolitions_caster"))["text"], "row text")
 	_report("hint Tarn text", ClassCard.unlock_hint(_game.flow.classes[3], _game.progress) == "Rout Admiral Brindle.", "row text")
+	var by_id := {}
+	for def in _game.flow.classes:
+		by_id[def.id] = def
+	_report("hint Tally text", ClassCard.unlock_hint(by_id["tally"], _game.progress).begins_with(Achievements.row("ledger_balanced")["text"]), "row text, then the lifetime count")
+	_report("hint cannon text", ClassCard.unlock_hint(by_id["remembered_cannon"], _game.progress) == Achievements.row("mind_quieted")["text"], "row text")
 
 
 func _stub(id: String) -> Resource:

@@ -22,8 +22,8 @@ const T := preload("res://tests/support/t.gd")
 #   - Tarn's card offers Tarn's own starter paint, no other card offers it, and the swatch,
 #     label and preview show it once equipped.
 
-# 13 words a card: 78 since the remembered cannon made six cards (wave 15).
-const CALM_BUDGET := 78
+# 75 since six pilots (wave 15 roster, 2026-10-05); each card rests at 13 words or fewer.
+const CALM_BUDGET := 75
 const HINT := "Unlock: Win a run."
 
 var _t := T.new("ui_locked_card_test")
@@ -68,14 +68,14 @@ func _run() -> void:
 	for prop in ["role", "species", "pitch", "weapon_id", "movement_id", "special_id", "smash_id", "color", "shape", "motif", "sound", "bible_home", "synergy_hooks"]:
 		locked_def.set(prop, rivet.get(prop))
 	_game.flow.classes[1] = locked_def
-	# Sable is the only starter: earn Kest and Tarn so only the second card is locked.
-	for i in [2, 3]:
+	# Sable is the only starter: earn every non-starter but the second so only the second card is locked.
+	for i in range(2, _game.flow.classes.size()):
 		_game.ctx.profile.unlock_pilot(_game.flow.classes[i].id)
 	_game.flow.open_class_select()
 	await _settle(0.7)
 	var cards: Array = _game.screens.class_cards()
 	var card = cards[1]
-	_t.check("P3-1 the locked card is flagged", card.locked and not cards[0].locked and not cards[2].locked and not cards[3].locked, "locked %s" % [cards.map(func(c): return c.locked)])
+	_t.check("P3-1 the locked card is flagged", cards.size() == 6 and card.locked and range(cards.size()).all(func(j): return j == 1 or not cards[j].locked), "locked %s" % [cards.map(func(c): return c.locked)])
 	_t.check("P3-1 the locked card is not disabled", not card.disabled, "disabled %s" % card.disabled)
 	var slate: Color = card.get_theme_stylebox("normal").border_color
 	var other: Color = cards[0].get_theme_stylebox("normal").border_color
@@ -87,7 +87,7 @@ func _run() -> void:
 	card.set_locked(true, HINT)
 	await _settle(0.5)
 	var calm := WordBudget.count(_game.screens)
-	_t.check("P3-2 class select at rest reads in 78 words or fewer with a locked card", calm["hud"] > 0 and calm["hud"] <= CALM_BUDGET, "%d words: %s" % [calm["hud"], _text_of("calm")])
+	_t.check("P3-2 class select at rest reads in 75 words or fewer with a locked card", calm["hud"] > 0 and calm["hud"] <= CALM_BUDGET, "%d words: %s" % [calm["hud"], _text_of("calm")])
 	_t.check("P3-1 the hint is not shown at rest", not _text_of("calm").contains("Unlock"), _text_of("calm"))
 	Push.hover(root, card)
 	await _settle(0.7)

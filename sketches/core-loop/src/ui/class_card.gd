@@ -90,6 +90,9 @@ var openness := 0.0
 var preview
 var _details: Array[CanvasItem] = []
 var _cells: Array = []
+var _keys_row: HBoxContainer
+var _name_label: Label
+var _role_label: Label
 var _serial := 0
 var locked := false
 var hint_text := ""
@@ -135,8 +138,13 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	box.add_child(preview)
 	add_child(_fade(width))
 	_build_overlay(width, color)
-	box.add_child(_name_row(color))
+	box.add_child(_name_row(color, width))
 	var role := _tagged(_text(ClassKit.role_line(def), 15, Color(Palette.SAND, 0.8)), color, _serial + 1)
+	# A tag wider than the card wraps at the card's inner width instead of widening the column.
+	if role.get_combined_minimum_size().x > width - 2.0 * PAD:
+		role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		role.custom_minimum_size.x = width - 2.0 * PAD
+	_role_label = role
 	box.add_child(role)
 	_details.append(role)
 	var line := _text(ClassKit.fantasy(def), 18, Palette.SAND)
@@ -150,16 +158,31 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	keys.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	keys.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(keys)
+	_keys_row = keys
 	var records := ClassKit.card_keys(def)
-	var cell_w := (width - 2.0 * PAD - 4.0 * (records.size() - 1)) / maxf(1.0, records.size())
+	var room := width - 2.0 * PAD - 4.0 * (records.size() - 1)
+	var fit := _fit_cells(records, room / maxf(1.0, records.size()), floorf(room) - 1.0)
 	for record in records:
-		keys.add_child(_cell(record, color, cell_w))
+		keys.add_child(_cell(record, color, fit["side"], fit["scale"]))
 	_apply()
 
 
 # The four slots and any Space extra, as {key, icon, words} in the bar's order.
 func keys_shown() -> Array:
 	return _cells.map(func(c): return {"key": c["key"], "icon": c["icon"], "words": c["words"]})
+
+
+# The key cells and the name label, for layout checks.
+func key_cells() -> Array:
+	return _keys_row.get_children() if _keys_row != null else []
+
+
+func name_label() -> Label:
+	return _name_label
+
+
+func role_label() -> Label:
+	return _role_label
 
 
 func is_open() -> bool:
@@ -331,7 +354,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
-func _name_row(color: Color) -> HBoxContainer:
+func _name_row(color: Color, width: float) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
@@ -351,13 +374,41 @@ func _name_row(color: Color) -> HBoxContainer:
 	_lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_lock.visible = false
 	row.add_child(_lock)
-	var name_label := _text(def.display_name, 30, color)
+	# The name never wraps: it steps down by 2 from 30 until it fits beside the 28 px glyph and gap.
+	var font_size := 30
+	while font_size > 20 and UiFonts.bold().get_string_size(def.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 38.0 > width - 2.0 * PAD:
+		font_size -= 2
+	var name_label := _text(def.display_name, font_size, color)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_name_label = name_label
 	row.add_child(name_label)
 	return row
 
 
-func _cell(record: Dictionary, color: Color, width: float) -> VBoxContainer:
+# Cells share the row evenly while every keycap fits its share. When the caps outgrow it
+# (six cards), the cells without a wide cap narrow first, then every cap steps down 5%.
+func _fit_cells(records: Array, cell_w: float, room: float) -> Dictionary:
+	var scale := 1.0
+	while scale > 0.5 and _caps_width(records, scale, 0.0) > room:
+		scale -= 0.05
+	var side := cell_w
+	while side > 0.0 and _caps_width(records, scale, side) > room:
+		side = ceilf(side) - 1.0
+	return {"side": side, "scale": scale}
+
+
+func _caps_width(records: Array, scale: float, side: float) -> float:
+	var total := 0.0
+	for record in records:
+		total += maxf(side, Keycap.size_of(record["key"], _cap_height(record["key"]) * scale).x)
+	return total
+
+
+func _cap_height(key_name: String) -> float:
+	return MOUSE_CAP if Keycap.is_mouse(key_name) else CELL_CAP
+
+
+func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> VBoxContainer:
 	var cell := VBoxContainer.new()
 	cell.custom_minimum_size = Vector2(width, 0.0)
 	cell.add_theme_constant_override("separation", 4)
@@ -367,10 +418,11 @@ func _cell(record: Dictionary, color: Color, width: float) -> VBoxContainer:
 	icon.modulate = Icons.tint(record["icon"], color)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.custom_minimum_size = Vector2(CELL_ICON, CELL_ICON)
+	var side := minf(CELL_ICON, width)
+	icon.custom_minimum_size = Vector2(side, side)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(icon)
-	var cap := KeycapView.new(record["key"], ScrapFrame.wear(color, _serial + record["key"].hash()), MOUSE_CAP if Keycap.is_mouse(record["key"]) else CELL_CAP)
+	var cap := KeycapView.new(record["key"], ScrapFrame.wear(color, _serial + record["key"].hash()), _cap_height(record["key"]) * cap_scale)
 	cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	# Letter caps sit in the mouse cap's height, so every key's words start on one line.
 	cap.custom_minimum_size.y = maxf(cap.custom_minimum_size.y, MOUSE_CAP)

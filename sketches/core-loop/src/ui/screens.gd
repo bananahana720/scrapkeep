@@ -30,6 +30,8 @@ const SLIDE := 14.0
 # the ball died must not pick a choice. Keys work at once.
 const CLICK_GUARD := 0.5
 const CARD_GAP := 24.0
+# Five or more cards close the gap so six fit one row at 1600 px.
+const CARD_GAP_TIGHT := 12.0
 const CARD_MAX := 420.0
 const SIDE := 60.0
 # The actions' gap, between buttons and between rows. A row that would pass the narrowest
@@ -197,7 +199,9 @@ func _on_flow_changed(state: String) -> void:
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
 			var classes: Array = game.flow.classes
-			var width := minf(CARD_MAX, (_screen().x - 2.0 * SIDE - (classes.size() - 1) * CARD_GAP) / maxf(1.0, classes.size()))
+			var gap := CARD_GAP if classes.size() <= 4 else CARD_GAP_TIGHT
+			_choices.add_theme_constant_override("separation", int(gap))
+			var width := minf(CARD_MAX, (_screen().x - 2.0 * SIDE - (classes.size() - 1) * gap) / maxf(1.0, classes.size()))
 			for i in classes.size():
 				var card := ClassCard.new(classes[i], "key_%d" % (i + 1), width)
 				card.pressed.connect(_press.bind(card.key))

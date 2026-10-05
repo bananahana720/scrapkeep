@@ -110,8 +110,8 @@ func _run() -> void:
 	for prop in ["role", "species", "pitch", "weapon_id", "movement_id", "special_id", "smash_id", "color", "shape", "motif", "sound", "bible_home", "synergy_hooks"]:
 		locked_def.set(prop, rivet.get(prop))
 	flow.classes[1] = locked_def
-	# Sable is the only starter now: earn Kest and Tarn so only the second card stays locked.
-	for i in [2, 3]:
+	# Sable is the only starter now: earn every non-starter but the second so only the second card is locked.
+	for i in range(2, flow.classes.size()):
 		_game.ctx.profile.unlock_pilot(flow.classes[i].id)
 	flow.open_class_select()
 	_game.screens._on_flow_changed("class_select")

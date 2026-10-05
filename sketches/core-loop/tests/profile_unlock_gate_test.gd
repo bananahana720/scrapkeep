@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 # ctx.profile sits under storage_dir, loaded and able to save, and the game's Progress
 # earns a row into it from the bus (P2-1). A key or a card click on a locked pilot starts
 # nothing, an unlocked or starter pilot starts (P2-2); flow.choose_class stays ungated.
-# Sable and Rivet start open; Kest and Tarn are each named by exactly one pilot reward (P2-3).
+# Sable and Rivet start open; Kest, Tarn, Tally and the remembered cannon are each named by exactly one pilot reward (P2-3).
 # The rescue rows earn from rescue_completed and the dig rescue unlocks Kest (P2-4); it runs
 # last, because rivet_rescued unlocks the runner_gunner id the gate steps keep locked.
 

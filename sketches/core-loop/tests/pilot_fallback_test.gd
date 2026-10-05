@@ -10,7 +10,7 @@ const ClassKit := preload("res://src/ui/class_kit.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const T := preload("res://tests/support/t.gd")
 
-# A pilot row the per-pilot tables do not know (T0; fifth since Tarn joined, wave 5). The probe is Rivet's row under a
+# A pilot row the per-pilot tables do not know (T0; the seventh since the six-pilot roster, wave 15). The probe is Rivet's row under a
 # new id, name and motif; it joins flow.classes here and never ClassDef.all(). The run
 # selects it from class select, plays stage 1 to the Warden's break and the reward, and
 # opens the workshop. The ability bar, the tree pick, the class card row, sound and music
