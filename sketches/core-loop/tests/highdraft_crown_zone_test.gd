@@ -31,6 +31,12 @@ const ROUTE_GRADE := 0.5
 const RAMP_STEP := 1.5
 const BETWEEN := Vector2(-60.0, 20.0)
 const KEYS := ["spawn", "mid", "west", "vault", "beacon"]
+# The deck under the beacon's north face, where skipper seeds 1 and 2 pressed the cliff on the
+# straight line from spawn (2026-10-04 crown stall), and the grid the way up is searched on.
+const STALL := Vector2(-25.0, -86.0)
+const CLIMB_STEP := 4.0
+const CLIMB_SLOPE := 0.5
+const CLIMB_BOX := Rect2(-70.0, -150.0, 120.0, 160.0)
 
 
 class ProbeTerrain extends "res://src/world/terrain.gd":
@@ -66,6 +72,7 @@ func _initialize() -> void:
 	_check_route()
 	_check_placements(map)
 	_check_ramps(map)
+	_check_way_up(map)
 	_plan_falls(map)
 
 
@@ -209,6 +216,48 @@ func _check_ramps(map) -> void:
 		var out := Vector2(-axis.y, axis.x) * signf(ramp["side"]) * (Highdraft.RAMP_HALF + Highdraft.RAMP_SKIRT + Terrain.STEP + 1.0)
 		var beside: Vector2 = foot.lerp(rim, 0.5) + out
 		_t.near("(10) deck beside the %s at %s" % [name, str(beside)], _terrain.height(beside.x, beside.y), Highdraft.NET_H, 0.001)
+
+
+# From the stall spot the straight line to the beacon meets a cliff, but a grid walk that never
+# rises steeper than CLIMB_SLOPE (falling is free) reaches the beacon top by a shoulder ramp.
+func _check_way_up(map) -> void:
+	var beacon: Vector2 = map.beacon
+	var steepest := 0.0
+	for s in range(1, int(STALL.distance_to(beacon)) + 1):
+		var a := STALL.lerp(beacon, float(s - 1) / STALL.distance_to(beacon))
+		var b := STALL.lerp(beacon, float(s) / STALL.distance_to(beacon))
+		steepest = maxf(steepest, _terrain.height(b.x, b.y) - _terrain.height(a.x, a.y))
+	_t.check("(11) the straight line from the stall spot to the beacon meets a cliff", steepest > CLIMB_SLOPE, "steepest metre %.2f" % steepest)
+	var nx := int(CLIMB_BOX.size.x / CLIMB_STEP) + 1
+	var nz := int(CLIMB_BOX.size.y / CLIMB_STEP) + 1
+	var graph := AStar2D.new()
+	var heights := PackedFloat32Array()
+	for j in nz:
+		for i in nx:
+			var p := CLIMB_BOX.position + Vector2(i, j) * CLIMB_STEP
+			heights.append(_terrain.height(p.x, p.y))
+			graph.add_point(j * nx + i, p)
+	for j in nz:
+		for i in nx:
+			for step in [Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(-1, 1)]:
+				var bi: int = i + step.x
+				var bj: int = j + step.y
+				if bi < 0 or bi >= nx or bj >= nz:
+					continue
+				var a := j * nx + i
+				var b := bj * nx + bi
+				var rise: float = (heights[b] - heights[a]) / (Vector2(step).length() * CLIMB_STEP)
+				if absf(rise) <= CLIMB_SLOPE:
+					graph.connect_points(a, b)
+				elif rise > 0.0:
+					graph.connect_points(b, a, false)
+				else:
+					graph.connect_points(a, b, false)
+	var path := graph.get_point_path(graph.get_closest_point(STALL), graph.get_closest_point(beacon))
+	var top: float = map._islands()["beacon"]["top"]
+	var end_h: float = _terrain.height(path[-1].x, path[-1].y) if not path.is_empty() else NAN
+	_t.check("(11) a walk from the stall spot climbs to the beacon top", not path.is_empty() and absf(end_h - top) < 0.01,
+		"%d points, ends at height %.2f" % [path.size(), end_h])
 
 
 func _build_contraptions(map) -> void:

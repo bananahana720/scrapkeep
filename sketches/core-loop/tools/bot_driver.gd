@@ -173,6 +173,11 @@ const CLIMB_STEP := 4.0
 const CLIMB_PAD := 100.0
 const CLIMB_SLOPE := 0.5
 const CLIMB_REACHED := 6.0
+# A fight target on a shelf more than LEVEL_BAND above the ball is climbed to the same way, the
+# route replanned every FIGHT_CLIMB_REPLAN seconds while the ball stays below: on the Highdraft
+# crown the deck under the beacon's cliff lies off the dogleg bridges, and the way up is a
+# shoulder ramp the straight line never meets.
+const FIGHT_CLIMB_REPLAN := 6.0
 # On a map with standing activities the explorer stops its other rolling (scrap lines, events, the
 # vault) at this stage second and goes to the Warden, so the fight has the rest of STAGE_LIMIT.
 const ENGAGE_BY := 140.0
@@ -240,6 +245,8 @@ var _cache_phase := "runup"
 var _cache_clock := 0.0
 var _climb: Array[Vector3] = []
 var _climb_for := ""
+var _fight_climb: Array[Vector3] = []
+var _fight_climb_clock := 0.0
 var _plate_hand := {}
 var _ignore_walls := false
 # Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
@@ -525,6 +532,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_cache_clock = 0.0
 	_climb = []
 	_climb_for = ""
+	_fight_climb = []
+	_fight_climb_clock = 0.0
 	_wander_clock = 0.0
 	_committed = policy == "skipper"
 	_planned = false
@@ -1306,7 +1315,24 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 			if _flat(ball, _runup_point) < 4.0 or _runup_time > RUNUP_SECONDS:
 				_fight_phase = "charge"
 	var steer: Vector3 = at if _fight_phase == "charge" else _runup_point
+	if at.y - ball.y > LEVEL_BAND:
+		steer = _fight_way_up(ball, at, delta)
+		_goal += " climb"
+	else:
+		_fight_climb.clear()
+		_fight_climb_clock = 0.0
 	_act(steer, aim, delta, target)
+
+
+# The next point on the climb to a fight target above the ball, or the target when no way up is found.
+func _fight_way_up(ball: Vector3, at: Vector3, delta: float) -> Vector3:
+	_fight_climb_clock -= delta
+	if _fight_climb_clock <= 0.0:
+		_fight_climb = _climb_route(ball, at)
+		_fight_climb_clock = FIGHT_CLIMB_REPLAN
+	while not _fight_climb.is_empty() and _flat(ball, _fight_climb[0]) < CLIMB_REACHED:
+		_fight_climb.pop_front()
+	return at if _fight_climb.is_empty() else _fight_climb[0]
 
 
 # Whether the ground RUNUP_EDGE past the runup point and to either side of it is level with the
