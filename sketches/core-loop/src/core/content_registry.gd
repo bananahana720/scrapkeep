@@ -70,7 +70,7 @@ const TABLES := {
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "97d479d2603d5f3cde4061761c404cf093f2e61b0ddcb0dfa5ece1774a1fc065",  # 2026-10-04 (wave 11): mind_quieted row
 	"cosmetics.ROWS": "168acf8b01f15d1c573cfc4c696c41cc439e167ca137ad81174b532519cd7f08",
-	"event_kinds.ROWS": "f60780c20dd9e5128ea3b191b23af9c42ba5891180f6ef109da05a14c5904139",  # 2026-10-04 (wave 11 fix): world_entered row hears stinger_world
+	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
 	"event_kinds.CAUSE_ROWS": "9d20bee7f3e2a23dd09db3c08ab99e3fa0aab0f99d4373ef3398fff8601e0812",
