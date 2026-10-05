@@ -34,9 +34,9 @@ One binary tree per pilot has four connected picks and sixteen endpoints; world 
 
 Continue proto/alpha; coordinator-only serial integration and canonical records. Recover the pending gamepad-menu fix at 286327f before replacement work. Existing rock/terrain candidates remain scoped experiments until their selected pieces pass admission; do not merge an old probe branch wholesale into the current slice. Preserve their sources and receipts.
 
-Use small waves within the host's four-agent ceiling: coordinator, up to two disjoint writers, one reviewer. Pin delegates by the active Codex map, preserving the stricter project judgment rules and approved GPT-6.1 Sol high asset/animation lane. Shared gate once per combined candidate; serialize GPU work.
+Use small waves within ORCHESTRATOR's eight-delegate ceiling (up to five writers, three reviewers or verifiers), as the alpha program waves have since EV-0599. Pin delegates by the active Codex map, preserving the stricter project judgment rules and approved GPT-6.1 Sol high asset/animation lane. Shared gate once per combined candidate; serialize GPU work.
 
-Current reconstruction: three of six pilots playable, zero of three worlds complete, first alpha sitting pending. No reliable overall percentage. The old 235-unit/11-to-14-day estimate is retired; recount bounded remaining units after recovery. Report built, integrated, automated and human-accepted separately.
+Current state (TRACKING EV-0625, proto/alpha 4f267f3, 6 October 2026): six of six pilots playable, three of three worlds complete in bot play, Cable Reach sitting passed (EV-0624), exported build with win proof each wave; the multi-hour alpha sitting is pending. Dressed campaign and camp, and Exported alpha, are the open checkpoints; HANDOFF.md holds the per-wave record. No reliable overall percentage. The old 235-unit/11-to-14-day estimate is retired; recount bounded remaining units after recovery. Report built, integrated, automated and human-accepted separately.
 
 The Cable Reach miss policy remains one correction round of at most ten units and a second sitting; further work needs a re-plan. Optional extras are additional lounge games/decorations. Production migration, dependencies/services, more worlds and a boss after Mind are outside this alpha.
 
