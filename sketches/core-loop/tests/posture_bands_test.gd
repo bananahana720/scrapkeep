@@ -8,18 +8,20 @@ const T := preload("res://tests/support/t.gd")
 # The slice Warden's numbers are held by a bot sweep (tools/posture_sweep.md): a class III ball
 # breaks it in about half a minute, a class I ball takes at least twice as long and can still break
 # it, and a ball that only shoots from range never does. The bands are defined on medians over five
-# seeds, so they are checked on the committed sweep table (tools/posture_sweep.tsv). This test also
-# plays the slice row as it stands on seeds 1 to 3 and checks that those medians are within 10 percent
-# of the ones the sweep recorded for the same seeds. Runs repeat exactly, so a larger move means the
-# fight changed, and the sweep wants rerunning.
+# seeds, so they are checked on the committed sweep table (tools/posture_sweep.tsv, seeds 1, 2, 4, 5
+# and 6). This test also plays the slice row as it stands on seeds 1, 2 and 4 and checks that those
+# medians are within 10 percent of the ones the sweep recorded for the same seeds. Runs repeat exactly,
+# so a larger move means the fight changed, and the sweep wants rerunning.
+# The bot plays class seed % 4 (tools/bot_driver.gd): 1 Rivet, 2 Kest, 4 Sable. Seeds 3 and 7 play
+# Tarn, who joined after the bands were set, so the sweep and this test leave them out.
 
 # The cap is 150 s, the small arm's band, so a camper run ends sooner: the smoke run's limit is 120 s.
 # A run that breaks before the cap measures the same at any cap.
-const SEEDS := "1,2,3"
+const SEEDS := "1,2,4"
 const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
-# 2026-10-04 (wave 9): re-pinned after the bot_driver and warden_variant changes; bands unchanged
-const EXPECT_SMALL_S := 82.4
-const EXPECT_GROWN_S := 39.2
+# 2026-10-05 (wave 15): re-pinned for seeds 1, 2 and 4 after Tarn's claw kit took seed 3; bands unchanged
+const EXPECT_SMALL_S := 70.9
+const EXPECT_GROWN_S := 33.1
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
