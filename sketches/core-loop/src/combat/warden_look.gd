@@ -14,7 +14,11 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 # - Four heavy jaw plates carry the plating tint, large and lit: amber means your
 #   punch breaks through, slate means not yet (enemy.gd _paint_plate).
 # - A glowing core sits in the clamp's mouth, visible through the gaps. It brightens
-#   as the pulse charges and goes live while the Warden is staggered.
+#   as the pulse charges and goes live while the Warden is staggered. This is the shared
+#   clamp's own core, lit the same for every family. The point a stagger opens is
+#   warden.family_point() (core, queen or lens by family, warden.gd:170-171), placed by
+#   warden_kit.gd's point_offset, and the choir's lens moves among three seats
+#   (warden.gd:176-177).
 # - Above it floats one badge, turned to face the camera: an integrity ring that
 #   fills with the beacon charge (the share of the Warden broken), and inside it the
 #   objective's diamond. Both wear beacon_charge_changed's colour from event_kinds,

@@ -736,11 +736,50 @@ E is interact everywhere (`design-v3/LOOP-REDESIGN.md` section 9). World owns th
 - `TARGET` is the boss body, an enemy node, as combat, the plate, the ring, audio and the run log call it: `fight`, `posture`, `staggered`, `stagger_left`, `chunks_left`, `glances`, `chunk_cracked`, `judge_hit(kind, punch, smash, tier)`, `take_damage`, `is_dead`, plus the enemy protocol combat reads (`plating_for`, `hit_mult`, `contact_part`, `on_struck`) and the calls and fields combat makes on any struck body without a guard (`knock`, `flash`, `set_tint`, `plating_now`; `plating`, `hp`, `max_hp`, `radius`, `half_height`, `kind` in `TARGET_PROPERTIES`, which `conforms` checks for `TARGET`). A method conforms when its argument count sits between its required and declared parameters. `combat.resolve()` sends any enemy whose `fight()` is `"posture"` through `judge_hit` before the plating rule.
 - `MODULE` is the module on `ctx.boss`, as flow and the HUD call it: `enter_arena(entry_velocity)`, `exit_arena`, `active`, `ground_height_at`, `music_state`, `objective_text`.
 
-Who conforms: the posture Warden (slice table) and Brindle's hull (`boss_target.gd`, forwarding to `boss.gd`) conform to `TARGET`, and the Slag Bowl module (`boss.gd`) conforms to `MODULE`; the test checks all three live. Pending: the later-world stub (unit F5).
+Who conforms: the posture Warden (slice table) and Brindle's hull (`boss_target.gd`, forwarding to `boss.gd`) conform to `TARGET`, and the Slag Bowl module (`boss.gd`) conforms to `MODULE`; the test checks all three live. The Waking and the Mind answer `MODULE` through `stub_boss.gd` (see Per-boss modules below).
 
 Brindle on the posture rule (unit F2a): `boss.gd` owns one `BossPosture` built from `boss_rules.gd` `POSTURE` (`curve` 2.0, `ram_shatters` false, the slice Warden's numbers). Only the hull answers `fight()` `"posture"`; the magnets, caps and scooter answer `"plating"` and keep combat's plating rule, and a full hit on one adds to the hull's bar as the rule weighs a hit at that plating, never touching an open core. A vent-cap slam on the hull's deck is judged at the cap's plating. A stagger opens the cockpit for its window. Health is the four chunks: `hp` reads the chunks left and `MAX_HP` is 4. Shattered chunks one to three end Requisition, Furnace and Scuttle, each no sooner than its phase's minimum seconds; a chunk broken early holds the phase and the hull takes no posture until the set piece ends. The fourth chunk is the scooter, taken by the catch through `_defeat`, which runs once, publishes `boss_defeated` and passes the scooter's `last_damage_source` to `run_state.record_kill`. A striker that skips `judge_hit` (the boss tests' spawner double) still meets the rule: `on_struck` judges the hull hit itself. Brindle publishes no `posture_changed` or `weak_point_opened`; the plate, ring and audio read is unit F2b's.
 
 Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The test only shows two conforming doubles can exist side by side without touching it; a real multi-module slot is not built.
+
+### Per-boss modules
+
+- **Table.** `Worlds.BOSSES` (`src/core/worlds.gd:22-29`) names, for `brindle`, `waking` and `mind`, the module `script`, the `music` section, the `title` and the `built` flag. All three rows are built.
+- **Lookup.** `flow._module_for(world)` (`src/core/flow.gd:141-147`) reads the row's `script`, returns the scene's module for the scene boss, and otherwise loads and sets up the script once and caches it by path in `_row_modules`, shared by every row that names it. `flow.boss_row(world)` (`:167`) is the row, with `boss_row_override` for tests.
+- **Scripts.** Brindle is `src/boss/boss.gd`. `src/boss/waking.gd` and `src/boss/mind.gd` extend `src/boss/stub_boss.gd`, which answers `MODULE` (`stub_boss.gd:45-223`: `active`, `enter_arena`, `exit_arena`, `ground_height_at`, `music_state`, `objective_text`).
+- **The Waking** fights three floors over the stub's pit: `FLOOR_NAMES` Spoil, Seam, Bedrock (`waking.gd:14`), each shattered chunk telegraphs the highest live floor and drops it `FLOOR_WARN` later (`waking.gd:16`, `:65`).
+- **The Mind** uses the `mind_attacks.gd` families `lane`, `split_lane`, `rush` and `plate` (`mind_attacks.gd:26`), a choir Warden whose stagger braces against the ball's habit (`warden.gd:511-518`; the objective line names the braced kinds, `mind.gd:191-192`) and `mind_hand` spawns from phase 2 (`mind.gd:11`, `:173`).
+
+### Breach plates
+
+`src/world/breach.gd:5-13` is the rule: a plate is `{id, rect: Rect2(x, z, w, d), drop_to}`, a slam inside an unbroken plate's rect breaks it, once per stage entry, and `slam()` returns the opened ids. The map supplies the plates (`map_dig.gd:28` `BREACH_PLATES`); `world.gd:189` builds a `Breach` for a map that has `breach_plates`, and `world.gd:384-394` swaps the overlay and the cover box for each opened id, sends one `breach_opened` fact (the `WORLD_ROWS` row copied as `Breach.ROW`) and marks it. `world.gd:399` `_breach_strike` strikes the tier below.
+
+### Net deck
+
+`src/world/map_highdraft.gd:3` and `:12`: islands stand over a flat net deck at `NET_H` (10.0). Ramps from the deck foot up to each island rim are listed in `RAMPS` (`:33`, `RAMP_HALF` `:37`, `RAMP_GRADE` `:38`), so a ball that falls to the deck can climb back.
+
+### Row-level packs
+
+`world._author_director` (`src/world/world.gd:447-449`) reads the stage row's `packs`, `elite` and `elite_arrival` and falls back to the table's (`ctx.stages.packs()`, `elite()`, `elite_arrival()`). The director spawns only authored packs when any exist.
+
+### Table rows 1 to 6
+
+`AlphaDefs.DEFS` (`src/core/alpha_defs.gd`), one row per stage with its world, map name, Warden family and variant. Map names resolve through `Terrain.MAPS` (`src/world/terrain.gd:13`).
+
+| Stage | World | Map | Family and variant | Rows at |
+| --- | --- | --- | --- | --- |
+| 1 | 1 | `spillway` | reactor, none | `alpha_defs.gd:49-54` |
+| 2 | 1 | `reach` | swarm, none | `:55-60` |
+| 3 | 2 | `dig` | reactor, `meltdown` | `:61-70` |
+| 4 | 2 | `dig_deep` | swarm, `brood` | `:71-80` |
+| 5 | 3 | `highdraft` | mind, `choir` | `:81-90` |
+| 6 | 3 | `highdraft_crown` | mind, `choir` | `:91-100` |
+
+Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
+
+### Relic spot
+
+`relic_spot` is an optional one-Vector2 map slot (`src/world/zone_schema.gd:7-9`, checked at `:59`). A map that has it gets a relic cache that always offers a relic (`src/world/interact.gd:57-66`), built after the terrain swap so the pedestals read the new ground. `map_dig.gd:45` and `map_dig_deep.gd:48` set it.
 
 ## Run store (RS2)
 
