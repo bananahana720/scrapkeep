@@ -191,7 +191,10 @@ func _is_plain(def) -> String:
 			return "new run kept knob %s = %s" % [k, _player.kit.knob(k)]
 	var ids := {"weapon": def.weapon_id, "movement": def.movement_id, "special": def.special_id, "smash": def.smash_id}
 	for slot in AbilityState.SLOTS:
-		if abilities.id_of(slot) != ids[slot] or abilities.slot(slot).max_charges != 1:
+		# A plain slot holds one charge, except a pressure weapon (Tally's reader), whose row
+		# names its own cap (wave 15, 2026-10-05).
+		var plain_cap: int = int(AbilityState.ABILITIES.get(ids[slot], {}).get("pressure", 1))
+		if abilities.id_of(slot) != ids[slot] or abilities.slot(slot).max_charges != plain_cap:
 			return "new run slot %s is %s with %d charges" % [slot, abilities.id_of(slot), abilities.slot(slot).max_charges]
 	for w in Weapons.ALL:
 		var plain: Resource = Weapons.base(w).transformed(_combat.active_transformers())

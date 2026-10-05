@@ -1174,6 +1174,10 @@ func _tick_echo(delta: float) -> void:
 	var row: Dictionary = _echo["row"]
 	var f: float = _echo["fraction"]
 	_echo = {}
+	# A special that needs live state (Tally's plate) echoes only while its can() still holds
+	# (wave 15, 2026-10-05); a stale echo fired at the ball otherwise.
+	if row.has("can") and not row["can"].call():
+		return
 	_echoing = true
 	row["fire"].call(f, row["geometry"].call(f))
 	_echoing = false
