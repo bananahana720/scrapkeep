@@ -1031,8 +1031,8 @@ func _apply_route() -> void:
 		ctx.run.grant_start_mass(start)
 
 
-# --companion-stub=on: one piece per family owned at run start, none assembled, until the
-# pickup table is placed on a map.
+# --companion-stub=on: one piece per family owned at run start, none assembled. Activities pay
+# pieces in play now; the stub stays as a test aid.
 func _grant_companion_stub() -> void:
 	if ctx.tuning == null or ctx.tuning.option("companion_stub") != "on" or not ctx.run.companion.is_empty():
 		return
