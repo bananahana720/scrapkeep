@@ -122,3 +122,61 @@ Seeds 1, 2, 3, fight seconds (stage 1 / stage 2 skipper, stage 2 completionist):
 Bands in `tests/posture_bands_test.gd`, set from these medians with room for a changed build: Spillway skipper median 45 to 90 s; Reach skipper median 30 to 80 s; Reach completionist median at most 1.25 times the Reach skipper's (measured 0.62). The completionist is faster, not slower, because it arrives with heft 2.8 to 3.0 against the skipper's 1.3 to 1.5; the factor only guards against a regression where doing the activities makes the fight longer. The Reach skipper's seed 2 (65 s) sits well above seeds 1 and 3 (about 40 s), so the three-seed median is not a tight estimate. No alpha camper arm: the slice camper row still holds the range-only rule on the same posture chassis.
 
 2026-10-04, after B2's two-hook completionist hand (`tools/bot_driver.gd`): the Reach completionist fights are 26.82, 50.46 and 31.38 s on seeds 1, 2, 3 (median 31.4 s, 0.75 times the skipper's 42.0 s; skipper rows unchanged). Seed 2 broke the Warden at 190.47 s of the stage 2 clock after leaving stage 1 at 104.4 s, past the old 24000-tick cap, so the alpha rows now run 30000 ticks. With `--chain-hand=0` seed 2's fight is 26.16 s, as above: the hand slows the fight but does not starve it.
+
+## Full current-driver rerun, 2026-10-04
+
+**Owner decision: the documented pick rule now chooses plating 110, curve 2, `ram_shatters` true.** It passes all four bands with a small-to-grown ratio of 2.62, above the current pick's 2.44. Its confirmation run also passes every band and reproduces all 20 rows exactly. The slice pick remains **110 / 2 / false** under the writer brief; changing it requires an owner decision.
+
+Measured on accepted `cand/alpha-w9`, base `aec5d2ed9a2937cb5ec4b57bb5259fed17cce029`, in `wt/alpha-w10-posture-sweep-full`. The full grid was rerun with the current `tools/bot_driver.gd`: 16 cells, all four arms, seeds 1 to 5, cap 240 s, six child processes, fixed FPS 90. Both committed TSVs now come entirely from this invocation. Every small, mid and grown run broke the Warden (240 runs); every camper reached its fight cap without breaking it (80 runs). There were no child timeouts, missing results or anomaly notes. Coverage, medians, ranges, break counts, ratios and bands were checked against the 320 raw rows. The sweep and driver sources stayed unchanged during measurement.
+
+Three cells pass every band and the 120 s small-median eligibility limit:
+
+| Rank | Plating | Curve | Rams shatter | Small | Mid | Grown | Small/grown | Camper broke |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 110 | 2 | true | 82.40 s | 37.66 s | 31.41 s | 2.62337 | 0 of 5 |
+| 2, current pick | 110 | 2 | false | 80.96 s | 48.87 s | 33.22 s | 2.43709 | 0 of 5 |
+| 3 | 130 | 2 | false | 83.48 s | 50.85 s | 39.21 s | 2.12905 | 0 of 5 |
+
+There is no ratio tie, so the plating, curve and shatter tie-breakers do not apply. The new leader was rerun separately with all four arms and five seeds, as the pick rule requires. All 20 fight times and full rows match the grid, and all four bands pass again. The current pick also reproduces all 20 full rows of its committed wave-9 rerun.
+
+Old means the table at `aec5d2e`, which mixed older grid measurements with the current pick's 2026-10-04 rerun. New means this full current-driver grid. Medians below are seconds, rounded as stored in the cell TSV; arrows show old to new. A camper median of 240 s means the cap, not a break.
+
+| Plating | Curve | Rams shatter | Small old -> new | Mid old -> new | Grown old -> new | Camper old -> new | Ratio old -> new | Bands now |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 70 | 1 | true | 31.3 -> 33.0 | 23.3 -> 26.4 | 19.4 -> 19.6 | 240.0 -> 240.0 | 1.61 -> 1.69 | miss |
+| 70 | 1 | false | 35.5 -> 35.6 | 26.0 -> 26.4 | 19.4 -> 19.6 | 240.0 -> 240.0 | 1.83 -> 1.82 | miss |
+| 70 | 2 | true | 40.8 -> 38.5 | 22.0 -> 29.4 | 19.4 -> 19.6 | 240.0 -> 240.0 | 2.10 -> 1.97 | miss |
+| 70 | 2 | false | 51.1 -> 46.3 | 26.0 -> 32.1 | 19.4 -> 19.6 | 240.0 -> 240.0 | 2.63 -> 2.36 | miss |
+| 90 | 1 | true | 40.6 -> 37.9 | 28.5 -> 29.9 | 20.4 -> 21.2 | 240.0 -> 240.0 | 1.99 -> 1.78 | miss |
+| 90 | 1 | false | 40.3 -> 38.6 | 31.8 -> 39.8 | 20.6 -> 21.2 | 240.0 -> 240.0 | 1.96 -> 1.82 | miss |
+| 90 | 2 | true | 50.7 -> 56.3 | 38.6 -> 36.6 | 19.5 -> 23.0 | 240.0 -> 240.0 | 2.60 -> 2.45 | miss |
+| 90 | 2 | false | 74.6 -> 59.8 | 49.0 -> 46.3 | 22.3 -> 23.9 | 240.0 -> 240.0 | 3.35 -> 2.50 | miss |
+| 110 | 1 | true | 46.0 -> 39.9 | 31.2 -> 33.2 | 25.0 -> 28.8 | 240.0 -> 240.0 | 1.84 -> 1.39 | miss |
+| 110 | 1 | false | 46.0 -> 45.3 | 38.4 -> 36.1 | 25.1 -> 28.8 | 240.0 -> 240.0 | 1.83 -> 1.57 | miss |
+| 110 | 2 | true | 74.2 -> 82.4 | 46.2 -> 37.7 | 25.5 -> 31.4 | 240.0 -> 240.0 | 2.91 -> 2.62 | pass |
+| 110 | 2 | false | 81.0 -> 81.0 | 48.9 -> 48.9 | 33.2 -> 33.2 | 240.0 -> 240.0 | 2.44 -> 2.44 | pass |
+| 130 | 1 | true | 39.0 -> 41.7 | 36.1 -> 32.8 | 32.4 -> 28.9 | 240.0 -> 240.0 | 1.20 -> 1.44 | miss |
+| 130 | 1 | false | 40.8 -> 42.5 | 43.9 -> 41.2 | 33.6 -> 31.7 | 240.0 -> 240.0 | 1.21 -> 1.34 | miss |
+| 130 | 2 | true | 83.8 -> 72.4 | 51.0 -> 50.6 | 35.0 -> 38.5 | 240.0 -> 240.0 | 2.40 -> 1.88 | miss |
+| 130 | 2 | false | 107.6 -> 83.5 | 63.6 -> 50.9 | 41.3 -> 39.2 | 240.0 -> 240.0 | 2.60 -> 2.13 | pass |
+
+The current pick's live seeds 1 to 3 have small median 82.40 s and grown median 39.20 s, exactly the existing pins. Neither moved more than 10 percent. `EXPECT_SMALL_S` stays 82.4 and `EXPECT_GROWN_S` stays 39.2; `tests/posture_bands_test.gd` is unchanged.
+
+The grid took **2820.6 s (47.0 minutes)**. Load averages at start were 3.1 / 3.6 / 6.9 and at end 17.9 / 21.8 / 20.9 (1 / 5 / 15 minutes, 32 threads). The leader's confirmation took **232.5 s (3.9 minutes)**. The import exited 0 but could not save global editor settings under the sandbox. Runs used writable `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` under the local evidence folder. Missing ACE music stems caused the existing synth fallback in the child runs; no Godot errors occurred in the sweep. These measurements establish bot combat bands, not human feel or audio acceptance.
+
+Commands from the assigned repository root, with the same Godot 4.7.2 binary as above. `E` is the absolute path to `artifacts/local/posture-sweep-full-2026-10-04` in this worktree; set the three `XDG_*_HOME` variables to `$E/data`, `$E/config` and `$E/cache` for the run commands.
+
+```sh
+G=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+E="$PWD/artifacts/local/posture-sweep-full-2026-10-04"
+"$G" --headless --path sketches/core-loop --import
+export XDG_DATA_HOME="$E/data"
+export XDG_CONFIG_HOME="$E/config"
+export XDG_CACHE_HOME="$E/cache"
+"$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/posture_sweep.gd -- --out="$E/posture_sweep.tsv" --runs="$E/posture_sweep_runs.tsv"
+"$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/posture_sweep.gd -- --out="$E/leader-repeat.tsv" --runs="$E/leader-repeat-runs.tsv" --plating=110 --curve=2 --shatter=true
+"$G" --headless --path sketches/core-loop --script res://tests/posture_bands_test.gd
+npm run sketch:lint
+```
+
+All five commands above exited 0. `posture_bands_test` printed `PASS (9 checks)` in 106.3 s, and `sketch:lint` passed in 0.3 s. Receipts and before/after comparisons are under `artifacts/local/posture-sweep-full-2026-10-04/`. The initial timing-wrapper attempt exited 127 before launching Godot because `/usr/bin/time` was absent; a Python wrapper recorded the successful runs' wall seconds and exit codes instead.
