@@ -5,6 +5,7 @@ extends RefCounted
 # assemble() runs at intermission. Run state consumes the escape corridor after a
 # survived low-hull hit; it never revives and never
 # spends or refills a retry; the ready/spent flag is what the body and chirp cues will show.
+# Combat (combat.gd) runs the conductive primer and the ram brace while they are seated.
 
 const CHASSIS := "spil9"
 const SOCKETS := 2
@@ -13,22 +14,29 @@ const RAM_BRACE := "ram_brace"
 const ESCAPE_CORRIDOR := "escape_corridor"
 const FAMILIES := [CONDUCTIVE_PRIMER, RAM_BRACE, ESCAPE_CORRIDOR]
 const MAX_NAME_WORDS := 3
+# Conductive primer (combat.gd): a weapon hit primes a foe for PRIMER_SECONDS; the next ball
+# contact or special on it consumes the prime. Coil scales that hit, Mesh shares it out.
+const PRIMER_SECONDS := 3.0
+const PRIMER_COIL_MULT := 1.5
+const PRIMER_MESH_SHARE := 0.4
+const PRIMER_MESH_TARGETS := 2
+const PRIMER_MESH_RANGE := 6.0
 
 const PIECES := [
 	{"id": "primer_coil", "family": CONDUCTIVE_PRIMER, "name": "Primer Coil",
-		"effect": "Primes struck foes so the next arc hits harder."},
+		"effect": "Shots prime a foe; your next ram, slam or special on it hits half again as hard."},
 	{"id": "primer_mesh", "family": CONDUCTIVE_PRIMER, "name": "Conductive Mesh",
-		"effect": "Primed foes pass a share of arc damage to neighbours."},
+		"effect": "Shots prime a foe; your next ram, slam or special on it arcs to two neighbours."},
 	{"id": "ram_prow", "family": RAM_BRACE, "name": "Ram Prow",
-		"effect": "Ram hits stagger what they strike."},
+		"effect": "Ram hits shove foes out of their wind-up."},
 	{"id": "ram_spring", "family": RAM_BRACE, "name": "Brace Spring",
-		"effect": "A ram buffs your next shot after landing."},
+		"effect": "A landed ram makes your next shot hit harder."},
 	{"id": "escape_vent", "family": ESCAPE_CORRIDOR, "name": "Escape Vent",
 		"effect": "After a survived low-hull hit, opens a short escape lane once."},
 	{"id": "escape_rail", "family": ESCAPE_CORRIDOR, "name": "Corridor Rail",
 		"effect": "After a survived low-hull hit, shoves nearby foes clear once."},
 ]
-# The order run-found pieces arrive: the first two make a legal pair, and escape, the only family with an effect, comes first.
+# The order run-found pieces arrive: the first two make a legal pair, and escape comes first.
 const DROP_ORDER := ["escape_vent", "ram_prow", "primer_coil", "escape_rail", "ram_spring", "primer_mesh"]
 
 var owned: Array[String] = []
@@ -45,6 +53,17 @@ static func _row(id: String) -> Dictionary:
 
 static func family_of(id: String) -> String:
 	return String(_row(id).get("family", ""))
+
+
+# The seated piece of `family` in a to_dict document, or "" (also for a malformed doc).
+static func seated(doc: Dictionary, family: String) -> String:
+	var sockets_v = doc.get("sockets")
+	if typeof(sockets_v) != TYPE_ARRAY:
+		return ""
+	for id in sockets_v:
+		if typeof(id) == TYPE_STRING and family_of(id) == family:
+			return id
+	return ""
 
 
 func has_family(family: String) -> bool:

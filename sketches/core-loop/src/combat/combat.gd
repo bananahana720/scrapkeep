@@ -27,6 +27,7 @@ const Fleet := preload("res://src/combat/fleet.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
+const Companion := preload("res://src/core/companion.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -93,6 +94,12 @@ const SHRED_HOLD_DECAY := 0.05
 const SHRED_REST_DECAY := 1.0
 const SHRED_GRACE := 1.5
 const SHRED_FLOOR := 0.5
+# Companion ram-brace family: the prow's shove beats every INTERRUPT (10) once per foe per
+# PROW_STAGGER s; a landed ram arms the spring for SPRING_WINDOW s and the next shot pays it.
+const PROW_SHOVE := 12.0
+const PROW_STAGGER := 0.8
+const SPRING_WINDOW := 3.0
+const SPRING_MULT := 1.5
 
 # Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
@@ -207,6 +214,11 @@ var _proc_ready := {}
 var _echo := {}
 var _echoing := false
 var _marks := {}
+# Conductive-primer expiries by instance id (transient, never saved).
+var _primed := {}
+# Ram-brace state: prow stagger ends by instance id, and the clock the spring stays armed until.
+var _prow_until := {}
+var _spring_until := -1.0
 # The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
 # presentation's edge flash. last_impact names the IMPACT row and the enemy of the strike
 # whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
@@ -288,6 +300,7 @@ func setup(ctx_ref) -> void:
 		_proc_ready = {}
 		_echo = {}
 		_marks = {}
+		_primed = {}
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
@@ -376,6 +389,10 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	if enemy.has_method("is_dead") and enemy.is_dead():
 		return
 	var result := resolve(enemy, kind, force, part)
+	var cls := _classify_source(kind, source if source != "" else _forced_source)
+	var spent := _primer_hit(enemy, kind, cls, result)
+	var at := enemy.global_position
+	var struck_id := enemy.get_instance_id()
 	_detect_before(enemy, kind, result)
 	var outer := _pending
 	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"]}
@@ -412,6 +429,91 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 		_add_shred(enemy, result["punch"])
 	_detect_after(enemy, kind, result)
 	_record_delivered(enemy, kind, removed, result["dealt"], source if source != "" else _forced_source)
+	if spent == "primer_mesh":
+		_primer_mesh(at, struck_id, float(result["dealt"]))
+	_companion_ram(enemy, kind, result)
+
+
+# --- Companion: conductive primer (companion.gd PRIMER_*) ---------------------------
+# A weapon hit primes; the next ball contact or special on a primed foe consumes it and
+# returns the seated piece. Posture fighters, items and persistent actors never take part.
+
+func _primer_hit(enemy: Node3D, kind: String, cls: String, result: Dictionary) -> String:
+	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
+	if piece == "" or _fights_posture(enemy):
+		return ""
+	var id := enemy.get_instance_id()
+	var live: bool = float(_primed.get(id, -1.0)) > _clock
+	if cls == "weapon":
+		_primed[id] = _clock + Companion.PRIMER_SECONDS
+		if not live:
+			effects.spark(enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
+		return ""
+	if live and (kind in CONTACT_KINDS or cls == "special"):
+		_primed.erase(id)
+		effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
+		if piece == "primer_coil":
+			result["dealt"] = float(result["dealt"]) * Companion.PRIMER_COIL_MULT
+		return piece
+	return ""
+
+
+# Mesh shares go through _trail_deal, never strike(): no bus fact, no proc, no prime.
+func _primer_mesh(at: Vector3, struck_id: int, dealt: float) -> void:
+	var found := []
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.get_instance_id() == struck_id or enemy.is_dead() or _fights_posture(enemy):
+			continue
+		var distance: float = enemy.global_position.distance_to(at)
+		if distance <= Companion.PRIMER_MESH_RANGE:
+			found.append([distance, enemy])
+	found.sort_custom(func(a, b): return a[0] < b[0])
+	for i in mini(Companion.PRIMER_MESH_TARGETS, found.size()):
+		var n: Node3D = found[i][1]
+		effects.arc(at + Vector3.UP * 0.5, n.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
+		if n.has_method("flash"):
+			n.flash()
+		_trail_deal(n, dealt * Companion.PRIMER_MESH_SHARE, "primer_mesh", "item_proc")
+
+
+func _fights_posture(enemy: Node3D) -> bool:
+	return enemy.has_method("fight") and enemy.call("fight") == "posture"
+
+
+func primed(enemy: Node3D) -> bool:
+	return is_instance_valid(enemy) and float(_primed.get(enemy.get_instance_id(), -1.0)) > _clock
+
+
+# --- Companion: ram brace ------------------------------------------------------------
+# Runs after the strike resolved and its facts went out; it shoves and arms, and never
+# strikes, hits or fires itself. Posture fighters (staggered()) keep their own rules.
+func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
+	if kind != "ram":
+		return
+	var piece := Companion.seated(ctx.run.companion, Companion.RAM_BRACE)
+	if piece == "ram_prow" and is_instance_valid(enemy) and not enemy.has_method("staggered") \
+			and not (enemy.has_method("is_dead") and enemy.is_dead()):
+		var id := enemy.get_instance_id()
+		if _clock >= float(_prow_until.get(id, -1.0)):
+			_prow_until[id] = _clock + PROW_STAGGER
+			var flat: Vector3 = enemy.global_position - ctx.player.ball_position()
+			flat.y = 0.0
+			var flat_dir: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else Vector3.FORWARD
+			var weight = enemy.get("weight")
+			if enemy.has_method("knock"):
+				enemy.knock(flat_dir + Vector3.UP * 0.35, PROW_SHOVE * (float(weight) if weight != null else 1.0))
+			effects.ring(enemy.global_position, 2.5, Palette.VERDIGRIS)
+	if piece == "ram_spring" and float(result.get("dealt", 0.0)) > 0.0:
+		_spring_until = _clock + SPRING_WINDOW
+		effects.spark(ctx.player.ball_position(), Palette.VERDIGRIS)
+
+
+func prow_staggered(enemy: Node3D) -> bool:
+	return is_instance_valid(enemy) and _clock < float(_prow_until.get(enemy.get_instance_id(), -1.0))
+
+
+func spring_armed() -> bool:
+	return _clock < _spring_until
 
 
 # hp is not part of the enemy protocol (README.md), but every implementation carries it
@@ -446,14 +548,14 @@ func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float
 # A wear-trail patch's damage (wear_trail.gd): straight to take_damage, never strike(), so no
 # bus fact goes out, but the HP it removes is still delivered damage. The class is read before
 # the hit because a kill retires a boss add's tag. Action "spark", source persistent_actor.
-func _trail_deal(enemy: Node3D, amount: float) -> float:
+func _trail_deal(enemy: Node3D, amount: float, action := "spark", source := "persistent_actor") -> float:
 	var target_class := _target_class(enemy)
 	var hp_before := _hp_of(enemy)
 	var removed: float = enemy.take_damage(amount)
 	# Same measure as strike(): a Brindle piece's return value undercounts (M0 delivered damage).
 	if is_instance_valid(enemy):
 		removed = maxf(removed, hp_before - maxf(0.0, _hp_of(enemy)))
-	_record_delivered(enemy, "spark", removed, amount, "persistent_actor", target_class)
+	_record_delivered(enemy, action, removed, amount, source, target_class)
 	return removed
 
 
@@ -860,6 +962,10 @@ func _fire(weapon: String, source := "weapon") -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var reach: float = p.range_m * ctx.tuning.mod("weapon_range")
 	var damage: float = p.damage * _damage_mod(weapon)
+	var sprung := source == "weapon" and spring_armed()
+	if sprung:
+		damage *= SPRING_MULT
+		_spring_until = -1.0
 	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, reach + AIM_SLACK)
 	var point: Vector3 = aim["point"]
 	var forward := point - ball
@@ -867,6 +973,8 @@ func _fire(weapon: String, source := "weapon") -> void:
 		forward = ctx.aim_forward()
 	forward = forward.normalized()
 	var muzzle := ball + forward * MUZZLE
+	if sprung:
+		effects.ring(muzzle, 1.5, Palette.VERDIGRIS)
 	var color := Weapons.color(weapon)
 	var kind := Weapons.strike_kind(weapon)
 	var layout: Array = p.layout(forward, volleys)
@@ -881,7 +989,7 @@ func _fire(weapon: String, source := "weapon") -> void:
 		})
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
-		"blocked": aim["blocked"], "bolts": layout.size(), "volley": volleys}
+		"blocked": aim["blocked"], "bolts": layout.size(), "volley": volleys, "sprung": sprung}
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
 
 
@@ -1865,6 +1973,8 @@ func _start_attempt() -> void:
 	_crushes.clear()
 	_shred.clear()
 	_pinned.clear()
+	_prow_until.clear()
+	_spring_until = -1.0
 	_warden_slam_hits = 0
 	_cooldown = 0.0
 	_overdrive = 0.0
