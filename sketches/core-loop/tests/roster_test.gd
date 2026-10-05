@@ -10,6 +10,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
+const Screens := preload("res://src/ui/screens.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -218,7 +219,7 @@ func _check_four() -> void:
 		for i in cards.size():
 			var rect: Rect2 = cards[i].get_global_rect()
 			inside = inside and screen.encloses(rect)
-			narrow = narrow and cards[i].size.x <= 420.0 + 0.5
+			narrow = narrow and cards[i].size.x <= Screens.CARD_MAX + 0.5
 			for j in range(i + 1, cards.size()):
 				apart = apart and not rect.grow(-0.5).intersects(cards[j].get_global_rect().grow(-0.5))
 		var m := _row_measures(cards)
