@@ -22,11 +22,11 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 const OBJECTIVE := "Break each stage's Warden at its beacon; grow your punch through its plating. Three worlds: rout Brindle, still the Waking, quiet the Mind."
 
 const TESTING := [
-	"One run: title, class, three stages, each sealed by a Warden at its beacon. Grow until your punch beats its plating, break it, roll through a reward gate and launch into the next stage. Stage 3's launch drops you into the arena against Admiral Brindle; beat him for the summary.",
+	"One run: title, class, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow until your punch beats its plating, break it, roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",
 	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
 	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
-	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage. In the arena, R retries the fight from its entry and T replays stage 3.",
+	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage. In a boss arena, R retries the fight from its entry and T replays that world's last stage.",
 ]
 
 const QUESTIONS := [
@@ -80,7 +80,7 @@ const SCREEN_KEYS := [
 	{"keys": "H", "does": "title: how to play, and back"},
 	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
 	{"keys": "R", "does": "death screen: retry the stage, or the fight in the arena"},
-	{"keys": "T", "does": "arena death screen: replay stage 3 from its start"},
+	{"keys": "T", "does": "arena death screen: replay the world's last stage from its start"},
 	{"keys": "N", "does": "death or summary: new run, same class"},
 	{"keys": "C", "does": "death screen: choose a class"},
 ]
