@@ -28,9 +28,9 @@ const LEASH_FRAMES := 300
 const SPEED_SLACK := 0.1
 const RAM_BELOW := 0.7
 const RAM_AT := 1.3
-# 2026-10-04 (wave 9): the Dig and Highdraft are greybox zones that get their activity sites in
-# wave 10 (the deep-Dig and Highdraft-crown map units remove them from this list).
-const SIDE_CONTENT_PENDING := ["dig", "highdraft"]
+# 2026-10-04 (wave 9): Highdraft is a greybox zone that gets its activity sites in wave 10 (the
+# Highdraft-crown map unit removes it from this list). The Dig got its own in wave 10.
+const SIDE_CONTENT_PENDING := ["highdraft"]
 const LINE_FRAMES := 24
 const PICKUP_FRAMES := 40
 const PICKUP_SPEED := 14.0
@@ -454,7 +454,7 @@ func _default_table() -> void:
 			continue
 		if not String(row["name"]).contains("placeholder"):
 			counts.append(maps[i].activity_sites.size() if "activity_sites" in maps[i] else 0)
-	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4], "sites per authored stage %s" % [counts])
+	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4, 3], "sites per authored stage %s" % [counts])
 	var pending_named := true
 	for row in _game.ctx.stages.DEFS:
 		if SIDE_CONTENT_PENDING.has(String(row["map"])) and String(row["name"]).contains("placeholder"):

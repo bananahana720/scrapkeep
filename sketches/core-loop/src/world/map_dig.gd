@@ -61,9 +61,13 @@ func _init() -> void:
 	]
 	# Lower tier: the reward gates stand east of the beacon.
 	gate_slots = [{"at": Vector2(50.0, 110.0), "facing": Vector3(0.0, 0.0, 1.0)}]
-	# Upper tier: the camp sits in the north-east, away from the plates and the route.
-	# World-one kinds only; the Dig's own kinds are not built yet.
-	activity_sites = [{"id": "enemy_camp", "at": Vector2(80.0, -130.0), "pack": ["chaser", "chaser", "lobber"]}]
+	# Upper tier: the camp sits in the north-east, away from the plates and the route, and the
+	# cache in the north-west. Lower tier: the ambush west of the ramp foot.
+	activity_sites = [
+		{"id": "enemy_camp", "at": Vector2(80.0, -130.0), "pack": ["chaser", "chaser", "lobber"], "pay": {"named": "rivet_plating"}},
+		{"id": "ambush_altar", "at": Vector2(-80.0, 40.0)},
+		{"id": "cracked_cache", "at": Vector2(-100.0, -100.0)},
+	]
 	# Lower tier: Kest's cage on flat ground west of the beacon, clear of the plates and the route.
 	rescue_sites = [{"id": "kest_cage", "quest": "dig", "at": Vector2(-60.0, 90.0), "face": Vector2(1.0, 0.0)}]
 	breach_plates = BREACH_PLATES.duplicate(true)
@@ -74,11 +78,8 @@ func _init() -> void:
 
 # The two tiers, the ramp, the pits under the plates, and the shared rim walls.
 func sample(x: float, z: float) -> Array:
-	var cliff := lerpf(UPPER_H, LOWER_H, smoothstep(CLIFF_Z - CLIFF_HALF, CLIFF_Z + CLIFF_HALF, z))
-	var ramp := lerpf(UPPER_H, LOWER_H, clampf((z - RAMP_Z.x) / (RAMP_Z.y - RAMP_Z.x), 0.0, 1.0))
-	var on_ramp := 1.0 - smoothstep(RAMP_HALF, RAMP_HALF + RAMP_BLEND, absf(x))
-	var h := lerpf(cliff, ramp, on_ramp)
-	var tint: Color = Palette.SAND.lerp(Palette.SANDSTONE, clampf(h / UPPER_H, 0.0, 1.0) * 0.6)
+	var h := _tiers(x, z)
+	var tint: Color = Palette.SAND.lerp(Palette.SANDSTONE, clampf(h / _upper(), 0.0, 1.0) * 0.6)
 	var plate = _plate_at(x, z)
 	if plate != null:
 		var r: Rect2 = plate["rect"]
@@ -89,6 +90,23 @@ func sample(x: float, z: float) -> Array:
 	return [h, tint]
 
 
+# The tiers before the pits: the cliff and the ramp down it. A deeper map adds its drops here.
+func _tiers(x: float, z: float) -> float:
+	var cliff := lerpf(UPPER_H, LOWER_H, smoothstep(CLIFF_Z - CLIFF_HALF, CLIFF_Z + CLIFF_HALF, z))
+	var ramp := lerpf(UPPER_H, LOWER_H, clampf((z - RAMP_Z.x) / (RAMP_Z.y - RAMP_Z.x), 0.0, 1.0))
+	var on_ramp := 1.0 - smoothstep(RAMP_HALF, RAMP_HALF + RAMP_BLEND, absf(x))
+	return lerpf(cliff, ramp, on_ramp)
+
+
+func _upper() -> float:
+	return UPPER_H
+
+
+# The top of a plate's cover: the upper tier, where every plate of this map sits.
+func _cover_top(_plate: Dictionary) -> float:
+	return _upper()
+
+
 func material_at(x: float, z: float) -> String:
 	return "concrete" if _plate_at(x, z) != null else "sand"
 
@@ -97,7 +115,7 @@ func material_at(x: float, z: float) -> String:
 func overlay_height(id: String, x: float, z: float, _ground: float) -> float:
 	for plate in breach_plates:
 		if plate["id"] + "_before" == id and _inside(plate["rect"], x, z):
-			return UPPER_H
+			return _upper()
 	return -INF
 
 
@@ -106,9 +124,10 @@ func build_props(parent: Node3D, _ground: Callable) -> void:
 	for plate in breach_plates:
 		var r: Rect2 = plate["rect"]
 		var drop_to: float = plate["drop_to"]
+		var top := _cover_top(plate)
 		var c := r.get_center()
-		var cover := box(parent, Vector3(r.size.x, UPPER_H - drop_to, r.size.y),
-			Vector3(c.x, (UPPER_H + drop_to) * 0.5, c.y), Palette.striped(Palette.RUST, Palette.CHARCOAL))
+		var cover := box(parent, Vector3(r.size.x, top - drop_to, r.size.y),
+			Vector3(c.x, (top + drop_to) * 0.5, c.y), Palette.striped(Palette.RUST, Palette.CHARCOAL))
 		cover.name = "BreachPlate_%s" % plate["id"]
 		cover.set_meta("home", cover.position)
 		swaps[plate["id"]] = {"before": [cover], "after": []}
