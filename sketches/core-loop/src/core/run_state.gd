@@ -86,7 +86,9 @@ var _wear_accum := 0.0
 var metrics := {}
 
 # The entrance document layer (RS1): fields a zone-entrance save carries that the live run did
-# not hold. Unit RS3 wires `world` (nothing sets it yet); `companion` is reserved for a later unit.
+# not hold. flow.enter_stage sets `world` from the stage table at every entry, so a loaded doc's
+# world (0 in one saved before that was wired) is recomputed on resume. flow seeds `companion`
+# from the profile at a run's start.
 var run_seed := 0
 var world := 0
 # The spend wallet (CG1): shop, fabricator, sell and refund move cogs and nothing else.
