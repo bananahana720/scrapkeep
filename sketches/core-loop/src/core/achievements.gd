@@ -27,7 +27,7 @@ const TEXT_WORDS := 12
 const MIN_ROWS := 8
 # Pilot ids a row may reward before their ClassDef row exists. The save records the unlock;
 # the card appears when the row lands, and that unit removes the id here.
-const PENDING_PILOTS := ["remembered_cannon", "tally"]
+const PENDING_PILOTS := ["remembered_cannon"]
 
 const ROWS := {
 	"warden_broken": {"name": "Warden Breaker", "text": "Break your first Warden.", "on": "beacon_unsealed",

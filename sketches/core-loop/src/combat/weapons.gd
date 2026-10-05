@@ -14,8 +14,9 @@ const ARC_CASTER := "arc_caster"
 const PYLON_TURRET := "pylon_turret"
 const STICKY_CHARGE := "sticky_charge"
 const CLAW_SWEEP := "claw_sweep"
+const LEDGER_READER := "ledger_reader"
 
-const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE, CLAW_SWEEP]
+const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE, CLAW_SWEEP, LEDGER_READER]
 
 # Runner-gunner: tight, fast and laser-true. Small damage, high rate, no spread, a thin
 # hit radius: it rewards aim and never stops firing.
@@ -41,10 +42,14 @@ const BASE := {
 	# tuning for Tarn belongs to the Tarn verification unit.
 	CLAW_SWEEP: {"damage": 32.0, "rate": 2.0, "range_m": 5.0, "speed": 140.0, "bolt_radius": 1.1,
 		"knock": EventKinds.IMPACT["claw"]["knock"]},
+	# Tally's ledger reader: the row gives _patterns, pattern() and _damage_mod a weapon to
+	# read. Combat runs her cards instead and never calls _fire for it.
+	LEDGER_READER: {"damage": 10.0, "rate": 2.5, "range_m": 30.0, "speed": 140.0, "bolt_radius": 0.5,
+		"knock": EventKinds.IMPACT["ledger"]["knock"]},
 }
 
 const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky",
-	CLAW_SWEEP: "claw"}
+	CLAW_SWEEP: "claw", LEDGER_READER: "ledger"}
 
 # Overdrive (runner special): a ring blast that throws everything off you, then a few
 # seconds of faster fire. Surrounded is when a runner most needs to keep rolling.
@@ -83,6 +88,40 @@ const CLAMP_SECONDS_MIN := 1.5
 const CLAMP_SECONDS_MAX := 3.0
 const CLAMP_BONUS := 1.5
 const CLAMP_KNOCK := EventKinds.IMPACT["clamp"]["knock"]
+# Tally's program cards: a press runs the selected bay's card at the aim point within
+# CARD_REACH and costs one pressure; CARD_RECOVERY is the pause before the next run.
+const CARDS := {"gather_plate": {"icon": "ab_tally_gather"}, "link_clips": {"icon": "ab_tally_link"},
+	"balance_due": {"icon": "ab_tally_balance"}}
+const CARD_REACH := 30.0
+const CARD_RECOVERY := 0.4
+# Gather: the plate pulls ordinary enemies within the radius toward it every tick, harder
+# the farther out they stand; it does no damage.
+const GATHER_RADIUS := 4.0
+const GATHER_SECONDS := 4.0
+const GATHER_TICK := 0.2
+const GATHER_KNOCK := 6.0
+# Link: clips the first enemy on the aim ray and its nearest neighbours; the next direct
+# hit on a clip arcs once to each other clip at a share of its force, never under the floor.
+const LINK_AIM_RADIUS := 1.5
+const LINK_NEIGHBOUR_REACH := 9.0
+const LINK_NEIGHBOURS := 2
+const LINK_SECONDS := 4.0
+const LINK_ARC_SHARE := 0.6
+const LINK_ARC_MIN := 8.0
+# Balance Due: one capacitor ring at the aim point; damage grows with planar speed at the press.
+const BALANCE_RADIUS := 3.0
+const BALANCE_BASE := 10.0
+const BALANCE_PER_SPEED := 1.2
+const BALANCE_MAX := 56.0
+# Pressure: rolling at cruise or faster refills one charge per PRESSURE_ROLL_S seconds.
+const PRESSURE_ROLL_S := 2.0
+# Plate return: a corridor from the plate toward the ball; the gauge scales its width and damage.
+const PLATE_RETURN_LENGTH := 8.0
+const PLATE_RETURN_HALF_MIN := 1.5
+const PLATE_RETURN_HALF_MAX := 2.5
+const PLATE_RETURN_DAMAGE_MIN := 8.0
+const PLATE_RETURN_DAMAGE_MAX := 16.0
+const LEDGER_KNOCK := EventKinds.IMPACT["ledger"]["knock"]
 
 
 static func base(weapon_id: String) -> Resource:
@@ -96,6 +135,8 @@ static func color(weapon_id: String) -> Color:
 		return ClassDef.RIVET_COLOR
 	if weapon_id == CLAW_SWEEP:
 		return ClassDef.TARN_COLOR
+	if weapon_id == LEDGER_READER:
+		return ClassDef.TALLY_COLOR
 	if weapon_id == PYLON_TURRET:
 		return Palette.ARC.lightened(0.25)
 	return Palette.ARC

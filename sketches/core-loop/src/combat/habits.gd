@@ -21,13 +21,13 @@ const BRACES := {
 	"stomp": {"kinds": ["stomp"], "icon": "trg_on_land"},
 	"smash": {"kinds": ["slam"], "icon": "trg_on_smash"},
 	"vault": {"kinds": ["stomp", "slam"], "icon": "trg_on_vault"},
-	"weapon": {"kinds": ["runner", "arc", "turret", "sticky", "shell", "claw"], "icon": "trg_on_hit"},
-	"special": {"kinds": ["line", "runner", "arc", "turret", "claw"], "icon": "trg_on_charge_release"},
+	"weapon": {"kinds": ["runner", "arc", "turret", "sticky", "shell", "claw", "ledger"], "icon": "trg_on_hit"},
+	"special": {"kinds": ["line", "runner", "arc", "turret", "claw", "ledger"], "icon": "trg_on_charge_release"},
 }
 # The habits that are movement, not a way to hit: the director reads them for air or
 # speed builds; the Mind does not brace against them.
 const MOVES := ["jump", "air", "boost", "grapple", "glide"]
-const WEAPON_KINDS := ["runner", "arc", "turret", "sticky", "shell", "claw"]
+const WEAPON_KINDS := ["runner", "arc", "turret", "sticky", "shell", "claw", "ledger"]
 
 var counts := {}
 var class_id := ""

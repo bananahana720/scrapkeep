@@ -15,6 +15,8 @@ const ANCIENT := Color("3d8bff")
 const HAZARD := Color("ff5a3c")
 # Admiral Brindle's brass: every boss fact wears it.
 const BRASS := Color("d9b44a")
+# Tally's ledger-paper cream: a pilot's colour, kept off the hostile hues.
+const LEDGER := Color("e6d9b8")
 # "Not yet": out of range, a glancing hit, a locked thing. Cool, so no warm colour shares it.
 const SLATE := Color("6f7f8f")
 

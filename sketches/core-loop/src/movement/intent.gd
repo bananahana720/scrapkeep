@@ -41,6 +41,8 @@ var harpoon_released := false
 # Drops whatever gauge is charging, spending nothing. The player turns an RMB press made
 # during a charge into this (the League convention: right click cancels a cast).
 var cancel_pressed := false
+# The card bay a key picked this tick (0, 1 or 2), or -1. Only a card weapon reads it.
+var bay_pick := -1
 
 
 func clear() -> void:
@@ -68,6 +70,7 @@ func clear() -> void:
 	shift_pressed = false
 	shift_held = false
 	shift_released = false
+	bay_pick = -1
 
 
 # A source lets the headless test drive the same player with no input at all.
@@ -124,3 +127,7 @@ class Keyboard:
 		out.harpoon_pressed = Input.is_action_just_pressed("cl_harpoon")
 		out.harpoon_held = Input.is_action_pressed("cl_harpoon")
 		out.harpoon_released = Input.is_action_just_released("cl_harpoon")
+		var bays := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
+		for i in bays.size():
+			if Input.is_action_just_pressed(bays[i]):
+				out.bay_pick = i

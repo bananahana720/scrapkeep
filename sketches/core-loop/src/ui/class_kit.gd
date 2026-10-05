@@ -32,6 +32,13 @@ const WORDS := {
 	"claw_pull": "claw pull",
 	"clamp": "claw clamp",
 	"rend_slam": "rend slam",
+	"ledger_reader": "ledger reader",
+	"flywheel_surge": "flywheel surge",
+	"plate_return": "plate return",
+	"stamp_slam": "stamp slam",
+	"gather_plate": "gather",
+	"link_clips": "link",
+	"balance_due": "balance due",
 }
 
 # Keys a movement kit adds, by the augment or flag that grants them: the verb whose table key
@@ -51,11 +58,12 @@ const FANTASY := {
 	"runner_gunner": "Unstoppable sprinter. Crowd control is fuel.",
 	"demolitions_caster": "Vanish in smoke. Drop a line of fire.",
 	"tarn": "Claw in close. Clamp the threat, then rend.",
+	"tally": "Punch a card. Roll to refill. Make them pay.",
 }
 
 # 1 to 3: how many things the pilot juggles. Rivet holds sprint and fires; Kest times
 # charges against a detonation line; Sable hooks, plants, mounts and slingshots.
-const DIFFICULTY := {"pylon_engineer": 3, "runner_gunner": 1, "demolitions_caster": 2, "tarn": 2}
+const DIFFICULTY := {"pylon_engineer": 3, "runner_gunner": 1, "demolitions_caster": 2, "tarn": 2, "tally": 3}
 const DIFFICULTY_MAX := 3
 
 

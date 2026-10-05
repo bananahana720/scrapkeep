@@ -42,10 +42,14 @@ const VERBS := {
 	"interact": {"intent": "interact_pressed", "fail": "verb_fail_interact", "glyph": "key_e", "label": "E", "icon": "ab_sable_mount",
 		"actions": {"cl_interact": {"keys": [KEY_E], "pad": JOY_BUTTON_Y}}},
 }
-# Actions that belong to no verb: the retry hold (R, RB) and the pause (P and Escape, Start).
+# Actions that belong to no verb: the retry hold (R, RB), the pause (P and Escape, Start) and
+# Tally's three card bays (1, 2, 3 or D-pad left, up, right).
 const EXTRA_ACTIONS := {
 	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
 	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
+	"cl_bay_1": {"keys": [KEY_1], "pad": JOY_BUTTON_DPAD_LEFT},
+	"cl_bay_2": {"keys": [KEY_2], "pad": JOY_BUTTON_DPAD_UP},
+	"cl_bay_3": {"keys": [KEY_3], "pad": JOY_BUTTON_DPAD_RIGHT},
 }
 # The engine's ui_* actions have no pad button, so a pad moves menu focus but cannot press or go
 # back. Boot adds these two rows to ui_accept and ui_cancel and keeps the engine's key events.

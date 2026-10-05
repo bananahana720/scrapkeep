@@ -221,6 +221,18 @@ var _prow_until := {}
 var _spring_until := -1.0
 # Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps.
 var _clamped := {}
+# Tally's program cards. bay is the selected card (0, 1 or 2); plate is Gather's plate ({}
+# or {"at", "until"}); link_group the live clips ({} or {"ids", "until", "spent"}); last_card
+# the last run ({"card", "at", "hits", "spent"}). All read only outside this file.
+var bay := 0
+var plate := {}
+var link_group := {}
+var last_card := {}
+var _cards := {}
+var _arcing := false
+var _gather_tick := 0.0
+var _roll_clock := 0.0
+var _restored_frame := {}
 # The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
 # presentation's edge flash. last_impact names the IMPACT row and the enemy of the strike
 # whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
@@ -272,7 +284,14 @@ func setup(ctx_ref) -> void:
 		"detonation_line": {"geometry": _line_geometry, "fire": _fire_line},
 		"point_blank": {"geometry": _point_blank_geometry, "fire": _fire_point_blank},
 		"clamp": {"geometry": _clamp_geometry, "fire": _fire_clamp},
+		"plate_return": {"geometry": _plate_return_geometry, "fire": _fire_plate_return, "can": _plate_out},
 	}
+	_cards = {"gather_plate": _run_gather, "link_clips": _run_link, "balance_due": _run_balance}
+	ctx.events.enemy_struck.connect(_on_card_struck)
+	ctx.events.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _grant_pressure(1))
+	ctx.events.slammed.connect(func(_at: Vector3, _strength: float, _flatness: float):
+		if ctx.player.abilities.cap(AbilityState.SMASH, "flavour", "") != "stamp":
+			_grant_pressure(1))
 	_actions = _proc_actions()
 	# Every bus fact any tree's procs listen for, connected once; the tree decides who fires.
 	var facts := {}
@@ -289,6 +308,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
+	ctx.player.pressure_grant = _grant_pressure
 	ctx.player.mass_of = func() -> float: return ctx.run.mass
 	_reset_ledger()
 	ctx.events.demo_slammed.connect(_on_demo_slammed)
@@ -306,6 +326,7 @@ func setup(ctx_ref) -> void:
 		_primed = {}
 		_prow_until = {}
 		_clamped = {}
+		_reset_cards()
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
@@ -868,7 +889,11 @@ func _physics_process(delta: float) -> void:
 	_tick_upgrades(delta)
 	var intent = ctx.player.intent
 	var weapon := active_weapon()
-	if ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0:
+	# Tally's reader runs cards, never bolts: this branch comes first so _fire never sees
+	# the ledger_reader row, which exists only for _patterns and _damage_mod.
+	if ctx.player.abilities.cap(AbilityState.WEAPON, "cards", null) != null:
+		_step_cards(intent, delta)
+	elif ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0:
 		_step_sticky_weapon(intent, delta)
 	elif intent.fire_held and _cooldown <= 0.0 and _patterns.has(weapon):
 		_fire(weapon)
@@ -1107,7 +1132,8 @@ func _step_special(intent, delta: float) -> void:
 		ctx.player.indicator.collapse("special")
 		ctx.events.gauge_cancelled.emit(id, "cancel")
 		return
-	if not gauge.charging and (intent.special_pressed or auto) and abilities.ready(AbilityState.SPECIAL):
+	if not gauge.charging and (intent.special_pressed or auto) and abilities.ready(AbilityState.SPECIAL) \
+			and (not row.has("can") or row["can"].call()):
 		gauge.begin()
 		ctx.events.gauge_charging.emit(id)
 		# Hip Fire: pressed mid-sprint, the gauge is already full and fires now.
@@ -1125,6 +1151,10 @@ func _step_special(intent, delta: float) -> void:
 	var shape: Dictionary = row["geometry"].call(f)
 	ctx.player.indicator.set_shape("special", shape)
 	ctx.player.indicator.clear("special")
+	# The plate can expire while the gauge fills: a release with nothing to return spends nothing.
+	if row.has("can") and not row["can"].call():
+		ctx.events.gauge_cancelled.emit(id, "blocked")
+		return
 	abilities.spend(AbilityState.SPECIAL)
 	last_committed = {"id": id, "fraction": f, "geometry": shape}
 	row["fire"].call(f, shape)
@@ -1144,6 +1174,10 @@ func _tick_echo(delta: float) -> void:
 	var row: Dictionary = _echo["row"]
 	var f: float = _echo["fraction"]
 	_echo = {}
+	# A special that needs live state (Tally's plate) echoes only while its can() still holds
+	# (wave 15, 2026-10-05); a stale echo fired at the ball otherwise.
+	if row.has("can") and not row["can"].call():
+		return
 	_echoing = true
 	row["fire"].call(f, row["geometry"].call(f))
 	_echoing = false
@@ -1271,6 +1305,240 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 		hit += 1
 	effects.ring(centre, radius, ClassDef.TARN_COLOR)
 	last_burst = {"at": centre, "radius": radius, "damage": damage, "hit": hit, "kind": "clamp"}
+	_forced_source = prev_source
+
+
+# --- Tally's program cards (DESIGN-V3 "Tally's program cards") -------------------------
+# The reader's charges are pressure. A press runs the selected bay's card at the aim
+# point: validate the aim, spend one pressure, then apply. Rolling and contact refill it.
+
+func _reset_cards() -> void:
+	bay = 0
+	plate = {}
+	link_group = {}
+	last_card = {}
+	_arcing = false
+	_gather_tick = 0.0
+	_roll_clock = 0.0
+	_restored_frame = {}
+
+
+func _step_cards(intent, delta: float) -> void:
+	var abilities = ctx.player.abilities
+	var cards: Array = abilities.cap(AbilityState.WEAPON, "cards", [])
+	if intent.bay_pick >= 0 and intent.bay_pick < cards.size():
+		bay = intent.bay_pick
+	bay = clampi(bay, 0, cards.size() - 1)
+	abilities.slot(AbilityState.WEAPON).icon = String(Weapons.CARDS.get(cards[bay], {}).get("icon", ""))
+	_step_plate(delta)
+	if not link_group.is_empty() and float(link_group["until"]) <= _clock:
+		link_group = {}
+	_step_roll_restore(delta)
+	if not intent.fire_pressed or _cooldown > 0.0:
+		return
+	var card: String = cards[bay]
+	if not _cards.has(card):
+		return
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	var ball: Vector3 = ctx.player.ball_position()
+	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, Weapons.CARD_REACH + AIM_SLACK)
+	var point: Vector3 = aim["point"]
+	var valid: bool = not aim["blocked"] and ball.distance_to(point) <= Weapons.CARD_REACH
+	if not _cards[card].call(point, valid):
+		return
+	_cooldown = maxf(_cooldown, 0.0) + Weapons.CARD_RECOVERY
+	ctx.events.shot_fired.emit(card, ball, point)
+
+
+func _ordinary(enemy: Node3D) -> bool:
+	var kind := _spawn_kind_of(enemy)
+	if kind in ["chaser", "lobber"]:
+		return _target_class(enemy) == "enemy"
+	return Roster.has(kind) and Roster.faction_of(kind) == Roster.SWARM and _target_class(enemy) == "adds"
+
+
+func _step_plate(delta: float) -> void:
+	if plate.is_empty():
+		return
+	if float(plate["until"]) <= _clock:
+		plate = {}
+		return
+	_gather_tick += delta
+	while _gather_tick >= Weapons.GATHER_TICK:
+		_gather_tick -= Weapons.GATHER_TICK
+		var at: Vector3 = plate["at"]
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			if enemy.is_dead() or not _ordinary(enemy):
+				continue
+			var inward: Vector3 = at - enemy.global_position
+			inward.y = 0.0
+			var distance := inward.length()
+			if distance > Weapons.GATHER_RADIUS or distance < 0.01:
+				continue
+			enemy.knock(inward / distance, Weapons.GATHER_KNOCK * clampf(distance / Weapons.GATHER_RADIUS, 0.25, 1.0))
+
+
+func _step_roll_restore(delta: float) -> void:
+	var abilities = ctx.player.abilities
+	var s = abilities.slot(AbilityState.WEAPON)
+	if s.charges >= s.max_charges:
+		_roll_clock = 0.0
+		return
+	var planar: float = ctx.player.planar_velocity().length()
+	if not ctx.player.state.grounded or SpeedTier.of(planar, ctx.player.tuning.f("cruise")) < SpeedTier.CRUISE:
+		return
+	_roll_clock += delta
+	while _roll_clock >= Weapons.PRESSURE_ROLL_S:
+		_roll_clock -= Weapons.PRESSURE_ROLL_S
+		_grant_pressure(1)
+
+
+func _grant_pressure(count: int) -> void:
+	var abilities = ctx.player.abilities
+	if count > 0 and abilities.cap(AbilityState.WEAPON, "pressure", null) != null:
+		abilities.grant(AbilityState.WEAPON, count)
+
+
+func _spend_card(card: String, at: Vector3) -> bool:
+	if not ctx.player.abilities.spend(AbilityState.WEAPON):
+		return false
+	last_card = {"card": card, "at": at, "hits": 0, "spent": true}
+	return true
+
+
+func _run_gather(point: Vector3, valid: bool) -> bool:
+	if not valid or not _spend_card("gather_plate", point):
+		return false
+	var at := _floor_at(point + Vector3.UP)
+	plate = {"at": at, "until": _clock + Weapons.GATHER_SECONDS}
+	_gather_tick = 0.0
+	effects.ring(at, Weapons.GATHER_RADIUS, ClassDef.TALLY_COLOR)
+	return true
+
+
+# The first live enemy along the aim within reach: smallest distance along the ray among
+# those within LINK_AIM_RADIUS of it.
+func _link_target(point: Vector3) -> Node3D:
+	var ball: Vector3 = ctx.player.ball_position()
+	var dir := point - ball
+	dir = dir.normalized() if dir.length() > 0.01 else ctx.aim_forward().normalized()
+	var best: Node3D = null
+	var best_along := Weapons.CARD_REACH
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.is_dead():
+			continue
+		var rel: Vector3 = enemy.global_position - ball
+		var along := rel.dot(dir)
+		if along < 0.0 or along > best_along:
+			continue
+		if (rel - dir * along).length() <= Weapons.LINK_AIM_RADIUS:
+			best_along = along
+			best = enemy
+	return best
+
+
+func _run_link(point: Vector3, valid: bool) -> bool:
+	if not valid:
+		return false
+	var first := _link_target(point)
+	if first == null or not _spend_card("link_clips", point):
+		return false
+	var clips := [first]
+	for enemy in _nearest_list(first.global_position, Weapons.LINK_NEIGHBOUR_REACH, Weapons.LINK_NEIGHBOURS + 1):
+		if enemy != first and clips.size() <= Weapons.LINK_NEIGHBOURS:
+			clips.append(enemy)
+	var ids := []
+	var ball: Vector3 = ctx.player.ball_position()
+	for clip in clips:
+		ids.append(clip.get_instance_id())
+		effects.arc(ball, clip.global_position, ClassDef.TALLY_COLOR)
+	link_group = {"ids": ids, "until": _clock + Weapons.LINK_SECONDS, "spent": false}
+	last_card["hits"] = ids.size()
+	return true
+
+
+func _run_balance(point: Vector3, valid: bool) -> bool:
+	if not valid:
+		return false
+	var speed: float = ctx.player.planar_velocity().length()
+	if not _spend_card("balance_due", point):
+		return false
+	var damage := minf(Weapons.BALANCE_MAX, Weapons.BALANCE_BASE + Weapons.BALANCE_PER_SPEED * speed) * _damage_mod(Weapons.LEDGER_READER)
+	var hits := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.is_dead() or not in_ring(point, Weapons.BALANCE_RADIUS, enemy):
+			continue
+		_hit(enemy, "ledger", damage, enemy.global_position - point, Weapons.LEDGER_KNOCK, "", "weapon")
+		hits += 1
+	effects.ring(point, Weapons.BALANCE_RADIUS, ClassDef.TALLY_COLOR)
+	last_card["hits"] = hits
+	last_card["damage"] = damage
+	return true
+
+
+# Link's arc and the pressure a contact restores. A direct hit on a clip (anything but the
+# arcs themselves) spends the group and arcs once to every other live clip.
+func _on_card_struck(enemy: Node3D, kind: String, force: float) -> void:
+	if kind == "ram" or kind == "stomp":
+		var frame := Engine.get_physics_frames()
+		if int(_restored_frame.get(kind, -1)) != frame:
+			_restored_frame[kind] = frame
+			_grant_pressure(1)
+	if _arcing or link_group.is_empty() or link_group["spent"] or float(link_group["until"]) <= _clock:
+		return
+	var ids: Array = link_group["ids"]
+	if not is_instance_valid(enemy) or not ids.has(enemy.get_instance_id()):
+		return
+	link_group["spent"] = true
+	var from: Vector3 = enemy.global_position
+	var damage := maxf(Weapons.LINK_ARC_MIN, force * Weapons.LINK_ARC_SHARE)
+	_arcing = true
+	for id in ids:
+		if id == enemy.get_instance_id():
+			continue
+		var other = instance_from_id(id)
+		if other == null or not is_instance_valid(other) or other.is_dead():
+			continue
+		var to: Vector3 = other.global_position
+		effects.arc(from, to, ClassDef.TALLY_COLOR)
+		_hit(other, "ledger", damage, to - from, Weapons.LEDGER_KNOCK, "", "weapon")
+	_arcing = false
+
+
+func _plate_out() -> bool:
+	return not plate.is_empty()
+
+
+# plate_return: a corridor from the plate toward the ball, as long as the gap up to
+# PLATE_RETURN_LENGTH; the gauge widens it.
+func _plate_return_geometry(f: float) -> Dictionary:
+	var ball := _ground_under(ctx.player.ball_position())
+	var from: Vector3 = plate.get("at", ball)
+	var gap := ball - from
+	gap.y = 0.0
+	var dir := gap.normalized() if gap.length() > 0.01 else _flat_aim()
+	var length := minf(Weapons.PLATE_RETURN_LENGTH, gap.length())
+	var half := AbilityState.Gauge.scaled(f, Weapons.PLATE_RETURN_HALF_MIN, Weapons.PLATE_RETURN_HALF_MAX)
+	return ctx.player.yours({"kind": "line", "from": from, "to": from + dir * length, "width": half * 2.0,
+		"full_to": from + dir * length, "fill": f})
+
+
+func _fire_plate_return(f: float, shape: Dictionary) -> void:
+	var prev_source := _forced_source
+	_forced_source = "special"
+	var ball: Vector3 = ctx.player.ball_position()
+	var from: Vector3 = shape["from"]
+	var to: Vector3 = shape["to"]
+	var damage := AbilityState.Gauge.scaled(f, Weapons.PLATE_RETURN_DAMAGE_MIN, Weapons.PLATE_RETURN_DAMAGE_MAX) * _damage_mod(Weapons.LEDGER_READER)
+	var hit := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.is_dead() or not in_line(from, to, shape["width"], enemy.global_position):
+			continue
+		_hit(enemy, "ledger", damage, ball - enemy.global_position, Weapons.LEDGER_KNOCK, "", "special")
+		hit += 1
+	effects.arc(from + Vector3.UP * 0.5, to + Vector3.UP * 0.5, ClassDef.TALLY_COLOR)
+	plate = {}
+	last_burst = {"at": from, "to": to, "damage": damage, "hit": hit, "kind": "plate_return"}
 	_forced_source = prev_source
 
 
@@ -1993,6 +2261,7 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 # restored part list, so a retry restores the build exactly.
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	_start_attempt()
+	_reset_cards()
 	ctx.camera.shoulder_target = 0.0
 	volleys = 0
 	last_shot = {}

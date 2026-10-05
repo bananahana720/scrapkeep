@@ -7,6 +7,7 @@ const Sable := preload("res://src/core/trees/sable.gd")
 const Rivet := preload("res://src/core/trees/rivet.gd")
 const Kest := preload("res://src/core/trees/kest.gd")
 const Tarn := preload("res://src/core/trees/tarn.gd")
+const Tally := preload("res://src/core/trees/tally.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
@@ -34,9 +35,10 @@ const SIZE := 30
 const WORLD_ONE_DEPTHS := 2
 const WORLD_ONE_SIZE := 6
 const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES,
-	"tarn": Tarn.NODES}
+	"tarn": Tarn.NODES, "tally": Tally.NODES}
 # Each pilot declares NODES_WORLD_ONE in the same heap order as its full tree.
-const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Tarn}
+const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Tarn,
+	"tally": Tally}
 const KEYS := ["weapon", "movement", "special", "smash"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.

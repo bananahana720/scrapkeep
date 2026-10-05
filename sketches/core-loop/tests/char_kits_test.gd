@@ -64,9 +64,10 @@ func _rows() -> void:
 		colours[def.color.to_html()] = true
 	var motifs := rows.map(func(d): return d.motif)
 	# Tarn (wave 15 look) has its own motif, shape and colour.
-	_report("four rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn"] and complete and colours.size() == 4 \
-			and motifs == ["sable", "rivet", "kest", "tarn"],
-		"classes %s, every field set, shapes from the event vocabulary, four colours, none HAZARD, motif ids %s" % [ids, motifs])
+	# Tally (wave 15 tally-kit) borrows Kest's motif until her look unit.
+	_report("five rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally"] and complete and colours.size() == 5 \
+			and motifs == ["sable", "rivet", "kest", "tarn", "kest"],
+		"classes %s, every field set, shapes from the event vocabulary, five colours, none HAZARD, motif ids %s" % [ids, motifs])
 	var tarn: Resource = ClassDef.by_id("tarn")
 	var rivet: Resource = ClassDef.by_id("runner_gunner")
 	var tarn_ids := [tarn.weapon_id, tarn.movement_id, tarn.special_id, tarn.smash_id]
