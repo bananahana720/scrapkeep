@@ -178,6 +178,7 @@ const CLIMB_REACHED := 6.0
 # crown the deck under the beacon's cliff lies off the dogleg bridges, and the way up is a
 # shoulder ramp the straight line never meets.
 const FIGHT_CLIMB_REPLAN := 6.0
+const CLIMB_LEVEL := 1.5
 # On a map with standing activities the explorer stops its other rolling (scrap lines, events, the
 # vault) at this stage second and goes to the Warden, so the fight has the rest of STAGE_LIMIT.
 const ENGAGE_BY := 140.0
@@ -950,6 +951,8 @@ func _approach(s, ball: Vector3) -> Vector3:
 
 # A grid path over the terrain's heights from the ball to the site that never climbs a step
 # steeper than CLIMB_SLOPE (falling is free), every other cell kept. Empty when there is none.
+# A cell costs more the further it drops to a neighbour, so a route up a ramp keeps to its middle,
+# not the rim of its skirt where a ball cutting the corner at the foot slides back to the deck.
 func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 	var terrain = game.ctx.terrain
 	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD
@@ -975,6 +978,9 @@ func _climb_route(from: Vector3, to: Vector3) -> Array[Vector3]:
 					continue
 				var b := bj * nx + bi
 				var rise: float = (heights[b] - heights[a]) / (Vector2(step).length() * CLIMB_STEP)
+				var drop := absf(heights[b] - heights[a]) / CLIMB_STEP
+				var high := a if heights[a] > heights[b] else b
+				graph.set_point_weight_scale(high, maxf(graph.get_point_weight_scale(high), 1.0 + drop))
 				if absf(rise) <= CLIMB_SLOPE:
 					graph.connect_points(a, b)
 				elif rise > 0.0:
@@ -1315,13 +1321,22 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 			if _flat(ball, _runup_point) < 4.0 or _runup_time > RUNUP_SECONDS:
 				_fight_phase = "charge"
 	var steer: Vector3 = at if _fight_phase == "charge" else _runup_point
-	if at.y - ball.y > LEVEL_BAND:
+	if _climbing(ball, at):
 		steer = _fight_way_up(ball, at, delta)
 		_goal += " climb"
 	else:
 		_fight_climb.clear()
 		_fight_climb_clock = 0.0
 	_act(steer, aim, delta, target)
+
+
+# Whether to climb to a target above the ball: more than LEVEL_BAND above it, or, with a climb in
+# hand, still on lower ground. The crown's beacon ramp tops out within LEVEL_BAND of the Warden's
+# floor, and rolling straight from there runs into the side wall of the bridge beside it.
+func _climbing(ball: Vector3, at: Vector3) -> bool:
+	if at.y - ball.y > LEVEL_BAND:
+		return true
+	return not _fight_climb.is_empty() and _ground_point(at.x, at.z).y - _ground_point(ball.x, ball.z).y > CLIMB_LEVEL
 
 
 # The next point on the climb to a fight target above the ball, or the target when no way up is found.
@@ -1599,6 +1614,14 @@ func _to_gate(delta: float) -> void:
 	var target := at - facing * 9.0
 	if side < 2.5 and along < 1.0:
 		target = at + facing * 10.0
+	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
+	var ball_at: Vector3 = game.player.ball_position()
+	if _climbing(ball_at, at):
+		target = _fight_way_up(ball_at, target, delta)
+		_goal += " climb"
+	else:
+		_fight_climb.clear()
+		_fight_climb_clock = 0.0
 	# A gate still untaken after GATE_HOP_SECONDS has something on its line (a kerb, a
 	# bench): hop while rolling at it, as a player clears a low lip.
 	_gate_time += delta
