@@ -331,6 +331,10 @@ func _tick(at: Vector3, out: Vector3, ticks: String, color: Color) -> void:
 			var tip := at + out * TICK_LEN
 			_ribbon(at + across, tip, EXTENT, color, false)
 			_ribbon(at - across, tip, EXTENT, color, false)
+		"lane":
+			var rail := out.cross(Vector3.UP).normalized() * TICK_LEN * 0.2
+			_ribbon(at + rail, at + rail + out * TICK_LEN, EXTENT, color, false)
+			_ribbon(at - rail, at - rail + out * TICK_LEN, EXTENT, color, false)
 		"burst":
 			_ribbon(at, at + out * TICK_LEN, EXTENT, color, false)
 		"cross":

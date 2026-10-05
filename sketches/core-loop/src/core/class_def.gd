@@ -81,11 +81,10 @@ static func all() -> Array[Resource]:
 			"color": TALLY_COLOR, "shape": "square", "motif": "tally", "sound": "cog_tick",
 			"bible_home": "Tally, mechanical program cards",
 			"starter": false, "synergy_hooks": PackedStringArray(["on_card_run", "on_link_arc", "on_stamp_contact"])}),
-		# The cannon's motif, sound and shape are Kest's stand-ins until pil-G11 lands its own.
 		make({"id": "remembered_cannon", "display_name": "Cannon", "role": "Boss-mirror cannon", "species": "rebuilt ancient",
 			"pitch": "The Mind's own guns, remembered. Call a lane, cut a split behind you, plate what you hit, ring the ground when you land.",
 			"weapon_id": "cannon_lane", "movement_id": "cannon_recoil", "special_id": "cannon_plate", "smash_id": "cannon_rush",
-			"color": CANNON_COLOR, "shape": "burst", "motif": "kest", "sound": "slam_boom",
+			"color": CANNON_COLOR, "shape": "lane", "motif": "cannon", "sound": "launch_roar",
 			"bible_home": "Remembered cannon, the Mind's four families",
 			"starter": false, "synergy_hooks": PackedStringArray(["on_lane_landed", "on_plate_exposed", "on_rush_ring"])}),
 	]

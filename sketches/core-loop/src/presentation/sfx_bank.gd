@@ -69,11 +69,11 @@ const TRIM_DB := {
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
 	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
-	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0,
-	"sable_ready": -9.0, "rivet_ready": -9.0, "kest_ready": -8.0, "tarn_ready": -9.0, "tally_ready": -9.0,
-	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0, "tally_break": -3.0,
+	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0, "cannon_recall": -3.0,
+	"sable_ready": -9.0, "rivet_ready": -9.0, "kest_ready": -8.0, "tarn_ready": -9.0, "tally_ready": -9.0, "cannon_ready": -9.0,
+	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0, "tally_break": -3.0, "cannon_break": -3.0,
 	"fleet_motif": -4.0, "reactor_tick": -6.0, "reactor_erupt": -2.0, "swarm_buzz": -9.0, "swarm_lock": -6.0, "swarm_scatter": -8.0,
-	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0, "mind_tally": -5.0,
+	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0, "mind_tally": -5.0, "mind_cannon": -5.0,
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
@@ -488,9 +488,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _tarn_release()
 		"tally_balance_due":
 			return _tally_release()
-		"sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready":
+		"cannon_recall":
+			return _cannon_release()
+		"sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready":
 			return _ready_pulse(id.get_slice("_", 0))
-		"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break":
+		"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break", "cannon_break":
 			return _break_free(id.get_slice("_", 0))
 		"fleet_motif":
 			return _fleet_motif()
@@ -504,7 +506,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _swarm_lock()
 		"swarm_scatter":
 			return _swarm_scatter()
-		"mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally":
+		"mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon":
 			return _mind_quote(id.get_slice("_", 1))
 		"hold_pit", "hold_bola", "hold_tether", "hold_net", "hold_riser":
 			return hold(id.get_slice("_", 1), Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
@@ -1267,6 +1269,18 @@ static func _tally_release() -> PackedFloat32Array:
 	return _mix(parts)
 
 
+# The rebuilt gun answers the Mind in reverse, climbing to the held D.
+static func _cannon_release() -> PackedFloat32Array:
+	var step := Synth.score_step
+	var score := _motif_score("cannon", 0, "chime", 0.7)
+	score.append_array(_motif_score("cannon", 0, "talk", 0.35, -12))
+	score.append_array([[0, 0, 2, "kick", 0.6], [4, 0, 2, "kick", 0.6], [4, 0, 8, "crash", 0.45], [4, 50, 6, "sub808", 0.6]])
+	var parts: Array = [[Synth.render_score(score, 1.6), 0, 1.0]]
+	parts.append([Synth.drum("snare"), int(2 * step), 0.6])
+	parts.append([Synth.drum("hat"), int(3 * step), 0.5])
+	return _mix(parts)
+
+
 # The ready pulse: the motif's first note on the class instrument, 120 ms, an octave up
 # so it reads over the band ("F is back").
 static func _ready_pulse(id: String) -> PackedFloat32Array:
@@ -1280,6 +1294,8 @@ static func _ready_pulse(id: String) -> PackedFloat32Array:
 			return _mix([[Synth.drum("anvil"), 0, 0.7], [_cut(_n("reese", first + 12), 0.1), 0, 0.8]])
 		"tally":
 			return _mix([[Synth.drum("clap"), 0, 0.6], [_cut(_n("keys", first + 12), 0.1), 0, 0.8]])
+		"cannon":
+			return _mix([[Synth.drum("ride"), 0, 0.5], [_cut(_n("chime", first + 12), 0.12), 0, 0.9]])
 	return _mix([[_cut(_n("mallet", first + 12), 0.12), 0, 1.0], [_cut(_n("bell", first + 24), 0.12), 0, 0.3]])
 
 
