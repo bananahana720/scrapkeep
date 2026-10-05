@@ -31,9 +31,10 @@ const BRACE_MULT := 1.4
 const VERBS := Rules.CONTACT_KINDS
 const CLEAR := Tuning.RADIUS
 const HEIGHT := 3.0
-# Later phases tighten each warn by this much per phase; base warns keep phase 3 at or
-# above WARN_FLOOR.
+# Later phases tighten each warn by this much per phase. Tightening stops at
+# TIGHTEN_PHASES, so every phase stays at or above WARN_FLOOR.
 const PHASE_TIGHTEN := 0.1
+const TIGHTEN_PHASES := 3
 
 const LANE_HALF := 1.6
 const LANE_WARN := 1.4
@@ -55,8 +56,9 @@ const SEARCH_STEP := 0.5
 const SEARCH_BEARINGS := 72
 
 
+# One phase per posture chunk; phase k exposes families 1..k.
 static func phase_cap() -> int:
-	return Rules.PHASE_NAMES.size()
+	return FAMILIES.size()
 
 
 static func exposed(phase: int) -> Array:
@@ -223,7 +225,7 @@ static func _base(family: String, n: int, shape: String, type: int, warn: float,
 
 
 static func _warn(base: float, phase: int) -> float:
-	return base - PHASE_TIGHTEN * (clampi(phase, 1, phase_cap()) - 1)
+	return base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1)
 
 
 static func _bearing(rng: RandomNumberGenerator, ball: Vector3, center: Vector3) -> float:

@@ -6,9 +6,10 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 
 # The Mind's fight on the stub's flat pad. Its Warden is a MIND choir Warden with the
 # fleet, so the Warden publishes its own posture and opens its lens on a stagger, bracing
-# against the ball's top habit. After Rules.INTRO_SECONDS the Mind commits one of
-# mind_attacks.gd's telegraphed families every ATTACK_PERIOD, more families as chunks
-# fall; from phase 2 it sends up to HAND_CAP mind_hand roster enemies off the ball's side.
+# against the ball's top habit. The Mind has four phases, one per posture chunk. After
+# Rules.INTRO_SECONDS it commits one of mind_attacks.gd's telegraphed families every
+# ATTACK_PERIOD, more families as chunks fall; the last chunk opens with the plate. From
+# phase 2 it sends up to HAND_CAP mind_hand roster enemies off the ball's side.
 # Every attack is announced on boss_attack_telegraphed and leaves an escape point; an
 # attack lands at most once.
 const BOSS_ID := "mind"
@@ -31,6 +32,7 @@ var attack_count := 0
 var _attack_clock := 0.0
 var _family := ""
 var _plate_verb := ""
+var _brace_due := false
 # Fight clock until which the last plate's weak window stays open.
 var _plate_until := -INF
 
@@ -59,6 +61,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_attack_clock = 0.0
 	_family = ""
 	_plate_verb = ""
+	_brace_due = false
 	_plate_until = -INF
 
 
@@ -72,7 +75,11 @@ func _physics_process(delta: float) -> void:
 	super(delta)
 	if not active() or not is_instance_valid(warden):
 		return
-	phase = clampi(1 + BossPosture.CHUNKS - warden.chunks_left(), 1, MindAttacks.phase_cap())
+	var next := clampi(1 + BossPosture.CHUNKS - warden.chunks_left(), 1, MindAttacks.phase_cap())
+	if next == MindAttacks.phase_cap() and next > phase:
+		_brace_due = true
+		_attack_clock = minf(_attack_clock, 0.0)
+	phase = next
 	_step_attacks(delta)
 	if clock < Rules.INTRO_SECONDS:
 		return
@@ -80,7 +87,8 @@ func _physics_process(delta: float) -> void:
 	if _attack_clock > 0.0:
 		return
 	_attack_clock = ATTACK_PERIOD
-	_commit_attack()
+	_commit_attack("plate" if _brace_due else "")
+	_brace_due = false
 	_send_hand()
 
 
