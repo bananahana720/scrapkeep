@@ -55,8 +55,10 @@ const POSTS := [
 var contraptions: Array = []
 var rescue_sites: Array = []
 var hard_points: Array = []
-# The beacon island's top, east of the bridge's landing: the relic cache (interact.gd).
-var relic_spot := Vector2(13.0, -60.0)
+# The relic cache (interact.gd), on the spawn island's top 9 m east of the drop, facing it. The
+# beacon island's top is the Warden's runup ground: a cache there (13, -60) walled a pocket the
+# skipper's ball wedged in, pressing its side wall toward the Warden (2026-10-05 stage 5 stall).
+var relic_spot := Vector2(9.0, 122.0)
 
 
 func _init() -> void:
