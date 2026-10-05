@@ -12,7 +12,7 @@ const T := preload("res://tests/support/t.gd")
 
 # Tarn's claw kit through the real game (calm, stage 1): the class row, the fitted
 # movement kit, the claw sweep's short reach, the claw pull, the clamp ring and its
-# bonus on claw sweeps, and the rend landing's inward pull.
+# bonus on claw sweeps, and the rend landing's inward pull; a clamp that kills leaves no entry, and a new attempt clears the clamp and exposure maps.
 
 var _t := T.new("tarn_kit_test")
 var _game
@@ -82,6 +82,8 @@ func _boot() -> void:
 		[_bonus_fire, 20, _bonus_release],
 		[_noop, 20, _check_bonus],
 		[_rend_start, 1, _check_rend],
+		[_clamp_kill_start, 1, _check_clamp_kill],
+		[_noop, 1, _check_attempt_clear],
 	]
 
 
@@ -347,6 +349,44 @@ func _check_rend() -> void:
 	_t.check("rend leaves the 12 m chaser", _planar(c.get("_knock")).length() < 0.01 and is_equal_approx(float(c.hp), _record["c_hp"])
 			and _struck.slice(_record["c_from"]).all(func(s): return s[0] != _record["c_id"]),
 		"knock %s, hp %.1f" % [c.get("_knock"), float(c.hp)])
+
+
+# --- i. a clamp that kills, and the attempt reset ---------------------------------------
+
+func _clamp_kill_start() -> void:
+	_as_class("tarn")
+	var aim := _aim_flat()
+	var k := _spawn("chaser", _ball_flat() + aim * 3.0)
+	k.hp = 1.0
+	var s := _spawn("chaser", _ball_flat() - aim * 3.0)
+	s.hp = 1000.0
+	s.max_hp = 1000.0
+	_record = {"k": k, "s": s}
+	_note_ids()
+	_combat._clamped = {}
+	_record["from"] = _struck.size()
+
+
+func _check_clamp_kill() -> void:
+	_combat._fire_clamp(1.0, _combat._clamp_geometry(1.0))
+	var k = _record["k"]
+	var k_id: int = _record["k_id"]
+	var s_id: int = _record["s_id"]
+	var keys := str(_combat._clamped.keys())
+	var dead: bool = not is_instance_valid(k) or k.is_dead()
+	_t.check("a clamp kill leaves no clamp entry", not _struck_by(k_id, "claw", _record["from"]).is_empty() and dead
+			and not _combat._clamped.has(k_id),
+		"killed id %d, survivor id %d, clamped keys %s, dead %s" % [k_id, s_id, keys, str(dead)])
+	_t.check("a clamp survivor stays clamped", _combat._clamped.has(s_id) and float(_combat._clamped.get(s_id, -INF)) > _combat._clock,
+		"killed id %d, survivor id %d, clamped keys %s" % [k_id, s_id, keys])
+
+
+func _check_attempt_clear() -> void:
+	_combat._clamped[123] = _combat._clock + 5.0
+	_combat._exposed[123] = {"until": _combat._clock + 5.0, "verb": "ram"}
+	_combat._start_attempt()
+	_t.check("an attempt clears the clamp and exposure maps", _combat._clamped.is_empty() and _combat._exposed.is_empty(),
+		"clamped %d, exposed %d" % [_combat._clamped.size(), _combat._exposed.size()])
 
 
 # Strikes are kept by instance id, so a chaser the sweep kills can still be counted.

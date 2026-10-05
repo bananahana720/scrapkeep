@@ -220,12 +220,12 @@ var _primed := {}
 # Ram-brace state: prow stagger ends by instance id, and the clock the spring stays armed until. Both maps clear on run start and every attempt; a kill drops its entry.
 var _prow_until := {}
 var _spring_until := -1.0
-# Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps.
+# Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps. Cleared on run start and every attempt; a kill drops its entry.
 var _clamped := {}
 # The remembered cannon: committed volleys ({family, hazards, damage, source, struck,
 # expose, verb, window, and the commit's seed, target, centre, radius and phase}), how many it has committed (its seed counter),
 # and plate-exposed enemies (instance id -> {until, verb}) that take MindAttacks.BRACE_MULT
-# from any contact strike.
+# from any contact strike. _exposed clears on run start and every attempt; a kill drops its entry.
 var _cannon := []
 var _cannon_count := 0
 var _exposed := {}
@@ -1327,8 +1327,8 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.is_dead() or not in_ring(centre, radius, enemy):
 			continue
-		_hit(enemy, "claw", damage, ball - enemy.global_position, Weapons.CLAMP_KNOCK, "", "special", "clamp")
 		_clamped[enemy.get_instance_id()] = _clock + seconds
+		_hit(enemy, "claw", damage, ball - enemy.global_position, Weapons.CLAMP_KNOCK, "", "special", "clamp")
 		hit += 1
 	effects.ring(centre, radius, ClassDef.TARN_COLOR)
 	last_burst = {"at": centre, "radius": radius, "damage": damage, "hit": hit, "kind": "clamp"}
@@ -2462,6 +2462,8 @@ func _start_attempt() -> void:
 	_pinned.clear()
 	_prow_until.clear()
 	_primed.clear()
+	_clamped.clear()
+	_exposed.clear()
 	_spring_until = -1.0
 	_warden_slam_hits = 0
 	_cooldown = 0.0
