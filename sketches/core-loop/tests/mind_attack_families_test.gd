@@ -6,7 +6,7 @@ const Arena := preload("res://src/boss/arena.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 # The Mind's attack families (src/boss/mind_attacks.gd) over 200 seeded commits across
-# phases 1-3, the ball at seeded floor points: every warn is at least the adapt floor and
+# phases 1 to phase_cap(), the ball at seeded floor points: every warn is at least the adapt floor and
 # Hazard.MIN_WARN; every region stays on the floor; escape_point is never null, and the
 # real Hazards, stepped to LIVE, do not contain it; the plate's hit_mult floor holds for
 # every verb; phase k never emits a family above k.

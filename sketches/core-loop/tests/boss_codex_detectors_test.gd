@@ -17,8 +17,9 @@ const T := preload("res://tests/support/t.gd")
 # strike with the plate's verb fires no mind_plate and another contact verb does.
 #
 # Evidence limit: slams and strikes are enemy_struck emits, not ball contacts; hits are
-# TARGET calls; the ball is placed by the test, not steered. The built Mind never commits a
-# plate (MindAttacks.exposed caps at three families), so the plate check forces one.
+# TARGET calls; the ball is placed by the test, not steered. The plate check still forces a
+# plate so it stays deterministic; the real fight commits one on entering phase 4
+# (mind_plate_reach_test).
 
 const STATE_FRAMES := 90 * 10
 const CHUNK_FRAMES := 90 * 10
