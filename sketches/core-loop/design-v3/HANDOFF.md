@@ -2,6 +2,69 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 16 landed (2026-10-05, f7f0098)
+
+The wave 16 candidate cand/alpha-w16 landed as f7f0098 (proto/alpha went 91e36c6 to f7f0098; eight units plus a soak note, 21 commits over base by `git rev-list --count 91e36c6..f7f0098`). Heads are the unit heads in git; verdicts are the verifiers' and the coordinator's, 2026-10-05. Branches are deleted. Coordinator commits on the candidate: cedd6b2 (harpoon test helpers, W16-R1), b5d49d5 (kick rows, icons README), 6deebef (preview test tightening), c0d6b5a (empty --pilot), the merges, and the records commit. Codex Sol (gpt-6.1-sol high) wrote tally-look, cannon-look, the soak and two read-only reviews; the coordinator committed its files.
+
+**Milestone:** M4 (alpha) follow-through: the wave 15 concerns list (camera kick leak, band coverage, test gaps), Tally's and the cannon's own look and sound, the six-pilot soak and its first stall fix, and the preview-pilot regression Sol found.
+
+| unit | branch | head | writer | verdict | note |
+|---|---|---|---|---|---|
+| test-gaps-w15 | wt/alpha-w16-test-gaps-w15 | dbc4e4c | sonnet (astack:hand) | PASS+NOTES (W16-R4) | tally echo test; _exposed/_clamped clears; stale comments; _check_rows split into _row_measures |
+| aim-rest (W16-1) | wt/alpha-w16-aim-rest | cedd6b2 | opus (astack:worker) + coordinator fix | FAIL (harpoon_line 4, harpoon_canon 62 red: test helpers posed the lens only), then admitted under W16-R1/R2/R3 | shots aim from chase_camera.aim_origin() (the lens rest); kick and shake no longer reach the simulation; camera_aim_rest_test 23 |
+| tally-look | wt/alpha-w16-tally-look | 9339e9b | Codex Sol (gpt-6.1-sol high), coordinator commit | PASS | motif D4 E4 F4 G4 D5, release/ready/break, seven icons, square shape, Ledger Cream reads +0.094 luminance over TALLY_COLOR; tally_look_test 61 |
+| cannon-look | wt/alpha-w16-cannon-look | ebb6608 | Codex Sol (gpt-6.1-sol high), coordinator commit | PASS | motif B E G D (Mind quote, four notes), lane shape, Old Verdigris; cannon_look_test 92 |
+| band-pilot-pins (W16-2) | wt/alpha-w16-band-pilot-pins | c0d6b5a | opus (astack:worker) + coordinator fix | PASS+NOTES (W16-R8) | band tests name the pilot per seed; bot_run --pilot; mutants 1-3 red; w23 table re-recorded with Sable and the cannon rows; empty --pilot= rejected (c0d6b5a) |
+| preview-pilot (W16-R5) | wt/alpha-w16-preview-pilot | 6deebef | opus (astack:worker) + coordinator test tightening | PASS+NOTES | HeroAssets.fit_pilot_into shared by gameplay and ClassPreview; Tally shows Rivet, the cannon shows Kest; class_preview_pilot_test 27 |
+| sable-climb (W16-R7) | wt/alpha-w16-sable-climb | 1ff6714 | opus (astack:worker) | FAIL (seed 24 still stalled: stale plant face), then PASS+NOTES after round 2 | engineer plant yields to the fight climb and drops its seek to idle; seeds 6/12/18/24 win stage 6, controls 3/5 win; bot_plant_climb_test 6 |
+| soak-six | wt/alpha-w16-soak-six | d300eca | Codex Sol (gpt-6.1-sol high), coordinator commit | n/a (evidence) | 72 runs on 91e36c6: 39 wins, 32 stalls, 1 wall cap, 0 crashes, 0 script errors; design-v3/soak-2026-10-05-six.md; evidence under artifacts/local/alpha/soak/2026-10-05-six |
+
+Cause of each review red: aim-rest, brief (AS BUILT said the harpoon tests were unaffected by D3); sable-climb round 1, writer (guard left a stale plant face steering); Sol look review FAIL (preview pilot), pre-existing design gap exposed by the new shell/pilot pairings, counted as writer for tally-look/cannon-look's missing preview assertion.
+
+### Sol lane (Codex gpt-6.1-sol high, headless `codex exec`)
+
+Four lanes ran beside the Claude units: tally-look and cannon-look (writers), a read-only cross-unit look review over 91e36c6..ebb6608 (FAIL: the preview-pilot finding above, the icons README count, and an audio_board sandbox write denial read as env), and the six-pilot soak. A fifth read-only lane diagnosed the soak's Sable stage 6 cluster (hypothesis a, bot driver; the plant routine overrode the climb steer) and proposed the guard the sable-climb unit shipped. Sol's reviews cite path:line and were checked by the coordinator before acting.
+
+### Gate story
+
+Candidate cand/alpha-w16. Gate 1 ran on f52fb01 (every unit merged): 419 runs, 8 at a time, 25 solo, 0 reds, 7 skips (ACE package absent in the worktree, headless audio), 1818 s; receipt artifacts/local/receipts/gate-db1a3a12a4d8-2026-10-05T23-03-12-264Z.json records head f52fb01, tree db1a3a12. After the gate one merge (f7f0098) added only design-v3/soak-2026-10-05-six.md, so there is no second full gate. The pre-merge candidate check (cand1.log, b5d49d5) ran 19 targeted tests, icons-diff 0 and lint 0. Gate logs under artifacts/local/alpha/wave16/. Gate read (f7f0098): ADMIT, PASS+NOTES, level 4 (Opus 5.5, scrapkeep-reviewer-medium; file-level fence check clean across all 54 changed files, line-level fences not checked; no SCRIPT ERROR or ERROR lines in the gate log). proto/alpha is fast-forwarded to the wave 16 records commit by the coordinator.
+
+### Export
+
+At f7f0098: tarball scrapkeep-core-loop-f7f0098.tar.gz 41.1 MiB, pack 78.6 MiB embedded, ACE_CHECK ready clips=8 streams=24, stems from the main checkout. Win proof won at stage 6, 38208 ticks, 102.11 s wall, skipper seed 1 (wave 15 was 34170 ticks; aim-rest moved the shots). Copied to artifacts/local/alpha/export/f7f0098/. Log artifacts/local/alpha/wave16/export1.log.
+
+### Rulings (coordinator, 2026-10-05; recorded in docs/decisions.tsv at the wave 16 records commit)
+
+- W16-R1 aim-rest: test-only fence extension; the three harpoon test _cam helpers pose the mount (lens rest), hold the SpringArm3D and reset the lens.
+- W16-R2 aim-rest a2: shake-only picture check accepted; kick scaling is covered by presentation_comfort_test.
+- W16-R3 posture_bands small/grown ratio 2.07 against a floor of 2.0 accepted after the aim change moved the grown median 14.5 percent.
+- W16-R4 test-gaps: _check_rows split into _row_measures accepted; the 420.0 literal (screens.gd CARD_MAX) stays a follow-up.
+- W16-R5 Sol look review FAIL opened the preview-pilot unit inside wave 16 instead of holding the look units.
+- W16-R6 soak: camper 0/24 at stage 1 is the policy holding position, not a defect; the Sable stage 6 cluster went to a Sol diagnosis and then a unit; Kest seed 14 wall cap, Tally seed 16 Brindle phase 2 stall and the drill_crew 'adds' classifier warning are wave 17 follow-ups.
+- W16-R7 sable-climb is a tool-only fix; game sources, posture numbers and "Keep ram racks posture" untouched.
+- W16-R8 band-pilot-pins notes: bot runs are not fully deterministic (world 2 seed 7 Tarn gave three stage-time sets across three runs); the posture_sweep.md seed 7 row is one sample.
+- Kick rows for Tally's cards and cannon_lane were added by the coordinator (b5d49d5) once aim-rest made a kick unable to move a shot.
+
+### Open after wave 16: wave 17 concerns
+
+1. Canonical M4 record (ALPHA-PLAN, BACKLOG, TRACKING, ADR) still reads wave 13 state; the HANDOFF holds waves 14-16.
+2. screens.gd CARD_MAX 420.0 literal in test-gaps (W16-R4).
+3. Soak follow-ups: the Warden charge stall is not Sable-only (Rivet seed 1 stage 6, Tarn seed 15 stage 6 climb, Kest seed 20 stage 5 climb; the sable-climb guard is gated on _engineer() and cannot touch them); Kest completionist seed 14 wall cap at stage 6 "two-hook second"; Tally skipper seed 16 Brindle phase 2 stall; combat.gd:686 drill_crew counted under 'adds' 4918 times in 72 runs.
+4. Bot run nondeterminism (W16-R8): stage 5 w23 has two of six runs just over the 128 s band top (median 109); if the band trips, widen or re-record rather than retune.
+5. Preview path has no missing-pilot-glb test; the preview seats bones at rest where gameplay also resets reactions.
+6. Only Sable, Rivet and Kest have generated cls_* portraits; Tarn, Tally and the cannon use the procedural class-row shape (Sol look review).
+7. Tally has no signature-move arm in ClassPreview._pose() (carried forward).
+8. Re-soak on the wave 16 head to measure the sable-climb effect across all policies; the 54 percent win rate above is on 91e36c6.
+9. Housekeeping: ~/.local/share/godot/app_userdata/core-loop holds about 220 pid-suffixed test run folders, 1.8 GB.
+
+### Hands checklist (never blocks; items 13-22 carry over from wave 15)
+
+23. Pick Tally and the cannon on class select: the preview seat shows Rivet's and Kest's pilots, not Sable's.
+24. Fire any pilot's shot while the camera shakes: the shot lands where the reticle rests, not where the shake put the lens.
+25. Hear Tally's climbing cards cash out and the cannon's B E G D chime; judge whether Tally still confuses with Sable.
+26. Eye Ledger Cream against Tally's accent (it is a lighter cream, separation by value only).
+27. Play Sable completionist-style to the stage 6 Warden shelf: the climb should hold without plant detours.
+
 ## Wave 15 landed (2026-10-05, cfb0a51)
 
 The wave 15 candidate cand/alpha-w15 landed as cfb0a51 (proto/alpha went 6fb7366 to cfb0a51; eleven units, 37 commits over base by `git rev-list --count 6fb7366..cfb0a51`). Heads below are the unit heads in git; verdicts are the verifiers' and the coordinator's, 2026-10-05. Branches are deleted. Coordinator commits on the candidate: 28faf37, 7251802, 8c4cfcc, 4eaef7c, cfb0a51; f625173 was written by the tally-kit worker under rulings R1-R5; e24042f (tree_bot header) is a coordinator commit on the wave 15 base.
