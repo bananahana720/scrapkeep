@@ -12,6 +12,7 @@ import {
   buildReceipt,
   commandFor,
   DEFAULT_RUNS,
+  EXPORT_TIMEOUT_MS,
   flakePasses,
   flakeRate,
   MAX_FLAKE_RATE,
@@ -85,11 +86,17 @@ async function fixture(fn) {
 
 // Rule: parse explicit flags, require positive integral repetition counts, reject typos.
 test("argument parsing defaults and validation", () => {
-  assert.deepEqual(parseArgs([]), { dryRun: false, runs: DEFAULT_RUNS });
+  assert.deepEqual(parseArgs([]), {
+    dryRun: false,
+    runs: DEFAULT_RUNS,
+    export: false,
+  });
   assert.deepEqual(parseArgs(["--dry-run", "--runs", "4"]), {
     dryRun: true,
     runs: 4,
+    export: false,
   });
+  assert.equal(parseArgs(["--export"]).export, true);
   for (const value of [
     undefined,
     "0",
@@ -418,6 +425,24 @@ test("CLI dry-run never launches Godot", () => {
   assert.match(result.stdout, /does\/not\/exist\/nightly-godot/);
   assert.match(result.stdout, /item fuzz/);
   assert.match(result.stdout, /GPU perf/);
+  assert.doesNotMatch(result.stdout, /^export win proof/m);
+  const exported = spawnSync(
+    process.execPath,
+    ["scripts/sketch-nightly.mjs", "--dry-run", "--runs", "1", "--export"],
+    {
+      encoding: "utf8",
+      env: { ...process.env, GODOT_BIN: "/does/not/exist/nightly-godot" },
+    },
+  );
+  assert.equal(exported.status, 0, exported.stderr);
+  assert.match(
+    exported.stdout,
+    /export win proof: .*sketch-export\.mjs" "--win-proof"/,
+  );
+  assert.doesNotMatch(
+    exported.stdout,
+    /does\/not\/exist\/nightly-godot" "--headless" "--path" "[^"]*" "--rendering/,
+  );
 });
 
 // Rule: artifacts must describe the exact bot seed and complete fuzz workload.
@@ -549,3 +574,135 @@ test("empty receipt is red and contains no fabricated flake rate", () => {
     fails: 0,
   });
 });
+
+// Rule: the export win proof is opt-in, runs right after import, alone and unrendered.
+test("export step is opt-in, first after import, alone and unrendered", async () =>
+  fixture(({ outDir }) => {
+    const build = (opts, imported) =>
+      buildPlan(opts, { scripts, baseline, outDir, imported });
+    const exportOptions = { ...options, export: true };
+    assert.equal(
+      build(options, true).filter((s) => s.kind === "export").length,
+      0,
+    );
+    const plan = build(exportOptions, true);
+    assert.equal(plan.filter((s) => s.kind === "export").length, 1);
+    assert.equal(plan[0].kind, "export");
+    assert.equal(plan[0].command, process.execPath);
+    assert.deepEqual(plan[0].args, [
+      path.resolve("scripts/sketch-export.mjs"),
+      "--win-proof",
+    ]);
+    assert.equal(plan[0].render, false);
+    assert.equal(plan[0].timeout_ms, EXPORT_TIMEOUT_MS);
+    const withImport = build(exportOptions, false);
+    assert.equal(withImport[0].kind, "import");
+    assert.equal(withImport[1].kind, "export");
+    assert.equal(plan.filter((s) => s.kind === "bot").length, 3 * BOT_SEEDS);
+  }));
+
+// Rule: an export without a won win proof line is never green, in any line order.
+test("export artifacts require a won win proof", () => {
+  const out = [
+    "win proof: won at stage 6, 900 ticks, 90 s wall, policy skipper seed 1, pack /x/p.pck",
+    "package: /x/p.tar.gz",
+    "version: v1",
+    "executable: /x/game",
+  ].join("\n");
+  assert.deepEqual(artifacts({ kind: "export" }, out), {
+    export: {
+      version: "v1",
+      package: "/x/p.tar.gz",
+      executable: "/x/game",
+      win_proof:
+        "won at stage 6, 900 ticks, 90 s wall, policy skipper seed 1, pack /x/p.pck",
+    },
+  });
+  assert.throws(
+    () => artifacts({ kind: "export" }, "win proof: died at stage 2\n"),
+    /won win proof/,
+  );
+  assert.throws(() => artifacts({ kind: "export" }, ""), /won win proof/);
+});
+
+// Rule: the receipt carries the export result and a failed export turns it red.
+test("fake export run reports in the receipt and a failing export is red", async () =>
+  fixture(async ({ outDir }) => {
+    const exportOptions = { ...options, export: true };
+    const plan = buildPlan(exportOptions, {
+      scripts,
+      baseline,
+      outDir,
+      imported: true,
+    });
+    const run = (runner, opts = exportOptions, p = plan) =>
+      runNightly(opts, {
+        plan: p,
+        git,
+        startedAt,
+        outDir,
+        runner,
+        readArtifacts: (step) =>
+          step.kind === "export"
+            ? { export: { win_proof: "won at stage 6" } }
+            : data(step),
+        log: () => {},
+      });
+    const green = await run(passingRunner);
+    assert.equal(green.exit, 0);
+    assert.equal(green.receipt.export.win_proof, "won at stage 6");
+    const red = await run(async (step) =>
+      step.kind === "export"
+        ? { code: 1, output: "sketch:export FAIL: export failed\n" }
+        : passingRunner(step),
+    );
+    assert.equal(red.exit, 1);
+    assert.equal(
+      red.receipt.results.find((r) => r.kind === "export").ok,
+      false,
+    );
+    const plain = buildPlan(options, {
+      scripts,
+      baseline,
+      outDir,
+      imported: true,
+    });
+    const off = await run(passingRunner, options, plain);
+    assert.equal(off.receipt.export, null);
+  }));
+
+// Rule: the export step sees the real templates through the isolated data home.
+test("export step links real templates into the isolated data home", async () =>
+  fixture(async ({ outDir }) => {
+    const realData = mkdtempSync(
+      path.join(os.tmpdir(), "sketch-nightly-data-"),
+    );
+    const saved = process.env.XDG_DATA_HOME;
+    try {
+      mkdirSync(path.join(realData, "godot/export_templates/4.7.2.stable"), {
+        recursive: true,
+      });
+      process.env.XDG_DATA_HOME = realData;
+      const step = {
+        kind: "export",
+        command: process.execPath,
+        args: [
+          "-e",
+          "const fs=require('fs');console.log(process.env.XDG_DATA_HOME);console.log(fs.existsSync(process.env.XDG_DATA_HOME+'/godot/export_templates/4.7.2.stable'))",
+        ],
+        state_dir: outDir,
+      };
+      const linked = await runProcess(step, 5000);
+      assert.ok(linked.output.includes(path.join(outDir, "state/data")));
+      assert.match(linked.output, /true/);
+      const plain = await runProcess(
+        { ...step, kind: "tool", state_dir: path.join(outDir, "other") },
+        5000,
+      );
+      assert.match(plain.output, /false/);
+    } finally {
+      if (saved === undefined) delete process.env.XDG_DATA_HOME;
+      else process.env.XDG_DATA_HOME = saved;
+      rmSync(realData, { recursive: true, force: true });
+    }
+  }));
