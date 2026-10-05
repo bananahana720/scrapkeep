@@ -16,6 +16,8 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
 # Music comes from the stage row and the world's boss row, not from stage numbers and the
 # literal "brindle" (src/presentation/audio.gd), so every row in today's game sounds as it
@@ -57,6 +59,7 @@ var _made: Array = []
 
 func _initialize() -> void:
 	_row_checks()
+	_world_entry_checks()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -141,6 +144,62 @@ func _row_checks() -> void:
 	arena._boss_track()
 	_t.eq("missing boss track warns once", arena.warnings.size(), 1)
 
+
+
+# Crossing into a world plays its stinger on the beat, pitched by the bank's step table:
+# one request per emit, a distinct sound per world, in the lane after the run's stinger
+# and before the stage's, and still on a launch whose landing replaces the stage hit.
+func _world_entry_checks() -> void:
+	var row: Dictionary = EventKinds.ROWS["world_entered"]
+	_t.eq("world row names the world stinger", row["sound"], SfxBank.WORLD_STINGER)
+	_t.eq("world row priority", int(row["priority"]), 3)
+	_t.check("world row is not a quiet grammar signal", not EventKinds.GRAMMAR_SIGNALS.has("world_entered"), str(EventKinds.GRAMMAR_SIGNALS))
+	var audio := _director(StageDefs)
+	audio.sound_ready = true
+	var events = audio.ctx.events
+	var asked := func() -> Array:
+		return audio.cue_log.filter(func(cue: Array): return cue[0] == "world_entered")
+	var counts: Array = []
+	for world in [1, 2, 3]:
+		events.world_entered.emit(world)
+		audio._flush_flow()
+		audio._flush_flow()
+		counts.append(asked.call().size())
+	var cues: Array = asked.call()
+	_t.eq("one world request per emit", counts, [1, 2, 3])
+	var sounds := {}
+	for cue in cues:
+		sounds[cue[1]] = true
+	_t.eq("three distinct world requests", sounds.size(), 3)
+	_t.check("world requests are on a beat", cues.all(func(cue: Array): return cue[2] == "beat" and int(cue[3]) >= 0), str(cues))
+	_t.eq("world one requests the row sound", cues[0][1], row["sound"])
+	_t.check("every world sound is a baked grid stinger", sounds.keys().all(func(id: String): return SfxBank.has_recipe(id) and SfxBank.STINGER_BEATS.has(id)), str(sounds.keys()))
+
+	var starts := func(kind: String) -> Array:
+		return audio.cue_log.filter(func(cue: Array): return cue[0] == kind and cue[2] == "beat").map(func(cue: Array): return int(cue[3]))
+	audio.cue_log.clear()
+	events.run_started.emit("sable")
+	events.world_entered.emit(1)
+	events.stage_entered.emit(1, false)
+	audio._flush_flow()
+	var run: Array = starts.call("run_started")
+	var at: Array = starts.call("world_entered")
+	_t.check("run start: world stinger after the run's", run.size() == 1 and at.size() == 1 and at[0] > run[0], "run %s, world %s" % [run, at])
+	audio.cue_log.clear()
+	events.world_entered.emit(2)
+	events.stage_entered.emit(3, false)
+	audio._flush_flow()
+	at = starts.call("world_entered")
+	var stage: Array = starts.call("stage_entered")
+	_t.check("new world: world stinger before the stage's", at.size() == 1 and stage.size() == 1 and at[0] < stage[0], "world %s, stage %s" % [at, stage])
+	audio.cue_log.clear()
+	audio._launch_armed = true
+	events.world_entered.emit(3)
+	events.stage_entered.emit(5, false)
+	audio._flush_flow()
+	_t.check("launch landing: world stinger sounds, stage hit left to the landing",
+		starts.call("world_entered").size() == 1 and starts.call("stage_entered").is_empty(), str(audio.cue_log))
+	audio._disarm_launch()
 
 
 # A stage table whose rows name packages the module does not have.
