@@ -27,6 +27,7 @@ func _initialize() -> void:
 	t = T.new("audio_title_summary_test")
 	var first := _title_then_won()
 	_lost_then_stage()
+	_won_without_sound()
 	var second := _title_then_won()
 	t.check("two runs with the same inputs log the same events", first == second,
 		"%d and %d events" % [first.size(), second.size()])
@@ -99,5 +100,21 @@ func _lost_then_stage() -> void:
 	_step(audio, 2)
 	t.check("a stage start leaves the menu track", engine.track == "level" and engine.mode == MusicEngine.PLAY,
 		"track %s mode %d" % [engine.track, engine.mode])
+	(audio as Node).free()
+	(events as Node).free()
+
+
+func _won_without_sound() -> void:
+	var rig := _rig()
+	var events = rig["events"]
+	var engine: MusicEngine = rig["engine"]
+	var audio = rig["audio"]
+	audio.sound_ready = false
+	events.run_ended.emit(true)
+	_step(audio, 6)
+	t.check("a won run before sound is ready hands the music to IDLE", engine.mode == MusicEngine.IDLE,
+		"mode %d" % engine.mode)
+	t.check("a won run before sound is ready queues no summary theme", _menu_logs(engine, "summary") == 0,
+		"%d summary menu logs" % _menu_logs(engine, "summary"))
 	(audio as Node).free()
 	(events as Node).free()

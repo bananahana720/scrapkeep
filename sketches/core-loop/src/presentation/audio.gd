@@ -1894,17 +1894,18 @@ func _flush_flow() -> void:
 					engine.schedule_cadence(start)
 			"end":
 				_ace_end()
-				if item[1]:
-					var start := on_beat("run_ended", 0.0, true)
-					if start >= 0:
-						engine.schedule_cadence(start + Harmony.BAR)
-						engine.schedule_mode(start + Harmony.BAR * 3, MusicEngine.IDLE)
-						engine.menu_theme("summary", true, start + Harmony.BAR * 3)
+				var won: bool = item[1]
+				var start := on_beat("run_ended", 0.0, true) if won else -1
+				if start >= 0:
+					engine.schedule_cadence(start + Harmony.BAR)
+					engine.schedule_mode(start + Harmony.BAR * 3, MusicEngine.IDLE)
+					engine.menu_theme("summary", true, start + Harmony.BAR * 3)
 				else:
+					# on_beat returns -1 until sound is ready, so this is the guarded handoff for both outcomes.
 					var at := engine.next_beat()
 					engine.schedule_mode(at, MusicEngine.IDLE)
 					if sound_ready:
-						engine.menu_theme("summary", false, at)
+						engine.menu_theme("summary", won, at)
 			"dead":
 				_ace_end()
 				_disarm_launch()
