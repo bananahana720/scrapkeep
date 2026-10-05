@@ -93,6 +93,13 @@ const LINE_REACH := 50.0
 const DROP_MEMORY := 6.0
 const RUNUP := 24.0
 const RUNUP_SECONDS := 3.2
+# A runup stays on the target's shelf: the ground RUNUP_EDGE past the runup point may sit at
+# most RUNUP_DROP below the target's, else the runup shortens in RUNUP_STEP down to RUNUP_MIN.
+# The ball overshoots the point, so a runup to a shelf's rim ends on the deck below.
+const RUNUP_EDGE := 6.0
+const RUNUP_DROP := 2.0
+const RUNUP_STEP := 2.0
+const RUNUP_MIN := 8.0
 const AIM_REACH := 40.0
 const WAYPOINT_REACHED := 9.0
 const WAYPOINT_SECONDS := 14.0
@@ -1290,13 +1297,27 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 				if away.length() < 0.5:
 					away = Vector3(rng.randf_range(-1.0, 1.0), 0.0, rng.randf_range(-1.0, 1.0))
 				away = away.normalized().rotated(Vector3.UP, rng.randf_range(-0.7, 0.7))
-				_runup_point = _ground_point(at.x + away.x * RUNUP, at.z + away.z * RUNUP)
+				var run := RUNUP
+				while run > RUNUP_MIN and not _runup_on_shelf(at, away, run):
+					run -= RUNUP_STEP
+				_runup_point = _ground_point(at.x + away.x * run, at.z + away.z * run)
 		"runup":
 			_runup_time += delta
 			if _flat(ball, _runup_point) < 4.0 or _runup_time > RUNUP_SECONDS:
 				_fight_phase = "charge"
 	var steer: Vector3 = at if _fight_phase == "charge" else _runup_point
 	_act(steer, aim, delta, target)
+
+
+# Whether the ground RUNUP_EDGE past the runup point and to either side of it is level with the
+# target's: the ball turns round there, so a bridge or a rim beside it drops it to the deck.
+func _runup_on_shelf(at: Vector3, away: Vector3, run: float) -> bool:
+	var floor_y: float = _ground_point(at.x, at.z).y
+	var side := away.cross(Vector3.UP)
+	for offset in [away * (run + RUNUP_EDGE), away * run + side * RUNUP_EDGE, away * run - side * RUNUP_EDGE]:
+		if _ground_point(at.x + offset.x, at.z + offset.z).y < floor_y - RUNUP_DROP:
+			return false
+	return true
 
 
 # Slams beside a caps Warden: a slam landing within 2.6 m of a cap meets plating 0.
