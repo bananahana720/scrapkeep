@@ -59,10 +59,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 
 func exit_arena() -> void:
 	_clear_attacks()
-	for hand in hands:
-		if is_instance_valid(hand):
-			hand.queue_free()
-	hands.clear()
+	_free_hands()
 	super()
 
 
@@ -92,6 +89,7 @@ func _publish_posture() -> void:
 
 func _on_warden_died(at: Vector3, scrap: int) -> void:
 	_clear_attacks()
+	_free_hands()
 	super(at, scrap)
 
 
@@ -100,8 +98,8 @@ func _commit_attack() -> void:
 	var center := pad.global_position if is_instance_valid(pad) else warden.global_position
 	center.y = _top()
 	attack_count += 1
-	var descriptors: Array = MindAttacks.commit_any(attack_count * 7919 + ctx.run.stage, ball, center, phase)
-	if MindAttacks.escape_point(descriptors, ball, ctx.tuning.f("cruise"), center) == null:
+	var descriptors: Array = MindAttacks.commit_any(attack_count * 7919 + ctx.run.stage, ball, center, phase, PAD_RADIUS)
+	if MindAttacks.escape_point(descriptors, ball, ctx.tuning.f("cruise"), center, PAD_RADIUS) == null:
 		push_warning("mind: attack %d leaves no escape point" % attack_count)
 	var laid: Array = []
 	for d in descriptors:
@@ -112,7 +110,7 @@ func _commit_attack() -> void:
 		_family = String(d["family"])
 		if d.has("verb"):
 			_plate_verb = String(d["verb"])
-		ctx.events.boss_attack_telegraphed.emit(String(d["id"]), float(d["warn"]))
+		ctx.events.boss_attack_telegraphed.emit(String(d["id"]), h.warn_seconds)
 	attacks.append({"hazards": laid, "family": _family, "landed": false})
 
 
@@ -138,6 +136,13 @@ func _step_attacks(delta: float) -> void:
 		else:
 			kept.append(attack)
 	attacks = kept
+
+
+func _free_hands() -> void:
+	for hand in hands:
+		if is_instance_valid(hand):
+			hand.queue_free()
+	hands.clear()
 
 
 func _clear_attacks() -> void:
