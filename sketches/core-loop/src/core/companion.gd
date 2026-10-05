@@ -5,6 +5,7 @@ extends RefCounted
 # assemble() runs at intermission. Run state consumes the escape corridor after a
 # survived low-hull hit; it never revives and never
 # spends or refills a retry; the ready/spent flag is what the body and chirp cues will show.
+# Combat (combat.gd) runs the conductive primer and the ram brace while they are seated.
 
 const CHASSIS := "spil9"
 const SOCKETS := 2
@@ -27,15 +28,15 @@ const PIECES := [
 	{"id": "primer_mesh", "family": CONDUCTIVE_PRIMER, "name": "Conductive Mesh",
 		"effect": "Shots prime a foe; your next ram, slam or special on it arcs to two neighbours."},
 	{"id": "ram_prow", "family": RAM_BRACE, "name": "Ram Prow",
-		"effect": "Ram hits stagger what they strike."},
+		"effect": "Ram hits shove foes out of their wind-up."},
 	{"id": "ram_spring", "family": RAM_BRACE, "name": "Brace Spring",
-		"effect": "A ram buffs your next shot after landing."},
+		"effect": "A landed ram makes your next shot hit harder."},
 	{"id": "escape_vent", "family": ESCAPE_CORRIDOR, "name": "Escape Vent",
 		"effect": "After a survived low-hull hit, opens a short escape lane once."},
 	{"id": "escape_rail", "family": ESCAPE_CORRIDOR, "name": "Corridor Rail",
 		"effect": "After a survived low-hull hit, shoves nearby foes clear once."},
 ]
-# The order run-found pieces arrive: the first two make a legal pair, and escape, the only family with an effect, comes first.
+# The order run-found pieces arrive: the first two make a legal pair, and escape comes first.
 const DROP_ORDER := ["escape_vent", "ram_prow", "primer_coil", "escape_rail", "ram_spring", "primer_mesh"]
 
 var owned: Array[String] = []
