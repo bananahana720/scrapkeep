@@ -4,7 +4,7 @@ About 30 to 40 minutes. One zone, one Warden, the slice table. This is the first
 
 ## Cold launch the exported alpha
 
-This is separate from the checkpoint 1 steps below. It checks that the packaged Linux build starts on its own, outside the project, with no Godot editor. Build 01aa202. About five minutes to the first run, then play as long as you like.
+This is separate from the checkpoint 1 steps below. It checks that the packaged Linux build starts on its own, outside the project, with no Godot editor. Build b9f9712. About five minutes to the first run, then play as long as you like.
 
 1. Open a terminal.
 
@@ -12,23 +12,23 @@ This is separate from the checkpoint 1 steps below. It checks that the packaged 
 
    ```bash
    mkdir -p ~/scrapkeep-cold
-   tar -xzf ~/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/export/01aa202/scrapkeep-core-loop-01aa202.tar.gz -C ~/scrapkeep-cold
+   tar -xzf ~/Projects/scrapkeep/artifacts/local/alpha/export/b9f9712/scrapkeep-core-loop-b9f9712.tar.gz -C ~/scrapkeep-cold
    ```
 
-3. Go into it and read the build's own sheet. Its first line must read `Scrapkeep core-loop alpha (01aa202)`.
+3. Go into it and read the build's own sheet. Its first line must read `Scrapkeep core-loop alpha (b9f9712)`.
 
    ```bash
-   cd ~/scrapkeep-cold/scrapkeep-core-loop-01aa202
+   cd ~/scrapkeep-cold/scrapkeep-core-loop-b9f9712
    cat HOW-TO-RUN.txt
    ```
 
 4. Launch with a fresh save folder. Your normal save is not touched, so skip the rename in step 4 of HOW-TO-RUN.txt. The first launch builds shaders and takes longer.
 
    ```bash
-   XDG_DATA_HOME="$HOME/.local/share/scrapkeep-cold-01aa202" ./core-loop.x86_64
+   XDG_DATA_HOME="$HOME/.local/share/scrapkeep-cold-b9f9712" ./core-loop.x86_64
    ```
 
-5. Check the title screen: amber **SCRAPKEEP: FIRST RUN** with the buttons Start, Help, Achievements and Settings. There is no Continue button. If you see Continue or New run, the save is not fresh: close the game and repeat step 4 exactly.
+5. Check the title screen: amber **SCRAPKEEP: FIRST RUN** with the buttons Start, Help, Achievements, Settings, Camp and Breath: hard. There is no Continue button, and no Companion button yet: Companion joins the row once a run finds your first companion piece. If you see Continue or New run, the save is not fresh: close the game and repeat step 4 exactly.
 
 6. Press H to read how to play, then close it. Press Space to start and pick any open pilot.
 
