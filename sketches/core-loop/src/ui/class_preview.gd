@@ -13,7 +13,8 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 # like a cannonball; Rivet sprints through a crowd with the laser firing, then blasts;
 # Kest lobs sticky charges, blinks out in smoke, draws the line and rides its own blast
 # up, then glides down on its vanes. The remembered cannon calls a lane, kicks back on a
-# split, plates, then rushes and rings the ground. The motion is scripted here, not the game's ball
+# split, plates, then rushes and rings the ground. Tally lays three ledger plates in a
+# climbing stair, hops them, spins up the flywheel and stamps the slam. The motion is scripted here, not the game's ball
 # and abilities, which need the whole run around them; the model, colours and shapes
 # are the game's (ring, chevron, burst, lane).
 

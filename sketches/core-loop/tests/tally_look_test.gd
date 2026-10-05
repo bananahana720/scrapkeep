@@ -247,6 +247,13 @@ func _check_ticks() -> void:
 
 func _check_preview() -> void:
 	var preview := ClassPreview.new(ClassDef.by_id("tally"))
+	for id in ["plate0", "plate1", "plate2", "surge", "stamp", "slam"]:
+		_t.check("preview " + id, preview._props.has(id), "has its own Tally prop")
+	_t.check("preview no borrowed props", not preview._props.has("lane") and not preview._props.has("post"), "no cannon lane or Sable post")
+	_t.eq("preview rest", ClassPreview.REST["tally"], 0.3)
+	for phase in [[0.5, "surge"], [0.78, "stamp"], [0.78, "slam"]]:
+		preview._pose(phase[0])
+		_t.check("preview visible " + phase[1], preview._props[phase[1]].visible, "visible at %.2f" % phase[0])
 	var props := ["plate0", "plate1", "plate2"]
 	preview._pose(0.3)
 	var climbing := props.filter(func(id): return preview._props[id].visible)
