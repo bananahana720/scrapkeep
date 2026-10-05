@@ -156,6 +156,7 @@ const PAY_BACKOFF := 6.0
 # The high ground goes first: a ball cannot climb back out of the trough, so a site on a shelf is
 # worked before the ones below it, ties nearest first. Sites are ranked by ground height in bands.
 const LEVEL_BAND := 8.0
+const PLATE_REACH := 30.0
 const CAMP_LAST := 1000.0
 # A site more than LEVEL_BAND above the ball is not rolled at straight: the cliff under its shelf
 # wedges the ball (the Reach camp stands 22 m over the trough). The way up is planned once on the
@@ -232,6 +233,7 @@ var _cache_phase := "runup"
 var _cache_clock := 0.0
 var _climb: Array[Vector3] = []
 var _climb_for := ""
+var _plate_hand := {}
 var _ignore_walls := false
 # Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
 var _seen := {}
@@ -311,6 +313,12 @@ func start(resume := false) -> void:
 	events.player_hit.connect(_on_player_hit)
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.special_used.connect(func(_id: String, _at: Vector3): _count("specials"))
+	events.world_fact.connect(func(fact: String, _at: Vector3):
+		if fact == "thermal_ride" and game.flow.in_stage():
+			_count("thermal_rides"))
+	events.slammed.connect(func(at: Vector3, _strength: float, _flatness: float):
+		if not _plate_hand.is_empty() and game.flow.in_stage() and _plate_contains(_plate_hand, at):
+			_count("plate_slams"))
 	events.mounted.connect(func(_at: Vector3, _banked: float): _count("plants"))
 	events.dismounted.connect(func(v: Vector3):
 		if v.length() > 0.5:
@@ -487,6 +495,7 @@ func _end(why: String) -> void:
 # --- bookkeeping -----------------------------------------------------------------------
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
+	_plate_hand = {}
 	_clear_chain_hand()
 	_close_note()
 	_stage = stage
@@ -521,7 +530,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
 		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
-		"specials": 0, "punch_short_s": 0.0}
+		"specials": 0, "punch_short_s": 0.0, "plate_slams": 0, "thermal_rides": 0}
 
 
 func _note_set(key: String, value) -> void:
@@ -1766,11 +1775,51 @@ func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
 
 # --- the hands: stick, mouse and buttons -----------------------------------------------
 
+static func _plate_contains(plate: Dictionary, ball: Vector3) -> bool:
+	var rect: Rect2 = plate["rect"]
+	return ball.x >= rect.position.x and ball.x <= rect.end.x and ball.z >= rect.position.y and ball.z <= rect.end.y
+
+
+func _plate_shortcut(steer: Vector3, ball: Vector3) -> Dictionary:
+	if not game.flow.in_stage() or ball.y - steer.y <= LEVEL_BAND or game.world.breach == null:
+		return {}
+	var chosen := {}
+	var nearest := PLATE_REACH
+	for plate in game.world.breach.plates:
+		if game.world.breach.breached(plate["id"]):
+			continue
+		var centre: Vector2 = (plate["rect"] as Rect2).get_center()
+		var at := Vector3(centre.x, ball.y, centre.y)
+		var distance := _flat(ball, at)
+		if distance <= nearest and _flat(at, steer) <= _flat(ball, steer):
+			chosen = plate
+			nearest = distance
+	return chosen
+
+
+func _inside_thermal(ball: Vector3) -> bool:
+	if not game.flow.in_stage() or not game.player.kit.on("glide"):
+		return false
+	var map = game.ctx.terrain.map()
+	if not "contraptions" in map:
+		return false
+	for spec in map.contraptions:
+		if spec["kind"] == "thermal" and Vector2(ball.x, ball.z).distance_to(spec["at"]) <= float(spec["radius"]):
+			return true
+	return false
+
+
 # Rolls toward steer and looks at aim (or along the way when there is nothing to aim
 # at). The stick is set in the camera's frame, as a person's WASD is.
 func _drive(steer: Vector3, aim, delta: float) -> void:
 	var player = game.player
 	var ball: Vector3 = player.ball_position()
+	_plate_hand = _plate_shortcut(steer, ball)
+	var on_plate := not _plate_hand.is_empty() and _plate_contains(_plate_hand, ball)
+	if not _plate_hand.is_empty():
+		var centre: Vector2 = (_plate_hand["rect"] as Rect2).get_center()
+		steer = Vector3(centre.x, ball.y, centre.y)
+	var thermal := _inside_thermal(ball)
 	var speed: float = player.planar_velocity().length()
 	if speed < STUCK_SPEED and player.state.grounded:
 		_slow_time += delta
@@ -1821,6 +1870,23 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		hold["harpoon_held"] = true
 	if _harpoon_commit:
 		hold["brake_held"] = true
+	if on_plate:
+		# Stay over the opening through the jump and landing, without a ground brake press.
+		hold["move"] = Vector2.ZERO
+		hold.erase("shift_held")
+		source.press.erase("shift_pressed")
+		if player.state.grounded:
+			source.press["jump_pressed"] = true
+		elif player.state.velocity.y < 2.0:
+			hold["brake_held"] = true
+	if thermal:
+		# Spend the air jump before glide can engage; a blink would leave the footprint.
+		hold.erase("shift_held")
+		source.press.erase("shift_pressed")
+		if player.state.grounded or player.state.air_actions > 0:
+			source.press["jump_pressed"] = true
+		elif player.state.velocity.y < 0.0 and not player.kit.slamming:
+			hold["jump_held"] = true
 	# Jump, boost and movement abilities cancel a committed body-line haul. Outside a boss
 	# the explorer's two-hook hand keeps them: it jumps and boosts off its lines on purpose.
 	var chain_hand: bool = policy == "completionist" and chain_hand_enabled and not _in_boss()
