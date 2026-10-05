@@ -2,9 +2,11 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
-## Wave 11 landed (candidate cand/alpha-w11 at 047c51c, gate not yet read)
+## Wave 11 landed (2026-10-05, 9b86eb7)
 
-The wave 11 candidate carries three worlds and six named zones end to end. Heads below are the unit heads in git; verdicts are the coordinator's, 2026-10-05, and the gate story waits for the gate.
+The wave 11 candidate carries three worlds and six named zones end to end. Heads below are the unit heads in git; verdicts are the coordinator's, 2026-10-05, and the gate story is below. proto/alpha went fe5d013 to 9b86eb7.
+
+**Milestone:** the full six-stage skipper seed 1 run won in 382.6 s game time, with the Mind defeated in 12.1 s. This is the first end-to-end three-world bot win.
 
 - table-swap-second-zones (wt/alpha-w11-table-swap-second-zones, 40c9c27): rows 4 and 6 run on dig_deep and highdraft_crown. Verdict: PASS+NOTES.
 - terrain-lazy-perf (wt/alpha-w11-terrain-lazy-perf, ee65af6): map-identity checks; perf test baselined. Verdict: PASS+NOTES (after the lint carve-out fix round; the perf test is in the L1 baseline).
@@ -34,22 +36,27 @@ The wave 11 candidate carries three worlds and six named zones end to end. Heads
 
 ### Open after wave 11
 
-- The gate story for the candidate, for the coordinator to record.
+- Gate story: candidate cand/alpha-w11. Gate 1 at 047c51c: 393 runs, 7 reds (audio_worlds stinger row, build_gate_props parked-stage colliders, run_resume_worlds deferred lambda ERROR, world_table placeholder pin, bot_stub_boss 120 s budget against the real Waking, bot_run_end crown stall, highdraft_warden_bot relic cache in runup). Fix rounds: crown-stall 2c3a8ef and e8fdbef (Opus), fixa a82fb32 (Sonnet), fixb bb073c7 (Opus), handoff fix 229582b (Sonnet). Gate 2 at 1ea5cb7: 394 runs, 1 red (spine_event_kinds priority-3 wording), fixed as 9b86eb7 with six targeted reruns; no third gate.
+- Soak: Bing Bong (Codex desktop) ran 48 runs on 08e12a4: skipper 5/16, completionist 3/16, camper 0/16 by design.
+- Wave 12 is in flight from 9b86eb7: w12-posture-bands (the held w23-posture-bands, 8e4a313, rerun on the new head), relics-sable-spread, run-prev-backup, stage5-gate-stall-seed2.
 - Stage 6 (the crown) is unbroken by the skipper bot on every seed; the world 3 boss is unreached in bot runs. Traced in wave 12 unit crown-stall. The w23 posture bands test is held on its branch until then.
 - Wave 12: spread two Sable relics onto the smash slot; keep the replaced run as run.json.prev; the seed 2 stall after the Warden break (bot defect).
 - Soak findings: design-v3/soak-2026-10-05.md.
 
-### Hands checklist (carried forward from wave 10; never blocks)
+### Hands checklist (never blocks)
 
-1. Play the title to RUN COMPLETE across three worlds.
-2. The Waking floor drops and the Mind brace by feel.
-3. Dig breach slam and Highdraft lift and ramps by hand.
-4. Music in fights.
-5. Cog versus mass glyph read.
-6. Hot-wire cues by ear.
-7. Physical gamepad.
-8. Cold launch of the exported Linux build.
-9. Ram-racks versus ram-shatters Warden comparison in the lab.
+1. Play the title to RUN COMPLETE through all three worlds.
+2. Hear the world stingers and the boss music sections.
+3. Read the cog and mass glyphs.
+4. Try the Highdraft ramps after a fall.
+5. Paste a second soak brief to Bing Bong on 9b86eb7.
+6. Physical gamepad.
+7. Cold launch of the exported build.
+
+### Lessons for briefs
+
+- A gate red whose cause is a parked stage's collider still standing for one physics tick: exclude other stages' colliders in physics sweeps (build_gate_props, wave 11).
+- A unit that adds a bus row's sound must edit event_kinds.gd in the same commit; a priority-3 flow row carries HUD or objective wording (spine_event_kinds).
 
 ## Wave 10 landed (2026-10-04, fe5d013)
 
