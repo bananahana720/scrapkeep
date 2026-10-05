@@ -156,8 +156,8 @@ func _build_shell() -> void:
 	_fit_pilot()
 
 
-# The game's pilot for this class (hero_assets.gd fit_pilot_into), held at rest: the
-# animator is stopped, no clip plays. Without one the shell's embedded pilot stays.
+# The game's pilot for this class (hero_assets.gd fit_pilot_into), seated the way
+# gameplay seats it between reactions: animator stopped, bones at rest pose.
 func _fit_pilot() -> void:
 	var fitted: Dictionary = _painter.fit_pilot_into(_pod, def.id, def.color)
 	if fitted.is_empty():
@@ -165,6 +165,8 @@ func _fit_pilot() -> void:
 	_pilot = fitted.pilot
 	if fitted.animator != null:
 		fitted.animator.stop()
+		for skeleton in _pilot.find_children("*", "Skeleton3D", true, false):
+			skeleton.reset_bone_poses()
 
 
 func _build_primitive_shell() -> void:
