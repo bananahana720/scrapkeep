@@ -1,0 +1,101 @@
+# smoke: solo (eight bot runs in child processes at once, each through its world's boss; a loaded machine slows them)
+extends SceneTree
+
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
+const T := preload("res://tests/support/t.gd")
+const Stage2 := preload("res://tests/alpha_posture_bands_test.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
+
+# World 2 (Dig, stages 3 and 4) and world 3 (Highdraft, stages 5 and 6) Wardens and bosses, played
+# by the skipper on tools/bot_run.gd --table=alpha (tools/posture_sweep.md, "World 2 and 3 Wardens
+# and bosses"). One process per seed and world: --from-stage=3 --until=4 ends as the world 2 boss's
+# victory enters stage 5; --from-stage=5 runs to the end of the run. A fight's seconds are the stage
+# clock at the break less the bot's turn to the Warden, as in the stage-2 test; a boss is its
+# defeated_s on the driver's boss clock (stepped sim time). The bands are fixed, not fit to results:
+# each Warden's median falls within 0.7 x to 1.6 x the stage-2 skipper window, and each boss's
+# median is under BOSS_CAP_S. A Warden that never breaks counts at the driver's stall limit, a boss
+# never beaten at the cap. Seeds 1 to 4 in the gate; the doc carries all eight from a tools run.
+const SEEDS := [1, 2, 3, 4]
+const WORLDS := {2: {"from": 3, "stages": [3, 4]}, 3: {"from": 5, "stages": [5, 6]}}
+const WARDEN_BAND_S := Vector2(0.7 * Stage2.REACH_SKIPPER_S.x, 1.6 * Stage2.REACH_SKIPPER_S.y)
+const WARDEN_CAP_S := BotDriver.STAGE_LIMIT
+const BOSS_CAP_S := 240.0
+
+
+func _initialize() -> void:
+	var t := T.new("alpha_posture_bands_w23_test")
+	var folder := OS.get_user_data_dir().path_join("alpha-posture-bands-w23-%d" % OS.get_process_id())
+	DirAccess.make_dir_recursive_absolute(folder)
+	var jobs := []
+	for world in WORLDS:
+		for run_seed in SEEDS:
+			var args := ["--out=" + folder.path_join("w%d-%d" % [world, run_seed]), "--policy=skipper",
+				"--seeds=%d" % run_seed, "--table=alpha", "--from-stage=%d" % WORLDS[world]["from"]]
+			if world == 2:
+				args.append("--until=4")
+			jobs.append({"script": "res://tools/bot_run.gd", "args": args})
+	var results := ChildRuns.run(jobs, 900.0)
+	_bands(t, folder, results)
+	if t.failures == 0:
+		_remove_tree(folder)
+	quit(t.verdict())
+
+
+func _record(folder: String, world: int, run_seed: int) -> Dictionary:
+	var path := folder.path_join("w%d-%d" % [world, run_seed]).path_join("bots.ndjson")
+	var line := FileAccess.get_file_as_string(path).split("\n", false)
+	var record = JSON.parse_string(line[0]) if not line.is_empty() else null
+	return record if record is Dictionary else {}
+
+
+# One fight's seconds per seed: the break less the bot's turn to the Warden, or the cap.
+func _fights(folder: String, world: int, stage: int) -> Array:
+	var out := []
+	for run_seed in SEEDS:
+		var fight := WARDEN_CAP_S
+		for note in _record(folder, world, run_seed).get("stages", []):
+			if int(note.get("stage", 0)) == stage and note.get("warden_broken_s") != null:
+				fight = float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0))
+		out.append(fight)
+	return out
+
+
+func _bosses(folder: String, world: int) -> Array:
+	var out := []
+	for run_seed in SEEDS:
+		var boss = _record(folder, world, run_seed).get("boss")
+		var defeated = boss.get("defeated_s") if boss is Dictionary else null
+		out.append(float(defeated) if defeated != null else BOSS_CAP_S)
+	return out
+
+
+static func _median(values: Array) -> float:
+	var sorted := values.duplicate()
+	sorted.sort()
+	return float(sorted[sorted.size() / 2]) if not sorted.is_empty() else -1.0
+
+
+func _bands(t, folder: String, results: Array) -> void:
+	for i in range(results.size()):
+		t.check("world bot run %d ran" % i, results[i]["code"] == 0 and not results[i]["timed_out"],
+			"exit %s, timed out %s" % [results[i]["code"], results[i]["timed_out"]])
+	for world in WORLDS:
+		for stage in WORLDS[world]["stages"]:
+			var fights := _fights(folder, world, stage)
+			var median := _median(fights)
+			print("stage %d Warden median %.2f s of %s" % [stage, median, fights])
+			t.check("stage %d skipper breaks its Warden in %.0f to %.0f s" % [stage, WARDEN_BAND_S.x, WARDEN_BAND_S.y],
+				median >= WARDEN_BAND_S.x and median <= WARDEN_BAND_S.y, "median %.2f s of %s" % [median, fights])
+		var bosses := _bosses(folder, world)
+		var boss_median := _median(bosses)
+		print("world %d boss median %.2f s of %s" % [world, boss_median, bosses])
+		t.check("world %d boss falls in under %.0f s" % [world, BOSS_CAP_S], boss_median < BOSS_CAP_S,
+			"median %.2f s of %s" % [boss_median, bosses])
+
+
+static func _remove_tree(path: String) -> void:
+	for sub in DirAccess.get_directories_at(path):
+		_remove_tree(path.path_join(sub))
+	for file in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(file))
+	DirAccess.remove_absolute(path)

@@ -180,3 +180,49 @@ npm run sketch:lint
 ```
 
 All five commands above exited 0. `posture_bands_test` printed `PASS (9 checks)` in 106.3 s, and `sketch:lint` passed in 0.3 s. Receipts and before/after comparisons are under `artifacts/local/posture-sweep-full-2026-10-04/`. The initial timing-wrapper attempt exited 127 before launching Godot because `/usr/bin/time` was absent; a Python wrapper recorded the successful runs' wall seconds and exit codes instead.
+
+## World 2 and 3 Wardens and bosses, 2026-10-04
+
+The four world 2 and world 3 Wardens (Dig upper bench reactor, plating 130, hp 950; Dig deep works swarm, 150 / 1100; Highdraft mind, 170 / 1250; Highdraft crown mind, 190 / 1400; posture `{curve 2.0, ram_shatters false}` on all four) and the two world bosses, played as they stand by the skipper on `tools/bot_run.gd --table=alpha`, one process per seed and world. World 2 runs start with `--from-stage=3 --until=4`, so a run ends as the world 2 boss's victory enters stage 5. World 3 runs start with `--from-stage=5` and run to the run's end. No `entrance.json` exists in a fresh `--out`, so each run starts normally and is then sent to the stage: the ball enters stage 3 and stage 5 at heft 1.0 (`warden_fight_heft` in the stage notes), not grown as in a full run. A fight is `warden_broken_s` less `warden_fight_s` from the `bots.ndjson` stage notes, as in "Alpha Wardens" above. A boss is its `defeated_s` on the driver's boss clock (stepped sim time, not wall time). A Warden never broken counts at the driver's 240 s stall limit (`STAGE_LIMIT`); a boss never beaten counts at the 240 s cap. Medians are the upper median of eight (the fifth value sorted), the same rule as the tests.
+
+The owner's ruling stands throughout: the Warden default stays "ram racks posture" (`ram_shatters` false; `docs/decisions.tsv`, 2026-10-04). These rows were measured as they are and nothing was tuned.
+
+Seeds 1 to 8, skipper, fight and boss seconds, outcome and wall seconds per process (16 processes at once):
+
+| Seed | Class | Stage 3 | Stage 4 | World 2 boss | World 2 run | Stage 5 | Stage 6 | World 3 boss | World 3 run |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | runner_gunner | 69.10 | 42.04 | 22.02 | until, 67.3 s | 97.84 | never (240) | not reached | stalled at 6, 140.2 s |
+| 2 | demolitions_caster | 67.51 | 48.95 | 21.33 | until, 77.5 s | 91.76 | never (240) | not reached | stalled at 6, 159.8 s |
+| 3 | tarn | 62.76 | 41.32 | 18.13 | until, 61.1 s | 98.50 | never (240) | not reached | stalled at 6, 134.7 s |
+| 4 | pylon_engineer | 68.90 | 40.59 | 24.43 | until, 63.6 s | 218.98 | never (240) | not reached | stalled at 6, 211.9 s |
+| 5 | runner_gunner | 77.78 | 44.20 | 15.32 | until, 69.1 s | 98.99 | never (240) | not reached | stalled at 6, 141.1 s |
+| 6 | demolitions_caster | 65.45 | 54.67 | 18.67 | until, 79.5 s | never (240) | not reached (240) | not reached | stalled at 5, 122.4 s |
+| 7 | tarn | 68.00 | 38.69 | 15.22 | until, 64.5 s | 122.02 | never (240) | not reached | stalled at 6, 146.7 s |
+| 8 | pylon_engineer | 71.44 | 38.09 | 22.50 | until, 65.3 s | never (240) | not reached (240) | not reached | stalled at 5, 137.1 s |
+| median | | 68.90 | 42.04 | 21.33 | | 122.02 | 240 | 240 | |
+
+Bands, fixed before the results: each Warden's median within 0.7 x to 1.6 x the stage-2 Reach skipper window (`REACH_SKIPPER_S` 30 to 80 s in `tests/alpha_posture_bands_test.gd`), so 21 to 128 s. This multiple is the w23 brief's reading of the plan, not a measured window. Each boss's median under 240 s.
+
+Band reading:
+
+- Stage 3 (68.9 s), stage 4 (42.0 s) and the world 2 boss (21.3 s) are inside their bands. World 2 holds neither a sponge nor a pushover for the skipper.
+- Stage 5 (122.0 s) is inside the band by 6 s, but only five of eight seeds broke it in time; seed 4 took 219 s, and seeds 6 and 8 stalled in the beacon state with the Warden unbroken.
+- Stage 6 misses: no seed broke the crown Warden in 240 s. All six that reached it stalled in the beacon state (`stall_state` "beacon"), with `wall_turns` 123 to 184 against 0.1 to 45 on the stage 5 fights that broke (153 and 55 on the two stage 5 stalls). The bot spent the stage turning off walls, so this may be a reach problem on the crown map rather than a sponge. That is an inference from the notes and was not traced.
+- The world 3 boss misses because no run reached it.
+
+Wall time for the eight-seed run was about 224 s (start 19:12:00, end 19:15:44 local). Load averages were 0.92 / 2.87 / 3.87 at start and 6.61 / 9.27 / 6.66 at end (1 / 5 / 15 minutes, 32 threads). The world 3 processes set the time: a run that stalls on stage 5 and then on stage 6 plays more than 480 game seconds.
+
+`tests/alpha_posture_bands_w23_test.gd` runs seeds 1 to 4 (eight processes) and checks the same bands. Its numbers for those seeds are the same as this table's. It took 189 s wall at load 2.44 at start. That is over the 180 s smoke budget, and the world 3 stalls set the time. It fails the stage 6 and world 3 boss checks until the crown Warden breaks.
+
+Commands from the worktree root:
+
+```sh
+G=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+"$G" --headless --path sketches/core-loop --import
+# one of each per seed s in 1..8, all at once
+"$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/w23-posture-bands-2026-10-04/w2-$s --policy=skipper --seeds=$s --table=alpha --from-stage=3 --until=4
+"$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/w23-posture-bands-2026-10-04/w3-$s --policy=skipper --seeds=$s --table=alpha --from-stage=5
+"$G" --headless --path sketches/core-loop --script res://tests/alpha_posture_bands_w23_test.gd
+```
+
+These are bot combat bands. They do not establish human feel.
