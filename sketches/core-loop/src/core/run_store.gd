@@ -127,6 +127,54 @@ func save(doc: Dictionary) -> String:
 	return ""
 
 
+# A new run is about to replace the saved one: its bytes go to "<path>.prev", over an older
+# .prev. Only a readable run of this build's schema range is copied; a missing, ended,
+# unreadable or newer-schema file writes nothing. Never touches path, the held document or
+# the generation. False, with last_error, when the copy could not be written.
+func keep_prev() -> bool:
+	last_error = ""
+	var read := _read()
+	if read["state"] != "ok":
+		return true
+	var err := SafeStore.write_atomic(path + ".prev", read["bytes"].get_string_from_utf8())
+	if err != OK:
+		last_error = "could not keep the old run as %s.prev: %s" % [path, error_string(err)]
+		return false
+	return true
+
+
+# Swaps "<path>.prev" back in as the saved run, one generation past the larger of the two
+# files so the generation on disk never goes down; the run it replaces becomes .prev (or .prev
+# is removed when there was none). The held document is forgotten, so the next load() reads
+# the restored run. False, with last_error, when .prev is missing, is not a run document, or a
+# write fails.
+func restore_prev() -> bool:
+	last_error = ""
+	var prev = get_script().new(path + ".prev")
+	var back: Dictionary = prev._read()
+	if back["state"] != "ok":
+		last_error = "no run to restore from %s.prev: %s" % [path, back.get("why", back["state"])]
+		return false
+	var current := _read()
+	var generation := maxi(int(back["generation"]), int(current.get("generation", 0))) + 1
+	var file_doc := {"schema": SCHEMA, "generation": generation, "run": back["run"]}
+	var err := SafeStore.write_atomic(path, JSON.stringify(file_doc, "  ", true, true))
+	if err != OK:
+		last_error = "could not write %s: %s" % [path, error_string(err)]
+		return false
+	_doc = {}
+	_generation = 0
+	refusal = ""
+	if current["state"] == "ok":
+		var kept := SafeStore.write_atomic(path + ".prev", current["bytes"].get_string_from_utf8())
+		if kept != OK:
+			last_error = "restored the run but could not keep the replaced one as %s.prev: %s" % [path, error_string(kept)]
+			return false
+	else:
+		DirAccess.remove_absolute(path + ".prev")
+	return true
+
+
 # The run ended: a readable file becomes a tombstone one generation past the newest seen, so
 # a stale store's save is refused (run_ended); a missing file stays missing, and an
 # unreadable or newer-schema file is removed (the way out of a newer-schema refusal). Forgets
