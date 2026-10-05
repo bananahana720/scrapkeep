@@ -6,9 +6,11 @@ const Gorge := preload("res://src/world/map_gorge.gd")
 const Reach := preload("res://src/world/map_reach.gd")
 const Dig := preload("res://src/world/map_dig.gd")
 const Highdraft := preload("res://src/world/map_highdraft.gd")
+const DigDeep := preload("res://src/world/map_dig_deep.gd")
+const HighdraftCrown := preload("res://src/world/map_highdraft_crown.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
-const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach, "dig": Dig, "highdraft": Highdraft}
+const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach, "dig": Dig, "highdraft": Highdraft, "dig_deep": DigDeep, "highdraft_crown": HighdraftCrown}
 
 # Owned by writer D (world). The spine reads only the terrain API block below.
 #
