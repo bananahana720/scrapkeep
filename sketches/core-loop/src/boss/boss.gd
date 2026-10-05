@@ -79,7 +79,7 @@ func setup(ctx_ref) -> void:
 	else:
 		ctx.set_meta("boss", self)
 	if ctx.codex != null and ctx.codex.has_method("declare"):
-		for entry in CodexEntries.ENTRIES:
+		for entry in CodexEntries.all():
 			var declared: Dictionary = entry.duplicate()
 			declared["category"] = CodexEntries.CATEGORY
 			ctx.codex.declare(declared)

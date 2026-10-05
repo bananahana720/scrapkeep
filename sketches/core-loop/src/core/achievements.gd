@@ -30,10 +30,10 @@ const ROWS := {
 		"count": 1, "reward": {"cosmetic": "paint_any_night"}},
 	"brindle_routed": {"name": "Brindle Routed", "text": "Rout Admiral Brindle.", "on": "enemy_killed",
 		"where": {"kind": "brindle"}, "count": 1, "reward": {"pilot": "tarn"}},
-	# Dormant until the world-one rescue emits rescue_completed("rivet"); Rivet stays a starter meanwhile.
+	# rescue_site.gd emits rescue_completed("rivet"); Rivet is also a starter, so the row records the rescue.
 	"rivet_rescued": {"name": "Runner Rescued", "text": "Rescue the stranded runner in world one.", "on": "rescue_completed",
 		"where": {"quest_id": "rivet"}, "count": 1, "reward": {"pilot": "runner_gunner"}},
-	# Dormant until the dig rescue emits rescue_completed("dig"); Kest stays locked meanwhile.
+	# rescue_site.gd emits rescue_completed("dig") for this quest.
 	"dig_rescued": {"name": "Digger Rescued", "text": "Rescue the buried digger.", "on": "rescue_completed",
 		"where": {"quest_id": "dig"}, "count": 1, "reward": {"pilot": "demolitions_caster"}},
 	"kills_100": {"name": "Hundred Down", "text": "Break 100 machines across all your runs.", "on": "enemy_killed",

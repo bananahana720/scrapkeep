@@ -59,14 +59,14 @@ const WAKING := [
 	{
 		"id": WAKING_BREACH_SLAM, "name": "Knock Downstairs",
 		"hint": "A ceiling can deliver more than dust.",
-		"clue": "a marked breach floor + a slam onto the Waking below",
-		"text": "Slam through a marked floor and land the breach attack on the Waking beneath it.",
+		"clue": "a dropped floor + a slam on the Waking within two seconds",
+		"text": "Slam the Waking within two seconds of a floor dropping out from under the fight.",
 	},
 	{
 		"id": WAKING_FLOOR_CHAIN, "name": "Repeat Descent",
 		"hint": "The first broken floor is only the beginning.",
-		"clue": "successive Waking floors + a breach slam on each",
-		"text": "Keep the descent going by breaching successive floors as the Waking fight moves downward.",
+		"clue": "breach slams on two different Waking floors",
+		"text": "Land breach slams on two different floors as the Waking sinks, the pit included.",
 	},
 	{
 		"id": WAKING_FINAL_FLOOR, "name": "Rock Bottom",
@@ -98,8 +98,8 @@ const MIND := [
 	{
 		"id": MIND_PLATE, "name": "Second Tool",
 		"hint": "A guarded answer leaves another question open.",
-		"clue": "the Mind's plate brace + a different contact verb during its weak window",
-		"text": "Hit the open weak point with a contact verb different from the one the Mind's plate has braced against.",
+		"clue": "the Mind's plate + a different contact verb on its staggered Warden",
+		"text": "While the plate's window is open and the Warden is staggered, hit it with a contact verb other than the one the plate braced.",
 	},
 ]
 

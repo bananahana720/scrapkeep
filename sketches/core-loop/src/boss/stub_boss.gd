@@ -4,6 +4,7 @@ const Warden := preload("res://src/combat/warden.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const CodexEntries := preload("res://src/boss/codex_entries.gd")
 
 # The stand-in fight for a boss whose own fight is not written yet. The Waking (waking.gd)
 # and the Mind (mind.gd) extend this file and run its fight until theirs land; test doubles
@@ -164,6 +165,11 @@ func _on_warden_died(_at: Vector3, _scrap: int) -> void:
 	warden = null
 	ctx.flow.boss_active = false
 	ctx.events.boss_defeated.emit()
+
+
+func _discover(id: String, at: Vector3) -> void:
+	if ctx.codex != null and ctx.codex.has_method("mark_discovered"):
+		ctx.codex.mark_discovered(id, at)
 
 
 # --- The terrain the Warden stands on, and combat's arena ground -----------------------

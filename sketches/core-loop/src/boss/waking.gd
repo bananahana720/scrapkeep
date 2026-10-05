@@ -14,6 +14,8 @@ const BOSS_ID := "waking"
 const FLOOR_NAMES := ["Spoil", "Seam", "Bedrock"]
 # Seconds between a floor's telegraph and its drop.
 const FLOOR_WARN := 1.0
+# A slam on the Warden this soon after a floor drops is a breach slam.
+const BREACH_WINDOW := 2.0
 
 var floors: WakingFloors
 # Floor number to its body, while the body stands.
@@ -24,11 +26,15 @@ var _drops: Array[int] = []
 var _queued := 0
 var _dropping := 0
 var _drop_left := 0.0
+# Fight clock at the last floor drop, and the floors a breach slam landed on.
+var _dropped_at := -INF
+var _breach_floors := {}
 
 
 func setup(ctx_ref) -> void:
 	super(ctx_ref)
 	name = "WakingBoss"
+	ctx.events.enemy_struck.connect(_on_enemy_struck)
 
 
 func enter_arena(entry_velocity: Vector3) -> void:
@@ -49,6 +55,8 @@ func exit_arena() -> void:
 	_queued = 0
 	_dropping = 0
 	_drop_left = 0.0
+	_dropped_at = -INF
+	_breach_floors.clear()
 	super()
 
 
@@ -71,6 +79,26 @@ func _physics_process(delta: float) -> void:
 			_floor_bodies.erase(_dropping)
 			_dropping = 0
 			_seat_warden()
+			_dropped_at = clock
+			_discover(CodexEntries.WAKING_FLOOR_DROP, ctx.player.ball_position())
+
+
+func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	if state != FIGHT or enemy != warden or kind != "slam" or clock - _dropped_at >= BREACH_WINDOW:
+		return
+	var at: Vector3 = ctx.player.ball_position()
+	_discover(CodexEntries.WAKING_BREACH_SLAM, at)
+	_breach_floors[floors.current_floor()] = true
+	if _breach_floors.size() >= 2:
+		_discover(CodexEntries.WAKING_FLOOR_CHAIN, at)
+
+
+# Every natural death is in the pit: the chunk before the last has already dropped the
+# lowest floor (waking_floors.gd live()), so the final-floor row is the kill itself.
+func _on_warden_died(at: Vector3, scrap: int) -> void:
+	if state == FIGHT:
+		_discover(CodexEntries.WAKING_FINAL_FLOOR, ctx.player.ball_position())
+	super(at, scrap)
 
 
 func _build_floor(k: int) -> StaticBody3D:

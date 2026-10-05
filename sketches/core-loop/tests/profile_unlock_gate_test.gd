@@ -11,6 +11,8 @@ const T := preload("res://tests/support/t.gd")
 # earns a row into it from the bus (P2-1). A key or a card click on a locked pilot starts
 # nothing, an unlocked or starter pilot starts (P2-2); flow.choose_class stays ungated.
 # Sable and Rivet start open; Kest and Tarn are each named by exactly one pilot reward (P2-3).
+# The rescue rows earn from rescue_completed and the dig rescue unlocks Kest (P2-4); it runs
+# last, because rivet_rescued unlocks the runner_gunner id the gate steps keep locked.
 
 const STEPS := ["key_locked", "click_locked", "direct", "die_a", "back_a", "key_unlocked", "die_b", "back_b", "key_starter"]
 
@@ -84,6 +86,7 @@ func _process(_delta: float) -> bool:
 		"key_starter":
 			_game._screen_key(KEY_1)
 			_t.check("P2-2 starter key starts", flow.in_play() and _game.run.class_def == flow.classes[0], "state %s" % flow.state_name())
+			_p4()
 			_game.queue_free()
 			quit(_t.verdict())
 			return true
@@ -115,7 +118,7 @@ func _p3() -> void:
 			owners[pilot] = owners.get(pilot, 0) + 1
 	for def in ClassDef.all():
 		var named: int = owners.get(def.id, 0)
-		# 2026-10-04: Rivet stays a starter until a rescue emitter exists; its dormant row still names it once.
+		# Rivet is a starter and its rescue row (rescue_site.gd emits it) still names it once.
 		var open: bool = def.id == "pylon_engineer" or def.id == "runner_gunner"
 		_t.check("P2-3 %s is open (Sable, Rivet) or named by exactly one pilot reward" % def.id, def.starter == open and (open or named == 1), "starter %s, rewards %d" % [def.starter, named])
 	var starters := 0
@@ -123,6 +126,21 @@ func _p3() -> void:
 		starters += 1 if def.starter else 0
 	_t.eq("P2-3 Sable and Rivet are the starters", starters, 2)
 	_t.check("P2-3 and the starter is Sable", ClassDef.all()[0].starter and ClassDef.all()[0].id == "pylon_engineer", "first row")
+
+
+func _p4() -> void:
+	var profile = _game.ctx.profile
+	var kest
+	for def in ClassDef.all():
+		if def.id == "demolitions_caster":
+			kest = def
+	var before: bool = _game.pilot_unlocked(kest)
+	_game.events.rescue_completed.emit("rivet")
+	_game.events.rescue_completed.emit("dig")
+	_t.check("P2-4 rescue_completed earns rivet_rescued", profile.earned("rivet_rescued"), "rivet")
+	_t.check("P2-4 rescue_completed earns dig_rescued", profile.earned("dig_rescued"), "dig")
+	_t.check("P2-4 the dig rescue unlocks demolitions_caster", not before and _game.pilot_unlocked(kest),
+			"before %s, after %s" % [before, _game.pilot_unlocked(kest)])
 
 
 func _click(control: Control) -> void:
