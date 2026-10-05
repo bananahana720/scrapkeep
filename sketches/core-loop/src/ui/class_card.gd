@@ -12,7 +12,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 
 # A class choice that sells its pilot. At rest: the hero shell turning on a plinth in
-# the class colour, the role glyph (the row's shape) and name, the fantasy line, a
+# the class colour, the class emblem and name, the fantasy line, a
 # difficulty mark, and the pilot's keys as ability icons over keycaps. Hover or focus
 # opens it: the card lifts, the others step back, the preview plays the signature
 # move, and each key gains its two words and the role line fades in. Those words show
@@ -392,11 +392,13 @@ func _name_row(color: Color, width: float) -> HBoxContainer:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var glyph := TextureRect.new()
 	_glyph = glyph
-	glyph.texture = Icons.shape(def.shape)
-	glyph.modulate = color
+	var icon_id := Icons.class_icon_id(def.id)
+	var portrait := Icons.from_file(icon_id)
+	glyph.texture = Icons.texture(icon_id) if portrait else Icons.shape(def.shape)
+	glyph.modulate = Icons.tint(icon_id, color) if portrait else color
 	glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	glyph.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	glyph.custom_minimum_size = Vector2(28.0, 28.0)
+	glyph.custom_minimum_size = Vector2(MIN_ICON_SIDE, MIN_ICON_SIDE)
 	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(glyph)
 	_lock = LockGlyph.new()
