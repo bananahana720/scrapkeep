@@ -2,6 +2,64 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 10 landed (2026-10-04, fe5d013)
+
+Twelve units merged (nine Claude, three Sol) and one held back, plus four coordinator commits. proto/alpha went 08e12a4 to fe5d013. Gate 1 at 9b8a2a3: 383 runs, 1 red (alpha_posture_bands_test killed at the 180 s cap under load); two-seed cut, test rerun solo 117 s PASS. Verifier verdicts per unit; no Opus gate read this wave, the Fable main read the verifier reports itself.
+
+- waking-fight (2245c0e, Opus): the real Waking fight; objective names the Waking before its floor.
+- mind-fight (7379dd8, Opus): the Mind fights with its four attack families, a choir Warden and hands.
+- w2-dig-deep-map (ba4e73e, Opus): the deep Dig map, a third tier below the Dig, and the Dig's side content.
+- w3-highdraft-crown-map (a072ce5, Opus): Highdraft crown zone map, its test, and Highdraft side content.
+- breach-attack-and-cue (3134b79, Opus): a slam through a breach plate strikes the tier below and is heard.
+- enemy-codex-detectors (25c0d5c, Opus): six codex detectors live; LS-3 waits up to 120 frames for the wave front to reach the parked ball.
+- w2-dig-rescue (f895aba, Sonnet): Kest rescue pinned end to end on the default table.
+- meltdown-slag-telegraph (fd01c39, Sonnet): the meltdown slag lane is telegraphed for SLAG_WARN before it burns.
+- release-gate-pending-lists (f014f63, Sonnet): the release gate fails on pending detectors and side content.
+- bot-breach-and-lift (17e4dd1, Sol): the brake hand slams Dig breach plates and rides the Highdraft lift.
+- alpha-bot-sweep-default (4d14f7e, Sol): alpha_bot_sweep_test runs five bot_run children on the default table.
+- posture-sweep-full (c00f273, Sol): full 16-cell posture sweep rerun with the wave 9 bot driver.
+- tree-depth-by-world (6d8e7e3, Sonnet): HELD BACK. Verifier FAIL: the retry conflicts with the tree_depth_cap_test guard and allows a duplicate pick; redone in wave 11 as tree-depth-by-world-redo.
+- Coordinator: 25c0d5c LS-3 wait fix (verifier-approved); 9b8a2a3 WORLD_ROWS golden hash re-pin (breach_opened row); merges 68372fc and 40da5bf resolved the pending lists (SIDE_CONTENT_PENDING [] in pending_content.gd, activities pin [1,4,3,2]); a7403ab alpha_posture_bands_test two seeds.
+
+### Gate story
+
+One red in gate 1: alpha_posture_bands_test, killed at the 180 s cap under load. Cause: wall cap, not a defect. The fix was a two-seed cut of its seed list; the test then passed solo in 117 s. There was no gate 2: the only change was that test's seed list and the full-sweep data, whose reader posture_bands_test was rerun PASS.
+
+### Rulings (docs/decisions.tsv)
+
+- Owner: the Warden default stays "ram racks posture" (110 / curve 2 / ram_shatters false) although the full sweep's pick rule now favours ram_shatters true; both pass every band; revisit only after Andrew plays both (Andrew, 2026-10-04).
+- Boss fight tests pace their own hits; module_harness stays unpaced.
+- The Waking's floors are module discs for now; a map overlay is the recommended later form.
+- The Mind's hazards are bounded to the pad (PAD_RADIUS 36), not Arena.FLOOR_R 44: wave 11 mind-arena-bound.
+- Greybox side-content pending lists live in src/core/pending_content.gd and the release gate reads them; both are empty after wave 10.
+- alpha_posture_bands_test runs two seeds in the gate (wall cap), same rule as bot_run_end_test.
+- tree-depth-by-world held back; a retry must never offer an id already held, and the retained world-one id maps to its base slot.
+- Sol units commit through the coordinator when the codex sandbox cannot write git metadata; the trailer names the coordinator model, the message names gpt-6.1-sol.
+
+### Open after wave 10
+
+Wave 11 is in flight from fe5d013 (thirteen units). Step 1: terrain-lazy-perf, tree-depth-by-world-redo, mind-arena-bound, highdraft-fragment-unlock, snd-zone-entry-cue (Claude); boss-music-sections, w23-lore-final (Sol). Step 2: table-swap-second-zones. Step 3: relics-per-world, run-save-worlds, ui-worlds-three, w23-posture-bands, contracts-and-handoff.
+
+- The soak: wt/alpha-w11-bot-soak (Bing Bong, the Codex desktop agent) runs a 48-run three-world soak outside the waves; 17 done at last report, skipper seed 1 won all six stages in 137 s, beacon stalls seen at stage 5 on some seeds.
+- The owner's ram-shatters question is parked until Andrew plays both Wardens.
+
+### Hands checklist (never blocks; carry forward)
+
+1. Play the title to RUN COMPLETE across three worlds.
+2. The Waking floor drops and the Mind brace by feel.
+3. Dig breach slam and Highdraft lift by hand.
+4. Music in fights.
+5. Cog versus mass glyph read.
+6. Hot-wire cues by ear.
+7. Physical gamepad.
+8. Cold launch of the exported Linux build.
+9. Ram-racks versus ram-shatters Warden comparison in the lab.
+
+### Lessons for briefs
+
+- A boss fight test must pace its hits, or the harness kills the Warden before the fight shows its behaviour.
+- Brief-author workflows must dedupe unit ids before the checker runs; three copies of one brief slipped through in wave 10.
+
 ## Wave 9 landed (2026-10-04, aec5d2e)
 
 Thirteen units merged (eleven Claude, two Sol) and one retired, plus fix rounds F and G and three coordinator commits. proto/alpha went 62a0dd4 to aec5d2e. Gate 1 had 6 reds; gate 2: 373 runs, 0 fail; Opus gate read PASS+NOTES.
@@ -41,7 +99,7 @@ Gate 1 reds and causes: build_gate_props (index 2 on fewer than 3 gate slots: te
 
 ### Open after wave 9
 
-Wave 10 is in flight from aec5d2e (thirteen units): waking-fight, mind-fight, w2-dig-deep-map, w3-highdraft-crown-map, breach-attack-and-cue, enemy-codex-detectors (Opus); w2-dig-rescue, tree-depth-by-world, meltdown-slag-telegraph, release-gate-pending-lists (Sonnet); bot-breach-and-lift, alpha-bot-sweep-default, posture-sweep-full (Sol).
+Wave 10 landed at fe5d013; see its section above. The units below were owed after wave 9 and are done except tree-depth-by-world (redo in wave 11).
 
 Owed:
 
