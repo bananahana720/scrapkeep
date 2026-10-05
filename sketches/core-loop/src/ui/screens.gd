@@ -30,6 +30,8 @@ const SLIDE := 14.0
 # the ball died must not pick a choice. Keys work at once.
 const CLICK_GUARD := 0.5
 const CARD_GAP := 24.0
+# Five or more cards close the gap so six fit one row at 1600 px.
+const CARD_GAP_TIGHT := 12.0
 const CARD_MAX := 420.0
 const SIDE := 60.0
 # The actions' gap, between buttons and between rows. A row that would pass the narrowest
@@ -197,13 +199,18 @@ func _on_flow_changed(state: String) -> void:
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
 			var classes: Array = game.flow.classes
-			var width := minf(CARD_MAX, (_screen().x - 2.0 * SIDE - (classes.size() - 1) * CARD_GAP) / maxf(1.0, classes.size()))
+			var gap := CARD_GAP if classes.size() <= 4 else CARD_GAP_TIGHT
+			_choices.add_theme_constant_override("separation", int(gap))
+			var width := minf(CARD_MAX, (_screen().x - 2.0 * SIDE - (classes.size() - 1) * gap) / maxf(1.0, classes.size()))
 			for i in classes.size():
 				var card := ClassCard.new(classes[i], "key_%d" % (i + 1), width)
 				card.pressed.connect(_press.bind(card.key))
 				_choices.add_child(card)
 				card.bind_profile(game.ctx.profile)
 				card.set_locked(not game.pilot_unlocked(classes[i]), _unlock_hint(classes[i]))
+			# The cards' wrapped words measure true only once laid out, so the row levels next frame.
+			if not get_tree().process_frame.is_connected(_level_cards):
+				get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
 		"dead":
 			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
 			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.ctx.stages.local(game.run.stage))
@@ -593,6 +600,15 @@ func button_for(action: String) -> Button:
 
 func class_cards() -> Array:
 	return _choices.get_children()
+
+
+# Every card in the row gives its preview the row's largest overflow, so every key row ends
+# inside its card on the same bottom edge.
+func _level_cards() -> void:
+	var row := class_cards()
+	var spill: float = row.reduce(func(m, c): return maxf(m, c.overflow()), 0.0)
+	for card in row:
+		card.shrink_preview(spill)
 
 
 # The screen as a player reads it: the body, then each choice as its key and words.

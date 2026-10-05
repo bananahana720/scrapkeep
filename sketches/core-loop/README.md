@@ -16,18 +16,20 @@ The alpha is three worlds, each with two zones and a boss:
 | 2     | Dig: the upper bench; Dig: the deep works | The Waking      |
 | 3     | Highdraft; Highdraft: the crown           | The Mind        |
 
-Three pilots are playable:
+Six pilots, two of them open from the first launch:
 
 - **Sable**, the pylon engineer, and **Rivet**, the runner-gunner, are available from the first launch.
 - **Kest**, the demolitions caster, unlocks when you rescue the buried digger in the Dig.
-- **Tarn**'s card stays locked until you rout Admiral Brindle. It then unlocks with a placeholder kit: Tarn runs Rivet's kit. This is not a fourth pilot.
+- **Tarn**, the claw bruiser, unlocks when you rout Admiral Brindle: claw sweep, claw pull, clamp and rend slam.
+- **Tally**, the ledger caster, unlocks when you return one ledger leaf per world to Moss. Beating a world's boss finds that world's leaf. In play, 1, 2 and 3 pick the Gather, Link and Balance Due cards, and the left mouse button runs the picked one.
+- **The remembered cannon** unlocks when you quiet the Mind: cannon lane, recoil split, cannon plate and rush ring, the Mind's own lane, split-lane, rush and plate families turned on the machines.
 
-Tally and the remembered cannon are not in this alpha.
+A locked pilot's card names what unlocks it, and a pilot you earn is selectable from the next run.
 
 ## The loop
 
 1. **Title.** Continue appears first when a saved run is valid. Start (Space; the button reads New run when a saved run exists) begins a run, and the menu also offers Help (H), Achievements (A) and Settings (S); with the recorded music on, B cycles the breath.
-2. **Class.** Press 1 to 4, or click a card: Sable, Rivet, Kest or Tarn. A locked pilot's card names what unlocks it. Sable, Rivet and Kest each have their own movement, special and smash on the same keys; Tarn borrows Rivet's.
+2. **Class.** Press 1 to 6, or click a card: Sable, Rivet, Kest, Tarn, Tally or the remembered cannon. A locked pilot's card names what unlocks it. Every pilot has its own weapon, movement, special and smash on the same keys.
 3. **Upgrade pick.** The run opens with an upgrade pick; Esc is "Later" and keeps the pick waiting.
 4. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next; under it, your punch bar races the Warden's plating.
 5. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks.
