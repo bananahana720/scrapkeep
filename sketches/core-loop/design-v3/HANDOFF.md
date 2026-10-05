@@ -72,6 +72,7 @@ Cost: wave workflow 36 agents, 3.36M subagent tokens, 101 min wall; round 2 work
 14. Look at the title row with a saved run, companion piece and Breath (two rows).
 15. Read the Tally spec veto list in DESIGN-V3.md.
 16. Try the Mind's plate attack.
+17. Look at the death screen and the run summary with a companion piece owned (and Replay on the death screen after an arena death): each action row wraps onto a second centred row when crowded, and no button overlaps the stats or the title or runs off screen. The victory screen shows no buttons.
 
 ## Wave 13 landed (2026-10-05, 01aa202)
 
