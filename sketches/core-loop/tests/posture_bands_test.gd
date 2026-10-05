@@ -20,8 +20,9 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := "0,1,2"
 const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 2026-10-05 (wave 15): re-pinned for seeds 0, 1 and 2 after Tarn's claw kit took seed 3; bands unchanged
-const EXPECT_SMALL_S := 80.6
-const EXPECT_GROWN_S := 33.1
+# 2026-10-05 (alpha wave 16 aim-rest): re-recorded after shots aim from the lens rest (W16-1); was 80.6 / 33.1
+const EXPECT_SMALL_S := 78.4
+const EXPECT_GROWN_S := 37.9
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 

@@ -61,8 +61,12 @@ func _point(dx: float, dz: float, lift: float) -> Vector3:
 
 
 func _cam(from: Vector3, to: Vector3) -> void:
+	# Shots and the harpoon aim from the lens rest (W16-1): pose the mount the lens
+	# sits on and hold the spring arm still, so the per-tick aim reads the posed eye.
 	_game.camera.set_process(false)
-	_game.camera.cam.global_transform = Transform3D(Basis.looking_at(to - from, Vector3.UP), from)
+	_game.camera.arm.set_physics_process_internal(false)
+	(_game.camera.cam.get_parent() as Node3D).global_transform = Transform3D(Basis.looking_at(to - from, Vector3.UP), from)
+	_game.camera.cam.transform = Transform3D.IDENTITY
 
 
 func _spawn_chaser(at: Vector3) -> Node3D:

@@ -277,7 +277,7 @@ func _physics_process(delta: float) -> void:
 	player.drive_basis = camera.yaw_basis()
 	flow.physics_step(delta)
 	if flow.in_play():
-		aim_along(camera.cam.global_position, -camera.cam.global_basis.z)
+		aim_along(camera.aim_origin(), camera.aim_forward())
 
 
 func _process(delta: float) -> void:
