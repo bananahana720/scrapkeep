@@ -37,8 +37,8 @@ const BASE := {
 	# longest throw; the throw cadence is the weapon slot's cooldown, not the rate.
 	STICKY_CHARGE: {"damage": 16.0, "rate": 1.0, "range_m": 30.0, "speed": 22.0, "bolt_radius": 3.0,
 		"knock": EventKinds.IMPACT["sticky"]["knock"]},
-	# Tarn's claw sweep: short, heavy and slow, one fat bolt that lands in full on
-	# world-one plating where a gun only chips.
+	# Tarn's claw sweep: short, heavy and slow, the highest per-hit weapon. Plating
+	# tuning for Tarn belongs to the Tarn verification unit.
 	CLAW_SWEEP: {"damage": 32.0, "rate": 2.0, "range_m": 5.0, "speed": 140.0, "bolt_radius": 1.1,
 		"knock": EventKinds.IMPACT["claw"]["knock"]},
 }

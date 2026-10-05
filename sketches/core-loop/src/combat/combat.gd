@@ -357,6 +357,7 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
 		var id := enemy.get_instance_id()
 		_record_retirement(_class_for_id(id, kind))
+		_clamped.erase(id)
 		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))

@@ -71,7 +71,7 @@ func _boot() -> void:
 		[_noop, 1, _check_kit],
 		[_reach_start, 54, _reach_release],
 		[_noop, 20, _check_reach],
-		[_noop, 1, _check_plating],
+		[_noop, 1, _check_top_hit],
 		# The press is set at the start of the step's first frame and the check runs at the start of the next, one game physics tick later.
 		[_pull_start, 2, _pull_check],
 		[_pull_again, 2, _check_pull_again],
@@ -204,13 +204,16 @@ func _check_reach() -> void:
 		"the 9 m chaser kept %.1f of %.1f" % [far_hp, _record["far_hp"]])
 
 
-# --- d. plating -----------------------------------------------------------------------
+# --- d. per-hit damage ---------------------------------------------------------------
 
-func _check_plating() -> void:
-	var plating := float(_combat.warden_spec(1)["plating"])
-	var damage := float(Weapons.BASE[Weapons.CLAW_SWEEP]["damage"])
-	_t.check("sweep lands in full on world-one plating", damage >= plating and plating > 0.0,
-		"claw %.1f vs stage-1 Warden plating %.1f from ctx.stages" % [damage, plating])
+func _check_top_hit() -> void:
+	var claw := float(Weapons.BASE[Weapons.CLAW_SWEEP]["damage"])
+	var top := true
+	for id in Weapons.ALL:
+		if id != Weapons.CLAW_SWEEP and float(Weapons.BASE[id]["damage"]) >= claw:
+			top = false
+	_t.check("claw_sweep has the highest per-hit damage of all weapons in Weapons.ALL", top,
+		"claw %.1f vs %s" % [claw, Weapons.ALL.map(func(id): return Weapons.BASE[id]["damage"])])
 
 
 # --- e. the claw pull ---------------------------------------------------------------------
