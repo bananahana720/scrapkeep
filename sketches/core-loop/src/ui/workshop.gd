@@ -37,6 +37,8 @@ const BUBBLE_Y := 0.30
 const COUNTER_X := 0.36
 const COUNTER_Y := 0.33
 const TALK_KEY := KEY_T
+# States between runs where the companion panel edits the profile; C7's camp state joins this list.
+const OUTSIDE_RUN := ["title", "class_select"]
 
 var game
 var armed := true
@@ -120,6 +122,11 @@ func setup(game_ref) -> void:
 	companion_panel = CompanionPanel.new()
 	add_child(companion_panel)
 	companion_panel.setup(game)
+	companion_panel.closed.connect(func():
+		if not game.flow.in_play():
+			game.flow._persist_companion()
+		if counter.is_open():
+			_apply_hold())
 	game.events.tree_offered.connect(func(_c: String, _d: int, _choices: Array): _offer_later())
 	game.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _offer_later())
 	game.events.bay_entered.connect(func(_banked: float): _speak_world_bark("shop_entered"))
@@ -301,12 +308,28 @@ func _enforce_hold() -> void:
 
 # ---- The companion screen ----
 
-# The companion assembly screen opens between attempts, on the death screen, and never in
-# play. False when the run is in play or carries no companion.
+# The companion assembly screen opens on the death screen, the run summary, the title (and
+# class select), and over Moss's counter in the bay; nowhere else in play. Outside a run it
+# edits the profile's companion. False when an overlay or the summary guard is up, or there
+# is nothing to assemble.
 func open_companion() -> bool:
-	if game.flow.in_play() or game.run.companion.is_empty():
+	var screens = game.screens
+	if screens != null and (screens.overlay_open() or screens.settings_open()):
+		return false
+	if game.summary_guard_left > 0.0:
+		return false
+	if _outside_run() and game.ctx.profile != null:
+		game.run.companion = game.ctx.profile.companion()
+	if game.flow.in_play():
+		if not counter.is_open():
+			return false
+	if game.run.companion.is_empty():
 		return false
 	return companion_panel.open()
+
+
+func _outside_run() -> bool:
+	return game.flow.state_name() in OUTSIDE_RUN
 
 
 # ---- Moss's voice ----
@@ -345,6 +368,7 @@ func _speak_world_bark(fact: String) -> void:
 
 
 func _on_bay_left() -> void:
+	companion_panel.close()
 	close_counter()
 	_speak_world_bark("shop_left")
 
@@ -417,8 +441,7 @@ func _input(event: InputEvent) -> void:
 		if companion_panel.handle(event):
 			get_viewport().set_input_as_handled()
 		return
-	if _companion_wanted(event):
-		open_companion()
+	if _companion_wanted(event) and open_companion():
 		get_viewport().set_input_as_handled()
 		return
 	if pick.is_open():
@@ -434,9 +457,14 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-# M, or the pad's left bumper, on the death screen.
+# M, or the pad's left bumper, on the death screen, the summary, the title (class select too)
+# and at Moss's counter. The title's emptiness is decided after open_companion loads the profile.
 func _companion_wanted(event: InputEvent) -> bool:
-	if game.flow.state_name() != "dead" or game.run.companion.is_empty():
+	var state: String = game.flow.state_name()
+	var outside := _outside_run()
+	if not (state == "dead" or state == "summary" or outside or counter.is_open()):
+		return false
+	if not outside and game.run.companion.is_empty():
 		return false
 	if event is InputEventKey:
 		return event.pressed and not event.echo and event.physical_keycode == KEY_M

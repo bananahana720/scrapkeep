@@ -31,6 +31,11 @@ const CLICK_GUARD := 0.5
 const CARD_GAP := 24.0
 const CARD_MAX := 420.0
 const SIDE := 60.0
+# The actions row's gap; a crowded title row tightens it down to ACTION_GAP_MIN so it fits
+# the narrowest supported width (int_screen_layout_test's 1280).
+const ACTION_GAP := 18
+const ACTION_GAP_MIN := 6
+const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 const TITLE := "SCRAPKEEP: FIRST RUN"
 # A win over the final world's boss opens the summary on the ending page (Worlds.ENDING). For
@@ -87,7 +92,7 @@ func setup(game_ref) -> void:
 	_content.add_child(_stats)
 	_choices = _row(CARD_GAP)
 	_content.add_child(_choices)
-	_actions = _row(18)
+	_actions = _row(ACTION_GAP)
 	_content.add_child(_actions)
 	_help = HelpPage.new()
 	_help.visible = false
@@ -146,6 +151,7 @@ func _on_flow_changed(state: String) -> void:
 	_title.visible = true
 	_stats.visible = true
 	_actions.visible = true
+	_actions.add_theme_constant_override("separation", ACTION_GAP)
 	for row in [_stats, _choices, _actions]:
 		for child in row.get_children():
 			row.remove_child(child)
@@ -166,9 +172,12 @@ func _on_flow_changed(state: String) -> void:
 			_action("help", "key_h", "Help")
 			_action("achievements", "key_a", "Achievements")
 			_action("settings", "key_s", "Settings")
+			if game.ctx.profile != null and not game.ctx.profile.companion().is_empty():
+				_companion_action()
 			if game.tuning.option(Tuning.MUSIC_KEY) == "ace":
 				_action("breath", "key_b", "")
 			refresh_lab_row()
+			_fit_actions()
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
 			var classes: Array = game.flow.classes
@@ -205,6 +214,8 @@ func _on_flow_changed(state: String) -> void:
 			_summary_stats()
 			_action("again", "key_n", "Run again")
 			_action("class", "key_space", "Choose class")
+			if not game.run.companion.is_empty():
+				_companion_action()
 			if ending:
 				_open_ending()
 	_fade(state in MENU_STATES)
@@ -392,8 +403,8 @@ func _action(id: String, key: String, words: String) -> void:
 	_actions.add_child(button)
 
 
-# The death screen's way into the companion screen (workshop.gd owns the M key); it is
-# offered only when the run carries a companion.
+# The death screen's, the summary's and the title's way into the companion screen
+# (workshop.gd owns the M key); it is offered only when there is something to assemble.
 func _companion_action() -> void:
 	var button := ChoiceButton.new("companion", "key_m", "Companion")
 	button.pressed.connect(func(): game.get_node("Workshop").open_companion())
@@ -460,6 +471,13 @@ func _fade(show: bool) -> void:
 	_tween.chain().tween_callback(func():
 		if not game.flow.state_name() in MENU_STATES:
 			visible = false)
+
+
+func _fit_actions() -> void:
+	var gaps: int = _actions.get_child_count() - 1
+	var over: float = _actions.get_combined_minimum_size().x - (minf(_screen().x, NARROW_W) - 2.0 * SIDE)
+	if gaps > 0 and over > 0.0:
+		_actions.add_theme_constant_override("separation", maxi(ACTION_GAP_MIN, ACTION_GAP - ceili(over / gaps)))
 
 
 func _screen() -> Vector2:

@@ -14,6 +14,9 @@ const T := preload("res://tests/support/t.gd")
 # two families is accepted in either order, a third piece or a same-family pair is refused
 # with one line, U (pad Y) empties both sockets, and every change writes run.companion as
 # the model's to_dict. The escape corridor seated leaves the next zone's escape ready.
+# The same key opens it on the run summary, the title and class select (where it edits the
+# profile's companion), and over Moss's counter in the bay; never under an overlay or the
+# summary guard. Closing it outside play writes the profile, so the next run starts with it.
 
 const BUDGET := 50
 
@@ -60,7 +63,62 @@ func _run() -> void:
 	_game.player.source = Intent.Scripted.new()
 	_t.eq("stub default off", Tuning.new().option("companion_stub"), "off")
 	_game.tuning.set_option("companion_stub", "on")
+	var profile = _game.ctx.profile
+	var all: Array = []
+	for p in Companion.PIECES:
+		all.append(p["id"])
+	# The title, at boot: the profile's pieces.
+	_ws.armed = true
+	_t.eq("boot on the title", flow.state_name(), "title")
+	profile.set_companion(_doc(all, []))
+	_game.screens._on_flow_changed("title")
+	_t.check("companion button on the title", _game.screens.button_for("companion") != null, "")
+	var row_w: float = _game.screens._actions.get_combined_minimum_size().x
+	var row_max: float = 1280.0 - 2.0 * _game.screens.SIDE
+	_t.check("title row fits with the companion button", row_w <= row_max, "%.0f of %.0f" % [row_w, row_max])
+	Push.key(root, KEY_M)
+	await _frames(2)
+	_t.check("M on the title opens the profile's six", panel.is_open() and panel.model.owned.size() == 6, "")
+	var words: int = WordBudget.count(panel)["hud"]
+	_t.check("calm budget on the title", words <= BUDGET, "%d words, budget %d" % [words, BUDGET])
+	Push.key(root, KEY_1)
+	Push.key(root, KEY_3)
+	await _frames(2)
+	Push.key(root, KEY_ESCAPE)
+	await _frames(2)
+	_t.check("Esc leaves to the title", not panel.is_open() and flow.state_name() == "title", "state %s" % flow.state_name())
+	_t.eq("title edit reaches the profile", profile.companion(), _doc(all, ["primer_coil", "ram_prow"]))
+	# Overlays on the title keep M.
+	_game.screens.toggle_help()
+	Push.key(root, KEY_M)
+	await _frames(2)
+	_t.check("M under help opens nothing", not panel.is_open(), "")
+	_game.screens.toggle_help()
+	_game.screens.toggle_settings()
+	Push.key(root, KEY_M)
+	await _frames(2)
+	_t.check("M under settings opens nothing", not panel.is_open(), "")
+	_game.screens.toggle_settings()
+	await _frames(2)
+	# An empty profile companion: no button, no panel.
+	profile.set_companion({})
+	_game.run.companion = {}
+	_game.screens._on_flow_changed("title")
+	_t.check("empty profile: no title button, no panel", _game.screens.button_for("companion") == null and not _ws.open_companion(), "")
+	# Class select is outside a run too.
+	profile.set_companion(_doc(all, []))
 	flow.press_start()
+	await _frames(2)
+	Push.key(root, KEY_M)
+	await _frames(2)
+	_t.check("M on class select opens the panel", panel.is_open() and flow.state_name() == "class_select", "state %s" % flow.state_name())
+	Push.key(root, KEY_ESCAPE)
+	await _frames(2)
+	_t.check("Esc leaves to class select", not panel.is_open() and flow.state_name() == "class_select", "state %s" % flow.state_name())
+	# The stub grants only into an empty run.companion.
+	profile.set_companion({})
+	_game.run.companion = {}
+	_ws.armed = false
 	flow.choose_class(1)
 	await _frames(20)
 	_ws.armed = true
@@ -85,7 +143,7 @@ func _run() -> void:
 	Push.pad(root, JOY_BUTTON_LEFT_SHOULDER)
 	await _frames(2)
 	_t.check("pad LB opens the panel", panel.is_open(), "")
-	var words: int = WordBudget.count(panel)["hud"]
+	words = WordBudget.count(panel)["hud"]
 	_t.check("calm budget", words <= BUDGET, "%d words, budget %d" % [words, BUDGET])
 	# Either order.
 	Push.key(root, KEY_1)
@@ -130,9 +188,6 @@ func _run() -> void:
 	_t.eq("pad picks vent and coil", _game.run.companion, want)
 	# A family twice, on a run that owns all six.
 	panel.close()
-	var all: Array = []
-	for p in Companion.PIECES:
-		all.append(p["id"])
 	_game.run.companion = _doc(all, [])
 	_t.check("reopens with six", _ws.open_companion() and panel.model.owned.size() == 6, "")
 	Push.key(root, KEY_1)
@@ -160,5 +215,63 @@ func _run() -> void:
 	_game.run.damage(99999.0, "test")
 	await _frames(12)
 	_t.check("no companion, no panel", not _ws.open_companion() and _game.screens.button_for("companion") == null, "")
+	# The run summary, after the guard.
+	flow.new_run()
+	await _frames(5)
+	_game.run.companion = _doc(stub, [])
+	flow._end_run(false)
+	await _frames(5)
+	_t.eq("summary", flow.state_name(), "summary")
+	# Headless frames outrun the guard's wall-clock seconds; the Guard section below covers it.
+	_game.summary_guard_left = 0.0
+	_t.check("companion button on the summary", _game.screens.button_for("companion") != null, "")
+	Push.key(root, KEY_M)
+	await _frames(2)
+	_t.check("M on the summary opens the panel", panel.is_open(), "")
+	Push.key(root, KEY_1)
+	Push.key(root, KEY_3)
+	await _frames(2)
+	Push.key(root, KEY_ESCAPE)
+	await _frames(2)
+	_t.check("Esc leaves to the summary", not panel.is_open() and flow.state_name() == "summary", "state %s" % flow.state_name())
+	_t.eq("summary edit reaches the profile", _game.ctx.profile.companion(), want)
+	flow.new_run()
+	await _frames(5)
+	_t.eq("new run keeps the summary assembly", _game.run.companion, want)
+	# The guard: a mashed M as the summary arrives opens nothing.
+	flow._end_run(false)
+	await _frames(1)
+	_t.check("guard up", _game.summary_guard_left > 0.0, "%.2f left" % _game.summary_guard_left)
+	Push.key(root, KEY_M)
+	await _frames(1)
+	_t.check("M under the summary guard opens nothing", not panel.is_open(), "")
+	# Moss's counter in the bay: the in-run intermission.
+	_game.summary_guard_left = 0.0
+	flow.new_run()
+	await _frames(20)
+	_game.run.companion = _doc(stub, [])
+	_game.build.shop.enter()
+	_ws.open_counter()
+	await _frames(2)
+	_t.check("counter open in the bay", _ws.counter.is_open() and flow.in_play(), "state %s" % flow.state_name())
+	Push.key(root, KEY_M)
+	await _frames(2)
+	_t.check("M at the counter opens the panel over it", panel.is_open() and _ws.counter.is_open(), "")
+	Push.key(root, KEY_1)
+	Push.key(root, KEY_3)
+	await _frames(2)
+	_t.eq("bay seats coil and vent", _game.run.companion, want)
+	Push.pad(root, JOY_BUTTON_B)
+	await _frames(2)
+	_t.check("pad B returns to the counter, ball still parked", not panel.is_open() and _ws.counter.is_open() and _game.player.frozen(), "")
+	Push.pad(root, JOY_BUTTON_LEFT_SHOULDER)
+	await _frames(2)
+	_t.check("pad LB reopens it at the counter", panel.is_open(), "")
+	_ws._on_bay_left()
+	await _frames(2)
+	_t.check("leaving the bay closes both", not panel.is_open() and not _ws.counter.is_open(), "")
+	Push.key(root, KEY_M)
+	await _frames(2)
+	_t.check("counter shut in play: M opens nothing", not panel.is_open() and not _ws.open_companion() and flow.in_play(), "state %s" % flow.state_name())
 	_game.queue_free()
 	quit(_t.verdict())
