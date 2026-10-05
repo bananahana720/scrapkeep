@@ -1151,6 +1151,10 @@ func _step_special(intent, delta: float) -> void:
 	var shape: Dictionary = row["geometry"].call(f)
 	ctx.player.indicator.set_shape("special", shape)
 	ctx.player.indicator.clear("special")
+	# The plate can expire while the gauge fills: a release with nothing to return spends nothing.
+	if row.has("can") and not row["can"].call():
+		ctx.events.gauge_cancelled.emit(id, "blocked")
+		return
 	abilities.spend(AbilityState.SPECIAL)
 	last_committed = {"id": id, "fraction": f, "geometry": shape}
 	row["fire"].call(f, shape)

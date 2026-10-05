@@ -28,6 +28,7 @@ var _record := {}
 var _struck: Array = []
 var _shots: Array = []
 var _dashed := 0
+var _fails: Array = []
 
 
 func _initialize() -> void:
@@ -69,6 +70,7 @@ func _boot() -> void:
 	_game.events.enemy_struck.connect(func(enemy: Node3D, kind: String, force: float): _struck.append([enemy.get_instance_id(), kind, force]))
 	_game.events.shot_fired.connect(func(weapon_id: String, _from: Vector3, _to: Vector3): _shots.append(weapon_id))
 	_game.events.dashed.connect(func(_dir: Vector3): _dashed += 1)
+	_game.events.verb_failed.connect(func(verb: String, reason: String, _at: Vector3): _fails.append([verb, reason]))
 	var tps := Engine.physics_ticks_per_second
 	_steps = [
 		[_noop, 1, _check_row],
@@ -97,6 +99,9 @@ func _boot() -> void:
 		[_plate_none_start, 3, _check_plate_none],
 		[_plate_start, int(0.6 * tps), _plate_release],
 		[_noop, 3, _check_plate],
+		[_plate_expire_start, int(0.6 * tps), _plate_release],
+		[_noop, 3, _check_plate_expired],
+		[_noop, 1, _check_shift_burst],
 		[_stamp_start, 1, _check_stamp],
 	]
 
@@ -204,6 +209,8 @@ func _check_row() -> void:
 	var pilots: Array = ClassDef.all().map(func(d): return d.id)
 	_t.eq("achievements validate", Achievements.validate(Achievements.ROWS, Achievements.bus_signals(), pilots,
 		preload("res://src/core/cosmetics.gd").ids()), [])
+	var paint: Dictionary = preload("res://src/core/cosmetics.gd").row("paint_tally_cream")
+	_t.check("tally owns a starter paint", paint.get("pilot", "") == "tally" and paint.get("starter", false) == true, str(paint))
 
 
 # --- b. pressure ---------------------------------------------------------------------------
@@ -526,6 +533,34 @@ func _check_plate() -> void:
 	_t.check("plate return pulls toward the ball", _knock_toward(target, _player.ball_position()) > 0.5,
 		"knock dot %.2f" % _knock_toward(target, _player.ball_position()))
 	_t.check("the plate is back in the reader", _combat.plate.is_empty(), str(_combat.plate))
+
+
+# The plate expires while the gauge fills: the release spends nothing and returns nothing.
+func _plate_expire_start() -> void:
+	_plate_start()
+	_combat.plate["until"] = _combat._clock + 0.2
+	_combat.last_burst = {}
+
+
+func _check_plate_expired() -> void:
+	_t.check("an expired plate spends no special", _player.abilities.ready(AbilityState.SPECIAL)
+			and _combat.last_burst.get("kind", "") != "plate_return" and _struck_by(_record["t_id"], "ledger", _record["from"]).is_empty(),
+		"ready %s last burst %s strikes %d" % [_player.abilities.ready(AbilityState.SPECIAL), _combat.last_burst.get("kind", ""),
+			_struck_by(_record["t_id"], "ledger", _record["from"]).size()])
+
+
+# --- Shift from the keyboard path ----------------------------------------------------------
+
+func _check_shift_burst() -> void:
+	for id in ["tarn", "tally"]:
+		_as_class(id)
+		_fails.clear()
+		_player.intent.clear()
+		_player.intent.shift_pressed = true
+		_player._read_shift()
+		_t.check("%s: Shift sets movement_pressed" % id, _player.intent.movement_pressed, "movement_pressed false")
+		_t.check("%s: Shift plays no fail cue" % id, _fails.is_empty(), str(_fails))
+		_player.intent.clear()
 
 
 # --- l. the stamp ------------------------------------------------------------------------

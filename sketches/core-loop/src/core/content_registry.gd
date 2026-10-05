@@ -71,7 +71,7 @@ const TABLES := {
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "6fa241c5a4dc54f16834cba7b0b64e80f0ee026a8d3f15d669d509857ac225e7",  # 2026-10-05 (alpha wave 14 achievements-fill): paint rewards on four rows; waking_stilled, highdraft_reached, codex_keeper
-	"cosmetics.ROWS": "5403cc5bfe4b8a30a3f4884bb4fac4275a41987d7d46a01e8d5337ede5f40ca5",  # 2026-10-05 (alpha wave 14 achievements-fill): seven earned paints, one per achievement reward
+	"cosmetics.ROWS": "2b6c3205f6862f05ff17f8b9ee931c25adf9e19dfb9c6667452eb0e940fefaeb",  # 2026-10-05 (alpha wave 15 tally-kit): Tally's starter paint, Ledger Cream
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
