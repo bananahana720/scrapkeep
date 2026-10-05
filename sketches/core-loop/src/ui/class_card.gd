@@ -36,6 +36,8 @@ const KEY_H := 28.0
 const HEIGHT := 600.0
 const PAD := 18.0
 const PREVIEW_H := 260.0
+# A row too tall for the card takes height from the preview, never below this.
+const PREVIEW_MIN := 160.0
 const LIFT := 0.06
 const BACK := 0.04
 const RATE := 9.0
@@ -91,6 +93,9 @@ var preview
 var _details: Array[CanvasItem] = []
 var _cells: Array = []
 var _keys_row: HBoxContainer
+var _box: VBoxContainer
+var _fade_rect: TextureRect
+var _preview_h := PREVIEW_H
 var _name_label: Label
 var _role_label: Label
 var _serial := 0
@@ -134,9 +139,11 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	box.add_theme_constant_override("separation", 8)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
+	_box = box
 	preview = ClassPreview.new(def, Vector2(width - 2.0 * PAD, PREVIEW_H))
 	box.add_child(preview)
-	add_child(_fade(width))
+	_fade_rect = _fade(width)
+	add_child(_fade_rect)
 	_build_overlay(width, color)
 	box.add_child(_name_row(color, width))
 	var role := _tagged(_text(ClassKit.role_line(def), 15, Color(Palette.SAND, 0.8)), color, _serial + 1)
@@ -183,6 +190,28 @@ func name_label() -> Label:
 
 func role_label() -> Label:
 	return _role_label
+
+
+# How far the built column runs past the card's floor; zero when it fits.
+func overflow() -> float:
+	if _box == null:
+		return 0.0
+	return maxf(0.0, _box.get_combined_minimum_size().y - (HEIGHT - (PAD + KEY_H + 8.0) - PAD))
+
+
+# The preview gives up height so the column fits. The row passes one value to every card
+# so their key rows stay level.
+func shrink_preview(by: float) -> void:
+	if preview == null or by <= 0.0:
+		return
+	_preview_h = maxf(PREVIEW_MIN, PREVIEW_H - by)
+	preview.custom_minimum_size.y = _preview_h
+	var top := PAD + KEY_H + 8.0 + _preview_h - 40.0
+	_hint.position.y = top
+	_paint_row.position.y = top
+	_fade_rect.position.y = PAD + KEY_H + 8.0 + _preview_h * 0.62
+	_fade_rect.size.y = _preview_h * 0.38 + 2.0
+	queue_redraw()
 
 
 func is_open() -> bool:
@@ -471,7 +500,7 @@ func _fade(width: float) -> TextureRect:
 # lower region, where the words sit.
 func _backdrop(tint: Color) -> void:
 	var top := PAD + KEY_H + 8.0
-	var rect := Rect2(Vector2(PAD, top), Vector2(size.x - 2.0 * PAD, PREVIEW_H))
+	var rect := Rect2(Vector2(PAD, top), Vector2(size.x - 2.0 * PAD, _preview_h))
 	var sky := Palette.VERDIGRIS.lerp(Palette.SAND, 0.35)
 	var warm := Palette.SANDSTONE.darkened(0.45).lerp(tint, 0.15)
 	var floor_color := Color(Palette.CHARCOAL, 0.0)
@@ -482,7 +511,7 @@ func _backdrop(tint: Color) -> void:
 		PackedColorArray([warm, warm, floor_color, floor_color]))
 	var glow := rect.position + rect.size * Vector2(0.5, 0.4)
 	for i in 6:
-		draw_circle(glow, PREVIEW_H * (0.45 - 0.06 * i), Color(tint, 0.03 + 0.04 * openness))
+		draw_circle(glow, _preview_h * (0.45 - 0.06 * i), Color(tint, 0.03 + 0.04 * openness))
 
 
 # Every state shares the card's serial, so the plate keeps its cuts, rivets and tape

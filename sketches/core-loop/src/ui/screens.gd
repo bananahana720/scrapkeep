@@ -208,6 +208,9 @@ func _on_flow_changed(state: String) -> void:
 				_choices.add_child(card)
 				card.bind_profile(game.ctx.profile)
 				card.set_locked(not game.pilot_unlocked(classes[i]), _unlock_hint(classes[i]))
+			# The cards' wrapped words measure true only once laid out, so the row levels next frame.
+			if not get_tree().process_frame.is_connected(_level_cards):
+				get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
 		"dead":
 			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
 			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.ctx.stages.local(game.run.stage))
@@ -597,6 +600,14 @@ func button_for(action: String) -> Button:
 
 func class_cards() -> Array:
 	return _choices.get_children()
+
+
+# Every card in the row gives its preview the row's largest overflow, so the key rows stay level.
+func _level_cards() -> void:
+	var row := class_cards()
+	var spill: float = row.reduce(func(m, c): return maxf(m, c.overflow()), 0.0)
+	for card in row:
+		card.shrink_preview(spill)
 
 
 # The screen as a player reads it: the body, then each choice as its key and words.
