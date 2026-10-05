@@ -41,6 +41,8 @@ func _physics_process(_delta: float) -> bool:
 	_check_mesh()
 	_check_posture()
 	_check_run_reset()
+	_check_death_prune()
+	_check_attempt_reset()
 	quit(_t.verdict())
 	return true
 
@@ -204,4 +206,26 @@ func _check_run_reset() -> void:
 	_t.check("reset: primed before run_started", _spawner().primed(e))
 	_game.events.run_started.emit("rivet")
 	_t.check("reset: run_started clears the prime", not _spawner().primed(e))
+	_clear()
+
+
+func _check_death_prune() -> void:
+	_seat("primer_coil")
+	var e := _spawn(Vector3(4, 0, 0))
+	var id := e.get_instance_id()
+	_hit(e, "runner", "weapon")
+	_t.check("death: primed before the kill", _spawner()._primed.has(id))
+	_spawner().strike(e, "runner", 100000.0, "", "weapon")
+	_t.check("death: the weapon strike killed it", e.is_dead())
+	_t.check("death: the kill erases the prime", not _spawner()._primed.has(id))
+	_clear()
+
+
+func _check_attempt_reset() -> void:
+	_seat("primer_coil")
+	var e := _spawn(Vector3(4, 0, 0))
+	_hit(e, "runner", "weapon")
+	_t.check("attempt: primed before the attempt", _spawner().primed(e))
+	_spawner()._start_attempt()
+	_t.check("attempt: a new attempt clears the prime", not _spawner().primed(e) and _spawner()._primed.is_empty())
 	_clear()

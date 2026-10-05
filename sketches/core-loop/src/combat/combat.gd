@@ -214,9 +214,9 @@ var _proc_ready := {}
 var _echo := {}
 var _echoing := false
 var _marks := {}
-# Conductive-primer expiries by instance id (transient, never saved).
+# Conductive-primer expiries by instance id (transient, never saved). Cleared on run start and every attempt; a kill drops its entry.
 var _primed := {}
-# Ram-brace state: prow stagger ends by instance id, and the clock the spring stays armed until.
+# Ram-brace state: prow stagger ends by instance id, and the clock the spring stays armed until. Both maps clear on run start and every attempt; a kill drops its entry.
 var _prow_until := {}
 var _spring_until := -1.0
 # The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
@@ -301,6 +301,7 @@ func setup(ctx_ref) -> void:
 		_echo = {}
 		_marks = {}
 		_primed = {}
+		_prow_until = {}
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
@@ -365,6 +366,8 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		ctx.run.record_kill(kind, where, scrap, enemy.last_damage_source if "last_damage_source" in enemy else "")
 		var id := enemy.get_instance_id()
+		_primed.erase(id)
+		_prow_until.erase(id)
 		_record_retirement(_class_for_id(id, kind))
 		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
@@ -1974,6 +1977,7 @@ func _start_attempt() -> void:
 	_shred.clear()
 	_pinned.clear()
 	_prow_until.clear()
+	_primed.clear()
 	_spring_until = -1.0
 	_warden_slam_hits = 0
 	_cooldown = 0.0

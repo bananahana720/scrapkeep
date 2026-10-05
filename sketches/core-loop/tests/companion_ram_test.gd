@@ -4,7 +4,7 @@ extends SceneTree
 # per foe per PROW_STAGGER s, and leaves posture fighters alone. A seated Brace Spring is
 # armed by a ram that deals damage; the next weapon volley inside SPRING_WINDOW deals
 # SPRING_MULT and disarms it. Item procs neither take nor spend it. Owned but unseated
-# pieces do nothing, and a new attempt clears both.
+# pieces do nothing, a new attempt or a new run clears both, and a kill drops the foe's entry.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -57,6 +57,8 @@ func _physics_process(_delta: float) -> bool:
 	_check_deflected()
 	_check_mixed_pair()
 	_check_reset()
+	_check_death_prune()
+	_check_run_reset()
 	quit(_t.verdict())
 	return true
 
@@ -262,3 +264,24 @@ func _check_reset() -> void:
 	_t.check("reset: armed before the attempt", _spawner().spring_armed())
 	_spawner()._start_attempt()
 	_t.check("reset: new attempt disarms", not _spawner().spring_armed())
+
+
+func _check_death_prune() -> void:
+	_seat(["ram_prow", "escape_vent"])
+	var e := _spawn("chaser", Vector3(0, 0, -4))
+	var id := e.get_instance_id()
+	_spawner().strike(e, "ram", RAM)
+	_t.check("death: prow stagger recorded", _spawner()._prow_until.has(id))
+	e.take_damage(float(e.hp) + 1.0)
+	_t.check("death: the kill erases the stagger", e.is_dead() and not _spawner()._prow_until.has(id))
+	_clear()
+
+
+func _check_run_reset() -> void:
+	_seat(["ram_prow", "escape_vent"])
+	var e := _spawn("chaser", Vector3(0, 0, -4))
+	_spawner().strike(e, "ram", RAM)
+	_t.check("run: staggered before run_started", _spawner().prow_staggered(e))
+	_game.events.run_started.emit("rivet")
+	_t.check("run: run_started clears the stagger", not _spawner().prow_staggered(e) and _spawner()._prow_until.is_empty())
+	_clear()
