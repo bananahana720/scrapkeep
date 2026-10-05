@@ -11,6 +11,7 @@
     "sketches/core-loop/tests/presentation_themes_test.gd",
     "sketches/core-loop/tests/spine_restart_test.gd",
     "sketches/core-loop/tests/stage_gorge_perf_test.gd",
+    "sketches/core-loop/tests/terrain_lazy_world_test.gd",
     "sketches/core-loop/tests/trees/child_runs.gd"
   ],
   "L2": [
