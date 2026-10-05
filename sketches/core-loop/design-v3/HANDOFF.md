@@ -2,6 +2,44 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 12 landed (2026-10-05, d300a77)
+
+The wave 12 candidate cand/alpha-w12 landed as d300a77 (proto/alpha went 9b86eb7 to d300a77). Heads below are the unit heads in git; verdicts are the coordinator's, 2026-10-05.
+
+**Milestone:** M3 (worlds two and three greybox and dressed) is complete in bot play: every skipper seed 1-4 clears all six stages and kills the Mind; posture bands hold for worlds 2 and 3.
+
+- relics-sable-spread (wt/alpha-w12-relics-sable-spread, 058f243): pit_coil and storm_crater as crater_slam swaps; the duplicate is accepted. Verdict: PASS+NOTES.
+- run-prev-backup (wt/alpha-w12-run-prev-backup, 6703777 then fix 8eac257): the verifier failed four data-loss probes (P2-P5); all four are fixed with a check each. Verdict: PASS.
+- bot-stalls-w3 (wt/alpha-w11-w23-posture-bands, c4b5328): combined stage5-gate-stall-seed2 and stage6-stall-seeds-2-4. Both stalls were bot steering: _to_gate climbs when the arch is above, the climb route keeps to ramp middles, and climb hysteresis. Verdict: PASS+NOTES.
+- w23-posture-bands (wt/alpha-w11-w23-posture-bands, b40b05f): admitted from hold. Verdict: PASS (14 checks); stage 6 medians [56.06, 45.08, 54.2, 87.49], Mind [12.99, 10.85, 11.46, 12.92].
+
+### Gate story
+
+Candidate cand/alpha-w12. Gate 1 at d300a77: 397 runs, 0 reds, 1733 s. No fix rounds against the gate.
+
+### Rulings (coordinator, 2026-10-05; recorded in docs/decisions.tsv at the wave 12 records commit)
+
+- wave 12: units 3 and 4 merged into one unit (bot-stalls-w3) on wt/alpha-w11-w23-posture-bands; Sable later relics duplicate crater_heart on the smash slot, accepted for alpha 2026-10-05.
+
+### Open after wave 12
+
+- M4 (alpha): Tarn claw kit, Tally kit, remembered cannon, assembled companion, camp, cosmetics, full achievements, discoveries, ending, title/summary music, Linux package, README, how-to-play. Wave 13 scouted now.
+
+### Hands checklist (never blocks)
+
+1. Play the title to RUN COMPLETE through all three worlds.
+2. Hear the world stingers and the boss music sections.
+3. Read the cog and mass glyphs.
+4. Try the Highdraft ramps after a fall.
+5. Paste a second soak brief to Bing Bong on d300a77.
+6. Physical gamepad.
+7. Cold launch of the exported build.
+8. Cold-launch the export once scripts/sketch-export.mjs produces a build on d300a77.
+
+### Lessons for briefs
+
+- Bot repro commands must carry --fixed-fps 90 (ChildRuns adds it); without it runs are not deterministic.
+
 ## Wave 11 landed (2026-10-05, 9b86eb7)
 
 The wave 11 candidate carries three worlds and six named zones end to end. Heads below are the unit heads in git; verdicts are the coordinator's, 2026-10-05, and the gate story is below. proto/alpha went fe5d013 to 9b86eb7.
@@ -38,7 +76,7 @@ The wave 11 candidate carries three worlds and six named zones end to end. Heads
 
 - Gate story: candidate cand/alpha-w11. Gate 1 at 047c51c: 393 runs, 7 reds (audio_worlds stinger row, build_gate_props parked-stage colliders, run_resume_worlds deferred lambda ERROR, world_table placeholder pin, bot_stub_boss 120 s budget against the real Waking, bot_run_end crown stall, highdraft_warden_bot relic cache in runup). Fix rounds: crown-stall 2c3a8ef and e8fdbef (Opus), fixa a82fb32 (Sonnet), fixb bb073c7 (Opus), handoff fix 229582b (Sonnet). Gate 2 at 1ea5cb7: 394 runs, 1 red (spine_event_kinds priority-3 wording), fixed as 9b86eb7 with six targeted reruns; no third gate.
 - Soak: Bing Bong (Codex desktop) ran 48 runs on 08e12a4: skipper 5/16, completionist 3/16, camper 0/16 by design.
-- Wave 12 is in flight from 9b86eb7: w12-posture-bands (the held w23-posture-bands, 8e4a313, rerun on the new head), relics-sable-spread, run-prev-backup, stage5-gate-stall-seed2.
+- Wave 12 landed; see above.
 - Stage 6 (the crown) is unbroken by the skipper bot on every seed; the world 3 boss is unreached in bot runs. Traced in wave 12 unit crown-stall. The w23 posture bands test is held on its branch until then.
 - Wave 12: spread two Sable relics onto the smash slot; keep the replaced run as run.json.prev; the seed 2 stall after the Warden break (bot defect).
 - Soak findings: design-v3/soak-2026-10-05.md.
