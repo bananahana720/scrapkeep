@@ -73,9 +73,21 @@ func _run() -> void:
 	profile.set_companion(_doc(all, []))
 	_game.screens._on_flow_changed("title")
 	_t.check("companion button on the title", _game.screens.button_for("companion") != null, "")
-	var row_w: float = _game.screens._actions.get_combined_minimum_size().x
-	var row_max: float = 1280.0 - 2.0 * _game.screens.SIDE
-	_t.check("title row fits with the companion button", row_w <= row_max, "%.0f of %.0f" % [row_w, row_max])
+	await _frames(2)
+	var room: Vector2 = root.get_visible_rect().size
+	var band_w: float = _game.screens.NARROW_W - 2.0 * _game.screens.SIDE
+	var band := Rect2((room.x - band_w) / 2.0, 0.0, band_w, room.y)
+	var rects: Array = []
+	for child in _game.screens._actions.get_children():
+		if child is Button and child.visible:
+			rects.append((child as Control).get_global_rect())
+	var inside := rects.all(func(r): return band.grow(0.5).encloses(r))
+	var apart := true
+	for a in rects.size():
+		for b in range(a + 1, rects.size()):
+			apart = apart and not (rects[a] as Rect2).grow(-0.5).intersects((rects[b] as Rect2).grow(-0.5))
+	_t.check("title row buttons sit inside the narrow band", rects.size() >= 5 and inside, "%d buttons, band %s, rects %s" % [rects.size(), band, rects])
+	_t.check("title row buttons never overlap", apart, "%s" % [rects])
 	Push.key(root, KEY_M)
 	await _frames(2)
 	_t.check("M on the title opens the profile's six", panel.is_open() and panel.model.owned.size() == 6, "")
