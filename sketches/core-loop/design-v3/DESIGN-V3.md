@@ -189,6 +189,57 @@ Newly earned pilots become selectable next run.
 Existing earned profile unlocks survive migration.
 At this base Sable, Rivet and Kest are all starters until their unlock achievements exist.
 
+### Tally's program cards
+
+A program card is a fixed program in one of three reader bays under the weapon slot, not a slot, part or item.
+Three starting cards ship in fixed bays, keeping the [Bible's](../../../BIBLE.md#4-characters) selection with 1, 2 and 3.
+In play only, those keys or D-pad left, up and right select a bay instantly and free, and LMB/RT runs it at the aim point.
+Selecting never refills pressure or cancels an effect, and bay 1 starts selected.
+Pressure is three shared charges that start full; a run costs one, and invalid aim costs none.
+Rolling at speed tier 1 or above restores one every 2 s; each distinct ram, stomp, slam or harpoon smash restores one, up to 3; standing restores none.
+Shared fire recovery is 0.4 s, and a dry reader leaves movement, boost and the harpoon usable.
+Numbers are tuning-owned probe values from the approved kit sheet, PLAYTEST-LOG entry 11.
+
+| Bay/key | Card | Effect | Cost |
+| --- | --- | --- | --- |
+| 1 | Gather | Plate within 30 m pulls ordinary enemies within 4 m for 4 s; never the player or a Warden; no damage. | 1 charge; one plate |
+| 2 | Link | Clips the first enemy hit within 30 m and two neighbours within 9 m for 4 s; the next direct hit arcs once to each other clip, then the group is spent. | 1 charge; one group |
+| 3 | Balance Due | Capacitor within 30 m discharges once in a 3 m radius; punch scales with launch speed at release; clips carry it. | 1 charge |
+
+| Slot | Ability id | Key | Rule |
+| --- | --- | --- | --- |
+| weapon | `ledger_reader` | LMB/RT | Routes to `gather_plate`, `link_clips` or `balance_due`. |
+| movement | `flywheel_surge` | Shift/B | Rearward steam surge along travel; 4 s; no pressure. |
+| special | `plate_return` | F/LB | Recalls the plate along an 8 m aimed corridor, nudging gathered enemies; 6 s; no plate means no spend. |
+| smash | `stamp_slam` | Ctrl/X, air, no line | Flavour "stamp"; each accepted contact restores one charge; line smash and winch win. |
+
+The pilot id is "tally" ([class rows](../src/core/class_def.gd), [slots](../src/core/ability_state.gd)).
+Programs grant no synergy tags; real events do.
+Every program effect and `plate_return` is noncontact forever: it fills Warden guard and never damages the open core.
+Only a ram at speed tier 2 or above, or a harpoon smash, breaks a chunk, so standing off cannot win.
+Beating world N's boss finds ledger leaf N, with no pickup; the profile keeps it across runs.
+On the next entry to Moss's shop, Moss takes every carried leaf with a ledger line.
+Each returned leaf emits the existing `world_fact` signal once, kind "ledger_returned"; no bus signal is added.
+The [achievement](../src/core/achievements.gd) row `ledger_balanced` ("Ledger Balanced", count 3, reward pilot "tally") unlocks Tally next run; a world returns once, so three means three worlds.
+Card finds, swaps and tags, full transmog and tree names below depth 2 are deferred.
+
+DECISIONS (veto list, 2026-10-05):
+- D1 Program card means a kit card; ledger leaf means only the unlock item.
+- D2 Fixed cards: 1 Gather, 2 Link, 3 Balance Due.
+- D3 Selection as above.
+- D4 Pressure as above.
+- D5 Card effects at kit-sheet probe values.
+- D6 Slot ids as above.
+- D7 Channels per STRATEGY-SPINE §2.
+- D8 Program effects stay noncontact against Wardens.
+- D9 A boss win finds that world's leaf, without pickup.
+- D10 Moss's shop takes the leaves; `ledger_balanced` counts three.
+- D11 Alpha transmog: the selected card stands raised, the others flat.
+- D12 Mulberry #906681 is cloth only; mint is ready; slate is a failed press; orange-red is threat.
+- D13 Corner Plate, Line Feed, Spring Vent and Through Feed sit at tree depth 2.
+- D14 (worker) Bay keys do nothing while the field-notes key is held; its pages use the D-pad.
+- D15 (worker) Balance Due shows its 3 m footprint in neutral sand before release.
+
 ## The SPIL-9 companion
 
 One SPIL-9 hover chassis has two unordered module sockets.
