@@ -4,7 +4,8 @@ extends RefCounted
 # here when the flag is on and one exists, and the node's own `effect` otherwise, so a node
 # without a row (and every card with the flag off) reads exactly as before. Source:
 # design-v3/research/build-systems/BUILD-SYSTEMS.md, the bold line of each node. Sable, Kest,
-# Rivet, Tarn and Tally rows join this table in their own units; nothing else needs to change.
+# Rivet, Tarn, Tally and remembered cannon rows join this table in their own units; nothing else
+# needs to change.
 
 const ROWS := {
 	# Sable, S1 to S6.
@@ -42,6 +43,13 @@ const ROWS := {
 	"tl_line_feed": "Harpoon smashes throw a second shockwave.",
 	"tl_spring_vent": "Each surge hands back your air jump.",
 	"tl_corner_plate": "Every plate return hands back a surge.",
+	# Remembered cannon, C1 to C6.
+	"c_quick_lane": "Call lanes a quarter faster.",
+	"c_brace_kick": "Every plate hands back a recoil kick.",
+	"c_lane_fever": "Kills speed up your lanes.",
+	"c_spare_kick": "Bank two recoil kicks.",
+	"c_spare_plate": "Bank two plates.",
+	"c_rush_shock": "Rush landings throw a shockwave.",
 }
 
 

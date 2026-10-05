@@ -89,8 +89,8 @@ const GOLDEN_HASHES := {
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
-	"upgrade_tree.TREES": "62a8ded1a34c63e13f91ca0838555b3e475a98739aa76322656b829ce77c888d",  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon aliases Kest's tree until pil-G11
-	"upgrade_tree.WORLD_ONE_NODES": "89795a17e8ea7f421669d58793296881ee105c7108af1377eca4debf1ad17a0c",  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon aliases Kest's tree until pil-G11
+	"upgrade_tree.TREES": "05961cc2fd4853501c123faf3a3eb2860c6c553ef9c685f180acb489d461ad3c",  # 2026-10-05 (alpha wave 15 cannon-tree): the remembered cannon's own tree
+	"upgrade_tree.WORLD_ONE_NODES": "3e4d483877d4a6e6f313179e78af3068ffcf4b09bae417f06590061a5d5d30f5",  # 2026-10-05 (alpha wave 15 cannon-tree): the remembered cannon's own tree
 	"combat.codex_entries.ENTRIES": "d30ff6f6b6d5e2069a71c218f5665edbcfab0761d77754ed4bd90f9b295b3ca4",
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned

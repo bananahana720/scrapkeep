@@ -18,8 +18,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const MAX_NAME_WORDS := 3
 const MAX_TEXT_WORDS := 8
 const MIN_PER_PILOT := 2
-const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally"]
-# Rivet's kit rows; Tarn and Tally have their own rows in each world.
+const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
+# Rivet's kit rows; Tarn, Tally and the remembered cannon have their own rows in each world.
 const RIVET := ["runner_gunner"]
 const SUFFIX := {AbilityState.WEAPON: "_weapon", AbilityState.MOVEMENT: "_move",
 	AbilityState.SPECIAL: "_special", AbilityState.SMASH: "_smash"}
@@ -55,6 +55,12 @@ const ROWS := {
 	"return_spring": {"name": "Return Spring", "text": "Plate return recharges 25% faster",
 		"pilots": ["tally"], "slot": AbilityState.SPECIAL, "cooldown": 0.75,
 		"part": "gen:utility:relic:none:on_charge_release", "world": 1},
+	"kick_spring": {"name": "Kick Spring", "text": "Recoil kick recharges 30% faster",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.MOVEMENT, "cooldown": 0.7,
+		"part": "gen:mobility:relic:frost:on_rebound", "world": 1},
+	"brace_pin": {"name": "Brace Pin", "text": "Plate recharges 25% faster",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.SPECIAL, "cooldown": 0.75,
+		"part": "gen:defense:relic:none:on_damage_taken", "world": 1},
 	# World 2, the Dig.
 	"spare_cell": {"name": "Spare Cell", "text": "Stock a second detonation charge",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 1,
@@ -86,6 +92,12 @@ const ROWS := {
 	"plate_hinge": {"name": "Plate Hinge", "text": "Plate return recharges 30% faster",
 		"pilots": ["tally"], "slot": AbilityState.SPECIAL, "cooldown": 0.7,
 		"part": "gen:charge:relic:arc:on_smash", "world": 2},
+	"second_kick": {"name": "Second Kick", "text": "Stock a second recoil kick",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.MOVEMENT, "charges": 1,
+		"part": "gen:mobility:relic:arc:on_land", "world": 2},
+	"brace_spring": {"name": "Brace Spring", "text": "Plate recharges 30% faster",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.SPECIAL, "cooldown": 0.7,
+		"part": "gen:weapon:relic:none:on_hit", "world": 2},
 	# World 3, Highdraft.
 	"crown_cell": {"name": "Crown Cell", "text": "Stock two more detonation charges",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 2,
@@ -117,6 +129,12 @@ const ROWS := {
 	"second_plate": {"name": "Second Plate", "text": "Stock a second plate return",
 		"pilots": ["tally"], "slot": AbilityState.SPECIAL, "charges": 1,
 		"part": "gen:utility:relic:arc:on_charge_release", "world": 3},
+	"hot_breech": {"name": "Hot Breech", "text": "Recoil kick recharges 40% faster",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.MOVEMENT, "cooldown": 0.6,
+		"part": "gen:mobility:relic:frost:on_speed_tier_up", "world": 3},
+	"twin_plate": {"name": "Twin Plate", "text": "Stock a second plate",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.SPECIAL, "charges": 1,
+		"part": "gen:charge:relic:none:on_smash", "world": 3},
 }
 
 

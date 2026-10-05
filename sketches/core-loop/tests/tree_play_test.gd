@@ -3,7 +3,7 @@ extends SceneTree
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
-# All 80 end builds (16 per class) played with every key against enemies, one child
+# All 96 end builds (16 per class) played with every key against enemies, one child
 # process per class in parallel (tests/trees/tree_play_run.gd). A class passes when its
 # child exits 0, every build leaves the ball and enemies finite, and its log holds no
 # script error, so every node's code path that the rota reaches ran clean.
