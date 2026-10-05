@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bootFailures, missingStems, releaseGateFailures } from "./sketch-export.mjs";
+import {
+  bootFailures,
+  defaultStemsFrom,
+  missingStems,
+  missingStemsMessage,
+  parseArgs,
+  releaseGateFailures,
+} from "./sketch-export.mjs";
 
 const manifest = {
   stems: ["drums", "bass"],
@@ -47,4 +54,28 @@ test("release gate FAIL lines are returned", () => {
 test("release gate with status 1 fails even beside a PASS line", () => {
   assert.equal(releaseGateFailures("release_gate_placeholder_test: PASS (3 checks)\n", 1).length, 1);
   assert.equal(releaseGateFailures("nothing", 0).length, 1);
+});
+
+test("parseArgs reads both --stems-from forms, defaults to null and rejects others", () => {
+  assert.deepEqual(parseArgs([]), { stemsFrom: null });
+  assert.deepEqual(parseArgs(["--stems-from=/a"]), { stemsFrom: "/a" });
+  assert.deepEqual(parseArgs(["--stems-from", "/b"]), { stemsFrom: "/b" });
+  assert.throws(() => parseArgs(["--nope"]), /unknown argument: --nope/);
+});
+
+test("defaultStemsFrom points at the main checkout's music_ace folder", () => {
+  assert.equal(
+    defaultStemsFrom("/home/x/repo/.git"),
+    "/home/x/repo/sketches/core-loop/assets/music_ace",
+  );
+});
+
+test("missingStemsMessage names the folder, the flag and the default, never a regeneration tool", () => {
+  const message = missingStemsMessage(["a.ogg", "b.ogg"], "/d", "/m");
+  assert.equal(
+    message,
+    "2 stem file(s) named by the manifest are missing from /d, first a.ogg. The ACE stems are gitignored and cannot be regenerated; pass --stems-from=<music_ace folder that holds spillway/*.ogg> (default: /m).",
+  );
+  assert.ok(message.includes("--stems-from="));
+  assert.ok(!message.includes("package_music"));
 });

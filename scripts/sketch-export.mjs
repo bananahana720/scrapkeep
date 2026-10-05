@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, readFile, stat } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,8 +7,9 @@ import { fileURLToPath } from "node:url";
 
 // npm run sketch:export: a Linux x86_64 release of sketches/core-loop under
 // artifacts/local/core-loop-export/<run>/, the ACE stems beside it in music_ace/, booted
-// headless for 300 frames. The stems are not in the pack (the packaging tool's .gdignore
-// keeps Godot from importing them), so the sequencer finds them beside the executable.
+// headless for 300 frames. The stems are not in the pack, so the sequencer finds them beside
+// the executable. They are gitignored and cannot be regenerated, so they are copied from
+// --stems-from=<music_ace folder> (default: the main checkout's sketches/core-loop/assets/music_ace).
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
@@ -30,6 +31,30 @@ export function missingStems(manifest, directory, exists = existsSync) {
     }
   }
   return missing;
+}
+
+export function parseArgs(argv) {
+  let stemsFrom = null;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg.startsWith("--stems-from="))
+      stemsFrom = arg.slice("--stems-from=".length);
+    else if (arg === "--stems-from" && i + 1 < argv.length)
+      stemsFrom = argv[++i];
+    else throw new Error("unknown argument: " + arg);
+  }
+  return { stemsFrom };
+}
+
+export function defaultStemsFrom(gitCommonDir) {
+  return path.join(
+    path.dirname(gitCommonDir),
+    "sketches/core-loop/assets/music_ace",
+  );
+}
+
+export function missingStemsMessage(missing, directory, fallback) {
+  return `${missing.length} stem file(s) named by the manifest are missing from ${directory}, first ${missing[0]}. The ACE stems are gitignored and cannot be regenerated; pass --stems-from=<music_ace folder that holds spillway/*.ogg> (default: ${fallback}).`;
 }
 
 export function bootFailures(output) {
@@ -67,6 +92,12 @@ function fail(message) {
 }
 
 async function main() {
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    fail(error.message);
+  }
   if (!existsSync(binary)) fail("Godot binary missing: " + binary);
   const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
   const template = path.join(dataHome, "godot/export_templates/4.7.2.stable/linux_release.x86_64");
@@ -75,9 +106,32 @@ async function main() {
   const manifestPath = path.join(stemRoot, manifestRel);
   if (!existsSync(manifestPath)) fail("ACE manifest missing: " + manifestPath);
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  const missing = missingStems(manifest, path.dirname(manifestPath));
+  const common = run("git", [
+    "-C",
+    root,
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-common-dir",
+  ]);
+  if (common.status !== 0) fail("git common dir not found\n" + common.stderr);
+  const fallback = defaultStemsFrom(common.stdout.trim());
+  const stemsFrom = path.resolve(args.stemsFrom ?? fallback);
+  const missing = missingStems(manifest, path.join(stemsFrom, "spillway"));
   if (missing.length > 0)
-    fail(`${missing.length} stem file(s) named by the manifest are missing, first ${missing[0]}; run tools/ace/package_music.py`);
+    fail(
+      missingStemsMessage(missing, path.join(stemsFrom, "spillway"), fallback),
+    );
+  const folderManifest = path.join(stemsFrom, manifestRel);
+  if (existsSync(folderManifest)) {
+    const [tracked, found] = await Promise.all([
+      readFile(manifestPath),
+      readFile(folderManifest),
+    ]);
+    if (!tracked.equals(found))
+      fail(
+        `stem folder manifest differs from the tracked manifest: ${folderManifest} vs ${manifestPath}`,
+      );
+  }
 
   const imported = run(binary, ["--headless", "--path", project, "--editor", "--import"]);
   if (imported.status !== 0 || errorLine.test(imported.stdout + imported.stderr))
@@ -100,10 +154,11 @@ async function main() {
   if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(exe))
     fail("export failed\n" + exportText.slice(-2000));
 
-  await cp(stemRoot, path.join(outDir, "music_ace"), {
+  await cp(stemsFrom, path.join(outDir, "music_ace"), {
     recursive: true,
     filter: (source) => !source.endsWith(".import") && !source.endsWith(".gdignore"),
   });
+  await copyFile(manifestPath, path.join(outDir, "music_ace", manifestRel));
   const stemCount = Object.keys(manifest.clips).length * manifest.stems.length;
 
   const boot = run(exe, ["--headless", "--quit-after", "300", "--music=ace", "--ace-check"], { cwd: outDir });
@@ -115,6 +170,7 @@ async function main() {
   const size = (await stat(exe)).size;
   console.log("executable: " + exe);
   console.log("pack size: " + size + " bytes (" + (size / 1048576).toFixed(1) + " MiB, pack embedded)");
+  console.log("stems from: " + stemsFrom);
   console.log("sidecar stems: " + stemCount + " in " + path.join(outDir, "music_ace"));
   console.log("boot tail:\n" + bootText.trim().split("\n").slice(-6).join("\n"));
 }
