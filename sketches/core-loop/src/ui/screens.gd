@@ -11,6 +11,7 @@ const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
+const CampMenu := preload("res://src/ui/camp_menu.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -31,10 +32,10 @@ const CLICK_GUARD := 0.5
 const CARD_GAP := 24.0
 const CARD_MAX := 420.0
 const SIDE := 60.0
-# The actions row's gap; a crowded title row tightens it down to ACTION_GAP_MIN so it fits
-# the narrowest supported width (int_screen_layout_test's 1280).
+# The actions' gap, between buttons and between rows. A row that would pass the narrowest
+# supported width (int_screen_layout_test's 1280) less SIDE each way wraps onto a second
+# centred row; no button is dropped or shrunk.
 const ACTION_GAP := 18
-const ACTION_GAP_MIN := 6
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 const TITLE := "SCRAPKEEP: FIRST RUN"
@@ -52,10 +53,11 @@ var _title: Label
 var _body: Label
 var _stats: HBoxContainer
 var _choices: HBoxContainer
-var _actions: HBoxContainer
+var _actions: HFlowContainer
 var _help
 var _achievements
 var _settings
+var _camp
 var _ending: VBoxContainer
 var _ending_title: Label
 var _ending_body: Label
@@ -92,7 +94,12 @@ func setup(game_ref) -> void:
 	_content.add_child(_stats)
 	_choices = _row(CARD_GAP)
 	_content.add_child(_choices)
-	_actions = _row(ACTION_GAP)
+	_actions = HFlowContainer.new()
+	_actions.alignment = FlowContainer.ALIGNMENT_CENTER
+	_actions.add_theme_constant_override("h_separation", ACTION_GAP)
+	_actions.add_theme_constant_override("v_separation", ACTION_GAP)
+	_actions.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_actions)
 	_help = HelpPage.new()
 	_help.visible = false
@@ -107,6 +114,14 @@ func setup(game_ref) -> void:
 	_settings.setup(game, "key_esc")
 	_settings.back_requested.connect(toggle_settings)
 	_content.add_child(_settings)
+	_camp = CampMenu.new()
+	_camp.visible = false
+	_camp.button_for("launch").pressed.connect(_press.bind("key_space"))
+	_camp.button_for("achievements").pressed.connect(_press.bind("key_a"))
+	_camp.button_for("settings").pressed.connect(_press.bind("key_s"))
+	_camp.back.pressed.connect(_press.bind("key_k"))
+	_camp.companion_button().pressed.connect(_camp_companion)
+	_content.add_child(_camp)
 	_ending = VBoxContainer.new()
 	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
 	_ending.add_theme_constant_override("separation", 26)
@@ -146,12 +161,13 @@ func _on_flow_changed(state: String) -> void:
 	_help.visible = false
 	_achievements.visible = false
 	_settings.visible = false
+	_camp.visible = false
 	_ending.visible = false
 	_ending_left = 0.0
 	_title.visible = true
 	_stats.visible = true
 	_actions.visible = true
-	_actions.add_theme_constant_override("separation", ACTION_GAP)
+	_fit_actions()
 	for row in [_stats, _choices, _actions]:
 		for child in row.get_children():
 			row.remove_child(child)
@@ -174,10 +190,10 @@ func _on_flow_changed(state: String) -> void:
 			_action("settings", "key_s", "Settings")
 			if game.ctx.profile != null and not game.ctx.profile.companion().is_empty():
 				_companion_action()
+			_action("camp", "key_k", "Camp")
 			if game.tuning.option(Tuning.MUSIC_KEY) == "ace":
 				_action("breath", "key_b", "")
 			refresh_lab_row()
-			_fit_actions()
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
 			var classes: Array = game.flow.classes
@@ -216,6 +232,7 @@ func _on_flow_changed(state: String) -> void:
 			_action("class", "key_space", "Choose class")
 			if not game.run.companion.is_empty():
 				_companion_action()
+			_action("camp", "key_k", "Camp")
 			if ending:
 				_open_ending()
 	_fade(state in MENU_STATES)
@@ -224,6 +241,7 @@ func _on_flow_changed(state: String) -> void:
 
 # H on the title swaps its body and actions for the how-to-play page, and back.
 func toggle_help() -> void:
+	_close_camp_silently()
 	if _state != "title" or _achievements.visible or _settings.visible:
 		return
 	_help.visible = not _help.visible
@@ -241,6 +259,7 @@ func help_open() -> bool:
 
 # A on the title swaps its body and actions for the achievements page, and back.
 func toggle_achievements() -> void:
+	_close_camp_silently()
 	if _state != "title" or _help.visible or _settings.visible:
 		return
 	_achievements.visible = not _achievements.visible
@@ -256,6 +275,7 @@ func toggle_achievements() -> void:
 # S on the title swaps its body and actions for the settings page, and back. It never
 # pauses the game or touches the mouse; Esc only goes back.
 func toggle_settings() -> void:
+	_close_camp_silently()
 	if _state != "title" or _help.visible or _achievements.visible:
 		return
 	_settings.visible = not _settings.visible
@@ -267,6 +287,53 @@ func toggle_settings() -> void:
 	else:
 		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 	_fade(true)
+
+
+# K on the title swaps its body and actions for the camp page, and back. A, S and H on the
+# camp close it and open their own page, whose Back returns to the title.
+func toggle_camp() -> void:
+	if _state != "title" or _help.visible or _achievements.visible or _settings.visible:
+		return
+	_camp.visible = not _camp.visible
+	_actions.visible = not _camp.visible
+	if _camp.visible:
+		_camp.refresh(game)
+		_show("CAMP", Palette.AMBER, "")
+		_camp.button_for("launch").grab_focus()
+	else:
+		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+		get_viewport().gui_release_focus()
+	_fade(true)
+
+
+func _close_camp_silently() -> void:
+	if not _camp.visible:
+		return
+	_camp.visible = false
+	_actions.visible = true
+	get_viewport().gui_release_focus()
+
+
+# The camp's Companion button: the camp steps aside first, since open_companion refuses
+# under an overlay.
+func _camp_companion() -> void:
+	_close_camp_silently()
+	_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+	game.get_node("Workshop").open_companion()
+
+
+# The summary's Camp: back to the title, with the camp open.
+func open_camp_from_summary() -> void:
+	game.flow.show_title()
+	toggle_camp()
+
+
+func camp_open() -> bool:
+	return _camp.visible
+
+
+func camp_page():
+	return _camp
 
 
 func settings_open() -> bool:
@@ -299,7 +366,7 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _ending.visible
+	return _help.visible or _achievements.visible or _camp.visible or _ending.visible
 
 
 func ending_open() -> bool:
@@ -348,6 +415,14 @@ func _input(event: InputEvent) -> void:
 		return
 	if _settings.visible:
 		if _settings.handle(event):
+			get_viewport().set_input_as_handled()
+		return
+	if _camp.visible:
+		if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+			toggle_camp()
+			get_viewport().set_input_as_handled()
+		elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
+			toggle_camp()
 			get_viewport().set_input_as_handled()
 		return
 	if overlay_open() and event is InputEventJoypadButton and event.pressed:
@@ -473,11 +548,9 @@ func _fade(show: bool) -> void:
 			visible = false)
 
 
+# The actions wrap at the room's width: the first row fills it, the rest centre below.
 func _fit_actions() -> void:
-	var gaps: int = _actions.get_child_count() - 1
-	var over: float = _actions.get_combined_minimum_size().x - (minf(_screen().x, NARROW_W) - 2.0 * SIDE)
-	if gaps > 0 and over > 0.0:
-		_actions.add_theme_constant_override("separation", maxi(ACTION_GAP_MIN, ACTION_GAP - ceili(over / gaps)))
+	_actions.custom_minimum_size.x = minf(_screen().x, NARROW_W) - 2.0 * SIDE
 
 
 func _screen() -> Vector2:
@@ -509,6 +582,8 @@ func button_for(action: String) -> Button:
 	if action == "back":
 		if _settings.visible:
 			return _settings.back
+		if _camp.visible:
+			return _camp.back
 		return _achievements.back if _achievements.visible else _help.back
 	for child in _actions.get_children():
 		if child.action == action:
