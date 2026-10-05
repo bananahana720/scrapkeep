@@ -3,13 +3,17 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   bootFailures,
+  buildStamp,
   defaultStemsFrom,
+  howToRun,
   missingStems,
   missingStemsMessage,
+  packageName,
   parseArgs,
   parsePresets,
   proofPresetDrift,
   releaseGateFailures,
+  tarArgs,
   winProofFailures,
 } from "./sketch-export.mjs";
 
@@ -163,4 +167,49 @@ test("an ERROR line fails beside a won row", () => {
 
 test("status 1 fails beside a won row", () => {
   assert.equal(winProofFailures("", 1, row("won")).length, 1);
+});
+
+test("buildStamp has each key", () => {
+  const text = buildStamp({
+    sha: "abc1234def",
+    dirty: false,
+    stamp: "20261005T051752",
+    godot: "4.7.2.stable",
+    stems: 24,
+    stemsFrom: "/m/music_ace",
+  });
+  for (const line of [
+    "commit: abc1234def",
+    "dirty: false",
+    "built: 20261005T051752",
+    "godot: 4.7.2.stable",
+    "stems: 24 from /m/music_ace",
+  ])
+    assert.ok(text.split("\n").includes(line), line);
+});
+
+test("howToRun names the files, the save folder and H, with no table", () => {
+  const text = howToRun({ sha7: "abc1234" });
+  assert.ok(text.startsWith("Scrapkeep core-loop alpha (abc1234)\n"));
+  for (const part of [
+    "music_ace",
+    "core-loop.x86_64",
+    "app_userdata/core-loop",
+    "press H",
+  ])
+    assert.ok(text.includes(part), part);
+  assert.ok(!text.includes("|"));
+  assert.ok(text.split(/\s+/).filter(Boolean).length < 120);
+});
+
+test("packageName and tarArgs", () => {
+  assert.equal(packageName("abc1234"), "scrapkeep-core-loop-abc1234");
+  assert.deepEqual(tarArgs("/a/b/20261005T051752", "abc1234"), [
+    "-czf",
+    "/a/b/scrapkeep-core-loop-abc1234.tar.gz",
+    "-C",
+    "/a/b",
+    "--transform=s,^20261005T051752,scrapkeep-core-loop-abc1234,",
+    "20261005T051752",
+  ]);
 });

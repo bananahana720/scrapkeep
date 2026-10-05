@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { copyFile, cp, mkdir, readFile, stat } from "node:fs/promises";
+import {
+  copyFile,
+  cp,
+  mkdir,
+  readFile,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -169,6 +176,50 @@ export function winProofFailures(output, status, rowsText) {
   return failures;
 }
 
+export function buildStamp({ sha, dirty, stamp, godot, stems, stemsFrom }) {
+  return (
+    [
+      "commit: " + sha,
+      "dirty: " + dirty,
+      "built: " + stamp,
+      "godot: " + godot,
+      "stems: " + stems + " from " + stemsFrom,
+    ].join("\n") + "\n"
+  );
+}
+
+export function howToRun({ sha7 }) {
+  return (
+    [
+      "Scrapkeep core-loop alpha (" + sha7 + ")",
+      "",
+      "1. Extract the archive anywhere.",
+      "2. Keep the music_ace folder next to core-loop.x86_64. Without it the game plays its built-in synth music instead of the recorded stems.",
+      "3. Run ./core-loop.x86_64 from any directory.",
+      "4. Saves live in ~/.local/share/godot/app_userdata/core-loop/. For a fresh first launch, rename that folder first and rename it back afterwards to keep your progress.",
+      "5. On the title, press H for how to play and the controls.",
+    ].join("\n") + "\n"
+  );
+}
+
+export function packageName(sha7) {
+  return "scrapkeep-core-loop-" + sha7;
+}
+
+export function tarArgs(outDir, sha7) {
+  const parent = path.dirname(outDir);
+  const stamp = path.basename(outDir);
+  const name = packageName(sha7);
+  return [
+    "-czf",
+    path.join(parent, name + ".tar.gz"),
+    "-C",
+    parent,
+    "--transform=s,^" + stamp + "," + name + ",",
+    stamp,
+  ];
+}
+
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
     encoding: "utf8",
@@ -259,7 +310,47 @@ async function main() {
   if (boot.status !== 0) failures.push("boot exit " + boot.status);
   if (failures.length > 0) fail(failures.join("; ") + "\n" + bootText.slice(-2000));
 
+  const head = run("git", ["-C", root, "rev-parse", "HEAD"]);
+  if (head.status !== 0) fail("git HEAD not found\n" + head.stderr);
+  const sha = head.stdout.trim();
+  const sha7 = sha.slice(0, 7);
+  const status = run("git", [
+    "-C",
+    root,
+    "status",
+    "--porcelain",
+    "--untracked-files=no",
+  ]);
+  if (status.status !== 0) fail("git status failed\n" + status.stderr);
+  const dirty = status.stdout.trim() !== "";
+  await writeFile(
+    path.join(outDir, "BUILD.txt"),
+    buildStamp({
+      sha,
+      dirty,
+      stamp,
+      godot: "4.7.2.stable",
+      stems: stemCount,
+      stemsFrom,
+    }),
+  );
+  await writeFile(path.join(outDir, "HOW-TO-RUN.txt"), howToRun({ sha7 }));
+  const tar = run("tar", tarArgs(outDir, sha7));
+  if (tar.status !== 0) fail("tar failed\n" + tar.stderr);
+  const tarball = path.join(
+    path.dirname(outDir),
+    packageName(sha7) + ".tar.gz",
+  );
+
   const size = (await stat(exe)).size;
+  console.log("version: " + sha7 + (dirty ? "-dirty" : "") + " " + stamp);
+  console.log(
+    "package: " +
+      tarball +
+      " (" +
+      ((await stat(tarball)).size / 1048576).toFixed(1) +
+      " MiB)",
+  );
   console.log("executable: " + exe);
   console.log("pack size: " + size + " bytes (" + (size / 1048576).toFixed(1) + " MiB, pack embedded)");
   console.log("stems from: " + stemsFrom);
