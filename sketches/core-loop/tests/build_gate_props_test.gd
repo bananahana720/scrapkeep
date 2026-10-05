@@ -66,6 +66,22 @@ func _ground_rid(stage: int) -> RID:
 	return ground.get_rid() if ground != null else RID()
 
 
+# Every collider of the other built stages. terrain.use() parks an idle stage by moving its
+# root down, but the physics server only sees the move once the transform notifications
+# flush at the next frame, and this test swaps stages and sweeps within one tick, so a
+# parked stage's ground still stands at the origin (seed 10's stage 5 approach hit the
+# stage 6 crown's Ground at (10.0, 13.9, -82.4)).
+func _parked_rids(stage: int) -> Array:
+	var terrain = _game.ctx.terrain
+	var rids := []
+	for other in range(1, _game.ctx.stages.COUNT + 1):
+		if other == stage or not terrain.is_built(other):
+			continue
+		for body in terrain.geometry_root(other).find_children("*", "CollisionObject3D", true, false):
+			rids.append(body.get_rid())
+	return rids
+
+
 # True when a ball-sized sphere swept from from_xz to to_xz (both raised to the
 # ground's own height plus the probe radius) hits anything on the world layer other
 # than the excluded ground body.
@@ -101,7 +117,7 @@ func _open_and_check(label: String, stage: int, ball_xz: Vector3, heading: Vecto
 	if offers.is_empty():
 		bad.append("%s: no gates opened" % label)
 		return
-	var exclude := [_ground_rid(stage)]
+	var exclude := [_ground_rid(stage)] + _parked_rids(stage)
 	for offer in offers:
 		var gate_at: Vector3 = offer["at"]
 		var facing: Vector3 = offer["facing"]
