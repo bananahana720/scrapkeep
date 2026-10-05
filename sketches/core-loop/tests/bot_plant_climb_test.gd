@@ -73,6 +73,13 @@ func _process(_delta: float) -> bool:
 	t.check("climbing: the climb waypoint stays the steer", up.steered == CLIMB_STEP, str(up.steered))
 	t.eq("climbing: the plant cycle does not run", up.plants, 0)
 
+	var stale := Probe.new(FakeGame.new())
+	stale._plant_state = "seek"
+	stale.climbing = true
+	stale._act(CLIMB_STEP, null, 1.0 / 90.0, fight)
+	t.eq("climbing: a seek in progress drops to idle", stale._plant_state, "idle")
+	t.check("climbing: the dropped seek does not steer", stale.steered == CLIMB_STEP, str(stale.steered))
+
 	var level := Probe.new(FakeGame.new())
 	level.climbing = false
 	level._act(CLIMB_STEP, null, 1.0 / 90.0, fight)

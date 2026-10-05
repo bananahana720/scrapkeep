@@ -1670,11 +1670,14 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 		return
 	# A plant face does not replace a fight climb's waypoint: the face beside the crown's beacon
 	# ramp slingshots the engineer back to the deck before she reaches the Warden's floor.
-	if _engineer() and fight != null and is_instance_valid(fight) \
-			and not _climbing(player.ball_position(), fight.global_position):
-		var planted := _plant(fight, delta)
-		if planted != Vector3.INF:
-			steer = planted
+	# A seek dropped for the climb is not resumed afterwards: its face may lie back down the ramp.
+	if _engineer() and fight != null and is_instance_valid(fight):
+		if _climbing(player.ball_position(), fight.global_position):
+			_plant_state = "idle" if _plant_state == "seek" else _plant_state
+		else:
+			var planted := _plant(fight, delta)
+			if planted != Vector3.INF:
+				steer = planted
 	_specials(fight, false)
 	_drive(steer, aim, delta)
 
