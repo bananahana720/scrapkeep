@@ -39,6 +39,10 @@ const WORDS := {
 	"gather_plate": "gather",
 	"link_clips": "link",
 	"balance_due": "balance due",
+	"cannon_lane": "cannon lane",
+	"cannon_recoil": "recoil split",
+	"cannon_plate": "cannon plate",
+	"cannon_rush": "rush ring",
 }
 
 # Keys a movement kit adds, by the augment or flag that grants them: the verb whose table key
@@ -59,11 +63,13 @@ const FANTASY := {
 	"demolitions_caster": "Vanish in smoke. Drop a line of fire.",
 	"tarn": "Claw in close. Clamp the threat, then rend.",
 	"tally": "Punch a card. Roll to refill. Make them pay.",
+	"remembered_cannon": "The Mind's guns, yours now. Call the shot.",
 }
 
 # 1 to 3: how many things the pilot juggles. Rivet holds sprint and fires; Kest times
 # charges against a detonation line; Sable hooks, plants, mounts and slingshots.
-const DIFFICULTY := {"pylon_engineer": 3, "runner_gunner": 1, "demolitions_caster": 2, "tarn": 2, "tally": 3}
+const DIFFICULTY := {"pylon_engineer": 3, "runner_gunner": 1, "demolitions_caster": 2, "tarn": 2, "tally": 3,
+	"remembered_cannon": 3}
 const DIFFICULTY_MAX := 3
 
 

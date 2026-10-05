@@ -17,6 +17,7 @@ const PILOTS := {
 	"demolitions_caster": "res://assets/models/pilot_kest_anim.glb",
 	"tarn": "res://assets/models/pilot_sable_anim.glb",  # Tarn: Sable's fox pilot, the nearest silhouette to a tiger, tinted rust
 	"tally": "res://assets/models/pilot_kest_anim.glb",  # Tally: Kest's pilot stands in until her own model lands, tinted ledger cream
+	"remembered_cannon": "res://assets/models/pilot_kest_anim.glb",  # remembered cannon: Kest's stand-in until pil-G11
 }
 
 # VD-01 clear sphere slice. Dresses the greybox in the procedural
@@ -42,6 +43,7 @@ const SHELLS := {
 	"demolitions_caster": "res://assets/models/world_one/shell_kest.glb",
 	"tarn": "res://assets/models/world_one/shell_kest.glb",  # Tarn: Kest's banded shell, the heaviest existing silhouette, tinted rust
 	"tally": "res://assets/models/world_one/shell_kest.glb",  # Tally: Kest's shell stands in until her own model lands, tinted ledger cream
+	"remembered_cannon": "res://assets/models/world_one/shell_kest.glb",  # remembered cannon: Kest's stand-in until pil-G11
 }
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"

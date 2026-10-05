@@ -19,6 +19,7 @@ const Ground := preload("res://src/combat/ground.gd")
 const WearTrail := preload("res://src/combat/wear_trail.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
 const Sight := preload("res://src/combat/sight.gd")
@@ -221,6 +222,13 @@ var _prow_until := {}
 var _spring_until := -1.0
 # Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps.
 var _clamped := {}
+# The remembered cannon: committed volleys ({family, hazards, damage, source, struck,
+# expose, verb, window, and the commit's seed, target, centre, radius and phase}), how many it has committed (its seed counter),
+# and plate-exposed enemies (instance id -> {until, verb}) that take MindAttacks.BRACE_MULT
+# from any contact strike.
+var _cannon := []
+var _cannon_count := 0
+var _exposed := {}
 # Tally's program cards. bay is the selected card (0, 1 or 2); plate is Gather's plate ({}
 # or {"at", "until"}); link_group the live clips ({} or {"ids", "until", "spent"}); last_card
 # the last run ({"card", "at", "hits", "spent"}). All read only outside this file.
@@ -285,6 +293,7 @@ func setup(ctx_ref) -> void:
 		"point_blank": {"geometry": _point_blank_geometry, "fire": _fire_point_blank},
 		"clamp": {"geometry": _clamp_geometry, "fire": _fire_clamp},
 		"plate_return": {"geometry": _plate_return_geometry, "fire": _fire_plate_return, "can": _plate_out},
+		"cannon_plate": {"geometry": _plate_geometry, "fire": _fire_plate},
 	}
 	_cards = {"gather_plate": _run_gather, "link_clips": _run_link, "balance_due": _run_balance}
 	ctx.events.enemy_struck.connect(_on_card_struck)
@@ -305,6 +314,8 @@ func setup(ctx_ref) -> void:
 		var argc: int = _signal_argc(ctx.events, kind)
 		ctx.events.connect(kind, _on_proc_fact.bind(kind).unbind(argc))
 	ctx.events.slammed.connect(_on_slammed_upgrade)
+	ctx.events.slammed.connect(_on_cannon_slammed)
+	ctx.events.dashed.connect(_on_cannon_dashed)
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
@@ -326,6 +337,9 @@ func setup(ctx_ref) -> void:
 		_primed = {}
 		_prow_until = {}
 		_clamped = {}
+		_free_cannon()
+		_cannon_count = 0
+		_exposed = {}
 		_reset_cards()
 		_cloud = {}
 		_sentry = {}
@@ -395,6 +409,7 @@ func spawn_enemy(kind: String, at: Vector3) -> Node3D:
 		_prow_until.erase(id)
 		_record_retirement(_class_for_id(id, kind))
 		_clamped.erase(id)
+		_exposed.erase(id)
 		_boss_add_ids.erase(id))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
@@ -418,6 +433,13 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	if enemy.has_method("is_dead") and enemy.is_dead():
 		return
 	var result := resolve(enemy, kind, force, part)
+	# The cannon's plate exposure: any contact strike deals BRACE_MULT while the window holds.
+	# The damage scales, not the force, because a contact's punch is affine in its force.
+	if kind in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()):
+		if float(_exposed[enemy.get_instance_id()]["until"]) > _clock:
+			result["dealt"] = float(result["dealt"]) * MindAttacks.BRACE_MULT
+		else:
+			_exposed.erase(enemy.get_instance_id())
 	var cls := _classify_source(kind, source if source != "" else _forced_source)
 	var spent := _primer_hit(enemy, kind, cls, result)
 	var at := enemy.global_position
@@ -893,6 +915,10 @@ func _physics_process(delta: float) -> void:
 	# the ledger_reader row, which exists only for _patterns and _damage_mod.
 	if ctx.player.abilities.cap(AbilityState.WEAPON, "cards", null) != null:
 		_step_cards(intent, delta)
+	elif ctx.player.abilities.cap(AbilityState.WEAPON, "family", "") == "lane":
+		if intent.fire_held and _cooldown <= 0.0 and _patterns.has(weapon):
+			_fire_cannon_lane(weapon)
+			_cooldown += 1.0 / _rate(weapon)
 	elif ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 0) > 0:
 		_step_sticky_weapon(intent, delta)
 	elif intent.fire_held and _cooldown <= 0.0 and _patterns.has(weapon):
@@ -901,6 +927,7 @@ func _physics_process(delta: float) -> void:
 	if not intent.fire_held:
 		_cooldown = maxf(_cooldown, 0.0)
 	_step_special(intent, delta)
+	_step_cannon(delta)
 	var enemies := get_tree().get_nodes_in_group("enemy")
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
@@ -1306,6 +1333,155 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 	effects.ring(centre, radius, ClassDef.TARN_COLOR)
 	last_burst = {"at": centre, "radius": radius, "damage": damage, "hit": hit, "kind": "clamp"}
 	_forced_source = prev_source
+
+
+# --- The remembered cannon (BIBLE "Mind and the remembered cannon") ------------------
+# Every cannon attack is one of the Mind's four families, committed through
+# MindAttacks with the ball as the source and the aim or an enemy as the target, laid as
+# a real Hazard in the cannon's colour. A non-hostile colour keeps it out of Threat.GROUP;
+# a hit lands only where the Hazard's own contains() holds, while it is live.
+
+func _cannon_phase() -> int:
+	return clampi(ctx.stages.world_of(ctx.run.stage), 1, 3) if ctx.stages != null else 1
+
+
+func _cannon_ground(p: Vector3) -> float:
+	return _floor_at(p + Vector3.UP).y
+
+
+func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: float, damage: float, source: String,
+		expose := false) -> Dictionary:
+	_cannon_count += 1
+	var seed: int = _cannon_count * 7919 + ctx.run.stage
+	var phase := _cannon_phase()
+	var descriptors: Array = MindAttacks.commit(family, seed, target, centre, phase, radius)
+	var entry := {"family": family, "hazards": [], "damage": damage, "source": source, "struck": {}, "expose": expose,
+		"verb": "", "window": 0.0, "seed": seed, "target": target, "centre": centre, "radius": radius, "phase": phase}
+	for d in descriptors:
+		d["id"] = "cannon_%s_%d" % [String(d["id"]).trim_prefix("mind_"), _cannon_count]
+		var h = MindAttacks.build(d)
+		h.color = ClassDef.CANNON_COLOR
+		h.ground = _cannon_ground
+		ctx.root.add_child(h)
+		entry["hazards"].append(h)
+		if d.has("verb"):
+			entry["verb"] = String(d["verb"])
+			entry["window"] = float(d["weak_window"])
+	_cannon.append(entry)
+	return entry
+
+
+func _step_cannon(delta: float) -> void:
+	if _cannon.is_empty():
+		return
+	var enemies := get_tree().get_nodes_in_group("enemy")
+	var kept := []
+	for entry in _cannon:
+		var done := true
+		for h in entry["hazards"]:
+			if not is_instance_valid(h):
+				continue
+			h.step(delta)
+			if not h.is_done():
+				done = false
+			if h.is_live():
+				_cannon_strike(entry, h, enemies)
+		if done:
+			for h in entry["hazards"]:
+				if is_instance_valid(h):
+					h.queue_free()
+		else:
+			kept.append(entry)
+	_cannon = kept
+
+
+func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		var id: int = enemy.get_instance_id()
+		if entry["struck"].has(id) or not h.contains(enemy.global_position):
+			continue
+		entry["struck"][id] = true
+		var push: Vector3 = h.heading if h.shape == MindAttacks.Hazard.Shape.LANE else enemy.global_position - h.centre
+		_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "",
+			entry["source"])
+		if entry["expose"] and is_instance_valid(enemy) and not enemy.is_dead():
+			_exposed[id] = {"until": _clock + float(entry["window"]), "verb": entry["verb"]}
+
+
+# Every cannon Hazard leaves the tree now and is freed at the end of the frame.
+func _free_cannon() -> void:
+	for entry in _cannon:
+		for h in entry["hazards"]:
+			if is_instance_valid(h):
+				if h.get_parent() != null:
+					h.get_parent().remove_child(h)
+				h.queue_free()
+	_cannon = []
+
+
+# The weapon: one Mind lane from the ground under the ball down the aim, per cooldown.
+func _fire_cannon_lane(weapon: String) -> void:
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	var ball: Vector3 = ctx.player.ball_position()
+	var reach: float = Weapons.CANNON_LANE_REACH * ctx.tuning.mod("weapon_range")
+	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, reach + AIM_SLACK)
+	var point: Vector3 = aim["point"]
+	var centre := _ground_under(ball)
+	var target := point
+	if Vector2(point.x - centre.x, point.z - centre.z).length() < MUZZLE * 1.5:
+		target = centre + _flat_aim() * 10.0
+	var entry := _commit_cannon("lane", target, centre, reach, Weapons.LANE_DAMAGE, "weapon")
+	var h = entry["hazards"][0]
+	var end: Vector3 = h.centre + h.heading * h.length
+	var muzzle: Vector3 = ball + h.heading * MUZZLE
+	volleys += 1
+	last_shot = {"weapon_id": weapon, "from": muzzle, "to": end, "point": point, "blocked": aim["blocked"], "bolts": 0,
+		"volley": volleys, "sprung": false}
+	ctx.events.shot_fired.emit(weapon, muzzle, end)
+
+
+# The movement: the recoil kicks the ball along the aim; the split lands behind it.
+func _on_cannon_dashed(dir: Vector3) -> void:
+	if ctx.player.abilities.cap(AbilityState.MOVEMENT, "family", "") != "split_lane":
+		return
+	var flat := Vector3(dir.x, 0.0, dir.z)
+	flat = flat.normalized() if flat.length() > 0.01 else _flat_aim()
+	var centre := _ground_under(ctx.player.ball_position())
+	_commit_cannon("split_lane", centre - flat * 10.0, centre, Weapons.RECOIL_REACH, Weapons.RECOIL_DAMAGE, "special")
+
+
+# The special: the gauge draws the plate's own band as a cone; the release commits it.
+func _plate_geometry(f: float) -> Dictionary:
+	return ctx.player.yours({"kind": "cone", "apex": _ground_under(ctx.player.ball_position()), "dir": _flat_aim(),
+		"length": 2.0 * MindAttacks.PLATE_HALF_BAND, "half_angle": MindAttacks.PLATE_HALF_SPAN, "fill": f})
+
+
+func _fire_plate(f: float, shape: Dictionary) -> void:
+	var apex: Vector3 = shape["apex"]
+	var dir: Vector3 = shape["dir"]
+	var damage := AbilityState.Gauge.scaled(f, Weapons.PLATE_DAMAGE_MIN, Weapons.PLATE_DAMAGE_MAX)
+	_commit_cannon("plate", apex + dir * MindAttacks.PLATE_HALF_BAND, apex, shape["length"], damage, "special", true)
+	last_burst = {"at": apex, "damage": damage, "kind": "cannon_plate"}
+
+
+# The smash: after the shared slam, a rush ring about the landing over the nearest enemy.
+func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
+	if ctx.player.abilities.cap(AbilityState.SMASH, "family", "") != "rush":
+		return
+	var landing := _floor_at(at + Vector3.UP)
+	var target := landing + _flat_aim() * 6.0
+	var best := Weapons.RUSH_REACH
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.has_method("is_dead") and enemy.is_dead():
+			continue
+		var d := Vector2(enemy.global_position.x - landing.x, enemy.global_position.z - landing.z).length()
+		if d <= best:
+			best = d
+			target = enemy.global_position
+	_commit_cannon("rush", target, landing, Weapons.RUSH_REACH, Weapons.RUSH_DAMAGE * clampf(strength, 0.5, 1.5),
+		"drop_or_slam")
 
 
 # --- Tally's program cards (DESIGN-V3 "Tally's program cards") -------------------------
@@ -2310,6 +2486,7 @@ func _clear_fight() -> void:
 	bolts.clear()
 	sticky.clear()
 	effects.clear()
+	_free_cannon()
 
 
 func _rebuild_patterns() -> void:

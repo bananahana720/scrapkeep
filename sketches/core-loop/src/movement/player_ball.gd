@@ -483,7 +483,8 @@ func _burst_key() -> String:
 # The pilot's class burst is on Shift (Rivet's sprint, Kest's blink, Tarn's claw pull); Sable's Shift is the
 # boost. The keyboard fills shift_*; a scripted source fills boost_* and movement_* itself.
 func _burst_pilot() -> bool:
-	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE)
+	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE) \
+		or kit.on(Augments.RECOIL)
 
 
 func _read_shift() -> void:

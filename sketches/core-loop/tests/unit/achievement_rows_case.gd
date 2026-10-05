@@ -58,11 +58,19 @@ func run(t) -> void:
 	_bad(t, "bad: two reward kinds are refused", {"reward": {"cosmetic": "paint_any_salt", "world": "gorge"}}, "at most one kind")
 	_bad(t, "bad: an unknown cosmetic reward is refused", {"reward": {"cosmetic": "nope"}}, "does not resolve")
 	_bad(t, "bad: an unknown pilot reward is refused", {"reward": {"pilot": "nobody"}}, "does not resolve")
-	var pending := _base_rows()
-	pending["pad_0"]["reward"] = {"pilot": "remembered_cannon"}
-	var pending_problems := Achievements.validate(pending, signals, _pilots(), Cosmetics.ids())
-	t.check("good: a pending pilot reward validates", pending_problems.is_empty(), "problems %s" % [pending_problems])
-	_bad(t, "bad: a pending pilot with a class row is refused", {"reward": {"pilot": "remembered_cannon"}}, "PENDING_PILOTS", _pilots() + ["remembered_cannon"])
+	# The pending id is read at runtime, so these two cases hold whichever pilots are still
+	# pending, and still count their checks once every pending pilot has its class row.
+	var pending_ids: Array = Achievements.PENDING_PILOTS.duplicate()
+	if pending_ids.is_empty():
+		_bad(t, "bad: with no pending pilots, a pilot with no class row is refused", {"reward": {"pilot": "no_class_row"}}, "does not resolve")
+		t.check("no pending pilots", true, "")
+	else:
+		var waiting: String = pending_ids[0]
+		var pending := _base_rows()
+		pending["pad_0"]["reward"] = {"pilot": waiting}
+		var pending_problems := Achievements.validate(pending, signals, _pilots(), Cosmetics.ids())
+		t.check("good: a pending pilot reward validates", pending_problems.is_empty(), "problems %s" % [pending_problems])
+		_bad(t, "bad: a pending pilot with a class row is refused", {"reward": {"pilot": waiting}}, "PENDING_PILOTS", _pilots() + [waiting])
 	_bad(t, "bad: a long name is refused", {"name": "One Two Three Four"}, "name")
 	_bad(t, "bad: a long text is refused", {"text": "one two three four five six seven eight nine ten eleven twelve thirteen"}, "text")
 

@@ -55,7 +55,7 @@ static func _lock(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array,
 
 # Whether the class movement burst can take a press this tick: Rivet's sprint with a
 # charge and not already running, Kest's blink with a charge (or her free blink out of the
-# cloak), Tarn's claw pull and Tally's flywheel surge with a charge. A slam plant or a
+# cloak), Tarn's claw pull, Tally's flywheel surge and the cannon's recoil with a charge. A slam plant or a
 # pylon mount stands the burst down.
 static func burst_ready(kit) -> bool:
 	if Augments.holding(kit):
@@ -64,6 +64,6 @@ static func burst_ready(kit) -> bool:
 		return kit.abilities.ready(AbilityState.MOVEMENT) and not kit.sprinting
 	if kit.on(Augments.BLINK):
 		return kit.abilities.ready(AbilityState.MOVEMENT) or (kit.cloaked and kit.knob("cloak_free_blink"))
-	if kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE):
+	if kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE) or kit.on(Augments.RECOIL):
 		return kit.abilities.ready(AbilityState.MOVEMENT)
 	return false

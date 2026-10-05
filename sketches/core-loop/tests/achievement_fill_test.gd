@@ -138,5 +138,5 @@ func _mind() -> void:
 	_t.eq("F7 mind_quieted keeps its text", Achievements.row("mind_quieted")["text"], MIND_TEXT)
 	_t.eq("F7 mind_quieted pays the remembered cannon", Achievements.reward_of("mind_quieted"), {"pilot": "remembered_cannon"})
 	_t.eq("F7 ledger_balanced pays Tally", Achievements.reward_of("ledger_balanced"), {"pilot": "tally"})
-	_t.check("F7 cannon stays pending, tally has a class row and is not pending", Achievements.PENDING_PILOTS.has("remembered_cannon")
-			and not Achievements.PENDING_PILOTS.has("tally") and ClassDef.by_id("tally") != null, "%s" % [Achievements.PENDING_PILOTS])
+	_t.check("F7 no pilot stays pending; the cannon and Tally have class rows", Achievements.PENDING_PILOTS.is_empty()
+			and ClassDef.by_id("remembered_cannon") != null and ClassDef.by_id("tally") != null, "%s" % [Achievements.PENDING_PILOTS])

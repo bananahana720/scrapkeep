@@ -15,8 +15,9 @@ const PYLON_TURRET := "pylon_turret"
 const STICKY_CHARGE := "sticky_charge"
 const CLAW_SWEEP := "claw_sweep"
 const LEDGER_READER := "ledger_reader"
+const CANNON_LANE := "cannon_lane"
 
-const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE, CLAW_SWEEP, LEDGER_READER]
+const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE, CLAW_SWEEP, LEDGER_READER, CANNON_LANE]
 
 # Runner-gunner: tight, fast and laser-true. Small damage, high rate, no spread, a thin
 # hit radius: it rewards aim and never stops firing.
@@ -46,10 +47,14 @@ const BASE := {
 	# read. Combat runs her cards instead and never calls _fire for it.
 	LEDGER_READER: {"damage": 10.0, "rate": 2.5, "range_m": 30.0, "speed": 140.0, "bolt_radius": 0.5,
 		"knock": EventKinds.IMPACT["ledger"]["knock"]},
+	# The remembered cannon's lane: the row gives _rate, pattern ops and a volley proc a
+	# pattern to read. Combat commits a Mind lane for it instead of firing bolts.
+	CANNON_LANE: {"damage": LANE_DAMAGE, "rate": 1.0, "range_m": CANNON_LANE_REACH, "speed": 120.0, "bolt_radius": 0.6,
+		"knock": EventKinds.IMPACT["cannon"]["knock"]},
 }
 
 const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky",
-	CLAW_SWEEP: "claw", LEDGER_READER: "ledger"}
+	CLAW_SWEEP: "claw", LEDGER_READER: "ledger", CANNON_LANE: "cannon"}
 
 # Overdrive (runner special): a ring blast that throws everything off you, then a few
 # seconds of faster fire. Surrounded is when a runner most needs to keep rolling.
@@ -122,6 +127,17 @@ const PLATE_RETURN_HALF_MAX := 2.5
 const PLATE_RETURN_DAMAGE_MIN := 8.0
 const PLATE_RETURN_DAMAGE_MAX := 16.0
 const LEDGER_KNOCK := EventKinds.IMPACT["ledger"]["knock"]
+# The remembered cannon's numbers: reach, damage and cooldowns only. Every warn, live,
+# half width, band and span comes from mind_attacks.gd, never from here.
+const CANNON_LANE_REACH := 26.0
+const LANE_DAMAGE := 30.0  # 38 in the brief; under the claw sweep's 32 (tarn_kit_test)
+const RECOIL_REACH := 16.0
+const RECOIL_DAMAGE := 24.0
+const PLATE_DAMAGE_MIN := 18.0
+const PLATE_DAMAGE_MAX := 34.0
+const RUSH_REACH := 14.0
+const RUSH_DAMAGE := 30.0
+const CANNON_KNOCK := EventKinds.IMPACT["cannon"]["knock"]
 
 
 static func base(weapon_id: String) -> Resource:
@@ -137,6 +153,8 @@ static func color(weapon_id: String) -> Color:
 		return ClassDef.TARN_COLOR
 	if weapon_id == LEDGER_READER:
 		return ClassDef.TALLY_COLOR
+	if weapon_id == CANNON_LANE:
+		return ClassDef.CANNON_COLOR
 	if weapon_id == PYLON_TURRET:
 		return Palette.ARC.lightened(0.25)
 	return Palette.ARC

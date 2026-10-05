@@ -18,6 +18,7 @@ const BLINK := "blink"
 const GLIDE := "glide"
 const CLAW_PULL := "claw_pull"
 const SURGE := "surge"
+const RECOIL := "recoil"
 const SLAM := "slam"
 
 const SPECS := [
@@ -29,6 +30,7 @@ const SPECS := [
 	{"key": GLIDE, "label": "Glide", "hint": "hold Space falling, after the air jump"},
 	{"key": CLAW_PULL, "label": "Claw pull", "hint": "Shift; a planted claw pulls you along the aim"},
 	{"key": SURGE, "label": "Flywheel surge", "hint": "Shift; steam surges you along your travel"},
+	{"key": RECOIL, "label": "Recoil split", "hint": "Shift; fire behind you and ride the kick"},
 	{"key": SLAM, "label": "Smash", "hint": "Ctrl while airborne; plants on flat, launches on slopes"},
 ]
 const SHARED := [SLAM]
@@ -108,6 +110,10 @@ const CLAW_PULL_LIFT := 2.0
 # at SURGE_SCALE times the dash floor, keeping a faster speed and the vertical velocity.
 const SURGE_MIN_SPEED := 2.0
 const SURGE_SCALE := 1.3
+# The remembered cannon's recoil: Shift fires behind and kicks the ball along the aim at
+# RECOIL_SCALE times the dash floor (a faster speed is kept), never lower than RECOIL_LIFT up.
+const RECOIL_SCALE := 1.3
+const RECOIL_LIFT := 1.5
 # Rivet's skid turns the slam's fall into forward speed instead of a plant; Bulldozer
 # raises the share through the skid_keep knob.
 const SKID_KEEP := 0.6
@@ -128,6 +134,7 @@ static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 	_blink(kit, tuning, intent, aim, body_state)
 	_claw_pull(kit, tuning, intent, aim, body_state)
 	_surge(kit, tuning, intent, aim, body_state)
+	_recoil(kit, tuning, intent, aim, body_state)
 	_slam(kit, state, tuning, intent, body_state, step)
 	if kit.plant_time > 0.0:
 		return
@@ -303,6 +310,18 @@ static func _surge(kit, tuning, intent, aim: Basis, body_state) -> void:
 	var dir := Vector3(v.x, 0.0, v.z) / planar if planar > SURGE_MIN_SPEED else _flat_forward(aim, v)
 	var speed := maxf(planar, tuning.f("dash_impulse") * SURGE_SCALE)
 	body_state.linear_velocity = Vector3(dir.x * speed, v.y, dir.z * speed)
+	kit.facts.append(["dashed", [dir]])
+
+
+static func _recoil(kit, tuning, intent, aim: Basis, body_state) -> void:
+	if not kit.on(RECOIL) or not intent.movement_pressed:
+		return
+	if not kit.abilities.spend(AbilityState.MOVEMENT):
+		return
+	var v: Vector3 = body_state.linear_velocity
+	var dir := _flat_forward(aim, v)
+	var speed := maxf(Vector2(v.x, v.z).length(), tuning.f("dash_impulse") * RECOIL_SCALE)
+	body_state.linear_velocity = Vector3(dir.x * speed, maxf(v.y, RECOIL_LIFT), dir.z * speed)
 	kit.facts.append(["dashed", [dir]])
 
 
