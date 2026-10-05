@@ -44,7 +44,7 @@ const ROWS := {
 	"cogs_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "cog_tick", "hud": "", "objective": "", "priority": 1},
 	"part_gained": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "hud": "+ {part}", "objective": "", "priority": 2},
 	"player_hit": {"group": "combat", "color": Palette.RUST, "shape": "burst", "sound": "hurt", "hud": "", "objective": "", "priority": 2},
-	# META-5: the player/body/chirp consumer lands later; this bus fact is quiet for now.
+	# The HUD pip and chirps read run.companion, not this signal, so the row stays quiet and listed in GRAMMAR_SIGNALS.
 	"escape_window": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"player_died": {"group": "combat", "color": Palette.RUST, "shape": "cross", "sound": "death", "hud": "Scrapped", "objective": "", "priority": 3},
 	"enemy_killed": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "kill_pop", "hud": "", "objective": "", "priority": 1},
@@ -697,6 +697,10 @@ const UI_ROWS := {
 	"callout_warden": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "callout_chime", "hud": "Break it", "objective": "", "priority": 2},
 	"callout_gates": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "callout_chime", "hud": "Roll through", "objective": "", "priority": 2},
 	"callout_notes": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "callout_chime", "hud": "Hold {key_tab}: notes", "objective": "", "priority": 2},
+	# The SPIL-9 escape charge as the HUD pip reads it from run.companion: a lit diamond
+	# when armed, an empty ring when spent.
+	"companion_ready": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "diamond", "sound": "companion_chirp_ready", "hud": "", "objective": "", "priority": 1},
+	"companion_spent": {"group": "combat", "color": Palette.SANDSTONE, "shape": "ring", "sound": "companion_chirp_spent", "hud": "", "objective": "", "priority": 1},
 }
 
 # v2 W7 enemies

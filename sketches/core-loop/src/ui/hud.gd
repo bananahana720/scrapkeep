@@ -27,6 +27,7 @@ const PartName := preload("res://src/ui/part_name.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const HotwireScreen := preload("res://src/ui/hotwire_screen.gd")
+const Companion := preload("res://src/core/companion.gd")
 
 # The wallet readout: the brass cog and the cogs the run holds, the one number the HUD
 # shows because it is what the next roll through a hoop spends.
@@ -171,6 +172,11 @@ var _cogs: CogChip
 var chain_counter: Control
 var _armor_flash := 0.0
 var _armor_peak := ARMOR_PEAK_FLOOR
+# The companion pip, left of the armour gauge: the escape charge read from run.companion,
+# drawn and chirped from the companion_ready / companion_spent UI rows.
+var _companion: TextureRect
+var _companion_state := "none"
+var _companion_cues: Array[String] = []
 var _threat := 0
 var _laid_out := Vector2.ZERO
 # What layout() last read besides the screen: the pieces whose own size moves their neighbours.
@@ -237,6 +243,14 @@ func setup(game_ref) -> void:
 	add_child(_cogs)
 	chain_counter = ChainCounter.new()
 	add_child(chain_counter)
+	_companion = TextureRect.new()
+	_companion.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_companion.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_companion.custom_minimum_size = Vector2(TOAST_ICON, TOAST_ICON)
+	_companion.size = Vector2(TOAST_ICON, TOAST_ICON)
+	_companion.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_companion.visible = false
+	add_child(_companion)
 	game.run.armor_hit.connect(func(_removed: float, _spill: int, _source: String): _armor_flash = ARMOR_FLASH)
 
 	reticle = AimReticle.new()
@@ -494,6 +508,26 @@ func _show_toast(entry: Dictionary) -> void:
 	_toast_row.modulate.a = 0.0
 
 
+# The escape charge the pip shows: "none" without a seated escape corridor, else
+# "ready" or "spent".
+static func companion_state_of(doc: Dictionary) -> String:
+	if doc.is_empty():
+		return "none"
+	var model := Companion.new()
+	if not model.from_dict(doc) or not model.has_family(Companion.ESCAPE_CORRIDOR):
+		return "none"
+	return "ready" if model.escape_ready() else "spent"
+
+
+# The chirps played so far, oldest first.
+func companion_cues() -> Array[String]:
+	return _companion_cues.duplicate()
+
+
+func companion_state() -> String:
+	return _companion_state
+
+
 # The toast on screen, or the one waiting for the stage card to clear.
 func toast_texts() -> Array[String]:
 	var out: Array[String] = []
@@ -589,6 +623,7 @@ func layout(size: Vector2) -> void:
 	var slot_mid := bar_y + AbilityBar.SLOT * 0.5
 	_health.position = Vector2(ability_bar.position.x - BOTTOM_GAP - _health.size.x, slot_mid - _health.size.y * 0.5)
 	_armor.position = Vector2(_health.position.x - BOTTOM_GAP - _armor.size.x, slot_mid - _armor.size.y * 0.5)
+	_companion.position = Vector2(_armor.position.x - BOTTOM_GAP - _companion.size.x, slot_mid - _companion.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 	_cogs.position = Vector2(_speed.position.x + _speed.size.x + BOTTOM_GAP, slot_mid - _cogs.size.y * 0.5)
 	chain_counter.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - chain_counter.size.y * 0.5)
@@ -633,7 +668,8 @@ func piece_rects() -> Dictionary:
 		"top": [_rect_of(_objective), _rect_of(_status)] + ([_rect_of(_plate)] if _plate != null else []),
 		"toasts": [_rect_of(_toasts)],
 		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_speed)]
-			+ ([_rect_of(_armor)] if _armor.visible else []),
+			+ ([_rect_of(_armor)] if _armor.visible else [])
+			+ ([_rect_of(_companion)] if _companion.visible else []),
 	}
 
 
@@ -648,6 +684,23 @@ static func row_color(id: String) -> Color:
 	if id == "charge_beacon":
 		return EventKinds.state_color("beacon_open")
 	return EventKinds.color(ROW_COLOR[id])
+
+
+# A change between ready and spent plays that row's chirp; a change from or to "none" is silent.
+func _step_companion(playing: bool) -> void:
+	var state := companion_state_of(game.run.companion)
+	if state != _companion_state and state != "none" and _companion_state != "none":
+		var kind := "companion_" + state
+		_companion_cues.append(kind)
+		var audio = game.presentation.audio if game.presentation != null else null
+		if audio != null and audio.has_method("play"):
+			audio.play(kind, 0.0, 1.0, "UI")
+	_companion_state = state
+	if state != "none":
+		var row: Dictionary = EventKinds.UI_ROWS["companion_" + state]
+		_companion.texture = Icons.shape(String(row["shape"]))
+		_companion.modulate = row["color"]
+	_companion.visible = playing and state != "none"
 
 
 static func _rect_of(control: Control) -> Rect2:
@@ -761,6 +814,7 @@ func _process(delta: float) -> void:
 		_plate.visible = playing
 	part_name.visible = playing and part_name.left > 0.0
 	_armor.visible = playing and game.run.armor_mode
+	_step_companion(playing)
 	if not playing:
 		_restart.set_fraction(0.0)
 		chain_counter.step(delta, 0)

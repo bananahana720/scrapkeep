@@ -76,7 +76,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.CAUSE_ROWS": "9d20bee7f3e2a23dd09db3c08ab99e3fa0aab0f99d4373ef3398fff8601e0812",
 	"event_kinds.ACTIVITY_ROWS": "3b128af84df85ddccc150f1d6f5847b194a39dd1625cd0c8a1d2c2c3b4ae2607",
 	"event_kinds.LOOT_ROWS": "1d99aa491419dc9a8bbd2da1cfd747d991c3848e5cf01e7cc8e099698d8b3b6e",
-	"event_kinds.UI_ROWS": "75e0ca77eefc9ef9fcaf372e6f184f84709cdfb5e3da7f962574da86153b6f2b",
+	"event_kinds.UI_ROWS": "c6a2047c965432db5eed87fba48ff0e1da8cf49b85d6731c4f8622322c529595",  # 2026-10-05 (alpha wave 13 companion-cues): companion_ready and companion_spent rows
 	"event_kinds.WORLD_ROWS": "799b6e7c924f4ca210f4eb4fa452e51bea451dc5c48cfa9e2726454592a02d09",  # 2026-10-04 (wave 10): breach_opened row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
