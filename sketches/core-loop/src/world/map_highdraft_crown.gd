@@ -58,6 +58,8 @@ func _init() -> void:
 	for k in [-1.0, 0.0, 1.0]:
 		gate_slots.append({"at": beacon + approach * 14.0 + side * 10.0 * k, "facing": facing})
 	hard_points = []
+	# The beacon island's top, east of the bridge's landing: the relic cache.
+	relic_spot = Vector2(-8.0, -115.0)
 	for post in CROWN_POSTS:
 		hard_points.append({"at": post["at"]})
 	contraptions = []

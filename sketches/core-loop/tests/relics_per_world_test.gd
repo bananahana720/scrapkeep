@@ -1,0 +1,182 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const Relics := preload("res://src/build/relics.gd")
+const ZoneSchema := preload("res://src/world/zone_schema.gd")
+const Dig := preload("res://src/world/map_dig.gd")
+const DigDeep := preload("res://src/world/map_dig_deep.gd")
+const Highdraft := preload("res://src/world/map_highdraft.gd")
+const Crown := preload("res://src/world/map_highdraft_crown.gd")
+
+# Each world has its own six relics, two per kit, and each world-2 and world-3 zone holds
+# one cache on its map's relic_spot that always offers a relic of that world. On the
+# default table, as Kest in calm: entering stages 3 to 6 puts that cache on the stage's own
+# ground (stage 3's, not stage 2's), with its chest and pedestals built on it.
+
+const KEST := 2
+const PILOT := "demolitions_caster"
+const KITS := ["pylon_engineer", "runner_gunner", "demolitions_caster"]
+const WORLD_ONE := ["crater_heart", "quick_fuse", "muzzle_heart", "redline_spring", "rain_heart", "long_fuse"]
+# Different luck keys for the one cache, so its relic draw is checked over many picks.
+const DRAWS := 12
+const SETTLE_TICKS := 4
+
+var _game
+var _source := Intent.Scripted.new()
+var _failures := 0
+var _checks := 0
+var _stages := [2, 3, 4, 5, 6]
+var _index := 0
+var _ticks := 0
+var _entered := false
+var _began := false
+
+
+func _initialize() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+	_check_table()
+	_check_maps()
+
+
+func _report(label: String, ok: bool, detail: String) -> void:
+	_checks += 1
+	if not ok:
+		_failures += 1
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+func _check_table() -> void:
+	_report("validator", Relics.validate().is_empty(), "table problems: %s" % [Relics.validate()])
+	var parts := {}
+	for id in Relics.ids():
+		parts[Relics.part_of(id)] = true
+	_report("one part per relic", parts.size() == Relics.ids().size(), "%d parts for %d relics" % [parts.size(), Relics.ids().size()])
+	for world in [1, 2, 3]:
+		var rows: Array = Relics.ids().filter(func(i): return int(Relics.row(i)["world"]) == world)
+		var per_kit := {}
+		for id in rows:
+			for kit in KITS:
+				if Relics.fits(id, kit):
+					per_kit[kit] = int(per_kit.get(kit, 0)) + 1
+		_report("world %d rows" % world, rows.size() == 6 and per_kit.values() == [2, 2, 2] and per_kit.size() == 3,
+			"%d rows, per kit %s" % [rows.size(), per_kit])
+		for pilot in Relics.PILOTS:
+			var pool := Relics.eligible(pilot, {}, null, world)
+			var own: bool = pool.size() == 2 and pool.all(func(i): return int(Relics.row(i)["world"]) == world)
+			_report("world %d pool for %s" % [world, pilot], own, "%s" % [pool])
+	for pilot in Relics.PILOTS:
+		_report("world 0 is every world for " + pilot, Relics.eligible(pilot, {}, null, 0) == Relics.eligible(pilot, {})
+			and Relics.eligible(pilot, {}).size() == 6, "%s" % [Relics.eligible(pilot, {})])
+	var first := []
+	for pilot in Relics.PILOTS:
+		for id in Relics.eligible(pilot, {}, null, 1):
+			if not id in first:
+				first.append(id)
+	first.sort()
+	var want := WORLD_ONE.duplicate()
+	want.sort()
+	_report("world 1 is the old six", first == want, "%s" % [first])
+
+
+func _check_maps() -> void:
+	for map in [Dig.new(), DigDeep.new(), Highdraft.new(), Crown.new()]:
+		var issues := ZoneSchema.validate(map)
+		_report(map.title + " schema", issues.is_empty() and ZoneSchema.slots(map).get("relic_spot") is Vector2,
+			"issues %s, relic_spot %s" % [issues, ZoneSchema.slots(map).get("relic_spot")])
+
+
+func _physics_process(_delta: float) -> bool:
+	if _game.flow == null:
+		return false
+	if not _began:
+		_began = true
+		_game.player.source = _source
+		_game.ctx.calm = true
+		_game.flow.press_start()
+		_game.flow.choose_class(KEST)
+		return false
+	if _index >= _stages.size():
+		print("relics_per_world_test: %s" % ("PASS (%d checks)" % _checks if _failures == 0 else "FAIL (%d of %d checks)" % [_failures, _checks]))
+		quit(0 if _failures == 0 else 1)
+		return true
+	var stage: int = _stages[_index]
+	if not _entered:
+		_entered = true
+		_ticks = 0
+		_game.flow.enter_stage(stage, Vector3.ZERO, false)
+		return false
+	_ticks += 1
+	if _ticks < SETTLE_TICKS:
+		return false
+	_check_stage(stage)
+	_index += 1
+	_entered = false
+	return false
+
+
+func _relic_cache():
+	for device in _game.world.interact.devices:
+		if device is CrackedCache and device.id == "relic_cache":
+			return device
+	return null
+
+
+func _check_stage(stage: int) -> void:
+	var terrain = _game.ctx.terrain
+	var map = terrain.map_for(stage)
+	var cache = _relic_cache()
+	if not "relic_spot" in map:
+		_report("stage %d has no relic cache" % stage, cache == null, "map %s" % map.title)
+		return
+	if cache == null:
+		_report("stage %d relic cache" % stage, false, "no relic cache placed on %s" % map.title)
+		return
+	var spot: Vector2 = map.relic_spot
+	var at: Vector3 = cache.global_position
+	var ground: Vector3 = terrain.ground_callable(stage).call(spot.x, spot.y, 0.0)
+	var on_spot: bool = Vector2(at.x, at.z).distance_to(spot) < 0.01 and absf(at.y - ground.y) < 0.01
+	var detail := "cache at %s, spot %s, stage ground %.2f" % [at, spot, ground.y]
+	if stage == 3:
+		var before: Vector3 = terrain.ground_callable(2).call(spot.x, spot.y, 0.0)
+		on_spot = on_spot and absf(before.y - ground.y) > 0.5
+		detail += ", stage 2 ground there %.2f" % before.y
+	_report("stage %d cache on its own ground" % stage, on_spot and cache.relic_guaranteed, detail)
+	_check_footing(stage, cache, map, spot, ground.y)
+	_check_relic(stage, cache)
+
+
+# The spot stands on the map with finite, level ground under the whole pocket, and the
+# chest's pedestals were built on this stage's ground.
+func _check_footing(stage: int, cache, map, spot: Vector2, y: float) -> void:
+	var terrain = _game.ctx.terrain
+	var finite: bool = is_finite(y) and terrain.contains(Vector3(spot.x, y, spot.y)) and (map.play_rect as Rect2).has_point(spot)
+	var worst := 0.0
+	for corner in [Vector3(-7.0, 0.0, -6.0), Vector3(7.0, 0.0, -6.0), Vector3(-7.0, 0.0, 6.0), Vector3(7.0, 0.0, 6.0)]:
+		var p: Vector3 = cache.to_global(corner)
+		worst = maxf(worst, absf(terrain.height(p.x, p.z) - y))
+	_report("stage %d spot on the map and level" % stage, finite and worst < 0.6,
+		"ground %.2f at %s, worst corner off by %.2f m" % [y, spot, worst])
+	var off := 0.0
+	for p in cache._pedestals:
+		var g: Vector3 = (p["node"] as Node3D).global_position
+		off = maxf(off, absf(g.y - terrain.height(g.x, g.z)))
+	_report("stage %d pedestals on the ground" % stage, off < 0.1, "worst pedestal off by %.2f m" % off)
+
+
+func _check_relic(stage: int, cache) -> void:
+	var world: int = _game.ctx.stages.world_of(stage)
+	var pool := Relics.eligible(_game.ctx.run.class_id(), _game.ctx.run.relics, _game.player.tree, world)
+	_report("stage %d pool is world %d's" % [stage, world], pool.size() == 2 and pool.all(func(i): return int(Relics.row(i)["world"]) == world),
+		"pool %s" % [pool])
+	var id: String = cache.id
+	var picks := []
+	for k in DRAWS:
+		cache.id = "%s_%d" % [id, k]
+		picks.append(cache._relic_offer())
+	cache.id = id
+	var ok: bool = picks.all(func(r): return Relics.has(r) and int(Relics.row(r)["world"]) == world and Relics.fits(r, PILOT))
+	_report("stage %d cache relic is world %d's" % [stage, world], ok, "%d draws %s" % [DRAWS, picks])

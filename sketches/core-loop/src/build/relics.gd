@@ -27,22 +27,60 @@ const SUFFIX := {AbilityState.WEAPON: "_weapon", AbilityState.MOVEMENT: "_move",
 const ROWS := {
 	"crater_heart": {"name": "Crater Heart", "text": "Smash spends the special for a crater",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SMASH, "swap": "crater_slam",
-		"part": "gen:defense:relic:none:on_smash"},
+		"part": "gen:defense:relic:none:on_smash", "world": 1},
 	"quick_fuse": {"name": "Quick Fuse", "text": "Detonation recharges 30% faster",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "cooldown": 0.7,
-		"part": "gen:charge:relic:arc:on_charge_release"},
+		"part": "gen:charge:relic:arc:on_charge_release", "world": 1},
 	"muzzle_heart": {"name": "Muzzle Heart", "text": "Special becomes a point-blank blast",
 		"pilots": RIVET, "slot": AbilityState.SPECIAL, "swap": "point_blank",
-		"part": "gen:weapon:relic:kinetic:on_kill"},
+		"part": "gen:weapon:relic:kinetic:on_kill", "world": 1},
 	"redline_spring": {"name": "Redline Spring", "text": "Overdrive sprint recharges 30% faster",
 		"pilots": RIVET, "slot": AbilityState.MOVEMENT, "cooldown": 0.7,
-		"part": "gen:mobility:relic:none:on_land"},
+		"part": "gen:mobility:relic:none:on_land", "world": 1},
 	"rain_heart": {"name": "Rain Heart", "text": "Sticky charges scatter three at once",
 		"pilots": ["demolitions_caster"], "slot": AbilityState.WEAPON, "swap": "sticky_rain",
-		"part": "gen:utility:relic:frost:on_hit"},
+		"part": "gen:utility:relic:frost:on_hit", "world": 1},
 	"long_fuse": {"name": "Long Fuse", "text": "Detonation line recharges 25% faster",
 		"pilots": ["demolitions_caster"], "slot": AbilityState.SPECIAL, "cooldown": 0.75,
-		"part": "gen:charge:relic:none:on_cloak_break"},
+		"part": "gen:charge:relic:none:on_cloak_break", "world": 1},
+	# World 2, the Dig.
+	"spare_cell": {"name": "Spare Cell", "text": "Stock a second detonation charge",
+		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 1,
+		"part": "gen:charge:relic:kinetic:on_smash", "world": 2},
+	"hot_coil": {"name": "Hot Coil", "text": "Detonation recharges 20% faster",
+		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "cooldown": 0.8,
+		"part": "gen:charge:relic:frost:timed", "world": 2},
+	"spare_spring": {"name": "Spare Spring", "text": "Stock a second overdrive sprint",
+		"pilots": RIVET, "slot": AbilityState.MOVEMENT, "charges": 1,
+		"part": "gen:mobility:relic:kinetic:on_rebound", "world": 2},
+	"hot_barrel": {"name": "Hot Barrel", "text": "Special blast recharges 25% faster",
+		"pilots": RIVET, "slot": AbilityState.SPECIAL, "cooldown": 0.75,
+		"part": "gen:weapon:relic:arc:on_hit", "world": 2},
+	"thin_smoke": {"name": "Thin Smoke", "text": "Smoke blink recharges 30% faster",
+		"pilots": ["demolitions_caster"], "slot": AbilityState.MOVEMENT, "cooldown": 0.7,
+		"part": "gen:mobility:relic:frost:on_cloak_break", "world": 2},
+	"deep_satchel": {"name": "Deep Satchel", "text": "Stock one more sticky charge",
+		"pilots": ["demolitions_caster"], "slot": AbilityState.WEAPON, "charges": 1,
+		"part": "gen:utility:relic:kinetic:on_kill", "world": 2},
+	# World 3, Highdraft.
+	"crown_cell": {"name": "Crown Cell", "text": "Stock two more detonation charges",
+		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 2,
+		"part": "gen:defense:relic:arc:on_damage_taken", "world": 3},
+	"storm_coil": {"name": "Storm Coil", "text": "Detonation recharges 40% faster",
+		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "cooldown": 0.6,
+		"part": "gen:utility:relic:arc:on_pickup", "world": 3},
+	"tailwind_spring": {"name": "Tailwind Spring", "text": "Overdrive sprint recharges 40% faster",
+		"pilots": RIVET, "slot": AbilityState.MOVEMENT, "cooldown": 0.6,
+		"part": "gen:mobility:relic:arc:on_speed_tier_up", "world": 3},
+	"twin_barrel": {"name": "Twin Barrel", "text": "Stock a second special blast",
+		"pilots": RIVET, "slot": AbilityState.SPECIAL, "charges": 1,
+		"part": "gen:weapon:relic:frost:on_vault", "world": 3},
+	"twin_blink": {"name": "Twin Blink", "text": "Stock a second smoke blink",
+		"pilots": ["demolitions_caster"], "slot": AbilityState.MOVEMENT, "charges": 1,
+		"part": "gen:charge:relic:frost:on_rebound", "world": 3},
+	"spare_line": {"name": "Spare Line", "text": "Stock a second detonation line",
+		"pilots": ["demolitions_caster"], "slot": AbilityState.SPECIAL, "charges": 1,
+		"part": "gen:defense:relic:kinetic:on_land", "world": 3},
 }
 
 
@@ -76,11 +114,14 @@ static func fits(relic_id: String, pilot: String) -> bool:
 
 # Relic ids a pilot may still find: the pilot's rows whose slot holds nothing yet, in
 # table order. `held` is slot to relic id. A relic whose swap the upgrade tree already gave
-# (`tree`, optional) is not offered: it would change nothing.
-static func eligible(pilot: String, held: Dictionary, tree = null) -> Array:
+# (`tree`, optional) is not offered: it would change nothing. `world` keeps the rows of that
+# world only; 0 keeps every world's.
+static func eligible(pilot: String, held: Dictionary, tree = null, world := 0) -> Array:
 	var out := []
 	for id in ROWS:
 		if not fits(id, pilot) or held.has(ROWS[id]["slot"]):
+			continue
+		if world != 0 and int(ROWS[id]["world"]) != world:
 			continue
 		if tree != null and swap_of(id) != "" and tree.gives_swap(ROWS[id]["slot"], swap_of(id)):
 			continue
