@@ -19,7 +19,7 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 # its rows with caps and a short word. The tester notes (TESTING, QUESTIONS, TRY_FIRST,
 # SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
 # What the run asks of you, in one line: the title screen shows it too.
-const OBJECTIVE := "Break each stage's Warden at its beacon; grow your punch through its plating. Three stages, then rout Admiral Brindle."
+const OBJECTIVE := "Break each stage's Warden at its beacon; grow your punch through its plating. Three worlds: rout Brindle, still the Waking, quiet the Mind."
 
 const TESTING := [
 	"One run: title, class, three stages, each sealed by a Warden at its beacon. Grow until your punch beats its plating, break it, roll through a reward gate and launch into the next stage. Stage 3's launch drops you into the arena against Admiral Brindle; beat him for the summary.",

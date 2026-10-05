@@ -8,15 +8,16 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
-# The title's one-page how to play (DESIGN-V2 section 14.10): the run's goal as three
-# icons in their event colours, then the controls diagram Tab's first page draws, with
-# no pilot chosen yet. Nothing here is written twice: the keys and words are
+# The title's one-page how to play (DESIGN-V2 section 14.10): the run's goal loop as
+# four icons in their event colours (the last is the next world), then the controls
+# diagram Tab's first page draws, with no pilot chosen yet. Nothing here is written twice: the keys and words are
 # FieldNotes.CONTROLS, the colours are event_kinds rows. Back presses H, as H opened it.
 
 const GOAL := [
 	{"icon": "res_heft", "kind": "heft_class_changed", "words": "Grow"},
 	{"icon": "obj_warden", "kind": "warden_engaged", "words": "Break the Warden"},
 	{"icon": "res_scrap", "kind": "bay_entered", "words": "Visit Moss"},
+	{"icon": "obj_launch", "kind": "world_entered", "words": "Next world"},
 ]
 
 var back: Button
