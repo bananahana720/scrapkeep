@@ -7,6 +7,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const MISSING := "res://assets/models/c1_missing_shell.glb"
 const MISSING_PILOT := "res://assets/models/c1_missing_pilot.glb"
 const MISSING_PREVIEW := "res://assets/models/c1_missing_preview.glb"
+const MISSING_PREVIEW_PILOT := "res://assets/models/c1_missing_preview_pilot.glb"
 
 # Rule: an unavailable GLB warns once per path on the loader, returns null without
 # script errors, and leaves the primitive player, pilot and live preview visible.
@@ -47,6 +48,16 @@ class MissingPreview:
 		_painter = MissingAssets.new()
 		_painter.replace_path = HeroAssets.SHELLS[def.id]
 		_painter.missing_path = MISSING_PREVIEW
+		super._build_shell()
+
+
+class MissingPilotPreview:
+	extends ClassPreview
+
+	func _build_shell() -> void:
+		_painter = MissingAssets.new()
+		_painter.replace_path = HeroAssets.PILOTS[def.id]
+		_painter.missing_path = MISSING_PREVIEW_PILOT
 		super._build_shell()
 
 
@@ -165,6 +176,33 @@ func _check_missing_preview() -> void:
 	preview.free()
 
 
+func _check_missing_preview_pilot() -> void:
+	var preview := MissingPilotPreview.new(_class_by_id("tally"))
+	root.add_child(preview)
+	var pod: Node3D = preview._pod
+	var placeholder := pod.find_child("Pilot", true, false) as GeometryInstance3D if pod != null else null
+	_report("preview pilot fallback", pod != null and placeholder != null and placeholder.layers != 0
+			and pod.get_node_or_null("AnimatedPilot") == null and preview._pilot == null
+			and _log.warnings_for(MISSING_PREVIEW_PILOT) == 1,
+		"missing pilot glb keeps the shell's placeholder Pilot visible, adds no AnimatedPilot, warns once")
+	preview.paint_id = ""
+	preview._process(1.0 / 90.0)
+	preview.open = 1.0
+	for i in 20:
+		preview._process(0.1)
+	preview._painter._scene(MISSING_PREVIEW_PILOT)
+	_report("preview pilot repeat", _log.warnings_for(MISSING_PREVIEW_PILOT) == 1,
+		"resting and open Tally preview frames and a second request add zero warnings")
+	preview.free()
+
+
+func _class_by_id(id: String) -> Resource:
+	for def in ClassDef.all():
+		if def.id == id:
+			return def
+	return null
+
+
 func _physics_process(_delta: float) -> bool:
 	if _done or _game.flow == null:
 		return false
@@ -172,6 +210,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_missing_shell()
 	_check_missing_pilot()
 	_check_missing_preview()
+	_check_missing_preview_pilot()
 	_game.free()
 	_report("no script errors", _log.script_errors.is_empty(), "%d captured script errors" % _log.script_errors.size())
 	OS.remove_logger(_log)
