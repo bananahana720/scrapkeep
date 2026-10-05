@@ -6,6 +6,9 @@ const Achievements := preload("res://src/core/achievements.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Push := preload("res://tests/workshop/push.gd")
+const Profile := preload("res://src/core/profile.gd")
+const Progress := preload("res://src/core/progress.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The title's achievements page and the toast for an earn (P3). On the real title, driven
@@ -16,6 +19,7 @@ const T := preload("res://tests/support/t.gd")
 #     from Progress.count_of; an earned row shows its date;
 #   - achievement_earned shows one toast with the row's name for 3 s; while a Warden fight
 #     is live toasts wait, then show in order.
+#   - PG10: a won run's bus facts earn first_win and mind_quieted, and the page shows both with their date.
 
 const ROW_WORDS := 15
 const EARNED_AT := 1790000000.0
@@ -122,6 +126,31 @@ func _run() -> void:
 	_t.eq("P3-5 then the next, in order", hud.ach_toasts(), ["Full Rack"])
 	await _settle(3.4)
 	_t.eq("P3-5 the Warden's own earn comes last", hud.ach_toasts(), ["Warden Breaker"])
+	# 2026-10-05 (wave 14, prog-G10): the page after a won run's bus facts, on its own bus.
+	var bus = GameEvents.new()
+	_game.add_child(bus)
+	var fresh := Profile.new("%s/progression_win.json" % _game.storage_dir)
+	fresh.load_profile()
+	var progress := Progress.new()
+	_game.add_child(progress)
+	const NOW := 1700000000.0
+	progress.setup(bus, _game.run, fresh, func(): return NOW)
+	bus.run_started.emit("x")
+	bus.world_entered.emit(3)
+	bus.boss_defeated.emit()
+	bus.run_ended.emit(true)
+	page.refresh(fresh, progress)
+	rows = page.rows
+	var won_stamp := Time.get_date_string_from_unix_time(int(NOW))
+	var fw := _label_texts(rows["first_win"])
+	var mq := _label_texts(rows["mind_quieted"])
+	var fr := _label_texts(rows["full_rack"])
+	_t.check("PG10 first_win row shows its name and date", fw.has(String(Achievements.row("first_win")["name"])) and fw.has(won_stamp), "%s" % [fw])
+	_t.check("PG10 mind_quieted row shows its name and date", mq.has(String(Achievements.row("mind_quieted")["name"])) and mq.has(won_stamp), "%s" % [mq])
+	_t.check("PG10 full_rack stays unearned", not AchievementsPage.reading("full_rack", fresh, progress)["earned"] and not fr.has(won_stamp), "%s" % [fr])
+	_t.eq("PG10 first_win counted once", progress.count_of("first_win"), 1.0)
+	progress.free()
+	bus.free()
 	_game.queue_free()
 	quit(_t.verdict())
 
