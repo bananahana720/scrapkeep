@@ -26,14 +26,14 @@ Tally and the remembered cannon are not in this alpha.
 
 ## The loop
 
-1. **Title.** Continue appears first when a saved run is valid. Start (Space; the button reads New run when a saved run exists) begins a run, and the menu also offers Help (H), Achievements (A) and Settings (S).
-2. **Class.** Press 1 to 4, or click a card: Sable, Rivet, Kest or Tarn. A locked pilot's card names what unlocks it. Each pilot has its own movement, special and smash on the same keys.
+1. **Title.** Continue appears first when a saved run is valid. Start (Space; the button reads New run when a saved run exists) begins a run, and the menu also offers Help (H), Achievements (A) and Settings (S); with the recorded music on, B cycles the breath.
+2. **Class.** Press 1 to 4, or click a card: Sable, Rivet, Kest or Tarn. A locked pilot's card names what unlocks it. Sable, Rivet and Kest each have their own movement, special and smash on the same keys; Tarn borrows Rivet's.
 3. **Upgrade pick.** The run opens with an upgrade pick; Esc is "Later" and keeps the pick waiting.
 4. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next; under it, your punch bar races the Warden's plating.
 5. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks.
-6. **Reward gates and Moss's bay.** Roll through one of two arches to take its part. A hover barge, Moss's workshop bay, docks beside the gates: an opt-in pit stop with a shop and a practice yard.
+6. **Reward gates and Moss's bay.** Roll through one of two arches to take its part. A hover barge, Moss's workshop bay, docks behind the gate row when it finds room: an opt-in pit stop with a shop and a practice yard.
 7. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
-8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A VICTORY screen follows, and the run continues into the next world's first stage; the last world's boss ends the run.
+8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A victory screen naming the rout (BRINDLE ROUTED, for one) follows, and the run continues into the next world's first stage; the last world's boss ends the run.
 9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and retries. N runs again as the same class.
 
 If you are scrapped, press R to retry the stage from its start (each world allows one retry; a death after it ends the run as RUN OVER), N for a new run, or C to choose a class. M opens the companion panel from the death screen when the run holds pieces.
