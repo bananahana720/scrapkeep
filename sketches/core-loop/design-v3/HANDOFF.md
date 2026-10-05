@@ -2,6 +2,77 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 14 landed (2026-10-05, b9f9712)
+
+The wave 14 candidate cand/alpha-w14 landed as b9f9712 (proto/alpha went 53dc109 to b9f9712; sixteen units, 28 commits over base). Heads below are the unit heads in git; verdicts are the verifiers' and the coordinator's, 2026-10-05. tarn-kit was held out after the gate; the candidate was reset to b9f9712 without it.
+
+**Milestone:** M4 (alpha) work: second and third companion families and the Companion panel, camp menu, cannon unlock, Tally ledger row, paint cosmetics, achievements, Mind plate reachable, nightly export, cold-launch steps and the wave 13 follow-ups.
+
+| unit | branch | head | writer | verdict | note |
+|---|---|---|---|---|---|
+| tarn-kit (pil-G1) | wt/alpha-w14-tarn-kit | c14b7a5 | opus (pstack-worker) | PASS after one ruling fix round, but HELD OUT: breaks posture_bands_test (slice sweep seed 3 plays Tarn) | lands in wave 15 with tarn-tree and tarn-verify once the bands are tuned or re-recorded |
+| cannon-unlock (pil-G9) | wt/alpha-w14-cannon-unlock | 6599335 | opus (pstack-worker) | PASS | PENDING_PILOTS allowance; no class row |
+| tally-ledger-row (pil-G6) | wt/alpha-w14-tally-ledger-row | 405fa8c | opus (pstack-worker) | PASS | boss win settles ledger.found.N; world_fact 'ledger_returned' fires on the Moss hand-in (progress.gd return_leaves) |
+| cosmetics-paint (prog-G2) | wt/alpha-w14-cosmetics-paint | dd359b6 | opus (pstack-worker) | PASS | paint tints only |
+| achievements-fill (prog-G3 + C9) | wt/alpha-w14-achievements-fill | 4acec09 | opus (pstack-worker) | PASS | 16 achievements, 16 cosmetics |
+| progression-asserts (prog-G10) | wt/alpha-w14-progression-asserts | e6b3882 | sonnet (pstack-hand) | PASS | |
+| companion-second-family (C2) | wt/alpha-w14-companion-second-family | 738ab43 | opus (pstack-worker) | PASS | conductive primer |
+| companion-third-family (C3) | wt/alpha-w14-companion-third-family | 1226739 | opus (pstack-worker) | PASS | ram brace prow/spring |
+| companion-panel (C6) | wt/alpha-w14-companion-panel | a073f7e | opus (pstack-worker) | PASS | |
+| camp-menu (C7) | wt/alpha-w14-camp-menu | 90db5ce | opus (pstack-worker) | FAIL x2 (title row overflow, Camp dropped), then PASS after the wrap ruling | ui_companion_panel_test row check now passes by construction (wave 15 follow-up) |
+| tally-spec (pil-G5) | wt/alpha-w14-tally-spec | 8897154 | opus (pstack-worker) | PASS | design doc; veto list in DESIGN-V3 |
+| mind-plate-reachable (prog-G1) | wt/alpha-w14-mind-plate-reachable | 1b0ad90 | opus (pstack-worker) | PASS | Mind plate commits in the real fight; bands held |
+| nightly-export (P6) | wt/alpha-w14-nightly-export | 7ab11a2 | sonnet (pstack-hand) | PASS | |
+| cold-launch-steps (P10) | wt/alpha-w14-cold-launch-steps | 3772620 | sonnet (pstack-hand) | PASS | SITTING.md numbered page |
+| w13-followups | wt/alpha-w14-w13-followups | 9bcf181 | sonnet (pstack-hand) | FAIL (skipped base-coverage check), then PASS on the same head | WAKING/MIND pins, field_notes line, sound_ready guard, export proof-before-tarball |
+| tarn-tree (pil-G2) | none | none | none | not delivered: brief author returned a summary | moves to wave 15 with tarn-verify and pil-G3 |
+
+tarn-verify (pil-G4) never started; wave 15.
+
+### Gate story
+
+Candidate cand/alpha-w14. Gate 1 ran on 5d25460 (b9f9712 plus the tarn-kit merge): 410 runs, 1 red (posture_bands_test, the slice-table sweep: small 58.3 s vs recorded 82.4, grown 33.1 s vs 39.2). Bisect: FAIL on the tarn-kit worktree alone, PASS on the companion chain. Ruling: tarn-kit held out of wave 14 (lands in wave 15 with the Tarn tree and tuning); candidate reset to b9f9712; posture_bands_test, unit_suite (634), char_kits, attack_rows, ui_class_card, companion_ram and lint rerun green on b9f9712. Cause of the red: brief (tarn-kit's ACCEPTANCE named the alpha bands but not the slice sweep). Gate log: artifacts/local/alpha/wave14/gate1.log. Opus gate read (b9f9712): ADMIT (PASS+NOTES, level 4). proto/alpha fast-forwarded to b9f9712.
+
+### Export
+
+At b9f9712: tarball 41.0 MiB, ACE_CHECK ready clips=8 streams=24. Win proof won at stage 6, 34170 ticks, 87.48 s wall. Copied to artifacts/local/alpha/export/b9f9712/.
+
+### Rulings (coordinator, 2026-10-05; recorded in docs/decisions.tsv at the wave 14 records commit)
+
+- Tarn's claw sweep stays at 32 damage; the "lands in full on world-one plating" claim is dropped (stage-1 plating is 90, so it chips like a gun); test 8d becomes "highest per-hit weapon"; Tarn plating tuning belongs to the Tarn verification unit; card label "claw clamp" accepted.
+- A crowded title row never drops a button; it wraps onto a second centred row at 22 px font. Camp sits after Companion on title and summary; the Companion button closes the camp first, then opens the panel.
+- Leaf source for Tally's ledger: a world's leaf is found when its boss is beaten (world_fact 'ledger_balanced'), no pickup, no new bus row; hand-in in Moss's shop. Tally ships three fixed starting cards; finds and swapping deferred.
+- Beating the Mind records remembered_cannon in the profile through Achievements.PENDING_PILOTS; no cannon class card until wave 15 (pil-G10).
+- Cosmetics are paint tints on existing models; Tarn's starter paint is "Redjaw Ash" (tiger, Redjaw Workshops), not badger.
+- The Tarn tree and Tarn verification move to wave 15 with the Tarn look; the wave 14 gate runs once on seventeen units.
+- tarn-kit held out of wave 14 after the posture_bands_test red; the Tarn chain (kit, tree, verify with tuning) lands together in wave 15.
+
+### Wave 15 queue
+
+Tarn chain (kit c14b7a5 held, tree, verify), Tally kit/tree (pil-G7, G8), cannon kit/tree (pil-G10, G11), roster pil-G12, Tarn look pil-G3 (Sol models), plus the concern list below.
+
+### Open after wave 14: wave 15 concerns (Opus gate read)
+
+1. The Tarn chain must pass posture_bands_test (add to briefs).
+2. _clamped stale entry when the clamp kills (combat.gd ~1157: write before _hit or skip when dead); no test for the death-time erase.
+3. Re-resolve tarn-kit's combat.gd conflict with C2/C3 on the new base and re-pin IMPACT.
+4. Tarn species badger->tiger lands with tarn-kit; check the 'Redjaw Ash' copy.
+5. ui_companion_panel_test.gd:76-78 row check passes by construction (point it at button rects).
+6. Summary/dead/victory rows share the wrapping container; visual check.
+7. Cold-launch page: tarball path is inside the proto/alpha worktree; step 5 button list predates Camp.
+8. Stale OUTSIDE_RUN comment in workshop.gd.
+9. Optional prune of _primed and _prow_until.
+10. Remove remembered_cannon and tally from PENDING_PILOTS when pil-G10 and pil-G7 add ClassDef rows.
+
+Cost: wave workflow 36 agents, 3.36M subagent tokens, 101 min wall; round 2 workflow 8 agents, 0.59M tokens, 17 min; brief workflow 18 agents, 2.70M tokens, 18 min.
+
+### Hands checklist additions (never blocks; Tarn items move to wave 15)
+
+13. Open the Camp (K on title) and the Companion panel.
+14. Look at the title row with a saved run, companion piece and Breath (two rows).
+15. Read the Tally spec veto list in DESIGN-V3.md.
+16. Try the Mind's plate attack.
+
 ## Wave 13 landed (2026-10-05, 01aa202)
 
 The wave 13 candidate cand/alpha-w13 landed as 01aa202 (proto/alpha went a1593a3 to 01aa202; 21 commits over base: b6232f3 plus the coherence-test fix). Heads below are the unit heads in git; verdicts are the verifiers' and the coordinator's, 2026-10-05. ending-copy 2066e13 was committed directly onto the candidate (parent 3730d73); its branch points at the same commit.
