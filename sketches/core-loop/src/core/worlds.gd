@@ -21,26 +21,27 @@ const ROWS := [
 # pad, until its fight lands.
 const BOSSES := {
 	"brindle": {"name": "Admiral Brindle", "title": "BRINDLE ROUTED", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
-		"built": true, "victory": "Brindle is routed.", "epitaph": "Brindle, routed in the Slag Bowl."},
+		"built": true, "victory": "Brindle is routed.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
 	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
-		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig."},
+		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig. Fallen floors await pit inspection."},
 	"mind": {"name": "The Mind", "title": "THE MIND IS QUIET", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
-		"built": true, "victory": "The Mind is quiet.", "epitaph": "The Mind, quieted in the Highdraft."},
+		"built": true, "victory": "The Mind is quiet.", "epitaph": "The Mind, quieted in the Highdraft. Lanes committed, crew still braced."},
 }
 
 
 # The page shown once when the summary opens after a win over the final world's boss, before
 # the stats (screens.gd). title is the heading, log the crew-log lines, sign the closing line.
-# Draft copy; prog-G6 writes the approved crew-log passage.
+# Crew-log ending, prog-G6; tone awaits Andrew's read.
 const ENDING := {
-	"title": "SHIFT LOG CLOSED",
+	"title": "RETURN TRIP ENTERED",
 	"log": [
-		"Final shift log: the Mind is quiet. Highdraft wind dropped to a working breeze.",
-		"Tally: everyone came home. Brindle's anchors returned, the Dig stopped knocking, the wrench came back.",
-		"Harnesses mended and hung. One hook left empty. Nobody remembers whose it was.",
-		"Next shift starts at dawn. The board already lists our names.",
+		"Highdraft watch: the Mind is quiet. We can hear a loose washer rolling across the deck.",
+		"West cable holds its note. Nobody answers from the next island.",
+		"Moss has a needle through my glove at the bay. Says supper won't mend it.",
+		"Tally laid the three fragments beside the repair sheet. The torn edges fit.",
+		"Return trip entered. We filled in the time ourselves.",
 	],
-	"sign": "Filed by the keeper, Spillway Works.",
+	"sign": "Filed by the bay crew.",
 }
 
 static func row(world: int) -> Dictionary:
