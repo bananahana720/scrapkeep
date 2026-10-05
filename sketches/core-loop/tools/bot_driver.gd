@@ -286,6 +286,19 @@ var _leg := 0
 var _last_press_tick := -1000000
 
 
+# The seed mapping (seed % roster size) moves whenever the roster grows, so band tests
+# pass --pilot (tools/bot_run.gd) to name the pilot each seed plays. With a pilot this
+# returns that ClassDef id's index, or -1 when no row has that id.
+static func class_index_for(seed_number: int, pilot := "") -> int:
+	var roster: Array = ClassDef.all()
+	if pilot == "":
+		return seed_number % roster.size()
+	for i in roster.size():
+		if roster[i].id == pilot:
+			return i
+	return -1
+
+
 func _init(game_ref, policy_name: String, seed_number: int) -> void:
 	game = game_ref
 	# No human answers the hot-wire screen in a bot run; tick answers the offer instead.
@@ -294,7 +307,7 @@ func _init(game_ref, policy_name: String, seed_number: int) -> void:
 	var named: String = PROFILES.get(policy_name, policy_name)
 	policy = named if named in POLICIES else "skipper"
 	seed_value = seed_number
-	class_index = seed_number % ClassDef.all().size()
+	class_index = class_index_for(seed_number)
 	rng.seed = hash([policy, seed_number])
 	_tree_rng.seed = hash(["tree", seed_number])
 

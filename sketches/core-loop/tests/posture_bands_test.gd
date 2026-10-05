@@ -2,6 +2,8 @@
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -12,12 +14,14 @@ const T := preload("res://tests/support/t.gd")
 # row as it stands on the same seeds and checks that its medians are within 10 percent of the table's.
 # Runs mostly repeat (two grid sweeps matched on 125 of 128 seed 1 and 2 runs, the picked cell on all),
 # so a larger move means the fight changed, and the sweep wants rerunning.
-# The bot plays class seed % ClassDef.all().size() (tools/bot_driver.gd), so seeds 0, 1 and 2 play
-# Sable, Rivet and Kest at any roster size. Pilots added later (Tarn and after) are left out.
+# The sweep plays seed % roster size (tools/posture_sweep.gd takes no --pilot); seeds 0 to 2 are
+# Sable, Rivet and Kest as long as the first three roster rows keep their order, and the
+# "seed N plays" checks fail if they move.
 
 # The cap is 150 s, the small arm's band, so a camper run ends sooner: the smoke run's limit is 120 s.
 # A run that breaks before the cap measures the same at any cap.
 const SEEDS := "0,1,2"
+const PILOTS := {0: "pylon_engineer", 1: "runner_gunner", 2: "demolitions_caster"}
 const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 2026-10-05 (wave 15): re-pinned for seeds 0, 1 and 2 after Tarn's claw kit took seed 3; bands unchanged
 # 2026-10-05 (alpha wave 16 aim-rest): re-recorded after shots aim from the lens rest (W16-1); was 80.6 / 33.1
@@ -36,6 +40,8 @@ func _initialize() -> void:
 	var shatters := bool(posture.get("ram_shatters", true))
 	t.check("the row is the picked cell", is_equal_approx(plating, float(PICK["plating"])) and is_equal_approx(curve, float(PICK["curve"]))
 		and shatters == bool(PICK["ram_shatters"]), "row plating %s curve %s shatter %s, pick %s" % [plating, curve, shatters, PICK])
+	for run_seed in PILOTS:
+		t.eq("seed %d plays %s" % [run_seed, PILOTS[run_seed]], ClassDef.all()[BotDriver.class_index_for(run_seed)].id, PILOTS[run_seed])
 	var folder := OS.get_user_data_dir().path_join("posture-bands-%d" % OS.get_process_id())
 	DirAccess.make_dir_recursive_absolute(folder)
 	var cells := folder.path_join("cells.tsv")

@@ -1,4 +1,4 @@
-# smoke: solo (six bot runs in child processes at once, 30000 ticks each; a loaded machine slows them)
+# smoke: solo (four bot runs in child processes at once, 30000 ticks each; a loaded machine slows them)
 # F6 2026-10-04: no row picks a fight; posture is the only rule.
 extends SceneTree
 
@@ -15,7 +15,11 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 # 26700); the window is the sweep's three-seed median, widened.
 # Two seeds in the gate since 2026-10-04 (wave 10): three ran 160-170 s per child under gate load against the
 # 180 s per-test cap; the nightly bot matrix carries the breadth (decisions.tsv, wave 9 row d).
-const ALPHA_SEEDS := [1, 2]
+# Each seed names its pilot through --pilot, because the bot's own seed mapping (seed % roster size)
+# moves when the roster grows; each run's record must show that pilot played. This test samples two
+# pilots on purpose, so it has no roster-cover check: the cannon, Tally, Tarn and Sable are measured
+# on worlds 2 and 3 by tests/alpha_posture_bands_w23_test.gd, not here.
+const PILOTS := {"runner_gunner": 1, "demolitions_caster": 2}
 const ALPHA_TICKS := 30000
 const SPILLWAY_SKIPPER_S := Vector2(45.0, 90.0)
 const REACH_SKIPPER_S := Vector2(30.0, 80.0)
@@ -29,9 +33,10 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(folder)
 	var jobs := []
 	for policy in ["skipper", "completionist"]:
-		for run_seed in ALPHA_SEEDS:
-			jobs.append({"script": "res://tools/bot_run.gd", "args": ["--out=" + folder.path_join("alpha-%s-%d" % [policy, run_seed]),
-				"--policy=" + policy, "--seeds=%d" % run_seed, "--ticks=%d" % ALPHA_TICKS, "--table=alpha"]})
+		for pilot in PILOTS:
+			jobs.append({"script": "res://tools/bot_run.gd", "args": ["--out=" + folder.path_join("alpha-%s-%s" % [policy, pilot]),
+				"--policy=" + policy, "--seeds=%d" % PILOTS[pilot], "--pilot=" + pilot, "--ticks=%d" % ALPHA_TICKS,
+				"--table=alpha"]})
 	var results := ChildRuns.run(jobs, 900.0)
 	_alpha(t, folder, results)
 	if t.failures == 0:
@@ -39,18 +44,21 @@ func _initialize() -> void:
 	quit(t.verdict())
 
 
-# One fight's seconds per stage and seed: the break less the bot's turn to the Warden.
+func _record(folder: String, policy: String, pilot: String) -> Dictionary:
+	var path := folder.path_join("alpha-%s-%s" % [policy, pilot]).path_join("bots.ndjson")
+	var line := FileAccess.get_file_as_string(path).split("\n", false)
+	var record = JSON.parse_string(line[0]) if not line.is_empty() else null
+	return record if record is Dictionary else {}
+
+
+# One fight's seconds per stage and pilot: the break less the bot's turn to the Warden.
 func _fights(folder: String, policy: String, stage: int) -> Array:
 	var out := []
-	for run_seed in ALPHA_SEEDS:
-		var path := folder.path_join("alpha-%s-%d" % [policy, run_seed]).path_join("bots.ndjson")
-		var line := FileAccess.get_file_as_string(path).split("\n", false)
+	for pilot in PILOTS:
 		var fight := -1.0
-		if not line.is_empty():
-			var record = JSON.parse_string(line[0])
-			for note in record.get("stages", []) if record is Dictionary else []:
-				if int(note.get("stage", 0)) == stage and note.get("warden_broken_s") != null:
-					fight = float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0))
+		for note in _record(folder, policy, pilot).get("stages", []):
+			if int(note.get("stage", 0)) == stage and note.get("warden_broken_s") != null:
+				fight = float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0))
 		out.append(fight)
 	return out
 
@@ -67,6 +75,9 @@ func _alpha(t, folder: String, results: Array) -> void:
 	for i in range(results.size()):
 		t.check("alpha bot run %d ran" % i, results[i]["code"] == 0 and not results[i]["timed_out"],
 			"exit %s, timed out %s" % [results[i]["code"], results[i]["timed_out"]])
+	for policy in ["skipper", "completionist"]:
+		for pilot in PILOTS:
+			t.eq("%s %s plays %s" % [policy, pilot, pilot], _record(folder, policy, pilot).get("class", ""), pilot)
 	var spillway := _fights(folder, "skipper", 1)
 	var reach := _fights(folder, "skipper", 2)
 	var reach_full := _fights(folder, "completionist", 2)

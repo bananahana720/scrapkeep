@@ -1,10 +1,11 @@
-# smoke: solo (eight bot runs in child processes at once, each through its world's boss; a loaded machine slows them)
+# smoke: solo (twelve bot runs in child processes at once, each through its world's boss; a loaded machine slows them)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
 const Stage2 := preload("res://tests/alpha_posture_bands_test.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # World 2 (Dig, stages 3 and 4) and world 3 (Highdraft, stages 5 and 6) Wardens and bosses, played
 # by the skipper on tools/bot_run.gd --table=alpha (tools/posture_sweep.md, "World 2 and 3 Wardens
@@ -14,8 +15,14 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 # defeated_s on the driver's boss clock (stepped sim time). The bands are fixed, not fit to results:
 # each Warden's median falls within 0.7 x to 1.6 x the stage-2 skipper window, and each boss's
 # median is under BOSS_CAP_S. A Warden that never breaks counts at the driver's stall limit, a boss
-# never beaten at the cap. Seeds 1 to 4 in the gate; the doc carries all eight from a tools run.
-const SEEDS := [1, 2, 3, 4]
+# never beaten at the cap. Medians are the upper median of six, one run per pilot.
+# The bot's own seed mapping (seed % roster size) moves when the roster grows, so each seed names
+# its pilot through --pilot and each run's record must show that pilot played. Seeds 1 to 4 keep
+# the pilots of the 2026-10-04 eight-seed table (Rivet, Kest, Tarn, Sable), so those rows compare
+# directly; Tally and the cannon take seeds 5 and 6. The pins cover the whole roster, so a new
+# pilot without a band seed fails here. The doc carries all eight seeds from a tools run
+# (tools/posture_sweep.md, "World 2 and 3 bands, pilots named, 2026-10-05 (wave 16)").
+const PILOTS := {"runner_gunner": 1, "demolitions_caster": 2, "tarn": 3, "pylon_engineer": 4, "tally": 5, "remembered_cannon": 6}
 const WORLDS := {2: {"from": 3, "stages": [3, 4]}, 3: {"from": 5, "stages": [5, 6]}}
 const WARDEN_BAND_S := Vector2(0.7 * Stage2.REACH_SKIPPER_S.x, 1.6 * Stage2.REACH_SKIPPER_S.y)
 const WARDEN_CAP_S := BotDriver.STAGE_LIMIT
@@ -28,9 +35,10 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(folder)
 	var jobs := []
 	for world in WORLDS:
-		for run_seed in SEEDS:
-			var args := ["--out=" + folder.path_join("w%d-%d" % [world, run_seed]), "--policy=skipper",
-				"--seeds=%d" % run_seed, "--table=alpha", "--from-stage=%d" % WORLDS[world]["from"]]
+		for pilot in PILOTS:
+			var args := ["--out=" + folder.path_join("w%d-%s" % [world, pilot]), "--policy=skipper",
+				"--seeds=%d" % PILOTS[pilot], "--pilot=" + pilot, "--table=alpha",
+				"--from-stage=%d" % WORLDS[world]["from"]]
 			if world == 2:
 				args.append("--until=4")
 			jobs.append({"script": "res://tools/bot_run.gd", "args": args})
@@ -41,19 +49,19 @@ func _initialize() -> void:
 	quit(t.verdict())
 
 
-func _record(folder: String, world: int, run_seed: int) -> Dictionary:
-	var path := folder.path_join("w%d-%d" % [world, run_seed]).path_join("bots.ndjson")
+func _record(folder: String, world: int, pilot: String) -> Dictionary:
+	var path := folder.path_join("w%d-%s" % [world, pilot]).path_join("bots.ndjson")
 	var line := FileAccess.get_file_as_string(path).split("\n", false)
 	var record = JSON.parse_string(line[0]) if not line.is_empty() else null
 	return record if record is Dictionary else {}
 
 
-# One fight's seconds per seed: the break less the bot's turn to the Warden, or the cap.
+# One fight's seconds per pilot: the break less the bot's turn to the Warden, or the cap.
 func _fights(folder: String, world: int, stage: int) -> Array:
 	var out := []
-	for run_seed in SEEDS:
+	for pilot in PILOTS:
 		var fight := WARDEN_CAP_S
-		for note in _record(folder, world, run_seed).get("stages", []):
+		for note in _record(folder, world, pilot).get("stages", []):
 			if int(note.get("stage", 0)) == stage and note.get("warden_broken_s") != null:
 				fight = float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0))
 		out.append(fight)
@@ -62,8 +70,8 @@ func _fights(folder: String, world: int, stage: int) -> Array:
 
 func _bosses(folder: String, world: int) -> Array:
 	var out := []
-	for run_seed in SEEDS:
-		var boss = _record(folder, world, run_seed).get("boss")
+	for pilot in PILOTS:
+		var boss = _record(folder, world, pilot).get("boss")
 		var defeated = boss.get("defeated_s") if boss is Dictionary else null
 		out.append(float(defeated) if defeated != null else BOSS_CAP_S)
 	return out
@@ -79,6 +87,16 @@ func _bands(t, folder: String, results: Array) -> void:
 	for i in range(results.size()):
 		t.check("world bot run %d ran" % i, results[i]["code"] == 0 and not results[i]["timed_out"],
 			"exit %s, timed out %s" % [results[i]["code"], results[i]["timed_out"]])
+	for world in WORLDS:
+		for pilot in PILOTS:
+			t.eq("w%d %s plays %s" % [world, pilot, pilot], _record(folder, world, pilot).get("class", ""), pilot)
+	var pinned: Array = PILOTS.keys()
+	pinned.sort()
+	var roster := []
+	for row in ClassDef.all():
+		roster.append(row.id)
+	roster.sort()
+	t.eq("the pins cover the roster", pinned, roster)
 	for world in WORLDS:
 		for stage in WORLDS[world]["stages"]:
 			var fights := _fights(folder, world, stage)
