@@ -37,7 +37,7 @@ const BUBBLE_Y := 0.30
 const COUNTER_X := 0.36
 const COUNTER_Y := 0.33
 const TALK_KEY := KEY_T
-# States between runs where the companion panel edits the profile; C7's camp state joins this list.
+# States between runs where the companion panel edits the profile. The camp (C7) is an overlay on the title and the summary (screens.gd), not a flow state, so it never joins this list.
 const OUTSIDE_RUN := ["title", "class_select"]
 
 var game
