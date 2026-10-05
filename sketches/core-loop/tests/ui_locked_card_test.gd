@@ -19,6 +19,8 @@ const T := preload("res://tests/support/t.gd")
 #   - unlocking the pilot clears the look on the next visit to the screen;
 #   - a card's paint cycle (swatch click or P on the open card) offers only the paints this
 #     profile owns plus none, saves each pick, and the preview wears the equipped one.
+#   - Tarn's card offers Tarn's own starter paint, no other card offers it, and the swatch,
+#     label and preview show it once equipped.
 
 # 50 since Tarn made four cards (wave 5).
 const CALM_BUDGET := 50
@@ -138,5 +140,23 @@ func _run() -> void:
 	_t.eq("P3-4 after the last owned paint the cycle returns to none", profile.equipped(sable.def.id, "paint"), "")
 	profile.unlock_cosmetic("paint_sable_violet")
 	_t.check("P3-4 an owned unlock joins the cycle", sable.paint_options().has("paint_sable_violet") and not sable.paint_options().has("paint_any_night"), "options %s" % [sable.paint_options()])
+	# Tarn's own paint, found by id since the chain may add cards.
+	var tarn = null
+	var offered_elsewhere: Array = []
+	for c in cards:
+		if c.def.id == "tarn":
+			tarn = c
+		elif c.paint_options().has("paint_tarn_ash"):
+			offered_elsewhere.append(c.def.id)
+	_t.check("P3-5 Tarn's card offers its own starter paint", tarn != null and tarn.paint_options().has("paint_tarn_ash"), "options %s" % [tarn.paint_options() if tarn != null else "no tarn card"])
+	_t.check("P3-5 no other pilot is offered Tarn's paint", offered_elsewhere.is_empty(), "offered to %s" % [offered_elsewhere])
+	if tarn != null:
+		for i in tarn.paint_options().size():
+			if profile.equipped("tarn", "paint") == "paint_tarn_ash":
+				break
+			tarn.cycle_paint()
+		_t.check("P3-5 the swatch shows Tarn's tint", tarn._swatch.color == Cosmetics.row("paint_tarn_ash")["tint"], "swatch %s equipped %s" % [tarn._swatch.color, profile.equipped("tarn", "paint")])
+		_t.eq("P3-5 the label shows the paint name", tarn._paint_label.text, "Redjaw Ash")
+		_t.eq("P3-5 the preview wears it", tarn.preview.paint_id, "paint_tarn_ash")
 	_game.queue_free()
 	quit(_t.verdict())

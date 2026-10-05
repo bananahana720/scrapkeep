@@ -88,6 +88,17 @@ func run(t) -> void:
 			starters += 1
 	t.check("no real tint is a hostile hue", hostile.is_empty(), "hostile tints on %s" % [hostile])
 	t.check("at least one starter paint exists", starters >= 1, "%d starter paints" % starters)
+	t.eq("cosmetics are paint only", Cosmetics.SLOTS, ["paint"])
+	var bare: Array = []
+	for pilot in _pilots():
+		var owned := false
+		for id in rows:
+			var r: Dictionary = rows[id]
+			if r["pilot"] == pilot and r["slot"] == "paint" and r["starter"] == true:
+				owned = true
+		if not owned:
+			bare.append(pilot)
+	t.check("every pilot has its own starter paint", bare.is_empty(), "no starter paint of their own: %s" % [bare])
 	t.check("for_slot offers a pilot its own and any-pilot paints", Cosmetics.for_slot("paint", "runner_gunner").has("paint_rivet_moss") and Cosmetics.for_slot("paint", "runner_gunner").has("paint_any_salt") and not Cosmetics.for_slot("paint", "runner_gunner").has("paint_kest_plum"),
 		"got %s" % [Cosmetics.for_slot("paint", "runner_gunner")])
 
@@ -98,8 +109,9 @@ func run(t) -> void:
 	_bad(t, "bad: a near-hostile tint is refused", _with({"tint": Color("fb5a3a")}), "paint_ok", "hostile")
 	_bad(t, "bad: an unknown slot is refused", _with({"slot": "aura"}), "paint_ok", "slot")
 	_bad(t, "bad: an unknown pilot is refused", _with({"pilot": "nobody"}), "paint_ok", "pilot")
-	_bad(t, "bad: tint and mesh together are refused", _with({"mesh": "res://x.tres"}), "paint_ok", "exactly one")
-	_bad(t, "bad: neither tint nor mesh is refused", _with({"tint": null}), "paint_ok", "exactly one")
+	_bad(t, "bad: a mesh key is refused", _with({"mesh": "res://x.tres"}), "paint_ok", "not allowed")
+	_bad(t, "bad: a row without a tint is refused", _with({"tint": null}), "paint_ok", "needs a tint")
+	_bad(t, "bad: a trail slot is refused", _with({"slot": "trail"}), "paint_ok", "slot")
 	_bad(t, "bad: a table without a starter paint is refused", _with({"starter": false}), "table", "starter paint")
 	_bad(t, "bad: a short table is refused", _good(), "table", "at least 6 rows")
 

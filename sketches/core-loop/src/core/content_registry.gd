@@ -69,7 +69,7 @@ const TABLES := {
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "76cddad10e759cd45d446b877212e5642d5182d03bdb38767d03492acb19b55f",  # 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_balanced row
-	"cosmetics.ROWS": "168acf8b01f15d1c573cfc4c696c41cc439e167ca137ad81174b532519cd7f08",
+	"cosmetics.ROWS": "420f6490abf241973b89a032e7c283777eea732a5f7279f08f69a0e00b69a8d1",  # 2026-10-05 (alpha wave 14 cosmetics-paint): paint only; starter paint for tarn
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
@@ -208,8 +208,6 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			_ref(issues, name, id, "slot", row.slot, Cosmetics.SLOTS)
 			if row.pilot != "":
 				_ref(issues, name, id, "pilot", row.pilot, pilots)
-			if row.get("mesh") is String and not ResourceLoader.exists(row.mesh):
-				_issue(issues, name, "references", id, "mesh resource does not exist")
 			for problem in Cosmetics.validate({id: row}, pilots):
 				if not str(problem).begins_with("table:"):
 					_issue(issues, name, "well_formed", id, problem)
