@@ -28,6 +28,8 @@ const PIECES := [
 	{"id": "escape_rail", "family": ESCAPE_CORRIDOR, "name": "Corridor Rail",
 		"effect": "After a survived low-hull hit, shoves nearby foes clear once."},
 ]
+# The order run-found pieces arrive: the first two make a legal pair, and escape, the only family with an effect, comes first.
+const DROP_ORDER := ["escape_vent", "ram_prow", "primer_coil", "escape_rail", "ram_spring", "primer_mesh"]
 
 var owned: Array[String] = []
 var sockets: Array[String] = []
@@ -135,7 +137,33 @@ static func validate(table: Array = PIECES) -> Array:
 		for f in FAMILIES:
 			if int(per_family.get(f, 0)) < 2:
 				problems.append("%s: needs at least two pieces" % f)
+		for id in DROP_ORDER:
+			if not seen.has(id):
+				problems.append("%s: in DROP_ORDER but not in PIECES" % id)
+		for id in seen:
+			if not DROP_ORDER.has(id):
+				problems.append("%s: missing from DROP_ORDER" % id)
 	return problems
+
+
+# The next piece a run finds, or "" when all are owned or the doc is malformed.
+static func next_drop(doc: Dictionary) -> String:
+	var model = new()
+	if not doc.is_empty() and not model.from_dict(doc):
+		return ""
+	for id in DROP_ORDER:
+		if not model.owned.has(id):
+			return id
+	return ""
+
+
+# The doc with `id` acquired, never equipped; a malformed doc comes back unchanged.
+static func with_piece(doc: Dictionary, id: String) -> Dictionary:
+	var model = new()
+	if not doc.is_empty() and not model.from_dict(doc):
+		return doc
+	model.acquire(id)
+	return model.to_dict()
 
 
 func to_dict() -> Dictionary:

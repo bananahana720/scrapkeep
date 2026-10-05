@@ -1,6 +1,7 @@
 extends Node3D
 
 const ActivityView := preload("res://src/world/activity_view.gd")
+const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Interact := preload("res://src/world/interact.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -21,7 +22,8 @@ const Parts := preload("res://src/build/parts.gd")
 # pay:      `scrap` (180, so three activities lift the ball two heft classes), taken with one
 #           part from `rarities` or an authored `named` part id, as a pickup at `where`: the altar, the pedestal or the
 #           place the brute fell. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
-#           EventKinds.CEREMONY_SOURCES, so no ceremony pauses the game for it.
+#           EventKinds.CEREMONY_SOURCES, so no ceremony pauses the game for it. The first activity finished
+#           in a stage entry also adds the next companion piece (Companion.DROP_ORDER) to the run, unequipped.
 const PAY_RARITIES := ["common", "rare"]
 const PAY_SCRAP := 180
 const RULES := {
@@ -67,6 +69,7 @@ const PEDESTAL_BACK := 4.0
 
 var ctx
 var sites: Array = []
+var _piece_paid := false
 var _pending_stage := false
 
 
@@ -96,8 +99,11 @@ func setup(ctx_ref) -> void:
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 
 
-func _on_stage_entered(_stage: int, _retry: bool) -> void:
+func _on_stage_entered(_stage: int, retry: bool) -> void:
 	clear()
+	# A retry does not re-arm the piece, so dying cannot farm one.
+	if not retry:
+		_piece_paid = false
 	var map = ctx.terrain.map()
 	if not "activity_sites" in map:
 		return
@@ -363,7 +369,18 @@ func _finish(s: Site, at: Vector3) -> void:
 		s.inside_pickup = _planar(ctx.player.ball_position(), at) <= PICKUP_REACH
 	else:
 		_pay_scrap(s, at)
+	_pay_piece()
 	ctx.events.activity_done.emit(s.id, at)
+
+
+func _pay_piece() -> void:
+	if _piece_paid:
+		return
+	var id := Companion.next_drop(ctx.run.companion)
+	if id == "":
+		return
+	ctx.run.companion = Companion.with_piece(ctx.run.companion, id)
+	_piece_paid = true
 
 
 # The rule's scrap, through the run's own add_scrap so it grows the ball and publishes a class up.
