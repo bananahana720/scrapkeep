@@ -75,11 +75,10 @@ static func all() -> Array[Resource]:
 			"color": TARN_COLOR, "shape": "cross", "motif": "tarn", "sound": "clank",
 			"bible_home": "Tarn, articulated claw melee",
 			"starter": false, "synergy_hooks": PackedStringArray(["on_claw_pull", "on_clamp_catch", "on_rend_landing"])}),
-		# Tally's motif and sound are Kest's stand-ins until her look unit lands her own.
 		make({"id": "tally", "display_name": "Tally", "role": "Ledger caster", "species": "pack rat",
 			"pitch": "Punch a card into the reader and run it where you aim. Gather the pack, link it, then make it pay. Roll to refill the pressure.",
 			"weapon_id": "ledger_reader", "movement_id": "flywheel_surge", "special_id": "plate_return", "smash_id": "stamp_slam",
-			"color": TALLY_COLOR, "shape": "ring", "motif": "kest", "sound": "slam_boom",
+			"color": TALLY_COLOR, "shape": "square", "motif": "tally", "sound": "cog_tick",
 			"bible_home": "Tally, mechanical program cards",
 			"starter": false, "synergy_hooks": PackedStringArray(["on_card_run", "on_link_arc", "on_stamp_contact"])}),
 		# The cannon's motif, sound and shape are Kest's stand-ins until pil-G11 lands its own.

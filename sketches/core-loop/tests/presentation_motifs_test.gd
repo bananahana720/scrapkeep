@@ -27,11 +27,11 @@ func _initialize() -> void:
 	_check("ids resolve", missing.is_empty(), "%s resolve through Harmony.motif; missing %s" % [STORY_IDS, missing])
 
 	var notes_ok: bool = Harmony.motif_notes("sable") == [62, 65, 69, 72, 76] and Harmony.motif_notes("rivet") == [69, 69, 69, 74] \
-		and Harmony.motif_notes("kest") == [62, 57, 53, 50] and Harmony.motif_notes("tarn") == [50, 50, 51, 57] and Harmony.motif_notes("reactor") == [44, 56] \
+		and Harmony.motif_notes("kest") == [62, 57, 53, 50] and Harmony.motif_notes("tarn") == [50, 50, 51, 57] and Harmony.motif_notes("tally") == [62, 64, 65, 67, 74] and Harmony.motif_notes("reactor") == [44, 56] \
 		and Harmony.motif("swarm")["chord"] == [74, 79, 84, 89] and Harmony.motif_notes("swarm") == [79]
 	var fleet: Array = Harmony.motif_notes("fleet")
 	notes_ok = notes_ok and fleet[0] == 50 and fleet.has(51) and fleet[fleet.size() - 1] == 50
-	_check("notes", notes_ok, "Sable D F A C E, Rivet A A A D, Kest D A F D, Tarn D D Eb A, the Fleet's D Eb D, the reactor's Ab pedal, the swarm's G into stacked fourths")
+	_check("notes", notes_ok, "Sable D F A C E, Rivet A A A D, Kest D A F D, Tarn D D Eb A, Tally D E F G D, the Fleet's D Eb D, the reactor's Ab pedal, the swarm's G into stacked fourths")
 
 	var quote: Array = Harmony.mind_quote("sable").map(func(c: Array): return c[1])
 	_check("the Mind quotes wrong", quote == [62, 59, 55, 52, 47], "Sable inverted, last note a semitone flat: %s (D B G E B)" % [quote])

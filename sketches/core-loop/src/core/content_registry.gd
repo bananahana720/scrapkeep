@@ -71,7 +71,7 @@ const TABLES := {
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "6fa241c5a4dc54f16834cba7b0b64e80f0ee026a8d3f15d669d509857ac225e7",  # 2026-10-05 (alpha wave 14 achievements-fill): paint rewards on four rows; waking_stilled, highdraft_reached, codex_keeper
-	"cosmetics.ROWS": "1ac417c448fbade3d9c156d383b072da5bb669f1bf4027680b1fe7ebd274c868",  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon starter paint, Old Verdigris
+	"cosmetics.ROWS": "afa4a451f20002e393ef5340d71d16e09a7941773d92cd41b42888cdb207892c",  # 2026-10-05 (alpha wave 16 tally-look): Ledger Cream lighter than TALLY_COLOR (W16-3)
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
@@ -89,8 +89,8 @@ const GOLDEN_HASHES := {
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
-	"upgrade_tree.TREES": "05961cc2fd4853501c123faf3a3eb2860c6c553ef9c685f180acb489d461ad3c",  # 2026-10-05 (alpha wave 15 cannon-tree): the remembered cannon's own tree
-	"upgrade_tree.WORLD_ONE_NODES": "3e4d483877d4a6e6f313179e78af3068ffcf4b09bae417f06590061a5d5d30f5",  # 2026-10-05 (alpha wave 15 cannon-tree): the remembered cannon's own tree
+	"upgrade_tree.TREES": "d25335d1526cf45fe1ddea0c4f3fdbbe298d32a812b3cd9e7acc7abba46865d7",  # 2026-10-05 (alpha wave 16 tally-look): Tally tree icons on ab_tally_*
+	"upgrade_tree.WORLD_ONE_NODES": "7c361f90236070d8e3f49313f05ea28fd3cc0401d39d673e29a11f1e68df7201",  # 2026-10-05 (alpha wave 16 tally-look): Tally tree icons on ab_tally_*
 	"combat.codex_entries.ENTRIES": "d30ff6f6b6d5e2069a71c218f5665edbcfab0761d77754ed4bd90f9b295b3ca4",
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned

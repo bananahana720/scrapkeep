@@ -69,11 +69,11 @@ const TRIM_DB := {
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
 	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
-	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0,
-	"sable_ready": -9.0, "rivet_ready": -9.0, "kest_ready": -8.0, "tarn_ready": -9.0,
-	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0,
+	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0,
+	"sable_ready": -9.0, "rivet_ready": -9.0, "kest_ready": -8.0, "tarn_ready": -9.0, "tally_ready": -9.0,
+	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0, "tally_break": -3.0,
 	"fleet_motif": -4.0, "reactor_tick": -6.0, "reactor_erupt": -2.0, "swarm_buzz": -9.0, "swarm_lock": -6.0, "swarm_scatter": -8.0,
-	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0,
+	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0, "mind_tally": -5.0,
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
 	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
@@ -486,9 +486,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _kest_release()
 		"tarn_latch_tear":
 			return _tarn_release()
-		"sable_ready", "rivet_ready", "kest_ready", "tarn_ready":
+		"tally_balance_due":
+			return _tally_release()
+		"sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready":
 			return _ready_pulse(id.get_slice("_", 0))
-		"sable_break", "rivet_break", "kest_break", "tarn_break":
+		"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break":
 			return _break_free(id.get_slice("_", 0))
 		"fleet_motif":
 			return _fleet_motif()
@@ -502,7 +504,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _swarm_lock()
 		"swarm_scatter":
 			return _swarm_scatter()
-		"mind_sable", "mind_rivet", "mind_kest", "mind_tarn":
+		"mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally":
 			return _mind_quote(id.get_slice("_", 1))
 		"hold_pit", "hold_bola", "hold_tether", "hold_net", "hold_riser":
 			return hold(id.get_slice("_", 1), Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
@@ -1252,6 +1254,19 @@ static func _tarn_release() -> PackedFloat32Array:
 	return _mix(parts)
 
 
+# Tally's release: four card punches count up the keys, then the total is struck.
+# A snare stamp, kick, till bell and low D land together after the pen lifts.
+static func _tally_release() -> PackedFloat32Array:
+	var step := Synth.score_step
+	var score := _motif_score("tally", 0, "keys", 0.8)
+	score.append_array([[5, 86, 6, "bell", 0.4], [5, 50, 6, "sub808", 0.6], [5, 0, 2, "kick", 0.5]])
+	var parts: Array = [[Synth.render_score(score, 0.9), 0, 1.0]]
+	for i in 4:
+		parts.append([Synth.drum("clap"), int(i * step), 0.4 + 0.08 * i])
+	parts.append([Synth.drum("snare"), int(5 * step), 0.8])
+	return _mix(parts)
+
+
 # The ready pulse: the motif's first note on the class instrument, 120 ms, an octave up
 # so it reads over the band ("F is back").
 static func _ready_pulse(id: String) -> PackedFloat32Array:
@@ -1263,6 +1278,8 @@ static func _ready_pulse(id: String) -> PackedFloat32Array:
 			return _mix([[_cut(_n("tom", first), 0.14), 0, 1.0]])
 		"tarn":
 			return _mix([[Synth.drum("anvil"), 0, 0.7], [_cut(_n("reese", first + 12), 0.1), 0, 0.8]])
+		"tally":
+			return _mix([[Synth.drum("clap"), 0, 0.6], [_cut(_n("keys", first + 12), 0.1), 0, 0.8]])
 	return _mix([[_cut(_n("mallet", first + 12), 0.12), 0, 1.0], [_cut(_n("bell", first + 24), 0.12), 0, 0.3]])
 
 
@@ -1272,7 +1289,7 @@ static func _break_free(id: String) -> PackedFloat32Array:
 	var row := Harmony.motif_or_first(id)
 	var cells: Array = row["cells"]
 	var a: int = int(cells[0][1]) + 12
-	var b: int = int(cells[cells.size() - 1][1] if id in ["rivet", "tarn"] else cells[1][1]) + 12
+	var b: int = int(cells[cells.size() - 1][1] if id in ["rivet", "tarn", "tally"] else cells[1][1]) + 12
 	var voice: String = row["voice"]
 	var gap := Synth.score_step
 	return _mix([[_noise(0.18, 5200.0, 2600.0, 14.0, 0.001), 0, 0.55], [_cut(_n(voice, a), 0.2), 0, 0.85],
