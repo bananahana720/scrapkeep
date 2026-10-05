@@ -195,8 +195,10 @@ func _fixtures() -> void:
 		and not _op_live("tarn", {"key": "weapon", "swap": {"weapon": "claw_sweep"}}, tarn_kit)
 		and not _op_live("tarn", {"key": "weapon", "charges": {"weapon": 1}}, laser_kit)
 		and not _op_live("tarn", {"key": "weapon", "pattern": {"sticky_charge": {"add": {"count": 1}}}}, tarn_kit)
+		and not _op_live("tarn", {"key": "movement", "proc": [{"on": "sprint_started", "do": "blast"}]}, tarn_kit)
+		and _op_live("tarn", {"key": "special", "proc": [{"on": "slammed", "do": "blast"}]}, tarn_kit)
 		and _op_live("tarn", {"key": "weapon", "knob": {"tarn_only_fixture": 2.0}}, tarn_kit),
-		"under Tarn's kit a foreign knob, identity swap, charges on a zero-cooldown weapon and a foreign pattern are dead; a Tarn-owned knob is live")
+		"under Tarn's kit a foreign knob, identity swap, charges on a zero-cooldown weapon, a foreign pattern and a proc on Rivet's sprint fact are dead; a proc on slammed and a Tarn-owned knob are live")
 	var pilot := "pylon_engineer"
 	var bad := {"id": "bad_fixture", "swap": {"movement": "rapid_laser"}, "knob": {"mount_reach": 0.5}}
 	var issues := UpgradeTree.safe_pick_problems(pilot, bad)
