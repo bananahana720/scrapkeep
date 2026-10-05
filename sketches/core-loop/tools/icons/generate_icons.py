@@ -496,6 +496,77 @@ register(
     plate_rounded_square, g_ab_kest_cloak,
 )
 
+
+def g_ab_tarn_weapon():
+    return [
+        path("M16 46 Q 20 26 40 16", stroke=IRON_OXIDE, width=DETAIL),
+        path("M16 46 Q 28 32 48 24", stroke=IRON_OXIDE, width=PRIMARY),
+        path("M16 46 Q 34 40 50 34", stroke=IRON_OXIDE, width=DETAIL),
+        dot(16, 46, 4, fill=BONE),
+    ]
+
+
+register(
+    "ab_tarn_weapon", "Claw sweep (LMB)",
+    "Three talon arcs raking from lower left to upper right, a pivot pin at their root",
+    plate_rounded_square, g_ab_tarn_weapon,
+)
+
+
+def g_ab_tarn_move():
+    return [
+        dot(18, 46, 7, fill=BONE),
+        line(24, 40, 40, 24, stroke=BONE, width=DETAIL, dash="4 4"),
+        f'<polyline points="27,31 33,31 33,37" fill="none" stroke="{IRON_OXIDE}" '
+        f'stroke-width="{DETAIL}" stroke-linecap="round" stroke-linejoin="round"/>',
+        line(40, 24, 50, 14, stroke=IRON_OXIDE, width=PRIMARY),
+        line(40, 24, 40, 12, stroke=IRON_OXIDE, width=DETAIL),
+        line(40, 24, 52, 24, stroke=IRON_OXIDE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_tarn_move", "Claw pull (Shift)",
+    "A ball on a dashed cable to a three-prong claw planted upper right, a chevron pointing at the claw",
+    plate_rounded_square, g_ab_tarn_move,
+)
+
+
+def g_ab_tarn_special():
+    return [
+        path("M24 14 Q 8 32 24 50", stroke=IRON_OXIDE, width=PRIMARY),
+        path("M40 14 Q 56 32 40 50", stroke=IRON_OXIDE, width=PRIMARY),
+        line(18, 24, 24, 26, stroke=BONE, width=DETAIL),
+        line(18, 40, 24, 38, stroke=BONE, width=DETAIL),
+        line(46, 24, 40, 26, stroke=BONE, width=DETAIL),
+        line(46, 40, 40, 38, stroke=BONE, width=DETAIL),
+        dot(32, 32, 5, fill=BONE),
+    ]
+
+
+register(
+    "ab_tarn_special", "Claw clamp (F)",
+    "Two opposed jaws with inward teeth closing on a centre dot",
+    plate_rounded_square, g_ab_tarn_special,
+)
+
+
+def g_ab_tarn_smash():
+    return [
+        line(10, 46, 54, 46, stroke=BONE, width=PRIMARY),
+        chevron(18, 34, 10, 16, stroke=IRON_OXIDE),
+        f'<polyline points="51,26 41,34 51,42" fill="none" stroke="{IRON_OXIDE}" '
+        f'stroke-width="{PRIMARY}" stroke-linecap="round" stroke-linejoin="round"/>',
+        dot(32, 36, 6, fill=BONE),
+    ]
+
+
+register(
+    "ab_tarn_smash", "Rend slam (Ctrl)",
+    "A ground line with two chevrons pointing inward at an impact dot",
+    plate_rounded_square, g_ab_tarn_smash,
+)
+
 # ---- Key glyphs (10) ---------------------------------------------------------
 
 

@@ -67,11 +67,10 @@ static func all() -> Array[Resource]:
 			"color": KEST_COLOR, "shape": "burst", "motif": "kest", "sound": "slam_boom",
 			"bible_home": "Fuse, directed casting and local pressure",
 			"starter": false, "synergy_hooks": PackedStringArray(["on_cloak_crit", "on_rocket_jump", "on_chain_detonation"])}),
-		# Motif, sound and shape stay on Rivet's until the look and sound unit (wave 15) lands.
 		make({"id": "tarn", "display_name": "Tarn", "role": "Claw bruiser", "species": "tiger",
 			"pitch": "Plant a claw and pull yourself into the fight. Clamp what is close, then rend it with heavy sweeps.",
 			"weapon_id": "claw_sweep", "movement_id": "claw_pull", "special_id": "clamp", "smash_id": "rend_slam",
-			"color": TARN_COLOR, "shape": "chevron", "motif": "rivet", "sound": "boost_whoosh",
+			"color": TARN_COLOR, "shape": "cross", "motif": "tarn", "sound": "clank",
 			"bible_home": "Tarn, articulated claw melee",
 			"starter": false, "synergy_hooks": PackedStringArray(["on_claw_pull", "on_clamp_catch", "on_rend_landing"])}),
 	]
