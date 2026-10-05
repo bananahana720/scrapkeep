@@ -3,8 +3,8 @@ extends SceneTree
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # Every class's bot still clears stage 1 with a random upgrade branch: char_bot_test's
-# skipper run for seeds 0, 1 and 2 (Sable, Rivet, Kest), with the bot taking one of
-# the two offered picks at class select and again when stage 1 clears. The three run in
+# skipper run for seeds 0 to 3 (Sable, Rivet, Kest, Tarn), with the bot taking one of
+# the two offered picks at class select and again when stage 1 clears. The four run in
 # parallel child processes at a fixed 90 fps, so the ticks are the real game's.
 #
 # Evidence limit: one seeded branch per class through stage 1 and the second pick's
