@@ -97,6 +97,8 @@ const TRIM_DB := {
 	# The shell's air factor moved: a released spring, an up-and-settle boing (audio.gd plays it
 	# up a fifth for the rise and down a fourth for the return).
 	"shell_spring": -9.0,
+	# The escape charge re-arms (a rising mallet pair) or is spent (a falling one).
+	"companion_chirp_ready": -8.0, "companion_chirp_spent": -9.0,
 	# The hot-wired offer: two rising brass notes, under 0.4 s (audio.gd, Build.hotwire_offered).
 	"hotwire_offer": -6.0,
 	# The harpoon line's states (design-v3/LEGIBILITY.md section 3), its hum, and one refusal per
@@ -398,6 +400,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.07, 220.0, 110.0, "square_dark", 30.0), 0, 0.7],
 				[_cut(_n("bell", 74), 0.35), Synth.seconds(0.08), 0.6], [_cut(_n("bell", 79), 0.35), Synth.seconds(0.17), 0.6],
 				[_cut(_n("bell", 83), 0.35), Synth.seconds(0.26), 0.65], [_cut(_n("bell", 86), 0.45), Synth.seconds(0.35), 0.7]])
+		"companion_chirp_ready":
+			return _mix([[_cut(_n("mallet", 79), 0.16), 0, 0.7], [_cut(_n("mallet", 86), 0.22), Synth.seconds(0.07), 0.75]])
+		"companion_chirp_spent":
+			return _mix([[_cut(_n("mallet", 84), 0.14), 0, 0.6], [_tone(0.12, _hz(76), _hz(64), "sine", 30.0), Synth.seconds(0.06), 0.5]])
 		"found_chime":
 			return _mix([[_cut(_n("mallet", 77), 0.35), 0, 0.8], [_fm(0.5, _hz(86), 3.5, 1.2, 6.0, 0.3), Synth.seconds(0.12), 0.7]])
 		"element_resolved":
