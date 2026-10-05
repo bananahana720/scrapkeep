@@ -10,6 +10,10 @@ import { fileURLToPath } from "node:url";
 // headless for 300 frames. The stems are not in the pack, so the sequencer finds them beside
 // the executable. They are gitignored and cannot be regenerated, so they are copied from
 // --stems-from=<music_ace folder> (default: the main checkout's sketches/core-loop/assets/music_ace).
+// --win-proof then exports the "Linux x64 proof" pack (the shipped recipe plus tools/) into the
+// sibling <run>-win-proof/ and plays one skipper bot run on it from a fresh user:// with the
+// editor binary, which fails unless the run is won. Release templates refuse --main-pack and
+// --script, so this proves the exported pack, not the release template's runtime.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
@@ -19,6 +23,9 @@ const project = path.join(root, "sketches/core-loop");
 const stemRoot = path.join(project, "assets/music_ace");
 const manifestRel = "spillway/manifest.json";
 const preset = "Linux x64";
+const proofPreset = "Linux x64 proof";
+const WIN_POLICY = "skipper";
+const WIN_SEED = 1;
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 
 export function missingStems(manifest, directory, exists = existsSync) {
@@ -35,15 +42,17 @@ export function missingStems(manifest, directory, exists = existsSync) {
 
 export function parseArgs(argv) {
   let stemsFrom = null;
+  let winProof = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg.startsWith("--stems-from="))
+    if (arg === "--win-proof") winProof = true;
+    else if (arg.startsWith("--stems-from="))
       stemsFrom = arg.slice("--stems-from=".length);
     else if (arg === "--stems-from" && i + 1 < argv.length)
       stemsFrom = argv[++i];
     else throw new Error("unknown argument: " + arg);
   }
-  return { stemsFrom };
+  return { stemsFrom, winProof };
 }
 
 export function defaultStemsFrom(gitCommonDir) {
@@ -75,6 +84,89 @@ export function releaseGateFailures(output, status) {
   return lines.some((line) => /^release_gate_placeholder_test: PASS\b/.test(line))
     ? []
     : ["no release_gate_placeholder_test PASS line in the gate output"];
+}
+
+const unquote = (value) => value.replace(/^"(.*)"$/, "$1");
+
+export function parsePresets(text) {
+  const sections = {};
+  let current = null;
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    const header = /^\[(.+)\]$/.exec(line);
+    if (header) current = sections[header[1]] = {};
+    else if (current && line.indexOf("=") > 0)
+      current[line.slice(0, line.indexOf("="))] = line.slice(
+        line.indexOf("=") + 1,
+      );
+  }
+  const presets = {};
+  for (const [id, fields] of Object.entries(sections)) {
+    if (id.endsWith(".options") || fields.name === undefined) continue;
+    presets[unquote(fields.name)] = {
+      fields,
+      options: sections[id + ".options"] ?? {},
+    };
+  }
+  return presets;
+}
+
+export function proofPresetDrift(presets) {
+  const shipped = presets[preset];
+  const proof = presets[proofPreset];
+  if (!shipped || !proof)
+    return [`preset "${shipped ? proofPreset : preset}" missing`];
+  const drift = [];
+  const own = new Set(["name", "runnable", "exclude_filter"]);
+  for (const part of ["fields", "options"]) {
+    const keys = new Set([
+      ...Object.keys(shipped[part]),
+      ...Object.keys(proof[part]),
+    ]);
+    for (const key of keys) {
+      if (part === "fields" && own.has(key)) continue;
+      if (shipped[part][key] !== proof[part][key])
+        drift.push(
+          `${part} ${key}: ${shipped[part][key]} shipped, ${proof[part][key]} proof`,
+        );
+    }
+  }
+  const list = (value) =>
+    unquote(value ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  const want = list(shipped.fields.exclude_filter)
+    .filter((item) => item !== "tools/*")
+    .join(", ");
+  const got = list(proof.fields.exclude_filter).join(", ");
+  if (want !== got)
+    drift.push(`exclude_filter: proof "${got}", want "${want}"`);
+  return drift;
+}
+
+export function winProofFailures(output, status, rowsText) {
+  const failures = [];
+  if (status !== 0) failures.push("bot run exited " + status);
+  if (errorLine.test(output))
+    failures.push("SCRIPT ERROR or ERROR line in the bot run output");
+  const rows = (rowsText ?? "").split("\n").filter((line) => line.trim());
+  if (rows.length !== 1) {
+    failures.push(`expected one bots.ndjson row, found ${rows.length}`);
+    return failures;
+  }
+  let row;
+  try {
+    row = JSON.parse(rows[0]);
+  } catch {
+    failures.push("bots.ndjson row is not JSON");
+    return failures;
+  }
+  if (row.outcome !== "won")
+    failures.push(
+      `outcome ${row.outcome} at stage ${row.stage_reached}, not won`,
+    );
+  return failures;
 }
 
 function run(command, args, options = {}) {
@@ -173,6 +265,73 @@ async function main() {
   console.log("stems from: " + stemsFrom);
   console.log("sidecar stems: " + stemCount + " in " + path.join(outDir, "music_ace"));
   console.log("boot tail:\n" + bootText.trim().split("\n").slice(-6).join("\n"));
+  if (args.winProof) await winProof(outDir);
+}
+
+async function winProof(outDir) {
+  const drift = proofPresetDrift(
+    parsePresets(
+      await readFile(path.join(project, "export_presets.cfg"), "utf8"),
+    ),
+  );
+  if (drift.length > 0)
+    fail("proof preset drifted from the shipped preset\n" + drift.join("\n"));
+  const proofDir = outDir + "-win-proof";
+  if (existsSync(proofDir))
+    fail("win proof folder already exists: " + proofDir);
+  const state = path.join(proofDir, "state");
+  for (const dir of ["data", "config", "cache"])
+    await mkdir(path.join(state, dir), { recursive: true });
+  const pack = path.join(proofDir, "proof.pck");
+  const exported = run(binary, [
+    "--headless",
+    "--path",
+    project,
+    "--export-pack",
+    proofPreset,
+    pack,
+  ]);
+  const exportText = exported.stdout + exported.stderr;
+  if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(pack))
+    fail("proof pack export failed\n" + exportText.slice(-2000));
+
+  const out = path.join(proofDir, "run");
+  const bot = run(
+    binary,
+    [
+      "--headless",
+      "--fixed-fps",
+      "90",
+      "--main-pack",
+      pack,
+      "--script",
+      "res://tools/bot_run.gd",
+      "--",
+      "--out=" + out,
+      "--policy=" + WIN_POLICY,
+      "--seeds=" + WIN_SEED,
+    ],
+    {
+      cwd: proofDir,
+      timeout: 900_000,
+      env: {
+        ...process.env,
+        XDG_DATA_HOME: path.join(state, "data"),
+        XDG_CONFIG_HOME: path.join(state, "config"),
+        XDG_CACHE_HOME: path.join(state, "cache"),
+      },
+    },
+  );
+  const botText = bot.stdout + bot.stderr;
+  const rowsPath = path.join(out, "bots.ndjson");
+  const rowsText = existsSync(rowsPath) ? await readFile(rowsPath, "utf8") : "";
+  const failures = winProofFailures(botText, bot.status, rowsText);
+  if (failures.length > 0)
+    fail("win proof\n" + failures.join("\n") + "\n" + botText.slice(-2000));
+  const row = JSON.parse(rowsText.trim());
+  console.log(
+    `win proof: ${row.outcome} at stage ${row.stage_reached}, ${row.ticks} ticks, ${row.wall_seconds} s wall, policy ${WIN_POLICY} seed ${WIN_SEED}, pack ${pack}`,
+  );
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

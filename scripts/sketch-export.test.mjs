@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   bootFailures,
@@ -6,7 +7,10 @@ import {
   missingStems,
   missingStemsMessage,
   parseArgs,
+  parsePresets,
+  proofPresetDrift,
   releaseGateFailures,
+  winProofFailures,
 } from "./sketch-export.mjs";
 
 const manifest = {
@@ -57,9 +61,15 @@ test("release gate with status 1 fails even beside a PASS line", () => {
 });
 
 test("parseArgs reads both --stems-from forms, defaults to null and rejects others", () => {
-  assert.deepEqual(parseArgs([]), { stemsFrom: null });
-  assert.deepEqual(parseArgs(["--stems-from=/a"]), { stemsFrom: "/a" });
-  assert.deepEqual(parseArgs(["--stems-from", "/b"]), { stemsFrom: "/b" });
+  assert.deepEqual(parseArgs([]), { stemsFrom: null, winProof: false });
+  assert.deepEqual(parseArgs(["--stems-from=/a"]), {
+    stemsFrom: "/a",
+    winProof: false,
+  });
+  assert.deepEqual(parseArgs(["--stems-from", "/b"]), {
+    stemsFrom: "/b",
+    winProof: false,
+  });
   assert.throws(() => parseArgs(["--nope"]), /unknown argument: --nope/);
 });
 
@@ -78,4 +88,79 @@ test("missingStemsMessage names the folder, the flag and the default, never a re
   );
   assert.ok(message.includes("--stems-from="));
   assert.ok(!message.includes("package_music"));
+});
+
+test("parseArgs reads --win-proof beside --stems-from", () => {
+  assert.deepEqual(parseArgs(["--win-proof"]), {
+    stemsFrom: null,
+    winProof: true,
+  });
+  assert.deepEqual(parseArgs(["--stems-from=/a", "--win-proof"]), {
+    stemsFrom: "/a",
+    winProof: true,
+  });
+});
+
+const presetsText = readFileSync(
+  new URL("../sketches/core-loop/export_presets.cfg", import.meta.url),
+  "utf8",
+);
+
+test("the real proof preset matches the shipped preset except name, runnable and tools/*", () => {
+  const presets = parsePresets(presetsText);
+  assert.deepEqual(Object.keys(presets), ["Linux x64", "Linux x64 proof"]);
+  assert.equal(
+    presets["Linux x64 proof"].options["texture_format/s3tc_bptc"],
+    "true",
+  );
+  assert.deepEqual(proofPresetDrift(presets), []);
+});
+
+test("a changed proof option is one drift", () => {
+  const mutated = presetsText.replace(
+    /(\[preset\.1\.options\][^[]*texture_format\/s3tc_bptc=)true/,
+    "$1false",
+  );
+  assert.notEqual(mutated, presetsText);
+  assert.equal(proofPresetDrift(parsePresets(mutated)).length, 1);
+});
+
+const row = (outcome, stage = 6) =>
+  JSON.stringify({
+    policy: "skipper",
+    seed: 1,
+    outcome,
+    stage_reached: stage,
+    ticks: 9000,
+  });
+
+test("a single won row with exit 0 and no error line passes", () => {
+  assert.deepEqual(
+    winProofFailures("bot_run: skipper seed 1 -> won\n", 0, row("won") + "\n"),
+    [],
+  );
+});
+
+test("a lost row fails", () => {
+  assert.equal(winProofFailures("", 0, row("lost", 3)).length, 1);
+});
+
+test("a stalled or until row fails", () => {
+  assert.equal(winProofFailures("", 0, row("stalled", 4)).length, 1);
+  assert.equal(winProofFailures("", 0, row("until", 6)).length, 1);
+});
+
+test("two rows fail", () => {
+  assert.equal(
+    winProofFailures("", 0, row("won") + "\n" + row("won") + "\n").length,
+    1,
+  );
+});
+
+test("an ERROR line fails beside a won row", () => {
+  assert.equal(winProofFailures("ERROR: boom\n", 0, row("won")).length, 1);
+});
+
+test("status 1 fails beside a won row", () => {
+  assert.equal(winProofFailures("", 1, row("won")).length, 1);
 });
