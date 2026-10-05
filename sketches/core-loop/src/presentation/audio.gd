@@ -1899,8 +1899,12 @@ func _flush_flow() -> void:
 					if start >= 0:
 						engine.schedule_cadence(start + Harmony.BAR)
 						engine.schedule_mode(start + Harmony.BAR * 3, MusicEngine.IDLE)
+						engine.menu_theme("summary", true, start + Harmony.BAR * 3)
 				else:
-					engine.schedule_mode(engine.next_beat(), MusicEngine.IDLE)
+					var at := engine.next_beat()
+					engine.schedule_mode(at, MusicEngine.IDLE)
+					if sound_ready:
+						engine.menu_theme("summary", false, at)
 			"dead":
 				_ace_end()
 				_disarm_launch()
@@ -1908,7 +1912,11 @@ func _flush_flow() -> void:
 				engine.death_break()
 			"idle":
 				_ace_end()
-				engine.schedule_mode(engine.next_beat(), MusicEngine.IDLE)
+				var at := engine.next_beat()
+				engine.schedule_mode(at, MusicEngine.IDLE)
+				# The title's own theme, kept across the class select.
+				if sound_ready:
+					engine.menu_theme("title", true, at)
 			"unseal":
 				_unseal_ms = Time.get_ticks_msec()
 				if ace_playing():
