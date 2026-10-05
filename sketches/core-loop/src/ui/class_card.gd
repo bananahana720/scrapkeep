@@ -33,6 +33,7 @@ const Achievements := preload("res://src/core/achievements.gd")
 # (game._screen_key). With nothing focused, the first arrow focuses a card.
 
 const KEY_H := 28.0
+const MIN_ICON_SIDE := 28.0  # the smallest a key icon may shrink to at six cards (roster ruling R-B)
 const HEIGHT := 600.0
 const PAD := 18.0
 const PREVIEW_H := 260.0
@@ -168,7 +169,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	_keys_row = keys
 	var records := ClassKit.card_keys(def)
 	var room := width - 2.0 * PAD - 4.0 * (records.size() - 1)
-	var fit := _fit_cells(records, room / maxf(1.0, records.size()), floorf(room) - 1.0)
+	var fit := _fit_cells(records, room / maxf(1.0, records.size()), floorf(room))
 	for record in records:
 		keys.add_child(_cell(record, color, fit["side"], fit["scale"]))
 	_apply()
@@ -200,7 +201,8 @@ func overflow() -> float:
 
 
 # The preview gives up height so the column fits. The row passes one value to every card
-# so their key rows stay level.
+# so every key row ends on the same bottom edge (the rows start at different heights because
+# the role and fantasy text above them wrap differently).
 func shrink_preview(by: float) -> void:
 	if preview == null or by <= 0.0:
 		return
@@ -421,7 +423,7 @@ func _fit_cells(records: Array, cell_w: float, room: float) -> Dictionary:
 	while scale > 0.5 and _caps_width(records, scale, 0.0) > room:
 		scale -= 0.05
 	var side := cell_w
-	while side > 0.0 and _caps_width(records, scale, side) > room:
+	while side > MIN_ICON_SIDE and _caps_width(records, scale, side) > room:
 		side = ceilf(side) - 1.0
 	return {"side": side, "scale": scale}
 

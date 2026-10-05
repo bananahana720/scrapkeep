@@ -602,7 +602,8 @@ func class_cards() -> Array:
 	return _choices.get_children()
 
 
-# Every card in the row gives its preview the row's largest overflow, so the key rows stay level.
+# Every card in the row gives its preview the row's largest overflow, so every key row ends
+# inside its card on the same bottom edge.
 func _level_cards() -> void:
 	var row := class_cards()
 	var spill: float = row.reduce(func(m, c): return maxf(m, c.overflow()), 0.0)
