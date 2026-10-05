@@ -74,7 +74,9 @@ static func reading(game) -> Dictionary:
 		model = Companion.new()
 	var seated: Array = []
 	for id in model.sockets:
-		seated.append(String(Companion._row(id)["name"]))
+		for piece in Companion.PIECES:
+			if piece["id"] == id:
+				seated.append(String(piece["name"]))
 	var ids: Array = Achievements.ids()
 	var earned := 0
 	for id in ids:

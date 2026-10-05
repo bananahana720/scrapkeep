@@ -36,8 +36,6 @@ const SIDE := 60.0
 # the narrowest supported width (int_screen_layout_test's 1280).
 const ACTION_GAP := 18
 const ACTION_GAP_MIN := 6
-# Past the tightest gap, a crowded title row's words step down from the buttons' 22 to this.
-const ACTION_FONT_MIN := 16
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 const TITLE := "SCRAPKEEP: FIRST RUN"
@@ -547,16 +545,23 @@ func _fade(show: bool) -> void:
 
 
 func _fit_actions() -> void:
-	var gaps: int = _actions.get_child_count() - 1
 	var room: float = minf(_screen().x, NARROW_W) - 2.0 * SIDE
-	var over: float = _actions.get_combined_minimum_size().x - room
+	# Past the tightest gap, Camp leaves a crowded title row; K and the summary still open it.
+	var camp := button_for("camp")
+	if camp != null and _actions_width(ACTION_GAP_MIN) > room:
+		_actions.remove_child(camp)
+		camp.queue_free()
+	var gaps: int = _actions.get_child_count() - 1
+	var over: float = _actions_width(ACTION_GAP) - room
 	if gaps > 0 and over > 0.0:
 		_actions.add_theme_constant_override("separation", maxi(ACTION_GAP_MIN, ACTION_GAP - ceili(over / gaps)))
-	var font := 22
-	while font > ACTION_FONT_MIN and _actions.get_combined_minimum_size().x > room:
-		font -= 1
-		for child in _actions.get_children():
-			child.add_theme_font_size_override("font_size", font)
+
+
+func _actions_width(gap: int) -> float:
+	var width := 0.0
+	for child in _actions.get_children():
+		width += child.get_combined_minimum_size().x
+	return width + gap * maxi(0, _actions.get_child_count() - 1)
 
 
 func _screen() -> Vector2:

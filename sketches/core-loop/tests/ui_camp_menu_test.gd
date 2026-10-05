@@ -10,16 +10,20 @@ const FieldNotes := preload("res://src/ui/field_notes.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
+const RunStore := preload("res://src/core/run_store.gd")
 
 # The interim camp (C7), a title page on K and the summary's Camp action, on the real title:
 #   - built synchronously; K, Escape, pad B and Back close it; A, S and Space leave for their page;
 #   - it reads ready and locked pilots, companion pieces found and seated, and achievements;
 #   - its Companion button shows only with a piece and opens the companion panel;
 #   - the summary's Camp (K, pad Y) lands on the title with the camp open;
-#   - every camp label is 15 words or fewer.
+#   - every camp label is 15 words or fewer;
+#   - Camp shows on a title row it fits within 1280 - 2*SIDE and steps off one it does not;
+#     K still opens the camp.
 
 const LABEL_WORDS := 15
 const EARNED_AT := 1790000000.0
+const STORE_DIR := "user://ui_camp_menu_test/"
 
 var _t := T.new("ui_camp_menu_test")
 var _game
@@ -57,6 +61,13 @@ func _line_with(lines: PackedStringArray, prefix: String) -> String:
 	return ""
 
 
+func _row_dump(screens) -> String:
+	var out := []
+	for c in screens._actions.get_children():
+		out.append("%s=%.0f" % [c.action, c.get_combined_minimum_size().x])
+	return "%s sep %d" % [out, screens._actions.get_theme_constant("separation")]
+
+
 func _run() -> void:
 	while _game.flow == null:
 		await process_frame
@@ -75,6 +86,9 @@ func _run() -> void:
 	_t.eq("the game starts on the title", flow.state_name(), "title")
 	var camp_button = screens.button_for("camp")
 	_t.check("the title has a Camp button on K", camp_button != null and camp_button.key == "key_k", "")
+	var room: float = 1280.0 - 2.0 * screens.SIDE
+	var row_w: float = screens._actions.get_combined_minimum_size().x
+	_t.check("the fresh title row with Camp fits", row_w <= room, "%.0f of %.0f %s" % [row_w, room, _row_dump(screens)])
 	var first = screens._actions.get_child(0)
 	_t.check("Continue or Start stays first on the title", first.action == "continue" or first.action == "start", first.action)
 
@@ -220,4 +234,32 @@ func _run() -> void:
 	await _frames(1)
 	_t.check("K on the summary lands on the title with the camp open", flow.state_name() == "title" and screens.camp_open(), flow.state_name())
 	_t.check("no Continue after a finished run", screens.button_for("continue") == null, "")
+	_game._screen_key(KEY_K)
+
+	# Crowded title rows: Camp steps off a row it would push past the room.
+	profile.set_companion(Companion.with_piece({}, "escape_vent"))
+	flow.show_title()
+	await _frames(1)
+	row_w = screens._actions.get_combined_minimum_size().x
+	_t.check("a title with Companion and Breath fits", screens.button_for("companion") != null
+		and screens.button_for("breath") != null and row_w <= room, "%.0f of %.0f %s" % [row_w, room, _row_dump(screens)])
+	DirAccess.make_dir_recursive_absolute(STORE_DIR)
+	flow.store = RunStore.new(STORE_DIR + "run.json")
+	flow.store.clear()
+	flow.press_start()
+	flow.choose_class(0)
+	await _frames(2)
+	flow.show_title()
+	await _frames(1)
+	var start = screens.button_for("start")
+	_t.check("a returning player's title shows Continue, New run, Companion and Breath",
+		screens.button_for("continue") != null and start != null and start.text == "New run"
+		and screens.button_for("companion") != null and screens.button_for("breath") != null, "")
+	row_w = screens._actions.get_combined_minimum_size().x
+	_t.check("Camp steps off the crowded row", screens.button_for("camp") == null, "%.0f of %.0f %s" % [row_w, room, _row_dump(screens)])
+	print("crowded title row without Camp: %.0f of %.0f %s" % [row_w, room, _row_dump(screens)])
+	_game._screen_key(KEY_K)
+	_t.check("K still opens the camp from the crowded title", screens.camp_open(), "")
+	_game._screen_key(KEY_K)
+	flow.store.clear()
 	quit(_t.verdict())
