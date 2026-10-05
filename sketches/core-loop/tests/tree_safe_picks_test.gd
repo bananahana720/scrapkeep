@@ -8,8 +8,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Relics := preload("res://src/build/relics.gd")
 
 # Rule: four safe growth picks cannot replace an ability, disable it, lower a knob's
-# default, or undo an earlier pick. Validate all 150 distinct nodes (five pilots' own trees;
-# the remembered cannon borrows Kest's tree until pil-G11, so it adds rows, not nodes).
+# default, or undo an earlier pick. Validate all 180 distinct nodes (six pilots' own trees).
 # Tarn's nodes and relics are also checked for dead offers (STRATEGY-SPINE.md:175).
 # Existing tradeoffs are findings, not permission to change content.
 # Decision 3 is pending: numerical decreases are conservatively flagged even when
@@ -22,7 +21,7 @@ const UNSAFE := {
 	"demolitions_caster": ["k_ghost", "k_heavy_charge", "k_sticky_rain"],
 	"tarn": [],
 	"tally": [],
-	"remembered_cannon": ["k_ghost", "k_heavy_charge", "k_sticky_rain"],  # remembered cannon: Kest's stand-in until pil-G11
+	"remembered_cannon": [],
 }
 
 var _failures := 0
@@ -74,12 +73,13 @@ func _initialize() -> void:
 		_report("%s world one" % def.display_name,
 			UpgradeTree.safe_growth_problems(def.id, true) == world_one, "%d reachable-node findings" % world_one.size())
 		_report("%s data preserved" % def.display_name, list == before, "validator never edits nodes")
-	_report("all six pilots", pilots == UNSAFE.keys() and checked == 30 * UNSAFE.size() and distinct.size() == 150,
+	_report("all six pilots", pilots == UNSAFE.keys() and checked == 30 * UNSAFE.size() and distinct.size() == 180,
 		"%d rows, %d distinct nodes, pilots %s" % [checked, distinct.size(), pilots])
 	_dead_offers()
 	_fixtures()
 	_tarn_rows()
 	_tally_rows()
+	_cannon_rows()
 	print("tree_safe_picks_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -282,3 +282,47 @@ func _tally_rows() -> void:
 	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Tally world-one cards", cards_ok, "%s" % [first_six])
+
+
+func _cannon_rows() -> void:
+	var cannon := UpgradeTree.nodes("remembered_cannon")
+	var ids := cannon.map(func(n): return String(n["id"]))
+	var own := ids.all(func(i): return i.begins_with("c_"))
+	var profile := UpgradeTree.nodes("remembered_cannon", true)
+	var shared := []
+	for other in UpgradeTree.TREES:
+		if other != "remembered_cannon":
+			shared.append_array(UpgradeTree.TREES[other].filter(func(n): return n["id"] in ids).map(func(n): return n["id"]))
+	_report("Cannon's own tree", own and profile.size() == 30 and profile[0]["id"] == "c_quick_lane" and shared.is_empty(),
+		"%d world-one nodes, first %s, shared with other pilots %s" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared])
+	var weapon := String(ClassDef.by_id("remembered_cannon").weapon_id)
+	var bad := []
+	for n in cannon:
+		var ok: bool = not n.has("knob") and not n.has("swap")
+		var pattern: Dictionary = n.get("pattern", {})
+		var shapes_bolts := false
+		for key in pattern:
+			ok = ok and String(key) == weapon
+			var t: Dictionary = pattern[key]
+			ok = ok and float(t.get("mul", {}).get("damage", 1.0)) <= 1.0
+			for part in ["add", "mul", "min"]:
+				ok = ok and not t.get(part, {}).has("range_m")
+				for k in t.get(part, {}):
+					shapes_bolts = shapes_bolts or String(k) != "rate"
+		if shapes_bolts:
+			# Lane honesty (D3): the lane reads only rate, so a row that shapes bolts needs a volley above it.
+			var above := UpgradeTree.path_to("remembered_cannon", n["id"])
+			above.pop_back()
+			var volley := false
+			for a in cannon.filter(func(m): return m["id"] in above):
+				for p in a.get("proc", []):
+					volley = volley or String(p["do"]) == "volley"
+			ok = ok and volley
+		ok = ok and (Icons.IDS.has(n["icon"]) or Icons.EXTRA.has(n["icon"]))
+		if not ok:
+			bad.append(n["id"])
+	_report("Cannon rulings", bad.is_empty(),
+		"no knob or swap; patterns on %s only; no damage mul above 1.0; no range_m; non-rate rows under a volley; known icons; bad %s" % [weapon, bad])
+	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
+	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
+	_report("Cannon world-one cards", cards_ok, "%s" % [first_six])

@@ -33,6 +33,7 @@ func _initialize() -> void:
 	_report("eligible skips held", not "quick_fuse" in Relics.eligible("pylon_engineer", held), "%s" % [Relics.eligible("pylon_engineer", held)])
 	_report("tarn has its own relics", not Relics.fits("muzzle_heart", "tarn") and Relics.fits("muzzle_heart", "runner_gunner") and Relics.eligible("tarn", {}) == ["taut_cable", "vice_heart", "spare_cable", "jaw_spring", "redjaw_cable", "twin_jaw"], "%s" % [Relics.eligible("tarn", {})])
 	_report("tally has its own relics", Relics.eligible("tally", {}) == ["oiled_flywheel", "return_spring", "spare_flywheel", "plate_hinge", "brass_governor", "second_plate"], "%s" % [Relics.eligible("tally", {})])
+	_report("the cannon has its own relics", Relics.eligible("remembered_cannon", {}) == ["kick_spring", "brace_pin", "second_kick", "brace_spring", "hot_breech", "twin_plate"], "%s" % [Relics.eligible("remembered_cannon", {})])
 	# A bad row must be caught.
 	var bad_rows: Dictionary = Relics.ROWS.duplicate(true)
 	bad_rows["quick_fuse"]["slot"] = "nowhere"
