@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const Relics := preload("res://src/build/relics.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
 const ZoneSchema := preload("res://src/world/zone_schema.gd")
 const Dig := preload("res://src/world/map_dig.gd")
 const DigDeep := preload("res://src/world/map_dig_deep.gd")
@@ -138,6 +139,8 @@ func _physics_process(_delta: float) -> bool:
 	if _ticks < SETTLE_TICKS:
 		return false
 	_check_stage(stage)
+	if stage >= 3:
+		_check_sable(stage)
 	_index += 1
 	_entered = false
 	return false
@@ -205,3 +208,17 @@ func _check_relic(stage: int, cache) -> void:
 	cache.id = id
 	var ok: bool = picks.all(func(r): return Relics.has(r) and int(Relics.row(r)["world"]) == world and Relics.fits(r, PILOT))
 	_report("stage %d cache relic is world %d's" % [stage, world], ok, "%d draws %s" % [DRAWS, picks])
+
+
+# Sable's later worlds keep an offer whichever world-1 relic Sable holds: Quick Fuse holds the
+# special slot, Crater Heart the smash slot.
+func _check_sable(stage: int) -> void:
+	var world: int = _game.ctx.stages.world_of(stage)
+	for held in [{AbilityState.SPECIAL: "quick_fuse"}, {AbilityState.SMASH: "crater_heart"}]:
+		var pool := Relics.eligible("pylon_engineer", held, null, world)
+		var ok := not pool.is_empty()
+		for id in pool:
+			ok = ok and int(Relics.row(id)["world"]) == world and Relics.fits(id, "pylon_engineer") and not held.has(Relics.slot_of(id))
+		if held.has(AbilityState.SMASH):
+			ok = ok and pool.any(func(i): return Relics.slot_of(i) == AbilityState.SPECIAL)
+		_report("stage %d Sable holding %s finds a world %d relic" % [stage, held.values()[0], world], ok, "pool %s" % [pool])
