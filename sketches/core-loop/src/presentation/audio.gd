@@ -895,6 +895,7 @@ func _connect_all(events) -> void:
 		engine.set_fleet_ticks(0)
 		_flow_queue.append(["run"]))
 	events.flow_changed.connect(_on_flow_changed)
+	events.world_entered.connect(func(world: int): _flow_queue.append(["world", world]))
 	events.stage_entered.connect(_on_stage_entered)
 	events.stage_cleared.connect(func(stage: int): _flow_queue.append(["clear", stage]))
 	events.run_ended.connect(func(won: bool):
@@ -1852,6 +1853,11 @@ func _flush_flow() -> void:
 				if start >= 0:
 					engine.schedule_restart(start, MusicEngine.PLAY, _stage_theme(1))
 				_ace_stage(1, start)
+			"world":
+				# The world's stinger on the lane, after the run's and before the stage's (the
+				# bus emits world_entered before stage_entered); a launch's landing replaces
+				# only the stage hit.
+				on_beat("world_entered", 0.0, true, 1, SfxBank.world_stinger(item[1]))
 			"stage":
 				var stage: int = item[1]
 				var retry: bool = item[2]

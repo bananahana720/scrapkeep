@@ -34,7 +34,16 @@ const STINGER_BEATS := {
 	"boss_phase": 2,
 	"stinger_boss_defeated": 8,
 	"build_riser": 8,
+	# The world stinger, one id per WORLD_STEPS value (world_stinger names them).
+	"stinger_world": 2,
+	"stinger_world_down5": 2,
+	"stinger_world_up5": 2,
 }
+
+# Crossing into a world plays the world stinger moved by that world's step in semitones,
+# worlds 1 to 3: the Dig steps down a fourth, the Highdraft up a fourth.
+const WORLD_STINGER := "stinger_world"
+const WORLD_STEPS := [0, -5, 5]
 
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
 # facts sit low so a firefight never turns to mush; rare facts sit at the top.
@@ -98,6 +107,7 @@ const TRIM_DB := {
 	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
 	"chunk_low": -2.0,
+	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
 # one per quarter, then the same notes together when it staggers. Variant 0 is wired in;
@@ -146,6 +156,14 @@ static func trim_db(id: String) -> float:
 	if id.begins_with(CAUSE_NOTE):
 		return CAUSE_NOTE_DB
 	return TRIM_DB.get(id, -8.0)
+
+
+# The world stinger's id for a world: the plain row sound at step 0, else the step named.
+static func world_stinger(world: int) -> String:
+	var step: int = WORLD_STEPS[clampi(world, 1, WORLD_STEPS.size()) - 1]
+	if step == 0:
+		return WORLD_STINGER
+	return "%s_%s%d" % [WORLD_STINGER, "up" if step > 0 else "down", absi(step)]
 
 
 static func cause_note_id(midi: int) -> String:
@@ -340,6 +358,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"stinger_stage":
 			return Synth.render_score([[0, 0, 2, "kick", 1.0], [0, 0, 2, "open_hat", 0.6], [0, 62, 2, "keys", 0.5],
 				[0, 65, 2, "keys", 0.5], [0, 69, 2, "keys", 0.5], [0, 72, 2, "keys", 0.5], [0, 74, 2, "lead", 0.6]], 0.5)
+		"stinger_world", "stinger_world_down5", "stinger_world_up5":
+			for world in range(1, WORLD_STEPS.size() + 1):
+				if world_stinger(world) == id:
+					return Synth.render_score(_score_world(WORLD_STEPS[world - 1]), 0.6)
+			return Synth.render_score(_score_world(0), 0.6)
 		"stinger_clear":
 			return Synth.render_score(_score_clear(0), 1.4)
 		"stinger_run_end":
@@ -641,6 +664,16 @@ static func _score_milestone() -> Array:
 
 
 # Three notes that climb: A, D, A an octave up. It says "bigger" in the band's key.
+# A door swinging open, two beats: a clav tumble down and back up on the eighths, then a
+# chime with a bell an octave under on beat two. No kick, so it never reads as the stage hit.
+static func _score_world(step: int) -> Array:
+	var score := [[0, 0, 1, "hat", 0.3], [4, 0, 1, "brush", 0.4], [4, 50 + step, 4, "keys", 0.3]]
+	for note in [[0, 74, 1, "clav", 0.55], [1, 72, 1, "clav", 0.5], [2, 69, 1, "clav", 0.5], [3, 74, 1, "clav", 0.55],
+			[4, 81, 4, "chime", 0.6], [4, 69, 4, "bell", 0.35]]:
+		score.append([note[0], note[1] + step, note[2], note[3], note[4]])
+	return score
+
+
 static func _score_class_up() -> Array:
 	return [[0, 0, 2, "kick", 0.7], [0, 69, 2, "mallet", 0.8], [0, 69, 2, "bell", 0.35], [2, 74, 2, "mallet", 0.85],
 		[2, 74, 2, "bell", 0.4], [4, 81, 4, "mallet", 0.9], [4, 81, 4, "bell", 0.5], [4, 38, 4, "sub", 0.6],
