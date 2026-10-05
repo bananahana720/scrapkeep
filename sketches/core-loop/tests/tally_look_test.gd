@@ -13,6 +13,7 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Trees := preload("res://src/core/upgrade_tree.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
+const ClassPreview := preload("res://src/ui/class_preview.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Tally's presentation: ledger cream and brass, punched program cards, and a
@@ -76,6 +77,7 @@ func _process(_delta: float) -> bool:
 	_check_motif()
 	_check_feel()
 	_check_ticks()
+	_check_preview()
 	quit(_t.verdict())
 	return true
 
@@ -241,3 +243,15 @@ func _check_ticks() -> void:
 		counts.append(ind._tris.get_faces().size())
 		ind.free()
 	_t.check("square ticks draw", counts[0] > counts[1], "vertices with square ticks %d, without %d" % counts)
+
+
+func _check_preview() -> void:
+	var preview := ClassPreview.new(ClassDef.by_id("tally"))
+	var props := ["plate0", "plate1", "plate2"]
+	preview._pose(0.3)
+	var climbing := props.filter(func(id): return preview._props[id].visible)
+	preview._pose(0.95)
+	var resting := props.filter(func(id): return preview._props[id].visible)
+	_t.check("preview plates", not climbing.is_empty() and resting.is_empty(),
+		"visible at 0.30 %s, at 0.95 %s" % [climbing, resting])
+	preview.free()

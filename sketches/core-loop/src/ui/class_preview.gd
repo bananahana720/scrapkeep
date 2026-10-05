@@ -20,7 +20,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const LOOP := 3.6
 # The loop phase each card holds at rest: the key art's moment.
 const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64, "tarn": 0.3,
-	"remembered_cannon": 0.22}
+	"remembered_cannon": 0.22, "tally": 0.3}
 const BOB := 0.08
 const REST_SPIN := 2.5
 # How far the resting pilot turns from its heading toward the camera.
@@ -247,6 +247,16 @@ func _build_props() -> void:
 			_prop("plate", plate, def.color, 1.2)
 			_prop("ring", _torus(0.9, 1.05), def.color, 1.8)
 			_prop("bolt", _stick(0.09), def.color, 2.6)
+		"tally":
+			for i in 3:
+				var card := BoxMesh.new()
+				card.size = Vector3(1.3, 0.14, 1.1)
+				_prop("plate%d" % i, card, Palette.LEDGER, 0.0)
+			_prop("surge", _torus(1.1, 1.25), def.color, 1.8)
+			var stamp := BoxMesh.new()
+			stamp.size = Vector3(1.8, 0.04, 1.8)
+			_prop("stamp", stamp, def.color, 1.2)
+			_prop("slam", _torus(0.9, 1.05), def.color, 1.8)
 
 
 func _process(delta: float) -> void:
@@ -287,6 +297,8 @@ func _pose(t: float) -> void:
 			_kest(t)
 		"remembered_cannon":
 			_cannon(t)
+		"tally":
+			_tally(t)
 	_roll()
 
 
@@ -444,6 +456,42 @@ func _cannon(t: float) -> void:
 	if t >= 0.84 and t < 0.96:
 		var f := _span(t, 0.84, 0.96)
 		_show("ring", landing + Vector3(0.0, -0.8, 0.0), Vector3.ONE * lerpf(0.8, 4.0, f), 1.0 - f)
+
+
+# Tally: three card strokes climb a stair of ledger plates (Gather, Link, Balance Due),
+# the flywheel surges on the top step, then the stamp slams down and bounces.
+func _tally(t: float) -> void:
+	var start := Vector3(-3.0, 1.0, 0.4)
+	var tops := [Vector3(-1.6, 0.45, 0.4), Vector3(-0.3, 0.95, 0.4), Vector3(1.0, 1.45, 0.4)]
+	var slam := Vector3(2.6, 1.0, 0.4)
+	for i in 3:
+		var stroke := _span(t, 0.04 + 0.1 * i, 0.08 + 0.1 * i)
+		if stroke > 0.0 and t < 0.8:
+			var top: Vector3 = tops[i]
+			_show("plate%d" % i, top - Vector3(0.0, 0.07, 0.0), Vector3(1.0, maxf(_ease_out(stroke), 0.01), 1.0),
+				1.0 - _span(t, 0.7, 0.8))
+	var standing := start
+	for i in 3:
+		var hop := _span(t, 0.08 + 0.1 * i, 0.14 + 0.1 * i)
+		if hop > 0.0:
+			var top: Vector3 = tops[i]
+			standing = _arc(standing, top + Vector3(0.0, 1.0, 0.0), 0.8, hop)
+	if t < 0.62:
+		ball.position = standing
+	elif t < 0.72:
+		ball.position = _arc(tops[2] + Vector3(0.0, 1.0, 0.0), slam, 1.6, _ease_in(_span(t, 0.62, 0.72)))
+	elif t < 0.82:
+		ball.position = slam + Vector3(0.0, 0.5 * sin(_span(t, 0.72, 0.82) * PI), 0.0)
+	else:
+		ball.position = slam.lerp(start, _span(t, 0.82, 1.0))
+	var surge := _span(t, 0.4, 0.6)
+	if surge > 0.0 and surge < 1.0:
+		_pod.rotation.y = _heading + TAU * 2.0 * _ease_in(surge)
+		_show("surge", ball.position + Vector3(0.0, -0.2, 0.0), Vector3.ONE * lerpf(0.7, 1.4, surge), 1.0 - surge * surge)
+	var struck := _span(t, 0.72, 0.84)
+	if struck > 0.0 and struck < 1.0:
+		_show("stamp", slam + Vector3(0.0, -0.95, 0.0), Vector3.ONE * lerpf(1.3, 1.0, struck), 0.8 * (1.0 - struck))
+		_show("slam", slam + Vector3(0.0, -0.8, 0.0), Vector3.ONE * lerpf(0.8, 3.6, struck), 1.0 - struck)
 
 
 func _roll() -> void:
