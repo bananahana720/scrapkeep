@@ -1,321 +1,193 @@
 arm	seed	plating	curve	ram_shatters	outcome	broke	engaged_s	struck_s	turn_s	fight_s	mass	heft	game_s	note
+small	0	70.0	1.0	true	broken	true	8.06	8.06	0.01	38.01	6.0	1.013	47.11	
 small	1	70.0	1.0	true	broken	true	10.87	10.87	0.01	24.69	1.0	1.002	36.32	
 small	2	70.0	1.0	true	broken	true	11.9	12.82	0.01	36.08	3.0	1.007	50.44	
-small	4	70.0	1.0	true	broken	true	8.06	8.06	0.01	33.05	8.0	1.018	42.17	
-small	5	70.0	1.0	true	broken	true	10.87	10.87	0.01	39.12	2.0	1.004	51.13	
-small	6	70.0	1.0	true	broken	true	11.66	12.61	0.01	24.01	1.0	1.002	37.58	
+mid	0	70.0	1.0	true	broken	true	8.06	8.06	0.01	25.48	232.0	1.516	34.24	
 mid	1	70.0	1.0	true	broken	true	10.87	10.87	0.01	41.61	225.0	1.500	53.79	
 mid	2	70.0	1.0	true	broken	true	11.9	12.82	0.01	23.81	226.0	1.502	37.81	
-mid	4	70.0	1.0	true	broken	true	8.06	8.06	0.01	26.45	233.0	1.518	35.29	
-mid	5	70.0	1.0	true	broken	true	10.87	10.87	0.01	27.76	226.0	1.502	39.38	
-mid	6	70.0	1.0	true	broken	true	11.66	12.61	0.01	31.98	226.0	1.502	46.11	
+grown	0	70.0	1.0	true	broken	true	8.06	8.06	0.01	23.32	547.0	2.216	31.96	
 grown	1	70.0	1.0	true	broken	true	10.87	10.87	0.01	19.42	542.0	2.204	30.87	
 grown	2	70.0	1.0	true	broken	true	11.9	12.82	0.01	11.28	541.0	2.202	24.63	
-grown	4	70.0	1.0	true	broken	true	8.06	8.06	0.01	23.84	548.0	2.218	32.62	
-grown	5	70.0	1.0	true	broken	true	10.87	10.87	0.01	19.60	542.0	2.204	31.02	
-grown	6	70.0	1.0	true	broken	true	11.66	12.61	0.01	18.46	543.0	2.207	31.89	
+camper	0	70.0	1.0	true	fight_capped	false	8.06	8.06		240.00	6.0	1.013	250.29	
 camper	1	70.0	1.0	true	fight_capped	false	10.87	10.87		240.00	1.0	1.002	256.40	
 camper	2	70.0	1.0	true	fight_capped	false	11.9	12.82		240.00	3.0	1.007	262.10	
-camper	4	70.0	1.0	true	fight_capped	false	8.06	8.06		240.00	8.0	1.018	254.87	
-camper	5	70.0	1.0	true	fight_capped	false	10.87	10.87		240.00	2.0	1.004	257.18	
-camper	6	70.0	1.0	true	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.21	
+small	0	70.0	1.0	false	broken	true	8.06	8.06	0.01	38.01	6.0	1.013	47.11	
 small	1	70.0	1.0	false	broken	true	10.87	10.87	0.01	43.48	1.0	1.002	55.74	
 small	2	70.0	1.0	false	broken	true	11.9	12.82	0.01	36.40	3.0	1.007	50.83	
-small	4	70.0	1.0	false	broken	true	8.06	8.06	0.01	33.05	8.0	1.018	42.17	
-small	5	70.0	1.0	false	broken	true	10.87	10.87	0.01	35.62	2.0	1.004	47.72	
-small	6	70.0	1.0	false	broken	true	11.66	12.61	0.01	38.49	1.0	1.002	52.72	
+mid	0	70.0	1.0	false	broken	true	8.06	8.06	0.01	27.00	232.0	1.516	35.83	
 mid	1	70.0	1.0	false	broken	true	10.87	10.87	0.01	41.61	225.0	1.500	53.79	
 mid	2	70.0	1.0	false	broken	true	11.9	12.82	0.01	24.78	226.0	1.502	38.71	
-mid	4	70.0	1.0	false	broken	true	8.06	8.06	0.01	26.45	233.0	1.518	35.29	
-mid	5	70.0	1.0	false	broken	true	10.87	10.87	0.01	29.33	226.0	1.502	40.99	
-mid	6	70.0	1.0	false	broken	true	11.66	12.61	0.01	31.98	226.0	1.502	46.11	
+grown	0	70.0	1.0	false	broken	true	8.06	8.06	0.01	26.03	547.0	2.216	34.81	
 grown	1	70.0	1.0	false	broken	true	10.87	10.87	0.01	19.42	542.0	2.204	30.87	
 grown	2	70.0	1.0	false	broken	true	11.9	12.82	0.01	15.90	541.0	2.202	29.54	
-grown	4	70.0	1.0	false	broken	true	8.06	8.06	0.01	23.84	548.0	2.218	32.62	
-grown	5	70.0	1.0	false	broken	true	10.87	10.87	0.01	19.60	542.0	2.204	31.02	
-grown	6	70.0	1.0	false	broken	true	11.66	12.61	0.01	19.02	543.0	2.207	32.44	
+camper	0	70.0	1.0	false	fight_capped	false	8.06	8.06		240.00	6.0	1.013	250.29	
 camper	1	70.0	1.0	false	fight_capped	false	10.87	10.87		240.00	1.0	1.002	256.40	
 camper	2	70.0	1.0	false	fight_capped	false	11.9	12.82		240.00	3.0	1.007	262.10	
-camper	4	70.0	1.0	false	fight_capped	false	8.06	8.06		240.00	8.0	1.018	254.87	
-camper	5	70.0	1.0	false	fight_capped	false	10.87	10.87		240.00	2.0	1.004	254.52	
-camper	6	70.0	1.0	false	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.21	
+small	0	70.0	2.0	true	broken	true	8.06	8.06	0.01	39.44	6.0	1.013	48.68	
 small	1	70.0	2.0	true	broken	true	10.87	10.87	0.01	38.53	1.0	1.002	50.60	
 small	2	70.0	2.0	true	broken	true	11.9	12.82	0.01	33.68	3.0	1.007	48.13	
-small	4	70.0	2.0	true	broken	true	8.06	8.06	0.01	35.06	8.0	1.018	44.27	
-small	5	70.0	2.0	true	broken	true	10.87	10.87	0.01	54.39	2.0	1.004	67.21	
-small	6	70.0	2.0	true	broken	true	11.66	12.61	0.01	35.55	1.0	1.002	49.74	
+mid	0	70.0	2.0	true	broken	true	8.06	8.06	0.01	25.48	232.0	1.516	34.24	
 mid	1	70.0	2.0	true	broken	true	10.87	10.87	0.01	29.35	225.0	1.500	41.09	
 mid	2	70.0	2.0	true	broken	true	11.9	12.82	0.01	17.39	226.0	1.502	31.02	
-mid	4	70.0	2.0	true	broken	true	8.06	8.06	0.01	26.45	233.0	1.518	35.29	
-mid	5	70.0	2.0	true	broken	true	10.87	10.87	0.01	30.56	226.0	1.502	42.30	
-mid	6	70.0	2.0	true	broken	true	11.66	12.61	0.01	31.80	226.0	1.502	45.81	
+grown	0	70.0	2.0	true	broken	true	8.06	8.06	0.01	23.32	547.0	2.216	31.96	
 grown	1	70.0	2.0	true	broken	true	10.87	10.87	0.01	19.42	542.0	2.204	30.87	
 grown	2	70.0	2.0	true	broken	true	11.9	12.82	0.01	12.68	541.0	2.202	26.14	
-grown	4	70.0	2.0	true	broken	true	8.06	8.06	0.01	23.84	548.0	2.218	32.62	
-grown	5	70.0	2.0	true	broken	true	10.87	10.87	0.01	19.60	542.0	2.204	31.02	
-grown	6	70.0	2.0	true	broken	true	11.66	12.61	0.01	18.46	543.0	2.207	31.89	
+camper	0	70.0	2.0	true	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.51	
 camper	1	70.0	2.0	true	fight_capped	false	10.87	10.87		240.00	1.0	1.002	255.50	
 camper	2	70.0	2.0	true	fight_capped	false	11.9	12.82		240.00	3.0	1.007	262.11	
-camper	4	70.0	2.0	true	fight_capped	false	8.06	8.06		240.00	8.0	1.018	254.00	
-camper	5	70.0	2.0	true	fight_capped	false	10.87	10.87		240.00	2.0	1.004	256.22	
-camper	6	70.0	2.0	true	fight_capped	false	11.66	12.61		240.00	1.0	1.002	259.70	
+small	0	70.0	2.0	false	broken	true	8.06	8.06	0.01	49.05	6.0	1.013	58.61	
 small	1	70.0	2.0	false	broken	true	10.87	10.87	0.01	52.55	1.0	1.002	65.30	
 small	2	70.0	2.0	false	broken	true	11.9	12.82	0.01	43.24	3.0	1.007	58.03	
-small	4	70.0	2.0	false	broken	true	8.06	8.06	0.01	46.28	8.0	1.018	55.99	
-small	5	70.0	2.0	false	broken	true	10.87	10.87	0.01	55.09	2.0	1.004	67.87	
-small	6	70.0	2.0	false	broken	true	11.66	12.61	0.01	45.28	1.0	1.002	59.94	
+mid	0	70.0	2.0	false	broken	true	8.06	8.06	0.01	27.00	232.0	1.516	35.83	
 mid	1	70.0	2.0	false	broken	true	10.87	10.87	0.01	32.06	225.0	1.500	44.07	
 mid	2	70.0	2.0	false	broken	true	11.9	12.82	0.01	23.29	226.0	1.502	37.17	
-mid	4	70.0	2.0	false	broken	true	8.06	8.06	0.01	26.45	233.0	1.518	35.29	
-mid	5	70.0	2.0	false	broken	true	10.87	10.87	0.01	39.39	226.0	1.502	51.58	
-mid	6	70.0	2.0	false	broken	true	11.66	12.61	0.01	39.17	226.0	1.502	53.58	
+grown	0	70.0	2.0	false	broken	true	8.06	8.06	0.01	26.03	547.0	2.216	34.81	
 grown	1	70.0	2.0	false	broken	true	10.87	10.87	0.01	19.42	542.0	2.204	30.87	
 grown	2	70.0	2.0	false	broken	true	11.9	12.82	0.01	17.62	541.0	2.202	31.36	
-grown	4	70.0	2.0	false	broken	true	8.06	8.06	0.01	23.84	548.0	2.218	32.62	
-grown	5	70.0	2.0	false	broken	true	10.87	10.87	0.01	19.60	542.0	2.204	31.02	
-grown	6	70.0	2.0	false	broken	true	11.66	12.61	0.01	19.02	543.0	2.207	32.44	
+camper	0	70.0	2.0	false	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.51	
 camper	1	70.0	2.0	false	fight_capped	false	10.87	10.87		240.00	1.0	1.002	255.50	
 camper	2	70.0	2.0	false	fight_capped	false	11.9	12.82		240.00	3.0	1.007	262.11	
-camper	4	70.0	2.0	false	fight_capped	false	8.06	8.06		240.00	8.0	1.018	254.00	
-camper	5	70.0	2.0	false	fight_capped	false	10.87	10.87		240.00	2.0	1.004	256.22	
-camper	6	70.0	2.0	false	fight_capped	false	11.66	12.61		240.00	1.0	1.002	259.70	
+small	0	90.0	1.0	true	broken	true	8.06	8.06	0.01	37.11	6.0	1.013	46.11	
 small	1	90.0	1.0	true	broken	true	10.87	10.87	0.01	28.07	1.0	1.002	39.64	
 small	2	90.0	1.0	true	broken	true	11.9	12.82	0.01	38.60	3.0	1.007	53.23	
-small	4	90.0	1.0	true	broken	true	8.06	8.06	0.01	37.85	8.0	1.018	47.11	
-small	5	90.0	1.0	true	broken	true	10.87	10.87	0.01	21.73	2.0	1.004	33.21	
-small	6	90.0	1.0	true	broken	true	11.66	12.61	0.01	30.16	1.0	1.002	43.98	
+mid	0	90.0	1.0	true	broken	true	8.06	8.06	0.01	38.71	232.0	1.516	47.86	
 mid	1	90.0	1.0	true	broken	true	10.87	10.87	0.01	28.90	225.0	1.500	40.59	
 mid	2	90.0	1.0	true	broken	true	11.9	12.82	0.01	22.88	226.0	1.502	36.82	
-mid	4	90.0	1.0	true	broken	true	8.06	8.06	0.01	29.92	233.0	1.518	38.92	
-mid	5	90.0	1.0	true	broken	true	10.87	10.87	0.01	36.33	226.0	1.502	48.23	
-mid	6	90.0	1.0	true	broken	true	11.66	12.61	0.01	19.51	226.0	1.502	32.91	
+grown	0	90.0	1.0	true	broken	true	8.06	8.06	0.01	23.32	547.0	2.216	31.96	
 grown	1	90.0	1.0	true	broken	true	10.87	10.87	0.01	20.39	542.0	2.204	31.88	
 grown	2	90.0	1.0	true	broken	true	11.9	12.82	0.01	11.91	541.0	2.202	25.30	
-grown	4	90.0	1.0	true	broken	true	8.06	8.06	0.01	23.86	548.0	2.218	32.64	
-grown	5	90.0	1.0	true	broken	true	10.87	10.87	0.01	21.25	542.0	2.204	32.76	
-grown	6	90.0	1.0	true	broken	true	11.66	12.61	0.01	17.75	543.0	2.207	31.16	
+camper	0	90.0	1.0	true	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.29	
 camper	1	90.0	1.0	true	fight_capped	false	10.87	10.87		240.00	1.0	1.002	256.42	
 camper	2	90.0	1.0	true	fight_capped	false	11.9	12.82		240.00	3.0	1.007	261.61	
-camper	4	90.0	1.0	true	fight_capped	false	8.06	8.06		240.00	8.0	1.018	252.94	
-camper	5	90.0	1.0	true	fight_capped	false	10.87	10.87		240.00	2.0	1.004	255.92	
-camper	6	90.0	1.0	true	fight_capped	false	11.66	12.61		240.00	1.0	1.002	259.84	
+small	0	90.0	1.0	false	broken	true	8.06	8.06	0.01	47.88	6.0	1.013	57.21	
 small	1	90.0	1.0	false	broken	true	10.87	10.87	0.01	44.99	1.0	1.002	57.03	
 small	2	90.0	1.0	false	broken	true	11.9	12.82	0.01	38.60	3.0	1.007	53.23	
-small	4	90.0	1.0	false	broken	true	8.06	8.06	0.01	37.85	8.0	1.018	47.11	
-small	5	90.0	1.0	false	broken	true	10.87	10.87	0.01	38.12	2.0	1.004	50.11	
-small	6	90.0	1.0	false	broken	true	11.66	12.61	0.01	46.87	1.0	1.002	61.32	
+mid	0	90.0	1.0	false	broken	true	8.06	8.06	0.01	38.71	232.0	1.516	47.86	
 mid	1	90.0	1.0	false	broken	true	10.87	10.87	0.01	44.38	225.0	1.500	56.88	
 mid	2	90.0	1.0	false	broken	true	11.9	12.82	0.01	39.82	226.0	1.502	54.53	
-mid	4	90.0	1.0	false	broken	true	8.06	8.06	0.01	33.10	233.0	1.518	42.30	
-mid	5	90.0	1.0	false	broken	true	10.87	10.87	0.01	42.19	226.0	1.502	54.46	
-mid	6	90.0	1.0	false	broken	true	11.66	12.61	0.01	33.28	226.0	1.502	47.24	
+grown	0	90.0	1.0	false	broken	true	8.06	8.06	0.01	26.03	547.0	2.216	34.80	
 grown	1	90.0	1.0	false	broken	true	10.87	10.87	0.01	20.39	542.0	2.204	31.88	
 grown	2	90.0	1.0	false	broken	true	11.9	12.82	0.01	14.72	541.0	2.202	28.21	
-grown	4	90.0	1.0	false	broken	true	8.06	8.06	0.01	25.08	548.0	2.218	33.94	
-grown	5	90.0	1.0	false	broken	true	10.87	10.87	0.01	21.25	542.0	2.204	32.76	
-grown	6	90.0	1.0	false	broken	true	11.66	12.61	0.01	20.84	543.0	2.207	34.39	
+camper	0	90.0	1.0	false	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.29	
 camper	1	90.0	1.0	false	fight_capped	false	10.87	10.87		240.00	1.0	1.002	256.42	
 camper	2	90.0	1.0	false	fight_capped	false	11.9	12.82		240.00	3.0	1.007	261.61	
-camper	4	90.0	1.0	false	fight_capped	false	8.06	8.06		240.00	8.0	1.018	252.94	
-camper	5	90.0	1.0	false	fight_capped	false	10.87	10.87		240.00	2.0	1.004	257.06	
-camper	6	90.0	1.0	false	fight_capped	false	11.66	12.61		240.00	1.0	1.002	259.84	
+small	0	90.0	2.0	true	broken	true	8.06	8.06	0.01	47.13	6.0	1.013	56.50	
 small	1	90.0	2.0	true	broken	true	10.87	10.87	0.01	56.29	1.0	1.002	69.13	
 small	2	90.0	2.0	true	broken	true	11.9	12.82	0.01	37.83	3.0	1.007	52.42	
-small	4	90.0	2.0	true	broken	true	8.06	8.06	0.01	49.81	8.0	1.018	59.56	
-small	5	90.0	2.0	true	broken	true	10.87	10.87	0.01	59.82	2.0	1.004	72.69	
-small	6	90.0	2.0	true	broken	true	11.66	12.61	0.01	46.16	1.0	1.002	60.89	
+mid	0	90.0	2.0	true	broken	true	8.06	8.06	0.01	31.05	232.0	1.516	40.09	
 mid	1	90.0	2.0	true	broken	true	10.87	10.87	0.01	42.46	225.0	1.500	54.74	
 mid	2	90.0	2.0	true	broken	true	11.9	12.82	0.01	31.87	226.0	1.502	46.18	
-mid	4	90.0	2.0	true	broken	true	8.06	8.06	0.01	33.22	233.0	1.518	42.39	
-mid	5	90.0	2.0	true	broken	true	10.87	10.87	0.01	40.09	226.0	1.502	52.28	
-mid	6	90.0	2.0	true	broken	true	11.66	12.61	0.01	20.02	226.0	1.502	33.43	
+grown	0	90.0	2.0	true	broken	true	8.06	8.06	0.01	23.32	547.0	2.216	31.96	
 grown	1	90.0	2.0	true	broken	true	10.87	10.87	0.01	19.46	542.0	2.204	30.84	
 grown	2	90.0	2.0	true	broken	true	11.9	12.82	0.01	12.02	541.0	2.202	25.40	
-grown	4	90.0	2.0	true	broken	true	8.06	8.06	0.01	23.86	548.0	2.218	32.64	
-grown	5	90.0	2.0	true	broken	true	10.87	10.87	0.01	22.98	542.0	2.204	34.57	
-grown	6	90.0	2.0	true	broken	true	11.66	12.61	0.01	17.75	543.0	2.207	31.16	
+camper	0	90.0	2.0	true	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.42	
 camper	1	90.0	2.0	true	fight_capped	false	10.87	10.87		240.00	1.0	1.002	255.24	
 camper	2	90.0	2.0	true	fight_capped	false	11.9	12.82		240.00	3.0	1.007	262.27	
-camper	4	90.0	2.0	true	fight_capped	false	8.06	8.06		240.00	8.0	1.018	252.88	
-camper	5	90.0	2.0	true	fight_capped	false	10.87	10.87		240.00	2.0	1.004	254.89	
-camper	6	90.0	2.0	true	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.81	
+small	0	90.0	2.0	false	broken	true	8.06	8.06	0.01	65.03	6.0	1.013	75.20	
 small	1	90.0	2.0	false	broken	true	10.87	10.87	0.01	64.91	1.0	1.002	78.12	
 small	2	90.0	2.0	false	broken	true	11.9	12.82	0.01	48.85	3.0	1.007	63.92	
-small	4	90.0	2.0	false	broken	true	8.06	8.06	0.01	58.47	8.0	1.018	68.43	
-small	5	90.0	2.0	false	broken	true	10.87	10.87	0.01	59.82	2.0	1.004	72.69	
-small	6	90.0	2.0	false	broken	true	11.66	12.61	0.01	72.22	1.0	1.002	88.30	
+mid	0	90.0	2.0	false	broken	true	8.06	8.06	0.01	46.52	232.0	1.516	56.04	
 mid	1	90.0	2.0	false	broken	true	10.87	10.87	0.01	42.46	225.0	1.500	54.74	
 mid	2	90.0	2.0	false	broken	true	11.9	12.82	0.01	36.46	226.0	1.502	51.23	
-mid	4	90.0	2.0	false	broken	true	8.06	8.06	0.01	46.33	233.0	1.518	55.92	
-mid	5	90.0	2.0	false	broken	true	10.87	10.87	0.01	47.97	226.0	1.502	60.28	
-mid	6	90.0	2.0	false	broken	true	11.66	12.61	0.01	31.95	226.0	1.502	45.87	
+grown	0	90.0	2.0	false	broken	true	8.06	8.06	0.01	26.03	547.0	2.216	34.80	
 grown	1	90.0	2.0	false	broken	true	10.87	10.87	0.01	23.57	542.0	2.204	35.18	
 grown	2	90.0	2.0	false	broken	true	11.9	12.82	0.01	14.80	541.0	2.202	28.33	
-grown	4	90.0	2.0	false	broken	true	8.06	8.06	0.01	25.08	548.0	2.218	33.94	
-grown	5	90.0	2.0	false	broken	true	10.87	10.87	0.01	23.93	542.0	2.204	35.57	
-grown	6	90.0	2.0	false	broken	true	11.66	12.61	0.01	17.75	543.0	2.207	31.16	
+camper	0	90.0	2.0	false	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.43	
 camper	1	90.0	2.0	false	fight_capped	false	10.87	10.87		240.00	1.0	1.002	255.24	
 camper	2	90.0	2.0	false	fight_capped	false	11.9	12.82		240.00	3.0	1.007	262.27	
-camper	4	90.0	2.0	false	fight_capped	false	8.06	8.06		240.00	8.0	1.018	252.88	
-camper	5	90.0	2.0	false	fight_capped	false	10.87	10.87		240.00	2.0	1.004	254.89	
-camper	6	90.0	2.0	false	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.81	
+small	0	110.0	1.0	true	broken	true	8.06	8.06	0.01	52.16	6.0	1.013	61.58	
 small	1	110.0	1.0	true	broken	true	10.87	10.87	0.01	45.29	1.0	1.002	57.51	
 small	2	110.0	1.0	true	broken	true	11.9	12.82	0.01	31.04	3.0	1.007	45.28	
-small	4	110.0	1.0	true	broken	true	8.06	8.06	0.01	38.36	8.0	1.018	47.70	
-small	5	110.0	1.0	true	broken	true	10.87	10.87	0.01	39.91	2.0	1.004	51.93	
-small	6	110.0	1.0	true	broken	true	11.66	12.61	0.01	62.60	1.0	1.002	77.51	
+mid	0	110.0	1.0	true	broken	true	8.06	8.06	0.01	33.75	232.0	1.516	42.81	
 mid	1	110.0	1.0	true	broken	true	10.87	10.87	0.01	30.37	225.0	1.500	42.03	
 mid	2	110.0	1.0	true	broken	true	11.9	12.82	0.01	26.38	226.0	1.502	40.46	
-mid	4	110.0	1.0	true	broken	true	8.06	8.06	0.01	33.23	233.0	1.518	42.38	
-mid	5	110.0	1.0	true	broken	true	10.87	10.87	0.01	46.32	226.0	1.502	58.77	
-mid	6	110.0	1.0	true	broken	true	11.66	12.61	0.01	45.12	226.0	1.502	59.59	
+grown	0	110.0	1.0	true	broken	true	8.06	8.06	0.01	25.48	547.0	2.216	34.24	
 grown	1	110.0	1.0	true	broken	true	10.87	10.87	0.01	22.05	542.0	2.204	33.54	
 grown	2	110.0	1.0	true	broken	true	11.9	12.82	0.01	33.63	541.0	2.202	48.02	
-grown	4	110.0	1.0	true	broken	true	8.06	8.06	0.01	30.73	548.0	2.218	39.74	
-grown	5	110.0	1.0	true	broken	true	10.87	10.87	0.01	28.80	542.0	2.204	40.59	
-grown	6	110.0	1.0	true	broken	true	11.66	12.61	0.01	34.52	543.0	2.207	48.76	
+camper	0	110.0	1.0	true	fight_capped	false	8.06	8.06		240.00	6.0	1.013	251.94	
 camper	1	110.0	1.0	true	fight_capped	false	10.87	10.87		240.00	1.0	1.002	256.13	
 camper	2	110.0	1.0	true	fight_capped	false	11.9	12.82		240.00	3.0	1.007	260.77	
-camper	4	110.0	1.0	true	fight_capped	false	8.06	8.06		240.00	8.0	1.018	253.42	
-camper	5	110.0	1.0	true	fight_capped	false	10.87	10.87		240.00	2.0	1.004	255.67	
-camper	6	110.0	1.0	true	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.24	
+small	0	110.0	1.0	false	broken	true	8.06	8.06	0.01	49.74	6.0	1.013	59.16	
 small	1	110.0	1.0	false	broken	true	10.87	10.87	0.01	45.29	1.0	1.002	57.51	
 small	2	110.0	1.0	false	broken	true	11.9	12.82	0.01	62.41	3.0	1.007	78.04	
-small	4	110.0	1.0	false	broken	true	8.06	8.06	0.01	38.36	8.0	1.018	47.70	
-small	5	110.0	1.0	false	broken	true	10.87	10.87	0.01	32.38	2.0	1.004	44.19	
-small	6	110.0	1.0	false	broken	true	11.66	12.61	0.01	62.60	1.0	1.002	77.51	
+mid	0	110.0	1.0	false	broken	true	8.06	8.06	0.01	35.63	232.0	1.516	44.78	
 mid	1	110.0	1.0	false	broken	true	10.87	10.87	0.01	39.83	225.0	1.500	51.92	
 mid	2	110.0	1.0	false	broken	true	11.9	12.82	0.01	35.39	226.0	1.502	49.84	
-mid	4	110.0	1.0	false	broken	true	8.06	8.06	0.01	36.08	233.0	1.518	45.33	
-mid	5	110.0	1.0	false	broken	true	10.87	10.87	0.01	33.82	226.0	1.502	45.69	
-mid	6	110.0	1.0	false	broken	true	11.66	12.61	0.01	45.12	226.0	1.502	59.59	
-grown	1	110.0	1.0	false	broken	true	10.87	10.87	0.01	35.93	542.0	2.204	47.88	
+grown	0	110.0	1.0	false	broken	true	8.06	8.06	0.01	31.36	547.0	2.216	40.27	
+grown	1	110.0	1.0	false	broken	true	10.87	10.87	0.01	29.43	542.0	2.204	41.10	
 grown	2	110.0	1.0	false	broken	true	11.9	12.82	0.01	27.81	541.0	2.202	42.04	
-grown	4	110.0	1.0	false	broken	true	8.06	8.06	0.01	30.73	548.0	2.218	39.74	
-grown	5	110.0	1.0	false	broken	true	10.87	10.87	0.01	28.80	542.0	2.204	40.59	
-grown	6	110.0	1.0	false	broken	true	11.66	12.61	0.01	34.52	543.0	2.207	48.76	
+camper	0	110.0	1.0	false	fight_capped	false	8.06	8.06		240.00	6.0	1.013	251.94	
 camper	1	110.0	1.0	false	fight_capped	false	10.87	10.87		240.00	1.0	1.002	256.13	
 camper	2	110.0	1.0	false	fight_capped	false	11.9	12.82		240.00	3.0	1.007	260.77	
-camper	4	110.0	1.0	false	fight_capped	false	8.06	8.06		240.00	8.0	1.018	253.42	
-camper	5	110.0	1.0	false	fight_capped	false	10.87	10.87		240.00	2.0	1.004	254.11	
-camper	6	110.0	1.0	false	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.24	
+small	0	110.0	2.0	true	broken	true	8.06	8.06	0.01	64.53	6.0	1.013	74.62	
 small	1	110.0	2.0	true	broken	true	10.87	10.87	0.01	94.96	1.0	1.002	109.13	
 small	2	110.0	2.0	true	broken	true	11.9	12.82	0.01	48.68	3.0	1.007	63.62	
-small	4	110.0	2.0	true	broken	true	8.06	8.06	0.01	68.39	8.0	1.018	78.57	
-small	5	110.0	2.0	true	broken	true	10.87	10.87	0.01	88.30	2.0	1.004	102.37	
-small	6	110.0	2.0	true	broken	true	11.66	12.61	0.01	52.41	1.0	1.002	67.48	
+mid	0	110.0	2.0	true	broken	true	8.06	8.06	0.01	60.01	232.0	1.516	70.09	
 mid	1	110.0	2.0	true	broken	true	10.87	10.87	0.01	34.60	225.0	1.500	46.59	
 mid	2	110.0	2.0	true	broken	true	11.9	12.82	0.01	31.55	226.0	1.502	45.88	
-mid	4	110.0	2.0	true	broken	true	8.06	8.06	0.01	53.36	233.0	1.518	63.22	
-mid	5	110.0	2.0	true	broken	true	10.87	10.87	0.01	46.71	226.0	1.502	59.07	
-mid	6	110.0	2.0	true	broken	true	11.66	12.61	0.01	28.99	226.0	1.502	42.70	
+grown	0	110.0	2.0	true	broken	true	8.06	8.06	0.01	29.38	547.0	2.216	38.32	
 grown	1	110.0	2.0	true	broken	true	10.87	10.87	0.01	39.20	542.0	2.204	51.28	
 grown	2	110.0	2.0	true	broken	true	11.9	12.82	0.01	31.41	541.0	2.202	45.64	
-grown	4	110.0	2.0	true	broken	true	8.06	8.06	0.01	30.73	548.0	2.218	39.74	
-grown	5	110.0	2.0	true	broken	true	10.87	10.87	0.01	35.50	542.0	2.204	47.48	
-grown	6	110.0	2.0	true	broken	true	11.66	12.61	0.01	31.46	543.0	2.207	45.44	
+camper	0	110.0	2.0	true	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.42	
 camper	1	110.0	2.0	true	fight_capped	false	10.87	10.87		240.00	1.0	1.002	254.56	
 camper	2	110.0	2.0	true	fight_capped	false	11.9	12.82		240.00	3.0	1.007	261.42	
-camper	4	110.0	2.0	true	fight_capped	false	8.06	8.06		240.00	8.0	1.018	253.83	
-camper	5	110.0	2.0	true	fight_capped	false	10.87	10.87		240.00	2.0	1.004	255.93	
-camper	6	110.0	2.0	true	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.12	
+small	0	110.0	2.0	false	broken	true	8.06	8.06	0.01	80.56	6.0	1.013	91.12	
 small	1	110.0	2.0	false	broken	true	10.87	10.87	0.01	94.96	1.0	1.002	109.13	
 small	2	110.0	2.0	false	broken	true	11.9	12.82	0.01	58.02	3.0	1.007	73.54	
-small	4	110.0	2.0	false	broken	true	8.06	8.06	0.01	70.92	8.0	1.018	81.20	
-small	5	110.0	2.0	false	broken	true	10.87	10.87	0.01	80.96	2.0	1.004	94.70	
-small	6	110.0	2.0	false	broken	true	11.66	12.61	0.01	57.97	1.0	1.002	73.34	
+mid	0	110.0	2.0	false	broken	true	8.06	8.06	0.01	48.35	232.0	1.516	57.94	
 mid	1	110.0	2.0	false	broken	true	10.87	10.87	0.01	34.60	225.0	1.500	46.59	
 mid	2	110.0	2.0	false	broken	true	11.9	12.82	0.01	53.21	226.0	1.502	68.51	
-mid	4	110.0	2.0	false	broken	true	8.06	8.06	0.01	48.87	233.0	1.518	58.69	
-mid	5	110.0	2.0	false	broken	true	10.87	10.87	0.01	53.67	226.0	1.502	66.44	
-mid	6	110.0	2.0	false	broken	true	11.66	12.61	0.01	61.46	226.0	1.502	76.88	
+grown	0	110.0	2.0	false	broken	true	8.06	8.06	0.01	31.31	547.0	2.216	40.30	
 grown	1	110.0	2.0	false	broken	true	10.87	10.87	0.01	39.20	542.0	2.204	51.28	
 grown	2	110.0	2.0	false	broken	true	11.9	12.82	0.01	33.15	541.0	2.202	47.71	
-grown	4	110.0	2.0	false	broken	true	8.06	8.06	0.01	30.73	548.0	2.218	39.74	
-grown	5	110.0	2.0	false	broken	true	10.87	10.87	0.01	33.22	542.0	2.204	45.22	
-grown	6	110.0	2.0	false	broken	true	11.66	12.61	0.01	34.14	543.0	2.207	48.29	
+camper	0	110.0	2.0	false	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.42	
 camper	1	110.0	2.0	false	fight_capped	false	10.87	10.87		240.00	1.0	1.002	254.56	
 camper	2	110.0	2.0	false	fight_capped	false	11.9	12.82		240.00	3.0	1.007	261.42	
-camper	4	110.0	2.0	false	fight_capped	false	8.06	8.06		240.00	8.0	1.018	253.83	
-camper	5	110.0	2.0	false	fight_capped	false	10.87	10.87		240.00	2.0	1.004	255.93	
-camper	6	110.0	2.0	false	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.12	
+small	0	130.0	1.0	true	broken	true	8.06	8.06	0.01	42.90	6.0	1.013	52.22	
 small	1	130.0	1.0	true	broken	true	10.87	10.87	0.01	33.62	1.0	1.002	45.47	
 small	2	130.0	1.0	true	broken	true	11.9	12.82	0.01	46.02	3.0	1.007	61.11	
-small	4	130.0	1.0	true	broken	true	8.06	8.06	0.01	39.32	8.0	1.018	48.62	
-small	5	130.0	1.0	true	broken	true	10.87	10.87	0.01	42.54	2.0	1.004	54.57	
-small	6	130.0	1.0	true	broken	true	11.66	12.61	0.01	39.84	1.0	1.002	54.11	
+mid	0	130.0	1.0	true	broken	true	8.06	8.06	0.01	35.20	232.0	1.516	44.13	
 mid	1	130.0	1.0	true	broken	true	10.87	10.87	0.01	32.81	225.0	1.500	44.58	
 mid	2	130.0	1.0	true	broken	true	11.9	12.82	0.01	18.22	226.0	1.502	31.87	
-mid	4	130.0	1.0	true	broken	true	8.06	8.06	0.01	31.98	233.0	1.518	41.00	
-mid	5	130.0	1.0	true	broken	true	10.87	10.87	0.01	39.73	226.0	1.502	51.70	
-mid	6	130.0	1.0	true	broken	true	11.66	12.61	0.01	38.44	226.0	1.502	52.66	
+grown	0	130.0	1.0	true	broken	true	8.06	8.06	0.01	30.04	547.0	2.216	38.99	
 grown	1	130.0	1.0	true	broken	true	10.87	10.87	0.01	28.89	542.0	2.204	40.59	
 grown	2	130.0	1.0	true	broken	true	11.9	12.82	0.01	37.08	541.0	2.202	51.62	
-grown	4	130.0	1.0	true	broken	true	8.06	8.06	0.01	27.85	548.0	2.218	36.79	
-grown	5	130.0	1.0	true	broken	true	10.87	10.87	0.01	40.26	542.0	2.204	52.42	
-grown	6	130.0	1.0	true	broken	true	11.66	12.61	0.01	28.31	543.0	2.207	42.14	
+camper	0	130.0	1.0	true	fight_capped	false	8.06	8.06		240.00	6.0	1.013	252.19	
 camper	1	130.0	1.0	true	fight_capped	false	10.87	10.87		240.00	1.0	1.002	254.50	
 camper	2	130.0	1.0	true	fight_capped	false	11.9	12.82		240.00	3.0	1.007	261.31	
-camper	4	130.0	1.0	true	fight_capped	false	8.06	8.06		240.00	8.0	1.018	252.69	
-camper	5	130.0	1.0	true	fight_capped	false	10.87	10.87		240.00	2.0	1.004	254.34	
-camper	6	130.0	1.0	true	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.04	
+small	0	130.0	1.0	false	broken	true	8.06	8.06	0.01	42.98	6.0	1.013	52.39	
 small	1	130.0	1.0	false	broken	true	10.87	10.87	0.01	35.86	1.0	1.002	47.74	
 small	2	130.0	1.0	false	broken	true	11.9	12.82	0.01	64.02	3.0	1.007	79.87	
-small	4	130.0	1.0	false	broken	true	8.06	8.06	0.01	45.73	8.0	1.018	55.29	
-small	5	130.0	1.0	false	broken	true	10.87	10.87	0.01	42.54	2.0	1.004	54.57	
-small	6	130.0	1.0	false	broken	true	11.66	12.61	0.01	43.50	1.0	1.002	57.86	
+mid	0	130.0	1.0	false	broken	true	8.06	8.06	0.01	43.58	232.0	1.516	52.79	
 mid	1	130.0	1.0	false	broken	true	10.87	10.87	0.01	49.66	225.0	1.500	62.06	
 mid	2	130.0	1.0	false	broken	true	11.9	12.82	0.01	41.23	226.0	1.502	56.02	
-mid	4	130.0	1.0	false	broken	true	8.06	8.06	0.01	37.91	233.0	1.518	47.03	
-mid	5	130.0	1.0	false	broken	true	10.87	10.87	0.01	35.67	226.0	1.502	47.51	
-mid	6	130.0	1.0	false	broken	true	11.66	12.61	0.01	46.73	226.0	1.502	61.18	
+grown	0	130.0	1.0	false	broken	true	8.06	8.06	0.01	30.04	547.0	2.216	38.99	
 grown	1	130.0	1.0	false	broken	true	10.87	10.87	0.01	35.07	542.0	2.204	47.18	
 grown	2	130.0	1.0	false	broken	true	11.9	12.82	0.01	32.97	541.0	2.202	47.40	
-grown	4	130.0	1.0	false	broken	true	8.06	8.06	0.01	27.85	548.0	2.218	36.79	
-grown	5	130.0	1.0	false	broken	true	10.87	10.87	0.01	31.70	542.0	2.204	43.66	
-grown	6	130.0	1.0	false	broken	true	11.66	12.61	0.01	32.12	543.0	2.207	46.10	
+camper	0	130.0	1.0	false	fight_capped	false	8.06	8.06		240.00	6.0	1.013	252.19	
 camper	1	130.0	1.0	false	fight_capped	false	10.87	10.87		240.00	1.0	1.002	254.50	
 camper	2	130.0	1.0	false	fight_capped	false	11.9	12.82		240.00	3.0	1.007	261.31	
-camper	4	130.0	1.0	false	fight_capped	false	8.06	8.06		240.00	8.0	1.018	252.69	
-camper	5	130.0	1.0	false	fight_capped	false	10.87	10.87		240.00	2.0	1.004	254.11	
-camper	6	130.0	1.0	false	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.04	
+small	0	130.0	2.0	true	broken	true	8.06	8.06	0.01	76.62	6.0	1.013	87.00	
 small	1	130.0	2.0	true	broken	true	10.87	10.87	0.01	72.77	1.0	1.002	86.38	
-small	2	130.0	2.0	true	broken	true	11.9	12.82	0.01	54.85	3.0	1.007	70.17	
-small	4	130.0	2.0	true	broken	true	8.06	8.06	0.01	72.40	8.0	1.018	83.09	
-small	5	130.0	2.0	true	broken	true	10.87	10.87	0.01	81.96	2.0	1.004	95.66	
-small	6	130.0	2.0	true	broken	true	11.66	12.61	0.01	50.04	1.0	1.002	64.93	
-mid	1	130.0	2.0	true	broken	true	10.87	10.87	0.01	43.04	225.0	1.500	55.37	
+small	2	130.0	2.0	true	broken	true	11.9	12.82	0.01	69.57	3.0	1.007	85.68	
+mid	0	130.0	2.0	true	broken	true	8.06	8.06	0.01	52.12	232.0	1.516	61.66	
+mid	1	130.0	2.0	true	broken	true	10.87	10.87	0.01	55.70	225.0	1.500	68.40	
 mid	2	130.0	2.0	true	broken	true	11.9	12.82	0.01	44.40	226.0	1.502	59.24	
-mid	4	130.0	2.0	true	broken	true	8.06	8.06	0.01	50.56	233.0	1.518	60.28	
-mid	5	130.0	2.0	true	broken	true	10.87	10.87	0.01	61.92	226.0	1.502	74.92	
-mid	6	130.0	2.0	true	broken	true	11.66	12.61	0.01	30.70	226.0	1.502	44.54	
+grown	0	130.0	2.0	true	broken	true	8.06	8.06	0.01	37.96	547.0	2.216	47.20	
 grown	1	130.0	2.0	true	broken	true	10.87	10.87	0.01	53.75	542.0	2.204	66.31	
 grown	2	130.0	2.0	true	broken	true	11.9	12.82	0.01	32.04	541.0	2.202	46.14	
-grown	4	130.0	2.0	true	broken	true	8.06	8.06	0.01	33.34	548.0	2.218	42.48	
-grown	5	130.0	2.0	true	broken	true	10.87	10.87	0.01	50.14	542.0	2.204	62.81	
-grown	6	130.0	2.0	true	broken	true	11.66	12.61	0.01	35.81	543.0	2.207	50.13	
+camper	0	130.0	2.0	true	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.42	
 camper	1	130.0	2.0	true	fight_capped	false	10.87	10.87		240.00	1.0	1.002	255.24	
 camper	2	130.0	2.0	true	fight_capped	false	11.9	12.82		240.00	3.0	1.007	261.78	
-camper	4	130.0	2.0	true	fight_capped	false	8.06	8.06		240.00	8.0	1.018	253.97	
-camper	5	130.0	2.0	true	fight_capped	false	10.87	10.87		240.00	2.0	1.004	255.46	
-camper	6	130.0	2.0	true	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.28	
+small	0	130.0	2.0	false	broken	true	8.06	8.06	0.01	76.62	6.0	1.013	87.00	
 small	1	130.0	2.0	false	broken	true	10.87	10.87	0.01	77.06	1.0	1.002	90.73	
 small	2	130.0	2.0	false	broken	true	11.9	12.82	0.01	79.59	3.0	1.007	96.21	
-small	4	130.0	2.0	false	broken	true	8.06	8.06	0.01	83.48	8.0	1.018	94.57	
-small	5	130.0	2.0	false	broken	true	10.87	10.87	0.01	102.02	2.0	1.004	116.39	
-small	6	130.0	2.0	false	broken	true	11.66	12.61	0.01	85.40	1.0	1.002	102.29	
+mid	0	130.0	2.0	false	broken	true	8.06	8.06	0.01	52.12	232.0	1.516	61.66	
 mid	1	130.0	2.0	false	broken	true	10.87	10.87	0.01	56.05	225.0	1.500	68.79	
 mid	2	130.0	2.0	false	broken	true	11.9	12.82	0.01	65.67	226.0	1.502	81.30	
-mid	4	130.0	2.0	false	broken	true	8.06	8.06	0.01	56.55	233.0	1.518	66.40	
-mid	5	130.0	2.0	false	broken	true	10.87	10.87	0.01	62.36	226.0	1.502	75.29	
-mid	6	130.0	2.0	false	broken	true	11.66	12.61	0.01	30.70	226.0	1.502	44.54	
+grown	0	130.0	2.0	false	broken	true	8.06	8.06	0.01	41.69	547.0	2.216	50.90	
 grown	1	130.0	2.0	false	broken	true	10.87	10.87	0.01	53.75	542.0	2.204	66.31	
 grown	2	130.0	2.0	false	broken	true	11.9	12.82	0.01	30.74	541.0	2.202	44.98	
-grown	4	130.0	2.0	false	broken	true	8.06	8.06	0.01	39.21	548.0	2.218	48.54	
-grown	5	130.0	2.0	false	broken	true	10.87	10.87	0.01	50.14	542.0	2.204	62.81	
-grown	6	130.0	2.0	false	broken	true	11.66	12.61	0.01	33.23	543.0	2.207	47.40	
+camper	0	130.0	2.0	false	fight_capped	false	8.06	8.06		240.00	6.0	1.013	253.42	
 camper	1	130.0	2.0	false	fight_capped	false	10.87	10.87		240.00	1.0	1.002	255.24	
 camper	2	130.0	2.0	false	fight_capped	false	11.9	12.82		240.00	3.0	1.007	261.78	
-camper	4	130.0	2.0	false	fight_capped	false	8.06	8.06		240.00	8.0	1.018	253.97	
-camper	5	130.0	2.0	false	fight_capped	false	10.87	10.87		240.00	2.0	1.004	255.46	
-camper	6	130.0	2.0	false	fight_capped	false	11.66	12.61		240.00	1.0	1.002	260.28	
