@@ -29,7 +29,7 @@ const DEMOS := [
 	["09", "moss-lounge-and-drop"], ["10", "threat-reel"], ["11", "cc-chain-break-free"], ["12", "moss-babble"],
 	["13", "ui-utility-reel"], ["14", "fleet-difficulty-ticks"],
 ]
-const RELEASE := {"sable": "sable_arpeggio", "rivet": "rivet_hihat_roll", "kest": "kest_low_thump"}
+const RELEASE := {"sable": "sable_arpeggio", "rivet": "rivet_hihat_roll", "kest": "kest_low_thump", "tarn": "tarn_latch_tear"}
 # Moss's lines are the vision keeper's (SOUND-STORY.md section 8); the board babbles the
 # first variation of each beat and the first relent.
 const MOSS_LINES := [
