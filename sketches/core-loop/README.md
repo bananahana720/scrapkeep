@@ -1,70 +1,88 @@
 # core-loop
 
-**Does one run of Scrapkeep, from title through three stages to a summary, keep you rolling the whole way?**
+**Can one run through three worlds, six zones and three bosses keep you rolling the whole way?**
 
-This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from [playtest entry 6](../../docs/playtests/PLAYTEST-LOG.md#6-mobility-kit-v2-first-human-play-and-design-principles). The whole run is here: a title, three classes, three stages, a beacon to charge in each one, reward gates to roll through, a launch into the next stage, and a summary. Death shows a one-key retry.
+This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from [playtest entry 6](../../docs/playtests/PLAYTEST-LOG.md#6-mobility-kit-v2-first-human-play-and-design-principles). Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code. Models, textures, fonts and the recorded music stems load from `assets/`; the rest of the world is built in script.
 
-Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code, and there are no assets: everything is built in script from primitives.
+Play it with `scrapkeep core-loop`, from any directory: the name is this sketch's directory, so it opens the main checkout's copy, or the current worktree's copy when typed inside one; a worktree's own name (`scrapkeep <worktree>`) opens its `core-loop` too, and `scrapkeep <worktree>/<sketch>` opens exactly one. Add `--table=slice` after the name for the slice table. After a sitting, `node scripts/run-summary.mjs --last 5` prints one line per run (table, outcome, stage, posture fight, packs and synergies) from the game's `runs.ndjson`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the controls and codex pages. The tester notes below are no longer drawn there. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
 
-Play it with `scrapkeep core-loop`, from any directory: the name is this sketch's directory, so it opens the main checkout's copy, or the current worktree's copy when typed inside one; a worktree's own name (`scrapkeep <worktree>`) opens its `core-loop` too, and `scrapkeep <worktree>/<sketch>` opens exactly one. Add `--table=slice` after the name for the slice table. After a sitting, `node scripts/run-summary.mjs --last 5` prints one line per run (table, outcome, stage, posture fight, packs and synergies) from the game's `runs.ndjson`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the field notes below, which keep the full list. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
+## What this build is
+
+The alpha is three worlds, each with two zones and a boss:
+
+| World | Zones                                     | Boss            |
+| ----- | ----------------------------------------- | --------------- |
+| 1     | Spillway: the top shelf; The Cable Reach  | Admiral Brindle |
+| 2     | Dig: the upper bench; Dig: the deep works | The Waking      |
+| 3     | Highdraft; Highdraft: the crown           | The Mind        |
+
+Three pilots are playable:
+
+- **Sable**, the pylon engineer, and **Rivet**, the runner-gunner, are available from the first launch.
+- **Kest**, the demolitions caster, unlocks when you rescue the buried digger in the Dig.
+- **Tarn**'s card stays locked until you rout Admiral Brindle. It then unlocks with a placeholder kit: Tarn runs Rivet's kit. This is not a fourth pilot.
+
+Tally and the remembered cannon are not in this alpha.
 
 ## The loop
 
-1. **Title.** Press Space or click Start.
-2. **Class.** Press 1, 2 or 3, or click a card: Sable the pylon engineer, Rivet the runner-gunner, or Kest the demolitions caster. Each has its own movement, special and smash on the same keys.
-3. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next in a few words; close to the Warden it says how to break it. Under it, your punch bar races the Warden's plating.
-4. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks. Scrap you roll up adds heft, and heft multiplies your punch. Events and vaults add bonus cores, the diamonds beside the objective, which raise the gate tiers.
-5. **Reward gates.** Two arches appear ahead of you. Roll through one to take its part.
-6. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
-7. **Summary.** After stage 3 you see time, stages, scrap, parts, kills, events won and retries. N runs again as the same class.
+1. **Title.** Continue appears first when a saved run is valid. Start (Space; the button reads New run when a saved run exists) begins a run, and the menu also offers Help (H), Achievements (A) and Settings (S); with the recorded music on, B cycles the breath.
+2. **Class.** Press 1 to 4, or click a card: Sable, Rivet, Kest or Tarn. A locked pilot's card names what unlocks it. Sable, Rivet and Kest each have their own movement, special and smash on the same keys; Tarn borrows Rivet's.
+3. **Upgrade pick.** The run opens with an upgrade pick; Esc is "Later" and keeps the pick waiting.
+4. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next; under it, your punch bar races the Warden's plating.
+5. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks.
+6. **Reward gates and Moss's bay.** Roll through one of two arches to take its part. A hover barge, Moss's workshop bay, docks behind the gate row when it finds room: an opt-in pit stop with a shop and a practice yard.
+7. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
+8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A victory screen naming the rout (BRINDLE ROUTED, for one) follows, and the run continues into the next world's first stage; the last world's boss ends the run.
+9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and retries. N runs again as the same class.
 
-If you are scrapped, press R to retry the stage from its start, N for a new run, or C to choose a class.
+If you are scrapped, press R to retry the stage from its start (each world allows one retry; a death after it ends the run as RUN OVER), N for a new run, or C to choose a class. M opens the companion panel from the death screen when the run holds pieces.
 
 ## Controls
 
-| Keys | Does |
-| --- | --- |
-| W A S D | drive, relative to where the camera looks |
-| mouse | look |
-| Space | jump and double jump, every class. Sable: in the air at a steep face it is the vault kick; mounted, hold and release to slingshot off. Kest: hold falling to glide; hold inside your own blast to rocket jump |
-| Shift | the pilot's go verb: Sable's boost, Rivet's overdrive sprint while held, Kest's smoke blink |
-| Ctrl | haul the line in: the smash on an enemy, the winch on the world. With no line it is the brake; airborne it is the slam: Sable's arc slam, Rivet's shockwave skid, Kest's demo slam |
-| left mouse | the class weapon. Sable's arc caster and Rivet's laser fire while held. Kest holds to aim a sticky charge and releases to throw it |
-| right mouse | the harpoon, every pilot: press to bite the reticle's target, hold to keep the line (a line on an enemy reels you in), release to let go and fling. During a charge it cancels the charge |
-| F (hold, release) | the class special: hold to fill the gauge, release to fire. Sable's detonation gauge, Rivet's overdrive blast, Kest's detonation line. Planting a pylon still fires Sable's discharge free |
-| E | interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet (the ring round the reticle fills), press it for a cache; inside an amber lane it arms the ride, which fires as you cross the mouth. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; press again to drop off |
-| Tab (hold) | field notes and the codex; the game pauses while held; Q and E switch pages |
-| - / = | music volume down / up |
-| [ / ] | effects volume down / up |
-| M | mute or unmute |
-| P, Esc or pad Start | pause menu: resume, restart run, field notes, music and effects volume, quit; mouse or keys. Closed while an upgrade pick or Moss's counter is open |
-| R (hold) | retry the stage from its start |
-| F1 | tuning panel (frees the mouse); a game launched with `--dev` only |
-| F3 | physics interpolation on or off (off by default); `--dev` only |
-| F6 | boss tempo: 129, or 172 while held; `--dev` only |
-| F4 | save every tuning value to `user://tuning-<time>.json`; `--dev` only |
+| Keys       | Does                                                                                                                                                                                                                                                                                          |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W A S D    | drive, relative to where the camera looks                                                                                                                                                                                                                                                     |
+| mouse      | look                                                                                                                                                                                                                                                                                          |
+| Space      | jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump                                                                                                                |
+| LMB        | the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw                                                                                                                                                                                       |
+| RMB        | the harpoon: press bites the aim point, hold keeps the line, release flings. During a charge it cancels                                                                                                                                                                                       |
+| Ctrl       | haul the line in: a smash on a body, a winch on the world. With no line: the brake on the ground, the slam in the air                                                                                                                                                                         |
+| Shift      | your go verb: Sable's boost, Rivet's sprint (hold), Kest's smoke blink                                                                                                                                                                                                                        |
+| F          | the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free                                                                                                                                                                                           |
+| E          | interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off |
+| Tab (hold) | field notes and the codex; the game pauses while held; Q / E switch pages                                                                                                                                                                                                                     |
+| - / =      | music volume down / up (also in the pause menu)                                                                                                                                                                                                                                               |
+| [ / ]      | effects volume down / up (also in the pause menu)                                                                                                                                                                                                                                             |
+| M          | mute or unmute                                                                                                                                                                                                                                                                                |
+| P / Esc    | pause menu: resume, restart the run, field notes, music and effects volume, quit                                                                                                                                                                                                              |
+| R (hold)   | retry the stage from its start (in the arena, the fight); release before holding again                                                                                                                                                                                                        |
+| F1         | launched with --dev only: tuning panel (frees the mouse)                                                                                                                                                                                                                                      |
+| F3         | launched with --dev only: physics interpolation on/off (off by default)                                                                                                                                                                                                                       |
+| F4         | launched with --dev only: save every tuning value to user://tuning-<time>.json                                                                                                                                                                                                                |
+| Esc        | outside play: quit                                                                                                                                                                                                                                                                            |
 
 On the screens outside play, every choice is also a button: click it, or press the key on its cap.
 
-| Keys | Does |
-| --- | --- |
-| Space | title: start; summary: choose a class |
-| H | title: the how-to-play page; H or Esc closes it |
-| 1, 2, ... | class select: one number per class card, left to right |
-| R | death screen: retry the stage, or the fight in the arena |
-| T | arena death screen: replay stage 3 from its start |
-| N | death or summary: new run as the same class |
-| C | death screen: choose a class |
+| Keys                             | Does                                                                                                                   |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Space                            | title: start; summary: choose a class                                                                                  |
+| H                                | title: the how-to-play page; H or Esc closes it                                                                        |
+| 1, 2, ...                        | class select: one number per class card, left to right                                                                 |
+| R                                | death screen: retry the stage, or the fight in the arena                                                               |
+| T                                | arena death screen: replay the world's last stage from its start                                                       |
+| N                                | death or summary: new run as the same class                                                                            |
+| C                                | death screen: choose a class                                                                                           |
 | 1 or 2, A/D then Enter, or click | upgrade pick (run start, Moss's bay, or stage clear if you skipped the bay); Esc is "Later" and keeps the pick waiting |
-| roll up slowly to Moss's counter | opens the shop: click a plate or move focus with the keys; T talks to Moss |
+| roll up slowly to Moss's counter | opens the shop: click a plate or move focus with the keys; T talks to Moss                                             |
 
 ## Field notes
 
-These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
+These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 
 ### Testing in this build
 
-- One run: title, class, then three stages. A Warden clamps each stage's beacon. Break it, roll through a reward gate, and launch into the next stage. A summary follows stage 3.
+- One run: title, class, then the stages of each world. A Warden clamps each stage's beacon. Break it, roll through a reward gate, and launch into the next stage. A boss victory launches the next world; the summary follows the last world's boss.
 - Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.
 - Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores, the diamonds beside the objective, which raise the gate tiers.
 - Sable's pylon banks the speed you plant with. Space slingshots you off along the face with that speed plus a boost, and E drops off where you are. The camera goes to the shoulder while you are mounted.
@@ -86,22 +104,40 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 4. As Sable, hit a steep face at speed and press E. Fire with left mouse, then hold and release Space to slingshot off.
 5. Get scrapped on purpose, then press R. You are back at the stage start in under a second.
 
+## Run the Linux build
+
+A built package is a `scrapkeep-core-loop-<sha7>.tar.gz`, where `<sha7>` is the commit it was built from.
+
+1. Extract the archive anywhere.
+2. Keep the `music_ace/` folder next to `core-loop.x86_64`. Without it the game plays its built-in synth music instead of the recorded stems.
+3. Run `./core-loop.x86_64` from any directory.
+4. Saves live in `~/.local/share/godot/app_userdata/core-loop/`. For a fresh first launch, rename that folder first and rename it back afterwards to keep your progress.
+5. On the title, press H for how to play and the controls.
+
+## Build the package
+
+`npm run sketch:export` builds a Linux x86_64 release of this sketch and boots it headless for 300 frames. It writes `artifacts/local/core-loop-export/<stamp>/` with `core-loop.x86_64`, `music_ace/`, `BUILD.txt` and `HOW-TO-RUN.txt`, and the `scrapkeep-core-loop-<sha7>.tar.gz` beside that folder.
+
+- `npm run sketch:export -- --stems-from=<music_ace folder>` names where the recorded stems are copied from. The default is the main checkout's `sketches/core-loop/assets/music_ace`. The stems are gitignored and cannot be regenerated, so the export fails if the folder lacks any stem the manifest names; point the flag at a folder that holds `spillway/*.ogg`.
+- `npm run sketch:export -- --win-proof` (flags go after `--`) also exports the "Linux x64 proof" pack into a sibling `<stamp>-win-proof/` folder and plays one skipper-bot run on it from a fresh `user://`. It fails unless the bot wins the run, so a passing line proves the exported pack finishes a run, not that the release template's runtime does.
+
 ## Layout
 
-| Path | Owner | Holds |
-| --- | --- | --- |
-| `src/game.gd` | spine | the root: builds the spine, sets up the modules in order, input, pause, hit-stop |
-| `src/core/` | spine | the bus, `event_kinds`, run state and heft, classes, stage dials, the flow and the Warden gate, the beacon, the context, the codex, the run log, the palette |
-| `src/movement/` | spine | the v2 rigid ball, augments, tuning and the chase camera |
-| `src/ui/` | spine | HUD, screens, field notes, tuning panel, reticle |
-| `src/combat/` | writer A | weapons, enemies, damage, the spawner |
-| `src/build/` | writer B | scrap, parts, reward gates |
-| `src/presentation/` | writer C | juice, SFX, music (a no-op stub for now) |
-| `src/world/` | writer D | terrain, the flood, the director, the launch |
+| Path                | Owner    | Holds                                                                                                                                                        |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/game.gd`       | spine    | the root: builds the spine, sets up the modules in order, input, pause, hit-stop                                                                             |
+| `src/boss/`         | spine    | the boss fights: Admiral Brindle, the Waking and the Mind                                                                                                    |
+| `src/core/`         | spine    | the bus, `event_kinds`, run state and heft, classes, stage dials, the flow and the Warden gate, the beacon, the context, the codex, the run log, the palette |
+| `src/movement/`     | spine    | the v2 rigid ball, augments, tuning and the chase camera                                                                                                     |
+| `src/ui/`           | spine    | HUD, screens, field notes, tuning panel, reticle                                                                                                             |
+| `src/combat/`       | writer A | weapons, enemies, damage, the spawner                                                                                                                        |
+| `src/build/`        | writer B | scrap, parts, reward gates                                                                                                                                   |
+| `src/presentation/` | writer C | juice, SFX, the music engine and the ACE stem sequencer                                                                                                      |
+| `src/world/`        | writer D | terrain, the flood, the director, the launch, Moss's bay                                                                                                     |
 
 ## Checks
 
-`npm run sketch:smoke` runs the headless import, a 300-frame boot and every test in `tests/`. The spine tests are:
+`npm run sketch:smoke` runs the headless import, a 300-frame boot and every test in `tests/`. `npm run sketch:gate` runs `sketch:lint`, then the smoke run with a receipt. The spine tests are:
 
 - `spine_run_test.gd` drives a scripted full run through every flow state and measures speed through each gate and each launch.
 - `spine_restart_test.gd` checks that a retry restores the stage-start snapshot, from play and from the death screen.
@@ -113,6 +149,6 @@ These mirror `src/ui/field_notes.gd`, which is what the Tab overlay prints.
 - `spine_objective_test.gd` checks the objective line, the heft label and the core pips.
 - `spine_crush_test.gd` checks the crush pass-through against the ram that bounces.
 - `spine_codex_test.gd` covers the codex registry, the burst, the logs, saving, and the Tab pages.
-- `spine_run_log_test.gd` checks that a run writes one record with three stages, and that a death adds one.
+- `spine_run_log_test.gd` checks that a scripted run writes one record with a record per stage, and that a death adds one.
 
 Automated checks say nothing about feel. Andrew's play is the review.
