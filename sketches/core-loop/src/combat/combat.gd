@@ -1666,7 +1666,7 @@ func _pin_step(enemies: Array) -> void:
 		var heading := Vector3(carrier.velocity.x, 0.0, carrier.velocity.z)
 		heading = heading.normalized() if heading.length() > 0.1 else Vector3.ZERO
 		for victim in enemies:
-			if victim == carrier or not _pinnable(victim):
+			if victim == carrier or not _pinnable(victim) or victim.get("weight") == null:
 				continue
 			var to: Vector3 = victim.global_position - carrier.global_position
 			to.y = 0.0
