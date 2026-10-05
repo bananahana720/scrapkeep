@@ -84,9 +84,13 @@ func _run() -> void:
 	t.check("LS-2 bloom live", unit.phase == unit.Phase.LIVE and unit.blooms == 1, "phase %s blooms %d" % [unit.state_name(), unit.blooms])
 	var hp_before: float = game.run.hp
 	var before: int = unit.lured_ticks
-	for frame in 20:
+	# 2026-10-04 (wave 10): the lure now gates on the committed wave's contains(), so the front
+	# reaches the parked ball later than the old 20-frame radius check; wait up to 120 frames.
+	for frame in 120:
 		_park()
 		await physics_frame
+		if unit.lured_ticks > before:
+			break
 	var hit: Dictionary = game.combat.last_player_hit
 	t.check("LS-3 slow ball lured", unit.lured_ticks > before, "lured_ticks %d -> %d" % [before, unit.lured_ticks])
 	var toward := false
