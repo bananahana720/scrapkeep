@@ -32,10 +32,10 @@ const CLICK_GUARD := 0.5
 const CARD_GAP := 24.0
 const CARD_MAX := 420.0
 const SIDE := 60.0
-# The actions row's gap; a crowded title row tightens it down to ACTION_GAP_MIN so it fits
-# the narrowest supported width (int_screen_layout_test's 1280).
+# The actions' gap, between buttons and between rows. A row that would pass the narrowest
+# supported width (int_screen_layout_test's 1280) less SIDE each way wraps onto a second
+# centred row; no button is dropped or shrunk.
 const ACTION_GAP := 18
-const ACTION_GAP_MIN := 6
 const NARROW_W := 1280.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 const TITLE := "SCRAPKEEP: FIRST RUN"
@@ -53,7 +53,7 @@ var _title: Label
 var _body: Label
 var _stats: HBoxContainer
 var _choices: HBoxContainer
-var _actions: HBoxContainer
+var _actions: HFlowContainer
 var _help
 var _achievements
 var _settings
@@ -94,7 +94,12 @@ func setup(game_ref) -> void:
 	_content.add_child(_stats)
 	_choices = _row(CARD_GAP)
 	_content.add_child(_choices)
-	_actions = _row(ACTION_GAP)
+	_actions = HFlowContainer.new()
+	_actions.alignment = FlowContainer.ALIGNMENT_CENTER
+	_actions.add_theme_constant_override("h_separation", ACTION_GAP)
+	_actions.add_theme_constant_override("v_separation", ACTION_GAP)
+	_actions.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_actions)
 	_help = HelpPage.new()
 	_help.visible = false
@@ -162,7 +167,7 @@ func _on_flow_changed(state: String) -> void:
 	_title.visible = true
 	_stats.visible = true
 	_actions.visible = true
-	_actions.add_theme_constant_override("separation", ACTION_GAP)
+	_fit_actions()
 	for row in [_stats, _choices, _actions]:
 		for child in row.get_children():
 			row.remove_child(child)
@@ -189,7 +194,6 @@ func _on_flow_changed(state: String) -> void:
 			if game.tuning.option(Tuning.MUSIC_KEY) == "ace":
 				_action("breath", "key_b", "")
 			refresh_lab_row()
-			_fit_actions()
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
 			var classes: Array = game.flow.classes
@@ -544,24 +548,9 @@ func _fade(show: bool) -> void:
 			visible = false)
 
 
+# The actions wrap at the room's width: the first row fills it, the rest centre below.
 func _fit_actions() -> void:
-	var room: float = minf(_screen().x, NARROW_W) - 2.0 * SIDE
-	# Past the tightest gap, Camp leaves a crowded title row; K and the summary still open it.
-	var camp := button_for("camp")
-	if camp != null and _actions_width(ACTION_GAP_MIN) > room:
-		_actions.remove_child(camp)
-		camp.queue_free()
-	var gaps: int = _actions.get_child_count() - 1
-	var over: float = _actions_width(ACTION_GAP) - room
-	if gaps > 0 and over > 0.0:
-		_actions.add_theme_constant_override("separation", maxi(ACTION_GAP_MIN, ACTION_GAP - ceili(over / gaps)))
-
-
-func _actions_width(gap: int) -> float:
-	var width := 0.0
-	for child in _actions.get_children():
-		width += child.get_combined_minimum_size().x
-	return width + gap * maxi(0, _actions.get_child_count() - 1)
+	_actions.custom_minimum_size.x = minf(_screen().x, NARROW_W) - 2.0 * SIDE
 
 
 func _screen() -> Vector2:

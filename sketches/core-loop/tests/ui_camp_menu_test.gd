@@ -18,8 +18,9 @@ const RunStore := preload("res://src/core/run_store.gd")
 #   - its Companion button shows only with a piece and opens the companion panel;
 #   - the summary's Camp (K, pad Y) lands on the title with the camp open;
 #   - every camp label is 15 words or fewer;
-#   - Camp shows on a title row it fits within 1280 - 2*SIDE and steps off one it does not;
-#     K still opens the camp.
+#   - the title row never drops a button: the worst case (Continue, New run, Help, Achievements,
+#     Settings, Companion, Camp, Breath) wraps onto two centred rows, every button inside
+#     1280 - 2*SIDE, none overlapping, in their order; Camp still opens the camp by focus and K.
 
 const LABEL_WORDS := 15
 const EARNED_AT := 1790000000.0
@@ -64,8 +65,34 @@ func _line_with(lines: PackedStringArray, prefix: String) -> String:
 func _row_dump(screens) -> String:
 	var out := []
 	for c in screens._actions.get_children():
-		out.append("%s=%.0f" % [c.action, c.get_combined_minimum_size().x])
-	return "%s sep %d" % [out, screens._actions.get_theme_constant("separation")]
+		var r: Rect2 = c.get_global_rect()
+		out.append("%s@%.0f,%.0f+%.0f" % [c.action, r.position.x, r.position.y, r.size.x])
+	return str(out)
+
+
+# Every title button inside the centred room, no two overlapping, read left to right and row
+# by row in the order they were added. Returns "" or the first fault.
+func _row_fault(screens, room: float) -> String:
+	var mid: float = screens._screen().x / 2.0
+	var buttons: Array = screens._actions.get_children()
+	for i in buttons.size():
+		var r: Rect2 = buttons[i].get_global_rect()
+		if r.position.x < mid - room / 2.0 - 0.5 or r.end.x > mid + room / 2.0 + 0.5:
+			return "%s outside the room" % buttons[i].action
+		for j in range(i + 1, buttons.size()):
+			var q: Rect2 = buttons[j].get_global_rect()
+			if r.intersects(q):
+				return "%s overlaps %s" % [buttons[i].action, buttons[j].action]
+			if q.position.y < r.position.y - 0.5 or (absf(q.position.y - r.position.y) <= 0.5 and q.position.x < r.position.x):
+				return "%s reads before %s" % [buttons[j].action, buttons[i].action]
+	return ""
+
+
+func _rows(screens) -> int:
+	var ys := {}
+	for c in screens._actions.get_children():
+		ys[roundi(c.get_global_rect().position.y)] = true
+	return ys.size()
 
 
 func _run() -> void:
@@ -87,8 +114,8 @@ func _run() -> void:
 	var camp_button = screens.button_for("camp")
 	_t.check("the title has a Camp button on K", camp_button != null and camp_button.key == "key_k", "")
 	var room: float = 1280.0 - 2.0 * screens.SIDE
-	var row_w: float = screens._actions.get_combined_minimum_size().x
-	_t.check("the fresh title row with Camp fits", row_w <= room, "%.0f of %.0f %s" % [row_w, room, _row_dump(screens)])
+	var fault := _row_fault(screens, room)
+	_t.check("the fresh title buttons with Camp sit inside the room, apart", fault == "", "%s %s" % [fault, _row_dump(screens)])
 	var first = screens._actions.get_child(0)
 	_t.check("Continue or Start stays first on the title", first.action == "continue" or first.action == "start", first.action)
 
@@ -236,13 +263,14 @@ func _run() -> void:
 	_t.check("no Continue after a finished run", screens.button_for("continue") == null, "")
 	_game._screen_key(KEY_K)
 
-	# Crowded title rows: Camp steps off a row it would push past the room.
+	# Crowded title rows wrap; no button leaves.
 	profile.set_companion(Companion.with_piece({}, "escape_vent"))
 	flow.show_title()
-	await _frames(1)
-	row_w = screens._actions.get_combined_minimum_size().x
-	_t.check("a title with Companion and Breath fits", screens.button_for("companion") != null
-		and screens.button_for("breath") != null and row_w <= room, "%.0f of %.0f %s" % [row_w, room, _row_dump(screens)])
+	await _frames(2)
+	fault = _row_fault(screens, room)
+	_t.check("a title with Companion, Camp and Breath keeps every button inside the room, apart",
+		screens.button_for("companion") != null and screens.button_for("camp") != null
+		and screens.button_for("breath") != null and fault == "", "%s %s" % [fault, _row_dump(screens)])
 	DirAccess.make_dir_recursive_absolute(STORE_DIR)
 	flow.store = RunStore.new(STORE_DIR + "run.json")
 	flow.store.clear()
@@ -250,16 +278,27 @@ func _run() -> void:
 	flow.choose_class(0)
 	await _frames(2)
 	flow.show_title()
-	await _frames(1)
-	var start = screens.button_for("start")
-	_t.check("a returning player's title shows Continue, New run, Companion and Breath",
-		screens.button_for("continue") != null and start != null and start.text == "New run"
-		and screens.button_for("companion") != null and screens.button_for("breath") != null, "")
-	row_w = screens._actions.get_combined_minimum_size().x
-	_t.check("Camp steps off the crowded row", screens.button_for("camp") == null, "%.0f of %.0f %s" % [row_w, room, _row_dump(screens)])
-	print("crowded title row without Camp: %.0f of %.0f %s" % [row_w, room, _row_dump(screens)])
+	await _frames(2)
+	var present := []
+	for action in ["continue", "start", "help", "achievements", "settings", "companion", "camp", "breath"]:
+		if screens.button_for(action) != null:
+			present.append(action)
+	_t.eq("the worst-case title keeps all eight buttons", present.size(), 8)
+	fault = _row_fault(screens, room)
+	_t.check("the worst-case buttons sit inside the room, apart, in order", fault == "", "%s %s" % [fault, _row_dump(screens)])
+	_t.eq("the worst-case row wraps onto two rows", _rows(screens), 2)
+	print("worst-case title row: %s" % _row_dump(screens))
+	var crowded_camp = screens.button_for("camp")
+	_t.check("the worst-case Camp is on K", crowded_camp != null and crowded_camp.key == "key_k", "")
 	_game._screen_key(KEY_K)
-	_t.check("K still opens the camp from the crowded title", screens.camp_open(), "")
+	_t.check("K opens the camp from the worst-case title", screens.camp_open(), "")
+	_game._screen_key(KEY_K)
+	await _frames(1)
+	crowded_camp = screens.button_for("camp")
+	crowded_camp.grab_focus()
+	Push.pad(root, JOY_BUTTON_A)
+	await _frames(2)
+	_t.check("pad A on the focused worst-case Camp opens the camp", screens.camp_open(), str(root.gui_get_focus_owner()))
 	_game._screen_key(KEY_K)
 	flow.store.clear()
 	quit(_t.verdict())
