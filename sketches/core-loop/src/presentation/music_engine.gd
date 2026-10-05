@@ -112,6 +112,12 @@ const PUMPED := [KEYS, SUB, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNT
 const PRESSURE_FLOOR := {"level": 0.0, "miniboss": 0.8, "warden:build": 0.55, "warden:open": 0.55, "warden:lift": 0.7, "warden:break": 0.85, "warden:drop": 1.0,
 	"brindle:1": 0.8, "brindle:2": 0.9, "brindle:3": 1.0, "brindle:chase": 1.0, "brindle:victory": 1.0}
 const LEAD_VOICE := ["lead", "brass", "talk"]
+# The menu tracks play over the IDLE bed in IDLE mode: the title's main theme once a
+# phrase, the won summary's victory line once, the lost summary on the DEAD mask's bed.
+const MENU_TRACKS := ["title", "summary"]
+const TITLE_LEAD_GAIN := 0.45
+const SUMMARY_LEAD_GAIN := 0.5
+const MENU_PHRASE_BARS := 8
 # The Warden's escalation: half broken lifts the key a half step, three quarters
 # starts the sinister break, whose build tightens with every hit until the unseal.
 const WARDEN_LIFT_AT := 0.5
@@ -904,6 +910,21 @@ func drop_at(at: int) -> void:
 	_add_action(at, {"type": "drop", "bars": 8, "weight": 1.0, "then": {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}}, "theme": -1, "set": {"unseal": true}})
 
 
+# The title or summary theme from the next bar line (or at a sample), leaving the mode
+# alone. A repeat for the track and section already playing or queued returns -1.
+func menu_theme(name: String, won := true, at := -1) -> int:
+	var next_section := "" if name == "title" else ("won" if won else "lost")
+	if track == name and section == next_section:
+		return -1
+	for action in _actions:
+		if action["type"] == "track" and action["track"] == name and action.get("section", "") == next_section:
+			return -1
+	var start := next_bar() if at < 0 else at
+	_add_action(start, {"type": "track", "track": name, "section": next_section, "step": Harmony.STEP, "key": 0})
+	events_log.append(["menu", clock, name, next_section])
+	return start
+
+
 # A boss dies: cadence home from the next beat, then the level theme at 172.
 func end_boss() -> int:
 	if track == "level":
@@ -1289,7 +1310,13 @@ func _run(action: Dictionary) -> void:
 		"mode":
 			mode = action["mode"]
 			if mode != PLAY:
-				_release_layers([KICK, SNARE, REESE, LEAD, ARP, WOB])
+				# A menu track's lead outlives the menu's own IDLE (title into class select).
+				_release_layers([KICK, SNARE, REESE, ARP, WOB] if track in MENU_TRACKS else [KICK, SNARE, REESE, LEAD, ARP, WOB])
+			elif track in MENU_TRACKS:
+				track = "level"
+				section = ""
+				_new_phrase()
+				events_log.append(["track", clock, "level:"])
 			_retarget()
 		"theme":
 			theme = int(action["theme"])
@@ -1545,6 +1572,12 @@ func _retarget() -> void:
 	if track == "warden" and section == "open" and mode == PLAY and _cadence_bar < 0:
 		for layer in OPEN_GAINS.size():
 			_targets[layer] = OPEN_GAINS[layer]
+	if track in MENU_TRACKS and mode == IDLE:
+		var lost := section == "lost"
+		if lost:
+			for layer in gains.size():
+				_targets[layer] = gains[layer] * MODE_MASK[DEAD][layer]
+		_targets[LEAD] = 0.0 if lost else (TITLE_LEAD_GAIN if track == "title" else SUMMARY_LEAD_GAIN)
 
 
 func _lounge_live() -> bool:
@@ -1642,6 +1675,12 @@ func _make_track_lead() -> Array:
 				return make_lead(phrase_index, MOTIF, Harmony.BRINDLE, 73)
 			var quote := {"1": 2, "2": 1, "3": 0}.get(section, 0) as int
 			return make_lead(phrase_index, [MOTIF, MOTIF_SLUICE, MOTIF_WEIR][quote], _progression(), 73)
+		"title":
+			_lead_voice = LEAD_VOICE[0]
+			return MOTIF
+		"summary":
+			_lead_voice = "brass"
+			return VICTORY_LEAD if section == "won" else []
 		_:
 			var progression := _progression()
 			if _lounge_live():
@@ -2150,6 +2189,9 @@ func _fill(s: int) -> void:
 # chopped echo, the counter-line and the arpeggiator. Silent layers trigger nothing.
 func _melodic(bar: int, s: int, chord: Dictionary, arp_instrument: String) -> void:
 	var phrase_bar := bar % Harmony.PHRASE_BARS
+	# The title's theme comes round once a menu phrase; the won summary's line plays once.
+	if track in MENU_TRACKS:
+		phrase_bar = bar % MENU_PHRASE_BARS if track == "title" else bar
 	if s == 0 and _on(PAD):
 		var pad := Synth.pad_chord(_voicing(chord))
 		_start(pad, mini(pad.size(), 16 * step_len + RELEASE), PAD, LEVELS[PAD], 0.0, false)
