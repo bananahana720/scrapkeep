@@ -10,7 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Every achievement pays a reward, and every earned paint has exactly one earner (alpha wave 14).
-#   F1 the table sizes: 16 achievements, 17 paints, no empty reward;
+#   F1 the table sizes: 16 achievements, 18 paints, no empty reward;
 #   F2 waking_stilled: only the world-two boss earns it, and it pays Dig Ochre;
 #   F3 highdraft_reached: entering world three earns it, and it pays Highdraft Sky;
 #   F4 codex_keeper: ten first-time discoveries earn it; a repeat discovery does not count;
@@ -63,7 +63,7 @@ func _fresh():
 
 func _tables() -> void:
 	_t.eq("F1 sixteen achievements", Achievements.ids().size(), 16)
-	_t.eq("F1 seventeen paints", Cosmetics.ids().size(), 17)  # 2026-10-05 (alpha wave 15 tally-kit): Tally's starter paint
+	_t.eq("F1 eighteen paints", Cosmetics.ids().size(), 18)  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon's starter paint
 	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty())
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 
