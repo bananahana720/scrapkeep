@@ -61,6 +61,8 @@ const TABLES := {
 	"upgrade_tree.WORLD_ONE_NODES": {"kind": "world_one_trees", "minimum": 4, "schema": TREE_SCHEMA},
 	"combat.codex_entries.ENTRIES": {"kind": "codex", "minimum": 1, "schema": {"id": TYPE_STRING, "name": TYPE_STRING, "hint": TYPE_STRING, "clue": TYPE_STRING, "text": TYPE_STRING}},
 	"boss.codex_entries.ENTRIES": {"kind": "codex", "minimum": 4, "schema": {"id": TYPE_STRING, "name": TYPE_STRING, "hint": TYPE_STRING, "clue": TYPE_STRING, "text": TYPE_STRING}},
+	"boss.codex_entries.WAKING": {"kind": "codex", "minimum": 4, "schema": {"id": TYPE_STRING, "name": TYPE_STRING, "hint": TYPE_STRING, "clue": TYPE_STRING, "text": TYPE_STRING}},
+	"boss.codex_entries.MIND": {"kind": "codex", "minimum": 4, "schema": {"id": TYPE_STRING, "name": TYPE_STRING, "hint": TYPE_STRING, "clue": TYPE_STRING, "text": TYPE_STRING}},
 	"parts.rows": {"kind": "parts", "minimum": 1, "schema": {"name": TYPE_STRING, "text": TYPE_STRING, "verb": TYPE_STRING, "rarity": TYPE_STRING, "tier": TYPE_INT, "family": TYPE_STRING, "tags": TYPE_ARRAY}},
 	"item_gen.RARITY": {"kind": "rarity", "minimum": 4, "schema": {"color": TYPE_COLOR, "weight": NUMBER, "stamp": TYPE_STRING, "rung": TYPE_INT, "tier": TYPE_INT, "affix": NUMBER}},
 }
@@ -91,6 +93,9 @@ const GOLDEN_HASHES := {
 	"upgrade_tree.WORLD_ONE_NODES": "4b06d53525e04c05ca15dcc4c857b3f26ee13fd08b8f103910d1d7b360e37cb0",
 	"combat.codex_entries.ENTRIES": "d30ff6f6b6d5e2069a71c218f5665edbcfab0761d77754ed4bd90f9b295b3ca4",
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
+	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned
+	"boss.codex_entries.WAKING": "6b6074ef43fd2de4eb04f2c60d971eb7922d6e152e532b9b94454a8e017f60ea",
+	"boss.codex_entries.MIND": "6acfd19449f8802b806ba76093fe15bd0c938c0a2f110230d9d38a5cbd004d87",
 	"parts.rows": "04904c356287b1dd821ac28484be29a7cc881bc70a3febab362de6a63215fa1d",
 	"item_gen.RARITY": "8a6773ccccd064709c46cb372da5f35a53e89430114754bd6a1a7121dcb768a4",
 }
@@ -112,7 +117,8 @@ static func snapshot() -> Dictionary:
 		"lore_rows.ROWS": Lore.ROWS, "music_rows.ROWS": Music.ROWS,
 		"windup_rows.ROWS": Windup.ROWS, "upgrade_tree.TREES": Trees.TREES,
 		"upgrade_tree.WORLD_ONE_NODES": world_one, "combat.codex_entries.ENTRIES": CombatCodex.ENTRIES,
-		"boss.codex_entries.ENTRIES": BossCodex.ENTRIES, "parts.rows": Parts.rows(),
+		"boss.codex_entries.ENTRIES": BossCodex.ENTRIES, "boss.codex_entries.WAKING": BossCodex.WAKING,
+		"boss.codex_entries.MIND": BossCodex.MIND, "parts.rows": Parts.rows(),
 		"item_gen.RARITY": ItemGen.RARITY,
 	}.duplicate(true)
 

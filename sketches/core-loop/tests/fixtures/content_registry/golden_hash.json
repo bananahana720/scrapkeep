@@ -144,6 +144,18 @@
       "value": "Fixture"
     },
     {
+      "table": "boss.codex_entries.WAKING",
+      "op": "set",
+      "field": "name",
+      "value": "Fixture"
+    },
+    {
+      "table": "boss.codex_entries.MIND",
+      "op": "set",
+      "field": "name",
+      "value": "Fixture"
+    },
+    {
       "table": "parts.rows",
       "op": "set",
       "field": "name",

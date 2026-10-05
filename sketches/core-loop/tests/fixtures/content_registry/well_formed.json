@@ -94,6 +94,14 @@
       "op": "bad_row"
     },
     {
+      "table": "boss.codex_entries.WAKING",
+      "op": "bad_row"
+    },
+    {
+      "table": "boss.codex_entries.MIND",
+      "op": "bad_row"
+    },
+    {
       "table": "parts.rows",
       "op": "bad_row"
     },
@@ -203,6 +211,14 @@
     },
     {
       "table": "boss.codex_entries.ENTRIES",
+      "op": "erase_field"
+    },
+    {
+      "table": "boss.codex_entries.WAKING",
+      "op": "erase_field"
+    },
+    {
+      "table": "boss.codex_entries.MIND",
       "op": "erase_field"
     },
     {

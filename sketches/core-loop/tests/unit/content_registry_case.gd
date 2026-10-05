@@ -5,7 +5,7 @@ extends RefCounted
 # must fail its named rule; deleting any registered table must fail minimum_rows.
 const Registry := preload("res://src/core/content_registry.gd")
 const FIXTURES := "res://tests/fixtures/content_registry/"
-const TABLE_COUNT := 25
+const TABLE_COUNT := 27
 # These two content pins exclude the stage table; unrelated registry pins stay canonical.
 const CONTENT_HASHES := {
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",

@@ -94,6 +94,14 @@
       "op": "empty"
     },
     {
+      "table": "boss.codex_entries.WAKING",
+      "op": "empty"
+    },
+    {
+      "table": "boss.codex_entries.MIND",
+      "op": "empty"
+    },
+    {
       "table": "parts.rows",
       "op": "empty"
     },

@@ -44,6 +44,8 @@ func _check_bosses(t) -> void:
 	t.eq("Mind table selected", CodexEntries.for_boss("mind"), CodexEntries.MIND)
 	t.eq("unknown boss has no rows", CodexEntries.for_boss("unknown"), [])
 	t.eq("golden digest boss.codex_entries.ENTRIES", Registry.digest(CodexEntries.ENTRIES), Registry.GOLDEN_HASHES["boss.codex_entries.ENTRIES"])
+	t.eq("golden digest boss.codex_entries.WAKING", Registry.digest(CodexEntries.WAKING), Registry.GOLDEN_HASHES["boss.codex_entries.WAKING"])
+	t.eq("golden digest boss.codex_entries.MIND", Registry.digest(CodexEntries.MIND), Registry.GOLDEN_HASHES["boss.codex_entries.MIND"])
 
 
 func _check_recipes(t) -> void:
