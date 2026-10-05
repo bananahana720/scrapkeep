@@ -2,6 +2,73 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 13 landed (2026-10-05, 01aa202)
+
+The wave 13 candidate cand/alpha-w13 landed as 01aa202 (proto/alpha went a1593a3 to 01aa202; 21 commits over base: b6232f3 plus the coherence-test fix). Heads below are the unit heads in git; verdicts are the verifiers' and the coordinator's, 2026-10-05. ending-copy 2066e13 was committed directly onto the candidate (parent 3730d73); its branch points at the same commit.
+
+**Milestone:** M4 (alpha) work: ending screen and copy, title and summary music, companion drops and cues, help page, README and the first packaged export with a win proof.
+
+| unit | branch | head | writer | verdict | note |
+|---|---|---|---|---|---|
+| boss-codex-rows | wt/alpha-w13-boss-codex-rows | c83558b | opus (pstack-worker) | PASS, level 3 | mind_plate force-only (BLOCKED, ruling: defer to wave 14); waking final-floor row ships as a plain kill row |
+| ending-screen | wt/alpha-w13-ending-screen | e22053e | opus (pstack-worker) | PASS with notes, level 4 | verifier ran the brief's own mutant, red on the brindle-at-stage-2 check |
+| ending-copy | wt/alpha-w13-ending-copy | 2066e13 | gpt-6.1-sol high (codex exec) | coordinator reran 3 acceptance tests: PASS 39/-/45 | committed by the coordinator (Sol sandbox had a read-only index.lock); tone awaits Andrew |
+| title-summary-music | wt/alpha-w13-title-summary-music | 3ab6290 | opus (pstack-worker) | PASS, level 4 | menu tracks keep LEAD on non-PLAY mode (low) |
+| export-stems-path | wt/alpha-w13-export-stems-path | 203ba9f | sonnet (pstack-hand) | PASS, level 4 | --stems-from default is the main checkout music_ace |
+| export-win-proof | wt/alpha-w13-export-win-proof | 178cf90 | opus (pstack-worker) | PASS, level 4 | won at stage 6, 34189 ticks, 92.3 s wall, deterministic across two runs |
+| export-package | wt/alpha-w13-export-package | c263e37 | sonnet (pstack-hand) | PASS, level 4 | tarball named by sha7 only (overwrites per commit, low) |
+| help-page | wt/alpha-w13-help-page | d413ba4 | sonnet (pstack-hand) | PASS, level 4 | page omits boss names (ruling: accepted) |
+| companion-drops | wt/alpha-w13-companion-drops | f1517c4 | opus (pstack-worker) | PASS, level 4 | same-entry double-pay guard lacks live coverage (low) |
+| companion-cues | wt/alpha-w13-companion-cues | e3c1e7a | opus (pstack-worker) | PASS, level 4 | audio.play not asserted by test (low); pip colour VERDIGRIS eye check parked |
+| readme-alpha | wt/alpha-w13-readme-alpha | 3a1769f | sonnet (pstack-hand) + coordinator wording fix | FAIL after fix round on 2 wording claims; coordinator fixed 4 lines; grep, links, controls, lint, prettier PASS | field_notes.gd TESTING still says "three stages" (outside fence, wave 14 note) |
+
+### Gate story
+
+Candidate cand/alpha-w13. Gate 1 on the b6232f3 tree: 403 runs, 1 red (loop_coherence_test: the new Waking and Mind codex rows read from BossCodex.ENTRIES only), fixed test-only in 01aa202; targeted rerun PASS, lint 0. No second full gate (the Opus gate read judged that defensible). Opus gate read: ADMIT (PASS+NOTES, level 4). proto/alpha fast-forwarded to 01aa202.
+
+### Export
+
+At 01aa202: tarball 41.0 MiB, pack 78.5 MiB, ACE_CHECK ready clips=8 streams=24. Win proof won at stage 6, 34170 ticks, 86.65 s wall (skipper seed 1). Copied to artifacts/local/alpha/export/01aa202/.
+
+### Rulings (coordinator, 2026-10-05; recorded in docs/decisions.tsv at the wave 13 records commit)
+
+- M4 done-when is "exported build launches cold and a run can be won"; Tarn, Tally and the cannon are wave 14+.
+- P1 first export by the coordinator on d300a77 (78.5 MiB Linux build, 300 headless frames, ACE ready, 24 sidecar stems).
+- Stems found through --stems-from (default: the main checkout); never regenerated.
+- Alpha cuts: C4, prog-G2 trail and topper, C8 wardrobe, bespoke Tarn/Tally/cannon models, camp recreation C10-C13.
+- mind_quieted unlocks the remembered cannon (id remembered_cannon); Tally gets an achievement row for the three ledger leaves; the ledger hand-in lives in Moss's shop.
+- Ending: world-3 win gets its own screen and crew-log copy; tone is Andrew's to approve.
+- Title and summary music: one unit on the synth engine.
+- Companion: C1 and C5 in wave 13; C2/C3 and C6 in wave 14.
+- README describes the alpha as built: three playable pilots, the rest locked.
+- mind_plate codex row stays force-only (deferred to wave 14 boss tuning).
+- Waking final-floor codex row ships as a plain "killed the Waking" row.
+- Help page names the run loop but not the three bosses (accepted).
+- Companion ready pip uses Palette.VERDIGRIS; eye check parked.
+- readme-alpha may fix the two "three stages" lines outside its fence.
+
+### Open after wave 13: wave 14 concerns (Opus gate read)
+
+1. content_registry pins only BossCodex.ENTRIES (Brindle); add WAKING/MIND (or all()) to TABLES and GOLDEN_HASHES; sweep ENTRIES-only readers.
+2. field_notes.gd:25 TESTING still says "three stages ... Admiral Brindle" (outside every wave 13 fence).
+3. Run the 7 stems-dependent music tests with stems present against the title/summary music change (gate worktrees have no stems, so they skipped).
+4. sketch-export: run the win proof before building the tarball or delete the tarball on a failed proof; add -dirty to the tarball name; record the proof in BUILD.txt; the tarball overwrites per commit.
+5. Mind codex rows (lane, split_lane, rush) fired 0 times in the win proof; only forced tests prove them.
+6. Won-summary menu_theme call lacks the sound_ready guard the lost and idle branches have (audio.gd ~1902).
+7. mind_plate is reachable only when forced (ruling: wave 14 boss tuning).
+8. companion-drops same-entry double-pay guard has no live test; companion-cues never asserts audio.play; menu tracks keep LEAD on non-PLAY mode.
+9. Companion pieces drop unequipped so the indicator stays hidden until assembly; hud.companion_state_of parses the document every frame.
+10. Win-proof tick count moved 34189 (178cf90) to 34170 (01aa202); the new number is recorded above.
+
+Cost: phase A workflow 18 agents, 1.48M subagent tokens, 24.4 min wall; readme workflow 4 agents, 0.36M tokens, 10.6 min; Sol ending-copy one codex exec.
+
+### Hands checklist additions (never blocks)
+
+9. Read the ending page copy (RETURN TRIP ENTERED, five log lines, "Filed by the bay crew.") and the three new epitaphs.
+10. Hear the title and summary synth themes.
+11. Cold-launch the new export tarball (01aa202).
+12. Eye-check the companion ready pip colour.
+
 ## Wave 12 landed (2026-10-05, d300a77)
 
 The wave 12 candidate cand/alpha-w12 landed as d300a77 (proto/alpha went 9b86eb7 to d300a77). Heads below are the unit heads in git; verdicts are the coordinator's, 2026-10-05.
