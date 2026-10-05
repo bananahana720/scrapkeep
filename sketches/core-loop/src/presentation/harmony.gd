@@ -124,24 +124,26 @@ const MOTIF_HEADS := [[69, 72, 74, 76], [74, 77, 79, 81], [62, 65, 69, 72]]
 # when it seeds the counter-line, band_octave its register there. Rivet's roll is the
 # closed-hat roll under the hammered note; Kest's boom doubles the last thump on the
 # 808; the Fleet's stamps are the anvil hits; the swarm's chord is its lock; the Mind
-# has no cells of its own and quotes the class motif (mind_quote).
+# has no cells of its own and quotes the class motif (mind_quote). Tarn's taps test the
+# latch and the long low A tears it loose.
 const MOTIFS := {
 	"sable": {"family": "class", "cells": [[0, 62, 1], [1, 65, 1], [2, 69, 1], [3, 72, 1], [4, 76, 2]], "voice": "mallet", "band": "bell", "band_octave": 12},
 	"rivet": {"family": "class", "cells": [[0, 69, 1], [1, 69, 1], [2, 69, 1], [4, 74, 2]], "voice": "clav", "band": "clav", "band_octave": 12, "roll": true},
 	"kest": {"family": "class", "cells": [[0, 62, 2], [2, 57, 2], [4, 53, 2], [6, 50, 4]], "voice": "tom", "band": "tom", "band_octave": 12, "boom": true},
+	"tarn": {"family": "class", "cells": [[0, 50, 1], [2, 50, 1], [3, 51, 1], [4, 57, 3]], "voice": "reese", "band": "fbass", "band_octave": 12},
 	"fleet": {"family": "fleet", "cells": [[0, 50, 2], [4, 50, 2], [6, 51, 2], [8, 50, 4]], "voice": "brass", "stamps": [0, 4]},
 	"reactor": {"family": "ancient", "cells": [[0, 44, 16], [0, 56, 16]], "voice": "sub"},
 	"swarm": {"family": "ancient", "cells": [[0, 79, 16]], "chord": [74, 79, 84, 89], "voice": "buzz"},
 	"mind": {"family": "ancient", "cells": [], "voice": "chime"},
 }
-const CLASS_MOTIFS := ["sable", "rivet", "kest"]
+const CLASS_MOTIFS := ["sable", "rivet", "kest", "tarn"]
 
 
 static func motif(id: String) -> Dictionary:
 	return MOTIFS.get(id, {})
 
 
-# Motif ids already warned about this session, so a pilot row beyond the first three
+# Motif ids already warned about this session, so a pilot row beyond the listed pilots
 # warns once rather than every cue.
 static var unknown_warned := {}
 

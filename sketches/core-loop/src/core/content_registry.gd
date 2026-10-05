@@ -89,8 +89,8 @@ const GOLDEN_HASHES := {
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
-	"upgrade_tree.TREES": "1b8c381ddeeaed434f76fbc70324e1ef8d7ea0bafd3c4246ea05a93013bf1212",  # 2026-10-05 (alpha wave 14 tarn-tree): Tarn's own tree
-	"upgrade_tree.WORLD_ONE_NODES": "e19eeab29b794bcc4712f1edbe7e1a4eec85db543cea9ad653395a2da3d0414e",  # 2026-10-05 (alpha wave 14 tarn-tree): Tarn's own tree
+	"upgrade_tree.TREES": "0f0138140dc1ffea5341751ae264a410add41ecbbc3d4996f6265f0bdccb35ae",  # 2026-10-05 (alpha wave 15 tarn-look): Tarn tree icons on ab_tarn_*
+	"upgrade_tree.WORLD_ONE_NODES": "83bd34165fd0b5c9ae7103380c2c2f3d9b44ae8da1b97801634cfa0085cd1aaf",  # 2026-10-05 (alpha wave 15 tarn-look): Tarn tree icons on ab_tarn_*
 	"combat.codex_entries.ENTRIES": "d30ff6f6b6d5e2069a71c218f5665edbcfab0761d77754ed4bd90f9b295b3ca4",
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned

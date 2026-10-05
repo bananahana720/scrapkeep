@@ -197,7 +197,8 @@ const JUICE := {
 	# Your own shots and throws: a camera kick against the aim and a recoil squash on the
 	# ball, per weapon; both are camera and shell only, never the ball's velocity.
 	"shot_fired": {"weapons": {"rapid_laser": {"kick": 0.05, "recoil": 0.04}, "arc_caster": {"kick": 0.12, "recoil": 0.08},
-			"pylon_turret": {"kick": 0.08, "recoil": 0.0}, "sticky_charge": {"kick": 0.16, "recoil": 0.12}},
+			"pylon_turret": {"kick": 0.08, "recoil": 0.0}, "sticky_charge": {"kick": 0.16, "recoil": 0.12},
+			"claw_sweep": {"kick": 0.14, "recoil": 0.10}},
 		"throw": {"sound": "dash_whoosh", "pitch": 1.5, "db": -4.0}, "stick": {"sound": "grapple_clink", "pitch": 0.7, "sparks": 8}},
 	# Kest's bomb: a flash, a shockwave ring and debris; the punch grows with each enemy the
 	# blast catches. Inside near_m of the ball it kicks the camera and squashes the shell.

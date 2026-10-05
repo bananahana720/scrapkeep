@@ -325,6 +325,12 @@ func _tick(at: Vector3, out: Vector3, ticks: String, color: Color) -> void:
 			_ribbon(at - across, tip, EXTENT, color, false)
 		"burst":
 			_ribbon(at, at + out * TICK_LEN, EXTENT, color, false)
+		"cross":
+			var mid := at + out * TICK_LEN * 0.5
+			var rake := out * TICK_LEN * 0.35
+			var slant := out.cross(Vector3.UP).normalized() * TICK_LEN * 0.35
+			_ribbon(mid - rake - slant, mid + rake + slant, EXTENT, color, false)
+			_ribbon(mid - rake + slant, mid + rake - slant, EXTENT, color, false)
 
 
 # RR-03's blocked mark: a charcoal cross where the shot would have gone.

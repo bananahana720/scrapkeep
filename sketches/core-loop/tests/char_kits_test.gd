@@ -63,9 +63,9 @@ func _rows() -> void:
 			and AbilityState.ABILITIES.has(def.special_id) and AbilityState.ABILITIES.has(def.smash_id)
 		colours[def.color.to_html()] = true
 	var motifs := rows.map(func(d): return d.motif)
-	# 2026-10-05: Tarn (pil-G1, wave 14) is the fourth row with its own claw kit and colour; its motif is pil-G3's (wave 15).
+	# Tarn (wave 15 look) has its own motif, shape and colour.
 	_report("four rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn"] and complete and colours.size() == 4 \
-			and motifs == ["sable", "rivet", "kest", "rivet"],
+			and motifs == ["sable", "rivet", "kest", "tarn"],
 		"classes %s, every field set, shapes from the event vocabulary, four colours, none HAZARD, motif ids %s" % [ids, motifs])
 	var tarn: Resource = ClassDef.by_id("tarn")
 	var rivet: Resource = ClassDef.by_id("runner_gunner")

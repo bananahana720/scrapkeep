@@ -25,7 +25,12 @@ const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 #   - A callout chimes as it appears.
 # The cue log, not speakers.
 
-const RELEASE := {"sable": "sable_arpeggio", "rivet": "rivet_hihat_roll", "kest": "kest_low_thump"}
+const RELEASE := {"sable": "sable_arpeggio", "rivet": "rivet_hihat_roll", "kest": "kest_low_thump",
+	"tarn": "tarn_latch_tear"}
+# 2026-10-05 (alpha wave 15 tarn-look): stand-in pilots that still carry Kest's motif. The
+# Mind's quote has a 600 ms repeat guard, so a shared motif would fail; the unit that gives
+# each pilot its own motif removes its id here.
+const STAND_IN := ["tally", "remembered_cannon"]
 const HOLDS := {"mag_pit": "hold_pit", "anchor_tether": "hold_tether", "air_net": "hold_net", "bola_wrap": "hold_bola",
 	"gyro_drift": "hold_riser"}
 const ARRIVALS := {"fleet": "fleet_motif", "reactor": "reactor_tick", "swarm": "swarm_lock", "mind": "mind_kest"}
@@ -109,14 +114,11 @@ func _initialize() -> void:
 func _class_cues() -> void:
 	var heard: Array = []
 	var ok := true
-	var seen := {}
 	for def in ClassDef.all():
 		var motif: String = def.motif
-		# Tarn borrows Rivet's motif (wave 5 placeholder); the Mind's quote has a 600 ms
-		# repeat guard, so a shared motif is heard once, by its first pilot.
-		if seen.has(motif):
+		# 2026-10-05 (alpha wave 15 tarn-look): Tarn's own motif; no pilot shares one
+		if def.id in STAND_IN:
 			continue
-		seen[motif] = true
 		_events.run_started.emit(def.id)
 		var band: String = _audio.engine.class_motif
 		_events.gauge_released.emit(def.special_id, 1.0)
