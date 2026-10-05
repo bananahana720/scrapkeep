@@ -6,8 +6,10 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as smoke from "./sketch-smoke.mjs";
@@ -30,16 +32,19 @@ export const FUZZ_SEEDS = 200;
 export const FUZZ_SECONDS = 90;
 const TEST_TIMEOUT_MS = 180_000; // matches sketch-smoke.mjs (2026-10-04)
 const TOOL_TIMEOUT_MS = 15 * 60_000;
+export const EXPORT_TIMEOUT_MS = 20 * 60_000;
 const FINISH_RESERVE_MS = 45_000; // Final read-only git checks and receipt writing.
 const WIDTH = BANDS.parallel;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches", "core-loop");
 const GPU_LOCK = "/tmp/scrapkeep-gpu.lock";
+export const EXPORT_SCRIPT = path.join(root, "scripts", "sketch-export.mjs");
 
 export function parseArgs(argv) {
-  const options = { dryRun: false, runs: DEFAULT_RUNS };
+  const options = { dryRun: false, runs: DEFAULT_RUNS, export: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--dry-run") options.dryRun = true;
+    else if (argv[i] === "--export") options.export = true;
     else if (argv[i] === "--runs") {
       const value = argv[++i];
       if (
@@ -119,6 +124,11 @@ export function buildPlan(
   const base = ["--headless", "--path", sketch];
   if (!imported)
     add("import", "import", [...base, "--import"], { timeout_ms: 600_000 });
+  if (options.export)
+    add("export win proof", "export", [EXPORT_SCRIPT, "--win-proof"], {
+      command: process.execPath,
+      timeout_ms: EXPORT_TIMEOUT_MS,
+    });
   for (const policy of ["completionist", "skipper", "camper"]) {
     for (let seed = 1; seed <= BOT_SEEDS; seed++) {
       const dir = path.join(outDir, "bots", `${policy}-${seed}`);
@@ -217,7 +227,22 @@ function ndjson(file) {
     .map((line) => JSON.parse(line));
 }
 
-export function artifacts(step) {
+export function artifacts(step, output = "") {
+  if (step.kind === "export") {
+    const field = (name) =>
+      output.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1] ?? null;
+    const winProof = field("win proof");
+    if (!winProof?.startsWith("won "))
+      throw new Error("export ran without a won win proof line");
+    return {
+      export: {
+        version: field("version"),
+        package: field("package"),
+        executable: field("executable"),
+        win_proof: winProof,
+      },
+    };
+  }
   if (step.kind === "bot") {
     const bots = ndjson(path.join(step.out, "bots.ndjson"));
     const bot = bots[0];
@@ -292,6 +317,15 @@ export function runProcess(step, timeoutMs) {
     const launch = commandFor(step);
     const state = path.join(step.state_dir, "state");
     const env = { ...process.env };
+    if (step.kind === "export") {
+      const realData =
+        process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
+      const godotData = path.join(state, "data", "godot");
+      mkdirSync(godotData, { recursive: true });
+      const templates = path.join(godotData, "export_templates");
+      if (!existsSync(templates))
+        symlinkSync(path.join(realData, "godot/export_templates"), templates);
+    }
     for (const kind of ["DATA", "CONFIG", "CACHE"])
       env[`XDG_${kind}_HOME`] = path.join(state, kind.toLowerCase());
     // A separate process group lets a timeout also stop Godot's child test processes.
@@ -423,6 +457,7 @@ export function buildReceipt({
     bot_bands: bands,
     full_bot_matrix: fullMatrix,
     flakes,
+    export: results.find((r) => r.kind === "export")?.export ?? null,
     perf: {
       runs: perf.length,
       medians_p50_ms: perfMedians,
@@ -506,7 +541,8 @@ export async function runNightly(
           : verdict.reason,
         skips: verdict.skips,
       };
-      if (data.ok) Object.assign(data, readArtifacts(step));
+      if (data.ok)
+        Object.assign(data, readArtifacts(step, result.output ?? ""));
     } catch (error) {
       data = { ok: false, reason: error.message };
       result ??= { code: -1, output: error.message };
