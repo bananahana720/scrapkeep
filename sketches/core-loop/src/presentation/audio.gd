@@ -42,7 +42,7 @@ const POLYPHONY := 32
 const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
-	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60,
+	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60,
 	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
@@ -54,7 +54,9 @@ const ARMOR_SHED_BIG_FROM := 150.0
 const ARMOR_SHED_FULL := 250.0
 const MENU_STATES := ["title", "class_select", "summary", "dead"]
 # Weapon voices per class, so each class sounds like itself (identity, principle 5).
-const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0, "claw_sweep": -5.0}
+# Tally's three cards climb E, F, G over D, the motif's count intervals.
+const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0, "claw_sweep": -5.0,
+	"gather_plate": 2.0, "link_clips": 3.0, "balance_due": 5.0}
 const VOLUME_STEP := 0.1
 
 # The harpoon line's grammar (design-v3/LEGIBILITY.md sections 3 and 5). Gaps are in seconds on
@@ -83,9 +85,9 @@ const LAUNCH_BUILD_SECONDS := 1.6
 const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
 	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
-	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready",
-	"sable_break", "rivet_break", "kest_break", "tarn_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
-	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "hold_pit", "hold_bola", "hold_tether", "hold_net",
+	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready",
+	"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
+	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "hold_pit", "hold_bola", "hold_tether", "hold_net",
 	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "reveal_clank", "ceremony_build",
 	"ceremony_resolve", "line_bite", "smash_crack", "achievement_chime", "rescue_fanfare",
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.

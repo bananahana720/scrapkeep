@@ -318,6 +318,14 @@ func _tick(at: Vector3, out: Vector3, ticks: String, color: Color) -> void:
 	match ticks:
 		"ring":
 			_cap(at + out * TICK_LEN * 0.5, 0.14, color)
+		"square":
+			var mid := at + out * TICK_LEN * 0.5
+			var half := out * TICK_LEN * 0.3
+			var side := out.cross(Vector3.UP).normalized() * TICK_LEN * 0.3
+			_ribbon(mid - half - side, mid - half + side, EXTENT, color, false)
+			_ribbon(mid - half + side, mid + half + side, EXTENT, color, false)
+			_ribbon(mid + half + side, mid + half - side, EXTENT, color, false)
+			_ribbon(mid + half - side, mid - half - side, EXTENT, color, false)
 		"chevron":
 			var across := out.cross(Vector3.UP).normalized() * TICK_LEN * 0.5
 			var tip := at + out * TICK_LEN

@@ -26,11 +26,9 @@ const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 # The cue log, not speakers.
 
 const RELEASE := {"sable": "sable_arpeggio", "rivet": "rivet_hihat_roll", "kest": "kest_low_thump",
-	"tarn": "tarn_latch_tear"}
-# 2026-10-05 (alpha wave 15 tarn-look): stand-in pilots that still carry Kest's motif. The
-# Mind's quote has a 600 ms repeat guard, so a shared motif would fail; the unit that gives
-# each pilot its own motif removes its id here.
-const STAND_IN := ["tally", "remembered_cannon"]
+	"tarn": "tarn_latch_tear", "tally": "tally_balance_due"}
+# 2026-10-05 (alpha wave 16 tally-look): Tally's own motif; only the cannon still shares Kest's
+const STAND_IN := ["remembered_cannon"]
 const HOLDS := {"mag_pit": "hold_pit", "anchor_tether": "hold_tether", "air_net": "hold_net", "bola_wrap": "hold_bola",
 	"gyro_drift": "hold_riser"}
 const ARRIVALS := {"fleet": "fleet_motif", "reactor": "reactor_tick", "swarm": "swarm_lock", "mind": "mind_kest"}
@@ -116,7 +114,7 @@ func _class_cues() -> void:
 	var ok := true
 	for def in ClassDef.all():
 		var motif: String = def.motif
-		# 2026-10-05 (alpha wave 15 tarn-look): Tarn's own motif; STAND_IN pilots still share Kest's
+		# The remembered cannon still shares Kest's motif until its look unit.
 		if def.id in STAND_IN:
 			continue
 		_events.run_started.emit(def.id)

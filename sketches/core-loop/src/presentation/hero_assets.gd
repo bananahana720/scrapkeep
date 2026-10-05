@@ -16,7 +16,7 @@ const PILOTS := {
 	"pylon_engineer": "res://assets/models/pilot_sable_anim.glb",
 	"demolitions_caster": "res://assets/models/pilot_kest_anim.glb",
 	"tarn": "res://assets/models/pilot_sable_anim.glb",  # Tarn: Sable's fox pilot, the nearest silhouette to a tiger, tinted rust
-	"tally": "res://assets/models/pilot_kest_anim.glb",  # Tally: Kest's pilot stands in until her own model lands, tinted ledger cream
+	"tally": "res://assets/models/pilot_rivet_anim.glb",  # Tally: Rivet's mole pilot, the nearest silhouette to a pack rat, tinted ledger cream
 	"remembered_cannon": "res://assets/models/pilot_kest_anim.glb",  # remembered cannon: Kest's stand-in until pil-G11
 }
 
@@ -42,7 +42,7 @@ const SHELLS := {
 	"runner_gunner": "res://assets/models/world_one/shell_rivet.glb",
 	"demolitions_caster": "res://assets/models/world_one/shell_kest.glb",
 	"tarn": "res://assets/models/world_one/shell_kest.glb",  # Tarn: Kest's banded shell, the heaviest existing silhouette, tinted rust
-	"tally": "res://assets/models/world_one/shell_kest.glb",  # Tally: Kest's shell stands in until her own model lands, tinted ledger cream
+	"tally": "res://assets/models/world_one/shell_sable.glb",  # Tally: Sable's light pod, a caster's shell, tinted ledger cream
 	"remembered_cannon": "res://assets/models/world_one/shell_kest.glb",  # remembered cannon: Kest's stand-in until pil-G11
 }
 const DEFAULT_CLASS := "pylon_engineer"

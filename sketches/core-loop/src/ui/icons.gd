@@ -39,10 +39,12 @@ const PREFIX_FALLBACK := {"ab_": "ring_dot", "cls_": "diamond", "key_": "square"
 	"trg_": "square", "thr_": "triangle", "obj_": "square", "res_": "disc", "fac_": "diamond"}
 # Pictures outside the 70 canonical ids: they draw a glyph but are not registry ids. res_mass
 # is scrap carried as mass (the heap), so the cog (res_scrap) means money alone. A later
-# pilot's ability pictures (Tarn's ab_tarn_*) live here too.
+# pilot's ability pictures (Tarn's ab_tarn_* and Tally's ab_tally_*) live here too.
 const REEL := "ab_sable_reel"
 const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "chevron", "ab_tarn_move": "hook",
-	"ab_tarn_special": "clamp", "ab_tarn_smash": "smash"}
+	"ab_tarn_special": "clamp", "ab_tarn_smash": "smash",
+	"ab_tally_weapon": "tag", "ab_tally_move": "cog", "ab_tally_special": "reel", "ab_tally_smash": "smash",
+	"ab_tally_gather": "target", "ab_tally_link": "bolt", "ab_tally_balance": "burst_ring"}
 
 # The event_kinds shapes as glyphs. These are drawn, never files: a toast wears its
 # row's silhouette (shape()).
