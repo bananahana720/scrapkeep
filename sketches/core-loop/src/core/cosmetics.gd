@@ -28,6 +28,13 @@ const ROWS := {
 	"paint_kest_plum": {"slot": "paint", "pilot": "demolitions_caster", "name": "Ember Plum", "starter": true, "tint": Color("8a3f6e")},
 	"paint_kest_dusk": {"slot": "paint", "pilot": "demolitions_caster", "name": "Dusk Pink", "starter": false, "tint": Color("d68ab0")},
 	"paint_tarn_ash": {"slot": "paint", "pilot": "tarn", "name": "Redjaw Ash", "starter": true, "tint": Color("5e5a54")},
+	"paint_tarn_dig": {"slot": "paint", "pilot": "tarn", "name": "Dig Ochre", "starter": false, "tint": Color("9a6a32")},
+	"paint_any_kelp": {"slot": "paint", "pilot": "", "name": "Kelp", "starter": false, "tint": Color("3f6b4f")},
+	"paint_any_cobalt": {"slot": "paint", "pilot": "", "name": "Cobalt", "starter": false, "tint": Color("2a4fd6")},
+	"paint_any_brine": {"slot": "paint", "pilot": "", "name": "Brine", "starter": false, "tint": Color("7fb8c4")},
+	"paint_any_ink": {"slot": "paint", "pilot": "", "name": "Ink", "starter": false, "tint": Color("1c1f2b")},
+	"paint_any_sky": {"slot": "paint", "pilot": "", "name": "Highdraft Sky", "starter": false, "tint": Color("8fc4ec")},
+	"paint_any_moth": {"slot": "paint", "pilot": "", "name": "Moth Grey", "starter": false, "tint": Color("a39cb3")},
 }
 
 

@@ -66,7 +66,11 @@ func _run() -> void:
 	var page = screens.achievements_page()
 	var rows: Dictionary = page.rows
 	_t.eq("P3-3 one row per achievement", rows.keys(), Achievements.ids())
-	_t.eq("P3-3 thirteen rows today", rows.size(), 13)  # 2026-10-05 (wave 14): ledger_balanced added
+	_t.eq("P3-3 sixteen rows today", rows.size(), 16)  # 2026-10-05 (wave 14 achievements-fill): waking_stilled, highdraft_reached, codex_keeper added
+	await _frames(2)
+	var view := root.get_visible_rect()
+	var spill := rows.keys().filter(func(id): return not view.encloses(rows[id].get_global_rect()))
+	_t.check("P3-3 every row and Back fit the screen without scrolling", spill.is_empty() and view.encloses(page.back.get_global_rect()), "view %s outside %s back %s" % [view, spill, page.back.get_global_rect()])
 	var long := rows.keys().filter(func(id): return WordBudget.count(rows[id])["hud"] > ROW_WORDS)
 	_t.check("P3-3 every row reads in 15 words or fewer", long.is_empty(), "long %s" % [long])
 	var hidden := AchievementsPage.reading("clean_win", _game.ctx.profile, _game.progress)

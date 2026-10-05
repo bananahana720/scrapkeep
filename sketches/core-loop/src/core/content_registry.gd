@@ -68,8 +68,8 @@ const TABLES := {
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "76cddad10e759cd45d446b877212e5642d5182d03bdb38767d03492acb19b55f",  # 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_balanced row
-	"cosmetics.ROWS": "420f6490abf241973b89a032e7c283777eea732a5f7279f08f69a0e00b69a8d1",  # 2026-10-05 (alpha wave 14 cosmetics-paint): paint only; starter paint for tarn
+	"achievements.ROWS": "6fa241c5a4dc54f16834cba7b0b64e80f0ee026a8d3f15d669d509857ac225e7",  # 2026-10-05 (alpha wave 14 achievements-fill): paint rewards on four rows; waking_stilled, highdraft_reached, codex_keeper
+	"cosmetics.ROWS": "5403cc5bfe4b8a30a3f4884bb4fac4275a41987d7d46a01e8d5337ede5f40ca5",  # 2026-10-05 (alpha wave 14 achievements-fill): seven earned paints, one per achievement reward
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",

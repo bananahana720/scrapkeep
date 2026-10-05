@@ -47,11 +47,11 @@ const ROWS := {
 	"first_win": {"name": "Run Won", "text": "Win a run.", "on": "run_ended",
 		"where": {"won": true}, "count": 1, "reward": {"cosmetic": "paint_kest_dusk"}},
 	"clean_win": {"name": "Clean Run", "text": "Win a run without retrying a stage.", "on": "run_ended",
-		"where": {"won": true}, "count": 1, "need": "retries", "max": 0, "hidden": true, "reward": {}},
+		"where": {"won": true}, "count": 1, "need": "retries", "max": 0, "hidden": true, "reward": {"cosmetic": "paint_any_ink"}},
 	"first_event": {"name": "Event Won", "text": "Win a world event.", "on": "milestone_won",
-		"count": 1, "reward": {}},
+		"count": 1, "reward": {"cosmetic": "paint_any_kelp"}},
 	"ten_events": {"name": "Event Regular", "text": "Win 10 world events across all your runs.", "on": "milestone_won",
-		"count": 10, "reward": {}},
+		"count": 10, "reward": {"cosmetic": "paint_any_cobalt"}},
 	# Beating the Mind remembers the cannon (ROADMAP:27); remembered_cannon is pending until its kit lands.
 	"mind_quieted": {"name": "Mind Quieted", "text": "Quiet the Mind. An old cannon in the Highdraft remembers.",
 		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {"pilot": "remembered_cannon"}},
@@ -59,7 +59,15 @@ const ROWS := {
 	"ledger_balanced": {"name": "Ledger Balanced", "text": "Return one ledger leaf per world to Moss.", "on": "world_fact",
 		"where": {"kind": "ledger_returned"}, "count": 3, "reward": {"pilot": "tally"}},
 	"full_rack": {"name": "Full Rack", "text": "Finish a run holding 10 parts.", "on": "run_ended",
-		"count": 1, "need": "parts", "min": 10, "reward": {}},
+		"count": 1, "need": "parts", "min": 10, "reward": {"cosmetic": "paint_any_brine"}},
+	# boss_defeated fires for every boss; the world bound keeps this to the Waking (Worlds.ROWS id 2).
+	"waking_stilled": {"name": "Waking Stilled", "text": "Still the Waking in the Dig.", "on": "boss_defeated",
+		"count": 1, "need": "world", "min": 2, "max": 2, "reward": {"cosmetic": "paint_tarn_dig"}},
+	"highdraft_reached": {"name": "Highdraft Reached", "text": "Reach the Highdraft.", "on": "world_entered",
+		"where": {"world": 3}, "count": 1, "reward": {"cosmetic": "paint_any_sky"}},
+	# codex.gd sets first_time once per synergy for the player, so the count is distinct synergies.
+	"codex_keeper": {"name": "Codex Keeper", "text": "Discover 10 synergies across all your runs.", "on": "synergy_discovered",
+		"where": {"first_time": true}, "count": 10, "reward": {"cosmetic": "paint_any_moth"}},
 }
 
 
