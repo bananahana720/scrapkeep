@@ -30,7 +30,7 @@ const WORDS := {
 	"demo_slam": "demo slam",
 	"claw_sweep": "claw sweep",
 	"claw_pull": "claw pull",
-	"clamp": "clamp",
+	"clamp": "claw clamp",
 	"rend_slam": "rend slam",
 }
 

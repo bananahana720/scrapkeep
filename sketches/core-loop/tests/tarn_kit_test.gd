@@ -72,6 +72,7 @@ func _boot() -> void:
 		[_reach_start, 54, _reach_release],
 		[_noop, 20, _check_reach],
 		[_noop, 1, _check_plating],
+		# The press is set at the start of the step's first frame and the check runs at the start of the next, one game physics tick later.
 		[_pull_start, 2, _pull_check],
 		[_pull_again, 2, _check_pull_again],
 		[_clamp_start, 81, _clamp_release],
@@ -131,6 +132,7 @@ func _planar(v: Vector3) -> Vector3:
 
 
 # Planar knock the enemy is carrying right now, pointed at `toward`: > 0 means inward.
+# Read instead of velocity, which a chaser already points at the ball on its own.
 func _knock_toward(enemy: Node3D, toward: Vector3) -> float:
 	var knock: Vector3 = _planar(enemy.get("_knock"))
 	var inward := _planar(toward - enemy.global_position)
@@ -150,8 +152,8 @@ func _check_row() -> void:
 	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id]
 	_t.eq("tarn ability ids", ids, ["claw_sweep", "claw_pull", "clamp", "rend_slam"])
 	_t.eq("tarn species", def.species, "tiger")
-	var text := "%s %s %s %s %s %s %s" % [def.display_name, def.role, def.species, def.pitch, def.bible_home,
-		def.synergy_hooks, ids]
+	var text := "%s %s %s %s %s %s %s %s %s %s %s" % [def.display_name, def.role, def.species, def.pitch, def.bible_home,
+		def.synergy_hooks, ids, def.color, def.shape, def.motif, def.sound]
 	_t.check("no placeholder in the row", not text.to_lower().contains("placeholder"), text)
 	_t.check("every ability row exists", ids.all(func(id): return AbilityState.ABILITIES.has(id)), str(ids))
 	_t.eq("tarn is not a starter", def.starter, false)
@@ -246,6 +248,7 @@ func _clamp_start() -> void:
 	_record = {"near": _spawn("chaser", _ball_flat() + aim * 3.0), "far": _spawn("chaser", _ball_flat() + aim * 10.0)}
 	_note_ids()
 	_record["near"].hp = 1000.0
+	_record["near_hp"] = 1000.0
 	_record["far_hp"] = float(_record["far"].hp)
 	_record["special_before"] = float(_combat._ledger["by_source"].get("special", 0.0))
 	_struck.clear()
@@ -261,11 +264,13 @@ func _clamp_release() -> void:
 func _check_clamp() -> void:
 	var near = _record["near"]
 	var far = _record["far"]
-	var special_after := float(_combat._ledger["by_source"].get("special", 0.0))
-	_t.check("clamp catches the near chaser", not _struck_by(_record["near_id"], "claw").is_empty() and special_after > _record["special_before"]
-			and _combat.last_burst.get("kind", "") == "clamp",
-		"claw strikes %d, special ledger %.1f -> %.1f, last burst %s" % [_struck_by(_record["near_id"], "claw").size(), _record["special_before"],
-			special_after, _combat.last_burst.get("kind", "")])
+	var special_gain := float(_combat._ledger["by_source"].get("special", 0.0)) - float(_record["special_before"])
+	var near_lost: float = float(_record["near_hp"]) - float(near.hp)
+	# The special ledger's gain is exactly the near chaser's loss: the clamp's damage, as source special, landed on it.
+	_t.check("clamp catches the near chaser", not _struck_by(_record["near_id"], "claw").is_empty() and special_gain > 0.0
+			and absf(special_gain - near_lost) < 0.01 and _combat.last_burst.get("kind", "") == "clamp",
+		"claw strikes %d, special ledger gain %.2f, near chaser lost %.2f, last burst %s" % [_struck_by(_record["near_id"], "claw").size(),
+			special_gain, near_lost, _combat.last_burst.get("kind", "")])
 	_t.check("clamp drags inward", _knock_toward(near, _player.ball_position()) > 0.5,
 		"knock dot toward the ball %.2f" % _knock_toward(near, _player.ball_position()))
 	_t.check("clamp leaves the far chaser", _struck_by(_record["far_id"], "claw").is_empty() and is_equal_approx(float(far.hp), _record["far_hp"]),
