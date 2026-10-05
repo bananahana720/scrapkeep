@@ -19,7 +19,7 @@ func _initialize() -> void:
 
 
 func _default(t) -> void:
-	t.eq("default maps", StageDefs.DEFS.map(func(row): return row["map"]), ["spillway", "reach", "dig", "reach", "highdraft", "reach"])
+	t.eq("default maps", StageDefs.DEFS.map(func(row): return row["map"]), ["spillway", "reach", "dig", "dig_deep", "highdraft", "highdraft_crown"])
 	t.eq("default count", StageDefs.COUNT, StageDefs.DEFS.size())
 	for s in range(1, StageDefs.COUNT + 1):
 		var w := ceili(s / 2.0)

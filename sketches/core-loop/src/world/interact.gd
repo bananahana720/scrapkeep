@@ -60,22 +60,30 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	var m = ctx.terrain.map_for(stage)
 	if not "relic_spot" in m:
 		return
+	_place_relic_cache.call_deferred(stage)
+
+
+# Deferred from _on_stage_entered, so it can land after this node or its game is gone.
+func _place_relic_cache(stage: int) -> void:
+	if not is_inside_tree() or ctx == null:
+		return
+	if ctx.terrain.stage != stage or ctx.run.stage != stage:
+		return
+	if _owned.any(func(d): return is_instance_valid(d) and d.id == "relic_cache"):
+		return
+	var m = ctx.terrain.map_for(stage)
+	if not "relic_spot" in m:
+		return
 	var spot: Vector2 = m.relic_spot
 	var face: Vector2 = (m.spawn - spot).normalized()
-	var place := func() -> void:
-		if ctx.terrain.stage != stage or ctx.run.stage != stage:
-			return
-		if _owned.any(func(d): return is_instance_valid(d) and d.id == "relic_cache"):
-			return
-		var cache: Node3D = DEVICES["cracked_cache"].new()
-		cache.relic_guaranteed = true
-		add_child(cache)
-		cache.global_position = ctx.terrain.ground_callable(stage).call(spot.x, spot.y, 0.0)
-		cache.rotation.y = atan2(face.x, face.y)
-		cache.setup(ctx, self, {"id": "relic_cache", "device": "cracked_cache", "at": spot, "face": face})
-		_owned.append(cache)
-		devices.append(cache)
-	place.call_deferred()
+	var cache: Node3D = DEVICES["cracked_cache"].new()
+	cache.relic_guaranteed = true
+	add_child(cache)
+	cache.global_position = ctx.terrain.ground_callable(stage).call(spot.x, spot.y, 0.0)
+	cache.rotation.y = atan2(face.x, face.y)
+	cache.setup(ctx, self, {"id": "relic_cache", "device": "cracked_cache", "at": spot, "face": face})
+	_owned.append(cache)
+	devices.append(cache)
 
 
 # Frees this system's own devices. A registered device stays registered: it is live

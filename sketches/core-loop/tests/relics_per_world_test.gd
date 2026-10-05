@@ -89,6 +89,30 @@ func _check_maps() -> void:
 			"issues %s, relic_spot %s" % [issues, ZoneSchema.slots(map).get("relic_spot")])
 
 
+# The relic cache is placed by a deferred call that can land after the game is gone, which the
+# engine logs as an ERROR from a lambda on a freed instance. The deferral is a bound method that
+# returns early on a stale stage or a node outside the tree, so neither adds a device.
+func _check_deferred_guards() -> void:
+	var interact = _game.world.interact
+	_report("the deferred placement is a bound method", interact.has_method("_place_relic_cache"), "has _place_relic_cache %s" % interact.has_method("_place_relic_cache"))
+	if not interact.has_method("_place_relic_cache"):
+		return
+	var stage: int = _game.ctx.run.stage
+	var before: int = interact.devices.size()
+	interact._place_relic_cache(stage + 90)
+	_report("a stale stage places nothing", interact.devices.size() == before, "devices %d -> %d" % [before, interact.devices.size()])
+	var cache = _relic_cache()
+	if cache != null:
+		interact.devices.erase(cache)
+		interact._owned.erase(cache)
+	before = interact.devices.size()
+	var parent: Node = interact.get_parent()
+	parent.remove_child(interact)
+	interact._place_relic_cache(stage)
+	parent.add_child(interact)
+	_report("a node outside the tree places nothing", interact.devices.size() == before, "devices %d -> %d" % [before, interact.devices.size()])
+
+
 func _physics_process(_delta: float) -> bool:
 	if _game.flow == null:
 		return false
@@ -100,6 +124,7 @@ func _physics_process(_delta: float) -> bool:
 		_game.flow.choose_class(KEST)
 		return false
 	if _index >= _stages.size():
+		_check_deferred_guards()
 		print("relics_per_world_test: %s" % ("PASS (%d checks)" % _checks if _failures == 0 else "FAIL (%d of %d checks)" % [_failures, _checks]))
 		quit(0 if _failures == 0 else 1)
 		return true
