@@ -473,17 +473,11 @@ func shell_of(player: Node) -> Dictionary:
 # --- cosmetic pilot reactions ------------------------------------------------------
 
 func _fit_pilot(rec: Dictionary) -> void:
-	var pilot := _scene(PILOTS[rec["class"]])
-	if pilot == null:
+	var fitted := fit_pilot_into(rec.pod, rec["class"], rec.player.class_color())
+	if fitted.is_empty():
 		return
-	pilot.name = "AnimatedPilot"
-	var pod: Node3D = rec.pod
-	var placeholder := pod.find_child("Pilot", true, false) as GeometryInstance3D
-	if placeholder != null:
-		hide_placeholder(placeholder)
-	pod.add_child(pilot)
-	paint(pilot, {"class": rec.player.class_color()})
-	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var pilot: Node3D = fitted.pilot
+	var animator: AnimationPlayer = fitted.animator
 	rec["animator"] = animator
 	rec["pilot"] = pilot
 	rec["reaction"] = ""
@@ -492,6 +486,26 @@ func _fit_pilot(rec: Dictionary) -> void:
 	if animator != null:
 		animator.animation_finished.connect(_pilot_finished.bind(rec.player.get_instance_id(), animator))
 		_seat_pilot(rec)
+
+
+# Seats the class's animated pilot in a pod: hides the shell's embedded placeholder pilot,
+# adds the pilot glb as "AnimatedPilot" and paints it in the class colour. The game's
+# _fit_pilot and the class card's preview both call it. Returns {pilot, animator}, or {}
+# when the class has no pilot or its scene is unavailable.
+func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:
+	if not PILOTS.has(class_id):
+		return {}
+	var pilot := _scene(PILOTS[class_id]) as Node3D
+	if pilot == null:
+		return {}
+	pilot.name = "AnimatedPilot"
+	var placeholder := pod.find_child("Pilot", true, false) as GeometryInstance3D
+	if placeholder != null:
+		hide_placeholder(placeholder)
+	pod.add_child(pilot)
+	paint(pilot, {"class": class_color})
+	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	return {"pilot": pilot, "animator": animator}
 
 
 func _connect_pilot_events() -> void:

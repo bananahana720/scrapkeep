@@ -53,6 +53,7 @@ var _viewport: SubViewport
 var _camera: Camera3D
 var _core: Node3D
 var _pod: Node3D
+var _pilot: Node3D
 var _props := {}
 var _last := Vector3.ZERO
 var _heading := 0.0
@@ -152,6 +153,18 @@ func _build_shell() -> void:
 	_pod = ball.get_node("Pod")
 	shell.free()
 	_paint_shell()
+	_fit_pilot()
+
+
+# The game's pilot for this class (hero_assets.gd fit_pilot_into), held at rest: the
+# animator is stopped, no clip plays. Without one the shell's embedded pilot stays.
+func _fit_pilot() -> void:
+	var fitted: Dictionary = _painter.fit_pilot_into(_pod, def.id, def.color)
+	if fitted.is_empty():
+		return
+	_pilot = fitted.pilot
+	if fitted.animator != null:
+		fitted.animator.stop()
 
 
 func _build_primitive_shell() -> void:
@@ -176,6 +189,8 @@ func _paint_shell() -> void:
 			tints["paint"] = tint
 	_painter.paint(_core, tints)
 	_painter.paint(_pod, tints)
+	if _pilot != null:
+		_painter.paint(_pilot, {"class": def.color})
 
 
 func _build_props() -> void:
