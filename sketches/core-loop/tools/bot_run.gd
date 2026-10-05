@@ -12,6 +12,10 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd \
 #     -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4] [--trace=1]
+#     [--pilot=<class id>]
+#
+# --pilot plays that ClassDef id (pylon_engineer, runner_gunner, demolitions_caster, tarn,
+# tally, remembered_cannon) whatever the seed; without it the seed picks seed % roster size.
 #
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
 # writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
@@ -58,7 +62,11 @@ func _initialize() -> void:
 		_allocation_noise.append(RefCounted.new())
 	node_added.connect(_on_node_added)
 	if not _settings.has("out"):
-		printerr("bot_run: usage: -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4]")
+		printerr("bot_run: usage: -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4] [--pilot=<class id>]")
+		quit(2)
+		return
+	if _settings.has("pilot") and (String(_settings["pilot"]) == "" or BotDriver.class_index_for(0, String(_settings["pilot"])) < 0):
+		printerr("bot_run: unknown --pilot=%s; use pylon_engineer, runner_gunner, demolitions_caster, tarn, tally or remembered_cannon" % _settings["pilot"])
 		quit(2)
 		return
 	_out = _absolute(_settings["out"])
@@ -154,6 +162,8 @@ func _physics_process(delta: float) -> bool:
 		_game.codex.storage_dir = _out
 		_game.run_log.storage_dir = _out
 		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), _seeds[_index])
+		if _settings.has("pilot"):
+			_driver.class_index = BotDriver.class_index_for(_seeds[_index], String(_settings["pilot"]))
 		_driver.trace = _settings.has("trace")
 		if _driver.trace:
 			_game.events.world_entered.connect(func(world: int): print("  trace world %d entered" % world))

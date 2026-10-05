@@ -201,6 +201,8 @@ Seeds 1 to 8, skipper, fight and boss seconds, outcome and wall seconds per proc
 | 8 | pylon_engineer | 71.44 | 38.09 | 22.50 | until, 65.3 s | never (240) | not reached (240) | not reached | stalled at 5, 137.1 s |
 | median | | 68.90 | 42.04 | 21.33 | | 122.02 | 240 | 240 | |
 
+Recorded at a four-pilot roster (seed % 4); the Class column no longer matches seed % 6.
+
 Bands, fixed before the results: each Warden's median within 0.7 x to 1.6 x the stage-2 Reach skipper window (`REACH_SKIPPER_S` 30 to 80 s in `tests/alpha_posture_bands_test.gd`), so 21 to 128 s. This multiple is the w23 brief's reading of the plan, not a measured window. Each boss's median under 240 s.
 
 Band reading:
@@ -212,7 +214,7 @@ Band reading:
 
 Wall time for the eight-seed run was about 224 s (start 19:12:00, end 19:15:44 local). Load averages were 0.92 / 2.87 / 3.87 at start and 6.61 / 9.27 / 6.66 at end (1 / 5 / 15 minutes, 32 threads). The world 3 processes set the time: a run that stalls on stage 5 and then on stage 6 plays more than 480 game seconds.
 
-`tests/alpha_posture_bands_w23_test.gd` runs seeds 1 to 4 (eight processes) and checks the same bands. Its numbers for those seeds are the same as this table's. It took 189 s wall at load 2.44 at start. That is over the 180 s smoke budget, and the world 3 stalls set the time. It fails the stage 6 and world 3 boss checks until the crown Warden breaks.
+`tests/alpha_posture_bands_w23_test.gd` now plays the six pinned (pilot, seed) pairs of "World 2 and 3 bands, pilots named, 2026-10-05 (wave 16)" below (twelve processes) and checks the same bands. On 2026-10-04 it ran seeds 1 to 4 by `seed % size` and took 189 s wall at load 2.44 at start. With the pins it took 111 s wall at load 4.25 at start (2026-10-05, PASS, 31 checks).
 
 Commands from the worktree root:
 
@@ -222,6 +224,49 @@ G=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
 # one of each per seed s in 1..8, all at once
 "$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/w23-posture-bands-2026-10-04/w2-$s --policy=skipper --seeds=$s --table=alpha --from-stage=3 --until=4
 "$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/w23-posture-bands-2026-10-04/w3-$s --policy=skipper --seeds=$s --table=alpha --from-stage=5
+"$G" --headless --path sketches/core-loop --script res://tests/alpha_posture_bands_w23_test.gd
+```
+
+These are bot combat bands. They do not establish human feel.
+
+## World 2 and 3 bands, pilots named, 2026-10-05 (wave 16)
+
+The same Wardens, bosses, fight and boss measures, caps and band rule as the 2026-10-04 section above, re-recorded with each seed's pilot named. Method: base `cedd6b2` with this unit's `--pilot` change, skipper on `tools/bot_run.gd --table=alpha`, `--pilot=<class id>` per seed, eight seeds, 16 processes at once (one per seed and world), `--fixed-fps 90`. World 2 runs start `--from-stage=3 --until=4`; world 3 runs start `--from-stage=5`. Medians are the upper median of eight (the fifth value sorted). A Warden never broken counts at 240 s (`STAGE_LIMIT`); a boss never beaten counts at the 240 s cap. The bot's own mapping (`seed % roster size`) moves when the roster grows, so the pilot is named per seed. Seeds 1 to 6 are the pins in `tests/alpha_posture_bands_w23_test.gd`. Seeds 7 and 8 play the pilots those seeds played on 2026-10-04. Six of eight rows (seeds 1, 2, 3, 4, 7 and 8) compare directly with the old table.
+
+| Seed | Class | Stage 3 | Stage 4 | World 2 boss | World 2 run | Stage 5 | Stage 6 | World 3 boss | World 3 run |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | runner_gunner | 70.16 | 39.74 | 15.16 | until, 71.8 s | 109.17 | 53.42 | 11.74 | won, 88.0 s |
+| 2 | demolitions_caster | 54.94 | 41.33 | 15.42 | until, 70.8 s | 85.14 | 48.10 | 9.11 | won, 82.7 s |
+| 3 | tarn | 54.26 | 37.51 | 13.52 | until, 59.5 s | 91.42 | 49.97 | 10.38 | won, 81.2 s |
+| 4 | pylon_engineer | 62.67 | 37.98 | 19.63 | until, 64.7 s | 128.41 | 82.05 | 12.09 | won, 108.1 s |
+| 5 | tally | 59.69 | 38.71 | 21.08 | until, 65.4 s | 128.85 | 53.53 | 13.46 | won, 91.2 s |
+| 6 | remembered_cannon | 70.50 | 39.66 | 15.70 | until, 86.8 s | 80.05 | 50.12 | 13.97 | won, 96.2 s |
+| 7 | tarn | 56.20 | 37.39 | 13.52 | until, 61.7 s | 94.35 | 57.43 | 14.16 | won, 85.0 s |
+| 8 | pylon_engineer | 70.81 | 43.54 | 24.16 | until, 71.5 s | 150.22 | 34.94 | 12.18 | won, 100.0 s |
+| median | | 62.67 | 39.66 | 15.70 | | 109.17 | 53.42 | 12.18 | |
+
+Each record's `class` matches its `--pilot`. No run stalled. Seeds 1 to 6 give the same seconds as the w23 test's run on the same tree.
+
+Band reading (Wardens 21 to 128 s, bosses under 240 s):
+
+- Stage 3 (62.67 s) is inside its band.
+- Stage 4 (39.66 s) is inside its band.
+- The world 2 boss (15.70 s) is inside its band.
+- Stage 5 (109.17 s) is inside its band by 19 s. Three single runs are above 128 s: Sable on seeds 4 and 8 (128.41 and 150.22) and Tally on seed 5 (128.85). All three broke the Warden.
+- Stage 6 (53.42 s) is inside its band. Every seed broke the crown Warden; the 2026-10-04 stalls do not recur at this base.
+- The world 3 boss (12.18 s) is inside its band. Every run won.
+
+Wall time: 121 s (start 15:00:23, end 15:02:24 local). Load averages: 5.94 / 8.47 / 8.77 at start, 16.72 / 13.34 / 10.61 at end (1 / 5 / 15 minutes, 32 threads).
+
+Commands from the worktree root:
+
+```sh
+G=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+"$G" --headless --path sketches/core-loop --import
+# one of each per (s, p) in (1 runner_gunner) (2 demolitions_caster) (3 tarn) (4 pylon_engineer)
+# (5 tally) (6 remembered_cannon) (7 tarn) (8 pylon_engineer), all at once
+"$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/w16-band-pilot-pins/w2-$s --policy=skipper --seeds=$s --pilot=$p --table=alpha --from-stage=3 --until=4
+"$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/w16-band-pilot-pins/w3-$s --policy=skipper --seeds=$s --pilot=$p --table=alpha --from-stage=5
 "$G" --headless --path sketches/core-loop --script res://tests/alpha_posture_bands_w23_test.gd
 ```
 
