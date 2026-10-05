@@ -578,6 +578,8 @@ func pad_screen_key(event: InputEvent) -> int:
 			return KEY_N
 	elif event.button_index == JOY_BUTTON_Y and state == "dead":
 		return KEY_C
+	elif event.button_index == JOY_BUTTON_Y and state == "summary":
+		return KEY_K
 	elif event.button_index == JOY_BUTTON_X and state == "dead":
 		return KEY_T
 	return KEY_NONE
@@ -687,6 +689,9 @@ func _screen_key(key: int) -> bool:
 			if key == KEY_S:
 				screens.toggle_settings()
 				return true
+			if key == KEY_K:
+				screens.toggle_camp()
+				return true
 			if key == KEY_B and tuning.option(Tuning.MUSIC_KEY) == "ace":
 				cycle_breath()
 				screens.refresh_lab_row()
@@ -712,6 +717,9 @@ func _screen_key(key: int) -> bool:
 				return true
 		"summary":
 			if summary_guard_left > 0.0:
+				return true
+			if key == KEY_K:
+				screens.open_camp_from_summary()
 				return true
 			if key == KEY_SPACE or key == KEY_ENTER:
 				flow.press_start()
