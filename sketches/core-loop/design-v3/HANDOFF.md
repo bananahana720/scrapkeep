@@ -2,6 +2,82 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 15 landed (2026-10-05, cfb0a51)
+
+The wave 15 candidate cand/alpha-w15 landed as cfb0a51 (proto/alpha went 6fb7366 to cfb0a51; eleven units, 37 commits over base by `git rev-list --count 6fb7366..cfb0a51`). Heads below are the unit heads in git; verdicts are the verifiers' and the coordinator's, 2026-10-05. Branches are deleted. Coordinator commits on the candidate: 28faf37, 7251802, 8c4cfcc, 4eaef7c, cfb0a51; f625173 was written by the tally-kit worker under rulings R1-R5; e24042f (tree_bot header) is a coordinator commit on the wave 15 base.
+
+**Milestone:** M4 (alpha) work: the Tarn chain (kit, tree, verify, look), Tally kit and tree, the remembered cannon kit and tree, six pilots on class select, the slice sweep seeds and the wave 14 follow-ups.
+
+| unit | branch | head | writer | verdict | note |
+|---|---|---|---|---|---|
+| w14-followups | wt/alpha-w15-w14-followups | 8f4341e | sonnet (pstack-hand) | PASS | title-row check reads real button rects; _primed/_prow_until pruned on death; cold-launch page on b9f9712 with Camp; OUTSIDE_RUN comment |
+| tarn-kit (pil-G1, held from wave 14) | wt/alpha-w14-tarn-kit | c14b7a5 | opus (pstack-worker) | PASS (round 2) | claw 32 dmg, no plating claim; 'claw clamp' label; _clamped erased on death |
+| tarn-tree (pil-G2) | wt/alpha-w14-tarn-tree | 3f05e7f | opus (pstack-worker) | PASS | 30 nodes, 6 relics, tree_bot seed 3 |
+| tarn-verify (pil-G4) | wt/alpha-w14-tarn-verify | ae40c9f | opus (pstack-worker) | FAIL (two-fact liveness vacuous), then PASS after refinement | dead-offer and fourth-pilot proofs; kit-agnostic proc exemption pinned narrow |
+| tarn-look (pil-G3) | wt/alpha-w15-tarn-look | 9e1b5e6 | opus (pstack-worker) | PASS+NOTES | own motif, sound and icons; exposed a pre-existing camera-kick-to-sim leak (juice.gd claw_sweep row) |
+| slice-sweep-seeds | wt/alpha-w15-slice-sweep-seeds | 6e686b0 | sonnet | verifier re-verify lost to API 529; coordinator reran: posture_bands_test PASS (9), unit_suite PASS | sweep plays seeds 0, 1, 2 (Sable, Rivet, Kest at any roster size); medians re-recorded small 80.6 / grown 33.1 |
+| tally-kit (pil-G7) | wt/alpha-w15-tally-kit | b443cc1 | opus (pstack-worker) | FAIL (no starter paint; Shift burst), then PASS (round 2 under R1-R5) | Ledger Cream paint; Harpoon.burst_ready answers every pilot burst; expired plate spends nothing |
+| tally-tree (pil-G8) | wt/alpha-w15-tally-tree | 28faf37 | opus (pstack-worker) + coordinator fix | FAIL (tree_apply plain-slot cap vs pressure), then admitted with coordinator fix 28faf37 | _is_plain reads the row's pressure; _tick_echo re-checks can() |
+| cannon-kit (pil-G10) | wt/alpha-w15-cannon-kit | 7251802 | opus (pstack-worker) + coordinator fix | FAIL (no starter paint), then admitted with coordinator fix 7251802 | Old Verdigris paint; PENDING_PILOTS []; LANE_DAMAGE 38 to 30; exposure scales dealt |
+| cannon-tree (pil-G11) | wt/alpha-w15-cannon-tree | d698536 | opus (pstack-worker) | PASS | brief re-authored against the shipped kit; 30 nodes, rate-only pattern rows, tree_bot seed 5 |
+| roster (pil-G12) | wt/alpha-w15-roster | 8c4cfcc | opus (pstack-worker) + coordinator fix | FAIL x2 (six cards overflow, brief D4 math wrong; then R-A premise wrong), then admitted with coordinator fix 8c4cfcc | six cards in one row; _fit_cells, role tag wraps, preview gives up overflow; MIN_ICON_SIDE 28 |
+
+Cause of each review red: tarn-kit round 1, brief (full-landing claim unreachable); tally-kit round 1, brief (cosmetics read-only, Shift burst unaddressed); tally-tree, brief (tree_apply read-only); cannon-kit, brief (cosmetics read-only); roster round 1, brief (D4 keycap arithmetic); roster round 2, owner (R-A premise); tarn-verify, writer (vacuous liveness check).
+
+### Gate story
+
+Candidate cand/alpha-w15. Gate 1 ran on 4eaef7c: 414 runs, 3 reds. audio_board_test was real (the RELEASE table lacked tarn); fixed in cfb0a51, cause brief (the tarn-look fence omitted tools/audio_board.gd). presentation_chain 'chain sings' and find_in_fight 'seen only now' were read as load flakes (8 of 8 green in an 8-way stress, 3 of 3 solo in the gate read; find_in_fight flaked once in wave 6; the kill streak uses wall-clock ms). No second full gate. Gate logs under artifacts/local/alpha/wave15/. Gate read (cfb0a51): ADMIT, PASS+NOTES, level 4. proto/alpha is fast-forwarded to cfb0a51 by the coordinator.
+
+### Export
+
+At cfb0a51: tarball 41.1 MiB, ACE_CHECK ready clips=8 streams=24. Win proof won at stage 6, 34170 ticks, 95.21 s wall. Copied to artifacts/local/alpha/export/cfb0a51/.
+
+### Rulings (coordinator, 2026-10-05; recorded in docs/decisions.tsv at the wave 15 records commit)
+
+- tally-kit R1: fence widens to cosmetics.gd and content_registry.gd; Tally gets its own starter paint, 'Ledger Cream'; cosmetics.ROWS golden re-pinned.
+- tally-kit R2: fence widens to harpoon.gd; Harpoon.burst_ready answers every pilot burst, so Shift and B fire Tarn's claw pull and Tally's flywheel surge; a keyboard-path check is added.
+- tally-kit R3: deviations kept (check 10i smash landing; plate_return adds the enemy hull; Gather plants at _floor_at(point + UP)).
+- tally-kit R4: the plate_return can guard re-checks the live plate at gauge release; an expired plate spends nothing.
+- tally-kit R5: posture_bands_test belongs to the slice sweep unit; report its line, do not count it against tally-kit.
+- roster R-A: the preview column gives up the row's largest overflow, one uniform value per row, floor 160 px. Amended after fix round 2: the shrink applies at every card count, because the base already overflowed at four cards (key cells to y 822 against a card bottom of 807; preview 260 to 227).
+- roster R-B: D4 amended; at five or more cards keycaps scale down evenly (_fit_cells, 5 percent steps), the role tag wraps at the card's inner width, icons never below 28 px.
+- roster R-C: class_card.gd is owned whole for this unit.
+- roster R-D: no 1 px tolerance on the name check.
+- roster R-E: red WIP commit 4940c48 may stay under a green commit; no squash.
+- roster R-F: w23 band seeds stay [1,2,3,4]; the cannon's band gap is recorded here, not fixed.
+- cannon-kit edited harpoon.gd (burst_ready plus RECOIL) outside its fence; accepted as an extension of R2.
+- audio_board one-line fix (RELEASE tarn line, cfb0a51); the two load flakes are read as flakes and there is no second full gate.
+- Coordinator fixes: tally-tree 28faf37 (_is_plain reads pressure; _tick_echo re-checks can()), cannon starter paint Old Verdigris 7251802, roster 8c4cfcc (floor(room) off-by-one, MIN_ICON_SIDE 28 floor, honest comments).
+
+### Open after wave 15: wave 16 concerns
+
+1. The camera kick reaches the simulation, against the event_kinds JUICE "camera and shell only" promise: juice.gd:554 kick, chase_camera.gd:239, aim_origin :170, context.gd:72, combat.gd:1029 Hitscan.aim. Shake jitter and the comfort "shake" setting move hits too. Affects every pilot with a kick row. Also decide, with it, the missing shot_fired kick rows for ledger_reader and cannon_lane.
+2. Band coverage: no band seed plays the cannon (w23 SEEDS [1,2,3,4]); record new medians with seed 5 as its own unit. Since Tally joined, bot seed 4 plays Tally (seed % 6), so alpha_posture_bands_w23_test [1,2,3,4] plays Rivet, Kest, Tarn and Tally and Sable has no w23 band run.
+3. Roster: no test asserts the key rows' bottom edge or the preview floor directly; the first class-select frame draws unshrunk cards for one process_frame (the slide-in likely hides it; needs a human eye).
+4. Tally's Ledger Cream tint equals TALLY_COLOR and may read as no paint.
+5. The tally plate_return echo gap is fixed by the can() re-check and needs a test.
+6. Cannon _exposed is never pruned on stage entry.
+7. tarn-kit _clamped is re-added when the clamp itself kills.
+8. The icons README header flips on regeneration (79 vs 83 ids).
+9. The _burst_pilot comment at player_ball.gd:483 names three bursts; the code covers five.
+
+README.md:25 "cannon not in this alpha" was concern 8 in the packet; the roster unit resolved it.
+
+Cost: brief workflow 8 agents, 1.48M tokens, 21 min; w14-followups 2 agents, 0.17M; Tarn chain 6 agents, 0.59M, 87 min; chain A (look, sweep) 12 agents, 1.44M, 144 min; chain B (tally) 6 agents, 0.71M, 88 min; cannon kit 4 agents, 0.58M, 75 min; cannon tree and roster 6 agents, 0.67M, 71 min; roster fix round 2: 2 agents, 0.23M, 37 min; brief re-authors 2 agents, about 0.37M.
+
+### Hands checklist (never blocks; items 13-16 carry over from wave 14)
+
+13. Open the Camp (K on title) and the Companion panel.
+14. Look at the title row with a saved run, companion piece and Breath (two rows).
+15. Read the Tally spec veto list in DESIGN-V3.
+16. Try the Mind's plate attack.
+17. Pick Tarn, Tally and the cannon on class select: six cards in one row; check the key rows and that the 28 px Kest icons read.
+18. Play Tarn's claw pull, clamp ring and rend slam.
+19. Run Tally's three cards and roll to refill pressure.
+20. Fire the cannon's lanes and watch the Mind brace.
+21. Hear Tarn's new motif and sound.
+22. Eye the Redjaw Ash, Ledger Cream and Old Verdigris paints.
+
 ## Wave 14 landed (2026-10-05, b9f9712)
 
 The wave 14 candidate cand/alpha-w14 landed as b9f9712 (proto/alpha went 53dc109 to b9f9712; sixteen units, 28 commits over base). Heads below are the unit heads in git; verdicts are the verifiers' and the coordinator's, 2026-10-05. tarn-kit was held out after the gate; the candidate was reset to b9f9712 without it.
