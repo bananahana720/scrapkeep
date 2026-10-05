@@ -66,7 +66,7 @@ func _run() -> void:
 	var page = screens.achievements_page()
 	var rows: Dictionary = page.rows
 	_t.eq("P3-3 one row per achievement", rows.keys(), Achievements.ids())
-	_t.eq("P3-3 twelve rows today", rows.size(), 12)  # 2026-10-04: mind_quieted added
+	_t.eq("P3-3 thirteen rows today", rows.size(), 13)  # 2026-10-05 (wave 14): ledger_balanced added
 	var long := rows.keys().filter(func(id): return WordBudget.count(rows[id])["hud"] > ROW_WORDS)
 	_t.check("P3-3 every row reads in 15 words or fewer", long.is_empty(), "long %s" % [long])
 	var hidden := AchievementsPage.reading("clean_win", _game.ctx.profile, _game.progress)

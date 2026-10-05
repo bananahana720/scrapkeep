@@ -15,6 +15,12 @@ const Achievements := preload("res://src/core/achievements.gd")
 
 const STAT_PREFIX := "ach."
 const SAVE_POINTS := ["player_died", "run_ended"]
+# Tally's ledger (ROADMAP Tally row): beating world N's boss finds leaf N; Moss's bay takes it
+# back (shop.enter). Both are settle-once ids, so collection spans runs.
+const LEDGER_WORLDS := 3
+const LEDGER_FOUND := "ledger.found.%d"
+const LEDGER_RETURNED := "ledger.returned.%d"
+const LEDGER_FACT := "ledger_returned"
 
 # The table to read. A test sets its own before setup.
 var rows: Dictionary = Achievements.ROWS
@@ -42,7 +48,7 @@ func setup(events, run, profile, now := Callable()) -> void:
 		if not _rows_on.has(on):
 			_rows_on[on] = []
 		_rows_on[on].append(id)
-	var wanted := {"world_entered": true, "run_started": true}
+	var wanted := {"world_entered": true, "run_started": true, "boss_defeated": true}
 	for on in _rows_on:
 		wanted[on] = true
 	for on in SAVE_POINTS:
@@ -134,6 +140,37 @@ func grant_once(id: String, kind: String, target: String) -> bool:
 	return true
 
 
+# The ledger leaves Moss holds, by world.
+func leaves_returned() -> int:
+	if _profile == null:
+		return 0
+	var count := 0
+	for w in range(1, LEDGER_WORLDS + 1):
+		if _profile.is_settled(LEDGER_RETURNED % w):
+			count += 1
+	return count
+
+
+# Hands every found, unreturned leaf to Moss. Saves once before announcing, so an earn's own
+# save never races an unsaved return. Returns the worlds returned, in world order.
+func return_leaves(at: Vector3) -> Array:
+	if _profile == null:
+		return []
+	var returned: Array = []
+	for w in range(1, LEDGER_WORLDS + 1):
+		if _profile.is_settled(LEDGER_FOUND % w) and not _profile.is_settled(LEDGER_RETURNED % w):
+			settle(LEDGER_RETURNED % w, false)
+			returned.append(w)
+	if returned.is_empty():
+		return returned
+	if _profile.can_save and not _profile.save():
+		warnings += 1
+		push_warning("progress: ledger leaves %s returned but not saved: %s" % [returned, _profile.last_error])
+	for w in returned:
+		_events.world_fact.emit(LEDGER_FACT, at)
+	return returned
+
+
 # When a row was earned, as unix seconds, or 0 if it has not been.
 func earned_at(id: String) -> int:
 	if _profile == null:
@@ -168,6 +205,8 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 		_won = false
 	elif signal_name == "run_ended":
 		_won = bool(fact.get("won", false))
+	elif signal_name == "boss_defeated" and _world >= 1 and _world <= LEDGER_WORLDS:
+		settle(LEDGER_FOUND % _world)
 	for id in _rows_on.get(signal_name, []):
 		_evaluate(id, fact)
 	if SAVE_POINTS.has(signal_name) and _profile.can_save:

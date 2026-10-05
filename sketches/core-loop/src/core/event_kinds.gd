@@ -831,6 +831,8 @@ const WORLD_ROWS := {
 	"steam_lift_fired": {"group": "event", "color": Palette.SAND, "shape": "arrow", "sound": "launch_roar", "sound_next": "return_launch_arpeggio", "hud": "", "objective": "", "priority": 1},
 	# Alpha wave 10: a Dig breach plate broken by a slam (world.gd _on_slammed, breach.gd ROW).
 	"breach_opened": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "breach_crack", "sound_next": "plate_crack_rubble_fall", "hud": "", "objective": "", "priority": 1},
+	# Alpha wave 14: Moss takes a ledger leaf (progress.gd return_leaves).
+	"ledger_returned": {"group": "event", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
 }
 
 

@@ -27,7 +27,7 @@ const TEXT_WORDS := 12
 const MIN_ROWS := 8
 # Pilot ids a row may reward before their ClassDef row exists. The save records the unlock;
 # the card appears when the row lands, and that unit removes the id here.
-const PENDING_PILOTS := ["remembered_cannon"]
+const PENDING_PILOTS := ["remembered_cannon", "tally"]
 
 const ROWS := {
 	"warden_broken": {"name": "Warden Breaker", "text": "Break your first Warden.", "on": "beacon_unsealed",
@@ -55,6 +55,9 @@ const ROWS := {
 	# Beating the Mind remembers the cannon (ROADMAP:27); remembered_cannon is pending until its kit lands.
 	"mind_quieted": {"name": "Mind Quieted", "text": "Quiet the Mind. An old cannon in the Highdraft remembers.",
 		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {"pilot": "remembered_cannon"}},
+	# Tally: three ledger leaves handed to Moss (progress.gd return_leaves); pil-G7 adds her ClassDef row.
+	"ledger_balanced": {"name": "Ledger Balanced", "text": "Return one ledger leaf per world to Moss.", "on": "world_fact",
+		"where": {"kind": "ledger_returned"}, "count": 3, "reward": {"pilot": "tally"}},
 	"full_rack": {"name": "Full Rack", "text": "Finish a run holding 10 parts.", "on": "run_ended",
 		"count": 1, "need": "parts", "min": 10, "reward": {}},
 }

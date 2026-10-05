@@ -448,4 +448,14 @@ Keyed to run history (`design-v2/STORY-THREADS.md` §6 names the records). One p
 
 This is the one Moss key table (primer reconciliation 4). `PROGRESSION.md` §3 lists the same facts under `moss_*` ids and owns where they persist; the names here are the ones the lines are keyed to.
 
+### Ledger lines
+
+Keyed to the ledger leaves returned so far; one plays instead of the remembers-you line on the visit Moss takes a leaf.
+
+| Key | Line |
+| --- | --- |
+| `moss.ledger.1` | A ledger leaf. Tally's scrawl. Pinned it by the shelf. |
+| `moss.ledger.2` | Second leaf. Tally's been counting on you. Literally. One more. |
+| `moss.ledger.3` | Three leaves. Balance due. Tally's at the gate, pockets full. |
+
 **Voice rules for any new Moss line.** Twelve words or fewer. He talks about weight, welds, the shelf and the clock, never about the collapse; that is the codex's job, and Moss keeps his opinions. He is grumpy about the hook and kind about the pilot. He never says "too strong for you" as a sentence of its own, never names a potion, a traveller or a wizard, and never dismisses the player to a seller of "weaker" anything; the send-off goes to lighter parts, flimsy carts or the gates.
