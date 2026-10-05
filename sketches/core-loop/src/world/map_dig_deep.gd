@@ -44,6 +44,8 @@ func _init() -> void:
 		{"id": "ambush_altar", "at": Vector2(-110.0, 40.0)},
 		{"id": "cracked_cache", "at": Vector2(-100.0, -100.0)},
 	]
+	# Deep tier, west of the beacon and south of Kest's cage: the relic cache.
+	relic_spot = Vector2(-80.0, 120.0)
 	breach_plates = BREACH_PLATES.duplicate(true) + MIDDLE_PLATES.duplicate(true)
 	start_overlays.clear()
 	for plate in breach_plates:

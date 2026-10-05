@@ -54,6 +54,28 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 		device.setup(ctx, self, spec)
 		_owned.append(device)
 		devices.append(device)
+	# A map's relic_spot holds a cache that always offers a relic, its cracked wall facing the
+	# spawn. This handler runs before world.gd swaps the terrain in, and the cache reads the
+	# ground under its chest and pedestals as it builds, so it is built once the swap is done.
+	var m = ctx.terrain.map_for(stage)
+	if not "relic_spot" in m:
+		return
+	var spot: Vector2 = m.relic_spot
+	var face: Vector2 = (m.spawn - spot).normalized()
+	var place := func() -> void:
+		if ctx.terrain.stage != stage or ctx.run.stage != stage:
+			return
+		if _owned.any(func(d): return is_instance_valid(d) and d.id == "relic_cache"):
+			return
+		var cache: Node3D = DEVICES["cracked_cache"].new()
+		cache.relic_guaranteed = true
+		add_child(cache)
+		cache.global_position = ctx.terrain.ground_callable(stage).call(spot.x, spot.y, 0.0)
+		cache.rotation.y = atan2(face.x, face.y)
+		cache.setup(ctx, self, {"id": "relic_cache", "device": "cracked_cache", "at": spot, "face": face})
+		_owned.append(cache)
+		devices.append(cache)
+	place.call_deferred()
 
 
 # Frees this system's own devices. A registered device stays registered: it is live

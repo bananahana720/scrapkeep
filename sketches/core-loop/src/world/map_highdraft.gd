@@ -41,6 +41,8 @@ const POSTS := [
 var contraptions: Array = []
 var rescue_sites: Array = []
 var hard_points: Array = []
+# The beacon island's top, east of the bridge's landing: the relic cache (interact.gd).
+var relic_spot := Vector2(13.0, -60.0)
 
 
 func _init() -> void:

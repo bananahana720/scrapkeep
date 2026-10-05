@@ -41,6 +41,8 @@ var contraptions: Array = []
 var rescue_sites: Array = []
 # [{id: String, rect: Rect2, drop_to: float}]: the breakable floors.
 var breach_plates: Array = []
+# Upper tier, west of the ramp and clear of plate_west: the relic cache (interact.gd).
+var relic_spot := Vector2(-100.0, -40.0)
 
 
 func _init() -> void:

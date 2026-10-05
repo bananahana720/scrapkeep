@@ -197,9 +197,11 @@ static func gem_color(rarity: String) -> Color:
 	return ItemGen.RARITY[id if id != "" else "common"]["color"]
 
 
-# The relic this cache holds, or "". Only a relic the pilot can use for an empty slot.
+# The relic this cache holds, or "". Only a relic of this stage's world the pilot can use
+# for an empty slot.
 func _relic_offer() -> String:
-	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics, ctx.player.tree if ctx.player != null else null)
+	var tree = ctx.player.tree if ctx.player != null else null
+	var pool := Relics.eligible(ctx.run.class_id(), ctx.run.relics, tree, ctx.stages.world_of(ctx.run.stage))
 	if pool.is_empty():
 		return ""
 	var rng: RandomNumberGenerator = system.luck(id + ":relic")
