@@ -365,11 +365,44 @@ func offered(for_class: String, depth: int) -> Array:
 	var pair := [0, 1]
 	if depth > 1:
 		pair = children_of(index_of(for_class, picks[depth - 2], world_one))
-	# A retained id may occupy another depth after a profile change (Sable's Face Runner).
-	# Refuse that route until it is migrated instead of offering children beyond this depth.
-	if not pair.all(func(i): return i >= 0 and i < list.size() and depth_of(i) == depth):
+	if depth > 1 and not world_one and not _pair_fits(pair, list, depth):
+		# A world-one pick can sit at another depth in the full table (Sable's Face Runner: slot 3
+		# there, slot 9 here). Take its children from the world-one slot, and swap any id the run
+		# already holds for the first unheld depth-d node under the first pick.
+		pair = _retained_pair(for_class, list, depth)
+	# Refuse a route that cannot give two nodes at this depth instead of offering the wrong ones.
+	if not _pair_fits(pair, list, depth):
 		return []
 	return pair.map(func(i): return list[i])
+
+
+func _pair_fits(pair: Array, list: Array, depth: int) -> bool:
+	return pair.size() == 2 and pair.all(func(i): return i >= 0 and i < list.size() and depth_of(i) == depth)
+
+
+func _retained_pair(for_class: String, list: Array, depth: int) -> Array:
+	var slot := index_of(for_class, picks[depth - 2], true)
+	var first := index_of(for_class, picks[0], true)
+	if slot < 0 or first < 0:
+		return []
+	var pair := children_of(slot)
+	if not _pair_fits(pair, list, depth):
+		return []
+	var held := picks.slice(0, depth - 1)
+	for n in pair.size():
+		if list[pair[n]]["id"] not in held:
+			continue
+		var other: int = pair[1 - n]
+		var found := -1
+		for i in list.size():
+			if depth_of(i) == depth and ((i + 2) >> (depth - 1)) - 2 == first and i != other \
+					and list[i]["id"] not in held:
+				found = i
+				break
+		if found < 0:
+			return []
+		pair[n] = found
+	return pair
 
 
 func pick(node_id: String) -> bool:

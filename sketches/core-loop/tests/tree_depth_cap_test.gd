@@ -153,7 +153,8 @@ func _walk(class_id: String, label: String, observed_cap: int, world_one: bool, 
 
 
 # A world-one Face Runner id is at depth 3 in the full table. Its children are
-# depth 4, so they must never masquerade as the run's next depth-3 offer.
+# depth 4, so they must never masquerade as the run's next depth-3 offer, and the
+# retry pair must not hold an id the run already has.
 func _retained_path_guard() -> void:
 	var tree := UpgradeTree.new()
 	tree.world_one = true
@@ -166,6 +167,14 @@ func _retained_path_guard() -> void:
 	tree.world_one = false
 	tree.max_depth = UpgradeTree.depth_cap(2)
 	tree.open_checkpoint()
-	var pair := tree.offered(tree.class_id, 3)
-	_report("retained Face Runner path stays bounded", first and second and pair.is_empty(),
-		"full-table children would be depth 4; refused %s, path migration remains required" % pair.is_empty())
+	var ids: Array = tree.offered(tree.class_id, 3).map(func(n): return n["id"])
+	var distinct: bool = ids.size() == 2 and ids[0] != ids[1]
+	var fits: bool = distinct
+	var held := false
+	for id in ids:
+		var i := UpgradeTree.index_of(tree.class_id, id)
+		fits = fits and i >= 0 and UpgradeTree.depth_of(i) == 3
+		held = held or id in tree.path()
+	_report("retained Face Runner path offers a fresh depth-3 pair",
+		first and second and fits and not held and not tree.pick("s_face_runner"),
+		"offered %s, held none %s, duplicate pick refused %s" % [ids, not held, not tree.pick("s_face_runner")])
