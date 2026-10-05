@@ -48,6 +48,9 @@ const ROWS := {
 		"count": 1, "reward": {}},
 	"ten_events": {"name": "Event Regular", "text": "Win 10 world events across all your runs.", "on": "milestone_won",
 		"count": 10, "reward": {}},
+	# Placeholder reward until Tally's kit lands (owner question 4).
+	"mind_quieted": {"name": "Third Fragment", "text": "Quiet the Mind in the Highdraft for Tally's third fragment.",
+		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
 	"full_rack": {"name": "Full Rack", "text": "Finish a run holding 10 parts.", "on": "run_ended",
 		"count": 1, "need": "parts", "min": 10, "reward": {}},
 }
