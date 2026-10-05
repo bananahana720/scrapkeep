@@ -28,10 +28,7 @@ const LEASH_FRAMES := 300
 const SPEED_SLACK := 0.1
 const RAM_BELOW := 0.7
 const RAM_AT := 1.3
-# 2026-10-04 (wave 9): the Dig and Highdraft are greybox zones that get their activity sites in
-# wave 10 (the deep-Dig and Highdraft-crown map units remove them from this list). The
-# Highdraft's two sites landed in wave 10.
-const SIDE_CONTENT_PENDING: Array = []  # 2026-10-04 (wave 10): the Dig and the Highdraft both landed their side content.
+const SIDE_CONTENT_PENDING := preload("res://src/core/pending_content.gd").SIDE_CONTENT_PENDING
 const LINE_FRAMES := 24
 const PICKUP_FRAMES := 40
 const PICKUP_SPEED := 14.0
@@ -455,8 +452,6 @@ func _default_table() -> void:
 			continue
 		if not String(row["name"]).contains("placeholder"):
 			counts.append(maps[i].activity_sites.size() if "activity_sites" in maps[i] else 0)
-	# Counts run in stage order: Spillway, Reach, Highdraft (wave 10); the Dig's goes before
-	# the Highdraft's when the deep-Dig unit removes it from the pending list.
 	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4, 3, 2], "sites per authored stage %s" % [counts])
 	var pending_named := true
 	for row in _game.ctx.stages.DEFS:

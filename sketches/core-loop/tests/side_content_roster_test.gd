@@ -14,10 +14,7 @@ const PENDING := {
 		"missing": ["combat challenge", "contraption or cache secret"]},
 }
 const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal"]
-# 2026-10-04 (wave 9): the Dig and Highdraft are greybox zones that get their side content in
-# wave 10 (the deep-Dig and Highdraft-crown map units remove them from this list). The
-# Highdraft's side content landed in wave 10.
-const SIDE_CONTENT_PENDING: Array = []  # 2026-10-04 (wave 10): the Dig and the Highdraft both landed their side content.
+const SIDE_CONTENT_PENDING := preload("res://src/core/pending_content.gd").SIDE_CONTENT_PENDING
 var _game
 var _failures := 0
 
