@@ -65,7 +65,7 @@ func _initialize() -> void:
 		printerr("bot_run: usage: -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4] [--pilot=<class id>]")
 		quit(2)
 		return
-	if _settings.has("pilot") and BotDriver.class_index_for(0, String(_settings["pilot"])) < 0:
+	if _settings.has("pilot") and (String(_settings["pilot"]) == "" or BotDriver.class_index_for(0, String(_settings["pilot"])) < 0):
 		printerr("bot_run: unknown --pilot=%s; use pylon_engineer, runner_gunner, demolitions_caster, tarn, tally or remembered_cannon" % _settings["pilot"])
 		quit(2)
 		return
