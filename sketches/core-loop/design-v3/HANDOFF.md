@@ -120,7 +120,7 @@ Fourteen units merged and one probe kept unmerged, plus five fix rounds and two 
 - No release-gate check on placeholder names yet.
 - target_material no longer covers lazily built later worlds.
 - World 2's two placeholder maps (gorge, reach) are near-identical terrains.
-- Music and lore for worlds 2 and 3 are synth and tone-pending placeholders.
+- Andrew approved the lore voice as written on 2026-10-04: dry work-crew notes and shift logs with a quiet wrong thing underneath. All 48 world 2 and world 3 lore rows use that voice. Music remains synth pending listening approval.
 - Nothing has been played by a human yet.
 
 ## Wave 6 landed (2026-10-04, f1f753b)

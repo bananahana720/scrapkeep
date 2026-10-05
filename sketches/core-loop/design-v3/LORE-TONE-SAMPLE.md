@@ -1,10 +1,10 @@
 # Lore tone sample
 
-Tone-pending placeholders for Andrew's approval. These lines propose a voice; they do not approve story direction. Music remains synth pending listening approval.
+Lore voice APPROVED as written by Andrew on 2026-10-04: dry work-crew notes and shift logs with a quiet wrong thing underneath. Music remains synth pending listening approval.
 
-Each world has ten lines drawn verbatim from its current lore rows.
+Each world has ten lines retained from the approved sample. World 2 and world 3 lore rows now use this voice, grounded in their maps.
 
-## Spillway Works — tone-pending
+## Spillway Works
 
 1. Packed you a spare seal. The river doesn't take promises.
 2. We fixed that leak yesterday.
@@ -17,7 +17,7 @@ Each world has ten lines drawn verbatim from its current lore rows.
 9. Cable Reach Warden. Still guarding a shift nobody remembers starting.
 10. Brindle: A working cableway. Excellent. We'll collect the anchors first.
 
-## The Dig — tone-pending
+## The Dig
 
 1. Brought spare lamps. Keep one for the walk back.
 2. The wall knocked first. We stopped calling it settling.
@@ -30,7 +30,7 @@ Each world has ten lines drawn verbatim from its current lore rows.
 9. Crew notice: borrowed lights go back on the rack. Even the ones you found.
 10. Pump report: water clear. Sediment forms neat circles around every bolt.
 
-## The Highdraft — tone-pending
+## The Highdraft
 
 1. Wind took the wrench. Sent back a spoon.
 2. Fits the same nut. Keep it.

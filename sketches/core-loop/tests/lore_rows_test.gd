@@ -9,6 +9,12 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 
+# SHA-256 of the 48 world 2/3 texts at 9b8a2a3, joined in ROWS order
+# with one newline between texts and no trailing newline.
+const OLD_DIGEST := "dc73b5d0ed3104f72f0dab51d1463144a320de10e061244daf1d2627a64aca14"
+const REWRITTEN_ZONES := ["2-1", "2-2", "3-1", "3-2"]
+const FORBIDDEN_TEXT := ["placeholder", "todo", "tone-pending"]
+
 # Three worlds of two zones, independent of the live table's current COUNT.
 class SixZones extends RefCounted:
 	const COUNT := 6
@@ -45,6 +51,7 @@ func _initialize() -> void:
 	var notes := {}
 	var exchanges := {}
 	var intros := {}
+	var rewritten_texts := PackedStringArray()
 	for zone in ZONES:
 		notes[zone] = 0
 		exchanges[zone] = {}
@@ -64,6 +71,11 @@ func _initialize() -> void:
 		_report(id + " zone", row.get("zone") is String and zone in ZONES, zone)
 		var text := String(row.get("text", ""))
 		_report(id + " text", row.get("text") is String and WordBudget.words_in(text) > 0, text)
+		for marker in FORBIDDEN_TEXT:
+			_report(id + " final text", not text.to_lower().contains(marker), "no " + marker)
+		if zone in REWRITTEN_ZONES:
+			rewritten_texts.append(text)
+			_report(id + " final id", not id.to_lower().contains("placeholder"), "no placeholder")
 		if CAPS.has(kind):
 			var words := WordBudget.words_in(text)
 			_report(id + " word cap", words <= int(CAPS[kind]), "%d / %d words" % [words, CAPS[kind]])
@@ -86,6 +98,9 @@ func _initialize() -> void:
 				_report(id + " intro subject", row.get("subject") is String and intros[zone].has(subject), subject)
 				if intros[zone].has(subject):
 					intros[zone][subject] += 1
+	var live_digest := "\n".join(rewritten_texts).sha256_text()
+	_report("rewritten text count", rewritten_texts.size() == 48, "%d texts; need 48" % rewritten_texts.size())
+	_report("world 2/3 rewritten", live_digest != OLD_DIGEST, "old %s; live %s" % [OLD_DIGEST, live_digest])
 	for zone in ZONES:
 		_report(zone + " notes", notes[zone] == 7, "%d notes; need 7" % notes[zone])
 		_report(zone + " one exchange", exchanges[zone].size() == 1, "%d exchanges" % exchanges[zone].size())
