@@ -66,7 +66,7 @@ Cost: phase A workflow 18 agents, 1.48M subagent tokens, 24.4 min wall; readme w
 
 9. Read the ending page copy (RETURN TRIP ENTERED, five log lines, "Filed by the bay crew.") and the three new epitaphs.
 10. Hear the title and summary synth themes.
-11. Cold-launch the new export tarball (01aa202).
+11. Cold-launch the new export tarball (01aa202): the numbered steps are in [SITTING.md](../SITTING.md#cold-launch-the-exported-alpha).
 12. Eye-check the companion ready pip colour.
 
 ## Wave 12 landed (2026-10-05, d300a77)
