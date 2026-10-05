@@ -13,6 +13,7 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Trees := preload("res://src/core/upgrade_tree.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
+const ClassPreview := preload("res://src/ui/class_preview.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Tally's presentation: ledger cream and brass, punched program cards, and a
@@ -76,6 +77,7 @@ func _process(_delta: float) -> bool:
 	_check_motif()
 	_check_feel()
 	_check_ticks()
+	_check_preview()
 	quit(_t.verdict())
 	return true
 
@@ -241,3 +243,22 @@ func _check_ticks() -> void:
 		counts.append(ind._tris.get_faces().size())
 		ind.free()
 	_t.check("square ticks draw", counts[0] > counts[1], "vertices with square ticks %d, without %d" % counts)
+
+
+func _check_preview() -> void:
+	var preview := ClassPreview.new(ClassDef.by_id("tally"))
+	for id in ["plate0", "plate1", "plate2", "surge", "stamp", "slam"]:
+		_t.check("preview " + id, preview._props.has(id), "has its own Tally prop")
+	_t.check("preview no borrowed props", not preview._props.has("lane") and not preview._props.has("post"), "no cannon lane or Sable post")
+	_t.eq("preview rest", ClassPreview.REST["tally"], 0.3)
+	for phase in [[0.5, "surge"], [0.78, "stamp"], [0.78, "slam"]]:
+		preview._pose(phase[0])
+		_t.check("preview visible " + phase[1], preview._props[phase[1]].visible, "visible at %.2f" % phase[0])
+	var props := ["plate0", "plate1", "plate2"]
+	preview._pose(0.3)
+	var climbing := props.filter(func(id): return preview._props[id].visible)
+	preview._pose(0.95)
+	var resting := props.filter(func(id): return preview._props[id].visible)
+	_t.check("preview plates", not climbing.is_empty() and resting.is_empty(),
+		"visible at 0.30 %s, at 0.95 %s" % [climbing, resting])
+	preview.free()
