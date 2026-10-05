@@ -67,15 +67,13 @@ static func all() -> Array[Resource]:
 			"color": KEST_COLOR, "shape": "burst", "motif": "kest", "sound": "slam_boom",
 			"bible_home": "Fuse, directed casting and local pressure",
 			"starter": false, "synergy_hooks": PackedStringArray(["on_cloak_crit", "on_rocket_jump", "on_chain_detonation"])}),
-		# PLACEHOLDER (alpha wave 5): Tarn's articulated-claw kit is not built. The row borrows
-		# Rivet's accepted kit shell (abilities, shape, sound) under its own name and colour
-		# until the claw kit lands; it is locked behind Brindle (achievements.gd).
-		make({"id": "tarn", "display_name": "Tarn", "role": "Claw bruiser (placeholder kit)", "species": "badger",
-			"pitch": "Placeholder kit on Rivet's shell. The claw arrives later.",
-			"weapon_id": "rapid_laser", "movement_id": "overdrive_sprint", "special_id": "overdrive_blast", "smash_id": "shockwave_skid",
+		# Motif, sound and shape stay on Rivet's until the look and sound unit (wave 15) lands.
+		make({"id": "tarn", "display_name": "Tarn", "role": "Claw bruiser", "species": "tiger",
+			"pitch": "Plant a claw and pull yourself into the fight. Clamp what is close, then rend it with heavy sweeps.",
+			"weapon_id": "claw_sweep", "movement_id": "claw_pull", "special_id": "clamp", "smash_id": "rend_slam",
 			"color": TARN_COLOR, "shape": "chevron", "motif": "rivet", "sound": "boost_whoosh",
-			"bible_home": "Tarn, articulated claw melee (placeholder shell)",
-			"starter": false, "synergy_hooks": PackedStringArray(["on_sprint_start", "on_blast_release", "on_cc_ignored"])}),
+			"bible_home": "Tarn, articulated claw melee",
+			"starter": false, "synergy_hooks": PackedStringArray(["on_claw_pull", "on_clamp_catch", "on_rend_landing"])}),
 	]
 	return list
 

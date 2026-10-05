@@ -6,6 +6,7 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const Sable := preload("res://src/core/trees/sable.gd")
 const Rivet := preload("res://src/core/trees/rivet.gd")
 const Kest := preload("res://src/core/trees/kest.gd")
+const Tarn := preload("res://src/core/trees/tarn.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
@@ -33,9 +34,9 @@ const SIZE := 30
 const WORLD_ONE_DEPTHS := 2
 const WORLD_ONE_SIZE := 6
 const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES,
-	"tarn": Rivet.NODES}  # placeholder: Tarn borrows Rivet's tree until the claw kit lands
+	"tarn": Tarn.NODES}
 # Each pilot declares NODES_WORLD_ONE in the same heap order as its full tree.
-const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Rivet}
+const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Tarn}
 const KEYS := ["weapon", "movement", "special", "smash"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.
@@ -222,7 +223,7 @@ static func safe_pick_problems(for_class: String, n: Dictionary, earlier: Array 
 
 
 # Visit every node with its actual ancestor picks. The world-one offer profile has
-# only six reachable nodes; the full profile checks all thirty, including Tarn's copy.
+# only six reachable nodes; the full profile checks all thirty, Tarn's included.
 static func safe_growth_problems(for_class: String, world_one := false) -> Array[String]:
 	var out: Array[String] = []
 	var list := nodes(for_class, world_one)

@@ -2,7 +2,7 @@ extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
-# All 48 end builds (16 per class) played with every key against enemies, one child
+# All 64 end builds (16 per class) played with every key against enemies, one child
 # process per class in parallel (tests/trees/tree_play_run.gd). A class passes when its
 # child exits 0, every build leaves the ball and enemies finite, and its log holds no
 # script error, so every node's code path that the rota reaches ran clean.
@@ -15,7 +15,7 @@ const TIMEOUT_S := 110.0
 
 func _initialize() -> void:
 	var jobs := []
-	for index in 3:
+	for index in 4:
 		jobs.append({"script": "res://tests/trees/tree_play_run.gd", "args": ["--class=%d" % index]})
 	var results := ChildRuns.run(jobs, TIMEOUT_S)
 	var failures := 0

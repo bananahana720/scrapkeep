@@ -63,10 +63,18 @@ func _rows() -> void:
 			and AbilityState.ABILITIES.has(def.special_id) and AbilityState.ABILITIES.has(def.smash_id)
 		colours[def.color.to_html()] = true
 	var motifs := rows.map(func(d): return d.motif)
-	# Tarn (wave 5) is the fourth row, a placeholder on Rivet's motif and ability shell, in its own colour.
+	# 2026-10-05: Tarn (pil-G1, wave 14) is the fourth row with its own claw kit and colour; its motif is pil-G3's (wave 15).
 	_report("four rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn"] and complete and colours.size() == 4 \
 			and motifs == ["sable", "rivet", "kest", "rivet"],
 		"classes %s, every field set, shapes from the event vocabulary, four colours, none HAZARD, motif ids %s" % [ids, motifs])
+	var tarn: Resource = ClassDef.by_id("tarn")
+	var rivet: Resource = ClassDef.by_id("runner_gunner")
+	var tarn_ids := [tarn.weapon_id, tarn.movement_id, tarn.special_id, tarn.smash_id]
+	var rivet_ids := [rivet.weapon_id, rivet.movement_id, rivet.special_id, rivet.smash_id]
+	var disjoint := tarn_ids.all(func(i): return not i in rivet_ids)
+	var prose := (String(tarn.role) + " " + String(tarn.pitch) + " " + String(tarn.bible_home)).to_lower()
+	_report("tarn is its own kit", disjoint and not prose.contains("placeholder") and Weapons.color(tarn.weapon_id) == ClassDef.TARN_COLOR,
+		"Tarn ids %s share none with Rivet's %s; no placeholder prose; claw strikes in the class colour" % [tarn_ids, rivet_ids])
 	var one_source := EventKinds.color("vault_kicked") == ClassDef.SABLE_COLOR \
 		and EventKinds.color("sprint_started") == ClassDef.RIVET_COLOR and EventKinds.color("sticky_detonated") == ClassDef.KEST_COLOR
 	_report("one colour source", one_source and Weapons.color(Weapons.RAPID_LASER) == ClassDef.RIVET_COLOR \
@@ -120,6 +128,15 @@ func _slots() -> void:
 	var cooling: String = state.slots()[1]["state"]
 	state.tick(2.5)
 	var frac: float = state.slots()[1]["cooldown_frac"]
+	var tarn: Resource = ClassDef.by_id("tarn")
+	var tarn_state := AbilityState.new()
+	tarn_state.fit(tarn)
+	var tarn_slots := tarn_state.slots()
+	var want_ids := [tarn.weapon_id, tarn.movement_id, tarn.special_id, tarn.smash_id]
+	var tarn_ids := tarn_slots.map(func(s): return s["id"])
+	var tarn_keys := tarn_slots.map(func(s): return s["key"])
+	_report("tarn slots", tarn_slots.size() == 4 and tarn_ids == want_ids and tarn_keys == ["LMB", "RMB", "F", "Ctrl"],
+		"Tarn's four slots %s on keys %s" % [tarn_ids, tarn_keys])
 	_report("slot contract", shaped and keys == ["LMB", "RMB", "F", "Ctrl"] and cooling == AbilityState.COOLING and is_equal_approx(frac, 0.5),
 		"4 slots with %s; keys %s; a spent sprint reads %s, half recharged reads cooldown_frac %.2f" % [SLOT_FIELDS, keys, cooling, frac])
 

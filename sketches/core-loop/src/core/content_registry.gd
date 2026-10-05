@@ -82,15 +82,15 @@ const GOLDEN_HASHES := {
 	"event_kinds.WORLD_ROWS": "686afd81f6d889e71870e154c32759dbf7bd738dd309c20b69567810ebbe0a4f",  # 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
-	"event_kinds.IMPACT": "480bce14f4ace39fb09b787961787a72362ffc1455125222dbb310a02eb83f1e",
+	"event_kinds.IMPACT": "6eb2d2a7620d340c801c4ebb4b7c79668a963867c5941590fe1909fc2080dab4",  # 2026-10-05 (alpha wave 14 tarn-kit): claw and clamp rows
 	"event_kinds.REACTIONS": "d69f61edda9075f25e0724226f87be0d35cb9688f1d840b76da4003371b92189",
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
-	"upgrade_tree.TREES": "30202fb50a25f663f44faf5e70a5de0aeea8f37614ac8cbef68d9005334d1412",
-	"upgrade_tree.WORLD_ONE_NODES": "4b06d53525e04c05ca15dcc4c857b3f26ee13fd08b8f103910d1d7b360e37cb0",
+	"upgrade_tree.TREES": "1b8c381ddeeaed434f76fbc70324e1ef8d7ea0bafd3c4246ea05a93013bf1212",  # 2026-10-05 (alpha wave 14 tarn-tree): Tarn's own tree
+	"upgrade_tree.WORLD_ONE_NODES": "e19eeab29b794bcc4712f1edbe7e1a4eec85db543cea9ad653395a2da3d0414e",  # 2026-10-05 (alpha wave 14 tarn-tree): Tarn's own tree
 	"combat.codex_entries.ENTRIES": "d30ff6f6b6d5e2069a71c218f5665edbcfab0761d77754ed4bd90f9b295b3ca4",
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned

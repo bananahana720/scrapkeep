@@ -4,7 +4,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # char_bot_test with the bot taking a random branch at every tree offer: depth 1 at
 # class select, depth 2 when stage 1 clears. tree_bot_test runs one per class with
-# "--seed=N" (0 Sable, 1 Rivet, 2 Kest). It pins world_one_builds off: the base tree gives the
+# "--seed=N" (0 Sable, 1 Rivet, 2 Kest, 3 Tarn). It pins world_one_builds off: the base tree gives the
 # second pick at stage 1's clear, while world-one builds hold it for a calm frame, which a
 # bot that is airborne at the gate never reaches before this run ends.
 

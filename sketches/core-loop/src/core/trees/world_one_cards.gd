@@ -3,8 +3,8 @@ extends RefCounted
 # World-one card copy (--world-one-builds=on), keyed by node id. A pick card shows the row
 # here when the flag is on and one exists, and the node's own `effect` otherwise, so a node
 # without a row (and every card with the flag off) reads exactly as before. Source:
-# design-v3/research/build-systems/BUILD-SYSTEMS.md, the bold line of each node. Sable and
-# Rivet rows join this table in their own units; nothing else needs to change.
+# design-v3/research/build-systems/BUILD-SYSTEMS.md, the bold line of each node. Sable, Kest,
+# Rivet and Tarn rows join this table in their own units; nothing else needs to change.
 
 const ROWS := {
 	# Sable, S1 to S6.
@@ -28,6 +28,13 @@ const ROWS := {
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
 	"r_ram_fins": "Sprint through bodies instead of rebounding.",
 	"r_second_wind": "Bank two sprints. Heavy fins open during sprint.",
+	# Tarn, T1 to T6.
+	"t_long_claw": "Reach two metres farther. Close the gap.",
+	"t_anchor_line": "Every claw pull throws a shockwave.",
+	"t_twin_talons": "Two lighter talons rake each sweep.",
+	"t_heavy_paw": "Sweeps hurl the crowd twice as far.",
+	"t_spare_claw": "Bank two claw pulls.",
+	"t_vice_grip": "Every clamp hands back a claw pull.",
 }
 
 
