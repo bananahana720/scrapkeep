@@ -17,7 +17,7 @@ const PILOTS := {
 	"demolitions_caster": "res://assets/models/pilot_kest_anim.glb",
 	"tarn": "res://assets/models/pilot_sable_anim.glb",  # Tarn: Sable's fox pilot, the nearest silhouette to a tiger, tinted rust
 	"tally": "res://assets/models/pilot_rivet_anim.glb",  # Tally: Rivet's mole pilot, the nearest silhouette to a pack rat, tinted ledger cream
-	"remembered_cannon": "res://assets/models/pilot_kest_anim.glb",  # remembered cannon: Kest's stand-in until pil-G11
+	"remembered_cannon": "res://assets/models/pilot_kest_anim.glb",  # remembered cannon: Kest's pilot rides the rebuilt gun, tinted ancient blue
 }
 
 # VD-01 clear sphere slice. Dresses the greybox in the procedural
@@ -43,7 +43,7 @@ const SHELLS := {
 	"demolitions_caster": "res://assets/models/world_one/shell_kest.glb",
 	"tarn": "res://assets/models/world_one/shell_kest.glb",  # Tarn: Kest's banded shell, the heaviest existing silhouette, tinted rust
 	"tally": "res://assets/models/world_one/shell_sable.glb",  # Tally: Sable's light pod, a caster's shell, tinted ledger cream
-	"remembered_cannon": "res://assets/models/world_one/shell_kest.glb",  # remembered cannon: Kest's stand-in until pil-G11
+	"remembered_cannon": "res://assets/models/world_one/shell_sable.glb",  # remembered cannon: Sable's shell seats the rebuilt gun, tinted ancient blue
 }
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"

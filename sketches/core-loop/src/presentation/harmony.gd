@@ -127,18 +127,20 @@ const MOTIF_HEADS := [[69, 72, 74, 76], [74, 77, 79, 81], [62, 65, 69, 72]]
 # has no cells of its own and quotes the class motif (mind_quote). Tarn's taps test the
 # latch and the long low A tears it loose.
 # Tally counts four strokes up the ledger and strikes the total an octave over home.
+# The cannon plays the Mind's quote of Sable back to front, one note per family.
 const MOTIFS := {
 	"sable": {"family": "class", "cells": [[0, 62, 1], [1, 65, 1], [2, 69, 1], [3, 72, 1], [4, 76, 2]], "voice": "mallet", "band": "bell", "band_octave": 12},
 	"rivet": {"family": "class", "cells": [[0, 69, 1], [1, 69, 1], [2, 69, 1], [4, 74, 2]], "voice": "clav", "band": "clav", "band_octave": 12, "roll": true},
 	"kest": {"family": "class", "cells": [[0, 62, 2], [2, 57, 2], [4, 53, 2], [6, 50, 4]], "voice": "tom", "band": "tom", "band_octave": 12, "boom": true},
 	"tarn": {"family": "class", "cells": [[0, 50, 1], [2, 50, 1], [3, 51, 1], [4, 57, 3]], "voice": "reese", "band": "fbass", "band_octave": 12},
 	"tally": {"family": "class", "cells": [[0, 62, 1], [1, 64, 1], [2, 65, 1], [3, 67, 1], [5, 74, 3]], "voice": "keys", "band": "beep", "band_octave": 0},
+	"cannon": {"family": "class", "cells": [[0, 59, 2], [2, 64, 1], [3, 67, 1], [4, 74, 4]], "voice": "chime", "band": "talk", "band_octave": 0},
 	"fleet": {"family": "fleet", "cells": [[0, 50, 2], [4, 50, 2], [6, 51, 2], [8, 50, 4]], "voice": "brass", "stamps": [0, 4]},
 	"reactor": {"family": "ancient", "cells": [[0, 44, 16], [0, 56, 16]], "voice": "sub"},
 	"swarm": {"family": "ancient", "cells": [[0, 79, 16]], "chord": [74, 79, 84, 89], "voice": "buzz"},
 	"mind": {"family": "ancient", "cells": [], "voice": "chime"},
 }
-const CLASS_MOTIFS := ["sable", "rivet", "kest", "tarn", "tally"]
+const CLASS_MOTIFS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 
 
 static func motif(id: String) -> Dictionary:

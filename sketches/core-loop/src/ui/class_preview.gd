@@ -12,14 +12,15 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 # the whole move loops, the camera trailing the sphere at mid range: Sable hooks a wall pylon, swings on the taut line and launches
 # like a cannonball; Rivet sprints through a crowd with the laser firing, then blasts;
 # Kest lobs sticky charges, blinks out in smoke, draws the line and rides its own blast
-# up, then glides down on its vanes. The motion is scripted here, not the game's ball
+# up, then glides down on its vanes. The remembered cannon calls a lane, kicks back on a
+# split, plates, then rushes and rings the ground. The motion is scripted here, not the game's ball
 # and abilities, which need the whole run around them; the model, colours and shapes
-# are the game's (ring, chevron, burst).
+# are the game's (ring, chevron, burst, lane).
 
 const LOOP := 3.6
 # The loop phase each card holds at rest: the key art's moment.
 const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64, "tarn": 0.3,
-	"remembered_cannon": 0.64}  # remembered cannon: Kest's stand-in until pil-G11
+	"remembered_cannon": 0.22}
 const BOB := 0.08
 const REST_SPIN := 2.5
 # How far the resting pilot turns from its heading toward the camera.
@@ -204,7 +205,7 @@ func _build_props() -> void:
 			for i in 4:
 				_prop("chevron%d" % i, _chevron(), def.color, 1.6)
 			_prop("blast", _torus(0.9, 1.05), def.color, 1.8)
-		"demolitions_caster", "remembered_cannon":  # remembered cannon: Kest's stand-in until pil-G11
+		"demolitions_caster":
 			for i in 3:
 				_prop("charge%d" % i, _sphere(0.24), def.color, 2.0)
 				_prop("boom%d" % i, _burst(), def.color, 2.2)
@@ -213,6 +214,22 @@ func _build_props() -> void:
 			var lane := BoxMesh.new()
 			lane.size = Vector3(1.0, 0.04, 0.9)
 			_prop("lane", lane, def.color, 1.2)
+		"remembered_cannon":
+			var lane := BoxMesh.new()
+			lane.size = Vector3(1.0, 0.04, 1.1)
+			_prop("lane", lane, def.color, 1.2)
+			for i in 2:
+				var split := BoxMesh.new()
+				split.size = Vector3(1.0, 0.04, 0.5)
+				_prop("split%d" % i, split, def.color, 1.0)
+			var plate := CylinderMesh.new()
+			plate.top_radius = 1.6
+			plate.bottom_radius = 1.6
+			plate.height = 0.04
+			plate.radial_segments = 3
+			_prop("plate", plate, def.color, 1.2)
+			_prop("ring", _torus(0.9, 1.05), def.color, 1.8)
+			_prop("bolt", _stick(0.09), def.color, 2.6)
 
 
 func _process(delta: float) -> void:
@@ -249,8 +266,10 @@ func _pose(t: float) -> void:
 			_sable(t)
 		"runner_gunner", "tarn":
 			_rivet(t)
-		"demolitions_caster", "remembered_cannon":  # remembered cannon: Kest's stand-in until pil-G11
+		"demolitions_caster":
 			_kest(t)
+		"remembered_cannon":
+			_cannon(t)
 	_roll()
 
 
@@ -372,6 +391,42 @@ func _kest(t: float) -> void:
 		var node := _pod.get_node_or_null(vane) as Node3D
 		if node != null:
 			node.rotation.z = (1.0 if vane == "VaneL" else -1.0) * glide * PI * 0.5
+
+
+func _cannon(t: float) -> void:
+	var start := Vector3(-3.0, 1.0, 0.4)
+	var kicked := start - Vector3(2.4, 0.0, 0.0)
+	var landing := start + Vector3(1.5, 0.0, 0.0)
+	if t < 0.3:
+		ball.position = start
+	elif t < 0.42:
+		ball.position = start.lerp(kicked, _ease_out(_span(t, 0.3, 0.42)))
+	elif t < 0.7:
+		ball.position = kicked
+	elif t < 0.84:
+		ball.position = _arc(kicked, landing, 2.0, _span(t, 0.7, 0.84))
+	elif t < 0.96:
+		ball.position = landing
+	else:
+		ball.position = landing.lerp(start, _span(t, 0.96, 1.0))
+	if t > 0.05 and t < 0.5:
+		var length := 7.0 * _span(t, 0.05, 0.2)
+		_show("lane", start + Vector3(length * 0.5, -0.95, 0.0), Vector3(maxf(length, 0.01), 1.0, 1.0), 0.6)
+	if t >= 0.2 and t < 0.3:
+		var at := start + Vector3(7.0 * _span(t, 0.2, 0.3), 0.0, 0.0)
+		_line("bolt", at, at + Vector3(1.4, 0.0, 0.0))
+	if t >= 0.3 and t < 0.55:
+		var alpha := 1.0 - _span(t, 0.42, 0.55)
+		for i in 2:
+			var side := 1.0 if i == 0 else -1.0
+			_show("split%d" % i, ball.position + Vector3(-1.4, -0.95, side * 0.6), Vector3(2.8, 1.0, 1.0), alpha,
+				Vector3(0.0, side * 0.35, 0.0))
+	if t >= 0.5 and t < 0.7:
+		var scale_by := lerpf(0.3, 1.0, _span(t, 0.5, 0.6))
+		_show("plate", ball.position + Vector3(1.4, -0.95, 0.0), Vector3.ONE * scale_by, 0.6 * (1.0 - _span(t, 0.6, 0.7)))
+	if t >= 0.84 and t < 0.96:
+		var f := _span(t, 0.84, 0.96)
+		_show("ring", landing + Vector3(0.0, -0.8, 0.0), Vector3.ONE * lerpf(0.8, 4.0, f), 1.0 - f)
 
 
 func _roll() -> void:

@@ -688,6 +688,71 @@ register(
     plate_rounded_square, g_ab_tally_balance,
 )
 
+# ---- Remembered cannon abilities (4) -----------------------------------------
+
+
+def g_ab_cannon_weapon():
+    return [
+        line(24, 25, 47, 25, stroke=ANCIENT, width=PRIMARY),
+        line(24, 39, 47, 39, stroke=ANCIENT, width=PRIMARY),
+        chevron(48, 32, 10, 24, stroke=ANCIENT, width=PRIMARY),
+        ring(17, 32, 7, stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_cannon_weapon", "Cannon lane (LMB)",
+    "A bone ball calling two ancient-blue rails toward a right-pointing chevron",
+    plate_rounded_square, g_ab_cannon_weapon,
+)
+
+
+def g_ab_cannon_move():
+    return [
+        line(36, 30, 14, 38, stroke=ANCIENT, width=PRIMARY),
+        line(34, 32, 25, 52, stroke=ANCIENT, width=PRIMARY),
+        ring(40, 23, 7, stroke=BONE, width=DETAIL),
+        path("M44 11 L53 11 L53 20", stroke=BONE, width=DETAIL),
+    ]
+
+
+register(
+    "ab_cannon_move", "Recoil split (Shift)",
+    "A bone ball moving up-right with two ancient-blue rails splitting behind it",
+    plate_rounded_square, g_ab_cannon_move,
+)
+
+
+def g_ab_cannon_special():
+    return [
+        path("M16 48 L24 13 A36 36 0 0 1 51 39 Z", stroke=ANCIENT, width=PRIMARY),
+        path("M26 29 A22 22 0 0 1 37 39", stroke=BONE, width=DETAIL),
+        dot(16, 48, 4, fill=BONE),
+    ]
+
+
+register(
+    "ab_cannon_special", "Cannon plate (F)",
+    "An ancient-blue wedge with a bone apex and an inner wave-front arc",
+    plate_rounded_square, g_ab_cannon_special,
+)
+
+
+def g_ab_cannon_smash():
+    return [
+        line(10, 49, 54, 49, stroke=BONE, width=DETAIL),
+        ring(32, 34, 15, stroke=ANCIENT, width=PRIMARY),
+        dot(32, 34, 4, fill=BONE),
+    ]
+
+
+register(
+    "ab_cannon_smash", "Rush ring (Ctrl)",
+    "An ancient-blue ring resting on a bone ground line around its impact dot",
+    plate_rounded_square, g_ab_cannon_smash,
+)
+
+
 # ---- Key glyphs (10) ---------------------------------------------------------
 
 

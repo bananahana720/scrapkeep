@@ -63,10 +63,9 @@ func _rows() -> void:
 			and AbilityState.ABILITIES.has(def.special_id) and AbilityState.ABILITIES.has(def.smash_id)
 		colours[def.color.to_html()] = true
 	var motifs := rows.map(func(d): return d.motif)
-	# Tarn and Tally (wave 15 and 16 looks) have their own motifs; the remembered cannon
-	# borrows Kest's until its look unit.
+	# The cannon (wave 16 look) has its own motif, shape and colour.
 	_report("six rows", ids == ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"] \
-			and complete and colours.size() == 6 and motifs == ["sable", "rivet", "kest", "tarn", "tally", "kest"],
+			and complete and colours.size() == 6 and motifs == ["sable", "rivet", "kest", "tarn", "tally", "cannon"],
 		"classes %s, every field set, shapes from the event vocabulary, six colours, none HAZARD, motif ids %s" % [ids, motifs])
 	var tarn: Resource = ClassDef.by_id("tarn")
 	var rivet: Resource = ClassDef.by_id("runner_gunner")
