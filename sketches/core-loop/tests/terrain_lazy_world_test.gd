@@ -49,6 +49,14 @@ func _table(table, label: String) -> void:
 	var t0 := Time.get_ticks_usec()
 	terrain.build(holder)
 	var build_ms := _ms(t0)
+	# 2026-10-04 (wave 11 review): red against a base that lacks the new map ids, where _init's
+	# assert leaves a short maps array and is_built clamps the stage.
+	_t.check("%s: one map object per row" % label, terrain.maps.size() == table.DEFS.size(),
+		"%d maps for %d rows" % [terrain.maps.size(), table.DEFS.size()])
+	for i in range(table.DEFS.size()):
+		var want: String = Terrain.MAPS[table.DEFS[i]["map"]].resource_path.get_file()
+		var got: String = terrain.map_for(i + 1).get_script().resource_path.get_file()
+		_t.check("%s: row %d loads %s" % [label, i + 1, want], got == want, "got %s" % got)
 	_t.check("%s: world 1 unaffected: stage 1 built at setup" % label, terrain.is_built(1))
 	_t.check("%s: world 1 unaffected: stage 2 built at setup" % label, terrain.is_built(2))
 	for i in [3, 4, 5, 6]:
