@@ -65,7 +65,6 @@ const ENTRIES := [
 		"clue": "one of the Mind's hands + your favourite move",
 		"text": "The Mind's hands brace against the move you use most this run, and show you which. Change verbs while its lens is open.",
 	},
-	# The Dig and Highdraft tricks are detector-pending; declarations show their hints.
 	{
 		"id": "burrow_lane", "name": "Off the Bulge",
 		"hint": "The floor gives away what is coming through it.",

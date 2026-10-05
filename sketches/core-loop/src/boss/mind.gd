@@ -20,7 +20,8 @@ const HAND_PHASE := 2
 const HAND_OFFSET := 10.0
 const HAND_EDGE := 4.0
 
-# Committed attacks: [{hazards, family, landed}], oldest first.
+# Committed attacks: [{hazards, family, landed, aimed}], oldest first; aimed is whether the
+# ball stood inside the attack when it committed.
 var attacks: Array = []
 # Every attack that landed: [{id, frame}].
 var landings: Array = []
@@ -30,11 +31,14 @@ var attack_count := 0
 var _attack_clock := 0.0
 var _family := ""
 var _plate_verb := ""
+# Fight clock until which the last plate's weak window stays open.
+var _plate_until := -INF
 
 
 func setup(ctx_ref) -> void:
 	super(ctx_ref)
 	name = "MindBoss"
+	ctx.events.enemy_struck.connect(_on_enemy_struck)
 
 
 func _row() -> Dictionary:
@@ -55,6 +59,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_attack_clock = 0.0
 	_family = ""
 	_plate_verb = ""
+	_plate_until = -INF
 
 
 func exit_arena() -> void:
@@ -93,16 +98,21 @@ func _on_warden_died(at: Vector3, scrap: int) -> void:
 	super(at, scrap)
 
 
-func _commit_attack() -> void:
+# family names one family to commit; empty lets the phase choose.
+func _commit_attack(family := "") -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var center := pad.global_position if is_instance_valid(pad) else warden.global_position
 	center.y = _top()
 	attack_count += 1
-	var descriptors: Array = MindAttacks.commit_any(attack_count * 7919 + ctx.run.stage, ball, center, phase, PAD_RADIUS)
+	var seed: int = attack_count * 7919 + ctx.run.stage
+	var descriptors: Array = MindAttacks.commit_any(seed, ball, center, phase, PAD_RADIUS) if family == "" \
+			else MindAttacks.commit(family, seed, ball, center, phase, PAD_RADIUS)
 	if MindAttacks.escape_point(descriptors, ball, ctx.tuning.f("cruise"), center, PAD_RADIUS) == null:
 		push_warning("mind: attack %d leaves no escape point" % attack_count)
 	var laid: Array = []
+	var aimed := false
 	for d in descriptors:
+		aimed = aimed or MindAttacks.covers(d, ball)
 		var h = MindAttacks.build(d)
 		h.ground = Callable(self, "ground_height_at")
 		ctx.root.add_child(h)
@@ -110,8 +120,9 @@ func _commit_attack() -> void:
 		_family = String(d["family"])
 		if d.has("verb"):
 			_plate_verb = String(d["verb"])
+			_plate_until = clock + h.warn_seconds + h.live_seconds + MindAttacks.PLATE_WINDOW
 		ctx.events.boss_attack_telegraphed.emit(String(d["id"]), h.warn_seconds)
-	attacks.append({"hazards": laid, "family": _family, "landed": false})
+	attacks.append({"hazards": laid, "family": _family, "landed": false, "aimed": aimed})
 
 
 # Ages every hazard like Brindle's loop; a live hazard holding the ball lands its attack
@@ -133,9 +144,20 @@ func _step_attacks(delta: float) -> void:
 				done = false
 		if done:
 			_free_hazards(attack)
+			if attack["aimed"] and not attack["landed"] and attack["family"] in ["lane", "split_lane", "rush"]:
+				_discover("mind_" + String(attack["family"]), ball)
 		else:
 			kept.append(attack)
 	attacks = kept
+
+
+# A contact on the staggered Warden inside the plate's weak window, with a verb other than
+# the one the plate braced.
+func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	if state != FIGHT or enemy != warden or not warden.staggered() or clock > _plate_until:
+		return
+	if kind in Rules.CONTACT_KINDS and kind != _plate_verb:
+		_discover(CodexEntries.MIND_PLATE, ctx.player.ball_position())
 
 
 func _free_hands() -> void:
