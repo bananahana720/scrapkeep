@@ -2,6 +2,40 @@
 
 About 30 to 40 minutes. One zone, one Warden, the slice table. This is the first build where everything from the alpha plan's first milestone is in: the harpoon for every pilot, the Warden's guard and core fight, packs, side activities, and growth that matters.
 
+## Cold launch the exported alpha
+
+This is separate from the checkpoint 1 steps below. It checks that the packaged Linux build starts on its own, outside the project, with no Godot editor. Build 01aa202. About five minutes to the first run, then play as long as you like.
+
+1. Open a terminal.
+
+2. Unpack the build into a new folder in your home directory.
+
+   ```bash
+   mkdir -p ~/scrapkeep-cold
+   tar -xzf ~/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/export/01aa202/scrapkeep-core-loop-01aa202.tar.gz -C ~/scrapkeep-cold
+   ```
+
+3. Go into it and read the build's own sheet. Its first line must read `Scrapkeep core-loop alpha (01aa202)`.
+
+   ```bash
+   cd ~/scrapkeep-cold/scrapkeep-core-loop-01aa202
+   cat HOW-TO-RUN.txt
+   ```
+
+4. Launch with a fresh save folder. Your normal save is not touched, so skip the rename in step 4 of HOW-TO-RUN.txt. The first launch builds shaders and takes longer.
+
+   ```bash
+   XDG_DATA_HOME="$HOME/.local/share/scrapkeep-cold-01aa202" ./core-loop.x86_64
+   ```
+
+5. Check the title screen: amber **SCRAPKEEP: FIRST RUN** with the buttons Start, Help, Achievements and Settings. There is no Continue button. If you see Continue or New run, the save is not fresh: close the game and repeat step 4 exactly.
+
+6. Press H to read how to play, then close it. Press Space to start and pick any open pilot.
+
+7. Play. The run is won by beating the Mind at the end of Highdraft: the crown, stage 6. Stop whenever you like.
+
+8. Close the game window. Tell me "cold launch done" with three things: did it open, did you hear music on the first stage, and how far you got. If it did not open, paste the last 20 lines from the terminal.
+
 ## What is new since your lab runs
 
 - **One harpoon for every pilot.** Right mouse bites and holds, release flings. Ctrl smashes the enemy on the line, or winches you to a post. A held line on an enemy reels you in.
