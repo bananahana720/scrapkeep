@@ -1,6 +1,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
+const Terrain := preload("res://src/world/terrain.gd")
 const Contraptions := preload("res://src/world/contraptions.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const ZoneSchema := preload("res://src/world/zone_schema.gd")
@@ -27,6 +28,7 @@ const TOP_ABOVE_DECK := 24.0
 const CHAIN_RATIO := 1.4
 const ROUTE_CLEARANCE := 1.0
 const ROUTE_GRADE := 0.5
+const RAMP_STEP := 1.5
 const BETWEEN := Vector2(-60.0, 20.0)
 const KEYS := ["spawn", "mid", "west", "vault", "beacon"]
 
@@ -63,6 +65,7 @@ func _initialize() -> void:
 	_check_islands(map)
 	_check_route()
 	_check_placements(map)
+	_check_ramps(map)
 	_plan_falls(map)
 
 
@@ -175,6 +178,37 @@ func _check_placements(map) -> void:
 	var on_tops: bool = map.activity_sites.all(func(s): return map.sample(s["at"].x, s["at"].y)[0] >= Highdraft.NET_H + TOP_ABOVE_DECK)
 	_t.check("(7) one camp and one combat site, both on island tops", ids.count("enemy_camp") == 1
 		and (ids.has("ambush_altar") or ids.has("hauler_bounty")) and on_tops, "sites %s, on tops %s" % [ids, on_tops])
+
+
+# Every ramp's centre line in the map's height field, metre by metre from the foot to the
+# rim, rises without a drop from the deck to the island top, no step over RAMP_STEP; the
+# terrain beside it, away from the bridge and past one grid cell, is still the deck.
+func _check_ramps(map) -> void:
+	var ramps: Array = map._ramps()
+	_t.check("(10) the beacon island has a ramp", ramps.any(func(r): return r["island"] == "beacon"), str(ramps))
+	for ramp in ramps:
+		var line: Dictionary = map.ramp_line(ramp)
+		var foot: Vector2 = line["foot"]
+		var rim: Vector2 = line["rim"]
+		var steps := int(ceil(foot.distance_to(rim)))
+		var heights: Array[float] = []
+		for s in steps + 1:
+			var p := foot.lerp(rim, float(s) / steps)
+			heights.append(map.sample(p.x, p.y)[0])
+		var drop := 0.0
+		var step := 0.0
+		for k in range(1, heights.size()):
+			drop = maxf(drop, heights[k - 1] - heights[k])
+			step = maxf(step, absf(heights[k] - heights[k - 1]))
+		var name := "%s ramp side %+.0f" % [ramp["island"], ramp["side"]]
+		_t.near("(10) %s starts on the deck" % name, heights[0], Highdraft.NET_H, 0.01)
+		_t.near("(10) %s ends at the island top" % name, heights[-1], float(line["top"]), 0.01)
+		_t.check("(10) %s rises monotonically, steps <= %.1f m" % [name, RAMP_STEP], drop <= 0.001 and step <= RAMP_STEP,
+			"%d samples over %.1f m, worst drop %.3f, worst step %.3f" % [heights.size(), foot.distance_to(rim), drop, step])
+		var axis: Vector2 = (foot - rim).normalized()
+		var out := Vector2(-axis.y, axis.x) * signf(ramp["side"]) * (Highdraft.RAMP_HALF + Highdraft.RAMP_SKIRT + Terrain.STEP + 1.0)
+		var beside: Vector2 = foot.lerp(rim, 0.5) + out
+		_t.near("(10) deck beside the %s at %s" % [name, str(beside)], _terrain.height(beside.x, beside.y), Highdraft.NET_H, 0.001)
 
 
 func _build_contraptions(map) -> void:

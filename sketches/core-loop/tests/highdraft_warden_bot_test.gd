@@ -9,7 +9,8 @@ const T := preload("res://tests/support/t.gd")
 
 # The 2026-10-05 soak's Highdraft stall: a skipper jumped to stage 5 (the choir mind Warden on
 # the beacon island) must break the Warden within BUDGET_SECONDS of game time. Seed 4 is the
-# soak's skipper repro, which ended on the net deck under the island until the watchdog.
+# soak's skipper repro, which ended on the net deck under the island until the watchdog; the
+# beacon island's ramps (map_highdraft.gd RAMPS) are its way back up. Without them it fails.
 #
 # Evidence limit: one seed and one class on the default table; it says nothing about the
 # other pilots, the completionist, or feel.
@@ -25,6 +26,8 @@ var _game
 var _driver
 var _seconds := 0.0
 var _done := false
+var _scrap_serial := 0
+var _counter_serial := 0
 
 
 func _initialize() -> void:
@@ -39,6 +42,7 @@ func _initialize() -> void:
 		quit(_t.verdict())
 		return
 	SimClock.ticks = true
+	node_added.connect(_on_node_added)
 	seed(SEED)
 	_game = Game.new()
 	_game.test_mode = true
@@ -50,6 +54,7 @@ func _physics_process(delta: float) -> bool:
 		return false
 	if _driver == null:
 		_driver = BotDriver.new(_game, "skipper", SEED)
+		_game.presentation.audio.bake_now()
 		_driver.start()
 		_game.flow.enter_stage(JUMP_STAGE, Vector3.ZERO, false)
 		return false
@@ -58,6 +63,19 @@ func _physics_process(delta: float) -> bool:
 	if over or _driver.warden_broken() or _seconds >= BUDGET_SECONDS:
 		_finish()
 	return false
+
+
+# The spawn-order signs tools/bot_run.gd sets, so the bot's strafe and scrap sides do not
+# hang on object IDs and the run repeats.
+func _on_node_added(node: Node) -> void:
+	if _game == null or _game.build == null:
+		return
+	if "_strafe" in node:
+		node.set_meta("bot_strafe", 1.0 if (_counter_serial + SEED) % 2 == 0 else -1.0)
+		_counter_serial += 1
+	if node.get_parent() == _game.build.scrap:
+		node.set_meta("bot_side", 1.0 if (_scrap_serial + SEED) % 2 == 0 else -1.0)
+		_scrap_serial += 1
 
 
 func _finish() -> void:

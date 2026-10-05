@@ -23,6 +23,20 @@ const SKIRT := 4.0
 const BRIDGES := [["spawn", "mid"], ["mid", "beacon"]]
 const BRIDGE_HALF := 4.0
 const BRIDGE_SKIRT := 3.0
+# Ramps from the deck up to an island rim, so a ball without glide that falls to the net can
+# climb back. Each runs beside the bridge from its island toward the neighbour island, side
+# metres off the bridge's centre line, and rises at RAMP_GRADE (14 m over 44 m on the beacon
+# island), a grade the ball's drive climbs (drive_accel 34 against gravity 26 times the slope's
+# sine, about 7.9). The beacon pair are the bridge mouth's shoulders: a ball that rolls off the
+# bridge lands on one, or on the deck at its foot, and climbs it toward the Warden. A ramp
+# set apart from the bridge leaves a pocket between the two skirts that traps the ball.
+const RAMPS := [
+	{"island": "beacon", "toward": "mid", "side": 8.0},
+	{"island": "beacon", "toward": "mid", "side": -8.0},
+]
+const RAMP_HALF := 4.0
+const RAMP_GRADE := 0.32
+const RAMP_SKIRT := 3.0
 const THERMAL_A := Vector2(-40.0, 60.0)
 const THERMAL_B := Vector2(40.0, -20.0)
 const THERMAL_C := Vector2(30.0, -75.0)
@@ -99,6 +113,23 @@ func _posts() -> Array:
 	return POSTS
 
 
+func _ramps() -> Array:
+	return RAMPS
+
+
+# A ramp's centre line: the foot on the deck, the end on the island rim, and the rim height.
+func ramp_line(ramp: Dictionary) -> Dictionary:
+	var isles := _islands()
+	var isle: Dictionary = isles[ramp["island"]]
+	var centre: Vector2 = isle["at"]
+	var axis: Vector2 = ((isles[ramp["toward"]]["at"] as Vector2) - centre).normalized()
+	var side: float = ramp["side"]
+	var radius: float = isle["radius"]
+	var top: float = isle["top"]
+	var rim: Vector2 = centre + axis * sqrt(radius * radius - side * side) + Vector2(-axis.y, axis.x) * side
+	return {"foot": rim + axis * (top - NET_H) / RAMP_GRADE, "rim": rim, "top": top}
+
+
 func build_props(parent: Node3D, ground: Callable) -> void:
 	for post in _posts():
 		var at: Vector2 = post["at"]
@@ -134,6 +165,16 @@ func sample(x: float, z: float) -> Array:
 		var bh := _skirt(top, p.distance_to(near) - BRIDGE_HALF, BRIDGE_SKIRT)
 		if bh > h:
 			h = bh
+			tint = Palette.RUST
+	for ramp in _ramps():
+		var line := ramp_line(ramp)
+		var foot: Vector2 = line["foot"]
+		var rim: Vector2 = line["rim"]
+		var near := Geometry2D.get_closest_point_to_segment(p, foot, rim)
+		var rise := lerpf(NET_H, line["top"], (near - foot).length() / foot.distance_to(rim))
+		var rh := _skirt(rise, p.distance_to(near) - RAMP_HALF, RAMP_SKIRT)
+		if rh > h:
+			h = rh
 			tint = Palette.RUST
 	return [h, tint]
 
