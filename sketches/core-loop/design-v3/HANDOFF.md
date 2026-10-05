@@ -4,26 +4,26 @@
 
 ## Wave 11 landed (candidate cand/alpha-w11 at 047c51c, gate not yet read)
 
-The wave 11 candidate carries three worlds and six named zones end to end. Heads below are the branch tips in git on 2026-10-04; the verdict column was not supplied to this unit (the coordinator's unit table was a placeholder), so each verdict reads "coordinator to record" and the gate story waits for the gate.
+The wave 11 candidate carries three worlds and six named zones end to end. Heads below are the unit heads in git; verdicts are the coordinator's, 2026-10-05, and the gate story waits for the gate.
 
-- table-swap-second-zones (wt/alpha-w11-table-swap-second-zones, 40c9c27): rows 4 and 6 run on dig_deep and highdraft_crown. Verdict: coordinator to record.
-- terrain-lazy-perf (wt/alpha-w11-terrain-lazy-perf, ee65af6): map-identity checks; perf test baselined. Verdict: coordinator to record.
-- tree-depth-by-world-redo (wt/alpha-w11-tree-depth-by-world-redo, a6b5abb): offers a fresh depth-3/4 pair after the world-one Face Runner. Verdict: coordinator to record.
-- mind-arena-bound (wt/alpha-w11-mind-arena-bound, 8e0bf6f): every Mind hazard and escape point bound to the stub pad. Verdict: coordinator to record.
-- highdraft-fragment-unlock (wt/alpha-w11-highdraft-fragment-unlock, 25a7756): mind_quieted, Tally's third fragment, earned once on beating the Mind. Verdict: coordinator to record.
-- snd-zone-entry-cue (wt/alpha-w11-snd-zone-entry-cue, cfff8c3): world stinger on the beat when a world is entered. Verdict: coordinator to record.
-- boss-music-sections (wt/alpha-w11-boss-music-sections, 016339b, Sol): boss music sections per boss id for the Waking and the Mind. Verdict: coordinator to record.
-- w23-lore-final (wt/alpha-w11-w23-lore-final, e0cc629, Sol): final world 2 and 3 lore rows in the approved crew-log voice. Verdict: coordinator to record.
-- relics-per-world (wt/alpha-w11-relics-per-world, 3890562): six relics per world, one relic cache on each world-2 and world-3 map. Verdict: coordinator to record.
-- run-save-worlds (wt/alpha-w11-run-save-worlds, 6d97612): resume at worlds 2 and 3, restart parity across three ways back. Verdict: coordinator to record.
-- ui-worlds-three (wt/alpha-w11-ui-worlds-three, 84c09f7): worlds 2 and 3 cards, victory and summary on the default table. Verdict: coordinator to record.
-- highdraft-choir-stall (wt/alpha-w11-highdraft-choir-stall, ed6d02a): Highdraft beacon ramps so a fallen ball can climb back; the bot runup fix is d78217f.
-- pin-step-weight (wt/alpha-w11-pin-step-weight, 5599f71): _pin_step skips a victim with no weight (Brindle targets).
-- bot-soak (wt/alpha-w11-bot-soak, 4d2e3b6, Codex desktop agent): 48-run soak findings in design-v3/soak-2026-10-05.md.
-- w23-posture-bands (wt/alpha-w11-w23-posture-bands): branch tip equals 047c51c, so no unit commit exists in git at this base.
-- contracts-and-handoff (this unit): CONTRACTS.md boss, breach, net deck, row-level pack, table-row and relic sections; DESIGN-V3 built-versus-planned table; this section; warden_look.gd comment.
+- table-swap-second-zones (wt/alpha-w11-table-swap-second-zones, 40c9c27): rows 4 and 6 run on dig_deep and highdraft_crown. Verdict: PASS+NOTES.
+- terrain-lazy-perf (wt/alpha-w11-terrain-lazy-perf, ee65af6): map-identity checks; perf test baselined. Verdict: PASS+NOTES (after the lint carve-out fix round; the perf test is in the L1 baseline).
+- tree-depth-by-world-redo (wt/alpha-w11-tree-depth-by-world-redo, a6b5abb): offers a fresh depth-3/4 pair after the world-one Face Runner. Verdict: PASS.
+- mind-arena-bound (wt/alpha-w11-mind-arena-bound, 8e0bf6f): every Mind hazard and escape point bound to the stub pad. Verdict: PASS+NOTES.
+- highdraft-fragment-unlock (wt/alpha-w11-highdraft-fragment-unlock, 25a7756): mind_quieted, Tally's third fragment, earned once on beating the Mind. Verdict: PASS.
+- snd-zone-entry-cue (wt/alpha-w11-snd-zone-entry-cue, cfff8c3): world stinger on the beat when a world is entered. Verdict: PASS.
+- boss-music-sections (wt/alpha-w11-boss-music-sections, 016339b, Sol): boss music sections per boss id for the Waking and the Mind. Verdict: PASS.
+- w23-lore-final (wt/alpha-w11-w23-lore-final, e0cc629, Sol): final world 2 and 3 lore rows in the approved crew-log voice. Verdict: PASS (Path A voice approved by owner).
+- relics-per-world (wt/alpha-w11-relics-per-world, 3890562): six relics per world, one relic cache on each world-2 and world-3 map. Verdict: PASS+NOTES (Sable slot ruling).
+- run-save-worlds (wt/alpha-w11-run-save-worlds, 6d97612): resume at worlds 2 and 3, restart parity across three ways back. Verdict: PASS+NOTES (New-run .prev ruling).
+- ui-worlds-three (wt/alpha-w11-ui-worlds-three, 84c09f7): worlds 2 and 3 cards, victory and summary on the default table. Verdict: PASS+NOTES.
+- highdraft-choir-stall (wt/alpha-w11-highdraft-choir-stall, ed6d02a): Highdraft beacon ramps on the bridge-mouth shoulders so a fallen ball can climb back; the bot runup fix is d78217f. Verdict: PASS+NOTES.
+- pin-step-weight (wt/alpha-w11-pin-step-weight, 522dd54, the cherry-pick of 5599f71 that is in the candidate): _pin_step skips a victim with no weight (Brindle targets). Verdict: PASS+NOTES.
+- bot-soak (wt/alpha-w11-bot-soak, 4d2e3b6, Codex desktop agent): 48-run soak findings in design-v3/soak-2026-10-05.md. Admitted as docs.
+- w23-posture-bands (wt/alpha-w11-w23-posture-bands, 8e4a313): held on its branch: stage 6, the crown Warden, never breaks and the world 3 boss is unreached; wave 12 unit crown-stall traces it.
+- contracts-and-handoff (this unit, ff587b8, fix round in progress): CONTRACTS.md boss, breach, net deck, row-level pack, table-row and relic sections; DESIGN-V3 built-versus-planned table; this section; warden_look.gd comment.
 
-### Rulings (docs/decisions.tsv)
+### Rulings (coordinator, 2026-10-05; recorded in docs/decisions.tsv at the wave 11 records commit)
 
 - highdraft-ramp: ruling (a), the net deck gets a ramp back onto the beacon island in map_highdraft.gd; the bot runup fix d78217f stays. A dead-end deck a human Sable or Rivet also hits is a map defect (momentum is sacred, quick restart). Coordinator, 2026-10-05.
 - highdraft-ramp placement: on both shoulders of the bridge mouth, not away from it (stalls cluster at both mouth corners; the radial try left a pocket). A seed 2 gate stall after the Warden break is a separate bot defect, logged for wave 12.
@@ -34,7 +34,8 @@ The wave 11 candidate carries three worlds and six named zones end to end. Heads
 
 ### Open after wave 11
 
-- Gate verdicts for the units above and the gate story, for the coordinator to record.
+- The gate story for the candidate, for the coordinator to record.
+- Stage 6 (the crown) is unbroken by the skipper bot on every seed; the world 3 boss is unreached in bot runs. Traced in wave 12 unit crown-stall. The w23 posture bands test is held on its branch until then.
 - Wave 12: spread two Sable relics onto the smash slot; keep the replaced run as run.json.prev; the seed 2 stall after the Warden break (bot defect).
 - Soak findings: design-v3/soak-2026-10-05.md.
 

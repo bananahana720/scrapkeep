@@ -747,7 +747,7 @@ Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The t
 - **Table.** `Worlds.BOSSES` (`src/core/worlds.gd:22-29`) names, for `brindle`, `waking` and `mind`, the module `script`, the `music` section, the `title` and the `built` flag. All three rows are built.
 - **Lookup.** `flow._module_for(world)` (`src/core/flow.gd:141-147`) reads the row's `script`, returns the scene's module for the scene boss, and otherwise loads and sets up the script once and caches it by path in `_row_modules`, shared by every row that names it. `flow.boss_row(world)` (`:167`) is the row, with `boss_row_override` for tests.
 - **Scripts.** Brindle is `src/boss/boss.gd`. `src/boss/waking.gd` and `src/boss/mind.gd` extend `src/boss/stub_boss.gd`, which answers `MODULE` (`stub_boss.gd:45-223`: `active`, `enter_arena`, `exit_arena`, `ground_height_at`, `music_state`, `objective_text`).
-- **The Waking** fights three floors over the stub's pit: `FLOOR_NAMES` Spoil, Seam, Bedrock (`waking.gd:14`), each shattered chunk telegraphs the highest live floor and drops it `FLOOR_WARN` later (`waking.gd:16`, `:65`).
+- **The Waking** fights three floors over the stub's pit: `FLOOR_NAMES` Spoil, Seam, Bedrock (`waking.gd:14`), each shattered chunk telegraphs the highest live floor and drops it `FLOOR_WARN` later (`waking.gd:16`, `:66`).
 - **The Mind** uses the `mind_attacks.gd` families `lane`, `split_lane`, `rush` and `plate` (`mind_attacks.gd:26`), a choir Warden whose stagger braces against the ball's habit (`warden.gd:511-518`; the objective line names the braced kinds, `mind.gd:191-192`) and `mind_hand` spawns from phase 2 (`mind.gd:11`, `:173`).
 
 ### Breach plates
@@ -756,11 +756,11 @@ Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The t
 
 ### Net deck
 
-`src/world/map_highdraft.gd:3` and `:12`: islands stand over a flat net deck at `NET_H` (10.0). Ramps from the deck foot up to each island rim are listed in `RAMPS` (`:33`, `RAMP_HALF` `:37`, `RAMP_GRADE` `:38`), so a ball that falls to the deck can climb back.
+`src/world/map_highdraft.gd:3` and `:12`: islands stand over a flat net deck at `NET_H` (10.0). Only two ramps exist, both on the beacon island's bridge-mouth shoulders, listed in `RAMPS` (`:33-36`, `RAMP_HALF` `:37`, `RAMP_GRADE` `:38`), so a ball that falls to the deck can climb back toward the Warden. `highdraft_crown` inherits them through `_ramps()`; no other island has one.
 
 ### Row-level packs
 
-`world._author_director` (`src/world/world.gd:447-449`) reads the stage row's `packs`, `elite` and `elite_arrival` and falls back to the table's (`ctx.stages.packs()`, `elite()`, `elite_arrival()`). The director spawns only authored packs when any exist.
+`world._author_director` (`src/world/world.gd:448-450`) reads the stage row's `packs`, `elite` and `elite_arrival` and falls back to the table's (`ctx.stages.packs()`, `elite()`, `elite_arrival()`). The director spawns only authored packs when any exist.
 
 ### Table rows 1 to 6
 
@@ -779,7 +779,7 @@ Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
 
 ### Relic spot
 
-`relic_spot` is an optional one-Vector2 map slot (`src/world/zone_schema.gd:7-9`, checked at `:59`). A map that has it gets a relic cache that always offers a relic (`src/world/interact.gd:57-66`), built after the terrain swap so the pedestals read the new ground. `map_dig.gd:45` and `map_dig_deep.gd:48` set it.
+`relic_spot` is an optional one-Vector2 map slot (`src/world/zone_schema.gd:7-9`, checked at `:59`). A map that has it gets a relic cache that always offers a relic (`src/world/interact.gd:57-66`), built after the terrain swap so the pedestals read the new ground. `map_dig.gd:45`, `map_dig_deep.gd:48`, `map_highdraft.gd:59` and `map_highdraft_crown.gd:62` set it.
 
 ## Run store (RS2)
 
