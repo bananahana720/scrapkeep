@@ -116,7 +116,7 @@ func _class_cues() -> void:
 	var ok := true
 	for def in ClassDef.all():
 		var motif: String = def.motif
-		# 2026-10-05 (alpha wave 15 tarn-look): Tarn's own motif; no pilot shares one
+		# 2026-10-05 (alpha wave 15 tarn-look): Tarn's own motif; STAND_IN pilots still share Kest's
 		if def.id in STAND_IN:
 			continue
 		_events.run_started.emit(def.id)
