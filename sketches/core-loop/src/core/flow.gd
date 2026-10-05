@@ -168,6 +168,13 @@ func boss_row(world: int) -> Dictionary:
 	return boss_row_override.get(world, Worlds.boss_of(world))
 
 
+# The run was won over the boss of its table's final world: the summary opens on the ending
+# page. A table that names no boss counts only when its last world is the last of Worlds.ROWS.
+func won_final() -> bool:
+	var world: int = ctx.stages.world_of(ctx.run.stage)
+	var boss_table: bool = ctx.stages.BOSS != "" or world == int(Worlds.ROWS.back()["id"])
+	return run_won and ctx.stages.is_run_last(ctx.run.stage) and bool(boss_row(world).get("built", false)) and boss_table
+
 # The boss that ends a world, or null when that world has none to run: its row is not
 # built, or the scene has no module. A one-world table that names no boss ends with the
 # summary as before.

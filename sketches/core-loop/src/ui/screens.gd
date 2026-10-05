@@ -13,6 +13,7 @@ const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -32,6 +33,10 @@ const CARD_MAX := 420.0
 const SIDE := 60.0
 const MENU_STATES := ["title", "class_select", "dead", "victory", "summary"]
 const TITLE := "SCRAPKEEP: FIRST RUN"
+# A win over the final world's boss opens the summary on the ending page (Worlds.ENDING). For
+# its first ENDING_HOLD seconds no key closes it, so a press meant for the fight cannot skip
+# it; after that Space, Enter, Esc or any pad button shows the summary beneath.
+const ENDING_HOLD := 1.0
 
 var game
 var _victory_boss := {}
@@ -46,6 +51,10 @@ var _actions: HBoxContainer
 var _help
 var _achievements
 var _settings
+var _ending: VBoxContainer
+var _ending_title: Label
+var _ending_body: Label
+var _ending_left := 0.0
 var _guard := 0.0
 var _tween: Tween
 var _state := ""
@@ -93,6 +102,19 @@ func setup(game_ref) -> void:
 	_settings.setup(game, "key_esc")
 	_settings.back_requested.connect(toggle_settings)
 	_content.add_child(_settings)
+	_ending = VBoxContainer.new()
+	_ending.alignment = BoxContainer.ALIGNMENT_CENTER
+	_ending.add_theme_constant_override("separation", 26)
+	_ending.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ending.visible = false
+	_ending_title = _label(64)
+	_ending.add_child(_ending_title)
+	_ending_body = _label(22)
+	_ending_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ending_body.custom_minimum_size = Vector2(1000.0, 0.0)
+	_ending_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_ending.add_child(_ending_body)
+	_content.add_child(_ending)
 	game.events.flow_changed.connect(_on_flow_changed)
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
 
@@ -119,6 +141,10 @@ func _on_flow_changed(state: String) -> void:
 	_help.visible = false
 	_achievements.visible = false
 	_settings.visible = false
+	_ending.visible = false
+	_ending_left = 0.0
+	_title.visible = true
+	_stats.visible = true
 	_actions.visible = true
 	for row in [_stats, _choices, _actions]:
 		for child in row.get_children():
@@ -172,11 +198,15 @@ func _on_flow_changed(state: String) -> void:
 			var epitaph := String(_victory_boss.get("epitaph", ""))
 			if epitaph != "":
 				body += "\n" + epitaph
-			_victory_boss = {}
+			var ending: bool = game.flow.won_final() and not _victory_boss.is_empty()
+			if not ending:
+				_victory_boss = {}
 			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
 			_summary_stats()
 			_action("again", "key_n", "Run again")
 			_action("class", "key_space", "Choose class")
+			if ending:
+				_open_ending()
 	_fade(state in MENU_STATES)
 	_update_enabled()
 
@@ -258,10 +288,53 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible
+	return _help.visible or _achievements.visible or _ending.visible
+
+
+func ending_open() -> bool:
+	return _ending.visible
+
+
+# The summary's title, epitaph, stats and actions are built beneath and wait hidden.
+func _open_ending() -> void:
+	_ending_title.text = String(Worlds.ENDING["title"])
+	_ending_title.add_theme_color_override("font_color", EventKinds.color("run_ended"))
+	_ending_body.text = "\n".join(PackedStringArray(Worlds.ENDING["log"])) + "\n\n" + String(Worlds.ENDING["sign"])
+	_ending.visible = true
+	_ending_left = ENDING_HOLD
+	for node in [_title, _body, _stats, _actions]:
+		node.visible = false
+
+
+# The summary beneath takes over with its key guard fresh, so the press that closed the page
+# cannot also start a run.
+func _close_ending() -> void:
+	_ending.visible = false
+	_victory_boss = {}
+	_title.visible = true
+	_body.visible = _body.text != ""
+	_stats.visible = true
+	_actions.visible = true
+	game.summary_guard_left = game.SUMMARY_GUARD
+	_fade(true)
+	_update_enabled()
+
+
+func _ending_closes(event: InputEvent) -> bool:
+	if event is InputEventJoypadButton:
+		return event.pressed
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return false
+	var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
+	return key in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE]
 
 
 func _input(event: InputEvent) -> void:
+	if _ending.visible:
+		if _ending_left <= 0.0 and _ending_closes(event):
+			_close_ending()
+			get_viewport().set_input_as_handled()
+		return
 	if _settings.visible:
 		if _settings.handle(event):
 			get_viewport().set_input_as_handled()
@@ -395,6 +468,11 @@ func _screen() -> Vector2:
 
 func _process(delta: float) -> void:
 	_guard = maxf(0.0, _guard - delta)
+	if _ending.visible:
+		game.summary_guard_left = maxf(game.summary_guard_left, game.SUMMARY_GUARD)
+		_ending_left = maxf(0.0, _ending_left - delta)
+		if game.bot_driven and _ending_left <= 0.0:
+			_close_ending()
 	_update_enabled()
 
 
