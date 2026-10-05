@@ -18,8 +18,8 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const MAX_NAME_WORDS := 3
 const MAX_TEXT_WORDS := 8
 const MIN_PER_PILOT := 2
-const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn"]
-# Rivet's kit rows; Tarn has its own rows in each world.
+const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally"]
+# Rivet's kit rows; Tarn and Tally have their own rows in each world.
 const RIVET := ["runner_gunner"]
 const SUFFIX := {AbilityState.WEAPON: "_weapon", AbilityState.MOVEMENT: "_move",
 	AbilityState.SPECIAL: "_special", AbilityState.SMASH: "_smash"}
@@ -49,6 +49,12 @@ const ROWS := {
 	"vice_heart": {"name": "Vice Heart", "text": "Clamp recharges 25% faster",
 		"pilots": ["tarn"], "slot": AbilityState.SPECIAL, "cooldown": 0.75,
 		"part": "gen:weapon:relic:kinetic:on_smash", "world": 1},
+	"oiled_flywheel": {"name": "Oiled Flywheel", "text": "Flywheel surge recharges 30% faster",
+		"pilots": ["tally"], "slot": AbilityState.MOVEMENT, "cooldown": 0.7,
+		"part": "gen:mobility:relic:arc:on_rebound", "world": 1},
+	"return_spring": {"name": "Return Spring", "text": "Plate return recharges 25% faster",
+		"pilots": ["tally"], "slot": AbilityState.SPECIAL, "cooldown": 0.75,
+		"part": "gen:utility:relic:none:on_charge_release", "world": 1},
 	# World 2, the Dig.
 	"spare_cell": {"name": "Spare Cell", "text": "Stock a second detonation charge",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 1,
@@ -74,6 +80,12 @@ const ROWS := {
 	"jaw_spring": {"name": "Jaw Spring", "text": "Clamp recharges 30% faster",
 		"pilots": ["tarn"], "slot": AbilityState.SPECIAL, "cooldown": 0.7,
 		"part": "gen:defense:relic:frost:on_smash", "world": 2},
+	"spare_flywheel": {"name": "Spare Flywheel", "text": "Stock a second flywheel surge",
+		"pilots": ["tally"], "slot": AbilityState.MOVEMENT, "charges": 1,
+		"part": "gen:mobility:relic:kinetic:on_speed_tier_up", "world": 2},
+	"plate_hinge": {"name": "Plate Hinge", "text": "Plate return recharges 30% faster",
+		"pilots": ["tally"], "slot": AbilityState.SPECIAL, "cooldown": 0.7,
+		"part": "gen:charge:relic:arc:on_smash", "world": 2},
 	# World 3, Highdraft.
 	"crown_cell": {"name": "Crown Cell", "text": "Stock two more detonation charges",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 2,
@@ -99,6 +111,12 @@ const ROWS := {
 	"twin_jaw": {"name": "Twin Jaw", "text": "Stock a second clamp",
 		"pilots": ["tarn"], "slot": AbilityState.SPECIAL, "charges": 1,
 		"part": "gen:charge:relic:kinetic:on_charge_release", "world": 3},
+	"brass_governor": {"name": "Brass Governor", "text": "Flywheel surge recharges 40% faster",
+		"pilots": ["tally"], "slot": AbilityState.MOVEMENT, "cooldown": 0.6,
+		"part": "gen:mobility:relic:none:on_speed_tier_up", "world": 3},
+	"second_plate": {"name": "Second Plate", "text": "Stock a second plate return",
+		"pilots": ["tally"], "slot": AbilityState.SPECIAL, "charges": 1,
+		"part": "gen:utility:relic:arc:on_charge_release", "world": 3},
 }
 
 

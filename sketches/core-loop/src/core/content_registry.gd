@@ -89,8 +89,8 @@ const GOLDEN_HASHES := {
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
-	"upgrade_tree.TREES": "1476f7f05da180a9b7fe7dbd7a9d257eca7750d18806fba503b9d9ece9a307fa",  # 2026-10-05 (alpha wave 15 tally-kit): tally borrows Rivet's tree until pil-G8
-	"upgrade_tree.WORLD_ONE_NODES": "7c71a4139ddc72ab22ba60c9612c197d59fd721410666ee1ac4e7ea96e33de23",  # 2026-10-05 (alpha wave 15 tally-kit): tally borrows Rivet's world-one table until pil-G8
+	"upgrade_tree.TREES": "2aceac8718536c82d640b9831304112661ae5886ae52695e9cf4ab4bd6870b6b",  # 2026-10-05 (alpha wave 15 tally-tree): Tally's own tree
+	"upgrade_tree.WORLD_ONE_NODES": "8532902bcf5042b247ce6d4ac33ccb5b629031f1c2ab3ca35fe903368c8be60e",  # 2026-10-05 (alpha wave 15 tally-tree): Tally's own tree
 	"combat.codex_entries.ENTRIES": "d30ff6f6b6d5e2069a71c218f5665edbcfab0761d77754ed4bd90f9b295b3ca4",
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned

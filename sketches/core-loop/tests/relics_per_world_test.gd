@@ -19,8 +19,10 @@ const Crown := preload("res://src/world/map_highdraft_crown.gd")
 const KEST := 2
 const PILOT := "demolitions_caster"
 # 2026-10-05 (alpha wave 14 tarn-tree): Tarn's own two rows per world
-const KITS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn"]
-const WORLD_ONE := ["crater_heart", "quick_fuse", "muzzle_heart", "redline_spring", "rain_heart", "long_fuse", "taut_cable", "vice_heart"]
+# 2026-10-05 (alpha wave 15 tally-tree): Tally's own two rows per world
+const KITS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally"]
+const WORLD_ONE := ["crater_heart", "quick_fuse", "muzzle_heart", "redline_spring", "rain_heart", "long_fuse", "taut_cable", "vice_heart",
+	"oiled_flywheel", "return_spring"]
 # Different luck keys for the one cache, so its relic draw is checked over many picks.
 const DRAWS := 12
 const SETTLE_TICKS := 4
@@ -64,7 +66,7 @@ func _check_table() -> void:
 			for kit in KITS:
 				if Relics.fits(id, kit):
 					per_kit[kit] = int(per_kit.get(kit, 0)) + 1
-		_report("world %d rows" % world, rows.size() == 8 and per_kit.values() == [2, 2, 2, 2] and per_kit.size() == 4,
+		_report("world %d rows" % world, rows.size() == 10 and per_kit.values() == [2, 2, 2, 2, 2] and per_kit.size() == 5,
 			"%d rows, per kit %s" % [rows.size(), per_kit])
 		for pilot in Relics.PILOTS:
 			var pool := Relics.eligible(pilot, {}, null, world)
@@ -81,7 +83,7 @@ func _check_table() -> void:
 	first.sort()
 	var want := WORLD_ONE.duplicate()
 	want.sort()
-	_report("world 1 is the old six plus Tarn's two", first == want, "%s" % [first])
+	_report("world 1 is the old six plus Tarn's and Tally's two", first == want, "%s" % [first])
 
 
 func _check_maps() -> void:

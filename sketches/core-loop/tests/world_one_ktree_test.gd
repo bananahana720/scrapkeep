@@ -176,7 +176,7 @@ func _cards() -> void:
 				if l[1] != want:
 					off_ok = false
 					off_bad = "%s: %s vs %s" % [l[0], l[1], want]
-	# 2026-10-05: six cards per pilot tree, four pilots, Tarn on its own tree.
+	# 2026-10-05: six cards per pilot tree, five pilots, Tally on its own tree.
 	_check("flag off, base effects exactly", off_ok and count == 6 * UpgradeTree.TREES.size(), "%d cards%s" % [count, "" if off_ok else "; " + off_bad])
 	var node_ok := true
 	for id in BASE_EFFECT:

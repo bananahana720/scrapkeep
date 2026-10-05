@@ -8,7 +8,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Relics := preload("res://src/build/relics.gd")
 
 # Rule: four safe growth picks cannot replace an ability, disable it, lower a knob's
-# default, or undo an earlier pick. Validate all 120 distinct nodes (four pilots' own trees).
+# default, or undo an earlier pick. Validate all 150 distinct nodes (five pilots' own trees).
 # Tarn's nodes and relics are also checked for dead offers (STRATEGY-SPINE.md:175).
 # Existing tradeoffs are findings, not permission to change content.
 # Decision 3 is pending: numerical decreases are conservatively flagged even when
@@ -20,8 +20,7 @@ const UNSAFE := {
 	"runner_gunner": ["r_run_gun", "r_ram_fins", "r_point_blank", "r_skyline"],
 	"demolitions_caster": ["k_ghost", "k_heavy_charge", "k_sticky_rain"],
 	"tarn": [],
-	# Tally borrows Rivet's tree until her own (pil-G8), so she is flagged on Rivet's rows.
-	"tally": ["r_run_gun", "r_ram_fins", "r_point_blank", "r_skyline"],
+	"tally": [],
 }
 
 var _failures := 0
@@ -73,11 +72,12 @@ func _initialize() -> void:
 		_report("%s world one" % def.display_name,
 			UpgradeTree.safe_growth_problems(def.id, true) == world_one, "%d reachable-node findings" % world_one.size())
 		_report("%s data preserved" % def.display_name, list == before, "validator never edits nodes")
-	_report("all five pilots", pilots == UNSAFE.keys() and checked == 150 and distinct.size() == 120,
+	_report("all five pilots", pilots == UNSAFE.keys() and checked == 30 * UNSAFE.size() and distinct.size() == 150,
 		"%d rows, %d distinct nodes, pilots %s" % [checked, distinct.size(), pilots])
 	_dead_offers()
 	_fixtures()
 	_tarn_rows()
+	_tally_rows()
 	print("tree_safe_picks_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -93,7 +93,10 @@ func _earlier(list: Array, index: int) -> Array:
 
 # Bus facts every class's own special or slam emits (combat.gd special_used after any gauge release,
 # player_ball.gd slammed for every slam), so a proc on them is live whatever the kit.
-const KIT_AGNOSTIC_ON := ["special_used", "slammed"]
+# 2026-10-05 (alpha wave 15 tally-tree): every class movement appends dashed (augments.gd vault,
+# sprint, blink, claw pull, surge) and holds.gd emits hold_broken for any pilot, so Tally's own
+# procs on them no longer make Tarn's read as another pilot's token.
+const KIT_AGNOSTIC_ON := ["special_used", "slammed", "dashed", "hold_broken"]
 
 
 func _class_kit(pilot: String) -> Dictionary:
@@ -248,3 +251,32 @@ func _tarn_rows() -> void:
 	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Tarn world-one cards", cards_ok, "%s" % [first_six])
+
+
+func _tally_rows() -> void:
+	var tally := UpgradeTree.nodes("tally")
+	var ids := tally.map(func(n): return String(n["id"]))
+	var own := ids.all(func(i): return i.begins_with("tl_"))
+	var profile := UpgradeTree.nodes("tally", true)
+	var shared := []
+	for other in UpgradeTree.TREES:
+		if other != "tally":
+			shared.append_array(UpgradeTree.TREES[other].filter(func(n): return n["id"] in ids).map(func(n): return n["id"]))
+	_report("Tally's own tree", own and profile.size() == 30 and profile[0]["id"] == "tl_audit_stamp" and shared.is_empty(),
+		"%d world-one nodes, first %s, shared with other pilots %s" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared])
+	var actions := ["blast", "air", "grant_move", "grant_special", "refund_move", "refund_special"]
+	var bad := []
+	for n in tally:
+		var ok: bool = not n.has("knob") and not n.has("swap") and not n.has("pattern")
+		for p in n.get("proc", []):
+			ok = ok and String(p["do"]) in actions
+			ok = ok and not (String(p["do"]) == "blast" and String(p["on"]) in UpgradeTree.DAMAGE_FACTS)
+		ok = ok and (Icons.IDS.has(n["icon"]) or Icons.EXTRA.has(n["icon"]))
+		if not ok:
+			bad.append(n["id"])
+	var depth_two := tally.slice(2, 6).map(func(n): return String(n["name"]))
+	_report("Tally rulings", bad.is_empty() and depth_two == ["Through Feed", "Line Feed", "Spring Vent", "Corner Plate"],
+		"no knob, swap or pattern; procs only %s; no blast on a damage fact; known icons; bad %s; depth 2 %s" % [actions, bad, depth_two])
+	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
+	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
+	_report("Tally world-one cards", cards_ok, "%s" % [first_six])

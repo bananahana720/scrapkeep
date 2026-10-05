@@ -10,7 +10,7 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 # Evidence limit: one seeded branch per class through stage 1 and the second pick's
 # offer; tree_play_test plays all 16 builds per class. Nothing here measures feel.
 
-const SEEDS := [0, 1, 2, 3]
+const SEEDS := [0, 1, 2, 3, 4]
 const TIMEOUT_S := 110.0
 
 
