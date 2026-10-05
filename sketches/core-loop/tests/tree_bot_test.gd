@@ -1,14 +1,15 @@
+# smoke: solo (six bot children at once at a fixed 90 fps; a loaded machine slows them)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 # Every class's bot still clears stage 1 with a random upgrade branch: char_bot_test's
 # skipper run for seeds 0 to 5 (Sable, Rivet, Kest, Tarn, Tally, the remembered cannon), with
-# the bot taking one of the two offered picks at class select and again when stage 1 clears. The six run in
+# the bot taking one of the offered picks at class select, when stage 1 clears and, if the class rises inside stage 1, at that rise. The six run in
 # parallel child processes at a fixed 90 fps, so the ticks are the real game's.
 #
-# Evidence limit: one seeded branch per class through stage 1 and the second pick's
-# offer; tree_play_test plays all 16 builds per class. Nothing here measures feel.
+# Evidence limit: one seeded branch per class through stage 1 and the later pick
+# offers; tree_play_test plays all 16 builds per class. Nothing here measures feel.
 
 const SEEDS := [0, 1, 2, 3, 4, 5]
 const TIMEOUT_S := 110.0

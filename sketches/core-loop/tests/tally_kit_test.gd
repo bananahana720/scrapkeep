@@ -13,7 +13,7 @@ const T := preload("res://tests/support/t.gd")
 # Tally's program-card kit through the real game (calm, stage 1): the class row, pressure
 # that time never refills, bay selection, Gather, an invalid aim, Link and its arc,
 # Balance Due's speed scaling, the pressure restores, no Warden shatter from a card, the
-# flywheel surge, plate return and the stamp landing.
+# flywheel surge, plate return, the special echo re-checking the plate and the stamp landing.
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -101,6 +101,12 @@ func _boot() -> void:
 		[_noop, 3, _check_plate],
 		[_plate_expire_start, int(0.6 * tps), _plate_release],
 		[_noop, 3, _check_plate_expired],
+		[_echo_start, int(0.6 * tps), _plate_release],
+		[_noop, 3, _check_echo_armed],
+		[_noop, int(0.7 * tps), _check_echo_stale],
+		[_echo_start, int(0.6 * tps), _plate_release],
+		[_noop, 3, _check_echo_live_armed],
+		[_noop, int(0.7 * tps), _check_echo_live],
 		[_noop, 1, _check_shift_burst],
 		[_stamp_start, 1, _check_stamp],
 	]
@@ -547,6 +553,44 @@ func _check_plate_expired() -> void:
 			and _combat.last_burst.get("kind", "") != "plate_return" and _struck_by(_record["t_id"], "ledger", _record["from"]).is_empty(),
 		"ready %s last burst %s strikes %d" % [_player.abilities.ready(AbilityState.SPECIAL), _combat.last_burst.get("kind", ""),
 			_struck_by(_record["t_id"], "ledger", _record["from"]).size()])
+
+
+# --- the special echo re-checks the plate ---------------------------------------------------
+
+func _echo_start() -> void:
+	_plate_start()
+	_player.tree._knobs["special_echo"] = 0.5
+	_record["plate_at"] = _combat.plate["at"]
+
+
+func _check_echo_armed() -> void:
+	_t.check("the echo arms on a plate return", _combat.last_burst.get("kind", "") == "plate_return" and _combat.plate.is_empty()
+			and not _combat._echo.is_empty(),
+		"last burst %s, plate %s, echo %s" % [_combat.last_burst.get("kind", ""), str(_combat.plate), str(_combat._echo.keys())])
+	_record["burst_at"] = _combat.last_burst["at"]
+
+
+# The plate is spent, so the echo's can() is false when it comes due and nothing fires (a stale echo would fire from the ball).
+func _check_echo_stale() -> void:
+	var at: Vector3 = _combat.last_burst["at"]
+	_t.check("a stale echo does not fire", _combat._echo.is_empty() and at.is_equal_approx(_record["burst_at"]),
+		"burst at %s, first burst at %s, ball %s" % [str(at), str(_record["burst_at"]), str(_player.ball_position())])
+
+
+func _check_echo_live_armed() -> void:
+	_t.check("the echo arms again", not _combat._echo.is_empty() and _combat.plate.is_empty(),
+		"echo %s, plate %s" % [str(_combat._echo.keys()), str(_combat.plate)])
+	var p2: Vector3 = _combat._floor_at(_player.ball_position() + _aim_flat() * 4.0 + Vector3.UP)
+	_combat.plate = {"at": p2, "until": _combat._clock + 4.0}
+	_record["p2"] = p2
+
+
+func _check_echo_live() -> void:
+	var at: Vector3 = _combat.last_burst.get("at", Vector3.INF)
+	_t.check("a live plate still echoes", _combat.last_burst.get("kind", "") == "plate_return" and at.is_equal_approx(_record["p2"])
+			and _combat.plate.is_empty(),
+		"burst at %s, new plate %s, plate left %s" % [str(at), str(_record["p2"]), str(_combat.plate)])
+	_player.tree._knobs.erase("special_echo")
 
 
 # --- Shift from the keyboard path ----------------------------------------------------------

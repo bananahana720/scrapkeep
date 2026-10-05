@@ -480,8 +480,8 @@ func _burst_key() -> String:
 	return AbilityState.KEYS[AbilityState.MOVEMENT] if kit.movement_id == Augments.GRAPPLE else Bindings.label("boost")
 
 
-# The pilot's class burst is on Shift (Rivet's sprint, Kest's blink, Tarn's claw pull); Sable's Shift is the
-# boost. The keyboard fills shift_*; a scripted source fills boost_* and movement_* itself.
+# The pilot's class burst is on Shift (Rivet's sprint, Kest's blink, Tarn's claw pull, Tally's flywheel surge, the remembered cannon's recoil); Sable's Shift is the boost.
+# The keyboard fills shift_*; a scripted source fills boost_* and movement_* itself.
 func _burst_pilot() -> bool:
 	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE) \
 		or kit.on(Augments.RECOIL)
