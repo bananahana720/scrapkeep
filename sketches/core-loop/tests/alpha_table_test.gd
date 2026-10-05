@@ -58,7 +58,7 @@ func _initialize() -> void:
 		_check("is_run_last %d" % s, A.is_run_last(s) == (s == 6), "stage %d: %s" % [s, A.is_run_last(s)])
 	# Naming all six maps keeps a swapped or placeholder map from shipping without this list changing.
 	var maps: Array = A.DEFS.map(func(row): return row["map"])
-	_check("maps", maps == ["spillway", "reach", "dig", "reach", "highdraft", "reach"], str(maps))
+	_check("maps", maps == ["spillway", "reach", "dig", "dig_deep", "highdraft", "highdraft_crown"], str(maps))
 	for i in A.DEFS.size():
 		var row: Dictionary = A.DEFS[i]
 		_check("row %d keys" % (i + 1), _missing(row).is_empty(), "missing %s" % str(_missing(row)))
@@ -69,13 +69,11 @@ func _initialize() -> void:
 	_check("terrain maps", terrain.maps.size() == A.COUNT, "%d maps" % terrain.maps.size())
 	for i in A.DEFS.size():
 		var row: Dictionary = A.DEFS[i]
-		var placeholder := String(row["name"]).contains("placeholder")
-		_check("row %d placeholder name" % (i + 1), placeholder == (i in [3, 5]), String(row["name"]))
-		if not placeholder:
-			_check("row %d title" % (i + 1), String(terrain.maps[i].title) == String(row["name"]), "%s vs %s" % [terrain.maps[i].title, row["name"]])
-		var want := {2: "meltdown", 4: "choir"}.get(i, "") as String
+		_check("row %d placeholder name" % (i + 1), not String(row["name"]).contains("placeholder"), String(row["name"]))
+		_check("row %d title" % (i + 1), String(terrain.maps[i].title) == String(row["name"]), "%s vs %s" % [terrain.maps[i].title, row["name"]])
+		var want := {2: "meltdown", 3: "brood", 4: "choir", 5: "choir"}.get(i, "") as String
 		_check("row %d variant" % (i + 1), String(row["warden_variant"]) == want, String(row["warden_variant"]))
-	for pair in [[2, 2], [4, 3]]:
+	for pair in [[2, 2], [3, 2], [4, 3], [5, 3]]:
 		var world_kinds := Roster.world_kinds(pair[1])
 		for pack in A.DEFS[pair[0]]["packs"]:
 			for kind in pack["kinds"]:

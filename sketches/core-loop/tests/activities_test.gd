@@ -452,7 +452,7 @@ func _default_table() -> void:
 			continue
 		if not String(row["name"]).contains("placeholder"):
 			counts.append(maps[i].activity_sites.size() if "activity_sites" in maps[i] else 0)
-	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4, 3, 2], "sites per authored stage %s" % [counts])
+	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4, 3, 3, 2, 2], "sites per authored stage %s" % [counts])
 	var pending_named := true
 	for row in _game.ctx.stages.DEFS:
 		if SIDE_CONTENT_PENDING.has(String(row["map"])) and String(row["name"]).contains("placeholder"):

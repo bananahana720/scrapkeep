@@ -4,8 +4,9 @@ const Worlds := preload("res://src/core/worlds.gd")
 
 # The alpha table: three worlds of two zones each, every zone ending at a posture-fight
 # Warden, then Brindle as the boss. World one is the Spillway (1-1) then the Cable Reach (1-2);
-# stages 3 and 5 are the real first zones of worlds two and three (the Dig, the Highdraft) with
-# their own packs and Warden variant keys; stages 4 and 6 stay placeholders on the reach. The default table:
+# stages 3 and 5 are the first zones of worlds two and three (the Dig, the Highdraft) and stages 4
+# and 6 their second zones (the deep works, the crown), each with its own map, packs drawn from
+# its world's kinds, and Warden variant key. The default table:
 # stage_defs.gd re-exports these rows, and `--table=alpha` picks this file directly.
 # Same shape as slice_defs.gd. It repeats that file's two lookups because a base script's
 # static functions would read the base's own DEFS, not this one's. Rows 3 to 6 scale rows 1
@@ -67,12 +68,16 @@ const DEFS := [
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower"]},
 			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
 		], "elite": ELITE, "warden_variant": "meltdown"},
-	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": ""}, "warden_family": "swarm", "name": "The High Cables: placeholder on the reach", "map": "reach", "threat": 1.2,
+	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": ""}, "warden_family": "swarm", "name": "Dig: the deep works", "map": "dig_deep", "threat": 1.2,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 150.0, "warden_hp": 1100.0, "warden_lesson": "",
 		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Bowl through its guard rack, then smash the core.",
-		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
+		"packs": [
+			{"id": "deep_bore", "kinds": ["drill_crew", "burrower", "burrower"]},
+			{"id": "deep_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "burrower"]},
+			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm"]},
+		], "elite": ELITE, "warden_variant": "brood"},
 	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": ""}, "warden_family": "mind", "name": "Highdraft", "map": "highdraft", "threat": 1.3,
 		"unlock_base": 2, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -83,12 +88,16 @@ const DEFS := [
 			{"id": "draft_anchor", "kinds": ["anchor_crew", "line_cutter"]},
 			{"id": "draft_kites", "kinds": ["kite_drone", "kite_drone", "anchor_crew"]},
 		], "elite": ELITE, "warden_variant": "choir"},
-	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": ""}, "warden_family": "mind", "name": "The Last Span: placeholder on the reach", "map": "reach", "threat": 1.4,
+	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": ""}, "warden_family": "mind", "name": "Highdraft: the crown", "map": "highdraft_crown", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 190.0, "warden_hp": 1400.0, "warden_lesson": "",
 		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
-		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
+		"packs": [
+			{"id": "crown_cut", "kinds": ["line_cutter", "kite_drone", "kite_drone"]},
+			{"id": "crown_anchor", "kinds": ["anchor_crew", "anchor_crew", "line_cutter"]},
+			{"id": "crown_kites", "kinds": ["kite_drone", "kite_drone", "line_cutter", "anchor_crew"]},
+		], "elite": ELITE, "warden_variant": "choir"},
 ]
 
 
