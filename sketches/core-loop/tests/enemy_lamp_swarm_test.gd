@@ -84,9 +84,13 @@ func _run() -> void:
 	t.check("LS-2 bloom live", unit.phase == unit.Phase.LIVE and unit.blooms == 1, "phase %s blooms %d" % [unit.state_name(), unit.blooms])
 	var hp_before: float = game.run.hp
 	var before: int = unit.lured_ticks
-	for frame in 20:
+	# 2026-10-04 (wave 10): the lure now gates on the committed wave's contains(), so the front
+	# reaches the parked ball later than the old 20-frame radius check; wait up to 120 frames.
+	for frame in 120:
 		_park()
 		await physics_frame
+		if unit.lured_ticks > before:
+			break
 	var hit: Dictionary = game.combat.last_player_hit
 	t.check("LS-3 slow ball lured", unit.lured_ticks > before, "lured_ticks %d -> %d" % [before, unit.lured_ticks])
 	var toward := false
@@ -117,6 +121,27 @@ func _run() -> void:
 	await physics_frame
 	t.check("LS-7 slow ram does not scatter", slow.scatters == 0 and slow.phase == phase_before,
 		"scatters %d phase %s" % [slow.scatters, slow.state_name()])
+	slow.free()
+	var front = _spawn()
+	# Each shove is judged against the wave's own contains() on the tick it lands.
+	var outside_hits := [0]
+	var inside_hits := [0]
+	front.hit_player.connect(func(_amount: float, _shove: Vector3):
+		if front.telegraph().contains(game.player.ball_position()):
+			inside_hits[0] += 1
+		else:
+			outside_hits[0] += 1)
+	await _to_live(front)
+	var flat_to: float = 0.0
+	for frame in 240:
+		_park()
+		var tele = front.telegraph()
+		if tele == null or inside_hits[0] > 0:
+			break
+		flat_to = Vector3(ball.x - tele.center.x, 0.0, ball.z - tele.center.z).length()
+		await physics_frame
+	t.check("LS-8 the lure follows the wave front", flat_to < front.BLOOM_RADIUS and outside_hits[0] == 0 and inside_hits[0] > 0,
+		"ball %.1f m from the bloom, hits outside the front %d, on the front %d" % [flat_to, outside_hits[0], inside_hits[0]])
 	game.free()
 	game = null
 	quit(t.verdict())

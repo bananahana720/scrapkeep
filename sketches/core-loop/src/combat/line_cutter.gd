@@ -88,6 +88,8 @@ func _live(_delta: float) -> bool:
 		hit_player.emit(STING, Vector3.ZERO)
 	else:
 		dodged += 1
+		if fleet != null:
+			fleet.discover("line_cut", _real_ball())
 	return false
 
 

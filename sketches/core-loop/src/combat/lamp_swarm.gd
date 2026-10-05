@@ -25,6 +25,8 @@ var blooms := 0
 var lured_ticks := 0
 var scatters := 0
 var _flung := false
+# This bloom already met the ball at cruise inside it (lure_bloom), so it reports once.
+var _bloom_met := false
 var _fling: Array = []
 
 
@@ -57,6 +59,7 @@ func _lamp_rest(index: int) -> Vector3:
 func _commit(_to_ball: Vector3) -> Node3D:
 	_clear_telegraph()
 	_telegraph = Telegraph.wave(world_root, terrain, global_position, BLOOM_RADIUS, BLOOM_SPEED, warn_seconds, BLOOM_REACH)
+	_bloom_met = false
 	_facts_begin(_telegraph)
 	return _telegraph
 
@@ -78,12 +81,23 @@ func _live(delta: float) -> bool:
 	var player = _player()
 	if player == null:
 		return true
-	var to: Vector3 = global_position - _real_ball()
+	var ball := _real_ball()
+	var to: Vector3 = global_position - ball
 	to.y = 0.0
-	if to.length() <= BLOOM_RADIUS and player.speed_tier() < SpeedTier.CRUISE:
+	if player.speed_tier() >= SpeedTier.CRUISE:
+		_meet_bloom(to)
+	elif tele.contains(ball):
 		lured_ticks += 1
 		hit_player.emit(0.0, to.normalized() * LURE * delta)
 	return true
+
+
+# A ball at cruise or faster inside the bloom went through the light: lure_bloom, once per bloom.
+func _meet_bloom(to: Vector3) -> void:
+	if _bloom_met or to.length() > BLOOM_RADIUS or fleet == null:
+		return
+	_bloom_met = true
+	fleet.discover("lure_bloom", _real_ball())
 
 
 func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
@@ -91,6 +105,9 @@ func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
 	if kind_hit != "ram" or phase == Phase.ROAM or player == null or player.speed_tier() < SpeedTier.CRUISE:
 		return
 	scatters += 1
+	var to: Vector3 = global_position - _real_ball()
+	to.y = 0.0
+	_meet_bloom(to)
 	broken_by = "scattered"
 	_flung = true
 	for i in lamps.size():
