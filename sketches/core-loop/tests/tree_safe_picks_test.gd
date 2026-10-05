@@ -2,10 +2,12 @@ extends SceneTree
 
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 # Rule: four safe growth picks cannot replace an ability, disable it, lower a knob's
-# default, or undo an earlier pick. Validate all 90 distinct nodes plus Tarn's 30
-# borrowed rows. Existing tradeoffs are findings, not permission to change content.
+# default, or undo an earlier pick. Validate all 120 distinct nodes across four pilots.
+# Existing tradeoffs are findings, not permission to change content.
 # Decision 3 is pending: numerical decreases are conservatively flagged even when
 # they help. These tests prove detection, not that the present trees are all safe.
 # No Game, wall clock, save writes, or runtime/feel claim is needed for this rule.
@@ -14,7 +16,7 @@ const UNSAFE := {
 	"pylon_engineer": ["s_face_runner", "s_crater"],
 	"runner_gunner": ["r_run_gun", "r_ram_fins", "r_point_blank", "r_skyline"],
 	"demolitions_caster": ["k_ghost", "k_heavy_charge", "k_sticky_rain"],
-	"tarn": ["r_run_gun", "r_ram_fins", "r_point_blank", "r_skyline"],
+	"tarn": [],
 }
 
 var _failures := 0
@@ -66,9 +68,10 @@ func _initialize() -> void:
 		_report("%s world one" % def.display_name,
 			UpgradeTree.safe_growth_problems(def.id, true) == world_one, "%d reachable-node findings" % world_one.size())
 		_report("%s data preserved" % def.display_name, list == before, "validator never edits nodes")
-	_report("all four pilots", pilots == UNSAFE.keys() and checked == 120 and distinct.size() == 90,
+	_report("all four pilots", pilots == UNSAFE.keys() and checked == 120 and distinct.size() == 120,
 		"%d rows, %d distinct nodes, pilots %s" % [checked, distinct.size(), pilots])
 	_fixtures()
+	_tarn_rows()
 	print("tree_safe_picks_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -107,3 +110,26 @@ func _fixtures() -> void:
 		{"knob": {"mount_reach": "two"}}).is_empty(), "string cannot disguise a lower number")
 	_report("finite number checked", not UpgradeTree.safe_pick_problems(pilot,
 		{"knob": {"mount_reach": NAN}}).is_empty(), "NaN cannot evade comparison")
+
+
+func _tarn_rows() -> void:
+	var tarn := UpgradeTree.nodes("tarn")
+	var ids := tarn.map(func(n): return String(n["id"]))
+	var own := ids.all(func(i): return i.begins_with("t_"))
+	var profile := UpgradeTree.nodes("tarn", true)
+	var shared := UpgradeTree.nodes("runner_gunner").filter(func(n): return n["id"] in ids)
+	_report("Tarn's own tree", own and profile.size() == 30 and profile[0]["id"] == "t_long_claw" and shared.is_empty(),
+		"%d world-one nodes, first %s, %d shared with Rivet" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared.size()])
+	var bad := []
+	for n in tarn:
+		var ok: bool = not n.has("knob") and not n.has("swap")
+		for weapon in n.get("pattern", {}):
+			ok = ok and weapon == "claw_sweep" and float(n["pattern"][weapon].get("mul", {}).get("damage", 1.0)) <= 1.0
+		ok = ok and not String(n["effect"]).to_lower().contains("plating")
+		ok = ok and (Icons.IDS.has(n["icon"]) or Icons.EXTRA.has(n["icon"]))
+		if not ok:
+			bad.append(n["id"])
+	_report("Tarn rulings", bad.is_empty(), "no knob, swap, non-claw pattern, damage gain, plating claim or unknown icon; bad %s" % [bad])
+	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
+	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
+	_report("Tarn world-one cards", cards_ok, "%s" % [first_six])

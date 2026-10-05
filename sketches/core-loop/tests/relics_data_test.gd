@@ -31,7 +31,7 @@ func _initialize() -> void:
 		and Relics.can_hold("crater_heart", "pylon_engineer", held)
 		and not Relics.can_hold("long_fuse", "pylon_engineer", {}), "held slot refused, free slot and wrong pilot checked")
 	_report("eligible skips held", not "quick_fuse" in Relics.eligible("pylon_engineer", held), "%s" % [Relics.eligible("pylon_engineer", held)])
-	_report("tarn aliases rivet", Relics.fits("muzzle_heart", "tarn") and Relics.fits("muzzle_heart", "runner_gunner"), "shared rows")
+	_report("tarn has its own relics", not Relics.fits("muzzle_heart", "tarn") and Relics.fits("muzzle_heart", "runner_gunner") and Relics.eligible("tarn", {}) == ["taut_cable", "vice_heart", "spare_cable", "jaw_spring", "redjaw_cable", "twin_jaw"], "%s" % [Relics.eligible("tarn", {})])
 	# A bad row must be caught.
 	var bad_rows: Dictionary = Relics.ROWS.duplicate(true)
 	bad_rows["quick_fuse"]["slot"] = "nowhere"

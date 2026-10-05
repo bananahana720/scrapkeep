@@ -19,8 +19,8 @@ const MAX_NAME_WORDS := 3
 const MAX_TEXT_WORDS := 8
 const MIN_PER_PILOT := 2
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn"]
-# Tarn borrows Rivet's kit (class_def.gd), so Rivet's relics list both.
-const RIVET := ["runner_gunner", "tarn"]
+# Rivet's kit rows; Tarn has its own rows in each world.
+const RIVET := ["runner_gunner"]
 const SUFFIX := {AbilityState.WEAPON: "_weapon", AbilityState.MOVEMENT: "_move",
 	AbilityState.SPECIAL: "_special", AbilityState.SMASH: "_smash"}
 
@@ -43,6 +43,12 @@ const ROWS := {
 	"long_fuse": {"name": "Long Fuse", "text": "Detonation line recharges 25% faster",
 		"pilots": ["demolitions_caster"], "slot": AbilityState.SPECIAL, "cooldown": 0.75,
 		"part": "gen:charge:relic:none:on_cloak_break", "world": 1},
+	"taut_cable": {"name": "Taut Cable", "text": "Claw pull recharges 30% faster",
+		"pilots": ["tarn"], "slot": AbilityState.MOVEMENT, "cooldown": 0.7,
+		"part": "gen:mobility:relic:kinetic:on_land", "world": 1},
+	"vice_heart": {"name": "Vice Heart", "text": "Clamp recharges 25% faster",
+		"pilots": ["tarn"], "slot": AbilityState.SPECIAL, "cooldown": 0.75,
+		"part": "gen:weapon:relic:kinetic:on_smash", "world": 1},
 	# World 2, the Dig.
 	"spare_cell": {"name": "Spare Cell", "text": "Stock a second detonation charge",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 1,
@@ -62,6 +68,12 @@ const ROWS := {
 	"deep_satchel": {"name": "Deep Satchel", "text": "Stock one more sticky charge",
 		"pilots": ["demolitions_caster"], "slot": AbilityState.WEAPON, "charges": 1,
 		"part": "gen:utility:relic:kinetic:on_kill", "world": 2},
+	"spare_cable": {"name": "Spare Cable", "text": "Stock a second claw pull",
+		"pilots": ["tarn"], "slot": AbilityState.MOVEMENT, "charges": 1,
+		"part": "gen:mobility:relic:none:on_rebound", "world": 2},
+	"jaw_spring": {"name": "Jaw Spring", "text": "Clamp recharges 30% faster",
+		"pilots": ["tarn"], "slot": AbilityState.SPECIAL, "cooldown": 0.7,
+		"part": "gen:defense:relic:frost:on_smash", "world": 2},
 	# World 3, Highdraft.
 	"crown_cell": {"name": "Crown Cell", "text": "Stock two more detonation charges",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 2,
@@ -81,6 +93,12 @@ const ROWS := {
 	"spare_line": {"name": "Spare Line", "text": "Stock a second detonation line",
 		"pilots": ["demolitions_caster"], "slot": AbilityState.SPECIAL, "charges": 1,
 		"part": "gen:defense:relic:kinetic:on_land", "world": 3},
+	"redjaw_cable": {"name": "Redjaw Cable", "text": "Claw pull recharges 40% faster",
+		"pilots": ["tarn"], "slot": AbilityState.MOVEMENT, "cooldown": 0.6,
+		"part": "gen:mobility:relic:frost:on_land", "world": 3},
+	"twin_jaw": {"name": "Twin Jaw", "text": "Stock a second clamp",
+		"pilots": ["tarn"], "slot": AbilityState.SPECIAL, "charges": 1,
+		"part": "gen:charge:relic:kinetic:on_charge_release", "world": 3},
 }
 
 
