@@ -136,7 +136,12 @@ func _check_hints() -> void:
 		if def.starter:
 			_report("hint %s" % def.display_name, hint == "", "starter hint \"%s\"" % hint)
 		else:
-			_report("hint %s" % def.display_name, id != "" and hint == Achievements.row(id)["text"], "hint \"%s\" for row %s" % [hint, id])
+			var want := ""
+			if id != "":
+				var r: Dictionary = Achievements.row(id)
+				var need := int(r.get("count", 1))
+				want = str(r["text"]) if need <= 1 else "%s (%d/%d)" % [r["text"], mini(int(_game.progress.count_of(id)), need), need]
+			_report("hint %s" % def.display_name, id != "" and hint == want, "hint \"%s\" for row %s, want \"%s\"" % [hint, id, want])
 		_report("screen hint %s" % def.display_name, _game.screens._unlock_hint(def) == hint, "screens agree")
 	_report("hint with no row", ClassCard.unlock_hint(_stub("no_such_pilot"), null) == "", "unknown pilot")
 	_report("hint Rivet starter", ClassCard.unlock_hint(_game.flow.classes[1], _game.progress) == "", "Rivet is a starter until a rescue emitter exists")

@@ -1350,7 +1350,10 @@ func _ordinary(enemy: Node3D) -> bool:
 
 
 func _step_plate(delta: float) -> void:
-	if plate.is_empty() or float(plate["until"]) <= _clock:
+	if plate.is_empty():
+		return
+	if float(plate["until"]) <= _clock:
+		plate = {}
 		return
 	_gather_tick += delta
 	while _gather_tick >= Weapons.GATHER_TICK:
@@ -1521,7 +1524,7 @@ func _fire_plate_return(f: float, shape: Dictionary) -> void:
 	var damage := AbilityState.Gauge.scaled(f, Weapons.PLATE_RETURN_DAMAGE_MIN, Weapons.PLATE_RETURN_DAMAGE_MAX) * _damage_mod(Weapons.LEDGER_READER)
 	var hit := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if enemy.is_dead() or not in_line(from, to, shape["width"], enemy.global_position, _hull(enemy)):
+		if enemy.is_dead() or not in_line(from, to, shape["width"], enemy.global_position):
 			continue
 		_hit(enemy, "ledger", damage, ball - enemy.global_position, Weapons.LEDGER_KNOCK, "", "special")
 		hit += 1

@@ -241,7 +241,7 @@ func _check_bay() -> void:
 
 func _gather_start() -> void:
 	_as_class("tally")
-	_record = {"vault": _spawn("vault", _ball_flat() + _aim_flat() * 12.0), "from": _struck.size()}
+	_record = {"from": _struck.size()}
 	_press_card(0)
 
 
@@ -260,7 +260,11 @@ func _gather_planted() -> void:
 	_record["b_id"] = b.get_instance_id()
 	_record["a_d"] = _planar(a.global_position - at).length()
 	_record["b_d"] = _planar(b.global_position - at).length()
-	_record["vault_at"] = (_record["vault"] as Node3D).global_position
+	# A miniboss takes knocks (enemy.knock counts them) but is never ordinary, so Gather
+	# must leave it alone; a Warden or a vault ignores knock and would prove nothing.
+	var boss := _tough(_spawn("miniboss", _planar(at) + _aim_flat() * 2.5))
+	_record["boss"] = boss
+	_record["boss_knocks"] = int(boss.knocks)
 	_record["from"] = _struck.size()
 
 
@@ -276,9 +280,9 @@ func _check_gather() -> void:
 			"%.2f m -> %.2f m" % [_record[key + "_d"], d])
 		_t.check("gather does no damage to %s" % key, is_equal_approx(float(enemy.hp), 100000.0)
 			and _struck.slice(_record["from"]).all(func(s): return s[0] != _record[key + "_id"]), "hp %.1f" % float(enemy.hp))
-	var vault: Node3D = _record["vault"]
-	_t.check("gather leaves the vault", vault.global_position.distance_to(_record["vault_at"]) < 0.01,
-		"moved %.3f m" % vault.global_position.distance_to(_record["vault_at"]))
+	var boss: Node3D = _record["boss"]
+	_t.check("gather never knocks the miniboss", int(boss.knocks) == int(_record["boss_knocks"]),
+		"knocks %d -> %d" % [_record["boss_knocks"], boss.knocks])
 
 
 # --- e. an invalid aim -----------------------------------------------------------------
@@ -440,12 +444,13 @@ func _check_warden() -> void:
 	_t.eq("balance due never shatters a chunk", warden.chunks_left(), before)
 	var cruise: float = _game.ctx.tuning.f("cruise")
 	_t.check("balance due reached the warden", not _struck_by(warden.get_instance_id(), "ledger", _record["from"]).is_empty(), "no ledger strike")
+	# The alpha Warden cells turn ram_shatters off (a smash breaks the core there); turn it on
+	# for this one Warden so a plain tier-2 ram proves the harness can break an open core.
 	posture.staggered = true
 	posture.stagger_left = 5.0
-	_player.smash_landing = warden
+	posture.ram_shatters = true
 	_combat.strike(warden, "ram", SpeedTier.MULTIPLES[posture.shatter_tier] * cruise * 1.05)
-	_player.smash_landing = null
-	_t.check("a smash landing on the same open core shatters", warden.chunks_left() < before,
+	_t.check("a tier-2 ram on the same open core shatters", warden.chunks_left() < before,
 		"chunks %d -> %d" % [before, warden.chunks_left()])
 
 
