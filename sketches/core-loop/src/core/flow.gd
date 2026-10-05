@@ -240,6 +240,8 @@ func _begin_run(chosen: Resource) -> void:
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
+	if store != null and not store.keep_prev():
+		warn_once("run_prev_backup", "flow: could not keep the old run: %s" % store.last_error)
 	var heading: Vector3 = ctx.terrain.entry_heading(1)
 	enter_stage(1, heading * ctx.tuning.f("cruise") * FIRST_DROP_SPEED, false)
 
