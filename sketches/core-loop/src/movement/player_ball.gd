@@ -85,6 +85,8 @@ var crush_check := Callable()
 var heft_of := Callable()
 # Answers the run's scrap mass alone, without parts; combat wires it. Unwired, mass reads 0.
 var mass_of := Callable()
+# Restores Tally's pressure by a count (the stamp landing); combat wires it to _grant_pressure.
+var pressure_grant := Callable()
 # E's first claim (world's interact system, claims(face_in_reach: bool) -> bool): true
 # when an interactable takes this press, so it never also plants a pylon.
 var interact_claim := Callable()
@@ -159,7 +161,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	tree.picked.connect(_on_tree_picked)
 	events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): kit.rewind_left = 0.0)
 	events.player_died.connect(func(): kit.drop_line("reset"))
-	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo, "rend": _smash_rend}
+	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo, "rend": _smash_rend, "stamp": _smash_stamp}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
 		chain.reset()
@@ -481,7 +483,7 @@ func _burst_key() -> String:
 # The pilot's class burst is on Shift (Rivet's sprint, Kest's blink, Tarn's claw pull); Sable's Shift is the
 # boost. The keyboard fills shift_*; a scripted source fills boost_* and movement_* itself.
 func _burst_pilot() -> bool:
-	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL)
+	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE)
 
 
 func _read_shift() -> void:
@@ -904,6 +906,19 @@ func _smash_rend(at: Vector3, speed: float) -> void:
 		inward = inward.normalized() if inward.length() > 0.01 else Vector3.FORWARD
 		enemy.knock(inward + Vector3.UP * 0.2, Augments.SLAM_KNOCK * strength * REND_PULL)
 		enemy.flash()
+
+
+# The shared slam already struck these enemies as "slam"; the stamp turns each one it
+# reached into a pressure point and strikes nothing again.
+func _smash_stamp(at: Vector3, _speed: float) -> void:
+	var count := 0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy.has_method("is_dead") and enemy.is_dead():
+			continue
+		if (enemy.global_position - at).length() <= Augments.SLAM_RADIUS:
+			count += 1
+	if count > 0 and pressure_grant.is_valid():
+		pressure_grant.call(count)
 
 
 # Sable's arc slam marks every steep face within FACE_TAG_REACH for a vault.

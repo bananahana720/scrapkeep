@@ -81,6 +81,7 @@ const WALL_REACH := 4.0
 const WALL_TILT := 0.5
 const WALL_TURNS := [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]
 const BOOST_GAP := 1.6
+const CARD_PRESS_GAP := 0.5
 # Shift is the pilot's go verb, pressed as the keyboard presses it: Sable boosts on the press,
 # Rivet sprints for as long as it is held, Kest blinks on the press.
 const SHIFT_HOLD := 1.2
@@ -226,6 +227,7 @@ var _slow_time := 0.0
 var _detour_time := 0.0
 var _detour := Vector3.ZERO
 var _boost_clock := 0.0
+var _card_press_tick := -1000000
 var _shift_left := 0.0
 var _waypoints: Array[Vector3] = []
 var _waypoint_time := 0.0
@@ -1966,6 +1968,21 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		source.press.erase("movement_pressed")
 		hold.erase("shift_held")
 	source.hold = hold
+	_card_hands()
+
+
+# Tally's reader runs a card per press, not while held: the hands keep bay 3 (Balance Due)
+# loaded and turn a held trigger into one press every CARD_PRESS_GAP seconds.
+func _card_hands() -> void:
+	if game.player.abilities.cap(AbilityState.WEAPON, "cards", null) == null:
+		return
+	source.hold["bay_pick"] = 2
+	if not source.hold.get("fire_held", false):
+		return
+	source.hold.erase("fire_held")
+	if ticks - _card_press_tick >= int(ceil(CARD_PRESS_GAP * Engine.physics_ticks_per_second)):
+		source.press["fire_pressed"] = true
+		_card_press_tick = ticks
 
 
 # A wall (a face steeper than WALL_TILT) within WALL_REACH on the way is rolled around:

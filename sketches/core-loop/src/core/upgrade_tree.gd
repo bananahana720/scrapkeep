@@ -34,9 +34,10 @@ const SIZE := 30
 const WORLD_ONE_DEPTHS := 2
 const WORLD_ONE_SIZE := 6
 const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES,
-	"tarn": Tarn.NODES}
+	"tarn": Tarn.NODES, "tally": Rivet.NODES}
 # Each pilot declares NODES_WORLD_ONE in the same heap order as its full tree.
-const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Tarn}
+const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Tarn,
+	"tally": Rivet}
 const KEYS := ["weapon", "movement", "special", "smash"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.

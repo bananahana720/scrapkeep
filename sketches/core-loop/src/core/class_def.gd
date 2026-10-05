@@ -14,6 +14,7 @@ const SABLE_COLOR := Palette.ARC
 const RIVET_COLOR := Palette.COPPER
 const KEST_COLOR := Palette.AMBER
 const TARN_COLOR := Palette.RUST
+const TALLY_COLOR := Palette.LEDGER
 
 @export var id := ""
 @export var display_name := ""
@@ -73,6 +74,13 @@ static func all() -> Array[Resource]:
 			"color": TARN_COLOR, "shape": "cross", "motif": "tarn", "sound": "clank",
 			"bible_home": "Tarn, articulated claw melee",
 			"starter": false, "synergy_hooks": PackedStringArray(["on_claw_pull", "on_clamp_catch", "on_rend_landing"])}),
+		# Tally's motif and sound are Kest's stand-ins until her look unit lands her own.
+		make({"id": "tally", "display_name": "Tally", "role": "Ledger caster", "species": "pack rat",
+			"pitch": "Punch a card into the reader and run it where you aim. Gather the pack, link it, then make it pay. Roll to refill the pressure.",
+			"weapon_id": "ledger_reader", "movement_id": "flywheel_surge", "special_id": "plate_return", "smash_id": "stamp_slam",
+			"color": TALLY_COLOR, "shape": "ring", "motif": "kest", "sound": "slam_boom",
+			"bible_home": "Tally, mechanical program cards",
+			"starter": false, "synergy_hooks": PackedStringArray(["on_card_run", "on_link_arc", "on_stamp_contact"])}),
 	]
 	return list
 

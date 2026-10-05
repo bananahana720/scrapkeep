@@ -21,8 +21,9 @@ const Achievements := preload("res://src/core/achievements.gd")
 #   - with nothing focused, Right opens the first card, Right again the second, and
 #     Enter starts that class.
 
-# 50 since the fourth pilot (Tarn, wave 5) joined the row; each card rests at 9 to 13 words.
-const CALM_BUDGET := 50
+# 13 words a card at rest (each card rests at 9 to 13 words), so the fifth pilot (Tally,
+# wave 15) raises it from 50 to 65 without loosening any one card.
+const CALM_BUDGET := 65
 const SETTLE := 0.5
 
 var _game
@@ -90,7 +91,7 @@ func _process(delta: float) -> bool:
 		"hover_check":
 			var open: Array = cards.map(func(c): return c.is_open())
 			var moved := _travel > 2.0
-			_report("hover opens one", open == [false, true, false, false] and cards[1].openness > 0.95 and cards[1].scale.x > cards[0].scale.x
+			_report("hover opens one", open == _only(cards, 1) and cards[1].openness > 0.95 and cards[1].scale.x > cards[0].scale.x
 					and cards[1].preview.playing() and not cards[0].preview.playing() and moved,
 				"open %s, openness %.2f, scale %.3f vs %.3f, preview playing %s, the shell travelled %.1f m over a loop"
 					% [open, cards[1].openness, cards[1].scale.x, cards[0].scale.x, cards[1].preview.playing(), _travel])
@@ -110,10 +111,10 @@ func _process(delta: float) -> bool:
 			var first: Array = cards.map(func(c): return c.is_open())
 			Push.key(root, KEY_RIGHT)
 			_next("second_key")
-			_report("arrow lands", first == [true, false, false, false], "the first Right with nothing focused opens %s" % [first])
+			_report("arrow lands", first == _only(cards, 0), "the first Right with nothing focused opens %s" % [first])
 		"second_key":
 			var second: Array = cards.map(func(c): return c.is_open())
-			_report("arrow moves", second == [false, true, false, false], "Right again opens %s" % [second])
+			_report("arrow moves", second == _only(cards, 1), "Right again opens %s" % [second])
 			Push.key(root, KEY_ENTER)
 			_next("picked")
 		"picked":
@@ -174,3 +175,10 @@ func _check_rows(cards: Array) -> void:
 			"shows %s; extras %s; edge %s for row colour %s"
 				% [shown.map(func(k): return "%s %s \"%s\"" % [k["key"], k["icon"], k["words"]]), extras, worn.to_html(false), def.color.to_html(false)])
 
+
+# Which cards should be open when only card `i` is: one entry per card on the row.
+func _only(cards: Array, i: int) -> Array:
+	var out := []
+	for j in cards.size():
+		out.append(j == i)
+	return out

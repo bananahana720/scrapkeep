@@ -38,7 +38,9 @@ const FORGIVENESS := 0.18
 # cooldown is per charge. charge_max > 0 makes the slot a hold-gauge-release shot.
 # duration is how long an active ability runs on one charge.
 #   weapon    pattern (the Pattern it fires, default its id), mounted (the weapon it
-#             becomes on a pylon), lob (how many sticky charges one throw scatters)
+#             becomes on a pylon), lob (how many sticky charges one throw scatters),
+#             cards (the bay programs in bay order; the weapon runs the selected one on a
+#             press), pressure (the slot's charges are shared pressure that time never refills)
 #   movement  augments (the movement kit it fits), rocket, cloak (Kest's passives)
 #   special   plant_discharge (planting a pylon fires it free)
 #   smash     flavour (arc, skid or demo landing), spends_special
@@ -62,6 +64,10 @@ const ABILITIES := {
 	"claw_pull": {"icon": "ab_tarn_move", "cooldown": 3.0, "augments": ["claw_pull"]},
 	"clamp": {"icon": "ab_tarn_special", "cooldown": 6.0, "charge_max": 0.8},
 	"rend_slam": {"icon": "ab_tarn_smash", "cooldown": 0.0, "flavour": "rend"},
+	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["gather_plate", "link_clips", "balance_due"], "pressure": 3},
+	"flywheel_surge": {"icon": "ab_tally_move", "cooldown": 4.0, "augments": ["surge"]},
+	"plate_return": {"icon": "ab_tally_special", "cooldown": 6.0, "charge_max": 0.4},
+	"stamp_slam": {"icon": "ab_tally_smash", "cooldown": 0.0, "flavour": "stamp"},
 }
 const ICON_DIR := "res://assets/icons/"
 
@@ -181,6 +187,9 @@ func swap(name: String, id: String) -> void:
 	var charge_max: float = row.get("charge_max", 0.0)
 	if charge_max > 0.0:
 		s.gauge = Gauge.new(charge_max)
+	if row.has("pressure"):
+		s.max_charges = maxi(old.max_charges, int(row["pressure"]))
+		s.charges = s.max_charges
 	_slots[name] = s
 
 
@@ -265,6 +274,10 @@ func tick(delta: float) -> void:
 
 # One charge at a time: time only ever fills the charge now recharging.
 func _recharge(s: Slot, seconds: float) -> void:
+	# Pressure is refilled by rolling and contact, never by time.
+	if ABILITIES.get(s.id, {}).has("pressure"):
+		s.recharge = 0.0
+		return
 	if s.charges >= s.max_charges:
 		s.recharge = 0.0
 		return

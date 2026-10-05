@@ -20,6 +20,8 @@ const UNSAFE := {
 	"runner_gunner": ["r_run_gun", "r_ram_fins", "r_point_blank", "r_skyline"],
 	"demolitions_caster": ["k_ghost", "k_heavy_charge", "k_sticky_rain"],
 	"tarn": [],
+	# Tally borrows Rivet's tree until her own (pil-G8), so she is flagged on Rivet's rows.
+	"tally": ["r_run_gun", "r_ram_fins", "r_point_blank", "r_skyline"],
 }
 
 var _failures := 0
@@ -71,7 +73,7 @@ func _initialize() -> void:
 		_report("%s world one" % def.display_name,
 			UpgradeTree.safe_growth_problems(def.id, true) == world_one, "%d reachable-node findings" % world_one.size())
 		_report("%s data preserved" % def.display_name, list == before, "validator never edits nodes")
-	_report("all four pilots", pilots == UNSAFE.keys() and checked == 120 and distinct.size() == 120,
+	_report("all five pilots", pilots == UNSAFE.keys() and checked == 150 and distinct.size() == 120,
 		"%d rows, %d distinct nodes, pilots %s" % [checked, distinct.size(), pilots])
 	_dead_offers()
 	_fixtures()

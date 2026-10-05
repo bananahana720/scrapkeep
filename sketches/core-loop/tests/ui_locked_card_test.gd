@@ -22,8 +22,8 @@ const T := preload("res://tests/support/t.gd")
 #   - Tarn's card offers Tarn's own starter paint, no other card offers it, and the swatch,
 #     label and preview show it once equipped.
 
-# 50 since Tarn made four cards (wave 5).
-const CALM_BUDGET := 50
+# 13 words a card: 65 since Tally made five cards (wave 15).
+const CALM_BUDGET := 65
 const HINT := "Unlock: Win a run."
 
 var _t := T.new("ui_locked_card_test")
@@ -87,7 +87,7 @@ func _run() -> void:
 	card.set_locked(true, HINT)
 	await _settle(0.5)
 	var calm := WordBudget.count(_game.screens)
-	_t.check("P3-2 class select at rest reads in 50 words or fewer with a locked card", calm["hud"] > 0 and calm["hud"] <= CALM_BUDGET, "%d words: %s" % [calm["hud"], _text_of("calm")])
+	_t.check("P3-2 class select at rest reads in 65 words or fewer with a locked card", calm["hud"] > 0 and calm["hud"] <= CALM_BUDGET, "%d words: %s" % [calm["hud"], _text_of("calm")])
 	_t.check("P3-1 the hint is not shown at rest", not _text_of("calm").contains("Unlock"), _text_of("calm"))
 	Push.hover(root, card)
 	await _settle(0.7)
