@@ -2,6 +2,60 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 17 landed (2026-10-06, 86dbf59)
+
+The wave 17 candidate cand/alpha-w17 landed as 86dbf59 (proto/alpha went ec61233 to the wave 17 records commit; four units plus the re-soak note, 11 commits over base by `git rev-list --count ec61233..86dbf59`). Before the wave, the coordinator wrote the canonical M4 program record on proto/alpha (ec61233: TRACKING EV-0625 for waves 1-16, ROADMAP current state; W17-R1). Branches are deleted. Coordinator commits on the candidate: af35a2a (tally_look preview check tightened, class_preview header), 3179330 and 5ceb86b (Sol lanes committed), the merges and the records commit.
+
+**Milestone:** M4 (alpha) follow-through: the wave 16 concerns (preview missing-glb test, CARD_MAX literal, Tally's preview move, portraits for Tarn, Tally and the cannon), the re-soak that confirms the Sable climb fix, and two Sol stall diagnoses (one rejected unit, one carried to wave 18).
+
+| unit | branch | head | writer | verdict | note |
+|---|---|---|---|---|---|
+| preview-glb | wt/alpha-w17-preview-glb | ef09360 | sonnet (astack:hand) | PASS+NOTES | hero_assets_missing_glb_test covers a missing pilot glb in the preview: placeholder stays, no AnimatedPilot, one warning |
+| card-max | wt/alpha-w17-card-max | d2b1294 | sonnet (astack:hand) | PASS+NOTES | roster_test reads Screens.CARD_MAX; verifier notes the narrow-card check cannot fail at the test's screen sizes |
+| tally-pose | wt/alpha-w17-tally-pose | af35a2a | opus (astack:worker) + coordinator test tightening | PASS+NOTES | Tally's preview move: three ledger plates in a climbing stair, flywheel spin-up, stamp slam; tally_look_test 73 |
+| portraits | wt/alpha-w17-portraits | 3179330 | Codex Sol (gpt-6.1-sol high), coordinator commit | coordinator-verified (54-check test, icons-diff 0) | cls_tarn, cls_tally, cls_cannon; Icons.class_icon_id; class_card uses the SVG with the shape fallback kept |
+| soak (re-soak) | wt/alpha-w17-soak | 5ceb86b | Codex Sol (gpt-6.1-sol high), coordinator commit | n/a (evidence) | 72 runs on 4f267f3: 42 wins, 30 stalls (24 camper by design), 0 crashes, 0 wall caps, 0 script errors; Sable stage 6 cluster gone |
+| burst-align (rejected) | scratch/alpha-w17-burst-align-rejected | 7f03369 | opus (astack:worker) | FAIL x2, fixer BLOCKED | aim guard on Shift for aim-directed pilots: premise did not reproduce with pinned pilots, guarded Kest 20 still stalled, posture bands fell outside tolerance (66.2/32.1 vs 78.4/37.9); not merged (W17-R4) |
+
+Cause of each review red: burst-align, brief (seed-mapped soak runs do not transfer to pinned pilots) plus diagnosis inference.
+
+### Sol lane (Codex gpt-6.1-sol high)
+
+Five lanes: the re-soak (writer), portraits (writer), and three read-only diagnoses: the Rivet 1 / Tarn 15 / Kest 20 Warden-charge stalls (mixed verdict; led to the rejected burst-align), the Tally skipper seed 16 Brindle phase 2 stall (driver: posture branch bypasses the vent-cap routine; became wave 18 unit brindle-cap), and, in wave 16, the Sable climb. Diagnoses that rest on seed-mapped soak runs now require a pinned-pilot baseline before any edit (lesson from burst-align).
+
+### Gate story
+
+Candidate cand/alpha-w17. Gate 1 ran on 761cc6d (four units): 420 runs, 8 at a time, 25 solo, 0 reds, 1947 s, while the Sol re-soak held three processes; receipt artifacts/local/receipts/gate-ed9094d45f5d-2026-10-06T00-38-26-962Z.json records head 761cc6d. After the gate one merge (86dbf59) added only design-v3/soak-2026-10-05-w17.md; no second full gate. Candidate check cand1.log: eleven targeted tests, icons-diff 0, lint 0. Gate read (86dbf59): ADMIT, PASS+NOTES, level 2 by the reviewer's own reads of the gate log, receipt and git captures (Opus 5.5, scrapkeep-reviewer-medium; file-level fences clean; no SCRIPT ERROR or ERROR lines; tree_bot_test passed once, keep watching). proto/alpha is fast-forwarded to the wave 17 records commit by the coordinator.
+
+### Export
+
+At 86dbf59: tarball scrapkeep-core-loop-86dbf59.tar.gz 41.1 MiB, ACE_CHECK ready clips=8 streams=24, stems from the main checkout. Win proof won at stage 6, 38208 ticks (same as wave 16), 110.76 s wall, skipper seed 1. Copied to artifacts/local/alpha/export/86dbf59/. Log artifacts/local/alpha/wave17/export1.log.
+
+### Rulings (coordinator, 2026-10-06; recorded in docs/decisions.tsv at the wave 17 records commit)
+
+- W17-R1 canonical M4 record on proto/alpha; no BACKLOG card for the alpha program (light play lane).
+- W17-R2 Sol diagnosis of the three Warden-charge stalls opened burst-align (tool-only).
+- W17-R3 wave 17 Claude units and Sol lanes as listed.
+- W17-R4 burst-align rejected; head kept on scratch/alpha-w17-burst-align-rejected; the re-soak decides whether those stalls recur (they did not: Rivet 1 and Kest 20 won).
+- W17-R5 re-soak read: Sable fix confirmed in bot play; remaining non-camper stalls are singletons except Tally skipper seed 16.
+- W17-R6 Tally Brindle diagnosis opened brindle-cap as the first wave 18 unit, baseline before edit mandatory.
+
+### Open after wave 17: wave 18 concerns
+
+1. brindle-cap (running): low-punch Brindle phase 2 routes to the vent cap for posture hulls.
+2. Rivet seed 1's relic-cache wedge (Sol: inside the Highdraft Crown cache pocket) did not recur in the re-soak; keep as a watch item, no unit.
+3. tree_bot_test flaked once on the rejected head (Kest seed 2 died at 44.5 s); watch on the next gates.
+4. The narrow-card roster check cannot fail at the test's screen sizes (card-max note): add a wide-screen case or drop the check.
+5. Bot run nondeterminism (W16-R8) stands; the re-soak could not isolate the Sable fix from the other wave 16 code.
+6. Hands items 23-27 from wave 16 and 28-30 below remain unplayed.
+7. Housekeeping: ~/.local/share/godot/app_userdata/core-loop test run folders (1.8 GB).
+
+### Hands checklist (never blocks; items 13-27 carry over)
+
+28. Class select: Tarn, Tally and the cannon show their own portraits (crossed claws, clipped ledger with the stair stamp, barrel with the split lane) at the card's icon size.
+29. Open Tally's card: the preview lays three plates in a stair, hops them, spins up and stamps.
+30. Fight Brindle as Tally once the wave 18 fix lands: the bot's stall was on the Furnace phase vent cap; see whether a human finds the cap reachable.
+
 ## Wave 16 landed (2026-10-05, f7f0098)
 
 The wave 16 candidate cand/alpha-w16 landed as f7f0098 (proto/alpha went 91e36c6 to f7f0098; eight units plus a soak note, 21 commits over base by `git rev-list --count 91e36c6..f7f0098`). Heads are the unit heads in git; verdicts are the verifiers' and the coordinator's, 2026-10-05. Branches are deleted. Coordinator commits on the candidate: cedd6b2 (harpoon test helpers, W16-R1), b5d49d5 (kick rows, icons README), 6deebef (preview test tightening), c0d6b5a (empty --pilot), the merges, and the records commit. Codex Sol (gpt-6.1-sol high) wrote tally-look, cannon-look, the soak and two read-only reviews; the coordinator committed its files.
