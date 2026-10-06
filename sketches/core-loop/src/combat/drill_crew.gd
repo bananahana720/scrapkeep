@@ -23,6 +23,9 @@ var last_bore := {}
 var bore_fact := {}
 var _absorb := false
 var _plate: MeshInstance3D
+var _bit: MeshInstance3D
+var _bit_rest := Vector3.ZERO
+static var _shared: Array = []
 
 
 func _configure(threat: float) -> void:
@@ -39,10 +42,77 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var parts := _parts()
+	if not parts.is_empty():
+		_crew.free()
+		_crew = null
+		_base_color = Color.WHITE
+		_material.albedo_color = _base_color
+		_material.vertex_color_use_as_albedo = true
+		for part in parts:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			if part.flash >= 0:
+				mi.set_surface_override_material(part.flash, _material)
+			_visual_parent().add_child(mi)
+			if part.name == "DrillPlate":
+				_plate = mi
+			elif part.name == "DrillBit":
+				_bit = mi
+				_bit_rest = mi.position
+		return
 	_box(Vector3(1.6, 0.9, 1.6), Palette.CHARCOAL, Vector3(0.0, 0.5, 1.3))
 	_plate = _box(Vector3(2.2, 1.8, 0.25), Palette.BRASS, Vector3(0.0, 0.6, -1.0), 0.4)
 	var bit := _cylinder(0.45, 2.4, Palette.HAZARD, Vector3(0.0, 0.5, 2.4), 0.6)
 	bit.rotation.x = PI * 0.5
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_two/enemy_drill_crew.glb"
+	if not ResourceLoader.exists(path):
+		return _shared
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return _shared
+	var scene := packed.instantiate()
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var flash := -1
+		for i in mesh.get_surface_count():
+			var slot := mesh.surface_get_material(i).resource_name
+			if slot == "fleet_paint":
+				flash = i
+			var painted := Palette.solid(Color.WHITE)
+			painted.vertex_color_use_as_albedo = true
+			painted.metallic = 0.45 if slot == "working_tool" else (0.25 if slot == "part_state" else 0.0)
+			painted.roughness = 0.5 if slot == "working_tool" else 0.82
+			mesh.surface_set_material(i, painted)
+		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
+	scene.free()
+	return _shared
+
+
+# E20 reads the same WARN clock as the committed floor ring; only the screw moves.
+func _pose() -> void:
+	if _bit == null:
+		return
+	var withdrawal := 0.0
+	if not is_dead():
+		if phase == Phase.WARN:
+			withdrawal = clampf(_warn_progress(), 0.0, 1.0)
+		elif phase == Phase.LIVE:
+			withdrawal = 1.0 - clampf(_t / live_seconds, 0.0, 1.0)
+	_bit.position = _bit_rest - Vector3(0.0, 0.0, 0.25 * withdrawal)
+
+
+func _on_end() -> void:
+	if _bit != null:
+		_bit.position = _bit_rest
 
 
 func _commit(_to_ball: Vector3) -> Node3D:
