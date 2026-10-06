@@ -254,6 +254,30 @@ test("a dead pid slot is reclaimed without waiting", async () => {
   }
 });
 
+// Rule: a claim whose pid belongs to another user is stale. Claims are written
+// by this user only; a sandboxed runner records its namespace pid (seen: 2),
+// which on the host names a root process and answers EPERM.
+test("a foreign-user pid slot is reclaimed without waiting", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-slot-"));
+  let lease;
+  try {
+    assert.throws(() => process.kill(1, 0), { code: "EPERM" });
+    const slot = path.join(directory, "slot-0");
+    mkdirSync(slot);
+    writeFileSync(path.join(slot, "claim-foreign"), "1");
+    lease = await acquireSlot({
+      directory,
+      slots: 1,
+      sleep: async () => assert.fail("foreign pid made us wait"),
+    });
+    assert.equal(lease.slot, slot);
+    assert.equal(existsSync(path.join(slot, "claim-foreign")), false);
+  } finally {
+    lease?.release();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 // Rule: named runs acquire a slot, rather than just observing the pool.
 test("waitForMachine claims a slot and records wait duration", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-named-slot-"));

@@ -188,7 +188,9 @@ function slotOwner(slot) {
       process.kill(pid, 0);
       return { owner, alive: true };
     } catch (error) {
-      if (error.code !== "ESRCH") throw error;
+      // EPERM: the pid is another user's process, so not this user's claimer
+      // (a sandboxed runner's namespace pid lands on a root process here).
+      if (error.code !== "ESRCH" && error.code !== "EPERM") throw error;
       return { owner, alive: false };
     }
   } catch (error) {
