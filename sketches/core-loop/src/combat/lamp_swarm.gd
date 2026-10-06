@@ -28,6 +28,12 @@ var _flung := false
 # This bloom already met the ball at cruise inside it (lure_bloom), so it reports once.
 var _bloom_met := false
 var _fling: Array = []
+var _lamp_rig: Skeleton3D
+var _lamp_bones: Array[int] = []
+var _shutter_bones: Array[int] = []
+var _lens_bones: Array[int] = []
+static var _shared: PackedScene
+static var _painted: StandardMaterial3D
 
 
 func _configure(threat: float) -> void:
@@ -42,6 +48,35 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var packed := _parts()
+	if packed != null:
+		_crew.free()
+		_crew = null
+		var model := packed.instantiate() as Node3D
+		_visual_parent().add_child(model)
+		_base_color = Color.WHITE
+		_material.albedo_color = _base_color
+		_material.vertex_color_use_as_albedo = true
+		for node in model.find_children("*", "MeshInstance3D", true, false):
+			var mi := node as MeshInstance3D
+			for surface in mi.mesh.get_surface_count():
+				var slot := mi.mesh.surface_get_material(surface).resource_name
+				mi.set_surface_override_material(surface, _material if slot == "fleet_paint" else _painted)
+		_lamp_rig = model.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
+		for i in LAMP_COUNT:
+			var lamp := Node3D.new()
+			lamp.name = "LampTransform%d" % i
+			_visual_parent().add_child(lamp)
+			lamp.position = _lamp_rest(i)
+			lamps.append(lamp)
+			_lamp_bones.append(_lamp_rig.find_bone("LampBulb%d" % i))
+			_lens_bones.append(_lamp_rig.find_bone("LampLens%d" % i))
+			_shutter_bones.append(_lamp_rig.find_bone("LampShutter%d" % i))
+			_shutter_bones.append(_lamp_rig.find_bone("LampShutter%dB" % i))
+		_fling.resize(LAMP_COUNT)
+		_fling.fill(Vector3.ZERO)
+		_pose_lamps()
+		return
 	for i in LAMP_COUNT:
 		var lamp := SphereMesh.new()
 		lamp.radius = LAMP_RADIUS
@@ -49,6 +84,19 @@ func _build_tool() -> void:
 		lamps.append(_accent(lamp, Palette.HAZARD, 2.0, _lamp_rest(i)))
 	_fling.resize(LAMP_COUNT)
 	_fling.fill(Vector3.ZERO)
+
+
+static func _parts() -> PackedScene:
+	if _shared != null:
+		return _shared
+	var path := "res://assets/models/world_two/enemy_lamp_swarm.glb"
+	if not ResourceLoader.exists(path):
+		return null
+	_shared = load(path) as PackedScene
+	if _shared != null:
+		_painted = Palette.solid(Color.WHITE)
+		_painted.vertex_color_use_as_albedo = true
+	return _shared
 
 
 func _lamp_rest(index: int) -> Vector3:
@@ -118,14 +166,30 @@ func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
 
 func _pose() -> void:
 	if not _flung:
+		_pose_lamps()
 		return
 	var delta := get_physics_process_delta_time()
 	for i in lamps.size():
 		_fling[i] += Vector3.DOWN * 9.8 * delta
 		lamps[i].position += _fling[i] * delta
+	_pose_lamps()
+
+
+func _pose_lamps(reset := false) -> void:
+	if _lamp_rig == null:
+		return
+	var open := clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN else (1.0 if phase == Phase.LIVE else 0.0)
+	if reset:
+		open = 0.0
+	for i in LAMP_COUNT:
+		_lamp_rig.set_bone_pose_position(_lamp_bones[i], lamps[i].position)
+		_lamp_rig.set_bone_pose_scale(_lens_bones[i], Vector3.ONE * lerpf(0.001, 1.0, open))
+		for side in 2:
+			_lamp_rig.set_bone_pose_rotation(_shutter_bones[i * 2 + side], Quaternion(Vector3.UP, (1.0 if side == 1 else -1.0) * deg_to_rad(100.0) * open))
 
 
 func _on_end() -> void:
 	_flung = false
 	for i in lamps.size():
 		lamps[i].position = _lamp_rest(i)
+	_pose_lamps(true)

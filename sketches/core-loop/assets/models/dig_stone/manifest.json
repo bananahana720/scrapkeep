@@ -1,0 +1,454 @@
+{
+  "schema": "scrapkeep-dig-stone/1",
+  "unit": "MDS",
+  "frame": "+Y up, +X right, -Z forward, metres",
+  "material": "res://assets/materials/dig_stone/stone.tres",
+  "shared_bed_source": "515f919:assets/shaders/target_bed4.gdshaderinc (unmerged input, vendored verbatim in recipe directory)",
+  "bed_thickness_table_m": [
+    1.7,
+    0.8,
+    2.6,
+    1.1,
+    0.6,
+    2.1,
+    1.4,
+    0.9
+  ],
+  "bed_seed": 3,
+  "bed_widen": 1.0,
+  "assets": [
+    {
+      "file": "cut_face_long.glb",
+      "root": "cut_face_long",
+      "nodes": [
+        "CutFace",
+        "socket_chain_l",
+        "socket_chain_r",
+        "cut_face_long"
+      ],
+      "sockets": {
+        "socket_chain_l": [
+          -4,
+          0,
+          0
+        ],
+        "socket_chain_r": [
+          4,
+          0,
+          0
+        ]
+      },
+      "material_slots": [
+        "stone"
+      ],
+      "bounds_min": [
+        -4,
+        0,
+        -1
+      ],
+      "bounds_max": [
+        4,
+        4,
+        1
+      ],
+      "bounds_size": [
+        8,
+        4,
+        2
+      ],
+      "triangles": 4588,
+      "exported_vertices": 13648,
+      "surfaces": 1,
+      "bytes": 465572,
+      "sha256": "36c3b0d2f445196c46c6e9ff2e67f559ef30c13a1b9fa0ee382c535c6a865c77",
+      "part": "CutFace",
+      "budget_row": "landform",
+      "caps": {
+        "triangles": 8000,
+        "imported_vertices": 24000,
+        "surfaces": 1
+      },
+      "origin": "bottom-centre",
+      "static_pivot": [
+        0,
+        0,
+        0
+      ],
+      "collision": false,
+      "clips": []
+    },
+    {
+      "file": "cut_face_scoop.glb",
+      "root": "cut_face_scoop",
+      "nodes": [
+        "CutScoop",
+        "socket_chain_l",
+        "socket_chain_r",
+        "cut_face_scoop"
+      ],
+      "sockets": {
+        "socket_chain_l": [
+          -3,
+          0,
+          0
+        ],
+        "socket_chain_r": [
+          3,
+          0,
+          0
+        ]
+      },
+      "material_slots": [
+        "stone"
+      ],
+      "bounds_min": [
+        -3,
+        0,
+        -1.25
+      ],
+      "bounds_max": [
+        3,
+        4,
+        1.25
+      ],
+      "bounds_size": [
+        6,
+        4,
+        2.5
+      ],
+      "triangles": 4588,
+      "exported_vertices": 13654,
+      "surfaces": 1,
+      "bytes": 465776,
+      "sha256": "b3c0b809a406a21671a40230733b6812f204067b84a297786807164f46a0572a",
+      "part": "CutScoop",
+      "budget_row": "landform",
+      "caps": {
+        "triangles": 8000,
+        "imported_vertices": 24000,
+        "surfaces": 1
+      },
+      "origin": "bottom-centre",
+      "static_pivot": [
+        0,
+        0,
+        0
+      ],
+      "collision": false,
+      "clips": []
+    },
+    {
+      "file": "rubble_cluster.glb",
+      "root": "rubble_cluster",
+      "nodes": [
+        "Rubble",
+        "socket_ground",
+        "rubble_cluster"
+      ],
+      "sockets": {
+        "socket_ground": [
+          0,
+          0,
+          0
+        ]
+      },
+      "material_slots": [
+        "stone"
+      ],
+      "bounds_min": [
+        -1.5,
+        0,
+        -1.25
+      ],
+      "bounds_max": [
+        1.5,
+        1,
+        1.25
+      ],
+      "bounds_size": [
+        3.0,
+        1,
+        2.5
+      ],
+      "triangles": 576,
+      "exported_vertices": 1577,
+      "surfaces": 1,
+      "bytes": 55152,
+      "sha256": "c5f4e8dc001fa3980f2d073a03e454c670aeaf952f3ad057ce29fc3ad4da7f53",
+      "part": "Rubble",
+      "budget_row": "landform",
+      "caps": {
+        "triangles": 8000,
+        "imported_vertices": 24000,
+        "surfaces": 1
+      },
+      "origin": "bottom-centre",
+      "static_pivot": [
+        0,
+        0,
+        0
+      ],
+      "collision": false,
+      "clips": []
+    },
+    {
+      "file": "breach_socket.glb",
+      "root": "breach_socket",
+      "nodes": [
+        "socket_landing_preview",
+        "socket_plate",
+        "SocketCut",
+        "breach_socket"
+      ],
+      "sockets": {
+        "socket_landing_preview": [
+          0,
+          -5,
+          -8
+        ],
+        "socket_plate": [
+          0,
+          0,
+          0
+        ]
+      },
+      "material_slots": [
+        "stone"
+      ],
+      "bounds_min": [
+        -4,
+        -1,
+        -4
+      ],
+      "bounds_max": [
+        4,
+        0,
+        4
+      ],
+      "bounds_size": [
+        8,
+        1,
+        8
+      ],
+      "triangles": 1152,
+      "exported_vertices": 2886,
+      "surfaces": 1,
+      "bytes": 100552,
+      "sha256": "7aca019076d51c496c9dd40090b87bd88243e9a4a94063c918b3b9365d483aa5",
+      "part": "SocketCut",
+      "budget_row": "landform",
+      "caps": {
+        "triangles": 8000,
+        "imported_vertices": 24000,
+        "surfaces": 1
+      },
+      "origin": "membrane centre at nominal top Y=0",
+      "static_pivot": [
+        0,
+        0,
+        0
+      ],
+      "collision": false,
+      "clips": []
+    },
+    {
+      "file": "bed_floor.glb",
+      "root": "bed_floor",
+      "nodes": [
+        "FloorStudy",
+        "bed_floor"
+      ],
+      "sockets": {},
+      "material_slots": [
+        "stone"
+      ],
+      "bounds_min": [
+        -4,
+        0,
+        -4
+      ],
+      "bounds_max": [
+        4,
+        1,
+        4
+      ],
+      "bounds_size": [
+        8,
+        1,
+        8
+      ],
+      "triangles": 2432,
+      "exported_vertices": 6531,
+      "surfaces": 1,
+      "bytes": 224788,
+      "sha256": "a3d25e6d0054b45f6c8317895592be9c5d70299d48efef61fb85a27d0ee24cb5",
+      "part": "FloorStudy",
+      "budget_row": "landform",
+      "caps": {
+        "triangles": 8000,
+        "imported_vertices": 24000,
+        "surfaces": 1
+      },
+      "origin": "bottom-centre",
+      "static_pivot": [
+        0,
+        0,
+        0
+      ],
+      "collision": false,
+      "clips": []
+    },
+    {
+      "file": "bed_cut.glb",
+      "root": "bed_cut",
+      "nodes": [
+        "CutStudy",
+        "bed_cut"
+      ],
+      "sockets": {},
+      "material_slots": [
+        "stone"
+      ],
+      "bounds_min": [
+        -4,
+        0,
+        -4
+      ],
+      "bounds_max": [
+        4,
+        4,
+        4
+      ],
+      "bounds_size": [
+        8,
+        4,
+        8
+      ],
+      "triangles": 4700,
+      "exported_vertices": 10290,
+      "surfaces": 1,
+      "bytes": 358684,
+      "sha256": "7de73b49710b3ca94ef3f965c1bfa9e614ab404ff3f78b255f45d57a80764442",
+      "part": "CutStudy",
+      "budget_row": "landform",
+      "caps": {
+        "triangles": 8000,
+        "imported_vertices": 24000,
+        "surfaces": 1
+      },
+      "origin": "bottom-centre",
+      "static_pivot": [
+        0,
+        0,
+        0
+      ],
+      "collision": false,
+      "clips": []
+    },
+    {
+      "file": "bed_rubble.glb",
+      "root": "bed_rubble",
+      "nodes": [
+        "RubbleStudy",
+        "bed_rubble"
+      ],
+      "sockets": {},
+      "material_slots": [
+        "stone"
+      ],
+      "bounds_min": [
+        -4,
+        0,
+        -4
+      ],
+      "bounds_max": [
+        4,
+        1.7999999523162842,
+        4
+      ],
+      "bounds_size": [
+        8,
+        1.7999999523162842,
+        8
+      ],
+      "triangles": 2432,
+      "exported_vertices": 3662,
+      "surfaces": 1,
+      "bytes": 132996,
+      "sha256": "7b1b02b625ae5000d30d4380c18445f7aca9eec824d24f1d142ddc07dff7af84",
+      "part": "RubbleStudy",
+      "budget_row": "landform",
+      "caps": {
+        "triangles": 8000,
+        "imported_vertices": 24000,
+        "surfaces": 1
+      },
+      "origin": "bottom-centre",
+      "static_pivot": [
+        0,
+        0,
+        0
+      ],
+      "collision": false,
+      "clips": []
+    },
+    {
+      "file": "bed_recess.glb",
+      "root": "bed_recess",
+      "nodes": [
+        "RecessStudy",
+        "bed_recess"
+      ],
+      "sockets": {},
+      "material_slots": [
+        "stone"
+      ],
+      "bounds_min": [
+        -4,
+        0,
+        -4
+      ],
+      "bounds_max": [
+        4,
+        4,
+        4
+      ],
+      "bounds_size": [
+        8,
+        4,
+        8
+      ],
+      "triangles": 5876,
+      "exported_vertices": 14010,
+      "surfaces": 1,
+      "bytes": 484788,
+      "sha256": "e5ca5d0c352668ef92899870cc76a1feda786c677c00db0678a6c44a5d947186",
+      "part": "RecessStudy",
+      "budget_row": "landform",
+      "caps": {
+        "triangles": 8000,
+        "imported_vertices": 24000,
+        "surfaces": 1
+      },
+      "origin": "bottom-centre",
+      "static_pivot": [
+        0,
+        0,
+        0
+      ],
+      "collision": false,
+      "clips": []
+    }
+  ],
+  "integration_notes": [
+    "No runtime loader, placement, registry, collision or gameplay change is supplied.",
+    "Admit the unmerged shared-bed method explicitly; align terrain material parameters before claiming bed continuity.",
+    "GLB stone is a neutral fallback. Its Color channel contains grayscale wear only, never per-piece coloured albedo beds. Override with the single shared stone.tres after import.",
+    "cut_face_long is buried 0.25 m during placement; origins remain authored bottom-centre.",
+    "Studies are look references; never tile them as walkable islands. Actual terrain remains authoritative.",
+    "breach_socket follows the 8x1x8 m KD surround with open 6 m throat. It is an offline study, not a support fitted to the P-R6 12x12 / 14x10 gameplay rectangles. Wiring owner must reconcile the surround footprint; never scale it blindly or plug the throat.",
+    "socket_landing_preview is a preview-only reference, not an approved gameplay landing.",
+    "Suggested bed_recess hollow instance parameter: [3.6,-0.8,0.75,3.2]; use only off-route.",
+    "CPU preview uses the same eight bed thicknesses in a Blender world-position material; its lighting and procedural tone are an offline approximation, not Godot renderer evidence."
+  ]
+}

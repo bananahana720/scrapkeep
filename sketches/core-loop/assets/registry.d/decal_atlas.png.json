@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "decal_atlas.png",
+   "path": "res://assets/cosmetics/textures/decal_atlas.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  }
+ ]
+}

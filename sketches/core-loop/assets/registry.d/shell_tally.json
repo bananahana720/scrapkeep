@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "shell_tally",
+   "path": "res://assets/models/world_one/shell_tally.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/shell_tally.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+   }
+  }
+ ]
+}

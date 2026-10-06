@@ -14,6 +14,7 @@ const HP := 40.0
 
 var _aerial: MeshInstance3D
 var _phase0 := 0.0
+static var _shared: Array = []
 
 
 func _configure(threat: float) -> void:
@@ -27,12 +28,52 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var parts := _parts()
+	if not parts.is_empty():
+		_crew.free()
+		_crew = null
+		for part in parts:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			if part.flash >= 0:
+				mi.set_surface_override_material(part.flash, _material)
+			_visual_parent().add_child(mi)
+			if part.name == "GyroAerial":
+				_aerial = mi
+		return
 	_aerial = _cylinder(0.07, 3.4, Palette.CHARCOAL, Vector3(0.0, CREW_HALF + 1.5, -0.2))
 	for i in 3:
 		var hoop := TorusMesh.new()
 		hoop.inner_radius = 0.45 - i * 0.1
 		hoop.outer_radius = 0.55 - i * 0.1
 		_accent(hoop, Palette.HAZARD, 0.8, Vector3(0.0, 0.6 + i * 0.5, 0.0), _aerial)
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_one/enemy_gyro_jammer.glb"
+	if not ResourceLoader.exists(path):
+		return _shared
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return _shared
+	var scene := packed.instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var flash := -1
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted)
+		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
+	scene.free()
+	return _shared
 
 
 func _commit(_to_ball: Vector3) -> Node3D:

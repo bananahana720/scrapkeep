@@ -19,6 +19,7 @@ var swats := 0
 var _paddle: Node3D
 var _sweep_dir := Vector3.RIGHT
 var _swung := false
+static var _shared: Array = []
 
 
 func _configure(threat: float) -> void:
@@ -35,12 +36,53 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var parts := _parts()
+	if not parts.is_empty():
+		_crew.free()
+		_crew = null
+		for part in parts:
+			var mi := MeshInstance3D.new()
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			_visual_parent().add_child(mi)
+			if part.paddle:
+				mi.name = "SwatterPaddle"
+				_paddle = mi
+			else:
+				mi.name = "SwatterBody"
+				mi.set_surface_override_material(part.body, _material)
+		return
 	_paddle = Node3D.new()
 	_paddle.position = Vector3(0.0, -CREW_HALF + 0.5, 0.0)
 	_visual_parent().add_child(_paddle)
 	_box(Vector3(0.2, 0.2, 5.5), Palette.CHARCOAL, Vector3(0.0, 0.0, 2.9), 0.0, _paddle)
 	_box(Vector3(0.3, 1.0, 1.6), Palette.RUST.darkened(0.2), Vector3(0.0, 0.2, 5.4), 0.0, _paddle)
 	_box(Vector3(0.32, 0.18, 1.62), Palette.HAZARD, Vector3(0.0, 0.62, 5.4), 0.6, _paddle)
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_one/enemy_swatter.glb"
+	if not ResourceLoader.exists(path):
+		return _shared
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return _shared
+	var scene := packed.instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var body := -1
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+				body = i
+			mesh.surface_set_material(i, painted)
+		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "paddle": mi.name.begins_with("SwatterPaddle")})
+	scene.free()
+	return _shared
 
 
 func _commit(to_ball: Vector3) -> Node3D:

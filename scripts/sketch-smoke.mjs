@@ -8,6 +8,7 @@ import {
   renameSync,
   rmdirSync,
   rmSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -177,6 +178,9 @@ export function machineSlotCount(env = process.env) {
   return slots;
 }
 
+// Longer than the slowest gate (about 35 min) with margin.
+export const FOREIGN_CLAIM_MAX_MS = 3 * 60 * 60 * 1000;
+
 function slotOwner(slot) {
   try {
     const owner = readdirSync(slot).find((name) => name.startsWith("claim-"));
@@ -188,8 +192,13 @@ function slotOwner(slot) {
       process.kill(pid, 0);
       return { owner, alive: true };
     } catch (error) {
-      if (error.code !== "ESRCH") throw error;
-      return { owner, alive: false };
+      if (error.code === "ESRCH") return { owner, alive: false };
+      if (error.code !== "EPERM") throw error;
+      // EPERM: a sandboxed runner's namespace pid lands on another user's
+      // process here, so the pid cannot prove liveness. Hold the slot until
+      // the claim is older than any run could be.
+      const age = Date.now() - statSync(path.join(slot, owner)).mtimeMs;
+      return { owner, alive: age < FOREIGN_CLAIM_MAX_MS };
     }
   } catch (error) {
     if (error.code === "ENOENT") return null;

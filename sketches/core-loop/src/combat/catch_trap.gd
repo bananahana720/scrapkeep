@@ -18,6 +18,8 @@ const HP := 35.0
 var cupped := 0
 var _cup: MeshInstance3D
 
+static var _shared: Array = []
+
 
 func _configure(threat: float) -> void:
 	_set_health(HP * threat)
@@ -30,16 +32,55 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
-	_cup = MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = 1.2
-	mesh.bottom_radius = 0.7
-	mesh.height = 0.8
-	_cup.mesh = mesh
-	_cup.material_override = Palette.solid(Palette.CHARCOAL.lightened(0.1), 0.0)
+	var parts := _parts()
+	if parts.is_empty():
+		_cup = MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 1.2
+		mesh.bottom_radius = 0.7
+		mesh.height = 0.8
+		_cup.mesh = mesh
+		_cup.material_override = Palette.solid(Palette.CHARCOAL.lightened(0.1), 0.0)
+		_visual_parent().add_child(_cup)
+		_cylinder(1.25, 0.1, Palette.HAZARD, Vector3(0.0, 0.42, 0.0), 0.7, _cup)
+	else:
+		_crew.free()
+		_crew = null
+		for part in parts:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			if part.flash >= 0:
+				mi.set_surface_override_material(part.flash, _material)
+			if part.name == "CatchCup":
+				_cup = mi
+			_visual_parent().add_child(mi)
 	_cup.position = Vector3(0.0, CREW_HALF + 0.5, -0.3)
-	_visual_parent().add_child(_cup)
-	_cylinder(1.25, 0.1, Palette.HAZARD, Vector3(0.0, 0.42, 0.0), 0.7, _cup)
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	if not ResourceLoader.exists("res://assets/models/world_one/enemy_catch_trap.glb"):
+		return []
+	var packed := load("res://assets/models/world_one/enemy_catch_trap.glb") as PackedScene
+	if packed == null:
+		return []
+	var scene := packed.instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var flash := -1
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted)
+		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
+	scene.free()
+	return _shared
 
 
 func _commit(_to_ball: Vector3) -> Node3D:

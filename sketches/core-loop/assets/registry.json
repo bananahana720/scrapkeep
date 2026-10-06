@@ -1,10 +1,1489 @@
 {
  "assets": [
   {
+   "id": "decal_fern_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_fern_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_moth_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_moth_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_mushroom_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_mushroom_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_patch_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_patch_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_paw_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_paw_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_seashell_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_seashell_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_snail_shell_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_snail_shell_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_thimble_mask.png",
+   "path": "res://assets/cosmetics/decals/decal_thimble_mask.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "decal_atlas.png",
+   "path": "res://assets/cosmetics/textures/decal_atlas.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_atlas.png",
+   "path": "res://assets/cosmetics/textures/trail_atlas.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (delivered cosmetic texture; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_forge_chips",
+   "path": "res://assets/cosmetics/trails/trail_forge_chips.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_ink_stitch",
+   "path": "res://assets/cosmetics/trails/trail_ink_stitch.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_moth_tuft",
+   "path": "res://assets/cosmetics/trails/trail_moth_tuft.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_plum_curl",
+   "path": "res://assets/cosmetics/trails/trail_plum_curl.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_rose_wash",
+   "path": "res://assets/cosmetics/trails/trail_rose_wash.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "trail_salt_skip",
+   "path": "res://assets/cosmetics/trails/trail_salt_skip.glb",
+   "class": "scenery",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/cosmetics/build_cua.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "boss_brindle",
+   "path": "res://assets/models/bosses/boss_brindle.glb",
+   "class": "warden_base",
+   "ships": true,
+   "loader": "src/boss/requisition.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/brindle_model.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   },
+   "budget_note": "Contains warden_base and warden_kit allocations, measured separately by dress_bri_assets_test; scooter shares the kit allowance.",
+   "exception": {
+    "tris": 6500,
+    "draws": 50
+   },
+   "exception_why": "one GLB holds the fortress base and its kit; D4 BUILD-SPEC allows warden_base plus warden_kit (1,500 tris, 18 draws)"
+  },
+  {
+   "id": "boss_brindle_scooter",
+   "path": "res://assets/models/bosses/boss_brindle_scooter.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/boss/requisition.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/brindle_model.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "boss_mind_base",
+   "path": "res://assets/models/bosses/boss_mind_base.glb",
+   "class": "warden_base",
+   "ships": true,
+   "loader": "src/boss/mind_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/mind_body.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "boss_mind_base_MindCastWear.png",
+   "path": "res://assets/models/bosses/boss_mind_base_MindCastWear.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/bosses/boss_mind_base.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/bosses/mind_body.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "boss_mind_kit",
+   "path": "res://assets/models/bosses/boss_mind_kit.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/boss/mind_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/mind_body.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "boss_mind_kit_MindCastWear.png",
+   "path": "res://assets/models/bosses/boss_mind_kit_MindCastWear.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/bosses/boss_mind_kit.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/bosses/mind_body.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "boss_waking_base",
+   "path": "res://assets/models/bosses/boss_waking_base.glb",
+   "class": "warden_base",
+   "ships": true,
+   "loader": "src/boss/waking_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/waking.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "boss_waking_kit",
+   "path": "res://assets/models/bosses/boss_waking_kit.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/boss/waking_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/waking.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "mind_hand",
+   "path": "res://assets/models/bosses/mind_hand.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/mind_hand.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/mind_hand.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "mind_hand_M1_M2_cast_atlas.png",
+   "path": "res://assets/models/bosses/mind_hand_M1_M2_cast_atlas.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/bosses/mind_hand.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/bosses/mind_hand.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "mind_hand_M4_signal_atlas.png",
+   "path": "res://assets/models/bosses/mind_hand_M4_signal_atlas.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/bosses/mind_hand.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/bosses/mind_hand.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
    "path": "res://assets/models/chunks.glb",
    "class": "chunk",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd:43"
+  },
+  {
+   "id": "escape_rail__primer_coil",
+   "path": "res://assets/models/companion/assembled/escape_rail__primer_coil.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_rail__primer_mesh",
+   "path": "res://assets/models/companion/assembled/escape_rail__primer_mesh.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_rail__ram_prow",
+   "path": "res://assets/models/companion/assembled/escape_rail__ram_prow.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_rail__ram_spring",
+   "path": "res://assets/models/companion/assembled/escape_rail__ram_spring.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_vent__primer_coil",
+   "path": "res://assets/models/companion/assembled/escape_vent__primer_coil.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_vent__primer_mesh",
+   "path": "res://assets/models/companion/assembled/escape_vent__primer_mesh.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_vent__ram_prow",
+   "path": "res://assets/models/companion/assembled/escape_vent__ram_prow.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_vent__ram_spring",
+   "path": "res://assets/models/companion/assembled/escape_vent__ram_spring.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_coil__escape_rail",
+   "path": "res://assets/models/companion/assembled/primer_coil__escape_rail.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_coil__escape_vent",
+   "path": "res://assets/models/companion/assembled/primer_coil__escape_vent.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_coil__ram_prow",
+   "path": "res://assets/models/companion/assembled/primer_coil__ram_prow.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_coil__ram_spring",
+   "path": "res://assets/models/companion/assembled/primer_coil__ram_spring.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_mesh__escape_rail",
+   "path": "res://assets/models/companion/assembled/primer_mesh__escape_rail.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_mesh__escape_vent",
+   "path": "res://assets/models/companion/assembled/primer_mesh__escape_vent.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_mesh__ram_prow",
+   "path": "res://assets/models/companion/assembled/primer_mesh__ram_prow.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_mesh__ram_spring",
+   "path": "res://assets/models/companion/assembled/primer_mesh__ram_spring.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_prow__escape_rail",
+   "path": "res://assets/models/companion/assembled/ram_prow__escape_rail.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_prow__escape_vent",
+   "path": "res://assets/models/companion/assembled/ram_prow__escape_vent.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_prow__primer_coil",
+   "path": "res://assets/models/companion/assembled/ram_prow__primer_coil.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_prow__primer_mesh",
+   "path": "res://assets/models/companion/assembled/ram_prow__primer_mesh.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_spring__escape_rail",
+   "path": "res://assets/models/companion/assembled/ram_spring__escape_rail.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_spring__escape_vent",
+   "path": "res://assets/models/companion/assembled/ram_spring__escape_vent.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_spring__primer_coil",
+   "path": "res://assets/models/companion/assembled/ram_spring__primer_coil.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_spring__primer_mesh",
+   "path": "res://assets/models/companion/assembled/ram_spring__primer_mesh.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_rail",
+   "path": "res://assets/models/companion/escape_rail.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "escape_vent",
+   "path": "res://assets/models/companion/escape_vent.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_coil",
+   "path": "res://assets/models/companion/primer_coil.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "primer_mesh",
+   "path": "res://assets/models/companion/primer_mesh.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_prow",
+   "path": "res://assets/models/companion/ram_prow.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "ram_spring",
+   "path": "res://assets/models/companion/ram_spring.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/companion_body.gd",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "spil9",
+   "path": "res://assets/models/companion/spil9.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/companion/build_spil9.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_rim_sector",
+   "path": "res://assets/models/dig_mechanical/breach_rim_sector.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_rim_sector.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_tab",
+   "path": "res://assets/models/dig_mechanical/breach_tab.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_tab.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_a",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_a.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_a.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_a_12x12",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_a_12x12.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_a_12x12.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_a_14x10",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_a_14x10.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_a_14x10.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_b",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_b.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_b.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_b_12x12",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_b_12x12.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_b_12x12.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_b_14x10",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_b_14x10.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_b_14x10.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_c",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_c.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_c.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_c_12x12",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_c_12x12.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_c_12x12.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_wedge_c_14x10",
+   "path": "res://assets/models/dig_mechanical/breach_wedge_c_14x10.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/breach_wedge_c_14x10.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "cart_body",
+   "path": "res://assets/models/dig_mechanical/cart_body.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/cart_body.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "cart_wheel",
+   "path": "res://assets/models/dig_mechanical/cart_wheel.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/cart_wheel.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "impeller_hub",
+   "path": "res://assets/models/dig_mechanical/impeller_hub.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/impeller_hub.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "impeller_rim_sector",
+   "path": "res://assets/models/dig_mechanical/impeller_rim_sector.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/impeller_rim_sector.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "impeller_vane",
+   "path": "res://assets/models/dig_mechanical/impeller_vane.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/impeller_vane.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "impeller_vane_chipped",
+   "path": "res://assets/models/dig_mechanical/impeller_vane_chipped.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/impeller_vane_chipped.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "intake_petal",
+   "path": "res://assets/models/dig_mechanical/intake_petal.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/intake_petal.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "intake_spine_segment",
+   "path": "res://assets/models/dig_mechanical/intake_spine_segment.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/intake_spine_segment.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "intake_throat",
+   "path": "res://assets/models/dig_mechanical/intake_throat.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/intake_throat.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "lamp_curve_module",
+   "path": "res://assets/models/dig_mechanical/lamp_curve_module.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/lamp_curve_module.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "lamp_straight_module",
+   "path": "res://assets/models/dig_mechanical/lamp_straight_module.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/lamp_straight_module.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "shell_crescent",
+   "path": "res://assets/models/dig_mechanical/shell_crescent.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/shell_crescent.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "shell_saddle",
+   "path": "res://assets/models/dig_mechanical/shell_saddle.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/shell_saddle.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "strut_bent",
+   "path": "res://assets/models/dig_mechanical/strut_bent.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/strut_bent.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "strut_tall",
+   "path": "res://assets/models/dig_mechanical/strut_tall.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/strut_tall.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "bed_cut",
+   "path": "res://assets/models/dig_stone/bed_cut.glb",
+   "class": "landform",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_stone/bed_cut.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "bed_floor",
+   "path": "res://assets/models/dig_stone/bed_floor.glb",
+   "class": "landform",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_stone/bed_floor.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "bed_recess",
+   "path": "res://assets/models/dig_stone/bed_recess.glb",
+   "class": "landform",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_stone/bed_recess.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "bed_rubble",
+   "path": "res://assets/models/dig_stone/bed_rubble.glb",
+   "class": "landform",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_stone/bed_rubble.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "breach_socket",
+   "path": "res://assets/models/dig_stone/breach_socket.glb",
+   "class": "landform",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_stone/breach_socket.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "cut_face_long",
+   "path": "res://assets/models/dig_stone/cut_face_long.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_stone/cut_face_long.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "cut_face_scoop",
+   "path": "res://assets/models/dig_stone/cut_face_scoop.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_stone/cut_face_scoop.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "rubble_cluster",
+   "path": "res://assets/models/dig_stone/rubble_cluster.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/dig_stone/rubble_cluster.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "anchor_collar",
+   "path": "res://assets/models/highdraft/anchor_collar.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "anchor_eye",
+   "path": "res://assets/models/highdraft/anchor_eye.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "anchor_mast",
+   "path": "res://assets/models/highdraft/anchor_mast.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "barge_skin",
+   "path": "res://assets/models/highdraft/barge_skin.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "barge_skin_rusted-salvaged-plate.webp",
+   "path": "res://assets/models/highdraft/barge_skin_rusted-salvaged-plate.webp",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/highdraft/barge_skin.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "bridge_skin",
+   "path": "res://assets/models/highdraft/bridge_skin.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "bridge_skin_rusted-salvaged-plate.webp",
+   "path": "res://assets/models/highdraft/bridge_skin_rusted-salvaged-plate.webp",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/highdraft/bridge_skin.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "island_large",
+   "path": "res://assets/models/highdraft/island_large.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "island_large_sandstone-strata.webp",
+   "path": "res://assets/models/highdraft/island_large_sandstone-strata.webp",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/highdraft/island_large.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "island_medium",
+   "path": "res://assets/models/highdraft/island_medium.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "island_medium_sandstone-strata.webp",
+   "path": "res://assets/models/highdraft/island_medium_sandstone-strata.webp",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/highdraft/island_medium.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "island_rib",
+   "path": "res://assets/models/highdraft/island_rib.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "island_rib_rusted-salvaged-plate.webp",
+   "path": "res://assets/models/highdraft/island_rib_rusted-salvaged-plate.webp",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/highdraft/island_rib.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "island_rim",
+   "path": "res://assets/models/highdraft/island_rim.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "island_rim_rusted-salvaged-plate.webp",
+   "path": "res://assets/models/highdraft/island_rim_rusted-salvaged-plate.webp",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/highdraft/island_rim.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "island_small",
+   "path": "res://assets/models/highdraft/island_small.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "island_small_sandstone-strata.webp",
+   "path": "res://assets/models/highdraft/island_small_sandstone-strata.webp",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/highdraft/island_small.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "net_edge",
+   "path": "res://assets/models/highdraft/net_edge.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "net_shoe",
+   "path": "res://assets/models/highdraft/net_shoe.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "net_tile",
+   "path": "res://assets/models/highdraft/net_tile.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_ballast",
+   "path": "res://assets/models/highdraft/prop_ballast.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_bearing",
+   "path": "res://assets/models/highdraft/prop_bearing.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_bench",
+   "path": "res://assets/models/highdraft/prop_bench.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_clamp",
+   "path": "res://assets/models/highdraft/prop_clamp.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_crate",
+   "path": "res://assets/models/highdraft/prop_crate.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_fan",
+   "path": "res://assets/models/highdraft/prop_fan.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_lamp_body",
+   "path": "res://assets/models/highdraft/prop_lamp_body.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_lamp_glass",
+   "path": "res://assets/models/highdraft/prop_lamp_glass.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_pot",
+   "path": "res://assets/models/highdraft/prop_pot.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_sail",
+   "path": "res://assets/models/highdraft/prop_sail.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "prop_spool",
+   "path": "res://assets/models/highdraft/prop_spool.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/props.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "return_ramp_skin",
+   "path": "res://assets/models/highdraft/return_ramp_skin.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "return_ramp_skin_rusted-salvaged-plate.webp",
+   "path": "res://assets/models/highdraft/return_ramp_skin_rusted-salvaged-plate.webp",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/highdraft/return_ramp_skin.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/islands.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "sky_blades",
+   "path": "res://assets/models/highdraft/sky_blades.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/sky.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "sky_cloud",
+   "path": "res://assets/models/highdraft/sky_cloud.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/sky.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "sky_cradle",
+   "path": "res://assets/models/highdraft/sky_cradle.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/sky.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "sky_loom",
+   "path": "res://assets/models/highdraft/sky_loom.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/sky.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "sky_mesa",
+   "path": "res://assets/models/highdraft/sky_mesa.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/sky.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "thermal_air",
+   "path": "res://assets/models/highdraft/thermal_air.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "thermal_vent",
+   "path": "res://assets/models/highdraft/thermal_vent.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/presentation/highdraft_scenery.gd",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "travel_vane",
+   "path": "res://assets/models/highdraft/travel_vane.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/highdraft/lift.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D2/out/BUILD-SPEC.md"
+   }
   },
   {
    "path": "res://assets/models/moss_shelter.glb",
@@ -25,6 +1504,17 @@
    "exception_why": "recipe assert tris < 6,500"
   },
   {
+   "id": "pilot_cannon_anim",
+   "path": "res://assets/models/pilot_cannon_anim.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/pilot_cannon.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+   }
+  },
+  {
    "path": "res://assets/models/pilot_kest_anim.glb",
    "class": "pilot",
    "ships": true,
@@ -41,6 +1531,28 @@
    "class": "pilot",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd:16"
+  },
+  {
+   "id": "pilot_tally_anim",
+   "path": "res://assets/models/pilot_tally_anim.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/pilot_tally.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "pilot_tarn_anim",
+   "path": "res://assets/models/pilot_tarn_anim.glb",
+   "class": "pilot",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/pilot_tarn.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+   }
   },
   {
    "path": "res://assets/models/reward_gate.glb",
@@ -91,6 +1603,74 @@
    "loader": "src/presentation/hero_assets.gd:663 (format string warden_kit_%s.glb)"
   },
   {
+   "id": "warden_mantle_brood",
+   "path": "res://assets/models/warden_mantle_brood.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/warden_mantle_brood.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D5/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "warden_mantle_brood_MantleStripes025m.png",
+   "path": "res://assets/models/warden_mantle_brood_MantleStripes025m.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/warden_mantle_brood.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/warden_mantle_brood.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D5/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "warden_mantle_choir",
+   "path": "res://assets/models/warden_mantle_choir.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/warden_mantle_choir.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D5/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "warden_mantle_hand",
+   "path": "res://assets/models/warden_mantle_hand.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/warden_mantle_hand.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D5/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "warden_mantle_meltdown",
+   "path": "res://assets/models/warden_mantle_meltdown.glb",
+   "class": "warden_kit",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/warden_mantle_meltdown.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D5/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "warden_mantle_meltdown_MantleStripes025m.png",
+   "path": "res://assets/models/warden_mantle_meltdown_MantleStripes025m.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "embedded in res://assets/models/warden_mantle_meltdown.glb; extracted by Godot import",
+   "provenance": {
+    "recipe": "tools/blender/warden_mantle_meltdown.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D5/out/BUILD-SPEC.md",
+    "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
    "path": "res://assets/models/world_one/clutter_kit.glb",
    "class": "clutter",
    "ships": true,
@@ -115,6 +1695,18 @@
    "loader": "src/combat/bola_thrower.gd (load of this path)"
   },
   {
+   "id": "enemy_catch_trap",
+   "path": "res://assets/models/world_one/enemy_catch_trap.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/catch_trap.gd:65, src/combat/catch_trap.gd:67",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_catch_trap.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "Ported world-one recipe; D3 supplies the shared enemy budget contract."
+   }
+  },
+  {
    "path": "res://assets/models/world_one/enemy_chaser.glb",
    "class": "enemy",
    "ships": true,
@@ -129,6 +1721,18 @@
    "class": "enemy",
    "ships": true,
    "loader": "src/combat/deflector.gd (load of this path)"
+  },
+  {
+   "id": "enemy_gyro_jammer",
+   "path": "res://assets/models/world_one/enemy_gyro_jammer.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/gyro_jammer.gd:57",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_gyro_jammer.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "Ported world-one recipe; D3 supplies the shared enemy budget contract."
+   }
   },
   {
    "path": "res://assets/models/world_one/enemy_hooker.glb",
@@ -169,6 +1773,42 @@
    "loader": "src/combat/plated_brute.gd (load of this path)"
   },
   {
+   "id": "enemy_ramp_flipper",
+   "path": "res://assets/models/world_one/enemy_ramp_flipper.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/ramp_flipper.gd:63, src/combat/ramp_flipper.gd:65",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_ramp_flipper.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "Ported world-one recipe; D3 supplies the shared enemy budget contract."
+   }
+  },
+  {
+   "id": "enemy_reactor",
+   "path": "res://assets/models/world_one/enemy_reactor.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/reactor_relic.gd:115",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_reactor.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "Ported world-one recipe; D3 supplies the shared enemy budget contract."
+   }
+  },
+  {
+   "id": "enemy_swatter",
+   "path": "res://assets/models/world_one/enemy_swatter.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/swatter.gd:66",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_swatter.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "Ported world-one recipe; D3 supplies the shared enemy budget contract."
+   }
+  },
+  {
    "path": "res://assets/models/world_one/enemy_winch_drone.glb",
    "class": "enemy",
    "ships": true,
@@ -177,6 +1817,17 @@
     "draws": 4
    },
    "exception_why": "winch drone test ceiling 4 draws"
+  },
+  {
+   "id": "shell_cannon",
+   "path": "res://assets/models/world_one/shell_cannon.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_cannon.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+   }
   },
   {
    "path": "res://assets/models/world_one/shell_kest.glb",
@@ -201,10 +1852,98 @@
    "loader": "src/presentation/hero_assets.gd:38-40"
   },
   {
+   "id": "shell_tally",
+   "path": "res://assets/models/world_one/shell_tally.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/shell_tally.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "shell_tarn",
+   "path": "res://assets/models/world_one/shell_tarn.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+   }
+  },
+  {
    "path": "res://assets/models/world_one/water_edges.glb",
    "class": "scenery",
    "ships": true,
    "loader": "src/presentation/spillway_scenery.gd:204"
+  },
+  {
+   "id": "enemy_anchor_crew",
+   "path": "res://assets/models/world_three/enemy_anchor_crew.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/anchor_crew.gd:67",
+   "provenance": {
+    "recipe": "tools/blender/world_three/enemy_anchor_crew.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "enemy_kite_drone",
+   "path": "res://assets/models/world_three/enemy_kite_drone.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/kite_drone.gd:80",
+   "provenance": {
+    "recipe": "tools/blender/world_three/enemy_kite_drone.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "enemy_line_cutter",
+   "path": "res://assets/models/world_three/enemy_line_cutter.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/line_cutter.gd:69",
+   "provenance": {
+    "recipe": "tools/blender/world_three/enemy_line_cutter.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "enemy_burrower",
+   "path": "res://assets/models/world_two/enemy_burrower.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/burrower.gd:90",
+   "provenance": {
+    "recipe": "tools/blender/world_two/enemy_burrower.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "enemy_drill_crew",
+   "path": "res://assets/models/world_two/enemy_drill_crew.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/drill_crew.gd:75",
+   "provenance": {
+    "recipe": "tools/blender/world_two/enemy_drill_crew.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "enemy_lamp_swarm",
+   "path": "res://assets/models/world_two/enemy_lamp_swarm.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/lamp_swarm.gd:92",
+   "provenance": {
+    "recipe": "tools/blender/world_two/enemy_lamp_swarm.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md"
+   }
   },
   {
    "path": "res://assets/textures/packed-sand-floor.webp",
@@ -242,5 +1981,163 @@
    "ships": true,
    "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
   }
+ ],
+ "fragment_ids": [
+  "anchor_collar",
+  "anchor_eye",
+  "anchor_mast",
+  "barge_skin",
+  "barge_skin_rusted-salvaged-plate.webp",
+  "bed_cut",
+  "bed_floor",
+  "bed_recess",
+  "bed_rubble",
+  "boss_brindle",
+  "boss_brindle_scooter",
+  "boss_mind_base",
+  "boss_mind_base_MindCastWear.png",
+  "boss_mind_kit",
+  "boss_mind_kit_MindCastWear.png",
+  "boss_waking_base",
+  "boss_waking_kit",
+  "breach_rim_sector",
+  "breach_socket",
+  "breach_tab",
+  "breach_wedge_a",
+  "breach_wedge_a_12x12",
+  "breach_wedge_a_14x10",
+  "breach_wedge_b",
+  "breach_wedge_b_12x12",
+  "breach_wedge_b_14x10",
+  "breach_wedge_c",
+  "breach_wedge_c_12x12",
+  "breach_wedge_c_14x10",
+  "bridge_skin",
+  "bridge_skin_rusted-salvaged-plate.webp",
+  "cart_body",
+  "cart_wheel",
+  "cut_face_long",
+  "cut_face_scoop",
+  "decal_atlas.png",
+  "decal_fern_mask.png",
+  "decal_moth_mask.png",
+  "decal_mushroom_mask.png",
+  "decal_patch_mask.png",
+  "decal_paw_mask.png",
+  "decal_seashell_mask.png",
+  "decal_snail_shell_mask.png",
+  "decal_thimble_mask.png",
+  "enemy_anchor_crew",
+  "enemy_burrower",
+  "enemy_catch_trap",
+  "enemy_drill_crew",
+  "enemy_gyro_jammer",
+  "enemy_kite_drone",
+  "enemy_lamp_swarm",
+  "enemy_line_cutter",
+  "enemy_ramp_flipper",
+  "enemy_reactor",
+  "enemy_swatter",
+  "escape_rail",
+  "escape_rail__primer_coil",
+  "escape_rail__primer_mesh",
+  "escape_rail__ram_prow",
+  "escape_rail__ram_spring",
+  "escape_vent",
+  "escape_vent__primer_coil",
+  "escape_vent__primer_mesh",
+  "escape_vent__ram_prow",
+  "escape_vent__ram_spring",
+  "impeller_hub",
+  "impeller_rim_sector",
+  "impeller_vane",
+  "impeller_vane_chipped",
+  "intake_petal",
+  "intake_spine_segment",
+  "intake_throat",
+  "island_large",
+  "island_large_sandstone-strata.webp",
+  "island_medium",
+  "island_medium_sandstone-strata.webp",
+  "island_rib",
+  "island_rib_rusted-salvaged-plate.webp",
+  "island_rim",
+  "island_rim_rusted-salvaged-plate.webp",
+  "island_small",
+  "island_small_sandstone-strata.webp",
+  "lamp_curve_module",
+  "lamp_straight_module",
+  "mind_hand",
+  "mind_hand_M1_M2_cast_atlas.png",
+  "mind_hand_M4_signal_atlas.png",
+  "net_edge",
+  "net_shoe",
+  "net_tile",
+  "pilot_cannon_anim",
+  "pilot_tally_anim",
+  "pilot_tarn_anim",
+  "primer_coil",
+  "primer_coil__escape_rail",
+  "primer_coil__escape_vent",
+  "primer_coil__ram_prow",
+  "primer_coil__ram_spring",
+  "primer_mesh",
+  "primer_mesh__escape_rail",
+  "primer_mesh__escape_vent",
+  "primer_mesh__ram_prow",
+  "primer_mesh__ram_spring",
+  "prop_ballast",
+  "prop_bearing",
+  "prop_bench",
+  "prop_clamp",
+  "prop_crate",
+  "prop_fan",
+  "prop_lamp_body",
+  "prop_lamp_glass",
+  "prop_pot",
+  "prop_sail",
+  "prop_spool",
+  "ram_prow",
+  "ram_prow__escape_rail",
+  "ram_prow__escape_vent",
+  "ram_prow__primer_coil",
+  "ram_prow__primer_mesh",
+  "ram_spring",
+  "ram_spring__escape_rail",
+  "ram_spring__escape_vent",
+  "ram_spring__primer_coil",
+  "ram_spring__primer_mesh",
+  "return_ramp_skin",
+  "return_ramp_skin_rusted-salvaged-plate.webp",
+  "rubble_cluster",
+  "shell_cannon",
+  "shell_crescent",
+  "shell_saddle",
+  "shell_tally",
+  "shell_tarn",
+  "sky_blades",
+  "sky_cloud",
+  "sky_cradle",
+  "sky_loom",
+  "sky_mesa",
+  "spil9",
+  "strut_bent",
+  "strut_tall",
+  "thermal_air",
+  "thermal_vent",
+  "trail_atlas.png",
+  "trail_forge_chips",
+  "trail_ink_stitch",
+  "trail_moth_tuft",
+  "trail_plum_curl",
+  "trail_rose_wash",
+  "trail_salt_skip",
+  "travel_vane",
+  "warden_mantle_brood",
+  "warden_mantle_brood_MantleStripes025m.png",
+  "warden_mantle_choir",
+  "warden_mantle_hand",
+  "warden_mantle_meltdown",
+  "warden_mantle_meltdown_MantleStripes025m.png"
  ]
 }
