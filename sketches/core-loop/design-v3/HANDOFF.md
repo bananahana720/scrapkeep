@@ -2,6 +2,56 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 19 landed (2026-10-06, e908ece)
+
+The wave 19 candidate cand/alpha-w19 landed as e908ece (proto/alpha went cd4b6f8 to the wave 19 records commit; two units plus the soak note, 6 commits over base by `git rev-list --count cd4b6f8..e908ece`). Branches are deleted. Coordinator commits on the candidate: cd1cbc6 (Sol soak note committed), the merges and the records commit.
+
+**Milestone:** M4 (alpha) acceptance evidence, continued: the fresh-profile unlock is now proven on the live path (a real Brindle kill, real emit order, Tarn opens), the roster's card cap check can fail, and the third soak records load per run and gives the first direct Mind coverage table.
+
+| unit | branch | head | writer | verdict | note |
+|---|---|---|---|---|---|
+| tidy | wt/alpha-w19-tidy | db5983b | sonnet (astack:hand) | PASS+NOTES | class_def.gd starter comment matches the data (Sable and Rivet start open); roster_test R11 at 3200x1800 pins all six cards to CARD_MAX, red under two mutants |
+| unlock-live | wt/alpha-w19-unlock-live | e60d697 | opus (astack:worker) | PASS+NOTES (verifier on Sonnet 5 high via router, W19-R3) | unlock_live_brindle_test 34 checks in 12 s: real arc strikes and a smash chunk, boss.jump_to_phase(4) to the eject, real catch strike kills Brindle; observed bus order enemy_killed(brindle) then boss_defeated; Tarn selectable after the summary and after reload; skip-the-catch mutant fails 11 of 34 |
+| soak-w19 | wt/alpha-w19-soak | cd1cbc6 | Codex Sol (gpt-6.1-sol high), coordinator commit | n/a (evidence) | 72 runs on cd4b6f8 at concurrency 2: 42 wins, 30 stalls (24 camper by design), 0 crashes, 0 SCRIPT ERROR; load per run; six solo reruns: four repro, two env; Mind coverage table |
+
+Cause of each review red: none this wave.
+
+**Mind coverage (first direct measurement, 43 stage-6 runs):** split_lane commits in 40 of 43 fights, rush in 39, plate in 42, lane in 5. Lane is a phase 1 attack and most bot fights take the first chunk within the 3 s introduction, so lane rarely gets a slot. This is a design observation for Andrew's veto list, not a defect: the Mind's opening is short against a skipper.
+
+**Stalls that reproduce solo (W19-R4):** Kest completionist 2 (stage 3), Kest 14 (stage 4) and Tarn 15 (stage 4) all end on "fight warden charge"; Sable skipper 12 ends on Brindle "charge short". Sol's read-only diagnosis of the common mechanism is running; the wave 20 driver unit, if any, runs the four solo commands as its baseline first.
+
+### Sol lane (Codex gpt-6.1-sol high)
+
+Two lanes: the soak (writer, 1 h 50 min at two processes) and the Warden-charge diagnosis (read-only, opened at the wave's end).
+
+### Gate
+
+Candidate cand/alpha-w19. Gate 1 ran on e908ece (all units and the soak note): 423 runs, 8 at a time, 25 solo, 0 reds, 1869 s, 7 environment skips (music stems not packaged in the worktree, no audio headless); receipt artifacts/local/receipts/gate-fa2194465dd1-2026-10-06T04-13-38-669Z.json records head e908ece. No merge after the gate; the records commit is docs only. Gate read (e908ece): ADMIT, PASS+NOTES, level 2 by the reviewer's reads of the gate log, receipt, git captures, the soak note against its TSV and the export log (Opus 5.5, scrapkeep-reviewer-medium; fences clean, union equals the wave stat; no SCRIPT ERROR, ERROR or FAIL lines; the class_def hunk was confirmed comment-only by the coordinator). proto/alpha is fast-forwarded to the wave 19 records commit by the coordinator.
+
+### Export
+
+At e908ece: tarball scrapkeep-core-loop-e908ece.tar.gz 41.1 MiB, ACE_CHECK ready clips=8 streams=24, stems from the main checkout. Two win proofs on one pack: Rivet skipper seed 1 won at stage 6, 38208 ticks, 129.34 s wall (the gate ran alongside); remembered cannon skipper seed 11 won at stage 6, 34249 ticks, 149.19 s wall. Both tick counts equal wave 18. Copied to artifacts/local/alpha/export/e908ece/. Log artifacts/local/alpha/wave19/export1.log.
+
+### Rulings (coordinator, 2026-10-06; recorded in docs/decisions.tsv at the wave 19 records commit)
+
+- W19-R1 wave 19 opened: soak-w19 and tidy.
+- W19-R2 tidy admitted; unlock-live opened (no faked bus events allowed).
+- W19-R3 unlock-live admitted; verifier ran on Sonnet via the router after the workflow skipped it.
+- W19-R4 soak read: four solo-reproduced stalls; Warden-charge diagnosis opened; repro is two-sample consistency, not determinism.
+- W19-R5 Sol diagnosis: the three Warden stalls are confinement (cache pocket, western pit) with a charge routine that never times out; Sable 12 is separate; batch and solo traces identical, so load is cleared as a cause. Wave 20 unit charge-recover opened (driver only, baseline first).
+
+### Open after wave 19: wave 20 concerns
+
+1. Warden-charge stall (Kest 2, Kest 14, Tarn 15): unit charge-recover running on the four-recipe baseline (W19-R5). Sable's Brindle openings (skipper 12) are a separate contact problem; a diagnosis waits on Andrew's interest.
+2. The Mind's lane family rarely fires against bots (5 of 43); Andrew to say whether the opening should hold longer (ram racks posture ruling stands).
+3. roster_test R11 recomputes the natural width with a hardcoded six-card formula (0.7 px off); precondition only.
+4. unlock_live skips Brindle phases 2-3 via the dev hook; a full-pacing variant would take about 85 s.
+5. Carried: tree_bot_test watch, bot nondeterminism (W16-R8), Godot test run folders (1.8 GB), four old Codex job worktrees and the wave 7 Highdraft probe worktree.
+
+### Hands checklist (never blocks; items 13-33 carry over)
+
+34. Fight the Mind as any pilot and watch for the lane attack in the opening seconds: the bot almost never sees it. Say whether the opening should hold longer.
+
 ## Wave 18 landed (2026-10-06, a718fdb)
 
 The wave 18 candidate cand/alpha-w18 landed as a718fdb (proto/alpha went ce300c7 to the wave 18 records commit; three units, 7 commits over base by `git rev-list --count ce300c7..a718fdb`). Two further units were retired on their baselines without a code change (brindle-cap, W18-R3) or closed by a Sol diagnosis that overturned the premise (Mind families, W18-R2). Branches are deleted. Coordinator commits on the candidate: 95d72d5 (run_log_boss_attacks_test hazard count pinned), the merges and the records commit.
