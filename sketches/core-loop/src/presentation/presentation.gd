@@ -8,6 +8,7 @@ const CodexBanner := preload("res://src/presentation/codex_banner.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
 const StatusMarks := preload("res://src/presentation/status_marks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const WardenRing := preload("res://src/presentation/warden_ring.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
@@ -82,6 +83,9 @@ func setup(ctx_ref) -> void:
 	hero_assets = HeroAssets.new()
 	add_child(hero_assets)
 	hero_assets.setup(ctx)
+	var companion_body := CompanionBody.new()
+	add_child(companion_body)
+	companion_body.setup(ctx)
 	var layer := CanvasLayer.new()
 	layer.name = "CodexBannerLayer"
 	layer.layer = 40
