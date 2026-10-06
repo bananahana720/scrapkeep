@@ -244,6 +244,8 @@ var _fight_target: Node3D = null
 var _runup_point := Vector3.ZERO
 var _runup_time := 0.0
 var _charge_best := INF
+var _charge_rise := -INF
+var _charge_climbing := false
 var _charge_clock := 0.0
 var _recoveries := 0
 var _recover_legs: Array[Vector3] = []
@@ -1398,6 +1400,8 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 # swaps targets does not renew the cap.
 func _reset_charge_watch() -> void:
 	_charge_best = INF
+	_charge_rise = -INF
+	_charge_climbing = false
 	_charge_clock = 0.0
 	_recover_legs = []
 	_recover_time = 0.0
@@ -1406,13 +1410,33 @@ func _reset_charge_watch() -> void:
 
 
 # The Warden charge's progress: the seconds since the ball last gained CHARGE_PROGRESS on its
-# best distance. Inside RUNUP or on a climb the ram laps and the climb route steer, not this.
+# best distance. Inside RUNUP the ram laps steer, not this. On a climb, progress is CHARGE_PROGRESS
+# of height or of 3D distance to the Warden: a ball rocking on a ledge it cannot top gains
+# neither, and the recovery's legs move it off the spot the climb route keeps replanning from.
 func _charge_watch(ball: Vector3, at: Vector3, distance: float, delta: float) -> void:
-	if distance <= RUNUP or _climbing(ball, at):
+	var climbing := _climbing(ball, at)
+	if climbing != _charge_climbing:
+		_charge_climbing = climbing
+		_charge_best = INF
+		_charge_rise = -INF
+		_charge_clock = 0.0
+	if climbing:
+		var reach := ball.distance_to(at)
+		var gained := false
+		if reach < _charge_best - CHARGE_PROGRESS:
+			_charge_best = reach
+			gained = true
+		if ball.y > _charge_rise + CHARGE_PROGRESS:
+			_charge_rise = ball.y
+			gained = true
+		if gained:
+			_charge_clock = 0.0
+			return
+	elif distance <= RUNUP:
 		_charge_best = INF
 		_charge_clock = 0.0
 		return
-	if distance < _charge_best - CHARGE_PROGRESS:
+	elif distance < _charge_best - CHARGE_PROGRESS:
 		_charge_best = distance
 		_charge_clock = 0.0
 		return
@@ -1422,6 +1446,7 @@ func _charge_watch(ball: Vector3, at: Vector3, distance: float, delta: float) ->
 	_recoveries += 1
 	_count("charge_recoveries")
 	_charge_best = INF
+	_charge_rise = -INF
 	_charge_clock = 0.0
 	_recover_legs = _charge_escape(ball, at)
 	_recover_time = 0.0
