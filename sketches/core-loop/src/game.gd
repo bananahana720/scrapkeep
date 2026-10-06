@@ -175,6 +175,7 @@ func _ready() -> void:
 			preload("res://src/presentation/spillway_scenery.gd").build(ctx.terrain.geometry_root(row["stage"]))
 		elif row["map"] in ["dig", "dig_deep"]:
 			preload("res://src/presentation/dig_scenery.gd").build(ctx.terrain.geometry_root(row["stage"]), ctx.terrain.map_for(row["stage"]), row["map"])
+	preload("res://src/presentation/highdraft_scenery.gd").hook(ctx)
 	combat = _module(Combat)
 	build = _module(Build)
 	# Wave 4's boss module sets up after build and before presentation when it exists.

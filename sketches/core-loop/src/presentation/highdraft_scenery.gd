@@ -1,0 +1,788 @@
+extends RefCounted
+
+# The Highdraft's dress: the islands, ridge bridges, return ramps and barges skinned with the
+# modelled kit, the thermal vent and air, the net deck, the harpoon anchors, a prop scatter, the
+# cloud deck and distant silhouettes, and the high bright morning sky. Visual only: no collision
+# shape, body or tuning is touched. Every piece falls back to the greybox the map and contraptions
+# already built when its GLB is missing (the original meshes stay visible until a skin lands).
+# Hooked from game.gd through hook(ctx), which builds the zone on the entry that builds its ground.
+
+const Palette := preload("res://src/core/palette.gd")
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const SetDressing := preload("res://src/presentation/set_dressing.gd")
+const Augments := preload("res://src/movement/augments.gd")
+const HighdraftMap := preload("res://src/world/map_highdraft.gd")
+
+const DIR := "res://assets/models/highdraft/"
+const NODE_NAME := "HighdraftScenery"
+# Skins sit a hair above the collider so they never z-fight the ground mesh; bridges and ramps
+# sit above the island skin so the mouth joins read without a step.
+const ISLAND_LIFT := 0.03
+const STRIP_LIFT := 0.05
+const WALL_OUT := 0.12
+const WALL_SEARCH := 5.0
+# The slab's 1.2 m wall is stretched down the skirt so the stone reads as a course, not a lip.
+const WALL_STRETCH := 2.0
+const NET_TILE := 4.0
+const NET_MARGIN := 36.0
+const NET_LIFT := 0.125
+const CHUNK := 32.0
+const EYE_HEIGHT := 16.6
+const ANCHOR_REACH := 1.8
+const SKY_RING := 460.0
+
+# Tests point this at a missing folder to prove the fallback; the game never changes it.
+static var dir := DIR
+static var _sky: PanoramaSkyMaterial
+static var _saved := {}
+
+
+# ---- Hook and environment ----
+
+static func is_highdraft(map) -> bool:
+	if map == null or map.get_script() == null:
+		return false
+	var path: String = (map.get_script() as Script).resource_path
+	return path == "res://src/world/map_highdraft.gd" or path == "res://src/world/map_highdraft_crown.gd"
+
+
+# Build the zone's dress on the entry that builds its ground, and swap the light for it; any
+# other stage restores the shared environment. Connected after the world module's own handler,
+# so the stage's contraptions already exist.
+static func hook(ctx) -> void:
+	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
+
+
+static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
+	var terrain = ctx.terrain
+	var map = terrain.map_for(stage)
+	if not is_highdraft(map):
+		restore_environment(terrain)
+		return
+	var root: Node3D = terrain.geometry_root(stage)
+	if root.get_node_or_null(NODE_NAME) == null:
+		var world = ctx.root.get("world") if ctx.root != null else null
+		var contraptions = world.contraptions.get(stage) if world != null and "contraptions" in world else null
+		build(root, map, contraptions, terrain.ground_callable(stage), ctx.player)
+	apply_environment(terrain, root)
+
+
+static func apply_environment(terrain, root: Node3D) -> void:
+	var env: Environment = terrain.environment
+	if env == null:
+		return
+	var sun := _sun(root)
+	if _saved.get("env") != env:
+		_saved = {"env": env, "sky": env.sky, "ambient": env.ambient_light_color, "exposure": env.tonemap_exposure,
+			"saturation": env.adjustment_saturation, "sun": sun, "sun_color": sun.light_color if sun != null else Color.WHITE,
+			"sun_rotation": sun.rotation_degrees if sun != null else Vector3.ZERO}
+	if _sky == null:
+		_sky = _sky_material()
+	var sky := Sky.new()
+	sky.sky_material = _sky
+	env.sky = sky
+	env.ambient_light_color = Color("b4c0c9")
+	env.tonemap_exposure = 1.18
+	env.adjustment_saturation = 1.0
+	if sun != null:
+		sun.light_color = Color("fff1dc")
+		sun.rotation_degrees = Vector3(-46.0, 62.0, 0.0)
+
+
+static func restore_environment(terrain) -> void:
+	var env: Environment = terrain.environment
+	if env == null or _saved.get("env") != env:
+		return
+	env.sky = _saved["sky"]
+	env.ambient_light_color = _saved["ambient"]
+	env.tonemap_exposure = _saved["exposure"]
+	env.adjustment_saturation = _saved["saturation"]
+	var sun = _saved.get("sun")
+	if is_instance_valid(sun):
+		sun.light_color = _saved["sun_color"]
+		sun.rotation_degrees = _saved["sun_rotation"]
+	_saved = {}
+
+
+static func _sun(root: Node3D) -> DirectionalLight3D:
+	var holder := root.get_parent()
+	if holder == null:
+		return null
+	for light in holder.find_children("*", "DirectionalLight3D", false, false):
+		if light.name != "SkyFill":
+			return light
+	return null
+
+
+# One cached 512 x 256 panorama: cool sky `#a9b6c0` over the `#798c9e` haze, a cream `#ece7da`
+# cloud deck below the horizon and a few broad cream banks above it. No storm, no glow.
+static func _sky_material() -> PanoramaSkyMaterial:
+	var image := Image.create_empty(512, 256, false, Image.FORMAT_RGB8)
+	var noise := FastNoiseLite.new()
+	noise.seed = 301006
+	noise.frequency = 1.0
+	noise.fractal_octaves = 2
+	var haze := Color("798c9e")
+	var high := Color("a9b6c0")
+	var cream := Color("ece7da")
+	for y in 256:
+		var elevation := (0.5 - float(y) / 255.0) * PI
+		for x in 512:
+			var angle := float(x) / 512.0 * TAU
+			var color := haze.lerp(high, clampf(elevation * 2.2, 0.0, 1.0))
+			if elevation < 0.0:
+				color = haze.lerp(cream, clampf(-elevation * 9.0, 0.0, 1.0))
+			elif elevation > 0.05:
+				var direction := Vector3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
+				var cloud := noise.get_noise_3d(direction.x * 4.0, direction.y * 9.0, direction.z * 4.0)
+				color = color.lerp(cream, smoothstep(0.3, 0.55, cloud) * smoothstep(0.05, 0.25, elevation) * 0.7)
+			image.set_pixel(x, y, color)
+	image.generate_mipmaps()
+	var material := PanoramaSkyMaterial.new()
+	material.panorama = ImageTexture.create_from_image(image)
+	return material
+
+
+# ---- Build ----
+
+# `ground` is the terrain's grid callable (x, z, clearance) -> Vector3; without it the map's own
+# height function stands in. `contraptions` is the stage's Contraptions node, if it exists yet.
+static func build(stage_root: Node3D, map, contraptions = null, ground := Callable(), player = null) -> Node3D:
+	var scenery := Node3D.new()
+	scenery.name = NODE_NAME
+	stage_root.add_child(scenery)
+	var state := Updater.new()
+	state.name = "Presence"
+	state.player = player
+	scenery.add_child(state)
+	_islands(scenery, map, ground)
+	_bridges_and_ramps(scenery, map)
+	if contraptions != null:
+		_barges(contraptions)
+		_thermals(scenery, state, map, contraptions)
+	_net_deck(scenery, map)
+	_anchors(scenery, state, stage_root, map, ground)
+	_props(scenery, map)
+	_sky_pieces(scenery)
+	return scenery
+
+
+static func _scene(file: String) -> Node:
+	var packed: PackedScene = load(dir + file) as PackedScene if ResourceLoader.exists(dir + file) else null
+	if packed == null:
+		push_warning("highdraft_scenery: %s missing, its piece stays on the greybox" % file)
+		return null
+	return packed.instantiate()
+
+
+# The first MeshInstance3D's mesh in a GLB (named when the file holds several), or null.
+static func _mesh(file: String, node_name := "*") -> Mesh:
+	var scene := _scene(file)
+	if scene == null:
+		return null
+	var found: Mesh = null
+	for view: MeshInstance3D in scene.find_children(node_name, "MeshInstance3D", true, false):
+		if view.mesh != null:
+			found = view.mesh
+			break
+	scene.free()
+	return found
+
+
+static func _height(ground: Callable, map, x: float, z: float) -> float:
+	if ground.is_valid():
+		return (ground.call(x, z, 0.0) as Vector3).y
+	return float(map.sample(x, z)[0])
+
+
+static func _multi(parent: Node3D, label: String, mesh: Mesh, transforms: Array[Transform3D]) -> MultiMeshInstance3D:
+	if mesh == null or transforms.is_empty():
+		return null
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = mesh
+	mm.instance_count = transforms.size()
+	var bounds := AABB()
+	var local := mesh.get_aabb()
+	for i in transforms.size():
+		mm.set_instance_transform(i, transforms[i])
+		var placed: AABB = transforms[i] * local
+		bounds = placed if i == 0 else bounds.merge(placed)
+	var node := MultiMeshInstance3D.new()
+	node.name = label
+	node.multimesh = mm
+	node.custom_aabb = bounds
+	node.set_meta("placements", transforms)
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(node)
+	GraphicsPreset.register_scenery(node)
+	return node
+
+
+# ---- Islands ----
+
+# The island GLB's top slab, fitted to the sampled ground: its top lies ISLAND_LIFT over the
+# flat top and its wall is walked down the terrain's own skirt, so the stone hugs the real
+# collider. A wall vertex that finds the ground still high (a bridge or ramp mouth) is pushed
+# out and buried, so no lip stands in a mouth. The keel and the underside stay out: they would
+# sit inside the pillar.
+static func _islands(parent: Node3D, map, ground: Callable) -> void:
+	var isles: Dictionary = map._islands()
+	for id in isles:
+		var isle: Dictionary = isles[id]
+		var radius: float = isle["radius"]
+		var file := "island_large.glb" if radius >= 20.0 else ("island_medium.glb" if radius >= 15.0 else "island_small.glb")
+		var skin := _island_mesh(file, isle, map, ground)
+		if skin == null:
+			continue
+		var view := MeshInstance3D.new()
+		view.name = "IslandSkin_%s" % id
+		view.mesh = skin
+		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		parent.add_child(view)
+		GraphicsPreset.register_scenery(view)
+
+
+static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) -> ArrayMesh:
+	var source := _mesh(file, "IslandStone")
+	if source == null:
+		return null
+	var arrays := source.surface_get_arrays(0)
+	var material := source.surface_get_material(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var centre: Vector2 = isle["at"]
+	var radius: float = isle["radius"]
+	var top: float = isle["top"]
+	var scale := radius / (source.get_aabb().size.x * 0.5)
+	var remap := {}
+	var out_vertices := PackedVector3Array()
+	var out_uvs := PackedVector2Array()
+	var out_indices := PackedInt32Array()
+	for t in range(0, indices.size(), 3):
+		var keep := true
+		var centroid := Vector3.ZERO
+		for k in 3:
+			var v := vertices[indices[t + k]]
+			centroid += v / 3.0
+			if v.y < -1.3 or (v.y < -0.02 and Vector2(v.x, v.z).length() * scale < radius - 1.5):
+				keep = false
+		if not keep:
+			continue
+		var normal := (vertices[indices[t + 1]] - vertices[indices[t]]).cross(vertices[indices[t + 2]] - vertices[indices[t]])
+		if centroid.y < -0.05 and normal.normalized().y < -0.5:
+			continue
+		for k in 3:
+			var index := indices[t + k]
+			if not remap.has(index):
+				remap[index] = out_vertices.size()
+				out_vertices.append(_fit(vertices[index], centre, radius, top, scale, map, ground))
+				out_uvs.append(uvs[index] if index < uvs.size() else Vector2.ZERO)
+			out_indices.append(remap[index])
+	if out_indices.is_empty():
+		return null
+	var normals := PackedVector3Array()
+	normals.resize(out_vertices.size())
+	for t in range(0, out_indices.size(), 3):
+		var face := (out_vertices[out_indices[t + 1]] - out_vertices[out_indices[t]]).cross(out_vertices[out_indices[t + 2]] - out_vertices[out_indices[t]])
+		for k in 3:
+			normals[out_indices[t + k]] += face
+	for i in normals.size():
+		normals[i] = normals[i].normalized() if normals[i].length_squared() > 0.000001 else Vector3.UP
+	var built := []
+	built.resize(Mesh.ARRAY_MAX)
+	built[Mesh.ARRAY_VERTEX] = out_vertices
+	built[Mesh.ARRAY_NORMAL] = normals
+	built[Mesh.ARRAY_TEX_UV] = out_uvs
+	built[Mesh.ARRAY_INDEX] = out_indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built)
+	mesh.surface_set_material(0, material)
+	return mesh
+
+
+static func _fit(v: Vector3, centre: Vector2, radius: float, top: float, scale: float, map, ground: Callable) -> Vector3:
+	var flat := Vector2(v.x, v.z) * scale
+	if v.y > -0.02:
+		# The collider is a 2 m grid, so its rim droops inside the analytic radius: follow it.
+		var spot := centre + flat
+		return Vector3(spot.x, minf(top, _height(ground, map, spot.x, spot.y)) + ISLAND_LIFT, spot.y)
+	var dir := flat.normalized() if flat.length() > 0.001 else Vector2.RIGHT
+	var target := top + v.y * WALL_STRETCH
+	var reach := radius
+	while reach < radius + WALL_SEARCH:
+		var at := centre + dir * reach
+		if _height(ground, map, at.x, at.y) <= target + 0.05:
+			break
+		reach += 0.25
+	var place := centre + dir * (reach + WALL_OUT)
+	return Vector3(place.x, minf(target, _height(ground, map, place.x, place.y) + ISLAND_LIFT), place.y)
+
+
+# ---- Bridges, return ramps, barges ----
+
+static func _bridges_and_ramps(parent: Node3D, map) -> void:
+	var isles: Dictionary = map._islands()
+	var bays: Array[Transform3D] = []
+	for pair in map._bridges():
+		var a: Dictionary = isles[pair[0]]
+		var b: Dictionary = isles[pair[1]]
+		var way: Vector2 = ((b["at"] as Vector2) - (a["at"] as Vector2)).normalized()
+		var from: Vector2 = (a["at"] as Vector2) + way * float(a["radius"])
+		var to: Vector2 = (b["at"] as Vector2) - way * float(b["radius"])
+		_strip(bays, from, to, float(a["top"]), float(b["top"]))
+	_multi(parent, "BridgeSkins", _mesh("bridge_skin.glb", "HardwareSkin"), bays)
+	var slopes: Array[Transform3D] = []
+	for ramp in map._ramps():
+		var line: Dictionary = map.ramp_line(ramp)
+		_strip(slopes, line["foot"], line["rim"], HighdraftMap.NET_H, float(line["top"]))
+	_multi(parent, "ReturnRampSkins", _mesh("return_ramp_skin.glb", "HardwareSkin"), slopes)
+
+
+# 8 m wide bays, 4 m long before scaling, laid end to end along a line that rises linearly.
+static func _strip(into: Array[Transform3D], from: Vector2, to: Vector2, from_y: float, to_y: float) -> void:
+	var length := from.distance_to(to)
+	if length < 0.5:
+		return
+	var way := (to - from) / length
+	var count := maxi(1, roundi(length / 4.0))
+	var slope := (to_y - from_y) / length
+	var z_axis := Vector3(way.x, slope, way.y).normalized()
+	var x_axis := Vector3(way.y, 0.0, -way.x)
+	var y_axis := z_axis.cross(x_axis)
+	var stretch := length / count / 4.0 * 1.04
+	for k in count:
+		var t := (k + 0.5) / count
+		var at := from.lerp(to, t)
+		var basis := Basis(x_axis, y_axis, z_axis * stretch)
+		into.append(Transform3D(basis, Vector3(at.x, lerpf(from_y, to_y, t), at.y) + y_axis * STRIP_LIFT))
+
+
+# The barge's own tilted deck node carries the skin, so it leans with the scripted settle; its
+# greybox deck, hull, jets and bands stay hidden (never freed, tests and the carry rule read them).
+static func _barges(contraptions: Node) -> void:
+	var skin_mesh := _mesh("barge_skin.glb", "HardwareSkin")
+	if skin_mesh == null:
+		return
+	for barge in contraptions.barges:
+		var body: Node3D = barge["body"]
+		var deck: MeshInstance3D = barge["deck"]
+		if deck.get_node_or_null("HighdraftBargeSkin") != null:
+			continue
+		for child in body.get_children():
+			if child is MeshInstance3D:
+				child.visible = false
+		var skin := MeshInstance3D.new()
+		skin.name = "HighdraftBargeSkin"
+		skin.mesh = skin_mesh
+		skin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		deck.add_child(skin)
+		skin.visible = true
+		# The hidden deck node hides its children, so the deck stays visible and bare instead.
+		deck.visible = true
+		deck.mesh = null
+
+
+# ---- Thermals ----
+
+static func _thermals(parent: Node3D, state: Node, map, contraptions: Node) -> void:
+	for thermal in contraptions.thermals:
+		var spec: Dictionary = thermal["spec"]
+		var base: Vector3 = thermal["base"]
+		var vent := _scene("thermal_vent.glb")
+		var air := _scene("thermal_air.glb")
+		if vent == null or air == null:
+			if vent != null:
+				vent.free()
+			if air != null:
+				air.free()
+			continue
+		_hide_thermal_greybox(contraptions, base, float(spec["height"]))
+		vent.name = "Vent_%s" % spec["id"]
+		vent.position = base
+		parent.add_child(vent)
+		air.name = "Air_%s" % spec["id"]
+		air.position = base
+		air.scale = Vector3(1.0, float(spec["height"]) / 40.0, 1.0)
+		parent.add_child(air)
+		var rise := air.find_children("*", "AnimationPlayer", true, false)
+		if not rise.is_empty():
+			(rise[0] as AnimationPlayer).play("rise")
+		var vent_player := vent.find_children("*", "AnimationPlayer", true, false)
+		state.thermals.append({"base": base, "radius": float(spec["radius"]), "height": float(spec["height"]),
+			"player": vent_player[0] if not vent_player.is_empty() else null, "state": ""})
+
+
+# The column and grate _build_thermal added: unnamed cylinders at the base and mid-height.
+static func _hide_thermal_greybox(contraptions: Node, base: Vector3, height: float) -> void:
+	for child in contraptions.get_children():
+		if child is MeshInstance3D and child.mesh is CylinderMesh:
+			var near_column: bool = (child.position - (base + Vector3.UP * height * 0.5)).length() < 0.05
+			var near_grate: bool = (child.position - (base + Vector3.UP * 0.1)).length() < 0.05
+			if near_column or near_grate:
+				child.visible = false
+
+
+# ---- Net deck ----
+
+static func _net_deck(parent: Node3D, map) -> void:
+	var tile := _mesh("net_tile.glb", "Weave")
+	if tile == null:
+		return
+	var isles: Dictionary = map._islands()
+	var low := Vector2(INF, INF)
+	var high := Vector2(-INF, -INF)
+	for id in isles:
+		var at: Vector2 = isles[id]["at"]
+		var extent: float = float(isles[id]["radius"]) + HighdraftMap.SKIRT
+		low = Vector2(minf(low.x, at.x - extent), minf(low.y, at.y - extent))
+		high = Vector2(maxf(high.x, at.x + extent), maxf(high.y, at.y + extent))
+	var rect := Rect2(low, high - low).grow(NET_MARGIN).intersection(map.play_rect)
+	var chunks := {}
+	var x0 := floorf(rect.position.x / NET_TILE) * NET_TILE
+	var z0 := floorf(rect.position.y / NET_TILE) * NET_TILE
+	var net_h: float = HighdraftMap.NET_H
+	var x := x0
+	while x < rect.end.x:
+		var z := z0
+		while z < rect.end.y:
+			var c := Vector2(x + NET_TILE * 0.5, z + NET_TILE * 0.5)
+			var open := true
+			for probe in [Vector2.ZERO, Vector2(2, 2), Vector2(-2, 2), Vector2(2, -2), Vector2(-2, -2)]:
+				if float(map.sample(c.x + probe.x, c.y + probe.y)[0]) > net_h + 0.05:
+					open = false
+					break
+			if open:
+				var key := Vector2i(floori(c.x / CHUNK), floori(c.y / CHUNK))
+				if not chunks.has(key):
+					var list: Array[Transform3D] = []
+					chunks[key] = list
+				(chunks[key] as Array[Transform3D]).append(Transform3D(Basis.IDENTITY, Vector3(c.x, net_h + NET_LIFT, c.y)))
+			z += NET_TILE
+		x += NET_TILE
+	var deck := Node3D.new()
+	deck.name = "NetDeck"
+	parent.add_child(deck)
+	for key in chunks:
+		_multi(deck, "Tiles_%d_%d" % [key.x, key.y], tile, chunks[key])
+	# Padded edge around the tiled bay, and a shoe at each corner.
+	var edge := _mesh("net_edge.glb", "Hardware")
+	var edges: Array[Transform3D] = []
+	var span := Rect2(Vector2(x0, z0), Vector2(ceilf((rect.end.x - x0) / NET_TILE) * NET_TILE, ceilf((rect.end.y - z0) / NET_TILE) * NET_TILE))
+	var steps_x := roundi(span.size.x / NET_TILE)
+	var steps_z := roundi(span.size.y / NET_TILE)
+	for i in steps_x:
+		var px := span.position.x + NET_TILE * (i + 0.5)
+		edges.append(Transform3D(Basis.IDENTITY, Vector3(px, net_h + NET_LIFT, span.position.y)))
+		edges.append(Transform3D(Basis(Vector3.UP, PI), Vector3(px, net_h + NET_LIFT, span.end.y)))
+	for i in steps_z:
+		var pz := span.position.y + NET_TILE * (i + 0.5)
+		edges.append(Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(span.position.x, net_h + NET_LIFT, pz)))
+		edges.append(Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3(span.end.x, net_h + NET_LIFT, pz)))
+	var kept: Array[Transform3D] = []
+	for placement in edges:
+		if float(map.sample(placement.origin.x, placement.origin.z)[0]) <= net_h + 0.05:
+			kept.append(placement)
+	_multi(deck, "NetEdges", edge, kept)
+	var shoes: Array[Transform3D] = []
+	for corner in [span.position, Vector2(span.end.x, span.position.y), Vector2(span.position.x, span.end.y), span.end]:
+		shoes.append(Transform3D(Basis.IDENTITY, Vector3(corner.x, net_h, corner.y)))
+	_multi(deck, "NetShoes", _mesh("net_shoe.glb", "Hardware"), shoes)
+
+
+# ---- Harpoon anchors ----
+
+# The mast and eye replace the post's drawn cylinder and cap; the post's collider stays. The
+# eye turns to face the camera and reads the harpoon's own state: slate idle, mint when this
+# post is what a press would bite, steady mint while the line holds it.
+static func _anchors(parent: Node3D, state: Node, stage_root: Node3D, map, ground: Callable) -> void:
+	var posts: Array = map._posts()
+	for post in posts:
+		var at: Vector2 = post["at"]
+		var height: float = post["height"]
+		var foot := Vector3(at.x, _height(ground, map, at.x, at.y) - 0.5, at.y)
+		var mast := _scene("anchor_mast.glb")
+		var eye := _scene("anchor_eye.glb")
+		if mast == null or eye == null:
+			if mast != null:
+				mast.free()
+			if eye != null:
+				eye.free()
+			continue
+		_hide_post_greybox(stage_root, foot, height)
+		mast.name = "AnchorMast_%d" % state.anchors.size()
+		mast.position = foot
+		parent.add_child(mast)
+		eye.name = "AnchorEye_%d" % state.anchors.size()
+		eye.position = foot + Vector3.UP * (height + 0.6)
+		parent.add_child(eye)
+		var collars: Array = []
+		for socket in ["collar_lb", "collar_lt", "collar_rb", "collar_rt"]:
+			var anchor_point := eye.find_child(socket, true, false) as Node3D
+			var collar := _scene("anchor_collar.glb")
+			if anchor_point == null or collar == null:
+				if collar != null:
+					collar.free()
+				continue
+			collar.position = anchor_point.position
+			# The collar block sits on its local (+1, +1) diagonal and closes toward the origin, so
+			# turn that diagonal onto the socket's corner direction.
+			collar.rotation.z = atan2(anchor_point.position.y, anchor_point.position.x) - PI * 0.25
+			eye.add_child(collar)
+			var players := collar.find_children("*", "AnimationPlayer", true, false)
+			if not players.is_empty():
+				collars.append(players[0])
+		var eye_players := eye.find_children("*", "AnimationPlayer", true, false)
+		state.anchors.append({"eye": eye, "foot": foot, "height": height, "collars": collars,
+			"player": eye_players[0] if not eye_players.is_empty() else null, "state": ""})
+
+
+static func _hide_post_greybox(stage_root: Node3D, foot: Vector3, height: float) -> void:
+	var shaft_at := foot + Vector3.UP * height * 0.5
+	var cap_at := foot + Vector3.UP * (height + 0.6)
+	for child in stage_root.get_children():
+		if child is StaticBody3D and ((child as Node3D).position - shaft_at).length() < 0.05:
+			for part in child.get_children():
+				if part is MeshInstance3D:
+					part.visible = false
+		elif child is MeshInstance3D and child.mesh is SphereMesh and ((child as Node3D).position - cap_at).length() < 0.05:
+			child.visible = false
+
+
+# ---- Props ----
+
+const PROPS := [
+	{"file": "prop_spool.glb", "node": "Surface", "weight": 2, "size": 1.8},
+	{"file": "prop_bearing.glb", "node": "Surface", "weight": 2, "size": 1.2},
+	{"file": "prop_crate.glb", "node": "Surface", "weight": 3, "size": 1.5},
+	{"file": "prop_pot.glb", "node": "Surface", "weight": 2, "size": 1.2},
+	{"file": "prop_clamp.glb", "node": "Surface", "weight": 2, "size": 1.0},
+	{"file": "prop_ballast.glb", "node": "Surface", "weight": 3, "size": 1.3},
+	{"file": "prop_bench.glb", "node": "Surface", "weight": 1, "size": 2.0},
+	{"file": "prop_lamp_body.glb", "node": "Surface", "weight": 1, "size": 0.7},
+]
+const PER_ISLAND := {"small": 4, "medium": 5, "large": 6}
+
+
+# Props stand in a ring near each island's rim, 2.5 to 6 m in from the edge, off every route:
+# the spawn, beacon bowl, vault, gate slots, sites and relic, the bridge and ramp mouths, the
+# harpoon posts, thermals, barge lanes and the cable. A weather sail (animated) rides each
+# island too. Seeded per island, so a run always sees the same yard.
+static func _props(parent: Node3D, map) -> void:
+	var rows := _keepouts(map)
+	var isles: Dictionary = map._islands()
+	var lists := {}
+	for id in isles:
+		var isle: Dictionary = isles[id]
+		var radius: float = isle["radius"]
+		var centre: Vector2 = isle["at"]
+		var top: float = isle["top"]
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(String(id)) ^ int(radius * 100.0)
+		var want: int = PER_ISLAND["large" if radius >= 20.0 else ("medium" if radius >= 15.0 else "small")]
+		var placed: Array[Vector2] = []
+		var tries := 0
+		while placed.size() < want and tries < 80:
+			tries += 1
+			var pick := _pick_prop(rng)
+			var angle := rng.randf() * TAU
+			var reach := radius - rng.randf_range(2.5, 6.0)
+			var at := centre + Vector2.from_angle(angle) * reach
+			var size: float = float(PROPS[pick]["size"])
+			if SetDressing.blocked(rows, at, size * 0.5 + 0.5) != "":
+				continue
+			var crowded := false
+			for other in placed:
+				if other.distance_to(at) < 4.0:
+					crowded = true
+					break
+			if crowded:
+				continue
+			placed.append(at)
+			var turn := rng.randf() * TAU
+			if not lists.has(pick):
+				var list: Array[Transform3D] = []
+				lists[pick] = list
+			(lists[pick] as Array[Transform3D]).append(Transform3D(Basis(Vector3.UP, turn), Vector3(at.x, top, at.y)))
+		# One weather sail per island, an animated scene so its wind loop runs.
+		var sail_at := Vector2.ZERO
+		var found := false
+		for k in 40:
+			sail_at = centre + Vector2.from_angle(rng.randf() * TAU) * (radius - rng.randf_range(2.5, 5.0))
+			if SetDressing.blocked(rows, sail_at, 1.5) == "":
+				var clear := true
+				for other in placed:
+					clear = clear and other.distance_to(sail_at) >= 4.0
+				if clear:
+					found = true
+					break
+		if found:
+			var sail := _scene("prop_sail.glb")
+			if sail != null:
+				sail.name = "Sail_%s" % id
+				sail.position = Vector3(sail_at.x, top, sail_at.y)
+				sail.rotation.y = rng.randf() * TAU
+				parent.add_child(sail)
+				var wind := sail.find_children("*", "AnimationPlayer", true, false)
+				if not wind.is_empty():
+					(wind[0] as AnimationPlayer).play("wind")
+	var yard := Node3D.new()
+	yard.name = "Props"
+	parent.add_child(yard)
+	for pick in lists:
+		var row: Dictionary = PROPS[pick]
+		_multi(yard, String(row["file"]).get_basename(), _mesh(row["file"], row["node"]), lists[pick])
+		if row["file"] == "prop_lamp_body.glb":
+			_multi(yard, "prop_lamp_glass", _mesh("prop_lamp_glass.glb", "Surface"), lists[pick])
+
+
+static func _pick_prop(rng: RandomNumberGenerator) -> int:
+	var total := 0
+	for row in PROPS:
+		total += int(row["weight"])
+	var roll := rng.randi_range(0, total - 1)
+	for i in PROPS.size():
+		roll -= int(PROPS[i]["weight"])
+		if roll < 0:
+			return i
+	return 0
+
+
+static func _keepouts(map) -> Array:
+	var isles: Dictionary = map._islands()
+	var row := func(what: String, points: Array, radius: float) -> Dictionary:
+		return {"what": what, "points": PackedVector2Array(points), "radius": radius, "ride": false}
+	var rows := []
+	rows.append(row.call("spawn", [map.spawn], 7.0))
+	rows.append(row.call("warden ground", [map.beacon], 16.0))
+	rows.append(row.call("vault", [map.vault], 8.0))
+	for slot in map.gate_slots:
+		rows.append(row.call("reward gate slot", [slot["at"]], 6.0))
+	for site in map.activity_sites:
+		rows.append(row.call("activity site", [site["at"]], 8.0))
+	rows.append(row.call("relic", [map.relic_spot], 7.0))
+	for pair in map._bridges():
+		var a: Dictionary = isles[pair[0]]
+		var b: Dictionary = isles[pair[1]]
+		rows.append(row.call("bridge mouth", [a["at"], b["at"]], HighdraftMap.BRIDGE_HALF + 4.0))
+	for ramp in map._ramps():
+		var line: Dictionary = map.ramp_line(ramp)
+		rows.append(row.call("return ramp", [line["foot"], line["rim"]], HighdraftMap.RAMP_HALF + 4.0))
+	for post in map._posts():
+		rows.append(row.call("anchor", [post["at"]], 6.0))
+	for spec in map.contraptions:
+		match spec["kind"]:
+			"thermal":
+				rows.append(row.call("thermal", [spec["at"]], float(spec["radius"]) + 4.0))
+			"barge":
+				var a3: Vector3 = spec["a"]
+				var b3: Vector3 = spec["b"]
+				rows.append(row.call("barge lane", [Vector2(a3.x, a3.z), Vector2(b3.x, b3.z)], 12.0))
+			"cable":
+				var f: Vector3 = spec["from"]
+				var t: Vector3 = spec["to"]
+				rows.append(row.call("cable", [Vector2(f.x, f.z), Vector2(t.x, t.z)], float(spec["radius"]) + 3.0))
+	return rows
+
+
+# ---- Sky: cloud deck and distant silhouettes ----
+
+static func _sky_pieces(parent: Node3D) -> void:
+	var sky := Node3D.new()
+	sky.name = "Sky"
+	parent.add_child(sky)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7_310_006
+	# Cloud deck: broad banks under the catch plane, top face at Y -20, never over the playfield.
+	var clouds: Array[Transform3D] = []
+	for k in 36:
+		var angle := TAU * k / 36.0 + rng.randf_range(-0.05, 0.05)
+		var reach := rng.randf_range(250.0, 560.0)
+		var wide := rng.randf_range(1.6, 3.0)
+		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(wide, 1.0, wide))
+		clouds.append(Transform3D(basis, Vector3(cos(angle) * reach, -26.0, sin(angle) * reach)))
+	_multi(sky, "CloudDeck", _mesh("sky_cloud.glb", "CloudHull"), clouds)
+	# Mesas stand well past the playable bounds; fog and scale keep them distant.
+	var mesas: Array[Transform3D] = []
+	for k in 7:
+		var angle := TAU * k / 7.0 + rng.randf_range(-0.2, 0.2)
+		var reach := rng.randf_range(SKY_RING, SKY_RING + 80.0)
+		var scale := rng.randf_range(2.0, 3.2)
+		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(scale, scale, scale))
+		mesas.append(Transform3D(basis, Vector3(cos(angle) * reach, -50.0, sin(angle) * reach)))
+	_multi(sky, "DistantMesas", _mesh("sky_mesa.glb", "MesaHull"), mesas)
+	# Landmarks frame the quiet centre: the loom to one side, the split blades to the other,
+	# a pair of far cradles between. None of them has an eye or a hard point.
+	_landmark(sky, "sky_loom.glb", "LoomHull", "Loom", 205.0, SKY_RING + 20.0, -40.0, 2.4)
+	_landmark(sky, "sky_blades.glb", "BladeHull", "Blades", 335.0, SKY_RING + 40.0, -50.0, 2.0)
+	_landmark(sky, "sky_cradle.glb", "CradleHull", "CradleA", 95.0, SKY_RING, 30.0, 2.2)
+	_landmark(sky, "sky_cradle.glb", "CradleHull", "CradleB", 265.0, SKY_RING + 60.0, 55.0, 2.6)
+
+
+static func _landmark(parent: Node3D, file: String, hull: String, label: String, degrees: float, reach: float, base_y: float, scale: float) -> void:
+	var mesh := _mesh(file, hull)
+	if mesh == null:
+		return
+	var view := MeshInstance3D.new()
+	view.name = label
+	view.mesh = mesh
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var angle := deg_to_rad(degrees)
+	view.transform = Transform3D(Basis(Vector3.UP, angle + PI * 0.5).scaled(Vector3.ONE * scale), Vector3(cos(angle) * reach, base_y, sin(angle) * reach))
+	parent.add_child(view)
+	GraphicsPreset.register_scenery(view)
+
+
+# ---- Live reads ----
+
+# Per-frame presentation only: the anchor eyes face the camera and show the harpoon's state,
+# the vents show whether the ball stands in their column. Nothing here writes game state.
+class Updater extends Node3D:
+	var player = null
+	var anchors: Array[Dictionary] = []
+	var thermals: Array[Dictionary] = []
+
+	func _process(_delta: float) -> void:
+		if not is_visible_in_tree():
+			return
+		var cam := get_viewport().get_camera_3d()
+		var kit = player.kit if player != null and "kit" in player else null
+		var ball: Vector3 = player.global_position if player != null and is_instance_valid(player) else Vector3.INF
+		for row in anchors:
+			var eye: Node3D = row["eye"]
+			if cam != null:
+				var toward := cam.global_position - eye.global_position
+				eye.global_rotation.y = atan2(toward.x, toward.z)
+			_set_anchor(row, _anchor_state(row, kit))
+		for row in thermals:
+			var base: Vector3 = row["base"]
+			var inside: bool = ball != Vector3.INF and Vector2(ball.x - base.x, ball.z - base.z).length() <= float(row["radius"]) \
+				and ball.y >= base.y and ball.y <= base.y + float(row["height"])
+			var want := "occupied" if inside else "idle"
+			if want != row["state"] and row["player"] != null:
+				(row["player"] as AnimationPlayer).play(want)
+			row["state"] = want
+
+	func _anchor_state(row: Dictionary, kit) -> String:
+		if kit == null:
+			return "idle"
+		var foot: Vector3 = row["foot"]
+		var eye_at := foot + Vector3.UP * EYE_HEIGHT
+		if kit.line_state != Augments.LINE_IDLE and (kit.anchor as Vector3).distance_to(eye_at) < 4.0:
+			return "attached"
+		var aim: Dictionary = kit.aim
+		if aim.get("state", Augments.AIM_NONE) != Augments.AIM_NONE:
+			var point: Vector3 = aim["point"]
+			if Vector2(point.x - foot.x, point.z - foot.z).length() <= ANCHOR_REACH and point.y >= foot.y - 1.0 and point.y <= foot.y + float(row["height"]) + 3.0:
+				return "ready"
+		return "idle"
+
+	func _set_anchor(row: Dictionary, want: String) -> void:
+		if want == row["state"]:
+			return
+		row["state"] = want
+		if row["player"] != null:
+			(row["player"] as AnimationPlayer).play(want)
+		for collar in row["collars"]:
+			(collar as AnimationPlayer).play("open" if want == "idle" else "close")
