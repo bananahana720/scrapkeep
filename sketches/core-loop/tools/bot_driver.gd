@@ -101,6 +101,19 @@ const RUNUP_EDGE := 6.0
 const RUNUP_DROP := 2.0
 const RUNUP_STEP := 2.0
 const RUNUP_MIN := 8.0
+# A Warden charge beyond RUNUP that gains less than CHARGE_PROGRESS on its best distance for
+# CHARGE_WINDOW seconds is pinned (a cache pocket's back wall, a pit): the ball moves fast enough
+# to dodge the stuck detour without getting anywhere. It recovers: back RECOVER_BACK off the
+# bearing, then RECOVER_SIDE to the side whose way on is clear, each leg held at most
+# RECOVER_LEG_SECONDS, then charges again. RECOVER_LIMIT per target leaves a hopeless stall to
+# the stage watchdog.
+const CHARGE_WINDOW := 6.0
+const CHARGE_PROGRESS := 2.0
+const RECOVER_BACK := 8.0
+const RECOVER_SIDE := 14.0
+const RECOVER_REACHED := 3.0
+const RECOVER_LEG_SECONDS := 3.0
+const RECOVER_LIMIT := 3
 const AIM_REACH := 40.0
 const WAYPOINT_REACHED := 9.0
 const WAYPOINT_SECONDS := 14.0
@@ -223,6 +236,11 @@ var _fight_phase := "charge"
 var _fight_target: Node3D = null
 var _runup_point := Vector3.ZERO
 var _runup_time := 0.0
+var _charge_best := INF
+var _charge_clock := 0.0
+var _recoveries := 0
+var _recover_legs: Array[Vector3] = []
+var _recover_time := 0.0
 var _slow_time := 0.0
 var _detour_time := 0.0
 var _detour := Vector3.ZERO
@@ -533,6 +551,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_gate_pick = -1
 	_fight_phase = "charge"
 	_fight_target = null
+	_reset_charge_watch()
 	_slow_time = 0.0
 	_detour_time = 0.0
 	_waypoints = []
@@ -1149,6 +1168,7 @@ func _fight(target: Node3D, delta: float) -> void:
 	if target != _fight_target:
 		_fight_target = target
 		_fight_phase = "charge"
+		_reset_charge_watch()
 	# The bot's own commitment to the Warden: a completionist or a wanderer can wake it
 	# (warden_engaged) on the way past long before it turns to fight.
 	if target == game.flow.warden and _note.get("warden_fight_s") == null:
@@ -1331,18 +1351,93 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 				while run > RUNUP_MIN and not _runup_on_shelf(at, away, run):
 					run -= RUNUP_STEP
 				_runup_point = _ground_point(at.x + away.x * run, at.z + away.z * run)
+			elif target == game.flow.warden:
+				_charge_watch(ball, at, distance, delta)
 		"runup":
 			_runup_time += delta
 			if _flat(ball, _runup_point) < 4.0 or _runup_time > RUNUP_SECONDS:
 				_fight_phase = "charge"
-	var steer: Vector3 = at if _fight_phase == "charge" else _runup_point
-	if _climbing(ball, at):
+		"recover":
+			_recover_time += delta
+			if _flat(ball, _recover_legs[0]) < RECOVER_REACHED or _recover_time > RECOVER_LEG_SECONDS:
+				_recover_legs.pop_front()
+				_recover_time = 0.0
+				if _recover_legs.is_empty():
+					_fight_phase = "charge"
+				else:
+					source.press["jump_pressed"] = true
+	var steer: Vector3 = at
+	if _fight_phase == "runup":
+		steer = _runup_point
+	elif _fight_phase == "recover":
+		steer = _recover_legs[0]
+	if _fight_phase != "recover" and _climbing(ball, at):
 		steer = _fight_way_up(ball, at, delta)
 		_goal += " climb"
 	else:
 		_fight_climb.clear()
 		_fight_climb_clock = 0.0
 	_act(steer, aim, delta, target)
+
+
+func _reset_charge_watch() -> void:
+	_charge_best = INF
+	_charge_clock = 0.0
+	_recoveries = 0
+	_recover_legs = []
+	_recover_time = 0.0
+
+
+# The Warden charge's progress: the seconds since the ball last gained CHARGE_PROGRESS on its
+# best distance. Inside RUNUP or on a climb the ram laps and the climb route steer, not this.
+func _charge_watch(ball: Vector3, at: Vector3, distance: float, delta: float) -> void:
+	if distance <= RUNUP or _climbing(ball, at):
+		_charge_best = INF
+		_charge_clock = 0.0
+		return
+	if distance < _charge_best - CHARGE_PROGRESS:
+		_charge_best = distance
+		_charge_clock = 0.0
+		return
+	_charge_clock += delta
+	if _charge_clock < CHARGE_WINDOW or _recoveries >= RECOVER_LIMIT:
+		return
+	_recoveries += 1
+	_count("charge_recoveries")
+	_charge_best = INF
+	_charge_clock = 0.0
+	_recover_legs = _charge_escape(ball, at)
+	_recover_time = 0.0
+	_fight_phase = "recover"
+	source.press["jump_pressed"] = true
+
+
+# The recovery's legs: back off the bearing to the target, then to the side whose way on toward
+# the target is clear of walls (the nearer one to the target when both or neither are).
+func _charge_escape(ball: Vector3, at: Vector3) -> Array[Vector3]:
+	var toward := Vector3(at.x - ball.x, 0.0, at.z - ball.z).normalized()
+	var back := ball - toward * RECOVER_BACK
+	var best := Vector3.INF
+	var best_score := -INF
+	for turn in [PI * 0.5, -PI * 0.5]:
+		var side := _ground_point(back.x, back.z) + toward.rotated(Vector3.UP, turn) * RECOVER_SIDE
+		side = _ground_point(side.x, side.z)
+		var score := -_flat(side, at)
+		if _way_clear(side, side + toward * RECOVER_SIDE):
+			score += 1000.0
+		if score > best_score:
+			best_score = score
+			best = side
+	var out: Array[Vector3] = [_ground_point(back.x, back.z), best]
+	return out
+
+
+# Whether a ray at ball height from one point to the other meets no wall (a face steeper than WALL_TILT).
+func _way_clear(from: Vector3, to: Vector3) -> bool:
+	var space = game.get_world_3d().direct_space_state
+	var lift := Vector3.UP * 0.2
+	var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(from + lift, to + lift, 1))
+	return hit.is_empty() or absf((hit["normal"] as Vector3).y) >= WALL_TILT
 
 
 # Whether to climb to a target above the ball: more than LEVEL_BAND above it, or, with a climb in
