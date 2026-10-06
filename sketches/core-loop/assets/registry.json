@@ -186,7 +186,12 @@
     "recipe": "tools/blender/bosses/brindle_model.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
    },
-   "budget_note": "Contains warden_base and warden_kit allocations, measured separately by dress_bri_assets_test; scooter shares the kit allowance."
+   "budget_note": "Contains warden_base and warden_kit allocations, measured separately by dress_bri_assets_test; scooter shares the kit allowance.",
+   "exception": {
+    "tris": 6500,
+    "draws": 50
+   },
+   "exception_why": "one GLB holds the fortress base and its kit; D4 BUILD-SPEC allows warden_base plus warden_kit (1,500 tris, 18 draws)"
   },
   {
    "id": "boss_brindle_scooter",

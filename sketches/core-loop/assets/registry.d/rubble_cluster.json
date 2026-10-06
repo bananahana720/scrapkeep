@@ -4,8 +4,8 @@
    "id": "rubble_cluster",
    "path": "res://assets/models/dig_stone/rubble_cluster.glb",
    "class": "landform",
-   "ships": false,
-   "loader": "none (delivered model; runtime integration pending)",
+   "ships": true,
+   "loader": "src/presentation/dig_scenery.gd",
    "provenance": {
     "recipe": "tools/blender/dig_stone/rubble_cluster.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
