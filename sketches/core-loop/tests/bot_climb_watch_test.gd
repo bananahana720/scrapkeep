@@ -131,6 +131,72 @@ func _process(_delta: float) -> bool:
 	t.check("control: a rising climb never recovers", not seen_recover, rising._fight_phase)
 	t.eq("control: no recovery counted", rising.counts.get("charge_recoveries", 0), 0)
 
+	# Rocking across LEVEL_BAND below the Warden: the climb flips on and off about once a
+	# second, faster than CHARGE_WINDOW, and the ball gets nowhere. The flips keep the clock.
+	var fgame := FakeGame.new()
+	fgame.flow.warden = warden
+	var flipper := Probe.new(fgame)
+	flipper._fight_target = warden
+	var ftime := 0.0
+	var flips := 0
+	var was_climbing := false
+	var flip_entered := -1.0
+	var band_y := WARDEN.y - BotDriver.LEVEL_BAND
+	while ftime < BotDriver.CHARGE_WINDOW + ROCK_PERIOD + 1.0:
+		fgame.player.at = Vector3(WARDEN.x, band_y + 1.5 * sin(ftime * 3.0), WARDEN.z + 40.0)
+		flipper._ram_laps(warden, null, STEP)
+		var now_climbing := flipper._climbing(fgame.player.at, WARDEN)
+		if now_climbing != was_climbing:
+			flips += 1
+			was_climbing = now_climbing
+		ftime += STEP
+		if flipper._fight_phase == "recover":
+			flip_entered = ftime
+			break
+	t.check("flip-flop: the climb flips faster than the window", flips >= 3, str(flips))
+	t.check("flip-flop: recovery starts once the window passes", flip_entered >= BotDriver.CHARGE_WINDOW and flip_entered <= BotDriver.CHARGE_WINDOW + 0.5, str(flip_entered))
+	t.eq("flip-flop: one recovery counted", flipper.counts.get("charge_recoveries", 0), 1)
+
+	# Pinned inside RUNUP on the Warden's level (a box collider between): the charge jiggles in
+	# place 15 m out and never closes. It is watched like a charge beyond RUNUP.
+	var pgame := FakeGame.new()
+	pgame.flow.warden = warden
+	var pinned := Probe.new(pgame)
+	pinned._fight_target = warden
+	var ptime := 0.0
+	var pin_entered := -1.0
+	while ptime < BotDriver.CHARGE_WINDOW + 1.0:
+		pgame.player.at = Vector3(WARDEN.x + 0.5 * sin(ptime * 3.0), WARDEN.y, WARDEN.z + 15.0 + 0.5 * cos(ptime * 3.0))
+		pinned._ram_laps(warden, null, STEP)
+		ptime += STEP
+		if pinned._fight_phase == "recover":
+			pin_entered = ptime
+			break
+	t.check("inside runup: the charge is not a climb", not pinned._goal.ends_with(" climb"), pinned._goal.left(40))
+	t.check("inside runup: recovery starts once the window passes", pin_entered >= BotDriver.CHARGE_WINDOW and pin_entered <= BotDriver.CHARGE_WINDOW + 0.1, str(pin_entered))
+
+	# Control: a runup's end starts the watch afresh, so a charge back in from the runup point
+	# at 8 m/s closes and never recovers.
+	var rgame := FakeGame.new()
+	rgame.flow.warden = warden
+	var lapper := Probe.new(rgame)
+	lapper._fight_target = warden
+	var rtime := 0.0
+	var lap_recover := false
+	var lap_phases := {}
+	var out_at := Vector3(WARDEN.x, WARDEN.y, WARDEN.z + 3.0)
+	while rtime < 30.0:
+		var leg := fmod(rtime, 6.0)
+		var off := 3.0 + (leg * 7.0 if leg < 3.0 else (6.0 - leg) * 7.0)
+		rgame.player.at = Vector3(WARDEN.x, WARDEN.y, WARDEN.z + off)
+		lapper._ram_laps(warden, null, STEP)
+		lap_phases[lapper._fight_phase] = true
+		if lapper._fight_phase == "recover":
+			lap_recover = true
+		rtime += STEP
+	t.check("control: ram laps run both phases", lap_phases.has("runup") and lap_phases.has("charge"), str(lap_phases.keys()))
+	t.check("control: ram laps never recover", not lap_recover, lapper._fight_phase)
+
 	warden.free()
 	quit(t.verdict())
 	return false
