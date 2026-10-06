@@ -47,6 +47,21 @@ const EDGES := [
 var _dir_cache := {}
 
 
+# Built on first entry, not at boot: building the Dig's terrain at game start changes
+# physics body creation order and so every seeded run (Rivet seed 1: 38208 -> 34066 ticks).
+static func hook(ctx) -> void:
+	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
+
+
+static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
+	for row in ctx.stages.DEFS:
+		if row["stage"] == stage and row["map"] in ["dig", "dig_deep"]:
+			var root: Node3D = ctx.terrain.geometry_root(stage)
+			if root.get_node_or_null("DigScenery") == null:
+				build(root, ctx.terrain.map_for(stage), row["map"])
+			return
+
+
 static func build(stage_root: Node3D, map: RefCounted, map_id: String) -> Node3D:
 	var scenery := Node3D.new()
 	scenery.name = "DigScenery"
