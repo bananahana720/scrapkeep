@@ -1413,27 +1413,31 @@ func _reset_charge_watch() -> void:
 # best distance. Inside RUNUP the ram laps steer, not this. On a climb, progress is CHARGE_PROGRESS
 # of height or of 3D distance to the Warden: a ball rocking on a ledge it cannot top gains
 # neither, and the recovery's legs move it off the spot the climb route keeps replanning from.
-# Crossing in or out of a climb re-bases the bests on the ball's place but keeps the clock, so a
-# ball rocking across LEVEL_BAND is still watched.
 func _charge_watch(ball: Vector3, at: Vector3, distance: float, delta: float) -> void:
 	var climbing := _climbing(ball, at)
-	if not climbing and distance <= RUNUP:
+	if climbing != _charge_climbing:
+		_charge_climbing = climbing
+		_charge_best = INF
+		_charge_rise = -INF
+		_charge_clock = 0.0
+	if climbing:
+		var reach := ball.distance_to(at)
+		var gained := false
+		if reach < _charge_best - CHARGE_PROGRESS:
+			_charge_best = reach
+			gained = true
+		if ball.y > _charge_rise + CHARGE_PROGRESS:
+			_charge_rise = ball.y
+			gained = true
+		if gained:
+			_charge_clock = 0.0
+			return
+	elif distance <= RUNUP:
 		_charge_best = INF
 		_charge_clock = 0.0
 		return
-	var reach := ball.distance_to(at) if climbing else distance
-	if climbing != _charge_climbing:
-		_charge_climbing = climbing
-		_charge_best = reach
-		_charge_rise = ball.y
-	var gained := false
-	if reach < _charge_best - CHARGE_PROGRESS:
-		_charge_best = reach
-		gained = true
-	if climbing and ball.y > _charge_rise + CHARGE_PROGRESS:
-		_charge_rise = ball.y
-		gained = true
-	if gained:
+	elif distance < _charge_best - CHARGE_PROGRESS:
+		_charge_best = distance
 		_charge_clock = 0.0
 		return
 	_charge_clock += delta
