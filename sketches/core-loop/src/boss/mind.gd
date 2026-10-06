@@ -130,6 +130,9 @@ func _commit_attack(family := "") -> void:
 			_plate_verb = String(d["verb"])
 			_plate_until = clock + h.warn_seconds + h.live_seconds + MindAttacks.PLATE_WINDOW
 		ctx.events.boss_attack_telegraphed.emit(String(d["id"]), h.warn_seconds)
+	var ledger: Dictionary = ctx.run.get_meta("boss_attacks", {})
+	ledger[_family] = int(ledger.get(_family, 0)) + 1
+	ctx.run.set_meta("boss_attacks", ledger)
 	attacks.append({"hazards": laid, "family": _family, "landed": false, "aimed": aimed})
 
 
