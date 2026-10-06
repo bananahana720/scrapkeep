@@ -79,6 +79,7 @@ func _run() -> void:
 		"focus %s" % [cards.map(func(c): return c.has_focus())])
 	_check_preview_floor()
 	await _check_four()
+	await _check_wide()
 	await _check_keys()
 	print("roster_test: %d checks" % _t.checks)
 	_game.free()
@@ -230,6 +231,28 @@ func _check_four() -> void:
 	_game.flow.classes.append_array(all)
 	await _open_select()
 	_t.check("R10 the six cards come back", _game.screens.class_cards().size() == 6, "%d cards" % _game.screens.class_cards().size())
+
+
+# R11: at a screen wide enough that six cards' natural width passes CARD_MAX, the cap binds and
+# every card is exactly CARD_MAX wide. The 1600 px checks above never reach the cap.
+func _check_wide() -> void:
+	var before := root.content_scale_size
+	var wide := Vector2i(3200, 1800)
+	root.content_scale_size = wide
+	await _frames(2)
+	await _open_select()
+	var cards: Array = _game.screens.class_cards()
+	var natural := (float(wide.x) - 2.0 * Screens.SIDE - 5.0 * Screens.CARD_GAP_TIGHT) / 6.0
+	var capped := true
+	var widths := []
+	for card in cards:
+		capped = capped and absf(card.size.x - Screens.CARD_MAX) <= 0.5
+		widths.append("%.1f" % card.size.x)
+	_t.check("R11 six cards at %dx%d all sit at the card cap" % [wide.x, wide.y], cards.size() == 6 and natural > Screens.CARD_MAX and capped,
+		"natural %.1f px, cap %.1f px, widths %s" % [natural, Screens.CARD_MAX, ", ".join(widths)])
+	root.content_scale_size = before
+	await _frames(2)
+	await _open_select()
 
 
 func _check_words(cards: Array) -> void:
