@@ -16,6 +16,7 @@ import {
   tarArgs,
   winProofFailures,
   winProofLine,
+  WIN_PROOFS,
 } from "./sketch-export.mjs";
 
 const manifest = {
@@ -264,5 +265,33 @@ test("winProofLine formats a won row", () => {
   assert.equal(
     winProofLine(won, "/x/proof.pck"),
     "win proof: won at stage 6, 34170 ticks, 86.65 s wall, policy skipper seed 1, pack /x/proof.pck",
+  );
+});
+
+test("WIN_PROOFS plays Rivet's seed 1 first, then the cannon pinned by --pilot", () => {
+  assert.deepEqual(
+    WIN_PROOFS.map((proof) => [proof.label, proof.seed, proof.pilot ?? null]),
+    [
+      ["win proof", 1, null],
+      ["win proof (cannon)", 11, "remembered_cannon"],
+    ],
+  );
+  assert.notEqual(WIN_PROOFS[0].dir, WIN_PROOFS[1].dir);
+});
+
+test("winProofLine formats the cannon proof with its pilot", () => {
+  const won = {
+    outcome: "won",
+    stage_reached: 6,
+    ticks: 34249,
+    wall_seconds: 180.84,
+  };
+  assert.equal(
+    winProofLine(won, "/x/proof.pck", WIN_PROOFS[1]),
+    "win proof (cannon): won at stage 6, 34249 ticks, 180.84 s wall, policy skipper seed 11 pilot remembered_cannon, pack /x/proof.pck",
+  );
+  assert.equal(
+    winProofLine(won, "/x/proof.pck", WIN_PROOFS[0]),
+    winProofLine(won, "/x/proof.pck"),
   );
 });

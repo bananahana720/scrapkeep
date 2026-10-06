@@ -18,11 +18,12 @@ import { fileURLToPath } from "node:url";
 // the executable. They are gitignored and cannot be regenerated, so they are copied from
 // --stems-from=<music_ace folder> (default: the main checkout's sketches/core-loop/assets/music_ace).
 // --win-proof then exports the "Linux x64 proof" pack (the shipped recipe plus tools/) into the
-// sibling <run>-win-proof/ and plays one skipper bot run on it from a fresh user:// with the
-// editor binary, which fails unless the run is won. Release templates refuse --main-pack and
+// sibling <run>-win-proof/ and plays two skipper bot runs on it, each from a fresh user://, with
+// the editor binary: seed 1 as rolled (Rivet), then seed 11 pinned to the remembered cannon.
+// Either run not won fails the export. Release templates refuse --main-pack and
 // --script, so this proves the exported pack, not the release template's runtime.
 // The proof runs before packaging, so a failed proof leaves no tarball. BUILD.txt records the
-// proof line, or "win proof: not run" without the flag. A dirty tree adds -dirty to the package name.
+// proof lines, or "win proof: not run" without the flag. A dirty tree adds -dirty to the package name.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
@@ -35,6 +36,17 @@ const preset = "Linux x64";
 const proofPreset = "Linux x64 proof";
 const WIN_POLICY = "skipper";
 const WIN_SEED = 1;
+const CANNON_SEED = 11;
+const CANNON_PILOT = "remembered_cannon";
+export const WIN_PROOFS = [
+  { label: "win proof", seed: WIN_SEED, dir: "" },
+  {
+    label: "win proof (cannon)",
+    seed: CANNON_SEED,
+    pilot: CANNON_PILOT,
+    dir: "cannon",
+  },
+];
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 
 export function missingStems(manifest, directory, exists = existsSync) {
@@ -217,8 +229,9 @@ export function packageName(sha7, dirty = false) {
   return "scrapkeep-core-loop-" + sha7 + (dirty ? "-dirty" : "");
 }
 
-export function winProofLine(row, pack) {
-  return `win proof: ${row.outcome} at stage ${row.stage_reached}, ${row.ticks} ticks, ${row.wall_seconds} s wall, policy ${WIN_POLICY} seed ${WIN_SEED}, pack ${pack}`;
+export function winProofLine(row, pack, proof = WIN_PROOFS[0]) {
+  const pilot = proof.pilot ? ` pilot ${proof.pilot}` : "";
+  return `${proof.label}: ${row.outcome} at stage ${row.stage_reached}, ${row.ticks} ticks, ${row.wall_seconds} s wall, policy ${WIN_POLICY} seed ${proof.seed}${pilot}, pack ${pack}`;
 }
 
 export function tarArgs(outDir, sha7, dirty = false) {
@@ -391,9 +404,7 @@ async function winProof(outDir) {
   const proofDir = outDir + "-win-proof";
   if (existsSync(proofDir))
     fail("win proof folder already exists: " + proofDir);
-  const state = path.join(proofDir, "state");
-  for (const dir of ["data", "config", "cache"])
-    await mkdir(path.join(state, dir), { recursive: true });
+  await mkdir(proofDir, { recursive: true });
   const pack = path.join(proofDir, "proof.pck");
   const exported = run(binary, [
     "--headless",
@@ -407,7 +418,17 @@ async function winProof(outDir) {
   if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(pack))
     fail("proof pack export failed\n" + exportText.slice(-2000));
 
-  const out = path.join(proofDir, "run");
+  const lines = [];
+  for (const proof of WIN_PROOFS)
+    lines.push(await playWinProof(path.join(proofDir, proof.dir), pack, proof));
+  return lines.join("\n");
+}
+
+async function playWinProof(base, pack, proof) {
+  const state = path.join(base, "state");
+  for (const dir of ["data", "config", "cache"])
+    await mkdir(path.join(state, dir), { recursive: true });
+  const out = path.join(base, "run");
   const bot = run(
     binary,
     [
@@ -421,10 +442,11 @@ async function winProof(outDir) {
       "--",
       "--out=" + out,
       "--policy=" + WIN_POLICY,
-      "--seeds=" + WIN_SEED,
+      "--seeds=" + proof.seed,
+      ...(proof.pilot ? ["--pilot=" + proof.pilot] : []),
     ],
     {
-      cwd: proofDir,
+      cwd: path.dirname(pack),
       timeout: 900_000,
       env: {
         ...process.env,
@@ -439,8 +461,8 @@ async function winProof(outDir) {
   const rowsText = existsSync(rowsPath) ? await readFile(rowsPath, "utf8") : "";
   const failures = winProofFailures(botText, bot.status, rowsText);
   if (failures.length > 0)
-    fail("win proof\n" + failures.join("\n") + "\n" + botText.slice(-2000));
-  return winProofLine(JSON.parse(rowsText.trim()), pack);
+    fail(proof.label + "\n" + failures.join("\n") + "\n" + botText.slice(-2000));
+  return winProofLine(JSON.parse(rowsText.trim()), pack, proof);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
