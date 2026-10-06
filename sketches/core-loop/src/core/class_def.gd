@@ -37,8 +37,9 @@ const CANNON_COLOR := Palette.ANCIENT
 @export var sound := ""
 @export var bible_home := ""
 @export var synergy_hooks: PackedStringArray = []
-# Playable from a fresh profile. Sable is the only starter; every other pilot is named by one
-# achievement row's pilot reward (achievements.gd).
+# Playable from a fresh profile. Sable and Rivet start open; every other pilot is named by one
+# achievement row's pilot reward (achievements.gd): Tarn after Brindle, Kest after the Dig
+# rescue, Tally after the third ledger leaf, the remembered cannon after the Mind.
 @export var starter := false
 
 
