@@ -2,6 +2,24 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Dress push waves 1 to 3 landed (2026-10-06, a6b75ea)
+
+The dress push (plan `/home/andrew/.claude/plans/let-s-plan-an-agent-dazzling-shamir.md`, board [DRESS-MANIFEST](DRESS-MANIFEST.md), resume note [PUSH-RESUME](PUSH-RESUME.md), rulings P-R1 to P-R11 in `docs/decisions.tsv`) replaces placeholder art with real models. proto/alpha went c91b28f to a6b75ea through merge 7cc63e9 of `cand/alpha-w3`.
+
+**What changed for the player.** 48 of 52 tracked subjects now render real models (27 placeholders at the start; left: miniboss, swarm_remnant, vault, Brindle's pickup). Every enemy kind, the three bosses and the Mind's hands, Tarn, Tally and the remembered cannon with their own shells, Warden mantles on stages 3 to 6, and a SPIL-9 body that hovers beside the ball. The Dig has cut faces, carts, lamp lines, two landmarks and drum skins on all eight breach covers; the Highdraft has skinned islands, bridges, barges, thermals, net deck and anchors, props and a far sky. Ten new ACE tracks are rendered but not yet wired (`artifacts/local/alpha/push/w1/D8/out/renders/`).
+
+**Units.** Wave 1: eight Sol direction sheets (D1 to D8). Wave 2: 27 Sol model and port units plus REG (registry, ratchet 27 to 16). Wave 3 (Claude Sonnet 5.5 medium after the Codex limit, P-R8): WHE pilots and mantles, WBO bosses, WCO companion, WDG Dig scenery, WHD Highdraft scenery, all PASS+NOTES at level 4.
+
+**Evidence.** Gate on cand/alpha-w2 5105e06: 453 runs, 0 reds, 2078 s. Gate on cand/alpha-w3 a8d6925: 458 runs, 0 reds, 1832 s, receipt `artifacts/local/receipts/gate-da6e45484efd-2026-10-06T20-35-00-477Z.json` in that worktree. Opus gate read (scrapkeep-reviewer-medium): FAIL on two items; the smoke-lock rule was fixed (718f6a0, red then green) and silent loader fallbacks were waived because dress_coverage_test fails the gate on any returning placeholder (P-R10). After the merge the export's win proofs drifted (Rivet 34066, cannon 37304); bisected to WDG's boot-time `geometry_root` call, which changes physics body creation order with no scenery built. a6b75ea builds the Dig on first entry (P-R11).
+
+### Export
+
+At a6b75ea: tarball scrapkeep-core-loop-a6b75ea.tar.gz 46.4 MiB, ACE_CHECK ready clips=8 streams=24. Win proofs: Rivet skipper seed 1 won at stage 6, 38208 ticks, 99.26 s wall; remembered cannon skipper seed 11 won at stage 6, 34249 ticks, 117.22 s wall. Both equal waves 18 to 20. Copied to `artifacts/local/alpha/export/a6b75ea/`. Log `artifacts/local/alpha/push/w3/export2.log`.
+
+### Next
+
+Pacing: Claude was at 96 to 97% of its week (resets Thu 22:00) and Codex is out until 2026-10-11, so no writer wave was started after this. The next wave: the four remaining placeholders, the cosmetics runtime (CUS, lost to the Codex limit), music rows for the ten new tracks, GPU captures from each unit's `artifacts/local/dress-capture/<unit>.md` plus the blind judge, then animation and effects. Follow-ups from P-R9 and P-R10.
+
 ## Wave 20 landed (2026-10-06, d03422d)
 
 The wave 20 candidate cand/alpha-w20 landed as d03422d (proto/alpha went 40d7f5a to the wave 20 records commit; one unit, 3 commits over base by `git rev-list --count 40d7f5a..d03422d`). Branches are deleted. Coordinator commits on the candidate: the merge and the records commit.
