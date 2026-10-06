@@ -12,7 +12,7 @@ One exported Linux alpha with Spillway Works, Dig and Highdraft in that fixed or
 | World one | Spillway plus Cable Reach, two Wardens, Brindle, rescue progression, rewards and durable run continuity | Complete world-one run; saves, retries, one-time rewards and existing profile migrations checked |
 | New pilots and companion | Tarn first, Tally next, cannon last; reused six probes; one modular SPIL-9 | Each full kit/tree/model/animation/sound; three module pairs useful and legible; no extra revival |
 | Three-world greybox | Four later zones, Breach and Lift, six new enemy kinds, four Wardens, Waking and Mind | Complete campaign without boss stubs; every pilot traverses both later mechanics |
-| Dressed campaign and camp | Approved world art, animation, effects, music/lore; five menu stations, skee-ball, pet/toys, ghost/medals and enemy sandbox | Captures and frame times on the same build; in-play look/audio verdict; launch budgets checked |
+| Dressed campaign and camp | Approved world art, animation, effects, music/lore; camp menu; optional for the alpha (cut, W18-R1): five menu stations, skee-ball, pet/toys, ghost/medals and enemy sandbox | Captures and frame times on the same build; in-play look/audio verdict; launch budgets checked |
 | Exported alpha | Achievements, cosmetics, codex, discoveries/recipes, ending, how-to-play and bundled assets/music | Fresh-profile unlock sequence, another run with cannon, cold Linux launch and durable resume |
 
 ## Content and progression
@@ -36,7 +36,7 @@ Continue proto/alpha; coordinator-only serial integration and canonical records.
 
 Use small waves within ORCHESTRATOR's eight-delegate ceiling (up to five writers, three reviewers or verifiers), as the alpha program waves have since EV-0599. Pin delegates by the active Codex map, preserving the stricter project judgment rules and approved GPT-6.1 Sol high asset/animation lane. Shared gate once per combined candidate; serialize GPU work.
 
-Current state (TRACKING EV-0625, proto/alpha 4f267f3, 6 October 2026): six of six pilots playable, three of three worlds complete in bot play, Cable Reach sitting passed (EV-0624), exported build with win proof each wave; the multi-hour alpha sitting is pending. Dressed campaign and camp, and Exported alpha, are the open checkpoints; HANDOFF.md holds the per-wave record. No reliable overall percentage. The old 235-unit/11-to-14-day estimate is retired; recount bounded remaining units after recovery. Report built, integrated, automated and human-accepted separately.
+Current state (TRACKING EV-0625, proto/alpha a718fdb after wave 18, 6 October 2026): six of six pilots playable, three of three worlds complete in bot play, Cable Reach sitting passed (EV-0624), exported build with win proof each wave; the multi-hour alpha sitting is pending. Dressed campaign and camp, and Exported alpha, are the open checkpoints; HANDOFF.md holds the per-wave record. No reliable overall percentage. The old 235-unit/11-to-14-day estimate is retired; recount bounded remaining units after recovery. Report built, integrated, automated and human-accepted separately.
 
 The Cable Reach miss policy remains one correction round of at most ten units and a second sitting; further work needs a re-plan. Optional extras are additional lounge games/decorations. Production migration, dependencies/services, more worlds and a boss after Mind are outside this alpha.
 

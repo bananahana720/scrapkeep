@@ -2,6 +2,57 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 18 landed (2026-10-06, a718fdb)
+
+The wave 18 candidate cand/alpha-w18 landed as a718fdb (proto/alpha went ce300c7 to the wave 18 records commit; three units, 7 commits over base by `git rev-list --count ce300c7..a718fdb`). Two further units were retired on their baselines without a code change (brindle-cap, W18-R3) or closed by a Sol diagnosis that overturned the premise (Mind families, W18-R2). Branches are deleted. Coordinator commits on the candidate: 95d72d5 (run_log_boss_attacks_test hazard count pinned), the merges and the records commit.
+
+**Milestone:** M4 (alpha) acceptance evidence: the exported build now proves a Rivet win and a remembered-cannon win on the same pack, the fresh-profile unlock sequence is pinned end to end, and the run record counts the Mind's attack commitments by family. Camp recreation (five stations, skee-ball, pet/toys, ghost/medals, enemy sandbox) is recorded as cut for the alpha (W18-R1).
+
+| unit | branch | head | writer | verdict | note |
+|---|---|---|---|---|---|
+| mind-coverage | wt/alpha-w18-mind-coverage | 95d72d5 | sonnet (astack:hand) + coordinator test pin | PASS+NOTES | `boss_attacks` on the run record (one count per `_commit_attack`, split_lane counts once); run_log_boss_attacks_test 4 checks, two mutants red |
+| unlock-seq | wt/alpha-w18-unlock-seq | bd1c21b | opus (astack:worker) | PASS+NOTES | profile_unlock_sequence_test 121 checks: fresh profile, Rivet starter, Tarn after Brindle, Kest after the Dig rescue, cannon after the Mind, Tally after the third leaf, save/reload each step; Mind-first mutant fails 12 of 44 |
+| cannon-proof | wt/alpha-w18-cannon-proof | a04f317 | opus (astack:worker), coordinator-verified | coordinator-verified (W18-R4) | `--win-proof` plays seed 1 (Rivet) then seed 11 pinned to remembered_cannon on the same proof pack, either loss fails the export; sketch-export.test.mjs 27 pass |
+| brindle-cap (retired) | none | ec61233 | opus (astack:worker) | FAIL on premise | Tally skipper seed 16 won stage 6 in all three pinned-code baselines; the w17 soak stall ran the same driver bytes at concurrency 3; no change (W18-R3) |
+| Mind families (Sol, read-only) | none | ce300c7 | Codex Sol (gpt-6.1-sol high) | verdict d | the Mind fires all four families against bots; codex rows record only dodged attacks; wave 13 note corrected below |
+
+Cause of each review red: brindle-cap, brief (a soak stall under load used as a driver-defect premise). The cannon-proof workflow lost both the writer's and the verifier's results (null); the coordinator verified it directly.
+
+**Correction to the wave 13 record:** the line "Mind codex rows (lane, split_lane, rush) fired 0 times in the win proof; only forced tests prove them" read codex discoveries as attack counts. The codex detector records lane, split_lane and rush only when an aimed attack is dodged (mind.gd `_step_attacks`), so landed attacks never produced a row. In the wave 17 re-soak, 42 winners show family damage or codex rows for lane (6), split_lane (39), rush (38) and plate (42). From wave 18 the `boss_attacks` field shows commitments directly.
+
+### Sol lane (Codex gpt-6.1-sol high)
+
+One read-only diagnosis (Mind attack families, verdict d, no combat change). The lane was otherwise idle this wave; the two bot-driver diagnoses from wave 17 both failed their pinned baselines, so bot-driver work from soak data now needs a solo reproduction before a brief is written.
+
+### Gate
+
+Candidate cand/alpha-w18. Gate 1 ran on a718fdb (all three units): 422 runs, 8 at a time, 25 solo, 0 reds, 1817 s, 7 environment skips (music stems not packaged in the worktree, no audio headless); receipt artifacts/local/receipts/gate-8fca6401a1ad-2026-10-06T01-38-42-944Z.json records head a718fdb. No merge after the gate; the records commit is docs only. Gate read (a718fdb): ADMIT, PASS+NOTES, level 2 by the reviewer's reads of the gate log, receipt and git captures (Opus 5.5, scrapkeep-reviewer-medium; fences clean, union equals the wave stat; no SCRIPT ERROR, ERROR or FAIL lines; no test pins the run record's key set; the second proof reuses the pack with its own state folder). proto/alpha is fast-forwarded to the wave 18 records commit by the coordinator.
+
+### Export
+
+At a718fdb: tarball scrapkeep-core-loop-a718fdb.tar.gz 41.1 MiB, ACE_CHECK ready clips=8 streams=24, stems from the main checkout. Two win proofs on one proof pack: Rivet skipper seed 1 won at stage 6, 38208 ticks (same as waves 16 and 17), 99.87 s wall; remembered cannon skipper seed 11 won at stage 6, 34249 ticks, 117.14 s wall. Copied to artifacts/local/alpha/export/a718fdb/. Log artifacts/local/alpha/wave18/export1.log.
+
+### Rulings (coordinator, 2026-10-06; recorded in docs/decisions.tsv at the wave 18 records commit)
+
+- W18-R1 camp recreation stays cut for the alpha; ROADMAP row says optional; captures/frame times and the cold launch parked to hands.
+- W18-R2 Mind families: verdict d, no combat change; wave 13 line corrected; mind-coverage evidence unit.
+- W18-R3 brindle-cap retired on its baseline; load-dependent soak stalls are classed env.
+- W18-R4 cannon-proof coordinator-verified after the workflow lost its reports.
+
+### Open after wave 18: wave 19 concerns
+
+1. Soak runner: record load and concurrency per run; a stall that does not reproduce solo is classed env in the soak note.
+2. unlock-seq drives the bus from class select; the in-run emit sites (Brindle enemy_killed then boss_defeated order) are unproven by it.
+3. class_def.gd comment "Sable is the only starter" contradicts Rivet starter:true; fix the comment.
+4. `boss_attacks` counts come back from JSON as floats; soak readers compare as ints.
+5. Carried: tree_bot_test watch, narrow-card roster check, bot nondeterminism (W16-R8), 1.8 GB of Godot test run folders, four old Codex job worktrees and the wave 7 Highdraft probe worktree.
+
+### Hands checklist (never blocks; items 13-30 carry over)
+
+31. Fresh profile: start a new save and confirm only Sable and Rivet are selectable, then beat Brindle and see Tarn open.
+32. Play the exported build as the remembered cannon after a Mind kill: the export now proves that run wins for the bot; see whether the lane and split lane read at human speed.
+33. (Replaces 30) Fight Brindle as Tally: the bot's stall did not reproduce solo, so this is a feel check, not a bug hunt.
+
 ## Wave 17 landed (2026-10-06, 86dbf59)
 
 The wave 17 candidate cand/alpha-w17 landed as 86dbf59 (proto/alpha went ec61233 to the wave 17 records commit; four units plus the re-soak note, 11 commits over base by `git rev-list --count ec61233..86dbf59`). Before the wave, the coordinator wrote the canonical M4 program record on proto/alpha (ec61233: TRACKING EV-0625 for waves 1-16, ROADMAP current state; W17-R1). Branches are deleted. Coordinator commits on the candidate: af35a2a (tally_look preview check tightened, class_preview header), 3179330 and 5ceb86b (Sol lanes committed), the merges and the records commit.
@@ -318,7 +369,7 @@ At 01aa202: tarball 41.0 MiB, pack 78.5 MiB, ACE_CHECK ready clips=8 streams=24.
 2. field_notes.gd:25 TESTING still says "three stages ... Admiral Brindle" (outside every wave 13 fence).
 3. Run the 7 stems-dependent music tests with stems present against the title/summary music change (gate worktrees have no stems, so they skipped).
 4. sketch-export: run the win proof before building the tarball or delete the tarball on a failed proof; add -dirty to the tarball name; record the proof in BUILD.txt; the tarball overwrites per commit.
-5. Mind codex rows (lane, split_lane, rush) fired 0 times in the win proof; only forced tests prove them.
+5. Mind codex rows (lane, split_lane, rush) fired 0 times in the win proof; only forced tests prove them. (Corrected 2026-10-06, W18-R2: codex rows record only dodged attacks; the Mind does fire all four families against bots. See wave 18.)
 6. Won-summary menu_theme call lacks the sound_ready guard the lost and idle branches have (audio.gd ~1902).
 7. mind_plate is reachable only when forced (ruling: wave 14 boss tuning).
 8. companion-drops same-entry double-pay guard has no live test; companion-cues never asserts audio.play; menu tracks keep LEAD on non-PLAY mode.
