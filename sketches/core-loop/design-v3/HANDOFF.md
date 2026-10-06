@@ -2,6 +2,50 @@
 
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
+## Wave 20 landed (2026-10-06, d03422d)
+
+The wave 20 candidate cand/alpha-w20 landed as d03422d (proto/alpha went 40d7f5a to the wave 20 records commit; one unit, 3 commits over base by `git rev-list --count 40d7f5a..d03422d`). Branches are deleted. Coordinator commits on the candidate: the merge and the records commit.
+
+**Milestone:** M4 (alpha) bot evidence: the bot driver recovers from confinement during the Warden charge, so the three solo-reproduced soak stalls (Kest 2, Kest 14, Tarn 15) now break their Warden and advance. This is a tool change only; no game code moved.
+
+| unit | branch | head | writer | verdict | note |
+|---|---|---|---|---|---|
+| charge-recover | wt/alpha-w20-charge-recover | 56e5167 | opus (astack:worker) | PASS+NOTES after one fix round | bounded lack-of-progress watch in the charge phase (6 s window, 2 m), escape by back-off and jump or a rim climb when the target is below, cap 3 per stage; bot_charge_recover_test 21 checks incl. seven synthetic pit cases; baseline held on all four pinned recipes before the edit |
+
+Round 1 FAIL (writer): the first escape left Kest 2 and Kest 14 stalled with three recoveries spent and the Warden unbroken; the fix added the rim-climb branch for a ball below the rim and stopped the per-target reset from clearing the cap. Round 2 PASS+NOTES.
+
+**Run table after the change (pinned pilots, fresh dirs, 600 s cap):** Kest 2 broke the stage 3 Warden at 186.3 s and won at stage 6 (103882 ticks, one recovery). Kest 14 broke the stage 4 Warden at 182.9 s (one recovery) and stalled at stage 5. Tarn 15 broke the stage 4 Warden at 229.6 s (three recoveries, the cap) and stalled at stage 5. Sable skipper 12 (control) won with two recoveries. Rivet skipper 1 won in exactly 38208 ticks with zero recoveries (the export win proof is untouched). Tarn 3 and the cannon 5 won. Posture bands exact at 78.4 and 37.9.
+
+**Open from the notes:** the stage 5 stalls for Kest 14 and Tarn 15 end in "fight warden charge climb"; the progress watch returns early while climbing (bot_driver.gd:1411), so a stuck climb is unwatched. The short-room back-off branch has no test. `_face_ahead` casts on layer 1 without exclusions and may read an enemy as a wall.
+
+### Sol lane (Codex gpt-6.1-sol high)
+
+Idle this wave. The wave 19 diagnosis (W19-R5) supplied the mechanism and the baseline recipe this unit used.
+
+### Gate
+
+Candidate cand/alpha-w20. Gate 1 ran on d03422d: 424 runs, 8 at a time, 25 solo, 0 reds, 1802 s, 7 environment skips (music stems not packaged in the worktree, no audio headless); receipt artifacts/local/receipts/gate-37293b0febe1-2026-10-06T05-51-36-250Z.json records head d03422d. No merge after the gate; the records commit is docs only. Gate read (d03422d): ADMIT, PASS+NOTES, level 2 by the reviewer's reads of the gate log, receipt, git captures, export log and the writer's run artifacts (Opus 5.5, scrapkeep-reviewer-medium; two files in the wave, no src/ change, alpha_defs posture rows curve 2.0 and ram_shatters false at every stage, watchdog constants STAGE_LIMIT 240 and BOSS_LIMIT 420 untouched; the three stall runs were recorded on the uncommitted fix tree later committed unchanged as 56e5167, same driver mtime). proto/alpha is fast-forwarded to the wave 20 records commit by the coordinator.
+
+### Export
+
+At d03422d: tarball scrapkeep-core-loop-d03422d.tar.gz 41.1 MiB, ACE_CHECK ready clips=8 streams=24, stems from the main checkout. Two win proofs on one pack: Rivet skipper seed 1 won at stage 6, 38208 ticks, 124.74 s wall; remembered cannon skipper seed 11 won at stage 6, 34249 ticks, 146.41 s wall. Both tick counts equal waves 18 and 19. Copied to artifacts/local/alpha/export/d03422d/. Log artifacts/local/alpha/wave20/export1.log.
+
+### Rulings (coordinator, 2026-10-06; recorded in docs/decisions.tsv at the wave 20 records commit)
+
+- W20-R1 charge-recover admitted after one fix round; stage 5 climb stall and the two untested branches go to wave 21.
+
+### Open after wave 20: wave 21 concerns
+
+1. Extend the charge progress watch to the climbing case (Kest 14, Tarn 15 at stage 5); baseline on those two pinned recipes first.
+2. Test the short-room back-off branch; exclude non-terrain bodies from `_face_ahead`.
+3. A fourth soak on the new head would show the aggregate effect of the recovery (expected: two or three more completionist wins).
+4. The Mind's lane attack rarely fires against bots (W19-R4); Andrew's call (hands item 34).
+5. Carried: tree_bot_test watch, roster R11 natural-width formula, unlock_live phase skip, Godot test run folders (1.8 GB), old Codex job worktrees and the wave 7 Highdraft probe worktree.
+
+### Hands checklist (never blocks; items 13-34 carry over)
+
+35. Watch a completionist bot run as Kest on seed 2 (tools/bot_run.gd --policy=completionist --seeds=2 --pilot=demolitions_caster --trace=1) if you want to see the recovery: the ball backs off and jumps out of the Dig cache pocket around 180 s.
+
 ## Wave 19 landed (2026-10-06, e908ece)
 
 The wave 19 candidate cand/alpha-w19 landed as e908ece (proto/alpha went cd4b6f8 to the wave 19 records commit; two units plus the soak note, 6 commits over base by `git rev-list --count cd4b6f8..e908ece`). Branches are deleted. Coordinator commits on the candidate: cd1cbc6 (Sol soak note committed), the merges and the records commit.
