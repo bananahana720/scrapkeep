@@ -105,8 +105,11 @@ const RUNUP_MIN := 8.0
 # CHARGE_WINDOW seconds is pinned (a cache pocket's back wall, a pit): the ball moves fast enough
 # to dodge the stuck detour without getting anywhere. It recovers: back RECOVER_BACK off the
 # bearing, then RECOVER_SIDE to the side whose way on is clear, each leg held at most
-# RECOVER_LEG_SECONDS, then charges again. RECOVER_LIMIT per target leaves a hopeless stall to
-# the stage watchdog.
+# RECOVER_LEG_SECONDS, then charges again. With a wall within RECOVER_PROBE ahead (a pit's rim,
+# a cache's back wall) a side-step cannot leave, so it backs off as far as RECOVER_BACK_MAX
+# allows and rolls at the wall with walls not dodged, jumping RECOVER_JUMP_AT short of it and
+# again near the top of the jump, to a point RECOVER_OVER past it. RECOVER_LIMIT per stage
+# leaves a hopeless stall to the stage watchdog.
 const CHARGE_WINDOW := 6.0
 const CHARGE_PROGRESS := 2.0
 const RECOVER_BACK := 8.0
@@ -114,6 +117,10 @@ const RECOVER_SIDE := 14.0
 const RECOVER_REACHED := 3.0
 const RECOVER_LEG_SECONDS := 3.0
 const RECOVER_LIMIT := 3
+const RECOVER_PROBE := 10.0
+const RECOVER_BACK_MAX := 12.0
+const RECOVER_JUMP_AT := 3.0
+const RECOVER_OVER := 6.0
 const AIM_REACH := 40.0
 const WAYPOINT_REACHED := 9.0
 const WAYPOINT_SECONDS := 14.0
@@ -241,6 +248,8 @@ var _charge_clock := 0.0
 var _recoveries := 0
 var _recover_legs: Array[Vector3] = []
 var _recover_time := 0.0
+var _recover_wall := false
+var _recover_climb := false
 var _slow_time := 0.0
 var _detour_time := 0.0
 var _detour := Vector3.ZERO
@@ -552,6 +561,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_fight_phase = "charge"
 	_fight_target = null
 	_reset_charge_watch()
+	_recoveries = 0
 	_slow_time = 0.0
 	_detour_time = 0.0
 	_waypoints = []
@@ -1364,8 +1374,11 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 				_recover_time = 0.0
 				if _recover_legs.is_empty():
 					_fight_phase = "charge"
-				else:
+				elif not _recover_wall:
 					source.press["jump_pressed"] = true
+			_recover_climb = _fight_phase == "recover" and _recover_wall and _recover_legs.size() == 1
+			if _recover_climb:
+				_wall_jump(ball, _recover_legs[0])
 	var steer: Vector3 = at
 	if _fight_phase == "runup":
 		steer = _runup_point
@@ -1378,14 +1391,18 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 		_fight_climb.clear()
 		_fight_climb_clock = 0.0
 	_act(steer, aim, delta, target)
+	_recover_climb = false
 
 
+# The per-target watch. The recovery count is per stage (_on_stage_entered), so a fight that
+# swaps targets does not renew the cap.
 func _reset_charge_watch() -> void:
 	_charge_best = INF
 	_charge_clock = 0.0
-	_recoveries = 0
 	_recover_legs = []
 	_recover_time = 0.0
+	_recover_wall = false
+	_recover_climb = false
 
 
 # The Warden charge's progress: the seconds since the ball last gained CHARGE_PROGRESS on its
@@ -1412,10 +1429,19 @@ func _charge_watch(ball: Vector3, at: Vector3, distance: float, delta: float) ->
 	source.press["jump_pressed"] = true
 
 
-# The recovery's legs: back off the bearing to the target, then to the side whose way on toward
-# the target is clear of walls (the nearer one to the target when both or neither are).
+# The recovery's legs. A wall ahead: back off the bearing as far as the room behind allows, then
+# over the wall. Otherwise: back off the bearing, then to the side whose way on toward the
+# target is clear of walls (the nearer one to the target when both or neither are).
 func _charge_escape(ball: Vector3, at: Vector3) -> Array[Vector3]:
 	var toward := Vector3(at.x - ball.x, 0.0, at.z - ball.z).normalized()
+	var ahead := _face_ahead(ball, toward, RECOVER_PROBE)
+	_recover_wall = ahead < INF
+	if _recover_wall:
+		var room := minf(RECOVER_BACK_MAX, _face_ahead(ball, -toward, RECOVER_BACK_MAX) - RECOVER_JUMP_AT)
+		var from := ball - toward * maxf(room, RECOVER_JUMP_AT)
+		var over := ball + toward * (ahead + RECOVER_OVER)
+		var climb: Array[Vector3] = [_ground_point(from.x, from.z), _ground_point(over.x, over.z)]
+		return climb
 	var back := ball - toward * RECOVER_BACK
 	var best := Vector3.INF
 	var best_score := -INF
@@ -1430,6 +1456,28 @@ func _charge_escape(ball: Vector3, at: Vector3) -> Array[Vector3]:
 			best = side
 	var out: Array[Vector3] = [_ground_point(back.x, back.z), best]
 	return out
+
+
+# The climb leg's jumps: off the ground RECOVER_JUMP_AT short of the wall, and the air jump
+# once the first one stops rising.
+func _wall_jump(ball: Vector3, over: Vector3) -> void:
+	var state = game.player.state
+	if state.grounded:
+		var toward := Vector3(over.x - ball.x, 0.0, over.z - ball.z).normalized()
+		if _face_ahead(ball, toward, RECOVER_JUMP_AT) < INF:
+			source.press["jump_pressed"] = true
+	elif state.air_actions > 0 and state.velocity.y < 1.0:
+		source.press["jump_pressed"] = true
+
+
+# The distance along a level ray from the ball to the first wall (a face steeper than WALL_TILT),
+# INF when none lies within reach.
+func _face_ahead(from: Vector3, dir: Vector3, reach: float) -> float:
+	var space = game.get_world_3d().direct_space_state
+	var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + dir * reach, 1))
+	if hit.is_empty() or absf((hit["normal"] as Vector3).y) >= WALL_TILT:
+		return INF
+	return _flat(from, hit["position"])
 
 
 # Whether a ray at ball height from one point to the other meets no wall (a face steeper than WALL_TILT).
@@ -2022,7 +2070,7 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 	if _detour_time > 0.0:
 		_detour_time -= delta
 		heading = _detour
-	elif player.state.grounded and not _ignore_walls:
+	elif player.state.grounded and not _ignore_walls and not _recover_climb:
 		heading = _around_walls(ball, heading)
 	var hold := {"fire_held": _throw_hold(aim)}
 	var look_at: Vector3 = ball + heading
