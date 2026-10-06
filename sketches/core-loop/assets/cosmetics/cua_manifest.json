@@ -1,0 +1,681 @@
+{
+  "schema": "scrapkeep-cua-assets/1",
+  "base": "955e7e55aa10a69c3d0f6c71d0bd2eb4763c5970",
+  "metres_per_unit": 1,
+  "trails": [
+    {
+      "id": "trail_salt_skip",
+      "path": "trails/trail_salt_skip.glb",
+      "nodes": [
+        "BallTrail",
+        "ChalkPuff"
+      ],
+      "clips": [
+        "fade_shrink"
+      ],
+      "duration_s": 0.35,
+      "size_m": [
+        0.09,
+        0.09
+      ],
+      "tint": "#e9ecea",
+      "key_pose_s": 0.14166666666666666,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.0,
+        0.0,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_ink_stitch",
+      "path": "trails/trail_ink_stitch.glb",
+      "nodes": [
+        "BallTrail",
+        "FlatStamp"
+      ],
+      "clips": [
+        "fade"
+      ],
+      "duration_s": 0.25,
+      "size_m": [
+        0.12,
+        0.07
+      ],
+      "tint": "#2b3a4a",
+      "key_pose_s": 0.1,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.25,
+        0.0,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_plum_curl",
+      "path": "trails/trail_plum_curl.glb",
+      "nodes": [
+        "BallTrail",
+        "CrescentPuff"
+      ],
+      "clips": [
+        "rotate_fade"
+      ],
+      "duration_s": 0.35,
+      "size_m": [
+        0.13,
+        0.1
+      ],
+      "tint": "#8a3f6e",
+      "key_pose_s": 0.14166666666666666,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.5,
+        0.0,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_forge_chips",
+      "path": "trails/trail_forge_chips.glb",
+      "nodes": [
+        "BallTrail",
+        "Chip"
+      ],
+      "clips": [
+        "tumble_fade"
+      ],
+      "duration_s": 0.25,
+      "size_m": [
+        0.045,
+        0.045
+      ],
+      "tint": "#3a6fb0",
+      "key_pose_s": 0.1,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.0,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_moth_tuft",
+      "path": "trails/trail_moth_tuft.glb",
+      "nodes": [
+        "BallTrail",
+        "PairedTuft"
+      ],
+      "clips": [
+        "expand_fade"
+      ],
+      "duration_s": 0.4,
+      "size_m": [
+        0.15,
+        0.09
+      ],
+      "tint": "#a39cb3",
+      "key_pose_s": 0.15833333333333333,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.25,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "id": "trail_rose_wash",
+      "path": "trails/trail_rose_wash.glb",
+      "nodes": [
+        "BallTrail",
+        "WashPuff"
+      ],
+      "clips": [
+        "flatten_fade"
+      ],
+      "duration_s": 0.35,
+      "size_m": [
+        0.16,
+        0.08
+      ],
+      "tint": "#d68ab0",
+      "key_pose_s": 0.14166666666666666,
+      "triangles": 2,
+      "vertices": 4,
+      "draws": 1,
+      "selected_max_triangles": 48,
+      "selected_max_vertices": 96,
+      "uv_rect": [
+        0.5,
+        0.25,
+        0.25,
+        0.25
+      ]
+    }
+  ],
+  "decals": [
+    {
+      "id": "decal_fern",
+      "path": "decals/decal_fern.tres",
+      "mask": "decals/decal_fern_mask.png",
+      "size_m": [
+        0.44,
+        0.55
+      ],
+      "tint": "#d2c5a5",
+      "atlas_rect_px": [
+        0,
+        0,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        68,
+        23,
+        120,
+        208
+      ],
+      "tile_size_m": [
+        0.9386666666666666,
+        0.676923076923077
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "decal_patch",
+      "path": "decals/decal_patch.tres",
+      "mask": "decals/decal_patch_mask.png",
+      "size_m": [
+        0.44,
+        0.34
+      ],
+      "tint": "#d2c5a5",
+      "atlas_rect_px": [
+        256,
+        0,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        32,
+        58,
+        193,
+        137
+      ],
+      "tile_size_m": [
+        0.5836269430051814,
+        0.6353284671532847
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "decal_snail_shell",
+      "path": "decals/decal_snail_shell.tres",
+      "mask": "decals/decal_snail_shell_mask.png",
+      "size_m": [
+        0.44,
+        0.42
+      ],
+      "tint": "#d2c5a5",
+      "atlas_rect_px": [
+        512,
+        0,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        61,
+        34,
+        152,
+        170
+      ],
+      "tile_size_m": [
+        0.7410526315789474,
+        0.6324705882352941
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "decal_thimble",
+      "path": "decals/decal_thimble.tres",
+      "mask": "decals/decal_thimble_mask.png",
+      "size_m": [
+        0.36,
+        0.42
+      ],
+      "tint": "#d2c5a5",
+      "atlas_rect_px": [
+        768,
+        0,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        45,
+        28,
+        166,
+        174
+      ],
+      "tile_size_m": [
+        0.5551807228915663,
+        0.6179310344827585
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "decal_mushroom",
+      "path": "decals/decal_mushroom.tres",
+      "mask": "decals/decal_mushroom_mask.png",
+      "size_m": [
+        0.44,
+        0.4
+      ],
+      "tint": "#906681",
+      "atlas_rect_px": [
+        0,
+        256,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        28,
+        42,
+        200,
+        172
+      ],
+      "tile_size_m": [
+        0.5632,
+        0.5953488372093023
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "decal_paw",
+      "path": "decals/decal_paw.tres",
+      "mask": "decals/decal_paw_mask.png",
+      "size_m": [
+        0.42,
+        0.42
+      ],
+      "tint": "#d2c5a5",
+      "atlas_rect_px": [
+        256,
+        256,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        33,
+        39,
+        190,
+        172
+      ],
+      "tile_size_m": [
+        0.5658947368421052,
+        0.6251162790697674
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "decal_seashell",
+      "path": "decals/decal_seashell.tres",
+      "mask": "decals/decal_seashell_mask.png",
+      "size_m": [
+        0.46,
+        0.42
+      ],
+      "tint": "#d2c5a5",
+      "atlas_rect_px": [
+        512,
+        256,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        28,
+        45,
+        200,
+        174
+      ],
+      "tile_size_m": [
+        0.5888,
+        0.6179310344827585
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "decal_moth",
+      "path": "decals/decal_moth.tres",
+      "mask": "decals/decal_moth_mask.png",
+      "size_m": [
+        0.5,
+        0.34
+      ],
+      "tint": "#906681",
+      "atlas_rect_px": [
+        768,
+        256,
+        256,
+        256
+      ],
+      "mask_bounds_px": [
+        28,
+        36,
+        200,
+        163
+      ],
+      "tile_size_m": [
+        0.64,
+        0.5339877300613497
+      ],
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    }
+  ],
+  "paints": [
+    {
+      "id": "companion_paint_night",
+      "path": "paints/companion_paint_night.tres",
+      "tint": "#2b3a4a",
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "companion_paint_forge",
+      "path": "paints/companion_paint_forge.tres",
+      "tint": "#3a6fb0",
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "companion_paint_plum",
+      "path": "paints/companion_paint_plum.tres",
+      "tint": "#8a3f6e",
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "companion_paint_salt",
+      "path": "paints/companion_paint_salt.tres",
+      "tint": "#e9ecea",
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "companion_paint_dusk",
+      "path": "paints/companion_paint_dusk.tres",
+      "tint": "#d68ab0",
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    },
+    {
+      "id": "companion_paint_moth",
+      "path": "paints/companion_paint_moth.tres",
+      "tint": "#a39cb3",
+      "extra_triangles": 0,
+      "extra_vertices": 0,
+      "extra_draws": 0
+    }
+  ],
+  "trail_contract": {
+    "origin": "ball_position projected to floor + 0.04 m",
+    "inherit_shell_spin": false,
+    "emission": "moving grounded only; suppress stationary/paused/airborne",
+    "max_cards": 24,
+    "max_wake_m": 1.8,
+    "max_width_m": 0.45,
+    "max_height_m": 0.25,
+    "max_lifetime_s": 0.45,
+    "threat_overlap": "fade cosmetic first; zero alpha in committed threat footprint",
+    "atlas": "textures/trail_atlas.png",
+    "material": "fx_neutral",
+    "max_texel_alpha": 0.1411764705882353,
+    "opacity_envelope": [
+      [
+        0,
+        1
+      ],
+      [
+        0.4,
+        0.85
+      ],
+      [
+        1,
+        0
+      ]
+    ],
+    "glb_animation": "transform clips only; glTF has no core material-alpha animation; consumer applies opacity envelope",
+    "batch": "24 cards share atlas/material; MultiMesh or one card buffer; never 24 scene draws"
+  },
+  "decal_contract": {
+    "node": "DecalMask",
+    "attach": "HeroCore rolling shell paint surface only",
+    "exclude": [
+      "HeroPod",
+      "glass",
+      "pilot",
+      "state-cue masks"
+    ],
+    "plate_edge_clearance_m": 0.04,
+    "origin": "centre of designated broad lower-shell plate",
+    "compose": "bake selected tile into existing paint surface; no projector/mesh/draw"
+  },
+  "paint_contract": {
+    "material": "paint",
+    "attach": [
+      "Hull",
+      "Deck"
+    ],
+    "exclude": [
+      "socket collars",
+      "rubber",
+      "bare_metal",
+      "EscapeWitness",
+      "module working faces",
+      "combat VFX",
+      "HUD"
+    ],
+    "compose": "duplicate existing enamel material and set albedo_color only; resources are tint swatches",
+    "extra_triangles": 0,
+    "extra_vertices": 0,
+    "extra_draws": 0,
+    "extra_clips": 0
+  },
+  "files": [
+    {
+      "path": "decals/decal_fern.tres",
+      "bytes": 266,
+      "sha256": "94ea0f963480ce2e2ed2f84591291960414961e0d6608028e083ad001dd8fffe"
+    },
+    {
+      "path": "decals/decal_fern_mask.png",
+      "bytes": 1595,
+      "sha256": "5ae4ca73a799825c7a5e7c822bdc65693957a9b5c1eb99dd67fac008330ed70a"
+    },
+    {
+      "path": "decals/decal_moth.tres",
+      "bytes": 270,
+      "sha256": "2298ea974aa51e5aafc555db3848042e31ed948fcfa9308b1fdd41a59ef77eb8"
+    },
+    {
+      "path": "decals/decal_moth_mask.png",
+      "bytes": 1568,
+      "sha256": "459ff9ba35b3076eab3d6d45d30eabab5181f46a93d509a4a0c7b9d0f4c669f6"
+    },
+    {
+      "path": "decals/decal_mushroom.tres",
+      "bytes": 268,
+      "sha256": "d7d7b9de0fb8f54cd47dfa3ee9634486fb014880e47f4557f22da425ed31b328"
+    },
+    {
+      "path": "decals/decal_mushroom_mask.png",
+      "bytes": 1072,
+      "sha256": "671bfd79a77c6e34739f5a27e36adbd62cf1b234f3e73b4e56a3c6aa6b5312ed"
+    },
+    {
+      "path": "decals/decal_patch.tres",
+      "bytes": 268,
+      "sha256": "7e318ae94a5b6fc8a63f152efd54509b0d9081ce871737395761dec34fdfffaa"
+    },
+    {
+      "path": "decals/decal_patch_mask.png",
+      "bytes": 1200,
+      "sha256": "6a9d3b3c289f3ada59043256ffed5d75c1ab4f9a21220df5f6e5bbe7c65c6167"
+    },
+    {
+      "path": "decals/decal_paw.tres",
+      "bytes": 270,
+      "sha256": "f7e93f6c8ca19664941bbbde8d28d420845d6a1d241289f3d631db31c74d4d18"
+    },
+    {
+      "path": "decals/decal_paw_mask.png",
+      "bytes": 1378,
+      "sha256": "1852873e94eac5d39a720df69784a4107a1272ce704ac48b03e6c7e444508ee5"
+    },
+    {
+      "path": "decals/decal_seashell.tres",
+      "bytes": 270,
+      "sha256": "b97c18a4d5cc3a72475a69cc14853b8302ceb88f6357a116df918b52bed44236"
+    },
+    {
+      "path": "decals/decal_seashell_mask.png",
+      "bytes": 1801,
+      "sha256": "ee60cede43a3ece4f03861b0bb077dee6c1e6aef766c9edfa9a848efca495e21"
+    },
+    {
+      "path": "decals/decal_snail_shell.tres",
+      "bytes": 268,
+      "sha256": "c12fa51b40ea56a4c01f58d6d580939d06e5bfe3053d45a7a2bd6a7c7c3f77ec"
+    },
+    {
+      "path": "decals/decal_snail_shell_mask.png",
+      "bytes": 1498,
+      "sha256": "269092849de3fa1c11cb5004ef6d7e0aefb54af9c905f52d6cc005246346e9b8"
+    },
+    {
+      "path": "decals/decal_thimble.tres",
+      "bytes": 268,
+      "sha256": "4be65bbf3a5c2de5a3a3a792dbae3e714077b7993e1b2e8f24a279b5a0e8f5ae"
+    },
+    {
+      "path": "decals/decal_thimble_mask.png",
+      "bytes": 1241,
+      "sha256": "152646f01133db66544cd5b2e73a5ffd620bf1f3dac506f9c1be58ab4155e549"
+    },
+    {
+      "path": "paints/companion_paint_dusk.tres",
+      "bytes": 198,
+      "sha256": "6e0af75a6752afaa7f9816a37b227bd61a2529ccf6667ae42a28c600e2787859"
+    },
+    {
+      "path": "paints/companion_paint_forge.tres",
+      "bytes": 198,
+      "sha256": "41009aac89e78058ce2ee63ae99e33b96951a16ec0ebc0d0ac634b8749e5cb18"
+    },
+    {
+      "path": "paints/companion_paint_moth.tres",
+      "bytes": 198,
+      "sha256": "153ab1842ee69176a15e93e25be0e9b6378fc98bc514fd4d02e465f04bc9b42f"
+    },
+    {
+      "path": "paints/companion_paint_night.tres",
+      "bytes": 198,
+      "sha256": "5d8de51f3082030569d21c82f7b3f45f689ff5514f4976bc7ef699acb2cf5bfa"
+    },
+    {
+      "path": "paints/companion_paint_plum.tres",
+      "bytes": 198,
+      "sha256": "42bd43688f74d67191d636d7a6dc8589d86fc02957198880e47527e93a93bd36"
+    },
+    {
+      "path": "paints/companion_paint_salt.tres",
+      "bytes": 198,
+      "sha256": "6a17035e37554a48dee6b03c9ed24ec8f0eb9745aa4144abd317336d0841330f"
+    },
+    {
+      "path": "textures/decal_atlas.png",
+      "bytes": 16005,
+      "sha256": "3b28bc5eb1cd2544f2c10218a5ef6e07524df6e94282c5c0597453b220f28011"
+    },
+    {
+      "path": "textures/trail_atlas.png",
+      "bytes": 6976,
+      "sha256": "786d28d51552698503e40edeeceab13d688348ae34586820406c8d9517dab930"
+    },
+    {
+      "path": "trails/trail_forge_chips.glb",
+      "bytes": 10532,
+      "sha256": "fc9728d7ac72c58d279e6d7e7ac79f7d24cb2c704e836b1848339b2f8b13c6fd"
+    },
+    {
+      "path": "trails/trail_ink_stitch.glb",
+      "bytes": 10208,
+      "sha256": "bd28e0d66e1650bd7c272eb7b854682cb7dbd064327d1af641ffea0717258862"
+    },
+    {
+      "path": "trails/trail_moth_tuft.glb",
+      "bytes": 10504,
+      "sha256": "7aa62bf6646cf70a8b9bebbdda29267353f86cb4121becbd7c3a04a9e074973c"
+    },
+    {
+      "path": "trails/trail_plum_curl.glb",
+      "bytes": 10932,
+      "sha256": "bef28cf72f56825db85a6adba79bd698e4a6d8a12c140748a3c5d839340c0b48"
+    },
+    {
+      "path": "trails/trail_rose_wash.glb",
+      "bytes": 10408,
+      "sha256": "ca70acf5f8f05c0741914e575851161145db13583b9e6a3e7153cf4441843db2"
+    },
+    {
+      "path": "trails/trail_salt_skip.glb",
+      "bytes": 10408,
+      "sha256": "26199f218930dff276fe684e23056d4d7bb94060ea6e8885bfb20339872ad73b"
+    }
+  ]
+}
