@@ -1,0 +1,16 @@
+{
+ "assets": [
+  {
+   "id": "boss_brindle",
+   "path": "res://assets/models/bosses/boss_brindle.glb",
+   "class": "warden_base",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/bosses/brindle_model.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   },
+   "budget_note": "Contains warden_base and warden_kit allocations, measured separately by dress_bri_assets_test; scooter shares the kit allowance."
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "warden_mantle_meltdown",
+   "path": "res://assets/models/warden_mantle_meltdown.glb",
+   "class": "warden_kit",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/warden_mantle_meltdown.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D5/out/BUILD-SPEC.md"
+   }
+  }
+ ]
+}

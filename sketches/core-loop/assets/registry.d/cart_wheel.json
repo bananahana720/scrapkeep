@@ -1,0 +1,15 @@
+{
+ "assets": [
+  {
+   "id": "cart_wheel",
+   "path": "res://assets/models/dig_mechanical/cart_wheel.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (delivered model; runtime integration pending)",
+   "provenance": {
+    "recipe": "tools/blender/dig_mechanical/cart_wheel.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  }
+ ]
+}

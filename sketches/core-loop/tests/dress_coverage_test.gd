@@ -2,7 +2,7 @@ extends SceneTree
 
 # Count subject types, not spawned instances or decorative cue meshes. Lower this
 # ceiling when a model lands. A GLB on disk clears nothing unless its loader uses it.
-const MAX_FALLBACKS := 27
+const MAX_FALLBACKS := 16
 const Game := preload("res://src/game.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Worlds := preload("res://src/core/worlds.gd")
