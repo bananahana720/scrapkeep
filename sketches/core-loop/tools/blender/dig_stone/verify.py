@@ -97,7 +97,7 @@ def main():
                 png = EVIDENCE / "release" / view["file"]
                 assert hashlib.sha256(png.read_bytes()).hexdigest() == view["sha256"]
         print("MDS_PREVIEWS: PASS (24 hashed CPU views of final GLB bytes)", flush=True)
-    changed = subprocess.check_output(["git", "status", "--short", "--untracked-files=all"], cwd=ROOT, text=True)
+    changed = subprocess.check_output(["git", "status", "--short", "-uall"], cwd=ROOT, text=True)
     (EVIDENCE / "git-status.txt").write_text(changed)
     allowed = ("sketches/core-loop/tools/blender/dig_stone/", "sketches/core-loop/assets/models/dig_stone/", "artifacts/local/dress-preview/MDS/")
     single = {"sketches/core-loop/assets/materials/dig_stone/stone.tres", "sketches/core-loop/tests/dress_mds_assets_test.gd"}
