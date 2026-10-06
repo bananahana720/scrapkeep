@@ -177,7 +177,7 @@ func _check_missing_preview() -> void:
 
 
 func _check_missing_preview_pilot() -> void:
-	var preview := MissingPilotPreview.new(_class_by_id("tally"))
+	var preview := MissingPilotPreview.new(_class_by_id("demolitions_caster"))
 	root.add_child(preview)
 	var pod: Node3D = preview._pod
 	var placeholder := pod.find_child("Pilot", true, false) as GeometryInstance3D if pod != null else null

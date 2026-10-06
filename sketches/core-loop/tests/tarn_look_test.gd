@@ -19,8 +19,8 @@ const T := preload("res://tests/support/t.gd")
 # drawn ability icons; the latch-and-tear motif and its cues; the claw sweep's feel; the
 # claw-slash rim ticks.
 
-const SHELL := "res://assets/models/world_one/shell_kest.glb"
-const PILOT := "res://assets/models/pilot_sable_anim.glb"
+const SHELL := "res://assets/models/world_one/shell_tarn.glb"
+const PILOT := "res://assets/models/pilot_tarn_anim.glb"
 const SLOTS := ["weapon", "move", "special", "smash"]
 const CUES := ["tarn_latch_tear", "tarn_ready", "tarn_break", "mind_tarn"]
 
@@ -116,7 +116,13 @@ func _check_model() -> void:
 		var dbox := _box(pod, dome)
 		var centre := pbox.get_center()
 		var inside := centre.x >= dbox.position.x and centre.x <= dbox.end.x and centre.z >= dbox.position.z and centre.z <= dbox.end.z
-		_t.check("pilot in dome", inside and pbox.end.y <= dbox.end.y + 0.05,
+		var top_ok: bool = pbox.end.y <= dbox.end.y + 0.05
+		if dbox.size == Vector3.ZERO:
+			# The bespoke shell's Dome is an empty seat marker, not a mesh: the pilot sits on its origin.
+			var seat := pod.to_local(dome.global_position)
+			inside = absf(centre.x - seat.x) <= 0.15 and absf(centre.z - seat.z) <= 0.15
+			top_ok = true
+		_t.check("pilot in dome", inside and top_ok,
 			"pilot centre %s top %.3f; dome %s..%s top %.3f" % [centre, pbox.end.y, dbox.position, dbox.end, dbox.end.y])
 	else:
 		_t.check("pilot in dome", false, "pilot %s dome %s" % [pilot, dome])

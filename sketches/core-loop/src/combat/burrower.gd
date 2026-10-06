@@ -20,6 +20,8 @@ var slam_kills := 0
 # The committed lane contained the ball: rolling off it before the burst is burrow_lane.
 var _lane_had_ball := false
 var _marker: MeshInstance3D
+var _marker_lip := -1
+static var _shared: Array = []
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -42,6 +44,15 @@ func _configure(threat: float) -> void:
 
 
 func _build_marker() -> void:
+	for part in _parts():
+		if part.name == "BurrowMarker":
+			_marker = MeshInstance3D.new()
+			_marker.name = part.name
+			_marker.mesh = part.mesh
+			_marker.transform = part.xform
+			add_child(_marker)
+			_marker_lip = _marker.find_blend_shape_by_name("MarkerWorkingLip")
+			return
 	var disc := CylinderMesh.new()
 	disc.top_radius = MARKER_RADIUS
 	disc.bottom_radius = MARKER_RADIUS
@@ -55,6 +66,53 @@ func _build_marker() -> void:
 	_marker.position.y = -half_height
 	_marker.top_level = false
 	add_child(_marker)
+
+
+func _build_tool() -> void:
+	for part in _parts():
+		if part.name == "BurrowHull":
+			_crew.free()
+			_crew = MeshInstance3D.new()
+			_crew.name = "BurrowBody"
+			_crew.mesh = part.mesh
+			_crew.transform = part.xform
+			_base_color = Color.WHITE
+			_material.albedo_color = _base_color
+			_material.vertex_color_use_as_albedo = true
+			_crew.set_surface_override_material(part.flash, _material)
+			_visual_parent().add_child(_crew)
+			return
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_two/enemy_burrower.glb"
+	if not ResourceLoader.exists(path):
+		return _shared
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return _shared
+	var scene := packed.instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var flash := -1
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted)
+		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
+	scene.free()
+	return _shared
+
+
+func _pose() -> void:
+	if _marker != null and _marker_lip >= 0:
+		var progress := clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN else 0.0
+		_marker.set_blend_shape_value(_marker_lip, progress)
 
 
 func _set_hidden(value: bool) -> void:

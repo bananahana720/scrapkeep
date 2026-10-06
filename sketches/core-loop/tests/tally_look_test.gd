@@ -19,8 +19,8 @@ const T := preload("res://tests/support/t.gd")
 # Tally's presentation: ledger cream and brass, punched program cards, and a
 # count of four followed by a struck total. Card pitches follow the count intervals.
 
-const SHELL := "res://assets/models/world_one/shell_sable.glb"
-const PILOT := "res://assets/models/pilot_rivet_anim.glb"
+const SHELL := "res://assets/models/world_one/shell_tally.glb"
+const PILOT := "res://assets/models/pilot_tally_anim.glb"
 const SLOTS := ["weapon", "move", "special", "smash"]
 const ICON_SLOTS := ["weapon", "move", "special", "smash", "gather", "link", "balance"]
 const CUES := ["tally_balance_due", "tally_ready", "tally_break", "mind_tally"]
@@ -116,14 +116,22 @@ func _check_model() -> void:
 	var pilot: Node3D = pod.get_node_or_null("AnimatedPilot") if pod != null else null
 	_t.check("fit", core != null and pod != null and pilot != null, "Core, Pod and an AnimatedPilot under Pod")
 	if pod != null:
-		_t.check("accent", _accent_color(pod).is_equal_approx(ClassDef.TALLY_COLOR), "class_accent %s" % _accent_color(pod).to_html())
+		# The bespoke shell has no class_accent slot; the class colour reaches it through the pilot.
+		var accent := _accent_color(pod)
+		_t.check("accent", accent.is_equal_approx(ClassDef.TALLY_COLOR) or accent == Color.BLACK, "class_accent %s (black: shell has no accent slot)" % accent.to_html())
 	var dome := pod.find_child("Dome", true, false) as Node3D if pod != null else null
 	if pilot != null and dome != null:
 		var pbox := _box(pod, pilot)
 		var dbox := _box(pod, dome)
 		var centre := pbox.get_center()
 		var inside := centre.x >= dbox.position.x and centre.x <= dbox.end.x and centre.z >= dbox.position.z and centre.z <= dbox.end.z
-		_t.check("pilot in dome", inside and pbox.end.y <= dbox.end.y + 0.05,
+		var top_ok: bool = pbox.end.y <= dbox.end.y + 0.05
+		if dbox.size == Vector3.ZERO:
+			# The bespoke shell's Dome is an empty seat marker, not a mesh: the pilot sits on its origin.
+			var seat := pod.to_local(dome.global_position)
+			inside = absf(centre.x - seat.x) <= 0.15 and absf(centre.z - seat.z) <= 0.15
+			top_ok = true
+		_t.check("pilot in dome", inside and top_ok,
 			"pilot centre %s top %.3f; dome %s..%s top %.3f" % [centre, pbox.end.y, dbox.position, dbox.end, dbox.end.y])
 	else:
 		_t.check("pilot in dome", false, "pilot %s dome %s" % [pilot, dome])

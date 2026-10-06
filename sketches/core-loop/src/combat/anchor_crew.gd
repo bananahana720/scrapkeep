@@ -16,6 +16,9 @@ const POST_HEIGHT := 1.2
 const HP := 60.0
 
 var winched := 0
+static var _shared: Dictionary = {}
+var _windup_rig: Skeleton3D
+var _reel: MeshInstance3D
 
 
 func _configure(threat: float) -> void:
@@ -31,8 +34,87 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var parts := _parts()
+	if not parts.is_empty():
+		_crew.free()
+		_crew = null
+		_base_color = Color.WHITE
+		_material.albedo_color = Color.WHITE
+		_material.vertex_color_use_as_albedo = true
+		_windup_rig = parts.rig.instantiate() as Skeleton3D
+		_visual_parent().add_child(_windup_rig)
+		for part in parts.meshes:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			if part.flash >= 0:
+				mi.set_surface_override_material(part.flash, _material)
+			_visual_parent().add_child(mi)
+			if part.skin != null:
+				mi.skin = part.skin
+				mi.skeleton = mi.get_path_to(_windup_rig)
+			if part.name == "DeckReel":
+				_reel = mi
+		return
 	_cylinder(0.55, 0.9, Palette.CHARCOAL, Vector3(0.0, 0.9, -CREW_RADIUS - 0.5))
 	_box(Vector3(0.3, POST_HEIGHT * 2.0, 0.3), Palette.CHARCOAL, Vector3(0.0, POST_HEIGHT, -CREW_RADIUS - 0.5))
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_three/enemy_anchor_crew.glb"
+	if not ResourceLoader.exists(path):
+		return _shared
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return _shared
+	var scene := packed.instantiate()
+	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
+	if rig == null:
+		scene.free()
+		return _shared
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	var meshes := []
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var flash := -1
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted)
+		meshes.append({"name": mi.name, "mesh": mesh, "xform": mi.transform,
+			"flash": flash, "skin": mi.skin})
+	for child in rig.get_children():
+		child.free()
+	rig.get_parent().remove_child(rig)
+	var packed_rig := PackedScene.new()
+	packed_rig.pack(rig)
+	rig.free()
+	_shared = {"rig": packed_rig, "meshes": meshes}
+	scene.free()
+	return _shared
+
+
+func _pose() -> void:
+	if _windup_rig == null:
+		return
+	var holding := _holding()
+	var progress := clampf(_t / warn_seconds, 0.0, 1.0) if phase == Phase.WARN else (1.0 if holding else 0.0)
+	var brace := _windup_rig.find_bone("CrewBrace")
+	var rest := _windup_rig.get_bone_rest(brace)
+	_windup_rig.set_bone_pose_rotation(brace, (Basis(Vector3.RIGHT, deg_to_rad(8.0) * progress) * rest.basis).get_rotation_quaternion())
+	_windup_rig.set_bone_pose_position(brace, rest.origin + Vector3(0.0, -0.08 * progress, 0.0))
+	for i in 3:
+		var tab := _windup_rig.find_bone("ClutchTab" + str(i))
+		var angle := TAU * i / 3.0
+		_windup_rig.set_bone_pose_position(tab, _windup_rig.get_bone_rest(tab).origin + Vector3(0.0, cos(angle), sin(angle)) * 0.09 * progress)
+	var hook := _windup_rig.find_bone("HostileHook")
+	_windup_rig.set_bone_pose_position(hook, _windup_rig.get_bone_rest(hook).origin + Vector3(0.0, 0.0, -0.20 * progress))
+	_reel.rotation.x = _t * TAU if holding else 0.0
 
 
 func anchor() -> Vector3:

@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const BossModel := preload("res://src/boss/boss_model.gd")
 
 # The Requisition: a rolling furnace-fortress several times the ball's height, with
 # Brindle's glass cockpit on its stern. This node is its body and its pieces, and it
@@ -20,6 +21,16 @@ const CAP_SIZE := Vector3(2.2, 0.8, 2.2)
 # whole width, so it never drops out mid-fight.
 const PLATE_REACH := 160.0
 const PLATE_LIFT := DECK + 4.0
+# The fortress and its scooter (recipes in tools/blender/bosses). The primitives below stay
+# built and are only hidden when the model loads, so a missing GLB leaves the old boxes.
+const MODEL := "res://assets/models/bosses/boss_brindle.glb"
+const SCOOTER_MODEL := "res://assets/models/bosses/boss_brindle_scooter.glb"
+# Test seam: a test points these at a missing file to prove the primitive fallback builds.
+static var model_path := MODEL
+static var scooter_path := SCOOTER_MODEL
+# The model parts the loader needs; a model that lacks any of them is dropped, not half used.
+const MODEL_PARTS := ["Hull", "CockpitShield", "CraneMasts", "CranePort", "CraneStarboard", "CableSpans", "MagnetSocketPort",
+	"MagnetSocketStarboard", "MagnetPort", "MagnetStarboard", "Cap0", "Cap1", "Cap2", "Armour0", "Armour1", "Armour2", "Armour3"]
 
 var hull
 var magnets: Array = []
@@ -34,6 +45,18 @@ var _magnet_mats: Array = []
 var _cap_meshes: Array = []
 var _plates: Array = []
 var _cockpit: MeshInstance3D
+# The model and its parts, when it loaded; null model means the primitives are the body.
+var model: Node3D
+var _prims: Array = []
+var _anim: AnimationPlayer
+var _cue_key := ""
+var _plate_mats: Array = []
+var _cap_mats: Array = []
+var _model_cranes: Array = []
+var _model_armour: Array = []
+var _model_magnets: Array = []
+var _model_magnet_meshes: Array = []
+var _model_shield: Node3D
 
 
 func build(boss) -> void:
@@ -47,6 +70,7 @@ func build(boss) -> void:
 		for z in [-3.5, 3.5]:
 			var plate_mat := Palette.solid(Color("5d6b78"))
 			hull.tint_with(plate_mat)
+			_plate_mats.append(plate_mat)
 			_plates.append(_box(hull, Vector3(0.4, 3.2, 6.0), plate_mat, Vector3(side * (HULL.x * 0.5 + 0.2), 0.3, z)))
 	_cockpit = _box(self, Vector3(3.0, 2.2, 3.0), Palette.water(Palette.ARC), Vector3(0.0, DECK + 1.1, 4.8))
 	_box(self, Vector3(1.2, 1.0, 1.0), Palette.solid(Palette.AMBER, 0.4), Vector3(0.0, DECK + 1.0, 4.8))
@@ -57,6 +81,7 @@ func build(boss) -> void:
 		add_child(cap)
 		var mat := Palette.solid(Palette.CHARCOAL)
 		cap.tint_with(mat)
+		_cap_mats.append(mat)
 		_cap_meshes.append(_cylinder(cap, 1.1, CAP_SIZE.y, mat))
 		caps.append(cap)
 	for i in CRANE_PIVOTS.size():
@@ -75,6 +100,7 @@ func build(boss) -> void:
 		cable.material_override = Palette.solid(Palette.CHARCOAL)
 		add_child(cable)
 		_cables.append(cable)
+	_dress()
 	plate = WorldPrompt.new()
 	plate.name = "BrindlePlate"
 	plate.attach(self, Vector3.UP * PLATE_LIFT, PLATE_REACH)
@@ -106,6 +132,9 @@ func set_magnet(i: int, at: Vector3, glow: float) -> void:
 	mat.emission_enabled = glow > 0.0
 	mat.emission = Palette.HAZARD
 	mat.emission_energy_multiplier = 2.5 * glow
+	if model != null:
+		(_model_magnets[i] as Node3D).global_position = at
+		BossModel.signal_glow(_model_magnet_meshes[i], Palette.HAZARD, 2.5 * glow)
 	var from := pivot(i)
 	var cable: MeshInstance3D = _cables[i]
 	var span := at - from
@@ -121,6 +150,8 @@ func show_cranes(on: bool) -> void:
 	for i in magnets.size():
 		magnets[i].visible = on
 		_cables[i].visible = on
+	for part in _model_cranes:
+		(part as Node3D).visible = on
 
 
 func open_caps(open: bool) -> void:
@@ -129,15 +160,20 @@ func open_caps(open: bool) -> void:
 		((mesh as MeshInstance3D).material_override as StandardMaterial3D).emission_enabled = open
 		((mesh as MeshInstance3D).material_override as StandardMaterial3D).emission = Palette.HAZARD
 		((mesh as MeshInstance3D).material_override as StandardMaterial3D).emission_energy_multiplier = 1.2
+	# The model's caps lift with the enter_furnace clip; the glow is the same tint material.
 
 
 func shed_armour() -> void:
 	for plate in _plates:
 		(plate as MeshInstance3D).visible = false
+	for part in _model_armour:
+		(part as Node3D).visible = false
 
 
 func cockpit_open(open: bool) -> void:
 	_cockpit.visible = not open
+	if _model_shield != null:
+		_model_shield.visible = not open
 
 
 func set_readout(text: String, color: Color, anchor: Node3D = null, lift := PLATE_LIFT) -> void:
@@ -148,6 +184,83 @@ func set_readout(text: String, color: Color, anchor: Node3D = null, lift := PLAT
 		plate.attach(to, Vector3.UP * lift, PLATE_REACH)
 
 
+# Loads the fortress GLB over the primitives. Any missing part drops the model, so a broken
+# or older GLB leaves the primitive fortress exactly as it was.
+func _dress() -> void:
+	var loaded := BossModel.load_scene(model_path)
+	if loaded == null:
+		return
+	for part in MODEL_PARTS:
+		if loaded.find_child(part, true, false) == null:
+			loaded.free()
+			return
+	model = loaded
+	model.name = "BrindleModel"
+	add_child(model)
+	for mesh in _prims:
+		BossModel.hide_primitive(mesh)
+	_anim = BossModel.player_of(model)
+	if _anim != null:
+		BossModel.own_clips(_anim)
+		BossModel.loop_clip(_anim, "idle_roll")
+		# Cap lift is the enter_furnace beat; the dip a later clip would reset it to is not.
+		BossModel.strip_tracks(_anim, "Cap0", ["drone_deploy"])
+		BossModel.strip_tracks(_anim, "Cap1", ["drone_deploy"])
+		BossModel.strip_tracks(_anim, "Cap2", ["drone_deploy"])
+	_model_shield = model.find_child("CockpitShield", true, false)
+	_model_cranes = [model.find_child("CraneMasts", true, false), model.find_child("CranePort", true, false),
+		model.find_child("CraneStarboard", true, false), model.find_child("MagnetSocketPort", true, false),
+		model.find_child("MagnetSocketStarboard", true, false)]
+	# The procedural cable spans the real distance; the model's static span would double it.
+	(model.find_child("CableSpans", true, false) as Node3D).visible = false
+	_model_magnets = [model.find_child("MagnetSocketPort", true, false), model.find_child("MagnetSocketStarboard", true, false)]
+	_model_magnet_meshes = [model.find_child("MagnetPort", true, false), model.find_child("MagnetStarboard", true, false)]
+	# The plating tint (slate or amber) and the hit flash live on the same materials the
+	# primitive plates and caps used, laid over the model's steel surface so the read survives.
+	for i in _plate_mats.size():
+		var panel := model.find_child("Armour%d" % i, true, false) as MeshInstance3D
+		panel.set_surface_override_material(0, _plate_mats[i])
+		_model_armour.append(panel)
+	for i in _cap_mats.size():
+		(model.find_child("Cap%d" % i, true, false) as MeshInstance3D).set_surface_override_material(0, _cap_mats[i])
+	_cue("idle_roll", 0)
+
+
+# Plays a clip once per (clip, token), so a per-frame caller never restarts it; a new token,
+# such as a new committed hazard, plays it again. A missing clip is a quiet no-op.
+func cue(clip: String, token := 0) -> void:
+	_cue(clip, token)
+
+
+func _cue(clip: String, token: int) -> void:
+	if model == null or _anim == null:
+		return
+	var key := "%s:%d" % [clip, token]
+	if key == _cue_key:
+		return
+	_cue_key = key
+	BossModel.play(_anim, clip)
+
+
+# The phase's entry clip: the idle roll, the furnace's open caps, the scuttle's shed armour.
+func cue_phase(phase: int) -> void:
+	_cue(["idle_roll", "enter_furnace", "enter_scuttle"][clampi(phase, 1, 3) - 1], phase)
+
+
+# The scooter that leaves the hull. Null when the model is missing: the caller keeps its box.
+static func dress_scooter(parent: Node3D) -> AnimationPlayer:
+	var loaded := BossModel.load_scene(scooter_path)
+	if loaded == null:
+		return null
+	loaded.name = "ScooterModel"
+	parent.add_child(loaded)
+	var player := BossModel.player_of(loaded)
+	if player != null:
+		BossModel.own_clips(player)
+		BossModel.loop_clip(player, "chase")
+	return player
+
+
 func _box(parent: Node3D, size: Vector3, mat: Material, at: Vector3) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
 	var box := BoxMesh.new()
@@ -156,6 +269,7 @@ func _box(parent: Node3D, size: Vector3, mat: Material, at: Vector3) -> MeshInst
 	mesh.material_override = mat
 	mesh.position = at
 	parent.add_child(mesh)
+	_prims.append(mesh)
 	return mesh
 
 
@@ -168,4 +282,5 @@ func _cylinder(parent: Node3D, r: float, h: float, mat: Material) -> MeshInstanc
 	mesh.mesh = cyl
 	mesh.material_override = mat
 	parent.add_child(mesh)
+	_prims.append(mesh)
 	return mesh

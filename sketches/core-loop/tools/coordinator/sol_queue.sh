@@ -43,7 +43,7 @@ done < "$queue"
 for p in "${pids[@]}"; do
   wait "$p"
 done
-for line in $(grep -v '^#' "$queue" | cut -f2,3,1 --output-delimiter=/ | awk -F/ '{print $2"/"$3"/"$1}'); do
+for line in $(grep -v '^#' "$queue" | awk -F'\t' '{print $2"/"$3"/"$1}'); do
   if [ -f "$push/$line/exit" ]; then
     echo "done $line exit $(cat "$push/$line/exit")"
   fi

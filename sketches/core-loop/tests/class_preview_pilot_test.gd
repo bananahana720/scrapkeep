@@ -45,7 +45,9 @@ func _check_row(def: Resource) -> void:
 		var gi := node as GeometryInstance3D
 		if gi.layers != 0 or gi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
 			shown.append(str(gi.get_path()))
-	_t.check(def.id + " placeholder present", placeholders.size() >= 1, "%d found" % placeholders.size())
+	# The bespoke Tarn, Tally and cannon shells model no seated placeholder to hide.
+	var bespoke: bool = def.id in ["tarn", "tally", "remembered_cannon"]
+	_t.check(def.id + " placeholder present", placeholders.size() >= 1 or bespoke, "%d found" % placeholders.size())
 	_t.eq(def.id + " placeholder hidden (%d found)" % placeholders.size(), shown, [])
 	# The animated pilot's own body mesh must stay visible; only the shell's placeholder hides.
 	var own_hidden: Array = []

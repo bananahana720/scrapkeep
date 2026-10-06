@@ -7,12 +7,14 @@ import {
   mkdtempSync,
   readdirSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
+  FOREIGN_CLAIM_MAX_MS,
   MISSING_VERDICT,
   acquireSlot,
   binary,
@@ -248,6 +250,55 @@ test("a dead pid slot is reclaimed without waiting", async () => {
     lease.release();
     assert.equal(namedRunMustWait({ directory, slots: 1 }), false);
     assert.deepEqual(readdirSync(directory), []);
+  } finally {
+    lease?.release();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+// Rule: a sandboxed runner records its namespace pid (seen: 2), which on the
+// host names another user's process and answers EPERM. The pid cannot prove
+// liveness, so a young claim holds the slot and an old one is stale.
+test("a young foreign-pid claim holds its slot", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-young-"));
+  try {
+    assert.throws(() => process.kill(1, 0), { code: "EPERM" });
+    const slot = path.join(directory, "slot-0");
+    mkdirSync(slot);
+    writeFileSync(path.join(slot, "claim-foreign"), "1");
+    await assert.rejects(
+      acquireSlot({
+        directory,
+        slots: 1,
+        sleep: async () => {
+          throw new Error("waited");
+        },
+      }),
+      /waited/,
+    );
+    assert.equal(existsSync(path.join(slot, "claim-foreign")), true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("an old foreign-pid claim is reclaimed without waiting", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-slot-"));
+  let lease;
+  try {
+    assert.throws(() => process.kill(1, 0), { code: "EPERM" });
+    const slot = path.join(directory, "slot-0");
+    mkdirSync(slot);
+    writeFileSync(path.join(slot, "claim-foreign"), "1");
+    const old = (Date.now() - FOREIGN_CLAIM_MAX_MS - 60_000) / 1000;
+    utimesSync(path.join(slot, "claim-foreign"), old, old);
+    lease = await acquireSlot({
+      directory,
+      slots: 1,
+      sleep: async () => assert.fail("foreign pid made us wait"),
+    });
+    assert.equal(lease.slot, slot);
+    assert.equal(existsSync(path.join(slot, "claim-foreign")), false);
   } finally {
     lease?.release();
     rmSync(directory, { recursive: true, force: true });

@@ -5,6 +5,20 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const WARDEN_BASE := "res://assets/models/warden_clamp_base.glb"
 const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
+# Presentation-only mantles by stage, never by warden_variant: both Highdraft stages carry
+# mind/choir in alpha_defs, so only the stage tells the hand from the choir. Each row names the
+# family it fits; a mismatch mounts nothing. Stages 1 and 2 stay bare.
+const WARDEN_MANTLES := {
+	3: {"family": "reactor", "path": "res://assets/models/warden_mantle_meltdown.glb"},
+	4: {"family": "swarm", "path": "res://assets/models/warden_mantle_brood.glb"},
+	5: {"family": "mind", "path": "res://assets/models/warden_mantle_hand.glb"},
+	6: {"family": "mind", "path": "res://assets/models/warden_mantle_choir.glb"},
+}
+# Mount group name -> node path under HeroKit that receives the group's meshes.
+const MANTLE_MOUNTS := {
+	"MountBody": "Body", "MountVent0": "Vent0", "MountVent1": "Vent1", "MountVent2": "Vent2",
+	"MountArmL": "ArmL", "MountArmR": "ArmR",
+}
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Accretion := preload("res://src/build/accretion.gd")
@@ -15,9 +29,9 @@ const PILOTS := {
 	"runner_gunner": "res://assets/models/pilot_rivet_anim.glb",
 	"pylon_engineer": "res://assets/models/pilot_sable_anim.glb",
 	"demolitions_caster": "res://assets/models/pilot_kest_anim.glb",
-	"tarn": "res://assets/models/pilot_sable_anim.glb",  # Tarn: Sable's fox pilot, the nearest silhouette to a tiger, tinted rust
-	"tally": "res://assets/models/pilot_rivet_anim.glb",  # Tally: Rivet's mole pilot, the nearest silhouette to a pack rat, tinted ledger cream
-	"remembered_cannon": "res://assets/models/pilot_kest_anim.glb",  # remembered cannon: Kest's pilot rides the rebuilt gun, tinted ancient blue
+	"tarn": "res://assets/models/pilot_tarn_anim.glb",
+	"tally": "res://assets/models/pilot_tally_anim.glb",
+	"remembered_cannon": "res://assets/models/pilot_cannon_anim.glb",
 }
 
 # VD-01 clear sphere slice. Dresses the greybox in the procedural
@@ -41,9 +55,9 @@ const SHELLS := {
 	"pylon_engineer": "res://assets/models/world_one/shell_sable.glb",
 	"runner_gunner": "res://assets/models/world_one/shell_rivet.glb",
 	"demolitions_caster": "res://assets/models/world_one/shell_kest.glb",
-	"tarn": "res://assets/models/world_one/shell_kest.glb",  # Tarn: Kest's banded shell, the heaviest existing silhouette, tinted rust
-	"tally": "res://assets/models/world_one/shell_sable.glb",  # Tally: Sable's light pod, a caster's shell, tinted ledger cream
-	"remembered_cannon": "res://assets/models/world_one/shell_sable.glb",  # remembered cannon: Sable's shell seats the rebuilt gun, tinted ancient blue
+	"tarn": "res://assets/models/world_one/shell_tarn.glb",
+	"tally": "res://assets/models/world_one/shell_tally.glb",
+	"remembered_cannon": "res://assets/models/world_one/shell_cannon.glb",
 }
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"
@@ -78,6 +92,8 @@ const SLOTS := {
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
 	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.72},
 	"ancient_light": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	# Warden mantle working throat: hazard, lit by the Warden's charge_fraction (see _update_mantle).
+	"mantle_tool": {"color": Palette.HAZARD, "emit": 0.0, "rough": 0.5},
 	"rarity": {"from": "rarity", "emit": 1.4, "rough": 0.5},
 }
 
@@ -742,7 +758,7 @@ func _dress_warden(warden) -> void:
 	var rec := {"warden": warden, "base": base, "kit": kit, "weak": weak,
 		"hidden": [], "materials": {}, "seams": [], "cracks": [], "lens": null, "shutters": [], "queen_hatch": null,
 		"jaws": [], "light_rest": {}, "segments": [], "chunk_marks": [], "flights": [],
-		"chunks_seen": 4, "core": base.get_node("CoreAssembly")}
+		"chunks_seen": 4, "core": base.get_node("CoreAssembly"), "mantle": null, "mantle_tool": null}
 	if warden.family == "swarm":
 		_split_queen_hatch(weak, rec)
 	_paint_warden(base, rec)
@@ -763,6 +779,7 @@ func _dress_warden(warden) -> void:
 				if child != weak:
 					rec.shutters.append({"node": child, "rest": at})
 		rec.lens = lens
+	_mount_mantle(warden, kit, rec)
 	warden.add_child(base)
 	# Conditional cool fill (LIGHTING-TARGETS, Warden): shadowless, 9 m, low energy, so the
 	# front barrel and left armour separate from the shared warm key.
@@ -792,6 +809,80 @@ func _dress_warden(warden) -> void:
 		if not bus.stage_entered.is_connected(_warden_stage_entered):
 			bus.stage_entered.connect(_warden_stage_entered)
 	_dress_mast.call_deferred(warden)
+
+
+# Mounts the stage's mantle (D5 contract) after the kit is painted and the lens is split off:
+# each Mount* group is detached and added to its kit node with identity transform. Enamel and
+# rubber reuse the Warden's own painted materials; the seam and tool materials are the mantle's
+# own and stay out of rec.materials, so the open-core mint and light records never touch them.
+# A missing file or node warns once and leaves the bare kit.
+func _mount_mantle(warden, kit: Node3D, rec: Dictionary) -> void:
+	var row: Dictionary = WARDEN_MANTLES.get(int(warden.stage), {})
+	if row.is_empty() or row.family != warden.family:
+		return
+	var mantle := _warden_scene(row.path)
+	if mantle == null:
+		_warn_once("mantle:" + row.path, "hero_assets: mantle '%s' unavailable; keeping the bare kit" % row.path)
+		return
+	var groups: Array[Node3D] = []
+	for child in mantle.get_children():
+		if child is Node3D and MANTLE_MOUNTS.has(String(child.name)):
+			groups.append(child)
+	var ok := not groups.is_empty()
+	for group in groups:
+		ok = ok and kit.get_node_or_null(MANTLE_MOUNTS[String(group.name)]) is Node3D
+	if not ok:
+		mantle.free()
+		_warn_once("mantle_nodes:" + row.path, "hero_assets: mantle '%s' does not fit the kit; keeping the bare kit" % row.path)
+		return
+	var seam := material("ancient_light").duplicate() as StandardMaterial3D
+	var tool := material("mantle_tool").duplicate() as StandardMaterial3D
+	tool.emission_enabled = true
+	tool.emission = Palette.HAZARD
+	tool.emission_energy_multiplier = 0.0
+	var mounted: Array[Node3D] = []
+	for group in groups:
+		var socket := kit.get_node(MANTLE_MOUNTS[String(group.name)]) as Node3D
+		mantle.remove_child(group)
+		group.transform = Transform3D.IDENTITY
+		socket.add_child(group)
+		mounted.append(group)
+		_paint_mantle(group, rec, seam, tool)
+	mantle.free()
+	rec.mantle = mounted
+	rec.mantle_tool = tool
+
+
+func _paint_mantle(root: Node, rec: Dictionary, seam: Material, tool: Material) -> void:
+	if root is MeshInstance3D:
+		for i in root.mesh.get_surface_count():
+			var slot := slot_of(root.mesh, i)
+			var mat: Material = null
+			match slot:
+				"ancient_enamel", "rubber":
+					mat = rec.materials.get(slot, material(slot))
+				"ancient_light":
+					mat = seam
+				"mantle_tool":
+					mat = tool
+				"bare_metal":
+					mat = material(slot)
+			if mat != null:
+				root.set_surface_override_material(i, mat)
+	for child in root.get_children():
+		_paint_mantle(child, rec, seam, tool)
+
+
+# The tool throats take the Warden's own charge: lit as the pulse charges, dark at rest and
+# while staggered. No clock of its own.
+func _update_mantle(rec: Dictionary) -> void:
+	var tool := rec.mantle_tool as StandardMaterial3D
+	if tool == null:
+		return
+	var warden = rec.warden
+	var lit: float = 0.0 if warden.staggered() else warden.charge_fraction()
+	tool.emission_energy_multiplier = lit * 2.0
+	tool.albedo_color = Palette.HAZARD.lerp(Palette.CHARCOAL, 1.0 - lit)
 
 
 # A posture Warden's jaws lean out from their outer bottom edge while its core is open.
@@ -1013,6 +1104,7 @@ func _update_warden(rec: Dictionary) -> void:
 	if not rec.jaws.is_empty():
 		_update_warden_open(rec)
 	_update_warden_chunks(rec)
+	_update_mantle(rec)
 
 
 # The jaws spring out and the core takes the live colour while a posture Warden is open.
