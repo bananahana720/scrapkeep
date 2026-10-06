@@ -157,26 +157,7 @@ func _process(_delta: float) -> bool:
 	t.check("flip-flop: recovery starts once the window passes", flip_entered >= BotDriver.CHARGE_WINDOW and flip_entered <= BotDriver.CHARGE_WINDOW + 0.5, str(flip_entered))
 	t.eq("flip-flop: one recovery counted", flipper.counts.get("charge_recoveries", 0), 1)
 
-	# Pinned inside RUNUP on the Warden's level (a box collider between): the charge jiggles in
-	# place 15 m out and never closes. It is watched like a charge beyond RUNUP.
-	var pgame := FakeGame.new()
-	pgame.flow.warden = warden
-	var pinned := Probe.new(pgame)
-	pinned._fight_target = warden
-	var ptime := 0.0
-	var pin_entered := -1.0
-	while ptime < BotDriver.CHARGE_WINDOW + 1.0:
-		pgame.player.at = Vector3(WARDEN.x + 0.5 * sin(ptime * 3.0), WARDEN.y, WARDEN.z + 15.0 + 0.5 * cos(ptime * 3.0))
-		pinned._ram_laps(warden, null, STEP)
-		ptime += STEP
-		if pinned._fight_phase == "recover":
-			pin_entered = ptime
-			break
-	t.check("inside runup: the charge is not a climb", not pinned._goal.ends_with(" climb"), pinned._goal.left(40))
-	t.check("inside runup: recovery starts once the window passes", pin_entered >= BotDriver.CHARGE_WINDOW and pin_entered <= BotDriver.CHARGE_WINDOW + 0.1, str(pin_entered))
-
-	# Control: a runup's end starts the watch afresh, so a charge back in from the runup point
-	# at 8 m/s closes and never recovers.
+	# Control: ram laps in and out of RUNUP at 7 m/s never recover.
 	var rgame := FakeGame.new()
 	rgame.flow.warden = warden
 	var lapper := Probe.new(rgame)

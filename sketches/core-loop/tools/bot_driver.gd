@@ -1355,9 +1355,6 @@ func _ram_laps(target: Node3D, aim, delta: float) -> void:
 			if distance < close:
 				_fight_phase = "runup"
 				_runup_time = 0.0
-				_charge_best = INF
-				_charge_rise = -INF
-				_charge_clock = 0.0
 				var away := Vector3(ball.x - at.x, 0.0, ball.z - at.z)
 				if away.length() < 0.5:
 					away = Vector3(rng.randf_range(-1.0, 1.0), 0.0, rng.randf_range(-1.0, 1.0))
@@ -1413,13 +1410,17 @@ func _reset_charge_watch() -> void:
 
 
 # The Warden charge's progress: the seconds since the ball last gained CHARGE_PROGRESS on its
-# best distance, counted from the end of the last runup. On a climb, progress is CHARGE_PROGRESS
+# best distance. Inside RUNUP the ram laps steer, not this. On a climb, progress is CHARGE_PROGRESS
 # of height or of 3D distance to the Warden: a ball rocking on a ledge it cannot top gains
 # neither, and the recovery's legs move it off the spot the climb route keeps replanning from.
 # Crossing in or out of a climb re-bases the bests on the ball's place but keeps the clock, so a
 # ball rocking across LEVEL_BAND is still watched.
 func _charge_watch(ball: Vector3, at: Vector3, distance: float, delta: float) -> void:
 	var climbing := _climbing(ball, at)
+	if not climbing and distance <= RUNUP:
+		_charge_best = INF
+		_charge_clock = 0.0
+		return
 	var reach := ball.distance_to(at) if climbing else distance
 	if climbing != _charge_climbing:
 		_charge_climbing = climbing
