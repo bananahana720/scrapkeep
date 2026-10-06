@@ -48,7 +48,7 @@ func _run() -> void:
 	for family in after:
 		delta[family] = int(after[family]) - int(before.get(family, 0))
 	_report("one commitment per family", delta == {"lane": 1, "split_lane": 1, "rush": 1, "plate": 1}, JSON.stringify(delta))
-	_report("split_lane laid two hazards", _hazard_count(mod) - hazards_before >= 5, "%d hazards for four commitments" % (_hazard_count(mod) - hazards_before))
+	_report("four commitments laid five hazards (split_lane counts two)", _hazard_count(mod) - hazards_before == 5, "%d hazards for four commitments" % (_hazard_count(mod) - hazards_before))
 
 	_game.ctx.events.run_ended.emit(false)
 	var path: String = _game.storage_dir.path_join(RunLog.LOG_FILE)
