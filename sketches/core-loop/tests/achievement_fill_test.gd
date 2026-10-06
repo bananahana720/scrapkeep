@@ -62,8 +62,8 @@ func _fresh():
 
 
 func _tables() -> void:
-	_t.eq("F1 sixteen achievements", Achievements.ids().size(), 16)
-	_t.eq("F1 eighteen paints", Cosmetics.ids().size(), 18)  # 2026-10-05 (alpha wave 15 cannon-kit): the cannon's starter paint
+	_t.eq("F1 thirty-six achievements", Achievements.ids().size(), 36)
+	_t.eq("F1 thirty-eight cosmetics", Cosmetics.ids().size(), 38)
 	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty())
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 

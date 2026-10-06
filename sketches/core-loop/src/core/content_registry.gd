@@ -70,8 +70,8 @@ const TABLES := {
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "6fa241c5a4dc54f16834cba7b0b64e80f0ee026a8d3f15d669d509857ac225e7",  # 2026-10-05 (alpha wave 14 achievements-fill): paint rewards on four rows; waking_stilled, highdraft_reached, codex_keeper
-	"cosmetics.ROWS": "afa4a451f20002e393ef5340d71d16e09a7941773d92cd41b42888cdb207892c",  # 2026-10-05 (alpha wave 16 tally-look): Ledger Cream lighter than TALLY_COLOR (W16-3)
+	"achievements.ROWS": "5c363ebc1fa89c7d094b9e7b1c8e0503f28c521c111a48472a389d5413990118",  # P-R7: twenty customization rewards
+	"cosmetics.ROWS": "26e9a040febcdc86f6905b07839ab946fe3ebfb1f98e8a27fd6e405dfd7ab440",  # P-R7: trails, decals and SPIL-9 paints
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
