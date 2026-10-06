@@ -162,6 +162,7 @@ func _on_run_started(class_id: String) -> void:
 	_posture_starts = {}
 	_posture_wardens = {}
 	_posture_open = {}
+	run.set_meta("boss_attacks", {})
 	_record = {"run_id": run.run_id, "class": class_id, "table": _table_id(), "outcome": "running", "brindle_phase_reached": null,
 		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0,
 		"chains": [], "best_combo": 0, "misses": 0, "smash_damage": 0.0, "smash_damage_by_fight": []}
@@ -482,6 +483,9 @@ func _write(outcome: String) -> void:
 	# this module never needs its own reference to the spawner. A run with no hits still
 	# carries the reset ledger (total 0.0), so a zero-damage run reads as zero, not missing.
 	line["delivered_damage"] = run.get_meta("delivered_damage", {})
+	# W18: the Mind's attack commitments by family (mind.gd _commit_attack), so a soak reads
+	# which families it used without codex rows (dodged only) or damage sources (landed only).
+	line["boss_attacks"] = run.get_meta("boss_attacks", {})
 	# The durability prototype's per-run metrics (run_state.gd), present only in armour
 	# mode so a flag-off line is byte-identical to the base. reverse_seconds is an
 	# approximation: seconds with a spill live and the ball moving against the stage's
