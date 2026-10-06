@@ -21,6 +21,11 @@ var dives := 0
 var batted := 0
 var _dive_from := Vector3.ZERO
 var _landed := false
+static var _shared: Dictionary = {}
+var _windup_rig: Skeleton3D
+var _wing_bones: Array[int] = []
+var _paw_bones: Array[int] = []
+var _chin: MeshInstance3D
 
 
 func _configure(threat: float) -> void:
@@ -38,8 +43,105 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var parts := _parts()
+	if not parts.is_empty():
+		_crew.free()
+		_crew = null
+		_base_color = Color.WHITE
+		_material.albedo_color = _base_color
+		_material.vertex_color_use_as_albedo = true
+		_windup_rig = parts.rig.instantiate() as Skeleton3D
+		_visual_parent().add_child(_windup_rig)
+		for bone_name in ["KiteWingLeft", "KiteWingRight"]:
+			_wing_bones.append(_windup_rig.find_bone(bone_name))
+		for bone_name in ["KitePawLeft", "KitePawRight"]:
+			_paw_bones.append(_windup_rig.find_bone(bone_name))
+		for part in parts.meshes:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			_visual_parent().add_child(mi)
+			if part.skin != null:
+				mi.skin = part.skin
+				mi.skeleton = mi.get_path_to(_windup_rig)
+			for surface in part.flash:
+				mi.set_surface_override_material(surface, _material)
+			if part.name == "DiveChin":
+				_chin = mi
+		return
 	_box(Vector3(3.2, 0.12, 0.7), Palette.CHARCOAL, Vector3(0.0, CREW_HALF + 0.4, 0.0), 0.0, _crew)
 	_cylinder(0.5, 0.9, Palette.RUST, Vector3(0.0, CREW_HALF + 0.1, 0.0), 0.0, _crew)
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_three/enemy_kite_drone.glb"
+	if not ResourceLoader.exists(path):
+		return _shared
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return _shared
+	var scene := packed.instantiate()
+	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
+	if rig == null:
+		scene.free()
+		return _shared
+	var meshes := []
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var source := node as MeshInstance3D
+		var mesh: Mesh = source.mesh.duplicate()
+		var flash := []
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+				flash.append(i)
+			mesh.surface_set_material(i, painted)
+		meshes.append({"name": source.name, "mesh": mesh, "skin": source.skin,
+			"xform": _asset_transform(source, scene), "flash": flash})
+	rig.transform = _asset_transform(rig, scene)
+	for child in rig.get_children():
+		child.free()
+	rig.get_parent().remove_child(rig)
+	var packed_rig := PackedScene.new()
+	packed_rig.pack(rig)
+	rig.free()
+	_shared = {"rig": packed_rig, "meshes": meshes}
+	scene.free()
+	return _shared
+
+
+static func _asset_transform(node: Node3D, scene: Node3D) -> Transform3D:
+	var xform := node.transform
+	var parent := node.get_parent() as Node3D
+	while parent != null and parent != scene:
+		xform = parent.transform * xform
+		parent = parent.get_parent() as Node3D
+	return xform
+
+
+func _pose() -> void:
+	if _windup_rig == null:
+		return
+	var tension := 0.0
+	if phase == Phase.WARN:
+		tension = clampf(_warn_progress(), 0.0, 1.0)
+	elif phase == Phase.LIVE:
+		tension = 1.0
+	for i in _wing_bones.size():
+		var rest := _windup_rig.get_bone_rest(_wing_bones[i])
+		var axis := _windup_rig.basis.inverse() * Vector3.BACK
+		var tilt := Basis(axis, deg_to_rad((-5.0 if i == 0 else 5.0) * tension))
+		_windup_rig.set_bone_pose_rotation(_wing_bones[i],
+			(tilt * rest.basis).get_rotation_quaternion())
+	for bone in _paw_bones:
+		var rest := _windup_rig.get_bone_rest(bone)
+		_windup_rig.set_bone_pose_position(bone,
+			rest.origin + _windup_rig.basis.inverse() * Vector3(0.0, 0.08, -0.08) * tension)
+	if _chin != null:
+		_chin.rotation.x = deg_to_rad(12.0 * tension)
 
 
 func _wants_attack(to_ball: Vector3) -> bool:
