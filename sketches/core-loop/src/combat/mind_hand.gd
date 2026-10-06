@@ -2,6 +2,7 @@ extends "res://src/combat/counter.gd"
 
 const Habits := preload("res://src/combat/habits.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const BossModel := preload("res://src/boss/boss_model.gd")
 
 # One of the Mind's hands (DESIGN-V2 section 10, superintelligence; STORY-THREADS T5):
 # a tall, thin, many-jointed arm on a cast foot, a lens cluster at the top that always
@@ -29,6 +30,12 @@ const PLATING_SCALE := 0.5
 const HP := 90.0
 const ARM_HEIGHT := 4.2
 const LENS_RADIUS := 0.7
+# The skinned hand (tools/blender/bosses). The cylinders and spheres built below stay as the
+# fallback and are only hidden when the model loads.
+const MODEL := "res://assets/models/bosses/mind_hand.glb"
+
+# Test seam: a test points this at a missing file to prove the primitive hand builds.
+static var model_path := MODEL
 
 var habit := ""
 var braced_kinds: Array = []
@@ -38,6 +45,9 @@ var _lens: Node3D
 var _lens_glass: MeshInstance3D
 var _icon: Sprite3D
 var _joints: Array = []
+var _model: Node3D
+var _anim: AnimationPlayer
+var _seen_phase := -1
 
 
 func _configure(threat: float) -> void:
@@ -182,10 +192,54 @@ func _build_crew() -> void:
 	_icon.position = Vector3(0.0, 1.3, 0.0)
 	_icon.visible = false
 	_lens.add_child(_icon)
+	_dress_model()
+
+
+# Puts the skinned hand over the primitives. The collider, the lens node (lens_point and the
+# habit icon ride on it) and every number above stay as they were; only the meshes change.
+func _dress_model() -> void:
+	var loaded := BossModel.load_scene(model_path)
+	if loaded == null:
+		return
+	var player := BossModel.player_of(loaded)
+	if loaded.find_child("MindHandSkin", true, false) == null or player == null or not player.has_animation("still_track"):
+		loaded.free()
+		return
+	for mesh in _visual_parent().find_children("*", "MeshInstance3D", true, false):
+		BossModel.hide_primitive(mesh)
+	for mesh in _lens.find_children("*", "MeshInstance3D", true, false):
+		BossModel.hide_primitive(mesh)
+	loaded.name = "MindHandModel"
+	_visual_parent().add_child(loaded)
+	_model = loaded
+	_anim = player
+	BossModel.own_clips(_anim)
+	BossModel.loop_clip(_anim, "still_track")
+	BossModel.play(_anim, "still_track")
+
+
+# Cues the clip for the phase the counter is in: still, the quote's warn, the exact strike
+# then the brace, then the recovery. Edge-triggered on the phase, so it adds no timing.
+func _cue_model() -> void:
+	if _anim == null or phase == _seen_phase:
+		return
+	var from := _seen_phase
+	_seen_phase = phase
+	match phase:
+		Phase.WARN:
+			BossModel.play(_anim, "quote_warn")
+		Phase.LIVE:
+			BossModel.play(_anim, "exact_strike")
+			_anim.queue("brace")
+		Phase.ROAM:
+			if from != -1:
+				BossModel.play(_anim, "recover")
+				_anim.queue("still_track")
 
 
 # Still, then exact: the lens always follows the ball; the brace opens it wide.
 func _pose() -> void:
+	_cue_model()
 	if _lens == null or target == null:
 		return
 	var to := _ball() - _lens.global_position

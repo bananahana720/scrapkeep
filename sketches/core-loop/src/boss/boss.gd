@@ -9,6 +9,7 @@ const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossModel := preload("res://src/boss/boss_model.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
 # Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
@@ -44,6 +45,8 @@ var phase_clock := 0.0
 var arena
 var ship
 var scooter
+# The scooter model's clips (eject, then chase), when its GLB loaded.
+var _scooter_anim: AnimationPlayer
 # The committed hazards still drawn or live; tests read them to check every hit.
 var hazards: Array = []
 var stuns := 0
@@ -155,6 +158,7 @@ func exit_arena() -> void:
 	arena = null
 	ship = null
 	scooter = null
+	_scooter_anim = null
 	hazards.clear()
 	_pickups.clear()
 	_grace.clear()
@@ -264,6 +268,7 @@ func _enter_phase(next: int) -> void:
 			ship.shed_armour()
 			ship.cockpit_open(true)
 			_charge = {"state": "rest", "timer": Rules.CHARGE_REST}
+	ship.cue_phase(next)
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
 
 
@@ -314,6 +319,7 @@ func _commit_crane(i: int, ball: Vector3) -> void:
 	h.commit_sector("crane_%d" % i, Hazard.Threat.Type.WAVE, centre, Rules.CRANE_BAND, bearing - sweep * Rules.CRANE_SPAN * 0.5,
 		bearing + sweep * Rules.CRANE_SPAN * 0.5, Rules.CRANE_REACH, Rules.CRANE_WARN, Rules.CRANE_SWEEP)
 	_add_hazard(h)
+	ship.cue("crane_warn", h.get_instance_id())
 	_cranes[i] = {"hazard": h, "caught": false, "held": 0, "trail": [], "values": [], "dripped": 0, "drip": 0.0}
 	_publish("boss_attack_telegraphed", ["crane_sweep", h.warn_seconds])
 
@@ -330,6 +336,7 @@ func _step_crane(i: int, delta: float, ball: Vector3) -> void:
 			at = at.lerp(_head(h, h.a_from, head_r), clampf(h.age / h.warn_seconds, 0.0, 1.0))
 		else:
 			glow = 1.0
+			ship.cue("crane_sweep", h.get_instance_id())
 			at = _head(h, lerpf(h.a_from, h.a_to, h.live_fraction()), head_r)
 			if not c["caught"] and h.contains(ball) and _swept(h, ball):
 				_crane_catch(i, ball, at)
@@ -405,6 +412,7 @@ func _drip(c: Dictionary) -> void:
 	_spawn_pickup(c["trail"][k], c["values"][k], "returned")
 	c["held"] -= c["values"][k]
 	c["dripped"] = k + 1
+	ship.cue("magnet_hold_drip", int(c["dripped"]))
 
 
 # A shot on a magnet that still holds scrap drops the rest in one pile under it.
@@ -500,6 +508,7 @@ func _step_furnace(delta: float) -> void:
 		h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, Rules.SLAG_WARN, Rules.SLAG_LIVE)
 		h.excluded = func(point: Vector3) -> bool: return arena.is_quenched(point, clock)
 		_add_hazard(h)
+		ship.cue("slag_warn", _slag_turn)
 		_slag_turn += 1
 		_next_attack = clock + Rules.SLAG_WARN + Rules.SLAG_LIVE + Rules.SLAG_GAP
 		_publish("boss_attack_telegraphed", [id, h.warn_seconds])
@@ -528,6 +537,7 @@ func _launch_lobber() -> void:
 	marker.commit_annulus("drone_pad", Hazard.Threat.Type.INSTANT, at, Vector2(0.0, 2.5), 0.0, Rules.DRONE_WARN, Rules.DRONE_WAIT)
 	arena.add_child(marker)
 	_drones.append({"at": at, "marker": marker})
+	ship.cue("drone_deploy", _drones.size() + Engine.get_physics_frames())
 
 
 func pending_drones() -> Array:
@@ -647,6 +657,7 @@ func _commit_charge(ball: Vector3) -> void:
 		Requisition.HULL.y + 0.5, Rules.CHARGE_WARN, length / Rules.CHARGE_SPEED + 0.2)
 	_add_hazard(h)
 	ship.move_to(from, heading)
+	ship.cue("charge_warn", h.get_instance_id())
 	_charge = {"state": "brace", "hazard": h, "from": from, "heading": heading, "length": length,
 		"into_wall": into_wall, "travelled": 0.0}
 	_publish("boss_attack_telegraphed", ["charge_wall" if into_wall else "charge", h.warn_seconds])
@@ -718,6 +729,7 @@ func _stun(seconds: float) -> void:
 		_charge["hazard"].finish()
 	_charge = {"state": "stun", "timer": seconds}
 	stuns += 1
+	ship.cue("wall_stun", stuns)
 
 
 func stunned() -> bool:
@@ -740,6 +752,7 @@ func _begin_eject() -> void:
 	ship.cockpit_open(true)
 	ship.show_cranes(false)
 	ship.open_caps(false)
+	ship.cue("eject")
 	scooter = Target.new()
 	scooter.setup(self, "scooter", "scooter", Vector3(2.0, 1.2, 2.8), Vector2(1.6, 1.0))
 	arena.add_child(scooter)
@@ -750,6 +763,10 @@ func _begin_eject() -> void:
 	body.mesh = box
 	body.material_override = Palette.solid(Palette.BRASS, 0.8)
 	scooter.add_child(body)
+	_scooter_anim = Requisition.dress_scooter(scooter)
+	if _scooter_anim != null:
+		BossModel.hide_primitive(body)
+		BossModel.play(_scooter_anim, "eject")
 	var ball: Vector3 = ctx.player.ball_position()
 	var land: float = arena.angle_of(ball) + PI
 	var from: Vector3 = ship.to_global(Vector3(0.0, Requisition.DECK + 1.5, 4.8))
@@ -770,6 +787,7 @@ func _step_scooter(delta: float) -> void:
 		scooter.global_position = at
 		if f >= 1.0:
 			_eject["landed"] = true
+			BossModel.play(_scooter_anim, "chase")
 			scooter.set_solid(true)
 			var ball_angle: float = arena.angle_of(ctx.player.ball_position())
 			_eject["dir"] = -signf(angle_difference(_eject["angle"], ball_angle))
