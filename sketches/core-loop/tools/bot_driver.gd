@@ -85,6 +85,11 @@ const CARD_PRESS_GAP := 0.5
 # Shift is the pilot's go verb, pressed as the keyboard presses it: Sable boosts on the press,
 # Rivet sprints for as long as it is held, Kest blinks on the press.
 const SHIFT_HOLD := 1.2
+# Tarn's claw pull, Kest's blink and the cannon's recoil throw the ball along the flat camera
+# aim (the flywheel surge too, below its minimum speed). The camera tracks the enemy while
+# the stick steers to a climb step, runup point or escape, so such a burst waits until the
+# aim is within the same 0.9 cosine (about 26 degrees) the velocity must already meet.
+const BURST_AIM_LINED := 0.9
 # The ram lap: charge until this close, then run up this far and charge again.
 const CHARGE_CLOSE := 3.8
 # The harpoon hand is the bowl-floor camper's: grounded on the floor (its radius, features.gd) and
@@ -1900,6 +1905,11 @@ func _inside_thermal(ball: Vector3) -> bool:
 	return false
 
 
+static func _burst_follows_aim(kit, planar_speed: float) -> bool:
+	return kit.on(Augments.CLAW_PULL) or kit.on(Augments.BLINK) or kit.on(Augments.RECOIL) \
+		or (kit.on(Augments.SURGE) and planar_speed <= Augments.SURGE_MIN_SPEED)
+
+
 # Rolls toward steer and looks at aim (or along the way when there is nothing to aim
 # at). The stick is set in the camera's frame, as a person's WASD is.
 func _drive(steer: Vector3, aim, delta: float) -> void:
@@ -1950,7 +1960,8 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		var lined: float = v.normalized().dot(dir) if v.length() > 0.5 else 1.0
 		# No brake-carving: brake is also the slam key, and a carve held over a bump
 		# becomes a slam that plants the ball (seen on the Slag Bowl's bank).
-		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded and player.verb_ready("boost"):
+		var aim_ok: bool = forward.dot(dir) > BURST_AIM_LINED or not _burst_follows_aim(player.kit, v.length())
+		if _boost_clock <= 0.0 and lined > 0.9 and aim_ok and player.state.grounded and player.verb_ready("boost"):
 			_boost_clock = BOOST_GAP
 			_shift_left = SHIFT_HOLD
 			source.press["shift_pressed"] = true
