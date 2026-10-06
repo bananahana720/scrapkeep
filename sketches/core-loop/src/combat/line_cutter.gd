@@ -23,6 +23,9 @@ var _disc: MeshInstance3D
 var _launch := Vector3.ZERO
 var _bump := 0.0
 var _landed := false
+var _body: MeshInstance3D
+var _throw_arm: MeshInstance3D
+static var _shared: Array = []
 
 
 func _configure(threat: float) -> void:
@@ -37,7 +40,63 @@ func _configure(threat: float) -> void:
 
 
 func _build_tool() -> void:
+	var parts := _parts()
+	if not parts.is_empty():
+		_crew.free()
+		_crew = null
+		_base_color = Color.WHITE
+		_material.albedo_color = _base_color
+		_material.vertex_color_use_as_albedo = true
+		for part in parts:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			if part.flash >= 0:
+				mi.set_surface_override_material(part.flash, _material)
+			_visual_parent().add_child(mi)
+			match part.name:
+				"CutterCrewBody": _body = mi
+				"ThrowArm": _throw_arm = mi
+				"CutterDisc": _disc = mi
+		return
 	_disc = _cylinder(0.7, 0.08, Palette.HAZARD, Vector3(0.0, CREW_HALF + 1.0, 0.0), 0.6, _visual_parent())
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_three/enemy_line_cutter.glb"
+	if not ResourceLoader.exists(path):
+		return _shared
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return _shared
+	var scene := packed.instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var flash := -1
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted)
+		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
+	scene.free()
+	return _shared
+
+
+func _pose() -> void:
+	if _body == null or _throw_arm == null:
+		return
+	var cock := clampf(_t / warn_seconds, 0.0, 1.0) if phase == Phase.WARN else 0.0
+	_body.rotation.x = 0.08 * cock
+	_throw_arm.position = _body.basis * Vector3(-0.48, 0.7, 0.0)
+	_throw_arm.rotation.x = -0.52 * cock
+	if phase == Phase.WARN and not _disc.top_level:
+		_disc.position = _throw_arm.transform * Vector3(0.48, 1.4, 0.0)
 
 
 func _wants_attack(to_ball: Vector3) -> bool:
