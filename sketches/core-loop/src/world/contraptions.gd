@@ -63,6 +63,11 @@ var _ring_mat: Material
 var _hook_mat: Material
 var _steam_mat: Material
 var _cache_rules
+var _puff_rng := RandomNumberGenerator.new()
+
+
+func _init() -> void:
+	_puff_rng.seed = 0x50FF
 
 
 func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void:
@@ -708,7 +713,7 @@ func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Arr
 	facts.append({"kind": "fact", "fact": "route_opened", "at": centre})
 	facts.append({"kind": "codex", "id": "sprint_through", "at": centre})
 	for k in 5:
-		_puff(centre + Vector3(randf_range(-3.0, 3.0), randf_range(-1.5, 2.0), randf_range(-1.0, 1.0)), 2.5)
+		_puff(centre + Vector3(_puff_rng.randf_range(-3.0, 3.0), _puff_rng.randf_range(-1.5, 2.0), _puff_rng.randf_range(-1.0, 1.0)), 2.5)
 
 
 # ---- Thermals (Kest) ----
