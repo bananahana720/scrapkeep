@@ -9,6 +9,7 @@ const LineView := preload("res://src/presentation/line_view.gd")
 const StatusMarks := preload("res://src/presentation/status_marks.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
+const TitleStage := preload("res://src/presentation/title_stage.gd")
 const WardenRing := preload("res://src/presentation/warden_ring.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
@@ -51,6 +52,7 @@ var banner
 var hero_assets
 var ceremony
 var set_dressing: Node3D
+var title_stage: Node
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
@@ -86,6 +88,9 @@ func setup(ctx_ref) -> void:
 	var companion_body := CompanionBody.new()
 	add_child(companion_body)
 	companion_body.setup(ctx)
+	title_stage = TitleStage.new()
+	add_child(title_stage)
+	title_stage.setup(ctx)
 	var layer := CanvasLayer.new()
 	layer.name = "CodexBannerLayer"
 	layer.layer = 40

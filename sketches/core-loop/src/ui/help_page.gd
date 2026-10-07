@@ -6,6 +6,7 @@ const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
+const MechanicsDiagram := preload("res://src/ui/mechanics_diagram.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
 # The title's one-page how to play (DESIGN-V2 section 14.10): the run's goal loop as
@@ -22,6 +23,9 @@ const GOAL := [
 
 var back: Button
 var diagram
+var pictures := {}
+var page_button: Button
+var _mechanics: HBoxContainer
 
 
 func _init() -> void:
@@ -33,13 +37,53 @@ func _init() -> void:
 	diagram = ControlsDiagram.new()
 	diagram.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(diagram)
+	_mechanics = _mechanics_row()
+	_mechanics.visible = false
+	add_child(_mechanics)
+	var actions := _hbox(18)
+	page_button = ChoiceButton.new("pictures", "", "Pictures")
+	page_button.pressed.connect(toggle_pictures)
+	actions.add_child(page_button)
 	back = ChoiceButton.new("back", "key_h", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	add_child(back)
+	actions.add_child(back)
+	add_child(actions)
+	visibility_changed.connect(_reset_page)
+
+
+func toggle_pictures() -> void:
+	_mechanics.visible = not _mechanics.visible
+	diagram.visible = not _mechanics.visible
+	page_button.text = "Controls" if _mechanics.visible else "Pictures"
+
+
+func _reset_page() -> void:
+	if not visible:
+		_mechanics.visible = false
+		diagram.visible = true
+		page_button.text = "Pictures"
 
 
 static func key_rows() -> Array:
 	return FieldNotes.CONTROLS.filter(func(row): return row.has("short") and row.has("caps"))
+
+
+func _mechanics_row() -> HBoxContainer:
+	var row := _hbox(18)
+	row.name = "MechanicsPictures"
+	for id in ["breach", "lift", "companion"]:
+		var card := VBoxContainer.new()
+		card.add_theme_constant_override("separation", 8)
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var picture := MechanicsDiagram.new(id)
+		card.add_child(picture)
+		var caption := _label(MechanicsDiagram.CAPTIONS[id], 16, Palette.SAND)
+		caption.name = "Caption"
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		card.add_child(caption)
+		row.add_child(card)
+		pictures[id] = {"picture": picture, "caption": caption}
+	return row
 
 
 func _goal_row() -> HBoxContainer:
