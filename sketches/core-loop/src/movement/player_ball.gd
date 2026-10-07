@@ -130,6 +130,7 @@ var _line_anchor := Vector3.ZERO
 var _line_hold := 0.0
 var _line_standing := false
 var _bow: Area3D
+var _bow_check_queued := false
 var _crushing := {}
 
 
@@ -761,8 +762,16 @@ func _build_bow() -> void:
 	_bow.body_entered.connect(_on_bow_entered)
 
 
-func _on_bow_entered(body: Node3D) -> void:
-	_try_crush(body)
+func _on_bow_entered(_body: Node3D) -> void:
+	# Batch the server's unordered notifications before assigning seeded kill payouts.
+	if not _bow_check_queued:
+		_bow_check_queued = true
+		_flush_bow.call_deferred()
+
+
+func _flush_bow() -> void:
+	_bow_check_queued = false
+	_recheck_bow()
 
 
 # Rechecked every tick for whatever is inside the bow, so an enemy the ball grows or
@@ -770,7 +779,9 @@ func _on_bow_entered(body: Node3D) -> void:
 func _recheck_bow() -> void:
 	if _bow == null or _frozen or state.tier < SpeedTier.CRUISE:
 		return
-	for body in _bow.get_overlapping_bodies():
+	var bodies := _bow.get_overlapping_bodies()
+	bodies.sort_custom(func(a: Node, b: Node): return b.is_greater_than(a))
+	for body in bodies:
 		_try_crush(body)
 
 
