@@ -116,6 +116,7 @@ var _heft_class := 1
 # The first stage-start snapshot of each stage in this run, kept for a replay of that
 # stage (the boss death screen's T replays stage 3).
 var _stage_starts := {}
+var _id_rng := RandomNumberGenerator.new()
 
 
 static func roman(n: int) -> String:
@@ -123,6 +124,7 @@ static func roman(n: int) -> String:
 
 
 func _init(events_ref = null) -> void:
+	_id_rng.seed = 0x1D2026
 	events = events_ref
 	reset_metrics()
 	if events != null:
@@ -146,7 +148,8 @@ func begin(chosen_class: Resource) -> void:
 	_heft_class = 1
 	class_rewarded = 1
 	_stage_starts = {}
-	run_id = "%d-%06d" % [int(Time.get_unix_time_from_system()), randi() % 1000000]
+	# The suffix also seeds device luck; presentation must never choose it.
+	run_id = "%d-%06d" % [int(Time.get_unix_time_from_system()), _id_rng.randi() % 1000000]
 	# Derived from the run id so it draws nothing from the global RNG.
 	run_seed = hash(run_id)
 	world = 0

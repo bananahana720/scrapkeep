@@ -165,6 +165,7 @@ var _motif := ""
 # Moss's babble, baked once per line, beat and key: {"beat|key|text": AudioStreamWAV}.
 var _babble := {}
 var sound_ready := false
+var _pitch_rng := RandomNumberGenerator.new()
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
 var volumes := {"Music": 0.8, "SFX": 1.0, "UI": 1.0}
@@ -233,6 +234,10 @@ static var _bake_task := -1
 static var _baked := false
 static var _bake_done := false
 static var _rest_task := -1
+
+
+func _init() -> void:
+	_pitch_rng.seed = 0xA0D10
 
 
 func setup(ctx_ref) -> void:
@@ -1739,7 +1744,7 @@ func _on_dismounted(velocity: Vector3) -> void:
 func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 	if kind == "synergy":
 		# A synergy's shockwave: its own light chime, never the slam family.
-		play("enemy_struck", -8.0, Harmony.ratio(Harmony.pentatonic_step(randi() % 5)), "SFX", "synergy_hit")
+		play("enemy_struck", -8.0, Harmony.ratio(Harmony.pentatonic_step(_pitch_rng.randi() % 5)), "SFX", "synergy_hit")
 		return
 	if is_instance_valid(enemy) and enemy.get("kind") == "vault":
 		# The vault's riser climbs as its integrity falls.
@@ -1825,7 +1830,7 @@ func _integrity(enemy: Node3D) -> float:
 
 
 func _on_shot(weapon_id: String, _from: Vector3, _to: Vector3) -> void:
-	var cents := randf_range(-25.0, 25.0) / 100.0
+	var cents := _pitch_rng.randf_range(-25.0, 25.0) / 100.0
 	play("shot_fired", 0.0, Harmony.ratio(WEAPON_PITCH.get(weapon_id, 0.0) + cents))
 
 
