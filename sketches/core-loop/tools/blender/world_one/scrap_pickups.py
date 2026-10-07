@@ -1,0 +1,79 @@
+"""Four shared, rigid salvage meshes, centred inside the field's 0.8 m cube.
+
+blender -b --factory-startup --python-exit-code 1 -P scrap_pickups.py
+One opaque vertex-colour surface per variant. Runtime supplies mint/amber tint
+and the existing pickup emission, just as Brindle's folded casting does.
+"""
+import math
+import os
+import sys
+
+import bmesh
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import common
+from common import Part
+
+SLOT = "field"
+LIGHT = "ffffff"
+MID = "c7ccc9"
+DARK = "6c7872"
+
+
+def finish(part, root):
+    bmesh.ops.recalc_face_normals(part.bm, faces=part.bm.faces[:])
+    obj = part.to_object(parent=root)
+    assert common.tris(obj) <= 270, part.name + " prop triangle budget"
+    assert all(max(abs(c) for c in v.co) <= 0.4001 for v in obj.data.vertices), part.name + " bounds"
+    return obj
+
+
+def build():
+    common.reset()
+    common.SLOTS[SLOT] = {"vc": True, "rough": 0.8}
+    root = common.empty("ScrapPickups")
+
+    plate = Part("BentPlate")
+    plate.prism(SLOT, [(-.38, -.31), (.22, -.31), (.37, -.16),
+                      (.34, .29), (-.24, .33), (-.38, .18)], .13,
+                matrix=common.mtx((0, 0, -.08)), color=MID)
+    plate.box(SLOT, (.51, .46, .07), loc=(-.035, .015, .065), rot=(0, .28, -.09), color=LIGHT)
+    plate.box(SLOT, (.12, .43, .06), loc=(-.18, .01, .16), rot=(0, -.25, 0), color=MID)
+    for x, y in [(.13, .13), (.12, -.16)]:
+        plate.cyl(SLOT, .065, .065, .05, segs=6, loc=(x, y, .15), color=DARK)
+    finish(plate, root)
+
+    gear = Part("GearSegment")
+    gear.ring(SLOT, .15, .30, .19, segs=9, arc=(-.3, 3.8), color=MID)
+    for i in range(7):
+        a = -.15 + i * .60
+        gear.box(SLOT, (.12, .13, .19), loc=(.325 * math.cos(a), .325 * math.sin(a), 0),
+                 rot=(0, 0, a), color=LIGHT)
+    gear.ring(SLOT, .15, .19, .23, segs=9, arc=(-.3, 3.8), color=DARK)
+    finish(gear, root)
+
+    pipe = Part("PipeStub")
+    pipe.ring(SLOT, .16, .23, .55, segs=8, color=MID)
+    pipe.ring(SLOT, .16, .31, .07, segs=8, loc=(0, 0, -.27), color=LIGHT)
+    pipe.ring(SLOT, .16, .255, .05, segs=8, loc=(0, 0, .27), color=DARK)
+    for a in [0, math.pi * .67, math.pi * 1.33]:
+        pipe.cyl(SLOT, .037, .037, .05, segs=6,
+                 loc=(.26 * math.cos(a), .26 * math.sin(a), -.325), color=DARK)
+    finish(pipe, root)
+
+    bolts = Part("BoltCluster")
+    bolts.prism(SLOT, [(-.31, -.24), (.26, -.24), (.34, .09), (.13, .26), (-.29, .21)],
+                .10, matrix=common.mtx((0, 0, -.22)), color=DARK)
+    for x, y, tilt in [(-.16, -.08, -.16), (.15, -.05, .15), (.01, .15, -.1)]:
+        bolts.cyl(SLOT, .063, .063, .43, segs=6, loc=(x, y, -.015), rot=(0, tilt, 0), color=MID)
+        bolts.cyl(SLOT, .12, .12, .12, segs=6, loc=(x + tilt * .16, y, .22), color=LIGHT)
+        bolts.ring(SLOT, .068, .094, .04, segs=4, loc=(x, y, -.10), color=LIGHT)
+    finish(bolts, root)
+    return root
+
+
+if __name__ == "__main__":
+    root = build()
+    path = common.args()["out"] or os.path.join(common.MODELS, "world_one", "scrap_pickups.glb")
+    common.export(root, path)
+    print("SCRAP PICKUPS", common.tri_total(root), "T / 4 variants / 1 draw per pickup")

@@ -1,0 +1,161 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Field := preload("res://src/build/scrap_field.gd")
+const Palette := preload("res://src/core/palette.gd")
+const GLB := "res://assets/models/world_one/scrap_pickups.glb"
+const NAMES := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
+const LOGIC_SHA := "72d047987ebb56ef71b7304b840436fcb1d27654a0e8ec5ce89bc1d7c90f672a"
+
+var failures: Array[String] = []
+var game
+var asset_meshes := {}
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _check(ok: bool, reason: String) -> void:
+	if not ok:
+		failures.append(reason)
+		print("scrap assertion: " + reason)
+
+
+func _asset() -> void:
+	var packed := load(GLB) as PackedScene if ResourceLoader.exists(GLB) else null
+	_check(packed != null, "GLB loads")
+	if packed == null:
+		return
+	var scene := packed.instantiate()
+	var names: Array[String] = []
+	var total_tris := 0
+	var total_vertices := 0
+	for found in scene.find_children("*", "MeshInstance3D", true, false):
+		var part := found as MeshInstance3D
+		names.append(String(part.name))
+		_check(Field._valid_pickup(part), String(part.name) + " identity origin, opaque vertex colours and prop budget")
+		if not part.mesh is ArrayMesh or part.mesh.get_surface_count() != 1:
+			continue
+		asset_meshes[String(part.name)] = part.mesh
+		var arrays := part.mesh.surface_get_arrays(0)
+		var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices = arrays[Mesh.ARRAY_INDEX]
+		var tris: int = (indices.size() if indices != null else vs.size()) / 3
+		_check(tris > 12 and tris <= 270 and vs.size() <= 610, String(part.name) + " independent 270 T / 610 V / 1 D cap")
+		var colors = arrays[Mesh.ARRAY_COLOR]
+		_check(colors != null and colors.size() == vs.size(), String(part.name) + " exported colour attribute")
+		total_tris += tris
+		total_vertices += vs.size()
+		print("scrap variant %s: %d T / %d V / 1 D" % [part.name, tris, vs.size()])
+	var expected := NAMES.duplicate()
+	expected.sort()
+	names.sort()
+	_check(names == expected, "exact four variant names")
+	_check(total_tris <= 1080 and total_vertices <= 2440, "aggregate four-prop budget")
+	_check(scene.find_children("*", "CollisionObject3D", true, false).is_empty(), "GLB contains no physics bodies")
+	_check(scene.find_children("*", "CollisionShape3D", true, false).is_empty(), "GLB contains no collision shapes")
+	print("scrap kit: %d T / %d V / %d D" % [total_tris, total_vertices, names.size()])
+	scene.free()
+
+
+func _draws(field, recovery := false) -> Dictionary:
+	var variants := {}
+	for item in field._items:
+		if field._cogs.has(item):
+			continue
+		var variant: String = item.get_meta("scrap_variant", "")
+		_check(NAMES.has(variant), "real spawn has a named GLB variant, never a fallback box")
+		_check(item.mesh is ArrayMesh and not item.mesh is PrimitiveMesh, "real spawn draws GLB geometry")
+		var material := item.material_override as StandardMaterial3D
+		_check(material != null and material.vertex_color_use_as_albedo, "real spawn enables vertex-colour albedo")
+		if material != null:
+			var color := Palette.AMBER if recovery else Palette.ARC
+			_check(material.resource_name == "field" and material.albedo_color.is_equal_approx(color) and material.emission_enabled
+				and material.emission.is_equal_approx(color)
+				and is_equal_approx(material.emission_energy_multiplier, 2.2 if recovery else 1.6), "existing tint and glow cue")
+		_check(item.find_children("*", "CollisionObject3D", true, false).is_empty(), "no pickup physics bodies")
+		if not asset_meshes.has(variant):
+			continue
+		var asset: Mesh = asset_meshes[variant]
+		if not recovery:
+			_check(item.mesh == asset, "real spawn uses exact imported shared mesh")
+		else:
+			_check(item.mesh.get_aabb().size.is_equal_approx(asset.get_aabb().size * 1.75), "recovery retains 1.4 / 0.8 size ratio")
+			var original := asset.surface_get_arrays(0)
+			var enlarged: Array = item.mesh.surface_get_arrays(0)
+			_check(enlarged[Mesh.ARRAY_INDEX] == original[Mesh.ARRAY_INDEX]
+				and enlarged[Mesh.ARRAY_COLOR] == original[Mesh.ARRAY_COLOR], "recovery retains GLB topology and vertex colours")
+			var original_vertices: PackedVector3Array = original[Mesh.ARRAY_VERTEX]
+			var enlarged_vertices: PackedVector3Array = enlarged[Mesh.ARRAY_VERTEX]
+			_check(original_vertices.size() == enlarged_vertices.size(), "recovery retains GLB vertex count")
+			if original_vertices.size() == enlarged_vertices.size():
+				for i in original_vertices.size():
+					_check(enlarged_vertices[i].is_equal_approx(original_vertices[i] * 1.75), "recovery draws enlarged GLB vertices")
+		if variants.has(variant):
+			_check(variants[variant] == item.mesh, "instances share variant mesh")
+		variants[variant] = item.mesh
+	return variants
+
+
+func _run() -> void:
+	_asset()
+	game = Game.new()
+	game.test_mode = true
+	game.table = "alpha"
+	root.add_child(game)
+	game.process_mode = Node.PROCESS_MODE_DISABLED
+	game.ctx.calm = true
+	game.flow.press_start()
+	game.flow.choose_class(0)
+	var field = game.ctx.build.scrap
+	_check(field.get_parent() == game and field.name == "Scrap", "real Build.setup field path")
+	var stage_rng := RandomNumberGenerator.new()
+	stage_rng.seed = 18421
+	for stage in range(1, 7):
+		game.flow.enter_stage(stage, Vector3.ZERO, false)
+		field.drop(Vector3.ZERO, 4, stage_rng)
+		_check(field.count() >= 4, "stage %d real enemy-drop path spawns scrap" % stage)
+		_draws(field)
+	game.flow.enter_stage(1, Vector3.ZERO, false)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 76183
+	field.lay_out(game.ctx.terrain, game.ctx.terrain.scrap_lines(1), 1.0, rng)
+	var first: Array = []
+	for item in field._items:
+		first.append([item.position, item.get_meta("scrap_variant", "cog")])
+	rng.seed = 76183
+	field.lay_out(game.ctx.terrain, game.ctx.terrain.scrap_lines(1), 1.0, rng)
+	var second: Array = []
+	for item in field._items:
+		second.append([item.position, item.get_meta("scrap_variant", "cog")])
+	_check(first == second, "retry retains seeded positions and variants")
+	field.clear()
+	var state: int = rng.state
+	for i in 200:
+		field._add(Vector3(i * 1.37, 1.4, i * .41))
+	var variants := _draws(field)
+	_check(variants.size() == 4 and field.count() == 200, "200 real pickups share four meshes")
+	_check(rng.state == state, "visual spawn consumes no RNG")
+	print("scrap 200 pickups: 200 base-pass draws / %d shared meshes / 1 shared material" % variants.size())
+	field.clear()
+	field.drop_line(Vector3.ZERO, Vector3.FORWARD, 40.0, 10, rng)
+	_check(field.count() == 10, "drop_line value/count unchanged")
+	_draws(field)
+	field.drop(Vector3.ONE, 3, rng)
+	_check(field.count() == 13, "enemy drop value/count unchanged")
+	_draws(field)
+	field.clear()
+	field.drop_recovery(null, Vector3.ZERO, Vector3.FORWARD, 19, 6, rng)
+	_check(field.recovery_count() == 6 and field.recovery_value() == 19, "recovery count and value unchanged")
+	_draws(field, true)
+	field.step(Vector3(1000, 0, 1000), 0.0, .1)
+	_draws(field, true)
+	var source := FileAccess.get_file_as_string("res://src/build/scrap_field.gd")
+	var start := source.find("func lay_out(")
+	var end := source.find("func _add(at:")
+	_check(start >= 0 and end > start and source.substr(start, end - start).sha256_text() == LOGIC_SHA,
+		"all layout, magnet, collection, value, timing, spin and seeded gameplay source unchanged")
+	game.free()
+	print("scrap_pickup_asset_test: %s" % ("PASS" if failures.is_empty() else "FAIL"))
+	quit(0 if failures.is_empty() else 1)
