@@ -242,3 +242,4 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 		var angle := PI * 0.25 + i * PI * 0.5
 		var at := RELAY + Vector2(cos(angle), sin(angle)) * (MESA_TOP + 2.0)
 		pylon_wall(parent, ground.call(at.x, at.y, 0.0), 12.0, 6.0, -angle + PI * 0.5)
+	load("res://src/presentation/spillway_scenery.gd").dress_props(parent)

@@ -3,6 +3,95 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
+const StageMap := preload("res://src/world/stage_map.gd")
+
+# The existing cast slabs keep their exact geometry. Their finishes share the workshop's
+# concrete/paint/shutter kit; the signal insert adds directional safety paint, open grates
+# and recessed ancient lenses. A missing insert leaves every original material intact.
+static var prop_shader_path := "res://assets/materials/wog_signal.gdshader"
+static var _prop_shaders := {}
+static var _prop_warnings := {}
+static var _prop_materials := {}
+
+
+static func dress_props(parent: Node) -> void:
+	var shader := _prop_shader()
+	if shader == null:
+		return
+	for view: MeshInstance3D in parent.find_children("*", "MeshInstance3D", true, false):
+		var original := view.material_override as StandardMaterial3D
+		if not view.mesh is PrimitiveMesh or original == null or original.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			continue
+		# Transparent steam and the threat painter's committed geometry keep their own grammar.
+		if original.shading_mode != BaseMaterial3D.SHADING_MODE_PER_PIXEL:
+			continue
+		var size := view.mesh.get_aabb().size
+		var color := original.albedo_color
+		var second := Palette.CHARCOAL
+		var role := "paint"
+		if original.get_meta("greybox_checker", false):
+			var image := original.albedo_texture.get_image()
+			if image == null:
+				continue
+			color = image.get_pixel(0, 0)
+			second = image.get_pixel(image.get_width() / 4, 0)
+			if color.is_equal_approx(Palette.AMBER):
+				role = "safety"
+			elif color.is_equal_approx(Palette.COPPER):
+				role = "grate" if view.mesh is CylinderMesh else "shutter"
+			elif second.is_equal_approx(Palette.SAND):
+				role = "grate"
+			elif color.is_equal_approx(Palette.SANDSTONE):
+				role = "cracked_cast"
+			else:
+				role = "concrete"
+				color = second
+		elif original.albedo_texture != null:
+			continue
+		elif original.emission_enabled:
+			role = "lens"
+		elif color.is_equal_approx(Palette.CHARCOAL):
+			role = "recess"
+		view.material_override = _prop_material(shader, original, role, color, second, size)
+		view.set_meta("spillway_finish", role)
+		view.set_meta("spillway_role_color", color)
+
+
+static func _prop_shader() -> Shader:
+	if _prop_shaders.has(prop_shader_path):
+		return _prop_shaders[prop_shader_path]
+	var shader: Shader
+	if ResourceLoader.exists(prop_shader_path, "Shader"):
+		shader = load(prop_shader_path) as Shader
+	if shader == null or shader.code.is_empty():
+		if not _prop_warnings.has(prop_shader_path):
+			_prop_warnings[prop_shader_path] = true
+			push_warning("spillway_scenery: missing or invalid prop finish " + prop_shader_path + "; original greybox retained")
+		return null
+	_prop_shaders[prop_shader_path] = shader
+	return shader
+
+
+static func _prop_material(shader: Shader, original: StandardMaterial3D, role: String,
+		color: Color, second: Color, size: Vector3) -> Material:
+	var key := prop_shader_path + ":" + role + ":" + color.to_html() + ":" + second.to_html() + ":" + str(size) + ":" + str(original.emission_energy_multiplier)
+	if _prop_materials.has(key):
+		return _prop_materials[key]
+	var mat: Material
+	if role in ["paint", "concrete", "shutter", "recess"]:
+		mat = StageMap.dressed_surface(color, 0 if role == "concrete" else (2 if role == "shutter" else 1), size, second, original)
+	else:
+		var insert := ShaderMaterial.new()
+		insert.shader = shader
+		insert.resource_name = "spillway_" + role
+		insert.set_shader_parameter("base_color", color)
+		insert.set_shader_parameter("secondary_color", second)
+		insert.set_shader_parameter("half_extents", size * 0.5)
+		insert.set_shader_parameter("finish_kind", ["lens", "safety", "grate", "cracked_cast"].find(role))
+		insert.set_shader_parameter("emission_energy", original.emission_energy_multiplier if original.emission_enabled else 0.0)
+		mat = insert
+	_prop_materials[key] = mat
+	return mat
 
 # Rim crown families, CLIFF-R2 section 1. Each crown is one closed solid: 12 perimeter stations
 # (six along the arena face, six along the back, both lists ordered by world Z) and five height

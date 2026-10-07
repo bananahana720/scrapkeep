@@ -3,7 +3,7 @@ extends SceneTree
 # Surface counts per visible draw node, including MultiMesh batches once, rather
 # than once per instance. Lower these ceilings as the materials and props land.
 const MAX_WHITE_SURFACES := 0
-const MAX_GREYBOX_SURFACES := 233
+const MAX_GREYBOX_SURFACES := 168
 const Game := preload("res://src/game.gd")
 const Alpha := preload("res://src/core/alpha_defs.gd")
 const Worlds := preload("res://src/core/worlds.gd")
