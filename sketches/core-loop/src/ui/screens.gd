@@ -334,6 +334,7 @@ func _close_camp_silently() -> void:
 func _camp_companion() -> void:
 	_close_camp_silently()
 	_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+	_layout_backdrop()
 	game.get_node("Workshop").open_companion()
 
 
