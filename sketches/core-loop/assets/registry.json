@@ -1991,6 +1991,34 @@
    "exception_why": "winch drone test ceiling 4 draws"
   },
   {
+   "id": "rescue_cage",
+   "path": "res://assets/models/world_one/rescue_cage.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/rescue_site.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/rescue_cage.py",
+    "note": "Procedural vertex-coloured salvaged cage. Reuses the registered animated pilot assets."
+   },
+   "exception": {
+    "tris": 1100,
+    "verts": 2100,
+    "draws": 4
+   },
+   "exception_why": "Rescue prop separates frame, gate, state latch and seat; limits asserted by rescue_cage_asset_test."
+  },
+  {
+   "id": "scrap_pickups",
+   "path": "res://assets/models/world_one/scrap_pickups.glb",
+   "class": "chunk",
+   "ships": true,
+   "loader": "src/build/scrap_field.gd:101",
+   "provenance": {
+    "recipe": "tools/blender/world_one/scrap_pickups.py",
+    "note": "Four procedural salvage variants, one opaque vertex-colour surface each. Each variant meets prop caps of 270 triangles, 610 imported vertices, one draw. Aggregate registered as a chunk kit. No external assets."
+   }
+  },
+  {
    "id": "shell_cannon",
    "path": "res://assets/models/world_one/shell_cannon.glb",
    "class": "shell",
@@ -2288,9 +2316,11 @@
   "ram_spring__escape_vent",
   "ram_spring__primer_coil",
   "ram_spring__primer_mesh",
+  "rescue_cage",
   "return_ramp_skin",
   "return_ramp_skin_rusted-salvaged-plate.webp",
   "rubble_cluster",
+  "scrap_pickups",
   "shell_cannon",
   "shell_crescent",
   "shell_saddle",

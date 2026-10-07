@@ -14,12 +14,14 @@ static var _prop_warnings := {}
 static var _prop_materials := {}
 
 
-static func dress_props(parent: Node) -> void:
+static func dress_props(parent: Node, keep: Node = null) -> void:
 	var shader := _prop_shader()
 	if shader == null:
 		return
 	for view: MeshInstance3D in parent.find_children("*", "MeshInstance3D", true, false):
 		var original := view.material_override as StandardMaterial3D
+		if keep != null and keep.is_ancestor_of(view):
+			continue
 		if not view.mesh is PrimitiveMesh or original == null or original.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
 			continue
 		# Transparent steam and the threat painter's committed geometry keep their own grammar.

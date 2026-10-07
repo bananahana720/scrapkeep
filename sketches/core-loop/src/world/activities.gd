@@ -188,6 +188,8 @@ func _build_cache(s: Site) -> void:
 	s.pedestal = s.to_global(local)
 	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
 	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL))
+	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
+	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
 
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:
