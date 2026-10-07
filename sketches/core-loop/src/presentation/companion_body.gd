@@ -33,7 +33,9 @@ var _snap := true
 var _moving := false
 var _primed := false
 var _primed_ids := {}
+var _primed_next := {}
 var _staggered := {}
+var _staggered_next := {}
 var _armed := false
 var _warned := false
 
@@ -194,7 +196,8 @@ func _beats() -> void:
 	var enemies := get_tree().get_nodes_in_group("enemy")
 	if key.contains("primer_"):
 		var any := false
-		var live := {}
+		var live := _primed_next
+		live.clear()
 		for enemy in enemies:
 			if combat.primed(enemy):
 				any = true
@@ -209,16 +212,19 @@ func _beats() -> void:
 					break
 			_beat("primer_expire" if expired else "primer_consume")
 		_primed = any
+		_primed_next = _primed_ids
 		_primed_ids = live
 	if key.contains("ram_prow"):
 		var fresh := false
-		var live := {}
+		var live := _staggered_next
+		live.clear()
 		for enemy in enemies:
 			if combat.prow_staggered(enemy):
 				var id: int = enemy.get_instance_id()
 				live[id] = true
 				if not _staggered.has(id):
 					fresh = true
+		_staggered_next = _staggered
 		_staggered = live
 		if fresh:
 			_beat("prow_response")
