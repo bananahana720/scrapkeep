@@ -1,6 +1,7 @@
 extends RefCounted
 
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const DigFx := preload("res://src/presentation/dig_fx.gd")
 
 # The Dig's scenery (alpha dress push, unit WDG): both zones' landmarks, cut faces, rubble,
 # struts, carts, shells and lamp lines along the rim, the drum look on every breach cover, the
@@ -45,6 +46,8 @@ const EDGES := [
 ]
 
 var _dir_cache := {}
+var _warnings := {}
+var _fx: Node3D
 
 
 # Built on first entry, not at boot: building the Dig's terrain at game start changes
@@ -59,6 +62,8 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 			var root: Node3D = ctx.terrain.geometry_root(stage)
 			if root.get_node_or_null("DigScenery") == null:
 				build(root, ctx.terrain.map_for(stage), row["map"])
+			var fx := root.get_node("DigScenery/DigFx")
+			fx.bind_context(ctx, stage)
 			return
 
 
@@ -72,6 +77,10 @@ static func build(stage_root: Node3D, map: RefCounted, map_id: String) -> Node3D
 
 
 func _build(scenery: Node3D, stage_root: Node3D, map: RefCounted, map_id: String) -> void:
+	_fx = DigFx.new()
+	_fx.name = "DigFx"
+	scenery.add_child(_fx)
+	_fx.prepare(stage_root, map)
 	var ground := func(x: float, z: float) -> float: return float(map.sample(x, z)[0])
 	var batches := {}
 	_ground_beds(scenery, stage_root)
@@ -81,6 +90,7 @@ func _build(scenery: Node3D, stage_root: Node3D, map: RefCounted, map_id: String
 	_lamp_lines(scenery, batches, ground, map_id)
 	_flush(scenery, batches)
 	_breach_skins(stage_root, map)
+	_fx.finish_build()
 
 
 # The ground's beds: the Dig's own stone material over the terrain mesh. The preset system
@@ -115,10 +125,22 @@ func _ground_beds(scenery: Node3D, stage_root: Node3D) -> void:
 
 func _slot_material(slot: String) -> Material:
 	if not SLOTS.has(slot):
+		_warn_once("slot_" + slot, "material slot missing or unknown, that piece keeps the fallback")
 		return null
 	if _dir_cache.has(slot):
 		return _dir_cache[slot]
-	var material := load(SLOTS[slot]) as Material
+	var path: String = SLOTS[slot]
+	var usable := ResourceLoader.exists(path)
+	if usable:
+		for dependency in ResourceLoader.get_dependencies(path):
+			var resource_path: String = dependency.get_slice("::", 2) if dependency.contains("::") else dependency
+			if resource_path.begins_with("res://") and not ResourceLoader.exists(resource_path):
+				usable = false
+	var material := load(path) as Material if usable else null
+	if material is ShaderMaterial and material.shader == null:
+		material = null
+	if material == null:
+		_warn_once(path, "%s missing or malformed, that material keeps the fallback" % path)
 	_dir_cache[slot] = material
 	return material
 
@@ -168,14 +190,19 @@ func _mech(file: String) -> String:
 
 
 # Queue one placed instance of every mesh in the GLB.
-func _put(batches: Dictionary, path: String, xf: Transform3D) -> bool:
+func _put(batches: Dictionary, path: String, xf: Transform3D, lamp_phase: float = -1.0, flicker: bool = false) -> bool:
 	var parts := _parts(path)
 	for part in parts:
 		var key: String = path + "#" + part["name"]
 		if not batches.has(key):
 			batches[key] = {"name": path.get_file().get_basename() + "_" + part["name"],
 				"mesh": part["mesh"], "material": part["material"], "xf": []}
+			if lamp_phase >= 0.0 and _fx.available:
+				batches[key]["material"] = _fx.lamp_material(part["slot"], part["material"])
+				batches[key]["custom"] = []
 		batches[key]["xf"].append(xf * part["local"])
+		if batches[key].has("custom"):
+			batches[key]["custom"].append(Color(1.0 if flicker else 0.0, lamp_phase, 0.0, 1.0))
 	return not parts.is_empty()
 
 
@@ -187,11 +214,14 @@ func _flush(scenery: Node3D, batches: Dictionary) -> void:
 			continue
 		var multi := MultiMesh.new()
 		multi.transform_format = MultiMesh.TRANSFORM_3D
+		multi.use_custom_data = batch.has("custom")
 		multi.mesh = batch["mesh"]
 		multi.instance_count = count
 		var origins := PackedVector3Array()
 		for i in count:
 			multi.set_instance_transform(i, batch["xf"][i])
+			if batch.has("custom"):
+				multi.set_instance_custom_data(i, batch["custom"][i])
 			origins.append((batch["xf"][i] as Transform3D).origin)
 		var view := MultiMeshInstance3D.new()
 		view.name = batch["name"]
@@ -202,6 +232,8 @@ func _flush(scenery: Node3D, batches: Dictionary) -> void:
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		scenery.add_child(view)
 		GraphicsPreset.register_scenery(view)
+		if batch.has("custom"):
+			_fx.lamp_views.append(view)
 		batch["xf"] = []
 	batches.clear()
 
@@ -257,7 +289,8 @@ func _edges(batches: Dictionary, ground: Callable, map_id: String) -> void:
 			if seat.y <= 3.0:
 				var p := _at(edge, c, a)
 				var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(p.x, seat.x - BURY * s, p.y))
-				_put(batches, _stone(kinds[kind]), xf)
+				if _put(batches, _stone(kinds[kind]), xf):
+					_fx.faces.append(xf * Vector3(0, 3.0, -0.7))
 			a += half + rng.randf_range(2.0, 14.0)
 		for i in int(mix["rubble"]):
 			_toe(batches, ground, edge, rng, _stone("rubble_cluster.glb"), rng.randf_range(2.2, 3.4), 0.1, true)
@@ -350,6 +383,7 @@ func _intake(batches: Dictionary, root: Transform3D) -> void:
 # light. Lens and rail are two meshes of one GLB; the GLB's own sockets chain the modules.
 func _lamp_lines(scenery: Node3D, batches: Dictionary, ground: Callable, map_id: String) -> void:
 	var curved := map_id == "dig_deep"
+	var line := 0
 	for edge in EDGES:
 		var yaw: float = edge["yaw"]
 		for a in [-90.0, 40.0]:
@@ -365,7 +399,7 @@ func _lamp_lines(scenery: Node3D, batches: Dictionary, ground: Callable, map_id:
 			var modules := 2 if curved else 3
 			for m in modules:
 				var file := "lamp_curve_module.glb" if curved else "lamp_straight_module.glb"
-				if not _put(batches, _mech(file), xf):
+				if not _put(batches, _mech(file), xf, line * 0.73, m == 1):
 					break
 				xf = xf * Transform3D(Basis.IDENTITY, Vector3(3.0, 0, -0.35) if curved else Vector3(2.667, 0, 0))
 			var light := OmniLight3D.new()
@@ -376,6 +410,8 @@ func _lamp_lines(scenery: Node3D, batches: Dictionary, ground: Callable, map_id:
 			light.shadow_enabled = false
 			scenery.add_child(light)
 			light.transform = first * Transform3D(Basis.IDENTITY, Vector3(4.0, -2.0, -3.0))
+			_fx.lights.append({"node": light, "phase": line * 0.73, "rest": light.transform})
+			line += 1
 
 
 static func _height_at(ground: Callable, edge: Dictionary, c: float, a: float) -> float:
@@ -402,11 +438,11 @@ func _breach_skins(stage_root: Node3D, map: RefCounted) -> void:
 
 func _skin(cover: StaticBody3D, rect: Rect2, manifest) -> void:
 	if not manifest is Dictionary:
-		push_warning("dig_scenery: dig_mechanical manifest missing, breach covers keep their boxes")
+		_warn_once("manifest", "dig_mechanical manifest missing, breach covers keep their boxes")
 		return
 	var key := "breach_assembly_%dx%d" % [int(rect.size.x), int(rect.size.y)]
 	if not manifest.get("assemblies", {}).has(key):
-		push_warning("dig_scenery: no breach assembly for %s" % key)
+		_warn_once(key, "no breach assembly for %s" % key)
 		return
 	var skin := Node3D.new()
 	skin.name = "BreachSkin"
@@ -417,7 +453,7 @@ func _skin(cover: StaticBody3D, rect: Rect2, manifest) -> void:
 	skin.position = Vector3(0, box_top + ASSEMBLY_LIFT, 0)
 	for item: Dictionary in manifest["assemblies"][key]["instances"]:
 		var parts := _parts(_mech(item["file"]))
-		if parts.is_empty():
+		if parts.is_empty() or parts.any(func(part): return part["material"] == null):
 			skin.free()
 			return
 		var rot: Array = item["rotation_degrees"]
@@ -436,6 +472,8 @@ func _skin(cover: StaticBody3D, rect: Rect2, manifest) -> void:
 			view.transform = xf * part["local"]
 			view.material_override = part["material"]
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			if String(item["name"]).begins_with("wedge_"):
+				view.set_meta("wedge", true)
 			if String(item["file"]) == "breach_tab.glb":
 				# P-R6: every plate is slam-anywhere, so every tab reads mint; no slate state.
 				view.set_instance_shader_parameter("state_tint", MINT)
@@ -444,6 +482,12 @@ func _skin(cover: StaticBody3D, rect: Rect2, manifest) -> void:
 	for child in cover.get_children():
 		if child is MeshInstance3D:
 			child.visible = false
+
+
+func _warn_once(key: String, message: String) -> void:
+	if not _warnings.has(key):
+		_warnings[key] = true
+		push_warning("dig_scenery: " + message)
 
 
 # A faint daylight shaft and a cool-warm pool above the membrane: light from the breach
