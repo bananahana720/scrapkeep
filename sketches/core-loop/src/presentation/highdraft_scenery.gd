@@ -35,7 +35,6 @@ const SKY_RING := 460.0
 # Tests point this at a missing folder to prove the fallback; the game never changes it.
 static var dir := DIR
 static var _sky: PanoramaSkyMaterial
-static var _saved := {}
 static var _warned := {}
 static var _coloured := {}
 
@@ -78,36 +77,22 @@ static func apply_environment(terrain, root: Node3D) -> void:
 	if env == null:
 		return
 	var sun := _sun(root)
-	if _saved.get("env") != env:
-		_saved = {"env": env, "sky": env.sky, "ambient": env.ambient_light_color, "exposure": env.tonemap_exposure,
-			"saturation": env.adjustment_saturation, "sun": sun, "sun_color": sun.light_color if sun != null else Color.WHITE,
-			"sun_rotation": sun.rotation_degrees if sun != null else Vector3.ZERO}
 	if _sky == null:
 		_sky = _sky_material()
 	var sky := Sky.new()
 	sky.sky_material = _sky
-	env.sky = sky
-	env.ambient_light_color = Color("b4c0c9")
-	env.tonemap_exposure = 1.18
-	env.adjustment_saturation = 1.0
+	var lights := []
 	if sun != null:
-		sun.light_color = Color("fff1dc")
-		sun.rotation_degrees = Vector3(-46.0, 62.0, 0.0)
+		lights.append({"object": sun, "values": {"light_color": Color("fff1dc"),
+			"rotation": Vector3(deg_to_rad(-46.0), deg_to_rad(62.0), 0.0)}})
+	GraphicsPreset.set_lighting(root, env, {"sky": sky, "ambient_light_color": Color("b4c0c9"),
+		"tonemap_exposure": 1.18, "adjustment_saturation": 1.0}, lights, "highdraft")
 
 
 static func restore_environment(terrain) -> void:
 	var env: Environment = terrain.environment
-	if env == null or _saved.get("env") != env:
-		return
-	env.sky = _saved["sky"]
-	env.ambient_light_color = _saved["ambient"]
-	env.tonemap_exposure = _saved["exposure"]
-	env.adjustment_saturation = _saved["saturation"]
-	var sun = _saved.get("sun")
-	if is_instance_valid(sun):
-		sun.light_color = _saved["sun_color"]
-		sun.rotation_degrees = _saved["sun_rotation"]
-	_saved = {}
+	if env != null:
+		GraphicsPreset.clear_lighting(env, "highdraft")
 
 
 static func _sun(root: Node3D) -> DirectionalLight3D:
