@@ -42,14 +42,17 @@ func _initialize() -> void:
 	_report("empty stage uses default", Rows.resolve({}) == Rows.resolve("default"), str(Rows.resolve({})))
 	var spillway := Rows.resolve("1-1")
 	_report("Spillway keeps ACE name and theme", spillway["synth_theme"] == 0 and spillway["ace_manifest"] == Ace.resolve_manifest(Ace.MANIFEST), str(spillway))
-	_report("Reach uses synth theme 1", Rows.resolve("1-2") == {"synth_theme": 1, "ace_manifest": ""}, str(Rows.resolve("1-2")))
+	_report("Reach uses ACE with synth theme 1", Rows.resolve("1-2") == {"synth_theme": 1, "ace_manifest": Rows.resolve_manifest("res://assets/music_ace/cable_reach/manifest.json")}, str(Rows.resolve("1-2")))
 
-	for zone in ["2-1", "2-2", "3-1", "3-2"]:
+	var tracks := {"2-1": "dig_upper", "2-2": "dig_deep", "3-1": "highdraft", "3-2": "highdraft_crown"}
+	for zone in tracks:
 		var theme := int(zone.split("-")[0]) - 1
-		_report("placeholder zone declared", Rows.ROWS.has(zone), zone)
-		_report("placeholder synth theme", Rows.resolve(zone) == {"synth_theme": theme, "ace_manifest": ""}, zone)
-		var synth = Ace.from_stage(zone)
-		_report("placeholder manifest is quiet", not synth.ready() and synth.missing == "" and synth.manifest_source == "", zone)
+		var path := Rows.resolve_manifest("res://assets/music_ace/%s/manifest.json" % tracks[zone])
+		_report("zone declared", Rows.ROWS.has(zone), zone)
+		_report("ACE retains fallback theme", path != "" and Rows.resolve(zone) == {"synth_theme": theme, "ace_manifest": path}, zone)
+		var band = Ace.from_stage(zone)
+		_report("zone manifest selects its track", band.manifest_source == path and band.manifest.get("theme") == tracks[zone]
+			and (band.ready() or band.missing.ends_with(".ogg")), zone)
 
 	var override := {"world": 1, "stage": 1, "music": {"theme": 2, "ace": ""}}
 	_report("override wins over Spillway", Rows.resolve(override) == {"synth_theme": 2, "ace_manifest": ""} and MusicEngine.stage_theme(override) == 2, str(Rows.resolve(override)))
@@ -69,7 +72,7 @@ func _initialize() -> void:
 		quiet = quiet and not band.ready() and band.missing == "" and Rows.resolve(missing_override) == {"synth_theme": 1, "ace_manifest": ""}
 	_report("repeated missing override is quiet", quiet, "five unready bands without loading a missing file")
 	var reach = Ace.from_stage("1-2")
-	_report("empty manifest is quiet", not reach.ready() and reach.missing == "" and reach.manifest_source == "", "Reach has no ACE package")
+	_report("Reach selects its package", reach.manifest.get("theme") == "cable_reach" and (reach.ready() or reach.missing.ends_with(".ogg")), reach.manifest_source)
 	var band = Ace.from_stage("1-1")
 	_report("ACE uses resolved row path", band.manifest_source == spillway["ace_manifest"], band.manifest_source)
 	_report("ACE stage factory reads Spillway", band.manifest.get("theme") == "spillway" and (band.ready() or band.missing.ends_with(".ogg")), "ready=%s missing=%s" % [band.ready(), band.missing])

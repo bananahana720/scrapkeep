@@ -185,7 +185,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--warden', choices=sorted(WARDEN_TAKES), default='s42')
     ap.add_argument('--slice', type=Path, default=SLICE)
+    ap.add_argument('--render', type=Path, help='new track render folder; preserves Spillway')
+    ap.add_argument('--stems', type=Path, help='htdemucs stem root for a new track')
+    ap.add_argument('--cuts', type=Path, help='measured take/source_start rows keyed by render job')
+    ap.add_argument('--nominal', action='store_true', help='provisional authored guard-bar cuts')
+    ap.add_argument('--seed', type=int, help='select a render seed instead of the first authored seed')
+    ap.add_argument('--bank', help='base, phase1 or menu bank')
     args = ap.parse_args()
+    if args.render:
+        from package_render_music import package_render
+        return package_render(args)
+    if args.stems or args.cuts or args.nominal or args.seed is not None or args.bank:
+        ap.error('new-track options require --render')
     slice_dir = args.slice
     warden_take = WARDEN_TAKES[args.warden]
     plan = json.loads((slice_dir / 'timeline.json').read_text())

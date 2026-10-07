@@ -68,11 +68,12 @@ func _process(_delta: float) -> bool:
 	_last_us = now
 	match _step:
 		0:
-			if _audio.sound_ready and _audio._ace_task >= 0 and WorkerThreadPool.is_task_completed(_audio._ace_task):
+			if _audio.sound_ready and _audio.ace != null and _audio.ace.mode == "menu":
 				_step = 1
 		1:
-			# The stems are loaded before the run starts: ace_ready() adopts them.
-			var preloaded: bool = _audio._ace_loaded != null and _audio._ace_loaded.ready()
+			# The title's worker result has already been adopted by the menu.
+			var preloaded: bool = _audio.ace.ready() and _audio.ace.manifest.get("theme") == "title" \
+				and _audio._ace_loaded_from == _audio._ace_from and _audio._ace_task == -1
 			_events.run_started.emit("arc_caster")
 			_step = 2
 			_last_us = Time.get_ticks_usec()
@@ -192,6 +193,11 @@ func _launch_out_of_the_break() -> void:
 		"piece %s, in the break %s; launched: flight holds the band %s; stage_entered leaves it (synth muted) %s; %d frames of flight, ACE audible and unbroken (longest silence %d) %s; landing at %d drops on the beat %d (%d frames on, ACE grid beat %s); stop scheduled on it %s; synth muted until its ramp %s, ACE played to the beat %s; the synth drop peaks %.3f in the 4410 frames from the beat; longest silence touchdown to a beat and a half after %d frames; band handed over %s" % [
 		piece, in_break, held, kept, flight.size(), _longest_silence(flight), through, touchdown, at, at - touchdown, on_beat, pending_stop,
 		muted_until_ramp, mode_until_at, drop_peak, silent, done])
+	_advance(BEAT * 20, 512)
+	_check("destination ACE starts after the synth landing drop", _audio.ace != ace \
+		and _audio.ace.manifest.get("theme") == "cable_reach" and _audio.ace.mode == "level" \
+		and engine.grid == _audio.ace and engine.band_muted and not engine.in_drop(),
+		"the directed flight and synth landing finish before Cable Reach's recorded bed")
 
 
 # The unsealed stage's gate: no piece, so the launch riser is the flight's music.
