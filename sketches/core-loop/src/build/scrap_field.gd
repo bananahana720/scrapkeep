@@ -1,6 +1,11 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PICKUP_GLB := "res://assets/models/world_one/scrap_pickups.glb"
+const PICKUP_VARIANTS := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
+static var _pickup_mesh_cache: Array[Mesh] = []
+static var _recovery_mesh_cache: Array[Mesh] = []
+static var _pickup_asset_checked := false
 
 # Scrap laid along the terrain's scrap lines. The magnet grows with heft (6 m times the
 # square root of heft, capped at 18 m) and reaches further again the faster you roll,
@@ -82,6 +87,69 @@ func setup() -> void:
 	_cog_mesh.bottom_radius = 0.45
 	_cog_mesh.height = 0.18
 	_cog_mesh.radial_segments = 8
+	if not _pickup_meshes().is_empty():
+		_material.resource_name = "field"
+		_cluster_material.resource_name = "field"
+		_material.vertex_color_use_as_albedo = true
+		_cluster_material.vertex_color_use_as_albedo = true
+
+
+static func _pickup_meshes() -> Array[Mesh]:
+	if _pickup_asset_checked:
+		return _pickup_mesh_cache
+	_pickup_asset_checked = true
+	var packed := load(PICKUP_GLB) as PackedScene if ResourceLoader.exists(PICKUP_GLB) else null
+	if packed != null:
+		var scene := packed.instantiate()
+		if scene != null:
+			var parts := scene.find_children("*", "MeshInstance3D", true, false)
+			if parts.size() == PICKUP_VARIANTS.size():
+				for variant in PICKUP_VARIANTS:
+					var part := scene.find_child(variant, true, false) as MeshInstance3D
+					if not _valid_pickup(part):
+						_pickup_mesh_cache.clear()
+						break
+					_pickup_mesh_cache.append(part.mesh)
+			scene.free()
+	if _pickup_mesh_cache.is_empty():
+		push_warning("scrap field: missing or malformed model; using scrap box fallback")
+	else:
+		for mesh in _pickup_mesh_cache:
+			var arrays := mesh.surface_get_arrays(0)
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			for i in vertices.size():
+				vertices[i] *= 1.75
+			arrays[Mesh.ARRAY_VERTEX] = vertices
+			var cluster := ArrayMesh.new()
+			cluster.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			cluster.surface_set_material(0, mesh.surface_get_material(0))
+			_recovery_mesh_cache.append(cluster)
+	return _pickup_mesh_cache
+
+
+static func _valid_pickup(part: MeshInstance3D) -> bool:
+	if part == null or not part.mesh is ArrayMesh or part.mesh.get_surface_count() != 1 \
+			or not part.transform.is_equal_approx(Transform3D.IDENTITY):
+		return false
+	var mesh := part.mesh
+	var material := mesh.surface_get_material(0) as BaseMaterial3D
+	if material == null or material.resource_name != "field" \
+			or material.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+		return false
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	var triangles := (indices.size() if not indices.is_empty() else vertices.size()) / 3
+	if vertices.is_empty() or vertices.size() > 610 or colors.size() != vertices.size() or triangles > 270:
+		return false
+	for vertex in vertices:
+		if vertex.abs().x > 0.401 or vertex.abs().y > 0.401 or vertex.abs().z > 0.401:
+			return false
+	for color in colors:
+		if color.a < 0.999:
+			return false
+	return true
 
 
 func lay_out(terrain, lines: Array, density: float, rng: RandomNumberGenerator) -> void:
@@ -269,6 +337,12 @@ func _add(at: Vector3, mesh: Mesh = null, material: Material = null) -> MeshInst
 	var item := MeshInstance3D.new()
 	item.mesh = mesh if mesh != null else _mesh
 	item.material_override = material if material != null else _material
+	if not _pickup_mesh_cache.is_empty() and (mesh == null or mesh == _cluster_mesh):
+		# Position is already seeded by the field; visual selection never draws RNG.
+		var seed_key := "%d:%d:%d" % [roundi(at.x * 1000.0), roundi(at.y * 1000.0), roundi(at.z * 1000.0)]
+		var variant := int(seed_key.hash() % PICKUP_VARIANTS.size())
+		item.mesh = _recovery_mesh_cache[variant] if mesh == _cluster_mesh else _pickup_mesh_cache[variant]
+		item.set_meta("scrap_variant", PICKUP_VARIANTS[variant])
 	item.position = at
 	add_child(item)
 	_items.append(item)
