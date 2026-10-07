@@ -123,8 +123,11 @@ static func roman(n: int) -> String:
 	return ["0", "I", "II", "III", "IV", "V", "VI"][clampi(n, 0, 6)]
 
 
-func _init(events_ref = null) -> void:
-	_id_rng.seed = 0x1D2026
+func _init(events_ref = null, session_seed = null) -> void:
+	# The id stream is seeded once from the session's global stream: players get fresh luck each
+	# session, seeded bots and tests repeat, and nothing drawn later can move it. Game takes the
+	# draw the moment it is created, before any node exists; a bare RunState draws here.
+	_id_rng.seed = session_seed if session_seed != null else randi() # lint: session seed
 	events = events_ref
 	reset_metrics()
 	if events != null:

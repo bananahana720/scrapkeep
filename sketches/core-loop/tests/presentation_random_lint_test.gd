@@ -11,13 +11,19 @@ func _initialize() -> void:
 	var bare := RegEx.create_from_string("(?<![A-Za-z0-9_.])(?:randf|randi|randf_range|randi_range|randfn|shuffle|pick_random)\\s*\\(")
 	var array_draw := RegEx.create_from_string("\\.(?:shuffle|pick_random)\\s*\\(")
 	var violations := []
+	var session_seeds := 0
 	for path in paths:
 		var lines := FileAccess.get_file_as_string(path).split("\n")
 		for i in lines.size():
 			var code := lines[i].split("#", true, 1)[0]
 			if bare.search(code) != null or array_draw.search(code) != null:
-				violations.append("%s:%d" % [path, i + 1])
+				# The run state seeds its id stream once from the session's global stream.
+				if path == "res://src/core/run_state.gd" and lines[i].ends_with("# lint: session seed"):
+					session_seeds += 1
+				else:
+					violations.append("%s:%d" % [path, i + 1])
 	t.check("presentation uses private random streams", violations.is_empty(), ", ".join(violations))
+	t.check("the run state draws its session seed exactly once", session_seeds == 1, "%d marked draws" % session_seeds)
 	quit(t.verdict())
 
 
