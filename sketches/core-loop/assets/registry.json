@@ -177,6 +177,78 @@
    }
   },
   {
+   "id": "arena_bowl_foundry",
+   "path": "res://assets/models/bosses/arena_bowl_foundry.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/arena_bowl_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/arena_bowl_dress.py"
+   },
+   "exception": {
+    "tris": 9000,
+    "verts": 16000,
+    "draws": 8
+   },
+   "exception_why": "Unit ARB authorizes foundry arena scenery where the Spillway kit has no rails or pour spouts. One static GLB contains the complete bowl's seven visual batches, with no physics bodies."
+  },
+  {
+   "assembly": {
+    "height": 0.65,
+    "radius": 36,
+    "repeat": 24,
+    "yaw_step_degrees": 15
+   },
+   "bounds": {
+    "max": [
+     9.281065940856934,
+     0,
+     -34.10673141479492
+    ],
+    "min": [
+     0.03696606680750847,
+     -0.6499999761581421,
+     -35.99998092651367
+    ],
+    "size": [
+     9.244099874049425,
+     0.6499999761581421,
+     1.89324951171875
+    ]
+   },
+   "budget_row": "prop",
+   "class": "prop",
+   "collision": false,
+   "draws": 1,
+   "id": "arena_waking_rim_sector.glb",
+   "loader": "src/presentation/arena_waking_dress.gd:_load_parts",
+   "material_slots": [
+    "steel"
+   ],
+   "materials": [
+    "steel"
+   ],
+   "nodes": [
+    "ReleaseRim",
+    "arena_waking_rim_sector"
+   ],
+   "parts": [
+    "ReleaseRim"
+   ],
+   "path": "res://assets/models/bosses/arena_waking_rim_sector.glb",
+   "provenance": {
+    "recipe": "tools/blender/bosses/arena_waking_rim_sector.py",
+    "source": "authored curved casting following the Dig steel slot"
+   },
+   "recipe": "tools/blender/bosses/arena_waking_rim_sector.py",
+   "root": "arena_waking_rim_sector",
+   "sha256": "3d775a512c2320566af93f7b6fc94ec8b1f35b8ae83820851d253d5283bae253",
+   "ships": true,
+   "triangles": 52,
+   "units": "metres, Godot +Y up, -Z forward",
+   "vertices": 84
+  },
+  {
    "id": "boss_brindle",
    "path": "res://assets/models/bosses/boss_brindle.glb",
    "class": "warden_base",
@@ -246,6 +318,18 @@
    "provenance": {
     "recipe": "tools/blender/bosses/mind_body.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "boss_pickup",
+   "path": "res://assets/models/bosses/boss_pickup.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/boss/boss.gd:440",
+   "provenance": {
+    "recipe": "tools/blender/bosses/boss_pickup.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "PSV design: artifacts/local/dress-preview/PSV/DESIGN.md; procedural bmesh, no external assets; D3 shared origin/material/budget rules."
    }
   },
   {
@@ -1671,10 +1755,61 @@
    }
   },
   {
+   "id": "ambush_altar",
+   "path": "res://assets/models/world_one/ambush_altar.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/ambush_altar.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/ambush_altar.py",
+    "note": "Procedural vertex-coloured shared-world device; design and CPU scale previews in artifacts/local/dress-preview/GPD."
+   },
+   "exception": {
+    "tris": 1100,
+    "verts": 2100,
+    "draws": 3
+   },
+   "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
+  },
+  {
+   "id": "bet_crate",
+   "path": "res://assets/models/world_one/bet_crate.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/bet_crate.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/bet_crate.py",
+    "note": "Procedural vertex-coloured shared-world device; design and CPU scale previews in artifacts/local/dress-preview/GPD."
+   },
+   "exception": {
+    "tris": 1100,
+    "verts": 2100,
+    "draws": 3
+   },
+   "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
+  },
+  {
    "path": "res://assets/models/world_one/clutter_kit.glb",
    "class": "clutter",
    "ships": true,
    "loader": "src/presentation/set_dressing.gd:9"
+  },
+  {
+   "id": "cracked_cache",
+   "path": "res://assets/models/world_one/cracked_cache.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "src/world/cracked_cache.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/cracked_cache.py",
+    "note": "Procedural vertex-coloured shared-world device; design and CPU scale previews in artifacts/local/dress-preview/GPD."
+   },
+   "exception": {
+    "tris": 1100,
+    "verts": 2100,
+    "draws": 5
+   },
+   "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
    "path": "res://assets/models/world_one/dam.glb",
@@ -1761,6 +1896,19 @@
    "exception_why": "mag trapper test ceiling 6 draws (independent top disc adds two surfaces)"
   },
   {
+   "id": "enemy_miniboss",
+   "path": "res://assets/models/world_one/enemy_miniboss.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/miniboss.gd:66",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_miniboss.py",
+    "design": "artifacts/local/dress-preview/PMB/DESIGN.md",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "Original procedural scrap impact press. Shared enemy budget; existing miniboss dimensions, -Z facing and fight loop preserved."
+   }
+  },
+  {
    "path": "res://assets/models/world_one/enemy_netcaster.glb",
    "class": "enemy",
    "ships": true,
@@ -1797,6 +1945,18 @@
    }
   },
   {
+   "id": "enemy_swarm_remnant",
+   "path": "res://assets/models/world_one/enemy_swarm_remnant.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/swarm_remnant.gd:205",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_swarm_remnant.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "PSV design: artifacts/local/dress-preview/PSV/DESIGN.md; procedural bmesh, no external assets; D3 shared origin/material/budget rules."
+   }
+  },
+  {
    "id": "enemy_swatter",
    "path": "res://assets/models/world_one/enemy_swatter.glb",
    "class": "enemy",
@@ -1806,6 +1966,18 @@
     "recipe": "tools/blender/world_one/enemy_swatter.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
     "note": "Ported world-one recipe; D3 supplies the shared enemy budget contract."
+   }
+  },
+  {
+   "id": "enemy_vault",
+   "path": "res://assets/models/world_one/enemy_vault.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/vault.gd:87",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_vault.py",
+    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D3/out/BUILD-SPEC.md",
+    "note": "PSV design: artifacts/local/dress-preview/PSV/DESIGN.md; procedural bmesh, no external assets; D3 shared origin/material/budget rules."
    }
   },
   {
@@ -1983,21 +2155,26 @@
   }
  ],
  "fragment_ids": [
+  "ambush_altar",
   "anchor_collar",
   "anchor_eye",
   "anchor_mast",
+  "arena_bowl_foundry",
+  "arena_waking_rim_sector.glb",
   "barge_skin",
   "barge_skin_rusted-salvaged-plate.webp",
   "bed_cut",
   "bed_floor",
   "bed_recess",
   "bed_rubble",
+  "bet_crate",
   "boss_brindle",
   "boss_brindle_scooter",
   "boss_mind_base",
   "boss_mind_base_MindCastWear.png",
   "boss_mind_kit",
   "boss_mind_kit_MindCastWear.png",
+  "boss_pickup",
   "boss_waking_base",
   "boss_waking_kit",
   "breach_rim_sector",
@@ -2016,6 +2193,7 @@
   "bridge_skin_rusted-salvaged-plate.webp",
   "cart_body",
   "cart_wheel",
+  "cracked_cache",
   "cut_face_long",
   "cut_face_scoop",
   "decal_atlas.png",
@@ -2035,9 +2213,12 @@
   "enemy_kite_drone",
   "enemy_lamp_swarm",
   "enemy_line_cutter",
+  "enemy_miniboss",
   "enemy_ramp_flipper",
   "enemy_reactor",
+  "enemy_swarm_remnant",
   "enemy_swatter",
+  "enemy_vault",
   "escape_rail",
   "escape_rail__primer_coil",
   "escape_rail__primer_mesh",

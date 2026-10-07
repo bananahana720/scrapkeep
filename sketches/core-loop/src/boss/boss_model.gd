@@ -12,7 +12,35 @@ static func load_scene(path: String) -> Node3D:
 	var packed := load(path) as PackedScene
 	if packed == null:
 		return null
-	return packed.instantiate() as Node3D
+	var scene := packed.instantiate() as Node3D
+	if scene != null:
+		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+			if view.mesh != null:
+				for i in view.mesh.get_surface_count():
+					var source := view.mesh.surface_get_material(i)
+					var drawn := _vertex_coloured(source)
+					if drawn != source:
+						view.set_surface_override_material(i, drawn)
+	return scene
+
+
+# Boss GLBs keep colour in vertex colours and import with white materials that ignore them,
+# so the Waking and the Mind drew white. One shared copy per source material.
+static var _coloured := {}
+
+
+static func _vertex_coloured(source: Material) -> Material:
+	if not (source is BaseMaterial3D):
+		return source
+	var base := source as BaseMaterial3D
+	if base.vertex_color_use_as_albedo or base.albedo_texture != null:
+		return source
+	var key := base.get_instance_id()
+	if not _coloured.has(key):
+		var copy := base.duplicate() as BaseMaterial3D
+		copy.vertex_color_use_as_albedo = true
+		_coloured[key] = copy
+	return _coloured[key]
 
 
 static func player_of(root: Node) -> AnimationPlayer:
