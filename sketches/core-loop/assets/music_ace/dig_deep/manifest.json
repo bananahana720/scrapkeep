@@ -1,0 +1,590 @@
+{
+ "format": 1,
+ "theme": "dig_deep",
+ "bank": "base",
+ "rate": 44100,
+ "key": "E",
+ "key_offset": 2,
+ "stems": [
+  "drums",
+  "bass",
+  "other"
+ ],
+ "level_db": 0.0,
+ "pre_roll": 4096,
+ "post_roll": 1024,
+ "loop_join": 441,
+ "join_ms": 10.0,
+ "silent_db": -80.0,
+ "sources": {
+  "calm": {
+   "take": "5eef849b-8d15-906c-bc64-891bfb239666",
+   "seed": 1152,
+   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/dig_deep/base-calm/5eef849b-8d15-906c-bc64-891bfb239666.wav",
+   "trim_samples": 246144,
+   "timing": "authored guard-bar target, unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/5eef849b-8d15-906c-bc64-891bfb239666/5eef849b-8d15-906c-bc64-891bfb239666.drums.wav",
+     "sha256": "22889f4ec784a1ec8d81b1416d6d743b2b9f7c19d7cfc73fd43b0a2adf702389"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/5eef849b-8d15-906c-bc64-891bfb239666/5eef849b-8d15-906c-bc64-891bfb239666.bass.wav",
+     "sha256": "aacd6dad53e0c3159396546521efaa24a1c776ffb66b5fe673ea2221c95e82f6"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/5eef849b-8d15-906c-bc64-891bfb239666/5eef849b-8d15-906c-bc64-891bfb239666.other.wav",
+     "sha256": "0038b45af68bb0d8d261645e2324dc93043fd13b3fad90cca2c1957d6e6e16df"
+    }
+   }
+  },
+  "travel": {
+   "take": "12167f8f-ac10-e98b-382c-382c072046f7",
+   "seed": 1152,
+   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/dig_deep/base-travel/12167f8f-ac10-e98b-382c-382c072046f7.wav",
+   "trim_samples": 246144,
+   "timing": "authored guard-bar target, unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/12167f8f-ac10-e98b-382c-382c072046f7/12167f8f-ac10-e98b-382c-382c072046f7.drums.wav",
+     "sha256": "7d5d4e9a8a8d7f635e1235fb90818321c2feae1d2a910dd324adf8138708f927"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/12167f8f-ac10-e98b-382c-382c072046f7/12167f8f-ac10-e98b-382c-382c072046f7.bass.wav",
+     "sha256": "a79fd29141055684bed493284c7d11170f6bce52baa142b29f8569963bb53516"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/12167f8f-ac10-e98b-382c-382c072046f7/12167f8f-ac10-e98b-382c-382c072046f7.other.wav",
+     "sha256": "63996a2881397c32cf45964fe9ee0c81a7b4003191541570488e2ab940f48b3c"
+    }
+   }
+  },
+  "pivot": {
+   "take": "2ff375c5-b23b-f76d-88ac-4783ae1dcf8e",
+   "seed": 1152,
+   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/dig_deep/base-pivot/2ff375c5-b23b-f76d-88ac-4783ae1dcf8e.wav",
+   "trim_samples": 246144,
+   "timing": "authored guard-bar target, unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/2ff375c5-b23b-f76d-88ac-4783ae1dcf8e/2ff375c5-b23b-f76d-88ac-4783ae1dcf8e.drums.wav",
+     "sha256": "bbe5bd6436c81ff661e8f60c8631be273fcaf0fdfdbbdf77acdeaccad46d3583"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/2ff375c5-b23b-f76d-88ac-4783ae1dcf8e/2ff375c5-b23b-f76d-88ac-4783ae1dcf8e.bass.wav",
+     "sha256": "631c7b44afedfb0b16063dadcf6aa3a5a22b1e0becbe7ae0e2d2c24152f10148"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/2ff375c5-b23b-f76d-88ac-4783ae1dcf8e/2ff375c5-b23b-f76d-88ac-4783ae1dcf8e.other.wav",
+     "sha256": "06e18d9b84aba0bd76609d2173388210753930934d93d1cc1db7ffefb43e103b"
+    }
+   }
+  },
+  "build": {
+   "take": "b484ac83-30ba-18f0-6d8e-5b9f17e1f178",
+   "seed": 1152,
+   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/dig_deep/base-build/b484ac83-30ba-18f0-6d8e-5b9f17e1f178.wav",
+   "trim_samples": 328192,
+   "timing": "authored guard-bar target, unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/b484ac83-30ba-18f0-6d8e-5b9f17e1f178/b484ac83-30ba-18f0-6d8e-5b9f17e1f178.drums.wav",
+     "sha256": "1870b8b0db946b478f4daa2b3cf2a6dca8398433564d4689b0345fe22a94b9a1"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/b484ac83-30ba-18f0-6d8e-5b9f17e1f178/b484ac83-30ba-18f0-6d8e-5b9f17e1f178.bass.wav",
+     "sha256": "2018775dab84a86211eda6daaa3e8c96863264ad40e6fadbd634a14eb4c1f585"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/b484ac83-30ba-18f0-6d8e-5b9f17e1f178/b484ac83-30ba-18f0-6d8e-5b9f17e1f178.other.wav",
+     "sha256": "681b3e2ef88d736745bbbf0dc58fd96d588b3741b34c07b56cf0239bd1537b7a"
+    }
+   }
+  },
+  "telegraph": {
+   "take": "56262bb7-67b9-f1bf-77a0-8733a10358ae",
+   "seed": 1152,
+   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/dig_deep/base-telegraph/56262bb7-67b9-f1bf-77a0-8733a10358ae.wav",
+   "trim_samples": 328192,
+   "timing": "authored guard-bar target, unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/56262bb7-67b9-f1bf-77a0-8733a10358ae/56262bb7-67b9-f1bf-77a0-8733a10358ae.drums.wav",
+     "sha256": "5825ad9ccf29468eb193e6d5ad5b35fdbbc805bc6235085496e2e350d49f603b"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/56262bb7-67b9-f1bf-77a0-8733a10358ae/56262bb7-67b9-f1bf-77a0-8733a10358ae.bass.wav",
+     "sha256": "2ec68e21ff5650e0627aa69227360d8415c733b70103c9a3a4a8826e2eb47308"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/56262bb7-67b9-f1bf-77a0-8733a10358ae/56262bb7-67b9-f1bf-77a0-8733a10358ae.other.wav",
+     "sha256": "b6d5e962f97135522ee4b3bbb12d7a2669b590490062caf6d20ff6ef0ef5abe1"
+    }
+   }
+  },
+  "open": {
+   "take": "34d60600-9f43-a291-3fea-3cae30eb112f",
+   "seed": 1152,
+   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/dig_deep/base-open/34d60600-9f43-a291-3fea-3cae30eb112f.wav",
+   "trim_samples": 328192,
+   "timing": "authored guard-bar target, unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/34d60600-9f43-a291-3fea-3cae30eb112f/34d60600-9f43-a291-3fea-3cae30eb112f.drums.wav",
+     "sha256": "2a8ca2251c9a2010153d475dbc5435317566723d5c39a658789f78fc8c274ae5"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/34d60600-9f43-a291-3fea-3cae30eb112f/34d60600-9f43-a291-3fea-3cae30eb112f.bass.wav",
+     "sha256": "438f88a0ca2e0ffb40502fc4d7e131fc0b1e308ed426c4291ffdefe7d480890f"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/34d60600-9f43-a291-3fea-3cae30eb112f/34d60600-9f43-a291-3fea-3cae30eb112f.other.wav",
+     "sha256": "757c15d16998be808d6dcf62ffc528f29e6d35a87669d4dca4cb7e659faf6d65"
+    }
+   }
+  },
+  "drop": {
+   "take": "41eae581-5844-ca81-3e8d-8eec4302499e",
+   "seed": 1152,
+   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/dig_deep/base-drop/41eae581-5844-ca81-3e8d-8eec4302499e.wav",
+   "trim_samples": 328192,
+   "timing": "authored guard-bar target, unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/41eae581-5844-ca81-3e8d-8eec4302499e/41eae581-5844-ca81-3e8d-8eec4302499e.drums.wav",
+     "sha256": "52b9d0741c8a8669a31e1ec32dc31ccada9b66a53ef8fdce2be04dbfa1bd297f"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/41eae581-5844-ca81-3e8d-8eec4302499e/41eae581-5844-ca81-3e8d-8eec4302499e.bass.wav",
+     "sha256": "d04e53e4a8f0cafa7fdd62c827e4c588aac9e6921a9616ec6f8f28c6cd05317b"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/41eae581-5844-ca81-3e8d-8eec4302499e/41eae581-5844-ca81-3e8d-8eec4302499e.other.wav",
+     "sha256": "58a0283a4ca8132fed346fbb9c4f8a3336bae17e1bb24f30d21f1fa468b68ccd"
+    }
+   }
+  },
+  "cadence": {
+   "take": "7c21ddab-39f2-f330-5503-70384b0a2777",
+   "seed": 1152,
+   "render": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/renders/dig_deep/base-cadence/7c21ddab-39f2-f330-5503-70384b0a2777.wav",
+   "trim_samples": 328192,
+   "timing": "authored guard-bar target, unverified",
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/7c21ddab-39f2-f330-5503-70384b0a2777/7c21ddab-39f2-f330-5503-70384b0a2777.drums.wav",
+     "sha256": "38321d6e6e089a756e66fda44a7e0e3d406687054619a50afd001728fe356ace"
+    },
+    "bass": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/7c21ddab-39f2-f330-5503-70384b0a2777/7c21ddab-39f2-f330-5503-70384b0a2777.bass.wav",
+     "sha256": "7b5b4a20b0014370dffcae473148ea5f40b9677c68786f115fd1f700b14e9e86"
+    },
+    "other": {
+     "path": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D8/out/stems/htdemucs/7c21ddab-39f2-f330-5503-70384b0a2777/7c21ddab-39f2-f330-5503-70384b0a2777.other.wav",
+     "sha256": "f191d3c96f7090aae4723aff52f6ac0ba3ffb92b04113b5a30491d44e3320fc0"
+    }
+   }
+  }
+ },
+ "clips": {
+  "calm": {
+   "parent": "base",
+   "take": "5eef849b-8d15-906c-bc64-891bfb239666",
+   "source_state": "base-calm",
+   "source_bars": "5-20",
+   "source_start": 246144,
+   "take_start": 246144,
+   "bpm": 172,
+   "beat": 15384,
+   "bar": 61536,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 988672,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 988672,
+   "key": "E",
+   "key_offset": 2,
+   "files": {
+    "drums": "calm.drums.ogg",
+    "bass": "calm.bass.ogg",
+    "other": "calm.other.ogg"
+   }
+  },
+  "travel": {
+   "parent": "base",
+   "take": "12167f8f-ac10-e98b-382c-382c072046f7",
+   "source_state": "base-travel",
+   "source_bars": "5-20",
+   "source_start": 246144,
+   "take_start": 246144,
+   "bpm": 172,
+   "beat": 15384,
+   "bar": 61536,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 988672,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 988672,
+   "key": "E",
+   "key_offset": 2,
+   "files": {
+    "drums": "travel.drums.ogg",
+    "bass": "travel.bass.ogg",
+    "other": "travel.other.ogg"
+   }
+  },
+  "pivot": {
+   "parent": "base",
+   "take": "2ff375c5-b23b-f76d-88ac-4783ae1dcf8e",
+   "source_state": "base-pivot",
+   "source_bars": "5-5",
+   "source_start": 246144,
+   "take_start": 246144,
+   "bpm": 172,
+   "beat": 15384,
+   "bar": 61536,
+   "beats_per_bar": 4,
+   "bars": 1,
+   "entry": 4096,
+   "exit": 65632,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 66656,
+   "key": "E",
+   "key_offset": 2,
+   "files": {
+    "drums": "pivot.drums.ogg",
+    "bass": "pivot.bass.ogg",
+    "other": "pivot.other.ogg"
+   }
+  },
+  "build": {
+   "parent": "base",
+   "take": "b484ac83-30ba-18f0-6d8e-5b9f17e1f178",
+   "source_state": "base-build",
+   "source_bars": "5-20",
+   "source_start": 328192,
+   "take_start": 328192,
+   "bpm": 129,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 1316864,
+   "loop": true,
+   "loop_offset": 660480,
+   "loop_to_bar": 9,
+   "sample_count": 1316864,
+   "key": "E",
+   "key_offset": 2,
+   "files": {
+    "drums": "build.drums.ogg",
+    "bass": "build.bass.ogg",
+    "other": "build.other.ogg"
+   }
+  },
+  "telegraph": {
+   "parent": "base",
+   "take": "56262bb7-67b9-f1bf-77a0-8733a10358ae",
+   "source_state": "base-telegraph",
+   "source_bars": "5-8",
+   "source_start": 328192,
+   "take_start": 328192,
+   "bpm": 129,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 332288,
+   "key": "E",
+   "key_offset": 2,
+   "files": {
+    "drums": "telegraph.drums.ogg",
+    "bass": "telegraph.bass.ogg",
+    "other": "telegraph.other.ogg"
+   }
+  },
+  "open": {
+   "parent": "base",
+   "take": "34d60600-9f43-a291-3fea-3cae30eb112f",
+   "source_state": "base-open",
+   "source_bars": "5-8",
+   "source_start": 328192,
+   "take_start": 328192,
+   "bpm": 129,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 332288,
+   "key": "E",
+   "key_offset": 2,
+   "files": {
+    "drums": "open.drums.ogg",
+    "bass": "open.bass.ogg",
+    "other": "open.other.ogg"
+   }
+  },
+  "drop": {
+   "parent": "base",
+   "take": "41eae581-5844-ca81-3e8d-8eec4302499e",
+   "source_state": "base-drop",
+   "source_bars": "5-8",
+   "source_start": 328192,
+   "take_start": 328192,
+   "bpm": 129,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 4,
+   "entry": 4096,
+   "exit": 332288,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 333312,
+   "key": "E",
+   "key_offset": 2,
+   "files": {
+    "drums": "drop.drums.ogg",
+    "bass": "drop.bass.ogg",
+    "other": "drop.other.ogg"
+   }
+  },
+  "cadence": {
+   "parent": "base",
+   "take": "7c21ddab-39f2-f330-5503-70384b0a2777",
+   "source_state": "base-cadence",
+   "source_bars": "5-6",
+   "source_start": 328192,
+   "take_start": 328192,
+   "bpm": 129,
+   "beat": 20512,
+   "bar": 82048,
+   "beats_per_bar": 4,
+   "bars": 2,
+   "entry": 4096,
+   "exit": 168192,
+   "loop": false,
+   "loop_offset": 0,
+   "loop_to_bar": null,
+   "sample_count": 169216,
+   "key": "E",
+   "key_offset": 2,
+   "files": {
+    "drums": "cadence.drums.ogg",
+    "bass": "cadence.bass.ogg",
+    "other": "cadence.other.ogg"
+   }
+  }
+ },
+ "sections": {
+  "calm": {
+   "clip": "calm",
+   "game": "shelf, closed Warden, pressure low",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full"
+  },
+  "travel": {
+   "clip": "travel",
+   "game": "shelf, pressure up",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full"
+  },
+  "pivot": {
+   "clip": "pivot",
+   "game": "boss or Warden entry",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full",
+   "hold_bars": 1,
+   "then": "build"
+  },
+  "build": {
+   "clip": "build",
+   "game": "bank and lift, the Warden closed",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full",
+   "reenter_bar": 9
+  },
+  "telegraph": {
+   "clip": "telegraph",
+   "game": "the pulse charging",
+   "enter": "beat",
+   "phase": "keep",
+   "profile": "full"
+  },
+  "open": {
+   "clip": "open",
+   "game": "window open, the held breath",
+   "enter": "beat",
+   "phase": "keep",
+   "profile": "breath"
+  },
+  "drop": {
+   "clip": "drop",
+   "game": "landed on the core",
+   "enter": "contact",
+   "phase": "start",
+   "profile": "full",
+   "hold_bars": 1,
+   "then": "follow"
+  },
+  "break": {
+   "clip": "open",
+   "game": "the Warden breaks: breath before home",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "breath",
+   "bars": 4,
+   "then": "return",
+   "directed": true
+  },
+  "return": {
+   "clip": "cadence",
+   "game": "kill cadence, A7b9 then D",
+   "enter": "then",
+   "phase": "start",
+   "profile": "full",
+   "then": "home",
+   "directed": true
+  },
+  "home": {
+   "clip": "calm",
+   "game": "back on the shelf at 172",
+   "enter": "then",
+   "phase": "start",
+   "profile": "full",
+   "bars": 8,
+   "then": "release",
+   "directed": true
+  }
+ },
+ "set_piece": [
+  "break",
+  "return",
+  "home"
+ ],
+ "profiles": {
+  "full": {
+   "drums": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  },
+  "lounge": {
+   "drums": {
+    "volume_db": -12.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": -4.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  }
+ },
+ "breath": {
+  "raw": {
+   "stems": {
+    "drums": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "the take as ACE played it: every stem at 0 dB"
+  },
+  "hard": {
+   "stems": {
+    "drums": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": -8.0,
+     "lowpass_hz": 900,
+     "lowpass_order": 2
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "round2/automation/open.json"
+  },
+  "gentle": {
+   "stems": {
+    "drums": {
+     "volume_db": -12.0,
+     "lowpass_hz": 2000,
+     "lowpass_order": 2
+    },
+    "bass": {
+     "volume_db": -6.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 60.0,
+   "ramp_out_ms": 20.0,
+   "source": "round2/automation/open-gentle.json"
+  }
+ },
+ "breath_default": "hard",
+ "cuts": "nominal-unverified",
+ "timing_verified": false
+}

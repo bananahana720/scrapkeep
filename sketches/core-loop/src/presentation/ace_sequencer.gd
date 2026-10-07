@@ -242,6 +242,26 @@ func stop(ramp := STOP_RAMP) -> void:
 	events_log.append(["stop", clock, ""])
 
 
+# Menus keep their chosen outcome; systemic pressure never changes a lost summary.
+func start_menu(at: int, won := true) -> void:
+	start_level(at)
+	_cancel_pending()
+	actions.clear()
+	mode = "menu"
+	var name := "calm"
+	if manifest.get("theme", "") == "summary":
+		name = "return" if won else "travel"
+	_schedule(name, maxi(at, clock + _join_frames(name)))
+
+
+func start_boss(at: int) -> void:
+	start_level(at)
+	_cancel_pending()
+	actions.clear()
+	mode = "warden"
+	_schedule("pivot", maxi(at, clock + _join_frames("pivot")))
+
+
 # The band stops at transport sample at: the sounding section plays to it and fades over
 # ramp frames from there (a set piece heard through a launch's flight, then handed to the
 # synth on the landing's beat). Anything that restarts or stops the band cancels it.
@@ -285,7 +305,7 @@ func set_warden_state(state: String) -> void:
 # beat. Returns the drop's transport sample, or -1 when nothing plays or the break has
 # begun.
 func drop_now() -> int:
-	if mode == "off" or (mode == "piece" and not piece_after_drop and section in ["break", "return", "home"]):
+	if mode in ["off", "menu"] or (mode == "piece" and not piece_after_drop and section in ["break", "return", "home"]):
 		return -1
 	if mode == "piece" and pending.get("section", "") == "break":
 		piece_after_drop = true
@@ -307,7 +327,7 @@ func drop_now() -> int:
 # The Warden broke: the directed set piece, once. After a drop still sounding, it waits
 # for the drop's end; otherwise it enters on the next bar.
 func warden_broken() -> void:
-	if mode == "off" or mode == "piece":
+	if mode in ["off", "piece", "menu"]:
 		return
 	mode = "piece"
 	if pending.get("section", "") == "drop" or (section == "drop" and pending.is_empty()):

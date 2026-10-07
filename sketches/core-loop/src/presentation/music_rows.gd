@@ -6,13 +6,16 @@ const THEME_COUNT := 3
 const ROWS := {
 	"default": {"synth_theme": 0, "ace_manifest": ""},
 	"1-1": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/spillway/manifest.json"},
-	"1-2": {"synth_theme": 1, "ace_manifest": ""},
-	# Tone-pending synth placeholders; authored ACE takes arrive after listening approval.
-	"2-1": {"synth_theme": 1, "ace_manifest": ""},
-	"2-2": {"synth_theme": 1, "ace_manifest": ""},
-	"3-1": {"synth_theme": 2, "ace_manifest": ""},
-	"3-2": {"synth_theme": 2, "ace_manifest": ""},
-	"brindle": {"synth_theme": 0, "ace_manifest": ""},
+	"1-2": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/cable_reach/manifest.json"},
+	"2-1": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/dig_upper/manifest.json"},
+	"2-2": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/dig_deep/manifest.json"},
+	"3-1": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/highdraft/manifest.json"},
+	"3-2": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/highdraft_crown/manifest.json"},
+	"brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/brindle/manifest.json"},
+	"waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/waking/manifest.json"},
+	"mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/mind/manifest.json"},
+	"title": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title/manifest.json"},
+	"summary": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/summary/manifest.json"},
 }
 
 
@@ -29,7 +32,13 @@ static func resolve(stage = "default", sidecar_dir := "", stages = StageDefs) ->
 			override = stage["music"]
 	var pack: Dictionary = ROWS.get(id, ROWS["default"]).duplicate()
 	pack["synth_theme"] = int(override.get("theme", pack["synth_theme"]))
-	if override.has("ace"):
+	# The canonical alpha rows predate the new packs. Their empty ACE fields inherit
+	# ROWS; caller-authored overrides still explicitly select synth with an empty field.
+	var inherited: bool = (stage is Dictionary and stage.has("stage")
+		and stages in [StageDefs, StageDefs.AlphaDefs]
+		and stage == stages.of(int(stage["stage"]))
+		and str(override.get("ace", "")) == "")
+	if override.has("ace") and not inherited:
 		var ace := str(override["ace"])
 		pack["ace_manifest"] = "" if ace == "" else "res://assets/music_ace/%s/manifest.json" % ace
 	return resolve_pack(pack, sidecar_dir)

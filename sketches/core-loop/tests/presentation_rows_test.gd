@@ -33,6 +33,8 @@ var _failures := 0
 var _step := 0
 var _wait_until := 0
 var _asked_at := 0
+var _beat_origin := 0
+var _beat_frames := 0
 var _radius_before := 0.0
 
 
@@ -92,9 +94,12 @@ func _process(_delta: float) -> bool:
 		1:
 			engine = _audio.engine
 			# Wait for a play head that sits mid-bar, well away from a beat.
-			var in_bar := posmod(engine.clock - engine.bar_origin, Harmony.BAR)
-			var in_beat := engine.clock % Harmony.BEAT
-			if in_bar < Harmony.BEAT or in_beat < Harmony.BEAT / 4 or in_beat > Harmony.BEAT * 3 / 4:
+			_beat_origin = engine.grid.origin if engine.grid != null else engine.bar_origin
+			_beat_frames = engine.grid.grid_beat if engine.grid != null else engine.beat_len()
+			var bar: int = engine.grid.grid_bar if engine.grid != null else engine.bar_len()
+			var in_bar := posmod(engine.clock - _beat_origin, bar)
+			var in_beat := posmod(engine.clock - _beat_origin, _beat_frames)
+			if in_bar < _beat_frames or in_beat < _beat_frames / 4 or in_beat > _beat_frames * 3 / 4:
 				return false
 			_audio.cue_log.clear()
 			_asked_at = engine.clock
@@ -103,9 +108,9 @@ func _process(_delta: float) -> bool:
 		2:
 			var starts: Array = engine.stinger_starts.filter(func(s: Array): return s[0] == "class_up")
 			var start: int = starts[0][1] if starts.size() > 0 else -1
-			var off := posmod(start, Harmony.BEAT)
-			var on_beat := start > _asked_at and (off <= 1 or off >= Harmony.BEAT - 1) and start - _asked_at <= Harmony.BEAT
-			_check("class up on the beat", on_beat, "asked mid-bar at sample %d (%.2f into its beat), stinger started at %d, %d frames off the beat" % [_asked_at, float(_asked_at % Harmony.BEAT) / Harmony.BEAT, start, mini(off, Harmony.BEAT - off)])
+			var off := posmod(start - _beat_origin, _beat_frames)
+			var on_beat := start > _asked_at and (off <= 1 or off >= _beat_frames - 1) and start - _asked_at <= _beat_frames
+			_check("class up on the beat", on_beat, "asked mid-bar at sample %d (%.2f into its beat), stinger started at %d, %d frames off the beat" % [_asked_at, float(posmod(_asked_at - _beat_origin, _beat_frames)) / _beat_frames, start, mini(off, _beat_frames - off)])
 			var juice = _game.presentation.juice
 			_check("class up juice", _logged(juice, "class_up") and is_equal_approx(juice.shell_target(), 1.1) and _game.presentation.vfx.spawned.get("heft_class_changed", 0) >= 1,
 				"squash-pop, a ripple ring and a shell target of %.2f" % juice.shell_target())
