@@ -32,6 +32,8 @@ var index := 0
 var pins_led := 0
 var _seam: MeshInstance3D
 var _body: MeshInstance3D
+static var _shared: Array = []
+static var _asset_warned := false
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -161,6 +163,21 @@ func _build_body() -> void:
 	add_child(shape)
 	_base_color = Roster.ANCIENT_ENAMEL
 	_material = Palette.solid(Roster.ANCIENT_ENAMEL)
+	var parts := _parts()
+	if not parts.is_empty():
+		for part in parts:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			if part.flash >= 0:
+				mi.set_surface_override_material(part.flash, _material)
+			_visual_parent().add_child(mi)
+			if part.name == "RemnantBody":
+				_body = mi
+			elif part.name == "RemnantSeam":
+				_seam = mi
+		return
 	var prism := CylinderMesh.new()
 	prism.radial_segments = 3
 	prism.top_radius = SIZE
@@ -180,3 +197,60 @@ func _build_body() -> void:
 	_seam.material_override = Palette.solid(Roster.ANCIENT_LIGHT, 2.2)
 	_seam.position = Vector3.UP * 0.02
 	_visual_parent().add_child(_seam)
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_one/enemy_swarm_remnant.glb"
+	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
+	if packed == null:
+		_asset_warning()
+		return []
+	var scene := packed.instantiate()
+	var parts: Array = []
+	var names := []
+	var valid := scene != null
+	if scene != null:
+		for node in scene.find_children("*", "MeshInstance3D", true, false):
+			var mi := node as MeshInstance3D
+			if mi.mesh == null or mi.mesh.get_surface_count() == 0:
+				valid = false
+				continue
+			var mesh: Mesh = mi.mesh.duplicate()
+			var flash := -1
+			var slots := []
+			for i in mesh.get_surface_count():
+				var source := mesh.surface_get_material(i)
+				if source == null:
+					valid = false
+					continue
+				var slot := source.resource_name
+				slots.append(slot)
+				if slot == "ancient_enamel":
+					flash = i
+				var mat := Palette.solid(Roster.ANCIENT_LIGHT, 2.2) if slot == "ancient_light" else Palette.solid(Color.WHITE)
+				mat.vertex_color_use_as_albedo = slot == "paint"
+				mesh.surface_set_material(i, mat)
+			valid = valid and ((mi.name == "RemnantBody" and slots.size() == 2 and "ancient_enamel" in slots and "paint" in slots)
+				or (mi.name == "RemnantSeam" and slots == ["ancient_light"]))
+			var xform := mi.transform
+			var ancestor := mi.get_parent()
+			while ancestor != scene and ancestor is Node3D:
+				xform = ancestor.transform * xform
+				ancestor = ancestor.get_parent()
+			names.append(String(mi.name))
+			parts.append({"name": mi.name, "mesh": mesh, "xform": xform, "flash": flash})
+		scene.free()
+	names.sort()
+	if not valid or names != ["RemnantBody", "RemnantSeam"]:
+		_asset_warning()
+		return []
+	_shared = parts
+	return _shared
+
+
+static func _asset_warning() -> void:
+	if not _asset_warned:
+		_asset_warned = true
+		push_warning("swarm_remnant: missing or malformed model; using cast triangle fallback")

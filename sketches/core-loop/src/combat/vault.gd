@@ -9,6 +9,8 @@ extends "res://src/combat/enemy.gd"
 const HALF_HEIGHT := 1.3
 const RADIUS := 1.7
 const SIZE := Vector3(3.2, 2.6, 3.2)
+static var _shared: Array = []
+static var _asset_warned := false
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -29,6 +31,28 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	add_child(shape)
 	_base_color = Palette.COPPER
 	_material = Palette.solid(_base_color, 0.2)
+	_build_visual()
+
+
+func _build_visual() -> void:
+	var parts := _parts()
+	if not parts.is_empty():
+		_base_color = Color.WHITE
+		_material.albedo_color = _base_color
+		_material.emission_enabled = false
+		_material.vertex_color_use_as_albedo = true
+		var band_mat := _plate_material()
+		for part in parts:
+			var mi := MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			if part.name == "VaultBody":
+				mi.set_surface_override_material(0, _material)
+			elif part.name == "VaultPlating":
+				mi.material_override = band_mat
+			_visual_parent().add_child(mi)
+		return
 	var body := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = SIZE * 0.9
@@ -55,6 +79,55 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	lamp.radius = 0.6
 	lamp.height = 1.2
 	_accent(lamp, Palette.SAND, 3.0, Vector3.UP * (HALF_HEIGHT + 2.0))
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	var path := "res://assets/models/world_one/enemy_vault.glb"
+	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
+	if packed == null:
+		_asset_warning()
+		return []
+	var scene := packed.instantiate()
+	var parts: Array = []
+	var names := []
+	var valid := scene != null
+	var expected := {"VaultBody": "fleet_paint", "VaultPlating": "part_state", "VaultLamp": "working_tool"}
+	if scene != null:
+		for node in scene.find_children("*", "MeshInstance3D", true, false):
+			var mi := node as MeshInstance3D
+			if mi.mesh == null or mi.mesh.get_surface_count() != 1:
+				valid = false
+				continue
+			var source := mi.mesh.surface_get_material(0)
+			if source == null or source.resource_name != expected.get(String(mi.name), ""):
+				valid = false
+				continue
+			var mesh: Mesh = mi.mesh.duplicate()
+			var mat := Palette.solid(Palette.SAND, 3.0) if mi.name == "VaultLamp" else Palette.solid(Color.WHITE)
+			mat.vertex_color_use_as_albedo = mi.name == "VaultBody"
+			mesh.surface_set_material(0, mat)
+			var xform := mi.transform
+			var ancestor := mi.get_parent()
+			while ancestor != scene and ancestor is Node3D:
+				xform = ancestor.transform * xform
+				ancestor = ancestor.get_parent()
+			names.append(String(mi.name))
+			parts.append({"name": mi.name, "mesh": mesh, "xform": xform})
+		scene.free()
+	names.sort()
+	if not valid or names != ["VaultBody", "VaultLamp", "VaultPlating"]:
+		_asset_warning()
+		return []
+	_shared = parts
+	return _shared
+
+
+static func _asset_warning() -> void:
+	if not _asset_warned:
+		_asset_warned = true
+		push_warning("vault: missing or malformed model; using cache fallback")
 
 
 func knock(_direction: Vector3, _force: float) -> void:
