@@ -61,6 +61,7 @@ func _configure(threat: float) -> void:
 # (front slab, shoulder and rear cladding) that shows exactly while plates > 0. The glb is read
 # once; every brute shares its meshes and adds only its own flashing body material as a surface
 # override and its own tinted plate material.
+static var _warned_asset := false
 static var _shared: Dictionary = {}
 
 # The crack glyph sits on the slab's face (front face at z = 1.35), 0.07 m off it so its strokes
@@ -105,13 +106,19 @@ static func _parts() -> Dictionary:
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
 		for i in mesh.get_surface_count():
-			var slot := mesh.surface_get_material(i).resource_name
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("plated_brute: surface has no material; using default finish")
+			var slot := surface_material.resource_name if surface_material != null else ""
 			if slot == "fleet_paint":
 				flash = i
 			mesh.surface_set_material(i, painted if slot == "paint" else charcoal)
 		meshes[node.name] = mesh
 	if flash < 0:
-		push_error("enemy_plated_brute.glb has no fleet_paint surface; the flash lands on surface 0")
+		if not _warned_asset:
+			_warned_asset = true
+			push_warning("enemy_plated_brute.glb has no fleet_paint surface; using default finish")
 		flash = 0
 	meshes["BrutePlates"] = _mask_uvs(meshes["BrutePlates"])
 	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D

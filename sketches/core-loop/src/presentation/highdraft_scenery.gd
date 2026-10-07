@@ -287,15 +287,21 @@ static func _islands(parent: Node3D, map, ground: Callable) -> void:
 
 static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) -> ArrayMesh:
 	var source := _mesh(file, "IslandStone")
-	if source == null:
-		return null
+	if source == null or source.get_surface_count() == 0:
+		return _reject_island(file)
 	var arrays := source.surface_get_arrays(0)
 	var material := source.surface_get_material(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
-	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
-	var original_normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
-	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV] if arrays[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+	var original_normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL] if arrays[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	if material == null or vertices.is_empty() or colors.size() != vertices.size() or original_normals.size() != vertices.size() \
+			or indices.is_empty() or indices.size() % 3 != 0 or source.get_aabb().size.x <= 0.0:
+		return _reject_island(file)
+	for index in indices:
+		if index < 0 or index >= vertices.size():
+			return _reject_island(file)
 	var centre: Vector2 = isle["at"]
 	var radius: float = isle["radius"]
 	var top: float = isle["top"]
@@ -351,6 +357,13 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built)
 	mesh.surface_set_material(0, material)
 	return mesh
+
+
+static func _reject_island(file: String) -> ArrayMesh:
+	if not _warned.has(dir + file):
+		_warned[dir + file] = true
+		push_warning("highdraft_scenery: %s malformed; keeping greybox island" % file)
+	return null
 
 
 static func _fit(v: Vector3, centre: Vector2, radius: float, top: float, scale: float, map, ground: Callable) -> Vector3:

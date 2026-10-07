@@ -21,6 +21,7 @@ const TURN_RATE := 6.0
 const MOVING_SPEED := 1.0
 # Renderer updates can outlive a retired mesh during a socket swap.
 static var _painted_materials := {}
+static var _warned_empty_mesh := false
 
 var ctx
 var model_dir := MODEL_DIR
@@ -61,6 +62,11 @@ static func model_path(sockets: Array, dir := MODEL_DIR) -> String:
 # repaints the cached GLB or a live companion's equipped cosmetic.
 static func dress_model(model: Node) -> void:
 	for mesh in model.find_children("*", "MeshInstance3D", true, false):
+		if mesh.mesh == null:
+			if not _warned_empty_mesh:
+				_warned_empty_mesh = true
+				push_warning("companion_body: empty mesh; skipping piece")
+			continue
 		for surface in mesh.mesh.get_surface_count():
 			var original := mesh.get_active_material(surface) as BaseMaterial3D
 			if original == null or original.resource_name != "paint" or original.vertex_color_use_as_albedo:

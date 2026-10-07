@@ -5,7 +5,8 @@ const PICKUP_GLB := "res://assets/models/world_one/scrap_pickups.glb"
 const PICKUP_VARIANTS := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
 static var _pickup_mesh_cache: Array[Mesh] = []
 static var _recovery_mesh_cache: Array[Mesh] = []
-static var _pickup_asset_checked := false
+static var model_path := PICKUP_GLB
+static var _pickup_assets := {}
 
 # Scrap laid along the terrain's scrap lines. The magnet grows with heft (6 m times the
 # square root of heft, capped at 18 m) and reaches further again the faster you roll,
@@ -105,10 +106,13 @@ static func _pickup_material(color: Color) -> ShaderMaterial:
 
 
 static func _pickup_meshes() -> Array[Mesh]:
-	if _pickup_asset_checked:
+	if _pickup_assets.has(model_path):
+		_pickup_mesh_cache = _pickup_assets[model_path]["meshes"]
+		_recovery_mesh_cache = _pickup_assets[model_path]["recovery"]
 		return _pickup_mesh_cache
-	_pickup_asset_checked = true
-	var packed := load(PICKUP_GLB) as PackedScene if ResourceLoader.exists(PICKUP_GLB) else null
+	_pickup_mesh_cache = []
+	_recovery_mesh_cache = []
+	var packed := load(model_path) as PackedScene if ResourceLoader.exists(model_path) else null
 	if packed != null:
 		var scene := packed.instantiate()
 		if scene != null:
@@ -134,6 +138,7 @@ static func _pickup_meshes() -> Array[Mesh]:
 			cluster.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 			cluster.surface_set_material(0, mesh.surface_get_material(0))
 			_recovery_mesh_cache.append(cluster)
+	_pickup_assets[model_path] = {"meshes": _pickup_mesh_cache, "recovery": _recovery_mesh_cache}
 	return _pickup_mesh_cache
 
 

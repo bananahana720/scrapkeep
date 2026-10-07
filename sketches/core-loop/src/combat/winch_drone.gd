@@ -62,6 +62,7 @@ func _configure(threat: float) -> void:
 # clear ahead of it. e11_cable_guide pitches the assembly and spins drum and rotor. The glb is read
 # once and its meshes are shared; each drone adds only its own flashing body material, set on the
 # glb's fleet_paint surface (Fleet oxide, RUST).
+static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -103,7 +104,11 @@ static func _parts() -> Array:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var body := 0
 		for i in mesh.get_surface_count():
-			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("winch_drone: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "fleet_paint":
 				body = i
 			mesh.surface_set_material(i, painted)
 		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "rotor": mi.name.begins_with("WinchRotor"), "drum": mi.name.begins_with("WinchDrum")})

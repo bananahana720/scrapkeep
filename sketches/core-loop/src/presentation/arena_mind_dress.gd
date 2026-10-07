@@ -53,9 +53,12 @@ func _load_kit() -> Dictionary:
 		var packed := load(path) as PackedScene
 		if packed == null:
 			return {}
-		var scene := packed.instantiate() as Node3D
-		if scene == null:
+		var instance := packed.instantiate()
+		if not instance is Node3D:
+			if instance != null:
+				instance.free()
 			return {}
+		var scene := instance as Node3D
 		var view := scene.find_child(PARTS[key][1], true, false) as MeshInstance3D
 		var mesh := _rebuild_mesh(view.mesh) if view != null and view.transform.is_equal_approx(Transform3D.IDENTITY) else null
 		var cosmetic := scene.find_children("*", "CollisionObject3D", true, false).is_empty() \

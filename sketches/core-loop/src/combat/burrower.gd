@@ -21,6 +21,7 @@ var slam_kills := 0
 var _lane_had_ball := false
 var _marker: MeshInstance3D
 var _marker_lip := -1
+static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -101,7 +102,11 @@ static func _parts() -> Array:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var flash := -1
 		for i in mesh.get_surface_count():
-			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("burrower: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "fleet_paint":
 				flash = i
 			mesh.surface_set_material(i, painted)
 		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})

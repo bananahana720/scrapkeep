@@ -50,6 +50,7 @@ const WIND_SPIN := 0.35
 # about the ring's own axis, so the opening never rolls edge-on.
 const SEAT_AXIS := Vector3(0.6, 0.53, 0.6)
 
+static var _warned_asset := false
 static var _shared: Dictionary = {}
 
 
@@ -87,7 +88,11 @@ static func _parts() -> Dictionary:
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
 		for i in mesh.get_surface_count():
-			var slot := mesh.surface_get_material(i).resource_name
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("bola_thrower: surface has no material; using default finish")
+			var slot := surface_material.resource_name if surface_material != null else ""
 			if slot == "fleet_paint":
 				flash = i
 			mesh.surface_set_material(i, hazard if slot == "class_accent" else (painted if slot == "paint" else charcoal))

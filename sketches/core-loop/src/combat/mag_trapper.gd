@@ -50,6 +50,7 @@ const CORE_EMISSION := 0.6
 const LINK_FOOT := 0.5
 const LINK_RADIUS := 0.16
 
+static var _warned_asset := false
 static var _shared: Dictionary = {}
 
 
@@ -111,7 +112,11 @@ static func _parts() -> Dictionary:
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
 		for i in mesh.get_surface_count():
-			var slot := mesh.surface_get_material(i).resource_name
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("mag_trapper: surface has no material; using default finish")
+			var slot := surface_material.resource_name if surface_material != null else ""
 			if slot == "fleet_paint":
 				flash = i
 			elif slot == "paint" and node.name == "MagDiscs":

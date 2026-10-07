@@ -59,6 +59,7 @@ func _configure(threat: float) -> void:
 # is committed by _commit below, untouched. The glb is read once; every deflector shares its mesh
 # and adds only its own flashing body material as a surface override. The resting body is the
 # Fleet oxide _add_capsule already set (RUST), so the hit flash and the event colour are unchanged.
+static var _warned_asset := false
 static var _shared: Dictionary = {}
 
 
@@ -94,7 +95,11 @@ static func _parts() -> Dictionary:
 	var flash := 0
 	var mesh: Mesh = (scene.find_child("DeflectorBody", true, false) as MeshInstance3D).mesh.duplicate()
 	for i in mesh.get_surface_count():
-		if mesh.surface_get_material(i).resource_name == "fleet_paint":
+		var surface_material := mesh.surface_get_material(i)
+		if surface_material == null and not _warned_asset:
+			_warned_asset = true
+			push_warning("deflector: surface has no material; using default finish")
+		if surface_material != null and surface_material.resource_name == "fleet_paint":
 			flash = i
 		mesh.surface_set_material(i, painted)
 	var wall := scene.find_child("DishWall", true, false) as MeshInstance3D
