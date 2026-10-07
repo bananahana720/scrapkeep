@@ -254,12 +254,14 @@ func _build_uncached(holder: Node3D, stage: int, world: int) -> void:
 func _dress_world(holder: Node3D, stage: int, world: int) -> void:
 	if holder.has_node(WORLD_DRESSING[world]):
 		return
+	# Gate on the stage's map like the live hooks do; a table can put any map in any world.
 	var map = game.ctx.terrain.map_for(stage)
+	var map_id := String(game.ctx.stages.of(stage).map)
 	if world == 1:
 		SpillwayScenery.build(holder)
-	elif world == 2:
-		DigScenery.build(holder, map, String(game.ctx.stages.of(stage).map))
-	elif world == 3:
+	elif world == 2 and map_id in ["dig", "dig_deep"]:
+		DigScenery.build(holder, map, map_id)
+	elif world == 3 and HighdraftScenery.is_highdraft(map):
 		HighdraftScenery.build(holder, map)
 
 
