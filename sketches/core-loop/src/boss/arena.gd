@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
 
 # The Slag Bowl: a foundry bowl about 124 m across, built above stage 3's beacon when
 # the fight starts and freed when it ends. A flat inner floor with two slag channels,
@@ -226,6 +227,7 @@ func _ready() -> void:
 			KICKER_LENGTH, KICKER_TOP, KICKER_HALF_WIDTH, "Kicker")
 	for a in VENT_ANGLES:
 		_vent(deg_to_rad(a))
+	BowlDress.build(self)
 
 
 func _bowl(body: StaticBody3D) -> void:
@@ -293,6 +295,7 @@ func _mast(body: StaticBody3D, angle: float) -> void:
 	cm.bottom_radius = 1.2
 	cm.height = MAST_HEIGHT
 	pole_mesh.mesh = cm
+	pole_mesh.set_meta("bowl_surface", "Mast")
 	pole_mesh.material_override = Palette.solid(Palette.COPPER)
 	pole_mesh.position = pole.position
 	add_child(pole_mesh)
@@ -300,6 +303,7 @@ func _mast(body: StaticBody3D, angle: float) -> void:
 	var bm := BoxMesh.new()
 	bm.size = box.size
 	bar_mesh.mesh = bm
+	bar_mesh.set_meta("bowl_surface", "Crossbar")
 	bar_mesh.material_override = Palette.solid(Palette.AMBER, 0.3)
 	bar_mesh.position = bar.position
 	bar_mesh.rotation = bar.rotation
@@ -375,6 +379,7 @@ func _mesh_node(st: SurfaceTool, mat: Material, label: String) -> MeshInstance3D
 	st.generate_normals()
 	var node := MeshInstance3D.new()
 	node.name = label
+	node.set_meta("bowl_surface", label)
 	node.mesh = st.commit()
 	if mat is BaseMaterial3D:
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
