@@ -1,0 +1,55 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const MechanicsDiagram := preload("res://src/ui/mechanics_diagram.gd")
+const WordBudget := preload("res://src/ui/word_budget.gd")
+const T := preload("res://tests/support/t.gd")
+
+var _t := T.new("help_mechanics_pictures_test")
+
+
+func _initialize() -> void:
+	call_deferred("_run")
+
+
+func _run() -> void:
+	var game := Game.new()
+	game.test_mode = true
+	root.add_child(game)
+	game.screens.toggle_help()
+	await process_frame
+	await process_frame
+	_t.check("title opens help", game.screens.help_open())
+	var help = game.screens._help
+	game.screens._content.modulate.a = 1.0
+	_t.check("controls open first", help.diagram.visible and not help._mechanics.visible)
+	_t.check("controls page fits 40 words", WordBudget.count(game.screens).hud <= 40)
+	help.page_button.pressed.emit()
+	await process_frame
+	_t.check("pictures replace controls", not help.diagram.visible and help._mechanics.visible and help.page_button.text == "Controls")
+	game.screens._content.modulate.a = 1.0
+	_t.check("pictures page fits 40 words including drawn labels", WordBudget.count(game.screens).hud <= 40)
+	_t.eq("three pictures", help.pictures.size(), 3)
+	for id in ["breach", "lift", "companion"]:
+		if not _t.check(id + " picture exists", help.pictures.has(id)):
+			continue
+		var picture: Control = help.pictures[id].picture
+		var caption: Label = help.pictures[id].caption
+		_t.check(id + " draws its diagram", picture.get_script() == MechanicsDiagram and picture.mechanic == id
+			and picture.is_visible_in_tree() and picture.size.x >= MechanicsDiagram.PICTURE_SIZE.x)
+		_t.eq(id + " caption", caption.text, MechanicsDiagram.CAPTIONS[id])
+		_t.check(id + " caption is a visible single line", caption.is_visible_in_tree() and not caption.text.contains("\n")
+			and caption.get_theme_font("font").get_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, -1, caption.get_theme_font_size("font_size")).x <= picture.size.x)
+		_t.check(id + " fits screen", root.get_visible_rect().encloses(picture.get_global_rect()) and root.get_visible_rect().encloses(caption.get_global_rect()))
+		_t.eq(id + " leaves mouse to menu", picture.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	_t.check("Back fits screen", root.get_visible_rect().encloses(help.back.get_global_rect()))
+	help.page_button.pressed.emit()
+	_t.check("Controls returns to the keyboard", help.diagram.visible and not help._mechanics.visible)
+	help.page_button.pressed.emit()
+	help.back.pressed.emit()
+	_t.check("Back closes help", not game.screens.help_open())
+	game.screens.toggle_help()
+	_t.check("reopening help resets to controls", help.diagram.visible and not help._mechanics.visible)
+	game.free()
+	await process_frame
+	quit(_t.verdict())
