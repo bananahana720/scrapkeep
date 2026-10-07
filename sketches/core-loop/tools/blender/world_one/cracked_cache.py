@@ -19,8 +19,8 @@ def g(x,y,z):
 def box(p,size,at,color,slot="device_metal"):
     return p.box(slot,(size[0],size[2],size[1]),loc=g(*at),color=color)
 
-def panel(p,outline,depth,at,color,slot="device_metal"):
-    return p.prism(slot,outline,depth,matrix=common.mtx(g(*at),(math.pi/2,0,0)),color=color)
+def panel(p,outline,depth,at,color,slot="device_metal",side_color=None):
+    return p.prism(slot,outline,depth,matrix=common.mtx(g(*at),(math.pi/2,0,0)),color=color,side_slot=slot if side_color is not None else None,side_color=side_color)
 
 def finish(p,origin=(0,0,0)):
     bmesh.ops.recalc_face_normals(p.bm,faces=p.bm.faces[:])
@@ -119,12 +119,12 @@ p=Part("CacheShell")
 # Walls preserve the collision envelope. Chamfered slab edges and repair seams
 # break up the pocket without stealing any route clearance.
 for s in (-1,1):
-    box(p,(1,7.5,12),(s*6.5,2.25,0),"petrol","device_concrete")
+    box(p,(1,7.5,12),(s*6.5,2.25,0),common.mix("petrol","bone",0.22),"device_concrete")
     for y in (0.5,3.3,5.6):
         box(p,(1.025,0.09,11.9),(s*6.5,y,0),"charcoal","device_concrete")
     for z in (-4,-0.8,2.8):
         panel(p,chamfer(0.65,0.85,0.16),0.05,(s*6.5,4.4,z),common.mix("petrol","bone",0.16),"device_concrete")
-box(p,(14,7.5,1),(0,2.25,-5.5),"petrol","device_concrete")
+box(p,(14,7.5,1),(0,2.25,-5.5),common.mix("petrol","bone",0.22),"device_concrete")
 panel(p,chamfer(14,1,0.18),12,(0,6.5,0),common.mix("petrol","bone",0.12),"device_concrete")
 box(p,(14.2,0.35,0.3),(0,3.3,6.05),"charcoal","device_concrete")
 # Exposed aggregate and two retained repair bands stay subdued.
@@ -149,7 +149,7 @@ for x,y in [(-5,1.2),(3.7,4.4),(0.6,0.8),(-2.7,5.5)]:
     panel(p,[(-0.3,-0.08),(0.22,-0.1),(0.32,0.015),(-0.15,0.11)],0.03,(x,y,5.99),"sandstone","device_concrete")
 finish(p,(0,2.25,5.5))
 p=Part("CacheChest")
-panel(p,chamfer(2,1.2,0.16),1.4,(0,0.6,-3.8),"petrol")
+panel(p,chamfer(2,1.2,0.16),1.4,(0,0.6,-3.8),common.mix("petrol","bone",0.38),side_color="petrol")
 box(p,(1.75,0.12,1.2),(0,1.15,-3.8),"charcoal")
 for x in (-0.72,0.72):
     box(p,(0.16,1.0,1.46),(x,0.6,-3.8),"copper")
@@ -157,7 +157,7 @@ box(p,(0.32,0.38,0.1),(0,0.85,-3.04),"charcoal")
 box(p,(0.12,0.17,0.12),(0,0.88,-2.98),"bone")
 finish(p,(0,0,-3.8))
 p=Part("CacheLid")
-panel(p,chamfer(2.1,0.3,0.08),1.5,(0,1.35,-3.8),"petrol")
+panel(p,chamfer(2.1,0.3,0.08),1.5,(0,1.35,-3.8),common.mix("petrol","bone",0.38))
 for x in (-0.72,0.72):
     box(p,(0.16,0.32,1.52),(x,1.35,-3.8),"copper")
 box(p,(1.45,0.07,0.85),(0,1.535,-3.8),common.mix("petrol","bone",0.18))

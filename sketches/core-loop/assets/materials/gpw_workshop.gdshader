@@ -6,6 +6,7 @@ uniform vec4 base_color : source_color = vec4(0.212, 0.341, 0.329, 1.0);
 uniform int surface_kind = 0;
 uniform vec3 half_extents = vec3(0.0);
 uniform float chip_width = 0.065;
+const float CONCRETE_VALUE_GAIN = 1.65;
 varying vec3 local_at;
 varying vec3 local_normal;
 
@@ -37,7 +38,7 @@ void fragment() {
 	float relief = 0.0;
 	vec3 finish;
 	if (surface_kind == 0) {
-		float seams = max(groove(p.y, 1.8, 0.014), groove(p.x, 3.6, 0.012));
+		float seams = max(groove(p.y, 1.8, 0.05), groove(p.x, 3.6, 0.045));
 		float tie = length(vec2(mod(p.x + 0.9, 1.8) - 0.9, mod(p.y + 0.45, 0.9) - 0.45));
 		float holes = (1.0 - smoothstep(0.025, 0.045 + fwidth(tie), tie)) * (1.0 - weights.y);
 		vec3 edge_distance = max(half_extents - abs(p), vec3(0.0));
@@ -45,6 +46,7 @@ void fragment() {
 		float chips = (1.0 - smoothstep(0.0, chip_width, edge)) * smoothstep(0.42, 0.68, grain(p * 13.0));
 		finish = paint * (0.86 + wash * 0.19 + aggregate * 0.08 - seams * 0.17 - holes * 0.30);
 		finish = mix(finish, vec3(0.37, 0.39, 0.35), chips * 0.72);
+		finish *= CONCRETE_VALUE_GAIN;
 		relief = aggregate * 0.014 - seams * 0.025 - holes * 0.035 - chips * 0.012;
 		ROUGHNESS = 0.94;
 		METALLIC = 0.0;
