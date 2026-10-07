@@ -4,6 +4,7 @@ const Worlds := preload("res://src/core/worlds.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const MindDress := preload("res://src/boss/mind_dress.gd")
+const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
 
 # The Mind's fight on the stub's flat pad. Its Warden is a MIND choir Warden with the
 # fleet, so the Warden publishes its own posture and opens its lens on a stagger, bracing
@@ -38,6 +39,7 @@ var _brace_due := false
 var _plate_until := -INF
 # The crown and the seat's kit (mind_dress.gd); null keeps the stub body.
 var _dress
+var _arena_dress
 
 
 func setup(ctx_ref) -> void:
@@ -66,10 +68,16 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_plate_verb = ""
 	_brace_due = false
 	_plate_until = -INF
+	_arena_dress = ArenaMindDress.attach(self)
 	_dress = MindDress.attach(self)
 
 
 func exit_arena() -> void:
+	if is_instance_valid(_arena_dress):
+		_arena_dress.release()
+		_arena_dress.get_parent().remove_child(_arena_dress)
+		_arena_dress.queue_free()
+	_arena_dress = null
 	# Out of the tree now, not at frame end, so it cannot dress the next fight's Warden.
 	if is_instance_valid(_dress):
 		remove_child(_dress)
