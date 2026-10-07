@@ -18,6 +18,9 @@ class FakeCombat extends RefCounted:
 	func primed(enemy) -> bool:
 		return primed_ids.has(enemy.get_instance_id())
 
+	func primer_expired(_enemy_id: int) -> bool:
+		return false
+
 	func prow_staggered(enemy) -> bool:
 		return staggered_ids.has(enemy.get_instance_id())
 

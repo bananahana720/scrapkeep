@@ -37,6 +37,7 @@ const MODEL := "res://assets/models/bosses/mind_hand.glb"
 # Test seam: a test points this at a missing file to prove the primitive hand builds.
 static var model_path := MODEL
 static var _warned_models := {}
+static var _rim_masks := {}
 
 var habit := ""
 var braced_kinds: Array = []
@@ -257,6 +258,8 @@ func _dress_model() -> void:
 
 # Only the blue seam texels carry plating light; the striped working face stays authored.
 func _skin_rim_mask(texture: Texture2D) -> ImageTexture:
+	if _rim_masks.has(texture):
+		return _rim_masks[texture]
 	var image := texture.get_image()
 	if image == null or image.is_empty():
 		return null
@@ -268,7 +271,9 @@ func _skin_rim_mask(texture: Texture2D) -> ImageTexture:
 			var color := image.get_pixel(x, y)
 			var seam := color.b > 0.75 and color.r < 0.35 and color.g < 0.65
 			mask.set_pixel(x, y, Color.WHITE if seam else Color.BLACK)
-	return ImageTexture.create_from_image(mask)
+	var result := ImageTexture.create_from_image(mask)
+	_rim_masks[texture] = result
+	return result
 
 
 func _warn_model(reason: String) -> void:

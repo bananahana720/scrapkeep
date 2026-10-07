@@ -76,6 +76,8 @@ var combat
 var build
 var boss
 var presentation
+# Taken when the game object is created, before any child can draw (see RunState._init).
+var _session_seed := randi() # lint: session seed
 var hud
 var screens
 var notes
@@ -114,7 +116,7 @@ func _ready() -> void:
 	events.flow_changed.connect(func(state: String):
 		if state == "summary":
 			summary_guard_left = SUMMARY_GUARD)
-	run = RunState.new(events)
+	run = RunState.new(events, _session_seed)
 	tuning = Tuning.new()
 	tuning.apply_cmdline("launch")
 

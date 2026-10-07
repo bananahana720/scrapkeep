@@ -18,7 +18,7 @@ n=0
 while IFS= read -r f; do
   git -C "$wt" add -- "$f"
   n=$((n + 1))
-done < <(git -C "$wt" status --porcelain --untracked-files=all | cut -c4- | grep -v -E '\.(uid|import)$' | grep -v '^artifacts/')
+done < <(git -C "$wt" status --porcelain -uall | cut -c4- | grep -v -E '\.(uid|import)$' | grep -v '^artifacts/')
 if [ "$n" -gt 0 ]; then
   git -C "$wt" commit -q -F "$msg"
   echo "$unit committed $n files at $(git -C "$wt" rev-parse HEAD)"

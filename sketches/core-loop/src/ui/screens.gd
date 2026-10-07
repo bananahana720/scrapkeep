@@ -464,8 +464,11 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if overlay_open() and event is InputEventJoypadButton and event.pressed:
-		# B closes the page and A does nothing; both are consumed so neither reaches the title
-		# behind. Other pad buttons pass through.
+		# A reaches Help's focused control; other accepts stay off the title behind it.
+		if event.button_index == JOY_BUTTON_A and _help.visible:
+			var focused := get_viewport().gui_get_focus_owner()
+			if focused != null and _help.is_ancestor_of(focused):
+				return
 		if event.button_index == JOY_BUTTON_B:
 			if _help.visible:
 				toggle_help()

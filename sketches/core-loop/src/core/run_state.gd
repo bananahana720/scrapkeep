@@ -116,13 +116,18 @@ var _heft_class := 1
 # The first stage-start snapshot of each stage in this run, kept for a replay of that
 # stage (the boss death screen's T replays stage 3).
 var _stage_starts := {}
+var _id_rng := RandomNumberGenerator.new()
 
 
 static func roman(n: int) -> String:
 	return ["0", "I", "II", "III", "IV", "V", "VI"][clampi(n, 0, 6)]
 
 
-func _init(events_ref = null) -> void:
+func _init(events_ref = null, session_seed = null) -> void:
+	# The id stream is seeded once from the session's global stream: players get fresh luck each
+	# session, seeded bots and tests repeat, and nothing drawn later can move it. Game takes the
+	# draw the moment it is created, before any node exists; a bare RunState draws here.
+	_id_rng.seed = session_seed if session_seed != null else randi() # lint: session seed
 	events = events_ref
 	reset_metrics()
 	if events != null:
@@ -146,7 +151,8 @@ func begin(chosen_class: Resource) -> void:
 	_heft_class = 1
 	class_rewarded = 1
 	_stage_starts = {}
-	run_id = "%d-%06d" % [int(Time.get_unix_time_from_system()), randi() % 1000000]
+	# The suffix also seeds device luck; presentation must never choose it.
+	run_id = "%d-%06d" % [int(Time.get_unix_time_from_system()), _id_rng.randi() % 1000000]
 	# Derived from the run id so it draws nothing from the global RNG.
 	run_seed = hash(run_id)
 	world = 0

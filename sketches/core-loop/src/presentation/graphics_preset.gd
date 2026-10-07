@@ -33,6 +33,7 @@ static var _scenery: Array = []
 static var _target_server_active := false
 static var _materials: Array = []
 static var _dressing_hosts: Array[WeakRef] = []
+static var _lighting: Array[Dictionary] = []
 
 static func apply(preset: String) -> bool:
 	if not PRESETS.has(preset):
@@ -53,8 +54,126 @@ static func apply(preset: String) -> bool:
 	return true
 
 static func register_dressing_host(host: Node) -> void:
-	_dressing_hosts.append(weakref(host))
+	if not _dressing_hosts.any(func(ref): return ref.get_ref() == host):
+		_dressing_hosts.append(weakref(host))
+		var on_exit := _unregister_dressing_host.bind(host.get_instance_id())
+		if not host.tree_exiting.is_connected(on_exit):
+			host.tree_exiting.connect(on_exit, CONNECT_ONE_SHOT)
 	host._sync_dressing()
+
+static func _unregister_dressing_host(id: int) -> void:
+	_dressing_hosts = _dressing_hosts.filter(func(ref):
+		var host = ref.get_ref()
+		return host != null and host.get_instance_id() != id)
+
+
+# Restore one shared baseline, then compose live overrides in entry order. An older
+# arena can leave after a new stage has entered without restoring over that stage.
+static func set_lighting(owner: Node, environment: Environment, values: Dictionary,
+		lights: Array = [], slot: String = "") -> Dictionary:
+	var world := _lighting_for(environment)
+	if world.is_empty():
+		world = {"environment": weakref(environment), "defaults": [], "overrides": []}
+		_lighting.append(world)
+	var previous := {}
+	for key in values:
+		previous[key] = environment.get(key)
+	_capture_lighting_changes(world)
+	var properties := []
+	for row in world.overrides:
+		if not slot.is_empty() and row.slot == slot:
+			properties = row.properties
+	_restore_lighting(world)
+	var id := owner.get_instance_id()
+	world.overrides = world.overrides.filter(func(row):
+		return row.id != id and (slot.is_empty() or row.slot != slot))
+	if properties.is_empty():
+		_lighting_defaults(world, environment, values)
+		properties.append({"object": weakref(environment), "values": values})
+		for light in lights:
+			_lighting_defaults(world, light.object, light.values)
+			properties.append({"object": weakref(light.object), "values": light.values})
+	world.overrides.append({"id": id, "slot": slot, "properties": properties})
+	var on_exit := release_lighting.bind(id)
+	if not owner.tree_exiting.is_connected(on_exit):
+		owner.tree_exiting.connect(on_exit, CONNECT_ONE_SHOT)
+	_apply_lighting(world)
+	return previous
+
+
+static func release_lighting(id: int) -> void:
+	for world in _lighting.duplicate():
+		if world.overrides.any(func(row): return row.id == id):
+			world.overrides = world.overrides.filter(func(row): return row.id != id)
+			_update_lighting(world)
+
+
+static func clear_lighting(environment: Environment, slot: String) -> void:
+	var world := _lighting_for(environment)
+	if not world.is_empty():
+		world.overrides = world.overrides.filter(func(row): return row.slot != slot)
+		_update_lighting(world)
+
+
+static func _lighting_for(environment: Environment) -> Dictionary:
+	for world in _lighting:
+		if world.environment.get_ref() == environment:
+			return world
+	return {}
+
+
+static func _lighting_defaults(world: Dictionary, object: Object, values: Dictionary) -> void:
+	var saved := {}
+	for row in world.defaults:
+		if row.object.get_ref() == object:
+			saved = row.values
+			break
+	if saved.is_empty():
+		world.defaults.append({"object": weakref(object), "values": saved})
+	for key in values:
+		if not saved.has(key):
+			saved[key] = object.get(key)
+
+
+static func _write_lighting(properties: Array) -> void:
+	for row in properties:
+		var object = row.object.get_ref()
+		if object != null:
+			for key in row.values:
+				object.set(key, row.values[key])
+
+
+# Explicit edits to the live light belong to the active override, or to the baseline
+# when that property has no override. Re-entering a named world keeps those edits.
+static func _capture_lighting_changes(world: Dictionary) -> void:
+	for row in world.defaults:
+		var object = row.object.get_ref()
+		if object == null:
+			continue
+		for key in row.values:
+			var values: Dictionary = row.values
+			for override in world.overrides:
+				for properties in override.properties:
+					if properties.object.get_ref() == object and properties.values.has(key):
+						values = properties.values
+			values[key] = object.get(key)
+
+
+static func _restore_lighting(world: Dictionary) -> void:
+	_write_lighting(world.defaults)
+
+
+static func _apply_lighting(world: Dictionary) -> void:
+	for row in world.overrides:
+		_write_lighting(row.properties)
+
+
+static func _update_lighting(world: Dictionary) -> void:
+	_restore_lighting(world)
+	_apply_lighting(world)
+	if world.overrides.is_empty():
+		_lighting.erase(world)
+
 
 static func bind(environment: Environment, sun: DirectionalLight3D, viewport: Viewport) -> void:
 	for arg in OS.get_cmdline_user_args():
@@ -75,6 +194,10 @@ static func _apply_scenery(view: GeometryInstance3D) -> void:
 	view.lod_bias = 1.0 / PRESETS[current].lod_threshold
 
 static func _apply_world(world: Dictionary) -> void:
+	var lighting := _lighting_for(world.environment)
+	if not lighting.is_empty():
+		_capture_lighting_changes(lighting)
+		_restore_lighting(lighting)
 	_restore_target(world)
 	if current != "target" and _target_server_active:
 		_restore_target_server()
@@ -135,6 +258,13 @@ static func _apply_world(world: Dictionary) -> void:
 		viewport.mesh_lod_threshold = spec.lod_threshold
 	if current == "target":
 		_apply_target(world, spec, env, sun)
+	if not lighting.is_empty():
+		for row in lighting.defaults:
+			var object = row.object.get_ref()
+			if object != null:
+				for key in row.values:
+					row.values[key] = object.get(key)
+		_apply_lighting(lighting)
 
 
 # One shadowless cool directional fill opposite the sun (LIGHTING-TARGETS: elevation 50,

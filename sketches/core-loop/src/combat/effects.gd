@@ -4,8 +4,8 @@ extends Node3D
 # where a committed hit landed, for a fraction of a second, drawn as thin lines at
 # PRIORITY, below every enemy telegraph (principle 4: our effects never hide a threat).
 # Presentation (writer C) owns the rest of the juice; these are the minimum a greybox
-# needs to read what the weapons did. The jitter uses the global randf on purpose: it
-# is visual only and must not draw from the run's seeded stream.
+# needs to read what the weapons did. Jitter has its own stream, independent of the
+# run's seeded stream and engine consumers of global randomness.
 
 const PRIORITY := 1
 const ARC_LIFE := 0.16
@@ -18,6 +18,11 @@ var _arcs: Array = []
 var _rings: Array = []
 var _sparks: Array = []
 var _mesh: ImmediateMesh
+var _arc_rng := RandomNumberGenerator.new()
+
+
+func _init() -> void:
+	_arc_rng.seed = 0xA7C
 
 
 func setup() -> void:
@@ -100,7 +105,7 @@ func _draw_arc(entry: Dictionary) -> void:
 		var t := float(i) / ARC_SEGMENTS
 		var point := from + span * t
 		if i < ARC_SEGMENTS:
-			point += Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * jitter
+			point += Vector3(_arc_rng.randf_range(-1.0, 1.0), _arc_rng.randf_range(-1.0, 1.0), _arc_rng.randf_range(-1.0, 1.0)) * jitter
 		_line(previous, point, color)
 		previous = point
 

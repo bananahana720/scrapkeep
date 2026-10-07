@@ -32,8 +32,10 @@ var _heading := Vector3.FORWARD
 var _snap := true
 var _moving := false
 var _primed := false
-var _primed_at := 0.0
+var _primed_ids := {}
+var _primed_next := {}
 var _staggered := {}
+var _staggered_next := {}
 var _armed := false
 var _warned := false
 
@@ -105,6 +107,7 @@ func _rebuild(seats: Array, key: String) -> void:
 	_anim = null
 	_staggered.clear()
 	_primed = false
+	_primed_ids.clear()
 	_armed = false
 	visible = key != ""
 	_snap = true
@@ -193,26 +196,35 @@ func _beats() -> void:
 	var enemies := get_tree().get_nodes_in_group("enemy")
 	if key.contains("primer_"):
 		var any := false
+		var live := _primed_next
+		live.clear()
 		for enemy in enemies:
 			if combat.primed(enemy):
 				any = true
-				break
-		var now := Time.get_ticks_msec() * 0.001
+				live[enemy.get_instance_id()] = true
 		if any and not _primed:
-			_primed_at = now
 			_beat("primer_set")
 		elif _primed and not any:
-			_beat("primer_expire" if now - _primed_at >= Companion.PRIMER_SECONDS - 0.25 else "primer_consume")
+			var expired := true
+			for id in _primed_ids:
+				if not combat.primer_expired(id):
+					expired = false
+					break
+			_beat("primer_expire" if expired else "primer_consume")
 		_primed = any
+		_primed_next = _primed_ids
+		_primed_ids = live
 	if key.contains("ram_prow"):
 		var fresh := false
-		var live := {}
+		var live := _staggered_next
+		live.clear()
 		for enemy in enemies:
 			if combat.prow_staggered(enemy):
 				var id: int = enemy.get_instance_id()
 				live[id] = true
 				if not _staggered.has(id):
 					fresh = true
+		_staggered_next = _staggered
 		_staggered = live
 		if fresh:
 			_beat("prow_response")

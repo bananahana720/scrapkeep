@@ -535,6 +535,10 @@ func primed(enemy: Node3D) -> bool:
 	return is_instance_valid(enemy) and float(_primed.get(enemy.get_instance_id(), -1.0)) > _clock
 
 
+func primer_expired(enemy_id: int) -> bool:
+	return _primed.has(enemy_id) and float(_primed[enemy_id]) <= _clock
+
+
 # --- Companion: ram brace ------------------------------------------------------------
 # Runs after the strike resolved and its facts went out; it shoves and arms, and never
 # strikes, hits or fires itself. Posture fighters (staggered()) keep their own rules.

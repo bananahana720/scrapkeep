@@ -1,5 +1,6 @@
 extends Node3D
 
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const DIR := "res://assets/models/highdraft/"
 const NODE_NAME := "MindArenaDress"
 const PARTS := {
@@ -213,34 +214,20 @@ func _apply_environment(terrain, root: Node) -> void:
 		if light.name != "SkyFill":
 			sun = light
 			break
-	_saved = {"env": env, "sky": env.sky, "ambient": env.ambient_light_color, "exposure": env.tonemap_exposure,
-		"saturation": env.adjustment_saturation, "sun": sun, "sun_color": sun.light_color if sun != null else Color.WHITE,
-		"sun_rotation": sun.rotation if sun != null else Vector3.ZERO}
 	if _sky_material == null:
 		_sky_material = _make_sky()
 	var sky := Sky.new()
 	sky.sky_material = _sky_material
-	env.sky = sky
-	env.ambient_light_color = Color("b4c0c9")
-	env.tonemap_exposure = 1.18
-	env.adjustment_saturation = 1.0
+	var lights := []
 	if sun != null:
-		sun.light_color = Color("fff1dc")
-		sun.rotation_degrees = Vector3(-46.0, 62.0, 0.0)
+		lights.append({"object": sun, "values": {"light_color": Color("fff1dc"),
+			"rotation": Vector3(deg_to_rad(-46.0), deg_to_rad(62.0), 0.0)}})
+	_saved = GraphicsPreset.set_lighting(self, env, {"sky": sky, "ambient_light_color": Color("b4c0c9"),
+		"tonemap_exposure": 1.18, "adjustment_saturation": 1.0}, lights)
 
 
 func restore_environment() -> void:
-	if _saved.is_empty():
-		return
-	var env: Environment = _saved["env"]
-	env.sky = _saved["sky"]
-	env.ambient_light_color = _saved["ambient"]
-	env.tonemap_exposure = _saved["exposure"]
-	env.adjustment_saturation = _saved["saturation"]
-	var sun = _saved["sun"]
-	if is_instance_valid(sun):
-		sun.light_color = _saved["sun_color"]
-		sun.rotation = _saved["sun_rotation"]
+	GraphicsPreset.release_lighting(get_instance_id())
 	_saved = {}
 
 

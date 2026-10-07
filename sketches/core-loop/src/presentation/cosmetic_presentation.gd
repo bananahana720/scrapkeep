@@ -18,12 +18,21 @@ var _spare: Array = []
 var _decal := {}
 var _companion := {}
 var _art := Cosmetics.art_manifest()
+var _enemies: Array[Node3D] = []
+var _threats: Array[Vector3] = []
 
 
 func setup(context, hook) -> void:
 	name = "CosmeticPresentation"
 	ctx = context
 	hero = hook
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		_remember_enemy(enemy)
+	get_tree().node_added.connect(_on_node_added)
+	get_tree().node_removed.connect(_on_node_removed)
+	var events = ctx.get("events")
+	if events != null:
+		events.enemy_spawned.connect(_on_enemy_spawned)
 	trail = Node3D.new()
 	trail.name = "BallTrail"
 	trail.top_level = true
@@ -235,11 +244,14 @@ func _step_trail(delta: float, row: Dictionary) -> void:
 		return
 	var ball: Vector3 = player.shown_position()
 	var threats := _threat_points()
-	for card in _cards.duplicate():
+	var index := _cards.size()
+	while index > 0:
+		index -= 1
+		var card: Dictionary = _cards[index]
 		card["age"] += delta
 		var node: Node3D = card["node"]
 		if card["age"] >= card["life"] or Vector2(node.global_position.x - ball.x, node.global_position.z - ball.z).length() > TRAIL_DISTANCE:
-			_cards.erase(card)
+			_cards.remove_at(index)
 			_retire(card)
 			continue
 		var obscures := _near_threat(node.global_position, threats)
@@ -294,11 +306,36 @@ func _take_card(row: Dictionary, key: String) -> Dictionary:
 
 
 func _threat_points() -> Array[Vector3]:
-	var points: Array[Vector3] = []
-	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if enemy is Node3D:
-			points.append((enemy as Node3D).global_position)
-	return points
+	var count := 0
+	for enemy in _enemies:
+		if enemy.is_in_group("enemy"):
+			if count == _threats.size():
+				_threats.append(enemy.global_position)
+			else:
+				_threats[count] = enemy.global_position
+			count += 1
+	_threats.resize(count)
+	return _threats
+
+
+func _remember_enemy(node) -> void:
+	if is_instance_valid(node) and node is Node3D and node.is_inside_tree() and node.is_in_group("enemy") and not _enemies.has(node):
+		_enemies.append(node)
+
+
+func _on_enemy_spawned(enemy: Node3D, _kind: String) -> void:
+	_remember_enemy(enemy)
+
+
+func _on_node_added(node: Node) -> void:
+	# Boss targets join the group during setup, after entering the tree.
+	if node is Node3D:
+		_remember_enemy.call_deferred(node)
+
+
+func _on_node_removed(node: Node) -> void:
+	if node is Node3D:
+		_enemies.erase(node)
 
 
 func _near_threat(point: Vector3, threats: Array[Vector3]) -> bool:

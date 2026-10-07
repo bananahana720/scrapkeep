@@ -18,10 +18,6 @@ const WALL_SECTORS := 16
 var module
 var _parts := {}
 var _materials := {}
-var _environment: Environment
-var _saved_environment := {}
-var _applied_environment := {}
-var _daylights := []
 var _reactor_light: OmniLight3D
 
 
@@ -129,10 +125,15 @@ func _build() -> void:
 	_reactor_light.shadow_enabled = false
 	add_child(_reactor_light)
 	_follow_reactor()
-	_environment = module.ctx.terrain.environment
+	var lights := []
 	for light in module.ctx.root.find_children("*", "DirectionalLight3D", true, false):
-		_daylights.append({"light": weakref(light), "visible": light.visible})
-	GraphicsPreset.register_dressing_host(self)
+		lights.append({"object": light, "values": {"visible": false}})
+	GraphicsPreset.set_lighting(self, module.ctx.terrain.environment, {
+		"background_mode": Environment.BG_COLOR, "background_color": Color("171e1d"),
+		"ambient_light_source": Environment.AMBIENT_SOURCE_COLOR, "ambient_light_color": Color("9ba8a3"),
+		"ambient_light_energy": 0.16, "reflected_light_source": Environment.REFLECTION_SOURCE_DISABLED,
+		"fog_enabled": true, "fog_density": 0.008, "fog_light_color": Color("242a28"),
+		"fog_light_energy": 0.3, "fog_sun_scatter": 0.0}, lights)
 
 
 func _floor(body: StaticBody3D, node_name: String) -> void:
@@ -214,41 +215,3 @@ func _follow_reactor() -> void:
 		_reactor_light.global_position = module.warden.family_point_at()
 	else:
 		_reactor_light.light_energy = 0.0
-
-
-# Preset changes write shared lighting first, so save their latest values before applying
-# the pit's light again. Exit restores the chosen preset, including changes made in the fight.
-func _sync_dressing() -> void:
-	if _environment == null or not is_inside_tree():
-		return
-	for property in ENV_PROPERTIES:
-		var value = _environment.get(property)
-		if not _applied_environment.has(property) or value != _applied_environment[property]:
-			_saved_environment[property] = value
-	_environment.background_mode = Environment.BG_COLOR
-	_environment.background_color = Color("171e1d")
-	_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	_environment.ambient_light_color = Color("9ba8a3")
-	_environment.ambient_light_energy = 0.16
-	_environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
-	_environment.fog_enabled = true
-	_environment.fog_density = 0.008
-	_environment.fog_light_color = Color("242a28")
-	_environment.fog_light_energy = 0.3
-	_environment.fog_sun_scatter = 0.0
-	for property in ENV_PROPERTIES:
-		_applied_environment[property] = _environment.get(property)
-	for row in _daylights:
-		var light = row["light"].get_ref()
-		if is_instance_valid(light):
-			light.visible = false
-
-
-func _exit_tree() -> void:
-	if _environment != null:
-		for property in _saved_environment:
-			_environment.set(property, _saved_environment[property])
-	for row in _daylights:
-		var light = row["light"].get_ref()
-		if is_instance_valid(light):
-			light.visible = row["visible"]
