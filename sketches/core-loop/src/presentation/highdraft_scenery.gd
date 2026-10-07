@@ -13,6 +13,7 @@ const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const HighdraftMap := preload("res://src/world/map_highdraft.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 
 const DIR := "res://assets/models/highdraft/"
 const NODE_NAME := "HighdraftScenery"
@@ -155,6 +156,7 @@ static func build(stage_root: Node3D, map, contraptions = null, ground := Callab
 	_anchors(scenery, state, stage_root, map, ground)
 	_props(scenery, map)
 	_sky_pieces(scenery)
+	_catch_floor(stage_root)
 	state.fx = HighdraftFx.install(scenery, state, map)
 	return scenery
 
@@ -171,9 +173,14 @@ static func _scene(file: String) -> Node:
 		if view.mesh != null:
 			for i in view.mesh.get_surface_count():
 				var source := view.mesh.surface_get_material(i)
-				var drawn := _vertex_coloured(source)
+				var drawn := Finishes.for_piece(file, _vertex_coloured(source))
 				if drawn != source:
 					view.set_surface_override_material(i, drawn)
+			if file in Finishes.DISTANT:
+				var coloured := view.mesh.duplicate() as Mesh
+				for i in coloured.get_surface_count():
+					coloured.surface_set_material(i, view.get_active_material(i))
+				view.mesh = Finishes.aerial_mesh(coloured)
 	return scene
 
 
@@ -183,7 +190,7 @@ static func _vertex_coloured(source: Material) -> Material:
 	if not (source is BaseMaterial3D):
 		return source
 	var base := source as BaseMaterial3D
-	if base.vertex_color_use_as_albedo or base.albedo_texture != null:
+	if base.vertex_color_use_as_albedo:
 		return source
 	var key := base.get_instance_id()
 	if not _coloured.has(key):
@@ -218,7 +225,7 @@ static func _mesh(file: String, node_name := "*") -> Mesh:
 		if view.mesh != null:
 			found = view.mesh.duplicate() as Mesh
 			for i in found.get_surface_count():
-				found.surface_set_material(i, _vertex_coloured(found.surface_get_material(i)))
+				found.surface_set_material(i, view.get_active_material(i))
 			break
 	scene.free()
 	return found
@@ -286,6 +293,8 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 	var material := source.surface_get_material(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	var original_normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var centre: Vector2 = isle["at"]
 	var radius: float = isle["radius"]
@@ -294,6 +303,8 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 	var remap := {}
 	var out_vertices := PackedVector3Array()
 	var out_uvs := PackedVector2Array()
+	var out_colors := PackedColorArray()
+	var out_normals := PackedVector3Array()
 	var out_indices := PackedInt32Array()
 	for t in range(0, indices.size(), 3):
 		var keep := true
@@ -314,6 +325,8 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 				remap[index] = out_vertices.size()
 				out_vertices.append(_fit(vertices[index], centre, radius, top, scale, map, ground))
 				out_uvs.append(uvs[index] if index < uvs.size() else Vector2.ZERO)
+				out_colors.append(colors[index] if index < colors.size() else Palette.SAND.srgb_to_linear())
+				out_normals.append(original_normals[index])
 			out_indices.append(remap[index])
 	if out_indices.is_empty():
 		return null
@@ -321,6 +334,8 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 	normals.resize(out_vertices.size())
 	for t in range(0, out_indices.size(), 3):
 		var face := (out_vertices[out_indices[t + 1]] - out_vertices[out_indices[t]]).cross(out_vertices[out_indices[t + 2]] - out_vertices[out_indices[t]])
+		if face.dot(out_normals[out_indices[t]]) < 0.0:
+			face = -face
 		for k in 3:
 			normals[out_indices[t + k]] += face
 	for i in normals.size():
@@ -330,6 +345,7 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 	built[Mesh.ARRAY_VERTEX] = out_vertices
 	built[Mesh.ARRAY_NORMAL] = normals
 	built[Mesh.ARRAY_TEX_UV] = out_uvs
+	built[Mesh.ARRAY_COLOR] = out_colors
 	built[Mesh.ARRAY_INDEX] = out_indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built)
@@ -470,6 +486,22 @@ static func _hide_thermal_greybox(contraptions: Node, base: Vector3, height: flo
 
 
 # ---- Net deck ----
+
+static func _catch_floor(stage_root: Node3D) -> void:
+	var body := stage_root.get_node_or_null("Ground")
+	if body == null:
+		return
+	for view: MeshInstance3D in body.find_children("*", "MeshInstance3D", true, false):
+		var material := ShaderMaterial.new()
+		material.shader = preload("res://assets/materials/highdraft/catch_floor.gdshader")
+		material.set_shader_parameter("floor_map", Palette.painted_texture(256, true))
+		material.set_shader_parameter("stone_tint", Color("c8bda5"))
+		material.set_shader_parameter("cord_tint", Palette.SAND.lerp(Palette.CHARCOAL, 0.35))
+		material.set_shader_parameter("deck_tint", Palette.CHARCOAL.lerp(Palette.SLATE, 0.3))
+		material.set_shader_parameter("net_height", HighdraftMap.NET_H)
+		material.set_shader_parameter("net_pitch", 4.0)
+		GraphicsPreset.set_ground_material(view, material)
+
 
 static func _net_deck(parent: Node3D, map) -> void:
 	var tile := _mesh("net_tile.glb", "Weave")
