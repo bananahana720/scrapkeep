@@ -278,9 +278,7 @@ func _check_stub() -> void:
 			and pod.find_child("Pilot", true, false) != null,
 			"shell fitted: core under the rolling mesh, pod on the juice node, placeholder hidden")
 		var accent := _accent_color(pod)
-		# Tally's and the cannon's bespoke shells carry no class_accent slot (black here).
-		var bespoke: bool = def.id in ["tally", "remembered_cannon"] and accent == Color.BLACK
-		_report("stub " + def.id + " accent", accent.is_equal_approx(def.color) or bespoke, "class_accent wears the class row colour")
+		_report("stub " + def.id + " accent", accent.is_equal_approx(def.color), "class_accent wears the class row colour")
 	# The vane check below is Kest's, so end the loop on Kest whatever order the roster ends in.
 	stub.class_def = ClassDef.by_id("demolitions_caster")
 	hook._process(0.016)

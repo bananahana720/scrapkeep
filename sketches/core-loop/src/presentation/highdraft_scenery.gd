@@ -410,7 +410,7 @@ static func _strip(into: Array[Transform3D], from: Vector2, to: Vector2, from_y:
 
 
 # The barge's own tilted deck node carries the skin, so it leans with the scripted settle; its
-# greybox deck, hull, jets and bands stay hidden (never freed, tests and the carry rule read them).
+# greybox nodes stay for the carry rule; the deck mesh is cleared and hull, jets and bands hidden.
 static func _barges(contraptions: Node) -> void:
 	var skin_mesh := _mesh("barge_skin.glb", "HardwareSkin")
 	if skin_mesh == null:

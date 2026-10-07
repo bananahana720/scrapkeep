@@ -63,6 +63,7 @@ def hull_panels(p):
 
 
 def build():
+    common.SLOTS["class_accent"] = {"color": "3d8bff", "rough": .75}
     common.SLOTS["ancient_light"] = dict(common.SLOTS["ancient_light"], emit=.45)
     root = common.empty("ShellCannon")
     glass = Part("Core")
@@ -93,7 +94,7 @@ def build():
             matrix=common.mtx((0, .42, -.34), (math.pi/2, 0, 0)), color="bone")
     # Inset rush annulus, with a narrow reclaimed-origin blue cue.
     p.ring("ancient_enamel", .15, .22, .03, 32, loc=(0, 0, -.78), color="bone")
-    p.ring("ancient_light", .157, .163, .004, 32, loc=(0, 0, -.798))
+    p.ring("class_accent", .157, .163, .004, 32, loc=(0, 0, -.798))
     # Charcoal cavities behind single-material moving cast meshes.
     p.cyl("rubber", .079, .079, .008, 24, loc=(0, .54, -.29), rot=(math.pi/2, 0, 0))
     for s in (-1, 1):
