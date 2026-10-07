@@ -13,7 +13,7 @@ else
   echo "(no report)"
 fi
 echo "-- changes (excluding .uid and .import)"
-git -C "$wt" status --short --untracked-files=all | grep -v -E '\.(uid|import)$' | grep -v ' artifacts/' | head -40
+git -C "$wt" status --short -uall | grep -v -E '\.(uid|import)$' | grep -v ' artifacts/' | head -40
 echo "-- commits over base: $(git -C "$wt" rev-list --count 955e7e55aa10a69c3d0f6c71d0bd2eb4763c5970..HEAD)"
 if [ -d "$wt/artifacts/local/dress-preview/$unit" ]; then
   echo "-- previews: $(find "$wt/artifacts/local/dress-preview/$unit" -name '*.png' | wc -l) png"
