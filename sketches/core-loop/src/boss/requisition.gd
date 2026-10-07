@@ -94,10 +94,10 @@ func build(boss) -> void:
 		_cylinder(magnet, 1.4, 0.9, mat)
 		magnets.append(magnet)
 		var cable := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(0.25, 0.25, 1.0)
-		cable.mesh = box
+		cable.name = "CableSpan%d" % i
+		cable.mesh = _cable_mesh()
 		cable.material_override = Palette.solid(Palette.CHARCOAL)
+		cable.material_override.vertex_color_use_as_albedo = true
 		add_child(cable)
 		_cables.append(cable)
 	_dress()
@@ -105,6 +105,27 @@ func build(boss) -> void:
 	plate.name = "BrindlePlate"
 	plate.attach(self, Vector3.UP * PLATE_LIFT, PLATE_REACH)
 	add_child(plate)
+
+
+static func _cable_mesh() -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Alternating collars give the working cable a ribbed profile along local Z.
+	for band in 6:
+		var z0 := -0.5 + band / 6.0
+		var z1 := -0.5 + (band + 1) / 6.0
+		var r0 := 0.10 if band % 2 == 0 else 0.125
+		var r1 := 0.125 if band % 2 == 0 else 0.10
+		for side in 8:
+			var a := TAU * side / 8.0
+			var b := TAU * (side + 1) / 8.0
+			var points := [Vector3(cos(a) * r0, sin(a) * r0, z0), Vector3(cos(b) * r0, sin(b) * r0, z0),
+				Vector3(cos(b) * r1, sin(b) * r1, z1), Vector3(cos(a) * r1, sin(a) * r1, z1)]
+			for index in [0, 2, 1, 0, 3, 2]:
+				surface.set_color(Color.WHITE if band % 2 == 0 else Color(1.4, 1.4, 1.4))
+				surface.add_vertex(points[index])
+	surface.generate_normals()
+	return surface.commit()
 
 
 # Places the ship with its bow along `dir`, on whatever ground is under it.

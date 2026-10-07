@@ -84,10 +84,12 @@ func _brindle() -> void:
 			"model %s" % [ship.model])
 	var meshes := _visible_meshes(ship)
 	var named := meshes.map(func(m): return String(m.name))
-	# The two procedural cable spans are the only primitives left on screen.
+	# The two modelled cable spans keep their original moving endpoints.
 	var prims := _primitive(meshes)
-	_t.check("Brindle shows the GLB hull, drums and armour and only the two cable spans as primitives",
-			named.has("Hull") and named.has("DrumL0") and named.has("Armour0") and named.has("CraneMasts") and prims.size() == 2,
+	_t.check("Brindle shows the GLB hull, drums, armour and two vertex-coloured cable spans",
+			named.has("Hull") and named.has("DrumL0") and named.has("Armour0") and named.has("CraneMasts") and prims.is_empty()
+			and named.has("CableSpan0") and named.has("CableSpan1")
+			and ship._cables.all(func(c): return c.mesh is ArrayMesh and c.material_override.vertex_color_use_as_albedo),
 			"%d visible, %d primitives, hull named %s" % [meshes.size(), prims.size(), named.has("Hull")])
 	_t.eq("phase 1 plays the idle roll", ship._anim.assigned_animation, "idle_roll")
 	boss.jump_to_phase(2)
