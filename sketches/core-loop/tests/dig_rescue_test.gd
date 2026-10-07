@@ -6,7 +6,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Profile := preload("res://src/core/profile.gd")
-const RescueSite := preload("res://src/world/rescue_site.gd")
+const RescueSites := preload("res://src/world/rescue_site.gd")
 
 # Kest's rescue on the default table: completing kest_cage on stage 3 (the Dig) fires
 # rescue_completed("dig") once, the profile earns dig_rescued and unlocks demolitions_caster
@@ -34,7 +34,7 @@ func _frames(count: int) -> void:
 
 
 func _break_frames() -> int:
-	return int(ceil(RescueSite.BREAK_SECONDS * Engine.physics_ticks_per_second)) + 10
+	return int(ceil(RescueSites.BREAK_SECONDS * Engine.physics_ticks_per_second)) + 10
 
 
 func _cage():

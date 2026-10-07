@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Profile := preload("res://src/core/profile.gd")
-const RescueSite := preload("res://src/world/rescue_site.gd")
+const RescueSites := preload("res://src/world/rescue_site.gd")
 
 # World one's rescue quest (rescue_site.gd), on the default table, as Sable on the Spillway:
 # - a caged runner stands on stage 1 as one registered device and not on stage 2;
@@ -40,7 +40,7 @@ func _frames(count: int) -> void:
 
 # The wait for one lock to break, in the frames of this run's physics rate, with a margin.
 func _break_frames() -> int:
-	return int(ceil(RescueSite.BREAK_SECONDS * Engine.physics_ticks_per_second)) + 10
+	return int(ceil(RescueSites.BREAK_SECONDS * Engine.physics_ticks_per_second)) + 10
 
 
 func _cage():
@@ -146,6 +146,6 @@ func _run() -> void:
 	_game.flow.enter_stage(2, Vector3.ZERO, false)
 	await _frames(3)
 	_t.eq("stage 2 stands no cage", _game.world.rescue.cages.size(), 0)
-	_t.check("and no rescue device is registered", _game.world.interact.devices.all(func(d): return not d is RescueSite.Cage), "devices %s" % [_game.world.interact.devices.size()])
+	_t.check("and no rescue device is registered", _game.world.interact.devices.all(func(d): return not d is RescueSites.Cage), "devices %s" % [_game.world.interact.devices.size()])
 	_game.queue_free()
 	quit(_t.verdict())

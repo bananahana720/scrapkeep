@@ -33,6 +33,7 @@ const RESCUE_DEPTH := 10.0
 const RESCUE_CLEAR := 14.0
 # The plate's colour when your punch is short of the live plating: combat's slate.
 const PLATE_SHORT := Color("9fb0bf")
+static var _pickup_materials := {}
 
 var ctx
 var state := IDLE
@@ -439,7 +440,7 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 	var node := MeshInstance3D.new()
 	var path := "res://assets/models/bosses/boss_pickup.glb"
 	var mesh := get_meta("boss_scrap_mesh") as Mesh if has_meta("boss_scrap_mesh") else null
-	var packed := load(path) as PackedScene if mesh == null and ResourceLoader.exists(path) else null
+	var packed := load(path) as PackedScene if mesh == null and not has_meta("scrap_asset_warned") and ResourceLoader.exists(path) else null
 	if packed != null:
 		if mesh == null:
 			var scene := packed.instantiate()
@@ -463,17 +464,22 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 		var box := BoxMesh.new()
 		box.size = Vector3.ONE * 0.7
 		node.mesh = box
-	var pickup_material: Material = Palette.solid(Palette.ARC, 2.0)
-	if mesh != null:
-		var painted := ShaderMaterial.new()
-		painted.resource_name = "field"
-		painted.shader = preload("res://assets/shaders/pickup.gdshader")
-		painted.set_shader_parameter("glow_color", Palette.ARC)
-		painted.set_shader_parameter("face_energy", 0.06)
-		painted.set_shader_parameter("rim_energy", 1.25)
-		painted.set_shader_parameter("emission_ceiling", 1.35)
-		pickup_material = painted
-	node.material_override = pickup_material
+	var material_key := "field" if mesh != null else "fallback"
+	if not _pickup_materials.has(material_key):
+		var pickup_material: Material
+		if mesh != null:
+			var painted := ShaderMaterial.new()
+			painted.resource_name = "field"
+			painted.shader = preload("res://assets/shaders/pickup.gdshader")
+			painted.set_shader_parameter("glow_color", Palette.ARC)
+			painted.set_shader_parameter("face_energy", 0.06)
+			painted.set_shader_parameter("rim_energy", 1.25)
+			painted.set_shader_parameter("emission_ceiling", 1.35)
+			pickup_material = painted
+		else:
+			pickup_material = Palette.solid(Palette.ARC, 2.0)
+		_pickup_materials[material_key] = pickup_material
+	node.material_override = _pickup_materials[material_key]
 	arena.add_child(node)
 	node.global_position = at
 	node.rotation = Vector3(0.6, clock * 3.0, 0.3)
