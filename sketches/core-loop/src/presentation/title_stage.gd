@@ -238,6 +238,7 @@ func _build_companion() -> void:
 		for x in [-0.29, 0.29]:
 			_box("ModuleFallback", Vector3(0.2, 0.3, 0.2), Vector3(x, 0.38, 0.0), Palette.COPPER, companion)
 		return
+	CompanionBody.dress_model(model)
 	companion.add_child(model)
 	_freeze_visual(model)
 

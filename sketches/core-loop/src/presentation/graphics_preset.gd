@@ -349,6 +349,21 @@ static func register_ground(view: MeshInstance3D) -> void:
 	_bind_material(view, "ground")
 
 
+# Keep a world-specific ground finish through preset changes, including target.
+static func set_ground_material(view: MeshInstance3D, material: Material) -> void:
+	for binding in _materials:
+		if binding.view.get_ref() == view:
+			binding.override = material
+			binding.originals = [material]
+			binding.target_override = material
+			_apply_material(binding)
+			return
+	view.material_override = material
+	register_ground(view)
+	_materials.back().target_override = material
+	_apply_material(_materials.back())
+
+
 static func _bind_material(view: MeshInstance3D, role: String) -> void:
 	var surfaces := []
 	var originals := []
@@ -369,6 +384,9 @@ static func _apply_material(binding: Dictionary) -> void:
 		view.material_override = binding.override
 		for i in binding.surfaces.size():
 			view.set_surface_override_material(i, binding.surfaces[i])
+		return
+	if binding.has("target_override"):
+		view.material_override = binding.target_override
 		return
 	var palette := preload("res://src/core/palette.gd")
 	for i in binding.originals.size():

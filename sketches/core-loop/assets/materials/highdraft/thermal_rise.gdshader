@@ -5,6 +5,10 @@ uniform float fx_time = 0.0;
 uniform float column_height = 40.0;
 uniform float column_radius = 5.0;
 uniform float occupied = 0.0;
+uniform vec4 lift_tint : source_color;
+uniform vec4 edge_tint : source_color;
+uniform float idle_opacity = 0.72;
+uniform float occupied_opacity = 0.92;
 varying float fade;
 
 void vertex() {
@@ -19,6 +23,6 @@ void vertex() {
 }
 
 void fragment() {
-	ALBEDO = vec3(0.925, 0.906, 0.855);
-	ALPHA = fade * mix(0.24, 0.40, occupied);
+	ALBEDO = mix(edge_tint.rgb, lift_tint.rgb, occupied * 0.35);
+	ALPHA = fade * mix(idle_opacity, occupied_opacity, occupied);
 }

@@ -8,12 +8,14 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
+const SpillwayScenery := preload("res://src/presentation/spillway_scenery.gd")
 
 const WORLD_SECONDS := 12.0
 const ESTABLISH_SECONDS := 2.0
 const LINE_SECONDS := 5.0
 const CREDITS_SECONDS := 18.0
 const TOTAL_SECONDS := WORLD_SECONDS * 3.0 + CREDITS_SECONDS
+const WORLD_DRESSING := {1: "SpillwayScenery", 2: "DigScenery", 3: "HighdraftScenery"}
 # TONE-READ: Credits. The thanks belongs to the person who made the return trip.
 const CREDITS := "SCRAPKEEP\n\nCreator and director\nAndrew\n\nMade with\nGodot · Blender\n\nMusic\nACE-Step\n\nAI collaborators\nClaude · Codex\n\nThank you for bringing the crew home."
 
@@ -38,6 +40,7 @@ var _credits: Label
 var _credits_back: ColorRect
 var _cut: ColorRect
 var _at := Vector3.ZERO
+var _dig_deep := false
 
 
 func start(game_ref) -> void:
@@ -79,7 +82,7 @@ func _build_view() -> void:
 	_scene = Node3D.new()
 	viewport.add_child(_scene)
 	camera = Camera3D.new()
-	camera.fov = 65.0
+	camera.fov = 48.0
 	camera.far = 1500.0
 	_scene.add_child(camera)
 	camera.make_current()
@@ -153,17 +156,24 @@ func _backing(top: float, bottom: float, color: Color) -> ColorRect:
 func _build_worlds() -> void:
 	for row in Worlds.ROWS:
 		var stage: int = game.ctx.stages.first_of(int(row.id))
-		# A resumed run can have only its current world's terrain cached.
+		# Terrain caches sibling zones before their presentation is built.
+		var cached := 0
 		for def in game.ctx.stages.DEFS:
 			if int(def.world) == int(row.id) and game.ctx.terrain.is_built(int(def.stage)):
-				stage = int(def.stage)
-				break
+				if cached == 0:
+					cached = int(def.stage)
+				if game.ctx.terrain.geometry_root(int(def.stage)).has_node(WORLD_DRESSING[int(row.id)]):
+					cached = int(def.stage)
+					break
+		if cached > 0:
+			stage = cached
 		var holder := Node3D.new()
 		holder.name = "World%d" % int(row.id)
 		_scene.add_child(holder)
 		if stage > 0:
 			if game.ctx.terrain.is_built(stage):
 				_snapshot(game.ctx.terrain.geometry_root(stage), holder, true)
+				_dress_world(holder, stage, int(row.id))
 			else:
 				_build_uncached(holder, stage, int(row.id))
 		worlds.append(holder)
@@ -238,9 +248,20 @@ func _build_uncached(holder: Node3D, stage: int, world: int) -> void:
 	mesh.mesh = surface.commit()
 	mesh.material_override = Palette.ground_material()
 	ground.add_child(mesh)
-	if world == 2:
-		DigScenery.build(holder, map, String(game.ctx.stages.of(stage).map))
-	elif world == 3:
+	_dress_world(holder, stage, world)
+
+
+func _dress_world(holder: Node3D, stage: int, world: int) -> void:
+	if holder.has_node(WORLD_DRESSING[world]):
+		return
+	# Gate on the stage's map like the live hooks do; a table can put any map in any world.
+	var map = game.ctx.terrain.map_for(stage)
+	var map_id := String(game.ctx.stages.of(stage).map)
+	if world == 1:
+		SpillwayScenery.build(holder)
+	elif world == 2 and map_id in ["dig", "dig_deep"]:
+		DigScenery.build(holder, map, map_id)
+	elif world == 3 and HighdraftScenery.is_highdraft(map):
 		HighdraftScenery.build(holder, map)
 
 
@@ -262,6 +283,7 @@ func _build_crew() -> void:
 		var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 		if packed != null:
 			var model := packed.instantiate()
+			CompanionBody.dress_model(model)
 			_snapshot(model, companion, true)
 			model.free()
 		else:
@@ -305,8 +327,19 @@ func advance(delta: float) -> void:
 	_copy.text = "" if phase == "flyover" else String(lines[mini(line, lines.size() - 1)])
 	_copy.modulate.a = clampf(fmod(maxf(0.0, local - ESTABLISH_SECONDS), LINE_SECONDS) / 0.4, 0.0, 1.0)
 	var p := local / WORLD_SECONDS
-	camera.position = _at + Vector3(lerpf(26.0, -24.0, smoothstep(0.0, 1.0, p)), lerpf(18.0, 22.0, p), 34.0)
-	camera.look_at(_at + Vector3(0.0, 3.0, 0.0))
+	var sweep := lerpf(5.0, -5.0, smoothstep(0.0, 1.0, p))
+	if world_index == 2:
+		camera.position = _at + Vector3(sweep, 7.0, 23.0)
+		camera.look_at(_at + Vector3(1.0, 2.5, -4.0))
+	elif world_index == 1 and _dig_deep:
+		camera.position = _at + Vector3(sweep * 0.3 - 8.0, 16.0, 9.0)
+		camera.look_at(_at + Vector3(-6.0, 1.0, -2.0))
+	elif world_index == 1:
+		camera.position = _at + Vector3(sweep - 8.0, 7.0, -23.0)
+		camera.look_at(_at + Vector3(-8.0, 2.0, 4.0))
+	else:
+		camera.position = _at + Vector3(sweep - 4.0, 7.0, -23.0)
+		camera.look_at(_at + Vector3(-4.0, 2.0, 4.0))
 	_cut.color.a = maxf(1.0 - local / 0.5, (local - WORLD_SECONDS + 0.5) / 0.5)
 	_cut.color.a = clampf(_cut.color.a, 0.0, 1.0)
 	viewport.size = Vector2i(get_viewport_rect().size)
@@ -318,12 +351,20 @@ func _enter_world(index: int) -> void:
 		worlds[i].visible = i == index
 	var stage: int = stages[index]
 	_at = Vector3.ZERO
+	_dig_deep = false
 	if stage > 0:
 		var map = game.ctx.terrain.map_for(stage)
 		var spot: Vector2 = map.spawn
+		# These are draw-only reunion positions, away from the empty drop-in sand.
+		if index == 0:
+			spot = Vector2(0.0, 196.0)
+		elif index == 1:
+			_dig_deep = String(game.ctx.stages.of(stage).map) == "dig_deep"
+			spot = Vector2(63.0, 184.0) if _dig_deep else Vector2(-27.0, 178.0)
 		_at = Vector3(spot.x, float(map.sample(spot.x, spot.y)[0]) + 2.0, spot.y)
+	camera.fov = 46.0 if _dig_deep else 48.0
 	shell.position = _at
-	companion.position = _at + Vector3(4.5, -0.8, -1.5)
+	companion.position = _at + Vector3(3.0, -0.8, -0.5)
 	_world_label.text = "%s\n%s" % [Worlds.ENDING.title, Worlds.ROWS[index].name]
 	_environment.ambient_light_color = Color("b4c0c9") if index == 2 else Palette.SAND
 	_environment.fog_light_color = Color("798c9e") if index == 2 else Palette.SAND

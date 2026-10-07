@@ -1,6 +1,7 @@
 extends Node3D
 
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
+const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const STONE_DIR := "res://assets/models/dig_stone/"
 const MECH_DIR := "res://assets/models/dig_mechanical/"
@@ -19,6 +20,7 @@ var module
 var _parts := {}
 var _materials := {}
 var _reactor_light: OmniLight3D
+var _core_key: SpotLight3D
 
 
 static func attach(owner_module):
@@ -47,6 +49,15 @@ func _prepare() -> bool:
 	stone.set_shader_parameter("bed_cream", Vector3(0.65, 0.58, 0.46))
 	stone.set_shader_parameter("bed_rust", Vector3(0.34, 0.27, 0.23))
 	_materials["stone"] = stone
+	var floor_material := ShaderMaterial.new()
+	floor_material.shader = preload("res://src/presentation/arena_waking_floor.gdshader")
+	floor_material.set_shader_parameter("tex_tone", stone.get_shader_parameter("tex_tone"))
+	floor_material.set_shader_parameter("tex_grain", stone.get_shader_parameter("tex_grain"))
+	floor_material.set_shader_parameter("base_color", Palette.SANDSTONE)
+	floor_material.set_shader_parameter("seam_color", Palette.CHARCOAL)
+	floor_material.set_shader_parameter("panel_pitch", 8.0)
+	floor_material.set_shader_parameter("seam_width", 0.10)
+	_materials["floor"] = floor_material
 	for slot in ["steel", "enamel", "glass"]:
 		var material := StandardMaterial3D.new()
 		material.resource_name = slot
@@ -120,12 +131,25 @@ func _build() -> void:
 	_reactor_light = OmniLight3D.new()
 	_reactor_light.name = "ReactorBounce"
 	_reactor_light.light_color = Color("91b4ce")
-	_reactor_light.light_energy = 1.35
+	_reactor_light.light_energy = 3.0
 	_reactor_light.omni_range = 48.0
 	_reactor_light.shadow_enabled = false
 	add_child(_reactor_light)
+	_core_key = SpotLight3D.new()
+	_core_key.name = "CoreKey"
+	_core_key.light_color = Palette.SAND
+	_core_key.light_energy = 2.8
+	_core_key.spot_range = 55.0
+	_core_key.spot_angle = 55.0
+	_core_key.shadow_enabled = true
+	add_child(_core_key)
 	_follow_reactor()
 	var lights := []
+	for light in find_children("*", "Light3D", true, false):
+		lights.append({"object": light, "values": {"light_energy": light.light_energy}})
+	for body in [module.pad] + module._floor_bodies.values():
+		for light in body.find_children("RimPool*", "OmniLight3D", true, false):
+			lights.append({"object": light, "values": {"light_energy": light.light_energy}})
 	for light in module.ctx.root.find_children("*", "DirectionalLight3D", true, false):
 		lights.append({"object": light, "values": {"visible": false}})
 	GraphicsPreset.set_lighting(self, module.ctx.terrain.environment, {
@@ -148,7 +172,21 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 	_flush(skin, batches)
 	for child in body.get_children():
 		if child is MeshInstance3D:
-			child.material_override = _materials["stone"]
+			child.material_override = _materials["floor"]
+	var pools := Node3D.new()
+	pools.name = "FloorLights"
+	pools.position.y = skin.position.y
+	body.add_child(pools)
+	for i in 4:
+		var angle := i * TAU / 4.0 + PI / 4.0
+		var light := OmniLight3D.new()
+		light.name = "RimPool%d" % i
+		light.position = Vector3(sin(angle) * 33.0, 4.0, cos(angle) * 33.0)
+		light.light_color = DigScenery.LAMP_LIGHT
+		light.light_energy = 1.4
+		light.omni_range = 30.0
+		light.shadow_enabled = false
+		pools.add_child(light)
 
 
 func _works() -> void:
@@ -212,6 +250,10 @@ func _physics_process(_delta: float) -> void:
 
 func _follow_reactor() -> void:
 	if is_instance_valid(module.warden):
-		_reactor_light.global_position = module.warden.family_point_at()
+		var core: Vector3 = module.warden.family_point_at()
+		_reactor_light.global_position = core
+		_core_key.global_position = core + Vector3(10, 18, 12)
+		_core_key.look_at(core)
 	else:
 		_reactor_light.light_energy = 0.0
+		_core_key.light_energy = 0.0

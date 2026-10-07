@@ -1,10 +1,13 @@
 extends Node3D
 
+const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
+const VISUAL_CATCH_GAIN := 8.0
 const CATCH_RADIUS := 6.0
 const CHUNK := 32.0
 const CLOUD_WRAP := 650.0
@@ -61,10 +64,13 @@ func _thermal(row: Dictionary, shader: Shader) -> void:
 	material.shader = shader
 	material.set_shader_parameter("column_height", row.height)
 	material.set_shader_parameter("column_radius", row.radius)
+	material.set_shader_parameter("lift_tint", EventKinds.world_row("thermal_ride").color)
+	material.set_shader_parameter("edge_tint", Palette.VERDIGRIS)
+	material.set_shader_parameter("idle_opacity", 0.72)
+	material.set_shader_parameter("occupied_opacity", 0.92)
 	var mote := BoxMesh.new()
-	mote.size = Vector3.ONE * 0.11
-	var streak := BoxMesh.new()
-	streak.size = Vector3(0.035, 0.85, 0.035)
+	mote.size = Vector3.ONE * 0.22
+	var streak := _lift_chevron()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 6_310_006 + thermals.size()
 	var views: Array[MultiMeshInstance3D] = []
@@ -90,6 +96,23 @@ func _thermal(row: Dictionary, shader: Shader) -> void:
 	thermals.append({"presence": row, "material": material, "views": views, "occupied": false})
 
 
+static func _lift_chevron() -> ArrayMesh:
+	var vertices := PackedVector3Array()
+	# Crossed ribbons keep the upward arrow legible from every chase heading.
+	var outline := [Vector2(-0.5, -0.35), Vector2(0, 0.35),
+		Vector2(0.5, -0.35), Vector2(0.5, -0.15), Vector2(0, 0.55), Vector2(-0.5, -0.15)]
+	for angle in [0.0, PI * 0.5]:
+		for index in [0, 1, 5, 1, 4, 5, 1, 2, 3, 1, 3, 4]:
+			var point: Vector2 = outline[index]
+			vertices.append(Vector3(cos(angle) * point.x, point.y, sin(angle) * point.x))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+
 func _net_chunk(view: MultiMeshInstance3D, shader: Shader) -> void:
 	var source := view.multimesh.mesh.surface_get_material(0) as StandardMaterial3D
 	# Malformed material: keep this chunk's original finish and weave.
@@ -104,9 +127,12 @@ func _net_chunk(view: MultiMeshInstance3D, shader: Shader) -> void:
 	material.set_shader_parameter("tint", source.albedo_color)
 	material.set_shader_parameter("finish_roughness", source.roughness)
 	material.set_shader_parameter("finish_metallic", source.metallic)
+	material.set_shader_parameter("cord_tint", Palette.SAND.lerp(Palette.CHARCOAL, 0.35))
+	material.set_shader_parameter("fade_end", 0.5)
 	material.set_shader_parameter("catch_point", Vector4(0.0, 0.0, 0.0, CATCH_RADIUS))
+	material.set_shader_parameter("visual_catch_gain", VISUAL_CATCH_GAIN)
 	view.material_override = material
-	view.custom_aabb = view.custom_aabb.grow(CATCH_DEPTH)
+	view.custom_aabb = view.custom_aabb.grow(CATCH_DEPTH * VISUAL_CATCH_GAIN)
 	var at: Vector3 = (view.get_meta("placements") as Array[Transform3D])[0].origin
 	chunks[Vector2i(floori(at.x / CHUNK), floori(at.z / CHUNK))] = material
 

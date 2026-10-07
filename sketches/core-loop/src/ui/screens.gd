@@ -334,6 +334,7 @@ func _close_camp_silently() -> void:
 func _camp_companion() -> void:
 	_close_camp_silently()
 	_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+	_layout_backdrop()
 	game.get_node("Workshop").open_companion()
 
 
@@ -571,6 +572,7 @@ func _summary_stats() -> void:
 
 
 func _fade(show: bool) -> void:
+	_layout_backdrop()
 	if _tween != null:
 		_tween.kill()
 	_tween = create_tween().set_parallel(true)
@@ -587,6 +589,14 @@ func _fade(show: bool) -> void:
 	_tween.chain().tween_callback(func():
 		if not game.flow.state_name() in MENU_STATES:
 			visible = false)
+
+
+func _layout_backdrop() -> void:
+	var title_deck: bool = _state == "title" and not (_help.visible or _achievements.visible or _settings.visible or _camp.visible)
+	_veil.anchor_bottom = 0.5 if title_deck else 1.0
+	_content.anchor_bottom = _veil.anchor_bottom
+	_content.add_theme_constant_override("separation", 18 if title_deck else 26)
+	_veil.color = Color(Palette.CHARCOAL, 1.0 if title_deck else 0.84)
 
 
 # The actions wrap at the room's width: the first row fills it, the rest centre below.

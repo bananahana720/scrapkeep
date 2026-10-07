@@ -67,13 +67,16 @@ func _draws(field, recovery := false) -> Dictionary:
 		var variant: String = item.get_meta("scrap_variant", "")
 		_check(NAMES.has(variant), "real spawn has a named GLB variant, never a fallback box")
 		_check(item.mesh is ArrayMesh and not item.mesh is PrimitiveMesh, "real spawn draws GLB geometry")
-		var material := item.material_override as StandardMaterial3D
-		_check(material != null and material.vertex_color_use_as_albedo, "real spawn enables vertex-colour albedo")
+		var material := item.material_override as ShaderMaterial
+		_check(material != null and material.shader.resource_path == "res://assets/shaders/pickup.gdshader"
+			and material.shader.code.contains("ALBEDO = COLOR.rgb;")
+			and not material.shader.code.contains("ALPHA"), "real spawn enables opaque vertex-colour albedo")
 		if material != null:
 			var color := Palette.AMBER if recovery else Palette.ARC
-			_check(material.resource_name == "field" and material.albedo_color.is_equal_approx(color) and material.emission_enabled
-				and material.emission.is_equal_approx(color)
-				and is_equal_approx(material.emission_energy_multiplier, 2.2 if recovery else 1.6), "existing tint and glow cue")
+			_check(material.resource_name == "field" and material.get_shader_parameter("glow_color") == color
+				and is_equal_approx(material.get_shader_parameter("face_energy"), 0.06)
+				and is_equal_approx(material.get_shader_parameter("rim_energy"), 1.25)
+				and is_equal_approx(material.get_shader_parameter("emission_ceiling"), 1.35), "palette glow confined to bounded rim")
 		_check(item.find_children("*", "CollisionObject3D", true, false).is_empty(), "no pickup physics bodies")
 		if not asset_meshes.has(variant):
 			continue

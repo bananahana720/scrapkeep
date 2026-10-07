@@ -37,19 +37,20 @@ for x in (-1.4, 1.4):
         panel(p,0.42,0.28,0.4,(x,0.14,z),"oxide")
     for y in (0.15,3.2):
         rod(p,(x,y,-1.4),(x,y,1.4),0.12,"petrol")
-    for z in (-0.7,0,0.7):
-        rod(p,(x,0.2,z),(x,3.15,z))
 for y in (0.15,3.2):
     rod(p,(-1.4,y,-1.4),(1.4,y,-1.4),0.12,"petrol")
     rod(p,(-1.4,y,1.4),(1.4,y,1.4),0.12,"petrol")
-for x in (-0.7,0,0.7):
-    rod(p,(x,0.2,-1.4),(x,3.15,-1.4))
-# A crooked cross strap and rubbed collars describe a repaired holding pen.
-rod(p,(-1.4,0.55,-1.43),(1.4,2.7,-1.43),0.06,"copper")
 for x in (-1.4,1.4):
     panel(p,0.33,0.32,0.08,(x,2.8,1.53),"bone")
 finish(p)
 p = Part("CageGate")
+# All imprisoning bars retract with the state-owned gate, leaving an open frame.
+for x in (-1.4,1.4):
+    for z in (-0.7,0,0.7):
+        rod(p,(x,0.2,z),(x,3.15,z))
+for x in (-0.7,0,0.7):
+    rod(p,(x,0.2,-1.4),(x,3.15,-1.4))
+rod(p,(-1.4,0.55,-1.43),(1.4,2.7,-1.43),0.06,"copper")
 for x in (-1.15,1.15):
     rod(p,(x,0.2,1.43),(x,3.05,1.43),0.095,"copper")
 for y in (0.2,3.05):

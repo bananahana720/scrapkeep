@@ -65,11 +65,11 @@ var _age := {}
 var _cogs := {}
 var _cog_material: StandardMaterial3D
 var _cog_mesh: CylinderMesh
-var _cluster_material: StandardMaterial3D
+var _cluster_material: Material
 var _cluster_mesh: BoxMesh
 var _items: Array[MeshInstance3D] = []
 var _caught := {}
-var _material: StandardMaterial3D
+var _material: Material
 var _mesh: BoxMesh
 var _spin := 0.0
 
@@ -88,10 +88,20 @@ func setup() -> void:
 	_cog_mesh.height = 0.18
 	_cog_mesh.radial_segments = 8
 	if not _pickup_meshes().is_empty():
+		_material = _pickup_material(Palette.ARC)
+		_cluster_material = _pickup_material(Palette.AMBER)
 		_material.resource_name = "field"
 		_cluster_material.resource_name = "field"
-		_material.vertex_color_use_as_albedo = true
-		_cluster_material.vertex_color_use_as_albedo = true
+
+
+static func _pickup_material(color: Color) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://assets/shaders/pickup.gdshader")
+	material.set_shader_parameter("glow_color", color)
+	material.set_shader_parameter("face_energy", 0.06)
+	material.set_shader_parameter("rim_energy", 1.25)
+	material.set_shader_parameter("emission_ceiling", 1.35)
+	return material
 
 
 static func _pickup_meshes() -> Array[Mesh]:

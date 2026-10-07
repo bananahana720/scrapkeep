@@ -1025,7 +1025,7 @@ func _apply_route() -> void:
 	var route_seed := int(ctx.tuning.base("route_seed"))
 	if route_seed > 0:
 		ctx.rng.seed = route_seed
-		seed(route_seed)
+		seed(route_seed)  # lint: route seed
 	var start := float(ctx.tuning.base("start_mass"))
 	if start > 0.0:
 		ctx.run.grant_start_mass(start)
