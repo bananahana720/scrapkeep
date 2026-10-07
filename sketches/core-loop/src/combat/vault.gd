@@ -78,7 +78,7 @@ func _build_visual() -> void:
 	var lamp := SphereMesh.new()
 	lamp.radius = 0.6
 	lamp.height = 1.2
-	_accent(lamp, Palette.SAND, 3.0, Vector3.UP * (HALF_HEIGHT + 2.0))
+	_accent(lamp, Palette.SAND, 0.35, Vector3.UP * (HALF_HEIGHT + 2.0))
 
 
 static func _parts() -> Array:
@@ -105,7 +105,7 @@ static func _parts() -> Array:
 				valid = false
 				continue
 			var mesh: Mesh = mi.mesh.duplicate()
-			var mat := Palette.solid(Palette.SAND, 3.0) if mi.name == "VaultLamp" else Palette.solid(Color.WHITE)
+			var mat := Palette.solid(Palette.SAND, 0.35) if mi.name == "VaultLamp" else Palette.solid(Color.WHITE)
 			mat.vertex_color_use_as_albedo = mi.name == "VaultBody"
 			mesh.surface_set_material(0, mat)
 			var xform := mi.transform

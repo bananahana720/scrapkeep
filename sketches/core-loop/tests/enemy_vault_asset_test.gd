@@ -143,7 +143,9 @@ func _run() -> void:
 	if body != null and lamp != null:
 		_check(body.get_surface_override_material(0) == cache._material and cache._material.vertex_color_use_as_albedo, "body vertex paint and flash registered")
 		var lm := lamp.mesh.surface_get_material(0) as StandardMaterial3D
-		_check(lm != null and lm.emission_enabled and lm.emission_energy_multiplier == 3.0, "existing landmark lamp retained")
+		_check(lm != null and lm.emission_enabled and is_equal_approx(lm.emission_energy_multiplier, 0.35)
+			and lm.albedo_color == cache.Palette.SAND and lm.emission == cache.Palette.SAND,
+			"landmark lamp retains palette bone below whiteout ceiling")
 		var other = game.ctx.spawner.spawn_enemy("vault", Vector3(10, 30, 0))
 		other.set_physics_process(false)
 		var ob := other.find_child("VaultBody", true, false) as MeshInstance3D

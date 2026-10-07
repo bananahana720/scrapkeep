@@ -60,14 +60,19 @@ func _measure(node: Node3D) -> Dictionary:
 				var p: Vector3 = xf * v
 				low = low.min(p)
 				high = high.max(p)
-			var mat := mi.get_surface_override_material(s) as BaseMaterial3D
+			var mat: Material = mi.get_surface_override_material(s)
 			if mat == null:
-				mat = mi.material_override as BaseMaterial3D
+				mat = mi.material_override
 			if mat == null:
-				mat = mi.mesh.surface_get_material(s) as BaseMaterial3D
+				mat = mi.mesh.surface_get_material(s)
 			opaque = opaque and mat != null
-			if mat != null:
+			if mat is BaseMaterial3D:
 				opaque = opaque and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and mat.albedo_color.a >= 0.999
+			elif mat is ShaderMaterial:
+				opaque = opaque and mat.shader != null and mat.shader.resource_path == "res://assets/shaders/pickup.gdshader" \
+					and not mat.shader.code.contains("ALPHA")
+			else:
+				opaque = false
 			if arrays[Mesh.ARRAY_COLOR] != null:
 				for c in arrays[Mesh.ARRAY_COLOR] as PackedColorArray:
 					opaque = opaque and c.a >= 0.999
@@ -130,9 +135,12 @@ func _run() -> void:
 	_check(record.value == 7 and record.at == at and record.age == 0.0 and record.source == "spill", "unchanged scrap value and collection record")
 	var field := ScrapField.new()
 	field.setup()
-	var mat := pickup.material_override as StandardMaterial3D
-	_check(mat != null and mat.albedo_color.is_equal_approx(field._material.albedo_color)
-		and mat.albedo_color.is_equal_approx(Palette.ARC) and mat.emission_enabled, "matches normal enemy scrap field mint")
+	var mat := pickup.material_override as ShaderMaterial
+	var field_mat := field._material as ShaderMaterial
+	_check(mat != null and field_mat != null and mat.shader == field_mat.shader
+		and mat.get_shader_parameter("glow_color") == Palette.ARC
+		and mat.get_shader_parameter("glow_color") == field_mat.get_shader_parameter("glow_color")
+		and mat.shader.code.contains("ALBEDO = COLOR.rgb;"), "matches scrap field mint rim and preserves vertex paint")
 	field.free()
 	boss._spawn_pickup(at + Vector3.RIGHT, 9, "returned")
 	var other: MeshInstance3D = boss._pickups[1].node
@@ -145,5 +153,6 @@ func _run() -> void:
 	var mesh_start := source.find("\tvar node := MeshInstance3D.new()", start)
 	var mesh_end := source.find("\tnode.material_override =", mesh_start)
 	var logic := source.substr(0, mesh_start) + source.substr(mesh_end)
+	logic = logic.replace("\tnode.material_override = pickup_material\n", "\tnode.material_override = Palette.solid(Palette.ARC, 2.0)\n")
 	_check(logic.sha256_text() == BASE_LOGIC_SHA, "entire boss source outside mesh construction unchanged")
 	_finish()

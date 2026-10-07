@@ -463,7 +463,17 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 		var box := BoxMesh.new()
 		box.size = Vector3.ONE * 0.7
 		node.mesh = box
-	node.material_override = Palette.solid(Palette.ARC, 2.0)
+	var pickup_material: Material = Palette.solid(Palette.ARC, 2.0)
+	if mesh != null:
+		var painted := ShaderMaterial.new()
+		painted.resource_name = "field"
+		painted.shader = preload("res://assets/shaders/pickup.gdshader")
+		painted.set_shader_parameter("glow_color", Palette.ARC)
+		painted.set_shader_parameter("face_energy", 0.06)
+		painted.set_shader_parameter("rim_energy", 1.25)
+		painted.set_shader_parameter("emission_ceiling", 1.35)
+		pickup_material = painted
+	node.material_override = pickup_material
 	arena.add_child(node)
 	node.global_position = at
 	node.rotation = Vector3(0.6, clock * 3.0, 0.3)
