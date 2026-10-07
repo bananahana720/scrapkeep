@@ -12,6 +12,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const HighdraftMap := preload("res://src/world/map_highdraft.gd")
+const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 
 const DIR := "res://assets/models/highdraft/"
 const NODE_NAME := "HighdraftScenery"
@@ -35,6 +36,7 @@ const SKY_RING := 460.0
 static var dir := DIR
 static var _sky: PanoramaSkyMaterial
 static var _saved := {}
+static var _warned := {}
 
 
 # ---- Hook and environment ----
@@ -63,7 +65,10 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	if root.get_node_or_null(NODE_NAME) == null:
 		var world = ctx.root.get("world") if ctx.root != null else null
 		var contraptions = world.contraptions.get(stage) if world != null and "contraptions" in world else null
-		build(root, map, contraptions, terrain.ground_callable(stage), ctx.player)
+		var scenery := build(root, map, contraptions, terrain.ground_callable(stage), ctx.player)
+		var effects := scenery.get_node_or_null("WindEffects")
+		if effects != null and ctx.player != null and ctx.events.has_signal("landed"):
+			ctx.events.connect("landed", effects.on_landed.bind(ctx.player))
 	apply_environment(terrain, root)
 
 
@@ -164,15 +169,33 @@ static func build(stage_root: Node3D, map, contraptions = null, ground := Callab
 	_anchors(scenery, state, stage_root, map, ground)
 	_props(scenery, map)
 	_sky_pieces(scenery)
+	state.fx = HighdraftFx.install(scenery, state, map)
 	return scenery
 
 
 static func _scene(file: String) -> Node:
 	var packed: PackedScene = load(dir + file) as PackedScene if ResourceLoader.exists(dir + file) else null
 	if packed == null:
-		push_warning("highdraft_scenery: %s missing, its piece stays on the greybox" % file)
+		if not _warned.has(dir + file):
+			_warned[dir + file] = true
+			push_warning("highdraft_scenery: %s missing, its piece stays on the greybox" % file)
 		return null
 	return packed.instantiate()
+
+
+static func _loop(scene: Node, choices: Array[String]) -> void:
+	for player: AnimationPlayer in scene.find_children("*", "AnimationPlayer", true, false):
+		for clip in choices:
+			if player.has_animation(clip):
+				if player.get_animation(clip).loop_mode != Animation.LOOP_LINEAR:
+					var library_name := player.find_animation_library(player.get_animation(clip))
+					var library := player.get_animation_library(library_name).duplicate(true) as AnimationLibrary
+					var key := clip.get_slice("/", clip.get_slice_count("/") - 1)
+					library.get_animation(key).loop_mode = Animation.LOOP_LINEAR
+					player.remove_animation_library(library_name)
+					player.add_animation_library(library_name, library)
+				player.play(clip)
+				return
 
 
 # The first MeshInstance3D's mesh in a GLB (named when the file holds several), or null.
@@ -382,6 +405,18 @@ static func _barges(contraptions: Node) -> void:
 		# The hidden deck node hides its children, so the deck stays visible and bare instead.
 		deck.visible = true
 		deck.mesh = null
+		# Reuse the kit's rig for a full weather sail and a small corner pennant.
+		for marker in [
+			{"name": "HighdraftWeatherSail", "at": Vector3(5.5, 1.0, -5.5), "scale": 1.0},
+			{"name": "HighdraftPennant", "at": Vector3(-5.5, 1.0, 5.5), "scale": 0.5},
+		]:
+			var sail := _scene("prop_sail.glb")
+			if sail != null:
+				sail.name = marker.name
+				sail.position = marker.at
+				sail.scale = Vector3.ONE * marker.scale
+				deck.add_child(sail)
+				_loop(sail, ["wind", "wind_loop"])
 
 
 # ---- Thermals ----
@@ -406,9 +441,7 @@ static func _thermals(parent: Node3D, state: Node, map, contraptions: Node) -> v
 		air.position = base
 		air.scale = Vector3(1.0, float(spec["height"]) / 40.0, 1.0)
 		parent.add_child(air)
-		var rise := air.find_children("*", "AnimationPlayer", true, false)
-		if not rise.is_empty():
-			(rise[0] as AnimationPlayer).play("rise")
+		_loop(air, ["rise", "rise_loop"])
 		var vent_player := vent.find_children("*", "AnimationPlayer", true, false)
 		state.thermals.append({"base": base, "radius": float(spec["radius"]), "height": float(spec["height"]),
 			"player": vent_player[0] if not vent_player.is_empty() else null, "state": ""})
@@ -624,9 +657,7 @@ static func _props(parent: Node3D, map) -> void:
 				sail.position = Vector3(sail_at.x, top, sail_at.y)
 				sail.rotation.y = rng.randf() * TAU
 				parent.add_child(sail)
-				var wind := sail.find_children("*", "AnimationPlayer", true, false)
-				if not wind.is_empty():
-					(wind[0] as AnimationPlayer).play("wind")
+				_loop(sail, ["wind", "wind_loop"])
 	var yard := Node3D.new()
 	yard.name = "Props"
 	parent.add_child(yard)
@@ -742,13 +773,16 @@ class Updater extends Node3D:
 	var player = null
 	var anchors: Array[Dictionary] = []
 	var thermals: Array[Dictionary] = []
+	var fx: Node3D
 
-	func _process(_delta: float) -> void:
+	func _process(delta: float) -> void:
 		if not is_visible_in_tree():
 			return
 		var cam := get_viewport().get_camera_3d()
 		var kit = player.kit if player != null and "kit" in player else null
 		var ball: Vector3 = player.global_position if player != null and is_instance_valid(player) else Vector3.INF
+		if player != null and is_instance_valid(player) and player.has_method("ball_position"):
+			ball = player.ball_position()
 		for row in anchors:
 			var eye: Node3D = row["eye"]
 			if cam != null:
@@ -763,6 +797,8 @@ class Updater extends Node3D:
 			if want != row["state"] and row["player"] != null:
 				(row["player"] as AnimationPlayer).play(want)
 			row["state"] = want
+		if fx != null:
+			fx.step(delta, ball)
 
 	func _anchor_state(row: Dictionary, kit) -> String:
 		if kit == null:

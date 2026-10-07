@@ -1,0 +1,215 @@
+extends Node3D
+
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+const SHADER_DIR := "res://assets/materials/highdraft/"
+const CATCH_SECONDS := 0.4
+const CATCH_DEPTH := 0.15
+const CATCH_RADIUS := 6.0
+const CHUNK := 32.0
+const CLOUD_WRAP := 650.0
+const MOTE_COUNTS := [18, 54]
+const STREAK_COUNTS := [6, 18]
+
+# Injectable only for the missing-resource proof. No preload that can break boot.
+static var shader_dir := SHADER_DIR
+var thermals: Array[Dictionary] = []
+var chunks := {}
+var active_catches: Array[Dictionary] = []
+var clouds: MultiMeshInstance3D
+var cloud_origins: Array[Transform3D] = []
+var cloud_placements: Array[Transform3D] = []
+var cloud_velocities: Array[Vector3] = []
+var clock := 0.0
+var frozen := false
+var low := false
+var _map
+var _last_ball := Vector3.INF
+var _cloud_wait := 0.0
+var _warned_net := false
+
+
+static func install(scenery: Node3D, presence: Node, map) -> Node3D:
+	var rise := _shader("thermal_rise.gdshader")
+	var sag := _shader("net_catch.gdshader")
+	if rise == null or sag == null:
+		push_warning("highdraft_fx: shaders unavailable; existing Highdraft scenery retained")
+		return null
+	var fx := new()
+	fx.name = "WindEffects"
+	fx._map = map
+	scenery.add_child(fx)
+	for row in presence.thermals:
+		fx._thermal(row, rise)
+	var deck := scenery.get_node_or_null("NetDeck")
+	if deck != null:
+		for chunk: MultiMeshInstance3D in deck.find_children("Tiles_*", "MultiMeshInstance3D", false, false):
+			fx._net_chunk(chunk, sag)
+	fx.clouds = scenery.get_node_or_null("Sky/CloudDeck") as MultiMeshInstance3D
+	fx._clouds()
+	GraphicsPreset.register_dressing_host(fx)
+	return fx
+
+
+static func _shader(file: String) -> Shader:
+	var path := shader_dir + file
+	return load(path) as Shader if ResourceLoader.exists(path) else null
+
+
+func _thermal(row: Dictionary, shader: Shader) -> void:
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	material.set_shader_parameter("column_height", row.height)
+	material.set_shader_parameter("column_radius", row.radius)
+	var mote := BoxMesh.new()
+	mote.size = Vector3.ONE * 0.11
+	var streak := BoxMesh.new()
+	streak.size = Vector3(0.035, 0.85, 0.035)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 6_310_006 + thermals.size()
+	var views: Array[MultiMeshInstance3D] = []
+	for kind in 2:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_custom_data = true
+		mm.mesh = mote if kind == 0 else streak
+		mm.instance_count = MOTE_COUNTS[1] if kind == 0 else STREAK_COUNTS[1]
+		for i in mm.instance_count:
+			mm.set_instance_transform(i, Transform3D.IDENTITY)
+			mm.set_instance_custom_data(i, Color(rng.randf(), rng.randf(), sqrt(rng.randf()), rng.randf()))
+		var view := MultiMeshInstance3D.new()
+		view.name = "Motes_%d" % thermals.size() if kind == 0 else "Streaks_%d" % thermals.size()
+		view.multimesh = mm
+		view.material_override = material
+		view.position = row.base
+		view.custom_aabb = AABB(Vector3(-row.radius, -1.0, -row.radius), Vector3(row.radius * 2.0, row.height + 2.0, row.radius * 2.0))
+		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(view)
+		GraphicsPreset.register_scenery(view)
+		views.append(view)
+	thermals.append({"presence": row, "material": material, "views": views, "occupied": false})
+
+
+func _net_chunk(view: MultiMeshInstance3D, shader: Shader) -> void:
+	var source := view.multimesh.mesh.surface_get_material(0) as StandardMaterial3D
+	# Malformed material: keep this chunk's original finish and weave.
+	if source == null:
+		if not _warned_net:
+			_warned_net = true
+			push_warning("highdraft_fx: net material unavailable; affected chunks retain their original weave")
+		return
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	material.set_shader_parameter("atlas", source.albedo_texture)
+	material.set_shader_parameter("tint", source.albedo_color)
+	material.set_shader_parameter("finish_roughness", source.roughness)
+	material.set_shader_parameter("finish_metallic", source.metallic)
+	material.set_shader_parameter("catch_point", Vector4(0.0, 0.0, 0.0, CATCH_RADIUS))
+	view.material_override = material
+	view.custom_aabb = view.custom_aabb.grow(CATCH_DEPTH)
+	var at: Vector3 = (view.get_meta("placements") as Array[Transform3D])[0].origin
+	chunks[Vector2i(floori(at.x / CHUNK), floori(at.z / CHUNK))] = material
+
+
+func _clouds() -> void:
+	if clouds == null:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 6_310_036
+	var placements: Array[Transform3D] = clouds.get_meta("placements")
+	for i in clouds.multimesh.instance_count:
+		cloud_origins.append(placements[i])
+		cloud_placements.append(placements[i])
+		cloud_velocities.append(Vector3(rng.randf_range(0.08, 0.14), 0.0, rng.randf_range(0.025, 0.055)))
+	# Drift can reach the whole wrap square, while the banks remain below the catch plane.
+	clouds.custom_aabb = AABB(Vector3(-900.0, -34.0, -900.0), Vector3(1800.0, 16.0, 1800.0))
+
+
+func _sync_dressing() -> void:
+	low = GraphicsPreset.current == "low"
+	for row in thermals:
+		_density(row)
+
+
+func _density(row: Dictionary) -> void:
+	var state := 1 if row.occupied else 0
+	var spec: Dictionary = GraphicsPreset.PRESETS[GraphicsPreset.current]
+	for kind in 2:
+		var view: MultiMeshInstance3D = row.views[kind]
+		var amount: int = MOTE_COUNTS[state] if kind == 0 else STREAK_COUNTS[state]
+		view.multimesh.visible_instance_count = amount / 3 if low else amount
+		view.visible = spec.get("air_motes" if kind == 0 else "air_streaks", true)
+
+
+# Called by Presence after it reads the actual column occupancy. No physics writes or RNG.
+func step(delta: float, ball: Vector3) -> void:
+	if frozen:
+		return
+	clock += delta
+	for row in thermals:
+		var occupied: bool = row.presence.state == "occupied"
+		if occupied != row.occupied:
+			row.occupied = occupied
+			row.material.set_shader_parameter("occupied", 1.0 if occupied else 0.0)
+			_density(row)
+		row.material.set_shader_parameter("fx_time", clock)
+	_step_catches(delta)
+	if ball != Vector3.INF:
+		var contact: float = _map.net_deck_height() + Tuning.RADIUS
+		if _last_ball != Vector3.INF and ball.y <= contact + 0.15 and ball.y >= contact - 0.2 \
+				and (_last_ball.y > contact + 0.15 or _last_ball.y < contact - 0.2):
+			catch_at(ball)
+	_last_ball = ball
+	_cloud_wait += delta
+	if clouds != null and _cloud_wait >= (0.2 if low else 0.1):
+		_cloud_wait = 0.0
+		for i in cloud_origins.size():
+			var xf: Transform3D = cloud_origins[i]
+			xf.origin += cloud_velocities[i] * clock
+			xf.origin.x = wrapf(xf.origin.x, -CLOUD_WRAP, CLOUD_WRAP)
+			xf.origin.z = wrapf(xf.origin.z, -CLOUD_WRAP, CLOUD_WRAP)
+			cloud_placements[i] = xf
+			clouds.multimesh.set_instance_transform(i, xf)
+
+
+func catch_at(ball: Vector3) -> void:
+	var deck: float = _map.net_deck_height()
+	if absf(ball.y - (deck + Tuning.RADIUS)) > 0.3 or absf(float(_map.sample(ball.x, ball.z)[0]) - deck) > 0.05:
+		return
+	var point := Vector2(ball.x, ball.z)
+	var corner := Vector2i(floori(ball.x / CHUNK), floori(ball.z / CHUNK))
+	for x in range(corner.x - 1, corner.x + 2):
+		for z in range(corner.y - 1, corner.y + 2):
+			var key := Vector2i(x, z)
+			if not chunks.has(key):
+				continue
+			var nearest := Vector2(clampf(point.x, x * CHUNK, (x + 1) * CHUNK), clampf(point.y, z * CHUNK, (z + 1) * CHUNK))
+			if nearest.distance_squared_to(point) > CATCH_RADIUS * CATCH_RADIUS:
+				continue
+			var material: ShaderMaterial = chunks[key]
+			active_catches = active_catches.filter(func(row): return row.material != material)
+			active_catches.append({"material": material, "at": point, "age": 0.0})
+			material.set_shader_parameter("catch_point", Vector4(point.x, point.y, CATCH_DEPTH, CATCH_RADIUS))
+
+
+# The existing landing signal arrives during force integration. Read the committed body
+# transform there so a quick bounce between rendered frames cannot miss its catch.
+func on_landed(_impact: float, player: Node3D) -> void:
+	if frozen or not is_visible_in_tree() or not is_instance_valid(player):
+		return
+	var body: RigidBody3D = player.active_body()
+	var physics := PhysicsServer3D.body_get_direct_state(body.get_rid())
+	if physics != null:
+		catch_at(physics.transform.origin)
+
+
+func _step_catches(delta: float) -> void:
+	if active_catches.is_empty():
+		return
+	for row in active_catches:
+		row.age += delta
+		var phase: float = clampf(row.age / CATCH_SECONDS, 0.0, 1.0)
+		# Fast shallow catch, spring toward rest, a smaller second settle. Never above the deck.
+		var depth := CATCH_DEPTH * pow(1.0 - phase, 2.0) * (0.75 + 0.25 * cos(phase * TAU * 1.5))
+		row.material.set_shader_parameter("catch_point", Vector4(row.at.x, row.at.y, depth, CATCH_RADIUS))
+	active_catches = active_catches.filter(func(row): return row.age < CATCH_SECONDS)
