@@ -54,6 +54,9 @@ var cam: Camera3D
 var _roll := 0.0
 var _previous_velocity := Vector3.ZERO
 var _shake := 0.0
+# Shake has its own stream. Drawn from the global one, any visual's randf() or particle
+# restart moved the picture the simulation reads, and a seeded run stopped repeating.
+var _shake_rng := _seeded_shake_rng()
 var _shake_decay := 2.4
 var _punch := 0.0
 var _punch_decay := 0.0
@@ -236,8 +239,14 @@ func _process(delta: float) -> void:
 	_shake = maxf(_shake, clampf(target.state.impact / 30.0, 0.0, 1.2) * motion_scale)
 	_shake = minf(maxf(0.0, _shake - delta * maxf(_shake_decay, 2.4)), shake_cap)
 	_kick = _kick.lerp(Vector3.ZERO, 1.0 - exp(-KICK_RETURN * delta))
-	var jitter := Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), 0.0) * _shake * 0.22
+	var jitter := Vector3(_shake_rng.randf_range(-1.0, 1.0), _shake_rng.randf_range(-1.0, 1.0), 0.0) * _shake * 0.22
 	cam.position = jitter + cam.get_parent().global_basis.inverse() * _kick
 	# The lens turns back by the bias so the view direction, and with it the aim, stays the player's.
 	cam.rotation = Vector3(-_pitch_bias, 0.0, _roll + jitter.x * 0.1)
 	cam.fov = minf(_base_fov + _fov_add + _punch, FOV_CAP)
+
+
+static func _seeded_shake_rng() -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 0x5CA1E
+	return rng
