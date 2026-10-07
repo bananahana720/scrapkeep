@@ -437,9 +437,32 @@ func _drop_held(i: int) -> void:
 
 func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 	var node := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3.ONE * 0.7
-	node.mesh = box
+	var path := "res://assets/models/bosses/boss_pickup.glb"
+	var mesh := get_meta("boss_scrap_mesh") as Mesh if has_meta("boss_scrap_mesh") else null
+	var packed := load(path) as PackedScene if mesh == null and ResourceLoader.exists(path) else null
+	if packed != null:
+		if mesh == null:
+			var scene := packed.instantiate()
+			if scene != null:
+				var parts := scene.find_children("*", "MeshInstance3D", true, false)
+				if parts.size() == 1:
+					var part := parts[0] as MeshInstance3D
+					if part.name == "ScrapChunk" and part.mesh != null and part.mesh.get_surface_count() == 1:
+						var material := part.mesh.surface_get_material(0)
+						if material != null and material.resource_name == "field" and part.transform.is_equal_approx(Transform3D.IDENTITY):
+							mesh = part.mesh
+							set_meta("boss_scrap_mesh", mesh)
+				scene.free()
+	if mesh != null:
+		node.name = "ScrapChunk"
+		node.mesh = mesh
+	else:
+		if not has_meta("scrap_asset_warned"):
+			set_meta("scrap_asset_warned", true)
+			push_warning("boss pickup: missing or malformed model; using scrap fallback")
+		var box := BoxMesh.new()
+		box.size = Vector3.ONE * 0.7
+		node.mesh = box
 	node.material_override = Palette.solid(Palette.ARC, 2.0)
 	arena.add_child(node)
 	node.global_position = at
