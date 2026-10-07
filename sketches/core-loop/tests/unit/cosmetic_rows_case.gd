@@ -88,7 +88,7 @@ func run(t) -> void:
 			starters += 1
 	t.check("no real tint is a hostile hue", hostile.is_empty(), "hostile tints on %s" % [hostile])
 	t.check("at least one starter paint exists", starters >= 1, "%d starter paints" % starters)
-	t.eq("cosmetics are paint only", Cosmetics.SLOTS, ["paint"])
+	t.eq("cosmetic slots are paint plus the three P-R7 slots", Cosmetics.SLOTS, ["paint", "trail", "decal", "companion_paint"])
 	var bare: Array = []
 	for pilot in _pilots():
 		var owned := false
