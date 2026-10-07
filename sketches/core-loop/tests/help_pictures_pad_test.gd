@@ -1,0 +1,35 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Push := preload("res://tests/workshop/push.gd")
+const T := preload("res://tests/support/t.gd")
+var _t := T.new("help_pictures_pad_test")
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+func _run() -> void:
+	var game := Game.new()
+	game.test_mode = true
+	root.add_child(game)
+	game.screens.toggle_help()
+	await process_frame
+	await process_frame
+	var help = game.screens._help
+	help.page_button.grab_focus()
+	Push.pad(root, JOY_BUTTON_A)
+	await process_frame
+	_t.check("gamepad A opens Pictures", help._mechanics.visible and not help.diagram.visible)
+	_t.check("Help stays open after Pictures", game.screens.help_open())
+	Push.pad(root, JOY_BUTTON_A)
+	await process_frame
+	_t.check("gamepad A returns to Controls", help.diagram.visible and not help._mechanics.visible)
+	help.back.grab_focus()
+	Push.pad(root, JOY_BUTTON_A)
+	await process_frame
+	_t.check("gamepad A activates Back", not game.screens.help_open())
+	game.screens.toggle_help()
+	Push.pad(root, JOY_BUTTON_B)
+	_t.check("gamepad B still closes Help", not game.screens.help_open())
+	game.free()
+	quit(_t.verdict())
