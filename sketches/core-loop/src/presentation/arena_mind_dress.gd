@@ -1,6 +1,7 @@
 extends Node3D
 
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const DIR := "res://assets/models/highdraft/"
 const NODE_NAME := "MindArenaDress"
 const PARTS := {
@@ -62,6 +63,8 @@ func _load_kit() -> Dictionary:
 		scene.free()
 		if mesh == null or not cosmetic:
 			return {}
+		if key == "Mesa":
+			mesh = Finishes.aerial_mesh(mesh)
 		meshes[key] = mesh
 	return meshes
 
