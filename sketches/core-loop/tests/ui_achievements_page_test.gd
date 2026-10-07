@@ -70,11 +70,16 @@ func _run() -> void:
 	var page = screens.achievements_page()
 	var rows: Dictionary = page.rows
 	_t.eq("P3-3 one row per achievement", rows.keys(), Achievements.ids())
-	_t.eq("P3-3 sixteen rows today", rows.size(), 16)  # 2026-10-05 (wave 14 achievements-fill): waking_stilled, highdraft_reached, codex_keeper added
+	_t.eq("P3-3 thirty-six rows today", rows.size(), 36)
 	await _frames(2)
-	var view := root.get_visible_rect()
-	var spill := rows.keys().filter(func(id): return not view.encloses(rows[id].get_global_rect()))
-	_t.check("P3-3 every row and Back fit the screen without scrolling", spill.is_empty() and view.encloses(page.back.get_global_rect()), "view %s outside %s back %s" % [view, spill, page.back.get_global_rect()])
+	_t.check("Back stays visible during page entry", root.get_visible_rect().encloses(page.back.get_global_rect()))
+	await _reach_rows(page)
+	Push.pad(root, JOY_BUTTON_A)
+	await _frames(2)
+	_t.check("pad A activates focused Back", not screens.achievements_open())
+	_game._screen_key(KEY_A)
+	await _settle(0.6)
+	rows = page.rows
 	var long := rows.keys().filter(func(id): return WordBudget.count(rows[id])["hud"] > ROW_WORDS)
 	_t.check("P3-3 every row reads in 15 words or fewer", long.is_empty(), "long %s" % [long])
 	var hidden := AchievementsPage.reading("clean_win", _game.ctx.profile, _game.progress)
@@ -162,3 +167,35 @@ func _label_texts(node: Node) -> Array:
 	for child in node.get_children():
 		out.append_array(_label_texts(child))
 	return out
+
+
+func _reach_rows(page) -> void:
+	var original := root.size
+	var original_scale := root.content_scale_size
+	await _settle(0.6)
+	for resolution in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+		root.size = resolution
+		root.content_scale_size = resolution
+		await _frames(5)
+		_t.eq("viewport checks actual resolution", Vector2i(root.get_visible_rect().size), resolution)
+		for pad in [false, true]:
+			page.rows.values()[0].grab_focus()
+			await _frames(3)
+			var reached := []
+			for id in Achievements.ids():
+				var row: Control = page.rows[id]
+				await _frames(3)
+				if row.has_focus() and page._scroll.get_global_rect().encloses(row.get_global_rect()):
+					reached.append(id)
+				_t.check("Back visible at %s with %s focused" % [resolution, id], root.get_visible_rect().encloses(page.back.get_global_rect()), "view %s back %s" % [root.get_visible_rect(), page.back.get_global_rect()])
+				if pad:
+					Push.pad(root, JOY_BUTTON_DPAD_DOWN)
+				else:
+					Push.key(root, KEY_DOWN)
+			await _frames(3)
+			_t.eq("all rows reachable by %s at %s" % ["pad" if pad else "keyboard", resolution], reached, Achievements.ids())
+			_t.check("navigation reaches fixed Back at %s" % resolution, page.back.has_focus())
+			_t.check("list scrolls to its final row at %s" % resolution, page._scroll.scroll_vertical > 0)
+	root.size = original
+	root.content_scale_size = original_scale
+	await _frames(5)

@@ -25,6 +25,7 @@ const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
 const PILOTS := {
 	"runner_gunner": "res://assets/models/pilot_rivet_anim.glb",
 	"pylon_engineer": "res://assets/models/pilot_sable_anim.glb",
@@ -132,6 +133,10 @@ func setup(ctx_ref) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.has_node("WardenLook"):
 			_dress_warden.call_deferred(enemy)
+	if ctx != null:
+		var cosmetics := CosmeticPresentation.new()
+		add_child(cosmetics)
+		cosmetics.setup(ctx, self)
 
 
 func _enter_tree() -> void:

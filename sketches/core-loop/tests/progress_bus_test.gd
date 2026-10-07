@@ -210,6 +210,6 @@ func _p5() -> void:
 	_collect()
 	_game.events.rescue_completed.emit("rivet")
 	_game.events.rescue_completed.emit("rivet")
-	_t.eq("P5 rivet earns rivet_rescued once", _earned, ["rivet_rescued"])
+	_t.eq("P5 rivet earns rescue and Fern once", _earned, ["rivet_rescued", "ach_d7_fern"])
 	_t.check("P5 Rivet unlocked", profile.has_pilot("runner_gunner"), "runner_gunner")
 	progress.free()

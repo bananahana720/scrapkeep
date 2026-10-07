@@ -21,23 +21,34 @@ var back: Button
 var rows := {}
 
 var _grid: GridContainer
+var _scroll: ScrollContainer
 
 
 func _init() -> void:
 	name = "AchievementsPage"
 	alignment = BoxContainer.ALIGNMENT_CENTER
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation", 22)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_scroll = ScrollContainer.new()
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.follow_focus = true
+	add_child(_scroll)
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
 	_grid.add_theme_constant_override("h_separation", 28)
 	_grid.add_theme_constant_override("v_separation", 12)
-	_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_grid)
+	_scroll.add_child(_grid)
 	back = ChoiceButton.new("back", "key_a", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(back)
+	var bottom := Control.new()
+	bottom.custom_minimum_size.y = 16.0
+	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bottom)
 
 
 # Rebuilds the list from the saved profile and the progress node's counters.
@@ -50,6 +61,40 @@ func refresh(profile, progress) -> void:
 		var row := _row(id, profile, progress)
 		_grid.add_child(row)
 		rows[id] = row
+	_focus_first.call_deferred()
+
+
+func _focus_first() -> void:
+	if is_visible_in_tree() and not rows.is_empty():
+		rows.values()[0].grab_focus()
+
+
+func _move(direction: int) -> void:
+	var controls: Array = rows.values() + [back]
+	var index := controls.find(get_viewport().gui_get_focus_owner())
+	controls[0 if index < 0 else posmod(index + direction, controls.size())].grab_focus()
+
+
+func _input(event: InputEvent) -> void:
+	if not is_visible_in_tree():
+		return
+	var direction := 0
+	if event is InputEventKey and event.pressed:
+		var code: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
+		if code in [KEY_DOWN, KEY_S, KEY_RIGHT]:
+			direction = 1
+		elif code in [KEY_UP, KEY_W, KEY_LEFT]:
+			direction = -1
+	elif event.is_action_pressed("ui_down", true) or event.is_action_pressed("ui_right", true):
+		direction = 1
+	elif event.is_action_pressed("ui_up", true) or event.is_action_pressed("ui_left", true):
+		direction = -1
+	if direction != 0:
+		_move(direction)
+		get_viewport().set_input_as_handled()
+	elif back.has_focus() and event.is_action_pressed("ui_accept"):
+		back.pressed.emit()
+		get_viewport().set_input_as_handled()
 
 
 # The words one row shows, for a test and for the row itself: name, text, and state.
@@ -73,6 +118,16 @@ func _row(id: String, profile, progress) -> Control:
 	var box := HBoxContainer.new()
 	box.name = id
 	box.custom_minimum_size = Vector2(ROW_WIDTH, 0.0)
+	box.focus_mode = Control.FOCUS_ALL
+	var outline := StyleBoxFlat.new()
+	outline.bg_color = Color.TRANSPARENT
+	outline.border_color = Palette.AMBER
+	outline.set_border_width_all(2)
+	box.draw.connect(func():
+		if box.has_focus():
+			box.draw_style_box(outline, Rect2(Vector2.ZERO, box.size)))
+	box.focus_entered.connect(box.queue_redraw)
+	box.focus_exited.connect(box.queue_redraw)
 	box.add_theme_constant_override("separation", 12)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var star := TextureRect.new()
