@@ -14,6 +14,7 @@ import {
   proofPresetDrift,
   releaseGateFailures,
   tarArgs,
+  trackedManifests,
   winProofFailures,
   winProofLine,
   WIN_PROOFS,
@@ -293,5 +294,14 @@ test("winProofLine formats the cannon proof with its pilot", () => {
   assert.equal(
     winProofLine(won, "/x/proof.pck", WIN_PROOFS[0]),
     winProofLine(won, "/x/proof.pck"),
+  );
+});
+
+test("trackedManifests ships every track folder that holds a manifest, sorted", () => {
+  const folders = ["title", "spillway", "renders", "mind"];
+  const held = new Set(["/m/title/manifest.json", "/m/spillway/manifest.json", "/m/mind/manifest.json"]);
+  assert.deepEqual(
+    trackedManifests("/m", () => folders, (file) => held.has(file)),
+    ["mind", "spillway", "title"],
   );
 });

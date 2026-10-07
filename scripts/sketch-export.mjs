@@ -7,7 +7,7 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -59,6 +59,13 @@ export function missingStems(manifest, directory, exists = existsSync) {
     }
   }
   return missing;
+}
+
+// Every ACE track with a committed manifest ships: zones, bosses, title and summary.
+export function trackedManifests(directory, list = readdirSync, exists = existsSync) {
+  return list(directory)
+    .filter((track) => exists(path.join(directory, track, "manifest.json")))
+    .sort();
 }
 
 export function parseArgs(argv) {
@@ -274,9 +281,11 @@ async function main() {
   const template = path.join(dataHome, "godot/export_templates/4.7.2.stable/linux_release.x86_64");
   if (!existsSync(template)) fail("export template missing: " + template);
 
-  const manifestPath = path.join(stemRoot, manifestRel);
-  if (!existsSync(manifestPath)) fail("ACE manifest missing: " + manifestPath);
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  const tracks = trackedManifests(stemRoot);
+  if (!tracks.includes("spillway")) fail("ACE manifest missing: " + path.join(stemRoot, manifestRel));
+  const manifests = {};
+  for (const track of tracks)
+    manifests[track] = JSON.parse(await readFile(path.join(stemRoot, track, "manifest.json"), "utf8"));
   const common = run("git", [
     "-C",
     root,
@@ -287,21 +296,24 @@ async function main() {
   if (common.status !== 0) fail("git common dir not found\n" + common.stderr);
   const fallback = defaultStemsFrom(common.stdout.trim());
   const stemsFrom = path.resolve(args.stemsFrom ?? fallback);
-  const missing = missingStems(manifest, path.join(stemsFrom, "spillway"));
-  if (missing.length > 0)
-    fail(
-      missingStemsMessage(missing, path.join(stemsFrom, "spillway"), fallback),
-    );
-  const folderManifest = path.join(stemsFrom, manifestRel);
-  if (existsSync(folderManifest)) {
-    const [tracked, found] = await Promise.all([
-      readFile(manifestPath),
-      readFile(folderManifest),
-    ]);
-    if (!tracked.equals(found))
+  for (const track of tracks) {
+    const missing = missingStems(manifests[track], path.join(stemsFrom, track));
+    if (missing.length > 0)
       fail(
-        `stem folder manifest differs from the tracked manifest: ${folderManifest} vs ${manifestPath}`,
+        missingStemsMessage(missing, path.join(stemsFrom, track), fallback),
       );
+    const manifestPath = path.join(stemRoot, track, "manifest.json");
+    const folderManifest = path.join(stemsFrom, track, "manifest.json");
+    if (existsSync(folderManifest)) {
+      const [tracked, found] = await Promise.all([
+        readFile(manifestPath),
+        readFile(folderManifest),
+      ]);
+      if (!tracked.equals(found))
+        fail(
+          `stem folder manifest differs from the tracked manifest: ${folderManifest} vs ${manifestPath}`,
+        );
+    }
   }
 
   const imported = run(binary, ["--headless", "--path", project, "--editor", "--import"]);
@@ -329,8 +341,12 @@ async function main() {
     recursive: true,
     filter: (source) => !source.endsWith(".import") && !source.endsWith(".gdignore"),
   });
-  await copyFile(manifestPath, path.join(outDir, "music_ace", manifestRel));
-  const stemCount = Object.keys(manifest.clips).length * manifest.stems.length;
+  let stemCount = 0;
+  for (const track of tracks) {
+    await mkdir(path.join(outDir, "music_ace", track), { recursive: true });
+    await copyFile(path.join(stemRoot, track, "manifest.json"), path.join(outDir, "music_ace", track, "manifest.json"));
+    stemCount += Object.keys(manifests[track].clips).length * manifests[track].stems.length;
+  }
 
   const boot = run(exe, ["--headless", "--quit-after", "300", "--music=ace", "--ace-check"], { cwd: outDir });
   const bootText = boot.stdout + boot.stderr;
