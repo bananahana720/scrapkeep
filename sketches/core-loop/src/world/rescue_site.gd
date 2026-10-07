@@ -40,6 +40,7 @@ class Cage extends "res://src/world/device.gd":
 	var _signal: StandardMaterial3D
 	var _animator: AnimationPlayer
 	var _pose := ""
+	var _light: OmniLight3D
 
 	func _init() -> void:
 		family = "ally"
@@ -100,16 +101,29 @@ class Cage extends "res://src/world/device.gd":
 			var fitted := assets.fit_pilot_into(_pilot, class_id, Interactables.color(family))
 			_animator = fitted.get("animator")
 			assets.free()
+		_light = OmniLight3D.new()
+		_light.name = "RescueLight"
+		_light.position = Vector3(0, 2.7, 0.4)
+		_light.omni_range = 5.0
+		_light.shadow_enabled = false
+		add_child(_light)
 
 	func _visual_state() -> void:
 		if _latch == null:
 			return
 		var fill := clampf(progress / BREAK_SECONDS, 0.0, 1.0)
+		_bars.visible = not spent
+		_bars.position.y = fill * 0.75 if breaking else 0.0
 		_latch.rotation.z = fill * PI * 0.5 if breaking else 0.0
+		_signal.albedo_color = Palette.ARC if spent else (Palette.SAND if breaking else Palette.SLATE)
 		_signal.emission_enabled = true
 		_signal.emission = Interactables.color(family)
 		_signal.emission_energy_multiplier = 1.2 + fill * 2.0 if breaking else 0.6
+		if _light != null:
+			_light.light_color = Palette.ARC if spent else Interactables.color(family)
+			_light.light_energy = 0.9 if spent else (1.8 if breaking else 0.25)
 		if _pilot != null:
+			_pilot.position = Vector3(0.0, 1.6, 1.8) if spent else Vector3(0.0, 1.25 + (0.25 if breaking else 0.0), -0.25)
 			_pilot.rotation.y = PI + (0.2 * sin(fill * TAU) if breaking else 0.0)
 		var pose := "big_cheer" if spent else ("heave" if breaking else "slump")
 		if pose != _pose and _animator != null and _animator.has_animation(pose):

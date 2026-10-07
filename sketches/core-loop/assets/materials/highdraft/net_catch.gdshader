@@ -7,16 +7,20 @@ uniform float finish_roughness = 0.8;
 uniform float finish_metallic = 0.0;
 // World X/Z, downward deflection, radius. One independent value per 32 m batch.
 uniform vec4 catch_point = vec4(0.0, 0.0, 0.0, 6.0);
+uniform float visual_catch_gain = 8.0;
 
 void vertex() {
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float reach = length(world.xz - catch_point.xy) / catch_point.w;
 	float bowl = max(0.0, 1.0 - reach * reach);
-	VERTEX.y -= catch_point.z * bowl * bowl;
+	VERTEX.y -= catch_point.z * visual_catch_gain * bowl * bowl;
+	vec2 slope = 4.0 * catch_point.z * visual_catch_gain * bowl
+		* (world.xz - catch_point.xy) / (catch_point.w * catch_point.w);
+	NORMAL = normalize(vec3(NORMAL.x - slope.x * NORMAL.y, NORMAL.y, NORMAL.z - slope.y * NORMAL.y));
 }
 
 void fragment() {
-	ALBEDO = texture(atlas, UV).rgb * tint.rgb;
+	ALBEDO = texture(atlas, UV).rgb * tint.rgb * COLOR.rgb;
 	ROUGHNESS = finish_roughness;
 	METALLIC = finish_metallic;
 }
