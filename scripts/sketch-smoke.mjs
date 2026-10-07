@@ -54,6 +54,21 @@ export function testScripts(directory) {
 const SOLO_MARKER = /^#\s*smoke:\s*solo\b/;
 const MARKER_LINES = 5;
 
+// A whole-run test that legitimately outgrows the cap declares a longer one in the same
+// head comment ("# smoke: solo timeout=300s"). It can only raise the cap, never past 360 s.
+const TIMEOUT_MARKER = /^#\s*smoke:.*\btimeout=(\d+)s\b/;
+const MAX_TIMEOUT_MS = 360_000;
+
+export function testTimeoutMs(source) {
+  for (const line of source.split("\n", MARKER_LINES)) {
+    const match = TIMEOUT_MARKER.exec(line.replace(/\r$/, ""));
+    if (match) {
+      return Math.min(MAX_TIMEOUT_MS, Math.max(TIMEOUT_MS, Number(match[1]) * 1000));
+    }
+  }
+  return TIMEOUT_MS;
+}
+
 export function isSolo(source) {
   return source
     .split("\n", MARKER_LINES)
@@ -482,7 +497,7 @@ function runAsync(job) {
     let output = "";
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
-    const timer = setTimeout(() => child.kill("SIGKILL"), TIMEOUT_MS);
+    const timer = setTimeout(() => child.kill("SIGKILL"), job.timeoutMs || TIMEOUT_MS);
     child.on("close", (code) => {
       clearTimeout(timer);
       rmSync(dataHome, { recursive: true, force: true });
@@ -561,7 +576,8 @@ async function main() {
     if (!named) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
-      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: script, solo: isSoloJob, quarantined: quarantine.has(path.posix.basename(script, ".gd")) };
+      const timeoutMs = testTimeoutMs(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"));
+      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: script, solo: isSoloJob, timeoutMs, quarantined: quarantine.has(path.posix.basename(script, ".gd")) };
       (isSoloJob ? solo : jobs).push(job);
     }
   }

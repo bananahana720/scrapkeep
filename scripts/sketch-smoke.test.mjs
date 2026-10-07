@@ -41,7 +41,17 @@ import {
   waitForMachine,
   isSolo,
   isSoloScript,
+  testTimeoutMs,
 } from "./sketch-smoke.mjs";
+
+test("a head marker can raise one test's cap, bounded at 360 s", () => {
+  assert.equal(testTimeoutMs("extends SceneTree\n"), 180_000);
+  assert.equal(testTimeoutMs("# smoke: solo timeout=300s\nextends SceneTree\n"), 300_000);
+  assert.equal(testTimeoutMs("# smoke: solo timeout=900s\nextends SceneTree\n"), 360_000);
+  assert.equal(testTimeoutMs("# smoke: solo timeout=60s\nextends SceneTree\n"), 180_000);
+  assert.equal(testTimeoutMs("extends SceneTree\n\n\n\n\n# smoke: solo timeout=300s\n"), 180_000);
+  assert.equal(isSolo("# smoke: solo timeout=300s\nextends SceneTree\n"), true);
+});
 
 test("a first-line marker opts a file into the solo phase", () => {
   assert.equal(isSolo("# smoke: solo\nextends SceneTree\n"), true);

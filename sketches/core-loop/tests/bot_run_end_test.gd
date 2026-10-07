@@ -1,4 +1,4 @@
-# smoke: solo (split by world from RunStore entrances; one seed child per world, 170 s wall cap)
+# smoke: solo timeout=300s (split by world from RunStore entrances; one seed child per world, 170 s wall cap)
 # 2026-10-04 (wave 9): one seed child per world in the gate since 2026-10-04; the nightly runs more seeds.
 # Two seeds ran past the 180 s smoke cap under load (killed at 189.5 s).
 extends SceneTree
