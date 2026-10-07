@@ -15,6 +15,7 @@ const CampMenu := preload("res://src/ui/camp_menu.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const EndingSequence := preload("res://src/ui/ending_sequence.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -64,6 +65,7 @@ var _ending: VBoxContainer
 var _ending_title: Label
 var _ending_body: Label
 var _ending_left := 0.0
+var ending_sequence
 var _guard := 0.0
 var _tween: Tween
 var _state := ""
@@ -159,6 +161,12 @@ func _row(separation: int) -> HBoxContainer:
 
 
 func _on_flow_changed(state: String) -> void:
+	if is_instance_valid(ending_sequence):
+		ending_sequence.cancel()
+		ending_sequence.queue_free()
+		ending_sequence = null
+	_content.visible = true
+	_veil.visible = true
 	_state = state
 	_help.visible = false
 	_achievements.visible = false
@@ -373,11 +381,25 @@ func refresh_lab_row() -> void:
 
 
 func overlay_open() -> bool:
-	return _help.visible or _achievements.visible or _camp.visible or _ending.visible
+	return _help.visible or _achievements.visible or _camp.visible or ending_open()
 
 
 func ending_open() -> bool:
-	return _ending.visible
+	return _ending.visible or (is_instance_valid(ending_sequence) and ending_sequence.active)
+
+
+func start_ending_sequence() -> void:
+	if is_instance_valid(ending_sequence):
+		return
+	_ending.visible = false
+	_content.visible = false
+	_veil.visible = false
+	_ending_left = ENDING_HOLD
+	game.summary_guard_left = game.SUMMARY_GUARD
+	ending_sequence = EndingSequence.new()
+	add_child(ending_sequence)
+	ending_sequence.finished.connect(_close_ending)
+	ending_sequence.start(game)
 
 
 # The summary's title, epitaph, stats and actions are built beneath and wait hidden.
@@ -394,6 +416,11 @@ func _open_ending() -> void:
 # The summary beneath takes over with its key guard fresh, so the press that closed the page
 # cannot also start a run.
 func _close_ending() -> void:
+	if is_instance_valid(ending_sequence):
+		ending_sequence.queue_free()
+		ending_sequence = null
+	_content.visible = true
+	_veil.visible = true
 	_ending.visible = false
 	_victory_boss = {}
 	_title.visible = true
@@ -415,6 +442,10 @@ func _ending_closes(event: InputEvent) -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	if is_instance_valid(ending_sequence) and ending_sequence.active:
+		ending_sequence.handle(event)
+		get_viewport().set_input_as_handled()
+		return
 	if _ending.visible:
 		if _ending_left <= 0.0 and _ending_closes(event):
 			_close_ending()
@@ -566,11 +597,14 @@ func _screen() -> Vector2:
 
 func _process(delta: float) -> void:
 	_guard = maxf(0.0, _guard - delta)
-	if _ending.visible:
+	if ending_open():
 		game.summary_guard_left = maxf(game.summary_guard_left, game.SUMMARY_GUARD)
 		_ending_left = maxf(0.0, _ending_left - delta)
 		if game.bot_driven and _ending_left <= 0.0:
-			_close_ending()
+			if is_instance_valid(ending_sequence):
+				ending_sequence.skip()
+			else:
+				_close_ending()
 	_update_enabled()
 
 

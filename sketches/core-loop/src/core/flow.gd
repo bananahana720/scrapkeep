@@ -681,6 +681,12 @@ func _on_boss_defeated() -> void:
 
 func _end_run_won() -> void:
 	_end_run(true)
+	# run_ended's synchronous listeners finish the profile, achievements and log first.
+	var world: int = ctx.stages.world_of(ctx.run.stage)
+	if won_final() and String(boss_row(world).get("music", "")) == "mind":
+		var screens = ctx.root.get("screens") if ctx.root != null else null
+		if screens != null and screens.has_method("start_ending_sequence"):
+			screens.start_ending_sequence()
 
 
 # The run is over for good, won or lost: the saved run becomes a tombstone so no Continue
