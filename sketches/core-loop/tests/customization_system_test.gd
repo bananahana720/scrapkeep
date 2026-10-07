@@ -148,22 +148,45 @@ func _backfill() -> void:
 
 func _assets() -> void:
 	var resolver := Cosmetics.new()
+	var paths := Cosmetics.asset_paths()
 	for slot in ["trail", "decal", "companion_paint"]:
 		var id: String = ITEMS[slot]
+		var asset: String = Cosmetics.row(id)["asset"]
 		_t.eq("CUS-5 missing %s falls back" % slot, resolver.resolve(id, {}), {})
 		var warnings: int = resolver._warned.size()
 		resolver.resolve(id, {})
 		_t.eq("CUS-5 repeated %s warns once" % slot, resolver._warned.size(), warnings)
 		_t.check("missing %s names its asset" % slot, resolver._warned.has(Cosmetics.row(id)["asset"]))
-		var resource := GradientTexture1D.new()
-		_t.eq("delivered %s resolves by spec id" % slot, resolver.resolve(id, {id: resource}).get("resource"), resource)
+		var resource = load(paths[asset])
+		_t.check("delivered %s resolves by art id" % slot, resolver.resolve(id, paths).get("resource") == resource)
+		_t.eq("malformed %s resource falls back" % slot, resolver.resolve(id, {asset: Gradient.new()}), {})
 	_t.eq("missing resource path falls back", resolver.resolve("trail_salt_skip", {"trail_salt_skip": "res://missing-art.tres"}), {})
 	_t.eq("empty selection has no warning", resolver.resolve("", {}), {})
 	_t.eq("only three absent asset ids warned", resolver._warned.size(), 3)
 	_t.eq("existing paint needs no art", resolver.resolve("paint_any_salt", {}), Cosmetics.row("paint_any_salt"))
+	_t.eq("empty trail scene falls back without instantiation errors", resolver.resolve("trail_salt_skip", {"trail_salt_skip": PackedScene.new()}), {})
+	var root := Node3D.new()
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = BoxMesh.new()
+	root.add_child(mesh)
+	mesh.owner = root
+	var malformed := PackedScene.new()
+	malformed.pack(root)
+	root.free()
+	_t.eq("materialless trail falls back without a crash", resolver.resolve("trail_salt_skip", {"trail_salt_skip": malformed}), {})
+	_t.eq("malformed asset keeps the same one warning", resolver._warned.size(), 3)
+	var second_resolver := Cosmetics.new()
+	second_resolver.resolve("trail_salt_skip", {})
+	_t.eq("multiple consumers emit one warning for the same asset", Cosmetics._warning_counts["trail_salt_skip"], 1)
+	for id in Cosmetics.ids():
+		if Cosmetics.row(id)["slot"] != "paint":
+			_t.check("every delivered item resolves: " + id, not resolver.resolve(id, paths).is_empty())
 
 
 func _validation() -> void:
+	var snapshot := Registry.snapshot()
+	for table in Registry.GOLDEN_HASHES:
+		_t.eq("content pin unchanged or explicitly authorized: " + table, Registry.digest(snapshot[table]), Registry.GOLDEN_HASHES[table])
 	var pilots: Array = ClassDef.all().map(func(d): return d.id)
 	_t.eq("cosmetics validate", Cosmetics.validate(Cosmetics.ROWS, pilots), [])
 	_t.eq("achievements validate", Achievements.validate(Achievements.ROWS, Achievements.bus_signals(), pilots, Cosmetics.ids()), [])

@@ -16,8 +16,7 @@ const WIDTH := 660.0
 var rows := {}
 var back: Button
 var pilot := "pylon_engineer"
-# The presentation unit supplies the same art-id/resource map to its consumer.
-var assets := {}
+var assets := Cosmetics.asset_paths()
 var resolver := Cosmetics.new()
 
 var _profile

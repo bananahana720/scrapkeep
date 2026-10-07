@@ -75,9 +75,14 @@ func _run() -> void:
 	_action("ui_right")
 	_t.eq("ui_right equips SPIL-9 paint", profile.equipped("spil9", "companion_paint"), "companion_paint_night")
 	for slot in ["trail", "decal", "companion_paint"]:
+		_t.check("page resolves delivered %s" % slot, not page.effective(slot).is_empty())
+	var real_assets: Dictionary = page.assets
+	page.assets = {}
+	for slot in ["trail", "decal", "companion_paint"]:
 		_t.eq("page resolves missing %s to default" % slot, page.effective(slot), {})
 		page.effective(slot)
 	_t.eq("page shares one warning per missing art id", page.resolver._warned.size(), 3)
+	page.assets = real_assets
 	page.focus("trail")
 	Push.key(root, KEY_LEFT)
 	_t.eq("left clears trail to none", profile.equipped(page.pilot, "trail"), "")

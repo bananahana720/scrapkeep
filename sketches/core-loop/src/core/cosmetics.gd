@@ -45,14 +45,14 @@ const ROWS := {
 	"trail_forge_chips": {"slot": "trail", "pilot": "", "name": "Forge Chips", "starter": false, "tint": Color("3a6fb0"), "asset": "trail_forge_chips"},
 	"trail_moth_tuft": {"slot": "trail", "pilot": "", "name": "Moth Tuft", "starter": false, "tint": Color("a39cb3"), "asset": "trail_moth_tuft"},
 	"trail_rose_wash": {"slot": "trail", "pilot": "", "name": "Rose Wash", "starter": false, "tint": Color("d68ab0"), "asset": "trail_rose_wash"},
-	"decal_fern": {"slot": "decal", "pilot": "", "name": "Fern", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_fern", "mask": 0},
-	"decal_patch": {"slot": "decal", "pilot": "", "name": "Patch", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_patch", "mask": 1},
-	"decal_snail_shell": {"slot": "decal", "pilot": "", "name": "Snail Shell", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_snail_shell", "mask": 2},
-	"decal_thimble": {"slot": "decal", "pilot": "", "name": "Thimble", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_thimble", "mask": 3},
-	"decal_mushroom": {"slot": "decal", "pilot": "", "name": "Mushroom", "starter": false, "tint": Color("906681"), "asset": "decal_mushroom", "mask": 4},
-	"decal_paw": {"slot": "decal", "pilot": "", "name": "Paw", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_paw", "mask": 5},
-	"decal_seashell": {"slot": "decal", "pilot": "", "name": "Seashell", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_seashell", "mask": 6},
-	"decal_moth": {"slot": "decal", "pilot": "", "name": "Moth", "starter": false, "tint": Color("906681"), "asset": "decal_moth", "mask": 7},
+	"decal_fern": {"slot": "decal", "pilot": "", "name": "Fern", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_fern_mask.png", "mask": 0},
+	"decal_patch": {"slot": "decal", "pilot": "", "name": "Patch", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_patch_mask.png", "mask": 1},
+	"decal_snail_shell": {"slot": "decal", "pilot": "", "name": "Snail Shell", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_snail_shell_mask.png", "mask": 2},
+	"decal_thimble": {"slot": "decal", "pilot": "", "name": "Thimble", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_thimble_mask.png", "mask": 3},
+	"decal_mushroom": {"slot": "decal", "pilot": "", "name": "Mushroom", "starter": false, "tint": Color("906681"), "asset": "decal_mushroom_mask.png", "mask": 4},
+	"decal_paw": {"slot": "decal", "pilot": "", "name": "Paw", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_paw_mask.png", "mask": 5},
+	"decal_seashell": {"slot": "decal", "pilot": "", "name": "Seashell", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_seashell_mask.png", "mask": 6},
+	"decal_moth": {"slot": "decal", "pilot": "", "name": "Moth", "starter": false, "tint": Color("906681"), "asset": "decal_moth_mask.png", "mask": 7},
 	"companion_paint_night": {"slot": "companion_paint", "pilot": "", "name": "Night Slate", "starter": false, "tint": Color("2b3a4a"), "asset": "companion_paint_night"},
 	"companion_paint_forge": {"slot": "companion_paint", "pilot": "", "name": "Forge Blue", "starter": false, "tint": Color("3a6fb0"), "asset": "companion_paint_forge"},
 	"companion_paint_plum": {"slot": "companion_paint", "pilot": "", "name": "Ember Plum", "starter": false, "tint": Color("8a3f6e"), "asset": "companion_paint_plum"},
@@ -150,6 +150,28 @@ static func fits(id: String, owner: String, slot: String) -> bool:
 # Consumers supply art ids mapped to imported resources or resource paths. Empty means
 # the slot's unmodified appearance; a missing optional asset is warned once per art id.
 var _warned := {}
+static var _warning_counts := {}
+var _resolved := {}
+
+
+static func asset_paths() -> Dictionary:
+	var paths := {}
+	var registry = JSON.parse_string(FileAccess.get_file_as_string("res://assets/registry.json"))
+	if registry is Dictionary:
+		for entry in registry.get("assets", []):
+			if entry is Dictionary and entry.has("id") and entry.has("path"):
+				paths[entry["id"]] = entry["path"]
+	# Materials and AtlasTextures are delivered in the cosmetics manifest, beside the GLBs.
+	var manifest := art_manifest()
+	for group in ["trails", "decals", "paints"]:
+		for entry in manifest.get(group, []):
+			paths[entry["id"]] = "res://assets/cosmetics/" + entry["path"]
+	return paths
+
+
+static func art_manifest() -> Dictionary:
+	var doc = JSON.parse_string(FileAccess.get_file_as_string("res://assets/cosmetics/cua_manifest.json"))
+	return doc if doc is Dictionary else {}
 
 
 func resolve(id: String, assets: Dictionary) -> Dictionary:
@@ -161,14 +183,42 @@ func resolve(id: String, assets: Dictionary) -> Dictionary:
 	if not r.has("asset"):
 		return r
 	var asset_id: String = r["asset"]
-	var resource = assets.get(asset_id)
+	var source = assets.get(asset_id)
+	if _resolved.has(asset_id) and typeof(_resolved[asset_id]["source"]) == typeof(source) and _resolved[asset_id]["source"] == source:
+		return _resolved[asset_id]["row"]
+	var resource = source
 	if resource is String:
 		resource = load(resource) if ResourceLoader.exists(resource) else null
-	if not resource is Resource:
+	var valid: bool = (r["slot"] == "trail" and resource is PackedScene) or (r["slot"] == "decal" and resource is Texture2D) or (r["slot"] == "companion_paint" and resource is StandardMaterial3D)
+	if valid and resource is PackedScene and resource.get_state().get_node_count() == 0:
+		valid = false
+	if valid and resource is PackedScene:
+		var scene: Node = resource.instantiate()
+		valid = scene is Node3D
+		var stack: Array[Node] = [scene]
+		var meshes := 0
+		while not stack.is_empty():
+			var node: Node = stack.pop_back()
+			stack.append_array(node.get_children())
+			if node is CollisionObject3D:
+				valid = false
+			if node is MeshInstance3D:
+				if node.mesh == null or node.mesh.get_surface_count() == 0:
+					valid = false
+				else:
+					meshes += 1
+					for surface in node.mesh.get_surface_count():
+						if node.get_active_material(surface) == null:
+							valid = false
+		valid = valid and meshes > 0
+		scene.free()
+	if not valid:
 		_warn(asset_id)
+		_resolved[asset_id] = {"source": source, "row": {}}
 		return {}
 	var out := r.duplicate()
 	out["resource"] = resource
+	_resolved[asset_id] = {"source": source, "row": out}
 	return out
 
 
@@ -176,4 +226,7 @@ func _warn(asset_id: String) -> void:
 	if _warned.has(asset_id):
 		return
 	_warned[asset_id] = true
+	if _warning_counts.has(asset_id):
+		return
+	_warning_counts[asset_id] = 1
 	push_warning("cosmetics: missing asset %s; using default appearance" % asset_id)
