@@ -59,10 +59,9 @@ static func own_clips(player: AnimationPlayer) -> void:
 	var library := player.get_animation_library("")
 	if library == null:
 		return
-	for clip in library.get_animation_list():
-		var copy: Animation = library.get_animation(clip).duplicate()
-		library.remove_animation(clip)
-		library.add_animation(clip, copy)
+	library = library.duplicate(true) as AnimationLibrary
+	player.remove_animation_library("")
+	player.add_animation_library("", library)
 
 
 static func loop_clip(player: AnimationPlayer, clip: String) -> void:
