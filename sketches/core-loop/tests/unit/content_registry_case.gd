@@ -9,7 +9,7 @@ const TABLE_COUNT := 27
 # These two content pins exclude the stage table; unrelated registry pins stay canonical.
 const CONTENT_HASHES := {
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",
-	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
+	"music_rows.ROWS": "f9e1cca796c86aa8044002aee416b6999ab8554aab078fc87545d8f59a3ec7ea",
 }
 
 

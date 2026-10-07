@@ -87,7 +87,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
-	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
+	"music_rows.ROWS": "f9e1cca796c86aa8044002aee416b6999ab8554aab078fc87545d8f59a3ec7ea",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
 	"upgrade_tree.TREES": "55786d60308e54612ab34205749dc173d281016e2222e047b26e1ea2ed8629f9",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
 	"upgrade_tree.WORLD_ONE_NODES": "d649afcb0e003763c8fc9488a275f44ddfc2049ca02963fa078c8c8f887df7a8",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
@@ -284,7 +284,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			_words(issues, name, id, row.text, 1, cap)
 		"music":
 			_ref(issues, name, id, "theme", row.synth_theme, range(Music.THEME_COUNT))
-			_ref(issues, name, id, "music id", id, ["default", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2"] + Worlds.BOSSES.keys())
+			_ref(issues, name, id, "music id", id, ["default", "title", "summary", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2"] + Worlds.BOSSES.keys())
 			# Missing optional ACE packs intentionally fall back to synth. Validate the path, not installation.
 			if row.ace_manifest != "" and not (row.ace_manifest.begins_with("res://assets/music_ace/") and row.ace_manifest.ends_with("/manifest.json") and not ".." in row.ace_manifest):
 				_issue(issues, name, "references", id, "manifest outside optional ACE pack root")
