@@ -4,6 +4,7 @@ const Worlds := preload("res://src/core/worlds.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const WakingFloors := preload("res://src/boss/waking_floors.gd")
 const WakingDress := preload("res://src/boss/waking_dress.gd")
+const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
 
 # The Waking's module: the stub's posture Warden, fought floor by floor. Three floors stand
 # stacked above the stub's pad, which is the pit; each shattered chunk telegraphs the highest
@@ -32,6 +33,7 @@ var _dropped_at := -INF
 var _breach_floors := {}
 # The hanging architecture and the seat's kit (waking_dress.gd); null keeps the stub body.
 var _dress
+var _arena_dress
 
 
 
@@ -50,9 +52,14 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_place_ball(_center + Vector3.UP * floors.floor_height(1), entry_velocity)
 	_seat_warden()
 	_dress = WakingDress.attach(self)
+	_arena_dress = ArenaWakingDress.attach(self)
 
 
 func exit_arena() -> void:
+	if is_instance_valid(_arena_dress):
+		remove_child(_arena_dress)
+		_arena_dress.queue_free()
+	_arena_dress = null
 	# Out of the tree now, not at frame end, so it cannot dress the next fight's Warden.
 	if is_instance_valid(_dress):
 		remove_child(_dress)
