@@ -2,11 +2,13 @@ extends Node3D
 
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
-const SLATE := Color("617481")
-const DUST := Color("d2c5a5")
-const STONE := Color("c6a274")
+const Palette := preload("res://src/core/palette.gd")
+const SLATE := Palette.SLATE
+const DUST := Palette.SAND
+const STONE := Palette.SANDSTONE
 const RUPTURE_SECONDS := 0.45
 const BURST_SECONDS := 0.85
+const UNDERLIGHT_SECONDS := 0.36
 const GRIT_REACH := 22.0
 const GRIT_INTERVAL := 0.2
 # Mutable only to exercise the missing-resource fallback without moving an asset.
@@ -165,10 +167,30 @@ func _rupture(id: String, cover: Node3D, at: Vector3) -> void:
 		var p := _particles(kind, _burst_count(kind), STONE if kind == "debris" else DUST)
 		p.name = kind.capitalize()
 		p.set_meta("kind", kind)
+		if kind == "debris":
+			p.spread = 35.0
+			p.initial_velocity_min = 12.0
+			p.initial_velocity_max = 17.0
+			p.scale_amount_min = 1.0
+			p.scale_amount_max = 1.8
+		else:
+			p.spread = 60.0
+			p.initial_velocity_min = 7.0
+			p.initial_velocity_max = 12.0
+			p.scale_amount_min = 2.5
+			p.scale_amount_max = 4.0
 		burst.add_child(p)
 		p.restart()
 		p.emitting = true
-	bursts.append({"node": burst, "age": 0.0})
+	var underlight := OmniLight3D.new()
+	underlight.name = "Underlight"
+	underlight.position.y = -0.6
+	underlight.light_color = Palette.SAND
+	underlight.light_energy = 2.4
+	underlight.omni_range = 10.0
+	underlight.shadow_enabled = false
+	burst.get_node("Debris").add_child(underlight)
+	bursts.append({"node": burst, "light": underlight, "age": 0.0})
 
 
 func _spent_material() -> ShaderMaterial:
@@ -257,6 +279,7 @@ func _process(delta: float) -> void:
 			ruptures.erase(rupture)
 	for burst in bursts.duplicate():
 		burst["age"] += delta
+		burst["light"].light_energy = 2.4 * maxf(0.0, 1.0 - burst["age"] / UNDERLIGHT_SECONDS)
 		if burst["age"] >= BURST_SECONDS:
 			burst["node"].queue_free()
 			bursts.erase(burst)
@@ -303,6 +326,8 @@ func freeze_rupture(seconds: float = 0.18) -> void:
 		rupture["age"] = seconds
 		_pose(rupture, seconds)
 	for burst in bursts:
+		burst["age"] = seconds
+		burst["light"].light_energy = 2.4 * maxf(0.0, 1.0 - seconds / UNDERLIGHT_SECONDS)
 		for p: CPUParticles3D in burst["node"].get_children():
 			p.speed_scale = 0.0
 	for p in grit:
