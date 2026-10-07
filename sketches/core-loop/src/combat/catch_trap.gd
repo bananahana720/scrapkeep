@@ -18,6 +18,7 @@ const HP := 35.0
 var cupped := 0
 var _cup: MeshInstance3D
 
+static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -75,7 +76,11 @@ static func _parts() -> Array:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var flash := -1
 		for i in mesh.get_surface_count():
-			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("catch_trap: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "fleet_paint":
 				flash = i
 			mesh.surface_set_material(i, painted)
 		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})

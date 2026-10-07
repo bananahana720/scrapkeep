@@ -32,6 +32,7 @@ var _lamp_rig: Skeleton3D
 var _lamp_bones: Array[int] = []
 var _shutter_bones: Array[int] = []
 var _lens_bones: Array[int] = []
+static var _warned_asset := false
 static var _shared: PackedScene
 static var _painted: StandardMaterial3D
 
@@ -60,7 +61,11 @@ func _build_tool() -> void:
 		for node in model.find_children("*", "MeshInstance3D", true, false):
 			var mi := node as MeshInstance3D
 			for surface in mi.mesh.get_surface_count():
-				var slot := mi.mesh.surface_get_material(surface).resource_name
+				var surface_material := mi.mesh.surface_get_material(surface)
+				if surface_material == null and not _warned_asset:
+					_warned_asset = true
+					push_warning("lamp_swarm: surface has no material; using default finish")
+				var slot := surface_material.resource_name if surface_material != null else ""
 				mi.set_surface_override_material(surface, _material if slot == "fleet_paint" else _painted)
 		_lamp_rig = model.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
 		for i in LAMP_COUNT:

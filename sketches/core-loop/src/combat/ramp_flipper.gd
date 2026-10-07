@@ -57,6 +57,9 @@ func _build_tool() -> void:
 	_visual_parent().add_child(_plate)
 
 
+static var _warned_asset := false
+
+
 static func _parts() -> Dictionary:
 	if not _shared.is_empty():
 		return _shared
@@ -72,12 +75,21 @@ static func _parts() -> Dictionary:
 	var plate: Mesh = (scene.find_child("RampPlate", true, false) as MeshInstance3D).mesh.duplicate()
 	var flash := -1
 	for i in body.get_surface_count():
-		if body.surface_get_material(i).resource_name == "fleet_paint":
+		var surface_material := body.surface_get_material(i)
+		if surface_material == null and not _warned_asset:
+			_warned_asset = true
+			push_warning("ramp_flipper: surface has no material; using default finish")
+		if surface_material != null and surface_material.resource_name == "fleet_paint":
 			flash = i
 		body.surface_set_material(i, painted)
 	for i in plate.get_surface_count():
 		plate.surface_set_material(i, painted)
-	assert(flash >= 0, "RampBody must contain fleet_paint")
+	if flash < 0:
+		scene.free()
+		if not _warned_asset:
+			_warned_asset = true
+			push_warning("ramp_flipper: fleet_paint missing; keeping greybox crew and plate")
+		return {}
 	_shared = {"body": body, "plate": plate, "flash": flash}
 	scene.free()
 	return _shared

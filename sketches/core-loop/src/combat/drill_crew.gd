@@ -25,6 +25,7 @@ var _absorb := false
 var _plate: MeshInstance3D
 var _bit: MeshInstance3D
 var _bit_rest := Vector3.ZERO
+static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -84,7 +85,11 @@ static func _parts() -> Array:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var flash := -1
 		for i in mesh.get_surface_count():
-			var slot := mesh.surface_get_material(i).resource_name
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("drill_crew: surface has no material; using default finish")
+			var slot := surface_material.resource_name if surface_material != null else ""
 			if slot == "fleet_paint":
 				flash = i
 			var painted := Palette.solid(Color.WHITE)

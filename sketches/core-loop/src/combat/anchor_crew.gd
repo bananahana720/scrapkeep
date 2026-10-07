@@ -16,6 +16,7 @@ const POST_HEIGHT := 1.2
 const HP := 60.0
 
 var winched := 0
+static var _warned_asset := false
 static var _shared: Dictionary = {}
 var _windup_rig: Skeleton3D
 var _reel: MeshInstance3D
@@ -75,6 +76,13 @@ static func _parts() -> Dictionary:
 	if rig == null:
 		scene.free()
 		return _shared
+	var reel := scene.find_child("DeckReel", true, false) as MeshInstance3D
+	if reel == null or reel.mesh == null:
+		scene.free()
+		if not _warned_asset:
+			_warned_asset = true
+			push_warning("anchor_crew: DeckReel missing; keeping greybox crew")
+		return _shared
 	var painted := Palette.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	var meshes := []
@@ -83,7 +91,11 @@ static func _parts() -> Dictionary:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var flash := -1
 		for i in mesh.get_surface_count():
-			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("anchor_crew: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "fleet_paint":
 				flash = i
 			mesh.surface_set_material(i, painted)
 		meshes.append({"name": mi.name, "mesh": mesh, "xform": mi.transform,

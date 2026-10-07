@@ -83,6 +83,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 				_barrel_rest = mi.transform
 
 
+static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -98,7 +99,11 @@ static func _parts() -> Array:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var body := 0
 		for i in mesh.get_surface_count():
-			var slot := mesh.surface_get_material(i).resource_name
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("lobber: surface has no material; using default finish")
+			var slot := surface_material.resource_name if surface_material != null else ""
 			if slot == "fleet_paint":
 				body = i
 			mesh.surface_set_material(i, charcoal)

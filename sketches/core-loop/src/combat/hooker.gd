@@ -44,6 +44,7 @@ func _configure(threat: float) -> void:
 const COCK := 0.45
 const THRUST := 0.3
 
+static var _warned_asset := false
 static var _shared: Dictionary = {}
 
 var _harpoon: MeshInstance3D
@@ -81,7 +82,11 @@ static func _parts() -> Dictionary:
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (node as MeshInstance3D).mesh.duplicate()
 		for i in mesh.get_surface_count():
-			var slot := mesh.surface_get_material(i).resource_name
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("hooker: surface has no material; using default finish")
+			var slot := surface_material.resource_name if surface_material != null else ""
 			if slot == "fleet_paint":
 				flash = i
 			mesh.surface_set_material(i, painted)

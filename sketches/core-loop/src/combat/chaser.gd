@@ -80,6 +80,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 			mi.set_surface_override_material(part.body, _material)
 
 
+static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -94,7 +95,11 @@ static func _parts() -> Array:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var body := -1
 		for i in mesh.get_surface_count():
-			var slot := mesh.surface_get_material(i).resource_name
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("chaser: surface has no material; using default finish")
+			var slot := surface_material.resource_name if surface_material != null else ""
 			if slot == "fleet_paint":
 				body = i
 			mesh.surface_set_material(i, visor if slot == "requisition_tag" else charcoal)

@@ -21,6 +21,7 @@ var dives := 0
 var batted := 0
 var _dive_from := Vector3.ZERO
 var _landed := false
+static var _warned_asset := false
 static var _shared: Dictionary = {}
 var _windup_rig: Skeleton3D
 var _wing_bones: Array[int] = []
@@ -96,7 +97,11 @@ static func _parts() -> Dictionary:
 		var mesh: Mesh = source.mesh.duplicate()
 		var flash := []
 		for i in mesh.get_surface_count():
-			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("kite_drone: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "fleet_paint":
 				flash.append(i)
 			mesh.surface_set_material(i, painted)
 		meshes.append({"name": source.name, "mesh": mesh, "skin": source.skin,

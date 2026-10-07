@@ -60,6 +60,9 @@ func _build_tool() -> void:
 	_box(Vector3(0.32, 0.18, 1.62), Palette.HAZARD, Vector3(0.0, 0.62, 5.4), 0.6, _paddle)
 
 
+static var _warned_asset := false
+
+
 static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
@@ -77,7 +80,11 @@ static func _parts() -> Array:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var body := -1
 		for i in mesh.get_surface_count():
-			if mesh.surface_get_material(i).resource_name == "fleet_paint":
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("swatter: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "fleet_paint":
 				body = i
 			mesh.surface_set_material(i, painted)
 		_shared.append({"mesh": mesh, "xform": mi.transform, "body": body, "paddle": mi.name.begins_with("SwatterPaddle")})

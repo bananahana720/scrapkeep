@@ -180,6 +180,9 @@ void fragment() {
 			var arrays := mesh.mesh.surface_get_arrays(surface)
 			var original: Material = mesh.get_active_material(surface)
 			var paint := original != null and original.resource_name == "paint"
+			if paint and arrays[Mesh.ARRAY_COLOR] == null:
+				resolver._warn(key)
+				paint = false
 			if paint:
 				var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR].duplicate()
 				var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]

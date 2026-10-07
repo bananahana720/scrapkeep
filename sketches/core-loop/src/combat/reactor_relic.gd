@@ -43,6 +43,7 @@ func _configure(threat: float) -> void:
 
 
 # Mesh templates are shared; flash and vent charge materials stay per enemy.
+static var _warned_asset := false
 static var _shared: Array = []
 var _vent_mesh: MultiMeshInstance3D
 var _vent_material: ShaderMaterial
@@ -126,7 +127,11 @@ static func _parts() -> Array:
 		var mesh: Mesh = mi.mesh.duplicate()
 		var body := -1
 		for i in mesh.get_surface_count():
-			if mesh.surface_get_material(i).resource_name == "ancient_enamel":
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("reactor_relic: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "ancient_enamel":
 				body = i
 			mesh.surface_set_material(i, painted)
 		_shared.append({"name": String(mi.name), "mesh": mesh, "xform": mi.transform, "body": body})
