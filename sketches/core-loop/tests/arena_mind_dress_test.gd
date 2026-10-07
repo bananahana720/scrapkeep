@@ -1,0 +1,243 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Harness := preload("res://tests/doubles/module_harness.gd")
+const Dress := preload("res://src/presentation/arena_mind_dress.gd")
+const T := preload("res://tests/support/t.gd")
+
+var _t := T.new("arena_mind_dress_test")
+var _game
+var _before := {}
+var _fixture_dir := ""
+
+
+func _initialize() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("-fixture-dir="):
+			_fixture_dir = arg.trim_prefix("-fixture-dir=")
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+	_run()
+
+
+func _run() -> void:
+	while _game.flow == null:
+		await physics_frame
+	Harness.boot(_game)
+	_t.eq("arena scenery is absent at boot", _game.find_children(Dress.NODE_NAME, "Node3D", true, false).size(), 0)
+	_game.ctx.events.boss_arena_entered.connect(func(): _before = _colliders(_game))
+	if not _fixture_dir.is_empty():
+		Dress.dir = _fixture_dir
+	var saved := _enter()
+	var mod = Harness.module(_game, 3)
+	_check_colliders("dressing changes no gameplay collider or transform")
+	var pad_shape := mod.pad.get_child(0) as CollisionShape3D
+	_t.check("pad remains the original radius 36 height 2 cylinder", pad_shape.shape is CylinderShape3D
+		and pad_shape.shape.radius == 36.0 and pad_shape.shape.height == 2.0
+		and pad_shape.transform == Transform3D.IDENTITY and mod.pad.collision_layer == 1 and mod.pad.collision_mask == 0)
+	var dress = mod.pad.get_node_or_null(Dress.NODE_NAME)
+	_t.check("the real Mind fight has summit dressing", mod.active() and dress != null)
+	if not _fixture_dir.is_empty():
+		_fallback(mod, saved)
+		_finish()
+		return
+	if dress == null:
+		_finish()
+		return
+	_t.check("the crown remains over the summit", mod._dress != null and mod._dress.base.find_child("CrownFrame", true, false) != null
+		and mod._dress.global_position.is_equal_approx(dress.global_position))
+	_t.check("greybox floor mesh alone is hidden", not _floor(mod).visible and mod.pad.visible and not pad_shape.disabled)
+	_t.eq("dressing adds no physics body", dress.find_children("*", "CollisionObject3D", true, false).size(), 0)
+	_t.eq("dressing adds no collision shape", dress.find_children("*", "CollisionShape3D", true, false).size(), 0)
+	_surface_checks(dress)
+	_geometry_checks(dress)
+	_t.check("fight sky is a textured Highdraft panorama", _game.ctx.terrain.environment.sky != saved["sky"]
+		and _game.ctx.terrain.environment.sky.sky_material is PanoramaSkyMaterial
+		and _game.ctx.terrain.environment.sky.sky_material.panorama != null)
+	_t.eq("fight ambient is Highdraft cool fill", _game.ctx.terrain.environment.ambient_light_color, Color("b4c0c9"))
+	_t.check("fight sun has morning bearing", _sun().rotation_degrees.is_equal_approx(Vector3(-46.0, 62.0, 0.0)))
+	var seen = Harness.counter(_game)
+	var fight: Dictionary = await Harness.fight(_game, mod, 2000, seen)
+	_t.check("the dressed real fight reaches defeat", fight["defeated"])
+	_assert_environment("defeat restores", saved)
+	mod.exit_arena()
+	_assert_environment("exit after defeat stays restored", saved)
+
+	saved = _enter()
+	var old_dress = mod._arena_dress
+	_game.flow._retry_arena()
+	_t.check("retry removes the previous visual node immediately", not old_dress.is_inside_tree())
+	_t.check("retry builds one summit", mod.pad.get_node_or_null(Dress.NODE_NAME) == mod._arena_dress)
+	_t.eq("retry saves the pre-fight sky instead of the previous fight sky", mod._arena_dress._saved["sky"], saved["sky"])
+	_check_colliders("retry preserves gameplay colliders")
+	mod.exit_arena()
+	_assert_environment("explicit arena exit restores", saved)
+
+	saved = _enter()
+	var restart_seen := {}
+	# The module's earlier run_started handler releases the arena before this observer
+	# and before stage 1 replaces the Highdraft environment.
+	var observe := func(_class_id: String): restart_seen.merge(_environment())
+	_game.ctx.events.run_started.connect(observe)
+	_game.flow.new_run()
+	_game.ctx.events.run_started.disconnect(observe)
+	_t.check("run restart restores every saved value before stage entry", restart_seen == saved)
+	_t.eq("new run frees the summit reference", mod._arena_dress, null)
+	await physics_frame
+	_t.eq("new run leaves no summit node", _game.find_children(Dress.NODE_NAME, "Node3D", true, false).size(), 0)
+
+	saved = _enter()
+	_game.flow.enter_stage(5, Vector3.ZERO, false)
+	_assert_environment("stage exit restores", saved)
+	_t.eq("stage exit releases the visual node", mod._arena_dress, null)
+
+	# The broken-folder case is also run as an external fixture: the exact same dressing
+	# requirement above must FAIL, while these fallback checks must still PASS.
+	Dress.dir = "res://assets/models/highdraft/__arm_missing__/"
+	saved = _enter()
+	_fallback(mod, saved)
+	Dress.dir = Dress.DIR
+	mod.exit_arena()
+	_finish()
+
+
+func _enter() -> Dictionary:
+	_game.flow.enter_stage(_game.ctx.stages.last_of(3), Vector3.ZERO, false)
+	var env: Environment = _game.ctx.terrain.environment
+	var sky := Sky.new()
+	sky.sky_material = ProceduralSkyMaterial.new()
+	env.sky = sky
+	env.ambient_light_color = Color(0.21, 0.34, 0.46)
+	env.tonemap_exposure = 0.91
+	env.adjustment_saturation = 0.87
+	_sun().light_color = Color(0.73, 0.83, 0.93)
+	_sun().rotation = Vector3(-0.71, 0.82, 0.11)
+	var saved := _environment()
+	_game.flow.enter_boss(Vector3(7.0, 0.0, -9.0))
+	return saved
+
+
+func _floor(mod) -> MeshInstance3D:
+	for child in mod.pad.get_children():
+		if child is MeshInstance3D:
+			return child
+	return null
+
+
+func _fallback(mod, saved: Dictionary) -> void:
+	_t.eq("missing kit adds no dressing node", mod.pad.get_node_or_null(Dress.NODE_NAME), null)
+	_t.check("missing kit keeps the old greybox floor", _floor(mod).visible and _floor(mod).material_override == null
+		and _floor(mod).mesh is CylinderMesh and _floor(mod).mesh.top_radius == 36.0)
+	_check_colliders("missing kit preserves every gameplay collider")
+	_assert_environment("missing kit keeps the current lighting", saved)
+	print("arena_mind_greybox_fallback: PASS" if _floor(mod).visible and _colliders(_game) == _before and _environment() == saved else "arena_mind_greybox_fallback: FAIL")
+
+
+func _surface_checks(dress: Node3D) -> void:
+	var surfaces := 0
+	var views: Array = dress.find_children("*", "GeometryInstance3D", true, false)
+	for view in views:
+		var mesh: Mesh = view.mesh if view is MeshInstance3D else view.multimesh.mesh
+		for i in mesh.get_surface_count():
+			surfaces += 1
+			var material := mesh.surface_get_material(i) as BaseMaterial3D
+			_t.check("surface retains vertex colours or an explicit texture: " + String(view.name), material != null
+				and (material.vertex_color_use_as_albedo or material.albedo_texture != null))
+			_t.check("scenery has no emission: " + String(view.name), material != null and not material.emission_enabled)
+			var arrays := mesh.surface_get_arrays(i)
+			_t.check("surface keeps authored colours: " + String(view.name), arrays[Mesh.ARRAY_COLOR] != null
+				and arrays[Mesh.ARRAY_COLOR].size() == arrays[Mesh.ARRAY_VERTEX].size())
+	_t.eq("the reused kit uses five surfaces", surfaces, 5)
+	# Malformed surface materials are a normal loader rejection, never a null dereference.
+	var null_mat := ArrayMesh.new()
+	null_mat.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, (BoxMesh.new() as Mesh).surface_get_arrays(0))
+	_t.eq("materialless mesh rejects safely", dress._rebuild_mesh(null_mat), null)
+	var unknown := StandardMaterial3D.new()
+	unknown.resource_name = "unknown_slot"
+	null_mat.surface_set_material(0, unknown)
+	_t.eq("unknown material slot rejects safely", dress._rebuild_mesh(null_mat), null)
+
+
+func _geometry_checks(dress: Node3D) -> void:
+	for label in ["SummitIsland", "EdgeFascia", "UndersideRibs", "CloudDeck", "DistantMesas"]:
+		_t.check("required summit piece " + label, dress.get_node_or_null(label) != null)
+	var island := dress.get_node("SummitIsland") as MeshInstance3D
+	var bounds: AABB = island.transform * island.mesh.get_aabb()
+	_t.near("summit spans the unchanged fighting diameter", bounds.size.x, 72.0)
+	_t.near("summit has the unchanged fighting depth", bounds.size.z, 72.0)
+	_t.near("stone top stays below the telegraph drawing", bounds.end.y, 0.02)
+	_t.check("keels make the island read below its edge", bounds.position.y <= -15.0)
+	var rim := dress.get_node("EdgeFascia") as MultiMeshInstance3D
+	var rim_inside := true
+	var rim_flat := true
+	var fascia_exposed := false
+	var rim_arrays := rim.multimesh.mesh.surface_get_arrays(0)
+	for placed: Transform3D in rim.get_meta("placements"):
+		for point: Vector3 in rim_arrays[Mesh.ARRAY_VERTEX]:
+			var at: Vector3 = placed * point
+			rim_inside = rim_inside and (at.y < 0.0 or Vector2(at.x, at.z).length() <= 36.0)
+			rim_flat = rim_flat and at.y <= 0.03
+			fascia_exposed = fascia_exposed or (at.y < -0.5 and Vector2(at.x, at.z).length() > 36.05)
+	_t.check("fascia implies no walkable surface beyond the collider", rim_inside)
+	_t.check("fascia leaves the whole fight top flat", rim_flat)
+	_t.check("lower fascia stands outside the opaque stone wall", fascia_exposed)
+	var clouds := dress.get_node("CloudDeck") as MultiMeshInstance3D
+	_t.eq("cloud banks surround the summit", clouds.multimesh.instance_count, 36)
+	_t.check("cloud banks stay below and outside combat", _sky_clear(clouds, true))
+	var mesas := dress.get_node("DistantMesas") as MultiMeshInstance3D
+	_t.eq("seven far mesas surround the summit", mesas.multimesh.instance_count, 7)
+	_t.check("mesas remain beyond the fight and its buffer", _sky_clear(mesas, false))
+
+
+func _sky_clear(view: MultiMeshInstance3D, clouds: bool) -> bool:
+	var arrays := view.multimesh.mesh.surface_get_arrays(0)
+	for placed: Transform3D in view.get_meta("placements"):
+		for point: Vector3 in arrays[Mesh.ARRAY_VERTEX]:
+			var at: Vector3 = placed * point
+			if Vector2(at.x, at.z).length() < (56.0 if clouds else 336.0) \
+				or (clouds and (at.y > -50.0 or view.to_global(at).y > -20.0)):
+				return false
+	return true
+
+
+func _colliders(parent: Node) -> Dictionary:
+	var shapes := {}
+	for shape: CollisionShape3D in parent.find_children("*", "CollisionShape3D", true, false):
+		if shape.is_queued_for_deletion() or shape.get_parent().is_queued_for_deletion():
+			continue
+		var owner = shape.get_parent()
+		var data := {"transform": shape.global_transform, "local": shape.transform, "disabled": shape.disabled,
+			"shape": shape.shape, "layer": owner.collision_layer, "mask": owner.collision_mask}
+		shapes[shape.get_instance_id()] = data
+	return shapes
+
+
+func _sun() -> DirectionalLight3D:
+	for light: DirectionalLight3D in _game.find_children("*", "DirectionalLight3D", true, false):
+		if light.name != "SkyFill":
+			return light
+	return null
+
+
+func _environment() -> Dictionary:
+	var env: Environment = _game.ctx.terrain.environment
+	return {"sky": env.sky, "ambient": env.ambient_light_color, "exposure": env.tonemap_exposure,
+		"saturation": env.adjustment_saturation, "sun_color": _sun().light_color, "sun_rotation": _sun().rotation}
+
+
+func _assert_environment(label: String, saved: Dictionary) -> void:
+	var now := _environment()
+	for key in saved:
+		_t.check(label + " " + key, now[key] == saved[key])
+
+
+func _check_colliders(label: String) -> void:
+	var after := _colliders(_game)
+	_t.check(label, after == _before, "%d before, %d after; compare shape identity, local/global transforms, enabled state and layers" % [_before.size(), after.size()])
+
+
+func _finish() -> void:
+	Dress.dir = Dress.DIR
+	_game.free()
+	quit(_t.verdict())
