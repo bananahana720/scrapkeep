@@ -37,6 +37,7 @@ static var dir := DIR
 static var _sky: PanoramaSkyMaterial
 static var _saved := {}
 static var _warned := {}
+static var _coloured := {}
 
 
 # ---- Hook and environment ----
@@ -180,7 +181,31 @@ static func _scene(file: String) -> Node:
 			_warned[dir + file] = true
 			push_warning("highdraft_scenery: %s missing, its piece stays on the greybox" % file)
 		return null
-	return packed.instantiate()
+	var scene := packed.instantiate()
+	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh != null:
+			for i in view.mesh.get_surface_count():
+				var source := view.mesh.surface_get_material(i)
+				var drawn := _vertex_coloured(source)
+				if drawn != source:
+					view.set_surface_override_material(i, drawn)
+	return scene
+
+
+# The kit's GLBs keep their colour in vertex colours and import with white materials that
+# ignore them, so every piece would draw flat white. One shared copy per source material.
+static func _vertex_coloured(source: Material) -> Material:
+	if not (source is BaseMaterial3D):
+		return source
+	var base := source as BaseMaterial3D
+	if base.vertex_color_use_as_albedo or base.albedo_texture != null:
+		return source
+	var key := base.get_instance_id()
+	if not _coloured.has(key):
+		var copy := base.duplicate() as BaseMaterial3D
+		copy.vertex_color_use_as_albedo = true
+		_coloured[key] = copy
+	return _coloured[key]
 
 
 static func _loop(scene: Node, choices: Array[String]) -> void:
@@ -206,7 +231,9 @@ static func _mesh(file: String, node_name := "*") -> Mesh:
 	var found: Mesh = null
 	for view: MeshInstance3D in scene.find_children(node_name, "MeshInstance3D", true, false):
 		if view.mesh != null:
-			found = view.mesh
+			found = view.mesh.duplicate() as Mesh
+			for i in found.get_surface_count():
+				found.surface_set_material(i, _vertex_coloured(found.surface_get_material(i)))
 			break
 	scene.free()
 	return found
