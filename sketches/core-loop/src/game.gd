@@ -77,7 +77,7 @@ var build
 var boss
 var presentation
 # Taken when the game object is created, before any child can draw (see RunState._init).
-var _session_seed := randi()
+var _session_seed := randi() # lint: session seed
 var hud
 var screens
 var notes
