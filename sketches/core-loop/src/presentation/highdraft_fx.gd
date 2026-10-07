@@ -3,7 +3,6 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
