@@ -112,9 +112,8 @@ func _check_model() -> void:
 	var pilot: Node3D = pod.get_node_or_null("AnimatedPilot") if pod != null else null
 	_t.check("fit", core != null and pod != null and pilot != null, "Core, Pod and an AnimatedPilot under Pod")
 	if pod != null:
-		# The bespoke shell has no class_accent slot; the class colour reaches it through the pilot.
 		var accent := _accent_color(pod)
-		_t.check("accent", accent.is_equal_approx(ClassDef.CANNON_COLOR) or accent == Color.BLACK, "class_accent %s (black: shell has no accent slot)" % accent.to_html())
+		_t.check("accent", accent.is_equal_approx(ClassDef.CANNON_COLOR), "class_accent %s" % accent.to_html())
 	var dome := pod.find_child("Dome", true, false) as Node3D if pod != null else null
 	if pilot != null and dome != null:
 		var pbox := _box(pod, pilot)

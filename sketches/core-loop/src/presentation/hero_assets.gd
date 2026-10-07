@@ -865,6 +865,11 @@ func _paint_mantle(root: Node, rec: Dictionary, seam: Material, tool: Material) 
 					mat = seam
 				"mantle_tool":
 					mat = tool
+					var authored := root.mesh.surface_get_material(i) as StandardMaterial3D
+					if authored != null and authored.albedo_texture != null:
+						tool.albedo_texture = authored.albedo_texture
+						tool.emission_texture = authored.albedo_texture
+						tool.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
 				"bare_metal":
 					mat = material(slot)
 			if mat != null:
@@ -882,7 +887,12 @@ func _update_mantle(rec: Dictionary) -> void:
 	var warden = rec.warden
 	var lit: float = 0.0 if warden.staggered() else warden.charge_fraction()
 	tool.emission_energy_multiplier = lit * 2.0
-	tool.albedo_color = Palette.HAZARD.lerp(Palette.CHARCOAL, 1.0 - lit)
+	if tool.albedo_texture != null:
+		tool.emission = Color.WHITE
+		var brightness := lerpf(0.03, 1.0, lit)
+		tool.albedo_color = Color(brightness, brightness, brightness)
+	else:
+		tool.albedo_color = Palette.HAZARD.lerp(Palette.CHARCOAL, 1.0 - lit)
 
 
 # A posture Warden's jaws lean out from their outer bottom edge while its core is open.

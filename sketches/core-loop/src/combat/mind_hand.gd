@@ -36,6 +36,7 @@ const MODEL := "res://assets/models/bosses/mind_hand.glb"
 
 # Test seam: a test points this at a missing file to prove the primitive hand builds.
 static var model_path := MODEL
+static var _warned_models := {}
 
 var habit := ""
 var braced_kinds: Array = []
@@ -48,6 +49,8 @@ var _joints: Array = []
 var _model: Node3D
 var _anim: AnimationPlayer
 var _seen_phase := -1
+var _skin_rim: StandardMaterial3D
+var _skin_rim_albedo := Color.WHITE
 
 
 func _configure(threat: float) -> void:
@@ -200,11 +203,45 @@ func _build_crew() -> void:
 func _dress_model() -> void:
 	var loaded := BossModel.load_scene(model_path)
 	if loaded == null:
+		_warn_model("model unavailable")
 		return
 	var player := BossModel.player_of(loaded)
-	if loaded.find_child("MindHandSkin", true, false) == null or player == null or not player.has_animation("still_track"):
+	var skin := loaded.find_child("MindHandSkin", true, false) as MeshInstance3D
+	if skin == null or skin.mesh == null or player == null or not player.has_animation("still_track"):
 		loaded.free()
+		_warn_model("malformed skin")
 		return
+	var body_surface := -1
+	var rim_surface := -1
+	for i in skin.mesh.get_surface_count():
+		var mat := skin.mesh.surface_get_material(i) as StandardMaterial3D
+		if mat == null:
+			continue
+		if mat.resource_name.begins_with("M1"):
+			body_surface = i
+		elif mat.resource_name.begins_with("M4") and mat.albedo_texture != null:
+			rim_surface = i
+	if body_surface < 0 or rim_surface < 0:
+		loaded.free()
+		_warn_model("skin lacks body or signal material")
+		return
+	var rim_source := skin.mesh.surface_get_material(rim_surface) as StandardMaterial3D
+	var rim_mask := _skin_rim_mask(rim_source.albedo_texture)
+	if rim_mask == null:
+		loaded.free()
+		_warn_model("signal texture unavailable")
+		return
+	_material = skin.mesh.surface_get_material(body_surface).duplicate() as StandardMaterial3D
+	_base_color = _material.albedo_color
+	skin.set_surface_override_material(body_surface, _material)
+	_skin_rim = rim_source.duplicate() as StandardMaterial3D
+	_skin_rim_albedo = _skin_rim.albedo_color
+	_skin_rim.emission_texture = rim_mask
+	_skin_rim.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+	_tint_materials.append(_skin_rim)
+	skin.set_surface_override_material(rim_surface, _skin_rim)
+	_paint_plate(_skin_rim, tint_state)
+	_skin_rim.albedo_color = _skin_rim_albedo
 	for mesh in _visual_parent().find_children("*", "MeshInstance3D", true, false):
 		BossModel.hide_primitive(mesh)
 	for mesh in _lens.find_children("*", "MeshInstance3D", true, false):
@@ -216,6 +253,34 @@ func _dress_model() -> void:
 	BossModel.own_clips(_anim)
 	BossModel.loop_clip(_anim, "still_track")
 	BossModel.play(_anim, "still_track")
+
+
+# Only the blue seam texels carry plating light; the striped working face stays authored.
+func _skin_rim_mask(texture: Texture2D) -> ImageTexture:
+	var image := texture.get_image()
+	if image == null or image.is_empty():
+		return null
+	if image.is_compressed():
+		image.decompress()
+	var mask := Image.create_empty(image.get_width(), image.get_height(), false, Image.FORMAT_RGB8)
+	for y in image.get_height():
+		for x in image.get_width():
+			var color := image.get_pixel(x, y)
+			var seam := color.b > 0.75 and color.r < 0.35 and color.g < 0.65
+			mask.set_pixel(x, y, Color.WHITE if seam else Color.BLACK)
+	return ImageTexture.create_from_image(mask)
+
+
+func _warn_model(reason: String) -> void:
+	if not _warned_models.has(model_path):
+		_warned_models[model_path] = true
+		push_warning("mind_hand: %s '%s'; keeping the primitive hand" % [reason, model_path])
+
+
+func set_tint(state: String) -> void:
+	super.set_tint(state)
+	if _skin_rim != null:
+		_skin_rim.albedo_color = _skin_rim_albedo
 
 
 # Cues the clip for the phase the counter is in: still, the quote's warn, the exact strike

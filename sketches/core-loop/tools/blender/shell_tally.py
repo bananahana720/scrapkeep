@@ -102,6 +102,7 @@ def common_cockpit(p):
 
 
 def build():
+    common.SLOTS["class_accent"] = {"color": "brass", "rough": .75}
     root=common.empty("ShellTally")
     glass=Part("Core")
     glass.uv("glass",.98,40,24)
@@ -113,7 +114,7 @@ def build():
     plates(p)
     p.box("rubber",(.40,.42,.05),loc=(0,.12,-.79))
     p.box("paint",(.46,.12,.08),loc=(0,.64,-.48),color="petrol")
-    p.box("bare_metal",(.40,.026,.017),loc=(0,.707,-.474))
+    p.box("class_accent",(.40,.026,.017),loc=(0,.707,-.474))
     # Reader support and flywheel bearings explain how the kit joins the cockpit.
     for s in (-1,1):
         p.beam("paint",(s*.28,.52,-.37),(s*.29,.69,-.33),.07,.10,color="petrol")

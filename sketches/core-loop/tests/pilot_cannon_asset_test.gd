@@ -228,7 +228,7 @@ func check_shell(shell: Node3D) -> void:
 					glass_error = maxf(glass_error, absf(distance - .98))
 	check("resting sphere bound", radius <= .985001, "radius %.6f <= .985" % radius)
 	check("0.98 glass sphere", glass_error < .0001, "error %.8f, imported vertex tolerance .0001 m" % glass_error)
-	check("five shell material slots", materials.size() <= 5 and materials.keys().all(func(name): return name in ["paint", "ancient_enamel", "rubber", "ancient_light", "glass"]), str(materials.keys()))
+	check("five shell material slots", materials.size() <= 5 and materials.keys().all(func(name): return name in ["paint", "ancient_enamel", "rubber", "class_accent", "glass"]), str(materials.keys()))
 	for name in SOCKETS:
 		var socket := shell.find_child(name.replace(".", "_"), true, false) as Node3D
 		check("socket " + name, socket != null)
