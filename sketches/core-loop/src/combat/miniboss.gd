@@ -58,6 +58,15 @@ var _core: MeshInstance3D
 var _core_material: StandardMaterial3D
 var _plates: Array = []
 var _halo: MeshInstance3D
+var _pose_rig: Skeleton3D
+var _pose_bones := {}
+var _model_plate_material: StandardMaterial3D
+static var _shared: Dictionary = {}
+static var _asset_warned := false
+const MODEL_PATH := "res://assets/models/world_one/enemy_miniboss.glb"
+const MODEL_PARTS := ["MinibossHull", "MinibossArmour", "MinibossCore"]
+const MODEL_BONES := ["MinibossBody", "MinibossFootLeft", "MinibossFootRight",
+	"MinibossFistLeft", "MinibossFistRight", "MinibossPlateLeft", "MinibossPlateRight", "MinibossHalo"]
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -69,8 +78,11 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	weight = WEIGHT
 	radius = RADIUS
 	half_height = HALF_HEIGHT
-	_add_capsule(RADIUS, HALF_HEIGHT * 2.0, Palette.COPPER)
-	_build_armour()
+	var placeholder := _add_capsule(RADIUS, HALF_HEIGHT * 2.0, Palette.COPPER)
+	if _build_model():
+		placeholder.free()
+	else:
+		_build_armour()
 
 
 func state_name() -> String:
@@ -195,6 +207,190 @@ func _fill(value: float) -> void:
 		shown.set_progress(value)
 
 
+func _build_model() -> bool:
+	var parts := _parts()
+	if parts.is_empty():
+		return false
+	_pose_rig = parts.rig.instantiate() as Skeleton3D
+	_visual_parent().add_child(_pose_rig)
+	for bone_name in MODEL_BONES:
+		_pose_bones[bone_name] = _pose_rig.find_bone(bone_name)
+	_base_color = Color.WHITE
+	_material.albedo_color = Color.WHITE
+	_material.vertex_color_use_as_albedo = true
+	_model_plate_material = _plate_material()
+	_core_material = Palette.solid(Palette.VERDIGRIS)
+	for part in parts.meshes:
+		var mi := MeshInstance3D.new()
+		mi.name = part.name
+		mi.mesh = part.mesh
+		mi.transform = part.xform
+		_visual_parent().add_child(mi)
+		if part.skin != null:
+			mi.skin = part.skin
+			mi.skeleton = mi.get_path_to(_pose_rig)
+		match part.name:
+			"MinibossHull": mi.material_override = _material
+			"MinibossArmour": mi.material_override = _model_plate_material
+			"MinibossCore":
+				_core = mi
+				mi.material_override = _core_material
+	_model_pose(0.0)
+	return true
+
+
+static func _asset_fallback() -> Dictionary:
+	if not _asset_warned:
+		push_warning("miniboss: missing or malformed " + MODEL_PATH + "; using primitive fallback")
+		_asset_warned = true
+	return {}
+
+
+static func _scene_transform(node: Node3D, scene: Node3D) -> Transform3D:
+	var result := node.transform
+	var parent := node.get_parent()
+	while parent != scene and parent is Node3D:
+		result = (parent as Node3D).transform * result
+		parent = parent.get_parent()
+	return result
+
+
+static func _parts() -> Dictionary:
+	if not _shared.is_empty():
+		return _shared
+	if not ResourceLoader.exists(MODEL_PATH):
+		return _asset_fallback()
+	var packed := load(MODEL_PATH) as PackedScene
+	if packed == null:
+		return _asset_fallback()
+	var instance := packed.instantiate()
+	if not instance is Node3D:
+		instance.free()
+		return _asset_fallback()
+	var scene := instance as Node3D
+	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
+	if rig == null:
+		scene.free()
+		return _asset_fallback()
+	for bone_name in MODEL_BONES:
+		if rig.find_bone(bone_name) < 0:
+			scene.free()
+			return _asset_fallback()
+	var meshes := []
+	for part_name in MODEL_PARTS:
+		var mi := scene.find_child(part_name, true, false) as MeshInstance3D
+		if mi == null or mi.mesh == null or mi.mesh.get_surface_count() != 1:
+			scene.free()
+			return _asset_fallback()
+		var material := mi.mesh.surface_get_material(0)
+		var slot: String = {"MinibossHull": "fleet_paint", "MinibossArmour": "part_state", "MinibossCore": "core_state"}[part_name]
+		if material == null or material.resource_name != slot or (part_name != "MinibossCore" and mi.skin == null):
+			scene.free()
+			return _asset_fallback()
+		var mesh := mi.mesh.duplicate() as ArrayMesh
+		if mesh == null:
+			scene.free()
+			return _asset_fallback()
+		if part_name == "MinibossArmour":
+			var arrays := mesh.surface_get_arrays(0)
+			if arrays[Mesh.ARRAY_COLOR] == null:
+				scene.free()
+				return _asset_fallback()
+			var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+			if colors.size() != (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
+				scene.free()
+				return _asset_fallback()
+			var uvs := PackedVector2Array()
+			for color in colors:
+				uvs.append(Vector2(0.5 / 24.0 if color.r < 0.01 else 1.0 / 6.0, 0.25))
+			arrays[Mesh.ARRAY_TEX_UV] = uvs
+			mesh = ArrayMesh.new()
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		var painted := Palette.solid(Color.WHITE)
+		painted.vertex_color_use_as_albedo = true
+		mesh.surface_set_material(0, painted)
+		meshes.append({"name": part_name, "mesh": mesh, "skin": mi.skin,
+			"xform": _scene_transform(mi, scene)})
+	var rig_transform := _scene_transform(rig, scene)
+	for child in rig.get_children():
+		child.free()
+	rig.get_parent().remove_child(rig)
+	rig.transform = rig_transform
+	var packed_rig := PackedScene.new()
+	var error := packed_rig.pack(rig)
+	rig.free()
+	scene.free()
+	if error != OK:
+		return _asset_fallback()
+	_shared = {"meshes": meshes, "rig": packed_rig}
+	return _shared
+
+
+func _model_pose(delta: float) -> void:
+	var weak := state == State.WEAK
+	var drop := 0.0
+	var tilt := 0.0
+	var fists := Vector3.ZERO
+	var foot_angle := 0.0
+	match state:
+		State.SLAM_CROUCH:
+			var t := clampf(_clock / SLAM_CROUCH, 0.0, 1.0)
+			drop = -0.9 * t
+			fists = Vector3(0.0, 0.35, 0.5) * t
+			foot_angle = 0.2 * t
+		State.SLAM_LEAP:
+			var t := clampf(_clock / SLAM_LEAP, 0.0, 1.0)
+			var raise := 1.0 - smoothstep(0.55, 1.0, t)
+			fists = Vector3(0.0, 1.8 * raise - 0.6 * (1.0 - raise), -0.5)
+			foot_angle = -0.15
+		State.CHARGE_BRACE:
+			var t := clampf(_clock / CHARGE_BRACE, 0.0, 1.0)
+			drop = -0.35 * t
+			tilt = -0.22 * t
+			fists = Vector3(0.0, 0.3, -0.85) * t
+		State.CHARGE:
+			drop = -0.35
+			tilt = -0.22
+			fists = Vector3(0.0, 0.3, -0.85)
+		State.WEAK:
+			drop = -0.3
+	var body_basis := Basis(Vector3.RIGHT, tilt)
+	for bone_name in MODEL_BONES:
+		var index: int = _pose_bones[bone_name]
+		var rest := _pose_rig.get_bone_rest(index)
+		var pos := body_basis * rest.origin + Vector3.UP * drop
+		var basis := body_basis * rest.basis
+		var size := Vector3.ONE
+		if "Foot" in bone_name:
+			pos = rest.origin
+			basis = Basis(Vector3.RIGHT, foot_angle) * rest.basis
+		elif "Fist" in bone_name:
+			pos += fists
+		elif "Plate" in bone_name:
+			var side := -1.0 if bone_name.ends_with("Left") else 1.0
+			var open := 1.15 if weak else 0.0
+			var current := _pose_rig.get_bone_pose_rotation(index)
+			basis = body_basis * Basis(Vector3.UP, side * open) * rest.basis
+			var desired := basis.get_rotation_quaternion()
+			basis = Basis(current.slerp(desired, 1.0 - exp(-14.0 * delta))) if delta > 0.0 else Basis(desired)
+		elif bone_name == "MinibossHalo":
+			pos = rest.origin
+			basis = Basis(Vector3.UP, _clock * 5.0) * rest.basis
+			size = Vector3.ONE if weak else Vector3.ZERO
+		_pose_rig.set_bone_pose_position(index, pos)
+		_pose_rig.set_bone_pose_rotation(index, basis.get_rotation_quaternion())
+		_pose_rig.set_bone_pose_scale(index, size)
+	_core.position = body_basis * Vector3(0.0, 0.6, -RADIUS * 0.75) + Vector3.UP * drop
+	_core.rotation.x = tilt
+	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
+	_core.scale = Vector3.ONE * (1.5 * pulse if weak else 0.8)
+	_core_material.albedo_color = Palette.live() if weak else Palette.VERDIGRIS
+	_core_material.emission_enabled = weak
+	_core_material.emission = Palette.live()
+	_core_material.emission_energy_multiplier = 4.0 if weak else 0.0
+	_model_plate_material.albedo_color = Palette.SLATE
+
+
 func _build_armour() -> void:
 	_core_material = Palette.solid(Palette.SAND, 0.4)
 	_core = MeshInstance3D.new()
@@ -237,6 +433,21 @@ func _build_armour() -> void:
 # The weak window reads three ways at once: the plates swing open (shape), the core
 # swells and burns bright (colour and size), and a halo spins overhead (motion).
 func _pose(delta: float) -> void:
+	if _pose_rig != null:
+		_model_pose(delta)
+	else:
+		_primitive_pose(delta)
+	# Face the ball while stalking or bracing, so the core is toward the player.
+	if state == State.STALK or state == State.CHARGE_BRACE or state == State.WEAK or state == State.SLAM_CROUCH:
+		var to := _flat_to_ball()
+		if state == State.CHARGE_BRACE and telegraph() != null:
+			to = telegraph().dir
+		if to.length() > 0.5:
+			var want := atan2(-to.x, -to.z)
+			rotation.y = lerp_angle(rotation.y, want, 1.0 - exp(-8.0 * delta))
+
+
+func _primitive_pose(delta: float) -> void:
 	if _core == null:
 		return
 	var weak := state == State.WEAK
@@ -252,11 +463,3 @@ func _pose(delta: float) -> void:
 	_halo.visible = weak
 	if weak:
 		_halo.rotate_y(delta * 5.0)
-	# Face the ball while stalking or bracing, so the core is toward the player.
-	if state == State.STALK or state == State.CHARGE_BRACE or state == State.WEAK or state == State.SLAM_CROUCH:
-		var to := _flat_to_ball()
-		if state == State.CHARGE_BRACE and telegraph() != null:
-			to = telegraph().dir
-		if to.length() > 0.5:
-			var want := atan2(-to.x, -to.z)
-			rotation.y = lerp_angle(rotation.y, want, 1.0 - exp(-8.0 * delta))
