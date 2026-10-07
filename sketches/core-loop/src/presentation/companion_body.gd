@@ -19,6 +19,8 @@ const BEHIND := 0.8
 const FOLLOW_RATE := 8.0
 const TURN_RATE := 6.0
 const MOVING_SPEED := 1.0
+# Renderer updates can outlive a retired mesh during a socket swap.
+static var _painted_materials := {}
 
 var ctx
 var model_dir := MODEL_DIR
@@ -51,6 +53,21 @@ static func model_path(sockets: Array, dir := MODEL_DIR) -> String:
 	if sockets.size() != Companion.SOCKETS:
 		return ""
 	return dir + "%s__%s.glb" % [sockets[0], sockets[1]]
+
+
+# Imported enamel is white without COLOR. Keep private overrides so a tableau never
+# repaints the cached GLB or a live companion's equipped cosmetic.
+static func dress_model(model: Node) -> void:
+	for mesh in model.find_children("*", "MeshInstance3D", true, false):
+		for surface in mesh.mesh.get_surface_count():
+			var original := mesh.get_active_material(surface) as BaseMaterial3D
+			if original == null or original.resource_name != "paint" or original.vertex_color_use_as_albedo:
+				continue
+			if not _painted_materials.has(original):
+				var painted := original.duplicate() as BaseMaterial3D
+				painted.vertex_color_use_as_albedo = true
+				_painted_materials[original] = painted
+			mesh.set_surface_override_material(surface, _painted_materials[original])
 
 
 # Capture hook (tools/asset_capture.gd --call): seats two owned pieces into the run's
@@ -121,6 +138,7 @@ func _rebuild(seats: Array, key: String) -> void:
 			push_warning("companion_body: model '%s' unavailable; keeping the plain hull" % path)
 		add_child(_fallback())
 		return
+	dress_model(_model)
 	add_child(_model)
 	_anim = _model.find_children("*", "AnimationPlayer", true, false).front() as AnimationPlayer
 	_play("idle")
