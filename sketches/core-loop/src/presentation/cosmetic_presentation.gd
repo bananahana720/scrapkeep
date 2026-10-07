@@ -14,6 +14,7 @@ var trail: Node3D
 var _trail_id := ""
 var _trail_clock := 0.0
 var _cards: Array = []
+var _spare: Array = []
 var _decal := {}
 var _companion := {}
 var _art := Cosmetics.art_manifest()
@@ -46,6 +47,7 @@ func _process(delta: float) -> void:
 		return
 	var rec: Dictionary = hero.shell_of(ctx.player)
 	if rec.is_empty():
+		_clear_cards()
 		return
 	var pilot: String = rec["class"]
 	_apply_decal(rec, effective(pilot, "decal"))
@@ -203,15 +205,28 @@ void fragment() {
 
 func _clear_cards() -> void:
 	for card in _cards:
-		card["node"].free()
+		_retire(card)
 	_cards.clear()
 	_trail_clock = 0.0
+
+
+# A spent card waits hidden for the next sample; the trail never instances per frame.
+func _retire(card: Dictionary) -> void:
+	(card["node"] as Node3D).visible = false
+	_spare.append(card)
+
+
+func _drop_pool() -> void:
+	_clear_cards()
+	for card in _spare:
+		card["node"].free()
+	_spare.clear()
 
 
 func _step_trail(delta: float, row: Dictionary) -> void:
 	var key: String = row.get("asset", "")
 	if key != _trail_id:
-		_clear_cards()
+		_drop_pool()
 		_trail_id = key
 	var player = ctx.player
 	var velocity: Vector3 = player.planar_velocity()
@@ -219,49 +234,75 @@ func _step_trail(delta: float, row: Dictionary) -> void:
 		_clear_cards()
 		return
 	var ball: Vector3 = player.shown_position()
+	var threats := _threat_points()
 	for card in _cards.duplicate():
 		card["age"] += delta
 		var node: Node3D = card["node"]
 		if card["age"] >= card["life"] or Vector2(node.global_position.x - ball.x, node.global_position.z - ball.z).length() > TRAIL_DISTANCE:
-			node.free()
 			_cards.erase(card)
+			_retire(card)
 			continue
-		var obscures := _near_threat(node.global_position)
-		for mesh in _meshes(node):
+		var obscures := _near_threat(node.global_position, threats)
+		for mesh in card["meshes"]:
 			mesh.transparency = 1.0 if obscures else float(card["age"]) / float(card["life"])
 	_trail_clock += delta
 	if _trail_clock < TRAIL_INTERVAL or _cards.size() >= TRAIL_LIMIT:
 		return
 	_trail_clock = 0.0
-	if _near_threat(ball):
+	if _near_threat(ball, threats):
 		return
+	var card := _take_card(row, key)
+	if card.is_empty():
+		return
+	var node: Node3D = card["node"]
+	node.visible = true
+	node.global_position = ball - velocity.normalized() * 0.12
+	node.global_position.y = ball.y - Tuning.RADIUS + 0.04
+	node.rotation.y = atan2(-velocity.x, -velocity.z)
+	for pair in card["clips"]:
+		(pair[0] as AnimationPlayer).stop()
+		(pair[0] as AnimationPlayer).play(pair[1])
+	card["age"] = 0.0
+	card["life"] = minf(0.45, float(_detail("trails", key).get("duration_s", 0.35)))
+	_cards.append(card)
+
+
+# A pooled card, or a new one while the pool is still filling (at most TRAIL_LIMIT exist).
+func _take_card(row: Dictionary, key: String) -> Dictionary:
+	if not _spare.is_empty():
+		return _spare.pop_back()
 	var packed := row["resource"] as PackedScene
 	var node := packed.instantiate() as Node3D
 	if node == null:
 		resolver._warn(key)
-		return
+		return {}
 	var meshes := _meshes(node)
 	if meshes.is_empty() or not node.find_children("*", "CollisionObject3D", true, false).is_empty():
 		node.free()
 		resolver._warn(key)
-		return
+		return {}
 	trail.add_child(node)
-	node.global_position = ball - velocity.normalized() * 0.12
-	node.global_position.y = ball.y - Tuning.RADIUS + 0.04
-	node.rotation.y = atan2(-velocity.x, -velocity.z)
 	for mesh in meshes:
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var clips: Array = []
 	for animator in node.find_children("*", "AnimationPlayer", true, false):
 		for clip in animator.get_animation_list():
 			if clip != "RESET":
-				animator.play(clip)
+				clips.append([animator, clip])
 				break
-	var life := minf(0.45, float(_detail("trails", key).get("duration_s", 0.35)))
-	_cards.append({"node": node, "age": 0.0, "life": life})
+	return {"node": node, "meshes": meshes, "clips": clips, "age": 0.0, "life": 0.0}
 
 
-func _near_threat(point: Vector3) -> bool:
+func _threat_points() -> Array[Vector3]:
+	var points: Array[Vector3] = []
 	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if enemy is Node3D and enemy.global_position.distance_to(point) < 3.0:
+		if enemy is Node3D:
+			points.append((enemy as Node3D).global_position)
+	return points
+
+
+func _near_threat(point: Vector3, threats: Array[Vector3]) -> bool:
+	for at in threats:
+		if at.distance_to(point) < 3.0:
 			return true
 	return false

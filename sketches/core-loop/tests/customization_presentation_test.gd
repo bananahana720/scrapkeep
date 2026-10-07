@@ -106,6 +106,13 @@ func _run() -> void:
 	for i in 40:
 		view._process(0.031)
 	_t.check("trail cap enforced", view._cards.size() > 0 and view._cards.size() <= 24)
+	# Cards are pooled: a rolling ball reuses at most 24 nodes instead of instancing per sample.
+	var seen := {}
+	for i in 80:
+		view._process(0.031)
+		for card in view._cards:
+			seen[(card["node"] as Node).get_instance_id()] = true
+	_t.check("trail reuses at most 24 card nodes over 80 frames", seen.size() > 0 and seen.size() <= 24, "%d distinct card nodes" % seen.size())
 	player.state.grounded = false
 	view._process(0.04)
 	_t.eq("airborne ball suppresses cosmetic trail", view._cards.size(), 0)
