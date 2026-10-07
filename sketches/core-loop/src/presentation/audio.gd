@@ -153,6 +153,8 @@ var _unmute_at := -1
 # landing hands it to the synth on a beat. _handover_at is that beat while it is coming.
 var _ace_flight := false
 var _handover_at := -1
+var _ace_arrival_stage := 0
+var _ace_arrival_at := -1
 # The transport sample the synth band starts fading out under the ACE band, -1 when the
 # synth band plays alone. It fades over AceSequencer.STOP_RAMP and is muted after.
 var _band_fade_start := -1
@@ -248,9 +250,10 @@ func setup(ctx_ref) -> void:
 	_make_overlay()
 	_connect_all(ctx.events)
 	_start_bake()
-	ace_manifest = _music_row(1)["ace_manifest"]
+	ace_manifest = MusicRows.resolve("title")["ace_manifest"]
 	_ace_row_manifest = ace_manifest
 	_start_ace_load()
+	_flow_queue.append(["idle"])
 
 
 # --- Baking -------------------------------------------------------------------------
@@ -457,6 +460,11 @@ func _process(delta: float) -> void:
 # sample-locked. The synth band fills its ring; the ACE band keeps it at the POC's
 # QUEUE_TARGET, so a contact reaches the speaker sooner.
 func _pump() -> void:
+	if _ace_arrival_stage > 0 and _ace_arrival_at >= 0 and engine.clock > _ace_arrival_at and not engine.in_drop():
+		var stage := _ace_arrival_stage
+		_ace_arrival_stage = 0
+		_ace_arrival_at = -1
+		_ace_stage(stage, engine.next_bar())
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
@@ -619,6 +627,9 @@ func ace_ready() -> bool:
 		ace_missing = loaded.missing
 		push_warning("ACE music: missing %s; playing the synth engine instead" % ace_missing)
 		return false
+	if ace != null:
+		ace.stop(AceSequencer.STOP_RAMP)
+		loaded.fading.append_array(ace.fading)
 	ace = loaded
 	_ace_from = ace_manifest
 	ace.clock = engine.clock
@@ -690,12 +701,14 @@ func _ace_package_for(stage: int) -> String:
 # other stage hands back to the synth, except that the band held through a launch's flight waits for the landing.
 func _ace_stage(stage: int, at: int) -> void:
 	var manifest: String = _music_row(stage)["ace_manifest"]
-	if manifest != _ace_row_manifest:
-		if ace_manifest == _ace_row_manifest:
-			ace_manifest = manifest
-			_ace_failed = false
-			ace_missing = ""
-		_ace_row_manifest = manifest
+	_select_ace_manifest(manifest)
+	# Preserve the launch riser and landing drop before the destination's recorded bed.
+	if (at < 0 and _launch_armed) or (_ace_flight and ace_playing()):
+		_ace_arrival_stage = stage
+		_ace_arrival_at = -1
+		return
+	_ace_arrival_stage = 0
+	_ace_arrival_at = -1
 	if _ace_package_for(stage) != "" and ace_ready():
 		_ace_flight = false
 		_handover_at = -1
@@ -704,14 +717,43 @@ func _ace_stage(stage: int, at: int) -> void:
 		return
 	if _ace_flight and ace_playing():
 		return
-	# Another stage: the synth band takes over now, so the new stage's restart, launch
-	# build and landing drop are heard; the ACE band fades over a beat under it.
+	_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
+
+
+func _select_ace_manifest(manifest: String) -> void:
+	if manifest != _ace_row_manifest:
+		if ace_manifest == _ace_row_manifest:
+			ace_manifest = manifest
+			_ace_failed = false
+			ace_missing = ""
+		_ace_row_manifest = manifest
+
+
+func _ace_named(id: String, at: int, boss := false, won := true) -> void:
+	_ace_arrival_stage = 0
+	_ace_arrival_at = -1
+	var manifest: String = MusicRows.resolve(id)["ace_manifest"]
+	var keep := manifest == _ace_from and ace_playing() and ace.mode == "menu"
+	_select_ace_manifest(manifest)
+	if ace_ready():
+		if keep and not boss:
+			return
+		_ace_flight = false
+		_handover_at = -1
+		if boss:
+			ace.start_boss(at)
+		else:
+			ace.start_menu(at, won)
+		engine.grid = ace
+		return
 	_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
 
 
 # The ACE band stops and the synth band plays again from this moment, so a note it starts
 # now (the death boom, a restart's first beat) is heard over the ACE fade tail.
 func _ace_end(ramp := AceSequencer.STOP_RAMP) -> void:
+	_ace_arrival_stage = 0
+	_ace_arrival_at = -1
 	engine.grid = null
 	_ace_flight = false
 	_handover_at = -1
@@ -1474,11 +1516,15 @@ func _begin_boss(kind: String, music: String) -> void:
 		# it restarts the boss music in play mode on the next beat, not the keys alone.
 		engine.cancel_pending()
 		var again := engine.restart_boss(music)
+		if music in MusicEngine.BOSS_TRACKS:
+			_ace_named(music, again, true)
 		cue_log.append([kind, "restart", "beat", again, 1.0])
 		return
 	var at := engine.begin_boss(music)
 	if at < 0:
 		return
+	if music in MusicEngine.BOSS_TRACKS:
+		_ace_named(music, at, true)
 	var sound := Rows.sound(kind)
 	if sound != "":
 		engine.schedule_stinger_at(sound, at)
@@ -1574,6 +1620,8 @@ func _on_landed(impact: float) -> void:
 func _land_drop() -> void:
 	var touchdown := engine.clock
 	var at := engine.drop_now(4, 0.85, {}, _landing_theme)
+	if _ace_arrival_stage > 0:
+		_ace_arrival_at = at
 	drop_log.append([touchdown, at])
 	if _ace_flight:
 		# The piece sounds to the landing's beat, fades under the synth drop over a beat and
@@ -1588,6 +1636,8 @@ func _land_drop() -> void:
 
 
 func _disarm_launch() -> void:
+	_ace_arrival_stage = 0
+	_ace_arrival_at = -1
 	if _ace_flight:
 		# The landing that would hand the band over is not coming.
 		_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
@@ -1902,24 +1952,26 @@ func _flush_flow() -> void:
 					engine.schedule_cadence(start + Harmony.BAR)
 					engine.schedule_mode(start + Harmony.BAR * 3, MusicEngine.IDLE)
 					engine.menu_theme("summary", true, start + Harmony.BAR * 3)
+					_ace_named("summary", start + Harmony.BAR * 3, false, true)
 				else:
 					# on_beat returns -1 until sound is ready, so this is the guarded handoff for both outcomes.
 					var at := engine.next_beat()
 					engine.schedule_mode(at, MusicEngine.IDLE)
 					if sound_ready:
 						engine.menu_theme("summary", won, at)
+						_ace_named("summary", at, false, won)
 			"dead":
 				_ace_end()
 				_disarm_launch()
 				engine.cancel_pending()
 				engine.death_break()
 			"idle":
-				_ace_end()
 				var at := engine.next_beat()
 				engine.schedule_mode(at, MusicEngine.IDLE)
 				# The title's own theme, kept across the class select.
 				if sound_ready:
 					engine.menu_theme("title", true, at)
+					_ace_named("title", at)
 			"unseal":
 				_unseal_ms = Time.get_ticks_msec()
 				if ace_playing():

@@ -113,6 +113,13 @@ func _kick_and_shake() -> void:
 		worst_angle = maxf(worst_angle, hit.aim_forward().angle_to(calm.aim_forward()))
 	_t.check("a1 aim_origin holds for 20 frames of spring-back", worst_gap < ORIGIN_TOL, "worst %.7f m" % worst_gap)
 	_t.check("a1 aim_forward holds for 20 frames of spring-back", worst_angle < ANGLE_TOL, "worst %.7f rad" % worst_angle)
+	# The shake keeps its own stream: a shake drawn from the global one let any visual's randf() move a seeded run.
+	seed(4242)
+	var want := randf()
+	seed(4242)
+	hit.shake(SHAKE, 1.0)
+	_step(hit, 5)
+	_t.check("a1 the shake never draws from the global stream", randf() == want, "the global stream advanced")
 	calm.free()
 	hit.free()
 

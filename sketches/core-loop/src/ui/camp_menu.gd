@@ -43,6 +43,7 @@ func _init() -> void:
 	_buttons.add_child(ChoiceButton.new("settings", "key_s", "Settings"))
 	back = ChoiceButton.new("back", "key_k", "Back")
 	_buttons.add_child(back)
+	preload("res://src/ui/customize_page.gd").attach(self)
 
 
 func button_for(action: String) -> Button:

@@ -5,6 +5,7 @@ const LocalMesh := preload("res://src/world/local_mesh.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const BayLap := preload("res://src/world/bay_lap.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const StageMap := preload("res://src/world/stage_map.gd")
 
 # Moss's workshop bay (DESIGN-V2 sections 12 and 15): a hover barge that docks over the
 # reward gates after each Warden break, a pit stop on the marble run. Opt-in: a steam
@@ -393,12 +394,14 @@ func _build_deck() -> void:
 		if o > 7.0:
 			return Palette.RUST.lerp(Palette.SANDSTONE, 0.3)
 		return Palette.SANDSTONE.lerp(Palette.SAND, 0.4)
-	LocalMesh.grid(_barge, "BayDeck", Vector2(DECK_U * 2.0, DECK_V * 2.0), 1.0, deck_height, tint)
+	var deck := LocalMesh.grid(_barge, "BayDeck", Vector2(DECK_U * 2.0, DECK_V * 2.0), 1.0, deck_height, tint)
+	var deck_view := deck.get_child(1) as MeshInstance3D
+	deck_view.material_override = _paint(Color.WHITE, 1, Vector3.ZERO, deck_view.material_override)
 	var hull := MeshInstance3D.new()
 	var hm := BoxMesh.new()
 	hm.size = Vector3(DECK_U * 2.0 - 2.0, 3.0, DECK_V * 2.0 - 2.0)
 	hull.mesh = hm
-	hull.material_override = Palette.solid(Palette.RUST)
+	hull.material_override = _paint(Palette.RUST)
 	hull.position = Vector3.DOWN * 2.0
 	_barge.add_child(hull)
 	for corner in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
@@ -408,7 +411,7 @@ func _build_deck() -> void:
 		jm.bottom_radius = 3.2
 		jm.height = 3.0
 		jet.mesh = jm
-		jet.material_override = Palette.solid(Palette.COPPER)
+		jet.material_override = _paint(Palette.COPPER)
 		jet.position = Vector3(corner.x * (DECK_U - 6.0), -4.5, corner.y * (DECK_V - 5.0))
 		_barge.add_child(jet)
 		var steam := MeshInstance3D.new()
@@ -424,7 +427,7 @@ func _build_deck() -> void:
 	var lm := BoxMesh.new()
 	lm.size = Vector3(1.2, 0.08, 8.5)
 	line.mesh = lm
-	line.material_override = Palette.striped(Palette.SAND, Palette.CHARCOAL)
+	line.material_override = _paint(Palette.SAND, 3, lm.size)
 	line.position = Vector3(0.0, 0.02 + deck_height(0.0, -(TRACK_R - 1.0)), -(TRACK_R - 1.0))
 	_barge.add_child(line)
 
@@ -444,12 +447,12 @@ func _build_cabin() -> void:
 	var bm := BoxMesh.new()
 	bm.size = box.size
 	body.mesh = bm
-	body.material_override = Palette.solid(Palette.VERDIGRIS)
+	body.material_override = _paint(Palette.VERDIGRIS)
 	cabin.add_child(body)
 	cabin.position = Vector3(CABIN.x, 3.0, CABIN.y)
 	_barge.add_child(cabin)
 	var front := CABIN.x + 2.55
-	_visual(Vector3(0.1, 4.6, 7.0), Vector3(front, 3.4, 0.0), Palette.striped(Palette.RUST, Palette.CHARCOAL))
+	_visual(Vector3(0.1, 4.6, 7.0), Vector3(front, 3.4, 0.0), _paint(Palette.RUST, 2))
 	_visual(Vector3(0.14, 1.3, 1.8), Vector3(front + 0.02, 1.2, 0.0), Palette.solid(Palette.CHARCOAL))
 	_visual(Vector3(1.0, 1.0, 6.0), Vector3(front + 0.8, 0.5, 0.0), Palette.solid(Palette.RUST.lerp(Palette.SANDSTONE, 0.3)))
 	_visual(Vector3(0.6, 0.12, 5.0), Vector3(front + 0.35, 5.2, 0.0), Palette.solid(Palette.COPPER))
@@ -468,7 +471,7 @@ func _build_cabin() -> void:
 	hm.inner_radius = 0.25
 	hm.outer_radius = 0.42
 	hook.mesh = hm
-	hook.material_override = Palette.solid(Palette.COPPER)
+	hook.material_override = _paint(Palette.COPPER)
 	hook.position = Vector3(front + 0.3, 4.0, 3.0)
 	hook.rotation.z = PI * 0.5
 	_barge.add_child(hook)
@@ -479,7 +482,7 @@ func _build_cabin() -> void:
 	dm.bottom_radius = 0.55
 	dm.height = 0.08
 	dial.mesh = dm
-	dial.material_override = Palette.solid(Palette.SAND)
+	dial.material_override = _paint(Palette.SAND)
 	dial.position = Vector3(front + 0.12, 4.9, 3.0)
 	dial.rotation.z = PI * 0.5
 	_barge.add_child(dial)
@@ -491,7 +494,7 @@ func _build_cabin() -> void:
 	mm.bottom_radius = 0.2
 	mm.height = 0.4
 	mug.mesh = mm
-	mug.material_override = Palette.solid(Palette.SAND)
+	mug.material_override = _paint(Palette.SAND)
 	mug.position = Vector3(front + 0.8, 1.2, -1.8)
 	_barge.add_child(mug)
 	_visual(Vector3(0.08, 0.1, 0.1), Vector3(front + 1.02, 1.36, -1.8), Palette.solid(Palette.CHARCOAL))
@@ -501,7 +504,7 @@ func _build_cabin() -> void:
 	tm.bottom_radius = 0.3
 	tm.height = 0.45
 	tin.mesh = tm
-	tin.material_override = Palette.solid(Palette.COPPER)
+	tin.material_override = _paint(Palette.COPPER)
 	tin.position = Vector3(front + 0.8, 1.22, 2.0)
 	_barge.add_child(tin)
 	for k in 3:
@@ -510,7 +513,7 @@ func _build_cabin() -> void:
 		lm.radius = 0.22
 		lm.height = 0.44
 		leaf.mesh = lm
-		leaf.material_override = Palette.solid(Palette.VERDIGRIS.lerp(Palette.ARC, 0.25))
+		leaf.material_override = _paint(Palette.VERDIGRIS.lerp(Palette.ARC, 0.25))
 		leaf.position = Vector3(front + 0.8 + (k - 1) * 0.15, 1.6 + k * 0.08, 2.0 + (k - 1) * 0.12)
 		_barge.add_child(leaf)
 
@@ -525,12 +528,12 @@ func _build_toys() -> void:
 	bm.bottom_radius = 1.0
 	bm.height = 1.4
 	_bell.mesh = bm
-	_bell.material_override = Palette.solid(Palette.BRASS.lerp(Palette.COPPER, 0.5))
+	_bell.material_override = _paint(Palette.BRASS.lerp(Palette.COPPER, 0.5))
 	_bell.position = Vector3(BELL.x, 3.9, BELL.y)
 	_barge.add_child(_bell)
 	_visual(Vector3(1.8, 2.6, 1.2), Vector3(JUKEBOX.x, 1.3, JUKEBOX.y + 1.6), Palette.solid(Palette.RUST))
 	_visual(Vector3(1.4, 1.2, 0.1), Vector3(JUKEBOX.x, 1.7, JUKEBOX.y + 0.98), Palette.solid(Palette.AMBER, 1.2))
-	_visual(Vector3(2.4, 0.1, 2.4), Vector3(JUKEBOX.x, 0.05, JUKEBOX.y), Palette.striped(Palette.AMBER, Palette.CHARCOAL))
+	_visual(Vector3(2.4, 0.1, 2.4), Vector3(JUKEBOX.x, 0.05, JUKEBOX.y), _paint(Palette.AMBER, 3, Vector3(2.4, 0.1, 2.4)))
 	_visual(Vector3(2.4, 1.6, 1.6), Vector3(MARBLE_TOY.x, 0.8, MARBLE_TOY.y - 1.4), Palette.solid(Palette.RUST.lerp(Palette.SANDSTONE, 0.4)))
 	for k in MARBLE_STEPS:
 		var step_bar := _visual(Vector3(0.5, 0.08, 1.3), Vector3(MARBLE_TOY.x - 0.9 + k * 0.4, 2.05 - k * 0.18, MARBLE_TOY.y - 0.8),
@@ -543,7 +546,7 @@ func _build_toys() -> void:
 	_marble.mesh = mm
 	_marble.material_override = Palette.solid(Palette.SAND, 0.4)
 	_barge.add_child(_marble)
-	_visual(Vector3(2.4, 0.1, 2.4), Vector3(MARBLE_TOY.x, 0.05, MARBLE_TOY.y), Palette.striped(Palette.SAND, Palette.CHARCOAL))
+	_visual(Vector3(2.4, 0.1, 2.4), Vector3(MARBLE_TOY.x, 0.05, MARBLE_TOY.y), _paint(Palette.SAND, 3, Vector3(2.4, 0.1, 2.4)))
 
 
 # The practice yard: painted bone lines, a pylon face, a grapple post and a rack of
@@ -560,7 +563,7 @@ func _build_yard() -> void:
 	var bm := BoxMesh.new()
 	bm.size = box.size
 	mesh.mesh = bm
-	mesh.material_override = Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
+	mesh.material_override = _paint(Palette.VERDIGRIS, 0, box.size)
 	wall.add_child(mesh)
 	wall.position = Vector3(YARD.position.x + YARD.size.x * 0.5, 2.5, YARD.end.y + 0.8)
 	_barge.add_child(wall)
@@ -577,7 +580,7 @@ func _build_yard() -> void:
 	pm.bottom_radius = 0.6
 	pm.height = 9.0
 	pv.mesh = pm
-	pv.material_override = Palette.solid(Palette.COPPER)
+	pv.material_override = _paint(Palette.COPPER)
 	post.add_child(pv)
 	post.position = Vector3(YARD.position.x + 1.0, 4.5, YARD.position.y - 0.8)
 	_barge.add_child(post)
@@ -598,7 +601,7 @@ func _build_yard() -> void:
 		vm.bottom_radius = 0.3
 		vm.height = 1.5
 		v.mesh = vm
-		v.material_override = Palette.solid(Palette.SAND)
+		v.material_override = _paint(Palette.SAND)
 		pin.add_child(v)
 		_barge.add_child(pin)
 		_pins.append(pin)
@@ -612,7 +615,7 @@ func _build_pad() -> void:
 	pm.bottom_radius = PAD_RADIUS
 	pm.height = 0.12
 	pad.mesh = pm
-	pad.material_override = Palette.striped(Palette.AMBER, Palette.CHARCOAL)
+	pad.material_override = _paint(Palette.AMBER, 3, Vector3(PAD_RADIUS * 2.0, pm.height, PAD_RADIUS * 2.0))
 	pad.position = Vector3(PAD.x, 0.06, PAD.y)
 	_barge.add_child(pad)
 	for k in 3:
@@ -635,7 +638,7 @@ func _build_cradle() -> void:
 	cm.bottom_radius = 1.2
 	cm.height = 0.6
 	cup.mesh = cm
-	cup.material_override = Palette.solid(Palette.COPPER)
+	cup.material_override = _paint(Palette.COPPER)
 	cup.position = Vector3.UP * 0.05
 	_cradle.add_child(cup)
 	var mast := MeshInstance3D.new()
@@ -644,7 +647,7 @@ func _build_cradle() -> void:
 	mm.bottom_radius = 0.35
 	mm.height = 12.0
 	mast.mesh = mm
-	mast.material_override = Palette.solid(Palette.RUST)
+	mast.material_override = _paint(Palette.RUST)
 	mast.position = Vector3(CRADLE_RADIUS + 1.2, 6.0, 0.0)
 	_cradle.add_child(mast)
 	var sign_mug := MeshInstance3D.new()
@@ -670,7 +673,11 @@ func _visual(size: Vector3, at: Vector3, mat: Material) -> MeshInstance3D:
 	var b := BoxMesh.new()
 	b.size = size
 	mesh.mesh = b
-	mesh.material_override = mat
+	mesh.material_override = _paint(mat.albedo_color, 1, size) if mat is StandardMaterial3D and not mat.emission_enabled and mat.albedo_texture == null else mat
 	mesh.position = at
 	_barge.add_child(mesh)
 	return mesh
+
+
+func _paint(color: Color, kind := 1, size := Vector3.ZERO, original: Material = null) -> Material:
+	return StageMap.dressed_surface(color, kind, size, Palette.CHARCOAL, original)

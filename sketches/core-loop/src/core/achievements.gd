@@ -68,6 +68,26 @@ const ROWS := {
 	# codex.gd sets first_time once per synergy for the player, so the count is distinct synergies.
 	"codex_keeper": {"name": "Codex Keeper", "text": "Discover 10 synergies across all your runs.", "on": "synergy_discovered",
 		"where": {"first_time": true}, "count": 10, "reward": {"cosmetic": "paint_any_moth"}},
+	"ach_d7_salt_skip": {"name": "Salt Skip", "text": "Finish one run.", "on": "run_ended", "count": 1, "reward": {"cosmetic": "trail_salt_skip"}},
+	"ach_d7_ink_stitch": {"name": "Ink Stitch", "text": "Land 25 harpoon smashes.", "on": "harpoon_smashed", "count": 25, "reward": {"cosmetic": "trail_ink_stitch"}},
+	"ach_d7_plum_curl": {"name": "Plum Curl", "text": "Land 50 slams.", "on": "slammed", "count": 50, "reward": {"cosmetic": "trail_plum_curl"}},
+	"ach_d7_forge_chips": {"name": "Forge Chips", "text": "Break 250 machines.", "on": "enemy_killed", "count": 250, "reward": {"cosmetic": "trail_forge_chips"}},
+	"ach_d7_moth_tuft": {"name": "Moth Tuft", "text": "Discover five distinct synergies.", "on": "synergy_discovered", "count": 5, "where": {"first_time": true}, "reward": {"cosmetic": "trail_moth_tuft"}},
+	"ach_d7_rose_wash": {"name": "Rose Wash", "text": "Win five world events.", "on": "milestone_won", "count": 5, "reward": {"cosmetic": "trail_rose_wash"}},
+	"ach_d7_fern": {"name": "Fern", "text": "Rescue the stranded runner.", "on": "rescue_completed", "count": 1, "where": {"quest_id": "rivet"}, "reward": {"cosmetic": "decal_fern"}},
+	"ach_d7_patch": {"name": "Patch", "text": "Finish five runs.", "on": "run_ended", "count": 5, "reward": {"cosmetic": "decal_patch"}},
+	"ach_d7_snail_shell": {"name": "Snail Shell", "text": "Release 100 harpoon lines.", "on": "grapple_released", "count": 100, "reward": {"cosmetic": "decal_snail_shell"}},
+	"ach_d7_thimble": {"name": "Thimble", "text": "Collect 1000 cogs across your runs.", "on": "cogs_collected", "count": 1000, "sum": "amount", "reward": {"cosmetic": "decal_thimble"}},
+	"ach_d7_mushroom": {"name": "Mushroom", "text": "Reach the Dig.", "on": "world_entered", "count": 1, "where": {"world": 2}, "reward": {"cosmetic": "decal_mushroom"}},
+	"ach_d7_paw": {"name": "Paw", "text": "Jump 100 times.", "on": "jumped", "count": 100, "reward": {"cosmetic": "decal_paw"}},
+	"ach_d7_seashell": {"name": "Seashell", "text": "Collect 5000 fresh scrap across your runs.", "on": "scrap_collected", "count": 5000, "sum": "amount", "reward": {"cosmetic": "decal_seashell"}},
+	"ach_d7_moth": {"name": "Moth", "text": "Reach the Highdraft.", "on": "world_entered", "count": 1, "where": {"world": 3}, "reward": {"cosmetic": "decal_moth"}},
+	"ach_d7_night_slate": {"name": "Night Slate", "text": "Survive a hit that spends SPIL-9's escape charge.", "on": "escape_window", "count": 1, "reward": {"cosmetic": "companion_paint_night"}},
+	"ach_d7_forge_blue": {"name": "Forge Blue", "text": "Break 500 machines.", "on": "enemy_killed", "count": 500, "reward": {"cosmetic": "companion_paint_forge"}},
+	"ach_d7_ember_plum": {"name": "Ember Plum", "text": "Use 100 specials.", "on": "special_used", "count": 100, "reward": {"cosmetic": "companion_paint_plum"}},
+	"ach_d7_salt_white": {"name": "Salt White", "text": "Break three Wardens.", "on": "beacon_unsealed", "count": 3, "reward": {"cosmetic": "companion_paint_salt"}},
+	"ach_d7_dusk_pink": {"name": "Dusk Pink", "text": "Win 15 world events.", "on": "milestone_won", "count": 15, "reward": {"cosmetic": "companion_paint_dusk"}},
+	"ach_d7_moth_grey": {"name": "Moth Grey", "text": "Discover ten distinct synergies.", "on": "synergy_discovered", "count": 10, "where": {"first_time": true}, "reward": {"cosmetic": "companion_paint_moth"}},
 }
 
 
@@ -172,3 +192,23 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 			elif kind == "world" and target == "":
 				problems.append("%s: reward world must name a world" % id)
 	return problems
+
+
+# Existing counters are lower bounds: an earned row stops counting. A stricter filter
+# proves the unfiltered fact too, but counts with a different sum never prove it.
+static func recorded_sources(id: String) -> Array:
+	var target := row(id)
+	var out: Array = []
+	if target.is_empty() or not id.begins_with("ach_d7_"):
+		return out
+	for source_id in ROWS:
+		var source: Dictionary = ROWS[source_id]
+		if source["on"] != target["on"] or source.get("sum", "") != target.get("sum", ""):
+			continue
+		var compatible := true
+		for key in target.get("where", {}):
+			if source.get("where", {}).get(key) != target["where"][key]:
+				compatible = false
+		if compatible:
+			out.append(source_id)
+	return out

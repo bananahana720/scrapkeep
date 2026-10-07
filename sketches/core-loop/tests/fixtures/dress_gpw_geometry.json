@@ -1,0 +1,803 @@
+[
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/0",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 7, 5)",
+		"type": "StaticBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/0/0",
+		"shape": "BoxShape3D",
+		"size": "Vector3(12, 7, 1.6)",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-6, -3.5, -0.8, 12, 7, 1.6)",
+		"mesh": "BoxMesh",
+		"path": "root/0/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "4276367196"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/1",
+		"transform": "Transform3D(0.7648422, 0, 0.64421767, 0, 1, 0, -0.64421767, 0, 0.7648422, 3, 11, 5)",
+		"type": "StaticBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/1/0",
+		"shape": "BoxShape3D",
+		"size": "Vector3(36, 15, 1.6)",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-18, -7.5, -0.8, 36, 15, 1.6)",
+		"mesh": "BoxMesh",
+		"path": "root/1/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "885226931"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/2",
+		"transform": "Transform3D(0.3623577, 0, -0.9320391, 0, 1, 0, 0.9320391, 0, 0.3623577, 3, 6, 5)",
+		"type": "StaticBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/2/0",
+		"shape": "BoxShape3D",
+		"size": "Vector3(8, 5, 1.6)",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-4, -2.5, -0.8, 8, 5, 1.6)",
+		"mesh": "BoxMesh",
+		"path": "root/2/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "2706960472"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/0",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "StaticBody3D"
+	},
+	{
+		"disabled": false,
+		"faces": "4162464748",
+		"path": "root/3/0/0/0",
+		"shape": "ConcavePolygonShape3D",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-31, -0.5, -21, 62, 4.5, 42)",
+		"mesh": "ArrayMesh",
+		"path": "root/3/0/0/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3745539512"
+	},
+	{
+		"bounds": "AABB(-30, -1.5, -20, 60, 3, 40)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "663517056"
+	},
+	{
+		"bounds": "AABB(-3.2, -1.5, -3.2, 6.4, 3, 6.4)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/2",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, -4.5, 16)",
+		"type": "MeshInstance3D",
+		"vertices": "2797368186"
+	},
+	{
+		"bounds": "AABB(-4, -3, -4, 8, 6, 8)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/3",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, -9, 16)",
+		"type": "MeshInstance3D",
+		"vertices": "2529242501"
+	},
+	{
+		"bounds": "AABB(-3.2, -1.5, -3.2, 6.4, 3, 6.4)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/4",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, -4.5, 16)",
+		"type": "MeshInstance3D",
+		"vertices": "2797368186"
+	},
+	{
+		"bounds": "AABB(-4, -3, -4, 8, 6, 8)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/5",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, -9, 16)",
+		"type": "MeshInstance3D",
+		"vertices": "2529242501"
+	},
+	{
+		"bounds": "AABB(-3.2, -1.5, -3.2, 6.4, 3, 6.4)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/6",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, -4.5, -16)",
+		"type": "MeshInstance3D",
+		"vertices": "2797368186"
+	},
+	{
+		"bounds": "AABB(-4, -3, -4, 8, 6, 8)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/7",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, -9, -16)",
+		"type": "MeshInstance3D",
+		"vertices": "2529242501"
+	},
+	{
+		"bounds": "AABB(-3.2, -1.5, -3.2, 6.4, 3, 6.4)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/8",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, -4.5, -16)",
+		"type": "MeshInstance3D",
+		"vertices": "2797368186"
+	},
+	{
+		"bounds": "AABB(-4, -3, -4, 8, 6, 8)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/9",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, -9, -16)",
+		"type": "MeshInstance3D",
+		"vertices": "2529242501"
+	},
+	{
+		"bounds": "AABB(-0.6, -0.04, -4.25, 1.2, 0.08, 8.5)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/10",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.48, -13)",
+		"type": "MeshInstance3D",
+		"vertices": "3965970578"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/11",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 3, 0)",
+		"type": "StaticBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/11/0",
+		"shape": "BoxShape3D",
+		"size": "Vector3(5, 6, 8)",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-2.5, -3, -4, 5, 6, 8)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/11/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "1461545731"
+	},
+	{
+		"bounds": "AABB(-0.05, -2.3, -3.5, 0.1, 4.6, 7)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/12",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.45, 3.4, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "2948317097"
+	},
+	{
+		"bounds": "AABB(-0.07, -0.65, -0.9, 0.14, 1.3, 1.8)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/13",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.43, 1.2, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "4219710316"
+	},
+	{
+		"bounds": "AABB(-0.5, -0.5, -3, 1, 1, 6)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/14",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.65, 0.5, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3128150059"
+	},
+	{
+		"bounds": "AABB(-0.3, -0.06, -2.5, 0.6, 0.12, 5)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/15",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.1, 5.2, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "2654449738"
+	},
+	{
+		"bounds": "AABB(-0.25, -0.25, -0.25, 0.5, 0.5, 0.5)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/16",
+		"surfaces": 1,
+		"transform": "Transform3D(0.70710677, -0.70710677, 0, 0.49999997, 0.49999997, -0.70710677, 0.49999997, 0.49999997, 0.70710677, -14.05, 5.65, -1.6)",
+		"type": "MeshInstance3D",
+		"vertices": "1687898295"
+	},
+	{
+		"bounds": "AABB(-0.25, -0.25, -0.25, 0.5, 0.5, 0.5)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/17",
+		"surfaces": 1,
+		"transform": "Transform3D(0.70710677, -0.70710677, 0, 0.49999997, 0.49999997, -0.70710677, 0.49999997, 0.49999997, 0.70710677, -14.05, 5.65, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "1687898295"
+	},
+	{
+		"bounds": "AABB(-0.25, -0.25, -0.25, 0.5, 0.5, 0.5)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/18",
+		"surfaces": 1,
+		"transform": "Transform3D(0.70710677, -0.70710677, 0, 0.49999997, 0.49999997, -0.70710677, 0.49999997, 0.49999997, 0.70710677, -14.05, 5.65, 1.6)",
+		"type": "MeshInstance3D",
+		"vertices": "1687898295"
+	},
+	{
+		"bounds": "AABB(-0.41999996, -0.08499999, -0.41999996, 0.8399999, 0.16999999, 0.8399999)",
+		"mesh": "TorusMesh",
+		"path": "root/3/0/19",
+		"surfaces": 1,
+		"transform": "Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, -14.15, 4, 3)",
+		"type": "MeshInstance3D",
+		"vertices": "2639617924"
+	},
+	{
+		"bounds": "AABB(-0.15, -0.225, -0.175, 0.3, 0.45, 0.35)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/20",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.15, 3.55, 3)",
+		"type": "MeshInstance3D",
+		"vertices": "3292361605"
+	},
+	{
+		"bounds": "AABB(-0.55, -0.04, -0.55, 1.1, 0.08, 1.1)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/21",
+		"surfaces": 1,
+		"transform": "Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, -14.33, 4.9, 3)",
+		"type": "MeshInstance3D",
+		"vertices": "1780978353"
+	},
+	{
+		"bounds": "AABB(-0.025, -0.1, -0.04, 0.05, 0.2, 0.08)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/22",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.27, 5.3, 3.25)",
+		"type": "MeshInstance3D",
+		"vertices": "3329576617"
+	},
+	{
+		"bounds": "AABB(-0.025, -0.225, -0.03, 0.05, 0.45, 0.06)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/23",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.27, 4.95, 3)",
+		"type": "MeshInstance3D",
+		"vertices": "470595947"
+	},
+	{
+		"bounds": "AABB(-0.22, -0.2, -0.22, 0.44, 0.4, 0.44)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/24",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.65, 1.2, -1.8)",
+		"type": "MeshInstance3D",
+		"vertices": "3138434213"
+	},
+	{
+		"bounds": "AABB(-0.04, -0.05, -0.05, 0.08, 0.1, 0.1)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/25",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.43, 1.36, -1.8)",
+		"type": "MeshInstance3D",
+		"vertices": "725709046"
+	},
+	{
+		"bounds": "AABB(-0.3, -0.225, -0.3, 0.6, 0.45, 0.6)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/26",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.65, 1.22, 2)",
+		"type": "MeshInstance3D",
+		"vertices": "3234801959"
+	},
+	{
+		"bounds": "AABB(-0.2197508, -0.22, -0.2197508, 0.4395016, 0.43999994, 0.4395016)",
+		"mesh": "SphereMesh",
+		"path": "root/3/0/27",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.8, 1.6, 1.88)",
+		"type": "MeshInstance3D",
+		"vertices": "1175653187"
+	},
+	{
+		"bounds": "AABB(-0.2197508, -0.22, -0.2197508, 0.4395016, 0.43999994, 0.4395016)",
+		"mesh": "SphereMesh",
+		"path": "root/3/0/28",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.65, 1.68, 2)",
+		"type": "MeshInstance3D",
+		"vertices": "1175653187"
+	},
+	{
+		"bounds": "AABB(-0.2197508, -0.22, -0.2197508, 0.4395016, 0.43999994, 0.4395016)",
+		"mesh": "SphereMesh",
+		"path": "root/3/0/29",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.5, 1.76, 2.12)",
+		"type": "MeshInstance3D",
+		"vertices": "1175653187"
+	},
+	{
+		"bounds": "AABB(-0.15, -2.5, -0.15, 0.3, 5, 0.3)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/30",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.6, 2.5, -7)",
+		"type": "MeshInstance3D",
+		"vertices": "3853437765"
+	},
+	{
+		"bounds": "AABB(-0.15, -2.5, -0.15, 0.3, 5, 0.3)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/31",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4, 2.5, -7)",
+		"type": "MeshInstance3D",
+		"vertices": "3853437765"
+	},
+	{
+		"bounds": "AABB(-1.8, -0.15, -0.15, 3.6, 0.3, 0.3)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/32",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 5, -7)",
+		"type": "MeshInstance3D",
+		"vertices": "1839595841"
+	},
+	{
+		"bounds": "AABB(-1, -0.7, -1, 2, 1.4, 2)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/33",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3.9, -7)",
+		"type": "MeshInstance3D",
+		"vertices": "3916491053"
+	},
+	{
+		"bounds": "AABB(-0.9, -1.3, -0.6, 1.8, 2.6, 1.2)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/34",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1.3, 8.6)",
+		"type": "MeshInstance3D",
+		"vertices": "1272363106"
+	},
+	{
+		"bounds": "AABB(-0.7, -0.6, -0.05, 1.4, 1.2, 0.1)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/35",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1.7, 7.98)",
+		"type": "MeshInstance3D",
+		"vertices": "387573255"
+	},
+	{
+		"bounds": "AABB(-1.2, -0.05, -1.2, 2.4, 0.1, 2.4)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/36",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.05, 7)",
+		"type": "MeshInstance3D",
+		"vertices": "1553262639"
+	},
+	{
+		"bounds": "AABB(-1.2, -0.8, -0.8, 2.4, 1.6, 1.6)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/37",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.8, -8.9)",
+		"type": "MeshInstance3D",
+		"vertices": "1013128038"
+	},
+	{
+		"bounds": "AABB(-0.25, -0.04, -0.65, 0.5, 0.08, 1.3)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/38",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 0.9553365, -0.29552022, 0, 0.29552022, 0.9553365, -2.9, 2.05, -8.3)",
+		"type": "MeshInstance3D",
+		"vertices": "4255384467"
+	},
+	{
+		"bounds": "AABB(-0.25, -0.04, -0.65, 0.5, 0.08, 1.3)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/39",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 0.9553365, 0.29552022, 0, -0.29552022, 0.9553365, -2.5, 1.87, -8.3)",
+		"type": "MeshInstance3D",
+		"vertices": "4255384467"
+	},
+	{
+		"bounds": "AABB(-0.25, -0.04, -0.65, 0.5, 0.08, 1.3)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/40",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 0.9553365, -0.29552022, 0, 0.29552022, 0.9553365, -2.1, 1.69, -8.3)",
+		"type": "MeshInstance3D",
+		"vertices": "4255384467"
+	},
+	{
+		"bounds": "AABB(-0.25, -0.04, -0.65, 0.5, 0.08, 1.3)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/41",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 0.9553365, 0.29552022, 0, -0.29552022, 0.9553365, -1.7, 1.51, -8.3)",
+		"type": "MeshInstance3D",
+		"vertices": "4255384467"
+	},
+	{
+		"bounds": "AABB(-0.25, -0.04, -0.65, 0.5, 0.08, 1.3)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/42",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 0.9553365, -0.29552022, 0, 0.29552022, 0.9553365, -1.3, 1.33, -8.3)",
+		"type": "MeshInstance3D",
+		"vertices": "4255384467"
+	},
+	{
+		"bounds": "AABB(-0.2197508, -0.22, -0.2197508, 0.4395016, 0.43999994, 0.4395016)",
+		"mesh": "SphereMesh",
+		"path": "root/3/0/43",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "1175653187"
+	},
+	{
+		"bounds": "AABB(-1.2, -0.05, -1.2, 2.4, 0.1, 2.4)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/44",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.05, -7.5)",
+		"type": "MeshInstance3D",
+		"vertices": "1553262639"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/45",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2.5, 8.8)",
+		"type": "StaticBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/45/0",
+		"shape": "BoxShape3D",
+		"size": "Vector3(8, 5, 1.4)",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-4, -2.5, -0.7, 8, 5, 1.4)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/45/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "4168058869"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/46",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 4.5, -8.8)",
+		"type": "StaticBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/46/0",
+		"shape": "CylinderShape3D",
+		"size": [
+			0.600000023841858,
+			9.0
+		],
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-0.6, -4.5, -0.6, 1.2, 9, 1.2)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/46/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "957056050"
+	},
+	{
+		"bounds": "AABB(-0.8, -0.8, -0.8, 1.6, 1.6, 1.6)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/47",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 9.5, -8.8)",
+		"type": "MeshInstance3D",
+		"vertices": "3300442628"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/48",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.75, -5)",
+		"type": "RigidBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/48/0",
+		"shape": "CylinderShape3D",
+		"size": [
+			0.300000011920929,
+			1.5
+		],
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-0.3, -0.75, -0.3, 0.6000001, 1.5, 0.6000001)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/48/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3567265179"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/49",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.75, -5.8)",
+		"type": "RigidBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/49/0",
+		"shape": "CylinderShape3D",
+		"size": [
+			0.300000011920929,
+			1.5
+		],
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-0.3, -0.75, -0.3, 0.6000001, 1.5, 0.6000001)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/49/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3567265179"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/50",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.75, -4.2)",
+		"type": "RigidBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/50/0",
+		"shape": "CylinderShape3D",
+		"size": [
+			0.300000011920929,
+			1.5
+		],
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-0.3, -0.75, -0.3, 0.6000001, 1.5, 0.6000001)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/50/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3567265179"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/51",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0.75, -6.6)",
+		"type": "RigidBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/51/0",
+		"shape": "CylinderShape3D",
+		"size": [
+			0.300000011920929,
+			1.5
+		],
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-0.3, -0.75, -0.3, 0.6000001, 1.5, 0.6000001)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/51/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3567265179"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/52",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0.75, -5)",
+		"type": "RigidBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/52/0",
+		"shape": "CylinderShape3D",
+		"size": [
+			0.300000011920929,
+			1.5
+		],
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-0.3, -0.75, -0.3, 0.6000001, 1.5, 0.6000001)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/52/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3567265179"
+	},
+	{
+		"layer": 1,
+		"mask": 1,
+		"path": "root/3/0/53",
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0.75, -3.4)",
+		"type": "RigidBody3D"
+	},
+	{
+		"disabled": false,
+		"path": "root/3/0/53/0",
+		"shape": "CylinderShape3D",
+		"size": [
+			0.300000011920929,
+			1.5
+		],
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "CollisionShape3D"
+	},
+	{
+		"bounds": "AABB(-0.3, -0.75, -0.3, 0.6000001, 1.5, 0.6000001)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/53/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3567265179"
+	},
+	{
+		"bounds": "AABB(-2.5, -0.06, -2.5, 5, 0.12, 5)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/0/54",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.06, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3429604970"
+	},
+	{
+		"bounds": "AABB(-0.2, -0.05, -0.9, 0.4, 0.1, 1.8)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/55",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.9, 0.14, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "801755944"
+	},
+	{
+		"bounds": "AABB(-0.2, -0.05, -0.9, 0.4, 0.1, 1.8)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/56",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.8, 0.14, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "801755944"
+	},
+	{
+		"bounds": "AABB(-0.2, -0.05, -0.9, 0.4, 0.1, 1.8)",
+		"mesh": "BoxMesh",
+		"path": "root/3/0/57",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.7, 0.14, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "801755944"
+	},
+	{
+		"bounds": "AABB(-3.5, -0.29999995, -3.5, 7, 0.5999999, 7)",
+		"mesh": "TorusMesh",
+		"path": "root/3/1/0",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3092966901"
+	},
+	{
+		"bounds": "AABB(-2.7, -0.3, -2.7, 5.4, 0.6, 5.4)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/1/1",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "1702622929"
+	},
+	{
+		"bounds": "AABB(-0.35, -6, -0.35, 0.70000005, 12, 0.70000005)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/1/2",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.7, 6, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "1567987919"
+	},
+	{
+		"bounds": "AABB(-0.9, -0.7, -0.9, 1.8, 1.4, 1.8)",
+		"mesh": "CylinderMesh",
+		"path": "root/3/1/3",
+		"surfaces": 1,
+		"transform": "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.7, 12.6, 0)",
+		"type": "MeshInstance3D",
+		"vertices": "3880595469"
+	}
+]

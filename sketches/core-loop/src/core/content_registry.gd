@@ -70,8 +70,8 @@ const TABLES := {
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "6fa241c5a4dc54f16834cba7b0b64e80f0ee026a8d3f15d669d509857ac225e7",  # 2026-10-05 (alpha wave 14 achievements-fill): paint rewards on four rows; waking_stilled, highdraft_reached, codex_keeper
-	"cosmetics.ROWS": "afa4a451f20002e393ef5340d71d16e09a7941773d92cd41b42888cdb207892c",  # 2026-10-05 (alpha wave 16 tally-look): Ledger Cream lighter than TALLY_COLOR (W16-3)
+	"achievements.ROWS": "5c363ebc1fa89c7d094b9e7b1c8e0503f28c521c111a48472a389d5413990118",  # P-R7: twenty customization rewards
+	"cosmetics.ROWS": "c0f10ab88faa487ec1b0e838e547d7c86ebb1e61343536947e6ea3e5ef3f2a0e",  # P-R7: delivered decal mask ids, trails and SPIL-9 paints
 	"event_kinds.ROWS": "1d7e9b42ef7b68a4b7e0eaced605e3e3710e43079a54dd4672bfa2e7abf2d51a",  # 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
@@ -87,7 +87,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
 	"lore_rows.ROWS": "2b810bbefed5a6febbbf6d52ab4da16b3d2232021453b293eb658217fe969647",  # 2026-10-04 (wave 11): world 2 and 3 lore final
-	"music_rows.ROWS": "3d441341163d0e78f67bdceed0be36dcce48551175f594a98fd815172f0b97c8",
+	"music_rows.ROWS": "f9e1cca796c86aa8044002aee416b6999ab8554aab078fc87545d8f59a3ec7ea",
 	"windup_rows.ROWS": "fee119046bc7b223e969ba6c99dd7778a0dc0045543dc93989ca9e9f5a736077",
 	"upgrade_tree.TREES": "55786d60308e54612ab34205749dc173d281016e2222e047b26e1ea2ed8629f9",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
 	"upgrade_tree.WORLD_ONE_NODES": "d649afcb0e003763c8fc9488a275f44ddfc2049ca02963fa078c8c8f887df7a8",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
@@ -284,7 +284,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			_words(issues, name, id, row.text, 1, cap)
 		"music":
 			_ref(issues, name, id, "theme", row.synth_theme, range(Music.THEME_COUNT))
-			_ref(issues, name, id, "music id", id, ["default", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2"] + Worlds.BOSSES.keys())
+			_ref(issues, name, id, "music id", id, ["default", "title", "summary", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2"] + Worlds.BOSSES.keys())
 			# Missing optional ACE packs intentionally fall back to synth. Validate the path, not installation.
 			if row.ace_manifest != "" and not (row.ace_manifest.begins_with("res://assets/music_ace/") and row.ace_manifest.ends_with("/manifest.json") and not ".." in row.ace_manifest):
 				_issue(issues, name, "references", id, "manifest outside optional ACE pack root")

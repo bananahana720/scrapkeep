@@ -15,7 +15,7 @@ const Push := preload("res://tests/workshop/push.gd")
 #   - the launch flags parse (--music=ace --breath=raw), and keyed SFX read the ACE key;
 #   - the game's Warden facts reach the sequencer through the audio director:
 #     warden_engaged pivots, beacon_unsealed starts the set piece;
-#   - stage 2 hands back to the synth at once (band unmuted, no ACE grid), even from
+#   - stage 2 leaves the set piece for its own track (Cable Reach), even from
 #     inside the set piece; back on stage 1 the ACE band returns;
 #   - a death stops the ACE band and unmutes the synth band in the same frame, so the
 #     death boom is not dropped.
@@ -152,9 +152,15 @@ func _process(delta: float) -> bool:
 			if not _audio._flow_queue.is_empty():
 				return false
 			var ace = _audio.ace
-			_report("stage 2 plays the synth", _game.run.stage == 2 and ace.mode == "off" and not _audio.engine.band_muted and _audio.engine.grid == null
-					and not _audio.ace_playing(),
-				"stage %d: ACE mode %s, synth band muted %s, ACE grid %s" % [_game.run.stage, ace.mode, _audio.engine.band_muted, _audio.engine.grid != null])
+			# Since the dress push every alpha stage has its own track: stage 2 leaves the
+			# set piece for a level band instead of handing back to the synth. This test pinned
+			# ace_manifest above, and a pinned manifest is kept, so it checks the row, not the file
+			# (audio_worlds_test covers the real per-stage switch).
+			if (ace.mode != "level" or not _audio.engine.band_muted) and _clock < 5.0:
+				return false
+			_report("stage 2 leaves the set piece for its own row's band", _game.run.stage == 2 and ace.mode == "level" and _audio.engine.band_muted
+					and _audio._ace_package_for(2) == "cable_reach",
+				"stage %d: ACE mode %s, synth band muted %s, row package %s" % [_game.run.stage, ace.mode, _audio.engine.band_muted, _audio._ace_package_for(2)])
 			_game.flow.enter_stage(1, _game.ctx.terrain.spawn_point(1), true)
 			_next("back1")
 		"back1":

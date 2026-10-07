@@ -31,7 +31,7 @@ const BOSSES := {
 
 # The page shown once when the summary opens after a win over the final world's boss, before
 # the stats (screens.gd). title is the heading, log the crew-log lines, sign the closing line.
-# Crew-log ending, prog-G6; tone awaits Andrew's read.
+# TONE-READ: Crew-log ending, prog-G6; tone awaits Andrew's read.
 const ENDING := {
 	"title": "RETURN TRIP ENTERED",
 	"log": [

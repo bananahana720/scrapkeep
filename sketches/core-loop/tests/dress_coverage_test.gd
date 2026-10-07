@@ -2,7 +2,7 @@ extends SceneTree
 
 # Count subject types, not spawned instances or decorative cue meshes. Lower this
 # ceiling when a model lands. A GLB on disk clears nothing unless its loader uses it.
-const MAX_FALLBACKS := 4
+const MAX_FALLBACKS := 0
 const Game := preload("res://src/game.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -280,7 +280,7 @@ func _bosses() -> void:
 		if module.has_method("_spawn_pickup") and module.has_method("pickups_left"):
 			module._spawn_pickup(Vector3(100, 20, 100), 1, "kill")
 			for pickup in module._pickups:
-				_row("boss_prop", id + "/pickup", _body(pickup.node))
+				_row("boss_prop", id + "/pickup", _body(pickup.node, ["res://assets/models/bosses/boss_pickup.glb"]))
 		if module.has_method("_begin_eject"):
 			module._begin_eject()
 			await process_frame

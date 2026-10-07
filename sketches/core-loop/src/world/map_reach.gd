@@ -251,6 +251,7 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	for wall in WALLS:
 		var at: Vector2 = wall["at"]
 		pylon_wall(parent, ground.call(at.x, at.y, 0.0), wall["length"], wall["height"], wall["turn"])
+	load("res://src/presentation/spillway_scenery.gd").dress_props(parent)
 
 
 # The gorge's landmark without the satellite that stands on the dive's line.

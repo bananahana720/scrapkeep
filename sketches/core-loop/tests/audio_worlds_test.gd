@@ -100,7 +100,7 @@ func _row_checks() -> void:
 	var picks := func(audio, stages: Array) -> Array:
 		return stages.map(func(s: int): return [audio._stage_theme(s), audio._ace_package_for(s)])
 	var base := _director(StageDefs)
-	_t.eq("W5-1 default table: themes and ACE by stage", picks.call(base, [1, 2]), [[0, "spillway"], [1, ""]])
+	_t.eq("W5-1 default table: themes and ACE by stage", picks.call(base, [1, 2]), [[0, "spillway"], [1, "cable_reach"]])
 	var slice := _director(SliceDefs)
 	_t.eq("W5-1 slice: stage 1 runs ACE with theme 0", picks.call(slice, [1]), [[0, "spillway"]])
 	var two := _director(TwoWorld, 4)
@@ -109,7 +109,7 @@ func _row_checks() -> void:
 
 	var six := _director(SixZones)
 	var route: Array = range(1, SixZones.COUNT + 1)
-	_t.eq("six-zone route resolves every zone", picks.call(six, route), [[0, "spillway"], [1, ""], [1, ""], [1, ""], [2, ""], [2, ""]])
+	_t.eq("six-zone route resolves every zone", picks.call(six, route), [[0, "spillway"], [1, "cable_reach"], [1, "dig_upper"], [1, "dig_deep"], [2, "highdraft"], [2, "highdraft_crown"]])
 	_t.eq("six-zone route has no missing music warnings", six.warnings.size(), 0)
 
 	var odd := _director(StageDefs)

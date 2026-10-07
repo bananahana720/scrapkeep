@@ -45,6 +45,10 @@ var _wall: Node3D
 var _lid: Node3D
 var _pedestals: Array = []
 var _inside: Array = []
+const MODEL := "res://assets/models/world_one/cracked_cache.glb"
+const REQUIRED := ["CacheShell", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
+static var _shared: Array = []
+static var _loaded := false
 
 
 func _init() -> void:
@@ -52,6 +56,16 @@ func _init() -> void:
 
 
 func build() -> void:
+	var parts := _parts()
+	if parts.is_empty():
+		_build_greybox()
+	else:
+		_build_model(parts)
+	_build_pedestals(parts)
+	ctx.events.slammed.connect(_on_slammed)
+
+
+func _build_greybox() -> void:
 	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 	var groove := Palette.solid(Palette.CHARCOAL)
 	var tall := HEIGHT + SINK
@@ -70,13 +84,19 @@ func build() -> void:
 	box(Vector3(2.0, 1.2, 1.4), chest + Vector3.UP * 0.6, Palette.solid(Palette.VERDIGRIS))
 	box(Vector3(2.05, 0.18, 1.45), chest + Vector3.UP * 0.8, groove)
 	_lid = box(Vector3(2.1, 0.3, 1.5), chest + Vector3.UP * 1.35, Palette.solid(Palette.VERDIGRIS))
+
+
+func _build_pedestals(parts: Array) -> void:
 	for spot in PEDESTALS:
 		var at: Vector3 = spot + Vector3.UP * ground_y(spot)
 		var pedestal := Node3D.new()
 		pedestal.position = at
 		pedestal.visible = false
 		add_child(pedestal)
-		cylinder(0.8, 0.6, Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL), pedestal)
+		if parts.is_empty():
+			cylinder(0.8, 0.6, Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL), pedestal)
+		else:
+			_model_part(parts, "CachePedestal", pedestal)
 		var gem := MeshInstance3D.new()
 		var sm := SphereMesh.new()
 		sm.radius = 0.45
@@ -84,13 +104,14 @@ func build() -> void:
 		sm.radial_segments = 4
 		sm.rings = 2
 		gem.mesh = sm
+		gem.material_override = Palette.solid(Palette.SAND)
+		gem.material_override.vertex_color_use_as_albedo = true
 		gem.position = Vector3.UP * 1.4
 		pedestal.add_child(gem)
 		var label := WorldPrompt.new()
 		label.attach(pedestal, Vector3.UP * 2.6, Interactables.REACH * 2.0)
 		pedestal.add_child(label)
 		_pedestals.append({"node": pedestal, "gem": gem, "label": label, "at": at})
-	ctx.events.slammed.connect(_on_slammed)
 
 
 func stand_down() -> void:
@@ -185,6 +206,7 @@ func fire() -> bool:
 		var d: Resource = Parts.def(Relics.part_of(offers[i]) if is_relic else offers[i])
 		var rarity: String = d.rarity if d != null else "common"
 		p["gem"].material_override = Palette.solid(gem_color(rarity), 2.0)
+		p["gem"].material_override.vertex_color_use_as_albedo = true
 		var words := (Relics.name_of(offers[i]) if is_relic else Parts.display_name(offers[i])).split(" ", false)
 		var icon: String = "cat_" + (d.icon_category if d != null and d.icon_category != "" else "utility")
 		p["label"].set_parts(" ".join(words.slice(0, WorldPrompt.TITLE_WORDS)), "", icon)
@@ -239,3 +261,107 @@ func take(index: int) -> void:
 		ctx.run.add_relic(taken, "cache")
 	else:
 		ctx.run.add_part(taken, "cache")
+
+
+func _collision_box(size: Vector3, at: Vector3) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var bs := BoxShape3D.new()
+	bs.size = size
+	shape.shape = bs
+	body.add_child(shape)
+	body.position = at
+	add_child(body)
+	return body
+
+
+func _build_model(parts: Array) -> void:
+	var tall := HEIGHT + SINK
+	var mid := tall * 0.5 - SINK
+	_collision_box(Vector3(HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -HALF_D - 0.5))
+	for s in [-1.0, 1.0]:
+		_collision_box(Vector3(1.0, tall, HALF_D * 2.0 + 2.0), Vector3(s * (HALF_W + 0.5), mid, 0.0))
+	_collision_box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0))
+	_wall = _collision_box(Vector3(HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, HALF_D + 0.5))
+	var panel := _model_part(parts, "CacheWall", _wall)
+	panel.position = Vector3.ZERO
+	_model_part(parts, "CacheShell")
+	var chest := Vector3(0.0, 0.0, -HALF_D + 1.2)
+	chest.y = ground_y(chest)
+	var body := _model_part(parts, "CacheChest")
+	body.position = chest
+	_lid = _model_part(parts, "CacheLid")
+	_lid.position = chest + Vector3.UP * 1.35
+
+
+static func _slot_material(slot: String) -> StandardMaterial3D:
+	if slot not in ["device_concrete", "device_metal", "device_marks"]:
+		return null
+	var mat := Palette.solid(Color.WHITE)
+	mat.resource_name = slot
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.95 if slot == "device_concrete" else 0.85
+	if slot == "device_metal":
+		mat.roughness = 0.68
+		mat.metallic = 0.28
+	return mat
+
+
+static func _parts() -> Array:
+	if _loaded:
+		return _shared
+	_loaded = true
+	var packed: PackedScene
+	if ResourceLoader.exists(MODEL):
+		packed = load(MODEL) as PackedScene
+	if packed != null:
+		var scene := packed.instantiate()
+		if scene == null:
+			push_warning("cracked_cache: %s cannot instantiate; keeping greybox" % MODEL)
+			return _shared
+		var valid := scene is Node3D
+		var found := {}
+		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+			if view.mesh == null or view.mesh.get_surface_count() == 0:
+				valid = false
+				break
+			var mesh := view.mesh.duplicate() as Mesh
+			for s in mesh.get_surface_count():
+				var source := mesh.surface_get_material(s)
+				var mat := _slot_material(String(source.resource_name)) if source != null else null
+				var arrays := mesh.surface_get_arrays(s)
+				if (mat == null or arrays.size() != Mesh.ARRAY_MAX
+					or arrays[Mesh.ARRAY_VERTEX] == null or arrays[Mesh.ARRAY_VERTEX].is_empty()
+					or arrays[Mesh.ARRAY_COLOR] == null or arrays[Mesh.ARRAY_COLOR].size() != arrays[Mesh.ARRAY_VERTEX].size()):
+					valid = false
+					break
+				mesh.surface_set_material(s, mat)
+			var xf := Transform3D.IDENTITY
+			var walk: Node = view
+			while walk != scene and walk != null:
+				if walk is Node3D:
+					xf = (walk as Node3D).transform * xf
+				walk = walk.get_parent()
+			found[String(view.name)] = true
+			_shared.append({"name": String(view.name), "mesh": mesh, "xform": xf})
+		valid = valid and found.size() == REQUIRED.size()
+		for required in REQUIRED:
+			valid = valid and found.has(required)
+		scene.free()
+		if not valid:
+			_shared.clear()
+	if _shared.is_empty():
+		push_warning("cracked_cache: %s missing or malformed; keeping greybox" % MODEL)
+	return _shared
+
+
+func _model_part(parts: Array, part_name: String, parent: Node3D = self) -> MeshInstance3D:
+	for part in parts:
+		if part.name == part_name:
+			var view := MeshInstance3D.new()
+			view.name = part.name
+			view.mesh = part.mesh
+			view.transform = part.xform
+			parent.add_child(view)
+			return view
+	return null

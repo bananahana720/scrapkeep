@@ -130,4 +130,38 @@ static func grapple_post(parent: Node3D, foot: Vector3, height_m: float) -> void
 # pylon can bite, so the engineer can read a turret spot at a glance.
 static func pylon_wall(parent: Node3D, foot: Vector3, length: float, height_m: float, turn: float) -> void:
 	box(parent, Vector3(length, height_m, 1.6), foot + Vector3.UP * (height_m * 0.5 - 0.5),
-		Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL), turn)
+		dressed_surface(Palette.VERDIGRIS, 0, Vector3(length, height_m, 1.6)), turn)
+
+
+# Mesh-local metres keep arbitrary slabs and the moving bay's paint from stretching.
+static var surface_shader_path := "res://assets/materials/gpw_workshop.gdshader"
+static var _surface_materials := {}
+static var _surface_warnings := {}
+
+
+static func dressed_surface(color: Color, kind := 1, size := Vector3.ZERO,
+		fallback_color := Palette.CHARCOAL, original: Material = null) -> Material:
+	var key := surface_shader_path + ":" + color.to_html() + ":" + str(kind) + ":" + str(size) + ":" + fallback_color.to_html() + ":" + (str(original.get_instance_id()) if original != null else "auto")
+	if _surface_materials.has(key):
+		return _surface_materials[key]
+	var shader: Shader
+	if ResourceLoader.exists(surface_shader_path, "Shader"):
+		shader = load(surface_shader_path) as Shader
+	if shader == null or shader.code.is_empty():
+		if not _surface_warnings.has(surface_shader_path):
+			_surface_warnings[surface_shader_path] = true
+			push_warning("gpw: missing workshop shader " + surface_shader_path + "; using original surface fallback")
+		var fallback: Material = original
+		if fallback == null:
+			fallback = Palette.solid(color) if kind == 1 else Palette.striped(color, fallback_color)
+		_surface_materials[key] = fallback
+		return fallback
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	mat.resource_name = "gpw_" + str(kind)
+	mat.set_shader_parameter("base_color", color)
+	mat.set_shader_parameter("surface_kind", kind)
+	mat.set_shader_parameter("half_extents", size * 0.5)
+	mat.set_shader_parameter("chip_width", 0.065)
+	_surface_materials[key] = mat
+	return mat

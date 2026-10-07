@@ -66,8 +66,10 @@ func _check_stage(stage: int, theme: int, audio) -> void:
 	_report("alpha theme preserved", pack["synth_theme"] == theme, "%s theme %s, want %d" % [zone, pack["synth_theme"], theme])
 	_report("audio theme uses zone row", audio._stage_theme(stage) == pack["synth_theme"], "%s audio %d, row %d" % [zone, audio._stage_theme(stage), pack["synth_theme"]])
 	_report("audio manifest uses zone row", audio.ace_manifest == pack["ace_manifest"], "%s audio '%s', row '%s'" % [zone, audio.ace_manifest, pack["ace_manifest"]])
-	var want_manifest := MusicRows.resolve_manifest(Ace.MANIFEST) if stage == 1 else ""
-	_report("alpha manifest preserved", audio.ace_manifest == want_manifest, "%s manifest '%s'" % [zone, audio.ace_manifest])
+	var track: String = ["spillway", "cable_reach", "dig_upper", "dig_deep", "highdraft", "highdraft_crown"][stage - 1]
+	var want_manifest := MusicRows.resolve_manifest("res://assets/music_ace/%s/manifest.json" % track)
+	_report("alpha manifest selects zone track", audio.ace_manifest == want_manifest and want_manifest != "", "%s manifest '%s'" % [zone, audio.ace_manifest])
+	_report("synth option keeps fallback active", not audio.ace_playing() and audio.engine.grid == null and not audio.engine.band_muted, zone)
 	# Advance the band's sample clock to its queued restart, without a wall-clock wait.
 	var at := -1
 	for action in audio.engine._actions:

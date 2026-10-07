@@ -1,0 +1,254 @@
+extends Node3D
+
+const DigScenery := preload("res://src/presentation/dig_scenery.gd")
+const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const STONE_DIR := "res://assets/models/dig_stone/"
+const MECH_DIR := "res://assets/models/dig_mechanical/"
+const RIM := "res://assets/models/bosses/arena_waking_rim_sector.glb"
+static var stone_dir := STONE_DIR
+static var mech_dir := MECH_DIR
+const STONE_FILES := ["cut_face_long.glb", "cut_face_scoop.glb"]
+const MECH_FILES := ["lamp_curve_module.glb", "strut_tall.glb", "strut_bent.glb", "shell_crescent.glb", "shell_saddle.glb"]
+const ENV_PROPERTIES := ["background_mode", "background_color", "ambient_light_source", "ambient_light_color", "ambient_light_energy", "reflected_light_source", "fog_enabled", "fog_density", "fog_light_color", "fog_light_energy", "fog_sun_scatter"]
+const WARNING := "arena_waking_dress: assets missing or malformed; keeping greybox"
+# The boss camera has a 12 m arm beyond the 36 m floor; rock and machines leave it room.
+const WALL_RADIUS := 60.0
+const WALL_SECTORS := 16
+
+var module
+var _parts := {}
+var _materials := {}
+var _environment: Environment
+var _saved_environment := {}
+var _applied_environment := {}
+var _daylights := []
+var _reactor_light: OmniLight3D
+
+
+static func attach(owner_module):
+	var dress = new()
+	if not dress._prepare():
+		dress.free()
+		push_warning(WARNING)
+		return null
+	dress.name = "ArenaWakingDress"
+	dress.module = owner_module
+	owner_module.add_child(dress)
+	dress.global_position = owner_module._center
+	dress._build()
+	return dress
+
+
+# Preflight is atomic: no floor, environment or scene change before every slot is valid.
+func _prepare() -> bool:
+	var stone := load(DigScenery.SLOTS["stone"]) as ShaderMaterial
+	if stone == null or stone.shader == null or stone.get_shader_parameter("tex_tone") == null or stone.get_shader_parameter("tex_grain") == null:
+		return false
+	stone = stone.duplicate() as ShaderMaterial
+	stone.set_shader_parameter("flat_color", Vector3(0.48, 0.43, 0.34))
+	stone.set_shader_parameter("bed_tan", Vector3(0.55, 0.45, 0.33))
+	stone.set_shader_parameter("bed_orange", Vector3(0.42, 0.33, 0.25))
+	stone.set_shader_parameter("bed_cream", Vector3(0.65, 0.58, 0.46))
+	stone.set_shader_parameter("bed_rust", Vector3(0.34, 0.27, 0.23))
+	_materials["stone"] = stone
+	for slot in ["steel", "enamel", "glass"]:
+		var material := StandardMaterial3D.new()
+		material.resource_name = slot
+		material.vertex_color_use_as_albedo = true
+		material.roughness = 0.82 if slot == "steel" else 0.87
+		material.metallic = 0.22 if slot == "steel" else 0.0
+		if slot == "glass":
+			material.roughness = 0.38
+			material.emission_enabled = true
+			material.emission = DigScenery.LAMP_LIGHT
+			material.emission_energy_multiplier = 0.25
+		_materials[slot] = material
+	for file in STONE_FILES:
+		if not _load_parts(stone_dir + file):
+			return false
+	for file in MECH_FILES:
+		if not _load_parts(mech_dir + file):
+			return false
+	return _load_parts(RIM)
+
+
+func _load_parts(path: String) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return false
+	var scene := packed.instantiate()
+	if scene == null:
+		return false
+	var parts := []
+	var valid := true
+	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh == null or view.mesh.get_surface_count() == 0:
+			valid = false
+			break
+		var mesh := view.mesh.duplicate() as Mesh
+		for surface in mesh.get_surface_count():
+			var source := mesh.surface_get_material(surface)
+			if source == null or not _materials.has(String(source.resource_name)):
+				valid = false
+				break
+			mesh.surface_set_material(surface, _materials[String(source.resource_name)])
+		parts.append({"mesh": mesh, "local": DigScenery._relative(view, scene)})
+	scene.free()
+	if not valid or parts.is_empty():
+		return false
+	_parts[path.get_file()] = parts
+	return true
+
+
+func _build() -> void:
+	_floor(module.pad, "PitDressing")
+	for k in module._floor_bodies:
+		_floor(module._floor_bodies[k], "FloorDressing")
+	var walls := Node3D.new()
+	walls.name = "ShaftCutFaces"
+	add_child(walls)
+	var wall_batches := {}
+	for band in 4:
+		for i in WALL_SECTORS:
+			var angle := i * TAU / WALL_SECTORS
+			var scoop := (i + band) % 3 == 0
+			var file := "cut_face_scoop.glb" if scoop else "cut_face_long.glb"
+			var scale_ := Vector3(4.0 if scoop else 3.0, 3.5, 2.0)
+			var radius := WALL_RADIUS + 0.6 * sin(float(i * 3 + band))
+			var at := Vector3(sin(angle) * radius, -22.0 + band * 14.0, cos(angle) * radius)
+			_put(wall_batches, file, Transform3D(Basis(Vector3.UP, angle).scaled(scale_), at))
+	_flush(walls, wall_batches)
+	_works()
+	_reactor_light = OmniLight3D.new()
+	_reactor_light.name = "ReactorBounce"
+	_reactor_light.light_color = Color("91b4ce")
+	_reactor_light.light_energy = 1.35
+	_reactor_light.omni_range = 48.0
+	_reactor_light.shadow_enabled = false
+	add_child(_reactor_light)
+	_follow_reactor()
+	_environment = module.ctx.terrain.environment
+	for light in module.ctx.root.find_children("*", "DirectionalLight3D", true, false):
+		_daylights.append({"light": weakref(light), "visible": light.visible})
+	GraphicsPreset.register_dressing_host(self)
+
+
+func _floor(body: StaticBody3D, node_name: String) -> void:
+	var skin := Node3D.new()
+	skin.name = node_name
+	# Body centre is one metre below its gameplay surface; no collider is touched.
+	skin.position.y = module.PAD_THICK * 0.5 + 0.015
+	body.add_child(skin)
+	var batches := {}
+	for i in 24:
+		_put(batches, RIM.get_file(), Transform3D(Basis(Vector3.UP, i * TAU / 24.0), Vector3.ZERO))
+	_flush(skin, batches)
+	for child in body.get_children():
+		if child is MeshInstance3D:
+			child.material_override = _materials["stone"]
+
+
+func _works() -> void:
+	var works := Node3D.new()
+	works.name = "DescendingWorks"
+	add_child(works)
+	var batches := {}
+	for tier in 4:
+		var y := 14.0 - tier * 10.0
+		for line in 8:
+			var angle := line * TAU / 8.0 + tier * 0.10
+			var wall := Vector3(sin(angle) * (WALL_RADIUS - 4.4), y, cos(angle) * (WALL_RADIUS - 4.4))
+			var basis := Basis(Vector3.UP, angle)
+			for link in 3:
+				_put(batches, "lamp_curve_module.glb", Transform3D(basis, wall) * Transform3D(Basis.IDENTITY, Vector3((link - 1) * 3.0, 0, 0)))
+			# One pool per line; deeper machinery recedes through the same fog as the cut faces.
+			var light := OmniLight3D.new()
+			light.name = "LampPool%d_%d" % [tier, line]
+			light.light_color = DigScenery.LAMP_LIGHT
+			light.light_energy = 0.9
+			light.omni_range = 24.0
+			light.shadow_enabled = false
+			light.position = wall + basis * Vector3(0, -1.0, -1.0)
+			works.add_child(light)
+			var foot := Vector3(sin(angle) * (WALL_RADIUS - 4.2), y - 5.0, cos(angle) * (WALL_RADIUS - 4.2))
+			_put(batches, "strut_bent.glb" if line % 3 == 0 else "strut_tall.glb", Transform3D(basis.scaled(Vector3.ONE * 1.4), foot))
+			if line % 2 == 0:
+				_put(batches, "shell_saddle.glb" if tier % 2 == 0 else "shell_crescent.glb", Transform3D(basis.scaled(Vector3.ONE * 1.3), foot + Vector3.DOWN * 2.0))
+	_flush(works, batches)
+
+
+func _put(batches: Dictionary, file: String, xf: Transform3D) -> void:
+	if not batches.has(file):
+		batches[file] = []
+	batches[file].append(xf)
+
+
+func _flush(parent: Node3D, batches: Dictionary) -> void:
+	for file in batches:
+		for part in _parts[file]:
+			var multi := MultiMesh.new()
+			multi.transform_format = MultiMesh.TRANSFORM_3D
+			multi.mesh = part["mesh"]
+			multi.instance_count = batches[file].size()
+			var placements: Array[Transform3D] = []
+			for i in multi.instance_count:
+				var xf: Transform3D = batches[file][i] * part["local"]
+				multi.set_instance_transform(i, xf)
+				placements.append(xf)
+			var view := MultiMeshInstance3D.new()
+			view.name = file.get_basename()
+			view.multimesh = multi
+			view.set_meta("placements", placements)
+			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			parent.add_child(view)
+
+
+func _physics_process(_delta: float) -> void:
+	_follow_reactor()
+
+
+func _follow_reactor() -> void:
+	if is_instance_valid(module.warden):
+		_reactor_light.global_position = module.warden.family_point_at()
+	else:
+		_reactor_light.light_energy = 0.0
+
+
+# Preset changes write shared lighting first, so save their latest values before applying
+# the pit's light again. Exit restores the chosen preset, including changes made in the fight.
+func _sync_dressing() -> void:
+	if _environment == null or not is_inside_tree():
+		return
+	for property in ENV_PROPERTIES:
+		var value = _environment.get(property)
+		if not _applied_environment.has(property) or value != _applied_environment[property]:
+			_saved_environment[property] = value
+	_environment.background_mode = Environment.BG_COLOR
+	_environment.background_color = Color("171e1d")
+	_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	_environment.ambient_light_color = Color("9ba8a3")
+	_environment.ambient_light_energy = 0.16
+	_environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	_environment.fog_enabled = true
+	_environment.fog_density = 0.008
+	_environment.fog_light_color = Color("242a28")
+	_environment.fog_light_energy = 0.3
+	_environment.fog_sun_scatter = 0.0
+	for property in ENV_PROPERTIES:
+		_applied_environment[property] = _environment.get(property)
+	for row in _daylights:
+		var light = row["light"].get_ref()
+		if is_instance_valid(light):
+			light.visible = false
+
+
+func _exit_tree() -> void:
+	if _environment != null:
+		for property in _saved_environment:
+			_environment.set(property, _saved_environment[property])
+	for row in _daylights:
+		var light = row["light"].get_ref()
+		if is_instance_valid(light):
+			light.visible = row["visible"]
