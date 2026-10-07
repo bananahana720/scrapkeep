@@ -161,6 +161,9 @@ func reset() -> void:
 		w["body"].visible = true
 	_slams.clear()
 	_thermal_quiet = 0.0
+	# Cache side walls are rebuilt by reset; finish them along with this zone's devices.
+	if map.get_script().resource_path == "res://src/world/map_reach.gd":
+		load("res://src/presentation/spillway_scenery.gd").dress_props(self)
 
 
 func note_slam(at: Vector3) -> void:
