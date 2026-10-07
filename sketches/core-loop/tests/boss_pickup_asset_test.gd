@@ -153,6 +153,7 @@ func _run() -> void:
 	var mesh_start := source.find("\tvar node := MeshInstance3D.new()", start)
 	var mesh_end := source.find("\tnode.material_override =", mesh_start)
 	var logic := source.substr(0, mesh_start) + source.substr(mesh_end)
-	logic = logic.replace("\tnode.material_override = pickup_material\n", "\tnode.material_override = Palette.solid(Palette.ARC, 2.0)\n")
+	logic = logic.replace("static var _pickup_materials := {}\n", "")
+	logic = logic.replace("\tnode.material_override = _pickup_materials[material_key]\n", "\tnode.material_override = Palette.solid(Palette.ARC, 2.0)\n")
 	_check(logic.sha256_text() == BASE_LOGIC_SHA, "entire boss source outside mesh construction unchanged")
 	_finish()

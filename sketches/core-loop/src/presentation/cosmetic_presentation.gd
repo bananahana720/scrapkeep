@@ -282,7 +282,10 @@ func _step_trail(delta: float, row: Dictionary) -> void:
 # A pooled card, or a new one while the pool is still filling (at most TRAIL_LIMIT exist).
 func _take_card(row: Dictionary, key: String) -> Dictionary:
 	if not _spare.is_empty():
-		return _spare.pop_back()
+		var card: Dictionary = _spare.pop_back()
+		for mesh in card["meshes"]:
+			mesh.transparency = 0.0
+		return card
 	var packed := row["resource"] as PackedScene
 	var node := packed.instantiate() as Node3D
 	if node == null:

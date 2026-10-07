@@ -34,7 +34,12 @@ static func attach(owner_module):
 	owner_module.add_child(dress)
 	dress.global_position = owner_module._center
 	dress._build()
+	GraphicsPreset.register_dressing_host(dress)
 	return dress
+
+
+func _sync_dressing() -> void:
+	_core_key.shadow_enabled = GraphicsPreset.current != "low"
 
 
 # Preflight is atomic: no floor, environment or scene change before every slot is valid.
