@@ -140,6 +140,7 @@ static func solid(color: Color, emit := 0.0) -> StandardMaterial3D:
 
 static func striped(a: Color, b: Color) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
+	mat.set_meta("greybox_checker", true)
 	mat.albedo_texture = checker_texture(a, b, 4, 64)
 	mat.uv1_triplanar = true
 	mat.uv1_scale = Vector3(0.25, 0.25, 0.25)
