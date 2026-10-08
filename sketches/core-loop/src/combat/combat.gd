@@ -220,6 +220,13 @@ var _primed := {}
 # Ram-brace state: prow stagger ends by instance id, and the clock the spring stays armed until. Both maps clear on run start and every attempt; a kill drops its entry.
 var _prow_until := {}
 var _spring_until := -1.0
+# Escape corridor: the act in progress ({piece, style, until}) and the lane it laid ({from,
+# dir, length, half_width, friction, hold, until}), both cleared on run start and stage entry.
+# escape_acts counts acts this run, and escape_acted fires once per act.
+signal escape_acted(piece: String, style: String)
+var escape_acts := 0
+var escape_lane := {}
+var _escape := {}
 # Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps. Cleared on run start and every attempt; a kill drops its entry.
 var _clamped := {}
 # The remembered cannon: committed volleys ({family, hazards, damage, source, struck,
@@ -328,6 +335,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.blink_used.connect(_on_blink)
 	ctx.events.line_state_changed.connect(_on_chain_state)
 	ctx.events.stage_entered.connect(_on_stage_entered)
+	ctx.events.escape_window.connect(func(_seconds: float): _escape_act())
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_started.connect(func(_class_id: String):
 		discovered = {}
@@ -337,6 +345,9 @@ func setup(ctx_ref) -> void:
 		_primed = {}
 		_prow_until = {}
 		_clamped = {}
+		_escape = {}
+		escape_lane = {}
+		escape_acts = 0
 		_free_cannon()
 		_cannon_count = 0
 		_exposed = {}
@@ -561,6 +572,80 @@ func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 	if piece == "ram_spring" and float(result.get("dealt", 0.0)) > 0.0:
 		_spring_until = _clock + SPRING_WINDOW
 		effects.spark(ctx.player.ball_position(), Palette.VERDIGRIS)
+
+
+# --- Companion: escape corridor ------------------------------------------------------
+# Run state has just spent the charge and opened the window after a survived low-hull hit;
+# this applies the seated piece's style. It adds velocity or a lane and never touches the
+# hull, the retries or the charge itself. The hit direction comes from last_player_hit when
+# that hit is this frame's, else the ball's own travel: no random draw.
+func _escape_act() -> void:
+	var piece := Companion.seated(ctx.run.companion, Companion.ESCAPE_CORRIDOR)
+	var esc := Companion.escape_of(piece)
+	if esc.is_empty() or not ctx.run.alive():
+		return
+	var style := String(esc["style"])
+	_escape = {"piece": piece, "style": style, "until": _clock + float(esc["seconds"])}
+	var ball: Vector3 = ctx.player.ball_position()
+	var v: Vector3 = ctx.player.planar_velocity()
+	var speed := v.length()
+	var away := Vector3.ZERO
+	if not last_player_hit.is_empty() and int(last_player_hit.get("frame", -1)) == Engine.get_physics_frames():
+		away = ball - Vector3(last_player_hit["from"])
+		away.y = 0.0
+	if away.length_squared() < 0.0001:
+		away = v
+	away = away.normalized() if away.length_squared() > 0.0001 else Vector3.FORWARD
+	if style == "shove":
+		var after := v + away * maxf(Companion.ESCAPE_SHOVE_FLOOR, speed * Companion.ESCAPE_SHOVE_SHARE)
+		var cap := maxf(speed * Companion.ESCAPE_SHOVE_CAP, Companion.ESCAPE_SHOVE_FLOOR)
+		if after.length() > cap:
+			after = after.normalized() * cap
+		if after.length() < speed:
+			after = after.normalized() * speed
+		ctx.player.add_external_accel((after - v) / get_physics_process_delta_time())
+		effects.ring(ball, 2.0, Palette.VERDIGRIS)
+	else:
+		var dir := v.normalized() if speed > 1.0 else away
+		escape_lane = {"from": ball, "dir": dir, "length": Companion.ESCAPE_LANE_LENGTH,
+			"half_width": Companion.ESCAPE_LANE_HALF_WIDTH, "friction": Companion.ESCAPE_LANE_FRICTION,
+			"hold": maxf(v.dot(dir), Companion.ESCAPE_LANE_FLOOR), "until": _escape["until"]}
+		effects.arc(ball, ball + dir * Companion.ESCAPE_LANE_LENGTH, Palette.VERDIGRIS)
+	escape_acts += 1
+	escape_acted.emit(piece, style)
+
+
+# Inside the lane the ball keeps its hold speed along it: each tick returns all but
+# LANE_FRICTION of the shortfall. Leaving the lane, or its time running out, ends it.
+func _step_escape_lane() -> void:
+	if escape_lane.is_empty():
+		return
+	if _clock >= float(escape_lane["until"]):
+		escape_lane = {}
+		return
+	var dir: Vector3 = escape_lane["dir"]
+	var rel: Vector3 = ctx.player.ball_position() - Vector3(escape_lane["from"])
+	rel.y = 0.0
+	var along := rel.dot(dir)
+	if along < -0.5 or along > float(escape_lane["length"]) or (rel - dir * along).length() > float(escape_lane["half_width"]):
+		return
+	var short: float = float(escape_lane["hold"]) - ctx.player.planar_velocity().dot(dir)
+	if short > 0.0:
+		ctx.player.add_external_accel(dir * short * (1.0 - float(escape_lane["friction"])) / get_physics_process_delta_time())
+
+
+# "none" without a seated escape piece; "acting" for the act's seconds; then "spent" until a
+# fresh stage re-arms the charge, else "ready".
+func escape_phase() -> String:
+	if Companion.seated(ctx.run.companion, Companion.ESCAPE_CORRIDOR) == "":
+		return "none"
+	if not _escape.is_empty() and _clock < float(_escape["until"]):
+		return "acting"
+	return "spent" if ctx.run.companion.get("escape_spent", false) == true else "ready"
+
+
+func escape_style() -> String:
+	return String(_escape.get("style", ""))
 
 
 func prow_staggered(enemy: Node3D) -> bool:
@@ -913,6 +998,7 @@ func _physics_process(delta: float) -> void:
 	_rocket_left = maxf(0.0, _rocket_left - delta)
 	_tick_cloak(delta)
 	_tick_upgrades(delta)
+	_step_escape_lane()
 	var intent = ctx.player.intent
 	var weapon := active_weapon()
 	# Tally's reader runs cards, never bolts: this branch comes first so _fire never sees
@@ -2441,6 +2527,8 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 # restored part list, so a retry restores the build exactly.
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	_start_attempt()
+	_escape = {}
+	escape_lane = {}
 	_reset_cards()
 	ctx.camera.shoulder_target = 0.0
 	volleys = 0

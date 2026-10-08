@@ -4,8 +4,8 @@ extends RefCounted
 # any two different families. Pieces are found in runs and acquired without equipping;
 # assemble() runs at intermission. Run state consumes the escape corridor after a
 # survived low-hull hit; it never revives and never
-# spends or refills a retry; the ready/spent flag is what the body and chirp cues will show.
-# Combat (combat.gd) runs the conductive primer and the ram brace while they are seated.
+# spends or refills a retry; the ready/spent flag is what the body and chirp cues show.
+# Combat (combat.gd) runs the conductive primer, the ram brace and the escape piece's act.
 
 const CHASSIS := "spil9"
 const SOCKETS := 2
@@ -21,6 +21,20 @@ const PRIMER_COIL_MULT := 1.5
 const PRIMER_MESH_SHARE := 0.4
 const PRIMER_MESH_TARGETS := 2
 const PRIMER_MESH_RANGE := 6.0
+# Escape corridor (combat.gd _escape_act): when run state opens the window, the seated piece's
+# `escape` row acts for its seconds. A shove adds velocity away from the hitter, sized from the
+# ball's speed (SHARE of it, at least FLOOR) and capped at CAP times that speed; it never slows
+# the ball. A lane is LANE_LENGTH m along the travel direction, LANE_HALF_WIDTH m either side,
+# where the ball keeps its speed (at least LANE_FLOOR) with only LANE_FRICTION of the loss.
+const ESCAPE_STYLES := ["shove", "lane"]
+const ESCAPE_SECONDS := 1.2
+const ESCAPE_SHOVE_SHARE := 0.5
+const ESCAPE_SHOVE_FLOOR := 8.0
+const ESCAPE_SHOVE_CAP := 1.5
+const ESCAPE_LANE_LENGTH := 6.0
+const ESCAPE_LANE_HALF_WIDTH := 1.5
+const ESCAPE_LANE_FRICTION := 0.2
+const ESCAPE_LANE_FLOOR := 7.0
 
 const PIECES := [
 	{"id": "primer_coil", "family": CONDUCTIVE_PRIMER, "name": "Primer Coil",
@@ -32,9 +46,11 @@ const PIECES := [
 	{"id": "ram_spring", "family": RAM_BRACE, "name": "Brace Spring",
 		"effect": "A landed ram makes your next shot hit harder."},
 	{"id": "escape_vent", "family": ESCAPE_CORRIDOR, "name": "Escape Vent",
-		"effect": "After a survived low-hull hit, opens a short escape lane once."},
+		"effect": "After a survived low-hull hit, vents once and shoves you clear of the hitter.",
+		"escape": {"style": "shove", "seconds": ESCAPE_SECONDS}},
 	{"id": "escape_rail", "family": ESCAPE_CORRIDOR, "name": "Corridor Rail",
-		"effect": "After a survived low-hull hit, shoves nearby foes clear once."},
+		"effect": "After a survived low-hull hit, lays a short slick lane once for you to ride out on.",
+		"escape": {"style": "lane", "seconds": ESCAPE_SECONDS}},
 ]
 # The order run-found pieces arrive: the first two make a legal pair, and escape comes first.
 const DROP_ORDER := ["escape_vent", "ram_prow", "primer_coil", "escape_rail", "ram_spring", "primer_mesh"]
@@ -53,6 +69,11 @@ static func _row(id: String) -> Dictionary:
 
 static func family_of(id: String) -> String:
 	return String(_row(id).get("family", ""))
+
+
+# The piece's escape act {style, seconds}, empty for a piece that has none.
+static func escape_of(id: String) -> Dictionary:
+	return _row(id).get("escape", {})
 
 
 # The seated piece of `family` in a to_dict document, or "" (also for a malformed doc).
@@ -152,6 +173,11 @@ static func validate(table: Array = PIECES) -> Array:
 			problems.append("%s: name must be 1 to %d words" % [id, MAX_NAME_WORDS])
 		if String(p.get("effect", "")).strip_edges() == "":
 			problems.append("%s: missing effect text" % id)
+		if fam == ESCAPE_CORRIDOR:
+			var esc = p.get("escape")
+			if typeof(esc) != TYPE_DICTIONARY or not ESCAPE_STYLES.has(esc.get("style", "")) \
+					or float(esc.get("seconds", 0.0)) <= 0.0:
+				problems.append("%s: escape needs a style in ESCAPE_STYLES and seconds > 0" % id)
 	if table == PIECES:
 		for f in FAMILIES:
 			if int(per_family.get(f, 0)) < 2:

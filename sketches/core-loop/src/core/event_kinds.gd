@@ -713,6 +713,10 @@ const UI_ROWS := {
 	# when armed, an empty ring when spent.
 	"companion_ready": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "diamond", "sound": "companion_chirp_ready", "hud": "", "objective": "", "priority": 1},
 	"companion_spent": {"group": "combat", "color": Palette.SANDSTONE, "shape": "ring", "sound": "companion_chirp_spent", "hud": "", "objective": "", "priority": 1},
+	# The escape piece acting (combat.gd escape_acted): the body's flare or rail flick and its
+	# chirp read this row. Companion verdigris, an outward arrow; the rising ready pair stands in
+	# until companion_chirp_escape is baked.
+	"escape_acted": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "arrow", "sound": "companion_chirp_ready", "sound_next": "companion_chirp_escape", "hud": "", "objective": "", "priority": 1},
 }
 
 # v2 W7 enemies
