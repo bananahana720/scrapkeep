@@ -10,6 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
+const Field := preload("res://src/build/scrap_field.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
 # Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
@@ -438,7 +439,7 @@ func _drop_held(i: int) -> void:
 
 
 func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
-	var node := MeshInstance3D.new()
+	var node := Node3D.new()
 	node.name = "BrindleReward"
 	if _pickup_mesh == null:
 		var packed := load("res://assets/models/bosses/boss_pickup.glb") as PackedScene
@@ -454,23 +455,32 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 		var fallback := BoxMesh.new()
 		fallback.size = Vector3.ONE * 0.7
 		_pickup_mesh = fallback
-	node.mesh = _pickup_mesh
-	node.scale = Vector3.ONE * 0.14
-	var material_key := "brindle_reward"
-	if not _pickup_materials.has(material_key):
-		var painted := Palette.solid(Palette.AMBER, 2.0)
-		painted.resource_name = "brindle_reward"
-		_pickup_materials[material_key] = painted
-	node.material_override = _pickup_materials[material_key]
-	var canister := MeshInstance3D.new()
-	canister.name = "RewardCanister"
+	var reward_material := Field._pickup_material(Palette.AMBER)
+	var core := MeshInstance3D.new()
+	core.name = "ScrapCore"
+	core.mesh = _pickup_mesh
+	core.scale = Vector3.ONE * 0.14
+	core.position.y = 0.12
+	core.material_override = reward_material
+	node.add_child(core)
 	var canister_mesh := CylinderMesh.new()
 	canister_mesh.top_radius = 0.38
 	canister_mesh.bottom_radius = 0.38
 	canister_mesh.height = 0.72
 	canister_mesh.radial_segments = 12
-	canister.mesh = canister_mesh
-	canister.material_override = _pickup_materials[material_key]
+	var mesh_arrays := canister_mesh.get_mesh_arrays()
+	var vertices := mesh_arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
+	var colors := PackedColorArray()
+	colors.resize(vertices.size())
+	colors.fill(Palette.AMBER)
+	mesh_arrays[Mesh.ARRAY_COLOR] = colors
+	var painted_mesh := ArrayMesh.new()
+	painted_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh_arrays)
+	var canister := MeshInstance3D.new()
+	canister.name = "RewardCanister"
+	canister.mesh = painted_mesh
+	canister.material_override = reward_material
+	canister.position.y = canister_mesh.height * 0.5
 	node.add_child(canister)
 	var band := MeshInstance3D.new()
 	band.name = "BoneBand"
@@ -482,10 +492,9 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 	band.mesh = band_mesh
 	band.material_override = Palette.solid(Palette.SAND)
 	band.position.y = 0.12
-	node.add_child(band)
+	canister.add_child(band)
 	arena.add_child(node)
-	node.global_position = at
-	node.position.y = at.y - 0.45
+	node.global_position = Vector3(at.x, at.y - 0.9, at.z)
 	_pickups.append({"node": node, "value": value, "at": at, "age": 0.0, "source": source})
 
 
@@ -497,9 +506,6 @@ func _step_trail(ball: Vector3) -> void:
 	for p in _pickups:
 		p["age"] += _delta
 		var node: Node3D = p["node"]
-		var reward_material := node.material_override as StandardMaterial3D
-		if reward_material != null:
-			reward_material.emission_energy_multiplier = 2.0 * (0.9 + 0.1 * sin(clock * 2.0))
 		if ball.distance_to(p["at"]) <= Rules.PICKUP_REACH:
 			ctx.run.add_scrap(p["value"], p["at"])
 			if p["source"] != "returned":

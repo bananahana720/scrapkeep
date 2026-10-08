@@ -5,7 +5,7 @@ const Boss := preload("res://src/boss/boss.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const GLB := "res://assets/models/bosses/boss_pickup.glb"
-const BASE_LOGIC_SHA := "99a176876c1ba7481d6fdf281f7497d708a11e00b796a04da2631062d574e2f1"
+const BASE_LOGIC_SHA := "0427903c86444ae1abdff0ed6fbc516c0dd15ac34202c6dc8cb4306683a1b507"
 
 var failures := 0
 var game
@@ -124,34 +124,38 @@ func _run() -> void:
 	boss.clock = 0.25
 	var at := Vector3(3, 4, 5)
 	boss._spawn_pickup(at, 7, "spill")
-	var pickup: MeshInstance3D = boss._pickups[0].node
+	var pickup: Node3D = boss._pickups[0].node
 	var live := _budget(pickup, "live")
-	_check(pickup.name == "ScrapChunk" and live.primitive == 0, "primitive pickup no longer builds")
-	_check(live.draws == 1, "single live draw")
+	_check(pickup.name == "BrindleReward" and pickup.find_child("ScrapCore", false, false) is MeshInstance3D
+		and pickup.find_child("RewardCanister", false, false) is MeshInstance3D and live.primitive == 1,
+		"Brindle keeps a small GLB core inside a procedural canister")
+	_check(live.draws == 3, "core, canister and band use three live draws")
 	_check(pickup.find_children("*", "CollisionObject3D", true, false).is_empty()
 		and pickup.find_children("*", "CollisionShape3D", true, false).is_empty(), "pickup has no collider")
-	_check(pickup.global_position == at and pickup.rotation.is_equal_approx(Vector3(0.6, 0.75, 0.3)), "base placement and spin")
+	_check(pickup.global_position.is_equal_approx(Vector3(at.x, at.y - 0.9, at.z))
+		and pickup.rotation.is_equal_approx(Vector3.ZERO), "ground placement without hover")
 	var record: Dictionary = boss._pickups[0]
 	_check(record.value == 7 and record.at == at and record.age == 0.0 and record.source == "spill", "unchanged scrap value and collection record")
 	var field := ScrapField.new()
 	field.setup()
-	var mat := pickup.material_override as ShaderMaterial
+	var canister := pickup.find_child("RewardCanister", false, false) as MeshInstance3D
+	var mat := canister.material_override as ShaderMaterial
 	var field_mat := field._material as ShaderMaterial
 	_check(mat != null and field_mat != null and mat.shader == field_mat.shader
-		and mat.get_shader_parameter("glow_color") == Palette.ARC
-		and mat.get_shader_parameter("glow_color") == field_mat.get_shader_parameter("glow_color")
-		and mat.shader.code.contains("ALBEDO = COLOR.rgb;"), "matches scrap field mint rim and preserves vertex paint")
+		and mat.get_shader_parameter("glow_color") == Palette.AMBER
+		and mat.shader.code.contains("ALBEDO = COLOR.rgb;"), "uses the shared field shader for the amber reward")
 	field.free()
 	boss._spawn_pickup(at + Vector3.RIGHT, 9, "returned")
-	var other: MeshInstance3D = boss._pickups[1].node
-	_check(other.mesh == pickup.mesh, "pickup mesh cached across drops")
+	var other: Node3D = boss._pickups[1].node
+	_check(other.find_child("RewardCanister", false, false) is MeshInstance3D
+		and other.find_child("ScrapCore", false, false) is MeshInstance3D, "each canister keeps its core and painted body")
 	var initial_yaw := pickup.rotation.y
 	boss._step_trail(Vector3(200, 200, 200))
 	_check(is_equal_approx(pickup.rotation.y - initial_yaw, boss._delta * 2.5), "base pickup spin rate")
 	var source := FileAccess.get_file_as_string("res://src/boss/boss.gd")
 	var start := source.find("func _spawn_pickup")
-	var mesh_start := source.find("\tvar node := MeshInstance3D.new()", start)
-	var mesh_end := source.find("\tnode.material_override =", mesh_start)
+	var mesh_start := source.find("\tvar node := Node3D.new()", start)
+	var mesh_end := source.find("\tvar canister_mesh := CylinderMesh.new()", mesh_start)
 	var logic := source.substr(0, mesh_start) + source.substr(mesh_end)
 	logic = logic.replace("static var _pickup_materials := {}\n", "")
 	logic = logic.replace("\tnode.material_override = _pickup_materials[material_key]\n", "\tnode.material_override = Palette.solid(Palette.ARC, 2.0)\n")

@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const GLB := "res://assets/models/world_one/enemy_vault.glb"
+const BASE_LOGIC_SHA := "062e1f7d31e45b4661f043dd35f34eb33e3114fee55bef46308c95a328a9c0c5"
 
 var failures := 0
 var game
@@ -109,10 +110,20 @@ func _run() -> void:
 	var cache = game.ctx.spawner.spawn_enemy("vault", Vector3(0, 30, 0))
 	cache.set_physics_process(false)
 	var m := _budget(cache, "live")
-	_check(m.primitive == 4, "only four hatch rings use lightweight primitives")
-	_named(cache, ["VaultBody", "VaultHatch0", "VaultHatch1", "VaultHatch2", "VaultHatch3", "VaultLamp", "VaultPlating"])
-	var hatches: Array = cache.find_children("VaultHatch*", "MeshInstance3D", true, false)
-	_check(hatches.size() == 4, "four hatch rings wrap the cache")
+	_check(m.draws <= 4, "four hatches share one D3 draw")
+	_named(cache, ["VaultBody", "VaultHatches", "VaultLamp", "VaultPlating"])
+	var hatches := 0
+	for side in 4:
+		var hatch: Node = cache.find_child("VaultHatch%d" % side, true, false)
+		hatches += 1 if hatch is Node3D else 0
+	_check(hatches == 4, "four hatch rings wrap the cache")
+	_check(cache.find_children("*", "Light3D", true, false).is_empty(), "vault has no per-instance light")
+	var source := FileAccess.get_file_as_string("res://src/combat/vault.gd")
+	var logic_start := source.find("func setup(")
+	var logic_end := source.find("func _build_visual(", logic_start)
+	_check(logic_start >= 0 and logic_end > logic_start
+		and source.substr(logic_start, logic_end - logic_start).sha256_text() == BASE_LOGIC_SHA,
+		"vault gameplay logic remains pinned")
 	_check(cache.plating == game.ctx.spawner.warden_spec(game.ctx.flow.stage() + 1).plating,
 		"vault uses next stage Warden plating")
 	var plate := cache.find_child("VaultPlating", true, false) as MeshInstance3D
@@ -168,4 +179,8 @@ func _run() -> void:
 	cache._die()
 	_check(cache._opened and cache._lamp_material.emission_energy_multiplier == 0.0,
 		"opening extinguishes the amber lamp")
+	_check(cache._hatch_model != null and cache._hatch_model.position.y < 0.0
+		and cache._hatch_model.mesh.get_surface_count() == 1
+		and (cache._hatch_model.material_override as StandardMaterial3D).albedo_color == cache.Palette.CHARCOAL,
+		"one shared charcoal hatch draw drops on open")
 	_finish()

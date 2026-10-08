@@ -51,20 +51,26 @@ func _run() -> void:
 	game.add_child(arena)
 	game.ctx.boss.arena = arena
 	game.ctx.boss._spawn_pickup(Vector3(3, 4, 5), 7, "spill")
-	var brindle: MeshInstance3D = game.ctx.boss._pickups[0].node
-	var reward_material := brindle.material_override as StandardMaterial3D
-	var reward_rgb := Vector3(reward_material.albedo_color.r, reward_material.albedo_color.g, reward_material.albedo_color.b) if reward_material != null else Vector3.ZERO
-	var amber_rgb := Vector3(Palette.AMBER.r, Palette.AMBER.g, Palette.AMBER.b)
+	var brindle: Node3D = game.ctx.boss._pickups[0].node
+	var canister := brindle.find_child("RewardCanister", false, false) as MeshInstance3D
+	_pickup(canister.material_override, Palette.AMBER, "Brindle")
+	var reward_material := canister.material_override as ShaderMaterial
 	t.check("Brindle reward body is amber", reward_material != null
-		and reward_rgb.distance_to(amber_rgb) < 0.1)
-	t.check("Brindle reward uses the field pulse", reward_material != null and reward_material.emission_enabled
-		and reward_material.emission.is_equal_approx(Palette.AMBER))
-	var canister: MeshInstance3D = brindle.find_child("RewardCanister", false, false)
+		and reward_material.get_shader_parameter("glow_color") == Palette.AMBER
+		and (canister.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_COLOR][0] == Palette.AMBER)
+	t.check("Brindle reward uses the shared field shader", canister.material_override is ShaderMaterial
+		and reward_material.shader.resource_path == SHADER
+		and reward_material.get_shader_parameter("glow_color") == Palette.AMBER)
 	t.check("Brindle reward uses a canister silhouette", brindle.name == "BrindleReward"
-		and brindle.mesh is ArrayMesh and canister != null and canister.mesh is CylinderMesh)
-	t.check("Brindle reward has a bone band", brindle.find_child("BoneBand", false, false) is MeshInstance3D)
+		and canister != null and canister.mesh is ArrayMesh
+		and canister.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() > 0)
+	t.check("Brindle reward has a bone band", brindle.find_child("BoneBand", true, false) is MeshInstance3D)
 	var rested_y := brindle.position.y
-	t.near("Brindle reward has zero vertical hover offset", rested_y, 3.55)
+	t.near("Brindle reward has zero vertical hover offset", rested_y, 3.1)
+	var reward_aabb := canister.mesh.get_aabb()
+	t.near("Brindle reward bottom sits on ground", canister.global_position.y
+		+ reward_aabb.position.y * canister.scale.y * brindle.scale.y, 3.1, 0.05)
+	t.check("Brindle reward is readable at arena distance", reward_aabb.size.y * canister.scale.y * brindle.scale.y >= 0.5)
 	game.ctx.boss._step_trail(Vector3(200, 200, 200))
 	t.near("Brindle reward has zero hover offset", brindle.position.y, rested_y)
 	t.check("Brindle reward remains grounded after a field tick", is_equal_approx(brindle.position.y, rested_y))
@@ -77,10 +83,16 @@ func _run() -> void:
 			and material.albedo_color.is_equal_approx(Palette.AMBER)
 			and material.emission.is_equal_approx(Palette.AMBER)
 			and material.emission_enabled and material.emission_energy_multiplier > 0.0)
-	var hatches: Array = vault.find_children("VaultHatch*", "MeshInstance3D", true, false)
-	t.eq("vault has four hatch rings", hatches.size(), 4)
+	var hatches := 0
+	for side in 4:
+		var hatch: Node = vault.find_child("VaultHatch%d" % side, true, false)
+		hatches += 1 if hatch is Node3D else 0
+	t.eq("vault has four hatch rings", hatches, 4)
+	t.check("vault combines hatches into one charcoal draw", vault.find_child("VaultHatches", true, false) is MeshInstance3D)
+	t.check("vault adds no per-instance light", vault.find_children("*", "Light3D", true, false).is_empty())
 	vault.hp = 1.0
 	game.combat.strike(vault, "runner", 10.0)
 	t.check("vault opening extinguishes the lamp", vault._opened and vault._lamp_material.emission_energy_multiplier == 0.0)
+	t.check("vault open cue drops the hatch ring", vault._hatch_model.position.y < 0.0)
 	game.free()
 	quit(t.verdict())

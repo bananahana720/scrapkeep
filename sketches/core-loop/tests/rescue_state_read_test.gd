@@ -23,7 +23,7 @@ func _run() -> void:
 	game.flow.enter_stage(1, Vector3.ZERO, false)
 	var cage = game.world.rescue.cage("rivet")
 	var gate := cage.find_child("CageGate", true, false) as MeshInstance3D
-	t.check("all imprisoning walls belong to the retracting gate", gate.mesh.get_aabb().size.z >= 2.8)
+	t.check("all imprisoning walls belong to the retracting gate", gate != null and gate.mesh.get_aabb().size.z >= 2.8)
 	# A per-cage light is freed on every stage change; Godot 4.7.2's renderer then
 	# segfaults on the next sealed boss entry (GPU only). The signal carries the glow.
 	t.check("cage adds no dynamic light", cage.find_children("*", "Light3D", true, false).is_empty())
@@ -36,10 +36,27 @@ func _run() -> void:
 	t.check("freeing raises pilot silhouette", cage._pilot.position.y >= locked_position.y + 0.15)
 	t.check("freeing signal glows for active rescue", cage._signal.emission_energy_multiplier >= 1.5)
 	cage.tick(Site.BREAK_SECONDS * 0.5)
-	t.check("freed gate stays visible as the folded exit wall", gate.is_visible_in_tree() and cage._bars.visible)
+	t.check("freed gate opens the exit while its frame remains", cage._open_walls.visible and cage._bars.visible)
 	t.check("freed pilot clears the frame", is_equal_approx(cage._pilot.position.z, 2.1) and cage._animator.assigned_animation == "big_cheer",
 		"position %s pose %s" % [cage._pilot.position, cage._animator.assigned_animation])
 	t.check("freed gate folds down toward the exit", cage._freed_wall != null and absf(cage._freed_wall.rotation.x) > deg_to_rad(60.0))
+	var outer_top := Vector3.ZERO
+	for mesh: MeshInstance3D in cage._freed_wall.find_children("*", "MeshInstance3D", true, false):
+		if mesh.position.y > 2.9:
+			outer_top = cage.to_local(mesh.global_position)
+	t.check("folded wall points out through the exit face", outer_top.z > 3.9, "top edge %s" % outer_top)
+	var gate_low := Vector3(INF, INF, INF)
+	var gate_high := -gate_low
+	for wall_mesh: MeshInstance3D in cage._freed_wall.find_children("*", "MeshInstance3D", true, false):
+		var gate_bounds := wall_mesh.get_aabb()
+		for x in [gate_bounds.position.x, gate_bounds.end.x]:
+			for y in [gate_bounds.position.y, gate_bounds.end.y]:
+				for z in [gate_bounds.position.z, gate_bounds.end.z]:
+					var corner: Vector3 = cage.to_local(wall_mesh.global_transform * Vector3(x, y, z))
+					gate_low = gate_low.min(corner)
+					gate_high = gate_high.max(corner)
+	t.check("folded gate rests beside the cage floor", gate_low.y >= -0.05 and gate_high.y <= 0.3,
+		"gate Y %.2f..%.2f" % [gate_low.y, gate_high.y])
 	t.check("freed signal keeps a completion glow", cage._signal.emission == Palette.ARC and cage._signal.emission_energy_multiplier >= 0.7 and cage._signal.emission_energy_multiplier <= 1.2)
 	t.check("presentation adds no colliders", cage.find_children("*", "CollisionObject3D", true, false).is_empty())
 	t.eq("rescue radius unchanged", Site.RING_RADIUS, 4.0)

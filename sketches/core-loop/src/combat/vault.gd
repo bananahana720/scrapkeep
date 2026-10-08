@@ -12,8 +12,8 @@ const SIZE := Vector3(3.2, 2.6, 3.2)
 static var _shared: Array = []
 static var _asset_warned := false
 var _lamp_material: StandardMaterial3D
-var _lamp_light: OmniLight3D
-var _hatches: Array[MeshInstance3D] = []
+var _hatches: Array[Node3D] = []
+var _hatch_model: MeshInstance3D
 var _opened := false
 
 
@@ -60,7 +60,6 @@ func _build_visual() -> void:
 				mi.material_override = _lamp_material
 			_visual_parent().add_child(mi)
 		_add_hatches()
-		_add_lamp_light()
 		return
 	var body := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
@@ -90,54 +89,48 @@ func _build_visual() -> void:
 	var lamp_view := _accent(lamp, Palette.AMBER, 1.4, Vector3.UP * (HALF_HEIGHT + 2.0))
 	_lamp_material = lamp_view.material_override as StandardMaterial3D
 	_add_hatches()
-	_add_lamp_light()
 
 
 func _add_hatches() -> void:
+	var torus := TorusMesh.new()
+	torus.rings = 8
+	torus.ring_segments = 6
+	torus.inner_radius = 0.42
+	torus.outer_radius = 0.54
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for side in 4:
-		var ring := MeshInstance3D.new()
+		var ring := Node3D.new()
 		ring.name = "VaultHatch%d" % side
-		var mesh := TorusMesh.new()
-		mesh.rings = 8
-		mesh.ring_segments = 6
-		mesh.inner_radius = 0.42
-		mesh.outer_radius = 0.54
-		ring.mesh = mesh
-		ring.material_override = Palette.solid(Palette.CHARCOAL)
 		match side:
 			0:
 				ring.position = Vector3(0.0, 0.0, -SIZE.z * 0.46)
-				ring.rotation.x = PI * 0.5
 			1:
 				ring.position = Vector3(0.0, 0.0, SIZE.z * 0.46)
-				ring.rotation.x = PI * 0.5
 			2:
 				ring.position = Vector3(-SIZE.x * 0.46, 0.0, 0.0)
-				ring.rotation.z = PI * 0.5
+				ring.rotation.y = PI * 0.5
 			3:
 				ring.position = Vector3(SIZE.x * 0.46, 0.0, 0.0)
-				ring.rotation.z = PI * 0.5
+				ring.rotation.y = PI * 0.5
+		surface.append_from(torus, 0, Transform3D(ring.basis, ring.position))
 		_visual_parent().add_child(ring)
 		_hatches.append(ring)
-
-
-func _add_lamp_light() -> void:
-	_lamp_light = OmniLight3D.new()
-	_lamp_light.light_color = Palette.AMBER
-	_lamp_light.light_energy = 1.4
-	_lamp_light.omni_range = 5.0
-	_lamp_light.position = Vector3.UP * (HALF_HEIGHT + 2.0)
-	add_child(_lamp_light)
+	_hatch_model = MeshInstance3D.new()
+	_hatch_model.name = "VaultHatches"
+	_hatch_model.mesh = surface.commit()
+	_hatch_model.material_override = Palette.solid(Palette.CHARCOAL)
+	_visual_parent().add_child(_hatch_model)
 
 
 func _die() -> void:
 	_opened = true
 	if _lamp_material != null:
 		_lamp_material.emission_energy_multiplier = 0.0
-	if _lamp_light != null:
-		_lamp_light.light_energy = 0.0
 	for hatch in _hatches:
 		hatch.position.y -= 0.55
+	if _hatch_model != null:
+		_hatch_model.position.y -= 0.55
 	super._die()
 
 

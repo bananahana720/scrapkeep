@@ -12,6 +12,7 @@ func _run() -> void:
 	var t := T.new("shell_accent_test")
 	var assets := HeroAssets.new()
 	var tint := Color("347fc4")
+	t.check("accent slot reads pilot class tint", HeroAssets.SLOTS["class_accent"].get("from", "") == "class")
 	for pilot in ["tally", "remembered_cannon"]:
 		var shell := load(HeroAssets.SHELLS[pilot]).instantiate() as Node3D
 		assets.paint(shell, {"class": tint})
