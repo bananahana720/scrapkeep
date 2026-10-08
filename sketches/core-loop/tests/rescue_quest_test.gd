@@ -109,7 +109,8 @@ func _run() -> void:
 	_t.eq("rescue_completed fires once with rivet", _rescued, ["rivet"])
 	_t.eq("interact_fired fires once for the cage", _fired, [["ally", "rivet_cage"]])
 	_t.eq("rivet_rescued is announced once", _earned.filter(func(id): return id == "rivet_rescued").size(), 1)
-	_t.check("the cage is spent and open", _cage().spent and not _cage()._bars.visible, "spent %s" % _cage().spent)
+	_t.check("the cage is spent with its exit wall folded", _cage().spent and _cage()._bars.visible
+		and absf(_cage()._freed_wall.rotation.x) > deg_to_rad(60.0), "spent %s" % _cage().spent)
 	var profile = _game.ctx.profile
 	_t.check("the profile earned it", profile.earned("rivet_rescued"), "earned")
 	_t.near("the profile counts it once", profile.stat("ach.rivet_rescued"), 1.0)
@@ -128,7 +129,8 @@ func _run() -> void:
 
 	_game.flow.retry_stage()
 	await _frames(3)
-	_t.check("a retry after the rescue keeps the cage open", _game.world.rescue.cages.size() == 1 and _cage().spent and not _cage()._bars.visible, "spent")
+	_t.check("a retry after the rescue keeps the exit wall folded", _game.world.rescue.cages.size() == 1 and _cage().spent
+		and _cage()._bars.visible and absf(_cage()._freed_wall.rotation.x) > deg_to_rad(60.0), "spent")
 	await _approach()
 	await _hold_e(HOLD_FRAMES)
 	await _frames(_break_frames())

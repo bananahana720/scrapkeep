@@ -51,17 +51,36 @@ func _run() -> void:
 	game.add_child(arena)
 	game.ctx.boss.arena = arena
 	game.ctx.boss._spawn_pickup(Vector3(3, 4, 5), 7, "spill")
-	_pickup(game.ctx.boss._pickups[0].node.material_override, Palette.ARC, "Brindle")
+	var brindle: MeshInstance3D = game.ctx.boss._pickups[0].node
+	var reward_material := brindle.material_override as StandardMaterial3D
+	var reward_rgb := Vector3(reward_material.albedo_color.r, reward_material.albedo_color.g, reward_material.albedo_color.b) if reward_material != null else Vector3.ZERO
+	var amber_rgb := Vector3(Palette.AMBER.r, Palette.AMBER.g, Palette.AMBER.b)
+	t.check("Brindle reward body is amber", reward_material != null
+		and reward_rgb.distance_to(amber_rgb) < 0.1)
+	t.check("Brindle reward uses the field pulse", reward_material != null and reward_material.emission_enabled
+		and reward_material.emission.is_equal_approx(Palette.AMBER))
+	var canister: MeshInstance3D = brindle.find_child("RewardCanister", false, false)
+	t.check("Brindle reward uses a canister silhouette", brindle.name == "BrindleReward"
+		and brindle.mesh is ArrayMesh and canister != null and canister.mesh is CylinderMesh)
+	t.check("Brindle reward has a bone band", brindle.find_child("BoneBand", false, false) is MeshInstance3D)
+	var rested_y := brindle.position.y
+	t.near("Brindle reward has zero vertical hover offset", rested_y, 3.55)
+	game.ctx.boss._step_trail(Vector3(200, 200, 200))
+	t.near("Brindle reward has zero hover offset", brindle.position.y, rested_y)
+	t.check("Brindle reward remains grounded after a field tick", is_equal_approx(brindle.position.y, rested_y))
 	var vault = game.ctx.spawner.spawn_enemy("vault", Vector3(0, 30, 0))
 	var lamp := vault.find_child("VaultLamp", true, false) as MeshInstance3D
 	t.check("vault has its modelled lamp", lamp != null)
 	if lamp != null:
-		var material := lamp.mesh.surface_get_material(0) as StandardMaterial3D
-		t.check("vault lamp retains palette bone with emission ceiling", material != null
-			and material.albedo_color.is_equal_approx(Palette.SAND)
-			and material.emission.is_equal_approx(Palette.SAND)
-			and material.emission_enabled and material.emission_energy_multiplier > 0.0
-			and material.emission_energy_multiplier <= 0.35,
-			"bone lamp emission must be positive and at most 0.35")
+		var material := lamp.get_active_material(0) as StandardMaterial3D
+		t.check("vault lamp reads as lit amber while locked", material != null
+			and material.albedo_color.is_equal_approx(Palette.AMBER)
+			and material.emission.is_equal_approx(Palette.AMBER)
+			and material.emission_enabled and material.emission_energy_multiplier > 0.0)
+	var hatches: Array = vault.find_children("VaultHatch*", "MeshInstance3D", true, false)
+	t.eq("vault has four hatch rings", hatches.size(), 4)
+	vault.hp = 1.0
+	game.combat.strike(vault, "runner", 10.0)
+	t.check("vault opening extinguishes the lamp", vault._opened and vault._lamp_material.emission_energy_multiplier == 0.0)
 	game.free()
 	quit(t.verdict())

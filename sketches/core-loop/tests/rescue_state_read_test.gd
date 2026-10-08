@@ -36,8 +36,10 @@ func _run() -> void:
 	t.check("freeing raises pilot silhouette", cage._pilot.position.y >= locked_position.y + 0.15)
 	t.check("freeing signal glows for active rescue", cage._signal.emission_energy_multiplier >= 1.5)
 	cage.tick(Site.BREAK_SECONDS * 0.5)
-	t.check("freed gate is actually hidden in the tree", not gate.is_visible_in_tree() and not cage._bars.visible)
-	t.check("freed pilot stands beyond the remaining frame", cage._pilot.position.z >= 1.7 and cage._animator.assigned_animation == "big_cheer")
+	t.check("freed gate stays visible as the folded exit wall", gate.is_visible_in_tree() and cage._bars.visible)
+	t.check("freed pilot clears the frame", is_equal_approx(cage._pilot.position.z, 2.1) and cage._animator.assigned_animation == "big_cheer",
+		"position %s pose %s" % [cage._pilot.position, cage._animator.assigned_animation])
+	t.check("freed gate folds down toward the exit", cage._freed_wall != null and absf(cage._freed_wall.rotation.x) > deg_to_rad(60.0))
 	t.check("freed signal keeps a completion glow", cage._signal.emission == Palette.ARC and cage._signal.emission_energy_multiplier >= 0.7 and cage._signal.emission_energy_multiplier <= 1.2)
 	t.check("presentation adds no colliders", cage.find_children("*", "CollisionObject3D", true, false).is_empty())
 	t.eq("rescue radius unchanged", Site.RING_RADIUS, 4.0)

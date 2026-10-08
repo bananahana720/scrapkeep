@@ -34,6 +34,7 @@ const RESCUE_CLEAR := 14.0
 # The plate's colour when your punch is short of the live plating: combat's slate.
 const PLATE_SHORT := Color("9fb0bf")
 static var _pickup_materials := {}
+static var _pickup_mesh: Mesh
 
 var ctx
 var state := IDLE
@@ -438,51 +439,53 @@ func _drop_held(i: int) -> void:
 
 func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 	var node := MeshInstance3D.new()
-	var path := "res://assets/models/bosses/boss_pickup.glb"
-	var mesh := get_meta("boss_scrap_mesh") as Mesh if has_meta("boss_scrap_mesh") else null
-	var packed := load(path) as PackedScene if mesh == null and not has_meta("scrap_asset_warned") and ResourceLoader.exists(path) else null
-	if packed != null:
-		if mesh == null:
-			var scene := packed.instantiate()
-			if scene != null:
-				var parts := scene.find_children("*", "MeshInstance3D", true, false)
-				if parts.size() == 1:
-					var part := parts[0] as MeshInstance3D
-					if part.name == "ScrapChunk" and part.mesh != null and part.mesh.get_surface_count() == 1:
-						var material := part.mesh.surface_get_material(0)
-						if material != null and material.resource_name == "field" and part.transform.is_equal_approx(Transform3D.IDENTITY):
-							mesh = part.mesh
-							set_meta("boss_scrap_mesh", mesh)
-				scene.free()
-	if mesh != null:
-		node.name = "ScrapChunk"
-		node.mesh = mesh
-	else:
-		if not has_meta("scrap_asset_warned"):
-			set_meta("scrap_asset_warned", true)
-			push_warning("boss pickup: missing or malformed model; using scrap fallback")
-		var box := BoxMesh.new()
-		box.size = Vector3.ONE * 0.7
-		node.mesh = box
-	var material_key := "field" if mesh != null else "fallback"
+	node.name = "BrindleReward"
+	if _pickup_mesh == null:
+		var packed := load("res://assets/models/bosses/boss_pickup.glb") as PackedScene
+		var scene := packed.instantiate() if packed != null else null
+		var part := scene.find_child("ScrapChunk", true, false) as MeshInstance3D if scene != null else null
+		if part != null and part.mesh != null and part.mesh.get_surface_count() == 1:
+			var mat := part.mesh.surface_get_material(0)
+			if mat != null and mat.resource_name == "field":
+				_pickup_mesh = part.mesh
+		if scene != null:
+			scene.free()
+	if _pickup_mesh == null:
+		var fallback := BoxMesh.new()
+		fallback.size = Vector3.ONE * 0.7
+		_pickup_mesh = fallback
+	node.mesh = _pickup_mesh
+	node.scale = Vector3.ONE * 0.14
+	var material_key := "brindle_reward"
 	if not _pickup_materials.has(material_key):
-		var pickup_material: Material
-		if mesh != null:
-			var painted := ShaderMaterial.new()
-			painted.resource_name = "field"
-			painted.shader = preload("res://assets/shaders/pickup.gdshader")
-			painted.set_shader_parameter("glow_color", Palette.ARC)
-			painted.set_shader_parameter("face_energy", 0.06)
-			painted.set_shader_parameter("rim_energy", 1.25)
-			painted.set_shader_parameter("emission_ceiling", 1.35)
-			pickup_material = painted
-		else:
-			pickup_material = Palette.solid(Palette.ARC, 2.0)
-		_pickup_materials[material_key] = pickup_material
+		var painted := Palette.solid(Palette.AMBER, 2.0)
+		painted.resource_name = "brindle_reward"
+		_pickup_materials[material_key] = painted
 	node.material_override = _pickup_materials[material_key]
+	var canister := MeshInstance3D.new()
+	canister.name = "RewardCanister"
+	var canister_mesh := CylinderMesh.new()
+	canister_mesh.top_radius = 0.38
+	canister_mesh.bottom_radius = 0.38
+	canister_mesh.height = 0.72
+	canister_mesh.radial_segments = 12
+	canister.mesh = canister_mesh
+	canister.material_override = _pickup_materials[material_key]
+	node.add_child(canister)
+	var band := MeshInstance3D.new()
+	band.name = "BoneBand"
+	var band_mesh := CylinderMesh.new()
+	band_mesh.top_radius = 0.405
+	band_mesh.bottom_radius = 0.405
+	band_mesh.height = 0.12
+	band_mesh.radial_segments = 12
+	band.mesh = band_mesh
+	band.material_override = Palette.solid(Palette.SAND)
+	band.position.y = 0.12
+	node.add_child(band)
 	arena.add_child(node)
 	node.global_position = at
-	node.rotation = Vector3(0.6, clock * 3.0, 0.3)
+	node.position.y = at.y - 0.45
 	_pickups.append({"node": node, "value": value, "at": at, "age": 0.0, "source": source})
 
 
@@ -494,6 +497,9 @@ func _step_trail(ball: Vector3) -> void:
 	for p in _pickups:
 		p["age"] += _delta
 		var node: Node3D = p["node"]
+		var reward_material := node.material_override as StandardMaterial3D
+		if reward_material != null:
+			reward_material.emission_energy_multiplier = 2.0 * (0.9 + 0.1 * sin(clock * 2.0))
 		if ball.distance_to(p["at"]) <= Rules.PICKUP_REACH:
 			ctx.run.add_scrap(p["value"], p["at"])
 			if p["source"] != "returned":

@@ -30,6 +30,7 @@ const PLATING_SCALE := 0.5
 const HP := 90.0
 const ARM_HEIGHT := 4.2
 const LENS_RADIUS := 0.7
+const HIT_FLASH_SECONDS := 0.08
 # The skinned hand (tools/blender/bosses). The cylinders and spheres built below stay as the
 # fallback and are only hidden when the model loads.
 const MODEL := "res://assets/models/bosses/mind_hand.glb"
@@ -52,6 +53,7 @@ var _anim: AnimationPlayer
 var _seen_phase := -1
 var _skin_rim: StandardMaterial3D
 var _skin_rim_albedo := Color.WHITE
+var _flash_tween: Tween
 
 
 func _configure(threat: float) -> void:
@@ -67,6 +69,26 @@ func _configure(threat: float) -> void:
 	live_seconds = BRACE
 	rest_seconds = 3.0
 	interruptible = false
+
+
+func flash() -> void:
+	if _material == null:
+		return
+	_flash = 1.0
+	if _flash_tween != null and _flash_tween.is_running():
+		_flash_tween.kill()
+	_material.albedo_color = Color.WHITE
+	_material.emission_enabled = true
+	_material.emission = Color.WHITE
+	_material.emission_energy_multiplier = 1.0
+	_flash_tween = create_tween()
+	_flash_tween.tween_property(_material, "albedo_color", _base_color, HIT_FLASH_SECONDS)
+	_flash_tween.tween_callback(_apply_rest_look)
+
+
+func _update_flash(_delta: float) -> void:
+	if _flash_tween != null and not _flash_tween.is_running():
+		_flash = 0.0
 
 
 func braced() -> bool:

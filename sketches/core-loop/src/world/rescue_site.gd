@@ -35,6 +35,7 @@ class Cage extends "res://src/world/device.gd":
 	var progress := 0.0
 	var breaking := false
 	var _bars: Node3D
+	var _freed_wall: Node3D
 	var _latch: Node3D
 	var _pilot: Node3D
 	var _signal: StandardMaterial3D
@@ -62,27 +63,39 @@ class Cage extends "res://src/world/device.gd":
 		var accent := Palette.solid(Interactables.color(family), 1.2)
 		_bars = Node3D.new()
 		add_child(_bars)
+		_freed_wall = Node3D.new()
+		_freed_wall.name = "FreedWallHinge"
+		_freed_wall.position = Vector3(0.0, 0.0, -1.4)
+		_bars.add_child(_freed_wall)
 		for sx in [-1.0, 1.0]:
 			for sz in [-1.0, 1.0]:
 				box(Vector3(0.3, 3.2, 0.3), Vector3(sx * 1.4, 1.6, sz * 1.4), steel, false, _bars)
 		for s in [-1.0, 1.0]:
 			box(Vector3(3.1, 0.25, 0.25), Vector3(0.0, 3.2, s * 1.4), steel, false, _bars)
 			box(Vector3(0.25, 0.25, 3.1), Vector3(s * 1.4, 3.2, 0.0), steel, false, _bars)
-			box(Vector3(0.12, 3.0, 0.12), Vector3(s * 0.5, 1.6, 1.4), steel, false, _bars)
-		box(Vector3(0.7, 0.5, 0.2), Vector3(0.0, 1.4, 1.5), accent, false, _bars)
+			box(Vector3(0.12, 3.0, 0.12), Vector3(s * 0.5, 1.6, 1.4), steel, false, _freed_wall)
+		box(Vector3(0.7, 0.5, 0.2), Vector3(0.0, 1.4, 1.5), accent, false, _freed_wall)
 		box(Vector3(0.8, 1.2, 0.8), Vector3(0.0, 0.6, 0.0), accent)
 
 	func _build_model(parts: Array) -> void:
 		_bars = Node3D.new()
 		_bars.name = "LockedGate"
 		add_child(_bars)
+		_freed_wall = Node3D.new()
+		_freed_wall.name = "FreedWallHinge"
+		_freed_wall.position = Vector3(0.0, 0.0, -1.4)
+		_bars.add_child(_freed_wall)
 		for part in parts:
 			var view := MeshInstance3D.new()
 			view.name = part.name
 			view.mesh = part.mesh
 			view.transform = part.xform
-			if part.name in ["CageGate", "CageLatch"]:
-				_bars.add_child(view)
+			if part.name == "CageGate":
+				_freed_wall.add_child(view)
+				view.transform = Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 1.4))
+			elif part.name == "CageLatch":
+				_freed_wall.add_child(view)
+				view.transform = _freed_wall.transform.affine_inverse() * part.xform
 			else:
 				add_child(view)
 			if part.name == "CageLatch":
@@ -102,10 +115,12 @@ class Cage extends "res://src/world/device.gd":
 			assets.free()
 
 	func _visual_state() -> void:
+		_bars.visible = true
+		if _freed_wall != null:
+			_freed_wall.rotation.x = PI * 0.5 if spent else 0.0
 		if _latch == null:
 			return
 		var fill := clampf(progress / BREAK_SECONDS, 0.0, 1.0)
-		_bars.visible = not spent
 		_bars.position.y = fill * 0.75 if breaking else 0.0
 		_latch.rotation.z = fill * PI * 0.5 if breaking else 0.0
 		_signal.albedo_color = Palette.ARC if spent else (Palette.SAND if breaking else Palette.SLATE)
@@ -115,7 +130,7 @@ class Cage extends "res://src/world/device.gd":
 		_signal.emission = Palette.ARC if spent else Interactables.color(family)
 		_signal.emission_energy_multiplier = 1.0 if spent else (1.2 + fill * 2.0 if breaking else 0.6)
 		if _pilot != null:
-			_pilot.position = Vector3(0.0, 1.6, 1.8) if spent else Vector3(0.0, 1.25 + (0.25 if breaking else 0.0), -0.25)
+			_pilot.position = Vector3(0.0, 1.6, 2.1) if spent else Vector3(0.0, 1.25 + (0.25 if breaking else 0.0), -0.25)
 			_pilot.rotation.y = PI + (0.2 * sin(fill * TAU) if breaking else 0.0)
 		var pose := "big_cheer" if spent else ("heave" if breaking else "slump")
 		if pose != _pose and _animator != null and _animator.has_animation(pose):
@@ -149,7 +164,6 @@ class Cage extends "res://src/world/device.gd":
 			return
 		breaking = false
 		spent = true
-		_bars.visible = false
 		_visual_state()
 		system.fired(self)
 		owner_site.complete(quest)

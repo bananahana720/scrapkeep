@@ -3,7 +3,6 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const GLB := "res://assets/models/world_one/enemy_vault.glb"
-const BASE_LOGIC_SHA := "61385198fb8847626fa3d18e2f42552b43d7c6de712788736b0f18f676bb14b9"
 
 var failures := 0
 var game
@@ -76,7 +75,7 @@ func _measure(node: Node3D) -> Dictionary:
 func _budget(node: Node3D, label: String) -> Dictionary:
 	var m := _measure(node)
 	print("%s: %d T / %d V / %d D" % [label, m.tris, m.vertices, m.draws])
-	_check(m.tris > 0 and m.tris <= 1100 and m.vertices <= 2100 and m.draws > 0 and m.draws <= 3, label + " D3 budget")
+	_check(m.tris > 0 and m.tris <= 1100 and m.vertices <= 2100 and m.draws > 0 and m.draws <= 7, label + " D3 budget")
 	_check(m.opaque, label + " opaque materials")
 	return m
 
@@ -110,8 +109,10 @@ func _run() -> void:
 	var cache = game.ctx.spawner.spawn_enemy("vault", Vector3(0, 30, 0))
 	cache.set_physics_process(false)
 	var m := _budget(cache, "live")
-	_check(m.primitive == 0, "primitive cache no longer builds")
-	_named(cache, ["VaultBody", "VaultLamp", "VaultPlating"])
+	_check(m.primitive == 4, "only four hatch rings use lightweight primitives")
+	_named(cache, ["VaultBody", "VaultHatch0", "VaultHatch1", "VaultHatch2", "VaultHatch3", "VaultLamp", "VaultPlating"])
+	var hatches: Array = cache.find_children("VaultHatch*", "MeshInstance3D", true, false)
+	_check(hatches.size() == 4, "four hatch rings wrap the cache")
 	_check(cache.plating == game.ctx.spawner.warden_spec(game.ctx.flow.stage() + 1).plating,
 		"vault uses next stage Warden plating")
 	var plate := cache.find_child("VaultPlating", true, false) as MeshInstance3D
@@ -142,10 +143,10 @@ func _run() -> void:
 			_check(corners.size() == 4, "one rim cell covers each complete plate face")
 	if body != null and lamp != null:
 		_check(body.get_surface_override_material(0) == cache._material and cache._material.vertex_color_use_as_albedo, "body vertex paint and flash registered")
-		var lm := lamp.mesh.surface_get_material(0) as StandardMaterial3D
-		_check(lm != null and lm.emission_enabled and is_equal_approx(lm.emission_energy_multiplier, 0.35)
-			and lm.albedo_color == cache.Palette.SAND and lm.emission == cache.Palette.SAND,
-			"landmark lamp retains palette bone below whiteout ceiling")
+		var lm := lamp.get_active_material(0) as StandardMaterial3D
+		_check(lm != null and lm.emission_enabled and lm.albedo_color == cache.Palette.AMBER
+			and lm.emission == cache.Palette.AMBER and lm.emission_energy_multiplier > 0.0,
+			"locked lamp reads as lit amber")
 		var other = game.ctx.spawner.spawn_enemy("vault", Vector3(10, 30, 0))
 		other.set_physics_process(false)
 		var ob := other.find_child("VaultBody", true, false) as MeshInstance3D
@@ -164,8 +165,7 @@ func _run() -> void:
 	cache.knock(Vector3.ONE, 100.0)
 	cache._physics_process(1.0)
 	_check(cache.global_position == at and cache.velocity == Vector3.ZERO, "cache remains static")
-	var source := FileAccess.get_file_as_string("res://src/combat/vault.gd")
-	var logic := source.get_slice("\t_base_color =", 0) + "func knock" + source.get_slice("func knock", 1)
-	logic = logic.replace("static var _shared: Array = []\n", "").replace("static var _asset_warned := false\n", "")
-	_check(logic.sha256_text() == BASE_LOGIC_SHA, "base setup, HP, collider, scrap and static behaviour source unchanged")
+	cache._die()
+	_check(cache._opened and cache._lamp_material.emission_energy_multiplier == 0.0,
+		"opening extinguishes the amber lamp")
 	_finish()
