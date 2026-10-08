@@ -11,6 +11,7 @@ const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const Gauge := preload("res://src/ui/gauge.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
 const SpeedGlyph := preload("res://src/ui/speed_glyph.gd")
 const RunStatus := preload("res://src/ui/run_status.gd")
 const ObjectiveView := preload("res://src/ui/objective_view.gd")
@@ -56,6 +57,18 @@ class CogChip extends Control:
 		UiDraw.text(self, 26.0, mid, str(amount), 18, Palette.SAND, true)
 
 
+# The field-notes key drawn small: the cap Tab opens the notes with.
+class NoteKey extends Control:
+	const KEY := "key_tab"
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = Keycap.size_of(KEY, 24.0)
+
+	func _draw() -> void:
+		Keycap.draw(self, size * 0.5, KEY, Palette.SAND, 24.0)
+
+
 # The spine's HUD, built to a word budget (playtest entry 7): icons, gauges and keycaps
 # carry the facts, and words appear only where nothing else can say it. Top band: the
 # run status (stage pips, threat), a boss plate when one is mounted (mount_plate) and the
@@ -81,6 +94,10 @@ const ACH_LAYER := 8
 const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
 const ACH_WORD := "Achievement"
+# A new field note: the Tab cap and these words under the achievement slot, 3 s, faded in and out.
+const LORE_WORDS := "New field note"
+const LORE_TOTAL := 3.0
+const LORE_TOP := 66.0
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
 # How long a world card stands alone before its first stage card replaces it.
@@ -146,6 +163,9 @@ var _ach_panel: PanelContainer
 var _ach_name: Label
 var _ach_queue: Array[String] = []
 var _ach_entry := {}
+var _lore_panel: PanelContainer
+var _lore_left := 0.0
+var _lore_age := 0.0
 var _lower: Control
 var _restart: Control
 var _health: Control
@@ -264,6 +284,8 @@ func setup(game_ref) -> void:
 	_mount_hotwire_screen()
 
 	_build_ach_toast()
+	_build_lore_pulse()
+	game.codex.lore_found.connect(func(_id: String): _show_lore())
 	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(String(Achievements.row(id).get("name", id))))
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
@@ -336,6 +358,56 @@ func _build_ach_toast() -> void:
 	_ach_name = _label(TOAST_FONT[3])
 	_ach_name.add_theme_color_override("font_color", Palette.SAND)
 	row.add_child(_ach_name)
+
+
+func _build_lore_pulse() -> void:
+	var layer_node := CanvasLayer.new()
+	layer_node.layer = ACH_LAYER
+	add_child(layer_node)
+	_lore_panel = PanelContainer.new()
+	_lore_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lore_panel.visible = false
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color(Palette.CHARCOAL, 0.94)
+	plate.border_color = Palette.SAND
+	plate.set_border_width_all(2)
+	plate.set_corner_radius_all(8)
+	plate.content_margin_left = 12.0
+	plate.content_margin_right = 16.0
+	plate.content_margin_top = 6.0
+	plate.content_margin_bottom = 6.0
+	_lore_panel.add_theme_stylebox_override("panel", plate)
+	layer_node.add_child(_lore_panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lore_panel.add_child(row)
+	row.add_child(NoteKey.new())
+	var words := _label(18)
+	words.text = LORE_WORDS
+	words.add_theme_color_override("font_color", Palette.SAND)
+	row.add_child(words)
+
+
+func _show_lore() -> void:
+	_lore_left = LORE_TOTAL
+	_lore_age = 0.0
+	_lore_panel.visible = true
+
+
+func lore_pulse_visible() -> bool:
+	return _lore_panel != null and _lore_panel.visible
+
+
+func _step_lore(delta: float) -> void:
+	if _lore_left <= 0.0:
+		return
+	_lore_left -= delta
+	_lore_age += delta
+	_lore_panel.modulate.a = clampf(minf(_lore_age / TOAST_IN, _lore_left / TOAST_OUT), 0.0, 1.0)
+	_lore_panel.position = Vector2(_screen_size().x - _lore_panel.size.x - MARGIN, LORE_TOP)
+	if _lore_left <= 0.0:
+		_lore_panel.visible = false
 
 
 # The achievement toast on screen (its row's name), then the names still waiting.
@@ -804,6 +876,7 @@ func _process(delta: float) -> void:
 		layout(size)
 	_step_toast(delta)
 	_step_ach(delta)
+	_step_lore(delta)
 
 	var flow = game.flow
 	var playing: bool = flow.in_play()
