@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readdirSync,
   rmSync,
+  statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -14,7 +15,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
-  FOREIGN_CLAIM_MAX_MS,
+  HEARTBEAT_MS,
+  STALE_CLAIM_MS,
   MISSING_VERDICT,
   acquireSlot,
   binary,
@@ -266,16 +268,16 @@ test("a dead pid slot is reclaimed without waiting", async () => {
   }
 });
 
-// Rule: a sandboxed runner records its namespace pid (seen: 2), which on the
-// host names another user's process and answers EPERM. The pid cannot prove
-// liveness, so a young claim holds the slot and an old one is stale.
-test("a young foreign-pid claim holds its slot", async () => {
+// Rule: a sandboxed runner records a namespace pid that answers EPERM on the
+// host; only the claim's heartbeat mtime decides liveness.
+test("a fresh unkillable-pid claim holds its slot", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-young-"));
   try {
     assert.throws(() => process.kill(1, 0), { code: "EPERM" });
     const slot = path.join(directory, "slot-0");
     mkdirSync(slot);
     writeFileSync(path.join(slot, "claim-foreign"), "1");
+    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
     await assert.rejects(
       acquireSlot({
         directory,
@@ -292,7 +294,7 @@ test("a young foreign-pid claim holds its slot", async () => {
   }
 });
 
-test("an old foreign-pid claim is reclaimed without waiting", async () => {
+test("a stale unkillable-pid claim is reclaimed at once", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-slot-"));
   let lease;
   try {
@@ -300,15 +302,61 @@ test("an old foreign-pid claim is reclaimed without waiting", async () => {
     const slot = path.join(directory, "slot-0");
     mkdirSync(slot);
     writeFileSync(path.join(slot, "claim-foreign"), "1");
-    const old = (Date.now() - FOREIGN_CLAIM_MAX_MS - 60_000) / 1000;
+    const old = (Date.now() - STALE_CLAIM_MS - 60_000) / 1000;
     utimesSync(path.join(slot, "claim-foreign"), old, old);
+    assert.equal(namedRunMustWait({ directory, slots: 1 }), false);
     lease = await acquireSlot({
       directory,
       slots: 1,
-      sleep: async () => assert.fail("foreign pid made us wait"),
+      sleep: async () => assert.fail("stale claim made us wait"),
     });
     assert.equal(lease.slot, slot);
     assert.equal(existsSync(path.join(slot, "claim-foreign")), false);
+  } finally {
+    lease?.release();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("a lease heartbeat refreshes its claim mtime", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-heartbeat-"));
+  let lease;
+  try {
+    assert.ok(HEARTBEAT_MS < STALE_CLAIM_MS);
+    lease = await acquireSlot({ directory, slots: 1, heartbeatMs: 20 });
+    const claimFile = path.join(lease.slot, readdirSync(lease.slot)[0]);
+    const old = (Date.now() - 600_000) / 1000;
+    utimesSync(claimFile, old, old);
+    await new Promise((r) => setTimeout(r, 200));
+    assert.ok(Date.now() - statSync(claimFile).mtimeMs < STALE_CLAIM_MS);
+    assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
+  } finally {
+    lease?.release();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("a stale waiter directory is swept and a fresh one is kept", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-waiters-"));
+  let lease;
+  try {
+    const waiter = (name, ageMs) => {
+      const dir = path.join(directory, name);
+      mkdirSync(dir);
+      writeFileSync(path.join(dir, name), "99999999");
+      const t = (Date.now() - ageMs) / 1000;
+      utimesSync(dir, t, t);
+      return dir;
+    };
+    const stale = waiter("claim-1-stale", STALE_CLAIM_MS + 60_000);
+    const fresh = waiter("claim-2-fresh", 1000);
+    lease = await acquireSlot({
+      directory,
+      slots: 1,
+      sleep: async () => assert.fail("unexpected wait"),
+    });
+    assert.equal(existsSync(stale), false);
+    assert.equal(existsSync(fresh), true);
   } finally {
     lease?.release();
     rmSync(directory, { recursive: true, force: true });
