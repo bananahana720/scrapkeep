@@ -87,6 +87,10 @@ const TRIM_DB := {
 	"sunken_bell": -6.0, "ally_hum_sable": -14.0, "ally_hum_rivet": -14.0, "ally_hum_kest": -14.0,
 	"ally_wake": -6.0, "fight_arm_stamp": -4.0,
 	"near_miss_whip_sable": -6.0, "near_miss_whip_rivet": -6.0, "near_miss_whip_kest": -6.0,
+	"near_miss_whip_tarn": -6.0, "near_miss_whip_tally": -6.0, "near_miss_whip_cannon": -6.0,
+	"pickup_fountain": -8.0, "synergy_fired": -6.0, "evolution_fired": -5.0, "lore_found": -10.0,
+	"pilot_unlocked": -9.0, "pilot_unlocked_sable": -9.0, "pilot_unlocked_rivet": -9.0, "pilot_unlocked_kest": -9.0,
+	"pilot_unlocked_tarn": -9.0, "pilot_unlocked_tally": -9.0, "pilot_unlocked_cannon": -9.0,
 	"kill_chain_tier": -5.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
@@ -123,6 +127,8 @@ const BREAK_PHRASES := [
 ]
 # A synergy's motif is three of these, one baked note per midi number (cause_note_<midi>).
 const CAUSE_NOTE := "cause_note_"
+# The motif cell a class's whip lands on, when it is not the second (Tarn's first two are one note).
+const WHIP_SECOND := {"tarn": 2}
 const CAUSE_NOTE_DB := -8.0
 # Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
 # loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
@@ -556,8 +562,20 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _ally_wake()
 		"fight_arm_stamp":
 			return _fight_arm_stamp()
-		"near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest":
+		"near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest", "near_miss_whip_tarn", "near_miss_whip_tally", "near_miss_whip_cannon":
 			return _near_miss_whip(id.get_slice("_", 3))
+		"pickup_fountain":
+			return _pickup_fountain()
+		"synergy_fired":
+			return _synergy_fired()
+		"evolution_fired":
+			return _evolution_fired()
+		"lore_found":
+			return _lore_found()
+		"pilot_unlocked":
+			return _pilot_unlocked("sable")
+		"pilot_unlocked_sable", "pilot_unlocked_rivet", "pilot_unlocked_kest", "pilot_unlocked_tarn", "pilot_unlocked_tally", "pilot_unlocked_cannon":
+			return _pilot_unlocked(id.get_slice("_", 2))
 		"kill_chain_tier":
 			return _kill_chain_tier()
 		"drop_landing":
@@ -1537,9 +1555,53 @@ static func _near_miss_whip(class_id: String) -> PackedFloat32Array:
 	var cells: Array = row["cells"]
 	var voice: String = row["voice"]
 	var a: int = int(cells[0][1]) + 12
-	var b: int = int(cells[1][1]) + 12
+	var b: int = int(cells[WHIP_SECOND.get(class_id, 1)][1]) + 12
 	return _mix([[_noise(0.22, 700.0, 4800.0, 9.0, 0.04), 0, 0.85],
 		[_cut(_n(voice, a), 0.16), 0, 0.8], [_cut(_n(voice, b), 0.22), Synth.seconds(0.09), 0.85]])
+
+
+# Four bright notes up the home key's pentatonic, D F G A, a fountain of scrap: a rising
+# mallet line with a bell an octave over it and a spray of noise on the last note.
+static func _pickup_fountain() -> PackedFloat32Array:
+	var step := Synth.seconds(0.075)
+	var parts: Array = []
+	var notes := [74, 77, 79, 81]
+	for i in notes.size():
+		parts.append([_cut(_n("mallet", notes[i]), 0.2), i * step, 0.75 + 0.07 * i])
+		parts.append([_cut(_n("bell", notes[i] + 12), 0.2), i * step, 0.25])
+	parts.append([_noise(0.08, 5200.0, 3200.0, 30.0), 3 * step, 0.3])
+	return _mix(parts)
+
+
+# Two causes become one: A below and D above close in on F, the minor third of the home
+# key, which rings as a chord of bells over the keys.
+static func _synergy_fired() -> PackedFloat32Array:
+	var score := [[0, 69, 2, "mallet", 0.7], [1, 86, 2, "bell", 0.6], [3, 77, 5, "mallet", 0.85], [3, 77, 5, "bell", 0.4],
+		[3, 65, 5, "keys", 0.35], [3, 62, 5, "keys", 0.3]]
+	return Synth.render_score(score, 0.05)
+
+
+# Something became more: the fourth A to D, then the octave over it, ringing.
+static func _evolution_fired() -> PackedFloat32Array:
+	var score := [[0, 69, 2, "mallet", 0.7], [2, 74, 2, "mallet", 0.8], [4, 86, 4, "mallet", 0.9], [4, 86, 4, "bell", 0.5],
+		[4, 74, 4, "keys", 0.35], [4, 62, 4, "sub808", 0.4]]
+	return Synth.render_score(score, 0.05)
+
+
+# A page turned and a note was written: a soft falling pair, A then F, a breath of
+# paper under the first, one quiet low note after.
+static func _lore_found() -> PackedFloat32Array:
+	return _mix([[_noise(0.14, 3000.0, 1200.0, 18.0, 0.03), 0, 0.3],
+		[_cut(_n("keys", 81), 0.3), 0, 0.8], [_cut(_n("keys", 77), 0.4), Synth.seconds(0.2), 0.7],
+		[_cut(_n("bell", 74), 0.45), Synth.seconds(0.42), 0.35]])
+
+
+# The pilot's own motif opening: its first phrase on its own voice, cut to under a second.
+static func _pilot_unlocked(class_id: String) -> PackedFloat32Array:
+	var row := Harmony.motif_or_first(class_id)
+	var score := _motif_score(class_id, 0, row["voice"], 0.8)
+	score.append_array(_motif_score(class_id, 0, "bell", 0.25, 12))
+	return _cut(Synth.render_score(score, 0.4), 0.85)
 
 
 # A two-note ladder stab, the kill chain's own accent so a tier never sounds like a lone
