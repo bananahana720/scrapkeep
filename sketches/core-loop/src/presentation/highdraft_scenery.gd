@@ -529,6 +529,8 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	var grid: MeshInstance3D = views[0]
 	var arrays := grid.mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	if arrays[Mesh.ARRAY_INDEX] == null:
+		return
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var rect: Rect2 = map.play_rect
 	var deck: float = HighdraftMap.NET_H + 0.05
