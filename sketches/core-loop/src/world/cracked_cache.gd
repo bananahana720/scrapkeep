@@ -3,6 +3,7 @@ extends "res://src/world/device.gd"
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const StageMap := preload("res://src/world/stage_map.gd")
 
 # A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
 # section 9): a verdigris concrete pocket with a charcoal groove, its open side walled
@@ -48,6 +49,12 @@ var _inside: Array = []
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
 const REQUIRED := ["CacheShell", "CacheWall", "CacheChest", "CacheLid", "CachePedestal"]
 static var _shared: Array = []
+# VX3: the shell and chest wear the workshop finish (concrete and painted metal), whose
+# chipped edges give the pocket a lighter rim. The finish multiplies the vertex colours, so the
+# amber signpost painted into them stays amber.
+const FINISH := {"device_concrete": 0, "device_metal": 1}
+# One warm lamp over the cracked face, no shadow: it lights the wall and the pocket's rim.
+const RIM_LIGHT := {"energy": 1.6, "range": 14.0, "at": Vector3(0.0, HEIGHT + 1.5, HALF_D + 4.0)}
 static var _loaded := false
 
 
@@ -62,6 +69,7 @@ func build() -> void:
 	else:
 		_build_model(parts)
 	_build_pedestals(parts)
+	_build_rim_light()
 	ctx.events.slammed.connect(_on_slammed)
 
 
@@ -294,6 +302,25 @@ func _build_model(parts: Array) -> void:
 	_lid.position = chest + Vector3.UP * 1.35
 
 
+func _build_rim_light() -> void:
+	var light := OmniLight3D.new()
+	light.name = "CacheRimLight"
+	light.light_color = Palette.SAND
+	light.light_energy = RIM_LIGHT.energy
+	light.omni_range = RIM_LIGHT.range
+	light.shadow_enabled = false
+	light.position = RIM_LIGHT.at
+	add_child(light)
+
+
+# Mesh-local size for the workshop shader's edge chips; meshes need not be centred.
+static func _finish_size(vertices: PackedVector3Array) -> Vector3:
+	var reach := Vector3.ZERO
+	for at in vertices:
+		reach = reach.max(at.abs())
+	return reach * 2.0
+
+
 static func _slot_material(slot: String) -> StandardMaterial3D:
 	if slot not in ["device_concrete", "device_metal", "device_marks"]:
 		return null
@@ -335,7 +362,11 @@ static func _parts() -> Array:
 					or arrays[Mesh.ARRAY_COLOR] == null or arrays[Mesh.ARRAY_COLOR].size() != arrays[Mesh.ARRAY_VERTEX].size()):
 					valid = false
 					break
-				mesh.surface_set_material(s, mat)
+				var finished: Material = mat
+				if FINISH.has(mat.resource_name):
+					finished = StageMap.dressed_surface(Color.WHITE, FINISH[mat.resource_name],
+						_finish_size(arrays[Mesh.ARRAY_VERTEX]), Palette.CHARCOAL, mat)
+				mesh.surface_set_material(s, finished)
 			var xf := Transform3D.IDENTITY
 			var walk: Node = view
 			while walk != scene and walk != null:
