@@ -7,10 +7,14 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const Icons := preload("res://src/ui/icons.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # The callout that shows why a synergy fired, through the real game on the slice table. Every
-# CAUSE_ROWS id is fired and must draw a callout in its row's shape and colour with two cause
-# glyphs and a name; it runs 0.9 s; the name shows on a profile's first three firings only;
+# CAUSE_ROWS id is fired and must draw a callout in its row's shape and colour with its two
+# callout parts' icons and a name; it runs 0.9 s; the name shows on a profile's first three
+# firings, the callout's three words after; a wave 11 callout (Tesla Pylon's Live Line) draws
+# two registered icons that resolve to textures;
 # one callout per row per 4 s, one on screen in a fight and two when calm, and a firing over
 # a limit still pulses the body; arming links two glyphs at the ball with no banner and
 # the discovery burst and ring are gone; a discovery card raised in a fight waits for 3 s of
@@ -84,12 +88,12 @@ func _run() -> void:
 		_fresh()
 		var row: Dictionary = EventKinds.cause_row(id)
 		var named: bool = Synergies.ROWS.has(id) and String(Synergies.ROWS[id]["name"]) != ""
-		var glyphs: Array = WhyCallout.cause_shapes(id)
+		var glyphs: Array = WhyCallout.callout_icons(id)
 		events.cause_fired.emit(id, null, AT)
 		var pieces: Array = _why.callouts()
 		var piece = pieces[0] if pieces.size() == 1 else null
-		_check("WY2-1 %s" % id, named and glyphs.size() == 2 and piece != null and piece.shape == String(row["shape"]) and piece.color == EventKinds.cause_color(id) and piece.cause_shapes == glyphs,
-			"named %s, cause glyphs %s, %d callout, shape %s against row %s, colour on the row's %s" % [named, glyphs, pieces.size(), piece.shape if piece != null else "none", row["shape"], EventKinds.cause_color(id) == (piece.color if piece != null else Color.BLACK)])
+		_check("WY2-1 %s" % id, named and glyphs.size() == 2 and piece != null and piece.shape == String(row["shape"]) and piece.color == EventKinds.cause_color(id) and piece.part_icons == glyphs,
+			"named %s, part icons %s, %d callout, shape %s against row %s, colour on the row's %s" % [named, glyphs, pieces.size(), piece.shape if piece != null else "none", row["shape"], EventKinds.cause_color(id) == (piece.color if piece != null else Color.BLACK)])
 		_why.profile.glyph_uses.erase(WhyCallout.USE_PREFIX + id)
 
 	_fresh()
@@ -112,8 +116,24 @@ func _run() -> void:
 		words.append(" ".join(shown.drawn_words()))
 		_steps(250)
 	var name_text: String = String(Synergies.ROWS["pinwheel"]["name"])
-	_check("WY2-3", words[0] == name_text and words[1] == name_text and words[2] == name_text and words[3] == "" and WordBudget.words_in(name_text) <= 3,
+	var call_words: String = String(Synergies.callout("pinwheel")["words"])
+	_check("WY2-3", words[0] == name_text and words[1] == name_text and words[2] == name_text and words[3] == call_words and WordBudget.words_in(name_text) <= 3
+			and WordBudget.words_in(call_words) == 3,
 		"firings one to four report %s" % [words])
+
+	_fresh()
+	var call := Synergies.callout("tesla_pylon")
+	events.cause_fired.emit("tesla_pylon", null, AT)
+	var tesla = _why.callouts()[0] if _why.callouts().size() == 1 else null
+	var icons: Array = tesla.part_icons if tesla != null else []
+	var resolve := icons.size() == 2 and icons.all(func(icon): return Icons.has(icon) and Icons.texture(icon) != null)
+	if tesla != null:
+		tesla.queue_redraw()
+	await process_frame
+	_check("GP2-3 new callout icons", call["b"] == "live_line" and resolve
+			and icons == [Parts.icon_of(call["a"]), Parts.icon_of(call["b"])],
+		"Tesla Pylon's callout %s + %s draws icons %s, registered and textured %s" % [call["a"], call["b"], icons, resolve])
+	_why.profile.glyph_uses.erase(WhyCallout.USE_PREFIX + "tesla_pylon")
 
 	_fresh()
 	events.cause_fired.emit("wrecking_ball", null, AT)
@@ -145,6 +165,8 @@ func _run() -> void:
 	_check("WY2-4 damage is a fight", _why.fight() and _why.callouts().size() == 1, "after a hit two rows drew %d callout" % _why.callouts().size())
 
 	_fresh()
+	# Let the cleared callouts leave the tree, so the counted one keeps the node name "Callout".
+	await process_frame
 	_why.profile.glyph_uses.erase(WhyCallout.USE_PREFIX + "pinwheel")
 	events.cause_fired.emit("pinwheel", null, AT)
 	var counted := WordBudget.count(_game.hud)
