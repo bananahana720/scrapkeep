@@ -353,15 +353,19 @@ func _show_paint() -> void:
 
 
 # What a locked pilot's card says: the class row's unlock label, with the lifetime count when
-# the rule's achievement row needs more than one. Empty for a starter or a row with no label,
+# the rule's achievement row needs more than one; a def made without unlock reads its id's row.
+# Empty for a starter or a pilot with no label,
 # so the card says only "Locked" and never something false. progress may be null (count 0).
 static func unlock_hint(def, progress) -> String:
 	if def.starter:
 		return ""
-	var label := String(def.unlock.get("label", ""))
+	var unlock: Dictionary = def.unlock
+	if unlock.is_empty() and ClassDef.by_id(def.id) != null:
+		unlock = ClassDef.by_id(def.id).unlock
+	var label := String(unlock.get("label", ""))
 	if label == "":
 		return ""
-	var id: String = ClassDef.unlock_row(String(def.unlock.get("by", "")))
+	var id: String = ClassDef.unlock_row(String(unlock.get("by", "")))
 	var need := int(Achievements.row(id).get("count", 1))
 	if need <= 1:
 		return label
