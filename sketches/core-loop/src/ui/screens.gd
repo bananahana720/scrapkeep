@@ -16,6 +16,7 @@ const Achievements := preload("res://src/core/achievements.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const EndingSequence := preload("res://src/ui/ending_sequence.gd")
+const PrologueRows := preload("res://src/core/prologue_rows.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -46,6 +47,7 @@ const TITLE := "SCRAPKEEP: FIRST RUN"
 # its first ENDING_HOLD seconds no key closes it, so a press meant for the fight cannot skip
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
 const ENDING_HOLD := 1.0
+const PROLOGUE_TITLE := "FIRST SHIFT"
 
 var game
 var _victory_boss := {}
@@ -57,6 +59,8 @@ var _body: Label
 var _stats: HBoxContainer
 var _choices: HBoxContainer
 var _actions: HFlowContainer
+# Under the title's buttons: why a saved run was refused, so New run is the plain next step.
+var _refusal: Label
 var _help
 var _achievements
 var _settings
@@ -69,6 +73,10 @@ var ending_sequence
 var _guard := 0.0
 var _tween: Tween
 var _state := ""
+# The prologue (PrologueRows) plays on the first pilot select of a profile. A bot-driven game
+# (the headless tests) skips it unless it opts in, so its Start lands on the cards as before.
+var prologue_enabled := true
+var _prologue_line := -1
 
 
 func setup(game_ref) -> void:
@@ -105,6 +113,14 @@ func setup(game_ref) -> void:
 	_actions.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_actions)
+	_refusal = _label(18)
+	_refusal.add_theme_color_override("font_color", Palette.SAND)
+	_refusal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_refusal.custom_minimum_size = Vector2(1000.0, 0.0)
+	_refusal.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_refusal.visible = false
+	_content.add_child(_refusal)
+	prologue_enabled = not game.bot_driven
 	_help = HelpPage.new()
 	_help.visible = false
 	_help.back.pressed.connect(_press.bind("key_h"))
@@ -174,8 +190,11 @@ func _on_flow_changed(state: String) -> void:
 	_camp.visible = false
 	_ending.visible = false
 	_ending_left = 0.0
+	_prologue_line = -1
+	_refusal.text = ""
 	_title.visible = true
 	_stats.visible = true
+	_choices.visible = true
 	_actions.visible = true
 	_fit_actions()
 	for row in [_stats, _choices, _actions]:
@@ -185,12 +204,10 @@ func _on_flow_changed(state: String) -> void:
 	match state:
 		"title":
 			# Continue (RS6) leads when a saved run is valid, so a pad's first focus lands on
-			# it; a saved file this build cannot use names its cause and leaves New run only.
+			# it; a saved file this build cannot use names its cause under the buttons and
+			# leaves New run, focused, as the next step.
 			game.flow.saved_run()
-			var body: String = FieldNotes.OBJECTIVE
-			if game.flow.saved_run_cause != "":
-				body = "Saved run not loaded (%s): %s\n\n%s" % [game.flow.saved_run_cause, game.flow.saved_run_why, body]
-			_show(TITLE, Palette.AMBER, body)
+			_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 			if game.flow.continue_ready:
 				_action("continue", "key_c", "Continue")
 			var saved: bool = game.flow.continue_ready or game.flow.saved_run_cause != ""
@@ -204,6 +221,9 @@ func _on_flow_changed(state: String) -> void:
 			if game.tuning.option(Tuning.MUSIC_KEY) == "ace":
 				_action("breath", "key_b", "")
 			refresh_lab_row()
+			if game.flow.saved_run_cause != "":
+				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
+				button_for("start").grab_focus()
 		"class_select":
 			_show("Choose your class", Palette.SAND, "")
 			var classes: Array = game.flow.classes
@@ -219,6 +239,8 @@ func _on_flow_changed(state: String) -> void:
 			# The cards' wrapped words measure true only once laid out, so the row levels next frame.
 			if not get_tree().process_frame.is_connected(_level_cards):
 				get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+			if _prologue_due():
+				_begin_prologue()
 		"dead":
 			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
 			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.ctx.stages.local(game.run.stage))
@@ -252,6 +274,103 @@ func _on_flow_changed(state: String) -> void:
 				_open_ending()
 	_fade(state in MENU_STATES)
 	_update_enabled()
+
+
+# The sentence a refused saved run gives: game.continue_refusal() when the build has it, else
+# the run store's last error, else flow's reason for a document it could not apply.
+func continue_refusal() -> String:
+	if game.flow.saved_run_cause == "":
+		return ""
+	if game.has_method("continue_refusal"):
+		var said := String(game.continue_refusal())
+		if said != "":
+			return said
+	if game.flow.store != null and String(game.flow.store.last_error) != "":
+		return String(game.flow.store.last_error)
+	return game.flow.saved_run_why
+
+
+func refusal_text() -> String:
+	return _refusal.text if _refusal.visible else ""
+
+
+# The UI profile records the prologue as a seen callout; see REPORT ST5 for why not the codex.
+func _prologue_due() -> bool:
+	if not prologue_enabled:
+		return false
+	var profile = game.hud.profile if game.hud != null else null
+	return profile != null and not profile.seen(PrologueRows.ID)
+
+
+func _begin_prologue() -> void:
+	game.hud.profile.mark_seen(PrologueRows.ID)
+	_prologue_line = 0
+	_choices.visible = false
+	_show_prologue_line()
+
+
+func prologue_showing() -> bool:
+	return _prologue_line >= 0
+
+
+func prologue_line() -> int:
+	return _prologue_line
+
+
+func _show_prologue_line() -> void:
+	var row: Dictionary = PrologueRows.ROWS[_prologue_line]
+	_show(PROLOGUE_TITLE, Palette.AMBER, "%s: %s" % [row["speaker"], row["text"]])
+	for child in _actions.get_children():
+		_actions.remove_child(child)
+		child.queue_free()
+	var last := _prologue_line == PrologueRows.ROWS.size() - 1
+	var next := ChoiceButton.new("prologue_next", "key_e", "Clock in" if last else "Next")
+	next.pressed.connect(advance_prologue)
+	_actions.add_child(next)
+	_fade(true)
+
+
+# The interact key, pad Y or the Next button: the next line, and after the last the cards.
+func advance_prologue() -> void:
+	if not prologue_showing():
+		return
+	_prologue_line += 1
+	if _prologue_line >= PrologueRows.ROWS.size():
+		end_prologue()
+	else:
+		_show_prologue_line()
+
+
+# Fire or hook skips what is left, as they end a zone-entry exchange.
+func end_prologue() -> void:
+	if not prologue_showing():
+		return
+	_prologue_line = -1
+	for child in _actions.get_children():
+		_actions.remove_child(child)
+		child.queue_free()
+	_show("Choose your class", Palette.SAND, "")
+	_choices.visible = true
+	if not get_tree().process_frame.is_connected(_level_cards):
+		get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+	_fade(true)
+
+
+# While the prologue shows, every key but Escape stays on it, so a number cannot pick a
+# pilot unseen. A click on its own button is the GUI's, not a skip.
+func _prologue_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var next := button_for("prologue_next")
+		if next != null and next.get_global_rect().has_point(event.position):
+			return
+	if event.is_action_pressed("cl_interact"):
+		advance_prologue()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
+		end_prologue()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and event.physical_keycode != KEY_ESCAPE:
+		get_viewport().set_input_as_handled()
 
 
 # H on the title swaps its body and actions for the how-to-play page, and back.
@@ -368,9 +487,12 @@ func achievements_page():
 	return _achievements
 
 
-# The words on a locked pilot's card: the pilot's reward row text and lifetime count.
+# The words on a locked pilot's card: the pilot's reward row text and lifetime count, then
+# the row's beat, the one line of why.
 func _unlock_hint(def) -> String:
-	return ClassCard.unlock_hint(def, game.progress)
+	var hint := ClassCard.unlock_hint(def, game.progress)
+	var beat := Achievements.beat_of(Achievements.for_pilot(def.id))
+	return hint if hint == "" or beat == "" else "%s\n%s" % [hint, beat]
 
 
 # With --music=ace the title's B cycles the Warden open's held breath; the button
@@ -451,6 +573,9 @@ func _input(event: InputEvent) -> void:
 		if _ending_left <= 0.0 and _ending_closes(event):
 			_close_ending()
 			get_viewport().set_input_as_handled()
+		return
+	if prologue_showing():
+		_prologue_input(event)
 		return
 	if _settings.visible:
 		if _settings.handle(event):
@@ -630,6 +755,7 @@ func _update_enabled() -> void:
 	for row in [_choices, _actions]:
 		for child in row.get_children():
 			(child as BaseButton).disabled = not live
+	_refusal.visible = _state == "title" and _actions.visible and _refusal.text != ""
 
 
 func button_for(action: String) -> Button:
@@ -668,4 +794,7 @@ func body_text() -> String:
 		lines.append("%s   %s" % [Keycap.label(card.key), card.words().to_lower()])
 	for button in _actions.get_children():
 		lines.append("%s   %s" % [Keycap.label(button.key), button.text.to_lower()])
+	if refusal_text() != "":
+		lines.append("")
+		lines.append(refusal_text())
 	return "\n".join(lines)

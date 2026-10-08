@@ -71,7 +71,7 @@ func _init() -> void:
 		{"id": "cracked_cache", "at": Vector2(-100.0, -100.0)},
 	]
 	# Lower tier: Kest's cage on flat ground west of the beacon, clear of the plates and the route.
-	rescue_sites = [{"id": "kest_cage", "quest": "dig", "at": Vector2(-60.0, 90.0), "face": Vector2(1.0, 0.0)}]
+	rescue_sites = [{"id": "kest_cage", "quest": "dig", "prompt": "free the digger", "at": Vector2(-60.0, 90.0), "face": Vector2(1.0, 0.0)}]
 	breach_plates = BREACH_PLATES.duplicate(true)
 	for plate in breach_plates:
 		# 2026-10-04: id + "_before" is the pre-break overlay, as map_gorge.gd and world._swap use it.
