@@ -7,7 +7,14 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
-const VISUAL_CATCH_GAIN := 8.0
+const CAPTURE_DEPTH := 0.05
+const CAPTURE_AT := 0.2
+# Drawn bowl is at most twice the physical sink, so the ball rests in the net it draws.
+const VISUAL_CATCH_GAIN := 2.0
+const RIPPLE_SECONDS := 0.5
+const CAPTURE_RIPPLE_SECONDS := 0.3
+const CAPTURE_RIPPLE_SCALE := 0.5
+const PULSE_SECONDS := 0.2
 const CATCH_RADIUS := 6.0
 const CHUNK := 32.0
 const CLOUD_WRAP := 650.0
@@ -25,6 +32,7 @@ var cloud_placements: Array[Transform3D] = []
 var cloud_velocities: Array[Vector3] = []
 var clock := 0.0
 var frozen := false
+var reduced_motion := false
 var low := false
 var _map
 var _last_ball := Vector3.INF
@@ -131,6 +139,7 @@ func _net_chunk(view: MultiMeshInstance3D, shader: Shader) -> void:
 	material.set_shader_parameter("fade_end", 0.5)
 	material.set_shader_parameter("catch_point", Vector4(0.0, 0.0, 0.0, CATCH_RADIUS))
 	material.set_shader_parameter("visual_catch_gain", VISUAL_CATCH_GAIN)
+	material.set_shader_parameter("ring_glow", Palette.SAND)
 	view.material_override = material
 	view.custom_aabb = view.custom_aabb.grow(CATCH_DEPTH * VISUAL_CATCH_GAIN)
 	var at: Vector3 = (view.get_meta("placements") as Array[Transform3D])[0].origin
@@ -214,8 +223,10 @@ func catch_at(ball: Vector3) -> void:
 				continue
 			var material: ShaderMaterial = chunks[key]
 			active_catches = active_catches.filter(func(row): return row.material != material)
-			active_catches.append({"material": material, "at": point, "age": 0.0})
+			var row := {"material": material, "at": point, "age": 0.0, "front": 0.0, "capture_front": -1.0, "captured": false}
+			active_catches.append(row)
 			material.set_shader_parameter("catch_point", Vector4(point.x, point.y, CATCH_DEPTH, CATCH_RADIUS))
+			_glow(row)
 
 
 # The existing landing signal arrives during force integration. Read the committed body
@@ -229,13 +240,51 @@ func on_landed(_impact: float, player: Node3D) -> void:
 		catch_at(physics.transform.origin)
 
 
+func _sink(age: float) -> float:
+	if age < CAPTURE_AT:
+		return lerpf(CATCH_DEPTH, CAPTURE_DEPTH, smoothstep(0.0, 1.0, age / CAPTURE_AT))
+	var phase := clampf((age - CAPTURE_AT) / (CATCH_SECONDS - CAPTURE_AT), 0.0, 1.0)
+	# Spring toward rest with a smaller second settle. Never above the deck.
+	return CAPTURE_DEPTH * pow(1.0 - phase, 2.0) * (0.75 + 0.25 * cos(phase * TAU * 1.5))
+
+
+# Ring fronts are metres from the contact point; the shader brightens cords at that distance.
+func _glow(row: Dictionary) -> void:
+	var at: Vector2 = row.at
+	var material: ShaderMaterial = row.material
+	if reduced_motion:
+		var level := clampf(1.0 - row.age / PULSE_SECONDS, 0.0, 1.0)
+		material.set_shader_parameter("pulse", Vector4(at.x, at.y, CATCH_RADIUS, level))
+		return
+	var first := clampf(row.age / RIPPLE_SECONDS, 0.0, 1.0)
+	row.front = CATCH_RADIUS * first
+	material.set_shader_parameter("ring_a", Vector4(at.x, at.y, row.front, 1.0 - first if first < 1.0 else 0.0))
+	if row.captured:
+		var second := clampf((row.age - CAPTURE_AT) / CAPTURE_RIPPLE_SECONDS, 0.0, 1.0)
+		row.capture_front = CATCH_RADIUS * CAPTURE_RIPPLE_SCALE * second
+		material.set_shader_parameter("ring_b", Vector4(at.x, at.y, row.capture_front, 1.0 - second if second < 1.0 else 0.0))
+
+
+func _glow_end(row: Dictionary) -> void:
+	var material: ShaderMaterial = row.material
+	material.set_shader_parameter("ring_a", Vector4.ZERO)
+	material.set_shader_parameter("ring_b", Vector4.ZERO)
+	material.set_shader_parameter("pulse", Vector4.ZERO)
+
+
 func _step_catches(delta: float) -> void:
 	if active_catches.is_empty():
 		return
 	for row in active_catches:
 		row.age += delta
-		var phase: float = clampf(row.age / CATCH_SECONDS, 0.0, 1.0)
-		# Fast shallow catch, spring toward rest, a smaller second settle. Never above the deck.
-		var depth := CATCH_DEPTH * pow(1.0 - phase, 2.0) * (0.75 + 0.25 * cos(phase * TAU * 1.5))
-		row.material.set_shader_parameter("catch_point", Vector4(row.at.x, row.at.y, depth, CATCH_RADIUS))
-	active_catches = active_catches.filter(func(row): return row.age < CATCH_SECONDS)
+		if row.age >= CAPTURE_AT:
+			row.captured = true
+		row.material.set_shader_parameter("catch_point", Vector4(row.at.x, row.at.y, _sink(row.age), CATCH_RADIUS))
+		_glow(row)
+	var live: Array[Dictionary] = []
+	for row in active_catches:
+		if row.age < maxf(RIPPLE_SECONDS, CAPTURE_AT + CAPTURE_RIPPLE_SECONDS):
+			live.append(row)
+		else:
+			_glow_end(row)
+	active_catches = live

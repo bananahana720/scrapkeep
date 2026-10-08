@@ -69,6 +69,7 @@ func _run() -> void:
 		t.check("spring returns toward rest", middle.z > 0.0 and middle.z < sag.z)
 		fx.step(0.21, contact)
 		t.near("sag uniform returns to rest", (material.get_shader_parameter("catch_point") as Vector4).z, 0.0)
+		fx.step(0.1, contact)
 		t.eq("completed catch retires", fx.active_catches.size(), 0)
 	fx.step(0.01, contact - Vector3.UP * 3.0)
 	fx.step(0.01, contact)
