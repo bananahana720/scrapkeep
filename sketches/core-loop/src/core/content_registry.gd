@@ -19,6 +19,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
@@ -281,6 +282,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			elif row.kind == "intro":
 				cap = Lore.INTRO_LINE_WORD_CAP
 				_ref(issues, name, id, "subject", row.get("subject", ""), ["warden"] + Worlds.BOSSES.keys())
+				_intro_zone(issues, name, id, row)
 			_words(issues, name, id, row.text, 1, cap)
 		"music":
 			_ref(issues, name, id, "theme", row.synth_theme, range(Music.THEME_COUNT))
@@ -374,6 +376,26 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 
 static func _selectable_node(node) -> bool:
 	return node is Dictionary and node.get("id") is String and node.id.strip_edges() != ""
+
+
+# An intro row's zone must be a stage of the table. The Warden line plays at engagement in any
+# zone; the second line is the boss's, voiced at the arena of the world's last zone, and is
+# reserved (valid, unplayed) in the world's earlier zones. It is only valid for the boss that
+# the zone's world owns.
+static func _intro_zone(issues: Array, name: String, id: String, row: Dictionary) -> void:
+	var parts := String(row.zone).split("-")
+	var world := int(parts[0]) if parts.size() == 2 and parts[0].is_valid_int() else 0
+	var local := int(parts[1]) if parts.size() == 2 and parts[1].is_valid_int() else 0
+	var found := false
+	for stage in StageDefs.COUNT:
+		if StageDefs.world_of(stage + 1) == world and StageDefs.local(stage + 1) == local:
+			found = true
+	if not found:
+		_issue(issues, name, "references", id, "intro zone '%s' has no stage" % row.zone)
+		return
+	var subject: String = row.get("subject", "")
+	if subject != "warden" and subject != String(Worlds.row(world).get("boss", "")):
+		_issue(issues, name, "reachable", id, "second intro line needs a boss row for world %d; '%s' is not it" % [world, subject])
 
 
 static func _objective_ids() -> Array:
