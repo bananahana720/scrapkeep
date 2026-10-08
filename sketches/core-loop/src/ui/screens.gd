@@ -8,6 +8,7 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
+const ClassKit := preload("res://src/ui/class_kit.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
@@ -17,6 +18,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const EndingSequence := preload("res://src/ui/ending_sequence.gd")
 const PrologueRows := preload("res://src/core/prologue_rows.gd")
+const CreditsHint := preload("res://src/ui/credits_hint.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -48,6 +50,9 @@ const TITLE := "SCRAPKEEP: FIRST RUN"
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
 const ENDING_HOLD := 1.0
 const PROLOGUE_TITLE := "FIRST SHIFT"
+# Start is the one filled button on the title: the primary action reads first and biggest.
+const PRIMARY_FONT := 26
+const PRIMARY_HEIGHT := 60.0
 
 var game
 var _victory_boss := {}
@@ -61,6 +66,10 @@ var _choices: HBoxContainer
 var _actions: HFlowContainer
 # Under the title's buttons: why a saved run was refused, so New run is the plain next step.
 var _refusal: Label
+# Under the class cards: how to choose and start, drawn with the title's keycaps.
+var _footer
+# The ACE music's held breath, on the settings page (B); the title no longer carries it.
+var _breath_row: Button
 var _help
 var _achievements
 var _settings
@@ -120,6 +129,10 @@ func setup(game_ref) -> void:
 	_refusal.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_refusal.visible = false
 	_content.add_child(_refusal)
+	_footer = CreditsHint.new()
+	_footer.visible = false
+	_footer.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_content.add_child(_footer)
 	prologue_enabled = not game.bot_driven
 	_help = HelpPage.new()
 	_help.visible = false
@@ -134,6 +147,11 @@ func setup(game_ref) -> void:
 	_settings.setup(game, "key_esc")
 	_settings.back_requested.connect(toggle_settings)
 	_content.add_child(_settings)
+	_breath_row = ChoiceButton.new("breath", "key_b", "")
+	_breath_row.pressed.connect(_press.bind("key_b"))
+	_breath_row.visible = false
+	_breath_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_content.add_child(_breath_row)
 	_camp = CampMenu.new()
 	_camp.visible = false
 	_camp.button_for("launch").pressed.connect(_press.bind("key_space"))
@@ -191,6 +209,8 @@ func _on_flow_changed(state: String) -> void:
 	_ending.visible = false
 	_ending_left = 0.0
 	_prologue_line = -1
+	_footer.visible = false
+	_breath_row.visible = false
 	_refusal.text = ""
 	_title.visible = true
 	_stats.visible = true
@@ -218,9 +238,6 @@ func _on_flow_changed(state: String) -> void:
 			if game.ctx.profile != null and not game.ctx.profile.companion().is_empty():
 				_companion_action()
 			_action("camp", "key_k", "Camp")
-			if game.tuning.option(Tuning.MUSIC_KEY) == "ace":
-				_action("breath", "key_b", "")
-			refresh_lab_row()
 			if game.flow.saved_run_cause != "":
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()
@@ -239,6 +256,9 @@ func _on_flow_changed(state: String) -> void:
 			# The cards' wrapped words measure true only once laid out, so the row levels next frame.
 			if not get_tree().process_frame.is_connected(_level_cards):
 				get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+			_footer.setup([{"cap": "key_1", "say": "1"}, {"say": "to"}, {"cap": "key_%d" % classes.size(), "say": str(classes.size())},
+				{"say": "choose"}, {"say": "·"}, {"cap": "key_enter", "say": "Enter"}, {"say": "start"}])
+			_footer.visible = true
 			if _prologue_due():
 				_begin_prologue()
 		"dead":
@@ -306,6 +326,7 @@ func _begin_prologue() -> void:
 	game.hud.profile.mark_seen(PrologueRows.ID)
 	_prologue_line = 0
 	_choices.visible = false
+	_footer.visible = false
 	_show_prologue_line()
 
 
@@ -351,6 +372,7 @@ func end_prologue() -> void:
 		child.queue_free()
 	_show("Choose your class", Palette.SAND, "")
 	_choices.visible = true
+	_footer.visible = true
 	if not get_tree().process_frame.is_connected(_level_cards):
 		get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
 	_fade(true)
@@ -418,7 +440,9 @@ func toggle_settings() -> void:
 		_settings.refresh()
 		_show("SETTINGS", Palette.AMBER, "")
 		_settings.focus("fullscreen")
+		refresh_lab_row()
 	else:
+		_breath_row.visible = false
 		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
 	_fade(true)
 
@@ -495,12 +519,11 @@ func _unlock_hint(def) -> String:
 	return hint if hint == "" or beat == "" else "%s\n%s" % [hint, beat]
 
 
-# With --music=ace the title's B cycles the Warden open's held breath; the button
-# names what the next run plays.
+# With --music=ace the settings page's Breath button (B) cycles the Warden open's held
+# breath and names what the next run plays; with the synth the button is hidden.
 func refresh_lab_row() -> void:
-	var breath := button_for("breath")
-	if breath != null:
-		breath.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
+	_breath_row.visible = _settings.visible and game.tuning.option(Tuning.MUSIC_KEY) == "ace"
+	_breath_row.text = "Breath: %s" % game.tuning.option(Tuning.BREATH_KEY)
 
 
 func overlay_open() -> bool:
@@ -517,6 +540,8 @@ func start_ending_sequence() -> void:
 	_ending.visible = false
 	_content.visible = false
 	_veil.visible = false
+	if game.hud != null:
+		game.hud.clear_achievement_toasts()
 	_ending_left = ENDING_HOLD
 	game.summary_guard_left = game.SUMMARY_GUARD
 	ending_sequence = EndingSequence.new()
@@ -646,7 +671,27 @@ func _show(title: String, color: Color, body: String) -> void:
 func _action(id: String, key: String, words: String) -> void:
 	var button := ChoiceButton.new(id, key, words)
 	button.pressed.connect(_press.bind(key))
+	if id == "start":
+		_make_primary(button)
 	_actions.add_child(button)
+
+
+# The filled amber plate, charcoal words and a taller, larger face; the unfilled focus ring
+# stays so keyboard focus still reads.
+func _make_primary(button: Button) -> void:
+	var left := ChoiceButton.PAD + Keycap.size_of(button.key, ChoiceButton.KEY_H).x + ChoiceButton.PAD
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var box := ChoiceButton.plate(Palette.AMBER, 2, left)
+		box.bg_color = Palette.AMBER.lightened(0.15) if state == "hover" else Palette.AMBER
+		if state == "disabled":
+			box.bg_color = Color(Palette.AMBER, 0.5)
+		button.add_theme_stylebox_override(state, box)
+	button.add_theme_stylebox_override("focus", ChoiceButton.plate(Color.WHITE, 4, left, false))
+	for color in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		button.add_theme_color_override(color, Palette.CHARCOAL)
+	button.add_theme_font_size_override("font_size", PRIMARY_FONT)
+	button.custom_minimum_size.y = PRIMARY_HEIGHT
+	button.set_meta("primary", true)
 
 
 # The death screen's, the summary's and the title's way into the companion screen
@@ -769,6 +814,8 @@ func button_for(action: String) -> Button:
 		if _camp.visible:
 			return _camp.back
 		return _achievements.back if _achievements.visible else _help.back
+	if action == "breath":
+		return _breath_row if _breath_row.visible else null
 	for child in _actions.get_children():
 		if child.action == action:
 			return child
@@ -779,10 +826,30 @@ func class_cards() -> Array:
 	return _choices.get_children()
 
 
+# Every card's name, role and fantasy line take the row's tallest, so a line that wraps on one
+# card does not push that card's text rows below the others'.
+func _level_text(row: Array) -> void:
+	for pick in [func(c): return c.name_label(), func(c): return c.role_label(), _fantasy_label]:
+		var tallest := 0.0
+		for card in row:
+			tallest = maxf(tallest, pick.call(card).get_combined_minimum_size().y)
+		for card in row:
+			pick.call(card).custom_minimum_size.y = tallest
+
+
 # Every card in the row gives its preview the row's largest overflow, so every key row ends
 # inside its card on the same bottom edge.
+func _fantasy_label(card) -> Label:
+	var said: String = ClassKit.fantasy(card.def)
+	for label in card.find_children("*", "Label", true, false):
+		if label.text == said:
+			return label
+	return card.name_label()
+
+
 func _level_cards() -> void:
 	var row := class_cards()
+	_level_text(row)
 	var spill: float = row.reduce(func(m, c): return maxf(m, c.overflow()), 0.0)
 	for card in row:
 		card.shrink_preview(spill)
