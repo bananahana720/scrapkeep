@@ -250,7 +250,7 @@ func _hook_and_environment() -> void:
 	_t.eq("hook: a retry does not build it twice", stage_root.find_children(Scenery.NODE_NAME, "Node3D", false, false).size(), 1)
 	var env: Environment = terrain.environment
 	_t.check("hook: the environment takes the morning sky", env.sky != before and env.sky.sky_material is PanoramaSkyMaterial)
-	_t.check("hook: ambient shifts to the cool fill", env.ambient_light_color.is_equal_approx(Color("b4c0c9")) and not ambient.is_equal_approx(env.ambient_light_color))
+	_t.check("hook: ambient shifts to the sky cream", env.ambient_light_color.is_equal_approx(Scenery.LOOK["ambient"]) and not ambient.is_equal_approx(env.ambient_light_color))
 	Scenery.restore_environment(terrain)
 	_t.check("restore: the shared sky and ambient come back", env.sky == before and env.ambient_light_color.is_equal_approx(ambient))
 	var source := FileAccess.get_file_as_string("res://src/game.gd")
