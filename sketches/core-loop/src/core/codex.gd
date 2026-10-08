@@ -2,6 +2,8 @@ extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # The codex: one registry of every synergy, trick and interaction the demo knows,
 # saved across runs (the demo's only meta-progression, DEMO-SPEC). Owners declare
@@ -14,6 +16,9 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 const CATEGORIES := ["build", "world", "enemy", "npc", "coop"]
 const STATE_FILE := "codex.json"
 const LOG_FILE := "codex-log.ndjson"
+
+# A new field note became known; the id is a LoreRows field_note row.
+signal lore_found(id: String)
 
 var events
 var run
@@ -39,6 +44,8 @@ var _attempt_found: Array[String] = []
 var _stage_seen_before_arena: Array[String] = []
 var _stage_found_before_arena: Array[String] = []
 var _warned := {}
+var _zone := ""
+var _guard_open := false
 
 
 func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
@@ -51,6 +58,7 @@ func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
 	events.run_started.connect(_on_run_started)
 	events.stage_entered.connect(_on_stage_entered)
 	events.stage_content_cleared.connect(_on_stage_content_cleared)
+	_connect_lore()
 
 
 # Idempotent: a second declare of the same id updates its words, never duplicates it.
@@ -181,7 +189,8 @@ func _on_run_started(_class_id: String) -> void:
 
 # A stage retry (R, or T replaying stage 3 from its start) rewinds everything since
 # the stage began, the arena attempt included.
-func _on_stage_entered(_stage: int, retry: bool) -> void:
+func _on_stage_entered(stage: int, retry: bool) -> void:
+	_enter_zone(stage)
 	if retry:
 		_rewind(_attempt_seen + _stage_seen_before_arena, _attempt_found + _stage_found_before_arena)
 	_attempt_seen = []
@@ -210,6 +219,77 @@ func _rewind(seen: Array, found: Array) -> void:
 		_run_discoveries.erase(id)
 	for text in found:
 		_run_found.erase(text)
+
+
+# The seven lore moments, one bus signal each: a standing activity done, a cracked wall
+# opened, a rescue freed, a relic taken, a Warden's guard broken (rising edge of its
+# stagger), the Warden killed (the beacon unsealing) and the stage cleared.
+func _connect_lore() -> void:
+	events.activity_done.connect(func(_id: String, _at: Vector3): _lore_moment())
+	events.world_fact.connect(func(kind: String, _at: Vector3):
+		if kind == "wall_crumbled":
+			_lore_moment())
+	events.rescue_completed.connect(func(_quest: String): _lore_moment())
+	events.part_gained.connect(func(part_id: String, _source: String):
+		var def: Resource = Parts.def(part_id)
+		if def != null and def.rarity == "relic":
+			_lore_moment())
+	events.posture_changed.connect(_on_lore_posture)
+	events.beacon_unsealed.connect(func(_stage: int): _lore_moment())
+	events.stage_cleared.connect(func(_stage: int): _lore_moment())
+
+
+func _on_lore_posture(_enemy, _posture: float, staggered: bool) -> void:
+	if staggered and not _guard_open:
+		_lore_moment()
+	_guard_open = staggered
+
+
+func _stage_table():
+	if flow != null and flow.get("ctx") != null:
+		return flow.ctx.stages
+	return null
+
+
+func _enter_zone(stage: int) -> void:
+	var table = _stage_table()
+	if table == null:
+		return
+	_zone = "%d-%d" % [table.world_of(stage), table.local(stage)]
+	_guard_open = false
+	for row in LoreRows.ROWS:
+		if row["kind"] == "exchange" and row["zone"] == _zone:
+			_mark_lore(row["id"], false)
+
+
+# The next unknown note of this zone in row order, else the earliest unknown note of an
+# earlier zone. A full codex does nothing.
+func _lore_moment() -> void:
+	var zones: Array[String] = []
+	for row in LoreRows.ROWS:
+		if not row["zone"] in zones:
+			zones.append(row["zone"])
+	var here := zones.find(_zone) if _zone in zones else zones.size()
+	var earlier := ""
+	for row in LoreRows.ROWS:
+		if row["kind"] != "field_note" or _discovered.has(row["id"]):
+			continue
+		if row["zone"] == _zone:
+			_mark_lore(row["id"])
+			return
+		if earlier == "" and zones.find(row["zone"]) < here:
+			earlier = row["id"]
+	if earlier != "":
+		_mark_lore(earlier)
+
+
+func _mark_lore(id: String, is_note := true) -> void:
+	if _discovered.has(id):
+		return
+	_discovered[id] = true
+	_save()
+	if is_note:
+		lore_found.emit(id)
 
 
 func _warn_once(key: String, message: String) -> void:
