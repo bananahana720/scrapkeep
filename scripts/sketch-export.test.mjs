@@ -269,15 +269,16 @@ test("winProofLine formats a won row", () => {
   );
 });
 
-test("WIN_PROOFS plays Rivet's seed 1 first, then the cannon pinned by --pilot", () => {
+test("WIN_PROOFS plays Rivet's seed 1 first, then the cannon and Tally pinned by --pilot", () => {
   assert.deepEqual(
     WIN_PROOFS.map((proof) => [proof.label, proof.seed, proof.pilot ?? null]),
     [
       ["win proof", 1, null],
       ["win proof (cannon)", 11, "remembered_cannon"],
+      ["win proof (tally)", 1, "tally"],
     ],
   );
-  assert.notEqual(WIN_PROOFS[0].dir, WIN_PROOFS[1].dir);
+  assert.equal(new Set(WIN_PROOFS.map((proof) => proof.dir)).size, WIN_PROOFS.length);
 });
 
 test("winProofLine formats the cannon proof with its pilot", () => {
