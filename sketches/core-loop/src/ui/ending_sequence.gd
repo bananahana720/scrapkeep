@@ -14,6 +14,7 @@ const WORLD_SECONDS := 12.0
 const ESTABLISH_SECONDS := 2.0
 const LINE_SECONDS := 5.0
 const CREDITS_SECONDS := 18.0
+const CREDITS_LINE_SECONDS := 4.5
 const TOTAL_SECONDS := WORLD_SECONDS * 3.0 + CREDITS_SECONDS
 const WORLD_DRESSING := {1: "SpillwayScenery", 2: "DigScenery", 3: "HighdraftScenery"}
 # TONE-READ: Credits. The thanks belongs to the person who made the return trip.
@@ -38,6 +39,7 @@ var _world_label: Label
 var _copy: Label
 var _credits: Label
 var _credits_back: ColorRect
+var _credits_band: ColorRect
 var _cut: ColorRect
 var _at := Vector3.ZERO
 var _dig_deep := false
@@ -126,7 +128,11 @@ func _build_view() -> void:
 	_credits.text = CREDITS
 	_credits.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	_credits.visible = false
-	# Keep the skip hint above the credit roll.
+	_credits_band = _backing(0.73, 1.0, Color(Palette.CHARCOAL, 0.88))
+	_credits_band.visible = false
+	# The copy and the skip hint stay above the credit roll.
+	move_child(_credits_band, -1)
+	move_child(_copy, -1)
 	move_child(skip_label, -1)
 	_cut = _backing(0.0, 1.0, Color(Palette.CHARCOAL, 0.0))
 
@@ -157,14 +163,15 @@ func _build_worlds() -> void:
 	for row in Worlds.ROWS:
 		var stage: int = game.ctx.stages.first_of(int(row.id))
 		# Terrain caches sibling zones before their presentation is built.
+		# The deepest dressed stage wins, so a run through the Dig's two zones ends on the pit.
 		var cached := 0
+		var dressed := false
 		for def in game.ctx.stages.DEFS:
 			if int(def.world) == int(row.id) and game.ctx.terrain.is_built(int(def.stage)):
-				if cached == 0:
+				var has_dressing: bool = game.ctx.terrain.geometry_root(int(def.stage)).has_node(WORLD_DRESSING[int(row.id)])
+				if has_dressing or not dressed:
 					cached = int(def.stage)
-				if game.ctx.terrain.geometry_root(int(def.stage)).has_node(WORLD_DRESSING[int(row.id)]):
-					cached = int(def.stage)
-					break
+					dressed = has_dressing
 		if cached > 0:
 			stage = cached
 		var holder := Node3D.new()
@@ -312,19 +319,20 @@ func advance(delta: float) -> void:
 		phase = "credits"
 		_credits_back.visible = true
 		_credits.visible = true
+		_credits_band.visible = true
 		_world_label.visible = false
-		_copy.visible = false
-		var p := (elapsed - WORLD_SECONDS * 3.0) / CREDITS_SECONDS
+		var credits_at := elapsed - WORLD_SECONDS * 3.0
+		_set_credits_copy(credits_at)
+		var p := credits_at / CREDITS_SECONDS
 		var height := get_viewport_rect().size.y
 		_credits.position.y = lerpf(height, -_credits.get_minimum_size().y, p)
 		_cut.color.a = 0.0
 		return
 	var local := fmod(elapsed, WORLD_SECONDS)
 	phase = "flyover" if local < ESTABLISH_SECONDS else "copy"
-	var line := world_index * 2 + int(maxf(0.0, local - ESTABLISH_SECONDS) / LINE_SECONDS)
-	var lines: Array = Worlds.ENDING.log.duplicate()
-	lines.append(Worlds.ENDING.sign)
-	_copy.text = "" if phase == "flyover" else String(lines[mini(line, lines.size() - 1)])
+	var lines: Array = Worlds.ENDING.log[int(Worlds.ROWS[world_index].id)]
+	var line := mini(int(maxf(0.0, local - ESTABLISH_SECONDS) / LINE_SECONDS), lines.size() - 1)
+	_copy.text = "" if phase == "flyover" else String(lines[line])
 	_copy.modulate.a = clampf(fmod(maxf(0.0, local - ESTABLISH_SECONDS), LINE_SECONDS) / 0.4, 0.0, 1.0)
 	var p := local / WORLD_SECONDS
 	var sweep := lerpf(5.0, -5.0, smoothstep(0.0, 1.0, p))
@@ -343,6 +351,15 @@ func advance(delta: float) -> void:
 	_cut.color.a = maxf(1.0 - local / 0.5, (local - WORLD_SECONDS + 0.5) / 0.5)
 	_cut.color.a = clampf(_cut.color.a, 0.0, 1.0)
 	viewport.size = Vector2i(get_viewport_rect().size)
+
+
+# The close lines each get a slot from the start of the roll, then the sign holds to the end.
+func _set_credits_copy(credits_at: float) -> void:
+	var close: Array = Worlds.ENDING.close
+	var slot := int(credits_at / CREDITS_LINE_SECONDS)
+	_copy.visible = true
+	_copy.text = String(close[slot]) if slot < close.size() else String(Worlds.ENDING.sign)
+	_copy.modulate.a = clampf(fmod(credits_at, CREDITS_LINE_SECONDS) / 0.4, 0.0, 1.0) if slot < close.size() else 1.0
 
 
 func _enter_world(index: int) -> void:
