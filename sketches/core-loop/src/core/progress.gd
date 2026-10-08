@@ -12,6 +12,7 @@ extends Node
 # class id), won (run_ended's argument, false before it) and world (the last world_entered).
 
 const Achievements := preload("res://src/core/achievements.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 const STAT_PREFIX := "ach."
 const SAVE_POINTS := ["player_died", "run_ended"]
@@ -63,6 +64,9 @@ func setup(events, run, profile, now := Callable()) -> void:
 		if arg_names.has(signal_name):
 			_connect(signal_name, arg_names[signal_name])
 	backfill_rewards()
+	if open_met_pilots() > 0 and _profile.can_save and not _profile.save():
+		warnings += 1
+		push_warning("progress: earned pilots opened but not saved: %s" % _profile.last_error)
 
 
 # Pays the reward of every row the profile already earned, once per reward (the settle-once
@@ -122,14 +126,18 @@ func reconcile_settled() -> void:
 
 
 # A profile-level one-time grant: kind is pilot, cosmetic or world. True when this call
-# made the grant, false when the id was settled before.
+# made the grant, false when the id was settled before. A pilot grant opens the pilots whose
+# class row unlock rule is now met, not the reward's id alone; a reward id with no class row
+# (Achievements.PENDING_PILOTS) is recorded as given.
 func grant_once(id: String, kind: String, target: String) -> bool:
 	# One save after the unlock: a save between settle and unlock could lose the grant.
 	if not settle(id, false):
 		return false
 	match kind:
 		"pilot":
-			_profile.unlock_pilot(target)
+			open_met_pilots()
+			if ClassDef.by_id(target) == null:
+				_profile.unlock_pilot(target)
 		"cosmetic":
 			_profile.unlock_cosmetic(target)
 		"world":
@@ -138,6 +146,20 @@ func grant_once(id: String, kind: String, target: String) -> bool:
 		warnings += 1
 		push_warning("progress: %s granted but not saved: %s" % [id, _profile.last_error])
 	return true
+
+
+# Opens every locked pilot whose class row unlock rule the saved achievements meet. setup runs
+# it too, so a profile from an older schema gets what it earned. Memory only; returns how many opened.
+func open_met_pilots() -> int:
+	if _profile == null:
+		return 0
+	var earned := Callable(_profile, "earned")
+	var opened := 0
+	for def in ClassDef.all():
+		if not def.starter and not _profile.has_pilot(def.id) and ClassDef.unlock_met(String(def.unlock.get("by", "")), earned):
+			_profile.unlock_pilot(def.id)
+			opened += 1
+	return opened
 
 
 # The ledger leaves Moss holds, by world.
