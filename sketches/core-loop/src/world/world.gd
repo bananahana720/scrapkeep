@@ -201,7 +201,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
 	director = Director.new(_stage_seed ^ 0x5eed)
 	_author_director(def)
-	director.use_row(def)
+	director.use_row(def, ctx.tuning.option(Director.Tuning.BREATH_KEY) if ctx.tuning != null else "")
 	director.threat = def["threat"]
 	director.play_rect = map.play_rect
 	flood.cycle = events.flood
