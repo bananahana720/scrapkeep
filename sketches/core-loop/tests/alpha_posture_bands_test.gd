@@ -21,8 +21,13 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 # on worlds 2 and 3 by tests/alpha_posture_bands_w23_test.gd, not here.
 const PILOTS := {"runner_gunner": 1, "demolitions_caster": 2}
 const ALPHA_TICKS := 30000
-const SPILLWAY_SKIPPER_S := Vector2(45.0, 90.0)
-const REACH_SKIPPER_S := Vector2(30.0, 80.0)
+# GP3 2026-10-08 re-recorded with the pressure rows (alpha_defs.gd PRESSURE) under the default
+# Breath (hard). Bigger, sooner packs did not lengthen the fights: the measured medians are
+# Spillway 59.0 s of [56.99, 58.98] and Reach 44.7 s of [44.29, 44.68] (before: Spillway 63.9 to
+# 79.7, Reach 42.0 to 46.0). The floors rise to about 10 s under them, narrowing each band toward
+# its upper half; the ceilings stay. Pushing the medians themselves up is the tuning sweep's job.
+const SPILLWAY_SKIPPER_S := Vector2(50.0, 90.0)
+const REACH_SKIPPER_S := Vector2(35.0, 80.0)
 # The Reach completionist's median fight is at most this many times the skipper's.
 const REACH_COMPLETIONIST_FACTOR := 1.25
 

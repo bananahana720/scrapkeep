@@ -45,24 +45,40 @@ const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
 # The arrival of each stage that is the elite pack.
 const ELITE_ARRIVAL := 3
 
+# The run's pressure curve (GP3), one row per stage, each key a multiplier on a constant that
+# stays where it lives: pack_scale on the director's crowd cap and pack share (PACK_MAX stays
+# the ceiling), interval_scale on its spawn interval, elite_rate on its elite repeat chance,
+# posture_curve on the Warden's posture exponent (the row's "posture" below reads it), and
+# boss_phase_scale on the world boss's attack pace. Pack density and elite rate climb every
+# stage from the Spillway to the crown; Breath hard multiplies on top (director.gd BREATH).
+const POSTURE_CURVE := 2.0
+const PRESSURE := [
+	{"pack_scale": 1.10, "interval_scale": 0.95, "elite_rate": 0.60, "posture_curve": 1.00, "boss_phase_scale": 1.00},
+	{"pack_scale": 1.15, "interval_scale": 0.92, "elite_rate": 0.80, "posture_curve": 1.00, "boss_phase_scale": 1.10},
+	{"pack_scale": 1.20, "interval_scale": 0.90, "elite_rate": 1.00, "posture_curve": 1.05, "boss_phase_scale": 1.15},
+	{"pack_scale": 1.25, "interval_scale": 0.88, "elite_rate": 1.20, "posture_curve": 1.05, "boss_phase_scale": 1.20},
+	{"pack_scale": 1.30, "interval_scale": 0.85, "elite_rate": 1.40, "posture_curve": 1.10, "boss_phase_scale": 1.25},
+	{"pack_scale": 1.40, "interval_scale": 0.80, "elite_rate": 1.60, "posture_curve": 1.10, "boss_phase_scale": 1.30},
+]
+
 const DEFS := [
 	{"stage": 1, "world": 1, "music": {"theme": 0, "ace": "spillway"}, "warden_family": "reactor", "name": "Spillway: the top shelf", "map": "spillway", "threat": 1.0,
 		"unlock_base": 2, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 90.0, "warden_hp": 650.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[0]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[0], "warden_hint": "Break its guard, then smash the core.",
 		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
 	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": "cable_reach"}, "warden_family": "swarm", "name": "The Cable Reach", "map": "reach", "threat": 1.0,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[1]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[1], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
 	{"stage": 3, "world": 2, "music": {"theme": 1, "ace": "dig_upper"}, "warden_family": "reactor", "name": "Dig: the upper bench", "map": "dig", "threat": 1.1,
 		"unlock_base": 2, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 130.0, "warden_hp": 950.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[2], "warden_hint": "Break its guard, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower"]},
@@ -72,7 +88,7 @@ const DEFS := [
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 150.0, "warden_hp": 1100.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[3]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[3], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "deep_bore", "kinds": ["drill_crew", "burrower", "burrower"]},
 			{"id": "deep_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "burrower"]},
@@ -82,7 +98,7 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 170.0, "warden_hp": 1250.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[4]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[4], "warden_hint": "Break its guard, then smash the core.",
 		"packs": [
 			{"id": "draft_cut", "kinds": ["line_cutter", "line_cutter", "kite_drone"]},
 			{"id": "draft_anchor", "kinds": ["anchor_crew", "line_cutter"]},
@@ -92,7 +108,7 @@ const DEFS := [
 		"unlock_base": 4, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 190.0, "warden_hp": 1400.0, "warden_lesson": "",
-		"posture": {"curve": 2.0, "ram_shatters": false}, "warden_hint": "Break its guard, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[5]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[5], "warden_hint": "Break its guard, then smash the core.",
 		"packs": [
 			{"id": "crown_cut", "kinds": ["line_cutter", "kite_drone", "kite_drone"]},
 			{"id": "crown_anchor", "kinds": ["anchor_crew", "anchor_crew", "line_cutter"]},
