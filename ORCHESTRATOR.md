@@ -95,6 +95,17 @@ One fresh reviewer may read a wave's two candidates together when their write se
 
 Reviewers remain read-only. They send their report; the coordinator records it. A failed requirement becomes changes_requested with actionable findings. Use at most two revised attempts after the initial attempt, numbered 2 and 3. A remaining failure returns the task to blocked with preserved evidence. Do not erase attempt history or substitute a different model family to evade capacity limits. Retry an environmental failure only after the condition changes.
 
+### Writer evidence and fix rounds (2026-10-08)
+
+Added after the alpha waves 9 to 11 and a read of an Unreal-with-Claude course; the measurements are in `artifacts/local/alpha/push/w12/research/`.
+
+- A writer looks at its own work. A unit that changes anything visible renders its own captures (`tools/asset_capture.gd`, `tools/visual_capture.gd`, the ball in frame as the scale reference), views them and says in the handoff what it saw against the direction sheet. A capture nobody viewed is not evidence. Reviewers and judges read fresh captures on the merged candidate, never the writer's description.
+- Authored routes only. When the kit, GLB slot, shared shader, pose row, scatter table or content registry cannot do what the card asks, the writer stops and reports the gap. A hand-placed mesh, a copied effect, a per-instance material or a local constant standing in for the shared route fails review. One table per fact.
+- A fix round opens with a bug report: steps, expected, actual, cause with `file:line`. A fix that moves a number without naming the mechanism is refused. The default bound is one revised attempt; when it also fails, the coordinator rolls the branch back to its last green commit and re-briefs the remaining work as a smaller card. Attempt 3 needs the coordinator's written reason.
+- Scale and facing are asserted. A new or changed actor or prop asset test checks world-space bounds against the sheet (the class I player ball is the mannequin) and the facing of the capture view. A pose row that must read as a different state asserts a silhouette difference from its neighbour, not only a different name.
+- A packet lists the forced neighbours: the event-kinds table for a new bus signal, the content pin for a row-text change, screen consumers of a table whose shape changes, `BASE_LOGIC_SHA` pins for a guarded script, and the tuning pin tests for any director, pressure or Warden change. Re-pin with a dated line naming the measured cause; never delete a guard.
+- Playtest after every system. A fight, director, boss or bot change runs the skipper bot on the affected pilots and seeds and pastes the outcome rows; a screen, flow or copy change runs the UAT first-minutes scenario and names the receipt.
+
 ## Serial integration and completion
 
 Integrate one approved candidate at a time. Inspect the actual base and existing owner changes, admit only the leased changes and run the applicable checks on the integrated result. If another integration changed a relevant dependency, reassess the candidate and rerun affected checks before accepting it. Never silently broaden the lease to absorb unrelated changes.
