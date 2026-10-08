@@ -4,6 +4,11 @@ extends SceneTree
 # than once per instance. Lower these ceilings as the materials and props land.
 const MAX_WHITE_SURFACES := 0
 const MAX_GREYBOX_SURFACES := 0
+# Warnings that match a dress word but are not dress faults, one per line with its reason.
+const IGNORED_WARNINGS: Array[String] = [
+	"audio fallback", # headless runs have no audio device and the mixer says so
+]
+const DressWarning := preload("res://src/presentation/dress_warning.gd")
 const Game := preload("res://src/game.gd")
 const Alpha := preload("res://src/core/alpha_defs.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -14,12 +19,17 @@ const Device := preload("res://src/world/device.gd")
 
 class ErrorLog extends Logger:
 	var errors := 0
+	var dress_warnings: Array[String] = []
 
-	func _log_error(_function: String, _file: String, _line: int, _code: String,
-			_rationale: String, _editor_notify: bool, error_type: int,
+	func _log_error(_function: String, _file: String, _line: int, code: String,
+			rationale: String, _editor_notify: bool, error_type: int,
 			_script_backtraces: Array[ScriptBacktrace]) -> void:
 		if error_type != Logger.ERROR_TYPE_WARNING:
 			errors += 1
+			return
+		var text := (code + " " + rationale).strip_edges()
+		if DressWarning.is_dress(text, IGNORED_WARNINGS):
+			dress_warnings.append(text)
 
 var game
 var error_log := ErrorLog.new()
@@ -268,6 +278,8 @@ func _run() -> void:
 	_require(totals.white <= MAX_WHITE_SURFACES, "white surfaces %d exceed MAX_WHITE_SURFACES %d" % [totals.white, MAX_WHITE_SURFACES])
 	_require(totals.greybox <= MAX_GREYBOX_SURFACES, "greybox surfaces %d exceed MAX_GREYBOX_SURFACES %d" % [totals.greybox, MAX_GREYBOX_SURFACES])
 	game.free()
+	for text in error_log.dress_warnings:
+		_require(false, "dress warning: %s" % text)
 	_require(error_log.errors == 0, "%d engine or script errors" % error_log.errors)
 	OS.remove_logger(error_log)
 	print("dress_material_test: %s" % ("PASS" if failures.is_empty() else "FAIL"))
