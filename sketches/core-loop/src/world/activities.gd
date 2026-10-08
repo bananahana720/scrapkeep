@@ -66,6 +66,8 @@ const SLAM_REACH := 7.0
 # so a landing as fast as the ram that breaks it breaks it too and a slower one does not.
 const SLAM_MIN_PER_CRUISE := 1.0
 const PEDESTAL_BACK := 4.0
+const CACHE_LANE_OFFSET := 6.0
+const CACHE_FIRED_LIGHT := {"energy": 0.8, "range": 10.0, "at": Vector3(0.0, WALL_HEIGHT + 1.0, WALL_DEPTH * 0.5)}
 
 var ctx
 var sites: Array = []
@@ -89,6 +91,7 @@ class Site extends Node3D:
 	var cap: Node3D
 	var pickup_taken := false
 	var inside_pickup := true
+	var fired_light: OmniLight3D
 
 
 func setup(ctx_ref) -> void:
@@ -165,13 +168,16 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 
 
 func _build_altar(s: Site) -> void:
-	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.COPPER))
-	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(EventKinds.activity_color(s.id), 1.2))
+	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.VERDIGRIS))
+	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.BRASS))
+	_mesh_box(s, Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, Palette.solid(Palette.SAND))
 
 
 func _build_cache(s: Site) -> void:
 	var face: Vector2 = s.rule["face"]
 	s.rotation.y = atan2(face.x, face.y)
+	s.global_position += s.global_basis.z * CACHE_LANE_OFFSET
+	s.global_position.y = ctx.terrain.height(s.global_position.x, s.global_position.z)
 	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
 	var tall := WALL_HEIGHT + WALL_SINK
 	var mid := tall * 0.5 - WALL_SINK
@@ -319,6 +325,15 @@ func _break_wall(s: Site) -> void:
 		return
 	s.wall.position += Vector3.DOWN * 400.0
 	s.wall.visible = false
+	var light_row: Dictionary = CACHE_FIRED_LIGHT
+	s.fired_light = OmniLight3D.new()
+	s.fired_light.name = "CacheFiredFill"
+	s.fired_light.light_color = Palette.SAND
+	s.fired_light.light_energy = light_row.energy
+	s.fired_light.omni_range = light_row.range
+	s.fired_light.shadow_enabled = false
+	s.fired_light.position = light_row.at
+	s.add_child(s.fired_light)
 	ctx.events.world_fact.emit("wall_crumbled", s.global_position)
 	_finish(s, s.pedestal)
 

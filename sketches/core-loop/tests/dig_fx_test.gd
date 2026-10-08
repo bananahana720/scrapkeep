@@ -64,6 +64,8 @@ func _run() -> void:
 		and fx.find_children("*", "CollisionObject3D", true, false).is_empty())
 	t.check("lamp batches share the motion shader", not fx.lamp_views.is_empty()
 		and fx.lamp_views.all(func(v): return v.material_override.shader == fx._shader))
+	t.check("lamp lens shader uses white paint and emission", fx._shader.code.contains("lens ? vec3(0.94, 0.97, 0.96)")
+		and fx._shader.code.contains("EMISSION = lens ? vec3(1.0) * 0.12"))
 	var plate: Dictionary = terrain.map().breach_plates[0]
 	var id: String = plate["id"]
 	var centre: Vector2 = plate["rect"].get_center()
@@ -132,7 +134,7 @@ func _run() -> void:
 	Preset.apply("low")
 	t.check("low disables ambient grit and sway", not fx._ambient and fx.grit.all(func(p): return not p.emitting)
 		and fx.lamp_views.all(func(v): return not v.get_instance_shader_parameter("motion_enabled")))
-	t.check("low restores steady lamp light", fx.lights.all(func(row): return is_equal_approx(row["node"].light_energy, 1.6)))
+	t.check("lamp animation creates no ambient fill light", stage_root.find_children("LampLight*", "OmniLight3D", true, false).is_empty())
 	game.events.stage_entered.emit(1, true)
 	game.world._on_slammed(at, 20, 1)
 	t.eq("retry restores break presentation", fx.ruptures.size(), 1)

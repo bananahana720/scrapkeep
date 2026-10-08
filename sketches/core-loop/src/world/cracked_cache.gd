@@ -33,6 +33,8 @@ const PEDESTAL_REACH := 1.7
 # filled, instead of a part. Drawn from the device's own luck stream under another key,
 # so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
+const LANE_OFFSET := 6.0
+const FIRED_LIGHT := {"energy": 0.8, "range": 10.0, "at": Vector3(0.0, HEIGHT + 1.0, HALF_D + 2.0)}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
 
@@ -44,6 +46,7 @@ var relic_guaranteed := false
 var relic_chance := RELIC_CHANCE
 var _wall: Node3D
 var _lid: Node3D
+var _fired_light: OmniLight3D
 var _pedestals: Array = []
 var _inside: Array = []
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
@@ -53,8 +56,6 @@ static var _shared: Array = []
 # chipped edges give the pocket a lighter rim. The finish multiplies the vertex colours, so the
 # amber signpost painted into them stays amber.
 const FINISH := {"device_concrete": 0, "device_metal": 1}
-# One warm lamp over the cracked face, no shadow: it lights the wall and the pocket's rim.
-const RIM_LIGHT := {"energy": 1.6, "range": 14.0, "at": Vector3(0.0, HEIGHT + 1.5, HALF_D + 4.0)}
 static var _loaded := false
 
 
@@ -63,13 +64,14 @@ func _init() -> void:
 
 
 func build() -> void:
+	global_position += global_basis.z * LANE_OFFSET
+	global_position.y = ctx.terrain.height(global_position.x, global_position.z)
 	var parts := _parts()
 	if parts.is_empty():
 		_build_greybox()
 	else:
 		_build_model(parts)
 	_build_pedestals(parts)
-	_build_rim_light()
 	ctx.events.slammed.connect(_on_slammed)
 
 
@@ -186,6 +188,7 @@ func crumble() -> void:
 	var at: Vector3 = _wall.global_position
 	_wall.position += Vector3.DOWN * 400.0
 	_wall.visible = false
+	_build_fired_light()
 	ctx.events.world_fact.emit("wall_crumbled", at)
 	ctx.events.world_fact.emit("route_opened", at)
 
@@ -302,15 +305,16 @@ func _build_model(parts: Array) -> void:
 	_lid.position = chest + Vector3.UP * 1.35
 
 
-func _build_rim_light() -> void:
+func _build_fired_light() -> void:
 	var light := OmniLight3D.new()
-	light.name = "CacheRimLight"
+	light.name = "CacheFiredFill"
 	light.light_color = Palette.SAND
-	light.light_energy = RIM_LIGHT.energy
-	light.omni_range = RIM_LIGHT.range
+	light.light_energy = FIRED_LIGHT.energy
+	light.omni_range = FIRED_LIGHT.range
 	light.shadow_enabled = false
-	light.position = RIM_LIGHT.at
+	light.position = FIRED_LIGHT.at
 	add_child(light)
+	_fired_light = light
 
 
 # Mesh-local size for the workshop shader's edge chips; meshes need not be centred.

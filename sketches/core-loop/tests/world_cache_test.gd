@@ -34,6 +34,7 @@ var _gauge_seen := 0.0
 func _initialize() -> void:
 	_game = Game.new()
 	_game.test_mode = true
+	_game.table = "alpha"
 	root.add_child(_game)
 
 
@@ -87,6 +88,7 @@ func _begin() -> void:
 		[_inside_pocket, 6, _press_e],
 		[_noop, 4, _check_open],
 		[_onto_pedestal, 4, _check_taken],
+		[_enter_deep, 30, _check_deep_cache],
 	]
 
 
@@ -94,11 +96,35 @@ func _noop() -> void:
 	pass
 
 
+func _enter_deep() -> void:
+	_game.ctx.calm = true
+	_game.flow.enter_stage(4, Vector3.ZERO, false)
+
+
+func _check_deep_cache() -> void:
+	var map = _game.ctx.terrain.map()
+	var deep_cache
+	for device in _game.world.interact.devices:
+		if device is CrackedCache and device.id == "relic_cache":
+			deep_cache = device
+	_report("Dig deep relic cache is placed", deep_cache != null, "devices %s" % [_game.world.interact.devices.map(func(d): return d.id)])
+	if deep_cache != null:
+		var at: Vector2 = map.relic_spot
+		var authored: Vector3 = _game.ctx.terrain.drop_point(at.x, at.y, 0.0)
+		_report("Dig deep cache clears its wall shadow", deep_cache.global_position.distance_to(authored) >= CrackedCache.LANE_OFFSET - 0.01,
+			"root offset %.2f m from authored wall point" % deep_cache.global_position.distance_to(authored))
+
+
 func _find_cache() -> void:
 	for device in _game.world.interact.devices:
 		if device is CrackedCache:
 			_cache = device
 	_report("cache placed", _cache != null, "stage 1 carries a cracked cache: %s" % (_cache.id if _cache != null else "none"))
+	if _cache != null:
+		var authored_at: Vector2 = _cache.spec["at"]
+		var authored: Vector3 = _game.ctx.terrain.drop_point(authored_at.x, authored_at.y, 0.0)
+		_report("cache clears its wall shadow", _cache.global_position.distance_to(authored) >= CrackedCache.LANE_OFFSET - 0.01,
+			"root offset %.2f m from authored wall point" % _cache.global_position.distance_to(authored))
 
 
 func _local_ground(local: Vector3) -> Vector3:
@@ -144,6 +170,8 @@ func _check_breaks() -> void:
 	_report("a fast ball breaks it", _cache.broken() and _crumbled.size() == 1 and at_break >= FAST * 0.9 and _gauge_seen >= 1.0,
 		"rolled at the wall at %.0f m/s: crumbled %d time(s) with the ball at %.1f m/s, gauge reached %.2f"
 			% [FAST, _crumbled.size(), at_break, _gauge_seen])
+	_report("fired cache gets its warm fill", _cache._fired_light != null and _cache._fired_light.light_energy > 0.0,
+		"light energy %.2f" % (_cache._fired_light.light_energy if _cache._fired_light != null else 0.0))
 
 
 # Inside the pocket, five metres from the chest, facing it.

@@ -1,7 +1,7 @@
 extends "res://src/world/device.gd"
 
 # An ambush altar, the opt-in fight family (LOOP-REDESIGN section 9): a copper post
-# with a HAZARD-striped cap in a HAZARD ring on the ground. Hold E and a pack arrives
+# with a brass cap and bone band. Hold E and a pack arrives
 # now, round the ring; clear it inside SECONDS and it pays a bonus core. While it runs
 # the prompt's gauge is the time left; once it is done, it is spent for the stage.
 # Nothing here stops the ball: the post has no collider and the pack comes to you.
@@ -30,18 +30,21 @@ func _init() -> void:
 func build() -> void:
 	var parts := _parts()
 	if not parts.is_empty():
-		_model_part(parts, "AltarPost")
+		var post := _model_part(parts, "AltarPost")
+		post.material_override = Palette.solid(Palette.VERDIGRIS)
 		_cap = _model_part(parts, "AltarCap")
-		_ring = _model_part(parts, "AltarRing")
+		_cap.material_override = Palette.solid(Palette.BRASS)
+		_ring = null
+		box(Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, Palette.solid(Palette.SAND), false)
 		return
 	_build_greybox()
 
 
 func _build_greybox() -> void:
-	var copper := Palette.solid(Palette.COPPER)
-	cylinder(0.45, 3.2, Vector3.UP * 1.6, copper)
-	_cap = box(Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.striped(Palette.HAZARD, Palette.CHARCOAL))
-	_ring = ground_ring(RING, Interactables.color(family))
+	cylinder(0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.VERDIGRIS))
+	_cap = box(Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.BRASS))
+	box(Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, Palette.solid(Palette.SAND), false)
+	_ring = null
 
 
 func reach_point() -> Vector3:
@@ -96,7 +99,8 @@ func _end(cleared: bool) -> void:
 	running = false
 	spent = true
 	won = cleared
-	_ring.visible = false
+	if _ring != null:
+		_ring.visible = false
 	if cleared:
 		ctx.run.add_core("ambush", reach_point())
 	ctx.events.ambush_ended.emit(id, cleared, reach_point())

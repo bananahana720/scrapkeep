@@ -1,7 +1,7 @@
 extends "res://src/world/device.gd"
 
-# A double-or-nothing crate, the risk-bet family (LOOP-REDESIGN section 9): a copper
-# crate with a HAZARD stripe and an odds dial on a post, half mint (heads) and half rust
+# A double-or-nothing crate, the risk-bet family (LOOP-REDESIGN section 9): a brass
+# crate with a bone band and an odds dial on a post, half mint (heads) and half rust
 # (tails). Hold E to stake every bonus core you carry this stage: heads doubles them,
 # tails burns them. The stake is on the prompt from the moment E locks the crate, before
 # the hold starts. The result lands as three beats: the drum roll while the needle
@@ -39,16 +39,19 @@ func _init() -> void:
 func build() -> void:
 	var parts := _parts()
 	if not parts.is_empty():
-		_model_part(parts, "BetHousing")
-		_model_part(parts, "OddsDial")
+		var housing := _model_part(parts, "BetHousing")
+		housing.material_override = Palette.solid(Palette.VERDIGRIS)
+		var dial := _model_part(parts, "OddsDial")
+		dial.material_override = Palette.solid(Palette.BRASS)
 		_needle = _model_part(parts, "OddsNeedle")
+		_needle.material_override = Palette.solid(Palette.CHARCOAL)
 		return
 	_build_greybox()
 
 
 func _build_greybox() -> void:
-	box(Vector3(2.4, 1.8, 2.4), Vector3.UP * 0.9, Palette.solid(Palette.COPPER))
-	box(Vector3(2.5, 0.35, 2.5), Vector3.UP * 1.2, Palette.striped(Palette.HAZARD, Palette.CHARCOAL))
+	box(Vector3(2.4, 1.8, 2.4), Vector3.UP * 0.9, Palette.solid(Palette.VERDIGRIS))
+	box(Vector3(2.5, 0.35, 2.5), Vector3.UP * 1.2, Palette.solid(Palette.SAND))
 	cylinder(0.15, 2.6, Vector3(0.0, 3.1, 0.0), Palette.solid(Palette.COPPER))
 	var dial := Node3D.new()
 	dial.position = Vector3(0.0, 4.6, 0.0)

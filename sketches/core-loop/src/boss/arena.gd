@@ -330,7 +330,7 @@ func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, 
 	_quad(st, points[4], points[5], points[3], points[2])
 	for p in [points[0], points[4], points[2], points[1], points[3], points[5]]:
 		st.add_vertex(p)
-	_mesh_node(st, Palette.striped(Palette.AMBER, Palette.CHARCOAL), label)
+	_mesh_node(st, Palette.solid(Palette.COPPER), label)
 
 
 func _vent(angle: float) -> void:

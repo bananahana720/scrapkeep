@@ -118,7 +118,8 @@ func _run() -> void:
 		t.check("(1) lamp rail is the GLB mesh", _batched(scenery, MECH + "lamp_straight_module.glb"), "lamp_straight_module")
 		t.check("(1) no intake in zone A", not _batched(scenery, MECH + "intake_petal.glb"), "intake_petal")
 		t.check("(1) every instance outside the play rect plus 8 m", _outside_apron(scenery, game.ctx.terrain.map().play_rect), "apron")
-		t.check("(1) lamp lines carry lights", scenery.find_children("LampLight*", "OmniLight3D", true, false).size() > 0, "lights")
+		t.eq("(1) Dig lamp lines have no light pool", scenery.find_children("LampLight*", "OmniLight3D", true, false).size(), 0)
+		t.eq("(1) Dig lamp lens material reads white", Scenery.LAMP_LIGHT, Color.WHITE)
 		var colliders := scenery.find_children("*", "CollisionObject3D", true, false)
 		t.check("(1) scenery adds no collider", colliders.is_empty(), str(colliders.size()))
 	var m = game.ctx.terrain.map()
@@ -127,6 +128,9 @@ func _run() -> void:
 	var other := stage_root.find_child("BreachPlate_plate_rim", true, false) as StaticBody3D
 	t.check("(2) 12x12 cover wears the 12x12 drum", cover != null and _cover_skinned(cover, "breach_wedge_a_12x12.glb"), "plate_east")
 	t.check("(2) 14x10 cover wears the 14x10 drum", other != null and _cover_skinned(other, "breach_wedge_a_14x10.glb"), "plate_rim")
+	t.check("(2) real Dig plate has no shaft or light", cover != null
+		and cover.find_child("DaylightShaft", true, false) == null
+		and cover.find_children("*", "Light3D", true, false).is_empty(), "shaft/light absent")
 	var boxes_hidden := true
 	var collider_kept := false
 	for child in cover.get_children():
