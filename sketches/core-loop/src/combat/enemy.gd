@@ -4,6 +4,8 @@ const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const WindupRows := preload("res://src/presentation/windup_rows.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -118,6 +120,12 @@ var _line_lean_from := 0.0
 var _line_lean_time := LINE_EASE
 const LINE_LEAN := 10.0
 const LINE_EASE := 0.15
+# The idle (EnemyMotion, read from this kind's WindupRows row): the pivot's offset now, on
+# its own sim clock, which stops while an attack is open.
+var idle_offset := Vector3.ZERO
+var _idle_pose := Basis.IDENTITY
+var _idle_clock := -1.0
+var _idle_period := 0.0
 
 
 func _visual_parent() -> Node3D:
@@ -226,11 +234,44 @@ func _update_reaction(delta: float) -> void:
 	_line_lean = _line_lean_goal if _line_lean_time >= LINE_EASE else lerpf(_line_lean_from, _line_lean_goal, smoothstep(0.0, LINE_EASE, _line_lean_time))
 	if reaction_pivot == null and (_line_lean != 0.0 or not _react_row.is_empty()):
 		_visual_parent()
+	_update_idle(delta)
 	if reaction_pivot != null:
 		var lean_pose := Quaternion.IDENTITY
 		if _line_lean != 0.0 and is_instance_valid(target):
 			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
-		reaction_pivot.transform = Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO)
+		reaction_pivot.transform = Transform3D(Basis(lean_pose * _react_pose) * _idle_pose, idle_offset)
+
+
+# The model breathes between attacks and holds still (or takes its row's pose) through
+# every open attack, so the idle is never read as a telegraph.
+func _update_idle(delta: float) -> void:
+	idle_offset = Vector3.ZERO
+	_idle_pose = Basis.IDENTITY
+	if reaction_pivot == null or _dead or not EnemyMotion.active():
+		return
+	var row: Dictionary = WindupRows.ROWS.get(kind, {})
+	if winding_up():
+		_idle_pose = EnemyMotion.pose_basis(row)
+		return
+	if _idle_clock < 0.0:
+		_idle_period = float(row.get("idle", {}).get("beats", 0.0)) * EnemyMotion.attack_clock(kind, self)
+		_idle_clock = float(absi(hash(Vector3i(global_position.round()))) % 97) / 97.0 * _idle_period
+	_idle_clock += delta
+	idle_offset = EnemyMotion.idle_offset(row.get("idle", {}), _idle_clock, _idle_period)
+
+
+# An attack is open: a wind-up or strike instance, a committed telegraph, or the state the
+# Warden and swarm remnant publish instead.
+func winding_up() -> bool:
+	return not _atk.is_empty() or telegraph() != null or not WindupRows.state_facts(self).is_empty()
+
+
+func _death_direction() -> Vector3:
+	var away := Vector3(_knock.x, 0.0, _knock.z)
+	if away.length_squared() < 0.01:
+		away = global_position - _reaction_ball()
+		away.y = 0.0
+	return away.normalized() if away.length_squared() > 0.0001 else Vector3.ZERO
 
 
 # Subclasses call this first from their own setup, then build their body.
@@ -352,12 +393,14 @@ func telegraph() -> Node3D:
 # The kill is recorded on the tick health reaches 0, and the body stops colliding on
 # that same tick, so a crush exception can never end inside a live collider. Any death
 # visual belongs to presentation, reading enemy_killed; this node is gone at frame end.
+# The break-up (EnemyMotion.scatter) lives in its own detached node and frees itself.
 func _die() -> void:
 	_dead = true
 	_facts_end(true)
 	collision_layer = 0
 	collision_mask = 0
 	_clear_telegraph()
+	EnemyMotion.scatter(self, kind, _death_direction())
 	died.emit(global_position, scrap_value)
 	queue_free()
 
