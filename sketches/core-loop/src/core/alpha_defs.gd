@@ -53,7 +53,8 @@ const ELITE_ARRIVAL := 3
 # the ceiling), interval_scale on its spawn interval, elite_rate on its elite repeat chance,
 # posture_curve on the Warden's posture exponent (the row's "posture" below reads it), and
 # boss_phase_scale on the world boss's attack pace. Pack density and elite rate climb every
-# stage from the Spillway to the crown; Breath hard multiplies on top (director.gd BREATH).
+# stage from the Spillway to the crown; the default Breath plays them as written and gentle eases
+# them (director.gd BREATH).
 const POSTURE_CURVE := 2.0
 const PRESSURE := [
 	{"pack_scale": 1.10, "interval_scale": 0.95, "elite_rate": 0.60, "posture_curve": 1.00, "boss_phase_scale": 1.00},
