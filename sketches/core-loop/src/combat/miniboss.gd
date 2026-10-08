@@ -61,8 +61,24 @@ var _halo: MeshInstance3D
 var _pose_rig: Skeleton3D
 var _pose_bones := {}
 var _model_plate_material: StandardMaterial3D
+var _armour: MeshInstance3D
 static var _shared: Dictionary = {}
 static var _asset_warned := false
+static var _hazard_stripe: StandardMaterial3D
+# One row per pose, so each reads without a label (LEGIBILITY.md:52). `body` moves the
+# body by a fraction of its standing height (HALF_HEIGHT); `lean` pitches it forward;
+# `splay` and `tuck` move the feet out and up; `shield_in` and `shield_drop` pull the
+# shields in and down; `hazard` paints the shield faces with the threat stripe, which
+# belongs to attacks (D3 SHEET.md:31), so only the pose that aims the charge carries it.
+const POSES := {
+	"stalk": {"body": 0.0, "lean": 0.0, "splay": 0.0, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.0, "hazard": false},
+	"slam_crouch": {"body": -0.3, "lean": 0.0, "splay": 0.6, "tuck": 0.0, "shield_in": 0.45, "shield_drop": 0.0, "hazard": false},
+	"slam_leap": {"body": 1.0, "lean": -0.35, "splay": 0.0, "tuck": 1.1, "shield_in": 0.45, "shield_drop": 0.0, "hazard": false},
+	"charge_brace": {"body": -0.1, "lean": -0.22, "splay": 0.35, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.7, "hazard": true},
+	"charge": {"body": -0.1, "lean": -0.22, "splay": 0.35, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.7, "hazard": false},
+	"weak": {"body": -0.087, "lean": 0.0, "splay": 0.0, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.0, "hazard": false},
+}
+const CORE_SOCKET := Vector3(0.0, 0.6, -RADIUS * 0.75)
 const MODEL_PATH := "res://assets/models/world_one/enemy_miniboss.glb"
 const MODEL_PARTS := ["MinibossHull", "MinibossArmour", "MinibossCore"]
 const MODEL_BONES := ["MinibossBody", "MinibossFootLeft", "MinibossFootRight",
@@ -231,7 +247,9 @@ func _build_model() -> bool:
 			mi.skeleton = mi.get_path_to(_pose_rig)
 		match part.name:
 			"MinibossHull": mi.material_override = _material
-			"MinibossArmour": mi.material_override = _model_plate_material
+			"MinibossArmour":
+				_armour = mi
+				mi.material_override = _model_plate_material
 			"MinibossCore":
 				_core = mi
 				mi.material_override = _core_material
@@ -328,60 +346,64 @@ static func _parts() -> Dictionary:
 
 func _model_pose(delta: float) -> void:
 	var weak := state == State.WEAK
-	var drop := 0.0
-	var tilt := 0.0
+	var row: Dictionary = POSES[state_name()]
+	var t := 1.0
 	var fists := Vector3.ZERO
 	var foot_angle := 0.0
+	var lift := 0.0
+	var foot_up := 0.0
 	match state:
 		State.SLAM_CROUCH:
-			var t := clampf(_clock / SLAM_CROUCH, 0.0, 1.0)
-			drop = -0.9 * t
+			t = clampf(_clock / SLAM_CROUCH, 0.0, 1.0)
 			fists = Vector3(0.0, 0.35, 0.5) * t
 			foot_angle = 0.2 * t
 		State.SLAM_LEAP:
-			var t := clampf(_clock / SLAM_LEAP, 0.0, 1.0)
-			var raise := 1.0 - smoothstep(0.55, 1.0, t)
+			var leap := clampf(_clock / SLAM_LEAP, 0.0, 1.0)
+			var raise := 1.0 - smoothstep(0.55, 1.0, leap)
 			fists = Vector3(0.0, 1.8 * raise - 0.6 * (1.0 - raise), -0.5)
-			foot_angle = -0.15
+			foot_angle = -0.6 * raise
+			# The body springs a body height clear of the ground; once the arc carries it
+			# that high, the arc is the lift and the pose adds nothing.
+			lift = maxf(0.0, float(row.body) * HALF_HEIGHT * raise * smoothstep(0.0, 0.15, leap) - _leap_clearance())
+			foot_up = lift + float(row.tuck) * raise
 		State.CHARGE_BRACE:
-			var t := clampf(_clock / CHARGE_BRACE, 0.0, 1.0)
-			drop = -0.35 * t
-			tilt = -0.22 * t
+			t = clampf(_clock / CHARGE_BRACE, 0.0, 1.0)
 			fists = Vector3(0.0, 0.3, -0.85) * t
 		State.CHARGE:
-			drop = -0.35
-			tilt = -0.22
 			fists = Vector3(0.0, 0.3, -0.85)
-		State.WEAK:
-			drop = -0.3
-	var body_basis := Basis(Vector3.RIGHT, tilt)
+	var drop: float = lift if state == State.SLAM_LEAP else float(row.body) * HALF_HEIGHT * t
+	var body_basis := Basis(Vector3.RIGHT, float(row.lean) * t)
+	var socket := body_basis * CORE_SOCKET + Vector3.UP * drop
 	for bone_name in MODEL_BONES:
 		var index: int = _pose_bones[bone_name]
 		var rest := _pose_rig.get_bone_rest(index)
 		var pos := body_basis * rest.origin + Vector3.UP * drop
 		var basis := body_basis * rest.basis
 		var size := Vector3.ONE
+		var side := -1.0 if bone_name.ends_with("Left") else 1.0
 		if "Foot" in bone_name:
-			pos = rest.origin
-			basis = Basis(Vector3.RIGHT, foot_angle) * rest.basis
+			pos = rest.origin + Vector3(side * float(row.splay) * t, foot_up, 0.0)
+			basis = Basis(Vector3.BACK, -side * float(row.splay) * 0.5 * t) * Basis(Vector3.RIGHT, foot_angle) * rest.basis
 		elif "Fist" in bone_name:
 			pos += fists
 		elif "Plate" in bone_name:
-			var side := -1.0 if bone_name.ends_with("Left") else 1.0
-			var open := 1.15 if weak else 0.0
+			var open := 1.15 if weak else -float(row.shield_in) * t
+			pos += body_basis * Vector3(-side * float(row.shield_in) * t, -float(row.shield_drop) * t, 0.0)
 			var current := _pose_rig.get_bone_pose_rotation(index)
 			basis = body_basis * Basis(Vector3.UP, side * open) * rest.basis
 			var desired := basis.get_rotation_quaternion()
 			basis = Basis(current.slerp(desired, 1.0 - exp(-14.0 * delta))) if delta > 0.0 else Basis(desired)
 		elif bone_name == "MinibossHalo":
-			pos = rest.origin
-			basis = Basis(Vector3.UP, _clock * 5.0) * rest.basis
+			# The vent ring rides the core socket, on its axis, so it frames what to hit.
+			pos = _pose_rig.transform.affine_inverse() * socket
+			basis = body_basis * Basis(Vector3.UP, _clock * 5.0) * rest.basis
 			size = Vector3.ONE if weak else Vector3.ZERO
 		_pose_rig.set_bone_pose_position(index, pos)
 		_pose_rig.set_bone_pose_rotation(index, basis.get_rotation_quaternion())
 		_pose_rig.set_bone_pose_scale(index, size)
-	_core.position = body_basis * Vector3(0.0, 0.6, -RADIUS * 0.75) + Vector3.UP * drop
-	_core.rotation.x = tilt
+	_armour.material_override = hazard_stripe() if row.hazard else _model_plate_material
+	_core.position = socket
+	_core.rotation.x = float(row.lean) * t
 	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
 	_core.scale = Vector3.ONE * (1.5 * pulse if weak else 0.8)
 	_core_material.albedo_color = Palette.live() if weak else Palette.VERDIGRIS
@@ -389,6 +411,24 @@ func _model_pose(delta: float) -> void:
 	_core_material.emission = Palette.live()
 	_core_material.emission_energy_multiplier = 4.0 if weak else 0.0
 	_model_plate_material.albedo_color = Palette.SLATE
+
+
+# Height of the body's soles above the ground under it.
+func _leap_clearance() -> float:
+	if terrain == null or not is_inside_tree():
+		return 0.0
+	return maxf(0.0, global_position.y - HALF_HEIGHT - terrain.height(global_position.x, global_position.z))
+
+
+# The threat stripe the telegraphs paint (Threat.Painter.stripe_texture), lit as a surface.
+static func hazard_stripe() -> StandardMaterial3D:
+	if _hazard_stripe == null:
+		_hazard_stripe = StandardMaterial3D.new()
+		_hazard_stripe.albedo_texture = Threat.Painter.stripe_texture()
+		_hazard_stripe.uv1_triplanar = true
+		_hazard_stripe.uv1_scale = Vector3.ONE / (Threat.STRIPE_PITCH * sqrt(2.0))
+		_hazard_stripe.roughness = 0.6
+	return _hazard_stripe
 
 
 func _build_armour() -> void:
@@ -399,7 +439,7 @@ func _build_armour() -> void:
 	sphere.height = 2.0
 	_core.mesh = sphere
 	_core.material_override = _core_material
-	_core.position = Vector3(0.0, 0.6, -RADIUS * 0.75)
+	_core.position = CORE_SOCKET
 	_visual_parent().add_child(_core)
 	var plate_material := _plate_material()
 	for side in [-1.0, 1.0]:
