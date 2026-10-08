@@ -157,12 +157,13 @@ func _rebuild(seats: Array, key: String) -> void:
 		if not _warned:
 			_warned = true
 			push_warning("companion_body: model '%s' unavailable; keeping the plain hull" % path)
-		add_child(_fallback())
-		_add_lamp(key)
+		var hull := _fallback()
+		add_child(hull)
+		_add_lamp(hull, key)
 		return
 	dress_model(_model)
 	add_child(_model)
-	_add_lamp(key)
+	_add_lamp(_model, key)
 	_anim = _model.find_children("*", "AnimationPlayer", true, false).front() as AnimationPlayer
 	_play("idle")
 
@@ -183,7 +184,8 @@ func _fallback() -> Node3D:
 	return hull
 
 
-func _add_lamp(key: String) -> void:
+# The lamp rides the model (or the plain hull) so the body keeps one child.
+func _add_lamp(host: Node3D, key: String) -> void:
 	if not key.contains("escape_"):
 		return
 	_lamp = MeshInstance3D.new()
@@ -196,7 +198,7 @@ func _add_lamp(key: String) -> void:
 	mat.emission_enabled = true
 	_lamp.material_override = mat
 	_lamp.position = Vector3(0.0, LAMP_LIFT, 0.0)
-	add_child(_lamp)
+	host.add_child(_lamp)
 	_light("ready")
 
 
