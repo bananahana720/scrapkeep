@@ -53,9 +53,12 @@ func _measure(node: Node, require_colours: bool) -> Dictionary:
 			totals.verts += verts.size()
 			totals.tris += (indices.size() if indices != null else verts.size()) / 3
 			totals.draws += 1
-			var material := mi.get_active_material(s) as BaseMaterial3D
+			var active := mi.get_active_material(s)
+			var material := active as BaseMaterial3D
+			# The cache's workshop finish (VX3) is a shader that multiplies the vertex colour.
+			var shaded: bool = active is ShaderMaterial and active.shader != null and active.shader.code.contains("COLOR.rgb")
 			if not require_colours:
-				_check(material != null and (material.vertex_color_use_as_albedo or material.albedo_texture != null),
+				_check(shaded or (material != null and (material.vertex_color_use_as_albedo or material.albedo_texture != null)),
 					String(mi.name) + " runtime surface consumes colour or texture")
 			if require_colours:
 				_check(arrays[Mesh.ARRAY_COLOR] != null and arrays[Mesh.ARRAY_COLOR].size() == verts.size(),

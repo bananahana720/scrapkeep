@@ -15,6 +15,19 @@ const WARNING := "arena_waking_dress: assets missing or malformed; keeping greyb
 # The boss camera has a 12 m arm beyond the 36 m floor; rock and machines leave it room.
 const WALL_RADIUS := 60.0
 const WALL_SECTORS := 16
+# One row per pit light (VX3): every builder and the readability test read these numbers.
+# Light comes from lamps, the reactor and the key; the floor itself never glows.
+# core_key_low is the low preset's trim: the key keeps its shadow on a tighter cone.
+const LIGHTS := {
+	"rim_pool": {"energy": 2.2, "range": 34.0, "radius": 28.0, "height": 6.0},
+	"lamp_pool": {"energy": 1.2, "range": 24.0},
+	"reactor": {"energy": 3.0, "range": 48.0},
+	"core_key": {"energy": 2.8, "range": 55.0, "angle": 55.0},
+	"core_key_low": {"angle": 30.0},
+}
+# The pit floor's plates: half the old 8 m pitch, so the top floor reads as tiled plate.
+const FLOOR_PLATE_PITCH := 4.0
+const FLOOR_SEAM_WIDTH := 0.12
 
 var module
 var _parts := {}
@@ -38,8 +51,10 @@ static func attach(owner_module):
 	return dress
 
 
+# The key casts on every preset; low narrows its cone so its one shadow map stays small.
 func _sync_dressing() -> void:
-	_core_key.shadow_enabled = GraphicsPreset.current != "low"
+	_core_key.shadow_enabled = true
+	_core_key.spot_angle = LIGHTS.core_key_low.angle if GraphicsPreset.current == "low" else LIGHTS.core_key.angle
 
 
 # Preflight is atomic: no floor, environment or scene change before every slot is valid.
@@ -48,11 +63,11 @@ func _prepare() -> bool:
 	if stone == null or stone.shader == null or stone.get_shader_parameter("tex_tone") == null or stone.get_shader_parameter("tex_grain") == null:
 		return false
 	stone = stone.duplicate() as ShaderMaterial
-	stone.set_shader_parameter("flat_color", Vector3(0.48, 0.43, 0.34))
-	stone.set_shader_parameter("bed_tan", Vector3(0.55, 0.45, 0.33))
-	stone.set_shader_parameter("bed_orange", Vector3(0.42, 0.33, 0.25))
-	stone.set_shader_parameter("bed_cream", Vector3(0.65, 0.58, 0.46))
-	stone.set_shader_parameter("bed_rust", Vector3(0.34, 0.27, 0.23))
+	stone.set_shader_parameter("flat_color", Vector3(0.56, 0.50, 0.40))
+	stone.set_shader_parameter("bed_tan", Vector3(0.63, 0.52, 0.38))
+	stone.set_shader_parameter("bed_orange", Vector3(0.50, 0.40, 0.30))
+	stone.set_shader_parameter("bed_cream", Vector3(0.72, 0.64, 0.51))
+	stone.set_shader_parameter("bed_rust", Vector3(0.42, 0.33, 0.28))
 	_materials["stone"] = stone
 	var floor_material := ShaderMaterial.new()
 	floor_material.shader = preload("res://src/presentation/arena_waking_floor.gdshader")
@@ -60,8 +75,8 @@ func _prepare() -> bool:
 	floor_material.set_shader_parameter("tex_grain", stone.get_shader_parameter("tex_grain"))
 	floor_material.set_shader_parameter("base_color", Palette.SANDSTONE)
 	floor_material.set_shader_parameter("seam_color", Palette.CHARCOAL)
-	floor_material.set_shader_parameter("panel_pitch", 8.0)
-	floor_material.set_shader_parameter("seam_width", 0.10)
+	floor_material.set_shader_parameter("panel_pitch", FLOOR_PLATE_PITCH)
+	floor_material.set_shader_parameter("seam_width", FLOOR_SEAM_WIDTH)
 	_materials["floor"] = floor_material
 	for slot in ["steel", "enamel", "glass"]:
 		var material := StandardMaterial3D.new()
@@ -136,16 +151,16 @@ func _build() -> void:
 	_reactor_light = OmniLight3D.new()
 	_reactor_light.name = "ReactorBounce"
 	_reactor_light.light_color = Color("91b4ce")
-	_reactor_light.light_energy = 3.0
-	_reactor_light.omni_range = 48.0
+	_reactor_light.light_energy = LIGHTS.reactor.energy
+	_reactor_light.omni_range = LIGHTS.reactor.range
 	_reactor_light.shadow_enabled = false
 	add_child(_reactor_light)
 	_core_key = SpotLight3D.new()
 	_core_key.name = "CoreKey"
 	_core_key.light_color = Palette.SAND
-	_core_key.light_energy = 2.8
-	_core_key.spot_range = 55.0
-	_core_key.spot_angle = 55.0
+	_core_key.light_energy = LIGHTS.core_key.energy
+	_core_key.spot_range = LIGHTS.core_key.range
+	_core_key.spot_angle = LIGHTS.core_key.angle
 	_core_key.shadow_enabled = true
 	add_child(_core_key)
 	_follow_reactor()
@@ -186,10 +201,11 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 		var angle := i * TAU / 4.0 + PI / 4.0
 		var light := OmniLight3D.new()
 		light.name = "RimPool%d" % i
-		light.position = Vector3(sin(angle) * 33.0, 4.0, cos(angle) * 33.0)
+		var pool: Dictionary = LIGHTS.rim_pool
+		light.position = Vector3(sin(angle) * pool.radius, pool.height, cos(angle) * pool.radius)
 		light.light_color = DigScenery.LAMP_LIGHT
-		light.light_energy = 1.4
-		light.omni_range = 30.0
+		light.light_energy = pool.energy
+		light.omni_range = pool.range
 		light.shadow_enabled = false
 		pools.add_child(light)
 
@@ -211,8 +227,8 @@ func _works() -> void:
 			var light := OmniLight3D.new()
 			light.name = "LampPool%d_%d" % [tier, line]
 			light.light_color = DigScenery.LAMP_LIGHT
-			light.light_energy = 0.9
-			light.omni_range = 24.0
+			light.light_energy = LIGHTS.lamp_pool.energy
+			light.omni_range = LIGHTS.lamp_pool.range
 			light.shadow_enabled = false
 			light.position = wall + basis * Vector3(0, -1.0, -1.0)
 			works.add_child(light)

@@ -25,14 +25,14 @@ func _run() -> void:
 		var key := dress.get_node("CoreKey") as SpotLight3D
 		t.check("high keeps CoreKey shadows", key.shadow_enabled)
 		Preset.apply("low")
-		t.check("low disables CoreKey shadows immediately", not key.shadow_enabled)
+		t.check("low keeps CoreKey shadows on a trimmed cone (VX3)", key.shadow_enabled and key.spot_angle < 55.0)
 		Preset.apply("target")
 		t.check("target restores CoreKey shadows", key.shadow_enabled)
 		mod.exit_arena()
 		Preset.apply("low")
 		Harness.enter_world(game, 2)
 		dress = Harness.module(game, 2)._arena_dress
-		t.check("Waking entry on low starts without CoreKey shadows", dress != null and not dress._core_key.shadow_enabled)
+		t.check("Waking entry on low starts with CoreKey shadows (VX3)", dress != null and dress._core_key.shadow_enabled)
 	game.free()
 	Preset.apply("high")
 	quit(t.verdict())
