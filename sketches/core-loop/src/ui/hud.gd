@@ -286,7 +286,7 @@ func setup(game_ref) -> void:
 	_build_ach_toast()
 	_build_lore_pulse()
 	game.codex.lore_found.connect(func(_id: String): _show_lore())
-	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(String(Achievements.row(id).get("name", id))))
+	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(Achievements.toast_text(id)))
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast_kind("boss_phase_changed", {"name": phase_name.capitalize()}))

@@ -7,7 +7,7 @@ const Codex := preload("res://src/core/codex.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # Lore wiring rule: zone-entry exchanges follow row order, wait for advance, end on
-# the interact key (never Escape or jump), dismiss at cruise speed, play once per zone per run and stay silent in Warden fights. Notes show
+# the interact key (never Escape or jump), dismiss at cruise speed, play once per zone per run; exchanges are silent in Warden fights and the Warden intro row plays once at engagement (wave 10 ST2). Notes show
 # only saved codex discoveries, with locked empty-text rows in lore-table order.
 # This exercises the real game's bus, input dispatch and rendered Notes labels.
 
@@ -121,13 +121,16 @@ func _physics_process(_delta: float) -> bool:
 			_report("new run restores exchange", _said(spillway[0]), _bubble.text)
 			_report("note survives new run", _game.notes.note_entries()[0]["known"], "saved codex id remains known")
 			_game.flow._engage()
-			_report("Warden engagement hides lore", not _bubble.visible and _bubble.text == "", "warden_engaged through flow")
+			var warden_intro: Dictionary = _lines("1-1", "intro")[0]
+			_report("Warden engagement shows the Warden intro, not an exchange", _bubble.visible and _bubble.text == String(warden_intro["text"]), _bubble.text)
 			_press("cl_interact")
 			_game.flow.enter_stage(2, Vector3.ZERO, false)
 			_game.flow._engage()
 			_next("fight")
 		"fight":
-			_report("no lore during Warden fight", not _bubble.visible and _bubble.text == "", "advance and entry signal cannot resume lore")
+			var reach_intro: Dictionary = _lines("1-2", "intro")[0]
+			_report("stage-2 engagement shows that zone's Warden intro", _bubble.text == String(reach_intro["text"]), _bubble.text)
+			_report("no exchange during Warden fight", not _said(_lines("1-2", "exchange")[0]) and not _said(spillway[0]), "advance and entry signal cannot resume an exchange")
 			print("ui_lore_wiring_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 			quit(0 if _failures == 0 else 1)
 			return true
