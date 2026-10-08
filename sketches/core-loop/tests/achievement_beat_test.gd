@@ -4,9 +4,11 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
+const ContentRegistry := preload("res://src/core/content_registry.gd")
 
 # ST5-3: every achievement row that unlocks a pilot carries a beat line of at most
-# BEAT_WORDS words, validate refuses a pilot row without one or with one past the cap, the
+# BEAT_WORDS words, validate_beats refuses a pilot row without one, one past the cap or one with no row, the
 # earned toast's text is the name then the beat, and a locked pilot card shows the beat
 # under its condition.
 
@@ -28,7 +30,7 @@ func _run() -> void:
 	for id in Achievements.ids():
 		var row: Dictionary = Achievements.row(id)
 		if not row.get("reward", {}).has("pilot"):
-			_t.check("%s has no beat" % id, not row.has("beat"), str(row.get("beat", "")))
+			_t.eq("%s has no beat" % id, Achievements.beat_of(id), "")
 			continue
 		pilots += 1
 		var beat := Achievements.beat_of(id)
@@ -38,17 +40,18 @@ func _run() -> void:
 	_t.eq("pilot unlock rows", pilots, 5)
 	_t.eq("a row without a beat toasts its name", Achievements.toast_text("kills_100"), "Hundred Down")
 
-	var signals := Achievements.bus_signals()
-	var ids: Array = []
-	for def in ClassDef.all():
-		ids.append(def.id)
-	var bare: Dictionary = Achievements.row("brindle_routed").duplicate(true)
-	bare.erase("beat")
-	var long: Dictionary = Achievements.row("brindle_routed").duplicate(true)
-	long["beat"] = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen"
-	_t.check("validate refuses a pilot row with no beat", not Achievements.validate({"x": bare}, signals, ids, []).filter(func(p): return p.contains("beat")).is_empty(), "")
-	_t.check("validate refuses a beat past the cap", not Achievements.validate({"x": long}, signals, ids, []).filter(func(p): return p.contains("beat")).is_empty(), "")
-	_t.check("the table validates", Achievements.validate(Achievements.ROWS, signals, ids, []).filter(func(p): return p.contains("beat")).is_empty(), "")
+	var bare: Dictionary = Achievements.BEATS.duplicate()
+	bare.erase("brindle_routed")
+	var long: Dictionary = Achievements.BEATS.duplicate()
+	long["brindle_routed"] = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen"
+	var stray: Dictionary = Achievements.BEATS.duplicate()
+	stray["no_such_row"] = "A line for nothing."
+	_t.check("validate_beats refuses a pilot row with no beat", not Achievements.validate_beats(Achievements.ROWS, bare).is_empty(), "")
+	_t.check("validate_beats refuses a beat past the cap", not Achievements.validate_beats(Achievements.ROWS, long).is_empty(), "")
+	_t.check("validate_beats refuses a beat with no row", not Achievements.validate_beats(Achievements.ROWS, stray).is_empty(), "")
+	_t.eq("the beat table validates", Achievements.validate_beats(), [])
+	_t.eq("the row table still validates", Achievements.validate(Achievements.ROWS, Achievements.bus_signals(), ClassDef.all().map(func(d): return d.id), Cosmetics.ids()), [])
+	_t.eq("the pinned ROWS digest is unchanged", ContentRegistry.digest(Achievements.ROWS), ContentRegistry.GOLDEN_HASHES["achievements.ROWS"])
 
 	_game = Game.new()
 	_game.test_mode = true
