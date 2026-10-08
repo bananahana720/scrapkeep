@@ -84,10 +84,15 @@ func _init() -> void:
 			"b": Vector3(at_b.x, float(b["top"]) - BARGE_SIZE.y * 0.5, at_b.y),
 			"size": BARGE_SIZE, "travel": barge["travel"], "dwell": 3.0, "offset": 0.0})
 	# The camp holds the west island, the bounty brute guards the vault 7 m to the side of the dock.
+	# 2026-10-08 (wave 11, GP1): the cache sits on the middle island's east lip, on the outside of
+	# the turn between the two bridges, its pocket clear of the walk across.
 	activity_sites = [
 		{"id": "enemy_camp", "at": Vector2(-100.0, -30.0), "pack": ["chaser", "chaser", "lobber"], "pay": {"named": "rivet_plating"}},
 		{"id": "hauler_bounty", "at": Vector2(95.9, 65.7)},
+		{"id": "cracked_cache", "at": Vector2(36.6, 6.5)},
 	]
+	# The parent's rescue is the first zone's; the crown has none.
+	rescue_sites = []
 
 
 func _islands() -> Dictionary:

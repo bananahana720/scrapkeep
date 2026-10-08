@@ -38,11 +38,14 @@ func _init() -> void:
 	# Deep tier: the reward gates stand east of the beacon.
 	gate_slots = [{"at": Vector2(80.0, 140.0), "facing": Vector3(0.0, 0.0, 1.0)}]
 	# Upper tier: the cache. Middle tier: the camp, in the Dig's own kinds, and the ambush.
+	# 2026-10-08 (wave 11, GP1): the bounty brute holds the pit lip, the second ramp's head
+	# above the deep cliff, 6 m east of the ramp's line.
 	activity_sites = [
 		{"id": "enemy_camp", "at": Vector2(120.0, 50.0), "pack": ["burrower", "drill_crew", "lamp_swarm"],
 			"pay": {"named": "pylon_capacitor"}},
 		{"id": "ambush_altar", "at": Vector2(-110.0, 40.0)},
 		{"id": "cracked_cache", "at": Vector2(-100.0, -100.0)},
+		{"id": "hauler_bounty", "at": Vector2(46.0, 62.0)},
 	]
 	# Deep tier, west of the beacon and south of Kest's cage: the relic cache.
 	relic_spot = Vector2(-80.0, 120.0)

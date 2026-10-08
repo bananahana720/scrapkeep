@@ -105,6 +105,9 @@ const WALLS := [
 
 
 var _dive_floor := PackedFloat32Array()
+# The relic cache (interact.gd), behind the valve's secret pocket: past its back wall, so the
+# ball that found the valve finds it next. Unlike a valve or activity cache, it always holds a relic.
+var relic_spot := SECRET_CACHE + Vector2(0.0, 22.0)
 
 
 func _init() -> void:
