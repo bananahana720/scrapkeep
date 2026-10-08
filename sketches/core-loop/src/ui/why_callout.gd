@@ -2,15 +2,17 @@ extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const Parts := preload("res://src/build/parts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# Why a synergy fired (LEGIBILITY section 5, Callout). One form for every row: the two
-# cause glyphs snap together, an arrow draws to the effect glyph in the row's own shape,
-# and a pulse in that shape plays on the struck body (presentation's vfx draws the pulse).
-# The 2D part sits beside the body, clamped to the play area and clear of the reticle. It
-# runs RUN seconds; its name shows on a profile's first NAME_USES firings of the row.
+# Why a synergy fired (LEGIBILITY section 5, Callout). One form for every row: the icons of
+# the row's two callout parts (Synergies.callout) snap together, an arrow draws to the effect
+# glyph in the row's own shape, and a pulse in that shape plays on the struck body
+# (presentation's vfx draws the pulse). The 2D part sits beside the body, clamped to the play
+# area and clear of the reticle. It runs RUN seconds; its name shows on a profile's first
+# NAME_USES firings of the row and the callout's three words on every later one.
 # Colours come from EventKinds.cause_color. A firing over a limit draws only the pulse.
 
 const RUN := 0.9
@@ -25,8 +27,6 @@ const BESIDE := 34.0
 const GLYPH := 30.0
 const NAME_FONT := 15
 const USE_PREFIX := "why:"
-# The silhouettes the effect shapes lack: the element icons' bolt (arc) and disc (kinetic).
-const ELEMENT_ICONS := {"bolt": "el_arc", "disc": "el_kinetic"}
 
 
 var game
@@ -37,12 +37,19 @@ var _since := {}
 var _calm_left := 0.0
 
 
-# The two cause silhouettes of a synergy, the shown ingredient's first; empty when the
-# row is unknown or a tag has no glyph.
-static func cause_shapes(id: String) -> Array:
-	if not Synergies.ROWS.has(id):
+# The icons of a synergy's two callout parts, part a's first; empty when the row has no
+# callout or either part has no registered icon.
+static func callout_icons(id: String) -> Array:
+	var call := Synergies.callout(id)
+	if call.is_empty():
 		return []
-	return EventKinds.cause_glyphs(Synergies.ROWS[id]["tags"])
+	var out: Array = []
+	for part_id in [call.get("a", ""), call.get("b", "")]:
+		var icon := Parts.icon_of(String(part_id))
+		if not Icons.has(icon):
+			return []
+		out.append(icon)
+	return out
 
 
 # Where a callout of `part` goes for a body at `anchor` on a screen of `screen`: beside the
@@ -136,8 +143,8 @@ func fight() -> bool:
 
 
 func _on_fired(id: String, target: Node3D, at: Vector3) -> void:
-	var shapes := cause_shapes(id)
-	if shapes.is_empty() or EventKinds.cause_row(id).is_empty():
+	var icons := callout_icons(id)
+	if icons.is_empty() or EventKinds.cause_row(id).is_empty():
 		return
 	if float(_since.get(id, COOLDOWN)) < COOLDOWN:
 		return
@@ -148,13 +155,15 @@ func _on_fired(id: String, target: Node3D, at: Vector3) -> void:
 	piece.id = id
 	piece.shape = String(EventKinds.cause_row(id)["shape"])
 	piece.color = EventKinds.cause_color(id)
-	piece.cause_shapes = shapes
+	piece.part_icons = icons
 	piece.target = target
 	piece.at = at
 	var key := USE_PREFIX + id
 	if profile != null and profile.uses(key) < NAME_USES:
 		piece.label = String(Synergies.ROWS[id]["name"])
 		profile.add_use(key)
+	else:
+		piece.label = String(Synergies.callout(id).get("words", ""))
 	piece.size = SIZE
 	piece.custom_minimum_size = SIZE
 	add_child(piece)
@@ -198,7 +207,7 @@ class Piece extends Control:
 	var id := ""
 	var shape := ""
 	var color := Color.WHITE
-	var cause_shapes: Array = []
+	var part_icons: Array = []
 	var label := ""
 	var age := 0.0
 	var target: Node3D
@@ -218,8 +227,8 @@ class Piece extends Control:
 		var y := GLYPH * 0.5 + 2.0
 		var first := Vector2(GLYPH * 0.5 + 2.0, y)
 		var second := first + Vector2(lerpf(GLYPH * 2.4, GLYPH * 1.15, snap), 0.0)
-		_glyph(first, cause_shapes[0], 1.0, fade)
-		_glyph(second, cause_shapes[1], 1.0, fade)
+		_icon(first, part_icons[0], fade)
+		_icon(second, part_icons[1], fade)
 		var from := second + Vector2(GLYPH * 0.7, 0.0)
 		var reach := clampf((p - 0.3) / 0.25, 0.0, 1.0)
 		var to := from + Vector2(GLYPH * 1.1 * reach, 0.0)
@@ -235,10 +244,9 @@ class Piece extends Control:
 	func _glyph(centre: Vector2, silhouette: String, scale_by: float, alpha: float) -> void:
 		var side := GLYPH * scale_by
 		draw_circle(centre, side * 0.62, Color(color.darkened(0.85), 0.7 * alpha))
-		draw_texture_rect(_silhouette(silhouette), Rect2(centre - Vector2.ONE * side * 0.5, Vector2.ONE * side), false, Color(color, alpha))
+		draw_texture_rect(Icons.shape(silhouette), Rect2(centre - Vector2.ONE * side * 0.5, Vector2.ONE * side), false, Color(color, alpha))
 
-	# A tag glyph is an effect-shape silhouette or one of the element icons' bolt and disc.
-	func _silhouette(name: String) -> Texture2D:
-		if Icons.SHAPES.has(name):
-			return Icons.shape(name)
-		return Icons.texture(ELEMENT_ICONS.get(name, "el_kinetic"))
+	# A part's own icon on the same disc; an SVG keeps its colours and takes only the fade.
+	func _icon(centre: Vector2, icon: String, alpha: float) -> void:
+		draw_circle(centre, GLYPH * 0.62, Color(color.darkened(0.85), 0.7 * alpha))
+		draw_texture_rect(Icons.texture(icon), Rect2(centre - Vector2.ONE * GLYPH * 0.5, Vector2.ONE * GLYPH), false, Icons.tint(icon, Color(color, alpha)))

@@ -22,10 +22,10 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 
 const CATALOGUE := {
 	# Common: gate fodder. Only these may be plain percentages.
-	"hot_rivets": {"name": "Hot Rivets", "verb": "Hit harder", "text": "+4 punch, +12% weapon damage",
+	"hot_rivets": {"touches": "fire", "name": "Hot Rivets", "verb": "Hit harder", "text": "+4 punch, +12% weapon damage",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["kinetic"], "punch": 4.0,
 		"mods": {"weapon_damage": 1.12}},
-	"loose_trigger": {"name": "Loose Trigger", "verb": "Fire faster", "text": "+10% fire rate",
+	"loose_trigger": {"touches": "fire", "name": "Loose Trigger", "verb": "Fire faster", "text": "+10% fire rate",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["speed"],
 		"mods": {"weapon_rate": 1.1}},
 	"long_barrel": {"name": "Long Barrel", "verb": "Shoot farther", "text": "+12% weapon range",
@@ -43,28 +43,51 @@ const CATALOGUE := {
 	"dash_vane": {"name": "Dash Vane", "verb": "Dash harder", "text": "+15% air dash",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["speed"],
 		"mods": {"dash_impulse": 1.15}},
-	"rivet_plating": {"name": "Rivet Plating", "verb": "Bolt on armour", "text": "+15 max health",
+	"rivet_plating": {"touches": "roll", "name": "Rivet Plating", "verb": "Bolt on armour", "text": "+15 max health",
 		"rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"max_hp_bonus": 15.0},
 	"magnet_spool": {"name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
 		"icon": "utility", "rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"magnet": 1.5},
+	# Wave 11 GP2: one part for each verb the alpha pool barely touched (roll, harpoon, boost,
+	# jump, haul; special is the rare Spare Cell). Each changes how its verb feels through one
+	# tuning knob and adds no key. "touches" is the Bindings verb, "pitch" the shelf's three words.
+	"grip_tread": {"name": "Grip Tread", "verb": "Bite the floor", "pitch": "Tread bites harder", "touches": "roll",
+		"text": "+15% drive acceleration", "icon": "mobility",
+		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["anchor"],
+		"mods": {"drive_accel": 1.15}},
+	"live_line": {"name": "Live Line", "verb": "Winch in faster", "pitch": "Line hums back", "touches": "harpoon",
+		"text": "+25% winch top speed", "icon": "mobility",
+		"rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
+		"mods": {"reel_speed": 1.25}},
+	"vent_baffle": {"name": "Vent Baffle", "verb": "Boost again sooner", "pitch": "Boost breathes quicker", "touches": "boost",
+		"text": "boost recharges 12% faster", "icon": "mobility",
+		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["speed"],
+		"cooldown_scale": 0.88},
+	"spring_shims": {"name": "Spring Shims", "verb": "Jump higher", "pitch": "Hop clears rails", "touches": "jump",
+		"text": "+10% jump speed", "icon": "mobility",
+		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["spiral"],
+		"mods": {"jump_speed": 1.1}},
+	"drop_weight": {"name": "Drop Weight", "verb": "Slam down faster", "pitch": "Slams land sooner", "touches": "haul",
+		"text": "+15% slam speed", "icon": "mobility",
+		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["mass"],
+		"mods": {"slam_speed": 1.15}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
 	"slag_rounds": {"name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 10.0,
 		"mods": {"weapon_damage": 1.25}},
-	"double_feed": {"name": "Double Feed", "verb": "Feed two rounds a trigger", "text": "+3 punch, +25% fire rate",
+	"double_feed": {"touches": "fire", "name": "Double Feed", "verb": "Feed two rounds a trigger", "text": "+3 punch, +25% fire rate",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["speed", "split"], "punch": 3.0,
 		"mods": {"weapon_rate": 1.25}},
-	"focus_lens": {"name": "Focus Lens", "verb": "Focus the beam", "text": "+6 punch, +25% weapon range",
+	"focus_lens": {"touches": "fire", "name": "Focus Lens", "verb": "Focus the beam", "text": "+6 punch, +25% weapon range",
 		"rarity": "common", "tier": 2, "family": "weapon", "tags": ["anchor"], "punch": 6.0,
 		"mods": {"weapon_range": 1.25}},
 	# Pattern transformers. The part id is the pattern id, and each copy adds a level.
-	"cross_split": {"name": "Cross Split", "verb": "Split shots into a cross", "text": "shots split four ways on impact",
+	"cross_split": {"touches": "fire", "name": "Cross Split", "verb": "Split shots into a cross", "text": "shots split four ways on impact",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["split"],
 		"patterns": {"cross_split": 1}},
-	"spiral_wave": {"name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
+	"spiral_wave": {"touches": "fire", "name": "Spiral Wave", "verb": "Spiral shots out in a wave", "text": "shots corkscrew outward",
 		"rarity": "common", "tier": 2, "family": "pattern", "tags": ["spiral"],
 		"patterns": {"spiral_wave": 1}},
 	"chain_arc": {"name": "Chain Arc", "verb": "Chain hits to a neighbour", "text": "a hit jumps to the nearest enemy",
@@ -75,22 +98,22 @@ const CATALOGUE := {
 		"elements": {"dash": "frost"}, "mods": {"dash_impulse": 1.1}},
 	# Arc Coil and Runner Overclock carry one tag: kinetic was not their identity, and on
 	# them it put Wrecking Ball over the 60% discovery cap (balance loop, B4).
-	"arc_coil": {"name": "Arc Coil", "verb": "Slam discharges an arc", "text": "slams burst arc at everything near",
+	"arc_coil": {"touches": "haul", "name": "Arc Coil", "verb": "Slam discharges an arc", "text": "slams burst arc at everything near",
 		"element": "arc", "rarity": "common", "tier": 2, "family": "mobility", "tags": ["arc"],
 		"elements": {"slam": "arc"}},
 	# Class mods: offered only to their class.
-	"pylon_capacitor": {"name": "Pylon Capacitor", "verb": "Bank a bigger plant", "text": "+8 punch, slingshot +50% boost",
+	"pylon_capacitor": {"touches": "jump", "name": "Pylon Capacitor", "verb": "Bank a bigger plant", "text": "+8 punch, slingshot +50% boost",
 		"icon": "mobility", "rarity": "common", "tier": 2, "family": "class", "class_id": "pylon_engineer", "tags": ["anchor", "arc"],
 		"punch": 8.0, "mods": {"slingshot_boost": 1.5, "slingshot_keep": 1.1, "turret_damage": 1.4}},
-	"runner_overclock": {"name": "Runner Overclock", "verb": "Overclock the gun on the run", "text": "+4 punch, +35% fire rate",
+	"runner_overclock": {"touches": "fire", "name": "Runner Overclock", "verb": "Overclock the gun on the run", "text": "+4 punch, +35% fire rate",
 		"icon": "damage", "rarity": "common", "tier": 2, "family": "class", "class_id": "runner_gunner", "tags": ["speed"],
 		"punch": 4.0, "mods": {"weapon_rate": 1.35}, "cooldown_scale": 0.8},
 
 	# Rare: vaults, and gates with one bonus core.
-	"sunforged_core": {"name": "Sunforged Core", "verb": "Forge every hit white-hot", "text": "+22 punch, +50% weapon damage",
+	"sunforged_core": {"touches": "fire", "name": "Sunforged Core", "verb": "Forge every hit white-hot", "text": "+22 punch, +50% weapon damage",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["kinetic", "mass"], "punch": 22.0,
 		"mods": {"weapon_damage": 1.5}},
-	"gatling_heart": {"name": "Gatling Heart", "verb": "Spin up a gatling stream", "text": "+5 punch, +50% fire rate",
+	"gatling_heart": {"touches": "fire", "name": "Gatling Heart", "verb": "Spin up a gatling stream", "text": "+5 punch, +50% fire rate",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["spiral", "speed"], "punch": 5.0,
 		"mods": {"weapon_rate": 1.5}},
 	"horizon_optic": {"name": "Horizon Optic", "verb": "Snipe to the horizon", "text": "+12 punch, +50% range",
@@ -105,6 +128,10 @@ const CATALOGUE := {
 	"ram_plow": {"name": "Ram Plow", "verb": "Plough through the line", "text": "+18 punch, +15 max health",
 		"icon": "damage", "rarity": "rare", "tier": 3, "family": "stat", "tags": ["kinetic", "mass"], "punch": 18.0,
 		"max_hp_bonus": 15.0},
+	"spare_cell": {"name": "Spare Cell", "verb": "Stock one more special", "pitch": "One cell extra", "touches": "special",
+		"text": "+1 special charge", "icon": "charge",
+		"rarity": "rare", "tier": 3, "family": "stat", "tags": ["mass"],
+		"charges": {"special": 1}},
 
 	# Rare-plus: won events, and gates with two or more bonus cores.
 	"tempest_core": {"name": "Tempest Core", "verb": "Call a spiral storm", "text": "spiral +2, chain +1, +30% fire rate",
@@ -170,7 +197,7 @@ const HOTWIRED := {
 # One common part's recycle value in cogs (design-v3/research/economy/ECONOMY.md, Cogs: recycling).
 const RECYCLE_COMMON := 10
 
-# The two Evolved parts (Synergies rows with "evolution"). Not in CATALOGUE, so they never
+# The four Evolved parts (Synergies rows with "evolution"). Not in CATALOGUE, so they never
 # enter rows(), ids(), offer_pool(), roll() or roll_gate(): build.gd grants one when both
 # ingredients are held (source "evolution"). Rarity evolved carries roll weight 0 too.
 const EVOLVED := {
@@ -180,6 +207,12 @@ const EVOLVED := {
 	"bladestorm_rotor": {"name": "Bladestorm Rotor", "verb": "Spin up a storm", "text": "Pinwheel evolved: spiral level +1, +20% fire rate",
 		"rarity": "evolved", "tier": 3, "family": "pattern", "tags": ["spiral", "speed"], "patterns": {"spiral_wave": 1},
 		"mods": {"weapon_rate": 1.2}},
+	"storm_mast": {"name": "Storm Mast", "verb": "Hook it, light it", "text": "Tesla Pylon evolved: +6 punch, +20% fire rate",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["anchor", "arc"], "punch": 6.0,
+		"mods": {"weapon_rate": 1.2}},
+	"grounding_spike": {"name": "Grounding Spike", "verb": "Earth every slam", "text": "Lightning Rod evolved: +8 punch, +25% weapon damage",
+		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["arc", "mass"], "punch": 8.0,
+		"mods": {"weapon_damage": 1.25}},
 }
 
 static var _defs := {}
@@ -284,6 +317,17 @@ static func display_name(part_id: String) -> String:
 static func tags_of(part_id: String) -> Array:
 	var d: Resource = def(part_id)
 	return d.tags if d != null else []
+
+
+# The icon a part shows where it stands for itself (the why callout): its element's icon when it
+# carries one, else its category icon; "" for an unknown id.
+static func icon_of(part_id: String) -> String:
+	var d: Resource = def(part_id)
+	if d == null:
+		return ""
+	if d.element != "":
+		return "el_" + d.element
+	return "cat_" + (d.icon_category if d.icon_category != "" else "utility")
 
 
 # The gate label's first line: "{name}: {verb}. Punch +{n}".
