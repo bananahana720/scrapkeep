@@ -115,41 +115,41 @@ const ROWS := [
 		"exchange": "lore.dig_entry.exchange",
 		"speaker": "Moss",
 		"skippable": true,
-		"text": "Brought spare lamps. Upper bench gets dark before the lamps agree.",
+		"text": "Brought spare lamps. Keep one for the walk back.",
 	},
 	{
 		"id": "lore.dig_entry.exchange.2", "kind": "exchange", "zone": "2-1",
 		"exchange": "lore.dig_entry.exchange",
 		"speaker": "Dig crew",
 		"skippable": true,
-		"text": "Checked the ramp. Heard boots below. Nobody signed in.",
+		"text": "The wall knocked first. We stopped calling it settling.",
 	},
 	{
 		"id": "lore.dig_entry.exchange.3", "kind": "exchange", "zone": "2-1",
 		"exchange": "lore.dig_entry.exchange",
 		"speaker": "Moss",
 		"skippable": true,
-		"text": "Leave their lamp on the rack. Count ours before supper.",
+		"text": "Good. Put the tools down when it answers.",
 	},
 	{
 		"id": "lore.dig_entry.note.1", "kind": "field_note", "zone": "2-1",
-		"text": "Shift log: upper bench swept. Dust returned through the plate seams. Sweepings entered under next shift.",
+		"text": "Lamp tally: six issued, seven returned. Extra lamp burns cold. Nobody claimed it.",
 	},
 	{
 		"id": "lore.dig_entry.note.2", "kind": "field_note", "zone": "2-1",
-		"text": "Ramp inspection: handcart reached the lower tier empty. Brakes held. Footprints beside it came uphill.",
+		"text": "Shift board: knock twice before drilling. Wait for the second knock to finish.",
 	},
 	{
 		"id": "lore.dig_entry.note.3", "kind": "field_note", "zone": "2-1",
-		"text": "Cover tag: east plate sounds hollow. West plate answers. Crew requests separate inspection hours.",
+		"text": "Rail repair: bent axle replaced. Cart still leans toward the sealed tunnel.",
 	},
 	{
 		"id": "lore.dig_entry.note.4", "kind": "field_note", "zone": "2-1",
-		"text": "Stores docket: vault stocked with six lamp wicks. Seventh wick already trimmed. Left scissors where they were.",
+		"text": "Lunch tin: KEEP CLOSED. Something below has learned the sound of the latch.",
 	},
 	{
 		"id": "lore.dig_entry.note.5", "kind": "field_note", "zone": "2-1",
-		"text": "Beacon service: lower tier lens cleaned. Light caught someone on the bench. Bench crew counted themselves twice.",
+		"text": "Survey mark: measured the same shaft twice. Second measurement includes a landing.",
 	},
 	{
 		"id": "lore.dig_entry.note.6", "kind": "field_note", "zone": "2-1",
@@ -162,7 +162,7 @@ const ROWS := [
 	{
 		"id": "lore.dig_entry.intro.warden", "kind": "intro", "zone": "2-1",
 		"subject": "warden",
-		"text": "Dig Warden. Upper bench closed. Something below has signed the sheet.",
+		"text": "Crew notice: borrowed lights go back on the rack. Even found ones.",
 	},
 	{
 		"id": "lore.dig_entry.intro.waking", "kind": "intro", "zone": "2-1",
@@ -226,48 +226,48 @@ const ROWS := [
 	{
 		"id": "lore.dig_depths.intro.waking", "kind": "intro", "zone": "2-2",
 		"subject": "waking",
-		"text": "Waking: Leave the second lamp. The first has learned the way.",
+		"text": "Pump report: water clear. Sediment forms neat circles around every bolt.",
 	},
 	{
 		"id": "lore.highdraft_deck.exchange.1", "kind": "exchange", "zone": "3-1",
 		"exchange": "lore.highdraft_deck.exchange",
 		"speaker": "Deck crew",
 		"skippable": true,
-		"text": "Barge came back with our wrench. We'd only just dropped it.",
+		"text": "Wind took the wrench. Sent back a spoon.",
 	},
 	{
 		"id": "lore.highdraft_deck.exchange.2", "kind": "exchange", "zone": "3-1",
 		"exchange": "lore.highdraft_deck.exchange",
 		"speaker": "Moss",
 		"skippable": true,
-		"text": "Dry it off. Supper's on the middle island.",
+		"text": "Fits the same nut. Keep it.",
 	},
 	{
 		"id": "lore.highdraft_deck.exchange.3", "kind": "exchange", "zone": "3-1",
 		"exchange": "lore.highdraft_deck.exchange",
 		"speaker": "Deck crew",
 		"skippable": true,
-		"text": "Wrench was dry. Had tomorrow's repair tied to it.",
+		"text": "Had our initials on it already.",
 	},
 	{
 		"id": "lore.highdraft_deck.note.1", "kind": "field_note", "zone": "3-1",
-		"text": "Bridge log: both crossings sound. Middle island crew heard a third crossing after everyone sat down.",
+		"text": "Deck ledger: three loose panels, two recovered. Third panel seen flying level.",
 	},
 	{
 		"id": "lore.highdraft_deck.note.2", "kind": "field_note", "zone": "3-1",
-		"text": "Barge tally: two hulls, two ropes. Third wake passed between them. Filed under weather until it docks.",
+		"text": "Rigging card: tension holds. Cable sings before the gust reaches the mast.",
 	},
 	{
 		"id": "lore.highdraft_deck.note.3", "kind": "field_note", "zone": "3-1",
-		"text": "Net deck inspection: loose fasteners recovered below the islands. One landed before the wrench slipped.",
+		"text": "Galley notice: lids tethered during supper. Soup now travels farther than gossip.",
 	},
 	{
 		"id": "lore.highdraft_deck.note.4", "kind": "field_note", "zone": "3-1",
-		"text": "Thermal notice: secure lunch lids near the columns. Soup rose cleanly. Bowl stayed on the table.",
+		"text": "Flight log: flotilla turned together. No signal sent from the bridge.",
 	},
 	{
 		"id": "lore.highdraft_deck.note.5", "kind": "field_note", "zone": "3-1",
-		"text": "Cable service: west line tension holds. Gloves on the far end match the pair still in stores.",
+		"text": "Repair stencil: PATCH HERE. Paint underneath names tomorrow's shift.",
 	},
 	{
 		"id": "lore.highdraft_deck.note.6", "kind": "field_note", "zone": "3-1",
@@ -280,7 +280,7 @@ const ROWS := [
 	{
 		"id": "lore.highdraft_deck.intro.warden", "kind": "intro", "zone": "3-1",
 		"subject": "warden",
-		"text": "Highdraft Warden. Bridges counted. An extra crossing remains on the sheet.",
+		"text": "Tool locker: spoon filed as wrench. Wrench filed as weather loss.",
 	},
 	{
 		"id": "lore.highdraft_deck.intro.mind", "kind": "intro", "zone": "3-1",
@@ -344,6 +344,6 @@ const ROWS := [
 	{
 		"id": "lore.highdraft_core.intro.mind", "kind": "intro", "zone": "3-2",
 		"subject": "mind",
-		"text": "Mind: Your gloves are mended. I left room for another hand.",
+		"text": "Lookout scrap: island lights blink in order. Count starts before the first.",
 	},
 ]
