@@ -529,7 +529,11 @@ func start_ending_sequence() -> void:
 func _open_ending() -> void:
 	_ending_title.text = String(Worlds.ENDING["title"])
 	_ending_title.add_theme_color_override("font_color", EventKinds.color("run_ended"))
-	_ending_body.text = "\n".join(PackedStringArray(Worlds.ENDING["log"])) + "\n\n" + String(Worlds.ENDING["sign"])
+	var ending_lines := PackedStringArray()
+	for world_id in [1, 2, 3]:
+		ending_lines.append_array(PackedStringArray(Worlds.ENDING["log"][world_id]))
+	ending_lines.append_array(PackedStringArray(Worlds.ENDING["close"]))
+	_ending_body.text = "\n".join(ending_lines) + "\n\n" + String(Worlds.ENDING["sign"])
 	_ending.visible = true
 	_ending_left = ENDING_HOLD
 	for node in [_title, _body, _stats, _actions]:

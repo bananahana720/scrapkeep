@@ -138,11 +138,15 @@ func _words(text: String) -> int:
 
 func _copy_caps() -> void:
 	var total := _words(String(Worlds.ENDING["sign"]))
-	for line in Worlds.ENDING["log"]:
-		_t.check("copy: log line has 20 words or fewer", _words(line) <= 20, "%d: %s" % [_words(line), line])
+	var log_lines: Array = []
+	for world_id in [1, 2, 3]:
+		_t.check("copy: world %d has two log lines" % world_id, Worlds.ENDING["log"].get(world_id, []).size() == 2, str(Worlds.ENDING["log"].get(world_id, []).size()))
+		log_lines.append_array(Worlds.ENDING["log"].get(world_id, []))
+	log_lines.append_array(Worlds.ENDING["close"])
+	for line in log_lines:
+		_t.check("copy: log line has 14 words or fewer", _words(line) <= 14, "%d: %s" % [_words(line), line])
 		total += _words(line)
-	_t.check("copy: log lines number 3 to 5", Worlds.ENDING["log"].size() >= 3 and Worlds.ENDING["log"].size() <= 5, str(Worlds.ENDING["log"].size()))
-	_t.check("copy: log plus sign is 40 to 80 words", total >= 40 and total <= 80, str(total))
+	_t.check("copy: log plus close plus sign is 40 to 120 words", total >= 40 and total <= 120, str(total))
 	_t.check("copy: title is 4 words or fewer", _words(Worlds.ENDING["title"]) <= 4, Worlds.ENDING["title"])
 	for id in Worlds.BOSSES:
 		for field in ["victory", "epitaph"]:
