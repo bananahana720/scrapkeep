@@ -89,9 +89,9 @@ func _run() -> void:
 	_t.check("the cage stands at the map's rescue site", Vector2(cage_at.x, cage_at.z).distance_to(site) < 0.5, "cage %s site %s" % [cage_at, site])
 	print("dig_rescue_test: observation: cage.terms() = \"%s\"" % _cage().terms())
 
-	var hint_row: String = Achievements.ROWS["dig_rescued"]["text"]
+	var hint_row: String = String(kest.unlock.get("label", ""))  # 2026-10-08 (wave 11 GP5): the card reads the class row's unlock label, not the achievement text
 	_t.check("Kest starts locked", not profile.has_pilot("demolitions_caster") and not _game.pilot_unlocked(kest), "locked")
-	_t.eq("the locked card hint is the dig_rescued row text", ClassCard.unlock_hint(kest, _game.progress), hint_row)
+	_t.eq("the locked card hint is the class row unlock label", ClassCard.unlock_hint(kest, _game.progress), hint_row)
 
 	await _approach()
 	await _hold_e(HOLD_FRAMES)
