@@ -100,13 +100,13 @@ const TRIES := 8
 # elite pack again; never two elites in a row.
 const ELITE_REPEAT := 0.1
 const PRESSURE_KEYS := ["pack_scale", "interval_scale", "elite_rate", "posture_curve", "boss_phase_scale"]
-# Breath as a gameplay setting, keyed by the same option values the music reads. raw and gentle
-# are normal (every key 1.0); hard is steeper.
+# Breath as a gameplay setting, keyed by the same option values the music reads. The authored
+# PRESSURE rows are the default game: hard (the default) and raw read 1.0 on every key; gentle eases.
 const BREATH_NORMAL := {"pack_scale": 1.0, "interval_scale": 1.0, "elite_rate": 1.0, "posture_curve": 1.0, "boss_phase_scale": 1.0}
 const BREATH := {
 	"raw": BREATH_NORMAL,
-	"hard": {"pack_scale": 1.25, "interval_scale": 0.85, "elite_rate": 1.25, "posture_curve": 1.0, "boss_phase_scale": 1.0},
-	"gentle": BREATH_NORMAL,
+	"hard": BREATH_NORMAL,
+	"gentle": {"pack_scale": 0.85, "interval_scale": 1.15, "elite_rate": 0.8, "posture_curve": 1.0, "boss_phase_scale": 0.9},
 }
 
 var stage_time := 0.0

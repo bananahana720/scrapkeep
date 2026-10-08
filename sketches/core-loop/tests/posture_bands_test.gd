@@ -27,8 +27,10 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 2026-10-05 (alpha wave 16 aim-rest): re-recorded after shots aim from the lens rest (W16-1); was 80.6 / 33.1
 # 2026-10-07 (dress push P-R18): re-recorded after the camera shake left the global random
 # stream (P-R15); the fight is unchanged (zero-shake runs match), one seed's run moved; was 78.4 / 37.9
-const EXPECT_SMALL_S := 72.4
-const EXPECT_GROWN_S := 37.9
+# 2026-10-08 (wave 11 GP3F): re-pinned to the measured medians, small/grown 2.11; was 72.4 / 37.9. The pre-GP3
+# base 39c20a0 already measured 70.5 / 32.5; GP3's elite repeat (director.gd ELITE_REPEAT) on the slice's authored director moved it to 66.6 / 31.5
+const EXPECT_SMALL_S := 66.6
+const EXPECT_GROWN_S := 31.5
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 

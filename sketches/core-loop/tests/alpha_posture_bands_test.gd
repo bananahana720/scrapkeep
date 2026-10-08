@@ -26,6 +26,8 @@ const ALPHA_TICKS := 30000
 # Spillway 59.0 s of [56.99, 58.98] and Reach 44.7 s of [44.29, 44.68] (before: Spillway 63.9 to
 # 79.7, Reach 42.0 to 46.0). The floors rise to about 10 s under them, narrowing each band toward
 # its upper half; the ceilings stay. Pushing the medians themselves up is the tuning sweep's job.
+# GP3F 2026-10-08: the default Breath now plays the rows as written (no hard multiplier on top); the
+# medians are Spillway 61.8 s of [61.81, 50.82] and Reach 46.7 s of [40.25, 46.67]. Bands unchanged.
 const SPILLWAY_SKIPPER_S := Vector2(50.0, 90.0)
 const REACH_SKIPPER_S := Vector2(35.0, 80.0)
 # The Reach completionist's median fight is at most this many times the skipper's.

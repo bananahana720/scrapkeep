@@ -8,8 +8,8 @@ const T := preload("res://tests/support/t.gd")
 # GP3: the run's pressure curve. One PRESSURE row per alpha stage, pack density and elite rate
 # climbing every stage, every key a multiplier in [0.5, 2.0]; each stage row carries its own
 # pressure row and reads its Warden posture curve from it. The director multiplies its own
-# constants by the row and by the Breath option's row: hard is steeper, raw and gentle are
-# normal (every multiplier 1.0).
+# constants by the row and by the Breath option's row. GP3F 2026-10-08: the rows are the default
+# game, so hard (the default) and raw read 1.0 on every key and gentle eases (later, smaller).
 
 var _t := T.new("pressure_rows_test")
 
@@ -78,21 +78,32 @@ func _director() -> void:
 func _breath() -> void:
 	_t.check("Breath options keep their names", Director.BREATH.keys().all(func(k): return k in ["raw", "hard", "gentle"])
 		and Tuning.new().options_of(Tuning.BREATH_KEY).all(func(k): return Director.BREATH.has(k)))
-	for normal in ["raw", "gentle"]:
+	_t.eq("hard stays the default Breath", Tuning.new().option(Tuning.BREATH_KEY), "hard")
+	for normal in ["hard", "raw"]:
 		var d := Director.new(7)
 		d.use_row({}, normal)
 		for key in Director.PRESSURE_KEYS:
 			_t.near("Breath %s: %s is 1.0" % [normal, key], d.scale(key), 1.0)
+	var none := Director.new(7)
+	none.use_row({})
+	for key in Director.PRESSURE_KEYS:
+		_t.near("no row, no Breath: %s is 1.0" % key, none.scale(key), 1.0)
+	for key in Director.PRESSURE_KEYS:
+		var v := float(Director.BREATH["gentle"][key])
+		_t.check("Breath gentle: %s in [0.5, 2.0]" % key, v >= 0.5 and v <= 2.0, "%s" % v)
 	for stage in [1, 6]:
+		var gentle := _at(stage, "gentle")
 		var hard := _at(stage, "hard")
-		var normal := _at(stage, "raw")
-		_t.check("stage %d: Breath hard spawns sooner than normal" % stage, hard.interval() < normal.interval(),
-			"%.3f vs %.3f s" % [hard.interval(), normal.interval()])
-		_t.check("stage %d: Breath hard crowds at least as much" % stage, hard.cap() >= normal.cap(),
-			"%d vs %d" % [hard.cap(), normal.cap()])
-	_t.near("Breath hard: pack_scale 1.25", Director.BREATH["hard"]["pack_scale"], 1.25)
-	_t.near("Breath hard: elite_rate 1.25", Director.BREATH["hard"]["elite_rate"], 1.25)
-	_t.near("Breath hard: interval_scale 0.85", Director.BREATH["hard"]["interval_scale"], 0.85)
+		_t.near("stage %d: Breath hard plays the row as written" % stage, hard.scale("pack_scale"),
+			float(AlphaDefs.PRESSURE[stage - 1]["pack_scale"]))
+		_t.check("stage %d: Breath gentle spawns later than hard" % stage, gentle.interval() > hard.interval(),
+			"%.3f vs %.3f s" % [gentle.interval(), hard.interval()])
+		_t.check("stage %d: Breath gentle crowds no more than hard" % stage, gentle.cap() <= hard.cap(),
+			"%d vs %d" % [gentle.cap(), hard.cap()])
+		_t.check("stage %d: Breath gentle packs smaller than hard" % stage,
+			gentle.scale("pack_scale") < hard.scale("pack_scale"))
+		_t.check("stage %d: Breath gentle draws fewer elites than hard" % stage,
+			gentle.scale("elite_rate") < hard.scale("elite_rate"))
 
 
 # Past the scheduled elite, a later arrival is the elite again at the stage's elite rate, never
