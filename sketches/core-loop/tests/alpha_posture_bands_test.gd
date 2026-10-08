@@ -1,4 +1,4 @@
-# smoke: solo (four bot runs in child processes at once, 30000 ticks each; a loaded machine slows them)
+# smoke: solo timeout=360s (four bot runs in child processes at once, 30000 ticks each; a loaded machine slows them)
 # F6 2026-10-04: no row picks a fight; posture is the only rule.
 extends SceneTree
 
