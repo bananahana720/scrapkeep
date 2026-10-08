@@ -28,8 +28,8 @@ func _run() -> void:
 	var scenery := Scenery.build(stage, terrain.map(), null, terrain.ground_callable(1))
 	var tile: MultiMeshInstance3D = scenery.get_node("NetDeck").find_children("Tiles_*", "MultiMeshInstance3D", true, false)[0]
 	var net := tile.material_override as ShaderMaterial
-	t.check("net cord uses rope tone and fades below a pixel", net != null and net.get_shader_parameter("cord_tint") == Palette.SAND.lerp(Palette.CHARCOAL, 0.35) and net.get_shader_parameter("fade_end") == 0.5)
-	var ground: MeshInstance3D = stage.get_node("Ground").find_children("*", "MeshInstance3D", true, false)[0]
+	t.check("net cord uses the bone weave and fades below a pixel", net != null and net.get_shader_parameter("cord_tint") == Palette.SAND and net.get_shader_parameter("fade_end") == 0.5)
+	var ground: MeshInstance3D = scenery.get_node("IslandRelief")
 	var ground_mat := ground.material_override as ShaderMaterial
 	t.check("catch floor has coarse filtered weave instead of a tan slab", ground_mat != null and ground_mat.get_shader_parameter("net_pitch") == 4.0)
 	var stable := true
@@ -60,13 +60,13 @@ func _run() -> void:
 	var steel := bridge.multimesh.mesh.surface_get_material(0) as BaseMaterial3D
 	t.check("textured traversal skins multiply the sheet vertex tint", steel != null and steel.vertex_color_use_as_albedo)
 	var mesa: MultiMeshInstance3D = scenery.get_node("Sky/DistantMesas")
-	t.check("distant mesas blend toward cool sky with height", _aerial_gradient(mesa.multimesh.mesh))
+	t.check("distant mesas darken at the foot and blend toward cool sky with height", _aerial_gradient(mesa.multimesh.mesh))
 	var dress := MindDress.new()
 	var kit := dress._load_kit()
 	t.check("crown background shares aerial perspective", _aerial_gradient(kit["Mesa"]))
 	var crate := Scenery._mesh("prop_crate.glb", "Surface")
 	var prop := crate.surface_get_material(0) as BaseMaterial3D
-	t.check("props keep sheet tint under bright fill", prop != null and prop.vertex_color_use_as_albedo and prop.albedo_color == Palette.SAND.lerp(Color.WHITE, 0.45) and is_equal_approx(prop.roughness, 0.9))
+	t.check("petrol props keep the M2 paint under bright fill", prop != null and prop.vertex_color_use_as_albedo and prop.albedo_color == Color("53686d").lerp(Color.WHITE, 0.3) and is_equal_approx(prop.roughness, 0.9))
 	dress.free()
 	scene.free()
 	quit(t.verdict())
@@ -85,7 +85,8 @@ func _aerial_gradient(mesh: Mesh) -> bool:
 	for i in mini(before.size(), after.size()):
 		var height := clampf((vertices[i].y - bounds.position.y) / maxf(bounds.size.y, 0.01), 0.0, 1.0)
 		var sky := Color("798c9e").lerp(Color("a9b6c0"), height).srgb_to_linear()
-		var expected := before[i].lerp(sky, lerpf(0.75, 0.55, height))
+		var value := lerpf(0.5, 1.05, height)
+		var expected := before[i].lerp(sky, lerpf(0.55, 0.4, height)) * Color(value, value, value)
 		var error := Vector3(after[i].r - expected.r, after[i].g - expected.g, after[i].b - expected.b).abs()
 		greatest_error = maxf(greatest_error, maxf(error.x, maxf(error.y, error.z)))
 		ok = ok and maxf(error.x, maxf(error.y, error.z)) <= 1.0 / 255.0 + 0.00001

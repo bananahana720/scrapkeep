@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
@@ -135,7 +136,7 @@ func _net_chunk(view: MultiMeshInstance3D, shader: Shader) -> void:
 	material.set_shader_parameter("tint", source.albedo_color)
 	material.set_shader_parameter("finish_roughness", source.roughness)
 	material.set_shader_parameter("finish_metallic", source.metallic)
-	material.set_shader_parameter("cord_tint", Palette.SAND.lerp(Palette.CHARCOAL, 0.35))
+	material.set_shader_parameter("cord_tint", Finishes.LOOK["bone"])
 	material.set_shader_parameter("fade_end", 0.5)
 	material.set_shader_parameter("catch_point", Vector4(0.0, 0.0, 0.0, CATCH_RADIUS))
 	material.set_shader_parameter("visual_catch_gain", VISUAL_CATCH_GAIN)

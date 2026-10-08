@@ -32,10 +32,15 @@ const CHUNK := 32.0
 const EYE_HEIGHT := 16.6
 const ANCHOR_REACH := 1.8
 const SKY_RING := 460.0
+# The cloud deck plane lies well under the catch plane and the banks; it never collides.
+const CLOUD_DECK_Y := -32.0
+const CLOUD_DECK_SIZE := 1600.0
+const LOOK := Finishes.LOOK
 
 # Tests point this at a missing folder to prove the fallback; the game never changes it.
 static var dir := DIR
 static var _sky: PanoramaSkyMaterial
+static var _cloud: StandardMaterial3D
 static var _warned := {}
 static var _coloured := {}
 
@@ -83,11 +88,16 @@ static func apply_environment(terrain, root: Node3D) -> void:
 	var sky := Sky.new()
 	sky.sky_material = _sky
 	var lights := []
+	var key_rotation: Vector3 = LOOK["key_rotation"]
 	if sun != null:
-		lights.append({"object": sun, "values": {"light_color": Color("fff1dc"),
-			"rotation": Vector3(deg_to_rad(-46.0), deg_to_rad(62.0), 0.0)}})
-	GraphicsPreset.set_lighting(root, env, {"sky": sky, "ambient_light_color": Color("b4c0c9"),
-		"tonemap_exposure": 1.18, "adjustment_saturation": 1.0}, lights, "highdraft")
+		lights.append({"object": sun, "values": {"light_color": LOOK["key"], "shadow_enabled": true,
+			"rotation": Vector3(deg_to_rad(key_rotation.x), deg_to_rad(key_rotation.y), 0.0)}})
+		var fill := sun.get_parent().get_node_or_null("SkyFill") as DirectionalLight3D
+		if fill != null:
+			lights.append({"object": fill, "values": {"light_color": LOOK["fill"],
+				"rotation": Vector3(deg_to_rad(-40.0), deg_to_rad(key_rotation.y + 180.0), 0.0)}})
+	GraphicsPreset.set_lighting(root, env, {"sky": sky, "ambient_light_color": LOOK["ambient"],
+		"fog_light_color": LOOK["fill"], "tonemap_exposure": 1.05, "adjustment_saturation": 1.15}, lights, "highdraft")
 
 
 static func restore_environment(terrain) -> void:
@@ -156,7 +166,7 @@ static func build(stage_root: Node3D, map, contraptions = null, ground := Callab
 	_anchors(scenery, state, stage_root, map, ground)
 	_props(scenery, map)
 	_sky_pieces(scenery)
-	_catch_floor(stage_root)
+	_relief(scenery, stage_root, map)
 	state.fx = HighdraftFx.install(scenery, state, map)
 	return scenery
 
@@ -280,7 +290,6 @@ static func _islands(parent: Node3D, map, ground: Callable) -> void:
 		var view := MeshInstance3D.new()
 		view.name = "IslandSkin_%s" % id
 		view.mesh = skin
-		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		parent.add_child(view)
 		GraphicsPreset.register_scenery(view)
 
@@ -331,7 +340,7 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 				remap[index] = out_vertices.size()
 				out_vertices.append(_fit(vertices[index], centre, radius, top, scale, map, ground))
 				out_uvs.append(uvs[index] if index < uvs.size() else Vector2.ZERO)
-				out_colors.append(colors[index] if index < colors.size() else Palette.SAND.srgb_to_linear())
+				out_colors.append(_stone(colors[index], vertices[index].y))
 				out_normals.append(original_normals[index])
 			out_indices.append(remap[index])
 	if out_indices.is_empty():
@@ -357,6 +366,12 @@ static func _island_mesh(file: String, isle: Dictionary, map, ground: Callable) 
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built)
 	mesh.surface_set_material(0, material)
 	return mesh
+
+
+# Pale stone top, darker fascia down the wall: the island's edge reads in greyscale.
+static func _stone(authored: Color, local_y: float) -> Color:
+	var band: Color = LOOK["stone"] if local_y > -0.02 else LOOK["fascia"]
+	return authored.lerp(band.srgb_to_linear(), 0.55 if local_y > -0.02 else 0.7)
 
 
 static func _reject_island(file: String) -> ArrayMesh:
@@ -500,20 +515,63 @@ static func _hide_thermal_greybox(contraptions: Node, base: Vector3, height: flo
 
 # ---- Net deck ----
 
-static func _catch_floor(stage_root: Node3D) -> void:
+# The terrain's own ground mesh drew the catch plane out to the 400 m grid edge as a flat grid.
+# It is hidden here and redrawn without the open floor outside the play rect, so past the edge
+# the eye falls to the cloud deck; the collider is untouched and the floor the ball can reach
+# still draws as the net. Pillars take the darker stone.
+static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	var body := stage_root.get_node_or_null("Ground")
 	if body == null:
 		return
-	for view: MeshInstance3D in body.find_children("*", "MeshInstance3D", true, false):
-		var material := ShaderMaterial.new()
-		material.shader = preload("res://assets/materials/highdraft/catch_floor.gdshader")
-		material.set_shader_parameter("floor_map", Palette.painted_texture(256, true))
-		material.set_shader_parameter("stone_tint", Color("c8bda5"))
-		material.set_shader_parameter("cord_tint", Palette.SAND.lerp(Palette.CHARCOAL, 0.35))
-		material.set_shader_parameter("deck_tint", Palette.CHARCOAL.lerp(Palette.SLATE, 0.3))
-		material.set_shader_parameter("net_height", HighdraftMap.NET_H)
-		material.set_shader_parameter("net_pitch", 4.0)
-		GraphicsPreset.set_ground_material(view, material)
+	var views := body.find_children("*", "MeshInstance3D", true, false)
+	if views.is_empty() or (views[0] as MeshInstance3D).mesh == null:
+		return
+	var grid: MeshInstance3D = views[0]
+	var arrays := grid.mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var rect: Rect2 = map.play_rect
+	var deck: float = HighdraftMap.NET_H + 0.05
+	var kept := PackedInt32Array()
+	kept.resize(indices.size())
+	var count := 0
+	for t in range(0, indices.size(), 3):
+		var a := vertices[indices[t]]
+		var b := vertices[indices[t + 1]]
+		var c := vertices[indices[t + 2]]
+		if a.y > deck or b.y > deck or c.y > deck or rect.has_point(Vector2(a.x + b.x + c.x, a.z + b.z + c.z) / 3.0):
+			kept[count] = indices[t]
+			kept[count + 1] = indices[t + 1]
+			kept[count + 2] = indices[t + 2]
+			count += 3
+	kept.resize(count)
+	arrays[Mesh.ARRAY_INDEX] = kept
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var relief := MeshInstance3D.new()
+	relief.name = "IslandRelief"
+	relief.mesh = mesh
+	scenery.add_child(relief)
+	grid.name = "GridFloor"
+	grid.visible = false
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://assets/materials/highdraft/catch_floor.gdshader")
+	material.set_shader_parameter("floor_map", Palette.painted_texture(256, true))
+	material.set_shader_parameter("stone_tint", LOOK["pillar"])
+	material.set_shader_parameter("cord_tint", LOOK["bone"])
+	material.set_shader_parameter("deck_tint", (LOOK["bone"] as Color).lerp(LOOK["charcoal"], 0.45))
+	material.set_shader_parameter("net_height", HighdraftMap.NET_H)
+	material.set_shader_parameter("net_pitch", 4.0)
+	GraphicsPreset.set_ground_material(relief, material)
+
+
+# The padded perimeter in the catch amber the sheet keeps for offered lift and catch edges.
+static func net_edge_material() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = LOOK["catch_edge"]
+	material.albedo_texture = Palette.painted_texture(256)
+	material.roughness = 0.85
+	return material
 
 
 static func _net_deck(parent: Node3D, map) -> void:
@@ -574,7 +632,9 @@ static func _net_deck(parent: Node3D, map) -> void:
 	for placement in edges:
 		if float(map.sample(placement.origin.x, placement.origin.z)[0]) <= net_h + 0.05:
 			kept.append(placement)
-	_multi(deck, "NetEdges", edge, kept)
+	var padded := _multi(deck, "NetEdges", edge, kept)
+	if padded != null:
+		padded.material_override = net_edge_material()
 	var shoes: Array[Transform3D] = []
 	for corner in [span.position, Vector2(span.end.x, span.position.y), Vector2(span.position.x, span.end.y), span.end]:
 		shoes.append(Transform3D(Basis.IDENTITY, Vector3(corner.x, net_h, corner.y)))
@@ -715,6 +775,7 @@ static func _props(parent: Node3D, map) -> void:
 				sail.rotation.y = rng.randf() * TAU
 				parent.add_child(sail)
 				_loop(sail, ["wind", "wind_loop"])
+				_sail_capture(parent, sail)
 	var yard := Node3D.new()
 	yard.name = "Props"
 	parent.add_child(yard)
@@ -723,6 +784,18 @@ static func _props(parent: Node3D, map) -> void:
 		_multi(yard, String(row["file"]).get_basename(), _mesh(row["file"], row["node"]), lists[pick])
 		if row["file"] == "prop_lamp_body.glb":
 			_multi(yard, "prop_lamp_glass", _mesh("prop_lamp_glass.glb", "Surface"), lists[pick])
+
+
+# A capture viewpoint 6 m off the first sail's face, aimed at its 2 m face, so stills can frame one.
+static func _sail_capture(parent: Node3D, sail: Node3D) -> void:
+	if parent.has_node("SailCapture"):
+		return
+	# The triangle spans local +X and faces local Z, so the view stands off that face.
+	var face := sail.transform * Vector3(0.9, 1.2, 0.0)
+	var view := Marker3D.new()
+	view.name = "SailCapture"
+	view.transform = Transform3D(Basis.IDENTITY, sail.transform * Vector3(1.5, 2.4, 6.0)).looking_at(face, Vector3.UP)
+	parent.add_child(view)
 
 
 static func _pick_prop(rng: RandomNumberGenerator) -> int:
@@ -791,6 +864,15 @@ static func _sky_pieces(parent: Node3D) -> void:
 		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(wide, 1.0, wide))
 		clouds.append(Transform3D(basis, Vector3(cos(angle) * reach, -26.0, sin(angle) * reach)))
 	_multi(sky, "CloudDeck", _mesh("sky_cloud.glb", "CloudHull"), clouds)
+	var plane := PlaneMesh.new()
+	plane.size = Vector2.ONE * CLOUD_DECK_SIZE
+	var deck := MeshInstance3D.new()
+	deck.name = "CloudPlane"
+	deck.mesh = plane
+	deck.position = Vector3(0.0, CLOUD_DECK_Y, 0.0)
+	deck.material_override = _cloud_material()
+	deck.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	sky.add_child(deck)
 	# Mesas stand well past the playable bounds; fog and scale keep them distant.
 	var mesas: Array[Transform3D] = []
 	for k in 7:
@@ -806,6 +888,30 @@ static func _sky_pieces(parent: Node3D) -> void:
 	_landmark(sky, "sky_blades.glb", "BladeHull", "Blades", 335.0, SKY_RING + 40.0, -50.0, 2.0)
 	_landmark(sky, "sky_cradle.glb", "CradleHull", "CradleA", 95.0, SKY_RING, 30.0, 2.2)
 	_landmark(sky, "sky_cradle.glb", "CradleHull", "CradleB", 265.0, SKY_RING + 60.0, 55.0, 2.6)
+
+
+# One cached cream deck with soft seamless noise, tiled; fog carries it into the haze.
+static func _cloud_material() -> StandardMaterial3D:
+	if _cloud != null:
+		return _cloud
+	var noise := FastNoiseLite.new()
+	noise.seed = 7_310_032
+	noise.frequency = 0.012
+	noise.fractal_octaves = 3
+	var image := noise.get_seamless_image(256, 256)
+	image.convert(Image.FORMAT_RGB8)
+	var cream: Color = LOOK["cloud"]
+	var shade := cream.lerp(LOOK["fill"], 0.6)
+	for y in image.get_height():
+		for x in image.get_width():
+			image.set_pixel(x, y, shade.lerp(cream, smoothstep(0.3, 0.7, image.get_pixel(x, y).r)))
+	image.generate_mipmaps()
+	_cloud = StandardMaterial3D.new()
+	_cloud.albedo_texture = ImageTexture.create_from_image(image)
+	_cloud.uv1_scale = Vector3(6.0, 6.0, 1.0)
+	_cloud.roughness = 1.0
+	_cloud.metallic_specular = 0.0
+	return _cloud
 
 
 static func _landmark(parent: Node3D, file: String, hull: String, label: String, degrees: float, reach: float, base_y: float, scale: float) -> void:
