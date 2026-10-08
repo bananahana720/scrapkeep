@@ -888,7 +888,11 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
-		_push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM)
+		var hits := _push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM)
+		if hits > 0:
+			events.drop_landed.emit(hits)
+		else:
+			events.missed_drop.emit()
 	if _smashes.has(kit.smash_flavour):
 		_smashes[kit.smash_flavour].call(at, speed)
 
@@ -1007,7 +1011,8 @@ func _on_pylon_planted(at: Vector3, banked_speed: float) -> void:
 	_push_enemies(at, Augments.MOUNT_REPEL_RADIUS, Augments.MOUNT_REPEL_KNOCK * tree.knob("plant_repel"), "")
 
 
-func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> void:
+func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> int:
+	var hits := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		var away: Vector3 = enemy.global_position - at
 		var reach := away.length()
@@ -1018,8 +1023,10 @@ func _push_enemies(at: Vector3, radius: float, force: float, kind: String) -> vo
 		var falloff := 1.0 - reach / radius
 		enemy.knock(away + Vector3.UP * 0.5, force * falloff)
 		enemy.flash()
+		hits += 1
 		if kind != "":
 			struck.emit(enemy, kind, force * falloff)
+	return hits
 
 
 # The motion the ball had going into a contact: of the velocities recently handed to the

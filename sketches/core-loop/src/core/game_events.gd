@@ -25,6 +25,8 @@ signal scrap_collected(amount: int, at: Vector3, total: int)
 # A gear pickup filled the wallet (build.gd): the amount just banked and the wallet after it.
 signal cogs_collected(amount: int, total: int)
 signal part_gained(part_id: String, source: String)
+# An evolution fires (build.gd), announced before its Evolved part is granted.
+signal evolution_fired(part_id: String)
 signal player_hit(amount: float, source: String)
 # Run state committed the companion's once-per-zone escape charge and brief window.
 signal escape_window(seconds: float)
@@ -46,6 +48,9 @@ signal boosted(direction: Vector3)
 signal dashed(direction: Vector3)
 signal landed(impact: float)
 signal slammed(at: Vector3, strength: float, flatness: float)
+# The slam's shockwave resolved (player_ball.gd): it threw hit_count enemies, or none.
+signal drop_landed(hit_count: int)
+signal missed_drop
 signal grapple_fired(anchor: Vector3)
 signal grapple_released
 # The harpoon (player_ball.gd): a line bitten into an enemy, and a committed haul landing on
