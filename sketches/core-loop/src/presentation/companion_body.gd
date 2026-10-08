@@ -4,10 +4,12 @@ extends Node3D
 # the ball and following it. Visual only: no collision, no damage, no timers of its own.
 # It reads the seated pieces from run.companion and plays each module's beat from state
 # combat already commits (primed, prow_staggered, spring_armed); it never decides any of it.
-# The escape pieces sit on the chassis with no cue (ruling P-R7: no escape-window visual).
+# The escape piece wears a lamp read from combat.escape_phase(): lit while ready, a flare (vent)
+# or a rail flick (rail) for the act's seconds with the escape_acted chirp, dimmed once spent.
 # A missing model leaves a plain hull box so the companion is still seen, and warns once.
 
 const Companion := preload("res://src/core/companion.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 # One GLB per ordered socket pair, named <socket 0>__<socket 1> in table order.
@@ -19,6 +21,12 @@ const BEHIND := 0.8
 const FOLLOW_RATE := 8.0
 const TURN_RATE := 6.0
 const MOVING_SPEED := 1.0
+# The escape lamp: radius, height over the hull root, emission per cue, and each act's shape.
+const LAMP_RADIUS := 0.09
+const LAMP_LIFT := 0.48
+const LAMP_ENERGY := {"ready": 1.0, "flare": 4.0, "flick": 3.0, "spent": 0.12}
+const LAMP_SCALE := {"ready": Vector3.ONE, "flare": Vector3.ONE * 1.8, "flick": Vector3(0.6, 0.6, 3.5), "spent": Vector3.ONE}
+const ESCAPE_CUES := {"shove": "flare", "lane": "flick"}
 # Renderer updates can outlive a retired mesh during a socket swap.
 static var _painted_materials := {}
 static var _warned_empty_mesh := false
@@ -41,6 +49,8 @@ var _staggered := {}
 var _staggered_next := {}
 var _armed := false
 var _warned := false
+var _lamp: MeshInstance3D
+var _escape_cue := "none"
 
 
 func setup(ctx_ref) -> void:
@@ -118,6 +128,7 @@ func _process(delta: float) -> void:
 	if key == "":
 		return
 	_follow(delta)
+	_escape_beat()
 	_beats()
 
 
@@ -132,6 +143,8 @@ func _rebuild(seats: Array, key: String) -> void:
 	_primed = false
 	_primed_ids.clear()
 	_armed = false
+	_lamp = null
+	_escape_cue = "none"
 	visible = key != ""
 	_snap = true
 	if key == "":
@@ -145,9 +158,11 @@ func _rebuild(seats: Array, key: String) -> void:
 			_warned = true
 			push_warning("companion_body: model '%s' unavailable; keeping the plain hull" % path)
 		add_child(_fallback())
+		_add_lamp(key)
 		return
 	dress_model(_model)
 	add_child(_model)
+	_add_lamp(key)
 	_anim = _model.find_children("*", "AnimationPlayer", true, false).front() as AnimationPlayer
 	_play("idle")
 
@@ -166,6 +181,55 @@ func _fallback() -> Node3D:
 		module.position = Vector3(x, 0.38, 0.0)
 		hull.add_child(module)
 	return hull
+
+
+func _add_lamp(key: String) -> void:
+	if not key.contains("escape_"):
+		return
+	_lamp = MeshInstance3D.new()
+	_lamp.name = "EscapeLamp"
+	var ball := SphereMesh.new()
+	ball.radius = LAMP_RADIUS
+	ball.height = LAMP_RADIUS * 2.0
+	_lamp.mesh = ball
+	var mat := StandardMaterial3D.new()
+	mat.emission_enabled = true
+	_lamp.material_override = mat
+	_lamp.position = Vector3(0.0, LAMP_LIFT, 0.0)
+	add_child(_lamp)
+	_light("ready")
+
+
+# The cue the escape lamp shows: none, ready, flare, flick or spent.
+func escape_cue() -> String:
+	return _escape_cue
+
+
+func _light(cue: String) -> void:
+	_escape_cue = cue
+	var row: Dictionary = EventKinds.UI_ROWS["companion_spent" if cue == "spent" else ("companion_ready" if cue == "ready" else "escape_acted")]
+	var mat := _lamp.material_override as StandardMaterial3D
+	mat.albedo_color = row["color"].darkened(0.6) if cue == "spent" else row["color"]
+	mat.emission = row["color"]
+	mat.emission_energy_multiplier = LAMP_ENERGY[cue]
+	_lamp.scale = LAMP_SCALE[cue]
+
+
+func _escape_beat() -> void:
+	if _lamp == null or combat == null or not combat.has_method("escape_phase"):
+		return
+	var phase: String = combat.escape_phase()
+	var cue := "ready" if phase == "ready" else ("spent" if phase == "spent" else String(ESCAPE_CUES.get(combat.escape_style(), "flare")))
+	if cue == _escape_cue:
+		return
+	if cue == "flare" or cue == "flick":
+		_beat("escape_spent")
+		var audio = get_parent().get("audio") if get_parent() != null else null
+		if audio != null and audio.has_method("play"):
+			audio.play("escape_acted", 0.0, 1.0, "UI")
+	elif cue == "ready" and _escape_cue == "spent":
+		_beat("escape_rearm")
+	_light(cue)
 
 
 func _follow(delta: float) -> void:
