@@ -1,4 +1,4 @@
-# smoke: solo timeout=300s (split by world from RunStore entrances; one seed child per world, 170 s wall cap)
+# smoke: solo timeout=360s (split by world from RunStore entrances; one child per proof run per world, 170 s wall cap)
 # 2026-10-04 (wave 9): one seed child per world in the gate since 2026-10-04; the nightly runs more seeds.
 # Two seeds ran past the 180 s smoke cap under load (killed at 189.5 s).
 extends SceneTree
@@ -13,7 +13,9 @@ const BossCodex := preload("res://src/boss/codex_entries.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 
-const SEEDS := 1
+# The win proofs: Rivet on seed 1 (seed % roster size, no --pilot) and Tally on seed 1, the first of
+# seeds 1 to 4 she wins in bot_six_tally_test (wave 11, GP7). Their children run side by side per world.
+const RUNS := [{"seed": 1, "pilot": ""}, {"seed": 1, "pilot": "tally"}]
 
 # 2026-10-05 (wave 14, prog-G10): the file also pins a final win's progression end state, in process,
 # because a bot child's profile dies with the child; the child supplies the played-win codex only.
@@ -30,52 +32,56 @@ func _run() -> void:
 	var folders := []
 	var run_ids := []
 	var traces := []
-	for i in SEEDS:
+	for i in RUNS.size():
 		folders.append(base.path_join(str(i + 1)))
 		run_ids.append("")
 		traces.append("")
 	for world in StageDefs.worlds():
 		var jobs := []
-		for i in SEEDS:
-			var args := ["--out=" + folders[i], "--policy=skipper", "--seeds=%d" % (i + 1),
+		for run in RUNS:
+			var args := ["--out=" + folders[jobs.size()], "--policy=skipper", "--seeds=%d" % run["seed"],
 				"--from-stage=%d" % StageDefs.first_of(world), "--trace=1"]
+			if run["pilot"] != "":
+				args.append("--pilot=" + run["pilot"])
 			if world != StageDefs.worlds().back():
 				args.append("--until=%d" % StageDefs.last_of(world))
 			jobs.append({"script": "res://tools/bot_run.gd", "args": args})
 		var results := ChildRuns.run(jobs, 170.0)
-		for i in SEEDS:
+		for i in RUNS.size():
 			var result: Dictionary = results[i]
 			var errors: Array = ChildRuns.summary(result)["errors"]
 			traces[i] += String(result["log"])
-			t.check("seed %d world %d child" % [i + 1, world], result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
+			t.check("%s world %d child" % [_label(i), world], result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
 				"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], errors])
 			var path: String = folders[i].path_join("bots.ndjson")
 			var rows := FileAccess.get_file_as_string(path).split("\n", false) if FileAccess.file_exists(path) else PackedStringArray()
 			var row = JSON.parse_string(rows[-1]) if rows.size() == world else null
-			if not t.check("seed %d world %d record" % [i + 1, world], row is Dictionary, "%d rows in %s" % [rows.size(), path]):
+			if not t.check("%s world %d record" % [_label(i), world], row is Dictionary, "%d rows in %s" % [rows.size(), path]):
 				continue
 			if world == StageDefs.worlds()[0]:
 				run_ids[i] = row["run_id"]
-			t.eq("seed %d same run" % (i + 1), row["run_id"], run_ids[i])
+			if RUNS[i]["pilot"] != "":
+				t.eq("%s pilot" % _label(i), row["class"], RUNS[i]["pilot"])
+			t.eq("%s same run" % _label(i), row["run_id"], run_ids[i])
 			var final: bool = world == StageDefs.worlds().back()
-			t.eq("seed %d world %d outcome" % [i + 1, world], row["outcome"], "won" if final else "until")
-			t.eq("seed %d world %d reached" % [i + 1, world], int(row["stage_reached"]),
+			t.eq("%s world %d outcome" % [_label(i), world], row["outcome"], "won" if final else "until")
+			t.eq("%s world %d reached" % [_label(i), world], int(row["stage_reached"]),
 				StageDefs.COUNT if final else StageDefs.first_of(world + 1))
-			print("seed %d world %d: %s, %.2f wall seconds" % [i + 1, world, row["outcome"], row["wall_seconds"]])
+			print("%s world %d: %s, %.2f wall seconds" % [_label(i), world, row["outcome"], row["wall_seconds"]])
 			if final:
 				var listed = JSON.parse_string(FileAccess.get_file_as_string(folders[i].path_join("codex-entries.json")))
 				var entries: Array = listed if listed is Array else []
-				t.check("seed %d codex has every Waking entry once" % (i + 1), _once(entries, BossCodex.WAKING), "%s" % [entries.size()])
-				t.check("seed %d codex has every Mind entry once" % (i + 1), _once(entries, BossCodex.MIND), "%s" % [entries.size()])
+				t.check("%s codex has every Waking entry once" % _label(i), _once(entries, BossCodex.WAKING), "%s" % [entries.size()])
+				t.check("%s codex has every Mind entry once" % _label(i), _once(entries, BossCodex.MIND), "%s" % [entries.size()])
 			if not final:
 				var entrance := RunStore.new(folders[i].path_join("entrance.json")).load()
-				t.check("seed %d next entrance saved" % (i + 1), entrance.get("run_id") == run_ids[i]
+				t.check("%s next entrance saved" % _label(i), entrance.get("run_id") == run_ids[i]
 					and int(entrance.get("stage", 0)) == StageDefs.first_of(world + 1))
 		if t.failures > 0:
 			break
-	for i in SEEDS:
+	for i in RUNS.size():
 		for world in StageDefs.worlds():
-			t.check("seed %d world %d entered in trace" % [i + 1, world],
+			t.check("%s world %d entered in trace" % [_label(i), world],
 				String(traces[i]).contains("trace world %d entered" % world))
 	# Pin the summary fallback too: without a run_ended callback, a lost summary
 	# must still stay lost. This does not mutate or simulate a win.
@@ -175,3 +181,9 @@ func _once(entries: Array, ids: Array) -> bool:
 		if n != 1:
 			return false
 	return true
+
+
+# A proof run's name in check lines: its pilot (or "seed-pilot" when the seed % roster size picks) and seed.
+func _label(i: int) -> String:
+	var pilot: String = RUNS[i]["pilot"]
+	return "%s seed %d" % [pilot if pilot != "" else "seed-pilot", RUNS[i]["seed"]]
