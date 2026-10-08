@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Hero := preload("res://src/presentation/hero_assets.gd")
 const Reactions := preload("res://src/presentation/pilot_reactions.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
 var failures := 0
@@ -19,6 +20,10 @@ func check(label: String, condition: bool) -> void:
 
 func _initialize() -> void:
 	policy_only = "--policy-only" in OS.get_cmdline_user_args()
+	var bus_names: Array = GameEvents.signal_names()
+	for event in Reactions.ROWS:
+		check(event + " carries no pending flag", not Reactions.ROWS[event].has("pending"))
+		check(event + " names a signal on the bus", bus_names.has(event))
 	if not policy_only:
 		check_assets()
 	else:
@@ -120,7 +125,6 @@ func run_policy() -> void:
 		var before_state: Vector3 = Vector3(12, -1, 8)
 		player.body().linear_velocity = before_body
 		player.state.velocity = before_state
-		check(class_id + " pending event cannot fire", not hero.react(player, "missed_drop"))
 		check(class_id + " unknown event cannot fire", not hero.react(player, "not_an_event"))
 		check(class_id + " near miss starts", hero.react(player, "near_miss"))
 		finish(rec)
@@ -164,3 +168,26 @@ func run_policy() -> void:
 		finish(rec)
 		check(class_id + " harpoon reactions preserve physical velocity", player.body().linear_velocity == before_body)
 		check(class_id + " harpoon reactions preserve state velocity", player.state.velocity == before_state)
+		hero._process(20.0)
+		game.events.evolution_fired.emit("wrecking_ball")
+		check(class_id + " evolution_fired plays big_cheer", rec.reaction == "big_cheer" and animator.is_playing())
+		game.events.drop_landed.emit(2)
+		check(class_id + " drop_landed does not interrupt the higher evolution beat", rec.reaction == "big_cheer")
+		finish(rec)
+		hero._process(20.0)
+		game.events.drop_landed.emit(2)
+		check(class_id + " drop_landed plays drop_land", rec.reaction == "drop_land" and animator.current_animation == "drop_land" and animator.is_playing())
+		game.events.missed_drop.emit()
+		check(class_id + " missed_drop interrupts drop_land with wince", rec.reaction == "wince" and animator.current_animation == "wince")
+		finish(rec)
+		game.events.drop_landed.emit(1)
+		check(class_id + " drop_land cooldown holds", rec.reaction == "")
+		hero._process(1.6)
+		game.events.drop_landed.emit(1)
+		check(class_id + " drop_land returns after its cooldown", rec.reaction == "drop_land")
+		finish(rec)
+		hero._process(1.6)
+		game.events.missed_drop.emit()
+		check(class_id + " missed_drop alone plays wince", rec.reaction == "wince")
+		finish(rec)
+		check(class_id + " slam reactions preserve physical velocity", player.body().linear_velocity == before_body)

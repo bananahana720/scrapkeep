@@ -1208,6 +1208,7 @@ func _frost_ring(at: Vector3) -> void:
 # part_gained with source "evolution". Nested gains recompute and find nothing more ready.
 func _grant_evolutions() -> void:
 	for part_id in Synergies.evolutions_ready(ctx.run.parts):
+		ctx.events.evolution_fired.emit(part_id)
 		ctx.run.add_part(part_id, "evolution")
 
 

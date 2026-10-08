@@ -1,6 +1,6 @@
 extends RefCounted
 
-# Explicit event policy. Pending rows reserve a beat without inventing a game signal.
+# Explicit event policy: every key is a GameEvents signal.
 # Cooldowns are shared by resolved clip, including per-class overrides.
 const ROWS := {
 	"boss_defeated": {"clip": "big_cheer", "priority": 80, "cooldown": 4.0},
@@ -12,8 +12,9 @@ const ROWS := {
 	"near_miss": {"clip": "phew", "priority": 20, "cooldown": 4.0},
 	"part_gained": {"clip": "big_cheer", "priority": 30, "cooldown": 12.0},
 	"hold_broken": {"clip": "phew", "priority": 20, "cooldown": 4.0},
-	"missed_drop": {"clip": "wince", "priority": 40, "cooldown": 3.0, "pending": true},
-	"evolution": {"clip": "big_cheer", "priority": 80, "cooldown": 4.0, "pending": true},
+	"missed_drop": {"clip": "wince", "priority": 40, "cooldown": 3.0},
+	"evolution_fired": {"clip": "big_cheer", "priority": 80, "cooldown": 4.0},
+	"drop_landed": {"clip": "drop_land", "priority": 30, "cooldown": 1.5},
 }
 
 
