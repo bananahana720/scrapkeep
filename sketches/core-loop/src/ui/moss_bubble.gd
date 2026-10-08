@@ -31,6 +31,7 @@ const HOLD_PER_WORD := 0.3
 const FADE := 0.25
 const HAND := 15.0
 const GESTURE_SECONDS := 0.6
+const INTRO_HOLD := 4.0
 
 var text := ""
 var kind := "moss_beat"
@@ -53,6 +54,9 @@ var _game
 var _exchange: Array = []
 var _exchange_index := 0
 var _zones_played := {}
+var _intros_played := {}
+var _intro_queue: Array = []
+var _intro_showing := false
 
 
 class ExchangeInput extends Node:
@@ -81,7 +85,8 @@ func _ready() -> void:
 	_install_exchange_input.call_deferred()
 	_game.events.run_started.connect(_on_run_started)
 	_game.events.stage_entered.connect(_on_stage_entered)
-	_game.events.warden_engaged.connect(func(_stage: int): _end_exchange())
+	_game.events.warden_engaged.connect(_on_warden_engaged)
+	_game.events.boss_arena_entered.connect(_on_boss_arena_entered)
 	# Reading is optional and momentum is sacred: firing or hooking walks away from it.
 	_game.events.shot_fired.connect(func(_w: String, _from: Vector3, _to: Vector3): _end_exchange())
 	_game.events.grapple_fired.connect(func(_anchor: Vector3): _end_exchange())
@@ -100,12 +105,15 @@ func _install_exchange_input() -> void:
 
 
 func _on_run_started(_class_id: String) -> void:
-	_end_exchange()
+	_end_exchange(false)
+	_end_intro()
 	_zones_played.clear()
+	_intros_played.clear()
 
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
-	_end_exchange()
+	_end_exchange(false)
+	_end_intro()
 	# Flow places the new Warden after this signal, clearing the previous engagement.
 	_begin_exchange.call_deferred(stage)
 
@@ -131,6 +139,51 @@ func _begin_exchange(stage: int) -> void:
 	_show_exchange_line()
 
 
+# Intro rows are the Warden's line (subject "warden") and the world boss's line. The Warden
+# line plays when the Warden is engaged; the boss line when the arena opens, which only the
+# last zone of a world reaches. Each plays once per run and zone, and waits out an exchange.
+func _zone_of(stage: int) -> String:
+	return "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
+
+
+func _on_warden_engaged(stage: int) -> void:
+	_end_exchange(false)
+	_queue_intro(_zone_of(stage), true)
+
+
+func _on_boss_arena_entered() -> void:
+	_queue_intro(_zone_of(_game.run.stage), false)
+
+
+func _queue_intro(zone: String, warden: bool) -> void:
+	var key := "%s/%s" % [zone, "warden" if warden else "boss"]
+	if _intros_played.has(key):
+		return
+	for row in LoreRows.ROWS:
+		if row["kind"] == "intro" and row["zone"] == zone and (row.get("subject", "") == "warden") == warden:
+			_intros_played[key] = true
+			_intro_queue.append(row)
+			break
+	_flush_intro()
+
+
+func _flush_intro() -> void:
+	if _intro_queue.is_empty() or not _exchange.is_empty() or get_tree().paused:
+		return
+	var row: Dictionary = _intro_queue.pop_front()
+	position = Vector2(0.0, get_viewport().get_visible_rect().size.y * 0.30)
+	_say(String(row["text"]), "moss_beat", "intro", 0.0, false, "")
+	_hold = INTRO_HOLD
+	_intro_showing = true
+
+
+func _end_intro() -> void:
+	_intro_queue.clear()
+	if _intro_showing:
+		_intro_showing = false
+		_clear_line()
+
+
 func _show_exchange_line() -> void:
 	var line: Dictionary = _exchange[_exchange_index]
 	_say("%s: %s" % [line["speaker"], line["text"]], "moss_beat", "exchange", 0.0, false, "")
@@ -144,11 +197,17 @@ func _advance_exchange() -> void:
 		_show_exchange_line()
 
 
-func _end_exchange() -> void:
+func _end_exchange(flush := true) -> void:
 	if _exchange.is_empty():
 		return
 	_exchange.clear()
 	_exchange_index = 0
+	_clear_line()
+	if flush:
+		_flush_intro()
+
+
+func _clear_line() -> void:
 	if _tween != null:
 		_tween.kill()
 	_hold = 0.0
@@ -161,7 +220,13 @@ func _end_exchange() -> void:
 # Only the interact key advances; Escape and ui_accept (Space and pad A are jump) are never
 # read. Fire and hook dismiss silently, and so does cruise speed (see _process).
 func _exchange_input(event: InputEvent) -> void:
-	if _exchange.is_empty() or get_tree().paused:
+	if get_tree().paused:
+		return
+	if _intro_showing:
+		if event.is_action_pressed("cl_interact") or event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
+			_end_intro()
+		return
+	if _exchange.is_empty():
 		return
 	if event.is_action_pressed("cl_interact"):
 		_advance_exchange()
@@ -187,7 +252,7 @@ func showing() -> bool:
 func beat(record: Dictionary) -> void:
 	if record.is_empty():
 		return
-	_end_exchange()
+	_end_exchange(false)
 	var mood_now := "beat"
 	if record.get("relent", false):
 		mood_now = "relent"
@@ -202,14 +267,15 @@ func beat(record: Dictionary) -> void:
 func bark(line: Dictionary, fact: String) -> void:
 	if line.is_empty():
 		return
-	_end_exchange()
+	_end_exchange(false)
 	var refused := fact == "shop_refused"
 	_say(String(line.get("text", "")), fact, "refuse" if refused else "bark", 0.0, refused,
 		"refuse" if refused else ("give" if fact in ["shop_bought", "shop_charge", "shop_sold"] else ""))
 
 
 func hush() -> void:
-	_end_exchange()
+	_end_exchange(false)
+	_intro_showing = false
 	_hold = 0.0
 	if not visible:
 		return
@@ -264,6 +330,8 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 
 
 func _process(delta: float) -> void:
+	if not _intro_queue.is_empty() and not visible:
+		_flush_intro()
 	if not visible:
 		return
 	_clock += delta
