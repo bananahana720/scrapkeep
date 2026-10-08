@@ -11,7 +11,8 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # (C11), and a follower that reaches another enemy launches into it as a pin carrier.
 
 const HP := 12.0
-const HOVER := 1.4
+# At rest the drone sits on the ground (its box's half height), so its shadow touches it.
+const HOVER := 0.3
 const HOVER_HIGH := 3.4
 const CLIMB := 6.0
 const SLOT_GAIN := 5.0
@@ -25,6 +26,16 @@ const SCATTER_FORCE := 5.0
 const PIN_REACH := 2.2
 const PIN_LAUNCH := 4.0
 const SIZE := 0.75
+# Scattered drones keep SPREAD metres apart, so a broken rack reads as broken, not stacked.
+const SPREAD := 1.5
+const SPREAD_GAIN := 16.0
+# The slab stands SLAB_HEIGHT tall on the floor of its box; the faces toward its heading
+# carry the threat stripe. Scattered, each tilts by its own angle and the inlay dims.
+const SLAB_HEIGHT := 0.42
+const LEADING := 0.3
+const SCATTER_TILT := [16.0, 23.0, 30.0]
+const SEAM_LIT := 2.2
+const SEAM_DIM := 0.3
 
 var swarm
 var fleet
@@ -32,8 +43,12 @@ var index := 0
 var pins_led := 0
 var _seam: MeshInstance3D
 var _body: MeshInstance3D
+var _slab: Node3D
+var _seam_material: StandardMaterial3D
+var _seamless := false
 static var _shared: Array = []
 static var _asset_warned := false
+static var _hazard_stripe: StandardMaterial3D
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -65,8 +80,17 @@ func knock(direction: Vector3, force: float) -> void:
 # The seam goes dark while the drone follows: hue alone never flips a hostile into an
 # ally, so its edge stays and only the ancient light leaves it.
 func set_seamless(on: bool) -> void:
-	if _seam != null:
-		_seam.visible = not on
+	_seamless = on
+	if _seam_material != null:
+		_seam_material.emission_energy_multiplier = SEAM_DIM if on else SEAM_LIT
+		_seam_material.albedo_color = Roster.ANCIENT_LIGHT.darkened(0.6) if on else Roster.ANCIENT_LIGHT
+	if _slab != null:
+		var heading := Vector3.RIGHT.rotated(Vector3.UP, float(index) * 2.4)
+		_slab.basis = Basis(heading, deg_to_rad(float(SCATTER_TILT[index % SCATTER_TILT.size()]))) if on else Basis.IDENTITY
+
+
+func seam_lit() -> bool:
+	return not _seamless
 
 
 func commit_formation_lane(from: Vector3, heading: Vector3, lane_length: float, lane_width: float) -> Node3D:
@@ -91,7 +115,7 @@ func _physics_process(delta: float) -> void:
 	var desired := Vector3.ZERO
 	match swarm.state:
 		swarm.State.SCATTERED:
-			desired = _follow(ball, speed)
+			desired = (_follow(ball, speed) + _spread()).limit_length(MAX_SPEED)
 			_lead_into_pin()
 		_:
 			var to_slot: Vector3 = swarm.slot(index) - global_position
@@ -108,6 +132,20 @@ func _follow(ball: Vector3, speed: float) -> Vector3:
 	if to.length() <= FOLLOW_GAP:
 		return Vector3.ZERO
 	return to.normalized() * minf(speed + (to.length() - FOLLOW_GAP) * FOLLOW_CLOSE, MAX_SPEED)
+
+
+func _spread() -> Vector3:
+	var push := Vector3.ZERO
+	for other in swarm.alive():
+		if other == self:
+			continue
+		var away: Vector3 = global_position - other.global_position
+		away.y = 0.0
+		var gap := away.length()
+		if gap < SPREAD:
+			var dir := away / gap if gap > 0.01 else Vector3.RIGHT.rotated(Vector3.UP, float(index))
+			push += dir * (SPREAD - gap) * SPREAD_GAIN
+	return push
 
 
 func _dive_check(ball: Vector3) -> void:
@@ -161,10 +199,14 @@ func _build_body() -> void:
 	box.size = Vector3(SIZE * 2.0, 0.6, SIZE * 2.0)
 	shape.shape = box
 	add_child(shape)
-	_base_color = Roster.ANCIENT_ENAMEL
-	_material = Palette.solid(Roster.ANCIENT_ENAMEL)
+	_slab = Node3D.new()
+	_slab.name = "Slab"
+	_visual_parent().add_child(_slab)
 	var parts := _parts()
 	if not parts.is_empty():
+		_base_color = Color.WHITE
+		_material = Palette.solid(Color.WHITE)
+		_material.vertex_color_use_as_albedo = true
 		for part in parts:
 			var mi := MeshInstance3D.new()
 			mi.name = part.name
@@ -172,12 +214,16 @@ func _build_body() -> void:
 			mi.transform = part.xform
 			if part.flash >= 0:
 				mi.set_surface_override_material(part.flash, _material)
-			_visual_parent().add_child(mi)
+			_slab.add_child(mi)
 			if part.name == "RemnantBody":
 				_body = mi
 			elif part.name == "RemnantSeam":
 				_seam = mi
+				_seam_material = (mi.mesh.surface_get_material(0) as StandardMaterial3D).duplicate()
+				mi.set_surface_override_material(0, _seam_material)
 		return
+	_base_color = Roster.ANCIENT_ENAMEL
+	_material = Palette.solid(Roster.ANCIENT_ENAMEL)
 	var prism := CylinderMesh.new()
 	prism.radial_segments = 3
 	prism.top_radius = SIZE
@@ -186,7 +232,7 @@ func _build_body() -> void:
 	_body = MeshInstance3D.new()
 	_body.mesh = prism
 	_body.material_override = _material
-	_visual_parent().add_child(_body)
+	_slab.add_child(_body)
 	var edge := CylinderMesh.new()
 	edge.radial_segments = 3
 	edge.top_radius = SIZE * 0.55
@@ -194,9 +240,21 @@ func _build_body() -> void:
 	edge.height = 0.24
 	_seam = MeshInstance3D.new()
 	_seam.mesh = edge
-	_seam.material_override = Palette.solid(Roster.ANCIENT_LIGHT, 2.2)
+	_seam_material = Palette.solid(Roster.ANCIENT_LIGHT, SEAM_LIT)
+	_seam.material_override = _seam_material
 	_seam.position = Vector3.UP * 0.02
-	_visual_parent().add_child(_seam)
+	_slab.add_child(_seam)
+
+
+# The threat stripe the telegraphs paint (Threat.Painter.stripe_texture), lit as a surface.
+static func hazard_stripe() -> StandardMaterial3D:
+	if _hazard_stripe == null:
+		_hazard_stripe = StandardMaterial3D.new()
+		_hazard_stripe.albedo_texture = Threat.Painter.stripe_texture()
+		_hazard_stripe.uv1_triplanar = true
+		_hazard_stripe.uv1_scale = Vector3.ONE / (Threat.STRIPE_PITCH * sqrt(2.0))
+		_hazard_stripe.roughness = 0.6
+	return _hazard_stripe
 
 
 static func _parts() -> Array:
@@ -211,6 +269,8 @@ static func _parts() -> Array:
 	var parts: Array = []
 	var names := []
 	var valid := scene != null
+	var low := INF
+	var high := -INF
 	if scene != null:
 		for node in scene.find_children("*", "MeshInstance3D", true, false):
 			var mi := node as MeshInstance3D
@@ -229,7 +289,7 @@ static func _parts() -> Array:
 				slots.append(slot)
 				if slot == "ancient_enamel":
 					flash = i
-				var mat := Palette.solid(Roster.ANCIENT_LIGHT, 2.2) if slot == "ancient_light" else Palette.solid(Color.WHITE)
+				var mat := Palette.solid(Roster.ANCIENT_LIGHT, SEAM_LIT) if slot == "ancient_light" else Palette.solid(Color.WHITE)
 				mat.vertex_color_use_as_albedo = slot == "paint"
 				mesh.surface_set_material(i, mat)
 			valid = valid and ((mi.name == "RemnantBody" and slots.size() == 2 and "ancient_enamel" in slots and "paint" in slots)
@@ -239,15 +299,57 @@ static func _parts() -> Array:
 			while ancestor != scene and ancestor is Node3D:
 				xform = ancestor.transform * xform
 				ancestor = ancestor.get_parent()
+			if valid and mi.name == "RemnantBody":
+				var bounds: AABB = xform * mesh.get_aabb()
+				low = bounds.position.y
+				high = bounds.end.y
+				mesh = _leading_split(mesh, slots)
+				flash = 0
 			names.append(String(mi.name))
 			parts.append({"name": mi.name, "mesh": mesh, "xform": xform, "flash": flash})
 		scene.free()
 	names.sort()
-	if not valid or names != ["RemnantBody", "RemnantSeam"]:
+	if not valid or names != ["RemnantBody", "RemnantSeam"] or high <= low:
 		_asset_warning()
 		return []
+	# Stand the casting SLAB_HEIGHT tall with its underside on the floor of the box.
+	var stand := SLAB_HEIGHT / (high - low)
+	var lift := Transform3D(Basis.from_scale(Vector3(1.0, stand, 1.0)), Vector3.UP * (-0.3 - low * stand))
+	for part in parts:
+		part.xform = lift * part.xform
 	_shared = parts
 	return _shared
+
+
+# One flashing hull surface (enamel and paint as vertex colour) and one surface of the
+# faces toward the heading, in the threat stripe; still three draws with the seam.
+static func _leading_split(mesh: Mesh, slots: Array) -> ArrayMesh:
+	var hull := SurfaceTool.new()
+	var edge := SurfaceTool.new()
+	hull.begin(Mesh.PRIMITIVE_TRIANGLES)
+	edge.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var enamel := Roster.ANCIENT_ENAMEL.srgb_to_linear()
+	for i in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(i)
+		var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var ns: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var cs = arrays[Mesh.ARRAY_COLOR]
+		var ix = arrays[Mesh.ARRAY_INDEX]
+		var count: int = ix.size() if ix != null else vs.size()
+		for k in range(0, count, 3):
+			var tri := [ix[k], ix[k + 1], ix[k + 2]] if ix != null else [k, k + 1, k + 2]
+			var n: Vector3 = (ns[tri[0]] + ns[tri[1]] + ns[tri[2]]).normalized()
+			var tool := edge if n.z > LEADING and absf(n.y) < 0.5 else hull
+			for v in tri:
+				tool.set_normal(ns[v])
+				tool.set_color(enamel if slots[i] == "ancient_enamel" or cs == null else cs[v])
+				tool.add_vertex(vs[v])
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	hull.set_material(painted)
+	edge.set_material(hazard_stripe())
+	var out := hull.commit()
+	return edge.commit(out)
 
 
 static func _asset_warning() -> void:

@@ -74,7 +74,7 @@ func _physics_process(delta: float) -> bool:
 			if _swarm.state == Swarm.State.SCATTERED:
 				var dark := true
 				for d in _swarm.alive():
-					dark = dark and not d.get("_seam").visible
+					dark = dark and not d.seam_lit()
 				_report("bowl-through scatters", _scattered == 1 and dark,
 					"%d swarm_scattered after bowling through at %.0f m/s; every follower's seam dark %s" % [_scattered, BOWL_SPEED, dark])
 				_mark = _clock
@@ -94,7 +94,7 @@ func _physics_process(delta: float) -> bool:
 			if _swarm.state == Swarm.State.FORMING:
 				var lit := true
 				for d in _swarm.alive():
-					lit = lit and d.get("_seam").visible
+					lit = lit and d.seam_lit()
 				_report("followers follow", _samples > 0 and float(_toward) / _samples >= 0.9,
 					"%d of %d follower samples closing on the ball or at its heels" % [_toward, _samples])
 				_report("then re-form", absf(_clock - _mark - Swarm.FOLLOW) <= 0.1 and lit,
