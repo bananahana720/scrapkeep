@@ -10,6 +10,7 @@ const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Achievements := preload("res://src/core/achievements.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # A class choice that sells its pilot. At rest: the hero shell turning on a plinth in
 # the class colour, the class emblem and name, the fantasy line, a
@@ -351,23 +352,21 @@ func _show_paint() -> void:
 	_swatch.queue_redraw()
 
 
-# What a locked pilot's card says: the reward row's text, with the lifetime count when the row
-# needs more than one. Empty when no row rewards the pilot or the row is hidden, so the card
-# says only "Locked" and never something false. progress may be null (count 0).
+# What a locked pilot's card says: the class row's unlock label, with the lifetime count when
+# the rule's achievement row needs more than one. Empty for a starter or a row with no label,
+# so the card says only "Locked" and never something false. progress may be null (count 0).
 static func unlock_hint(def, progress) -> String:
 	if def.starter:
 		return ""
-	var id := Achievements.for_pilot(def.id)
-	if id == "":
+	var label := String(def.unlock.get("label", ""))
+	if label == "":
 		return ""
-	var r: Dictionary = Achievements.row(id)
-	if r.get("hidden", false):
-		return ""
-	var need := int(r.get("count", 1))
+	var id: String = ClassDef.unlock_row(String(def.unlock.get("by", "")))
+	var need := int(Achievements.row(id).get("count", 1))
 	if need <= 1:
-		return str(r["text"])
+		return label
 	var have := mini(int(progress.count_of(id)) if progress != null else 0, need)
-	return "%s (%d/%d)" % [r["text"], have, need]
+	return "%s (%d/%d)" % [label, have, need]
 
 
 func _on_pressed() -> void:
