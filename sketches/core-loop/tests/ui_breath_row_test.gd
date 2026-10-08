@@ -10,7 +10,7 @@ const Push := preload("res://tests/workshop/push.gd")
 #   - a missing package falls back to the synth: one warning names the file, the band
 #     stays unmuted and the game plays on;
 #   - with the package, stage 1 starts the ACE band and mutes the synth band;
-#   - the title's B and the pause menu's Breath row cycle raw, hard, gentle, and the
+#   - the settings page's B (the title carries no Breath button) and the pause menu's Breath row cycle raw, hard, gentle, and the
 #     sequencer's style follows; with --music=synth the row is hidden;
 #   - the launch flags parse (--music=ace --breath=raw), and keyed SFX read the ACE key;
 #   - the game's Warden facts reach the sequencer through the audio director:
@@ -68,12 +68,15 @@ func _process(delta: float) -> bool:
 			_audio.ace_manifest = "res://tests/no_such_package/manifest.json"
 			_next("title")
 		"title":
+			var on_title: bool = _game.screens.button_for("breath") == null
+			_game.screens.toggle_settings()
 			var button: Button = _game.screens.button_for("breath")
 			var before: String = button.text if button != null else ""
 			_game._screen_key(KEY_B)
 			var after: String = button.text if button != null else ""
-			_report("title B", before == "Breath: hard" and after == "Breath: gentle" and _game.tuning.option(Tuning.BREATH_KEY) == "gentle",
-				"with music ace the title shows %s; B made it %s" % [before, after])
+			_report("settings B", on_title and before == "Breath: hard" and after == "Breath: gentle" and _game.tuning.option(Tuning.BREATH_KEY) == "gentle",
+				"the title has no Breath button; with music ace the settings page shows %s; B made it %s" % [before, after])
+			_game.screens.toggle_settings()
 			Push.click(root, _game.screens.button_for("start"))
 			_next("class")
 		"class":

@@ -8,6 +8,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
+const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const SpillwayScenery := preload("res://src/presentation/spillway_scenery.gd")
 
 const WORLD_SECONDS := 12.0
@@ -15,6 +16,9 @@ const ESTABLISH_SECONDS := 2.0
 const LINE_SECONDS := 5.0
 const CREDITS_SECONDS := 18.0
 const CREDITS_LINE_SECONDS := 4.5
+# The credits roll stops this far above the screen bottom; the skip hint owns the band beneath.
+const HINT_BAND := 72.0
+const SKIP_HINT := [{"cap": "key_enter", "say": "Enter"}, {"say": "or"}, {"cap": "key_esc", "say": "Esc"}, {"say": "skip to summary"}]
 const TOTAL_SECONDS := WORLD_SECONDS * 3.0 + CREDITS_SECONDS
 const WORLD_DRESSING := {1: "SpillwayScenery", 2: "DigScenery", 3: "HighdraftScenery"}
 # TONE-READ: Credits. The thanks belongs to the person who made the return trip.
@@ -38,6 +42,11 @@ var _sun: DirectionalLight3D
 var _world_label: Label
 var _copy: Label
 var _credits: Label
+var _credits_clip: Control
+var _hint_band: ColorRect
+var skip_hint
+var _bar_top: ColorRect
+var _bar_bottom: ColorRect
 var _credits_back: ColorRect
 var _credits_band: ColorRect
 var _cut: ColorRect
@@ -103,8 +112,8 @@ func _build_view() -> void:
 	_sun.light_energy = 1.2
 	_sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)
 	_scene.add_child(_sun)
-	_backing(0.0, 0.14, Color(Palette.CHARCOAL, 0.78))
-	_backing(0.73, 1.0, Color(Palette.CHARCOAL, 0.88))
+	_bar_top = _backing(0.0, 0.14, Palette.CHARCOAL)
+	_bar_bottom = _backing(0.73, 1.0, Palette.CHARCOAL)
 	_world_label = _label(26, Palette.SAND)
 	_world_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	_world_label.offset_top = 28.0
@@ -117,24 +126,53 @@ func _build_view() -> void:
 	_copy.offset_bottom = -65.0
 	_copy.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var skip_label := _label(18, Palette.SAND)
-	skip_label.text = "Confirm / Back · Skip to summary"
-	skip_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	skip_label.offset_top = -48.0
-	skip_label.offset_bottom = -20.0
 	_credits_back = _backing(0.0, 1.0, Color(Palette.CHARCOAL, 0.94))
 	_credits_back.visible = false
+	_credits_clip = Control.new()
+	_credits_clip.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_credits_clip.offset_bottom = -HINT_BAND
+	_credits_clip.clip_contents = true
+	_credits_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_credits_clip.visible = false
+	add_child(_credits_clip)
 	_credits = _label(30, Palette.SAND)
+	remove_child(_credits)
+	_credits_clip.add_child(_credits)
 	_credits.text = CREDITS
 	_credits.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	_credits.visible = false
-	_credits_band = _backing(0.73, 1.0, Color(Palette.CHARCOAL, 0.88))
+	_credits_band = _backing(0.73, 1.0, Palette.CHARCOAL)
 	_credits_band.visible = false
-	# The copy and the skip hint stay above the credit roll.
+	_hint_band = ColorRect.new()
+	_hint_band.name = "HintBand"
+	_hint_band.color = Palette.CHARCOAL
+	_hint_band.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_hint_band.offset_top = -HINT_BAND
+	_hint_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_hint_band)
+	skip_hint = CreditsHint.new()
+	skip_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	skip_hint.offset_top = -HINT_BAND
+	skip_hint.offset_bottom = 0.0
+	skip_hint.setup(SKIP_HINT)
+	add_child(skip_hint)
+	# The copy stays above the credit roll; the hint band and its keycaps stay above the copy.
 	move_child(_credits_band, -1)
 	move_child(_copy, -1)
-	move_child(skip_label, -1)
+	move_child(_hint_band, -1)
+	move_child(skip_hint, -1)
 	_cut = _backing(0.0, 1.0, Color(Palette.CHARCOAL, 0.0))
+
+
+func letterbox_bars() -> Array:
+	return [_bar_top, _bar_bottom, _credits_band]
+
+
+func hint_band_rect() -> Rect2:
+	return _hint_band.get_global_rect()
+
+
+func credits_rect() -> Rect2:
+	return _credits.get_global_rect().intersection(_credits_clip.get_global_rect())
 
 
 func _label(size_px: int, color: Color) -> Label:
@@ -183,9 +221,19 @@ func _build_worlds() -> void:
 				_dress_world(holder, stage, int(row.id))
 			else:
 				_build_uncached(holder, stage, int(row.id))
+		if int(row.id) == 3:
+			_hide_grid_floor(holder)
 		worlds.append(holder)
 		stages.append(stage)
 		holder.visible = false
+
+
+# The Highdraft's ground mesh is the catch floor: an orange and blue grid under the
+# islands. The fly-over shows the islands on the cloud deck, so the floor node is hidden.
+func _hide_grid_floor(holder: Node3D) -> void:
+	var floor_node := holder.find_child("Ground", true, false) as Node3D
+	if floor_node != null:
+		floor_node.visible = false
 
 
 # Copy draw nodes, never scripts, timers, bodies, areas or collision shapes. Inactive
@@ -318,13 +366,13 @@ func advance(delta: float) -> void:
 	if elapsed >= WORLD_SECONDS * 3.0:
 		phase = "credits"
 		_credits_back.visible = true
-		_credits.visible = true
+		_credits_clip.visible = true
 		_credits_band.visible = true
 		_world_label.visible = false
 		var credits_at := elapsed - WORLD_SECONDS * 3.0
 		_set_credits_copy(credits_at)
 		var p := credits_at / CREDITS_SECONDS
-		var height := get_viewport_rect().size.y
+		var height := get_viewport_rect().size.y - HINT_BAND
 		_credits.position.y = lerpf(height, -_credits.get_minimum_size().y, p)
 		_cut.color.a = 0.0
 		return
@@ -346,8 +394,8 @@ func advance(delta: float) -> void:
 		camera.position = _at + Vector3(sweep - 8.0, 7.0, -23.0)
 		camera.look_at(_at + Vector3(-8.0, 2.0, 4.0))
 	else:
-		camera.position = _at + Vector3(sweep - 4.0, 7.0, -23.0)
-		camera.look_at(_at + Vector3(-4.0, 2.0, 4.0))
+		camera.position = _at + Vector3(sweep - 20.0, 5.0, -20.0)
+		camera.look_at(_at + Vector3(4.0, 1.0, 30.0))
 	_cut.color.a = maxf(1.0 - local / 0.5, (local - WORLD_SECONDS + 0.5) / 0.5)
 	_cut.color.a = clampf(_cut.color.a, 0.0, 1.0)
 	viewport.size = Vector2i(get_viewport_rect().size)
