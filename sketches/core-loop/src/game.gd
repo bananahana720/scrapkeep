@@ -255,13 +255,13 @@ func _module(script: GDScript) -> Node:
 	return module
 
 
-# A pilot is playable when it is a starter or the profile holds it. Only the keys and card
-# clicks ask; flow.choose_class stays ungated for bots and tests.
 # The title's one line on why Continue is not offered (SAFE1); "" when it is, or no run exists.
 func continue_refusal() -> String:
 	return flow.continue_refusal()
 
 
+# A pilot is playable when it is a starter or the profile holds it. Only the keys and card
+# clicks ask; flow.choose_class stays ungated for bots and tests.
 func pilot_unlocked(def) -> bool:
 	return def.starter or ctx.profile.has_pilot(def.id)
 
