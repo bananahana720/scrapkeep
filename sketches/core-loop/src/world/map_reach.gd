@@ -240,7 +240,24 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 	var enamel := Palette.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.15))
 	var light := Palette.solid(ANCIENT, 2.4)
 	var concrete := Palette.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
-	box(parent, Vector3(18.0, 1.0, 10.0), ground.call(spawn.x, spawn.y - 6.0, -0.3), Palette.striped(Palette.AMBER, Palette.CHARCOAL))
+	var spawn_deck: Vector3 = ground.call(spawn.x, spawn.y - 6.0, -0.3)
+	var spawn_pad_material := StandardMaterial3D.new()
+	spawn_pad_material.albedo_color = Palette.VERDIGRIS
+	spawn_pad_material.roughness = 0.72
+	var spawn_seam_material := StandardMaterial3D.new()
+	spawn_seam_material.albedo_color = ANCIENT
+	spawn_seam_material.roughness = 0.72
+	spawn_seam_material.emission_enabled = true
+	spawn_seam_material.emission = ANCIENT
+	spawn_seam_material.emission_energy_multiplier = 0.7
+	var spawn_pad: StaticBody3D = box(parent, Vector3(18.0, 1.0, 10.0), spawn_deck, spawn_pad_material)
+	var spawn_seam := MeshInstance3D.new()
+	var spawn_seam_mesh := BoxMesh.new()
+	spawn_seam_mesh.size = Vector3(0.18, 0.06, 8.0)
+	spawn_seam.mesh = spawn_seam_mesh
+	spawn_seam.material_override = spawn_seam_material
+	spawn_seam.position = Vector3.UP * 0.53
+	spawn_pad.add_child(spawn_seam)
 	_landmark(parent, ground, enamel, light, copper, rust)
 	_bridges(parent, concrete)
 	_tunnel_roofs(parent, ground, concrete)
@@ -252,6 +269,13 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 		var at: Vector2 = wall["at"]
 		pylon_wall(parent, ground.call(at.x, at.y, 0.0), wall["length"], wall["height"], wall["turn"])
 	load("res://src/presentation/spillway_scenery.gd").dress_props(parent)
+	var spawn_pad_view: MeshInstance3D
+	for child in spawn_pad.get_children():
+		if child is MeshInstance3D:
+			spawn_pad_view = child
+			break
+	spawn_pad_view.material_override = spawn_pad_material
+	spawn_seam.material_override = spawn_seam_material
 
 
 # The gorge's landmark without the satellite that stands on the dive's line.

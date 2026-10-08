@@ -16,7 +16,6 @@ static var lamp_shader_path := "res://assets/materials/dig_mechanical/lamp_motio
 
 var available := false
 var lamp_views: Array[MultiMeshInstance3D] = []
-var lights: Array = []
 var faces: Array[Vector3] = []
 var ruptures: Array = []
 var bursts: Array = []
@@ -44,6 +43,13 @@ func prepare(stage_root: Node3D, map: RefCounted) -> void:
 	if ResourceLoader.exists(lamp_shader_path):
 		_shader = load(lamp_shader_path) as Shader
 	if _shader != null:
+		var source := _shader.code.replace(
+			"vec3 paint = spent ? spent_tint.rgb * mix(0.75, 1.0, COLOR.r) : COLOR.rgb;",
+			"vec3 paint = lens ? vec3(0.94, 0.97, 0.96) : (spent ? spent_tint.rgb * mix(0.75, 1.0, COLOR.r) : COLOR.rgb);")
+		source = source.replace("vec3(1.0, 0.93, 0.82)", "vec3(1.0)")
+		var white_lens_shader := Shader.new()
+		white_lens_shader.code = source
+		_shader = white_lens_shader
 		var uniforms := _shader.get_shader_uniform_list().map(func(row): return row["name"])
 		available = uniforms.has("lens") and uniforms.has("spent") and _shader.code.contains("instance uniform float fx_time") \
 			and _shader.code.contains("instance uniform bool motion_enabled")
@@ -96,9 +102,6 @@ func _sync_dressing() -> void:
 	_ambient = available and active and Preset.current != "low"
 	for view in lamp_views:
 		view.set_instance_shader_parameter("motion_enabled", _ambient)
-	for row in lights:
-		row["node"].transform = row["rest"]
-		row["node"].light_energy = 1.6
 	for p in grit:
 		p.emitting = false
 		p.visible = _ambient
@@ -263,10 +266,6 @@ func _process(delta: float) -> void:
 	if _ambient:
 		for view in lamp_views:
 			view.set_instance_shader_parameter("fx_time", _clock)
-		for row in lights:
-			var phase: float = row["phase"]
-			row["node"].light_energy = 1.6 * (1.0 - 0.07 * pow(maxf(0, sin(_clock * 8.3 + phase)), 16))
-			row["node"].position = row["rest"].origin + Vector3.RIGHT * sin(_clock * 1.7 + phase) * 0.025
 		_grit_wait -= delta
 		if _grit_wait <= 0:
 			_grit_wait = GRIT_INTERVAL

@@ -125,12 +125,12 @@ func _surfaces(arena: Node3D) -> void:
 	var wall_mat := _slot_material("foundry_steel")
 	wall_mat.resource_name = "bowl_rusted_rim"
 	wall_mat.albedo_color = Color("84604b")
-	var ramp_mat := _slot_material("foundry_steel")
+	var ramp_mat := _slot_material("foundry_copper")
 	ramp_mat.resource_name = "bowl_cast_ramps"
-	ramp_mat.albedo_color = Color("8a7760")
+	ramp_mat.albedo_color = Palette.COPPER
 	var mast_mat := _slot_material("foundry_copper")
 	mast_mat.resource_name = "bowl_crane_masts"
-	mast_mat.albedo_color = Color("80694b")
+	mast_mat.albedo_color = Palette.COPPER
 	# Only arena-owned views carry this metadata. Combat/hazards and vent pads stay live.
 	for view: MeshInstance3D in arena.get_children().filter(func(n): return n is MeshInstance3D):
 		match view.get_meta("bowl_surface", ""):

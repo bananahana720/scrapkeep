@@ -84,18 +84,10 @@ func _run() -> void:
 				_t.check("shaft dressing clears the boss camera arm and 2 m margin", clear, "%s at %.2f m, need > %.2f m" % [view.name, nearest, camera_radius])
 	for body in _bodies(mod):
 		var skin: Node = body.get_node_or_null("PitDressing" if body == mod.pad else "FloorDressing")
-		_t.check("floor has its own release rim", skin != null)
+		_t.check("floor dressing remains without decorative arcs", skin != null)
 		if skin != null:
-			_surfaces(skin)
 			_t.eq("floor dressing has no collider", skin.find_children("*", "CollisionShape3D", true, false).size(), 0)
-			for view: MultiMeshInstance3D in skin.get_children():
-				_t.eq("floor has 24 separate curved rim keys", view.multimesh.instance_count, 24)
-				var faces := view.multimesh.mesh.get_faces()
-				_t.check("rim sector fits the prop triangle budget", faces.size() / 3 <= 270)
-				var fits := true
-				for at: Vector3 in faces:
-					fits = fits and Vector2(at.x, at.z).length() <= mod.PAD_RADIUS + 0.001 and at.y <= 0.001
-				_t.check("curved rim fits the existing floor surface", fits)
+			_t.eq("Waking floor arcs are absent", skin.find_children("*", "MultiMeshInstance3D", true, false).size(), 0)
 		for child in body.get_children():
 			if child is MeshInstance3D:
 				_t.check("greybox floor is textured stone", child.material_override is ShaderMaterial and _material_valid(child.material_override))

@@ -304,7 +304,7 @@ func _mast(body: StaticBody3D, angle: float) -> void:
 	bm.size = box.size
 	bar_mesh.mesh = bm
 	bar_mesh.set_meta("bowl_surface", "Crossbar")
-	bar_mesh.material_override = Palette.solid(Palette.AMBER, 0.3)
+	bar_mesh.material_override = Palette.solid(Palette.COPPER, 0.3)
 	bar_mesh.position = bar.position
 	bar_mesh.rotation = bar.rotation
 	add_child(bar_mesh)
@@ -330,7 +330,7 @@ func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, 
 	_quad(st, points[4], points[5], points[3], points[2])
 	for p in [points[0], points[4], points[2], points[1], points[3], points[5]]:
 		st.add_vertex(p)
-	_mesh_node(st, Palette.striped(Palette.AMBER, Palette.CHARCOAL), label)
+	_mesh_node(st, Palette.solid(Palette.COPPER), label)
 
 
 func _vent(angle: float) -> void:
