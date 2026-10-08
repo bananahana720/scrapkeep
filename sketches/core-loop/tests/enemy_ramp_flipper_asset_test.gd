@@ -5,7 +5,7 @@ const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
 const BASE_MECHANIC_SHA := "b52181b178e4e9fab039ae3ae2acb13ccdb56d3d4dc3c6bbbacc4e4c56a16bde"
 const BASE_PARENTS := {
 	"counter": "56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca",
-	"enemy": "81fd677fdec55b9886c4b92d1eb09362b3c2fbc5702c6ab7affd71ec841dbf97",
+	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
 }
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}

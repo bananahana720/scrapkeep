@@ -7,7 +7,7 @@ const GLB := "res://assets/models/world_one/enemy_gyro_jammer.glb"
 const BASE_CONSTS := {"FIELD_RADIUS": 7.0, "DRIFT": 11.0, "DRIFT_HZ": 0.7, "HP": 40.0}
 const BASE_INHERITED := {
 	"counter": "56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca",
-	"enemy": "81fd677fdec55b9886c4b92d1eb09362b3c2fbc5702c6ab7affd71ec841dbf97",
+	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
 }
 const BASE_CONFIGURE := """func _configure(threat: float) -> void:
 	_set_health(HP * threat)

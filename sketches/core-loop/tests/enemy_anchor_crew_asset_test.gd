@@ -15,7 +15,7 @@ const GAMEPLAY := {
 }
 const INHERITED := {
 	"counter": "56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca",
-	"enemy": "81fd677fdec55b9886c4b92d1eb09362b3c2fbc5702c6ab7affd71ec841dbf97",
+	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
 }
 const SOCKETS := {
 	"reel_axis": Vector3(0, 0.9, -1.3), "post_base": Vector3(0, 0, -1.3),
