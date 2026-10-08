@@ -161,6 +161,8 @@ func _live(_delta: float) -> bool:
 	if not pit.contains(ball) or player.heft() >= rating:
 		if _holding():
 			_release("left")
+		if pit.contains(ball) and fleet != null:
+			fleet.discover("heavy_roll", ball)
 		return true
 	if not _holding() and not _catch():
 		return true
@@ -168,6 +170,11 @@ func _live(_delta: float) -> bool:
 	to_centre.y = 0.0
 	_pull(to_centre * CENTRE_PULL)
 	return true
+
+
+func _on_broken(_method: String) -> void:
+	if fleet != null:
+		fleet.discover("heavy_roll", _real_ball())
 
 
 # E05 e05_stack_hoist: one disc rises clear and accelerates its spin on WARN's clock.

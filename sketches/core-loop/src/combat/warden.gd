@@ -58,6 +58,8 @@ const SLAG_WIDTH := 4.0
 const SLAG_SECONDS := 6.0
 const SLAG_WARN := 1.0
 const SLAG_DAMAGE := 4.0
+# A ball in the air at most this high over a burning lane is jumping it (the codex's slag_hop).
+const SLAG_HOP_HEIGHT := 8.0
 const ADAPT_CYCLE := 8.0
 const CHOIR_RADIUS := 1.6
 const CHOIR_BRACE_MULT := 1.6
@@ -206,6 +208,9 @@ func _step_guard(delta: float) -> void:
 		return
 	if guard != null and not guard.alive().is_empty():
 		return
+	# The first tick the brood's lamp guard is down; the respawn wait starts full.
+	if guard != null and variant == "brood" and guard_kind() == "lamp_swarm" and _guard_wait >= GUARD_RESPAWN:
+		fleet.discover("brood_dark", global_position)
 	_guard_wait -= delta
 	if _guard_wait > 0.0:
 		return
@@ -230,7 +235,9 @@ func contact_part(ball: Vector3, hit_kind: String) -> String:
 	return ""
 
 
-func on_struck(_hit_kind: String, _part: String, result: Dictionary) -> void:
+func on_struck(hit_kind: String, _part: String, result: Dictionary) -> void:
+	if variant == "choir" and family_open() and not braced_kinds.is_empty() and not hit_kind in braced_kinds and fleet != null:
+		fleet.discover("choir_switch", family_point_at())
 	_apply_posture(result)
 
 
@@ -271,6 +278,8 @@ func _step_slag(delta: float) -> void:
 		_slag_burn = 0.0
 		return
 	var ball_state = target.get("state")
+	if ball_state != null and not ball_state.grounded and fleet != null and _over_slag(_ball()):
+		fleet.discover("slag_hop", _ball())
 	if ball_state == null or not ball_state.grounded or not _slag_burns(_ball()):
 		_slag_burn = 0.0
 		return
@@ -296,6 +305,18 @@ func in_slag(point: Vector3) -> bool:
 func _slag_burns(point: Vector3) -> bool:
 	for lane in slag_lanes:
 		if lane["phase"] == PHASE_STRIKE and is_instance_valid(lane["node"]) and lane["node"].contains(point):
+			return true
+	return false
+
+
+# True where a ball in the air hangs over a burning lane, low enough to be jumping it.
+func _over_slag(point: Vector3) -> bool:
+	for lane in slag_lanes:
+		var node = lane["node"]
+		if lane["phase"] != PHASE_STRIKE or not is_instance_valid(node):
+			continue
+		var ground: float = node.ground_under(node.terrain, point)
+		if point.y - ground <= SLAG_HOP_HEIGHT and node.contains(Vector3(point.x, ground, point.z)):
 			return true
 	return false
 
@@ -486,6 +507,8 @@ func _apply_posture(result: Dictionary) -> void:
 	_posture.apply(result, Engine.get_physics_frames())
 	if _posture.chunks < chunks_before:
 		_armed = float(result["dealt"])
+		if fleet != null:
+			fleet.discover("warden_shatter", global_position)
 	if _posture.staggered and not was_staggered:
 		_begin_stagger()
 	_publish_posture(before)

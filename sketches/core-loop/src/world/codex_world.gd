@@ -13,6 +13,9 @@ extends RefCounted
 #   "slam"     {"at"}                              a slam landed
 #   "jump"     {"at", "tailwind"}                  a jump with the squall at the ball's back
 #   "grounded" {"at", "over_water"}                the ball is rolling on something over the flood
+#   "footing"  {"at", "on"}                        each grounded tick on a map with a net deck:
+#                                                  "deck", "island" (stone tops, bridges, ramps) or "barge"
+#   "thermal"  {"at"}                              a thermal column is lifting the ball this tick
 
 const ENTRIES := [
 	{"id": "live_wire_flood", "category": "world", "name": "Live Wire",
@@ -57,8 +60,8 @@ const ENTRIES := [
 		"hint": "A cracked wheel beside a copper door.",
 		"clue": "Ram the valve on the Reach's west shelf + the copper door",
 		"text": "A rolling ram turns the old valve. Behind the sinking door, the crew's spare parts wait."},
-	# world.gd declares every row at setup: these appear as undiscovered hints next build.
-	# The Dig and Highdraft detectors will wire these recipes later; note() does not fire them.
+	# The Dig's breach plate fires from world.gd when a slam opens one; the three Highdraft
+	# rows fire from note() on the "footing" and "thermal" notes world.gd sends.
 	{"id": "breach_plate", "category": "world", "name": "Down Payment",
 		"hint": "Some floors are waiting for a heavier answer.",
 		"clue": "The Dig's marked breach plate + a slam through to the floor below",
@@ -78,6 +81,26 @@ const ENTRIES := [
 ]
 
 
+# The script whose code fires each row. tests/codex_coverage_test.gd reads it: every row
+# has one, and that script names the row's id where it fires.
+const DETECTORS := {
+	"live_wire_flood": "res://src/world/codex_world.gd",
+	"surge_slingshot": "res://src/world/codex_world.gd",
+	"sluice_hammer": "res://src/world/codex_world.gd",
+	"squall_sail": "res://src/world/codex_world.gd",
+	"ice_bridge": "res://src/world/codex_world.gd",
+	"steam_thermal": "res://src/world/contraptions.gd",
+	"sprint_through": "res://src/world/contraptions.gd",
+	"do_not_open_until_clear": "res://src/world/contraptions.gd",
+	"pit_stop_lap": "res://src/world/bay.gd",
+	"reach_pressure_cache": "res://src/world/map_reach.gd",
+	"breach_plate": "res://src/world/world.gd",
+	"net_deck": "res://src/world/codex_world.gd",
+	"thermal_lift": "res://src/world/codex_world.gd",
+	"moving_island": "res://src/world/codex_world.gd",
+}
+
+
 static func entry(id: String) -> Dictionary:
 	for row in ENTRIES:
 		if row["id"] == id:
@@ -90,6 +113,16 @@ const HAMMER_SECONDS := 3.0
 const ICE_SECONDS := 12.0
 const ICE_REACH := 10.0
 const BLAZING := 3
+# A fall off an island counts if the deck is reached this soon after the ball left the stone.
+const NET_FALL_SECONDS := 6.0
+# A thermal ride counts if an island is reached this soon after the column last lifted the
+# ball, standing at least THERMAL_RISE above where the ride began.
+const THERMAL_SECONDS := 8.0
+const THERMAL_RISE := 2.0
+# A barge ride counts if the ball steps onto an island within STEP_OFF_SECONDS of leaving the
+# deck, at least CROSSING metres (planar) from where it boarded.
+const STEP_OFF_SECONDS := 2.0
+const CROSSING := 12.0
 
 var time := 0.0
 var fired: Array[String] = []
@@ -97,6 +130,15 @@ var fired: Array[String] = []
 var _electrified: Array = []
 var _frozen: Array = []
 var _kicked_at := -INF
+# The net deck: the last footing, and when the ball left an island top for the air.
+var _footing := ""
+var _left_island_at := -INF
+# The thermal ride: the lowest point and the last tick of the current ride.
+var _thermal_from := INF
+var _thermal_at := -INF
+# The barge ride: where the ball boarded, and the last tick it stood on the deck.
+var _boarded_at := Vector3.INF
+var _barge_at := -INF
 
 
 func note(kind: String, data: Dictionary) -> Array:
@@ -117,6 +159,14 @@ func note(kind: String, data: Dictionary) -> Array:
 		"airborne":
 			if data.get("off_kicker", false):
 				_kicked_at = time
+			if _footing == "island":
+				_left_island_at = time
+			_footing = ""
+		"thermal":
+			_thermal_from = minf(_thermal_from, float(data["at"].y))
+			_thermal_at = time
+		"footing":
+			_footing_note(String(data.get("on", "")), data["at"], out)
 		"slam":
 			if time - _kicked_at <= HAMMER_SECONDS:
 				_fire("sluice_hammer", data["at"], out)
@@ -128,6 +178,30 @@ func note(kind: String, data: Dictionary) -> Array:
 			if data.get("over_water", false) and _recent(_frozen, ICE_SECONDS, data["at"], ICE_REACH):
 				_fire("ice_bridge", data["at"], out)
 	return out
+
+
+func _footing_note(on: String, at: Vector3, out: Array) -> void:
+	match on:
+		"deck":
+			if time - _left_island_at <= NET_FALL_SECONDS:
+				_fire("net_deck", at, out)
+			_left_island_at = -INF
+			_thermal_from = INF
+			_boarded_at = Vector3.INF
+		"island":
+			if time - _thermal_at <= THERMAL_SECONDS and at.y >= _thermal_from + THERMAL_RISE:
+				_fire("thermal_lift", at, out)
+			if _boarded_at != Vector3.INF and time - _barge_at <= STEP_OFF_SECONDS \
+					and Vector2(at.x - _boarded_at.x, at.z - _boarded_at.z).length() >= CROSSING:
+				_fire("moving_island", at, out)
+			_left_island_at = -INF
+			_thermal_from = INF
+			_boarded_at = Vector3.INF
+		"barge":
+			if _boarded_at == Vector3.INF:
+				_boarded_at = at
+			_barge_at = time
+	_footing = on
 
 
 func advance(delta: float) -> void:
