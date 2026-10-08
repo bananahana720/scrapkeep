@@ -67,7 +67,7 @@ else
 fi
 
 cmd=(codex exec --skip-git-repo-check -C "$cwd" -m "$model"
-  -c 'model_reasoning_effort="high"' -c 'service_tier="priority"'
+  -c 'model_reasoning_effort="high"' -c "service_tier=\"${SOL_TIER:-priority}\""
   -s "$sandbox" -o "$out/report.md")
 for d in "${add_dirs[@]}"; do
   cmd+=(--add-dir "$d")
