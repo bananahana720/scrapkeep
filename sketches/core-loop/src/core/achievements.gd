@@ -15,15 +15,18 @@ extends RefCounted
 # need     optional: a run summary key (SUMMARY_KEYS) or one of class, won, world
 # min,max  optional numbers compared with the need key
 # hidden   optional: the card shows no text until it is earned
+# beat     a pilot reward row's story line, BEAT_WORDS or fewer, crew voice: the earned toast's
+#          second line and the line under a locked pilot card's condition
 # reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id};
 #          a pilot id is a ClassDef id or a PENDING_PILOTS id
 
-const FIELDS := ["name", "text", "on", "where", "sum", "count", "need", "min", "max", "hidden", "reward"]
+const FIELDS := ["name", "text", "on", "where", "sum", "count", "need", "min", "max", "hidden", "beat", "reward"]
 const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries"]
 const EVALUATOR_KEYS := ["class", "won", "world"]
 const REWARD_KINDS := ["pilot", "cosmetic", "world"]
 const NAME_WORDS := 3
 const TEXT_WORDS := 12
+const BEAT_WORDS := 14
 const MIN_ROWS := 8
 # Pilot ids a row may reward before their ClassDef row exists. The save records the unlock;
 # the card appears when the row lands, and that unit removes the id here.
@@ -33,13 +36,13 @@ const ROWS := {
 	"warden_broken": {"name": "Warden Breaker", "text": "Break your first Warden.", "on": "beacon_unsealed",
 		"count": 1, "reward": {"cosmetic": "paint_any_night"}},
 	"brindle_routed": {"name": "Brindle Routed", "text": "Rout Admiral Brindle.", "on": "enemy_killed",
-		"where": {"kind": "brindle"}, "count": 1, "reward": {"pilot": "tarn"}},
+		"where": {"kind": "brindle"}, "count": 1, "beat": "Tarn signed on the day Brindle fell. Brought a claw nobody issued.", "reward": {"pilot": "tarn"}},
 	# rescue_site.gd emits rescue_completed("rivet"); Rivet is also a starter, so the row records the rescue.
 	"rivet_rescued": {"name": "Runner Rescued", "text": "Rescue the stranded runner in world one.", "on": "rescue_completed",
-		"where": {"quest_id": "rivet"}, "count": 1, "reward": {"pilot": "runner_gunner"}},
+		"where": {"quest_id": "rivet"}, "count": 1, "beat": "Rivet's back on the roster. Asked who locked the cage from inside.", "reward": {"pilot": "runner_gunner"}},
 	# rescue_site.gd emits rescue_completed("dig") for this quest.
 	"dig_rescued": {"name": "Digger Rescued", "text": "Rescue the buried digger.", "on": "rescue_completed",
-		"where": {"quest_id": "dig"}, "count": 1, "reward": {"pilot": "demolitions_caster"}},
+		"where": {"quest_id": "dig"}, "count": 1, "beat": "Kest dug out. Says the wall knocked back the whole time.", "reward": {"pilot": "demolitions_caster"}},
 	"kills_100": {"name": "Hundred Down", "text": "Break 100 machines across all your runs.", "on": "enemy_killed",
 		"count": 100, "reward": {"cosmetic": "paint_rivet_forge"}},
 	"kills_1000": {"name": "Thousand Down", "text": "Break 1000 machines across all your runs.", "on": "enemy_killed",
@@ -54,10 +57,10 @@ const ROWS := {
 		"count": 10, "reward": {"cosmetic": "paint_any_cobalt"}},
 	# Beating the Mind remembers the cannon (ROADMAP:27); remembered_cannon is pending until its kit lands.
 	"mind_quieted": {"name": "Mind Quieted", "text": "Quiet the Mind. An old cannon in the Highdraft remembers.",
-		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {"pilot": "remembered_cannon"}},
+		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "beat": "The Mind's guns went quiet. One turned up at the gate, cleaned.", "reward": {"pilot": "remembered_cannon"}},
 	# Tally: three ledger leaves handed to Moss (progress.gd return_leaves); pil-G7 adds her ClassDef row.
 	"ledger_balanced": {"name": "Ledger Balanced", "text": "Return one ledger leaf per world to Moss.", "on": "world_fact",
-		"where": {"kind": "ledger_returned"}, "count": 3, "reward": {"pilot": "tally"}},
+		"where": {"kind": "ledger_returned"}, "count": 3, "beat": "Three ledger leaves balanced. Tally walked in holding the pen that wrote them.", "reward": {"pilot": "tally"}},
 	"full_rack": {"name": "Full Rack", "text": "Finish a run holding 10 parts.", "on": "run_ended",
 		"count": 1, "need": "parts", "min": 10, "reward": {"cosmetic": "paint_any_brine"}},
 	# boss_defeated fires for every boss; the world bound keeps this to the Waking (Worlds.ROWS id 2).
@@ -103,6 +106,17 @@ static func reward_of(id: String) -> Dictionary:
 	return row(id).get("reward", {})
 
 
+static func beat_of(id: String) -> String:
+	return String(row(id).get("beat", ""))
+
+
+# The earned toast's words: the row's name, then its beat on a second line when it has one.
+static func toast_text(id: String) -> String:
+	var title := String(row(id).get("name", id))
+	var beat := beat_of(id)
+	return title if beat == "" else "%s\n%s" % [title, beat]
+
+
 static func for_pilot(pilot_id: String) -> String:
 	for id in ROWS:
 		if ROWS[id].get("reward", {}).get("pilot", "") == pilot_id and pilot_id != "":
@@ -143,6 +157,11 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 		var text: String = str(r.get("text", ""))
 		if text == "" or _words(text) > TEXT_WORDS:
 			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
+		var beat: String = str(r.get("beat", ""))
+		if _words(beat) > BEAT_WORDS:
+			problems.append("%s: beat must be %d words or fewer" % [id, BEAT_WORDS])
+		if r.get("reward") is Dictionary and r["reward"].has("pilot") and beat == "":
+			problems.append("%s: a pilot reward row needs a beat line" % id)
 		var on: String = str(r.get("on", ""))
 		var args: Array = signals.get(on, [])
 		if not signals.has(on):

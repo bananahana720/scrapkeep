@@ -125,7 +125,8 @@ func _run() -> void:
 const GAMEPLAY_PINS := {
 	"ready_now()": "0060043e7f67817e46894fe11cf978a3303acd50dceacf9b14670d76a6ef120c",
 	"gauge()": "e06ffece5391077a014123fa855cf6ffc78a569453eb8c59fb73dc2f400a32cb",
-	"terms()": "654d1e90bc4e6a22709f0c9b21a0f2f725003140c8de139b81104214f033dbc0",
+	# 2026-10-08 (wave 10 ST5): terms() reads the site row's prompt.
+	"terms()": "64019d70ab6e4a0d41b327aaabc14544c7e1ffa36f4b937fc4cb8ad6b9d669af",
 	"fire()": "d8de13993e8a10a3e061db6f46b2107a70a7b42e95a382cd57c9387cc07ad150",
 	"tick(delta: float)": "2d3aea769354e155fabc658d342a592ff05307619a71cb43c6c28fdd9810eea7",
 }
