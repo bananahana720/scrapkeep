@@ -89,6 +89,47 @@ static func commit(family: String, seed: int, ball: Vector3, center: Vector3, ph
 	return []
 
 
+# commit or commit_any made a guarantee: the set laid always leaves escape_point non-null.
+# A set with no escape is recommitted at seed + k * RECOMMIT_STRIDE, k up to RECOMMITS, in the
+# same family set; then its descriptors are dropped from the last until an escape exists;
+# then a single lane pointed away from the ball is laid. "path" names the step that held
+# ("first", "recommit", "drop", "single"; "none" with no descriptors when the ball cannot
+# reach any clear floor at all, so nothing is laid).
+const RECOMMITS := 4
+const RECOMMIT_STRIDE := 104729
+const FALLBACK_PATHS := ["drop", "single", "none"]
+
+
+static func commit_safe(family: String, seed: int, ball: Vector3, center: Vector3, phase: int, cruise_speed: float, radius := Arena.FLOOR_R) -> Dictionary:
+	var first: Array = []
+	for k in RECOMMITS + 1:
+		var s := seed + k * RECOMMIT_STRIDE
+		var descs: Array = commit_any(s, ball, center, phase, radius) if family == "" else commit(family, s, ball, center, phase, radius)
+		if k == 0:
+			first = descs
+		if escape_point(descs, ball, cruise_speed, center, radius) != null:
+			return {"descriptors": descs, "path": "first" if k == 0 else "recommit"}
+	for n in range(first.size() - 1, 0, -1):
+		var kept := first.slice(0, n)
+		if escape_point(kept, ball, cruise_speed, center, radius) != null:
+			return {"descriptors": kept, "path": "drop"}
+	var away := [away_lane(ball, center, phase, radius)]
+	if escape_point(away, ball, cruise_speed, center, radius) != null:
+		return {"descriptors": away, "path": "single"}
+	return {"descriptors": [], "path": "none"}
+
+
+# The last resort: a lane from just off the centre pointing away from the ball, so the ball
+# is never inside it.
+static func away_lane(ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Dictionary:
+	var v := _flat(ball - center)
+	var bearing := (atan2(v.z, v.x) if v.length() > 0.0 else 0.0) + PI
+	var d := _lane_desc("lane", 0, center, bearing, _warn(LANE_WARN, phase), LANE_LIVE, radius)
+	d["from"] = center + _flat(d["dir"]) * CLEAR
+	d["ahead"] = float(d["ahead"]) - CLEAR
+	return d
+
+
 # One lane from the Mind at the centre straight down the ball's bearing.
 static func lane(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Array:
 	var rng := _rng(seed)

@@ -130,10 +130,12 @@ func _commit_attack(family := "") -> void:
 	center.y = _top()
 	attack_count += 1
 	var seed: int = attack_count * 7919 + ctx.run.stage
-	var descriptors: Array = MindAttacks.commit_any(seed, ball, center, phase, PAD_RADIUS) if family == "" \
-			else MindAttacks.commit(family, seed, ball, center, phase, PAD_RADIUS)
-	if MindAttacks.escape_point(descriptors, ball, ctx.tuning.f("cruise"), center, PAD_RADIUS) == null:
-		push_warning("mind: attack %d leaves no escape point" % attack_count)
+	var safe := MindAttacks.commit_safe(family, seed, ball, center, phase, ctx.tuning.f("cruise"), PAD_RADIUS)
+	var descriptors: Array = safe["descriptors"]
+	if MindAttacks.FALLBACK_PATHS.has(safe["path"]):
+		push_warning("mind: attack %d had no escape; fell back to %s" % [attack_count, safe["path"]])
+	if descriptors.is_empty():
+		return
 	var laid: Array = []
 	var aimed := false
 	for d in descriptors:

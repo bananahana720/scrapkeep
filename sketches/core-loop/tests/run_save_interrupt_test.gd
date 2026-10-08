@@ -156,7 +156,9 @@ func _loads_clean() -> bool:
 	var store := RunStore.new(PATH)
 	var doc := store.load()
 	var valid: bool = doc.is_empty() or RunState.validate_entrance_doc(doc) == ""
-	return valid and store.refusal == "" and store.last_error == "" and _bad_files().is_empty()
+	# An ended run's tombstone is a named refusal (run_ended), not damage.
+	var ended := store.refusal == RunStore.REFUSED_ENDED
+	return valid and (ended or (store.refusal == "" and store.last_error == "")) and _bad_files().is_empty()
 
 
 func _tear(game) -> void:
@@ -448,7 +450,7 @@ func _hostile_cases() -> void:
 		var named := false
 		match cause:
 			"unreadable":
-				named = probed.is_empty() and probe.refusal == "" and "unreadable" in probe.last_error and ".bad" in probe.last_error \
+				named = probed.is_empty() and probe.refusal == RunStore.REFUSED_CHANGED and "unreadable" in probe.last_error and ".bad" in probe.last_error \
 					and FileAccess.file_exists(DIR + "probe.json.bad")
 			"newer_schema":
 				named = probed.is_empty() and probe.refusal == "newer_schema" and probe.save(good_doc) == "newer_schema"

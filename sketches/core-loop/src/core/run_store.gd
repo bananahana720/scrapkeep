@@ -20,6 +20,18 @@ const REFUSED_CHANGED := "changed_on_disk"
 const REFUSED_BACKUP := "backup_failed"
 const REFUSED_WRITE := "write_failed"
 const REFUSED_ENDED := "run_ended"
+# A load sets `refusal` to one of these when the file is there but no run comes back. Only
+# SAVE_BLOCKERS keep refusing saves; the others are cleared by the next save, which starts a
+# new run over the set-aside or ended one.
+const SAVE_BLOCKERS := [REFUSED_NEWER, REFUSED_QUARANTINE]
+# What the title tells the player about a refused run, one line, no paths. last_error keeps
+# the detail for logs.
+const SENTENCES := {
+	REFUSED_NEWER: "This run was saved by a newer version of the game; update it to continue.",
+	REFUSED_QUARANTINE: "The saved run is damaged and could not be set aside, so nothing will be saved until it is removed.",
+	REFUSED_CHANGED: "The saved run was damaged, so it was set aside and cannot be continued.",
+	REFUSED_ENDED: "Your last run is over; start a new one.",
+}
 
 var path := "user://run.json"
 var last_error := ""
@@ -41,9 +53,12 @@ func generation() -> int:
 
 
 # The run doc on disk, or {} for no run. A document older than the one held in memory is
-# merged under it (see merge). An unreadable file is moved to .bad and loads as no run; a
-# newer schema is left alone and refuses `save` until clear().
+# merged under it (see merge). An unreadable file is moved to .bad and loads as no run
+# (refusal changed_on_disk); a tombstone loads as no run (refusal run_ended); a newer schema
+# is left alone and refuses `save` until clear(). A refused load never deletes or rewrites
+# the file.
 func load() -> Dictionary:
+	var set_aside := refusal == REFUSED_CHANGED
 	last_error = ""
 	refusal = ""
 	_backup_path = ""
@@ -52,18 +67,26 @@ func load() -> Dictionary:
 	var state: String = read["state"]
 	if state == "missing":
 		_generation = 0
+		# The title asks again after this store moved the file aside; the reason stands until a save.
+		if set_aside:
+			refusal = REFUSED_CHANGED
+			last_error = _refusal_why
 		return {}
 	if state == "newer":
 		return _refuse(REFUSED_NEWER, read["why"])
 	if state == "tombstone":
 		_generation = int(read["generation"])
 		_doc = {}
+		refusal = REFUSED_ENDED
+		last_error = "the run in %s ended at generation %d" % [path, _generation]
 		return {}
 	if state != "ok":
 		var bad := SafeStore.quarantine(path)
 		if bad.is_empty():
 			return _refuse(REFUSED_QUARANTINE, "%s and could not be moved aside" % read["why"])
 		last_error = "%s; kept as %s" % [read["why"], bad]
+		refusal = REFUSED_CHANGED
+		_refusal_why = last_error
 		_doc = {}
 		_generation = 0
 		return {}
@@ -84,9 +107,10 @@ func load() -> Dictionary:
 # merged in; a file that cannot be read or is newer is never written over.
 func save(doc: Dictionary) -> String:
 	last_error = ""
-	if refusal != "":
+	if SAVE_BLOCKERS.has(refusal):
 		last_error = "not saving: %s" % _refusal_why
 		return refusal
+	refusal = ""
 	var read := _read()
 	var state: String = read["state"]
 	if state == "newer":
@@ -242,6 +266,11 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	if not cleared.is_empty() or out.has("worlds_cleared"):
 		out["worlds_cleared"] = cleared
 	return out
+
+
+# The player's sentence for the last refusal, "" for none.
+func refusal_sentence() -> String:
+	return String(SENTENCES.get(refusal, ""))
 
 
 func _refuse(cause: String, why: String) -> Dictionary:

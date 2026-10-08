@@ -115,8 +115,9 @@ func _unreadable() -> void:
 	_check(s.load().is_empty(), "unreadable loads as no run")
 	_check(not FileAccess.file_exists(p), "unreadable file moved off the path")
 	_check(FileAccess.file_exists(p + ".bad") and _bytes(p + ".bad") == junk, "one .bad keeps the original bytes")
-	_check(s.refusal == "", "unreadable does not block saving")
+	_check(s.refusal == RunStore.REFUSED_CHANGED, "unreadable is named changed_on_disk: " + s.refusal)
 	_check(s.save(_doc()) == "", "next save proceeds: " + s.last_error)
+	_check(s.refusal == "", "the save clears the load's refusal")
 	_check(_bytes(p + ".bad") == junk, ".bad untouched by the save")
 
 

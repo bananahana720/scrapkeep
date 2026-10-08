@@ -221,7 +221,7 @@ func _settle_summary(stale, stale_doc: Dictionary) -> void:
 	var tombstone := RunStore.new(STORE_PATH)
 	var loaded: Dictionary = tombstone.load()
 	var late: String = stale.save(stale_doc)
-	_t.check("run store is a tombstone", FileAccess.file_exists(STORE_PATH) and loaded.is_empty() and tombstone.refusal == ""
+	_t.check("run store is a tombstone", FileAccess.file_exists(STORE_PATH) and loaded.is_empty() and tombstone.refusal == RunStore.REFUSED_ENDED
 			and late == RunStore.REFUSED_ENDED and RunStore.new(STORE_PATH).load().is_empty(),
 		"file %s, load empty %s, stale write refused as '%s' (%s)" % [FileAccess.file_exists(STORE_PATH), loaded.is_empty(), late, stale.last_error])
 

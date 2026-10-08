@@ -5,6 +5,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const RunState := preload("res://src/core/run_state.gd")
+const RunStore := preload("res://src/core/run_store.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
@@ -90,6 +91,7 @@ var store_error := ""
 var continue_ready := false
 var saved_run_cause := ""
 var saved_run_why := ""
+const INVALID_RUN_SENTENCE := "The saved run does not fit this version of the game, so it cannot be continued."
 var run_won := false
 # The entrance doc last written, kept so a spent retry rewrites the entrance, never the arena.
 var _entrance := {}
@@ -254,9 +256,9 @@ func _begin_run(chosen: Resource) -> void:
 
 
 # The saved run the title can offer, or {} with saved_run_cause naming why not: "" for no
-# run, the store's refusal (newer_schema, quarantine_failed), "unreadable" for a file moved
-# aside as .bad, or "invalid_run" for a document this build cannot apply. saved_run_why has
-# the sentence.
+# run or an ended one, the store's refusal (newer_schema, quarantine_failed), "unreadable" for
+# a file moved aside as .bad, or "invalid_run" for a document this build cannot apply.
+# saved_run_why has the detail; continue_refusal() has the player's sentence.
 func saved_run() -> Dictionary:
 	continue_ready = false
 	saved_run_cause = ""
@@ -265,10 +267,10 @@ func saved_run() -> Dictionary:
 		return {}
 	var doc: Dictionary = store.load()
 	if doc.is_empty():
-		if store.refusal != "":
-			saved_run_cause = store.refusal
-		elif store.last_error != "":
+		if store.refusal == RunStore.REFUSED_CHANGED or (store.refusal == "" and store.last_error != ""):
 			saved_run_cause = "unreadable"
+		elif store.refusal != RunStore.REFUSED_ENDED:
+			saved_run_cause = store.refusal
 		saved_run_why = store.last_error
 		return {}
 	var why := RunState.validate_entrance_doc(doc)
@@ -280,6 +282,16 @@ func saved_run() -> Dictionary:
 		return {}
 	continue_ready = true
 	return doc
+
+
+# Why the last saved_run() offered no Continue, as one line for the title; "" when Continue
+# is offered or there is no run on disk.
+func continue_refusal() -> String:
+	if continue_ready or store == null:
+		return ""
+	if saved_run_cause == "invalid_run":
+		return INVALID_RUN_SENTENCE
+	return store.refusal_sentence()
 
 
 # Continue (RS6): the saved run from its last zone entrance, free. The world's spent
