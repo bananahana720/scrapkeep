@@ -111,6 +111,10 @@ func _play_copy(seq) -> void:
 	want.append_array(Worlds.ENDING.close)
 	want.append(Worlds.ENDING.sign)
 	_t.eq("ST3-1 copy plays each world's rows, then close, then sign, once each", seen, want)
+	var anchored := seen.size() == 9
+	for i in 3:
+		anchored = anchored and String(seen[i * 2]).contains(ANCHORS[i + 1])
+	_t.check("ST3-1 played slots 0, 2, 4 are about Brindle, the Waking, the Mind (literal, not table order)", anchored, str(seen.size()))
 	_t.eq("phases run fly-over, copy, credits", phase_seen, ["flyover", "copy", "credits"])
 
 
