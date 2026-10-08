@@ -74,7 +74,7 @@ func _cage_check(cage, pilot_file: String) -> void:
 	_check(cage._animator != null and cage._animator.assigned_animation == "heave", "freeing pilot braces against the lock")
 	cage.tick(Site.BREAK_SECONDS * 0.5)
 	var freed_gate := cage.find_child("CageGate", true, false) as MeshInstance3D
-	_check(cage.spent and cage._bars.visible and freed_gate != null
+	_check(cage.spent and not cage._bars.visible and freed_gate != null
 		and absf(cage._freed_wall.rotation.x) > deg_to_rad(60.0)
 		and cage._animator != null and cage._animator.assigned_animation == "big_cheer",
 		"freed folds the exit wall and pilot cheers")

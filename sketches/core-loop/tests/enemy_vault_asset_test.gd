@@ -76,7 +76,7 @@ func _measure(node: Node3D) -> Dictionary:
 func _budget(node: Node3D, label: String) -> Dictionary:
 	var m := _measure(node)
 	print("%s: %d T / %d V / %d D" % [label, m.tris, m.vertices, m.draws])
-	_check(m.tris > 0 and m.tris <= 1100 and m.vertices <= 2100 and m.draws > 0 and m.draws <= 7, label + " D3 budget")
+	_check(m.tris > 0 and m.tris <= 1100 and m.vertices <= 2100 and m.draws > 0 and m.draws <= 4, label + " D3 budget")
 	_check(m.opaque, label + " opaque materials")
 	return m
 
@@ -111,7 +111,28 @@ func _run() -> void:
 	cache.set_physics_process(false)
 	var m := _budget(cache, "live")
 	_check(m.draws <= 4, "four hatches share one D3 draw")
-	_named(cache, ["VaultBody", "VaultHatches", "VaultLamp", "VaultPlating"])
+	_check(m.primitive == 0, "primitive cache no longer builds")
+	var ring_mesh := cache.find_child("VaultHatches", true, false) as MeshInstance3D
+	var ring_verts: PackedVector3Array = ring_mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] if ring_mesh != null else PackedVector3Array()
+	_check(ring_mesh != null and ring_mesh.mesh.get_surface_count() == 1, "hatch rings are one surface")
+	for side in 4:
+		var ring := cache.find_child("VaultHatch%d" % side, true, false) as Node3D
+		if ring == null:
+			_check(false, "hatch %d exists" % side)
+			continue
+		var low := Vector3(INF, INF, INF)
+		var high := -low
+		for v in ring_verts:
+			if v.distance_to(ring.position) <= 0.7:
+				low = low.min(v)
+				high = high.max(v)
+		var ext := high - low
+		var axis_i := 2 if side < 2 else 0
+		var smallest := ext[axis_i] > 0.0
+		for i in 3:
+			if i != axis_i and ext[i] <= ext[axis_i] + 0.001:
+				smallest = false
+		_check(smallest, "hatch %d ring faces outward, wall-normal extent smallest (extent %s)" % [side, ext])
 	var hatches := 0
 	for side in 4:
 		var hatch: Node = cache.find_child("VaultHatch%d" % side, true, false)

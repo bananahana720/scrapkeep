@@ -27,6 +27,7 @@ func _run() -> void:
 	# A per-cage light is freed on every stage change; Godot 4.7.2's renderer then
 	# segfaults on the next sealed boss entry (GPU only). The signal carries the glow.
 	t.check("cage adds no dynamic light", cage.find_children("*", "Light3D", true, false).is_empty())
+	t.check("model locked gate covers the cage face", _span_z(cage, gate)[1] >= 1.3 and _span_z(cage, gate)[0] <= -1.3, "z span %s" % [_span_z(cage, gate)])
 	var locked_colour: Color = cage._signal.albedo_color
 	var locked_position: Vector3 = cage._pilot.position
 	cage.fire()
@@ -36,7 +37,7 @@ func _run() -> void:
 	t.check("freeing raises pilot silhouette", cage._pilot.position.y >= locked_position.y + 0.15)
 	t.check("freeing signal glows for active rescue", cage._signal.emission_energy_multiplier >= 1.5)
 	cage.tick(Site.BREAK_SECONDS * 0.5)
-	t.check("freed gate opens the exit while its frame remains", cage._open_walls.visible and cage._bars.visible)
+	t.check("freed gate opens the exit and the locked bars are hidden", cage._open_walls.visible and not cage._bars.visible)
 	t.check("freed pilot clears the frame", is_equal_approx(cage._pilot.position.z, 2.1) and cage._animator.assigned_animation == "big_cheer",
 		"position %s pose %s" % [cage._pilot.position, cage._animator.assigned_animation])
 	t.check("freed gate folds down toward the exit", cage._freed_wall != null and absf(cage._freed_wall.rotation.x) > deg_to_rad(60.0))
@@ -61,5 +62,30 @@ func _run() -> void:
 	t.check("presentation adds no colliders", cage.find_children("*", "CollisionObject3D", true, false).is_empty())
 	t.eq("rescue radius unchanged", Site.RING_RADIUS, 4.0)
 	t.eq("rescue hold unchanged", Site.BREAK_SECONDS, 2.0)
+	Site.model_path = "res://assets/models/world_one/does_not_exist.glb"
+	game.world.rescue._done.clear()
+	game.flow.enter_stage(1, Vector3.ZERO, false)
+	var grey = game.world.rescue.cage("rivet")
+	t.check("greybox build ran", grey != null and grey._model_gate == null and grey._latch == null)
+	if grey != null:
+		t.check("greybox locked gate sits on the cage face", absf(_span_z(grey, grey._freed_wall).reduce(func(a, b): return a + b) * 0.5 - 1.4) <= 0.1, "z span %s" % [_span_z(grey, grey._freed_wall)])
+	Site.model_path = Site.MODEL
 	game.free()
 	quit(t.verdict())
+
+
+func _span_z(space: Node3D, node: Node) -> Array:
+	var low := Vector3(INF, INF, INF)
+	var high := -low
+	var meshes: Array = node.find_children("*", "MeshInstance3D", true, false)
+	if node is MeshInstance3D:
+		meshes.append(node)
+	for view: MeshInstance3D in meshes:
+		var bounds := view.mesh.get_aabb()
+		for x in [bounds.position.x, bounds.end.x]:
+			for y in [bounds.position.y, bounds.end.y]:
+				for z in [bounds.position.z, bounds.end.z]:
+					var corner: Vector3 = space.to_local(view.global_transform * Vector3(x, y, z))
+					low = low.min(corner)
+					high = high.max(corner)
+	return [low.z, high.z]

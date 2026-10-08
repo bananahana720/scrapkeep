@@ -105,14 +105,16 @@ func _add_hatches() -> void:
 		match side:
 			0:
 				ring.position = Vector3(0.0, 0.0, -SIZE.z * 0.46)
+				ring.rotation.x = PI * 0.5
 			1:
 				ring.position = Vector3(0.0, 0.0, SIZE.z * 0.46)
+				ring.rotation.x = PI * 0.5
 			2:
 				ring.position = Vector3(-SIZE.x * 0.46, 0.0, 0.0)
-				ring.rotation.y = PI * 0.5
+				ring.rotation.z = PI * 0.5
 			3:
 				ring.position = Vector3(SIZE.x * 0.46, 0.0, 0.0)
-				ring.rotation.y = PI * 0.5
+				ring.rotation.z = PI * 0.5
 		surface.append_from(torus, 0, Transform3D(ring.basis, ring.position))
 		_visual_parent().add_child(ring)
 		_hatches.append(ring)

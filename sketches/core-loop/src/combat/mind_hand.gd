@@ -31,7 +31,9 @@ const HP := 90.0
 const ARM_HEIGHT := 4.2
 const LENS_RADIUS := 0.7
 const HIT_FLASH_SECONDS := 0.08
-const HIT_FLASH_SPEEDUP := 5.0
+# enemy.gd's _update_flash decays _flash at this rate per second (its literal 2.5).
+const FLASH_DECAY := 2.5
+const HIT_FLASH_SPEEDUP := 1.0 / (FLASH_DECAY * HIT_FLASH_SECONDS)
 # The skinned hand (tools/blender/bosses). The cylinders and spheres built below stay as the
 # fallback and are only hidden when the model loads.
 const MODEL := "res://assets/models/bosses/mind_hand.glb"

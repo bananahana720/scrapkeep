@@ -455,7 +455,11 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 		var fallback := BoxMesh.new()
 		fallback.size = Vector3.ONE * 0.7
 		_pickup_mesh = fallback
-	var reward_material := Field._pickup_material(Palette.AMBER)
+	if not _pickup_materials.has("reward"):
+		var made: ShaderMaterial = Field._pickup_material(Palette.AMBER)
+		made.resource_name = "field"
+		_pickup_materials["reward"] = made
+	var reward_material: ShaderMaterial = _pickup_materials["reward"]
 	var core := MeshInstance3D.new()
 	core.name = "ScrapCore"
 	core.mesh = _pickup_mesh

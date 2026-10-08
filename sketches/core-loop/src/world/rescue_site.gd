@@ -68,15 +68,15 @@ class Cage extends "res://src/world/device.gd":
 		_freed_wall = Node3D.new()
 		_freed_wall.name = "FreedWallHinge"
 		_freed_wall.position = Vector3(0.0, 0.0, 1.4)
-		_bars.add_child(_freed_wall)
+		add_child(_freed_wall)
 		for sx in [-1.0, 1.0]:
 			for sz in [-1.0, 1.0]:
 				box(Vector3(0.3, 3.2, 0.3), Vector3(sx * 1.4, 1.6, sz * 1.4), steel, false, _bars)
 		for s in [-1.0, 1.0]:
 			box(Vector3(3.1, 0.25, 0.25), Vector3(0.0, 3.2, s * 1.4), steel, false, _bars)
 			box(Vector3(0.25, 0.25, 3.1), Vector3(s * 1.4, 3.2, 0.0), steel, false, _bars)
-			box(Vector3(0.12, 3.0, 0.12), Vector3(s * 0.5, 1.6, 1.4), steel, false, _freed_wall)
-		box(Vector3(0.7, 0.5, 0.2), Vector3(0.0, 1.4, 1.5), accent, false, _freed_wall)
+			box(Vector3(0.12, 3.0, 0.12), Vector3(s * 0.5, 1.6, 0.0), steel, false, _freed_wall)
+		box(Vector3(0.7, 0.5, 0.2), Vector3(0.0, 1.4, 0.1), accent, false, _freed_wall)
 		box(Vector3(0.8, 1.2, 0.8), Vector3(0.0, 0.6, 0.0), accent)
 
 	func _build_model(parts: Array) -> void:
@@ -144,7 +144,7 @@ class Cage extends "res://src/world/device.gd":
 				box(Vector3(2.8, edge, edge), Vector3(0.0, y, 0.0), steel, false, wall)
 
 	func _visual_state() -> void:
-		_bars.visible = true
+		_bars.visible = not spent
 		if _model_gate != null:
 			_model_gate.visible = not spent
 		if _open_walls != null:
