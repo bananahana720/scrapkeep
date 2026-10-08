@@ -97,8 +97,9 @@ func _run() -> void:
 	Engine.time_scale = 1.0
 	_t.eq("END-1 all fly-overs play automatically", seen_worlds, [0, 1, 2])
 	_t.eq("END-1 phases play automatically", seen_phases, ["flyover", "copy", "credits"])
-	var lines: Array = Worlds.ENDING.log.duplicate()
-	lines.append(Worlds.ENDING.sign)
+	var lines: Array = []
+	for world in Worlds.ROWS:
+		lines.append_array(Worlds.ENDING.log[int(world.id)])
 	_t.eq("END-1 ending copy appears line by line", seen_lines, lines)
 	_t.eq("crew stays in frame in all three worlds", crew_visible, [true, true, true])
 	_t.eq("camera moves in all three worlds", camera_moves, [true, true, true])

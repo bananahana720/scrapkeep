@@ -30,18 +30,30 @@ const BOSSES := {
 
 
 # The page shown once when the summary opens after a win over the final world's boss, before
-# the stats (screens.gd). title is the heading, log the crew-log lines, sign the closing line.
-# TONE-READ: Crew-log ending, prog-G6; tone awaits Andrew's read.
+# the stats (screens.gd). title is the heading. log holds two crew-log lines per world id, shown
+# over that world's fly-over. close is shown over the start of the credits, then sign.
+# TONE-READ: Crew-log ending, prog-G6; every line awaits Andrew's read.
 const ENDING := {
 	"title": "RETURN TRIP ENTERED",
-	"log": [
-		"Highdraft watch: the Mind is quiet. We can hear a loose washer rolling across the deck.",
-		"West cable holds its note. Nobody answers from the next island.",
-		"Moss has a needle through my glove at the bay. Says supper won't mend it.",
-		"Tally laid the three fragments beside the repair sheet. The torn edges fit.",
-		"Return trip entered. We filled in the time ourselves.",
+	"log": {
+		1: [
+			"Shift log: Brindle routed, anchors collected. Cableway turns without anyone on the handwheel.",
+			"Intake clear. Old flood marks inside the housing are one hand higher.",
+		],
+		2: [
+			"Shift board: the Waking is stilled. Nobody has knocked since.",
+			"Pit inspected. Seven lamps back on the rack. We only issued six.",
+		],
+		3: [
+			"Highdraft watch: the Mind is quiet. We hear a washer rolling across the deck.",
+			"West cable holds its note. Nobody answers from the next island.",
+		],
+	},
+	"close": [
+		"Moss has a needle through my glove. Says supper won't mend it.",
+		"Tally laid the three leaves beside the repair sheet. The torn edges fit.",
 	],
-	"sign": "Filed by the bay crew.",
+	"sign": "Return trip entered. We filled in the time ourselves. Filed by the bay crew.",
 }
 
 static func row(world: int) -> Dictionary:
