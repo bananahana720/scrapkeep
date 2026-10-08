@@ -15,6 +15,7 @@ var _failures := 0
 func _initialize() -> void:
 	_check_entries()
 	_check_recipes()
+	_check_highdraft()
 	print("world_codex_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -73,6 +74,56 @@ func _check_recipes() -> void:
 	var wanted: Array[String] = ["live_wire_flood", "surge_slingshot", "sluice_hammer", "squall_sail", "ice_bridge"]
 	_report("recipes", got == wanted and misses.is_empty() and again.is_empty(),
 		"fired %s in order; near misses that fired %s; a repeat fired %d more" % [got, misses, again.size()])
+
+
+# The three Highdraft rows, from the footing and thermal notes world.gd sends, each with
+# the near miss that must not fire it.
+func _check_highdraft() -> void:
+	var d = CodexWorld.new()
+	var got: Array[String] = []
+	var misses: Array[String] = []
+	var collect := func(out: Array): for e in out: got.append(e["id"])
+	var top := Vector3(0.0, 29.0, 120.0)
+	var deck := Vector3(0.0, 11.0, 90.0)
+
+	# The net deck: rolling down to the deck is not a fall; leaving the stone, then the deck, is.
+	d.note("footing", {"at": top, "on": "island"})
+	if not d.note("footing", {"at": deck, "on": "deck"}).is_empty():
+		misses.append("net deck fired on a roll down without a fall")
+	d.note("footing", {"at": top, "on": "island"})
+	d.note("airborne", {"at": top, "off_kicker": false})
+	_wait(d, 1.5)
+	collect.call(d.note("footing", {"at": deck, "on": "deck"}))
+
+	# The thermal: a ride that ends no higher than it began is not a lift; one that rises to stone is.
+	var base := Vector3(-40.0, 12.0, 60.0)
+	d.note("airborne", {"at": deck, "off_kicker": false})
+	d.note("thermal", {"at": base})
+	_wait(d, 1.0)
+	if not d.note("footing", {"at": base + Vector3(0.0, 1.0, 0.0), "on": "island"}).is_empty():
+		misses.append("thermal lift fired 1 m above where the ride began")
+	d.note("airborne", {"at": base, "off_kicker": false})
+	d.note("thermal", {"at": base})
+	d.note("thermal", {"at": base + Vector3(0.0, 12.0, 0.0)})
+	_wait(d, 3.0)
+	collect.call(d.note("footing", {"at": Vector3(-30.0, 27.0, 40.0), "on": "island"}))
+
+	# The barge: stepping back off where you boarded is not a crossing; riding it 24 m is.
+	var dock := Vector3(24.0, 27.0, 40.0)
+	d.note("footing", {"at": dock, "on": "barge"})
+	_wait(d, 1.0)
+	if not d.note("footing", {"at": dock + Vector3(-3.0, 0.0, 0.0), "on": "island"}).is_empty():
+		misses.append("moving island fired 3 m from the dock")
+	d.note("footing", {"at": dock, "on": "barge"})
+	for i in 8:
+		_wait(d, 1.0)
+		d.note("footing", {"at": dock + Vector3(3.0 * (i + 1), 0.0, 0.0), "on": "barge"})
+	_wait(d, 0.5)
+	collect.call(d.note("footing", {"at": dock + Vector3(27.0, 2.0, 0.0), "on": "island"}))
+
+	var wanted: Array[String] = ["net_deck", "thermal_lift", "moving_island"]
+	_report("highdraft", got == wanted and misses.is_empty(),
+		"fired %s in order; near misses that fired %s" % [got, misses])
 
 
 func _report(label: String, ok: bool, detail: String) -> void:

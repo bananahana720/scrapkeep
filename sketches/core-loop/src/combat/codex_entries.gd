@@ -101,7 +101,80 @@ const ENTRIES := [
 		"clue": "a circling kite + a shot, or a dive mark + a roll away",
 		"text": "Rides the thermals out of reach and dives on the spot it marks; shoot it while it circles or leave the mark.",
 	},
+	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
+	# Fleet crews, and the Warden with one entry per variant whose trick differs.
+	{
+		"id": "heavy_roll", "name": "Too Heavy to Hold",
+		"hint": "A pit sized for a pebble cannot hold a boulder.",
+		"clue": "a mag trapper's pit + heft past its rating, or a jump",
+		"text": "Grow past the disc's rating and roll straight through its pit; a jump or a smash shatters the disc.",
+	},
+	{
+		"id": "plate_peel", "name": "Second Coat",
+		"hint": "The brute wears one plate more than anyone else.",
+		"clue": "a plated brute's outer plate + a second breaking hit",
+		"text": "Its outer plate takes the first breaking hit whole and pops off; hit it hard again and the body cracks.",
+	},
+	{
+		"id": "cable_snap", "name": "Cut the Line",
+		"hint": "A winch can only reel what stays on its cable.",
+		"clue": "a winch drone's cable + a jump, boost or smash",
+		"text": "Hovers out of ramming reach and winches you toward its pack; jump, boost or smash to snap the cable.",
+	},
+	{
+		"id": "warden_shatter", "name": "Crack the Clamp",
+		"hint": "Every guard has a breaking point.",
+		"clue": "a Warden's full posture bar + a hit on the open core",
+		"text": "Hit a Warden until its guard bar fills and it staggers open, then smash the core before it seals.",
+	},
+	{
+		"id": "slag_hop", "name": "Over the Slag",
+		"hint": "Slag only burns what rolls in it.",
+		"clue": "a meltdown Warden's slag lane + a jump across it",
+		"text": "A meltdown Warden's pulse leaves a slag lane that burns a rolling ball; jump the lane instead of rolling through.",
+	},
+	{
+		"id": "brood_dark", "name": "Lights Out",
+		"hint": "A brood keeps its lamps close. Put them out.",
+		"clue": "a brood Warden's lamp guard + every lamp down",
+		"text": "A brood Warden hides behind a lamp swarm; put the lamps out and its guard stays dark for ten seconds.",
+	},
+	{
+		"id": "choir_switch", "name": "Change the Tune",
+		"hint": "The choir learns your favourite song. Play another.",
+		"clue": "a choir Warden's open lens + a move it has not braced",
+		"text": "A staggered choir Warden braces against your most-used move; hit it with a different one while its lens is open.",
+	},
 ]
+
+
+# Each entry's roster kind (the Warden's with its variant, "" for any enemy) and the script
+# whose code fires it. tests/codex_coverage_test.gd reads this to prove every kind that can
+# spawn has a trick that can fire.
+const DETECTORS := {
+	"shell_return": {"kind": "lobber", "script": "res://src/combat/combat.gd"},
+	"counter_ram": {"kind": "chaser", "script": "res://src/combat/combat.gd"},
+	"chain": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"crush_chain": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"parting_shot": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"tether_snap": {"kind": "hooker", "script": "res://src/combat/hooker.gd"},
+	"shield_vault": {"kind": "deflector", "script": "res://src/combat/deflector.gd"},
+	"awaiting_operator": {"kind": "swarm_remnant", "script": "res://src/combat/fleet.gd"},
+	"what_it_learned": {"kind": "mind_hand", "script": "res://src/combat/fleet.gd"},
+	"burrow_lane": {"kind": "burrower", "script": "res://src/combat/burrower.gd"},
+	"bore_breach": {"kind": "drill_crew", "script": "res://src/combat/drill_crew.gd"},
+	"lure_bloom": {"kind": "lamp_swarm", "script": "res://src/combat/lamp_swarm.gd"},
+	"line_cut": {"kind": "line_cutter", "script": "res://src/combat/line_cutter.gd"},
+	"deck_winch": {"kind": "anchor_crew", "script": "res://src/combat/anchor_crew.gd"},
+	"thermal_dive": {"kind": "kite_drone", "script": "res://src/combat/kite_drone.gd"},
+	"heavy_roll": {"kind": "mag_trapper", "script": "res://src/combat/mag_trapper.gd"},
+	"plate_peel": {"kind": "plated_brute", "script": "res://src/combat/plated_brute.gd"},
+	"cable_snap": {"kind": "winch_drone", "script": "res://src/combat/winch_drone.gd"},
+	"warden_shatter": {"kind": "warden", "script": "res://src/combat/warden.gd"},
+	"slag_hop": {"kind": "warden", "variant": "meltdown", "script": "res://src/combat/warden.gd"},
+	"brood_dark": {"kind": "warden", "variant": "brood", "script": "res://src/combat/warden.gd"},
+	"choir_switch": {"kind": "warden", "variant": "choir", "script": "res://src/combat/warden.gd"},
+}
 
 
 # 2026-10-04 (wave 9): entries whose in-play detector has not landed yet. Their hints show in

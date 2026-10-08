@@ -82,6 +82,8 @@ var _class_picks_owed := 0
 var _pressure := -1.0
 var _vault_pending := false
 var _was_grounded := true
+# A barge carried the ball this tick (contraptions.gd's "carry" fact), for the net deck's footing note.
+var _on_barge := false
 
 
 func setup(ctx_ref) -> void:
@@ -368,6 +370,12 @@ func _watch_ground(delta: float, ball: Vector3) -> void:
 		_discover(codex_world.note("airborne", {"at": ball, "off_kicker": terrain.map().near_kicker_lip(Vector2(ball.x, ball.z))}))
 	elif grounded and flood.in_basin(ball) and flood.surface_y() > terrain.height(ball.x, ball.z):
 		_discover(codex_world.note("grounded", {"at": ball, "over_water": true}))
+	# The Highdraft's footing: the barge under the ball, the net deck, or stone.
+	var map = terrain.map()
+	if grounded and map.has_method("net_deck_height"):
+		var on := "barge" if _on_barge else ("deck" if map.material_at(ball.x, ball.z) == "net" else "island")
+		_discover(codex_world.note("footing", {"at": ball, "on": on}))
+	_on_barge = false
 	_was_grounded = grounded
 
 
@@ -516,9 +524,11 @@ func _contraption_fact(fact: Dictionary) -> void:
 		"accel":
 			if not ctx.calm:
 				ctx.player.add_external_accel(fact["accel"])
+			_discover(codex_world.note("thermal", {"at": ctx.player.ball_position()}))
 		"carry":
 			# The deck's own frame, not a world push, so it holds in calm too.
 			ctx.player.add_external_accel(fact["accel"])
+			_on_barge = true
 
 
 func _bay_fact(fact: Dictionary) -> void:

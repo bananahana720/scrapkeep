@@ -17,6 +17,18 @@ class LegacyGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
 
+class StateDouble extends RefCounted:
+	var grounded := true
+
+
+class BallDouble extends RefCounted:
+	var state := StateDouble.new()
+	var at := Vector3.ZERO
+
+	func ball_position() -> Vector3:
+		return at
+
+
 var _game
 var _combat
 var _source := Intent.Scripted.new()
@@ -208,6 +220,7 @@ func _w9_tricks() -> void:
 	for node in [rig, cutter, crew]:
 		if is_instance_valid(node):
 			node.queue_free()
+	_w10_pack_tricks(home)
 
 	var burrower: Node3D = _w9_spawn("burrower", home + Vector3(8.0, 0.0, 0.0))
 	burrower._warn(_w9_to(burrower))
@@ -251,6 +264,39 @@ func _w9_after_move() -> void:
 	_game.player.reset_to(_w9_home)
 
 
+# Wave 10 (ST4): the alpha packs' and elite's Fleet crews, each through its own code.
+func _w10_pack_tricks(home: Vector3) -> void:
+	var fleet = _combat.fleet
+	var trap: Node3D = _w9_spawn("mag_trapper", home + Vector3(6.0, 0.0, -6.0))
+	trap._warn(_w9_to(trap))
+	trap.phase = trap.Phase.LIVE
+	_combat.heft_override = trap.rating + 0.5
+	trap._live(0.0)
+	_combat.heft_override = 1.0
+	_report("heavy_roll", _combat.discovered.has("heavy_roll") and not fleet.holds.held(trap),
+		"a ball past the disc's rating %.1f rolled through its pit unheld" % trap.rating)
+
+	var brute: Node3D = _w9_spawn("plated_brute", home + Vector3(-8.0, 0.0, -6.0))
+	_combat.strike(brute, "slam", 80.0)
+	var popped: int = brute.plates_popped
+	_combat.strike(brute, "slam", 80.0)
+	_report("plate_peel", _combat.discovered.has("plate_peel") and popped == 1,
+		"the first breaking hit popped the plate (%d), the second reached the body" % popped)
+
+	fleet.holds.immune_left = 0.0
+	var drone: Node3D = _w9_spawn("winch_drone", home + Vector3(0.0, 0.0, -10.0))
+	drone._warn(_w9_to(drone))
+	drone.phase = drone.Phase.LIVE
+	drone._go_live()
+	var winched: bool = fleet.holds.held(drone)
+	fleet.holds.snap(drone, "jump")
+	_report("cable_snap", _combat.discovered.has("cable_snap") and winched and drone.broken_by == "jump",
+		"a winch drone hooked the ball (%s), then a jump snapped the cable (%s)" % [winched, drone.broken_by])
+	for node in [trap, brute, drone]:
+		if is_instance_valid(node):
+			node.queue_free()
+
+
 func _w9_spawn(kind: String, at: Vector3) -> Node3D:
 	var ctx = _game.ctx
 	return ctx.spawner.spawn_enemy(kind, ctx.terrain.drop_point(at.x, at.z, 1.6))
@@ -282,6 +328,7 @@ func _warden_tricks() -> void:
 	var ctx = _game.ctx
 	var warden: Node3D = ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(2))
 	_report("posture warden", warden.fight() == "posture", "the stage 2 Warden fights on posture; caps and the magnet are gone")
+	_w10_warden_tricks(warden)
 	_game.player.chain.combo = 3
 	_game.events.line_state_changed.emit("chain_link", null, Vector3.ZERO, "")
 	_report("chain", _combat.discovered.has("chain"), "a third link in one chain")
@@ -297,6 +344,55 @@ func _warden_tricks() -> void:
 	_report("all", all_found, "discovered this run: %s" % [_combat.discovery_log])
 	_report("pending stay undiscovered", pending_ok, "detector-pending: %s" % [CodexEntries.DETECTOR_PENDING])
 	_last_case_ran = true
+
+
+# Wave 10 (ST4): the Warden's shared trick and one per variant, unit-level on the stage 2
+# Warden with its variant set in place (a variant's own setup is warden_variants_test's).
+func _w10_warden_tricks(warden: Node3D) -> void:
+	# The stage's ball is still dropping in, so a stand-in ball hops 3 m over the lane.
+	var player = warden.target
+	var hop := BallDouble.new()
+	hop.at = warden.global_position + Vector3(-6.0, 3.0, 0.0)
+	hop.at.y = _game.ctx.terrain.height(hop.at.x, hop.at.z) + 3.0
+	warden.target = hop
+	warden.variant = "meltdown"
+	warden._leave_slag()
+	hop.state.grounded = true
+	warden._step_slag(warden.SLAG_WARN + 0.01)
+	var rolled: bool = _combat.discovered.has("slag_hop")
+	hop.state.grounded = false
+	warden._step_slag(0.0)
+	warden.target = player
+	_report("slag_hop", _combat.discovered.has("slag_hop") and not rolled,
+		"a ball 3 m over a burning slag lane, not one rolling in it (rolled fired %s)" % rolled)
+
+	warden.variant = "choir"
+	_combat.fleet.habits.add("ram", 5.0)
+	for i in 8:
+		if warden.staggered():
+			break
+		warden.on_struck("guard_rack", "", warden.judge_hit("guard_rack", 0.0, false, 0))
+	var braced: Array = warden.braced_kinds
+	var chunks: int = warden.chunks_left()
+	# A core hit lands the frame after the stagger opens; this stands in for that next frame.
+	warden._posture.stagger_frame = -1
+	warden.on_struck("slam", "", warden.judge_hit("slam", 200.0, true, 2))
+	_report("choir_switch", _combat.discovered.has("choir_switch") and braced == ["ram"],
+		"a slam on a choir Warden braced against %s" % [braced])
+	_report("warden_shatter", _combat.discovered.has("warden_shatter") and warden.chunks_left() == chunks - 1,
+		"a smash on the open core took a chunk (%d to %d)" % [chunks, warden.chunks_left()])
+
+	warden.variant = "brood"
+	var at: Vector3 = warden.global_position + Vector3(9.0, 0.0, 0.0)
+	warden.guard = _combat.fleet.spawn_guard(warden.global_position, _game.ctx.terrain.drop_point(at.x, at.z, 1.4), "lamp_swarm")
+	warden._guard_wait = warden.GUARD_RESPAWN
+	var lamps: int = warden.guard.alive().size()
+	for lamp in warden.guard.alive():
+		lamp.hp = 1.0
+		_combat.strike(lamp, "slam", 80.0)
+	warden._step_guard(0.0)
+	_report("brood_dark", _combat.discovered.has("brood_dark") and lamps == 1 and warden.guard.alive().is_empty(),
+		"a brood Warden's lamp guard (%d) was put out and went dark" % lamps)
 
 
 func _finish() -> bool:

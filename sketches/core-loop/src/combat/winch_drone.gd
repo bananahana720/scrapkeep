@@ -146,6 +146,11 @@ func _live(_delta: float) -> bool:
 	return true
 
 
+func _on_broken(_method: String) -> void:
+	if fleet != null:
+		fleet.discover("cable_snap", _real_ball())
+
+
 # How taut the cable is, 0 to 1: the ball's planar speed over the speed that snaps it.
 func strain() -> float:
 	var player = _player()

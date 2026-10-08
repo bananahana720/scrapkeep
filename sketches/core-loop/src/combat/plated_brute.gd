@@ -229,6 +229,8 @@ func _go_live() -> void:
 
 func on_struck(_kind: String, _part: String, result: Dictionary) -> void:
 	bounty_woken = true
+	if result.get("full", false) and plates == 0 and plates_popped > 0 and fleet != null:
+		fleet.discover("plate_peel", global_position)
 	if result.get("full", false) and plates > 0:
 		plates -= 1
 		plates_popped += 1
