@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const GLB := "res://assets/models/world_one/enemy_vault.glb"
-const BASE_LOGIC_SHA := "61385198fb8847626fa3d18e2f42552b43d7c6de712788736b0f18f676bb14b9"
+const BASE_LOGIC_SHA := "062e1f7d31e45b4661f043dd35f34eb33e3114fee55bef46308c95a328a9c0c5"
 
 var failures := 0
 var game
@@ -76,7 +76,7 @@ func _measure(node: Node3D) -> Dictionary:
 func _budget(node: Node3D, label: String) -> Dictionary:
 	var m := _measure(node)
 	print("%s: %d T / %d V / %d D" % [label, m.tris, m.vertices, m.draws])
-	_check(m.tris > 0 and m.tris <= 1100 and m.vertices <= 2100 and m.draws > 0 and m.draws <= 3, label + " D3 budget")
+	_check(m.tris > 0 and m.tris <= 1100 and m.vertices <= 2100 and m.draws > 0 and m.draws <= 4, label + " D3 budget")
 	_check(m.opaque, label + " opaque materials")
 	return m
 
@@ -110,8 +110,41 @@ func _run() -> void:
 	var cache = game.ctx.spawner.spawn_enemy("vault", Vector3(0, 30, 0))
 	cache.set_physics_process(false)
 	var m := _budget(cache, "live")
+	_check(m.draws <= 4, "four hatches share one D3 draw")
 	_check(m.primitive == 0, "primitive cache no longer builds")
-	_named(cache, ["VaultBody", "VaultLamp", "VaultPlating"])
+	var ring_mesh := cache.find_child("VaultHatches", true, false) as MeshInstance3D
+	var ring_verts: PackedVector3Array = ring_mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] if ring_mesh != null else PackedVector3Array()
+	_check(ring_mesh != null and ring_mesh.mesh.get_surface_count() == 1, "hatch rings are one surface")
+	for side in 4:
+		var ring := cache.find_child("VaultHatch%d" % side, true, false) as Node3D
+		if ring == null:
+			_check(false, "hatch %d exists" % side)
+			continue
+		var low := Vector3(INF, INF, INF)
+		var high := -low
+		for v in ring_verts:
+			if v.distance_to(ring.position) <= 0.7:
+				low = low.min(v)
+				high = high.max(v)
+		var ext := high - low
+		var axis_i := 2 if side < 2 else 0
+		var smallest := ext[axis_i] > 0.0
+		for i in 3:
+			if i != axis_i and ext[i] <= ext[axis_i] + 0.001:
+				smallest = false
+		_check(smallest, "hatch %d ring faces outward, wall-normal extent smallest (extent %s)" % [side, ext])
+	var hatches := 0
+	for side in 4:
+		var hatch: Node = cache.find_child("VaultHatch%d" % side, true, false)
+		hatches += 1 if hatch is Node3D else 0
+	_check(hatches == 4, "four hatch rings wrap the cache")
+	_check(cache.find_children("*", "Light3D", true, false).is_empty(), "vault has no per-instance light")
+	var source := FileAccess.get_file_as_string("res://src/combat/vault.gd")
+	var logic_start := source.find("func setup(")
+	var logic_end := source.find("func _build_visual(", logic_start)
+	_check(logic_start >= 0 and logic_end > logic_start
+		and source.substr(logic_start, logic_end - logic_start).sha256_text() == BASE_LOGIC_SHA,
+		"vault gameplay logic remains pinned")
 	_check(cache.plating == game.ctx.spawner.warden_spec(game.ctx.flow.stage() + 1).plating,
 		"vault uses next stage Warden plating")
 	var plate := cache.find_child("VaultPlating", true, false) as MeshInstance3D
@@ -142,10 +175,10 @@ func _run() -> void:
 			_check(corners.size() == 4, "one rim cell covers each complete plate face")
 	if body != null and lamp != null:
 		_check(body.get_surface_override_material(0) == cache._material and cache._material.vertex_color_use_as_albedo, "body vertex paint and flash registered")
-		var lm := lamp.mesh.surface_get_material(0) as StandardMaterial3D
-		_check(lm != null and lm.emission_enabled and is_equal_approx(lm.emission_energy_multiplier, 0.35)
-			and lm.albedo_color == cache.Palette.SAND and lm.emission == cache.Palette.SAND,
-			"landmark lamp retains palette bone below whiteout ceiling")
+		var lm := lamp.get_active_material(0) as StandardMaterial3D
+		_check(lm != null and lm.emission_enabled and lm.albedo_color == cache.Palette.AMBER
+			and lm.emission == cache.Palette.AMBER and lm.emission_energy_multiplier > 0.0,
+			"locked lamp reads as lit amber")
 		var other = game.ctx.spawner.spawn_enemy("vault", Vector3(10, 30, 0))
 		other.set_physics_process(false)
 		var ob := other.find_child("VaultBody", true, false) as MeshInstance3D
@@ -164,8 +197,11 @@ func _run() -> void:
 	cache.knock(Vector3.ONE, 100.0)
 	cache._physics_process(1.0)
 	_check(cache.global_position == at and cache.velocity == Vector3.ZERO, "cache remains static")
-	var source := FileAccess.get_file_as_string("res://src/combat/vault.gd")
-	var logic := source.get_slice("\t_base_color =", 0) + "func knock" + source.get_slice("func knock", 1)
-	logic = logic.replace("static var _shared: Array = []\n", "").replace("static var _asset_warned := false\n", "")
-	_check(logic.sha256_text() == BASE_LOGIC_SHA, "base setup, HP, collider, scrap and static behaviour source unchanged")
+	cache._die()
+	_check(cache._opened and cache._lamp_material.emission_energy_multiplier == 0.0,
+		"opening extinguishes the amber lamp")
+	_check(cache._hatch_model != null and cache._hatch_model.position.y < 0.0
+		and cache._hatch_model.mesh.get_surface_count() == 1
+		and (cache._hatch_model.material_override as StandardMaterial3D).albedo_color == cache.Palette.CHARCOAL,
+		"one shared charcoal hatch draw drops on open")
 	_finish()

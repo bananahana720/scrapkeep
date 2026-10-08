@@ -17,18 +17,18 @@ func _run() -> void:
 	boss.arena = arena
 	boss._spawn_pickup(Vector3.ZERO, 7, "spill")
 	boss._spawn_pickup(Vector3.RIGHT, 9, "returned")
-	var first: MeshInstance3D = boss._pickups[0].node
-	var second: MeshInstance3D = boss._pickups[1].node
-	t.check("real pickup model loads", first.name == "ScrapChunk" and first.material_override is ShaderMaterial)
+	var first := boss._pickups[0].node.find_child("RewardCanister", false, false) as MeshInstance3D
+	var second := boss._pickups[1].node.find_child("RewardCanister", false, false) as MeshInstance3D
+	t.check("real pickup model loads", first != null and first.material_override is ShaderMaterial)
 	t.check("two boss pickups share one material instance", first.material_override == second.material_override)
 	var other_boss := Boss.new()
 	other_boss.arena = arena
 	other_boss._spawn_pickup(Vector3.LEFT, 1, "kill")
-	t.check("material is shared across boss instances", first.material_override == other_boss._pickups[0].node.material_override)
+	t.check("material is shared across boss instances", first.material_override == other_boss._pickups[0].node.find_child("RewardCanister", false, false).material_override)
 	var mat := first.material_override as ShaderMaterial
 	if mat != null:
 		t.eq("shared material keeps field slot", mat.resource_name, "field")
-		t.eq("shared material keeps mint glow", mat.get_shader_parameter("glow_color"), Palette.ARC)
+		t.eq("shared material glows amber", mat.get_shader_parameter("glow_color"), Palette.AMBER)
 		t.near("shared material keeps face energy", mat.get_shader_parameter("face_energy"), 0.06)
 		t.near("shared material keeps rim energy", mat.get_shader_parameter("rim_energy"), 1.25)
 		t.near("shared material keeps emission ceiling", mat.get_shader_parameter("emission_ceiling"), 1.35)

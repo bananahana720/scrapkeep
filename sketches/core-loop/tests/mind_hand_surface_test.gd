@@ -47,11 +47,13 @@ func _run() -> void:
 			var rest := body.albedo_color
 			var hp: float = hand.hp
 			_game.combat.strike(hand, "runner", 5.0)
-			hand._update_flash(0.01)
-			_t.check("live hit flashes M1 skin", hand.hp < hp and hand._flash > 0.0 and body.emission_enabled
-				and body.emission_energy_multiplier > 0.0 and body.albedo_color != rest)
+			hand._update_flash(0.0)
+			_t.check("live hit starts an 80 ms shared white flash", hand.hp < hp
+				and is_equal_approx(hand.HIT_FLASH_SECONDS, 0.08) and hand._flash > 0.0
+				and body.albedo_color == Color(1.0, 1.0, 0.85) and body.emission_enabled
+				and body.emission == EventKinds.role_color("neutral"))
 			_t.check("hit does not flash the other hand", other._material != body and not other._material.emission_enabled)
-			hand._update_flash(0.5)
+			hand._update_flash(hand.HIT_FLASH_SECONDS)
 			_t.check("flash returns to authored rest", not body.emission_enabled and body.albedo_color == rest)
 			var finish := rim.albedo_color
 			for state in ["slate", "amber", ""]:
