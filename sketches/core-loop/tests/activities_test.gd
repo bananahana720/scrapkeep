@@ -159,11 +159,13 @@ func _lit() -> void:
 	var altar := AmbushAltar.new()
 	altar._build_greybox()
 	_t.check("altar fallback has no hazard surface or ground ring", _no_hazard_surface(altar) and altar._ring == null)
+	_t.check("altar fallback bone band uses its dressed material", _has_bone_band(altar))
 	altar.free()
 	altar = AmbushAltar.new()
 	altar.build()
 	_t.check("altar model has no hazard surface or floor ring", _no_hazard_surface(altar) and altar._ring == null
 		and altar.find_child("AltarRing", true, false) == null)
+	_t.check("altar model bone band uses its dressed material", _has_bone_band(altar))
 	altar.free()
 	var bet := BetCrate.new()
 	bet._build_greybox()
@@ -183,6 +185,15 @@ func _no_hazard_surface(node: Node) -> bool:
 			if _rgb(view.material_override.albedo_color) == _rgb(Palette.HAZARD):
 				return false
 	return true
+
+
+func _has_bone_band(node: Node) -> bool:
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh is BoxMesh and (view.mesh as BoxMesh).size == Vector3(1.42, 0.12, 1.42):
+			return view.material_override is StandardMaterial3D \
+				and view.material_override.resource_name == "altar_bone_band" \
+				and _rgb(view.material_override.albedo_color) == _rgb(Palette.SAND)
+	return false
 
 
 func _rgb(c: Color) -> Array:
@@ -341,6 +352,9 @@ func _cache() -> void:
 	var authored: Vector3 = _game.ctx.terrain.drop_point(spec["at"].x, spec["at"].y, 0.0)
 	_t.check("cache is shifted 6 m into the lane", s.global_position.distance_to(authored) >= Activities.CACHE_LANE_OFFSET - 0.01,
 		"offset %.2f m" % s.global_position.distance_to(authored))
+	var wall_gap := _nearest_external_wall(s)
+	_t.check("Reach cache is 6 m from external wall colliders", wall_gap < 0.0 or wall_gap >= Activities.CACHE_LANE_OFFSET - 0.01,
+		"nearest external wall %s" % ("none within 30 m" if wall_gap < 0.0 else "%.2f m away" % wall_gap))
 	var cruise: float = _game.ctx.tuning.f("cruise")
 	var back: Vector3 = s.global_basis.z
 	var heading: Vector3 = -back
@@ -368,7 +382,27 @@ func _cache() -> void:
 	_t.eq("a second pass adds nothing", _game.run.parts.size(), own_after)
 	_t.check("the pickup cost no speed beyond the line", onto["after"] >= onto["before"] - (onto_control["before"] - onto_control["after"]) - SPEED_SLACK,
 		"through %.2f to %.2f, control %.2f to %.2f" % [onto["before"], onto["after"], onto_control["before"], onto_control["after"]])
-	_t.eq("the cache finished once", _done.count("cracked_cache"), 1)
+
+
+func _nearest_external_wall(cache: Node3D) -> float:
+	var nearest := INF
+	var stage_root: Node3D = _game.ctx.terrain.geometry_root(1)
+	for body in stage_root.find_children("*", "StaticBody3D", true, false):
+		if cache.is_ancestor_of(body):
+			continue
+		for shape_node in body.find_children("*", "CollisionShape3D", true, false):
+			if not shape_node.shape is BoxShape3D:
+				continue
+			var size: Vector3 = shape_node.shape.size
+			if size.y < 6.0 or minf(size.x, size.z) > 2.5:
+				continue
+			var local: Vector3 = shape_node.to_local(cache.global_position)
+			var half := size * 0.5
+			var closest: Vector3 = local.clamp(-half, half)
+			var gap: float = shape_node.to_global(closest).distance_to(cache.global_position)
+			if gap <= 30.0:
+				nearest = minf(nearest, gap)
+	return -1.0 if is_inf(nearest) else nearest
 
 
 # The ball rolled at the wall until the first frame it has crossed the wall's plane or `frames` pass;

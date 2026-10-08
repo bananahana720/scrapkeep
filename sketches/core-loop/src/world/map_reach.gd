@@ -269,7 +269,11 @@ func build_props(parent: Node3D, ground: Callable) -> void:
 		var at: Vector2 = wall["at"]
 		pylon_wall(parent, ground.call(at.x, at.y, 0.0), wall["length"], wall["height"], wall["turn"])
 	load("res://src/presentation/spillway_scenery.gd").dress_props(parent)
-	var spawn_pad_view := spawn_pad.get_child(1) as MeshInstance3D
+	var spawn_pad_view: MeshInstance3D
+	for child in spawn_pad.get_children():
+		if child is MeshInstance3D:
+			spawn_pad_view = child
+			break
 	spawn_pad_view.material_override = spawn_pad_material
 	spawn_seam.material_override = spawn_seam_material
 

@@ -35,6 +35,7 @@ const PEDESTAL_REACH := 1.7
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
 const FIRED_LIGHT := {"energy": 0.8, "range": 10.0, "at": Vector3(0.0, HEIGHT + 1.0, HALF_D + 2.0)}
+const RIM_LIGHT := {"energy": 1.6, "range": 14.0, "at": Vector3(0.0, HEIGHT + 1.5, HALF_D + 4.0)}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
 
@@ -72,6 +73,7 @@ func build() -> void:
 	else:
 		_build_model(parts)
 	_build_pedestals(parts)
+	_build_rim_light()
 	ctx.events.slammed.connect(_on_slammed)
 
 
@@ -315,6 +317,17 @@ func _build_fired_light() -> void:
 	light.position = FIRED_LIGHT.at
 	add_child(light)
 	_fired_light = light
+
+
+func _build_rim_light() -> void:
+	var light := OmniLight3D.new()
+	light.name = "CacheRimLight"
+	light.light_color = Palette.SAND
+	light.light_energy = RIM_LIGHT.energy
+	light.omni_range = RIM_LIGHT.range
+	light.shadow_enabled = false
+	light.position = RIM_LIGHT.at
+	add_child(light)
 
 
 # Mesh-local size for the workshop shader's edge chips; meshes need not be centred.

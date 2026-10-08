@@ -16,6 +16,7 @@ const DeepMap := preload("res://src/world/map_dig_deep.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 const STONE := "res://assets/models/dig_stone/"
 const MECH := "res://assets/models/dig_mechanical/"
@@ -119,6 +120,9 @@ func _run() -> void:
 		t.check("(1) no intake in zone A", not _batched(scenery, MECH + "intake_petal.glb"), "intake_petal")
 		t.check("(1) every instance outside the play rect plus 8 m", _outside_apron(scenery, game.ctx.terrain.map().play_rect), "apron")
 		t.eq("(1) Dig lamp lines have no light pool", scenery.find_children("LampLight*", "OmniLight3D", true, false).size(), 0)
+		var lamp_lights := scenery.find_children("*", "OmniLight3D", true, false)
+		var amber_lights := lamp_lights.filter(func(light): return light.light_color.is_equal_approx(Palette.AMBER))
+		t.eq("(1) no Dig lamp has amber light", amber_lights.size(), 0)
 		t.eq("(1) Dig lamp lens material reads white", Scenery.LAMP_LIGHT, Color.WHITE)
 		var colliders := scenery.find_children("*", "CollisionObject3D", true, false)
 		t.check("(1) scenery adds no collider", colliders.is_empty(), str(colliders.size()))

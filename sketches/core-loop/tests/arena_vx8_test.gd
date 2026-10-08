@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const T := preload("res://tests/support/t.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 var t := T.new("arena_vx8_test")
 var game
@@ -29,10 +30,11 @@ func _run() -> void:
 		t.eq("all four ramps and kickers use the copper family without hazard checker", ramps.size(), 4)
 		for view: MeshInstance3D in ramps:
 			t.check("bowl ramp is not hazard striped", not (view.material_override is BaseMaterial3D and view.material_override.get_meta("greybox_checker", false)), String(view.name))
-		var crossbar: MeshInstance3D
-		for child in arena.get_children():
-			if child is MeshInstance3D and child.get_meta("bowl_surface", "") == "Crossbar":
-				crossbar = child
-		t.check("rig panel uses the copper material row", crossbar != null and crossbar.material_override.resource_name == "bowl_crane_masts")
+		var rig := arena.find_children("*", "MeshInstance3D", true, false).filter(func(n): return n.get_meta("bowl_surface", "") in ["Mast", "Crossbar"])
+		t.eq("all rig parts use the copper family", rig.size(), 8)
+		for view: MeshInstance3D in rig:
+			t.check("rig part is copper rather than hazard striped", view.material_override is BaseMaterial3D
+				and not view.material_override.get_meta("greybox_checker", false)
+				and view.material_override.albedo_color == Palette.COPPER, String(view.name))
 	game.free()
 	quit(t.verdict())

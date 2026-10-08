@@ -88,6 +88,7 @@ func _begin() -> void:
 		[_inside_pocket, 6, _press_e],
 		[_noop, 4, _check_open],
 		[_onto_pedestal, 4, _check_taken],
+		[_enter_reach, 30, _check_reach_cache],
 		[_enter_deep, 30, _check_deep_cache],
 	]
 
@@ -99,6 +100,20 @@ func _noop() -> void:
 func _enter_deep() -> void:
 	_game.ctx.calm = true
 	_game.flow.enter_stage(4, Vector3.ZERO, false)
+
+
+func _enter_reach() -> void:
+	_game.ctx.calm = true
+	_game.flow.enter_stage(2, Vector3.ZERO, false)
+
+
+func _check_reach_cache() -> void:
+	var cache: Node3D = _game.world.activities.site("cracked_cache") as Node3D
+	_report("Reach cache is present", cache != null, "activities %s" % _game.world.activities.sites.map(func(site): return site.id))
+	if cache != null:
+		var gap := _nearest_external_wall(cache, 2)
+		_report("Reach cache clears nearby map wall colliders", gap < 0.0 or gap >= CrackedCache.LANE_OFFSET - 0.01,
+			"nearest external wall %s" % ("none within 30 m" if gap < 0.0 else "%.2f m away" % gap))
 
 
 func _check_deep_cache() -> void:
@@ -113,6 +128,9 @@ func _check_deep_cache() -> void:
 		var authored: Vector3 = _game.ctx.terrain.drop_point(at.x, at.y, 0.0)
 		_report("Dig deep cache clears its wall shadow", deep_cache.global_position.distance_to(authored) >= CrackedCache.LANE_OFFSET - 0.01,
 			"root offset %.2f m from authored wall point" % deep_cache.global_position.distance_to(authored))
+		var gap := _nearest_external_wall(deep_cache, 4)
+		_report("Dig deep cache clears nearby map wall colliders", gap < 0.0 or gap >= CrackedCache.LANE_OFFSET - 0.01,
+			"nearest external wall %s" % ("none within 30 m" if gap < 0.0 else "%.2f m away" % gap))
 
 
 func _find_cache() -> void:
@@ -121,10 +139,37 @@ func _find_cache() -> void:
 			_cache = device
 	_report("cache placed", _cache != null, "stage 1 carries a cracked cache: %s" % (_cache.id if _cache != null else "none"))
 	if _cache != null:
+		var rim := _cache.find_child("CacheRimLight", false, false) as OmniLight3D
+		_report("sealed cache keeps its warm rim light", rim != null and is_equal_approx(rim.light_energy, 1.6),
+			"rim energy %.2f" % (rim.light_energy if rim != null else 0.0))
 		var authored_at: Vector2 = _cache.spec["at"]
 		var authored: Vector3 = _game.ctx.terrain.drop_point(authored_at.x, authored_at.y, 0.0)
 		_report("cache clears its wall shadow", _cache.global_position.distance_to(authored) >= CrackedCache.LANE_OFFSET - 0.01,
 			"root offset %.2f m from authored wall point" % _cache.global_position.distance_to(authored))
+		var gap := _nearest_external_wall(_cache, 1)
+		_report("Reach cache clears nearby map wall colliders", gap < 0.0 or gap >= CrackedCache.LANE_OFFSET - 0.01,
+			"nearest external wall %s" % ("none within 30 m" if gap < 0.0 else "%.2f m away" % gap))
+
+
+func _nearest_external_wall(cache: Node3D, stage: int) -> float:
+	var nearest := INF
+	var stage_root: Node3D = _game.ctx.terrain.geometry_root(stage)
+	for body in stage_root.find_children("*", "StaticBody3D", true, false):
+		if cache.is_ancestor_of(body):
+			continue
+		for shape_node in body.find_children("*", "CollisionShape3D", true, false):
+			if not shape_node.shape is BoxShape3D:
+				continue
+			var size: Vector3 = shape_node.shape.size
+			if size.y < 6.0 or minf(size.x, size.z) > 2.5:
+				continue
+			var local: Vector3 = shape_node.to_local(cache.global_position)
+			var half := size * 0.5
+			var closest: Vector3 = local.clamp(-half, half)
+			var gap: float = shape_node.to_global(closest).distance_to(cache.global_position)
+			if gap <= 30.0:
+				nearest = minf(nearest, gap)
+	return -1.0 if is_inf(nearest) else nearest
 
 
 func _local_ground(local: Vector3) -> Vector3:

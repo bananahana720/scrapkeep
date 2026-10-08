@@ -35,7 +35,7 @@ func build() -> void:
 		_cap = _model_part(parts, "AltarCap")
 		_cap.material_override = Palette.solid(Palette.BRASS)
 		_ring = null
-		box(Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, Palette.solid(Palette.SAND), false)
+		box(Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _bone_material(), false)
 		return
 	_build_greybox()
 
@@ -43,8 +43,16 @@ func build() -> void:
 func _build_greybox() -> void:
 	cylinder(0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.VERDIGRIS))
 	_cap = box(Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.BRASS))
-	box(Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, Palette.solid(Palette.SAND), false)
+	box(Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _bone_material(), false)
 	_ring = null
+
+
+func _bone_material() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.resource_name = "altar_bone_band"
+	material.albedo_color = Palette.SAND
+	material.roughness = 0.82
+	return material
 
 
 func reach_point() -> Vector3:
