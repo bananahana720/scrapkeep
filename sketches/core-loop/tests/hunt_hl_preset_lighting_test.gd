@@ -26,7 +26,7 @@ func _run() -> void:
 	if _t.check("HL03 real Mind dressing attached", mod._arena_dress != null):
 		_cycle(game, "Mind")
 		mod.exit_arena()
-		_t.eq("HL03 Mind exit restores Highdraft ambient", Probe.lighting(game).ambient, Color("b4c0c9"))
+		_t.eq("HL03 Mind exit restores Highdraft ambient", Probe.lighting(game).ambient, Color("ece7da"))
 	game.flow.new_run()
 	Probe.check_lighting(_t, "HL03 new run after preset changes restores original lighting", game, before)
 	game.free()

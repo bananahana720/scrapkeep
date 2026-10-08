@@ -440,7 +440,7 @@ func _v1_migrates_to_2() -> void:
 	_t.check("META-7 v1 saves", p.save(), p.last_error)
 	_t.check("META-7 v1 backup holds the original bytes", _bytes(path + ".v1") == original)
 	var saved = JSON.parse_string(FileAccess.get_file_as_string(path))
-	_t.check("META-7 v1 file is now schema 2, generation 13, unknown key kept", saved is Dictionary and saved.get("schema") == 2 and saved.get("generation") == 13 and saved.get("kept_from_a_tool", {}).get("note") == "unknown keys ride through", str(saved))
+	_t.check("META-7 v1 file is now schema 3, generation 13, unknown key kept", saved is Dictionary and saved.get("schema") == 3 and saved.get("generation") == 13 and saved.get("kept_from_a_tool", {}).get("note") == "unknown keys ride through", str(saved))
 	var q := Profile.new(path)
 	q.load_profile()
 	_t.check("META-7 v2 reload keeps every unlock", q.has_pilot("runner_gunner") and q.has_cosmetic("paint_rust") and q.earned("first_win") and q.has_world("slag_bowl"))

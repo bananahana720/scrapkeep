@@ -134,7 +134,7 @@ func _lit() -> void:
 	var world = _game.world
 	var map = _game.ctx.terrain.map()
 	_t.eq("four activity nodes stand at the first frame", world.activities.sites.size(), 4)
-	_t.eq("no device stands", world.interact.devices.size(), 0)
+	_t.eq("one device stands, the relic cache behind the valve (GP1)", world.interact.devices.size(), 1)
 	for spec in map.activity_sites:
 		var id := String(spec["id"])
 		var s = _site(id)
@@ -382,6 +382,7 @@ func _cache() -> void:
 	_t.eq("a second pass adds nothing", _game.run.parts.size(), own_after)
 	_t.check("the pickup cost no speed beyond the line", onto["after"] >= onto["before"] - (onto_control["before"] - onto_control["after"]) - SPEED_SLACK,
 		"through %.2f to %.2f, control %.2f to %.2f" % [onto["before"], onto["after"], onto_control["before"], onto_control["after"]])
+	_t.eq("the cache finished once", _done.count("cracked_cache"), 1)
 
 
 func _nearest_external_wall(cache: Node3D) -> float:
@@ -458,7 +459,7 @@ func _retry() -> void:
 	_t.check("each is unfinished and lit", sites.all(func(s): return not s.done and s.view.lit()), "done flags %s" % [sites.map(func(s): return s.done)])
 	var s = _site("hauler_bounty")
 	_t.check("the bounty's brute stands again", s != null and s.brute != null and is_instance_valid(s.brute) and not s.brute.is_dead(), "brute %s" % [s.brute if s != null else null])
-	_t.eq("no device stands", _game.world.interact.devices.size(), 0)
+	_t.eq("one device stands, the relic cache (GP1)", _game.world.interact.devices.size(), 1)
 	_t.check("the cache's wall stands again", _site("cracked_cache").wall.visible and not _site("cracked_cache").done, "wall")
 
 
@@ -526,7 +527,7 @@ func _default_table() -> void:
 			continue
 		if not String(row["name"]).contains("placeholder"):
 			counts.append(maps[i].activity_sites.size() if "activity_sites" in maps[i] else 0)
-	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4, 3, 3, 2, 2], "sites per authored stage %s" % [counts])
+	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4, 3, 4, 3, 3], "sites per authored stage %s" % [counts])
 	var pending_named := true
 	for row in _game.ctx.stages.DEFS:
 		if SIDE_CONTENT_PENDING.has(String(row["map"])) and String(row["name"]).contains("placeholder"):

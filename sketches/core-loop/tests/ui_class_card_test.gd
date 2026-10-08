@@ -126,8 +126,8 @@ func _process(delta: float) -> bool:
 	return false
 
 
-# A locked card's hint is the pilot's reward row text (with the lifetime count when the row
-# needs several), empty only for a pilot no row rewards (the starters) or a hidden row.
+# A locked card's hint is the class row's unlock label (with the lifetime count when the rule's
+# achievement row needs several), empty only for a starter or a pilot with no label.
 func _check_hints() -> void:
 	for def in _game.flow.classes:
 		var hint: String = ClassCard.unlock_hint(def, _game.progress)
@@ -137,22 +137,22 @@ func _check_hints() -> void:
 		else:
 			var want := ""
 			if id != "":
-				var r: Dictionary = Achievements.row(id)
-				var need := int(r.get("count", 1))
-				want = str(r["text"]) if need <= 1 else "%s (%d/%d)" % [r["text"], mini(int(_game.progress.count_of(id)), need), need]
+				var label := String(def.unlock["label"])
+				var need := int(Achievements.row(id).get("count", 1))
+				want = label if need <= 1 else "%s (%d/%d)" % [label, mini(int(_game.progress.count_of(id)), need), need]
 			_report("hint %s" % def.display_name, id != "" and hint == want, "hint \"%s\" for row %s, want \"%s\"" % [hint, id, want])
 		var beat := Achievements.beat_of(id)
 		var screen_hint: String = _game.screens._unlock_hint(def)
 		_report("screen hint %s" % def.display_name, screen_hint == (hint if hint == "" or beat == "" else "%s\n%s" % [hint, beat]), "screens add the beat: \"%s\"" % screen_hint)
 	_report("hint with no row", ClassCard.unlock_hint(_stub("no_such_pilot"), null) == "", "unknown pilot")
-	_report("hint Rivet starter", ClassCard.unlock_hint(_game.flow.classes[1], _game.progress) == "", "Rivet is a starter until a rescue emitter exists")
-	_report("hint Kest text", ClassCard.unlock_hint(_game.flow.classes[2], _game.progress) == Achievements.row(Achievements.for_pilot("demolitions_caster"))["text"], "row text")
-	_report("hint Tarn text", ClassCard.unlock_hint(_game.flow.classes[3], _game.progress) == "Rout Admiral Brindle.", "row text")
+	_report("hint Rivet label", ClassCard.unlock_hint(_game.flow.classes[1], _game.progress) == "Open the cage. The runner never clocked out.", "class row label")
+	_report("hint Kest text", ClassCard.unlock_hint(_game.flow.classes[2], _game.progress) == String(_game.flow.classes[2].unlock["label"]), "class row label")
+	_report("hint Tarn text", ClassCard.unlock_hint(_game.flow.classes[3], _game.progress) == "Rout Brindle. Somebody signs on the day he falls.", "class row label")
 	var by_id := {}
 	for def in _game.flow.classes:
 		by_id[def.id] = def
-	_report("hint Tally text", ClassCard.unlock_hint(by_id["tally"], _game.progress).begins_with(Achievements.row("ledger_balanced")["text"]), "row text, then the lifetime count")
-	_report("hint cannon text", ClassCard.unlock_hint(by_id["remembered_cannon"], _game.progress) == Achievements.row("mind_quieted")["text"], "row text")
+	_report("hint Tally text", ClassCard.unlock_hint(by_id["tally"], _game.progress).begins_with(String(by_id["tally"].unlock["label"])), "class row label, then the lifetime count")
+	_report("hint cannon text", ClassCard.unlock_hint(by_id["remembered_cannon"], _game.progress) == String(by_id["remembered_cannon"].unlock["label"]), "class row label")
 
 
 func _stub(id: String) -> Resource:

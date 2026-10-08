@@ -162,8 +162,9 @@ func _check_label() -> void:
 # v2 W4 re-pinned it for the 86-row pool (the first 28, the 58 new rows) plus Moss's
 # four cells; kinetic keeps to its old share (6 of 41 tags, 15%) or below 25%, so
 # Wrecking Ball stays under its cap as the pool grows.
-const TAG_COUNTS := {"frost": 5, "arc": 14, "kinetic": 19, "split": 5, "spiral": 7, "chain": 9, "anchor": 17,
-	"speed": 31, "mass": 33}
+# 2026-10-08 (alpha wave 11 GP2): six new parts; was arc 14, spiral 7, anchor 17, speed 31, mass 33
+const TAG_COUNTS := {"frost": 5, "arc": 15, "kinetic": 19, "split": 5, "spiral": 8, "chain": 9, "anchor": 18,
+	"speed": 32, "mass": 35}
 const KINETIC_SHARE_MAX := 0.25
 
 

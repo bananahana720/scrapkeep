@@ -9,9 +9,9 @@ const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The fresh-profile unlock sequence (ROADMAP "Content and progression"): a test-mode game
-# starts on an empty profile under its own storage_dir with Sable and Rivet selectable.
+# starts on an empty profile under its own storage_dir with Sable alone selectable (P-R21).
 # Bus events then arrive in the game's own order and each reward opens exactly its pilot:
-# the world-one rescue keeps Rivet, Brindle opens Tarn, the Dig rescue opens Kest, the Mind
+# the world-one rescue opens Rivet, Brindle opens Tarn, the Dig rescue opens Kest, the Mind
 # opens the remembered cannon and the third ledger leaf handed to Moss opens Tally. Leaf
 # three is found by the world-three boss, which is the Mind (progress.gd LEDGER_FOUND,
 # achievements.gd mind_quieted), so the cannon opens before Tally. After every step the
@@ -26,7 +26,7 @@ const TALLY := "tally"
 const CANNON := "remembered_cannon"
 # A step: its label, the pilot ids it newly opens, and the full selectable set after it.
 const SEQUENCE := [
-	["rivet_rescue", [], [SABLE, RIVET]],
+	["rivet_rescue", [RIVET], [SABLE, RIVET]],
 	["brindle_routed", [TARN], [SABLE, RIVET, TARN]],
 	["leaf_one_returned", [], [SABLE, RIVET, TARN]],
 	["dig_rescue", [KEST], [SABLE, RIVET, KEST, TARN]],
@@ -60,8 +60,8 @@ func _run() -> void:
 	_t.eq("S0 the profile starts with no pilots", _profile_pilots(profile), [])
 	_t.eq("S0 the profile starts with no achievements", Achievements.ids().filter(func(id): return profile.earned(id)), [])
 	_game.flow.open_class_select()
-	_t.eq("S0 Sable and Rivet are selectable", _selectable(), [SABLE, RIVET])
-	if not await _gate("S0", [SABLE, RIVET]):
+	_t.eq("S0 Sable alone is selectable", _selectable(), [SABLE])
+	if not await _gate("S0", [SABLE]):
 		_finish()
 		return
 	for step in SEQUENCE:
@@ -134,11 +134,11 @@ func _profile_pilots(profile) -> Array:
 	return out
 
 
-# The pilots the profile holds after a step: every selectable non-starter, plus Rivet once rescued.
+# The pilots the profile holds after a step: every selectable non-starter.
 func _rewarded(selectable: Array) -> Array:
 	var out: Array = []
 	for def in ClassDef.all():
-		if selectable.has(def.id) and (not def.starter or def.id == RIVET):
+		if selectable.has(def.id) and not def.starter:
 			out.append(def.id)
 	return out
 

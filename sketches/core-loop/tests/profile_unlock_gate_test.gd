@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 # ctx.profile sits under storage_dir, loaded and able to save, and the game's Progress
 # earns a row into it from the bus (P2-1). A key or a card click on a locked pilot starts
 # nothing, an unlocked or starter pilot starts (P2-2); flow.choose_class stays ungated.
-# Sable and Rivet start open; Kest, Tarn, Tally and the remembered cannon are each named by exactly one pilot reward (P2-3).
+# Sable alone starts open (P-R21); Rivet, Kest, Tarn, Tally and the remembered cannon are each named by exactly one pilot reward (P2-3).
 # The rescue rows earn from rescue_completed and the dig rescue unlocks Kest (P2-4); it runs
 # last, because rivet_rescued unlocks the runner_gunner id the gate steps keep locked.
 
@@ -118,13 +118,12 @@ func _p3() -> void:
 			owners[pilot] = owners.get(pilot, 0) + 1
 	for def in ClassDef.all():
 		var named: int = owners.get(def.id, 0)
-		# Rivet is a starter and its rescue row (rescue_site.gd emits it) still names it once.
-		var open: bool = def.id == "pylon_engineer" or def.id == "runner_gunner"
-		_t.check("P2-3 %s is open (Sable, Rivet) or named by exactly one pilot reward" % def.id, def.starter == open and (open or named == 1), "starter %s, rewards %d" % [def.starter, named])
+		var open: bool = def.id == "pylon_engineer"
+		_t.check("P2-3 %s is open (Sable) or named by exactly one pilot reward" % def.id, def.starter == open and (open or named == 1), "starter %s, rewards %d" % [def.starter, named])
 	var starters := 0
 	for def in ClassDef.all():
 		starters += 1 if def.starter else 0
-	_t.eq("P2-3 Sable and Rivet are the starters", starters, 2)
+	_t.eq("P2-3 Sable is the only starter", starters, 1)
 	_t.check("P2-3 and the starter is Sable", ClassDef.all()[0].starter and ClassDef.all()[0].id == "pylon_engineer", "first row")
 	var class_ids: Array = ClassDef.all().map(func(d): return d.id)
 	var unresolved: Array = []
