@@ -28,13 +28,14 @@ void fragment() {
 	vec3 finish = base_color.rgb;
 	float glow = 0.0;
 	if (finish_kind == 0) {
-		// Dark seals frame each blue seam; ribbed glass keeps the blue continuous and legible.
+		// Dark seals frame each ancient seam. Chevron bands (V stripes, 0.5 m pitch) dim the glow so the
+		// seam reads without its green: deuteranopes see uranium glass as brass (material_slots.gd).
 		vec3 edges = max(half_extents - abs(p), vec3(0.0));
 		float border = dot(weights, vec3(min(edges.y, edges.z), min(edges.x, edges.z), min(edges.x, edges.y)));
 		float lens = smoothstep(0.015, 0.055, border);
-		float ribs = groove(p.y, 0.5, 0.015);
-		finish = mix(secondary_color.rgb, base_color.rgb * (0.93 - ribs * 0.13), lens);
-		glow = lens * (1.0 - ribs * 0.13);
+		float chevron = groove(p.y - abs(p.x + p.z) * 0.55, 0.5, 0.07);
+		finish = mix(secondary_color.rgb, base_color.rgb * (0.95 - chevron * 0.4), lens);
+		glow = lens * (1.0 - chevron * 0.55);
 		ROUGHNESS = 0.32;
 		METALLIC = 0.08;
 	} else if (finish_kind == 1) {

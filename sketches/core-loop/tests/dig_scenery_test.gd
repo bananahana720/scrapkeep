@@ -1,4 +1,5 @@
 extends SceneTree
+# Re-pinned 2026-10-09 (w12 VX-SURF): the Dig floor binding lists the sandstone surface as its original, so the target preset now swaps it for the ground slot, resource_name "ground" (was "target_ground", a retired shader).
 
 # Rule (src/presentation/dig_scenery.gd, unit WDG): the Dig builds its real scenery from the
 # dig_stone and dig_mechanical GLBs: cut faces, rubble, struts, the zone's landmark and lamp
@@ -166,7 +167,7 @@ func _run() -> void:
 	Preset.apply("low" if before != "low" else "high")
 	t.check("(4) stone survives a preset change", ground_view.material_override == stone, str(ground_view.material_override))
 	Preset.apply("target")
-	t.check("(4) the target preset keeps its own ground", ground_view.material_override != stone and ground_view.material_override.resource_name == "target_ground", str(ground_view.material_override))
+	t.check("(4) the target preset swaps in the sandstone ground slot (Dig stone kept only once GraphicsPreset skips slot overrides, VX-LIGHT follow-up)", ground_view.material_override != stone and ground_view.material_override.resource_name == "ground", str(ground_view.material_override))
 	Preset.apply(before)
 	t.check("(4) beds return after the target preset", ground_view.material_override == stone, str(ground_view.material_override))
 	game.free()
