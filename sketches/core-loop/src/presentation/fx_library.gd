@@ -48,7 +48,7 @@ const SPECS := {
 	"crack_debris": {"pool": 2, "max": 32, "life": 1.0, "speed": [4.0, 9.0], "spread": 50.0, "gravity": -24.0,
 		"size": Vector3(0.28, 0.2, 0.24), "colour": "CHARCOAL", "attach": "world", "blend": "mix", "shape": "point", "spin": 540.0},
 	"cache_ember": {"pool": 2, "max": 4, "life": 1.6, "speed": [0.3, 0.8], "spread": 25.0, "gravity": 0.15,
-		"size": 0.09, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "point", "glow": 2.0, "owner": "vfx"},
+		"size": 0.24, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "point", "glow": 2.0, "owner": "vfx"},
 	"dig_debris": {"pool": 1, "max": 10, "life": 0.7, "speed": [12.0, 17.0], "spread": 35.0, "gravity": -26.0, "scale": [1.0, 1.8],
 		"size": Vector3.ONE * 0.24, "colour": "SANDSTONE", "attach": "world", "blend": "mix", "shape": "point", "owner": "dig"},
 	"dig_dust": {"pool": 1, "max": 12, "life": 0.5, "speed": [7.0, 12.0], "spread": 60.0, "gravity": 1.5, "scale": [2.5, 4.0],
