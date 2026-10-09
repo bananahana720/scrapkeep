@@ -2,6 +2,8 @@ extends SceneTree
 
 # VX3: the three dark places (the Waking pit rig, a pylon wall segment, the cracked cache)
 # on every quality preset. Light count and total energy sit inside the recorded ranges, and
+# 2026-10-09 re-pin (LIGHT-FIX): the pit total energy falls from 79-80 to 60.2 (measured) because the rim pool
+# lights drop from 2.2 to 1.0 each (arena_waking_dress.gd LIGHTS.rim_pool); the light set stays 50.
 # no floor carries a glow; no emissive anywhere in them wears a telegraph colour.
 # Headless: this reads the light and material inputs; the rendered 18% floor is the capture's.
 
@@ -15,7 +17,7 @@ const T := preload("res://tests/support/t.gd")
 const PRESETS := ["low", "high", "target"]
 # [min count, max count, min energy, max energy] per place; the same on every preset.
 const RANGES := {
-	"waking_pit": [50, 50, 79.0, 80.0],
+	"waking_pit": [50, 50, 60.0, 60.5],
 	"pylon_wall": [0, 0, 0.0, 0.0],
 	# 2026-10-08: cache light removed (freed per-cache light crashed Forward+); its glow is emission.
 	"cache": [0, 0, 0.0, 0.0],

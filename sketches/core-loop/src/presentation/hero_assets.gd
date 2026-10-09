@@ -794,7 +794,7 @@ func _dress_warden(warden) -> void:
 		shader.code = """shader_type spatial;
 render_mode blend_add, unshaded, depth_draw_never, cull_back;
 uniform vec3 tint : source_color = vec3(0.659, 0.761, 0.831);
-uniform float energy = 0.35;
+uniform float energy = 0.8;
 void fragment() {
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
 	ALBEDO = tint * rim * energy;

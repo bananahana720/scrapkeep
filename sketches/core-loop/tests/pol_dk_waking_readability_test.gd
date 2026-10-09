@@ -1,4 +1,6 @@
 extends SceneTree
+# 2026-10-09 re-pin (LIGHT-FIX): the rim pool energy floor falls from 1.4 to 1.0 because the pit's amber
+# floor accent swamped the cool walls at 2.2 (blind read, arw_pit_b over_shoulder); LIGHTS.rim_pool.energy is now 1.0.
 # 2026-10-09 re-pin (VX-LIGHT): the Dig has its own world look row (world_look.gd ROWS[2], a dark
 # dome), entered on the Dig stage before the pit, so leaving the pit restores the Dig's light,
 # not stage 1's (measured: background, ambient, energy and saturation differ from stage 1).
@@ -30,7 +32,7 @@ func _run() -> void:
 		var pools := top.find_children("RimPool*", "OmniLight3D", true, false)
 		_t.eq("DK top floor has four rim pools", pools.size(), 4)
 		for light: OmniLight3D in pools:
-			_t.check("DK rim pool reaches floor without shadows", light.light_energy >= 1.399 and light.omni_range >= 30.0 and not light.shadow_enabled)
+			_t.check("DK rim pool reaches floor without shadows", light.light_energy >= 0.999 and light.omni_range >= 30.0 and not light.shadow_enabled)
 		for child in top.get_children():
 			if child is MeshInstance3D:
 				var mat := child.material_override as ShaderMaterial
