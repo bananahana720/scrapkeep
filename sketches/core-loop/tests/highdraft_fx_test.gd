@@ -1,3 +1,4 @@
+# 2026-10-09 VX-FX: thermal motes at half density (thermal_ride JUICE row: idle 9, occupied 27, low idle 3), SEEDS:88; streaks unchanged.
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
@@ -43,13 +44,13 @@ func _run() -> void:
 	t.check("real ball occupies thermal", column.occupied and column.presence.state == "occupied",
 		"ball %s, base %s, presence visible %s" % [game.ctx.player.ball_position(), base, presence.is_visible_in_tree()])
 	t.eq("occupied shader state", column.material.get_shader_parameter("occupied"), 1.0)
-	t.eq("occupied motes denser", column.views[0].multimesh.visible_instance_count, 54)
+	t.eq("occupied motes denser", column.views[0].multimesh.visible_instance_count, 27)
 	t.eq("occupied streaks denser", column.views[1].multimesh.visible_instance_count, 18)
 	t.eq("presentation preserves ball velocity", game.ctx.player.state.velocity, before_velocity)
 	game.ctx.player.reset_to(base + Vector3(12.0, 16.0, 0.0))
 	presence._process(1.0 / 60.0)
 	t.check("leaving thermal returns to idle", not column.occupied)
-	t.eq("idle motes", column.views[0].multimesh.visible_instance_count, 18)
+	t.eq("idle motes", column.views[0].multimesh.visible_instance_count, 9)
 	# A real ball falls onto the actual net point under the vent. Read its body's position,
 	# not the unmoving PlayerBall parent. Also exercise the rescue crossing from below.
 	var contact := base + Vector3.UP
@@ -83,7 +84,7 @@ func _run() -> void:
 	game.ctx.player.reset_to(base + Vector3(12.0, 16.0, 0.0))
 	presence._process(1.0 / 60.0)
 	GraphicsPreset.apply("low")
-	t.eq("low idle motes reduced", column.views[0].multimesh.visible_instance_count, 6)
+	t.eq("low idle motes reduced", column.views[0].multimesh.visible_instance_count, 3)
 	t.eq("low idle streaks reduced", column.views[1].multimesh.visible_instance_count, 2)
 	GraphicsPreset.apply("high")
 	var start: Transform3D = fx.cloud_placements[0]

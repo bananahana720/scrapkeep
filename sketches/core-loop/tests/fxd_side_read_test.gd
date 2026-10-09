@@ -1,8 +1,11 @@
+# 2026-10-09 VX-FX: GPUParticles3D casts (base class settings on the process material); the Underlight is retired (SEEDS:88 no rim glow), the check now pins no light and a sandstone puff.
 extends SceneTree
 
 const Fx := preload("res://src/presentation/dig_fx.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 const T := preload("res://tests/support/t.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 
 func _initialize() -> void:
@@ -33,21 +36,22 @@ func _run() -> void:
 		skin.add_child(wedge)
 	fx._rupture("probe", cover, Vector3.ZERO)
 	var burst: Node3D = fx.bursts[0].node
-	var dust: CPUParticles3D = burst.get_node("Dust")
-	var debris: CPUParticles3D = burst.get_node("Debris")
-	t.check("dust spans the rim rather than a small puff", dust.scale_amount_min >= 2.5 and dust.scale_amount_max >= 4.0)
-	var rise := debris.initial_velocity_min * cos(deg_to_rad(debris.spread)) * 0.18 + debris.gravity.y * 0.18 * 0.18 * 0.5
+	var dust: GPUParticles3D = burst.get_node("Dust")
+	var debris: GPUParticles3D = burst.get_node("Debris")
+	var dust_pm := dust.process_material as ParticleProcessMaterial
+	var debris_pm := debris.process_material as ParticleProcessMaterial
+	t.check("dust spans the rim rather than a small puff", dust_pm.scale_min >= 2.5 and dust_pm.scale_max >= 4.0)
+	var rise := debris_pm.initial_velocity_min * cos(deg_to_rad(debris_pm.spread)) * 0.18 + debris_pm.gravity.y * 0.18 * 0.18 * 0.5
 	t.check("slowest debris clears rim by a metre at capture time", rise >= 1.0, "rise %.3f m" % rise)
-	var light := burst.find_child("Underlight", true, false) as OmniLight3D
-	t.check("brief below-rim light exposes the broken opening", light != null and light.position.y < 0 and light.light_energy >= 2.0 and light.omni_range >= 8.0)
+	t.check("no light and no glow puff in the burst: the puff is sandstone", burst.find_children("*", "Light3D", true, false).is_empty()
+		and burst.get_node_or_null("Glow") == null and FxLibrary.colour("dig_dust", "breach_opened") == Palette.SANDSTONE)
 	fx._process(0.18)
 	fx.freeze_rupture(0.18)
-	t.check("mid-rupture capture retains underlight", light != null and light.light_energy > 0.5)
+	t.check("mid-rupture capture freezes the particle clocks", burst.get_children().all(func(p): return p.speed_scale == 0))
 	fx._frozen = false
 	fx._process(0.4)
-	t.check("underlight extinguishes before dust cleanup", light != null and is_zero_approx(light.light_energy))
 	fx._process(0.5)
 	await process_frame
-	t.check("burst and light expire together", not is_instance_valid(burst) and not is_instance_valid(light))
+	t.check("burst expires with the rupture", not is_instance_valid(burst))
 	stage.free()
 	quit(t.verdict())
