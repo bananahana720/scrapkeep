@@ -40,6 +40,7 @@ const LANE_LEVEL_RISE := 1.0
 # The shell's own warm glow, brighter once the wall is fired. No light: a per-cache
 # OmniLight3D freed with the cache on a stage change made Godot 4.7.2 Forward+ segfault on
 # the next boss entry (GPU only), as the wave 9 cage light did.
+const RIM_STRIP := 0.2
 const RIM_GLOW := {"sealed": 1.6, "fired": 2.4}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
@@ -331,10 +332,9 @@ func _build_model(parts: Array) -> void:
 
 # The workshop finish shader carries no emission, so the glow is this cache's own additive
 # overlay on its shell (greybox: the roof), one material per cache.
+# The warm rim is a thin additive strip along the shell's top front edge, on its own mesh. An overlay on
+# the whole shell washed the teal workshop finish to near white (wave 12). No Light3D anywhere.
 func _build_rim_glow() -> void:
-	var shell := find_child("CacheShell", false, false) as GeometryInstance3D
-	if shell == null:
-		shell = _roof
 	_rim_glow = StandardMaterial3D.new()
 	_rim_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	_rim_glow.albedo_color = Color.BLACK
@@ -342,8 +342,15 @@ func _build_rim_glow() -> void:
 	_rim_glow.emission_enabled = true
 	_rim_glow.emission = Palette.SAND
 	_rim_glow.emission_energy_multiplier = RIM_GLOW.sealed
-	if shell != null:
-		shell.material_overlay = _rim_glow
+	var strip := MeshInstance3D.new()
+	strip.name = "CacheRimGlow"
+	var bar := BoxMesh.new()
+	bar.size = Vector3(HALF_W * 2.0, RIM_STRIP, RIM_STRIP)
+	strip.mesh = bar
+	strip.position = Vector3(0.0, HEIGHT - RIM_STRIP, HALF_D)
+	strip.material_override = _rim_glow
+	strip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(strip)
 
 
 # Mesh-local size for the workshop shader's edge chips; meshes need not be centred.
