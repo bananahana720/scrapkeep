@@ -5,6 +5,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const Preset := preload("res://src/presentation/graphics_preset.gd")
 
 # The stage-freed light rule (wave 9 cage light, wave 11 cache light, SEEDS:113): a Light3D freed
 # with a node a stage change frees made Godot 4.7.2 Forward+ segfault on the next boss entry, GPU
@@ -88,6 +89,9 @@ func _run() -> void:
 	_game.player.source = Intent.Scripted.new()
 	await _check("class select to stage 1")
 	_t.check("stage 1 spawned its Warden", is_instance_valid(_game.flow.warden))
+	var env: Environment = _game.ctx.terrain.environment
+	_t.check("the game enters the Spillway row and its air on stage entry (shipped high)", Preset.current == "high" and env.volumetric_fog_enabled
+		and is_equal_approx(env.volumetric_fog_density, WorldLook.ROWS[1].air.volumetric_fog_density), Preset.current)
 	_plant(_game.flow.warden)
 	_game.flow.enter_stage(2, Vector3.ZERO, false)
 	var planted := await _check("stage 1 to stage 2 (the Warden is freed)")
@@ -96,6 +100,7 @@ func _run() -> void:
 	await _check("stage 2 to the first boss")
 	_game.flow.enter_stage(_game.ctx.stages.first_of(2), Vector3.ZERO, false)
 	await _check("the first boss to the Dig")
+	_t.check("the Dig closes its dome", env.background_mode == Environment.BG_COLOR and env.background_color == WorldLook.ROWS[2].background)
 	var pool: Node = _game.ctx.terrain.geometry_root(_game.ctx.stages.first_of(2)).get_node_or_null("WorldLook/LampPool")
 	var lamps: Array = pool.find_children("*", "OmniLight3D", false, false) if pool != null else []
 	_t.check("the Dig's lamp pool is stage-owned with its fixed count", lamps.size() == WorldLook.ROWS[2].lamps.count, "%d lamps" % lamps.size())
