@@ -189,7 +189,7 @@ const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window"]
 const JUICE := {
 	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0, "sparks": 8,
 		"crit": {"stop_mult": 1.4, "sparks": 16, "shake": 0.22, "color": Palette.BRASS, "sound": "crit_ping"},
-		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}, "fx": {"hit_sparks": 12}},
+		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}, "fx": {"hit_sparks": 16}},
 	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
 	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
 	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
