@@ -137,9 +137,12 @@ func _find_cache() -> void:
 			_cache = device
 	_report("cache placed", _cache != null, "stage 1 carries a cracked cache: %s" % (_cache.id if _cache != null else "none"))
 	if _cache != null:
-		var rim := _cache.find_child("CacheRimLight", false, false) as OmniLight3D
-		_report("sealed cache keeps its warm rim light", rim != null and is_equal_approx(rim.light_energy, 1.6),
-			"rim energy %.2f" % (rim.light_energy if rim != null else 0.0))
+		# A per-cache light freed on a stage change segfaulted Godot 4.7.2 Forward+ at the
+		# next boss entry (GPU only); the rim is an emissive lip instead.
+		_report("cache adds no dynamic light", _cache.find_children("*", "Light3D", true, false).is_empty(),
+			"%d lights under the cache" % _cache.find_children("*", "Light3D", true, false).size())
+		_report("sealed cache keeps its warm rim glow", _cache._rim_glow != null and is_equal_approx(_cache._rim_glow.emission_energy_multiplier, CrackedCache.RIM_GLOW.sealed),
+			"rim glow %.2f" % (_cache._rim_glow.emission_energy_multiplier if _cache._rim_glow != null else 0.0))
 		var authored_at: Vector2 = _cache.spec["at"]
 		var authored: Vector3 = _game.ctx.terrain.drop_point(authored_at.x, authored_at.y, 0.0)
 		_report("cache clears its wall shadow", _cache.global_position.distance_to(authored) >= CrackedCache.LANE_OFFSET - 0.01,
@@ -213,8 +216,9 @@ func _check_breaks() -> void:
 	_report("a fast ball breaks it", _cache.broken() and _crumbled.size() == 1 and at_break >= FAST * 0.9 and _gauge_seen >= 1.0,
 		"rolled at the wall at %.0f m/s: crumbled %d time(s) with the ball at %.1f m/s, gauge reached %.2f"
 			% [FAST, _crumbled.size(), at_break, _gauge_seen])
-	_report("fired cache gets its warm fill", _cache._fired_light != null and _cache._fired_light.light_energy > 0.0,
-		"light energy %.2f" % (_cache._fired_light.light_energy if _cache._fired_light != null else 0.0))
+	_report("fired cache gets its warm fill", _cache._rim_glow != null and is_equal_approx(_cache._rim_glow.emission_energy_multiplier, CrackedCache.RIM_GLOW.fired)
+		and _cache.find_children("*", "Light3D", true, false).is_empty(),
+		"rim glow %.2f" % (_cache._rim_glow.emission_energy_multiplier if _cache._rim_glow != null else 0.0))
 
 
 # Inside the pocket, five metres from the chest, facing it.

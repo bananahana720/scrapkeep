@@ -34,8 +34,10 @@ const PEDESTAL_REACH := 1.7
 # so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
-const FIRED_LIGHT := {"energy": 0.8, "range": 10.0, "at": Vector3(0.0, HEIGHT + 1.0, HALF_D + 2.0)}
-const RIM_LIGHT := {"energy": 1.6, "range": 14.0, "at": Vector3(0.0, HEIGHT + 1.5, HALF_D + 4.0)}
+# One warm emissive lip under the roof's front edge, brighter once the wall is fired. No light:
+# a per-cache OmniLight3D freed with the cache on a stage change made Godot 4.7.2 Forward+
+# segfault on the next boss entry (GPU only), as the wave 9 cage light did.
+const RIM_GLOW := {"sealed": 1.6, "fired": 2.4, "size": Vector3(HALF_W * 2.0 + 2.0, 0.3, 0.3), "at": Vector3(0.0, HEIGHT - 0.15, HALF_D + 1.15)}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
 
@@ -47,7 +49,7 @@ var relic_guaranteed := false
 var relic_chance := RELIC_CHANCE
 var _wall: Node3D
 var _lid: Node3D
-var _fired_light: OmniLight3D
+var _rim_glow: StandardMaterial3D
 var _pedestals: Array = []
 var _inside: Array = []
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
@@ -74,7 +76,7 @@ func build() -> void:
 	else:
 		_build_model(parts)
 	_build_pedestals(parts)
-	_build_rim_light()
+	_build_rim_glow()
 	ctx.events.slammed.connect(_on_slammed)
 
 
@@ -191,7 +193,7 @@ func crumble() -> void:
 	var at: Vector3 = _wall.global_position
 	_wall.position += Vector3.DOWN * 400.0
 	_wall.visible = false
-	_build_fired_light()
+	_rim_glow.emission_energy_multiplier = RIM_GLOW.fired
 	ctx.events.world_fact.emit("wall_crumbled", at)
 	ctx.events.world_fact.emit("route_opened", at)
 
@@ -308,27 +310,17 @@ func _build_model(parts: Array) -> void:
 	_lid.position = chest + Vector3.UP * 1.35
 
 
-func _build_fired_light() -> void:
-	var light := OmniLight3D.new()
-	light.name = "CacheFiredFill"
-	light.light_color = Palette.SAND
-	light.light_energy = FIRED_LIGHT.energy
-	light.omni_range = FIRED_LIGHT.range
-	light.shadow_enabled = false
-	light.position = FIRED_LIGHT.at
-	add_child(light)
-	_fired_light = light
-
-
-func _build_rim_light() -> void:
-	var light := OmniLight3D.new()
-	light.name = "CacheRimLight"
-	light.light_color = Palette.SAND
-	light.light_energy = RIM_LIGHT.energy
-	light.omni_range = RIM_LIGHT.range
-	light.shadow_enabled = false
-	light.position = RIM_LIGHT.at
-	add_child(light)
+func _build_rim_glow() -> void:
+	var view := MeshInstance3D.new()
+	view.name = "CacheRimGlow"
+	var bm := BoxMesh.new()
+	bm.size = RIM_GLOW.size
+	view.mesh = bm
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_rim_glow = Palette.solid(Palette.SAND, RIM_GLOW.sealed)
+	view.material_override = _rim_glow
+	view.position = RIM_GLOW.at
+	add_child(view)
 
 
 # Mesh-local size for the workshop shader's edge chips; meshes need not be centred.

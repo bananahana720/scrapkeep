@@ -67,7 +67,10 @@ const SLAM_REACH := 7.0
 const SLAM_MIN_PER_CRUISE := 1.0
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
-const CACHE_FIRED_LIGHT := {"energy": 0.8, "range": 10.0, "at": Vector3(0.0, WALL_HEIGHT + 1.0, WALL_DEPTH * 0.5)}
+# A lintel on the side walls' front tops that glows once the wall is fired. No light: a
+# per-site OmniLight3D freed on a stage change made Godot 4.7.2 Forward+ segfault on the next
+# boss entry (GPU only), as the wave 9 cage light did.
+const CACHE_FIRED_GLOW := {"energy": 0.8, "size": Vector3(WALL_HALF_W * 2.0 + 2.0, 0.3, 0.3), "at": Vector3(0.0, WALL_HEIGHT + 0.15, -0.15)}
 
 var ctx
 var sites: Array = []
@@ -91,7 +94,7 @@ class Site extends Node3D:
 	var cap: Node3D
 	var pickup_taken := false
 	var inside_pickup := true
-	var fired_light: OmniLight3D
+	var fired_glow: StandardMaterial3D
 
 
 func setup(ctx_ref) -> void:
@@ -196,6 +199,17 @@ func _build_cache(s: Site) -> void:
 	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL))
 	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
 	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
+	# Built after the dressing pass so the lintel keeps its own emissive material.
+	var lintel := MeshInstance3D.new()
+	lintel.name = "CacheFiredGlow"
+	var bm := BoxMesh.new()
+	bm.size = CACHE_FIRED_GLOW.size
+	lintel.mesh = bm
+	lintel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	s.fired_glow = Palette.solid(Palette.SAND)
+	lintel.material_override = s.fired_glow
+	lintel.position = CACHE_FIRED_GLOW.at
+	s.add_child(lintel)
 
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:
@@ -325,15 +339,10 @@ func _break_wall(s: Site) -> void:
 		return
 	s.wall.position += Vector3.DOWN * 400.0
 	s.wall.visible = false
-	var light_row: Dictionary = CACHE_FIRED_LIGHT
-	s.fired_light = OmniLight3D.new()
-	s.fired_light.name = "CacheFiredFill"
-	s.fired_light.light_color = Palette.SAND
-	s.fired_light.light_energy = light_row.energy
-	s.fired_light.omni_range = light_row.range
-	s.fired_light.shadow_enabled = false
-	s.fired_light.position = light_row.at
-	s.add_child(s.fired_light)
+	if s.fired_glow != null:
+		s.fired_glow.emission_enabled = true
+		s.fired_glow.emission = Palette.SAND
+		s.fired_glow.emission_energy_multiplier = CACHE_FIRED_GLOW.energy
 	ctx.events.world_fact.emit("wall_crumbled", s.global_position)
 	_finish(s, s.pedestal)
 
