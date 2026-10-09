@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Rendered lab stills, polite to the shared GPU.
+# Cards: gpu_queue.sh (per-card lock, hidden display); see README-gpu.md.
 #   lab_capture.sh <out dir> <seed> <policy> [seconds]
 # Waits while any GPU process holds more than 3000 MiB, holds /tmp/scrapkeep-gpu.lock for
 # the run, launches alpha_capture on hidden workspace 10 and waits for its capture.json.
