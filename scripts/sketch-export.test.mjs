@@ -2,8 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
+  BOSS_SMOKE,
   bootFailures,
+  bossSmokeCommand,
+  bossSmokeFailures,
+  bossSmokeLine,
   buildStamp,
+  runBossSmoke,
   defaultStemsFrom,
   howToRun,
   missingStems,
@@ -305,4 +310,63 @@ test("trackedManifests ships every track folder that holds a manifest, sorted", 
     trackedManifests("/m", () => folders, (file) => held.has(file)),
     ["mind", "spillway", "title"],
   );
+});
+
+const vulkanBanner = "Vulkan 1.4.341 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060";
+const smokeOut = (boss) =>
+  [
+    "Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org",
+    vulkanBanner,
+    `BOSS_SMOKE boss=${boss} stage=4 ticks=300 in_arena=true rendering=forward_plus driver=vulkan device=NVIDIA GeForce RTX 3060 PASS`,
+  ].join("\n");
+
+test("boss smoke boots each boss through the GPU queue on Vulkan with the queue's card index", () => {
+  assert.deepEqual(BOSS_SMOKE, ["bowl", "waking", "mind"]);
+  const { command, args } = bossSmokeCommand({ queue: "/q.sh", binary: "/godot", project: "/p", boss: "waking" });
+  assert.equal(command, "/q.sh");
+  assert.deepEqual(args.slice(0, args.indexOf("--") + 1), ["--gpu", "1", "--need", "3000", "--name", "boss-smoke-waking", "--display", "--shared", "--"]);
+  assert.ok(args.includes('exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"'));
+  assert.deepEqual(args.slice(args.indexOf("--rendering-driver"), args.indexOf("--rendering-driver") + 2), ["--rendering-driver", "vulkan"]);
+  assert.equal(args.at(-1), "--boss=waking");
+});
+
+test("boss smoke passes a clean Vulkan run and names the device", () => {
+  assert.deepEqual(bossSmokeFailures("waking", smokeOut("waking"), 0), []);
+  assert.equal(
+    bossSmokeLine("waking", smokeOut("waking")),
+    "boss smoke waking: PASS, stage 4 arena, 300 ticks, Vulkan on NVIDIA - NVIDIA GeForce RTX 3060",
+  );
+});
+
+test("boss smoke fails a crash, a missing PASS, an error before PASS and a non-Vulkan device", () => {
+  assert.deepEqual(bossSmokeFailures("mind", smokeOut("mind"), null, "SIGSEGV"), ["mind: killed by SIGSEGV"]);
+  assert.deepEqual(bossSmokeFailures("mind", vulkanBanner, 0), ["mind: no BOSS_SMOKE PASS line"]);
+  const crashLine = "ERROR: BUG, indexing did not unpair geometries from light.";
+  const early = [vulkanBanner, crashLine, smokeOut("mind").split("\n").at(-1)].join("\n");
+  assert.deepEqual(bossSmokeFailures("mind", early, 0), ["mind: " + crashLine]);
+  const gl = smokeOut("bowl").replace(vulkanBanner, "OpenGL API 3.3.0 NVIDIA 610.57.04 - Compatibility - Using Device: NVIDIA - NVIDIA GeForce RTX 3060");
+  assert.deepEqual(bossSmokeFailures("bowl", gl, 0), ['bowl: no "Using Device" line']);
+  const fallback = smokeOut("bowl").replace("Vulkan 1.4.341", "OpenGL 3.3");
+  assert.deepEqual(bossSmokeFailures("bowl", fallback, 0), ["bowl: renderer OpenGL, not Vulkan"]);
+  const teardown = smokeOut("bowl") + "\n" + crashLine;
+  assert.deepEqual(bossSmokeFailures("bowl", teardown, 0), []);
+  assert.match(bossSmokeLine("bowl", teardown), /, 1 teardown error lines$/);
+});
+
+test("runBossSmoke runs every boss through the stubbed runner and collects failures", () => {
+  const calls = [];
+  const runner = (command, args) => {
+    calls.push(args.at(-1));
+    const boss = args.at(-1).slice("--boss=".length);
+    return boss === "mind" ? { status: null, signal: "SIGSEGV", stdout: vulkanBanner, stderr: "" } : { status: 0, stdout: smokeOut(boss), stderr: "" };
+  };
+  const result = runBossSmoke({ runner, queue: "/q.sh", binary: "/godot", project: "/p" });
+  assert.deepEqual(calls, ["--boss=bowl", "--boss=waking", "--boss=mind"]);
+  assert.equal(result.lines.length, 2);
+  assert.deepEqual(result.failures, ["mind: killed by SIGSEGV", "mind: no BOSS_SMOKE PASS line"]);
+});
+
+test("buildStamp records the boss smoke lines before the win proof", () => {
+  const text = buildStamp({ sha: "a", dirty: false, stamp: "s", godot: "g", stems: 1, stemsFrom: "f", bossSmoke: "boss smoke bowl: PASS" });
+  assert.match(text, /stems: 1 from f\nboss smoke bowl: PASS\nwin proof: not run/);
 });
