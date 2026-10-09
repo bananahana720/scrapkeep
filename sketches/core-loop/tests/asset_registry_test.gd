@@ -73,7 +73,7 @@ func _run() -> void:
 
 	var found: Array = []
 	_scan(ROOT, ["glb"], found)
-	_scan(ROOT, ["webp", "png", "jpg", "jpeg"], found)
+	_scan(ROOT, ["webp", "png", "jpg", "jpeg", "hdr"], found)
 	found.sort()
 	for path in found:
 		_check(entries.has(path), "%s is in the registry" % path)
