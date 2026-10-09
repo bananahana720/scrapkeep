@@ -47,7 +47,7 @@ The eight AD-02 colours carry every role. Three extensions already live in code 
 | HAZARD (extension) | `#ff5a3c` | Hostile danger areas and nothing else | Any reward, any player effect |
 | BRASS (extension) | `#d9b44a` | Admiral Brindle and the Fleet's requisition tags | Player effects |
 | ICE (extension) | `#c8f0ff` | The frost element | Anything that is not frost |
-| ANCIENT (pending Andrew) | `#3d8bff` recommended | Light seams on awakened ancient machines, the focal landmark's beacon | The Fleet, the player, rewards, danger areas |
+| ANCIENT | `#9dff3c` (candidate B, chosen by Andrew 2026-10-09; seams carry the pattern cue) | Light seams on awakened ancient machines, the focal landmark's beacon | The Fleet, the player, rewards, danger areas |
 
 **ANCIENT candidates.** Ancient machines need a light no other fact uses. Andrew rejected violet on 2026-09-27 as overused. Three alternatives were measured with the same method as above: WCAG contrast, and the smallest Machado CIELAB ΔE against all eleven palette colours (the AD-02 eight plus HAZARD, BRASS and ICE) under each vision type.
 
@@ -59,7 +59,7 @@ The eight AD-02 colours carry every role. Three extensions already live in code 
 
 Rejected violet `#a98cf0` measured ICE 61 / ICE 43 / ICE 49 / bone 22 for reference.
 
-**Recommendation.** Choose A, Cherenkov blue. It is the only candidate whose closest collision stays at ΔE 31 or more in every vision type, it has no hue neighbour in the palette, and its meaning is literal (it is the light of human nuclear tech, which also ties to the reactor relics). Its one weakness is value on petrol enamel (2.39:1), which the charcoal groove fixes. C's sheen can layer on top as a material cue if Andrew wants more strangeness. ANCIENT stays pending until Andrew picks. Until then, the sketch uses A.
+**Recommendation.** Choose A, Cherenkov blue. It is the only candidate whose closest collision stays at ΔE 31 or more in every vision type, it has no hue neighbour in the palette, and its meaning is literal (it is the light of human nuclear tech, which also ties to the reactor relics). Its one weakness is value on petrol enamel (2.39:1), which the charcoal groove fixes. C's sheen can layer on top as a material cue if Andrew wants more strangeness. Andrew chose B, uranium-glass green, on 2026-10-09. Its redundancy cue is mandatory: every ancient seam carries the seam pattern as well as the colour, because B reads as BRASS to deuteranopes (ΔE 20) and as mint under tritanopia (ΔE 13). palette.gd, the swarm icon and the pinned tests move with it in wave 12 (VX-SURF).
 
 **Mint is shared on purpose.** Sable's kit is the collection field turned into a tool, so Sable owns mint and the collectors keep it. Scrap in flight is a square chunk on a path into the intake. Sable's effects are rings. Shape separates them.
 
