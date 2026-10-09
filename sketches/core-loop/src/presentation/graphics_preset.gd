@@ -2,8 +2,8 @@ extends RefCounted
 
 const WorldLook := preload("res://src/presentation/world_look.gd")
 # Quality knobs only; each world's light and air numbers live in world_look.gd. The shipped high
-# takes the parked target look's renderer rows (wave 12): 4096 shadow atlas, the SSAO tuning and
-# the sun's shadow properties. R1's -28 degree sun put play ground in the western rim's shadow, so
+# takes the parked target look (wave 12): 4096 shadow atlas, the SSAO tuning, the sun's shadow
+# properties and the surface swap to VX-SURF's slots (palette.target_surface_material). R1's -28 degree sun put play ground in the western rim's shadow, so
 # the sun direction stays the world row's -36 degree pin. No global shaft veil: world air is the
 # per-world volumetric row, entered with the world.
 const HIGH := {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
@@ -13,21 +13,20 @@ const HIGH := {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mod
 	"fog_volume_size": 64, "fog_volume_depth": 64,
 	"material_detail": true, "material_relief": true,
 	"set_dressing": true, "air_motes": true, "air_streaks": true,
-	"material_ground": false, "material_rock": false, "material_dam": false,
+	"material_ground": true, "material_rock": true, "material_dam": true,
 	"environment": {"ssao_radius": 0.55, "ssao_intensity": 1.25, "ssao_detail": 0.40},
 	"sun_properties": {"light_angular_distance": 0.0, "shadow_normal_bias": 0.65,
 		"directional_shadow_split_1": 0.18},
 	"sky_properties": {},
 }
-# The surface swap (palette.target_surface_material) stays on the lab preset until its pins move
-# with VX-SURF's slots: target is high with the three material roles on.
-const TARGET_SURFACES := {"material_ground": true, "material_rock": true, "material_dam": true}
 # Settings are applied on bind or an explicit preset change, never polled each frame.
-static var PRESETS := {
+# target is the lab name the shipped high grew from; it stays an alias so --preset=target and the
+# files that still gate on the name keep working.
+const PRESETS := {
 	"high": HIGH,
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
 		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1, "ssao_quality": 0, "air": false},
-	"target": _merged(HIGH, TARGET_SURFACES),
+	"target": HIGH,
 }
 static var current := "high"
 static var _worlds: Array = []
@@ -36,12 +35,6 @@ static var _target_server_active := false
 static var _materials: Array = []
 static var _dressing_hosts: Array[WeakRef] = []
 static var _lighting: Array[Dictionary] = []
-
-static func _merged(base: Dictionary, extra: Dictionary) -> Dictionary:
-	var spec := base.duplicate(true)
-	spec.merge(extra, true)
-	return spec
-
 
 static func apply(preset: String) -> bool:
 	if not PRESETS.has(preset):
@@ -419,6 +412,12 @@ static func _apply_material(binding: Dictionary) -> void:
 		view.material_override = binding.target_override
 		return
 	var palette := preload("res://src/core/palette.gd")
+	# A prebuilt slot resource a dressing host put on the view (the Dig's stone beds) is already the
+	# shipped surface; swapping it for the binding's original role would erase the Dig's strata.
+	for material in [view.material_override, binding.override]:
+		if material != null and palette.is_slot_resource(material):
+			view.material_override = material
+			return
 	for i in binding.originals.size():
 		var material := palette.target_surface_material(binding.role, binding.originals[i])
 		material.set_shader_parameter("detail_enabled", spec.material_detail)
