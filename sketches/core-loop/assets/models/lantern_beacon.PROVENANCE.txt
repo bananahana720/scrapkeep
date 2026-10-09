@@ -14,3 +14,16 @@ PF-12 Review record: frames artifacts/local/alpha/push/w12/units/recipe-cart/bea
 PF-13 Gating: owner decision to swap the game's beacon; the src/core/beacon.gd change that would set state_tint per state; an emissive route for the lantern and the state parts (no shared slot emits today). The landmark budget row is a trial number.
 PF-14 Companion fields: not a companion artefact; not applicable.
 PF-15 Naming: lower snake case exactly as referenced: lantern_beacon_frame.glb, lantern_beacon_lens.glb, tools/blender/lantern_beacon.py.
+
+Detail layers, lantern beacon (wave 12 DETAIL-BEACON, 2026-10-09). Same fields; rows not named here match the beacon rows above.
+PF-01 ID: lantern_beacon_detail1, lantern_beacon_detail2 (assets/registry.d/lantern_beacon_detail.json).
+PF-02 Status: proposal, not loaded by the game (ships=false). Additive shells over lantern_beacon_frame.glb at its origin, one draw each in the steel slot; dropped by distance (visibility range, FADE_SELF: detail1 end 60 m margin 8 m, detail2 end 35 m margin 5 m), so they double as the level-of-detail chain. Neither paints the state key mint.
+PF-03 Origin: local. Recipes tools/blender/lantern_beacon_detail1.py and lantern_beacon_detail2.py; they import lantern_beacon.py's tables and helpers and do not change it. Concept references: detail 1 from artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png; detail 2 from artifacts/local/alpha/push/w12/units/detail-beacon/ref/beacon_pass2.png, FLUX.1 schnell image-to-image of the pass-1 hero render (strength 0.55, 6 steps, seed 101, 1024 px).
+PF-04 Creator: geometry authored by a Claude Opus 5.5 agent (DETAIL-BEACON unit) from the pictures; images generated locally by FLUX.1 [schnell] (Black Forest Labs).
+PF-05 Licence evidence: lantern_beacon.LICENSE.txt beside this file (FLUX.1 schnell Apache-2.0 per its README at revision 741f7c3c). Geometry project-authored; the pictures are references only and not shipped.
+PF-06 Recipe: blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/lantern_beacon_detail1.py (and detail2.py); two runs byte-identical (sha256 detail1 93bdd23e..., detail2 7790eba3...).
+PF-08 Units and axes: as the frame (metres at game scale, +Y up). Bounds detail1 5.79 x 18.64 x 5.13 m, detail2 5.17 x 15.83 x 4.61 m; each recipe asserts its size within 3 percent.
+PF-09 Rig: none. Reference nodes CollarFeet, LanternTrim (detail1); LegHardware, CageBolts (detail2).
+PF-12 Review record: artifacts/local/alpha/push/w12/units/detail-beacon/ (sheets, gap lists A to D, range and fade-band proof), viewed by the writer 2026-10-09. Judge review pending.
+PF-13 Gating: owner decision on the beacon swap; the landmark class row is per GLB, and the shells are checked against 900 and 1500 tris by asset:inspect, not by a class row.
+PF-15 Naming: lantern_beacon_detail1.glb, lantern_beacon_detail2.glb, tools/blender/lantern_beacon_detail1.py, lantern_beacon_detail2.py.
