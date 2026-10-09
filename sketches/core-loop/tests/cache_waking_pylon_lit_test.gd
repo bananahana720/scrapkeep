@@ -17,7 +17,7 @@ const PRESETS := ["low", "high", "target"]
 const RANGES := {
 	"waking_pit": [50, 50, 79.0, 80.0],
 	"pylon_wall": [0, 0, 0.0, 0.0],
-	# The cache's rim is an emissive lip, not a light (a freed per-cache light crashed Forward+).
+	# 2026-10-08: cache light removed (freed per-cache light crashed Forward+); its glow is emission.
 	"cache": [0, 0, 0.0, 0.0],
 }
 const TELEGRAPH := [Palette.HAZARD, Palette.ARC, Palette.AMBER]

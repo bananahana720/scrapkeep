@@ -34,10 +34,10 @@ const PEDESTAL_REACH := 1.7
 # so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
-# One warm emissive lip under the roof's front edge, brighter once the wall is fired. No light:
-# a per-cache OmniLight3D freed with the cache on a stage change made Godot 4.7.2 Forward+
-# segfault on the next boss entry (GPU only), as the wave 9 cage light did.
-const RIM_GLOW := {"sealed": 1.6, "fired": 2.4, "size": Vector3(HALF_W * 2.0 + 2.0, 0.3, 0.3), "at": Vector3(0.0, HEIGHT - 0.15, HALF_D + 1.15)}
+# The shell's own warm glow, brighter once the wall is fired. No light: a per-cache
+# OmniLight3D freed with the cache on a stage change made Godot 4.7.2 Forward+ segfault on
+# the next boss entry (GPU only), as the wave 9 cage light did.
+const RIM_GLOW := {"sealed": 1.6, "fired": 2.4}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
 
@@ -50,6 +50,7 @@ var relic_chance := RELIC_CHANCE
 var _wall: Node3D
 var _lid: Node3D
 var _rim_glow: StandardMaterial3D
+var _roof: GeometryInstance3D
 var _pedestals: Array = []
 var _inside: Array = []
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
@@ -88,7 +89,7 @@ func _build_greybox() -> void:
 	box(Vector3(HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -HALF_D - 0.5), concrete, true)
 	for s in [-1.0, 1.0]:
 		box(Vector3(1.0, tall, HALF_D * 2.0 + 2.0), Vector3(s * (HALF_W + 0.5), mid, 0.0), concrete, true)
-	box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0), concrete, true)
+	_roof = box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0), concrete, true).get_child(1)
 	box(Vector3(HALF_W * 2.0 + 2.2, 0.35, 0.3), Vector3(0.0, HEIGHT * 0.55, HALF_D + 1.05), groove)
 	_wall = box(Vector3(HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, HALF_D + 0.5), Palette.striped(Palette.SANDSTONE, Palette.VERDIGRIS), true)
 	for k in 3:
@@ -310,17 +311,21 @@ func _build_model(parts: Array) -> void:
 	_lid.position = chest + Vector3.UP * 1.35
 
 
+# The workshop finish shader carries no emission, so the glow is this cache's own additive
+# overlay on its shell (greybox: the roof), one material per cache.
 func _build_rim_glow() -> void:
-	var view := MeshInstance3D.new()
-	view.name = "CacheRimGlow"
-	var bm := BoxMesh.new()
-	bm.size = RIM_GLOW.size
-	view.mesh = bm
-	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_rim_glow = Palette.solid(Palette.SAND, RIM_GLOW.sealed)
-	view.material_override = _rim_glow
-	view.position = RIM_GLOW.at
-	add_child(view)
+	var shell := find_child("CacheShell", false, false) as GeometryInstance3D
+	if shell == null:
+		shell = _roof
+	_rim_glow = StandardMaterial3D.new()
+	_rim_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_rim_glow.albedo_color = Color.BLACK
+	_rim_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	_rim_glow.emission_enabled = true
+	_rim_glow.emission = Palette.SAND
+	_rim_glow.emission_energy_multiplier = RIM_GLOW.sealed
+	if shell != null:
+		shell.material_overlay = _rim_glow
 
 
 # Mesh-local size for the workshop shader's edge chips; meshes need not be centred.

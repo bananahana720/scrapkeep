@@ -67,10 +67,10 @@ const SLAM_REACH := 7.0
 const SLAM_MIN_PER_CRUISE := 1.0
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
-# A lintel on the side walls' front tops that glows once the wall is fired. No light: a
-# per-site OmniLight3D freed on a stage change made Godot 4.7.2 Forward+ segfault on the next
-# boss entry (GPU only), as the wave 9 cage light did.
-const CACHE_FIRED_GLOW := {"energy": 0.8, "size": Vector3(WALL_HALF_W * 2.0 + 2.0, 0.3, 0.3), "at": Vector3(0.0, WALL_HEIGHT + 0.15, -0.15)}
+# The back wall's own glow once the wall is fired. No light: a per-site OmniLight3D freed on
+# a stage change made Godot 4.7.2 Forward+ segfault on the next boss entry (GPU only), as the
+# wave 9 cage light did.
+const CACHE_FIRED_GLOW := {"energy": 0.8}
 
 var ctx
 var sites: Array = []
@@ -192,24 +192,20 @@ func _build_cache(s: Site) -> void:
 		crack.rotation.z = 0.5 - k * 0.45
 	for side in [-1.0, 1.0]:
 		_mesh_box(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5), concrete, true)
-	_mesh_box(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5), concrete, true)
+	var back := _mesh_box(s, Vector3(WALL_HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -WALL_DEPTH - 0.5), concrete, true)
 	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
 	s.pedestal = s.to_global(local)
 	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
 	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL))
 	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
 	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
-	# Built after the dressing pass so the lintel keeps its own emissive material.
-	var lintel := MeshInstance3D.new()
-	lintel.name = "CacheFiredGlow"
-	var bm := BoxMesh.new()
-	bm.size = CACHE_FIRED_GLOW.size
-	lintel.mesh = bm
-	lintel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	s.fired_glow = Palette.solid(Palette.SAND)
-	lintel.material_override = s.fired_glow
-	lintel.position = CACHE_FIRED_GLOW.at
-	s.add_child(lintel)
+	# The dressed finish shader carries no emission, so the glow is this site's own additive
+	# overlay on its back wall, dark until the wall is fired.
+	s.fired_glow = StandardMaterial3D.new()
+	s.fired_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	s.fired_glow.albedo_color = Color.BLACK
+	s.fired_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
 
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:
