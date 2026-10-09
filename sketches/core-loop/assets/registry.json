@@ -177,6 +177,54 @@
    }
   },
   {
+   "id": "barge",
+   "path": "res://assets/models/barge.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; today's barge stays code-built in contraptions.gd and skinned by highdraft_scenery.gd until the owner swaps it)",
+   "provenance": {
+    "recipe": "tools/blender/barge.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
+    "notes": "assets/models/barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "barge_detail1",
+   "path": "res://assets/models/barge_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at barge.glb's origin, visibility range end 60 m)",
+   "provenance": {
+    "recipe": "tools/blender/barge_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
+    "notes": "assets/models/barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "barge_detail2",
+   "path": "res://assets/models/barge_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at barge.glb's origin, visibility range end 35 m)",
+   "provenance": {
+    "recipe": "tools/blender/barge_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-barge/ref/barge_pass2.png",
+    "notes": "assets/models/barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "barge_fenders",
+   "path": "res://assets/models/barge_fenders.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; placed at barge.glb's origin)",
+   "provenance": {
+    "recipe": "tools/blender/barge.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
+    "notes": "assets/models/barge.PROVENANCE.txt"
+   }
+  },
+  {
    "id": "arena_bowl_foundry",
    "path": "res://assets/models/bosses/arena_bowl_foundry.glb",
    "class": "scenery",
@@ -2526,6 +2574,10 @@
   "anchor_mast",
   "arena_bowl_foundry",
   "arena_waking_rim_sector.glb",
+  "barge",
+  "barge_detail1",
+  "barge_detail2",
+  "barge_fenders",
   "barge_skin",
   "barge_skin_rusted-salvaged-plate.webp",
   "bed_cut",
