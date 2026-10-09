@@ -1,6 +1,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Contraptions := preload("res://src/world/contraptions.gd")
 const Scenery := preload("res://src/presentation/highdraft_scenery.gd")
@@ -240,6 +241,7 @@ func _hook_and_environment() -> void:
 	terrain.build(scene)
 	var ctx := FakeCtx.new()
 	ctx.terrain = terrain
+	terrain.environment.sky = Palette.hdri_sky()
 	var before: Sky = terrain.environment.sky
 	var ambient: Color = terrain.environment.ambient_light_color
 	Scenery.hook(ctx)
@@ -249,7 +251,11 @@ func _hook_and_environment() -> void:
 	ctx.events.stage_entered.emit(1, true)
 	_t.eq("hook: a retry does not build it twice", stage_root.find_children(Scenery.NODE_NAME, "Node3D", false, false).size(), 1)
 	var env: Environment = terrain.environment
-	_t.check("hook: the environment takes the morning sky", env.sky != before and env.sky.sky_material is PanoramaSkyMaterial)
+	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). World row 3 says sky "hdri", so
+	# apply_environment leaves the sky to the row (Palette.hdri_sky); the painted sky is used only
+	# when the row says "own" (highdraft_scenery.gd apply_environment).
+	_t.check("hook: the environment keeps the shared HDRI sky when the row says hdri", env.sky == before and env.sky.sky_material is PanoramaSkyMaterial)
+	_t.check("hook: the painted sky path for an own row still builds a panorama", Scenery._sky_material() is PanoramaSkyMaterial)
 	_t.check("hook: ambient shifts to the sky cream", env.ambient_light_color.is_equal_approx(Scenery.LOOK["ambient"]) and not ambient.is_equal_approx(env.ambient_light_color))
 	Scenery.restore_environment(terrain)
 	_t.check("restore: the shared sky and ambient come back", env.sky == before and env.ambient_light_color.is_equal_approx(ambient))
@@ -286,10 +292,13 @@ func _game_integration() -> void:
 			if (barge["deck"] as Node).get_node_or_null("HighdraftBargeSkin") != null:
 				skinned += 1
 	_t.eq("game: both barges wear the skin", skinned, 2)
-	_t.check("game: the morning sky is up", env.sky != shared)
+	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). Stages 5 and 1 (worlds 3 and 1) both
+	# say "hdri": the one cached Palette.hdri_sky() is set on entry and stays across the move.
+	_t.check("game: the morning sky is up (the cached HDRI sky)", env.sky == Palette.hdri_sky())
 	game.flow.enter_stage(1, Vector3.ZERO, false)
 	await physics_frame
-	_t.check("game: stage 1 gets the shared sky back", env.sky == shared)
+	_t.check("game: stage 1 keeps the same cached HDRI sky", env.sky == Palette.hdri_sky())
+	_t.check("game: the startup sky was replaced by the HDRI row", shared != Palette.hdri_sky())
 	game.free()
 
 

@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
 const Dress := preload("res://src/presentation/arena_mind_dress.gd")
 const T := preload("res://tests/support/t.gd")
@@ -98,7 +99,12 @@ func _run() -> void:
 	var fight_look := _environment()
 	_game.flow.enter_stage(5, Vector3.ZERO, false)
 	var after_exit := _environment()
-	_t.check("stage exit restores sky", after_exit["sky"] == saved["sky"])
+	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). Stage 5 is world 3, whose row says
+	# sky "hdri", so stage entry sets the one cached Palette.hdri_sky(); the hand-written sky that
+	# _enter() writes is replaced by the row on stage entry, so the old saved["sky"] can never return.
+	_t.check("stage exit restores sky", after_exit["sky"] == stage_look["sky"])
+	_t.check("stage exit lands on the shared HDRI sky, not a rebuilt one", after_exit["sky"] == Palette.hdri_sky())
+	_t.check("the fight does not keep the stage's HDRI sky (Mind arena builds its own)", fight_look["sky"] != Palette.hdri_sky())
 	for key in ["ambient", "exposure", "saturation", "sun_color", "sun_rotation"]:
 		_t.check("stage exit lands on stage 5's world look " + key, after_exit[key] == stage_look[key],
 			"got %s, want %s, fight %s" % [after_exit[key], stage_look[key], fight_look[key]])
