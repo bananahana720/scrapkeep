@@ -1,7 +1,7 @@
 extends SceneTree
 # Wave 12 light capture: port of the wave 7 driver's environment, arena and title cameras with
 # eyes and targets unchanged, so frames compare with w11/captures. Native window only.
-#   godot --path sketches/core-loop --script res://tools/w12_capture.gd -- --out=<dir> --scene=worlds|pit|arenas|title
+#   godot --path sketches/core-loop --script res://tools/w12_light_capture.gd -- --out=<dir> --scene=worlds|pit|arenas|title
 # Writes <out>/<subject>__<shot>.png and frames_<scene>.json. The game names each world's light
 # and air itself on stage and arena entry; this tool never calls the look.
 const Game := preload("res://src/game.gd")
@@ -128,7 +128,7 @@ func _run() -> void:
 		"title": await _title()
 		_:
 			printerr("unknown scene ", scene); quit(2); return
-	var doc := {"tool": "w12_capture.gd", "scene": scene, "preset": GraphicsPreset.current, "adapter": RenderingServer.get_video_adapter_name(), "frames": recs}
+	var doc := {"tool": "w12_light_capture.gd", "scene": scene, "preset": GraphicsPreset.current, "adapter": RenderingServer.get_video_adapter_name(), "frames": recs}
 	var f := FileAccess.open(out.path_join("frames_%s.json" % scene), FileAccess.WRITE)
 	f.store_string(JSON.stringify(doc, "\t"))
 	f.close()
