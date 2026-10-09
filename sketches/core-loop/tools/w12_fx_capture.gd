@@ -106,6 +106,11 @@ func _stage() -> void:
 	game.hud.visible = false
 	cam.global_position = site + Vector3(7.5, 5.0, 9.0)
 	cam.look_at(site + Vector3(0, 0.8, 0))
+	if event == "ember":
+		# the gpd_cache three_q camera (tools/w12_capture.gd:190): 7 right, 3 up, 6 back of the cache, fov 50
+		var cache := site + Vector3(1.5, 0.0, -1.0)
+		cam.global_position = cache + Vector3(7.0, 3.0, -6.0)
+		cam.look_at(cache, Vector3.UP)
 
 
 # The ball and the enemy hold their marks for the shots: the ball frozen beside the site
@@ -146,8 +151,9 @@ func _scene_tick() -> void:
 					game.player.reset_to(site + Vector3(8.0, 14.0, 0.0))
 					_look(site + Vector3(-18, 12, 4), site + Vector3(0, 14, 0), 60.0)
 				else:
-					game.player.reset_to(site + Vector3(2.0, 3.0, 2.0))
-					_look(site + Vector3(6, 9, 6), site + Vector3(0, 1, 0), 55.0)
+					site = _deck_point(terrain, site)
+					game.player.reset_to(site + Vector3(-2.5, 1.0, 1.5))
+					_look(site + Vector3(5, 5, 7), site + Vector3(0, 0.5, 0), 55.0)
 			"miniboss":
 				var b: Vector3 = game.player.ball_position()
 				enemy = game.combat.spawn_enemy("miniboss", Vector3(b.x + 22, terrain.height(b.x + 22, b.z + 10) + 6, b.z + 10))
@@ -159,11 +165,25 @@ func _scene_tick() -> void:
 		game.player.reset_to(site + Vector3(-9.0, 1.0, 4.0))
 	elif ticks == T0 - 30 and event == "miniboss":
 		game.player.body().freeze = true
-		_look(site + Vector3(-14, 6, 14), site + Vector3(0, 3, 0), 55.0)
+		_look(site + Vector3(-9, 4, 9), site + Vector3(0, 3, 0), 55.0)
 	elif ticks == T0 - 1 and event == "net_sag":
 		game.player.body().freeze = true
 	elif ticks == T0:
 		_fire()
+
+
+# The nearest point to `near` where the Highdraft net deck is bare net (the catch ignores a
+# ball that is not on the deck: highdraft_fx.gd catch_at).
+func _deck_point(terrain, near: Vector3) -> Vector3:
+	var deck: float = terrain.map().net_deck_height()
+	for ring in range(14, 54, 2):
+		for step in 12:
+			var a := TAU * step / 12.0
+			var x: float = near.x + cos(a) * ring
+			var z: float = near.z + sin(a) * ring
+			if absf(float(terrain.map().sample(x, z)[0]) - deck) <= 0.05:
+				return Vector3(x, deck, z)
+	return near
 
 
 func _look(eye: Vector3, target: Vector3, fov: float) -> void:
@@ -192,8 +212,13 @@ func _fire() -> void:
 			pass
 		"net_sag":
 			var fx = game.ctx.terrain.geometry_root(5).get_node("HighdraftScenery/WindEffects")
-			fx.catch_at(site + Vector3(0, 1, 0))
+			print("FXCAP net_sag deck point ", site)
+			fx.catch_at(site + Vector3(0, 1.0, 0))
+			print("FXCAP net_sag catches ", fx.active_catches.size())
 		"miniboss":
+			var j = game.presentation.juice
+			print("FXCAP miniboss resolve ", j.resolve_of.call(enemy, "ram", 24.0) if j.resolve_of.is_valid() else "no resolver")
+			j.resolve_of = func(_e, _k, f): return {"dealt": f, "punch": f, "full": true, "part": "", "plating": 0.0}
 			events.enemy_struck.emit(enemy, "ram", 24.0)
 		"slam":
 			events.slammed.emit(game.ctx.terrain.drop_point(site.x, site.z, 0.0), 1.0, 1.0)

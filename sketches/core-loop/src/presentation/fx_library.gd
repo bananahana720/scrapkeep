@@ -19,13 +19,14 @@ const Palette := preload("res://src/core/palette.gd")
 #            continuously, "persist" emits continuously where it was placed until stopped
 #   blend    "add" glows over the scene, "mix" is solid matter
 #   glow     brightness multiplier on the tint, so an additive spark still reads on sand
+#   warm     a persistent emitter starts with a full cloud (preprocess = life), not a trickle
 #   shape    "point" or "ring" (emission on a flat ring of ring_m radius)
 #   forward  the emitter's direction is its own -Z, aimed at a target (the latch's pulse)
 #   owner    "vfx" pools are built by Vfx under its root; others belong to the node named
 # Emitters use a fixed seed, so a capture at a fixed tick repeats. No lights.
 const SEED := 731
 # Pool x max over the "vfx" specs; fx_library_test pins it.
-const CEILING := 648
+const CEILING := 752
 const SPECS := {
 	"roll_dust": {"pool": 1, "max": 64, "life": 0.7, "speed": [0.4, 1.4], "spread": 75.0, "gravity": 0.6,
 		"size": 0.42, "colour": "SANDSTONE", "attach": "ball", "blend": "mix", "shape": "point"},
@@ -41,14 +42,18 @@ const SPECS := {
 		"size": 0.5, "colour": "row", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 0.6},
 	"slam_dust": {"pool": 2, "max": 24, "life": 0.8, "speed": [2.0, 5.5], "spread": 70.0, "gravity": 1.0,
 		"size": 0.7, "colour": "SANDSTONE", "attach": "world", "blend": "mix", "shape": "ring", "ring_m": 1.2},
-	"latch_ring": {"pool": 2, "max": 24, "life": 0.28, "speed": [0.0, 0.0], "radial": [-5.5, -5.0], "spread": 0.0, "gravity": 0.0,
-		"size": 0.34, "colour": "row", "attach": "world", "blend": "mix", "shape": "ring", "ring_m": 1.5, "glow": 1.4},
-	"latch_pulse": {"pool": 2, "max": 16, "life": 0.25, "speed": [4.0, 4.6], "spread": 2.0, "gravity": 0.0, "explosive": 0.15,
-		"size": 0.3, "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "forward": true, "glow": 1.6},
+	"latch_ring": {"pool": 2, "max": 24, "life": 0.2, "speed": [0.0, 0.0], "radial": [-7.0, -6.5], "spread": 0.0, "gravity": 0.0,
+		"size": 0.42, "colour": "row", "attach": "world", "blend": "mix", "shape": "ring", "ring_m": 1.2, "glow": 1.5},
+	"latch_halo": {"pool": 2, "max": 24, "life": 0.2, "speed": [0.0, 0.0], "radial": [-7.0, -6.5], "spread": 0.0, "gravity": 0.0,
+		"size": 0.9, "colour": "row", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 1.2, "glow": 2.0},
+	"latch_pulse": {"pool": 2, "max": 16, "life": 0.12, "speed": [9.0, 10.5], "spread": 1.0, "gravity": 0.0, "explosive": 0.6,
+		"size": 0.34, "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "forward": true, "glow": 1.8},
 	"crack_debris": {"pool": 2, "max": 32, "life": 1.0, "speed": [4.0, 9.0], "spread": 50.0, "gravity": -24.0,
 		"size": Vector3(0.28, 0.2, 0.24), "colour": "CHARCOAL", "attach": "world", "blend": "mix", "shape": "point", "spin": 540.0},
-	"cache_ember": {"pool": 2, "max": 4, "life": 1.6, "speed": [0.3, 0.8], "spread": 25.0, "gravity": 0.15,
-		"size": 0.24, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "point", "glow": 2.0, "owner": "vfx"},
+	"cache_ember": {"pool": 2, "max": 24, "life": 1.2, "speed": [1.0, 2.6], "spread": 60.0, "gravity": 0.3,
+		"size": 0.34, "colour": "AMBER", "attach": "persist", "blend": "add", "shape": "point", "glow": 1.3, "warm": true, "owner": "vfx"},
+	"cache_wisp": {"pool": 2, "max": 8, "life": 2.4, "speed": [0.4, 0.9], "spread": 15.0, "gravity": 0.5, "scale": [1.0, 1.6],
+		"size": 0.8, "colour": "CHARCOAL", "attach": "persist", "blend": "mix", "shape": "point", "warm": true, "owner": "vfx"},
 	"dig_debris": {"pool": 1, "max": 10, "life": 0.7, "speed": [12.0, 17.0], "spread": 35.0, "gravity": -26.0, "scale": [1.0, 1.8],
 		"size": Vector3.ONE * 0.24, "colour": "SANDSTONE", "attach": "world", "blend": "mix", "shape": "point", "owner": "dig"},
 	"dig_dust": {"pool": 1, "max": 12, "life": 0.5, "speed": [7.0, 12.0], "spread": 60.0, "gravity": 1.5, "scale": [2.5, 4.0],
@@ -170,6 +175,7 @@ static func build(id: String) -> GPUParticles3D:
 	p.explosiveness = s.get("explosive", 1.0) if p.one_shot else 0.0
 	p.local_coords = false
 	p.emitting = false
+	p.preprocess = float(s["life"]) if s.get("warm", false) else 0.0
 	p.use_fixed_seed = true
 	p.seed = SEED
 	p.visibility_aabb = AABB(Vector3(-8, -4, -8), Vector3(16, 10, 16))
