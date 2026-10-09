@@ -25,7 +25,6 @@ const T := preload("res://tests/support/t.gd")
 
 const TARN := "tarn"
 const SABLE := "pylon_engineer"
-const RIVET := "runner_gunner"
 const ROW := "brindle_routed"
 const STORE_DIR := "user://unlock_live_brindle_test"
 const STORE_PATH := STORE_DIR + "/run.json"
@@ -85,7 +84,7 @@ func _walk() -> void:
 	game._screen_key(KEY_SPACE)
 	if not await _settle_select("fresh"):
 		return
-	_t.eq("fresh: Sable and Rivet selectable, Tarn not", _selectable(), [SABLE, RIVET])
+	_t.eq("fresh: Sable only selectable, Tarn not", _selectable(), [SABLE])
 	_t.check("fresh: Tarn's card is locked", _card(TARN) != null and _card(TARN).locked, str(_card(TARN)))
 	game._screen_key(KEY_1 + _index(TARN))
 	_t.check("fresh: Tarn's key starts nothing", flow.state_name() == "class_select" and not flow.in_play(), flow.state_name())
@@ -222,7 +221,7 @@ func _after_run() -> void:
 		await physics_frame
 	if not await _settle_select("after the run"):
 		return
-	_t.eq("after the run: Tarn joins the selectable set", _selectable(), [SABLE, RIVET, TARN])
+	_t.eq("after the run: Tarn joins the selectable set", _selectable(), [SABLE, TARN])
 	_t.check("after the run: Tarn's card is open", _card(TARN) != null and not _card(TARN).locked, str(_card(TARN)))
 	_t.check("after the run: profile holds the Brindle row and Tarn", profile.earned(ROW) and profile.has_pilot(TARN), profile.path)
 	_t.eq("the Brindle row announced once", _earned.count(ROW), 1)
