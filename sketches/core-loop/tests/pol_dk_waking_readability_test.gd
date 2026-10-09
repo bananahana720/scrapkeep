@@ -1,4 +1,7 @@
 extends SceneTree
+# 2026-10-09 re-pin (VX-SWAP): the pit floor plate is cool slate (Palette.SLATE), not sandstone, because the sandstone
+# plate read amber-brown under the rim pools (LIGHT-FIX follow-up); weathered petrol was tried and took arw_pit_b
+# over_shoulder to 0.81 near-black (dead), so the lighter cool tone stands.
 # 2026-10-09 re-pin (LIGHT-FIX): the rim pool energy floor falls from 1.4 to 1.0 because the pit's amber
 # floor accent swamped the cool walls at 2.2 (blind read, arw_pit_b over_shoulder); LIGHTS.rim_pool.energy is now 1.0.
 # 2026-10-09 re-pin (VX-LIGHT): the Dig has its own world look row (world_look.gd ROWS[2], a dark
@@ -38,7 +41,7 @@ func _run() -> void:
 				var mat := child.material_override as ShaderMaterial
 				var seam = mat.get_shader_parameter("seam_width") if mat != null else null
 				_t.check("DK floor panel seams are at least 0.10m", seam is float and seam >= 0.10)
-				_t.check("DK floor uses sandstone", mat != null and mat.get_shader_parameter("base_color") == Palette.SANDSTONE)
+				_t.check("DK floor uses the cool slate plate", mat != null and mat.get_shader_parameter("base_color") == Palette.SLATE)
 		for preset in ["low", "high", "target"]:
 			Preset.apply(preset)
 			_t.check("DK pit lift survives " + preset, is_equal_approx(game.ctx.terrain.environment.ambient_light_energy, 0.16) and bounce.light_energy >= 3.0)

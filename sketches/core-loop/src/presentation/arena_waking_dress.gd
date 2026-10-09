@@ -73,7 +73,7 @@ func _prepare() -> bool:
 	floor_material.shader = preload("res://src/presentation/arena_waking_floor.gdshader")
 	floor_material.set_shader_parameter("tex_tone", stone.get_shader_parameter("tex_tone"))
 	floor_material.set_shader_parameter("tex_grain", stone.get_shader_parameter("tex_grain"))
-	floor_material.set_shader_parameter("base_color", Palette.SANDSTONE)
+	floor_material.set_shader_parameter("base_color", Palette.SLATE)
 	floor_material.set_shader_parameter("seam_color", Palette.CHARCOAL)
 	floor_material.set_shader_parameter("panel_pitch", FLOOR_PLATE_PITCH)
 	floor_material.set_shader_parameter("seam_width", FLOOR_SEAM_WIDTH)
