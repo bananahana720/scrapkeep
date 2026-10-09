@@ -24,9 +24,12 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const CART_SCALE := 2.2
 const TODAY_SOCKETS := [Vector3(-0.74, 0.3, -0.95), Vector3(0.74, 0.3, -0.95), Vector3(-0.74, 0.3, 0.95), Vector3(0.74, 0.3, 0.95)]
 # Per subject: each side's distance from the ball, and camera rows [eye, target]; "hero" is relative to one side.
+# The beacon's "clamp" row (wave 12 BEACON-CLAMP) is the Warden-on-lantern close-up: the tripod, collar and platform
+# around the Warden's seat, from the hero side; the in-game Warden captures place it at the beacon's origin.
 const VIEWS := {
 	"cart": {"gap": 9.0, "arena": [Vector3(0, 9, 30), Vector3(0, 1.5, 0)], "hero": [Vector3(7.5, 5.5, -5.0), Vector3(0, 1.9, -1.2)]},
-	"beacon": {"gap": 16.0, "arena": [Vector3(0, 16, 62), Vector3(0, 9, 0)], "hero": [Vector3(14, 12, 24), Vector3(0, 10, 0)]},
+	"beacon": {"gap": 16.0, "arena": [Vector3(0, 16, 62), Vector3(0, 9, 0)], "hero": [Vector3(14, 12, 24), Vector3(0, 10, 0)],
+		"clamp": [Vector3(9, 8, 15), Vector3(0, 6.5, 0)]},
 }
 # Detail layer drop-out per subject, one row per layer: [visibility_range_end, visibility_range_end_margin] in metres,
 # and the range shots (metres from the hero target along the hero direction), the last one the arena distance;
@@ -294,6 +297,8 @@ func _init() -> void:
 		_state(fresh, "beacon_sealed")
 		var sealed: Image = await _shot(cam, fresh.position + hero[0], fresh.position + hero[1], out.path_join("%s_hero_sealed.png" % tag))
 		heroes.insert(2, sealed)
+		var clamp: Array = view["clamp"]
+		await _shot(cam, fresh.position + clamp[0], fresh.position + clamp[1], out.path_join("%s_clamp.png" % tag))
 	_sheet([ref, arena], out.path_join("%s_sheet_arena.png" % tag), 540)
 	_sheet([ref, near], out.path_join("%s_sheet_near.png" % tag), 540)
 	_sheet(heroes, out.path_join("%s_sheet_hero.png" % tag), 540)

@@ -22,7 +22,7 @@ from lantern_beacon import kit
 NAME = "lantern_beacon_detail2"
 SLOT = "steel"
 BUDGET = [1500, 2000, 1]
-SIZE = [5.169, 15.829, 4.605]
+SIZE = [4.98, 17.629, 5.602]
 tone, ring, stud = d1.tone, d1.ring, d1.stud
 
 
@@ -39,7 +39,7 @@ def band(s, a, b, r, n, color):
 
 
 def plate(s, a, b, out, w, h):
-    # A brass tongue lying on the leg's outer face: width across the leg (tangential), thickness along the leg's normal.
+    # A copper tongue lying on the leg's outer face: width across the leg (tangential), thickness along the leg's normal.
     d = (b - a).normalized()
     side = d.cross(out).normalized() * w / 2
     lift = side.cross(d).normalized()
@@ -49,13 +49,13 @@ def plate(s, a, b, out, w, h):
     lift = lift * h
     corners = [-side, side, side + lift, -side + lift]
     verts = [tuple(p + c) for p in (a, b) for c in corners]
-    s.add(verts, [(i, (i + 1) % 4, 4 + (i + 1) % 4, 4 + i) for i in range(4)] + [(3, 2, 1, 0), (4, 5, 6, 7)], tone("brass"))
+    s.add(verts, [(i, (i + 1) % 4, 4 + (i + 1) % 4, 4 + i) for i in range(4)] + [(3, 2, 1, 0), (4, 5, 6, 7)], tone("copper"))
 
 
 def bolt_row(s, radius, y, count, start=0.0):
     for t in lb.around(count, start):
         out = Vector((math.sin(t), 0, math.cos(t)))
-        stud(s, (radius * .97 * out.x, y, radius * .97 * out.z), out, .06, .08, 6, tone("brass"))
+        stud(s, (radius * .97 * out.x, y, radius * .97 * out.z), out, .06, .08, 6, tone("copper"))
 
 
 def lantern(s):
@@ -66,7 +66,7 @@ def lantern(s):
         ring(s, lb.BAR_R + .1, lb.BAR_R + .1, y, y + .1, 16, caps=(False, False))
     for t in lb.around(lb.BARS, 0):
         x, z = lb.BAR_R * math.sin(t), lb.BAR_R * math.cos(t)
-        lb.strut(s, (x, y0, z), (x, y1, z), .08, .08, tone("brass"))
+        lb.strut(s, (x, y0, z), (x, y1, z), .08, .08, tone("copper"))
 
 
 def brackets(s):
@@ -75,23 +75,21 @@ def brackets(s):
     for side in (-1, 1):
         for x, y in ((lb.TOP_FIT[0] + .05, head), (lb.TOP_BAND[0] + .05, top), (lb.BAR_R + .05, bottom)):
             for face in (-1, 1):
-                stud(s, (side * x, y, face * .04), (0, 0, face), .08, .07, 6, tone("brass"))
+                stud(s, (side * x, y, face * .04), (0, 0, face), .08, .07, 6, tone("copper"))
 
 
 def legs(s):
     for angle in lb.LEG_ANGLES:
         a = math.radians(angle)
         pts = [Vector((r * math.sin(a), y, r * math.cos(a))) for r, y in lb.LEG_PATH]
-        top, knee, foot = pts
-        down = (knee - top).normalized()
+        top, shoulder, knee, foot = pts
+        down = (shoulder - top).normalized()
         out = Vector((math.sin(a), 0, math.cos(a)))
-        mid = top + down * .55
+        # No rivet on the plate since BEACON-CLAMP: the bowed shoulder exports 20 more vertices per leg, and the
+        # three rivets were the cheapest way back under the landmark row's 2000.
         plate(s, top + down * .15, top + down * 1.0, out, .42, .14)
-        normal = (down.cross(out)).cross(down).normalized()
-        if normal.dot(out) < 0:
-            normal = -normal
-        stud(s, tuple(mid + normal * (lb.LEG_R + .1)), normal, .07, .07, 6, tone("brass"))
-        band(s, knee - down * .45, knee - down * .1, lb.LEG_R + .07, 6, tone("leg"))
+        shin = (knee - shoulder).normalized()
+        band(s, knee - shin * .45, knee - shin * .1, lb.LEG_R + .07, 6, tone("leg"))
         low = (foot - knee).normalized()
         band(s, foot - low * .55, foot - low * .3, lb.LEG_R + .07, 6, tone("leg"))
 

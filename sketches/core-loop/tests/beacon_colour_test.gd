@@ -1,4 +1,5 @@
 extends SceneTree
+# 2026-10-09 (w12 VX-SWAP): the beacon is the authored lantern; its frame's steel ring and cap join the parts read here, measured cause: an unset state_tint renders the shader's mint key.
 
 const Game := preload("res://src/game.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
@@ -42,8 +43,12 @@ func _physics_process(_delta: float) -> bool:
 
 
 func _parts(beacon) -> Dictionary:
-	return {"ring": beacon._ring_material.albedo_color, "bulb": beacon._core_material.albedo_color,
+	var parts := {"ring": beacon._ring_material.albedo_color, "bulb": beacon._core_material.albedo_color,
 		"bulb glow": beacon._core_material.emission}
+	# The lantern frame's ring and cap: the steel state key wears the instance's state_tint.
+	for view: MeshInstance3D in beacon._state_views:
+		parts["lantern " + String(view.name)] = view.get_instance_shader_parameter("state_tint")
+	return parts
 
 
 func _clear_of(label: String, colour: Color) -> void:
@@ -64,6 +69,7 @@ func _run() -> void:
 	root.add_child(markers)
 	markers.setup(_game)
 	_t.check("the Warden seals the stage", flow.sealed and beacon.sealed and flow.state_name() == "stage", "sealed %s, beacon %s" % [flow.sealed, beacon.sealed])
+	_t.check("the lantern frame carries the steel state key", beacon._state_views.size() > 0, "%d steel views" % beacon._state_views.size())
 	var not_yet := EventKinds.role_color("slate")
 	var offering := EventKinds.role_color("amber")
 	for name in _parts(beacon):
