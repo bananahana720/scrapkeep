@@ -390,10 +390,7 @@ func _flush_hits() -> void:
 			heavy = true
 			contact = hit["at"]
 		if vfx != null and i < MAX_BURSTS:
-			if hit["crit"]:
-				vfx.burst("spark", hit["at"], row["crit"]["color"], int(row["crit"]["sparks"]))
-			else:
-				vfx.burst("spark", hit["at"], color, int(row["sparks"]))
+			vfx.play_fx("enemy_struck", hit["at"], row["crit"]["color"] if hit["crit"] else color)
 	if stop > 0.0:
 		stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
 	if crit and audio != null:

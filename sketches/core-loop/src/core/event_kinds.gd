@@ -189,7 +189,7 @@ const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window"]
 const JUICE := {
 	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0, "sparks": 8,
 		"crit": {"stop_mult": 1.4, "sparks": 16, "shake": 0.22, "color": Palette.BRASS, "sound": "crit_ping"},
-		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}},
+		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}, "fx": {"hit_sparks": 12}},
 	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
 	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
 	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
@@ -216,6 +216,12 @@ const JUICE := {
 	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "squash": 0.18, "color": Palette.HAZARD},
 	"scrap_lost": {"pulse": -0.22},
 	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
+	# W12 P-FX: GPU effects (presentation/fx_library.gd SPECS), particles per effect.
+	# rolling plays continuously while the ball rolls at speed; count is per second.
+	"rolling": {"fx": {"roll_dust": 90}, "min_speed": 9.0},
+	"slammed": {"fx": {"slam_ring": 72, "slam_dust": 24}},
+	"harpoon_bit": {"fx": {"latch_flash": 16}},
+	"wall_crumbled": {"fx": {"crack_debris": 28, "slam_dust": 14}},
 }
 # What one hit of each kind does, in one place: the shove and lift combat gives the enemy,
 # the stop and shake presentation gives the screen, and how the enemy should answer.
