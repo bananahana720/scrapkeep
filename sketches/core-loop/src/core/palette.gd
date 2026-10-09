@@ -148,6 +148,32 @@ static func striped(a: Color, b: Color) -> StandardMaterial3D:
 	return mat
 
 
+# 45 degree bands, `a` at pixel (0, 0) and `b` at (size / 4, 0), the two places dress_props samples.
+static func stripe_texture(a: Color, b: Color, size := 64) -> ImageTexture:
+	var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
+	var band := size / 4
+	for y in size:
+		for x in size:
+			image.set_pixel(x, y, a if ((x + y) / band) % 2 == 0 else b)
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)
+
+
+# Hostile means HAZARD plus 45 degree stripes (VISUAL-LANGUAGE.md): one material, shared by every
+# hazard surface, so the stripe pitch and the two colours cannot drift between props.
+static var _hazard_stripe: StandardMaterial3D
+
+static func hazard_stripe() -> StandardMaterial3D:
+	if _hazard_stripe == null:
+		_hazard_stripe = StandardMaterial3D.new()
+		_hazard_stripe.set_meta("greybox_checker", true)
+		_hazard_stripe.albedo_texture = stripe_texture(HAZARD, CHARCOAL)
+		_hazard_stripe.uv1_triplanar = true
+		_hazard_stripe.uv1_scale = Vector3(0.25, 0.25, 0.25)
+		_hazard_stripe.roughness = 0.75
+	return _hazard_stripe
+
+
 static func water(color: Color) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(color.r, color.g, color.b, 0.62)

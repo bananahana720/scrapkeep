@@ -1,0 +1,6 @@
+packed-sand-floor.webp
+Source: Poly Haven texture "dense_sand", https://polyhaven.com/a/dense_sand
+File: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/dense_sand/dense_sand_diff_1k.jpg
+Licence: CC0 1.0 Universal (public domain dedication), https://polyhaven.com/license
+Transforms: 1 px Gaussian blur, luminance split into six equal-population bands, each band painted one palette.gd tone (ramp "floor" in w12 P-SURF quantise.py), WebP q88.
+Transforms revised in fix round: narrower six-tone ramp (quantise.py RAMPS).
