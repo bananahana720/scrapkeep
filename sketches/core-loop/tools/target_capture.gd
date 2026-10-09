@@ -191,18 +191,20 @@ static func _pair(text: String) -> Vector2:
 	return Vector2(float(parts[0]), float(parts[1])) if parts.size() == 2 else Vector2.ZERO
 
 
+# 2026-10-09: target_ground and target_rock left this list when VX-SURF retired both shaders
+# (cand/alpha-w12 34b7ed9, the material slot registry); a listed file that is gone records
+# "missing" instead of an empty hash and an open error.
 func _hashes() -> Dictionary:
 	var result := {}
 	for path in ["src/world/terrain.gd", "src/core/palette.gd", "src/presentation/hero_assets.gd",
 		"src/presentation/spillway_scenery.gd", "src/presentation/graphics_preset.gd",
 		"tools/capture_cameras.gd", "tools/target_capture.gd", "project.godot",
-		"assets/shaders/target_ground.gdshader", "assets/shaders/target_rock.gdshader",
 		"assets/shaders/target_dam.gdshader", "assets/shaders/target_surface.gdshaderinc",
 		"src/presentation/presentation.gd", "src/presentation/set_dressing.gd",
 		"assets/shaders/target_dressing.gdshader", "assets/shaders/target_air.gdshader",
 		"assets/shaders/target_protection.gdshaderinc", "src/presentation/clutter.gdshader",
 		"src/world/reach_routes.json"]:
-		result[path] = FileAccess.get_sha256("res://" + path)
+		result[path] = FileAccess.get_sha256("res://" + path) if FileAccess.file_exists("res://" + path) else "missing"
 	return result
 
 
