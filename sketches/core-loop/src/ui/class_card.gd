@@ -47,6 +47,8 @@ const CELL_ICON := 40.0
 const CELL_CAP := 26.0
 const MOUSE_CAP := 36.0
 const PIP := 9.0
+const WORD_SIZE := 13
+const WORD_MIN := 9
 const SHAKE := 0.25
 const LOCK_DIM := 0.4
 const NO_PAINT := "No paint"
@@ -466,11 +468,26 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	# Every key's words stack on two lines, so no label wraps on its own and the row reads even.
 	var words: String = record["words"]
 	var gap := words.find(" ")
-	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), 13, Palette.SAND)
+	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), WORD_SIZE, Palette.SAND)
+	# A word wider than its cell steps down to WORD_MIN, then clips at two lines, so a narrow
+	# cell cannot push the key row below the card's floor.
+	var cell_w := maxf(width, Keycap.size_of(record["key"], _cap_height(record["key"]) * cap_scale).x)
+	var word_size := WORD_SIZE
+	while word_size > WORD_MIN and _widest_word(words, word_size) > cell_w:
+		word_size -= 1
+	label.add_theme_font_size_override("font_size", word_size)
+	label.max_lines_visible = 2
 	cell.add_child(label)
 	_details.append(label)
 	_cells.append({"key": record["key"], "icon": record["icon"], "words": words})
 	return cell
+
+
+func _widest_word(words: String, font_size: int) -> float:
+	var widest := 0.0
+	for word in words.split(" "):
+		widest = maxf(widest, UiFonts.bold().get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	return widest
 
 
 func _text(value: String, font_size: int, color: Color) -> Label:
