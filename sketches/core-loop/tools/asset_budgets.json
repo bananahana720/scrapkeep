@@ -65,6 +65,12 @@
    "verts": 610,
    "draws": 1,
    "set_by": "moss_shelter (266 / 608 / 1); old ceilings 1,600 T / 2,400 V; moss_workshop carries an exception under its recipe's 6,500 T assert"
+  },
+  "landmark": {
+   "tris": 900,
+   "verts": 2000,
+   "draws": 2,
+   "set_by": "trial row, 2026-10-09 (wave 12 RECIPE-CART beacon): P-GEN and P-GEN-2 measured the 270-tri prop class as too small for a hero landmark (both generated beacons collapsed into solid statues); 900 / 2,000 / 2 are the coordinator's trial numbers, first member lantern_beacon_frame; re-derive by the rule below once the class has members in the game"
   }
  },
  "texture": {
