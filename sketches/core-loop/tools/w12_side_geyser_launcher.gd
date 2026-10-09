@@ -76,7 +76,7 @@ func _glb(path: String) -> Node3D:
 	return doc.generate_scene(state)
 
 
-func _ball(root: Node, at: Vector3) -> void:
+func _ball(root: Node, at: Vector3) -> MeshInstance3D:
 	var ball := MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = Tuning.RADIUS
@@ -87,6 +87,7 @@ func _ball(root: Node, at: Vector3) -> void:
 	bm.albedo_color = Color("e6d9b8")
 	ball.material_override = bm
 	root.add_child(ball)
+	return ball
 
 
 func _shot(cam: Camera3D, eye: Vector3, target: Vector3, path: String) -> Image:
@@ -291,9 +292,8 @@ func _init() -> void:
 		_state(fresh, "beacon_open")
 	if subject == "geyser_launcher":
 		_role(fresh, "amber")
-	_ball(root, Vector3(0, 0, 4.0))
-	_ball(root, Vector3(gap + 4.0, 0, 6.0))
-	_ball(root, Vector3(-gap + 4.0, 0, 6.0))
+	var scatter: Array[MeshInstance3D] = [_ball(root, Vector3(0, 0, 4.0)), _ball(root, Vector3(gap + 4.0, 0, 6.0)),
+		_ball(root, Vector3(-gap + 4.0, 0, 6.0))]
 
 	var ref := Image.load_from_file(args["ref"])
 	var cam := Camera3D.new()
@@ -312,6 +312,21 @@ func _init() -> void:
 	var hero_new: Image = await _shot(cam, fresh.position + hero[0], fresh.position + hero[1], out.path_join("%s_hero_new.png" % tag))
 	var hero_today: Image = await _shot(cam, today.position + hero[0], today.position + hero[1], out.path_join("%s_hero_today.png" % tag))
 	var heroes := [ref, hero_new, hero_today]
+	if subject == "geyser_launcher":
+		# Footprint proof (wave 12-D fix): the ball at the launch point (the mouth, ground + 1.0) and 4 m before the rim
+		# (centre 7.5 m from the axis, rim radius 3.5) on the approach, hero camera, the scattered balls hidden.
+		for stray in scatter:
+			stray.visible = false
+		var probe := _ball(root, fresh.position - Vector3(0, MOUTH_LIFT, 0))
+		var seated: Image = await _shot(cam, fresh.position + hero[0], fresh.position + hero[1], out.path_join("%s_hero_seated.png" % tag))
+		print("W12_FIX_BALL seated centre=", probe.position, " mouth=", fresh.position)
+		probe.position = fresh.position + Vector3(-7.5, 0, 0)
+		var approach: Image = await _shot(cam, fresh.position + hero[0], fresh.position + hero[1], out.path_join("%s_hero_approach.png" % tag))
+		print("W12_FIX_BALL approach centre=", probe.position, " mouth=", fresh.position)
+		_sheet([ref, seated, approach], out.path_join("%s_sheet_balls.png" % tag), 540)
+		probe.visible = false
+		for stray in scatter:
+			stray.visible = true
 	if subject == "beacon":
 		_state(fresh, "beacon_sealed")
 		var sealed: Image = await _shot(cam, fresh.position + hero[0], fresh.position + hero[1], out.path_join("%s_hero_sealed.png" % tag))

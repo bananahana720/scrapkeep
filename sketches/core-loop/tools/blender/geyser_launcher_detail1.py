@@ -1,7 +1,7 @@
 """Detail layer 1 for the geyser launcher: an additive steel shell at the base's origin, authored from gap list A
 (artifacts/local/alpha/push/w12/units/rc-geyser_launcher/gaps_A.md): block rivets, top-course bolts and joints, the
 grate's rim lip, the nozzle's bolted flange and neck band, rubber-bush post collars, cap lips, spout fittings and the
-pipe's threaded tip. Switchback Enclaves habit: the posts sit in charcoal rubber bushes and the grate is held by
+pipe's threaded tip. The footprint fix (low stone well, geyser_launcher.py `clearance`) applies to this shell too. Switchback Enclaves habit: the posts sit in charcoal rubber bushes and the grate is held by
 exposed service bolts. Class "detail" (1500 tris, 3000 verts, 1 draw). Colours are TONES rows of
 geyser_launcher.py; no state key is painted here.
 
@@ -17,7 +17,7 @@ import geyser_launcher as g
 from geyser_launcher import kit, frustum, polar, tone
 
 DETAIL = [1500, 3000, 1]
-SIZE = [6.749, 2.553, 6.749]
+SIZE = [6.749, 1.161, 6.749]
 
 
 def frame(n):
@@ -63,7 +63,7 @@ def build(s):
     for i in range(n):
         a = math.tau * (i + .5) / n
         d = ro * math.cos(math.pi / n)
-        bolt(s, polar(d, a, (y0 + y1) / 2 + .1), radial(a), .09, .05, dark)
+        bolt(s, polar(d, a, (y0 + y1) / 2), radial(a), .07, .05, dark)
     sn, sro, sy0, sy1 = g.SLAB
     for i in range(12):
         bolt(s, polar(3.18, math.tau * (i + .25) / 12, sy1), (0, 1, 0), .1, .05, dark)
@@ -76,24 +76,24 @@ def build(s):
     frustum(s, g.R_TORUS_IN + .02, g.R_TORUS_IN - .04, gy1 - .02, gy1 + .07, 16, dark, caps=(False, False))
     frustum(s, g.R_TORUS_IN - .04, g.R_TORUS_IN - .1, gy1 + .07, gy1 + .07, 16, dark, caps=(False, False))
     for i in range(8):
-        bolt(s, polar(2.72, math.tau * (i + .5) / 8, gy1), (0, 1, 0), .08, .05, dark)
+        bolt(s, polar(2.8, math.tau * (i + .5) / 8, gy1), (0, 1, 0), .08, .05, dark)
     fr, fy = g.NOZZLE[1]
     for i in range(8):
         bolt(s, polar(fr - .12, math.tau * i / 8, fy), (0, 1, 0), .07, .05, copper)
-    frustum(s, .52, .52, 1.44, 1.54, 8, dark, caps=(False, False))
+    frustum(s, .72, .72, -.8, -.75, 8, dark, caps=(False, False))
     pr, py0, _ = g.POST
     cr, _, cy1 = g.CAP
     for deg in g.POSTS:
         a = math.radians(deg)
         x, _, z = polar(g.POST_R, a, 0)
-        frustum(s, pr + .14, pr + .1, py0, py0 + .14, 8, dark, caps=(False, True), at=(x, z))
-        frustum(s, cr + .06, cr + .06, cy1, cy1 + .08, 8, copper, caps=(True, True), at=(x, z))
+        frustum(s, pr + .08, pr + .05, py0, py0 + .14, 8, dark, caps=(False, True), at=(x, z))
+        frustum(s, cr + .04, cr + .04, cy1 - .08, cy1, 8, copper, caps=(True, True), at=(x, z))
         t = (math.cos(a), 0.0, -math.sin(a))
         end = pr - .04 + g.SPOUT[0] - .02
         bolt(s, (x + t[0] * end, g.SPOUT[2], z + t[2] * end), t, .13, .08, copper)
     plen, pside, py = g.PIPE
-    bolt(s, (0.0, py, g.NOZZLE[2][0] - .05 + plen - .02), (0, 0, 1), .12, .1, copper)
-    bolt(s, (0.0, py, g.NOZZLE[2][0] - .05 + plen + .08), (0, 0, 1), .06, .08, tone("pipe"))
+    bolt(s, (0.0, py, g.NOZZLE[2][0] - .05 + plen - .02), (0, 0, 1), .08, .1, copper)
+    bolt(s, (0.0, py, g.NOZZLE[2][0] - .05 + plen + .08), (0, 0, 1), .04, .08, tone("pipe"))
 
 
 def main():

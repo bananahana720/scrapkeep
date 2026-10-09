@@ -16,7 +16,7 @@ import geyser_launcher as g
 from geyser_launcher import frustum, polar, tone
 from geyser_launcher_detail1 import DETAIL, bolt, radial
 
-SIZE = [6.915, 2.613, 6.915]
+SIZE = [6.91, 1.108, 6.91]
 
 
 def on_face(d, a, off, y):
@@ -31,13 +31,13 @@ def build(s):
     for i in range(sn):
         a = math.tau * i / sn
         for off in (-.1, .1):
-            bolt(s, on_face(d, a, off, sy1 - .14), radial(a), .05, .03, dark)
+            bolt(s, on_face(d, a, off, sy1 - .075), radial(a), .04, .03, dark)
     n, ro, ri, y0, y1, gap = g.BLOCKS
     d = ro * math.cos(math.pi / n)
     for i in range(n):
         a = math.tau * (i + .5) / n
         for off in (-.17, .17):
-            bolt(s, on_face(d, a, off, y0 + .2), radial(a), .05, .03, dark)
+            bolt(s, on_face(d, a, off, (y0 + y1) / 2), radial(a), .04, .03, dark)
     frustum(s, sro + .02, sro + .02, sy0, sy0 + .05, sn, dark, caps=(False, False))
     fr, fy0 = g.NOZZLE[0]
     for i in range(8):
@@ -48,7 +48,7 @@ def build(s):
     for deg in g.POSTS:
         a = math.radians(deg)
         x, _, z = polar(g.POST_R, a, 0)
-        frustum(s, cr + .02, cr + .02, cy0 + .12, cy0 + .22, 8, dark, caps=(False, False), at=(x, z))
+        frustum(s, cr + .02, cr + .02, cy0 + .06, cy0 + .14, 8, dark, caps=(False, False), at=(x, z))
         t = (math.cos(a), 0.0, -math.sin(a))
         end = pr - .04 + g.SPOUT[0] - .1
         bolt(s, (x + t[0] * end, g.SPOUT[2], z + t[2] * end), t, .12, .06, copper, k=8)

@@ -13,8 +13,12 @@ The rim stands where today's amber cradle ring stands (contraptions.gd:428-435) 
 
 Footprint (src/world/contraptions.gd:422-509, map_gorge.gd:356): origin at the mouth point, ground(at, 1.0), so the
 ground is at y -1.0; the drum's outer radius is the spec radius 3.5 the mouth test reads (contraptions.gd:259-260);
-the grate rim's outer edge is the torus's inner radius 2.9; the drum top stays under 2 m above the ground and the
-nozzle well under mouth + 4.0, where the steam column is centred. No facing, no collider.
+the grate rim's outer edge is the torus's inner radius 2.9. The ball (radius 1.0, tuning.gd:82) rolls through the
+launcher at the mouth height and the launcher has no collider, so the recipe is a low stone well (wing 12-D fix
+round, the footprint wins over the picture): the drum wall tops at ground + 0.35, the grate rim at ground + 0.55
+(today's ring stands at ground + 0.2), nothing inside radius 2.2 rises above ground + 0.35, the nozzle dome tops at
+ground + 0.3 and the posts stand on the rim to ground + 1.2. `clearance` asserts it for every exported part.
+No facing, no collider.
 
 Lore (research/lore-makers-2026-10-09.md): copper caps and dome (the picture's brass), petrol posts, Switchback
 Enclaves construction: serviceable, rubber-bushed (detail1 adds the bushes and the grate's service bolts).
@@ -57,24 +61,31 @@ TONES = {
 GROUND = -1.0
 R_SPEC = 3.5                           # spec radius, the mouth test (map_gorge.gd:356)
 R_TORUS_IN = 2.9                       # today's torus inner radius (contraptions.gd:430)
-BLOCKS = (12, R_SPEC, 3.3, GROUND, -.15, .05)   # count, outer, inner core, y0, y1, gap
-SLAB = (16, 3.42, -.15, .5)            # segments, outer radius, y0, y1 (the top course)
-PIT_Y = -.3                            # the stone basin under the grate: lit stone, so the charcoal bars read over it
-GRATE_Y = (.45, .72)                   # rim bottom, grate top
+# The clearance rule (the ball, radius 1.0 at the mouth, rolls through; the code's ring stands at ground + 0.2).
+CLEAR_R = 2.2                          # nothing inside this radius rises above WALL_TOP
+WALL_TOP = -.65                        # ground + 0.35
+NOZZLE_CAP = -.7                       # the dome (and its pipe) top out here, ground + 0.3
+RIM_TOP = -.45                         # ground + 0.55: the grate rim; anything above it stands at radius 2.7 or more
+RIM_CLEAR = 2.7
+POST_TOP = .2                          # ground + 1.2: caps included
+EPS = 1e-4
+BLOCKS = (12, R_SPEC, 3.3, GROUND, -.8, .05)   # count, outer, inner core, y0, y1, gap
+SLAB = (16, 3.42, -.8, WALL_TOP)       # segments, outer radius, y0, y1 (the top course)
+PIT_Y = -.95                           # the stone basin under the grate: lit stone, so the charcoal bars read over it
+GRATE_Y = (WALL_TOP, RIM_TOP)          # rim bottom, grate top
 RIM_IN = 2.6
-MID = (1.68, 2.02)                     # the ring between the two slot rows, where the posts stand
-HUB = 1.15                             # the nozzle flange covers the grate inside this
-SPOKES = ((16, MID[1], RIM_IN, .36), (8, HUB, MID[0], .3))   # count, r0, r1, width
-POST_R = 1.85
+INNER_RING = (CLEAR_R, 2.34)           # the grate's inner lip, where the open slots start
+SPOKES = ((16, INNER_RING[1], RIM_IN, .3),)   # count, r0, r1, width
+POST_R = 3.2
 POSTS = [45, 135, 225, 315]
-POST = (.27, GRATE_Y[1], 1.55)          # radius, y0, y1
-CAP = (.36, 1.55, 1.92)
-SPOUT = (.34, .18, 1.1)                # length out of the post, side, centre y
-NOZZLE = [(1.15, GRATE_Y[1]), (1.15, .82), (.45, 1.0), (.45, 1.5), (.58, 1.6), (.4, 1.88)]
-NOZZLE_TOP = 1.98
-PIPE = (.62, .16, 1.15)                # length out of the neck, side, centre y; points at +z
+POST = (.25, WALL_TOP, 0.0)             # radius, y0, y1
+CAP = (.3, 0.0, POST_TOP)
+SPOUT = (.34, .18, -.25)               # length out of the post, side, centre y
+NOZZLE = [(1.15, PIT_Y), (1.15, -.9), (.7, -.82), (.7, -.78), (.55, -.74)]
+NOZZLE_TOP = -.72
+PIPE = (.62, .14, -.8)                 # length out of the neck, side, centre y; points at +z
 SOCKETS = {"socket_steam": [0, 4.0, 0]}
-SIZE = {"drum": [7.0, 1.5, 7.0], "grate": [5.8, .27, 5.8], "fittings": [3.55, 1.26, 3.55]}
+SIZE = {"drum": [7.0, .35, 7.0], "grate": [5.8, .2, 5.8], "fittings": [5.431, 1.15, 5.431]}
 
 
 def tone(name):
@@ -136,10 +147,11 @@ def grate(s):
     y0, y1 = GRATE_Y
     annulus(s, RIM_IN, R_TORUS_IN, y1, n, tone("state"))
     wall(s, R_TORUS_IN, y0, y1, n, tone("state"))
-    annulus(s, MID[0], MID[1], y1, n, tone("grate"))
+    annulus(s, INNER_RING[0], INNER_RING[1], y1, n, tone("grate"))
+    wall(s, INNER_RING[0], y0, y1, n, tone("grate"))
     for count, r0, r1, w in SPOKES:
         for i in range(count):
-            spoke(s, math.tau * (i + .5) / count, r0, r1, w, y1 - .1, y1, tone("grate"))
+            spoke(s, math.tau * (i + .5) / count, r0, r1, w, y0, y1, tone("grate"))
     kit.PARTS["GrateTop"] = {"reference_position": [0, y1, 0]}
 
 
@@ -175,10 +187,25 @@ def fittings(s):
         frustum(s, r, r, y0, y1, 6, tone("post"), caps=(False, False), at=(x, z))
         cr, c0, c1 = CAP
         frustum(s, cr, cr, c0, c1, 6, tone("copper"), caps=(True, True), at=(x, z))
-        # The spout turns along the ring, the way the picture's side valves do.
+        # The spout turns along the rim, the way the picture's side valves do.
         t = (math.cos(a), -math.sin(a))
         box_along(s, (x + t[0] * (r - .04), z + t[1] * (r - .04)), t, SPOUT[0], SPOUT[1], SPOUT[2], tone("post"))
     kit.PARTS["Nozzle"] = {"reference_position": [0, NOZZLE_TOP, 0]}
+
+
+def clearance(name, verts):
+    # The footprint rule: print the maxima, then assert them. Radius is horizontal distance from the mouth axis.
+    r = [math.hypot(v[0], v[2]) for v in verts]
+    inside = [v[1] for v, q in zip(verts, r) if q < CLEAR_R - EPS]
+    above = [q for v, q in zip(verts, r) if v[1] > RIM_TOP + EPS]
+    top = max(v[1] for v in verts)
+    max_in = max(inside) if inside else None
+    min_out = min(above) if above else None
+    print("GEYSER_CLEAR", name, "max_y_inside_%.1f" % CLEAR_R, None if max_in is None else round(max_in, 4),
+          "min_r_above_%.2f" % RIM_TOP, None if min_out is None else round(min_out, 4), "max_y", round(top, 4))
+    assert max_in is None or max_in <= NOZZLE_CAP + EPS, (name, "inside radius", CLEAR_R, "rises to", max_in)
+    assert min_out is None or min_out >= RIM_CLEAR - EPS, (name, "above", RIM_TOP, "reaches radius", min_out)
+    assert top <= POST_TOP + EPS, (name, "tops out at", top)
 
 
 def stone_material():
@@ -200,6 +227,7 @@ def export(name, part, slot, build, size, sockets, out_dir, budget=PROP, tag="GE
     root = common.empty(name)
     s = kit.Surface(part, slot, smooth=False)
     build(s)
+    clearance(name, s.verts)
     s.finish(root)
     for pname, row in kit.PARTS.items():
         kit.empty(pname, row["reference_position"], root)
