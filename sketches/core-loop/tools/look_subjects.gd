@@ -23,6 +23,8 @@ extends RefCounted
 #   baseline  whether the subject joins the baseline set.
 #
 # Re-aimed rows (wave 12, push/w11/captures/DEAD-FRAMES.md) carry "reaim": the camera and why.
+# A row may pin the ball for a camera whose rule points a visual-only mesh hides (look_harness
+# ball_candidates): "ball": {camera: offset from the camera's target}, with "ball_reason".
 
 const DEAD := {"black": 0.8, "sky": 0.6}
 const STAGES := 6
@@ -83,11 +85,11 @@ const SUBJECTS := {
 		"cameras": [["sky_loom", Vector3(0, 45, 60), Vector3(0, 10, -400), 70.0], ["sky_west", Vector3(0, 45, 60), Vector3(-400, 20, -200), 70.0], ["sky_east", Vector3(0, 45, 60), Vector3(400, 0, -200), 70.0], ["sky_south", Vector3(0, 45, 60), Vector3(-40, 30, 450), 70.0]]},
 	# ---------------------------------------------------------------- boss arenas
 	"arb_bowl": {"group": "arenas", "stage": 1, "kind": "scene", "owner": "VX-LIGHT", "anchor": "arena", "tick": 180,
-		"cameras": [["overview", Vector3(0, 95, 75), Vector3.ZERO, 60.0], ["rim_low", Vector3(72, 14, 40), Vector3(-10, 4, -6), 60.0], ["floor_level", Vector3(34, 3.5, -34), Vector3(-12, 3, 14), 60.0], ["top_down", Vector3(0.5, 120, 1), Vector3.ZERO, 55.0], ["ramp_mast", Vector3(-12, 12, 40), Vector3(-27, 8, -27), 60.0]],
-		"reaim": {"overview": "w7 eye (0, 70, 105) looked over the bowl rim into open sky (flat share 0.714, 134,161,183); raised and pulled in so the floor fills the frame"}},
+		"cameras": [["overview", Vector3(0, 54, 45), Vector3(0, 0, -4), 60.0], ["rim_low", Vector3(72, 14, 40), Vector3(-10, 4, -6), 60.0], ["floor_level", Vector3(34, 3.5, -34), Vector3(-12, 3, 14), 60.0], ["top_down", Vector3(0.5, 120, 1), Vector3.ZERO, 55.0], ["ramp_mast", Vector3(-12, 12, 40), Vector3(-27, 8, -27), 60.0]],
+		"reaim": {"overview": "w7 eye (0, 70, 105) looked over the bowl rim into open sky (flat share 0.714, 134,161,183), and the first re-aim (0, 95, 75) still framed the round bowl in a 16:9 frame with sky in every corner (0.575, over 0.6 on VX-LIGHT builds); 2026-10-09 moved to 70 m at 50 degrees, (0, 54, 45) on (0, 0, -4), so the bowl (bank radius 60, boss/arena.gd:15) fills the width and sky is the top corners (0.113)"}},
 	"arw_pit": {"group": "arenas", "stage": 4, "kind": "scene", "owner": "VX-LIGHT", "anchor": "pit", "tick": 330,
-		"cameras": [["rim_view", Vector3(0, 12, 66), Vector3(0, 6, 0), 60.0], ["down_shaft", Vector3(20, 55, 40), Vector3(0, -6, 0), 60.0], ["floor_level", Vector3(20, 6, 16), Vector3(-8, 2, -10), 66.0], ["side_stack", Vector3(0, -4, 90), Vector3(0, -8, 0), 60.0], ["lamps_wall", Vector3(-30, 8, 20), Vector3(20, 6, -10), 65.0]],
-		"reaim": {"floor_level": "w7 eye (28, 3, 24) sat against the pit wall (flat share 0.919, 27,21,10); moved inside the wall ring and raised to read the floor"}},
+		"cameras": [["rim_view", Vector3(0, 30, 54), Vector3(0, 2, 0), 60.0], ["down_shaft", Vector3(20, 55, 40), Vector3(0, -6, 0), 60.0], ["floor_level", Vector3(20, 6, 16), Vector3(-8, 2, -10), 66.0], ["side_stack", Vector3(0, -4, 90), Vector3(0, -8, 0), 60.0], ["lamps_wall", Vector3(-30, 8, 20), Vector3(20, 6, -10), 65.0]],
+		"reaim": {"floor_level": "w7 eye (28, 3, 24) sat against the pit wall (flat share 0.919, 27,21,10); moved inside the wall ring and raised to read the floor", "rim_view": "w7 eye (0, 12, 66) sat 6 m inside the wall rock (WALL_RADIUS 60, rock bands at y -22 to 20, arena_waking_dress.gd:15,146), a frame of rock the flat-colour rule passes; 2026-10-09 moved inside the ring above the top band, (0, 30, 54) on (0, 2, 0), showing the stacked floor, the core and the lamp-lit wall"}},
 	"arm_crown": {"group": "arenas", "stage": 6, "kind": "scene", "owner": "VX-LIGHT", "anchor": "pad", "tick": 480,
 		"cameras": [["crown", Vector3(0, 18, 78), Vector3(0, 16, 0), 60.0], ["pad_level", Vector3(36, 4, 30), Vector3(-6, 6, -10), 60.0], ["edge_drop", Vector3(0, 9, 52), Vector3(0, -10, 24), 65.0], ["top_down", Vector3(1, 45, 1), Vector3.ZERO, 55.0], ["sky_far", Vector3(60, 14, 60), Vector3(-80, 2, -140), 70.0]],
 		"reaim": {"top_down": "w7 eye 100 m above the pad framed mostly cloud floor (flat share 0.787, 195,195,192); lowered to 45 m so the pad fills the frame"}},
@@ -97,15 +99,19 @@ const SUBJECTS := {
 			["pit_top", Vector3(0, 46, 2), Vector3.ZERO, 60.0], ["pit_edge", Vector3(30, 30, 52), Vector3(-4, -8, 0), 66.0], ["ball_view", Vector3(10, 4, 10), Vector3.ZERO, 55.0, "ball"]]},
 	# ---------------------------------------------------------------- devices, pylons, camp bay
 	"gpd_cache": {"group": "devices", "stage": 2, "kind": "prop", "owner": "VX-SURF", "anchor": "cache", "tick": 240,
-		"cameras": [["front", Vector3(0, 6.25, -22.5), Vector3.ZERO, 50.0], ["three_q", Vector3(7, 3, -6), Vector3.ZERO, 50.0], ["side", Vector3(23.4, 5.2, 0), Vector3.ZERO, 50.0], ["rear", Vector3(-5, 3, 7), Vector3.ZERO, 50.0]],
-		"reaim": {"front": "dead on this base (flat share 0.809): the w7 eye (0, 2.5, -9) sits 3 m from the back wall of the 12 x 10 m cache shell (cracked_cache.gd:22-24) and sees only that wall; pulled out 2.5x on the same line", "side": "dead on this base (flat share 0.617): the w7 eye (9, 2, 0) sits 2 m from the side wall; pulled out 2.6x on the same line"}},
+		"cameras": [["front", Vector3(0, 6.25, -22.5), Vector3.ZERO, 50.0], ["three_q", Vector3(7, 3, -6), Vector3.ZERO, 50.0], ["side", Vector3(23.4, 5.2, 0), Vector3.ZERO, 50.0], ["rear", Vector3(-12.5, 7.5, 17.5), Vector3.ZERO, 50.0]],
+		"reaim": {"front": "dead on this base (flat share 0.809): the w7 eye (0, 2.5, -9) sits 3 m from the back wall of the 12 x 10 m cache shell (cracked_cache.gd:22-24) and sees only that wall; pulled out 2.5x on the same line", "side": "dead on this base (flat share 0.617): the w7 eye (9, 2, 0) sits 2 m from the side wall; pulled out 2.6x on the same line", "rear": "dead by framing on this base: the w7 eye (-5, 3, 7) sits 2 m outside the shell's +z wall (HALF_D 5) and sees one wall face; 2026-10-09 pulled out 2.5x on the same line like front and side"},
+		"ball": {"front": Vector3(-3, 0, -8.5), "rear": Vector3(-3, 0, 8.5)},
+		"ball_reason": "the rule's points beside the cache centre fall inside the 12 x 10 m shell (HALF_W 6, HALF_D 5), which has no collider for the rule's rays, so the render showed 0.04 and 0.0 of the ball; pinned 3.5 m outside the wall the camera faces"},
 	"gpd_bet": {"group": "devices", "stage": 2, "kind": "prop", "owner": "VX-SURF", "anchor": "bet", "tick": 270,
 		"cameras": [["front", Vector3(0, 2.5, -9), Vector3.ZERO, 50.0], ["three_q", Vector3(7, 3, -6), Vector3.ZERO, 50.0], ["side", Vector3(9, 2, 0), Vector3.ZERO, 50.0], ["rear", Vector3(-5, 3, 7), Vector3.ZERO, 50.0]]},
 	"gpd_altar": {"group": "devices", "stage": 2, "kind": "prop", "owner": "VX-SURF", "anchor": "altar", "tick": 300,
 		"cameras": [["front", Vector3(0, 2.5, -9), Vector3.ZERO, 50.0], ["three_q", Vector3(7, 3, -6), Vector3.ZERO, 50.0], ["side", Vector3(9, 2, 0), Vector3.ZERO, 50.0], ["rear", Vector3(-5, 3, 7), Vector3.ZERO, 50.0]]},
 	"gpd_cache_fired": {"group": "devices", "stage": 2, "kind": "prop", "owner": "VX-SURF", "anchor": "cache", "tick": 390,
 		"cameras": [["three_q", Vector3(7, 3, -6), Vector3.ZERO, 50.0], ["front", Vector3(0, 6.25, -22.5), Vector3.ZERO, 50.0]],
-		"reaim": {"front": "dead on this base (flat share 0.809), the same eye as gpd_cache front; pulled out 2.5x on the same line"}},
+		"reaim": {"front": "dead on this base (flat share 0.809), the same eye as gpd_cache front; pulled out 2.5x on the same line"},
+		"ball": {"front": Vector3(-3, 0, -8.5)},
+		"ball_reason": "as gpd_cache front: the rule's point falls inside the shell; pinned 3.5 m outside the wall the camera faces"},
 	"gpw_pylon_spillway": {"group": "props", "stage": 1, "kind": "prop", "owner": "VX-SURF", "anchor": "wall", "basis": true, "tick": 150,
 		"cameras": [["face", Vector3(0, 1, -14), Vector3.ZERO, 55.0], ["three_q", Vector3(10, 3, -11), Vector3.ZERO, 55.0], ["edge", Vector3(14, 0, 2), Vector3.ZERO, 55.0], ["back", Vector3(0, 3, 14), Vector3.ZERO, 55.0]]},
 	"gpw_pylon_reach_w": {"group": "props", "stage": 2, "kind": "prop", "owner": "VX-SURF", "anchor": "reach_w", "tick": 240,
@@ -142,7 +148,8 @@ const SUBJECTS := {
 		"cameras": [["spawn_pad", Vector3(0, 8, -18), Vector3(0, 0, 10), 60.0], ["spawn_wide", Vector3(-45, 30, -55), Vector3(0, 0, 40), 65.0], ["tower_base", Vector3(60, 25, 60), Vector3(0, 20, 0), 60.0, "tower"],
 			["tower_top", Vector3(70, 80, 70), Vector3(0, 60, 0), 60.0, "tower"], ["tunnels", Vector3(0, 60, 0), Vector3(40, 40, 70), 65.0, ""]]},
 	"cache_activity": {"group": "workshop", "stage": 2, "kind": "prop", "owner": "VX-SURF", "anchor": "cache", "tick": 270,
-		"cameras": [["front", Vector3(0, 4, -13), Vector3.ZERO, 55.0], ["three_q", Vector3(10, 5, -10), Vector3.ZERO, 55.0], ["side", Vector3(14, 3, 0), Vector3.ZERO, 55.0], ["wide", Vector3(0, 22, -34), Vector3.ZERO, 60.0]]},
+		"cameras": [["front", Vector3(0, 4, -13), Vector3.ZERO, 55.0], ["three_q", Vector3(10, 5, -10), Vector3.ZERO, 55.0], ["side", Vector3(14, 3, 0), Vector3.ZERO, 55.0], ["wide", Vector3(24, 22, -24), Vector3.ZERO, 60.0]],
+		"reaim": {"wide": "dead by framing in every build (w11 capture the same): the w7 eye (0, 22, -34) sits beside the tall pylon by the cache, which fills the frame centre and hides the cache and the ball (render 0.0 of the ball); 2026-10-09 turned 45 degrees about the cache to (24, 22, -24), same height and distance class, so the cache, the white cache block and the ball read with the pylon at the edge"}},
 	# ---------------------------------------------------------------- Dig deep floor (P-GROUND port)
 	"dig_deep_floor": {"group": "dig_deep", "stage": 4, "kind": "scene", "owner": "VX-GROUND", "anchor": "spawn", "tick": 180,
 		"cameras": [["floor", Vector3(-6, 9, -12), Vector3(4, 0, 10), 60.0]]},
@@ -259,6 +266,11 @@ static func problems(stage_count: int) -> Array:
 				out.append("%s camera %s eye equals target" % [n, shot[0]])
 		if (row.get("cameras", []) as Array).is_empty():
 			out.append("%s has no camera" % n)
+		for cam_name in row.get("ball", {}):
+			if not seen.has(cam_name) or not (row["ball"][cam_name] is Vector3):
+				out.append("%s ball pin %s names no camera or is not a Vector3" % [n, cam_name])
+		if row.has("ball") and String(row.get("ball_reason", "")).is_empty():
+			out.append("%s pins the ball without a ball_reason" % n)
 	return out
 
 

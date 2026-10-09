@@ -30,7 +30,7 @@ func _run() -> void:
 		_t.check("group %s listed once" % g, not groups.has(g))
 		groups[g] = true
 		_t.check("group %s stages at least one subject" % g, not Subjects.in_group(g).is_empty())
-	for n in ["arb_bowl", "arm_crown", "arw_pit", "cv2_camp_bay", "ttl_stage_ball", "ttl_stage_spil9"]:
+	for n in ["arb_bowl", "arm_crown", "arw_pit", "cv2_camp_bay", "ttl_stage_ball", "ttl_stage_spil9", "gpd_cache", "cache_activity"]:
 		_t.check("re-aimed row %s says why" % n, Subjects.SUBJECTS[n].has("reaim"))
 
 	var black := Image.create(1920, 1080, false, Image.FORMAT_RGB8)
@@ -99,6 +99,32 @@ func _run() -> void:
 	var bay := {"bay": {"point": Vector3(0, 5, 0), "basis": Basis.IDENTITY, "radius": 20.0}}
 	var vb := Subjects.resolve("cv2_camp_bay", Subjects.SUBJECTS["cv2_camp_bay"]["cameras"][0], bay)
 	_t.check("a scale row multiplies by the anchor radius", (vb["eye"] as Vector3).is_equal_approx(Vector3(14, 14, -14)), str(vb["eye"]))
+
+	# Ball placement: the rule's points depend on eye and target alone, right side first.
+	var c1 := Harness.ball_candidates(Vector3(0, 0, 10), Vector3.ZERO)
+	var c2 := Harness.ball_candidates(Vector3(0, 0, 10), Vector3.ZERO)
+	_t.check("ball candidates are the same for the same camera", c1 == c2, str(c1))
+	_t.check("the first candidate is on the camera's right", (c1[0] as Vector3).x > 0.0 and (c1[1] as Vector3).x < 0.0, str(c1))
+	_t.near("the two candidates mirror across the view line", (c1[0] as Vector3).x, -(c1[1] as Vector3).x, 0.0001)
+	var pins := Harness.ball_pins({"frames": [{"id": "front", "ball": {"at": [1.0, 2.0, 3.0]}}, {"id": "ui", "ball": {"in_frame": false}}]})
+	_t.check("a base frames.json pins the ball per camera", pins.size() == 1 and (pins["front"] as Vector3).is_equal_approx(Vector3(1, 2, 3)), str(pins))
+
+	# Ball visibility: the share of its disk that changes when it is hidden.
+	var off := Image.create(200, 100, false, Image.FORMAT_RGB8)
+	off.fill(Color8(90, 110, 130))
+	var on := off.duplicate() as Image
+	for y in range(30, 70):
+		for x in range(80, 120):
+			if (x + 0.5 - 100.0) ** 2 + (y + 0.5 - 50.0) ** 2 <= 400.0:
+				on.set_pixel(x, y, Color8(220, 220, 225))
+	var disk := [80.0, 30.0, 40.0, 40.0]
+	_t.near("a ball in plain view changes its whole disk", Harness.ball_seen(on, off, disk), 1.0, 0.01)
+	_t.near("a ball behind a wall changes nothing", Harness.ball_seen(off, off, disk), 0.0)
+	var half := on.duplicate() as Image
+	half.fill_rect(Rect2i(80, 30, 20, 40), Color8(90, 110, 130))
+	_t.near("a ball half behind a post shows half its disk", Harness.ball_seen(half, off, disk), 0.5, 0.05)
+	_t.near("a ball off the frame shows nothing", Harness.ball_seen(on, off, [300.0, 30.0, 40.0, 40.0]), 0.0)
+	_t.check("the seen share sits between a hidden and a half-shown ball", Harness.SEEN_SHARE > 0.0 and Harness.SEEN_SHARE < 0.5)
 
 	var holder := Node3D.new()
 	root.add_child(holder)
