@@ -2,6 +2,7 @@ extends Node3D
 
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const DIR := "res://assets/models/highdraft/"
 const NODE_NAME := "MindArenaDress"
 const PARTS := {
@@ -224,12 +225,10 @@ func _apply_environment(terrain, root: Node) -> void:
 		_sky_material = _make_sky()
 	var sky := Sky.new()
 	sky.sky_material = _sky_material
-	var lights := []
-	if sun != null:
-		lights.append({"object": sun, "values": {"light_color": Color("fff1dc"),
-			"rotation": Vector3(deg_to_rad(-46.0), deg_to_rad(62.0), 0.0)}})
-	_saved = GraphicsPreset.set_lighting(self, env, {"sky": sky, "ambient_light_color": Color("b4c0c9"),
-		"tonemap_exposure": 1.18, "adjustment_saturation": 1.0}, lights)
+	var look: Dictionary = WorldLook.ARENAS.mind
+	var values := WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air)
+	values["sky"] = sky
+	_saved = GraphicsPreset.set_lighting(self, env, values, WorldLook.lights(look, sun), "arena")
 
 
 func restore_environment() -> void:

@@ -1,4 +1,5 @@
 extends SceneTree
+# Re-pinned 2026-10-09 (w12 VX-LIGHT): the shipped high is the target look, surface swap included, so the established originals are snapshotted on low and high must bind the same slots as target; measured cause: high now carries material_ground/rock/dam true (graphics_preset.gd HIGH).
 # Re-pinned 2026-10-09 (w12 VX-SURF): ground and rock now ship as the sandstone slot materials (src/presentation/material_slots.gd), so the target_ground and target_rock shaders are retired and their uniform checks moved to the dam; measured cause: target_surface_material no longer wraps those two roles.
 
 const Game := preload("res://src/game.gd")
@@ -52,6 +53,7 @@ func _run() -> void:
 	for i in 120:
 		await physics_frame
 	paused = true
+	Preset.apply("low")
 	var views := game.find_children("*", "MeshInstance3D", true, false)
 	var before := []
 	var surface_count := 0
@@ -67,7 +69,7 @@ func _run() -> void:
 			surface_count += 1
 		before.append({"view": view, "mesh": view.mesh, "cast_shadow": view.cast_shadow,
 			"materials": materials, "values": material_values})
-	check(Preset.apply("low") and _matches(before), "fresh high to low keeps every active material and its values")
+	check(Preset.apply("low") and _matches(before), "low keeps every active material and its values")
 	check(Preset.apply("target"), "target applies to the built game")
 	var roles := {"ground": 0, "rock": 0, "dam": 0}
 	for binding in Preset._materials:
@@ -100,9 +102,15 @@ func _run() -> void:
 		check(row.view.mesh == row.mesh and row.view.cast_shadow == row.cast_shadow, "target keeps mesh and shadow-caster state for " + str(row.view.name))
 		if not Preset._materials.any(func(binding): return binding.view.get_ref() == row.view):
 			check(_matches([row]), "target keeps actor, prop and effect materials for " + str(row.view.name))
-	check(Preset.apply("high") and _matches(before), "target to high restores every original material resource and value")
+	var bound := []
+	for binding in Preset._materials:
+		var view := binding.view.get_ref() as MeshInstance3D
+		if view != null:
+			bound.append([view, view.get_active_material(0)])
+	check(Preset.apply("high") and bound.all(func(row): return row[0].get_active_material(0) == row[1]), "shipped high binds the same surfaces as target")
+	check(Preset.apply("low") and _matches(before), "high to low restores every original material resource and value")
 	check(Preset.apply("target") and Preset.apply("low") and _matches(before), "target to low restores every original material resource and value")
-	check(Preset.apply("target") and Preset.apply("target") and Preset.apply("high") and _matches(before), "repeated target preserves original material bindings")
+	check(Preset.apply("target") and Preset.apply("target") and Preset.apply("high") and Preset.apply("low") and _matches(before), "repeated target preserves original material bindings")
 	check(Palette.ground_material().shader.resource_path == "res://src/presentation/sandstone.gdshader", "established ground construction remains original")
 	var layer := CanvasLayer.new()
 	var label := WorldPrompt.new()

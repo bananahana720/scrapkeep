@@ -786,18 +786,34 @@ func _dress_warden(warden) -> void:
 		rec.lens = lens
 	_mount_mantle(warden, kit, rec)
 	warden.add_child(base)
-	# Conditional cool fill (LIGHTING-TARGETS, Warden): shadowless, 9 m, low energy, so the
-	# front barrel and left armour separate from the shared warm key.
-	var cool := OmniLight3D.new()
-	cool.name = "WardenCoolFill"
-	cool.light_color = Color("a8c2d4")
-	cool.light_energy = 0.9
-	cool.omni_range = 9.0
-	cool.omni_attenuation = 1.2
-	cool.shadow_enabled = false
-	cool.light_specular = 0.0
-	cool.position = Vector3(-4.5, 3.5, -5.5)
-	base.add_child(cool)
+	# Cool fill (LIGHTING-TARGETS, Warden) as an additive cool rim, so the barrel and armour separate from
+	# the shared warm key. No light: a Warden is freed on every beacon placement, and a light freed with
+	# it is the stage-freed light crash class (the cracked_cache.gd RIM_GLOW recipe: glow on its own mesh, no light).
+	if not _materials.has("warden_cool_fill"):
+		var shader := Shader.new()
+		shader.code = """shader_type spatial;
+render_mode blend_add, unshaded, depth_draw_never, cull_back;
+uniform vec3 tint : source_color = vec3(0.659, 0.761, 0.831);
+uniform float energy = 0.35;
+void fragment() {
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+	ALBEDO = tint * rim * energy;
+}
+"""
+		var cool := ShaderMaterial.new()
+		cool.shader = shader
+		_materials["warden_cool_fill"] = cool
+	# The rim draws as its own shell over the part (the cache glow's own-mesh recipe); a material
+	# overlay freed with a Warden logs a null material on the headless server.
+	for part in ["Tower", "Housing"]:
+		var view := base.get_node_or_null(part) as MeshInstance3D
+		if view != null and view.mesh != null:
+			var rim := MeshInstance3D.new()
+			rim.name = "CoolFill"
+			rim.mesh = view.mesh
+			rim.material_override = _materials["warden_cool_fill"]
+			rim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			view.add_child(rim)
 	for child in warden._look.get_children():
 		if child is MeshInstance3D and child.material_override == warden._look.body_material:
 			_hide_warden_mesh(child, rec)

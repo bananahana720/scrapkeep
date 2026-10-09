@@ -5,6 +5,7 @@ const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Palette := preload("res://src/core/palette.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 
 const PILOTS := [
 	{"id": "pylon_engineer", "name": "SableShell", "color": ClassDef.SABLE_COLOR, "at": Vector3(-3.5, 1.04, 0.0)},
@@ -84,11 +85,11 @@ func _sync_dressing() -> void:
 	viewport.mesh_lod_threshold = spec.lod_threshold
 	_environment.ssao_enabled = spec.ssao
 	_environment.glow_enabled = spec.glow
-	_environment.ambient_light_energy = spec.ambient
-	_sun.rotation_degrees = spec.sun_rotation
-	_sun.light_energy = spec.sun
+	_environment.ambient_light_energy = WorldLook.TITLE.energy
+	_sun.rotation_degrees = WorldLook.TITLE.sun_rotation
+	_sun.light_energy = WorldLook.TITLE.sun_energy
 	_sun.shadow_enabled = not low
-	_fill.light_energy = spec.fill
+	_fill.light_energy = WorldLook.TITLE.fill
 	_resize()
 	set_process(active and not low)
 	if not active:
@@ -122,32 +123,32 @@ func _frame() -> void:
 func _build_lights() -> void:
 	_environment = Environment.new()
 	_environment.background_mode = Environment.BG_COLOR
-	_environment.background_color = Color("243b43")
+	_environment.background_color = WorldLook.TITLE.background
 	_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	_environment.ambient_light_color = Color("9db5cf")
+	_environment.ambient_light_color = WorldLook.TITLE.ambient
 	_environment.tonemap_mode = Environment.TONE_MAPPER_AGX
-	_environment.tonemap_exposure = 1.1
-	_environment.tonemap_agx_contrast = 1.25
+	_environment.tonemap_exposure = WorldLook.TITLE.exposure
+	_environment.tonemap_agx_contrast = WorldLook.TITLE.contrast
 	_environment.glow_intensity = 0.18
 	_environment.glow_hdr_threshold = 1.5
 	_environment.ssao_radius = 0.45
 	_environment.ssao_intensity = 1.15
 	_sun = DirectionalLight3D.new()
 	_sun.name = "SpillwaySun"
-	_sun.light_color = Color("ffd49a")
+	_sun.light_color = WorldLook.TITLE.sun_color
 	_sun.directional_shadow_max_distance = 30.0
 	stage.add_child(_sun)
 	_fill = DirectionalLight3D.new()
 	_fill.name = "SkyFill"
-	_fill.rotation_degrees = Vector3(-50.0, 125.0, 0.0)
-	_fill.light_color = Color("a3c4e6")
+	_fill.rotation_degrees = WorldLook.TITLE.fill_rotation
+	_fill.light_color = WorldLook.TITLE.fill_color
 	_fill.shadow_enabled = false
 	stage.add_child(_fill)
 	var lamp := OmniLight3D.new()
 	lamp.name = "WorkLamp"
 	lamp.position = Vector3(-5.1, 2.5, 1.6)
-	lamp.light_color = Palette.AMBER
-	lamp.light_energy = 2.2
+	lamp.light_color = WorldLook.TITLE.lamp_color
+	lamp.light_energy = WorldLook.TITLE.lamp_energy
 	lamp.omni_range = 5.0
 	stage.add_child(lamp)
 

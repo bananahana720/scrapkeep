@@ -1,6 +1,7 @@
 extends SubViewportContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 # The class card's portrait and live ability preview: the pilot's real hero shell
@@ -107,19 +108,23 @@ func _build_stage() -> void:
 	env.background_mode = Environment.BG_CLEAR_COLOR
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Palette.SAND
-	env.ambient_light_energy = 0.6
+	env.ambient_light_energy = WorldLook.PREVIEW.energy
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	_camera.environment = env
 	_viewport.add_child(_camera)
 	var sun := DirectionalLight3D.new()
-	sun.rotation = Vector3(deg_to_rad(-48.0), deg_to_rad(32.0), 0.0)
-	sun.light_energy = 1.4
+	sun.name = "PreviewSun"
+	sun.rotation_degrees = WorldLook.PREVIEW.sun_rotation
+	sun.light_energy = WorldLook.PREVIEW.sun_energy
 	_viewport.add_child(sun)
-	var rim := OmniLight3D.new()
-	rim.position = Vector3(-1.5, 4.5, -3.0)
+	# The class-tinted rim from behind is directional: the preview closes with its screen, and a
+	# positional light freed with it is the stage-freed light class.
+	var rim := DirectionalLight3D.new()
+	rim.name = "PreviewRim"
+	rim.rotation_degrees = WorldLook.PREVIEW.rim_rotation
 	rim.light_color = tint
-	rim.light_energy = 2.4
-	rim.omni_range = 11.0
+	rim.light_energy = WorldLook.PREVIEW.rim_energy
+	rim.shadow_enabled = false
 	_viewport.add_child(rim)
 	var ground := CylinderMesh.new()
 	ground.top_radius = FLOOR

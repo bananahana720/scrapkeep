@@ -1,31 +1,32 @@
 extends RefCounted
 
+const WorldLook := preload("res://src/presentation/world_look.gd")
+# Quality knobs only; each world's light and air numbers live in world_look.gd. The shipped high
+# takes the parked target look (wave 12): 4096 shadow atlas, the SSAO tuning, the sun's shadow
+# properties and the surface swap to VX-SURF's slots (palette.target_surface_material). R1's -28 degree sun put play ground in the western rim's shadow, so
+# the sun direction stays the world row's -36 degree pin. No global shaft veil: world air is the
+# per-world volumetric row, entered with the world.
+const HIGH := {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
+	"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2, "ssao_quality": 2, "air": true,
+	"sdfgi": false, "ssil": false, "volumetric_fog": false,
+	"shadow_atlas": 4096, "sdfgi_rays": 1, "ssil_quality": 2,
+	"fog_volume_size": 64, "fog_volume_depth": 64,
+	"material_detail": true, "material_relief": true,
+	"set_dressing": true, "air_motes": true, "air_streaks": true,
+	"material_ground": true, "material_rock": true, "material_dam": true,
+	"environment": {"ssao_radius": 0.55, "ssao_intensity": 1.25, "ssao_detail": 0.40},
+	"sun_properties": {"light_angular_distance": 0.0, "shadow_normal_bias": 0.65,
+		"directional_shadow_split_1": 0.18},
+	"sky_properties": {},
+}
 # Settings are applied on bind or an explicit preset change, never polled each frame.
+# target is the lab name the shipped high grew from; it stays an alias so --preset=target and the
+# files that still gate on the name keep working.
 const PRESETS := {
-	"high": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
-		"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
-		"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.5},
+	"high": HIGH,
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
-		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1,
-		"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.5},
-	# R1's -28 degree sun puts play ground in the western rim's shadow; the ball loses
-	# its separate height cue. Keep high's -36 degree sun, PSSM, bias and grade pinned.
-	# No global shaft veil: leave volumetric fog off until a bounded occluder test earns it.
-	"target": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
-		"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
-		"ambient": 0.28, "sun": 2.35, "fog": 0.0006,
-		"sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.5,
-		"sdfgi": false, "ssil": false, "volumetric_fog": false,
-		"shadow_atlas": 4096, "sdfgi_rays": 1, "ssil_quality": 2,
-		"fog_volume_size": 64, "fog_volume_depth": 64,
-		"material_detail": true, "material_relief": true,
-		"set_dressing": true, "air_motes": true, "air_streaks": true,
-		"material_ground": true, "material_rock": true, "material_dam": true,
-		"environment": {"ssao_radius": 0.55, "ssao_intensity": 1.25, "ssao_detail": 0.40},
-		"sun_properties": {"light_angular_distance": 0.0, "shadow_normal_bias": 0.65,
-			"directional_shadow_split_1": 0.18},
-		"sky_properties": {},
-	},
+		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1, "ssao_quality": 0, "air": false},
+	"target": HIGH,
 }
 static var current := "high"
 static var _worlds: Array = []
@@ -115,6 +116,26 @@ static func clear_lighting(environment: Environment, slot: String) -> void:
 		_update_lighting(world)
 
 
+# A stage or arena enters its world look row: light, fog and, on presets with air, the world's
+# volumetric air. The row lives on the owner's own WorldLook node (set_lighting replaces every row
+# of one owner, P-LIGHT's fix round), so it leaves with the owner. Stage rows use slot "world",
+# arena rows slot "arena": both write the same keys, so an arena covers its stage and uncovers it.
+static func enter_world(owner: Node, environment: Environment, look: Dictionary, slot := "world") -> void:
+	clear_lighting(environment, slot)
+	if look.is_empty() or environment == null:
+		return
+	var holder := owner.get_node_or_null(WorldLook.NODE) as Node3D
+	if holder == null:
+		holder = Node3D.new()
+		holder.name = WorldLook.NODE
+		owner.add_child(holder)
+	var sun: DirectionalLight3D = null
+	for world in _worlds:
+		if world.environment == environment and world.sun.get_ref() != null:
+			sun = world.sun.get_ref()
+	set_lighting(holder, environment, WorldLook.environment(look, PRESETS[current].air), WorldLook.lights(look, sun), slot)
+
+
 static func _lighting_for(environment: Environment) -> Dictionary:
 	for world in _lighting:
 		if world.environment.get_ref() == environment:
@@ -199,19 +220,20 @@ static func _apply_world(world: Dictionary) -> void:
 		_capture_lighting_changes(lighting)
 		_restore_lighting(lighting)
 	_restore_target(world)
-	if current != "target" and _target_server_active:
-		_restore_target_server()
 	var spec: Dictionary = PRESETS[current]
+	var look: Dictionary = WorldLook.ROWS[1]
+	if not spec.has("shadow_atlas") and _target_server_active:
+		_restore_target_server()
 	var env: Environment = world.environment
 	var sun: DirectionalLight3D = world.sun.get_ref()
 	var viewport: Viewport = world.viewport.get_ref()
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("9db5cf")
+	env.ambient_light_color = look.ambient
 	env.ambient_light_sky_contribution = 0.25
-	env.ambient_light_energy = spec.ambient
+	env.ambient_light_energy = look.energy
 	# AgX with a fixed exposure; auto exposure and SDFGI/SSIL/SSR stay off.
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
-	env.tonemap_exposure = 1.1
+	env.tonemap_exposure = look.exposure
 	env.tonemap_agx_white = 16.29
 	env.tonemap_agx_contrast = 1.25
 	env.ssao_enabled = spec.ssao
@@ -224,7 +246,7 @@ static func _apply_world(world: Dictionary) -> void:
 	env.ssao_ao_channel_affect = 0.0
 	RenderingServer.environment_set_ssao_quality(spec.ssao_quality, true, 0.5, 2.0, 50.0, 300.0)
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 1.2
+	env.adjustment_saturation = look.saturation
 	env.sdfgi_enabled = false
 	env.ssil_enabled = false
 	env.ssr_enabled = false
@@ -232,23 +254,23 @@ static func _apply_world(world: Dictionary) -> void:
 	env.glow_intensity = 0.18
 	env.glow_hdr_threshold = 1.5
 	env.fog_enabled = true
-	env.fog_density = spec.fog
-	env.fog_light_color = Color("a3bdd0")
+	env.fog_density = look.fog.density
+	env.fog_light_color = look.fog.color
 	env.fog_light_energy = 0.75
 	env.fog_sky_affect = 0.25
 	env.fog_aerial_perspective = 0.0
 	env.fog_sun_scatter = 0.25
 	env.volumetric_fog_enabled = false
-	sun.rotation_degrees = spec.sun_rotation
-	sun.light_color = Color("ffd49a")
+	sun.rotation_degrees = look.sun_rotation
+	sun.light_color = look.sun_color
 	sun.directional_shadow_split_1 = 0.18
 	# PCSS (angular distance above 0) samples the hoop's shadow on the pilot's head with visible
 	# noise; the smooth high-quality filter blurs it without any.
 	sun.light_angular_distance = 0.0
 	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
 	sun.shadow_blur = 1.0
-	_apply_fill(sun, spec)
-	sun.light_energy = spec.sun
+	_apply_fill(sun, look)
+	sun.light_energy = look.sun_energy
 	sun.directional_shadow_max_distance = spec.shadow_distance
 	sun.directional_shadow_mode = spec.shadow_mode
 	sun.shadow_normal_bias = 0.65
@@ -256,7 +278,7 @@ static func _apply_world(world: Dictionary) -> void:
 	if viewport != null:
 		viewport.msaa_3d = spec.msaa
 		viewport.mesh_lod_threshold = spec.lod_threshold
-	if current == "target":
+	if spec.has("shadow_atlas"):
 		_apply_target(world, spec, env, sun)
 	if not lighting.is_empty():
 		for row in lighting.defaults:
@@ -269,7 +291,7 @@ static func _apply_world(world: Dictionary) -> void:
 
 # One shadowless cool directional fill opposite the sun (LIGHTING-TARGETS: elevation 50,
 # azimuth 298). It is a sibling of the world sun, so the sun stays the only shadow caster.
-static func _apply_fill(sun: DirectionalLight3D, spec: Dictionary) -> void:
+static func _apply_fill(sun: DirectionalLight3D, look: Dictionary) -> void:
 	var parent := sun.get_parent()
 	if parent == null:
 		return
@@ -278,13 +300,13 @@ static func _apply_fill(sun: DirectionalLight3D, spec: Dictionary) -> void:
 		fill = DirectionalLight3D.new()
 		fill.name = "SkyFill"
 		fill.shadow_enabled = false
-		fill.rotation_degrees = Vector3(-50.0, spec.sun_rotation.y + 180.0, 0.0)
-		fill.light_color = Color("a3c4e6")
+		fill.rotation_degrees = Vector3(look.fill_pitch, look.sun_rotation.y + 180.0, 0.0)
+		fill.light_color = look.fill_color
 		fill.light_specular = 0.0
 		parent.add_child(fill)
 	# Opposite the sun's yaw, so the wall faces the key misses get cool light.
-	fill.rotation_degrees = Vector3(-50.0, spec.sun_rotation.y + 180.0, 0.0)
-	fill.light_energy = spec.fill
+	fill.rotation_degrees = Vector3(look.fill_pitch, look.sun_rotation.y + 180.0, 0.0)
+	fill.light_energy = look.fill
 
 
 # Snapshot only the renderer properties target overrides. Returning to either established
@@ -380,7 +402,8 @@ static func _apply_material(binding: Dictionary) -> void:
 	var view := binding.view.get_ref() as MeshInstance3D
 	if view == null:
 		return
-	if current != "target" or not PRESETS.target["material_" + binding.role]:
+	var spec: Dictionary = PRESETS[current]
+	if not spec.get("material_" + binding.role, false):
 		view.material_override = binding.override
 		for i in binding.surfaces.size():
 			view.set_surface_override_material(i, binding.surfaces[i])
@@ -389,10 +412,16 @@ static func _apply_material(binding: Dictionary) -> void:
 		view.material_override = binding.target_override
 		return
 	var palette := preload("res://src/core/palette.gd")
+	# A prebuilt slot resource a dressing host put on the view (the Dig's stone beds) is already the
+	# shipped surface; swapping it for the binding's original role would erase the Dig's strata.
+	for material in [view.material_override, binding.override]:
+		if material != null and palette.is_slot_resource(material):
+			view.material_override = material
+			return
 	for i in binding.originals.size():
 		var material := palette.target_surface_material(binding.role, binding.originals[i])
-		material.set_shader_parameter("detail_enabled", PRESETS.target.material_detail)
-		material.set_shader_parameter("relief_enabled", PRESETS.target.material_relief)
+		material.set_shader_parameter("detail_enabled", spec.material_detail)
+		material.set_shader_parameter("relief_enabled", spec.material_relief)
 		if binding.override != null:
 			view.material_override = material
 			break
