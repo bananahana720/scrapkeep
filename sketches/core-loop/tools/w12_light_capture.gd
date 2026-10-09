@@ -1,7 +1,7 @@
 extends SceneTree
 # Wave 12 light capture: port of the wave 7 driver's environment, arena and title cameras with
 # eyes and targets unchanged, so frames compare with w11/captures. Native window only.
-#   godot --path sketches/core-loop --script res://tools/w12_light_capture.gd -- --out=<dir> --scene=worlds|pit|arenas|title
+#   godot --path sketches/core-loop --script res://tools/w12_light_capture.gd -- --out=<dir> --scene=worlds|pit|arenas|title|warden
 # Writes <out>/<subject>__<shot>.png and frames_<scene>.json. The game names each world's light
 # and air itself on stage and arena entry; this tool never calls the look.
 const Game := preload("res://src/game.gd")
@@ -115,6 +115,9 @@ func _dead(image: Image) -> String:
 		return "dead:flat"
 	return ""
 
+func _gh(x: float, z: float) -> float:
+	return game.ctx.terrain.height(x, z)
+
 func _enter(stage: int) -> void:
 	game.flow.enter_stage(stage, Vector3.ZERO, false)
 	await _frames(40)
@@ -126,6 +129,7 @@ func _run() -> void:
 		"pit": await _pit()
 		"arenas": await _arenas()
 		"title": await _title()
+		"warden": await _warden()
 		_:
 			printerr("unknown scene ", scene); quit(2); return
 	var doc := {"tool": "w12_light_capture.gd", "scene": scene, "preset": GraphicsPreset.current, "adapter": RenderingServer.get_video_adapter_name(), "frames": recs}
@@ -219,3 +223,18 @@ func _title() -> void:
 	for n in root.find_children("*", "CanvasLayer", true, false):
 		if n != d._layer: n.visible = false
 	await _snap("ttl_stage_only", ["t0", Vector3.ZERO, Vector3.ZERO, 55.0], true)
+
+# Stage 1's Warden (forced) seen from the ball's side with the ball in frame: the cool fill read.
+func _warden() -> void:
+	await _boot(true)
+	await _frames(90)
+	game.player.body().freeze = true
+	var w: Vector3 = game.flow.warden.global_position
+	var b: Vector3 = game.player.ball_position()
+	var away := Vector3(b.x - w.x, 0, b.z - w.z).normalized()
+	var side := away.cross(Vector3.UP)
+	# The ball parked 7 m in front of the Warden as the scale mannequin.
+	var at := w + away * 7.0 + side * 2.0
+	game.player.body().global_position = Vector3(at.x, _gh(at.x, at.z) + 1.2, at.z)
+	await _frames(4)
+	await _snap("wdn_stage1", ["three_q", at + away * 9.0 + side * 3.0 + Vector3.UP * 4.0, w + Vector3.UP * 2.0, 55.0])
