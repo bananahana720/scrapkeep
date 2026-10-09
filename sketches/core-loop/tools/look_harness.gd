@@ -388,8 +388,9 @@ func _wait_tick(subject: String) -> Dictionary:
 	return {"tick": ticks, "wanted": want, "late": late}
 
 
-# The ball, frozen, moved under the paused tree beside the camera's target and toward the
-# camera, then pulled in front of whatever collider hides it from the eye: the body for physics
+# The ball, frozen, moved under the paused tree beside the camera's target (toward the camera
+# for a far view, behind the target for a close one), on whichever side the eye sees it, else
+# pulled in front of the collider that hides it: the body for physics
 # and the visual root (the parent of the juice node), which _process places and a paused tree
 # no longer updates. A ball already in frame and unhidden stays where the staging put it.
 func _place_ball(eye: Vector3, target: Vector3) -> Vector3:
@@ -400,29 +401,43 @@ func _place_ball(eye: Vector3, target: Vector3) -> Vector3:
 		return now
 	var to_eye := eye - target
 	var dist := to_eye.length()
-	var p := target + cam.global_basis.x * clampf(dist * 0.22, 2.5, 24.0) + to_eye.normalized() * minf(dist * 0.35, 8.0)
-	p = _on_floor(p, 30.0, 80.0)
-	var space := cam.get_world_3d().direct_space_state
-	var q := PhysicsRayQueryParameters3D.create(eye, p)
-	q.exclude = [body.get_rid()]
-	var hit := space.intersect_ray(q)
-	if not hit.is_empty() and eye.distance_to(hit["position"]) > NEAR_PULL:
-		var h: Vector3 = hit["position"]
-		p = _on_floor(h + (eye - h).normalized() * (Tuning.RADIUS + 0.4), 2.0, 30.0)
+	var side := clampf(dist * 0.22, 1.5, 24.0)
+	var toward := to_eye.normalized() * clampf((dist - 8.0) * 0.35, -2.0, 8.0)
+	var first := Vector3.INF
+	var p := Vector3.INF
+	for sgn in [1.0, -1.0]:
+		var c := _on_floor(target + cam.global_basis.x * side * sgn + toward)
+		if first == Vector3.INF:
+			first = c
+		if not _hidden(eye, c):
+			p = c
+			break
+	if p == Vector3.INF:
+		p = first
+		var q := PhysicsRayQueryParameters3D.create(eye, p)
+		q.exclude = [body.get_rid()]
+		var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
+		if not hit.is_empty() and eye.distance_to(hit["position"]) > NEAR_PULL:
+			var h: Vector3 = hit["position"]
+			p = _on_floor(h + (eye - h).normalized() * (Tuning.RADIUS + 0.4))
 	body.freeze = true
 	body.global_position = p
 	(game.player.juice_node().get_parent() as Node3D).global_position = p
 	return p
 
 
-func _on_floor(p: Vector3, up: float, down: float) -> Vector3:
-	var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * up, p + Vector3.DOWN * down)
-	q.exclude = [game.player.body().get_rid()]
-	var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
-	if hit.is_empty():
-		return p
-	var on_floor: Vector3 = hit["position"] + Vector3.UP * Tuning.RADIUS
-	return on_floor if cam.is_position_in_frustum(on_floor) else p
+# The floor under p: the nearest surface below a point just above it, so a stacked arena
+# puts the ball on the floor the target stands on, not the slab over it; a longer cast when
+# nothing is under that, and p itself when the floor would leave the frame.
+func _on_floor(p: Vector3) -> Vector3:
+	for up in [2.0, 30.0]:
+		var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * up, p + Vector3.DOWN * 80.0)
+		q.exclude = [game.player.body().get_rid()]
+		var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
+		if not hit.is_empty():
+			var on_floor: Vector3 = hit["position"] + Vector3.UP * Tuning.RADIUS
+			return on_floor if cam.is_position_in_frustum(on_floor) else p
+	return p
 
 
 func _hidden(eye: Vector3, p: Vector3) -> bool:
