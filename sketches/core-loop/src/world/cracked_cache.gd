@@ -34,8 +34,10 @@ const PEDESTAL_REACH := 1.7
 # so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
-const FIRED_LIGHT := {"energy": 0.8, "range": 10.0, "at": Vector3(0.0, HEIGHT + 1.0, HALF_D + 2.0)}
-const RIM_LIGHT := {"energy": 1.6, "range": 14.0, "at": Vector3(0.0, HEIGHT + 1.5, HALF_D + 4.0)}
+# The shell's own warm glow, brighter once the wall is fired. No light: a per-cache
+# OmniLight3D freed with the cache on a stage change made Godot 4.7.2 Forward+ segfault on
+# the next boss entry (GPU only), as the wave 9 cage light did.
+const RIM_GLOW := {"sealed": 1.6, "fired": 2.4}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
 
@@ -47,7 +49,8 @@ var relic_guaranteed := false
 var relic_chance := RELIC_CHANCE
 var _wall: Node3D
 var _lid: Node3D
-var _fired_light: OmniLight3D
+var _rim_glow: StandardMaterial3D
+var _roof: GeometryInstance3D
 var _pedestals: Array = []
 var _inside: Array = []
 const MODEL := "res://assets/models/world_one/cracked_cache.glb"
@@ -74,7 +77,7 @@ func build() -> void:
 	else:
 		_build_model(parts)
 	_build_pedestals(parts)
-	_build_rim_light()
+	_build_rim_glow()
 	ctx.events.slammed.connect(_on_slammed)
 
 
@@ -86,7 +89,7 @@ func _build_greybox() -> void:
 	box(Vector3(HALF_W * 2.0 + 2.0, tall, 1.0), Vector3(0.0, mid, -HALF_D - 0.5), concrete, true)
 	for s in [-1.0, 1.0]:
 		box(Vector3(1.0, tall, HALF_D * 2.0 + 2.0), Vector3(s * (HALF_W + 0.5), mid, 0.0), concrete, true)
-	box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0), concrete, true)
+	_roof = box(Vector3(HALF_W * 2.0 + 2.0, 1.0, HALF_D * 2.0 + 2.0), Vector3(0.0, HEIGHT + 0.5, 0.0), concrete, true).get_child(1)
 	box(Vector3(HALF_W * 2.0 + 2.2, 0.35, 0.3), Vector3(0.0, HEIGHT * 0.55, HALF_D + 1.05), groove)
 	_wall = box(Vector3(HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, HALF_D + 0.5), Palette.striped(Palette.SANDSTONE, Palette.VERDIGRIS), true)
 	for k in 3:
@@ -191,7 +194,7 @@ func crumble() -> void:
 	var at: Vector3 = _wall.global_position
 	_wall.position += Vector3.DOWN * 400.0
 	_wall.visible = false
-	_build_fired_light()
+	_rim_glow.emission_energy_multiplier = RIM_GLOW.fired
 	ctx.events.world_fact.emit("wall_crumbled", at)
 	ctx.events.world_fact.emit("route_opened", at)
 
@@ -308,27 +311,21 @@ func _build_model(parts: Array) -> void:
 	_lid.position = chest + Vector3.UP * 1.35
 
 
-func _build_fired_light() -> void:
-	var light := OmniLight3D.new()
-	light.name = "CacheFiredFill"
-	light.light_color = Palette.SAND
-	light.light_energy = FIRED_LIGHT.energy
-	light.omni_range = FIRED_LIGHT.range
-	light.shadow_enabled = false
-	light.position = FIRED_LIGHT.at
-	add_child(light)
-	_fired_light = light
-
-
-func _build_rim_light() -> void:
-	var light := OmniLight3D.new()
-	light.name = "CacheRimLight"
-	light.light_color = Palette.SAND
-	light.light_energy = RIM_LIGHT.energy
-	light.omni_range = RIM_LIGHT.range
-	light.shadow_enabled = false
-	light.position = RIM_LIGHT.at
-	add_child(light)
+# The workshop finish shader carries no emission, so the glow is this cache's own additive
+# overlay on its shell (greybox: the roof), one material per cache.
+func _build_rim_glow() -> void:
+	var shell := find_child("CacheShell", false, false) as GeometryInstance3D
+	if shell == null:
+		shell = _roof
+	_rim_glow = StandardMaterial3D.new()
+	_rim_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_rim_glow.albedo_color = Color.BLACK
+	_rim_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	_rim_glow.emission_enabled = true
+	_rim_glow.emission = Palette.SAND
+	_rim_glow.emission_energy_multiplier = RIM_GLOW.sealed
+	if shell != null:
+		shell.material_overlay = _rim_glow
 
 
 # Mesh-local size for the workshop shader's edge chips; meshes need not be centred.

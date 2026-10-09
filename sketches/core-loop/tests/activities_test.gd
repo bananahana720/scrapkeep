@@ -364,8 +364,10 @@ func _cache() -> void:
 		"ram at %.1f m/s of cruise %.1f: done %s, wall visible %s" % [cruise * RAM_BELOW, cruise, s.done, s.wall.visible])
 	var fast: Dictionary = await _ram(s, start, heading * cruise * RAM_AT, RAM_FRAMES)
 	_t.check("a ram at cruise breaks the wall", s.done and not s.wall.visible, "ram at %.1f m/s: done %s" % [cruise * RAM_AT, s.done])
-	_t.check("fired cache has its warm fill", s.fired_light != null and s.fired_light.light_energy > 0.0,
-		"light energy %.2f" % (s.fired_light.light_energy if s.fired_light != null else 0.0))
+	_t.check("fired cache has its warm fill", s.fired_glow != null and s.fired_glow.emission_enabled and s.fired_glow.emission_energy_multiplier > 0.0,
+		"glow energy %.2f" % (s.fired_glow.emission_energy_multiplier if s.fired_glow != null else 0.0))
+	# A per-site light freed on a stage change segfaulted Godot 4.7.2 Forward+ at the next boss entry.
+	_t.check("fired cache adds no dynamic light", s.find_children("*", "Light3D", true, false).is_empty())
 	_t.eq("the cache finishes once", _done.count("cracked_cache"), 1)
 	_t.check("one pickup stands on the pedestal", s.pickup != null and _planar(s.pickup.global_position, s.pedestal) < 0.5,
 		"pickup %s, pedestal %s" % [s.pickup, s.pedestal])

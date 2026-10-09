@@ -17,7 +17,8 @@ const PRESETS := ["low", "high", "target"]
 const RANGES := {
 	"waking_pit": [50, 50, 79.0, 80.0],
 	"pylon_wall": [0, 0, 0.0, 0.0],
-	"cache": [1, 1, 1.5, 2.0],
+	# 2026-10-08: cache light removed (freed per-cache light crashed Forward+); its glow is emission.
+	"cache": [0, 0, 0.0, 0.0],
 }
 const TELEGRAPH := [Palette.HAZARD, Palette.ARC, Palette.AMBER]
 var _t := T.new("cache_waking_pylon_lit_test")

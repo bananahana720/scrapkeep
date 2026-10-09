@@ -247,7 +247,8 @@ func _check_gameplay_sources() -> void:
 
 
 const SOURCE_PINS := {
-	"cracked_cache": ["stand_down()", "120b58128fd836844a23efb678b96de2c1b53b84e96005d5c3637b64b0ddacae"],
+	# 2026-10-08: re-pinned for crumble()'s fired light becoming an emission change (Forward+ crash fix).
+	"cracked_cache": ["stand_down()", "0cac2a5650b860ef67d8c2bb2ebb351cb428f8b46929be080ed37ca050cd2f8d"],
 	"bet_crate": ["reach_point()", "dc1b7b8203b6c2018894e88689885c366ed5edd5d928cae60f6370082acb2e16"],
 	"ambush_altar": ["reach_point()", "7a1a73f6c7f2d8fc8645eb7565f763f0fb95d0d7701598998f46905bc9aa6db3"],
 }
