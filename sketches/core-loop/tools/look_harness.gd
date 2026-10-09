@@ -19,7 +19,8 @@ extends SceneTree
 #   --baseline=<sha7>  renders into <baseline root>/<sha7>/ (default root artifacts/local/alpha/baselines).
 #   --pair --base=<sha7>  after rendering, writes <out>/pairs/<subject>__<camera>/{a,b}.png and
 #     <out>/pairs/key.json; which side is the baseline is the subject/camera coin (look_subjects.coin),
-#     never printed.
+#     never printed. A subject whose base and head frames.json name different adapters is not paired.
+#   Every frames.json in a run must name the run's adapter; a drift fails the run.
 # Serve: --serve --out=<abs dir> renders each <out>/requests/<id>.json ({"subjects": [...]} or
 #   {"quit": true}) and answers <out>/answers/<id>.json, for units with many render cycles.
 # Boss smoke: --boss=bowl|waking|mind boots on the native display, enters that world's last stage
@@ -150,7 +151,13 @@ static func _groups_of(subjects: Array) -> Array:
 func _render_children(subjects: Array, dir: String) -> int:
 	var logs := dir.path_join("_logs")
 	DirAccess.make_dir_recursive_absolute(logs)
-	var engine_args := Array(OS.get_cmdline_args())
+	# OS.get_cmdline_args() drops the engine's own flags (a child given only those rendered on
+	# card 0 while the parent ran on card 1), so each child gets the parent's renderer, display
+	# and the queue's card index explicitly.
+	var engine_args: Array = ["--path", ProjectSettings.globalize_path("res://"), "--rendering-driver", RenderingServer.get_current_rendering_driver_name(),
+		"--display-driver", DisplayServer.get_name(), "--resolution", "%dx%d" % [SIZE.x, SIZE.y], "--script", "res://tools/look_harness.gd"]
+	if OS.has_environment("SCRAPKEEP_GPU_INDEX"):
+		engine_args.append_array(["--gpu-index", OS.get_environment("SCRAPKEEP_GPU_INDEX")])
 	var rows: Array = []
 	for g in _groups_of(subjects):
 		var mine: Array = subjects.filter(func(n): return Subjects.SUBJECTS[n]["group"] == g)
@@ -175,30 +182,35 @@ func _summarize(subjects: Array, dir: String, groups: Array) -> int:
 	var dead: Array = []
 	var missing: Array = []
 	var no_ball: Array = []
+	var adapter := RenderingServer.get_video_adapter_name()
+	var drift: Array = []
 	for n in subjects:
 		var fj := dir.path_join(n).path_join("frames.json")
 		if not FileAccess.file_exists(fj):
 			missing.append(n)
 			continue
 		var doc: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(fj))
+		if doc["adapter"] != adapter:
+			drift.append("%s on %s" % [n, doc["adapter"]])
 		for fr in doc["frames"]:
 			if fr["dead"]:
 				dead.append("%s/%s" % [n, fr["id"]])
 			if Subjects.needs_ball(n) and (not fr["ball"]["in_frame"] or fr["ball"].get("hidden", false)):
 				no_ball.append("%s/%s" % [n, fr["id"]])
 	var failed_groups: Array = groups.filter(func(r): return r["rc"] != 0).map(func(r): return r["group"])
-	var doc := {"tool": "look_harness.gd", "variant": variant, "preset": preset, "subjects": subjects.size(), "groups": groups,
-		"dead": dead, "missing": missing, "ball_out_of_frame": no_ball, "failed_groups": failed_groups}
+	var doc := {"tool": "look_harness.gd", "variant": variant, "preset": preset, "adapter": adapter, "subjects": subjects.size(), "groups": groups,
+		"dead": dead, "missing": missing, "ball_out_of_frame": no_ball, "adapter_drift": drift, "failed_groups": failed_groups}
 	var f := FileAccess.open(dir.path_join("run.json"), FileAccess.WRITE)
 	f.store_string(JSON.stringify(doc, "\t"))
 	f.close()
 	for d in dead: print("DEAD ", d)
 	for m in missing: print("MISSING ", m)
 	for b in no_ball: print("NO_BALL ", b)
+	for a in drift: print("ADAPTER_DRIFT ", a, " (run on ", adapter, ")")
 	if pair:
 		write_pairs(subjects, baseline_root.path_join(base), dir, dir.path_join("pairs"))
-	var bad := not dead.is_empty() or not missing.is_empty() or not failed_groups.is_empty() or not no_ball.is_empty()
-	print("look_harness: %s subjects=%d dead=%d missing=%d no_ball=%d failed_groups=%d" % ["FAIL" if bad else "PASS", subjects.size(), dead.size(), missing.size(), no_ball.size(), failed_groups.size()])
+	var bad := not dead.is_empty() or not missing.is_empty() or not failed_groups.is_empty() or not no_ball.is_empty() or not drift.is_empty()
+	print("look_harness: %s subjects=%d dead=%d missing=%d no_ball=%d adapter_drift=%d failed_groups=%d adapter=%s" % ["FAIL" if bad else "PASS", subjects.size(), dead.size(), missing.size(), no_ball.size(), drift.size(), failed_groups.size(), adapter])
 	return 1 if bad else 0
 
 
@@ -279,7 +291,11 @@ static func write_pairs(subjects: Array, base_dir: String, head_dir: String, pai
 	var key := {"base": base_dir, "head": head_dir, "pairs": {}}
 	var made := 0
 	for n in subjects:
+		var adapters := [_adapter_of(base_dir.path_join(n)), _adapter_of(head_dir.path_join(n))]
 		for shot in Subjects.SUBJECTS[n]["cameras"]:
+			if adapters[0] != adapters[1]:
+				key["pairs"]["%s__%s" % [n, shot[0]]] = "adapter_mismatch: base %s, head %s" % adapters
+				continue
 			var file: String = shot[0] + ".png"
 			var bp := base_dir.path_join(n).path_join(file)
 			var hp := head_dir.path_join(n).path_join(file)
@@ -298,6 +314,15 @@ static func write_pairs(subjects: Array, base_dir: String, head_dir: String, pai
 	f.close()
 	print("pairs: %d written to %s (key in key.json)" % [made, pair_dir])
 	return made
+
+
+# A pair is only fair on one card and driver: the adapter a subject folder's frames.json names.
+static func _adapter_of(dir: String) -> String:
+	var fj := dir.path_join("frames.json")
+	if not FileAccess.file_exists(fj):
+		return ""
+	var doc = JSON.parse_string(FileAccess.get_file_as_string(fj))
+	return String(doc.get("adapter", "")) if doc is Dictionary else ""
 
 
 # ---------------------------------------------------------------- silhouette helper

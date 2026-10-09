@@ -71,8 +71,18 @@ func _run() -> void:
 		small.save_png(TMP + "/base/gpd_bet/" + row[0] + ".png")
 		small.fill(Color.BLUE)
 		small.save_png(TMP + "/head/gpd_bet/" + row[0] + ".png")
-	var made := Harness.write_pairs(["gpd_bet"], ProjectSettings.globalize_path(TMP + "/base"), ProjectSettings.globalize_path(TMP + "/head"), ProjectSettings.globalize_path(TMP + "/pairs"))
-	_t.eq("one pair per gpd_bet camera", made, (Subjects.SUBJECTS["gpd_bet"]["cameras"] as Array).size())
+	DirAccess.make_dir_recursive_absolute(TMP + "/base/gpd_altar")
+	DirAccess.make_dir_recursive_absolute(TMP + "/head/gpd_altar")
+	for row in Subjects.SUBJECTS["gpd_altar"]["cameras"]:
+		small.save_png(TMP + "/base/gpd_altar/" + row[0] + ".png")
+		small.save_png(TMP + "/head/gpd_altar/" + row[0] + ".png")
+	for side in [["base", "gpd_bet", "card one"], ["head", "gpd_bet", "card one"], ["base", "gpd_altar", "card zero"], ["head", "gpd_altar", "card one"]]:
+		var f := FileAccess.open(TMP + "/%s/%s/frames.json" % [side[0], side[1]], FileAccess.WRITE)
+		f.store_string(JSON.stringify({"adapter": side[2]}))
+		f.close()
+	var made := Harness.write_pairs(["gpd_bet", "gpd_altar"], ProjectSettings.globalize_path(TMP + "/base"), ProjectSettings.globalize_path(TMP + "/head"), ProjectSettings.globalize_path(TMP + "/pairs"))
+	_t.eq("one pair per gpd_bet camera and none across two adapters", made, (Subjects.SUBJECTS["gpd_bet"]["cameras"] as Array).size())
+	_t.check("a pair across two adapters is refused in key.json", not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(TMP + "/pairs/gpd_altar__front")))
 	var key: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(TMP + "/pairs/key.json"))
 	for row in Subjects.SUBJECTS["gpd_bet"]["cameras"]:
 		var id: String = "gpd_bet__" + row[0]
@@ -80,6 +90,7 @@ func _run() -> void:
 		var a_is_base: bool = a.get_pixel(1, 1).r > 0.5
 		_t.check("pair %s side a follows the coin" % id, a_is_base == Subjects.coin("gpd_bet", row[0]))
 		_t.eq("key.json names side a of %s" % id, key["pairs"][id]["a"], "base" if a_is_base else "head")
+	_t.check("key.json names the adapter refusal", String(key["pairs"]["gpd_altar__front"]).begins_with("adapter_mismatch"))
 
 	var turned := {"miniboss": {"point": Vector3(10, 0, 0), "basis": Basis(Vector3.UP, PI / 2.0), "radius": 1.0}}
 	var v := Subjects.resolve("pmb_miniboss_stalk", Subjects.SUBJECTS["pmb_miniboss_stalk"]["cameras"][0], turned)
