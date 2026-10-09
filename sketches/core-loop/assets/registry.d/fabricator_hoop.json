@@ -1,0 +1,40 @@
+{
+ "assets": [
+  {
+   "id": "fabricator_hoop",
+   "path": "res://assets/models/fabricator_hoop.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; today's hoop stays code-built in src/build/fabricators.gd _build_hoop until the owner swaps it)",
+   "provenance": {
+    "recipe": "tools/blender/fabricator_hoop.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/fabricator_hoop_101.png",
+    "notes": "assets/models/fabricator_hoop.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "fabricator_hoop_detail1",
+   "path": "res://assets/models/fabricator_hoop_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at fabricator_hoop's origin, visibility range end 45 m)",
+   "provenance": {
+    "recipe": "tools/blender/fabricator_hoop_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/fabricator_hoop_101.png",
+    "notes": "assets/models/fabricator_hoop.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "fabricator_hoop_detail2",
+   "path": "res://assets/models/fabricator_hoop_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at fabricator_hoop's origin, visibility range end 25 m)",
+   "provenance": {
+    "recipe": "tools/blender/fabricator_hoop_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-fabricator_hoop/ref/fabricator_hoop_pass2.png",
+    "notes": "assets/models/fabricator_hoop.PROVENANCE.txt"
+   }
+  }
+ ]
+}
