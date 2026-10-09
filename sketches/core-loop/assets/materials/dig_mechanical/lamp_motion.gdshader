@@ -21,9 +21,9 @@ void vertex() {
 }
 
 void fragment() {
-    vec3 paint = spent ? spent_tint.rgb * mix(0.75, 1.0, COLOR.r) : COLOR.rgb;
+    vec3 paint = lens ? vec3(0.94, 0.97, 0.96) : (spent ? spent_tint.rgb * mix(0.75, 1.0, COLOR.r) : COLOR.rgb);
     ALBEDO = paint * (lens ? lamp_energy : 1.0);
     METALLIC = lens ? 0.0 : 0.22;
     ROUGHNESS = lens ? 0.38 : 0.82;
-    EMISSION = lens ? vec3(1.0, 0.93, 0.82) * 0.12 * lamp_energy : vec3(0.0);
+    EMISSION = lens ? vec3(1.0) * 0.12 * lamp_energy : vec3(0.0);
 }

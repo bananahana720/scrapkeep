@@ -315,9 +315,16 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 		and float(result.get("plating", 0.0)) < float(plating_of.call(enemy))
 	var crit := weak or dealt > float(result.get("punch", dealt)) * 1.01
 	var impact := EventKinds.impact(_impact_key(enemy, kind))
-	_hits.append({"at": at + Vector3.UP * 0.6, "damage": dealt, "crit": crit, "heavy": impact["stop"] == "heavy", "kind": kind,
+	_hits.append({"at": at + Vector3.UP * 0.6, "contact": _contact_point(enemy, at + Vector3.UP * 0.6), "damage": dealt, "crit": crit, "heavy": impact["stop"] == "heavy", "kind": kind,
 		"stop": impact["stop"] != "none", "shake": float(impact["shake"])})
 	_queue_flush()
+
+
+# Where the hit met the body: on its skin along the line to the ball, not at its middle.
+func _contact_point(enemy: Node3D, centre: Vector3) -> Vector3:
+	var to_ball: Vector3 = player.ball_position() - centre
+	var reach := minf(float(enemy.get("radius")) if is_instance_valid(enemy) and enemy.get("radius") != null else 0.0, to_ball.length() * 0.5)
+	return centre + to_ball.normalized() * reach
 
 
 # A blast publishes enemy_struck under a gun kind, so the row comes from the record combat
@@ -390,10 +397,7 @@ func _flush_hits() -> void:
 			heavy = true
 			contact = hit["at"]
 		if vfx != null and i < MAX_BURSTS:
-			if hit["crit"]:
-				vfx.burst("spark", hit["at"], row["crit"]["color"], int(row["crit"]["sparks"]))
-			else:
-				vfx.burst("spark", hit["at"], color, int(row["sparks"]))
+			vfx.play_fx("enemy_struck", hit["contact"], row["crit"]["color"] if hit["crit"] else color, "crit" if hit["crit"] else "")
 	if stop > 0.0:
 		stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
 	if crit and audio != null:
@@ -565,7 +569,7 @@ func _on_stuck(at: Vector3) -> void:
 	if audio != null:
 		audio.play("shot_fired", -2.0, float(stick["pitch"]), "SFX", String(stick["sound"]))
 	if vfx != null:
-		vfx.burst("spark", at, EventKinds.color("sticky_detonated"), int(stick["sparks"]))
+		vfx.play_fx("sticky_stuck", at, EventKinds.color("sticky_detonated"))
 
 
 func _on_detonated(at: Vector3, crit: bool) -> void:

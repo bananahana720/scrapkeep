@@ -1,14 +1,12 @@
 extends Node3D
 
 const Preset := preload("res://src/presentation/graphics_preset.gd")
-const Vfx := preload("res://src/presentation/vfx.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const SLATE := Palette.SLATE
-const DUST := Palette.SAND
-const STONE := Palette.SANDSTONE
 const RUPTURE_SECONDS := 0.45
 const BURST_SECONDS := 0.85
-const UNDERLIGHT_SECONDS := 0.36
 const GRIT_REACH := 22.0
 const GRIT_INTERVAL := 0.2
 # Mutable only to exercise the missing-resource fallback without moving an asset.
@@ -19,14 +17,13 @@ var lamp_views: Array[MultiMeshInstance3D] = []
 var faces: Array[Vector3] = []
 var ruptures: Array = []
 var bursts: Array = []
-var grit: Array[CPUParticles3D] = []
+var grit: Array[GPUParticles3D] = []
 var warning_count := 0
 var active := true
 var _stage_root: Node3D
 var _map: RefCounted
 var _shader: Shader
 var _lamp_materials := {}
-var _particle_meshes := {}
 var _player
 var _ctx
 var _stage := 0
@@ -43,13 +40,6 @@ func prepare(stage_root: Node3D, map: RefCounted) -> void:
 	if ResourceLoader.exists(lamp_shader_path):
 		_shader = load(lamp_shader_path) as Shader
 	if _shader != null:
-		var source := _shader.code.replace(
-			"vec3 paint = spent ? spent_tint.rgb * mix(0.75, 1.0, COLOR.r) : COLOR.rgb;",
-			"vec3 paint = lens ? vec3(0.94, 0.97, 0.96) : (spent ? spent_tint.rgb * mix(0.75, 1.0, COLOR.r) : COLOR.rgb);")
-		source = source.replace("vec3(1.0, 0.93, 0.82)", "vec3(1.0)")
-		var white_lens_shader := Shader.new()
-		white_lens_shader.code = source
-		_shader = white_lens_shader
 		var uniforms := _shader.get_shader_uniform_list().map(func(row): return row["name"])
 		available = uniforms.has("lens") and uniforms.has("spent") and _shader.code.contains("instance uniform float fx_time") \
 			and _shader.code.contains("instance uniform bool motion_enabled")
@@ -60,16 +50,10 @@ func prepare(stage_root: Node3D, map: RefCounted) -> void:
 func finish_build() -> void:
 	if available:
 		for i in 2:
-			var p := _particles("debris", 4, STONE)
+			var p := FxLibrary.build("dig_grit")
 			p.name = "CutFaceGrit%d" % i
-			p.one_shot = false
-			p.explosiveness = 0.0
-			p.direction = Vector3.DOWN
-			p.initial_velocity_min = 0.15
-			p.initial_velocity_max = 0.4
-			p.scale_amount_min = 0.12
-			p.scale_amount_max = 0.25
-			p.lifetime = 0.65
+			p.set_instance_shader_parameter("tint", FxLibrary.colour("dig_grit", "breach_opened"))
+			p.emitting = false
 			add_child(p)
 			grit.append(p)
 	Preset.register_dressing_host(self)
@@ -107,8 +91,8 @@ func _sync_dressing() -> void:
 		p.visible = _ambient
 	# Existing one-shots also shrink if the player selects low during a rupture.
 	for burst in bursts:
-		for p: CPUParticles3D in burst["node"].get_children():
-			p.amount = _burst_count(String(p.get_meta("kind")))
+		for p: GPUParticles3D in burst["node"].get_children():
+			p.amount_ratio = _burst_count(String(p.get_meta("kind"))) / float(p.amount)
 	set_process(available and active)
 
 
@@ -166,34 +150,15 @@ func _rupture(id: String, cover: Node3D, at: Vector3) -> void:
 	add_child(burst)
 	# The fact's contact can be at any edge of the plate. Emit at that contact on its top surface.
 	burst.global_position = Vector3(at.x, ghost.global_position.y, at.z)
-	for kind in ["debris", "dust"]:
-		var p := _particles(kind, _burst_count(kind), STONE if kind == "debris" else DUST)
+	for kind: String in ["debris", "dust"]:
+		var fx_id: String = "dig_" + kind
+		var p := FxLibrary.build(fx_id)
 		p.name = kind.capitalize()
 		p.set_meta("kind", kind)
-		if kind == "debris":
-			p.spread = 35.0
-			p.initial_velocity_min = 12.0
-			p.initial_velocity_max = 17.0
-			p.scale_amount_min = 1.0
-			p.scale_amount_max = 1.8
-		else:
-			p.spread = 60.0
-			p.initial_velocity_min = 7.0
-			p.initial_velocity_max = 12.0
-			p.scale_amount_min = 2.5
-			p.scale_amount_max = 4.0
 		burst.add_child(p)
-		p.restart()
-		p.emitting = true
-	var underlight := OmniLight3D.new()
-	underlight.name = "Underlight"
-	underlight.position.y = -0.6
-	underlight.light_color = Palette.SAND
-	underlight.light_energy = 2.4
-	underlight.omni_range = 10.0
-	underlight.shadow_enabled = false
-	burst.get_node("Debris").add_child(underlight)
-	bursts.append({"node": burst, "light": underlight, "age": 0.0})
+		FxLibrary.fire(p, fx_id, "breach_opened", _burst_count(kind), burst.global_position + p.position)
+		p.amount_ratio = _burst_count(kind) / float(p.amount)
+	bursts.append({"node": burst, "age": 0.0})
 
 
 func _spent_material() -> ShaderMaterial:
@@ -207,56 +172,7 @@ func _spent_material() -> ShaderMaterial:
 
 
 static func _burst_count(kind: String) -> int:
-	return (4 if kind == "debris" else 5) if Preset.current == "low" else (10 if kind == "debris" else 12)
-
-
-# Same mesh, lifetime, gravity and scale grammar as Vfx.BURSTS; bounded local one-shots,
-# so no global burst pool or gameplay random stream changes.
-func _particles(kind: String, count: int, tint: Color) -> CPUParticles3D:
-	var spec: Dictionary = Vfx.BURSTS[kind]
-	if not _particle_meshes.has(kind):
-		var mesh: PrimitiveMesh
-		if spec.get("soft", false):
-			var sphere := SphereMesh.new()
-			sphere.radius = spec["size"].x * 0.5
-			sphere.height = spec["size"].x
-			sphere.radial_segments = 6
-			sphere.rings = 3
-			mesh = sphere
-		else:
-			var box := BoxMesh.new()
-			box.size = spec["size"]
-			mesh = box
-		var material := StandardMaterial3D.new()
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.vertex_color_use_as_albedo = true
-		if spec.get("soft", false):
-			material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mesh.material = material
-		_particle_meshes[kind] = mesh
-	var p := CPUParticles3D.new()
-	p.emitting = false
-	p.one_shot = true
-	p.amount = count
-	p.lifetime = spec["life"]
-	p.explosiveness = 1.0
-	p.direction = Vector3.UP
-	p.spread = spec["spread"]
-	p.initial_velocity_min = spec["speed"][0]
-	p.initial_velocity_max = spec["speed"][1]
-	p.gravity = Vector3(0, spec["gravity"], 0)
-	p.scale_amount_min = 0.6
-	p.scale_amount_max = 1.2
-	var curve := Curve.new()
-	curve.add_point(Vector2(0, 1))
-	curve.add_point(Vector2(1, 0.3 if spec.get("soft", false) else 0.0))
-	p.scale_amount_curve = curve
-	p.mesh = _particle_meshes[kind]
-	p.color = tint
-	p.use_fixed_seed = true
-	p.seed = 731
-	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	return p
+	return int(FxLibrary.effects("breach_opened", "low" if Preset.current == "low" else "")["dig_" + kind])
 
 
 func _process(delta: float) -> void:
@@ -278,7 +194,6 @@ func _process(delta: float) -> void:
 			ruptures.erase(rupture)
 	for burst in bursts.duplicate():
 		burst["age"] += delta
-		burst["light"].light_energy = 2.4 * maxf(0.0, 1.0 - burst["age"] / UNDERLIGHT_SECONDS)
 		if burst["age"] >= BURST_SECONDS:
 			burst["node"].queue_free()
 			bursts.erase(burst)
@@ -326,8 +241,7 @@ func freeze_rupture(seconds: float = 0.18) -> void:
 		_pose(rupture, seconds)
 	for burst in bursts:
 		burst["age"] = seconds
-		burst["light"].light_energy = 2.4 * maxf(0.0, 1.0 - seconds / UNDERLIGHT_SECONDS)
-		for p: CPUParticles3D in burst["node"].get_children():
+		for p: GPUParticles3D in burst["node"].get_children():
 			p.speed_scale = 0.0
 	for p in grit:
 		p.speed_scale = 0.0
