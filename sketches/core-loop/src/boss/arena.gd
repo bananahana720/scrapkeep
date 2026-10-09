@@ -304,7 +304,7 @@ func _mast(body: StaticBody3D, angle: float) -> void:
 	bm.size = box.size
 	bar_mesh.mesh = bm
 	bar_mesh.set_meta("bowl_surface", "Crossbar")
-	bar_mesh.material_override = Palette.solid(Palette.AMBER, 0.3)
+	bar_mesh.material_override = Palette.solid(Palette.COPPER, 0.3)
 	bar_mesh.position = bar.position
 	bar_mesh.rotation = bar.rotation
 	add_child(bar_mesh)

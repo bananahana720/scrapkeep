@@ -103,7 +103,7 @@ func _loot_parity() -> void:
 	var digest := text.sha256_text()
 	_check("loot", not "riveted_shell" in text, "riveted_shell absent from ids, rows, pools and 50 rolls")
 	print("[loot digest] ids %d rows %d sha256 %s" % [Parts.ids().size(), Parts.rows().size(), digest])
-	_check("loot parity", digest == "e65c5020297b4b84f58c0b12d0029a4e2bdc224260f9172fa7b78084aeca56d4", "digest matches the RR1 pin")
+	_check("loot parity", digest == "d85b50b76df695396024904cc3a9245d9fa636352144869cc21c8086c73111e3", "digest matches the GP5 pin (2026-10-08: six new parts and four synergies changed ids, rows and offer pools; RR1 pin was e65c5020)")
 
 
 func _preview() -> void:

@@ -19,7 +19,7 @@ const RunStore := preload("res://src/core/run_store.gd")
 #   - the summary's Camp (K, pad Y) lands on the title with the camp open;
 #   - every camp label is 15 words or fewer;
 #   - the title row never drops a button: the worst case (Continue, New run, Help, Achievements,
-#     Settings, Companion, Camp, Breath) wraps onto two centred rows, every button inside
+#     Settings, Companion, Camp) wraps onto two centred rows, every button inside
 #     1280 - 2*SIDE, none overlapping, in their order; Camp still opens the camp by focus and K.
 
 const LABEL_WORDS := 15
@@ -268,9 +268,9 @@ func _run() -> void:
 	flow.show_title()
 	await _frames(2)
 	fault = _row_fault(screens, room)
-	_t.check("a title with Companion, Camp and Breath keeps every button inside the room, apart",
+	_t.check("a title with Companion and Camp keeps every button inside the room, apart",
 		screens.button_for("companion") != null and screens.button_for("camp") != null
-		and screens.button_for("breath") != null and fault == "", "%s %s" % [fault, _row_dump(screens)])
+		and screens.button_for("breath") == null and fault == "", "%s %s" % [fault, _row_dump(screens)])
 	DirAccess.make_dir_recursive_absolute(STORE_DIR)
 	flow.store = RunStore.new(STORE_DIR + "run.json")
 	flow.store.clear()
@@ -280,10 +280,10 @@ func _run() -> void:
 	flow.show_title()
 	await _frames(2)
 	var present := []
-	for action in ["continue", "start", "help", "achievements", "settings", "companion", "camp", "breath"]:
+	for action in ["continue", "start", "help", "achievements", "settings", "companion", "camp"]:
 		if screens.button_for(action) != null:
 			present.append(action)
-	_t.eq("the worst-case title keeps all eight buttons", present.size(), 8)
+	_t.eq("the worst-case title keeps all seven buttons", present.size(), 7)
 	fault = _row_fault(screens, room)
 	_t.check("the worst-case buttons sit inside the room, apart, in order", fault == "", "%s %s" % [fault, _row_dump(screens)])
 	_t.eq("the worst-case row wraps onto two rows", _rows(screens), 2)

@@ -79,7 +79,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.CAUSE_ROWS": "9d20bee7f3e2a23dd09db3c08ab99e3fa0aab0f99d4373ef3398fff8601e0812",
 	"event_kinds.ACTIVITY_ROWS": "3b128af84df85ddccc150f1d6f5847b194a39dd1625cd0c8a1d2c2c3b4ae2607",
 	"event_kinds.LOOT_ROWS": "1d99aa491419dc9a8bbd2da1cfd747d991c3848e5cf01e7cc8e099698d8b3b6e",
-	"event_kinds.UI_ROWS": "c6a2047c965432db5eed87fba48ff0e1da8cf49b85d6731c4f8622322c529595",  # 2026-10-05 (alpha wave 13 companion-cues): companion_ready and companion_spent rows
+	"event_kinds.UI_ROWS": "f8c0f271ee5a6f5d41ce209283d2b499f1183831465a081d6de308e19179a51e",  # 2026-10-08 (alpha wave 11 GP4 escape corridor): escape_acted row; was c6a2047c (wave 13 companion cues)
 	"event_kinds.WORLD_ROWS": "686afd81f6d889e71870e154c32759dbf7bd738dd309c20b69567810ebbe0a4f",  # 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
@@ -97,7 +97,7 @@ const GOLDEN_HASHES := {
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned
 	"boss.codex_entries.WAKING": "6b6074ef43fd2de4eb04f2c60d971eb7922d6e152e532b9b94454a8e017f60ea",
 	"boss.codex_entries.MIND": "6acfd19449f8802b806ba76093fe15bd0c938c0a2f110230d9d38a5cbd004d87",
-	"parts.rows": "04904c356287b1dd821ac28484be29a7cc881bc70a3febab362de6a63215fa1d",
+	"parts.rows": "374d860be797b340774f2529139aeb4f5f115420cab91c33298533ddc16cfb7b",  # 2026-10-08 (wave 11 GP-parts): six new parts and four synergies
 	"item_gen.RARITY": "8a6773ccccd064709c46cb372da5f35a53e89430114754bd6a1a7121dcb768a4",
 }
 

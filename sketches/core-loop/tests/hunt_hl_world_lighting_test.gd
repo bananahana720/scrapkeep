@@ -23,7 +23,7 @@ func _run() -> void:
 	if _t.check("HL02 real Waking fight reaches victory", fight.defeated and fight.victory_state == "victory"):
 		game.flow.physics_step(game.flow.VICTORY_SECONDS + 0.1)
 		_t.eq("HL02 victory advances to Highdraft stage 5", game.run.stage, 5)
-		_t.eq("HL02 Waking teardown preserves Highdraft ambient", Probe.lighting(game).ambient, Color("b4c0c9"))
+		_t.eq("HL02 Waking teardown preserves Highdraft ambient", Probe.lighting(game).ambient, Color("ece7da"))
 		_t.eq("HL02 Waking teardown restores sky background for Highdraft", Probe.lighting(game).background, before.background)
 		game.flow.new_run()
 		Probe.check_lighting(_t, "HL02 new run restores original world lighting", game, before)

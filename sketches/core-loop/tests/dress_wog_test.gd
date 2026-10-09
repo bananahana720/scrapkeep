@@ -88,9 +88,12 @@ func _signals(stage_root: Node3D, stage: int) -> void:
 		if stage != 2:
 			continue
 		if view.mesh is BoxMesh and view.mesh.size == Vector3(18, 1, 10):
-			_finish(view, "spawn pad", Palette.AMBER, Palette.CHARCOAL)
-			_require(view.get_meta("spillway_finish", "") == "safety", "spawn wears broad safety bands")
+			_require(view.material_override is StandardMaterial3D and (view.material_override as StandardMaterial3D).albedo_color == Palette.VERDIGRIS,
+				"spawn pad is plain verdigris deck")
 			pads += 1
+		if view.mesh is BoxMesh and view.mesh.size == Vector3(0.18, 0.06, 8.0):
+			_require(view.material_override is StandardMaterial3D and (view.material_override as StandardMaterial3D).albedo_color == Reach.ANCIENT,
+				"spawn deck carries the world's ancient-blue seam")
 		if view.mesh is BoxMesh and is_equal_approx(view.mesh.size.x, 0.35) or view.mesh is SphereMesh and is_equal_approx(view.mesh.radius, 3.2):
 			_finish(view, "ancient seam or landmark beacon", Palette.ANCIENT, Palette.CHARCOAL, 2.4)
 			ancient += 1

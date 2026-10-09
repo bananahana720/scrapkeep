@@ -427,7 +427,17 @@ func _fight_live() -> bool:
 	return game.flow != null and game.flow.engaged() and game.flow.sealed
 
 
+# The ending owns the screen: no achievement toast waits for it or shows over it.
+func clear_achievement_toasts() -> void:
+	_ach_queue.clear()
+	_ach_entry = {}
+	_ach_panel.visible = false
+
+
 func _step_ach(delta: float) -> void:
+	if game.screens != null and game.screens.ending_open():
+		clear_achievement_toasts()
+		return
 	if _ach_entry.is_empty() and not _ach_queue.is_empty() and not _fight_live():
 		_ach_entry = {"text": _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
 		_ach_name.text = _ach_entry["text"]

@@ -73,8 +73,11 @@ func _cage_check(cage, pilot_file: String) -> void:
 	_check(not cage._latch.transform.is_equal_approx(latch) and cage._bars.visible and not cage.spent, "freeing moves latch before completion")
 	_check(cage._animator != null and cage._animator.assigned_animation == "heave", "freeing pilot braces against the lock")
 	cage.tick(Site.BREAK_SECONDS * 0.5)
-	_check(cage.spent and not cage._bars.visible and cage._animator != null
-		and cage._animator.assigned_animation == "big_cheer", "freed removes gate and pilot cheers")
+	var freed_gate := cage.find_child("CageGate", true, false) as MeshInstance3D
+	_check(cage.spent and not cage._bars.visible and freed_gate != null
+		and absf(cage._freed_wall.rotation.x) > deg_to_rad(60.0)
+		and cage._animator != null and cage._animator.assigned_animation == "big_cheer",
+		"freed folds the exit wall and pilot cheers")
 	_check(rescued.count(cage.quest) == 1, "rescue event emitted once")
 	cage.fire()
 	cage.tick(10)
@@ -128,7 +131,7 @@ const GAMEPLAY_PINS := {
 	# 2026-10-08 (wave 10 ST5): terms() reads the site row's prompt.
 	"terms()": "64019d70ab6e4a0d41b327aaabc14544c7e1ffa36f4b937fc4cb8ad6b9d669af",
 	"fire()": "d8de13993e8a10a3e061db6f46b2107a70a7b42e95a382cd57c9387cc07ad150",
-	"tick(delta: float)": "2d3aea769354e155fabc658d342a592ff05307619a71cb43c6c28fdd9810eea7",
+	"tick(delta: float)": "aef639e09a4397398ba5a3c0d1293ab5181c56c57360d9d4b812f578f3fef295",
 }
 
 

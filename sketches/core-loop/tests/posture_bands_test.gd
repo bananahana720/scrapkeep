@@ -27,12 +27,14 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 2026-10-05 (alpha wave 16 aim-rest): re-recorded after shots aim from the lens rest (W16-1); was 80.6 / 33.1
 # 2026-10-07 (dress push P-R18): re-recorded after the camera shake left the global random
 # stream (P-R15); the fight is unchanged (zero-shake runs match), one seed's run moved; was 78.4 / 37.9
-const EXPECT_SMALL_S := 72.4
 # 2026-10-08 (alpha wave 10, codex cover ST4): re-pinned after four new codex ids (warden_shatter,
 # cable_snap, heavy_roll, plate_peel) first-fire inside this fight; each pays flow.discovery_burst,
 # 20 x stage scrap of mass, so the grown ball breaks the Warden sooner (seed 2: 37.9 -> 32.5 s, seeds 0
 # and 1 within a run); the slice row is unchanged and the sweep table still holds its band; was 37.9
-const EXPECT_GROWN_S := 32.5
+# 2026-10-08 (wave 11 GP3F): re-pinned to the measured medians, small/grown 2.11; was 72.4 / 37.9. The pre-GP3
+# base 39c20a0 already measured 70.5 / 32.5; GP3's elite repeat (director.gd ELITE_REPEAT) on the slice's authored director moved it to 66.6 / 31.5
+const EXPECT_SMALL_S := 66.6
+const EXPECT_GROWN_S := 31.5
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 

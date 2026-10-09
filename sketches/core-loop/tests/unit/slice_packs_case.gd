@@ -39,6 +39,7 @@ func _slice_director(seed_value: int) -> Director:
 	d.authored = SliceDefs.packs()
 	d.elite = SliceDefs.elite()
 	d.elite_arrival = SliceDefs.elite_arrival()
+	d.use_row(SliceDefs.of(1))
 	return d
 
 

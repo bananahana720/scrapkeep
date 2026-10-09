@@ -5,7 +5,6 @@ const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const STONE_DIR := "res://assets/models/dig_stone/"
 const MECH_DIR := "res://assets/models/dig_mechanical/"
-const RIM := "res://assets/models/bosses/arena_waking_rim_sector.glb"
 static var stone_dir := STONE_DIR
 static var mech_dir := MECH_DIR
 const STONE_FILES := ["cut_face_long.glb", "cut_face_scoop.glb"]
@@ -96,7 +95,7 @@ func _prepare() -> bool:
 	for file in MECH_FILES:
 		if not _load_parts(mech_dir + file):
 			return false
-	return _load_parts(RIM)
+	return true
 
 
 func _load_parts(path: String) -> bool:
@@ -186,10 +185,7 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 	# Body centre is one metre below its gameplay surface; no collider is touched.
 	skin.position.y = module.PAD_THICK * 0.5 + 0.015
 	body.add_child(skin)
-	var batches := {}
-	for i in 24:
-		_put(batches, RIM.get_file(), Transform3D(Basis(Vector3.UP, i * TAU / 24.0), Vector3.ZERO))
-	_flush(skin, batches)
+	# Floor arcs had no gameplay state; the pit remains readable through its walls and lights.
 	for child in body.get_children():
 		if child is MeshInstance3D:
 			child.material_override = _materials["floor"]

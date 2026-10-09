@@ -96,10 +96,17 @@ func _init() -> void:
 	]
 	# 2026-10-04 (wave 10): side content. The camp holds the west island (cable or barge out),
 	# the bounty brute guards the vault on its island, 7 m off the vault beside the barge dock.
+	# 2026-10-08 (wave 11, GP1): the altar stands on the middle island's south-east lip, beside
+	# the bridge walk toward the beacon, so the chain's ride crosses its ring.
 	activity_sites = [
 		{"id": "enemy_camp", "at": Vector2(-70.0, -20.0), "pack": ["chaser", "chaser", "lobber"], "pay": {"named": "rivet_plating"}},
 		{"id": "hauler_bounty", "at": Vector2(70.0, 47.0)},
+		{"id": "ambush_altar", "at": Vector2(7.5, 30.0)},
 	]
+	# The hauler's cage on the middle island's north-west lip, beside the bridge landing, facing
+	# the Lift (thermal_a). Rescue rows carry no pay yet (rescue_site.gd).
+	rescue_sites = [{"id": "hauler_cage", "quest": "highdraft", "prompt": "free the hauler",
+		"at": Vector2(-7.5, 52.0), "face": (THERMAL_A - Vector2(-7.5, 52.0)).normalized()}]
 
 
 # The island, bridge and post tables every method reads, so a variant zone (map_highdraft_crown.gd)

@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Remnant := preload("res://src/combat/swarm_remnant.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const GLB := "res://assets/models/world_one/enemy_swarm_remnant.glb"
-const BASE_LOGIC_SHA := "00bfb2c949b90d6aa09ce671576986135327c8c22de397c943bfc29536a57b4b"
+const BASE_LOGIC_SHA := "7fddf220164b537e4f1ccaa4af5a1a1046ebc63ee3aedacd5cee9559aaa8ad10"
 
 var failures := 0
 var game
@@ -136,9 +136,9 @@ func _run() -> void:
 		_check(other_body != null and other_body.mesh == body.mesh and first._material != drone._material,
 			"identical drones share mesh and own flash materials")
 		drone.swarm.scatter(drone.global_position)
-		_check(not seam.visible and body.visible, "seam dark while scattered, casting remains")
+		_check(not drone.seam_lit() and seam.visible and body.visible, "seam dims while scattered, casting remains")
 		drone.swarm._reform()
-		_check(seam.visible, "seam returns on reform")
+		_check(drone.seam_lit(), "seam returns on reform")
 	var source := FileAccess.get_file_as_string("res://src/combat/swarm_remnant.gd")
 	var logic := source.get_slice("func _build_body()", 0)
 	logic = logic.replace("static var _shared: Array = []\n", "").replace("static var _asset_warned := false\n", "")

@@ -18,8 +18,9 @@ import { fileURLToPath } from "node:url";
 // the executable. They are gitignored and cannot be regenerated, so they are copied from
 // --stems-from=<music_ace folder> (default: the main checkout's sketches/core-loop/assets/music_ace).
 // --win-proof then exports the "Linux x64 proof" pack (the shipped recipe plus tools/) into the
-// sibling <run>-win-proof/ and plays two skipper bot runs on it, each from a fresh user://, with
-// the editor binary: seed 1 as rolled (Rivet), then seed 11 pinned to the remembered cannon.
+// sibling <run>-win-proof/ and plays three skipper bot runs on it, each from a fresh user://, with
+// the editor binary: seed 1 as rolled (Rivet), seed 11 pinned to the remembered cannon, then seed 1
+// pinned to Tally (wave 11, GP7).
 // Either run not won fails the export. Release templates refuse --main-pack and
 // --script, so this proves the exported pack, not the release template's runtime.
 // The proof runs before packaging, so a failed proof leaves no tarball. BUILD.txt records the
@@ -38,6 +39,9 @@ const WIN_POLICY = "skipper";
 const WIN_SEED = 1;
 const CANNON_SEED = 11;
 const CANNON_PILOT = "remembered_cannon";
+// Tally on seed 1 is the first of seeds 1 to 4 she wins in bot_six_tally_test (wave 11, GP7).
+const TALLY_SEED = 1;
+const TALLY_PILOT = "tally";
 export const WIN_PROOFS = [
   { label: "win proof", seed: WIN_SEED, dir: "" },
   {
@@ -46,6 +50,7 @@ export const WIN_PROOFS = [
     pilot: CANNON_PILOT,
     dir: "cannon",
   },
+  { label: "win proof (tally)", seed: TALLY_SEED, pilot: TALLY_PILOT, dir: "tally" },
 ];
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 

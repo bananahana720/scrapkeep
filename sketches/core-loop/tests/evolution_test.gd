@@ -6,8 +6,10 @@ const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 
-# Two evolutions (wave 6): Wrecking Ball (Double Feed + Hot Rivets) becomes Breaker Drive,
-# Pinwheel (Spiral Wave + Loose Trigger) becomes Bladestorm Rotor. Holding one ingredient
+# Four evolutions. Wave 6: Wrecking Ball (Double Feed + Hot Rivets) becomes Breaker Drive,
+# Pinwheel (Spiral Wave + Loose Trigger) becomes Bladestorm Rotor. Wave 11 GP2: Tesla Pylon
+# (Focus Lens + Live Line) becomes Storm Mast, Lightning Rod (Arc Coil + Drop Weight) becomes
+# Grounding Spike; each pair is live as its synergy before it evolves. Holding one ingredient
 # does nothing; holding both gains the Evolved part once, announced as part_gained with
 # source "evolution" at rarity evolved; the pair synergy reads consumed (folded once, never
 # live twice); the Evolved effect is measurable; the part list holds it, so a restore keeps
@@ -16,6 +18,8 @@ const Synergies := preload("res://src/build/synergies.gd")
 const CASES := [
 	{"synergy": "wrecking_ball", "into": "breaker_drive", "parts": ["double_feed", "hot_rivets"]},
 	{"synergy": "pinwheel", "into": "bladestorm_rotor", "parts": ["spiral_wave", "loose_trigger"]},
+	{"synergy": "tesla_pylon", "into": "storm_mast", "parts": ["focus_lens", "live_line"]},
+	{"synergy": "lightning_rod", "into": "grounding_spike", "parts": ["arc_coil", "drop_weight"]},
 ]
 
 var _game
@@ -63,14 +67,15 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 func _check_table() -> void:
 	var ids: Array = Synergies.evolution_ids()
-	var kept := ids.size() == 2 and ids.all(func(key): return Synergies.in_play(key))
+	var kept := ids.size() == CASES.size() and ids.all(func(key): return Synergies.in_play(key))
 	var rows_ok := true
 	for c in CASES:
 		var d: Resource = Parts.def(c["into"])
 		rows_ok = rows_ok and d != null and d.rarity == "evolved" and ItemGen.RARITY["evolved"]["weight"] == 0.0 \
 			and not d.percentage_only() and Synergies.evolution_of(c["into"]) == c["synergy"] \
-			and Parts.has(c["into"]) and not c["into"] in Parts.ids()
-	_report("table", kept and rows_ok, "evolutions %s, both in play, rows rarity evolved, weight 0, outside ids(); ok %s" % [ids, rows_ok])
+			and Parts.has(c["into"]) and not c["into"] in Parts.ids() \
+			and c["synergy"] in Synergies.active(c["parts"], Parts.tag_sets(c["parts"]))
+	_report("table", kept and rows_ok, "evolutions %s, all in play, each pair live as its synergy, rows rarity evolved, weight 0, outside ids(); ok %s" % [ids, rows_ok])
 
 
 func _fresh() -> void:
@@ -166,7 +171,7 @@ func _check_never_rolls() -> void:
 				for seed in 40:
 					var rng := RandomNumberGenerator.new()
 					rng.seed = seed * 7919 + 13
-					var held: Array = ["double_feed", "hot_rivets", "spiral_wave", "loose_trigger"] if seed % 2 == 0 else []
+					var held: Array = ["double_feed", "hot_rivets", "spiral_wave", "loose_trigger", "focus_lens", "live_line", "arc_coil", "drop_weight"] if seed % 2 == 0 else []
 					for id in Parts.roll(rng, rarities, cls, held, 3):
 						draws += 1
 						if id in evolved_ids:

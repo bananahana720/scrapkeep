@@ -88,10 +88,8 @@ static func reading(game) -> Dictionary:
 	for p in pilots:
 		if p["ready"]:
 			lines.append("%s: ready" % p["name"])
-		elif p["hint"] != "":
-			lines.append("%s: %s" % [p["name"], p["hint"]])
 		else:
-			lines.append("%s: locked" % p["name"])
+			lines.append("%s: %s" % [p["name"], p["hint"] if p["hint"] != "" else "locked"])
 	var pieces: int = model.owned.size()
 	if pieces > 0:
 		lines.append("Companion pieces: %d of %d" % [pieces, Companion.PIECES.size()])

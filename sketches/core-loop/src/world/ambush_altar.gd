@@ -1,13 +1,14 @@
 extends "res://src/world/device.gd"
 
 # An ambush altar, the opt-in fight family (LOOP-REDESIGN section 9): a copper post
-# with a HAZARD-striped cap in a HAZARD ring on the ground. Hold E and a pack arrives
+# with a brass cap and bone band. Hold E and a pack arrives
 # now, round the ring; clear it inside SECONDS and it pays a bonus core. While it runs
 # the prompt's gauge is the time left; once it is done, it is spent for the stage.
 # Nothing here stops the ball: the post has no collider and the pack comes to you.
 
 const SECONDS := 30.0
 const RING := 10.0
+const BAND_SIZE := 1.42
 const PACK := ["chaser", "chaser", "lobber"]
 
 var running := false
@@ -30,18 +31,38 @@ func _init() -> void:
 func build() -> void:
 	var parts := _parts()
 	if not parts.is_empty():
-		_model_part(parts, "AltarPost")
+		_model_part(parts, "AltarPost").material_override = finish(Palette.VERDIGRIS)
 		_cap = _model_part(parts, "AltarCap")
-		_ring = _model_part(parts, "AltarRing")
+		_cap.material_override = finish(Palette.BRASS)
+		_ring = null
+		box(Vector3(BAND_SIZE, 0.12, BAND_SIZE), Vector3.UP * 3.22, _bone_material(true), false)
 		return
 	_build_greybox()
 
 
 func _build_greybox() -> void:
-	var copper := Palette.solid(Palette.COPPER)
-	cylinder(0.45, 3.2, Vector3.UP * 1.6, copper)
-	_cap = box(Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.striped(Palette.HAZARD, Palette.CHARCOAL))
-	_ring = ground_ring(RING, Interactables.color(family))
+	cylinder(0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.VERDIGRIS))
+	_cap = box(Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.BRASS))
+	box(Vector3(BAND_SIZE, 0.12, BAND_SIZE), Vector3.UP * 3.22, _bone_material(false), false)
+	_ring = null
+
+
+static func finish(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.albedo_texture = Palette.look_texture("rusted-salvaged-plate-worn", true)
+	material.uv1_triplanar = true
+	material.uv1_scale = Vector3.ONE / 4.0
+	material.roughness = 0.82
+	return material
+
+
+func _bone_material(dressed: bool) -> StandardMaterial3D:
+	var material := finish(Palette.SAND) if dressed else StandardMaterial3D.new()
+	material.resource_name = "altar_bone_band"
+	material.albedo_color = Palette.SAND
+	material.roughness = 0.82
+	return material
 
 
 func reach_point() -> Vector3:
@@ -96,7 +117,8 @@ func _end(cleared: bool) -> void:
 	running = false
 	spent = true
 	won = cleared
-	_ring.visible = false
+	if _ring != null:
+		_ring.visible = false
 	if cleared:
 		ctx.run.add_core("ambush", reach_point())
 	ctx.events.ambush_ended.emit(id, cleared, reach_point())

@@ -11,10 +11,14 @@ extends RefCounted
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 
-const SCHEMA := 2
+const SCHEMA := 3
 
 # From-version to the method that returns the document one version up.
-const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1"}
+const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2"}
+
+# Pilot ids every schema 2 build let anyone fly (Rivet was a starter, Kest came free with it).
+# Frozen history, not a rule: a returning v2 profile keeps them under the v3 locks.
+const V2_FREE_PILOTS := ["runner_gunner", "demolitions_caster"]
 
 const SHAPE := {
 	"pilots": SafeStore.STRINGS,
@@ -375,4 +379,21 @@ func _migrate_1(doc: Dictionary) -> Dictionary:
 	for key in doc:
 		out[key] = doc[key]
 	out["schema"] = 2
+	return out
+
+
+# Schema 2 to 3 turns the pilot locks on (ruling P-R21). The pilots a v2 build gave everyone
+# are added so a returning player keeps them; pilots the saved achievements already earned
+# are opened by progress.gd's open_met_pilots at setup. Nothing is removed.
+func _migrate_2(doc: Dictionary) -> Dictionary:
+	var out := _defaults()
+	for key in doc:
+		out[key] = doc[key]
+	if out["pilots"] is Array:
+		var pilots: Array = (out["pilots"] as Array).duplicate()
+		for id in V2_FREE_PILOTS:
+			if not pilots.has(id):
+				pilots.append(id)
+		out["pilots"] = pilots
+	out["schema"] = 3
 	return out

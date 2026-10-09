@@ -22,8 +22,7 @@ const SLOTS := {
 }
 const MINT := Color("8bf0d3")
 # Warm white, not amber: amber belongs to an offered landing or reward (SHEET.md).
-const LAMP_LIGHT := Color(1.0, 0.93, 0.82)
-const DAYLIGHT := Color(1.0, 0.95, 0.80)
+const LAMP_LIGHT := Color.WHITE
 const APRON := 8.0
 const BURY := 0.25
 const ASSEMBLY_LIFT := 0.03
@@ -87,7 +86,7 @@ func _build(scenery: Node3D, stage_root: Node3D, map: RefCounted, map_id: String
 	_edges(batches, ground, map_id)
 	_landmark(batches, ground, map_id)
 	_flush(scenery, batches)
-	_lamp_lines(scenery, batches, ground, map_id)
+	_lamp_lines(batches, ground, map_id)
 	_flush(scenery, batches)
 	_breach_skins(stage_root, map)
 	_fx.finish_build()
@@ -379,9 +378,9 @@ func _intake(batches: Dictionary, root: Transform3D) -> void:
 		_put(batches, _mech("intake_petal.glb"), root * Transform3D(Basis(Vector3.UP, k * TAU / 3.0), Vector3(0, 10, 0)))
 
 
-# Straight and curved rails on the rim wall, hung well above any shelf, each with one warm
-# light. Lens and rail are two meshes of one GLB; the GLB's own sockets chain the modules.
-func _lamp_lines(scenery: Node3D, batches: Dictionary, ground: Callable, map_id: String) -> void:
+# Straight and curved rails on the rim wall, hung well above any shelf. Lens and rail are two
+# meshes of one GLB; the GLB's own sockets chain the modules. Their lenses stay white and unpooled.
+func _lamp_lines(batches: Dictionary, ground: Callable, map_id: String) -> void:
 	var curved := map_id == "dig_deep"
 	var line := 0
 	for edge in EDGES:
@@ -395,22 +394,12 @@ func _lamp_lines(scenery: Node3D, batches: Dictionary, ground: Callable, map_id:
 				continue
 			var p := _at(edge, c - 0.4, a)
 			var xf := Transform3D(Basis(Vector3.UP, yaw), Vector3(p.x, wall_y, p.y))
-			var first := xf
 			var modules := 2 if curved else 3
 			for m in modules:
 				var file := "lamp_curve_module.glb" if curved else "lamp_straight_module.glb"
 				if not _put(batches, _mech(file), xf, line * 0.73, m == 1):
 					break
 				xf = xf * Transform3D(Basis.IDENTITY, Vector3(3.0, 0, -0.35) if curved else Vector3(2.667, 0, 0))
-			var light := OmniLight3D.new()
-			light.name = "LampLight"
-			light.light_color = LAMP_LIGHT
-			light.light_energy = 1.6
-			light.omni_range = 24.0
-			light.shadow_enabled = false
-			scenery.add_child(light)
-			light.transform = first * Transform3D(Basis.IDENTITY, Vector3(4.0, -2.0, -3.0))
-			_fx.lights.append({"node": light, "phase": line * 0.73, "rest": light.transform})
 			line += 1
 
 
@@ -433,7 +422,6 @@ func _breach_skins(stage_root: Node3D, map: RefCounted) -> void:
 			continue
 		var rect: Rect2 = plate["rect"]
 		_skin(cover, rect, manifest)
-		_daylight(cover, rect)
 
 
 func _skin(cover: StaticBody3D, rect: Rect2, manifest) -> void:
@@ -488,43 +476,3 @@ func _warn_once(key: String, message: String) -> void:
 	if not _warnings.has(key):
 		_warnings[key] = true
 		push_warning("dig_scenery: " + message)
-
-
-# A faint daylight shaft and a cool-warm pool above the membrane: light from the breach
-# overhead. Both are children of the cover, so they leave with it when the plate breaks.
-func _daylight(cover: StaticBody3D, rect: Rect2) -> void:
-	if cover.find_child("BreachSkin", false, false) == null:
-		return
-	var top := 0.0
-	for child in cover.get_children():
-		if child is CollisionShape3D and child.shape is BoxShape3D:
-			top = child.shape.size.y * 0.5
-	var shaft := MeshInstance3D.new()
-	shaft.name = "DaylightShaft"
-	var cone := CylinderMesh.new()
-	cone.top_radius = minf(rect.size.x, rect.size.y) * 0.5
-	cone.bottom_radius = maxf(rect.size.x, rect.size.y) * 0.5 + 1.0
-	cone.height = 26.0
-	cone.radial_segments = 24
-	cone.rings = 1
-	shaft.mesh = cone
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_color = Color(DAYLIGHT.r, DAYLIGHT.g, DAYLIGHT.b, 0.07)
-	shaft.material_override = material
-	shaft.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	shaft.position = Vector3(0, top + 13.0, 0)
-	cover.add_child(shaft)
-	var pool := SpotLight3D.new()
-	pool.name = "DaylightPool"
-	pool.light_color = DAYLIGHT
-	pool.light_energy = 3.0
-	pool.spot_range = 40.0
-	pool.spot_angle = 24.0
-	pool.shadow_enabled = false
-	pool.position = Vector3(0, top + 26.0, 0)
-	pool.rotation_degrees = Vector3(-90, 0, 0)
-	cover.add_child(pool)

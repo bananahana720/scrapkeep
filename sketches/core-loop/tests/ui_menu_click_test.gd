@@ -37,6 +37,7 @@ func _process(delta: float) -> bool:
 	match _phase:
 		"boot":
 			_game.ctx.calm = true
+			_game.ctx.profile.unlock_pilot(_game.flow.classes[1].id)
 			_game.player.source = Intent.Scripted.new()
 			_phase = "title"
 			_wait = 0

@@ -4,6 +4,10 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Activities := preload("res://src/world/activities.gd")
+const Palette := preload("res://src/core/palette.gd")
+const BetCrate := preload("res://src/world/bet_crate.gd")
+const AmbushAltar := preload("res://src/world/ambush_altar.gd")
 
 # The three standing activities on the slice's Cable Reach (LEGIBILITY section 9, wave R3), on a
 # live slice game:
@@ -130,7 +134,7 @@ func _lit() -> void:
 	var world = _game.world
 	var map = _game.ctx.terrain.map()
 	_t.eq("four activity nodes stand at the first frame", world.activities.sites.size(), 4)
-	_t.eq("no device stands", world.interact.devices.size(), 0)
+	_t.eq("one device stands, the relic cache behind the valve (GP1)", world.interact.devices.size(), 1)
 	for spec in map.activity_sites:
 		var id := String(spec["id"])
 		var s = _site(id)
@@ -138,6 +142,9 @@ func _lit() -> void:
 			_t.check("%s stands" % id, false, "no node for it")
 			continue
 		var want: Vector3 = _game.ctx.terrain.drop_point(spec["at"].x, spec["at"].y, 0.0)
+		if id == "cracked_cache":
+			var lane: Vector3 = s.global_basis.z * Activities.CACHE_LANE_OFFSET
+			want = _game.ctx.terrain.drop_point(spec["at"].x + lane.x, spec["at"].y + lane.z, 0.0)
 		_t.check("%s stands on the site's ground" % id, s.global_position.distance_to(want) < 0.01, "at %s, want %s" % [s.global_position, want])
 		var color: Color = EventKinds.activity_color(id)
 		_t.check("%s is lit" % id, s.view.lit(), "column %s, glyph %s, ring %s" % [s.view.column.visible, s.view.glyph.visible, s.view.ring.visible])
@@ -147,8 +154,46 @@ func _lit() -> void:
 		_t.check("%s's ring is the row's amber" % id, _rgb(_first_mesh(s.view.ring).material_override.albedo_color) == _rgb(color), "ring colour")
 		_t.check("%s's word waits until the ball is near" % id, not s.view.word.visible, "word visible at the spawn")
 	var cap = _site("ambush_altar").cap
-	_t.check("the altar's cap is the row's amber", cap != null and _rgb(cap.material_override.albedo_color) == _rgb(EventKinds.activity_color("ambush_altar")),
+	_t.check("the altar cap is brass", cap != null and _rgb(cap.material_override.albedo_color) == _rgb(Palette.BRASS),
 		"cap %s" % [cap.material_override.albedo_color if cap != null else null])
+	var altar := AmbushAltar.new()
+	altar._build_greybox()
+	_t.check("altar fallback has no hazard surface or ground ring", _no_hazard_surface(altar) and altar._ring == null)
+	_t.check("altar fallback bone band uses its dressed material", _has_bone_band(altar))
+	altar.free()
+	altar = AmbushAltar.new()
+	altar.build()
+	_t.check("altar model has no hazard surface or floor ring", _no_hazard_surface(altar) and altar._ring == null
+		and altar.find_child("AltarRing", true, false) == null)
+	_t.check("altar model bone band uses its dressed material", _has_bone_band(altar))
+	altar.free()
+	var bet := BetCrate.new()
+	bet._build_greybox()
+	_t.check("bet crate fallback has no hazard surface", _no_hazard_surface(bet))
+	bet.free()
+	bet = BetCrate.new()
+	bet.build()
+	_t.check("bet crate model has no hazard surface", _no_hazard_surface(bet))
+	bet.free()
+
+
+func _no_hazard_surface(node: Node) -> bool:
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		if view.material_override is BaseMaterial3D:
+			if view.material_override.get_meta("greybox_checker", false):
+				return false
+			if _rgb(view.material_override.albedo_color) == _rgb(Palette.HAZARD):
+				return false
+	return true
+
+
+func _has_bone_band(node: Node) -> bool:
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh is BoxMesh and (view.mesh as BoxMesh).size == Vector3(1.42, 0.12, 1.42):
+			return view.material_override is StandardMaterial3D \
+				and view.material_override.resource_name == "altar_bone_band" \
+				and _rgb(view.material_override.albedo_color) == _rgb(Palette.SAND)
+	return false
 
 
 func _rgb(c: Color) -> Array:
@@ -303,6 +348,13 @@ func _away_from_the_line(s, ring: float) -> void:
 
 func _cache() -> void:
 	var s = _site("cracked_cache")
+	var spec: Dictionary = _game.ctx.terrain.map().activity_sites.filter(func(row): return row["id"] == "cracked_cache")[0]
+	var authored: Vector3 = _game.ctx.terrain.drop_point(spec["at"].x, spec["at"].y, 0.0)
+	_t.check("cache is shifted 6 m into the lane", s.global_position.distance_to(authored) >= Activities.CACHE_LANE_OFFSET - 0.01,
+		"offset %.2f m" % s.global_position.distance_to(authored))
+	var wall_gap := _nearest_external_wall(s)
+	_t.check("Reach cache is 6 m from external wall colliders", wall_gap < 0.0 or wall_gap >= Activities.CACHE_LANE_OFFSET - 0.01,
+		"nearest external wall %s" % ("none within 30 m" if wall_gap < 0.0 else "%.2f m away" % wall_gap))
 	var cruise: float = _game.ctx.tuning.f("cruise")
 	var back: Vector3 = s.global_basis.z
 	var heading: Vector3 = -back
@@ -312,6 +364,8 @@ func _cache() -> void:
 		"ram at %.1f m/s of cruise %.1f: done %s, wall visible %s" % [cruise * RAM_BELOW, cruise, s.done, s.wall.visible])
 	var fast: Dictionary = await _ram(s, start, heading * cruise * RAM_AT, RAM_FRAMES)
 	_t.check("a ram at cruise breaks the wall", s.done and not s.wall.visible, "ram at %.1f m/s: done %s" % [cruise * RAM_AT, s.done])
+	_t.check("fired cache has its warm fill", s.fired_light != null and s.fired_light.light_energy > 0.0,
+		"light energy %.2f" % (s.fired_light.light_energy if s.fired_light != null else 0.0))
 	_t.eq("the cache finishes once", _done.count("cracked_cache"), 1)
 	_t.check("one pickup stands on the pedestal", s.pickup != null and _planar(s.pickup.global_position, s.pedestal) < 0.5,
 		"pickup %s, pedestal %s" % [s.pickup, s.pedestal])
@@ -329,6 +383,27 @@ func _cache() -> void:
 	_t.check("the pickup cost no speed beyond the line", onto["after"] >= onto["before"] - (onto_control["before"] - onto_control["after"]) - SPEED_SLACK,
 		"through %.2f to %.2f, control %.2f to %.2f" % [onto["before"], onto["after"], onto_control["before"], onto_control["after"]])
 	_t.eq("the cache finished once", _done.count("cracked_cache"), 1)
+
+
+func _nearest_external_wall(cache: Node3D) -> float:
+	var nearest := INF
+	var stage_root: Node3D = _game.ctx.terrain.geometry_root(1)
+	for body in stage_root.find_children("*", "StaticBody3D", true, false):
+		if cache.is_ancestor_of(body):
+			continue
+		for shape_node in body.find_children("*", "CollisionShape3D", true, false):
+			if not shape_node.shape is BoxShape3D:
+				continue
+			var size: Vector3 = shape_node.shape.size
+			if size.y < 6.0 or minf(size.x, size.z) > 2.5:
+				continue
+			var local: Vector3 = shape_node.to_local(cache.global_position)
+			var half := size * 0.5
+			var closest: Vector3 = local.clamp(-half, half)
+			var gap: float = shape_node.to_global(closest).distance_to(cache.global_position)
+			if gap <= 30.0:
+				nearest = minf(nearest, gap)
+	return -1.0 if is_inf(nearest) else nearest
 
 
 # The ball rolled at the wall until the first frame it has crossed the wall's plane or `frames` pass;
@@ -384,7 +459,7 @@ func _retry() -> void:
 	_t.check("each is unfinished and lit", sites.all(func(s): return not s.done and s.view.lit()), "done flags %s" % [sites.map(func(s): return s.done)])
 	var s = _site("hauler_bounty")
 	_t.check("the bounty's brute stands again", s != null and s.brute != null and is_instance_valid(s.brute) and not s.brute.is_dead(), "brute %s" % [s.brute if s != null else null])
-	_t.eq("no device stands", _game.world.interact.devices.size(), 0)
+	_t.eq("one device stands, the relic cache (GP1)", _game.world.interact.devices.size(), 1)
 	_t.check("the cache's wall stands again", _site("cracked_cache").wall.visible and not _site("cracked_cache").done, "wall")
 
 
@@ -452,7 +527,7 @@ func _default_table() -> void:
 			continue
 		if not String(row["name"]).contains("placeholder"):
 			counts.append(maps[i].activity_sites.size() if "activity_sites" in maps[i] else 0)
-	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4, 3, 3, 2, 2], "sites per authored stage %s" % [counts])
+	_t.check("the default alpha's authored (non-placeholder) maps carry their activity sites", counts == [1, 4, 3, 4, 3, 3], "sites per authored stage %s" % [counts])
 	var pending_named := true
 	for row in _game.ctx.stages.DEFS:
 		if SIDE_CONTENT_PENDING.has(String(row["map"])) and String(row["name"]).contains("placeholder"):

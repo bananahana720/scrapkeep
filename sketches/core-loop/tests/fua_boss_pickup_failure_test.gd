@@ -29,10 +29,10 @@ func _run() -> void:
 	boss.arena = arena
 	boss._spawn_pickup(Vector3.ZERO, 7, "spill")
 	t.eq("first malformed pickup performs one validation attempt", fixture_script.get("attempts"), 1)
-	t.check("first malformed pickup uses box fallback", boss._pickups[0].node.mesh is BoxMesh)
+	t.check("first malformed pickup uses box fallback", boss._pickups[0].node.find_child("ScrapCore", false, false).mesh is BoxMesh)
 	boss._spawn_pickup(Vector3.RIGHT, 9, "returned")
 	t.eq("second malformed pickup does not retry validation", fixture_script.get("attempts"), 1)
-	t.check("second malformed pickup keeps box fallback", boss._pickups[1].node.mesh is BoxMesh)
+	t.check("second malformed pickup keeps box fallback", boss._pickups[1].node.find_child("ScrapCore", false, false).mesh is BoxMesh)
 	t.eq("fallback keeps pickup value", boss._pickups[1].value, 9)
 	boss.free()
 	arena.free()

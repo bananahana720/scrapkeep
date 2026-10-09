@@ -65,7 +65,7 @@ func _run() -> void:
 		var id := Achievements.for_pilot(card.def.id)
 		checked += 1
 		_t.check("%s locked card shows the beat under the condition" % card.def.display_name,
-			card.hint_text.ends_with("\n" + Achievements.beat_of(id)) and card.hint_text.begins_with(String(Achievements.row(id)["text"])),
+			card.hint_text.ends_with("\n" + Achievements.beat_of(id)) and card.hint_text.begins_with(String(card.def.unlock["label"])),
 			card.hint_text.replace("\n", " / "))
 	_t.check("locked cards checked", checked >= 1, "%d" % checked)
 	_game.free()

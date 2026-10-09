@@ -35,9 +35,15 @@ extends RefCounted
 # ancient share. Packs are drawn uniformly and never the same twice in a row; the
 # `elite_arrival`-th arrival is the `elite` pack, once. Pacing stays the director's own, and
 # a pack arrives only when the cap has room for all of it.
+#
+# Pressure (GP3): the stage row's "pressure" (alpha_defs.gd PRESSURE) times the Breath row
+# (BREATH, keyed by the tuning's breath option) multiplies the constants below, never replaces
+# them: pack_scale the crowd cap and pack share, interval_scale the spawn interval, elite_rate
+# the chance a later authored arrival is the elite again. A row with no pressure reads 1.0.
 enum { CHASER, LOBBER }
 
 const Roster := preload("res://src/combat/roster.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
@@ -90,6 +96,18 @@ const FLANK_RANGE := Vector2(45.0, 70.0)
 const MIN_GAP := 25.0
 const SLOW := 3.0
 const TRIES := 8
+# Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
+# elite pack again; never two elites in a row.
+const ELITE_REPEAT := 0.1
+const PRESSURE_KEYS := ["pack_scale", "interval_scale", "elite_rate", "posture_curve", "boss_phase_scale"]
+# Breath as a gameplay setting, keyed by the same option values the music reads. The authored
+# PRESSURE rows are the default game: hard (the default) and raw read 1.0 on every key; gentle eases.
+const BREATH_NORMAL := {"pack_scale": 1.0, "interval_scale": 1.0, "elite_rate": 1.0, "posture_curve": 1.0, "boss_phase_scale": 1.0}
+const BREATH := {
+	"raw": BREATH_NORMAL,
+	"hard": BREATH_NORMAL,
+	"gentle": {"pack_scale": 0.85, "interval_scale": 1.15, "elite_rate": 0.8, "posture_curve": 1.0, "boss_phase_scale": 0.9},
+}
 
 var stage_time := 0.0
 var spike := false
@@ -108,6 +126,9 @@ var arrivals: Array[Dictionary] = []
 var stage := 0
 # The stage row's unlock_base and ancient, once use_row() has been called; {} reads the guess.
 var _row := {}
+# The stage row's pressure multipliers and the Breath option, set by use_row().
+var pressure_row := {}
+var breath := ""
 # combat's build_read(): {class, habits: {habit: share}, branch_tags: [axis]}.
 var build := {}
 # Every pack composed, in order: {id, kinds, tests}. For tests and the balance read.
@@ -129,6 +150,7 @@ var _pack_seq := 0
 var _arrivals_made := 0
 var _next_pack := {}
 var _last_pack_id := ""
+var _last_was_elite := false
 
 
 func _init(seed_value := 20260922) -> void:
@@ -149,12 +171,12 @@ func hp_scale() -> float:
 
 
 func cap() -> int:
-	var base := int(round((6 + effective_tier() * 2) * threat))
+	var base := int(round((6 + effective_tier() * 2) * threat * scale("pack_scale")))
 	return mini(HARD_CAP, base + HEFT_CAP_STEP * maxi(0, heft_class - 1))
 
 
 func interval() -> float:
-	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat)
+	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale"))
 
 
 func lobber_share() -> float:
@@ -255,7 +277,8 @@ func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vec
 		return
 	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})
 	_place_pack(at, kinds, ball)
-	if _next_pack != elite:
+	_last_was_elite = _next_pack == elite
+	if not _last_was_elite:
 		_last_pack_id = _next_pack["id"]
 	_next_pack = {}
 	_arrivals_made += 1
@@ -263,6 +286,9 @@ func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vec
 
 func _draw_authored() -> Dictionary:
 	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 == elite_arrival:
+		return elite
+	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 > elite_arrival \
+			and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate"):
 		return elite
 	var pool := authored.filter(func(p: Dictionary) -> bool: return p["id"] != _last_pack_id)
 	if pool.is_empty():
@@ -273,11 +299,20 @@ func _draw_authored() -> Dictionary:
 # --- v2 W7 enemies: pack composition -------------------------------------------------
 
 # The world hands the director the stage's table row on stage entry: its counter unlock
-# level and its ancient enemy come from the row, so a stage past the third reads its own.
-func use_row(row: Dictionary) -> void:
+# level and its ancient enemy come from the row, so a stage past the third reads its own. The
+# row's pressure and the Breath option scale the pacing (scale()).
+func use_row(row: Dictionary, breath_option := "") -> void:
 	_row = {}
 	if row.has("unlock_base") and row.has("ancient"):
 		_row = {"unlock_base": int(row["unlock_base"]), "ancient": String(row["ancient"])}
+	pressure_row = row.get("pressure", {})
+	breath = breath_option
+
+
+# One pressure key's multiplier: the stage row's times the Breath row's, 1.0 where either is silent.
+func scale(key: String) -> float:
+	var breath_row: Dictionary = BREATH.get(breath, BREATH_NORMAL)
+	return float(pressure_row.get(key, 1.0)) * float(breath_row.get(key, 1.0))
 
 
 func _unlock_base() -> int:
@@ -311,7 +346,7 @@ func reinforcement_weight() -> float:
 	var ticks := effective_tier()
 	if ticks <= 0:
 		return 0.0
-	return clampf(PACK_PER_TICK * ticks + PAST_BREAK_STEP * past_break_ticks(), 0.0, PACK_MAX)
+	return clampf(PACK_PER_TICK * scale("pack_scale") * ticks + PAST_BREAK_STEP * past_break_ticks(), 0.0, PACK_MAX)
 
 
 func unlocked_counters() -> Array:

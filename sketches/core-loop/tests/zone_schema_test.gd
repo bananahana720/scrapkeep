@@ -55,6 +55,8 @@ func _check_fill(map) -> void:
 		own_positions.append(row["at"])
 	for row in map.sites.values():
 		own_positions.append(row["ring"])
+	if "relic_spot" in map:
+		own_positions.append(map.relic_spot)
 	var own: bool = first.has("activity_sites") and not first["activity_sites"].is_empty() \
 		and first.has("hard_points") and not first["hard_points"].is_empty() and first.has("relic_spot")
 	if own:

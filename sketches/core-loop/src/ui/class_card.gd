@@ -10,6 +10,7 @@ const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Achievements := preload("res://src/core/achievements.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # A class choice that sells its pilot. At rest: the hero shell turning on a plinth in
 # the class colour, the class emblem and name, the fantasy line, a
@@ -46,6 +47,8 @@ const CELL_ICON := 40.0
 const CELL_CAP := 26.0
 const MOUSE_CAP := 36.0
 const PIP := 9.0
+const WORD_SIZE := 13
+const WORD_MIN := 9
 const SHAKE := 0.25
 const LOCK_DIM := 0.4
 const NO_PAINT := "No paint"
@@ -351,23 +354,25 @@ func _show_paint() -> void:
 	_swatch.queue_redraw()
 
 
-# What a locked pilot's card says: the reward row's text, with the lifetime count when the row
-# needs more than one. Empty when no row rewards the pilot or the row is hidden, so the card
-# says only "Locked" and never something false. progress may be null (count 0).
+# What a locked pilot's card says: the class row's unlock label, with the lifetime count when
+# the rule's achievement row needs more than one; a def made without unlock reads its id's row.
+# Empty for a starter or a pilot with no label,
+# so the card says only "Locked" and never something false. progress may be null (count 0).
 static func unlock_hint(def, progress) -> String:
 	if def.starter:
 		return ""
-	var id := Achievements.for_pilot(def.id)
-	if id == "":
+	var unlock: Dictionary = def.unlock
+	if unlock.is_empty() and ClassDef.by_id(def.id) != null:
+		unlock = ClassDef.by_id(def.id).unlock
+	var label := String(unlock.get("label", ""))
+	if label == "":
 		return ""
-	var r: Dictionary = Achievements.row(id)
-	if r.get("hidden", false):
-		return ""
-	var need := int(r.get("count", 1))
+	var id: String = ClassDef.unlock_row(String(unlock.get("by", "")))
+	var need := int(Achievements.row(id).get("count", 1))
 	if need <= 1:
-		return str(r["text"])
+		return label
 	var have := mini(int(progress.count_of(id)) if progress != null else 0, need)
-	return "%s (%d/%d)" % [r["text"], have, need]
+	return "%s (%d/%d)" % [label, have, need]
 
 
 func _on_pressed() -> void:
@@ -463,11 +468,26 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	# Every key's words stack on two lines, so no label wraps on its own and the row reads even.
 	var words: String = record["words"]
 	var gap := words.find(" ")
-	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), 13, Palette.SAND)
+	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), WORD_SIZE, Palette.SAND)
+	# A word wider than its cell steps down to WORD_MIN, then clips at two lines, so a narrow
+	# cell cannot push the key row below the card's floor.
+	var cell_w := maxf(width, Keycap.size_of(record["key"], _cap_height(record["key"]) * cap_scale).x)
+	var word_size := WORD_SIZE
+	while word_size > WORD_MIN and _widest_word(words, word_size) > cell_w:
+		word_size -= 1
+	label.add_theme_font_size_override("font_size", word_size)
+	label.max_lines_visible = 2
 	cell.add_child(label)
 	_details.append(label)
 	_cells.append({"key": record["key"], "icon": record["icon"], "words": words})
 	return cell
+
+
+func _widest_word(words: String, font_size: int) -> float:
+	var widest := 0.0
+	for word in words.split(" "):
+		widest = maxf(widest, UiFonts.bold().get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	return widest
 
 
 func _text(value: String, font_size: int, color: Color) -> Label:

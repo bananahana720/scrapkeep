@@ -3,6 +3,11 @@ extends SceneTree
 # Count subject types, not spawned instances or decorative cue meshes. Lower this
 # ceiling when a model lands. A GLB on disk clears nothing unless its loader uses it.
 const MAX_FALLBACKS := 0
+# Warnings that match a dress word but are not dress faults, one per line with its reason.
+const IGNORED_WARNINGS: Array[String] = [
+	"audio fallback", # headless runs have no audio device and the mixer says so
+]
+const DressWarning := preload("res://src/presentation/dress_warning.gd")
 const Game := preload("res://src/game.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -14,16 +19,22 @@ const Companion := preload("res://src/core/companion.gd")
 
 class ErrorLog extends Logger:
 	var errors := 0
+	var dress_warnings: Array[String] = []
 
-	func _log_error(_function: String, _file: String, _line: int, _code: String,
-			_rationale: String, _editor_notify: bool, error_type: int,
+	func _log_error(_function: String, _file: String, _line: int, code: String,
+			rationale: String, _editor_notify: bool, error_type: int,
 			_script_backtraces: Array[ScriptBacktrace]) -> void:
 		if error_type != Logger.ERROR_TYPE_WARNING:
 			errors += 1
+			return
+		var text := (code + " " + rationale).strip_edges()
+		if DressWarning.is_dress(text, IGNORED_WARNINGS):
+			dress_warnings.append(text)
 
 var game
 var error_log := ErrorLog.new()
 var failures: Array[String] = []
+var warnings_claimed := 0
 var totals := {}
 var fallbacks := 0
 var glbs := {}
@@ -45,7 +56,14 @@ func _require(ok: bool, reason: String) -> void:
 		print("coverage assertion: %s" % reason)
 
 
+func _claim_warnings(subject: String) -> void:
+	while warnings_claimed < error_log.dress_warnings.size():
+		_require(false, "%s: dress warning: %s" % [subject, error_log.dress_warnings[warnings_claimed]])
+		warnings_claimed += 1
+
+
 func _row(category: String, subject: String, result: Dictionary) -> void:
+	_claim_warnings(subject)
 	if not totals.has(category):
 		totals[category] = {"subjects": 0, "fallbacks": 0}
 	totals[category].subjects += 1
@@ -340,6 +358,7 @@ func _run() -> void:
 	print("coverage total: subjects=%d real=%d fallbacks=%d MAX_FALLBACKS=%d" %
 		[subjects, subjects - fallbacks, fallbacks, MAX_FALLBACKS])
 	game.free()
+	_claim_warnings("(after the last subject)")
 	_require(error_log.errors == 0, "%d engine or script errors" % error_log.errors)
 	OS.remove_logger(error_log)
 	print("dress_coverage_test: %s" % ("PASS" if failures.is_empty() else "FAIL"))

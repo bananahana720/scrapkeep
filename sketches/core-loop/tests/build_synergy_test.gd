@@ -5,6 +5,9 @@ const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const Bindings := preload("res://src/core/bindings.gd")
+const WordBudget := preload("res://src/ui/word_budget.gd")
 
 # Named synergies are tag pairs (DEMO-SPEC "Synergies"). Checks: there are about
 # eight, every one is a pair of known tags whose shown ingredient carries the first
@@ -14,7 +17,10 @@ const Synergies := preload("res://src/build/synergies.gd")
 # one ingredient and clue the other. The first firing in a run is a discovery (going live
 # discovers nothing), and a retry does not add it to the build's discovered list twice. Offers carry "* completes X *" and
 # "* ingredient: ??? *", which names the synergy once it is discovered. Every live
-# synergy puts a ring on the ball.
+# synergy puts a ring on the ball. Every row has a callout (has_callout): two valid part ids,
+# a the shown part and b a part carrying the second tag, and exactly three words. Every part on
+# the alpha table names the verb it touches, and each wave 11 part (the ones with a pitch) has a
+# three-word pitch and changes exactly one number.
 
 # 2026-10-04: the default table is the alpha ruleset (twelve parts, five synergies, class pick on); this test checks the full catalogue so it runs on the legacy FirstWorld table.
 class LegacyGame extends "res://src/game.gd":
@@ -47,6 +53,8 @@ func _physics_process(_delta: float) -> bool:
 	if _ticks < 12:
 		return false
 	_check_table()
+	_check_callouts()
+	_check_alpha_parts()
 	_check_cards()
 	_check_each_goes_live()
 	_check_marks_and_discovery()
@@ -86,6 +94,78 @@ func _check_table() -> void:
 	_report("synergy table", bad.is_empty() and n >= 7 and n <= 10 and Synergies.ROWS.has("storm_lattice")
 			and Synergies.ROWS.has("thermal_shock"),
 		"%d named synergies, each a pair of known tags with a behaviour and no bare percentage; problems %s" % [n, bad])
+
+
+# has_callout: a row's callout names two real parts that make it live together (a is the shown
+# part, b carries the second tag) and exactly three words.
+func _check_callouts() -> void:
+	var bad: Array = []
+	for key in Synergies.ROWS:
+		var row: Dictionary = Synergies.ROWS[key]
+		var call := Synergies.callout(key)
+		var a := String(call.get("a", ""))
+		var b := String(call.get("b", ""))
+		var words := String(call.get("words", ""))
+		if call.is_empty():
+			bad.append("%s has no callout" % key)
+			continue
+		if not Parts.rows().has(a) or not Parts.rows().has(b) or a == b:
+			bad.append("%s parts %s and %s" % [key, a, b])
+			continue
+		if a != row["shown"] or not row["tags"][1] in Parts.tags_of(b) or not key in Synergies.active([a, b], Parts.tag_sets([a, b])):
+			bad.append("%s: %s + %s does not make it live" % [key, a, b])
+		if WordBudget.words_in(words) != 3:
+			bad.append("%s words '%s'" % [key, words])
+	_report("has_callout", bad.is_empty() and Synergies.ROWS.size() > 0,
+		"%d rows walked, each with two valid parts that bring it live and three words; problems %s" % [Synergies.ROWS.size(), bad])
+
+
+# The numbers a part changes: tuning knobs, punch, cooldown, health, magnet, scrap, charges,
+# pattern levels. An element trigger alone is not a number.
+func _numbers(part_id: String) -> Array:
+	var d: Resource = Parts.def(part_id)
+	var out: Array = d.mods.keys()
+	if d.punch > 0.0:
+		out.append("punch")
+	if d.cooldown_scale != 1.0:
+		out.append("cooldown")
+	if d.max_hp_bonus > 0.0:
+		out.append("max_hp")
+	if d.magnet != 1.0:
+		out.append("magnet")
+	if d.kill_scrap != 1.0:
+		out.append("kill_scrap")
+	for slot in d.charges:
+		out.append("charges:" + String(slot))
+	for pattern in d.patterns:
+		out.append("pattern:" + String(pattern))
+	return out
+
+
+func _check_alpha_parts() -> void:
+	var bad: Array = []
+	var families := {}
+	var added: Array = []
+	for part_id in AlphaDefs.PARTS:
+		var row: Dictionary = Parts.row(part_id)
+		var verb := String(row.get("touches", ""))
+		if row.is_empty() or not Bindings.VERBS.has(verb) or verb in ["look", "interact"]:
+			bad.append("%s touches '%s'" % [part_id, verb])
+		families[verb] = families.get(verb, 0) + 1
+		if not row.has("pitch"):
+			continue
+		added.append(part_id)
+		var numbers := _numbers(part_id)
+		if WordBudget.words_in(String(row["pitch"])) != 3 or numbers.size() != 1:
+			bad.append("%s pitch '%s' numbers %s" % [part_id, row["pitch"], numbers])
+		var d: Resource = Parts.def(part_id)
+		if d.mods.has("weapon_damage") or d.punch > 0.0:
+			bad.append("%s is a damage part" % part_id)
+	var distinct := {}
+	for part_id in AlphaDefs.PARTS:
+		distinct[part_id] = true
+	_report("alpha parts", bad.is_empty() and AlphaDefs.PARTS.size() == 18 and distinct.size() == 18 and added.size() == 6,
+		"%d parts by verb %s, %d with a pitch %s; problems %s" % [AlphaDefs.PARTS.size(), families, added.size(), added, bad])
 
 
 # The synergy hint cards, plus v2 W4's callback cards (Strike, Spare, Turkey and Moss's

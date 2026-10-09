@@ -10,6 +10,7 @@ import {
   rmSync,
   statSync,
   unlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -193,8 +194,10 @@ export function machineSlotCount(env = process.env) {
   return slots;
 }
 
-// Longer than the slowest gate (about 35 min) with margin.
+// Kept for compatibility; liveness is the heartbeat rule below.
 export const FOREIGN_CLAIM_MAX_MS = 3 * 60 * 60 * 1000;
+export const HEARTBEAT_MS = 15_000;
+export const STALE_CLAIM_MS = 90_000;
 
 function slotOwner(slot) {
   try {
@@ -205,16 +208,13 @@ function slotOwner(slot) {
       throw new Error(`invalid slot pid in ${slot}`);
     try {
       process.kill(pid, 0);
-      return { owner, alive: true };
     } catch (error) {
       if (error.code === "ESRCH") return { owner, alive: false };
       if (error.code !== "EPERM") throw error;
-      // EPERM: a sandboxed runner's namespace pid lands on another user's
-      // process here, so the pid cannot prove liveness. Hold the slot until
-      // the claim is older than any run could be.
-      const age = Date.now() - statSync(path.join(slot, owner)).mtimeMs;
-      return { owner, alive: age < FOREIGN_CLAIM_MAX_MS };
     }
+    // Heartbeat rule: a holder refreshes its claim's mtime, so a stale mtime is dead whatever the pid says (sandbox pids are unverifiable).
+    const age = Date.now() - statSync(path.join(slot, owner)).mtimeMs;
+    return { owner, alive: age < STALE_CLAIM_MS };
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -236,10 +236,34 @@ function releaseSlot(slot, owner) {
   }
 }
 
+function touch(target) {
+  const now = new Date();
+  try {
+    utimesSync(target, now, now);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
+
+// Waiter directories of killed runners: unlink-then-rmdir, never recursive.
+function sweepStaleWaiters(directory, own) {
+  for (const name of readdirSync(directory)) {
+    if (!name.startsWith("claim-") || name === own) continue;
+    const dir = path.join(directory, name);
+    try {
+      if (Date.now() - statSync(dir).mtimeMs < STALE_CLAIM_MS) continue;
+      releaseSlot(dir, name);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+}
+
 export async function acquireSlot({
   directory = slotRoot(),
   slots = machineSlotCount(),
   pollMs = 2000,
+  heartbeatMs = HEARTBEAT_MS,
   sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
   log = console.log,
 } = {}) {
@@ -253,6 +277,8 @@ export async function acquireSlot({
   try {
     writeFileSync(path.join(claim, owner), String(process.pid));
     for (;;) {
+      sweepStaleWaiters(directory, owner);
+      touch(claim);
       for (let index = 0; index < slots; index++) {
         const slot = path.join(directory, `slot-${index}`);
         const holder = slotOwner(slot);
@@ -261,11 +287,15 @@ export async function acquireSlot({
           // Publish an already populated directory atomically: no pid-write gap.
           renameSync(claim, slot);
           let released = false;
+          const claimFile = path.join(slot, owner);
+          const beat = setInterval(() => touch(claimFile), heartbeatMs);
+          beat.unref();
           return {
             slot,
             waitMs: Date.now() - started,
             release: () => {
               if (released) return;
+              clearInterval(beat);
               releaseSlot(slot, owner);
               released = true;
             },

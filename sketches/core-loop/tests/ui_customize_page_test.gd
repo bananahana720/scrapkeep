@@ -37,6 +37,7 @@ func _run() -> void:
 	_game.ctx.calm = true
 	var screens = _game.screens
 	var profile = _game.ctx.profile
+	profile.unlock_pilot("runner_gunner")
 	_game._screen_key(KEY_K)
 	await _frames()
 	var camp = screens.camp_page()
