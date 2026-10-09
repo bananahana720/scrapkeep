@@ -109,7 +109,8 @@ func _run() -> void:
 	await _boot()
 	game.player.body().freeze = true
 	await _spillway()
-	await _camp_bay()
+	await _scrap_variants()
+	await _cache()
 	await _dig()
 	await _dig_deep()
 	await _highdraft()
@@ -162,7 +163,11 @@ func _dig() -> void:
 	var q2: Vector3 = items[0].global_position
 	await _ball_at(q2.x + 2.0, q2.z + 3.0)
 	await _frames(2)
-	await _snap("scr_dig", [["close", q2 + Vector3(2.4, 1.6, -3), q2, 45.0], ["cluster", q2 + Vector3(0, 6, -10), q2 + Vector3(0, -0.5, 4), 55.0]], {"scrap_count": items.size()})
+	var rest: Array = []
+	for k in mini(items.size(), 8):
+		var at: Vector3 = items[k].global_position
+		rest.append(snappedf(at.y - _gh(at.x, at.z), 0.001))
+	await _snap("scr_dig", [["close", q2 + Vector3(2.4, 1.6, -3), q2, 45.0], ["cluster", q2 + Vector3(0, 6, -10), q2 + Vector3(0, -0.5, 4), 55.0]], {"scrap_count": items.size(), "scrap_rest_above_collider": rest})
 
 
 # Extra (not a w7 camera): the Dig deep floor on stage 4, near its spawn pad.
@@ -180,3 +185,53 @@ func _highdraft() -> void:
 	await _ball_at(0.0, 104.0, 27.0)
 	await _frames(2)
 	await _snap("hdr_island_bridge", [["island_bridge", Vector3(0, 40, 150), Vector3(0, 26, 100), 60.0]])
+	var sc: Node3D = game.ctx.terrain.geometry_root(5).get_node("HighdraftScenery")
+	var props: Node3D = sc.get_node("Props")
+	var shots: Array = []
+	for pname in ["prop_crate", "prop_spool", "prop_lamp_body", "prop_bearing", "prop_clamp", "prop_pot"]:
+		var mm := props.get_node_or_null(pname) as MultiMeshInstance3D
+		if mm == null or mm.multimesh.instance_count == 0: continue
+		var p: Vector3 = (mm.global_transform * mm.multimesh.get_instance_transform(0)).origin
+		shots.append([pname, p + Vector3(5, 3.5, 6), p + Vector3(0, 0.8, 0), 55.0])
+	await _ball_at(0.0, -10.0, 12.0)
+	await _snap("hdr_props", shots)
+	await _snap("hdr_net", [["net_deck", Vector3(0, 45, -20), Vector3(0, 10, -10), 60.0], ["return_ramps", Vector3(-14, 30, -35), Vector3(-8, 15, -70), 60.0], ["net_low", Vector3(0, 14, 30), Vector3(0, 8, -30), 65.0]])
+
+
+# w7 _scrap, scr_variants on stage 1: one close camera per scrap variant.
+func _scrap_variants() -> void:
+	await _stage(1)
+	var sc = game.find_child("Scrap", true, false)
+	var vs := {}
+	for it in sc.get_children():
+		if it is MeshInstance3D and it.visible:
+			vs[str(it.get_meta("scrap_variant", "?"))] = it
+	var vshots: Array = []
+	for k in vs:
+		var q: Vector3 = vs[k].global_position
+		vshots.append(["v_" + k, q + Vector3(2.2, 1.4, -2.6), q, 45.0])
+	if vshots.is_empty():
+		failures += 1
+		return
+	var first: Vector3 = vs[vs.keys()[0]].global_position
+	await _ball_at(first.x + 2.0, first.z + 3.0)
+	await _snap("scr_variants", vshots, {"variants": vs.keys()})
+
+
+# w7 _props, gpd_cache three_q on stage 1: a cracked cache built beside the spawn, fired.
+func _cache() -> void:
+	await _stage(1)
+	var b: Vector3 = game.player.ball_position()
+	var Cache := preload("res://src/world/cracked_cache.gd")
+	var d = Cache.new()
+	game.add_child(d)
+	var x: float = b.x + 10
+	var z: float = b.z + 40
+	d.global_position = Vector3(x, _gh(x, z), z)
+	d.setup(game.ctx, game.world.interact, {"id": "w12_cache"})
+	await _frames(30)
+	d.fire()
+	await _frames(60)
+	var c: Vector3 = d.global_position + Vector3(0, 1.4, 0)
+	await _ball_at(c.x - 3.0, c.z - 3.0)
+	await _snap("gpd_cache_fired", [["three_q", c + Vector3(7, 3, -6), c, 50.0]])

@@ -73,8 +73,8 @@ func _batched(scenery: Node, path: String) -> bool:
 	return false
 
 
-func _outside_apron(scenery: Node, rect: Rect2) -> bool:
-	var keep := rect.grow(Scenery.APRON)
+func _outside_apron(scenery: Node, map) -> bool:
+	var keep := (map.play_rect as Rect2).grow(float(map.scatter["apron"]))
 	var any := false
 	for view: MultiMeshInstance3D in scenery.find_children("*", "MultiMeshInstance3D", true, false):
 		for o: Vector3 in view.get_meta("origins"):
@@ -118,7 +118,7 @@ func _run() -> void:
 		t.check("(1) zone A impeller vane is the GLB mesh", _batched(scenery, MECH + "impeller_vane.glb"), "impeller_vane")
 		t.check("(1) lamp rail is the GLB mesh", _batched(scenery, MECH + "lamp_straight_module.glb"), "lamp_straight_module")
 		t.check("(1) no intake in zone A", not _batched(scenery, MECH + "intake_petal.glb"), "intake_petal")
-		t.check("(1) every instance outside the play rect plus 8 m", _outside_apron(scenery, game.ctx.terrain.map().play_rect), "apron")
+		t.check("(1) every instance outside the play rect plus 8 m", _outside_apron(scenery, game.ctx.terrain.map()), "apron")
 		t.eq("(1) Dig lamp lines have no light pool", scenery.find_children("LampLight*", "OmniLight3D", true, false).size(), 0)
 		var lamp_lights := scenery.find_children("*", "OmniLight3D", true, false)
 		var amber_lights := lamp_lights.filter(func(light): return light.light_color.is_equal_approx(Palette.AMBER))
@@ -182,7 +182,7 @@ func _run() -> void:
 	t.check("(5) zone B intake petal is the GLB mesh", _batched(deep_scenery, MECH + "intake_petal.glb"), "intake_petal")
 	t.check("(5) zone B scooped cut face is the GLB mesh", _batched(deep_scenery, STONE + "cut_face_scoop.glb"), "cut_face_scoop")
 	t.check("(5) no impeller in zone B", not _batched(deep_scenery, MECH + "impeller_vane.glb"), "impeller_vane")
-	t.check("(5) every instance outside the play rect plus 8 m", _outside_apron(deep_scenery, deep.map().play_rect), "apron")
+	t.check("(5) every instance outside the play rect plus 8 m", _outside_apron(deep_scenery, deep.map()), "apron")
 	var skinned := 0
 	for p in deep.map().breach_plates:
 		var body := deep_root.find_child("BreachPlate_%s" % p["id"], true, false)

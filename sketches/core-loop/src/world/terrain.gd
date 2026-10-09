@@ -9,7 +9,6 @@ const Highdraft := preload("res://src/world/map_highdraft.gd")
 const DigDeep := preload("res://src/world/map_dig_deep.gd")
 const HighdraftCrown := preload("res://src/world/map_highdraft_crown.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
-const ScatterRows := preload("res://src/world/scatter_rows.gd")
 const Scatter := preload("res://src/world/scatter.gd")
 
 const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach, "dig": Dig, "highdraft": Highdraft, "dig_deep": DigDeep, "highdraft_crown": HighdraftCrown}
@@ -94,6 +93,7 @@ func _build_stage(i: int) -> void:
 	holder.name = "Stage%d" % (i + 1)
 	var heights := _build_ground(holder, m)
 	m.build_props(holder, _ground_at.bind(heights))
+	_build_scatter(holder, m, heights)
 	_roots[i] = holder
 	_heights[i] = heights
 	_parent.add_child(holder)
@@ -282,6 +282,32 @@ static func _ground_at(x: float, z: float, clearance: float, heights: PackedFloa
 	return Vector3(x, _grid_height(heights, x, z) + clearance, z)
 
 
+# The map's scatter rows, added after every other child of the stage so the nodes' sibling order
+# (and every path a test or a tool keys on it) stays what it was.
+static func _build_scatter(holder: Node3D, m: RefCounted, heights: PackedFloat32Array) -> void:
+	var scatter: Dictionary = m.get("scatter") if m.get("scatter") is Dictionary else {}
+	if (scatter.get("kit", []) as Array).is_empty():
+		return
+	var relief: Dictionary = scatter.get("relief", {})
+	var ground := _ground_at.bind(heights)
+	if not relief.is_empty():
+		ground = _relief_at.bind(heights, _relief_noise(relief), float(relief["amp"]))
+	Scatter.build(holder, m, ground)
+
+
+# The relief view's height at (x, z): the collider's grid plus the same seeded noise the view mesh draws.
+static func _relief_at(x: float, z: float, clearance: float, heights: PackedFloat32Array, noise: FastNoiseLite, amp: float) -> Vector3:
+	return Vector3(x, _grid_height(heights, x, z) + noise.get_noise_2d(x, z) * amp + clearance, z)
+
+
+static func _relief_noise(row: Dictionary) -> FastNoiseLite:
+	var noise := FastNoiseLite.new()
+	noise.seed = String(row["seed"]).hash()
+	noise.frequency = 1.0 / float(row["period"])
+	noise.fractal_octaves = 2
+	return noise
+
+
 func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	var heights := PackedFloat32Array()
 	heights.resize(SIDE * SIDE)
@@ -349,11 +375,11 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 
 	# The collider keeps the 2 m grid; a map with a relief row draws a finer, noisier view.
-	# A map outside MAPS (a test double) has no id and so no relief or scatter row.
-	var found = MAPS.find_key(m.get_script())
-	var map_id: String = found if found != null else ""
+	# A map without a scatter table (a test double) has no relief and no scatter row.
+	var scatter: Dictionary = m.get("scatter") if m.get("scatter") is Dictionary else {}
+	var relief: Dictionary = scatter.get("relief", {})
 	var view := MeshInstance3D.new()
-	view.mesh = _relief_mesh(ScatterRows.RELIEF[map_id], heights, colors) if ScatterRows.RELIEF.has(map_id) else mesh
+	view.mesh = _relief_mesh(relief, heights, colors) if not relief.is_empty() else mesh
 	view.material_override = Palette.ground_material()
 	preload("res://src/presentation/graphics_preset.gd").register_ground(view)
 	var body := StaticBody3D.new()
@@ -363,8 +389,6 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	body.add_child(shape)
 	body.add_child(view)
 	parent.add_child(body)
-	if not ScatterRows.for_map(map_id).is_empty():
-		Scatter.build(parent, map_id, m.play_rect, _ground_at.bind(heights))
 	return heights
 
 
@@ -375,10 +399,7 @@ static func _relief_mesh(row: Dictionary, heights: PackedFloat32Array, coarse: P
 	var sub: int = row["sub"]
 	var amp: float = row["amp"]
 	var shade: float = row["shade"]
-	var noise := FastNoiseLite.new()
-	noise.seed = String(row["seed"]).hash()
-	noise.frequency = 1.0 / float(row["period"])
-	noise.fractal_octaves = 2
+	var noise := _relief_noise(row)
 	var cells := CELLS * sub
 	var side := cells + 1
 	var step := STEP / sub

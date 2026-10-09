@@ -23,15 +23,8 @@ const SLOTS := {
 const MINT := Color("8bf0d3")
 # Warm white, not amber: amber belongs to an offered landing or reward (SHEET.md).
 const LAMP_LIGHT := Color.WHITE
-const APRON := 8.0
 const BURY := 0.25
 const ASSEMBLY_LIFT := 0.03
-# Per zone: [cut faces per edge (long, scoop), rubble, struts, carts, shells]. Zone A favours long
-# cuts, zone B scooped faces and sheltered recesses; B keeps the machines sparse (BUILD-SPEC).
-const MIX := {
-	"dig": {"long": 8, "scoop": 3, "rubble": 12, "strut": 5, "cart": 2, "shell": 3},
-	"dig_deep": {"long": 3, "scoop": 8, "rubble": 12, "strut": 2, "cart": 1, "shell": 6},
-}
 # The rim begins to climb at 162 m (Features.rim); everything stands at or beyond 160.
 const FACE_C := 166.0
 const TOE_C := 161.0
@@ -83,7 +76,7 @@ func _build(scenery: Node3D, stage_root: Node3D, map: RefCounted, map_id: String
 	var ground := func(x: float, z: float) -> float: return float(map.sample(x, z)[0])
 	var batches := {}
 	_ground_beds(scenery, stage_root)
-	_edges(batches, ground, map_id)
+	_edges(batches, ground, map_id, map.scatter["mix"])
 	_landmark(batches, ground, map_id)
 	_flush(scenery, batches)
 	_lamp_lines(batches, ground, map_id)
@@ -262,10 +255,9 @@ static func _seat(ground: Callable, edge: Dictionary, c: float, a: float, half: 
 	return Vector2(low, high - low)
 
 
-func _edges(batches: Dictionary, ground: Callable, map_id: String) -> void:
+func _edges(batches: Dictionary, ground: Callable, map_id: String, mix: Dictionary) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("dig_scenery_" + map_id).hash()
-	var mix: Dictionary = MIX.get(map_id, MIX["dig"])
 	var kinds := {"long": "cut_face_long.glb", "scoop": "cut_face_scoop.glb"}
 	var halves := {"long": 4.0, "scoop": 3.0}
 	for edge in EDGES:
