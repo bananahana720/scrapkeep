@@ -32,6 +32,8 @@ func _run() -> void:
 			_t.eq("%s shell %d end" % [key, i], view.visibility_range_end, float(rows[i][1]))
 			_t.eq("%s shell %d margin" % [key, i], view.visibility_range_end_margin, float(rows[i][2]))
 			_t.eq("%s shell %d fade mode" % [key, i], view.visibility_range_fade_mode, GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF)
+			_t.eq("%s shell %d casts no shadow" % [key, i], view.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+			_t.check("%s shell %d carries the fade meta" % [key, i], view.has_meta(RecipeProps.META_FADE))
 			_t.eq("%s shell %d at the transform" % [key, i], view.position, Vector3(1, 2, 3))
 			var mesh := (view as MeshInstance3D).mesh
 			var slots := 0

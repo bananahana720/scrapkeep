@@ -28,6 +28,16 @@ func run() -> void:
 	for key in ["ambient", "sun", "fog", "sun_rotation", "fill"]:
 		check(not Preset.PRESETS.high.has(key) and not Preset.PRESETS.low.has(key), "presets hold no look number " + key)
 	check(not Preset.apply("unknown") and Preset.current == "high", "unknown preset preserves current configuration")
+	var fading := MeshInstance3D.new()
+	root.add_child(fading)
+	fading.visibility_range_end = 40.0
+	fading.visibility_range_end_margin = 4.0
+	fading.set_meta("recipe_fade", true)
+	Preset.register_scenery(fading)
+	check(fading.visibility_range_end == 40.0 and fading.visibility_range_end_margin == 4.0, "a recipe fade view keeps its range through register_scenery")
+	check(Preset.apply("low") and fading.visibility_range_end == 40.0 and mesh.visibility_range_end == 520.0, "a recipe fade view keeps its range through a preset change, a plain view takes the preset")
+	Preset.apply("high")
+	fading.free()
 	mesh.free()
 	sun.free()
 	check(Preset.apply("low"), "switch after scene disposal drops dead bindings")
