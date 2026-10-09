@@ -1,81 +1,87 @@
 {
- "classes": {
-  "enemy": {
-   "tris": 1100,
-   "verts": 2100,
-   "draws": 3,
-   "set_by": "tris and verts: enemy_plated_brute (1,044 / 2,063); draws: the 3-draw ceiling of bola thrower, deflector, hooker, plated brute, netcaster tests; chaser, lobber, winch drone and mag trapper carry exceptions"
+  "classes": {
+    "enemy": {
+      "tris": 1100,
+      "verts": 2100,
+      "draws": 3,
+      "set_by": "tris and verts: enemy_plated_brute (1,044 / 2,063); draws: the 3-draw ceiling of bola thrower, deflector, hooker, plated brute, netcaster tests; chaser, lobber, winch drone and mag trapper carry exceptions"
+    },
+    "clutter": {
+      "tris": 280,
+      "verts": 650,
+      "draws": 13,
+      "set_by": "clutter_kit (280 / 646 / 13); the old per-piece ceilings sum to 460 triangles"
+    },
+    "chunk": {
+      "tris": 2900,
+      "verts": 8500,
+      "draws": 23,
+      "set_by": "chunks (2,822 / 8,466 / 23); old bands are per variant, the file holds every variant"
+    },
+    "gate": {
+      "tris": 2700,
+      "verts": 5300,
+      "draws": 20,
+      "set_by": "reward_gate (2,696 / 5,216 / 20); old band is per rarity, the file holds every rarity"
+    },
+    "warden_base": {
+      "tris": 5000,
+      "verts": 9600,
+      "draws": 32,
+      "set_by": "warden_clamp_base (4,956 / 9,530 / 32); old band 4,000-6,000"
+    },
+    "warden_kit": {
+      "tris": 1500,
+      "verts": 2800,
+      "draws": 18,
+      "set_by": "tris: warden_kit_reactor (1,476) and the 1,500 old ceiling; verts and draws: warden_kit_mind (2,706) and hive/mind (18)"
+    },
+    "shell": {
+      "tris": 11000,
+      "verts": 11600,
+      "draws": 10,
+      "set_by": "world_one shell_sable (10,944 T) and shell_kest (11,593 V); draws: shell_rivet and shell_sable (10); caps leave room for the largest pilot inside the 16,000 T / 15,000 V pod ceiling; shell_kest carries a 16-draw exception"
+    },
+    "pilot": {
+      "tris": 4600,
+      "verts": 3100,
+      "draws": 5,
+      "set_by": "pilot_sable_anim (4,592 T), pilot_kest_anim (3,098 V), kest and sable (5 draws); old band 400-4,800"
+    },
+    "scenery": {
+      "tris": 120,
+      "verts": 110,
+      "draws": 2,
+      "set_by": "water_edges (112 / 106 / 2) and its 120 T / 180 V / 2 D ceiling; dam carries an exception"
+    },
+    "landform": {
+      "tris": 8000,
+      "verts": 24000,
+      "draws": 1,
+      "set_by": "sculpted rock round four, alpha/x11/LKR4/KIT.md: 8,000 triangles, one draw (cliff_strata 7,988 / 8,000); verts is 3 per triangle, the unwelded flat-shaded bound, since the kit gives none; no member yet"
+    },
+    "prop": {
+      "tris": 270,
+      "verts": 610,
+      "draws": 1,
+      "set_by": "moss_shelter (266 / 608 / 1); old ceilings 1,600 T / 2,400 V; moss_workshop carries an exception under its recipe's 6,500 T assert"
+    },
+    "landmark": {
+      "tris": 900,
+      "verts": 2000,
+      "draws": 2,
+      "set_by": "trial row, 2026-10-09 (wave 12 RECIPE-CART beacon): P-GEN and P-GEN-2 measured the 270-tri prop class as too small for a hero landmark (both generated beacons collapsed into solid statues); 900 / 2,000 / 2 are the coordinator's trial numbers, first member lantern_beacon_frame; re-derive by the rule below once the class has members in the game"
+    },
+    "detail": {
+      "tris": 1500,
+      "verts": 3000,
+      "draws": 1,
+      "set_by": "2026-10-09 wave 12 coordinator: trial class for detail shells (one extra draw each, culled by range); the base asset keeps its own class. Values from the cart and beacon detail pilots (848 to 1240 tris per shell)."
+    }
   },
-  "clutter": {
-   "tris": 280,
-   "verts": 650,
-   "draws": 13,
-   "set_by": "clutter_kit (280 / 646 / 13); the old per-piece ceilings sum to 460 triangles"
+  "texture": {
+    "max_side": 2048,
+    "set_by": "the written cap; every texture today is 512 or 1024"
   },
-  "chunk": {
-   "tris": 2900,
-   "verts": 8500,
-   "draws": 23,
-   "set_by": "chunks (2,822 / 8,466 / 23); old bands are per variant, the file holds every variant"
-  },
-  "gate": {
-   "tris": 2700,
-   "verts": 5300,
-   "draws": 20,
-   "set_by": "reward_gate (2,696 / 5,216 / 20); old band is per rarity, the file holds every rarity"
-  },
-  "warden_base": {
-   "tris": 5000,
-   "verts": 9600,
-   "draws": 32,
-   "set_by": "warden_clamp_base (4,956 / 9,530 / 32); old band 4,000-6,000"
-  },
-  "warden_kit": {
-   "tris": 1500,
-   "verts": 2800,
-   "draws": 18,
-   "set_by": "tris: warden_kit_reactor (1,476) and the 1,500 old ceiling; verts and draws: warden_kit_mind (2,706) and hive/mind (18)"
-  },
-  "shell": {
-   "tris": 11000,
-   "verts": 11600,
-   "draws": 10,
-   "set_by": "world_one shell_sable (10,944 T) and shell_kest (11,593 V); draws: shell_rivet and shell_sable (10); caps leave room for the largest pilot inside the 16,000 T / 15,000 V pod ceiling; shell_kest carries a 16-draw exception"
-  },
-  "pilot": {
-   "tris": 4600,
-   "verts": 3100,
-   "draws": 5,
-   "set_by": "pilot_sable_anim (4,592 T), pilot_kest_anim (3,098 V), kest and sable (5 draws); old band 400-4,800"
-  },
-  "scenery": {
-   "tris": 120,
-   "verts": 110,
-   "draws": 2,
-   "set_by": "water_edges (112 / 106 / 2) and its 120 T / 180 V / 2 D ceiling; dam carries an exception"
-  },
-  "landform": {
-   "tris": 8000,
-   "verts": 24000,
-   "draws": 1,
-   "set_by": "sculpted rock round four, alpha/x11/LKR4/KIT.md: 8,000 triangles, one draw (cliff_strata 7,988 / 8,000); verts is 3 per triangle, the unwelded flat-shaded bound, since the kit gives none; no member yet"
-  },
-  "prop": {
-   "tris": 270,
-   "verts": 610,
-   "draws": 1,
-   "set_by": "moss_shelter (266 / 608 / 1); old ceilings 1,600 T / 2,400 V; moss_workshop carries an exception under its recipe's 6,500 T assert"
-  },
-  "landmark": {
-   "tris": 900,
-   "verts": 2000,
-   "draws": 2,
-   "set_by": "trial row, 2026-10-09 (wave 12 RECIPE-CART beacon): P-GEN and P-GEN-2 measured the 270-tri prop class as too small for a hero landmark (both generated beacons collapsed into solid statues); 900 / 2,000 / 2 are the coordinator's trial numbers, first member lantern_beacon_frame; re-derive by the rule below once the class has members in the game"
-  }
- },
- "texture": {
-  "max_side": 2048,
-  "set_by": "the written cap; every texture today is 512 or 1024"
- },
- "rule": "cap = smallest round number (100 for 1,000 and up, 10 below) at or above the largest member after import, never above the tightest existing per-asset ceiling for any member; a member over its class carries an exception in assets/registry.json"
+  "rule": "cap = smallest round number (100 for 1,000 and up, 10 below) at or above the largest member after import, never above the tightest existing per-asset ceiling for any member; a member over its class carries an exception in assets/registry.json"
 }
