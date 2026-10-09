@@ -11,6 +11,11 @@ extends SceneTree
 #   godot --path sketches/core-loop --script res://tools/w12_recipe_cart_side.gd -- --out=<abs dir>
 #     --body=<abs ore_cart_body.glb> --wheel=<abs ore_cart_wheel.glb> --ref=<abs png> [--tag=<name>]
 #     [--subject=beacon --body=<abs lantern_beacon_frame.glb> --lens=<abs lantern_beacon_lens.glb>]
+#     [--detail1=<abs detail1 glb> [--detail2=<abs detail2 glb>]] [--mode=side|ranges]
+# Wave 12 DETAIL-CART and DETAIL-BEACON: each detail GLB is an additive shell at the subject's origin and scale, its own
+# draw, dropped by distance through LAYER_RANGE (VISIBILITY_RANGE_FADE_SELF). mode=side shoots each camera with every
+# layer, without the last layer and base only; mode=ranges shoots the stack from the hero direction at the subject's
+# RANGE_DISTANCES, its FADE_DISTANCES (inside the first layer's fade band) and the per-layer toggles.
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
@@ -23,6 +28,14 @@ const VIEWS := {
 	"cart": {"gap": 9.0, "arena": [Vector3(0, 9, 30), Vector3(0, 1.5, 0)], "hero": [Vector3(7.5, 5.5, -5.0), Vector3(0, 1.9, -1.2)]},
 	"beacon": {"gap": 16.0, "arena": [Vector3(0, 16, 62), Vector3(0, 9, 0)], "hero": [Vector3(14, 12, 24), Vector3(0, 10, 0)]},
 }
+# Detail layer drop-out per subject, one row per layer: [visibility_range_end, visibility_range_end_margin] in metres,
+# and the range shots (metres from the hero target along the hero direction), the last one the arena distance;
+# TOGGLE_DISTANCE sits between the two layers' ends (detail2 gone, detail1 present); FADE_DISTANCES sit inside
+# detail1's fade band. The beacon's detail2 ends past its 28 m hero view, so pass 2 shows where the picture is framed.
+const LAYER_RANGE := {"cart": [[40.0, 4.0], [15.0, 3.0]], "beacon": [[60.0, 8.0], [35.0, 5.0]]}
+const RANGE_DISTANCES := {"cart": [8.0, 20.0, 45.0], "beacon": [10.0, 30.0, 70.0]}
+const TOGGLE_DISTANCE := {"cart": 20.0, "beacon": 45.0}
+const FADE_DISTANCES := {"cart": [], "beacon": [56.0, 60.0, 62.0, 64.0, 66.0, 67.0, 68.0, 69.0]}
 
 
 func _slots(node: Node, side: String) -> void:
@@ -90,8 +103,122 @@ func _sheet(images: Array, path: String, height: int) -> void:
 	sheet.save_png(path)
 
 
+func _show(layers: Array[Node3D], count: int) -> void:
+	for i in layers.size():
+		layers[i].visible = i < count
+
+
+func _bbox(cam: Camera3D, subject: Node3D, layers: Array[Node3D], tag: String) -> void:
+	var box := AABB()
+	var first := true
+	for view: MeshInstance3D in subject.find_children("*", "MeshInstance3D", true, false):
+		var world := view.global_transform * view.get_aabb()
+		box = world if first else box.merge(world)
+		first = false
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for k in 8:
+		var p := cam.unproject_position(box.get_endpoint(k))
+		lo = lo.min(p)
+		hi = hi.max(p)
+	# unproject_position answers in the root's visible rect (content-scaled); the saved PNG is the window size.
+	var px := Vector2(get_root().size) / get_root().get_visible_rect().size
+	lo *= px
+	hi *= px
+	var to_layers := ""
+	for layer in layers:
+		for view: MeshInstance3D in layer.find_children("*", "MeshInstance3D", true, false):
+			var centre := (view.global_transform * view.get_aabb()).get_center()
+			to_layers += " %s_centre=%.2f" % [layer.name, cam.global_position.distance_to(centre)]
+	print("W12_DC_BBOX ", tag, " ", int(floor(lo.x)), " ", int(floor(lo.y)), " ", int(ceil(hi.x)), " ", int(ceil(hi.y)),
+		" eye_to_origin=", snappedf(cam.global_position.distance_to(subject.global_position), 0.01), to_layers)
+
+
+# Detail shells at the subject's origin and scale, each faded out by its LAYER_RANGE row.
+func _layers(fresh: Node3D, args: Dictionary, subject: String) -> Array[Node3D]:
+	var layers: Array[Node3D] = []
+	var rows: Array = LAYER_RANGE[subject]
+	for i in 2:
+		var key := "detail%d" % (i + 1)
+		if args[key] == "":
+			break
+		var shell := _glb(args[key])
+		if shell == null:
+			return []
+		shell.name = key
+		shell.scale = Vector3.ONE * (CART_SCALE if subject == "cart" else 1.0)
+		fresh.add_child(shell)
+		for view: GeometryInstance3D in shell.find_children("*", "GeometryInstance3D", true, false):
+			view.visibility_range_end = rows[i][0]
+			view.visibility_range_end_margin = rows[i][1]
+			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		print("W12_DC_LAYER ", subject, " ", key, " end=", rows[i][0], " margin=", rows[i][1])
+		layers.append(shell)
+	return layers
+
+
+func _detail(cam: Camera3D, fresh: Node3D, layers: Array[Node3D], ref: Image, out: String, tag: String, mode: String, subject: String) -> void:
+	var n := layers.size()
+	var view: Dictionary = VIEWS[subject]
+	var hero: Array = view["hero"]
+	var arena: Array = view["arena"]
+	if mode == "ranges":
+		var target: Vector3 = fresh.position + hero[1]
+		var dir: Vector3 = (hero[0] - hero[1]).normalized()
+		var distances: Array = RANGE_DISTANCES[subject]
+		var frames: Array = []
+		var fades: Array = []
+		for d: float in FADE_DISTANCES[subject]:
+			for k in [n, 0]:
+				_show(layers, k)
+				var name := "%s_fade_%s_%dm" % [tag, "full" if k == n else "base", int(d)]
+				var img: Image = await _shot(cam, target + dir * d, target, out.path_join(name + ".png"))
+				_bbox(cam, fresh, layers, name)
+				if k == n:
+					fades.append(img)
+		_show(layers, n)
+		for d: float in distances:
+			var name := "%s_range_full_%dm" % [tag, int(d)]
+			frames.append(await _shot(cam, target + dir * d, target, out.path_join(name + ".png")))
+			_bbox(cam, fresh, layers, name)
+		var far: float = distances[distances.size() - 1]
+		_show(layers, 0)
+		frames.append(await _shot(cam, target + dir * far, target, out.path_join("%s_range_base_%dm.png" % [tag, int(far)])))
+		_bbox(cam, fresh, layers, "%s_range_base_%dm" % [tag, int(far)])
+		var mid: float = TOGGLE_DISTANCE[subject]
+		_show(layers, n)
+		await _shot(cam, target + dir * mid, target, out.path_join("%s_toggle_full_%dm.png" % [tag, int(mid)]))
+		_bbox(cam, fresh, layers, "%s_toggle_full_%dm" % [tag, int(mid)])
+		for i in n:
+			_show(layers, n)
+			layers[i].visible = false
+			var name := "%s_range_no_d%d_%dm" % [tag, i + 1, int(mid)]
+			await _shot(cam, target + dir * mid, target, out.path_join(name + ".png"))
+			_bbox(cam, fresh, layers, name)
+		_show(layers, n)
+		_sheet(frames, out.path_join("%s_sheet_ranges.png" % tag), 540)
+		if not fades.is_empty():
+			_sheet(fades, out.path_join("%s_sheet_fade.png" % tag), 540)
+		return
+	var views := {
+		"arena": [arena[0], arena[1]],
+		"near": [arena[0] * 0.45 + Vector3(0, 1, 0), arena[1]],
+		"hero": [fresh.position + hero[0], fresh.position + hero[1]],
+	}
+	for v: String in views:
+		var shots: Array = [ref]
+		var counts := [n, n - 1, 0] if n > 1 else [n, 0]
+		var names := ["full", "minus", "base"] if n > 1 else ["full", "base"]
+		for k in counts.size():
+			_show(layers, counts[k])
+			shots.append(await _shot(cam, views[v][0], views[v][1], out.path_join("%s_%s_%s.png" % [tag, v, names[k]])))
+		_show(layers, n)
+		_sheet(shots, out.path_join("%s_sheet_%s.png" % [tag, v]), 540)
+
+
 func _init() -> void:
-	var args := {"out": "", "body": "", "wheel": "", "lens": "", "ref": "", "tag": "ore_cart", "subject": "cart"}
+	var args := {"out": "", "body": "", "wheel": "", "lens": "", "ref": "", "tag": "ore_cart", "subject": "cart",
+		"detail1": "", "detail2": "", "mode": "side"}
 	for arg in OS.get_cmdline_user_args():
 		var kv := arg.trim_prefix("--").split("=", true, 1)
 		if kv.size() == 2 and args.has(kv[0]):
@@ -134,6 +261,10 @@ func _init() -> void:
 	if sockets < 0:
 		quit(1)
 		return
+	var layers := _layers(fresh, args, subject)
+	if args["detail1"] != "" and layers.is_empty():
+		quit(1)
+		return
 	_slots(today, "today")
 	_slots(fresh, subject)
 	if subject == "beacon":
@@ -147,6 +278,11 @@ func _init() -> void:
 	cam.fov = 60.0
 	root.add_child(cam)
 	cam.current = true
+	if not layers.is_empty():
+		await _detail(cam, fresh, layers, ref, out, tag, args["mode"], subject)
+		print("W12_RC_SIDE ", subject, " ", tag, " sockets=", sockets, " layers=", layers.size(), " ball_radius=", Tuning.RADIUS)
+		quit(0)
+		return
 	var arena_cam: Array = view["arena"]
 	var hero: Array = view["hero"]
 	var arena: Image = await _shot(cam, arena_cam[0], arena_cam[1], out.path_join("%s_arena.png" % tag))
