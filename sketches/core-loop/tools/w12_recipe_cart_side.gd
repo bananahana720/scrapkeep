@@ -5,17 +5,24 @@ extends SceneTree
 # the ball between them, and the FLUX concept picture beside each frame on a sheet. Both carts take their
 # materials through dig_scenery.gd's SLOTS table (GLB material name = slot key) and their tyres at the body's
 # wheel sockets, the runtime route. The ore cart's sockets are read from its own GLB nodes.
+# --subject=beacon does the same for the lantern beacon (tools/blender/lantern_beacon.py) beside today's code-built
+# beacon (src/core/beacon.gd, opened), its lens at the frame's socket_lens, and its steel state key lit through
+# the instance's state_tint from EventKinds' beacon_open and beacon_sealed rows.
 #   godot --path sketches/core-loop --script res://tools/w12_recipe_cart_side.gd -- --out=<abs dir>
 #     --body=<abs ore_cart_body.glb> --wheel=<abs ore_cart_wheel.glb> --ref=<abs png> [--tag=<name>]
+#     [--subject=beacon --body=<abs lantern_beacon_frame.glb> --lens=<abs lantern_beacon_lens.glb>]
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
+const Beacon := preload("res://src/core/beacon.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const CART_SCALE := 2.2
 const TODAY_SOCKETS := [Vector3(-0.74, 0.3, -0.95), Vector3(0.74, 0.3, -0.95), Vector3(-0.74, 0.3, 0.95), Vector3(0.74, 0.3, 0.95)]
-const GAP := 9.0
-# Camera rows: name -> [eye, target], relative to the scene origin or to one cart ("hero_*").
-const ARENA := [Vector3(0, 9, 30), Vector3(0, 1.5, 0)]
-const HERO := [Vector3(7.5, 5.5, -5.0), Vector3(0, 1.9, -1.2)]
+# Per subject: each side's distance from the ball, and camera rows [eye, target]; "hero" is relative to one side.
+const VIEWS := {
+	"cart": {"gap": 9.0, "arena": [Vector3(0, 9, 30), Vector3(0, 1.5, 0)], "hero": [Vector3(7.5, 5.5, -5.0), Vector3(0, 1.9, -1.2)]},
+	"beacon": {"gap": 16.0, "arena": [Vector3(0, 16, 62), Vector3(0, 9, 0)], "hero": [Vector3(14, 12, 24), Vector3(0, 10, 0)]},
+}
 
 
 func _slots(node: Node, side: String) -> void:
@@ -84,7 +91,7 @@ func _sheet(images: Array, path: String, height: int) -> void:
 
 
 func _init() -> void:
-	var args := {"out": "", "body": "", "wheel": "", "ref": "", "tag": "ore_cart"}
+	var args := {"out": "", "body": "", "wheel": "", "lens": "", "ref": "", "tag": "ore_cart", "subject": "cart"}
 	for arg in OS.get_cmdline_user_args():
 		var kv := arg.trim_prefix("--").split("=", true, 1)
 		if kv.size() == 2 and args.has(kv[0]):
@@ -114,9 +121,52 @@ func _init() -> void:
 	ground.material_override = gm
 	root.add_child(ground)
 
+	var subject: String = args["subject"]
+	var view: Dictionary = VIEWS[subject]
+	var gap: float = view["gap"]
 	var today := Node3D.new()
-	today.position = Vector3(-GAP, 0, 0)
+	today.position = Vector3(-gap, 0, 0)
 	root.add_child(today)
+	var fresh := Node3D.new()
+	fresh.position = Vector3(gap, 0, 0)
+	root.add_child(fresh)
+	var sockets := _cart(today, fresh, args) if subject == "cart" else _beacon(today, fresh, args)
+	if sockets < 0:
+		quit(1)
+		return
+	_slots(today, "today")
+	_slots(fresh, subject)
+	if subject == "beacon":
+		_state(fresh, "beacon_open")
+	_ball(root, Vector3(0, 0, 4.0))
+	_ball(root, Vector3(gap + 4.0, 0, 6.0))
+	_ball(root, Vector3(-gap + 4.0, 0, 6.0))
+
+	var ref := Image.load_from_file(args["ref"])
+	var cam := Camera3D.new()
+	cam.fov = 60.0
+	root.add_child(cam)
+	cam.current = true
+	var arena_cam: Array = view["arena"]
+	var hero: Array = view["hero"]
+	var arena: Image = await _shot(cam, arena_cam[0], arena_cam[1], out.path_join("%s_arena.png" % tag))
+	var near: Image = await _shot(cam, arena_cam[0] * 0.45 + Vector3(0, 1, 0), arena_cam[1], out.path_join("%s_near.png" % tag))
+	var hero_new: Image = await _shot(cam, fresh.position + hero[0], fresh.position + hero[1], out.path_join("%s_hero_new.png" % tag))
+	var hero_today: Image = await _shot(cam, today.position + hero[0], today.position + hero[1], out.path_join("%s_hero_today.png" % tag))
+	var heroes := [ref, hero_new, hero_today]
+	if subject == "beacon":
+		_state(fresh, "beacon_sealed")
+		var sealed: Image = await _shot(cam, fresh.position + hero[0], fresh.position + hero[1], out.path_join("%s_hero_sealed.png" % tag))
+		heroes.insert(2, sealed)
+	_sheet([ref, arena], out.path_join("%s_sheet_arena.png" % tag), 540)
+	_sheet([ref, near], out.path_join("%s_sheet_near.png" % tag), 540)
+	_sheet(heroes, out.path_join("%s_sheet_hero.png" % tag), 540)
+	print("W12_RC_SIDE ", subject, " ", tag, " sockets=", sockets, " ball_radius=", Tuning.RADIUS)
+	quit(0)
+
+
+# Today's cart at its hard-coded sockets on the left; the ore cart and its tyres at its own GLB sockets on the right.
+func _cart(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	var body: Node3D = (load("res://assets/models/dig_mechanical/cart_body.glb") as PackedScene).instantiate()
 	body.scale = Vector3.ONE * CART_SCALE
 	today.add_child(body)
@@ -125,48 +175,57 @@ func _init() -> void:
 		wheel.position = socket * CART_SCALE
 		wheel.scale = Vector3.ONE * CART_SCALE
 		today.add_child(wheel)
-
-	var ore := Node3D.new()
-	ore.position = Vector3(GAP, 0, 0)
-	root.add_child(ore)
 	var ore_body := _glb(args["body"])
 	if ore_body == null:
-		quit(1)
-		return
+		return -1
 	ore_body.scale = Vector3.ONE * CART_SCALE
-	ore.add_child(ore_body)
+	fresh.add_child(ore_body)
 	var sockets := 0
 	for socket: Node3D in ore_body.find_children("socket_wheel_*", "Node3D", true, false):
 		var wheel := _glb(args["wheel"])
 		if wheel == null:
-			quit(1)
-			return
-		var at := Vector3.ZERO
-		var node: Node = socket
-		while node != ore_body:
-			at = (node as Node3D).transform * at
-			node = node.get_parent()
-		wheel.position = at * CART_SCALE
+			return -1
+		wheel.position = _local(socket, ore_body) * CART_SCALE
 		wheel.scale = Vector3.ONE * CART_SCALE
-		ore.add_child(wheel)
+		fresh.add_child(wheel)
 		sockets += 1
-	_slots(today, "today")
-	_slots(ore, "ore_cart")
-	_ball(root, Vector3(0, 0, 4.0))
-	_ball(root, Vector3(GAP + 4.0, 0, 6.0))
-	_ball(root, Vector3(-GAP + 4.0, 0, 6.0))
+	return sockets
 
-	var ref := Image.load_from_file(args["ref"])
-	var cam := Camera3D.new()
-	cam.fov = 60.0
-	root.add_child(cam)
-	cam.current = true
-	var arena: Image = await _shot(cam, ARENA[0], ARENA[1], out.path_join("%s_arena.png" % tag))
-	var near: Image = await _shot(cam, ARENA[0] * 0.45 + Vector3(0, 1, 0), ARENA[1], out.path_join("%s_near.png" % tag))
-	var hero_new: Image = await _shot(cam, ore.position + HERO[0], ore.position + HERO[1], out.path_join("%s_hero_new.png" % tag))
-	var hero_today: Image = await _shot(cam, today.position + HERO[0], today.position + HERO[1], out.path_join("%s_hero_today.png" % tag))
-	_sheet([ref, arena], out.path_join("%s_sheet_arena.png" % tag), 540)
-	_sheet([ref, near], out.path_join("%s_sheet_near.png" % tag), 540)
-	_sheet([ref, hero_new, hero_today], out.path_join("%s_sheet_hero.png" % tag), 540)
-	print("W12_RC_SIDE ", tag, " sockets=", sockets, " ball_radius=", Tuning.RADIUS, " scale=", CART_SCALE)
-	quit(0)
+
+# Today's beacon, opened, on the left; the lantern beacon frame and its lens at socket_lens on the right.
+func _beacon(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
+	var old := Beacon.new()
+	old.sealed = false
+	today.add_child(old)
+	old.setup()
+	var frame := _glb(args["body"])
+	if frame == null:
+		return -1
+	fresh.add_child(frame)
+	var sockets := 0
+	for socket: Node3D in frame.find_children("socket_lens", "Node3D", true, false):
+		var lens := _glb(args["lens"])
+		if lens == null:
+			return -1
+		lens.position = _local(socket, frame)
+		fresh.add_child(lens)
+		sockets += 1
+	return sockets
+
+
+# A socket's position in its GLB root's space (the generated scene nests the GLB root under one more node).
+func _local(socket: Node3D, top: Node3D) -> Vector3:
+	var at := Vector3.ZERO
+	var node: Node = socket
+	while node != top:
+		at = (node as Node3D).transform * at
+		node = node.get_parent()
+	return at
+
+
+# The steel shader swaps its mint state key for the instance's state_tint; the beacon state row names the colour.
+func _state(node: Node, id: String) -> void:
+	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		if view.material_override is ShaderMaterial and String(view.material_override.resource_name) == "steel":
+			view.set_instance_shader_parameter("state_tint", EventKinds.state_color(id))
+			print("W12_RC_STATE node=", view.name, " state=", id, " tint=", EventKinds.state_color(id).to_html(false))

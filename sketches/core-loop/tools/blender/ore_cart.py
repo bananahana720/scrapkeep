@@ -204,4 +204,5 @@ def main():
     export("ore_cart_wheel", "Tyre", "elastomer", True, wheel, {}, args.out_dir)
 
 
-main()
+if __name__ == "__main__":
+    main()

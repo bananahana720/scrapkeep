@@ -1,0 +1,28 @@
+{
+ "assets": [
+  {
+   "id": "lantern_beacon_frame",
+   "path": "res://assets/models/lantern_beacon_frame.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12 RECIPE-CART; today's beacon stays code-built in src/core/beacon.gd until the owner swaps it)",
+   "provenance": {
+    "recipe": "tools/blender/lantern_beacon.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
+    "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "lantern_beacon_lens",
+   "path": "res://assets/models/lantern_beacon_lens.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12 RECIPE-CART; placed at lantern_beacon_frame's socket_lens)",
+   "provenance": {
+    "recipe": "tools/blender/lantern_beacon.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
+    "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   }
+  }
+ ]
+}
