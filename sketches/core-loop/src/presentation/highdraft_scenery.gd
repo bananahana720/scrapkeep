@@ -530,6 +530,8 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	var arrays := grid.mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	if arrays[Mesh.ARRAY_INDEX] == null:
+		# A grid with no index buffer cannot be trimmed, but it still wears the catch floor.
+		GraphicsPreset.set_ground_material(grid, _catch_material())
 		return
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var rect: Rect2 = map.play_rect
@@ -556,6 +558,10 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	scenery.add_child(relief)
 	grid.name = "GridFloor"
 	grid.visible = false
+	GraphicsPreset.set_ground_material(relief, _catch_material())
+
+
+static func _catch_material() -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://assets/materials/highdraft/catch_floor.gdshader")
 	material.set_shader_parameter("floor_map", Palette.painted_texture(256, true))
@@ -564,16 +570,12 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	material.set_shader_parameter("deck_tint", (LOOK["bone"] as Color).lerp(LOOK["charcoal"], 0.45))
 	material.set_shader_parameter("net_height", HighdraftMap.NET_H)
 	material.set_shader_parameter("net_pitch", 4.0)
-	GraphicsPreset.set_ground_material(relief, material)
+	return material
 
 
 # The padded perimeter in the catch amber the sheet keeps for offered lift and catch edges.
 static func net_edge_material() -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = LOOK["catch_edge"]
-	material.albedo_texture = Palette.painted_texture(256)
-	material.roughness = 0.85
-	return material
+	return Palette.nosing_material()
 
 
 static func _net_deck(parent: Node3D, map) -> void:
@@ -714,7 +716,6 @@ const PROPS := [
 	{"file": "prop_bench.glb", "node": "Surface", "weight": 1, "size": 2.0},
 	{"file": "prop_lamp_body.glb", "node": "Surface", "weight": 1, "size": 0.7},
 ]
-const PER_ISLAND := {"small": 4, "medium": 5, "large": 6}
 
 
 # Props stand in a ring near each island's rim, 2.5 to 6 m in from the edge, off every route:
@@ -732,7 +733,7 @@ static func _props(parent: Node3D, map) -> void:
 		var top: float = isle["top"]
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(String(id)) ^ int(radius * 100.0)
-		var want: int = PER_ISLAND["large" if radius >= 20.0 else ("medium" if radius >= 15.0 else "small")]
+		var want: int = map.scatter["per_preset"]["large" if radius >= 20.0 else ("medium" if radius >= 15.0 else "small")]
 		var placed: Array[Vector2] = []
 		var tries := 0
 		while placed.size() < want and tries < 80:

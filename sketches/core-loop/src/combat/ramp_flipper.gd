@@ -48,7 +48,7 @@ func _build_tool() -> void:
 		var box := BoxMesh.new()
 		box.size = Vector3(PLATE_RADIUS * 1.6, 0.18, PLATE_RADIUS * 1.6)
 		_plate.mesh = box
-		_plate.material_override = Palette.striped(Palette.CHARCOAL, Palette.HAZARD)
+		_plate.material_override = Palette.hazard_stripe()
 	else:
 		_plate.name = "RampPlate"
 		_plate.mesh = parts["plate"]

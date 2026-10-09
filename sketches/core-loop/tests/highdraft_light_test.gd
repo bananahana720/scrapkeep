@@ -99,8 +99,11 @@ func _run() -> void:
 	_t.check("every net bowl chunk draws the woven bone material", woven, "%d chunks" % tiles.size())
 	var edges := scenery.get_node_or_null("NetDeck/NetEdges") as MultiMeshInstance3D
 	var edge := edges.material_override as StandardMaterial3D if edges != null else null
-	_t.check("the net edge is the catch amber", edge != null and _near(edge.albedo_color, SHEET_AMBER),
-		"edge %s" % (edge.albedo_color if edge != null else "none"))
+	# 2026-10-09 (wave 12 vx-ground): the edge wears Palette.nosing_material(), amber and charcoal 45 degree
+	# bands from the slot table, so the amber is the stripe at pixel (0, 0), not the albedo colour.
+	var band: Color = edge.albedo_texture.get_image().get_pixel(0, 0) if edge != null and edge.albedo_texture != null else Color.BLACK
+	_t.check("the net edge is the catch amber", edge != null and _near(band, SHEET_AMBER),
+		"edge band %s" % band)
 
 	var ticks := int(SAIL_SECONDS * Engine.physics_ticks_per_second)
 	for tick in ticks:

@@ -63,6 +63,7 @@ var relic_spot := Vector2(9.0, 122.0)
 
 func _init() -> void:
 	title = "Highdraft"
+	scatter["per_preset"] = {"small": 4, "medium": 5, "large": 6}
 	spawn = _islands()["spawn"]["at"]
 	heading = Vector3(0.0, 0.0, -1.0)
 	beacon = _islands()["beacon"]["at"]

@@ -35,6 +35,19 @@ var kickers: Array = []
 var gate_slots: Array = []
 # Where the activity builders put their sites, each {"id": String, "at": Vector2}. Empty by default.
 var activity_sites: Array = []
+# The ground's visual dressing, one table per map (read by terrain.gd, scatter.gd, set_dressing.gd,
+# dig_scenery.gd and highdraft_scenery.gd; presentation only, never a collider):
+#   kit        scatter rows (src/world/scatter_rows.gd lists the fields): one MultiMesh per row
+#   relief     {sub, amp, period, shade, seed}: the 1 m view mesh over the 2 m collider grid, empty for none
+#   clear      metres kept bare round the spawn, the beacon and the vault
+#   clusters, edge_share, spacing   the target preset's clutter clusters (set_dressing.gd)
+#   apron      metres outside the play rect where the Dig's rim props stand (dig_scenery.gd)
+#   mix        the Dig's rim prop counts per edge (dig_scenery.gd)
+#   per_preset  Highdraft's props per island by size (highdraft_scenery.gd)
+var scatter := {
+	"kit": [], "relief": {}, "clear": {"spawn": 6.0, "beacon": 31.0, "vault": 11.0},
+	"clusters": 110, "edge_share": 0.6, "spacing": 9.0, "apron": 8.0, "mix": {}, "per_preset": {},
+}
 
 
 # How far p is from the fall line, the straight run from the spawn to the beacon. The
