@@ -30,7 +30,7 @@ func _run() -> void:
 		_t.check("group %s listed once" % g, not groups.has(g))
 		groups[g] = true
 		_t.check("group %s stages at least one subject" % g, not Subjects.in_group(g).is_empty())
-	for n in ["arb_bowl", "arm_crown", "arw_pit", "cv2_camp_bay", "ttl_stage_ball", "ttl_stage_spil9"]:
+	for n in ["arb_bowl", "arm_crown", "arw_pit", "cv2_camp_bay", "ttl_stage_ball", "ttl_stage_spil9", "gpd_cache", "cache_activity"]:
 		_t.check("re-aimed row %s says why" % n, Subjects.SUBJECTS[n].has("reaim"))
 
 	var black := Image.create(1920, 1080, false, Image.FORMAT_RGB8)
