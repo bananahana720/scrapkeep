@@ -93,6 +93,7 @@ const SUBJECTS := {
 		"reaim": {"top_down": "w7 eye 100 m above the pad framed mostly cloud floor (flat share 0.787, 195,195,192); lowered to 45 m so the pad fills the frame"}},
 	"arw_pit_b": {"group": "arw2", "stage": 4, "kind": "actor", "owner": "VX-LIGHT", "anchor": "pit", "tick": 330,
 		"cameras": [["over_shoulder", Vector3(0, 6, 14), Vector3.ZERO, 62.0, ["ball", "warden"]], ["boss_high", Vector3(34, 20, 34), Vector3(0, -2, 0), 62.0, "warden"], ["boss_low", Vector3(40, 3, 0), Vector3(0, 6, 0), 62.0, "warden"],
+			["three_q", Vector3(-9, 4, 6), Vector3(0, 2, 0), 55.0, "warden"],
 			["pit_top", Vector3(0, 46, 2), Vector3.ZERO, 60.0], ["pit_edge", Vector3(30, 30, 52), Vector3(-4, -8, 0), 66.0], ["ball_view", Vector3(10, 4, 10), Vector3.ZERO, 55.0, "ball"]]},
 	# ---------------------------------------------------------------- devices, pylons, camp bay
 	"gpd_cache": {"group": "devices", "stage": 2, "kind": "prop", "owner": "VX-SURF", "anchor": "cache", "tick": 240,

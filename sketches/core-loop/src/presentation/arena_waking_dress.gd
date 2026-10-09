@@ -19,7 +19,7 @@ const WALL_SECTORS := 16
 # Light comes from lamps, the reactor and the key; the floor itself never glows.
 # core_key_low is the low preset's trim: the key keeps its shadow on a tighter cone.
 const LIGHTS := {
-	"rim_pool": {"energy": 2.2, "range": 34.0, "radius": 28.0, "height": 6.0},
+	"rim_pool": {"energy": 1.0, "range": 34.0, "radius": 28.0, "height": 6.0},
 	"lamp_pool": {"energy": 1.2, "range": 24.0},
 	"reactor": {"energy": 3.0, "range": 48.0},
 	"core_key": {"energy": 2.8, "range": 55.0, "angle": 55.0},
