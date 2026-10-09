@@ -8,6 +8,7 @@ extends "res://src/world/device.gd"
 
 const SECONDS := 30.0
 const RING := 10.0
+const BAND_SIZE := 1.42
 const PACK := ["chaser", "chaser", "lobber"]
 
 var running := false
@@ -30,12 +31,11 @@ func _init() -> void:
 func build() -> void:
 	var parts := _parts()
 	if not parts.is_empty():
-		var post := _model_part(parts, "AltarPost")
-		post.material_override = Palette.solid(Palette.VERDIGRIS)
+		_model_part(parts, "AltarPost").material_override = finish(Palette.VERDIGRIS)
 		_cap = _model_part(parts, "AltarCap")
-		_cap.material_override = Palette.solid(Palette.BRASS)
+		_cap.material_override = finish(Palette.BRASS)
 		_ring = null
-		box(Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _bone_material(), false)
+		box(Vector3(BAND_SIZE, 0.12, BAND_SIZE), Vector3.UP * 3.22, _bone_material(true), false)
 		return
 	_build_greybox()
 
@@ -43,12 +43,22 @@ func build() -> void:
 func _build_greybox() -> void:
 	cylinder(0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.VERDIGRIS))
 	_cap = box(Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.BRASS))
-	box(Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _bone_material(), false)
+	box(Vector3(BAND_SIZE, 0.12, BAND_SIZE), Vector3.UP * 3.22, _bone_material(false), false)
 	_ring = null
 
 
-func _bone_material() -> StandardMaterial3D:
+static func finish(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.albedo_texture = Palette.look_texture("rusted-salvaged-plate-worn", true)
+	material.uv1_triplanar = true
+	material.uv1_scale = Vector3.ONE / 4.0
+	material.roughness = 0.82
+	return material
+
+
+func _bone_material(dressed: bool) -> StandardMaterial3D:
+	var material := finish(Palette.SAND) if dressed else StandardMaterial3D.new()
 	material.resource_name = "altar_bone_band"
 	material.albedo_color = Palette.SAND
 	material.roughness = 0.82

@@ -75,7 +75,9 @@ class Cage extends "res://src/world/device.gd":
 		for s in [-1.0, 1.0]:
 			box(Vector3(3.1, 0.25, 0.25), Vector3(0.0, 3.2, s * 1.4), steel, false, _bars)
 			box(Vector3(0.25, 0.25, 3.1), Vector3(s * 1.4, 3.2, 0.0), steel, false, _bars)
+			box(Vector3(0.12, 3.0, 0.12), Vector3(s * 0.5, 1.6, 1.4), steel, false, _bars)
 			box(Vector3(0.12, 3.0, 0.12), Vector3(s * 0.5, 1.6, 0.0), steel, false, _freed_wall)
+		box(Vector3(0.7, 0.5, 0.2), Vector3(0.0, 1.4, 1.5), accent, false, _bars)
 		box(Vector3(0.7, 0.5, 0.2), Vector3(0.0, 1.4, 0.1), accent, false, _freed_wall)
 		box(Vector3(0.8, 1.2, 0.8), Vector3(0.0, 0.6, 0.0), accent)
 
@@ -150,6 +152,7 @@ class Cage extends "res://src/world/device.gd":
 		if _open_walls != null:
 			_open_walls.visible = spent
 		if _freed_wall != null:
+			_freed_wall.visible = spent
 			_freed_wall.rotation.x = PI * 0.5 if spent else 0.0
 		if _latch == null:
 			return

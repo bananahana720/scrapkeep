@@ -6,8 +6,8 @@ const T := preload("res://tests/support/t.gd")
 
 # Interactable devices belong to a map, not to a stage number:
 # - the default table's stage 1 is the Spillway and gets the Spillway's three devices;
-# - the slice's stage 1 is another map and gets none of them, so no cache stands on its
-#   spawn apron;
+# - the slice's stage 1 is another map and gets none of them, so no Spillway cache stands on its
+#   spawn apron; its Reach map's own relic cache (map_reach.gd relic_spot) is the one device it has;
 # - every placement key names a map some stage table uses.
 
 var _t := T.new("world_devices_by_map_test")
@@ -49,7 +49,9 @@ func _run() -> void:
 	_t.check("four of them", first["count"] == 4, "devices %s" % [first["ids"]])
 	var slice: Dictionary = await _stage_one("slice")
 	_t.check("the slice's stage 1 is another map", slice["map"] != "spillway", "map %s" % slice["map"])
-	_t.eq("it gets none of the Spillway's devices", slice["count"], 0)
+	var spillway_ids: Array = (Interactables.PLACEMENTS["spillway"] as Array).map(func(row): return String(row["id"]))
+	_t.check("it gets none of the Spillway's devices", spillway_ids.all(func(id): return not slice["ids"].has(id)), "devices %s" % [slice["ids"]])
+	_t.eq("only its own relic cache stands there", slice["ids"], ["relic_cache"])
 	var maps := {}
 	for table in [preload("res://src/core/stage_defs.gd"), preload("res://src/core/slice_defs.gd")]:
 		for row in table.DEFS:
