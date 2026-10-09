@@ -35,7 +35,7 @@ NAME = "fabricator_hoop"
 # slate (reserved for "not yet"), so they are bone, the picture's ivory plate tone.
 TONES = {
     "state": "mint",
-    "brass": "brass",
+    "brass": "copper",
     "pad": "bone",
     "footing": "charcoal",
     "plate": "bone",
