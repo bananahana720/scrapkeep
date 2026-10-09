@@ -1,0 +1,52 @@
+{
+ "assets": [
+  {
+   "id": "cottonwood_trunk",
+   "path": "res://assets/models/cottonwood_trunk.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; today's cottonwood stays the cylinder and sphere batches in spillway_scenery.gd until the owner swaps it)",
+   "provenance": {
+    "recipe": "tools/blender/cottonwood.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/cottonwood_101.png",
+    "notes": "assets/models/cottonwood.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cottonwood_crown",
+   "path": "res://assets/models/cottonwood_crown.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; drawn at cottonwood_trunk's origin)",
+   "provenance": {
+    "recipe": "tools/blender/cottonwood.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/cottonwood_101.png",
+    "notes": "assets/models/cottonwood.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cottonwood_detail1",
+   "path": "res://assets/models/cottonwood_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at cottonwood_trunk's origin, visibility range end 50 m, margin 10 m)",
+   "provenance": {
+    "recipe": "tools/blender/cottonwood_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/cottonwood_101.png",
+    "notes": "assets/models/cottonwood.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cottonwood_detail2",
+   "path": "res://assets/models/cottonwood_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at cottonwood_trunk's origin, visibility range end 30 m, margin 4 m)",
+   "provenance": {
+    "recipe": "tools/blender/cottonwood_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-cottonwood/ref/cottonwood_pass2.png",
+    "notes": "assets/models/cottonwood.PROVENANCE.txt"
+   }
+  }
+ ]
+}
