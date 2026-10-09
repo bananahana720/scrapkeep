@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 # The stage exit. Sealed, a Warden clamps it: the charge shown is how much of the Warden
 # is broken, and sitting in the ring adds nothing. Unsealed, charging starts the moment
@@ -107,6 +108,11 @@ func _lantern() -> bool:
 				_state_views.append(view)
 			if root == lens:
 				_lens_centre = lens.transform * _relative(view, lens) * view.mesh.get_aabb().get_center()
+	# The detail shells sit at the frame's origin and wear the steel state tint like the frame.
+	for shell in RecipeProps.shells("lantern_beacon", self, Transform3D.IDENTITY):
+		var view := shell as MeshInstance3D
+		if view.get_surface_override_material(0) == RecipeProps.slot_material("steel"):
+			_state_views.append(view)
 	return true
 
 
