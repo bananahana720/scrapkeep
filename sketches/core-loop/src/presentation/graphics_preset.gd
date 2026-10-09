@@ -1,10 +1,11 @@
 extends RefCounted
 
+const HIGH := {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
+	"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
+	"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.5}
 # Settings are applied on bind or an explicit preset change, never polled each frame.
 const PRESETS := {
-	"high": {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
-		"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2,
-		"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 2, "fill": 0.5},
+	"high": HIGH,
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
 		"scenery_distance": 520.0, "lod_threshold": 4.0, "msaa": 1,
 		"ambient": 0.28, "sun": 2.35, "fog": 0.0006, "sun_rotation": Vector3(-36.0, -55.0, 0.0), "ssao_quality": 0, "fill": 0.5},
@@ -26,6 +27,30 @@ const PRESETS := {
 			"directional_shadow_split_1": 0.18},
 		"sky_properties": {},
 	},
+	"probe_c": HIGH, "probe_d": HIGH, "probe_e": HIGH,
+}
+# Wave 12 light probe (P-LIGHT): each probe preset is high plus one row here.
+const PROBES := {
+	"probe_c": {"ssil": true},
+	"probe_d": {"world_air": true},
+	"probe_e": {"sun_sky": true, "sun_properties": {"light_angular_distance": 0.5}},
+}
+# Per-world volumetric air for probe_d, entered through enter_world. Sun direction stays
+# pinned; only energy and air change, so the ball keeps its ground shadow.
+const WORLD_AIR := {
+	"spillway": {"environment": {"volumetric_fog_density": 0.004, "volumetric_fog_albedo": Color("e9d2a6"),
+		"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.55,
+		"volumetric_fog_length": 160.0, "volumetric_fog_ambient_inject": 0.4, "volumetric_fog_sky_affect": 0.0}},
+	"dig": {"sun_energy": 1.2, "environment": {"volumetric_fog_density": 0.018,
+		"volumetric_fog_albedo": Color("56636f"), "volumetric_fog_emission": Color("06090d"),
+		"volumetric_fog_anisotropy": 0.15, "volumetric_fog_length": 120.0, "volumetric_fog_ambient_inject": 0.2,
+		"volumetric_fog_sky_affect": 0.5, "ambient_light_energy": 0.14, "ambient_light_color": Color("6d7f92")}},
+	"highdraft": {"environment": {"volumetric_fog_density": 0.0025, "volumetric_fog_albedo": Color("fff1dc"),
+		"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.6,
+		"volumetric_fog_length": 300.0, "volumetric_fog_ambient_inject": 0.3, "volumetric_fog_sky_affect": 0.0}},
+	"waking": {"environment": {"volumetric_fog_density": 0.025, "volumetric_fog_albedo": Color("4f5d63"),
+		"volumetric_fog_emission": Color("05080a"), "volumetric_fog_anisotropy": 0.35,
+		"volumetric_fog_length": 90.0, "volumetric_fog_ambient_inject": 0.15, "volumetric_fog_sky_affect": 0.0}},
 }
 static var current := "high"
 static var _worlds: Array = []
@@ -258,6 +283,8 @@ static func _apply_world(world: Dictionary) -> void:
 		viewport.mesh_lod_threshold = spec.lod_threshold
 	if current == "target":
 		_apply_target(world, spec, env, sun)
+	elif PROBES.has(current):
+		_apply_probe(world, PROBES[current], env, sun)
 	if not lighting.is_empty():
 		for row in lighting.defaults:
 			var object = row.object.get_ref()
@@ -319,6 +346,38 @@ static func _apply_target(world: Dictionary, spec: Dictionary, env: Environment,
 	RenderingServer.environment_set_ssil_quality(spec.ssil_quality, true, 0.5, 2, 50.0, 300.0)
 	RenderingServer.environment_set_volumetric_fog_volume_size(spec.fog_volume_size, spec.fog_volume_depth)
 	_target_server_active = true
+
+
+static func _apply_probe(world: Dictionary, probe: Dictionary, env: Environment, sun: DirectionalLight3D) -> void:
+	world.target_defaults = []
+	_target_properties(world, env, {"ssil_enabled": probe.get("ssil", false)})
+	_target_properties(world, sun, probe.get("sun_properties", {}))
+	if probe.get("sun_sky", false):
+		var fill := sun.get_parent().get_node_or_null("SkyFill") as DirectionalLight3D
+		_target_properties(world, fill, {"sky_mode": DirectionalLight3D.SKY_MODE_LIGHT_ONLY})
+		_target_properties(world, env.sky, {"sky_material": preload("res://src/core/palette.gd").sun_sky()})
+
+
+# A stage or arena names its world's air on entry; the row lives until its owner leaves.
+static func enter_world(owner: Node, environment: Environment, world_name: String) -> void:
+	clear_lighting(environment, "air")
+	if not PROBES.get(current, {}).get("world_air", false) or not WORLD_AIR.has(world_name):
+		return
+	var row: Dictionary = WORLD_AIR[world_name]
+	var values: Dictionary = row.environment.duplicate()
+	values["volumetric_fog_enabled"] = true
+	var lights := []
+	for world in _worlds:
+		var sun = world.sun.get_ref()
+		if world.environment == environment and sun != null and row.has("sun_energy"):
+			lights.append({"object": sun, "values": {"light_energy": row.sun_energy}})
+	# set_lighting replaces every row of one owner, so the air row gets its own owner node.
+	var air := owner.get_node_or_null("WorldAir")
+	if air == null:
+		air = Node.new()
+		air.name = "WorldAir"
+		owner.add_child(air)
+	set_lighting(air, environment, values, lights, "air")
 
 
 static func _restore_target_server() -> void:

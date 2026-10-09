@@ -171,6 +171,9 @@ static func unshaded(color: Color) -> StandardMaterial3D:
 	return mat
 
 
+# The workshop sky's colours, read by the painted panorama and the sun-disc sky alike.
+const SKY := {"horizon": Color("e6c898"), "zenith": Color("4a78a8"), "far_ridge": Color("93aecb"),
+	"ridge": Color("7d9dc0"), "cloud": Color("ebe1cb")}
 static var _sky_texture: ImageTexture
 
 static func workshop_sky() -> PanoramaSkyMaterial:
@@ -185,22 +188,35 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 			for x in 1024:
 				var angle := float(x) / 1024.0 * TAU
 				var direction := Vector3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
-				var color := Color("e6c898").lerp(Color("4a78a8"), clampf(elevation * 1.6, 0.0, 1.0))
+				var color := SKY.horizon.lerp(SKY.zenith, clampf(elevation * 1.6, 0.0, 1.0))
 				var ridge := 0.035 + 0.065 * noise.get_noise_2d(cos(angle) * 4.0, sin(angle) * 4.0)
 				var far_ridge := ridge + 0.045 + 0.035 * noise.get_noise_2d(cos(angle) * 11.0, sin(angle) * 11.0)
 				if elevation < far_ridge:
-					color = Color("93aecb")
+					color = SKY.far_ridge
 				if elevation < ridge:
-					color = Color("7d9dc0")
+					color = SKY.ridge
 				if elevation > 0.12:
 					var cloud := noise.get_noise_3d(direction.x * 7.0, direction.y * 16.0, direction.z * 7.0)
 					var coverage := smoothstep(0.22, 0.5, cloud) * smoothstep(0.14, 0.34, elevation)
-					color = color.lerp(Color("ebe1cb"), coverage * 0.8)
+					color = color.lerp(SKY.cloud, coverage * 0.8)
 				image.set_pixel(x, y, color)
 		image.generate_mipmaps()
 		_sky_texture = ImageTexture.create_from_image(image)
 	var material := PanoramaSkyMaterial.new()
 	material.panorama = _sky_texture
+	material.energy_multiplier = 1.0
+	return material
+
+
+# A procedural sky in the same colours: the world sun draws its own disc and halo.
+static func sun_sky() -> ProceduralSkyMaterial:
+	var material := ProceduralSkyMaterial.new()
+	material.sky_top_color = SKY.zenith
+	material.sky_horizon_color = SKY.horizon
+	material.ground_horizon_color = SKY.far_ridge
+	material.ground_bottom_color = SKY.ridge
+	material.sun_angle_max = 7.0
+	material.sun_curve = 0.12
 	material.energy_multiplier = 1.0
 	return material
 
