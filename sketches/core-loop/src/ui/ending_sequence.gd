@@ -240,6 +240,7 @@ func _hide_grid_floor(holder: Node3D) -> void:
 
 # Copy draw nodes, never scripts, timers, bodies, areas or collision shapes. Inactive
 # terrain roots are hidden and parked at -5000; only their children carry local poses.
+# Any other kind (particles, labels, sprites) becomes a plain holder for its children.
 func _snapshot(source: Node, parent: Node3D, root := false) -> void:
 	if source is Node3D and not root and not source.visible:
 		return
@@ -275,7 +276,7 @@ func _snapshot(source: Node, parent: Node3D, root := false) -> void:
 	view.name = source.name
 	if source is Node3D and not root:
 		view.transform = source.transform
-	if source is GeometryInstance3D:
+	if view is GeometryInstance3D:
 		view.layers = source.layers
 		view.material_override = source.material_override
 		view.material_overlay = source.material_overlay
