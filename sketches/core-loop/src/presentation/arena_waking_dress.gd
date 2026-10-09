@@ -28,6 +28,9 @@ const LIGHTS := {
 # The pit floor's plates: half the old 8 m pitch, so the top floor reads as tiled plate.
 const FLOOR_PLATE_PITCH := 4.0
 const FLOOR_SEAM_WIDTH := 0.12
+# Pale zinc: a cool plate that is no state colour (not slate's "not yet") and lighter than the old sandstone,
+# so the copper ball reads dark against it under the 0.16 ambient and the amber pools stay an accent.
+const FLOOR_PLATE_COLOR := Color("c8cdcf")
 
 var module
 var _parts := {}
@@ -73,7 +76,7 @@ func _prepare() -> bool:
 	floor_material.shader = preload("res://src/presentation/arena_waking_floor.gdshader")
 	floor_material.set_shader_parameter("tex_tone", stone.get_shader_parameter("tex_tone"))
 	floor_material.set_shader_parameter("tex_grain", stone.get_shader_parameter("tex_grain"))
-	floor_material.set_shader_parameter("base_color", Palette.SLATE)
+	floor_material.set_shader_parameter("base_color", FLOOR_PLATE_COLOR)
 	floor_material.set_shader_parameter("seam_color", Palette.CHARCOAL)
 	floor_material.set_shader_parameter("panel_pitch", FLOOR_PLATE_PITCH)
 	floor_material.set_shader_parameter("seam_width", FLOOR_SEAM_WIDTH)
