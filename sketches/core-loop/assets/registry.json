@@ -1663,6 +1663,23 @@
     "recipe": "tools/blender/lantern_beacon_detail1.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
     "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   },
+   "bounds": {
+    "min": [
+     -3.525,
+     0,
+     -3.1097
+    ],
+    "max": [
+     1.975,
+     20.436,
+     3.1097
+    ],
+    "size": [
+     5.5,
+     20.436,
+     6.2193
+    ]
    }
   },
   {
@@ -1675,6 +1692,23 @@
     "recipe": "tools/blender/lantern_beacon_detail2.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/detail-beacon/ref/beacon_pass2.png",
     "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   },
+   "bounds": {
+    "min": [
+     -3.2177,
+     0.4812,
+     -2.8009
+    ],
+    "max": [
+     1.7621,
+     18.11,
+     2.8009
+    ],
+    "size": [
+     4.9798,
+     17.6288,
+     5.6019
+    ]
    }
   },
   {
@@ -1687,6 +1721,23 @@
     "recipe": "tools/blender/lantern_beacon.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
     "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   },
+   "bounds": {
+    "min": [
+     -3.46,
+     0,
+     -2.9964
+    ],
+    "max": [
+     3.4256,
+     21.2,
+     2.9964
+    ],
+    "size": [
+     6.8856,
+     21.2,
+     5.9929
+    ]
    }
   },
   {
@@ -1699,6 +1750,23 @@
     "recipe": "tools/blender/lantern_beacon.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
     "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   },
+   "bounds": {
+    "min": [
+     -1.0432,
+     0,
+     -1.0432
+    ],
+    "max": [
+     1.0432,
+     5.2,
+     1.0432
+    ],
+    "size": [
+     2.0864,
+     5.2,
+     2.0864
+    ]
    }
   },
   {
