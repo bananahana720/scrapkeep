@@ -1362,6 +1362,9 @@ func _dress_mast(warden) -> void:
 	var beacon = ctx.flow.beacon
 	if not is_instance_valid(beacon):
 		return
+	if beacon.clamp_seat() != null:
+		_clamp_lantern(warden, beacon.clamp_seat())
+		return
 	for child in beacon.get_children():
 		if not child is MeshInstance3D or not child.mesh is CylinderMesh:
 			continue
@@ -1400,6 +1403,15 @@ func _dress_mast(warden) -> void:
 		child.layers = 0
 		child.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		return
+
+
+# The lantern beacon is one authored mesh, and its recipe keeps every family's weak point clear of it around
+# the clamp seat (tools/blender/lantern_beacon.py socket_clamp), so the Warden sitting on the seat owns the
+# clamp and nothing is cut or added.
+func _clamp_lantern(warden, seat: Node3D) -> void:
+	if warden.global_position.distance_to(seat.global_position) > 0.01:
+		return
+	_mast = {"owner": warden.get_instance_id(), "mesh": null, "root": null, "seat": seat}
 
 
 func _mast_radius(cylinder: CylinderMesh, height: float) -> float:

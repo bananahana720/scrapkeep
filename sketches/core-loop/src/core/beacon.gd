@@ -14,8 +14,9 @@ enum { IDLE, CHARGING, READY }
 const MAST_HEIGHT := 18.0
 # The authored lantern beacon (tools/blender/lantern_beacon.py): the frame carries steel and enamel,
 # the lens carries glass at the frame's socket_lens. The ring and cap are the steel shader's state key,
-# so each frame wears the beacon's state through its state_tint. Without the GLBs the beacon builds
-# the copper mast and bulb.
+# so each frame wears the beacon's state through its state_tint. The frame's socket_clamp is the Warden's
+# seat, which the recipe keeps clear of every family's weak point. Without the GLBs or either socket the
+# beacon builds the copper mast and bulb.
 const FRAME_PATH := "res://assets/models/lantern_beacon_frame.glb"
 const LENS_PATH := "res://assets/models/lantern_beacon_lens.glb"
 # Inside the 1.08 m glass even at full charge (scale 1.6).
@@ -35,6 +36,7 @@ var _ring: MeshInstance3D
 var _core: MeshInstance3D
 var _state_views: Array[MeshInstance3D] = []
 var _lens_centre := Vector3.ZERO
+var _clamp_seat: Node3D
 
 
 func setup() -> void:
@@ -74,17 +76,19 @@ func setup() -> void:
 
 
 # The frame and its lens from the authored GLBs, each surface in its material slot; false when
-# either GLB or the lens socket is missing, and nothing is added.
+# either GLB, the lens socket or the clamp seat is missing, and nothing is added.
 func _lantern() -> bool:
 	var frame := _model(FRAME_PATH)
 	var lens := _model(LENS_PATH)
 	var socket: Node3D = frame.find_child("socket_lens", true, false) as Node3D if frame != null else null
-	if frame == null or lens == null or socket == null:
+	var seat: Node3D = frame.find_child("socket_clamp", true, false) as Node3D if frame != null else null
+	if frame == null or lens == null or socket == null or seat == null:
 		for node in [frame, lens]:
 			if node != null:
 				node.free()
-		push_warning("beacon: lantern GLB or socket_lens missing, the beacon builds its mast")
+		push_warning("beacon: lantern GLB, socket_lens or socket_clamp missing, the beacon builds its mast")
 		return false
+	_clamp_seat = seat
 	frame.name = "LanternFrame"
 	lens.name = "LanternLens"
 	add_child(frame)
@@ -104,6 +108,11 @@ func _lantern() -> bool:
 			if root == lens:
 				_lens_centre = lens.transform * _relative(view, lens) * view.mesh.get_aabb().get_center()
 	return true
+
+
+# The Warden's seat on the lantern frame (socket_clamp); null on the copper mast.
+func clamp_seat() -> Node3D:
+	return _clamp_seat
 
 
 static func _model(path: String) -> Node3D:

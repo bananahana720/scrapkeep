@@ -24,7 +24,7 @@ from lantern_beacon import kit, common
 NAME = "lantern_beacon_detail1"
 SLOT = "steel"
 BUDGET = [900, 2000, 1]
-SIZE = [5.786, 18.636, 5.125]
+SIZE = [5.5, 20.436, 6.219]
 
 
 def tone(name):
@@ -35,7 +35,7 @@ def tone(name):
 
 
 def ring(s, r0, r1, y0, y1, n=12, color=None, caps=(True, True), at=(0, 0)):
-    lb.frustum(s, r0, r1, y0, y1, n, color or tone("brass"), caps=caps, at=at)
+    lb.frustum(s, r0, r1, y0, y1, n, color or tone("copper"), caps=caps, at=at)
 
 
 def stud(s, center, axis, r, depth, n, color):
@@ -58,7 +58,7 @@ def collar(s):
     rm = (r0 + r1) / 2 * math.cos(math.pi / 12)
     for a in lb.around(12):
         out = Vector((math.sin(a), 0, math.cos(a)))
-        stud(s, (rm * out.x, ym, rm * out.z), out, .1, .1, 6, tone("brass"))
+        stud(s, (rm * out.x, ym, rm * out.z), out, .1, .1, 6, tone("copper"))
 
 
 def feet(s):
@@ -95,10 +95,10 @@ def brackets(s):
     head = lb.CAP[1] - .12
     fit = lb.TOP_FIT[0]
     for side in (-1, 1):
-        lb.strut(s, (side * out, top, 0), (side * out, head - .25, 0), .1, .1, tone("brass"))
-        lb.strut(s, (side * out, head - .3, 0), (side * (out - .3), head, 0), .1, .1, tone("brass"))
-        lb.strut(s, (side * (out - .25), head, 0), (side * fit, head, 0), .1, .1, tone("brass"))
-        lb.strut(s, (side * (out - .3), bottom, 0), (side * out, bottom + .3, 0), .1, .1, tone("brass"))
+        lb.strut(s, (side * out, top, 0), (side * out, head - .25, 0), .1, .1, tone("copper"))
+        lb.strut(s, (side * out, head - .3, 0), (side * (out - .3), head, 0), .1, .1, tone("copper"))
+        lb.strut(s, (side * (out - .25), head, 0), (side * fit, head, 0), .1, .1, tone("copper"))
+        lb.strut(s, (side * (out - .3), bottom, 0), (side * out, bottom + .3, 0), .1, .1, tone("copper"))
 
 
 def build(s):
@@ -124,6 +124,7 @@ def export(name, slot, build_fn, size, budget, out_dir):
     path = Path(out_dir) / (name + ".glb")
     common.export(root, str(path))
     m = kit.gltf_metrics(path)
+    lb.assert_clear(name, [s])
     print("LANTERN_BEACON_DETAIL_SIZE", name, [round(v, 3) for v in m["bounds"]["size"]], m["triangles"], m["vertices"], m["draws"])
     assert all(m[k] <= cap for k, cap in zip(["triangles", "vertices", "draws"], budget)), (name, m, budget)
     assert m["materials"] == [slot], m["materials"]
