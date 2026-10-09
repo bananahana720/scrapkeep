@@ -17,22 +17,23 @@ const Palette := preload("res://src/core/palette.gd")
 #   colour   "row" takes the event row's colour, any other value names a Palette const
 #   attach   "world" stays where it fired, "ball" follows the ball and emits continuously
 #   blend    "add" glows over the scene, "mix" is solid matter
+#   glow     brightness multiplier on the tint, so an additive spark still reads on sand
 #   shape    "point" or "ring" (emission on a flat ring of ring_m radius)
 # Emitters use a fixed seed, so a capture at a fixed tick repeats. No lights.
 const SEED := 731
 const SPECS := {
 	"roll_dust": {"pool": 1, "max": 64, "life": 0.7, "speed": [0.4, 1.4], "spread": 75.0, "gravity": 0.6,
 		"size": 0.42, "colour": "SANDSTONE", "attach": "ball", "blend": "mix", "shape": "point"},
-	"hit_sparks": {"pool": 10, "max": 24, "life": 0.3, "speed": [7.0, 14.0], "spread": 180.0, "gravity": -12.0,
-		"size": Vector3(0.05, 0.05, 0.34), "colour": "row", "attach": "world", "blend": "add", "shape": "point", "align": true},
+	"hit_sparks": {"pool": 10, "max": 24, "life": 0.32, "speed": [8.0, 16.0], "spread": 180.0, "gravity": -12.0,
+		"size": Vector3(0.07, 0.07, 0.55), "colour": "row", "attach": "world", "blend": "add", "shape": "point", "align": true, "glow": 2.5},
 	"slam_ring": {"pool": 2, "max": 72, "life": 0.42, "speed": [0.0, 0.0], "radial": [11.0, 12.0], "spread": 0.0, "gravity": 0.0,
 		"size": 0.5, "colour": "row", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 0.6},
 	"slam_dust": {"pool": 2, "max": 28, "life": 0.8, "speed": [2.0, 5.5], "spread": 70.0, "gravity": 1.0,
 		"size": 0.7, "colour": "SANDSTONE", "attach": "world", "blend": "mix", "shape": "ring", "ring_m": 1.2},
 	"latch_flash": {"pool": 3, "max": 16, "life": 0.2, "speed": [3.0, 6.0], "spread": 180.0, "gravity": 0.0,
-		"size": Vector3(0.06, 0.06, 0.5), "colour": "row", "attach": "world", "blend": "add", "shape": "point", "align": true},
+		"size": Vector3(0.06, 0.06, 0.5), "colour": "row", "attach": "world", "blend": "add", "shape": "point", "align": true, "glow": 2.5},
 	"crack_debris": {"pool": 3, "max": 32, "life": 1.0, "speed": [4.0, 9.0], "spread": 50.0, "gravity": -24.0,
-		"size": Vector3(0.28, 0.2, 0.24), "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "spin": 540.0},
+		"size": Vector3(0.28, 0.2, 0.24), "colour": "CHARCOAL", "attach": "world", "blend": "mix", "shape": "point", "spin": 540.0},
 }
 
 const _SHADER := """
@@ -94,6 +95,8 @@ static func build(id: String) -> GPUParticles3D:
 		pm.radial_velocity_min = s["radial"][0]
 		pm.radial_velocity_max = s["radial"][1]
 	pm.gravity = Vector3(0.0, s["gravity"], 0.0)
+	var glow: float = s.get("glow", 1.0)
+	pm.color = Color(glow, glow, glow)
 	pm.particle_flag_align_y = s.get("align", false)
 	pm.scale_min = 0.6
 	pm.scale_max = 1.2
