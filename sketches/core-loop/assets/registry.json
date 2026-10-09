@@ -1588,6 +1588,30 @@
    "exception_why": "recipe assert tris < 6,500"
   },
   {
+   "id": "ore_cart_body",
+   "path": "res://assets/models/ore_cart_body.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12 RECIPE-CART; today's cart stays cart_body.glb until the owner swaps it)",
+   "provenance": {
+    "recipe": "tools/blender/ore_cart.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/cart_101.png",
+    "notes": "assets/models/ore_cart.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "ore_cart_wheel",
+   "path": "res://assets/models/ore_cart_wheel.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12 RECIPE-CART; placed at ore_cart_body's socket_wheel_* nodes)",
+   "provenance": {
+    "recipe": "tools/blender/ore_cart.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/cart_101.png",
+    "notes": "assets/models/ore_cart.PROVENANCE.txt"
+   }
+  },
+  {
    "id": "pilot_cannon_anim",
    "path": "res://assets/models/pilot_cannon_anim.glb",
    "class": "pilot",
@@ -2282,6 +2306,8 @@
   "net_edge",
   "net_shoe",
   "net_tile",
+  "ore_cart_body",
+  "ore_cart_wheel",
   "pilot_cannon_anim",
   "pilot_tally_anim",
   "pilot_tarn_anim",
