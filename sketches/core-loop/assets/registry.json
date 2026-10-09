@@ -2194,6 +2194,23 @@
    }
   },
   {
+   "id": "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+   "path": "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset candidate; PanoramaSkyMaterial lab override in tools/w12_light_capture.gd --hdri)",
+   "provenance": {
+    "PF-01": "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+    "PF-02": "proposal (candidate, not wired in; the painted workshop sky ships until the coordinator's blind read picks it)",
+    "PF-03": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+    "PF-04": "Poly Haven",
+    "PF-05": "CC0 1.0, assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.LICENSE.txt",
+    "PF-06": "none; downloaded 2026-10-09 with Andrew's approval, 5451493 bytes",
+    "PF-07": "sky candidate for wog_spillway spawn_wide and hdr_sky sky_loom",
+    "note": "ships is false until a blind pair picks it; Godot writes the .import beside it (untracked)."
+   }
+  },
+  {
    "path": "res://assets/textures/packed-sand-floor.webp",
    "class": "texture",
    "ships": true,
@@ -2322,6 +2339,7 @@
   "island_rim_rusted-salvaged-plate.webp",
   "island_small",
   "island_small_sandstone-strata.webp",
+  "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
   "lamp_curve_module",
   "lamp_straight_module",
   "lantern_beacon_frame",
