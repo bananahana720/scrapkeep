@@ -15,7 +15,14 @@ extends SceneTree
 #   the single most common colour, mean luminance) and the ball's screen box; a frame over its row's
 #   dead_frame limits is dead, and any dead frame makes the run exit 1 naming subject/camera.
 #   The ball (the scale mannequin) is placed beside each camera's target, on the floor under it,
-#   for every subject that is not a ui row.
+#   for every subject that is not a ui row. Its point is a function of the camera row alone: a
+#   point the row pins ("ball": {camera: offset from the target}), else ball_candidates(eye,
+#   target) tried in order against static colliders only (enemy, Warden and rigid bodies are
+#   skipped), never where the staging left the ball or where the previous camera put it. With
+#   --base, the base run's recorded point wins, so both sides of a pair show the ball on one spot.
+#   Whether the ball shows is the render's answer, not a ray's: the frame is drawn again with the
+#   ball hidden and ball.visible is the share of its screen disk that changed (ball_seen); an
+#   actor or prop frame under SEEN_SHARE fails the run as NO_BALL.
 #   --baseline=<sha7>  renders into <baseline root>/<sha7>/ (default root artifacts/local/alpha/baselines).
 #   --pair --base=<sha7>  after rendering, writes <out>/pairs/<subject>__<camera>/{a,b}.png and
 #     <out>/pairs/key.json; which side is the baseline is the subject/camera coin (look_subjects.coin),
@@ -44,6 +51,11 @@ const BOSS_TICKS := 300
 # A collider this close to the eye (the camera inside or against it) does not pull the ball in.
 const NEAR_PULL := 4.0
 const BOSSES := {"bowl": 1, "waking": 2, "mind": 3}
+# ball_seen: a pixel changed when a channel moves more than SEEN_DELTA with the ball hidden; the
+# ball shows when SEEN_SHARE of its on-screen disk changed; at most SEEN_SAMPLES pixels are read.
+const SEEN_DELTA := 12.0 / 255.0
+const SEEN_SHARE := 0.2
+const SEEN_SAMPLES := 4096
 
 var out := ""
 var requested: Array = []
@@ -65,6 +77,7 @@ var cam: Camera3D
 var ticks := 0
 var failures := 0
 var _anchors := {}
+var _pins := {}
 
 
 func _initialize() -> void:
@@ -166,6 +179,7 @@ func _render_children(subjects: Array, dir: String) -> int:
 		if tick_override >= 0: args.append("--tick=%d" % tick_override)
 		if not preset.is_empty(): args.append("--preset=" + preset)
 		if not variant.is_empty(): args.append("--variant=" + variant)
+		if not base.is_empty(): args.append_array(["--base=" + base, "--baseline-root=" + baseline_root])
 		var started := Time.get_ticks_msec()
 		var output: Array = []
 		var rc := OS.execute(OS.get_executable_path(), args, output, true)
@@ -195,7 +209,7 @@ func _summarize(subjects: Array, dir: String, groups: Array) -> int:
 		for fr in doc["frames"]:
 			if fr["dead"]:
 				dead.append("%s/%s" % [n, fr["id"]])
-			if Subjects.needs_ball(n) and (not fr["ball"]["in_frame"] or fr["ball"].get("hidden", false)):
+			if Subjects.needs_ball(n) and (not fr["ball"]["in_frame"] or not fr["ball"].get("seen", false)):
 				no_ball.append("%s/%s" % [n, fr["id"]])
 	var failed_groups: Array = groups.filter(func(r): return r["rc"] != 0).map(func(r): return r["group"])
 	var doc := {"tool": "look_harness.gd", "variant": variant, "preset": preset, "adapter": adapter, "subjects": subjects.size(), "groups": groups,
@@ -272,6 +286,57 @@ static func frame_metrics(img: Image) -> Dictionary:
 
 static func is_dead(metrics: Dictionary, limits: Dictionary) -> bool:
 	return metrics["black"] > limits["black"] or metrics["sky"] > limits["sky"]
+
+
+# The rule's two ball points for a camera, in the order tried: beside the target on the
+# camera's right, then its left (side grows with distance), both moved toward the eye for a far
+# view and behind the target for a close one. Eye and target alone decide them.
+static func ball_candidates(eye: Vector3, target: Vector3) -> Array:
+	var to_eye := eye - target
+	var dist := to_eye.length()
+	var right := Basis.looking_at(target - eye, Vector3.UP).x
+	var side := clampf(dist * 0.22, 1.5, 24.0)
+	var toward := to_eye.normalized() * clampf((dist - 8.0) * 0.35, -2.0, 8.0)
+	return [target + right * side + toward, target - right * side + toward]
+
+
+# Camera name to the ball point a frames.json recorded, for --base.
+static func ball_pins(frames_doc: Dictionary) -> Dictionary:
+	var pins := {}
+	for fr in frames_doc.get("frames", []):
+		var at = (fr.get("ball", {}) as Dictionary).get("at", null)
+		if at is Array and at.size() == 3:
+			pins[String(fr["id"])] = Vector3(at[0], at[1], at[2])
+	return pins
+
+
+# Share of the ball's on-screen disk (bbox from ball_box) whose pixels differ between the frame
+# with the ball and the same frame with the ball hidden: 0 when a wall or the frame edge hides
+# it, near 1 when it is in plain view. Physics rays cannot answer this, because visual-only
+# meshes (the pit's rock bands, the cache shell) have no collider.
+static func ball_seen(on: Image, off: Image, bbox: Array) -> float:
+	if bbox.size() != 4 or on.get_size() != off.get_size():
+		return 0.0
+	var r: float = bbox[2] * 0.5
+	var cx: float = bbox[0] + r
+	var cy: float = bbox[1] + r
+	var x0 := maxi(0, floori(bbox[0]))
+	var y0 := maxi(0, floori(bbox[1]))
+	var x1 := mini(on.get_width(), ceili(bbox[0] + bbox[2]))
+	var y1 := mini(on.get_height(), ceili(bbox[1] + bbox[3]))
+	var stride := maxi(1, ceili(sqrt(bbox[2] * bbox[3] / float(SEEN_SAMPLES))))
+	var total := 0
+	var changed := 0
+	for y in range(y0, y1, stride):
+		for x in range(x0, x1, stride):
+			if (x + 0.5 - cx) * (x + 0.5 - cx) + (y + 0.5 - cy) * (y + 0.5 - cy) > r * r:
+				continue
+			total += 1
+			var a := on.get_pixel(x, y)
+			var b := off.get_pixel(x, y)
+			if maxf(absf(a.r - b.r), maxf(absf(a.g - b.g), absf(a.b - b.b))) > SEEN_DELTA:
+				changed += 1
+	return 0.0 if total == 0 else float(changed) / total
 
 
 # Screen box of a sphere of radius r at p, in viewport pixels; in_frame when it overlaps the frame.
@@ -413,42 +478,62 @@ func _wait_tick(subject: String) -> Dictionary:
 	return {"tick": ticks, "wanted": want, "late": late}
 
 
-# The ball, frozen, moved under the paused tree beside the camera's target (toward the camera
-# for a far view, behind the target for a close one), on whichever side the eye sees it, else
-# pulled in front of the collider that hides it: the body for physics
-# and the visual root (the parent of the juice node), which _process places and a paused tree
-# no longer updates. A ball already in frame and unhidden stays where the staging put it.
-func _place_ball(eye: Vector3, target: Vector3) -> Vector3:
-	var body: RigidBody3D = game.player.body()
-	var now: Vector3 = body.global_position
-	var seen := ball_box(cam, now, Tuning.RADIUS, SIZE)
-	if seen["in_frame"] and cam.is_position_in_frustum(now) and seen["bbox"][2] >= 6.0 and seen["bbox"][2] <= SIZE.y * 0.4 and not _hidden(eye, now):
-		return now
-	var to_eye := eye - target
-	var dist := to_eye.length()
-	var side := clampf(dist * 0.22, 1.5, 24.0)
-	var toward := to_eye.normalized() * clampf((dist - 8.0) * 0.35, -2.0, 8.0)
-	var first := Vector3.INF
+# The ball, frozen, moved under the paused tree to the camera row's point: the body for physics
+# and the visual root (the parent of the juice node), which _process places and a paused tree no
+# longer updates. The point, in order: the --base run's recorded point for this camera; the
+# row's pin ("ball": {camera: offset from the target}) on the floor under it; else the first of
+# ball_candidates the eye sees past static colliders, else the first pulled in front of the
+# static collider that hides it. Rays skip enemies, the Warden and rigid bodies, so where they
+# stand at the tick cannot move the ball, and nothing reads where the staging left it.
+func _place_ball(subject: String, shot_name: String, eye: Vector3, target: Vector3) -> Dictionary:
+	var how := "rule"
 	var p := Vector3.INF
-	for sgn in [1.0, -1.0]:
-		var c := _on_floor(target + cam.global_basis.x * side * sgn + toward)
-		if first == Vector3.INF:
-			first = c
-		if not _hidden(eye, c):
-			p = c
-			break
-	if p == Vector3.INF:
+	var pinned: Dictionary = Subjects.SUBJECTS[subject].get("ball", {})
+	if _pins.has(shot_name):
+		p = _pins[shot_name]
+		how = "base"
+	elif pinned.has(shot_name):
+		p = _on_floor(target + pinned[shot_name])
+		how = "row"
+	else:
+		var cands := ball_candidates(eye, target)
+		var first := _on_floor(cands[0])
 		p = first
-		var q := PhysicsRayQueryParameters3D.create(eye, p)
-		q.exclude = [body.get_rid()]
-		var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
-		if not hit.is_empty() and eye.distance_to(hit["position"]) > NEAR_PULL:
-			var h: Vector3 = hit["position"]
-			p = _on_floor(h + (eye - h).normalized() * (Tuning.RADIUS + 0.4))
+		if _hidden(eye, first):
+			var second := _on_floor(cands[1])
+			if not _hidden(eye, second):
+				p = second
+			else:
+				var hit := _ray(eye, first)
+				if not hit.is_empty() and eye.distance_to(hit["position"]) > NEAR_PULL:
+					var h: Vector3 = hit["position"]
+					p = _on_floor(h + (eye - h).normalized() * (Tuning.RADIUS + 0.4))
+	var body: RigidBody3D = game.player.body()
 	body.freeze = true
 	body.global_position = p
-	(game.player.juice_node().get_parent() as Node3D).global_position = p
-	return p
+	_ball_root().global_position = p
+	return {"at": p, "placed": how}
+
+
+func _ball_root() -> Node3D:
+	return game.player.juice_node().get_parent() as Node3D
+
+
+# A ray against the stage's static colliders: the player, enemies (the Warden is one) and rigid
+# bodies are skipped, so the answer is the same whatever moved before the tick.
+func _ray(from: Vector3, to: Vector3) -> Dictionary:
+	var skip: Array[RID] = [game.player.body().get_rid()]
+	for i in 16:
+		var q := PhysicsRayQueryParameters3D.create(from, to)
+		q.exclude = skip
+		var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
+		if hit.is_empty():
+			return hit
+		var c = hit.get("collider")
+		if not (c is CharacterBody3D or c is RigidBody3D):
+			return hit
+		skip.append(hit["rid"])
+	return {}
 
 
 # The floor under p: the nearest surface below a point just above it, so a stacked arena
@@ -456,9 +541,7 @@ func _place_ball(eye: Vector3, target: Vector3) -> Vector3:
 # nothing is under that, and p itself when the floor would leave the frame.
 func _on_floor(p: Vector3) -> Vector3:
 	for up in [2.0, 30.0]:
-		var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * up, p + Vector3.DOWN * 80.0)
-		q.exclude = [game.player.body().get_rid()]
-		var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
+		var hit := _ray(p + Vector3.UP * up, p + Vector3.DOWN * 80.0)
 		if not hit.is_empty():
 			var on_floor: Vector3 = hit["position"] + Vector3.UP * Tuning.RADIUS
 			return on_floor if cam.is_position_in_frustum(on_floor) else p
@@ -466,9 +549,7 @@ func _on_floor(p: Vector3) -> Vector3:
 
 
 func _hidden(eye: Vector3, p: Vector3) -> bool:
-	var q := PhysicsRayQueryParameters3D.create(eye, p)
-	q.exclude = [game.player.body().get_rid()]
-	var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
+	var hit := _ray(eye, p)
 	return not hit.is_empty() and eye.distance_to(hit["position"]) < eye.distance_to(p) - Tuning.RADIUS
 
 
@@ -485,6 +566,10 @@ func _shoot(subject: String, extra := {}) -> void:
 	if not ui:
 		for n in root.find_children("*", "CanvasLayer", true, false): n.visible = false
 		for l in root.find_children("*", "Label3D", true, false): l.visible = false
+	_pins = {}
+	var base_frames := baseline_root.path_join(base).path_join(subject).path_join("frames.json")
+	if not base.is_empty() and FileAccess.file_exists(base_frames):
+		_pins = ball_pins(JSON.parse_string(FileAccess.get_file_as_string(base_frames)))
 	var recs: Array = []
 	for shot in row["cameras"]:
 		var v := Subjects.resolve(subject, shot, _anchors)
@@ -495,15 +580,25 @@ func _shoot(subject: String, extra := {}) -> void:
 			cam.look_at(v["target"], Vector3.UP)
 			cam.fov = v["fov"]
 			cam.current = true
-			var p := _place_ball(v["eye"], v["target"])
+			var placed := _place_ball(subject, String(shot[0]), v["eye"], v["target"])
+			var p: Vector3 = placed["at"]
 			ball = ball_box(cam, p, Tuning.RADIUS, SIZE)
 			ball["at"] = [p.x, p.y, p.z]
-			ball["hidden"] = _hidden(v["eye"], p)
+			ball["placed"] = placed["placed"]
 		for i in DRAW_FRAMES:
 			await RenderingServer.frame_post_draw
 		var img := root.get_texture().get_image()
 		var png := dir.path_join(String(shot[0]) + ".png")
 		img.save_png(png)
+		if not ui:
+			# The same frame without the ball: what changed inside its disk is what showed.
+			_ball_root().visible = false
+			for i in DRAW_FRAMES:
+				await RenderingServer.frame_post_draw
+			var off := root.get_texture().get_image()
+			_ball_root().visible = true
+			ball["visible"] = snappedf(ball_seen(img, off, ball["bbox"]), 0.001) if ball["in_frame"] else 0.0
+			ball["seen"] = ball["in_frame"] and ball["visible"] >= SEEN_SHARE
 		var m := frame_metrics(img)
 		var dead := is_dead(m, Subjects.dead_limits(subject))
 		recs.append({"id": shot[0], "eye": [v["eye"].x, v["eye"].y, v["eye"].z], "target": [v["target"].x, v["target"].y, v["target"].z], "fov": v["fov"],
