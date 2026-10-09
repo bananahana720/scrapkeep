@@ -45,6 +45,7 @@ const EDGES := [
 var _dir_cache := {}
 var _warnings := {}
 var _fx: Node3D
+var _cart_bodies: Array[Transform3D] = []
 
 
 # Built on first entry, not at boot: building the Dig's terrain at game start changes
@@ -205,13 +206,13 @@ func _mech(file: String) -> String:
 
 
 # Queue one placed instance of every mesh in the GLB.
-func _put(batches: Dictionary, path: String, xf: Transform3D, lamp_phase: float = -1.0, flicker: bool = false, fade: Array = []) -> bool:
+func _put(batches: Dictionary, path: String, xf: Transform3D, lamp_phase: float = -1.0, flicker: bool = false) -> bool:
 	var parts := _parts(path)
 	for part in parts:
 		var key: String = path + "#" + part["name"]
 		if not batches.has(key):
 			batches[key] = {"name": path.get_file().get_basename() + "_" + part["name"],
-				"mesh": part["mesh"], "material": part["material"], "xf": [], "fade": fade}
+				"mesh": part["mesh"], "material": part["material"], "xf": []}
 			if lamp_phase >= 0.0 and _fx.available:
 				batches[key]["material"] = _fx.lamp_material(part["slot"], part["material"])
 				batches[key]["custom"] = []
@@ -244,11 +245,6 @@ func _flush(scenery: Node3D, batches: Dictionary) -> void:
 		# A headless renderer keeps no instance buffer, so tests read the placements from here.
 		view.set_meta("origins", origins)
 		view.material_override = batch["material"]
-		var fade: Array = batch["fade"]
-		if not fade.is_empty():
-			view.visibility_range_end = fade[0]
-			view.visibility_range_end_margin = fade[1]
-			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		scenery.add_child(view)
 		GraphicsPreset.register_scenery(view)
@@ -256,6 +252,11 @@ func _flush(scenery: Node3D, batches: Dictionary) -> void:
 			_fx.lamp_views.append(view)
 		batch["xf"] = []
 	batches.clear()
+	# One shell node per cart per layer, so Godot measures each fade from its own cart.
+	for body in _cart_bodies:
+		for shell in RecipeProps.shells("ore_cart", scenery, body):
+			GraphicsPreset.register_scenery(shell)
+	_cart_bodies.clear()
 
 
 # A point on an edge band: c metres out along the normal, a along the tangent.
@@ -361,8 +362,7 @@ func _cart(batches: Dictionary, ground: Callable, edge: Dictionary, rng: RandomN
 		return
 	for socket: Transform3D in _sockets(body_path, "socket_wheel_"):
 		_put(batches, cart_dir + "ore_cart_wheel.glb", body * socket)
-	for shell: Array in RecipeProps.shell_rows("ore_cart"):
-		_put(batches, shell[0], body, -1.0, false, [shell[1], shell[2]])
+	_cart_bodies.append(body)
 
 
 # Zone A: the broken Daylight Cut pump impeller, upright in the south wall, face toward -Z, 30

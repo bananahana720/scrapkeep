@@ -1,6 +1,7 @@
 extends RefCounted
 
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 # Quality knobs only; each world's light and air numbers live in world_look.gd. The shipped high
 # takes the parked target look (wave 12): 4096 shadow atlas, the SSAO tuning, the sun's shadow
 # properties and the surface swap to VX-SURF's slots (palette.target_surface_material). R1's -28 degree sun put play ground in the western rim's shadow, so
@@ -210,6 +211,8 @@ static func register_scenery(view: GeometryInstance3D) -> void:
 	_bind_scenery_material.call_deferred(weakref(view))
 
 static func _apply_scenery(view: GeometryInstance3D) -> void:
+	if view.has_meta(RecipeProps.META_FADE):
+		return
 	view.visibility_range_end = PRESETS[current].scenery_distance
 	view.visibility_range_end_margin = 30.0
 	view.lod_bias = 1.0 / PRESETS[current].lod_threshold

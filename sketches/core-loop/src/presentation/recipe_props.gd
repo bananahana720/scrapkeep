@@ -5,6 +5,8 @@ const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 # One row per picture-driven recipe object. shells: [[glb_path, visibility_range_end, visibility_range_end_margin], ...],
 # metres, proven on the render rig under the no-pop rule (tools/w12_recipe_cart_side.gd LAYER_RANGE). The game camera
 # differs from the rig camera, so this is the one place to retune a range. A swap unit adds a row and one call.
+# Set on every shell; GraphicsPreset leaves a view with this meta at its row's range.
+const META_FADE := "recipe_fade"
 const ROWS := {
 	"ore_cart": {"shells": [["res://assets/models/ore_cart_detail1.glb", 40.0, 4.0], ["res://assets/models/ore_cart_detail2.glb", 15.0, 3.0]]},
 	"lantern_beacon": {"shells": [["res://assets/models/lantern_beacon_detail1.glb", 60.0, 8.0], ["res://assets/models/lantern_beacon_detail2.glb", 35.0, 5.0]]},
@@ -28,7 +30,7 @@ static func shell_rows(key: String) -> Array:
 
 
 # One MeshInstance3D per shell under parent at xform, each surface in the slot named by its GLB material, faded out
-# by the row's range end and margin. A shell that cannot load is skipped with a warning.
+# by the row's range end and margin. Shells cast no shadow: the base mesh already casts the shape. A shell that cannot load is skipped with a warning.
 static func shells(key: String, parent: Node3D, xform: Transform3D) -> Array[GeometryInstance3D]:
 	var out: Array[GeometryInstance3D] = []
 	for shell: Array in shell_rows(key):
@@ -52,6 +54,8 @@ static func shells(key: String, parent: Node3D, xform: Transform3D) -> Array[Geo
 			view.visibility_range_end = shell[1]
 			view.visibility_range_end_margin = shell[2]
 			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			view.set_meta(META_FADE, true)
 			parent.add_child(view)
 			view.transform = xform * _relative(source, scene)
 			out.append(view)

@@ -20,6 +20,7 @@ const Preset := preload("res://src/presentation/graphics_preset.gd")
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
 const Palette := preload("res://src/core/palette.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 const STONE := "res://assets/models/dig_stone/"
 const MECH := "res://assets/models/dig_mechanical/"
@@ -132,6 +133,31 @@ func _cover_skinned(cover: Node, wedge_file: String) -> bool:
 	return false
 
 
+# One shell node per cart per layer, at the cart's body origin, holding its ROWS range after register_scenery ran.
+func _check_shells(scenery: Node) -> void:
+	var bodies: Array = []
+	var body_sigs := _signatures(CART + "ore_cart_body.glb")
+	for view: MultiMeshInstance3D in scenery.find_children("*", "MultiMeshInstance3D", true, false):
+		if body_sigs.has(_signature(view.multimesh.mesh)):
+			bodies.append_array(Array(view.get_meta("origins")))
+	var nodes: Array = scenery.find_children("*", "MeshInstance3D", true, false).filter(func(n): return n.has_meta(RecipeProps.META_FADE))
+	for row: Array in RecipeProps.shell_rows("ore_cart"):
+		var sigs := _signatures(row[0])
+		var layer := nodes.filter(func(n): return sigs.has(_signature((n as MeshInstance3D).mesh)))
+		var label := String(row[0]).get_file()
+		t.eq("(1) %s: one shell per cart" % label, layer.size(), bodies.size())
+		var placed := 0
+		var ranged := 0
+		for node: MeshInstance3D in layer:
+			ranged += 1 if node.visibility_range_end == float(row[1]) and node.visibility_range_end_margin == float(row[2]) else 0
+			for b: Vector3 in bodies:
+				if node.global_position.distance_to(b) < 0.01:
+					placed += 1
+					break
+		t.eq("(1) %s: every shell keeps its row range" % label, ranged, layer.size())
+		t.eq("(1) %s: every shell at a cart body origin" % label, placed, layer.size())
+
+
 func _run() -> void:
 	# (1) The live game, one-stage Dig: scenery hooked, real meshes, covers skinned.
 	var game := DigGame.new()
@@ -156,6 +182,7 @@ func _run() -> void:
 		t.check("(1) cart body is the ore cart GLB mesh", _batched(scenery, CART + "ore_cart_body.glb"), "ore_cart_body")
 		t.check("(1) no old cart body", not _batched(scenery, MECH + "cart_body.glb"), "cart_body")
 		_check_tyres(scenery)
+		_check_shells(scenery)
 		t.check("(1) lamp rail is the GLB mesh", _batched(scenery, MECH + "lamp_straight_module.glb"), "lamp_straight_module")
 		t.check("(1) no intake in zone A", not _batched(scenery, MECH + "intake_petal.glb"), "intake_petal")
 		t.check("(1) every instance outside the play rect plus 8 m", _outside_apron(scenery, game.ctx.terrain.map()), "apron")
