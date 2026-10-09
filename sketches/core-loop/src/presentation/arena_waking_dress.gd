@@ -3,6 +3,7 @@ extends Node3D
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const STONE_DIR := "res://assets/models/dig_stone/"
 const MECH_DIR := "res://assets/models/dig_mechanical/"
 static var stone_dir := STONE_DIR
@@ -156,7 +157,7 @@ func _build() -> void:
 	add_child(_reactor_light)
 	_core_key = SpotLight3D.new()
 	_core_key.name = "CoreKey"
-	_core_key.light_color = Palette.SAND
+	_core_key.light_color = WorldLook.ARENAS.waking.key
 	_core_key.light_energy = LIGHTS.core_key.energy
 	_core_key.spot_range = LIGHTS.core_key.range
 	_core_key.spot_angle = LIGHTS.core_key.angle
@@ -171,12 +172,9 @@ func _build() -> void:
 			lights.append({"object": light, "values": {"light_energy": light.light_energy}})
 	for light in module.ctx.root.find_children("*", "DirectionalLight3D", true, false):
 		lights.append({"object": light, "values": {"visible": false}})
-	GraphicsPreset.set_lighting(self, module.ctx.terrain.environment, {
-		"background_mode": Environment.BG_COLOR, "background_color": Color("171e1d"),
-		"ambient_light_source": Environment.AMBIENT_SOURCE_COLOR, "ambient_light_color": Color("9ba8a3"),
-		"ambient_light_energy": 0.16, "reflected_light_source": Environment.REFLECTION_SOURCE_DISABLED,
-		"fog_enabled": true, "fog_density": 0.008, "fog_light_color": Color("242a28"),
-		"fog_light_energy": 0.3, "fog_sun_scatter": 0.0}, lights)
+	var look: Dictionary = WorldLook.ARENAS.waking
+	GraphicsPreset.set_lighting(self, module.ctx.terrain.environment,
+		WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air), lights, "arena")
 
 
 func _floor(body: StaticBody3D, node_name: String) -> void:
@@ -199,7 +197,7 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 		light.name = "RimPool%d" % i
 		var pool: Dictionary = LIGHTS.rim_pool
 		light.position = Vector3(sin(angle) * pool.radius, pool.height, cos(angle) * pool.radius)
-		light.light_color = DigScenery.LAMP_LIGHT
+		light.light_color = WorldLook.ARENAS.waking.floor_accent
 		light.light_energy = pool.energy
 		light.omni_range = pool.range
 		light.shadow_enabled = false

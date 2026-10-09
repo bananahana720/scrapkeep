@@ -1,4 +1,7 @@
 extends SceneTree
+# 2026-10-09 re-pin (VX-LIGHT): the Dig has its own world look row (world_look.gd ROWS[2], a dark
+# dome), entered on the Dig stage before the pit, so leaving the pit restores the Dig's light,
+# not stage 1's (measured: background, ambient, energy and saturation differ from stage 1).
 
 const Probe := preload("res://tests/support/lighting_harness.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
@@ -12,6 +15,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var game = await Probe.boot(self)
+	game.flow.enter_stage(game.ctx.stages.last_of(2), Vector3.ZERO, false)
 	var before := Probe.lighting(game)
 	Harness.enter_world(game, 2)
 	var mod = Harness.module(game, 2)

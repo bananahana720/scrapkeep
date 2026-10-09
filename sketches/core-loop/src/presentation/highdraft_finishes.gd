@@ -2,16 +2,17 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const DISTANT := ["sky_mesa.glb", "sky_loom.glb", "sky_blades.glb", "sky_cradle.glb"]
-# The Highdraft's light and surface rows from the D2 sheet (SHEET.md, materials and sky). The
-# key is the sheet's cream atmosphere tint warmed a third toward the catch amber: a low morning
-# sun. Scenery, net and props all read these, so the light and the surfaces cannot drift.
+const WorldLook := preload("res://src/presentation/world_look.gd")
+# The Highdraft's light and surface rows from the D2 sheet (SHEET.md, materials and sky). The light
+# keys are a view over the world look row (world_look.gd ROWS[3]); the surface colours live here.
+# Scenery, net and props all read these, so the light and the surfaces cannot drift.
 const LOOK := {
-	"key": Color("eacfab"),
-	"key_rotation": Vector3(-24.0, 62.0, 0.0),
-	"fill": Color("a9b6c0"),
-	"ambient": Color("ece7da"),
-	"haze": Color("798c9e"),
-	"cloud": Color("ece7da"),
+	"key": WorldLook.ROWS[3]["sun_color"],
+	"key_rotation": WorldLook.ROWS[3]["sun_rotation"],
+	"fill": WorldLook.ROWS[3]["fill_color"],
+	"ambient": WorldLook.ROWS[3]["ambient"],
+	"haze": WorldLook.ROWS[3]["haze"],
+	"cloud": WorldLook.ROWS[3]["cloud"],
 	"stone": Color("c8bda5"),
 	"fascia": Color("8a8070"),
 	"pillar": Color("9f9480"),
