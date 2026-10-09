@@ -1776,9 +1776,9 @@
   {
    "id": "lantern_beacon_detail1",
    "path": "res://assets/models/lantern_beacon_detail1.glb",
-   "class": "landmark",
-   "ships": false,
-   "loader": "none (route proof, wave 12 DETAIL-BEACON; additive shell at lantern_beacon_frame's origin, visibility range end 60 m)",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 60 m with its margin; beacon.gd _lantern)",
    "provenance": {
     "recipe": "tools/blender/lantern_beacon_detail1.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
@@ -1805,9 +1805,9 @@
   {
    "id": "lantern_beacon_detail2",
    "path": "res://assets/models/lantern_beacon_detail2.glb",
-   "class": "landmark",
-   "ships": false,
-   "loader": "none (route proof, wave 12 DETAIL-BEACON; additive shell at lantern_beacon_frame's origin, visibility range end 35 m)",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 35 m with its margin; beacon.gd _lantern)",
    "provenance": {
     "recipe": "tools/blender/lantern_beacon_detail2.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/detail-beacon/ref/beacon_pass2.png",
@@ -1922,9 +1922,9 @@
   {
    "id": "ore_cart_detail1",
    "path": "res://assets/models/ore_cart_detail1.glb",
-   "class": "prop",
-   "ships": false,
-   "loader": "none (wave 12 DETAIL-CART pilot; additive shell at ore_cart_body's origin and scale, visibility_range_end 40 m in tools/w12_recipe_cart_side.gd LAYER_RANGE)",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 40 m with its margin; Scenery._cart batch route)",
    "provenance": {
     "recipe": "tools/blender/ore_cart_detail1.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/cart_101.png",
@@ -1934,9 +1934,9 @@
   {
    "id": "ore_cart_detail2",
    "path": "res://assets/models/ore_cart_detail2.glb",
-   "class": "prop",
-   "ships": false,
-   "loader": "none (wave 12 DETAIL-CART pilot; additive shell at ore_cart_body's origin and scale, visibility_range_end 15 m in tools/w12_recipe_cart_side.gd LAYER_RANGE)",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 15 m with its margin; Scenery._cart batch route)",
    "provenance": {
     "recipe": "tools/blender/ore_cart_detail2.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/detail-cart/ref/cart_pass2.png",

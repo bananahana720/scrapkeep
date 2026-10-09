@@ -3,9 +3,9 @@
   {
    "id": "lantern_beacon_detail1",
    "path": "res://assets/models/lantern_beacon_detail1.glb",
-   "class": "landmark",
-   "ships": false,
-   "loader": "none (route proof, wave 12 DETAIL-BEACON; additive shell at lantern_beacon_frame's origin, visibility range end 60 m)",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 60 m with its margin; beacon.gd _lantern)",
    "provenance": {
     "recipe": "tools/blender/lantern_beacon_detail1.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
@@ -32,9 +32,9 @@
   {
    "id": "lantern_beacon_detail2",
    "path": "res://assets/models/lantern_beacon_detail2.glb",
-   "class": "landmark",
-   "ships": false,
-   "loader": "none (route proof, wave 12 DETAIL-BEACON; additive shell at lantern_beacon_frame's origin, visibility range end 35 m)",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 35 m with its margin; beacon.gd _lantern)",
    "provenance": {
     "recipe": "tools/blender/lantern_beacon_detail2.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/detail-beacon/ref/beacon_pass2.png",

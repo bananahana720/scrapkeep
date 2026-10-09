@@ -3,6 +3,7 @@ extends RefCounted
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const DigFx := preload("res://src/presentation/dig_fx.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 # The Dig's scenery (alpha dress push, unit WDG): both zones' landmarks, cut faces, rubble,
 # struts, carts, shells and lamp lines along the rim, the drum look on every breach cover, the
@@ -204,13 +205,13 @@ func _mech(file: String) -> String:
 
 
 # Queue one placed instance of every mesh in the GLB.
-func _put(batches: Dictionary, path: String, xf: Transform3D, lamp_phase: float = -1.0, flicker: bool = false) -> bool:
+func _put(batches: Dictionary, path: String, xf: Transform3D, lamp_phase: float = -1.0, flicker: bool = false, fade: Array = []) -> bool:
 	var parts := _parts(path)
 	for part in parts:
 		var key: String = path + "#" + part["name"]
 		if not batches.has(key):
 			batches[key] = {"name": path.get_file().get_basename() + "_" + part["name"],
-				"mesh": part["mesh"], "material": part["material"], "xf": []}
+				"mesh": part["mesh"], "material": part["material"], "xf": [], "fade": fade}
 			if lamp_phase >= 0.0 and _fx.available:
 				batches[key]["material"] = _fx.lamp_material(part["slot"], part["material"])
 				batches[key]["custom"] = []
@@ -243,6 +244,11 @@ func _flush(scenery: Node3D, batches: Dictionary) -> void:
 		# A headless renderer keeps no instance buffer, so tests read the placements from here.
 		view.set_meta("origins", origins)
 		view.material_override = batch["material"]
+		var fade: Array = batch["fade"]
+		if not fade.is_empty():
+			view.visibility_range_end = fade[0]
+			view.visibility_range_end_margin = fade[1]
+			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		scenery.add_child(view)
 		GraphicsPreset.register_scenery(view)
@@ -355,6 +361,8 @@ func _cart(batches: Dictionary, ground: Callable, edge: Dictionary, rng: RandomN
 		return
 	for socket: Transform3D in _sockets(body_path, "socket_wheel_"):
 		_put(batches, cart_dir + "ore_cart_wheel.glb", body * socket)
+	for shell: Array in RecipeProps.shell_rows("ore_cart"):
+		_put(batches, shell[0], body, -1.0, false, [shell[1], shell[2]])
 
 
 # Zone A: the broken Daylight Cut pump impeller, upright in the south wall, face toward -Z, 30
