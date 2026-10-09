@@ -53,6 +53,7 @@ var hero_assets
 var ceremony
 var set_dressing: Node3D
 var title_stage: Node
+var ui_hidden := false
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
 var auto_banner := true
 var _dismiss_wired := {}
@@ -270,12 +271,28 @@ func _codex_entry(id: String) -> Dictionary:
 	return {}
 
 
+# Capture switch: hides the game's screen-space UI, the Moss bubble and the world prompts (Labels
+# parented to world anchors, outside every CanvasLayer) and stops them redrawing themselves.
+# One way; look_harness.gd flips it before a frame, the game is not played after.
+func hide_ui() -> void:
+	ui_hidden = true
+	var scope: Node = ctx.root if ctx != null and ctx.root != null else self
+	for node in scope.find_children("*", "CanvasLayer", true, false):
+		node.visible = false
+		node.process_mode = Node.PROCESS_MODE_DISABLED
+	for node in scope.find_children("*", "Control", true, false):
+		node.visible = false
+		node.process_mode = Node.PROCESS_MODE_DISABLED
+	for node in scope.find_children("*", "Label3D", true, false):
+		node.visible = false
+
+
 func _sync_dressing() -> void:
 	if is_instance_valid(set_dressing):
 		set_dressing.free()
 	set_dressing = null
-	var spec: Dictionary = GraphicsPreset.PRESETS.target
-	if GraphicsPreset.current == "target" and (spec.set_dressing or spec.air_motes or spec.air_streaks):
+	var spec: Dictionary = GraphicsPreset.PRESETS[GraphicsPreset.current]
+	if spec.get("set_dressing", false) or spec.get("air_motes", false) or spec.get("air_streaks", false):
 		set_dressing = SetDressing.new()
 		add_child(set_dressing)
 		set_dressing.setup(ctx)

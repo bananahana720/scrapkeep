@@ -5,16 +5,16 @@ const Palette := preload("res://src/core/palette.gd")
 # One light-and-air row per world (worlds.gd ids), per arena and per menu stage. Every layer that
 # lights a place reads its row here: the stage hook, the arena dresses, the Highdraft finishes, the
 # title, the ending and the class preview. Graphics presets hold quality knobs only.
-#   sky: "workshop" the painted panorama, "own" the stage or arena builds its sky, "dome" a colour
-#   background (no sky ridges).
-#   fog: on a stage the squall haze (event_view.gd) owns depth fog density and colour and resets
-#   them on every rebuild, so stage rows name "squall" and only the Spillway's numbers (the base the
-#   haze starts from) are kept; an arena row sets its own.
+#   sky: "workshop" the painted panorama, "hdri" the Poly Haven sky (Palette.hdri_sky), "own" the
+#   stage or arena builds its sky, "dome" a colour background (no sky ridges).
+#   fog: density and colour written when the row names them. The squall haze (event_view.gd) starts
+#   from the fog the row left on the environment (record_fog after the row is entered); a row
+#   without numbers leaves the environment's fog as it was.
 #   air: the volumetric row entered with the world (P-LIGHT WORLD_AIR); empty is no air.
 const ROWS := {
-	1: {"name": "spillway", "sky": "workshop", "background": Color("243b43"),
+	1: {"name": "spillway", "sky": "hdri", "background": Color("243b43"),
 		"ambient": Color("9db5cf"), "energy": 0.28, "exposure": 1.1, "saturation": 1.2,
-		"fog": {"owner": "squall", "color": Color("a3bdd0"), "density": 0.0006},
+		"fog": {"color": Color("a3bdd0"), "density": 0.0006},
 		"sun_color": Color("ffd49a"), "sun_energy": 2.35, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
 		"sun_visible": true, "fill": 0.5, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"),
 		# A faint warm haze: the P-LIGHT row at 0.004 washed the factory toward sand.
@@ -24,7 +24,7 @@ const ROWS := {
 	# Underground: a closed dark dome, low cool ambient, a dimmed shaft key and the lamp pool.
 	2: {"name": "dig", "sky": "dome", "background": Color("0b0f12"),
 		"ambient": Color("6d7f92"), "energy": 0.12, "exposure": 1.1, "saturation": 1.1,
-		"fog": {"owner": "squall"},
+		"fog": {"color": Color("56636f"), "density": 0.018},
 		"sun_color": Color("e8dcc8"), "sun_energy": 0.7, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
 		"sun_visible": true, "fill": 0.15, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"),
 		"air": {"volumetric_fog_density": 0.018, "volumetric_fog_albedo": Color("56636f"),
@@ -33,9 +33,9 @@ const ROWS := {
 		"lamps": {"count": 6, "energy": 4.0, "range": 30.0, "attenuation": 1.1, "every": 0.25}},
 	# The D2 sheet's light: the key is the cream atmosphere tint warmed a third toward the catch
 	# amber, a low morning sun (highdraft_finishes.LOOK reads these).
-	3: {"name": "highdraft", "sky": "own", "background": Color("243b43"),
+	3: {"name": "highdraft", "sky": "hdri", "background": Color("243b43"),
 		"ambient": Color("ece7da"), "energy": 0.28, "exposure": 1.05, "saturation": 1.15,
-		"fog": {"owner": "squall"},
+		"fog": {},
 		"sun_color": Color("eacfab"), "sun_energy": 2.35, "sun_rotation": Vector3(-24.0, 62.0, 0.0),
 		"sun_visible": true, "fill": 0.5, "fill_pitch": -40.0, "fill_color": Color("a9b6c0"), "haze": Color("798c9e"), "cloud": Color("ece7da"),
 		"air": {"volumetric_fog_density": 0.0025, "volumetric_fog_albedo": Color("fff1dc"),
@@ -57,7 +57,7 @@ const ARENAS := {
 			"volumetric_fog_length": 90.0, "volumetric_fog_ambient_inject": 0.15, "volumetric_fog_sky_affect": 0.0}},
 	"mind": {"name": "mind", "sky": "own", "background": Color("243b43"),
 		"ambient": Color("b4c0c9"), "energy": 0.28, "exposure": 1.18, "saturation": 1.0,
-		"fog": {"owner": "squall"},
+		"fog": {},
 		"sun_color": Color("fff1dc"), "sun_energy": 2.35, "sun_rotation": Vector3(-46.0, 62.0, 0.0),
 		"sun_visible": true, "fill": 0.5, "fill_pitch": -40.0, "fill_color": Color("a9b6c0"), "air": {}},
 }
@@ -87,7 +87,7 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		"fog_enabled": true, "fog_light_energy": fog.get("light_energy", 0.75), "fog_sun_scatter": fog.get("sun_scatter", 0.25),
 		"volumetric_fog_enabled": air and not look.air.is_empty(),
 	}
-	if fog.get("owner", "") != "squall":
+	if fog.has("density"):
 		values["fog_density"] = fog.density
 		values["fog_light_color"] = fog.color
 	if look.sky == "dome":
@@ -95,9 +95,11 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		values["background_color"] = look.background
 		values["fog_sky_affect"] = 0.0
 		values["reflected_light_source"] = Environment.REFLECTION_SOURCE_DISABLED
-	elif look.sky == "workshop":
+	elif look.sky == "workshop" or look.sky == "hdri":
 		values["background_mode"] = Environment.BG_SKY
 		values["fog_sky_affect"] = 0.25
+		if look.sky == "hdri":
+			values["sky"] = Palette.hdri_sky()
 	if values.volumetric_fog_enabled:
 		values.merge(look.air)
 	return values
@@ -132,6 +134,9 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	var world: int = ctx.stages.world_of(stage)
 	var GraphicsPreset := load("res://src/presentation/graphics_preset.gd")
 	GraphicsPreset.enter_world(root, terrain.environment, row(world))
+	var game = ctx.root
+	if game != null and game.get("world") != null and game.world.view != null:
+		game.world.view.record_fog()
 	var look := row(world)
 	if look.has("lamps") and ctx.player != null:
 		var pool := LampPool.find(root)

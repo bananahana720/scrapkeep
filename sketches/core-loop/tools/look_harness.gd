@@ -7,7 +7,7 @@ extends SceneTree
 #   godot --rendering-driver vulkan --display-driver x11 --gpu-index $SCRAPKEEP_GPU_INDEX --path sketches/core-loop
 #     --resolution 1920x1080 --script res://tools/look_harness.gd -- --subject=<name>[,<name>...]|--all --out=<abs dir>
 #     [--tick=N] [--preset=high|low|target] [--variant=<label>] [--class=N]
-#     [--baseline=<sha7>] [--pair --base=<sha7>] [--baseline-root=<abs dir>]
+#     [--hide-ui=0] [--baseline=<sha7>] [--pair --base=<sha7>] [--baseline-root=<abs dir>]
 #   Writes <out>/<subject>/<camera>.png and <out>/<subject>/frames.json, and <out>/run.json over the run.
 #   Subjects of one group render in one boot; several groups run one child process per group.
 #   The tree pauses on the subject's physics tick (its row's tick, or --tick) before the first frame,
@@ -28,6 +28,7 @@ extends SceneTree
 #     <out>/pairs/key.json; which side is the baseline is the subject/camera coin (look_subjects.coin),
 #     never printed. A subject whose base and head frames.json name different adapters is not paired.
 #   Every frames.json in a run must name the run's adapter; a drift fails the run.
+#   Non-ui subjects hide the Moss bubble and the world prompts (presentation.hide_ui) unless --hide-ui=0.
 # Serve: --serve --out=<abs dir> renders each <out>/requests/<id>.json ({"subjects": [...]} or
 #   {"quit": true}) and answers <out>/answers/<id>.json, for units with many render cycles.
 # Boss smoke: --boss=bowl|waking|mind boots on the native display, enters that world's last stage
@@ -70,6 +71,7 @@ var pair := false
 var base := ""
 var baseline_root := ""
 var serve := false
+var hide_ui := true
 var boss := ""
 
 var game
@@ -95,6 +97,7 @@ func _initialize() -> void:
 		elif a.begins_with("--base="): base = a.trim_prefix("--base=")
 		elif a.begins_with("--baseline-root="): baseline_root = a.trim_prefix("--baseline-root=")
 		elif a == "--serve": serve = true
+		elif a.begins_with("--hide-ui="): hide_ui = a.trim_prefix("--hide-ui=") != "0"
 		elif a.begins_with("--boss="): boss = a.trim_prefix("--boss=")
 	if baseline_root.is_empty():
 		baseline_root = ProjectSettings.globalize_path("res://").path_join("../../artifacts/local/alpha/baselines").simplify_path()
@@ -566,6 +569,8 @@ func _shoot(subject: String, extra := {}) -> void:
 	if not ui:
 		for n in root.find_children("*", "CanvasLayer", true, false): n.visible = false
 		for l in root.find_children("*", "Label3D", true, false): l.visible = false
+		if hide_ui:
+			game.presentation.hide_ui()
 	_pins = {}
 	var base_frames := baseline_root.path_join(base).path_join(subject).path_join("frames.json")
 	if not base.is_empty() and FileAccess.file_exists(base_frames):

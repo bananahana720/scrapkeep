@@ -1,4 +1,5 @@
 extends SceneTree
+# 2026-10-09 (VX-WIRE): the scan also reads .hdr, so the registry row for the Poly Haven sky (assets/sky) is held to "listed and present".
 
 # Alpha R12 AB. Every .glb and texture under assets/ is listed in assets/registry.json with a budget class from
 # tools/asset_budgets.json. A shipped model fails on any triangle, vertex or draw (surface) count over its class,
@@ -73,7 +74,7 @@ func _run() -> void:
 
 	var found: Array = []
 	_scan(ROOT, ["glb"], found)
-	_scan(ROOT, ["webp", "png", "jpg", "jpeg"], found)
+	_scan(ROOT, ["webp", "png", "jpg", "jpeg", "hdr"], found)
 	found.sort()
 	for path in found:
 		_check(entries.has(path), "%s is in the registry" % path)

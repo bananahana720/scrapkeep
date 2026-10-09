@@ -13,6 +13,7 @@ const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const HighdraftMap := preload("res://src/world/map_highdraft.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 
 const DIR := "res://assets/models/highdraft/"
@@ -83,10 +84,15 @@ static func apply_environment(terrain, root: Node3D) -> void:
 	if env == null:
 		return
 	var sun := _sun(root)
-	if _sky == null:
-		_sky = _sky_material()
-	var sky := Sky.new()
-	sky.sky_material = _sky
+	var look: Dictionary = WorldLook.ROWS[3]
+	var values := {"ambient_light_color": LOOK["ambient"], "fog_light_color": LOOK["fill"],
+		"tonemap_exposure": look.exposure, "adjustment_saturation": look.saturation}
+	if look.sky == "own":
+		if _sky == null:
+			_sky = _sky_material()
+		var sky := Sky.new()
+		sky.sky_material = _sky
+		values["sky"] = sky
 	var lights := []
 	var key_rotation: Vector3 = LOOK["key_rotation"]
 	if sun != null:
@@ -96,8 +102,7 @@ static func apply_environment(terrain, root: Node3D) -> void:
 		if fill != null:
 			lights.append({"object": fill, "values": {"light_color": LOOK["fill"],
 				"rotation": Vector3(deg_to_rad(-40.0), deg_to_rad(key_rotation.y + 180.0), 0.0)}})
-	GraphicsPreset.set_lighting(root, env, {"sky": sky, "ambient_light_color": LOOK["ambient"],
-		"fog_light_color": LOOK["fill"], "tonemap_exposure": 1.05, "adjustment_saturation": 1.15}, lights, "highdraft")
+	GraphicsPreset.set_lighting(root, env, values, lights, "highdraft")
 
 
 static func restore_environment(terrain) -> void:

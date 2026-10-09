@@ -290,6 +290,19 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 	return material
 
 
+const HDRI_SKY := "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr"
+static var _hdri_sky: Sky
+
+# The Poly Haven partly cloudy sky, one Sky for every world row that names "hdri".
+static func hdri_sky() -> Sky:
+	if _hdri_sky == null:
+		var material := PanoramaSkyMaterial.new()
+		material.panorama = load(HDRI_SKY)
+		_hdri_sky = Sky.new()
+		_hdri_sky.sky_material = material
+	return _hdri_sky
+
+
 static var _wear: ImageTexture
 static var _oxide: ImageTexture
 
