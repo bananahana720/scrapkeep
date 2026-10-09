@@ -134,7 +134,9 @@ const SUBJECTS := {
 		"cameras": [["v_?", Vector3(2.2, 1.4, -2.6), Vector3.ZERO, 45.0, "v_?"], ["v_BentPlate", Vector3(2.2, 1.4, -2.6), Vector3.ZERO, 45.0, "v_BentPlate"], ["v_BoltCluster", Vector3(2.2, 1.4, -2.6), Vector3.ZERO, 45.0, "v_BoltCluster"],
 			["v_GearSegment", Vector3(2.2, 1.4, -2.6), Vector3.ZERO, 45.0, "v_GearSegment"], ["v_PipeStub", Vector3(2.2, 1.4, -2.6), Vector3.ZERO, 45.0, "v_PipeStub"]]},
 	"scr_dig": {"group": "scrap", "stage": 3, "kind": "prop", "owner": "VX-GROUND", "anchor": "scrap_dig", "tick": 240,
-		"cameras": [["close", Vector3(2.4, 1.6, -3), Vector3.ZERO, 45.0], ["cluster", Vector3(0, 6, -10), Vector3(0, -0.5, 4), 55.0]]},
+		"cameras": [["close", Vector3(2.4, 1.6, -3), Vector3.ZERO, 45.0], ["cluster", Vector3(0, 6, -10), Vector3(0, -0.5, 4), 55.0],
+			# The haul cart at the Dig rim's foot (dig_scenery.gd _cart, the first cart on the south edge), world-fixed (VX-SWAP).
+			["cart", Vector3(78, 7, 149), Vector3(88.5, 2, 161.5), 50.0, ""]]},
 	"wog_spillway": {"group": "workshop", "stage": 1, "kind": "scene", "owner": "VX-SURF", "anchor": "ball", "tick": 120,
 		"cameras": [["spawn_pad", Vector3(0, 7, -16), Vector3(0, 0, 10), 60.0], ["spawn_wide", Vector3(-40, 28, -50), Vector3(10, 0, 30), 65.0], ["beacon", Vector3(-80, 52, -45), Vector3(-46, 34, -12), 65.0, ""],
 			["relay", Vector3(10, 60, -150), Vector3(10, 38, -84), 65.0, ""], ["benches", Vector3(10, 44, 56), Vector3(24, 28, 22), 65.0, ""],

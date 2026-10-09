@@ -14,6 +14,8 @@ const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 # The directories are static vars so a test can point them at nothing and see the fallback.
 static var stone_dir := "res://assets/models/dig_stone/"
 static var mech_dir := "res://assets/models/dig_mechanical/"
+# The authored ore cart (tools/blender/ore_cart.py) lives with the other recipe GLBs.
+static var cart_dir := "res://assets/models/"
 # The resource paths come from the one material slot table (material_slots.gd).
 const SLOTS := {
 	"stone": MaterialSlots.SLOTS["stone"]["path"],
@@ -95,8 +97,9 @@ class GroundBeds extends Node:
 	var material: Material
 
 	func _sync_dressing() -> void:
-		# The target preset owns every ground (target_material_test); the beds stand in the others.
-		if view != null and material != null and GraphicsPreset.current != "target":
+		# The beds stand in every preset: the shipped high and its target alias keep a prebuilt slot
+		# resource (GraphicsPreset._apply_material), and low gets the beds put back here.
+		if view != null and material != null:
 			view.material_override = material
 
 
@@ -137,6 +140,23 @@ func _slot_material(slot: String) -> Material:
 		_warn_once(path, "%s missing or malformed, that material keeps the fallback" % path)
 	_dir_cache[slot] = material
 	return material
+
+
+# A GLB's socket nodes whose names start with the prefix, each as its transform in the GLB's space.
+func _sockets(path: String, prefix: String) -> Array:
+	var key := path + "#" + prefix
+	if _dir_cache.has(key):
+		return _dir_cache[key]
+	var out := []
+	if ResourceLoader.exists(path):
+		var packed := load(path) as PackedScene
+		if packed != null:
+			var scene := packed.instantiate()
+			for socket: Node3D in scene.find_children(prefix + "*", "Node3D", true, false):
+				out.append(_relative(socket, scene))
+			scene.free()
+	_dir_cache[key] = out
+	return out
 
 
 # One entry per mesh in a GLB: {name, mesh, local, slot, material}; empty when the GLB is
@@ -330,10 +350,11 @@ func _cart(batches: Dictionary, ground: Callable, edge: Dictionary, rng: RandomN
 	var p := _at(edge, c, a)
 	var yaw: float = float(edge["yaw"]) + PI * 0.5 + rng.randf_range(-0.2, 0.2)
 	var body := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(p.x, seat.x, p.y))
-	if not _put(batches, _mech("cart_body.glb"), body):
+	var body_path := cart_dir + "ore_cart_body.glb"
+	if not _put(batches, body_path, body):
 		return
-	for socket in [Vector3(-0.74, 0.3, -0.95), Vector3(0.74, 0.3, -0.95), Vector3(-0.74, 0.3, 0.95), Vector3(0.74, 0.3, 0.95)]:
-		_put(batches, _mech("cart_wheel.glb"), body * Transform3D(Basis.IDENTITY, socket))
+	for socket: Transform3D in _sockets(body_path, "socket_wheel_"):
+		_put(batches, cart_dir + "ore_cart_wheel.glb", body * socket)
 
 
 # Zone A: the broken Daylight Cut pump impeller, upright in the south wall, face toward -Z, 30

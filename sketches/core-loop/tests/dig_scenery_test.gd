@@ -1,4 +1,5 @@
 extends SceneTree
+# Re-pinned 2026-10-09 (w12 VX-SWAP): the haul cart is the authored ore cart (assets/models/ore_cart_body.glb) with its tyres at the body's socket_wheel_* nodes, so the fallback also breaks Scenery.cart_dir; the stone beds now stand in under the target alias too (it is the shipped high), measured cause: GroundBeds skipped its sync whenever current == "target".
 # Re-pinned 2026-10-09 (w12 VX-SURF): the Dig floor binding lists the sandstone surface as its original, so the target preset now swaps it for the ground slot, resource_name "ground" (was "target_ground", a retired shader).
 # Re-pinned 2026-10-09 (w12 VX-LIGHT): target is the shipped high and GraphicsPreset._apply_material skips a view whose override is a prebuilt slot resource, so the Dig stone beds stay under target; measured cause: the floor's override is assets/materials/dig_stone/stone.tres.
 
@@ -22,6 +23,7 @@ const Palette := preload("res://src/core/palette.gd")
 
 const STONE := "res://assets/models/dig_stone/"
 const MECH := "res://assets/models/dig_mechanical/"
+const CART := "res://assets/models/"
 
 
 class DigGame extends "res://src/game.gd":
@@ -75,6 +77,39 @@ func _batched(scenery: Node, path: String) -> bool:
 	return false
 
 
+# Every cart body has four tyres, each at one of the body GLB's socket_wheel_* nodes.
+func _check_tyres(scenery: Node) -> void:
+	var sockets := []
+	var packed := load(CART + "ore_cart_body.glb") as PackedScene
+	var body_scene := packed.instantiate()
+	for socket: Node3D in body_scene.find_children("socket_wheel_*", "Node3D", true, false):
+		sockets.append(Scenery._relative(socket, body_scene))
+	body_scene.free()
+	t.eq("(1) ore cart body carries four wheel sockets", sockets.size(), 4)
+	# A headless renderer keeps no instance buffer, so placements come from the batch's origins:
+	# each tyre stands the socket's distance (at the cart's 2.2 scale) from its nearest body.
+	var body_sigs := _signatures(CART + "ore_cart_body.glb")
+	var tyre_sigs := _signatures(CART + "ore_cart_wheel.glb")
+	var bodies: Array = []
+	var tyres: Array = []
+	for view: MultiMeshInstance3D in scenery.find_children("*", "MultiMeshInstance3D", true, false):
+		var sig := _signature(view.multimesh.mesh)
+		if body_sigs.has(sig):
+			bodies.append_array(Array(view.get_meta("origins")))
+		elif tyre_sigs.has(sig):
+			tyres.append_array(Array(view.get_meta("origins")))
+	var reach: float = 2.2 * (sockets[0] as Transform3D).origin.length() if not sockets.is_empty() else 0.0
+	var placed := 0
+	for o: Vector3 in tyres:
+		var near := INF
+		for b: Vector3 in bodies:
+			near = minf(near, o.distance_to(b))
+		placed += 1 if absf(near - reach) < 0.01 else 0
+	t.check("(1) carts placed", bodies.size() > 0, str(bodies.size()))
+	t.eq("(1) four tyres per cart", tyres.size(), bodies.size() * 4)
+	t.eq("(1) every tyre at a body socket", placed, tyres.size())
+
+
 func _outside_apron(scenery: Node, map) -> bool:
 	var keep := (map.play_rect as Rect2).grow(float(map.scatter["apron"]))
 	var any := false
@@ -118,6 +153,9 @@ func _run() -> void:
 		t.check("(1) rubble is the GLB mesh", _batched(scenery, STONE + "rubble_cluster.glb"), "rubble_cluster")
 		t.check("(1) strut is the GLB mesh", _batched(scenery, MECH + "strut_tall.glb") or _batched(scenery, MECH + "strut_bent.glb"), "strut")
 		t.check("(1) zone A impeller vane is the GLB mesh", _batched(scenery, MECH + "impeller_vane.glb"), "impeller_vane")
+		t.check("(1) cart body is the ore cart GLB mesh", _batched(scenery, CART + "ore_cart_body.glb"), "ore_cart_body")
+		t.check("(1) no old cart body", not _batched(scenery, MECH + "cart_body.glb"), "cart_body")
+		_check_tyres(scenery)
 		t.check("(1) lamp rail is the GLB mesh", _batched(scenery, MECH + "lamp_straight_module.glb"), "lamp_straight_module")
 		t.check("(1) no intake in zone A", not _batched(scenery, MECH + "intake_petal.glb"), "intake_petal")
 		t.check("(1) every instance outside the play rect plus 8 m", _outside_apron(scenery, game.ctx.terrain.map()), "apron")
@@ -169,6 +207,9 @@ func _run() -> void:
 	t.check("(4) stone survives a preset change", ground_view.material_override == stone, str(ground_view.material_override))
 	Preset.apply("target")
 	t.check("(4) the target look keeps the Dig stone slot resource (GraphicsPreset skips prebuilt slots)", ground_view.material_override == stone, str(ground_view.material_override))
+	ground_view.material_override = null
+	(stage_root.find_child("GroundBeds", true, false) as Node)._sync_dressing()
+	t.check("(4) the beds stand in under the target preset too", ground_view.material_override == stone, str(ground_view.material_override))
 	Preset.apply(before)
 	t.check("(4) beds return after the target preset", ground_view.material_override == stone, str(ground_view.material_override))
 	game.free()
@@ -194,6 +235,8 @@ func _run() -> void:
 	# (6) The fallback: with the GLB directories broken the box covers and default ground stay.
 	var keep_stone := Scenery.stone_dir
 	var keep_mech := Scenery.mech_dir
+	var keep_cart := Scenery.cart_dir
+	Scenery.cart_dir = "res://assets/models/no_such_cart/"
 	Scenery.stone_dir = "res://assets/models/no_such_stone/"
 	Scenery.mech_dir = "res://assets/models/no_such_mech/"
 	var bare := Node3D.new()
@@ -205,6 +248,7 @@ func _run() -> void:
 	var bare_scenery := Scenery.build(bare_root, terrain.map(), "dig")
 	Scenery.stone_dir = keep_stone
 	Scenery.mech_dir = keep_mech
+	Scenery.cart_dir = keep_cart
 	t.check("(6) no batches without the GLBs", bare_scenery.find_children("*", "MultiMeshInstance3D", true, false).is_empty(), "batches")
 	var fallback := true
 	var bare_cover := bare_root.find_child("BreachPlate_plate_east", true, false)
