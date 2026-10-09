@@ -851,8 +851,9 @@ func _on_world_fact_fx(kind: String, at: Vector3) -> void:
 
 # A spent cache keeps a low ember going where it stands, until the stage is left.
 func stop_embers() -> void:
-	for p: GPUParticles3D in _fx["cache_ember"]:
-		p.emitting = false
+	for id in ["cache_ember", "cache_wisp"]:
+		for p: GPUParticles3D in _fx[id]:
+			p.emitting = false
 
 
 # Rolling dust: the ball's contact point emits while it rolls on the ground at speed,

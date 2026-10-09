@@ -222,11 +222,11 @@ const JUICE := {
 	# "low" sub-dict gives the low preset's counts; "motes" and "streaks" are [idle, occupied].
 	"rolling": {"fx": {"roll_dust": 90}, "min_speed": 9.0},
 	"slammed": {"fx": {"slam_ring": 48, "slam_dust": 24}},
-	"harpoon_bit": {"fx": {"latch_ring": 24, "latch_pulse": 12}},
+	"harpoon_bit": {"fx": {"latch_ring": 24, "latch_halo": 24, "latch_pulse": 12}},
 	"wall_crumbled": {"fx": {"crack_debris": 28, "slam_dust": 14}},
 	"sticky_stuck": {"fx": {"spark_core": 8, "spark_halo": 8}},
 	"breach_opened": {"fx": {"dig_debris": 10, "dig_dust": 12}, "low": {"dig_debris": 4, "dig_dust": 5}},
-	"cache_spent": {"fx": {"cache_ember": 6}},
+	"cache_spent": {"fx": {"cache_ember": 24, "cache_wisp": 6}},
 	"net_caught": {"fx": {"net_dust": 14}},
 	"thermal_ride": {"motes": [9, 27], "streaks": [6, 18]},
 }
