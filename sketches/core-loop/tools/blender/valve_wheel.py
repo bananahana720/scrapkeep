@@ -29,14 +29,14 @@ from ore_cart import kit, common, strut
 
 MODELS = kit.SKETCH / "assets/models"
 
-# One row per painted part, palette names only. The band is the brief's thin hazard band (breakable); the gasket
-# and outlet are copper, not the picture's orange, because hazard is kept to the one band (LEGIBILITY.md:21).
+# One row per painted part, palette names only. The band is amber, a painted safety stripe (VISUAL-LANGUAGE.md:482), not hazard (LEGIBILITY.md:21); the hub, gasket
+# and outlet are copper: brass is the Fleet requisition colour, friendly fittings are copper (RECIPE-WAVE.md LORE).
 # The wheel grey is charcoal lifted toward bone (the palette has no neutral grey; slate is a state colour).
 TONES = {
     "iron": common.mix("charcoal", "bone", .32),
     "crack": "charcoal",
-    "brass": "brass",
-    "band": "hazard",
+    "brass": "copper",
+    "band": "amber",
     "body": "petrol",
     "gasket": "copper",
     "slab": common.mix("bone", "charcoal", .28),
