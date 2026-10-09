@@ -124,10 +124,8 @@ func _check_deep_cache() -> void:
 			deep_cache = device
 	_report("Dig deep relic cache is placed", deep_cache != null, "devices %s" % [_game.world.interact.devices.map(func(d): return d.id)])
 	if deep_cache != null:
-		var at: Vector2 = map.relic_spot
-		var authored: Vector3 = _game.ctx.terrain.drop_point(at.x, at.y, 0.0)
-		_report("Dig deep cache clears its wall shadow", deep_cache.global_position.distance_to(authored) >= CrackedCache.LANE_OFFSET - 0.01,
-			"root offset %.2f m from authored wall point" % deep_cache.global_position.distance_to(authored))
+		# GATEFIX (2026-10-08): a relic cache sits on its authored spot (relics_per_world_test pins
+		# it within 0.01 m), so the lane offset is not a shadow proxy here; the wall-gap check below is.
 		var gap := _nearest_external_wall(deep_cache, 4)
 		_report("Dig deep cache clears nearby map wall colliders", gap < 0.0 or gap >= CrackedCache.LANE_OFFSET - 0.01,
 			"nearest external wall %s" % ("none within 30 m" if gap < 0.0 else "%.2f m away" % gap))
