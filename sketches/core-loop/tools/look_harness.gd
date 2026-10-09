@@ -155,7 +155,7 @@ func _render_children(subjects: Array, dir: String) -> int:
 	# card 0 while the parent ran on card 1), so each child gets the parent's renderer, display
 	# and the queue's card index explicitly.
 	var engine_args: Array = ["--path", ProjectSettings.globalize_path("res://"), "--rendering-driver", RenderingServer.get_current_rendering_driver_name(),
-		"--display-driver", DisplayServer.get_name(), "--resolution", "%dx%d" % [SIZE.x, SIZE.y], "--script", "res://tools/look_harness.gd"]
+		"--display-driver", DisplayServer.get_name().to_lower(), "--resolution", "%dx%d" % [SIZE.x, SIZE.y], "--script", "res://tools/look_harness.gd"]
 	if OS.has_environment("SCRAPKEEP_GPU_INDEX"):
 		engine_args.append_array(["--gpu-index", OS.get_environment("SCRAPKEEP_GPU_INDEX")])
 	var rows: Array = []
