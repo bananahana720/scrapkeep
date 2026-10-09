@@ -72,7 +72,7 @@ func _init() -> void:
 		{"kind": "rock", "density": 0.3, "scale": Vector2(0.9, 1.9), "slope": 0.8, "bury": 0.4, "seed": "scatter_spillway_boulder", "mesh": "kit:rubble", "slot": "stone"},
 		{"kind": "rock", "density": 0.5, "scale": Vector2(0.4, 0.9), "slope": 0.8, "bury": 0.35, "seed": "scatter_spillway_rock", "mesh": "kit:rubble", "slot": "stone"},
 		{"kind": "scrap", "density": 0.06, "scale": Vector2(0.5, 0.9), "slope": 0.85, "bury": 0.3, "seed": "scatter_spillway_scrap", "mesh": "glb:res://assets/models/dig_mechanical/strut_bent.glb", "slot": "steel"},
-		{"kind": "cable", "density": 0.08, "scale": Vector2(0.8, 1.3), "slope": 0.9, "bury": 0.4, "seed": "scatter_spillway_cable", "mesh": "prim:coil", "slot": "elastomer"},
+		{"kind": "cable", "density": 0.08, "scale": Vector2(0.8, 1.3), "slope": 0.9, "bury": 0.4, "seed": "scatter_spillway_cable", "mesh": "prim:coil", "slot": "cable"},
 	]
 	basin = {"centre": BASIN_CENTRE, "radius": 95.0, "depth": 7.0,
 		"plane_size": Vector2(300.0, 130.0), "plane_centre": Vector2(0.0, 120.0)}

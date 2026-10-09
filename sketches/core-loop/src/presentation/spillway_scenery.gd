@@ -438,10 +438,7 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	view.mesh = importer.get_mesh()
 	view.material_override = material
 	if label == "SandstoneShoulders":
-		var strata := ShaderMaterial.new()
-		strata.shader = preload("res://src/presentation/sandstone.gdshader")
-		strata.set_shader_parameter("cliff_only", true)
-		view.material_override = strata
+		view.material_override = Palette.rock_material()
 	elif label in ["SpillSheets", "Tailrace"]:
 		var flowing := ShaderMaterial.new()
 		flowing.shader = preload("res://src/presentation/spill_water.gdshader")

@@ -34,6 +34,9 @@ const PEDESTAL_REACH := 1.7
 # so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
+const LANE_EDGE := 4.0
+const LANE_LEVEL_SPAN := 2.0
+const LANE_LEVEL_RISE := 1.0
 # The shell's own warm glow, brighter once the wall is fired. No light: a per-cache
 # OmniLight3D freed with the cache on a stage change made Godot 4.7.2 Forward+ segfault on
 # the next boss entry (GPU only), as the wave 9 cage light did.
@@ -69,8 +72,10 @@ func _init() -> void:
 
 func build() -> void:
 	if not relic_guaranteed:
-		global_position += global_basis.z * LANE_OFFSET
-		global_position.y = ctx.terrain.height(global_position.x, global_position.z)
+		var lane := global_position + global_basis.z * LANE_OFFSET
+		if lane_clear(ctx.terrain.map().play_rect, lane, ctx.terrain.height):
+			global_position = lane
+			global_position.y = ctx.terrain.height(lane.x, lane.z)
 	var parts := _parts()
 	if parts.is_empty():
 		_build_greybox()
@@ -79,6 +84,18 @@ func build() -> void:
 	_build_pedestals(parts)
 	_build_rim_glow()
 	ctx.events.slammed.connect(_on_slammed)
+
+
+# The lane spot is used only inside the play rect (less LANE_EDGE) and on ground that is level over
+# LANE_LEVEL_SPAN metres; otherwise the cache stays where the map placed it.
+static func lane_clear(rect: Rect2, at: Vector3, height: Callable) -> bool:
+	if not rect.grow(-LANE_EDGE).has_point(Vector2(at.x, at.z)):
+		return false
+	var east: float = height.call(at.x + LANE_LEVEL_SPAN, at.z)
+	var west: float = height.call(at.x - LANE_LEVEL_SPAN, at.z)
+	var north: float = height.call(at.x, at.z + LANE_LEVEL_SPAN)
+	var south: float = height.call(at.x, at.z - LANE_LEVEL_SPAN)
+	return maxf(absf(east - west), absf(north - south)) <= LANE_LEVEL_RISE
 
 
 func _build_greybox() -> void:
@@ -278,6 +295,7 @@ func take(index: int) -> void:
 		ctx.run.add_relic(taken, "cache")
 	else:
 		ctx.run.add_part(taken, "cache")
+	ctx.events.world_fact.emit("cache_spent", global_position)
 
 
 func _collision_box(size: Vector3, at: Vector3) -> StaticBody3D:

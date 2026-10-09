@@ -2,6 +2,7 @@ extends RefCounted
 
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const DigFx := preload("res://src/presentation/dig_fx.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
 # The Dig's scenery (alpha dress push, unit WDG): both zones' landmarks, cut faces, rubble,
 # struts, carts, shells and lamp lines along the rim, the drum look on every breach cover, the
@@ -13,12 +14,13 @@ const DigFx := preload("res://src/presentation/dig_fx.gd")
 # The directories are static vars so a test can point them at nothing and see the fallback.
 static var stone_dir := "res://assets/models/dig_stone/"
 static var mech_dir := "res://assets/models/dig_mechanical/"
+# The resource paths come from the one material slot table (material_slots.gd).
 const SLOTS := {
-	"stone": "res://assets/materials/dig_stone/stone.tres",
-	"steel": "res://assets/materials/dig_mechanical/steel.tres",
-	"enamel": "res://assets/materials/dig_mechanical/enamel.tres",
-	"elastomer": "res://assets/materials/dig_mechanical/elastomer.tres",
-	"glass": "res://assets/materials/dig_mechanical/glass.tres",
+	"stone": MaterialSlots.SLOTS["stone"]["path"],
+	"steel": MaterialSlots.SLOTS["steel"]["path"],
+	"enamel": MaterialSlots.SLOTS["enamel"]["path"],
+	"elastomer": MaterialSlots.SLOTS["elastomer"]["path"],
+	"glass": MaterialSlots.SLOTS["glass"]["path"],
 }
 const MINT := Color("8bf0d3")
 # Warm white, not amber: amber belongs to an offered landing or reward (SHEET.md).

@@ -9,7 +9,7 @@ extends RefCounted
 #   bury     fraction of the instance's height pushed below the ground, so it reads embedded
 #   seed     the name hashed into the row's private RandomNumberGenerator
 #   mesh     "kit:<name>" (KIT below), "glb:<path>" (first mesh of a kit GLB) or "prim:coil"
-#   slot     the kit material slot (dig_scenery.gd SLOTS) every instance of the row shares
+#   slot     the material slot (material_slots.gd) every instance of the row shares
 const KINDS := ["rock", "pebble", "scrap", "cable"]
 const KEYS := ["kind", "density", "scale", "slope", "bury", "seed", "mesh", "slot"]
 # Closed, faceted, under 60 triangles: a lat-long solid of `segments` x `rings`, each vertex pushed

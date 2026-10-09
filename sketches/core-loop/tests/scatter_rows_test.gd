@@ -3,7 +3,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ScatterRows := preload("res://src/world/scatter_rows.gd")
 const Scatter := preload("res://src/world/scatter.gd")
-const DigScenery := preload("res://src/presentation/dig_scenery.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
@@ -35,7 +35,7 @@ func _initialize() -> void:
 			if float(row["bury"]) < 0.0 or float(row["bury"]) >= 1.0: row_errors.append(tag + " bury")
 			if seeds.has(row["seed"]): row_errors.append(tag + " seed reused")
 			seeds[row["seed"]] = true
-			if not DigScenery.SLOTS.has(row["slot"]): row_errors.append(tag + " slot")
+			if Palette.slot_material(row["slot"]) == null: row_errors.append(tag + " slot")
 			if Scatter._source(row["mesh"]).is_empty(): row_errors.append(tag + " mesh source")
 		var relief: Dictionary = table["relief"]
 		if not relief.is_empty() and float(relief["amp"]) > 0.14:

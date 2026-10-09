@@ -28,7 +28,7 @@ func _init() -> void:
 		{"kind": "rock", "density": 1.2, "scale": Vector2(0.3, 0.8), "slope": 0.8, "bury": 0.35, "seed": "scatter_dig_deep_rock", "mesh": "kit:rubble", "slot": "stone"},
 		{"kind": "pebble", "density": 2.2, "scale": Vector2(0.1, 0.25), "slope": 0.8, "bury": 0.3, "seed": "scatter_dig_deep_pebble", "mesh": "kit:pebble", "slot": "stone"},
 		{"kind": "scrap", "density": 0.2, "scale": Vector2(0.25, 0.45), "slope": 0.85, "bury": 0.3, "seed": "scatter_dig_deep_scrap", "mesh": "glb:res://assets/models/dig_mechanical/strut_bent.glb", "slot": "steel"},
-		{"kind": "cable", "density": 0.25, "scale": Vector2(0.7, 1.2), "slope": 0.9, "bury": 0.4, "seed": "scatter_dig_deep_cable", "mesh": "prim:coil", "slot": "elastomer"},
+		{"kind": "cable", "density": 0.25, "scale": Vector2(0.7, 1.2), "slope": 0.9, "bury": 0.4, "seed": "scatter_dig_deep_cable", "mesh": "prim:coil", "slot": "cable"},
 	]
 	# Upper tier: the drop-in spot, west of the first map's.
 	spawn = Vector2(-24.0, -128.0)

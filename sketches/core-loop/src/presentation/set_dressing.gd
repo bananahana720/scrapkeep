@@ -64,11 +64,11 @@ func _build_stage() -> void:
 	_rng.seed = seed_value
 	_ground = ctx.terrain.ground_callable(stage)
 	var map = ctx.terrain.map_for(stage)
-	if Preset.PRESETS.target.set_dressing:
+	if Preset.PRESETS[Preset.current].get("set_dressing", false):
 		_build_props(map, stage)
-	if Preset.PRESETS.target.air_motes:
+	if Preset.PRESETS[Preset.current].get("air_motes", false):
 		_build_dust()
-	if Preset.PRESETS.target.air_streaks:
+	if Preset.PRESETS[Preset.current].get("air_streaks", false):
 		_build_streaks(map)
 	_update_protection()
 

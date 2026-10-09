@@ -10,6 +10,7 @@ extends RefCounted
 
 const ScatterRows := preload("res://src/world/scatter_rows.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 const COIL_INNER := 0.3
 const COIL_OUTER := 0.42
@@ -60,7 +61,7 @@ static func build(parent: Node3D, map, ground: Callable) -> Node3D:
 		view.set_meta("instance_buffer", buffer)
 		view.set_meta("origins", origins)
 		view.set_meta("verts_per_instance", source["verts"])
-		view.material_override = load(DigScenery.SLOTS[row["slot"]])
+		view.material_override = Palette.slot_material(row["slot"])
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		holder.add_child(view)
 	parent.add_child(holder)

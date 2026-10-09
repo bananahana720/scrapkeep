@@ -575,11 +575,7 @@ static func _catch_material() -> ShaderMaterial:
 
 # The padded perimeter in the catch amber the sheet keeps for offered lift and catch edges.
 static func net_edge_material() -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = LOOK["catch_edge"]
-	material.albedo_texture = Palette.painted_texture(256)
-	material.roughness = 0.85
-	return material
+	return Palette.nosing_material()
 
 
 static func _net_deck(parent: Node3D, map) -> void:
