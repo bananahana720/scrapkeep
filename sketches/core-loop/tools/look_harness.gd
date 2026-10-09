@@ -1,0 +1,989 @@
+extends SceneTree
+
+# The look harness: every wave 12 look unit and judge renders named subjects through it.
+# Subjects and cameras live in look_subjects.gd (one row per subject); this file stages them.
+#
+# Render (native display; on card 1 through tools/coordinator/gpu_queue.sh --gpu 1 --need 3000 --display --shared):
+#   godot --rendering-driver vulkan --display-driver x11 --gpu-index $SCRAPKEEP_GPU_INDEX --path sketches/core-loop
+#     --resolution 1920x1080 --script res://tools/look_harness.gd -- --subject=<name>[,<name>...]|--all --out=<abs dir>
+#     [--tick=N] [--preset=high|low|target] [--variant=<label>] [--class=N]
+#     [--baseline=<sha7>] [--pair --base=<sha7>] [--baseline-root=<abs dir>]
+#   Writes <out>/<subject>/<camera>.png and <out>/<subject>/frames.json, and <out>/run.json over the run.
+#   Subjects of one group render in one boot; several groups run one child process per group.
+#   The tree pauses on the subject's physics tick (its row's tick, or --tick) before the first frame,
+#   so a re-run draws the same tick. Each frame records its metrics (near-black share, flat-sky share:
+#   the single most common colour, mean luminance) and the ball's screen box; a frame over its row's
+#   dead_frame limits is dead, and any dead frame makes the run exit 1 naming subject/camera.
+#   The ball (the scale mannequin) is placed beside each camera's target, on the floor under it,
+#   for every subject that is not a ui row.
+#   --baseline=<sha7>  renders into <baseline root>/<sha7>/ (default root artifacts/local/alpha/baselines).
+#   --pair --base=<sha7>  after rendering, writes <out>/pairs/<subject>__<camera>/{a,b}.png and
+#     <out>/pairs/key.json; which side is the baseline is the subject/camera coin (look_subjects.coin),
+#     never printed.
+# Serve: --serve --out=<abs dir> renders each <out>/requests/<id>.json ({"subjects": [...]} or
+#   {"quit": true}) and answers <out>/answers/<id>.json, for units with many render cycles.
+# Boss smoke: --boss=bowl|waking|mind boots on the native display, enters that world's last stage
+#   and its arena as the bot does (flow.enter_stage, then flow.enter_boss), runs 300 physics ticks
+#   and prints one BOSS_SMOKE line with the device (sketch-export runs it per boss on Vulkan).
+# Silhouette helper for asset tests: subject_bounds(node) is the world AABB of the visible meshes
+#   under it; facing(node, eye) is the angle in degrees between the node's forward (-Z) and the
+#   direction to the camera eye; a subject faces a named view when facing() is under 90.
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const Subjects := preload("res://tools/look_subjects.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+
+const SIZE := Vector2i(1920, 1080)
+const METRIC_SIZE := Vector2i(480, 270)
+const BLACK_LEVEL := 24
+const DRAW_FRAMES := 12
+const SEED := 280928
+const BOSS_TICKS := 300
+# A collider this close to the eye (the camera inside or against it) does not pull the ball in.
+const NEAR_PULL := 4.0
+const BOSSES := {"bowl": 1, "waking": 2, "mind": 3}
+
+var out := ""
+var requested: Array = []
+var all := false
+var group_arg := ""
+var tick_override := -1
+var preset := ""
+var variant := ""
+var class_index := 1
+var baseline := ""
+var pair := false
+var base := ""
+var baseline_root := ""
+var serve := false
+var boss := ""
+
+var game
+var cam: Camera3D
+var ticks := 0
+var failures := 0
+var _anchors := {}
+
+
+func _initialize() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--out="): out = a.trim_prefix("--out=")
+		elif a.begins_with("--subject="): requested = Array(a.trim_prefix("--subject=").split(",", false))
+		elif a == "--all": all = true
+		elif a.begins_with("--group="): group_arg = a.trim_prefix("--group=")
+		elif a.begins_with("--tick="): tick_override = int(a.trim_prefix("--tick="))
+		elif a.begins_with("--preset="): preset = a.trim_prefix("--preset=")
+		elif a.begins_with("--variant="): variant = a.trim_prefix("--variant=")
+		elif a.begins_with("--class="): class_index = int(a.trim_prefix("--class="))
+		elif a.begins_with("--baseline="): baseline = a.trim_prefix("--baseline=")
+		elif a == "--pair": pair = true
+		elif a.begins_with("--base="): base = a.trim_prefix("--base=")
+		elif a.begins_with("--baseline-root="): baseline_root = a.trim_prefix("--baseline-root=")
+		elif a == "--serve": serve = true
+		elif a.begins_with("--boss="): boss = a.trim_prefix("--boss=")
+	if baseline_root.is_empty():
+		baseline_root = ProjectSettings.globalize_path("res://").path_join("../../artifacts/local/alpha/baselines").simplify_path()
+	if not baseline.is_empty():
+		out = baseline_root.path_join(baseline)
+	if DisplayServer.get_name() == "headless":
+		printerr("look_harness: needs a native display (run through gpu_queue.sh --display)")
+		quit(2)
+		return
+	if boss.is_empty() and out.is_empty():
+		printerr("look_harness: needs --out or --baseline")
+		quit(2)
+		return
+	if pair and base.is_empty():
+		printerr("look_harness: --pair needs --base=<sha7>")
+		quit(2)
+		return
+	root.size = SIZE
+	root.content_scale_size = SIZE
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
+	if not out.is_empty():
+		DirAccess.make_dir_recursive_absolute(out)
+	_main.call_deferred()
+
+
+func _physics_process(_delta: float) -> bool:
+	if not paused:
+		ticks += 1
+	return false
+
+
+func _main() -> void:
+	if not boss.is_empty():
+		quit(await _boss_smoke(boss))
+		return
+	if serve:
+		quit(_serve())
+		return
+	if all:
+		requested = Subjects.names()
+	for n in requested:
+		if not Subjects.SUBJECTS.has(n):
+			printerr("look_harness: unknown subject ", n)
+			quit(2)
+			return
+	if requested.is_empty():
+		printerr("look_harness: needs --subject=, --all, --serve or --boss=")
+		quit(2)
+		return
+	var groups := _groups_of(requested)
+	if not group_arg.is_empty() or groups.size() == 1:
+		await _run_group(groups[0] if group_arg.is_empty() else group_arg)
+		quit(failures)
+		return
+	quit(_render_children(requested, out))
+
+
+# ---------------------------------------------------------------- runs, children, summary
+static func _groups_of(subjects: Array) -> Array:
+	var groups: Array = []
+	for g in Subjects.GROUPS:
+		if subjects.any(func(n): return Subjects.SUBJECTS[n]["group"] == g):
+			groups.append(g)
+	return groups
+
+
+func _render_children(subjects: Array, dir: String) -> int:
+	var logs := dir.path_join("_logs")
+	DirAccess.make_dir_recursive_absolute(logs)
+	var engine_args := Array(OS.get_cmdline_args())
+	var rows: Array = []
+	for g in _groups_of(subjects):
+		var mine: Array = subjects.filter(func(n): return Subjects.SUBJECTS[n]["group"] == g)
+		var args := engine_args.duplicate()
+		args.append_array(["--", "--out=" + dir, "--group=" + g, "--subject=" + ",".join(mine), "--class=%d" % class_index])
+		if tick_override >= 0: args.append("--tick=%d" % tick_override)
+		if not preset.is_empty(): args.append("--preset=" + preset)
+		if not variant.is_empty(): args.append("--variant=" + variant)
+		var started := Time.get_ticks_msec()
+		var output: Array = []
+		var rc := OS.execute(OS.get_executable_path(), args, output, true)
+		var wall := (Time.get_ticks_msec() - started) / 1000.0
+		var f := FileAccess.open(logs.path_join(g + ".log"), FileAccess.WRITE)
+		f.store_string("\n".join(output))
+		f.close()
+		print("group %s rc=%d wall=%.1f s subjects=%d" % [g, rc, wall, mine.size()])
+		rows.append({"group": g, "rc": rc, "wall_s": wall, "subjects": mine})
+	return _summarize(subjects, dir, rows)
+
+
+func _summarize(subjects: Array, dir: String, groups: Array) -> int:
+	var dead: Array = []
+	var missing: Array = []
+	var no_ball: Array = []
+	for n in subjects:
+		var fj := dir.path_join(n).path_join("frames.json")
+		if not FileAccess.file_exists(fj):
+			missing.append(n)
+			continue
+		var doc: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(fj))
+		for fr in doc["frames"]:
+			if fr["dead"]:
+				dead.append("%s/%s" % [n, fr["id"]])
+			if Subjects.needs_ball(n) and (not fr["ball"]["in_frame"] or fr["ball"].get("hidden", false)):
+				no_ball.append("%s/%s" % [n, fr["id"]])
+	var failed_groups: Array = groups.filter(func(r): return r["rc"] != 0).map(func(r): return r["group"])
+	var doc := {"tool": "look_harness.gd", "variant": variant, "preset": preset, "subjects": subjects.size(), "groups": groups,
+		"dead": dead, "missing": missing, "ball_out_of_frame": no_ball, "failed_groups": failed_groups}
+	var f := FileAccess.open(dir.path_join("run.json"), FileAccess.WRITE)
+	f.store_string(JSON.stringify(doc, "\t"))
+	f.close()
+	for d in dead: print("DEAD ", d)
+	for m in missing: print("MISSING ", m)
+	for b in no_ball: print("NO_BALL ", b)
+	if pair:
+		write_pairs(subjects, baseline_root.path_join(base), dir, dir.path_join("pairs"))
+	var bad := not dead.is_empty() or not missing.is_empty() or not failed_groups.is_empty() or not no_ball.is_empty()
+	print("look_harness: %s subjects=%d dead=%d missing=%d no_ball=%d failed_groups=%d" % ["FAIL" if bad else "PASS", subjects.size(), dead.size(), missing.size(), no_ball.size(), failed_groups.size()])
+	return 1 if bad else 0
+
+
+func _serve() -> int:
+	var inbox := out.path_join("requests")
+	var answers := out.path_join("answers")
+	DirAccess.make_dir_recursive_absolute(inbox)
+	DirAccess.make_dir_recursive_absolute(answers)
+	print("look_harness: serving ", inbox)
+	while true:
+		var files := Array(DirAccess.get_files_at(inbox)).filter(func(f): return f.ends_with(".json"))
+		files.sort()
+		for file in files:
+			var path := inbox.path_join(file)
+			var req = JSON.parse_string(FileAccess.get_file_as_string(path))
+			DirAccess.remove_absolute(path)
+			if not (req is Dictionary):
+				continue
+			if req.get("quit", false):
+				return 0
+			var subjects: Array = (req.get("subjects", []) as Array).filter(func(n): return Subjects.SUBJECTS.has(n))
+			var dir := out.path_join(file.get_basename())
+			var rc := _render_children(subjects, dir)
+			var ans := FileAccess.open(answers.path_join(file), FileAccess.WRITE)
+			ans.store_string(JSON.stringify({"rc": rc, "dir": dir, "subjects": subjects}))
+			ans.close()
+		OS.delay_msec(250)
+	return 0
+
+
+# ---------------------------------------------------------------- frames
+static func frame_metrics(img: Image) -> Dictionary:
+	var small: Image = img.duplicate()
+	if small.get_format() != Image.FORMAT_RGB8:
+		small.convert(Image.FORMAT_RGB8)
+	small.resize(METRIC_SIZE.x, METRIC_SIZE.y, Image.INTERPOLATE_NEAREST)
+	var data := small.get_data()
+	var n := data.size() / 3
+	var black := 0
+	var luma := 0.0
+	var counts := {}
+	for i in n:
+		var r := data[i * 3]
+		var g := data[i * 3 + 1]
+		var b := data[i * 3 + 2]
+		if r < BLACK_LEVEL and g < BLACK_LEVEL and b < BLACK_LEVEL:
+			black += 1
+		luma += 0.2126 * r + 0.7152 * g + 0.0722 * b
+		var key := (r << 16) | (g << 8) | b
+		counts[key] = counts.get(key, 0) + 1
+	var top := 0
+	var top_key := 0
+	for k in counts:
+		if counts[k] > top:
+			top = counts[k]
+			top_key = k
+	return {"black": float(black) / n, "sky": float(top) / n, "sky_rgb": [top_key >> 16, (top_key >> 8) & 255, top_key & 255], "luma": luma / n / 255.0}
+
+
+static func is_dead(metrics: Dictionary, limits: Dictionary) -> bool:
+	return metrics["black"] > limits["black"] or metrics["sky"] > limits["sky"]
+
+
+# Screen box of a sphere of radius r at p, in viewport pixels; in_frame when it overlaps the frame.
+static func ball_box(camera: Camera3D, p: Vector3, r: float, size: Vector2i) -> Dictionary:
+	if camera.is_position_behind(p):
+		return {"in_frame": false, "bbox": []}
+	var c := camera.unproject_position(p)
+	var e := camera.unproject_position(p + camera.global_basis.y * r)
+	var rad := maxf(1.0, c.distance_to(e))
+	var box := Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0)
+	var inside := box.intersects(Rect2(Vector2.ZERO, Vector2(size)))
+	return {"in_frame": inside, "bbox": [snappedf(box.position.x, 0.1), snappedf(box.position.y, 0.1), snappedf(box.size.x, 0.1), snappedf(box.size.y, 0.1)]}
+
+
+static func write_pairs(subjects: Array, base_dir: String, head_dir: String, pair_dir: String) -> int:
+	DirAccess.make_dir_recursive_absolute(pair_dir)
+	var key := {"base": base_dir, "head": head_dir, "pairs": {}}
+	var made := 0
+	for n in subjects:
+		for shot in Subjects.SUBJECTS[n]["cameras"]:
+			var file: String = shot[0] + ".png"
+			var bp := base_dir.path_join(n).path_join(file)
+			var hp := head_dir.path_join(n).path_join(file)
+			if not FileAccess.file_exists(bp) or not FileAccess.file_exists(hp):
+				key["pairs"]["%s__%s" % [n, shot[0]]] = "missing"
+				continue
+			var d := pair_dir.path_join("%s__%s" % [n, shot[0]])
+			DirAccess.make_dir_recursive_absolute(d)
+			var base_is_a := Subjects.coin(n, shot[0])
+			DirAccess.copy_absolute(bp if base_is_a else hp, d.path_join("a.png"))
+			DirAccess.copy_absolute(hp if base_is_a else bp, d.path_join("b.png"))
+			key["pairs"]["%s__%s" % [n, shot[0]]] = {"a": "base" if base_is_a else "head", "b": "head" if base_is_a else "base"}
+			made += 1
+	var f := FileAccess.open(pair_dir.path_join("key.json"), FileAccess.WRITE)
+	f.store_string(JSON.stringify(key, "\t"))
+	f.close()
+	print("pairs: %d written to %s (key in key.json)" % [made, pair_dir])
+	return made
+
+
+# ---------------------------------------------------------------- silhouette helper
+static func subject_bounds(n: Node) -> AABB:
+	var box := AABB()
+	var first := true
+	for m in n.find_children("*", "GeometryInstance3D", true, false):
+		if not m.is_visible_in_tree() or not (m is MeshInstance3D or m is MultiMeshInstance3D):
+			continue
+		if m.get_aabb().size == Vector3.ZERO:
+			continue
+		var b: AABB = m.global_transform * m.get_aabb()
+		box = b if first else box.merge(b)
+		first = false
+	if n is MeshInstance3D and first:
+		box = n.global_transform * n.get_aabb()
+	return box
+
+
+static func facing(n: Node3D, eye: Vector3) -> float:
+	var fwd := -n.global_basis.z
+	var to_eye := eye - n.global_position
+	fwd.y = 0.0
+	to_eye.y = 0.0
+	if fwd.length() < 0.0001 or to_eye.length() < 0.0001:
+		return 0.0
+	return rad_to_deg(fwd.normalized().angle_to(to_eye.normalized()))
+
+
+# ---------------------------------------------------------------- staging
+func _frames(n: int) -> void:
+	for i in n:
+		await physics_frame
+
+
+func _gh(x: float, z: float) -> float:
+	return game.ctx.terrain.height(x, z)
+
+
+func _boot(warden := false, table := "alpha") -> void:
+	seed(SEED)
+	game = Game.new()
+	game.name = "Game"
+	game.test_mode = true
+	game.table = table
+	root.add_child(game)
+	while game.flow == null:
+		await physics_frame
+	await process_frame
+	game.ctx.calm = true
+	game.flow.force_warden = warden
+	game.flow.press_start()
+	game.flow.choose_class(class_index)
+	game.run.set_max_hp(999999.0)
+	game.player.source = Intent.Scripted.new()
+	cam = Camera3D.new()
+	cam.far = 1800.0
+	cam.near = 0.05
+	game.add_child(cam)
+
+
+func _boot_play(stage := 1, warden := false) -> void:
+	await _boot(warden)
+	await _frames(60)
+	if stage != 1:
+		await _stage(stage)
+
+
+func _stage(stage: int) -> void:
+	game.flow.enter_stage(stage, Vector3.ZERO, false)
+	await _frames(40)
+	game.player.body().freeze = true
+
+
+func _anchor(name: String, point: Vector3, node: Node3D = null, radius := 1.0) -> void:
+	_anchors[name] = {"point": point, "basis": node.global_basis if node != null else Basis.IDENTITY, "radius": radius}
+
+
+func _wants(subject: String) -> bool:
+	return requested.has(subject)
+
+
+func _wait_tick(subject: String) -> Dictionary:
+	var want: int = tick_override if tick_override >= 0 else int(Subjects.SUBJECTS[subject]["tick"])
+	var late := want > 0 and ticks > want
+	while ticks < want:
+		await physics_frame
+	return {"tick": ticks, "wanted": want, "late": late}
+
+
+# The ball, frozen, moved under the paused tree beside the camera's target and toward the
+# camera, then pulled in front of whatever collider hides it from the eye: the body for physics
+# and the visual root (the parent of the juice node), which _process places and a paused tree
+# no longer updates. A ball already in frame and unhidden stays where the staging put it.
+func _place_ball(eye: Vector3, target: Vector3) -> Vector3:
+	var body: RigidBody3D = game.player.body()
+	var now: Vector3 = body.global_position
+	var seen := ball_box(cam, now, Tuning.RADIUS, SIZE)
+	if seen["in_frame"] and cam.is_position_in_frustum(now) and seen["bbox"][2] >= 6.0 and seen["bbox"][2] <= SIZE.y * 0.4 and not _hidden(eye, now):
+		return now
+	var to_eye := eye - target
+	var dist := to_eye.length()
+	var p := target + cam.global_basis.x * clampf(dist * 0.22, 2.5, 24.0) + to_eye.normalized() * minf(dist * 0.35, 8.0)
+	p = _on_floor(p, 30.0, 80.0)
+	var space := cam.get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(eye, p)
+	q.exclude = [body.get_rid()]
+	var hit := space.intersect_ray(q)
+	if not hit.is_empty() and eye.distance_to(hit["position"]) > NEAR_PULL:
+		var h: Vector3 = hit["position"]
+		p = _on_floor(h + (eye - h).normalized() * (Tuning.RADIUS + 0.4), 2.0, 30.0)
+	body.freeze = true
+	body.global_position = p
+	(game.player.juice_node().get_parent() as Node3D).global_position = p
+	return p
+
+
+func _on_floor(p: Vector3, up: float, down: float) -> Vector3:
+	var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * up, p + Vector3.DOWN * down)
+	q.exclude = [game.player.body().get_rid()]
+	var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
+	if hit.is_empty():
+		return p
+	var on_floor: Vector3 = hit["position"] + Vector3.UP * Tuning.RADIUS
+	return on_floor if cam.is_position_in_frustum(on_floor) else p
+
+
+func _hidden(eye: Vector3, p: Vector3) -> bool:
+	var q := PhysicsRayQueryParameters3D.create(eye, p)
+	q.exclude = [game.player.body().get_rid()]
+	var hit := cam.get_world_3d().direct_space_state.intersect_ray(q)
+	return not hit.is_empty() and eye.distance_to(hit["position"]) < eye.distance_to(p) - Tuning.RADIUS
+
+
+func _shoot(subject: String, extra := {}) -> void:
+	if not _wants(subject):
+		return
+	var row: Dictionary = Subjects.SUBJECTS[subject]
+	var ui: bool = row["kind"] == "ui"
+	var dir := out.path_join(subject)
+	DirAccess.make_dir_recursive_absolute(dir)
+	var tick: Dictionary = await _wait_tick(subject)
+	var was_paused := paused
+	paused = true
+	if not ui:
+		for n in root.find_children("*", "CanvasLayer", true, false): n.visible = false
+		for l in root.find_children("*", "Label3D", true, false): l.visible = false
+	var recs: Array = []
+	for shot in row["cameras"]:
+		var v := Subjects.resolve(subject, shot, _anchors)
+		var ball := {"in_frame": false, "bbox": []}
+		var started := Time.get_ticks_msec()
+		if not ui:
+			cam.global_position = v["eye"]
+			cam.look_at(v["target"], Vector3.UP)
+			cam.fov = v["fov"]
+			cam.current = true
+			var p := _place_ball(v["eye"], v["target"])
+			ball = ball_box(cam, p, Tuning.RADIUS, SIZE)
+			ball["at"] = [p.x, p.y, p.z]
+			ball["hidden"] = _hidden(v["eye"], p)
+		for i in DRAW_FRAMES:
+			await RenderingServer.frame_post_draw
+		var img := root.get_texture().get_image()
+		var png := dir.path_join(String(shot[0]) + ".png")
+		img.save_png(png)
+		var m := frame_metrics(img)
+		var dead := is_dead(m, Subjects.dead_limits(subject))
+		recs.append({"id": shot[0], "eye": [v["eye"].x, v["eye"].y, v["eye"].z], "target": [v["target"].x, v["target"].y, v["target"].z], "fov": v["fov"],
+			"file": String(shot[0]) + ".png", "sha256": FileAccess.get_sha256(png), "metrics": m, "dead": dead, "ball": ball,
+			"wall_ms": Time.get_ticks_msec() - started})
+		if dead:
+			printerr("DEAD frame %s/%s black=%.3f sky=%.3f" % [subject, shot[0], m["black"], m["sky"]])
+	var doc := {"tool": "look_harness.gd", "subject": subject, "group": row["group"], "stage": row["stage"], "class": class_index, "kind": row["kind"],
+		"owner": row["owner"], "variant": variant, "preset": preset, "tick": tick, "adapter": RenderingServer.get_video_adapter_name(),
+		"rendering": RenderingServer.get_current_rendering_method(), "extra": extra, "frames": recs}
+	var f := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
+	f.store_string(JSON.stringify(doc, "\t"))
+	f.close()
+	paused = was_paused
+	print("snap ", subject, " ", recs.size(), " tick ", tick["tick"])
+
+
+func _run_group(group: String) -> void:
+	_anchors = {}
+	match group:
+		"smalls": await _smalls()
+		"pickup": await _pickup()
+		"dig_fx": await _dig_fx()
+		"hd_fx": await _hd_fx()
+		"hd_redo": await _hd_redo()
+		"arenas": await _arenas()
+		"arw2": await _arw2()
+		"devices": await _devices()
+		"props": await _props()
+		"bay": await _bay()
+		"cages": await _cages()
+		"scrap": await _scrap()
+		"workshop": await _workshop()
+		"dig_deep": await _dig_deep()
+		"title": await _title()
+		"title2": await _title2()
+		"ending": await _ending()
+		"customize": await _customize()
+		_:
+			printerr("look_harness: unknown group ", group)
+			failures += 1
+	if group_arg.is_empty():
+		failures += _summarize(requested, out, [{"group": group, "rc": failures, "wall_s": 0.0, "subjects": requested}])
+
+
+func _smalls() -> void:
+	await _boot_play(1)
+	var b: Vector3 = game.player.ball_position()
+	game.player.body().freeze = true
+	var mb = game.combat.spawn_enemy("miniboss", Vector3(b.x + 22, _gh(b.x + 22, b.z + 10) + 6, b.z + 10))
+	var rm = game.combat.spawn_enemy("swarm_remnant", Vector3(b.x + 50, _gh(b.x + 50, b.z + 10) + 3, b.z + 10))
+	var vt = game.combat.spawn_enemy("vault", Vector3(b.x + 80, _gh(b.x + 80, b.z + 10) + 4, b.z + 10))
+	await _frames(90)
+	for e in [mb, rm, vt]:
+		if is_instance_valid(e): e.set_physics_process(false)
+	_anchor("miniboss", mb.global_position + Vector3(0, 3.0, 0), mb)
+	await _shoot("pmb_miniboss_stalk", {"state": "STALK"})
+	for st in [["pmb_miniboss_crouch", mb.State.SLAM_CROUCH, 0.5, 10], ["pmb_miniboss_leap", mb.State.SLAM_LEAP, 0.3, 10], ["pmb_miniboss_charge_brace", mb.State.CHARGE_BRACE, 1.0, 10], ["pmb_miniboss_vented", mb.State.WEAK, 1.0, 40]]:
+		mb.state = st[1]
+		mb._clock = st[2]
+		for i in st[3]: mb._pose(0.05)
+		await _shoot(st[0], {"state": st[0]})
+	var pack: Array = []
+	for n in root.find_children("*", "CharacterBody3D", true, false):
+		if str(n.get("kind")) == "swarm_remnant":
+			pack.append(n)
+			n.set_physics_process(false)
+	var rc := Vector3.ZERO
+	for n in pack: rc += n.global_position
+	rc /= maxf(1.0, pack.size())
+	var near = pack[0]
+	for n in pack:
+		if n.global_position.distance_to(rc) < near.global_position.distance_to(rc): near = n
+	_anchor("pack", rc, near)
+	_anchor("one", near.global_position, near)
+	await _shoot("psv_swarm_remnant", {"seam": "lit (default)", "pack": pack.size()})
+	for n in pack: n.set_seamless(false)
+	await _shoot("psv_swarm_remnant_scattered", {"seam": "set_seamless(false)"})
+	_anchor("vault", vt.global_position + Vector3(0, 1.5, 0), vt)
+	await _shoot("psv_vault")
+
+
+func _pickup() -> void:
+	await _boot_play(1)
+	game.flow.enter_boss(Vector3(18, 0, 0))
+	await _frames(60)
+	var bs = game.boss
+	var at: Vector3 = bs.ship.global_position + Vector3(30, 0, 0)
+	var g: float = bs.arena.ground(at)
+	for i in 3:
+		bs._spawn_pickup(Vector3(at.x + i * 2.5, g + 0.9, at.z), 3 + i * 4, "kill")
+	await _frames(20)
+	game.player.body().freeze = true
+	_anchor("pickup", Vector3(at.x + 2.5, g + 0.9, at.z))
+	await _shoot("psv_brindle_pickup", {"values": [3, 7, 11]})
+
+
+func _dig_fx() -> void:
+	await _boot_play(3)
+	var terrain = game.ctx.terrain
+	var stage_root: Node3D = terrain.geometry_root(3)
+	var fx = stage_root.get_node("DigScenery/DigFx")
+	var face: Vector3 = fx.to_global(fx.faces[0])
+	game.player.reset_to(face + Vector3(3, 2, 0))
+	game.player.body().freeze = true
+	await _frames(80)
+	fx.freeze_rupture(0.18)
+	_anchor("face", face)
+	await _shoot("fxd_grit_lamps", {"face": [face.x, face.y, face.z]})
+	fx.clear()
+	game.player.reset_to(Vector3(0, 40, 0))
+	game.player.body().freeze = true
+	var plate: Dictionary = terrain.map().breach_plates[0]
+	var centre: Vector2 = plate["rect"].get_center()
+	var cover: Node3D = stage_root.get_node("BreachPlate_" + String(plate["id"]))
+	var at := Vector3(centre.x, cover.get_meta("home").y, centre.y)
+	game.world._on_slammed(at, 20, 1)
+	await _frames(11)
+	fx.freeze_rupture(0.18)
+	_anchor("plate", at)
+	await _shoot("fxd_rupture_mid", {"plate": plate["id"], "ruptures": fx.ruptures.size(), "bursts": fx.bursts.size()})
+	var other: Dictionary = terrain.map().breach_plates[1]
+	var oc: Vector2 = other["rect"].get_center()
+	var ocover: Node3D = stage_root.get_node("BreachPlate_" + String(other["id"]))
+	_anchor("other_plate", Vector3(oc.x, ocover.get_meta("home").y, oc.y))
+	await _shoot("fxd_unbroken_plate", {"plate": other["id"]})
+
+
+func _hd_fx() -> void:
+	await _boot_play(5)
+	var sc: Node3D = game.ctx.terrain.geometry_root(5).get_node("HighdraftScenery")
+	var fx = sc.get_node("WindEffects")
+	var presence = sc.get_node("Presence")
+	var column: Dictionary = fx.thermals[0]
+	var b0: Vector3 = column.presence.base
+	game.player.reset_to(b0 + Vector3.UP * 14.0)
+	game.player.body().freeze = true
+	for i in 70:
+		presence._process(1.0 / 60.0)
+		await physics_frame
+	fx.frozen = true
+	_anchor("thermal_0", b0)
+	await _shoot("fxh_thermal_occupied", {"occupied": column.occupied})
+	fx.frozen = false
+	game.player.reset_to(b0 + Vector3(26, 14, 0))
+	game.player.body().freeze = true
+	for i in 4:
+		presence._process(1.0 / 60.0)
+		await physics_frame
+	await _frames(40)
+	fx.frozen = true
+	_anchor("thermal_1", fx.thermals[1].presence.base)
+	await _shoot("fxh_thermal_idle", {"column": 1})
+	fx.frozen = false
+	var contact := b0 + Vector3(0, 1, 0)
+	fx.catch_at(contact)
+	fx.step(0.1, contact)
+	fx.frozen = true
+	_anchor("contact", contact)
+	await _shoot("fxh_net_sag", {"catches": fx.active_catches.size()})
+	fx.frozen = false
+	fx.step(25.0, Vector3.INF)
+	fx.frozen = true
+	await _shoot("fxh_clouds_sails", {"cloud_step_s": 25.0})
+
+
+func _hd_redo() -> void:
+	await _boot_play(5)
+	var sc: Node3D = game.ctx.terrain.geometry_root(5).get_node("HighdraftScenery")
+	await _shoot("hdr_island_bridge")
+	var ac: Vector3 = sc.get_node("AnchorEye_0").global_position
+	var am: Vector3 = sc.get_node("AnchorMast_0").global_position
+	_anchor("anchor_0", ac)
+	_anchor("mast_0", am)
+	_anchor("mast_mid", (am + ac) * 0.5)
+	_anchor("anchor_1", sc.get_node("AnchorEye_1").global_position)
+	_anchor("anchor_2", sc.get_node("AnchorEye_2").global_position)
+	await _shoot("hdr_anchors")
+	var props: Node3D = sc.get_node("Props")
+	for pname in ["prop_crate", "prop_spool", "prop_lamp_body", "prop_bearing", "prop_clamp", "prop_pot"]:
+		var mm := props.get_node_or_null(pname) as MultiMeshInstance3D
+		if mm != null and mm.multimesh.instance_count > 0:
+			_anchor(pname, (mm.global_transform * mm.multimesh.get_instance_transform(0)).origin)
+	await _shoot("hdr_props")
+	_anchor("sail_spawn", sc.get_node("Sail_spawn").global_position)
+	_anchor("sail_vault", sc.get_node("Sail_vault").global_position)
+	await _shoot("hdr_sails")
+	for t in ["a", "b", "c"]:
+		_anchor("vent_" + t, (sc.get_node("Vent_thermal_" + t) as Node3D).global_position)
+	await _shoot("hdr_thermals")
+	await _shoot("hdr_net")
+	await _shoot("hdr_sky")
+
+
+func _enter_boss_of(world: int) -> void:
+	game.flow.enter_stage(game.ctx.stages.last_of(world), Vector3.ZERO, false)
+	await _frames(20)
+	game.flow.enter_boss(Vector3.ZERO)
+	await _frames(90)
+
+
+func _arenas() -> void:
+	await _boot(false)
+	await _frames(20)
+	game.flow.enter_boss(Vector3(18, 0, 0))
+	await _frames(60)
+	game.player.body().freeze = true
+	_anchor("arena", game.boss.arena.global_position)
+	await _shoot("arb_bowl")
+	if not (_wants("arw_pit") or _wants("arm_crown")):
+		return
+	await _enter_boss_of(2)
+	game.player.body().freeze = true
+	_anchor("pit", game.flow._boss_module()._center)
+	await _shoot("arw_pit")
+	await _enter_boss_of(3)
+	game.player.body().freeze = true
+	_anchor("pad", game.flow._boss_module().pad.global_position + Vector3(0, 1, 0))
+	await _shoot("arm_crown")
+
+
+func _arw2() -> void:
+	await _boot(true)
+	await _frames(20)
+	await _enter_boss_of(2)
+	var m = game.flow._boss_module()
+	game.player.body().freeze = true
+	var b: Vector3 = game.player.ball_position()
+	_anchor("pit", m._center)
+	_anchor("warden", m.warden.global_position)
+	_anchor("ball", b)
+	await _shoot("arw_pit_b", {"warden": [m.warden.global_position.x, m.warden.global_position.y, m.warden.global_position.z]})
+
+
+func _spawn_devices(b: Vector3) -> Dictionary:
+	var made := {}
+	var i := 0
+	for row in [["cache", preload("res://src/world/cracked_cache.gd")], ["bet", preload("res://src/world/bet_crate.gd")], ["altar", preload("res://src/world/ambush_altar.gd")]]:
+		var d = row[1].new()
+		game.add_child(d)
+		var x: float = b.x - 14 + i * 14
+		var z: float = b.z + 26
+		d.global_position = Vector3(x, _gh(x, z), z)
+		d.setup(game.ctx, game.world.interact, {"id": "w7_" + row[0]})
+		made[row[0]] = d
+		i += 1
+	return made
+
+
+func _devices() -> void:
+	await _boot_play(2)
+	game.player.body().freeze = true
+	var made := _spawn_devices(game.player.ball_position())
+	await _frames(30)
+	for k in made:
+		_anchor(k, (made[k] as Node3D).global_position + Vector3(0, 1.4, 0))
+		await _shoot("gpd_" + k, {"stage": 2})
+	var cache = made["cache"]
+	cache.fire()
+	await _frames(60)
+	_anchor("cache", (cache as Node3D).global_position + Vector3(0, 1.4, 0))
+	await _shoot("gpd_cache_fired", {"state": "fire() called"})
+
+
+func _props() -> void:
+	await _boot_play(1)
+	game.player.body().freeze = true
+	var walls := []
+	for body in game.ctx.terrain.geometry_root(1).find_children("*", "StaticBody3D", true, false):
+		for m in body.get_children():
+			if m is MeshInstance3D and m.mesh is BoxMesh and absf(m.mesh.size.z - 1.6) < 0.01 and m.mesh.size.y >= 4.0:
+				walls.append(body)
+	if walls.is_empty():
+		printerr("look_harness: no Spillway relay wall")
+		failures += 1
+	else:
+		var w: Node3D = walls[0]
+		_anchor("wall", w.global_position + Vector3(0, 3, 0), w)
+		await _shoot("gpw_pylon_spillway", {"walls": walls.size()})
+	if not (_wants("gpw_pylon_reach_w") or _wants("gpw_pylon_reach_e")):
+		return
+	await _stage(2)
+	for wp in [Vector3(-64, 0, -105), Vector3(52, 0, 80)]:
+		var tag := "w" if wp.x < 0 else "e"
+		_anchor("reach_" + tag, Vector3(wp.x, _gh(wp.x, wp.z) + 4, wp.z))
+		await _shoot("gpw_pylon_reach_" + tag, {"at": [wp.x, wp.z]})
+
+
+func _bay() -> void:
+	await _boot_play(1)
+	for n in ["cv2_camp_bay_stage2", "cv2_camp_bay"]:
+		if not _wants(n):
+			continue
+		var st := int(Subjects.SUBJECTS[n]["stage"])
+		await _stage(st)
+		var offers: Array = []
+		for slot in game.ctx.terrain.map().gate_slots:
+			var sa: Vector2 = slot["at"]
+			offers.append({"at": Vector3(sa.x, _gh(sa.x, sa.y), sa.y), "facing": slot["facing"], "width": 8.0})
+		var docked: bool = game.world.bay.dock(offers, Callable(game.ctx.terrain, "height"), null)
+		await _frames(40)
+		var box := subject_bounds(game.world.bay)
+		print("bay stage ", st, " offers ", offers.size(), " docked ", docked, " aabb ", box)
+		if not docked or box.size == Vector3.ZERO:
+			printerr("look_harness: the bay did not dock on stage %d" % st)
+			failures += 1
+			continue
+		_anchor("bay", box.get_center(), null, maxf(box.size.x, box.size.z) * 0.8 + 6.0)
+		await _shoot(n, {"docked": docked, "offers": offers.size(), "aabb": [box.position.x, box.position.y, box.position.z, box.size.x, box.size.y, box.size.z]})
+
+
+func _cages() -> void:
+	await _boot_play(1)
+	game.player.body().freeze = true
+	var cage = game.find_child("RescueSites", true, false).cages[0]
+	_anchor("cage", cage.global_position + Vector3(0, 1.6, 0), cage)
+	await _frames(20)
+	await _shoot("cag_rivet_locked", {"state": "locked"})
+	cage.fire()
+	cage.tick(1.0)
+	game.player.body().freeze = true
+	await _frames(45)
+	await _shoot("cag_rivet_freeing", {"state": "freeing"})
+	cage.tick(1.5)
+	await _frames(45)
+	await _shoot("cag_rivet_freed", {"state": "freed"})
+	if not (_wants("cag_dig_locked") or _wants("cag_dig_freeing")):
+		return
+	await _stage(3)
+	cage = game.find_child("RescueSites", true, false).cages[0]
+	_anchor("cage", cage.global_position + Vector3(0, 1.6, 0), cage)
+	await _shoot("cag_dig_locked", {"state": "locked", "quest": cage.quest})
+	cage.fire()
+	cage.tick(1.0)
+	await _frames(45)
+	await _shoot("cag_dig_freeing", {"state": "freeing"})
+
+
+func _scrap() -> void:
+	await _boot_play(1)
+	game.player.body().freeze = true
+	var items: Array = game.find_child("Scrap", true, false).get_children().filter(func(n): return n is MeshInstance3D and n.visible)
+	var a: Node3D = items[0]
+	_anchor("scrap_a", a.global_position)
+	await _shoot("scr_spillway_a", {"item": str(a.name), "variant": a.get_meta("scrap_variant", "")})
+	for it in items:
+		var k := "v_" + str(it.get_meta("scrap_variant", "?"))
+		if not _anchors.has(k):
+			_anchor(k, (it as Node3D).global_position)
+	await _shoot("scr_variants")
+	if not _wants("scr_dig"):
+		return
+	await _stage(3)
+	items = game.find_child("Scrap", true, false).get_children().filter(func(n): return n is MeshInstance3D and n.visible)
+	_anchor("scrap_dig", (items[0] as Node3D).global_position)
+	await _shoot("scr_dig", {"scrap_count": items.size()})
+
+
+func _workshop() -> void:
+	await _boot_play(1)
+	game.player.body().freeze = true
+	_anchor("ball", game.player.ball_position())
+	var caches: Array = []
+	for n in game.find_children("*", "Node3D", true, false):
+		if n.get_script() == preload("res://src/world/cracked_cache.gd"):
+			var shell: Node = n.find_child("CacheShell", false, false)
+			caches.append({"path": str(n.get_path()), "at": [n.global_position.x, n.global_position.y, n.global_position.z],
+				"shell_overlay": shell != null and (shell as GeometryInstance3D).material_overlay != null})
+	await _shoot("wog_spillway", {"cracked_caches": caches})
+	if not (_wants("wog_reach") or _wants("cache_activity")):
+		return
+	await _stage(2)
+	_anchor("ball", game.player.ball_position())
+	var tw: Vector3 = game.ctx.terrain.map_for(2).TOWER
+	_anchor("tower", Vector3(tw.x, _gh(tw.x, tw.z), tw.z))
+	await _shoot("wog_reach")
+	var cache = game.find_child("Activity_cracked_cache", true, false)
+	if cache == null:
+		printerr("look_harness: no Activity_cracked_cache")
+		failures += 1
+		return
+	_anchor("cache", (cache as Node3D).global_position + Vector3(0, 1.5, 0))
+	await _shoot("cache_activity")
+
+
+func _dig_deep() -> void:
+	await _boot_play(4)
+	_anchor("spawn", game.ctx.terrain.spawn_point(4))
+	await _shoot("dig_deep_floor")
+
+
+func _title() -> void:
+	seed(SEED)
+	game = Game.new()
+	game.name = "Game"
+	game.test_mode = true
+	game.table = "alpha"
+	root.add_child(game)
+	await process_frame
+	await physics_frame
+	await _shoot("ttl_title", {"state": "title"})
+	await _shoot("ttl_title_b", {"state": "title, +2.5 s of camera drift"})
+	game.flow.press_start()
+	await _shoot("ttl_class_select", {"state": game.flow.state_name()})
+
+
+func _title2() -> void:
+	seed(SEED)
+	game = Game.new()
+	game.name = "Game"
+	game.test_mode = true
+	game.table = "alpha"
+	root.add_child(game)
+	await process_frame
+	await physics_frame
+	await _frames(30)
+	var d = game.presentation.get_node("TitleStage")
+	for n in root.find_children("*", "CanvasLayer", true, false):
+		if n != d._layer: n.visible = false
+	await _shoot("ttl_stage_only", {"note": "menu layers hidden, title stage picture only"})
+	d.set_process(false)
+	for nm in ["SableShell", "RivetShell", "KestShell", "SPIL9", "Ball"]:
+		var subject: String = "ttl_stage_" + String(nm).to_lower()
+		var h: Node3D = d.stage.get_node_or_null(nm)
+		if h == null or not _wants(subject):
+			continue
+		var shot: Array = Subjects.SUBJECTS[subject]["cameras"][0]
+		var c: Vector3 = h.global_position + Vector3(0, 0.6, 0)
+		d.camera.position = c + shot[1]
+		d.camera.look_at(c + shot[2])
+		await _frames(3)
+		await _shoot(subject, {"node": nm, "camera_at": [d.camera.position.x, d.camera.position.y, d.camera.position.z]})
+
+
+func _ending() -> void:
+	const StageDefs := preload("res://src/core/stage_defs.gd")
+	seed(SEED)
+	game = Game.new()
+	game.test_mode = true
+	game.table = "default"
+	var folder := "user://ending-%d" % OS.get_process_id()
+	DirAccess.make_dir_recursive_absolute(folder)
+	game.run_store_path = folder.path_join("run.json")
+	root.add_child(game)
+	await _frames(5)
+	game.bot_driven = false
+	game.ctx.calm = true
+	game.flow.press_start()
+	game.flow.choose_class(1)
+	await _frames(3)
+	for world in StageDefs.worlds():
+		game.flow.enter_stage(StageDefs.first_of(world), Vector3.ZERO, false)
+	game.flow.enter_stage(StageDefs.COUNT, Vector3.ZERO, false)
+	await _frames(3)
+	game.flow._set_state(game.flow.BOSS)
+	game.events.boss_defeated.emit()
+	game.flow.physics_step(game.flow.VICTORY_SECONDS + 0.01)
+	var seq = game.screens.ending_sequence
+	if not (is_instance_valid(seq) and seq.active):
+		printerr("look_harness: ending did not start")
+		failures += 1
+		return
+	seq.set_process(false)
+	var order: Array = Subjects.in_group("ending")
+	order.sort_custom(func(a, b): return Subjects.SUBJECTS[a]["elapsed"] < Subjects.SUBJECTS[b]["elapsed"])
+	for n in order:
+		seq.advance(float(Subjects.SUBJECTS[n]["elapsed"]) - seq.elapsed)
+		await RenderingServer.frame_post_draw
+		await _shoot(n, {"elapsed": seq.elapsed, "phase": seq.phase, "world": seq.world_index})
+	seq.skip()
+
+
+func _customize() -> void:
+	const Push := preload("res://tests/workshop/push.gd")
+	seed(SEED)
+	game = Game.new()
+	game.test_mode = true
+	root.add_child(game)
+	while game.flow == null:
+		await process_frame
+	await _frames(5)
+	game.ctx.calm = true
+	var profile = game.ctx.profile
+	profile.unlock_cosmetic("trail_plum_curl")
+	profile.unlock_cosmetic("companion_paint_forge")
+	profile.unlock_cosmetic("decal_fern")
+	game._screen_key(KEY_K)
+	await _frames(3)
+	var page = game.screens.camp_page().get_node("CustomizePage")
+	Push.key(root, KEY_C)
+	await _frames(5)
+	await _shoot("cus_page_default", {"equipped": "nothing yet"})
+	page.focus("trail")
+	page.press("trail")
+	page.focus("companion_paint")
+	page.press("companion_paint")
+	await _frames(5)
+	await _shoot("cus_page_equipped", {"trail": profile.equipped(page.pilot, "trail")})
+	page.focus("decal")
+	page.press("decal")
+	await _frames(5)
+	await _shoot("cus_page_decal", {"decal": profile.equipped(page.pilot, "decal")})
+
+
+# ---------------------------------------------------------------- boss smoke
+func _boss_smoke(id: String) -> int:
+	if not BOSSES.has(id):
+		printerr("look_harness: unknown boss ", id)
+		return 2
+	await _boot(false)
+	await _frames(20)
+	var world: int = BOSSES[id]
+	var stage: int = game.ctx.stages.last_of(world)
+	if game.ctx.stages.world_of(game.ctx.run.stage) != world or game.ctx.run.stage != stage:
+		game.flow.enter_stage(stage, Vector3.ZERO, false)
+		await _frames(20)
+	game.flow.enter_boss(Vector3.ZERO)
+	var start := ticks
+	await _frames(BOSS_TICKS)
+	var in_arena: bool = game.flow.in_arena
+	print("BOSS_SMOKE boss=%s stage=%d ticks=%d in_arena=%s rendering=%s driver=%s device=%s %s" % [id, stage, ticks - start, in_arena,
+		RenderingServer.get_current_rendering_method(), RenderingServer.get_current_rendering_driver_name(), RenderingServer.get_video_adapter_name(), "PASS" if in_arena else "FAIL"])
+	return 0 if in_arena else 1
