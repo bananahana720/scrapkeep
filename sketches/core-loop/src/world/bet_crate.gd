@@ -13,6 +13,7 @@ extends "res://src/world/device.gd"
 # replays, so restarting to bet again lands the same way and fishing pays nothing.
 # With no core to stake it is not ready: the dial shows, the keycap does not.
 
+const Altar := preload("res://src/world/ambush_altar.gd")
 const ODDS := 0.5
 const SPIN := 0.9
 const LAND := 0.35
@@ -40,11 +41,11 @@ func build() -> void:
 	var parts := _parts()
 	if not parts.is_empty():
 		var housing := _model_part(parts, "BetHousing")
-		housing.material_override = Palette.solid(Palette.VERDIGRIS)
+		housing.material_override = Altar.finish(Palette.VERDIGRIS)
 		var dial := _model_part(parts, "OddsDial")
-		dial.material_override = Palette.solid(Palette.BRASS)
+		dial.material_override = Altar.finish(Palette.BRASS)
 		_needle = _model_part(parts, "OddsNeedle")
-		_needle.material_override = Palette.solid(Palette.CHARCOAL)
+		_needle.material_override = Altar.finish(Palette.CHARCOAL)
 		return
 	_build_greybox()
 

@@ -65,8 +65,9 @@ func _init() -> void:
 
 
 func build() -> void:
-	global_position += global_basis.z * LANE_OFFSET
-	global_position.y = ctx.terrain.height(global_position.x, global_position.z)
+	if not relic_guaranteed:
+		global_position += global_basis.z * LANE_OFFSET
+		global_position.y = ctx.terrain.height(global_position.x, global_position.z)
 	var parts := _parts()
 	if parts.is_empty():
 		_build_greybox()

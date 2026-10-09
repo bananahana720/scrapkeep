@@ -10,6 +10,10 @@ const ASSETS := [
 	[Bet, "bet_crate", ["BetHousing", "OddsDial", "OddsNeedle"], 3],
 	[Altar, "ambush_altar", ["AltarPost", "AltarCap", "AltarRing"], 3],
 ]
+# VX8: only an attack wears hazard stripes, so the altar keeps no floor ring. The GLB still ships
+# the part; the runtime leaves it out. The bone band is the one box the dressed altar may carry.
+const UNUSED_RUNTIME := {"ambush_altar": ["AltarRing"]}
+const ALTAR_BAND := Vector3(1.42, 0.12, 1.42)
 var failures := 0
 var game
 
@@ -115,10 +119,13 @@ func _run() -> void:
 		_check(device.find_children("*", "CollisionObject3D", true, false).size() == (5 if device is Cache else 0), row[1] + " physics body count unchanged")
 		var boxes := 0
 		for view: MeshInstance3D in device.find_children("*", "MeshInstance3D", true, false):
-			if view.mesh is BoxMesh:
+			if view.mesh is BoxMesh and not (row[1] == "ambush_altar" and (view.mesh as BoxMesh).size == ALTAR_BAND):
 				boxes += 1
 		_check(boxes == 0, row[1] + " builds no greybox boxes")
 		for part_name in row[2]:
+			if part_name in UNUSED_RUNTIME.get(row[1], []):
+				_check(device.find_child(part_name, true, false) == null, row[1] + " leaves out " + part_name)
+				continue
 			_check(device.find_child(part_name, true, false) is MeshInstance3D, row[1] + " runtime part " + part_name)
 		if device is Cache:
 			_check_cache(device)
@@ -214,17 +221,17 @@ func _check_altar(device) -> void:
 	Altar._shared = saved
 	var idle: float = device._cap.rotation.y
 	device.tick(0.1)
-	_check(is_equal_approx(device._cap.rotation.y - idle, 0.06) and device._ring.visible, "altar idle cap turns with ring visible")
+	_check(is_equal_approx(device._cap.rotation.y - idle, 0.06) and device._ring == null, "altar idle cap turns with no floor ring")
 	device.fire()
 	var armed: float = device._cap.rotation.y
 	device.tick(0.1)
-	_check(device.running and is_equal_approx(device._cap.rotation.y - armed, 0.4) and device._ring.visible, "altar armed running cap speeds up")
+	_check(device.running and is_equal_approx(device._cap.rotation.y - armed, 0.4), "altar armed running cap speeds up")
 	device._end(true)
-	_check(device.spent and device.won and not device._ring.visible, "altar cleared spent ring hides")
+	_check(device.spent and device.won, "altar cleared is spent and won")
 	var twin := _device(Altar, "timeout")
 	twin.fire()
 	twin._end(false)
-	_check(twin.spent and not twin.won and not twin._ring.visible, "altar expired spent ring hides")
+	_check(twin.spent and not twin.won, "altar expired is spent and lost")
 	_dispose(twin)
 
 
@@ -240,9 +247,9 @@ func _check_gameplay_sources() -> void:
 
 
 const SOURCE_PINS := {
-	"cracked_cache": ["stand_down()", "6ad4693e52a6fb8cd4a139413c8b01f2d6f403f2fb4047b3bd2a45dcef90fc84"],
+	"cracked_cache": ["stand_down()", "120b58128fd836844a23efb678b96de2c1b53b84e96005d5c3637b64b0ddacae"],
 	"bet_crate": ["reach_point()", "dc1b7b8203b6c2018894e88689885c366ed5edd5d928cae60f6370082acb2e16"],
-	"ambush_altar": ["reach_point()", "73bc2781eda2be612b112a25b4e55f88f976eb807b6721f943b88f9cbffe24ba"],
+	"ambush_altar": ["reach_point()", "7a1a73f6c7f2d8fc8645eb7565f763f0fb95d0d7701598998f46905bc9aa6db3"],
 }
 const INHERITED_PINS := {
 	"device": "4d3fd93f28a96ecdf01e95f0a1750673057bdd79c00ba1956a65e972d6fce056",
