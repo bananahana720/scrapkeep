@@ -265,6 +265,9 @@ func _hook_and_environment() -> void:
 	_t.check("restore: the shared sky and ambient come back", env.sky == before and env.ambient_light_color.is_equal_approx(ambient))
 	var source := FileAccess.get_file_as_string("res://src/game.gd")
 	_t.check("game.gd hooks the Highdraft dress", source.contains("highdraft_scenery.gd\").hook(ctx)"))
+	# hook() binds ctx into a connection on ctx.events; dropping the bus ends that cycle so the
+	# terrain, its environment and the shared HDRI sky are freed before the engine exits.
+	ctx.events = null
 	scene.free()
 
 
