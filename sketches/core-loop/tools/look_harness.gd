@@ -813,6 +813,7 @@ func _arenas() -> void:
 	game.player.body().freeze = true
 	_anchor("arena", game.boss.arena.global_position)
 	await _shoot("arb_bowl")
+	await _shoot("swp_kicker_wedge")
 	if not (_wants("arw_pit") or _wants("arm_crown")):
 		return
 	await _enter_boss_of(2)
