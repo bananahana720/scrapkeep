@@ -116,11 +116,11 @@ func _state(node: Node) -> Array:
 	if node is Node3D:
 		result.append(node.transform)
 		result.append(node.visible)
-	# 2026-10-09 swap-wave 12-F: recipe views carry surface overrides
-	if node is MeshInstance3D and node.material_override != null:
+	# 2026-10-09 swap-wave 12-F (merge of the barge and valve re-pins): recipe views carry surface overrides
+	# and no material_override; hash their slots instead of skipping them.
+	if node is MeshInstance3D:
 		result.append(hash(node.mesh.get_faces()))
 		var mat: StandardMaterial3D = node.material_override
-		# 2026-10-09 swap-wave 12-F: recipe views carry surface overrides and no material_override; hash their slots.
 		if mat == null:
 			result.append(range(node.mesh.get_surface_count()).map(func(i): return node.get_surface_override_material(i)))
 		else:
