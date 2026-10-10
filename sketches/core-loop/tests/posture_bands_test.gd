@@ -33,8 +33,14 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # and 1 within a run); the slice row is unchanged and the sweep table still holds its band; was 37.9
 # 2026-10-08 (wave 11 GP3F): re-pinned to the measured medians, small/grown 2.11; was 72.4 / 37.9. The pre-GP3
 # base 39c20a0 already measured 70.5 / 32.5; GP3's elite repeat (director.gd ELITE_REPEAT) on the slice's authored director moved it to 66.6 / 31.5
-const EXPECT_SMALL_S := 66.6
-const EXPECT_GROWN_S := 31.5
+# 2026-10-09 (wave 12-F BUGFIX-MOVEMENT): re-pinned to the measured medians after the movement fixes (sprint kick
+# follows the roll, grounded over-speed drag, harpoon lock cone from the ball, harpoon refused while mounted or
+# planted); bisected: green at 339b4db, red at ab0a366 with these exact numbers. The bands still hold (grown 25 to
+# 45 s, small at least twice grown); the slice row and the sweep table are unchanged; was 66.6 / 31.5. The hunter's
+# build and combat fixes on the same candidate (item hits scale once, the braced Warden plates at plating_for) then
+# moved grown from 27.3 back to 30.7 (measured on fa73529; the attribution to those two fixes is inference).
+const EXPECT_SMALL_S := 75.9
+const EXPECT_GROWN_S := 30.7
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
