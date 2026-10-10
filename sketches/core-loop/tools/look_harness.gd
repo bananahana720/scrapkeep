@@ -976,6 +976,7 @@ func _workshop() -> void:
 			caches.append({"path": str(n.get_path()), "at": [n.global_position.x, n.global_position.y, n.global_position.z],
 				"shell_overlay": shell != null and (shell as GeometryInstance3D).material_overlay != null})
 	await _shoot("wog_spillway", {"cracked_caches": caches})
+	await _shoot("swp_cottonwood")
 	if not (_wants("wog_reach") or _wants("cache_activity") or _wants("swp_valve_wheel")):
 		return
 	await _stage(2)

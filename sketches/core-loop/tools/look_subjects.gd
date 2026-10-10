@@ -157,6 +157,14 @@ const SUBJECTS := {
 			["relay", Vector3(10, 60, -150), Vector3(10, 38, -84), 65.0, ""], ["benches", Vector3(10, 44, 56), Vector3(24, 28, 22), 65.0, ""],
 			# The stage-1 beacon close-up (VX-SWAP): map_spillway.gd BEACON (-46, -12) on the 15 m bowl floor, eye 12 m out at three-quarter.
 			["beacon_close", Vector3(-37.5, 21, -3.5), Vector3(-46, 24, -12), 70.0, ""]]},
+	# The Spillway shoulder cottonwoods (SWAP-WAVE 12-F): the west station i 6 (spillway_scenery.gd shoulder_plan), whose four
+	# roots sit within 2 m of the terrain; close is its size 0.96 tree at root (-258.3, 75.7, 152), mid the row of four, far
+	# from the dam wall's west end 84 m out, past detail1's 50 m end plus its 10 m margin. World-fixed eyes.
+	"swp_cottonwood": {"group": "workshop", "stage": 1, "kind": "prop", "owner": "SWAP-WAVE", "tick": 135,
+		"cameras": [["close", Vector3(-240, 86, 140), Vector3(-258.3, 81, 152), 55.0], ["mid", Vector3(-225, 92, 135), Vector3(-256, 82, 156), 55.0],
+			["far", Vector3(-195, 112, 205), Vector3(-256, 82, 156), 35.0]],
+		"ball": {"close": Vector3(4, 0, -3), "mid": Vector3(4, 0, -6), "far": Vector3(6, 0, -4)},
+		"ball_reason": "the scale mannequin stands on the terrain beside the tree feet on the play side, clear of the crowns, in every camera"},
 	"wog_reach": {"group": "workshop", "stage": 2, "kind": "scene", "owner": "VX-SURF", "anchor": "ball", "tick": 240,
 		"cameras": [["spawn_pad", Vector3(0, 8, -18), Vector3(0, 0, 10), 60.0], ["spawn_wide", Vector3(-45, 30, -55), Vector3(0, 0, 40), 65.0], ["tower_base", Vector3(60, 25, 60), Vector3(0, 20, 0), 60.0, "tower"],
 			["tower_top", Vector3(70, 80, 70), Vector3(0, 60, 0), 60.0, "tower"], ["tunnels", Vector3(0, 60, 0), Vector3(40, 40, 70), 65.0, ""]]},
