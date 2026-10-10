@@ -36,7 +36,7 @@ Acceptance for a visual unit: a Blender CLI recipe that reruns the same output, 
 
 | id | wave | what | sheet | state |
 | --- | --- | --- | --- | --- |
-| W-COV | 2 | `tests/dress_coverage_test.gd`: counts capsule and primitive fallbacks across enemies, bosses, Wardens, pilots and the companion | n/a | planned |
+| W-COV | 2 | `tests/dress_coverage_test.gd`: counts capsule and primitive fallbacks across enemies, bosses, Wardens, pilots and the companion | n/a | done: `tests/dress_coverage_test.gd` runs with `MAX_FALLBACKS := 0` (verified 2026-10-10) |
 
 ## Cuts
 

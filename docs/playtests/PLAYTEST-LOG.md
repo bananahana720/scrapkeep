@@ -4,39 +4,11 @@ Andrew's own play sessions, newest first. Only human play is recorded here. Auto
 
 ## Waiting for play
 
-Parked on 22 September 2026 when Andrew took a break (TRACKING EV-0482). Three sketches passed the coordinator's gate (`check:scope` reports `sketch`, a clean tree, and every `sketch:smoke` test passing). Each lives on its own branch and worktree and merges to `main` only after Andrew plays it. On 26 September 2026 Andrew played all three: the mobility kit (entry 3), Spillway Drop (entry 4) and Cable Bench (entry 5). The table below is kept as the record of what was asked; the merges followed (TRACKING EV-0578).
+**Next sitting: wave 13 (entry 13, not yet played).** Wave 12 (`cand/alpha-w12` at `c7bfe37`) merged into `proto/alpha` at `967a468` on 10 October 2026 on its smoke evidence, without a play verdict, by Andrew's call (docs/decisions.tsv, w13-open). Wave 13 is building on `cand/alpha-w13`: six pilots in open gyro cages, the 1-2-3 skill bar and Q ultimate, three Warden kinds, and the six stages rebuilt as Arizona parks. Its export and play checklist land at `artifacts/local/alpha/push/w13/PLAY-CHECKLIST.md` when the wave closes. The multi-hour sitting judges waves 12 and 13 together; log it as entry 13 with FPS notes from Spillway, the Dig deep and the Highdraft.
 
-**Played: the core-loop demo** (entry 7) on `proto/core-loop-rc` at `525a46f`, merged to `main` after play (TRACKING EV-0588). Earlier: mobility kit v2 (entry 6, EV-0587). **Played 28 September 2026 (entry 8): not alpha; a loop redesign round follows.** It was the core-loop v2 alpha candidate on `proto/core-loop-v2` at `19fc173`, launched with `scrapkeep core-loop-v2`. It answers entry 7 (readability, iconography, what to press, transitions, mouse on menus, telegraph types, how to get stronger, soul). It adds three pilots, the upgrade trees, Moss's bay and shop, stage 2's Cable Reach gorge, W7's enemies and family Wardens, the music layers, pause and help, and the Codex Style A visual pass. Checks: `sketch:smoke` 171 green at 06be395 plus the keycap fix's UI tests, and rendered stills of three bot runs at 1920x1080 in that worktree's `artifacts/local/alpha-capture/`. Its verdict becomes entry 8.
+The September sketch table and launcher notes that stood here are in git history (`git log -p -- docs/playtests/PLAYTEST-LOG.md`); every sketch they listed was played and merged (TRACKING EV-0578, EV-0588).
 
-| Sketch | Branch and head | Question it answers |
-| --- | --- | --- |
-| Mobility kit (ball lab plus five augments) | `proto/mobility-kit` at `1d11db6` | Which of grapple (right mouse), air dash (Shift in air), glide (hold Space falling), slam (Ctrl in air) and mag-cling (hold E at a wall) earn their place? Keys 1-5 toggle them. Ground boost and air dash share one 1.1 s cooldown; split them if the dash feels starved. |
-| Spillway Drop | `proto/spillway-drop` at `af89c89` | Do stacked shelves, sluice chutes and a slow bypass ramp create route choice? It also has a 90 s basin flood that reveals a secret hatch. |
-| Cable Bench | `proto/cable-bench` at `29dcbcf` | Does a 45 s difficulty clock with rising cache prices make looting versus leaving a real choice? It also has kicker-gated benches and cableway hazards. |
-
-Launch any of them with the `scrapkeep` launcher, which finds sketches across every
-worktree. The mobility kit's README and each stage's README list controls and "what to
-try first".
-
-```sh
-scrapkeep                 # list what is playable, with branch, head and the question it asks
-scrapkeep mobility        # play the mobility kit
-scrapkeep spillway        # play Spillway Drop
-scrapkeep cable           # play Cable Bench
-scrapkeep test            # headless import, boot and tests/*.gd for every sketch in every worktree
-```
-
-`npm run play` is the same tool from inside the repo. It reads the pinned binary from
-`scripts/sketch-smoke.mjs`; set `GODOT_BIN` to override it and `SCRAPKEEP_ROOT` to point the
-wrapper at a different checkout. The long form still works:
-
-```sh
-/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path /home/andrew/Projects/scrapkeep-worktrees/mobility-kit/sketches/ball-lab
-```
-
-If a worktree is gone, recreate it with `git worktree add /home/andrew/Projects/scrapkeep-worktrees/<name> proto/<name>`.
-
-After play: log the verdict here, append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`), merge the played branches, graft the kept augments into the chosen stage, then plan the Bible amendment (BIBLE.md:519 still describes compact levels).
+After play: log the verdict here and append its line to [verdicts.ndjson](verdicts.ndjson) (checked by `node scripts/lab/verdicts.mjs`).
 
 ## 12. Checkpoint 1, the Cable Reach, first human play
 

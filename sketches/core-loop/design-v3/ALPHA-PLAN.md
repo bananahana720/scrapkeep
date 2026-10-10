@@ -1,6 +1,6 @@
 # Scrapkeep full alpha plan
 
-Status: authorized and in progress. Waves 1 to 4 landed. [DESIGN-V3](DESIGN-V3.md) owns the current gameplay design; [HANDOFF](HANDOFF.md) owns the live coordinator handoff. Historical unit lists below preserve planning provenance.
+Status: authorized and in progress. Waves 1 to 20 and dress waves 1 to 12 landed (wave 12 merged on smoke evidence, 10 October 2026). Wave 13 is the open wave: see "Wave 13" below. [DESIGN-V3](DESIGN-V3.md) owns the current gameplay design; [HANDOFF](HANDOFF.md) owns the live coordinator handoff. Historical unit lists below preserve planning provenance.
 
 ## What approving this plan authorizes
 
@@ -353,3 +353,13 @@ T5 merges before the first content wave. T6 merges before the first pilot or bos
 - `tools/bot_run.gd`, `balance_report.gd`, `item_fuzz.gd`, `stress_capture.gd`, `visual_capture.gd` for evidence.
 - The clone's asset sheet, judge rubric, pilot rig and reaction clips.
 - `native/export_presets.cfg` and `scripts/native-smoke.mjs` as the export recipe.
+
+## Wave 13 (opened 10 October 2026)
+
+Branch `cand/alpha-w13`, cut from `proto/alpha` after the wave 12 merge. The approved session plan lives outside the repo at `~/.claude/plans/let-s-plan-this-session-glowing-beaver.md`; its decisions are recorded in `docs/decisions.tsv` (phase `w13-open`). Three lanes:
+
+- **Pilots.** All six pilots at one full bar: the 1-2-3 skill bar with snap-back and a Q ultimate per pilot ([SKILL-BAR](SKILL-BAR.md)), six pilot sheets ([PILOTS](PILOTS.md)), open gyro cage bodies from FLUX boards ([ROSTER-LOOK](ROSTER-LOOK.md)), a customization scaffold ([CUSTOMIZE](CUSTOMIZE.md)) and the clip set ([PILOT-CLIPS](PILOT-CLIPS.md)).
+- **Park and Wardens.** All six stages rebuilt as Arizona parks at four times today's size on Terrain3D plus recipe landforms, one hero landmark per stage, dynamic events, and three Warden kinds, one per world ([PARK](PARK.md), `adr/TADR-011`).
+- **Polish.** Small fixes beside the other lanes.
+
+Storyboards and boards go to Andrew for click approval before terrain or bodies are built. Each wave closes with the full smoke, the gate, an Opus gate read, an export with win proofs and a `uat` receipt.
