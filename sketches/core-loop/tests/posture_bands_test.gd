@@ -39,8 +39,11 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 45 s, small at least twice grown); the slice row and the sweep table are unchanged; was 66.6 / 31.5. The hunter's
 # build and combat fixes on the same candidate (item hits scale once, the braced Warden plates at plating_for) then
 # moved grown from 27.3 back to 30.7 (measured on fa73529; the attribution to those two fixes is inference).
-const EXPECT_SMALL_S := 75.9
-const EXPECT_GROWN_S := 30.7
+# 2026-10-09 (wave 12-F HOOK-FIX): re-pinned to the measured medians 66.6 / 32.3 after the grounded rigid ball
+# stopped paying the over-speed drag again (it is an air rule; rigid_ball.gd); small/grown 2.06, grown inside 25
+# to 45 s, so the bands still hold; the slice row and the sweep table are unchanged; was 75.9 / 30.7.
+const EXPECT_SMALL_S := 66.6
+const EXPECT_GROWN_S := 32.3
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
