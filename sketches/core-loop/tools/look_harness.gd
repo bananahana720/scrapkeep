@@ -796,6 +796,8 @@ func _hd_redo() -> void:
 	await _shoot("hdr_thermals")
 	await _shoot("hdr_net")
 	await _shoot("hdr_sky")
+	_anchor("barge_0", game.world.contraptions[5].barges[0]["body"].global_position)
+	await _shoot("swp_barge")
 
 
 func _enter_boss_of(world: int) -> void:
