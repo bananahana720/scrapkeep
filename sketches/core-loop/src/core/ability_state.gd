@@ -150,6 +150,8 @@ class Slot:
 	# items re-apply as a delta and never overwrite a pick.
 	var item_charges := 0
 	var item_scale := 1.0
+	# What a pressure row lifted the cap by, so a swap away hands back only the slot's own cap.
+	var pressure_bonus := 0
 
 
 # The key the movement slot shows: RMB for the rope, Shift for a pilot whose movement is a
@@ -180,8 +182,8 @@ func swap(name: String, id: String) -> void:
 	var row: Dictionary = ABILITIES.get(id, {})
 	var old: Slot = _slots[name]
 	var s := Slot.new()
-	s.max_charges = old.max_charges
-	s.charges = old.max_charges
+	s.max_charges = maxi(1, old.max_charges - old.pressure_bonus)
+	s.charges = s.max_charges
 	s.cooldown_scale = old.cooldown_scale
 	s.item_charges = old.item_charges
 	s.item_scale = old.item_scale
@@ -193,7 +195,9 @@ func swap(name: String, id: String) -> void:
 	if charge_max > 0.0:
 		s.gauge = Gauge.new(charge_max)
 	if row.has("pressure"):
+		var own: int = s.max_charges
 		s.max_charges = maxi(old.max_charges, int(row["pressure"]))
+		s.pressure_bonus = s.max_charges - own
 		s.charges = s.max_charges
 	_slots[name] = s
 

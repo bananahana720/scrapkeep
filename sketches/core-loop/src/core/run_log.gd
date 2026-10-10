@@ -474,7 +474,10 @@ func _write(outcome: String) -> void:
 	var keys := _stages.keys()
 	keys.sort()
 	for index in keys:
-		_close_posture(index)
+		# Only the stage being played is still open; an earlier stage closed on its own clock
+		# when it cleared, and run.stage_time now reads a later stage's clock.
+		if index == run.stage:
+			_close_posture(index)
 		stages.append(_stages[index])
 	line["stages"] = stages
 	line["codex"] = codex.discovered_this_run() if codex != null else []

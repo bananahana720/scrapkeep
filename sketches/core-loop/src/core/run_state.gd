@@ -481,7 +481,7 @@ func wear_step(delta: float, speed: float, cruise: float, active: bool) -> void:
 	if not armor_mode or not wear_on or not active or not alive() or delta <= 0.0 or mass < 1.0:
 		return
 	_wear_accum += wear_rate(speed, cruise) * delta
-	var whole := minf(floorf(_wear_accum), mass)
+	var whole := minf(floorf(_wear_accum), floorf(mass))
 	if whole < 1.0:
 		return
 	_wear_accum -= whole
