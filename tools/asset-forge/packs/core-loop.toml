@@ -60,3 +60,28 @@ hero = 40
 [promote.model]
 models = "sketches/core-loop/assets/models"
 recipes = "sketches/core-loop/tools/blender/forge"
+
+# --- vfx ---
+# The vfx kind reuses the bands/sizes/draw_calls tables under its own key. "prop" is the pack's
+# default category, so it exists here; "burst" and "ambient" are the real ones.
+# bands.vfx = particle budget [low, high] per effect. The ceiling is twice the largest pooled
+# burst in vfx.gd (fountain, 24).
+[bands.vfx]
+prop = [1, 48]
+burst = [1, 48]
+ambient = [1, 24]
+
+# Largest distance in metres any simulated particle may reach from the effect origin, [low, high].
+[sizes.vfx]
+prop = [0.1, 8.0]
+burst = [0.1, 8.0]
+ambient = [0.1, 8.0]
+
+# Emitters per effect (one draw call each).
+[draw_calls.vfx]
+prop = 4
+burst = 4
+ambient = 3
+
+[promote.vfx]
+vfx = "sketches/core-loop/assets/vfx"
