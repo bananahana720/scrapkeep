@@ -152,11 +152,12 @@ const SUBJECTS := {
 		"cameras": [["spawn_pad", Vector3(0, 8, -18), Vector3(0, 0, 10), 60.0], ["spawn_wide", Vector3(-45, 30, -55), Vector3(0, 0, 40), 65.0], ["tower_base", Vector3(60, 25, 60), Vector3(0, 20, 0), 60.0, "tower"],
 			["tower_top", Vector3(70, 80, 70), Vector3(0, 60, 0), 60.0, "tower"], ["tunnels", Vector3(0, 60, 0), Vector3(40, 40, 70), 65.0, ""]]},
 	# The Reach cache valve (SWAP-WAVE 12-F): map_reach.gd SECRET_VALVE (-100, 54), foot y 23.68, hub 1.6 m up; world-fixed
-	# eyes on the door side (+z) clear of the 12 m door at z 64. far is 40 m out, past detail1's 32 m end plus its 4 m margin.
+	# eyes on the door side (+z); mid and far look down over the cache pocket walls by the door at z 64. far is 45 m out,
+	# past detail1's 32 m end plus its 4 m margin.
 	"swp_valve_wheel": {"group": "workshop", "stage": 2, "kind": "prop", "owner": "SWAP-WAVE", "tick": 255,
-		"cameras": [["close", Vector3(-94.5, 27.2, 59.5), Vector3(-100, 25, 54), 50.0], ["mid", Vector3(-84, 30, 62), Vector3(-100, 25, 54), 55.0],
-			["far", Vector3(-66, 40, 70), Vector3(-100, 25, 54), 50.0]],
-		"ball": {"close": Vector3(3.2, 0, 1.5), "mid": Vector3(3.2, 0, 1.5), "far": Vector3(3.2, 0, 1.5)},
+		"cameras": [["close", Vector3(-94.5, 27.2, 59.5), Vector3(-100, 25, 54), 50.0], ["mid", Vector3(-92, 38, 66), Vector3(-100, 25, 54), 55.0],
+			["far", Vector3(-84, 55, 84), Vector3(-100, 25, 54), 50.0]],
+		"ball": {"close": Vector3(3.2, 0, 1.5), "mid": Vector3(3.5, 0, -0.5), "far": Vector3(3.5, 0, -0.5)},
 		"ball_reason": "the scale mannequin stands beside the wheel on the door side, clear of the 1.9 m wheel radius, in every camera"},
 	"cache_activity": {"group": "workshop", "stage": 2, "kind": "prop", "owner": "VX-SURF", "anchor": "cache", "tick": 270,
 		"cameras": [["front", Vector3(0, 4, -13), Vector3.ZERO, 55.0], ["three_q", Vector3(10, 5, -10), Vector3.ZERO, 55.0], ["side", Vector3(14, 3, 0), Vector3.ZERO, 55.0], ["wide", Vector3(24, 22, -24), Vector3.ZERO, 60.0]],
