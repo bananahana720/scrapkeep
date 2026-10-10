@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const SteamCycle := preload("res://src/world/steam_cycle.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const Activities := preload("res://src/world/activities.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 # The gorge's contraptions, built from the map's specs and run from world's physics
 # tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
@@ -58,7 +59,6 @@ var _gauge_mat: Material
 var _needle_mat: Material
 var _rust_mat: Material
 var _copper_mat: Material
-var _band_mat: Material
 var _ring_mat: Material
 var _hook_mat: Material
 var _steam_mat: Material
@@ -80,7 +80,6 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 	_needle_mat = Palette.solid(Palette.CHARCOAL)
 	_rust_mat = Palette.solid(Palette.RUST)
 	_copper_mat = Palette.solid(Palette.COPPER)
-	_band_mat = Palette.solid(Palette.AMBER, 0.6)
 	_ring_mat = Palette.solid(Palette.AMBER, 0.8)
 	_hook_mat = Palette.solid(Palette.AMBER, 1.2)
 	_steam_mat = Palette.unshaded(Color(Palette.SAND, 0.55))
@@ -272,40 +271,19 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 	box.size = size
 	shape.shape = box
 	body.add_child(shape)
+	# The deck node owns the barge's picture and its drawn lean (_place_barge); the recipe views ride it, the recipe
+	# floor (y +1.0 at the GLB origin) on the collider top. The recipe's low wall has no collider: the ball can clip it.
+	# The striped box stays only when the recipe's base GLBs are missing.
 	var deck := MeshInstance3D.new()
-	var dm := BoxMesh.new()
-	dm.size = size
-	deck.mesh = dm
-	deck.material_override = Palette.striped(Palette.SANDSTONE, Palette.CHARCOAL)
 	body.add_child(deck)
-	var hull := MeshInstance3D.new()
-	var hm := CylinderMesh.new()
-	hm.top_radius = size.x * 0.45
-	hm.bottom_radius = size.x * 0.2
-	hm.height = 3.0
-	hull.mesh = hm
-	hull.material_override = _rust_mat
-	hull.position = Vector3.DOWN * 2.1
-	body.add_child(hull)
-	for corner in [Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, -1)]:
-		var jet := MeshInstance3D.new()
-		var jm := CylinderMesh.new()
-		jm.top_radius = 0.8
-		jm.bottom_radius = 1.2
-		jm.height = 1.6
-		jet.mesh = jm
-		jet.material_override = _copper_mat
-		jet.position = Vector3(corner.x * size.x * 0.42, -1.2, corner.z * size.z * 0.42)
-		body.add_child(jet)
-	# Amber hazard-free edge bands: a barge's rim reads as a ledge you can roll off.
-	for side in [-1.0, 1.0]:
-		var band := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = Vector3(size.x, 0.12, 0.5)
-		band.mesh = bm
-		band.material_override = _band_mat
-		band.position = Vector3(0.0, size.y * 0.5 + 0.02, side * (size.z * 0.5 - 0.25))
-		body.add_child(band)
+	var floor_at := Transform3D(Basis.IDENTITY, Vector3(0.0, size.y * 0.5 - 1.0, 0.0))
+	if RecipeProps.base("barge", deck, floor_at).is_empty():
+		var dm := BoxMesh.new()
+		dm.size = size
+		deck.mesh = dm
+		deck.material_override = Palette.striped(Palette.SANDSTONE, Palette.CHARCOAL)
+	else:
+		RecipeProps.shells("barge", deck, floor_at)
 	add_child(body)
 	return {"spec": spec, "body": body, "deck": deck, "time": 0.0, "tilt": Vector2.ZERO, "last": Vector3.INF, "velocity": Vector3.ZERO}
 

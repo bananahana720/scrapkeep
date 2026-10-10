@@ -44,7 +44,9 @@ func _run() -> void:
 	var groups := {}
 	_collect(a, groups)
 	_check(attributes_ok, "all solid surfaces retain authored attributes")
-	_check(groups.size() == 7, "seven exact solid color/emission variants")
+	# 2026-10-09 swap-wave 12-F barge: the gorge barges wear the recipe, so their amber 0.6 edge bands (the only
+	# AMBER 0.6 solid) are gone; six of the seven VARIANTS remain in use.
+	_check(groups.size() == 6, "six exact solid color/emission variants")
 	var shared := true
 	for ids in groups.values():
 		shared = shared and ids.size() == 1
@@ -114,7 +116,8 @@ func _state(node: Node) -> Array:
 	if node is Node3D:
 		result.append(node.transform)
 		result.append(node.visible)
-	if node is MeshInstance3D:
+	# 2026-10-09 swap-wave 12-F: recipe views carry surface overrides
+	if node is MeshInstance3D and node.material_override != null:
 		result.append(hash(node.mesh.get_faces()))
 		var mat: StandardMaterial3D = node.material_override
 		result.append([mat.albedo_color, mat.roughness, mat.metallic, mat.emission_enabled, mat.emission,
