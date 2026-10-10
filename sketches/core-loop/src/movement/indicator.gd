@@ -136,7 +136,7 @@ func _origin(shape: Dictionary) -> Vector3:
 			return shape["from"]
 		"cone":
 			return shape["apex"]
-		"arc":
+		"arc", "marks":
 			return shape["points"][0] if not (shape["points"] as Array).is_empty() else Vector3.ZERO
 	return Vector3.ZERO
 
@@ -198,6 +198,7 @@ func _draw(shape: Dictionary, now: float) -> void:
 				_dashed(apex, tip, EDGE, edge)
 		"marks":
 			for point in shape["points"]:
+				_anchor = point
 				_circle(point, 0.6, EDGE, edge, false, 1.0)
 
 
