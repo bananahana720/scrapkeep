@@ -77,8 +77,14 @@ static func strip_tracks(player: AnimationPlayer, node_name: String, clips: Arra
 			continue
 		var animation := player.get_animation(clip)
 		for t in range(animation.get_track_count() - 1, -1, -1):
-			if String(animation.track_get_path(t)).get_slice(":", 0).ends_with("/" + node_name):
+			if _names(String(animation.track_get_path(t)).get_slice(":", 0), node_name):
 				animation.remove_track(t)
+
+
+# A track's node path names `node_name` when it is that node directly under the clip root
+# or ends in it one or more levels down; a sibling that only ends the same way is not it.
+static func _names(node_path: String, node_name: String) -> bool:
+	return node_path == node_name or node_path.ends_with("/" + node_name)
 
 
 # Drops the node's tracks from every clip not named in `keep`: a part a clip would reset to
@@ -118,7 +124,7 @@ static func split_player(player: AnimationPlayer, clips: Array, node_names: Arra
 static func _on_node(path: NodePath, node_names: Array) -> bool:
 	var node := String(path).get_slice(":", 0)
 	for name in node_names:
-		if node.ends_with("/" + String(name)):
+		if _names(node, String(name)):
 			return true
 	return false
 
@@ -149,8 +155,9 @@ static func play(player, clip: String, backwards := false) -> bool:
 	return true
 
 
-# Lights the M4 signal surface of one mesh instance. The imported material is shared, so the
-# instance gets its own copy the first time. Mint and blue are never passed in here: only the
+# Lights the M4 signal surface of one mesh instance. The drawn material (load_scene's
+# vertex-coloured override, else the imported one) is shared, so the instance gets its own
+# copy of it the first time. Mint and blue are never passed in here: only the
 # hazard working face and the live target glow, and the caller picks which.
 static func signal_glow(mesh: MeshInstance3D, color: Color, energy: float) -> void:
 	if mesh == null or mesh.mesh == null:
@@ -163,7 +170,10 @@ static func signal_glow(mesh: MeshInstance3D, color: Color, energy: float) -> vo
 				found = i
 		mesh.set_meta("signal_surface", found)
 		if found >= 0:
-			mesh.set_surface_override_material(found, mesh.mesh.surface_get_material(found).duplicate())
+			var drawn := mesh.get_surface_override_material(found)
+			if drawn == null:
+				drawn = mesh.mesh.surface_get_material(found)
+			mesh.set_surface_override_material(found, drawn.duplicate())
 	var surface: int = mesh.get_meta("signal_surface")
 	if surface < 0:
 		return
