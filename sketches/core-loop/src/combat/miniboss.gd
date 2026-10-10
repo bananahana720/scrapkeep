@@ -122,7 +122,7 @@ func knock(direction: Vector3, force: float) -> void:
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_pose(delta)
-	if not _in_play() or target == null:
+	if not _in_play() or not is_instance_valid(target):
 		if state != State.SLAM_LEAP:
 			_move(delta, Vector3.ZERO)
 		return
@@ -477,7 +477,10 @@ func _pose(delta: float) -> void:
 		_model_pose(delta)
 	else:
 		_primitive_pose(delta)
-	# Face the ball while stalking or bracing, so the core is toward the player.
+	# Face the ball while stalking or bracing, so the core is toward the player. A null or
+	# freed target leaves the facing where it is (F008).
+	if not is_instance_valid(target):
+		return
 	if state == State.STALK or state == State.CHARGE_BRACE or state == State.WEAK or state == State.SLAM_CROUCH:
 		var to := _flat_to_ball()
 		if state == State.CHARGE_BRACE and telegraph() != null:

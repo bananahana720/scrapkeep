@@ -36,6 +36,8 @@ var _floor_at: Callable
 var _clock := 0.0
 var _last_hit := {}
 var _run
+# Wear below one whole unit, carried to the next signal so chunks under 1.0 still add up (F007).
+var _wear_debt := 0.0
 # Set by combat: deals the hit and writes it into the M0 delivered-damage ledger, returning the
 # HP actually removed. Unset (a bare trail in a test), the patch calls take_damage itself.
 var deal: Callable
@@ -59,6 +61,7 @@ func active() -> bool:
 func step(delta: float, enemies: Array) -> void:
 	if _ctx.run != _run:
 		_run = _ctx.run
+		_wear_debt = 0.0
 		if _run != null and _run.has_signal("wear_taken") and not _run.wear_taken.is_connected(_on_wear):
 			_run.wear_taken.connect(_on_wear)
 	if not active():
@@ -80,7 +83,10 @@ func step(delta: float, enemies: Array) -> void:
 func _on_wear(removed: float) -> void:
 	if not active():
 		return
-	for i in int(removed):
+	_wear_debt += removed
+	var whole := int(floorf(_wear_debt))
+	_wear_debt -= whole
+	for i in whole:
 		_place()
 
 
