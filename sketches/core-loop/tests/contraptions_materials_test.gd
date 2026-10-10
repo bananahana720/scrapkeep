@@ -120,11 +120,15 @@ func _state(node: Node) -> Array:
 	if node is MeshInstance3D and node.material_override != null:
 		result.append(hash(node.mesh.get_faces()))
 		var mat: StandardMaterial3D = node.material_override
-		result.append([mat.albedo_color, mat.roughness, mat.metallic, mat.emission_enabled, mat.emission,
-			mat.emission_energy_multiplier, mat.transparency, mat.shading_mode, mat.cull_mode, mat.no_depth_test,
-			mat.uv1_triplanar, mat.uv1_scale])
-		if mat.albedo_texture != null:
-			result.append([mat.albedo_texture.get_width(), mat.albedo_texture.get_height()])
+		# 2026-10-09 swap-wave 12-F: recipe views carry surface overrides and no material_override; hash their slots.
+		if mat == null:
+			result.append(range(node.mesh.get_surface_count()).map(func(i): return node.get_surface_override_material(i)))
+		else:
+			result.append([mat.albedo_color, mat.roughness, mat.metallic, mat.emission_enabled, mat.emission,
+				mat.emission_energy_multiplier, mat.transparency, mat.shading_mode, mat.cull_mode, mat.no_depth_test,
+				mat.uv1_triplanar, mat.uv1_scale])
+			if mat.albedo_texture != null:
+				result.append([mat.albedo_texture.get_width(), mat.albedo_texture.get_height()])
 	if node is CollisionShape3D:
 		result.append([node.disabled, hash(node.shape.get_debug_mesh().get_faces())])
 	if node is CollisionObject3D:

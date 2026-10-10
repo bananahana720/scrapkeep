@@ -533,32 +533,18 @@ func _build_cable(spec: Dictionary) -> Dictionary:
 func _build_valve(spec: Dictionary) -> Dictionary:
 	var at: Vector2 = spec["at"]
 	var foot: Vector3 = ground.call(at.x, at.y, 0.0)
-	var wheel := MeshInstance3D.new()
-	var wm := TorusMesh.new()
-	wm.inner_radius = 1.3
-	wm.outer_radius = 1.9
-	wheel.mesh = wm
-	wheel.material_override = _rust_mat
+	# The authored valve (RecipeProps rows valve_wheel and valve_wheel_mount): the wheel frame rides the
+	# "wheel" handle that smash and reset turn; the mount frame's two views stand still at the foot, directly
+	# under this node, so the valve keeps three children before its door and collider paths hold.
+	var wheel := Node3D.new()
+	wheel.name = String(spec["id"]) + "_wheel"
 	wheel.position = foot + Vector3.UP * 1.6
 	wheel.rotation.x = PI * 0.5
 	add_child(wheel)
-	var crack := MeshInstance3D.new()
-	var km := BoxMesh.new()
-	km.size = Vector3(0.25, 0.1, 3.6)
-	crack.mesh = km
-	crack.material_override = _needle_mat
-	crack.position = wheel.position + Vector3(0.0, 0.0, 0.0)
-	crack.rotation = Vector3(PI * 0.5, 0.0, 0.6)
-	add_child(crack)
-	var stripe := MeshInstance3D.new()
-	var sm := CylinderMesh.new()
-	sm.top_radius = 0.5
-	sm.bottom_radius = 0.5
-	sm.height = 1.6
-	stripe.mesh = sm
-	stripe.material_override = Palette.striped(Palette.AMBER, Palette.CHARCOAL)
-	stripe.position = foot + Vector3.UP * 0.8
-	add_child(stripe)
+	RecipeProps.base("valve_wheel", wheel, Transform3D.IDENTITY)
+	RecipeProps.shells("valve_wheel", wheel, Transform3D.IDENTITY)
+	RecipeProps.base("valve_wheel_mount", self, Transform3D(Basis.IDENTITY, foot))
+	RecipeProps.shells("valve_wheel_mount", self, Transform3D(Basis.IDENTITY, foot))
 	var d: Dictionary = spec["door"]
 	var dat: Vector2 = d["at"]
 	var door_foot: Vector3 = ground.call(dat.x, dat.y, 0.0)
