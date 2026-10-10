@@ -4,8 +4,8 @@
    "id": "kicker_wedge",
    "path": "res://assets/models/kicker_wedge.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (route proof, wave 12-D RECIPE-WAVE; today's kicker stays code-built in src/boss/arena.gd _wedge until the owner swaps it; no code path attaches a GLB there yet)",
+   "ships": true,
+   "loader": "recipe_props",
    "provenance": {
     "recipe": "tools/blender/kicker_wedge.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/kicker_wedge_101.png",
@@ -16,8 +16,8 @@
    "id": "kicker_wedge_stripes",
    "path": "res://assets/models/kicker_wedge_stripes.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (route proof, wave 12-D RECIPE-WAVE; enamel stripes and cap bar at kicker_wedge's origin)",
+   "ships": true,
+   "loader": "recipe_props",
    "provenance": {
     "recipe": "tools/blender/kicker_wedge.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/kicker_wedge_101.png",
@@ -28,8 +28,8 @@
    "id": "kicker_wedge_detail1",
    "path": "res://assets/models/kicker_wedge_detail1.glb",
    "class": "detail",
-   "ships": false,
-   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at kicker_wedge's origin, visibility range end 45 m margin 10 m)",
+   "ships": true,
+   "loader": "recipe_props",
    "provenance": {
     "recipe": "tools/blender/kicker_wedge_detail1.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/kicker_wedge_101.png",
@@ -40,8 +40,8 @@
    "id": "kicker_wedge_detail2",
    "path": "res://assets/models/kicker_wedge_detail2.glb",
    "class": "detail",
-   "ships": false,
-   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at kicker_wedge's origin, visibility range end 24 m margin 6 m)",
+   "ships": true,
+   "loader": "recipe_props",
    "provenance": {
     "recipe": "tools/blender/kicker_wedge_detail2.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-kicker_wedge/ref/kicker_wedge_pass2.png",

@@ -1,4 +1,5 @@
 extends SceneTree
+# 2026-10-09 (w12 SWAP-WAVE 12-F kicker_wedge): re-pinned for the authored kicker; measured cause: the dress hides the two Kicker greybox views and places kicker_wedge recipe views at each wedge frame, so a Kicker greybox is re-materialled but hidden.
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
@@ -7,6 +8,8 @@ const Proof := preload("res://tests/support/arena_bowl_proof.gd")
 const T := preload("res://tests/support/t.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Arena := preload("res://src/boss/arena.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 var t := T.new("dress_arb_test")
 var game
@@ -124,7 +127,7 @@ func _check_dress(arena: Node3D, dressing: Node3D) -> void:
 			continue
 		counts[role] = counts.get(role, 0) + 1
 		var material: Material = view.material_override
-		t.check("greybox re-materialled: " + role, material != null and material.resource_name == roles[role] and view.visible)
+		t.check("greybox re-materialled: " + role, material != null and material.resource_name == roles[role] and view.visible == (role != "Kicker"))
 		if material is StandardMaterial3D:
 			t.check("vertex colour or explicit texture: " + role, material.vertex_color_use_as_albedo or material.albedo_texture != null)
 		elif material is ShaderMaterial:
@@ -137,6 +140,7 @@ func _check_dress(arena: Node3D, dressing: Node3D) -> void:
 		elif role in ["Ramp", "Kicker"]:
 			expected = 2
 		t.eq("all arena surfaces dressed: " + role, counts.get(role, 0), expected)
+	_check_kickers(arena)
 	var channels := arena.get_children().filter(func(n): return n is MeshInstance3D and n.get_meta("bowl_surface", "") == "Channel")
 	t.eq("both live slag channels retained", channels.size(), 2)
 	for channel in channels:
@@ -146,3 +150,53 @@ func _check_dress(arena: Node3D, dressing: Node3D) -> void:
 	for vent in vents:
 		t.check("live mint and emission unchanged", vent.material_override.albedo_color == Palette.ARC
 			and is_equal_approx(vent.material_override.emission_energy_multiplier, 0.6))
+
+
+# The authored kicker stands where the collider does: per Kicker greybox view one holder at its wedge frame, the
+# greybox's six collider points land on the frame's wedge (foot at the origin, top 1.6 at z 7), and the recipe's base
+# never rises above the collider plane y = 1.6 z / 7 by more than 16 mm and meets it at the top edge.
+func _check_kickers(arena: Node3D) -> void:
+	var greybox := arena.get_children().filter(func(n): return n is MeshInstance3D and n.get_meta("bowl_surface", "") == "Kicker")
+	var holders := arena.get_children().filter(func(n): return String(n.name).begins_with("KickerWedge"))
+	t.eq("one recipe kicker per Kicker greybox view", holders.size(), greybox.size())
+	var base_count := 0
+	for path: String in RecipeProps.base_paths("kicker_wedge"):
+		var scene := (load(path) as PackedScene).instantiate()
+		base_count += scene.find_children("*", "MeshInstance3D", true, false).size()
+		scene.free()
+	for view: MeshInstance3D in greybox:
+		var frame: Transform3D = view.transform * (view.get_meta(Arena.WEDGE_FRAME) as Transform3D)
+		var matched := holders.filter(func(h): return (h as Node3D).transform.is_equal_approx(frame))
+		t.eq("recipe kicker stands at the wedge frame", matched.size(), 1)
+		if matched.size() != 1:
+			continue
+		var holder: Node3D = matched[0]
+		var to_local := frame.affine_inverse() * view.transform
+		var on_wedge := true
+		for vertex: Vector3 in view.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+			var p := to_local * vertex
+			var top := absf(p.y - Arena.KICKER_TOP) < 0.001 and absf(p.z - Arena.KICKER_LENGTH) < 0.001
+			var low := absf(p.y) < 0.001 and (absf(p.z) < 0.001 or absf(p.z - Arena.KICKER_LENGTH) < 0.001)
+			on_wedge = on_wedge and (top or low) and absf(absf(p.x) - Arena.KICKER_HALF_WIDTH) < 0.001
+		t.check("collider points sit on the wedge frame", on_wedge)
+		var views := holder.get_children().filter(func(n): return n is MeshInstance3D)
+		var bases := views.filter(func(n): return not n.has_meta(RecipeProps.META_FADE))
+		var shells := views.filter(func(n): return n.has_meta(RecipeProps.META_FADE))
+		t.eq("recipe base views present", bases.size(), base_count)
+		t.eq("recipe shells present", shells.size(), RecipeProps.shell_rows("kicker_wedge").size())
+		for v: MeshInstance3D in views:
+			t.check("recipe view visible: " + String(v.name), v.visible and v.is_visible_in_tree() and v.mesh != null)
+		for v: MeshInstance3D in bases:
+			t.check("recipe base casts its shadow: " + String(v.name), v.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
+		t.check("recipe riding body present", holder.get_node_or_null("kicker_wedge_Body") is MeshInstance3D)
+		var above := -INF
+		var reach := INF
+		for v: MeshInstance3D in bases:
+			for vertex: Vector3 in v.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+				var p := v.transform * vertex
+				above = maxf(above, p.y - Arena.KICKER_TOP * p.z / Arena.KICKER_LENGTH)
+				if p.z > Arena.KICKER_LENGTH - 0.05:
+					reach = minf(reach, absf(p.y - Arena.KICKER_TOP))
+		t.check("recipe base never above the collider plane by more than 16 mm", above <= 0.016, "%.4f m" % above)
+		t.check("riding face meets the collider top", reach <= 0.016, "%.4f m" % reach)
+

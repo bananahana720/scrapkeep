@@ -33,6 +33,7 @@ const KICKER_R := 39.0
 const KICKER_LENGTH := 7.0
 const KICKER_TOP := 1.6
 const KICKER_HALF_WIDTH := 3.0
+const WEDGE_FRAME := "wedge_frame"
 const VENT_ANGLES := [60.0, 120.0, 240.0, 300.0]
 const VENT_R := 43.0
 const VENT_SPAN := 0.4363323  # 25 degrees either side of the vent
@@ -330,7 +331,9 @@ func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, 
 	_quad(st, points[4], points[5], points[3], points[2])
 	for p in [points[0], points[4], points[2], points[1], points[3], points[5]]:
 		st.add_vertex(p)
-	_mesh_node(st, Palette.striped(Palette.AMBER, Palette.CHARCOAL), label)
+	var node := _mesh_node(st, Palette.striped(Palette.AMBER, Palette.CHARCOAL), label)
+	# The wedge's own frame (origin at the foot centre on the floor, +Z up the slope), the one point the dress places a recipe at.
+	node.set_meta(WEDGE_FRAME, Transform3D(Basis(Vector3.UP.cross(f), Vector3.UP, f), foot))
 
 
 func _vent(angle: float) -> void:

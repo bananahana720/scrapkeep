@@ -1,6 +1,8 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const Arena := preload("res://src/boss/arena.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ASSET_DIR := "res://assets/models/bosses"
 const SPILLWAY_DIR := "res://assets/models/world_one"
 const FOUNDRY_PARTS := ["RimRepairs", "CraneRails", "PourSpouts", "CooledSlagPools", "CastFloorSeams", "MastCollars", "BankCopperCourses"]
@@ -137,5 +139,21 @@ func _surfaces(arena: Node3D) -> void:
 			"Floor": view.material_override = floor_mat
 			"Bank": view.material_override = bank_mat
 			"RimWall": view.material_override = wall_mat
-			"Ramp", "Kicker": view.material_override = ramp_mat
+			"Ramp": view.material_override = ramp_mat
+			"Kicker":
+				view.material_override = ramp_mat
+				_kicker(arena, view)
 			"Mast", "Crossbar": view.material_override = mast_mat
+
+
+# The authored kicker replaces the greybox view where the collider stands: one holder per kicker at the wedge's own
+# frame (arena.gd _wedge), its base views and detail shells at the holder's origin, so the recipe's riding face lies on
+# the collider plane. The greybox view stays in the tree, hidden, and the collider is untouched.
+func _kicker(arena: Node3D, view: MeshInstance3D) -> void:
+	var holder := Node3D.new()
+	holder.name = "KickerWedge"
+	holder.transform = view.transform * (view.get_meta(Arena.WEDGE_FRAME) as Transform3D)
+	arena.add_child(holder, true)
+	RecipeProps.base("kicker_wedge", holder, Transform3D.IDENTITY)
+	RecipeProps.shells("kicker_wedge", holder, Transform3D.IDENTITY)
+	view.visible = false
