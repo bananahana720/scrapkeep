@@ -104,7 +104,8 @@ static func resistance(state, tuning, intent, delta: float) -> Vector3:
 
 
 # The quadratic part of resistance alone. The rigid ball pays rolling and brake
-# resistance as forces of its own, and this term as an impulse, in the air or not.
+# resistance as forces of its own, and this term as an impulse in the air only; on the
+# ground the rigid ball, the game's authority (TADR-006), keeps its over-cruise speed.
 static func over_speed_drag(state, tuning, delta: float) -> Vector3:
 	var speed: float = state.velocity.length()
 	if speed <= 0.001:

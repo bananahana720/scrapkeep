@@ -11,7 +11,8 @@ const Indicator := preload("res://src/movement/indicator.gd")
 
 # The hosted movement bug hunt (wave 12, bughunt/movement/bug-report.md), on the real rigid
 # ball in a small fixture world. Each check names its finding: the sprint kick follows the
-# roll (1), the grounded rigid ball keeps the over-speed drag (2), the harpoon press obeys
+# roll (1), the rigid ball pays the over-speed drag in the air and not on the ground (2,
+# re-specified by HOOK-FIX 2026-10-09), the harpoon press obeys
 # the busy rule verb_ready shows (3), the hook ray never returns an enemy behind the ball
 # (5), a collapsing marks shape shrinks in place (6), and a bow-crush smash landing sets
 # smash_landing for its strike (7). Finding 4 is a doc-only change (harpoon.gd).
@@ -22,6 +23,7 @@ const RAY_BALL := Vector3(0.0, 6.0, 150.0)
 const KICK := 8.0
 const DRAG_TICKS := 30
 const DRAG_SPEED := 30.0
+const AIR_LIFT := Vector3(0.0, 40.0, 0.0)
 
 
 # A hookable enemy stand-in: in the enemy group, on the enemy layer, and able to take the
@@ -72,8 +74,10 @@ func _initialize() -> void:
 	_steps = [
 		[_noop, 3, _marks_collapse_in_place],
 		[_sprint_start, 3, _check_sprint],
-		[_drag_start.bind(_tuning.f("cruise")), DRAG_TICKS, _drag_end.bind("live")],
-		[_drag_start.bind(40.0), DRAG_TICKS, _drag_end.bind("no_quad")],
+		[_drag_start.bind(_tuning.f("cruise"), Vector3.ZERO), DRAG_TICKS, _drag_end.bind("live")],
+		[_drag_start.bind(40.0, Vector3.ZERO), DRAG_TICKS, _drag_end.bind("no_quad")],
+		[_drag_start.bind(_tuning.f("cruise"), AIR_LIFT), DRAG_TICKS, _drag_end.bind("air_live")],
+		[_drag_start.bind(40.0, AIR_LIFT), DRAG_TICKS, _drag_end.bind("air_no_quad")],
 		[_noop, 2, _check_drag],
 		[_noop, 2, _harpoon_busy],
 		[_noop, 2, _hook_ray_behind],
@@ -179,13 +183,16 @@ func _check_sprint() -> void:
 			% [KICK, dir.x, dir.y, dir.z, vz])
 
 
-# Finding 2: the same rolling ball over the same ticks, once with the over-speed term live
-# and once with cruise raised past the speed so the term is zero. The difference is the
-# term the grounded rigid ball must still pay (ball_rules.resistance).
-func _drag_start(cruise: float) -> void:
+# Finding 2, re-specified by HOOK-FIX (2026-10-09): the same ball over the same ticks, once
+# with the over-speed term live and once with cruise raised past the speed so the term is
+# zero, rolling on the ground and then flying. The rigid ball is the game's authority
+# (TADR-006) and Andrew chose it for its momentum, so on the ground it keeps its
+# over-cruise speed (the designed rides to the sky layer and the two-hook apex need it);
+# in the air it pays the term (rigid_ball.gd, ball_rules.over_speed_drag).
+func _drag_start(cruise: float, lift: Vector3) -> void:
 	_tuning.set_value("cruise", cruise)
 	_player.fit_class(ClassDef.by_id("pylon_engineer"))
-	_player.reset_to(DRAG_LANE, Vector3(DRAG_SPEED, 0.0, 0.0))
+	_player.reset_to(DRAG_LANE + lift, Vector3(DRAG_SPEED, 0.0, 0.0))
 
 
 func _drag_end(label: String) -> void:
@@ -199,10 +206,16 @@ func _check_drag() -> void:
 	var excess: float = DRAG_SPEED - float(_record["cruise"]) * SpeedTier.MULTIPLES[SpeedTier.FAST]
 	var predicted: float = Tuning.QUAD_DRAG * excess * excess * seconds
 	var extra: float = _record["live"] - _record["no_quad"]
-	_report("2 grounded rigid ball keeps the over-speed drag",
-		_record["grounded_live"] and _record["grounded_no_quad"] and extra > predicted * 0.5 and extra < predicted * 1.5,
-		"%d ticks grounded from %.0f m/s: lost %.3f with the term, %.3f without; extra %.3f, predicted about %.3f"
+	_report("2 grounded rigid ball keeps its over-cruise speed",
+		_record["grounded_live"] and _record["grounded_no_quad"] and absf(extra) < predicted * 0.25,
+		"%d ticks grounded from %.0f m/s: lost %.3f with the term, %.3f without; extra %.3f, air term would be about %.3f"
 			% [DRAG_TICKS, DRAG_SPEED, _record["live"], _record["no_quad"], extra, predicted])
+	var air_extra: float = _record["air_live"] - _record["air_no_quad"]
+	_report("2 flying rigid ball pays the over-speed drag",
+		not _record["grounded_air_live"] and not _record["grounded_air_no_quad"] \
+			and air_extra > predicted * 0.5 and air_extra < predicted * 1.5,
+		"%d ticks in the air from %.0f m/s: lost %.3f with the term, %.3f without; extra %.3f, predicted about %.3f"
+			% [DRAG_TICKS, DRAG_SPEED, _record["air_live"], _record["air_no_quad"], air_extra, predicted])
 
 
 # Finding 3: planted (or mounted) with an aim and no cooldown, verb_ready says no and the
