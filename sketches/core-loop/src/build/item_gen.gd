@@ -277,10 +277,10 @@ static func finish(part_id: String, spec: Dictionary) -> Dictionary:
 # adds health), so every generated part hits harder or helps outright, not only when
 # its trigger fires.
 static func _apply_base_stat(row: Dictionary, b: Dictionary, rarity: String) -> void:
-	var tier: int = RARITY[rarity]["tier"]
+	var rung: int = RARITY[rarity]["rung"]
 	var stat: Dictionary = b["stat"]
 	for key in stat:
-		var value: float = stat[key][tier - 1]
+		var value: float = stat[key][mini(rung, stat[key].size() - 1)]
 		match key:
 			"cruise":
 				row["mods"] = {"cruise": value}
