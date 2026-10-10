@@ -24,12 +24,14 @@ func _run() -> void:
 			await process_frame
 			var stage_root: Node3D = game.ctx.terrain.geometry_root(stage)
 			var counts := _counts(stage_root, stage)
-			_require(counts.greybox == (12 if stage == 1 else 52) and counts.white == 0, "missing asset keeps today's exact greybox count")
+			# 2026-10-09 swap-wave 12-F: the valve's wheel and safety ring are recipe views now (contraptions.gd _build_valve),
+			# which the greybox finish skips, so Reach's greybox count is 50, not 52 (see dress_wog_test's matching re-pin).
+			_require(counts.greybox == (12 if stage == 1 else 50) and counts.white == 0, "missing asset keeps today's exact greybox count")
 			_snapshot(stage_root, "Stage%d" % stage, physics)
 			for view in stage_root.find_children("*", "MeshInstance3D", true, false):
 				_require(not view.has_meta("spillway_finish"), "missing asset never partly dresses props")
 		game.world.contraptions[2].reset()
-		_require(_counts(game.ctx.terrain.geometry_root(2), 2).greybox == 52, "fallback survives cache reset")
+		_require(_counts(game.ctx.terrain.geometry_root(2), 2).greybox == 50, "fallback survives cache reset")
 	var expected = JSON.parse_string(FileAccess.get_file_as_string(PHYSICS_BASELINE))
 	_require(JSON.parse_string(JSON.stringify(physics)) == expected, "fallback keeps base collision ordering and transforms")
 	_require(warning_log.lines.size() == 1, "both stages and repeated cache resets emit one warning")
