@@ -6,6 +6,7 @@ extends SceneTree
 
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Beacon := preload("res://src/core/beacon.gd")
 const T := preload("res://tests/support/t.gd")
 const LIVE := ["ore_cart", "lantern_beacon", "valve_wheel", "valve_wheel_mount", "barge", "kicker_wedge", "moss_jukebox",
 		"moss_hover_barge", "fabricator_hoop", "cottonwood"]
@@ -30,6 +31,7 @@ func _run() -> void:
 	for key: String in RecipeProps.ROWS:
 		_check_shells(key, xform)
 		_check_base(key, xform)
+	_check_beacon()
 	_t.check("a name that is no slot role fails loud", not RecipeProps.is_slot_role("not_a_slot"))
 	_t.check("a real role resolves", RecipeProps.slot_material("steel") != null)
 	quit(_t.verdict())
@@ -88,6 +90,38 @@ func _check_base(key: String, xform: Transform3D) -> void:
 	if key in ["lantern_beacon", "fabricator_hoop"]:
 		_t.check("%s has steel base views for the state tint" % key, RecipeProps.steel_views(views).size() > 0)
 	parent.free()
+
+
+# 2026-10-10 (w13 LANTERN-SHELLS): the game's beacon carries the base GLB (frame and lens) and both lantern detail shells
+# in the scene tree, each shell with the visibility range of its ROWS row.
+func _check_beacon() -> void:
+	var beacon := Beacon.new()
+	root.add_child(beacon)
+	beacon.setup()
+	_t.check("beacon carries the frame GLB", beacon.get_node_or_null("LanternFrame") != null)
+	_t.check("beacon carries the lens GLB", beacon.get_node_or_null("LanternLens") != null)
+	var wanted: Dictionary = {}
+	for row: Array in RecipeProps.shell_rows("lantern_beacon"):
+		wanted[String(row[0]).get_file()] = row
+	_t.eq("lantern has two detail shells in its row", wanted.size(), 2)
+	var found := {}
+	for shell: Array in RecipeProps.shell_rows("lantern_beacon"):
+		var scene := (load(shell[0]) as PackedScene).instantiate()
+		var meshes: Array[Node] = scene.find_children("*", "MeshInstance3D", true, false)
+		for view in beacon.get_children():
+			if not view is MeshInstance3D or not view.has_meta(RecipeProps.META_FADE):
+				continue
+			for source: MeshInstance3D in meshes:
+				if view.mesh == source.mesh:
+					found[String(shell[0]).get_file()] = found.get(String(shell[0]).get_file(), 0) + 1
+					_t.eq("%s view range end from the table" % String(shell[0]).get_file(), view.visibility_range_end, float(shell[1]))
+					_t.eq("%s view range margin from the table" % String(shell[0]).get_file(), view.visibility_range_end_margin, float(shell[2]))
+					_t.eq("%s view fades itself" % String(shell[0]).get_file(), view.visibility_range_fade_mode, GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF)
+		scene.free()
+	for key: String in wanted:
+		_t.check("beacon carries %s in the tree" % key, found.get(key, 0) > 0)
+	_t.check("beacon base views never fade", beacon.get_node("LanternFrame").find_children("*", "MeshInstance3D", true, false).all(func(v): return v.visibility_range_end == 0.0))
+	beacon.free()
 
 
 func _slots(view: GeometryInstance3D) -> int:

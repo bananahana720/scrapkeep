@@ -30,6 +30,9 @@ var radius := 30.0
 # Sealed until the beacon opens: a Warden clamps it. The ring, the bulb and the edge marker
 # read this one fact through state_id(), so none of them wears the live colour.
 var sealed := true
+# False builds the copper mast and bulb even where the lantern GLBs load: the test seam for the mast branch of the
+# hero hook's _dress_mast. Set before setup().
+var authored := true
 
 var _ring_material: StandardMaterial3D
 var _core_material: StandardMaterial3D
@@ -42,7 +45,7 @@ var _clamp_seat: Node3D
 
 func setup() -> void:
 	var tint := tint_color()
-	var lantern := _lantern()
+	var lantern := authored and _lantern()
 	if not lantern:
 		var mast := MeshInstance3D.new()
 		var cyl := CylinderMesh.new()
