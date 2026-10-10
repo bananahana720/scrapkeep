@@ -53,7 +53,8 @@ def _unfilter(raw, height, stride, bpp):
 
 
 def read(path):
-    data = open(path, "rb").read()
+    with open(path, "rb") as f:
+        data = f.read()
     if data[:8] != SIG:
         raise ValueError("not a PNG: %s" % path)
     idat, palette, trns = bytearray(), None, None

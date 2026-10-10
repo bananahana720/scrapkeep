@@ -13,3 +13,4 @@ sheet = "preview/sheet.png"
 # Pack tables: bands.vfx = particle budget per category, sizes.vfx = cloud radius in metres,
 # draw_calls.vfx = emitter cap (one draw call each).
 bands_key = "vfx"
+band_label = "particle budget"

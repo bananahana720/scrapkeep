@@ -287,8 +287,9 @@ def agent_command(vdir, model, max_turns, budget):
 
 
 def agent_task(vdir, params, revising):
-    lines = ["Build the asset described in prompt.md in this directory (asset %r, category %r, triangle band %s to %s)."
-             % (params["asset"], params["category"], params["band"][0], params["band"][1])]
+    label = fc.load_kind(params["kind"]).get("band_label", "triangle band")
+    lines = ["Build the asset described in prompt.md in this directory (asset %r, category %r, %s %s to %s)."
+             % (params["asset"], params["category"], label, params["band"][0], params["band"][1])]
     if revising:
         lines.append("This is a revision. recipe.py is the previous version and reference/previous.png is its sheet. Change it as the prompt asks and keep what already works.")
     if (vdir / "reference" / "concept.png").is_file():

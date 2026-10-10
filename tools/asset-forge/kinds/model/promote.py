@@ -83,7 +83,7 @@ def promote(vdir, params, pack, manifest, force=False):
         "source": {"recipe": str(recipe_dst.relative_to(repo)),
                    "forge_version": "%s/%s/%s" % (params["pack"], asset, vdir.name),
                    "recipe_sha256": fc.sha256_file(recipe_dst)},
-        "creator": "%s through tools/asset-forge, commissioned by Andrew" % (", ".join(manifest.get("model_used") or [manifest.get("model_requested", "model")])),
+        "creator": "%s through tools/asset-forge, commissioned by Andrew" % (", ".join(manifest.get("model_used") or [manifest.get("model_requested") or "model"])),
         "license_evidence": "Original locally generated procedural geometry; no external meshes, textures or scans; no public license grant.",
         "transformations": ["Blender %s recipe build, glTF export with canonical triangle order" % manifest.get("blender", "")],
         "actual_use": "core-loop sketch %s" % params["category"],

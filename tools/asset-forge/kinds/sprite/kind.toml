@@ -10,3 +10,4 @@ outputs = ["out/{asset}_sheet.png", "out/{asset}.json", "preview/sheet.png"]
 sheet = "preview/sheet.png"
 # Key into the pack's bands (frame edge in px), sizes (model extent in m), draw_calls (colour budget) and promote tables.
 bands_key = "sprite"
+band_label = "frame size in pixels"

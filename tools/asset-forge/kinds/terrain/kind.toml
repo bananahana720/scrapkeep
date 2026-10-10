@@ -8,3 +8,4 @@ promoter = "promote.py"
 outputs = ["out/{asset}_albedo.png", "out/{asset}_normal.png", "out/{asset}_roughness.png", "out/{asset}_ao.png", "out/{asset}_height.png", "out/{asset}.tres", "preview/sheet.png"]
 sheet = "preview/sheet.png"
 bands_key = "terrain"
+band_label = "texture size in pixels"
