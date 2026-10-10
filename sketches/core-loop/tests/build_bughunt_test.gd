@@ -41,13 +41,16 @@ class FakeSheet:
 var _failures := 0
 
 
-func _initialize() -> void:
+# The checks run on the first frame, once root is inside the tree, so the F001 enemy
+# stand-in has a global transform when item_hit reads it.
+func _process(_delta: float) -> bool:
 	_check_f001_item_hit_once()
 	_check_f002_brace_expires()
 	_check_f003_rare_base_stat()
 	_check_f004_one_slot_bait()
 	print("build_bughunt_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
+	return true
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
