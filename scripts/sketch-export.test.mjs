@@ -7,6 +7,12 @@ import {
   bossSmokeCommand,
   bossSmokeFailures,
   bossSmokeLine,
+  bossSmokeFailLine,
+  bossSmokeCrash,
+  BOSS_SMOKE_CRASH_SCRIPT,
+  BOSS_SMOKE_QUEUE_WAIT_S,
+  BOSS_SMOKE_TIMEOUT_S,
+  exitText,
   buildStamp,
   runBossSmoke,
   defaultStemsFrom,
@@ -73,14 +79,16 @@ test("release gate with status 1 fails even beside a PASS line", () => {
 });
 
 test("parseArgs reads both --stems-from forms, defaults to null and rejects others", () => {
-  assert.deepEqual(parseArgs([]), { stemsFrom: null, winProof: false });
+  assert.deepEqual(parseArgs([]), { stemsFrom: null, winProof: false, bossSmokeOnly: false });
   assert.deepEqual(parseArgs(["--stems-from=/a"]), {
     stemsFrom: "/a",
     winProof: false,
+    bossSmokeOnly: false,
   });
   assert.deepEqual(parseArgs(["--stems-from", "/b"]), {
     stemsFrom: "/b",
     winProof: false,
+    bossSmokeOnly: false,
   });
   assert.throws(() => parseArgs(["--nope"]), /unknown argument: --nope/);
 });
@@ -106,10 +114,12 @@ test("parseArgs reads --win-proof beside --stems-from", () => {
   assert.deepEqual(parseArgs(["--win-proof"]), {
     stemsFrom: null,
     winProof: true,
+    bossSmokeOnly: false,
   });
   assert.deepEqual(parseArgs(["--stems-from=/a", "--win-proof"]), {
     stemsFrom: "/a",
     winProof: true,
+    bossSmokeOnly: false,
   });
 });
 
@@ -320,26 +330,61 @@ const smokeOut = (boss) =>
     `BOSS_SMOKE boss=${boss} stage=4 ticks=300 in_arena=true rendering=forward_plus driver=vulkan device=NVIDIA GeForce RTX 3060 PASS`,
   ].join("\n");
 
-test("boss smoke boots each boss through the GPU queue on Vulkan with the queue's card index", () => {
+test("boss smoke boots each boss through the GPU queue on Vulkan with the queue's card index and two timeouts", () => {
   assert.deepEqual(BOSS_SMOKE, ["bowl", "waking", "mind"]);
   const { command, args } = bossSmokeCommand({ queue: "/q.sh", binary: "/godot", project: "/p", boss: "waking" });
   assert.equal(command, "/q.sh");
-  assert.deepEqual(args.slice(0, args.indexOf("--") + 1), ["--gpu", "1", "--need", "3000", "--name", "boss-smoke-waking", "--display", "--shared", "--"]);
-  assert.ok(args.includes('exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"'));
-  assert.deepEqual(args.slice(args.indexOf("--rendering-driver"), args.indexOf("--rendering-driver") + 2), ["--rendering-driver", "vulkan"]);
+  assert.deepEqual(args.slice(0, args.indexOf("--") + 1), [
+    "--gpu", "1", "--need", "3000", "--name", "boss-smoke-waking", "--display", "--shared",
+    "--timeout", String(BOSS_SMOKE_QUEUE_WAIT_S), "--",
+  ]);
+  const inner = args.slice(args.indexOf("--") + 1);
+  assert.deepEqual(inner.slice(0, 4), ["timeout", "-k", "10", String(BOSS_SMOKE_TIMEOUT_S)]);
+  assert.ok(inner.includes('exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"'));
+  assert.deepEqual(inner.slice(inner.indexOf("--rendering-driver"), inner.indexOf("--rendering-driver") + 2), ["--rendering-driver", "vulkan"]);
+  assert.deepEqual(inner.slice(inner.indexOf("--display-driver"), inner.indexOf("--display-driver") + 2), ["--display-driver", "x11"]);
+  assert.equal(inner[inner.indexOf("--script") + 1], "res://tools/look_harness.gd");
   assert.equal(args.at(-1), "--boss=waking");
 });
 
-test("boss smoke passes a clean Vulkan run and names the device", () => {
+test("the crash control swaps in the crashing entry script for one boss only", () => {
+  const { args } = bossSmokeCommand({ queue: "/q.sh", binary: "/godot", project: "/p", boss: "mind", crash: true });
+  assert.equal(args[args.indexOf("--script") + 1], BOSS_SMOKE_CRASH_SCRIPT);
+  assert.equal(BOSS_SMOKE_CRASH_SCRIPT, "res://tools/boss_smoke_crash.gd");
+  assert.equal(args.at(-1), "--boss=mind");
+});
+
+test("the crash control is off unless SCRAPKEEP_BOSS_SMOKE_CRASH names a boss, and a typo is refused", () => {
+  assert.equal(bossSmokeCrash({}), null);
+  assert.equal(bossSmokeCrash({ SCRAPKEEP_BOSS_SMOKE_CRASH: "" }), null);
+  assert.equal(bossSmokeCrash({ SCRAPKEEP_BOSS_SMOKE_CRASH: "waking" }), "waking");
+  assert.throws(() => bossSmokeCrash({ SCRAPKEEP_BOSS_SMOKE_CRASH: "wakng" }), /SCRAPKEEP_BOSS_SMOKE_CRASH=wakng is not one of bowl, waking, mind/);
+});
+
+test("exitText names the timeout and the signal behind a shell exit code", () => {
+  assert.equal(exitText(0, null), "exit 0");
+  assert.equal(exitText(124, null), `exit 124 (timed out after ${BOSS_SMOKE_TIMEOUT_S} s)`);
+  assert.equal(exitText(139, null), "exit 139 (SIGSEGV)");
+  assert.equal(exitText(134, null), "exit 134 (SIGABRT)");
+  assert.equal(exitText(3, null), "exit 3");
+  assert.equal(exitText(null, "SIGTERM"), "signal SIGTERM");
+});
+
+test("boss smoke passes a clean Vulkan run and names exit, wall time and device", () => {
   assert.deepEqual(bossSmokeFailures("waking", smokeOut("waking"), 0), []);
   assert.equal(
-    bossSmokeLine("waking", smokeOut("waking")),
-    "boss smoke waking: PASS, stage 4 arena, 300 ticks, Vulkan on NVIDIA - NVIDIA GeForce RTX 3060",
+    bossSmokeLine("waking", smokeOut("waking"), { status: 0, signal: null, wall: 41234 }),
+    "boss smoke waking: PASS, exit 0, 41.2 s wall, stage 4 arena, 300 ticks, Vulkan on NVIDIA - NVIDIA GeForce RTX 3060",
   );
 });
 
-test("boss smoke fails a crash, a missing PASS, an error before PASS and a non-Vulkan device", () => {
+test("boss smoke fails a crash, a timeout, a missing PASS, an error before PASS and a non-Vulkan device", () => {
   assert.deepEqual(bossSmokeFailures("mind", smokeOut("mind"), null, "SIGSEGV"), ["mind: killed by SIGSEGV"]);
+  assert.deepEqual(bossSmokeFailures("mind", smokeOut("mind"), 139), ["mind: exit 139 (SIGSEGV)"]);
+  assert.deepEqual(bossSmokeFailures("mind", vulkanBanner, 124), [
+    `mind: exit 124 (timed out after ${BOSS_SMOKE_TIMEOUT_S} s)`,
+    "mind: no BOSS_SMOKE PASS line",
+  ]);
   assert.deepEqual(bossSmokeFailures("mind", vulkanBanner, 0), ["mind: no BOSS_SMOKE PASS line"]);
   const crashLine = "ERROR: BUG, indexing did not unpair geometries from light.";
   const early = [vulkanBanner, crashLine, smokeOut("mind").split("\n").at(-1)].join("\n");
@@ -350,20 +395,46 @@ test("boss smoke fails a crash, a missing PASS, an error before PASS and a non-V
   assert.deepEqual(bossSmokeFailures("bowl", fallback, 0), ["bowl: renderer OpenGL, not Vulkan"]);
   const teardown = smokeOut("bowl") + "\n" + crashLine;
   assert.deepEqual(bossSmokeFailures("bowl", teardown, 0), []);
-  assert.match(bossSmokeLine("bowl", teardown), /, 1 teardown error lines$/);
+  assert.match(bossSmokeLine("bowl", teardown, { status: 0, signal: null, wall: 1000 }), /, 1 teardown error lines$/);
 });
 
-test("runBossSmoke runs every boss through the stubbed runner and collects failures", () => {
+test("a failed boss prints one FAIL line with exit, wall time and the reasons", () => {
+  assert.equal(
+    bossSmokeFailLine("mind", ["mind: exit 134 (SIGABRT)", "mind: no BOSS_SMOKE PASS line"], { status: 134, signal: null, wall: 12049 }),
+    "boss smoke mind: FAIL, exit 134 (SIGABRT), 12.0 s wall: exit 134 (SIGABRT); no BOSS_SMOKE PASS line",
+  );
+});
+
+test("runBossSmoke prints a PASS or FAIL line for every boss and fails on any crash", () => {
   const calls = [];
+  let clock = 0;
+  const now = () => (clock += 5000);
   const runner = (command, args) => {
     calls.push(args.at(-1));
     const boss = args.at(-1).slice("--boss=".length);
-    return boss === "mind" ? { status: null, signal: "SIGSEGV", stdout: vulkanBanner, stderr: "" } : { status: 0, stdout: smokeOut(boss), stderr: "" };
+    return boss === "mind" ? { status: 139, signal: null, stdout: vulkanBanner, stderr: "" } : { status: 0, signal: null, stdout: smokeOut(boss), stderr: "" };
   };
-  const result = runBossSmoke({ runner, queue: "/q.sh", binary: "/godot", project: "/p" });
+  const result = runBossSmoke({ runner, queue: "/q.sh", binary: "/godot", project: "/p", now });
   assert.deepEqual(calls, ["--boss=bowl", "--boss=waking", "--boss=mind"]);
-  assert.equal(result.lines.length, 2);
-  assert.deepEqual(result.failures, ["mind: killed by SIGSEGV", "mind: no BOSS_SMOKE PASS line"]);
+  assert.equal(result.lines.length, 3);
+  assert.match(result.lines[0], /^boss smoke bowl: PASS, exit 0, 5\.0 s wall,/);
+  assert.match(result.lines[1], /^boss smoke waking: PASS, exit 0, 5\.0 s wall,/);
+  assert.equal(result.lines[2], "boss smoke mind: FAIL, exit 139 (SIGSEGV), 5.0 s wall: exit 139 (SIGSEGV); no BOSS_SMOKE PASS line");
+  assert.deepEqual(result.failures, ["mind: exit 139 (SIGSEGV)", "mind: no BOSS_SMOKE PASS line"]);
+});
+
+test("runBossSmoke builds the crash command only for the boss the control names", () => {
+  const scripts = [];
+  const runner = (command, args) => {
+    scripts.push(args[args.indexOf("--script") + 1]);
+    return { status: 0, signal: null, stdout: smokeOut(args.at(-1).slice("--boss=".length)), stderr: "" };
+  };
+  runBossSmoke({ runner, queue: "/q.sh", binary: "/godot", project: "/p", crash: "waking", now: () => 0 });
+  assert.deepEqual(scripts, ["res://tools/look_harness.gd", BOSS_SMOKE_CRASH_SCRIPT, "res://tools/look_harness.gd"]);
+});
+
+test("parseArgs reads --boss-smoke-only", () => {
+  assert.deepEqual(parseArgs(["--boss-smoke-only"]), { stemsFrom: null, winProof: false, bossSmokeOnly: true });
 });
 
 test("buildStamp records the boss smoke lines before the win proof", () => {

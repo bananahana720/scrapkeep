@@ -247,3 +247,18 @@ A test that sends a fact straight to the bus can pass while the game path is dea
 
 The same bot seed is not repeatable across processes: one brawler seed gave a 28.6 s fight in one process and 22.0 s in another. Sweep bands need wide margins until this is found. A Sol unit is diagnosing it.
 
+
+## The export's GPU boss smoke (card BOSS-GPU-SMOKE)
+
+The headless gate cannot see the Forward+ light crash class, so `npm run sketch:export` boots each boss arena (Brindle's bowl, the Waking, the Mind) on Vulkan. Each boss runs through `tools/coordinator/gpu_queue.sh` on card 1 with its own hidden display, and runs `tools/look_harness.gd --boss=<id>` for 300 ticks. `node scripts/sketch-export.mjs --boss-smoke-only` runs only this step.
+
+| Limit | Value | What happens when it is hit |
+|---|---|---|
+| Wait for the card | 600 s (`BOSS_SMOKE_QUEUE_WAIT_S`) | the queue exits 3 and the boss fails |
+| One boss run | 300 s (`BOSS_SMOKE_TIMEOUT_S`), then SIGKILL 10 s later | exit 124 and the boss fails |
+
+Each boss prints one line: `boss smoke <id>: PASS|FAIL, exit N, S s wall, ...`. An exit above 128 names its signal, for example `exit 134 (SIGABRT)`. The step fails the export on a non-zero exit, a signal, a missing PASS line, a non-Vulkan device or an error line before the PASS line. Every boss runs even after one fails.
+
+Positive control: `SCRAPKEEP_BOSS_SMOKE_CRASH=<id>` boots `tools/boss_smoke_crash.gd` for that boss. The script runs the real entry, prints the PASS line, then aborts. The step must fail on the exit alone. A misspelled id stops the export. Unset, it is off.
+
+First run, 2026-10-10, RTX 3060 on card 1: 55 s for all three. Bowl 13.9 s, the Waking 12.8 s and the Mind 28.7 s all passed, each with 10 error lines after its PASS line from teardown, which are recorded rather than failed. With the control on the Waking, it failed with `exit 134 (SIGABRT)`, the other two passed and the export exited 1.

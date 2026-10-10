@@ -30,6 +30,11 @@ import { fileURLToPath } from "node:url";
 // stage and arena as the bot does and runs 300 ticks (tools/look_harness.gd --boss=): a crash, a
 // missing PASS line, a non-Vulkan device or an error line before the PASS fails the export, because
 // the headless gate cannot see the Forward+ light crash class (wave 11, the Waking boss entry).
+// Each boss waits at most BOSS_SMOKE_QUEUE_WAIT_S for the card, runs at most BOSS_SMOKE_TIMEOUT_S
+// under timeout(1) and prints one PASS or FAIL line with its exit (124 names the timeout, 128+N the
+// signal) and wall time. --boss-smoke-only runs just this step. SCRAPKEEP_BOSS_SMOKE_CRASH=<boss> is
+// the positive control: that boss boots tools/boss_smoke_crash.gd, which enters the arena, prints its
+// PASS line and then aborts, so the step must fail on the exit alone. Unset, nothing crashes.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
@@ -59,6 +64,10 @@ export const WIN_PROOFS = [
 ];
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 export const BOSS_SMOKE = ["bowl", "waking", "mind"];
+export const BOSS_SMOKE_QUEUE_WAIT_S = 600;
+export const BOSS_SMOKE_TIMEOUT_S = 300;
+export const BOSS_SMOKE_CRASH_SCRIPT = "res://tools/boss_smoke_crash.gd";
+const BOSS_SMOKE_SCRIPT = "res://tools/look_harness.gd";
 const gpuQueue = path.join(project, "tools/coordinator/gpu_queue.sh");
 
 export function missingStems(manifest, directory, exists = existsSync) {
@@ -83,16 +92,18 @@ export function trackedManifests(directory, list = readdirSync, exists = existsS
 export function parseArgs(argv) {
   let stemsFrom = null;
   let winProof = false;
+  let bossSmokeOnly = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--win-proof") winProof = true;
+    else if (arg === "--boss-smoke-only") bossSmokeOnly = true;
     else if (arg.startsWith("--stems-from="))
       stemsFrom = arg.slice("--stems-from=".length);
     else if (arg === "--stems-from" && i + 1 < argv.length)
       stemsFrom = argv[++i];
     else throw new Error("unknown argument: " + arg);
   }
-  return { stemsFrom, winProof };
+  return { stemsFrom, winProof, bossSmokeOnly };
 }
 
 export function defaultStemsFrom(gitCommonDir) {
@@ -232,18 +243,43 @@ export function buildStamp({
   );
 }
 
-// One boss boot: the GPU queue on card 1 with its own hidden display, Godot on Vulkan with the
-// card index the queue exports.
-export function bossSmokeCommand({ queue, binary, project, boss }) {
+// One boss boot: the GPU queue on card 1 with its own hidden display (waiting at most
+// BOSS_SMOKE_QUEUE_WAIT_S for the card), then timeout(1) around Godot on Vulkan with the card index
+// the queue exports. crash swaps in the positive-control entry script.
+export function bossSmokeCommand({ queue, binary, project, boss, crash = false }) {
   return {
     command: queue,
     args: [
-      "--gpu", "1", "--need", "3000", "--name", "boss-smoke-" + boss, "--display", "--shared", "--",
+      "--gpu", "1", "--need", "3000", "--name", "boss-smoke-" + boss, "--display", "--shared",
+      "--timeout", String(BOSS_SMOKE_QUEUE_WAIT_S), "--",
+      "timeout", "-k", "10", String(BOSS_SMOKE_TIMEOUT_S),
       "sh", "-c", 'exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"', binary,
       "--rendering-driver", "vulkan", "--display-driver", "x11", "--path", project,
-      "--resolution", "1280x720", "--script", "res://tools/look_harness.gd", "--", "--boss=" + boss,
+      "--resolution", "1280x720", "--script", crash ? BOSS_SMOKE_CRASH_SCRIPT : BOSS_SMOKE_SCRIPT,
+      "--", "--boss=" + boss,
     ],
   };
+}
+
+// The positive control is off unless SCRAPKEEP_BOSS_SMOKE_CRASH names one boss; a typo stops the
+// export rather than silently testing nothing.
+export function bossSmokeCrash(env) {
+  const value = env.SCRAPKEEP_BOSS_SMOKE_CRASH;
+  if (!value) return null;
+  if (!BOSS_SMOKE.includes(value))
+    throw new Error(`SCRAPKEEP_BOSS_SMOKE_CRASH=${value} is not one of ${BOSS_SMOKE.join(", ")}`);
+  return value;
+}
+
+// 124 is timeout(1) giving up; above 128 a shell reports the signal that ended the child.
+export function exitText(status, signal) {
+  if (signal) return `signal ${signal}`;
+  if (status === 124) return `exit 124 (timed out after ${BOSS_SMOKE_TIMEOUT_S} s)`;
+  if (status > 128) {
+    const name = Object.entries(os.constants.signals).find(([, n]) => n === status - 128)?.[0];
+    if (name) return `exit ${status} (${name})`;
+  }
+  return `exit ${status}`;
 }
 
 const deviceLine = /^(\S+) [\d.]+ - [^-]+ - Using Device #\d+: (.+)$/m;
@@ -251,7 +287,7 @@ const deviceLine = /^(\S+) [\d.]+ - [^-]+ - Using Device #\d+: (.+)$/m;
 export function bossSmokeFailures(boss, output, status, signal = null) {
   const failures = [];
   if (signal) failures.push(`${boss}: killed by ${signal}`);
-  else if (status !== 0) failures.push(`${boss}: exit ${status}`);
+  else if (status !== 0) failures.push(`${boss}: ${exitText(status, null)}`);
   const lines = output.split("\n");
   const pass = lines.findIndex((line) => line.startsWith(`BOSS_SMOKE boss=${boss} `) && line.trim().endsWith(" PASS"));
   if (pass < 0) failures.push(`${boss}: no BOSS_SMOKE PASS line`);
@@ -265,26 +301,38 @@ export function bossSmokeFailures(boss, output, status, signal = null) {
 }
 
 // Error lines after the PASS line come from teardown; they are kept in the line, not failed.
-export function bossSmokeLine(boss, output) {
+const runText = ({ status, signal, wall }) => `${exitText(status, signal)}, ${(wall / 1000).toFixed(1)} s wall`;
+
+export function bossSmokeLine(boss, output, run) {
   const lines = output.split("\n");
   const pass = lines.find((line) => line.startsWith(`BOSS_SMOKE boss=${boss} `)) ?? "";
   const ticks = pass.match(/ticks=(\d+)/)?.[1] ?? "?";
   const stage = pass.match(/stage=(\d+)/)?.[1] ?? "?";
   const device = output.match(deviceLine)?.[2] ?? "unknown device";
   const after = lines.slice(lines.indexOf(pass) + 1).filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line)).length;
-  return `boss smoke ${boss}: PASS, stage ${stage} arena, ${ticks} ticks, Vulkan on ${device}` + (after > 0 ? `, ${after} teardown error lines` : "");
+  return `boss smoke ${boss}: PASS, ${runText(run)}, stage ${stage} arena, ${ticks} ticks, Vulkan on ${device}` + (after > 0 ? `, ${after} teardown error lines` : "");
 }
 
-export function runBossSmoke({ runner, queue, binary, project, bosses = BOSS_SMOKE }) {
+export function bossSmokeFailLine(boss, failures, run) {
+  const reasons = failures.map((failure) => failure.slice(`${boss}: `.length));
+  return `boss smoke ${boss}: FAIL, ${runText(run)}: ${reasons.join("; ")}`;
+}
+
+// Every boss runs and prints its line, so one crash does not hide the others' state.
+export function runBossSmoke({ runner, queue, binary, project, bosses = BOSS_SMOKE, crash = null, now = Date.now }) {
   const lines = [];
   const failures = [];
   for (const boss of bosses) {
-    const { command, args } = bossSmokeCommand({ queue, binary, project, boss });
+    const { command, args } = bossSmokeCommand({ queue, binary, project, boss, crash: boss === crash });
+    const started = now();
     const result = runner(command, args);
+    const run = { status: result.status, signal: result.signal ?? null, wall: now() - started };
     const output = (result.stdout ?? "") + (result.stderr ?? "");
-    const found = bossSmokeFailures(boss, output, result.status, result.signal ?? null);
-    if (found.length > 0) failures.push(...found);
-    else lines.push(bossSmokeLine(boss, output));
+    const found = bossSmokeFailures(boss, output, result.status, run.signal);
+    if (found.length > 0) {
+      failures.push(...found);
+      lines.push(bossSmokeFailLine(boss, found, run));
+    } else lines.push(bossSmokeLine(boss, output, run));
   }
   return { lines, failures };
 }
@@ -335,6 +383,22 @@ function run(command, args, options = {}) {
   });
 }
 
+// Prints every boss line, then fails the export if any boss failed. The outer timeout only backs up
+// the queue wait and timeout(1), so it should never be the one that fires.
+function bossSmoke(crash) {
+  const smoke = runBossSmoke({
+    runner: (command, args) =>
+      run(command, args, { timeout: (BOSS_SMOKE_QUEUE_WAIT_S + BOSS_SMOKE_TIMEOUT_S + 60) * 1000 }),
+    queue: gpuQueue,
+    binary,
+    project,
+    crash,
+  });
+  for (const line of smoke.lines) console.log(line);
+  if (smoke.failures.length > 0) fail("boss smoke\n" + smoke.failures.join("\n"));
+  return smoke;
+}
+
 function fail(message) {
   console.error("sketch:export FAIL: " + message);
   process.exit(1);
@@ -348,6 +412,17 @@ async function main() {
     fail(error.message);
   }
   if (!existsSync(binary)) fail("Godot binary missing: " + binary);
+  let crash = null;
+  try {
+    crash = bossSmokeCrash(process.env);
+  } catch (error) {
+    fail(error.message);
+  }
+  if (crash) console.log(`boss smoke: crash control on for ${crash} (SCRAPKEEP_BOSS_SMOKE_CRASH)`);
+  if (args.bossSmokeOnly) {
+    bossSmoke(crash);
+    return;
+  }
   const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
   const template = path.join(dataHome, "godot/export_templates/4.7.2.stable/linux_release.x86_64");
   if (!existsSync(template)) fail("export template missing: " + template);
@@ -399,14 +474,7 @@ async function main() {
   const gateFailures = releaseGateFailures(gate.stdout + gate.stderr, gate.status);
   if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 
-  const smoke = runBossSmoke({
-    runner: (command, args) => run(command, args, { timeout: 900_000 }),
-    queue: gpuQueue,
-    binary,
-    project,
-  });
-  if (smoke.failures.length > 0) fail("boss smoke\n" + smoke.failures.join("\n"));
-  for (const line of smoke.lines) console.log(line);
+  const smoke = bossSmoke(crash);
 
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
   const outDir = path.join(root, "artifacts/local/core-loop-export", stamp);
