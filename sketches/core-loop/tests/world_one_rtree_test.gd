@@ -232,7 +232,9 @@ func _drain_of(fire: bool) -> float:
 	intent.fire_held = fire
 	intent.movement_held = true
 	var b := Body.new()
-	Augments._sprint(kit, _player.state, _game.ctx.tuning, intent, b, 0.5)
+	# 2026-10-09 BUGFIX-MOVEMENT F001 gave _sprint an aim basis (the kick follows the roll, the aim when still);
+	# this drain check measures stamina, not direction, so the identity aim keeps the old reading.
+	Augments._sprint(kit, _player.state, _game.ctx.tuning, intent, Basis.IDENTITY, b, 0.5)
 	var used: float = 2.0 - kit.sprint_left
 	kit.sprinting = false
 	return used
