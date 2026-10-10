@@ -973,13 +973,14 @@ func _workshop() -> void:
 			caches.append({"path": str(n.get_path()), "at": [n.global_position.x, n.global_position.y, n.global_position.z],
 				"shell_overlay": shell != null and (shell as GeometryInstance3D).material_overlay != null})
 	await _shoot("wog_spillway", {"cracked_caches": caches})
-	if not (_wants("wog_reach") or _wants("cache_activity")):
+	if not (_wants("wog_reach") or _wants("cache_activity") or _wants("swp_valve_wheel")):
 		return
 	await _stage(2)
 	_anchor("ball", game.player.ball_position())
 	var tw: Vector3 = game.ctx.terrain.map_for(2).TOWER
 	_anchor("tower", Vector3(tw.x, _gh(tw.x, tw.z), tw.z))
 	await _shoot("wog_reach")
+	await _shoot("swp_valve_wheel")
 	var cache = game.find_child("Activity_cracked_cache", true, false)
 	if cache == null:
 		printerr("look_harness: no Activity_cracked_cache")
