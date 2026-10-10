@@ -6,6 +6,7 @@ const RideRail := preload("res://src/world/ride_rail.gd")
 const BayLap := preload("res://src/world/bay_lap.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 # Moss's workshop bay (DESIGN-V2 sections 12 and 15): a hover barge that docks over the
 # reward gates after each Warden break, a pit stop on the marble run. Opt-in: a steam
@@ -397,23 +398,11 @@ func _build_deck() -> void:
 	var deck := LocalMesh.grid(_barge, "BayDeck", Vector2(DECK_U * 2.0, DECK_V * 2.0), 1.0, deck_height, tint)
 	var deck_view := deck.get_child(1) as MeshInstance3D
 	deck_view.material_override = _paint(Color.WHITE, 1, Vector3.ZERO, deck_view.material_override)
-	var hull := MeshInstance3D.new()
-	var hm := BoxMesh.new()
-	hm.size = Vector3(DECK_U * 2.0 - 2.0, 3.0, DECK_V * 2.0 - 2.0)
-	hull.mesh = hm
-	hull.material_override = _paint(Palette.RUST)
-	hull.position = Vector3.DOWN * 2.0
-	_barge.add_child(hull)
+	# The authored hull and thrusters (RecipeProps row moss_hover_barge), authored in the Barge frame: deck centred, +X is u.
+	RecipeProps.base("moss_hover_barge", _barge, Transform3D.IDENTITY)
+	RecipeProps.shells("moss_hover_barge", _barge, Transform3D.IDENTITY)
 	for corner in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
-		var jet := MeshInstance3D.new()
-		var jm := CylinderMesh.new()
-		jm.top_radius = 2.0
-		jm.bottom_radius = 3.2
-		jm.height = 3.0
-		jet.mesh = jm
-		jet.material_override = _paint(Palette.COPPER)
-		jet.position = Vector3(corner.x * (DECK_U - 6.0), -4.5, corner.y * (DECK_V - 5.0))
-		_barge.add_child(jet)
+		var jet := Vector3(corner.x * (DECK_U - 6.0), -4.5, corner.y * (DECK_V - 5.0))
 		var steam := MeshInstance3D.new()
 		var sm := CylinderMesh.new()
 		sm.top_radius = 2.4
@@ -421,7 +410,7 @@ func _build_deck() -> void:
 		sm.height = 6.0
 		steam.mesh = sm
 		steam.material_override = Palette.unshaded(Color(Palette.SAND, 0.25))
-		steam.position = jet.position + Vector3.DOWN * 4.5
+		steam.position = jet + Vector3.DOWN * 4.5
 		_barge.add_child(steam)
 	var line := MeshInstance3D.new()
 	var lm := BoxMesh.new()
@@ -531,8 +520,10 @@ func _build_toys() -> void:
 	_bell.material_override = _paint(Palette.BRASS.lerp(Palette.COPPER, 0.5))
 	_bell.position = Vector3(BELL.x, 3.9, BELL.y)
 	_barge.add_child(_bell)
-	_visual(Vector3(1.8, 2.6, 1.2), Vector3(JUKEBOX.x, 1.3, JUKEBOX.y + 1.6), Palette.solid(Palette.RUST))
-	_visual(Vector3(1.4, 1.2, 0.1), Vector3(JUKEBOX.x, 1.7, JUKEBOX.y + 0.98), Palette.solid(Palette.AMBER, 1.2))
+	# The authored jukebox (RecipeProps row moss_jukebox): floor centre at its origin, grille facing -z.
+	var juke_at := Transform3D(Basis.IDENTITY, Vector3(JUKEBOX.x, 0.0, JUKEBOX.y + 1.6))
+	RecipeProps.base("moss_jukebox", _barge, juke_at)
+	RecipeProps.shells("moss_jukebox", _barge, juke_at)
 	_visual(Vector3(2.4, 0.1, 2.4), Vector3(JUKEBOX.x, 0.05, JUKEBOX.y), _paint(Palette.AMBER, 3, Vector3(2.4, 0.1, 2.4)))
 	_visual(Vector3(2.4, 1.6, 1.6), Vector3(MARBLE_TOY.x, 0.8, MARBLE_TOY.y - 1.4), Palette.solid(Palette.RUST.lerp(Palette.SANDSTONE, 0.4)))
 	for k in MARBLE_STEPS:
