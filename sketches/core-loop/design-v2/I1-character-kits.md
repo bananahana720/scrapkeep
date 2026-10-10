@@ -1,5 +1,7 @@
 # I1: Core-loop v2 character kits
 
+> Pilot kits, ultimates and bodies are superseded by [../design-v3/PILOTS.md](../design-v3/PILOTS.md) (2026-10-10); this file's pilot text is history.
+
 Buildable in Godot 4.7 GDScript against the existing sketch. Physics: 90 Hz, RigidBody3D, mass 6, `RADIUS = 1.0`. Reuses `movement/augments.gd`, `movement/player_ball.gd`, `combat/combat.gd`, `combat/weapons.gd`, `core/class_def.gd`, `core/run_state.gd`, `core/event_kinds.gd`.
 
 Everyone keeps: jump, double jump (`state.air_actions`), boost (`BOOST_IMPULSE = 11.0`, `BOOST_COOLDOWN = 1.1s`), and a ground smash (`_slam`/`_plant`) with a per-character flavor layered onto the existing flatness-split landing.

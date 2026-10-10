@@ -1,5 +1,7 @@
 # Core-loop v2 design
 
+> Pilot kits, ultimates and bodies are superseded by [design-v3/PILOTS.md](design-v3/PILOTS.md) (2026-10-10); this file's pilot text is history.
+
 This is the accepted spec for the v2 round (TRACKING EV-0588). It answers playtest entry 7.
 
 - The approved plan is `/home/andrew/.claude/plans/synchronous-weaving-crystal.md`.

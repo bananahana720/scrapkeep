@@ -1,5 +1,7 @@
 # Scrapkeep character bible
 
+> Pilot kits, ultimates and bodies are superseded by [sketches/core-loop/design-v3/PILOTS.md](../sketches/core-loop/design-v3/PILOTS.md) (2026-10-10); this file's pilot text is history.
+
 5 September 2026. This document is the production-guiding character reference for pilots, antagonists, companions, and supporting cast, written deep enough to brief an artist or writer cold.
 
 Invented names, species and fiction below remain creative proposals. Andrew delegated their development during the [notebook interview](DISCOVERY.md#reference-boundaries-and-creative-direction); this does not make the old five-rung campaign or exact roster accepted canon. The current lightning kit is implemented separately, under its [increment contract](project/INCREMENT-01-lightning-playtest.md).
