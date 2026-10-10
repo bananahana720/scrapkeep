@@ -9,6 +9,8 @@ import {
   lintL3,
   lintL4,
   lintL5,
+  lintL6,
+  lintL6Owners,
   parseTuning,
 } from "./sketch-lint.mjs";
 
@@ -111,4 +113,37 @@ test("the baseline silences listed offenders and shrinks only", () => {
   assert.match(out[2].message, /file is gone/);
   assert.deepEqual(applyBaseline([{ rule: "L5", path: "q", line: 1, message: "m" }], { L5: ["q"] }, () => true).length, 1);
   assert.deepEqual(baselineFrom(findings), { L1: ["a.gd", "new.gd"], L2: [], L3: [], L4: [] });
+});
+
+const wardenDress = (light) => `func _dress_warden(warden) -> void:
+\tvar base := _warden_scene(WARDEN_BASE)
+\twarden.add_child(base)
+${light ? "\tvar cool := OmniLight3D.new()\n\tbase.add_child(cool)\n" : "\t# OmniLight3D.new() would be freed with the Warden\n"}`;
+const owners = { "src/presentation/hero_assets.gd": { sites: 1, owner: "MossBay barge, session-lived" } };
+
+test("L6 flags a Light3D created under a stage-freed node in an unlisted file", () => {
+  const bad = lintL6("sketches/s/src/combat/warden_dress.gd", "src/combat/warden_dress.gd", wardenDress(true), owners);
+  assert.deepEqual(bad.map((item) => `${item.rule} ${item.line}`), ["L6 4"]);
+  assert.match(bad[0].message, /does not list/);
+});
+
+test("L6 flags a new light in a listed file whose site count drifts", () => {
+  const text = "var lamp := OmniLight3D.new()\nbarge.add_child(lamp)\n" + wardenDress(true);
+  const bad = lintL6("x/hero_assets.gd", "src/presentation/hero_assets.gd", text, owners);
+  assert.equal(bad.length, 2);
+  assert.match(bad[0].message, /2 runtime Light3D sites, LIGHT_OWNERS lists 1/);
+});
+
+test("L6 passes a listed owner, a lightless dress and a commented light", () => {
+  const listed = lintL6("x/hero_assets.gd", "src/presentation/hero_assets.gd", "var lamp := OmniLight3D.new()\nbarge.add_child(lamp)\n" + wardenDress(false), owners);
+  assert.deepEqual(listed, []);
+  assert.deepEqual(lintL6("x/w.gd", "src/combat/warden_dress.gd", wardenDress(false), owners), []);
+  assert.deepEqual(lintL6("x/s.gd", "src/a.gd", "var s := DirectionalLight3D\nvar m := MeshInstance3D.new()\n", owners), []);
+});
+
+test("L6 flags a stale owner entry", () => {
+  assert.deepEqual(lintL6Owners(new Set(["src/presentation/hero_assets.gd"]), "s", owners), []);
+  const stale = lintL6Owners(new Set(), "s", owners);
+  assert.equal(stale.length, 1);
+  assert.match(stale[0].message, /remove the entry/);
 });

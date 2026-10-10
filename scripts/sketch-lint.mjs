@@ -128,6 +128,48 @@ export function lintL5(text, tests, file = "sketches/core-loop/tests/QUARANTINE.
   return findings;
 }
 
+// L6 owners: every src/ file that creates a Light3D at runtime, its site count and the node that owns
+// the lights. A light freed with a node a stage change frees segfaults Forward+ on the next boss entry,
+// GPU only (light_lifetime_lint_test). Paths are relative to the sketch; a site count that drifts is a
+// finding, so a new light in a listed file is classified too. open: a known stage-freed owner left
+// for its own card; it stays quiet but main prints it on every run.
+export const LIGHT_OWNERS = {
+  "src/presentation/hero_assets.gd": { sites: 2, owner: "MossBay barge, made once per session by world.gd (workshop warm fills)" },
+  "src/presentation/graphics_preset.gd": { sites: 1, owner: "sibling of the world sun, session-lived" },
+  "src/presentation/world_look.gd": { sites: 1, owner: "the Dig's LampPool under its stage geometry root, kept across stage changes" },
+  "src/presentation/title_stage.gd": { sites: 3, owner: "presentation's title stage, session-lived" },
+  "src/ui/class_preview.gd": { sites: 2, owner: "class select screen, directional, closes before any stage" },
+  "src/ui/ending_sequence.gd": { sites: 1, owner: "ending screen, directional, after the last stage" },
+  "src/world/flood.gd": { sites: 1, owner: "world.gd Flood, session-lived and reconfigured per stage" },
+  "src/world/map_gorge.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },
+  "src/world/map_reach.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },
+  "src/world/terrain.gd": { sites: 1, owner: "the world sun, session-lived" },
+  "src/presentation/arena_waking_dress.gd": { sites: 4, owner: "ArenaWakingDress, freed by boss/waking.gd exit_arena: stage-freed", open: true },
+};
+
+const lightNew = /\b(?:Omni|Spot|Directional)Light3D\.new\(/;
+
+// L6: rel is the path inside the sketch, file the repo path for the finding.
+export function lintL6(file, rel, text, owners = LIGHT_OWNERS) {
+  const sites = codeLines(text).filter((line) => lightNew.test(line.raw));
+  if (sites.length === 0) return [];
+  const listed = owners[rel];
+  if (listed === undefined) {
+    return sites.map((line) => finding("L6", file, line.number, "runtime Light3D in a file LIGHT_OWNERS does not list; a light freed with a stage-freed node crashes Forward+, so glow on the node's own mesh or list an owner that outlives the stage"));
+  }
+  if (sites.length !== listed.sites) {
+    return sites.map((line) => finding("L6", file, line.number, `${sites.length} runtime Light3D sites, LIGHT_OWNERS lists ${listed.sites}; classify the new light's owner`));
+  }
+  return [];
+}
+
+// L6 stale entries: counts maps rel to the sites found, so a listed owner that no longer lights is removed.
+export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
+  return Object.keys(owners)
+    .filter((rel) => !counts.has(rel))
+    .map((rel) => finding("L6", `${relative}/${rel}`, 1, "LIGHT_OWNERS lists a file with no runtime Light3D: remove the entry"));
+}
+
 // The baseline only shrinks: offenders it lists stay quiet, a listed path that no longer
 // offends or no longer exists is itself a finding. exists(path) answers for the disk.
 export function applyBaseline(findings, baseline, exists) {
@@ -191,9 +233,16 @@ export function lintSketch(sketch) {
   const findings = [];
   const testFiles = sources(path.join(directory, "tests"), new Set([".gd"]));
   for (const file of testFiles) findings.push(...lintL1(file.path, file.text));
+  const lit = new Set();
   for (const file of sources(path.join(directory, "src"), new Set([".gd"]))) {
     if (file.path !== `${relative}/src/core/safe_store.gd`) findings.push(...lintL2(file.path, file.text));
+    // LIGHT_OWNERS describes core-loop; another sketch has no owner table yet.
+    if (sketch !== "core-loop") continue;
+    const rel = file.path.slice(relative.length + 1);
+    if (codeLines(file.text).some((line) => lightNew.test(line.raw))) lit.add(rel);
+    findings.push(...lintL6(file.path, rel, file.text));
   }
+  if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);
   const flagFiles = [
     ...testFiles,
@@ -228,6 +277,11 @@ function main() {
   const baseline = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
   const findings = applyBaseline(raw, baseline, (file) => existsSync(path.join(root, file)) && statSync(path.join(root, file)).isFile());
   for (const item of findings) console.log(formatFinding(item));
+  if (options.sketch === "core-loop") {
+    for (const [rel, entry] of Object.entries(LIGHT_OWNERS).filter(([, entry]) => entry.open)) {
+      console.log(`L6 open: sketches/core-loop/${rel} ${entry.sites} sites, ${entry.owner}`);
+    }
+  }
   const baselined = BASELINED_RULES.map((rule) => `${rule}=${(baseline[rule] ?? []).length}`).join(" ");
   console.log(`sketch-lint ${findings.length === 0 ? "pass" : "fail"}: ${findings.length} findings, baseline entries ${baselined}, ${Date.now() - started}ms`);
   process.exit(findings.length === 0 ? 0 : 1);
