@@ -60,3 +60,44 @@ hero = 40
 [promote.model]
 models = "sketches/core-loop/assets/models"
 recipes = "sketches/core-loop/tools/blender/forge"
+
+# --- sprite/pixel ---
+# sprite: bands = frame edge in px [low, high]; sizes = model extent in metres (as the model kind);
+# draw_calls = colour budget (distinct opaque colours; over it is a warning).
+# pixel: bands = canvas edge in px [low, high]; sizes = frames in the strip [low, high];
+# draw_calls = colour budget.
+[bands.sprite]
+prop = [16, 96]
+kit = [16, 128]
+hero = [32, 192]
+
+[sizes.sprite]
+prop = [0.15, 8.0]
+kit = [0.5, 10.0]
+hero = [1.0, 12.0]
+
+[draw_calls.sprite]
+prop = 20
+kit = 24
+hero = 32
+
+[bands.pixel]
+prop = [8, 64]
+kit = [8, 64]
+hero = [16, 128]
+
+[sizes.pixel]
+prop = [1, 16]
+kit = [1, 16]
+hero = [1, 16]
+
+[draw_calls.pixel]
+prop = 12
+kit = 16
+hero = 24
+
+[promote.sprite]
+sprites = "sketches/core-loop/assets/sprites"
+
+[promote.pixel]
+sprites = "sketches/core-loop/assets/sprites"
