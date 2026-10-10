@@ -19,6 +19,8 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 # apart and spend at most STOP_BUDGET_MS a second, so rapid fire and a Katamari
 # roll-up tick instead of stutter. A deflected hit clanks and never stops. The spine
 # caps a stop at 60 ms and refuses to stack; Engine.time_scale never touches velocity.
+# A reduced-motion hit-edge flash keeps this share of its alpha (SettingsStore.REDUCED_FLASH).
+const REDUCED_FLASH := 0.25
 const SPINE_CAP_MS := 60.0
 const STOP_FLOOR_MS := 4.0
 const STOP_TRIM_FLOOR_MS := 8.0
@@ -183,6 +185,15 @@ func set_comfort(id: String, level: float) -> void:
 				camera.motion_scale = level
 		"hitstop":
 			stop_scale = level
+
+
+# Reduced motion: the camera holds still and the hit-edge flash drops to a quarter. Telegraph
+# motion is not read here, so it keeps its timing.
+func set_reduced_motion(on: bool) -> void:
+	if camera != null:
+		camera.reduced_motion = on
+	if vfx != null and vfx.edge != null:
+		vfx.edge.flash_scale = REDUCED_FLASH if on else 1.0
 
 
 func comfort(id: String) -> float:

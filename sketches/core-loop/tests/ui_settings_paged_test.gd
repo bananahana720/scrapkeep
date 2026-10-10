@@ -70,7 +70,7 @@ func _run() -> void:
 
 	_t.eq("three pages", SettingsPages.PAGES, ["display", "controls", "look"])
 	_t.eq("the session starts on Display", _page.current_page(), "display")
-	_t.eq("Display holds fullscreen, quality and Back", _page.page_ids(), ["fullscreen", "quality", "back"])
+	_t.eq("Display holds fullscreen, quality, reduced motion and Back", _page.page_ids(), ["fullscreen", "quality", "reduced_motion", "back"])
 	_t.check("the title's page is shown with its first row focused", screens.settings_open() and _page.focused_id() == "fullscreen", "focus %s" % _page.focused_id())
 	_t.check("only the shown page's rows are visible", _page.row("fullscreen").is_visible_in_tree() and not _page.row("jump").is_visible_in_tree() and not _page.row("aim_assist").is_visible_in_tree(), "visibility")
 
@@ -105,7 +105,7 @@ func _run() -> void:
 
 	# The d-pad reaches every row of every page, Back included.
 	var want := {
-		"display": ["fullscreen", "quality", "back"],
+		"display": ["fullscreen", "quality", "reduced_motion", "back"],
 		"controls": ["jump", "pad_jump", "fire", "pad_fire", "harpoon", "pad_harpoon", "haul", "pad_haul", "boost", "pad_boost", "special", "pad_special", "interact", "pad_interact", "reset", "back"],
 		"look": ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist", "back"],
 	}

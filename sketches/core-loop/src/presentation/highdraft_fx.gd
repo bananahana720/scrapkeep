@@ -35,7 +35,9 @@ var cloud_placements: Array[Transform3D] = []
 var cloud_velocities: Array[Vector3] = []
 var clock := 0.0
 var frozen := false
-var reduced_motion := false
+# The saved setting, read when the fx installs; Game.set_reduced_motion also updates a live one.
+static var preferred := false
+var reduced_motion := preferred
 var low := false
 var _map
 var _last_ball := Vector3.INF

@@ -26,6 +26,8 @@ const Presentation := preload("res://src/presentation/presentation.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 
 # The root. It builds the spine (bus, run, tuning, ball, camera, flow, beacon), hands
@@ -549,6 +551,7 @@ func apply_saved_display(args: Array = []) -> void:
 		set_quality(saved.quality())
 	if saved.fullscreen():
 		set_fullscreen(true)
+	set_reduced_motion(saved.reduced_motion())
 
 
 # 0 High, 1 Low.
@@ -556,6 +559,20 @@ func set_quality(level: int) -> void:
 	var preset := "low" if level == 1 else "high"
 	if GraphicsPreset.current != preset:
 		GraphicsPreset.apply(preset)
+
+
+# Reduced motion: the camera holds still, the hit-edge flash drops to a quarter, enemy idle
+# and the net-deck fx go quiet. Telegraph motion reads none of these, so it keeps its timing.
+func set_reduced_motion(on: bool) -> void:
+	EnemyMotion.motion_scale = 0.0 if on else 1.0
+	HighdraftFx.preferred = on
+	if presentation != null and presentation.get("juice") != null:
+		presentation.juice.set_reduced_motion(on)
+	elif camera != null:
+		camera.reduced_motion = on
+	for node in find_children("*", "Node3D", true, false):
+		if node.get_script() == HighdraftFx:
+			node.reduced_motion = on
 
 
 func set_fullscreen(on: bool) -> void:
