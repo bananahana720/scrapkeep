@@ -60,3 +60,18 @@ hero = 40
 [promote.model]
 models = "sketches/core-loop/assets/models"
 recipes = "sketches/core-loop/tools/blender/forge"
+
+# --- terrain ---
+# For the terrain kind. `band` is the allowed texture size in pixels (not triangles), `sizes`
+# is the same range, and one material is one draw call.
+[bands.terrain]
+prop = [256, 1024]
+
+[sizes.terrain]
+prop = [256, 1024]
+
+[draw_calls.terrain]
+prop = 1
+
+[promote.terrain]
+textures = "sketches/core-loop/assets/textures"
