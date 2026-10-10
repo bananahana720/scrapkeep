@@ -122,7 +122,7 @@ func knock(direction: Vector3, force: float) -> void:
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_pose(delta)
-	if not _in_play() or not is_instance_valid(target):
+	if not _in_play() or target == null:
 		if state != State.SLAM_LEAP:
 			_move(delta, Vector3.ZERO)
 		return
