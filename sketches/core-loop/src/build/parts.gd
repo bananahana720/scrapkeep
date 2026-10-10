@@ -482,7 +482,8 @@ static func holds_pattern(held: Array) -> bool:
 # A reward gate pair: roll(), then the pattern guarantee. On stage 2, when nothing held
 # transforms a pattern and neither offer is a pattern part, the last slot becomes one.
 # That slot is never the synergy bait (always first), and a pattern part hits harder, so
-# the pair keeps both rules. The pattern part comes from the gate's own rarities when one
+# the pair keeps both rules; a one-slot gate holding the bait keeps it and skips the
+# pattern part. The pattern part comes from the gate's own rarities when one
 # fits; at two or more bonus cores (rare and relic) none does, and only that slot
 # drops to common. Any other stage, or a build that already holds a pattern, gets
 # exactly what roll() gives for the same seed.
@@ -499,6 +500,6 @@ static func roll_gate(rng: RandomNumberGenerator, rarities: Array, class_id: Str
 	var pattern: String = eligible[rng.randi_range(0, eligible.size() - 1)]
 	if picks.size() < count:
 		picks.append(pattern)
-	else:
+	elif picks.size() >= 2 or picks[0] != completing_part(held, offer_pool(class_id, rarities)):
 		picks[picks.size() - 1] = pattern
 	return picks
