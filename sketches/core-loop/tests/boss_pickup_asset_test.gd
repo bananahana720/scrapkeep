@@ -5,7 +5,9 @@ const Boss := preload("res://src/boss/boss.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const GLB := "res://assets/models/bosses/boss_pickup.glb"
-const BASE_LOGIC_SHA := "0427903c86444ae1abdff0ed6fbc516c0dd15ac34202c6dc8cb4306683a1b507"
+# Re-pinned 2026-10-09 (BUGFIX-BOSS F001): _cancel_hazards now drips out scrap a magnet
+# still holds when phase 1 ends, which only phase 1 used to pay back; pickup meshes unchanged.
+const BASE_LOGIC_SHA := "893127dcaa31283c6662e1594d99087453596a1a7e41a3fbaab7232112246c86"
 
 var failures := 0
 var game

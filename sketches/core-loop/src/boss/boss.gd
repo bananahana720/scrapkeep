@@ -947,6 +947,8 @@ func _add_hazard(h) -> void:
 	hazards.append(h)
 
 
+# Scrap a magnet still holds is dripped out along its trail at once: only phase 1 steps
+# the cranes, so a hold left at the phase end would never be paid back.
 func _cancel_hazards() -> void:
 	for h in hazards:
 		if is_instance_valid(h):
@@ -955,6 +957,8 @@ func _cancel_hazards() -> void:
 	for c in _cranes:
 		if c.has("hazard"):
 			c.erase("hazard")
+		while c.get("held", 0) > 0:
+			_drip(c)
 
 
 func active_hazards() -> Array:
