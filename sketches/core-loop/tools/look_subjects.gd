@@ -83,6 +83,11 @@ const SUBJECTS := {
 		"cameras": [["net_deck", Vector3(0, 45, -20), Vector3(0, 10, -10), 60.0], ["return_ramps", Vector3(-14, 30, -35), Vector3(-8, 15, -70), 60.0], ["net_low", Vector3(0, 14, 30), Vector3(0, 8, -30), 65.0]]},
 	"hdr_sky": {"group": "hd_redo", "stage": 5, "kind": "scene", "owner": "VX-LIGHT", "tick": 390,
 		"cameras": [["sky_loom", Vector3(0, 45, 60), Vector3(0, 10, -400), 70.0], ["sky_west", Vector3(0, 45, 60), Vector3(-400, 20, -200), 70.0], ["sky_east", Vector3(0, 45, 60), Vector3(400, 0, -200), 70.0], ["sky_south", Vector3(0, 45, 60), Vector3(-40, 30, 450), 70.0]]},
+	# SWAP-WAVE 12-F: the first Highdraft barge (barge_isle) where the recipe replaces the greybox hull; anchor barge_0 is its
+	# body centre (deck top +1 m), read about 40 ticks after stage entry; tick 150 falls inside the 3 s dwell at its lane start
+	# (map_highdraft.gd:91-93), so the anchor and the frame agree. far stands about 80 m off, past the detail1 range end (60 m, margin 8).
+	"swp_barge": {"group": "hd_redo", "stage": 5, "kind": "prop", "owner": "SWAP-WAVE", "anchor": "barge_0", "tick": 150,
+		"cameras": [["close", Vector3(9, 4.5, 9), Vector3(0, 1.5, 0), 55.0], ["mid", Vector3(22, 9, 22), Vector3(0, 1, 0), 55.0], ["far", Vector3(55, 20, 55), Vector3(0, 0, 0), 30.0]]},
 	# ---------------------------------------------------------------- boss arenas
 	"arb_bowl": {"group": "arenas", "stage": 1, "kind": "scene", "owner": "VX-LIGHT", "anchor": "arena", "tick": 180,
 		"cameras": [["overview", Vector3(0, 54, 45), Vector3(0, 0, -4), 60.0], ["rim_low", Vector3(72, 14, 40), Vector3(-10, 4, -6), 60.0], ["floor_level", Vector3(34, 3.5, -34), Vector3(-12, 3, 14), 60.0], ["top_down", Vector3(0.5, 120, 1), Vector3.ZERO, 55.0], ["ramp_mast", Vector3(-12, 12, 40), Vector3(-27, 8, -27), 60.0]],

@@ -443,29 +443,13 @@ static func _strip(into: Array[Transform3D], from: Vector2, to: Vector2, from_y:
 		into.append(Transform3D(basis, Vector3(at.x, lerpf(from_y, to_y, t), at.y) + y_axis * STRIP_LIFT))
 
 
-# The barge's own tilted deck node carries the skin, so it leans with the scripted settle; its
-# greybox nodes stay for the carry rule; the deck mesh is cleared and hull, jets and bands hidden.
+# The barge's own tilted deck node carries its recipe views (contraptions.gd _build_barge), so the
+# rig leans with the scripted settle: the sail and pennant ride the deck too.
 static func _barges(contraptions: Node) -> void:
-	var skin_mesh := _mesh("barge_skin.glb", "HardwareSkin")
-	if skin_mesh == null:
-		return
 	for barge in contraptions.barges:
-		var body: Node3D = barge["body"]
 		var deck: MeshInstance3D = barge["deck"]
-		if deck.get_node_or_null("HighdraftBargeSkin") != null:
+		if deck.get_node_or_null("HighdraftWeatherSail") != null:
 			continue
-		for child in body.get_children():
-			if child is MeshInstance3D:
-				child.visible = false
-		var skin := MeshInstance3D.new()
-		skin.name = "HighdraftBargeSkin"
-		skin.mesh = skin_mesh
-		skin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		deck.add_child(skin)
-		skin.visible = true
-		# The hidden deck node hides its children, so the deck stays visible and bare instead.
-		deck.visible = true
-		deck.mesh = null
 		# Reuse the kit's rig for a full weather sail and a small corner pennant.
 		for marker in [
 			{"name": "HighdraftWeatherSail", "at": Vector3(5.5, 1.0, -5.5), "scale": 1.0},

@@ -4,8 +4,8 @@
    "id": "barge",
    "path": "res://assets/models/barge.glb",
    "class": "landmark",
-   "ships": false,
-   "loader": "none (route proof, wave 12-D RECIPE-WAVE; today's barge stays code-built in contraptions.gd and skinned by highdraft_scenery.gd until the owner swaps it)",
+   "ships": true,
+   "loader": "recipe_props",
    "provenance": {
     "recipe": "tools/blender/barge.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
@@ -16,8 +16,8 @@
    "id": "barge_fenders",
    "path": "res://assets/models/barge_fenders.glb",
    "class": "landmark",
-   "ships": false,
-   "loader": "none (route proof, wave 12-D RECIPE-WAVE; placed at barge.glb's origin)",
+   "ships": true,
+   "loader": "recipe_props",
    "provenance": {
     "recipe": "tools/blender/barge.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
@@ -28,8 +28,8 @@
    "id": "barge_detail1",
    "path": "res://assets/models/barge_detail1.glb",
    "class": "detail",
-   "ships": false,
-   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at barge.glb's origin, visibility range end 60 m)",
+   "ships": true,
+   "loader": "recipe_props",
    "provenance": {
     "recipe": "tools/blender/barge_detail1.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
@@ -40,8 +40,8 @@
    "id": "barge_detail2",
    "path": "res://assets/models/barge_detail2.glb",
    "class": "detail",
-   "ships": false,
-   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive shell at barge.glb's origin, visibility range end 35 m)",
+   "ships": true,
+   "loader": "recipe_props",
    "provenance": {
     "recipe": "tools/blender/barge_detail2.py",
     "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-barge/ref/barge_pass2.png",
