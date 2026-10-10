@@ -96,15 +96,28 @@ static func resistance(state, tuning, intent, delta: float) -> Vector3:
 	if speed <= 0.001:
 		return Vector3.ZERO
 	var dir: Vector3 = state.velocity / speed
-	var loss := 0.0
+	var loss := _over_speed_loss(speed, tuning, delta)
 	if state.grounded:
 		var rate: float = Tuning.BRAKE_RESISTANCE if intent.brake_held else tuning.f("rolling_resistance")
 		loss += rate * delta
-	var fast: float = tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST]
-	if speed > fast:
-		var excess := speed - fast
-		loss += Tuning.QUAD_DRAG * excess * excess * delta
 	return -dir * minf(speed, loss)
+
+
+# The quadratic part of resistance alone. The rigid ball pays rolling and brake
+# resistance as forces of its own, and this term as an impulse, in the air or not.
+static func over_speed_drag(state, tuning, delta: float) -> Vector3:
+	var speed: float = state.velocity.length()
+	if speed <= 0.001:
+		return Vector3.ZERO
+	return -state.velocity / speed * minf(speed, _over_speed_loss(speed, tuning, delta))
+
+
+static func _over_speed_loss(speed: float, tuning, delta: float) -> float:
+	var fast: float = tuning.f("cruise") * SpeedTier.MULTIPLES[SpeedTier.FAST]
+	if speed <= fast:
+		return 0.0
+	var excess := speed - fast
+	return Tuning.QUAD_DRAG * excess * excess * delta
 
 
 static func stick(state, delta: float) -> Vector3:
