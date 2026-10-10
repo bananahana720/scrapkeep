@@ -477,7 +477,10 @@ func _pose(delta: float) -> void:
 		_model_pose(delta)
 	else:
 		_primitive_pose(delta)
-	# Face the ball while stalking or bracing, so the core is toward the player.
+	# Face the ball while stalking or bracing, so the core is toward the player. A null or
+	# freed target leaves the facing where it is (F008).
+	if not is_instance_valid(target):
+		return
 	if state == State.STALK or state == State.CHARGE_BRACE or state == State.WEAK or state == State.SLAM_CROUCH:
 		var to := _flat_to_ball()
 		if state == State.CHARGE_BRACE and telegraph() != null:

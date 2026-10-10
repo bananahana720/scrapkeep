@@ -8,7 +8,9 @@ const Augments := preload("res://src/movement/augments.gd")
 # the face is reflected across the dish's normal at RESTITUTION 0.9, through the CC
 # door, so you lose your line but keep most of your speed. The counterplay is the
 # opportunity: jump within VAULT_WINDOW of the rebound and it becomes a vault for any
-# class, exit speed incoming x 1.8 (the vault kick's gain), with the break refund.
+# class, exit speed = the rebound speed the ball carries when it jumps x 1.8 (the vault
+# kick's gain, Augments.vault_exit, which also gains on the ball's speed at the kick),
+# with the break refund. The rebound has already paid RESTITUTION on the normal part.
 # Rivet's sprint ignores the dish and rolls through.
 
 const RESTITUTION := 0.9

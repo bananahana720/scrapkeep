@@ -29,8 +29,8 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 #   pull so the sum across the velocity stays inside the limit, with no one-tick delay.
 #
 # The binding each hold draws is a striped hazard line from its source to the ball,
-# and while immune the ball wears a broken-bracket flicker in the class colour
-# (VISUAL-LANGUAGE section 11).
+# and while immune the ball wears a broken-bracket flicker in neutral ink (VISUAL-LANGUAGE
+# section 11; the colour law moved it off the class colour in 7f19110).
 
 signal released(source_id: int, kind: String, reason: String)
 
@@ -359,8 +359,8 @@ static func _stripes(mesh: ImmediateMesh, from: Vector3, to: Vector3) -> void:
 		t += 0.9
 
 
-# Tenacity's broken bracket: four corner arcs round the ball, in the class colour,
-# flickering while the immunity lasts. It is Rivet's sprint look, because both mean
+# Tenacity's broken bracket: four corner arcs round the ball, in neutral ink (the colour
+# law, 7f19110; enemy_tenacity_test pins it), flickering while the immunity lasts. It is Rivet's sprint look, because both mean
 # crowd control cannot hold you.
 func _draw_bracket(ball: Vector3) -> void:
 	var on := immune() and fmod(_clock * FLICKER_HZ, 1.0) < 0.7
