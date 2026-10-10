@@ -2,6 +2,7 @@ extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
 const Palette := preload("res://src/core/palette.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
 # Drive-through fabricators: hoops standing across the scrap lines. Each shows the part
@@ -146,18 +147,12 @@ func sold(fab: Dictionary) -> void:
 
 func _build_hoop(fab: Dictionary) -> void:
 	var node: Node3D = fab["node"]
-	var hoop := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = RING - 0.35
-	torus.outer_radius = RING
-	torus.rings = 48
-	hoop.mesh = torus
-	# Upright, facing along the line: the torus lies in XZ, so tip it onto XY.
-	hoop.rotation = Vector3(PI * 0.5, 0.0, 0.0)
-	hoop.position = Vector3(0.0, RING - SINK, 0.0)
-	var hoop_mat := Palette.solid(Palette.COPPER, 0.4)
-	hoop.material_override = hoop_mat
-	node.add_child(hoop)
+	# The authored hoop (recipe row fabricator_hoop): its origin is the ground under the ring, ring centre RING - SINK up,
+	# ring in the node's XY plane, so it stands across the line at IDENTITY. Its steel views wear the hoop's state.
+	var views := RecipeProps.base("fabricator_hoop", node, Transform3D.IDENTITY)
+	RecipeProps.shells("fabricator_hoop", node, Transform3D.IDENTITY)
+	fab["state_views"] = RecipeProps.steel_views(views)
+	_paint_state(fab, false)
 	# Ground chevrons pointing through the hoop both ways say "roll through here".
 	for dir in [-1.0, 1.0]:
 		var chevron := MeshInstance3D.new()
@@ -183,7 +178,6 @@ func _build_hoop(fab: Dictionary) -> void:
 	label.name = "Prompt"
 	label.attach(node, Vector3(0.0, RING * 2.0 - SINK, 0.0), PROMPT_REACH)
 	node.add_child(label)
-	fab["hoop_mat"] = hoop_mat
 	fab["glyph"] = glyph
 	fab["label"] = label
 	_refresh_glyph(fab)
@@ -232,11 +226,17 @@ func _refresh_label(fab: Dictionary, cogs: int, held: Array) -> void:
 	label.set_parts(prompt_title(part_id) if fab["restock"] <= 0.0 else "Fabricating",
 		_detail(text), "obj_fabricator")
 	label.modulate = Palette.AMBER if ready else Palette.SAND.darkened(0.25)
-	var mat: StandardMaterial3D = fab["hoop_mat"]
-	mat.albedo_color = Palette.AMBER if ready else Palette.COPPER.darkened(0.3)
-	mat.emission_enabled = true
-	mat.emission = mat.albedo_color
-	mat.emission_energy_multiplier = 2.2 if ready else 0.15
+	_paint_state(fab, ready)
+
+
+# The hoop's state on its steel views: amber when you can buy, dark copper when you cannot.
+static func state_tint(ready: bool) -> Color:
+	return Palette.AMBER if ready else Palette.COPPER.darkened(0.3)
+
+
+func _paint_state(fab: Dictionary, ready: bool) -> void:
+	for view: GeometryInstance3D in fab["state_views"]:
+		view.set_instance_shader_parameter("state_tint", state_tint(ready))
 
 
 # The prompt's title at range: the part's name, at most three words.
