@@ -7,17 +7,22 @@ W = os.environ.get("BOARD_ROOT") or os.path.dirname(os.path.abspath(__file__))
 boards = []
 for name in sys.argv[1:]:
     spec = json.load(open(os.path.join(W, "boards", name + ".json")))
-    seed = str(spec.get("seeds", [101])[0])
+    seeds = [str(s) for s in spec.get("seeds", [101])]
+    seed = ", ".join(seeds)
     bdir = os.path.join(W, "boards", name)
     os.makedirs(os.path.join(bdir, "img"), exist_ok=True)
     cards = []
+    # One card per subject; with several seeds, one card per take, keyed <subject>_<seed>.
     for key in spec["subjects"]:
-        src = os.path.join(bdir, f"{key}_{seed}.png")
-        if not os.path.exists(src):
-            continue
-        Image.open(src).convert("RGB").save(os.path.join(bdir, "img", key + ".jpg"), quality=85)
-        cards.append({"key": key, "label": spec.get("labels", {}).get(key, key.replace("_", " ")),
-                      "role": spec.get("roles", {}).get(key, ""), "img": f"img/{name}/{key}.jpg"})
+        for n, s in enumerate(seeds, 1):
+            src = os.path.join(bdir, f"{key}_{s}.png")
+            if not os.path.exists(src):
+                continue
+            card = key if len(seeds) == 1 else f"{key}_{s}"
+            label = spec.get("labels", {}).get(key, key.replace("_", " "))
+            Image.open(src).convert("RGB").save(os.path.join(bdir, "img", card + ".jpg"), quality=85)
+            cards.append({"key": card, "label": label if len(seeds) == 1 else f"{label}, take {n}",
+                          "role": spec.get("roles", {}).get(key, ""), "img": f"img/{name}/{card}.jpg"})
     boards.append({"name": name, "seed": seed, "cards": cards, "maker": spec.get("maker_line", "")})
 TEMPLATE = r'''<title>Scrapkeep Concept Board</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
