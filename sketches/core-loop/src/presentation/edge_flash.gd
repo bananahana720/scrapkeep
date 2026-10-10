@@ -11,6 +11,8 @@ const SIDE_FLOOR := 0.15
 var direction := Vector2.ZERO
 var color := Color.RED
 var alpha := 0.0
+# 1 normally; reduced motion sets it to the store's REDUCED_FLASH share.
+var flash_scale := 1.0
 var _peak := 0.0
 var _left := 0.0
 var _life := 0.4
@@ -25,7 +27,7 @@ func _init() -> void:
 func flash(toward: Vector2, tint: Color, strength: float, seconds: float) -> void:
 	direction = toward.normalized() if toward.length() > 0.01 else Vector2.ZERO
 	color = tint
-	_peak = clampf(strength, 0.0, 1.0)
+	_peak = clampf(strength * flash_scale, 0.0, 1.0)
 	_life = maxf(0.05, seconds)
 	_left = _life
 	alpha = _peak

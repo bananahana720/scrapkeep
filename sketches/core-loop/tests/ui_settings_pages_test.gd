@@ -127,7 +127,7 @@ func _run() -> void:
 	_t.check("S3-2 the settings row opens the page", menu.settings_open() and page.visible and not menu.row("resume").visible, "open %s" % menu.settings_open())
 	_t.check("S3-2 the page reads within %d words" % PAGE_BUDGET, page_words <= PAGE_BUDGET, "%d words" % page_words)
 	print("  settings page words: %d" % page_words)
-	_t.eq("S3-2 the page rows", page.rows.keys().filter(func(id): return not id.begins_with("pad_") and not id in ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist"]), ["fullscreen", "quality", "jump", "fire", "harpoon", "haul", "boost", "special", "interact", "reset", "roll", "look", "back"])
+	_t.eq("S3-2 the page rows", page.rows.keys().filter(func(id): return not id.begins_with("pad_") and not id in ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist"]), ["fullscreen", "quality", "reduced_motion", "jump", "fire", "harpoon", "haul", "boost", "special", "interact", "reset", "roll", "look", "back"])
 	_t.check("S3-2 roll and look are fixed", page.row("roll").disabled and page.row("look").disabled, "fixed")
 	_t.check("S3-2 the page holds the pause", paused and _game.pause_toggled(), "paused %s" % paused)
 	Push.key(root, KEY_S)
@@ -136,7 +136,7 @@ func _run() -> void:
 	down.button_index = JOY_BUTTON_DPAD_DOWN
 	down.pressed = true
 	root.push_input(down)
-	_t.eq("S3-6 a pad's down moves it too (Display holds fullscreen, quality and Back)", page.focused_id(), "back")
+	_t.eq("S3-6 a pad's down moves it too (Display holds fullscreen, quality, reduced motion and Back)", page.focused_id(), "reduced_motion")
 	Push.key(root, KEY_ESCAPE)
 	await _settle(0.5)
 	_t.check("S3-2 Esc goes back to the first page with Settings focused", not menu.settings_open() and menu.is_open() and menu.focused_id() == "settings" and menu.row("resume").visible, "focus %s" % menu.focused_id())

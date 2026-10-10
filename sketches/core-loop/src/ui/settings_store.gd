@@ -13,6 +13,11 @@ const FILE := "settings.json"
 # Comfort numbers the settings page keeps: fullscreen 0 off, 1 on; quality 0 High, 1 Low.
 const FULLSCREEN := "fullscreen"
 const QUALITY := "quality"
+# Reduced motion, 0 off and 1 on: damps camera shake, FOV kicks, hit-edge flashes and decorative
+# motion. Telegraphs are gameplay information and keep their timing and read.
+const REDUCED_MOTION := "reduced_motion"
+# A reduced-motion edge flash keeps this share of its alpha (the hit read stays visible).
+const REDUCED_FLASH := 0.25
 const STICK_SENSITIVITY := "stick_sensitivity"
 const INVERT_Y := "invert_y"
 const STICK_DEADZONE := "stick_deadzone"
@@ -122,6 +127,10 @@ func _look_value(id: String, value: float) -> float:
 
 func fullscreen() -> bool:
 	return float(comfort.get(FULLSCREEN, 0.0)) >= 0.5
+
+
+func reduced_motion() -> bool:
+	return float(comfort.get(REDUCED_MOTION, 0.0)) >= 0.5
 
 
 # 0 for High, 1 for Low.

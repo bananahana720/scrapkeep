@@ -105,7 +105,7 @@ func setup(game_ref, back_key := "key_esc") -> void:
 
 
 func _build_display() -> void:
-	for id in ["fullscreen", "quality"]:
+	for id in ["fullscreen", "quality", "reduced_motion"]:
 		_add_plain(id, "display")
 
 
@@ -267,6 +267,7 @@ func refresh() -> void:
 	var store = _store()
 	rows["fullscreen"].text = "Fullscreen: %s" % ("on" if store.fullscreen() else "off")
 	rows["quality"].text = "Quality: %s" % ("Low" if store.quality() == 1 else "High")
+	rows["reduced_motion"].text = "Reduced motion: %s" % ("on" if store.reduced_motion() else "off")
 	for verb in VERBS:
 		_rebuild(verb)
 		_rebuild("pad_" + verb)
@@ -384,6 +385,11 @@ func press(id: String) -> void:
 			_store().set_comfort(SettingsStore.QUALITY, float(level))
 			_game.set_quality(level)
 			rows["quality"].text = "Quality: %s" % ("Low" if level == 1 else "High")
+		"reduced_motion":
+			var calm: bool = not _store().reduced_motion()
+			_store().set_comfort(SettingsStore.REDUCED_MOTION, 1.0 if calm else 0.0)
+			_game.set_reduced_motion(calm)
+			rows["reduced_motion"].text = "Reduced motion: %s" % ("on" if calm else "off")
 		"reset":
 			_game.reset_bindings()
 			refresh()
