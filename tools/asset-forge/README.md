@@ -98,13 +98,25 @@ Model-written code executes only in `forge run`. The agent can run nothing else.
    `dontAsk`, so a `PreToolUse` hook (`bash_gate.py`, passed with `--settings`) denies every
    Bash command that is not exactly the forge run. `ls /` and `cat recipe.py` are denied.
 3. **The run sandbox.** `systemd-run --user --scope` caps memory (`MemoryMax=20G`,
-   `MemorySwapMax=2G`) and a wall-clock timeout kills the scope. Inside it `bwrap` gives
-   no network (`--unshare-net`, a probe recipe's `socket.connect` fails with "Network is
-   unreachable"), a read-only filesystem, a tmpfs home and `/tmp`, and one writable path: the
-   version dir. `IPAddressDeny=any` on a user scope was tried and is NOT enforced (a probe
-   connected), which is why bwrap is used.
-4. **No trust in the agent's outputs.** After the agent finishes, `make` restores `params.json`
+   `MemorySwapMax=2G`); a wall-clock timeout kills the scope, and the scope is stopped after
+   every run so nothing the recipe spawned outlives it. Inside, `bwrap --unshare-all
+   --new-session --clearenv` shows only `/usr`, `/etc` and `/sys` read-only, `/dev/dri` for
+   the GPU, the helper, kind and Blender dirs read-only, a tmpfs home and `/tmp`, and one
+   writable path: the version dir. No network, and no `/run`, so the user D-Bus, ssh-agent
+   and other sockets are unreachable. No caller environment variables (API keys) reach the
+   recipe. Without bwrap, `forge run` refuses (harness fault) rather than run unconfined.
+   `IPAddressDeny=any` on a user scope was tried and is NOT enforced, which is why bwrap is used.
+4. **Links are swept.** Recipe code could plant a symlink in its version dir (say `run.log`
+   pointing at `~/.bashrc`) for the unsandboxed forge to write or read through. Every outer
+   step first deletes any entry that is not a plain file or directory (`forgecore.sweep`),
+   a run that left one is a recipe fault, and outer JSON/text writes go through a temp file
+   and a rename, which replaces a link rather than following it.
+5. **No trust in the agent's outputs.** After the agent finishes, `make` restores `params.json`
    from memory and does an authoritative `forge run`.
+
+Tests prove each layer: `test_bash_gate_allows_only_the_exact_run`, `test_sweep_*`,
+`test_write_json_replaces_a_link_*`, `test_refuses_to_run_without_bwrap`, and the sandbox probe
+in `BlenderRuns` (network, user bus, `/run`, env, planted links).
 
 ## Stated gaps
 
@@ -112,11 +124,13 @@ Model-written code executes only in `forge run`. The agent can run nothing else.
   copies, `result.json`); the final authoritative run regenerates results and the validator
   never trusts the agent's files, but a hand-edited `result.json` would be rewritten, not caught.
 - Writes outside the version dir from a recipe succeed inside the sandbox's private tmpfs and
-  vanish; they are not an error. Reads of the rest of the filesystem (outside `$HOME`) stay possible.
+  vanish; they are not an error. Recipes can still read `/usr`, `/etc` and `/sys` (no secrets
+  there on this machine) and the bound helper dirs.
 - `--max-budget-usd` and `--max-turns` bound spend; with a subscription login the dollar figure
   is notional.
 - Floating-part detection uses island bounding boxes (5 mm tolerance), so a gap hidden inside
   a box's footprint is not seen. Non-manifold is a warning by design.
 - The preview is eight stills. Passing validation says nothing about human taste, in-engine
   look, collision or performance (`manifest.limits`).
-- `sandbox_prefix` falls back to `unshare` (no filesystem confinement) when `bwrap` is missing, and says so.
+- `bash_gate.py` relies on Claude Code honouring `--settings` hooks under `--restricted`
+  (checked on 2.1.296); recheck after CLI upgrades with the Haiku security probe.

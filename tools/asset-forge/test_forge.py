@@ -262,6 +262,51 @@ class Setup(unittest.TestCase):
         self.assertEqual(cmd[cmd.index("--model") + 1], "sonnet")
         self.assertIn("--max-turns", cmd)
 
+    def test_bash_gate_allows_only_the_exact_run(self):
+        import subprocess
+        allowed = "python3 %s run ." % forge.FORGE_PY
+
+        def decide(command):
+            event = json.dumps({"tool_name": "Bash", "tool_input": {"command": command}})
+            out = subprocess.run([sys.executable, str(fc.FORGE_DIR / "bash_gate.py"), allowed], input=event,
+                                 capture_output=True, text=True, check=True).stdout
+            return json.loads(out)["hookSpecificOutput"]["permissionDecision"] if out.strip() else "pass"
+
+        self.assertEqual(decide(allowed), "pass")
+        for evil in ("ls /", allowed + " && ls /", allowed + "; ls", allowed + "\nls /", "FOO=1 " + allowed,
+                     allowed.replace("python3", "./python3"), allowed + " --x", "cat recipe.py", allowed + " | sh"):
+            self.assertEqual(decide(evil), "deny", evil)
+
+    def test_sweep_removes_links_and_special_files(self):
+        d = self.tmp / "v"
+        (d / "out").mkdir(parents=True)
+        (d / "out" / "ok.glb").write_text("x")
+        (d / "run.log").symlink_to("/etc/hostname")
+        (d / "linkdir").symlink_to("/etc")
+        os.mkfifo(d / "out" / "pipe")
+        self.assertEqual(sorted(fc.sweep(d)), ["linkdir", "out/pipe", "run.log"])
+        self.assertTrue((d / "out" / "ok.glb").is_file())
+        self.assertIsNone(fc.read_json(d / "missing.json"))
+
+    def test_write_json_replaces_a_link_instead_of_following_it(self):
+        victim = self.tmp / "victim.txt"
+        victim.write_text("precious")
+        link = self.tmp / "result.json"
+        link.symlink_to(victim)
+        fc.write_json(link, {"a": 1})
+        self.assertEqual(victim.read_text(), "precious")
+        self.assertFalse(link.is_symlink())
+
+    def test_refuses_to_run_without_bwrap(self):
+        real = shutil.which
+        try:
+            shutil.which = lambda name: None if name == "bwrap" else real(name)
+            prefix, notes = forge.sandbox_prefix(self.tmp, [], "forge-test.scope")
+        finally:
+            shutil.which = real
+        self.assertIsNone(prefix)
+        self.assertIn("refuses", notes[0])
+
     def test_prepare_version_files_and_revision(self):
         p, k = pack(), fc.load_kind("model")
         ref = self.tmp / "c.png"
@@ -398,6 +443,20 @@ def build(params):
         out["home_listing"] = len(os.listdir(os.path.expanduser("~")))
     except OSError as e:
         out["home_listing"] = repr(e)
+    out["run_dir"] = os.path.exists("/run/user")
+    out["env"] = sorted(os.environ)
+    try:
+        s = socket.socket(socket.AF_UNIX)
+        s.connect("/run/user/%d/bus" % os.getuid())
+        out["user_bus"] = "CONNECTED"
+    except OSError as e:
+        out["user_bus"] = "blocked: %r" % e
+    # Plant links the unsandboxed forge would otherwise write or read through.
+    for name, target in (("run.log", LOG_TARGET), ("notes.md", LOG_TARGET), ("out/leak.glb", "/etc/hostname")):
+        os.makedirs(os.path.dirname(name) or ".", exist_ok=True)
+        if os.path.lexists(name):
+            os.unlink(name)
+        os.symlink(target, name)
     open("probe.json", "w").write(json.dumps(out))
     root = common.empty("Probe")
     p = Part("P")
@@ -405,11 +464,33 @@ def build(params):
     p.to_object((0, 0, 0), root)
     return root
 '''.replace("PROBE_PATH", repr(str(probe)))
+        victim = self.tmp / "andrews_file.txt"
+        victim.write_text("precious\n")
+        src = src.replace("LOG_TARGET", repr(str(victim)))
         vdir, _ = make_version(self.tmp, src)
-        forge.do_run(vdir, timeout=120, quiet=True)
+        os.environ["FORGE_SECRET_PROBE"] = "must-not-leak"
+        try:
+            rc = forge.do_run(vdir, timeout=120, quiet=True)
+        finally:
+            del os.environ["FORGE_SECRET_PROBE"]
         got = fc.read_json(vdir / "probe.json")
         print("sandbox probe:", got)
         self.assertTrue(got["network"].startswith("blocked"), got)
+        self.assertTrue(got["user_bus"].startswith("blocked"), got)
+        self.assertFalse(got["run_dir"], got)
+        # Blender adds its own variables (OCIO, PWD, ...); nothing from the caller may pass.
+        self.assertNotIn("FORGE_SECRET_PROBE", got["env"])
+        self.assertFalse([k for k in got["env"] if k.startswith(("ANTHROPIC", "CLAUDE", "XDG_RUNTIME", "DBUS", "SSH"))], got)
+        # The planted links are swept, the run is a recipe fault, and nothing outside changed.
+        self.assertEqual(rc, 1)
+        self.assertEqual(victim.read_text(), "precious\n")
+        res = fc.read_json(vdir / "result.json")
+        self.assertEqual(res["status"], "recipe_error")
+        self.assertIn("run.log", res["error"])
+        for name in ("run.log", "notes.md", "out/leak.glb"):
+            self.assertFalse((vdir / name).is_symlink(), name)
+        forge.do_run(vdir, timeout=120, quiet=True)  # the next outer run writes run.log afresh
+        self.assertEqual(victim.read_text(), "precious\n")
         # Writes outside the version dir may succeed inside the sandbox's private tmpfs but
         # must never reach the real filesystem.
         self.assertFalse(Path(vdir.parent / "escape.txt").exists())

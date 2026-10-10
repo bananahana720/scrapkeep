@@ -79,6 +79,7 @@ def prepare_version(pack, kind, asset, category, prompt, parent=None, reference=
         if src.is_file():
             shutil.copyfile(src, vdir / "reference" / src.name)
     if parent:
+        fc.sweep(parent)
         shutil.copyfile(parent / "recipe.py", vdir / "recipe.py")
         prev = parent / "preview" / "sheet.png"
         if prev.is_file():
@@ -91,19 +92,26 @@ def prepare_version(pack, kind, asset, category, prompt, parent=None, reference=
 
 # --- forge run: the only place recipe code executes --------------------------------------
 def sandbox_prefix(vdir, extra_ro, unit, mem="20G", swap="2G"):
+    """Recipe code sees /usr, /etc and /sys read-only, the GPU render nodes, its helper dirs
+    read-only and its version dir writable. Not /run (the user bus and agent sockets live
+    there), not $HOME, not the caller's environment. Without bwrap there is no confinement,
+    so the forge refuses to run rather than fall back."""
+    if not shutil.which("bwrap"):
+        return None, ["bwrap is not installed; forge run refuses to execute recipe code unconfined"]
     scope = ["systemd-run", "--user", "--scope", "-q", "--unit", unit, "-p", "MemoryMax=" + mem, "-p", "MemorySwapMax=" + swap]
-    notes = []
-    if shutil.which("bwrap"):
-        home = str(Path.home())
-        bw = ["bwrap", "--die-with-parent", "--unshare-net", "--ro-bind", "/", "/", "--dev-bind", "/dev", "/dev",
-              "--proc", "/proc", "--tmpfs", "/tmp", "--tmpfs", home]
-        for p in extra_ro:
-            bw += ["--ro-bind", str(p), str(p)]
-        bw += ["--bind", str(vdir), str(vdir)]
-        notes.append("bwrap: no network, filesystem read-only, home hidden, only the version dir writable")
-        return scope + bw, notes
-    notes.append("GAP: bwrap missing, fell back to unshare (no network, filesystem NOT confined)")
-    return scope + ["unshare", "--net", "--map-current-user", "--"], notes
+    home = str(Path.home())
+    bw = ["bwrap", "--die-with-parent", "--new-session", "--unshare-all", "--clearenv",
+          "--setenv", "PATH", "/usr/bin", "--setenv", "HOME", home, "--setenv", "LANG", "C.UTF-8",
+          "--ro-bind", "/usr", "/usr", "--ro-bind", "/etc", "/etc", "--ro-bind", "/sys", "/sys",
+          "--symlink", "usr/bin", "/bin", "--symlink", "usr/bin", "/sbin",
+          "--symlink", "usr/lib", "/lib", "--symlink", "usr/lib", "/lib64",
+          "--dev", "/dev", "--dev-bind-try", "/dev/dri", "/dev/dri", "--proc", "/proc",
+          "--tmpfs", "/tmp", "--tmpfs", home]
+    for p in extra_ro:
+        bw += ["--ro-bind", str(p), str(p)]
+    bw += ["--bind", str(vdir), str(vdir)]
+    notes = ["bwrap: no network or sockets, cleared env, /usr /etc /sys read-only, only the version dir writable"]
+    return scope + bw, notes
 
 
 def run_blender(vdir, kind, params, timeout):
@@ -111,13 +119,17 @@ def run_blender(vdir, kind, params, timeout):
     exe = os.path.realpath(shutil.which("blender") or "blender")
     ro = [params["helper_dir"], kind["dir"], fc.FORGE_DIR, os.path.dirname(exe)]
     prefix, notes = sandbox_prefix(vdir, ro, unit)
+    if prefix is None:
+        return {"rc": None, "timed_out": False, "harness": notes[0], "cmd": [], "notes": notes}
     cmd = prefix + [exe, "-b", "--factory-startup", "--python-exit-code", "1", "-P",
                     str(kind["dir"] / kind["entry"]), "--", str(vdir)]
-    log = open(vdir / "run.log", "w")
+    log = os.fdopen(os.open(vdir / "run.log", os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644), "w")
     t0 = time.time()
     try:
-        proc = subprocess.Popen(cmd, cwd=vdir, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+        proc = subprocess.Popen(cmd, cwd=vdir, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                                start_new_session=True)
     except FileNotFoundError as exc:
+        log.close()
         return {"rc": None, "timed_out": False, "harness": "cannot start: %s" % exc, "cmd": cmd, "notes": notes}
     timed_out = False
     try:
@@ -131,12 +143,15 @@ def run_blender(vdir, kind, params, timeout):
         except ProcessLookupError:
             pass
         proc.wait()
+    # Nothing recipe-spawned may outlive the run: the outer steps below trust the tree.
+    subprocess.run(["systemctl", "--user", "stop", unit], capture_output=True)
     log.close()
     return {"rc": proc.returncode, "timed_out": timed_out, "seconds": round(time.time() - t0, 1), "cmd": cmd, "notes": notes}
 
 
 def load_ctx(vdir):
     vdir = Path(vdir).resolve()
+    fc.sweep(vdir)
     params = fc.read_json(vdir / "params.json")
     if not params:
         die("%s has no params.json; not a version directory" % vdir)
@@ -154,7 +169,11 @@ def do_run(vdir, timeout=600, quiet=False):
         run = {"rc": None, "timed_out": False, "notes": []}
     else:
         run = run_blender(vdir, kind, params, timeout)
+        swept = fc.sweep(vdir)
         res = fc.read_json(vdir / "result.json")
+        if swept and res is not None:
+            res["status"] = "recipe_error"
+            res["error"] = "the recipe left links or special files, which were deleted: %s" % ", ".join(swept)
         if run.get("harness"):
             res = {"schema_version": 1, "status": "harness_error", "error": run["harness"], "warnings": []}
         elif run["timed_out"]:
@@ -286,16 +305,18 @@ def run_agent(vdir, params, model, max_turns, budget, timeout, revising):
     try:
         r = subprocess.run(cmd, cwd=vdir, input=agent_task(vdir, params, revising), capture_output=True, text=True,
                            timeout=timeout, env=env)
-    except subprocess.TimeoutExpired as exc:
-        (vdir / "agent.json").write_text(json.dumps({"is_error": True, "result": "agent timed out after %ds" % timeout}))
+    except subprocess.TimeoutExpired:
+        fc.sweep(vdir)
+        fc.write_json(vdir / "agent.json", {"is_error": True, "result": "agent timed out after %ds" % timeout})
         return {"is_error": True, "result": "agent timed out"}
-    (vdir / "agent.stderr").write_text(r.stderr)
+    fc.sweep(vdir)
+    fc.write_text(vdir / "agent.stderr", r.stderr)
     try:
         out = json.loads(r.stdout)
     except json.JSONDecodeError:
         out = {"is_error": True, "result": r.stdout[-2000:] or r.stderr[-2000:], "rc": r.returncode}
     fc.write_json(vdir / "agent.json", out)
-    (vdir / "notes.md").write_text((out.get("result") or "").strip() + "\n")
+    fc.write_text(vdir / "notes.md", (out.get("result") or "").strip() + "\n")
     return out
 
 
@@ -354,6 +375,8 @@ def cmd_list(args):
 def cmd_compare(args):
     pack = args.pack
     a, b = (fc.version_dir(pack, args.asset, v) for v in (args.a, args.b))
+    for d in (a, b):
+        fc.sweep(d)
     sheets = [d / "preview" / "sheet.png" for d in (a, b)]
     for s in sheets:
         if not s.is_file():

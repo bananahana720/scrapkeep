@@ -5,7 +5,9 @@ import hashlib
 import json
 import os
 import re
+import stat
 import struct
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -153,15 +155,41 @@ def version_dir(pack, asset, v):
     return asset_dir(pack, asset) / ("v%03d" % int(m.group(1)))
 
 
+def sweep(vdir):
+    """Recipe code can plant symlinks, fifos or sockets in its writable version dir; the
+    unsandboxed forge would then read or write through them as Andrew. Delete every entry
+    that is not a plain file or directory, before any outer step touches the tree."""
+    removed = []
+    for top, dirs, files in os.walk(vdir, followlinks=False):
+        for name in dirs + files:
+            p = os.path.join(top, name)
+            st = os.lstat(p)
+            if not (stat.S_ISREG(st.st_mode) or stat.S_ISDIR(st.st_mode)):
+                os.unlink(p)
+                removed.append(os.path.relpath(p, vdir))
+        dirs[:] = [d for d in dirs if os.path.isdir(os.path.join(top, d))]
+    return removed
+
+
 def read_json(path, default=None):
     p = Path(path)
-    if not p.is_file():
+    if p.is_symlink() or not p.is_file():
         return default
     return json.loads(p.read_text())
 
 
+def write_text(path, text):
+    """Write through a fresh temp file and rename it into place: a rename replaces a
+    symlink at `path` instead of following it."""
+    path = Path(path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix="." + path.name + ".")
+    with os.fdopen(fd, "w") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+
 def write_json(path, data):
-    Path(path).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+    write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n")
 
 
 # --- glb read-back ----------------------------------------------------------------------
