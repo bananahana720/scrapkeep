@@ -6354,3 +6354,42 @@ Andrew authorized this documentation-only round at TRACKING EV-0579 after playin
 **Verification and evidence:** Headless Blender probes and generation under `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G`; AT-01 checks on all four exports; rendered image inspection; `npm run check:scope -- <base> <candidate>` and its required commands; independent review. No browser flow changes; browser UAT is not applicable.
 
 **Boundary:** Local original mesh tooling and neutral fixtures only. No paid provider, new dependency, clothing rig, engine migration, game change, paused-sprint mutation or acceptance of pending hero/boss designs.
+
+## Rule-drift check proposal (10 October 2026)
+
+Proposed by the coordinator after the Jev ecosystem scan at [docs/research/jev-ecosystem-2026-10-10.md](docs/research/jev-ecosystem-2026-10-10.md). Not authorized; a ready card is not authorization to start it. The existing `check:drift` is hash agreement only (TL-01 to TL-04). The semantic rules in AGENTS.md and the lightning contract are enforced by review alone today, and 25 of the TRACKING review rows are FAIL or changes-requested, so a labeled corpus exists.
+
+<a id="tl-05"></a>
+
+### TL-05: Jev rule-drift check over AGENTS.md and the lightning contract
+
+**Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** tooling, advisory
+
+**Source and inputs:**
+
+- [docs/research/jev-ecosystem-2026-10-10.md](docs/research/jev-ecosystem-2026-10-10.md) § B and § Ranked recommendations item 1
+- AGENTS.md bullets 3 to 6 (module ownership, locked dependencies, verification scope, worktree discipline) and [docs/project/INCREMENT-01-lightning-playtest.md](docs/project/INCREMENT-01-lightning-playtest.md) (the module, geometry and input contract)
+- `tools/jev-player/decide.mjs` (`apiKey()`, `instrumentIdentity()`, the raw `fetch` client), `scripts/verify.mjs` (stage list), `scripts/check-drift.mjs` (DRIFT line form)
+- [docs.typesafe.ai/model-jaggedness/jev-1.13](https://docs.typesafe.ai/model-jaggedness/jev-1.13.md): literal reading, first-option bias, large or irrelevant state
+- Method: `.agents/skills/reactive-model-loop/SKILL.md` (controls, blind corpus, pre-registration, verdict cache, cost fields)
+
+**Dependencies:** None. **Blocking questions:** Whether Andrew's TypeSafe key still works after the 2026-09-22 signup pause (one `--dry-run` then one live call settles it).
+
+**Files touched:** `tools/rule-drift/{rules.json,check.mjs,corpus.json,corpus-blind.json,corpus-blind.PROVENANCE.md,README.md,tests/}`; `tools/jev-player/decide.mjs` (export the client as `ask()` with a `baseUrl` option, no behavior change for the player); `scripts/verify.mjs` (one advisory stage); `package.json` (`check:rules`); `CONTRIBUTING.md` (one paragraph); `artifacts/local/tasks/TL-05/`.
+
+**Definition of done:**
+
+1. `rules.json` holds each rule as one literal sentence with its source file and line, a `kind` (`ownership`, `dependency`, `scope`, `geometry`), and the glob of files it governs. Every AGENTS.md bullet 3 to 6 and every "must" or "never" sentence in the lightning contract appears once. A test fails when a source sentence's bytes change without the rule entry's hash changing.
+2. `check.mjs <base> <candidate>` lists the changed hunks (`git diff -U3`, hunk per `@@`), pairs each hunk with the rules whose glob matches its file, and asks one Noul per pair: "This change breaks the rule." The request carries the rule sentence, the hunk and at most 40 lines of surrounding file, never a whole file. State over 6,000 characters is truncated around the hunk and the truncation is recorded.
+3. Each pair resolves to `BREAKS` (probability at or above the pair kind's threshold), `REVIEW` (within 0.15 below it), or `OK`. A request error, truncation past the hunk, or an empty hunk resolves to `UNCHECKED`, never `OK`. Thresholds live in `rules.json` per kind and start at 0.70; the corpus run in item 6 sets them before the stage goes on.
+4. The stage is advisory: `npm run verify` prints one `RULE` line per non-`OK` pair in the `check:drift` DRIFT form (file, hunk range, rule source and line, label, probability) and exits 0. Without `TYPESAFE_API_KEY` or a reachable endpoint it prints one `rule-drift: skipped (<reason>)` line and exits 0. `--strict` turns `BREAKS` into exit 1 for a reviewer's use; nothing calls it by default.
+5. A verdict cache keyed by sha256 of (rule hash, hunk bytes, context bytes, model, question set hash) under `artifacts/local/rule-drift/cache/` means a rerun on the same diff makes zero calls. Every live run writes a receipt with call count, tokens, model, `instrumentIdentity()` and total cost from the response usage fields. A batch cap of 120 calls aborts the stage as `UNCHECKED` with the cap in the receipt.
+6. **Labeled corpus, built before any threshold is set.** `corpus.json` holds at least 10 positive pairs taken from TRACKING review rows marked FAIL or changes requested whose finding names a rule in scope (start at EV-0196, EV-0208, EV-0252, EV-0266, EV-0318, EV-0383, EV-0386; reconstruct the hunk from the candidate SHA the row cites), and at least 10 negative pairs from admitted candidates touching the same files. Each case carries the EV row, candidate SHA, rule id, label and who labeled it. `corpus-blind.json` holds at least 10 more cases labeled by a different agent from the one who wrote the question wording, with provenance, and is scored once. `node tools/rule-drift/score.mjs` reports severity-weighted accuracy with a missed `BREAKS` weighted 3 and a false `BREAKS` weighted 1, authored and blind separately, blind marked as the gating number.
+7. **Controls run in the same score pass.** Option-order and wording-swap controls per the reactive-model-loop skill, plus two deterministic controls: a hunk that moves orchard state out of `simulation.js` into `scene.js` must score `BREAKS` on the ownership rule, and a whitespace-only hunk in the same file must score `OK`. A control failure keeps the stage out of `verify` and is written up as a negative result in the README.
+8. The stage joins `scripts/verify.mjs` only when the blind weighted accuracy is at or above 0.85 and both deterministic controls pass; otherwise the card closes with the README stating the measured number and the stage stays available as `npm run check:rules` only.
+9. Offline tests cover hunk pairing, truncation, label resolution including every `UNCHECKED` path, cache hits, the skipped line, the DRIFT line format and the `--strict` exit. No test makes a live call. `npm test` and `npm run check:skills` pass.
+10. README states what the check measures, what it cannot (semantic agreement is the model's opinion at the recorded probability; a `RULE` line is a prompt to look, not a finding), the cost per typical diff from the receipts, and the jaggedness page caveats that apply.
+
+**Verification and evidence:** `npm test`; `npm run check:rules -- --dry-run <base> <candidate>` (zero calls, prints the pairs it would ask); one live `npm run check:rules -- <base> <candidate>` on a candidate from the corpus with its receipt; `node tools/rule-drift/score.mjs` authored and blind reports; `npm run verify` once with the key present and once with it unset; `npm run check:scope -- <base> <candidate>` and every command it prints; receipts under `artifacts/local/tasks/TL-05/`. Expected cost for the whole card under $1 at the published rate; the receipts say the actual figure.
+
+**Boundary:** No new npm dependency (the raw `fetch` client stays; the official SDK is not added). No change to the player's gate path, `GATE_VERSION` or question sets. No rule beyond AGENTS.md bullets 3 to 6 and the lightning contract; BIBLE and ADR rules are a later card once this one has a measured number. Never a merge gate: `--strict` exists for a reviewer, and nothing in CONTRIBUTING may require it. No local-model endpoint in this card (that is the ollaya trial, a separate card); the `baseUrl` option exists so that trial needs no client change. Jev-as-player stays parked.
