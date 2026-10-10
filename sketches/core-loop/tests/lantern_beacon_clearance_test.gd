@@ -8,6 +8,8 @@ extends SceneTree
 const Warden := preload("res://src/combat/warden.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Game := preload("res://src/game.gd")
+const Beacon := preload("res://src/core/beacon.gd")
 const T := preload("res://tests/support/t.gd")
 const FRAME := "res://assets/models/lantern_beacon_frame.glb"
 const LENS := "res://assets/models/lantern_beacon_lens.glb"
@@ -15,6 +17,9 @@ const SHELLS := ["res://assets/models/lantern_beacon_detail1.glb", "res://assets
 
 var _t := T.new("lantern_beacon_clearance_test")
 var _done := false
+var _game
+var _mast_done := false
+var _ticks := 0
 
 
 # Runs on the first frame: in _initialize nothing is inside the tree yet, so every global transform reads as identity.
@@ -23,8 +28,73 @@ func _process(_delta: float) -> bool:
 		return false
 	_done = true
 	_run()
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+	return false
+
+
+# 2026-10-10 (w13 LANTERN-SHELLS): the mast branch of the hero hook's _dress_mast, reachable now that a beacon built with
+# authored = false keeps its copper mast. The mast beacon replaces the game's lantern, a Warden sits on its mast, and the
+# hook splits the mast into two segments and six rails that keep every family's weak point clear.
+func _physics_process(_delta: float) -> bool:
+	if _game == null or _game.flow == null or _mast_done:
+		return false
+	_ticks += 1
+	if _ticks == 1:
+		_game.ctx.calm = true
+		_game.flow.force_warden = true
+		_game.flow.press_start()
+		_game.flow.choose_class(0)
+	if _ticks < 6:
+		return false
+	_mast_done = true
+	_run_mast()
+	_game.free()
 	quit(_t.verdict())
 	return false
+
+
+func _run_mast() -> void:
+	var hook = _game.presentation.hero_assets
+	var warden = _game.flow.warden
+	_t.check("a Warden spawned for the mast check", warden != null and hook.warden_of(warden).size() > 0)
+	if warden == null:
+		return
+	var lantern_beacon = _game.flow.beacon
+	_t.check("the game's beacon is the lantern", lantern_beacon.clamp_seat() != null)
+	var mast_beacon := Beacon.new()
+	mast_beacon.authored = false
+	_game.add_child(mast_beacon)
+	mast_beacon.setup()
+	_t.check("an unauthored beacon builds the mast and no lantern", mast_beacon.clamp_seat() == null and mast_beacon.get_node_or_null("LanternFrame") == null)
+	mast_beacon.global_position = Vector3(500, 0, 500)
+	_game.flow.beacon = mast_beacon
+	hook._restore_mast()
+	warden.global_position = mast_beacon.global_position + Vector3.UP * Beacon.MAST_HEIGHT * 0.5
+	hook._dress_mast(warden)
+	_t.check("the mast branch ran for this Warden", not hook._mast.is_empty() and hook._mast.owner == warden.get_instance_id() and hook._mast.root != null)
+	if hook._mast.is_empty() or hook._mast.root == null:
+		return
+	var support: Node3D = hook._mast.root
+	var segments := 0
+	var rails := 0
+	var minimum := INF
+	for visual in support.get_children():
+		var centre: Vector3 = visual.to_local(warden.family_point_at())
+		if visual.mesh is BoxMesh:
+			rails += 1
+			var half: Vector3 = visual.mesh.size * 0.5
+			minimum = minf(minimum, centre.distance_to(centre.clamp(-half, half)))
+		else:
+			segments += 1
+			minimum = minf(minimum, absf(centre.y) - (visual.mesh as CylinderMesh).height * 0.5)
+	_t.eq("mast split into two segments", segments, 2)
+	_t.eq("mast braced by six rails", rails, 6)
+	_t.check("the split mast keeps the weak point clear", minimum >= Warden.FAMILY_POINT_RADIUS, "%.3f m, sphere %.1f m" % [minimum, Warden.FAMILY_POINT_RADIUS])
+	_t.check("the original mast is hidden", mast_beacon.get_children().any(func(c): return c is MeshInstance3D and c.mesh is CylinderMesh and c.layers == 0))
+	hook._restore_mast()
+	_t.check("the mast restores", hook._mast.is_empty() and (not is_instance_valid(support) or support.is_queued_for_deletion()))
 
 
 func _run() -> void:
