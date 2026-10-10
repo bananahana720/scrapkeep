@@ -117,8 +117,9 @@ func _state(node: Node) -> Array:
 		result.append(node.transform)
 		result.append(node.visible)
 	# 2026-10-09 swap-wave 12-F (merge of the barge and valve re-pins): recipe views carry surface overrides
-	# and no material_override; hash their slots instead of skipping them.
-	if node is MeshInstance3D:
+	# and no material_override; hash their slots instead of skipping them. The recipe barge's deck
+	# keeps its node but no mesh, so a mesh-less view is skipped.
+	if node is MeshInstance3D and node.mesh != null:
 		result.append(hash(node.mesh.get_faces()))
 		var mat: StandardMaterial3D = node.material_override
 		if mat == null:
