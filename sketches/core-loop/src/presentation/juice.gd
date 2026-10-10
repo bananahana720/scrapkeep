@@ -19,8 +19,9 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 # apart and spend at most STOP_BUDGET_MS a second, so rapid fire and a Katamari
 # roll-up tick instead of stutter. A deflected hit clanks and never stops. The spine
 # caps a stop at 60 ms and refuses to stack; Engine.time_scale never touches velocity.
-# A reduced-motion hit-edge flash keeps this share of its alpha (SettingsStore.REDUCED_FLASH).
-const REDUCED_FLASH := 0.25
+const SettingsStore := preload("res://src/ui/settings_store.gd")
+# A reduced-motion hit-edge flash keeps this share of its alpha; the store owns the number.
+const REDUCED_FLASH: float = SettingsStore.REDUCED_FLASH
 const SPINE_CAP_MS := 60.0
 const STOP_FLOOR_MS := 4.0
 const STOP_TRIM_FLOOR_MS := 8.0

@@ -55,6 +55,16 @@ test("a new record prints the table, posture, packs and causes", () => {
   );
 });
 
+test("wave 13 pack rows print the faction with its kinds", () => {
+  const stages = [{ ...newRecord.stages[0], packs: [
+    { faction: "fleet", kinds: ["chaser", "lobber"] },
+    { faction: "fleet", kinds: ["chaser", "lobber"] },
+    { faction: "swarm", kinds: [] },
+  ] }];
+  const line = summarize({ ...newRecord, stages }, 90);
+  assert.match(line, /\| packs fleet\[chaser\+lobber\]x2,swarmx1 \|/);
+});
+
 test("the last line of a run is the run, and the CLI reads both kinds", () => {
   const early = { ...newRecord, outcome: "running" };
   const text = [oldRecord, early, newRecord].map((one) => JSON.stringify(one)).join("\n");

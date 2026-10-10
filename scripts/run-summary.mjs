@@ -72,9 +72,20 @@ function seconds(ticks, rate) {
   }
 }
 
+// A pack row is a faction string in old records and {faction, kinds} since wave 13.
+function packLabel(item) {
+  if (item && typeof item === "object") {
+    const kinds = Array.isArray(item.kinds) ? item.kinds.join("+") : "";
+    return kinds ? `${item.faction ?? DASH}[${kinds}]` : `${item.faction ?? DASH}`;
+  } else {
+    return item;
+  }
+}
+
 function tally(items) {
   const counts = new Map();
-  for (const item of items) {
+  for (const raw of items) {
+    const item = packLabel(raw);
     counts.set(item, (counts.get(item) ?? 0) + 1);
   }
   if (counts.size === 0) {
