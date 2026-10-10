@@ -2,6 +2,8 @@ extends RefCounted
 
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const DigFx := preload("res://src/presentation/dig_fx.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 # The Dig's scenery (alpha dress push, unit WDG): both zones' landmarks, cut faces, rubble,
 # struts, carts, shells and lamp lines along the rim, the drum look on every breach cover, the
@@ -13,25 +15,21 @@ const DigFx := preload("res://src/presentation/dig_fx.gd")
 # The directories are static vars so a test can point them at nothing and see the fallback.
 static var stone_dir := "res://assets/models/dig_stone/"
 static var mech_dir := "res://assets/models/dig_mechanical/"
+# The authored ore cart (tools/blender/ore_cart.py) lives with the other recipe GLBs.
+static var cart_dir := "res://assets/models/"
+# The resource paths come from the one material slot table (material_slots.gd).
 const SLOTS := {
-	"stone": "res://assets/materials/dig_stone/stone.tres",
-	"steel": "res://assets/materials/dig_mechanical/steel.tres",
-	"enamel": "res://assets/materials/dig_mechanical/enamel.tres",
-	"elastomer": "res://assets/materials/dig_mechanical/elastomer.tres",
-	"glass": "res://assets/materials/dig_mechanical/glass.tres",
+	"stone": MaterialSlots.SLOTS["stone"]["path"],
+	"steel": MaterialSlots.SLOTS["steel"]["path"],
+	"enamel": MaterialSlots.SLOTS["enamel"]["path"],
+	"elastomer": MaterialSlots.SLOTS["elastomer"]["path"],
+	"glass": MaterialSlots.SLOTS["glass"]["path"],
 }
 const MINT := Color("8bf0d3")
 # Warm white, not amber: amber belongs to an offered landing or reward (SHEET.md).
 const LAMP_LIGHT := Color.WHITE
-const APRON := 8.0
 const BURY := 0.25
 const ASSEMBLY_LIFT := 0.03
-# Per zone: [cut faces per edge (long, scoop), rubble, struts, carts, shells]. Zone A favours long
-# cuts, zone B scooped faces and sheltered recesses; B keeps the machines sparse (BUILD-SPEC).
-const MIX := {
-	"dig": {"long": 8, "scoop": 3, "rubble": 12, "strut": 5, "cart": 2, "shell": 3},
-	"dig_deep": {"long": 3, "scoop": 8, "rubble": 12, "strut": 2, "cart": 1, "shell": 6},
-}
 # The rim begins to climb at 162 m (Features.rim); everything stands at or beyond 160.
 const FACE_C := 166.0
 const TOE_C := 161.0
@@ -47,6 +45,7 @@ const EDGES := [
 var _dir_cache := {}
 var _warnings := {}
 var _fx: Node3D
+var _cart_bodies: Array[Transform3D] = []
 
 
 # Built on first entry, not at boot: building the Dig's terrain at game start changes
@@ -83,7 +82,7 @@ func _build(scenery: Node3D, stage_root: Node3D, map: RefCounted, map_id: String
 	var ground := func(x: float, z: float) -> float: return float(map.sample(x, z)[0])
 	var batches := {}
 	_ground_beds(scenery, stage_root)
-	_edges(batches, ground, map_id)
+	_edges(batches, ground, map_id, map.scatter["mix"])
 	_landmark(batches, ground, map_id)
 	_flush(scenery, batches)
 	_lamp_lines(batches, ground, map_id)
@@ -100,8 +99,9 @@ class GroundBeds extends Node:
 	var material: Material
 
 	func _sync_dressing() -> void:
-		# The target preset owns every ground (target_material_test); the beds stand in the others.
-		if view != null and material != null and GraphicsPreset.current != "target":
+		# The beds stand in every preset: the shipped high and its target alias keep a prebuilt slot
+		# resource (GraphicsPreset._apply_material), and low gets the beds put back here.
+		if view != null and material != null:
 			view.material_override = material
 
 
@@ -142,6 +142,23 @@ func _slot_material(slot: String) -> Material:
 		_warn_once(path, "%s missing or malformed, that material keeps the fallback" % path)
 	_dir_cache[slot] = material
 	return material
+
+
+# A GLB's socket nodes whose names start with the prefix, each as its transform in the GLB's space.
+func _sockets(path: String, prefix: String) -> Array:
+	var key := path + "#" + prefix
+	if _dir_cache.has(key):
+		return _dir_cache[key]
+	var out := []
+	if ResourceLoader.exists(path):
+		var packed := load(path) as PackedScene
+		if packed != null:
+			var scene := packed.instantiate()
+			for socket: Node3D in scene.find_children(prefix + "*", "Node3D", true, false):
+				out.append(_relative(socket, scene))
+			scene.free()
+	_dir_cache[key] = out
+	return out
 
 
 # One entry per mesh in a GLB: {name, mesh, local, slot, material}; empty when the GLB is
@@ -235,6 +252,11 @@ func _flush(scenery: Node3D, batches: Dictionary) -> void:
 			_fx.lamp_views.append(view)
 		batch["xf"] = []
 	batches.clear()
+	# One shell node per cart per layer, so Godot measures each fade from its own cart.
+	for body in _cart_bodies:
+		for shell in RecipeProps.shells("ore_cart", scenery, body):
+			GraphicsPreset.register_scenery(shell)
+	_cart_bodies.clear()
 
 
 # A point on an edge band: c metres out along the normal, a along the tangent.
@@ -262,10 +284,9 @@ static func _seat(ground: Callable, edge: Dictionary, c: float, a: float, half: 
 	return Vector2(low, high - low)
 
 
-func _edges(batches: Dictionary, ground: Callable, map_id: String) -> void:
+func _edges(batches: Dictionary, ground: Callable, map_id: String, mix: Dictionary) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("dig_scenery_" + map_id).hash()
-	var mix: Dictionary = MIX.get(map_id, MIX["dig"])
 	var kinds := {"long": "cut_face_long.glb", "scoop": "cut_face_scoop.glb"}
 	var halves := {"long": 4.0, "scoop": 3.0}
 	for edge in EDGES:
@@ -336,10 +357,12 @@ func _cart(batches: Dictionary, ground: Callable, edge: Dictionary, rng: RandomN
 	var p := _at(edge, c, a)
 	var yaw: float = float(edge["yaw"]) + PI * 0.5 + rng.randf_range(-0.2, 0.2)
 	var body := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(p.x, seat.x, p.y))
-	if not _put(batches, _mech("cart_body.glb"), body):
+	var body_path := cart_dir + "ore_cart_body.glb"
+	if not _put(batches, body_path, body):
 		return
-	for socket in [Vector3(-0.74, 0.3, -0.95), Vector3(0.74, 0.3, -0.95), Vector3(-0.74, 0.3, 0.95), Vector3(0.74, 0.3, 0.95)]:
-		_put(batches, _mech("cart_wheel.glb"), body * Transform3D(Basis.IDENTITY, socket))
+	for socket: Transform3D in _sockets(body_path, "socket_wheel_"):
+		_put(batches, cart_dir + "ore_cart_wheel.glb", body * socket)
+	_cart_bodies.append(body)
 
 
 # Zone A: the broken Daylight Cut pump impeller, upright in the south wall, face toward -Z, 30

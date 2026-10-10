@@ -50,7 +50,9 @@ func _build_tool() -> void:
 				_paddle = mi
 			else:
 				mi.name = "SwatterBody"
-				mi.set_surface_override_material(part.body, _material)
+				# A body mesh with no fleet_paint surface keeps its own finish (F012).
+				if part.body >= 0:
+					mi.set_surface_override_material(part.body, _material)
 		return
 	_paddle = Node3D.new()
 	_paddle.position = Vector3(0.0, -CREW_HALF + 0.5, 0.0)

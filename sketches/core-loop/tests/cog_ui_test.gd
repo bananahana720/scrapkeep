@@ -5,6 +5,9 @@ const Intent := preload("res://src/movement/intent.gd")
 const Items := preload("res://src/build/items.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const Fabricators := preload("res://src/build/fabricators.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # The cog wallet on screen (CG2): scrap is mass, cogs are money, and every place that
 # showed scrap as a wallet now shows cogs.
@@ -14,6 +17,8 @@ const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 #   - the HUD's wallet reads run.cogs while playing;
 #   - the run summary carries cogs;
 #   - a fabricator hoop's label names cogs and WorldPrompt.parse still reads it as a fabricator;
+#   - the hoop is the authored recipe (no torus), standing across its line around the trigger band,
+#     and its steel wears the state tint: dark copper short of cogs, amber when you can buy;
 #   - an activity's payout adds cogs beside its mass;
 #   - an item whose effect is scrap reads as mass, not money.
 # Every wait is a counted physics frame; none reads the wall clock.
@@ -125,14 +130,51 @@ func _hoop() -> void:
 	var fab: Dictionary = fabs.add_at(at, Vector3(0.0, 0.0, 1.0), "long_spool")
 	fabs.step(Vector3(0.0, 500.0, 0.0), 0.016, 0, [])
 	var poor: String = fab["text"]
+	var poor_tint: Array = _tints(fab)
 	var price: int = fabs.price("long_spool", 0)
 	fabs.step(Vector3(0.0, 500.0, 0.0), 0.016, price + 100, [])
 	var ready: String = fab["text"]
+	var ready_tint: Array = _tints(fab)
+	_hoop_recipe(fab, poor_tint, ready_tint)
 	var parsed: Dictionary = WorldPrompt.parse(ready)
 	_check("hoop label", poor.contains("need %d cogs (have 0)" % price) and ready.contains("ROLL THROUGH: %d cogs" % price)
 			and not ready.contains("scrap") and parsed["icon"] == "obj_fabricator",
 		"short \"%s\"; ready \"%s\"; parsed icon %s" % [poor.replace("\n", " / "), ready.replace("\n", " / "), parsed["icon"]])
 	fabs.clear()
+
+
+# The state tint on each steel view of the hoop's base (the views that wear the hoop's state).
+func _tints(fab: Dictionary) -> Array:
+	var base: Array[GeometryInstance3D] = []
+	base.assign((fab["node"] as Node3D).find_children("fabricator_hoop_*", "MeshInstance3D", false, false))
+	return RecipeProps.steel_views(base).map(func(v): return v.get_instance_shader_parameter("state_tint"))
+
+
+# SWAP-WAVE 12-F (2026-10-09): the greybox torus became the recipe hoop; these checks pin the swap.
+func _hoop_recipe(fab: Dictionary, poor_tint: Array, ready_tint: Array) -> void:
+	var node: Node3D = fab["node"]
+	var tori := node.find_children("*", "MeshInstance3D", true, false).filter(func(m): return m.mesh is TorusMesh)
+	var base := node.find_children("fabricator_hoop_*", "MeshInstance3D", false, false)
+	var shells := node.find_children("*", "MeshInstance3D", false, false).filter(func(m): return m.has_meta(RecipeProps.META_FADE))
+	_check("hoop recipe views", tori.is_empty() and base.size() == 2 and shells.size() == RecipeProps.shell_rows("fabricator_hoop").size(),
+		"torus %d, base views %d (want 2), shells %d" % [tori.size(), base.size(), shells.size()])
+	_check("hoop state tint", poor_tint == [Fabricators.state_tint(false)] and ready_tint == [Fabricators.state_tint(true)]
+			and Fabricators.state_tint(true) != Fabricators.state_tint(false),
+		"one steel view each time; short of cogs %s, ready %s" % [poor_tint, ready_tint])
+	var box := AABB()
+	for i in base.size():
+		var m: MeshInstance3D = base[i]
+		var b: AABB = node.global_transform * m.transform * m.mesh.get_aabb()
+		box = b if i == 0 else box.merge(b)
+	var facing: Vector3 = fab["facing"]
+	var along := box.size.dot(facing.abs())
+	var across := box.size.dot(facing.cross(Vector3.UP).abs())
+	var ground: float = (fab["at"] as Vector3).y
+	# The visible ring stands on the ground across its line and covers the trigger band (step: rel.y < RING * 2 - SINK,
+	# side within WIDTH / 2 + 0.5); the band is several class I balls tall.
+	_check("hoop bounds", absf(box.position.y - ground) < 0.05 and box.end.y - ground >= Fabricators.RING * 2.0 - Fabricators.SINK
+			and across >= Fabricators.WIDTH + 1.0 and along < 3.0 and box.size.y > Tuning.RADIUS * 8.0,
+		"ground %.2f, box %s, along facing %.2f, across %.2f, ball radius %.2f" % [ground, box, along, across, Tuning.RADIUS])
 
 
 func _text() -> void:

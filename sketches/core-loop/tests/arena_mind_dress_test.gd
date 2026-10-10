@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
 const Dress := preload("res://src/presentation/arena_mind_dress.gd")
 const T := preload("res://tests/support/t.gd")
@@ -87,9 +88,26 @@ func _run() -> void:
 	await physics_frame
 	_t.eq("new run leaves no summit node", _game.find_children(Dress.NODE_NAME, "Node3D", true, false).size(), 0)
 
-	saved = _enter()
+	# 2026-10-09 re-pin (wave 12 VX-LIGHT b089655): every stage entry applies its world look row
+	# (world_look.gd, slot "world") and the Mind's look rides slot "arena" above it, so leaving the
+	# arena for stage 5 lands on stage 5's world row, not on the values _enter() wrote by hand. The
+	# reference is the same stage 6 to stage 5 move with no arena between; the sky stays the saved one.
+	_game.flow.enter_stage(_game.ctx.stages.last_of(3), Vector3.ZERO, false)
 	_game.flow.enter_stage(5, Vector3.ZERO, false)
-	_assert_environment("stage exit restores", saved)
+	var stage_look := _environment()
+	saved = _enter()
+	var fight_look := _environment()
+	_game.flow.enter_stage(5, Vector3.ZERO, false)
+	var after_exit := _environment()
+	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). Stage 5 is world 3, whose row says
+	# sky "hdri", so stage entry sets the one cached Palette.hdri_sky(); the hand-written sky that
+	# _enter() writes is replaced by the row on stage entry, so the old saved["sky"] can never return.
+	_t.check("stage exit restores sky", after_exit["sky"] == stage_look["sky"])
+	_t.check("stage exit lands on the shared HDRI sky, not a rebuilt one", after_exit["sky"] == Palette.hdri_sky())
+	_t.check("the fight does not keep the stage's HDRI sky (Mind arena builds its own)", fight_look["sky"] != Palette.hdri_sky())
+	for key in ["ambient", "exposure", "saturation", "sun_color", "sun_rotation"]:
+		_t.check("stage exit lands on stage 5's world look " + key, after_exit[key] == stage_look[key],
+			"got %s, want %s, fight %s" % [after_exit[key], stage_look[key], fight_look[key]])
 	_t.eq("stage exit releases the visual node", mod._arena_dress, null)
 
 	# The broken-folder case is also run as an external fixture: the exact same dressing

@@ -1,4 +1,6 @@
 extends SceneTree
+# 2026-10-09 re-pin (VX-WIRE): the shipped high carries set dressing and air motes (presentation.gd reads the
+# preset switches, not "target"), so high is the dressed baseline and low the bare one.
 
 const Game := preload("res://src/game.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
@@ -70,10 +72,11 @@ func _run() -> void:
 	for i in 120:
 		await physics_frame
 	paused = true
-	var original_nodes := _node_count(game)
-	check(game.find_children("TargetSetDressing", "", true, false).is_empty(), "high has zero dressing and air nodes")
+	var high_nodes := _node_count(game)
+	check(not game.find_children("TargetSetDressing", "", true, false).is_empty(), "shipped high carries the dressing and air nodes")
 	Preset.apply("low")
-	check(_node_count(game) == original_nodes and game.find_children("TargetSetDressing", "", true, false).is_empty(), "low has identical node count and zero dressing/air")
+	var original_nodes := _node_count(game)
+	check(original_nodes < high_nodes and game.find_children("TargetSetDressing", "", true, false).is_empty(), "low has fewer nodes and zero dressing/air")
 	Preset.apply("target")
 	var dressing = game.presentation.set_dressing
 	check(dressing != null and dressing.map_id == "spillway" and dressing.seed_value == "spillway".hash(), "target dressing seeded from map id")
@@ -176,10 +179,10 @@ func _run() -> void:
 	Preset.apply("high")
 	# The enemy is the only deliberately added gameplay node in this test.
 	enemy.free()
-	check(game.find_children("TargetSetDressing", "", true, false).is_empty() and _node_count(game) == original_nodes, "target to high restores original node count")
+	check(not game.find_children("TargetSetDressing", "", true, false).is_empty() and _node_count(game) == high_nodes, "target to high restores the high node count")
 	Preset.apply("target")
 	Preset.apply("low")
-	check(game.find_children("TargetSetDressing", "", true, false).is_empty() and _node_count(game) == original_nodes, "target to low restores original node count")
+	check(game.find_children("TargetSetDressing", "", true, false).is_empty() and _node_count(game) == original_nodes, "target to low restores the low node count")
 	game.free()
 	Preset.apply("high")
 	await _reach_checks()

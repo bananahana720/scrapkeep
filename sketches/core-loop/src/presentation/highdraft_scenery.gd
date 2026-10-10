@@ -13,6 +13,7 @@ const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const HighdraftMap := preload("res://src/world/map_highdraft.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 
 const DIR := "res://assets/models/highdraft/"
@@ -83,10 +84,15 @@ static func apply_environment(terrain, root: Node3D) -> void:
 	if env == null:
 		return
 	var sun := _sun(root)
-	if _sky == null:
-		_sky = _sky_material()
-	var sky := Sky.new()
-	sky.sky_material = _sky
+	var look: Dictionary = WorldLook.ROWS[3]
+	var values := {"ambient_light_color": LOOK["ambient"], "fog_light_color": LOOK["fill"],
+		"tonemap_exposure": look.exposure, "adjustment_saturation": look.saturation}
+	if look.sky == "own":
+		if _sky == null:
+			_sky = _sky_material()
+		var sky := Sky.new()
+		sky.sky_material = _sky
+		values["sky"] = sky
 	var lights := []
 	var key_rotation: Vector3 = LOOK["key_rotation"]
 	if sun != null:
@@ -96,8 +102,7 @@ static func apply_environment(terrain, root: Node3D) -> void:
 		if fill != null:
 			lights.append({"object": fill, "values": {"light_color": LOOK["fill"],
 				"rotation": Vector3(deg_to_rad(-40.0), deg_to_rad(key_rotation.y + 180.0), 0.0)}})
-	GraphicsPreset.set_lighting(root, env, {"sky": sky, "ambient_light_color": LOOK["ambient"],
-		"fog_light_color": LOOK["fill"], "tonemap_exposure": 1.05, "adjustment_saturation": 1.15}, lights, "highdraft")
+	GraphicsPreset.set_lighting(root, env, values, lights, "highdraft")
 
 
 static func restore_environment(terrain) -> void:
@@ -438,29 +443,13 @@ static func _strip(into: Array[Transform3D], from: Vector2, to: Vector2, from_y:
 		into.append(Transform3D(basis, Vector3(at.x, lerpf(from_y, to_y, t), at.y) + y_axis * STRIP_LIFT))
 
 
-# The barge's own tilted deck node carries the skin, so it leans with the scripted settle; its
-# greybox nodes stay for the carry rule; the deck mesh is cleared and hull, jets and bands hidden.
+# The barge's own tilted deck node carries its recipe views (contraptions.gd _build_barge), so the
+# rig leans with the scripted settle: the sail and pennant ride the deck too.
 static func _barges(contraptions: Node) -> void:
-	var skin_mesh := _mesh("barge_skin.glb", "HardwareSkin")
-	if skin_mesh == null:
-		return
 	for barge in contraptions.barges:
-		var body: Node3D = barge["body"]
 		var deck: MeshInstance3D = barge["deck"]
-		if deck.get_node_or_null("HighdraftBargeSkin") != null:
+		if deck.get_node_or_null("HighdraftWeatherSail") != null:
 			continue
-		for child in body.get_children():
-			if child is MeshInstance3D:
-				child.visible = false
-		var skin := MeshInstance3D.new()
-		skin.name = "HighdraftBargeSkin"
-		skin.mesh = skin_mesh
-		skin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		deck.add_child(skin)
-		skin.visible = true
-		# The hidden deck node hides its children, so the deck stays visible and bare instead.
-		deck.visible = true
-		deck.mesh = null
 		# Reuse the kit's rig for a full weather sail and a small corner pennant.
 		for marker in [
 			{"name": "HighdraftWeatherSail", "at": Vector3(5.5, 1.0, -5.5), "scale": 1.0},
@@ -530,6 +519,8 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	var arrays := grid.mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	if arrays[Mesh.ARRAY_INDEX] == null:
+		# A grid with no index buffer cannot be trimmed, but it still wears the catch floor.
+		GraphicsPreset.set_ground_material(grid, _catch_material())
 		return
 	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	var rect: Rect2 = map.play_rect
@@ -556,6 +547,10 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	scenery.add_child(relief)
 	grid.name = "GridFloor"
 	grid.visible = false
+	GraphicsPreset.set_ground_material(relief, _catch_material())
+
+
+static func _catch_material() -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://assets/materials/highdraft/catch_floor.gdshader")
 	material.set_shader_parameter("floor_map", Palette.painted_texture(256, true))
@@ -564,16 +559,12 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 	material.set_shader_parameter("deck_tint", (LOOK["bone"] as Color).lerp(LOOK["charcoal"], 0.45))
 	material.set_shader_parameter("net_height", HighdraftMap.NET_H)
 	material.set_shader_parameter("net_pitch", 4.0)
-	GraphicsPreset.set_ground_material(relief, material)
+	return material
 
 
 # The padded perimeter in the catch amber the sheet keeps for offered lift and catch edges.
 static func net_edge_material() -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = LOOK["catch_edge"]
-	material.albedo_texture = Palette.painted_texture(256)
-	material.roughness = 0.85
-	return material
+	return Palette.nosing_material()
 
 
 static func _net_deck(parent: Node3D, map) -> void:
@@ -714,7 +705,6 @@ const PROPS := [
 	{"file": "prop_bench.glb", "node": "Surface", "weight": 1, "size": 2.0},
 	{"file": "prop_lamp_body.glb", "node": "Surface", "weight": 1, "size": 0.7},
 ]
-const PER_ISLAND := {"small": 4, "medium": 5, "large": 6}
 
 
 # Props stand in a ring near each island's rim, 2.5 to 6 m in from the edge, off every route:
@@ -732,7 +722,7 @@ static func _props(parent: Node3D, map) -> void:
 		var top: float = isle["top"]
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(String(id)) ^ int(radius * 100.0)
-		var want: int = PER_ISLAND["large" if radius >= 20.0 else ("medium" if radius >= 15.0 else "small")]
+		var want: int = map.scatter["per_preset"]["large" if radius >= 20.0 else ("medium" if radius >= 15.0 else "small")]
 		var placed: Array[Vector2] = []
 		var tries := 0
 		while placed.size() < want and tries < 80:

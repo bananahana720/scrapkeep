@@ -9,6 +9,7 @@ const Highdraft := preload("res://src/world/map_highdraft.gd")
 const DigDeep := preload("res://src/world/map_dig_deep.gd")
 const HighdraftCrown := preload("res://src/world/map_highdraft_crown.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const Scatter := preload("res://src/world/scatter.gd")
 
 const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach, "dig": Dig, "highdraft": Highdraft, "dig_deep": DigDeep, "highdraft_crown": HighdraftCrown}
 
@@ -92,6 +93,7 @@ func _build_stage(i: int) -> void:
 	holder.name = "Stage%d" % (i + 1)
 	var heights := _build_ground(holder, m)
 	m.build_props(holder, _ground_at.bind(heights))
+	_build_scatter(holder, m, heights)
 	_roots[i] = holder
 	_heights[i] = heights
 	_parent.add_child(holder)
@@ -280,6 +282,32 @@ static func _ground_at(x: float, z: float, clearance: float, heights: PackedFloa
 	return Vector3(x, _grid_height(heights, x, z) + clearance, z)
 
 
+# The map's scatter rows, added after every other child of the stage so the nodes' sibling order
+# (and every path a test or a tool keys on it) stays what it was.
+static func _build_scatter(holder: Node3D, m: RefCounted, heights: PackedFloat32Array) -> void:
+	var scatter: Dictionary = m.get("scatter") if m.get("scatter") is Dictionary else {}
+	if (scatter.get("kit", []) as Array).is_empty():
+		return
+	var relief: Dictionary = scatter.get("relief", {})
+	var ground := _ground_at.bind(heights)
+	if not relief.is_empty():
+		ground = _relief_at.bind(heights, _relief_noise(relief), float(relief["amp"]))
+	Scatter.build(holder, m, ground)
+
+
+# The relief view's height at (x, z): the collider's grid plus the same seeded noise the view mesh draws.
+static func _relief_at(x: float, z: float, clearance: float, heights: PackedFloat32Array, noise: FastNoiseLite, amp: float) -> Vector3:
+	return Vector3(x, _grid_height(heights, x, z) + noise.get_noise_2d(x, z) * amp + clearance, z)
+
+
+static func _relief_noise(row: Dictionary) -> FastNoiseLite:
+	var noise := FastNoiseLite.new()
+	noise.seed = String(row["seed"]).hash()
+	noise.frequency = 1.0 / float(row["period"])
+	noise.fractal_octaves = 2
+	return noise
+
+
 func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	var heights := PackedFloat32Array()
 	heights.resize(SIDE * SIDE)
@@ -346,8 +374,12 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 
+	# The collider keeps the 2 m grid; a map with a relief row draws a finer, noisier view.
+	# A map without a scatter table (a test double) has no relief and no scatter row.
+	var scatter: Dictionary = m.get("scatter") if m.get("scatter") is Dictionary else {}
+	var relief: Dictionary = scatter.get("relief", {})
 	var view := MeshInstance3D.new()
-	view.mesh = mesh
+	view.mesh = _relief_mesh(relief, heights, colors) if not relief.is_empty() else mesh
 	view.material_override = Palette.ground_material()
 	preload("res://src/presentation/graphics_preset.gd").register_ground(view)
 	var body := StaticBody3D.new()
@@ -358,6 +390,77 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 	body.add_child(view)
 	parent.add_child(body)
 	return heights
+
+
+# The visual ground at STEP / sub: the collider's own triangles (the same diagonal per sub-cell,
+# so each vertex lies on the coarse face) plus a seeded noise offset under amp metres, with the
+# coarse colours interpolated and the dips shaded.
+static func _relief_mesh(row: Dictionary, heights: PackedFloat32Array, coarse: PackedColorArray) -> ArrayMesh:
+	var sub: int = row["sub"]
+	var amp: float = row["amp"]
+	var shade: float = row["shade"]
+	var noise := _relief_noise(row)
+	var cells := CELLS * sub
+	var side := cells + 1
+	var step := STEP / sub
+	var fine := PackedFloat32Array()
+	var verts := PackedVector3Array()
+	var colors := PackedColorArray()
+	var uvs := PackedVector2Array()
+	fine.resize(side * side)
+	verts.resize(side * side)
+	colors.resize(side * side)
+	uvs.resize(side * side)
+	for j in side:
+		var z := -HALF + j * step
+		for i in side:
+			var x := -HALF + i * step
+			var idx := j * side + i
+			var n := noise.get_noise_2d(x, z)
+			fine[idx] = _grid_height(heights, x, z) + n * amp
+			verts[idx] = Vector3(x, fine[idx], z)
+			uvs[idx] = Vector2(x, z) * 0.1
+			var ci := mini(i / sub, CELLS - 1)
+			var cj := mini(j / sub, CELLS - 1)
+			var fx := float(i - ci * sub) / sub
+			var fz := float(j - cj * sub) / sub
+			var top := coarse[cj * SIDE + ci].lerp(coarse[cj * SIDE + ci + 1], fx)
+			var bottom := coarse[(cj + 1) * SIDE + ci].lerp(coarse[(cj + 1) * SIDE + ci + 1], fx)
+			colors[idx] = top.lerp(bottom, fz).darkened(clampf(-n, 0.0, 1.0) * shade)
+	var normals := PackedVector3Array()
+	normals.resize(side * side)
+	for j in side:
+		for i in side:
+			var idx := j * side + i
+			var left: float = fine[idx - (1 if i > 0 else 0)]
+			var right: float = fine[idx + (1 if i < side - 1 else 0)]
+			var back: float = fine[idx - (side if j > 0 else 0)]
+			var front: float = fine[idx + (side if j < side - 1 else 0)]
+			normals[idx] = Vector3(left - right, 2.0 * step, back - front).normalized()
+	var indices := PackedInt32Array()
+	indices.resize(cells * cells * 6)
+	var w := 0
+	for j in cells:
+		for i in cells:
+			var a := j * side + i
+			var c := a + side
+			indices[w] = a
+			indices[w + 1] = a + 1
+			indices[w + 2] = c
+			indices[w + 3] = a + 1
+			indices[w + 4] = c + 1
+			indices[w + 5] = c
+			w += 6
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var fine_mesh := ArrayMesh.new()
+	fine_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return fine_mesh
 
 
 func _build_sky(parent: Node3D) -> void:

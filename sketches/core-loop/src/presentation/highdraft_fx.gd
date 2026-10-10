@@ -5,6 +5,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
@@ -19,8 +20,9 @@ const PULSE_SECONDS := 0.2
 const CATCH_RADIUS := 6.0
 const CHUNK := 32.0
 const CLOUD_WRAP := 650.0
-const MOTE_COUNTS := [18, 54]
-const STREAK_COUNTS := [6, 18]
+# Idle and occupied counts per column come from the thermal_ride JUICE row.
+static var MOTE_COUNTS: Array = EventKinds.juice("thermal_ride")["motes"]
+static var STREAK_COUNTS: Array = EventKinds.juice("thermal_ride")["streaks"]
 
 # Injectable only for the missing-resource proof. No preload that can break boot.
 static var shader_dir := SHADER_DIR
@@ -39,6 +41,8 @@ var _map
 var _last_ball := Vector3.INF
 var _cloud_wait := 0.0
 var _warned_net := false
+var _net_dust: Array[GPUParticles3D] = []
+var _net_dust_next := 0
 
 
 static func install(scenery: Node3D, presence: Node, map) -> Node3D:
@@ -51,6 +55,11 @@ static func install(scenery: Node3D, presence: Node, map) -> Node3D:
 	fx.name = "WindEffects"
 	fx._map = map
 	scenery.add_child(fx)
+	for i in int(FxLibrary.spec("net_dust")["pool"]):
+		var dust := FxLibrary.build("net_dust")
+		dust.name = "NetDust%d" % i
+		fx.add_child(dust)
+		fx._net_dust.append(dust)
 	for row in presence.thermals:
 		fx._thermal(row, rise)
 	var deck := scenery.get_node_or_null("NetDeck")
@@ -228,6 +237,10 @@ func catch_at(ball: Vector3) -> void:
 			active_catches.append(row)
 			material.set_shader_parameter("catch_point", Vector4(point.x, point.y, CATCH_DEPTH, CATCH_RADIUS))
 			_glow(row)
+	if not _net_dust.is_empty() and not reduced_motion:
+		var puff := _net_dust[_net_dust_next]
+		_net_dust_next = (_net_dust_next + 1) % _net_dust.size()
+		FxLibrary.fire(puff, "net_dust", "net_caught", int(FxLibrary.effects("net_caught")["net_dust"]), Vector3(ball.x, deck + 0.1, ball.z))
 
 
 # The existing landing signal arrives during force integration. Read the committed body

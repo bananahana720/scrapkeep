@@ -1,3 +1,4 @@
+# 2026-10-09 VX-FX: the burst is GPUParticles3D from fx_library (gravity lives on the process material); the lens shader strings now live in lamp_motion.gdshader; the Underlight is gone (no light, no glow puff).
 # smoke: solo (the presentation CPU budget is measured here)
 extends SceneTree
 
@@ -95,7 +96,7 @@ func _run() -> void:
 	t.check("mint ends at break and tabs hide", ghost.get_children().all(func(v):
 		var muted: bool = v.get_instance_shader_parameter("state_tint") == Fx.SLATE if v.get_meta("wedge", false) else v.material_override.get_shader_parameter("spent") == true
 		return muted and (not String(v.name).begins_with("tab_") or not v.visible)))
-	t.check("burst uses existing gravity and lifetime grammar", burst.get_node("Debris").gravity.y == -26.0
+	t.check("burst uses the fx table's gravity and lifetime grammar", (burst.get_node("Debris").process_material as ParticleProcessMaterial).gravity.y == -26.0
 		and burst.get_node("Dust").lifetime == 0.5 and burst.get_node("Debris").amount == 10)
 	fx.freeze_rupture(0.18)
 	t.check("wedges translate down and out at mid-rupture", rupture["wedges"].all(func(w):
@@ -139,7 +140,7 @@ func _run() -> void:
 	game.world._on_slammed(at, 20, 1)
 	t.eq("retry restores break presentation", fx.ruptures.size(), 1)
 	if fx.bursts.size() > 0:
-		t.eq("low reduces debris", fx.bursts[0]["node"].get_node("Debris").amount, 4)
+		t.check("low reduces debris", is_equal_approx(fx.bursts[0]["node"].get_node("Debris").amount_ratio * 10.0, 4.0))
 	Preset.apply("target")
 	t.check("target restores ambient motion", fx._ambient
 		and fx.lamp_views.all(func(v): return v.get_instance_shader_parameter("motion_enabled")))

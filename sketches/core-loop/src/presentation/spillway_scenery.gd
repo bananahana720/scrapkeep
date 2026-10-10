@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 # The existing cast slabs keep their exact geometry. Their finishes share the workshop's
 # concrete/paint/shutter kit; the signal insert adds directional safety paint, open grates
@@ -154,8 +155,6 @@ static func build(stage_root: Node3D) -> Node3D:
 	var recess: Array[Transform3D] = []
 	var metal: Array[Transform3D] = []
 	var rocks: Array[Transform3D] = []
-	var trunks: Array[Transform3D] = []
-	var leaves: Array[Transform3D] = []
 	var banners: Array[Transform3D] = []
 	var water: Array[Transform3D] = []
 	var pools: Array[Transform3D] = []
@@ -205,16 +204,13 @@ static func build(stage_root: Node3D) -> Node3D:
 	# each inside the box it replaces, so they take one identity placement.
 	_place(water, Vector3.ZERO, Vector3.ONE)
 	_place(pools, Vector3.ZERO, Vector3.ONE)
-	# Shoulders: 16 continuous hulls (below) replace the 64 shelves; 48 small scattered rocks and the
-	# cottonwoods keep their transforms.
+	# Shoulders: 16 continuous hulls (below) replace the 64 shelves; 48 small scattered rocks keep their
+	# transforms. The cottonwoods stand on the hull roots under the stage root (_cottonwoods).
 	for side in [-1.0, 1.0]:
 		for i in 8:
 			var z := -176.0 + i * 56.0
 			for j in 3:
 				_place(rocks, Vector3(side * (206 + j * 2), 31, z + j * 2), Vector3(0.5, 0.3, 0.7), j)
-	var cottonwoods := cottonwood_transforms()
-	trunks.append_array(cottonwoods["trunks"])
-	leaves.append_array(cottonwoods["leaves"])
 	# The rim skyline is the crown, saddle and headland families of GEOMETRY.md section 3, baked
 	# into the shoulder batch below. West crowns end at x=-158, east ones start at x=184.
 	var rim := rim_plan(Spillway.new())
@@ -255,12 +251,6 @@ static func build(stage_root: Node3D) -> Node3D:
 	for hull in shoulder_plan():
 		cliff.append_from(shoulder_mesh(hull), 0, Transform3D.IDENTITY)
 	cliff.index()
-	var trunk := CylinderMesh.new()
-	trunk.top_radius = 0.7
-	trunk.bottom_radius = 1.0
-	trunk.height = 2.0
-	trunk.radial_segments = 6
-	trunk.rings = 1
 	var canopy := SphereMesh.new()
 	# Spray cards: a two-triangle quad facing the play area with a soft radial alpha edge,
 	# so the shared triangle budget is not spent on spheres.
@@ -276,8 +266,6 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "Recesses", box, recess, Color("454943"))
 	_batch(scenery, "CopperValves", box, metal, Color("885e43"))
 	_batch(scenery, "SandstoneShoulders", cliff.commit(), [Transform3D.IDENTITY], Color("b37d50"))
-	_batch(scenery, "CottonwoodTrunks", trunk, trunks, Color("766744"))
-	_batch(scenery, "CottonwoodCrowns", canopy, leaves, Color("728249"))
 	_dam_detail(scenery)
 	_batch(scenery, "ValvePennants", box, banners, Color("6e8982"))
 	_batch(scenery, "SpillSheets", _water_edge_mesh("SpillSheets", box), water, Color.WHITE)
@@ -288,7 +276,51 @@ static func build(stage_root: Node3D) -> Node3D:
 	_batch(scenery, "LanternLenses", box, lamps, Color("f2cc88"))
 	_batch(scenery, "BallInsignia", canopy, glyphs, Color("e2ceb0"))
 	_merge_opaque(scenery)
+	_cottonwoods(stage_root)
 	return scenery
+
+
+# SWAP-WAVE 12-F: the shoulder cottonwoods are the cottonwood recipe, one tree per hull root under the stage root (not the
+# scenery batches, which bake and merge their children). The base trunk and crown are one MultiMesh per base view, an
+# instance per tree, each surface in the loader's slot material; the detail shells hang per tree under a holder at the
+# tree's frame, so each fades by its own distance.
+static func _cottonwoods(stage_root: Node3D) -> Node3D:
+	var group := Node3D.new()
+	group.name = "Cottonwoods"
+	stage_root.add_child(group)
+	var trees := cottonwood_trees()
+	var probe := Node3D.new()
+	for view: GeometryInstance3D in RecipeProps.base("cottonwood", probe, Transform3D.IDENTITY):
+		var source := view as MeshInstance3D
+		var mesh := source.mesh.duplicate() as ArrayMesh
+		for i in mesh.get_surface_count():
+			mesh.surface_set_material(i, source.get_surface_override_material(i))
+		var multi := MultiMesh.new()
+		multi.transform_format = MultiMesh.TRANSFORM_3D
+		multi.mesh = mesh
+		multi.instance_count = trees.size()
+		var origins := PackedVector3Array()
+		for i in trees.size():
+			var placed := cottonwood_frame(trees[i]) * source.transform
+			multi.set_instance_transform(i, placed)
+			origins.append(placed.origin)
+		var batch := MultiMeshInstance3D.new()
+		batch.name = source.name
+		batch.multimesh = multi
+		# A headless renderer keeps no instance buffer, so tests read the placements from here.
+		batch.set_meta("origins", origins)
+		batch.cast_shadow = source.cast_shadow
+		group.add_child(batch)
+		GraphicsPreset.register_scenery(batch)
+	probe.free()
+	for i in trees.size():
+		var holder := Node3D.new()
+		holder.name = "Cottonwood%02d" % i
+		group.add_child(holder)
+		holder.transform = cottonwood_frame(trees[i])
+		for shell in RecipeProps.shells("cottonwood", holder, Transform3D.IDENTITY):
+			GraphicsPreset.register_scenery(shell)
+	return group
 
 
 static func _water_edge_mesh(node_name: String, fallback: Mesh) -> Mesh:
@@ -438,10 +470,7 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	view.mesh = importer.get_mesh()
 	view.material_override = material
 	if label == "SandstoneShoulders":
-		var strata := ShaderMaterial.new()
-		strata.shader = preload("res://src/presentation/sandstone.gdshader")
-		strata.set_shader_parameter("cliff_only", true)
-		view.material_override = strata
+		view.material_override = Palette.rock_material()
 	elif label in ["SpillSheets", "Tailrace"]:
 		var flowing := ShaderMaterial.new()
 		flowing.shader = preload("res://src/presentation/spill_water.gdshader")
@@ -522,17 +551,30 @@ static func _eroded_rock() -> ArrayMesh:
 	return st.commit()
 
 
+# The one cottonwood table: a tree per shoulder hull root, {foot, size}; size is the round 1 crown factor, 0.2 to 1.0.
+static func cottonwood_trees() -> Array:
+	var trees := []
+	for hull in shoulder_plan():
+		for j in 4:
+			trees.append({"foot": hull["roots"][j], "size": 0.6 + 0.4 * sin(j * 2.3 + hull["i"])})
+	return trees
+
+
+# A tree's frame: the recipe GLB origin on the root, scaled by the tree's size.
+static func cottonwood_frame(tree: Dictionary) -> Transform3D:
+	return Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * float(tree["size"])), tree["foot"])
+
+
 # The cottonwood placements on the shoulder stacks, unchanged from round 1.
 static func cottonwood_transforms() -> Dictionary:
 	var trunks: Array[Transform3D] = []
 	var leaves: Array[Transform3D] = []
-	for hull in shoulder_plan():
-		for j in 4:
-			var foot: Vector3 = hull["roots"][j]
-			var size := 0.6 + 0.4 * sin(j * 2.3 + hull["i"])
-			_place(trunks, foot + Vector3(0, 3, 0), Vector3(0.55, 3, 0.55))
-			_place(leaves, foot + Vector3(-2, 6, 0), Vector3(5, 4, 4) * size)
-			_place(leaves, foot + Vector3(2, 8, 1), Vector3(4, 5, 4) * size)
+	for tree in cottonwood_trees():
+		var foot: Vector3 = tree["foot"]
+		var size: float = tree["size"]
+		_place(trunks, foot + Vector3(0, 3, 0), Vector3(0.55, 3, 0.55))
+		_place(leaves, foot + Vector3(-2, 6, 0), Vector3(5, 4, 4) * size)
+		_place(leaves, foot + Vector3(2, 8, 1), Vector3(4, 5, 4) * size)
 	return {"trunks": trunks, "leaves": leaves}
 
 

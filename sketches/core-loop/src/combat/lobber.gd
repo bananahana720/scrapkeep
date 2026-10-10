@@ -1,9 +1,10 @@
 extends "res://src/combat/enemy.gd"
 
 # The lobber stands and shells. Its job is to make a predictable line expensive: its
-# muzzle glows for TELEGRAPH seconds, then it commits a landing ring where you will
-# be if you hold your line, and the shell lands there FLIGHT seconds later. Only that
-# ring hurts (projectile.gd), so a change of line or a jump beats it at any speed.
+# muzzle glows for TELEGRAPH seconds, then it commits a landing ring LEAD of the way
+# along your held line (half the ball's FLIGHT travel, DESIGN-NOTES rule 12), and the
+# shell lands there FLIGHT seconds later. Only that ring hurts (projectile.gd), so a
+# change of line or a jump beats it at any speed.
 
 const CYCLE := 3.6
 const TELEGRAPH := 1.3

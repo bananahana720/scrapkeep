@@ -49,9 +49,7 @@ func setup(terrain_ref, player_ref = null) -> void:
 	vault_prompt.add_theme_color_override("font_color", Palette.AMBER)
 	vault_prompt.attach(_vault_anchor, Vector3.ZERO, VAULT_PROMPT_REACH)
 	_vault_anchor.add_child(vault_prompt)
-	if terrain.environment != null:
-		_base_fog = terrain.environment.fog_density
-		_base_fog_color = terrain.environment.fog_light_color
+	record_fog()
 	_dust_wall = MeshInstance3D.new()
 	var quad := QuadMesh.new()
 	quad.size = Vector2(420.0, 60.0)
@@ -59,6 +57,14 @@ func setup(terrain_ref, player_ref = null) -> void:
 	_dust_wall.material_override = Palette.unshaded(Color(FOG_COLOR.r, FOG_COLOR.g, FOG_COLOR.b, 0.45))
 	_dust_wall.visible = false
 	add_child(_dust_wall)
+
+
+# The haze starts from the fog the world row left on the environment, so a world's own depth fog
+# survives every rebuild and clear. WorldLook calls this after it enters a world's row.
+func record_fog() -> void:
+	if terrain != null and terrain.environment != null:
+		_base_fog = terrain.environment.fog_density
+		_base_fog_color = terrain.environment.fog_light_color
 
 
 func rebuild(director_ref) -> void:

@@ -487,9 +487,10 @@ func chunk_cracked() -> bool:
 	return _posture.cracked
 
 
-# What the rule says a hit does.
-func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
-	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating, "smash": smash, "tier": tier,
+# What the rule says a hit does. The judge meets the plating this kind and part meet
+# (plating_for: the choir brace, the open point), so combat.resolve passes the part (F004).
+func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "") -> Dictionary:
+	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating_for(hit_kind, part), "smash": smash, "tier": tier,
 			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point()})
 	if hit_kind == "guard_rack":
 		# A rack is posture pressure, not a contact on the core. Keep judge/apply's

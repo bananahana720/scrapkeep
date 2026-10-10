@@ -786,18 +786,34 @@ func _dress_warden(warden) -> void:
 		rec.lens = lens
 	_mount_mantle(warden, kit, rec)
 	warden.add_child(base)
-	# Conditional cool fill (LIGHTING-TARGETS, Warden): shadowless, 9 m, low energy, so the
-	# front barrel and left armour separate from the shared warm key.
-	var cool := OmniLight3D.new()
-	cool.name = "WardenCoolFill"
-	cool.light_color = Color("a8c2d4")
-	cool.light_energy = 0.9
-	cool.omni_range = 9.0
-	cool.omni_attenuation = 1.2
-	cool.shadow_enabled = false
-	cool.light_specular = 0.0
-	cool.position = Vector3(-4.5, 3.5, -5.5)
-	base.add_child(cool)
+	# Cool fill (LIGHTING-TARGETS, Warden) as an additive cool rim, so the barrel and armour separate from
+	# the shared warm key. No light: a Warden is freed on every beacon placement, and a light freed with
+	# it is the stage-freed light crash class (the cracked_cache.gd RIM_GLOW recipe: glow on its own mesh, no light).
+	if not _materials.has("warden_cool_fill"):
+		var shader := Shader.new()
+		shader.code = """shader_type spatial;
+render_mode blend_add, unshaded, depth_draw_never, cull_back;
+uniform vec3 tint : source_color = vec3(0.659, 0.761, 0.831);
+uniform float energy = 0.8;
+void fragment() {
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+	ALBEDO = tint * rim * energy;
+}
+"""
+		var cool := ShaderMaterial.new()
+		cool.shader = shader
+		_materials["warden_cool_fill"] = cool
+	# The rim draws as its own shell over the part (the cache glow's own-mesh recipe); a material
+	# overlay freed with a Warden logs a null material on the headless server.
+	for part in ["Tower", "Housing"]:
+		var view := base.get_node_or_null(part) as MeshInstance3D
+		if view != null and view.mesh != null:
+			var rim := MeshInstance3D.new()
+			rim.name = "CoolFill"
+			rim.mesh = view.mesh
+			rim.material_override = _materials["warden_cool_fill"]
+			rim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			view.add_child(rim)
 	for child in warden._look.get_children():
 		if child is MeshInstance3D and child.material_override == warden._look.body_material:
 			_hide_warden_mesh(child, rec)
@@ -1346,6 +1362,9 @@ func _dress_mast(warden) -> void:
 	var beacon = ctx.flow.beacon
 	if not is_instance_valid(beacon):
 		return
+	if beacon.clamp_seat() != null:
+		_clamp_lantern(warden, beacon.clamp_seat())
+		return
 	for child in beacon.get_children():
 		if not child is MeshInstance3D or not child.mesh is CylinderMesh:
 			continue
@@ -1384,6 +1403,15 @@ func _dress_mast(warden) -> void:
 		child.layers = 0
 		child.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		return
+
+
+# The lantern beacon is one authored mesh, and its recipe keeps every family's weak point clear of it around
+# the clamp seat (tools/blender/lantern_beacon.py socket_clamp), so the Warden sitting on the seat owns the
+# clamp and nothing is cut or added.
+func _clamp_lantern(warden, seat: Node3D) -> void:
+	if warden.global_position.distance_to(seat.global_position) > 0.01:
+		return
+	_mast = {"owner": warden.get_instance_id(), "mesh": null, "root": null, "seat": seat}
 
 
 func _mast_radius(cylinder: CylinderMesh, height: float) -> float:
@@ -1433,6 +1461,39 @@ func _dress_shelter(barge: Node) -> void:
 	barge.add_child(shelter)
 
 
+# moss_workshop.glb carries its own domed jukebox cabinet in the CabinDress mesh at the teal pad (Barge space
+# x -6.99..-4.85, y 0..3.22, z 7.91..9.29), and it enclosed the recipe jukebox bay.gd places there. Andrew chose the
+# recipe jukebox (2026-10-09, task #7), so the dressing draws without every triangle wholly inside this box; the
+# apron's corners (x -7.25/-4.75, z 5.75/8.25) lie outside it, so the pad stays.
+const WORKSHOP_JUKEBOX := AABB(Vector3(-7.2, -0.05, 7.85), Vector3(2.4, 3.4, 1.5))
+
+
+# A copy of mesh without the triangles wholly inside WORKSHOP_JUKEBOX (xform places mesh in Barge space); same
+# surfaces, materials and names. Built once per source mesh.
+func _without_jukebox(mesh: Mesh, xform: Transform3D) -> Mesh:
+	var key := "workshop_no_jukebox#%d" % mesh.get_instance_id()
+	if _meshes.has(key):
+		return _meshes[key]
+	var out := ArrayMesh.new()
+	for s in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(s)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var kept := PackedInt32Array()
+		for t in range(0, index.size(), 3):
+			var inside := true
+			for k in 3:
+				inside = inside and WORKSHOP_JUKEBOX.has_point(xform * verts[index[t + k]])
+			if not inside:
+				kept.append_array([index[t], index[t + 1], index[t + 2]])
+		arrays[Mesh.ARRAY_INDEX] = kept
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		out.surface_set_material(s, mesh.surface_get_material(s))
+		out.surface_set_name(s, (mesh as ArrayMesh).surface_get_name(s) if mesh is ArrayMesh else "")
+	_meshes[key] = out
+	return out
+
+
 func _dress_bay() -> void:
 	if ctx == null or not is_inside_tree():
 		return
@@ -1447,6 +1508,9 @@ func _dress_bay() -> void:
 	if workshop == null:
 		return
 	workshop.name = "HeroWorkshop"
+	for node in workshop.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		mi.mesh = _without_jukebox(mi.mesh, mi.transform)
 	paint(workshop, {"class": Palette.AMBER})
 	barge.add_child(workshop)
 	_dress_shelter(barge)

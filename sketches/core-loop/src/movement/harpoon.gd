@@ -12,8 +12,11 @@ const STICKY := 1.5
 
 
 # What a press would bite right now, in the record the reticle, the world marker and the
-# fire action share. Lock prefers an enemy inside the cone, seen from the ball, and otherwise
-# falls back to the centre ray, which takes an enemy or the world. Walkable ground is refused.
+# fire action share. Lock prefers an enemy inside the cone around the reticle: the angle is
+# measured from the camera (from, forward), so the cone sits on the crosshair, while reach,
+# the in-front test and line of sight are the ball's, since the line runs from the ball.
+# Otherwise it falls back to the centre ray, which takes an enemy or the world. Walkable
+# ground is refused.
 static func target(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array, from: Vector3,
 		forward: Vector3, ball: Vector3) -> Dictionary:
 	var reach: float = tuning.f("rope_range")

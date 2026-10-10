@@ -25,6 +25,11 @@ import { fileURLToPath } from "node:url";
 // --script, so this proves the exported pack, not the release template's runtime.
 // The proof runs before packaging, so a failed proof leaves no tarball. BUILD.txt records the
 // proof lines, or "win proof: not run" without the flag. A dirty tree adds -dirty to the package name.
+// After the headless release gate, the boss smoke boots the project on Vulkan once per boss on a
+// hidden display through tools/coordinator/gpu_queue.sh (card 1, shared), enters that world's last
+// stage and arena as the bot does and runs 300 ticks (tools/look_harness.gd --boss=): a crash, a
+// missing PASS line, a non-Vulkan device or an error line before the PASS fails the export, because
+// the headless gate cannot see the Forward+ light crash class (wave 11, the Waking boss entry).
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary =
@@ -53,6 +58,8 @@ export const WIN_PROOFS = [
   { label: "win proof (tally)", seed: TALLY_SEED, pilot: TALLY_PILOT, dir: "tally" },
 ];
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
+export const BOSS_SMOKE = ["bowl", "waking", "mind"];
+const gpuQueue = path.join(project, "tools/coordinator/gpu_queue.sh");
 
 export function missingStems(manifest, directory, exists = existsSync) {
   const missing = [];
@@ -210,6 +217,7 @@ export function buildStamp({
   stems,
   stemsFrom,
   winProof,
+  bossSmoke,
 }) {
   return (
     [
@@ -218,9 +226,67 @@ export function buildStamp({
       "built: " + stamp,
       "godot: " + godot,
       "stems: " + stems + " from " + stemsFrom,
+      ...(bossSmoke ? [bossSmoke] : []),
       winProof ?? "win proof: not run (pass --win-proof)",
     ].join("\n") + "\n"
   );
+}
+
+// One boss boot: the GPU queue on card 1 with its own hidden display, Godot on Vulkan with the
+// card index the queue exports.
+export function bossSmokeCommand({ queue, binary, project, boss }) {
+  return {
+    command: queue,
+    args: [
+      "--gpu", "1", "--need", "3000", "--name", "boss-smoke-" + boss, "--display", "--shared", "--",
+      "sh", "-c", 'exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"', binary,
+      "--rendering-driver", "vulkan", "--display-driver", "x11", "--path", project,
+      "--resolution", "1280x720", "--script", "res://tools/look_harness.gd", "--", "--boss=" + boss,
+    ],
+  };
+}
+
+const deviceLine = /^(\S+) [\d.]+ - [^-]+ - Using Device #\d+: (.+)$/m;
+
+export function bossSmokeFailures(boss, output, status, signal = null) {
+  const failures = [];
+  if (signal) failures.push(`${boss}: killed by ${signal}`);
+  else if (status !== 0) failures.push(`${boss}: exit ${status}`);
+  const lines = output.split("\n");
+  const pass = lines.findIndex((line) => line.startsWith(`BOSS_SMOKE boss=${boss} `) && line.trim().endsWith(" PASS"));
+  if (pass < 0) failures.push(`${boss}: no BOSS_SMOKE PASS line`);
+  for (const line of pass < 0 ? lines : lines.slice(0, pass))
+    if (/^(SCRIPT ERROR|ERROR)\b/.test(line) || /VK_ERROR|vulkan[^\n]*(error|fail)/i.test(line))
+      failures.push(`${boss}: ${line.trim()}`);
+  const device = output.match(deviceLine);
+  if (!device) failures.push(`${boss}: no "Using Device" line`);
+  else if (device[1] !== "Vulkan") failures.push(`${boss}: renderer ${device[1]}, not Vulkan`);
+  return failures;
+}
+
+// Error lines after the PASS line come from teardown; they are kept in the line, not failed.
+export function bossSmokeLine(boss, output) {
+  const lines = output.split("\n");
+  const pass = lines.find((line) => line.startsWith(`BOSS_SMOKE boss=${boss} `)) ?? "";
+  const ticks = pass.match(/ticks=(\d+)/)?.[1] ?? "?";
+  const stage = pass.match(/stage=(\d+)/)?.[1] ?? "?";
+  const device = output.match(deviceLine)?.[2] ?? "unknown device";
+  const after = lines.slice(lines.indexOf(pass) + 1).filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line)).length;
+  return `boss smoke ${boss}: PASS, stage ${stage} arena, ${ticks} ticks, Vulkan on ${device}` + (after > 0 ? `, ${after} teardown error lines` : "");
+}
+
+export function runBossSmoke({ runner, queue, binary, project, bosses = BOSS_SMOKE }) {
+  const lines = [];
+  const failures = [];
+  for (const boss of bosses) {
+    const { command, args } = bossSmokeCommand({ queue, binary, project, boss });
+    const result = runner(command, args);
+    const output = (result.stdout ?? "") + (result.stderr ?? "");
+    const found = bossSmokeFailures(boss, output, result.status, result.signal ?? null);
+    if (found.length > 0) failures.push(...found);
+    else lines.push(bossSmokeLine(boss, output));
+  }
+  return { lines, failures };
 }
 
 export function howToRun({ sha7 }) {
@@ -333,6 +399,15 @@ async function main() {
   const gateFailures = releaseGateFailures(gate.stdout + gate.stderr, gate.status);
   if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 
+  const smoke = runBossSmoke({
+    runner: (command, args) => run(command, args, { timeout: 900_000 }),
+    queue: gpuQueue,
+    binary,
+    project,
+  });
+  if (smoke.failures.length > 0) fail("boss smoke\n" + smoke.failures.join("\n"));
+  for (const line of smoke.lines) console.log(line);
+
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
   const outDir = path.join(root, "artifacts/local/core-loop-export", stamp);
   await mkdir(outDir, { recursive: true });
@@ -384,6 +459,7 @@ async function main() {
       stems: stemCount,
       stemsFrom,
       winProof: proofLine,
+      bossSmoke: smoke.lines.join("\n"),
     }),
   );
   await writeFile(

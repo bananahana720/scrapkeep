@@ -3,8 +3,12 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const Clearance := preload("res://tests/lantern_beacon_clearance_test.gd")
 
 # F6 2026-10-04: caps, magnet, brace, tint and shred checks are gone; the weak point opens on a stagger.
+# 2026-10-09 (w12 BEACON-CLAMP): the beacon is the authored lantern, so the mast checks become lantern checks when
+# the frame loads: the Warden sits on socket_clamp and owns the clamp with nothing cut, added or lit, and its weak
+# point clears the frame. Measured cause: with the lantern in, "active mast owner" failed (no mast to split).
 class LegacyGame extends "res://src/game.gd":
 	func _chosen_table():
 		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
@@ -17,6 +21,8 @@ var prior_id := 0
 var dead_ids: Array[int] = []
 var mast_original := {}
 var prior_support: Node3D
+var lantern: Node3D
+var frame_original := []
 
 
 func _initialize() -> void:
@@ -37,6 +43,9 @@ func _physics_process(_delta: float) -> bool:
 	ticks += 1
 	if ticks == 1:
 		check_chunk_asset(game.presentation.hero_assets)
+		lantern = game.flow.beacon.clamp_seat()
+		if lantern != null:
+			frame_original = frame_snapshot()
 		for child in game.flow.beacon.get_children():
 			if child is MeshInstance3D and child.mesh is CylinderMesh:
 				mast_original = {"node": child, "mesh": child.mesh, "material": child.material_override, "transform": child.transform, "layers": child.layers, "shadow": child.cast_shadow}
@@ -231,12 +240,19 @@ func check_stroke_surfaces(rec: Dictionary) -> void:
 
 
 func check_mast_restored(reason: String) -> void:
+	if lantern != null:
+		check("lantern clamp released " + reason, game.presentation.hero_assets._mast.is_empty())
+		check("lantern frame untouched " + reason, frame_snapshot() == frame_original)
+		return
 	var node: MeshInstance3D = mast_original.node
 	check("exact mast restoration " + reason, node.mesh == mast_original.mesh and node.material_override == mast_original.material and node.transform == mast_original.transform and node.layers == mast_original.layers and node.cast_shadow == mast_original.shadow)
 	check("no orphan support " + reason, node.get_child_count() == 0)
 
 
 func check_mast(hook, warden) -> void:
+	if lantern != null:
+		check_lantern(hook, warden)
+		return
 	check("active mast owner", not hook._mast.is_empty() and hook._mast.owner == warden.get_instance_id())
 	if hook._mast.is_empty(): return
 	var support: Node3D = hook._mast.root
@@ -272,6 +288,34 @@ func check_mast(hook, warden) -> void:
 	print("MAST_CLEARANCE ", warden.family, " ", minimum)
 	check("entire support outside fixed sphere", minimum >= Warden.FAMILY_POINT_RADIUS and segments == 2 and rails == 6)
 	check("lamp and ring retained", game.flow.beacon._core.is_inside_tree() and game.flow.beacon._core.layers != 0 and game.flow.beacon._ring.is_inside_tree() and game.flow.beacon._ring.layers != 0)
+
+
+func check_lantern(hook, warden) -> void:
+	var beacon = game.flow.beacon
+	check("active lantern clamp owner", not hook._mast.is_empty() and hook._mast.owner == warden.get_instance_id() and hook._mast.seat == lantern)
+	check("Warden on the clamp seat", warden.global_position.distance_to(lantern.global_position) < 0.01)
+	hook._dress_mast(warden)
+	check("idempotent lantern clamp", hook._mast.owner == warden.get_instance_id() and hook._mast.seat == lantern)
+	check("lantern frame untouched " + warden.family, frame_snapshot() == frame_original)
+	check("no light on the beacon", beacon.find_children("*", "Light3D", true, false).is_empty())
+	var clearance: float = Clearance.surface_clearance(warden.family_point_at(), Clearance.triangles(beacon.get_node("LanternFrame")))
+	print("LANTERN_CLEARANCE ", warden.family, " ", snappedf(clearance, 0.001))
+	check("weak point clears the lantern frame", clearance >= Warden.FAMILY_POINT_RADIUS)
+	check("lamp and ring retained", beacon._core.is_inside_tree() and beacon._core.layers != 0 and beacon._ring.is_inside_tree() and beacon._ring.layers != 0)
+
+
+# Every node under the lantern frame with its mesh, material, transform, layers and shadow: a runtime cut or
+# added part changes it.
+func frame_snapshot() -> Array:
+	var out := []
+	for node in game.flow.beacon.get_node("LanternFrame").find_children("*", "", true, false):
+		var row: Array = [node.get_path(), node.get_child_count()]
+		if node is Node3D:
+			row.append(node.transform)
+		if node is MeshInstance3D:
+			row.append_array([node.mesh, node.material_override, node.layers, node.cast_shadow])
+		out.append(row)
+	return out
 
 
 func check_chunk_asset(hook) -> void:

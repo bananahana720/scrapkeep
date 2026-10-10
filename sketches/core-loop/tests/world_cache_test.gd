@@ -141,6 +141,9 @@ func _find_cache() -> void:
 		# next boss entry (GPU only); the rim is an emissive lip instead.
 		_report("cache adds no dynamic light", _cache.find_children("*", "Light3D", true, false).is_empty(),
 			"%d lights under the cache" % _cache.find_children("*", "Light3D", true, false).size())
+		var shell := _cache.find_child("CacheShell", false, false) as GeometryInstance3D
+		_report("the rim glow is its own strip, not an overlay on the shell", _cache.find_child("CacheRimGlow", false, false) != null and (shell == null or shell.material_overlay == null),
+			"shell overlay %s" % [shell.material_overlay if shell != null else "no shell"])
 		_report("sealed cache keeps its warm rim glow", _cache._rim_glow != null and is_equal_approx(_cache._rim_glow.emission_energy_multiplier, CrackedCache.RIM_GLOW.sealed),
 			"rim glow %.2f" % (_cache._rim_glow.emission_energy_multiplier if _cache._rim_glow != null else 0.0))
 		var authored_at: Vector2 = _cache.spec["at"]

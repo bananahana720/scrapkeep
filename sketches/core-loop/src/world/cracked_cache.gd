@@ -34,9 +34,13 @@ const PEDESTAL_REACH := 1.7
 # so the parts roll above it consumes exactly what it did before relics.
 const RELIC_CHANCE := 0.2
 const LANE_OFFSET := 6.0
+const LANE_EDGE := 4.0
+const LANE_LEVEL_SPAN := 2.0
+const LANE_LEVEL_RISE := 1.0
 # The shell's own warm glow, brighter once the wall is fired. No light: a per-cache
 # OmniLight3D freed with the cache on a stage change made Godot 4.7.2 Forward+ segfault on
 # the next boss entry (GPU only), as the wave 9 cage light did.
+const RIM_STRIP := 0.2
 const RIM_GLOW := {"sealed": 1.6, "fired": 2.4}
 
 enum { SEALED, OPEN, PICKING, TAKEN }
@@ -69,8 +73,10 @@ func _init() -> void:
 
 func build() -> void:
 	if not relic_guaranteed:
-		global_position += global_basis.z * LANE_OFFSET
-		global_position.y = ctx.terrain.height(global_position.x, global_position.z)
+		var lane := global_position + global_basis.z * LANE_OFFSET
+		if lane_clear(ctx.terrain.map().play_rect, lane, ctx.terrain.height):
+			global_position = lane
+			global_position.y = ctx.terrain.height(lane.x, lane.z)
 	var parts := _parts()
 	if parts.is_empty():
 		_build_greybox()
@@ -79,6 +85,18 @@ func build() -> void:
 	_build_pedestals(parts)
 	_build_rim_glow()
 	ctx.events.slammed.connect(_on_slammed)
+
+
+# The lane spot is used only inside the play rect (less LANE_EDGE) and on ground that is level over
+# LANE_LEVEL_SPAN metres; otherwise the cache stays where the map placed it.
+static func lane_clear(rect: Rect2, at: Vector3, height: Callable) -> bool:
+	if not rect.grow(-LANE_EDGE).has_point(Vector2(at.x, at.z)):
+		return false
+	var east: float = height.call(at.x + LANE_LEVEL_SPAN, at.z)
+	var west: float = height.call(at.x - LANE_LEVEL_SPAN, at.z)
+	var north: float = height.call(at.x, at.z + LANE_LEVEL_SPAN)
+	var south: float = height.call(at.x, at.z - LANE_LEVEL_SPAN)
+	return maxf(absf(east - west), absf(north - south)) <= LANE_LEVEL_RISE
 
 
 func _build_greybox() -> void:
@@ -278,6 +296,7 @@ func take(index: int) -> void:
 		ctx.run.add_relic(taken, "cache")
 	else:
 		ctx.run.add_part(taken, "cache")
+	ctx.events.world_fact.emit("cache_spent", global_position)
 
 
 func _collision_box(size: Vector3, at: Vector3) -> StaticBody3D:
@@ -313,19 +332,30 @@ func _build_model(parts: Array) -> void:
 
 # The workshop finish shader carries no emission, so the glow is this cache's own additive
 # overlay on its shell (greybox: the roof), one material per cache.
+# The warm rim is a thin additive strip along the shell's top front edge, on its own mesh. An overlay on
+# the whole shell washed the teal workshop finish to near white (wave 12). No Light3D anywhere.
 func _build_rim_glow() -> void:
-	var shell := find_child("CacheShell", false, false) as GeometryInstance3D
-	if shell == null:
-		shell = _roof
 	_rim_glow = StandardMaterial3D.new()
 	_rim_glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	_rim_glow.albedo_color = Color.BLACK
+	_rim_glow.vertex_color_use_as_albedo = true
 	_rim_glow.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 	_rim_glow.emission_enabled = true
 	_rim_glow.emission = Palette.SAND
 	_rim_glow.emission_energy_multiplier = RIM_GLOW.sealed
-	if shell != null:
-		shell.material_overlay = _rim_glow
+	var strip := MeshInstance3D.new()
+	strip.name = "CacheRimGlow"
+	var bar := CapsuleMesh.new()
+	bar.radius = RIM_STRIP * 0.5
+	bar.height = HALF_W * 2.0
+	bar.radial_segments = 8
+	bar.rings = 2
+	strip.mesh = bar
+	strip.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+	strip.position = Vector3(0.0, HEIGHT - RIM_STRIP, HALF_D)
+	strip.material_override = _rim_glow
+	strip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(strip)
 
 
 # Mesh-local size for the workshop shader's edge chips; meshes need not be centred.

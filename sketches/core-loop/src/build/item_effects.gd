@@ -338,7 +338,7 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 		"rebound_strike":
 			if not is_instance_valid(c.enemy):
 				return false
-			build.item_hit(c.enemy, (BASE_HIT + build.punch_bonus()) * power * build.sheet.mod("weapon_damage"), element)
+			build.item_hit(c.enemy, (BASE_HIT + build.punch_bonus()) * power, element)
 			return true
 		"relaunch_pin":
 			var any := false
@@ -370,8 +370,9 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 		"brace":
 			if c.kind == Triggers.Kind.ON_LAND and c.amount < fx.get("min_impact", 0.0):
 				return false
+			var held_share: float = _brace_share if _clock < _brace_until else 0.0
 			_brace_until = _clock + fx.get("window", 1.0)
-			_brace_share = maxf(_brace_share if _clock < _brace_until else 0.0, power)
+			_brace_share = maxf(held_share, power)
 			_brace_source = c.enemy.get("kind") if c.kind == Triggers.Kind.ON_REBOUND and is_instance_valid(c.enemy) else ""
 			return true
 		"floor_hp":

@@ -114,7 +114,7 @@ const ROWS := {
 	# `sound_next` names the SOUND-STORY section 3 cue, resolved through roster.gd's row
 	# (`hold`) or faction (`arrival`). pack_arrived's `icon` is the Fleet's edge-marker
 	# badge; an ancient pack shows its family's fac_ icon from the roster. Cherenkov
-	# blue (3d8bff) is the ancients' light, so a weak point opening is its seam.
+	# green (9dff3c, uranium glass) is the ancients' light, so a weak point opening is its seam.
 	"hold_started": {"group": "combat", "color": Palette.HAZARD, "shape": "bar", "sound": "hold_pit", "sound_next": "hold_by_kind", "hud": "", "objective": "", "priority": 1},
 	"hold_broken": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "shatter", "sound_next": "class_break", "hud": "", "objective": "", "priority": 1},
 	"hold_ended": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
@@ -187,9 +187,10 @@ const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window"]
 #   chain_ms, chain_cap   a streak: the window that keeps it alive and its top rung
 #   pulse   the ball's squash for the fact (negative shrinks: a heft loss)
 const JUICE := {
-	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0, "sparks": 8,
-		"crit": {"stop_mult": 1.4, "sparks": 16, "shake": 0.22, "color": Palette.BRASS, "sound": "crit_ping"},
-		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}},
+	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0,
+		"crit": {"stop_mult": 1.4, "shake": 0.22, "color": Palette.BRASS, "sound": "crit_ping",
+			"fx": {"crit_core": 24, "crit_halo": 24}},
+		"heavy": {"stop_add_ms": 10.0, "kick": 0.45, "dust": 12}, "fx": {"spark_core": 16, "spark_halo": 16}},
 	"enemy_rebounded": {"kick": 0.55, "shake": 0.35, "dust": 14},
 	"enemy_killed": {"pop": 14, "debris": 10, "chain_ms": 1500, "chain_cap": 7, "multi_ms": 90, "multi_stop_ms": 30.0, "pips": 8},
 	"scrap_collected": {"chain_ms": 700, "chain_cap": 9, "pulse": 0.05, "pulse_cap": 0.16},
@@ -206,7 +207,7 @@ const JUICE := {
 			# (one shot a second). Both land after W16-1, so a kick never moves a shot.
 			"gather_plate": {"kick": 0.06, "recoil": 0.04}, "link_clips": {"kick": 0.07, "recoil": 0.05},
 			"balance_due": {"kick": 0.10, "recoil": 0.08}, "cannon_lane": {"kick": 0.2, "recoil": 0.14}},
-		"throw": {"sound": "dash_whoosh", "pitch": 1.5, "db": -4.0}, "stick": {"sound": "grapple_clink", "pitch": 0.7, "sparks": 8}},
+		"throw": {"sound": "dash_whoosh", "pitch": 1.5, "db": -4.0}, "stick": {"sound": "grapple_clink", "pitch": 0.7}},
 	# Kest's bomb: a flash, a shockwave ring and debris; the punch grows with each enemy the
 	# blast catches. Inside near_m of the ball it kicks the camera and squashes the shell.
 	"sticky_detonated": {"punch_fov": 3.0, "punch_per_enemy": 1.5, "punch_cap": 10.0, "debris": 12, "dust": 14, "shake": 0.35,
@@ -216,6 +217,18 @@ const JUICE := {
 	"player_hit": {"edge_s": 0.4, "edge_alpha": 0.65, "squash": 0.18, "color": Palette.HAZARD},
 	"scrap_lost": {"pulse": -0.22},
 	"beacon_unsealed": {"stop_ms": 50.0, "punch_fov": 9.0},
+	# W12 VX-FX: GPU effects (presentation/fx_library.gd SPECS). "fx" is {spec id: particles};
+	# rolling plays continuously while the ball rolls at speed, its count per second. A
+	# "low" sub-dict gives the low preset's counts; "motes" and "streaks" are [idle, occupied].
+	"rolling": {"fx": {"roll_dust": 90}, "min_speed": 9.0},
+	"slammed": {"fx": {"slam_ring": 48, "slam_dust": 24}},
+	"harpoon_bit": {"fx": {"latch_ring": 24, "latch_halo": 24, "latch_pulse": 12}},
+	"wall_crumbled": {"fx": {"crack_debris": 28, "slam_dust": 14}},
+	"sticky_stuck": {"fx": {"spark_core": 8, "spark_halo": 8}},
+	"breach_opened": {"fx": {"dig_debris": 10, "dig_dust": 12}, "low": {"dig_debris": 4, "dig_dust": 5}},
+	"cache_spent": {"fx": {"cache_ember": 24, "cache_wisp": 6}},
+	"net_caught": {"fx": {"net_dust": 14}},
+	"thermal_ride": {"motes": [9, 27], "streaks": [6, 18]},
 }
 # What one hit of each kind does, in one place: the shove and lift combat gives the enemy,
 # the stop and shake presentation gives the screen, and how the enemy should answer.

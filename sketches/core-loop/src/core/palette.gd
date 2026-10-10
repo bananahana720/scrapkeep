@@ -9,8 +9,12 @@ const CHARCOAL := Color("242a28")
 const VERDIGRIS := Color("365754")
 const AMBER := Color("e5a044")
 const ARC := Color("8bf0d3")
-# Cherenkov seams belong to awakened ancient machines.
-const ANCIENT := Color("3d8bff")
+# Uranium-glass green: the ancients' light (Andrew, 2026-10-09, over Cherenkov blue). Deuteranopes
+# read it as Brindle's BRASS, so every ancient seam also carries a pattern cue (material_slots.gd,
+# the `pattern` field).
+const ANCIENT := Color("9dff3c")
+# Cable runs and hoses: darker than CHARCOAL's panels so a coil never reads as white plastic.
+const CABLE := Color("2a3231")
 # Outside the greybox palette on purpose: a klaxon has to read as nothing else on screen.
 const HAZARD := Color("ff5a3c")
 # Admiral Brindle's brass: every boss fact wears it.
@@ -108,15 +112,79 @@ static func look_texture(id: String, neutral := false) -> Texture2D:
 	return texture
 
 
-static var _ground: ShaderMaterial
+const SLOT_TABLE := preload("res://src/presentation/material_slots.gd")
+static var _slot_materials := {}
 
+
+# A slot param that names a palette constant ("HAZARD") resolves to its Color.
+static func _slot_value(value):
+	if value is String:
+		var constants: Dictionary = (load("res://src/core/palette.gd") as GDScript).get_script_constant_map()
+		if constants.get(value) is Color:
+			return constants[value]
+	return value
+
+
+# The role's shared material, built once from its material_slots.gd row.
+static func slot_material(role: String) -> Material:
+	if _slot_materials.has(role):
+		return _slot_materials[role]
+	var row: Dictionary = SLOT_TABLE.row(role)
+	if row.is_empty():
+		push_warning("palette: unknown material slot " + role)
+		return null
+	var mat: Material
+	match row.kind:
+		"resource":
+			mat = load(row.path) as Material
+		"standard":
+			mat = _standard_slot(row)
+		_:
+			var shader_mat := ShaderMaterial.new()
+			shader_mat.shader = load(row.shader) as Shader
+			for key in row.params:
+				shader_mat.set_shader_parameter(key, _slot_value(row.params[key]))
+			if row.triplanar_scale > 0.0:
+				shader_mat.set_shader_parameter("strata_metres", row.triplanar_scale)
+			for key in row.textures:
+				shader_mat.set_shader_parameter(key, look_texture(row.textures[key]))
+			mat = shader_mat
+	if mat != null:
+		mat.resource_name = role
+	_slot_materials[role] = mat
+	return mat
+
+
+static func _standard_slot(row: Dictionary) -> StandardMaterial3D:
+	var params: Dictionary = row.params
+	var mat := StandardMaterial3D.new()
+	mat.roughness = params.get("roughness", 0.8)
+	mat.metallic = params.get("metallic", 0.0)
+	if params.has("stripe_a"):
+		if params.get("checker_meta", false):
+			mat.set_meta("greybox_checker", true)
+		mat.albedo_texture = stripe_texture(_slot_value(params.stripe_a), _slot_value(params.stripe_b))
+		mat.uv1_triplanar = true
+		mat.uv1_scale = Vector3.ONE / row.triplanar_scale
+	else:
+		mat.albedo_color = _slot_value(params.albedo)
+	return mat
+
+
+# terrain.gd:351 calls this: the ground role (sand floor, rock on steep faces).
 static func ground_material() -> ShaderMaterial:
-	if _ground == null:
-		_ground = ShaderMaterial.new()
-		_ground.shader = preload("res://src/presentation/sandstone.gdshader")
-		_ground.set_shader_parameter("strata_map", look_texture("sandstone-strata"))
-		_ground.set_shader_parameter("floor_map", look_texture("packed-sand-floor"))
-	return _ground
+	return slot_material("ground") as ShaderMaterial
+
+
+# The Highdraft's padded net edge: amber on charcoal bands, so it reads against the cream catch floor
+# by value as well as hue. highdraft_scenery.net_edge_material returns it.
+static func nosing_material() -> StandardMaterial3D:
+	return slot_material("nosing") as StandardMaterial3D
+
+
+# Rock only, no sand: cliff and mesa batches that must not take the floor's vertex tint.
+static func rock_material() -> ShaderMaterial:
+	return slot_material("rock") as ShaderMaterial
 
 
 static func ball_material() -> StandardMaterial3D:
@@ -146,6 +214,23 @@ static func striped(a: Color, b: Color) -> StandardMaterial3D:
 	mat.uv1_scale = Vector3(0.25, 0.25, 0.25)
 	mat.roughness = 0.75
 	return mat
+
+
+# 45 degree bands, `a` at pixel (0, 0) and `b` at (size / 4, 0), the two places dress_props samples.
+static func stripe_texture(a: Color, b: Color, size := 64) -> ImageTexture:
+	var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
+	var band := size / 4
+	for y in size:
+		for x in size:
+			image.set_pixel(x, y, a if ((x + y) / band) % 2 == 0 else b)
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)
+
+
+# Hostile means HAZARD plus 45 degree stripes (VISUAL-LANGUAGE.md): one material, shared by every
+# hazard surface, so the stripe pitch and the two colours cannot drift between props.
+static func hazard_stripe() -> StandardMaterial3D:
+	return slot_material("hazard_stripe") as StandardMaterial3D
 
 
 static func water(color: Color) -> StandardMaterial3D:
@@ -205,6 +290,19 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 	return material
 
 
+const HDRI_SKY := "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr"
+static var _hdri_sky: Sky
+
+# The Poly Haven partly cloudy sky, one Sky for every world row that names "hdri".
+static func hdri_sky() -> Sky:
+	if _hdri_sky == null:
+		var material := PanoramaSkyMaterial.new()
+		material.panorama = load(HDRI_SKY)
+		_hdri_sky = Sky.new()
+		_hdri_sky.sky_material = material
+	return _hdri_sky
+
+
 static var _wear: ImageTexture
 static var _oxide: ImageTexture
 
@@ -232,7 +330,6 @@ static func enamel_wear(mat: StandardMaterial3D) -> void:
 
 static var _target_surfaces := {}
 static var _target_clutter := {}
-const CLUTTER_SHADER := preload("res://src/presentation/clutter.gdshader")
 
 # The clutter kit's slots carry their colour in vertex colours (the paint slot) and the
 # slot's albedo. The target copy is the clutter shader: albedo times vertex colour, fully
@@ -244,49 +341,40 @@ static func target_clutter_material(original: Material) -> ShaderMaterial:
 	if _target_clutter.has(key):
 		return _target_clutter[key]
 	var mat := ShaderMaterial.new()
-	mat.shader = CLUTTER_SHADER
+	mat.shader = load(SLOT_TABLE.row("clutter").shader) as Shader
 	mat.set_shader_parameter("albedo", (original as StandardMaterial3D).albedo_color if original is StandardMaterial3D else Color.WHITE)
 	mat.resource_name = original.resource_name
 	_target_clutter[key] = mat
 	return mat
 
-# Target resources wrap the existing surface; original materials and mesh slots are
-# retained by GraphicsPreset so high/low can restore the exact resource identities.
+# The shipped look per role. Ground and rock are the slot materials themselves (the sandstone
+# shader); a role whose slot is a prebuilt resource (the Dig's stone) keeps its original; the dam
+# wraps its imported surface. The role string is the contract with GraphicsPreset._apply_material.
 static func target_surface_material(role: String, original: Material) -> ShaderMaterial:
+	if is_slot_resource(original):
+		return original as ShaderMaterial
+	if role in SLOT_TABLE.SHIPPED_AS_SLOT:
+		return slot_material(role) as ShaderMaterial
 	var key := role + ":" + str(original.get_instance_id())
 	if _target_surfaces.has(key):
 		return _target_surfaces[key]
 	var mat := ShaderMaterial.new()
-	match role:
-		"ground":
-			mat.shader = preload("res://assets/shaders/target_ground.gdshader")
-		"rock":
-			mat.shader = preload("res://assets/shaders/target_rock.gdshader")
-		"dam":
-			mat.shader = preload("res://assets/shaders/target_dam.gdshader")
-			if original is StandardMaterial3D:
-				mat.set_shader_parameter("base_color", original.albedo_color)
-				mat.set_shader_parameter("base_roughness", original.roughness)
-				mat.set_shader_parameter("has_base_map", original.albedo_texture != null)
-				if original.albedo_texture != null:
-					mat.set_shader_parameter("base_map", original.albedo_texture)
-	mat.set_shader_parameter("base_color", target_base_color(role, original))
-	if role == "ground":
-		mat.set_shader_parameter("rock_color", SANDSTONE)
-		var floor_map = original.get_shader_parameter("floor_map") if original is ShaderMaterial else null
-		if floor_map != null:
-			mat.set_shader_parameter("floor_map", floor_map)
-			mat.set_shader_parameter("has_floor_map", true)
+	mat.shader = load(SLOT_TABLE.row(role).shader) as Shader
+	if original is StandardMaterial3D:
+		mat.set_shader_parameter("base_color", original.albedo_color)
+		mat.set_shader_parameter("base_roughness", original.roughness)
+		mat.set_shader_parameter("has_base_map", original.albedo_texture != null)
+		if original.albedo_texture != null:
+			mat.set_shader_parameter("base_map", original.albedo_texture)
 	mat.resource_name = "target_" + role
 	_target_surfaces[key] = mat
 	return mat
 
 
-# Terrain's map tint comes from SAND/SANDSTONE. The dam is already a merged set
-# of vertex colours and imported paint slots: preserve that source's base and map.
-static func target_base_color(role: String, original: Material) -> Color:
-	if role == "ground":
-		return SAND
-	if role == "rock":
-		return SANDSTONE
-	return original.albedo_color if original is StandardMaterial3D else Color.WHITE
+# True for a prebuilt slot resource (the Dig stone and mechanicals): GraphicsPreset should keep these.
+static func is_slot_resource(original: Material) -> bool:
+	for role in SLOT_TABLE.SLOTS:
+		var row: Dictionary = SLOT_TABLE.SLOTS[role]
+		if row.kind == "resource" and original.resource_path == row.path:
+			return true
+	return false

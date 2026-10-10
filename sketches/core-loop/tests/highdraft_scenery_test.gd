@@ -1,6 +1,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Contraptions := preload("res://src/world/contraptions.gd")
 const Scenery := preload("res://src/presentation/highdraft_scenery.gd")
@@ -10,6 +11,7 @@ const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const Highdraft := preload("res://src/world/map_highdraft.gd")
 const Game := preload("res://src/game.gd")
 const Crown := preload("res://src/world/map_highdraft_crown.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 # The Highdraft's dress: the game builds the real kit models (islands, bridges, ramps, barges,
 # vents, air, net, anchors, props, sky) on the greybox the map and contraptions already built,
@@ -110,17 +112,18 @@ func _zone(label: String, map_script: GDScript) -> void:
 	var ramp := scenery.get_node("ReturnRampSkins") as MultiMeshInstance3D
 	_t.eq("%s ramp skins carry return_ramp_skin.glb" % label, _signature(ramp.multimesh.mesh), _glb_signature("return_ramp_skin.glb", "HardwareSkin"))
 	_t.eq("%s two return ramps skinned" % label, ramp.multimesh.instance_count >= 2, true)
-	# Barges: the skin rides the tilting deck node, the greybox hides.
-	var barge_sig := _glb_signature("barge_skin.glb", "HardwareSkin")
+	# Barges: the recipe views ride the tilting deck node, the greybox hides.
+	# 2026-10-09 swap-wave 12-F: re-pinned from barge_skin.glb's HardwareSkin to the barge recipe (base and shells,
+	# contraptions.gd _build_barge); the deck carries no mesh of its own and the box collider stays child 0.
 	var barge_ok: bool = contraptions.barges.size() == 2
 	for barge in contraptions.barges:
-		var skin := (barge["deck"] as Node).get_node_or_null("HighdraftBargeSkin") as MeshInstance3D
-		barge_ok = barge_ok and skin != null and _signature(skin.mesh) == barge_sig
+		barge_ok = barge_ok and _deck_recipe(barge["deck"])
+		barge_ok = barge_ok and (barge["deck"] as Node).get_node_or_null("HighdraftWeatherSail") != null
 		for child in (barge["body"] as Node).get_children():
 			if child is MeshInstance3D and child != barge["deck"]:
 				barge_ok = barge_ok and not child.visible
 		barge_ok = barge_ok and (barge["body"] as Node).get_child(0) is CollisionShape3D
-	_t.check("%s barges wear barge_skin.glb on the deck node and hide the greybox" % label, barge_ok)
+	_t.check("%s barges wear the barge recipe on the deck node and hide the greybox" % label, barge_ok)
 	# Thermals: vent and air scenes, greybox cylinders hidden.
 	var thermal_ok: bool = contraptions.thermals.size() == 3
 	for spec in map.contraptions:
@@ -220,11 +223,13 @@ func _fallback() -> void:
 	var scenery := Scenery.build(stage_root, map, contraptions, f["terrain"].ground_callable(1), null)
 	Scenery.dir = Scenery.DIR
 	_t.eq("fallback: no island skin without the GLB", scenery.find_children("IslandSkin_*", "MeshInstance3D", false, false).size(), 0)
+	# 2026-10-09 swap-wave 12-F: the barge's picture is the recipe contraptions builds, not the Highdraft kit, so a
+	# missing kit leaves it on the deck and only the kit's sail is absent.
 	var deck_ok := true
 	for barge in contraptions.barges:
-		deck_ok = deck_ok and (barge["deck"] as MeshInstance3D).mesh is BoxMesh and (barge["deck"] as MeshInstance3D).visible
-		deck_ok = deck_ok and (barge["deck"] as Node).get_node_or_null("HighdraftBargeSkin") == null
-	_t.check("fallback: barge keeps its greybox deck", deck_ok)
+		deck_ok = deck_ok and _deck_recipe(barge["deck"])
+		deck_ok = deck_ok and (barge["deck"] as Node).get_node_or_null("HighdraftWeatherSail") == null
+	_t.check("fallback: barge keeps its recipe deck and has no kit sail", deck_ok)
 	_t.eq("fallback: thermal column and grate stay visible", _visible_cylinders(contraptions), cylinders_before)
 	_t.check("fallback: there were thermal cylinders to keep", cylinders_before >= 6)
 	_t.eq("fallback: post shaft and cap stay visible", _visible_post_meshes(stage_root), posts)
@@ -240,6 +245,7 @@ func _hook_and_environment() -> void:
 	terrain.build(scene)
 	var ctx := FakeCtx.new()
 	ctx.terrain = terrain
+	terrain.environment.sky = Palette.hdri_sky()
 	var before: Sky = terrain.environment.sky
 	var ambient: Color = terrain.environment.ambient_light_color
 	Scenery.hook(ctx)
@@ -249,12 +255,19 @@ func _hook_and_environment() -> void:
 	ctx.events.stage_entered.emit(1, true)
 	_t.eq("hook: a retry does not build it twice", stage_root.find_children(Scenery.NODE_NAME, "Node3D", false, false).size(), 1)
 	var env: Environment = terrain.environment
-	_t.check("hook: the environment takes the morning sky", env.sky != before and env.sky.sky_material is PanoramaSkyMaterial)
+	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). World row 3 says sky "hdri", so
+	# apply_environment leaves the sky to the row (Palette.hdri_sky); the painted sky is used only
+	# when the row says "own" (highdraft_scenery.gd apply_environment).
+	_t.check("hook: the environment keeps the shared HDRI sky when the row says hdri", env.sky == before and env.sky.sky_material is PanoramaSkyMaterial)
+	_t.check("hook: the painted sky path for an own row still builds a panorama", Scenery._sky_material() is PanoramaSkyMaterial)
 	_t.check("hook: ambient shifts to the sky cream", env.ambient_light_color.is_equal_approx(Scenery.LOOK["ambient"]) and not ambient.is_equal_approx(env.ambient_light_color))
 	Scenery.restore_environment(terrain)
 	_t.check("restore: the shared sky and ambient come back", env.sky == before and env.ambient_light_color.is_equal_approx(ambient))
 	var source := FileAccess.get_file_as_string("res://src/game.gd")
 	_t.check("game.gd hooks the Highdraft dress", source.contains("highdraft_scenery.gd\").hook(ctx)"))
+	# hook() binds ctx into a connection on ctx.events; dropping the bus ends that cycle so the
+	# terrain, its environment and the shared HDRI sky are freed before the engine exits.
+	ctx.events = null
 	scene.free()
 
 
@@ -280,16 +293,20 @@ func _game_integration() -> void:
 	var scenery := stage_root.get_node_or_null(Scenery.NODE_NAME)
 	_t.check("game: stage 5 entry builds the Highdraft dress", scenery != null)
 	var contraptions = game.world.contraptions.get(5)
+	# 2026-10-09 swap-wave 12-F: re-pinned from the HighdraftBargeSkin node to the barge recipe views.
 	var skinned := 0
 	if contraptions != null:
 		for barge in contraptions.barges:
-			if (barge["deck"] as Node).get_node_or_null("HighdraftBargeSkin") != null:
+			if _deck_recipe(barge["deck"]):
 				skinned += 1
-	_t.eq("game: both barges wear the skin", skinned, 2)
-	_t.check("game: the morning sky is up", env.sky != shared)
+	_t.eq("game: both barges wear the recipe", skinned, 2)
+	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). Stages 5 and 1 (worlds 3 and 1) both
+	# say "hdri": the one cached Palette.hdri_sky() is set on entry and stays across the move.
+	_t.check("game: the morning sky is up (the cached HDRI sky)", env.sky == Palette.hdri_sky())
 	game.flow.enter_stage(1, Vector3.ZERO, false)
 	await physics_frame
-	_t.check("game: stage 1 gets the shared sky back", env.sky == shared)
+	_t.check("game: stage 1 keeps the same cached HDRI sky", env.sky == Palette.hdri_sky())
+	_t.check("game: the startup sky was replaced by the HDRI row", shared != Palette.hdri_sky())
 	game.free()
 
 
@@ -317,3 +334,19 @@ func _run() -> void:
 	await _game_integration()
 	var code := _t.verdict()
 	quit(code)
+
+
+# The barge recipe's meshes (base and shells, recipe_props.gd ROWS "barge"), each one visible on a deck that draws
+# no mesh of its own.
+func _deck_recipe(deck: MeshInstance3D) -> bool:
+	var probe := Node3D.new()
+	var want: Array = []
+	for view in RecipeProps.base("barge", probe, Transform3D.IDENTITY) + RecipeProps.shells("barge", probe, Transform3D.IDENTITY):
+		want.append((view as MeshInstance3D).mesh)
+	probe.free()
+	var have: Array = []
+	for child in deck.get_children():
+		if child is MeshInstance3D and (child as MeshInstance3D).visible:
+			have.append((child as MeshInstance3D).mesh)
+	return deck.mesh == null and deck.visible and not want.is_empty() and have.size() == want.size() \
+		and want.all(func(m): return have.has(m))

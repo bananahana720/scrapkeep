@@ -4,6 +4,7 @@ signal finished
 
 const Worlds := preload("res://src/core/worlds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
@@ -103,14 +104,15 @@ func _build_view() -> void:
 	_environment.sky = Sky.new()
 	_environment.sky.sky_material = Palette.workshop_sky()
 	_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	_environment.ambient_light_energy = 0.9
+	_environment.ambient_light_energy = WorldLook.ENDING.energy
 	_environment.fog_enabled = true
-	_environment.fog_density = 0.0008
+	_environment.fog_density = WorldLook.ENDING.fog
 	env.environment = _environment
 	_scene.add_child(env)
 	_sun = DirectionalLight3D.new()
-	_sun.light_energy = 1.2
-	_sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)
+	_sun.name = "EndingSun"
+	_sun.light_energy = WorldLook.ENDING.sun_energy
+	_sun.rotation_degrees = WorldLook.ENDING.sun_rotation
 	_scene.add_child(_sun)
 	_bar_top = _backing(0.0, 0.14, Palette.CHARCOAL)
 	_bar_bottom = _backing(0.73, 1.0, Palette.CHARCOAL)
@@ -238,6 +240,7 @@ func _hide_grid_floor(holder: Node3D) -> void:
 
 # Copy draw nodes, never scripts, timers, bodies, areas or collision shapes. Inactive
 # terrain roots are hidden and parked at -5000; only their children carry local poses.
+# Any other kind (particles, labels, sprites) becomes a plain holder for its children.
 func _snapshot(source: Node, parent: Node3D, root := false) -> void:
 	if source is Node3D and not root and not source.visible:
 		return
@@ -273,7 +276,7 @@ func _snapshot(source: Node, parent: Node3D, root := false) -> void:
 	view.name = source.name
 	if source is Node3D and not root:
 		view.transform = source.transform
-	if source is GeometryInstance3D:
+	if view is GeometryInstance3D:
 		view.layers = source.layers
 		view.material_override = source.material_override
 		view.material_overlay = source.material_overlay

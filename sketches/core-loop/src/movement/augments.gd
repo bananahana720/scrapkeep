@@ -124,7 +124,7 @@ static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 		return
 	var step: float = body_state.step
 	kit.tick_timers(step)
-	_sprint(kit, state, tuning, intent, body_state, step)
+	_sprint(kit, state, tuning, intent, aim, body_state, step)
 	if _mount(kit, state, tuning, intent, aim, body_state, step):
 		_keep_body_line(kit, tuning, body_state)
 		return
@@ -213,9 +213,9 @@ static func _vault(kit, state, tuning, aim: Basis, body_state) -> void:
 
 
 # Rivet's overdrive sprint: Shift held spends a charge and runs up to its duration, or
-# until released. While it runs the drive aims past cruise and crowd control slides off
+# until released. Its kick and its facts point along the roll (the aim when still). While it runs the drive aims past cruise and crowd control slides off
 # (player_ball.crowd_control reads kit.sprinting).
-static func _sprint(kit, state, tuning, intent, body_state, step: float) -> void:
+static func _sprint(kit, state, tuning, intent, aim: Basis, body_state, step: float) -> void:
 	if not kit.on(SPRINT):
 		kit.sprinting = false
 		state.cruise_boost = 1.0
@@ -236,7 +236,9 @@ static func _sprint(kit, state, tuning, intent, body_state, step: float) -> void
 	elif intent.movement_pressed and kit.abilities.spend(AbilityState.MOVEMENT):
 		kit.sprinting = true
 		kit.sprint_left = slot.duration
-		var dir := _flat_forward(Basis.IDENTITY, body_state.linear_velocity)
+		var v: Vector3 = body_state.linear_velocity
+		var flat := Vector3(v.x, 0.0, v.z)
+		var dir := flat.normalized() if flat.length_squared() > 0.0001 else _flat_forward(aim, v)
 		if kit.knob("sprint_kick") > 0.0:
 			body_state.linear_velocity += dir * kit.knob("sprint_kick")
 		kit.facts.append(["sprint_started", [dir]])
@@ -414,6 +416,7 @@ static func _hook_ray(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vect
 		if not (behind and hookable_body(hit["collider"])):
 			break
 		skipped.append(hit["rid"])
+		hit = {}
 	if hit.is_empty() or (hit["position"] as Vector3).distance_to(ball) > reach:
 		return {}
 	if hit["collider"] is Node3D and (hit["collider"] as Node3D).is_in_group("enemy"):

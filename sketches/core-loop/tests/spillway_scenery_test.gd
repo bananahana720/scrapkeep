@@ -3,6 +3,8 @@ extends SceneTree
 const Terrain := preload("res://src/world/terrain.gd")
 const Scenery := preload("res://src/presentation/spillway_scenery.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 var failures := 0
 # Recorded at base bcd0a7e; the round 2 slice changes neither. The collider hash was re-pinned when
 # the deleted loops took the parked drop lips (extra trimesh colliders) out of the Spillway.
@@ -83,8 +85,10 @@ func _run() -> void:
 	_check(triangles > 0 and triangles <= 25000 and scenery.get_child_count() <= 20,
 		"geometry budget: %d triangles, %d single-surface batches (not measured draw calls)" % [triangles, scenery.get_child_count()])
 	_check(scenery.is_visible_in_tree(), "visible under stage 1")
+	var trees := _check_cottonwoods(terrain.geometry_root(1), scenery)
 	terrain.use(2)
 	_check(not scenery.is_visible_in_tree() and scenery.global_position.y == -Terrain.PARK_DEPTH, "stage 2 hides and parks scenery")
+	_check(trees != null and not trees.is_visible_in_tree(), "stage 2 hides the cottonwoods with the stage root")
 	terrain.use(1)
 	_check(scenery.is_visible_in_tree() and scenery.global_position == Vector3.ZERO, "stage 1 restores scenery")
 	terrain.park_all()
@@ -492,6 +496,73 @@ func _edge_distance(p: Vector2, polygon: PackedVector2Array) -> float:
 		var closest := Geometry2D.get_closest_point_to_segment(p, a, b)
 		best = minf(best, p.distance_to(closest))
 	return best
+
+
+# 2026-10-09 SWAP-WAVE 12-F cottonwood: the shoulder cottonwoods left the scenery batches (CottonwoodTrunks and
+# CottonwoodCrowns are gone, so the budget above no longer counts them) for the cottonwood recipe under the stage root:
+# one MultiMesh per base view with an instance per tree, and per-tree holders carrying the fading shells.
+func _check_cottonwoods(stage_root: Node3D, scenery: Node3D) -> Node3D:
+	_check(scenery.get_node_or_null("CottonwoodTrunks") == null and scenery.get_node_or_null("CottonwoodCrowns") == null,
+		"the greybox trunk and crown batches are gone from the scenery node")
+	var group := stage_root.get_node_or_null("Cottonwoods") as Node3D
+	_check(group != null and group.get_parent() == stage_root, "the cottonwoods hang under the stage root, not the scenery node")
+	if group == null:
+		return null
+	var trees := Scenery.cottonwood_trees()
+	var probe := Node3D.new()
+	var base := RecipeProps.base("cottonwood", probe, Transform3D.IDENTITY)
+	var batches := group.find_children("*", "MultiMeshInstance3D", false, false)
+	var batches_ok := base.size() == 2 and batches.size() == base.size()
+	var top := 0.0
+	var crown_wide_x := false
+	for view: GeometryInstance3D in base:
+		var source := view as MeshInstance3D
+		var batch := group.get_node_or_null(NodePath(source.name)) as MultiMeshInstance3D
+		batches_ok = batches_ok and batch != null and batch.multimesh.instance_count == trees.size()
+		if batch == null:
+			continue
+		var mesh := batch.multimesh.mesh
+		batches_ok = batches_ok and batch.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON and batch.material_override == null
+		batches_ok = batches_ok and mesh.get_surface_count() == source.mesh.get_surface_count()
+		for i in mesh.get_surface_count():
+			batches_ok = batches_ok and mesh.surface_get_material(i) == source.get_surface_override_material(i) and mesh.surface_get_material(i) != null
+		var origins: PackedVector3Array = batch.get_meta("origins", PackedVector3Array())
+		batches_ok = batches_ok and origins.size() == trees.size()
+		for i in mini(origins.size(), trees.size()):
+			batches_ok = batches_ok and origins[i].is_equal_approx((Scenery.cottonwood_frame(trees[i]) * source.transform).origin)
+		var box := source.transform * source.mesh.get_aabb()
+		top = maxf(top, box.end.y)
+		if source.name.ends_with("Crown"):
+			crown_wide_x = box.size.x > box.size.z
+	probe.free()
+	_check(batches_ok, "%d base batches, one per recipe base view, %d instances each at the tree frames, slot materials per surface, shadows on" % [batches.size(), trees.size()])
+	var holders := 0
+	var shells_ok := true
+	var size_lo := INF
+	var size_hi := 0.0
+	for i in trees.size():
+		var holder := group.get_node_or_null("Cottonwood%02d" % i) as Node3D
+		if holder == null:
+			shells_ok = false
+			continue
+		holders += 1
+		shells_ok = shells_ok and holder.transform.is_equal_approx(Scenery.cottonwood_frame(trees[i]))
+		var rows := RecipeProps.shell_rows("cottonwood")
+		shells_ok = shells_ok and holder.get_child_count() == rows.size()
+		for k in mini(rows.size(), holder.get_child_count()):
+			var shell := holder.get_child(k) as MeshInstance3D
+			shells_ok = shells_ok and shell != null and shell.has_meta(RecipeProps.META_FADE) and shell.transform == Transform3D.IDENTITY
+			shells_ok = shells_ok and shell.visibility_range_end == rows[k][1] and shell.visibility_range_end_margin == rows[k][2]
+			shells_ok = shells_ok and shell.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		size_lo = minf(size_lo, trees[i]["size"])
+		size_hi = maxf(size_hi, trees[i]["size"])
+	_check(holders == 64 and shells_ok, "%d cottonwood holders at the tree frames, each with the recipe's fading shells" % holders)
+	# Scale against the ball mannequin: the full-size tree's crown top matches round 1's 13 m crown (5 percent), over six
+	# ball diameters, and the crown's long side runs along X as round 1's blobs did.
+	var ball := 2.0 * Tuning.RADIUS
+	_check(absf(top * size_hi - 13.0) <= 0.65 and top * size_hi >= 6.0 * ball and crown_wide_x,
+		"tree height %.2f m at size %.2f (%.1f ball diameters), %.2f m at size %.2f; crown long side along X" % [top * size_hi, size_hi, top * size_hi / ball, top * size_lo, size_lo])
+	return group
 
 
 # Terrain, colliders and cottonwoods do not move.

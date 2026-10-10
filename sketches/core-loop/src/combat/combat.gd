@@ -339,6 +339,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_started.connect(func(_class_id: String):
 		discovered = {}
+		discovery_log = []
 		_proc_ready = {}
 		_echo = {}
 		_marks = {}
@@ -444,15 +445,12 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	if enemy.has_method("is_dead") and enemy.is_dead():
 		return
 	var result := resolve(enemy, kind, force, part)
-	# The cannon's plate exposure: any contact strike deals BRACE_MULT while the window holds.
-	# The damage scales, not the force, because a contact's punch is affine in its force.
-	if kind in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()):
-		if float(_exposed[enemy.get_instance_id()]["until"]) > _clock:
-			result["dealt"] = float(result["dealt"]) * MindAttacks.BRACE_MULT
-		else:
-			_exposed.erase(enemy.get_instance_id())
 	var cls := _classify_source(kind, source if source != "" else _forced_source)
-	var spent := _primer_hit(enemy, kind, cls, result)
+	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, kind, cls)
+	if kind in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
+			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
+		_exposed.erase(enemy.get_instance_id())
+	var spent := _primer_hit(enemy, kind, cls)
 	var at := enemy.global_position
 	var struck_id := enemy.get_instance_id()
 	_detect_before(enemy, kind, result)
@@ -500,24 +498,49 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 # A weapon hit primes; the next ball contact or special on a primed foe consumes it and
 # returns the seated piece. Posture fighters, items and persistent actors never take part.
 
-func _primer_hit(enemy: Node3D, kind: String, cls: String, result: Dictionary) -> String:
+# The primer_coil's PRIMER_COIL_MULT is applied through _strike_mult, before this consumes
+# the prime; _result stays for the companion tests that pass one and is not changed.
+func _primer_hit(enemy: Node3D, kind: String, cls: String, _result := {}) -> String:
 	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
 	if piece == "" or _fights_posture(enemy):
 		return ""
 	var id := enemy.get_instance_id()
-	var live: bool = float(_primed.get(id, -1.0)) > _clock
 	if cls == "weapon":
+		var live: bool = float(_primed.get(id, -1.0)) > _clock
 		_primed[id] = _clock + Companion.PRIMER_SECONDS
 		if not live:
 			effects.spark(enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
 		return ""
-	if live and (kind in CONTACT_KINDS or cls == "special"):
-		_primed.erase(id)
-		effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
-		if piece == "primer_coil":
-			result["dealt"] = float(result["dealt"]) * Companion.PRIMER_COIL_MULT
-		return piece
-	return ""
+	if _primer_consumes(enemy, kind, cls) == "":
+		return ""
+	_primed.erase(id)
+	effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
+	return piece
+
+
+# The seated primer piece a hit of this kind and source class would consume on this
+# enemy now, or "". Reads only; _primer_hit does the consuming.
+func _primer_consumes(enemy: Node3D, kind: String, cls: String) -> String:
+	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
+	if piece == "" or cls == "weapon" or _fights_posture(enemy):
+		return ""
+	if float(_primed.get(enemy.get_instance_id(), -1.0)) <= _clock:
+		return ""
+	return piece if kind in CONTACT_KINDS or cls == "special" else ""
+
+
+# What strike() multiplies resolve()'s dealt by, beyond the plating rule: the cannon's
+# plate exposure (any contact deals BRACE_MULT while the window holds; the damage scales,
+# not the force, because a contact's punch is affine in its force) and a seated primer
+# coil consuming a live prime. Reads only, so would_crush() asks the same question the
+# strike will answer (F005).
+func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
+	var mult := 1.0
+	if kind in CONTACT_KINDS and float(_exposed.get(enemy.get_instance_id(), {}).get("until", -INF)) > _clock:
+		mult *= MindAttacks.BRACE_MULT
+	if _primer_consumes(enemy, kind, cls) == "primer_coil":
+		mult *= Companion.PRIMER_COIL_MULT
+	return mult
 
 
 # Mesh shares go through _trail_deal, never strike(): no bus fact, no proc, no prime.
@@ -826,7 +849,11 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 	var punch := punch_of(kind, force)
 	if enemy.has_method("fight") and enemy.fight() == "posture":
 		var tier: int = SpeedTier.of(force, ctx.player.tuning.f("cruise")) if kind == "ram" else 0
-		var judged: Dictionary = enemy.judge_hit(kind, punch, ctx.player.smash_landing == enemy, tier)
+		var smash: bool = ctx.player.smash_landing == enemy
+		# A judge that takes the part (warden.gd) meets plating_for(kind, part) (F004);
+		# BossContract's judge_hit is four arguments, so a boss piece gets four.
+		var judged: Dictionary = enemy.judge_hit(kind, punch, smash, tier, part) \
+				if enemy.get_method_argument_count("judge_hit") >= 5 else enemy.judge_hit(kind, punch, smash, tier)
 		if not judged.is_empty():
 			return judged
 	var reported: float = enemy.plating_for(kind, part) if enemy.has_method("plating_for") else 0.0
@@ -918,7 +945,8 @@ func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 	if enemy.has_method("crushable") and not enemy.crushable():
 		return false
 	var result := resolve(enemy, kind, force)
-	return result["plating"] <= 0.0 and result["dealt"] >= enemy.hp
+	var dealt: float = float(result["dealt"]) * _strike_mult(enemy, kind, _classify_source(kind, _forced_source))
+	return result["plating"] <= 0.0 and dealt >= enemy.hp
 
 
 # --- Pattern API for parts (README.md) ----------------------------------------------
@@ -2065,7 +2093,10 @@ func _detonate(charge: Dictionary) -> void:
 	_rocket_jump(at)
 	_start_cloak()
 	if _knob("sticky_chain") > 0.0:
+		# A nested detonation can already have taken a charge from this snapshot (F001).
 		for other in sticky.charges.duplicate():
+			if not sticky.charges.has(other):
+				continue
 			if (other["pos"] as Vector3).distance_to(at) <= _knob("sticky_chain"):
 				_detonate(sticky.take(other))
 
@@ -2552,6 +2583,14 @@ func _start_attempt() -> void:
 	_crushes.clear()
 	_shred.clear()
 	_pinned.clear()
+	pins = 0
+	# The upgrade tree's pending specials and clocks belong to the attempt that made
+	# them: no echo, sentry, cloud or marks fire into the next one (F002).
+	_echo = {}
+	_marks = {}
+	_cloud = {}
+	_sentry = {}
+	_pulse_left = 0.0
 	_prow_until.clear()
 	_primed.clear()
 	_clamped.clear()

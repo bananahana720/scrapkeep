@@ -177,6 +177,54 @@
    }
   },
   {
+   "id": "barge",
+   "path": "res://assets/models/barge.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/barge.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
+    "notes": "assets/models/barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "barge_detail1",
+   "path": "res://assets/models/barge_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/barge_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
+    "notes": "assets/models/barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "barge_detail2",
+   "path": "res://assets/models/barge_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/barge_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-barge/ref/barge_pass2.png",
+    "notes": "assets/models/barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "barge_fenders",
+   "path": "res://assets/models/barge_fenders.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/barge.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/barge_101.png",
+    "notes": "assets/models/barge.PROVENANCE.txt"
+   }
+  },
+  {
    "id": "arena_bowl_foundry",
    "path": "res://assets/models/bosses/arena_bowl_foundry.glb",
    "class": "scenery",
@@ -387,6 +435,54 @@
     "recipe": "tools/blender/bosses/mind_hand.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D4/out/BUILD-SPEC.md",
     "note": "Godot extracts this embedded image during GLB import; generated file is not a separate delivery."
+   }
+  },
+  {
+   "id": "cannon_launcher_body",
+   "path": "res://assets/models/cannon_launcher_body.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; enamel and steel; the cannon at its mouth point, beside the code's ring and dial)",
+   "provenance": {
+    "recipe": "tools/blender/cannon_launcher.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/cannon_launcher_202.png",
+    "notes": "assets/models/cannon_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cannon_launcher_detail1",
+   "path": "res://assets/models/cannon_launcher_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive steel shell at the body's origin, visibility range end 50 m, margin 12 m)",
+   "provenance": {
+    "recipe": "tools/blender/cannon_launcher_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/cannon_launcher_202.png",
+    "notes": "assets/models/cannon_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cannon_launcher_detail2",
+   "path": "res://assets/models/cannon_launcher_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive steel shell at the body's origin, visibility range end 26 m, margin 6 m)",
+   "provenance": {
+    "recipe": "tools/blender/cannon_launcher_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-cannon_launcher/ref/cannon_launcher_pass2.png",
+    "notes": "assets/models/cannon_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cannon_launcher_gauge",
+   "path": "res://assets/models/cannon_launcher_gauge.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; glass gauge face at the body's origin)",
+   "provenance": {
+    "recipe": "tools/blender/cannon_launcher.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/cannon_launcher_202.png",
+    "notes": "assets/models/cannon_launcher.PROVENANCE.txt"
    }
   },
   {
@@ -734,6 +830,54 @@
    "provenance": {
     "recipe": "tools/blender/companion/build_spil9.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D7/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "cottonwood_crown",
+   "path": "res://assets/models/cottonwood_crown.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/cottonwood.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/cottonwood_101.png",
+    "notes": "assets/models/cottonwood.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cottonwood_detail1",
+   "path": "res://assets/models/cottonwood_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/cottonwood_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/cottonwood_101.png",
+    "notes": "assets/models/cottonwood.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cottonwood_detail2",
+   "path": "res://assets/models/cottonwood_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/cottonwood_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-cottonwood/ref/cottonwood_pass2.png",
+    "notes": "assets/models/cottonwood.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "cottonwood_trunk",
+   "path": "res://assets/models/cottonwood_trunk.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/cottonwood.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/cottonwood_101.png",
+    "notes": "assets/models/cottonwood.PROVENANCE.txt"
    }
   },
   {
@@ -1108,6 +1252,174 @@
    "provenance": {
     "recipe": "tools/blender/dig_stone/rubble_cluster.py",
     "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D1/out/BUILD-SPEC.md"
+   }
+  },
+  {
+   "id": "fabricator_hoop",
+   "path": "res://assets/models/fabricator_hoop.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/fabricator_hoop.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/fabricator_hoop_101.png",
+    "notes": "assets/models/fabricator_hoop.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "fabricator_hoop_detail1",
+   "path": "res://assets/models/fabricator_hoop_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/fabricator_hoop_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/fabricator_hoop_101.png",
+    "notes": "assets/models/fabricator_hoop.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "fabricator_hoop_detail2",
+   "path": "res://assets/models/fabricator_hoop_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/fabricator_hoop_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-fabricator_hoop/ref/fabricator_hoop_pass2.png",
+    "notes": "assets/models/fabricator_hoop.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "gauge_dial_bezel",
+   "path": "res://assets/models/gauge_dial_bezel.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof; foot origin with gauge_dial_stand)",
+   "provenance": {
+    "recipe": "tools/blender/gauge_dial.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/gauge_dial_101.png",
+    "notes": "assets/models/gauge_dial.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "gauge_dial_detail1",
+   "path": "res://assets/models/gauge_dial_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof; detail shell at the foot, visibility_range_end 32 m, margin 7 m, FADE_SELF)",
+   "provenance": {
+    "recipe": "tools/blender/gauge_dial_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/gauge_dial_101.png",
+    "notes": "assets/models/gauge_dial.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "gauge_dial_detail2",
+   "path": "res://assets/models/gauge_dial_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof; detail shell at the foot, visibility_range_end 18 m, margin 3 m, FADE_SELF)",
+   "provenance": {
+    "recipe": "tools/blender/gauge_dial_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/gauge_dial_101.png",
+    "notes": "assets/models/gauge_dial.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "gauge_dial_face",
+   "path": "res://assets/models/gauge_dial_face.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof; foot origin, faces +Z)",
+   "provenance": {
+    "recipe": "tools/blender/gauge_dial.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/gauge_dial_101.png",
+    "notes": "assets/models/gauge_dial.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "gauge_dial_needle",
+   "path": "res://assets/models/gauge_dial_needle.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof; origin at the pivot, pointer +Y, placed at socket_needle and turned by contraptions.gd _needle rotation.z)",
+   "provenance": {
+    "recipe": "tools/blender/gauge_dial.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/gauge_dial_101.png",
+    "notes": "assets/models/gauge_dial.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "gauge_dial_stand",
+   "path": "res://assets/models/gauge_dial_stand.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; today's dial stays code-built in src/world/contraptions.gd _dial until the owner swaps it); origin on the ground under the post, carries socket_needle (0, 3.4, 0.12)",
+   "provenance": {
+    "recipe": "tools/blender/gauge_dial.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/gauge_dial_101.png",
+    "notes": "assets/models/gauge_dial.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "geyser_launcher_detail1",
+   "path": "res://assets/models/geyser_launcher_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive steel shell at the base's origin, visibility range end 40 m)",
+   "provenance": {
+    "recipe": "tools/blender/geyser_launcher_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/geyser_launcher_101.png",
+    "notes": "assets/models/geyser_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "geyser_launcher_detail2",
+   "path": "res://assets/models/geyser_launcher_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive steel shell at the base's origin, visibility range end 24 m)",
+   "provenance": {
+    "recipe": "tools/blender/geyser_launcher_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-geyser_launcher/ref/geyser_launcher_pass2.png",
+    "notes": "assets/models/geyser_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "geyser_launcher_drum",
+   "path": "res://assets/models/geyser_launcher_drum.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; stone slot, one of three GLBs at the geyser launcher's mouth point)",
+   "provenance": {
+    "recipe": "tools/blender/geyser_launcher.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/geyser_launcher_101.png",
+    "notes": "assets/models/geyser_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "geyser_launcher_fittings",
+   "path": "res://assets/models/geyser_launcher_fittings.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; enamel slot, one of three GLBs at the geyser launcher's mouth point)",
+   "provenance": {
+    "recipe": "tools/blender/geyser_launcher.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/geyser_launcher_101.png",
+    "notes": "assets/models/geyser_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "geyser_launcher_grate",
+   "path": "res://assets/models/geyser_launcher_grate.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; steel slot, one of three GLBs at the geyser launcher's mouth point)",
+   "provenance": {
+    "recipe": "tools/blender/geyser_launcher.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/geyser_launcher_101.png",
+    "notes": "assets/models/geyser_launcher.PROVENANCE.txt"
    }
   },
   {
@@ -1570,6 +1882,338 @@
    }
   },
   {
+   "id": "kicker_wedge",
+   "path": "res://assets/models/kicker_wedge.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/kicker_wedge.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/kicker_wedge_101.png",
+    "notes": "assets/models/kicker_wedge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "kicker_wedge_detail1",
+   "path": "res://assets/models/kicker_wedge_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/kicker_wedge_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/kicker_wedge_101.png",
+    "notes": "assets/models/kicker_wedge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "kicker_wedge_detail2",
+   "path": "res://assets/models/kicker_wedge_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/kicker_wedge_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-kicker_wedge/ref/kicker_wedge_pass2.png",
+    "notes": "assets/models/kicker_wedge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "kicker_wedge_stripes",
+   "path": "res://assets/models/kicker_wedge_stripes.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/kicker_wedge.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/kicker_wedge_101.png",
+    "notes": "assets/models/kicker_wedge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "lantern_beacon_detail1",
+   "path": "res://assets/models/lantern_beacon_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 60 m with its margin; beacon.gd _lantern)",
+   "provenance": {
+    "recipe": "tools/blender/lantern_beacon_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
+    "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   },
+   "bounds": {
+    "min": [
+     -3.525,
+     0,
+     -3.1097
+    ],
+    "max": [
+     1.975,
+     20.436,
+     3.1097
+    ],
+    "size": [
+     5.5,
+     20.436,
+     6.2193
+    ]
+   }
+  },
+  {
+   "id": "lantern_beacon_detail2",
+   "path": "res://assets/models/lantern_beacon_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 35 m with its margin; beacon.gd _lantern)",
+   "provenance": {
+    "recipe": "tools/blender/lantern_beacon_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/detail-beacon/ref/beacon_pass2.png",
+    "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   },
+   "bounds": {
+    "min": [
+     -3.2177,
+     0.4812,
+     -2.8009
+    ],
+    "max": [
+     1.7621,
+     18.11,
+     2.8009
+    ],
+    "size": [
+     4.9798,
+     17.6288,
+     5.6019
+    ]
+   }
+  },
+  {
+   "id": "lantern_beacon_frame",
+   "path": "res://assets/models/lantern_beacon_frame.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12 RECIPE-CART; today's beacon stays code-built in src/core/beacon.gd until the owner swaps it)",
+   "provenance": {
+    "recipe": "tools/blender/lantern_beacon.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
+    "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   },
+   "bounds": {
+    "min": [
+     -3.46,
+     0,
+     -2.9964
+    ],
+    "max": [
+     3.4256,
+     21.2,
+     2.9964
+    ],
+    "size": [
+     6.8856,
+     21.2,
+     5.9929
+    ]
+   }
+  },
+  {
+   "id": "lantern_beacon_lens",
+   "path": "res://assets/models/lantern_beacon_lens.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12 RECIPE-CART; placed at lantern_beacon_frame's socket_lens)",
+   "provenance": {
+    "recipe": "tools/blender/lantern_beacon.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/beacon_101.png",
+    "notes": "assets/models/lantern_beacon.PROVENANCE.txt"
+   },
+   "bounds": {
+    "min": [
+     -1.0432,
+     0,
+     -1.0432
+    ],
+    "max": [
+     1.0432,
+     5.2,
+     1.0432
+    ],
+    "size": [
+     2.0864,
+     5.2,
+     2.0864
+    ]
+   }
+  },
+  {
+   "id": "lift_platform_deck",
+   "path": "res://assets/models/lift_platform_deck.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; enamel and steel; the plate and column at the lift body's origin)",
+   "provenance": {
+    "recipe": "tools/blender/lift_platform.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/lift_platform_202.png",
+    "notes": "assets/models/lift_platform.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "lift_platform_detail1",
+   "path": "res://assets/models/lift_platform_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive steel shell at the pump's origin, visibility range end 50 m, margin 12 m)",
+   "provenance": {
+    "recipe": "tools/blender/lift_platform_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/lift_platform_202.png",
+    "notes": "assets/models/lift_platform.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "lift_platform_detail2",
+   "path": "res://assets/models/lift_platform_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive steel shell at the pump's origin, visibility range end 26 m, margin 6 m)",
+   "provenance": {
+    "recipe": "tools/blender/lift_platform_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-lift_platform/ref/lift_platform_pass2.png",
+    "notes": "assets/models/lift_platform.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "lift_platform_glass",
+   "path": "res://assets/models/lift_platform_glass.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; glass gauge faces at the pump's origin)",
+   "provenance": {
+    "recipe": "tools/blender/lift_platform.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/lift_platform_202.png",
+    "notes": "assets/models/lift_platform.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "lift_platform_pump",
+   "path": "res://assets/models/lift_platform_pump.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; enamel and steel; the tank pump at the foot on -x beside the plate)",
+   "provenance": {
+    "recipe": "tools/blender/lift_platform.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/lift_platform_202.png",
+    "notes": "assets/models/lift_platform.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_hover_barge",
+   "path": "res://assets/models/moss_hover_barge.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_hover_barge.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/moss_hover_barge_202.png",
+    "notes": "assets/models/moss_hover_barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_hover_barge_detail1",
+   "path": "res://assets/models/moss_hover_barge_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_hover_barge_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/moss_hover_barge_202.png",
+    "notes": "assets/models/moss_hover_barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_hover_barge_detail2",
+   "path": "res://assets/models/moss_hover_barge_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_hover_barge_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-moss_hover_barge/ref/moss_hover_barge_pass2.png",
+    "notes": "assets/models/moss_hover_barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_hover_barge_thrusters",
+   "path": "res://assets/models/moss_hover_barge_thrusters.glb",
+   "class": "landmark",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_hover_barge.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/moss_hover_barge_202.png",
+    "notes": "assets/models/moss_hover_barge.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_jukebox_cabinet",
+   "path": "res://assets/models/moss_jukebox_cabinet.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_jukebox.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/moss_jukebox_101.png",
+    "notes": "assets/models/moss_jukebox.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_jukebox_detail1",
+   "path": "res://assets/models/moss_jukebox_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_jukebox_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/moss_jukebox_101.png",
+    "notes": "assets/models/moss_jukebox.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_jukebox_detail2",
+   "path": "res://assets/models/moss_jukebox_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_jukebox_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-moss_jukebox/ref/moss_jukebox_pass2.png",
+    "notes": "assets/models/moss_jukebox.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_jukebox_feet",
+   "path": "res://assets/models/moss_jukebox_feet.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_jukebox.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/moss_jukebox_101.png",
+    "notes": "assets/models/moss_jukebox.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "moss_jukebox_trim",
+   "path": "res://assets/models/moss_jukebox_trim.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/moss_jukebox.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/moss_jukebox_101.png",
+    "notes": "assets/models/moss_jukebox.PROVENANCE.txt"
+   }
+  },
+  {
    "path": "res://assets/models/moss_shelter.glb",
    "class": "prop",
    "ships": true,
@@ -1586,6 +2230,54 @@
     "draws": 3
    },
    "exception_why": "recipe assert tris < 6,500"
+  },
+  {
+   "id": "ore_cart_body",
+   "path": "res://assets/models/ore_cart_body.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12 RECIPE-CART; today's cart stays cart_body.glb until the owner swaps it)",
+   "provenance": {
+    "recipe": "tools/blender/ore_cart.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/cart_101.png",
+    "notes": "assets/models/ore_cart.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "ore_cart_detail1",
+   "path": "res://assets/models/ore_cart_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 40 m with its margin; Scenery._cart batch route)",
+   "provenance": {
+    "recipe": "tools/blender/ore_cart_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/cart_101.png",
+    "notes": "assets/models/ore_cart.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "ore_cart_detail2",
+   "path": "res://assets/models/ore_cart_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/recipe_props.gd ROWS (shell at the base GLB's origin and scale, visibility_range_end 15 m with its margin; Scenery._cart batch route)",
+   "provenance": {
+    "recipe": "tools/blender/ore_cart_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/detail-cart/ref/cart_pass2.png",
+    "notes": "assets/models/ore_cart.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "ore_cart_wheel",
+   "path": "res://assets/models/ore_cart_wheel.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (route proof, wave 12 RECIPE-CART; placed at ore_cart_body's socket_wheel_* nodes)",
+   "provenance": {
+    "recipe": "tools/blender/ore_cart.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/probes/gen2/ref/cart_101.png",
+    "notes": "assets/models/ore_cart.PROVENANCE.txt"
+   }
   },
   {
    "id": "pilot_cannon_anim",
@@ -1661,6 +2353,138 @@
    "class": "shell",
    "ships": false,
    "loader": "none (no loader in src/; the loaded shells are under world_one/)"
+  },
+  {
+   "id": "trebuchet_launcher_arm",
+   "path": "res://assets/models/trebuchet_launcher_arm.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; steel; the throwing arm, origin at its pivot, placed at the frame's socket_arm and posed like contraptions.gd's arm)",
+   "provenance": {
+    "recipe": "tools/blender/trebuchet_launcher.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/trebuchet_launcher_202.png",
+    "notes": "assets/models/trebuchet_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "trebuchet_launcher_detail1",
+   "path": "res://assets/models/trebuchet_launcher_detail1.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive steel shell at the frame's origin, visibility range end 55 m, margin 12 m)",
+   "provenance": {
+    "recipe": "tools/blender/trebuchet_launcher_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/trebuchet_launcher_202.png",
+    "notes": "assets/models/trebuchet_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "trebuchet_launcher_detail2",
+   "path": "res://assets/models/trebuchet_launcher_detail2.glb",
+   "class": "detail",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; additive steel shell at the frame's origin, visibility range end 30 m, margin 6 m)",
+   "provenance": {
+    "recipe": "tools/blender/trebuchet_launcher_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-trebuchet_launcher/ref/trebuchet_launcher_pass2.png",
+    "notes": "assets/models/trebuchet_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "trebuchet_launcher_frame",
+   "path": "res://assets/models/trebuchet_launcher_frame.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; enamel and steel; the A-frame, axle, sphere fittings and control box at the mouth point, beside the code's ring and dial)",
+   "provenance": {
+    "recipe": "tools/blender/trebuchet_launcher.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/trebuchet_launcher_202.png",
+    "notes": "assets/models/trebuchet_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "trebuchet_launcher_glass",
+   "path": "res://assets/models/trebuchet_launcher_glass.glb",
+   "class": "landmark",
+   "ships": false,
+   "loader": "none (route proof, wave 12-D RECIPE-WAVE; glass; the sphere and the two gauge faces at the frame's origin)",
+   "provenance": {
+    "recipe": "tools/blender/trebuchet_launcher.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props-r2/trebuchet_launcher_202.png",
+    "notes": "assets/models/trebuchet_launcher.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "valve_wheel_band",
+   "path": "res://assets/models/valve_wheel_band.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/valve_wheel.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/valve_wheel_101.png",
+    "notes": "assets/models/valve_wheel.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "valve_wheel_detail1",
+   "path": "res://assets/models/valve_wheel_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/valve_wheel_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/valve_wheel_101.png",
+    "notes": "assets/models/valve_wheel.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "valve_wheel_detail1m",
+   "path": "res://assets/models/valve_wheel_detail1m.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/valve_wheel_detail1.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/valve_wheel_101.png",
+    "notes": "assets/models/valve_wheel.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "valve_wheel_detail2",
+   "path": "res://assets/models/valve_wheel_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/valve_wheel_detail2.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/units/rc-valve_wheel/ref/valve_pass2.png",
+    "notes": "assets/models/valve_wheel.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "valve_wheel_mount",
+   "path": "res://assets/models/valve_wheel_mount.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/valve_wheel.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/valve_wheel_101.png",
+    "notes": "assets/models/valve_wheel.PROVENANCE.txt"
+   }
+  },
+  {
+   "id": "valve_wheel_wheel",
+   "path": "res://assets/models/valve_wheel_wheel.glb",
+   "class": "prop",
+   "ships": true,
+   "loader": "recipe_props",
+   "provenance": {
+    "recipe": "tools/blender/valve_wheel.py",
+    "concept_reference": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w12/concepts/boards/alpha-props/valve_wheel_101.png",
+    "notes": "assets/models/valve_wheel.PROVENANCE.txt"
+   }
   },
   {
    "path": "res://assets/models/warden_clamp_base.glb",
@@ -2146,6 +2970,23 @@
    }
   },
   {
+   "id": "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+   "path": "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+   "class": "texture",
+   "ships": true,
+   "loader": "none (asset candidate; PanoramaSkyMaterial lab override in tools/w12_light_capture.gd --hdri)",
+   "provenance": {
+    "PF-01": "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+    "PF-02": "wired in by VX-WIRE (sky on the Spillway and Highdraft world rows); adopted 2026-10-09 after the coordinator's blind read picked it on both cameras",
+    "PF-03": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_48d_partly_cloudy_puresky_2k.hdr",
+    "PF-04": "Poly Haven",
+    "PF-05": "CC0 1.0, assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.LICENSE.txt",
+    "PF-06": "none; downloaded 2026-10-09 with Andrew's approval, 5451493 bytes",
+    "PF-07": "sky candidate for wog_spillway spawn_wide and hdr_sky sky_loom",
+    "note": "ships true since 2026-10-09 (VX-WIRE); Godot writes the .import beside it (untracked)."
+   }
+  },
+  {
    "path": "res://assets/textures/packed-sand-floor.webp",
    "class": "texture",
    "ships": true,
@@ -2189,6 +3030,10 @@
   "anchor_mast",
   "arena_bowl_foundry",
   "arena_waking_rim_sector.glb",
+  "barge",
+  "barge_detail1",
+  "barge_detail2",
+  "barge_fenders",
   "barge_skin",
   "barge_skin_rusted-salvaged-plate.webp",
   "bed_cut",
@@ -2219,8 +3064,16 @@
   "breach_wedge_c_14x10",
   "bridge_skin",
   "bridge_skin_rusted-salvaged-plate.webp",
+  "cannon_launcher_body",
+  "cannon_launcher_detail1",
+  "cannon_launcher_detail2",
+  "cannon_launcher_gauge",
   "cart_body",
   "cart_wheel",
+  "cottonwood_crown",
+  "cottonwood_detail1",
+  "cottonwood_detail2",
+  "cottonwood_trunk",
   "cracked_cache",
   "cut_face_long",
   "cut_face_scoop",
@@ -2257,6 +3110,20 @@
   "escape_vent__primer_mesh",
   "escape_vent__ram_prow",
   "escape_vent__ram_spring",
+  "fabricator_hoop",
+  "fabricator_hoop_detail1",
+  "fabricator_hoop_detail2",
+  "gauge_dial_bezel",
+  "gauge_dial_detail1",
+  "gauge_dial_detail2",
+  "gauge_dial_face",
+  "gauge_dial_needle",
+  "gauge_dial_stand",
+  "geyser_launcher_detail1",
+  "geyser_launcher_detail2",
+  "geyser_launcher_drum",
+  "geyser_launcher_fittings",
+  "geyser_launcher_grate",
   "impeller_hub",
   "impeller_rim_sector",
   "impeller_vane",
@@ -2274,14 +3141,41 @@
   "island_rim_rusted-salvaged-plate.webp",
   "island_small",
   "island_small_sandstone-strata.webp",
+  "kicker_wedge",
+  "kicker_wedge_detail1",
+  "kicker_wedge_detail2",
+  "kicker_wedge_stripes",
+  "kloofendal_48d_partly_cloudy_puresky_2k.hdr",
   "lamp_curve_module",
   "lamp_straight_module",
+  "lantern_beacon_detail1",
+  "lantern_beacon_detail2",
+  "lantern_beacon_frame",
+  "lantern_beacon_lens",
+  "lift_platform_deck",
+  "lift_platform_detail1",
+  "lift_platform_detail2",
+  "lift_platform_glass",
+  "lift_platform_pump",
   "mind_hand",
   "mind_hand_M1_M2_cast_atlas.png",
   "mind_hand_M4_signal_atlas.png",
+  "moss_hover_barge",
+  "moss_hover_barge_detail1",
+  "moss_hover_barge_detail2",
+  "moss_hover_barge_thrusters",
+  "moss_jukebox_cabinet",
+  "moss_jukebox_detail1",
+  "moss_jukebox_detail2",
+  "moss_jukebox_feet",
+  "moss_jukebox_trim",
   "net_edge",
   "net_shoe",
   "net_tile",
+  "ore_cart_body",
+  "ore_cart_detail1",
+  "ore_cart_detail2",
+  "ore_cart_wheel",
   "pilot_cannon_anim",
   "pilot_tally_anim",
   "pilot_tarn_anim",
@@ -2344,6 +3238,17 @@
   "trail_rose_wash",
   "trail_salt_skip",
   "travel_vane",
+  "trebuchet_launcher_arm",
+  "trebuchet_launcher_detail1",
+  "trebuchet_launcher_detail2",
+  "trebuchet_launcher_frame",
+  "trebuchet_launcher_glass",
+  "valve_wheel_band",
+  "valve_wheel_detail1",
+  "valve_wheel_detail1m",
+  "valve_wheel_detail2",
+  "valve_wheel_mount",
+  "valve_wheel_wheel",
   "warden_mantle_brood",
   "warden_mantle_brood_MantleStripes025m.png",
   "warden_mantle_choir",

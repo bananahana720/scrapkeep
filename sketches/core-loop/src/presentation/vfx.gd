@@ -11,6 +11,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Synergies := preload("res://src/build/synergies.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # World-space effects. Each glyph takes its colour and silhouette from the fact's
 # event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
@@ -27,14 +28,11 @@ const LINES_PER_TIER := [0, 0, 10, 20]
 # v3 W11 bursts: pooled one-shot CPU particles, one shared mesh and material per kind;
 # each burst sets only its emitter's colour, place and count. pool emitters x max count
 # is the ceiling a dense fight can hold alive at once (DESIGN-NOTES v3 W11).
-#   spark     a hit: thin shards flying out in the hit's colour
 #   pop       a kill: a quick round puff
 #   debris    a kill or a blast: chunks thrown up under gravity
 #   dust      a ram, a rebound or a blast: soft puffs rolling out along the ground
 #   fountain  a part or a core: a column that rises and falls around the drop
 const BURSTS := {
-	"spark": {"pool": 10, "max": 16, "life": 0.28, "speed": [5.0, 11.0], "spread": 180.0, "gravity": -9.0,
-		"size": Vector3(0.05, 0.05, 0.24), "align": true},
 	"pop": {"pool": 6, "max": 14, "life": 0.32, "speed": [3.0, 7.0], "spread": 180.0, "gravity": -3.0, "size": Vector3.ONE * 0.16},
 	"debris": {"pool": 6, "max": 12, "life": 0.7, "speed": [4.0, 9.0], "spread": 55.0, "gravity": -26.0, "size": Vector3.ONE * 0.24},
 	"dust": {"pool": 4, "max": 14, "life": 0.5, "speed": [2.0, 5.0], "spread": 85.0, "gravity": 1.5, "size": Vector3.ONE * 0.4, "soft": true},
@@ -68,6 +66,10 @@ var _heft_class := 1
 var _found_wired := false
 var _bursts := {}
 var _burst_next := {}
+# W12 P-FX: GPU effect pools by FxLibrary spec id, and the ball's rolling dust.
+var _fx := {}
+var _fx_next := {}
+var _roll: GPUParticles3D
 var _pips: Array = []
 var _pip_mat: StandardMaterial3D
 var _chain := 0
@@ -162,6 +164,7 @@ func setup(ctx_ref) -> void:
 	for i in SPARKLE_POOL:
 		_sparkles.append(_make_sparkle())
 	_build_bursts()
+	_build_fx()
 	_build_pips()
 	var layer := CanvasLayer.new()
 	layer.name = "EdgeFlashLayer"
@@ -176,7 +179,9 @@ func setup(ctx_ref) -> void:
 	events.mounted.connect(_on_mounted)
 	events.dismounted.connect(_on_dismounted)
 	events.grapple_fired.connect(func(anchor: Vector3): glyph("grapple_fired", anchor, 0.25, 0.7, 0.25, Vector3.ZERO, "", player.class_color()))
-	events.harpoon_bit.connect(func(_enemy: Node3D, at: Vector3): glyph("harpoon_bit", at, 0.3, 1.0, 0.3, Vector3.ZERO, "", player.class_color()))
+	events.harpoon_bit.connect(func(_enemy: Node3D, at: Vector3):
+		glyph("harpoon_bit", at, 0.3, 1.0, 0.3, Vector3.ZERO, "", player.class_color())
+		play_fx("harpoon_bit", at, player.class_color(), "", player.ball_position() - at))
 	events.harpoon_smashed.connect(func(_enemy: Node3D, at: Vector3, speed: float):
 		glyph("harpoon_smashed", at, 0.6, 2.0 + speed * 0.05, 0.4, Vector3.ZERO, "", player.class_color()))
 	events.shot_fired.connect(_on_shot)
@@ -198,6 +203,9 @@ func wire_optional() -> void:
 	var events = ctx.events
 	_listen(events, "beacon_unsealed", _on_unsealed)
 	_listen(events, "heft_class_changed", _on_heft_class)
+	_listen(events, "world_fact", _on_world_fact_fx)
+	_listen(events, "stage_entered", func(_stage: int, _retry: bool): stop_embers())
+	_listen(events, "stage_content_cleared", func(_reason: String): stop_embers())
 	_listen(events, "heft_class_dropped", _on_heft_class)
 	_listen(events, "scrap_lost", _on_scrap_lost)
 	_listen(events, "strike_deflected", _on_deflected)
@@ -536,6 +544,7 @@ func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05:
 		return
 	glyph("slammed", at + Vector3.UP * 0.15, 1.0, Augments.SLAM_RADIUS, 0.35, player.state.contact_normal)
+	play_fx("slammed", at + Vector3.UP * 0.15)
 
 
 # The plant ring shows the mount's repel reach.
@@ -659,6 +668,7 @@ func _process(delta: float) -> void:
 	if trails:
 		_draw_trail(tier)
 		_draw_lines(tier, delta)
+	_roll_dust()
 
 
 func _draw_trail(tier: int) -> void:
@@ -798,6 +808,71 @@ func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
 	p.restart()
 	p.emitting = true
 	spawned["burst_" + kind] = spawned.get("burst_" + kind, 0) + 1
+
+
+func _build_fx() -> void:
+	for id in FxLibrary.SPECS:
+		if FxLibrary.SPECS[id].get("owner", "vfx") != "vfx":
+			continue
+		var pool: Array = []
+		for i in int(FxLibrary.SPECS[id]["pool"]):
+			var p := FxLibrary.build(id)
+			p.name = "%s_%d" % [p.name, i]
+			root.add_child(p)
+			pool.append(p)
+		_fx[id] = pool
+		_fx_next[id] = 0
+	_roll = _fx["roll_dust"][0]
+	_roll.set_instance_shader_parameter("tint", FxLibrary.colour("roll_dust", "rolling"))
+
+
+# The GPU effects an event's JUICE row names, at one place: the oldest emitter of each
+# restarts there, its particle count from the row, its tint from the spec's colour
+# source unless the caller passes one (a crit's colour). `variant` picks the row's
+# "crit" set; `toward` aims a forward spec (the latch's pulse runs at the ball).
+func play_fx(kind: String, at: Vector3, tint := Color.TRANSPARENT, variant := "", toward := Vector3.ZERO) -> void:
+	if root == null or not root.is_inside_tree():
+		return
+	var effects := FxLibrary.effects(kind, variant)
+	for id in effects:
+		if not _fx.has(id) or FxLibrary.SPECS[id]["attach"] == "ball":
+			continue
+		var pool: Array = _fx[id]
+		var p: GPUParticles3D = pool[_fx_next[id]]
+		_fx_next[id] = (_fx_next[id] + 1) % pool.size()
+		FxLibrary.fire(p, id, kind, int(effects[id]), at, tint, toward)
+		spawned["fx_" + id] = spawned.get("fx_" + id, 0) + 1
+
+
+func _on_world_fact_fx(kind: String, at: Vector3) -> void:
+	if not FxLibrary.effects(kind).is_empty() and kind != "breach_opened":
+		play_fx(kind, at)
+
+
+# A spent cache keeps a low ember going where it stands, until the stage is left.
+func stop_embers() -> void:
+	for id in ["cache_ember", "cache_wisp"]:
+		for p: GPUParticles3D in _fx[id]:
+			p.emitting = false
+
+
+# Rolling dust: the ball's contact point emits while it rolls on the ground at speed,
+# thicker as it goes faster; the row's count is particles per second at twice min_speed.
+func _roll_dust() -> void:
+	if _roll == null:
+		return
+	var row := EventKinds.juice("rolling")
+	var speed: float = player.planar_velocity().length()
+	var floor_speed: float = row["min_speed"]
+	var on: bool = player.state.grounded and speed >= floor_speed
+	if on:
+		_roll.global_position = player.ball_position() - player.state.contact_normal * 0.95
+		var rate: float = float(row["fx"]["roll_dust"]) * clampf(speed / (floor_speed * 2.0), 0.4, 1.0)
+		_roll.amount_ratio = clampf(rate * _roll.lifetime / float(_roll.amount), 0.0, 1.0)
+	if _roll.emitting != on:
+		_roll.emitting = on
+		if on:
+			spawned["fx_roll_dust"] = spawned.get("fx_roll_dust", 0) + 1
 
 
 # A kill's starburst, pop and debris, through the kill-pop gate: one call per kill.

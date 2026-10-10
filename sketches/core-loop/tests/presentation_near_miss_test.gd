@@ -103,6 +103,48 @@ func _process(_delta: float) -> bool:
 	_tick()
 	_check("withdrawn threat", _watch.fired == 2, "a threat freed before it landed: %d near_miss in total" % _watch.fired)
 
+	# BUGFIX-COMBAT-A F003 (2026-10-09): a WAVE hurts only on its running front, so its
+	# watch reads the front: inside the ring ahead of the front is in, the front running
+	# past the ball (or the wave spent) is the landing. 6 m ring, 6 m/s front, 1 s warn.
+	var waved: int = _watch.fired
+	var dodge := _wave(terrain, far + Vector3(0.0, 0.0, 30.0))
+	_at(dodge, 3.0)
+	_wave_run(dodge, 0.5)
+	_at(dodge, 9.0)
+	_wave_run(dodge, 2.0)
+	_check("wave: out before the front", _watch.fired == waved + 1 and _heard.size() == waved + 1 and _heard[waved][0] == "threat_wave",
+		"3 m in while it warned, 9 m out before the front reached 3 m: %d near_miss (%s)" % [_watch.fired - waved, _heard.slice(waved)])
+	dodge.queue_free()
+
+	waved = _watch.fired
+	var hopped := _wave(terrain, far + Vector3(30.0, 0.0, 30.0))
+	_at(hopped, 3.0)
+	_wave_run(hopped, 1.2)
+	_point.y += 6.0
+	_wave_run(hopped, 0.7)
+	_point.y -= 6.0
+	_wave_run(hopped, 1.0)
+	_check("wave: jumped over the front", _watch.fired == waved + 1,
+		"3 m in, up 6 m while the front passed under: %d near_miss" % (_watch.fired - waved))
+	hopped.queue_free()
+
+	waved = _watch.fired
+	var caught := _wave(terrain, far + Vector3(60.0, 0.0, 30.0))
+	_at(caught, 3.0)
+	_wave_run(caught, 1.5)
+	_game.events.player_hit.emit(10.0, "lamp_swarm")
+	_wave_run(caught, 1.5)
+	_check("wave: not when the front hit", _watch.fired == waved,
+		"3 m in, hit as the front crossed, front ran on: %d near_miss" % (_watch.fired - waved))
+	caught.queue_free()
+
+	waved = _watch.fired
+	var outside := _wave(terrain, far + Vector3(90.0, 0.0, 30.0))
+	_at(outside, 9.0)
+	_wave_run(outside, 3.0)
+	_check("wave: never inside", _watch.fired == waved, "9 m out the whole wave: %d near_miss" % (_watch.fired - waved))
+	outside.queue_free()
+
 	var juice = _game.presentation.juice
 	juice.reset_stops()
 	_game.events.near_miss.emit("threat_lane", _game.player.ball_position())
@@ -117,6 +159,17 @@ func _process(_delta: float) -> bool:
 
 func _ring(terrain, at: Vector3) -> Node3D:
 	return Telegraph.ring(_game, terrain, Threat.Type.INSTANT, at, 3.0)
+
+
+func _wave(terrain, at: Vector3) -> Node3D:
+	return Telegraph.wave(_game, terrain, at, 6.0, 6.0, 1.0)
+
+
+# The wave and the watch step together, 60 ticks a second.
+func _wave_run(wave: Node3D, seconds: float) -> void:
+	for i in int(round(seconds * 60.0)):
+		wave.step(1.0 / 60.0)
+		_tick()
 
 
 func _at(ring: Node3D, out: float) -> void:

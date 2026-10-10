@@ -21,9 +21,6 @@ const SMALL_SCALE := {"rock_a": Vector2(1.5, 3.0), "rock_c": Vector2(1.5, 3.0), 
 	"plate_b": Vector2(1.5, 3.0), "stub_a": Vector2(1.5, 3.0), "tuft_a": Vector2(2.2, 4.0),
 	"tuft_b": Vector2(2.2, 4.0), "slab_a": Vector2(1.5, 2.5)}
 const CLUSTER_SMALL := Vector2i(6, 12)
-const CLUSTER_SPACING := 9.0
-const CLIFF_CLUSTERS := 110
-const EDGE_SHARE := 0.6
 const WIND := Vector2(0.93, 0.367)
 static var _route_warned := false
 
@@ -37,6 +34,7 @@ var _clock := 0.0
 var _active := true
 var _ground: Callable
 var _rng := RandomNumberGenerator.new()
+var _spacing := 0.0
 
 func setup(context) -> void:
 	ctx = context
@@ -66,11 +64,11 @@ func _build_stage() -> void:
 	_rng.seed = seed_value
 	_ground = ctx.terrain.ground_callable(stage)
 	var map = ctx.terrain.map_for(stage)
-	if Preset.PRESETS.target.set_dressing:
+	if Preset.PRESETS[Preset.current].get("set_dressing", false):
 		_build_props(map, stage)
-	if Preset.PRESETS.target.air_motes:
+	if Preset.PRESETS[Preset.current].get("air_motes", false):
 		_build_dust()
-	if Preset.PRESETS.target.air_streaks:
+	if Preset.PRESETS[Preset.current].get("air_streaks", false):
 		_build_streaks(map)
 	_update_protection()
 
@@ -122,6 +120,7 @@ func _kit_meshes() -> Dictionary:
 # edge of each ride line just outside its clear strip. Everything else stays bare.
 func _cluster_centres(map, rect: Rect2, rows: Array) -> Array[Vector2]:
 	var centres: Array[Vector2] = []
+	_spacing = float(map.scatter["spacing"])
 	for point in structure_points(map):
 		_try_centre(centres, point, rect, rows, 4.0)
 	for row in rows:
@@ -133,12 +132,12 @@ func _cluster_centres(map, rect: Rect2, rows: Array) -> Array[Vector2]:
 			var steps := int(length / 9.0)
 			var along := (points[i + 1] - points[i]).normalized()
 			for k in steps:
-				if _rng.randf() > EDGE_SHARE:
+				if _rng.randf() > float(map.scatter["edge_share"]):
 					continue
 				var side := Vector2(-along.y, along.x) * (1.0 if _rng.randf() < 0.5 else -1.0)
 				var at: Vector2 = points[i] + along * (float(k) + _rng.randf()) * 9.0 + side * (float(row.radius) + _rng.randf_range(2.0, 5.0))
 				_try_centre(centres, at, rect, rows, 4.0)
-	var limit := centres.size() + CLIFF_CLUSTERS
+	var limit := centres.size() + int(map.scatter["clusters"])
 	for i in 40000:
 		if centres.size() >= limit:
 			break
@@ -151,7 +150,7 @@ func _try_centre(centres: Array[Vector2], at: Vector2, rect: Rect2, rows: Array,
 	if not rect.grow(-6.0).has_point(at) or _normal(at.x, at.y).y < 0.9 or blocked(rows, at, margin) != "":
 		return
 	for other in centres:
-		if other.distance_to(at) < CLUSTER_SPACING:
+		if other.distance_to(at) < _spacing:
 			return
 	centres.append(at)
 

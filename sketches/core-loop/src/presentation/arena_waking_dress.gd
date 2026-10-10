@@ -3,6 +3,7 @@ extends Node3D
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const STONE_DIR := "res://assets/models/dig_stone/"
 const MECH_DIR := "res://assets/models/dig_mechanical/"
 static var stone_dir := STONE_DIR
@@ -18,7 +19,7 @@ const WALL_SECTORS := 16
 # Light comes from lamps, the reactor and the key; the floor itself never glows.
 # core_key_low is the low preset's trim: the key keeps its shadow on a tighter cone.
 const LIGHTS := {
-	"rim_pool": {"energy": 2.2, "range": 34.0, "radius": 28.0, "height": 6.0},
+	"rim_pool": {"energy": 1.0, "range": 34.0, "radius": 28.0, "height": 6.0},
 	"lamp_pool": {"energy": 1.2, "range": 24.0},
 	"reactor": {"energy": 3.0, "range": 48.0},
 	"core_key": {"energy": 2.8, "range": 55.0, "angle": 55.0},
@@ -27,6 +28,9 @@ const LIGHTS := {
 # The pit floor's plates: half the old 8 m pitch, so the top floor reads as tiled plate.
 const FLOOR_PLATE_PITCH := 4.0
 const FLOOR_SEAM_WIDTH := 0.12
+# Pale zinc: a cool plate that is no state colour (not slate's "not yet") and lighter than the old sandstone,
+# so the copper ball reads dark against it under the 0.16 ambient and the amber pools stay an accent.
+const FLOOR_PLATE_COLOR := Color("c8cdcf")
 
 var module
 var _parts := {}
@@ -72,7 +76,7 @@ func _prepare() -> bool:
 	floor_material.shader = preload("res://src/presentation/arena_waking_floor.gdshader")
 	floor_material.set_shader_parameter("tex_tone", stone.get_shader_parameter("tex_tone"))
 	floor_material.set_shader_parameter("tex_grain", stone.get_shader_parameter("tex_grain"))
-	floor_material.set_shader_parameter("base_color", Palette.SANDSTONE)
+	floor_material.set_shader_parameter("base_color", FLOOR_PLATE_COLOR)
 	floor_material.set_shader_parameter("seam_color", Palette.CHARCOAL)
 	floor_material.set_shader_parameter("panel_pitch", FLOOR_PLATE_PITCH)
 	floor_material.set_shader_parameter("seam_width", FLOOR_SEAM_WIDTH)
@@ -156,7 +160,7 @@ func _build() -> void:
 	add_child(_reactor_light)
 	_core_key = SpotLight3D.new()
 	_core_key.name = "CoreKey"
-	_core_key.light_color = Palette.SAND
+	_core_key.light_color = WorldLook.ARENAS.waking.key
 	_core_key.light_energy = LIGHTS.core_key.energy
 	_core_key.spot_range = LIGHTS.core_key.range
 	_core_key.spot_angle = LIGHTS.core_key.angle
@@ -171,12 +175,9 @@ func _build() -> void:
 			lights.append({"object": light, "values": {"light_energy": light.light_energy}})
 	for light in module.ctx.root.find_children("*", "DirectionalLight3D", true, false):
 		lights.append({"object": light, "values": {"visible": false}})
-	GraphicsPreset.set_lighting(self, module.ctx.terrain.environment, {
-		"background_mode": Environment.BG_COLOR, "background_color": Color("171e1d"),
-		"ambient_light_source": Environment.AMBIENT_SOURCE_COLOR, "ambient_light_color": Color("9ba8a3"),
-		"ambient_light_energy": 0.16, "reflected_light_source": Environment.REFLECTION_SOURCE_DISABLED,
-		"fog_enabled": true, "fog_density": 0.008, "fog_light_color": Color("242a28"),
-		"fog_light_energy": 0.3, "fog_sun_scatter": 0.0}, lights)
+	var look: Dictionary = WorldLook.ARENAS.waking
+	GraphicsPreset.set_lighting(self, module.ctx.terrain.environment,
+		WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air), lights, "arena")
 
 
 func _floor(body: StaticBody3D, node_name: String) -> void:
@@ -199,7 +200,7 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 		light.name = "RimPool%d" % i
 		var pool: Dictionary = LIGHTS.rim_pool
 		light.position = Vector3(sin(angle) * pool.radius, pool.height, cos(angle) * pool.radius)
-		light.light_color = DigScenery.LAMP_LIGHT
+		light.light_color = WorldLook.ARENAS.waking.floor_accent
 		light.light_energy = pool.energy
 		light.omni_range = pool.range
 		light.shadow_enabled = false

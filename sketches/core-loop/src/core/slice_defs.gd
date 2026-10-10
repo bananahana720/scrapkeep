@@ -4,8 +4,10 @@ const Worlds := preload("res://src/core/worlds.gd")
 
 # The slice table: the Cable Reach played first and alone, ending the run at its gate.
 # Same shape as stage_defs.gd. It repeats that file's two lookups because a base script's
-# static functions would read the base's own DEFS, not this one's. The numbers are
-# stage 1's from stage_defs.gd. The slice has no timed events and no vault, and its
+# static functions would read the base's own DEFS, not this one's. The Warden's plating,
+# hp and posture are the slice's own, tuned against ball size by a bot sweep
+# (posture_bands_test pins them); they match the alpha's Cable Reach row, stage 2 of
+# alpha_defs.gd, not its stage 1. The slice has no timed events and no vault, and its
 # enemies arrive as the authored packs below, drawn by the director instead of its
 # clock, its build tilt and its unlock rules.
 

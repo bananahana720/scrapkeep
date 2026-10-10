@@ -1,4 +1,6 @@
 extends SceneTree
+# Re-pinned 2026-10-09 (w12 VX-LIGHT): the shipped high is the target look, surface swap included, so the established originals are snapshotted on low and high must bind the same slots as target; measured cause: high now carries material_ground/rock/dam true (graphics_preset.gd HIGH).
+# Re-pinned 2026-10-09 (w12 VX-SURF): ground and rock now ship as the sandstone slot materials (src/presentation/material_slots.gd), so the target_ground and target_rock shaders are retired and their uniform checks moved to the dam; measured cause: target_surface_material no longer wraps those two roles.
 
 const Game := preload("res://src/game.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
@@ -51,6 +53,7 @@ func _run() -> void:
 	for i in 120:
 		await physics_frame
 	paused = true
+	Preset.apply("low")
 	var views := game.find_children("*", "MeshInstance3D", true, false)
 	var before := []
 	var surface_count := 0
@@ -66,7 +69,7 @@ func _run() -> void:
 			surface_count += 1
 		before.append({"view": view, "mesh": view.mesh, "cast_shadow": view.cast_shadow,
 			"materials": materials, "values": material_values})
-	check(Preset.apply("low") and _matches(before), "fresh high to low keeps every active material and its values")
+	check(Preset.apply("low") and _matches(before), "low keeps every active material and its values")
 	check(Preset.apply("target"), "target applies to the built game")
 	var roles := {"ground": 0, "rock": 0, "dam": 0}
 	for binding in Preset._materials:
@@ -75,20 +78,20 @@ func _run() -> void:
 			continue
 		for i in view.mesh.get_surface_count():
 			var material := view.get_active_material(i) as ShaderMaterial
-			check(material != null and material.resource_name == "target_" + binding.role, "target binds " + binding.role + " on " + str(view.name))
+			var slot_role: bool = binding.role in ["ground", "rock"]
+			var expected_name: String = binding.role if slot_role else "target_" + binding.role
+			check(material != null and material.resource_name == expected_name, "target binds " + binding.role + " on " + str(view.name))
 			if material != null:
-				var expected: Color = Palette.SAND if binding.role == "ground" else Palette.SANDSTONE
-				if binding.role == "dam":
-					expected = binding.originals[i].albedo_color
-				check(material.get_shader_parameter("base_color") == expected, "target base uniform matches high palette/source colour for " + binding.role)
-				if binding.role == "ground":
-					check(material.get_shader_parameter("rock_color") == Palette.SANDSTONE, "ground slope uses sandstone palette uniform")
-				if binding.role == "dam":
+				if slot_role:
+					check(material.shader.resource_path == "res://src/presentation/sandstone.gdshader" and material == Palette.slot_material(binding.role), "w12 VX-SURF: shipped " + binding.role + " is the sandstone slot material")
+					check(material.get_shader_parameter("cliff_only") == (binding.role == "rock") and material.get_shader_parameter("strata_map") != null, "w12 VX-SURF: " + binding.role + " slot carries its cliff flag and the strata map")
+				else:
+					check(material.get_shader_parameter("base_color") == binding.originals[i].albedo_color, "target base uniform matches high palette/source colour for " + binding.role)
 					check(material.get_shader_parameter("base_map") == binding.originals[i].albedo_texture, "dam keeps high source map and its rust hue")
+					check(material.get_shader_parameter("detail_enabled") == true and material.get_shader_parameter("relief_enabled") == true, "target detail and relief enabled")
+					var parameters := material.shader.get_shader_uniform_list()
+					check(parameters.any(func(p): return p.name == "detail_enabled"), "engine parses target shader uniforms and include")
 				roles[binding.role] += 1
-				check(material.get_shader_parameter("detail_enabled") == true and material.get_shader_parameter("relief_enabled") == true, "target detail and relief enabled")
-				var parameters := material.shader.get_shader_uniform_list()
-				check(parameters.any(func(p): return p.name == "detail_enabled"), "engine parses target shader uniforms and include")
 	var built := 0
 	for i in game.ctx.terrain.maps.size():
 		if game.ctx.terrain.is_built(i + 1):
@@ -99,9 +102,15 @@ func _run() -> void:
 		check(row.view.mesh == row.mesh and row.view.cast_shadow == row.cast_shadow, "target keeps mesh and shadow-caster state for " + str(row.view.name))
 		if not Preset._materials.any(func(binding): return binding.view.get_ref() == row.view):
 			check(_matches([row]), "target keeps actor, prop and effect materials for " + str(row.view.name))
-	check(Preset.apply("high") and _matches(before), "target to high restores every original material resource and value")
+	var bound := []
+	for binding in Preset._materials:
+		var view := binding.view.get_ref() as MeshInstance3D
+		if view != null:
+			bound.append([view, view.get_active_material(0)])
+	check(Preset.apply("high") and bound.all(func(row): return row[0].get_active_material(0) == row[1]), "shipped high binds the same surfaces as target")
+	check(Preset.apply("low") and _matches(before), "high to low restores every original material resource and value")
 	check(Preset.apply("target") and Preset.apply("low") and _matches(before), "target to low restores every original material resource and value")
-	check(Preset.apply("target") and Preset.apply("target") and Preset.apply("high") and _matches(before), "repeated target preserves original material bindings")
+	check(Preset.apply("target") and Preset.apply("target") and Preset.apply("high") and Preset.apply("low") and _matches(before), "repeated target preserves original material bindings")
 	check(Palette.ground_material().shader.resource_path == "res://src/presentation/sandstone.gdshader", "established ground construction remains original")
 	var layer := CanvasLayer.new()
 	var label := WorldPrompt.new()

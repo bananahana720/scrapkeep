@@ -73,14 +73,14 @@ const TABLES := {
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "d50e7ffc23deb805190e89fc74ad42672acba364c2a11a9e3ffb6727e317e8a9",  # 2026-10-08 (wave 10 ST5): one story beat per pilot unlock; was P-R7: twenty customization rewards
 	"cosmetics.ROWS": "c0f10ab88faa487ec1b0e838e547d7c86ebb1e61343536947e6ea3e5ef3f2a0e",  # P-R7: delivered decal mask ids, trails and SPIL-9 paints
-	"event_kinds.ROWS": "3e9034943de300b0f5dac66cdc81408d7a85113ad7e9b5925b4a29ca90fb6d3f",  # 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
+	"event_kinds.ROWS": "1326ff102e432c2c54517ec23e78ea21411cca8f39dc8ef5d740b55ff288c595",  # 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 3e903494, 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
 	"event_kinds.CAUSE_ROWS": "9d20bee7f3e2a23dd09db3c08ab99e3fa0aab0f99d4373ef3398fff8601e0812",
 	"event_kinds.ACTIVITY_ROWS": "3b128af84df85ddccc150f1d6f5847b194a39dd1625cd0c8a1d2c2c3b4ae2607",
 	"event_kinds.LOOT_ROWS": "1d99aa491419dc9a8bbd2da1cfd747d991c3848e5cf01e7cc8e099698d8b3b6e",
 	"event_kinds.UI_ROWS": "f8c0f271ee5a6f5d41ce209283d2b499f1183831465a081d6de308e19179a51e",  # 2026-10-08 (alpha wave 11 GP4 escape corridor): escape_acted row; was c6a2047c (wave 13 companion cues)
-	"event_kinds.WORLD_ROWS": "686afd81f6d889e71870e154c32759dbf7bd738dd309c20b69567810ebbe0a4f",  # 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
+	"event_kinds.WORLD_ROWS": "7284c5453342ce3f69febfebbb4c27362068f15ea2626bf42b89585e2203b9dd",  # 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 686afd81, 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
 	"event_kinds.IMPACT": "6131066a6305444600f0678a8f8dc9aaae7212e9f4581cc4f58c3e293067052c",  # 2026-10-05 (alpha wave 15 cannon-kit): cannon row
@@ -98,7 +98,7 @@ const GOLDEN_HASHES := {
 	"boss.codex_entries.WAKING": "6b6074ef43fd2de4eb04f2c60d971eb7922d6e152e532b9b94454a8e017f60ea",
 	"boss.codex_entries.MIND": "6acfd19449f8802b806ba76093fe15bd0c938c0a2f110230d9d38a5cbd004d87",
 	"parts.rows": "374d860be797b340774f2529139aeb4f5f115420cab91c33298533ddc16cfb7b",  # 2026-10-08 (wave 11 GP-parts): six new parts and four synergies
-	"item_gen.RARITY": "8a6773ccccd064709c46cb372da5f35a53e89430114754bd6a1a7121dcb768a4",
+	"item_gen.RARITY": "abc72c1edec3fe06f0acffa49bab184750d7edb905317f93e66b8a9910bdb2c5",  # 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 8a6773cc
 }
 
 
@@ -328,6 +328,10 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 		var nodes: Array = rows[pilot]
 		if nodes.size() < size:
 			_issue(issues, name, "minimum_rows", str(pilot), "has %d nodes, needs %d" % [nodes.size(), size])
+		# A node is reachable when it is selectable, inside the cap and its whole parent chain is.
+		var reach: Array[bool] = []
+		for index in nodes.size():
+			reach.append(index < size and _selectable_node(nodes[index]) and (index < 2 or reach[(index - 2) / 2]))
 		var seen := {}
 		for index in nodes.size():
 			var id := "%s/%d" % [pilot, index]
@@ -370,7 +374,7 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 								_ref(issues, name, id, "proc do", proc.do, Trees.ACTIONS)
 			# Both roots are selectable. Every later node needs its heap parent and stays inside the cap.
 			var parent: int = (index - 2) / 2
-			if index >= size or (index >= 2 and not _selectable_node(nodes[parent])):
+			if index >= size or (index >= 2 and not reach[parent]):
 				_issue(issues, name, "reachable", id, "outside selectable heap or missing parent")
 
 

@@ -44,7 +44,9 @@ func _run() -> void:
 	var groups := {}
 	_collect(a, groups)
 	_check(attributes_ok, "all solid surfaces retain authored attributes")
-	_check(groups.size() == 7, "seven exact solid color/emission variants")
+	# 2026-10-09 swap-wave 12-F barge: the gorge barges wear the recipe, so their amber 0.6 edge bands (the only
+	# AMBER 0.6 solid) are gone; six of the seven VARIANTS remain in use.
+	_check(groups.size() == 6, "six exact solid color/emission variants")
 	var shared := true
 	for ids in groups.values():
 		shared = shared and ids.size() == 1
@@ -114,14 +116,20 @@ func _state(node: Node) -> Array:
 	if node is Node3D:
 		result.append(node.transform)
 		result.append(node.visible)
-	if node is MeshInstance3D:
+	# 2026-10-09 swap-wave 12-F (merge of the barge and valve re-pins): recipe views carry surface overrides
+	# and no material_override; hash their slots instead of skipping them. The recipe barge's deck
+	# keeps its node but no mesh, so a mesh-less view is skipped.
+	if node is MeshInstance3D and node.mesh != null:
 		result.append(hash(node.mesh.get_faces()))
 		var mat: StandardMaterial3D = node.material_override
-		result.append([mat.albedo_color, mat.roughness, mat.metallic, mat.emission_enabled, mat.emission,
-			mat.emission_energy_multiplier, mat.transparency, mat.shading_mode, mat.cull_mode, mat.no_depth_test,
-			mat.uv1_triplanar, mat.uv1_scale])
-		if mat.albedo_texture != null:
-			result.append([mat.albedo_texture.get_width(), mat.albedo_texture.get_height()])
+		if mat == null:
+			result.append(range(node.mesh.get_surface_count()).map(func(i): return node.get_surface_override_material(i)))
+		else:
+			result.append([mat.albedo_color, mat.roughness, mat.metallic, mat.emission_enabled, mat.emission,
+				mat.emission_energy_multiplier, mat.transparency, mat.shading_mode, mat.cull_mode, mat.no_depth_test,
+				mat.uv1_triplanar, mat.uv1_scale])
+			if mat.albedo_texture != null:
+				result.append([mat.albedo_texture.get_width(), mat.albedo_texture.get_height()])
 	if node is CollisionShape3D:
 		result.append([node.disabled, hash(node.shape.get_debug_mesh().get_faces())])
 	if node is CollisionObject3D:

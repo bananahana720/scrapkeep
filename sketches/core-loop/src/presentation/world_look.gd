@@ -1,0 +1,202 @@
+extends RefCounted
+
+const Palette := preload("res://src/core/palette.gd")
+
+# One light-and-air row per world (worlds.gd ids), per arena and per menu stage. Every layer that
+# lights a place reads its row here: the stage hook, the arena dresses, the Highdraft finishes, the
+# title, the ending and the class preview. Graphics presets hold quality knobs only.
+#   sky: "workshop" the painted panorama, "hdri" the Poly Haven sky (Palette.hdri_sky), "own" the
+#   stage or arena builds its sky, "dome" a colour background (no sky ridges).
+#   fog: density and colour written when the row names them. The squall haze (event_view.gd) starts
+#   from the fog the row left on the environment (record_fog after the row is entered); a row
+#   without numbers leaves the environment's fog as it was.
+#   air: the volumetric row entered with the world (P-LIGHT WORLD_AIR); empty is no air.
+const ROWS := {
+	1: {"name": "spillway", "sky": "hdri", "background": Color("243b43"),
+		"ambient": Color("9db5cf"), "energy": 0.28, "exposure": 1.1, "saturation": 1.2,
+		"fog": {"color": Color("a3bdd0"), "density": 0.0006},
+		"sun_color": Color("ffd49a"), "sun_energy": 2.35, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
+		"sun_visible": true, "fill": 0.5, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"),
+		# A faint warm haze: the P-LIGHT row at 0.004 washed the factory toward sand.
+		"air": {"volumetric_fog_density": 0.0012, "volumetric_fog_albedo": Color("e9d2a6"),
+			"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.55,
+			"volumetric_fog_length": 160.0, "volumetric_fog_ambient_inject": 0.2, "volumetric_fog_sky_affect": 0.0}},
+	# Underground: a closed dark dome, low cool ambient, a dimmed shaft key and the lamp pool.
+	2: {"name": "dig", "sky": "dome", "background": Color("0b0f12"),
+		"ambient": Color("6d7f92"), "energy": 0.12, "exposure": 1.1, "saturation": 1.1,
+		"fog": {"color": Color("56636f"), "density": 0.018},
+		"sun_color": Color("e8dcc8"), "sun_energy": 0.7, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
+		"sun_visible": true, "fill": 0.15, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"),
+		"air": {"volumetric_fog_density": 0.018, "volumetric_fog_albedo": Color("56636f"),
+			"volumetric_fog_emission": Color("06090d"), "volumetric_fog_anisotropy": 0.15,
+			"volumetric_fog_length": 120.0, "volumetric_fog_ambient_inject": 0.2, "volumetric_fog_sky_affect": 0.0},
+		"lamps": {"count": 6, "energy": 4.0, "range": 30.0, "attenuation": 1.1, "every": 0.25}},
+	# The D2 sheet's light: the key is the cream atmosphere tint warmed a third toward the catch
+	# amber, a low morning sun (highdraft_finishes.LOOK reads these).
+	3: {"name": "highdraft", "sky": "hdri", "background": Color("243b43"),
+		"ambient": Color("ece7da"), "energy": 0.28, "exposure": 1.05, "saturation": 1.15,
+		"fog": {},
+		"sun_color": Color("eacfab"), "sun_energy": 2.35, "sun_rotation": Vector3(-24.0, 62.0, 0.0),
+		"sun_visible": true, "fill": 0.5, "fill_pitch": -40.0, "fill_color": Color("a9b6c0"), "haze": Color("798c9e"), "cloud": Color("ece7da"),
+		"air": {"volumetric_fog_density": 0.0025, "volumetric_fog_albedo": Color("fff1dc"),
+			"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.6,
+			"volumetric_fog_length": 300.0, "volumetric_fog_ambient_inject": 0.3, "volumetric_fog_sky_affect": 0.0}},
+}
+# The bowl has no row: it sits in the Spillway's world row and daylight.
+const ARENAS := {
+	# The Waking pit: no daylight, a black ceiling, cool walls under a cool core key, the amber
+	# accent on the floor pools.
+	"waking": {"name": "waking", "sky": "dome", "background": Color("171e1d"),
+		"ambient": Color("9ba8a3"), "energy": 0.16, "exposure": 1.1, "saturation": 1.2,
+		"fog": {"color": Color("242a28"), "density": 0.008, "light_energy": 0.3, "sun_scatter": 0.0},
+		"sun_color": Color("ffd49a"), "sun_energy": 2.35, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
+		"sun_visible": false, "fill": 0.5, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"),
+		"key": Color("a8c2d4"), "floor_accent": Palette.AMBER,
+		"air": {"volumetric_fog_density": 0.025, "volumetric_fog_albedo": Color("4f5d63"),
+			"volumetric_fog_emission": Color("05080a"), "volumetric_fog_anisotropy": 0.35,
+			"volumetric_fog_length": 90.0, "volumetric_fog_ambient_inject": 0.15, "volumetric_fog_sky_affect": 0.0}},
+	"mind": {"name": "mind", "sky": "own", "background": Color("243b43"),
+		"ambient": Color("b4c0c9"), "energy": 0.28, "exposure": 1.18, "saturation": 1.0,
+		"fog": {},
+		"sun_color": Color("fff1dc"), "sun_energy": 2.35, "sun_rotation": Vector3(-46.0, 62.0, 0.0),
+		"sun_visible": true, "fill": 0.5, "fill_pitch": -40.0, "fill_color": Color("a9b6c0"), "air": {}},
+}
+# The menu stages own their small worlds; they are never freed with a stage.
+const TITLE := {"energy": ROWS[1]["energy"], "sun_energy": ROWS[1]["sun_energy"], "sun_rotation": ROWS[1]["sun_rotation"],
+	"fill": ROWS[1]["fill"], "background": Color("243b43"), "ambient": Color("9db5cf"), "exposure": 1.1, "contrast": 1.25,
+	"sun_color": Color("ffd49a"), "fill_rotation": Vector3(-50.0, 125.0, 0.0), "fill_color": Color("a3c4e6"),
+	"lamp_color": Palette.AMBER, "lamp_energy": 2.2}
+const ENDING := {"sky": "workshop", "energy": 0.9, "fog": 0.0008, "sun_energy": 1.2, "sun_rotation": Vector3(-38.0, 118.0, 0.0)}
+const PREVIEW := {"energy": 0.6, "sun_energy": 1.4, "sun_rotation": Vector3(-48.0, 32.0, 0.0),
+	"rim_energy": 1.6, "rim_rotation": Vector3(-20.0, 200.0, 0.0)}
+const NODE := "WorldLook"
+
+
+static func row(world: int) -> Dictionary:
+	return ROWS.get(world, {})
+
+
+# The Environment values a row sets. Every row writes the same keys, so an arena's row covers
+# the stage row it sits on, and leaving the arena uncovers it again.
+static func environment(look: Dictionary, air: bool) -> Dictionary:
+	var fog: Dictionary = look.fog
+	var values := {
+		"ambient_light_source": Environment.AMBIENT_SOURCE_COLOR,
+		"ambient_light_color": look.ambient, "ambient_light_energy": look.energy,
+		"tonemap_exposure": look.exposure, "adjustment_saturation": look.saturation,
+		"fog_enabled": true, "fog_light_energy": fog.get("light_energy", 0.75), "fog_sun_scatter": fog.get("sun_scatter", 0.25),
+		"volumetric_fog_enabled": air and not look.air.is_empty(),
+	}
+	if fog.has("density"):
+		values["fog_density"] = fog.density
+		values["fog_light_color"] = fog.color
+	if look.sky == "dome":
+		values["background_mode"] = Environment.BG_COLOR
+		values["background_color"] = look.background
+		values["fog_sky_affect"] = 0.0
+		values["reflected_light_source"] = Environment.REFLECTION_SOURCE_DISABLED
+	elif look.sky == "workshop" or look.sky == "hdri":
+		values["background_mode"] = Environment.BG_SKY
+		values["fog_sky_affect"] = 0.25
+		if look.sky == "hdri":
+			values["sky"] = Palette.hdri_sky()
+	if values.volumetric_fog_enabled:
+		values.merge(look.air)
+	return values
+
+
+# The world sun and its SkyFill sibling, as set_lighting light rows.
+static func lights(look: Dictionary, sun: DirectionalLight3D) -> Array:
+	var result := []
+	if sun == null:
+		return result
+	var r: Vector3 = look.sun_rotation
+	result.append({"object": sun, "values": {"light_color": look.sun_color, "light_energy": look.sun_energy,
+		"visible": look.sun_visible, "rotation": Vector3(deg_to_rad(r.x), deg_to_rad(r.y), 0.0)}})
+	var fill := sun.get_parent().get_node_or_null("SkyFill") as DirectionalLight3D if sun.get_parent() != null else null
+	if fill != null:
+		result.append({"object": fill, "values": {"light_energy": look.fill, "light_color": look.fill_color,
+			"visible": look.sun_visible, "rotation": Vector3(deg_to_rad(look.fill_pitch), deg_to_rad(r.y + 180.0), 0.0)}})
+	return result
+
+
+# Stage entry: the world's row on the stage root's own WorldLook node. Stage roots are parked,
+# never freed, so the Dig's lamp pool lives under that node for the whole run.
+static func hook(ctx) -> void:
+	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
+
+
+static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
+	var terrain = ctx.terrain
+	if terrain == null or terrain.environment == null:
+		return
+	var root: Node3D = terrain.geometry_root(stage)
+	var world: int = ctx.stages.world_of(stage)
+	var GraphicsPreset := load("res://src/presentation/graphics_preset.gd")
+	GraphicsPreset.enter_world(root, terrain.environment, row(world))
+	var game = ctx.root
+	if game != null and game.get("world") != null and game.world.view != null:
+		game.world.view.record_fog()
+	var look := row(world)
+	if look.has("lamps") and ctx.player != null:
+		var pool := LampPool.find(root)
+		if pool == null:
+			pool = LampPool.new()
+			pool.name = "LampPool"
+			pool.setup(look.lamps, root, ctx.player)
+			root.get_node(NODE).add_child(pool)
+
+
+# A fixed set of shadowless lights moved to the lamps nearest the ball. The lamps themselves are
+# batched meshes (dig_scenery lamp lines, their placements in the view's "origins" meta), so the
+# light comes from this stage-owned pool and never from a per-lamp light.
+class LampPool extends Node3D:
+	var _spec: Dictionary
+	var _stage: Node3D
+	var _player
+	var _lamps := PackedVector3Array()
+	var _lights: Array[OmniLight3D] = []
+	var _wait := 0.0
+
+	static func find(stage_root: Node) -> Node:
+		var holder := stage_root.get_node_or_null(NODE)
+		return holder.get_node_or_null("LampPool") if holder != null else null
+
+	func setup(spec: Dictionary, stage_root: Node3D, player) -> void:
+		_spec = spec
+		_stage = stage_root
+		_player = player
+		var colour: Color = load("res://src/presentation/dig_scenery.gd").LAMP_LIGHT
+		for i in int(spec.count):
+			var light := OmniLight3D.new()
+			light.name = "Lamp%d" % i
+			light.light_color = colour
+			light.light_energy = spec.energy
+			light.omni_range = spec.range
+			light.omni_attenuation = spec.attenuation
+			light.shadow_enabled = false
+			light.light_specular = 0.2
+			light.visible = false
+			add_child(light)
+			_lights.append(light)
+
+	func _process(delta: float) -> void:
+		_wait -= delta
+		if _wait > 0.0 or not is_visible_in_tree():
+			return
+		_wait = _spec.every
+		if _lamps.is_empty():
+			for view in _stage.find_children("*", "MultiMeshInstance3D", true, false):
+				if view.has_meta("origins") and String(view.name).contains("lamp"):
+					var origins: PackedVector3Array = view.get_meta("origins")
+					for at in origins:
+						_lamps.append(view.global_transform * at)
+		if _lamps.is_empty() or _player == null:
+			return
+		var ball: Vector3 = _player.ball_position()
+		var order := Array(_lamps)
+		order.sort_custom(func(a: Vector3, b: Vector3) -> bool: return a.distance_squared_to(ball) < b.distance_squared_to(ball))
+		for i in _lights.size():
+			_lights[i].visible = i < order.size()
+			if i < order.size():
+				_lights[i].global_position = order[i] + Vector3.DOWN * 1.5
