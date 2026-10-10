@@ -168,7 +168,7 @@ def sweep(vdir):
     def raise_error(exc):
         raise exc
 
-    removed = []
+    removed, reserved = [], []
     root = os.path.normpath(os.fspath(vdir))
     os.chmod(root, 0o700)
     for top, dirs, files in os.walk(root, followlinks=False, onerror=raise_error):
@@ -178,17 +178,19 @@ def sweep(vdir):
             st = os.lstat(p)
             if stat.S_ISDIR(st.st_mode):
                 os.chmod(p, 0o700)
+                keep.append(name)
                 if top == root and name in RESERVED:
-                    shutil.rmtree(p)
-                    removed.append(name)
-                else:
-                    keep.append(name)
+                    reserved.append(p)
             elif stat.S_ISREG(st.st_mode):
                 os.chmod(p, 0o600)
             else:
                 os.unlink(p)
                 removed.append(os.path.relpath(p, root))
         dirs[:] = [d for d in dirs if d in keep]
+    # Removed after the walk, which has restored access to every directory beneath them.
+    for p in reserved:
+        shutil.rmtree(p)
+        removed.append(os.path.basename(p))
     return removed
 
 

@@ -304,7 +304,8 @@ class Setup(unittest.TestCase):
 
     def test_sweep_clears_dirs_planted_at_forge_output_names(self):
         d = self.tmp / "v"
-        (d / "result.json" / "x").mkdir(parents=True)
+        (d / "result.json" / "x" / "y").mkdir(parents=True)
+        os.chmod(d / "result.json" / "x", 0o000)
         (d / "out" / "result.json").mkdir(parents=True)
         self.assertEqual(fc.sweep(d), ["result.json"])
         self.assertTrue((d / "out" / "result.json").is_dir())  # only top-level names are reserved

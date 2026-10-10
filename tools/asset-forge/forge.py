@@ -2,6 +2,7 @@
 """Asset forge: a headless Claude Code agent writes a Blender recipe, the forge builds and
 validates it. See README.md. Stdlib only."""
 import argparse
+import contextlib
 import datetime
 import fcntl
 import json
@@ -159,16 +160,25 @@ def load_ctx(vdir):
     return vdir, params, fc.load_pack(params["pack"]), fc.load_kind(params["kind"])
 
 
-def do_run(vdir, timeout=600, quiet=False):
-    # One run per version dir at a time: the sweep below assumes no sandboxed recipe is
-    # alive while the outer steps read and write the tree. The lock sits on the directory
-    # itself, which the sandbox cannot replace (it is the bind-mount root).
-    fd = os.open(Path(vdir).resolve(), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+@contextlib.contextmanager
+def version_lock(vdir):
+    """One forge step per version dir at a time: a sweep assumes no sandboxed recipe is
+    alive while the outer steps read and write the tree. The lock sits on the directory
+    itself, which the sandbox cannot replace (it is the bind-mount root)."""
+    vdir = Path(vdir).resolve()
+    if not vdir.is_dir():
+        die("%s is not a version directory" % vdir)
+    fd = os.open(vdir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        return locked_run(vdir, timeout, quiet)
+        yield
     finally:
         os.close(fd)
+
+
+def do_run(vdir, timeout=600, quiet=False):
+    with version_lock(vdir):
+        return locked_run(vdir, timeout, quiet)
 
 
 def locked_run(vdir, timeout, quiet):
@@ -318,21 +328,28 @@ def run_agent(vdir, params, model, max_turns, budget, timeout, revising):
     merge_manifest(vdir, model_requested=model, claude_cli_version=claude_version(),
                    agent_command=cmd + ["<task prompt on stdin>"], agent_started=now())
     env = {**os.environ, "CLAUDE_CODE_DISABLE_CLAUDE_MDS": "1"}
+    proc = subprocess.Popen(cmd, cwd=vdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True, env=env, start_new_session=True)
     try:
-        r = subprocess.run(cmd, cwd=vdir, input=agent_task(vdir, params, revising), capture_output=True, text=True,
-                           timeout=timeout, env=env)
+        stdout, stderr = proc.communicate(agent_task(vdir, params, revising), timeout=timeout)
     except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        stdout, stderr = proc.communicate()
+        stdout, stderr = "", (stderr or "") + "\nagent timed out after %ds" % timeout
+    # An inner `forge run` the agent started may outlive it; it holds the version lock,
+    # so waiting for the lock here means its recipe has exited before we sweep.
+    with version_lock(vdir):
         fc.sweep(vdir)
-        fc.write_json(vdir / "agent.json", {"is_error": True, "result": "agent timed out after %ds" % timeout})
-        return {"is_error": True, "result": "agent timed out"}
-    fc.sweep(vdir)
-    fc.write_text(vdir / "agent.stderr", r.stderr)
-    try:
-        out = json.loads(r.stdout)
-    except json.JSONDecodeError:
-        out = {"is_error": True, "result": r.stdout[-2000:] or r.stderr[-2000:], "rc": r.returncode}
-    fc.write_json(vdir / "agent.json", out)
-    fc.write_text(vdir / "notes.md", (out.get("result") or "").strip() + "\n")
+        fc.write_text(vdir / "agent.stderr", stderr)
+        try:
+            out = json.loads(stdout)
+        except json.JSONDecodeError:
+            out = {"is_error": True, "result": stdout[-2000:] or stderr[-2000:], "rc": proc.returncode}
+        fc.write_json(vdir / "agent.json", out)
+        fc.write_text(vdir / "notes.md", (out.get("result") or "").strip() + "\n")
     return out
 
 
