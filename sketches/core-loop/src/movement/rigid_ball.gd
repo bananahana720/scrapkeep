@@ -136,7 +136,12 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		elif state.grounded:
 			body_state.apply_central_force(-state.velocity.normalized() * tuning.f("rolling_resistance") * mass)
 
-		body_state.apply_central_impulse(Rules.over_speed_drag(state, tuning, delta) * mass)
+		# The over-speed drag is an air rule on this ball (HOOK-FIX, 2026-10-09). On the ground
+		# it pays only the rolling and brake forces above: that is the ball Andrew chose in play
+		# for its speed and momentum (TADR-006 D1), and the designed rides up to the sky layer
+		# and the two-hook apex need that momentum (stage_layers_test, bot_chain_hand_test).
+		if not state.grounded:
+			body_state.apply_central_impulse(Rules.over_speed_drag(state, tuning, delta) * mass)
 
 		if external_accel != Vector3.ZERO:
 			body_state.apply_central_force(external_accel * mass)
