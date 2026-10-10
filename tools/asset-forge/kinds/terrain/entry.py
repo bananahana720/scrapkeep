@@ -131,6 +131,8 @@ try:
     if rough.shape != (n, n) or ao.shape != (n, n):
         raise RuntimeError("roughness and ao must be (n, n); got %s and %s" % (rough.shape, ao.shape))
 
+    RESULT["uv_scale"] = float(maps.get("uv_scale", 1.0))
+
     def write_all():
         tl.write_png(os.path.join(OUT, ASSET + "_albedo.png"), albedo)
         tl.write_png(os.path.join(OUT, ASSET + "_normal.png"), normal)
@@ -138,7 +140,7 @@ try:
         tl.write_png(os.path.join(OUT, ASSET + "_ao.png"), ao)
         tl.write_png(os.path.join(OUT, ASSET + "_height.png"), height, bits=16)
         with open(os.path.join(OUT, ASSET + ".tres"), "w") as f:
-            f.write(tl.tres_text(ASSET, uv_scale=float(maps.get("uv_scale", 1.0))))
+            f.write(tl.tres_text(ASSET, uv_scale=RESULT["uv_scale"]))
     stage("write", write_all)
 except BaseException as exc:  # noqa: BLE001
     RESULT["status"] = "recipe_error"

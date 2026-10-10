@@ -3,6 +3,7 @@
 validates it. See README.md. Stdlib only."""
 import argparse
 import datetime
+import fcntl
 import json
 import os
 import re
@@ -159,6 +160,18 @@ def load_ctx(vdir):
 
 
 def do_run(vdir, timeout=600, quiet=False):
+    # One run per version dir at a time: the sweep below assumes no sandboxed recipe is
+    # alive while the outer steps read and write the tree. The lock sits on the directory
+    # itself, which the sandbox cannot replace (it is the bind-mount root).
+    fd = os.open(Path(vdir).resolve(), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        return locked_run(vdir, timeout, quiet)
+    finally:
+        os.close(fd)
+
+
+def locked_run(vdir, timeout, quiet):
     vdir, params, pack, kind = load_ctx(vdir)
     for d in ("out", "preview"):
         shutil.rmtree(vdir / d, ignore_errors=True)

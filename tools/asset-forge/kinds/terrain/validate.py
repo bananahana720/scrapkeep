@@ -6,7 +6,6 @@ Thresholds are in the constants below; kinds/terrain/README.md says how they wer
 import array
 import struct
 import sys
-import zlib
 from operator import sub
 from pathlib import Path
 
@@ -43,7 +42,7 @@ def read_png(path):
         raise ValueError("unsupported PNG (depth %d, type %d)" % (depth, ctype))
     ch = pngio.CHANNELS[ctype]
     size = depth // 8
-    lines = pngio._unfilter(zlib.decompress(bytes(idat)), h, w * ch * size, ch * size)
+    lines = pngio._unfilter(pngio.inflate(idat, w, h, ch * size), h, w * ch * size, ch * size)
     rows = []
     for line in lines:
         if size == 2:

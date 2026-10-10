@@ -280,5 +280,25 @@ class TerrainStatic(unittest.TestCase):
         self.assertEqual(P.res_folder(pack, textures), "res://assets/textures")
 
 
+    def test_promote_regenerates_the_material_instead_of_copying_it(self):
+        P = fc.load_module(KIND_DIR / "promote.py", "terrain_promote_regen")
+        root = Path(tempfile.mkdtemp())
+        try:
+            v = root / "v001"
+            (v / "out").mkdir(parents=True)
+            for m in P.MAPS:
+                (v / "out" / ("tile_%s.png" % m)).write_bytes(b"png")
+            (v / "out" / "tile.tres").write_text('[gd_resource type="StandardMaterial3D"]\n[sub_resource type="GDScript" id="evil"]\n')
+            (v / "recipe.py").write_text("def build(p): pass\n")
+            fc.write_json(v / "result.json", {"uv_scale": 3.0})
+            pack = {"repo_root": str(root), "sketch": "sk", "promote": {"terrain": {"textures": "sk/assets/textures"}}}
+            P.promote(v, {"asset": "tile", "pack": "test"}, pack, {})
+            text = (root / "sk/assets/textures/tile/tile.tres").read_text()
+            self.assertNotIn("GDScript", text)
+            self.assertIn("uv1_scale = Vector3(3, 3, 3)", text)
+            self.assertIn("res://assets/textures/tile/tile_albedo.png", text)
+        finally:
+            shutil.rmtree(root)
+
 if __name__ == "__main__":
     unittest.main()

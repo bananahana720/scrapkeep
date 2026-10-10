@@ -1,5 +1,7 @@
 """Terrain promoter: the five maps, the preview sheet, the recipe and a provenance sidecar into
-<textures dir>/<asset>/, with the .tres res:// placeholder rewritten to the real folder."""
+<textures dir>/<asset>/, plus a .tres regenerated here from tres.py (the sandbox's copy is
+recipe-controllable and is never promoted)."""
+import math
 import shutil
 import sys
 from pathlib import Path
@@ -7,7 +9,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import forgecore as fc  # noqa: E402
 
-PLACEHOLDER = "res://__FORGE_TEXTURES__"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tres import PLACEHOLDER, tres_text  # noqa: E402
 MAPS = ("albedo", "normal", "roughness", "ao", "height")
 
 
@@ -31,10 +34,13 @@ def promote(vdir, params, pack, manifest, force=False):
         src = vdir / "out" / ("%s_%s.png" % (asset, m))
         shutil.copyfile(src, dst / src.name)
         written.append(dst / src.name)
-    text = (vdir / "out" / (asset + ".tres")).read_text()
-    if PLACEHOLDER not in text:
-        raise SystemExit("forge: out/%s.tres has no %s placeholder to rewrite" % (asset, PLACEHOLDER))
-    tres_dst.write_text(text.replace(PLACEHOLDER, res_folder(pack, textures)))
+    try:
+        uv = float((fc.read_json(vdir / "result.json") or {}).get("uv_scale", 1.0))
+    except (TypeError, ValueError):
+        uv = 1.0
+    if not (math.isfinite(uv) and 0 < uv <= 64):
+        uv = 1.0
+    tres_dst.write_text(tres_text(asset, uv_scale=uv).replace(PLACEHOLDER, res_folder(pack, textures)))
     written.append(tres_dst)
     sheet = vdir / "preview" / "sheet.png"
     if sheet.is_file():

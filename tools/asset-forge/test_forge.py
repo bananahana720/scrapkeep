@@ -15,6 +15,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "kinds" / "model"))
 import forge  # noqa: E402
 import forgecore as fc  # noqa: E402
+import pngio  # noqa: E402
 import validate as model_validate  # noqa: E402
 
 HAVE_BLENDER = shutil.which("blender") is not None and shutil.which("bwrap") is not None
@@ -273,6 +274,10 @@ class Setup(unittest.TestCase):
             return json.loads(out)["hookSpecificOutput"]["permissionDecision"] if out.strip() else "pass"
 
         self.assertEqual(decide(allowed), "pass")
+        background = json.dumps({"tool_name": "Bash", "tool_input": {"command": allowed, "run_in_background": True}})
+        out = subprocess.run([sys.executable, str(fc.FORGE_DIR / "bash_gate.py"), allowed], input=background,
+                             capture_output=True, text=True, check=True).stdout
+        self.assertEqual(json.loads(out)["hookSpecificOutput"]["permissionDecision"], "deny")
         for evil in ("ls /", allowed + " && ls /", allowed + "; ls", allowed + "\nls /", "FOO=1 " + allowed,
                      allowed.replace("python3", "./python3"), allowed + " --x", "cat recipe.py", allowed + " | sh"):
             self.assertEqual(decide(evil), "deny", evil)
@@ -287,6 +292,32 @@ class Setup(unittest.TestCase):
         self.assertEqual(sorted(fc.sweep(d)), ["linkdir", "out/pipe", "run.log"])
         self.assertTrue((d / "out" / "ok.glb").is_file())
         self.assertIsNone(fc.read_json(d / "missing.json"))
+
+    def test_sweep_sees_inside_dirs_the_recipe_made_unreadable(self):
+        d = self.tmp / "v"
+        (d / "out").mkdir(parents=True)
+        (d / "out" / "effect.tscn").symlink_to(self.tmp / "victim")
+        os.chmod(d / "out", 0o300)
+        os.chmod(d, 0o300)
+        self.assertEqual(fc.sweep(d), ["out/effect.tscn"])
+        self.assertFalse((d / "out" / "effect.tscn").is_symlink())
+
+    def test_sweep_clears_dirs_planted_at_forge_output_names(self):
+        d = self.tmp / "v"
+        (d / "result.json" / "x").mkdir(parents=True)
+        (d / "out" / "result.json").mkdir(parents=True)
+        self.assertEqual(fc.sweep(d), ["result.json"])
+        self.assertTrue((d / "out" / "result.json").is_dir())  # only top-level names are reserved
+
+    def test_inflate_refuses_bombs_and_huge_headers(self):
+        import zlib
+        bomb = zlib.compress(bytes(10_000_000))
+        with self.assertRaises(ValueError):
+            pngio.inflate(bomb, 16, 16, 4)
+        with self.assertRaises(ValueError):
+            pngio.inflate(b"", 100_000, 1, 4)
+        ok = zlib.compress(bytes(4 * (1 + 4 * 3)))
+        self.assertEqual(len(pngio.inflate(ok, 4, 4, 3)), 4 * (1 + 4 * 3))
 
     def test_write_json_replaces_a_link_instead_of_following_it(self):
         victim = self.tmp / "victim.txt"

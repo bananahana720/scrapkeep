@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import stat
 import struct
 import tempfile
@@ -15,6 +16,9 @@ FORGE_DIR = Path(__file__).resolve().parent
 REPO = FORGE_DIR.parents[1]
 KINDS_DIR = FORGE_DIR / "kinds"
 PACKS_DIR = FORGE_DIR / "packs"
+# Files the outer forge writes at the top of a version dir; a directory planted at one of
+# these names would make the write fail, so sweep removes it.
+RESERVED = {"run.log", "result.json", "validate.json", "manifest.json", "agent.json", "agent.stderr", "notes.md"}
 
 
 def scratch_root():
@@ -159,15 +163,32 @@ def sweep(vdir):
     """Recipe code can plant symlinks, fifos or sockets in its writable version dir; the
     unsandboxed forge would then read or write through them as Andrew. Delete every entry
     that is not a plain file or directory, before any outer step touches the tree."""
+    # The recipe can chmod a directory to write+exec only; os.walk would then skip its
+    # contents in silence. Restore owner access before listing, and fail on any listing error.
+    def raise_error(exc):
+        raise exc
+
     removed = []
-    for top, dirs, files in os.walk(vdir, followlinks=False):
+    root = os.path.normpath(os.fspath(vdir))
+    os.chmod(root, 0o700)
+    for top, dirs, files in os.walk(root, followlinks=False, onerror=raise_error):
+        keep = []
         for name in dirs + files:
             p = os.path.join(top, name)
             st = os.lstat(p)
-            if not (stat.S_ISREG(st.st_mode) or stat.S_ISDIR(st.st_mode)):
+            if stat.S_ISDIR(st.st_mode):
+                os.chmod(p, 0o700)
+                if top == root and name in RESERVED:
+                    shutil.rmtree(p)
+                    removed.append(name)
+                else:
+                    keep.append(name)
+            elif stat.S_ISREG(st.st_mode):
+                os.chmod(p, 0o600)
+            else:
                 os.unlink(p)
-                removed.append(os.path.relpath(p, vdir))
-        dirs[:] = [d for d in dirs if os.path.isdir(os.path.join(top, d))]
+                removed.append(os.path.relpath(p, root))
+        dirs[:] = [d for d in dirs if d in keep]
     return removed
 
 

@@ -102,8 +102,8 @@ def validate(vdir, params, result, pack):
     out = vdir / "out"
     out.mkdir(exist_ok=True)
     tscn, expect = out / "effect.tscn", out / "expect.json"
-    tscn.write_text(vfxtscn.to_tscn(spec, palette, params["asset"]))
-    expect.write_text(json.dumps(vfxtscn.expectations(spec, palette), indent=1, sort_keys=True) + "\n")
+    fc.write_text(tscn, vfxtscn.to_tscn(spec, palette, params["asset"]))
+    fc.write_text(expect, json.dumps(vfxtscn.expectations(spec, palette), indent=1, sort_keys=True) + "\n")
     ok, text = godot_check(tscn, expect, Path(pack["sketch_path"]))
     last = [ln for ln in text.splitlines() if "VFX_" in ln]
     if ok is None:

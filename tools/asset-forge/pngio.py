@@ -28,6 +28,22 @@ def _paeth(a, b, c):
     return b if pb <= pc else c
 
 
+MAX_SIDE = 4096
+
+
+def inflate(idat, width, height, bpp):
+    """Decompress IDAT for a width x height image, refusing oversized headers and any
+    stream that inflates past the expected size: PNGs read here come out of the sandbox."""
+    if not (0 < width <= MAX_SIDE and 0 < height <= MAX_SIDE):
+        raise ValueError("PNG is %d x %d; the forge reads at most %d px a side" % (width, height, MAX_SIDE))
+    expected = height * (1 + width * bpp)
+    d = zlib.decompressobj()
+    raw = d.decompress(bytes(idat), expected + 1)
+    if len(raw) != expected or d.unconsumed_tail:
+        raise ValueError("PNG image data does not match its %d x %d header" % (width, height))
+    return raw
+
+
 def _unfilter(raw, height, stride, bpp):
     out, prev, pos = [], bytearray(stride), 0
     for _ in range(height):
@@ -71,7 +87,7 @@ def read(path):
         raise ValueError("unsupported PNG (depth %d, type %d, interlace %d)" % (depth, ctype, interlace))
     nch, size = CHANNELS[ctype], depth // 8
     bpp = nch * size
-    lines = _unfilter(zlib.decompress(bytes(idat)), height, width * bpp, bpp)
+    lines = _unfilter(inflate(idat, width, height, bpp), height, width * bpp, bpp)
     rows = []
     for line in lines:
         if size == 2:
