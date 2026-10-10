@@ -14,7 +14,29 @@ var _done := false
 var _failures := 0
 
 
+# The Oggs are gitignored, so a fresh worktree has none: the test SKIPs (exit 0) when the
+# music package holds no Ogg, and still fails when Oggs exist but a track is broken.
+# ACE_MUSIC_DIR overrides the folder searched, so the SKIP path is provable without
+# touching the real package.
+func _oggs_in(dir: String) -> int:
+	var count := 0
+	for file in DirAccess.get_files_at(dir):
+		if file.ends_with(".ogg"):
+			count += 1
+	for sub in DirAccess.get_directories_at(dir):
+		count += _oggs_in(dir.path_join(sub))
+	return count
+
+
 func _initialize() -> void:
+	var dir := OS.get_environment("ACE_MUSIC_DIR")
+	if dir == "":
+		dir = "res://assets/music_ace"
+	if _oggs_in(dir) == 0:
+		print("ace_tracks_test: SKIP (no Oggs under %s; the music package is gitignored)" % dir)
+		_done = true
+		quit(0)
+		return
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
