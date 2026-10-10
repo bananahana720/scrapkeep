@@ -3,6 +3,9 @@ extends SceneTree
 const StageMap := preload("res://src/world/stage_map.gd")
 const Bay := preload("res://src/world/bay.gd")
 const Palette := preload("res://src/core/palette.gd")
+# 2026-10-09 swap-wave 12-F bay: fixture re-recorded once after both swaps. The jukebox cabinet and grille boxes and the
+# barge hull box and four jet cylinders gave way to the RecipeProps views of moss_jukebox and moss_hover_barge
+# (bay.gd _build_toys, _build_deck); colliders and every other geometry row are unchanged.
 const BASELINE := "res://tests/fixtures/dress_gpw_geometry.json"
 var _failures := 0
 

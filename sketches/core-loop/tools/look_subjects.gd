@@ -132,6 +132,14 @@ const SUBJECTS := {
 		"reaim": {"all": "alpha stage 1 has no bay dock (the bay never docks, aabb empty, every camera aimed at the origin under the map; rear and top flat 0.887 and 1.0); the subject moves to stage 3, the first stage after stage 2 where the bay docks, so it differs from cv2_camp_bay_stage2", "top": "w7 top eye (1, 1.1r, 1) is a unit offset on a radius scale; written as (0.1, 1.1, 0.1) of r, the same direction with no degenerate look-down"}},
 	"cv2_camp_bay_stage2": {"group": "bay", "stage": 2, "kind": "prop", "owner": "VX-GROUND", "anchor": "bay", "scale": true, "tick": 0,
 		"cameras": [["three_q", Vector3(0.7, 0.45, -0.7), Vector3.ZERO, 60.0], ["side", Vector3(1, 0.25, 0), Vector3.ZERO, 60.0], ["rear", Vector3(-0.7, 0.45, 0.7), Vector3.ZERO, 60.0], ["top", Vector3(0.1, 1.1, 0.1), Vector3.ZERO, 60.0], ["close", Vector3(0.35, 0.15, -0.35), Vector3.ZERO, 60.0]]},
+	# SWAP-WAVE 12-F: Moss's jukebox and hover barge (bay.gd _build_toys, _build_deck) on the stage 2 dock, the first alpha stage
+	# where the bay docks (stage 1 never does). Anchor bay_jukebox is the jukebox cabinet centre, Barge-local (-6, 1.3, 8.6),
+	# turned by the Barge basis (the dock's facing), so every eye is Barge-local; mid and far aim at the "bay" box centre.
+	# close stands at the jukebox's front (-z); mid is off the bow quarter (+u) about 65 m out; far is about 175 m out,
+	# past the hull detail1 range end (130 m, margin 15), so no shell draws there.
+	"swp_bay": {"group": "bay", "stage": 2, "kind": "prop", "owner": "SWAP-WAVE", "anchor": "bay_jukebox", "basis": true, "tick": 0,
+		"cameras": [["close", Vector3(2.5, 1.7, -6), Vector3.ZERO, 50.0], ["mid", Vector3(66, 10.7, -33.6), Vector3.ZERO, 55.0, ["bay_jukebox", "bay"]],
+			["far", Vector3(126, 68.7, -118.6), Vector3.ZERO, 30.0, ["bay_jukebox", "bay"]]]},
 	# ---------------------------------------------------------------- cages, scrap, finishes
 	"cag_rivet_locked": {"group": "cages", "stage": 1, "kind": "prop", "owner": "VX-SURF", "anchor": "cage", "basis": true, "tick": 120,
 		"cameras": [["front", Vector3(0, 2.5, -11), Vector3.ZERO, 55.0], ["three_q", Vector3(6.427876, 3, -7.660444), Vector3.ZERO, 55.0], ["side", Vector3(10, 2, 0), Vector3.ZERO, 55.0], ["rear", Vector3(0, 3, 10), Vector3.ZERO, 55.0]]},

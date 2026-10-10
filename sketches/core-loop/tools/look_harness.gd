@@ -897,7 +897,7 @@ func _props() -> void:
 
 func _bay() -> void:
 	await _boot_play(1)
-	for n in ["cv2_camp_bay_stage2", "cv2_camp_bay"]:
+	for n in ["cv2_camp_bay_stage2", "cv2_camp_bay", "swp_bay"]:
 		if not _wants(n):
 			continue
 		var st := int(Subjects.SUBJECTS[n]["stage"])
@@ -915,6 +915,7 @@ func _bay() -> void:
 			failures += 1
 			continue
 		_anchor("bay", box.get_center(), null, maxf(box.size.x, box.size.z) * 0.8 + 6.0)
+		_anchor("bay_jukebox", game.world.bay._barge.to_global(Vector3(game.world.bay.JUKEBOX.x, 1.3, game.world.bay.JUKEBOX.y + 1.6)), game.world.bay._barge)
 		await _shoot(n, {"docked": docked, "offers": offers.size(), "aabb": [box.position.x, box.position.y, box.position.z, box.size.x, box.size.y, box.size.z]})
 
 
