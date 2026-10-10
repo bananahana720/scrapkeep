@@ -1461,6 +1461,39 @@ func _dress_shelter(barge: Node) -> void:
 	barge.add_child(shelter)
 
 
+# moss_workshop.glb carries its own domed jukebox cabinet in the CabinDress mesh at the teal pad (Barge space
+# x -6.99..-4.85, y 0..3.22, z 7.91..9.29), and it enclosed the recipe jukebox bay.gd places there. Andrew chose the
+# recipe jukebox (2026-10-09, task #7), so the dressing draws without every triangle wholly inside this box; the
+# apron's corners (x -7.25/-4.75, z 5.75/8.25) lie outside it, so the pad stays.
+const WORKSHOP_JUKEBOX := AABB(Vector3(-7.2, -0.05, 7.85), Vector3(2.4, 3.4, 1.5))
+
+
+# A copy of mesh without the triangles wholly inside WORKSHOP_JUKEBOX (xform places mesh in Barge space); same
+# surfaces, materials and names. Built once per source mesh.
+func _without_jukebox(mesh: Mesh, xform: Transform3D) -> Mesh:
+	var key := "workshop_no_jukebox#%d" % mesh.get_instance_id()
+	if _meshes.has(key):
+		return _meshes[key]
+	var out := ArrayMesh.new()
+	for s in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(s)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var kept := PackedInt32Array()
+		for t in range(0, index.size(), 3):
+			var inside := true
+			for k in 3:
+				inside = inside and WORKSHOP_JUKEBOX.has_point(xform * verts[index[t + k]])
+			if not inside:
+				kept.append_array([index[t], index[t + 1], index[t + 2]])
+		arrays[Mesh.ARRAY_INDEX] = kept
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		out.surface_set_material(s, mesh.surface_get_material(s))
+		out.surface_set_name(s, (mesh as ArrayMesh).surface_get_name(s) if mesh is ArrayMesh else "")
+	_meshes[key] = out
+	return out
+
+
 func _dress_bay() -> void:
 	if ctx == null or not is_inside_tree():
 		return
@@ -1475,6 +1508,9 @@ func _dress_bay() -> void:
 	if workshop == null:
 		return
 	workshop.name = "HeroWorkshop"
+	for node in workshop.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		mi.mesh = _without_jukebox(mi.mesh, mi.transform)
 	paint(workshop, {"class": Palette.AMBER})
 	barge.add_child(workshop)
 	_dress_shelter(barge)
