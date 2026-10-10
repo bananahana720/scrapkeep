@@ -57,9 +57,11 @@ func step(delta: float) -> void:
 			continue
 		var inside: bool = node.contains(at)
 		if w["resolved"] < 0.0:
-			if _landed(node):
+			if _landed(node, at):
 				_resolve(id, inside, at)
-			elif inside:
+			elif inside or _ahead_of_front(node, at):
+				if not w["entered"]:
+					w["entered_at"] = _clock
 				w["entered"] = true
 			continue
 		if _last_hit >= w["resolved"]:
@@ -70,14 +72,48 @@ func step(delta: float) -> void:
 			w["done"] = true
 
 
-static func _landed(node: Node) -> bool:
+static func _landed(node: Node, at: Vector3) -> bool:
+	if _front_wave(node):
+		return node.is_spent() or node.front_radius() - Threat.WAVE_EDGE > _flat_from(node, at)
 	var d: Dictionary = node.descriptor()
 	return bool(d.get("live", false)) or float(d.get("progress", 0.0)) >= 1.0
+
+
+# A WAVE telegraph (telegraph.gd) hurts only on its running front, so contains() is false
+# all through the warning (F003). Its watch reads the front instead: the ball is in while
+# it stands inside the ring and the front has not run past it, and the wave lands for the
+# ball once the front has run past it or the wave is spent.
+static func _front_wave(node: Node) -> bool:
+	return node.has_method("front_radius") and node.has_method("is_spent") \
+			and int(node.descriptor().get("type", -1)) == Threat.Type.WAVE
+
+
+static func _flat_from(node: Node, at: Vector3) -> float:
+	var centre: Vector3 = node.descriptor()["centre"]
+	return Vector2(at.x - centre.x, at.z - centre.z).length()
+
+
+static func _ahead_of_front(node: Node, at: Vector3) -> bool:
+	if not _front_wave(node):
+		return false
+	var d: Dictionary = node.descriptor()
+	var terrain = node.get("terrain")
+	var ground: float = node.ground_under(terrain, at) if terrain != null else float(d["centre"].y)
+	var above := at.y - ground
+	if above > float(d.get("reach", 0.0)) or above < -2.0:
+		return false
+	var flat := _flat_from(node, at)
+	return flat <= float(d.get("r_out", 0.0)) and node.front_radius() - Threat.WAVE_EDGE <= flat
 
 
 func _resolve(id: int, inside: bool, at: Vector3) -> void:
 	var w: Dictionary = _watch[id]
 	if not w["entered"]:
+		w["done"] = true
+		return
+	# A front wave lands after its front crossed the ball, so a hit since the ball was in
+	# already came from it.
+	if _front_wave(w["node"]) and _last_hit >= float(w.get("entered_at", INF)):
 		w["done"] = true
 		return
 	w["resolved"] = _clock
@@ -91,7 +127,8 @@ func _on_exiting(id: int) -> void:
 		return
 	var w: Dictionary = _watch[id]
 	var node: Node = w["node"]
-	if not w["done"] and w["resolved"] < 0.0 and w["entered"] and is_instance_valid(node) and _landed(node) and ball.is_valid():
+	if not w["done"] and w["resolved"] < 0.0 and w["entered"] and is_instance_valid(node) and ball.is_valid() \
+			and _landed(node, ball.call()):
 		var at: Vector3 = ball.call()
 		_resolve(id, node.contains(at), at)
 	_watch.erase(id)
