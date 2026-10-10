@@ -59,7 +59,12 @@ def recipe(**swap):
 
 
 def pack():
-    return fc.load_pack("core-loop")
+    # The checkout's budget and registry files differ by branch (proto/alpha has both, main
+    # neither), so tests that need them pass a fixture; the rest run against the pack bands.
+    p = fc.load_pack("core-loop")
+    p.pop("budgets", None)
+    p.pop("registry", None)
+    return p
 
 
 def make_version(root, recipe_src, asset="test_asset", category="prop"):
