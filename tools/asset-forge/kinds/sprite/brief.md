@@ -9,6 +9,9 @@ owns the camera, the lights and the palette. You write `recipe.py` and may set o
   (a Blender empty with every mesh under it, built with `common.Part`, palette roles only), or,
   when `reference/source.glb` exists, define no `build` and the forge loads that model. A recipe
   can also call `load_reference()` inside `build` to load the source and add or hide parts.
+- If `reference/source.glb` exists the request is a sprite OF THAT MODEL. You cannot read a GLB
+  (it is binary), so do not rebuild it from the prompt's words: write only the `SPRITE` dict (no
+  `build`), run, and judge the preview. Build your own model only when there is no source.glb.
 - Optionally set a module-level dict, every key optional:
   `SPRITE = {"size": 64, "directions": 4, "fit": "tight", "elevation": 30.0, "outline": True, "margin": 2}`
   - `size`: frame edge in px (square), 8 to 256. Take it from the prompt ("64px"); else pick
