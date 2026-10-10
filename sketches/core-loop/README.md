@@ -4,7 +4,7 @@
 
 This is a throwaway Godot 4.7.2 greybox for the core-loop prototype ("Scrapkeep: First Run"), built under Andrew's design principles from [playtest entry 6](../../docs/playtests/PLAYTEST-LOG.md#6-mobility-kit-v2-first-human-play-and-design-principles). The whole run is here: a title, three classes, three stages, a beacon to charge in each one, reward gates to roll through, a launch into the next stage, and a summary. Death shows a one-key retry.
 
-Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code, and there are no assets: everything is built in script from primitives.
+Movement is the mobility kit v2 core (rigid physics only). Combat, the build, audio and events are the wave-2 modules. Nothing here is production code. The game itself is built in script from primitives; the hero models under `assets/models/` come from the Blender recipes in `tools/blender/`, including `tools/blender/forge/` (recipes promoted from the [asset forge](../../tools/asset-forge/README.md)).
 
 Play it with `scrapkeep core-loop`. In play the HUD shows a key only while its action is available, beside the ball or the target; hold **Tab** for the field notes below, which keep the full list. [DEMO-SPEC.md](DEMO-SPEC.md) is the progression spec Andrew accepted on 2026-09-26 (heft, plating, the Warden, cores). [CONTRACTS.md](CONTRACTS.md) is the module seam, and [DESIGN-NOTES.md](DESIGN-NOTES.md) logs every design call with the principle it serves.
 

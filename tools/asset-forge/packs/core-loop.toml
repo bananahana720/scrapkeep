@@ -1,0 +1,62 @@
+# Pack: the core-loop sketch's look. Paths are relative to the repository root.
+name = "core-loop"
+description = "Scrapkeep core-loop sketch: chunky low-poly, one flat colour per slot, Bible palette."
+sketch = "sketches/core-loop"
+palette_source = "sketches/core-loop/src/core/palette.gd"
+helper_dir = "sketches/core-loop/tools/blender"   # holds common.py, the recipe helper module
+inspect = "scripts/asset-inspect.mjs"
+default_category = "prop"
+
+[style]
+# Sections are cut from the brief by their "## N." heading and appended to the system prompt.
+brief = "sketches/core-loop/VISUAL-LANGUAGE.md"
+sections = ["2", "9", "10"]
+# Existing recipes copied into each version's reference/ for the agent to study.
+examples = [
+  "sketches/core-loop/tools/blender/common.py",
+  "sketches/core-loop/tools/blender/chunks.py",
+  "sketches/core-loop/tools/blender/reward_gate.py",
+]
+
+[palette]
+# palette.gd constant -> the role name common.py uses. Colours are never copied here;
+# they are parsed from palette_source at run time.
+[palette.roles]
+SAND = "bone"
+SANDSTONE = "sandstone"
+RUST = "oxide"
+COPPER = "copper"
+CHARCOAL = "charcoal"
+VERDIGRIS = "petrol"
+AMBER = "amber"
+ARC = "mint"
+ANCIENT = "ancient"
+HAZARD = "hazard"
+BRASS = "brass"
+# Roles that VISUAL-LANGUAGE.md section 2 adds outside palette.gd, with the value
+# common.py HEX carries for them (read from common.py, not repeated here).
+[palette.extensions]
+roles = ["ice"]
+
+# Triangle bands per category, [low, high]. Precedent: chunks.py small/medium/large,
+# shell_base.py SHELL_TRIS, warden_clamp.py KIT_TRIS.
+[bands.model]
+prop = [150, 1500]
+kit = [800, 1500]
+hero = [3000, 6500]
+
+# Real-world size sanity per category: longest bounding-box edge in metres, [low, high].
+[sizes.model]
+prop = [0.15, 8.0]
+kit = [0.5, 10.0]
+hero = [1.0, 12.0]
+
+# Primitives (draw calls) allowed per category.
+[draw_calls.model]
+prop = 12
+kit = 24
+hero = 40
+
+[promote.model]
+models = "sketches/core-loop/assets/models"
+recipes = "sketches/core-loop/tools/blender/forge"
