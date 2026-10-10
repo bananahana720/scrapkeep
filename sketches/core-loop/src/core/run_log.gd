@@ -20,7 +20,7 @@ extends Node
 # does not choose and which are left out.
 #
 # The sitting (LEGIBILITY): the record carries the table the run was played on, and each
-# stage row carries the packs that arrived there in order, the synergies that fired there
+# stage row carries the packs that arrived there in order ({faction, kinds} each), the synergies that fired there
 # by id and, for a posture Warden only, its posture fight: staggers, chunks lost, glanced
 # hits and the ticks from the first posture gain to the break or the stage's end. A row
 # counts its attempts; packs, causes and posture describe the last attempt only and leave
@@ -344,9 +344,9 @@ func _on_beacon_unsealed(stage: int) -> void:
 	_close_posture(stage)
 
 
-func _on_pack_arrived(faction: String, _at: Vector3, _kinds: Array) -> void:
+func _on_pack_arrived(faction: String, _at: Vector3, kinds: Array) -> void:
 	if not _record.is_empty() and not _in_arena:
-		_stage_list("packs").append(faction)
+		_stage_list("packs").append({"faction": faction, "kinds": kinds.duplicate()})
 
 
 func _on_prompt_shown(_verb: String) -> void:

@@ -125,7 +125,7 @@ func _start(table: String) -> bool:
 	_game.flow.choose_class(1)
 	_game.events.harpoon_smashed.connect(func(_e: Node3D, _at: Vector3, _speed: float): _smashed += 1)
 	_game.events.posture_changed.connect(_on_posture)
-	_game.events.pack_arrived.connect(func(faction: String, _at: Vector3, _kinds: Array): _packs_seen.append(faction))
+	_game.events.pack_arrived.connect(func(faction: String, _at: Vector3, kinds: Array): _packs_seen.append({"faction": faction, "kinds": kinds.duplicate()}))
 	_game.events.cause_fired.connect(func(id: String, _t: Node3D, _at: Vector3): _fired += 1 if id == SYNERGY else 0)
 	await _seconds(0.4)
 	_game.run.set_max_hp(99999.0)
@@ -236,10 +236,10 @@ func _retry_row() -> void:
 	for one in line.get("stages", []):
 		row = one
 		break
-	_report("a retry clears the old packs and causes", row.get("packs") == ["raid"] and row.get("causes", {}).size() == 1 and int(row.get("causes", {}).get("new_cause", 0)) == 1,
+	_report("a retry clears the old packs and causes", row.get("packs") == [{"faction": "raid", "kinds": []}] and row.get("causes", {}).size() == 1 and int(row.get("causes", {}).get("new_cause", 0)) == 1,
 		"packs %s, causes %s" % [row.get("packs"), row.get("causes")])
 	_report("a retry is attempt 2", row.get("attempts") == 2, "attempts %s" % [row.get("attempts")])
-	_report("arena packs and causes stay out of the stage row", not ("arena_pack" in row.get("packs", [])) and not row.get("causes", {}).has("arena_cause"),
+	_report("arena packs and causes stay out of the stage row", not JSON.stringify(row.get("packs", [])).contains("arena_pack") and not row.get("causes", {}).has("arena_cause"),
 		"packs %s, causes %s" % [row.get("packs"), row.get("causes")])
 
 
