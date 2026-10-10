@@ -140,10 +140,10 @@ func pivot(i: int) -> Vector3:
 	return to_global(CRANE_PIVOTS[i])
 
 
-# Where a magnet hangs when its crane is idle: out past the side of the hull.
+# Where a magnet hangs when its crane is idle: out past the side of the hull, below its pivot.
 func magnet_rest(i: int) -> Vector3:
 	var p: Vector3 = CRANE_PIVOTS[i]
-	var out := Vector3(signf(p.x) * MAGNET_REST, -MAGNET_HANG + 2.0, p.z)
+	var out := Vector3(signf(p.x) * MAGNET_REST, p.y - MAGNET_HANG + 2.0, p.z)
 	return to_global(out)
 
 
@@ -164,7 +164,7 @@ func set_magnet(i: int, at: Vector3, glow: float) -> void:
 		return
 	cable.visible = true
 	cable.global_transform = Transform3D(Basis.looking_at(span.normalized(), Vector3.UP if absf(span.normalized().y) < 0.99 else Vector3.RIGHT)
-		.scaled(Vector3(1.0, 1.0, span.length())), from + span * 0.5)
+		.scaled_local(Vector3(1.0, 1.0, span.length())), from + span * 0.5)
 
 
 func show_cranes(on: bool) -> void:
