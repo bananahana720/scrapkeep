@@ -151,9 +151,14 @@ func _signals(stage_root: Node3D, stage: int) -> void:
 	var wall: StaticBody3D = devices.walls[0].body
 	_finish(wall.get_child(1), "breakable wall", Palette.SANDSTONE, Palette.VERDIGRIS)
 	print("wog device counts: grates=%d safety=%d cracks=%d plumes=%d" % [grates, safety, dark_cracks, plumes])
-	_require(grates == 2 and safety == 1 and dark_cracks == 4 and plumes == 2 and hooks == 1 and cable_spans == 1 and wheels == 1, "all Reach contraption signals checked")
+	# 2026-10-09 swap-wave 12-F: the valve's torus wheel, amber stem and charcoal spoke are the authored recipe views
+	# now (contraptions.gd _build_valve), which the greybox finish skips: wheels 1 -> 0, safety 1 -> 0, cracks 4 -> 3.
+	_require(grates == 2 and safety == 0 and dark_cracks == 3 and plumes == 2 and hooks == 1 and cable_spans == 1 and wheels == 0, "all Reach contraption signals checked")
+	var valve_views: Array = (devices.valves[0]["wheel"] as Node3D).find_children("valve_wheel_*", "MeshInstance3D", false, false)
+	_require(valve_views.size() == 2 and valve_views.all(func(v): return v.material_override == null and not v.has_meta("spillway_finish")),
+		"the valve wheel is the recipe's two base views, left to their slot materials")
 	print("wog signal Stage2: spawn/valve amber #e5a044 + charcoal; 14 grapple caps and cable hook amber emit=1.2; 13 ancient lenses blue #3d8bff emit=2.4")
-	print("wog signal contraptions: 2 copper/charcoal grates; copper shutter; sandstone/verdigris wall; 4 charcoal cracks/spoke; 2 bone plumes alpha=0.12; no hostile red")
+	print("wog signal contraptions: 2 copper/charcoal grates; copper shutter; sandstone/verdigris wall; 3 charcoal cracks; 2 bone plumes alpha=0.12; no hostile red")
 
 
 func _snapshot(node: Node, at: String, rows: Array) -> void:
