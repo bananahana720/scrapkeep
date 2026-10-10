@@ -328,6 +328,10 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 		var nodes: Array = rows[pilot]
 		if nodes.size() < size:
 			_issue(issues, name, "minimum_rows", str(pilot), "has %d nodes, needs %d" % [nodes.size(), size])
+		# A node is reachable when it is selectable, inside the cap and its whole parent chain is.
+		var reach: Array[bool] = []
+		for index in nodes.size():
+			reach.append(index < size and _selectable_node(nodes[index]) and (index < 2 or reach[(index - 2) / 2]))
 		var seen := {}
 		for index in nodes.size():
 			var id := "%s/%d" % [pilot, index]
@@ -370,7 +374,7 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 								_ref(issues, name, id, "proc do", proc.do, Trees.ACTIONS)
 			# Both roots are selectable. Every later node needs its heap parent and stays inside the cap.
 			var parent: int = (index - 2) / 2
-			if index >= size or (index >= 2 and not _selectable_node(nodes[parent])):
+			if index >= size or (index >= 2 and not reach[parent]):
 				_issue(issues, name, "reachable", id, "outside selectable heap or missing parent")
 
 
