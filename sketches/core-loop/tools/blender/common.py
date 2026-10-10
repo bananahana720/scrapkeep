@@ -39,7 +39,7 @@ HEX = {
     "hazard": "ff5a3c",
     "brass": "d9b44a",
     "ice": "c8f0ff",
-    "ancient": "3d8bff",
+    "ancient": "9dff3c",  # uranium-glass green, palette.gd ANCIENT since wave 12 (decisions.tsv, VX-SURF 5a9e1ef)
 }
 
 # The section 9 slot names, exactly. `vc` slots take their colour from vertex colours.

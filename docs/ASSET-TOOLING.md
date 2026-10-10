@@ -60,3 +60,14 @@ Run `node --test tests/asset-inspect.test.js`. The fixtures contain actual binar
 ## Reusable mesh kit
 
 The [static fur and accessory kit](../tools/asset-kit/README.md) generates chunky fur, goggles and collars on two neutral head fixtures, with editable Blender sources, static GLBs, detailed/reduced fixture budgets and a contact sheet. Its memory-capped recipe uses this inspector on each actual export; engine import and human acceptance remain separate.
+
+## Asset forge
+
+[`tools/asset-forge`](../tools/asset-forge/README.md) turns a text prompt (and an optional concept picture) into a validated model. A headless Claude Code agent writes a Blender recipe against `sketches/core-loop/tools/blender/common.py`, `forge run` builds it in a memory-capped, network-less `bwrap` sandbox, and a stdlib validator checks the triangle band, palette (parsed from `palette.gd`), grounding, floating parts, non-manifold edges, size and draw calls. The agent iterates on that check list and on its own look at the turntable sheet. Each version keeps its recipe, GLB, `.blend`, preview, `validate.json` and a schema-1 `manifest.json` under `artifacts/local/forge/`; `forge promote` copies an accepted GLB into `sketches/core-loop/assets/models/`, a standalone recipe into `tools/blender/forge/`, and a provenance sidecar (`<asset>.forge.json`, per [ASSETS.md](project/ASSETS.md)) beside the GLB.
+
+```sh
+python3 tools/asset-forge/forge.py make model --pack core-loop --name scrap_crate "a chunky supply crate"
+python3 -m unittest discover -s tools/asset-forge -p 'test_*.py'
+```
+
+A passing validation is a geometry and palette check. It is not human acceptance, an in-engine look or a performance measurement; `engine_import` is checked separately with `tools/asset-forge/godot/load_check.gd`.

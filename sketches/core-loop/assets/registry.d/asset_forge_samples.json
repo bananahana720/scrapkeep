@@ -1,0 +1,114 @@
+{
+ "assets": [
+  {
+   "id": "scrap_crate",
+   "path": "res://assets/models/scrap_crate.glb",
+   "class": "prop",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "tools/blender/forge/scrap_crate.py",
+    "build_spec": "assets/models/scrap_crate.forge.json"
+   }
+  },
+  {
+   "id": "crate_icon_sheet.png",
+   "path": "res://assets/sprites/crate_icon/crate_icon_sheet.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "../../tools/asset-forge/kinds/sprite/entry.py",
+    "build_spec": "assets/sprites/crate_icon/crate_icon.forge.json"
+   }
+  },
+  {
+   "id": "scrap_coin.png",
+   "path": "res://assets/sprites/scrap_coin/scrap_coin.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "../../tools/asset-forge/kinds/pixel/entry.py",
+    "build_spec": "assets/sprites/scrap_coin/scrap_coin.forge.json"
+   }
+  },
+  {
+   "id": "sand_ground_albedo.png",
+   "path": "res://assets/textures/sand_ground/sand_ground_albedo.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
+    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
+   }
+  },
+  {
+   "id": "sand_ground_ao.png",
+   "path": "res://assets/textures/sand_ground/sand_ground_ao.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
+    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
+   }
+  },
+  {
+   "id": "sand_ground_height.png",
+   "path": "res://assets/textures/sand_ground/sand_ground_height.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
+    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
+   }
+  },
+  {
+   "id": "sand_ground_normal.png",
+   "path": "res://assets/textures/sand_ground/sand_ground_normal.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
+    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
+   }
+  },
+  {
+   "id": "sand_ground_preview.png",
+   "path": "res://assets/textures/sand_ground/sand_ground_preview.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
+    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
+   }
+  },
+  {
+   "id": "sand_ground_roughness.png",
+   "path": "res://assets/textures/sand_ground/sand_ground_roughness.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
+    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
+   }
+  },
+  {
+   "id": "spark_burst_preview.png",
+   "path": "res://assets/vfx/spark_burst/preview.png",
+   "class": "texture",
+   "ships": false,
+   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "provenance": {
+    "recipe": "assets/vfx/spark_burst/recipe.py",
+    "build_spec": "assets/vfx/spark_burst/spark_burst.forge.json"
+   }
+  }
+ ]
+}
