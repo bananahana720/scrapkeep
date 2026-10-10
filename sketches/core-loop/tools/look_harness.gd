@@ -934,6 +934,8 @@ func _cages() -> void:
 	cage.tick(1.5)
 	await _frames(45)
 	await _shoot("cag_rivet_freed", {"state": "freed"})
+	_anchor("fab", game.build.fabricators.records()[0]["node"].global_position, game.build.fabricators.records()[0]["node"])
+	await _shoot("swp_fabricator_hoop")
 	if not (_wants("cag_dig_locked") or _wants("cag_dig_freeing")):
 		return
 	await _stage(3)

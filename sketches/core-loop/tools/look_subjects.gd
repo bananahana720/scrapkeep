@@ -151,6 +151,11 @@ const SUBJECTS := {
 		"cameras": [["front", Vector3(0, 2.5, -11), Vector3.ZERO, 55.0], ["three_q", Vector3(6.427876, 3, -7.660444), Vector3.ZERO, 55.0]]},
 	"cag_dig_freeing": {"group": "cages", "stage": 3, "kind": "prop", "owner": "VX-SURF", "anchor": "cage", "basis": true, "tick": 360,
 		"cameras": [["front", Vector3(0, 2.5, -11), Vector3.ZERO, 55.0], ["three_q", Vector3(6.427876, 3, -7.660444), Vector3.ZERO, 55.0]]},
+	# The first stage-1 fabricator (SWAP-WAVE 12-F), anchored on its node at the ground under the ring, eyes turned by its
+	# facing; target the ring centre 3.5 m up. close 12 m with the ball by the rule, mid about 20 m (both shells on), far
+	# about 63 m, past detail1's 45 m end plus its 6 m margin, so only the base hoop draws. Shot after cag_rivet_freed.
+	"swp_fabricator_hoop": {"group": "cages", "stage": 1, "kind": "prop", "owner": "SWAP-WAVE", "anchor": "fab", "basis": true, "tick": 270,
+		"cameras": [["close", Vector3(9, 3, -8), Vector3(0, 3.5, 0), 55.0], ["mid", Vector3(12, 6, -16), Vector3(0, 3.5, 0), 55.0], ["far", Vector3(36, 22, -48), Vector3(0, 3.5, 0), 40.0]]},
 	"scr_spillway_a": {"group": "scrap", "stage": 1, "kind": "prop", "owner": "VX-GROUND", "anchor": "scrap_a", "tick": 120,
 		"cameras": [["close", Vector3(2.4, 1.6, -3), Vector3.ZERO, 45.0], ["three_q", Vector3(4, 2.5, 4), Vector3.ZERO, 50.0], ["cluster", Vector3(0, 5, -9), Vector3(0, -0.5, 4), 55.0]]},
 	"scr_variants": {"group": "scrap", "stage": 1, "kind": "prop", "owner": "VX-GROUND", "tick": 150,
