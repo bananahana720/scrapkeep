@@ -358,7 +358,9 @@ class RunnerIntegration(unittest.TestCase):
         params = fc.read_json(vdir / "params.json")
         written = vfx_promote.promote(vdir, params, p, fc.read_json(vdir / "manifest.json", {}), False)
         names = sorted(Path(w).name for w in written)
-        self.assertEqual(names, ["effect.json", "effect.tscn", "preview.png", "recipe.py", "test_fx.forge.json"])
+        self.assertEqual(names, ["effect.json", "effect.tscn", "recipe.py", "test_fx.forge.json", "test_fx_preview.png"])
+        preview = next(Path(w) for w in written if Path(w).name == "test_fx_preview.png")
+        self.assertNotIn("assets", preview.relative_to(dest_root).parts)  # review images stay out of the shipped tree
         with self.assertRaises(SystemExit):
             vfx_promote.promote(vdir, params, p, {}, False)
         vfx_promote.promote(vdir, params, p, {}, True)

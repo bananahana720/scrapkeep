@@ -130,11 +130,14 @@ def measure():
     unslotted_area = 0.0
     unknown_materials = set()
     per_object = {}
+    origin = root.matrix_world.translation
+    max_radius = 0.0
     for obj in meshes:
         ev = obj.evaluated_get(depsgraph)
         me = ev.to_mesh()
         mw = ev.matrix_world
         wco = [mw @ v.co for v in me.vertices]
+        max_radius = max([max_radius] + [(p - origin).length for p in wco])
         for p in wco:
             for i in range(3):
                 lo[i] = min(lo[i], p[i])
@@ -223,6 +226,7 @@ def measure():
         "center_xy": [(hi[0] + lo[0]) / 2, (hi[1] + lo[1]) / 2],
         "lowest_z": lowest,
         "root_origin": root_loc,
+        "max_radius": max_radius,
         "islands": len(islands),
         "floating": floating,
         "nonmanifold_edges": nonmanifold,

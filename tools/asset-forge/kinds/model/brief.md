@@ -23,7 +23,10 @@ Write `recipe.py`: a Blender Python module run by the forge, never by you.
   x = 0, y = 0 (bounding box centre). Size it as the real object would be in a game where
   the player's rolling ball is 1.7 m across.
 - Stay inside the triangle band in `params["band"]`. `common.tris(obj)` counts a part;
-  `common.tri_total(root)` counts all.
+  `common.tri_total(root)` counts all. When `params["max_vertices"]` is set, stay under it too.
+- Each material slot you use is one draw call; `params["max_draw_calls"]` caps them. When the
+  cap is 1 or 2, paint every colour as vertex colours in the `paint` slot instead of reaching
+  for separate slots.
 - Every part must touch the ground or another part. No floating pieces, no gaps, no holes.
 
 ## Build order

@@ -2337,15 +2337,15 @@
    "loader": "src/presentation/hero_assets.gd:44"
   },
   {
-   "id": "scrap_crate",
-   "path": "res://assets/models/scrap_crate.glb",
    "class": "prop",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "id": "scrap_crate",
+   "loader": "none (forge promote scrap_crate/v002; wire it in and set ships true)",
+   "path": "res://assets/models/scrap_crate.glb",
    "provenance": {
-    "recipe": "tools/blender/forge/scrap_crate.py",
-    "build_spec": "assets/models/scrap_crate.forge.json"
-   }
+    "notes": "assets/models/scrap_crate.forge.json",
+    "recipe": "tools/blender/forge/scrap_crate.py"
+   },
+   "ships": false
   },
   {
    "path": "res://assets/models/shell_kest.glb",
@@ -2998,26 +2998,26 @@
    }
   },
   {
-   "id": "crate_icon_sheet.png",
-   "path": "res://assets/sprites/crate_icon/crate_icon_sheet.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "id": "crate_icon_sheet",
+   "loader": "none (forge promote crate_icon/v003; wire it in and set ships true)",
+   "path": "res://assets/sprites/crate_icon/crate_icon_sheet.png",
    "provenance": {
-    "recipe": "../../tools/asset-forge/kinds/sprite/entry.py",
-    "build_spec": "assets/sprites/crate_icon/crate_icon.forge.json"
-   }
+    "notes": "assets/sprites/crate_icon/crate_icon.forge.json",
+    "recipe": null
+   },
+   "ships": false
   },
   {
-   "id": "scrap_coin.png",
-   "path": "res://assets/sprites/scrap_coin/scrap_coin.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
+   "id": "scrap_coin",
+   "loader": "none (forge promote scrap_coin/v001; wire it in and set ships true)",
+   "path": "res://assets/sprites/scrap_coin/scrap_coin.png",
    "provenance": {
-    "recipe": "../../tools/asset-forge/kinds/pixel/entry.py",
-    "build_spec": "assets/sprites/scrap_coin/scrap_coin.forge.json"
-   }
+    "notes": "assets/sprites/scrap_coin/scrap_coin.forge.json",
+    "recipe": null
+   },
+   "ships": false
   },
   {
    "path": "res://assets/textures/packed-sand-floor.webp",
@@ -3044,70 +3044,59 @@
    "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
   },
   {
-   "id": "sand_ground_albedo.png",
+   "class": "texture",
+   "id": "sand_ground_albedo",
+   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
    "path": "res://assets/textures/sand_ground/sand_ground_albedo.png",
-   "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
    "provenance": {
-    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
-    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
-   }
+    "notes": "assets/textures/sand_ground/sand_ground.forge.json",
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py"
+   },
+   "ships": false
   },
   {
-   "id": "sand_ground_ao.png",
+   "class": "texture",
+   "id": "sand_ground_ao",
+   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
    "path": "res://assets/textures/sand_ground/sand_ground_ao.png",
-   "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
    "provenance": {
-    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
-    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
-   }
+    "notes": "assets/textures/sand_ground/sand_ground.forge.json",
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py"
+   },
+   "ships": false
   },
   {
-   "id": "sand_ground_height.png",
+   "class": "texture",
+   "id": "sand_ground_height",
+   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
    "path": "res://assets/textures/sand_ground/sand_ground_height.png",
-   "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
    "provenance": {
-    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
-    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
-   }
+    "notes": "assets/textures/sand_ground/sand_ground.forge.json",
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py"
+   },
+   "ships": false
   },
   {
-   "id": "sand_ground_normal.png",
+   "class": "texture",
+   "id": "sand_ground_normal",
+   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
    "path": "res://assets/textures/sand_ground/sand_ground_normal.png",
-   "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
    "provenance": {
-    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
-    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
-   }
+    "notes": "assets/textures/sand_ground/sand_ground.forge.json",
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py"
+   },
+   "ships": false
   },
   {
-   "id": "sand_ground_preview.png",
-   "path": "res://assets/textures/sand_ground/sand_ground_preview.png",
    "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
-   "provenance": {
-    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
-    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
-   }
-  },
-  {
-   "id": "sand_ground_roughness.png",
+   "id": "sand_ground_roughness",
+   "loader": "none (forge promote sand_ground/v001; wire it in and set ships true)",
    "path": "res://assets/textures/sand_ground/sand_ground_roughness.png",
-   "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
    "provenance": {
-    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py",
-    "build_spec": "assets/textures/sand_ground/sand_ground.forge.json"
-   }
+    "notes": "assets/textures/sand_ground/sand_ground.forge.json",
+    "recipe": "assets/textures/sand_ground/sand_ground.recipe.py"
+   },
+   "ships": false
   },
   {
    "path": "res://assets/textures/sandstone-strata.webp",
@@ -3120,17 +3109,6 @@
    "class": "texture",
    "ships": true,
    "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
-  },
-  {
-   "id": "spark_burst_preview.png",
-   "path": "res://assets/vfx/spark_burst/preview.png",
-   "class": "texture",
-   "ships": false,
-   "loader": "none (asset-forge sample output from claude/reverse-engineer-asset-pipeline-a5025f 7c160c7; not wired into the game)",
-   "provenance": {
-    "recipe": "assets/vfx/spark_burst/recipe.py",
-    "build_spec": "assets/vfx/spark_burst/spark_burst.forge.json"
-   }
   }
  ],
  "fragment_ids": [
@@ -3185,7 +3163,7 @@
   "cottonwood_detail2",
   "cottonwood_trunk",
   "cracked_cache",
-  "crate_icon_sheet.png",
+  "crate_icon_sheet",
   "cut_face_long",
   "cut_face_scoop",
   "decal_atlas.png",
@@ -3325,13 +3303,12 @@
   "return_ramp_skin",
   "return_ramp_skin_rusted-salvaged-plate.webp",
   "rubble_cluster",
-  "sand_ground_albedo.png",
-  "sand_ground_ao.png",
-  "sand_ground_height.png",
-  "sand_ground_normal.png",
-  "sand_ground_preview.png",
-  "sand_ground_roughness.png",
-  "scrap_coin.png",
+  "sand_ground_albedo",
+  "sand_ground_ao",
+  "sand_ground_height",
+  "sand_ground_normal",
+  "sand_ground_roughness",
+  "scrap_coin",
   "scrap_crate",
   "scrap_pickups",
   "shell_cannon",
@@ -3344,7 +3321,6 @@
   "sky_cradle",
   "sky_loom",
   "sky_mesa",
-  "spark_burst_preview.png",
   "spil9",
   "strut_bent",
   "strut_tall",

@@ -58,6 +58,15 @@ def validate(vdir, params, result, pack):
         dc = info["draw_calls"]
         state = "pass" if dc <= cap else "warn" if dc <= 2 * cap else "fail"
         add("draw_calls", state, dc, "%d primitives (draw calls); the %s cap is %d" % (dc, params["category"], cap))
+        vcap = params.get("max_vertices")
+        if vcap:
+            vs = info["vertices"]
+            add("vertices", "pass" if vs <= vcap else "fail", vs, "%d vertices; the %s budget class allows %d" % (vs, params["category"], vcap))
+        need = params.get("profile", {}).get("required_nodes", [])
+        missing = [n for n in need if n not in info["node_names"]]
+        if need:
+            add("required_nodes", "fail" if missing else "pass", missing or need,
+                "missing node(s) %s, which the game looks up by name" % ", ".join(missing) if missing else "nodes %s present" % ", ".join(need))
         unknown = [n for n in info["materials"] if n.split(".")[0] not in params["slots"]]
         if unknown:
             add("glb_materials", "fail", unknown, "GLB materials not in the slot list: %s" % ", ".join(unknown))
@@ -102,8 +111,16 @@ def validate(vdir, params, result, pack):
     else:
         add("palette_colours", "pass", len(sum(([*c] for c in m["vertex_colour_area"].values()), [])), "every painted colour is a palette role or mix")
 
+    profile = params.get("profile", {})
+    centre = profile.get("pivot") == "centre"
+    if profile.get("max_radius") is not None:
+        r, cap = m.get("max_radius"), profile["max_radius"]
+        add("radius", "pass" if r is not None and r <= cap else "fail", None if r is None else round(r, 4),
+            "geometry reaches %.3f m from the origin; the cap is %.3f m" % (r if r is not None else -1, cap))
     lowest = m["lowest_z"]
-    if abs(lowest) <= GROUND_TOL:
+    if centre:
+        add("grounding", "info", round(lowest, 4), "centre-pivot asset (%s): no ground contact expected" % params["category"])
+    elif abs(lowest) <= GROUND_TOL:
         add("grounding", "pass", round(lowest, 4), "lowest point z = %.4f m" % lowest)
     elif lowest < 0:
         add("grounding", "fail", round(lowest, 4), "sunk %.3f m below z = 0" % -lowest)
@@ -119,7 +136,9 @@ def validate(vdir, params, result, pack):
     ro = m["root_origin"]
     add("origin", "info", [round(x, 3) for x in ro], "root object origin")
 
-    if m["floating"]:
+    if centre:
+        add("floating_parts", "info", len(m["floating"]), "centre-pivot asset: ground support not checked")
+    elif m["floating"]:
         add("floating_parts", "fail", len(m["floating"]),
             "%d part(s) touch neither the ground nor another part, e.g. %s at z %.2f to %.2f" % (
                 len(m["floating"]), m["floating"][0]["object"], m["floating"][0]["min"][2], m["floating"][0]["max"][2]))

@@ -22,7 +22,7 @@
   "source": {
     "forge_version": "core-loop/sand_ground/v001",
     "recipe": "sketches/core-loop/assets/textures/sand_ground/sand_ground.recipe.py",
-    "texlib_sha256": "3417c3155b732c64e41ca925c3f26dd14ab134f0a24c5d49f6df3ee725f3330c"
+    "texlib_sha256": "53d256ec6133ed5238cc2c03e102cd205b928cb3cdeb89671dd91f867528ce40"
   },
   "transformations": [
     "Blender 5.2.2 LTS Python (numpy) recipe build, wrapped noise only, palette ramps"

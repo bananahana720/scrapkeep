@@ -225,7 +225,7 @@ def glb_info(path):
     nodes = g.get("nodes", [])
     meshes = g.get("meshes", [])
     scene = g["scenes"][g.get("scene", 0)]
-    tris = draws = instances = 0
+    tris = draws = instances = verts = 0
     stack = list(scene.get("nodes", []))
     seen = set()
     while stack:
@@ -239,10 +239,12 @@ def glb_info(path):
             instances += 1
             for prim in meshes[n["mesh"]]["primitives"]:
                 draws += 1
+                verts += g["accessors"][prim["attributes"]["POSITION"]]["count"]
                 if prim.get("mode", 4) == 4:
                     count = g["accessors"][prim["indices"]]["count"] if "indices" in prim else g["accessors"][prim["attributes"]["POSITION"]]["count"]
                     tris += count // 3
-    return {"nodes": len(nodes), "mesh_nodes": instances, "draw_calls": draws, "triangles": tris,
+    return {"nodes": len(nodes), "mesh_nodes": instances, "draw_calls": draws, "triangles": tris, "vertices": verts,
+            "node_names": [n.get("name", "") for n in nodes],
             "materials": [m.get("name", "") for m in g.get("materials", [])], "bytes": len(data)}
 
 
