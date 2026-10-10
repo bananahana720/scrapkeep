@@ -85,7 +85,7 @@ def prepare_version(pack, kind, asset, category, prompt, parent=None, reference=
         if prev.is_file():
             shutil.copyfile(prev, vdir / "reference" / "previous.png")
     if reference:
-        shutil.copyfile(reference, vdir / "reference" / "concept.png")
+        shutil.copyfile(reference, vdir / "reference" / ("source.glb" if reference.suffix == ".glb" else "concept.png"))
     (vdir / "system_prompt.md").write_text(system_prompt(pack, kind))
     return vdir, params
 
@@ -225,7 +225,7 @@ def write_manifest(vdir, params, pack, kind, run=None):
     res = fc.read_json(vdir / "result.json", {})
     val = fc.read_json(vdir / "validate.json", {})
     sources = {}
-    for name in ("prompt.md", "params.json", "recipe.py", "system_prompt.md", "reference/concept.png"):
+    for name in ("prompt.md", "params.json", "recipe.py", "system_prompt.md", "reference/concept.png", "reference/source.glb"):
         if (vdir / name).is_file():
             sources[name] = fc.sha256_file(vdir / name)
     for p in (kind["dir"] / kind["entry"], kind["dir"] / kind["validator"], kind["dir"] / kind["brief"], FORGE_PY):
@@ -293,6 +293,8 @@ def agent_task(vdir, params, revising):
         lines.append("This is a revision. recipe.py is the previous version and reference/previous.png is its sheet. Change it as the prompt asks and keep what already works.")
     if (vdir / "reference" / "concept.png").is_file():
         lines.append("reference/concept.png is the concept picture. Read it first and match it.")
+    if (vdir / "reference" / "source.glb").is_file():
+        lines.append("reference/source.glb is the source model (a GLB). A sprite recipe can call load_reference() to use it.")
     lines.append("Follow the system brief. The prompt:\n\n" + (vdir / "prompt.md").read_text())
     return "\n".join(lines)
 
