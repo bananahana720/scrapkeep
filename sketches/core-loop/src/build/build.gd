@@ -340,8 +340,9 @@ func enemies_near(at: Vector3, radius: float, count: int) -> Array[Node3D]:
 	return _enemies_near(at, radius, count)
 
 
-# An item's own hit: damage after the weapon multiplier, as a synergy strike that never
-# procs another item, with its element applied where it lands.
+# An item's own hit: callers pass damage before the weapon multiplier and this applies
+# it once, as a synergy strike that never procs another item, with its element applied
+# where it lands.
 func item_hit(enemy: Node3D, damage: float, element := "") -> void:
 	if not is_instance_valid(enemy) or damage <= 0.0:
 		return
