@@ -167,7 +167,7 @@ func _sync() -> void:
 	visible = active()
 	if not visible:
 		return
-	var foot := Vector3(_warden.global_position.x, 0.0, _warden.global_position.z)
+	var foot := _centre()
 	if _built_at.distance_to(foot) > 0.05:
 		_build(foot)
 	_backing_material.albedo_color = crack_backing()
@@ -185,10 +185,29 @@ func _sync() -> void:
 	_mark_material.albedo_color = crack_color()
 
 
+# The ring's centre on the ground. Brindle's hull is a piece of the ship the player sees, so
+# its ring centres on that ship, never on the hull body's own position.
+func _centre() -> Vector3:
+	var at: Vector3 = _warden.global_position
+	if _warden.get("boss") != null and _warden.get_parent() is Node3D:
+		at = (_warden.get_parent() as Node3D).global_position
+	return Vector3(at.x, 0.0, at.z)
+
+
 func _radius() -> float:
-	# A Warden's ring clears its core pulse; Brindle's hull has no core, so it clears the hull.
-	var body := float(WardenBody.CORE_RADIUS) if _warden.get("boss") == null else float(_warden.get("radius"))
-	return body + CLEARANCE + BACKING * 0.5 + BAND * 0.5
+	return _reach() + CLEARANCE + BACKING * 0.5 + BAND * 0.5
+
+
+# What the ring must clear. A Warden's ring clears its core pulse. Brindle's hull has no
+# core, so its ring clears the hull box's half diagonal and no heading hides an arc.
+func _reach() -> float:
+	if _warden.get("boss") == null:
+		return float(WardenBody.CORE_RADIUS)
+	for child in _warden.get_children():
+		if child is CollisionShape3D and child.shape is BoxShape3D:
+			var size: Vector3 = child.shape.size
+			return Vector2(size.x, size.z).length() * 0.5
+	return float(_warden.get("radius"))
 
 
 func _ground(x: float, z: float) -> float:

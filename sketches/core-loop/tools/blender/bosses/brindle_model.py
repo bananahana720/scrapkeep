@@ -343,7 +343,10 @@ def build_ship():
     armour(h)
     p = Part("BowRam")
     box(p, (9, 3.2, .35), (0, 2.5, -6.625), "bone")
-    stripe_rectangle(p, 8.65, 2.88, (0, 2.5, -6.801))
+    # Hazard paint only on the ram lip, clear of the bolts: the arenas sheet allows stripes
+    # on the magnet underside, the throats and the bow. A full-face stripe read as striped
+    # hull sides at rest.
+    stripe_rectangle(p, 7.6, .8, (0, 1.6, -6.801))
     for x in (-4.35, 4.35):
         for y in (1.0, 4.0):
             bolt(p, (x, y, -6.76), (0, 0, -1))
