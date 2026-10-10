@@ -550,6 +550,8 @@ func _harpoon_refusal() -> String:
 		return "rewinding"
 	if kit.aim.get("state", Augments.AIM_NONE) == Augments.AIM_NONE:
 		return "no_aim"
+	if Augments.holding(kit):
+		return "busy"
 	return ""
 
 
@@ -800,9 +802,12 @@ func _try_crush(body: Node3D) -> void:
 	_rigid.add_collision_exception_with(body)
 	var closing := kit.line_closing
 	var landing := _begin_landing(body)
+	if landing:
+		smash_landing = body
 	struck.emit(body, RAM, _landing_force(RAM, speed))
 	if landing:
 		_finish_landing(body, closing)
+	smash_landing = null
 	get_tree().create_timer(CRUSH_PASS, false, true).timeout.connect(_end_crush.bind(id))
 
 

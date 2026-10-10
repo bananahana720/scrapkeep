@@ -136,10 +136,7 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		elif state.grounded:
 			body_state.apply_central_force(-state.velocity.normalized() * tuning.f("rolling_resistance") * mass)
 
-		var drag := Rules.resistance(state, tuning, intent, delta)
-		if state.grounded:
-			drag = Vector3.ZERO
-		body_state.apply_central_impulse(drag * mass)
+		body_state.apply_central_impulse(Rules.over_speed_drag(state, tuning, delta) * mass)
 
 		if external_accel != Vector3.ZERO:
 			body_state.apply_central_force(external_accel * mass)
