@@ -44,8 +44,10 @@ def promote(vdir, params, pack, manifest, force=False):
     written.append(tres_dst)
     sheet = vdir / "preview" / "sheet.png"
     if sheet.is_file():
-        shutil.copyfile(sheet, dst / (asset + "_preview.png"))
-        written.append(dst / (asset + "_preview.png"))
+        previews = repo / pack["previews"]
+        previews.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(sheet, previews / (asset + "_preview.png"))
+        written.append(previews / (asset + "_preview.png"))
     recipe_dst = dst / (asset + ".recipe.py")
     recipe_dst.write_text(
         "# %s: promoted from the asset forge (tools/asset-forge), pack %s, %s.\n"

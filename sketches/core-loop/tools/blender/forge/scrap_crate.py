@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 NAME = 'scrap_crate'
-PARAMS = json.loads('{"asset": "scrap_crate", "band": [150, 1500], "category": "prop", "kind": "model", "max_draw_calls": 12, "pack": "core-loop", "palette": {"amber": "e5a044", "ancient": "3d8bff", "bone": "d2c5a5", "brass": "d9b44a", "charcoal": "242a28", "copper": "b77843", "hazard": "ff5a3c", "ice": "c8f0ff", "mint": "8bf0d3", "oxide": "9b513a", "petrol": "365754", "sandstone": "c6a274"}, "parent_version": "v001", "size_range": [0.15, 8.0], "slot_specs": {"ancient_enamel": {"rough": 0.55, "vc": true}, "ancient_light": {"color": "ancient", "emit": 3.0, "rough": 0.3}, "bare_metal": {"color": "bone", "lighten": 0.25, "metal": 0.6, "rough": 0.45}, "class_accent": {"color": "mint", "emit": 0.4, "rough": 0.5}, "field": {"color": "mint", "emit": 2.0, "rough": 0.4}, "fleet_paint": {"color": "oxide", "rough": 0.8}, "glass": {"alpha": 0.12, "color": "ffffff", "rough": 0.05}, "paint": {"rough": 0.8, "vc": true}, "pilot": {"rough": 0.9, "vc": true}, "rarity": {"color": "bone", "emit": 1.2, "rough": 0.5}, "requisition_tag": {"color": "brass", "metal": 0.5, "rough": 0.4}, "rubber": {"color": "charcoal", "rough": 0.95}}, "slots": ["paint", "bare_metal", "rubber", "class_accent", "field", "glass", "pilot", "fleet_paint", "requisition_tag", "ancient_enamel", "ancient_light", "rarity"]}')
+PARAMS = json.loads('{"asset": "scrap_crate", "band": [150, 1500], "category": "prop", "kind": "model", "max_draw_calls": 12, "pack": "core-loop", "parent_version": "v001", "size_range": [0.15, 8.0]}')
 
 # ---- recipe as written by the forge agent ----
 # Scrap crate prop. Provenance: authored procedurally from common.Part boxes and rods.

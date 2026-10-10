@@ -34,6 +34,20 @@ def build(params):
 '''
 
 
+SHELL = HEADER + '''
+def build(params):
+    root = common.empty("ShellTest")
+    core = Part("Core")
+    core.uv("glass", 0.98, 48, 32)
+    core.to_object((0, 0, 0), root)
+    p = Part("Pod")
+    p.box("paint", (0.8, 0.8, 0.8), loc=(0, 0, 0), color="oxide")
+    pod = p.to_object((0, 0, 0), root)
+    common.empty("Dome", parent=pod)
+    return root
+'''
+
+
 def recipe(**swap):
     """GOOD with textual substitutions to seed one defect."""
     s = GOOD
@@ -245,12 +259,65 @@ class Setup(unittest.TestCase):
         self.assertEqual(fc.kind_names(kd), ["terrain"])
 
     def test_system_prompt_has_all_parts(self):
-        sp = forge.system_prompt(pack(), fc.load_kind("model"))
+        kind = fc.load_kind("model")
+        sp = forge.system_prompt(pack(), kind, forge.build_params(pack(), kind, "x", "prop"))
+        self.assertNotIn("Shell (pilot mecha ball) rules", sp)
+        shell = forge.system_prompt(pack(), kind, forge.build_params(pack(), kind, "x", "shell"))
+        self.assertIn("Shell (pilot mecha ball) rules", shell)
         self.assertIn("python3 %s run ." % forge.FORGE_PY, sp)
         self.assertIn("front faces -Y", sp.replace("The front faces -Y", "front faces -Y"))
         self.assertIn("## 2. Palette roles", sp)
         self.assertIn("## 9. Hero asset briefs", sp)
         self.assertIn("## 10. Reviewer checklist", sp)
+
+    def test_budget_classes_replace_the_model_bands(self):
+        budgets = self.tmp / "budgets.json"
+        budgets.write_text(json.dumps({"classes": {"prop": {"tris": 270, "verts": 610, "draws": 1},
+                                                   "landmark": {"tris": 900, "verts": 2000, "draws": 2}}}))
+        p, kind = dict(pack(), budgets=str(budgets)), fc.load_kind("model")
+        params = forge.build_params(p, kind, "x", "prop")
+        self.assertEqual((params["band"][1], params["max_draw_calls"], params["max_vertices"]), (270, 1, 610))
+        self.assertLessEqual(params["band"][0], 135)
+        self.assertEqual(params["budget_class"], "prop")
+        self.assertEqual(forge.build_params(p, kind, "x", "landmark")["max_draw_calls"], 2)
+        with self.assertRaises(SystemExit):
+            forge.build_params(p, kind, "x", "kit")  # not a budget class
+        plain = forge.build_params(pack(), kind, "x", "prop")  # no budgets file: the pack bands
+        self.assertEqual((plain["band"], plain["max_vertices"]), (pack()["bands"]["model"]["prop"], None))
+
+    def test_pilot_category_is_refused(self):
+        with self.assertRaises(SystemExit):
+            forge.build_params(pack(), fc.load_kind("model"), "x", "pilot")
+
+    def test_registry_fragment_lists_only_files_under_assets(self):
+        sketch = self.tmp / "sk"
+        (sketch / "assets" / "registry.d").mkdir(parents=True)
+        (sketch / "assets" / "models").mkdir()
+        (sketch / "tools").mkdir()
+        glb, side = sketch / "assets/models/thing.glb", sketch / "assets/models/thing.forge.json"
+        recipe_py, preview = sketch / "tools/thing.py", sketch / "tools/thing_preview.png"
+        for f in (glb, side, recipe_py, preview):
+            f.write_text("x")
+        vdir = self.tmp / "v001"
+        (vdir / "reference").mkdir(parents=True)
+        p = dict(pack(), repo_root=str(self.tmp), registry="sk/assets/registry.d", sketch_path=sketch)
+        params = {"asset": "thing", "category": "landmark", "budget_class": "landmark"}
+        frag = forge.write_registry(p, params, vdir, [glb, side, recipe_py, preview])
+        rows = fc.read_json(frag)["assets"]
+        self.assertEqual([r["path"] for r in rows], ["res://assets/models/thing.glb"])
+        self.assertEqual((rows[0]["id"], rows[0]["class"], rows[0]["ships"]), ("thing", "landmark", False))
+        self.assertEqual(rows[0]["provenance"]["recipe"], "tools/thing.py")
+        self.assertEqual(rows[0]["provenance"]["notes"], "assets/models/thing.forge.json")
+        no_reg = dict(p, registry="sk/missing")
+        self.assertIsNone(forge.write_registry(no_reg, params, vdir, [glb]))
+
+    def test_promoted_recipe_carries_no_palette_snapshot(self):
+        promote = fc.load_module(fc.KINDS_DIR / "model" / "promote.py", "model_promote_t")
+        params = forge.build_params(pack(), fc.load_kind("model"), "x", "prop")
+        params["parent_version"] = None
+        text = promote.standalone_recipe("x", "v001", params, "def build(params):\n    return None\n")
+        for gone in ('"palette"', '"slot_specs"', "3d8bff", "9dff3c"):
+            self.assertNotIn(gone, text)
 
     def test_agent_command_is_locked_down(self):
         cmd = forge.agent_command(self.tmp, "sonnet", 40, 3.0)
@@ -426,6 +493,17 @@ class BlenderRuns(unittest.TestCase):
         rc, _, checks = self.run_recipe(recipe(sphere_loc="loc=(0, 0, 2.5)"))
         self.assertEqual(rc, 1)
         self.assertEqual(checks["floating_parts"]["state"], "fail", checks)
+
+    def test_shell_profile_passes_and_catches_defects(self):
+        rc, _, checks = self.run_recipe(SHELL, category="shell")
+        self.assertEqual(rc, 0, checks)
+        self.assertEqual(checks["required_nodes"]["state"], "pass", checks)
+        self.assertEqual(checks["radius"]["state"], "pass", checks)
+        self.assertEqual(checks["grounding"]["state"], "info", checks)
+        rc, _, checks = self.run_recipe(SHELL.replace("0.98, 48", "1.2, 48"), category="shell")
+        self.assertEqual(checks["radius"]["state"], "fail", checks)
+        rc, _, checks = self.run_recipe(SHELL.replace('    common.empty("Dome", parent=pod)\n', ""), category="shell")
+        self.assertEqual(checks["required_nodes"]["state"], "fail", checks)
 
     def test_seeded_sunk_model_fails(self):
         src = GOOD.replace("loc=(0, 0, 0.25)", "loc=(0, 0, 0.1)").replace("loc=(0, 0, 0.03)", "loc=(0, 0, -0.12)")

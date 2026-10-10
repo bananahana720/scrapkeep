@@ -6,6 +6,12 @@ palette_source = "sketches/core-loop/src/core/palette.gd"
 helper_dir = "sketches/core-loop/tools/blender"   # holds common.py, the recipe helper module
 inspect = "scripts/asset-inspect.mjs"
 default_category = "prop"
+# Optional, used when the checkout has them (proto/alpha does, main does not): per-class model
+# caps that replace the model bands below, and the registry fragment directory promote writes to.
+budgets = "sketches/core-loop/tools/asset_budgets.json"
+registry = "sketches/core-loop/assets/registry.d"
+# Review images stay out of assets/, which ships with the game and is scanned by the registry test.
+previews = "sketches/core-loop/tools/blender/forge/previews"
 
 [style]
 # Sections are cut from the brief by their "## N." heading and appended to the system prompt.
@@ -44,18 +50,22 @@ roles = ["ice"]
 prop = [150, 1500]
 kit = [800, 1500]
 hero = [3000, 6500]
+shell = [2000, 11000]
 
 # Real-world size sanity per category: longest bounding-box edge in metres, [low, high].
 [sizes.model]
 prop = [0.15, 8.0]
 kit = [0.5, 10.0]
 hero = [1.0, 12.0]
+shell = [1.6, 2.0]
+default = [0.05, 40.0]
 
 # Primitives (draw calls) allowed per category.
 [draw_calls.model]
 prop = 12
 kit = 24
 hero = 40
+shell = 10
 
 [promote.model]
 models = "sketches/core-loop/assets/models"
@@ -141,3 +151,16 @@ sprites = "sketches/core-loop/assets/sprites"
 
 [promote.pixel]
 sprites = "sketches/core-loop/assets/sprites"
+
+# --- category profiles and refusals (model kind) ---
+# A shell is the pilot mecha's ball: glass `Core` sphere and steered `Pod`, origin at the
+# sphere centre, +Y forward, everything within 0.985 m (src/presentation/hero_assets.gd,
+# tests/pilot_cannon_asset_test.gd on proto/alpha).
+[profiles.model.shell]
+brief = "brief.shell.md"
+pivot = "centre"
+max_radius = 0.985
+required_nodes = ["Core", "Pod", "Dome"]
+
+[refuse.model]
+pilot = "pilots need a 25-bone rig and seven animation clips (tools/blender/PILOT-RIG.md); the model kind exports static meshes, so build pilots with the hand-written rig recipes"

@@ -14,7 +14,8 @@ def promote(vdir, params, pack, manifest, force=False):
     repo = Path(pack["repo_root"])
     dest = repo / pack["promote"]["vfx"]["vfx"] / asset
     files = {"effect.tscn": vdir / "out" / "effect.tscn", "effect.json": vdir / "out" / "effect.json",
-             "preview.png": vdir / "preview" / "sheet.png", "recipe.py": vdir / "recipe.py"}
+             "recipe.py": vdir / "recipe.py"}
+    preview = vdir / "preview" / "sheet.png"
     for name, src in files.items():
         if not src.is_file():
             raise SystemExit("forge: %s is missing; run `forge run` first" % src)
@@ -25,6 +26,11 @@ def promote(vdir, params, pack, manifest, force=False):
     for name, src in files.items():
         shutil.copyfile(src, dest / name)
         written.append(dest / name)
+    if preview.is_file():
+        previews = repo / pack["previews"]
+        previews.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(preview, previews / (asset + "_preview.png"))
+        written.append(previews / (asset + "_preview.png"))
     side = dest / (asset + ".forge.json")
     fc.write_json(side, {
         "schema_version": 1,

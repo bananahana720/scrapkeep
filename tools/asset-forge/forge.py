@@ -35,16 +35,44 @@ def now():
 
 
 # --- params and version setup ---------------------------------------------------------
+def budget_classes(pack, kind):
+    """The sketch's per-class triangle/vertex/draw caps (tools/asset_budgets.json), when the
+    checkout has them; the registry test measures promoted models against these."""
+    rel = pack.get("budgets")
+    if kind["bands_key"] != "model" or not rel:
+        return {}
+    path = Path(pack["repo_root"]) / rel
+    return json.loads(path.read_text())["classes"] if path.is_file() else {}
+
+
 def build_params(pack, kind, asset, category, preview=True):
-    bands = pack["bands"][kind["bands_key"]]
-    if category not in bands:
+    key = kind["bands_key"]
+    refused = pack.get("refuse", {}).get(key, {})
+    if category in refused:
+        die("category %r: %s" % (category, refused[category]))
+    bands, sizes, draws = pack["bands"][key], pack["sizes"][key], pack["draw_calls"][key]
+    classes = budget_classes(pack, kind)
+    max_verts = None
+    if classes:
+        if category not in classes:
+            die("category %r is not a budget class in %s: %s" % (category, pack["budgets"], ", ".join(sorted(classes))))
+        cap = classes[category]
+        low = bands[category][0] if category in bands else cap["tris"] // 10
+        band = [min(low, cap["tris"] // 2), cap["tris"]]
+        max_draws, max_verts = cap["draws"], cap["verts"]
+    elif category in bands:
+        band, max_draws = bands[category], draws[category]
+    else:
         die("category %r not in pack %s bands: %s" % (category, pack["name"], ", ".join(bands)))
     specs = fc.slot_specs(pack)
     return {
         "kind": kind["name"], "pack": pack["name"], "asset": asset, "category": category,
-        "band": bands[category],
-        "size_range": pack["sizes"][kind["bands_key"]][category],
-        "max_draw_calls": pack["draw_calls"][kind["bands_key"]][category],
+        "band": band,
+        "size_range": sizes.get(category, sizes.get("default", [0.05, 40.0])),
+        "max_draw_calls": max_draws,
+        "max_vertices": max_verts,
+        "budget_class": category if classes else None,
+        "profile": pack.get("profiles", {}).get(key, {}).get(category, {}),
         "slots": list(specs), "slot_specs": specs,
         "palette": fc.pack_palette(pack),
         "helper_dir": str(pack["helper_dir_path"]),
@@ -63,9 +91,12 @@ def style_excerpt(pack):
     return "\n\n".join(parts)
 
 
-def system_prompt(pack, kind):
+def system_prompt(pack, kind, params):
     system = (fc.FORGE_DIR / "system.md").read_text().replace("{forge}", str(FORGE_PY))
     brief = (kind["dir"] / kind["brief"]).read_text()
+    extra = params["profile"].get("brief")
+    if extra:
+        brief += "\n\n" + (kind["dir"] / extra).read_text()
     return "%s\n\n%s\n\n# Style rules from the project (%s)\n\n%s\n" % (system, brief, pack["style"]["brief"], style_excerpt(pack))
 
 
@@ -88,7 +119,7 @@ def prepare_version(pack, kind, asset, category, prompt, parent=None, reference=
             shutil.copyfile(prev, vdir / "reference" / "previous.png")
     if reference:
         shutil.copyfile(reference, vdir / "reference" / ("source.glb" if reference.suffix == ".glb" else "concept.png"))
-    (vdir / "system_prompt.md").write_text(system_prompt(pack, kind))
+    (vdir / "system_prompt.md").write_text(system_prompt(pack, kind, params))
     return vdir, params
 
 
@@ -421,6 +452,44 @@ def cmd_compare(args):
     return 0
 
 
+IMAGE_EXT = (".png", ".webp", ".jpg", ".jpeg", ".hdr")
+
+
+def write_registry(pack, params, vdir, written):
+    """One fragment per asset in the sketch's registry.d/, listing every model and image the
+    promote put under assets/, so the registry test finds them. Rows start unshipped: the
+    budget test counts a model once someone wires it in and sets ships to true."""
+    rel = pack.get("registry")
+    reg = Path(pack["repo_root"]) / rel if rel else None
+    if not reg or not reg.is_dir():
+        print("forge: no registry directory in this checkout; skipped the registry fragment")
+        return None
+    sketch = Path(pack["sketch_path"])
+    assets = (sketch / "assets").resolve()
+    recipe = next((p for p in written if p.suffix == ".py"), None)
+    side = next((p for p in written if p.name.endswith(".forge.json")), None)
+    concept = vdir / "reference" / "concept.png"
+    provenance = {"recipe": recipe.relative_to(sketch).as_posix() if recipe else None,
+                  "notes": side.relative_to(sketch).as_posix() if side else None}
+    if concept.is_file():
+        provenance["concept_reference"] = str(concept)
+    rows = []
+    for p in written:
+        ext = p.suffix.lower()
+        if ext != ".glb" and ext not in IMAGE_EXT or not p.resolve().is_relative_to(assets):
+            continue
+        rows.append({"id": p.stem, "path": "res://" + p.relative_to(sketch).as_posix(),
+                     "class": (params.get("budget_class") or params["category"]) if ext == ".glb" else "texture",
+                     "ships": False,
+                     "loader": "none (forge promote %s/%s; wire it in and set ships true)" % (params["asset"], vdir.name),
+                     "provenance": provenance})
+    if not rows:
+        return None
+    dst = reg / (params["asset"] + ".json")
+    fc.write_json(dst, {"assets": rows})
+    return dst
+
+
 def cmd_promote(args):
     vdir = fc.version_dir(args.pack, args.asset, args.version)
     vdir, params, pack, kind = load_ctx(vdir)
@@ -429,6 +498,9 @@ def cmd_promote(args):
         die("%s did not validate (run `forge run` first); refusing to promote" % vdir.name, 1)
     mod = fc.load_module(kind["dir"] / kind["promoter"], "forge_kind_promote")
     written = mod.promote(vdir, params, pack, fc.read_json(vdir / "manifest.json", {}), args.force)
+    fragment = write_registry(pack, params, vdir, written)
+    if fragment:
+        written.append(fragment)
     for p in written:
         print("promoted", p)
     merge_manifest(vdir, promoted=[str(p) for p in written], promoted_at=now())

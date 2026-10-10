@@ -11,7 +11,7 @@
   "source": {
     "forge_version": "core-loop/scrap_crate/v002",
     "recipe": "sketches/core-loop/tools/blender/forge/scrap_crate.py",
-    "recipe_sha256": "905ddca97a14eba45ebe49b8cbd6319abc45dee101a77a9c8b1efeee0a57b5c2"
+    "recipe_sha256": "1cc9d1a5238dd24b0d991cdbfee1c78ee481fbaab3359438de47af113e9a4cc6"
   },
   "transformations": [
     "Blender 5.2.2 LTS recipe build, glTF export with canonical triangle order"

@@ -37,7 +37,10 @@ main()
 
 
 def standalone_recipe(asset, version, params, recipe_src):
-    keep = {k: v for k, v in params.items() if k not in ("helper_dir", "inspect_script", "preview")}
+    # Colours and slots come from common.py when the recipe runs; a frozen copy here would go
+    # stale the next time the palette changes (it did: ancient blue became uranium green).
+    keep = {k: v for k, v in params.items()
+            if k not in ("helper_dir", "inspect_script", "preview", "palette", "slot_specs", "slots", "profile")}
     header = textwrap.dedent('''\
         # %(asset)s: promoted from the asset forge (tools/asset-forge), pack %(pack)s, %(version)s.
         # Provenance: authored by a model-written Blender recipe from the prompt in the sidecar
