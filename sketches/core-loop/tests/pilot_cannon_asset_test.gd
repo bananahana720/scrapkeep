@@ -5,6 +5,10 @@ extends SceneTree
 # 1.25, glass leaves the slot set and copper joins it, and the sockets move to the barrel on
 # WeaponRing (LaneMuzzle, BarrelPivot, SectorPivot), the split ports and the rush ring; the yoke
 # grips are hoberman()'s Control.Grip.R/L at the same points. The pilot rig checks are unchanged.
+# 2026-10-10 (PD-CANNON fix round): the split ports move rearward and down to 5 and 7 o'clock
+# from the mid chase eye (P-UNITS PD-CANNON GOAL; ROSTER-LOOK section 4), so SplitExit.R/L
+# re-pin; the 0.40 m breech face moves the sector shield out, so SectorPivot re-pins to its
+# inner radius 0.18. Directions are unchanged.
 
 const PILOT := "res://assets/models/pilot_cannon_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_cannon.glb"
@@ -23,8 +27,8 @@ const PARENTS := {
 }
 const SOCKETS := {
 	"LaneMuzzle": Vector3(0, 0, -1.472), "BarrelPivot": Vector3(0, 0, -1.13),
-	"SplitExit.R": Vector3(.869804, -.486676, .339873), "SplitExit.L": Vector3(-.869804, -.486676, .339873),
-	"SectorPivot": Vector3(0, .118, -1.165), "RushContact": Vector3(0, -.90, 0),
+	"SplitExit.R": Vector3(.315156, -.353486, .940558), "SplitExit.L": Vector3(-.315156, -.353486, .940558),
+	"SectorPivot": Vector3(0, .18, -1.165), "RushContact": Vector3(0, -.90, 0),
 	"Grip.R": Vector3(.32, .05, -.40), "Grip.L": Vector3(-.32, .05, -.40),
 }
 # Godot node names of the sockets (hoberman's controls carry the Control. prefix).

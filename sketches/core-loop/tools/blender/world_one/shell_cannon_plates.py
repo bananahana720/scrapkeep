@@ -18,6 +18,9 @@ exception ROSTER-LOOK section 5 names).
   III  the side gaps, and the thicker tread caps on every hub
   IV   most of the rest; the crown stays open
   V    every gap but the sight gaps, and the heavy forms of the split ports and the rush ring
+Not built: the barrel-borne scrap of pilots/cannon.md section 5 (II muzzle brake, III breech
+jacket, IV skirt from the bearing collar). It must yaw with WeaponRing, and a layer mounts only
+Core and Pod (C4); on Pod it would leave the barrel and enter the ring's sweep.
 No panel ever fills a sight gap: the gaps on the 35 degree cone from the pilot's head to the
 chase eyes and to the front eyes stay open at every class. Panels hang inside the lattice
 (outer face 0.92 to 0.93, inner 0.89), outside the gimbal sweep (0.862), so none can enter the

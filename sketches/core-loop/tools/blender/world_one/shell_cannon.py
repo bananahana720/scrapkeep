@@ -16,8 +16,8 @@ pilot_cannon.py imports build() and MODEL; run it with sha256sum before and afte
 
 Node tree, Blender +Y forward, +Z up (Godot -Z forward, +Y up):
   Core                        the petrol lattice from hoberman(), tumbling with the ball
-  Pod                         seat (charcoal), controls, split ports at about 4 and 8 o'clock
-                              from the chase eye on gap brackets, the rush ring at the bottom
+  Pod                         seat (charcoal), controls, split ports at 5 and 7 o'clock from
+                              the mid chase eye on gap brackets, the rush ring at the bottom
   Pod > Gyro > GyroInner      the gimbal rings
   Pod > WeaponRing            bone band, charcoal clamps and collar, the barrel's trunnion cheeks;
                               yawed to the aim by hero_assets; BarrelPivot marks the trunnion axis
@@ -60,22 +60,35 @@ BAND = "5e4836"
 BORE = "242a28"
 CHOIR = common.mix("petrol", STONE, 0.35)
 
-# The barrel (pilots/cannon.md section 5). Trunnion on the ring's front arc at the equator; the
-# breech face clears the band (outer 1.08) at +35 degrees and the lattice (0.985) at every pitch.
+# The barrel (pilots/cannon.md section 5). Trunnion on the ring's front arc at the equator. The
+# breech face is 0.40 m across (P-UNITS PD-CANNON acceptance), cast as a 0.20 m radius cap that
+# straddles the trunnion so it clears the band (outer 1.08, top 0.04) at +35 degrees and the
+# lattice (0.985) at every pitch; a short cast taper steps it down to the 0.16 m body.
 PIVOT = Vector((0.0, 1.13, 0.0))
 PITCH = (-10.0, 35.0)
-BREECH_Y = 1.10
+BREECH_Y = 1.12
+BREECH_R = 0.20
+TAPER_Y = (1.15, 1.18)
 MUZZLE_Y = 1.47
-BODY_R = (0.118, 0.108)
-BANDS_Y = (1.20, 1.26, 1.32, 1.38)  # lane, split, rush, plate, breech to muzzle
-BAND_R = 0.127
+BODY_R = (0.16, 0.115)            # at TAPER_Y[1] and at the muzzle ring
+BANDS_Y = (1.21, 1.27, 1.33, 1.39)  # lane, split, rush, plate, breech to muzzle
+BAND_PROUD = 0.012
+SHUTTER = (1.165, 0.18, 0.225)    # y, r_in, r_out: the sector shield over the breech taper
 MUZZLE_R = (0.066, 0.132)
-CHEEK_X = 0.165
+CHEEK_X = 0.235
 
-# Split ports (bracket carriers): twin-bore copper blocks low on each side, 0.12 m past the
-# lattice, above Z -0.6 (ROSTER-LOOK section 3 rule 6). From the chase eye they sit at about 4
-# and 8 o'clock (rule 6 keeps them off 5 and 7); the bores face the rear for the recoil lanes.
-PORT_DIR = Vector((0.84, -0.20, -0.47))
+
+def body_r(y):
+    """The cast body's radius at y, tapering from the breech step to the muzzle ring."""
+    t = (y - TAPER_Y[1]) / (MUZZLE_Y - 0.04 - TAPER_Y[1])
+    return BODY_R[0] + (BODY_R[1] - BODY_R[0]) * min(max(t, 0.0), 1.0)
+
+
+# Split ports (bracket carriers): twin-bore copper blocks low at the rear sides, 0.12 m past the
+# lattice, every vertex past radius 1.0 above Z -0.6 (ROSTER-LOOK section 3 rule 6). From the
+# mid chase eye their centres sit about 60 degrees below horizontal, 5 and 7 o'clock (ROSTER-LOOK
+# section 4; 4 and 8 is Tarn's), outside the 35 degree sight cone; main() prints the CLOCK line.
+PORT_DIR = Vector((0.37, -0.83, -0.415))
 PORT_R = 1.045
 PORT_SIZE = (0.11, 0.26, 0.12)   # radial, forward, up
 BORE_R = 0.03
@@ -141,7 +154,7 @@ def split_ports(p):
         for off in (-0.027, 0.027):
             mid = c + n * off
             p.rod("rubber", mid - f * (PORT_SIZE[1] / 2 + 0.02), mid + f * (PORT_SIZE[1] / 2 + 0.02), BORE_R, 8)
-        p.rod("rubber", Vector((side * 0.50, -0.10, -0.36)), c - n * (PORT_SIZE[0] / 2), 0.022, 6)
+        p.rod("rubber", Vector((side * 0.30, -0.20, -0.36)), c - n * (PORT_SIZE[0] / 2), 0.022, 6)
 
 
 def rush_ring(p):
@@ -206,14 +219,17 @@ def barrel(variant=""):
     glow on their muzzle faces, the sector shutter on top of the breech and the muzzle. The
     Choir Barrel recasts the muzzle as a six-shuttered housing (src/boss/mind_dress.gd SHUTTERS)."""
     b = Part("MainBarrel")
-    b.rod("ancient_enamel", (0, BREECH_Y, 0), (0, PIVOT.y + 0.005, 0), BODY_R[0] + 0.017, 16, color=STONE_DARK)
-    b.rod("ancient_enamel", (0, PIVOT.y + 0.005, 0), (0, MUZZLE_Y - 0.04, 0), BODY_R[0], 16, color=STONE,
+    b.rod("ancient_enamel", (0, BREECH_Y, 0), (0, TAPER_Y[0], 0), BREECH_R, 16, color=STONE_DARK)
+    b.rod("ancient_enamel", (0, TAPER_Y[0], 0), (0, TAPER_Y[1], 0), BREECH_R, 16, color=STONE_DARK, r2=BODY_R[0])
+    b.rod("ancient_enamel", (0, TAPER_Y[1], 0), (0, MUZZLE_Y - 0.04, 0), BODY_R[0], 16, color=STONE,
           r2=BODY_R[1])
     for k, y in enumerate(BANDS_Y):
-        b.rod("ancient_enamel", (0, y - 0.016, 0), (0, y + 0.016, 0), BAND_R, 12, color=BAND)
-        _dashes(b, BODY_R[0] + 0.002, BAND_R - 0.002, 0.004, y + 0.018, 4, 0.8, phase=0.4 * k)
-    # Sector shutter: a cast shield over the top of the breech (arc 60 to 120 degrees).
-    b.ring("ancient_enamel", BODY_R[0] - 0.004, 0.150, 0.05, 6, loc=(0, 1.165, 0), rot=(math.pi / 2, 0, 0),
+        band_r = body_r(y) + BAND_PROUD
+        b.rod("ancient_enamel", (0, y - 0.016, 0), (0, y + 0.016, 0), band_r, 12, color=BAND)
+        _dashes(b, body_r(y) + 0.002, band_r - 0.002, 0.004, y + 0.018, 4, 0.8, phase=0.4 * k)
+    # Sector shutter: a cast shield over the top of the breech taper (arc 60 to 120 degrees).
+    s_y, s_in, s_out = SHUTTER
+    b.ring("ancient_enamel", s_in, s_out, 0.05, 6, loc=(0, s_y, 0), rot=(math.pi / 2, 0, 0),
            color=BAND, arc=(math.pi / 3, 2 * math.pi / 3))
     m_in, m_out = MUZZLE_R
     if variant == "choir":
@@ -265,8 +281,8 @@ def build_shell(variant=""):
     main = barrel(variant).to_object(PIVOT, ring)
     socket("BarrelPivot", PIVOT, (0, 1, 0), ring)
     socket("LaneMuzzle", (0, MUZZLE_Y + 0.002, 0), (0, 1, 0), main)
-    socket("SectorShutter", (0, 1.165, 0.135), (0, 1, 0), main)
-    socket("SectorPivot", (0, 1.165, BODY_R[0]), (0, 1, 0), main)
+    socket("SectorShutter", (0, SHUTTER[0], (SHUTTER[1] + SHUTTER[2]) / 2), (0, 1, 0), main)
+    socket("SectorPivot", (0, SHUTTER[0], SHUTTER[1]), (0, 1, 0), main)
     for side, tag in ((1, "R"), (-1, "L")):
         c, n, f, u = port_axes(side)
         socket("SplitExit." + tag, c - f * (PORT_SIZE[1] / 2), (side * 0.22, -1, 0), pod)
@@ -326,6 +342,41 @@ def sweep_hits(obj, bins, step=0.01, margin=0.01):
     return hits
 
 
+def barrel_clearance(barrel_obj):
+    """(band hits, lattice clearance): barrel vertices inside the ring's band or collar box at any
+    pitch over PITCH, and the barrel's smallest radius from the ball centre at any pitch."""
+    boxes = [(b_in, b_out, b_z - b_h / 2, b_z + b_h / 2) for b_in, b_out, b_h, b_z in (sb.RING_BAND, sb.RING_COLLAR)]
+    pitches = [PITCH[0] + (PITCH[1] - PITCH[0]) * i / 18 for i in range(19)]
+    hits, closest = 0, 9.0
+    for v in barrel_obj.data.vertices:
+        w = barrel_obj.matrix_world @ v.co
+        for deg in pitches:
+            p = _pitched(w, deg)
+            closest = min(closest, p.length)
+            r = math.hypot(p.x, p.y)
+            if any(lo <= r <= hi and z0 <= p.z <= z1 for lo, hi, z0, z1 in boxes):
+                hits += 1
+                break
+    return hits, closest
+
+
+def clock(point, eye=sb.CHASE_EYES[1]):
+    """(degrees below horizontal, clock hour) of point about the ball centre, as projected from
+    eye looking at the centre, 12 at the top."""
+    fwd = (-eye).normalized()
+    right = fwd.cross(Vector((0, 0, 1))).normalized()
+    up = right.cross(fwd)
+
+    def proj(q):
+        d = q - eye
+        z = d.dot(fwd)
+        return Vector((d.dot(right) / z, d.dot(up) / z))
+    o = proj(point) - proj(Vector())
+    below = math.degrees(math.atan2(-o.y, abs(o.x)))
+    hour = (math.degrees(math.atan2(o.x, o.y)) % 360) / 30
+    return below, hour
+
+
 def main():
     common.reset()
     variant = flag("--variant", "") or ""
@@ -345,7 +396,18 @@ def main():
     print("CANNON_REACH pod modules %.3f (cap 1.25), barrel tip %.3f" % (reach, tip))
     print("BARREL_SWEEP %d Pod vertices inside the ring and barrel sweep (pitch %+.0f to %+.0f) %s"
           % (hits, PITCH[0], PITCH[1], "ok" if hits == 0 else "OUT"))
-    if hits or n_draws > DRAW_CAP or reach > 1.25:
+    band_hits, closest = barrel_clearance(shell["barrel"])
+    print("BREECH face %.3f m across; band hits %d; nearest to centre %.3f (lattice %.3f) %s"
+          % (2 * BREECH_R, band_hits, closest, sb.CORE_LIMIT,
+             "ok" if band_hits == 0 and closest > sb.CORE_LIMIT else "OUT"))
+    ports_ok = True
+    for side, tag in ((1, "R"), (-1, "L")):
+        below, hour = clock(port_axes(side)[0])
+        ok = 55.0 <= below <= 65.0
+        ports_ok = ports_ok and ok
+        print("CLOCK SplitExit.%s %.1f degrees below horizontal, %.2f o'clock from the mid chase eye %s"
+              % (tag, below, hour, "ok" if ok else "OUT"))
+    if hits or band_hits or closest <= sb.CORE_LIMIT or not ports_ok or n_draws > DRAW_CAP or reach > 1.25:
         raise SystemExit("cannon shell out of contract")
     # finish() reads a pilot node; the shell carries none, so it gets a detached empty.
     no_pilot = common.empty("NoPilot")
