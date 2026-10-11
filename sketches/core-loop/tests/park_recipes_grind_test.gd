@@ -38,6 +38,7 @@ const RIDE_PLANAR := 12.0
 const RIDE_FLOOR := 14.0
 const REACH := 45.0
 const SIDE_GAP := 10.0
+const ON_TOP := 0.6
 
 var _t := T.new("park_recipes_grind_test")
 var _facts: Array = []
@@ -270,6 +271,14 @@ func _check_bite_and_ride(id: String, rail: PackedVector3Array, node: Node3D) ->
 		ride_time > 0.5 and absf(ride_time - _flat(rail, entry) / RIDE_FLOOR) < 0.1 * float(legs), "%.2f s" % ride_time)
 
 
+# The rail's height at depth z, interpolated between its points.
+func _rail_y(rail: PackedVector3Array, z: float) -> float:
+	for k in range(1, rail.size()):
+		if z <= rail[k].z:
+			return lerpf(rail[k - 1].y, rail[k].y, clampf((z - rail[k - 1].z) / (rail[k].z - rail[k - 1].z), 0.0, 1.0))
+	return rail[rail.size() - 1].y
+
+
 # Planar length of the rail from point `from` to its end.
 func _flat(rail: PackedVector3Array, from: int) -> float:
 	var out := 0.0
@@ -327,11 +336,16 @@ func _check_roll(ids: Array, rails: Dictionary, placed: Dictionary) -> void:
 			else:
 				row["slow"] = 0.0
 			row["far"] = maxf(float(row.get("far", 0.0)), z)
+			var rail: PackedVector3Array = rails[id]
+			var want_y := _rail_y(rail, z) + (placed[id] as Node3D).global_position.y + Tuning.RADIUS
+			var want_x := rail[0].x + (placed[id] as Node3D).global_position.x
+			row["off"] = maxf(float(row.get("off", 0.0)), maxf(absf(ball.global_position.y - want_y), absf(ball.global_position.x - want_x)))
 	for id in balls:
 		var row: Dictionary = balls[id]
 		var length: float = RECIPES[id]["size"][0]
 		_t.check("(f) %s: the roll never holds under %.0f m/s for over %.1f s (worst %.2f s)" % [id, MIN_SPEED, MAX_SLOW_S, row["worst"]], row["worst"] <= MAX_SLOW_S)
 		_t.check("(f) %s: the ball rolls the length (reached %.0f of %.0f m)" % [id, float(row.get("far", 0.0)), length], float(row.get("far", 0.0)) >= length - 8.0)
+		_t.check("(f) %s: the ball stays on the top (worst %.2f m off the rail line, limit %.1f)" % [id, float(row.get("off", 99.0)), ON_TOP], float(row.get("off", 99.0)) <= ON_TOP)
 		var node: Node3D = placed[id]
 		var near := _facts.filter(func(e): return absf(e[1].x - node.global_position.x) < SPACING * 0.5)
 		_t.check("(f) %s: the roll publishes %s" % [id, FACT], near.any(func(e): return e[0] == FACT), str(near.map(func(e): return e[0])))
