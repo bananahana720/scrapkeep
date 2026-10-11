@@ -1,186 +1,362 @@
-"""Tally's three-bay card reader, internal flywheels and battered rolling shell.
+"""Tally's Hoberman mecha (unit PD-TALLY): a mulberry lattice on shell_base.hoberman(), ledger
+drums at 3 and 9 o'clock whose punched windows show pressure, the reader carriage with three
+tabbed cards beside the right yoke, a stamp sole on the bottom hub, and a drum magazine on the
+weapon ring whose card slot is the only class_accent. --variant abacus builds the earned
+Abacus Lattice shell (CUSTOMIZE section 8): cream enamel with a copper bead threaded on each
+chain and six-sided tread caps; the machinery, its sockets and the sight cone do not move.
 
-blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/shell_tally.py
+Pictures (approved as one set, docs/decisions.tsv w13-look rows of 2026-10-10 18:30):
+artifacts/local/alpha/push/w13/concepts/codex/tally/{hero,chase,sheet}.png and
+concepts/codex/base/{base-hero,mechanism}.png. Design: ROSTER-LOOK sections 0, 2 to 6 and 9,
+pilots/tally.md section 5, PILOTS.md section 1, PILOT-CLIPS section 5, CUSTOMIZE section 8.
 
-The common spherical assembly's seat, grips, 0.98 m glass and gyro are reproduced
-locally because its built-in pilot and emissive field would violate this unit's
-separate-pilot and five-material contracts. Shared scripts remain untouched.
+  blender --background --threads 2 --python-exit-code 1 \
+    --python sketches/core-loop/tools/blender/shell_tally.py -- [--out <glb>] [--variant abacus]
+wrapped in prlimit with a 12884901888-byte address-space cap, as world_one/shell_neutral.py runs.
+
+Calls made here (P-UNITS PD common rule C6 reading, listed in the PD-TALLY report):
+- Struts 0.06 m and tread caps 0.10 m, inherited from shell_base.py's defaults (PD-0b strut
+  rule, ROSTER-LOOK section 3 rule 7 as amended 2026-10-10); this recipe passes no width.
+- One X-pair per link on the default shell as well as the variant (fix round 2026-10-11):
+  ROSTER-LOOK section 3 rule 1 names it the first cut when the lattice hides the pilot, and it
+  brings the base under the 6,600 target (section 5 cut order).
+- The drums ride the upright Pod on gap brackets off the outer gimbal axle bosses, not the
+  WeaponRing. The heft layers mount under Pod (B5's loader), so the class IV hoods and the
+  class V heavy drums only stay on their drums if the drums share that carrier, and the Pod
+  holds 3 and 9 o'clock to the heading, which the chase camera sits behind. (Accepted by the
+  coordinator: docs/decisions.tsv w13-PD register 2026-10-10T21:29:13, which amends ROSTER-LOOK
+  section 4 and tally.md:246.)
+- Draws, held to 10 under the Hoberman pilot mecha cap of 16 (docs/decisions.tsv w13-PD
+  register 2026-10-10T21:29:13): Core 3 (paint, copper, rubber), Pod 2, Gyro 1,
+  GyroInner 1, WeaponRing 2 (paint, class_accent) and one drum mesh. Both drums sit on one
+  axis (X, through Z DRUM_Z), so they are one mesh, Flywheel.R, that spins about that axis;
+  Flywheel.L is an empty at the left drum's centre. The rubber parts hoberman() puts on Pod and
+  WeaponRing fold into their paint surface in charcoal vertex colour, as the drum's punch marks
+  and hub boss already do.
+- Pressure windows: four per drum face, on the drum mesh's one paint surface. Vertex colour
+  alpha carries the window index (0.2, 0.4, 0.6, 0.8 for windows 0 to 3; 1.0 elsewhere), so a
+  cached shader with a per-instance lit count can light windows 0..n-1 cream on the drum mesh
+  (ROSTER-LOOK section 8: no material_override). At rest windows 0 to 2 show cream and window 3
+  is the dark blank the shop part lifts.
 """
-import argparse
-import json
 import math
-from pathlib import Path
+import os
 import sys
 
 import bmesh
 import bpy
 from mathutils import Vector
 
-HERE=Path(__file__).resolve().parent
-sys.path.insert(0,str(HERE))
-import common
-from common import Part
-from pilot_tally import punched_panel,glb_counts,PREVIEW
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 
-OUT=HERE.parents[1]/"assets/models/world_one/shell_tally.glb"
+import common  # noqa: E402
+from common import Part  # noqa: E402
+import shell_base as sb  # noqa: E402
 
+OUT = os.path.join(common.MODELS, "world_one", "shell_tally.glb")
+ABACUS_OUT = os.path.join(common.MODELS, "world_one", "shell_tally_abacus.glb")
+SHELL_BAND = (3000, 11000)
+TARGET_TRIS = 6600
 
-def plates(p):
-    """Inset spherical plate sectors, broad rubbed patches and sheltered dark seams."""
-    bands=[(-.30,-.59,14,.13),(-.59,-.84,12,.29),(-.84,-.96,8,.04)]
-    colours=["f7f1e3","petrol","f7f1e3","charcoal","petrol","f7f1e3","petrol"]
-    for band,(z0,z1,n,offset) in enumerate(bands):
-        for k in range(n):
-            start=math.tau*k/n+offset+.014
-            end=math.tau*(k+1)/n+offset-.014
-            top=z0-.008
-            bottom=z1+.008
-            if band==0 and math.cos((start+end)/2)>.80:
-                top=-.452
-            # Broad polygonal patches follow the ball; nothing becomes a ground foot.
-            cols=3
-            rows=[]
-            for radius in (.925,.947):
-                layer=[]
-                for z in (top,(top+bottom)/2,bottom):
-                    ring=[]
-                    r=math.sqrt(max(.001,radius*radius-z*z))
-                    for j in range(cols+1):
-                        a=start+(end-start)*j/cols
-                        ring.append(p.bm.verts.new((r*math.sin(a),r*math.cos(a),z)))
-                    layer.append(ring)
-                rows.append(layer)
-            fs=[]
-            colour=colours[(k+band*3)%len(colours)]
-            for i in range(2):
-                for j in range(cols):
-                    outer=p.bm.faces.new((rows[1][i][j],rows[1][i+1][j],rows[1][i+1][j+1],rows[1][i][j+1]))
-                    inner=p.bm.faces.new((rows[0][i][j],rows[0][i][j+1],rows[0][i+1][j+1],rows[0][i+1][j]))
-                    p.paint([outer],"paint",colour)
-                    p.paint([inner],"rubber")
-                    # A few unequal wear patches sit at exposed corners, not a bolt grid.
-                    if (k+band*4)%7==2 and i==0 and j in (0,1):
-                        p.paint([outer],"paint","f7f1e3" if colour!="f7f1e3" else "706a5d")
-                    fs += [outer,inner]
-            boundary=[(0,j) for j in range(cols+1)]+[(1,cols),(2,cols)]+[(2,j) for j in range(cols-1,-1,-1)]+[(1,0)]
-            for j,(r,c) in enumerate(boundary):
-                rr,cc=boundary[(j+1)%len(boundary)]
-                f=p.bm.faces.new((rows[0][r][c],rows[0][rr][cc],rows[1][rr][cc],rows[1][r][c]))
-                p.paint([f],"paint","charcoal" if j%3 else "f7f1e3")
-            # One repair fastener on selected panels, sunk inside the rolling boundary.
-            if k%3==0 and band<2:
-                a=(start+end)/2
-                z=top-.04
-                r=math.sqrt(.949**2-z*z)
-                loc=Vector((r*math.sin(a),r*math.cos(a),z))
-                p.bolt(loc,loc.normalized(),r=.014,h=.010,segs=6)
+# Mulberry lattice enamel (ROSTER-LOOK 0.2; hero_assets_test MULBERRY, sampled from tally/hero.png).
+MULBERRY = "8a3d46"
+CREAM = "f7f1e3"
+# Ledger drums (pilots/tally.md section 5): 0.34 m across, 0.07 m deep, axis along X, centred
+# 0.23 m up so they clear the weapon band (top at Z 0.04). The inner face sits outside the
+# tread-cap sphere (0.985) so the tumbling lattice never passes through a drum; the outer face
+# stands 0.12 m past the lattice at that height, and the top rim breaks the outline by 0.165 m.
+DRUM_R = 0.17
+DRUM_DEPTH = 0.07
+DRUM_Z = 0.23
+DRUM_X = 1.033
+WINDOW_R = 0.032
+WINDOW_AT = 0.095
+# Window index rides vertex colour alpha (see the header).
+WINDOW_ALPHA = (0.2, 0.4, 0.6, 0.8)
+# Reader carriage: the three card bays in a row beside the right yoke, front to back, on the
+# bank line (shell_base.BANK); bay 0 is slot 1, bay 1 slot 2, bay 2 slot 3.
+BAY_X = sb.BANK[0][0]
+BAY_YS = (0.42, sb.BANK[0][1], sb.BANK[1][1])
+BAY_Z = -0.262
+# Drum magazine on the ring's front arc; the card slot points forward along the aim.
+MAG_FRONT = 1.20
 
 
-def common_cockpit(p):
-    # Dimensions copied from shell_base.spherical, without its duplicate animal.
-    # The reader interrupts the front rim so all three bays remain visible.
-    p.ring("paint",.86,.92,.12,42,loc=(0,0,-.29),color="petrol",
-           arc=(math.pi/2+.50,math.pi/2+math.tau-.50))
-    for k in range(12):
-        a=k*math.tau/12
-        if abs(a-math.pi/2)<.50:
+def flag(name, default=None):
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    if name not in argv:
+        return default
+    i = argv.index(name)
+    return argv[i + 1] if i + 1 < len(argv) and not argv[i + 1].startswith("--") else True
+
+
+def merge(obj, part):
+    """Appends a Part's faces to an existing mesh object at the same origin, mapping each slot
+    onto the object's material list, so the part costs no draw for a slot the object has."""
+    tmp = part.to_object((0, 0, 0), None)
+    remap = []
+    for m in tmp.data.materials:
+        idx = next((i for i, om in enumerate(obj.data.materials) if om == m), None)
+        if idx is None:
+            obj.data.materials.append(m)
+            idx = len(obj.data.materials) - 1
+        remap.append(idx)
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    col = bm.loops.layers.float_color.get("Color")
+    src = tmp.data
+    src_col = src.color_attributes["Color"]
+    vs = [bm.verts.new(v.co) for v in src.vertices]
+    new = []
+    for p in src.polygons:
+        f = bm.faces.new([vs[i] for i in p.vertices])
+        f.material_index = remap[p.material_index]
+        for loop, li in zip(f.loops, p.loop_indices):
+            loop[col] = src_col.data[li].color
+        new.append(f)
+    bm.normal_update()
+    for f in new:
+        f.smooth = True
+        for e in f.edges:
+            if e.is_manifold and e.calc_face_angle() > 0.9:
+                e.smooth = False
+    bm.to_mesh(obj.data)
+    bm.free()
+    bpy.data.objects.remove(tmp)
+    bpy.data.meshes.remove(src)
+
+
+def drop_islands(obj, test):
+    """Deletes every connected island of obj's mesh whose vertices all pass test(co)."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.verts.ensure_lookup_table()
+    seen = set()
+    doomed = []
+    for v in bm.verts:
+        if v.index in seen:
             continue
-        normal=Vector((math.cos(a),math.sin(a),0))
-        p.bolt(normal*.919+Vector((0,0,-.29)),normal,r=.015,h=.010)
-    for start,span,z,depth in ((.35,.63,-.30,.073),(2.5,.43,-.305,.055),(4.9,.26,-.28,.045)):
-        p.ring("paint",.916,.924,depth,4,loc=(0,0,z),color="f7f1e3",arc=(start,start+span))
-    p.cyl("rubber",.36,.28,.16,20,loc=(0,0,-.6))
-    for z in (-.62,-.69,-.76):
-        p.ring("paint",.18,.25,.027,24,loc=(0,0,z),color="f7f1e3")
-    seat=[(-.22,-.27),(.22,-.27),(.27,-.20),(.24,.14),(.16,.20),(-.16,.20),(-.24,.14),(-.27,-.20)]
-    p.prism("paint",seat,.09,matrix=common.mtx((0,-.27,-.1),(math.pi/2,0,0)),color="petrol")
-    p.uv("rubber",.22,12,8,loc=(0,-.22,-.12),scale=(1,.35,1.15))
-    p.box("rubber",(.48,.42,.09),loc=(0,0,-.34))
-    for s in (-1,1):
-        p.rod("bare_metal",(s*.34,.28,-.32),(s*.32,.4,0),.025,8)
-        p.rod("rubber",(s*.32,.4,0),(s*.32,.4,.10),.045,8)
+        island = []
+        stack = [v]
+        seen.add(v.index)
+        while stack:
+            u = stack.pop()
+            island.append(u)
+            for e in u.link_edges:
+                w = e.other_vert(u)
+                if w.index not in seen:
+                    seen.add(w.index)
+                    stack.append(w)
+        if all(test(u.co) for u in island):
+            doomed += island
+    bmesh.ops.delete(bm, geom=doomed, context="VERTS")
+    bm.to_mesh(obj.data)
+    bm.free()
+    return len(doomed)
 
 
-def build():
-    common.SLOTS["class_accent"] = {"color": "brass", "rough": .75}
-    root=common.empty("ShellTally")
-    glass=Part("Core")
-    glass.uv("glass",.98,40,24)
-    core=glass.to_object(parent=root)
-    for f in core.data.polygons:
-        f.use_smooth=True
-    p=Part("Pod")
-    common_cockpit(p)
-    plates(p)
-    p.box("rubber",(.40,.42,.05),loc=(0,.12,-.79))
-    p.box("paint",(.46,.12,.08),loc=(0,.64,-.48),color="petrol")
-    p.box("class_accent",(.40,.026,.017),loc=(0,.707,-.474))
-    # Reader support and flywheel bearings explain how the kit joins the cockpit.
-    for s in (-1,1):
-        p.beam("paint",(s*.28,.52,-.37),(s*.29,.69,-.33),.07,.10,color="petrol")
-        p.beam("bare_metal",(s*.30,-.35,-.28),(s*.50,-.35,-.28),.042,.042)
-        p.box("rubber",(.095,.115,.105),loc=(s*.43,-.35,-.28))
-    bmesh.ops.recalc_face_normals(p.bm,faces=list(p.bm.faces))
-    pod=p.to_object(parent=root)
-    common.empty("Dome",parent=pod)
-    gyro=Part("Gyro")
-    gyro.ring("bare_metal",.938,.965,.055,56,rot=(math.pi/2,0,0))
-    gyro.ring("bare_metal",.946,.972,.028,56,rot=(math.pi/2,0,0))
-    for s in (-1,1):
-        gyro.cyl("bare_metal",.065,.065,.024,12,loc=(s*.94,0,0),rot=(0,math.pi/2,0))
-    gyro.to_object(parent=pod)
-    for side,s in (("R",1),("L",-1)):
-        centre=(s*.50,-.35,-.28)
-        wheel=Part("Flywheel."+side)
-        wheel.ring("paint",.13,.17,.07,20,loc=centre,rot=(0,math.pi/2,0),color="f7f1e3")
-        wheel.cyl("paint",.13,.13,.045,20,loc=centre,rot=(0,math.pi/2,0),color="petrol")
-        wheel.cyl("paint",.035,.035,.07,10,loc=centre,rot=(0,math.pi/2,0),color="f7f1e3")
-        for k in range(4):
-            a=k*math.tau/4+.27
-            wheel.box("paint",(.070,.016,.040),loc=(s*.50,-.35+.112*math.sin(a),-.28+.112*math.cos(a)),
-                      rot=(a,0,0),color="charcoal")
-        wheel.to_object(origin=centre,parent=pod)
-        socket=common.empty("FlywheelAxis."+side,centre,pod)
-        socket.rotation_euler=(0,math.pi/2,0)
-    reader=Part("ReaderCarriage")
-    reader.box("paint",(.70,.16,.23),loc=(0,.72,-.32),color="petrol")
-    reader.box("paint",(.67,.008,.204),loc=(0,.804,-.32),color="charcoal")
-    for i,x in enumerate((-.23,0,.23)):
-        punched_panel(reader,(x,.80,-.32),.20,.19,.035,colour="f7f1e3")
-        reader.box("paint",(.035,.04,.09),loc=(x,.72,-.17),color="oxide")
-        reader.box("paint",(.040,.045,.017),loc=(x,.72,-.215),color="charcoal")
-        for dx in (-.084,.084):
-            reader.box("paint",(.008,.039,.174),loc=(x+dx,.80,-.32),color="charcoal")
-    bmesh.ops.recalc_face_normals(reader.bm,faces=list(reader.bm.faces))
-    carriage=reader.to_object(origin=(0,.72,-.32),parent=pod)
-    for i,x in enumerate((-.23,0,.23)):
-        common.empty("CardBay."+str(i),(x,.80,-.32),carriage)
-    for name,pos,parent in [("ReaderExit",(0,.81,-.32),carriage),
-        ("ReturnExit",(0,.72,-.48),pod),("StampContact",(0,.12,-.82),pod),
-        ("LedgerMount",(-.255,.045,-.20),pod),
-        ("Grip.R",(.32,.4,.05),pod),("Grip.L",(-.32,.4,.05),pod)]:
-        obj=common.empty(name,pos,parent)
-        # Socket local -Z is the outgoing axis after glTF/Godot conversion.
-        obj.rotation_euler=(0,0,0) if name=="StampContact" else (math.pi/2,0,0)
+def tint_alpha(part, faces, alpha):
+    for f in faces:
+        for loop in f.loops:
+            c = loop[part.col]
+            loop[part.col] = (c[0], c[1], c[2], alpha)
+
+
+def drum(name, side, centre, radius=DRUM_R, depth=DRUM_DEPTH, reel=False, part=None):
+    """One ledger drum on one paint surface, axis along X, outer face toward side: a cream
+    punched-tape reel between petrol flanges, a charcoal hub boss and four windows in a square
+    on the outer face. reel adds the class V second tape reel ring on the face. Every vertex
+    stays inside x in [-depth/2, depth/2] and radius in the drum's local frame. part appends
+    the drum to an existing Part (both drums share one mesh) instead of a new one."""
+    p = part if part is not None else Part(name)
+    c = Vector(centre)
+    half = depth / 2
+    flange = 0.008
+    face = half - 0.003          # outer flange face; windows and boss stand to half
+    rot = (0, math.pi / 2, 0)
+
+    def at(x):
+        return (c.x + side * x, c.y, c.z)
+
+    p.cyl("paint", radius * 0.91, radius * 0.91, face - flange + half - flange, 16,
+          loc=at((face - flange - half + flange) / 2), rot=rot, color=CREAM, caps=False)
+    p.cyl("paint", radius, radius, flange, 16, loc=at(face - flange / 2), rot=rot, color="petrol")
+    p.cyl("paint", radius, radius, flange, 16, loc=at(-half + flange / 2), rot=rot, color="petrol")
+    # Punch marks on the tape: a few charcoal slots, unevenly spaced (rule 8).
+    for k, a in enumerate((0.3, 1.4, 2.2, 3.5, 4.1, 5.3)):
+        r = radius * 0.91 + 0.002
+        x, y, z = at(-0.01 + 0.012 * (k % 2))
+        # Local Z of the box turns to the radial direction (0, sin a, cos a).
+        p.box("paint", (0.018, 0.026, 0.010), loc=(x, y + r * math.sin(a), z + r * math.cos(a)),
+              rot=(-a, 0, 0), color="charcoal")
+    p.cyl("paint", 0.04, 0.04, half - face, 8, loc=at((half + face) / 2), rot=rot, color="charcoal")
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        y, z = WINDOW_AT * math.cos(a), WINDOW_AT * math.sin(a)
+        colour = CREAM if k < 3 else "charcoal"
+        faces = p.cyl("paint", WINDOW_R, WINDOW_R, half - face, 6, loc=(at((half + face) / 2)[0], c.y + y, c.z + z),
+                      rot=rot, color=colour)
+        tint_alpha(p, faces, WINDOW_ALPHA[k])
+    if reel:
+        p.ring("paint", radius * 0.62, radius * 0.72, half - face, 16, loc=at((half + face) / 2), rot=rot, color=CREAM)
+    sb._sharpen(p)
+    return p
+
+
+def bracket(p, side):
+    """The gap bracket: a dark-steel arm from the outer gimbal axle boss (on the ring axis, so the
+    gimbal's sweep never reaches it) out through the side gap to the drum's inner face."""
+    inner = DRUM_X - DRUM_DEPTH / 2
+    p.rod("rubber", (side * 0.885, 0, 0), (side * (inner + 0.004), 0, DRUM_Z), 0.018, 6)
+    p.cyl("rubber", 0.035, 0.035, 0.012, 8, loc=(side * (inner - 0.002), 0, DRUM_Z), rot=(0, math.pi / 2, 0))
+
+
+def carriage(p):
+    """Reader carriage beside the right yoke: a petrol box under the bank, three cream punched
+    cards lying in a row (bay 0 front), and the copper tab of card 0 (the bank builds tabs 1, 2)."""
+    # Inside the gimbal sweep (radius 0.829, shell_base.cockpit).
+    p.box("paint", (0.10, 0.32, 0.05), loc=(BAY_X, 0.30, -0.335), color="petrol")
+    for y in BAY_YS:
+        p.box("paint", (0.09, 0.10, 0.006), loc=(BAY_X, y, BAY_Z), color=CREAM)
+        for dx in (-0.025, 0.0, 0.025):
+            p.box("paint", (0.012, 0.012, 0.002), loc=(BAY_X + dx, y - 0.02, BAY_Z + 0.004), color="charcoal")
+    p.box("copper", (0.03, 0.05, 0.08), loc=(BAY_X, BAY_YS[0], -0.27 + 0.06))
+    # Return vent low behind the seat: the surge steam leaves through the rear gaps.
+    p.box("rubber", (0.18, 0.03, 0.08), loc=(0, -0.255, -0.47))
+
+
+def magazine(r):
+    """Drum magazine on the ring's front arc: a petrol housing, two dark side reels, the card
+    slot (class_accent, the only light on the mecha) and a cream card leaving it."""
+    r.box("paint", (0.26, 0.125, 0.14), loc=(0, 1.1375, 0), color="petrol")
+    for s in (-1, 1):
+        r.cyl("rubber", 0.06, 0.06, 0.05, 8, loc=(s * 0.155, 1.13, 0), rot=(0, math.pi / 2, 0))
+        r.box("rubber", (0.012, 0.13, 0.15), loc=(s * 0.10, 1.14, 0))
+    r.box("class_accent", (0.14, 0.012, 0.026), loc=(0, MAG_FRONT + 0.006, 0.0))
+    r.box("paint", (0.10, 0.04, 0.004), loc=(0, MAG_FRONT + 0.025, -0.004), rot=(-0.12, 0, 0), color=CREAM)
+
+
+def stamp_sole(p):
+    """Square copper stamp around the bottom hub's tread cap (Hub.11 points straight down)."""
+    p.box("copper", (0.24, 0.24, 0.016), loc=(0, 0, -0.952))
+
+
+def beads(core_part):
+    """Abacus Lattice: one copper bead (pilots/tally.md section 6) threaded on each of the 60
+    chains, pushed to one end or the other by link, like counted beads (two per chain is 12,609
+    verts, over the 11,600 cap). Copper is a surface Core already has, so beads cost no draw."""
+    hubs, links, _ = sb.lattice_layout()
+    for n, (i, j) in enumerate(links):
+        a, b = hubs[i], hubs[j]
+        for t in ((0.30,) if n % 2 else (0.70,)):
+            c = sb._slerp(a, b, t)
+            d = (sb._slerp(a, b, t + 0.01) - sb._slerp(a, b, t - 0.01)).normalized()
+            centre = c * sb.HUB_RADIUS
+            core_part.rod("copper", centre - d * 0.018, centre + d * 0.018, 0.026, 6)
+
+
+def fold_rubber(obj):
+    """Moves obj's rubber faces onto its paint surface in charcoal vertex colour and drops the
+    rubber slot, so the object spends one draw fewer. Returns the faces moved."""
+    names = [m.name for m in obj.data.materials]
+    if "rubber" not in names or "paint" not in names:
+        return 0
+    rub, pai = names.index("rubber"), names.index("paint")
+    charcoal = common.rgba("charcoal")
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    col = bm.loops.layers.float_color.get("Color")
+    moved = 0
+    for f in bm.faces:
+        if f.material_index == rub:
+            f.material_index = pai
+            for loop in f.loops:
+                loop[col] = charcoal
+            moved += 1
+    bm.to_mesh(obj.data)
+    bm.free()
+    # pop() shifts the face indices above the removed slot down by one.
+    obj.data.materials.pop(index=rub)
+    return moved
+
+
+def build(variant=""):
+    """Builds the shell under a new root "ShellTally" (pilot_tally.previews() calls this too) and
+    returns the hoberman() dict plus the drum objects."""
+    abacus = variant == "abacus"
+    caps = 6 if abacus else 8
+    shell = sb.hoberman("Tally", enamel=CREAM if abacus else MULBERRY, seat="petrol", pairs=1, hub_sides=8,
+                        cap_sides=caps,
+                        bank=(("CardTab.1", "tab"), ("CardTab.2", "tab")))
+    root, core, pod, ring = shell["root"], shell["core"], shell["pod"], shell["ring"]
+    # Tally's pilot is its own GLB (pilot_tally_anim.glb); the shell carries no Pilot node.
+    bpy.data.objects.remove(shell["pilot"])
+    extra = Part("CoreTally")
+    stamp_sole(extra)
+    if abacus:
+        beads(extra)
+    merge(core, extra)
+    # The neutral weapon seat on the front arc gives way to the magazine.
+    dropped = drop_islands(ring, lambda co: co.y > 1.07 and abs(co.x) < 0.1 and abs(co.z) < 0.1)
+    mag = Part("RingTally")
+    magazine(mag)
+    sb._sharpen(mag)
+    merge(ring, mag)
+    cab = Part("PodTally")
+    carriage(cab)
+    for side in (1, -1):
+        bracket(cab, side)
+    sb._sharpen(cab)
+    merge(pod, cab)
+    shell["folded"] = fold_rubber(pod) + fold_rubber(ring)
+    # Both drums in one mesh on the shared X axis, origin at the right drum's centre.
+    wheels = Part("Flywheel.R")
+    for name, side in (("R", 1), ("L", -1)):
+        centre = (side * DRUM_X, 0.0, DRUM_Z)
+        drum("Flywheel." + name, side, centre, part=wheels)
+        axis = common.empty("FlywheelAxis." + name, centre, pod)
+        axis.rotation_euler = (0, math.pi / 2, 0)
+    drums = [wheels.to_object((DRUM_X, 0.0, DRUM_Z), pod)]
+    common.empty("Flywheel.L", (-DRUM_X, 0.0, DRUM_Z), pod)
+    reader = common.empty("ReaderCarriage", (BAY_X, 0.30, -0.30), pod)
+    for i, y in enumerate(BAY_YS):
+        common.empty("CardBay." + str(i), (BAY_X, y, BAY_Z), reader)
+    common.empty("Control.CardTab.0", (BAY_X, BAY_YS[0], -0.27), pod)
+    # Socket local -Z is the outgoing axis after glTF/Godot conversion (as before the mecha).
+    for name, pos, parent, rot in [
+            ("ReaderExit", (0, MAG_FRONT + 0.012, 0.0), ring, (math.pi / 2, 0, 0)),
+            ("ReturnExit", (0, -0.27, -0.47), pod, (math.pi / 2, 0, 0)),
+            ("StampContact", (0, 0, -0.985), pod, (0, 0, 0)),
+            ("LedgerMount", (-0.255, 0.045, -0.20), pod, (math.pi / 2, 0, 0))]:
+        common.empty(name, pos, parent).rotation_euler = rot
     bpy.context.view_layer.update()
-    radii={o.name:common.max_radius(o) for o in common.tree(root) if o.type=="MESH"}
-    assert max(radii.values())<=.9850001,radii
-    return root,radii
+    shell["drums"] = drums
+    shell["dropped"] = dropped
+    return shell
 
 
 def main():
-    parser=argparse.ArgumentParser()
-    parser.add_argument("--out",type=Path,default=OUT)
-    args=parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
     common.reset()
-    root,radii=build()
-    common.export(root,str(args.out))
-    counts=glb_counts(args.out)
-    assert counts["triangles"]<=11000 and counts["vertices"]<=11600 and counts["draws"]<=10 and counts["materials"]<=5,counts
-    PREVIEW.mkdir(parents=True,exist_ok=True)
-    (PREVIEW/"shell-receipt.json").write_text(json.dumps({"export":counts,"maximum_rest_radius":radii},indent=2)+"\n")
-    print("TALLY_SHELL",json.dumps(counts,sort_keys=True))
+    variant = flag("--variant", "")
+    if variant not in ("", "abacus"):
+        raise SystemExit("unknown variant %s" % variant)
+    shell = build(variant)
+    root = shell["root"]
+    dome = sb.bpy_object(shell["pod"], "Dome")
+    tris = common.tri_total(root)
+    print("HOBERMAN Tally variant=%s tris=%d core=%d target=%d %s; neutral mount verts dropped %d; rubber faces folded %d"
+          % (variant or "default", tris, common.tris(shell["core"]), TARGET_TRIS,
+             "fits" if tris <= TARGET_TRIS else "over target", shell["dropped"], shell["folded"]))
+    draws = sum(len(o.data.materials) for o in common.tree(root) if o.type == "MESH")
+    print("DRAWS Tally %d (unit budget 10, Hoberman pilot cap 16) %s" % (draws, "ok" if draws <= 10 else "OVER"))
+    if draws > 10:
+        raise SystemExit("Tally shell spends %d draws, over the unit's budget of 10" % draws)
+    for d in shell["drums"]:
+        print("DRUM %s radius %.4f" % (d.name, common.max_radius(d)))
+    out = flag("--out") or (ABACUS_OUT if variant == "abacus" else OUT)
+    sb.finish("Tally", root, shell["core"], dome, shell_band=SHELL_BAND, pod_obj=shell["pod"], out=out)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
