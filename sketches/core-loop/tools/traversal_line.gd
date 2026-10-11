@@ -6,6 +6,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # The traversal measure (design-v3/TRAVERSAL.md): one pilot's traversal bot crosses the slice
 # table's stage once per seed, from the spawn to the Warden's engagement, and one JSON file
@@ -45,7 +46,9 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 # the landmark also passes at the Warden's engagement) and segment_s (the longest of them),
 # quiet_max_s (the longest stretch with no ride fact, kicker launch, bite or drop of 4 m or
 # more), distinct_verbs (how many different ride facts and verbs fired, named in verbs),
-# length_ratio (path over the straight distance from the drop to the engage centre),
+# distinct_ride_facts (how many of those were ride facts or kicker launches, the count the
+# distinct-verbs band judges), blazing_mps (the blazing tier's speed, 1.9 times the tuned
+# cruise, the peak band's threshold), length_ratio (path over the straight distance from the drop to the engage centre),
 # dead_stop_at (stage second and place of each dead stop) and progress_m (the drop in the stage
 # graph's d_landmark per second; null without assets/park/<map_id>/graph.bin, said once). The
 # summary holds each measure's median and names every band with whether its median is inside.
@@ -96,13 +99,16 @@ const BAND_FLOW_WORST := 0.60
 const BAND_AIRBORNE := [0.12, 0.45]
 const BAND_AIRBORNE_HIGH := [0.25, 0.60]
 const BAND_AIRBORNE_HIGH_STAGES := [5, 6]
-const BAND_PEAK := 26.6
+# The peak band is the blazing tier (SpeedTier.MULTIPLES[BLAZING] times the tuned cruise),
+# read per run into blazing_mps, so it moves with cruise the way tier3_s does.
 const BAND_TIER3 := 3.0
 const BAND_QUIET := 20.0
 const BAND_ANCHOR := 40.0
 const BAND_VERBS := 3
 const BAND_LENGTH := [1.3, 2.0]
 const BAND_FLOOR := 2.0
+# Not a band: a run under this much path never armed the dead-stop clock (RunLog.Traversal).
+const STALLED_PATH_M := 1.0
 
 # How many times this process said a stage has no graph (once is enough).
 static var graph_notes := 0
@@ -143,10 +149,12 @@ class Sampler:
 	var _start_time := 0.0
 	var _straight := 0.0
 	var _graph_start = null
+	var cruise := 0.0
 
 	func _init(game_ref) -> void:
 		game = game_ref
-		traversal = RunLog.Traversal.new(Engine.physics_ticks_per_second, game.player.tuning.f("cruise"))
+		cruise = game.player.tuning.f("cruise")
+		traversal = RunLog.Traversal.new(Engine.physics_ticks_per_second, cruise)
 		game.events.warden_engaged.connect(_on_engaged)
 		game.events.world_fact.connect(_on_fact)
 		game.events.line_state_changed.connect(_on_line)
@@ -194,6 +202,10 @@ class Sampler:
 	func _verb(name: String) -> void:
 		if not name in _verbs:
 			_verbs.append(name)
+
+	# The ride facts among the verbs: PARK.md section 8 judges distinct verbs on these alone.
+	func _ride_facts() -> Array:
+		return _verbs.filter(func(v): return v in RIDE_FACTS or v in PARK_RIDE_FACTS or v.begins_with("ride_") or v == KICKER_LAUNCH)
 
 	# A ride fact, kicker launch, bite or drop ends the quiet stretch.
 	func _event() -> void:
@@ -359,7 +371,9 @@ class Sampler:
 			"segment_s": longest,
 			"quiet_max_s": snappedf(_quiet_max, 0.01),
 			"distinct_verbs": _verbs.size(),
+			"distinct_ride_facts": _ride_facts().size(),
 			"verbs": _verbs.duplicate(),
+			"blazing_mps": snappedf(SpeedTier.MULTIPLES[SpeedTier.BLAZING] * cruise, 0.01),
 			"length_ratio": snappedf(_path / _straight, 0.01) if _straight > 0.0 else null,
 			"dead_stop_at": dead_stop_at.duplicate(true),
 			"progress_m": _progress(),
@@ -405,7 +419,7 @@ static func park_document(pilot: String, map_id: String, stage: int, commit: Str
 	doc["stage"] = stage
 	var medians := {}
 	for key in ["time_to_warden_s", "flow_share", "airborne_share", "peak_speed_mps", "tier3_s", "segment_s", "quiet_max_s",
-			"distinct_verbs", "max_anchor_gap_m", "length_ratio", "progress_m", "path_length_m", "dead_stops"]:
+			"distinct_verbs", "distinct_ride_facts", "max_anchor_gap_m", "length_ratio", "progress_m", "path_length_m", "dead_stops", "blazing_mps"]:
 		var values := _values(runs, key)
 		medians[key] = snappedf(median(values), 0.0001) if not values.is_empty() else null
 	var segment_medians: Array = []
@@ -448,14 +462,29 @@ static func park_document(pilot: String, map_id: String, stage: int, commit: Str
 	bands.append(_band("airborne_share", "%s to %s" % [air[0], air[1]], medians["airborne_share"], null, _within(medians["airborne_share"], air)))
 	var dead := _values(runs, "dead_stops")
 	var dead_worst = _worst(dead, true)
-	bands.append(_band("dead_stops", "0 on every seed", medians["dead_stops"], dead_worst, null if dead.is_empty() else float(dead_worst) == 0.0))
+	# A seed that never rolled (under 1 m of path) cannot arm the slow clock, so its 0 is no data.
+	var stalled := runs.filter(func(r): return float(r.get("path_length_m", 0.0)) < STALLED_PATH_M).size()
+	var dead_inside = null
+	if not dead.is_empty() and stalled == 0:
+		dead_inside = float(dead_worst) == 0.0
+	elif not dead.is_empty() and float(dead_worst) > 0.0:
+		dead_inside = false
+	bands.append(_band("dead_stops", "0 on every seed" if stalled == 0 else "0 on every seed; no data: %d seed(s) never rolled" % stalled,
+		medians["dead_stops"], dead_worst, dead_inside))
 	var peaks := _values(runs, "peak_speed_mps")
 	var peak_worst = _worst(peaks, false)
-	bands.append(_band("peak_speed_mps", "at least %s m/s on every seed" % BAND_PEAK, medians["peak_speed_mps"], peak_worst, _at_least(peak_worst, BAND_PEAK)))
+	# The strictest blazing speed any run was tuned to; null when no run recorded it.
+	var blazings := _values(runs, "blazing_mps")
+	var blazing = _worst(blazings, true) if not blazings.is_empty() else null
+	var peak_label := "at least the blazing tier on every seed (no tuned cruise recorded)" if blazing == null \
+		else "at least %s m/s (the blazing tier) on every seed" % blazing
+	bands.append(_band("peak_speed_mps", peak_label, medians["peak_speed_mps"], peak_worst,
+		null if blazing == null else _at_least(peak_worst, float(blazing))))
 	bands.append(_band("tier3_s", "median at least %s s at the blazing tier" % BAND_TIER3, medians["tier3_s"], null, _at_least(medians["tier3_s"], BAND_TIER3)))
 	bands.append(_band("quiet_max_s", "at most %s s" % BAND_QUIET, medians["quiet_max_s"], _worst(_values(runs, "quiet_max_s"), true), _at_most(medians["quiet_max_s"], BAND_QUIET)))
 	bands.append(_band("max_anchor_gap_m", "at most %s m" % BAND_ANCHOR, medians["max_anchor_gap_m"], _worst(_values(runs, "max_anchor_gap_m"), true), _at_most(medians["max_anchor_gap_m"], BAND_ANCHOR)))
-	bands.append(_band("distinct_verbs", "at least %d" % BAND_VERBS, medians["distinct_verbs"], _worst(_values(runs, "distinct_verbs"), false), _at_least(medians["distinct_verbs"], BAND_VERBS)))
+	bands.append(_band("distinct_verbs", "at least %d different ride facts" % BAND_VERBS, medians["distinct_ride_facts"],
+		_worst(_values(runs, "distinct_ride_facts"), false), _at_least(medians["distinct_ride_facts"], BAND_VERBS)))
 	bands.append(_band("length_ratio", "%s to %s" % [BAND_LENGTH[0], BAND_LENGTH[1]], medians["length_ratio"], null, _within(medians["length_ratio"], BAND_LENGTH)))
 	if pilot == FLOOR:
 		var ref = floor_ref.get("median_time_to_warden_s")
@@ -802,9 +831,9 @@ func _physics_process(delta: float) -> bool:
 		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"],
 			run["path_length_m"], run["rides"], run["uphill_m"]])
 	if _park:
-		print("traversal_line: %s seed %d park: airborne %.3f, peak %.1f m/s, tier 3 %.1f s, segments %s s (longest %s), quiet max %.1f s, verbs %d %s, length ratio %s, progress %s, dead stops at %s"
-			% [_pilot, run["seed"], run["airborne_share"], run["peak_speed_mps"], run["tier3_s"], run["segments_s"], run["segment_s"],
-				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["length_ratio"], run["progress_m"], run["dead_stop_at"]])
+		print("traversal_line: %s seed %d park: airborne %.3f, peak %.1f m/s (blazing %s), tier 3 %.1f s, segments %s s (longest %s), quiet max %.1f s, verbs %d %s (ride facts %d), length ratio %s, progress %s, dead stops at %s"
+			% [_pilot, run["seed"], run["airborne_share"], run["peak_speed_mps"], run["blazing_mps"], run["tier3_s"], run["segments_s"], run["segment_s"],
+				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["distinct_ride_facts"], run["length_ratio"], run["progress_m"], run["dead_stop_at"]])
 	_game.free()
 	_game = null
 	_next()

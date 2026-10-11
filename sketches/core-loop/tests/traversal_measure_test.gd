@@ -186,7 +186,7 @@ func _check_summary() -> void:
 			"reached_warden": true, "path_length_m": 1500.0, "rides": ["ride_chute"], "uphill_m": 2.0, "outcome": "engaged", "ticks": 8100,
 			"airborne_share": 0.05, "peak_speed_mps": 30.0, "tier3_s": 4.0, "segment_s": 30.0, "segments_s": [20.0, 30.0, 25.0],
 			"quiet_max_s": 12.0, "distinct_verbs": 4, "verbs": ["jump", "boost", "ride_chute", "kicker_launch"], "progress_m": null,
-			"length_ratio": 1.5, "dead_stop_at": []})
+			"distinct_ride_facts": 2, "blazing_mps": 26.6, "length_ratio": 1.5, "dead_stop_at": []})
 	var doc := TraversalLine.park_document("sable", "park_test", 0, "test", runs, {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}, {})
 	var named: Array = []
 	var verdicts := {}
@@ -206,6 +206,38 @@ func _check_summary() -> void:
 		if row.get("measure") == "floor":
 			floor_band = row
 	_t.eq("the floor band judges 2.0 times the pilot line's median time", [floor_band.get("worst"), floor_band.get("inside")], [80.0, false])
+	_check_summary_edges(runs)
+
+
+# Each row's band reads PARK.md section 8's definition, not a nearby measure.
+func _check_summary_edges(base: Array) -> void:
+	var skills := _rows(base, {"distinct_verbs": 3, "verbs": ["jump", "boost", "special"], "distinct_ride_facts": 1})
+	_t.eq("three verbs with one ride fact miss the distinct-verbs band (ride facts only)",
+		_band_of(skills, "distinct_verbs").get("inside"), false)
+	var rides := _rows(base, {"distinct_verbs": 3, "verbs": ["ride_chute", "kicker_launch", "crater_ride"], "distinct_ride_facts": 3})
+	_t.eq("three ride facts make the distinct-verbs band", _band_of(rides, "distinct_verbs").get("inside"), true)
+	var fast_cruise := _rows(base, {"peak_speed_mps": 30.0, "blazing_mps": 32.3})
+	_t.eq("the peak band reads the blazing tier the run was tuned to", _band_of(fast_cruise, "peak_speed_mps").get("inside"), false)
+	var slow_cruise := _rows(base, {"peak_speed_mps": 25.0, "blazing_mps": 22.8})
+	_t.eq("a lower tuned cruise lowers the peak band with it", _band_of(slow_cruise, "peak_speed_mps").get("inside"), true)
+	var stalled := _rows(base, {"dead_stops": 0, "path_length_m": 0.0})
+	_t.eq("a ball that never rolled cannot read the dead-stop band green", _band_of(stalled, "dead_stops").get("inside"), null)
+
+
+func _rows(base: Array, change: Dictionary) -> Dictionary:
+	var runs: Array = []
+	for row in base:
+		var copy: Dictionary = (row as Dictionary).duplicate(true)
+		copy.merge(change, true)
+		runs.append(copy)
+	return TraversalLine.park_document("sable", "park_test", 0, "test", runs, {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}, {})
+
+
+func _band_of(doc: Dictionary, measure: String) -> Dictionary:
+	for row in doc.get("bands", []):
+		if row.get("measure") == measure:
+			return row
+	return {}
 
 
 # The floor line's hands: only the stick and the brake survive the filter.
