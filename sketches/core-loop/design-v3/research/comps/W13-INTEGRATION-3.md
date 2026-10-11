@@ -739,7 +739,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 
 - **GOAL.** The stage graph also checks that the beacon sits on an objective-fit node, checks beacon before spawn, and reports the reward-to-objective ratio and the full-visit ratio; the KD stage units gate both ratios on their own files (paste 4f).
 - **SCOPE.** `tools/park_graph.gd` (a `beacon_ok` flag: a flat open disc whose radius derives from the Warden engage ring), `tests/park_graph_test.gd`, `tests/park_pockets_test.gd`.
-- **CONTEXT.** KB8 (`K-UNITS.md:127-143`); `comps/ror2/stage-anatomy.md:97`, `:112` (copy no RoR2 constants); `comps/isaac/floor-generation.md:107`; `W13-INTEGRATION-2.md:44`.
+- **CONTEXT.** KB8 (`K-UNITS.md:127-143`); `comps/ror2/stage-anatomy.md:112` (copy no RoR2 constants); `comps/isaac/floor-generation.md:107` (the 1.5 reward-to-objective ratio); `W13-INTEGRATION-2.md:44`.
 - **ACCEPTANCE.** The fixture beacon passes `beacon_ok` and a planted ledge beacon turns the test red; beacon is checked before spawn and a failure names which rule failed first; the report prints the median spawn-to-reward over spawn-to-objective ratio (target at least 1.5) and `full_visit_ratio` (target at most 3.0), reported, not gated, as KB8 left it (`K-UNITS.md:138`); a planted fixture row that breaks either target is printed as out of target.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'park_graph_test' --test 'park_pockets_test'` (2 files).
 - **TIMEBOX.** 2 h.
@@ -1149,7 +1149,7 @@ Lane S (W13-INTEGRATION-3.md section 8) shares the machine with this table: at m
 **Target: `K-UNITS.md` KD1 to KD6 (`:219-243`), ACCEPTANCE, after the bullet that begins `` - `tools/park_graph.gd` run on the stage ``.** SR15 prints both ratios; each stage unit owns its pass or fail. The six drafts still carry open detour and sightline conflicts (`decisions.tsv:471`, `:480c`), so a stage that misses a target reports it to the coordinator in the same fix round as those.
 
 ```markdown
-- **Graph ratios (comps: ror2/stage-anatomy:97, roboquest/stage-anatomy:125).** On the stage's own graph: the median spawn-to-reward over spawn-to-objective path ratio is at least 1.5 and `full_visit_ratio` is at most 3.0 (both start values, printed by SR15's report). A miss names the pocket or route that causes it.
+- **Graph ratios (comps: isaac/floor-generation.md:107, roboquest/stage-anatomy:125).** On the stage's own graph: the median spawn-to-reward over spawn-to-objective path ratio is at least 1.5 and `full_visit_ratio` is at most 3.0 (both start values, printed by SR15's report). A miss names the pocket or route that causes it.
 ```
 ## 5. Blocked rows
 
