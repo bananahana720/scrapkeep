@@ -57,7 +57,9 @@ var interruptible := true
 # The per-kind dial on the interrupt: a knock must reach INTERRUPT * impact_resist.
 var impact_resist := 1.0
 # Seconds left in the stagger window, and staggers taken, for tests and presentation.
-var stagger_left := 0.0
+# Not stagger_left/staggered(): those names mark a posture fighter (boss_contract.gd,
+# combat.gd's Ram Prow guard), and a pack kind must still take the prow shove.
+var stun_left := 0.0
 var staggers := 0
 
 var _t := 0.0
@@ -94,8 +96,8 @@ func interrupt_speed() -> float:
 	return INTERRUPT * impact_resist if interruptible else INF
 
 
-func staggered() -> bool:
-	return stagger_left > 0.0
+func stunned() -> bool:
+	return stun_left > 0.0
 
 
 # --- Subclass hooks -------------------------------------------------------------------
@@ -156,13 +158,13 @@ func _physics_process(delta: float) -> void:
 		_idle(delta)
 		return
 	_t += delta
-	stagger_left = maxf(0.0, stagger_left - delta)
+	stun_left = maxf(0.0, stun_left - delta)
 	var to_ball := _flat_to_ball()
 	match phase:
 		Phase.ROAM:
 			_rest -= delta
-			_move(delta, Vector3.ZERO if staggered() else _roam(to_ball))
-			if not staggered() and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(to_ball):
+			_move(delta, Vector3.ZERO if stunned() else _roam(to_ball))
+			if not stunned() and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(to_ball):
 				_warn(to_ball)
 		Phase.WARN:
 			_move(delta, Vector3.ZERO)
@@ -241,7 +243,7 @@ func _on_broken(_method: String) -> void:
 func _stagger() -> void:
 	_end()
 	staggers += 1
-	stagger_left = STAGGER_WINDOW
+	stun_left = STAGGER_WINDOW
 	_rest = maxf(_rest, STAGGER_WINDOW)
 
 

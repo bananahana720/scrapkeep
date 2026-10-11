@@ -142,13 +142,13 @@ func _probe(kind: String) -> Dictionary:
 	row["knock"] = float(enemy._knocked_speed())
 	await physics_frame
 	var after := _ball_speed()
-	row["staggered_on_tick"] = enemy.staggered()
+	row["staggered_on_tick"] = enemy.stunned()
 	row["phase_after"] = enemy.state_name()
 	var worst := after / maxf(float(_baseline[1]), 0.001)
-	var frames := 1 if enemy.staggered() else 0
+	var frames := 1 if enemy.stunned() else 0
 	for i in _window_ticks():
 		await physics_frame
-		if enemy.staggered():
+		if enemy.stunned():
 			frames += 1
 			worst = minf(worst, _ball_speed() / maxf(float(_baseline[i + 2]), 0.001))
 		elif frames > 0:
@@ -166,7 +166,7 @@ func _probe(kind: String) -> Dictionary:
 			_game.combat._hit(low, "ram", 1.0, Vector3.RIGHT, soft, "", "", "ram")
 			row["soft_knock"] = float(low._knocked_speed())
 			await physics_frame
-			row["soft_staggered"] = low.staggered()
+			row["soft_staggered"] = low.stunned()
 			row["soft_phase"] = low.state_name()
 		if is_instance_valid(low):
 			low.free()
