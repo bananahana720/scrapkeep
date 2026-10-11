@@ -29,7 +29,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # The ultimate's prompt (design-v3/SKILL-BAR.md section 5) is the Q keycap in the meter arc's gap
 # at the reticle, on ticks the meter is full and a press would start the set piece; it follows
 # the same retire and return rules (its first availability in a run is the run's first full
-# meter) and wears ULTIMATE until the profile has used it RETIRE_AFTER["ultimate"] times. While it
+# meter) and wears ULTIMATE until the profile has used it RETIRE_AFTER["ultimate"] times, and only
+# while it is the one prompt on screen (the fight-case word budget). While it
 # shows, the reticle leaves its own Q off.
 
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
@@ -256,6 +257,13 @@ func step(delta: float, view: Dictionary) -> void:
 			return ra < rb
 		return _order(a["verb"]) < _order(b["verb"]))
 	shown = candidates.slice(0, MAX_PROMPTS)
+	# Word-budget trim (SKILL-BAR section 5, wave 13 B2 fix round, 2026-10-10): ULTIMATE rides
+	# the Q only while no other prompt shares the screen. In a crowded fight the breathing arc,
+	# its mint rim and the Q keycap carry the read, and the word would put the fight case at 26.
+	if shown.size() > 1:
+		for prompt in shown:
+			if prompt["verb"] == "ultimate":
+				prompt["word"] = ""
 	for prompt in shown:
 		var verb: String = prompt["verb"]
 		if verb != LETGO and not (verb == "jump" and vault_only) and (_first[verb] or _revived[verb]):

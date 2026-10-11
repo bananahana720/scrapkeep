@@ -239,6 +239,7 @@ func press(id: String) -> void:
 			game.flow.new_run()
 		"notes":
 			_notes_pinned = true
+			_drop_quit()
 			game.hold_notes(true)
 			game.notes.show_page(0)
 		"settings":
@@ -261,6 +262,7 @@ func press(id: String) -> void:
 # The settings page takes the column's place; the first page's rows stay built, only hidden.
 func _enter_settings() -> void:
 	_in_settings = true
+	_drop_quit()
 	_title.text = "SETTINGS"
 	for id in _order:
 		_rows[id].visible = false
@@ -349,7 +351,12 @@ func _quit_key(event: InputEvent) -> bool:
 
 
 # One tick of the quit hold: QUIT_HOLD seconds of X down quits.
+# W13 B2 fix round: the hold drops while settings or the notes have the keys, because
+# _input never routes X's release here then and a stale hold would quit with no key down.
 func step_quit(delta: float) -> void:
+	if _in_settings or (game != null and game.notes_held()):
+		_drop_quit()
+		return
 	if not _open or not _quit_down:
 		return
 	_quit_held += delta
@@ -358,6 +365,15 @@ func step_quit(delta: float) -> void:
 		_quit_down = false
 		_quit_held = 0.0
 		press("quit")
+
+
+func _drop_quit() -> void:
+	if not _quit_down and _quit_held == 0.0:
+		return
+	_quit_down = false
+	_quit_held = 0.0
+	if _quit_ring != null:
+		_quit_ring.queue_redraw()
 
 
 # The hold's share, 0 to 1, for the ring and the tests.

@@ -367,6 +367,28 @@ func _check_pause() -> void:
 	_key(KEY_X, false)
 	menu.step_quit(1.0)
 	var short_quit := _quits
+	# 2026-10-10 (wave 13 B2 fix round): X goes down, settings or the pinned notes take the keys,
+	# X comes up where _input never routes it to the quit hold; the hold must not finish.
+	_key(KEY_X, true)
+	menu.press("settings")
+	_key(KEY_X, false)
+	menu.step_quit(1.0)
+	var settings_quit := _quits
+	var settings_fill: float = menu.quit_fill()
+	menu._leave_settings(true)
+	menu.step_quit(1.0)
+	var after_settings := _quits
+	_key(KEY_X, true)
+	menu.press("notes")
+	_key(KEY_X, false)
+	menu.step_quit(1.0)
+	var notes_quit := _quits
+	menu._unpin_notes()
+	menu.step_quit(1.0)
+	var after_notes := _quits
+	_report("pause quit drops off-menu", settings_quit == 0 and settings_fill == 0.0 and after_settings == 0 and notes_quit == 0 and after_notes == 0,
+		"X released in settings %d (fill %.2f), back on the menu %d; X released over the notes %d, after unpinning %d"
+			% [settings_quit, settings_fill, after_settings, notes_quit, after_notes])
 	_key(KEY_X, true)
 	menu.step_quit(0.3)
 	var mid := _quits
