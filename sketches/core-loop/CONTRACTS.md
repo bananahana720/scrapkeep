@@ -157,6 +157,16 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `strike_deflected` | `enemy: Node3D, kind: String, punch: float, plating: float` | A | a hit below plating chipped for 20% |
 | `shot_fired` | `weapon_id: String, from: Vector3, to: Vector3` | A | a weapon fired; the segment it drew |
 | `special_used` | `special_id: String, at: Vector3` | A | a class special fired |
+| `slot_selected` | `slot: String, reason: String` | spine ball (`player_ball._route_slots`) | the skill bar's selection changed; reason `pick`, or the snap back's cause: `cast`, `deselect`, `cancel`, `swap`, `timeout`, `ultimate`, `reset` |
+| `slot_cast` | `slot: String, ability_id: String, at: Vector3` | A | slot 2 or 3 committed a cast; the player's router snaps the selection back on it |
+| `line_skill_loaded` | `ability_id: String, seconds: float` | A | a line skill cast with no line standing loaded the next bite |
+| `line_skill_fired` | `ability_id: String, target: Node3D, at: Vector3, on: String` | A | the line skill fired along the line; on is `body` or `world`; target is null on the world |
+| `line_skill_expired` | `ability_id: String` | A | a load ran out with no bite; nothing is refunded |
+| `ultimate_ready` | `ultimate_id: String` | ultimate (`src/combat/ultimate.gd`, wave P-B B3) | the meter reached full |
+| `ultimate_started` | `ultimate_id: String, path: String, from: Vector3, to: Vector3, seconds: float` | ultimate | Q committed a planned path; seconds is wind-up plus flight |
+| `ultimate_peak` | `ultimate_id: String, at: Vector3` | ultimate | the flight's middle beat |
+| `ultimate_landed` | `ultimate_id: String, at: Vector3, hits: int, damage: float` | ultimate | the landing strike resolved |
+| `ultimate_cancelled` | `ultimate_id: String, reason: String, refunded: bool` | ultimate | `recall`, `bail`, `stage` or `death` |
 | `reward_offered` | `offers: Array` | B | gates are open or moved; offer records below |
 | `reward_chosen` | `part_id: String` | B | a gate was taken, after `run.add_part` |
 | `element_resolved` | `element_id: String, material_id: String, behaviour: String, at: Vector3` | B | an element met a material (TADR-009); C picks the sound by behaviour (freeze, electrify, shatter) |
@@ -361,6 +371,14 @@ The HUD's ability bar (`src/ui/ability_bar.gd`) draws one input, an ordered arra
 - **Reticle gauge.** While any slot's `gauge` is above 0, a ring round the reticle fills clockwise from twelve, linearly, in the class colour. It closes when the gauge is full.
 - A slot `key` may also be a glyph id (`key_*`, `pad_*`), which `normalized()` passes through.
 - `ui_ability_slots_test.gd` checks all three pilots' records, a charging special and its ring, the release to cooling, the normaliser and the swell.
+
+### The skill bar (design-v3/SKILL-BAR.md, wave P-B B1, 2026-10-10)
+
+- **Slots.** `AbilityState.SLOTS` is `weapon, movement, special, smash, line`; `BAR` is `weapon, special, line` (keys 1, 2, 3), `CHIPS` is `movement, smash` (Shift, Ctrl, never selectable). `ULTIMATE` stays out of `SLOTS`; `SWAPPABLE` is `SLOTS` plus it. Each `slots()` record also carries `number` (1 to 3, 0 for a chip), `group` (`bar` or `chip`), `selected` and `select_left`.
+- **Selection.** `abilities.selected` is the slot left click casts; the weapon is home. Only the player's router (`player_ball._route_slots`, which runs before `_read_grammar` on the player's physics tick, ahead of combat's) changes it, through `select(name) -> String` (`""` or the refusal) and `snap_back(reason)`, and it alone publishes `slot_selected`. A left click on a picked slot 2 or 3 is ORed into `intent.special_*` or `intent.line_*` and `fire_*` is cleared, so the weapon never sees it. A scripted source that writes `special_*` or `line_*` directly still drives a kit test; bots pick with `slot_pick`.
+- **Casts.** Combat's `_step_special` keeps the gauge path and adds a tap path for a row with no `charge_max`; `_step_line` casts the line skill through the `_line_skills` table. Both publish `slot_cast(slot, id, at)` when a cast commits, and the router snaps back on it. A row with `pool` spends that slot's charges (Tally's gather plate and link clips spend slot 1's pressure).
+- **Line skill.** On a standing line it fires now along it; with none it loads the next bite for the row's `load_seconds`. `combat.line_load()` is `{id, fraction, left}` or `{}`.
+- **Injected hooks.** `player.set_piece_phase` (a Callable answering `idle`, `windup`, `flight` or `recover`) is the ultimate unit's to set; while it answers anything but `idle` the router swallows every input but `move`, `jump_*` and `ultimate_pressed`. `player.snap_slots(reason)` is the one door for a snap back from outside the router.
 
 ## Icons
 

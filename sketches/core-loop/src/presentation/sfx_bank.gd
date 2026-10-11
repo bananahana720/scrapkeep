@@ -112,6 +112,23 @@ const TRIM_DB := {
 	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0,
 	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
+	# The skill bar's refusals (SKILL-BAR section 2): a refused pick and a refused Q, each a dull
+	# tick of its own.
+	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0,
+	# Each pilot's line-skill and set-piece cues, one marked block per pilot (SKILL-BAR section 12,
+	# item 4); a row here needs its recipe in _bake.
+	# --- P-C Sable sounds ---
+	# --- end Sable ---
+	# --- P-C Rivet sounds ---
+	# --- end Rivet ---
+	# --- P-C Kest sounds ---
+	# --- end Kest ---
+	# --- P-C Tarn sounds ---
+	# --- end Tarn ---
+	# --- P-C Tally sounds ---
+	# --- end Tally ---
+	# --- P-C Cannon sounds ---
+	# --- end Cannon ---
 	"chunk_low": -2.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
 }
@@ -298,6 +315,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _fm(0.2, _hz(67), 2.0, 2.0, 18.0, -3.0)
 		"verb_fail_interact":
 			return _mix([[_tone(0.09, 520.0, 330.0, "sine", 32.0), 0, 1.0], [_noise(0.01, 2500.0, 2000.0, 300.0), 0, 0.4]])
+		"verb_fail_select":
+			return _mix([[_tone(0.05, 300.0, 260.0, "square_dark", 45.0), 0, 1.0], [_noise(0.01, 1800.0, 1200.0, 250.0), 0, 0.3]])
+		"verb_fail_ultimate":
+			return _mix([[_fm(0.16, _hz(62), 1.5, 2.5, 20.0, -2.0), 0, 1.0], [_tone(0.06, 180.0, 150.0, "sine", 30.0), Synth.seconds(0.05), 0.6]])
 		"grapple_release":
 			return _fm(0.15, _hz(76), 2.0, 1.5, 24.0, -2.0)
 		"pylon_plant":

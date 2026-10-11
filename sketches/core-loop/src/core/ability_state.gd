@@ -12,12 +12,26 @@ const WEAPON := "weapon"
 const MOVEMENT := "movement"
 const SPECIAL := "special"
 const SMASH := "smash"
-const SLOTS := [WEAPON, MOVEMENT, SPECIAL, SMASH]
-# The key each slot reads, from the bindings table: the weapon is fire, the movement slot the
-# harpoon (a pilot whose movement is not the line reads its own go key, player_ball sets that),
-# the special and the smash the special and the haul.
-static var KEYS := {WEAPON: Bindings.label("fire"), MOVEMENT: Bindings.label("harpoon"),
-	SPECIAL: Bindings.label("special"), SMASH: Bindings.label("haul")}
+# Slot 3, the line skill (design-v3/SKILL-BAR.md section 3). Appended so the first four keep
+# their order.
+const LINE := "line"
+const SLOTS := [WEAPON, MOVEMENT, SPECIAL, SMASH, LINE]
+# The numbered bar keys 1, 2 and 3 pick from, the chips beside it that are never selectable,
+# and each bar slot's number (SKILL-BAR section 1).
+const BAR := [WEAPON, SPECIAL, LINE]
+const CHIPS := [MOVEMENT, SMASH]
+const NUMBER := {WEAPON: 1, SPECIAL: 2, LINE: 3}
+# Q's set piece. Its charge is the meter, not a cooldown, so it stays out of SLOTS (_recharge
+# refills any slot whose cooldown is 0); an upgrade may still swap it.
+const ULTIMATE := "ultimate"
+const SWAPPABLE := SLOTS + [ULTIMATE]
+# A pick with no cast snaps back to slot 1 after this long (SKILL-BAR section 9, start).
+const SELECT_TIMEOUT := 3.0
+# The key each slot shows: the bar slots their number, the movement chip Shift for every
+# pilot (Sable's chip is her boost; her movement row is the harpoon, which has no slot) and the
+# smash chip the haul.
+static var KEYS := {WEAPON: "1", MOVEMENT: Bindings.label("boost"),
+	SPECIAL: "2", SMASH: Bindings.label("haul"), LINE: "3"}
 
 const READY := "ready"
 const COOLING := "cooling"
@@ -44,7 +58,17 @@ const FORGIVENESS := 0.18
 #   movement  augments (the movement kit it fits), rocket, cloak (Kest's passives)
 #   special   plant_discharge (planting a pylon fires it free)
 #   smash     flavour (arc, skid or demo landing), spends_special
-#   any slot  family (lane, split_lane, plate or rush: the Mind family this slot commits)
+#   line      line (marks a line-skill row), load_seconds (how long a cast with no line
+#             waits for the next bite)
+#   ultimate  paths (preference order over line, arc, rail), beats (0 lets the path length
+#             set the flight beats, a positive number fixes them), hold_beats (a hold leg
+#             before the last leg), variant_of (a depth-3 row names its base ultimate)
+#   any slot  family (lane, split_lane, plate or rush: the Mind family this slot commits),
+#             pool (the slot whose charges this row spends: Tally's slots 2 and 3 spend
+#             slot 1's pressure). A special or line row with no charge_max is a tap: it
+#             casts on the press.
+# Each pilot owns one marked block below for its wave P-C rows (SKILL-BAR section 12, item
+# 4), so the six pilot units never edit the same lines.
 const ABILITIES := {
 	"arc_caster": {"icon": "ab_sable_weapon", "cooldown": 0.0, "mounted": "pylon_turret"},
 	"grapple": {"icon": "ab_sable_move", "cooldown": 0.0, "augments": ["grapple", "pylon", "vault"]},
@@ -65,7 +89,12 @@ const ABILITIES := {
 	"claw_pull": {"icon": "ab_tarn_move", "cooldown": 3.0, "augments": ["claw_pull"]},
 	"clamp": {"icon": "ab_tarn_special", "cooldown": 6.0, "charge_max": 0.8},
 	"rend_slam": {"icon": "ab_tarn_smash", "cooldown": 0.0, "flavour": "rend"},
-	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["gather_plate", "link_clips", "balance_due"], "pressure": 3},
+	# Tally's deck re-cut to the bar (SKILL-BAR section 1): balance due on 1, gather plate on 2
+	# (a tap), link clips on 3 (her ledger clip as the line skill), all from one pressure pool.
+	# Plate return stays a row for the tree and P-C; it is off her kit until then.
+	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3},
+	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 0.0, "pool": WEAPON},
+	"link_clips": {"icon": "ab_tally_link", "cooldown": 0.0, "pool": WEAPON, "line": true, "load_seconds": 4.0},
 	"flywheel_surge": {"icon": "ab_tally_move", "cooldown": 4.0, "augments": ["surge"]},
 	"plate_return": {"icon": "ab_tally_special", "cooldown": 6.0, "charge_max": 0.4},
 	"stamp_slam": {"icon": "ab_tally_smash", "cooldown": 0.0, "flavour": "stamp"},
@@ -73,6 +102,22 @@ const ABILITIES := {
 	"cannon_recoil": {"icon": "ab_cannon_move", "cooldown": 3.5, "augments": ["recoil"], "family": "split_lane"},
 	"cannon_plate": {"icon": "ab_cannon_special", "cooldown": 6.0, "charge_max": 0.8, "family": "plate"},
 	"cannon_rush": {"icon": "ab_cannon_smash", "cooldown": 0.0, "flavour": "rush", "family": "rush"},
+	# The shared placeholders until wave P-C: one line skill (a 4 m yank on a body, a reel
+	# burst on the world) and one ultimate (B3 builds its set piece).
+	"line_reel": {"icon": "ab_sable_reel", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"ult_default": {"icon": "ab_sable_reel", "cooldown": 0.0, "paths": ["line", "arc"], "beats": 0},
+	# --- P-C Sable rows (line skill, ultimate, depth-3 variants) -------------------------
+	# --- end Sable ---
+	# --- P-C Rivet rows ------------------------------------------------------------------
+	# --- end Rivet ---
+	# --- P-C Kest rows -------------------------------------------------------------------
+	# --- end Kest ---
+	# --- P-C Tarn rows -------------------------------------------------------------------
+	# --- end Tarn ---
+	# --- P-C Tally rows ------------------------------------------------------------------
+	# --- end Tally ---
+	# --- P-C Cannon rows -----------------------------------------------------------------
+	# --- end Cannon ---
 }
 const ICON_DIR := "res://assets/icons/"
 
@@ -154,10 +199,18 @@ class Slot:
 	var pressure_bonus := 0
 
 
-# The key the movement slot shows: RMB for the rope, Shift for a pilot whose movement is a
-# burst (player_ball sets it).
+# The key the movement chip shows: Shift for every pilot (player_ball sets it).
 var movement_key: String = KEYS[MOVEMENT]
 var _slots := {}
+# The bar slot left click casts (SKILL-BAR section 1). Exactly one is selected at every tick;
+# the weapon is home. Only the player's router changes it, through select() and snap_back().
+var selected := WEAPON
+# Seconds since the pick with no cast begun; the router snaps back at SELECT_TIMEOUT.
+var _select_held := 0.0
+# The ultimate in Q's place, and its meter. B3's UltimateMeter (src/core/ultimate_meter.gd)
+# fills `meter`; until then it is null and the ultimate reads as charging at 0.
+var ultimate_id := ""
+var meter = null
 
 
 func _init() -> void:
@@ -165,14 +218,20 @@ func _init() -> void:
 		_slots[name] = Slot.new()
 
 
-# Fills the four slots from a class row. Charges start full; a stage entry refills them.
+# Fills the five slots and the ultimate from a class row. Charges start full; a stage entry
+# refills them. The selection goes home.
 func fit(def) -> void:
-	var ids := {WEAPON: "", MOVEMENT: "", SPECIAL: "", SMASH: ""}
+	var ids := {WEAPON: "", MOVEMENT: "", SPECIAL: "", SMASH: "", LINE: ""}
+	ultimate_id = ""
 	if def != null:
-		ids = {WEAPON: def.weapon_id, MOVEMENT: def.movement_id, SPECIAL: def.special_id, SMASH: def.smash_id}
+		ids = {WEAPON: def.weapon_id, MOVEMENT: def.movement_id, SPECIAL: def.special_id, SMASH: def.smash_id,
+			LINE: def.line_id}
+		ultimate_id = def.ultimate_id
 	for name in SLOTS:
 		_slots[name] = Slot.new()
 		swap(name, ids[name])
+	selected = WEAPON
+	_select_held = 0.0
 
 
 # Puts ability `id` in a slot, full, with its row's cooldown, duration and gauge. The
@@ -230,15 +289,22 @@ func cooldown_of(name: String) -> float:
 	return floored(s.cooldown, s.cooldown_scale)
 
 
+# The slot whose charges `name` spends: its row's pool, else itself.
+func pool_of(name: String) -> String:
+	var pool := String(cap(name, "pool", ""))
+	return pool if pool != "" and pool != name and _slots.has(pool) else name
+
+
 func ready(name: String) -> bool:
 	var s: Slot = _slots[name]
-	return s.available and s.charges > 0
+	var payer: Slot = _slots[pool_of(name)]
+	return s.available and payer.charges > 0
 
 
 func spend(name: String) -> bool:
 	if not ready(name):
 		return false
-	(_slots[name] as Slot).charges -= 1
+	(_slots[pool_of(name)] as Slot).charges -= 1
 	return true
 
 
@@ -327,7 +393,65 @@ func state_of(name: String) -> String:
 		return UNAVAILABLE
 	if s.active or (s.gauge != null and s.gauge.charging):
 		return ACTIVE
-	return READY if s.charges > 0 else COOLING
+	return READY if (_slots[pool_of(name)] as Slot).charges > 0 else COOLING
+
+
+# --- The selection (SKILL-BAR sections 1 and 2) ----------------------------------------
+# These change the record only; the player's router publishes slot_selected.
+
+# Picks a bar slot. Returns "" when it took, else the refusal: "unavailable" for a slot that
+# is not on the bar or not available, "cooling" for one with no charge in.
+func select(name: String) -> String:
+	if not name in BAR or not _slots.has(name):
+		return UNAVAILABLE
+	var s: Slot = _slots[name]
+	if s.id == "" or not s.available:
+		return UNAVAILABLE
+	if name != WEAPON and not ready(name):
+		return COOLING
+	selected = name
+	_select_held = 0.0
+	return ""
+
+
+# Sends the selection home to slot 1. True when it moved.
+func snap_back(_reason := "") -> bool:
+	_select_held = 0.0
+	if selected == WEAPON:
+		return false
+	selected = WEAPON
+	return true
+
+
+# One tick of the pick's clock. It pauses while a gauge charges (`charging`); true on the tick
+# a pick with no cast reaches SELECT_TIMEOUT, so the router snaps it back.
+func tick_selection(delta: float, charging: bool) -> bool:
+	if selected == WEAPON or charging:
+		return false
+	_select_held += delta
+	return _select_held >= SELECT_TIMEOUT
+
+
+# The share of the pick's timeout still to run, 1 at the pick, 0 at the snap; 0 at home.
+func select_left() -> float:
+	if selected == WEAPON:
+		return 0.0
+	return clampf(1.0 - _select_held / SELECT_TIMEOUT, 0.0, 1.0)
+
+
+# Q's record for the HUD and bots: {id, icon, key, fill, state}, state charging, ready or
+# active. The meter is B3's; with none the ultimate reads as charging at 0.
+func ultimate() -> Dictionary:
+	var fill := 0.0
+	var state := "charging"
+	if meter != null:
+		fill = float(meter.fraction())
+		if meter.get("locked") == true:
+			state = ACTIVE
+		elif meter.full():
+			state = READY
+	return {"id": ultimate_id, "icon": String(ABILITIES.get(ultimate_id, {}).get("icon", "")),
+		"key": Bindings.label("ultimate"), "fill": fill, "state": state}
 
 
 # The key a slot publishes now, read through the glyph lookup: the table's label while the
@@ -341,8 +465,9 @@ func slot_key(name: String) -> String:
 	return label
 
 
-# W1's Ability slots contract: one record per slot, in bar order. cooldown_frac is the
-# share of the recharging charge still to go, 0 when every charge is in.
+# W1's Ability slots contract: one record per slot, in SLOTS order. cooldown_frac is the
+# share of the recharging charge still to go, 0 when every charge is in. number is 1 to 3 on
+# the bar and 0 for a chip; group is bar or chip; selected and select_left are the pick.
 func slots() -> Array:
 	var out := []
 	for name in SLOTS:
@@ -353,5 +478,7 @@ func slots() -> Array:
 			frac = clampf(1.0 - s.recharge / cd, 0.0, 1.0)
 		out.append({"slot": name, "id": s.id, "icon": s.icon, "key": slot_key(name), "cooldown_frac": frac,
 			"charges": s.charges, "max_charges": s.max_charges, "state": state_of(name),
-			"gauge": s.gauge.fraction() if s.gauge != null else 0.0})
+			"gauge": s.gauge.fraction() if s.gauge != null else 0.0,
+			"number": int(NUMBER.get(name, 0)), "group": "bar" if name in BAR else "chip",
+			"selected": name == selected, "select_left": select_left() if name == selected else 0.0})
 	return out

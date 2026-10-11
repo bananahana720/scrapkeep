@@ -176,6 +176,28 @@ signal achievement_earned(id: String)
 # runner, "dig" for the later dig rescue. achievements.gd rows key on it to unlock pilots.
 signal rescue_completed(quest_id: String)
 
+# The skill bar and the ultimate (design-v3/SKILL-BAR.md section 7). All ten are declared
+# here at once so only one unit edits the bus.
+# slot_selected (player_ball's router): the selection changed. reason is "pick", or the snap
+# back's cause: cast, deselect, cancel, swap, timeout, ultimate or reset.
+signal slot_selected(slot: String, reason: String)
+# Combat: slot 2 or 3 committed a cast. The cast's own signal (special_used,
+# line_skill_fired) carries its presentation.
+signal slot_cast(slot: String, ability_id: String, at: Vector3)
+# Combat's line skill: a cast with no line loaded the next bite for `seconds`; the flavour
+# fired along the line (on is "body" or "world"); a load ran out with no bite.
+signal line_skill_loaded(ability_id: String, seconds: float)
+signal line_skill_fired(ability_id: String, target: Node3D, at: Vector3, on: String)
+signal line_skill_expired(ability_id: String)
+# The set piece (src/combat/ultimate.gd, wave P-B's ultimate unit): the meter reached full;
+# Q committed the planned path (seconds is wind-up plus flight); the flight's middle beat;
+# the landing strike resolved; a cancel (recall, bail, stage or death) and whether it refunded.
+signal ultimate_ready(ultimate_id: String)
+signal ultimate_started(ultimate_id: String, path: String, from: Vector3, to: Vector3, seconds: float)
+signal ultimate_peak(ultimate_id: String, at: Vector3)
+signal ultimate_landed(ultimate_id: String, at: Vector3, hits: int, damage: float)
+signal ultimate_cancelled(ultimate_id: String, reason: String, refunded: bool)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()

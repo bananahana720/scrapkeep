@@ -43,6 +43,20 @@ const WORDS := {
 	"cannon_recoil": "recoil split",
 	"cannon_plate": "cannon plate",
 	"cannon_rush": "rush ring",
+	"line_reel": "line reel",
+	"ult_default": "set piece",
+	# --- P-C Sable words ---
+	# --- end Sable ---
+	# --- P-C Rivet words ---
+	# --- end Rivet ---
+	# --- P-C Kest words ---
+	# --- end Kest ---
+	# --- P-C Tarn words ---
+	# --- end Tarn ---
+	# --- P-C Tally words ---
+	# --- end Tally ---
+	# --- P-C Cannon words ---
+	# --- end Cannon ---
 }
 
 # Keys a movement kit adds, by the augment or flag that grants them: the verb whose table key
@@ -54,7 +68,7 @@ const EXTRAS := {
 }
 # The verb each slot's key comes from. The movement slot is the harpoon for the pilot whose
 # movement is the line, and the pilot's go verb (Shift) for the others.
-const SLOT_VERBS := {"weapon": "fire", "special": "special", "smash": "haul"}
+const SLOT_VERBS := {"weapon": "fire", "special": "special", "smash": "haul", "line": "select"}
 
 # DESIGN-V2 section 2's Fantasy row, cut to fit a card.
 const FANTASY := {
@@ -83,8 +97,8 @@ static func keys(def) -> Array[Dictionary]:
 		var ability := String(def.get("%s_id" % slot))
 		var row: Dictionary = AbilityState.ABILITIES.get(ability, {})
 		out.append({"slot": slot, "ability": ability,
-			"icon": row.get("icon", "ab_%s_%s" % [AbilitySlots.pilot_of(def), AbilitySlots.ROLES[slot]]),
-			"key": Bindings.glyph(slot_verb(slot, def)),
+			"icon": row.get("icon", "ab_%s_%s" % [AbilitySlots.pilot_of(def), AbilitySlots.ROLES.get(slot, slot)]),
+			"key": "key_%d" % AbilityState.NUMBER[slot] if slot == AbilityState.LINE else Bindings.glyph(slot_verb(slot, def)),
 			"words": WORDS.get(ability, ability.replace("_", " ")), "card": true})
 	var movement: Dictionary = AbilityState.ABILITIES.get(String(def.movement_id), {})
 	for grant in movement.get("augments", []):
