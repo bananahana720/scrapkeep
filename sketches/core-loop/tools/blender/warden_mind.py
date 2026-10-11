@@ -74,6 +74,22 @@ PERCH_BASE = 2 * PERCH_PIVOT_Y
 GRIP_TO_LENS = 6.0  # mind.md section 1: the lens 6 m above the perch
 GRIP_DROP = 2.4  # how far a gripping finger's middle segment hooks down past the perch top
 BUDGET = {"tris": 5000, "verts": 9600, "draws": 32}
+# 2026-10-11 (w13 KF7c): the silhouette check (see "silhouette check" below). The read cameras:
+# (name, eye offset in radii, look_subjects.gd constant and row). SIL_YAW_DEG is the hand's staged
+# yaw in look_harness.gd _warden_bodies (hero_assets.gd turns the Pose node toward the ball's
+# staging point; the probe read 93.70 and 98.53 degrees in two runs, so 96.1).
+SIL_YAW_DEG = 96.1
+SIL_CAMERAS = [
+    ("over_shoulder", (0.0, 0.6, 2.0), "WARDEN_BODY_MIND_CAMERAS row 0"),
+    ("three_q", (-1.97, 0.42, 1.31), "WARDEN_BODY_MIND_CAMERAS row 3"),
+    ("under", (-1.148, -1.06, 0.074), "WARDEN_BODY_MIND_CAMERAS row 4"),
+]
+SIL_FINGER_CAMERAS = ("under", "over_shoulder")
+# Thresholds (KF7c packet; fixed, never lowered inside a unit).
+SIL_FINGER_GAP = 0.5
+SIL_TIP_SPAN = 1.2
+SIL_THUMB_OUT_M = 1.0
+SIL_THUMB_CAMERAS = 2
 
 # Section 5: name -> (length, blend) in seconds. The extras below repeat a row for the
 # finger or knuckle the loader picks.
@@ -872,6 +888,168 @@ def check(path, body, arm, actions):
     return info
 
 
+# --- silhouette check (w13 KF7c) -----------------------------------------------------------
+# 2026-10-11 (w13 KF7c): two blind reads failed in one class: the named parts did not break the
+# body's outline from the read cameras. This check measures that on the rest-pose mesh and fails
+# the build, so geometry is tuned against a number and a regression fails here, not in a read.
+# The read directions copy sketches/core-loop/tools/look_subjects.gd (WARDEN_BODY_CAMERAS /
+# WARDEN_BODY_MIND_CAMERAS: eye offset in radii from the warden_bounds centre). Those offsets are
+# world-fixed, and look_harness.gd _warden_bodies stages each body turned by its runtime yaw
+# (measured with a probe in two KF7c runs; SIL_YAW_DEG below), so each offset is turned into the
+# body frame by -yaw. An orthographic projection along the view direction stands in for the
+# harness's perspective at about two radii. Thresholds are fixed by the KF7c packet; never lower
+# them to pass a candidate.
+
+
+def _sub(a, b):
+    return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+
+def _dot(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def _cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+def _unit(a):
+    n = math.sqrt(_dot(a, a))
+    return (a[0] / n, a[1] / n, a[2] / n)
+
+
+def sil_axes(offset, yaw_deg):
+    """(view, up, right) in the body's Godot frame for a world eye offset and the body's yaw."""
+    c, s = math.cos(math.radians(yaw_deg)), math.sin(math.radians(yaw_deg))
+    x, y, z = offset
+    body = (x * c - z * s, y, x * s + z * c)  # Basis(UP, -yaw) * offset
+    view = _unit((-body[0], -body[1], -body[2]))
+    up0 = (0.0, 1.0, 0.0) if abs(view[1]) <= 0.9 else (0.0, 0.0, -1.0)
+    up = _unit(_sub(up0, tuple(view[i] * _dot(up0, view) for i in range(3))))
+    return view, up, _cross(up, view)
+
+
+def sil_project(points, axes):
+    _, up, right = axes
+    return [(_dot(p, right), _dot(p, up)) for p in points]
+
+
+def _turn(o, a, b):
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+
+def sil_hull(pts):
+    """Monotone chain convex hull, counter-clockwise, no repeated end point."""
+    pts = sorted(set((round(p[0], 6), round(p[1], 6)) for p in pts))
+    if len(pts) < 3:
+        return pts
+    lower, upper = [], []
+    for p in pts:
+        while len(lower) >= 2 and _turn(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    for p in reversed(pts):
+        while len(upper) >= 2 and _turn(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return lower[:-1] + upper[:-1]
+
+
+def _seg_dist(p, a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    n = dx * dx + dy * dy
+    t = 0.0 if n == 0 else max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / n))
+    return math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy)
+
+
+def _inside(p, hull):
+    n = len(hull)
+    return n >= 3 and all(_turn(hull[i], hull[(i + 1) % n], p) >= -1e-9 for i in range(n))
+
+
+def sil_outside(p, hull):
+    """0 inside the hull, else the distance to its boundary."""
+    if _inside(p, hull):
+        return 0.0
+    n = len(hull)
+    return min(_seg_dist(p, hull[i], hull[(i + 1) % n]) for i in range(n))
+
+
+def _cross_segs(a, b, c, d):
+    return (_turn(a, b, c) * _turn(a, b, d) < 0) and (_turn(c, d, a) * _turn(c, d, b) < 0)
+
+
+def sil_hull_gap(h1, h2):
+    """Minimal distance between two convex polygons, 0 when they touch or overlap."""
+    if any(_inside(p, h2) for p in h1) or any(_inside(p, h1) for p in h2):
+        return 0.0
+    n1, n2 = len(h1), len(h2)
+    for i in range(n1):
+        for j in range(n2):
+            if _cross_segs(h1[i], h1[(i + 1) % n1], h2[j], h2[(j + 1) % n2]):
+                return 0.0
+    best = min(_seg_dist(p, h2[j], h2[(j + 1) % n2]) for p in h1 for j in range(n2))
+    return min(best, min(_seg_dist(p, h1[i], h1[(i + 1) % n1]) for p in h2 for i in range(n1)))
+
+
+def sil_part_outside(part_pts, outline_pts, axes):
+    """(outside_m, outside_frac) of a part's vertices against the outline's projected hull."""
+    hull = sil_hull(sil_project(outline_pts, axes))
+    d = [sil_outside(p, hull) for p in sil_project(part_pts, axes)]
+    return max(d), sum(1 for x in d if x > 1e-6) / len(d)
+
+
+def sil_say(ok, body, camera, part, metric, value, want):
+    print("SILHOUETTE %s %s %s %s %s=%.3f wants %s" % ("ok" if ok else "FAIL", body, camera, part, metric, value, want))
+    return ok
+
+
+def silhouette(body):
+    """Prints a SILHOUETTE line per rule on the rest pose (the island hang); returns the failures."""
+    pts = [tuple(p) for p in rest_points(body)]
+    names = {i: g.name for i, g in enumerate(body.vertex_groups)}
+    groups = [names[v.groups[0].group] if v.groups else "" for v in body.data.vertices]
+    fails = []
+    axes = {}
+    for name, off, src in SIL_CAMERAS:
+        axes[name] = sil_axes(off, SIL_YAW_DEG)
+        view = axes[name][0]
+        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s yaw %.1f view_body=(%.3f, %.3f, %.3f)"
+              % (name, off[0], off[1], off[2], src, SIL_YAW_DEG, view[0], view[1], view[2]))
+    fingers = [[p for p, g in zip(pts, groups) if g.startswith("Finger%d_" % fi)] for fi in range(len(FINGERS))]
+    thumb = [p for p, g in zip(pts, groups) if g.startswith("Thumb")]
+    palm_fingers = [p for p, g in zip(pts, groups) if g == "Palm" or g.startswith("Knuckle") or g.startswith("Finger")]
+    for cam in SIL_FINGER_CAMERAS:
+        hulls = [sil_hull(sil_project(f, axes[cam])) for f in fingers]
+        for fi in range(len(FINGERS) - 1):
+            gap = sil_hull_gap(hulls[fi], hulls[fi + 1])
+            pair = "%s/%s" % (FINGERS[fi][0], FINGERS[fi + 1][0])
+            if not sil_say(gap >= SIL_FINGER_GAP, "mind", cam, pair, "hull_gap_m", gap, ">=%.1f" % SIL_FINGER_GAP):
+                fails.append("%s %s gap" % (cam, pair))
+    tips = []
+    for fi, f in enumerate(fingers):
+        far = min(p[2] for p in f)
+        end = [p for p in f if p[2] <= far + 0.4]
+        tips.append(sum(p[1] for p in end) / len(end))
+        print("SILHOUETTE row mind tip %s y=%.3f" % (FINGERS[fi][0], tips[-1]))
+    span = max(tips) - min(tips)
+    if not sil_say(span >= SIL_TIP_SPAN, "mind", "3d", "fingertips", "height_span_m", span, ">=%.1f" % SIL_TIP_SPAN):
+        fails.append("tip span")
+    inside = min(tips) >= LOW_BAND - 1e-4 and max(tips) <= SIL_Y[1] + 1e-4
+    if not sil_say(inside, "mind", "3d", "fingertips", "in_band", 1.0 if inside else 0.0,
+                   "%.1f<=y<=%.1f" % (LOW_BAND, SIL_Y[1])):
+        fails.append("tips out of band")
+    good = 0
+    for cam, _, _ in SIL_CAMERAS:
+        out_m, frac = sil_part_outside(thumb, palm_fingers, axes[cam])
+        print("SILHOUETTE row mind %s thumb outside_m=%.3f outside_frac=%.3f" % (cam, out_m, frac))
+        good += out_m >= SIL_THUMB_OUT_M
+    if not sil_say(good >= SIL_THUMB_CAMERAS, "mind", "all", "thumb", "cameras(outside_m>=%.1f)" % SIL_THUMB_OUT_M,
+                   good, ">=%d of %d" % (SIL_THUMB_CAMERAS, len(SIL_CAMERAS))):
+        fails.append("thumb")
+    return fails
+
+
 def export(root, arm, path):
     bpy.context.view_layer.update()
     bpy.ops.object.select_all(action="DESELECT")
@@ -899,12 +1077,16 @@ def main():
         out = argv[argv.index("--out") + 1]
     root, arm, body = build()
     print("TRIS warden_mind body %d (blender, before export)" % common.tris(body))
+    silhouette_fails = silhouette(body)
     if "--count-only" in argv:
         pts = rest_points(body)
         mask = finger_vertex_mask(body)
         for label, p, base_y in (("hang", pts, 0.0), ("perch", perch_points(pts), PERCH_BASE)):
             for rule, value, limit, ok in collider_rule(p, mask, base_y):
                 print("COUNT collider %s %s %.3f limit %.3f %s" % (label, rule, value, limit, "ok" if ok else "OUT"))
+    if silhouette_fails:
+        raise SystemExit("warden_mind silhouette FAILED: " + ", ".join(silhouette_fails))
+    if "--count-only" in argv:
         return
     actions = animate(arm)
     export(root, arm, out)

@@ -42,15 +42,21 @@ const CGE_BALL_REASON := "the ball is the subject: it stays under the camera tar
 # centre; both sides were free of the stage's walls and mounds for all three bodies (scout contact
 # sheets, w13 KF8-CAM). over_shoulder and three_q frame from warden_bounds as well, at gameplay height and
 # ball is pinned beside the body.
+# 2026-10-11 (w13 KF7c): "under" is the ball's own eye: about 1 m over the ground, aimed at the bounds
+# centre. Reactor and swarm: 1.6 radii out, 0.45 radii under the centre, from the reactor's +X side
+# (the jaw that faces the ball in play). Mind: 1.15 radii out on the fingertips' side (the hand's -Z
+# at the staged Pose yaw of about 96 degrees), 1.06 radii under the centre, looking up 43 degrees, so
+# the back of the hanging hand shows with sky between the fingers. The warden recipes' silhouette
+# checks copy these vectors (warden_reactor.py, warden_mind.py SIL_CAMERAS); move one, move both.
 const WARDEN_BODY_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZERO, 62.0, "warden_bounds"], ["boss_high", Vector3(-1.04, 1.4709, 1.04), Vector3.ZERO, 62.0, "warden_bounds"],
-	["boss_low", Vector3(-2.0, -0.25, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"]]
+	["boss_low", Vector3(-2.0, -0.25, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"], ["under", Vector3(-1.2, -0.45, -1.06), Vector3.ZERO, 62.0, "warden_bounds"]]
 # The mind's boss_low eye sits level with the bounds centre (y 0.1 radii, not -0.25): from below,
 # the camera-facing objective badge above the hand projected onto the middle fingertip (w13 KF8-CAM
 # fix round). The mind's other three cameras are WARDEN_BODY_CAMERAS unchanged.
 const WARDEN_BODY_MIND_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZERO, 62.0, "warden_bounds"], ["boss_high", Vector3(-1.04, 1.4709, 1.04), Vector3.ZERO, 62.0, "warden_bounds"],
-	["boss_low", Vector3(-2.0, 0.1, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"]]
-const WARDEN_BODY_BALL := {"boss_high": Vector3(6.4, 0, 6.4), "boss_low": Vector3(0, 0, 9.0)}
-const WARDEN_BODY_BALL_REASON := "the ball stands on the floor beside the body, off the eye-to-target line, so it stays small"
+	["boss_low", Vector3(-2.0, 0.1, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"], ["under", Vector3(-1.148, -1.06, 0.074), Vector3.ZERO, 62.0, "warden_bounds"]]
+const WARDEN_BODY_BALL := {"boss_high": Vector3(6.4, 0, 6.4), "boss_low": Vector3(0, 0, 9.0), "under": Vector3(0, 0, 9.0)}
+const WARDEN_BODY_BALL_REASON := "the ball stands on the floor beside the body (under: 9 m to the side of the target), off the eye-to-target line, so it stays small"
 
 const SUBJECTS := {
 	# ---------------------------------------------------------------- miniboss, swarm, vault (stage 1)

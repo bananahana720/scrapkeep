@@ -114,6 +114,27 @@ RAM_BARREL = (0.2, 1.25)  # the copper barrel's z range; the rod shows above it
 RAM_BARREL_R = 0.32
 RAM_ROD_R = 0.22
 RAM_DEG = 45.0  # each ram sits this far round from its jaw's middle, front and back
+# 2026-10-11 (w13 KF7c): the silhouette check (see "silhouette check" below).
+# The read cameras: (name, eye offset in radii, look_subjects.gd constant and row). SIL_YAW_DEG is
+# the reactor body's staged yaw in look_harness.gd _warden_bodies (hero_assets.gd sets
+# body.rotation.y from warden_look _jaws, still turning toward the ball when the harness freezes it):
+# the probe read 138.66 and 139.36 degrees in two runs, so 139.0.
+SIL_YAW_DEG = 139.0
+SIL_CAMERAS = [
+    ("over_shoulder", (0.0, 0.6, 2.0), "WARDEN_BODY_CAMERAS row 0"),
+    ("three_q", (-1.97, 0.42, 1.31), "WARDEN_BODY_CAMERAS row 3"),
+    ("under", (-1.2, -0.45, -1.06), "WARDEN_BODY_CAMERAS row 4"),
+]
+SIL_APPROACH = ("over_shoulder", "three_q")
+# Thresholds (KF7c packet; fixed, never lowered inside a unit).
+SIL_RAM_OUT_M = 0.4
+SIL_RAM_OUT_FRAC = 0.3
+SIL_RAM_COUNT = 2
+SIL_TOOTH_OUT_M = 0.5
+SIL_TOOTH_COUNT = 4
+SIL_TOOTH_MIN_H = 0.6
+SIL_TOOTH_PER_ROW = 3
+SIL_JAW_STANDOFF = 0.3
 
 
 # --- geometry helpers ------------------------------------------------------------------
@@ -165,6 +186,244 @@ def polar(r, deg, z):
     return Vector((r * math.cos(a), r * math.sin(a), z))
 
 
+# --- silhouette check (w13 KF7c) -----------------------------------------------------------
+# 2026-10-11 (w13 KF7c): two blind reads failed in one class: the named parts did not break the
+# body's outline from the read cameras. This check measures that on the rest-pose mesh and fails
+# the build, so geometry is tuned against a number and a regression fails here, not in a read.
+# The read directions copy sketches/core-loop/tools/look_subjects.gd (WARDEN_BODY_CAMERAS /
+# WARDEN_BODY_MIND_CAMERAS: eye offset in radii from the warden_bounds centre). Those offsets are
+# world-fixed, and look_harness.gd _warden_bodies stages each body turned by its runtime yaw
+# (measured with a probe in two KF7c runs; SIL_YAW_DEG below), so each offset is turned into the
+# body frame by -yaw. An orthographic projection along the view direction stands in for the
+# harness's perspective at about two radii. Thresholds are fixed by the KF7c packet; never lower
+# them to pass a candidate.
+
+
+def _sub(a, b):
+    return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+
+def _dot(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def _cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+def _unit(a):
+    n = math.sqrt(_dot(a, a))
+    return (a[0] / n, a[1] / n, a[2] / n)
+
+
+def sil_axes(offset, yaw_deg):
+    """(view, up, right) in the body's Godot frame for a world eye offset and the body's yaw."""
+    c, s = math.cos(math.radians(yaw_deg)), math.sin(math.radians(yaw_deg))
+    x, y, z = offset
+    body = (x * c - z * s, y, x * s + z * c)  # Basis(UP, -yaw) * offset
+    view = _unit((-body[0], -body[1], -body[2]))
+    up0 = (0.0, 1.0, 0.0) if abs(view[1]) <= 0.9 else (0.0, 0.0, -1.0)
+    up = _unit(_sub(up0, tuple(view[i] * _dot(up0, view) for i in range(3))))
+    return view, up, _cross(up, view)
+
+
+def sil_project(points, axes):
+    _, up, right = axes
+    return [(_dot(p, right), _dot(p, up)) for p in points]
+
+
+def _turn(o, a, b):
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+
+def sil_hull(pts):
+    """Monotone chain convex hull, counter-clockwise, no repeated end point."""
+    pts = sorted(set((round(p[0], 6), round(p[1], 6)) for p in pts))
+    if len(pts) < 3:
+        return pts
+    lower, upper = [], []
+    for p in pts:
+        while len(lower) >= 2 and _turn(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    for p in reversed(pts):
+        while len(upper) >= 2 and _turn(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return lower[:-1] + upper[:-1]
+
+
+def _seg_dist(p, a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    n = dx * dx + dy * dy
+    t = 0.0 if n == 0 else max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / n))
+    return math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy)
+
+
+def _inside(p, hull):
+    n = len(hull)
+    return n >= 3 and all(_turn(hull[i], hull[(i + 1) % n], p) >= -1e-9 for i in range(n))
+
+
+def sil_outside(p, hull):
+    """0 inside the hull, else the distance to its boundary."""
+    if _inside(p, hull):
+        return 0.0
+    n = len(hull)
+    return min(_seg_dist(p, hull[i], hull[(i + 1) % n]) for i in range(n))
+
+
+def _cross_segs(a, b, c, d):
+    return (_turn(a, b, c) * _turn(a, b, d) < 0) and (_turn(c, d, a) * _turn(c, d, b) < 0)
+
+
+def sil_hull_gap(h1, h2):
+    """Minimal distance between two convex polygons, 0 when they touch or overlap."""
+    if any(_inside(p, h2) for p in h1) or any(_inside(p, h1) for p in h2):
+        return 0.0
+    n1, n2 = len(h1), len(h2)
+    for i in range(n1):
+        for j in range(n2):
+            if _cross_segs(h1[i], h1[(i + 1) % n1], h2[j], h2[(j + 1) % n2]):
+                return 0.0
+    best = min(_seg_dist(p, h2[j], h2[(j + 1) % n2]) for p in h1 for j in range(n2))
+    return min(best, min(_seg_dist(p, h1[i], h1[(i + 1) % n1]) for p in h2 for i in range(n1)))
+
+
+def sil_part_outside(part_pts, outline_pts, axes):
+    """(outside_m, outside_frac) of a part's vertices against the outline's projected hull."""
+    hull = sil_hull(sil_project(outline_pts, axes))
+    d = [sil_outside(p, hull) for p in sil_project(part_pts, axes)]
+    return max(d), sum(1 for x in d if x > 1e-6) / len(d)
+
+
+def sil_say(ok, body, camera, part, metric, value, want):
+    print("SILHOUETTE %s %s %s %s %s=%.3f wants %s" % ("ok" if ok else "FAIL", body, camera, part, metric, value, want))
+    return ok
+
+
+
+# label -> [(object name, first vertex, end vertex)]: the parts the check names, recorded while the
+# bmesh is built (to_object keeps vertex order: triangulation adds no vertex).
+TAGS = {}
+
+
+def tagged(part, label, fn, *a, **kw):
+    n0 = len(part.bm.verts)
+    out = fn(*a, **kw)
+    TAGS.setdefault(label, []).append((part.name, n0, len(part.bm.verts)))
+    return out
+
+
+def ram_label(deg):
+    return "ram%03d" % (int(round(deg)) % 360)
+
+
+def _labelled_points(root):
+    bpy.context.view_layer.update()
+    label_of = {}
+    for label, spans in TAGS.items():
+        for name, a, b in spans:
+            for i in range(a, b):
+                label_of[(name, i)] = label
+    pts, labels, faces = [], [], []
+    for o in common.tree(root):
+        if o.type != "MESH":
+            continue
+        base = len(pts)
+        mw = o.matrix_world
+        for i, v in enumerate(o.data.vertices):
+            w = mw @ v.co
+            pts.append((w.x, w.z, -w.y))  # Blender to the Godot frame
+            labels.append(label_of.get((o.name, i), o.name))
+        for poly in o.data.polygons:
+            faces.append((o.name, [base + i for i in poly.vertices]))
+    return pts, labels, faces
+
+
+def _jaw_standoff(pts, labels, faces, jaw):
+    """The least radial gap from the jaw slab's vertices to the drum surface (Drum without the rams,
+    the jacket quarters and their seams) at the same height and bearing; faces stand in for the
+    surface by their outermost vertex, so a chord never reads as a gap."""
+    drum = set(["Drum"] + ["Jacket%d" % k for k in range(4)] + ["SeamV%d" % k for k in range(4)])
+    spans = []
+    for name, idx in faces:
+        if name not in drum or any(labels[i].startswith("ram") for i in idx):
+            continue
+        ys = [pts[i][1] for i in idx]
+        rs = [math.hypot(pts[i][0], pts[i][2]) for i in idx]
+        angs = [math.atan2(pts[i][2], pts[i][0]) for i in idx]
+        spans.append((min(ys), max(ys), max(rs), angs))
+    worst = math.inf
+    for p, lab in zip(pts, labels):
+        if lab != "jawslab_" + jaw:
+            continue
+        r = math.hypot(p[0], p[2])
+        a = math.atan2(p[2], p[0])
+        surface = 0.0
+        for y0, y1, rmax, angs in spans:
+            if not (y0 - 0.05 <= p[1] <= y1 + 0.05):
+                continue
+            rel = [math.remainder(b - a, math.tau) for b in angs]
+            if min(abs(x) for x in rel) < math.radians(3.0) or (min(rel) <= 0.0 <= max(rel) and max(rel) - min(rel) < math.pi):
+                surface = max(surface, rmax)
+        worst = min(worst, r - surface)
+    return worst
+
+
+def silhouette(root):
+    """Prints a SILHOUETTE line per rule; returns the failures."""
+    pts, labels, faces = _labelled_points(root)
+    fails = []
+    for name, off, src in SIL_CAMERAS:
+        view, up, right = sil_axes(off, SIL_YAW_DEG)
+        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s yaw %.1f view_body=(%.3f, %.3f, %.3f)"
+              % (name, off[0], off[1], off[2], src, SIL_YAW_DEG, view[0], view[1], view[2]))
+    rams = sorted(set(l for l in labels if l.startswith("ram")))
+    teeth = sorted(set(l for l in labels if l.startswith("tooth_")))
+    by_label = {}
+    for p, l in zip(pts, labels):
+        by_label.setdefault(l, []).append(p)
+    axes = {name: sil_axes(off, SIL_YAW_DEG) for name, off, _ in SIL_CAMERAS}
+    best_ram = best_tooth = (-1, "")
+    for cam in SIL_APPROACH:
+        good_rams = good_teeth = 0
+        for part in rams + teeth:
+            outline = [p for p, l in zip(pts, labels) if l != part]
+            out_m, frac = sil_part_outside(by_label[part], outline, axes[cam])
+            print("SILHOUETTE row reactor %s %s outside_m=%.3f outside_frac=%.3f" % (cam, part, out_m, frac))
+            if part.startswith("ram") and out_m >= SIL_RAM_OUT_M and frac >= SIL_RAM_OUT_FRAC:
+                good_rams += 1
+            if part.startswith("tooth_") and out_m >= SIL_TOOTH_OUT_M:
+                good_teeth += 1
+        best_ram = max(best_ram, (good_rams, cam))
+        best_tooth = max(best_tooth, (good_teeth, cam))
+    if not sil_say(best_ram[0] >= SIL_RAM_COUNT, "reactor", best_ram[1], "rams",
+                   "count(outside_m>=%.1f,outside_frac>=%.1f)" % (SIL_RAM_OUT_M, SIL_RAM_OUT_FRAC), best_ram[0],
+                   ">=%d on over_shoulder or three_q" % SIL_RAM_COUNT):
+        fails.append("rams")
+    if not sil_say(best_tooth[0] >= SIL_TOOTH_COUNT, "reactor", best_tooth[1], "teeth",
+                   "count(outside_m>=%.1f)" % SIL_TOOTH_OUT_M, best_tooth[0],
+                   ">=%d on over_shoulder or three_q" % SIL_TOOTH_COUNT):
+        fails.append("teeth")
+    rows = {}
+    for t in teeth:
+        ys = [p[1] for p in by_label[t]]
+        if not sil_say(max(ys) - min(ys) >= SIL_TOOTH_MIN_H, "reactor", "3d", t, "height_m", max(ys) - min(ys),
+                       ">=%.1f" % SIL_TOOTH_MIN_H):
+            fails.append(t + " height")
+        rows.setdefault(t.rsplit("_", 1)[0], []).append(t)
+    for row, members in sorted(rows.items()):
+        if not sil_say(len(members) <= SIL_TOOTH_PER_ROW, "reactor", "3d", row, "teeth", len(members),
+                       "<=%d" % SIL_TOOTH_PER_ROW):
+            fails.append(row + " count")
+    for jaw in ("JawL", "JawR"):
+        gap = _jaw_standoff(pts, labels, faces, jaw)
+        if not sil_say(gap >= SIL_JAW_STANDOFF, "reactor", "3d", jaw, "standoff_m", gap, ">=%.1f" % SIL_JAW_STANDOFF):
+            fails.append(jaw + " standoff")
+    return fails
+
+
 # --- parts ---------------------------------------------------------------------------------
 
 
@@ -176,12 +435,12 @@ def drum(root):
     # thick copper barrel on a sandstone clevis foot, an iron gland at its mouth, the jaw's
     # bright piston rod rising out of it. Inside r 2.8 below 2 m.
     for a in (-RAM_DEG, RAM_DEG, 180.0 - RAM_DEG, 180.0 + RAM_DEG):
-        p.box("ancient_enamel", (0.6, 0.6, 0.2), loc=polar(RAM_R - 0.05, a, 0.1), rot=(0, 0, math.radians(a)),
-              color=SAND_DARK)
-        p.cyl("ancient_enamel", RAM_BARREL_R, RAM_BARREL_R, RAM_BARREL[1] - RAM_BARREL[0], 8,
-              loc=polar(RAM_R, a, sum(RAM_BARREL) / 2), color=COPPER)
-        p.cyl("ancient_enamel", RAM_BARREL_R, RAM_ROD_R + 0.04, 0.14, 8, loc=polar(RAM_R, a, RAM_BARREL[1] + 0.07),
-              color=IRON)
+        tagged(p, ram_label(a), p.box, "ancient_enamel", (0.6, 0.6, 0.2), loc=polar(RAM_R - 0.05, a, 0.1),
+               rot=(0, 0, math.radians(a)), color=SAND_DARK)
+        tagged(p, ram_label(a), p.cyl, "ancient_enamel", RAM_BARREL_R, RAM_BARREL_R, RAM_BARREL[1] - RAM_BARREL[0], 8,
+               loc=polar(RAM_R, a, sum(RAM_BARREL) / 2), color=COPPER)
+        tagged(p, ram_label(a), p.cyl, "ancient_enamel", RAM_BARREL_R, RAM_ROD_R + 0.04, 0.14, 8,
+               loc=polar(RAM_R, a, RAM_BARREL[1] + 0.07), color=IRON)
     p.ring("rubber", PED_R[1] - 0.05, PED_R[1] + 0.14, 0.18, 16, loc=(0, 0, 1.5))
     # Skirt flares above 2 m from the stem to the drum, an overhang the jaws' lower mandibles
     # stand clear of.
@@ -304,26 +563,31 @@ def jaw(root, side):
     z0, z1 = JAW_Z
     # KF7b fix: the lower mandible stands off the skirt (inner r 3.1 to 3.42), so a shade line
     # and ground show between jaw and drum.
-    sweep(p, "ancient_enamel", [(3.1, z0), (r1, z0), (r1, z0 + 0.62), (3.42, z0 + 0.62)], -JAW_SPAN, JAW_SPAN, 10,
-          SAND)
-    sweep(p, "ancient_enamel", [(r0, z1 - 0.5), (r1, z1 - 0.5), (r1, z1), (r0, z1)], -JAW_SPAN, JAW_SPAN, 10, SAND)
+    slab = "jawslab_" + p.name
+    tagged(p, slab, sweep, p, "ancient_enamel", [(3.1, z0), (r1, z0), (r1, z0 + 0.62), (3.42, z0 + 0.62)],
+           -JAW_SPAN, JAW_SPAN, 10, SAND)
+    tagged(p, slab, sweep, p, "ancient_enamel", [(r0, z1 - 0.5), (r1, z1 - 0.5), (r1, z1), (r0, z1)], -JAW_SPAN,
+           JAW_SPAN, 10, SAND)
     spine = math.radians(11)
-    sweep(p, "ancient_enamel", [(3.58, z0 + 0.62), (r1, z0 + 0.62), (r1, z1 - 0.5), (3.58, z1 - 0.5)],
-          -spine, spine, 2, SAND)
+    tagged(p, slab, sweep, p, "ancient_enamel", [(3.58, z0 + 0.62), (r1, z0 + 0.62), (r1, z1 - 0.5), (3.58, z1 - 0.5)],
+           -spine, spine, 2, SAND)
     span = math.degrees(JAW_SPAN)
+    n = 0
     for k in range(6):
         deg = -span + 6.0 + (2 * span - 12.0) * k / 5
         if abs(deg) < 12.0:
             continue  # the spine's place
-        tooth(p, 3.42, r1, deg, z0 + 0.6, 0.76, 1.0, TOOTH)  # KF7b fix: taller, an opposed bite
-        tooth(p, 3.42, r1, deg, z1 - 0.48, 0.7, -0.8, TOOTH)
+        tagged(p, "tooth_%s_lower_%d" % (p.name, n), tooth, p, 3.42, r1, deg, z0 + 0.6, 0.76, 1.0, TOOTH)
+        tagged(p, "tooth_%s_upper_%d" % (p.name, n), tooth, p, 3.42, r1, deg, z1 - 0.48, 0.7, -0.8, TOOTH)
+        n += 1
     # The rams' lugs and piston rods, under the lower mandible in its front and back quarters,
     # so a camera on either side of the drum sees one ram per jaw.
     for deg in (-RAM_DEG, RAM_DEG):
         p.box("ancient_enamel", (1.1, 0.7, 0.3), loc=polar(RAM_R + 0.3, deg, z0 + 0.05),
               rot=(0, 0, math.radians(deg)), color=SAND_DARK)
-        p.cyl("ancient_enamel", RAM_ROD_R, RAM_ROD_R, z0 - 0.05 - RAM_BARREL[1] + 0.35, 8,
-              loc=polar(RAM_R, deg, (z0 - 0.05 + RAM_BARREL[1] - 0.35) / 2), color=ROD)
+        tagged(p, ram_label(deg + (0.0 if side > 0 else 180.0)), p.cyl, "ancient_enamel", RAM_ROD_R, RAM_ROD_R,
+               z0 - 0.05 - RAM_BARREL[1] + 0.35, 8, loc=polar(RAM_R, deg, (z0 - 0.05 + RAM_BARREL[1] - 0.35) / 2),
+               color=ROD)
     p.cyl("ancient_enamel", 0.12, 0.12, 0.75, 8, loc=(3.6, 0.0, z0 + 0.15), rot=(math.pi / 2, 0, 0),
           color=IRON)
     return finish(p, HINGE, root, rot_z=0.0 if side > 0 else math.pi)
@@ -374,6 +638,7 @@ def seam_ring(root):
 
 def build():
     common.reset()
+    TAGS.clear()
     root = common.empty("WardenReactor")
     drum(root)
     for k in range(4):
@@ -730,6 +995,11 @@ def main():
     snapshot = rest(root)
     animate(root, snapshot)
     reset_pose(root, snapshot)
+    silhouette_fails = silhouette(root)
+    if silhouette_fails:
+        if "--count-only" in argv:
+            check(root)
+        raise SystemExit("warden_reactor silhouette FAILED: " + ", ".join(silhouette_fails))
     if "--count-only" in argv:
         check(root)
         return
