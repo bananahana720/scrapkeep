@@ -1,4 +1,10 @@
 extends SceneTree
+# 2026-10-10 (PD-CANNON): the shell is the Hoberman mecha from the approved concept set
+# (concepts/codex/cannon). Shell geometry re-pinned: the 0.98 glass sphere becomes the lattice
+# check, the 0.985 bound holds for Core with the ring's barrel reaching 1.50 and Pod modules
+# 1.25, glass leaves the slot set and copper joins it, and the sockets move to the barrel on
+# WeaponRing (LaneMuzzle, BarrelPivot, SectorPivot), the split ports and the rush ring; the yoke
+# grips are hoberman()'s Control.Grip.R/L at the same points. The pilot rig checks are unchanged.
 
 const PILOT := "res://assets/models/pilot_cannon_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_cannon.glb"
@@ -16,11 +22,17 @@ const PARENTS := {
 	"tail.01": "pelvis", "tail.02": "tail.01", "tool.R": "hand.R",
 }
 const SOCKETS := {
-	"LaneMuzzle": Vector3(0, -.29, -.85), "BarrelPivot": Vector3(0, -.29, -.44),
-	"SplitExit.R": Vector3(.32, -.30, .71), "SplitExit.L": Vector3(-.32, -.30, .71),
-	"SectorPivot": Vector3(0, -.56, -.60), "RushContact": Vector3(0, -.81, 0),
+	"LaneMuzzle": Vector3(0, 0, -1.472), "BarrelPivot": Vector3(0, 0, -1.13),
+	"SplitExit.R": Vector3(.869804, -.486676, .339873), "SplitExit.L": Vector3(-.869804, -.486676, .339873),
+	"SectorPivot": Vector3(0, .118, -1.165), "RushContact": Vector3(0, -.90, 0),
 	"Grip.R": Vector3(.32, .05, -.40), "Grip.L": Vector3(-.32, .05, -.40),
 }
+# Godot node names of the sockets (hoberman's controls carry the Control. prefix).
+const SOCKET_NODES := {"Grip.R": "Control_Grip_R", "Grip.L": "Control_Grip_L"}
+const SHELL_SLOTS := ["paint", "ancient_enamel", "rubber", "class_accent", "copper"]
+const CORE_LIMIT := .985
+const MODULE_REACH := 1.25
+const BARREL_REACH := 1.50
 var failures := 0
 
 
@@ -214,23 +226,31 @@ func check_shell(shell: Node3D) -> void:
 	check("Core rolling sibling", core.get_parent() == pod.get_parent())
 	check("Dome identity under Pod", dome.get_parent() == pod and dome.transform.is_equal_approx(Transform3D.IDENTITY))
 	check("no duplicate pilot", shell.find_child("Pilot", true, false) == null)
-	var radius := 0.0
-	var glass_error := 0.0
+	var ring := pod.get_node_or_null("WeaponRing") as Node3D
+	var core_radius := 0.0
+	var module_radius := 0.0
+	var barrel_radius := 0.0
 	var materials := {}
 	for mi: MeshInstance3D in meshes(shell):
 		var transform := to_root(mi, shell)
+		var on_ring := ring != null and (mi == ring or ring.is_ancestor_of(mi))
 		for surface in mi.mesh.get_surface_count():
 			materials[mi.mesh.surface_get_material(surface).resource_name] = true
 			for v in mi.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
 				var distance: float = (transform * v).length()
-				radius = maxf(radius, distance)
 				if mi == core:
-					glass_error = maxf(glass_error, absf(distance - .98))
-	check("resting sphere bound", radius <= .985001, "radius %.6f <= .985" % radius)
-	check("0.98 glass sphere", glass_error < .0001, "error %.8f, imported vertex tolerance .0001 m" % glass_error)
-	check("five shell material slots", materials.size() <= 5 and materials.keys().all(func(name): return name in ["paint", "ancient_enamel", "rubber", "class_accent", "glass"]), str(materials.keys()))
+					core_radius = maxf(core_radius, distance)
+				elif on_ring:
+					barrel_radius = maxf(barrel_radius, distance)
+				else:
+					module_radius = maxf(module_radius, distance)
+	check("lattice core bound", core_radius <= CORE_LIMIT + .000001 and core_radius >= .95, "Core radius %.6f in .95..%.3f" % [core_radius, CORE_LIMIT])
+	check("lattice core", core.find_child("Hub_00", false, false) != null and not materials.has("glass"), "Core carries Hub_00, no glass slot")
+	check("pod module reach", module_radius <= MODULE_REACH, "Pod parts off the ring reach %.3f <= %.2f" % [module_radius, MODULE_REACH])
+	check("barrel reach", barrel_radius > 1.02 and barrel_radius <= BARREL_REACH, "WeaponRing and MainBarrel reach %.3f in 1.02..%.2f" % [barrel_radius, BARREL_REACH])
+	check("five shell material slots", materials.size() <= 5 and materials.keys().all(func(name): return name in SHELL_SLOTS), str(materials.keys()))
 	for name in SOCKETS:
-		var socket := shell.find_child(name.replace(".", "_"), true, false) as Node3D
+		var socket := shell.find_child(SOCKET_NODES.get(name, name.replace(".", "_")), true, false) as Node3D
 		check("socket " + name, socket != null)
 		if socket != null:
 			var transform := to_root(socket, shell)
@@ -239,9 +259,11 @@ func check_shell(shell: Node3D) -> void:
 			if name.begins_with("SplitExit"):
 				direction = Vector3(.22 if name.ends_with("R") else -.22, 0, 1).normalized()
 			check("socket direction " + name, (transform.basis * Vector3.FORWARD - direction).length() < .00001)
-	for name in ["MainBarrel", "SplitPorts", "SectorShutter"]:
-		var hardware := shell.find_child(name, true, false)
-		check("kit " + name, hardware != null and hardware.get_parent() == pod)
+	check("kit WeaponRing", ring != null and ring.get_parent() == pod)
+	var barrel := shell.find_child("MainBarrel", true, false)
+	check("kit MainBarrel", barrel != null and barrel.get_parent() == ring and barrel is MeshInstance3D)
+	var shutter := shell.find_child("SectorShutter", true, false)
+	check("kit SectorShutter", shutter != null and shutter.get_parent() == barrel)
 
 
 func _run() -> void:
