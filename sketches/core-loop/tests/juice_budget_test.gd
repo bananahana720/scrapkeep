@@ -117,6 +117,23 @@ func _finish(camera) -> void:
 	_game.events.near_miss.emit("threat_lane", _game.player.ball_position())
 	_check("no stop on a roll", freezes == 0 and _sink_calls.size() == calls_before,
 		"%d ball-motion facts (%s) at 18 m/s send %d stops; the sink saw %d calls" % [rolled, ", ".join(BALL_FACTS), freezes, _sink_calls.size() - calls_before])
+	# The list of strike facts is closed: a reward card, a beacon and a fact nobody listed
+	# send no stop either, and each is still logged at zero.
+	var closed := {}
+	for fact in ["reward_rare", "beacon_unsealed", "unlisted_ball_motion"]:
+		_juice.reset_stops()
+		var seen: int = _juice.hit_stop_log.size()
+		var sink_seen := _sink_calls.size()
+		_juice.request_hit_stop(0.04, fact)
+		var rows: Array = _juice.hit_stop_log.slice(seen)
+		closed[fact] = rows.size() == 1 and rows[0][1] == 0.0 and _sink_calls.size() == sink_seen
+	_check("closed list", closed.values().all(func(v): return v),
+		"reward_rare, beacon_unsealed and an unlisted fact each log one zero stop and the sink saw none: %s" % [closed])
+	_juice.reset_stops()
+	var rare_seen: int = _juice.hit_stop_log.size()
+	_juice.request_hit_stop(0.04, "enemy_struck")
+	_check("listed fact stops", _juice.hit_stop_log.slice(rare_seen).filter(func(e: Array): return e[1] > 0.0).size() == 1,
+		"a listed strike fact sent straight to the budget sends one stop (the control for the closed list)")
 	var velocity_after: Vector3 = _game.player._rigid.linear_velocity
 	_check("movement not frozen", Vector2(velocity_after.x - velocity_before.x, velocity_after.z - velocity_before.z).length() < 0.5 and Engine.time_scale == 1.0,
 		"planar velocity %s before, %s after; Engine.time_scale %.2f" % [velocity_before, velocity_after, Engine.time_scale])

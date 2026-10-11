@@ -29,10 +29,13 @@ const SPINE_CAP_MS := 60.0
 # is capped per frame so a crowded fight stays readable); the crit row's 0.22 and the
 # blast's 0.35 pass untouched.
 const SHAKE_CAP := 0.5
-# Hit-stop belongs to the attacker's own strike. A fact naming the ball's motion, a roll or
-# a dodge past an attack never freezes time, so the pilot's movement is never held by it
-# (ror2/characters-and-feel: no hitstop on ball rolling; BIBLE: momentum is sacred).
-const BALL_STOP_FACTS := ["near_miss", "rolling", "roll", "dashed", "landed", "launched"]
+# Hit-stop belongs to the attacker's own strike, so only these facts may freeze time. The
+# list is closed: a fact naming the ball's motion, a roll, a dodge past an attack, a reward
+# card or a beacon asks for a stop that is logged at zero and never sent, and so does any
+# new fact nobody has listed (ror2/characters-and-feel: no hitstop on ball rolling;
+# BIBLE: momentum is sacred). "test" and "comfort" are the names the presentation tests
+# send straight to the budget.
+const STRIKE_STOP_FACTS := ["enemy_struck", "boss_weak_point_hit", "multi_kill", "harpoon_bit", "test", "comfort"]
 const STOP_FLOOR_MS := 4.0
 const STOP_TRIM_FLOOR_MS := 8.0
 # The harpoon biting a body stops time this long (LEGIBILITY section 3). A world latch sends none.
@@ -659,7 +662,7 @@ func request_shake(amount: float, time: float, _fact: String) -> void:
 # scaled by the viewer's Hit-stop setting; a stop over the budget is trimmed to fit.
 func request_hit_stop(seconds: float, fact: String) -> void:
 	var now := SimClock.msec()
-	if BALL_STOP_FACTS.has(fact):
+	if not STRIKE_STOP_FACTS.has(fact):
 		hit_stop_log.append([seconds, 0.0, fact, now])
 		return
 	var wanted := minf(seconds * 1000.0, SPINE_CAP_MS) * stop_scale
