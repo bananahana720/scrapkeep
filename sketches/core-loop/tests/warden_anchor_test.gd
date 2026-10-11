@@ -18,7 +18,7 @@ const WardenScript := preload("res://src/combat/warden.gd")
 # mid-charge, and finishes with the drop: a haul onto the staggered Warden that removes one
 # chunk. The moving mounting is a test driver through the per-kind hook (KF2 to KF4 supply
 # the real ones). The mind under the island drops the line 1.2 s after the pulse
-# (wardens/mind.md section 10, call 1). Wardens opt in as anchors (spec "anchor": true; the
+# (wardens/mind.md section 10, call 1). Wardens opt in as anchors (spec "harpoon_anchor": true; the
 # test sets it), so the authored boss arenas field none, and a park spec's mount_driver and
 # hardpoint_offsets arrive as JSON without erroring.
 
@@ -336,20 +336,21 @@ func _bot(stage: int, family: String, hang: float) -> void:
 # Park data arrives as JSON (KF8 wires landmark.warden): a string or dictionary mount_driver
 # and array hardpoint_offsets must not error. A Warden built from such a spec keeps no driver,
 # reads the offsets as Vector3 and drops the bad ones, and joins the anchors only on a literal
-# "anchor": true. A driver whose offset is not a Vector3 leaves the body at home.
+# "harpoon_anchor": true; the park schema's position "anchor" ([0, 22, 590]) neither opts in
+# nor blocks it. A driver whose offset is not a Vector3 leaves the body at home.
 func _spec_guards() -> void:
 	var at: Vector3 = _warden.global_position + Vector3(60.0, 0.0, 60.0)
 	var first = WardenScript.new()
 	_game.ctx.root.add_child(first)
 	first.global_position = at
 	first.setup(_player, _game.ctx.terrain, _game.ctx.root, Callable(_game.flow, "in_play"), 1.0,
-		{"stage": 1, "anchor": true, "mount_driver": "hoist",
+		{"stage": 1, "harpoon_anchor": true, "anchor": [0, 22, 590], "mount_driver": "hoist",
 			"hardpoint_offsets": [[0, 2, 0], [3.0, 0.0, 0.0], "bad", [1, 2], [1, "x", 2]]})
 	var second = WardenScript.new()
 	_game.ctx.root.add_child(second)
 	second.global_position = at + Vector3(20.0, 0.0, 0.0)
 	second.setup(_player, _game.ctx.terrain, _game.ctx.root, Callable(_game.flow, "in_play"), 1.0,
-		{"stage": 1, "anchor": "yes", "mount_driver": {"mount_offset": 1}, "hardpoints": "two",
+		{"stage": 1, "harpoon_anchor": "yes", "anchor": [0, 22, 590], "mount_driver": {"mount_offset": 1}, "hardpoints": "two",
 			"hardpoint_offsets": "crown"})
 	await _frames(10)
 	var first_home: Vector3 = first.home
@@ -367,7 +368,7 @@ func _spec_guards() -> void:
 	_report("a driver whose offset is not a Vector3 leaves the body at home",
 		second.global_position.is_equal_approx(second_home) and second.mount_velocity == Vector3.ZERO,
 		"body moved %.3f m, mount velocity %s" % [second.global_position.distance_to(second_home), second.mount_velocity])
-	_report("only a literal anchor true opts a Warden in", first.is_in_group(ANCHOR_GROUP)
+	_report("only a literal harpoon_anchor true opts a Warden in", first.is_in_group(ANCHOR_GROUP)
 			and not second.is_in_group(ANCHOR_GROUP) and not _warden.is_in_group(ANCHOR_GROUP),
 		"true -> %s, \"yes\" -> %s, the stage Warden with no flag -> %s" % [first.is_in_group(ANCHOR_GROUP),
 			second.is_in_group(ANCHOR_GROUP), _warden.is_in_group(ANCHOR_GROUP)])
@@ -407,7 +408,8 @@ func _latch_and_reel(family: String, framework: bool) -> void:
 		if kit.rope <= ANCHOR_MIN_ROPE + 0.01 and absf(_gap() - ANCHOR_MIN_ROPE) <= HANG_BAND:
 			reached = float(tick + 1) / Engine.physics_ticks_per_second
 			break
-	_report("%s: the held winch reels in to the minimum rope" % family, held and reached > 0.0 and worst <= STRETCH_OK,
+	_report("%s: the held winch reels in to the minimum rope" % family, held and reached > 0.0 and worst <= STRETCH_OK
+			and kit.rope >= ANCHOR_MIN_ROPE - 0.01,
 		"held %s, reached %.1f m after %.2f s, rope %.2f m, closest %.2f m, worst stretch %.2f m%s" % [held,
 			ANCHOR_MIN_ROPE, reached, kit.rope, closest, worst, "" if held else ", " + _latch_note])
 
@@ -418,6 +420,9 @@ func _hang(family: String, hoist) -> void:
 	var held := _held()
 	var worst := 0.0
 	var gaps := Vector2(INF, -INF)
+	# The rope never pays out below the minimum (the winch's stop); the gap alone would pass
+	# with the stop gone, since the line's arrival rests the ball near 6 m on its own.
+	var rope_low := INF
 	hoist.velocity = HANG_VELOCITY
 	for tick in _seconds(HANG_SECONDS):
 		_keep_quiet()
@@ -429,10 +434,12 @@ func _hang(family: String, hoist) -> void:
 		var gap := _gap()
 		gaps = Vector2(minf(gaps.x, gap), maxf(gaps.y, gap))
 		worst = maxf(worst, absf(gap - ANCHOR_MIN_ROPE))
+		rope_low = minf(rope_low, _kit().rope)
 	hoist.velocity = Vector3.ZERO
-	_report("%s: hangs at the minimum rope while the mounting moves" % family, held and worst <= HANG_BAND,
-		"held %s, distance to the hardpoint %.2f to %.2f m over %.1f s (rope %.2f m), worst %.2f m off %.1f%s" % [held,
-			gaps.x, gaps.y, HANG_SECONDS, _kit().rope, worst, ANCHOR_MIN_ROPE, "" if held else ", " + _latch_note])
+	_report("%s: hangs at the minimum rope while the mounting moves" % family, held and worst <= HANG_BAND
+			and rope_low >= ANCHOR_MIN_ROPE - 0.01,
+		"held %s, distance to the hardpoint %.2f to %.2f m over %.1f s (rope %.2f m, lowest %.2f m), worst %.2f m off %.1f%s" % [held,
+			gaps.x, gaps.y, HANG_SECONDS, _kit().rope, rope_low, worst, ANCHOR_MIN_ROPE, "" if held else ", " + _latch_note])
 
 
 # The mounting moves; the anchor moves with it and the rope's tension carries the ball.

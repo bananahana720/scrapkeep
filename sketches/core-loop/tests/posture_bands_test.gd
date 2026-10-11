@@ -45,7 +45,7 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 2026-10-10 (wave 13 KF1b): measured 66.6 / 32.3 (2.06) on the merged tree plus KF1b, equal to the pins, so
 # they stand. KF1's drift to 59.2 / 31.6 came from the slice Warden being a harpoon anchor: forced back on, the bot
 # breaks it in 60.9 / 33.6 with Ctrl hauls ungated and stalls (150 / 130 s) with them gated to the stagger; KF1b
-# makes anchors opt in (spec "anchor": true), and the slice Warden does not, so neither the haul gate nor the drift reaches it.
+# makes anchors opt in (spec "harpoon_anchor": true), and the slice Warden does not, so neither the haul gate nor the drift reaches it.
 const EXPECT_SMALL_S := 66.6
 const EXPECT_GROWN_S := 32.3
 const SWEEP := "res://tools/posture_sweep.tsv"

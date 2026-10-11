@@ -44,9 +44,9 @@ const Augments := preload("res://src/movement/augments.gd")
 #   per pulse cycle the lined hardpoint flares through the charge and the pulse shrugs the
 #   line off, shrug_delay seconds late (the island's swing); the ball keeps its velocity.
 #   A stagger cancels the charge, so every hardpoint holds through it.
-#   A Warden is an anchor only when its spec says "anchor": true (unit KF1b; the park
-#   loader sets it from landmark.warden); the authored boss arenas' Wardens are not, so
-#   their fights are unchanged. Ctrl on an anchor line hauls only inside the stagger
+#   A Warden is an anchor only when its spec says "harpoon_anchor": true (unit KF1b; the
+#   park loader sets it beside landmark.warden, whose "anchor" is a position, so the key
+#   differs); the authored boss arenas' Wardens are not, so their fights are unchanged. Ctrl on an anchor line hauls only inside the stagger
 #   (Augments.haul_open). The flare is picked once per charge, and the shrug cuts only the
 #   flaring hardpoint's line; the flare goes out when that line does.
 
@@ -443,7 +443,7 @@ func set_mount_driver(driver) -> void:
 
 # Whether a spec opts this Warden in as a harpoon anchor: only a literal true does.
 static func anchor_from(spec_in: Dictionary) -> bool:
-	var value = spec_in.get("anchor", false)
+	var value = spec_in.get("harpoon_anchor", false)
 	return value is bool and value
 
 
