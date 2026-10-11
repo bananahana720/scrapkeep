@@ -5,6 +5,7 @@ const SteamCycle := preload("res://src/world/steam_cycle.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const Activities := preload("res://src/world/activities.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 # The gorge's contraptions, built from the map's specs and run from world's physics
 # tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
@@ -35,6 +36,28 @@ const PUFF_SECONDS := 0.7
 # relative speed: the ball's own rolling resistance and drag act against the world,
 # not the deck, and would otherwise let it creep aft (measured: 6.6 m per crossing).
 const KEEP_STATION := 4.0
+
+# The park's contraption skins (design-v3/PARK.md section 4, KC9): a spec with a `recipe` key draws that recipe's GLBs in
+# place of the code primitive; a spec without one, or whose GLBs are missing, draws the primitive it always drew. The
+# skin changes the picture only: colliders, positions, cycles and gauges stay the code's. Each GLB wears the enamel slot
+# (recipe_props.gd) and takes its visibility ranges from its budget class in tools/asset_budgets.json, as park_recipes.gd.
+# Origins: the lift and barge at the body centre, a launcher at its mouth point, the gauge on the ground under its post.
+const SKIN_DIR := "res://assets/models/park/contraptions/"
+const SKIN_META := "contraption_recipe"
+const SKIN_ID_META := "contraption_id"
+const SKINS := {
+	"gauge": {"budget": "detail", "base": ["gauge"], "shells": ["gauge_detail1", "gauge_detail2"]},
+	"geyser_vent": {"budget": "detail", "base": ["geyser_vent"], "shells": ["geyser_vent_detail1", "geyser_vent_detail2"]},
+	"lift_platform": {"budget": "detail", "base": ["lift_platform"], "shells": ["lift_platform_detail1", "lift_platform_detail2"]},
+	"cannon": {"budget": "landform", "base": ["cannon"], "shells": ["cannon_detail1", "cannon_detail2"]},
+	"trebuchet": {"budget": "landform", "base": ["trebuchet"], "shells": ["trebuchet_detail1", "trebuchet_detail2"], "arm": ["trebuchet_arm"]},
+	"barge": {"budget": "landform", "base": ["barge"], "shells": ["barge_detail1", "barge_detail2"]},
+}
+# The recipe a launcher style wears; a spec naming another recipe for its style draws the primitive.
+const STYLE_RECIPE := {"cannon": "cannon", "trebuchet": "trebuchet", "geyser": "geyser_vent"}
+# The lift plate radius and the barge plan the GLBs are drawn at; the skin is scaled to the spec's radius and size in X and Z.
+const SKIN_LIFT_RADIUS := 4.5
+const SKIN_BARGE_SIDE := 14.0
 
 var map
 var ground: Callable
@@ -259,6 +282,85 @@ static func _at_mouth(ball: Vector3, mouth: Vector3, radius: float) -> bool:
 	return Vector2(ball.x - mouth.x, ball.z - mouth.z).length() <= radius and absf(ball.y - mouth.y) < 3.0
 
 
+# ---- Skins ----
+
+static func _recipe_of(spec: Dictionary) -> String:
+	return String(spec.get("recipe", ""))
+
+
+# The views of the recipe's GLB files under parent at xform, named Skin_<recipe>_<node>, in the enamel slot, tagged with
+# SKIN_META and SKIN_ID_META, with the budget class's visibility ranges (base_end for the base, the class's shell ranges for
+# shells, the first file's shell range index by order). files names GLBs of the recipe row's `part` ("base", "arm") and
+# shells the row's shell files. [] when any named file is missing, with nothing added, so the caller draws the primitive.
+static func _skin_views(spec: Dictionary, recipe: String, parent: Node3D, xform: Transform3D, part := "base", shells := true) -> Array[MeshInstance3D]:
+	var out: Array[MeshInstance3D] = []
+	var row: Dictionary = SKINS.get(recipe, {})
+	if row.is_empty() or not row.has(part):
+		return out
+	var files: Array = []
+	for file: String in row[part]:
+		files.append([file, 0])
+	if shells:
+		for file: String in row["shells"]:
+			files.append([file, files.size() - row[part].size() + 1])
+	for entry: Array in files:
+		if not ResourceLoader.exists(SKIN_DIR + String(entry[0]) + ".glb"):
+			push_warning("contraptions: %s missing, %s draws its primitive" % [entry[0], spec.get("id", "")])
+			return out
+	var ranges := ParkRecipes.ranges(String(row["budget"]))
+	for entry: Array in files:
+		var packed := load(SKIN_DIR + String(entry[0]) + ".glb") as PackedScene
+		if packed == null:
+			continue
+		var scene := packed.instantiate()
+		for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+			if source.mesh == null:
+				continue
+			var view := MeshInstance3D.new()
+			view.name = "Skin_%s_%s" % [recipe, source.name]
+			view.mesh = source.mesh
+			for i in source.mesh.get_surface_count():
+				var original := source.mesh.surface_get_material(i)
+				var material := RecipeProps.slot_material(String(original.resource_name) if original != null else "")
+				if material != null:
+					view.set_surface_override_material(i, material)
+			view.set_meta(SKIN_META, recipe)
+			view.set_meta(SKIN_ID_META, String(spec.get("id", "")))
+			view.set_meta(RecipeProps.META_FADE, true)
+			parent.add_child(view)
+			view.transform = xform * _node_in(source, scene)
+			var shell_index: int = int(entry[1])
+			if shell_index == 0:
+				view.visibility_range_end = float(ranges.get("base_end", 0.0))
+				view.visibility_range_end_margin = float(ranges.get("base_margin", 0.0))
+				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			else:
+				var shell_ranges: Array = ranges.get("shells", [])
+				var sr: Array = shell_ranges[shell_index - 1] if shell_index - 1 < shell_ranges.size() else [0.0, 0.0]
+				view.visibility_range_end = float(sr[0])
+				view.visibility_range_end_margin = float(sr[1])
+				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+			out.append(view)
+		scene.free()
+	return out
+
+
+static func _node_in(node: Node3D, top: Node) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	var walk: Node = node
+	while walk != null and walk != top:
+		if walk is Node3D:
+			xf = (walk as Node3D).transform * xf
+		walk = walk.get_parent()
+	return xf
+
+
+# Turns the GLB's +Z onto a launcher's aim.
+static func _aim_basis(aim: Vector3) -> Basis:
+	return Basis(Vector3.UP, atan2(aim.x, aim.z))
+
+
 # ---- Barges ----
 
 func _build_barge(spec: Dictionary) -> Dictionary:
@@ -277,7 +379,11 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 	var deck := MeshInstance3D.new()
 	body.add_child(deck)
 	var floor_at := Transform3D(Basis.IDENTITY, Vector3(0.0, size.y * 0.5 - 1.0, 0.0))
-	if RecipeProps.base("barge", deck, floor_at).is_empty():
+	# A row that names the park barge skin draws it, scaled to the row's plan; every other row draws what it drew before.
+	var skin_at := Transform3D(Basis.from_scale(Vector3(size.x / SKIN_BARGE_SIDE, 1.0, size.z / SKIN_BARGE_SIDE)), floor_at.origin)
+	if _recipe_of(spec) == "barge" and not _skin_views(spec, "barge", deck, skin_at).is_empty():
+		pass
+	elif RecipeProps.base("barge", deck, floor_at).is_empty():
 		var dm := BoxMesh.new()
 		dm.size = size
 		deck.mesh = dm
@@ -362,14 +468,18 @@ func _build_lift(spec: Dictionary) -> Dictionary:
 	cyl.height = 1.0
 	shape.shape = cyl
 	body.add_child(shape)
-	var plate := MeshInstance3D.new()
-	var pm := CylinderMesh.new()
-	pm.top_radius = spec["radius"]
-	pm.bottom_radius = spec["radius"]
-	pm.height = 1.0
-	plate.mesh = pm
-	plate.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
-	body.add_child(plate)
+	var skin_scale: float = float(spec["radius"]) / SKIN_LIFT_RADIUS
+	var skinned := _recipe_of(spec) == "lift_platform" and not _skin_views(spec, "lift_platform", body,
+		Transform3D(Basis.from_scale(Vector3(skin_scale, 1.0, skin_scale)), Vector3.ZERO)).is_empty()
+	if not skinned:
+		var plate := MeshInstance3D.new()
+		var pm := CylinderMesh.new()
+		pm.top_radius = spec["radius"]
+		pm.bottom_radius = spec["radius"]
+		pm.height = 1.0
+		plate.mesh = pm
+		plate.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
+		body.add_child(plate)
 	var piston := MeshInstance3D.new()
 	var sm := CylinderMesh.new()
 	sm.top_radius = 1.2
@@ -381,7 +491,7 @@ func _build_lift(spec: Dictionary) -> Dictionary:
 	body.add_child(piston)
 	add_child(body)
 	var home := foot + Vector3.DOWN * 0.45
-	var needle := _dial(foot + Vector3(float(spec["radius"]) + 1.6, 0.0, 0.0))
+	var needle := _dial(foot + Vector3(float(spec["radius"]) + 1.6, 0.0, 0.0), spec)
 	return {"spec": spec, "body": body, "home": home, "needle": needle, "cycle": null}
 
 
@@ -414,7 +524,33 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 	var target: Vector3 = spec["target"]
 	var aim := Vector3(target.x - mouth.x, 0.0, target.z - mouth.z).normalized()
 	var arm: MeshInstance3D = null
+	# A row whose recipe is its style's skin draws the GLB where the primitives below would go. The amber ring stays code.
+	var style: String = spec["style"]
+	var skin_xf := Transform3D(_aim_basis(aim), mouth)
+	var skinned := false
+	if STYLE_RECIPE.get(style, "") != "" and _recipe_of(spec) == STYLE_RECIPE[style]:
+		skinned = not _skin_views(spec, _recipe_of(spec), root, skin_xf).is_empty()
 	match spec["style"]:
+		"cannon" when skinned:
+			pass
+		"trebuchet" when skinned:
+			# The arm is a pivot the code poses each step (_launcher_pose); its GLB hangs from the pivot.
+			arm = MeshInstance3D.new()
+			arm.name = "TrebuchetArm"
+			arm.position = mouth - aim * 6.0 + Vector3.UP * 10.5
+			root.add_child(arm)
+			_skin_views(spec, "trebuchet", arm, Transform3D.IDENTITY, "arm", false)
+		"geyser" when skinned:
+			var steam := MeshInstance3D.new()
+			var steam_mesh := CylinderMesh.new()
+			steam_mesh.top_radius = 2.4
+			steam_mesh.bottom_radius = 1.6
+			steam_mesh.height = 10.0
+			steam.mesh = steam_mesh
+			steam.material_override = _steam_mat
+			steam.position = mouth + Vector3.UP * 4.0
+			root.add_child(steam)
+			arm = steam
 		"cannon":
 			var barrel := MeshInstance3D.new()
 			var bm := CylinderMesh.new()
@@ -483,7 +619,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			column.position = mouth + Vector3.UP * 4.0
 			root.add_child(column)
 			arm = column
-	var needle := _dial(mouth + aim.cross(Vector3.UP) * (float(spec["radius"]) + 2.0) + Vector3.DOWN * 1.0)
+	var needle := _dial(mouth + aim.cross(Vector3.UP) * (float(spec["radius"]) + 2.0) + Vector3.DOWN * 1.0, spec)
 	return {"spec": spec, "root": root, "mouth": mouth, "aim": aim, "needle": needle, "arm": arm, "cycle": null}
 
 
@@ -709,7 +845,17 @@ func _build_thermal(spec: Dictionary) -> Dictionary:
 # ---- Shared visuals ----
 
 # A bone gauge dial on a post; returns the needle to turn.
-func _dial(at: Vector3) -> MeshInstance3D:
+# A row with one of the park's skins draws the gauge skin for the post, face and redline; the needle stays code.
+func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
+	if SKINS.has(_recipe_of(spec)) and not _skin_views(spec, "gauge", self, Transform3D(Basis.IDENTITY, at)).is_empty():
+		var needle := MeshInstance3D.new()
+		var nm := BoxMesh.new()
+		nm.size = Vector3(0.12, 0.95, 0.05)
+		needle.mesh = nm
+		needle.material_override = _needle_mat
+		needle.position = at + Vector3.UP * 3.4 + Vector3(0.0, 0.0, 0.12)
+		add_child(needle)
+		return needle
 	var post := MeshInstance3D.new()
 	var pm := CylinderMesh.new()
 	pm.top_radius = 0.2
