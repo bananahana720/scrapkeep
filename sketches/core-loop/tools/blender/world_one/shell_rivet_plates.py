@@ -7,9 +7,11 @@
 #   II   six panels in the lower gaps, every vertex below Z -0.36
 #   III  the side gaps; a Core part with wider 6-sided tread caps carrying a raised chevron tread
 #        (corners inside 0.985)
-#   IV   the remaining gaps below Z 0.6 (the fin V carried back along the flanks); collars round
-#        the stack bases
-#   V    the remaining upper gaps: every gap but the front drill gap and the sight gaps
+#   IV   every remaining gap but the front drill gap and the sight gaps (the fin V carried back
+#        along the flanks; pilots/rivet.md section 5: "only the sight gaps to the head stay open");
+#        collars round the stack bases
+#   V    the heavy drill: five copper steps over the base drill and a lens face 0.20 m across
+#        whose centre is the base drill's glowing lens, on the layer's WeaponRing node
 # A panel that would touch a keep-out is slid up to 10 degrees inside its gap and shrunk to 55
 # percent before its gap is left open; the build prints every open gap with its reasons and fails
 # if any gap but the front drill gap and the sight gaps (centre inside a sight cone) stays open.
@@ -19,18 +21,21 @@
 # the gimbal bosses. Concept: concepts/codex/rivet/sheet.png (GAP PANEL, heft I, III and V) and
 # hero.png.
 #
-# 2026-10-10 (PD-RIVET fix round): class V no longer carries the heavy drill. A layer part hangs
-# under the Pod holder (hero_assets.gd fit_shell_into), which turns to the heading, while the
-# drill and DrillTip ride WeaponRing, which yaws to the aim, so a Pod-mounted heavy lens pointed
-# away from the beam whenever aim and heading differed. The five-step, 0.20 m form waits on a
-# loader route for ring-mounted layer parts (reported as a follow-up).
+# 2026-10-10 (PD-RIVET fix round): class V no longer carries the heavy drill on Pod. A layer part
+# hangs under the Pod holder (hero_assets.gd fit_shell_into), which turns to the heading, while
+# the drill and DrillTip ride WeaponRing, which yaws to the aim.
+# 2026-10-10 (PD-RIVET fix round 2): PD-0b's heft-layer route reparents a layer Pod's WeaponRing
+# node under the base ring (hero_assets.gd fit_shell_into), so the five-step heavy drill is back
+# at class V on that route and yaws with the aim. The class cap is 1 draw for every layer but
+# class III (docs/decisions.tsv w13-PD, 2026-10-10), and the panels (Pod) and the drill
+# (WeaponRing) are two meshes, so the class V upper panels moved to class IV and c5 is the drill
+# alone, one copper surface; its lens face is copper round the base drill's class_accent lens.
 #
 #   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
 #     --python world_one/shell_rivet_plates.py -- [--outdir <dir>]
 #
-# Each layer is one surface per part (detail class: 1 draw); class III has two parts, Pod panels
-# and Core caps, which ROSTER-LOOK section 5 (class III row) prices at 2 draws with a registry
-# exception.
+# Each layer is one surface (detail class: 1 draw); class III has two parts, Pod panels and Core
+# caps, which ROSTER-LOOK section 5 (class III row) prices at 2 draws with a registry exception.
 
 import math
 import os
@@ -58,7 +63,8 @@ FRONT_GAP = 7
 SCALES = (1.0, 0.85, 0.7, 0.55)
 SLIDES = (0, 2, 4, 6, 8, 10)
 TOWARD = 8
-# Wider than the base cap (0.07), so its rim shows round it; the face sits at 0.981 so the hexagon's
+# Wider than the base cap (radius sb.CAP_WIDTH / 2, 0.05 since PD-0b), so its rim shows round it,
+# and inside the hub drum (radius 0.10), so it hides no more of the pilot than the drum does; the face sits at 0.981 so the hexagon's
 # corners stay inside CORE_LIMIT (sqrt(0.981^2 + 0.085^2) = 0.9847).
 CAP_THICK = (0.085, 0.950, 0.981)
 # The chevron tread: a raised chevron 0.003 m proud of the cap face, its points inside 0.04 m of
@@ -66,10 +72,26 @@ CAP_THICK = (0.085, 0.950, 0.981)
 TREAD_H = 0.03
 TREAD_PROUD = 0.003
 FRONT_EYES = tuple(Vector((e.x, -e.y, e.z)) for e in sb.CHASE_EYES)
+# Class V heavy drill on the layer's WeaponRing, same axis as the base drill (x 0, Z DRILL_Z,
+# along +Y). Four copper steps (y0, y1, r0, r1) and the lens step, a thick annulus whose front
+# face spans radius 0.06 to 0.10 at DrillTip, so the base lens (0.06) glows at its centre. The
+# third step stays under the ring collar (Z -0.07 at radius 1.035 to 1.075): top at Z -0.08.
+HEAVY_STEPS = ((0.87, 0.97, 0.21, 0.195), (0.97, 1.02, 0.18, 0.165), (1.02, 1.09, 0.14, 0.13),
+               (1.09, 1.14, 0.125, 0.115))
+HEAVY_LENS = (1.14, 1.184, 0.064, 0.105, 0.004)     # y0, y1, inner, outer radius, front taper
+HEAVY_SIDES = 10
+# Ring parts the heavy drill must clear (horizontal radius in, out; Z low, high): band, collar.
+RING_CLEAR = ((sb.RING_BAND[0], sb.RING_BAND[1], sb.RING_BAND[3] - sb.RING_BAND[2] / 2 - 0.006,
+               sb.RING_BAND[3] + sb.RING_BAND[2] / 2 + 0.006),
+              (sb.RING_COLLAR[0], sb.RING_COLLAR[1], sb.RING_COLLAR[3] - sb.RING_COLLAR[2] / 2,
+               sb.RING_COLLAR[3] + sb.RING_COLLAR[2] / 2))
 # The drill rides WeaponRing and yaws to the aim, so it sweeps a band round the Pod: horizontal
-# radius past its rear face, height its first step's radius, each with 0.02 m clearance.
-SWEEP_R = rivet.DRILL_Y0 - 0.02
-SWEEP_Z = (rivet.DRILL_Z - rivet.DRILL_STEPS[0][2] - 0.02, rivet.DRILL_Z + rivet.DRILL_STEPS[0][2] + 0.02)
+# radius past its rear face, height its widest step's radius, each with 0.02 m clearance. The
+# heavy drill (class V) shows with every panel, so the band covers it as well as the base drill.
+_REAR = min(rivet.DRILL_Y0, HEAVY_STEPS[0][0])
+_WIDE = max(rivet.DRILL_STEPS[0][2], HEAVY_STEPS[0][2])
+SWEEP_R = _REAR - 0.02
+SWEEP_Z = (rivet.DRILL_Z - _WIDE - 0.02, rivet.DRILL_Z + _WIDE + 0.02)
 # Keep-out capsules on Pod (reason, a, b, radius), Blender axes: the stacks and their brackets,
 # the gimbal bosses.
 KEEP_OUT = []
@@ -212,7 +234,7 @@ def plan():
             sight = in_cone(centre, sb.CHASE_EYES) or in_cone(centre, FRONT_EYES)
             open_gaps[i] = (["sight cone"] if sight else []) + [w for w in why if w != "sight cone" or not sight]
             continue
-        out[4 if g.z < 0.6 else 5].append((d, h))
+        out[4].append((d, h))
         used.add(i)
     return out, open_gaps
 
@@ -234,10 +256,29 @@ def tread(part, n):
     part.prism("rubber", outline(TREAD_H), TREAD_PROUD, matrix=m)
 
 
+def heavy_drill():
+    """The class V drill module: five copper steps over the base drill, the last a thick annulus
+    whose front face is the 0.20 m lens round the base drill's glowing lens."""
+    w = Part("WeaponRing")
+    for y0, y1, r0, r1 in HEAVY_STEPS:
+        w.cyl("copper", r0, r1, y1 - y0, HEAVY_SIDES, loc=(0, (y0 + y1) / 2, rivet.DRILL_Z), rot=(-math.pi / 2, 0, 0))
+    y0, y1, r_in, r_out, taper = HEAVY_LENS
+    w.ring("copper", r_in, r_out, y1 - y0, HEAVY_SIDES, loc=(0, (y0 + y1) / 2, rivet.DRILL_Z),
+           rot=(-math.pi / 2, 0, 0), taper=taper)
+    sb._sharpen(w)
+    return w
+
+
 def build(n, panels):
     common.reset()
     root = common.empty("ShellRivetC%d" % n)
-    body, stripe = ("bone", "oxide") if n == 5 else ("petrol", "oxide")
+    if n == 5:
+        # Core and Pod stay as the empties the loader splits on; the drill rides Pod > WeaponRing.
+        core_obj = common.empty("Core", (0, 0, 0), root)
+        pod_obj = common.empty("Pod", (0, 0, 0), root)
+        heavy_drill().to_object((0, 0, 0), pod_obj)
+        return root, core_obj, pod_obj
+    body, stripe = "petrol", "oxide"
     pod = Part("Pod")
     for d, h in panels:
         chevron(pod, d, h, body, stripe)
@@ -261,7 +302,35 @@ def build(n, panels):
     return root, core_obj, pod_obj
 
 
+def check_drill(root, pod_obj):
+    """Class V: one mesh, WeaponRing under Pod, inside the drill sweep band, clear of the ring band
+    and collar, the lens face centred on DrillTip and 0.20 m across."""
+    tris = common.tri_total(root)
+    meshes = [o for o in common.tree(root) if o.type == "MESH"]
+    verts = sum(len(o.data.vertices) for o in meshes)
+    ring = meshes[0] if len(meshes) == 1 else None
+    pts = [ring.matrix_world @ v.co for v in ring.data.vertices] if ring else []
+    outside = sum(1 for p in pts if not (Vector((p.x, p.y)).length > SWEEP_R and SWEEP_Z[0] < p.z < SWEEP_Z[1]))
+    clash = sum(1 for p in pts for r_in, r_out, z0, z1 in RING_CLEAR
+                if r_in <= Vector((p.x, p.y)).length <= r_out and z0 <= p.z <= z1)
+    front = max((p.y for p in pts), default=0.0)
+    face = [p for p in pts if p.y > front - 1e-4]
+    centre = sum(face, Vector()) / max(1, len(face))
+    tip = Vector((0, rivet.DRILL_STEPS[-1][1] + 0.0015, rivet.DRILL_Z))
+    across = 2 * max((Vector((p.x, p.z - rivet.DRILL_Z)).length for p in face), default=0.0)
+    steps = len(HEAVY_STEPS) + 1
+    ok = (ring is not None and ring.name == "WeaponRing" and ring.parent == pod_obj and tris <= LAYER_TRIS
+          and verts <= LAYER_VERTS and len(ring.data.materials) == 1 and outside == 0 and clash == 0
+          and (centre - tip).length < 0.01 and abs(across - 0.20) < 0.006)
+    print("LAYER c5 drill steps=%d tris=%d verts=%d slots=%d outside_sweep=%d ring_clash=%d lens_to_tip=%.4f lens_across=%.3f %s"
+          % (steps, tris, verts, len(ring.data.materials) if ring else 0, outside, clash, (centre - tip).length, across,
+             "ok" if ok else "OUT"))
+    return ok
+
+
 def check(n, root, core_obj, pod_obj, panels):
+    if n == 5:
+        return check_drill(root, pod_obj)
     tris = common.tri_total(root)
     verts = sum(len(o.data.vertices) for o in common.tree(root) if o.type == "MESH")
     far = common.max_radius(pod_obj)

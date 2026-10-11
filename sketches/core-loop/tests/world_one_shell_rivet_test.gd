@@ -8,6 +8,13 @@ extends SceneTree
 # the heading while DrillTip yaws with the aim; c5 is one draw and keeps the aimed drill showing.
 # New checks: the lens stays on DrillTip with the ring yawed 30 degrees, the base draws per mesh
 # (pinned here, not read from the registry exception), and panels clear the drill's yaw sweep.
+# 2026-10-10 (PD-RIVET fix round 2): rebuilt on PD-0b's base (struts 0.06 m, caps 0.10 m). The
+# 16-draw Hoberman pilot mecha cap replaces the pending ratification (docs/decisions.tsv w13-PD).
+# Class V is the five-step heavy drill on the layer's WeaponRing (PD-0b's heft-layer route) and
+# its upper panels moved to class IV, since each layer but III is one draw. New checks: c5's
+# drill steps and 0.20 m lens face, the drill inside the sweep band the panels keep out of, and
+# the lens on DrillTip with the fitted shell's ring yawed 30 degrees (hero_assets fit_shell_into).
+# The sweep band grows to the heavy drill.
 
 # What it checks (P-UNITS PD-RIVET acceptance; ROSTER-LOOK sections 0 to 8):
 #   budget     shell class tris and verts; draws equal the registry row's exception.
@@ -17,7 +24,7 @@ extends SceneTree
 #              the cockpit controls (Lever, WinchLever, the lap bar and two pedals).
 #   drill      DrillTip faces forward on the centre line the parallel laser muzzles fire along;
 #              the lens sits on DrillTip with the ring yawed 30 degrees; 0.12 m across; three steps.
-#   draws      surfaces per mesh, pinned (the shell cap is 10; the excess waits on ratification).
+#   draws      surfaces per mesh, pinned, within the 16-draw Hoberman pilot mecha cap.
 #   stacks     at 11:30 and 12:30 from behind, rear, 0.18 m past the lattice outline.
 #   accent     class_accent only on the lens (Drill) and the exhaust mouths (Pod).
 #   outline    nothing breaks the outline at 4 or 8 o'clock from behind; fins lie flat on the
@@ -25,9 +32,10 @@ extends SceneTree
 #   colour     charcoal lattice enamel, bone seat.
 #   pod        sight cone empty; nothing past radius 1.0 below Y -0.6.
 #   variant    shell_rivet_calibrated: budget, contract, machinery at the same points.
-#   layers     shell_rivet_c2 to _c5: Core and Pod parts, detail budget and draws, panels inside
+#   layers     shell_rivet_c2 to _c4: Core and Pod parts, detail budget and draws, panels inside
 #              the lattice, out of the sight cone and clear of the drill's yaw sweep; II all
-#              below Y -0.35; V leaves the aimed Drill showing and carries no lens of its own.
+#              below Y -0.35. c5: Pod > WeaponRing heavy drill, one draw, five steps, a lens face
+#              0.20 m across, inside the sweep band, on DrillTip at a 30 degree ring yaw (fitted).
 #   rig        pilot_rivet_anim.glb: 25 ordered bones, meshes, triangles, seven clips.
 # The run must make EXPECTED_CHECKS checks, so an early return or a skipped loop fails it.
 
@@ -42,7 +50,7 @@ const LAYER := "res://assets/models/world_one/shell_rivet_c%d.glb"
 const RIG := "res://assets/models/pilot_rivet_anim.glb"
 const BUDGETS := "res://tools/asset_budgets.json"
 const REGISTRY := "res://assets/registry.json"
-const EXPECTED_CHECKS := 57
+const EXPECTED_CHECKS := 58
 const CORE_LIMIT := 0.985
 const LATTICE_OUTER := 0.975
 const LATTICE_INNER := 0.94
@@ -50,13 +58,17 @@ const LENS := 0.12
 const DRILL_STEPS := 3
 const STACK_RISE := 0.18
 const LAYER_DRAWS := {2: 1, 3: 2, 4: 1, 5: 1}
+const DRAW_CAP := 16
+const HEAVY_STEPS := 5
+const HEAVY_LENS := 0.20
+const DRILL_Y := -0.22
 # Surfaces per mesh in shell_rivet.glb: PD-0's base (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2)
 # plus the exhaust mouths on Pod, copper on WeaponRing, the Drill and the placeholder Pilot.
 const BASE_DRAWS := {"Core": 3, "Pod": 4, "Gyro": 1, "GyroInner": 1, "WeaponRing": 3, "Drill": 2, "Pilot": 1}
-# The band the drill sweeps as the ring yaws (Godot axes): horizontal radius past 0.86 m, height
-# from -0.41 to -0.03 m (shell_rivet_plates.py SWEEP_R, SWEEP_Z).
-const SWEEP_R := 0.86
-const SWEEP_Y := Vector2(-0.41, -0.03)
+# The band the drill sweeps as the ring yaws (Godot axes): horizontal radius past 0.85 m, height
+# from -0.45 to 0.01 m, sized to the class V heavy drill (shell_rivet_plates.py SWEEP_R, SWEEP_Z).
+const SWEEP_R := 0.85
+const SWEEP_Y := Vector2(-0.45, 0.01)
 const CONTROLS := ["Control_Grip_L", "Control_Grip_R", "Control_Trigger", "Control_Lever", "Control_WinchLever",
 	"Control_LapBar", "LapBar_L", "LapBar_R", "Control_Pedal_L", "Control_Pedal_R", "DecalPlate"]
 const MACHINERY := ["Drill", "DrillTip", "LaserMuzzle_L", "LaserMuzzle_R", "Exhaust_L", "Exhaust_R"]
@@ -174,9 +186,11 @@ func _budget(label: String, scene: Node, klass: String, exception: Dictionary) -
 
 func _draws(shell: Node3D) -> void:
 	var got := {}
+	var total := 0
 	for mi: MeshInstance3D in meshes(shell):
 		got[String(mi.name)] = mi.mesh.get_surface_count()
-	_t.check("shell draws per mesh", got == BASE_DRAWS, "%s, want %s" % [got, BASE_DRAWS])
+		total += mi.mesh.get_surface_count()
+	_t.check("shell draws per mesh", got == BASE_DRAWS and total <= DRAW_CAP, "%s (%d), want %s within %d" % [got, total, BASE_DRAWS, DRAW_CAP])
 
 
 # --- the base mecha --------------------------------------------------------------------------------
@@ -347,7 +361,7 @@ func _variant(shell: Node3D) -> void:
 # --- heft layers -----------------------------------------------------------------------------------
 
 func _layers() -> void:
-	for n in [2, 3, 4, 5]:
+	for n in [2, 3, 4]:
 		var path := LAYER % n
 		var layer := _load(path)
 		_t.check("c%d loads with Core and Pod" % n, layer != null and at(layer, "Core") != null and at(layer, "Pod") is MeshInstance3D, path)
@@ -385,12 +399,83 @@ func _layers() -> void:
 				for v in points(pod, layer, "paint"):
 					collars += 1 if v.z > 0.1 and v.y > 0.7 else 0
 				_t.check("c4 collars round the stack bases", collars > 0, "%d collar vertices" % collars)
-			5:
-				# The aimed Drill stays visible: no Replace_Drill, and no unaimed lens or copper on Pod.
-				var stray := points(pod, layer, "class_accent").size() + points(pod, layer, "copper").size()
-				_t.check("c5 leaves the aimed Drill showing", at(layer, "Replace_Drill") == null and stray == 0,
-					"Replace_Drill %s, %d lens or copper vertices on the layer" % [at(layer, "Replace_Drill") != null, stray])
 		layer.queue_free()
+	_heavy_drill()
+
+
+# Class V: the heavy drill rides the layer's Pod > WeaponRing, which hero_assets reparents under
+# the base ring, so it yaws with the aim and its lens face stays on DrillTip.
+func _heavy_drill() -> void:
+	var path := LAYER % 5
+	var layer := _load(path)
+	var pod := at(layer, "Pod") if layer != null else null
+	var module := pod.get_node_or_null("WeaponRing") as MeshInstance3D if pod != null else null
+	_t.check("c5 loads with Core, Pod and Pod > WeaponRing", layer != null and at(layer, "Core") != null and module != null, path)
+	if module == null:
+		for i in 4:
+			_t.check("c5 skipped", false)
+		if layer != null:
+			layer.free()
+		return
+	root.add_child(layer)
+	var c := counts(layer)
+	_t.check("c5 detail budget", c.tris <= 1500 and c.verts <= 3000 and c.draws == LAYER_DRAWS[5]
+		and c.draws <= int(_exception(path).get("draws", 1)) and slot_of(module.mesh, 0) == "copper",
+		"%d tris, %d verts, %d draws (want %d), slot %s" % [c.tris, c.verts, c.draws, LAYER_DRAWS[5], slot_of(module.mesh, 0)])
+	var pts := points(module, layer)
+	var levels := {}
+	var front := INF
+	for v in pts:
+		levels[snappedf(v.z, 0.005)] = true
+		front = minf(front, v.z)
+	var across := 0.0
+	var outside := 0
+	for v in pts:
+		if v.z < front + 0.0005:
+			across = maxf(across, 2.0 * Vector2(v.x, v.y - DRILL_Y).length())
+		outside += 0 if Vector2(v.x, v.z).length() > SWEEP_R and v.y > SWEEP_Y.x and v.y < SWEEP_Y.y else 1
+	_t.check("c5 five-step heavy drill with a 0.20 m lens face", levels.size() == HEAVY_STEPS + 1 and absf(across - HEAVY_LENS) < 0.006,
+		"%d shoulder planes (want %d), lens face %.3f m across" % [levels.size(), HEAVY_STEPS + 1, across])
+	_t.check("c5 drill inside the sweep band the panels keep out of", outside == 0, "%d vertices outside the band" % outside)
+	layer.queue_free()
+	# Fitted as the game fits it: class V, the ring yawed 30 degrees to the aim.
+	var hook := HeroAssets.new()
+	root.add_child(hook)
+	var ball := Node3D.new()
+	root.add_child(ball)
+	var rec: Dictionary = hook.fit_shell_into(ball, "runner_gunner", "", 5, {})
+	var fpod: Node3D = rec.get("pod")
+	var ring: Node3D = fpod.get_node_or_null("WeaponRing") if fpod != null else null
+	var heavy := ring.get_node_or_null("HeftC5/WeaponRing") as MeshInstance3D if ring != null else null
+	var tip := ring.get_node_or_null("DrillTip") as Node3D if ring != null else null
+	var detail := "ring %s, heavy drill %s, DrillTip %s" % [ring != null, heavy != null, tip != null]
+	var ok := false
+	if heavy != null and tip != null:
+		var want := deg_to_rad(30.0)
+		hook.steer_weapon_ring(fpod, Vector3(-sin(want), 0.0, -cos(want)), 10.0)
+		var fwd := -tip.global_basis.z.normalized()
+		var world: Array[Vector3] = []
+		var far := -INF
+		for s in heavy.mesh.get_surface_count():
+			for v in heavy.mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX]:
+				var w: Vector3 = heavy.global_transform * v
+				world.append(w)
+				far = maxf(far, w.dot(fwd))
+		var centre := Vector3.ZERO
+		var n := 0
+		for w in world:
+			if w.dot(fwd) > far - 0.0005:
+				centre += w
+				n += 1
+		centre /= maxf(1.0, float(n))
+		var off := tip.global_position - ball.global_position
+		var yaw := rad_to_deg(atan2(-fwd.x, -fwd.z))
+		ok = heavy.is_visible_in_tree() and centre.distance_to(tip.global_position) < 0.01 and absf(off.x) > 0.5 and absf(absf(yaw) - 30.0) < 1.0
+		detail = "lens face centre %s, DrillTip %s (%.4f m), ring yaw %.1f degrees, shown %s" % [centre, tip.global_position,
+			centre.distance_to(tip.global_position), yaw, heavy.is_visible_in_tree()]
+	_t.check("c5 lens on DrillTip with the fitted ring yawed 30 degrees", ok, detail)
+	ball.free()
+	hook.free()
 
 
 # --- the rig (unchanged) ---------------------------------------------------------------------------

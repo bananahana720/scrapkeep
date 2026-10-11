@@ -21,7 +21,12 @@
 # class_accent (exhaust mouths); Gyro; GyroInner; WeaponRing paint, rubber, copper (laser pods,
 # collar studs, drill hanger); Drill copper, class_accent (lens); the placeholder Pilot, which
 # fit_pilot_into hides in play (hero_assets.gd:1113-1115). 15 in the file, 14 drawn; the
-# registry row carries the draw exception.
+# registry row carries the draw exception under the 16-draw Hoberman pilot mecha cap
+# (docs/decisions.tsv w13-PD, 2026-10-10).
+#
+# 2026-10-10 (PD-RIVET fix round 2): rebuilt on PD-0b's shell_base (struts 0.06 m, caps 0.10 m,
+# ROSTER-LOOK section 3 rule 7 as amended); the lattice wrapper forwards strut_width and
+# cap_width, and the Calibrated ticks shrink to sit on the narrower bar.
 
 import math
 import os
@@ -71,6 +76,8 @@ BRACKET_R = 0.02
 FIN_AT = ((38.0, -32.0), (-38.0, -32.0))
 FIN_IN, FIN_OUT = 0.978, 0.983
 FIN_TIP, FIN_TAIL, FIN_HALF = 0.11, 0.07, 0.07
+# Calibrated scale tick: a diamond whose half-diagonal stays inside the bar's half width.
+TICK_R = round(sb.BAR_WIDTH * 0.42, 4)
 
 
 def flag(name, default=None):
@@ -133,14 +140,15 @@ def scale_ticks(part, pairs):
             p1 = sb._slerp(a, b, t1) * r_bar + s * sb.CHAIN_WIDTH / 2
             n = ((p0 + p1) / 2).normalized()
             p = p0.lerp(p1, 0.28) + n * (sb.STRUT_PAIR / 4 + 0.0015)
-            sb._disc(part, p, n, 0.03, 4, "paint", "bone", roll=0.785)
+            sb._disc(part, p, n, TICK_R, 4, "paint", "bone", roll=0.785)
 
 
 def make_lattice(variant):
     base = sb.lattice
 
-    def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None):
-        out = base(part, enamel, pairs, hub_sides, cap_sides, rng)
+    def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None,
+                strut_width=sb.BAR_WIDTH, cap_width=sb.CAP_WIDTH):
+        out = base(part, enamel, pairs, hub_sides, cap_sides, rng, strut_width, cap_width)
         for az, el in FIN_AT:
             fin(part, direction(az, el))
         if variant:

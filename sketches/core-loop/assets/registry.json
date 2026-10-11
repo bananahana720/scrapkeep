@@ -2894,7 +2894,7 @@
    "exception": {
     "draws": 15
    },
-   "exception_why": "PD-RIVET Hoberman mecha: the 10-draw base plus the placeholder Pilot (hidden in play by fit_pilot_into), class_accent on Pod (exhaust mouths), copper on WeaponRing (laser pods) and the spinning Drill (copper, lens); 14 drawn in play. Over the 10-draw shell cap pending the coordinator's docs/decisions.tsv ratification (PD-RIVET fix round, 2026-10-10)",
+   "exception_why": "PD-RIVET Hoberman mecha: the 10-draw base plus the placeholder Pilot (hidden in play by fit_pilot_into), class_accent on Pod (exhaust mouths), copper on WeaponRing (laser pods) and the spinning Drill (copper, lens); 14 drawn in play. Within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10: PD-0 base 10 plus up to 6 for machinery and the Pilot placeholder)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_rivet.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -2921,7 +2921,7 @@
    "exception": {
     "draws": 2
    },
-   "exception_why": "ROSTER-LOOK section 5, class III row: two parts, the Pod's side-gap panels and the Core's wider chevron tread caps, one draw each; the row prices them at 2 draws with this exception",
+   "exception_why": "ROSTER-LOOK section 5, class III row: two parts, the Pod's side-gap panels and the Core's wider chevron tread caps, one draw each; the row prices them at 2 draws with this exception (the class III layer allowance, docs/decisions.tsv w13-PD, 2026-10-10)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_rivet_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png"
@@ -2943,7 +2943,7 @@
    "path": "res://assets/models/world_one/shell_rivet_c5.glb",
    "class": "detail",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class V layer of shell_rivet)",
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class V layer of shell_rivet: the heavy drill on the layer's WeaponRing, which rides the base ring)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_rivet_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png"
@@ -2958,7 +2958,7 @@
    "exception": {
     "draws": 15
    },
-   "exception_why": "the same mecha as shell_rivet, whose row gives the draw breakdown; 14 drawn in play",
+   "exception_why": "the same mecha as shell_rivet, whose row gives the draw breakdown; 14 drawn in play, within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_rivet.py --variant calibrated",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png; design-v3/pilots/rivet.md section 7"
