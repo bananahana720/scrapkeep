@@ -23,6 +23,16 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 # A reduced-motion hit-edge flash keeps this share of its alpha; the store owns the number.
 const REDUCED_FLASH: float = SettingsStore.REDUCED_FLASH
 const SPINE_CAP_MS := 60.0
+# The most shake presentation asks of the camera on any frame, before the viewer's Screen
+# shake row scales it. Every juice shake goes through request_shake, so stacked hits, blasts
+# and any future row share this one ceiling. A start value (ror2/characters-and-feel: shake
+# is capped per frame so a crowded fight stays readable); the crit row's 0.22 and the
+# blast's 0.35 pass untouched.
+const SHAKE_CAP := 0.5
+# Hit-stop belongs to the attacker's own strike. A fact naming the ball's motion, a roll or
+# a dodge past an attack never freezes time, so the pilot's movement is never held by it
+# (ror2/characters-and-feel: no hitstop on ball rolling; BIBLE: momentum is sacred).
+const BALL_STOP_FACTS := ["near_miss", "rolling", "roll", "dashed", "landed", "launched"]
 const STOP_FLOOR_MS := 4.0
 const STOP_TRIM_FLOOR_MS := 8.0
 # The harpoon biting a body stops time this long (LEGIBILITY section 3). A world latch sends none.
@@ -417,7 +427,7 @@ func _flush_hits() -> void:
 	if heavy:
 		_thump(contact, float(row["heavy"]["kick"]), int(row["heavy"]["dust"]), "enemy_struck")
 	if camera != null and shake > 0.0:
-		camera.shake(shake, 0.2)
+		request_shake(shake, 0.2, "enemy_struck")
 	_hits.clear()
 	if stop > 0.0:
 		request_hit_stop(stop / 1000.0, "enemy_struck")
@@ -440,7 +450,7 @@ func _on_rebounded(enemy: Node3D, _speed: float) -> void:
 	var at: Vector3 = enemy.global_position if is_instance_valid(enemy) and enemy.is_inside_tree() else player.ball_position()
 	_thump(at, float(row["kick"]), int(row["dust"]), "enemy_rebounded")
 	if camera != null:
-		camera.shake(float(row["shake"]), 0.2)
+		request_shake(float(row["shake"]), 0.2, "enemy_rebounded")
 
 
 # A weak point cracked: a crit's stop and a small kick.
@@ -590,7 +600,7 @@ func _on_detonated(at: Vector3, crit: bool) -> void:
 	_blasts.append([at, crit])
 	_queue_flush()
 	if camera != null:
-		camera.shake(float(row["shake"]), 0.25)
+		request_shake(float(row["shake"]), 0.25, "sticky_detonated")
 	if vfx != null:
 		vfx.glyph("sticky_detonated", at + Vector3.UP * 0.8, 1.0, 4.0, 0.18, Vector3.ZERO, "flash")
 		vfx.glyph("sticky_detonated", at + Vector3.UP * 0.2, 1.0, 9.0, 0.4, Vector3.UP, "ring")
@@ -636,11 +646,22 @@ func _camera(hook: String, fact: String, direction: Vector3, amount: float, time
 			camera.kick(direction, amount)
 
 
+# The one way presentation asks the camera to shake, so every shake shares SHAKE_CAP. The
+# camera scales the capped amount by the viewer's Screen shake row.
+func request_shake(amount: float, time: float, _fact: String) -> void:
+	if camera == null:
+		return
+	camera.shake(minf(amount, SHAKE_CAP), time)
+
+
 # The one way presentation asks for a freeze, so every stop shares one budget. Gated by
 # the spacing and the short and long budgets, and
 # scaled by the viewer's Hit-stop setting; a stop over the budget is trimmed to fit.
 func request_hit_stop(seconds: float, fact: String) -> void:
 	var now := SimClock.msec()
+	if BALL_STOP_FACTS.has(fact):
+		hit_stop_log.append([seconds, 0.0, fact, now])
+		return
 	var wanted := minf(seconds * 1000.0, SPINE_CAP_MS) * stop_scale
 	_stops = _stops.filter(func(stop: Array): return now - int(stop[0]) < 1000)
 	var spent := 0.0
