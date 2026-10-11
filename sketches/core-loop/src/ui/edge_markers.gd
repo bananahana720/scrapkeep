@@ -54,6 +54,8 @@ func setup(game_ref) -> void:
 	game.events.flow_changed.connect(func(state: String):
 		if state != "gates":
 			gate_points.clear())
+	# Door keys repeat across runs, so a new run forgets what the last one found.
+	game.events.run_started.connect(func(_class_id: String): discovered.clear())
 
 
 # What the markers point at now: {at, kind, icon}, kind naming the event_kinds row and
