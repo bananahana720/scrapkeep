@@ -152,10 +152,16 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	var s := Site.new()
 	s.id = id
 	s.rule = RULES[id]
-	if id == "enemy_camp":
+	var spec_pay: Dictionary = spec.get("pay", {})
+	if id == "enemy_camp" or not spec_pay.is_empty():
 		s.rule = s.rule.duplicate(true)
+	if id == "enemy_camp":
 		s.rule["pack"] = spec.get("pack", s.rule["pack"])
-		s.rule["pay"] = s.rule["pay"].merged(spec.get("pay", {}), true)
+	# PARK.md 2.12: the park row authors the pay ladder (rarities, or a named part that wins when the
+	# table offers it). Scrap, source and where stay the rule's own, so the heft pace never moves.
+	for key in ["rarities", "named"]:
+		if spec_pay.has(key):
+			s.rule["pay"][key] = spec_pay[key]
 	s.name = "Activity_" + id
 	add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
