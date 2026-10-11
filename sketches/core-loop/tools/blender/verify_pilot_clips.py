@@ -9,9 +9,11 @@ clip at half-frame steps. Prints `PILOT_CLIPS: PASS <pilot> <n> clips` and exits
 `PILOT_CLIPS: FAIL <pilot>: <first failure>` and exits 1. The receipt goes to
 artifacts/local/alpha/push/w13/clips/<pilot>/verify.json (or --evidence).
 
-Transitional rule (until PE-INT): a GLB with only the seven kept clips passes as
-`PASS <pilot> 7 clips` while roster.json says has_table false for the pilot; with has_table
-true it fails "seven clips, no pose table".
+Transitional rule (until PE-INT): whether a pilot has a pose table is whether
+src/presentation/clips/<pilot>.json exists (PILOT-CLIPS section 8, the same file the game
+reads in hero_assets.gd _pilot_table). A GLB with only the seven kept clips passes as
+`PASS <pilot> 7 clips` while that file is absent; with the file present it fails "seven clips,
+no pose table", and an 18-clip GLB fails while the file is absent.
 
 --selftest builds a clean 18-clip GLB from the shipped Sable GLB in a temp dir (the eleven new
 clips keyed at rest, at Sable's end frames), seeds four defects one at a time (a clip missing,
@@ -159,6 +161,11 @@ def roster():
     return json.loads(ROSTER.read_text())
 
 
+def table_exists(pilot):
+    """The one source for 'this pilot has a pose table': the file exists."""
+    return (TABLES / ('%s.json' % pilot)).exists()
+
+
 def pose_table(pilot):
     path = TABLES / ('%s.json' % pilot)
     return json.loads(path.read_text()) if path.exists() else None
@@ -190,7 +197,7 @@ def check_structure(doc, binary, blob, base_doc, base_bin, data, pilot, has_tabl
         raise Failure('check 1: a RESET action is exported')
     if sorted(names) == sorted(kept):
         if has_table:
-            raise Failure('seven clips, no pose table: roster.json says has_table true but the GLB carries the seven kept clips only')
+            raise Failure('seven clips, no pose table: src/presentation/clips/%s.json exists but the GLB carries the seven kept clips only' % pilot)
         info['transitional'] = True
     else:
         missing = [c for c in kept + new if c not in names]
@@ -198,7 +205,7 @@ def check_structure(doc, binary, blob, base_doc, base_bin, data, pilot, has_tabl
         if missing or extra:
             raise Failure('check 1: clip set differs from roster.json: missing %s, extra %s' % (missing, extra))
         if not has_table:
-            raise Failure('check 1: 18 clips but roster.json says has_table false for %s' % pilot)
+            raise Failure('check 1: 18 clips but src/presentation/clips/%s.json does not exist' % pilot)
         info['transitional'] = False
     for name in names:
         lowered = name.lower()
@@ -411,9 +418,9 @@ def verify(pilot, glb, baseline, has_table=None, pose=True, quiet=False):
     data = roster()
     if pilot not in data['pilots']:
         raise SystemExit('unknown pilot %s; roster has %s' % (pilot, sorted(data['pilots'])))
-    if has_table is None:
-        has_table = bool(data['pilots'][pilot].get('has_table', False))
     table = pose_table(pilot)
+    if has_table is None:
+        has_table = table_exists(pilot)
     info = {'pilot': pilot, 'glb': str(glb), 'baseline': str(baseline) if baseline else None, 'has_table': has_table}
     try:
         doc, binary, blob = read_glb(glb)
@@ -518,8 +525,6 @@ def main():
     parser.add_argument('--glb')
     parser.add_argument('--evidence')
     parser.add_argument('--selftest', action='store_true')
-    # Reads the GLB as if roster.json said has_table true (the transitional rule's other branch).
-    parser.add_argument('--assume-table', action='store_true')
     args = parser.parse_args(argv)
     if args.selftest:
         sys.exit(0 if selftest() else 1)
@@ -527,8 +532,7 @@ def main():
         parser.error('a pilot or --selftest')
     data = roster()
     glb = Path(args.glb) if args.glb else SKETCH / data['pilots'][args.pilot]['glb']
-    passed, line, info = verify(args.pilot, glb, Path(args.baseline) if args.baseline else None,
-                                has_table=True if args.assume_table else None)
+    passed, line, info = verify(args.pilot, glb, Path(args.baseline) if args.baseline else None)
     folder = Path(args.evidence) if args.evidence else EVIDENCE / args.pilot
     folder.mkdir(parents=True, exist_ok=True)
     (folder / 'verify.json').write_text(json.dumps(info, indent=2, default=str) + '\n')

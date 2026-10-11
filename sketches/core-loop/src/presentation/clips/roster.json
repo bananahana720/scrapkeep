@@ -20,11 +20,11 @@
     "cannon": {"idle_loop": 85, "ult_ride_loop": 43, "class_up": 28, "cast_special": 19, "cast_line": 15, "ult_ready": 25, "ult_windup": 11, "ult_strike": 16, "ult_recover": 19, "smash": 18, "unlock": 85}
   },
   "pilots": {
-    "sable": {"class": "pylon_engineer", "glb": "assets/models/pilot_sable_anim.glb", "shell": "assets/models/world_one/shell_sable.glb", "has_table": false},
-    "rivet": {"class": "runner_gunner", "glb": "assets/models/pilot_rivet_anim.glb", "shell": "assets/models/world_one/shell_rivet.glb", "has_table": false},
-    "kest": {"class": "demolitions_caster", "glb": "assets/models/pilot_kest_anim.glb", "shell": "assets/models/world_one/shell_kest.glb", "has_table": false},
-    "tarn": {"class": "tarn", "glb": "assets/models/pilot_tarn_anim.glb", "shell": "assets/models/world_one/shell_tarn.glb", "has_table": false},
-    "tally": {"class": "tally", "glb": "assets/models/pilot_tally_anim.glb", "shell": "assets/models/world_one/shell_tally.glb", "has_table": false},
-    "cannon": {"class": "remembered_cannon", "glb": "assets/models/pilot_cannon_anim.glb", "shell": "assets/models/world_one/shell_cannon.glb", "has_table": false}
+    "sable": {"class": "pylon_engineer", "glb": "assets/models/pilot_sable_anim.glb", "shell": "assets/models/world_one/shell_sable.glb"},
+    "rivet": {"class": "runner_gunner", "glb": "assets/models/pilot_rivet_anim.glb", "shell": "assets/models/world_one/shell_rivet.glb"},
+    "kest": {"class": "demolitions_caster", "glb": "assets/models/pilot_kest_anim.glb", "shell": "assets/models/world_one/shell_kest.glb"},
+    "tarn": {"class": "tarn", "glb": "assets/models/pilot_tarn_anim.glb", "shell": "assets/models/world_one/shell_tarn.glb"},
+    "tally": {"class": "tally", "glb": "assets/models/pilot_tally_anim.glb", "shell": "assets/models/world_one/shell_tally.glb"},
+    "cannon": {"class": "remembered_cannon", "glb": "assets/models/pilot_cannon_anim.glb", "shell": "assets/models/world_one/shell_cannon.glb"}
   }
 }

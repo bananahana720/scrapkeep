@@ -5,6 +5,7 @@ extends RefCounted
 # animation_finished path, the bone-rest check, and a cockpit fixture Pod for the mecha motion.
 
 const ROSTER_PATH := "res://src/presentation/clips/roster.json"
+const TABLES_DIR := "res://src/presentation/clips"
 const FIXTURE_CONTROLS := ["Trigger", "Lever", "Crank", "Plunger", "Pedal.L", "Pedal.R", "LapBar"]
 
 
@@ -12,6 +13,29 @@ static func roster() -> Dictionary:
 	var text := FileAccess.get_file_as_string(ROSTER_PATH)
 	var parsed = JSON.parse_string(text) if text != "" else null
 	return parsed if parsed is Dictionary else {}
+
+
+# Whether a pilot has a pose table: the file exists (PILOT-CLIPS section 8). The same file the
+# game reads in hero_assets.gd _pilot_table and verify_pilot_clips.py table_exists; roster.json
+# carries no flag for it. dir is for the test's positive control only.
+static func has_table(stem: String, dir: String = TABLES_DIR) -> bool:
+	return stem != "" and FileAccess.file_exists(dir.path_join(stem + ".json"))
+
+
+# The clips a pilot's GLB must carry under the transitional rule: the seven kept ones, plus the
+# eleven new ones once the pilot has a pose table.
+static func required_clips(with_table: bool) -> Array:
+	var data := roster()
+	return Array(data.get("kept", [])) + (Array(data.get("new", [])) if with_table else [])
+
+
+# The required clips an animator lacks.
+static func missing_clips(animator: AnimationPlayer, with_table: bool) -> Array:
+	var missing: Array = []
+	for clip in required_clips(with_table):
+		if not animator.has_animation(clip):
+			missing.append(clip)
+	return missing
 
 
 # The roster stem (sable, rivet, ...) of a class id, or "".

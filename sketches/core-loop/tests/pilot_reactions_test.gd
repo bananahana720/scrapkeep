@@ -1,9 +1,11 @@
 extends SceneTree
 
 # Re-pinned 2026-10-11 (PE-0, design-v3/PILOT-CLIPS.md section 8): the rows now name the eleven
-# new clips, which today's GLBs lack, so the asset check follows src/presentation/clips/roster.json
-# instead of the rows: a pilot with has_table true carries all 18 roster clips, one without carries
-# the seven kept ones. Loops are allowed only for names ending in _loop. After a one-shot the base
+# new clips, which today's GLBs lack, so the asset check follows the roster instead of the rows: a
+# pilot whose src/presentation/clips/<pilot>.json exists carries all 18 roster clips, one without
+# carries the seven kept ones. Fix round 2026-10-11: the table fact is the file's existence (the
+# same file hero_assets.gd reads), not a roster flag; six new checks: the roster carries no flag,
+# and a positive control with a probe table under user:// requires 18 and fails a seven-clip GLB. Loops are allowed only for names ending in _loop. After a one-shot the base
 # loop idle_loop plays when the GLB has it, else the animator is stopped (the transitional branch;
 # PE-INT removes it once all six carry 18). A row may name its bus signal under "signal", so the
 # bus check reads signal_of(). The check count changes with the row and clip counts.
@@ -19,6 +21,7 @@ var failures := 0
 var game
 var ticks := 0
 var policy_only := false
+var probed := false
 
 
 func check(label: String, condition: bool) -> void:
@@ -42,6 +45,38 @@ func _initialize() -> void:
 	root.add_child(game)
 
 
+
+# The table fact has one source, the file. The roster carries no flag, and a probe table written
+# under user:// (never res://, which parallel tests read) flips the rule for a seven-clip GLB.
+func check_table_rule(animator: AnimationPlayer, stem: String) -> void:
+	var flagged := []
+	for name in Trigger.roster().get("pilots", {}):
+		if Trigger.roster()["pilots"][name].has("has_table"):
+			flagged.append(name)
+	check("roster.json carries no has_table flag " + str(flagged), flagged.is_empty())
+	check(stem + " has no pose table in res:// today", not Trigger.has_table(stem))
+	var dir := "user://pilot-clips-table-probe"
+	DirAccess.make_dir_recursive_absolute(dir)
+	var probe := FileAccess.open(dir.path_join(stem + ".json"), FileAccess.WRITE)
+	probe.store_string("{}")
+	probe.close()
+	var with_table := Trigger.has_table(stem, dir)
+	check("probe: " + stem + " with a pose table file reads as having one", with_table)
+	check("probe: a pose table requires 18 clips", Trigger.required_clips(with_table).size() == 18)
+	# A seven-clip animator built from the GLB's kept clips, so the probe holds after a pilot unit
+	# ships its 18-clip GLB.
+	var seven := AnimationPlayer.new()
+	var library := AnimationLibrary.new()
+	for clip in Trigger.required_clips(false):
+		if animator.has_animation(clip):
+			library.add_animation(clip, animator.get_animation(clip))
+	seven.add_animation_library("", library)
+	check("probe: a seven-clip GLB fails with a pose table (11 missing)", Trigger.missing_clips(seven, with_table).size() == 11)
+	seven.free()
+	DirAccess.remove_absolute(dir.path_join(stem + ".json"))
+	check("probe: removing the file removes the table", not Trigger.has_table(stem, dir))
+
+
 func check_assets() -> void:
 	for class_id in Hero.PILOTS:
 		var pilot: Node = load(Hero.PILOTS[class_id]).instantiate()
@@ -51,12 +86,14 @@ func check_assets() -> void:
 			pilot.free()
 			continue
 		root.add_child(pilot)
-		var roster := Trigger.roster()
 		var stem := Trigger.stem_of(class_id)
 		check(class_id + " has a roster row", stem != "")
-		var has_table: bool = roster.get("pilots", {}).get(stem, {}).get("has_table", false)
-		var required: Array = Array(roster.get("kept", [])) + (Array(roster.get("new", [])) if has_table else [])
-		check("%s carries %d roster clips (has_table %s)" % [class_id, required.size(), has_table], required.size() == (18 if has_table else 7))
+		if not probed:
+			probed = true
+			check_table_rule(animator, stem)
+		var has_table := Trigger.has_table(stem)
+		var required: Array = Trigger.required_clips(has_table)
+		check("%s carries %d roster clips (pose table %s)" % [class_id, required.size(), "present" if has_table else "absent"], required.size() == (18 if has_table else 7))
 		for clip in required:
 			check("%s / %s exists" % [class_id, clip], animator.has_animation(clip))
 		for clip in animator.get_animation_list():
