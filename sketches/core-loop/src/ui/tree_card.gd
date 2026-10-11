@@ -2,6 +2,7 @@ extends Button
 
 const Palette := preload("res://src/core/palette.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -63,9 +64,14 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 			grab_focus())
 
 
-# The slot key the node changes, as a key glyph id: weapon is key_lmb, smash key_ctrl.
+# The slot key the node changes, as a key glyph id (design-v3/SKILL-BAR.md section 5): the bar
+# slots their number (weapon key_1, special key_2, line key_3), the chips key_shift and
+# key_ctrl, the ultimate key_q.
 static func slot_key(node_row: Dictionary) -> String:
-	return "key_" + String(AbilityState.KEYS.get(node_row.get("key", ""), "")).to_lower()
+	var slot := String(node_row.get("key", ""))
+	if slot == AbilityState.ULTIMATE:
+		return Bindings.glyph("ultimate")
+	return "key_" + String(AbilityState.KEYS.get(slot, "")).to_lower()
 
 
 # The effect line as drawn: the world-one copy under the flag, else the node's own.

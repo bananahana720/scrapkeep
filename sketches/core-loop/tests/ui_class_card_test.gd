@@ -167,8 +167,8 @@ func _stub(id: String) -> Resource:
 # Re-pinned 2026-10-10 (wave 13 unit B2, SKILL-BAR section 5): a card shows the bar as it plays,
 # [1 weapon] [2 special] [3 line skill] [Q ultimate], over a chip row [RMB harpoon] [Shift verb]
 # [Ctrl smash] and the Space extras. Sable's harpoon chip is her grapple row and her Shift chip
-# her boost. Was one row of LMB, RMB or Shift, F, Ctrl. Each cell's words run 1 to 3 (gather
-# plate, link clips and the harpoon's one word).
+# her boost. Was one row of LMB, RMB or Shift, F, Ctrl. The bar cells keep 2 or 3 words; the
+# chips draw an icon and a small keycap and no words, so the six-card row keeps its floor.
 const BAR_KEYS := ["key_1", "key_2", "key_3", "key_q"]
 const CHIP_KEYS := ["key_rmb", "key_shift", "key_ctrl"]
 
@@ -191,8 +191,8 @@ func _check_rows(cards: Array) -> void:
 		var want_keys: Array = BAR_KEYS + CHIP_KEYS
 		var slots_ok := shown.size() >= want_keys.size()
 		for j in mini(want_keys.size(), shown.size()):
-			slots_ok = slots_ok and shown[j]["key"] == want_keys[j] and shown[j]["icon"] == want_icons[j] \
-				and shown[j]["words"].split(" ", false).size() in [1, 2, 3]
+			var words_ok: bool = shown[j]["words"].split(" ", false).size() in [2, 3] if j < BAR_KEYS.size() else shown[j]["words"] == ""
+			slots_ok = slots_ok and shown[j]["key"] == want_keys[j] and shown[j]["icon"] == want_icons[j] and words_ok
 		var rows: Array = card.key_rows()
 		var rows_ok: bool = rows.size() == 2 and rows[0] == BAR_KEYS and rows[1].slice(0, 3) == CHIP_KEYS
 		var extras: Array = shown.slice(want_keys.size()).map(func(k): return k["key"])

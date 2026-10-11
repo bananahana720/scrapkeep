@@ -128,8 +128,20 @@ func _check_layout() -> void:
 		"order %s; slot %.0f px, chip %.0f px, chip gap %.0f px, bar width %.0f vs last chip edge %.0f"
 			% [order, w.size.x, m.size.x, m.position.x - l.end.x, AbilityBar.bar_size(5).x, k.end.x])
 	var keys: Array = bar.slots.map(func(e): return e["key"])
-	_report("bar keys", keys == ["key_1", "key_2", "key_3", "key_shift", "key_ctrl"] and bar.drawn_words() == PackedStringArray(["1", "2", "3", "Shift", "Ctrl"]),
-		"keys %s, words %s" % [keys, bar.drawn_words()])
+	# A prompt on screen (the boost's Shift at the drop) hides its key on the bar; read it bare.
+	var none: Array[String] = []
+	var source: Callable = bar.hidden_source
+	bar.hidden_source = Callable()
+	bar.hide_keys(none)
+	var bare: PackedStringArray = bar.drawn_words()
+	bar.hidden_source = func() -> Array[String]:
+		var shift: Array[String] = ["key_shift"]
+		return shift
+	var hidden: PackedStringArray = bar.drawn_words()
+	bar.hidden_source = source
+	_report("bar keys", keys == ["key_1", "key_2", "key_3", "key_shift", "key_ctrl"] and bare == PackedStringArray(["1", "2", "3", "Shift", "Ctrl"])
+			and hidden == PackedStringArray(["1", "2", "3", "Ctrl"]),
+		"keys %s, words %s, with a live Shift prompt %s" % [keys, bare, hidden])
 	var chain: Control = _game.hud.chain_counter
 	_report("chain right of chips", chain.position.x >= bar.position.x + k.end.x,
 		"chain at x %.0f, last chip ends at %.0f" % [chain.position.x, bar.position.x + k.end.x])
