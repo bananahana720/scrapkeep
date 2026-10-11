@@ -20,6 +20,7 @@ extends SceneTree
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const T := preload("res://tests/support/t.gd")
@@ -220,7 +221,10 @@ func _check_kicker_roll() -> void:
 	ParkRecipes.place(kicker_row, parent, Callable(), publish)
 	ParkRecipes.place(_row("n", "sky_island", Vector2(0, 14), -20.0, Vector3(80, 14, 80), "net_deck", "ride_hop"), parent, Callable(), publish)
 	var map := StageMap.new()
-	map.kickers = [{"at": Vector2(0, 12), "dir": Vector2(0, 1), "width": 14.0}]
+	# The lip comes from park_map's own rule for the row, so the test fails loud if the two drift apart.
+	var lip: Dictionary = ParkMap.kicker_entry(kicker_row)
+	_t.check("(d) park_map puts the recipe kicker's lip a full length from the entry origin", (lip["at"] as Vector2).distance_to(Vector2(0, KICKER.size.z)) < EPS, str(lip["at"]))
+	map.kickers = [lip]
 	var ball := _ball(parent, Vector3(0, 1.05, -50), Vector3(0, 0, 20))
 	var speeds: Array = []
 	var launched := false
