@@ -46,11 +46,7 @@
    "provenance": {
     "recipe": "tools/blender/park/skyislands.py",
     "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 gives landform 1 draw. The base GLB holds the render mesh and its undrawn -col trimesh (park_recipes.gd COL_SUFFIX), and the inspector and asset_registry_test count every primitive, so the file measures 2. The render mesh is one draw; triangles and vertices stay inside the class."
+   }
   },
   {
    "id": "mesa_lip_kicker_detail1",
@@ -86,11 +82,7 @@
    "provenance": {
     "recipe": "tools/blender/park/skyislands.py",
     "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 gives landform 1 draw. The base GLB holds the render mesh and its undrawn -col trimesh (park_recipes.gd COL_SUFFIX), and the inspector and asset_registry_test count every primitive, so the file measures 2. The render mesh is one draw; triangles and vertices stay inside the class."
+   }
   },
   {
    "id": "net_deck_detail1",

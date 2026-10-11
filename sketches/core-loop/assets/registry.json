@@ -2324,11 +2324,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/bowls.py"
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; a park recipe GLB also carries its -col collision mesh (a second surface the registry test counts and park_recipes.gd never draws: it takes the mesh as the trimesh), so the base is 2 surfaces."
+   }
   },
   {
    "id": "bench_coping_detail1",
@@ -2362,13 +2358,7 @@
    "provenance": {
     "recipe": "tools/blender/park/grind.py",
     "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's canal_lip-rail_NN empties."
-   },
-   "exception": {
-    "tris": 8000,
-    "verts": 24000,
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the canal_lip-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+   }
   },
   {
    "id": "canal_lip_detail1",
@@ -2404,11 +2394,7 @@
    "provenance": {
     "recipe": "tools/blender/park/caverns.py",
     "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
-   },
-   "exception": {
-    "draws": 3
-   },
-   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+   }
   },
   {
    "id": "cavern_shell_detail1",
@@ -2442,11 +2428,7 @@
    "provenance": {
     "recipe": "tools/blender/park/caverns.py",
     "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
-   },
-   "exception": {
-    "draws": 3
-   },
-   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+   }
   },
   {
    "id": "cenote_pool_detail1",
@@ -2878,11 +2860,7 @@
    "provenance": {
     "recipe": "tools/blender/park/caverns.py",
     "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
-   },
-   "exception": {
-    "draws": 3
-   },
-   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+   }
   },
   {
    "id": "flooded_shaft_detail1",
@@ -2916,13 +2894,7 @@
    "provenance": {
     "recipe": "tools/blender/park/grind.py",
     "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's flume_span-rail_NN empties."
-   },
-   "exception": {
-    "tris": 8000,
-    "verts": 24000,
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the flume_span-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+   }
   },
   {
    "id": "flume_span_detail1",
@@ -2958,11 +2930,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "half_pipe_concrete_detail1",
@@ -3106,11 +3074,7 @@
    "provenance": {
     "recipe": "tools/blender/park/skyislands.py",
     "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 gives landform 1 draw. The base GLB holds the render mesh and its undrawn -col trimesh (park_recipes.gd COL_SUFFIX), and the inspector and asset_registry_test count every primitive, so the file measures 2. The render mesh is one draw; triangles and vertices stay inside the class."
+   }
   },
   {
    "id": "mesa_lip_kicker_detail1",
@@ -3233,11 +3197,7 @@
    "provenance": {
     "recipe": "tools/blender/park/skyislands.py",
     "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 gives landform 1 draw. The base GLB holds the render mesh and its undrawn -col trimesh (park_recipes.gd COL_SUFFIX), and the inspector and asset_registry_test count every primitive, so the file measures 2. The render mesh is one draw; triangles and vertices stay inside the class."
+   }
   },
   {
    "id": "net_deck_detail1",
@@ -3273,13 +3233,7 @@
    "provenance": {
     "recipe": "tools/blender/park/grind.py",
     "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's penstock_run-rail_NN empties."
-   },
-   "exception": {
-    "tris": 8000,
-    "verts": 24000,
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the penstock_run-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+   }
   },
   {
    "id": "penstock_run_detail1",
@@ -3315,13 +3269,7 @@
    "provenance": {
     "recipe": "tools/blender/park/grind.py",
     "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's pipeline_rail-rail_NN empties."
-   },
-   "exception": {
-    "tris": 8000,
-    "verts": 24000,
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the pipeline_rail-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+   }
   },
   {
    "id": "pipeline_rail_detail1",
@@ -3356,11 +3304,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/bowls.py"
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; a park recipe GLB also carries its -col collision mesh (a second surface the registry test counts and park_recipes.gd never draws: it takes the mesh as the trimesh), so the base is 2 surfaces."
+   }
   },
   {
    "id": "pit_haul_ramp_detail1",
@@ -3430,11 +3374,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "slot_canyon_flow_bend15",
@@ -3446,11 +3386,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "slot_canyon_flow_bend15_detail1",
@@ -3486,11 +3422,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "slot_canyon_flow_bend30_detail1",
@@ -3585,11 +3517,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/bowls.py"
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; a park recipe GLB also carries its -col collision mesh (a second surface the registry test counts and park_recipes.gd never draws: it takes the mesh as the trimesh), so the base is 2 surfaces."
+   }
   },
   {
    "id": "tailings_lip_detail1",
@@ -3710,11 +3638,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "wash_dropin_lip_detail1",

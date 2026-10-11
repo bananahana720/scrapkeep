@@ -46,8 +46,11 @@ func _measure(path: String) -> Dictionary:
 		var mi := m as MeshInstance3D
 		if mi.mesh == null:
 			continue
+		# A "-col" mesh is the collision trimesh the park loader never draws (park_recipes.gd COL_SUFFIX), so it counts
+		# toward triangles and vertices but not draws, as asset-inspect's collision_nodes (KC-INT, 2026-10-11).
+		var collision := String(mi.name).ends_with("-col")
 		for s in mi.mesh.get_surface_count():
-			draws += 1
+			draws += 0 if collision else 1
 			var arrays := mi.mesh.surface_get_arrays(s)
 			var pos: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			var idx = arrays[Mesh.ARRAY_INDEX]

@@ -10,11 +10,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "half_pipe_concrete_detail1",
@@ -50,11 +46,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "slot_canyon_flow_detail1",
@@ -90,11 +82,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "slot_canyon_flow_bend15_detail1",
@@ -130,11 +118,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "slot_canyon_flow_bend30_detail1",
@@ -170,11 +154,7 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
-   },
-   "exception": {
-    "draws": 2
-   },
-   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+   }
   },
   {
    "id": "wash_dropin_lip_detail1",

@@ -10,13 +10,7 @@
    "provenance": {
     "recipe": "tools/blender/park/grind.py",
     "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's canal_lip-rail_NN empties."
-   },
-   "exception": {
-    "tris": 8000,
-    "verts": 24000,
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the canal_lip-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+   }
   },
   {
    "id": "canal_lip_detail1",
@@ -52,13 +46,7 @@
    "provenance": {
     "recipe": "tools/blender/park/grind.py",
     "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's flume_span-rail_NN empties."
-   },
-   "exception": {
-    "tris": 8000,
-    "verts": 24000,
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the flume_span-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+   }
   },
   {
    "id": "flume_span_detail1",
@@ -94,13 +82,7 @@
    "provenance": {
     "recipe": "tools/blender/park/grind.py",
     "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's penstock_run-rail_NN empties."
-   },
-   "exception": {
-    "tris": 8000,
-    "verts": 24000,
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the penstock_run-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+   }
   },
   {
    "id": "penstock_run_detail1",
@@ -136,13 +118,7 @@
    "provenance": {
     "recipe": "tools/blender/park/grind.py",
     "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's pipeline_rail-rail_NN empties."
-   },
-   "exception": {
-    "tris": 8000,
-    "verts": 24000,
-    "draws": 2
-   },
-   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the pipeline_rail-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+   }
   },
   {
    "id": "pipeline_rail_detail1",

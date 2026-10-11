@@ -14,8 +14,8 @@ The bowl floor itself is the terrain height stamp (park_bake); these recipes sit
                     named "<id>-col-col" because the importer strips one -col hint (see build_recipe)
   <id>_detail1.glb  detail shell 1 (mid range), one "stone" surface, class `detail`
   <id>_detail2.glb  detail shell 2 (close range), one "stone" surface, class `detail`
-The draws in the base GLB count the -col mesh as one surface (asset_registry_test counts every surface), so the base of
-each recipe carries a registry exception on draws only (2), citing PARK.md section 9.
+The -col mesh counts toward triangles and vertices but not draws (asset_registry_test and asset-inspect collision_nodes,
+KC-INT), so each base is 1 draw inside the landform class with no registry exception.
 
 Convention, the same for the whole family: metres, +Y up, the ride direction and the fall line are +Z, the origin is the
 centre of the ENTRY LIP on the ground: the level approach runs from z -4 to z 0 at y 0, the first coping fillet starts at

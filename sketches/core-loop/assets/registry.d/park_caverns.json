@@ -10,11 +10,7 @@
    "provenance": {
     "recipe": "tools/blender/park/caverns.py",
     "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
-   },
-   "exception": {
-    "draws": 3
-   },
-   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+   }
   },
   {
    "id": "cenote_pool_detail1",
@@ -48,11 +44,7 @@
    "provenance": {
     "recipe": "tools/blender/park/caverns.py",
     "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
-   },
-   "exception": {
-    "draws": 3
-   },
-   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+   }
   },
   {
    "id": "flooded_shaft_detail1",
@@ -86,11 +78,7 @@
    "provenance": {
     "recipe": "tools/blender/park/caverns.py",
     "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
-   },
-   "exception": {
-    "draws": 3
-   },
-   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+   }
   },
   {
    "id": "cavern_shell_detail1",

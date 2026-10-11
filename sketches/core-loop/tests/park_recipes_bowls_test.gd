@@ -112,7 +112,8 @@ func _check_files(entries: Dictionary) -> void:
 				and row.get("path", "") == _glb(recipe, part), str(row))
 
 
-# Triangles, vertices and draws as asset_registry_test counts them: every surface of every mesh.
+# Triangles, vertices and draws as asset_registry_test counts them: every surface of every mesh, the undrawn -col
+# collision mesh counting toward triangles and vertices but not draws (KC-INT).
 func _measure(scene: Node) -> Dictionary:
 	var tris := 0
 	var verts := 0
@@ -120,8 +121,9 @@ func _measure(scene: Node) -> Dictionary:
 	for m: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		if m.mesh == null:
 			continue
+		var collision := String(m.name).ends_with(ParkRecipes.COL_SUFFIX)
 		for s in m.mesh.get_surface_count():
-			draws += 1
+			draws += 0 if collision else 1
 			var arrays := m.mesh.surface_get_arrays(s)
 			var pos: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			var idx = arrays[Mesh.ARRAY_INDEX]
