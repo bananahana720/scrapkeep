@@ -124,6 +124,52 @@ const BASE_ROWS := {
 		"line": "Reads the habit you use most this run, quotes your tune back wrong, then braces against that one verb."},
 }
 
+# The chassis column (SQ4; comps/roboquest/enemy-design-grammar.md, "a family is a chassis
+# class plus a movement class plus one read"). Every row, base or declared, names:
+# - chassis: its body class, one of CHASSIS_CLASSES;
+# - move_class: how it gets about, one of MOVE_CLASSES (fixed holds its ground, ground
+#   travels or lunges on the floor, airborne hovers or dives);
+# - threat_feature: the one visible part that is also its warning, what a still at game
+#   camera distance must show. Unique per row, so no two silhouettes share a read.
+# The table sits here, beside the rows, so a declared later-world row (roster_dig.gd,
+# roster_highdraft.gd) gets its columns without those files changing; _all_rows merges it in.
+const CHASSIS_CLASSES := ["crawler", "emplacement", "heavy", "hover", "swarm", "burrower", "cache"]
+const MOVE_CLASSES := ["fixed", "ground", "airborne"]
+
+# Start values from comps/roboquest/movement-and-feel.md (run about 2.35x the median enemy
+# and 1.2x the p90 enemy). The speed table in tests/roster_speed_ratio_test.gd reports against
+# them and gates from a later unit; nothing in play reads them.
+const RUN_TO_MEDIAN_RATIO := 2.35
+const FAST_ENEMY_RATIO := 1.2
+
+const CHASSIS := {
+	"chaser": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Lance snout that levels before the lunge"},
+	"lobber": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Mortar tube tipping up toward the ball"},
+	"miniboss": {"chassis": "heavy", "move_class": "ground", "threat_feature": "Plating that lifts off before the charge"},
+	"vault": {"chassis": "cache", "move_class": "fixed", "threat_feature": "Cracked panel showing the next Warden's plating"},
+	"warden": {"chassis": "heavy", "move_class": "fixed", "threat_feature": "Beacon seal lens at its core"},
+	"mag_trapper": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Disc launcher spinning up on its boom"},
+	"hooker": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Harpoon barrel aimed along its lane"},
+	"netcaster": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Net mast whose crown crackles"},
+	"bola_thrower": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Whirling bola arm at full swing"},
+	"plated_brute": {"chassis": "heavy", "move_class": "fixed", "threat_feature": "Slab plate raised overhead before the slam"},
+	"deflector": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Dish shield braced face-on to the ball"},
+	"winch_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Winch drum hanging under the hull"},
+	"gyro_jammer": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Gyro ring wobbling around its field"},
+	"swatter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Low paddle arm cocked at the sweep edge"},
+	"ramp_flipper": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Floor plate tilting on its hinge"},
+	"catch_trap": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cup petals opening over the floor"},
+	"reactor_relic": {"chassis": "heavy", "move_class": "fixed", "threat_feature": "Vent slits glowing before the eruption"},
+	"swarm_remnant": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Drones snapping into one lined-up formation"},
+	"mind_hand": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Raised arm whose lens locks on the ball"},
+	"burrower": {"chassis": "burrower", "move_class": "ground", "threat_feature": "Bulging floor line running along its lane"},
+	"drill_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Drill bit lowered over the bore point"},
+	"lamp_swarm": {"chassis": "swarm", "move_class": "airborne", "threat_feature": "Lure lamps blooming in a ring"},
+	"line_cutter": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cutter ring spinning up at its rim"},
+	"anchor_crew": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Winch post with the line paid out along its lane"},
+	"kite_drone": {"chassis": "hover", "move_class": "airborne", "threat_feature": "Mark lamp painting the dive spot below"},
+}
+
 # The Fleet counters in the order the director unlocks them, and the ancients.
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
@@ -141,7 +187,22 @@ static func _all_rows() -> Dictionary:
 		for id in table:
 			assert(not rows.has(id), "roster id declared twice: %s" % id)
 			rows[id] = table[id]
+	for id in rows:
+		rows[id] = rows[id].merged(CHASSIS.get(id, {}))
 	return rows
+
+
+# What is wrong with a row's chassis column: a missing or unknown chassis, a missing or
+# unknown move class, a blank threat feature. Empty when the row is sound.
+static func chassis_problems(entry: Dictionary) -> Array:
+	var problems := []
+	if not String(entry.get("chassis", "")) in CHASSIS_CLASSES:
+		problems.append("chassis")
+	if not String(entry.get("move_class", "")) in MOVE_CLASSES:
+		problems.append("move_class")
+	if String(entry.get("threat_feature", "")).strip_edges() == "":
+		problems.append("threat_feature")
+	return problems
 
 
 # A kind is built when it needs no script of its own or its script file exists.
