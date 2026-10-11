@@ -6,7 +6,10 @@
 #
 #   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
 #     --python world_one/shell_neutral.py -- [--out <file.glb>] [--pairs N] [--cheap] [--count-only]
+#     [--strut W] [--cap D]
 #
+# --strut and --cap set the bar face width and tread cap diameter in metres (defaults
+# shell_base.BAR_WIDTH and CAP_WIDTH, PD-0b's strut table).
 # --pairs sets the X-pairs per hub-to-hub link (default 2), --cheap uses 6-sided hub drums
 # and caps, and --count-only prints the TRIS and HOBERMAN lines without exporting, for the
 # budget table at 2, 3 and 5 pairs (ROSTER-LOOK section 5).
@@ -36,11 +39,14 @@ def main():
     common.reset()
     pairs = int(flag("--pairs", 2))
     sides = 6 if flag("--cheap") else 8
-    shell = sb.hoberman("Neutral", enamel="petrol", seat="bone", pairs=pairs, hub_sides=sides, cap_sides=sides)
+    strut = float(flag("--strut", sb.BAR_WIDTH))
+    cap = float(flag("--cap", sb.CAP_WIDTH))
+    shell = sb.hoberman("Neutral", enamel="petrol", seat="bone", pairs=pairs, hub_sides=sides, cap_sides=sides,
+                        strut_width=strut, cap_width=cap)
     tris = common.tri_total(shell["root"], skip=(shell["pilot"].name,))
     core_tris = common.tris(shell["core"])
-    print("HOBERMAN Neutral pairs=%d hub_sides=%d tris=%d core=%d rest=%d target=%d %s"
-          % (pairs, sides, tris, core_tris, tris - core_tris, TARGET_TRIS, "fits" if tris <= TARGET_TRIS else "over"))
+    print("HOBERMAN Neutral pairs=%d hub_sides=%d strut=%.3f cap=%.3f tris=%d core=%d rest=%d target=%d %s"
+          % (pairs, sides, strut, cap, tris, core_tris, tris - core_tris, TARGET_TRIS, "fits" if tris <= TARGET_TRIS else "over"))
     print("HUBS %d GAPS %d" % (len(shell["hubs"]), len(shell["gaps"])))
     if flag("--count-only"):
         return
