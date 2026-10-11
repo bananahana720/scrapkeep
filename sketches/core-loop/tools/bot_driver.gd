@@ -354,6 +354,7 @@ var _anchor_lined := false
 var _anchor_below := 0.0
 var _haul_made := false
 var _haul_above := false
+var _haul_pressed_above := false
 var _haul_chunks := -1
 var _drop_jumped := false
 var _anchor_chunks_seen := -1
@@ -1387,6 +1388,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_anchor_lined = false
 		_anchor_below = 0.0
 		_haul_made = false
+		_haul_pressed_above = false
 		_drop_jumped = false
 		_anchor_seen_hung = false
 	_anchor_vy = (at.y - _anchor_last_y) / maxf(delta, 0.0001)
@@ -1493,20 +1495,24 @@ func _anchor_ride(target: Node3D, staggered: bool, ball: Vector3, delta: float) 
 		if kit.line_state == Augments.LINE_SMASH:
 			_goal = "haul"
 			_harpoon_commit = true
+			# A haul counts once the kit has committed it (Augments.haul_open let the Ctrl press
+			# through), not when the hand decides to press: a break in a stagger the bot only
+			# meant to haul is not a finish from the line (KF-BOT fix round, mutation b).
+			if not _haul_made:
+				_haul_made = true
+				_haul_above = _haul_pressed_above
+				_haul_chunks = int(target.chunks_left())
+				_count("latch_hauls")
+				if _haul_above:
+					_count("drop_hauls")
+				if trace:
+					print("    haul t=%.2f above=%s ball=%s point=%s stagger_left=%.2f" % [game.run.stage_time, _haul_above, ball,
+						point, target.stagger_left()])
 		elif above or _anchor_below > DROP_WAIT:
 			_goal = "drop" if above else "haul from below"
 			# A fresh Ctrl press: one that hit-stop swallowed comes up for a tick and goes again.
 			_harpoon_commit = not game.player._brake_was_held
-			if not _haul_made:
-				_haul_made = true
-				_haul_above = above
-				_haul_chunks = int(target.chunks_left())
-				_count("latch_hauls")
-				if above:
-					_count("drop_hauls")
-				if trace:
-					print("    haul t=%.2f above=%s ball=%s point=%s stagger_left=%.2f" % [game.run.stage_time, above, ball, point,
-						target.stagger_left()])
+			_haul_pressed_above = above
 		else:
 			_goal = "drop wait"
 			_anchor_below += delta
@@ -1540,6 +1546,7 @@ func _watch_haul(target: Node3D, staggered: bool) -> void:
 		_haul_chunks = left
 	if not staggered:
 		_haul_made = false
+		_haul_pressed_above = false
 		_drop_jumped = false
 
 
