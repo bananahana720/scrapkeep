@@ -21,8 +21,12 @@ const BuildSweep := preload("res://tools/build_sweep.gd")
 # Time to kill is printed per stack row (report now; the numbers gate nothing yet).
 
 const EPS := 1e-6
+# A runtime script error aborts a check function without failing the run, so every
+# check must report: fewer than this many verdicts is itself a failure.
+const EXPECTED_REPORTS := 8
 
 var _failures := 0
+var _reports := 0
 
 
 func _initialize() -> void:
@@ -31,11 +35,15 @@ func _initialize() -> void:
 	_check_spike_pool_rule()
 	_check_stack_arm()
 	_check_compose_arm()
+	if _reports != EXPECTED_REPORTS:
+		_failures += 1
+		print("FAIL report count: %d of %d checks reported (a check died mid-way)" % [_reports, EXPECTED_REPORTS])
 	print("stack_sweep_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
+	_reports += 1
 	print("%s %s: %s" % ["PASS" if ok else "FAIL", label, detail])
 	if not ok:
 		_failures += 1
@@ -112,7 +120,7 @@ func _check_stack_arm() -> void:
 	var caught := [BuildSweep.row_problems(past_cap).size(), BuildSweep.row_problems(growing).size(),
 		BuildSweep.row_problems(spike).size()]
 	_report("stack arm controls fire", caught.all(func(c): return c > 0), "problems per planted row %s" % [caught])
-	BuildSweep.print_stack(rows)
+	BuildSweep.print_stack_table(rows)
 
 
 func _ramp(start: float, step: float, accelerate := false) -> Array:
@@ -123,15 +131,13 @@ func _ramp(start: float, step: float, accelerate := false) -> Array:
 
 
 func _check_compose_arm() -> void:
-	var t0 := Time.get_ticks_msec()
 	var stats: Dictionary = BuildSweep.compose_arm(BuildSweep.DEFAULT_SEED, BuildSweep.COMPOSE_BUILDS)
-	var ms := Time.get_ticks_msec() - t0
-	BuildSweep.print_compose(stats)
+	BuildSweep.print_compose_table(stats)
 	_report("composition arm", stats["builds"] == 10000 and stats["draws"] >= 60000 and stats["tag3_share"] >= 0.30
 		and stats["unspecified_pairs"] == 0 and stats["repeats_per_10k"] <= 1.0,
-		"%d builds, %d draws, %.1f%% reach 3+ tags, %d unspecified pairs, %.2f offer repeats per 10,000 draws (%d ms)"
+		"%d builds, %d draws, %.1f%% reach 3+ tags, %d unspecified pairs, %.2f offer repeats per 10,000 draws"
 			% [stats["builds"], stats["draws"], 100.0 * stats["tag3_share"], stats["unspecified_pairs"],
-				stats["repeats_per_10k"], ms])
+				stats["repeats_per_10k"]])
 	var again: Dictionary = BuildSweep.compose_arm(7, 300)
 	var twice: Dictionary = BuildSweep.compose_arm(7, 300)
 	var other: Dictionary = BuildSweep.compose_arm(8, 300)
