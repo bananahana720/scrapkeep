@@ -596,6 +596,9 @@ static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), pub
 		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
 	var node := place(row, parent, seat(row, ground), publish)
 	if node != null and stamp_replaces(row):
+		# PARK.md section 4's rows are "height stamp plus a recipe": for a greybox stand-in (the fixture's deck, lip and
+		# apron) the stamp is the whole shape, so the row keeps no Collider of its own and the stamped ground collides.
+		# park_place_test's collider-vs-stamp report records this reading per row.
 		for part in ["Collider", "Greybox"]:
 			var child := node.get_node_or_null(part)
 			if child != null:

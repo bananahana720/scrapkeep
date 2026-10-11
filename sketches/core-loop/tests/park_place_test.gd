@@ -8,6 +8,14 @@ extends SceneTree
 # lattice has a world aim hit within 40 m, probed as tools/traversal_line.gd _anchored probes; a planted 80 m pitch
 # fails that. The test also records how each recipe's collider meets the stamped ground and the placed draw count
 # (report only; KB6 gates draws). Evidence: artifacts/local/alpha/push/w13/place/park_place.json.
+#
+# 2026-10-11 (w13 KB9 round 3): the judged anchor set is explicit. A field lattice point inside another built row's
+# footprint or its run-out (park_recipes.gd clear_zones footprints, ANCHOR_RUNOUT_M at ends and ANCHOR_SIDE_M at
+# sides) is that row's to anchor and is left out of the judged set (the 06:47 w13-park ruling keeps that exclusion);
+# so is a point inside a post. Every other point is judged, lane points (route legs and the waymarks chain) included
+# and also counted on their own. The run prints and the report records the excluded counts beside the judged count.
+# The bus is checked on its own, apart from any sensor: the terrain is the one World.setup builds on a stand-in context,
+# its publish must be a valid Callable, and a probe fact sent through it must arrive once on ctx.events.world_fact.
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -17,6 +25,8 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const RigidBall := preload("res://src/movement/rigid_ball.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const World := preload("res://src/world/world.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
 const FRAMES_MAX := 3000
@@ -50,11 +60,38 @@ func _run() -> void:
 	var bus = GameEvents.new()
 	holder.add_child(bus)
 	bus.world_fact.connect(func(kind: String, at: Vector3) -> void: _heard.append([kind, at]))
-	var terrain = Terrain.new(TABLE)
-	if "publish" in terrain:
-		terrain.publish = bus.world_fact.emit
-	terrain.build(holder)
+	# The terrain is the one World.setup builds (world.gd), on a stand-in context with this test's bus, so the sensors
+	# below publish through world.gd's own wiring.
+	var ctx := StandInCtx.new()
+	ctx.events = bus
+	ctx.stages = StandInTable.new(TABLE["DEFS"])
+	ctx.root = holder
+	ctx.tuning = Tuning.new()
+	ctx.player = StandInPlayer.new()
+	holder.add_child(ctx.player)
+	ctx.codex = StandInCodex.new()
+	holder.add_child(ctx.codex)
+	ctx.flow = StandInFlow.new()
+	holder.add_child(ctx.flow)
+	var world := World.new()
+	holder.add_child(world)
+	world.setup(ctx)
+	var terrain = ctx.terrain
 	terrain.use(1)
+
+	# The bus, independent of any sensor: world.gd handed terrain a valid publish, and a fact sent through it reaches
+	# the stand-in context's events.world_fact.
+	var publish = terrain.get("publish")
+	var bus_valid: bool = publish is Callable and (publish as Callable).is_valid()
+	var probe := Vector3(-1234.5, 67.0, 890.25)
+	_heard.clear()
+	if bus_valid:
+		(publish as Callable).call("ride_chute", probe)
+	var probe_heard := _heard.filter(func(h: Array) -> bool: return h[0] == "ride_chute" and (h[1] as Vector3).is_equal_approx(probe))
+	print("park_place_test: World.setup handed terrain publish %s; a probe fact through it heard %d times on ctx.events.world_fact" % [str(publish), probe_heard.size()])
+	t.check("World.setup hands terrain a valid publish Callable", bus_valid, str(publish))
+	t.eq("a fact through terrain.publish reaches ctx.events.world_fact once", probe_heard.size(), 1)
+	_heard.clear()
 	var frames := 0
 	var limit := FRAMES_MAX if terrain.has_method("rows_ready") else 30
 	while frames < limit and not (terrain.has_method("rows_ready") and terrain.rows_ready(1)):
@@ -97,8 +134,6 @@ func _run() -> void:
 	t.check("every row naming a recipe is placed under the stage root", placed == want and missing.is_empty(), "%d of %d, missing %s" % [placed, want, missing])
 	t.check("no row with recipe \"\" places anything", stray.is_empty(), str(stray))
 	t.check("every placed WORLD_ROWS ride row carries a Ride sensor", sensors_missing.is_empty() and sensors > 0, "%d sensors, missing %s" % [sensors, sensors_missing])
-	var world_src := FileAccess.get_file_as_string("res://src/world/world.gd")
-	t.check("world.gd hands terrain the bus's world_fact.emit before build", world_src.contains("terrain.publish = ctx.events.world_fact.emit"))
 	if placed == 0:
 		_finish(report, holder)
 		return
@@ -185,14 +220,15 @@ func _run() -> void:
 		if gaps["lane_worst"] > lane_worst:
 			lane_worst = gaps["lane_worst"]
 			lane_at = gaps["lane_at"]
-	print("park_place_test: %d anchor fields, %d posts; %d field lattice points, %d over 40 m, worst gap %.1f m at %s" % [fields, posts, points, over_points, worst, worst_at])
+	print("park_place_test: %d anchor fields, %d posts; %d judged field lattice points (%d excluded as other rows' footprints or run-outs, %d inside posts), %d over 40 m, worst gap %.1f m at %s" % [fields, posts, points, skipped_points, blocked_points, over_points, worst, worst_at])
 	print("park_place_test: %d points inside other rows' footprints or run-outs and %d inside posts left out; of the judged points %d in lanes, %d over 40 m, worst %.1f m at %s" % [skipped_points, blocked_points, lane_points, lane_over, lane_worst, lane_at])
-	report["anchor"] = {"fields": fields, "posts": posts, "points": points, "points_over_band": over_points, "over_at": over_list,
+	report["anchor"] = {"fields": fields, "posts": posts, "points": points, "judged_points": points, "excluded_points": skipped_points + blocked_points, "points_over_band": over_points, "over_at": over_list,
 		"worst_gap_m": snappedf(worst, 0.1), "worst_at": [worst_at.x, worst_at.z], "points_in_other_rows": skipped_points, "points_inside_posts": blocked_points,
 		"lane_points": lane_points, "lane_over_band": lane_over, "lane_worst_gap_m": snappedf(lane_worst, 0.1) if is_finite(lane_worst) else -1.0, "lane_worst_at": [lane_at.x, lane_at.z]}
 	t.check("the fixture's anchor fields place posts", fields > 0 and posts > fields, "%d fields, %d posts" % [fields, posts])
 	t.check("anchor posts are world-layer static bodies", non_world.is_empty(), str(non_world))
-	t.check("every anchor-field lattice point has a world aim hit within 40 m", fields > 0 and points > 0 and worst <= GAP_BAND_M, "worst %.1f m at %s over %d points" % [worst, worst_at, points])
+	t.check("every judged anchor-field lattice point has a world aim hit within 40 m", fields > 0 and points > 0 and worst <= GAP_BAND_M,
+		"worst %.1f m at %s over %d judged points (%d left out in other rows' footprints or run-outs, %d inside posts)" % [worst, worst_at, points, skipped_points, blocked_points])
 	t.check("every lane lattice point in a field has a world aim hit within 40 m", lanes.size() > 0 and lane_points > 0 and lane_worst <= GAP_BAND_M,
 		"%d lanes, %d points, %d over, worst %.1f m at %s" % [lanes.size(), lane_points, lane_over, lane_worst, lane_at])
 
@@ -364,12 +400,17 @@ func _meets(space: PhysicsDirectSpaceState3D, row: Dictionary, node: Node3D, flo
 			v += step
 		u += step
 	var kind := "under or inside the stamped ground"
+	var reading := ""
 	if node.has_meta("stamp_replaces"):
+		# The greybox stand-in of a stamped row (deck, lip, apron on the fixture) has no collider of its own: PARK.md
+		# section 4 makes such a row "height stamp plus a recipe", the stamp is its shape, and the greybox box had
+		# no lip or rim to add (park_recipes.gd place_row).
 		kind = "replaced by its stamp (no solid)"
+		reading = "PARK.md section 4 height-stamp-plus-recipe row: the greybox stand-in's Collider and Greybox are removed, the stamped ground is its collider"
 	elif above > 0:
 		kind = "lips above the stamped ground" if lip > 0.5 else "sits on the stamped ground"
 	return {"recipe": row["recipe"], "stamp": row["stamp"], "glb": not _recipes.call("stands_in", row) if _has_static("stands_in") else false,
-		"samples": samples, "recipe_on_top": above, "max_above_ground_m": snappedf(lip, 0.01), "reads": kind}
+		"samples": samples, "recipe_on_top": above, "max_above_ground_m": snappedf(lip, 0.01), "reads": kind, "reading": reading}
 
 
 # The hole cells' centres from the fixture's holes.bin (800 by 800 cells of 2 m from -800, park_holes_test.gd).
@@ -416,6 +457,71 @@ func _has_static(method: String) -> bool:
 		if m["name"] == method:
 			return true
 	return false
+
+
+# What World.setup reads from a context, with no game behind it (world.gd setup; game.gd fills the real one).
+class StandInCtx:
+	var events
+	var stages
+	var root: Node3D
+	var player
+	var tuning
+	var codex
+	var terrain
+	var flow
+	var run
+	var rng := RandomNumberGenerator.new()
+	var calm := true
+	var dev := false
+
+
+class StandInTable:
+	var DEFS: Array
+
+	func _init(defs: Array) -> void:
+		DEFS = defs
+
+	func of(stage: int) -> Dictionary:
+		for row: Dictionary in DEFS:
+			if int(row["stage"]) == stage:
+				return row
+		return {}
+
+	func packs() -> Array:
+		return StageDefs.packs()
+
+	func elite() -> Dictionary:
+		return StageDefs.elite()
+
+	func elite_arrival() -> int:
+		return StageDefs.elite_arrival()
+
+
+class StandInPlayer extends Node3D:
+	var interact_claim := Callable()
+
+	func ball_position() -> Vector3:
+		return global_position
+
+
+# No run: no stage is in play, so the world modules' per-frame steps stand idle.
+class StandInFlow extends Node:
+	func in_stage() -> bool:
+		return false
+
+	func stage() -> int:
+		return 1
+
+	func state_name() -> String:
+		return "title"
+
+	func stage_def() -> Dictionary:
+		return {}
+
+
+class StandInCodex extends Node:
+	func declare(_entry: Dictionary) -> void:
+		pass
 
 
 func _finish(report: Dictionary, holder: Node) -> void:
