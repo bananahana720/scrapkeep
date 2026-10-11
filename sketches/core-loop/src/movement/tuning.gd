@@ -62,7 +62,7 @@ const SPECS := [
 	{"key": "companion_stub", "label": "Companion stub pieces", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	# --profile=sitting: every pilot opens on the title for a sitting. It only answers
 	# Game.pilot_unlocked; the saved profile is never read or written differently.
-	{"key": "profile", "label": "Profile", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["default", "sitting"]},
+	{"key": "profile", "label": "Launch set", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["default", "sitting"]},
 	{"key": "harpoon_rewind", "label": "Harpoon rewind (s)", "min": 0.0, "max": 3.0, "step": 0.1, "value": 1.0},
 ]
 

@@ -168,6 +168,7 @@ func _ready() -> void:
 	ctx.profile = Profile.new(storage_dir.path_join("profile.json"))
 	if not ctx.profile.load_profile():
 		push_warning("profile: %s" % ctx.profile.last_error)
+	sitting_save_guard()
 	progress = Progress.new()
 	progress.name = "Progress"
 	add_child(progress)
@@ -265,6 +266,13 @@ func continue_refusal() -> String:
 
 # A pilot is playable when it is a starter or the profile holds it. Only the keys and card
 # clicks ask; flow.choose_class stays ungated for bots and tests.
+# A sitting run never writes the saved profile: every save path goes through Profile.save, which
+# checks can_save. The launch flag is applied before the profile loads, so this runs once at setup.
+func sitting_save_guard() -> void:
+	if tuning != null and tuning.sitting() and ctx.profile != null:
+		ctx.profile._refuse("sitting profile: this session does not save")
+
+
 func pilot_unlocked(def) -> bool:
 	return def.starter or (tuning != null and tuning.sitting()) or ctx.profile.has_pilot(def.id)
 

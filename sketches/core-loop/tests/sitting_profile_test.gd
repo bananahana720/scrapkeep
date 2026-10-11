@@ -53,10 +53,14 @@ func _run() -> void:
 	_t.check("profile file written before the run", before.size() > 0, str(before.size()))
 	var parsed: Dictionary = _game.tuning.apply_args(PackedStringArray(["--profile=sitting"]), "launch")
 	_t.check("flag parsed from the launch table", parsed.has("profile") and _game.tuning.sitting(), str(parsed))
+	_game.sitting_save_guard()
 	_t.eq("sitting opens all six", _open_ids().size(), 6)
 	_game.flow.open_class_select()
 	_game.flow.show_title()
 	_t.check("title wears the SITTING tag", _title_text().contains("SITTING"), _title_text())
+	_game.screens.toggle_help()
+	_game.screens.toggle_help()
+	_t.check("tag survives Help and back", _title_text().contains("SITTING"), _title_text())
 	_game.flow.open_class_select()
 	for i in classes.size():
 		_t.check("card %d is not locked" % i, not _game.screens._choices.get_child(i).locked, classes[i].id)
@@ -71,5 +75,12 @@ func _run() -> void:
 	_t.check("no achievement earned", not any_earned and _earned.is_empty(), str(_earned))
 	_game.flow.choose_class(classes.size() - 1)
 	_t.eq("a locked pilot starts a run", _game.ctx.run.class_def.id, classes[classes.size() - 1].id)
-	_t.check("profile bytes identical after starting a run", _profile_bytes() == before, "%d bytes before and after" % before.size())
+	_game.events.player_died.emit()
+	_game.events.run_ended.emit(true)
+	_t.check("profile cannot save under the flag", not _game.ctx.profile.can_save, "can_save false")
+	_t.check("profile bytes identical after save points", _profile_bytes() == before, "%d before, %d after" % [before.size(), _profile_bytes().size()])
+	any_earned = false
+	for id in Achievements.ids():
+		any_earned = any_earned or _game.ctx.profile.earned(id)
+	_t.check("no achievement earned through the run", not any_earned, str(_earned))
 	_t.check("default option restores the lock", _game.tuning.set_option("profile", "default") and _open_ids().size() == 1, "back to one pilot")
