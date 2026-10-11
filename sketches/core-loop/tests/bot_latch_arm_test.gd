@@ -82,6 +82,10 @@ func _physics_process(delta: float) -> bool:
 	if not _child:
 		return false
 	_anchor_live()
+	# The run ends at the break, as posture_sweep.gd ends it: what follows (the gates, stage 4)
+	# is not this test's, and the swarm driver's strike listener outlives the freed hive there.
+	if _driver != null and _driver.outcome == "" and _driver.warden_broken():
+		_driver._end("broken")
 	return super._physics_process(delta)
 
 
