@@ -29,6 +29,7 @@
 #   sockets WeakPoint on the Lens bone (the big lens's face) and Hardpoint0..2 on the Knuckle
 #           bones (west, east, north on the back of the hand), as bone-attached nodes.
 #   bones   every bone points along -Z with roll 0, so its local axes are the model's axes.
+#   hand    a left hand: palm up, fingers along -Z, the thumb on the -X side (2026-10-11, w13 KF7c).
 #
 # Clips are section 5's table, one glTF animation per row, plus the per-finger and per-knuckle
 # variants of chunk_lost and shrug (chunk_lost is the little finger, the first to go) and the
@@ -109,7 +110,10 @@ ENAMEL = "petrol"
 IRON = common.mix("charcoal", "petrol", 0.25)
 DUST = common.mix("petrol", "sandstone", 0.35)
 UNDER = common.mix("petrol", "charcoal", 0.4)
-CUFF = common.mix("sandstone", "petrol", 0.4)  # KF7b fix: the wrist cuff, light against the iron lips in grey
+# KF7c: the cuff hangs in the palm's shade with the sun overhead, so KF7b's sandstone-petrol mix
+# rendered as dark as the stalk; it is bone-light now. ancient_enamel multiplies the vertex colour
+# by a 0.66 to 1.0 grey noise (palette.gd painted_texture), so the vertex colour sets the value.
+CUFF = common.mix("bone", "sandstone", 0.25)
 
 # 2026-10-11 (w13 KF7b): the blind read (decisions.tsv KF8-LOOK) never called this body a hand:
 # its read cameras see the hand from its side, where four fingers of one height and a thumb at
@@ -125,32 +129,46 @@ CUFF = common.mix("sandstone", "petrol", 0.4)  # KF7b fix: the wrist cuff, light
 # stagger in length; the thumb is a short hook under the index near the heel, its tip turned up
 # toward the index (the pinch gap); the heel is shorter, so the stalk meets the hand at its heel
 # like a wrist; and the cuff is sandstone-light against its iron lips.
-# Fingers, index to little (thumb side -X): x at the knuckle line, segment lengths, the rest fan
-# in radians about +Y (positive turns the tip toward -X) and each segment's droop in radians
-# (the cascade: index straight, little most bent), so the four read as a hand and not a rake
-# while every tip stays inside the 3.8 m band and above 1.6 m (the perch's band).
+# 2026-10-11 (w13 KF7c): both KF7b reads still saw a beam or a crossbar: the over_shoulder camera
+# sees the hand from its thumb side 17 degrees down, and four fingers 0.46 m deep and 1.3 m apart,
+# fanned and drooping, overlapped in that view. The silhouette check now measures it, and the hand
+# is built to it: the knuckle line rolls 14.7 degrees about the hand's long axis, little side up,
+# so each finger stands 0.55 m over its thumb-side neighbour and 2.1 m beside it; the fingers are
+# straight and parallel (so their outlines never cross), slimmer (0.8 by 0.3 m) with their seams
+# on their sides, and their joint drums stand 0.05 m proud of the finger so each joint shows as a
+# hump edge on. The little finger's root top stays at the perch grip (GRIP_Y, warden_kit.gd's
+# grip and the perch lens checks), and the index's underside stays over the 2 m band. Lengths
+# differ (middle longest), so the four tips step in length as well as in height.
+# Fingers, index to little (thumb side -X): x at the knuckle line, segment lengths, fan and droop
+# (both 0 at rest: the clips' curls start from straight).
 FINGERS = [
-    ("index", -2.0, (3.2, 2.7, 2.3), 0.15, (0.0, 0.0, 0.0)),
-    ("middle", -0.68, (3.5, 2.95, 2.5), 0.05, (0.02, 0.04, 0.05)),
-    ("ring", 0.68, (3.2, 2.7, 2.3), -0.05, (0.05, 0.08, 0.1)),
-    ("little", 2.0, (2.7, 2.25, 1.95), -0.18, (0.09, 0.13, 0.16)),
+    ("index", -3.15, (3.2, 2.7, 2.3), 0.0, (0.0, 0.0, 0.0)),
+    ("middle", -1.05, (3.5, 2.95, 2.5), 0.0, (0.0, 0.0, 0.0)),
+    ("ring", 1.05, (3.2, 2.7, 2.3), 0.0, (0.0, 0.0, 0.0)),
+    ("little", 3.15, (2.7, 2.25, 1.95), 0.0, (0.0, 0.0, 0.0)),
 ]
 FINGER_ORDER = ["little", "ring", "middle", "index"]  # the order chunks put them out
 KNUCKLE_Z = -3.2
-FINGER_W = 0.9
-FINGER_H = 0.46
-FINGER_Y = 4.05 - FINGER_H / 2  # the index root's top stays where the perch grip measures it
-# KF7b fix: the knuckle line rolls, each root this much under the index's (the hand turned a
-# little on its long axis), so from the side the four fingers stack with sky between them along
-# their whole length and not only at the tips. The index sets the grip, so the perch is unmoved.
-ROOT_DROP = (0.0, 0.15, 0.3, 0.45)
-PALM_Y = (2.4, 3.4)
-# The opposed thumb: from the thenar pad at the heel, forward along the -X flank under the index
-# with sky between them, its tip turned in under the index's first joint. Its underside stays
-# above 2 m (beyond r 2.8, the low band) and its seam faces up.
-THUMB = {"x": -3.15, "y": 2.42, "w": 0.95, "h": 0.72,
-         "pts": [(-2.6, 2.75, 1.4), (-3.15, 2.42, -0.9), (-3.2, 2.42, -3.0), (-2.7, 2.72, -4.7)]}
-KNUCKLES = [("west", (-2.0, 2.25, -2.4)), ("east", (2.0, 2.25, -2.4)), ("north", (0.0, 2.25, -2.95))]
+FINGER_W = 0.8
+FINGER_H = 0.3
+JOINT_R = FINGER_H / 2 + 0.05  # the joint drums, proud of the finger
+GRIP_Y = 4.114  # the little finger's root top: the perch grip (PERCH_LENS_OFFSET_Y 6.086 - 6 + 1.6 - 5.8 = -4.114)
+FINGER_STEP = 0.55  # each finger's root over its thumb-side neighbour's
+ROOT_Y = [GRIP_Y - JOINT_R - FINGER_STEP * (3 - i) for i in range(4)]
+PALM_ROLL = math.atan2(FINGER_STEP, FINGERS[1][1] - FINGERS[0][1])  # the knuckle line's roll, about -Z
+PALM_Y0 = 3.12  # the palm's middle plane at x = 0
+# The opposed thumb: from the thenar pad at the heel it throws out to the -X side and up past the
+# palm's plane, its tip back toward the wrist, so every read camera sees it clear of the palm.
+THUMB = {"w": 0.75, "h": 0.55,
+         "pts": [(-2.0, 3.2, 1.6), (-2.75, 3.5, 2.6), (-3.15, 3.72, 3.6), (-3.25, 3.78, 4.45)]}
+def palm_back_y(x, hh=0.32):
+    """The palm's back (its underside in the hang) at x, for a row of half thickness hh."""
+    return PALM_Y0 + x * math.tan(PALM_ROLL) - hh / math.cos(PALM_ROLL)
+
+
+# Knuckle hardpoints on the back of the rolled hand (bone heads; the sockets sit 0.2 m under them).
+KNUCKLES = [("west", (-1.3, palm_back_y(-1.3), -2.4)), ("east", (1.6, palm_back_y(1.6), -2.4)),
+            ("north", (0.0, palm_back_y(0.0), -2.95))]
 STALK = [("Stalk0", 0.0, -1.6, 0.95), ("Stalk1", -1.9, -3.3, 0.78), ("Stalk2", -3.6, -5.0, 0.66)]
 DROP = 10.0
 SEAM_SLOTS = ["ancient_light_seam%d" % i for i in range(4)] + ["ancient_light_thumb", "ancient_light_knuckle",
@@ -245,20 +263,21 @@ def joint(part, bone, at, r, length, drop=0.0):
     part.on(bone, part.cyl, "ancient_enamel", r, r, length, 8, loc=B(c), rot=(0, math.pi / 2, 0), color=IRON)
 
 
-def finger_points(x, lengths, fan, droop, root_drop=0.0):
-    pts = [Vector((x, FINGER_Y - root_drop, KNUCKLE_Z))]
+def finger_points(x, lengths, fan, droop, root_y):
+    pts = [Vector((x, root_y, KNUCKLE_Z))]
     for seg, p in zip(lengths, droop):
         d = Vector((-math.sin(fan) * math.cos(p), -math.sin(p), -math.cos(fan) * math.cos(p)))
         pts.append(pts[-1] + d * seg)
     return pts
 
 
-# The palm, lofted heel to knuckles along -Z: (z, half width, underside y, top y, chamfer). A heel
-# with raised pads at +Z, a cupped middle, and a thick knuckle ridge at the finger line, so the
-# side view shows a palm's profile and not a slab.
-PALM = [(2.95, 1.6, 2.45, 3.3, 0.3), (2.4, 2.45, 2.15, 3.7, 0.45), (1.3, 2.9, 2.2, 3.55, 0.4),
-        (0.0, 2.95, 2.35, 3.3, 0.3), (-2.2, 2.95, 2.3, 3.45, 0.3), (-3.2, 2.85, 2.2, 3.7, 0.4),
-        (-3.75, 2.45, 2.45, 3.5, 0.35)]
+# The palm, lofted heel to knuckles along -Z: (z, half width, half thickness, lift, chamfer), each
+# row rolled by PALM_ROLL about the hand's long axis through (0, PALM_Y0 + lift). A thick narrow
+# heel with raised pads at +Z, a thinner plate, and a knuckle ridge as wide as the finger line.
+# Every corner stays over the 2 m band where it passes r 2.8 (KF7c).
+PALM = [(2.95, 1.6, 0.42, 0.0, 0.3), (2.4, 2.2, 0.48, 0.0, 0.35), (1.3, 2.7, 0.42, 0.0, 0.3),
+        (0.0, 3.0, 0.36, 0.0, 0.3), (-2.2, 3.3, 0.32, 0.0, 0.28), (-3.2, 3.4, 0.32, 0.0, 0.28),
+        (-3.75, 3.2, 0.28, 0.0, 0.24)]
 
 
 def build_body():
@@ -277,30 +296,35 @@ def build_body():
     # Palm plate: the lofted palm, then the thenar pad at the thumb root and the smaller pad
     # opposite, both raised on the palm side at the heel.
     bones.append(("Palm", (0.0, 2.9, 0.0), "Hand"))
-    rows = [section(Vector((0, (yb + yt) / 2, z)), Vector((1, 0, 0)), Vector((0, 1, 0)), 2 * hw, yt - yb, ch)
-            for z, hw, yb, yt, ch in PALM]
+    roll_r = Vector((math.cos(PALM_ROLL), math.sin(PALM_ROLL), 0))
+    roll_u = Vector((-math.sin(PALM_ROLL), math.cos(PALM_ROLL), 0))
+    rows = [section(Vector((0, PALM_Y0 + lift, z)), roll_r, roll_u, 2 * hw, 2 * hh, ch)
+            for z, hw, hh, lift, ch in PALM]
     p.on("Palm", loft, p, rows, "ancient_enamel", ENAMEL)
-    y0, y1 = PALM_Y
-    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((-2.2, 3.35, 0.9)), scale=(0.95, 1.6, 0.55), color=ENAMEL)
-    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((2.0, 3.35, 1.5)), scale=(0.8, 1.1, 0.45), color=ENAMEL)
-    p.on("Palm", p.ring, "ancient_enamel", 1.2, 1.55, 0.18, 12, loc=B((0, 3.32, 0.4)), color=IRON)
-    # The back of the hand: radial ribs from the wrist collar toward the fingers.
-    for k, x in enumerate((-2.0, 0.0, 2.0)):
-        p.on("Palm", p.beam, "ancient_enamel", B((x * 0.45, y0 - 0.1, -0.8)), B((x, y0 - 0.1, -3.1)), 0.5, 0.18,
-             color=IRON)
+    tilt = (0, -PALM_ROLL, 0)  # Blender rotation matching the roll about -Z
+
+    def top_y(x, hh):
+        return PALM_Y0 + x * math.tan(PALM_ROLL) + hh / math.cos(PALM_ROLL)
+
+    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((-1.9, top_y(-1.9, 0.42) - 0.1, 1.3)), scale=(0.85, 1.4, 0.4),
+         rot=tilt, color=ENAMEL)
+    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((1.8, top_y(1.8, 0.42) - 0.1, 1.6)), scale=(0.7, 1.0, 0.35),
+         rot=tilt, color=ENAMEL)
+    p.on("Palm", p.ring, "ancient_enamel", 1.2, 1.55, 0.18, 12, loc=B((0, top_y(0, 0.36) - 0.03, 0.2)), rot=tilt,
+         color=IRON)
     # Knuckle hardpoints on the back: a dome, a dark groove and a green rim, bottoms at 2.05 m.
     for i, (_, at) in enumerate(KNUCKLES):
         name = "Knuckle%d" % i
         bones.append((name, at, "Palm"))
         c = Vector(at)
         p.on(name, p.uv, "ancient_enamel", 0.62, 10, 4, loc=B(c + Vector((0, 0.05, 0))), scale=(1, 1, 0.42),
-             color=ENAMEL)
-        p.on(name, p.ring, "rubber", 0.6, 0.86, 0.14, 12, loc=B(c + Vector((0, 0.12, 0))))
-        p.on(name, p.ring, "ancient_light_knuckle", 0.66, 0.8, 0.16, 12, loc=B(c + Vector((0, 0.1, 0))))
-    # Fingers: three segments, a knuckle drum at each joint, the seam on top and underneath.
+             rot=tilt, color=ENAMEL)
+        p.on(name, p.ring, "rubber", 0.6, 0.86, 0.14, 12, loc=B(c + Vector((0, 0.12, 0))), rot=tilt)
+        p.on(name, p.ring, "ancient_light_knuckle", 0.66, 0.8, 0.16, 12, loc=B(c + Vector((0, 0.1, 0))), rot=tilt)
+    # Fingers: three segments, a knuckle drum at each joint, a seam along each side.
     for fi, (fname, x, lengths, fan, droop) in enumerate(FINGERS):
         slot = "ancient_light_seam%d" % fi
-        pts = finger_points(x, lengths, fan, droop, ROOT_DROP[fi])
+        pts = finger_points(x, lengths, fan, droop, ROOT_Y[fi])
         parent = "Palm"
         scale = (1.0, 0.94, 0.86, 0.78)
         for s in range(3):
@@ -309,19 +333,19 @@ def build_body():
             parent = name
             w0, w1 = FINGER_W * scale[s], FINGER_W * scale[s + 1]
             h0, h1 = FINGER_H * scale[s], FINGER_H * scale[s + 1]
-            _, up = segment(p, name, pts[s], pts[s + 1], w0, h0, w1, h1)
-            joint(p, name, pts[s], h0 * 0.5 + 0.11, w0 * 1.02, drop=0.13)
+            right, _ = segment(p, name, pts[s], pts[s + 1], w0, h0, w1, h1)
+            joint(p, name, pts[s], JOINT_R * scale[s], w0 * 1.02)
             d = (pts[s + 1] - pts[s]).normalized()
             a = pts[s] + d * 0.6
             b = pts[s + 1] - d * 0.45
-            seam(p, name, slot, a + up * (h0 + h1) / 4, b + up * (h0 + h1) / 4, up, 0.1)
-            seam(p, name, slot, a - up * (h0 + h1) / 4, b - up * (h0 + h1) / 4, -up, 0.1)
+            seam(p, name, slot, a + right * (w0 + w1) / 4, b + right * (w0 + w1) / 4, right, 0.06)
+            seam(p, name, slot, a - right * (w0 + w1) / 4, b - right * (w0 + w1) / 4, -right, 0.06)
         # The fingertip: a blunt cast cap.
         tip = pts[3]
         d = (pts[3] - pts[2]).normalized()
-        p.on(parent, p.ico, "ancient_enamel", 0.36, 1, loc=B(tip - d * 0.08), scale=(0.95, 0.8, 0.8),
+        p.on(parent, p.ico, "ancient_enamel", 0.17, 1, loc=B(tip - d * 0.05), scale=(1.5, 1.2, 1.0),
              color=ENAMEL)
-    # Thumb, opposed along the -X side under the index, its tip turned in.
+    # Thumb, opposed: out on the -X side from the heel, rising past the palm's plane.
     tp = [Vector(v) for v in THUMB["pts"]]
     parent = "Palm"
     for s in range(3):
@@ -335,7 +359,7 @@ def build_body():
         d = (tp[s + 1] - tp[s]).normalized()
         seam(p, name, "ancient_light_thumb", tp[s] + d * 0.4 + up * THUMB["h"] * k0 * 0.5,
              tp[s + 1] - d * 0.3 + up * THUMB["h"] * k1 * 0.5, up, 0.09)
-    p.on(parent, p.ico, "ancient_enamel", 0.4, 1, loc=B(tp[3]), scale=(0.95, 0.85, 0.85), color=ENAMEL)
+    p.on(parent, p.ico, "ancient_enamel", 0.3, 1, loc=B(tp[3]), scale=(0.95, 0.85, 0.85), color=ENAMEL)
     # The wrist stalk: three ribbed sleeves, each with a dark core that hides in the sleeve
     # above it at rest and bridges the gap when the stalk telescopes down 10 m.
     parent = "Hand"
@@ -451,6 +475,16 @@ def curl_finger(out, fi, angles):
         out[name] = (qrot((1, 0, 0), a) @ rot, loc, scl)
 
 
+# KF7c: the index's root sits 0.06 m over the band floor in the rolled hand, so the small
+# breathing curls of the steady clips (which bend every finger toward the back of the hand) are
+# softer on it; the grip, the fist and the clamp keep their full curls (curl_finger).
+SWAY_SCALE = (0.6, 1.0, 1.0, 1.0)
+
+
+def sway(out, fi, angles):
+    curl_finger(out, fi, tuple(a * SWAY_SCALE[fi] for a in angles))
+
+
 def turn(out, name, axis, angle):
     rot, loc, scl = out.get(name, (Quaternion(), Vector(), Vector((1, 1, 1))))
     out[name] = (qrot(axis, angle) @ rot, loc, scl)
@@ -467,12 +501,17 @@ def scale(out, name, s):
     out[name] = (rot, loc, Vector((scl.x * sv.x, scl.y * sv.z, scl.z * sv.y)))
 
 
-SPLAY = [0.02, 0.01, -0.01, -0.03]  # extra fan about +Y, index (-X) to little, outward on the rest fan
+SPLAY = [0.01, 0.005, -0.005, -0.015]  # extra fan about +Y, index (-X) to little; KF7c halved it: the
+# outer fingers now sit 3.15 m out, and a full splay would carry their tips past |x| 3.8
 CURL_SHUT = (1.2, 1.35, 1.15)
 # A lost finger's fold: the middle segment pitches down, then both swing inward (toward the
 # hand's middle) to these world yaws, the last segment flat, so the dead finger lies folded
 # under its neighbours and never leaves |x| <= 3.8, 1.6 <= y <= 4.2 (both poses' band).
 FOLD_PITCH = 0.36
+# KF7c: per finger, index to little. In the rolled hand the index and middle sit low in the band,
+# so the index's dead segments pitch up (negative) and the middle's lie level; the ring and little
+# keep the original drop.
+FOLD_PITCHES = (-0.15, 0.0, FOLD_PITCH, FOLD_PITCH)
 FOLD_YAW = (2.0, 4.2)
 # The perch stalk: the lens moves up the stalk by perch_lift(), shared Stalk1, Stalk2, LensMount.
 PERCH_LIFT_SHARE = (0.22, 0.38, 0.40)
@@ -480,7 +519,7 @@ PERCH_LIFT_SHARE = (0.22, 0.38, 0.40)
 
 def grip_hang_y():
     """The fingers' palm-side face at rest (hang y), the face that sits on a perch top."""
-    return FINGER_Y + FINGER_H / 2 + 0.064  # the top seam's lift; check() measures the real face
+    return GRIP_Y  # the little finger's root drum top; check() measures the real face
 
 
 def perch_lift():
@@ -498,7 +537,7 @@ def fold_finger(out, fi, c, shiver=0.0):
     swing2 = ease((c - 0.35) / 0.65)
     # The rest droop is taken back out, so the folded segments sit where a flat finger's would.
     droop = FINGERS[fi][4]
-    w1 = qrot((0, 1, 0), s * FOLD_YAW[0] * swing1) @ qrot((1, 0, 0), (droop[1] - FOLD_PITCH) * drop + shiver)
+    w1 = qrot((0, 1, 0), s * FOLD_YAW[0] * swing1) @ qrot((1, 0, 0), (droop[1] - FOLD_PITCHES[fi]) * drop + shiver)
     w2 = qrot((0, 1, 0), s * (FOLD_YAW[1] - math.tau) * swing2) @ qrot((1, 0, 0), droop[2] * drop + shiver * 0.5)
     for name, rot in (("Finger%d_1" % fi, w1), ("Finger%d_2" % fi, w1.inverted() @ w2)):
         _, loc, scl = out.get(name, (Quaternion(), Vector(), Vector((1, 1, 1))))
@@ -512,7 +551,7 @@ def pose(clip, t):
     if clip == "idle":
         for k, fname in enumerate(FINGER_ORDER):
             w = bump(t, k * 0.25, k * 0.25 + 0.35) if k < 3 else bump(t, 0.72, 1.0)
-            curl_finger(out, fidx[fname], (-0.05 * w, -0.03 * w, -0.02 * w))
+            sway(out, fidx[fname], (-0.05 * w, -0.03 * w, -0.02 * w))
         turn(out, "Lens", (0, 1, 0), 0.06 * math.sin(math.tau * t))
         turn(out, "Lens", (1, 0, 0), 0.03 * math.sin(math.pi * 2 * t))
     elif clip == "pulse_warn":
@@ -525,17 +564,17 @@ def pose(clip, t):
         for fi in range(4):
             tighten = ease(t)
             turn(out, "Finger%d_0" % fi, (0, 1, 0), -SPLAY[fi] * 0.6 * tighten)
-            curl_finger(out, fi, (-0.025 * tighten, -0.02 * tighten, 0.0))
+            sway(out, fi, (-0.025 * tighten, -0.02 * tighten, 0.0))
     elif clip == "pulse":
         snap = math.sin(math.pi * t)
         for fi in range(4):
-            curl_finger(out, fi, (-0.06 * snap, -0.03 * snap, -0.02 * snap))
+            sway(out, fi, (-0.06 * snap, -0.03 * snap, -0.02 * snap))
             turn(out, "Finger%d_0" % fi, (0, 1, 0), SPLAY[fi] * snap)
     elif clip == "active":
         o = ease(t)
         for fi in range(4):
             turn(out, "Finger%d_0" % fi, (0, 1, 0), SPLAY[fi] * o)
-            curl_finger(out, fi, (-0.04 * o, -0.02 * o, 0.0))
+            sway(out, fi, (-0.04 * o, -0.02 * o, 0.0))
         scale(out, "Lens", 1.0 + 0.3 * o)
         scale(out, "LensIris", 1.0 + 0.1 * o)
     elif clip.startswith("chunk_lost"):
@@ -572,7 +611,7 @@ def pose(clip, t):
             move(out, name, (0, -DROP / 3 * d, 0))
         scale(out, "Lens", 1 + 0.3 * d)
         for fi in range(4):
-            curl_finger(out, fi, (-0.05 * d, -0.03 * d, 0.0))
+            sway(out, fi, (-0.05 * d, -0.03 * d, 0.0))
     elif clip == "takeoff":
         push = math.sin(math.pi * min(1.0, t / 0.5))
         move(out, "Hand", (0, -0.5 * push, 0))
@@ -585,7 +624,7 @@ def pose(clip, t):
         for fi in range(4):
             wave = math.sin(math.tau * t + fi * 0.6)
             turn(out, "Finger%d_0" % fi, (0, 1, 0), SPLAY[fi])
-            curl_finger(out, fi, (-0.03 + 0.025 * wave, -0.02 + 0.015 * wave, 0.01 * wave))
+            sway(out, fi, (-0.03 + 0.025 * wave, -0.02 + 0.015 * wave, 0.01 * wave))
         turn(out, "Lens", (1, 0, 0), 0.25 + 0.05 * math.sin(math.tau * t))
         turn(out, "Hand", (0, 0, 1), 0.025 * math.sin(math.tau * t))
     elif clip == "land":
