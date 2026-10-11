@@ -4,6 +4,10 @@ extends SceneTree
 # approved pictures (concepts/codex/rivet/hero.png, chase.png, sheet.png) replace the visor,
 # optical rail, raked side fins and saddle with the lattice, the drill nose, folded fins, twin
 # stacks and laser pods on the weapon ring. The rig checks are unchanged.
+# 2026-10-10 (PD-RIVET fix round): class V drops the Pod-mounted heavy drill, whose lens turned with
+# the heading while DrillTip yaws with the aim; c5 is one draw and keeps the aimed drill showing.
+# New checks: the lens stays on DrillTip with the ring yawed 30 degrees, the base draws per mesh
+# (pinned here, not read from the registry exception), and panels clear the drill's yaw sweep.
 
 # What it checks (P-UNITS PD-RIVET acceptance; ROSTER-LOOK sections 0 to 8):
 #   budget     shell class tris and verts; draws equal the registry row's exception.
@@ -12,7 +16,8 @@ extends SceneTree
 #              Drill, DrillTip and the laser muzzles under WeaponRing; Exhaust_L/R under Pod;
 #              the cockpit controls (Lever, WinchLever, the lap bar and two pedals).
 #   drill      DrillTip faces forward on the centre line the parallel laser muzzles fire along;
-#              the lens is 0.12 m across; three steps.
+#              the lens sits on DrillTip with the ring yawed 30 degrees; 0.12 m across; three steps.
+#   draws      surfaces per mesh, pinned (the shell cap is 10; the excess waits on ratification).
 #   stacks     at 11:30 and 12:30 from behind, rear, 0.18 m past the lattice outline.
 #   accent     class_accent only on the lens (Drill) and the exhaust mouths (Pod).
 #   outline    nothing breaks the outline at 4 or 8 o'clock from behind; fins lie flat on the
@@ -21,8 +26,8 @@ extends SceneTree
 #   pod        sight cone empty; nothing past radius 1.0 below Y -0.6.
 #   variant    shell_rivet_calibrated: budget, contract, machinery at the same points.
 #   layers     shell_rivet_c2 to _c5: Core and Pod parts, detail budget and draws, panels inside
-#              the lattice and out of the sight cone; II all below Y -0.35; V hides Drill and
-#              carries a 0.20 m lens.
+#              the lattice, out of the sight cone and clear of the drill's yaw sweep; II all
+#              below Y -0.35; V leaves the aimed Drill showing and carries no lens of its own.
 #   rig        pilot_rivet_anim.glb: 25 ordered bones, meshes, triangles, seven clips.
 # The run must make EXPECTED_CHECKS checks, so an early return or a skipped loop fails it.
 
@@ -37,15 +42,21 @@ const LAYER := "res://assets/models/world_one/shell_rivet_c%d.glb"
 const RIG := "res://assets/models/pilot_rivet_anim.glb"
 const BUDGETS := "res://tools/asset_budgets.json"
 const REGISTRY := "res://assets/registry.json"
-const EXPECTED_CHECKS := 55
+const EXPECTED_CHECKS := 57
 const CORE_LIMIT := 0.985
 const LATTICE_OUTER := 0.975
 const LATTICE_INNER := 0.94
 const LENS := 0.12
-const HEAVY_LENS := 0.20
 const DRILL_STEPS := 3
 const STACK_RISE := 0.18
-const LAYER_DRAWS := {2: 1, 3: 2, 4: 1, 5: 3}
+const LAYER_DRAWS := {2: 1, 3: 2, 4: 1, 5: 1}
+# Surfaces per mesh in shell_rivet.glb: PD-0's base (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2)
+# plus the exhaust mouths on Pod, copper on WeaponRing, the Drill and the placeholder Pilot.
+const BASE_DRAWS := {"Core": 3, "Pod": 4, "Gyro": 1, "GyroInner": 1, "WeaponRing": 3, "Drill": 2, "Pilot": 1}
+# The band the drill sweeps as the ring yaws (Godot axes): horizontal radius past 0.86 m, height
+# from -0.41 to -0.03 m (shell_rivet_plates.py SWEEP_R, SWEEP_Z).
+const SWEEP_R := 0.86
+const SWEEP_Y := Vector2(-0.41, -0.03)
 const CONTROLS := ["Control_Grip_L", "Control_Grip_R", "Control_Trigger", "Control_Lever", "Control_WinchLever",
 	"Control_LapBar", "LapBar_L", "LapBar_R", "Control_Pedal_L", "Control_Pedal_R", "DecalPlate"]
 const MACHINERY := ["Drill", "DrillTip", "LaserMuzzle_L", "LaserMuzzle_R", "Exhaust_L", "Exhaust_R"]
@@ -74,6 +85,7 @@ func _run() -> void:
 		return
 	root.add_child(shell)
 	_budget("shell", shell, "shell", _exception(SHELL))
+	_draws(shell)
 	var problems := Cage.contract_problems(shell)
 	_t.check("shell contract", problems.is_empty(), str(problems))
 	_tree(shell)
@@ -160,6 +172,13 @@ func _budget(label: String, scene: Node, klass: String, exception: Dictionary) -
 	_t.check(label + " draws", c.draws <= draws_cap, "%d draws within %d (%s)" % [c.draws, draws_cap, "registry exception" if exception.has("draws") else klass])
 
 
+func _draws(shell: Node3D) -> void:
+	var got := {}
+	for mi: MeshInstance3D in meshes(shell):
+		got[String(mi.name)] = mi.mesh.get_surface_count()
+	_t.check("shell draws per mesh", got == BASE_DRAWS, "%s, want %s" % [got, BASE_DRAWS])
+
+
 # --- the base mecha --------------------------------------------------------------------------------
 
 func _tree(shell: Node3D) -> void:
@@ -204,6 +223,18 @@ func _drill(shell: Node3D) -> void:
 	for v in points(drill, shell, "class_accent"):
 		lens = maxf(lens, Vector2(v.x - tp.x, v.y - tp.y).length())
 	_t.near("lens is 0.12 m across", lens * 2.0, LENS, 0.004)
+	# The lens rides the aimed carrier: yaw the ring 30 degrees off the heading and it stays on DrillTip.
+	var ring := at(shell, "WeaponRing")
+	ring.rotation.y = deg_to_rad(30.0)
+	var lens_pts := points(drill, shell, "class_accent")
+	var centre := Vector3.ZERO
+	for v in lens_pts:
+		centre += v
+	centre /= maxf(1.0, float(lens_pts.size()))
+	var tip_yawed := pos(shell, tip)
+	ring.rotation.y = 0.0
+	_t.check("lens on DrillTip with the ring yawed 30 degrees", lens_pts.size() > 0 and centre.distance_to(tip_yawed) < 0.01
+		and absf(tip_yawed.x) > 0.5, "lens centre %s, DrillTip %s" % [centre, tip_yawed])
 	var levels := {}
 	for v in points(drill, shell, "copper"):
 		levels[snappedf(v.z, 0.005)] = true
@@ -331,12 +362,15 @@ func _layers() -> void:
 		var pod := at(layer, "Pod") as MeshInstance3D
 		var far := 0.0
 		var low_top := -INF
+		var swept := 0
 		for v in points(pod, layer, "paint"):
 			far = maxf(far, v.length())
 			low_top = maxf(low_top, v.y)
+			swept += 1 if Vector2(v.x, v.z).length() > SWEEP_R and v.y > SWEEP_Y.x and v.y < SWEEP_Y.y else 0
 		var problems := Cage.contract_problems(layer)
-		_t.check("c%d panels inside the lattice, out of the sight cone" % n, far > 0.85 and far <= LATTICE_INNER
-			and Cage.cone_hits(pod) == 0 and problems.is_empty(), "panels reach %.3f (inner face %.2f), cone %d, %s" % [far, LATTICE_INNER, Cage.cone_hits(pod), problems])
+		_t.check("c%d panels inside the lattice, out of the sight cone and the drill sweep" % n, far > 0.85 and far <= LATTICE_INNER
+			and Cage.cone_hits(pod) == 0 and swept == 0 and problems.is_empty(),
+			"panels reach %.3f (inner face %.2f), cone %d, %d vertices in the drill sweep, %s" % [far, LATTICE_INNER, Cage.cone_hits(pod), swept, problems])
 		match n:
 			2:
 				_t.check("c2 panels below Y -0.35", low_top < -0.35, "highest panel vertex %.3f" % low_top)
@@ -352,11 +386,10 @@ func _layers() -> void:
 					collars += 1 if v.z > 0.1 and v.y > 0.7 else 0
 				_t.check("c4 collars round the stack bases", collars > 0, "%d collar vertices" % collars)
 			5:
-				var lens := 0.0
-				for v in points(pod, layer, "class_accent"):
-					lens = maxf(lens, Vector2(v.x, v.y + 0.22).length())
-				_t.check("c5 heavy drill replaces Drill, lens 0.20 m", at(layer, "Replace_Drill") != null and absf(lens * 2.0 - HEAVY_LENS) < 0.006,
-					"Replace_Drill %s, lens %.3f m" % [at(layer, "Replace_Drill") != null, lens * 2.0])
+				# The aimed Drill stays visible: no Replace_Drill, and no unaimed lens or copper on Pod.
+				var stray := points(pod, layer, "class_accent").size() + points(pod, layer, "copper").size()
+				_t.check("c5 leaves the aimed Drill showing", at(layer, "Replace_Drill") == null and stray == 0,
+					"Replace_Drill %s, %d lens or copper vertices on the layer" % [at(layer, "Replace_Drill") != null, stray])
 		layer.queue_free()
 
 

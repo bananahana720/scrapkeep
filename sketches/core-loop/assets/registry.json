@@ -2894,7 +2894,7 @@
    "exception": {
     "draws": 15
    },
-   "exception_why": "PD-RIVET Hoberman mecha: the 10-draw base plus the placeholder Pilot (hidden in play by fit_pilot_into), class_accent on Pod (exhaust mouths), copper on WeaponRing (laser pods) and the spinning Drill (copper, lens); 14 drawn in play",
+   "exception_why": "PD-RIVET Hoberman mecha: the 10-draw base plus the placeholder Pilot (hidden in play by fit_pilot_into), class_accent on Pod (exhaust mouths), copper on WeaponRing (laser pods) and the spinning Drill (copper, lens); 14 drawn in play. Over the 10-draw shell cap pending the coordinator's docs/decisions.tsv ratification (PD-RIVET fix round, 2026-10-10)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_rivet.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -2921,7 +2921,7 @@
    "exception": {
     "draws": 2
    },
-   "exception_why": "ROSTER-LOOK section 5: class III is two parts, the Pod's side-gap panels and the Core's wider tread caps, one draw each",
+   "exception_why": "ROSTER-LOOK section 5, class III row: two parts, the Pod's side-gap panels and the Core's wider chevron tread caps, one draw each; the row prices them at 2 draws with this exception",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_rivet_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png"
@@ -2944,10 +2944,6 @@
    "class": "detail",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class V layer of shell_rivet)",
-   "exception": {
-    "draws": 3
-   },
-   "exception_why": "ROSTER-LOOK section 5: class V carries the heavy drill module, copper with its class_accent lens, beside the paint panels",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_rivet_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png"
