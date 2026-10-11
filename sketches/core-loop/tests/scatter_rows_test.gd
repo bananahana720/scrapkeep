@@ -42,6 +42,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# The park section runs first, so the process's resource cache holds none of what the build reads.
+	await _park_chunks()
 	var seeds := {}
 	var row_errors := []
 	var relief_errors := []
@@ -159,7 +161,6 @@ func _run() -> void:
 	print("scatter_rows_test: old-map scatter hash ", old_hash)
 	t.eq("the old maps' scatter transforms are byte-identical to d204cea", old_hash, OLD_MAPS_HASH)
 
-	await _park_chunks()
 	quit(t.verdict())
 
 
@@ -193,8 +194,13 @@ func _old_maps_hash() -> String:
 
 
 # The park fixture (park_test, KB4's bake): its stage built through terrain.gd, then its scatter
-# built in chunks through a local shim (terrain.gd does not call the chunked build yet; the hook is
-# reported with KB5), on worker threads, pumped frame by frame as the game would.
+# built in chunks by terrain.gd's own hook (KB5b), on worker threads, pumped frame by frame as the
+# game would. The fixture's kit is PARK_KIT plus a second rock row (same mesh and slot, other density
+# and size) so the per-kind merge is observable: unmerged, a chunk holds two rock batches.
+const BIG_ROCK := {"kind": "rock", "density": 0.3, "scale": Vector2(0.9, 1.5), "slope": 0.8, "bury": 0.35, "seed": "scatter_park_rock_big", "mesh": "kit:rubble", "slot": "stone"}
+const STRUT := "res://assets/models/dig_mechanical/strut_bent.glb"
+
+
 func _park_chunks() -> void:
 	var api: Variant = Scatter
 	if not t.check("scatter.gd has the chunked park build", Scatter.new().has_method("build_chunked") and Scatter.new().has_method("visible_vertices")):
@@ -208,7 +214,12 @@ func _park_chunks() -> void:
 		t.check("%s validates" % tag, ScatterRows.problems(row).is_empty(), ", ".join(ScatterRows.problems(row)))
 		t.check("%s has a visibility range that covers its own chunk" % tag, float(ranges.get(row["kind"], 0.0)) >= ParkTerrain.TILE_M * sqrt(2.0) * 0.5)
 	var rows_api: Variant = ScatterRows
+	var fixture_kit: Array = park_kit.duplicate()
+	fixture_kit.append(BIG_ROCK)
 	t.check("the park kit rows give one mesh and slot per kind", (rows_api.kind_problems(park_kit) as Array).is_empty(), str(rows_api.kind_problems(park_kit)))
+	t.check("the fixture kit still gives one mesh and slot per kind", (rows_api.kind_problems(fixture_kit) as Array).is_empty(), str(rows_api.kind_problems(fixture_kit)))
+	var rock_rows := fixture_kit.filter(func(r: Dictionary) -> bool: return r["kind"] == "rock")
+	t.check("the fixture carries two rows of one kind, same mesh and slot, other density and size", rock_rows.size() >= 2 and rock_rows[0]["mesh"] == rock_rows[1]["mesh"] and rock_rows[0]["slot"] == rock_rows[1]["slot"] and rock_rows[0]["density"] != rock_rows[1]["density"] and rock_rows[0]["scale"] != rock_rows[1]["scale"])
 	t.check("a table with two meshes under one kind is refused", not (rows_api.kind_problems([
 		{"kind": "rock", "mesh": "kit:rubble", "slot": "stone"}, {"kind": "rock", "mesh": "kit:pebble", "slot": "stone"}]) as Array).is_empty())
 
@@ -218,13 +229,21 @@ func _park_chunks() -> void:
 	holder.add_child(camera)
 	camera.make_current()
 	var terrain = Terrain.new(PARK_TABLE)
+	var map = terrain.map_for(1)
+	map.scatter["kit"] = fixture_kit
+	# Cold run: this section runs first, so the process holds none of what the build reads; the strut glb
+	# is also requested with the cache bypassed, so it is cold on every run.
+	var stone_path := String(Palette.SLOT_TABLE.row("stone").get("path", ""))
+	t.check("the cold run: neither the strut glb nor the stone material is in the resource cache yet", not ResourceLoader.has_cached(STRUT) and not ResourceLoader.has_cached(stone_path), "strut %s, stone %s" % [ResourceLoader.has_cached(STRUT), ResourceLoader.has_cached(stone_path)])
 	terrain.build(holder)
 	terrain.use(1)
 	var stage_root: Node3D = terrain.geometry_root(1)
-	var map = terrain.map_for(1)
 	var ground: Callable = terrain.ground_callable(1)
-	var chunks: Node3D = api.build_chunked(stage_root, map, ground, true)
-	t.check("the chunked build starts on worker threads", chunks != null and not chunks.is_ready())
+	var chunks: Node3D = stage_root.get_node_or_null("GroundScatter")
+	if not t.check("terrain.gd built the stage's chunked scatter (no shim)", chunks != null and chunks.has_method("is_ready")):
+		holder.free()
+		return
+	t.check("the chunked build starts on worker threads", not chunks.is_ready())
 	var frames := 0
 	while chunks != null and not chunks.is_ready() and frames < BUILD_FRAMES_MAX:
 		await process_frame
@@ -237,7 +256,12 @@ func _park_chunks() -> void:
 		% [frames, chunks.worker_chunks, chunks.start_usec / 1000.0, slowest_ms, chunks.slowest_step, chunks.frame_usec_max / 1000.0])
 	t.check("the build spanned frames", frames > 1, "%d frames" % frames)
 	t.eq("every chunk was built off the main thread", chunks.worker_chunks, ParkTerrain.TILE_COUNT)
+	t.eq("the stage root holds all 100 chunks", chunks.get_child_count(), ParkTerrain.TILE_COUNT)
 	t.check("start() is metered", chunks.start_usec > 0 and chunks.slowest_usec >= chunks.start_usec, "%d usec" % chunks.start_usec)
+	# The glb source is requested on the loader thread with the cache bypassed, so the main thread never
+	# loads it and the build is cold whatever the process has cached (KB5's receipt ran warm).
+	t.eq("the glb mesh sources load on the loader thread, not the main thread", chunks.get("threaded_loads"), 1)
+	t.check("the slot materials that are resources load on the loader thread", int(chunks.get("threaded_materials")) >= 1, str(chunks.get("threaded_materials")))
 	t.check("no main-thread scatter step over 8 ms during the build, start() included", chunks.slowest_usec > 0 and chunks.slowest_usec < FRAME_CAP_USEC, "%.2f ms" % slowest_ms)
 
 	# One MultiMesh per kind per chunk; no node for a kind a chunk has none of; each chunk sits in
@@ -281,6 +305,26 @@ func _park_chunks() -> void:
 	t.check("one MultiMesh per kind per chunk, none empty", batches > 0 and per_chunk_errors.is_empty(), ", ".join(per_chunk_errors.slice(0, 8)))
 	t.check("every chunk's pieces lie inside its 160 m collider tile", instances > 0 and off_tile == 0, "%d of %d outside" % [off_tile, instances])
 	t.check("every piece stands on height()", instances > 0 and off_height == 0, "%d of %d off" % [off_height, instances])
+	# The merge: each chunk's rock batch holds the pieces of every rock row, and only one rock batch stands.
+	var merge_errors := []
+	var merged_chunks := 0
+	var rock_source: Dictionary = Scatter._source(rock_rows[0]["mesh"])
+	for chunk: Node in chunks.get_children():
+		var cparts := String(chunk.name).trim_prefix("Chunk").split("_")
+		var expect := 0
+		var rows_present := 0
+		for row: Dictionary in rock_rows:
+			var n: int = Scatter.chunk_transforms(row, map, ground, rock_source["aabb"], int(cparts[0]), int(cparts[1]), []).size()
+			expect += n
+			rows_present += 1 if n > 0 else 0
+		var rocks := chunk.get_children().filter(func(b: Node) -> bool: return b.get_meta("kind", "") == "rock")
+		if rocks.size() != (1 if expect > 0 else 0):
+			merge_errors.append("%s has %d rock batches" % [chunk.name, rocks.size()])
+		elif expect > 0 and (rocks[0] as MultiMeshInstance3D).multimesh.instance_count != expect:
+			merge_errors.append("%s rock batch holds %d of %d" % [chunk.name, (rocks[0] as MultiMeshInstance3D).multimesh.instance_count, expect])
+		elif rows_present >= 2:
+			merged_chunks += 1
+	t.check("each chunk's rock rows merge into one batch holding every row's pieces", merge_errors.is_empty() and merged_chunks > 0, "%d chunks merged two rows; %s" % [merged_chunks, ", ".join(merge_errors.slice(0, 6))])
 	t.check("the park scatter adds no collider", chunks.find_children("*", "CollisionObject3D", true, false).is_empty())
 
 	# The same chunks built at once on the main thread give the same buffers: placement does not

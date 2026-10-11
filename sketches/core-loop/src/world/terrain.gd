@@ -202,7 +202,7 @@ func _on_park_built(i: int) -> void:
 	_holes[i] = ground.holes
 	_under[i] = ground.under
 	maps[i].build_props(_roots[i], ground_callable(i + 1))
-	_build_scatter(_roots[i], maps[i], _heights[i])
+	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), true)
 
 
 # Builds the whole world a stage belongs to, if any of it is not built yet, and returns
