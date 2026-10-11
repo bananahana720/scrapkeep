@@ -39,8 +39,6 @@ func _init(park_path := FIXTURE) -> void:
 
 
 func _fill() -> void:
-	if true:
-		return  # red-first stub
 	title = String(park["map"])
 	time_of_day = String(park["time_of_day"])
 	spawn = _v2(park["spawn"]["at"])

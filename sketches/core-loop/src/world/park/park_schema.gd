@@ -221,8 +221,6 @@ static func describe(errors: Array) -> String:
 
 static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	var out := []
-	if true:
-		return out  # red-first stub
 	if not _fields(out, "park", park, TOP_FIELDS):
 		return out
 	if park["schema"] != SCHEMA:
@@ -285,8 +283,6 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 # at the section 8 bands.
 static func validate_lines(lines: Dictionary, park: Dictionary) -> Array:
 	var out := []
-	if true:
-		return out  # red-first stub
 	if not _fields(out, "lines", lines, {"map": "s", "stage": "n", "pilots": "o", "floor": "o"}):
 		return out
 	if lines["map"] != park.get("map"):
