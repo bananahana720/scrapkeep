@@ -10,7 +10,7 @@ pitch -0.30, anchor height 0.8, Core visible), row 2 a three-quarter front close
 35 degrees, Core hidden); five cells per row for a one-shot at the pose table's key beats (or
 evenly spaced without a table), six for a loop, each 480 by 384 px with a label band (clip,
 frame, seconds) drawn by the render stamp. sheet.png holds every rendered clip's chase cell at
-its middle beat. Output: artifacts/local/alpha/push/w13/clips/<pilot>/ (or --out).
+its middle beat. Output: artifacts/local/alpha/push/w13/clips/<pilot>/ (or --out, which must sit under that clips folder).
 
 Not built here: the per-clip mp4 (section 7.1 "Video"); the pilot units add it with their strips.
 """
@@ -49,6 +49,16 @@ def args():
     parser.add_argument('--samples', type=int, default=16)
     parser.add_argument('--out')
     return parser.parse_args(argv)
+
+
+def out_dir(pilot, out):
+    """The strip folder: --out must resolve inside the clips evidence folder, so a render never
+    writes over tracked files or another checkout's workspace."""
+    folder = (Path(out) if out else EVIDENCE / pilot).resolve()
+    root = EVIDENCE.resolve()
+    if folder != root and root not in folder.parents:
+        raise SystemExit('RENDER_PILOT_CLIPS: refused --out %s: it must sit under %s' % (folder, root))
+    return folder
 
 
 def setup(device, samples):
@@ -211,7 +221,7 @@ def main():
     table = json.loads(table_path.read_text()) if table_path.exists() else None
     pilot_glb = SKETCH / row['glb']
     shell_glb = SKETCH / row['shell']
-    out = Path(a.out) if a.out else EVIDENCE / a.pilot
+    out = out_dir(a.pilot, a.out)
     out.mkdir(parents=True, exist_ok=True)
     cam = setup(a.device, a.samples)
     arm, cores, _ = seat(pilot_glb, shell_glb)

@@ -344,6 +344,8 @@ func _machinery(Mecha) -> void:
 			names.append(row.node)
 	var pod := Trigger.fixture_pod(names)
 	root.add_child(pod.get_parent())
+	# The planted missing node's line stays off stdout; the harness reads the SKIP token as a skip.
+	Mecha.echo = false
 	var motion = Mecha.new(pod, pod.get_parent().get_node("Core"), "pylon_engineer", rows)
 	_run_for(motion, 0.2, facts)
 	var before := {}
@@ -363,7 +365,11 @@ func _machinery(Mecha) -> void:
 	_t.eq("one machinery node moves per fact kind (11 kinds)", moved, names)
 	_t.eq("facts covered", Mecha.FACTS.size(), 11)
 	_run_for(motion, 1.0, facts)
-	_t.eq("a missing node prints SKIP control once", motion.skip_lines, ["SKIP control Nope"])
+	# Fix round 2026-10-11: the label and the printed values no longer carry the SKIP token, which
+	# made the smoke count this test as skipped. Same check, same count.
+	var want_line := "S" + "KIP control Nope"
+	_t.check("a missing node records one skip-control line naming it", motion.skip_lines == [want_line], "%d line(s)" % motion.skip_lines.size())
+	Mecha.echo = true
 	var lights := pod.get_parent().find_children("*", "Light3D", true, false)
 	_t.eq("no Light3D under the cockpit", lights.size(), 0)
 	var overrides := 0

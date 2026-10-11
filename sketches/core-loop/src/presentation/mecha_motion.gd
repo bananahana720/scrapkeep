@@ -82,6 +82,11 @@ const SLOT_NAMES := {1: "weapon", 2: "special", 3: "line"}
 const AXIS_INDEX := {"x": 0, "y": 1, "z": 2}
 const EASE_RATE := 12.0
 
+# Whether a SKIP line is also printed. The smoke harness counts any output line holding the
+# SKIP token as a skipped test, so a test that plants a missing node turns this off and reads
+# skip_lines instead. Static, because rows are read (and lines made) in _init.
+static var echo := true
+
 var class_id := ""
 var skip_lines: Array = []
 var _pod: Node3D
@@ -278,7 +283,8 @@ func _skip(line: String) -> void:
 	if line in skip_lines:
 		return
 	skip_lines.append(line)
-	print(line)
+	if echo:
+		print(line)
 
 
 # --- machinery rows ---------------------------------------------------------------------
