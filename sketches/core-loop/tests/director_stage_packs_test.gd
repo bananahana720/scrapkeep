@@ -5,6 +5,7 @@ const Director := preload("res://src/world/director.gd")
 const T := preload("res://tests/support/t.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 # A stage row's own packs, elite and elite_arrival reach the director on stage entry; a row
 # without them keeps the table's. A pack kind the director cannot spawn is skipped with one
@@ -127,6 +128,16 @@ func _alpha_wardens() -> void:
 		_t.eq("alpha stage %d Warden family, ancient, variant" % stage, got, want)
 		_t.eq("alpha stage %d roster family by world" % stage, Roster.warden_family(stage), want[0])
 	_t.eq("a stage past the table clamps to the last world's family", Roster.warden_family(9), "mind")
+	# A mantle mounts only when its family matches the row's, so a table change that moves a
+	# kind must move its mantle too; a variant row carries the mantle named for its variant.
+	for stage in HeroAssets.WARDEN_MANTLES:
+		var mantle: Dictionary = HeroAssets.WARDEN_MANTLES[stage]
+		_t.eq("alpha stage %d mantle family" % stage, String(mantle["family"]), String(AlphaDefs.of(stage).get("warden_family", "")))
+	for stage in ALPHA_WARDENS:
+		var variant: String = ALPHA_WARDENS[stage][2]
+		if variant != "":
+			var path := String(HeroAssets.WARDEN_MANTLES.get(stage, {}).get("path", ""))
+			_t.check("alpha stage %d %s mounts its mantle" % [stage, variant], path.ends_with("warden_mantle_%s.glb" % variant), path)
 
 
 # Stages 1 and 2 author no deflector anywhere, and drawing their arrivals spawns none.

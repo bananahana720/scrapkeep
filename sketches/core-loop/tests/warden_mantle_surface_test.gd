@@ -1,4 +1,5 @@
 extends SceneTree
+# KF0 2026-10-10: the striped mantles (meltdown, brood) now sit on stages 2 and 4.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Warden := preload("res://src/combat/warden.gd")
@@ -37,11 +38,11 @@ func _run() -> void:
 						surfaces += 1
 						_t.check("tool override", mesh.get_surface_override_material(i) == tool)
 						var authored := mesh.mesh.surface_get_material(i) as StandardMaterial3D
-						if stage in [3, 4]:
+						if stage in [2, 4]:
 							_t.check("authored stripes reach albedo and emission", authored != null and authored.albedo_texture != null
 								and tool.albedo_texture == authored.albedo_texture and tool.emission_texture == authored.albedo_texture)
 			_t.check("tool surfaces present", surfaces > 0)
-			if stage in [3, 4] and tool.albedo_texture != null:
+			if stage in [2, 4] and tool.albedo_texture != null:
 				var image := tool.albedo_texture.get_image()
 				_t.check("stripe texture has distinct bands", absf(image.get_pixel(8, 8).r - image.get_pixel(72, 8).r) > 0.4)
 				_t.eq("stripe bands run diagonally", image.get_pixel(8, 8), image.get_pixel(16, 16))
@@ -50,7 +51,7 @@ func _run() -> void:
 				warden._charge_time = warden._charge_len * fraction
 				hook._update_mantle(rec)
 				_t.near("stage %d emission follows charge %.2f" % [stage, fraction], tool.emission_energy_multiplier, warden.charge_fraction() * 2.0)
-				if stage in [3, 4]:
+				if stage in [2, 4]:
 					_t.eq("texture hue is not multiplied by hazard", tool.emission, Color.WHITE)
 					_t.near("stripe brightness follows charge", tool.albedo_color.r, lerpf(0.03, 1.0, fraction))
 			warden._posture.staggered = true

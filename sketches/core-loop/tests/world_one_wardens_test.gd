@@ -1,5 +1,8 @@
 extends SceneTree
 # F6 2026-10-04: the family step is now _step_guard; the plating fight is gone.
+# KF0 2026-10-10: one Warden kind per world, so world one's pair is the Spillway reactor and
+# the Reach reactor meltdown; the swarm rack case and its --mutant control moved to stage 3,
+# the swarm on the Dig.
 
 const Game := preload("res://src/game.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
@@ -11,12 +14,13 @@ const Warden := preload("res://src/combat/warden.gd")
 
 # The two world-one zone Wardens on the alpha table, through the real spawn path
 # (flow.enter_stage, then combat.spawn_enemy("warden")): the Spillway reactor and the Cable
-# Reach swarm both fight by posture. Each row builds a Warden that conforms to the boss
-# contract's TARGET, takes real contacts to a stagger, cracks then shatters one chunk, and four
-# chunks unseal the stage with the plate and the ring mounted for it. The Reach rack pays one
-# fixed quarter bar per scatter on a cruise-or-faster ram, once, until it reforms; the Spillway
-# has no rack. Contacts are real physics from placed starts, not a player's run; every wait is
-# counted in physics frames. Run with --mutant to read the Reach row as a reactor (the rack
+# Reach reactor meltdown both fight by posture. Each row builds a Warden that conforms to the
+# boss contract's TARGET, takes real contacts to a stagger, cracks then shatters one chunk, and
+# four chunks unseal the stage with the plate and the ring mounted for it. Neither has a rack;
+# the Reach carries the meltdown's 6 s core window. The Dig's swarm (stage 3, world two) keeps
+# the rack case: one fixed quarter bar per scatter on a cruise-or-faster ram, once, until it
+# reforms. Contacts are real physics from placed starts, not a player's run; every wait is
+# counted in physics frames. Run with --mutant to read the Dig row as a reactor (the rack
 # check must then fail).
 
 const OUT := 58.0
@@ -38,7 +42,7 @@ var _unsealed := 0
 var _mutant := false
 
 
-# The alpha table with the Reach row read as a reactor, for the mutant run only.
+# The alpha table with the Dig row (stage 3) read as a reactor, for the mutant run only.
 class MutantTable extends RefCounted:
 	const BOSS := AlphaDefs.BOSS
 	const COUNT := AlphaDefs.COUNT
@@ -47,7 +51,7 @@ class MutantTable extends RefCounted:
 
 	func of(stage: int) -> Dictionary:
 		var row: Dictionary = AlphaDefs.of(stage).duplicate(true)
-		if stage == 2:
+		if stage == 3:
 			row["warden_family"] = "reactor"
 		return row
 
@@ -218,8 +222,9 @@ func _run() -> void:
 		await _start(stage)
 		await _contacts(stage)
 		_game.free()
-	await _rack_case(2)
+	await _rack_case(3)
 	await _no_rack(1)
+	await _no_rack(2)
 	print("world_one_wardens_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -296,7 +301,7 @@ func _rack_case(stage: int) -> void:
 	for drone in _warden.guard.alive() if _warden.guard != null else []:
 		drone.set_physics_process(false)
 	var has_rack: bool = _warden.guard != null and _warden.guard.alive().size() == 10
-	_report("stage 2 swarm Warden has a ten-drone rack", has_rack and _warden.family == "swarm",
+	_report("stage %d swarm Warden has a ten-drone rack" % stage, has_rack and _warden.family == "swarm",
 		"family %s, rack %s" % [_warden.family, "ten drones" if has_rack else "none"])
 	if not has_rack:
 		_game.free()
@@ -324,9 +329,14 @@ func _no_rack(stage: int) -> void:
 		return
 	_warden.set_physics_process(false)
 	_warden._physics_process(Warden.GUARD_RESPAWN)
-	_report("stage 1 reactor Warden has no rack", _warden.family == "reactor" and _warden.guard == null,
+	_report("stage %d reactor Warden has no rack" % stage, _warden.family == "reactor" and _warden.guard == null,
 		"family %s, guard %s" % [_warden.family, _warden.guard])
+	var want_variant := String(_row["warden_variant"])
+	var window := 6.0 if want_variant == "meltdown" else BossPosture.STAGGER_SECONDS
+	_report("stage %d variant '%s'" % [stage, want_variant], _warden.variant == want_variant
+			and is_equal_approx(_warden._posture.stagger_seconds, window),
+		"variant '%s', stagger_seconds %.1f" % [_warden.variant, _warden._posture.stagger_seconds])
 	_warden.on_guard_scattered(null, Vector3.ZERO)
-	_report("stage 1 posture stays 0 without a rack", _warden.posture() == 0.0 and not _warden.family_open(),
+	_report("stage %d posture stays 0 without a rack" % stage, _warden.posture() == 0.0 and not _warden.family_open(),
 		"posture %.1f" % _warden.posture())
 	_game.free()

@@ -5,11 +5,12 @@ const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const WARDEN_BASE := "res://assets/models/warden_clamp_base.glb"
 const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
-# Presentation-only mantles by stage, never by warden_variant: both Highdraft stages carry
-# mind/choir in alpha_defs, so only the stage tells the hand from the choir. Each row names the
-# family it fits; a mismatch mounts nothing. Stages 1 and 2 stay bare.
+# Presentation-only mantles by stage, never by warden_variant: stage 5 (the Mind's hand) has no
+# variant, so only the stage tells the hand from the choir. Each row names the family it fits; a
+# mismatch mounts nothing. KF0 2026-10-10: one Warden kind per world moved the reactor meltdown
+# to stage 2; stages 1 and 3 (the bare reactor and the bare swarm) stay bare.
 const WARDEN_MANTLES := {
-	3: {"family": "reactor", "path": "res://assets/models/warden_mantle_meltdown.glb"},
+	2: {"family": "reactor", "path": "res://assets/models/warden_mantle_meltdown.glb"},
 	4: {"family": "swarm", "path": "res://assets/models/warden_mantle_brood.glb"},
 	5: {"family": "mind", "path": "res://assets/models/warden_mantle_hand.glb"},
 	6: {"family": "mind", "path": "res://assets/models/warden_mantle_choir.glb"},
