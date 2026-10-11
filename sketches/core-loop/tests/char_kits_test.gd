@@ -10,16 +10,26 @@ const Contact := preload("res://src/movement/contact.gd")
 const Combat := preload("res://src/combat/combat.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
+const Icons := preload("res://src/ui/icons.gd")
 
 # The v2 W3 rules as data and pure functions (DESIGN-V2 sections 1 to 6): three class
 # rows that every layer reads, class-gated movement kits with no shared air dash, the
 # ability slots W1's HUD reads, charges that stockpile one at a time, the 0.4 s floor,
 # the gauge's release scaling and cancel, the bowling-ball rebound, the vault's exit and
 # its face lock, and the skill-shot forgiveness living in the hit test.
+# Re-pinned 2026-10-10 (wave P-B unit B1, design-v3/SKILL-BAR.md sections 1 to 3): the bar
+# has five slots on keys 1, Shift, 2, Ctrl, 3, the fifth the line skill; each record gains
+# number, group, selected and select_left. The two shared placeholder rows (line_reel and
+# ult_default) wear the drawn reel picture (Icons.EXTRA) until P-C gives every pilot its own
+# ab_<pilot>_line and ab_<pilot>_ult file; no other row may lack a file.
 
 const FIELDS := ["id", "display_name", "role", "species", "weapon_id", "movement_id", "special_id", "smash_id",
 	"color", "shape", "motif", "sound", "bible_home"]
-const SLOT_FIELDS := ["id", "icon", "key", "cooldown_frac", "charges", "max_charges", "state"]
+const SLOT_FIELDS := ["id", "icon", "key", "cooldown_frac", "charges", "max_charges", "state", "number", "group",
+	"selected", "select_left"]
+const BAR_KEYS := ["1", "Shift", "2", "Ctrl", "3"]
+# The placeholder rows allowed a drawn icon until P-C, and the one picture they may wear.
+const PLACEHOLDER_ICONS := {"line_reel": "ab_sable_reel", "ult_default": "ab_sable_reel"}
 
 var _failures := 0
 
@@ -112,7 +122,7 @@ func _slots() -> void:
 	var state := AbilityState.new()
 	state.fit(ClassDef.by_id("runner_gunner"))
 	var slots := state.slots()
-	var shaped := slots.size() == 4
+	var shaped := slots.size() == 5
 	for s in slots:
 		for field in SLOT_FIELDS:
 			shaped = shaped and (s as Dictionary).has(field)
@@ -120,6 +130,8 @@ func _slots() -> void:
 	var missing := []
 	for id in AbilityState.ABILITIES:
 		var icon: String = AbilityState.ABILITIES[id]["icon"]
+		if PLACEHOLDER_ICONS.get(id, "") == icon and Icons.EXTRA.has(icon):
+			continue
 		if not icon.begins_with("ab_") or not FileAccess.file_exists(AbilityState.ICON_DIR + icon + ".svg"):
 			missing.append(icon)
 	_report("canonical icons", missing.is_empty() and slots[0]["icon"] == "ab_rivet_weapon",
@@ -132,13 +144,13 @@ func _slots() -> void:
 	var tarn_state := AbilityState.new()
 	tarn_state.fit(tarn)
 	var tarn_slots := tarn_state.slots()
-	var want_ids := [tarn.weapon_id, tarn.movement_id, tarn.special_id, tarn.smash_id]
+	var want_ids := [tarn.weapon_id, tarn.movement_id, tarn.special_id, tarn.smash_id, tarn.line_id]
 	var tarn_ids := tarn_slots.map(func(s): return s["id"])
 	var tarn_keys := tarn_slots.map(func(s): return s["key"])
-	_report("tarn slots", tarn_slots.size() == 4 and tarn_ids == want_ids and tarn_keys == ["LMB", "RMB", "F", "Ctrl"],
-		"Tarn's four slots %s on keys %s" % [tarn_ids, tarn_keys])
-	_report("slot contract", shaped and keys == ["LMB", "RMB", "F", "Ctrl"] and cooling == AbilityState.COOLING and is_equal_approx(frac, 0.5),
-		"4 slots with %s; keys %s; a spent sprint reads %s, half recharged reads cooldown_frac %.2f" % [SLOT_FIELDS, keys, cooling, frac])
+	_report("tarn slots", tarn_slots.size() == 5 and tarn_ids == want_ids and tarn_keys == BAR_KEYS,
+		"Tarn's five slots %s on keys %s" % [tarn_ids, tarn_keys])
+	_report("slot contract", shaped and keys == BAR_KEYS and cooling == AbilityState.COOLING and is_equal_approx(frac, 0.5),
+		"5 slots with %s; keys %s; a spent sprint reads %s, half recharged reads cooldown_frac %.2f" % [SLOT_FIELDS, keys, cooling, frac])
 
 
 func _charges() -> void:

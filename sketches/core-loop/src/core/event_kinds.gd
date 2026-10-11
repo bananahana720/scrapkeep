@@ -168,11 +168,28 @@ const ROWS := {
 	"missed_drop": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"evolution_fired": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"posture_changed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# The skill bar and the ultimate (design-v3/SKILL-BAR.md section 7). `sound` is a baked id
+	# standing in; `sound_next` names the new cue the ultimate unit bakes. Live mint is "your
+	# verb works now" (LEGIBILITY.md:23); a pick and a cast are neutral bone, since the bar
+	# itself draws them. No toasts: the bar and the reticle carry every one.
+	"slot_selected": {"group": "combat", "color": Palette.SAND, "shape": "square", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
+	"slot_cast": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"line_skill_loaded": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "lock_tick", "sound_next": "line_load", "hud": "", "objective": "", "priority": 1},
+	"line_skill_fired": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "line_bite", "sound_next": "motif_line", "hud": "", "objective": "", "priority": 1},
+	"line_skill_expired": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
+	"ultimate_ready": {"group": "combat", "color": Palette.ARC, "shape": "ring", "sound": "found_chime", "sound_next": "ultimate_ready", "hud": "", "objective": "", "priority": 1},
+	"ultimate_started": {"group": "combat", "color": Palette.ARC, "shape": "lane", "sound": "launch_roar", "hud": "", "objective": "", "priority": 1},
+	"ultimate_peak": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "sound_next": "motif_stinger", "hud": "", "objective": "", "priority": 1},
+	"ultimate_landed": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
+	"ultimate_cancelled": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
 }
 
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
-# for one removes it from this list.
-const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window"]
+# for one removes it from this list. The skill-bar signals wait for wave P-B's HUD and
+# ultimate units (design-v3/SKILL-BAR.md section 10), which wire their listeners.
+const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window",
+	"slot_selected", "slot_cast", "line_skill_loaded", "line_skill_fired", "line_skill_expired",
+	"ultimate_ready", "ultimate_started", "ultimate_peak", "ultimate_landed", "ultimate_cancelled"]
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,

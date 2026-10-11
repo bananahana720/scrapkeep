@@ -145,6 +145,20 @@ const ENTRIES := [
 		"clue": "a choir Warden's open lens + a move it has not braced",
 		"text": "A staggered choir Warden braces against your most-used move; hit it with a different one while its lens is open.",
 	},
+	# The skill bar's framework entries are wave P-B's discovery unit's (SKILL-BAR section 7). Each
+	# pilot owns one marked block for its line-skill and set-piece entries (section 12, item 4).
+	# --- P-C Sable entries ---
+	# --- end Sable ---
+	# --- P-C Rivet entries ---
+	# --- end Rivet ---
+	# --- P-C Kest entries ---
+	# --- end Kest ---
+	# --- P-C Tarn entries ---
+	# --- end Tarn ---
+	# --- P-C Tally entries ---
+	# --- end Tally ---
+	# --- P-C Cannon entries ---
+	# --- end Cannon ---
 ]
 
 

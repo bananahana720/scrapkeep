@@ -20,6 +20,10 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # Evidence limit: effects are read where the game reads them and procs are driven
 # through the bus, not played; tree_play_test plays every build, and nothing here says
 # anything about feel or balance.
+# Re-pinned 2026-10-10 (wave P-B unit B1, design-v3/SKILL-BAR.md section 10): the bar's
+# fifth slot, the line skill, is restored and compared like the other four, and the
+# ultimate id, which apply_pick can now swap, must come back to the pilot's row. A special
+# proc is measured on the slot that pays for the special (Tally's pooled pressure).
 
 var _game
 var _player
@@ -189,7 +193,10 @@ func _is_plain(def) -> String:
 	for k in UpgradeTree.KNOBS:
 		if _player.kit.knob(k) != UpgradeTree.KNOBS[k]["default"]:
 			return "new run kept knob %s = %s" % [k, _player.kit.knob(k)]
-	var ids := {"weapon": def.weapon_id, "movement": def.movement_id, "special": def.special_id, "smash": def.smash_id}
+	var ids := {"weapon": def.weapon_id, "movement": def.movement_id, "special": def.special_id, "smash": def.smash_id,
+		"line": def.line_id}
+	if abilities.ultimate_id != def.ultimate_id:
+		return "new run kept ultimate %s" % abilities.ultimate_id
 	for slot in AbilityState.SLOTS:
 		# A plain slot holds one charge, except a pressure weapon (Tally's reader), whose row
 		# names its own cap (wave 15, 2026-10-05).
@@ -229,14 +236,23 @@ func _proc_fires(p: Dictionary) -> String:
 			"discharge", "blast", "detonate": return float(_struck)
 			"volley": return float(_shots)
 			"charge": return float(_combat.sticky.charges.size())
-			"grant_special", "refund_special": return abilities.slot(AbilityState.SPECIAL).charges + abilities.slot(AbilityState.SPECIAL).recharge * 0.001
+			"grant_special", "refund_special":
+				var payer = abilities.slot(abilities.pool_of(AbilityState.SPECIAL))
+				return payer.charges + payer.recharge * 0.001
 			"grant_move", "refund_move": return abilities.slot(AbilityState.MOVEMENT).charges + abilities.slot(AbilityState.MOVEMENT).recharge * 0.001
 			"overdrive": return _combat._overdrive
 			"air": return float(_player.state.air_actions)
 		return 0.0
+	# Tally's special pays from slot 1's pressure, which a smash also refills on its own
+	# (combat's _grant_pressure), so a pooled special primes two charges down and is judged
+	# by the step: the first emit must gain more than the second, inside the gap.
+	var pooled: bool = p["do"] in ["grant_special", "refund_special"] and abilities.pool_of(AbilityState.SPECIAL) != AbilityState.SPECIAL
 	var prime := func() -> void:
 		match p["do"]:
-			"grant_special", "refund_special": abilities.spend(AbilityState.SPECIAL)
+			"grant_special", "refund_special":
+				abilities.spend(AbilityState.SPECIAL)
+				if pooled:
+					abilities.spend(AbilityState.SPECIAL)
 			"grant_move", "refund_move": abilities.spend(AbilityState.MOVEMENT)
 			"overdrive": _combat._overdrive = 0.0
 			"air": _player.state.air_actions = 0
@@ -252,7 +268,9 @@ func _proc_fires(p: Dictionary) -> String:
 	_combat.sticky.clear()
 	if not once > before:
 		return "proc %s on %s did nothing (%s -> %s)" % [p["do"], p["on"], before, once]
-	if twice > primed and not p["do"] in ["discharge", "blast", "detonate", "volley", "charge"]:
+	if pooled and twice - primed >= once - before:
+		return "proc %s on %s fired twice inside its gap (%s -> %s, then %s -> %s)" % [p["do"], p["on"], before, once, primed, twice]
+	if not pooled and twice > primed and not p["do"] in ["discharge", "blast", "detonate", "volley", "charge"]:
 		return "proc %s on %s fired twice inside its gap" % [p["do"], p["on"]]
 	if p["do"] in ["discharge", "blast", "detonate", "volley", "charge"] and twice - once > 0.0:
 		return "proc %s on %s fired twice inside its gap (%s -> %s)" % [p["do"], p["on"], once, twice]

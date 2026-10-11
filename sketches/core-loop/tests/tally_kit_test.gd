@@ -14,6 +14,14 @@ const T := preload("res://tests/support/t.gd")
 # that time never refills, bay selection, Gather, an invalid aim, Link and its arc,
 # Balance Due's speed scaling, the pressure restores, no Warden shatter from a card, the
 # flywheel surge, plate return, the special echo re-checking the plate and the stamp landing.
+# Re-pinned 2026-10-10 for the skill bar (design-v3/SKILL-BAR.md section 1, "Tally's deck,
+# re-cut", wave P-B unit B1): the bays retired. Balance due is slot 1's card (left click at
+# home), gather plate is slot 2's tap (2 then click) and link clips is slot 3's line skill (3
+# then click loads it, the next bite on an enemy clips it as the first clip), all from the
+# reader's one pressure pool. A gather tap at the sky and a cast on an empty pool spend
+# nothing and answer verb_failed. Plate return is off her kit until wave P-C; its row stays,
+# so the plate-return and echo steps swap it into slot 2 and keep driving special_pressed
+# directly, the kit-test path the router leaves working.
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -82,7 +90,12 @@ func _boot() -> void:
 		# The camera takes a new pitch on the next tick, so each aimed press waits one step.
 		[_invalid_start, 2, _invalid_press],
 		[_noop, 2, _check_invalid],
+		[_invalid_tap_start, 2, _invalid_tap_press],
+		[_noop, 2, _check_invalid_tap],
+		[_empty_pool_start, 2, _empty_pool_press],
+		[_noop, 2, _check_empty_pool],
 		[_link_start, 2, _link_press],
+		[_noop, 2, _link_bite],
 		[_noop, 2, _check_link],
 		[_balance_start, 2, _balance_press],
 		[_noop, 2, _balance_rest],
@@ -194,16 +207,27 @@ func _aim_at(point: Vector3) -> void:
 	_game.camera.pitch = atan2(point.y - origin.y, flat)
 
 
+# The old bay numbers, now bar picks: 0 gather plate (pick 2, click), 1 link clips (pick 3,
+# click), 2 balance due (click at home).
 func _press_card(card_bay: int) -> void:
-	_source.press = {"bay_pick": card_bay, "fire_pressed": true}
+	if card_bay == 2:
+		_source.press = {"fire_pressed": true}
+		return
+	_source.press = {"slot_pick": card_bay + 1, "fire_pressed": true}
+
+
+# Plate return is off Tally's kit until wave P-C; these steps put its row in slot 2.
+func _as_plate_return() -> void:
+	_as_class("tally")
+	_player.abilities.swap(AbilityState.SPECIAL, "plate_return")
 
 
 # --- a. the row --------------------------------------------------------------------------
 
 func _check_row() -> void:
 	var def: Resource = ClassDef.by_id("tally")
-	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id]
-	_t.eq("tally ability ids", ids, ["ledger_reader", "flywheel_surge", "plate_return", "stamp_slam"])
+	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id, def.line_id]
+	_t.eq("tally ability ids", ids, ["ledger_reader", "flywheel_surge", "gather_plate", "stamp_slam", "link_clips"])
 	_t.eq("tally species", def.species, "pack rat")
 	var text := "%s %s %s %s %s %s %s %s %s %s %s" % [def.display_name, def.role, def.species, def.pitch, def.bible_home,
 		def.synergy_hooks, ids, def.color, def.shape, def.motif, def.sound]
@@ -241,13 +265,18 @@ func _check_pressure() -> void:
 
 func _bay_start() -> void:
 	_as_class("tally")
-	_source.press = {"bay_pick": 2}
+	_source.press = {"slot_pick": 1}
 
 
 func _check_bay() -> void:
-	_t.eq("bay pick 2 selects Balance Due", _combat.bay, 2)
-	_t.eq("the weapon slot shows the loaded card", _player.abilities.slot(AbilityState.WEAPON).icon, "ab_tally_balance")
-	_t.eq("selecting costs no pressure", _charges(), 3)
+	var ab = _player.abilities
+	_t.eq("the bar: balance due on 1, gather plate on 2, link clips on 3",
+		[ab.cap(AbilityState.WEAPON, "cards", []), ab.id_of(AbilityState.SPECIAL), ab.id_of(AbilityState.LINE)],
+		[["balance_due"], "gather_plate", "link_clips"])
+	_t.eq("slots 2 and 3 spend slot 1's pressure", [ab.pool_of(AbilityState.SPECIAL), ab.pool_of(AbilityState.LINE)],
+		[AbilityState.WEAPON, AbilityState.WEAPON])
+	_t.eq("the weapon slot shows balance due", ab.slot(AbilityState.WEAPON).icon, "ab_tally_balance")
+	_t.eq("2 picks gather and costs no pressure", [ab.selected, _charges()], [AbilityState.SPECIAL, 3])
 
 
 # --- d. Gather ---------------------------------------------------------------------------
@@ -261,6 +290,7 @@ func _gather_start() -> void:
 func _gather_planted() -> void:
 	_t.check("gather plants the plate", not _combat.plate.is_empty(), str(_combat.plate))
 	_t.eq("gather costs one pressure", _charges(), 2)
+	_t.eq("the gather tap snaps the pick home", _player.abilities.selected, AbilityState.WEAPON)
 	if _combat.plate.is_empty():
 		return
 	var at: Vector3 = _combat.plate["at"]
@@ -317,6 +347,41 @@ func _check_invalid() -> void:
 	_game.camera.pitch = 0.0
 
 
+# A gather tap at the sky: refused, nothing spent, the pick kept.
+func _invalid_tap_start() -> void:
+	_as_class("tally")
+	_game.camera.pitch = 1.2
+
+
+func _invalid_tap_press() -> void:
+	_fails.clear()
+	_press_card(0)
+
+
+func _check_invalid_tap() -> void:
+	_t.eq("a gather tap at the sky spends nothing and answers no_target",
+		[_charges(), _fails.has(["fire", "no_target"]), _player.abilities.selected, _combat.plate.is_empty()],
+		[3, true, AbilityState.SPECIAL, true])
+	_game.camera.pitch = 0.0
+
+
+# Slot 1 empties the shared pool while 2 is picked: the cast is refused.
+func _empty_pool_start() -> void:
+	_as_class("tally")
+	_source.press = {"slot_pick": 1}
+
+
+func _empty_pool_press() -> void:
+	_fails.clear()
+	_set_charges(0)
+	_source.press = {"fire_pressed": true}
+
+
+func _check_empty_pool() -> void:
+	_t.eq("a cast on an empty pool is refused (cooling)", [_fails.has(["fire", "cooling"]), _combat.plate.is_empty(), _charges()],
+		[true, true, 0])
+
+
 # --- f. Link and its arc --------------------------------------------------------------
 
 func _link_start() -> void:
@@ -336,7 +401,17 @@ func _link_press() -> void:
 	_press_card(1)
 
 
+# 3 then click loaded link clips; the next bite on c0 carries it.
+func _link_bite() -> void:
+	_record["loaded"] = String(_combat.line_load().get("id", ""))
+	_record["pressure"] = _charges()
+	var c0: Node3D = _record["c0"]
+	_player.grapple_to(c0.global_position, Vector3.UP, c0)
+
+
 func _check_link() -> void:
+	_t.eq("3 then click loads link clips and spends one pressure", [_record["loaded"], _record["pressure"]], ["link_clips", 2])
+	_player.release_grapple()
 	var ids: Array = _combat.link_group.get("ids", [])
 	_t.check("link clips three", ids.size() == 3 and ids.has(_record["c0_id"]), "group %s" % [_combat.link_group])
 	var from := _struck.size()
@@ -501,7 +576,7 @@ func _check_surge() -> void:
 # --- k. plate return ----------------------------------------------------------------------
 
 func _plate_none_start() -> void:
-	_as_class("tally")
+	_as_plate_return()
 	_source.press = {"special_pressed": true}
 	_source.hold = {"special_held": true}
 
@@ -514,7 +589,7 @@ func _check_plate_none() -> void:
 
 
 func _plate_start() -> void:
-	_as_class("tally")
+	_as_plate_return()
 	var aim := _aim_flat()
 	var ground: Vector3 = _combat._floor_at(_player.ball_position() + aim * 6.0 + Vector3.UP)
 	_combat.plate = {"at": ground, "until": _combat._clock + 4.0}

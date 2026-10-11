@@ -103,6 +103,17 @@ var smash_landing: Node3D
 var chain := ChainState.new()
 # The chain's multiplier while a smash landing resolves; 1.0 otherwise.
 var _landing_mult := 1.0
+# The skill bar's router (design-v3/SKILL-BAR.md section 1). set_piece_phase answers the
+# ultimate's phase (idle, windup, flight, recover); the ultimate unit sets it, and unset it
+# reads idle. line_load_of answers combat.line_load(); combat wires it.
+var set_piece_phase := Callable()
+var line_load_of := Callable()
+# The release latch: after a snap back with left click still down, the weapon ignores left
+# click until it comes up, so a held cast never rolls into weapon fire.
+var _fire_latched := false
+# Left click as the source polled it this tick, before the router moves it to slot 2 or 3. A
+# cast's snap back lands after the router cleared fire_*, so the latch reads this.
+var _click_held := false
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -171,6 +182,14 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
 	events.stage_entered.connect(func(_stage: int, _retry: bool): abilities.refill())
 	events.stage_content_cleared.connect(func(_reason: String): abilities.refill())
+	# The selection goes home on a cast and at every reset point (SKILL-BAR section 1).
+	events.slot_cast.connect(func(_slot: String, _id: String, _at: Vector3): snap_slots("cast"))
+	events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
+		snap_slots("ultimate"))
+	events.stage_entered.connect(func(_stage: int, _retry: bool): snap_slots("reset"))
+	events.stage_content_cleared.connect(func(_reason: String): snap_slots("reset"))
+	events.player_died.connect(func(): snap_slots("reset"))
+	events.run_ended.connect(func(_won: bool): snap_slots("reset"))
 	_rigid.landed.connect(func(impact: float): events.landed.emit(impact))
 
 	# Everything under the player is placed per frame in _process, which interpolation
@@ -417,6 +436,7 @@ func grapple_range() -> float:
 
 func _physics_process(delta: float) -> void:
 	source.poll(intent)
+	_route_slots(delta)
 	abilities.movement_key = _burst_key()
 	_read_mass()
 	_route_interact()
@@ -452,7 +472,115 @@ func _mark_slots() -> void:
 
 func _charging() -> bool:
 	var special = abilities.gauge(AbilityState.SPECIAL)
-	return (special != null and special.charging) or kit.slingshot.charging
+	var line = abilities.gauge(AbilityState.LINE)
+	return (special != null and special.charging) or (line != null and line.charging) or kit.slingshot.charging
+
+
+# --- The skill bar's router (design-v3/SKILL-BAR.md sections 1 and 2) -------------------
+# Runs right after the poll and before the grammar, on the player's physics tick, which runs
+# ahead of combat's (the player is added to the tree first), so combat reads the routed
+# fields on the same tick.
+func _route_slots(delta: float) -> void:
+	_click_held = intent.fire_held
+	# The latch lasts only until the click comes up, whichever slot is picked meanwhile, so
+	# a stale latch never eats a later click.
+	if _fire_latched and not intent.fire_held:
+		_fire_latched = false
+		intent.fire_released = false
+	var phase := String(set_piece_phase.call()) if set_piece_phase.is_valid() else "idle"
+	if phase != "idle" and phase != "":
+		_swallow_for_set_piece()
+		return
+	# The timeout runs before the click is routed: a click on the tick the pick goes stale is
+	# the weapon's, never both a slot cast and a weapon shot.
+	if abilities.tick_selection(delta, abilities.charging()):
+		snap_slots("timeout", intent.fire_held and not intent.fire_pressed)
+	if intent.slot_pick >= 0 and intent.slot_pick < AbilityState.BAR.size():
+		_pick(AbilityState.BAR[intent.slot_pick])
+	var picked: String = abilities.selected
+	if picked == AbilityState.SPECIAL:
+		intent.special_pressed = intent.special_pressed or intent.fire_pressed
+		intent.special_held = intent.special_held or intent.fire_held
+		intent.special_released = intent.special_released or intent.fire_released
+		_clear_fire()
+	elif picked == AbilityState.LINE:
+		intent.line_pressed = intent.line_pressed or intent.fire_pressed
+		intent.line_held = intent.line_held or intent.fire_held
+		intent.line_released = intent.line_released or intent.fire_released
+		_clear_fire()
+	elif _fire_latched:
+		_clear_fire()
+
+
+# During the set piece only the roll (steering), Space (bail) and Q (recall) reach the ball.
+func _swallow_for_set_piece() -> void:
+	var move := intent.move
+	var jump_pressed := intent.jump_pressed
+	var jump_held := intent.jump_held
+	var ultimate_pressed := intent.ultimate_pressed
+	intent.clear()
+	intent.move = move
+	intent.jump_pressed = jump_pressed
+	intent.jump_held = jump_held
+	intent.ultimate_pressed = ultimate_pressed
+
+
+func _clear_fire() -> void:
+	intent.fire_pressed = false
+	intent.fire_held = false
+	intent.fire_released = false
+
+
+# A number key. The home key, or the picked number again, is the undo: any gauge on the
+# picked slot drops and the selection goes home. Another number drops whatever gauge charges
+# (a picked slot's, or Kest's slot-1 sticky gauge) and picks the new slot if it is ready.
+func _pick(slot: String) -> void:
+	var held: String = abilities.selected
+	if slot == AbilityState.WEAPON or slot == held:
+		if held == AbilityState.WEAPON:
+			return
+		_drop_gauge(held, "cancel")
+		snap_slots("deselect")
+		return
+	var swapped := false
+	if held != AbilityState.WEAPON:
+		swapped = _drop_gauge(held, "swap")
+	else:
+		for id in abilities.cancel_gauges():
+			events.gauge_cancelled.emit(id, "swap")
+			indicator.collapse_all()
+	var refusal := "loaded" if slot == AbilityState.LINE and _line_loaded() else abilities.select(slot)
+	if refusal != "":
+		_fail("select", refusal)
+		if swapped:
+			snap_slots("swap")
+		return
+	events.slot_selected.emit(slot, "swap" if swapped else "pick")
+
+
+# Drops a picked slot's charging gauge with nothing spent. True when one was charging.
+func _drop_gauge(slot: String, reason: String) -> bool:
+	var gauge = abilities.gauge(slot)
+	if gauge == null or not gauge.cancel():
+		return false
+	indicator.collapse(slot)
+	events.gauge_cancelled.emit(abilities.id_of(slot), reason)
+	return true
+
+
+func _line_loaded() -> bool:
+	return line_load_of.is_valid() and not (line_load_of.call() as Dictionary).is_empty()
+
+
+# The one door for a snap back to slot 1 (SKILL-BAR section 1): publishes slot_selected with
+# the reason when the selection moves, and latches left click if it is still down. The
+# timeout passes its own reading: a click pressed on the timeout tick is fresh, not held.
+func snap_slots(reason: String, latch := true) -> void:
+	if not abilities.snap_back(reason):
+		return
+	if latch and (intent.fire_held or _click_held):
+		_fire_latched = true
+	events.slot_selected.emit(AbilityState.WEAPON, reason)
 
 
 # Right mouse is the line for every pilot, except while the special or the slingshot charges:
@@ -463,6 +591,8 @@ func _read_grammar() -> void:
 	if intent.harpoon_pressed and _charging():
 		intent.harpoon_pressed = false
 		intent.cancel_pressed = true
+		# A cancelled cast ends the intent: the pick goes home (SKILL-BAR section 1).
+		snap_slots("cancel")
 	_read_ctrl()
 	if _frozen or not kit.on(Augments.GRAPPLE):
 		return
@@ -477,8 +607,10 @@ func _read_grammar() -> void:
 		intent.mount_pressed = true
 
 
+# The movement chip's key: Shift for every pilot. Sable's chip is her boost, since her movement
+# row is the harpoon and the harpoon has no slot (SKILL-BAR section 1).
 func _burst_key() -> String:
-	return AbilityState.KEYS[AbilityState.MOVEMENT] if kit.movement_id == Augments.GRAPPLE else Bindings.label("boost")
+	return Bindings.label("boost")
 
 
 # The pilot's class burst is on Shift (Rivet's sprint, Kest's blink, Tarn's claw pull, Tally's flywheel surge, the remembered cannon's recoil); Sable's Shift is the boost.

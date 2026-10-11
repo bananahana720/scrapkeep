@@ -1,6 +1,6 @@
 extends RefCounted
 
-# The nine verbs the player has, by id, and the one table every key comes from. Per verb:
+# The verbs the player has, by id, and the one table every key comes from. Per verb:
 #   intent   the Intent field a press fills ("" where no Intent field carries it: the camera
 #            reads the mouse itself)
 #   fail     the cue id of the answer to a press that cannot succeed
@@ -10,6 +10,7 @@ extends RefCounted
 #   glyph    the key glyph id a prompt, a card or a diagram draws for the verb
 #   label    what that glyph spells in words
 #   icon     the verb's icon id ("" where the verb has no prompt picture)
+#   retired  true on a verb no key fills any more (the old F special), kept for its readers
 # game.gd registers every action from here and holds no key table of its own.
 const VERBS := {
 	"roll": {"intent": "move", "fail": "none", "glyph": "key_w", "label": "W A S D", "icon": "",
@@ -37,20 +38,33 @@ const VERBS := {
 		"actions": {"cl_haul": {"keys": [KEY_CTRL], "pad": JOY_BUTTON_X}}},
 	"boost": {"intent": "boost_pressed", "fail": "verb_fail_boost", "glyph": "key_shift", "label": "Shift", "icon": "cat_mobility",
 		"actions": {"cl_boost": {"keys": [KEY_SHIFT], "pad": JOY_BUTTON_B}}},
+	# Retired (SKILL-BAR section 6): F is unbound in play and the special is slot 2, cast by
+	# left click after a 2. The row stays, with no key, so the screens that still list the
+	# special verb keep reading it until wave P-B's HUD unit drops it; special_* are now the
+	# router's outputs, and no key fills them.
 	"special": {"intent": "special_pressed", "fail": "verb_fail_special", "glyph": "key_f", "label": "F", "icon": "ab_sable_special",
-		"actions": {"cl_special": {"keys": [KEY_F], "pad": JOY_BUTTON_LEFT_SHOULDER}}},
+		"retired": true, "actions": {"cl_special": {"keys": []}}},
 	"interact": {"intent": "interact_pressed", "fail": "verb_fail_interact", "glyph": "key_e", "label": "E", "icon": "ab_sable_mount",
 		"actions": {"cl_interact": {"keys": [KEY_E], "pad": JOY_BUTTON_Y}}},
+	# Keys 1, 2, 3 pick the bar slot left click casts (SKILL-BAR section 1). The actions keep
+	# their cl_bay names from Tally's old card bays.
+	"select": {"intent": "slot_pick", "fail": "verb_fail_select", "glyph": "key_1", "label": "1 2 3", "icon": "",
+		"actions": {
+			"cl_bay_1": {"keys": [KEY_1], "pad": JOY_BUTTON_DPAD_LEFT},
+			"cl_bay_2": {"keys": [KEY_2], "pad": JOY_BUTTON_DPAD_UP},
+			"cl_bay_3": {"keys": [KEY_3], "pad": JOY_BUTTON_DPAD_RIGHT},
+		}},
+	# Q is the ultimate (SKILL-BAR section 4); LB is free since the special retired.
+	"ultimate": {"intent": "ultimate_pressed", "fail": "verb_fail_ultimate", "glyph": "key_q", "label": "Q", "icon": "",
+		"actions": {"cl_ultimate": {"keys": [KEY_Q], "pad": JOY_BUTTON_LEFT_SHOULDER}}},
 }
-# Actions that belong to no verb: the retry hold (R, RB), the pause (P and Escape, Start) and
-# Tally's three card bays (1, 2, 3 or D-pad left, up, right).
+# Actions that belong to no verb: the retry hold (R, RB) and the pause (P and Escape, Start).
 const EXTRA_ACTIONS := {
 	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
 	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
-	"cl_bay_1": {"keys": [KEY_1], "pad": JOY_BUTTON_DPAD_LEFT},
-	"cl_bay_2": {"keys": [KEY_2], "pad": JOY_BUTTON_DPAD_UP},
-	"cl_bay_3": {"keys": [KEY_3], "pad": JOY_BUTTON_DPAD_RIGHT},
 }
+# The bar slot each select action picks, by its index in Intent.slot_pick.
+const SELECT_ACTIONS := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
 # The engine's ui_* actions have no pad button, so a pad moves menu focus but cannot press or go
 # back. Boot adds these two rows to ui_accept and ui_cancel and keeps the engine's key events.
 const UI_PAD := {"ui_accept": JOY_BUTTON_A, "ui_cancel": JOY_BUTTON_B}
@@ -58,21 +72,26 @@ const VERB_FIELDS := ["intent", "fail", "glyph", "label", "icon", "actions"]
 
 # The ball states a key can be read in, highest first (LEGIBILITY section 3): a key means one
 # verb in the highest state that holds, and a world swing is also airborne.
-const STATES := ["line_body", "line_world", "charging", "mounted", "air", "ground"]
+# set_piece is the ultimate's ride (SKILL-BAR section 6): every key but the roll, Space (bail)
+# and Q is swallowed.
+const STATES := ["set_piece", "line_body", "line_world", "charging", "mounted", "air", "ground"]
 
 # What each verb's key does in each state. "any" is the reading of every state not named.
 # "refused" is a press the ball answers with a failure cue; "brake or slam" is the ground and
-# air reading of Ctrl, which a charge does not change.
+# air reading of Ctrl, which a charge does not change. "" is a key that does nothing there.
+# The retired special has no row, so it reads "" everywhere.
 const READS := {
 	"roll": {"any": "drive"},
 	"look": {"any": "look"},
-	"jump": {"any": "jump", "air": "double jump", "mounted": "slingshot"},
-	"fire": {"any": "fire"},
-	"harpoon": {"any": "bite", "line_body": "fling", "line_world": "fling", "charging": "cancel"},
-	"haul": {"any": "brake", "line_body": "smash", "line_world": "winch", "charging": "brake or slam", "mounted": "refused", "air": "slam"},
-	"boost": {"any": "go", "mounted": "refused"},
-	"special": {"any": "special", "charging": "release"},
-	"interact": {"any": "interact", "mounted": "dismount"},
+	"jump": {"any": "jump", "air": "double jump", "mounted": "slingshot", "set_piece": "bail"},
+	"fire": {"any": "fire", "charging": "release", "set_piece": ""},
+	"harpoon": {"any": "bite", "line_body": "fling", "line_world": "fling", "charging": "cancel", "set_piece": ""},
+	"haul": {"any": "brake", "line_body": "smash", "line_world": "winch", "charging": "brake or slam", "mounted": "refused", "air": "slam",
+		"set_piece": ""},
+	"boost": {"any": "go", "mounted": "refused", "set_piece": ""},
+	"interact": {"any": "interact", "mounted": "dismount", "set_piece": ""},
+	"select": {"any": "pick", "charging": "swap", "set_piece": ""},
+	"ultimate": {"any": "ultimate", "set_piece": ""},
 }
 
 
@@ -105,8 +124,11 @@ static func icon(verb: String) -> String:
 	return VERBS[verb]["icon"] if VERBS.has(verb) else ""
 
 
-# The ball's highest state. `line` is "" for no line, "body" or "world".
-static func ball_state(line: String, charging: bool, mounted: bool, airborne: bool) -> String:
+# The ball's highest state. `line` is "" for no line, "body" or "world"; `set_piece` is true
+# while the ultimate rides.
+static func ball_state(line: String, charging: bool, mounted: bool, airborne: bool, set_piece := false) -> String:
+	if set_piece:
+		return "set_piece"
 	if line == "body":
 		return "line_body"
 	if line == "world":

@@ -19,7 +19,7 @@ const Sticky := preload("res://src/combat/sticky.gd")
 # new run starts clean.
 #
 # A node never edits ability code. It carries ops the rest of the game reads:
-#   swap     {slot: ability id}     the slot plays a variant row from AbilityState.ABILITIES
+#   swap     {slot: ability id}     the slot (or "ultimate") plays a variant row from AbilityState.ABILITIES
 #   knob     {name: value}          a behaviour switch or number, defaults in KNOBS
 #   proc     [{on, do, scale, gap}] on a bus fact, run one of ACTIONS (combat runs them)
 #   pattern  {weapon: transformer}  applied to that weapon's Pattern after the parts
@@ -42,7 +42,9 @@ const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "de
 const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Tarn,
 	"tally": Tally,
 	"remembered_cannon": Cannon}
-const KEYS := ["weapon", "movement", "special", "smash"]
+# The slot a node's card sits on: the bar, the chips and, from depth 3, the ultimate
+# (design-v3/SKILL-BAR.md section 12, item 3).
+const KEYS := ["weapon", "movement", "special", "smash", "line", "ultimate"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
 # The director's vocabulary: what a build leans on, so packs can test it fairly.
 const TAGS := ["air", "burst", "close", "ranged", "mobility", "mounted", "sustain", "cc_immune", "traps", "stealth"]
@@ -73,6 +75,20 @@ const KNOBS := {
 	"blink_cut": {"default": false}, "smoke_cloud": {"default": 0.0}, "sticky_ride": {"default": false},
 	"mark_burst": {"default": false}, "line_charges": {"default": 0}, "cloak_free_blink": {"default": false},
 	"cloak_hold_fast": {"default": false},
+	# The shared ultimate knobs (ult_encore, ult_beats, ult_radius, ult_volley) are B3's. A pilot
+	# may own at most one ult_<word> knob, in its own block (SKILL-BAR section 12, item 4).
+	# --- P-C Sable knob ---
+	# --- end Sable ---
+	# --- P-C Rivet knob ---
+	# --- end Rivet ---
+	# --- P-C Kest knob ---
+	# --- end Kest ---
+	# --- P-C Tarn knob ---
+	# --- end Tarn ---
+	# --- P-C Tally knob ---
+	# --- end Tally ---
+	# --- P-C Cannon knob ---
+	# --- end Cannon ---
 }
 
 # What a proc may do, and the bus facts each action itself causes. No proc listens for
@@ -189,7 +205,7 @@ static func safe_pick_problems(for_class: String, n: Dictionary, earlier: Array 
 		return out
 	var slots := {}
 	var knobs := {}
-	for slot in AbilityState.SLOTS:
+	for slot in AbilityState.SWAPPABLE:
 		slots[slot] = def.get("%s_id" % slot)
 	for k in KNOBS:
 		knobs[k] = KNOBS[k]["default"]
@@ -202,6 +218,8 @@ static func safe_pick_problems(for_class: String, n: Dictionary, earlier: Array 
 		var replacement = n["swap"][slot]
 		if not slots.has(slot) or not AbilityState.ABILITIES.has(replacement):
 			out.append("%s: swap %s -> %s removes a valid slot ability" % [id, slot, replacement])
+		elif _grows(slots[slot], replacement):
+			continue
 		elif replacement != slots[slot] or replacement != def.get("%s_id" % slot):
 			out.append("%s: swap %s -> %s replaces ability %s" % [id, slot, replacement, slots[slot]])
 	for k in n.get("knob", {}):
@@ -225,6 +243,13 @@ static func safe_pick_problems(for_class: String, n: Dictionary, earlier: Array 
 		elif float(value) < float(previous):
 			out.append("%s: knob %s lowers earlier pick %s to %s" % [id, k, previous, value])
 	return out
+
+
+# A swap to a row whose variant_of is the held ability is growth: a depth-3 ultimate variant
+# changes the set piece without taking it away (SKILL-BAR section 12, item 3).
+static func _grows(held, replacement) -> bool:
+	var base := String(AbilityState.ABILITIES.get(String(replacement), {}).get("variant_of", ""))
+	return base != "" and base == String(held)
 
 
 # Visit every node with its actual ancestor picks. The world-one offer profile has
@@ -291,7 +316,7 @@ static func problems(for_class: String, world_one := false) -> Array[String]:
 				out.append("%s: unknown knob '%s'" % [id, k])
 		for slot in n.get("swap", {}):
 			var variant: String = n["swap"][slot]
-			if not slot in AbilityState.SLOTS or not AbilityState.ABILITIES.has(variant):
+			if not slot in AbilityState.SWAPPABLE or not AbilityState.ABILITIES.has(variant):
 				out.append("%s: swap %s -> %s is not a slot and ability row" % [id, slot, variant])
 		for slot in n.get("charges", {}):
 			if not slot in AbilityState.SLOTS or int(n["charges"][slot]) < 1:
@@ -463,7 +488,10 @@ func branch_tags() -> PackedStringArray:
 # scale, extra charges add to whatever items gave, a cooldown scale multiplies in.
 static func apply_pick(abilities, n: Dictionary) -> void:
 	for slot in n.get("swap", {}):
-		abilities.swap(slot, n["swap"][slot])
+		if slot == AbilityState.ULTIMATE:
+			abilities.ultimate_id = String(n["swap"][slot])
+		else:
+			abilities.swap(slot, n["swap"][slot])
 	for slot in n.get("charges", {}):
 		var extra := int(n["charges"][slot])
 		abilities.set_max_charges(slot, abilities.slot(slot).max_charges + extra)

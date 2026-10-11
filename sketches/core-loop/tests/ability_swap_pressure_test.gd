@@ -33,4 +33,21 @@ func _initialize() -> void:
 	c.swap(w, "rapid_laser")
 	_t.eq("a swap away keeps the pick, drops the pressure", c.slot(w).max_charges, 2)
 	_t.eq("the swapped slot starts full", c.slot(w).charges, 2)
+
+	# Re-pinned 2026-10-10 for the skill bar (SKILL-BAR.md section 1, "Tally's deck, re-cut",
+	# wave P-B unit B1): a row's pool names the slot whose charges it spends, so Tally's slot 2
+	# (gather plate) and slot 3 (link clips) draw from the reader's one pressure pool.
+	var d := AbilityState.new()
+	d.swap(w, "ledger_reader")
+	d.swap(AbilityState.SPECIAL, "gather_plate")
+	d.swap(AbilityState.LINE, "link_clips")
+	d.spend(AbilityState.SPECIAL)
+	d.spend(AbilityState.LINE)
+	_t.eq("slots 2 and 3 spend the reader's pressure", [d.slot(w).charges, d.slot(AbilityState.SPECIAL).charges,
+		d.slot(AbilityState.LINE).charges], [1, 1, 1])
+	d.spend(w)
+	_t.eq("an empty pool cools all three", [d.ready(AbilityState.SPECIAL), d.ready(AbilityState.LINE),
+		d.state_of(AbilityState.SPECIAL), d.spend(AbilityState.LINE)], [false, false, AbilityState.COOLING, false])
+	d.swap(AbilityState.SPECIAL, "detonation_gauge")
+	_t.eq("a row with no pool spends its own charge", d.pool_of(AbilityState.SPECIAL), AbilityState.SPECIAL)
 	quit(_t.verdict())

@@ -187,15 +187,17 @@ func _pilots() -> void:
 	await _sim(0.1)
 
 
-# The bar's movement key follows the pilot: Sable's rope is RMB, Rivet's sprint and Kest's blink
-# are Shift. E stays interact for a pilot on a line, and Sable's mount.
+# The bar's movement chip is Shift for every pilot: Sable's boost, Rivet's sprint and Kest's
+# blink (re-pinned 2026-10-10, wave P-B unit B1, design-v3/SKILL-BAR.md sections 1 and 2: the
+# harpoon has no slot, so Sable's chip shows her boost). E stays interact for a pilot on a
+# line, and Sable's mount.
 func _keys() -> void:
 	var ball := _point(0, 0, 3.0)
 	var labels := []
 	for name in ["sable", "rivet", "kest"]:
 		_pilot(name)
 		labels.append(_keys_of(AbilityState.MOVEMENT))
-	_check("the bar's movement key follows the pilot", labels == ["RMB", "Shift", "Shift"],
+	_check("the bar's movement key is Shift for every pilot", labels == ["Shift", "Shift", "Shift"],
 		"Sable, Rivet, Kest: %s" % [labels])
 	_pilot("rivet")
 	_place(ball)

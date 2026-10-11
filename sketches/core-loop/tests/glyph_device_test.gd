@@ -15,6 +15,11 @@ const T := preload("res://tests/support/t.gd")
 #   S4-3 a rebinding of cl_jump to G reads as key_g, and a live prompt redraws with G;
 #   S4-4 a pad event switches the live prompts and the ability bar to pad caps, a key event back;
 #   S4-5 Keycap.label and Keycap.words give the pad caps' text and leave key_space alone.
+# Re-pinned 2026-10-10 (wave P-B unit B1, design-v3/SKILL-BAR.md sections 1, 4 and 6): F
+# retired, so the special verb has no pad reading and LB is the ultimate's (Q); keys 1, 2, 3
+# pick a slot on the D-pad (input_pad_test pins the buttons); the bar is five slots, 1, Shift,
+# 2, Ctrl, 3. The pad bar's number caps stay key_1..key_3 until wave P-B's HUD unit draws
+# them (B2): Glyphs has no D-pad picture yet.
 
 var _t := T.new("glyph_device_test")
 var _game
@@ -80,10 +85,12 @@ func _defaults_and_pad() -> void:
 	_t.check("S4-1 keyboard defaults are the table glyphs", strays.is_empty(), "strays %s" % [strays])
 	_t.eq("S4-2 cl_retry on the keyboard", Glyphs.of_action("cl_retry", ""), "key_r")
 	Glyphs.device = "pad"
-	var want := {"jump": "pad_a", "haul": "pad_x", "boost": "pad_b", "special": "pad_lb", "interact": "pad_y",
+	var want := {"jump": "pad_a", "haul": "pad_x", "boost": "pad_b", "ultimate": "pad_lb", "interact": "pad_y",
 		"fire": "pad_rt", "harpoon": "pad_lt", "roll": "pad_ls", "look": "pad_rs"}
 	for verb in want:
 		_t.eq("S4-2 pad %s" % verb, Glyphs.of(verb), want[verb])
+	_t.check("S4-2 the retired special has no pad reading", not Glyphs.of("special").begins_with("pad_"),
+		"special reads %s on the pad" % Glyphs.of("special"))
 	_t.eq("S4-2 cl_retry on the pad", Glyphs.of_action("cl_retry", ""), "pad_rb")
 	_t.eq("S4-2 cl_pause on the pad", Glyphs.of_action("cl_pause", ""), "pad_start")
 	Glyphs.device = "kbm"
@@ -146,9 +153,9 @@ func _device_switch() -> void:
 	var cam: Camera3D = _game.camera.cam
 	var point := cam.global_position - cam.global_transform.basis.z * 6.0
 	_game.note_device(_key_event())
-	_t.eq("S4-4 bar on the keyboard", _bar_keys(), ["key_lmb", "key_rmb", "key_f", "key_ctrl"])
+	_t.eq("S4-4 bar on the keyboard", _bar_keys(), ["key_1", "key_shift", "key_2", "key_ctrl", "key_3"])
 	_game.note_device(_pad_event())
-	_t.eq("S4-4 bar on the pad", _bar_keys(), ["pad_rt", "pad_lt", "pad_lb", "pad_x"])
+	_t.eq("S4-4 bar on the pad", _bar_keys(), ["key_1", "pad_b", "key_2", "pad_x", "key_3"])
 	glyphs.new_run()
 	glyphs.step(0.016, _view(point))
 	glyphs._process(0.0)
@@ -156,4 +163,4 @@ func _device_switch() -> void:
 	_game.note_device(_key_event())
 	glyphs._process(0.0)
 	_t.eq("S4-4 prompt back on the keyboard", glyphs._placed.map(func(p): return p["glyph"]), ["key_space"])
-	_t.eq("S4-4 bar back on the keyboard", _bar_keys(), ["key_lmb", "key_rmb", "key_f", "key_ctrl"])
+	_t.eq("S4-4 bar back on the keyboard", _bar_keys(), ["key_1", "key_shift", "key_2", "key_ctrl", "key_3"])

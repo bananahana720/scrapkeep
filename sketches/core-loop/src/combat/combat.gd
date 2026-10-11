@@ -192,8 +192,15 @@ var _pending := {}
 # (seconds since its last landed hit)}.
 var _shred := {}
 
-# special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}.
+# special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}, or
+# {tap: Callable() -> bool} for a row with no gauge.
 var _specials := {}
+# The line skill's dispatch table (built in setup) and the load waiting for the next bite:
+# {} or {id, fraction, left}.
+var _line_skills := {}
+var _line_load := {}
+# The last line skill that fired: {id, on, target, at, fraction, mult}. Read only outside.
+var last_line := {}
 var sticky
 # Rivet's Run and Gun wear trail (world one, --wear=on); wear_trail.gd.
 var wear_trail
@@ -301,7 +308,33 @@ func setup(ctx_ref) -> void:
 		"clamp": {"geometry": _clamp_geometry, "fire": _fire_clamp},
 		"plate_return": {"geometry": _plate_return_geometry, "fire": _fire_plate_return, "can": _plate_out},
 		"cannon_plate": {"geometry": _plate_geometry, "fire": _fire_plate},
+		"gather_plate": {"tap": _tap_gather},
 	}
+	# line_id -> {on_body: Callable(target, fraction, chain_mult), on_world: Callable(anchor,
+	# fraction, chain_mult), geometry: Callable(fraction)} (SKILL-BAR section 7). Each pilot owns
+	# one marked block for its wave P-C row (section 12, item 4).
+	_line_skills = {
+		"line_reel": {"on_body": _line_reel_body, "on_world": _reel_burst, "geometry": _line_reel_geometry},
+		"link_clips": {"on_body": _link_clips_body, "on_world": _reel_burst, "geometry": _line_reel_geometry},
+		# --- P-C Sable line skill ---
+		# --- end Sable ---
+		# --- P-C Rivet line skill ---
+		# --- end Rivet ---
+		# --- P-C Kest line skill ---
+		# --- end Kest ---
+		# --- P-C Tarn line skill ---
+		# --- end Tarn ---
+		# --- P-C Tally line skill ---
+		# --- end Tally ---
+		# --- P-C Cannon line skill ---
+		# --- end Cannon ---
+	}
+	ctx.player.line_load_of = line_load
+	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
+	# after the latch is set). A reset point drops the load.
+	ctx.events.grapple_fired.connect(func(_anchor: Vector3): _bite_load())
+	ctx.events.player_died.connect(func(): _line_load = {})
+	ctx.events.stage_content_cleared.connect(func(_reason: String): _line_load = {})
 	_cards = {"gather_plate": _run_gather, "link_clips": _run_link, "balance_due": _run_balance}
 	ctx.events.enemy_struck.connect(_on_card_struck)
 	ctx.events.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _grant_pressure(1))
@@ -353,6 +386,7 @@ func setup(ctx_ref) -> void:
 		_cannon_count = 0
 		_exposed = {}
 		_reset_cards()
+		_line_load = {}
 		_cloud = {}
 		_sentry = {}
 		_pulse_left = 0.0
@@ -1045,6 +1079,7 @@ func _physics_process(delta: float) -> void:
 	if not intent.fire_held:
 		_cooldown = maxf(_cooldown, 0.0)
 	_step_special(intent, delta)
+	_step_line(intent, delta)
 	_step_cannon(delta)
 	var enemies := get_tree().get_nodes_in_group("enemy")
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
@@ -1262,14 +1297,22 @@ func _knob(name: String):
 # if a charge is in; a second press or RMB drops it with nothing spent; the key coming
 # up, or a full gauge held past its grace, fires the geometry drawn at that fraction.
 # The slot's ability id picks the row in _specials, so a swapped variant plays here too.
+# A row with no gauge is a tap (SKILL-BAR section 1): it casts on the press, through its
+# `tap` callable, which answers whether it landed and spends nothing itself.
 func _step_special(intent, delta: float) -> void:
 	var abilities = ctx.player.abilities
 	var kit = ctx.player.kit
 	var id: String = abilities.id_of(AbilityState.SPECIAL)
 	var gauge = abilities.gauge(AbilityState.SPECIAL)
-	if gauge == null or not _specials.has(id):
+	if not _specials.has(id):
 		return
 	var row: Dictionary = _specials[id]
+	if gauge == null:
+		if row.has("tap") and intent.special_pressed:
+			_tap(AbilityState.SPECIAL, id, row["tap"])
+		return
+	if not gauge.charging and intent.special_pressed and not abilities.ready(AbilityState.SPECIAL):
+		_refuse_cast(AbilityState.SPECIAL, "cooling")
 	# Auto Gauge: mounted, the gauge starts and holds by itself, so it fires at full.
 	var auto: bool = _knob("mounted_autogauge") and kit.mounted
 	if gauge.charging and (intent.special_pressed or intent.cancel_pressed):
@@ -1308,6 +1351,31 @@ func _step_special(intent, delta: float) -> void:
 		_echo = {"row": row, "fraction": f * 0.6, "left": _knob("special_echo")}
 	ctx.events.gauge_released.emit(id, f)
 	ctx.events.special_used.emit(id, ctx.player.ball_position())
+	ctx.events.slot_cast.emit(AbilityState.SPECIAL, id, ctx.player.ball_position())
+
+
+# One tap cast on a bar slot: refused while cooling, refused with no target, else spent and
+# published. Nothing is spent on a refusal, and the selection and its timer stay.
+func _tap(slot: String, id: String, cast: Callable) -> void:
+	var abilities = ctx.player.abilities
+	if not abilities.ready(slot):
+		_refuse_cast(slot, "cooling")
+		return
+	if not bool(cast.call()):
+		_refuse_cast(slot, "no_target")
+		return
+	abilities.spend(slot)
+	var at: Vector3 = ctx.player.ball_position()
+	if slot == AbilityState.SPECIAL:
+		ctx.events.special_used.emit(id, at)
+	ctx.events.slot_cast.emit(slot, id, at)
+
+
+# A cast left click asked for that cannot go. Only a click the bar routed answers with a cue;
+# a module test or a bot writing special_* directly hears nothing new.
+func _refuse_cast(slot: String, reason: String) -> void:
+	if ctx.player.abilities.selected == slot:
+		ctx.events.verb_failed.emit("fire", reason, ctx.player.ball_position())
 
 
 func _tick_echo(delta: float) -> void:
@@ -1602,6 +1670,152 @@ func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 		"drop_or_slam")
 
 
+# --- The line skill (design-v3/SKILL-BAR.md section 3) --------------------------------
+# Slot 3 sends the pilot's flavour along the harpoon. With a line standing it fires now along
+# it; with none the cast loads, and the next bite within the row's load_seconds carries it. A
+# dry fire keeps the load; a load that runs out publishes line_skill_expired and refunds
+# nothing (the cooldown started at the cast). The flavour adds no chain link and scales by
+# chain.multiplier() when it fires.
+
+const LINE_LOAD_SECONDS := 4.0
+# The shared placeholder until wave P-C (SKILL-BAR section 3, start): on a body a 10 damage
+# yank toward the ball, about 4 m, times the chain multiplier; on the world a reel burst.
+const LINE_REEL_DAMAGE := 10.0
+const LINE_REEL_KNOCK := 12.0
+const REEL_BURST := 8.0
+
+# A bite this tick waits for _step_line, so it fires after the bite's chain link is counted.
+var _bite_pending := false
+
+
+# The load waiting for the next bite, {id, fraction, left}, or {} (HUD and bots read it).
+func line_load() -> Dictionary:
+	return _line_load.duplicate()
+
+
+func _bite_load() -> void:
+	if not _line_load.is_empty():
+		_bite_pending = true
+
+
+func _step_line(intent, delta: float) -> void:
+	var abilities = ctx.player.abilities
+	var kit = ctx.player.kit
+	if _bite_pending:
+		_bite_pending = false
+		if not _line_load.is_empty() and kit.hooked:
+			var waiting := _line_load
+			_line_load = {}
+			_fire_line_skill(String(waiting["id"]), float(waiting["fraction"]))
+	if not _line_load.is_empty():
+		_line_load["left"] = float(_line_load["left"]) - delta
+		if float(_line_load["left"]) <= 0.0:
+			var gone := String(_line_load["id"])
+			_line_load = {}
+			ctx.events.line_skill_expired.emit(gone)
+	var id: String = abilities.id_of(AbilityState.LINE)
+	if not _line_skills.has(id):
+		return
+	var gauge = abilities.gauge(AbilityState.LINE)
+	var fraction := 1.0
+	if gauge != null:
+		if gauge.charging and (intent.line_pressed or intent.cancel_pressed):
+			gauge.cancel()
+			ctx.player.indicator.collapse(AbilityState.LINE)
+			ctx.events.gauge_cancelled.emit(id, "cancel")
+			return
+		if not gauge.charging and intent.line_pressed and _line_cast_ok():
+			gauge.begin()
+			ctx.events.gauge_charging.emit(id)
+		if not gauge.charging:
+			ctx.player.indicator.clear(AbilityState.LINE)
+			return
+		if not gauge.step(delta, intent.line_held):
+			ctx.player.indicator.set_shape(AbilityState.LINE, _line_skills[id]["geometry"].call(gauge.fraction()))
+			return
+		ctx.player.indicator.clear(AbilityState.LINE)
+		fraction = gauge.fired_fraction
+		if not abilities.ready(AbilityState.LINE) or not _line_load.is_empty():
+			ctx.events.gauge_cancelled.emit(id, "blocked")
+			return
+		ctx.events.gauge_released.emit(id, fraction)
+	elif not intent.line_pressed or not _line_cast_ok():
+		return
+	_cast_line(id, fraction)
+
+
+func _line_cast_ok() -> bool:
+	if not _line_load.is_empty():
+		ctx.events.verb_failed.emit("select", "loaded", ctx.player.ball_position())
+		return false
+	if not ctx.player.abilities.ready(AbilityState.LINE):
+		_refuse_cast(AbilityState.LINE, "cooling")
+		return false
+	return true
+
+
+# The cast commits: spent, published, then fired along a standing line or loaded.
+func _cast_line(id: String, fraction: float) -> void:
+	var abilities = ctx.player.abilities
+	abilities.spend(AbilityState.LINE)
+	ctx.events.slot_cast.emit(AbilityState.LINE, id, ctx.player.ball_position())
+	if ctx.player.kit.hooked:
+		_fire_line_skill(id, fraction)
+		return
+	var seconds := float(AbilityState.ABILITIES.get(id, {}).get("load_seconds", LINE_LOAD_SECONDS))
+	_line_load = {"id": id, "fraction": fraction, "left": seconds}
+	ctx.events.line_skill_loaded.emit(id, seconds)
+
+
+func _fire_line_skill(id: String, fraction: float) -> void:
+	var row: Dictionary = _line_skills.get(id, {})
+	if row.is_empty():
+		return
+	var kit = ctx.player.kit
+	var mult := float(ctx.player.chain.multiplier())
+	var target: Node3D = kit.anchor_body if kit.on_body and is_instance_valid(kit.anchor_body) else null
+	var at: Vector3 = kit.anchor
+	var on := "body" if target != null else "world"
+	var prev_source := _forced_source
+	_forced_source = "special"
+	if target != null:
+		row["on_body"].call(target, fraction, mult)
+	else:
+		row["on_world"].call(at, fraction, mult)
+	_forced_source = prev_source
+	last_line = {"id": id, "on": on, "target": target, "at": at, "fraction": fraction, "mult": mult}
+	ctx.events.line_skill_fired.emit(id, target, at, on)
+
+
+# line_reel on a body: the bitten enemy is yanked toward the ball and struck.
+func _line_reel_body(target: Node3D, _fraction: float, mult: float) -> void:
+	if target.has_method("is_dead") and target.is_dead():
+		return
+	_hit(target, "line", LINE_REEL_DAMAGE * mult, ctx.player.ball_position() - target.global_position, LINE_REEL_KNOCK, "", "special")
+
+
+# The default on a world latch: one +8 m/s burst toward the anchor.
+func _reel_burst(anchor: Vector3, _fraction: float, _mult: float) -> void:
+	var body: RigidBody3D = ctx.player.body()
+	var toward: Vector3 = anchor - body.global_position
+	if toward.length() > 0.01:
+		body.linear_velocity += toward.normalized() * REEL_BURST
+
+
+# Tally's ledger clip on a body: link clips with the bitten enemy as the first clip.
+func _link_clips_body(target: Node3D, _fraction: float, _mult: float) -> void:
+	_link_from(target)
+
+
+# The committed geometry a line gauge draws: the cable from the ball to the anchor, or along
+# the aim with no line.
+func _line_reel_geometry(f: float) -> Dictionary:
+	var ball: Vector3 = ctx.player.ball_position()
+	var kit = ctx.player.kit
+	var to: Vector3 = kit.anchor if kit.hooked else ball + _flat_aim() * ctx.player.grapple_range()
+	return ctx.player.yours({"kind": "line", "from": ball, "to": to, "width": 1.0, "full_to": to, "fill": f})
+
+
 # --- Tally's program cards (DESIGN-V3 "Tally's program cards") -------------------------
 # The reader's charges are pressure. A press runs the selected bay's card at the aim
 # point: validate the aim, spend one pressure, then apply. Rolling and contact refill it.
@@ -1617,11 +1831,12 @@ func _reset_cards() -> void:
 	_restored_frame = {}
 
 
+# Since the skill bar (SKILL-BAR section 1, "Tally's deck, re-cut") the reader holds one card,
+# balance due, on slot 1; gather plate is slot 2's tap and link clips slot 3's line skill. The
+# bays retired, so `bay` stays 0.
 func _step_cards(intent, delta: float) -> void:
 	var abilities = ctx.player.abilities
 	var cards: Array = abilities.cap(AbilityState.WEAPON, "cards", [])
-	if intent.bay_pick >= 0 and intent.bay_pick < cards.size():
-		bay = intent.bay_pick
 	bay = clampi(bay, 0, cards.size() - 1)
 	abilities.slot(AbilityState.WEAPON).icon = String(Weapons.CARDS.get(cards[bay], {}).get("icon", ""))
 	_step_plate(delta)
@@ -1633,15 +1848,29 @@ func _step_cards(intent, delta: float) -> void:
 	var card: String = cards[bay]
 	if not _cards.has(card):
 		return
+	var aim := _card_aim()
+	if not _cards[card].call(aim["point"], aim["valid"]):
+		return
+	_cooldown = maxf(_cooldown, 0.0) + Weapons.CARD_RECOVERY
+	ctx.events.shot_fired.emit(card, ctx.player.ball_position(), aim["point"])
+
+
+# Where a card lands: the shared aim query's point, valid within CARD_REACH and unblocked.
+func _card_aim() -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
 	var aim := Hitscan.aim(space, ctx.aim_origin(), ctx.aim_forward(), ball, Weapons.CARD_REACH + AIM_SLACK)
 	var point: Vector3 = aim["point"]
-	var valid: bool = not aim["blocked"] and ball.distance_to(point) <= Weapons.CARD_REACH
-	if not _cards[card].call(point, valid):
-		return
-	_cooldown = maxf(_cooldown, 0.0) + Weapons.CARD_RECOVERY
-	ctx.events.shot_fired.emit(card, ball, point)
+	return {"point": point, "valid": not aim["blocked"] and ball.distance_to(point) <= Weapons.CARD_REACH}
+
+
+# Slot 2's tap: plant the plate at the aim. The tap path spends the pressure when it lands.
+func _tap_gather() -> bool:
+	var aim := _card_aim()
+	if not _run_gather(aim["point"], aim["valid"], false):
+		return false
+	ctx.events.shot_fired.emit("gather_plate", ctx.player.ball_position(), aim["point"])
+	return true
 
 
 func _ordinary(enemy: Node3D) -> bool:
@@ -1700,9 +1929,14 @@ func _spend_card(card: String, at: Vector3) -> bool:
 	return true
 
 
-func _run_gather(point: Vector3, valid: bool) -> bool:
-	if not valid or not _spend_card("gather_plate", point):
+# pay false leaves the spend to the caller (slot 2's tap path).
+func _run_gather(point: Vector3, valid: bool, pay := true) -> bool:
+	if not valid:
 		return false
+	if pay and not _spend_card("gather_plate", point):
+		return false
+	if not pay:
+		last_card = {"card": "gather_plate", "at": point, "hits": 0, "spent": true}
 	var at := _floor_at(point + Vector3.UP)
 	plate = {"at": at, "until": _clock + Weapons.GATHER_SECONDS}
 	_gather_tick = 0.0
@@ -1737,6 +1971,14 @@ func _run_link(point: Vector3, valid: bool) -> bool:
 	var first := _link_target(point)
 	if first == null or not _spend_card("link_clips", point):
 		return false
+	_link_from(first)
+	return true
+
+
+# Clips `first` and up to LINK_NEIGHBOURS live enemies near it; the next direct hit on one arcs
+# to the rest. Returns how many it clipped.
+func _link_from(first: Node3D) -> int:
+	last_card = {"card": "link_clips", "at": first.global_position, "hits": 0, "spent": true}
 	var clips := [first]
 	for enemy in _nearest_list(first.global_position, Weapons.LINK_NEIGHBOUR_REACH, Weapons.LINK_NEIGHBOURS + 1):
 		if enemy != first and clips.size() <= Weapons.LINK_NEIGHBOURS:
@@ -1748,7 +1990,7 @@ func _run_link(point: Vector3, valid: bool) -> bool:
 		effects.arc(ball, clip.global_position, ClassDef.TALLY_COLOR)
 	link_group = {"ids": ids, "until": _clock + Weapons.LINK_SECONDS, "spent": false}
 	last_card["hits"] = ids.size()
-	return true
+	return ids.size()
 
 
 func _run_balance(point: Vector3, valid: bool) -> bool:
@@ -2243,13 +2485,28 @@ func _proc_actions() -> Dictionary:
 		"volley": _proc_volley,
 		"charge": _proc_charges,
 		"detonate": _proc_detonate,
-		"grant_special": func(_scale: float): abilities.call().grant(AbilityState.SPECIAL),
+		"grant_special": func(_scale: float): _grant_special(abilities.call()),
 		"grant_move": func(_scale: float): abilities.call().grant(AbilityState.MOVEMENT),
-		"refund_special": func(scale: float): abilities.call().refund(AbilityState.SPECIAL, scale),
+		"refund_special": func(scale: float): _refund_special(abilities.call(), scale),
 		"refund_move": func(scale: float): abilities.call().refund(AbilityState.MOVEMENT, scale),
 		"overdrive": func(scale: float): _boost(scale),
 		"air": func(_scale: float): ctx.player.state.air_actions = 1,
 	}
+
+
+# A special that spends another slot's charges (Tally's gather plate pays from slot 1's
+# pressure, SKILL-BAR section 2) takes its grant there. Pressure never refills by time, so a
+# refund on such a pool returns one charge instead; the proc's gap is its throttle.
+func _grant_special(abilities) -> void:
+	abilities.grant(abilities.pool_of(AbilityState.SPECIAL))
+
+
+func _refund_special(abilities, scale: float) -> void:
+	var pool: String = abilities.pool_of(AbilityState.SPECIAL)
+	if pool == AbilityState.SPECIAL:
+		abilities.refund(AbilityState.SPECIAL, scale)
+	else:
+		abilities.grant(pool)
 
 
 func _proc_volley(scale: float) -> void:
@@ -2558,6 +2815,7 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 # restored part list, so a retry restores the build exactly.
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	_start_attempt()
+	_line_load = {}
 	_escape = {}
 	escape_lane = {}
 	_reset_cards()

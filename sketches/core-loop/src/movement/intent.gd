@@ -1,10 +1,10 @@
 extends RefCounted
 
 # One tick of what the player asked for. Input fills it; nothing else reads a key.
-# Combat reads fire and special from here, so a scripted source drives weapons too.
-# The grammar is the same for every class (design-v3/LEGIBILITY.md section 3): LMB weapon,
-# RMB the harpoon, F the hold-gauge-release special, Ctrl the haul, Space jump, Shift the
-# pilot's go verb.
+# Combat reads fire, special and line from here, so a scripted source drives weapons too.
+# The grammar is the same for every class (design-v3/LEGIBILITY.md section 3 and
+# SKILL-BAR.md section 6): keys 1, 2, 3 pick the bar slot, LMB casts the picked slot, RMB the
+# harpoon, Ctrl the haul, Space jump, Shift the pilot's go verb, Q the ultimate.
 # A held key's release is its own one-tick field. A scripted press with no hold reads
 # as a tap.
 
@@ -22,9 +22,14 @@ var interact_pressed := false
 var fire_pressed := false
 var fire_held := false
 var fire_released := false
+# The router's outputs (player_ball._route_slots): left click on a picked slot 2 or 3 is ORed
+# in here. No key fills them; a module test may set them directly, a bot never does.
 var special_pressed := false
 var special_held := false
 var special_released := false
+var line_pressed := false
+var line_held := false
+var line_released := false
 var movement_pressed := false
 var movement_held := false
 var movement_released := false
@@ -41,8 +46,10 @@ var harpoon_released := false
 # Drops whatever gauge is charging, spending nothing. The player turns an RMB press made
 # during a charge into this (the League convention: right click cancels a cast).
 var cancel_pressed := false
-# The card bay a key picked this tick (0, 1 or 2), or -1. Only a card weapon reads it.
-var bay_pick := -1
+# The bar slot a key picked this tick (0, 1 or 2 for slots 1, 2, 3), or -1.
+var slot_pick := -1
+# Q this tick.
+var ultimate_pressed := false
 
 
 func clear() -> void:
@@ -60,6 +67,9 @@ func clear() -> void:
 	special_pressed = false
 	special_held = false
 	special_released = false
+	line_pressed = false
+	line_held = false
+	line_released = false
 	movement_pressed = false
 	movement_held = false
 	movement_released = false
@@ -70,7 +80,8 @@ func clear() -> void:
 	shift_pressed = false
 	shift_held = false
 	shift_released = false
-	bay_pick = -1
+	slot_pick = -1
+	ultimate_pressed = false
 
 
 # A source lets the headless test drive the same player with no input at all.
@@ -121,13 +132,11 @@ class Keyboard:
 		out.fire_pressed = Input.is_action_just_pressed("cl_fire")
 		out.fire_held = Input.is_action_pressed("cl_fire")
 		out.fire_released = Input.is_action_just_released("cl_fire")
-		out.special_pressed = Input.is_action_just_pressed("cl_special")
-		out.special_held = Input.is_action_pressed("cl_special")
-		out.special_released = Input.is_action_just_released("cl_special")
 		out.harpoon_pressed = Input.is_action_just_pressed("cl_harpoon")
 		out.harpoon_held = Input.is_action_pressed("cl_harpoon")
 		out.harpoon_released = Input.is_action_just_released("cl_harpoon")
-		var bays := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
-		for i in bays.size():
-			if Input.is_action_just_pressed(bays[i]):
-				out.bay_pick = i
+		out.ultimate_pressed = Input.is_action_just_pressed("cl_ultimate")
+		var picks := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
+		for i in picks.size():
+			if Input.is_action_just_pressed(picks[i]):
+				out.slot_pick = i

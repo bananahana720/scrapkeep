@@ -46,7 +46,22 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	"ab_tarn_special": "clamp", "ab_tarn_smash": "smash",
 	"ab_tally_weapon": "tag", "ab_tally_move": "cog", "ab_tally_special": "reel", "ab_tally_smash": "smash",
 	"ab_tally_gather": "target", "ab_tally_link": "bolt", "ab_tally_balance": "burst_ring",
-	"ab_cannon_weapon": "lane", "ab_cannon_move": "arrow", "ab_cannon_special": "shield", "ab_cannon_smash": "rings"}
+	"ab_cannon_weapon": "lane", "ab_cannon_move": "arrow", "ab_cannon_special": "shield", "ab_cannon_smash": "rings",
+	# Each pilot's line-skill and ultimate pictures, ab_<pilot>_line and ab_<pilot>_ult (SKILL-BAR
+	# sections 3 and 4), one marked block per pilot (section 12, item 4).
+	# --- P-C Sable icons ---
+	# --- end Sable ---
+	# --- P-C Rivet icons ---
+	# --- end Rivet ---
+	# --- P-C Kest icons ---
+	# --- end Kest ---
+	# --- P-C Tarn icons ---
+	# --- end Tarn ---
+	# --- P-C Tally icons ---
+	# --- end Tally ---
+	# --- P-C Cannon icons ---
+	# --- end Cannon ---
+}
 
 # The event_kinds shapes as glyphs. These are drawn, never files: a toast wears its
 # row's silhouette (shape()).

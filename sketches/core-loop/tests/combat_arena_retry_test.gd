@@ -7,6 +7,9 @@ const Intent := preload("res://src/movement/intent.gd")
 # special cooldown, the overdrive and the fire cooldown reset on stage_content_cleared.
 # Overdrive fires in the arena, the arena is retried at once with the special on its
 # 6 s cooldown, and F fires again on the first tick of the retried fight.
+# Re-pinned 2026-10-10 for the skill bar (SKILL-BAR.md section 1, wave P-B unit B1): F left
+# the bindings, so "F" here is special_pressed written directly, the kit-test path the
+# router keeps; and a pick held into the retry goes home to slot 1 (reason reset).
 
 var _game
 var _combat
@@ -48,7 +51,10 @@ func _physics_process(_delta: float) -> bool:
 			_before_retry = _specials
 			_report("arena_special", _before_retry == 1 and _game.flow.in_arena,
 				"overdrive in the arena: %d special, in_arena %s" % [_before_retry, _game.flow.in_arena])
+			var picked: String = _game.player.abilities.select("line")
 			_game.flow.retry_stage()
+			_report("retry_pick_home", picked == "" and _game.player.abilities.selected == "weapon",
+				"picked slot 3 (%s), after the retry %s is selected" % ["took" if picked == "" else picked, _game.player.abilities.selected])
 		4:
 			_source.press["special_pressed"] = true
 		6:
