@@ -15,7 +15,8 @@ enters the sight cone, the front face gap or a claw arm's gap.
 Concept: artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png (GAP PANEL, heft I, III
 and V) and hero.png.
 
-  prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
+  Run as shell_tarn.py's header shows, under the same 12 GiB prlimit address-space cap:
+    blender --background --threads 2 --python-exit-code 1 \
     --python tools/blender/shell_tarn_plates.py -- [--outdir <dir>]
 """
 import math

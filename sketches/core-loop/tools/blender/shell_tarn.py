@@ -8,7 +8,8 @@ w13-look rows of 2026-10-10). Where a picture and ROSTER-LOOK disagree the sheet
 goes on the lattice struts only (section 6, "Tarn's colour clash"), so the blade housings that
 the picture paints oxide are petrol here.
 
-  prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
+  Under the 12 GiB prlimit address-space cap of tools/blender/PILOT-RIG.md:72:
+    blender --background --threads 2 --python-exit-code 1 \
     --python tools/blender/shell_tarn.py -- [--out <file.glb>] [--variant teeth] [--count-only]
 
 --variant teeth builds the earned Redjaw Teeth shell (CUSTOMIZE section 8,
