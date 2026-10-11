@@ -2896,7 +2896,84 @@
    "path": "res://assets/models/world_one/shell_sable.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd:38-40"
+   "loader": "src/presentation/hero_assets.gd:38-40",
+   "exception": {
+    "draws": 14
+   },
+   "exception_why": "PD-SABLE Hoberman mecha: PD-0's base takes all 10 (Core 3, Pod 3, Gyro, GyroInner, WeaponRing 2); the hidden placeholder Pilot, the CoilMast tip and the WrenchRack each need their own node and the emitter coils add copper on the ring",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable.py",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/hero.png, chase.png and sheet.png; concepts/codex/base/base-hero.png and mechanism.png"
+   }
+  },
+  {
+   "id": "shell_sable_c2",
+   "path": "res://assets/models/world_one/shell_sable_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC2 holder under HeroPod, shown at heft class II and up)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (GAP PANEL, heft I, III, V)"
+   }
+  },
+  {
+   "id": "shell_sable_c3",
+   "path": "res://assets/models/world_one/shell_sable_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC3 holders under HeroCore and HeroPod)",
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "ROSTER-LOOK section 5 class III: thicker tread caps on Core plus side-gap panels on Pod, one draw per part",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (GAP PANEL, heft I, III, V)"
+   }
+  },
+  {
+   "id": "shell_sable_c4",
+   "path": "res://assets/models/world_one/shell_sable_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC4 holder under HeroPod)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (GAP PANEL, heft I, III, V)"
+   }
+  },
+  {
+   "id": "shell_sable_c5",
+   "path": "res://assets/models/world_one/shell_sable_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC5 holder under HeroPod; Replace_CoilMast hides the base CoilMast tip)",
+   "exception": {
+    "draws": 3
+   },
+   "exception_why": "class V adds the coil mast's heavy form (copper winding and the mint tip, which must stay class_accent) beside the panel surface",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (heft V, HUB MODULE)"
+   }
+  },
+  {
+   "id": "shell_sable_felt",
+   "path": "res://assets/models/world_one/shell_sable_felt.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (shell variant shell_sable_felt, CUSTOMIZE section 8 Felt Rig; layers borrow the default shell_sable_c2..c5)",
+   "exception": {
+    "draws": 14
+   },
+   "exception_why": "same node set as shell_sable (see its row)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable.py --variant felt",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/hero.png, chase.png and sheet.png"
+   }
   },
   {
    "id": "shell_tally",
@@ -3326,6 +3403,11 @@
   "shell_cannon",
   "shell_crescent",
   "shell_neutral",
+  "shell_sable_c2",
+  "shell_sable_c3",
+  "shell_sable_c4",
+  "shell_sable_c5",
+  "shell_sable_felt",
   "shell_saddle",
   "shell_tally",
   "shell_tarn",

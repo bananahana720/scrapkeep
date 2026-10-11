@@ -1,18 +1,31 @@
 extends SceneTree
+# 2026-10-10 (PD-SABLE): re-pinned for the Hoberman mecha. The C07 glass-pod checks (one glass
+# surface, the pod-silhouette bounds, the petrol band patches and ring wear islands) described the
+# retired glass ball and are gone; the shell is now shell_base.hoberman() plus Sable's machinery
+# (P-UNITS PD-SABLE, ROSTER-LOOK sections 0 to 6, pilots/sable.md section 5). The pod ceiling
+# keeps 16,000 T / 15,000 V; draws rise from 15 to 19 (shell 14 by its registry exception, rig 5).
+# The rig checks are unchanged. The run must make EXPECTED_CHECKS checks.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# C07 Sable pod limits (artifacts/asset-sheet/ASSETS.md): the world-one shell plus the
-# unchanged pilot rig stay under the no-growth pod ceiling, the pod keeps its old
-# silhouette, and the rig, clips and node names the game reads are intact.
-# BASE_* were measured on the shipped shell_sable.glb at base 69cb3c4 after import.
-
 const SHELL := "res://assets/models/world_one/shell_sable.glb"
+const FELT := "res://assets/models/world_one/shell_sable_felt.glb"
+const LAYER := "res://assets/models/world_one/shell_sable_c%d.glb"
 const RIG := "res://assets/models/pilot_sable_anim.glb"
+const EXPECTED_CHECKS := 56
 const MAX_V := 15000
 const MAX_T := 16000
-const MAX_DRAWS := 15
+const MAX_DRAWS := 19
+const SHELL_DRAWS := 14
+const SHELL_TRIS := 6500        # hero_assets_test's world-one shell band, pilot excluded
+const LAYER_TRIS := 1500
+const CORE_LIMIT := 0.985
+const LATTICE_OUT := 0.975
+const MAST_PAST := 0.20
+const MAST_HEAVY_PAST := 0.25
+const SPOOL_PAST := 0.12
+const TOL := 0.01
 const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
 const RIG_BONES := [
 	"root", "pelvis", "spine_01", "spine_02", "neck", "head", "crest", "ear.L", "ear.R",
@@ -22,41 +35,18 @@ const RIG_BONES := [
 # The triangle range allows one percent of export variation; pod ceilings above stay fixed.
 const RIG_TRIS := Vector2i(4546, 4638)
 const RIG_MESHES := {"Pilot": ["pilot"], "TailBase": ["pilot"], "TailTip": ["pilot"], "Tool": ["bare_metal", "class_accent"]}
-const NODES := ["Core", "Pod", "Dome", "Pilot", "Gyro", "RopeExit"]
-const GROW := 0.002
-# Petrol band (r 0.86 to 0.92 at z -0.29): the 16 regular pale arcs the judge read as fittings
-# are replaced by three broad, unequal patches; the 16 bolts stay.
-const BAND_R := Vector2(0.86, 0.93)
-const BAND_Z := Vector2(-0.37, -0.2)
-const PATCH_MIN := 3
-const PATCH_MAX := 3
-const PATCH_MIN_AREA := 0.02
-const PATCH_UNEQUAL := 1.5
-const BOLTS := 16
-# Pod kit mesh bounds of the base shell in shell space.
-const BASE_POD_MIN := Vector3(-0.94, -0.7735, -0.94)
-const BASE_POD_MAX := Vector3(0.94, 0.16555, 0.94)
-
-# Ring wear (C07 correction): the cosmetic wear on the plate ring is a few unequal contact
-# patches, not many small regular marks. An island is a connected bare_metal or paint piece
-# in the ring zone (shell space, y up, ring at y about -0.36) that is neither a plate
-# (longest side 0.165 or more) nor a bolt (under 0.065). The flank spool sector (within 0.5 rad
-# of +x) and the class_accent tops are outside the zone or slots counted.
-const WEAR_SLOTS := ["bare_metal", "paint"]
-const WEAR_R := Vector2(0.45, 0.60)
-const WEAR_Y := Vector2(-0.46, -0.30)
-const WEAR_MIN_ANGLE := 0.5
-const BOLT_EXTENT := 0.065
-const PLATE_EXTENT := 0.165
-const WEAR_MAX_ISLANDS := 3
-const WEAR_MIN_ISLANDS := 3
-const WEAR_MIN_AREA := 0.010
-const WEAR_UNEQUAL := 1.5
+# Godot names of the nodes the kit, the clips and the loader read (Blender dots become underscores).
+const POD_NODES := ["Gyro", "WeaponRing", "Dome", "CoilMast", "WrenchRack", "RopeExit", "DecalPlate",
+	"Control_Grip_L", "Control_Grip_R", "Control_Trigger", "Control_GaugeLever", "Control_SpoolBrake",
+	"Control_LapBar", "Control_Pedal_L", "Control_Pedal_R"]
+const BAD_SLOTS := ["glass", "requisition_tag", "fleet_paint"]
 
 var _failures := 0
+var _checks := 0
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
+	_checks += 1
 	if not ok:
 		_failures += 1
 	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
@@ -81,7 +71,7 @@ static func to_root(node: Node, root: Node) -> Transform3D:
 
 
 static func under(node: Node, name: String) -> bool:
-	var n := node
+	var n := node.get_parent()
 	while n != null:
 		if String(n.name) == name:
 			return true
@@ -89,156 +79,71 @@ static func under(node: Node, name: String) -> bool:
 	return false
 
 
-# Vertex, triangle, surface counts, and the count of alpha surfaces.
-static func counts(scene: Node) -> Dictionary:
-	var out := {"v": 0, "t": 0, "s": 0, "alpha": 0}
+# Vertex, triangle and surface counts; skip names meshes left out.
+static func counts(scene: Node, skip: Array = []) -> Dictionary:
+	var out := {"v": 0, "t": 0, "s": 0}
 	for mi in meshes(scene):
+		if String(mi.name) in skip:
+			continue
 		for i in mi.mesh.get_surface_count():
 			var arrays := (mi.mesh as Mesh).surface_get_arrays(i)
 			out.v += (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
 			var index = arrays[Mesh.ARRAY_INDEX]
 			out.t += (index.size() if index != null else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
 			out.s += 1
-			if HeroAssets.slot_of(mi.mesh, i) == "glass":
-				out.alpha += 1
 	return out
 
 
-static func _key(v: Vector3) -> Vector3i:
-	return Vector3i(roundi(v.x * 1000.0), roundi(v.y * 1000.0), roundi(v.z * 1000.0))
-
-
-# Shell space is Godot's (y up), so the band height is y. Connected islands (welded by position) of the Pod triangles in one slot whose centroid is in
-# the band zone; `bone_only` also needs every vertex colour to be the bone paint. Each entry is
-# the island's summed triangle area.
-static func band_islands(shell: Node, slot: String, bone_only: bool, r_lo: float, r_hi: float) -> Array:
-	var sand: Color = Palette.SAND.srgb_to_linear()
-	var parent := {}
-	var tris := []
-	for mi in meshes(shell):
-		if String(mi.name) != "Pod":
+# Shell-space points of every surface of mi in the given slot ("" for all).
+static func points(mi: MeshInstance3D, root: Node, slot := "") -> PackedVector3Array:
+	var t := to_root(mi, root)
+	var out := PackedVector3Array()
+	for i in mi.mesh.get_surface_count():
+		if slot != "" and HeroAssets.slot_of(mi.mesh, i) != slot:
 			continue
-		var t := to_root(mi, shell)
-		for i in mi.mesh.get_surface_count():
-			if HeroAssets.slot_of(mi.mesh, i) != slot:
-				continue
-			var arrays := (mi.mesh as Mesh).surface_get_arrays(i)
-			var vs := arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
-			var cs = arrays[Mesh.ARRAY_COLOR]
-			var index = arrays[Mesh.ARRAY_INDEX]
-			var n: int = index.size() if index != null else vs.size()
-			for k in range(0, n, 3):
-				var ids := [k, k + 1, k + 2]
-				if index != null:
-					ids = [index[k], index[k + 1], index[k + 2]]
-				var p := [t * vs[ids[0]], t * vs[ids[1]], t * vs[ids[2]]]
-				var c: Vector3 = (p[0] + p[1] + p[2]) / 3.0
-				var r := Vector2(c.x, c.z).length()
-				if r < r_lo or r > r_hi or c.y < BAND_Z.x or c.y > BAND_Z.y:
-					continue
-				if bone_only:
-					var pale := true
-					for id in ids:
-						var col: Color = cs[id]
-						pale = pale and absf(col.r - sand.r) < 0.01 and absf(col.g - sand.g) < 0.01 and absf(col.b - sand.b) < 0.01
-					if not pale:
-						continue
-				tris.append(p)
-	var find := func(x: Vector3i):
-		var y: Vector3i = x
-		while parent.get(y, y) != y:
-			y = parent[y]
-		return y
-	for p in tris:
-		for q in p:
-			if not parent.has(_key(q)):
-				parent[_key(q)] = _key(q)
-		var root0: Vector3i = find.call(_key(p[0]))
-		for m in [1, 2]:
-			var rm: Vector3i = find.call(_key(p[m]))
-			if rm != root0:
-				parent[rm] = root0
-	var area := {}
-	for p in tris:
-		var root: Vector3i = find.call(_key(p[0]))
-		area[root] = area.get(root, 0.0) + ((p[1] - p[0]).cross(p[2] - p[0]) as Vector3).length() * 0.5
-	return area.values()
+		for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
+			out.append(t * v)
+	return out
 
 
-# Connected pieces (by welded position) of every wear-slot surface of the Pod mesh, kept when
-# they sit in the ring zone and are neither bolts nor plates. Each entry is {area, centre}.
-static func wear_islands(shell: Node) -> Array:
+static func far(pts: PackedVector3Array) -> float:
+	var r := 0.0
+	for p in pts:
+		r = maxf(r, p.length())
+	return r
+
+
+# Clock position seen from the chase camera behind the ball: 12 up, 3 to the right (+X).
+static func clock(p: Vector3) -> float:
+	return fposmod(rad_to_deg(atan2(p.x, p.y)) / 30.0, 12.0)
+
+
+static func near_any(c: Color, set: Array) -> bool:
+	for p in set:
+		var lin: Color = (p as Color).srgb_to_linear()
+		if absf(c.r - lin.r) < 0.01 and absf(c.g - lin.g) < 0.01 and absf(c.b - lin.b) < 0.01:
+			return true
+	return false
+
+
+# Glass, Fleet or requisition slots, lights and material overrides anywhere under root.
+static func problems(root: Node) -> Array:
 	var out := []
-	for mi in meshes(shell):
-		if String(mi.name) != "Pod":
-			continue
-		var t := to_root(mi, shell)
-		for si in mi.mesh.get_surface_count():
-			if not (HeroAssets.slot_of(mi.mesh, si) in WEAR_SLOTS):
-				continue
-			var arrays := (mi.mesh as Mesh).surface_get_arrays(si)
-			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-			var index = arrays[Mesh.ARRAY_INDEX]
-			var ids := {}
-			var parent := []
-			var vid := PackedInt32Array()
-			for v in verts:
-				var w := t * v
-				var key := Vector3i((w * 10000.0).round())
-				if not ids.has(key):
-					ids[key] = parent.size()
-					parent.append(parent.size())
-				vid.append(ids[key])
-			var tri_count: int = (index.size() if index != null else verts.size()) / 3
-			for f in tri_count:
-				var a: int = vid[index[f * 3] if index != null else f * 3]
-				for j in 2:
-					var b: int = vid[index[f * 3 + 1 + j] if index != null else f * 3 + 1 + j]
-					var ra := a
-					while parent[ra] != ra:
-						ra = parent[ra]
-					var rb := b
-					while parent[rb] != rb:
-						rb = parent[rb]
-					if ra != rb:
-						parent[rb] = ra
-			var boxes := {}
-			for i in verts.size():
-				var r: int = vid[i]
-				while parent[r] != r:
-					r = parent[r]
-				var w := t * verts[i]
-				if not boxes.has(r):
-					boxes[r] = AABB(w, Vector3.ZERO)
-				else:
-					boxes[r] = (boxes[r] as AABB).expand(w)
-			for r in boxes:
-				var bb: AABB = boxes[r]
-				var c := bb.get_center()
-				var rad := Vector2(c.x, c.z).length()
-				var ang := absf(atan2(c.z, c.x))
-				var ext := bb.size
-				var dims := [ext.x, ext.y, ext.z]
-				dims.sort()
-				var area: float = dims[1] * dims[2]
-				if rad < WEAR_R.x or rad > WEAR_R.y or c.y < WEAR_Y.x or c.y > WEAR_Y.y or ang < WEAR_MIN_ANGLE:
-					continue
-				if dims[2] < BOLT_EXTENT or dims[2] >= PLATE_EXTENT:
-					continue
-				out.append({"area": area, "centre": c})
+	for n in root.find_children("*", "Light3D", true, false):
+		out.append("light " + String(n.name))
+	for mi in meshes(root):
+		if mi.material_override != null:
+			out.append("material_override on " + String(mi.name))
+		for i in mi.mesh.get_surface_count():
+			var slot := HeroAssets.slot_of(mi.mesh, i)
+			if slot in BAD_SLOTS or not HeroAssets.SLOTS.has(slot):
+				out.append("%s slot %s" % [mi.name, slot])
 	return out
 
 
-# Scratch GLBs are read directly, so a red run never overwrites a delivered asset or its import.
-func _load_asset(path: String, environment: String) -> Node:
-	var scratch := OS.get_environment(environment)
-	if not scratch.is_empty():
-		var document := GLTFDocument.new()
-		var state := GLTFState.new()
-		var error := document.append_from_file(scratch, state)
-		_report("sable scratch load", error == OK, "GLTF load error %d" % error)
-		return document.generate_scene(state) if error == OK else Node.new()
-	return (load(path) as PackedScene).instantiate()
+func _load(path: String) -> Node:
+	var packed := load(path) as PackedScene
+	return packed.instantiate() if packed != null else Node.new()
 
 
 func _check_rig(rig: Node) -> void:
@@ -273,83 +178,190 @@ func _check_rig(rig: Node) -> void:
 			"%.6f seconds, expected %.6f +/-0.001" % [length, CLIPS[clip]])
 
 
-func _initialize() -> void:
-	var shell: Node = _load_asset(SHELL, "SCRAPKEEP_TEST_SHELL")
-	var rig: Node = _load_asset(RIG, "SCRAPKEEP_TEST_RIG")
+func _check_budget(shell: Node, rig: Node) -> void:
 	var a := counts(shell)
 	var b := counts(rig)
+	var body := counts(shell, ["Pilot"])
+	_report("sable shell tris", body.t <= SHELL_TRIS, "%d triangles without the placeholder pilot, band top %d" % [body.t, SHELL_TRIS])
+	_report("sable shell draws", a.s == SHELL_DRAWS, "%d surfaces, registry exception %d" % [a.s, SHELL_DRAWS])
 	_report("sable pod V", a.v + b.v <= MAX_V, "%d + %d = %d vertices, ceiling %d" % [a.v, b.v, a.v + b.v, MAX_V])
 	_report("sable pod T", a.t + b.t <= MAX_T, "%d + %d = %d triangles, ceiling %d" % [a.t, b.t, a.t + b.t, MAX_T])
 	_report("sable pod draws", a.s + b.s <= MAX_DRAWS, "%d + %d = %d surfaces, ceiling %d" % [a.s, b.s, a.s + b.s, MAX_DRAWS])
-	_report("sable glass", a.alpha == 1 and b.alpha == 0, "one glass surface (%d shell, %d rig)" % [a.alpha, b.alpha])
-	var missing := NODES.filter(func(n): return shell.find_child(n, true, false) == null)
-	_report("sable nodes", missing.is_empty(), "Core, Pod, Dome, Pilot, Gyro, RopeExit (missing %s)" % [missing])
-	var slots := []
-	for mi in meshes(shell):
-		for i in mi.mesh.get_surface_count():
-			var slot := HeroAssets.slot_of(mi.mesh, i)
-			if not HeroAssets.SLOTS.has(slot):
-				slots.append(slot)
-	_report("sable slots", slots.is_empty(), "every surface is a section 9 slot %s" % [slots])
-	var paint_set := [Palette.VERDIGRIS, Palette.RUST, Palette.SAND]
-	var off := 0
-	for mi in meshes(shell):
-		for i in mi.mesh.get_surface_count():
-			if HeroAssets.slot_of(mi.mesh, i) == "paint":
-				for c in Array(mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]):
-					var near := false
-					for p in paint_set:
-						var lin: Color = (p as Color).srgb_to_linear()
-						near = near or (absf(c.r - lin.r) < 0.01 and absf(c.g - lin.g) < 0.01 and absf(c.b - lin.b) < 0.01)
-					if not near:
-						off += 1
-	_report("sable paint", off == 0, "paint vertex colours are petrol, iron oxide or bone (%d off)" % off)
-	var core := shell.find_child("Core", true, false) as MeshInstance3D
-	var far := 0.0
-	for v in (core.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-		far = maxf(far, (core.transform * v).length())
-	_report("sable core", far <= 0.981, "glass hull radius %.4f, collider 1.0" % far)
-	# Silhouette: the Pod kit mesh (plates, spool, mast, saddle) may not extend past the base
-	# shell's bounds. The gyro ring, glass and pilot are unchanged and fixed by other checks.
-	var lo := Vector3(INF, INF, INF)
-	var hi := Vector3(-INF, -INF, -INF)
-	for mi in meshes(shell):
-		if String(mi.name) != "Pod":
-			continue
-		var t := to_root(mi, shell)
-		for i in mi.mesh.get_surface_count():
-			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				var w := t * v
-				lo = lo.min(w)
-				hi = hi.max(w)
-	var grew := (lo - BASE_POD_MIN).x < -GROW or (lo - BASE_POD_MIN).y < -GROW or (lo - BASE_POD_MIN).z < -GROW \
-		or (hi - BASE_POD_MAX).x > GROW or (hi - BASE_POD_MAX).y > GROW or (hi - BASE_POD_MAX).z > GROW
-	_report("sable silhouette", not grew, "pod bounds %s..%s within base %s..%s +%.3f" % [lo, hi, BASE_POD_MIN, BASE_POD_MAX, GROW])
-	var pale := band_islands(shell, "paint", true, BAND_R.x, BAND_R.y)
-	var lo_a := INF
-	var hi_a := 0.0
-	for area in pale:
-		lo_a = minf(lo_a, area)
-		hi_a = maxf(hi_a, area)
-	_report("sable band count", pale.size() >= PATCH_MIN and pale.size() <= PATCH_MAX,
-		"%d pale wear islands in the band, want %d to %d" % [pale.size(), PATCH_MIN, PATCH_MAX])
-	_report("sable band size", not pale.is_empty() and lo_a >= PATCH_MIN_AREA and hi_a >= lo_a * PATCH_UNEQUAL,
-		"island areas %s m2, each at least %.3f and largest at least %.1fx smallest" % [pale.map(func(a): return snappedf(a, 0.001)), PATCH_MIN_AREA, PATCH_UNEQUAL])
-	var bolts := band_islands(shell, "bare_metal", false, 0.92, 0.945)
-	_report("sable band bolts", bolts.size() == BOLTS, "%d bolts on the band, want %d" % [bolts.size(), BOLTS])
-	_check_rig(rig)
-	var islands := wear_islands(shell)
-	var areas := []
-	for isl in islands:
-		areas.append(isl.area)
-		print("wear island area %.4f m2 at %s" % [isl.area, isl.centre])
-	areas.sort()
-	var few: bool = islands.size() >= WEAR_MIN_ISLANDS and islands.size() <= WEAR_MAX_ISLANDS
-	_report("sable wear count", few, "%d ring wear islands, want %d to %d" % [islands.size(), WEAR_MIN_ISLANDS, WEAR_MAX_ISLANDS])
-	_report("sable wear size", not areas.is_empty() and areas[0] >= WEAR_MIN_AREA, "smallest island %.4f m2, want at least %.3f" % [areas[0] if not areas.is_empty() else 0.0, WEAR_MIN_AREA])
-	_report("sable wear unequal", areas.size() >= 2 and areas[-1] >= areas[0] * WEAR_UNEQUAL, "largest %.4f over smallest %.4f, want ratio %.1f" % [areas[-1] if not areas.is_empty() else 0.0, areas[0] if not areas.is_empty() else 0.0, WEAR_UNEQUAL])
 
+
+func _check_tree(shell: Node) -> void:
+	var core := shell.find_child("Core", true, false) as MeshInstance3D
+	var pod := shell.find_child("Pod", true, false) as MeshInstance3D
+	_report("sable core and pod", core != null and pod != null, "Core and Pod meshes under the root")
+	if core == null or pod == null:
+		return
+	var missing := POD_NODES.filter(func(n): return pod.find_child(n, true, false) == null)
+	_report("sable pod nodes", missing.is_empty(), "%d kit, control and loader nodes under Pod (missing %s)" % [POD_NODES.size(), missing])
+	var hand_points := ["LapBar_L", "LapBar_R"].filter(func(n): return pod.find_child("Control_LapBar", true, false) == null \
+		or pod.find_child("Control_LapBar", true, false).get_node_or_null(n) == null)
+	_report("sable lap bar hands", hand_points.is_empty(), "LapBar_L and LapBar_R under Control_LapBar (missing %s)" % [hand_points])
+	var hubs := 0
+	for c in core.get_children():
+		if String(c.name).begins_with("Hub_"):
+			hubs += 1
+	_report("sable lattice hubs", hubs == 32, "%d Hub_NN empties on Core, want 32" % hubs)
+	var r := far(points(core, shell))
+	_report("sable core radius", r <= CORE_LIMIT + 0.0001 and r >= 0.95, "lattice reaches %.4f, limit %.3f" % [r, CORE_LIMIT])
+	var ring := pod.find_child("WeaponRing", true, false)
+	var el := ring.get_node_or_null("Emitter_L") as Node3D if ring != null else null
+	var er := ring.get_node_or_null("Emitter_R") as Node3D if ring != null else null
+	_report("sable emitter mounts", el != null and er != null and el.position.z < -1.1 and er.position.z < -1.1
+		and el.position.x < 0.0 and er.position.x > 0.0 and absf(el.position.x + er.position.x) < 0.001,
+		"twin arc emitter muzzles on the ring's front arc, mirrored about the nose")
+	var slots := []
+	if ring is MeshInstance3D:
+		for i in (ring as MeshInstance3D).mesh.get_surface_count():
+			slots.append(HeroAssets.slot_of((ring as MeshInstance3D).mesh, i))
+	slots.sort()
+	_report("sable ring slots", slots == ["copper", "paint", "rubber"], "WeaponRing surfaces %s: bone band, dark collar, copper coils and studs" % [slots])
+
+
+func _check_machinery(shell: Node) -> void:
+	var pod := shell.find_child("Pod", true, false) as MeshInstance3D
+	var mast := shell.find_child("CoilMast", true, false) as MeshInstance3D
+	var rack := shell.find_child("WrenchRack", true, false) as MeshInstance3D
+	_report("sable mast and rack meshes", mast != null and rack != null and pod != null, "CoilMast and WrenchRack are mesh nodes")
+	if mast == null or rack == null or pod == null:
+		return
+	_report("sable mast parent", mast.get_parent() == pod and rack.get_parent() == pod, "CoilMast and WrenchRack ride the upright Pod")
+	var tip := points(mast, shell)
+	var top := Vector3.ZERO
+	for p in tip:
+		if p.length() > top.length():
+			top = p
+	_report("sable mast height", absf(top.length() - (LATTICE_OUT + MAST_PAST)) <= TOL,
+		"mast tip at radius %.3f, want %.3f (0.20 m past the lattice)" % [top.length(), LATTICE_OUT + MAST_PAST])
+	_report("sable mast clock", clock(top) >= 10.5 and clock(top) <= 11.5, "mast at %.2f o'clock from behind, want 11" % clock(top))
+	# Accent surfaces: the mast tip and the rack, nothing else on the shell.
+	var accents := []
+	for mi in meshes(shell):
+		for i in mi.mesh.get_surface_count():
+			if HeroAssets.slot_of(mi.mesh, i) == "class_accent":
+				accents.append(String(mi.name))
+	accents.sort()
+	_report("sable accent surfaces", accents == ["CoilMast", "WrenchRack"], "class_accent only on the mast tip and the rack: %s" % [accents])
+	_report("sable mast surface", mast.mesh.get_surface_count() == 1 and HeroAssets.slot_of(mast.mesh, 0) == "class_accent",
+		"the mint tip is the CoilMast node's one class_accent surface")
+	# Spool: the Pod's reach at 3 o'clock, and nothing at 1 o'clock.
+	var spool_r := 0.0
+	var one_r := 0.0
+	var all_pod := points(pod, shell)
+	all_pod.append_array(tip)
+	for p in all_pod:
+		var c := clock(p)
+		if c >= 2.5 and c <= 3.75:
+			spool_r = maxf(spool_r, p.length())
+		if c >= 0.5 and c <= 1.5:
+			one_r = maxf(one_r, p.length())
+	_report("sable spool bulge", absf(spool_r - (LATTICE_OUT + SPOOL_PAST)) <= TOL,
+		"Pod reaches %.3f at 3 o'clock, want %.3f (0.12 m past the lattice)" % [spool_r, LATTICE_OUT + SPOOL_PAST])
+	_report("sable nothing at one", one_r <= 1.0, "Pod reaches %.3f at 1 o'clock, inside the collider" % one_r)
+	var rope := pod.find_child("RopeExit", true, false) as Node3D
+	var rope_at := to_root(rope, shell).origin if rope != null else Vector3.ZERO
+	_report("sable rope exit", rope != null and rope_at.x > 0.85 and rope_at.z < -0.08 and clock(rope_at) > 2.5 and clock(rope_at) < 3.75,
+		"RopeExit at the spool's front rope mouth, %s" % rope_at)
+	# Rack: one mesh, one class_accent surface, five index bands in COLOR.r (rail, four wrenches).
+	_report("sable rack surface", rack.mesh.get_surface_count() == 1 and HeroAssets.slot_of(rack.mesh, 0) == "class_accent",
+		"WrenchRack is one class_accent surface")
+	var bands := {}
+	var cols = rack.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+	if cols != null:
+		for c in cols:
+			bands[snappedf((c as Color).r, 0.05)] = true
+	var keys := bands.keys()
+	keys.sort()
+	_report("sable rack index", keys == [0.0, 0.25, 0.5, 0.75, 1.0], "COLOR.r index bands %s, want rail 0 and wrenches 0.25 to 1.0" % [keys])
+	var rack_pts := points(rack, shell)
+	var behind := true
+	for p in rack_pts:
+		behind = behind and p.z > 0.24 and p.y < -0.04
+	_report("sable rack on seat back", behind and not rack_pts.is_empty(), "rack behind the seat back, below the sight cone")
+
+
+func _check_materials(shell: Node) -> void:
+	var bad := problems(shell)
+	_report("sable contract", bad.is_empty(), "no glass, Fleet or requisition slot, light or material_override (%s)" % [bad])
+	var enamels := [Palette.VERDIGRIS, Palette.RUST, Palette.SAND, Palette.CHARCOAL]
+	var off := 0
+	var seat_off := 0
+	for mi in meshes(shell):
+		for i in mi.mesh.get_surface_count():
+			if HeroAssets.slot_of(mi.mesh, i) != "paint":
+				continue
+			var cols = mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]
+			for c in Array(cols if cols != null else []):
+				if not near_any(c, enamels):
+					off += 1
+				if String(mi.name) == "Pod" and not near_any(c, [Palette.SAND]):
+					seat_off += 1
+	_report("sable paint", off == 0, "paint vertex colours are section 6 enamels (%d off)" % off)
+	_report("sable seat bone", seat_off == 0, "every Pod paint face (seat, decal plate, rope drum) is bone (%d off)" % seat_off)
+
+
+func _check_layers() -> void:
+	for n in [2, 3, 4, 5]:
+		var layer := _load(LAYER % n)
+		var core := layer.find_child("Core", true, false)
+		var pod := layer.find_child("Pod", true, false) as MeshInstance3D
+		var c := counts(layer)
+		_report("sable c%d split" % n, core != null and pod != null, "Core and Pod at the top, panels on the Pod")
+		_report("sable c%d budget" % n, c.t <= LAYER_TRIS and problems(layer).is_empty(),
+			"%d triangles within %d, clean slots and no overrides" % [c.t, LAYER_TRIS])
+		if pod != null:
+			var pod_slots := []
+			for i in pod.mesh.get_surface_count():
+				pod_slots.append(HeroAssets.slot_of(pod.mesh, i))
+			var pts := points(pod, layer)
+			var top := -INF
+			var out_r := 0.0
+			for p in pts:
+				top = maxf(top, p.y)
+				out_r = maxf(out_r, p.length())
+			if n == 2:
+				_report("sable c2 low", top < -0.35, "class II panels top out at Y %.3f, below -0.35" % top)
+			_report("sable c%d panels" % n, pod_slots == ["paint"] and out_r <= 0.93, "one paint surface inside the lattice (%s, reach %.3f)" % [pod_slots, out_r])
+		if n == 3:
+			var caps := far(points(core as MeshInstance3D, layer)) if core is MeshInstance3D else INF
+			_report("sable c3 caps", caps <= CORE_LIMIT + 0.0001, "thicker tread caps reach %.4f, limit %.3f" % [caps, CORE_LIMIT])
+		if n == 5:
+			var heavy := layer.find_child("Replace_CoilMast", true, false) as MeshInstance3D
+			var reach := far(points(heavy, layer, "class_accent")) if heavy != null else 0.0
+			_report("sable c5 heavy mast", heavy != null and absf(reach - (LATTICE_OUT + MAST_HEAVY_PAST)) <= TOL,
+				"Replace_CoilMast's mint tip at radius %.3f, want %.3f (one mast, 0.25 m)" % [reach, LATTICE_OUT + MAST_HEAVY_PAST])
+		layer.free()
+
+
+func _check_felt(shell: Node) -> void:
+	var felt := _load(FELT)
+	var same := true
+	for n in ["CoilMast", "RopeExit", "WrenchRack", "Control_GaugeLever"]:
+		var a := shell.find_child(n, true, false) as Node3D
+		var b := felt.find_child(n, true, false) as Node3D
+		same = same and a != null and b != null and to_root(a, shell).origin.distance_to(to_root(b, felt).origin) < 0.001
+	_report("sable felt machinery", same, "Felt Rig keeps the mast, rope exit, rack and bank where the default has them")
+	var core := felt.find_child("Core", true, false) as MeshInstance3D
+	var r := far(points(core, felt)) if core != null else INF
+	_report("sable felt lattice", r <= CORE_LIMIT + 0.0001 and problems(felt).is_empty(), "Felt Rig lattice reaches %.4f, clean slots" % r)
+	felt.free()
+
+
+func _initialize() -> void:
+	var shell := _load(SHELL)
+	var rig := _load(RIG)
+	_check_budget(shell, rig)
+	_check_tree(shell)
+	_check_machinery(shell)
+	_check_materials(shell)
+	_check_layers()
+	_check_felt(shell)
+	_check_rig(rig)
 	shell.free()
 	rig.free()
+	_report("sable check count", _checks + 1 == EXPECTED_CHECKS, "%d checks, want %d" % [_checks + 1, EXPECTED_CHECKS])
 	print("world_one_shell_sable_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
