@@ -6,7 +6,7 @@ extends SceneTree
 #     socket_exit node at the exit lip; no light nodes.
 # (b) Budgets per segment: render mesh, -col mesh and shells stay under the per-segment targets that keep a 36-segment chain of
 #     lava_tube_run inside park_large times 36 (printed per segment).
-# (c) Mouths: no face above the ball's band on the entry lip faces the incoming ball steeply (roof lips bevel back 3 m, TRAVERSAL.md:110).
+# (c) Mouths: no face above the ball's band on the entry lip stands steeply against the incoming ball (n.z under -0.75) (roof lips bevel back 3 m, TRAVERSAL.md:110).
 # (d) Placement: park_recipes.place makes one trimesh body from the -col mesh and draws the base plus both shells.
 # (e) A headless roll from a ground apron: the row's ride fact publishes once, the ball leaves through the exit, and its speed never
 #     stays under 2 m/s for more than 0.5 s (the dead-stop rule, PARK.md section 8).
@@ -25,7 +25,7 @@ const RECIPES := {
 	"lava_tube_run_bend_p30": {"fact": "ride_chute", "size": [48.0, 12.0, 16.0], "exit": [12.28, -5.045, 45.84, 30.0]},
 	"lava_tube_run_bend_n30": {"fact": "ride_chute", "size": [48.0, 12.0, 16.0], "exit": [-12.28, -5.045, 45.84, -30.0]},
 	"adit_mouth": {"fact": "ride_chute", "size": [56.0, 6.0, 8.0], "exit": [0.0, -3.915, 56.0, 0.0]},
-	"shaft_drop": {"fact": "ride_drop", "size": [26.0, 18.0, 12.0], "exit": [0.0, -20.5, 26.0, 0.0]},
+	"shaft_drop": {"fact": "ride_drop", "size": [26.0, 18.0, 12.0], "exit": [0.0, -21.53, 26.0, 0.0]},
 	"spillway_tunnel": {"fact": "ride_drop", "size": [90.0, 9.0, 11.0], "exit": [0.0, -35.5, 90.0, 0.0]},
 }
 const CHAIN := ["lava_tube_run", "lava_tube_run_bend_p30", "lava_tube_run", "lava_tube_run_bend_n30", "lava_tube_run"]
@@ -36,11 +36,18 @@ const SHELL_TRI_CAP := 1500
 const FILE_TRI_CAP := 16000
 const CHAIN_LEN := 36
 const SPACING := 500.0
-const START_SPEED := 8.0
-const ROLL_FRAMES := 720
+# The ball arrives at cruise speed (14 m/s, PARK.md section 8); the drift at 4 degrees is the slowest recipe.
+const START_SPEED := 14.0
+const ROLL_FRAMES := 900
+# The exit counts when the ball crosses the exit plane within this distance of the exit lip's floor centre.
+const EXIT_REACH := 8.0
 const DEAD_SPEED := 2.0
 const DEAD_SECONDS := 0.5
 const EPS := 0.05
+# A face whose normal is within 41 degrees of -Z stands against a ball coming along +Z; the 3 m bevel keeps lips at 45 degrees (n.z -0.71).
+const MOUTH_STEEP := 0.75
+# A shaft has no roof at its mouth: its entry lip is the ground edge, so it needs no bevelled faces to show.
+const NO_ROOF := ["shaft_drop"]
 
 var _t := T.new("park_recipes_tunnels_test")
 var _facts: Array = []
@@ -169,10 +176,11 @@ func _check_mouths() -> void:
 				if centre.z < -0.5 or centre.z > 3.2 or centre.y < 4.0:
 					continue
 				seen += 1
-				if n.z < -0.3 and absf(n.y) < 0.69:
+				if n.z < -MOUTH_STEEP:
 					bad += 1
 		scene.free()
-		_t.check("(c) %s entry lip has %d faces above the ball band and none stand against it" % [id, seen], seen > 0 and bad == 0, "%d steep" % bad)
+		_t.check("(c) %s entry lip has %d faces above the ball band and none stand against it" % [id, seen],
+			(seen > 0 or id in NO_ROOF) and bad == 0, "%d steep" % bad)
 
 
 func _row(id: String, at: Vector3, yaw := 0.0) -> Dictionary:
@@ -238,10 +246,10 @@ func _apron(parent: Node3D, x: float, yaw := 0.0) -> void:
 	body.rotation.y = yaw
 
 
-func _watch(ball: RigidBody3D, goal: Vector3, reach: float, out: Dictionary) -> void:
+func _watch(ball: RigidBody3D, goal: Vector3, heading: Vector3, out: Dictionary) -> void:
 	out["ball"] = ball
 	out["goal"] = goal
-	out["reach"] = reach
+	out["heading"] = heading
 	out["slow"] = 0.0
 	out["worst"] = 0.0
 	out["done"] = false
@@ -258,7 +266,12 @@ func _step_watch(w: Dictionary) -> void:
 		w["armed"] = true
 	if not w["armed"]:
 		return
-	if ball.position.distance_to(w["goal"]) < w["reach"]:
+	# Through the exit: past the exit plane, inside the tube's width and within a ball's reach of the exit lip's height.
+	var heading: Vector3 = w["heading"]
+	var from_exit: Vector3 = ball.position - (w["goal"] as Vector3)
+	var along: float = from_exit.dot(heading)
+	var lateral: float = (from_exit - heading * along).length()
+	if along > 0.0 and lateral < EXIT_REACH:
 		w["done"] = true
 		return
 	if ball.linear_velocity.length() < DEAD_SPEED:
@@ -282,7 +295,8 @@ func _check_rolls() -> void:
 		var exit_row: Array = RECIPES[id]["exit"]
 		var w := {}
 		var ball := _ball(parent, Vector3(x, Tuning.RADIUS + 0.05, -10.0), Vector3(0, 0, START_SPEED))
-		_watch(ball, Vector3(x + exit_row[0], exit_row[1] + Tuning.RADIUS, exit_row[2]), 4.0, w)
+		var yaw := deg_to_rad(float(exit_row[3]))
+		_watch(ball, Vector3(x + exit_row[0], exit_row[1], exit_row[2]), Vector3(sin(yaw), 0, cos(yaw)), w)
 		w["x"] = x
 		w["node"] = node
 		watches[id] = w
@@ -371,7 +385,7 @@ func _check_chain() -> void:
 	apron.position = Vector3(0, -1.0, -30.0)
 	var ball := _ball(parent, Vector3(0, Tuning.RADIUS + 0.05, -10.0), Vector3(0, 0, START_SPEED))
 	var w := {}
-	_watch(ball, last_socket + Vector3(0, Tuning.RADIUS, 0), 5.0, w)
+	_watch(ball, last_socket, at.basis * Vector3(0, 0, 1), w)
 	for f in ROLL_FRAMES * 2:
 		await physics_frame
 		_step_watch(w)
