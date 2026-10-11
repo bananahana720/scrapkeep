@@ -270,6 +270,14 @@ The rules scale the comps pocket spec (`research/comps/pocket-placement.md:30-42
 
 The on-line activity keeps only the clear ring and the sightline. The hidden pocket keeps every rule except the beacon distance: its door opens a sealed space and pulls no play toward the Warden, so it needs only to stay off `warden` nodes. A door that fails a rule moves within its site row first, then the KD unit moves the activity's `at` or its site row in the stage's park file; the band tables of section 8 do not move to make a pocket pass (PARK.md:476).
 
+**Readings fixed after the draft round (2026-10-11).** Two rounds of straight-line checks on the six journey drafts disagreed with each other and with the journeys, so the rules above read this way from here on:
+
+1. Every distance in the table is a path distance on KB8's graph. Until a stage has its `graph.bin`, a straight-line estimate is advisory, is written as `_est`, and never moves an activity or a row.
+2. The on-line activity may be a waymark, and its kind is whatever the journey puts on the line (a `hauler_bounty` on the line is allowed when the journey has it there). The off-line pair stays one reward and one risk.
+3. The journey's positions win over the starting values. This narrows the sentence above: a KD unit moves a pocket only when the graph shows a breach of the clear ring, the door-to-door minimum or the route-open rule; a detour or sightline miss is logged for the sitting and the band tables still do not move.
+4. The clear ring counts home sites, destructive event sites (cave-in, collapse, blow, eruption) and contraption hazards. A flood or a drain is not destructive, so a door may stand inside its site. When a home and a door collide, the home moves, not the door.
+5. A draft that moved a pocket off its journey position to satisfy a straight-line estimate carries both positions; the KD unit picks by the graph and restores the journey's position when rule 3 allows it.
+
 ## 3. The terrain route on Terrain3D v1.0.2
 
 **Regions.** Rendering uses `vertex_spacing` 1.0 m and `region_size` 1024 vertices, so a region is 1024 m square. Four regions, at region coordinates (-1,-1), (0,-1), (-1,0) and (0,0), cover -1024 m to +1024 m: the 1600 m play square and a 224 m apron. The apron holds the rims, mesas and walls that rise into the skyline. Beyond 1024 m there is no ground; the sky and distant silhouette cards close the view. The probe found Terrain3D snaps the import origin to its region grid and fixed it with a region-aligned image (P-ADDON A3), so the bake writes region-aligned images.
