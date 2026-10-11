@@ -328,16 +328,17 @@ static func _recoil(kit, tuning, intent, aim: Basis, body_state) -> void:
 
 
 static func attach(kit, from: Vector3, point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> void:
-	# A Warden's bite takes its nearest hardpoint (PARK.md section 7).
-	if body != null and anchor_line(body):
-		point = body.anchor_point(point)
 	kit.hooked = true
 	kit.anchor = point
 	kit.anchor_normal = normal
-	kit.rope = maxf(MIN_ROPE, from.distance_to(point))
 	kit.on_body = body != null
 	kit.anchor_body = body
 	kit.anchor_offset = point - body.global_position if body != null else Vector3.ZERO
+	# A Warden line rides from the hardpoint nearest the bite (PARK.md section 7); the offset
+	# keeps the bite, so a committed haul still homes where it bit (_follow).
+	if body != null and anchor_line(body):
+		kit.anchor = body.anchor_point(point)
+	kit.rope = maxf(MIN_ROPE, from.distance_to(kit.anchor))
 	kit.line_state = LINE_LATCHED
 	kit.smash_left = 0.0
 	kit.slamming = false
@@ -732,6 +733,8 @@ static func _follow(kit, tuning, origin: Vector3) -> bool:
 		kit.drop_line("body_died")
 		return false
 	kit.anchor = body.global_position + kit.anchor_offset
+	if kit.line_state == LINE_LATCHED and anchor_line(body):
+		kit.anchor = body.anchor_point(kit.anchor)
 	var dist := origin.distance_to(kit.anchor)
 	if dist > BREAK_STRETCH * tuning.f("rope_range"):
 		kit.drop_line("out_of_reach")

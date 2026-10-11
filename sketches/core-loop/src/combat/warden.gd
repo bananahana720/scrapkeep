@@ -6,6 +6,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Habits := preload("res://src/combat/habits.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -399,7 +400,8 @@ func hardpoint_at(index: int) -> Vector3:
 	return global_position + (hardpoints[index] as Vector3)
 
 
-# The hardpoint a bite at `point` takes: the nearest one. Augments.attach moves the bite there.
+# The hardpoint a bite at `point` takes: the nearest one. A latched line rides from it;
+# a committed haul still homes on the bite itself (Augments._follow).
 func anchor_point(point: Vector3) -> Vector3:
 	return hardpoint_at(_nearest_hardpoint(point - global_position))
 
@@ -420,6 +422,9 @@ func set_mount_driver(driver) -> void:
 func lined_hardpoint() -> int:
 	var kit = target.get("kit") if target != null else null
 	if kit == null or not kit.hooked or not kit.on_body or kit.anchor_body != self:
+		return -1
+	# A committed haul homes on its bite, off the hardpoints, so the shrug leaves it be.
+	if kit.line_state != Augments.LINE_LATCHED:
 		return -1
 	return _nearest_hardpoint(kit.anchor_offset)
 
