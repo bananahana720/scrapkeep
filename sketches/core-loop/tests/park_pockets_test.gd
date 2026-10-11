@@ -17,6 +17,14 @@ extends SceneTree
 # smaller one common or rare. A planted swap, the camp paying rare and the larger-detour pocket
 # common, breaks the ladder on both rows, and a row with no pay.rarities and no named part breaks
 # it too. The full visit (spawn, all four doors in the best order, beacon) is reported and finite.
+#
+# SR15, reported and not gated (K-UNITS KB8): the report prints reward_ratio, the median
+# spawn-to-pocket path over the spawn-to-beacon path across the off-line pockets (start target at
+# least 1.5, comps/isaac/floor-generation.md), and full_visit_ratio (start target at most 3.0).
+# Both are structural facts here (present, finite); a target miss is printed as out of target and
+# is no test failure. Two planted fixtures each break one target and print out of target: the
+# off-line doors moved next to the spawn (reward_ratio) and one pocket sent to the far corner
+# (full_visit_ratio).
 
 const T := preload("res://tests/support/t.gd")
 
@@ -118,7 +126,66 @@ func _run() -> void:
 	t.check("full_visit_ratio is finite", full < INF and ratio < INF, "%.1f m, ratio %.3f" % [full, ratio])
 	t.check("the full visit is no shorter than spawn to beacon", ratio >= 1.0, "%.3f" % ratio)
 	print("[full_visit] %.1f m, ratio %.3f (start target at most 3.0, reported)" % [full, ratio])
+	_ratios(tool, graph, park, ruling)
 	quit(t.verdict())
+
+
+# SR15: the two ratios as targets. Structural asserts only; the targets are printed.
+func _ratios(tool: GDScript, graph, park: Dictionary, ruling: Dictionary) -> void:
+	var reward_ratio: float = ruling.get("reward_ratio", -1.0)
+	t.check("reward_ratio is present and finite", reward_ratio > 0.0 and reward_ratio < INF, str(reward_ratio))
+	var targets: Array = ruling.get("targets", [])
+	var names := []
+	for row in targets:
+		names.append(row["name"])
+		t.check("target %s carries a value, a target and a verdict" % row["name"],
+			row.has("value") and row.has("target") and row.has("ok") and is_finite(float(row["value"])), str(row))
+	t.eq("the report carries both targets", names, ["reward_ratio", "full_visit_ratio"])
+	print("[reward_ratio] %.3f (start target at least 1.5, reported)" % reward_ratio)
+	for line in tool.target_lines(ruling):
+		print("[target] " + line)
+	t.check("the table text prints both targets", tool.pocket_table(ruling).contains("reward_ratio") and tool.pocket_table(ruling).contains("full_visit_ratio"))
+
+	# Planted: every off-line door next to the spawn, so the spawn-to-pocket median collapses.
+	var close := park.duplicate(true)
+	_activity(close, "tube_cache")["at"] = [-100, -560]
+	_activity(close, "bench_altar")["at"] = [-60, -560]
+	for c in close["contraption_rows"]:
+		if c["id"] == _role_id(ruling, "hidden"):
+			if c.has("door"):
+				c["door"]["at"] = [-80, -540]
+			c["at"] = [-80, -540]
+	var near_ruling: Dictionary = tool.pockets(graph, close)
+	_print_targets("planted close doors", tool, near_ruling)
+	t.check("pockets planted near the spawn print reward_ratio out of target", _out_of_target(near_ruling, "reward_ratio"))
+	t.check("a missed target is no breach (reported, not gated)", not _breaks(near_ruling, "park", "reward_ratio"))
+
+	# Planted: one pocket in the far corner, so the tour dwarfs the spawn-to-beacon path.
+	var far := park.duplicate(true)
+	_activity(far, "bench_altar")["at"] = [700, 700]
+	var far_ruling: Dictionary = tool.pockets(graph, far)
+	_print_targets("planted far pocket", tool, far_ruling)
+	t.check("a pocket planted in the far corner prints full_visit_ratio out of target", _out_of_target(far_ruling, "full_visit_ratio"))
+	t.check("the fixture itself prints neither target out", not _out_of_target(ruling, "reward_ratio") and not _out_of_target(ruling, "full_visit_ratio"), str(targets))
+
+
+func _role_id(ruling: Dictionary, role: String) -> String:
+	for row in ruling["rows"]:
+		if row["role"] == role:
+			return row["id"]
+	return ""
+
+
+func _out_of_target(ruling: Dictionary, name: String) -> bool:
+	for row in ruling.get("targets", []):
+		if row["name"] == name:
+			return not row["ok"]
+	return false
+
+
+func _print_targets(label: String, tool: GDScript, ruling: Dictionary) -> void:
+	for line in tool.target_lines(ruling):
+		print("[%s] %s" % [label, line])
 
 
 # The two distances of 2.12 on the loaded fixture: the door rules on door_m, the detour band
