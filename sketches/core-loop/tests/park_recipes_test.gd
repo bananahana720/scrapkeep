@@ -175,6 +175,7 @@ func _check_glb() -> void:
 		var parts := {"base": [_fake_glb("tube", raw, Vector3(8, 6, 20))],
 			"shells": [_fake_glb("tube_d1", raw, Vector3(1, 1, 1)), _fake_glb("tube_d2", raw, Vector3(1, 1, 1))]}
 		var node := ParkRecipes.place_parts(row, parts, parent)
+		_free_parts(parts)
 		var views := node.find_children("*", "MeshInstance3D", true, false)
 		var drawn_col := views.filter(func(v): return String(v.name).ends_with(ParkRecipes.COL_SUFFIX))
 		_t.check("(d) %s: the -col mesh is never drawn" % label, drawn_col.is_empty() and views.size() == 3,
@@ -202,6 +203,7 @@ func _check_glb() -> void:
 	var hparts := {"base": [_fake_glb("dam", false, Vector3(10, 10, 10))], "shells": [], "mid": [_fake_glb("dam_mid", false, Vector3(1, 1, 1))],
 		"far": [_fake_glb("dam_far", false, Vector3(1, 1, 1))]}
 	var hnode := ParkRecipes.place_parts(hero, hparts, parent)
+	_free_parts(hparts)
 	var h := ParkRecipes.ranges("hero_landmark")
 	var by_name := {}
 	for v in hnode.find_children("*", "MeshInstance3D", true, false):
@@ -223,13 +225,26 @@ func _check_glb() -> void:
 	parent.free()
 
 
+func _free_parts(parts: Dictionary) -> void:
+	for key in parts:
+		for scene: Node in parts[key]:
+			scene.free()
+
+
 func _collider_box(node: Node3D) -> AABB:
 	var out := AABB()
 	var first := true
 	for s: CollisionShape3D in node.find_children("*", "CollisionShape3D", true, false):
 		if not s.get_parent() is StaticBody3D:
 			continue
-		var box := s.transform * s.shape.get_debug_mesh().get_aabb()
+		# A convex shape's debug mesh sits inside its margin; its points are the extent the ball meets.
+		var local := s.shape.get_debug_mesh().get_aabb()
+		if s.shape is ConvexPolygonShape3D:
+			var pts: PackedVector3Array = (s.shape as ConvexPolygonShape3D).points
+			local = AABB(pts[0], Vector3.ZERO)
+			for p in pts:
+				local = local.expand(p)
+		var box := s.transform * local
 		out = box if first else out.merge(box)
 		first = false
 	return out
@@ -291,7 +306,10 @@ func _check_roll() -> void:
 		else:
 			_t.check("(e) greybox %s (fact '%s') publishes nothing" % [ride["element"], ride["fact"]], kinds.is_empty(), str(kinds))
 		var ball: RigidBody3D = ride["ball"]
-		_t.check("(e) the ball stays on greybox %s" % ride["element"], ball.position.y > 0.0, "y %.2f" % ball.position.y)
+		if ParkRecipes.WEDGES.has(ride["element"]):
+			_t.check("(e) the ball stays on greybox %s" % ride["element"], ball.position.y > 0.0, "y %.2f" % ball.position.y)
+		else:
+			_t.near("(e) the ball rests on greybox %s's top" % ride["element"], ball.position.y, 3.0 + Tuning.RADIUS, 0.1)
 	for kind in NEW_FACTS:
 		_t.check("(e) the roll publishes %s" % kind, published.has(kind), str(published.keys()))
 	var stray := _facts.filter(func(e): return e[1].x > (i - 0.5) * SPACING)

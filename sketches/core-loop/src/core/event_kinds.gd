@@ -844,6 +844,12 @@ const WORLD_ROWS := {
 	"ride_glide_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_glide_wind", "hud": "", "objective": "", "priority": 1},
 	"ride_skylight": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rail_hum", "hud": "", "objective": "", "priority": 1},
 	"ride_chute": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "ride_rolling_metal", "hud": "", "objective": "", "priority": 1},
+	# w13 KC0: the park's ride facts (design-v3/PARK.md section 4), published by park_recipes.gd's ride sensor. Rides,
+	# so rising and breathy; the shape is the piece: a bowl's ring, a drop's arrow, a ledge's bar, a hop's chevron.
+	"ride_bowl": {"group": "event", "color": Palette.SANDSTONE, "shape": "ring", "sound": "boost_whoosh", "sound_next": "ride_bowl_carve", "hud": "", "objective": "", "priority": 1},
+	"ride_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "arrow", "sound": "dash_whoosh", "sound_next": "ride_drop_swoop", "hud": "", "objective": "", "priority": 1},
+	"ride_ledge": {"group": "event", "color": Palette.SANDSTONE, "shape": "bar", "sound": "boost_whoosh", "sound_next": "ride_ledge_scuff", "hud": "", "objective": "", "priority": 1},
+	"ride_hop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_hop_lift", "hud": "", "objective": "", "priority": 1},
 	"landmark_hum": {"group": "event", "color": ANCIENT_LIGHT, "shape": "wave", "sound": "beacon_hum", "sound_next": "landmark_sub_pulse", "hud": "", "objective": "", "priority": 0},
 	"thermal_ride": {"group": "event", "color": Palette.SAND, "shape": "wave", "sound": "boost_whoosh", "sound_next": "thermal_updraft_swell", "hud": "", "objective": "", "priority": 1},
 	"wall_crumbled": {"group": "event", "color": Palette.SANDSTONE, "shape": "burst", "sound": "shatter", "sound_next": "cracked_wall_crumble", "hud": "", "objective": "", "priority": 1},
