@@ -35,7 +35,6 @@ const CAMPER_MEDIAN_S := 180.0
 const COMPLETIONIST_TICKS := 9000
 const CAMPER_TICKS := 16650
 const PARALLEL := 16
-const CHILD_CAP_S := 320.0
 const DT := 1.0 / 90.0
 
 var _t := T.new("bot_skill_bar_test")
@@ -48,7 +47,6 @@ var _pending: Array[Dictionary] = []
 var _active: Array[Dictionary] = []
 var _done: Array[Dictionary] = []
 var _folder := ""
-var _started := 0
 
 
 func _initialize() -> void:
@@ -94,18 +92,14 @@ func _physics_process(delta: float) -> bool:
 			if OS.get_cmdline_user_args().has("--hand-only"):
 				_finish()
 				return true
-			_started = Time.get_ticks_msec()
 			_launch()
 			_phase = "children"
 		"children":
+			# Every child is capped by --ticks; the smoke runner's timeout bounds the whole test.
 			_reap()
 			_launch()
 			if not _active.is_empty() or not _pending.is_empty():
-				if Time.get_ticks_msec() - _started < CHILD_CAP_S * 1000.0:
-					return false
-				for trial in _active:
-					OS.kill(trial["pid"])
-				_t.check("every capped run finished inside %.0f s" % CHILD_CAP_S, false, "%d running, %d waiting" % [_active.size(), _pending.size()])
+				return false
 			_bands()
 			_finish()
 			return true

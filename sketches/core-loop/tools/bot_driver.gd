@@ -203,6 +203,24 @@ const CLIMB_LEVEL := 1.5
 # On a map with standing activities the explorer stops its other rolling (scrap lines, events, the
 # vault) at this stage second and goes to the Warden, so the fight has the rest of STAGE_LIMIT.
 const ENGAGE_BY := 140.0
+# The skill bar's hands (SKILL-BAR section 8). A bot casts slot 2 or 3 the way a player does: a
+# number key picks it and a left click casts it, never by writing special_* or line_* (the router's
+# outputs). Every policy sends the pick and the click on one tick; the traversal pilot sends them
+# CAST_GAP apart and counts the pair as one verb. The line skill goes along a body line within
+# LINE_CAST_REACH, or loads just before a planned bite. Q goes at a full meter when a Warden core is
+# open within ULT_CORE_REACH or ULT_CROWD enemies are within ULT_CROWD_RADIUS; the traversal pilot
+# fires it when its next waypoint lies ULT_TRAVERSE_NEAR to ULT_TRAVERSE_FAR ahead over open ground.
+# A refused Q waits ULT_RETRY before the next press. What the hands read is what the bar and the
+# meter show: abilities.selected, abilities.slots(), abilities.ultimate(), combat.line_load() and
+# combat.ultimate.phase().
+const CAST_GAP := 0.1
+const LINE_CAST_REACH := 15.0
+const ULT_CORE_REACH := 45.0
+const ULT_CROWD := 3
+const ULT_CROWD_RADIUS := 20.0
+const ULT_TRAVERSE_NEAR := 25.0
+const ULT_TRAVERSE_FAR := 70.0
+const ULT_RETRY := 1.0
 
 var game
 var policy := "skipper"
@@ -311,6 +329,22 @@ var _defer_look := false
 var _look_delta := Vector2.ZERO
 var _leg := 0
 var _last_press_tick := -1000000
+# The cast in hand: the bar number (2 or 3), its hold, and where it is. "click" sends the pick
+# and the click; "hold" keeps the click down; "release" lets it up and, if the cast did not
+# commit, presses 1 to send the pick home. The traversal pilot adds "sent" (the pick is in its
+# buffer) and schedules the click at _cast_click_tick once the pick has passed its press gate.
+var _cast_slot := 0
+var _cast_hold := 0.0
+var _cast_phase := ""
+var _cast_click_tick := -1
+var _ult_wait := 0.0
+var _traverse_point := Vector3.INF
+# In-play seconds, the meter's own clock (it fills only in play), and the fill records.
+var _play_clock := 0.0
+var _fill_from := 0.0
+var _fills: Array[float] = []
+var _fill_open := true
+var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0}
 
 
 # The seed mapping (seed % roster size) moves whenever the roster grows, so band tests
@@ -370,6 +404,9 @@ func start(resume := false) -> void:
 	events.player_hit.connect(_on_player_hit)
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.special_used.connect(func(_id: String, _at: Vector3): _count("specials"))
+	_connect_optional("slot_cast", func(slot: String, _id: String, _at: Vector3): _on_slot_cast(slot))
+	_connect_optional("ultimate_started", func(_id: String, _path: String, _from: Vector3, _to: Vector3, _s: float): _on_ultimate_started())
+	_connect_optional("ultimate_ready", func(_id: String): _on_ultimate_ready())
 	events.world_fact.connect(func(fact: String, _at: Vector3):
 		if fact == "thermal_ride" and game.flow.in_stage():
 			_count("thermal_rides"))
@@ -469,6 +506,8 @@ func tick(delta: float) -> bool:
 		_end("fight_capped")
 		return true
 	_boost_clock -= delta
+	_play_clock += delta
+	_ult_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
 	_plant_cool -= delta
@@ -501,6 +540,7 @@ func tick(delta: float) -> bool:
 			_fight_boss(delta)
 		_:
 			source.hold = {}
+	_set_piece_hands()
 	return outcome != ""
 
 
@@ -609,6 +649,30 @@ func _count(key: String, by: float = 1.0) -> void:
 	if into.is_empty():
 		return
 	into[key] = into.get(key, 0) + by
+
+
+func _on_slot_cast(slot: String) -> void:
+	var key := "slot_casts_special" if slot == AbilityState.SPECIAL else "slot_casts_line" if slot == AbilityState.LINE else ""
+	if key == "":
+		return
+	_totals[key] = int(_totals[key]) + 1
+	_count(key)
+
+
+func _on_ultimate_started() -> void:
+	_totals["ultimates"] = int(_totals["ultimates"]) + 1
+	_count("ultimates")
+	_fill_from = _play_clock
+	_fill_open = true
+
+
+# Seconds of play from the run's start, or from the last set piece, to a full meter. A retry that
+# restores a full meter publishes ready again; that fill was already counted.
+func _on_ultimate_ready() -> void:
+	if not _fill_open:
+		return
+	_fill_open = false
+	_fills.append(snappedf(_play_clock - _fill_from, 0.01))
 
 
 func _boss_set(key: String, value) -> void:
@@ -772,6 +836,7 @@ func _traverse(delta: float) -> void:
 	if _leg < route.size():
 		point = game.ctx.terrain.drop_point(route[_leg].x, route[_leg].y, 1.0)
 	_goal = "traverse leg %d" % _leg
+	_traverse_point = point
 	source.hold = {}
 	source.press = {}
 	_defer_look = true
@@ -792,7 +857,23 @@ func _traverse(delta: float) -> void:
 	if source.hold.has("move"):
 		source.hold["move"] = _world_to_stick(sent["wish"])
 	source.press = sent["press"]
+	var picked: bool = source.press.has("slot_pick")
 	_gate_presses()
+	_traverse_click(picked)
+
+
+# The traversal pilot's cast is one verb sent as two keys: the pick passes the press gate, and
+# the click follows CAST_GAP later outside the gate. A pick the gate dropped drops the cast.
+func _traverse_click(picked: bool) -> void:
+	if picked:
+		if source.press.has("slot_pick") and _cast_phase == "sent":
+			_cast_click_tick = ticks + int(ceil(CAST_GAP * Engine.physics_ticks_per_second))
+		elif _cast_phase == "sent":
+			_cast_phase = ""
+	if _cast_click_tick >= 0 and ticks >= _cast_click_tick:
+		_cast_click_tick = -1
+		source.press["fire_pressed"] = true
+		_cast_phase = "release"
 
 
 func _stick_to_world(stick: Vector2) -> Vector3:
@@ -808,14 +889,16 @@ func _world_to_stick(wish: Vector3) -> Vector2:
 func _gate_presses() -> void:
 	var pressed: Array = []
 	for key in source.press:
-		if source.press[key]:
+		# slot_pick is an int: 0 picks slot 1 (home), -1 picks nothing.
+		var value = source.press[key]
+		if (value is int and value >= 0) or (value is bool and value):
 			pressed.append(key)
 	if pressed.is_empty():
 		return
 	if ticks - _last_press_tick < int(ceil(TRAVERSE_PRESS_GAP * Engine.physics_ticks_per_second)):
 		source.press = {}
 		return
-	source.press = {pressed[0]: true}
+	source.press = {pressed[0]: source.press[pressed[0]]}
 	_last_press_tick = ticks
 	press_ticks.append(ticks)
 
@@ -1244,6 +1327,8 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 		swallowed = true
 	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
 			and _off_line > DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+		# The planned bite: slot 3 loads on this tick, so the bite carries the line skill.
+		_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
 		_count("harpoon_bites")
@@ -1813,6 +1898,8 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 		return
 	if _plant_state == "mounted":
 		_plant_state = "idle"
+	_ultimate_hands(fight)
+	_line_hands()
 	var threats := _threats() if evade else []
 	if not threats.is_empty():
 		for h in threats:
@@ -2004,7 +2091,152 @@ func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
 				near += 1
 	var close: bool = fight != null and is_instance_valid(fight) and ball.distance_to(fight.global_position) < CLOSE_FIGHT
 	if near >= CROWD or close or (pressed_by_threat and near >= 1):
-		source.press["special_pressed"] = true
+		_cast(2)
+
+
+# --- the skill bar's hands (SKILL-BAR section 8) ---------------------------------------
+
+# Starts a cast of bar slot `slot` (2 or 3): the number key, then a left click held for
+# hold_seconds (0 is a tap: the click comes up on the next tick, so a gauge fires at its floor,
+# as the old one-tick special press did). False when the slot does not read ready on the bar,
+# a cast is already in hand, or a set piece runs.
+func _cast(slot: int, hold_seconds := 0.0) -> bool:
+	if _cast_phase != "" or _set_piece_up() or slot < 2 or slot > AbilityState.BAR.size():
+		return false
+	if _bar_state(slot) != AbilityState.READY or (slot == 3 and _line_loaded()):
+		return false
+	_cast_slot = slot
+	_cast_hold = hold_seconds
+	_cast_phase = "click"
+	return true
+
+
+# The bar slot's state as the bar draws it (ready, cooling, active or unavailable).
+func _bar_state(slot: int) -> String:
+	for s in game.player.abilities.slots():
+		if int(s["number"]) == slot:
+			return String(s["state"])
+	return AbilityState.UNAVAILABLE
+
+
+# Sends the cast in hand into this tick's keys. Runs after _drive has built the hold, so the
+# click it writes is the one the router reads.
+func _cast_hands() -> void:
+	var abilities = game.player.abilities
+	var name: String = AbilityState.BAR[_cast_slot - 1] if _cast_slot >= 1 else ""
+	match _cast_phase:
+		"click":
+			# A pick of the number already selected is the undo gesture, so a slot still picked
+			# (a refused cast keeps its pick) gets only the click.
+			if abilities.selected != name:
+				source.press["slot_pick"] = _cast_slot - 1
+			if policy == "traversal":
+				_cast_phase = "sent"
+				source.hold.erase("fire_held")
+				return
+			source.press["fire_pressed"] = true
+			if _cast_hold > 0.0:
+				source.hold["fire_held"] = true
+				_cast_phase = "hold"
+			else:
+				source.hold.erase("fire_held")
+				_cast_phase = "release"
+		"hold":
+			_cast_hold -= 1.0 / Engine.physics_ticks_per_second
+			source.hold["fire_held"] = true
+			if _cast_hold <= 0.0:
+				_cast_phase = "release"
+		"release":
+			# The click comes up for a tick: a gauge fires, and the release latch clears.
+			source.hold.erase("fire_held")
+			if abilities.selected == name and not abilities.charging():
+				source.press["slot_pick"] = 0
+			_cast_phase = ""
+
+
+# Slot 3 while a body line stands on an enemy within LINE_CAST_REACH. The load before a planned
+# bite is cast from _harpoon_hand, on the bite's own tick.
+func _line_hands() -> void:
+	var kit = game.player.kit
+	if not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
+		return
+	var body: Node3D = kit.anchor_body
+	if not body.is_in_group("enemy"):
+		return
+	if game.player.ball_position().distance_to(body.global_position) <= LINE_CAST_REACH:
+		_cast(3)
+
+
+# A load waits on the next bite; the bar refuses a second cast while one does.
+func _line_loaded() -> bool:
+	var combat = game.get("combat")
+	return combat != null and combat.has_method("line_load") and not (combat.line_load() as Dictionary).is_empty()
+
+
+func _set_piece_up() -> bool:
+	var combat = game.get("combat")
+	return combat != null and combat.get("ultimate") != null and combat.ultimate.phase() != "idle"
+
+
+# Q at a full meter: a Warden core open within ULT_CORE_REACH, or ULT_CROWD enemies within
+# ULT_CROWD_RADIUS; for the traversal pilot, a next waypoint ULT_TRAVERSE_NEAR to
+# ULT_TRAVERSE_FAR ahead with the way clear. The set piece flies where the camera looks, and
+# every policy is already looking at its target or along its way.
+func _ultimate_hands(fight: Node3D) -> void:
+	if _ult_wait > 0.0 or _set_piece_up() or _cast_phase != "":
+		return
+	if String(game.player.abilities.ultimate().get("state", "")) != AbilityState.READY:
+		return
+	var ball: Vector3 = game.player.ball_position()
+	var want := false
+	if policy == "traversal":
+		if _traverse_point != Vector3.INF:
+			var ahead := _flat(ball, _traverse_point)
+			want = ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
+	else:
+		want = _core_open(fight, ball) or _enemies_within(ball, ULT_CROWD_RADIUS) >= ULT_CROWD
+	if not want:
+		return
+	source.press["ultimate_pressed"] = true
+	_ult_wait = ULT_RETRY
+	_totals["ult_presses"] = int(_totals["ult_presses"]) + 1
+
+
+# A staggered Warden or boss hull is an open core: the fight lock, the stage Warden or the boss's.
+func _core_open(fight: Node3D, ball: Vector3) -> bool:
+	var cores: Array = [fight]
+	if game.flow != null and is_instance_valid(game.flow.warden):
+		cores.append(game.flow.warden)
+	var boss = _boss() if game.flow.state_name() == "boss" else null
+	if boss != null:
+		if boss.get("ship") != null and is_instance_valid(boss.ship.hull):
+			cores.append(boss.ship.hull)
+		if boss.get("warden") is Node3D:
+			cores.append(boss.get("warden"))
+	for core in cores:
+		if core == null or not is_instance_valid(core) or not core.has_method("staggered"):
+			continue
+		if core.staggered() and ball.distance_to(core.global_position) <= ULT_CORE_REACH:
+			return true
+	return false
+
+
+func _enemies_within(ball: Vector3, radius: float) -> int:
+	var near := 0
+	for node in game.get_tree().get_nodes_in_group("enemy"):
+		if node is Node3D and is_instance_valid(node) and ball.distance_to(node.global_position) < radius:
+			if not (node.has_method("is_dead") and node.is_dead()):
+				near += 1
+	return near
+
+
+# While the set piece runs only the stick, Space and Q reach the ball, and Space bails the
+# flight and Q recalls the wind-up: the hands send neither.
+func _set_piece_hands() -> void:
+	if not _set_piece_up():
+		return
+	source.press.erase("jump_pressed")
+	source.press.erase("ultimate_pressed")
 
 
 # --- the hands: stick, mouse and buttons -----------------------------------------------
@@ -2131,14 +2363,15 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		hold.erase("shift_held")
 	source.hold = hold
 	_card_hands()
+	_cast_hands()
 
 
-# Tally's reader runs a card per press, not while held: the hands keep bay 3 (Balance Due)
-# loaded and turn a held trigger into one press every CARD_PRESS_GAP seconds.
+# Tally's reader runs a card per press, not while held: the hands turn a held trigger into one
+# press every CARD_PRESS_GAP seconds. Since the skill bar her reader holds one card (Balance Due)
+# on slot 1 and the bays are gone, so there is no bay to keep loaded.
 func _card_hands() -> void:
 	if game.player.abilities.cap(AbilityState.WEAPON, "cards", null) == null:
 		return
-	source.hold["bay_pick"] = 2
 	if not source.hold.get("fire_held", false):
 		return
 	source.hold.erase("fire_held")
@@ -2242,4 +2475,10 @@ func record(wall_seconds: float) -> Dictionary:
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
 		"boss": boss_note if not boss_note.is_empty() else null,
 		"reaction_s": REACTION,
+		# The skill bar (SKILL-BAR section 8): casts of slots 2 and 3, set pieces started, Q presses,
+		# the in-play seconds each fill took (run start or the last set piece to a full meter), and
+		# the in-play seconds played, which bounds a meter that never filled.
+		"slot_casts": {"special": _totals["slot_casts_special"], "line": _totals["slot_casts_line"]},
+		"ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
+		"ult_fill_s": _fills, "play_s": snappedf(_play_clock, 0.01),
 	}
