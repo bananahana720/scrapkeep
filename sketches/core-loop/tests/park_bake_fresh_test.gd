@@ -5,7 +5,6 @@ extends SceneTree
 # mark exactly the 2 m cells under their footprint, and the stamps land where PARK.md 2.2 and
 # section 3 put them: additive on the y 0 base plain, a `ramp` falling by its height from its
 # start to its end along its yaw (park/stages/1-park_dam.md section 2). K-UNITS KB3.
-# smoke: timeout=300s
 
 const T := preload("res://tests/support/t.gd")
 
