@@ -137,6 +137,69 @@ func _hud_checks() -> void:
 	_game.add_child(target)
 	target.global_position = _game.player.ball_position() + Vector3(0.0, 0.0, -4.0)
 	_game.events.enemy_struck.emit(target, "arc", 30.0)
+	_game.presentation.juice.flush()
 	var dealt: Array = layer.shown()
 	var arc_ok = dealt.size() == before + 1 and dealt[dealt.size() - 1]["color"] == DamageNumbers.effect_colour("arc", "player")
 	_report("hit dealt", arc_ok, "an arc strike on a plain target adds one arc/player number (%d -> %d)" % [before, dealt.size()])
+	_live_colour_checks(layer)
+
+
+# The colour juice.gd actually hands the effect layer (a recorder in place of vfx) against the
+# colour of the number the same event leaves on the HUD layer. Neither side reads the table
+# the other one does, so a change to either colour shows here.
+class Recorder:
+	extends RefCounted
+	var fx_tint := []
+	var flash_tint := []
+
+	func play_fx(_kind: String, _at: Vector3, tint := Color.TRANSPARENT, _variant := "", _toward := Vector3.ZERO) -> void:
+		fx_tint.append(tint)
+
+	func edge_flash(_direction: Vector2, color: Color, _strength: float, _seconds: float) -> void:
+		flash_tint.append(color)
+
+
+func _live_colour_checks(layer) -> void:
+	var juice = _game.presentation.juice
+	var real_vfx = juice.vfx
+	var real_resolve: Callable = juice.resolve_of
+	var real_plating: Callable = juice.plating_of
+	var rec := Recorder.new()
+	juice.vfx = rec
+	var cases := 0
+	var mismatches := 0
+	var detail := ""
+	# kind, crit by size, crit by weak point
+	for kind in ["burst", "arc", "frost"]:
+		for mode in ["plain", "big", "weak"]:
+			var target := Node3D.new()
+			_game.add_child(target)
+			target.global_position = _game.player.ball_position() + Vector3(0.0, 0.0, -4.0)
+			var dealt := 12.0 * (2.0 if mode == "big" else 1.0)
+			juice.resolve_of = func(_e, _k, _f): return {"dealt": dealt, "punch": 12.0, "full": true, "part": "head" if mode == "weak" else "", "plating": 1.0}
+			juice.plating_of = func(_e): return 5.0
+			layer.clear()
+			rec.fx_tint.clear()
+			_game.events.enemy_struck.emit(target, kind, 12.0)
+			juice.flush()
+			cases += 1
+			var shown: Array = layer.shown()
+			var want_crit: bool = mode != "plain"
+			if shown.size() != 1 or rec.fx_tint.size() != 1 or shown[0]["color"] != rec.fx_tint[0] or bool(shown[0]["crit"]) != want_crit:
+				mismatches += 1
+				detail += " %s/%s" % [kind, mode]
+			target.queue_free()
+	for source in ["cutter", ""]:
+		layer.clear()
+		rec.flash_tint.clear()
+		_game.events.player_hit.emit(7.0, source)
+		cases += 1
+		var shown_taken: Array = layer.shown()
+		if shown_taken.size() != 1 or rec.flash_tint.size() != 1 or shown_taken[0]["color"] != rec.flash_tint[0]:
+			mismatches += 1
+			detail += " taken/%s" % source
+	juice.vfx = real_vfx
+	juice.resolve_of = real_resolve
+	juice.plating_of = real_plating
+	_report("live colour agreement", cases == 11 and mismatches == 0,
+		"%d live events (3 strike kinds x plain, size crit, weak-point crit, 2 hits taken): %d number/effect colour mismatches%s" % [cases, mismatches, detail])
