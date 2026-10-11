@@ -147,6 +147,7 @@ func _initialize() -> void:
 		if row.is_empty():
 			t.check("%s has a code row to quote" % p, false, "display_name differs from the roster name")
 		else:
-			var radius := "%s m" % String.num(row["bolt_radius"])
+			var r: float = row["bolt_radius"]
+			var radius := "%s m" % (str(int(r)) if r == floorf(r) else String.num(r))
 			t.check("%s envelope cell quotes the code's bolt radius %s" % [p, radius], cell.contains(radius), cell.substr(0, 80))
 	quit(t.verdict())
