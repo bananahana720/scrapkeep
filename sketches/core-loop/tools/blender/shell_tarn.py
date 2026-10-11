@@ -16,18 +16,18 @@ the picture paints oxide are petrol here.
 shell_tarn_redjaw_teeth): the same machinery, sockets and sight cone; only the hub tread caps
 change, to ten-sided toothed caps whose rims alternate long and short teeth.
 
-Draws, held to the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10
-w13-PD; fix round 2 cut 21 to 16): the four claw jaws are each their own mesh so code can
-hinge them, each a bone paint body plus a toothed class_accent strip along its biting edge
-(the tooth edges are the working device, the only class_accent): 8. The two blades swing, one
-bare_metal mesh each: 2. Gyro and GyroInner: 2. The static meshes keep one surface beside
-their enamel: Core 2 (paint, copper; the rubber tread caps fold into paint in charcoal vertex
-colour), Pod 1 and WeaponRing 1 (their rubber and the Pod's copper fold into paint in
-charcoal and copper vertex colour, as shell_tally.py does). The pull drum and its wraps are
-rotationally symmetric and untextured, so they ride the Pod mesh and PullDrum is an empty at
-the axle. Call, for the coordinator: the Pod's copper (lap bar, bank knobs, gimbal and claw
-hinge bosses, drum cheeks) now takes an equipped paint's tint, against ROSTER-LOOK section 6;
-the hub copper on Core keeps its slot.
+Draws: 17, a documented exception to the 16-draw cap for Hoberman pilot mechas (cap:
+docs/decisions.tsv 2026-10-10 w13-PD; exception: docs/decisions.tsv 2026-10-11 w13-PD, Tarn
+17). The four claw jaws are each their own mesh so code can hinge them, each a bone paint body
+plus a toothed class_accent strip along its biting edge (the tooth edges are the working
+device, the only class_accent): 8. The two blades swing, one bare_metal mesh each: 2. Gyro and
+GyroInner: 2. Core 2 (paint, copper; the rubber tread caps fold into paint in charcoal vertex
+colour). Pod 2 (paint, copper): the copper lap bar is the ultimate control on every pilot, so
+its copper keeps its own slot and never takes a paint tint (ROSTER-LOOK section 6; fix round 3
+restores the slot that round 2 folded); its rubber folds into paint in charcoal. WeaponRing 1
+(its rubber folds into paint in charcoal, as shell_tally.py does). The pull drum and its wraps
+are rotationally symmetric and untextured, so they ride the Pod mesh and PullDrum is an empty
+at the axle. check() prints COPPER and fails the build if copper slips under paint.
 
 Claw reach by class (CLAW_REACH) is not carried on the jaws: the base GLB's jaws and ClawTip
 sit at class I reach and the layers' bone hooks show the longer reach. Moving the reach onto
@@ -320,12 +320,12 @@ def build_shell(variant=""):
     drum_extra, exit_point = drum_parts(pod)
     join_into(pod, drum_extra.to_object((0, 0, 0), pod))
     join_into(ring, blades(ring).to_object((0, 0, 0), ring))
-    # Fix round 2, the 16-draw cap (docs/decisions.tsv 2026-10-10 w13-PD): every static mesh
-    # keeps one surface beside its own enamel, so the seven moving parts keep theirs.
+    # Rubber folds into paint in charcoal on the static meshes, so the seven moving parts keep
+    # their own meshes inside 17 draws (docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17). Copper
+    # never folds: paint must not tint the lap bar (ROSTER-LOOK section 6).
     folds = {
         "Core rubber": fold_slot(core, "rubber", "charcoal"),
         "Pod rubber": fold_slot(pod, "rubber", "charcoal"),
-        "Pod copper": fold_slot(pod, "copper", "copper"),
         "WeaponRing rubber": fold_slot(ring, "rubber", "charcoal"),
     }
     print("FOLDS " + ", ".join("%s %d faces" % kv for kv in folds.items()))
@@ -374,6 +374,30 @@ def check(shell, points):
                 c = Vector(col.data[poly.loop_indices[0]].color[:3])
                 if (c - oxide).length < 0.01:
                     print("OXIDE off the lattice on", o.name)
+                    ok = False
+                    break
+    # Copper keeps its own untinted slot (ROSTER-LOOK section 6): Pod (lap bar, bank knobs,
+    # bosses, drum cheeks) and Core (hubs) each spend faces on a copper material at metallic
+    # 0.6, and no paint face on any shell mesh carries copper vertex colour.
+    copper = Vector(common.rgba("copper")[:3])
+    for o in (shell["pod"], shell["core"]):
+        mats = [m.name for m in o.data.materials]
+        used = {mats[p.material_index] for p in o.data.polygons}
+        metal = o.data.materials[mats.index("copper")].node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value \
+            if "copper" in mats else -1.0
+        good = "copper" in used and abs(metal - 0.6) < 1e-6
+        print("COPPER %s slot %s, metallic %.2f %s" % (o.name, "used" if "copper" in used else "MISSING", metal, "ok" if good else "BAD"))
+        ok &= good
+    for o in common.tree(shell["root"]):
+        if o.type != "MESH" or o.name == shell["pilot"].name or not o.data.color_attributes:
+            continue
+        col = o.data.color_attributes["Color"]
+        paint = [i for i, m in enumerate(o.data.materials) if m.name == "paint"]
+        for poly in o.data.polygons:
+            if poly.material_index in paint:
+                c = Vector(col.data[poly.loop_indices[0]].color[:3])
+                if (c - copper).length < 0.01:
+                    print("COPPER under paint on", o.name)
                     ok = False
                     break
     return ok

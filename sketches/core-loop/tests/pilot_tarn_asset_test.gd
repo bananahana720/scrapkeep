@@ -1,4 +1,9 @@
 extends SceneTree
+# 2026-10-11 (PD-TARN fix round 3, docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17): the Pod copper
+# fold is vetoed, so Pod keeps a copper surface beside paint (the lap bar is the ultimate control
+# and paint never tints it, ROSTER-LOOK section 6), and Tarn carries a documented 17-draw
+# exception to the 16 cap (four articulated two-surface jaws). The shell is pinned to exactly
+# SHELL_DRAWS surfaces and the registry exception must match it.
 # 2026-10-10 (PD-TARN fix round 2, the 16-draw cap in docs/decisions.tsv w13-PD): the pull drum
 # is symmetric and untextured, so it rides the Pod mesh and PullDrum becomes an empty at its
 # axle; the registry exception (16 draws) is the shell budget the check reads.
@@ -28,6 +33,7 @@ const SOCKETS := {"Control.Grip.R": Vector3(.32, .05, -.4), "Control.Grip.L": Ve
 	"ClawTip.R": Vector3(.9164, -.4470, -.4754), "ClawTip.L": Vector3(-.9164, -.4470, -.4754),
 	"PullExit": Vector3(0, -.54, .552), "RendContact": Vector3(0, -.79, -.23)}
 const SHELL_ID := "shell_tarn"
+const SHELL_DRAWS := 17
 const CORE_LIMIT := .985
 const REACH := 1.25
 
@@ -59,7 +65,7 @@ func _meshes(scene: Node) -> Array:
 	return found
 
 
-func _budget(scene: Node, label: String, cap: Dictionary, allowed: Array) -> void:
+func _budget(scene: Node, label: String, cap: Dictionary, allowed: Array) -> int:
 	var tris := 0
 	var verts := 0
 	var draws := 0
@@ -81,6 +87,7 @@ func _budget(scene: Node, label: String, cap: Dictionary, allowed: Array) -> voi
 		"%d triangles / %d vertices / %d surfaces; caps %d / %d / %d" % [tris, verts, draws, cap.tris, cap.verts, cap.draws])
 	_t.check(label + " materials", slots.size() <= 5 and wrong.is_empty(), "slots %s; wrong %s" % [slots.keys(), wrong])
 	print("TARN_BUDGET %s: %d T / %d V / %d surfaces" % [label, tris, verts, draws])
+	return draws
 
 
 func _rig(scene: Node) -> void:
@@ -227,6 +234,13 @@ func _shell(scene: Node) -> void:
 			_t.check("claw " + kind + side, slots == ["class_accent", "paint"], "independent jaw: paint body, class_accent tooth strip; got %s" % [slots])
 		var blade := pod.get_node_or_null("WeaponRing/Blade_" + side) as MeshInstance3D
 		_t.check("blade " + side, blade != null and blade.mesh.get_surface_count() == 1, "single-material blade under WeaponRing")
+	var pod_slots := []
+	if pod is MeshInstance3D:
+		for s in (pod as MeshInstance3D).mesh.get_surface_count():
+			pod_slots.append((pod as MeshInstance3D).mesh.surface_get_material(s).resource_name)
+		pod_slots.sort()
+	_t.check("pod copper", pod_slots == ["copper", "paint"],
+		"Pod keeps its copper surface beside paint, so paint never tints the lap bar (ROSTER-LOOK section 6); got %s" % [pod_slots])
 	var drum := pod.get_node_or_null("PullDrum") as Node3D
 	_t.check("pull drum", drum != null and not (drum is MeshInstance3D) and drum.position.y < -.4,
 		"PullDrum is an empty at the low rear axle; the drum rides the Pod mesh")
@@ -262,7 +276,9 @@ func _process(_delta: float) -> bool:
 	for row in fragment.assets:
 		if row.get("id", "") == SHELL_ID:
 			shell_cap.merge(row.get("exception", {}), true)
-	_budget(shell, "shell", shell_cap, ["paint", "copper", "bare_metal", "rubber", "class_accent"])
+	var shell_draws := _budget(shell, "shell", shell_cap, ["paint", "copper", "bare_metal", "rubber", "class_accent"])
+	_t.check("shell draws pinned", shell_draws == SHELL_DRAWS and int(shell_cap.draws) == SHELL_DRAWS,
+		"%d surfaces, registry exception %d; both must be %d (Tarn 17, 2026-10-11 w13-PD)" % [shell_draws, int(shell_cap.draws), SHELL_DRAWS])
 	_rig(pilot)
 	_shell(shell)
 	pilot.free()
