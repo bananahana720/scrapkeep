@@ -25,6 +25,7 @@ const PARK_CLASSES := ["landform", "park_large", "hero_landmark", "detail"]
 const EPS := 0.01
 const ROLL_FRAMES := 240
 const SPACING := 400.0
+const MISSING_PROBE := "kc0_missing_probe"
 
 var _t := T.new("park_recipes_test")
 var _facts: Array = []
@@ -131,8 +132,9 @@ func _check_greybox() -> void:
 func _check_fallback() -> void:
 	var parent := Node3D.new()
 	root.add_child(parent)
-	var row := _row("wash", "half_pipe", Vector2(0, 0), Vector3(60, 12, 30), 0.0, "ride_chute", "half_pipe_concrete")
-	_t.check("(c) no half_pipe_concrete GLB yet", not ResourceLoader.exists(ParkRecipes.paths("half_pipe_concrete", "landform")["base"]))
+	# kc0_missing_probe is an id no family builds, so the fallback stays tested as recipes land (KC-INT R4).
+	var row := _row("wash", "half_pipe", Vector2(0, 0), Vector3(60, 12, 30), 0.0, "ride_chute", MISSING_PROBE)
+	_t.check("(c) no %s GLB exists" % MISSING_PROBE, not ResourceLoader.exists(ParkRecipes.paths(MISSING_PROBE, "landform")["base"]))
 	var node := ParkRecipes.place(row, parent)
 	_t.check("(c) a missing GLB falls back to the element's greybox", node != null and _collider_box(node).size.is_equal_approx(Vector3(30, 12, 60)),
 		str(_collider_box(node) if node != null else null))
@@ -185,8 +187,9 @@ func _check_glb() -> void:
 		_t.check("(d) %s: the -col meshes become trimesh shapes" % label, trimesh, "%d shapes" % shapes.size())
 		var base_shape: CollisionShape3D = shapes[0] if not shapes.is_empty() else null
 		var faces: int = (base_shape.shape as ConcavePolygonShape3D).get_faces().size() if base_shape != null and base_shape.shape is ConcavePolygonShape3D else -1
-		_t.check("(d) %s: the trimesh is the -col mesh, at its place" % label, base_shape != null and faces == 36
-			and base_shape.position.is_equal_approx(Vector3(0, 1, 0)), "faces %d" % faces)
+		# lava_tube_run's registry row says origin entry_lip: the GLB origin sits half the 200 m length behind at (ride_frame).
+		_t.check("(d) %s: the trimesh is the -col mesh, at its place from the entry lip" % label, base_shape != null and faces == 36
+			and base_shape.position.is_equal_approx(Vector3(0, 1, -100)), "faces %d at %s" % [faces, base_shape.position if base_shape != null else null])
 		_t.check("(d) %s: no importer body copied in" % label, node.find_children("*", "StaticBody3D", true, false).size() == 1)
 		var r := ParkRecipes.ranges("park_large")
 		var base_view := views[0] as GeometryInstance3D

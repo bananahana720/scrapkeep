@@ -499,8 +499,12 @@ export function inspectGlb(bytes, selection = {}) {
   check(roots.length > 0, "Selected assembly is empty");
   const selected = new Set(),
     worldBounds = bounds();
+  // A node named "<name>-col" is the engine's collision mesh (Godot imports it as a trimesh and never draws it), so it
+  // counts under collision_nodes, not draws; primitives still counts every primitive selected (KC-INT, 2026-10-11).
   let triangles = 0,
     primitiveCount = 0,
+    draws = 0,
+    collisionNodes = 0,
     instances = 0,
     unknownBounds = animations.length > 0;
   const worldCache = new Map();
@@ -525,6 +529,8 @@ export function inspectGlb(bytes, selection = {}) {
       const mesh = meshes[n.mesh];
       triangles += mesh.triangles;
       primitiveCount += mesh.primitives;
+      if (typeof n.name === "string" && n.name.endsWith("-col")) collisionNodes++;
+      else draws += mesh.primitives;
       instances++;
       unknownBounds ||=
         n.skin !== undefined || mesh.geometry.some((p) => p.morph);
@@ -563,6 +569,8 @@ export function inspectGlb(bytes, selection = {}) {
       mesh_instances: instances,
       triangles,
       primitives: primitiveCount,
+      draws,
+      collision_nodes: collisionNodes,
       static_world_bounds: unknownBounds ? null : worldBounds,
       bounds_status: unknownBounds ? "unknown_deformed_or_animated" : "static",
     },

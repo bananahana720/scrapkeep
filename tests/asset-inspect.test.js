@@ -600,3 +600,35 @@ test("an option cannot consume the next option as its missing value", (t) => {
     assert.equal(fs.existsSync(path.join(dir, "--json")), false);
   }
 });
+test("a -col node counts under collision_nodes, not draws", () => {
+  const r = inspectGlb(
+    fixture({
+      edit: (d) => {
+        d.nodes = [
+          { children: [1, 2] },
+          { name: "piece", mesh: 0 },
+          { name: "piece-col", mesh: 0 },
+        ];
+      },
+    }),
+  );
+  assert.equal(r.selection.primitives, 2);
+  assert.equal(r.selection.draws, 1);
+  assert.equal(r.selection.collision_nodes, 1);
+  assert.equal(r.selection.triangles, 2);
+  const plain = inspectGlb(fixture());
+  assert.equal(plain.selection.draws, 1);
+  assert.equal(plain.selection.collision_nodes, 0);
+});
+test("a park recipe base GLB draws once and carries one -col node", () => {
+  const glb = fileURLToPath(
+    new URL(
+      "../sketches/core-loop/assets/models/park/half_pipe_concrete.glb",
+      import.meta.url,
+    ),
+  );
+  const r = inspectGlb(fs.readFileSync(glb));
+  assert.equal(r.selection.primitives, 2);
+  assert.equal(r.selection.draws, 1);
+  assert.equal(r.selection.collision_nodes, 1);
+});

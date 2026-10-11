@@ -7,6 +7,7 @@ extends "res://src/world/stage_map.gd"
 # Heights stay the base plain's until the bake (tools/park_bake.gd) lands.
 
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 const FIXTURE := "res://src/world/park/park_test.json"
 
@@ -59,10 +60,7 @@ func _fill() -> void:
 	for row in park["park_rows"]:
 		if row["element"] != "kicker":
 			continue
-		# The lip is the footprint's far end along the piece's facing; width is its cross size.
-		var dir := _dir(float(row["yaw_deg"]))
-		kickers.append({"id": row["id"], "at": _v2(row["at"]) + dir * float(row["size"][0]) * 0.5,
-			"dir": dir, "width": float(row["size"][2])})
+		kickers.append(kicker_lip(row))
 
 	contraptions = []
 	for row in park["contraption_rows"]:
@@ -87,6 +85,14 @@ func _fill() -> void:
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))
 	scatter["keep_out"] = keep_out
+
+
+# One kicker row's lip: the ride's exit, the footprint's far end along the facing, which park_recipes.gd ride_frame (the
+# one owner of the origin rule) gives for a greybox and a GLB recipe alike; width is the piece's cross size.
+static func kicker_lip(row: Dictionary) -> Dictionary:
+	var dir := _dir(float(row["yaw_deg"]))
+	var exit: Vector3 = ParkRecipes.ride_frame(row)["exit"]
+	return {"id": row["id"], "at": _v2(row["at"]) + dir * exit.z, "dir": dir, "width": float(row["size"][2])}
 
 
 # The ground-plane direction a yaw faces: 0 faces +z, turning toward +x (PARK.md 2.1).

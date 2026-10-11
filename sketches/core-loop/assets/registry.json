@@ -2280,6 +2280,266 @@
    }
   },
   {
+   "id": "adit_mouth",
+   "path": "res://assets/models/park/adit_mouth.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (mesh adit_mouth drawn, adit_mouth-col becomes the trimesh, shells fade by park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4, PARK.md section 4 tunnels family; row size [56, 6, 8] timbered drift, 4 degree fall; +Y up, ride +Z, origin at the entry lip, socket_exit at the exit lip"
+   }
+  },
+  {
+   "id": "adit_mouth_detail1",
+   "path": "res://assets/models/park/adit_mouth_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 1 of adit_mouth"
+   }
+  },
+  {
+   "id": "adit_mouth_detail2",
+   "path": "res://assets/models/park/adit_mouth_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 2 of adit_mouth"
+   }
+  },
+  {
+   "id": "bench_coping",
+   "path": "res://assets/models/park/bench_coping.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "bench_coping_detail1",
+   "path": "res://assets/models/park/bench_coping_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "bench_coping_detail2",
+   "path": "res://assets/models/park/bench_coping_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "canal_lip",
+   "path": "res://assets/models/park/canal_lip.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's canal_lip-rail_NN empties."
+   }
+  },
+  {
+   "id": "canal_lip_detail1",
+   "path": "res://assets/models/park/canal_lip_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 1 of canal_lip, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "canal_lip_detail2",
+   "path": "res://assets/models/park/canal_lip_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 2 of canal_lip, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "cavern_shell",
+   "path": "res://assets/models/park/cavern_shell.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py",
+    "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
+   }
+  },
+  {
+   "id": "cavern_shell_detail1",
+   "path": "res://assets/models/park/cavern_shell_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "cavern_shell_detail2",
+   "path": "res://assets/models/park/cavern_shell_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "cenote_pool",
+   "path": "res://assets/models/park/cenote_pool.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py",
+    "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
+   }
+  },
+  {
+   "id": "cenote_pool_detail1",
+   "path": "res://assets/models/park/cenote_pool_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "cenote_pool_detail2",
+   "path": "res://assets/models/park/cenote_pool_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "cliff_dwelling_row",
+   "path": "res://assets/models/park/cliff_dwelling_row.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -14,
+     -8,
+     0
+    ],
+    "max": [
+     7.287,
+     14.3102,
+     60
+    ],
+    "size": [
+     21.287,
+     22.3102,
+     60
+    ]
+   }
+  },
+  {
+   "id": "cliff_dwelling_row_detail1",
+   "path": "res://assets/models/park/cliff_dwelling_row_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -7.289,
+     -3.6747,
+     4.9497
+    ],
+    "max": [
+     7.6661,
+     9.0611,
+     54.8227
+    ],
+    "size": [
+     14.9552,
+     12.7358,
+     49.873
+    ]
+   }
+  },
+  {
+   "id": "cliff_dwelling_row_detail2",
+   "path": "res://assets/models/park/cliff_dwelling_row_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -4.8,
+     2.5,
+     12.55
+    ],
+    "max": [
+     -0.7448,
+     8.435,
+     47.45
+    ],
+    "size": [
+     4.0552,
+     5.935,
+     34.9
+    ]
+   }
+  },
+  {
    "id": "park_contraption_barge",
    "path": "res://assets/models/park/contraptions/barge.glb",
    "class": "landform",
@@ -2492,6 +2752,7 @@
    "id": "crater_ending",
    "path": "res://assets/models/park/crater_ending.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (base GLB with its crater_ending-col trimesh; the ending camera set, never a stage)",
    "provenance": {
@@ -2502,6 +2763,7 @@
    "id": "crater_ending_detail1",
    "path": "res://assets/models/park/crater_ending_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, no collider)",
    "provenance": {
@@ -2512,6 +2774,7 @@
    "id": "crater_ending_detail2",
    "path": "res://assets/models/park/crater_ending_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, no collider)",
    "provenance": {
@@ -2522,6 +2785,7 @@
    "id": "crater_event",
    "path": "res://assets/models/park/crater_event.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (base GLB with its crater_event-col trimesh; ranges from the park_large class)",
    "provenance": {
@@ -2532,6 +2796,7 @@
    "id": "crater_event_detail1",
    "path": "res://assets/models/park/crater_event_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, no collider)",
    "provenance": {
@@ -2542,10 +2807,861 @@
    "id": "crater_event_detail2",
    "path": "res://assets/models/park/crater_event_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, no collider)",
    "provenance": {
     "recipe": "tools/blender/park/crater.py"
+   }
+  },
+  {
+   "id": "floating_island",
+   "path": "res://assets/models/park/floating_island.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "floating_island recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "floating_island_detail1",
+   "path": "res://assets/models/park/floating_island_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "floating_island recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "floating_island_detail2",
+   "path": "res://assets/models/park/floating_island_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "floating_island recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "flooded_shaft",
+   "path": "res://assets/models/park/flooded_shaft.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py",
+    "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
+   }
+  },
+  {
+   "id": "flooded_shaft_detail1",
+   "path": "res://assets/models/park/flooded_shaft_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "flooded_shaft_detail2",
+   "path": "res://assets/models/park/flooded_shaft_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "flume_span",
+   "path": "res://assets/models/park/flume_span.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's flume_span-rail_NN empties."
+   }
+  },
+  {
+   "id": "flume_span_detail1",
+   "path": "res://assets/models/park/flume_span_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 1 of flume_span, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_span_detail2",
+   "path": "res://assets/models/park/flume_span_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 2 of flume_span, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "half_pipe_concrete",
+   "path": "res://assets/models/park/half_pipe_concrete.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "half_pipe_concrete_detail1",
+   "path": "res://assets/models/park/half_pipe_concrete_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "half_pipe_concrete_detail2",
+   "path": "res://assets/models/park/half_pipe_concrete_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "lava_tube_run",
+   "path": "res://assets/models/park/lava_tube_run.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run drawn, lava_tube_run-col becomes the trimesh, shells fade by park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4, PARK.md section 4 tunnels family; row size [48, 12, 16] straight, 6 degree fall; +Y up, ride +Z, origin at the entry lip, socket_exit at the exit lip"
+   }
+  },
+  {
+   "id": "lava_tube_run_bend_n30",
+   "path": "res://assets/models/park/lava_tube_run_bend_n30.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run_bend_n30 drawn, lava_tube_run_bend_n30-col becomes the trimesh, shells fade by park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4, PARK.md section 4 tunnels family; row size [48, 12, 16] bend toward -X, exit yaw -30 degrees; +Y up, ride +Z, origin at the entry lip, socket_exit at the exit lip"
+   }
+  },
+  {
+   "id": "lava_tube_run_bend_n30_detail1",
+   "path": "res://assets/models/park/lava_tube_run_bend_n30_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 1 of lava_tube_run_bend_n30"
+   }
+  },
+  {
+   "id": "lava_tube_run_bend_n30_detail2",
+   "path": "res://assets/models/park/lava_tube_run_bend_n30_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 2 of lava_tube_run_bend_n30"
+   }
+  },
+  {
+   "id": "lava_tube_run_bend_p30",
+   "path": "res://assets/models/park/lava_tube_run_bend_p30.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run_bend_p30 drawn, lava_tube_run_bend_p30-col becomes the trimesh, shells fade by park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4, PARK.md section 4 tunnels family; row size [48, 12, 16] bend toward +X, exit yaw +30 degrees; +Y up, ride +Z, origin at the entry lip, socket_exit at the exit lip"
+   }
+  },
+  {
+   "id": "lava_tube_run_bend_p30_detail1",
+   "path": "res://assets/models/park/lava_tube_run_bend_p30_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 1 of lava_tube_run_bend_p30"
+   }
+  },
+  {
+   "id": "lava_tube_run_bend_p30_detail2",
+   "path": "res://assets/models/park/lava_tube_run_bend_p30_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 2 of lava_tube_run_bend_p30"
+   }
+  },
+  {
+   "id": "lava_tube_run_detail1",
+   "path": "res://assets/models/park/lava_tube_run_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 1 of lava_tube_run"
+   }
+  },
+  {
+   "id": "lava_tube_run_detail2",
+   "path": "res://assets/models/park/lava_tube_run_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 2 of lava_tube_run"
+   }
+  },
+  {
+   "id": "mesa_lip_kicker",
+   "path": "res://assets/models/park/mesa_lip_kicker.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "mesa_rim_ledge",
+   "path": "res://assets/models/park/mesa_rim_ledge.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -25,
+     -8,
+     0
+    ],
+    "max": [
+     9.1729,
+     11.0219,
+     60
+    ],
+    "size": [
+     34.1729,
+     19.0219,
+     60
+    ]
+   }
+  },
+  {
+   "id": "mesa_rim_ledge_detail1",
+   "path": "res://assets/models/park/mesa_rim_ledge_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -17.953,
+     -4.6649,
+     0.6046
+    ],
+    "max": [
+     9.8214,
+     11.6503,
+     60.2908
+    ],
+    "size": [
+     27.7744,
+     16.3152,
+     59.6861
+    ]
+   }
+  },
+  {
+   "id": "mesa_rim_ledge_detail2",
+   "path": "res://assets/models/park/mesa_rim_ledge_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -17.4498,
+     2.5,
+     0.5053
+    ],
+    "max": [
+     7.9256,
+     11.3384,
+     59.8296
+    ],
+    "size": [
+     25.3754,
+     8.8384,
+     59.3243
+    ]
+   }
+  },
+  {
+   "id": "net_deck",
+   "path": "res://assets/models/park/net_deck.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "net_deck_detail1",
+   "path": "res://assets/models/park/net_deck_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "net_deck_detail2",
+   "path": "res://assets/models/park/net_deck_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "penstock_run",
+   "path": "res://assets/models/park/penstock_run.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's penstock_run-rail_NN empties."
+   }
+  },
+  {
+   "id": "penstock_run_detail1",
+   "path": "res://assets/models/park/penstock_run_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 1 of penstock_run, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "penstock_run_detail2",
+   "path": "res://assets/models/park/penstock_run_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 2 of penstock_run, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "pipeline_rail",
+   "path": "res://assets/models/park/pipeline_rail.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's pipeline_rail-rail_NN empties."
+   }
+  },
+  {
+   "id": "pipeline_rail_detail1",
+   "path": "res://assets/models/park/pipeline_rail_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 1 of pipeline_rail, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "pipeline_rail_detail2",
+   "path": "res://assets/models/park/pipeline_rail_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 2 of pipeline_rail, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "pit_haul_ramp",
+   "path": "res://assets/models/park/pit_haul_ramp.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "pit_haul_ramp_detail1",
+   "path": "res://assets/models/park/pit_haul_ramp_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "pit_haul_ramp_detail2",
+   "path": "res://assets/models/park/pit_haul_ramp_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "shaft_drop",
+   "path": "res://assets/models/park/shaft_drop.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (mesh shaft_drop drawn, shaft_drop-col becomes the trimesh, shells fade by park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4, PARK.md section 4 tunnels family; row size [26, 18, 12] pit 20 m long with walls to 18 m and a vertical far wall past the landing run (KC-INT R5), then a 6 m drift; +Y up, ride +Z, origin at the entry lip, socket_exit at the exit lip"
+   }
+  },
+  {
+   "id": "shaft_drop_detail1",
+   "path": "res://assets/models/park/shaft_drop_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 1 of shaft_drop"
+   }
+  },
+  {
+   "id": "shaft_drop_detail2",
+   "path": "res://assets/models/park/shaft_drop_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 2 of shaft_drop"
+   }
+  },
+  {
+   "id": "slot_canyon_flow",
+   "path": "res://assets/models/park/slot_canyon_flow.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend15",
+   "path": "res://assets/models/park/slot_canyon_flow_bend15.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend15_detail1",
+   "path": "res://assets/models/park/slot_canyon_flow_bend15_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend15_detail2",
+   "path": "res://assets/models/park/slot_canyon_flow_bend15_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend30",
+   "path": "res://assets/models/park/slot_canyon_flow_bend30.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend30_detail1",
+   "path": "res://assets/models/park/slot_canyon_flow_bend30_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend30_detail2",
+   "path": "res://assets/models/park/slot_canyon_flow_bend30_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_detail1",
+   "path": "res://assets/models/park/slot_canyon_flow_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_detail2",
+   "path": "res://assets/models/park/slot_canyon_flow_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "spillway_tunnel",
+   "path": "res://assets/models/park/spillway_tunnel.glb",
+   "class": "park_large",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (mesh spillway_tunnel drawn, spillway_tunnel-col becomes the trimesh, shells fade by park_large ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4, PARK.md section 4 tunnels family; row size [90, 9, 11] 35.5 m fall over 90 m; +Y up, ride +Z, origin at the entry lip, socket_exit at the exit lip"
+   }
+  },
+  {
+   "id": "spillway_tunnel_detail1",
+   "path": "res://assets/models/park/spillway_tunnel_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 1 of spillway_tunnel"
+   }
+  },
+  {
+   "id": "spillway_tunnel_detail2",
+   "path": "res://assets/models/park/spillway_tunnel_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/tunnels.py",
+    "notes": "wave 13 KC4 detail shell 2 of spillway_tunnel"
+   }
+  },
+  {
+   "id": "tailings_lip",
+   "path": "res://assets/models/park/tailings_lip.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "tailings_lip_detail1",
+   "path": "res://assets/models/park/tailings_lip_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "tailings_lip_detail2",
+   "path": "res://assets/models/park/tailings_lip_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "viga_pivot",
+   "path": "res://assets/models/park/viga_pivot.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -12,
+     -8,
+     0
+    ],
+    "max": [
+     8.02,
+     10.7,
+     36
+    ],
+    "size": [
+     20.02,
+     18.7,
+     36
+    ]
+   }
+  },
+  {
+   "id": "viga_pivot_detail1",
+   "path": "res://assets/models/park/viga_pivot_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -6.4593,
+     -3.8807,
+     6.814
+    ],
+    "max": [
+     6.7017,
+     9.7,
+     32.1313
+    ],
+    "size": [
+     13.161,
+     13.5807,
+     25.3173
+    ]
+   }
+  },
+  {
+   "id": "viga_pivot_detail2",
+   "path": "res://assets/models/park/viga_pivot_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -3.5,
+     2.5,
+     8.6
+    ],
+    "max": [
+     7.0265,
+     9.495,
+     27.9
+    ],
+    "size": [
+     10.5265,
+     6.995,
+     19.3
+    ]
+   }
+  },
+  {
+   "id": "wash_dropin_lip",
+   "path": "res://assets/models/park/wash_dropin_lip.glb",
+   "class": "landform",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "wash_dropin_lip_detail1",
+   "path": "res://assets/models/park/wash_dropin_lip_detail1.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "wash_dropin_lip_detail2",
+   "path": "res://assets/models/park/wash_dropin_lip_detail2.glb",
+   "class": "detail",
+   "origin": "entry_lip",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
    }
   },
   {
@@ -3794,6 +4910,9 @@
   }
  ],
  "fragment_ids": [
+  "adit_mouth",
+  "adit_mouth_detail1",
+  "adit_mouth_detail2",
   "ambush_altar",
   "anchor_collar",
   "anchor_eye",
@@ -3810,6 +4929,9 @@
   "bed_floor",
   "bed_recess",
   "bed_rubble",
+  "bench_coping",
+  "bench_coping_detail1",
+  "bench_coping_detail2",
   "bet_crate",
   "boss_brindle",
   "boss_brindle_scooter",
@@ -3834,12 +4956,24 @@
   "breach_wedge_c_14x10",
   "bridge_skin",
   "bridge_skin_rusted-salvaged-plate.webp",
+  "canal_lip",
+  "canal_lip_detail1",
+  "canal_lip_detail2",
   "cannon_launcher_body",
   "cannon_launcher_detail1",
   "cannon_launcher_detail2",
   "cannon_launcher_gauge",
   "cart_body",
   "cart_wheel",
+  "cavern_shell",
+  "cavern_shell_detail1",
+  "cavern_shell_detail2",
+  "cenote_pool",
+  "cenote_pool_detail1",
+  "cenote_pool_detail2",
+  "cliff_dwelling_row",
+  "cliff_dwelling_row_detail1",
+  "cliff_dwelling_row_detail2",
   "cottonwood_crown",
   "cottonwood_detail1",
   "cottonwood_detail2",
@@ -3890,6 +5024,15 @@
   "fabricator_hoop",
   "fabricator_hoop_detail1",
   "fabricator_hoop_detail2",
+  "floating_island",
+  "floating_island_detail1",
+  "floating_island_detail2",
+  "flooded_shaft",
+  "flooded_shaft_detail1",
+  "flooded_shaft_detail2",
+  "flume_span",
+  "flume_span_detail1",
+  "flume_span_detail2",
   "gauge_dial_bezel",
   "gauge_dial_detail1",
   "gauge_dial_detail2",
@@ -3901,6 +5044,9 @@
   "geyser_launcher_drum",
   "geyser_launcher_fittings",
   "geyser_launcher_grate",
+  "half_pipe_concrete",
+  "half_pipe_concrete_detail1",
+  "half_pipe_concrete_detail2",
   "impeller_hub",
   "impeller_rim_sector",
   "impeller_vane",
@@ -3929,11 +5075,26 @@
   "lantern_beacon_detail2",
   "lantern_beacon_frame",
   "lantern_beacon_lens",
+  "lava_tube_run",
+  "lava_tube_run_bend_n30",
+  "lava_tube_run_bend_n30_detail1",
+  "lava_tube_run_bend_n30_detail2",
+  "lava_tube_run_bend_p30",
+  "lava_tube_run_bend_p30_detail1",
+  "lava_tube_run_bend_p30_detail2",
+  "lava_tube_run_detail1",
+  "lava_tube_run_detail2",
   "lift_platform_deck",
   "lift_platform_detail1",
   "lift_platform_detail2",
   "lift_platform_glass",
   "lift_platform_pump",
+  "mesa_lip_kicker",
+  "mesa_lip_kicker_detail1",
+  "mesa_lip_kicker_detail2",
+  "mesa_rim_ledge",
+  "mesa_rim_ledge_detail1",
+  "mesa_rim_ledge_detail2",
   "mind_hand",
   "mind_hand_M1_M2_cast_atlas.png",
   "mind_hand_M4_signal_atlas.png",
@@ -3946,6 +5107,9 @@
   "moss_jukebox_detail2",
   "moss_jukebox_feet",
   "moss_jukebox_trim",
+  "net_deck",
+  "net_deck_detail1",
+  "net_deck_detail2",
   "net_edge",
   "net_shoe",
   "net_tile",
@@ -3972,9 +5136,18 @@
   "park_contraption_trebuchet_arm",
   "park_contraption_trebuchet_detail1",
   "park_contraption_trebuchet_detail2",
+  "penstock_run",
+  "penstock_run_detail1",
+  "penstock_run_detail2",
   "pilot_cannon_anim",
   "pilot_tally_anim",
   "pilot_tarn_anim",
+  "pipeline_rail",
+  "pipeline_rail_detail1",
+  "pipeline_rail_detail2",
+  "pit_haul_ramp",
+  "pit_haul_ramp_detail1",
+  "pit_haul_ramp_detail2",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",
@@ -4019,6 +5192,9 @@
   "scrap_coin",
   "scrap_crate",
   "scrap_pickups",
+  "shaft_drop",
+  "shaft_drop_detail1",
+  "shaft_drop_detail2",
   "shell_cannon",
   "shell_cannon_c2",
   "shell_cannon_c3",
@@ -4060,9 +5236,24 @@
   "sky_cradle",
   "sky_loom",
   "sky_mesa",
+  "slot_canyon_flow",
+  "slot_canyon_flow_bend15",
+  "slot_canyon_flow_bend15_detail1",
+  "slot_canyon_flow_bend15_detail2",
+  "slot_canyon_flow_bend30",
+  "slot_canyon_flow_bend30_detail1",
+  "slot_canyon_flow_bend30_detail2",
+  "slot_canyon_flow_detail1",
+  "slot_canyon_flow_detail2",
   "spil9",
+  "spillway_tunnel",
+  "spillway_tunnel_detail1",
+  "spillway_tunnel_detail2",
   "strut_bent",
   "strut_tall",
+  "tailings_lip",
+  "tailings_lip_detail1",
+  "tailings_lip_detail2",
   "thermal_air",
   "thermal_vent",
   "trail_atlas.png",
@@ -4084,11 +5275,17 @@
   "valve_wheel_detail2",
   "valve_wheel_mount",
   "valve_wheel_wheel",
+  "viga_pivot",
+  "viga_pivot_detail1",
+  "viga_pivot_detail2",
   "warden_mantle_brood",
   "warden_mantle_brood_MantleStripes025m.png",
   "warden_mantle_choir",
   "warden_mantle_hand",
   "warden_mantle_meltdown",
-  "warden_mantle_meltdown_MantleStripes025m.png"
+  "warden_mantle_meltdown_MantleStripes025m.png",
+  "wash_dropin_lip",
+  "wash_dropin_lip_detail1",
+  "wash_dropin_lip_detail2"
  ]
 }

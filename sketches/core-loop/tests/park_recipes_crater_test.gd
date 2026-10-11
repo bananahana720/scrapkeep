@@ -67,11 +67,20 @@ func _run() -> void:
 	quit(_t.verdict())
 
 
+# The test names where a GLB's entry-lip origin goes; a row's at is its footprint's centre (PARK.md:77), so the row's at is
+# that point moved by the loader's own conversion (park_recipes.gd ride_frame), turned by the row's yaw.
+func _centre(row: Dictionary) -> Dictionary:
+	var o: Vector3 = ParkRecipes.ride_frame(row)["origin"]
+	var yaw := deg_to_rad(float(row["yaw_deg"]))
+	row["at"] = [float(row["at"][0]) - sin(yaw) * o.z, float(row["at"][1]) - cos(yaw) * o.z]
+	return row
+
+
 func _row(id: String, at: Vector2) -> Dictionary:
 	var f: float = SPEC[id]["f"]
 	var h: float = SPEC[id]["h"]
-	return {"id": "row_" + id, "element": "crater_bowl", "at": [at.x, at.y], "y": 0.0, "size": [2.0 * f * LIP, h, 2.0 * f * LIP],
-		"yaw_deg": 0.0, "ride_fact": "ride_bowl", "recipe": id, "budget": "park_large"}
+	return _centre({"id": "row_" + id, "element": "crater_bowl", "at": [at.x, at.y], "y": 0.0, "size": [2.0 * f * LIP, h, 2.0 * f * LIP],
+		"yaw_deg": 0.0, "ride_fact": "ride_bowl", "recipe": id, "budget": "park_large"})
 
 
 func _check_registry(id: String) -> void:
