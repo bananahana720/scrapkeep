@@ -12,6 +12,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const Scatter := preload("res://src/world/scatter.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 # A park map id (`--table=park`, park_defs.gd) reads its park file: src/world/park/<id>.json once a
 # stage unit (KD1 to KD6) lands it, else the stage-1 stand-in under assets/park/ (KD0). A park id
@@ -81,6 +82,11 @@ var _render_owner: Array[int] = []
 # (park_terrain.gd meter); PARK.md section 9 caps a frame at 33 ms.
 var last_use_usec := 0
 const SWAP_METER_FRAMES := 120
+# Where a park stage's ride sensors publish (park_recipes.gd _sensor): publish(kind, at). world.gd sets the game
+# bus's world_fact.emit before build(); with none set the rows place without sensors.
+var publish: Callable
+# Per global stage: whether its park ground builds on worker threads, so its rows place the same way (KB9).
+var _threaded: Array[bool] = []
 
 # A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
 # root (world.gd's contraptions) drops them.
@@ -102,6 +108,7 @@ func _init(table = StageDefs) -> void:
 		_grounds.append(null)
 		_holes.append(PackedByteArray())
 		_under.append(PackedFloat32Array())
+		_threaded.append(false)
 
 
 func _park_map(id: String, stage_number: int) -> RefCounted:
@@ -190,6 +197,7 @@ func _build_park_stage(i: int, threaded: bool) -> void:
 	_park(holder, _arena or i != stage - 1)
 	var ground := ParkTerrain.new()
 	_grounds[i] = ground
+	_threaded[i] = threaded
 	holder.add_child(ground)
 	ground.built.connect(_on_park_built.bind(i), CONNECT_ONE_SHOT)
 	var slot := _render_owner.find(-1)
@@ -207,7 +215,22 @@ func _on_park_built(i: int) -> void:
 	_holes[i] = ground.holes
 	_under[i] = ground.under
 	maps[i].build_props(_roots[i], ground_callable(i + 1))
+	# The park rows (KB9): every row naming a recipe, with its collider and ride sensor, placed on the height() floor.
+	if maps[i] is ParkMap:
+		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _holes[i], _under[i]), publish, _threaded[i])
 	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), true)
+
+
+# A park stage's placed rows (park_recipes.gd Placer, "ParkRows" under its root), or null.
+func park_rows(index: int) -> Node:
+	var root: Node3D = _roots[_index(index)]
+	return root.get_node_or_null("ParkRows") if root != null else null
+
+
+# True once a park stage's rows are all placed (an old map has none to place).
+func rows_ready(index: int) -> bool:
+	var rows := park_rows(index)
+	return not _is_park[_index(index)] or (rows != null and rows.is_ready())
 
 
 # Builds the whole world a stage belongs to, if any of it is not built yet, and returns
@@ -415,6 +438,11 @@ static func _park_height(heights: PackedFloat32Array, holes: PackedByteArray, un
 
 static func _park_ground_at(x: float, z: float, clearance: float, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array) -> Vector3:
 	return Vector3(x, _park_height(heights, holes, under, x, z) + clearance, z)
+
+
+# height()'s floor as (x, z) -> float, for park_recipes.gd placement (safe on a worker thread).
+static func _park_floor_at(x: float, z: float, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array) -> float:
+	return _park_height(heights, holes, under, x, z)
 
 
 func vault_point(index: int) -> Vector3:

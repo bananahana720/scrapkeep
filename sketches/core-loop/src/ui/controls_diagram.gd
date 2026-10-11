@@ -16,7 +16,10 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 # the title's Help page both draw this. The board is scrap (scrap_frame.gd): each key a
 # cut plate, its cap from a mismatched set, the mouse taped together, its words on tags.
 
+# The number row carries the pick keys 1, 2 and 3 (design-v3/SKILL-BAR.md section 5).
 const ROWS := [
+	[["key_quoteleft", 1.0], ["key_1", 1.0], ["key_2", 1.0], ["key_3", 1.0], ["key_4", 1.0], ["key_5", 1.0], ["key_6", 1.0],
+		["key_7", 1.0], ["key_8", 1.0], ["key_9", 1.0], ["key_0", 1.0]],
 	[["key_tab", 1.5], ["key_q", 1.0], ["key_w", 1.0], ["key_e", 1.0], ["key_r", 1.0], ["key_t", 1.0], ["key_y", 1.0],
 		["key_u", 1.0], ["key_i", 1.0], ["key_o", 1.0], ["key_p", 1.0]],
 	[["key_caps", 1.75], ["key_a", 1.0], ["key_s", 1.0], ["key_d", 1.0], ["key_f", 1.0], ["key_g", 1.0], ["key_h", 1.0],

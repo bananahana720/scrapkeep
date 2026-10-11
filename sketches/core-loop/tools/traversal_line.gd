@@ -7,6 +7,7 @@ const RunLog := preload("res://src/core/run_log.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
 
 # The traversal measure (design-v3/TRAVERSAL.md): one pilot's traversal bot crosses the slice
 # table's stage once per seed, from the spawn to the Warden's engagement, and one JSON file
@@ -45,9 +46,9 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 # segments_s (stage seconds between waymark passes, a waymark counting as passed within 12 m;
 # the landmark also passes at the Warden's engagement) and segment_s (the longest of them),
 # quiet_max_s (the longest stretch with no ride fact, kicker launch, bite or drop of 4 m or
-# more), distinct_verbs (how many different ride facts and verbs fired, named in verbs),
-# distinct_ride_facts (how many of those were ride facts or kicker launches, the count the
-# distinct-verbs band judges), blazing_mps (the blazing tier's speed, 1.9 times the tuned
+# more; on the park the ride facts are PARK_RIDE_FACTS alone), distinct_verbs (how many different
+# ride facts and verbs fired, named in verbs), distinct_ride_facts (how many of those were
+# PARK_RIDE_FACTS, the count the distinct-verbs band judges), blazing_mps (the blazing tier's speed, 1.9 times the tuned
 # cruise, the peak band's threshold), length_ratio (path over the straight distance from the drop to the engage centre),
 # dead_stop_at (stage second and place of each dead stop) and progress_m (the drop in the stage
 # graph's d_landmark per second; null without assets/park/<map_id>/graph.bin, said once). The
@@ -78,19 +79,25 @@ const PARK_OUT := "res://../../artifacts/local/traversal/park"
 const FIXTURE_STAGE := 0
 const FIXTURE_MAP := "park_test"
 const FIXTURE_SWAP := ["\"map\": \"park_dam\"", "\"map\": \"park_test\""]
-const GRAPH_LOADER := "res://src/world/park/park_graph.gd"
 const GRAPH_FILE := "res://assets/park/%s/graph.bin"
 const WAYMARK_PASSED := 12.0
 const DROP_EVENT := 4.0
-# Ride facts the park adds to the slice's: terrain craters and lifts are rides too.
-const PARK_RIDE_FACTS := ["crater_ride", "lift_fired"]
+# The park's ride facts, PARK.md section 4's "Verb and ride fact" column (kicker_launch
+# included). On --table=park only these count toward distinct_ride_facts and end a quiet
+# stretch; the lift is a contraption there, not a ride fact.
+const PARK_RIDE_FACTS := ["ride_chute", "ride_grapple_line", "ride_bowl", "ride_drop", "ride_ledge",
+	"kicker_launch", "ride_glide_drop", "thermal_ride", "ride_hop"]
+# World facts recorded among the verbs (and, on the slice, counted as rides) that the park
+# does not count as ride facts.
+const RIDE_EXTRAS := ["crater_ride", "lift_fired"]
 # Verbs by the bus signal that reports them.
 const VERB_SIGNALS := {"jumped": "jump", "boosted": "boost", "dashed": "dash", "slammed": "slam", "special_used": "special",
 	"vault_kicked": "vault", "sprint_started": "sprint", "rocket_jumped": "rocket_jump", "blink_used": "blink",
 	"mounted": "mount", "shield_vaulted": "shield_vault"}
 
 # The bands, PARK.md section 8's table (start). Numbers are the design doc's; never tune here.
-const BAND_REACHED := "8 of 8 seeds"
+# The reached band reads "<n> of <n> seeds" with the run's own seed count (8 in PARK.md).
+const BAND_REACHED := "%d of %d seeds"
 const BAND_TIME := [60.0, 120.0]
 const BAND_TIME_WORST := 150.0
 const BAND_SEGMENT := [12.0, 45.0]
@@ -113,6 +120,8 @@ const STALLED_PATH_M := 1.0
 # How many times this process said a stage has no graph (once is enough).
 static var graph_notes := 0
 static var _park_defs_source := ""
+# Graphs read this process, by file: every seed of a sweep shares one read.
+static var _graphs := {}
 
 
 # One seed's measurement, fed once per physics tick from the spawn until the Warden engages.
@@ -182,7 +191,12 @@ class Sampler:
 			return
 		if kind in RIDE_FACTS and not kind in _rides:
 			_rides.append(kind)
-		if kind in RIDE_FACTS or kind in PARK_RIDE_FACTS or kind.begins_with("ride_"):
+		if park:
+			if kind in PARK_RIDE_FACTS:
+				_event()
+			if kind in PARK_RIDE_FACTS or kind in RIDE_FACTS or kind in RIDE_EXTRAS or kind.begins_with("ride_"):
+				_verb(kind)
+		elif kind in RIDE_FACTS or kind in RIDE_EXTRAS or kind.begins_with("ride_"):
 			_event()
 			_verb(kind)
 
@@ -205,7 +219,9 @@ class Sampler:
 
 	# The ride facts among the verbs: PARK.md section 8 judges distinct verbs on these alone.
 	func _ride_facts() -> Array:
-		return _verbs.filter(func(v): return v in RIDE_FACTS or v in PARK_RIDE_FACTS or v.begins_with("ride_") or v == KICKER_LAUNCH)
+		if park:
+			return _verbs.filter(func(v): return v in PARK_RIDE_FACTS)
+		return _verbs.filter(func(v): return v in RIDE_FACTS or v in RIDE_EXTRAS or v.begins_with("ride_") or v == KICKER_LAUNCH)
 
 	# A ride fact, kicker launch, bite or drop ends the quiet stretch.
 	func _event() -> void:
@@ -268,7 +284,8 @@ class Sampler:
 		if park and not _mark_times.is_empty():
 			_mark_times[0] = _start_time
 		if graph != null:
-			_graph_start = float(graph.d_landmark(ball))
+			var d: float = graph.d_landmark(ball)
+			_graph_start = d if is_finite(d) else null
 
 	func _watch_drop(ball: Vector3) -> void:
 		_drop_top = maxf(_drop_top, ball.y)
@@ -339,7 +356,10 @@ class Sampler:
 		var seconds: float = (time_to_warden if time_to_warden != null else game.run.stage_time) - _start_time
 		if seconds <= 0.0:
 			return null
-		return snappedf((float(_graph_start) - float(graph.d_landmark(_last_ball))) / seconds, 0.01)
+		var d: float = graph.d_landmark(_last_ball)
+		if not is_finite(d):
+			return null
+		return snappedf((float(_graph_start) - d) / seconds, 0.01)
 
 	func result(seed_number: int, outcome: String) -> Dictionary:
 		if not engaged:
@@ -380,6 +400,11 @@ class Sampler:
 		}
 
 
+# The park's ride facts among verbs, in the order they fired (PARK_RIDE_FACTS only).
+static func park_ride_facts(verbs: Array) -> Array:
+	return verbs.filter(func(v): return v in PARK_RIDE_FACTS)
+
+
 # The file's content: the per-seed numbers, the median flow share, the worst seed and the totals.
 static func document(pilot: String, table: String, commit: String, runs: Array, bar: Dictionary) -> Dictionary:
 	var shares: Array = []
@@ -414,6 +439,10 @@ static func document(pilot: String, table: String, commit: String, runs: Array, 
 # row per PARK.md section 8 band ({measure, band, median, worst, inside}). inside is null when
 # no seed gave the measure. floor_ref is {} or {"pilot", "median_time_to_warden_s"} for --floor.
 static func park_document(pilot: String, map_id: String, stage: int, commit: String, runs: Array, bar: Dictionary, floor_ref: Dictionary) -> Dictionary:
+	# distinct_ride_facts follows each row's verbs through PARK_RIDE_FACTS, whatever wrote it.
+	for run in runs:
+		if run.get("verbs") is Array:
+			run["distinct_ride_facts"] = park_ride_facts(run["verbs"]).size()
 	var doc := document(pilot, PARK, commit, runs, bar)
 	doc["map"] = map_id
 	doc["stage"] = stage
@@ -441,7 +470,7 @@ static func park_document(pilot: String, map_id: String, stage: int, commit: Str
 	for run in runs:
 		if run.get("reached_warden", false):
 			reached += 1
-	bands.append(_band("reached_warden", BAND_REACHED, reached, null, not runs.is_empty() and reached == runs.size()))
+	bands.append(_band("reached_warden", BAND_REACHED % [runs.size(), runs.size()], reached, null, not runs.is_empty() and reached == runs.size()))
 	var times := _values(runs, "time_to_warden_s")
 	var time_worst = _worst(times, true) if times.size() == runs.size() else null
 	bands.append(_band("time_to_warden_s", "median %s to %s s; no seed over %s s" % [BAND_TIME[0], BAND_TIME[1], BAND_TIME_WORST],
@@ -666,38 +695,23 @@ static func map_of(stage: int) -> String:
 	return String(defs[clampi(stage, 1, defs.size()) - 1].get("map", "")) if not defs.is_empty() else ""
 
 
-# The stage graph (unit KB8's src/world/park/park_graph.gd over assets/park/<map_id>/graph.bin),
-# or null. A missing graph is said once per process.
+# The stage graph (src/world/park/park_graph.gd's static read over assets/park/<map_id>/graph.bin),
+# or null. A missing or unreadable graph is said once per process.
 static func open_graph(map_id: String):
-	var file := GRAPH_FILE % map_id
-	var graph = null
-	if FileAccess.file_exists(file) and ResourceLoader.exists(GRAPH_LOADER):
-		graph = _construct_graph(load(GRAPH_LOADER), ProjectSettings.globalize_path(file), file)
+	return open_graph_file(GRAPH_FILE % map_id, map_id)
+
+
+static func open_graph_file(file: String, map_id: String):
+	if _graphs.has(file):
+		return _graphs[file]
+	var graph = ParkGraph.read(file) if FileAccess.file_exists(file) else null
+	if graph != null and (graph.d_land as PackedFloat32Array).size() != graph.node_count():
+		graph = null
+	if graph != null:
+		_graphs[file] = graph
 	if graph == null and graph_notes == 0:
 		graph_notes += 1
-		print("traversal_line: %s has no stage graph (%s with %s); progress_m reads null" % [map_id, file, GRAPH_LOADER])
-	return graph
-
-
-static func _construct_graph(script: GDScript, absolute: String, file: String):
-	if script == null:
-		return null
-	var init_args := 0
-	for method in script.get_script_method_list():
-		if method["name"] == "_init":
-			init_args = (method["args"] as Array).size()
-	var graph = null
-	if init_args >= 1:
-		graph = script.new(file)
-	else:
-		graph = script.new()
-		for name in ["load_file", "open", "load_graph", "read"]:
-			if graph.has_method(name):
-				graph.call(name, file)
-				break
-	if graph == null or not graph.has_method("d_landmark"):
-		push_warning("traversal_line: %s has no d_landmark(at); progress_m reads null (%s)" % [GRAPH_LOADER, absolute])
-		return null
+		print("traversal_line: %s has no readable stage graph at %s; progress_m reads null" % [map_id, file])
 	return graph
 
 

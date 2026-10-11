@@ -22,6 +22,11 @@ const Push := preload("res://tests/workshop/push.gd")
 #   - a pick that opens under the menu keeps the tree paused after Resume.
 
 const CALM_BUDGET := 40
+# The title's Help page is the key reference: 43 words since the skill bar (re-pinned 40 -> 43 on
+# 2026-10-10, wave 13 unit B2, design-v3/SKILL-BAR.md section 5). Its controls diagram gains the
+# pick keys 1, 2, 3 with "pick" and Q with "ultimate", and loses F and "special". The pause menu
+# itself keeps CALM_BUDGET.
+const HELP_BUDGET := 43
 const SETTLE := 0.45
 
 var _game
@@ -77,8 +82,8 @@ func _process(delta: float) -> bool:
 			var opened: bool = _game.screens.help_open()
 			var words := _words(_game.screens, "help page")
 			var rows := HelpPage.key_rows().size()
-			_report("help by click", opened and _game.flow.state_name() == "title" and words <= CALM_BUDGET and rows >= 8,
-				"the Help click opened it %s, %d key rows, %d words (budget %d)" % [opened, rows, words, CALM_BUDGET])
+			_report("help by click", opened and _game.flow.state_name() == "title" and words <= HELP_BUDGET and rows >= 8,
+				"the Help click opened it %s, %d key rows, %d words (budget %d)" % [opened, rows, words, HELP_BUDGET])
 			var handled: bool = _game._screen_key(KEY_H)
 			var by_h: bool = handled and not _game.screens.help_open()
 			_game._screen_key(KEY_H)
