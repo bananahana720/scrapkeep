@@ -101,6 +101,22 @@ func _run() -> void:
 	t.check("the frames after the swap were timed", after_worst > 0.0 and after_frames > 60, "%d frames" % after_frames)
 	t.check("no main-thread frame over 33 ms after the swap", after_worst < FRAME_CAP_MS, "worst %.2f ms" % after_worst)
 	t.eq("stage 2 is active", terrain.stage, 2)
+	# Stage 2's scatter (terrain.gd starts it when the ground is done) attached during the flight and the
+	# landing; its own frame meter and the step meter are capped like the ground's (KB5b).
+	var scatter: Node = terrain.geometry_root(2).get_node_or_null("GroundScatter")
+	t.check("stage 2 carries a chunked scatter", scatter != null and scatter.has_method("is_ready"))
+	var scatter_frames := 0
+	while scatter != null and not scatter.is_ready() and scatter_frames < BUILD_FRAMES_MAX:
+		await process_frame
+		scatter_frames += 1
+	t.check("stage 2's scatter finished attaching", scatter != null and scatter.is_ready(), "%d extra frames" % scatter_frames)
+	t.eq("stage 2's scatter holds 100 chunks", scatter.get_child_count() if scatter != null else -1, 100)
+	var scatter_frame_ms: float = scatter.frame_usec_max / 1000.0 if scatter != null else INF
+	var scatter_step_ms: float = scatter.slowest_usec / 1000.0 if scatter != null else INF
+	print("park_swap_test: scatter attaching during the flight: worst main-thread frame %.2f ms (ground meter %.2f ms), slowest scatter step %.2f ms at %s"
+		% [scatter_frame_ms, after_worst, scatter_step_ms, scatter.slowest_step if scatter != null else ""])
+	t.check("no main-thread frame over 33 ms with the scatter attaching", scatter_frame_ms < FRAME_CAP_MS and after_worst < FRAME_CAP_MS, "scatter %.2f ms, ground %.2f ms" % [scatter_frame_ms, after_worst])
+	t.check("no scatter step over 8 ms", scatter_step_ms < 8.0, "%.2f ms" % scatter_step_ms)
 	t.check("stage 1 left memory (only the active and next stage stay)", terrain.park_ground(1) == null and holder.get_node_or_null("Stage1") == null)
 	var at := ball.global_position
 	var floor_y: float = terrain.height(at.x, at.z)
