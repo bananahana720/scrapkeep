@@ -11,10 +11,16 @@ const HighdraftCrown := preload("res://src/world/map_highdraft_crown.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Scatter := preload("res://src/world/scatter.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 # A park map id (`--table=park`, park_defs.gd) reads its park file: src/world/park/<id>.json once a
 # stage unit (KD1 to KD6) lands it, else the stage-1 stand-in under assets/park/ (KD0). A park id
 # with neither stands on the old map of the same stage, so the table still runs end to end.
+# A park file's ground is park_terrain.gd (KB4, PARK.md section 3): its bake as Terrain3D regions
+# and a tiled trimesh over the 1.6 km square. A park stage is never built with its world: the
+# first stage builds at setup, a later one when first read or from prepare(), which builds it
+# on worker threads; use() starts the next park stage's prepare and frees any park stage that
+# is neither active nor next, so at most two are resident.
 const PARK_FILES := ["res://src/world/park/%s.json", "res://assets/park/%s_stage1.json"]
 const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach, "dig": Dig, "highdraft": Highdraft, "dig_deep": DigDeep, "highdraft_crown": HighdraftCrown}
 
@@ -60,6 +66,20 @@ var _heights: Array[PackedFloat32Array] = []
 var _worlds: Array[int] = []
 var _parent: Node3D
 var _arena := false
+# Per global stage: whether it stands on a park file, its park ground node (null until built
+# or preparing), and its hole cells and their floors (empty off the park).
+var _is_park: Array[bool] = []
+var _grounds: Array = []
+var _holes: Array[PackedByteArray] = []
+var _under: Array[PackedFloat32Array] = []
+# Two Terrain3D render nodes made at setup (park_terrain.gd make_render), each lent to one
+# resident park stage; _render_owner holds the stage index using each, or -1.
+var _render: Array[Node3D] = []
+var _render_owner: Array[int] = []
+# The last use()'s main-thread cost, and how many frames a park stage times after its swap
+# (park_terrain.gd meter); PARK.md section 9 caps a frame at 33 ms.
+var last_use_usec := 0
+const SWAP_METER_FRAMES := 120
 
 
 func _init(table = StageDefs) -> void:
@@ -70,9 +90,13 @@ func _init(table = StageDefs) -> void:
 		else:
 			assert(MAPS.has(id), "terrain: stage %s names an unknown map '%s'" % [row["stage"], id])
 			maps.append(MAPS[id].new())
+		_is_park.append(maps[-1] is ParkMap)
 		_worlds.append(int(row.get("world", 1)))
 		_roots.append(null)
 		_heights.append(PackedFloat32Array())
+		_grounds.append(null)
+		_holes.append(PackedByteArray())
+		_under.append(PackedFloat32Array())
 
 
 func _park_map(id: String, stage_number: int) -> RefCounted:
@@ -97,17 +121,46 @@ func map_for(index: int) -> RefCounted:
 func build(parent: Node3D) -> void:
 	_parent = parent
 	_build_sky(parent)
+	_pad_rows()
+	if _is_park.has(true) and parent.is_inside_tree():
+		for n in mini(2, _is_park.count(true)):
+			_render.append(ParkTerrain.make_render(parent, "ParkRender%d" % (n + 1)))
+			_render_owner.append(-1)
 	for i in maps.size():
-		if _worlds[i] == _worlds[0]:
+		if _worlds[i] == _worlds[0] and (not _is_park[i] or i == 0):
 			_build_stage(i)
 
 
 # True once this stage's ground and props exist.
 func is_built(index: int) -> bool:
-	return _roots[_index(index)] != null
+	return is_ready(index)
+
+
+# True once this stage's ground and props exist; a park stage still building on worker threads
+# is not ready.
+func is_ready(index: int) -> bool:
+	var i := _index(index)
+	return _roots[i] != null and (not _is_park[i] or _grounds[i].is_ready())
+
+
+# The park ground node of a park stage (park_terrain.gd), or null.
+func park_ground(index: int) -> Node3D:
+	return _grounds[_index(index)]
+
+
+# Starts building a park stage on worker threads; the main thread only adds the finished
+# pieces a few a frame. A no-op for an old map or a stage already built or building.
+func prepare(index: int) -> void:
+	var i := _index(index)
+	if not _is_park[i] or _roots[i] != null or _parent == null:
+		return
+	_build_park_stage(i, true)
 
 
 func _build_stage(i: int) -> void:
+	if _is_park[i]:
+		_build_park_stage(i, false)
+		return
 	var m = maps[i]
 	var holder := Node3D.new()
 	holder.name = "Stage%d" % (i + 1)
@@ -121,15 +174,52 @@ func _build_stage(i: int) -> void:
 	holder.process_mode = Node.PROCESS_MODE_DISABLED if _arena else Node.PROCESS_MODE_INHERIT
 
 
+# A park stage: the holder enters the tree parked, then its ground builds, at once (threaded
+# false) or on worker threads, and the props follow when the ground is done.
+func _build_park_stage(i: int, threaded: bool) -> void:
+	var m = maps[i]
+	var holder := Node3D.new()
+	holder.name = "Stage%d" % (i + 1)
+	_roots[i] = holder
+	_parent.add_child(holder)
+	_park(holder, _arena or i != stage - 1)
+	var ground := ParkTerrain.new()
+	_grounds[i] = ground
+	holder.add_child(ground)
+	ground.built.connect(_on_park_built.bind(i), CONNECT_ONE_SHOT)
+	var slot := _render_owner.find(-1)
+	if slot >= 0:
+		_render_owner[slot] = i
+	ground.start(String(m.title), m, threaded, _render[slot] if slot >= 0 else null)
+	_show_render()
+	# A stage that is not processing (the arena) still has to finish when it is read.
+	holder.process_mode = Node.PROCESS_MODE_DISABLED if _arena else Node.PROCESS_MODE_INHERIT
+
+
+func _on_park_built(i: int) -> void:
+	var ground = _grounds[i]
+	_heights[i] = ground.heights
+	_holes[i] = ground.holes
+	_under[i] = ground.under
+	maps[i].build_props(_roots[i], ground_callable(i + 1))
+	_build_scatter(_roots[i], maps[i], _heights[i])
+
+
 # Builds the whole world a stage belongs to, if any of it is not built yet, and returns
-# the stage's clamped index. Every read of the ground goes through here.
+# the stage's clamped index. Every read of the ground goes through here. A park stage builds
+# alone, or finishes its worker build on the spot when it is read before it is done.
 func _ensure(index: int) -> int:
 	var i := _index(index)
 	if _roots[i] == null:
 		assert(_parent != null, "terrain: build() has not run")
-		for j in maps.size():
-			if _worlds[j] == _worlds[i] and _roots[j] == null:
-				_build_stage(j)
+		if _is_park[i]:
+			_build_stage(i)
+		else:
+			for j in maps.size():
+				if _worlds[j] == _worlds[i] and _roots[j] == null and not _is_park[j]:
+					_build_stage(j)
+	elif _is_park[i] and not _grounds[i].is_ready():
+		_grounds[i].finish()
 	return i
 
 
@@ -138,7 +228,14 @@ func _ensure(index: int) -> int:
 # physics world, hidden and parked far below: moving a body is cheap, while adding a
 # trimesh back to the world rebuilds its tree (measured at about 34 ms a swap).
 func use(index: int) -> void:
-	stage = _ensure(index) + 1
+	var started := Time.get_ticks_usec()
+	# Park stages that are neither the target nor its next leave first, so a target that is
+	# not resident (a new run back on stage 1) finds a free Terrain3D render node to draw into.
+	var target := _index(index)
+	for i in _roots.size():
+		if _roots[i] != null and _is_park[i] and i != target and i != target + 1:
+			_free_stage(i)
+	stage = _ensure(target + 1) + 1
 	_arena = false
 	var m = map()
 	overlays.clear()
@@ -149,6 +246,36 @@ func use(index: int) -> void:
 			continue
 		_park(_roots[i], i != stage - 1)
 		_roots[i].process_mode = Node.PROCESS_MODE_INHERIT
+	if stage < maps.size():
+		prepare(stage + 1)
+	_show_render()
+	if _is_park[stage - 1]:
+		_grounds[stage - 1].meter(SWAP_METER_FRAMES)
+	last_use_usec = Time.get_ticks_usec() - started
+
+
+# Only the active park stage's Terrain3D node draws (none in the arena).
+func _show_render() -> void:
+	for n in _render.size():
+		_render[n].visible = not _arena and _render_owner[n] == stage - 1
+
+
+# A park stage leaves memory (neither active nor next); a later read builds it again. Its
+# Terrain3D node goes back to the pool, regions and all, until the next stage replaces them.
+func _free_stage(i: int) -> void:
+	var slot := _render_owner.find(i)
+	if slot >= 0:
+		_render_owner[slot] = -1
+	# A ground still attaching must not add one more region to the render node it just gave up
+	# in the frames before queue_free lands; the stage that takes the node may already own it.
+	if _grounds[i] != null:
+		_grounds[i].set_process(false)
+	_roots[i].queue_free()
+	_roots[i] = null
+	_grounds[i] = null
+	_heights[i] = PackedFloat32Array()
+	_holes[i] = PackedByteArray()
+	_under[i] = PackedFloat32Array()
 
 
 # The arena is not a stage: every map is hidden and its colliders leave the physics
@@ -161,6 +288,7 @@ func park_all() -> void:
 			continue
 		_park(root, true)
 		root.process_mode = Node.PROCESS_MODE_DISABLED
+	_show_render()
 
 
 static func _park(root: Node3D, parked: bool) -> void:
@@ -175,7 +303,7 @@ func geometry_root(index: int) -> Node3D:
 # The terrain API the spine and the other modules read through ctx.terrain (see
 # CONTRACTS.md).
 func height(x: float, z: float) -> float:
-	var h := _grid_height(_heights[_ensure(stage)], x, z)
+	var h := _floor(_ensure(stage), x, z)
 	if overlays.is_empty():
 		return h
 	var ground := h
@@ -191,7 +319,7 @@ func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 
 func spawn_point(index: int) -> Vector3:
 	var s: Vector2 = map_for(index).spawn
-	return Vector3(s.x, _grid_height(_heights[_ensure(index)], s.x, s.y) + 2.0, s.y)
+	return Vector3(s.x, _floor(_ensure(index), s.x, s.y) + 2.0, s.y)
 
 
 func entry_heading(index: int) -> Vector3:
@@ -200,7 +328,7 @@ func entry_heading(index: int) -> Vector3:
 
 func beacon_point(index: int) -> Vector3:
 	var b: Vector2 = map_for(index).beacon
-	return Vector3(b.x, _grid_height(_heights[_ensure(index)], b.x, b.y), b.y)
+	return Vector3(b.x, _floor(_ensure(index), b.x, b.y), b.y)
 
 
 func scrap_lines(index: int) -> Array:
@@ -208,7 +336,9 @@ func scrap_lines(index: int) -> Array:
 
 
 func contains(point: Vector3) -> bool:
-	return absf(point.x) < HALF - 1.0 and absf(point.z) < HALF - 1.0
+	_pad_rows()
+	var half := ParkTerrain.HALF if _is_park[stage - 1] else HALF
+	return absf(point.x) < half - 1.0 and absf(point.z) < half - 1.0
 
 
 func rescue_point(near: Vector3) -> Vector3:
@@ -240,6 +370,10 @@ func landmark_point(index: int) -> Vector3:
 
 
 func layer_at(point: Vector3) -> String:
+	_pad_rows()
+	var i := stage - 1
+	if _is_park[i] and not is_nan(ParkTerrain.hole_floor(_holes[_ensure(stage)], _under[i], point.x, point.z)):
+		return "under"
 	var m = map()
 	return m.layer_at(point) if m.has_method("layer_at") else ""
 
@@ -257,18 +391,48 @@ func near_moss(point: Vector3) -> bool:
 
 
 func ground_callable(index: int) -> Callable:
-	return _ground_at.bind(_heights[_ensure(index)])
+	var i := _ensure(index)
+	if _is_park[i]:
+		return _park_ground_at.bind(_heights[i], _holes[i], _under[i])
+	return _ground_at.bind(_heights[i])
+
+
+# The stage's ground at (x, z): the grid's two triangles, or a hole cell's floor beneath.
+func _floor(i: int, x: float, z: float) -> float:
+	if _is_park[i]:
+		return _park_height(_heights[i], _holes[i], _under[i], x, z)
+	return _grid_height(_heights[i], x, z)
+
+
+static func _park_height(heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, x: float, z: float) -> float:
+	var floor_y := ParkTerrain.hole_floor(holes, under, x, z)
+	return _grid_height(heights, x, z) if is_nan(floor_y) else floor_y
+
+
+static func _park_ground_at(x: float, z: float, clearance: float, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array) -> Vector3:
+	return Vector3(x, _park_height(heights, holes, under, x, z) + clearance, z)
 
 
 func vault_point(index: int) -> Vector3:
 	var v: Vector2 = map_for(index).vault
-	return Vector3(v.x, _grid_height(_heights[_ensure(index)], v.x, v.y), v.y)
+	return Vector3(v.x, _floor(_ensure(index), v.x, v.y), v.y)
 
 
 func _index(index: int) -> int:
+	_pad_rows()
 	if index < 1 or index > maps.size():
 		_range_error(index)
 	return clampi(index, 1, maps.size()) - 1
+
+
+# Test doubles append maps and the original per-stage arrays themselves (dig_zone_test and
+# others); the park arrays catch up here so those doubles keep working.
+func _pad_rows() -> void:
+	while _is_park.size() < maps.size():
+		_is_park.append(maps[_is_park.size()] is ParkMap)
+		_grounds.append(null)
+		_holes.append(PackedByteArray())
+		_under.append(PackedFloat32Array())
 
 
 func _range_error(index: int) -> void:
@@ -282,17 +446,26 @@ func _range_error(index: int) -> void:
 		push_error(text)
 
 
+# The grid is the old maps' 201 by 201 or a park's 801 by 801 (park_terrain.gd), told apart by
+# its size; both are 2 m cells centred on the origin.
 static func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
-	var gx := clampf((x + HALF) / STEP, 0.0, CELLS - 0.001)
-	var gz := clampf((z + HALF) / STEP, 0.0, CELLS - 0.001)
+	var half := HALF
+	var cells := CELLS
+	var side := SIDE
+	if heights.size() == ParkTerrain.SIDE * ParkTerrain.SIDE:
+		half = ParkTerrain.HALF
+		cells = ParkTerrain.CELLS
+		side = ParkTerrain.SIDE
+	var gx := clampf((x + half) / STEP, 0.0, cells - 0.001)
+	var gz := clampf((z + half) / STEP, 0.0, cells - 0.001)
 	var i := int(gx)
 	var j := int(gz)
 	var fx := gx - i
 	var fz := gz - j
-	var a := heights[j * SIDE + i]
-	var b := heights[j * SIDE + i + 1]
-	var c := heights[(j + 1) * SIDE + i]
-	var d := heights[(j + 1) * SIDE + i + 1]
+	var a := heights[j * side + i]
+	var b := heights[j * side + i + 1]
+	var c := heights[(j + 1) * side + i]
+	var d := heights[(j + 1) * side + i + 1]
 	if fx + fz <= 1.0:
 		return a + (b - a) * fx + (c - a) * fz
 	return d + (c - d) * (1.0 - fx) + (b - d) * (1.0 - fz)
