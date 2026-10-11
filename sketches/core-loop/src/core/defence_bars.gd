@@ -6,9 +6,10 @@ extends RefCounted
 #
 # id        armour | shield | health, CLASS_IDS order.
 # palette   the Palette constant the bar wears. No new meaning colour: armour wears the boss
-#           plating brass, shield wears the ancients' light, health wears neutral sand.
-# pattern   the cue that survives a colour-blind read (Palette.ANCIENT reads as BRASS to a
-#           deuteranope): segmented blocks, a hollow outline, a plain solid fill.
+#           plating brass, shield wears slate (the colour law's "not yet": burst it first), health wears
+#           neutral sand. Not ANCIENT: that already means "weak point opened, hit it now".
+# pattern   the cue that survives a colour-blind read (colour alone may not separate the
+#           classes for a colour-blind player): segmented blocks, a hollow outline, a plain solid fill.
 # regen     none | after_delay. The one rule that says how the bar comes back.
 # breaks    true when reaching zero is permanent (armour breaks; shield goes down and returns).
 # attack    the one line a player reads off the bar.
@@ -19,7 +20,7 @@ const CLASS_FIELDS := ["palette", "pattern", "regen", "breaks", "attack"]
 const CLASSES := {
 	"armour": {"palette": "BRASS", "pattern": "segments", "regen": "none", "breaks": true,
 		"attack": "break it once; it stays broken"},
-	"shield": {"palette": "ANCIENT", "pattern": "outline", "regen": "after_delay", "breaks": false,
+	"shield": {"palette": "SLATE", "pattern": "outline", "regen": "after_delay", "breaks": false,
 		"attack": "burst it before it recovers"},
 	"health": {"palette": "SAND", "pattern": "solid", "regen": "none", "breaks": false,
 		"attack": "just damage"},
@@ -41,9 +42,9 @@ const STATES := {
 const SHIELD_REGEN_DELAY := 5.0
 const SHIELD_REGEN_PER_S := 0.10
 
-# The K-F read distance (K-UNITS.md:427) and the haze a bar sits behind there. HAZE_MIX is a
-# start value: how far the bar's colour is pulled toward the dust before a player reads it.
-const READ_DISTANCE_M := 150.0
+# HAZE_MIX is a start value: how far a bar's colour is pulled toward the dust before a player
+# reads it. It models the haze at the K-F read distance of 150 m (K-UNITS.md:427); no distance
+# enters any computation here.
 const HAZE_MIX := 0.2
 const HAZE_COLOR := Palette.SANDSTONE
 # A read that lands further than this from every class names none (a hazard klaxon is not a bar).
@@ -91,13 +92,14 @@ class Pool extends RefCounted:
 			value = minf(max_value, value + max_value * SHIELD_REGEN_PER_S * live)
 
 
-# The colour a bar shows at READ_DISTANCE_M: its row pulled toward the haze.
+# The colour a bar shows at the modeled haze start value: its row pulled toward the haze.
 static func hazed(colour: Color) -> Color:
 	return colour.lerp(HAZE_COLOR, HAZE_MIX)
 
 
-# Two bars of each class at mixed fill, drawn as seen at 150 m. Read by colour alone: at this
-# range the pattern cue is under a pixel.
+# Two bars of each class at mixed fill, modeled at the 150 m haze start value (HAZE_MIX). Read
+# by colour alone: at this range the pattern cue is under a pixel. It is a colour model, not a
+# rendered frame.
 static func fixture_frame() -> Array:
 	var frame := []
 	for id in CLASS_IDS:

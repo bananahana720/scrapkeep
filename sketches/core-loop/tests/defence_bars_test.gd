@@ -10,6 +10,12 @@ const T := preload("res://tests/support/t.gd")
 # The colour law's floor between two meaning colours (LEGIBILITY section 1).
 const MIN_GAP := 35.0
 
+# The colour law's meaning rows (LEGIBILITY section 1), read from palette.gd. A class may wear a
+# meaning colour only on the row the table assigns it: a shield says "not yet", which is SLATE.
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const MEANING_ROWS := ["HAZARD", "live", "AMBER", "SLATE", "RUST"]
+const ASSIGNED_MEANING := {"shield": "SLATE"}
+
 var _t := T.new("defence_bars_test")
 
 
@@ -114,7 +120,16 @@ func _colours() -> void:
 		_t.check(id + " names an existing palette row", palette_rows.has(row_name), "row '%s'" % row_name)
 		var colour: Color = DefenceBars.colour_of(id)
 		_t.check(id + " colour is that palette row", palette_rows.has(row_name) and colour == palette_rows[row_name], colour.to_html(false))
-		_t.check(id + " does not borrow the live or hazard meaning", row_name != "ARC" and row_name != "HAZARD", row_name)
+		var assigned: String = ASSIGNED_MEANING.get(id, "")
+		for meaning in MEANING_ROWS:
+			if meaning == assigned:
+				continue
+			var meaning_colour: Color = Palette.live() if meaning == "live" else palette_rows[meaning]
+			_t.check(id + " does not borrow the colour-law row " + meaning, colour != meaning_colour, "%s wears %s" % [id, row_name])
+		if assigned != "":
+			_t.check(id + " wears its assigned colour-law row " + assigned, colour == palette_rows[assigned], "%s wears %s" % [id, row_name])
+		var weak_point: Color = EventKinds.ROWS["weak_point_opened"]["color"]
+		_t.check(id + " is not the weak_point_opened colour", colour != weak_point, "%s wears %s" % [id, row_name])
 		_t.check("no second class uses " + row_name, not seen.has(row_name), "seen %s" % [seen.keys()])
 		seen[row_name] = true
 		patterns[row["pattern"]] = true
@@ -129,8 +144,8 @@ func _colours() -> void:
 
 
 func _blind_read() -> void:
-	# A frame at the K-F distance: hazed bars of mixed width, read by colour alone.
-	_t.near("the read distance is 150 m", DefenceBars.READ_DISTANCE_M, 150.0)
+	# Modeled colour read at the 150 m haze start value (DefenceBars.HAZE_MIX). No rendered frame
+	# is read here; the rendered 150 m still belongs to the SG-LOOK legibility unit.
 	var frame := DefenceBars.fixture_frame()
 	_t.check("the fixture frame holds two bars of each class", frame.size() >= DefenceBars.CLASS_IDS.size() * 2, "%d bars" % frame.size())
 	var covered := {}
@@ -142,6 +157,6 @@ func _blind_read() -> void:
 			wrong += 1
 			print("defence_bars_test: bar %s seen %s read as '%s'" % [bar["class"], bar["seen"].to_html(false), named])
 	_t.eq("the fixture covers every class", covered.size(), DefenceBars.CLASS_IDS.size())
-	_t.eq("a blind read at 150 m names every bar's class", wrong, 0)
+	_t.eq("the modeled colour read at the haze start value names every bar's class", wrong, 0)
 	# Control: a colour that belongs to no class is not named (the read can fail).
 	_t.eq("a hazard-coloured bar names no class", DefenceBars.blind_read(Palette.HAZARD), "")
