@@ -15,7 +15,7 @@ CONVENTION, the same for the whole family (Godot axes, metres):
   min(thickness, distance from the nearest end), so the face a ball in flight meets slopes at 40 to 50 degrees instead of
   standing as a wall (TRAVERSAL.md:110). The -col mesh holds the clean interior, the bevelled hull and nothing else; ribs,
   timbers, rails and rubble are drawn only. hole is true at the mouths; the stage cuts it, the recipe supplies the surface under it.
-  Materials: one palette material "paint" (vertex colour), no textures. Draws: the drawn mesh plus the -col mesh is 2, the park_large
+  Materials: one vertex-colour material named "enamel" (the runtime slot that turns vertex colour on), no textures. Draws: the drawn mesh plus the -col mesh is 2, the park_large
   ceiling; each shell is 1 draw in the detail class. Arizona palette: basalt and scoria for the lava tube, sandstone and iron oxide
   rock with weathered timber and copper (#b77843, never brass) for the adit and shaft, dam-era concrete grey with form-board joints
   for the spillway. Nothing here names a living people; the ids stay as the PARK.md table gives them.
@@ -48,10 +48,10 @@ BEVEL = 3.0  # roof lips bevel back 3 m (PARK.md section 4)
 
 # sRGB tuples. The tube palettes pull from the game palette (common.HEX) and stay mid-value so no frame reads black.
 C = {
-    "basalt": common.mix("charcoal", "oxide", .42),
-    "basalt_dark": common.mix("charcoal", "oxide", .22),
-    "scoria": common.mix("oxide", "charcoal", .30),
-    "varnish": common.mix("charcoal", "oxide", .30),
+    "basalt": common.mix("charcoal", "oxide", .58),
+    "basalt_dark": common.mix("charcoal", "oxide", .40),
+    "scoria": common.mix("oxide", "charcoal", .45),
+    "varnish": common.mix("charcoal", "oxide", .50),
     "dust": common.mix("sandstone", "bone", .30),
     "sand": common.srgb("sandstone"),
     "sandstone_wall": common.mix("sandstone", "oxide", .28),
@@ -64,6 +64,8 @@ C = {
     "concrete_dark": common.mix("bone", "charcoal", .58),
     "concrete_light": common.mix("bone", "charcoal", .30),
     "stain": common.mix("oxide", "charcoal", .55),
+    "concrete_stain": common.mix("bone", "oxide", .22),
+    "cream": common.mix("bone", "sandstone", .35),
     "sage": common.mix("petrol", "bone", .40),
 }
 
@@ -84,21 +86,30 @@ def tint(color, amount, seed):
     return tuple(min(1.0, max(0.0, c * k)) for c in color)
 
 
+def strata(tube, s, i, palette, thickness=1.5):
+    """Bedding colour for a hull face: bands by world height, so the rock reads as layered stone, not as ribs."""
+    x, y, _ = tube.profile[i % len(tube.profile)]
+    wy = tube.world(s, 0, y).y
+    k = int(math.floor(wy / thickness))
+    return tint(palette[k % len(palette)], .06, int(s) * 3 + i)
+
+
 class Soup:
     """Godot-space polygons with one colour per face, triangulated with a fixed quad split."""
 
     def __init__(self):
-        self.verts, self.faces, self.colors = [], [], []
+        self.verts, self.faces, self.colors, self.smooth = [], [], [], []
 
     def add_vert(self, p):
         self.verts.append(tuple(float(v) for v in p))
         return len(self.verts) - 1
 
-    def face(self, idx, color):
+    def face(self, idx, color, smooth=False):
         self.faces.append(tuple(idx))
         self.colors.append(color)
+        self.smooth.append(smooth)
 
-    def strip(self, rings, color_fn, facing, axis_fn, closed=True):
+    def strip(self, rings, color_fn, facing, axis_fn, closed=True, smooth=False):
         """Quads between consecutive rings (lists of Vectors). facing 'in' makes the normals point at axis_fn(r), 'out' away.
         color_fn(r, i) picks the face colour. The whole strip is flipped when its normals sum to the wrong side."""
         base = []
@@ -118,7 +129,7 @@ class Soup:
                 quads.append((q, color_fn(r, i)))
         want = score > 0 if facing == "in" else score < 0
         for q, color in quads:
-            self.face(q if want else tuple(reversed(q)), color)
+            self.face(q if want else tuple(reversed(q)), color, smooth)
 
     def outward(self, idx, inside, color):
         """Add one face wound so its normal points away from the point inside."""
@@ -150,10 +161,27 @@ class Soup:
 
     def tris(self):
         out = []
-        for f, color in zip(self.faces, self.colors):
+        for f, color, smooth in zip(self.faces, self.colors, self.smooth):
             for k in range(1, len(f) - 1):
-                out.append(((f[0], f[k], f[k + 1]), color))
+                out.append(((f[0], f[k], f[k + 1]), color, smooth))
         return out
+
+
+def palette_material():
+    """The one vertex-colour material, named for the runtime slot 'enamel' (assets/materials/dig_mechanical/enamel.tres: a
+    StandardMaterial3D with vertex_color_use_as_albedo, roughness 0.87). park_recipes.gd swaps any surface named for a slot role
+    for that slot's material, and the importer alone would not turn on vertex colour, so the name is what colours the recipe in game."""
+    mat = bpy.data.materials.get("enamel")
+    if mat is not None:
+        return mat
+    mat = bpy.data.materials.new("enamel")
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    bsdf.inputs["Roughness"].default_value = .87
+    attr = mat.node_tree.nodes.new("ShaderNodeVertexColor")
+    attr.layer_name = "Color"
+    mat.node_tree.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
+    return mat
 
 
 def bpy_xyz(p):
@@ -163,17 +191,17 @@ def bpy_xyz(p):
 def make_object(name, soup, root, painted):
     tris = soup.tris()
     mesh = bpy.data.meshes.new(name)
-    mesh.from_pydata([bpy_xyz(v) for v in soup.verts], [], [t for t, _ in tris])
+    mesh.from_pydata([bpy_xyz(v) for v in soup.verts], [], [t for t, _, _ in tris])
     mesh.update()
     if painted:
         attr = mesh.color_attributes.new(name="Color", type="FLOAT_COLOR", domain="CORNER")
-        for poly, (_, color) in zip(mesh.polygons, tris):
+        for poly, (_, color, _) in zip(mesh.polygons, tris):
             for li in poly.loop_indices:
                 attr.data[li].color = common.rgba(color)
         mesh.color_attributes.active_color = attr
-        mesh.materials.append(common.material("paint"))
-    for poly in mesh.polygons:
-        poly.use_smooth = False
+        mesh.materials.append(palette_material())
+    for poly, (_, _, smooth) in zip(mesh.polygons, tris):
+        poly.use_smooth = smooth
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.scene.collection.objects.link(obj)
     obj.parent = root
@@ -186,7 +214,7 @@ def make_object(name, soup, root, painted):
 class Tube:
     """A profile swept along a straight or 30 degree arc centreline that descends at a constant slope."""
 
-    def __init__(self, rid, profile, length, drop, bend_deg, thickness, centre_y, stations, noise, palette, joints=()):
+    def __init__(self, rid, profile, length, drop, bend_deg, thickness, centre_y, stations, noise, palette, joints=(), smooth=False):
         self.rid, self.profile, self.L, self.drop = rid, profile, length, drop
         self.bend = math.radians(bend_deg)
         self.thickness, self.cy, self.noise, self.palette = thickness, centre_y, noise, palette
@@ -194,6 +222,7 @@ class Tube:
         self.joints = joints
         self.R = length / abs(self.bend) if self.bend else 0.0
         self.rendering = False
+        self.smooth = smooth
 
     def frame(self, s):
         """Floor-centre point and heading yaw (radians) at arc length s."""
@@ -262,8 +291,8 @@ class Tube:
         in_axes = [self.axis(s) for s in st]
         out_axes = [self.axis(s) for s in hs]
         if render:
-            soup.strip(inner, lambda r, i: self.palette("in", st[r], i, self), "in", lambda r: in_axes[r])
-            soup.strip(outer, lambda r, i: self.palette("out", hs[r], i, self), "out", lambda r: out_axes[r])
+            soup.strip(inner, lambda r, i: self.palette("in", st[r], i, self), "in", lambda r: in_axes[r], smooth=self.smooth)
+            soup.strip(outer, lambda r, i: self.palette("out", hs[r], i, self), "out", lambda r: out_axes[r], smooth=self.smooth)
         else:
             soup.strip(inner, lambda r, i: C["sand"], "in", lambda r: in_axes[r])
             soup.strip(outer, lambda r, i: C["sand"], "out", lambda r: out_axes[r])
@@ -288,13 +317,11 @@ def lava_palette(side, s, i, tube):
     seed = s * 7 + i
     if side == "in":
         if kind == "floor":
-            return tint(C["dust"] if hash01(i, int(s / 4)) > .3 else C["sand"], .10, seed)
+            return tint(C["dust"], .035, seed)
         if kind == "roof":
-            return tint(C["basalt_dark"], .22, seed)
-        return tint(C["scoria"] if hash01(i, 5) > .5 else C["basalt"], .18, seed)
-    ridge = hash01(int(s / 4), i // 3)
-    base = C["varnish"] if ridge > .35 else C["rock_red"]
-    return tint(base, .16, seed)
+            return tint(C["basalt_dark"], .10, seed)
+        return tint(C["scoria"] if hash01(i // 2, 5) > .5 else C["basalt"], .08, seed)
+    return strata(tube, s, i, [C["varnish"], C["scoria"], C["varnish"], C["rock_red"]])
 
 
 # adit_mouth: a timbered drift 8 m wide, walls to 3.6 m, a flat arch to 5.6 m
@@ -311,11 +338,11 @@ def adit_palette(side, s, i, tube):
     seed = s * 5 + i
     if side == "in":
         if kind == "floor":
-            return tint(C["dust"], .12, seed)
+            return tint(C["dust"], .04, seed)
         if kind == "roof":
-            return tint(C["sandstone_wall"], .16, seed)
-        return tint(C["rock_red"] if hash01(i, int(s / 6)) > .45 else C["sandstone_wall"], .16, seed)
-    return tint(C["sand"] if hash01(int(s / 4), i) > .4 else C["rock_red"], .14, seed)
+            return tint(C["sandstone_wall"], .07, seed)
+        return tint(C["rock_red"] if hash01(i // 2, 3) > .5 else C["sandstone_wall"], .07, seed)
+    return strata(tube, s, i, [C["sand"], C["rock_red"], C["cream"], C["sandstone_wall"]])
 
 
 # spillway_tunnel: dam-era horseshoe, floor 11 m wide, walls to 4.5 m, arch to 9 m; board bands of 1.2 m
@@ -336,20 +363,20 @@ def spillway_palette(side, s, i, tube):
     seed = s * 3 + i
     if side == "in":
         if kind == "floor":
-            return tint(C["concrete_dark"], .06, seed)
+            return tint(C["concrete_dark"], .03, seed)
         band = int(max(0.0, y) / 1.2)
-        board = C["concrete_light"] if (band + int(s / 2)) % 2 == 0 else C["concrete"]
-        if hash01(band, int(s / 3)) > .86:
-            board = C["stain"]
-        return tint(board, .07, seed)
-    return tint(C["concrete"] if hash01(int(s / 6), i) > .3 else C["concrete_light"], .08, seed)
+        board = C["concrete_light"] if band % 2 == 0 else C["concrete"]
+        if hash01(band, int(s / 3), 5) > .965:
+            board = C["concrete_stain"]
+        return tint(board, .035, int(s / 6) * 5 + band)
+    return tint(C["concrete"] if int(s / 6) % 2 == 0 else C["concrete_light"], .04, int(s / 6) * 3 + i)
 
 
 def tube_for(rid):
     if rid.startswith("lava_tube_run"):
         bend = 30 if rid.endswith("p30") else -30 if rid.endswith("n30") else 0
         stations = [0, 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 45, 48]
-        return Tube(rid, lava_profile(), 48.0, 48.0 * math.tan(math.radians(6)), bend, 3.0, 3.6, stations, .35, lava_palette)
+        return Tube(rid, lava_profile(), 48.0, 48.0 * math.tan(math.radians(6)), bend, 3.0, 3.6, stations, .35, lava_palette, smooth=True)
     if rid == "adit_mouth":
         stations = [0, 3, 8, 14, 20, 26, 32, 38, 44, 50, 53, 56]
         return Tube(rid, adit_profile(), 56.0, 56.0 * math.tan(math.radians(4)), 0, 2.5, 3.6, stations, .12, adit_palette)
@@ -372,7 +399,7 @@ def lava_shell1(tube):
             s = 6 + k * 3.4 + hash01(k, side, 12) * 1.2
             ln = 3.2 + hash01(k, side, 13) * 2.4
             pos = tube.world(s, side * 7.55, 2.1 + hash01(k, side, 14) * .5)
-            soup.box(pos, (.9, .38, ln), tint(C["scoria"], .2, k * 2 + side), yaw=math.degrees(tube.frame(s)[1]), roll=side * 12)
+            soup.box(pos, (.9, .45, ln), tint(C["scoria"], .12, k * 2 + side), yaw=math.degrees(tube.frame(s)[1]))
     for k in range(16):  # drips hanging from the roof
         s = 6 + hash01(k, 1, 21) * 36
         x = (hash01(k, 2, 22) - .5) * 9
@@ -518,9 +545,9 @@ def shaft_palette(side, s, i, tube):
     seed = s * 5 + i
     if side == "in":
         if kind == "floor":
-            return tint(C["dust"], .12, seed)
-        return tint(C["timber"] if int(s / 2) % 2 == 0 else C["timber_pale"], .15, seed)
-    return tint(C["rock_red"], .15, seed)
+            return tint(C["dust"], .04, seed)
+        return tint(C["timber"] if int(s / 2) % 2 == 0 else C["timber_pale"], .08, seed)
+    return strata(tube, s, i, [C["rock_red"], C["sand"], C["sandstone_wall"]])
 
 
 def build_shaft(render):
@@ -534,7 +561,7 @@ def build_shaft(render):
     cols = [-PIT_W, -PIT_W / 3, PIT_W / 3, PIT_W]
     ts = (0, .25, .5, .75, 1.0)  # 0 is the ground, 1 the floor
     floor = [[Vector((x, pit_floor_y(z), z)) for x in cols] for z in rows]
-    soup.strip(floor, lambda r, i: tint(C["dust"], .12, r * 4 + i), "in", lambda r: Vector((0, pit_floor_y(rows[r]) + 5, rows[r])), closed=False)
+    soup.strip(floor, lambda r, i: tint(C["dust"], .04, r * 4 + i), "in", lambda r: Vector((0, pit_floor_y(rows[r]) + 5, rows[r])), closed=False)
     for side in (-1, 1):  # side walls: timber cribbing from the collar down, a rock footing below
         wall = [[Vector((side * PIT_W, pit_floor_y(z) * t, z)) for t in ts] for z in rows]
         soup.strip(wall, lambda r, i, side=side: shaft_wall_color(i, r, side), "in", lambda r: Vector((0, -6, rows[r])), closed=False)
@@ -585,16 +612,17 @@ def shaft_collar():
 
 def shaft_wall_color(i, r, side):
     if i <= 2:
-        return tint(C["timber"] if (r + i) % 2 == 0 else C["timber_pale"], .18, i * 7 + r)
-    return tint(C["rock_red"] if side else C["sandstone_wall"], .15, i * 3 + r + side)
+        return tint(C["timber"] if i % 2 == 0 else C["timber_pale"], .06, i * 7)
+    return tint(C["rock_red"] if side else C["sandstone_wall"], .06, i * 3 + side)
 
 
 def merge(dst, src):
     off = len(dst.verts)
     dst.verts += src.verts
-    for f, c in zip(src.faces, src.colors):
+    for f, c, sm in zip(src.faces, src.colors, src.smooth):
         dst.faces.append(tuple(k + off for k in f))
         dst.colors.append(c)
+        dst.smooth.append(sm)
 
 
 def shaft_shell1():
@@ -712,7 +740,7 @@ def check_glb(path, rid, counts, budget, draws, names, pos, yaw):
     for name in names:
         assert name in node_names, (path.name, "missing node", name, node_names)
     assert "KHR_lights_punctual" not in doc.get("extensionsUsed", []), (path.name, "light in recipe")
-    assert [m["name"] for m in doc.get("materials", [])] in (["paint"], []), (path.name, doc.get("materials"))
+    assert [m["name"] for m in doc.get("materials", [])] in (["enamel"], []), (path.name, doc.get("materials"))
     if pos is not None:
         sock = doc["nodes"][node_names.index("socket_exit")]
         t = sock.get("translation", [0, 0, 0])
