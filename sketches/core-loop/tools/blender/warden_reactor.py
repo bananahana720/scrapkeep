@@ -86,7 +86,7 @@ COPPER = "copper"
 SAND = common.mix("sandstone", "petrol", 0.22)
 SAND_DARK = common.mix("sandstone", "charcoal", 0.45)
 TOOTH = common.mix("sandstone", "bone", 0.35)  # the lightest value on the body: teeth over the dark jacket
-ROD = common.mix("charcoal", "bone", 0.3)  # the ram's piston rod: thin and darker than its copper barrel, so the step reads in grey
+ROD = common.mix("bone", "charcoal", 0.3)  # KF7b fix: the ram's piston rod, polished and lighter than its copper barrel
 DUST = common.mix("petrol", "sandstone", 0.3)
 
 DRUM_R = 3.22
@@ -102,9 +102,18 @@ CAGE_BASE = 6.3
 CAGE_R = 1.45
 CAGE_TOP = 7.9
 HINGE = Vector((JAW_R[1], 0.0, JAW_Z[0]))
-RAM_R = 2.48  # the rams' axis radius: barrel r 0.3 stays inside r 2.8 below 2 m
-RAM_BARREL = (0.3, 1.4)  # the copper barrel's z range; the rod shows above it
-RAM_DEG = 28.0  # each ram sits this far round from its jaw's middle, toward the front (Godot +Z)
+# 2026-10-11 (w13 KF7b fix round): the second read still found no ram: the barrels stood in
+# front of a pedestal as wide as their own circle, copper on dark enamel in the skirt's shade,
+# and the rods were dark. Now the pedestal is a narrow stem (r 1.5 to 1.7), so each ram stands
+# free with ground showing between it and the stem; the barrel is a thick copper cylinder on a
+# sandstone clevis foot, and a bright steel rod rises 0.8 m out of it into the jaw's lug. The
+# rams sit 45 degrees round from each jaw's middle, so both read cameras see them in profile.
+PED_R = (1.7, 1.5)  # the pedestal stem's bottom and top radius
+RAM_R = 2.46  # the rams' axis radius: barrel r 0.32 stays inside r 2.8 below 2 m
+RAM_BARREL = (0.2, 1.25)  # the copper barrel's z range; the rod shows above it
+RAM_BARREL_R = 0.32
+RAM_ROD_R = 0.22
+RAM_DEG = 45.0  # each ram sits this far round from its jaw's middle, front and back
 
 
 # --- geometry helpers ------------------------------------------------------------------
@@ -161,23 +170,22 @@ def polar(r, deg, z):
 
 def drum(root):
     p = Part("Drum")
-    # Pedestal and feet: everything under 2 m stays inside r = 2.8.
-    p.cyl("ancient_enamel", 2.2, 2.45, 2.0, 16, loc=(0, 0, 1.0), color=ENAMEL)
-    for k in range(4):
-        a = 45 + 90 * k
-        foot = polar(1.95, a, 0.25)
-        p.box("ancient_enamel", (0.9, 0.8, 0.5), loc=foot, rot=(0, 0, math.radians(a)), color=IRON)
-    # KF7b: the jaws' rams, two under each jaw (its front and back quarter): a thick copper
-    # barrel on an iron clevis foot, an iron gland at its mouth, the jaw's piston rod rising
-    # out of it. Inside r 2.8 below 2 m.
+    # Pedestal: a narrow stem; everything under 2 m stays inside r = 2.8.
+    p.cyl("ancient_enamel", PED_R[0], PED_R[1], 2.0, 16, loc=(0, 0, 1.0), color=ENAMEL)
+    # KF7b: the jaws' rams, two under each jaw (its front and back quarter), free of the stem: a
+    # thick copper barrel on a sandstone clevis foot, an iron gland at its mouth, the jaw's
+    # bright piston rod rising out of it. Inside r 2.8 below 2 m.
     for a in (-RAM_DEG, RAM_DEG, 180.0 - RAM_DEG, 180.0 + RAM_DEG):
-        p.box("ancient_enamel", (0.56, 0.5, 0.3), loc=polar(RAM_R, a, 0.15), rot=(0, 0, math.radians(a)), color=IRON)
-        p.cyl("ancient_enamel", 0.3, 0.3, RAM_BARREL[1] - RAM_BARREL[0], 8,
+        p.box("ancient_enamel", (0.6, 0.6, 0.2), loc=polar(RAM_R - 0.05, a, 0.1), rot=(0, 0, math.radians(a)),
+              color=SAND_DARK)
+        p.cyl("ancient_enamel", RAM_BARREL_R, RAM_BARREL_R, RAM_BARREL[1] - RAM_BARREL[0], 8,
               loc=polar(RAM_R, a, sum(RAM_BARREL) / 2), color=COPPER)
-        p.cyl("ancient_enamel", 0.3, 0.22, 0.16, 8, loc=polar(RAM_R, a, RAM_BARREL[1] + 0.08), color=IRON)
-    p.ring("rubber", 2.28, 2.5, 0.18, 16, loc=(0, 0, 1.5))
-    # Skirt flares above 2 m to the drum.
-    p.cyl("ancient_enamel", 2.45, DRUM_R, DRUM_Z[0] - LOW, 24, loc=(0, 0, (LOW + DRUM_Z[0]) / 2), color=ENAMEL,
+        p.cyl("ancient_enamel", RAM_BARREL_R, RAM_ROD_R + 0.04, 0.14, 8, loc=polar(RAM_R, a, RAM_BARREL[1] + 0.07),
+              color=IRON)
+    p.ring("rubber", PED_R[1] - 0.05, PED_R[1] + 0.14, 0.18, 16, loc=(0, 0, 1.5))
+    # Skirt flares above 2 m from the stem to the drum, an overhang the jaws' lower mandibles
+    # stand clear of.
+    p.cyl("ancient_enamel", PED_R[1], DRUM_R, DRUM_Z[0] - LOW, 24, loc=(0, 0, (LOW + DRUM_Z[0]) / 2), color=ENAMEL,
           caps=False)
     p.cyl("ancient_enamel", DRUM_R, DRUM_R, DRUM_Z[1] - DRUM_Z[0], 24, loc=(0, 0, sum(DRUM_Z) / 2), color=IRON,
           caps=False)
@@ -294,7 +302,9 @@ def jaw(root, side):
     p = Part("JawR" if side > 0 else "JawL")
     r0, r1 = JAW_R
     z0, z1 = JAW_Z
-    sweep(p, "ancient_enamel", [(2.95, z0), (r1, z0), (r1, z0 + 0.62), (3.3, z0 + 0.62)], -JAW_SPAN, JAW_SPAN, 10,
+    # KF7b fix: the lower mandible stands off the skirt (inner r 3.1 to 3.42), so a shade line
+    # and ground show between jaw and drum.
+    sweep(p, "ancient_enamel", [(3.1, z0), (r1, z0), (r1, z0 + 0.62), (3.42, z0 + 0.62)], -JAW_SPAN, JAW_SPAN, 10,
           SAND)
     sweep(p, "ancient_enamel", [(r0, z1 - 0.5), (r1, z1 - 0.5), (r1, z1), (r0, z1)], -JAW_SPAN, JAW_SPAN, 10, SAND)
     spine = math.radians(11)
@@ -305,14 +315,14 @@ def jaw(root, side):
         deg = -span + 6.0 + (2 * span - 12.0) * k / 5
         if abs(deg) < 12.0:
             continue  # the spine's place
-        tooth(p, 3.42, r1, deg, z0 + 0.6, 0.78, 0.8, TOOTH)
-        tooth(p, 3.42, r1, deg, z1 - 0.48, 0.66, -0.62, TOOTH)
+        tooth(p, 3.42, r1, deg, z0 + 0.6, 0.76, 1.0, TOOTH)  # KF7b fix: taller, an opposed bite
+        tooth(p, 3.42, r1, deg, z1 - 0.48, 0.7, -0.8, TOOTH)
     # The rams' lugs and piston rods, under the lower mandible in its front and back quarters,
     # so a camera on either side of the drum sees one ram per jaw.
     for deg in (-RAM_DEG, RAM_DEG):
-        p.box("ancient_enamel", (0.8, 0.7, 0.3), loc=polar(RAM_R + 0.05, deg, z0 + 0.05),
+        p.box("ancient_enamel", (1.1, 0.7, 0.3), loc=polar(RAM_R + 0.3, deg, z0 + 0.05),
               rot=(0, 0, math.radians(deg)), color=SAND_DARK)
-        p.cyl("ancient_enamel", 0.17, 0.17, z0 - 0.05 - RAM_BARREL[1] + 0.35, 8,
+        p.cyl("ancient_enamel", RAM_ROD_R, RAM_ROD_R, z0 - 0.05 - RAM_BARREL[1] + 0.35, 8,
               loc=polar(RAM_R, deg, (z0 - 0.05 + RAM_BARREL[1] - 0.35) / 2), color=ROD)
     p.cyl("ancient_enamel", 0.12, 0.12, 0.75, 8, loc=(3.6, 0.0, z0 + 0.15), rot=(math.pi / 2, 0, 0),
           color=IRON)
@@ -358,7 +368,7 @@ def hardpoint(root):
 
 def seam_ring(root):
     p = Part("SeamRing")
-    p.ring("ancient_light", 2.46, 2.56, 0.07, 16, loc=(0, 0, 1.5))
+    p.ring("ancient_light", PED_R[1] + 0.09, PED_R[1] + 0.17, 0.07, 16, loc=(0, 0, 1.5))
     return finish(p, (0, 0, 1.5), root)
 
 
