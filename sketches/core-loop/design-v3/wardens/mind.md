@@ -31,7 +31,7 @@ The Mind is the superintelligence that ran the old works (SOUND-STORY.md:61). It
 | Silhouette | A squat drum with three upright stacks: a pile | A lumpy dome of many small hexagonal cells round a queen cell (`warden_kit.gd:13-14`): a hive | An open hand with a lens on a stalk: a hand |
 | Where it lives | On the water: the dam face, the flume head house | In the earth: on the hoist in the headframe, on the sinkhole wall | In the air; the only kind that never touches the ground |
 | Motion | Vertical: stacks lift on the pulse, water and slag fall | Crawling and rippling: drones walk over it, shutters open in waves, the guard scatters and reforms | Tracking and travelling: the lens follows you and the whole body moves (the tilt, the flight) |
-| Light | One steady blue that breathes with the charge | Many blue pinpricks in the cell seams, rippling base to crown | One big point that turns toward you; five small lenses blink the quote's rhythm |
+| Light | One steady green that breathes with the charge | Many green pinpricks in the cell seams, rippling base to crown | One big point that turns toward you; five small lenses blink the quote's rhythm |
 | Sound | The Ab tritone pedal and a Geiger tick (SOUND-STORY.md:59) | A thin G5 buzz that locks into a quartal chord (SOUND-STORY.md:60) | Your own class motif, inverted and wrong (SOUND-STORY.md:61) |
 | Colours the band | Yes, the only one (SOUND-STORY.md:69, 74) | No (SOUND-STORY.md:69) | No, never (SOUND-STORY.md:280) |
 | What you play around | It never moves. Its mounting turns the pulse into terrain: a road up to the core (the sheet) or lanes to dodge (the slag) | A guard stands between you and it, and its reach changes on a vertical rhythm (the hoist, the rising pool) | It moves you. A latched ball is thrown by the tilt or carried by the flight, so the rope is the fight |
@@ -103,7 +103,7 @@ Every Warden is a harpoon anchor (PARK.md:412-418). The framework is unit KF1; t
 
 | Behaviour | Rule (PARK.md:414-418) | Under the island | On the spires |
 | --- | --- | --- | --- |
-| Latch | 3 hardpoints rimmed in blue, bitten from rope range (45 m, `tuning.gd:18`) | The three knuckles at 88 m. From a knuckle butte's top edge the nearest knuckle is about 37 m away; from the bowl floor under it, 44 m | The three knuckles on the back of the hand, 2 m above the perch top. From the bowl floor beside the perch, about 27 m |
+| Latch | 3 hardpoints rimmed in green, bitten from rope range (45 m, `tuning.gd:18`) | The three knuckles at 88 m. From a knuckle butte's top edge the nearest knuckle is about 37 m away; from the bowl floor under it, 44 m | The three knuckles on the back of the hand, 2 m above the perch top. From the bowl floor beside the perch, about 27 m |
 | Ride | Swing as on a world line; the winch shortens it; no drop inside the minimum rope | A pendulum under the island, across the bowl. Winch a 16 m line and the ball hangs level with the lens: swing through it for a ram | An orbit round the perch spire, inside the perch ring |
 | Fire from the line | The weapon slot fires while hanging; each gun bolt adds 1.5 posture | Hang from a knuckle and shoot the lens below you, 3 posture a hit during the charge (`boss_posture.gd:12`) | Hang from the hand and shoot it while it is perched |
 | Drag | When the mounting moves, the anchor moves | The swing: 20.5 m in 1.2 s, peak about 27 m/s | The flight: about 85 m in 3 s, about 28 m/s |

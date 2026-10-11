@@ -361,7 +361,7 @@ Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-2
 | `none_hoodoo_ash` | `hoodoo_garden` | A hoodoo's cap is welded ash; the soft stone under it goes first. Balance is borrowed time. |
 | `fleet_mooring_tags` | `mooring_mesa` | Mooring tag: INVENTORY. DO NOT FLOAT. |
 | `mining_tram_ledger` | `tram_head` | Tram ledger: buckets up, 212. Buckets down, 212. Buckets that came down heavier than they went up: 3. |
-| `mining_ore_bench_assay` | `ore_bench` | Assay: copper, good. Silver, fair. One sample blue and warm; it would not go in the crucible. |
+| `mining_ore_bench_assay` | `ore_bench` | Assay: copper, good. Silver, fair. One sample green and warm; it would not go in the crucible. |
 | `mining_adit_lamp` | `ore_adit` | Carbide lamp found burning. The carbide ran out years ago. |
 | `mining_ore_chute` | `ore_chute` | The chute boards are worn smooth on the inside. Also, oddly, on the outside. |
 | `ancient_lens_rock_hum` | `lens_rocks` | The rocks hum one step below whatever you are whistling. |

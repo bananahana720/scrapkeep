@@ -24,7 +24,7 @@ A swarm remnant is a pre-collapse machine that is many machines: a hive of ident
 | Silhouette | A squat drum with three upright stacks: a pile | A lumpy dome of many small hexagonal cells round a queen cell (`warden_kit.gd:13-14`): a hive | An open hand with a lens on a stalk: a hand |
 | Where it lives | On the water: the dam face, the flume head house | In the earth: on the hoist in the headframe, on the sinkhole wall | In the air; the only kind that never touches the ground |
 | Motion | Vertical: stacks lift on the pulse, water and slag fall | Crawling and rippling: drones walk over it, shutters open in waves, the guard scatters and reforms | Tracking and travelling: the lens follows you and the whole body moves (the tilt, the flight) |
-| Light | One steady blue that breathes with the charge | Many blue pinpricks in the cell seams, rippling base to crown | One big point that turns toward you; five small lenses blink the quote's rhythm |
+| Light | One steady green that breathes with the charge | Many green pinpricks in the cell seams, rippling base to crown | One big point that turns toward you; five small lenses blink the quote's rhythm |
 | Sound | The Ab tritone pedal and a Geiger tick (SOUND-STORY.md:59) | A thin G5 buzz that locks into a quartal chord (SOUND-STORY.md:60) | Your own class motif, inverted and wrong (SOUND-STORY.md:61) |
 | Colours the band | Yes, the only one (SOUND-STORY.md:69, 74) | No (SOUND-STORY.md:69) | No, never (SOUND-STORY.md:280) |
 | What you play around | It never moves. Its mounting turns the pulse into terrain: a road up to the core (the sheet) or lanes to dodge (the slag) | A guard stands between you and it, and its reach changes on a vertical rhythm (the hoist, the rising pool) | It moves you. A latched ball is thrown by the tilt or carried by the flight, so the rope is the fight |
@@ -38,7 +38,7 @@ K-F gives the kind its own body (unit KF6, section 11) on the same clamp base, s
 - **The hive dome.** About 10 m across and 8 m tall (start): 19 hexagonal cells in three rings (the queen, 6 round it, 12 outside), stacked into an uneven dome, not a smooth one. Each outer cell is about 1.6 m across with a three-plate iris shutter. Enamel stays dull petrol like the reactor's (`warden_kit.gd:6-9`), so the two ancients share a maker.
 - **The queen cell.** In the middle and on top, 1.6 m across and taller than the rest, with its own heavier shutter. It is the family weak point, `queen` (`src/combat/warden.gd:51`), open only in a stagger (`warden.gd:183-184`).
 - **Drones on the body.** Six to ten flat cast triangles crawl over the dome at all times (start), the same mesh as the enemy drone (`swarm_remnant.gd:263`). They are dressing, not enemies: the rule and the guard live in `swarm.gd`.
-- **Hardpoints.** Three grip cells, each a cell with a thick blue rim, for the harpoon (section 4).
+- **Hardpoints.** Three grip cells, each a cell with a thick green rim, for the harpoon (section 4).
 - **Mounting dress.** On the headframe the clamp's jaws close round the hoist cage's guide rails, so the hive hangs in the cage and the rope runs from its crown to the sheaves. In the sinkhole the jaws bite the gallery ring's inner timbers, and the dome hangs out over the pool on the wall, with brood comb spreading 10 m across the rock round it.
 
 ### 1.2 Light
@@ -107,13 +107,13 @@ Every Warden is a harpoon anchor (PARK.md:412-418). The framework is unit KF1; t
 
 | Behaviour | Rule (PARK.md:414-418) | On the headframe | In the sinkhole |
 | --- | --- | --- | --- |
-| Latch | 3 hardpoints rimmed in blue, bitten from rope range (45 m) | three grip cells on the hive's crown; they move with it | two gallery-ring posts 20 m either side of the nest (y -96) and one grip cell on the nest's crown |
+| Latch | 3 hardpoints rimmed in green, bitten from rope range (45 m) | three grip cells on the hive's crown; they move with it | two gallery-ring posts 20 m either side of the nest (y -96) and one grip cell on the nest's crown |
 | Ride | swing as on a world line; the winch shortens it; no drop inside the minimum rope | hang under the hive and ride its rise and fall | a pendulum over the pool from a ring post, or an orbit round the nest |
 | Fire from the line | the weapon slot fires while hanging; each bolt adds 1.5 posture, 3 during the charge (`boss_posture.gd:11-12`) | at the high dwell, hang below the hive and shoot it while the floor rack reforms | hang over the pool and shoot the nest while the lamp guard circles below |
 | Drag | when the mounting moves, the anchor moves | yes: 15 m/s up for 2 s, then slack on the fall | none: the nest never moves; the pool rises under you instead |
 | Resist | once per pulse cycle a lined hardpoint flares for the 2 s charge, then drops the line on the pulse; the ball keeps its velocity plus the lift | the snip (below) | the snip (below) |
 
-**The snip: how it resists.** The swarm shows PARK.md's shrug with drones. During the 2 s charge, a file of three drones runs up the lined rope from the hardpoint toward the ball. The rope's blue flickers and the buzz rises along it. On the pulse they cut the line, and the ball keeps its velocity plus the pulse's 10 m/s lift if it is inside the reach ring. You see the cut coming from 2 s away, you can let go early, and the cut never stops the ball (PARK.md:308).
+**The snip: how it resists.** The swarm shows PARK.md's shrug with drones. During the 2 s charge, a file of three drones runs up the lined rope from the hardpoint toward the ball. The rope's green flickers and the buzz rises along it. On the pulse they cut the line, and the ball keeps its velocity plus the pulse's 10 m/s lift if it is inside the reach ring. You see the cut coming from 2 s away, you can let go early, and the cut never stops the ball (PARK.md:308).
 
 **How it throws you.** On the headframe the throw is the hoist stop (section 3.1): ride the rise and the stop throws you onto the tipple deck. In the sinkhole the throw is the snip plus the pulse: a ball swinging from a ring post when the line is cut flies up the sinkhole wall, back onto the gallery ring.
 
@@ -230,7 +230,7 @@ Board `warden-swarm`, five panels (PARK.md:406):
 
 | Panel | Frame |
 | --- | --- |
-| `w1_body` | The hive alone on a plain ground: a lumpy honeycomb dome of hexagonal cells in dull petrol enamel, blue pinpricks in the seams, the queen cell taller on top, flat triangle drones crawling over it. |
+| `w1_body` | The hive alone on a plain ground: a lumpy honeycomb dome of hexagonal cells in dull petrol enamel, green pinpricks in the seams, the queen cell taller on top, flat triangle drones crawling over it. |
 | `w2_mount_a` | The headframe: the hive hanging in the hoist cage at its high dwell under the tipple deck, the black steel frame and sheave wheels above, the pit's benches behind in noon light. |
 | `w3_mount_b` | The sinkhole: the nest on the banded south wall over a round pool, the timber gallery ring, the lamp guard circling over the water, the green column rising to an afternoon sky. |
 | `w4_anchor` | A harpoon line from a grip cell to a ball hanging in the air, three drones walking the rope toward it. |

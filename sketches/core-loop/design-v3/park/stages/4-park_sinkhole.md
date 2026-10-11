@@ -212,7 +212,7 @@ Both rows carry `handling: "none"`. The monsoon changes the view and the sound: 
 - Skylights get no volumetric light shaft and no light pool. They show the sky colour through the hole and raise the ambient level in a 20 m radius (start), nothing more.
 - No warm OmniLight3D anywhere; drift lamps keep white, unpooled lenses (`src/presentation/dig_scenery.gd:404-405`).
 - Breach caps carry no light under them.
-- The only coloured light on a floor is a telegraph, a lamp swarm's lure bloom (an enemy's own read) or the brood's blue.
+- The only coloured light on a floor is a telegraph, a lamp swarm's lure bloom (an enemy's own read) or the brood's green.
 - The light column is vertical, 4 m wide, centred on the nest and the Warden's colour. It lights no floor patch along a line.
 
 ## 9. Traversal lines
@@ -229,7 +229,7 @@ Every line passes the waymarks `drop_in`, `tube_mouth`, `bounty_great_room`, `la
 | The Cannon | 1,832 m | 1.58 | 70.5 s | 20.6 / 30.2 / 19.7 | cannon tube, main tube upper's tail, main tube lower |
 | Floor line | 1,686 m | 1.46 | 84.3 s | 26.7 / 32.0 / 25.6 | main tubes, no harpoon, no contraption |
 
-**The flow line a skater takes.** Roll off the cone's north rim and carve the crater bowl, down and round to the breach on its south-east. Shoot the breach into the lava channel, a half-pipe of black cinder, and either drop into the tube mouth at the channel's end or let the fumarole throw you there. Under the roof the ride becomes a dark slalom: S-bends between basalt pillars, skylights flashing overhead, a fall of 43 m to the great room. Bank round the great room's cavern bowl past the hauler, take a lower tube another 45 m down, and burst out onto the gallery ring with the sky open 100 m above, the pool below and the brood glowing blue on the far wall.
+**The flow line a skater takes.** Roll off the cone's north rim and carve the crater bowl, down and round to the breach on its south-east. Shoot the breach into the lava channel, a half-pipe of black cinder, and either drop into the tube mouth at the channel's end or let the fumarole throw you there. Under the roof the ride becomes a dark slalom: S-bends between basalt pillars, skylights flashing overhead, a fall of 43 m to the great room. Bank round the great room's cavern bowl past the hauler, take a lower tube another 45 m down, and burst out onto the gallery ring with the sky open 100 m above, the pool below and the brood glowing green on the far wall.
 
 **Tricks it offers each pilot (verbs from the brief).**
 
@@ -290,7 +290,7 @@ Short field notes in the deep works' existing voice (`src/core/lore_rows.gd:195-
 | `lava_tube_flow` | `tube_mouth` | The tubes ran lava downhill, then nothing for a long time. The floors are polished anyway. |
 | `lava_cenote_note` | `west_gallery_1` | Flooded gallery: water clear to the bottom. The lights are not on the bottom. |
 | `mining_drift_tally` | `east_drift_1` | Drift tally: timber sets every six metres. One more set going in than coming out. |
-| `ancient_buried_lens` | `machine_vault` | Vault seam: blue, steady, warm to the glove. The seam is a lid. |
+| `ancient_buried_lens` | `machine_vault` | Vault seam: green, steady, warm to the glove. The seam is a lid. |
 | `mining_cap_stencil` | `great_room_cap` | Cap stencil: DO NOT SLAM. Bolts already loosened. From underneath. |
 | `mining_haulage_rails` | `east_haulage_1` | Haulage rails: ore cars ran to the pump shaft. Rails polished. No cars. |
 | `mining_gallery_timber` | `gallery_ring` | Gallery ring set at the hundred-metre mark. The brood has built a second ring inside it. |
@@ -327,9 +327,9 @@ Board id `park-4-park_sinkhole`. PARK.md section 6.1 panels in brackets. The pil
 2. **First flow line [p3_line].** Chase camera low in the lava channel, a half-pipe of black cinder with glassy walls, the ball high on the left wall. Ahead, the fumarole vents white steam and the tube mouth gapes, a collapsed skylight with the tube's dark throat beyond.
 3. **An enemy home [p4_home].** The flooded west gallery: a dark lava tube half full of clear still water, three lamp-swarm lures hanging over the surface as the only light, their reflections below. The Rivet ball cuts a straight wake through the middle at speed, the lures swinging toward where it was.
 4. **An event firing [p5_event].** Inside the west tube, looking up. The roof's crust cracks in a glowing ring (the `crust_crack` telegraph) and dust sifts down. Second beat: the roof has fallen away into a sky-lit trench, rubble banked into ramps along the walls, and a ball rides the bank past it.
-5. **The landmark approach [p3_line, second].** From inside the main lower tube, the round mouth ahead blazes with daylight. Through it, the sinkhole's far wall in banded basalt and limestone, the timber gallery ring, and the brood's blue nest. The ball is a silhouette against the light.
+5. **The landmark approach [p3_line, second].** From inside the main lower tube, the round mouth ahead blazes with daylight. Through it, the sinkhole's far wall in banded basalt and limestone, the timber gallery ring, and the brood's green nest. The ball is a silhouette against the light.
 6. **The Warden fight [p6_warden].** Wide shot from the gallery ring. The brood nest, a lumpy honeycomb of hexagonal cells, clings to the south wall over a round pool. The lamp guard circles over the water. A ball is mid-ram across the pool floor. Waterfall threads from the monsoon fall down the walls; the light column rises from the nest to the sky.
-7. **The drop finisher [p6_warden, second].** Stagger, the pool raised two steps: the nest's shutters are blown open and the queen cell swells blue. The ball falls from a harpoon swing straight onto it, the rope trailing.
+7. **The drop finisher [p6_warden, second].** Stagger, the pool raised two steps: the nest's shutters are blown open and the queen cell swells green. The ball falls from a harpoon swing straight onto it, the rope trailing.
 8. **The exit.** The pool flooded to the gallery ring, flat and bright, the nest dark and dripping. The bay's hover barge docks over the water by the gate, and the launch arc rises up the sinkhole's open throat toward the sky and the next world.
 
 ## 14. Calls, veto list and open questions
@@ -339,7 +339,7 @@ Board id `park-4-park_sinkhole`. PARK.md section 6.1 panels in brackets. The pil
 1. The great room is the one junction every line passes, and it hosts the hauler bounty as waymark 3.
 2. Five upper routes (main tube, skylight chain, flooded gallery, east drift, cannon tube) give each pilot family its own way; the floor line takes the main tubes.
 3. The pool rises 5 m a step from -120 to -105, and the break floods it to the gallery ring at -100.
-4. The light column is 4 m wide and blue. It is the stage's sight line, because the sinkhole cannot be seen from the plateau.
+4. The light column is 4 m wide and green. It is the stage's sight line, because the sinkhole cannot be seen from the plateau.
 5. Skylights get no light shaft or pool, following the wave 11 lamp veto.
 6. The ambush altar gives way to a hauler bounty in the great room.
 7. The Ancestral Puebloan granaries sit off every measured line, on the west loop, and host nothing hostile.

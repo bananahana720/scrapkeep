@@ -251,8 +251,8 @@ Draft text for the lore pass, in the tone of `SOUND-STORY.md:212`. Fragment ids 
 | `dam_era_bridge_plate` | pipeline bridge | Pipeline 3. Rated for water. Not rated for whatever you are. |
 | `dam_era_haul_sign` | east haul road | Haul road. Speed limit 25. Nobody has checked since. |
 | `dam_era_powerhouse_log` | powerhouse | Shift log: boiler 2 hot again. Relic on the face hums at night. Filed under not my problem. |
-| `dam_dedication_plaque` | the dam | Dedicated to the crews who poured the face. The bottom line is scratched out and rewritten in blue. |
-| `ancient_eye_marks` | the Eye | Marks cut round the Eye's rim, older than the wash. They glow faintly the same blue as the face. |
+| `dam_dedication_plaque` | the dam | Dedicated to the crews who poured the face. The bottom line is scratched out and rewritten in green. |
+| `ancient_eye_marks` | the Eye | Marks cut round the Eye's rim, older than the wash. They glow faintly the same green as the face. |
 | `ancient_vent_plate` | toe vent pits | A cast plate over a vent: no bolts, no seams. Warm. |
 | `ref_cliff_rooms` | cliff rooms | Rooms built into an alcove of the canyon wall, stone laid in mud mortar, sheltered from sun and flood by the overhang above. |
 | `ref_viga_beams` | viga span | Roof beams carried from far uplands, their ends left long past the wall. |
@@ -421,7 +421,7 @@ Board `park-1-park_dam`, panels per PARK.md:406. `p1_overhead` is plotted from s
 
 **Frame 4, an event firing.** The plunge pool from the toe apron. Left half: the telegraph, the pool's coping lit in the flood colour and water already sheeting off the spillway tunnel's outlet. Right half: three seconds later, the pool brimming and the ball riding its rim line where the floor line was.
 
-**Frame 5, the landmark approach.** Off the construction incline, the camera falling with the ball down the canyon wall toward the toe; the dam fills the frame, 120 m of curved concrete, the relic a squat blue-seamed drum clamped to its centre 22 m up, the powerhouse steaming to the right.
+**Frame 5, the landmark approach.** Off the construction incline, the camera falling with the ball down the canyon wall toward the toe; the dam fills the frame, 120 m of curved concrete, the relic a squat green-seamed drum clamped to its centre 22 m up, the powerhouse steaming to the right.
 
 **Frame 6, the Warden fight.** From the toe apron looking up the face: the gates over the relic open, a white water sheet pouring down the face, and the ball riding up the sheet toward the relic's open core, a harpoon line taut from a gate pier to the ball.
 

@@ -258,7 +258,7 @@ Short field notes in the Dig's existing voice (`src/core/lore_rows.gd:114-170`).
 | `mining_adit_docket` | `adit_east` | Adit docket: drill crew sent in. Drill crew sent back out. Different crew. |
 | `mining_winze_stencil` | `winze_west` | Winze cap stencil: DO NOT SLAM. Someone has scratched out the DO NOT. |
 | `mining_conveyor_tag` | `conveyor_gallery` | Belt tag: conveyor stopped, rollers turning. Grease fresh. Nobody on shift. |
-| `ancient_adit_seal` | `deep_adit` | Adit 4 sealed at the old lens. The seal is warm. The seam is blue. |
+| `ancient_adit_seal` | `deep_adit` | Adit 4 sealed at the old lens. The seal is warm. The seam is green. |
 | `mining_sump_gauge` | `floor_sump` | Sump gauge: dry at noon, full by two. No rain logged. |
 | `mining_hoist_boiler` | `hoist_house` | Boiler ticket: pressure steady. No fire lit. |
 | `mining_leach_ticket` | `leach_pads` | Leach pad ticket: copper drawn off, solution returned. Return volume exceeds issue. |
@@ -293,7 +293,7 @@ Board id `park-3-park_pit`. PARK.md section 6.1 panels in brackets. The pilot ba
 4. **An event firing [p5_event].** The tailings slump. Panel left: the telegraph, a dust curtain lifting along the bench 1 face and the `ground_slump` form crawling along its foot. Panel right, one bar later: the face has sheared into a smooth slide down to bench 2, and a ball is riding it.
 5. **The landmark approach [p3_line, second].** From the east dive kicker on the bench 2 lip, the ball in the air over bench 3 with the headframe filling the right half of frame. Inside the frame the hive hangs low at the collar, green seams lit, a rack of drones forming on the floor between it and the ball.
 6. **The Warden fight [p6_warden].** The hive at its high dwell just under the tipple deck. A harpoon line runs from a ringed grip cell down to the ball hanging 25 m above the floor. A file of drones climbs the rope toward the ball: the snip telegraph. Below, the hoist house and the floor dish.
-7. **The drop finisher [p6_warden, second].** Stagger. The hive has dropped to the collar, shutters blown open, the queen cell swollen and blazing blue. The ball falls from the tipple deck straight onto it.
+7. **The drop finisher [p6_warden, second].** Stagger. The hive has dropped to the collar, shutters blown open, the queen cell swollen and blazing green. The ball falls from the tipple deck straight onto it.
 8. **The exit.** The bay's hover barge docked over the gate on the pit floor, the headframe dark and still behind it, and the stage launch arc rising out of the pit toward the south-west and the next zone.
 
 ## 14. Calls, veto list and open questions

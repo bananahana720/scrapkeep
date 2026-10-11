@@ -245,7 +245,7 @@ The stage row keeps theme 1, the sluice palette with the funk slap bass (`alpha_
 | `dam_era_rim_milepost` | rim road | Milepost 3. The bend is prettier from here than from the bottom. |
 | `dam_era_headhouse_log` | head house | Head house log: flow normal. Relic warm. Do not let it touch the flume. Note added: it touched the flume. |
 | `dam_era_annex_dial` | heat-exchanger annex | A dial with one red band. The needle is in it. |
-| `headhouse_relic_plate` | the landmark | The relic's cast plate, the same blue as the dam's. Two of them. There were always more than one. |
+| `headhouse_relic_plate` | the landmark | The relic's cast plate, the same green as the dam's. Two of them. There were always more than one. |
 | `ref_canal_headgate` | main canal | A headgate where the canal leaves the river: a gap in a stone and brush weir, set so the river feeds the canal at its own pace. |
 | `ref_canal_gap_cut` | butte gap | The canal threads the gap between two buttes on the only line that keeps its fall. |
 | `ref_canal_turnout` | lateral canal | Turnouts let the main canal feed smaller ones; the fields get their water in turn. |
