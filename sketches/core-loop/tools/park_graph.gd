@@ -1242,7 +1242,9 @@ static func ruling(graph, park: Dictionary, built: Dictionary) -> Dictionary:
 				counts[ParkGraph.FLAG_NAMES[bit]] += 1
 	var longest := _longest(graph)
 	var spawn_beacon: float = graph.d_from[graph.beacon_node]
-	var spawn := spawn_check(graph, park)
+	var stage := stage_checks(graph, park)
+	var spawn_run: bool = stage["checked"].has("spawn")
+	var spawn: Dictionary = stage["spawn"] if spawn_run else {"ok": false, "d_landmark": INF, "farther_share": 0.0}
 	var pocket := pockets(graph, park)
 	var pocket_rows := []
 	for row in pocket["rows"]:
@@ -1267,11 +1269,12 @@ static func ruling(graph, park: Dictionary, built: Dictionary) -> Dictionary:
 		"flags": counts, "line_path_nodes": built["line_path"].size(),
 		"spawn_beacon_m": _json_m(spawn_beacon), "longest_est_m": _json_m(longest),
 		"spawn_beacon_share": "%.3f" % (spawn_beacon / longest if longest > 0.0 and spawn_beacon < INF else 0.0),
-		"spawn": {"ok": spawn["ok"], "d_landmark": _json_m(spawn["d_landmark"]), "farther_share": "%.3f" % spawn["farther_share"]},
+		"spawn": {"ok": spawn["ok"], "run": spawn_run, "d_landmark": _json_m(spawn["d_landmark"]), "farther_share": "%.3f" % spawn["farther_share"]},
+		"stage_checked": stage["checked"], "first_failed": stage["first_failed"],
 		"routes": route_steps(graph, park),
 		"pockets": pocket_rows, "breaches": pocket["breaches"],
 		"full_visit_m": _json_m(pocket["full_visit_m"]), "full_visit_ratio": ratio,
-		"reward_ratio": reward, "beacon_ok": beacon_check(graph, park)["ok"], "targets": targets,
+		"reward_ratio": reward, "beacon_ok": stage["beacon"]["ok"], "targets": targets,
 	}
 
 
@@ -1346,8 +1349,15 @@ static func report_text(info: Dictionary) -> String:
 		lines.append("LINE BROKEN: %s" % problem)
 	lines.append("spawn to beacon %s m over the longest shortest path (estimate) %s m: share %s (start target 0.6, reported)" % [
 		info["spawn_beacon_m"], info["longest_est_m"], info["spawn_beacon_share"]])
-	lines.append("spawn d_landmark %s m, farther share of open nodes %s: %s" % [info["spawn"]["d_landmark"],
-		info["spawn"]["farther_share"], "farthest quarter" if info["spawn"]["ok"] else "NOT in the farthest quarter"])
+	if info["spawn"].get("run", true):
+		lines.append("spawn d_landmark %s m, farther share of open nodes %s: %s" % [info["spawn"]["d_landmark"],
+			info["spawn"]["farther_share"], "farthest quarter" if info["spawn"]["ok"] else "NOT in the farthest quarter"])
+	else:
+		lines.append("spawn rule not run: the beacon rule failed first")
+	if String(info.get("first_failed", "")) != "":
+		lines.append("first failed: %s" % info["first_failed"])
+	else:
+		lines.append("stage rules: %s passed" % ", ".join(info.get("stage_checked", [])))
 	var ids: Array = info["routes"].keys()
 	ids.sort()
 	for id in ids:

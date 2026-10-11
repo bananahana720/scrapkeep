@@ -194,6 +194,9 @@ func _beacon(tool: GDScript, graph, park: Dictionary) -> void:
 	t.check("the ruling of a bad beacon has beacon_ok false", not bad_rule.get("beacon_ok", true), str(bad_rule.get("beacon_ok")))
 	t.eq("the ruling of a bad beacon and bad spawn names beacon_ok first", bad_rule.get("first_failed"), "beacon_ok")
 	t.eq("the ruling does not run spawn after the beacon fails", bad_rule.get("stage_checked"), ["beacon_ok"])
+	for rule in [good_rule, bad_rule]:
+		rule["map"] = "park_test"
+		rule["bytes"] = 0
 	var bad_report: String = tool.report_text(bad_rule)
 	t.check("the report of a bad beacon prints the first failed rule", bad_report.contains("first failed: beacon_ok"), bad_report.substr(0, 400))
 	var good_report: String = tool.report_text(good_rule)

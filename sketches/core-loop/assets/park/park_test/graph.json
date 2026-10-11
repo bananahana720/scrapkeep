@@ -4,6 +4,7 @@
   "breaches": [],
   "bytes": 824822,
   "edges": 321135,
+  "first_failed": "",
   "flags": {
     "deck": 68,
     "door_ok": 39872,
@@ -143,10 +144,15 @@
   "spawn": {
     "d_landmark": 1303,
     "farther_share": "0.152",
-    "ok": true
+    "ok": true,
+    "run": true
   },
   "spawn_beacon_m": 1303,
   "spawn_beacon_share": "0.575",
+  "stage_checked": [
+    "beacon_ok",
+    "spawn"
+  ],
   "targets": [
     {
       "name": "reward_ratio",
@@ -161,5 +167,5 @@
       "value": 1.624
     }
   ],
-  "tool_sha256": "5b2ae55a7d1f85b803e95b8e63c9f9b8a9002e33f86ce90d84ae78c4c96b1072"
+  "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"
 }
