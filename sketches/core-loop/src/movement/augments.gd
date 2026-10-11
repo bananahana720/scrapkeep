@@ -331,10 +331,14 @@ static func attach(kit, from: Vector3, point: Vector3, normal := Vector3.ZERO, b
 	kit.hooked = true
 	kit.anchor = point
 	kit.anchor_normal = normal
-	kit.rope = maxf(MIN_ROPE, from.distance_to(point))
 	kit.on_body = body != null
 	kit.anchor_body = body
 	kit.anchor_offset = point - body.global_position if body != null else Vector3.ZERO
+	# A Warden line rides from the hardpoint nearest the bite (PARK.md section 7); the offset
+	# keeps the bite, so a committed haul still homes where it bit (_follow).
+	if body != null and anchor_line(body):
+		kit.anchor = body.anchor_point(point)
+	kit.rope = maxf(MIN_ROPE, from.distance_to(kit.anchor))
 	kit.line_state = LINE_LATCHED
 	kit.smash_left = 0.0
 	kit.slamming = false
@@ -663,6 +667,8 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 			return
 		if kit.line_state == LINE_SMASH:
 			_haul(kit, tuning, intent, body_state, step)
+		elif anchor_line(kit.anchor_body):
+			_ride_anchor(kit, tuning, intent, body_state, step)
 		elif intent.harpoon_held:
 			_winch_body(kit, tuning, body_state, step)
 		return
@@ -690,21 +696,50 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 	body_state.linear_velocity = v
 
 
+# A Warden is a harpoon anchor (PARK.md section 7): its line is a world line whose anchor
+# moves with the body. Only a body that names its hardpoints and its anchor speed is one.
+static func anchor_line(body) -> bool:
+	return is_instance_valid(body) and body.has_method("anchor_point") and body.has_method("anchor_velocity")
+
+
+# A latched Warden line rides as a world line (_grapple's rope below): right mouse held
+# winches it, and the rope cancels the ball's outward speed measured against the moving
+# anchor, so a moving mounting drags the ball on the rope's tension.
+static func _ride_anchor(kit, tuning, intent, body_state, step: float) -> void:
+	if intent.harpoon_held:
+		_winch_body(kit, tuning, body_state, step)
+	var to_anchor: Vector3 = kit.anchor - body_state.transform.origin
+	var dist := to_anchor.length()
+	if dist < 0.001 or dist <= kit.rope:
+		return
+	var dir := to_anchor / dist
+	var v: Vector3 = body_state.linear_velocity
+	var carried: Vector3 = kit.anchor_body.anchor_velocity()
+	var outward := -(v - carried).dot(dir)
+	if outward > 0.0:
+		v += dir * outward
+	v += dir * (dist - kit.rope) * tuning.f("rope_spring")
+	body_state.linear_velocity = v
+
+
 # Moves the anchor with the body. The line lets go, keeping the ball's velocity, when
 # the body is gone, stretched past BREAK_STRETCH ranges, or (latched only) passed inside
 # the minimum rope and both radii, measured centre to centre whatever point the bite stored:
-# an enemy line has no pendulum to dead-stop on.
+# an enemy line has no pendulum to dead-stop on. A Warden line has one (anchor_line), so
+# it holds there and the ball orbits or hangs.
 static func _follow(kit, tuning, origin: Vector3) -> bool:
 	var body = kit.anchor_body
 	if not is_instance_valid(body) or not body.is_inside_tree() or (body.has_method("is_dead") and body.is_dead()):
 		kit.drop_line("body_died")
 		return false
 	kit.anchor = body.global_position + kit.anchor_offset
+	if kit.line_state == LINE_LATCHED and anchor_line(body):
+		kit.anchor = body.anchor_point(kit.anchor)
 	var dist := origin.distance_to(kit.anchor)
 	if dist > BREAK_STRETCH * tuning.f("rope_range"):
 		kit.drop_line("out_of_reach")
 		return false
-	if kit.line_state == LINE_LATCHED:
+	if kit.line_state == LINE_LATCHED and not anchor_line(body):
 		var radius = body.get("radius")
 		var centre_dist := origin.distance_to(body.global_position)
 		if centre_dist <= MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0):

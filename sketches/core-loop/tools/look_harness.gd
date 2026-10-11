@@ -27,6 +27,8 @@ extends SceneTree
 #   --pair --base=<sha7>  after rendering, writes <out>/pairs/<subject>__<camera>/{a,b}.png and
 #     <out>/pairs/key.json; which side is the baseline is the subject/camera coin (look_subjects.coin),
 #     never printed. A subject whose base and head frames.json name different adapters is not paired.
+#     A missing or empty baseline fails the run before it renders (exit 2), and a run that makes
+#     0 pairs fails after it (exit 1); either prints the reason (pair_problem).
 #   Every frames.json in a run must name the run's adapter; a drift fails the run.
 #   Non-ui subjects hide the Moss bubble and the world prompts (presentation.hide_ui) unless --hide-ui=0.
 # Serve: --serve --out=<abs dir> renders each <out>/requests/<id>.json ({"subjects": [...]} or
@@ -115,6 +117,12 @@ func _initialize() -> void:
 		printerr("look_harness: --pair needs --base=<sha7>")
 		quit(2)
 		return
+	if pair:
+		var why := pair_problem(baseline_root.path_join(base))
+		if not why.is_empty():
+			printerr("look_harness: --pair FAIL: ", why)
+			quit(2)
+			return
 	root.size = SIZE
 	root.content_scale_size = SIZE
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
@@ -215,8 +223,9 @@ func _summarize(subjects: Array, dir: String, groups: Array) -> int:
 			if Subjects.needs_ball(n) and (not fr["ball"]["in_frame"] or not fr["ball"].get("seen", false)):
 				no_ball.append("%s/%s" % [n, fr["id"]])
 	var failed_groups: Array = groups.filter(func(r): return r["rc"] != 0).map(func(r): return r["group"])
+	var pair_why := _pair(subjects, dir) if pair else ""
 	var doc := {"tool": "look_harness.gd", "variant": variant, "preset": preset, "adapter": adapter, "subjects": subjects.size(), "groups": groups,
-		"dead": dead, "missing": missing, "ball_out_of_frame": no_ball, "adapter_drift": drift, "failed_groups": failed_groups}
+		"dead": dead, "missing": missing, "ball_out_of_frame": no_ball, "adapter_drift": drift, "failed_groups": failed_groups, "pair_problem": pair_why}
 	var f := FileAccess.open(dir.path_join("run.json"), FileAccess.WRITE)
 	f.store_string(JSON.stringify(doc, "\t"))
 	f.close()
@@ -224,9 +233,7 @@ func _summarize(subjects: Array, dir: String, groups: Array) -> int:
 	for m in missing: print("MISSING ", m)
 	for b in no_ball: print("NO_BALL ", b)
 	for a in drift: print("ADAPTER_DRIFT ", a, " (run on ", adapter, ")")
-	if pair:
-		write_pairs(subjects, baseline_root.path_join(base), dir, dir.path_join("pairs"))
-	var bad := not dead.is_empty() or not missing.is_empty() or not failed_groups.is_empty() or not no_ball.is_empty() or not drift.is_empty()
+	var bad := not dead.is_empty() or not missing.is_empty() or not failed_groups.is_empty() or not no_ball.is_empty() or not drift.is_empty() or not pair_why.is_empty()
 	print("look_harness: %s subjects=%d dead=%d missing=%d no_ball=%d adapter_drift=%d failed_groups=%d adapter=%s" % ["FAIL" if bad else "PASS", subjects.size(), dead.size(), missing.size(), no_ball.size(), drift.size(), failed_groups.size(), adapter])
 	return 1 if bad else 0
 
@@ -382,6 +389,29 @@ static func write_pairs(subjects: Array, base_dir: String, head_dir: String, pai
 	f.close()
 	print("pairs: %d written to %s (key in key.json)" % [made, pair_dir])
 	return made
+
+
+# Pairs the run against --base and returns why the pairing proved nothing, "" when it made pairs.
+func _pair(subjects: Array, dir: String) -> String:
+	var base_dir := baseline_root.path_join(base)
+	var why := pair_problem(base_dir)
+	if why.is_empty():
+		why = pair_problem(base_dir, write_pairs(subjects, base_dir, dir, dir.path_join("pairs")))
+	if not why.is_empty():
+		printerr("look_harness: --pair FAIL: ", why)
+	return why
+
+
+# Why a blind pair against base_dir proves nothing: the baseline is missing, empty, or (made
+# given) yielded no pair. "" when it is sound.
+static func pair_problem(base_dir: String, made := -1) -> String:
+	if not DirAccess.dir_exists_absolute(base_dir):
+		return "baseline %s does not exist" % base_dir
+	if DirAccess.get_directories_at(base_dir).is_empty() and DirAccess.get_files_at(base_dir).is_empty():
+		return "baseline %s is empty" % base_dir
+	if made == 0:
+		return "0 pairs against baseline %s (key.json names each refusal)" % base_dir
+	return ""
 
 
 # A pair is only fair on one card and driver: the adapter a subject folder's frames.json names.
@@ -1118,9 +1148,11 @@ func _customize() -> void:
 
 
 # ---------------------------------------------------------------- Hoberman mecha per pilot (PD-0)
-# Each pilot boots once (its row's "pilot" is the class index), the ball stands frozen, and each
-# heft row shows that class's chunk load. Until each pilot's P-D unit lands, the shell is the
-# pilot's current one (VD-01 glass); the heft layers land with B5 and the pilot units.
+# Each pilot boots once (its row's "pilot" is the class index), the ball stands frozen on the
+# floor under where it spawned, and each row shows its heft class's layers. Heft rows also carry
+# that class's chunk load; rule rows ("chunks": false) carry none, as ROSTER-LOOK section 3 rules
+# 1 to 3 measure. Every row is posed chase from behind: the Pod faces -Z, away from the cge eyes,
+# its WeaponRing aims straight ahead and the gimbal follows the Core against the posed Pod.
 const CGE_MASS := {1: 0.0, 3: 60.0, 5: 400.0}
 
 
@@ -1136,13 +1168,45 @@ func _cge() -> void:
 			await process_frame
 		class_index = pilot
 		await _boot_play(1)
-		game.player.body().freeze = true
+		var body: RigidBody3D = game.player.body()
+		body.freeze = true
+		# The spawn leaves the ball in the air; the anchor is the floor under it, so the camera
+		# target and the pinned ball agree and the far eye keeps the whole ball in frame.
+		var at: Vector3 = game.player.ball_position()
+		var floor_hit := _ray(at + Vector3.UP * 2.0, at + Vector3.DOWN * 80.0)
+		if not floor_hit.is_empty():
+			at = floor_hit["position"] + Vector3.UP * Tuning.RADIUS
+		body.global_position = at
+		_ball_root().global_position = at
+		var hero = game.presentation.hero_assets
 		for n in mine:
 			var heft := int(Subjects.SUBJECTS[n]["heft"])
-			game.build.accretion.show_build(CGE_MASS[heft], [], [], heft)
+			var chunks: bool = Subjects.SUBJECTS[n].get("chunks", true)
+			game.build.accretion.show_build(CGE_MASS[heft] if chunks else 0.0, [], [], heft)
+			hero.set_heft_class(hero.shell_of(game.player).get("shell", {}), heft, false)
+			paused = false
 			await _frames(5)
-			_anchor("ball", game.player.ball_position())
-			await _shoot(n, {"pilot": pilot, "heft": heft, "shell": game.presentation.hero_assets.shell_of(game.player).get("class", "")})
+			await _wait_tick(n)
+			paused = true
+			_pose_chase(hero)
+			_anchor("ball", at)
+			await _shoot(n, {"pilot": pilot, "heft": heft, "chunks": chunks, "pose": "chase", "shell": hero.shell_of(game.player).get("class", "")})
+		paused = false
+
+
+func _pose_chase(hero) -> void:
+	var rec: Dictionary = hero.shell_of(game.player)
+	var pod = rec.get("pod")
+	var core = rec.get("core")
+	if pod == null or not is_instance_valid(pod):
+		return
+	(pod as Node3D).global_rotation = Vector3.ZERO
+	var ring := (pod as Node3D).get_node_or_null("WeaponRing") as Node3D
+	if ring != null:
+		ring.rotation = Vector3.ZERO
+	var gyro := (pod as Node3D).get_node_or_null("Gyro") as Node3D
+	if gyro != null and gyro.has_node("GyroInner") and core != null and is_instance_valid(core):
+		hero.counter_tilt(pod, gyro, core)
 
 
 # ---------------------------------------------------------------- boss smoke

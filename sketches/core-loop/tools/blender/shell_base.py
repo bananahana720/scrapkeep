@@ -285,10 +285,16 @@ LATTICE_OUTER = 0.975
 STRUT_PAIR = 0.035
 LATTICE_INNER = LATTICE_OUTER - STRUT_PAIR
 HUB_RADIUS = LATTICE_OUTER - STRUT_PAIR / 2
-BAR_WIDTH = 0.10
+# Strut bar face width and hub tread cap diameter. hoberman() and lattice() take strut_width and
+# cap_width; these are the defaults. 2026-10-10 (PD-0b): 0.10 / 0.14 (ROSTER-LOOK section 3 rule 7)
+# down to 0.06 / 0.10 by the strut-table rule: no width from 0.10 to 0.05 met rule 1 (pilot 75%,
+# head 90%) on the neutral shell, so the rule's fallback applies (0.06 m is about 6 px at the
+# chase mid eye); the coordinator re-pins rules 1 and 7 from that table.
+BAR_WIDTH = 0.06
+CAP_WIDTH = 0.10
 CHAIN_WIDTH = 0.12
 HUB_BODY = (0.10, 0.937, LATTICE_OUTER)      # radius, inner and outer reach of the copper drum
-HUB_CAP = (0.07, 0.962, 0.9824)              # the rubber tread cap; its rim reaches CORE_LIMIT
+HUB_CAP = (CAP_WIDTH / 2, 0.962, 0.9824)     # the rubber tread cap; its rim reaches CORE_LIMIT
 HUB_CLEAR = 0.075                            # chain ends tuck under the hub drum
 # One equator gap faces the front (+Y) and one the rear, so the face and the head show
 # through open diamonds in the rest pose.
@@ -419,9 +425,10 @@ def _slerp(a, b, t):
     return (a * math.sin((1 - t) * om) + b * math.sin(t * om)) / math.sin(om)
 
 
-def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None):
+def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None, strut_width=BAR_WIDTH, cap_width=CAP_WIDTH):
     """The Core: hubs with tread caps and the scissor chains between them. Returns the layout."""
     rng = rng or random.Random("scrapkeep-hoberman")
+    cap_r = cap_width / 2
     hubs, links, gaps = lattice_layout()
     r_outer_bar = LATTICE_OUTER - STRUT_PAIR / 4
     r_inner_bar = LATTICE_INNER + STRUT_PAIR / 4
@@ -434,9 +441,9 @@ def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None):
             t1 = span + (1 - 2 * span) * (k + 1) / pairs
             c0, c1, cm = _slerp(a, b, t0), _slerp(a, b, t1), _slerp(a, b, (t0 + t1) / 2)
             _bar(part, c0 * r_outer_bar - s * CHAIN_WIDTH / 2, c1 * r_outer_bar + s * CHAIN_WIDTH / 2,
-                 BAR_WIDTH, STRUT_PAIR / 2, "paint", enamel)
+                 strut_width, STRUT_PAIR / 2, "paint", enamel)
             _bar(part, c0 * r_inner_bar + s * CHAIN_WIDTH / 2, c1 * r_inner_bar - s * CHAIN_WIDTH / 2,
-                 BAR_WIDTH, STRUT_PAIR / 2, "paint", enamel)
+                 strut_width, STRUT_PAIR / 2, "paint", enamel)
             _disc(part, cm * (LATTICE_OUTER + 0.002), cm, 0.028, 6, "copper")
             if k > 0:
                 for side in (-1, 1):
@@ -445,11 +452,12 @@ def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None):
     for h, d in enumerate(hubs):
         _drum(part, d, HUB_BODY[0], HUB_BODY[1], HUB_BODY[2], hub_sides, "copper", roll=0.0)
         # Rule 8: each cap's tread turns differently, so the pattern cannot strobe.
-        _drum(part, d, HUB_CAP[0], HUB_CAP[1], HUB_CAP[2], cap_sides, "rubber",
+        _drum(part, d, cap_r, HUB_CAP[1], HUB_CAP[2], cap_sides, "rubber",
               roll=rng.uniform(0, math.tau), bottom=False)
-    # The chalk balance mark on one tread cap, so the eye can count a turn (rule 8).
+    # The chalk balance mark on one tread cap, so the eye can count a turn (rule 8); it scales
+    # with the cap (0.035 m out, 0.018 m radius on the 0.14 m cap).
     e1, _ = _frame(hubs[0])
-    _disc(part, hubs[0] * (HUB_CAP[2] + 0.0003) + e1 * 0.035, hubs[0], 0.018, 6, "paint", "bone")
+    _disc(part, hubs[0] * (HUB_CAP[2] + 0.0003) + e1 * (cap_r * 0.5), hubs[0], cap_r * 0.018 / 0.07, 6, "paint", "bone")
     _sharpen(part)
     return hubs, links, gaps
 
@@ -562,7 +570,7 @@ def cockpit(seat="bone", bank=(("Slot2", "lever"), ("Slot3", "lever"))):
 
 
 def hoberman(name, enamel="petrol", seat="bone", pairs=2, bank=(("Slot2", "lever"), ("Slot3", "lever")),
-             pilot=None, hub_sides=8, cap_sides=8):
+             pilot=None, hub_sides=8, cap_sides=8, strut_width=BAR_WIDTH, cap_width=CAP_WIDTH):
     """Builds the Hoberman base under a new root. pilot: a Part for the seated body (a recipe's
     placeholder), or None for an empty Pilot node. Returns {root, core, pod, gyro, ring, pilot,
     hubs, gaps} (Blender objects; hubs and gaps are the empties in index order)."""
@@ -570,7 +578,8 @@ def hoberman(name, enamel="petrol", seat="bone", pairs=2, bank=(("Slot2", "lever
         raise ValueError("bank names the slot 2 and slot 3 controls, %d given" % len(bank))
     root = common.empty("Shell" + name)
     core_part = Part("Core")
-    hub_dirs, _, gap_dirs = lattice(core_part, enamel, pairs, hub_sides, cap_sides, rng_for(name + "-lattice"))
+    hub_dirs, _, gap_dirs = lattice(core_part, enamel, pairs, hub_sides, cap_sides, rng_for(name + "-lattice"),
+                                    strut_width, cap_width)
     core = core_part.to_object((0, 0, 0), root)
     hubs = [_point_empty("Hub.%02d" % i, d, HUB_RADIUS, core) for i, d in enumerate(hub_dirs)]
     gaps = [_point_empty("Gap.%02d" % i, d, HUB_RADIUS, core) for i, d in enumerate(gap_dirs)]

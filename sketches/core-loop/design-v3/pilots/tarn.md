@@ -348,7 +348,7 @@ Tarn already has two paints: Redjaw Ash, the starter, and Dig Ochre, earned by s
 
 | Slot | Id | Name | Look | Earned by |
 | --- | --- | --- | --- | --- |
-| trail | `trail_tarn_claw_marks` | Claw Marks | two parallel scored lines 0.6 m apart in bone, broken every 1.5 m like tooth gaps | achievement `tarn_dragged_50`, "Drag 50 machines into your claws.": on `line_skill_fired` with `ability_id` `claw_drag` and `on` `body`, count 50 |
+| trail | `trail_tarn_claw_marks` | Claw Marks | two parallel scored lines 0.6 m apart in bone, broken every 1.5 m like tooth gaps | "Ten in the Claws": "Drag ten machines into your claws in one stage."; discovery `tarn_dragged` |
 | shell variant | `shell_tarn_redjaw_teeth` | Redjaw Teeth | bone-white replacement teeth with copper rivets (brass is the Furnace Fleet's colour, `ROSTER-LOOK.md` §6 and §0.7) on both ring blades and both claw arms, and a spare-tooth rack on a rear hub. The Redjaw benches keep worn teeth "until someone proves a better replacement" (`BIBLE.md:135`). | achievement `tarn_six_at_once`, "Land Redjaw Rend on six machines at once.": on `ultimate_landed` with `ultimate_id` `redjaw_rend` and `hits` 6 or more, count 1 |
 | outfit | `outfit_tarn_steady_cap` | Steady Cap | a clean welding cap with one Redjaw stripe, in place of the battered one (`BIBLE.md:325`) | hidden discovery `tarn_hold_still`, "Hold still.": break a hostile hold with Q three times as Tarn (`hold_broken` with method `ultimate`, `game_events.gd:130`). **A2-CRITIC:** an achievement row cannot test the pilot (`src/core/progress.gd:259-288`), so Tarn's kit code counts the breaks and grants through `synergy_discovered`, as the Rivet and Kest sheets do. Beat text: "Hold still. The machine, I mean." (`BIBLE.md:329`) |
 
