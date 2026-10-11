@@ -4,7 +4,7 @@ Evidence: shipped data tables (level 4 at measurement, scripts outside the repo;
 
 ## What it does
 
-**Families by chassis and movement.** The wiki groups enemies in six categories by chassis, and the asset folders use six family tokens that do not map one to one onto the wiki's six or onto the table's classes. This note renames the families in its own words: ground walker, airborne, fixed emplacement, small walker, rail labourer, pod and heavy. Movement class is a separate axis in the tables: 58 rows fixed, 45 ground-moving, 36 airborne. Read as one rule per family (inference from table classes and wiki one-line attacks):
+**Families by chassis and movement.** The wiki groups enemies in six categories by chassis, and the asset folders use six family tokens that do not map one to one onto the wiki's six or onto the table's classes. This note names the seven asset-folder families in its own words: ground walker, airborne, fixed emplacement, small walker, rail labourer, pod and heavy. Movement class is a separate axis in the tables: 58 rows fixed, 45 ground-moving, 36 airborne. Read as one rule per family (inference from table classes and wiki one-line attacks):
 
 - **Ground walker:** walks, shoots a blaster, throws a grenade; the stable infantry read. Health median 135.
 - **Airborne:** hovers or dives; its attacks are a charge-up then a dive, a slow-tracking ray, or a flash. Health median 120, speed up to 1,600 cm/s.
@@ -28,7 +28,7 @@ Across all enemies, bones have a median of 27 and a 90th percentile of 55; bosse
 
 **What makes a silhouette read (inference).** The wiki and tables do not say; the pattern across the one-line attack texts is that each enemy has one threat feature and that feature is also its warning: a lens or light that charges before a flash or beam, a body that hides then strikes, a rail that declares its path. Each boss is described by one signature mechanic that changes its arena or rules: proximity detonation, burrowing, rail-bound movement, a forcefield, floor collapse (Bosses.txt:11, 25, 54, 68, 86). Boss time-to-kill was tuned to be similar across bosses (Updates.txt:1190).
 
-**Squad anchors.** Arena and corridor pieces carry 5,979 enemy anchors. Each records the connector side it sits on, not a facing, and a type. The tallies of non-default values are 1,892 airborne and 1,091 fixed, and the tally skips default values, so about 3,000 anchors carry the default type (PIECES-MEASURED.md:16, 81, 102). The anchor fixes the chassis class, and the spawner picks the specific enemy (inference). Wave counts per anchor are not decoded.
+**Squad anchors.** The 151 pieces carry 5,979 enemy anchors in all, most of them in corridor connectors and arena pieces. Each records the connector side it sits on, not a facing, and a type. The tallies of non-default values are 1,892 airborne and 1,091 fixed, and the tally skips default values, so about 3,000 anchors carry the default type (PIECES-MEASURED.md:16, 81, 102). The anchor fixes the chassis class, and the spawner picks the specific enemy (inference). Wave counts per anchor are not decoded.
 
 **Respawn rule.** Arena respawns lower the chance of the type just killed (Updates.txt:1180-1181), spreading families across the arena.
 

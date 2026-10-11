@@ -40,7 +40,7 @@ flowchart TD
 | Neutral perk behavior | repeatable, unlocks nothing | wiki (public): Neutral Perks page, line 10 |
 | Neutral perk examples | several at +10% per step; reload +12% with move +6%; health +10%; crit damage +10% | wiki (public): Neutral Perks page, lines 30, 38, 46, 54, 62, 78 |
 | Perk table rows | 390 data rows (the perk table, the shipped item table); header rows split them into seven class sections of 54 / 58 / 76 / 37 / 46 / 45 / 59, which sum to 375; the other 15 rows are unexplained | shipped data tables (level 4 for counts); the class split is an inference from the header rows |
-| Perk rarity in data | unset on 231 rows, common on 158, epic on 1; most costs 1, maximum 12 | shipped data tables (level 4 at measurement) |
+| Perk rarity in data | unset on 231 rows, set on 159 in two tiers (158 and 1); most costs 1, maximum 12 | shipped data tables (level 4 at measurement) |
 | Primary cooldowns | dash class 8 s, stealth class 15 s, weapon-eating class 8 s, explosives class 8 s, elemental class 7 s; tank-like class has a 3 s shield limit; drone class has scrap-based reduction of 1 s each | wiki (public): class pages, lines cited in the movement note and Commando line 19, Elementalist line 15, Guardian lines 12 to 20, Engineer lines 17 to 19 |
 | Passive numbers (examples) | combo counter of 5; focus up to 16 at 1.5% crit damage each; element rotation every 10 s with +15% damage; start at 50% health, heal 15% per weapon eaten | wiki (public): class pages, lines cited per class in the scout report |
 | Crit rule | weak points deal 1.25x by default; a separate roll adds auto-crit | wiki (public): Criticals page, line 6 |

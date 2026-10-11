@@ -10,7 +10,7 @@ Evidence: shipped data tables parsed to the last byte (level 4 at measurement, s
 
 **One interrupt window for everyone.** Stagger duration is 1.25 s on nearly every row (median and 90th percentile both 1.25 s), so a staggered enemy is open for the same beat whatever its chassis. Impact resistance, not stagger length, decides whether a hit staggers: median 65 to 70, 90th percentile 1,100, maximum 4,600.
 
-**The telegraph grammar.** Every enemy skill (169 rows, 0 to 6 skills per enemy; 41 enemies have none, 54 have one) joins to an attack definition (112 rows). The same four numbers describe every attack: pre-shoot time (the wind-up before the hit resolves), recovery time (the vulnerable tail), cooldown, and for area attacks a radius.
+**The telegraph grammar.** Every enemy skill (169 rows, 0 to 6 skills per enemy; 28 enemies have none, 54 have one) joins to an attack definition (112 rows). The same four numbers describe every attack: pre-shoot time (the wind-up before the hit resolves), recovery time (the vulnerable tail), cooldown, and for area attacks a radius.
 
 - Pure projectiles: pre-shoot median 0.75 s, 90th percentile 0.75 s, maximum 1.75 s; recovery median 0.75 s; cooldown median 0.
 - Projectile with an area on impact: pre-shoot median 0.75 s, 90th percentile 1 s, maximum 2.5 s; cooldown 90th percentile 6 s; radius median 2.4 m, maximum 8.5 m.
@@ -47,7 +47,7 @@ flowchart TD
 | Health, all enemies | min 1 (10 after header exclusion), median 120, 90th percentile 5,000, max 13,000 | tables, enemy statistics and summary |
 | Health by class, median | small walker 60, labourer 80, airborne 120, fixed 120, ground walker 135 | tables, per-class summary |
 | Move speed, all | median 600 to 650 cm/s, 90th percentile 1,250, max 1,600 | tables (two outputs differ slightly) |
-| Move speed, turret and worker | 400 cm/s each (turret to 450) | tables, per-class summary |
+| Move speed, fixed emplacements and labourers | 400 cm/s each (turret to 450) | tables, per-class summary |
 | Stagger duration | 1.25 s median and 90th percentile, 0.1 to 0.2 s minimum | tables |
 | Impact resistance | median 65 to 70, 90th percentile 1,100, max 4,600 | tables |
 | Flags | boss 32, elite 7, big 7, no overlap | tables |
