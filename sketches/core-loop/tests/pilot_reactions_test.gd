@@ -1,5 +1,14 @@
 extends SceneTree
 
+# Re-pinned 2026-10-11 (PE-0, design-v3/PILOT-CLIPS.md section 8): the rows now name the eleven
+# new clips, which today's GLBs lack, so the asset check follows src/presentation/clips/roster.json
+# instead of the rows: a pilot with has_table true carries all 18 roster clips, one without carries
+# the seven kept ones. Loops are allowed only for names ending in _loop. After a one-shot the base
+# loop idle_loop plays when the GLB has it, else the animator is stopped (the transitional branch;
+# PE-INT removes it once all six carry 18). A row may name its bus signal under "signal", so the
+# bus check reads signal_of(). The check count changes with the row and clip counts.
+
+const Trigger := preload("res://tests/support/pilot_clip_trigger.gd")
 const Game := preload("res://src/game.gd")
 const Hero := preload("res://src/presentation/hero_assets.gd")
 const Reactions := preload("res://src/presentation/pilot_reactions.gd")
@@ -23,7 +32,7 @@ func _initialize() -> void:
 	var bus_names: Array = GameEvents.signal_names()
 	for event in Reactions.ROWS:
 		check(event + " carries no pending flag", not Reactions.ROWS[event].has("pending"))
-		check(event + " names a signal on the bus", bus_names.has(event))
+		check(event + " names a signal on the bus", bus_names.has(Reactions.signal_of(event)))
 	if not policy_only:
 		check_assets()
 	else:
@@ -42,14 +51,20 @@ func check_assets() -> void:
 			pilot.free()
 			continue
 		root.add_child(pilot)
-		for event in Reactions.ROWS:
-			var clip := Reactions.clip_for(Reactions.ROWS[event], class_id)
-			check("%s / %s -> %s exists (including pending rows)" % [class_id, event, clip], animator.has_animation(clip))
+		var roster := Trigger.roster()
+		var stem := Trigger.stem_of(class_id)
+		check(class_id + " has a roster row", stem != "")
+		var has_table: bool = roster.get("pilots", {}).get(stem, {}).get("has_table", false)
+		var required: Array = Array(roster.get("kept", [])) + (Array(roster.get("new", [])) if has_table else [])
+		check("%s carries %d roster clips (has_table %s)" % [class_id, required.size(), has_table], required.size() == (18 if has_table else 7))
+		for clip in required:
+			check("%s / %s exists" % [class_id, clip], animator.has_animation(clip))
 		for clip in animator.get_animation_list():
 			if clip == "RESET":
 				continue
 			var animation := animator.get_animation(clip)
-			check("%s / %s does not loop" % [class_id, clip], animation.loop_mode == Animation.LOOP_NONE)
+			var loops := animation.loop_mode != Animation.LOOP_NONE
+			check("%s / %s loops only as a _loop name" % [class_id, clip], loops == String(clip).ends_with("_loop"))
 			var bone_tracks_only := true
 			for track in animation.get_track_count():
 				var path := animation.track_get_path(track)
@@ -128,7 +143,10 @@ func run_policy() -> void:
 		check(class_id + " unknown event cannot fire", not hero.react(player, "not_an_event"))
 		check(class_id + " near miss starts", hero.react(player, "near_miss"))
 		finish(rec)
-		check(class_id + " clip finishes seated", rec.reaction == "" and not animator.is_playing())
+		if animator.has_animation("idle_loop"):
+			check(class_id + " clip hands back to idle_loop", rec.reaction == "" and animator.is_playing() and animator.current_animation == "idle_loop")
+		else:
+			check(class_id + " clip finishes seated (no idle_loop yet)", rec.reaction == "" and not animator.is_playing())
 		check(class_id + " shared cooldown blocks hold_broken after near_miss", not hero.react(player, "hold_broken"))
 		hero._process(4.01)
 		check(class_id + " cooldown expires", hero.react(player, "near_miss"))
