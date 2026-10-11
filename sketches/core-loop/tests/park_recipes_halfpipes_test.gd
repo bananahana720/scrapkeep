@@ -207,7 +207,7 @@ func _ball(parent: Node3D, at: Vector3, velocity: Vector3) -> RigidBody3D:
 	return ball
 
 
-# One run per ball: {id, node, ball, exit (local), slow_frames, worst_slow, min_x, max_x, lowest}.
+# One run per ball: {id, frame (the GLB's), ball, exit (local), slow_frames, worst_slow, min_x, max_x, lowest}.
 func _check_roll() -> void:
 	var parent := Node3D.new()
 	root.add_child(parent)
@@ -226,14 +226,16 @@ func _check_roll() -> void:
 		var at := Vector2(i * SPACING, 0.0)
 		var row := _row(id, at, Vector3(48, 10, 24))
 		var node := ParkRecipes.place(row, parent, Callable(), publish)
+		# The GLB's own frame: its entry-lip origin sits half a length behind the row's centred at (ride_frame).
+		var frame := node.global_transform * Transform3D(Basis.IDENTITY, ParkRecipes.ride_frame(row)["origin"])
 		var drop := float(RECIPES[id]["drop"])
 		# A channel's ball starts 1.4 m over the entry floor, a drop-in's 6 m back on the deck, 1.4 m over it.
 		var start_z := 2.0 if drop == 0.0 else -6.0
 		for lane in [0.0, 4.5]:
 			# The off-centre ball starts higher in a channel, so it falls onto the wall's transition instead of into it.
 			var local_start := Vector3(lane, 1.4 if (lane == 0.0 or drop > 0.0) else 4.0, start_z)
-			var ball := _ball(parent, node.global_transform * local_start, node.global_transform.basis * Vector3(0, 0, START_SPEED))
-			runs.append({"id": id, "lane": lane, "node": node, "ball": ball, "exit": exit_local, "half": absf(gl.x) + 1.0,
+			var ball := _ball(parent, frame * local_start, frame.basis * Vector3(0, 0, START_SPEED))
+			runs.append({"id": id, "lane": lane, "frame": frame, "ball": ball, "exit": exit_local, "half": absf(gl.x) + 1.0,
 				"slow": 0, "worst": 0, "published": false})
 	for f in ROLL_FRAMES:
 		await physics_frame
@@ -247,7 +249,7 @@ func _check_roll() -> void:
 				run["worst"] = maxi(run["worst"], run["slow"])
 			else:
 				run["slow"] = 0
-			var local: Vector3 = (run["node"] as Node3D).global_transform.affine_inverse() * ball.global_position
+			var local: Vector3 = (run["frame"] as Transform3D).affine_inverse() * ball.global_position
 			if not run.has("reached") and local.z >= (run["exit"] as Transform3D).origin.z * 0.9 \
 					and local.distance_to((run["exit"] as Transform3D).origin) < 14.0:
 				run["reached"] = f

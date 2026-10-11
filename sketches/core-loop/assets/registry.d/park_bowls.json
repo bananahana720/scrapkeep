@@ -4,6 +4,7 @@
       "id": "bench_coping",
       "path": "res://assets/models/park/bench_coping.glb",
       "class": "landform",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {
@@ -18,6 +19,7 @@
       "id": "bench_coping_detail1",
       "path": "res://assets/models/park/bench_coping_detail1.glb",
       "class": "detail",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {
@@ -28,6 +30,7 @@
       "id": "bench_coping_detail2",
       "path": "res://assets/models/park/bench_coping_detail2.glb",
       "class": "detail",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {
@@ -38,6 +41,7 @@
       "id": "tailings_lip",
       "path": "res://assets/models/park/tailings_lip.glb",
       "class": "landform",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {
@@ -52,6 +56,7 @@
       "id": "tailings_lip_detail1",
       "path": "res://assets/models/park/tailings_lip_detail1.glb",
       "class": "detail",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {
@@ -62,6 +67,7 @@
       "id": "tailings_lip_detail2",
       "path": "res://assets/models/park/tailings_lip_detail2.glb",
       "class": "detail",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {
@@ -72,6 +78,7 @@
       "id": "pit_haul_ramp",
       "path": "res://assets/models/park/pit_haul_ramp.glb",
       "class": "landform",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {
@@ -86,6 +93,7 @@
       "id": "pit_haul_ramp_detail1",
       "path": "res://assets/models/park/pit_haul_ramp_detail1.glb",
       "class": "detail",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {
@@ -96,6 +104,7 @@
       "id": "pit_haul_ramp_detail2",
       "path": "res://assets/models/park/pit_haul_ramp_detail2.glb",
       "class": "detail",
+      "origin": "entry_lip",
       "ships": true,
       "loader": "src/world/park/park_recipes.gd",
       "provenance": {

@@ -5,12 +5,24 @@ extends RefCounted
 # primitive of the row's size. Either way the node carries a world collider and, when the row's ride fact is a
 # WORLD_ROWS kind, a ride sensor that publishes it once each time the ball enters. Placement reads only the row; the
 # visibility ranges come from the row's budget class in tools/asset_budgets.json, so retuning a range is one edit there.
+#
+# The origin conversion (KC-INT, 2026-10-11; PARK.md:77): a row's `at` is always the centre of its footprint, and its
+# ride sensor, greybox and every footprint reader (bake stamps, holes, keep-out) stay centred there. A GLB recipe whose
+# registry row (assets/registry.json, folded from registry.d) says `"origin": "entry_lip"` is authored with its origin
+# on the entry lip and its ride along +Z, so ride_frame() puts that origin at at - forward * size[0] / 2 and the piece
+# runs through at to at + forward * size[0] / 2. ride_frame() is the one owner of that rule: place_parts() offsets the
+# GLB views and colliders by it and park_map.gd takes a kicker's lip from it. A row never carries a lip position.
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 const BUDGETS_PATH := "res://tools/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
+const REGISTRY_PATH := "res://assets/registry.json"
+# A registry row's `origin`: where its GLB's origin sits on the footprint. Absent means ORIGIN_CENTRE.
+const ORIGIN_CENTRE := "centre"
+const ORIGIN_ENTRY_LIP := "entry_lip"
+const ORIGINS := [ORIGIN_CENTRE, ORIGIN_ENTRY_LIP]
 const GREYBOX := "greybox:"
 # A recipe's collision mesh is the node named "<name>-col". Godot 4.7.2 keeps that node as a MeshInstance3D and adds a
 # StaticBody3D child holding its ConcavePolygonShape3D (probed 2026-10-10); placement takes the shape and never draws it.
@@ -75,6 +87,8 @@ const ELEMENT_FACTS := {
 const WEDGES := {"kicker": 1.0, "drop": -1.0}
 
 static var _budgets := {}
+static var _origins := {}
+static var _origins_read := false
 
 
 # A budget class's visibility ranges from tools/asset_budgets.json: base_end and base_margin for the base views,
@@ -84,6 +98,28 @@ static func ranges(budget: String) -> Dictionary:
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(BUDGETS_PATH))
 		_budgets = parsed if parsed is Dictionary else {"classes": {}}
 	return _budgets["classes"].get(budget, {}).get("ranges", {})
+
+
+# A recipe id's registry `origin` (ORIGINS), ORIGIN_CENTRE when its row gives none or the id has no row.
+static func origin(recipe: String) -> String:
+	if not _origins_read:
+		_origins_read = true
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string(REGISTRY_PATH))
+		if parsed is Dictionary:
+			for a in parsed.get("assets", []):
+				if a is Dictionary and a.get("id") is String and a.get("origin") is String:
+					_origins[a["id"]] = a["origin"]
+	return String(_origins.get(recipe, ORIGIN_CENTRE))
+
+
+# The origin conversion, in the row's own space (y 0, +Z the facing turned by yaw_deg): "entry" and "exit" are the
+# footprint's rear and far edges on its centre line, -size[0]/2 and +size[0]/2 along Z, and "origin" is where the
+# recipe's GLB origin goes: the entry for an ORIGIN_ENTRY_LIP recipe, else the centre (a greybox, a centred GLB).
+static func ride_frame(row: Dictionary) -> Dictionary:
+	var half := float(row["size"][0]) * 0.5
+	var recipe := String(row.get("recipe", ""))
+	var lip := not recipe.begins_with(GREYBOX) and origin(recipe) == ORIGIN_ENTRY_LIP
+	return {"entry": Vector3(0, 0, -half), "exit": Vector3(0, 0, half), "origin": Vector3(0, 0, -half if lip else 0.0)}
 
 
 # The GLB paths a recipe id names: <id>.glb, its two detail shells, and the hero landmark's mid and far meshes.
@@ -138,33 +174,35 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 
 # Places instantiated recipe scenes: parts is {"base": [Node], "shells": [Node, ...], "mid": [Node], "far": [Node]}.
 # Every -col mesh becomes a trimesh on the node's one StaticBody3D and is never drawn; every other mesh is a view with
-# the budget class's range. The caller keeps ownership of the part scenes.
+# the budget class's range. Views and colliders sit at the GLB origin ride_frame() gives. The caller keeps ownership of
+# the part scenes.
 static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, ground := Callable(), publish := Callable()) -> Node3D:
 	var node := _node(row, parent, ground)
 	var body := _body(node)
+	var at_origin := Transform3D(Basis.IDENTITY, ride_frame(row)["origin"])
 	var r := ranges(String(row.get("budget", "landform")))
 	var base_end := float(r.get("base_end", 0.0))
 	var mid_end := float(r.get("mid_end", 0.0))
 	for scene: Node in parts.get("base", []):
-		for view in _views(scene, node, body):
+		for view in _views(scene, node, body, at_origin):
 			_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var shell_ranges: Array = r.get("shells", [])
 	var shells: Array = parts.get("shells", [])
 	for k in shells.size():
 		var sr: Array = shell_ranges[k] if k < shell_ranges.size() else [0.0, 0.0]
-		for view in _views(shells[k], node, body):
+		for view in _views(shells[k], node, body, at_origin):
 			_range(view, 0.0, float(sr[0]), float(sr[1]))
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for scene: Node in parts.get("mid", []):
-		for view in _views(scene, node, body):
+		for view in _views(scene, node, body, at_origin):
 			_range(view, base_end, mid_end, float(r.get("mid_margin", 0.0)))
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for scene: Node in parts.get("far", []):
-		for view in _views(scene, node, body):
+		for view in _views(scene, node, body, at_origin):
 			_range(view, mid_end, 0.0, 0.0)
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_sensor(node, row, publish, true)
+	_sensor(node, row, publish)
 	return node
 
 
@@ -203,7 +241,7 @@ static func place_greybox(row: Dictionary, element: String, parent: Node3D, grou
 	view.set_meta(RecipeProps.META_FADE, true)
 	node.add_child(view)
 	body.add_child(shape)
-	_sensor(node, row, publish, false)
+	_sensor(node, row, publish)
 	return node
 
 
@@ -226,14 +264,14 @@ static func _body(node: Node3D) -> StaticBody3D:
 	return body
 
 
-# One view per drawn mesh of scene under node, at its place in the scene; each -col mesh goes to body as a trimesh.
-# A surface whose GLB material names a material slot wears that slot (recipe_props.gd); others keep their own.
-static func _views(scene: Node, node: Node3D, body: StaticBody3D) -> Array[MeshInstance3D]:
+# One view per drawn mesh of scene under node, at its place in the scene moved to the GLB origin at_origin; each -col
+# mesh goes to body as a trimesh. A surface whose GLB material names a material slot wears that slot (recipe_props.gd).
+static func _views(scene: Node, node: Node3D, body: StaticBody3D, at_origin: Transform3D) -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
 	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		if source.mesh == null:
 			continue
-		var xf := _relative(source, scene)
+		var xf := at_origin * _relative(source, scene)
 		if String(source.name).ends_with(COL_SUFFIX):
 			var shape := CollisionShape3D.new()
 			shape.shape = _trimesh(source)
@@ -272,8 +310,9 @@ static func _range(view: GeometryInstance3D, begin: float, end: float, margin: f
 
 
 # The ride sensor: an Area3D over the footprint reaching SENSOR_ABOVE_M above the top, hearing only the ball's layer.
-# entry_origin is true for a GLB recipe (origin at the entry lip). None when the row's fact is no WORLD_ROWS kind or no publish callable is given.
-static func _sensor(node: Node3D, row: Dictionary, publish: Callable, entry_origin: bool) -> void:
+# Centred on the row's at for every recipe (ride_frame). None when the row's fact is no WORLD_ROWS kind or no publish
+# callable is given.
+static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
 	var fact := String(row.get("ride_fact", ""))
 	if not publish.is_valid() or not EventKinds.WORLD_ROWS.has(fact):
 		return
@@ -289,9 +328,6 @@ static func _sensor(node: Node3D, row: Dictionary, publish: Callable, entry_orig
 	box.size = Vector3(float(size[2]), float(size[1]) + SENSOR_ABOVE_M, float(size[0]))
 	shape.shape = box
 	shape.position.y = box.size.y * 0.5
-	# A GLB recipe's origin is its entry lip, so its footprint runs 0..length along +z; a greybox is centred.
-	if entry_origin:
-		shape.position.z = box.size.z * 0.5
 	area.add_child(shape)
 	node.add_child(area)
 	area.body_entered.connect(func(ball: Node3D) -> void: publish.call(fact, ball.global_position))

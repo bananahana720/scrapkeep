@@ -59,10 +59,19 @@ func _run() -> void:
 	quit(_t.verdict())
 
 
+# The test names where a GLB's entry-lip origin goes; a row's at is its footprint's centre (PARK.md:77), so the row's at is
+# that point moved by the loader's own conversion (park_recipes.gd ride_frame), turned by the row's yaw.
+func _centre(row: Dictionary) -> Dictionary:
+	var o: Vector3 = ParkRecipes.ride_frame(row)["origin"]
+	var yaw := deg_to_rad(float(row["yaw_deg"]))
+	row["at"] = [float(row["at"][0]) - sin(yaw) * o.z, float(row["at"][1]) - cos(yaw) * o.z]
+	return row
+
+
 func _row(id: String, recipe: String, at: Vector2, element := "", fact := "") -> Dictionary:
 	var spec: Dictionary = RECIPES[recipe]
-	return {"id": id, "element": element if element != "" else spec["element"], "at": [at.x, at.y], "y": null, "size": spec["size"],
-		"yaw_deg": 0.0, "ride_fact": fact if fact != "" else spec["fact"], "recipe": recipe, "budget": "landform"}
+	return _centre({"id": id, "element": element if element != "" else spec["element"], "at": [at.x, at.y], "y": null, "size": spec["size"],
+		"yaw_deg": 0.0, "ride_fact": fact if fact != "" else spec["fact"], "recipe": recipe, "budget": "landform"})
 
 
 func _glb(recipe: String, part := "") -> String:
@@ -168,12 +177,15 @@ func _check_place() -> void:
 	parent.free()
 
 
+# The -col faces in the GLB's own frame (origin on the entry lip), not the node's centred one.
 func _faces(node: Node3D) -> PackedVector3Array:
+	var recipe := String(node.get_meta("park_recipe"))
+	var lip: Vector3 = ParkRecipes.ride_frame(_row("f", recipe, Vector2.ZERO))["origin"]
 	var out := PackedVector3Array()
 	for s: CollisionShape3D in node.find_children("*", "CollisionShape3D", true, false):
 		if s.get_parent() is StaticBody3D and s.shape is ConcavePolygonShape3D:
 			for p in (s.shape as ConcavePolygonShape3D).get_faces():
-				out.append(s.transform * p)
+				out.append(s.transform * p - lip)
 	return out
 
 

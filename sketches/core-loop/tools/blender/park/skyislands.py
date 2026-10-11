@@ -3,7 +3,9 @@ mesa_lip_kicker, net_deck and floating_island, each with a base GLB, two detail 
 
 Family convention, the same for all three: +Y up, the ride direction +Z (the fall line), x centred, the origin at the entry
 lip with y 0 at the ridden surface there. A park row places a recipe with position, y, size and yaw, so a row's y is the
-height of its ridden surface and a row's yaw turns the ride direction.
+height of its ridden surface and a row's yaw turns the ride direction. A row's at is its footprint's centre; the registry
+rows say origin entry_lip, so park_recipes.gd ride_frame puts this origin size[0] / 2 behind at, and the kicker's lip
+(z L here) lands on the footprint's far edge, where park_map.gd kicker_lip finds it (KC-INT, 2026-10-11).
   mesa_lip_kicker  12 m long, 2.5 m high at the lip, 14 m wide (the stage 3 pit rows' size [12, 2.5, 14]). The top is the
                    parabola y = H * (z / L)^2: flush with the ground at z 0, 22.6 degrees at the lip, so the ball leaves at
                    the angle atan(2 H / L) the row's height and length set. Mesa strata in red and cream slickrock, three

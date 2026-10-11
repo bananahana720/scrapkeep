@@ -4,6 +4,7 @@
    "id": "cenote_pool",
    "path": "res://assets/models/park/cenote_pool.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -19,6 +20,7 @@
    "id": "cenote_pool_detail1",
    "path": "res://assets/models/park/cenote_pool_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -29,6 +31,7 @@
    "id": "cenote_pool_detail2",
    "path": "res://assets/models/park/cenote_pool_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -39,6 +42,7 @@
    "id": "flooded_shaft",
    "path": "res://assets/models/park/flooded_shaft.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -54,6 +58,7 @@
    "id": "flooded_shaft_detail1",
    "path": "res://assets/models/park/flooded_shaft_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -64,6 +69,7 @@
    "id": "flooded_shaft_detail2",
    "path": "res://assets/models/park/flooded_shaft_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -74,6 +80,7 @@
    "id": "cavern_shell",
    "path": "res://assets/models/park/cavern_shell.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -89,6 +96,7 @@
    "id": "cavern_shell_detail1",
    "path": "res://assets/models/park/cavern_shell_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -99,6 +107,7 @@
    "id": "cavern_shell_detail2",
    "path": "res://assets/models/park/cavern_shell_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {

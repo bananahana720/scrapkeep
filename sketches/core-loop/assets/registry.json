@@ -2283,6 +2283,7 @@
    "id": "adit_mouth",
    "path": "res://assets/models/park/adit_mouth.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh adit_mouth drawn, adit_mouth-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -2294,6 +2295,7 @@
    "id": "adit_mouth_detail1",
    "path": "res://assets/models/park/adit_mouth_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -2305,6 +2307,7 @@
    "id": "adit_mouth_detail2",
    "path": "res://assets/models/park/adit_mouth_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -2316,6 +2319,7 @@
    "id": "bench_coping",
    "path": "res://assets/models/park/bench_coping.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2330,6 +2334,7 @@
    "id": "bench_coping_detail1",
    "path": "res://assets/models/park/bench_coping_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2340,6 +2345,7 @@
    "id": "bench_coping_detail2",
    "path": "res://assets/models/park/bench_coping_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2350,6 +2356,7 @@
    "id": "canal_lip",
    "path": "res://assets/models/park/canal_lip.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2367,6 +2374,7 @@
    "id": "canal_lip_detail1",
    "path": "res://assets/models/park/canal_lip_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2378,6 +2386,7 @@
    "id": "canal_lip_detail2",
    "path": "res://assets/models/park/canal_lip_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2389,6 +2398,7 @@
    "id": "cavern_shell",
    "path": "res://assets/models/park/cavern_shell.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2404,6 +2414,7 @@
    "id": "cavern_shell_detail1",
    "path": "res://assets/models/park/cavern_shell_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2414,6 +2425,7 @@
    "id": "cavern_shell_detail2",
    "path": "res://assets/models/park/cavern_shell_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2424,6 +2436,7 @@
    "id": "cenote_pool",
    "path": "res://assets/models/park/cenote_pool.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2439,6 +2452,7 @@
    "id": "cenote_pool_detail1",
    "path": "res://assets/models/park/cenote_pool_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2449,6 +2463,7 @@
    "id": "cenote_pool_detail2",
    "path": "res://assets/models/park/cenote_pool_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2459,6 +2474,7 @@
    "id": "cliff_dwelling_row",
    "path": "res://assets/models/park/cliff_dwelling_row.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
    "provenance": {
@@ -2487,6 +2503,7 @@
    "id": "cliff_dwelling_row_detail1",
    "path": "res://assets/models/park/cliff_dwelling_row_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
    "provenance": {
@@ -2515,6 +2532,7 @@
    "id": "cliff_dwelling_row_detail2",
    "path": "res://assets/models/park/cliff_dwelling_row_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
    "provenance": {
@@ -2752,6 +2770,7 @@
    "id": "crater_ending",
    "path": "res://assets/models/park/crater_ending.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (base GLB with its crater_ending-col trimesh; the ending camera set, never a stage)",
    "provenance": {
@@ -2762,6 +2781,7 @@
    "id": "crater_ending_detail1",
    "path": "res://assets/models/park/crater_ending_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, no collider)",
    "provenance": {
@@ -2772,6 +2792,7 @@
    "id": "crater_ending_detail2",
    "path": "res://assets/models/park/crater_ending_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, no collider)",
    "provenance": {
@@ -2782,6 +2803,7 @@
    "id": "crater_event",
    "path": "res://assets/models/park/crater_event.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (base GLB with its crater_event-col trimesh; ranges from the park_large class)",
    "provenance": {
@@ -2792,6 +2814,7 @@
    "id": "crater_event_detail1",
    "path": "res://assets/models/park/crater_event_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, no collider)",
    "provenance": {
@@ -2802,6 +2825,7 @@
    "id": "crater_event_detail2",
    "path": "res://assets/models/park/crater_event_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, no collider)",
    "provenance": {
@@ -2812,6 +2836,7 @@
    "id": "floating_island",
    "path": "res://assets/models/park/floating_island.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -2823,6 +2848,7 @@
    "id": "floating_island_detail1",
    "path": "res://assets/models/park/floating_island_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -2834,6 +2860,7 @@
    "id": "floating_island_detail2",
    "path": "res://assets/models/park/floating_island_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -2845,6 +2872,7 @@
    "id": "flooded_shaft",
    "path": "res://assets/models/park/flooded_shaft.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2860,6 +2888,7 @@
    "id": "flooded_shaft_detail1",
    "path": "res://assets/models/park/flooded_shaft_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2870,6 +2899,7 @@
    "id": "flooded_shaft_detail2",
    "path": "res://assets/models/park/flooded_shaft_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "park_recipes",
    "provenance": {
@@ -2880,6 +2910,7 @@
    "id": "flume_span",
    "path": "res://assets/models/park/flume_span.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2897,6 +2928,7 @@
    "id": "flume_span_detail1",
    "path": "res://assets/models/park/flume_span_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2908,6 +2940,7 @@
    "id": "flume_span_detail2",
    "path": "res://assets/models/park/flume_span_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -2919,6 +2952,7 @@
    "id": "half_pipe_concrete",
    "path": "res://assets/models/park/half_pipe_concrete.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -2934,6 +2968,7 @@
    "id": "half_pipe_concrete_detail1",
    "path": "res://assets/models/park/half_pipe_concrete_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -2945,6 +2980,7 @@
    "id": "half_pipe_concrete_detail2",
    "path": "res://assets/models/park/half_pipe_concrete_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -2956,6 +2992,7 @@
    "id": "lava_tube_run",
    "path": "res://assets/models/park/lava_tube_run.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run drawn, lava_tube_run-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -2967,6 +3004,7 @@
    "id": "lava_tube_run_bend_n30",
    "path": "res://assets/models/park/lava_tube_run_bend_n30.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run_bend_n30 drawn, lava_tube_run_bend_n30-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -2978,6 +3016,7 @@
    "id": "lava_tube_run_bend_n30_detail1",
    "path": "res://assets/models/park/lava_tube_run_bend_n30_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -2989,6 +3028,7 @@
    "id": "lava_tube_run_bend_n30_detail2",
    "path": "res://assets/models/park/lava_tube_run_bend_n30_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3000,6 +3040,7 @@
    "id": "lava_tube_run_bend_p30",
    "path": "res://assets/models/park/lava_tube_run_bend_p30.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run_bend_p30 drawn, lava_tube_run_bend_p30-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -3011,6 +3052,7 @@
    "id": "lava_tube_run_bend_p30_detail1",
    "path": "res://assets/models/park/lava_tube_run_bend_p30_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3022,6 +3064,7 @@
    "id": "lava_tube_run_bend_p30_detail2",
    "path": "res://assets/models/park/lava_tube_run_bend_p30_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3033,6 +3076,7 @@
    "id": "lava_tube_run_detail1",
    "path": "res://assets/models/park/lava_tube_run_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3044,6 +3088,7 @@
    "id": "lava_tube_run_detail2",
    "path": "res://assets/models/park/lava_tube_run_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3055,6 +3100,7 @@
    "id": "mesa_lip_kicker",
    "path": "res://assets/models/park/mesa_lip_kicker.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -3070,6 +3116,7 @@
    "id": "mesa_lip_kicker_detail1",
    "path": "res://assets/models/park/mesa_lip_kicker_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -3081,6 +3128,7 @@
    "id": "mesa_lip_kicker_detail2",
    "path": "res://assets/models/park/mesa_lip_kicker_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -3092,6 +3140,7 @@
    "id": "mesa_rim_ledge",
    "path": "res://assets/models/park/mesa_rim_ledge.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
    "provenance": {
@@ -3120,6 +3169,7 @@
    "id": "mesa_rim_ledge_detail1",
    "path": "res://assets/models/park/mesa_rim_ledge_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
    "provenance": {
@@ -3148,6 +3198,7 @@
    "id": "mesa_rim_ledge_detail2",
    "path": "res://assets/models/park/mesa_rim_ledge_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
    "provenance": {
@@ -3176,6 +3227,7 @@
    "id": "net_deck",
    "path": "res://assets/models/park/net_deck.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -3191,6 +3243,7 @@
    "id": "net_deck_detail1",
    "path": "res://assets/models/park/net_deck_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -3202,6 +3255,7 @@
    "id": "net_deck_detail2",
    "path": "res://assets/models/park/net_deck_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
    "provenance": {
@@ -3213,6 +3267,7 @@
    "id": "penstock_run",
    "path": "res://assets/models/park/penstock_run.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3230,6 +3285,7 @@
    "id": "penstock_run_detail1",
    "path": "res://assets/models/park/penstock_run_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3241,6 +3297,7 @@
    "id": "penstock_run_detail2",
    "path": "res://assets/models/park/penstock_run_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3252,6 +3309,7 @@
    "id": "pipeline_rail",
    "path": "res://assets/models/park/pipeline_rail.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3269,6 +3327,7 @@
    "id": "pipeline_rail_detail1",
    "path": "res://assets/models/park/pipeline_rail_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3280,6 +3339,7 @@
    "id": "pipeline_rail_detail2",
    "path": "res://assets/models/park/pipeline_rail_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3291,6 +3351,7 @@
    "id": "pit_haul_ramp",
    "path": "res://assets/models/park/pit_haul_ramp.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3305,6 +3366,7 @@
    "id": "pit_haul_ramp_detail1",
    "path": "res://assets/models/park/pit_haul_ramp_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3315,6 +3377,7 @@
    "id": "pit_haul_ramp_detail2",
    "path": "res://assets/models/park/pit_haul_ramp_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3325,6 +3388,7 @@
    "id": "shaft_drop",
    "path": "res://assets/models/park/shaft_drop.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh shaft_drop drawn, shaft_drop-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -3336,6 +3400,7 @@
    "id": "shaft_drop_detail1",
    "path": "res://assets/models/park/shaft_drop_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3347,6 +3412,7 @@
    "id": "shaft_drop_detail2",
    "path": "res://assets/models/park/shaft_drop_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3358,6 +3424,7 @@
    "id": "slot_canyon_flow",
    "path": "res://assets/models/park/slot_canyon_flow.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3373,6 +3440,7 @@
    "id": "slot_canyon_flow_bend15",
    "path": "res://assets/models/park/slot_canyon_flow_bend15.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3388,6 +3456,7 @@
    "id": "slot_canyon_flow_bend15_detail1",
    "path": "res://assets/models/park/slot_canyon_flow_bend15_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3399,6 +3468,7 @@
    "id": "slot_canyon_flow_bend15_detail2",
    "path": "res://assets/models/park/slot_canyon_flow_bend15_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3410,6 +3480,7 @@
    "id": "slot_canyon_flow_bend30",
    "path": "res://assets/models/park/slot_canyon_flow_bend30.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3425,6 +3496,7 @@
    "id": "slot_canyon_flow_bend30_detail1",
    "path": "res://assets/models/park/slot_canyon_flow_bend30_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3436,6 +3508,7 @@
    "id": "slot_canyon_flow_bend30_detail2",
    "path": "res://assets/models/park/slot_canyon_flow_bend30_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3447,6 +3520,7 @@
    "id": "slot_canyon_flow_detail1",
    "path": "res://assets/models/park/slot_canyon_flow_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3458,6 +3532,7 @@
    "id": "slot_canyon_flow_detail2",
    "path": "res://assets/models/park/slot_canyon_flow_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3469,6 +3544,7 @@
    "id": "spillway_tunnel",
    "path": "res://assets/models/park/spillway_tunnel.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh spillway_tunnel drawn, spillway_tunnel-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -3480,6 +3556,7 @@
    "id": "spillway_tunnel_detail1",
    "path": "res://assets/models/park/spillway_tunnel_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3491,6 +3568,7 @@
    "id": "spillway_tunnel_detail2",
    "path": "res://assets/models/park/spillway_tunnel_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -3502,6 +3580,7 @@
    "id": "tailings_lip",
    "path": "res://assets/models/park/tailings_lip.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3516,6 +3595,7 @@
    "id": "tailings_lip_detail1",
    "path": "res://assets/models/park/tailings_lip_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3526,6 +3606,7 @@
    "id": "tailings_lip_detail2",
    "path": "res://assets/models/park/tailings_lip_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -3536,6 +3617,7 @@
    "id": "viga_pivot",
    "path": "res://assets/models/park/viga_pivot.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
    "provenance": {
@@ -3564,6 +3646,7 @@
    "id": "viga_pivot_detail1",
    "path": "res://assets/models/park/viga_pivot_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
    "provenance": {
@@ -3592,6 +3675,7 @@
    "id": "viga_pivot_detail2",
    "path": "res://assets/models/park/viga_pivot_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
    "provenance": {
@@ -3620,6 +3704,7 @@
    "id": "wash_dropin_lip",
    "path": "res://assets/models/park/wash_dropin_lip.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3635,6 +3720,7 @@
    "id": "wash_dropin_lip_detail1",
    "path": "res://assets/models/park/wash_dropin_lip_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -3646,6 +3732,7 @@
    "id": "wash_dropin_lip_detail2",
    "path": "res://assets/models/park/wash_dropin_lip_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {

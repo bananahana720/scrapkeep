@@ -23,7 +23,7 @@ const SHELL_TRIS := 1500
 const DEAD_SPEED := 2.0
 const DEAD_SECONDS := 0.5
 const START_SPEED := 16.0
-const SENSOR_STRICT := false   # true once the loader centres or shifts the ride sensor for lip-origin recipes (see the gap note in the report)
+const SENSOR_STRICT := true   # KC-INT: the loader places the lip-origin GLB through its centred footprint, so the sensor covers the line
 const LIP_SLACK := 1.0
 const CLIP_FLOOR := 10.0   # the plain rolls bottom out at 11.5 to 12.2 m/s (the ramp climb); the bank and jump rolls must not fall below 10
 # The bank roll drops the x check: the banked lip bends the line inward (a 22 degree slope), which is the verb; falling off (y < -0.5 on the line) and the speed floor still bind.
@@ -109,10 +109,19 @@ func _check_files(id: String) -> void:
 	base.free()
 
 
-func _row(id: String) -> Dictionary:
+# The test names where a GLB's entry-lip origin goes; a row's at is its footprint's centre (PARK.md:77), so the row's at is
+# that point moved by the loader's own conversion (park_recipes.gd ride_frame), turned by the row's yaw.
+func _centre(row: Dictionary) -> Dictionary:
+	var o: Vector3 = ParkRecipes.ride_frame(row)["origin"]
+	var yaw := deg_to_rad(float(row["yaw_deg"]))
+	row["at"] = [float(row["at"][0]) - sin(yaw) * o.z, float(row["at"][1]) - cos(yaw) * o.z]
+	return row
+
+
+func _row(id: String, x := 0.0) -> Dictionary:
 	var s: Array = RECIPES[id]
-	return {"id": "r_" + id, "element": "ledge", "at": [0.0, 0.0], "y": 0.0, "size": [s[0], s[1], s[2]], "yaw_deg": 0.0,
-		"ride_fact": "ride_ledge", "recipe": id, "budget": "landform"}
+	return _centre({"id": "r_" + id, "element": "ledge", "at": [x, 0.0], "y": 0.0, "size": [s[0], s[1], s[2]], "yaw_deg": 0.0,
+		"ride_fact": "ride_ledge", "recipe": id, "budget": "landform"})
 
 
 func _ground(parent: Node3D) -> void:
@@ -165,8 +174,7 @@ func _check_beams() -> void:
 	root.add_child(parent)
 	var viga := _row("viga_pivot")
 	ParkRecipes.place(viga, parent)
-	var dwelling := _row("cliff_dwelling_row")
-	dwelling["at"] = [200.0, 0.0]
+	var dwelling := _row("cliff_dwelling_row", 200.0)
 	ParkRecipes.place(dwelling, parent)
 	await physics_frame
 	await physics_frame
@@ -181,8 +189,7 @@ func _check_beams() -> void:
 		_t.check("(c) cliff_dwelling_row room beam at z %.1f takes a ray at its top" % z, not hit.is_empty() and absf(hit["position"].y - 5.22) < 0.15,
 			str(hit.get("position")))
 	# The clear lane: rays down across x at a mid-shelf z hit the shelf at y 2.5 along an unbroken run of at least 8 m.
-	var mesa := _row("mesa_rim_ledge")
-	mesa["at"] = [400.0, 0.0]
+	var mesa := _row("mesa_rim_ledge", 400.0)
 	ParkRecipes.place(mesa, parent)
 	await physics_frame
 	var mid := {"viga_pivot": [0.0, 18.0], "cliff_dwelling_row": [200.0, 14.25], "mesa_rim_ledge": [400.0, 30.0]}
@@ -210,16 +217,14 @@ func _check_rolls() -> void:
 	var i := 0
 	for id: String in RECIPES:
 		var s: Array = RECIPES[id]
-		var row := _row(id)
-		row["at"] = [i * 400.0, 0.0]
+		var row := _row(id, i * 400.0)
 		ParkRecipes.place(row, parent, Callable(), publish)
 		var ball := _ball(parent, Vector3(i * 400.0 + float(s[3]), 1.0, -45.0), Vector3(0, 0, START_SPEED))
 		runs.append({"id": id, "ball": ball, "x": i * 400.0, "length": float(s[0]), "lane": float(s[3]), "slow": 0.0, "worst": 0.0, "min": INF,
 			"off": false, "on_shelf": 0})
 		i += 1
 	# The control: viga_pivot with a 5 m wall across the lane at z 20. The dead-stop detector must read it as a stop, or it measures nothing.
-	var blocked := _row("viga_pivot")
-	blocked["at"] = [i * 400.0, 0.0]
+	var blocked := _row("viga_pivot", i * 400.0)
 	ParkRecipes.place(blocked, parent)
 	var wall := StaticBody3D.new()
 	wall.collision_layer = 0
@@ -238,8 +243,7 @@ func _check_rolls() -> void:
 	var jump_speed: float = Tuning.new().f("jump_speed")
 	for e: Array in [["mesa_rim_ledge (bank lane x 7.5)", "mesa_rim_ledge", 7.5, -1.0], ["viga_pivot (full jump at z 15)", "viga_pivot", 1.0, 15.0]]:
 		var es: Array = RECIPES[e[1]]
-		var erow := _row(e[1])
-		erow["at"] = [i * 400.0, 0.0]
+		var erow := _row(e[1], i * 400.0)
 		ParkRecipes.place(erow, parent, Callable(), publish)
 		runs.append({"id": e[0], "ball": _ball(parent, Vector3(i * 400.0 + float(e[2]), 1.0, -45.0), Vector3(0, 0, START_SPEED)),
 			"x": i * 400.0, "length": float(es[0]), "lane": float(e[2]), "slow": 0.0, "worst": 0.0, "min": INF, "off": false, "on_shelf": 0,
@@ -278,8 +282,8 @@ func _check_rolls() -> void:
 		_t.check("(d) a roll along %s publishes ride_ledge" % id, near.any(func(e): return e[0] == "ride_ledge"), str(near.map(func(e): return e[0])))
 		var first := near.filter(func(e): return e[0] == "ride_ledge")
 		if RECIPES.has(id) and not first.is_empty():
-			# The fact must fire on the line (row-local z from the entry lip), not on the approach. KC0's sensor is a box centred on the
-			# row origin, but this family's origin is the entry lip, so today it fires about half a length early: a loader gap, not a recipe one.
+			# The fact must fire on the line (z from the entry lip), not on the approach: the sensor is centred on the row's at and the
+			# loader runs the lip-origin GLB through that footprint (park_recipes.gd ride_frame, KC-INT).
 			var first_z: float = first[0][1].z
 			var on_line := first_z >= -LIP_SLACK
 			if SENSOR_STRICT:

@@ -156,6 +156,12 @@ func _place(id: String, parent: Node3D, slot: int) -> Node3D:
 	return ParkRecipes.place(_row(id, slot), parent, Callable(), publish)
 
 
+# The GLB's origin in the world: its entry lip, half a length behind the row's centred at (park_recipes.gd ride_frame).
+func _origin(node: Node3D) -> Vector3:
+	var recipe := String(node.get_meta("park_recipe"))
+	return node.global_transform * (ParkRecipes.ride_frame(_row(recipe, 0))["origin"] as Vector3)
+
+
 # (c) placed through park_recipes.gd.
 func _check_placed(id: String, node: Node3D) -> void:
 	if not _t.check("(c) %s: places as a GLB recipe" % id, node != null and node.find_children("Greybox", "MeshInstance3D", true, false).is_empty()):
@@ -186,11 +192,11 @@ func _check_rail_on_top(id: String, pts: PackedVector3Array, node: Node3D) -> vo
 	var worst := 0.0
 	var steep := 0
 	for p in pts:
-		var hit := _ray_down(node.global_position + p)
+		var hit := _ray_down(_origin(node) + p)
 		if hit.is_empty():
 			worst = INF
 			continue
-		worst = maxf(worst, absf((hit["position"] as Vector3).y - (node.global_position.y + p.y)))
+		worst = maxf(worst, absf((hit["position"] as Vector3).y - (_origin(node).y + p.y)))
 		if (hit["normal"] as Vector3).y <= Augments.WALKABLE_Y:
 			steep += 1
 	_t.check("(b) %s: every rail point lies on the collider top (within %.2f m)" % [id, TOP_TOLERANCE], worst <= TOP_TOLERANCE, "worst %.3f" % worst)
@@ -201,7 +207,7 @@ func _check_rail_on_top(id: String, pts: PackedVector3Array, node: Node3D) -> vo
 func _side_shot(id: String, node: Node3D, rail: PackedVector3Array) -> Dictionary:
 	var mid := rail[rail.size() / 2]
 	var height: float = RECIPES[id]["size"][1]
-	var from := node.global_position + Vector3(-SIDE_GAP, mid.y - height * 0.45, mid.z)
+	var from := _origin(node) + Vector3(-SIDE_GAP, mid.y - height * 0.45, mid.z)
 	return {"from": from, "forward": Vector3.RIGHT}
 
 
@@ -218,11 +224,11 @@ func _check_bite_and_ride(id: String, rail: PackedVector3Array, node: Node3D) ->
 	var point: Vector3 = aim["point"]
 	var normal: Vector3 = aim["normal"]
 	_t.check("(d) %s: the bite is on a steep face (normal.y %.2f, rule %.1f)" % [id, normal.y, Augments.WALKABLE_Y], normal.y <= Augments.WALKABLE_Y)
-	var local := point - node.global_position
+	var local := point - _origin(node)
 	_t.check("(d) %s: the bite lands on the piece's own footprint" % id, absf(local.x) <= RECIPES[id]["size"][2] and local.z >= 0.0 and local.z <= RECIPES[id]["size"][0],
 		str(local))
 	# The control: the same rule aimed straight down at the walkable top refuses it.
-	var top := node.global_position + rail[rail.size() / 2]
+	var top := _origin(node) + rail[rail.size() / 2]
 	var down := Augments.grapple_target(_space(), top + Vector3.UP * 5.0, Vector3.DOWN, top + Vector3.UP * 5.0, REACH, 0.0,
 		Augments.WORLD_MASK | Augments.ENEMY_MASK, false)
 	_t.check("(d) %s: aimed straight down at the walkable top the harpoon is refused" % id, down.get("state", Augments.AIM_NONE) == Augments.AIM_NONE, str(down))
@@ -230,7 +236,7 @@ func _check_bite_and_ride(id: String, rail: PackedVector3Array, node: Node3D) ->
 	var entry := 0
 	var best := INF
 	for k in rail.size():
-		var d := (node.global_position + rail[k]).distance_to(point)
+		var d := (_origin(node) + rail[k]).distance_to(point)
 		if d < best:
 			best = d
 			entry = k
@@ -240,10 +246,10 @@ func _check_bite_and_ride(id: String, rail: PackedVector3Array, node: Node3D) ->
 	var slowest := INF
 	var ok_line := true
 	var length := 0.0
-	var pos := node.global_position + rail[entry] + rise
+	var pos := _origin(node) + rail[entry] + rise
 	var dt := 1.0 / float(Engine.physics_ticks_per_second)
 	for k in range(entry + 1, rail.size()):
-		var to := node.global_position + rail[k] + rise
+		var to := _origin(node) + rail[k] + rise
 		var ride = RideRail.line("grapple_line", pos, to, RIDE_PLANAR, RIDE_FLOOR)
 		length += pos.distance_to(to)
 		var steps := 0
@@ -264,7 +270,7 @@ func _check_bite_and_ride(id: String, rail: PackedVector3Array, node: Node3D) ->
 			and ride.release_speed >= RIDE_FLOOR, "%s vs %s" % [ride.point_at(ride.flight), to])
 		pos = to
 		legs += 1
-	_t.check("(e) %s: the ride covers the rail to its last point from rail_%02d" % [id, entry], legs == rail.size() - 1 - entry and legs >= 1 and pos.is_equal_approx(node.global_position + rail[rail.size() - 1] + rise))
+	_t.check("(e) %s: the ride covers the rail to its last point from rail_%02d" % [id, entry], legs == rail.size() - 1 - entry and legs >= 1 and pos.is_equal_approx(_origin(node) + rail[rail.size() - 1] + rise))
 	_t.check("(e) %s: every tick holds the ball to the line" % id, ok_line)
 	_t.check("(e) %s: the ride never drops under %.0f m/s (slowest %.1f)" % [id, MIN_SPEED, slowest], slowest >= MIN_SPEED)
 	_t.check("(e) %s: the ride runs %.0f m in %.1f s, the floor speed over its planar length" % [id, length, ride_time],
@@ -317,7 +323,7 @@ func _check_roll(ids: Array, rails: Dictionary, placed: Dictionary) -> void:
 		var rail: PackedVector3Array = rails[id]
 		if node == null or rail.size() < 3:
 			continue
-		var start := node.global_position + rail[0] + Vector3(0, Tuning.RADIUS + 0.05, 1.0)
+		var start := _origin(node) + rail[0] + Vector3(0, Tuning.RADIUS + 0.05, 1.0)
 		balls[id] = {"ball": _ball(parent, start, Vector3(0, 0, ROLL_SPEED)), "slow": 0.0, "worst": 0.0, "z0": start.z}
 	var frames := int(ROLL_SECONDS * Engine.physics_ticks_per_second)
 	var dt := 1.0 / float(Engine.physics_ticks_per_second)
@@ -327,7 +333,7 @@ func _check_roll(ids: Array, rails: Dictionary, placed: Dictionary) -> void:
 			var row: Dictionary = balls[id]
 			var ball: RigidBody3D = row["ball"]
 			var length: float = RECIPES[id]["size"][0]
-			var z: float = ball.global_position.z - (placed[id] as Node3D).global_position.z
+			var z: float = ball.global_position.z - _origin(placed[id] as Node3D).z
 			if z < 4.0 or z > length - 6.0:
 				continue
 			if ball.linear_velocity.length() < MIN_SPEED:
@@ -337,8 +343,8 @@ func _check_roll(ids: Array, rails: Dictionary, placed: Dictionary) -> void:
 				row["slow"] = 0.0
 			row["far"] = maxf(float(row.get("far", 0.0)), z)
 			var rail: PackedVector3Array = rails[id]
-			var want_y := _rail_y(rail, z) + (placed[id] as Node3D).global_position.y + Tuning.RADIUS
-			var want_x := rail[0].x + (placed[id] as Node3D).global_position.x
+			var want_y := _rail_y(rail, z) + _origin(placed[id] as Node3D).y + Tuning.RADIUS
+			var want_x := rail[0].x + _origin(placed[id] as Node3D).x
 			row["off"] = maxf(float(row.get("off", 0.0)), maxf(absf(ball.global_position.y - want_y), absf(ball.global_position.x - want_x)))
 	for id in balls:
 		var row: Dictionary = balls[id]
@@ -347,7 +353,7 @@ func _check_roll(ids: Array, rails: Dictionary, placed: Dictionary) -> void:
 		_t.check("(f) %s: the ball rolls the length (reached %.0f of %.0f m)" % [id, float(row.get("far", 0.0)), length], float(row.get("far", 0.0)) >= length - 8.0)
 		_t.check("(f) %s: the ball stays on the top (worst %.2f m off the rail line, limit %.1f)" % [id, float(row.get("off", 99.0)), ON_TOP], float(row.get("off", 99.0)) <= ON_TOP)
 		var node: Node3D = placed[id]
-		var near := _facts.filter(func(e): return absf(e[1].x - node.global_position.x) < SPACING * 0.5)
+		var near := _facts.filter(func(e): return absf(e[1].x - _origin(node).x) < SPACING * 0.5)
 		_t.check("(f) %s: the roll publishes %s" % [id, FACT], near.any(func(e): return e[0] == FACT), str(near.map(func(e): return e[0])))
 	_t.check("(f) every recipe rolled", balls.size() == RECIPES.size(), str(balls.keys()))
 	parent.free()

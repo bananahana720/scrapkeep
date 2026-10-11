@@ -30,10 +30,11 @@ const DEAD_SPEED := 2.0
 const DEAD_FRAMES := 30
 const GL := 26.0
 
-# id -> {budget, extent: AABB of the -col mesh in the node's space}
-const KICKER := AABB(Vector3(-7, 0, 0), Vector3(14, 2.5, 12))
+# id -> {budget, extent: AABB of the -col mesh in the node's space}. A row's at is its footprint's centre (PARK.md:77):
+# the loader puts each entry-lip GLB's origin half a length behind it (park_recipes.gd ride_frame).
+const KICKER := AABB(Vector3(-7, 0, -6), Vector3(14, 2.5, 12))
 const NET_X := 40.6   # the 40 m cell plus the corner posts' 0.6 m radius
-const NET_Z0 := -0.6
+const NET_Z0 := -40.6
 const NET_Z := 81.2
 const NET_POST := 16.0
 const NET_SAG := 3.5
@@ -124,19 +125,19 @@ func _check_placed() -> void:
 	var kicker := _placed("mesa_lip_kicker", _row("k", "kicker", Vector2.ZERO, 0.0, Vector3(12, 2.5, 14), "mesa_lip_kicker", "kicker_launch"), parent)
 	_t.check("(b) mesa_lip_kicker: one trimesh collider, -col never drawn, base and two shells viewed", kicker["trimeshes"] == 1 and kicker["shapes"] == 1
 		and kicker["drawn_col"] == 0 and kicker["views"].size() == 3, "%s trimeshes, %s shapes, %s views" % [kicker["trimeshes"], kicker["shapes"], kicker["views"].size()])
-	_near_box("(b) mesa_lip_kicker collider is 14 x 2.5 x 12 from the entry lip", kicker["box"], KICKER)
+	_near_box("(b) mesa_lip_kicker collider is 14 x 2.5 x 12 centred on the row's at", kicker["box"], KICKER)
 	var net := _placed("net_deck", _row("n", "sky_island", Vector2(500, 0), 0.0, Vector3(80, 14, 80), "net_deck", "ride_hop"), parent)
 	_t.check("(b) net_deck: one trimesh collider, -col never drawn, base and two shells viewed", net["trimeshes"] == 1 and net["shapes"] == 1
 		and net["drawn_col"] == 0 and net["views"].size() == 3, "%s trimeshes, %s shapes, %s views" % [net["trimeshes"], net["shapes"], net["views"].size()])
 	var nb: AABB = net["box"]
-	_t.check("(b) net_deck spans x -40..40 and z 0..80 plus the posts' radius, posts to 16 m, sag to -3.5 m", absf(nb.position.x + NET_X) <= EPS and absf(nb.size.x - 2.0 * NET_X) <= EPS
+	_t.check("(b) net_deck spans x -40..40 and z -40..40 plus the posts' radius, posts to 16 m, sag to -3.5 m", absf(nb.position.x + NET_X) <= EPS and absf(nb.size.x - 2.0 * NET_X) <= EPS
 		and absf(nb.position.z - NET_Z0) <= EPS and absf(nb.size.z - NET_Z) <= EPS and absf(nb.end.y - NET_POST) <= EPS and absf(nb.position.y + NET_SAG) <= 0.1, str(nb))
 	var isle := _placed("floating_island", _row("i", "sky_island", Vector2(1000, 0), 0.0, Vector3(180, ISLE_DROP, 180), "floating_island", "ride_hop", "park_large"), parent)
 	_t.check("(b) floating_island: one trimesh collider, -col never drawn, base and two shells viewed", isle["trimeshes"] == 1 and isle["shapes"] == 1
 		and isle["drawn_col"] == 0 and isle["views"].size() == 3, "%s trimeshes, %s shapes, %s views" % [isle["trimeshes"], isle["shapes"], isle["views"].size()])
 	var ib: AABB = isle["box"]
 	_t.check("(b) floating_island deck is 180 m across at y 0 and the tip is 318 m under it", absf(ib.position.x + ISLE_R) <= 0.5 and absf(ib.size.x - 2.0 * ISLE_R) <= 0.5
-		and absf(ib.position.z) <= 0.5 and absf(ib.size.z - 2.0 * ISLE_R) <= 0.5 and absf(ib.end.y) <= 0.5 and absf(ib.position.y + ISLE_DROP) <= 0.5, str(ib))
+		and absf(ib.position.z + ISLE_R) <= 0.5 and absf(ib.size.z - 2.0 * ISLE_R) <= 0.5 and absf(ib.end.y) <= 0.5 and absf(ib.position.y + ISLE_DROP) <= 0.5, str(ib))
 	parent.free()
 
 
@@ -217,13 +218,14 @@ func _check_kicker_roll() -> void:
 	var publish := func(kind: String, _at: Vector3) -> void: events.append(kind)
 	# A 60 m runway whose top is y 0, the kicker at its end, and the net 20 m under the lip.
 	ParkRecipes.place(_row("runway", "ground", Vector2(0, -30), -1.0, Vector3(60, 1, 40), "greybox:ground", ""), parent)
-	var kicker_row := _row("k", "kicker", Vector2.ZERO, 0.0, Vector3(12, 2.5, 14), "mesa_lip_kicker", "kicker_launch")
+	# Rows are centred: the kicker's footprint runs z 0..12 (at z 6) and the net's z 14..94 (at z 54).
+	var kicker_row := _row("k", "kicker", Vector2(0, KICKER.size.z * 0.5), 0.0, Vector3(12, 2.5, 14), "mesa_lip_kicker", "kicker_launch")
 	ParkRecipes.place(kicker_row, parent, Callable(), publish)
-	ParkRecipes.place(_row("n", "sky_island", Vector2(0, 14), -20.0, Vector3(80, 14, 80), "net_deck", "ride_hop"), parent, Callable(), publish)
+	ParkRecipes.place(_row("n", "sky_island", Vector2(0, 54), -20.0, Vector3(80, 14, 80), "net_deck", "ride_hop"), parent, Callable(), publish)
 	var map := StageMap.new()
 	# The lip comes from park_map's own rule for the row, so the test fails loud if the two drift apart.
-	var lip: Dictionary = ParkMap.kicker_entry(kicker_row)
-	_t.check("(d) park_map puts the recipe kicker's lip a full length from the entry origin", (lip["at"] as Vector2).distance_to(Vector2(0, KICKER.size.z)) < EPS, str(lip["at"]))
+	var lip: Dictionary = ParkMap.kicker_lip(kicker_row)
+	_t.check("(d) park_map puts the recipe kicker's lip at the footprint's far edge, where the GLB's lip lands", (lip["at"] as Vector2).distance_to(Vector2(0, KICKER.size.z)) < EPS, str(lip["at"]))
 	map.kickers = [lip]
 	var ball := _ball(parent, Vector3(0, 1.05, -50), Vector3(0, 0, 20))
 	var speeds: Array = []
@@ -258,7 +260,7 @@ func _check_island_roll() -> void:
 	root.add_child(parent)
 	var events: Array = []
 	var publish := func(kind: String, _at: Vector3) -> void: events.append(kind)
-	ParkRecipes.place(_row("i", "sky_island", Vector2.ZERO, 0.0, Vector3(180, ISLE_DROP, 180), "floating_island", "ride_hop", "park_large"), parent, Callable(), publish)
+	ParkRecipes.place(_row("i", "sky_island", Vector2(0, ISLE_R), 0.0, Vector3(180, ISLE_DROP, 180), "floating_island", "ride_hop", "park_large"), parent, Callable(), publish)
 	var ball := _ball(parent, Vector3(0, 1.6, 6), Vector3(0, 0, 16))
 	var speeds: Array = []
 	for f in 480:

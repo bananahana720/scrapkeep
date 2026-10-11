@@ -4,6 +4,7 @@
    "id": "lava_tube_run",
    "path": "res://assets/models/park/lava_tube_run.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run drawn, lava_tube_run-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -15,6 +16,7 @@
    "id": "lava_tube_run_detail1",
    "path": "res://assets/models/park/lava_tube_run_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -26,6 +28,7 @@
    "id": "lava_tube_run_detail2",
    "path": "res://assets/models/park/lava_tube_run_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -37,6 +40,7 @@
    "id": "lava_tube_run_bend_p30",
    "path": "res://assets/models/park/lava_tube_run_bend_p30.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run_bend_p30 drawn, lava_tube_run_bend_p30-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -48,6 +52,7 @@
    "id": "lava_tube_run_bend_p30_detail1",
    "path": "res://assets/models/park/lava_tube_run_bend_p30_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -59,6 +64,7 @@
    "id": "lava_tube_run_bend_p30_detail2",
    "path": "res://assets/models/park/lava_tube_run_bend_p30_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -70,6 +76,7 @@
    "id": "lava_tube_run_bend_n30",
    "path": "res://assets/models/park/lava_tube_run_bend_n30.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh lava_tube_run_bend_n30 drawn, lava_tube_run_bend_n30-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -81,6 +88,7 @@
    "id": "lava_tube_run_bend_n30_detail1",
    "path": "res://assets/models/park/lava_tube_run_bend_n30_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -92,6 +100,7 @@
    "id": "lava_tube_run_bend_n30_detail2",
    "path": "res://assets/models/park/lava_tube_run_bend_n30_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -103,6 +112,7 @@
    "id": "adit_mouth",
    "path": "res://assets/models/park/adit_mouth.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh adit_mouth drawn, adit_mouth-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -114,6 +124,7 @@
    "id": "adit_mouth_detail1",
    "path": "res://assets/models/park/adit_mouth_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -125,6 +136,7 @@
    "id": "adit_mouth_detail2",
    "path": "res://assets/models/park/adit_mouth_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -136,6 +148,7 @@
    "id": "shaft_drop",
    "path": "res://assets/models/park/shaft_drop.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh shaft_drop drawn, shaft_drop-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -147,6 +160,7 @@
    "id": "shaft_drop_detail1",
    "path": "res://assets/models/park/shaft_drop_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -158,6 +172,7 @@
    "id": "shaft_drop_detail2",
    "path": "res://assets/models/park/shaft_drop_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -169,6 +184,7 @@
    "id": "spillway_tunnel",
    "path": "res://assets/models/park/spillway_tunnel.glb",
    "class": "park_large",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (mesh spillway_tunnel drawn, spillway_tunnel-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
@@ -180,6 +196,7 @@
    "id": "spillway_tunnel_detail1",
    "path": "res://assets/models/park/spillway_tunnel_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 1 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {
@@ -191,6 +208,7 @@
    "id": "spillway_tunnel_detail2",
    "path": "res://assets/models/park/spillway_tunnel_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (shell 2 at the base GLB's origin; range from the row's park_large class)",
    "provenance": {

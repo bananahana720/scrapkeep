@@ -4,6 +4,7 @@
    "id": "cliff_dwelling_row",
    "path": "res://assets/models/park/cliff_dwelling_row.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
    "provenance": {
@@ -32,6 +33,7 @@
    "id": "cliff_dwelling_row_detail1",
    "path": "res://assets/models/park/cliff_dwelling_row_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
    "provenance": {
@@ -60,6 +62,7 @@
    "id": "cliff_dwelling_row_detail2",
    "path": "res://assets/models/park/cliff_dwelling_row_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
    "provenance": {
@@ -88,6 +91,7 @@
    "id": "mesa_rim_ledge",
    "path": "res://assets/models/park/mesa_rim_ledge.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
    "provenance": {
@@ -116,6 +120,7 @@
    "id": "mesa_rim_ledge_detail1",
    "path": "res://assets/models/park/mesa_rim_ledge_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
    "provenance": {
@@ -144,6 +149,7 @@
    "id": "mesa_rim_ledge_detail2",
    "path": "res://assets/models/park/mesa_rim_ledge_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
    "provenance": {
@@ -172,6 +178,7 @@
    "id": "viga_pivot",
    "path": "res://assets/models/park/viga_pivot.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
    "provenance": {
@@ -200,6 +207,7 @@
    "id": "viga_pivot_detail1",
    "path": "res://assets/models/park/viga_pivot_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
    "provenance": {
@@ -228,6 +236,7 @@
    "id": "viga_pivot_detail2",
    "path": "res://assets/models/park/viga_pivot_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
    "provenance": {

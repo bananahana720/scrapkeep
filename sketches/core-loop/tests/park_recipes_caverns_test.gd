@@ -136,7 +136,9 @@ func _place_all(world: Node3D) -> Dictionary:
 	var out := {}
 	var i := 0
 	for id in RECIPES:
-		out[id] = ParkRecipes.place(_row(id, Vector2(i * SPACING, 0)), world, Callable(), func(kind: String, at: Vector3) -> void: _facts.append([kind, at]))
+		# The row's at is the footprint's centre (PARK.md:77), so the entry lip lands at z 0 and the ride runs z 0 .. L.
+		var half: float = float(RECIPES[id]["size"][0]) * 0.5
+		out[id] = ParkRecipes.place(_row(id, Vector2(i * SPACING, half)), world, Callable(), func(kind: String, at: Vector3) -> void: _facts.append([kind, at]))
 		i += 1
 	return out
 
@@ -326,8 +328,8 @@ func _check_rolls(world: Node3D, placed: Dictionary) -> void:
 			continue
 		var x0 := node.position.x
 		# An approach plank on the ground before the lip, so the ball arrives rolling at y 0.
-		# The plank reaches back past the ride sensor (park_recipes.gd centres it on the row origin, so it spans z -L/2 .. L/2),
-		# so the ball starts outside the sensor and the fact comes from the sensor's own entry, not from the spawn.
+		# The ride sensor is centred on the row's at (z L/2), so it spans z 0 .. L, the piece itself; the plank starts the ball
+		# before z 0, outside the sensor, so the fact comes from the sensor's own entry at the lip, not from the spawn.
 		var lead := maxf(APPROACH_M, length * 0.5 + SENSOR_LEAD_M)
 		var plank := PackedVector3Array()
 		plank.append_array(_quad(Vector3(-width * 0.5, 0, -lead), Vector3(-width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, -lead)))

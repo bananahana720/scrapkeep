@@ -183,11 +183,20 @@ func _check_mouths() -> void:
 			(seen > 0 or id in NO_ROOF) and bad == 0, "%d steep" % bad)
 
 
+# The test names where a GLB's entry-lip origin goes; a row's at is its footprint's centre (PARK.md:77), so the row's at is
+# that point moved by the loader's own conversion (park_recipes.gd ride_frame), turned by the row's yaw.
+func _centre(row: Dictionary) -> Dictionary:
+	var o: Vector3 = ParkRecipes.ride_frame(row)["origin"]
+	var yaw := deg_to_rad(float(row["yaw_deg"]))
+	row["at"] = [float(row["at"][0]) - sin(yaw) * o.z, float(row["at"][1]) - cos(yaw) * o.z]
+	return row
+
+
 func _row(id: String, at: Vector3, yaw := 0.0) -> Dictionary:
 	var spec: Dictionary = RECIPES[id]
 	var size: Array = spec["size"]
-	return {"id": "t_" + id, "element": "tunnel", "at": [at.x, at.z], "y": at.y, "size": size, "yaw_deg": yaw,
-		"ride_fact": spec["fact"], "recipe": id, "budget": "park_large", "hole": true}
+	return _centre({"id": "t_" + id, "element": "tunnel", "at": [at.x, at.z], "y": at.y, "size": size, "yaw_deg": yaw,
+		"ride_fact": spec["fact"], "recipe": id, "budget": "park_large", "hole": true})
 
 
 func _check_placement() -> void:

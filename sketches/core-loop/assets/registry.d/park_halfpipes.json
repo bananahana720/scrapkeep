@@ -4,6 +4,7 @@
    "id": "half_pipe_concrete",
    "path": "res://assets/models/park/half_pipe_concrete.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -19,6 +20,7 @@
    "id": "half_pipe_concrete_detail1",
    "path": "res://assets/models/park/half_pipe_concrete_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -30,6 +32,7 @@
    "id": "half_pipe_concrete_detail2",
    "path": "res://assets/models/park/half_pipe_concrete_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -41,6 +44,7 @@
    "id": "slot_canyon_flow",
    "path": "res://assets/models/park/slot_canyon_flow.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -56,6 +60,7 @@
    "id": "slot_canyon_flow_detail1",
    "path": "res://assets/models/park/slot_canyon_flow_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -67,6 +72,7 @@
    "id": "slot_canyon_flow_detail2",
    "path": "res://assets/models/park/slot_canyon_flow_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -78,6 +84,7 @@
    "id": "slot_canyon_flow_bend15",
    "path": "res://assets/models/park/slot_canyon_flow_bend15.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -93,6 +100,7 @@
    "id": "slot_canyon_flow_bend15_detail1",
    "path": "res://assets/models/park/slot_canyon_flow_bend15_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -104,6 +112,7 @@
    "id": "slot_canyon_flow_bend15_detail2",
    "path": "res://assets/models/park/slot_canyon_flow_bend15_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -115,6 +124,7 @@
    "id": "slot_canyon_flow_bend30",
    "path": "res://assets/models/park/slot_canyon_flow_bend30.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -130,6 +140,7 @@
    "id": "slot_canyon_flow_bend30_detail1",
    "path": "res://assets/models/park/slot_canyon_flow_bend30_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -141,6 +152,7 @@
    "id": "slot_canyon_flow_bend30_detail2",
    "path": "res://assets/models/park/slot_canyon_flow_bend30_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -152,6 +164,7 @@
    "id": "wash_dropin_lip",
    "path": "res://assets/models/park/wash_dropin_lip.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -167,6 +180,7 @@
    "id": "wash_dropin_lip_detail1",
    "path": "res://assets/models/park/wash_dropin_lip_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {
@@ -178,6 +192,7 @@
    "id": "wash_dropin_lip_detail2",
    "path": "res://assets/models/park/wash_dropin_lip_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
    "provenance": {

@@ -4,6 +4,7 @@
    "id": "canal_lip",
    "path": "res://assets/models/park/canal_lip.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -21,6 +22,7 @@
    "id": "canal_lip_detail1",
    "path": "res://assets/models/park/canal_lip_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -32,6 +34,7 @@
    "id": "canal_lip_detail2",
    "path": "res://assets/models/park/canal_lip_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -43,6 +46,7 @@
    "id": "flume_span",
    "path": "res://assets/models/park/flume_span.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -60,6 +64,7 @@
    "id": "flume_span_detail1",
    "path": "res://assets/models/park/flume_span_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -71,6 +76,7 @@
    "id": "flume_span_detail2",
    "path": "res://assets/models/park/flume_span_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -82,6 +88,7 @@
    "id": "penstock_run",
    "path": "res://assets/models/park/penstock_run.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -99,6 +106,7 @@
    "id": "penstock_run_detail1",
    "path": "res://assets/models/park/penstock_run_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -110,6 +118,7 @@
    "id": "penstock_run_detail2",
    "path": "res://assets/models/park/penstock_run_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -121,6 +130,7 @@
    "id": "pipeline_rail",
    "path": "res://assets/models/park/pipeline_rail.glb",
    "class": "landform",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -138,6 +148,7 @@
    "id": "pipeline_rail_detail1",
    "path": "res://assets/models/park/pipeline_rail_detail1.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
@@ -149,6 +160,7 @@
    "id": "pipeline_rail_detail2",
    "path": "res://assets/models/park/pipeline_rail_detail2.glb",
    "class": "detail",
+   "origin": "entry_lip",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
