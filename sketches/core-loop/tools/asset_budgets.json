@@ -58,7 +58,24 @@
       "tris": 8000,
       "verts": 24000,
       "draws": 1,
-      "set_by": "sculpted rock round four, alpha/x11/LKR4/KIT.md: 8,000 triangles, one draw (cliff_strata 7,988 / 8,000); verts is 3 per triangle, the unwelded flat-shaded bound, since the kit gives none; no member yet"
+      "set_by": "sculpted rock round four, alpha/x11/LKR4/KIT.md: 8,000 triangles, one draw (cliff_strata 7,988 / 8,000); verts is 3 per triangle, the unwelded flat-shaded bound, since the kit gives none; no member yet",
+      "ranges": {"base_end": 900.0, "base_margin": 60.0, "shells": [[120.0, 15.0], [50.0, 8.0]]}
+    },
+    "park_large": {
+      "tris": 16000,
+      "verts": 48000,
+      "draws": 2,
+      "set_by": "2026-10-10 w13 KC0: design-v3/PARK.md section 9 recipes row (16,000 triangles, 2 draws) for tunnels, caverns, the crater and the floating island; verts is 3 per triangle, the landform rule; no member yet",
+      "ranges": {"base_end": 700.0, "base_margin": 50.0, "shells": [[150.0, 20.0], [60.0, 8.0]]}
+    },
+    "hero_landmark": {
+      "tris": 24000,
+      "verts": 72000,
+      "draws": 6,
+      "mid_tris": 6000,
+      "far_tris": 1500,
+      "set_by": "2026-10-10 w13 KC0: design-v3/PARK.md section 9 recipes row (24,000 triangles, 6 draws, mid mesh 6,000, far mesh 1,500) for the six park landmarks; verts is 3 per triangle, the landform rule; no member yet",
+      "ranges": {"base_end": 300.0, "base_margin": 30.0, "mid_end": 900.0, "mid_margin": 60.0, "shells": [[200.0, 25.0], [80.0, 10.0]]}
     },
     "prop": {
       "tris": 270,
@@ -76,7 +93,8 @@
       "tris": 1500,
       "verts": 3000,
       "draws": 1,
-      "set_by": "2026-10-09 wave 12 coordinator: trial class for detail shells (one extra draw each, culled by range); the base asset keeps its own class. Values from the cart and beacon detail pilots (848 to 1240 tris per shell)."
+      "set_by": "2026-10-09 wave 12 coordinator: trial class for detail shells (one extra draw each, culled by range); the base asset keeps its own class. Values from the cart and beacon detail pilots (848 to 1240 tris per shell).",
+      "ranges": {"base_end": 250.0, "base_margin": 20.0, "shells": [[60.0, 8.0], [25.0, 4.0]]}
     }
   },
   "texture": {

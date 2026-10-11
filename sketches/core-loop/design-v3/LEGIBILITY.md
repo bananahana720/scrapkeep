@@ -55,6 +55,8 @@ Ten situations. Each has one source table.
 
 **One rule per meaning.** The builder critic found the draft would give one harpoon bite three rows. So: `LINE_ROWS` replaces the `harpoon_bit` and `harpoon_smashed` rows in `ROWS`. `CAUSE_ROWS` is keyed by the ids in `synergies.gd` and holds presentation only; names are read from `synergies.gd`. `STATE_ROWS.held` replaces `hold_started`'s presentation. A test fails when one id has presentation in two tables.
 
+**Telegraph timing.** An enemy attack warns for at least 1.0 s (`src/boss/hazard.gd:19`); pack kinds stay at 1.0 to 1.1 s, and a charge longer than 3 s belongs to a Warden or a miniboss. The warn sound, the wind-up pose and the floor fill start on the same tick, and damage comes only from the committed telegraph, only inside its live window (`src/combat/telegraph.gd:6-10`). Feedback is bounded: camera shake never exceeds the active camera row's `shake_cap` (1.2, and 0.6 in a Warden fight, `chase_camera.gd:27-29`), and hitstop stays inside its row's clamp (`juice.gd:355`). `tests/telegraph_timing_test.gd` holds each line for the Warden kinds from wave 13; the pack kinds' rows join it in the next wave.
+
 ## 3. The harpoon
 
 Two keys for every pilot. Right mouse is the line: press bites, hold keeps it, release flings. A line held on a body reels the ball in, as it did in the build he played. Ctrl hauls it in: a smash on a body, a winch on the world. With no line standing, Ctrl is the brake on the ground and the slam in the air, and plays no refusal.

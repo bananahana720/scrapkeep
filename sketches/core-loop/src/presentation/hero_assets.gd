@@ -508,6 +508,8 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 # pod. The outer ring (Gyro) pivots on the pod's left-right axis by the lattice's pitch, the inner
 # ring (Gyro > GyroInner) on its top-bottom bosses by the next turn, so both follow the tumble.
 static func counter_tilt(pod: Node3D, gyro: Node3D, core: Node3D) -> void:
+	if not pod.is_inside_tree() or not gyro.is_inside_tree() or not core.is_inside_tree():
+		return
 	var rel := (pod.global_basis.orthonormalized().inverse() * core.global_basis.orthonormalized()).get_euler(EULER_ORDER_XYZ)
 	gyro.rotation = Vector3(rel.x, 0.0, 0.0)
 	(gyro.get_node("GyroInner") as Node3D).rotation = Vector3(0.0, rel.y, 0.0)
@@ -773,6 +775,7 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	core.name = "HeroCore"
 	pod.name = "HeroPod"
 	var rec := {"core": core, "pod": pod, "layers": {}, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
+	var ring_holders: Array = []
 	for i in HEFT_LAYERS.size():
 		var n: int = HEFT_LAYERS[i]
 		var core_holder := Node3D.new()
@@ -789,6 +792,19 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 					var part: Node3D = layer_parts[key]
 					part.transform = Transform3D.IDENTITY
 					(core_holder if key == "core" else pod_holder).add_child(part)
+				# A layer's WeaponRing rides the base ring, so a heft module turns with the aim;
+				# its holder shows and hides with the layer's Pod holder.
+				var layer_ring := (layer_parts.pod as Node3D).get_node_or_null("WeaponRing") as Node3D
+				var base_ring := pod.get_node_or_null("WeaponRing") as Node3D
+				if layer_ring != null and base_ring != null:
+					var ring_holder := Node3D.new()
+					ring_holder.name = "HeftC%d" % n
+					ring_holder.visible = false
+					layer_ring.get_parent().remove_child(layer_ring)
+					ring_holder.add_child(layer_ring)
+					base_ring.add_child(ring_holder)
+					pod_holder.visibility_changed.connect(func(): ring_holder.visible = pod_holder.visible)
+					ring_holders.append([pod_holder, ring_holder])
 		for holder in [core_holder, pod_holder]:
 			holder.visible = false
 			for mi in holder.find_children("*", "MeshInstance3D", true, false):
@@ -802,6 +818,9 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	ball.add_child(core)
 	(pod_parent if pod_parent != null else ball).add_child(pod)
 	set_heft_class(rec, heft_class, false)
+	# visibility_changed fires only inside the tree; a fit outside it syncs here.
+	for pair in ring_holders:
+		pair[1].visible = pair[0].visible
 	if _ready_glow:
 		_glow_rec(rec, true)
 	return rec
