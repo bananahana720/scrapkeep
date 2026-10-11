@@ -2,8 +2,6 @@ extends RefCounted
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const Palette := preload("res://src/core/palette.gd")
-const Telegraph := preload("res://src/combat/telegraph.gd")
-const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # The reactor relic's driver (design-v3/wardens/reactor.md sections 3 and 4; unit KF2). warden.gd's
 # per-kind hook loads this file for every park Warden of the reactor family (spec "harpoon_anchor":
@@ -20,14 +18,12 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 #   bus's world_fact, as the park's ride sensors do. A ball outside the sheet is never touched.
 #   The face's downhill direction is the sheet's heading; on level ground it is the heading to the
 #   ball at the first pulse, kept for the fight (a mounting row's "sheet_dir" names it outright).
-# - flume (stage 2, variant meltdown): warden.gd's own _leave_slag lays the W01 lane at the
-#   relic. This driver makes every lane start at the pour channel (POUR_OFFSET from home, or the
-#   row's "pour_offset"): in on_pulse, the same tick, it rebuilds the newest lane from the pour
-#   channel (from, a flat heading to the ball, a fresh Telegraph.lane node at the same progress and
-#   phase), so the strike is published and burned from the one geometry. The body never leaves
-#   home (KF2b: moving it for the pour let a stagger opened on the landing tick strand it at the
-#   pour channel and spike anchor_velocity). The windup fact went out from home before the
-#   rebuild. slag_hop is untouched. The core window is MELTDOWN_WINDOW times longer (warden.gd's
+# - flume (stage 2, variant meltdown): warden.gd's own _leave_slag lays the W01 lane. This driver
+#   gives it the lane origin (lane_origin, KF2c): the pour channel (POUR_OFFSET from home, or the
+#   row's "pour_offset"), so the lane is laid there from the first tick and the windup, strike and
+#   recover facts and their geometry all read the one channel. The body never leaves home (KF2b:
+#   moving it for the pour let a stagger opened on the landing tick strand it at the pour channel
+#   and spike anchor_velocity). slag_hop is untouched. The core window is MELTDOWN_WINDOW times longer (warden.gd's
 #   setup already does this).
 
 const SHEET_SECONDS := 3.0
@@ -85,8 +81,6 @@ func on_charge(_warden, _seconds: float) -> void:
 
 
 func on_pulse(warden, _lifted: bool) -> void:
-	if warden.variant == "meltdown":
-		_pour(warden)
 	if warden.mounting == "dam_face":
 		_open_sheet(warden)
 
@@ -228,28 +222,6 @@ func pour_point(warden) -> Vector3:
 	return warden.home + offset
 
 
-# Rebuilds the lane this pulse laid (newest, not yet aged) from the pour channel toward the ball.
-func _pour(warden) -> void:
-	var lanes: Array = warden.slag_lanes
-	if lanes.is_empty():
-		return
-	var lane: Dictionary = lanes[lanes.size() - 1]
-	if float(lane["age"]) > 0.0:
-		return
-	var pour := pour_point(warden)
-	var out := Vector3.ZERO
-	if warden.target != null:
-		var ball: Vector3 = warden.target.ball_position()
-		out = Vector3(ball.x - pour.x, 0.0, ball.z - pour.z)
-	var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
-	var old = lane["node"]
-	var progress := 0.0
-	if is_instance_valid(old):
-		progress = old.progress
-		old.queue_free()
-	var node := Telegraph.lane(warden.world_root, warden.terrain, Threat.Type.LANE, pour, dir,
-			warden.SLAG_LENGTH, warden.SLAG_WIDTH)
-	node.set_progress(progress)
-	lane["from"] = pour
-	lane["dir"] = dir
-	lane["node"] = node
+# warden.gd's _leave_slag asks for this: every slag lane is laid from the pour channel.
+func lane_origin(warden) -> Vector3:
+	return pour_point(warden)
