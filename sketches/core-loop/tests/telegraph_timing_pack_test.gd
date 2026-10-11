@@ -363,8 +363,6 @@ func _run() -> void:
 		"%d pack kinds %s; record kinds %s" % [kinds.size(), sorted_kinds, recorded])
 	var report := {}
 	var outside: Array = []
-	# The measured wall time goes in the receipt: the smoke cap is the header's timeout.
-	var wall_start := Time.get_ticks_msec()
 	print("kind | attack | spawns | lead min/max s | record pre-shoot | overlap min | marker | band | radius | early hits")
 	for kind in kinds:
 		var id: String = _record.id_of(kind)
@@ -442,8 +440,6 @@ func _run() -> void:
 			mismatched.append("%s in LEGIBILITY only" % id)
 	_test.check("LEGIBILITY section 2 equals the report", mismatched.is_empty() and legibility.size() == report.size(),
 		"%d LEGIBILITY rows, %d report rows; mismatched %s" % [legibility.size(), report.size(), mismatched])
-	print("measured wall time %.1f s for %d kinds x %d spawns (smoke cap 360 s)" % [
-		float(Time.get_ticks_msec() - wall_start) / 1000.0, kinds.size(), SPAWNS])
 	Engine.time_scale = 1.0
 	Engine.physics_ticks_per_second = BASE_TICKS
 	_game.free()
