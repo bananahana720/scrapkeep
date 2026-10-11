@@ -1,276 +1,393 @@
 extends SceneTree
+# 2026-10-10 (PD-RIVET): re-pinned for the Hoberman mecha. The C08 glass pod checks (16,000 T pod
+# ceiling with the rig, one glass surface, base-shell vertices and extents kept) are gone: the
+# approved pictures (concepts/codex/rivet/hero.png, chase.png, sheet.png) replace the visor,
+# optical rail, raked side fins and saddle with the lattice, the drill nose, folded fins, twin
+# stacks and laser pods on the weapon ring. The rig checks are unchanged.
+
+# What it checks (P-UNITS PD-RIVET acceptance; ROSTER-LOOK sections 0 to 8):
+#   budget     shell class tris and verts; draws equal the registry row's exception.
+#   contract   no glass or requisition_tag slot, light or material_override (cage_contract_test).
+#   tree       32 hubs and 30 gaps on Core; Pod > Gyro > GyroInner, WeaponRing, Dome > Pilot;
+#              Drill, DrillTip and the laser muzzles under WeaponRing; Exhaust_L/R under Pod;
+#              the cockpit controls (Lever, WinchLever, the lap bar and two pedals).
+#   drill      DrillTip faces forward on the centre line the parallel laser muzzles fire along;
+#              the lens is 0.12 m across; three steps.
+#   stacks     at 11:30 and 12:30 from behind, rear, 0.18 m past the lattice outline.
+#   accent     class_accent only on the lens (Drill) and the exhaust mouths (Pod).
+#   outline    nothing breaks the outline at 4 or 8 o'clock from behind; fins lie flat on the
+#              lattice in the front lower gaps on both sides, inside the 0.985 core limit.
+#   colour     charcoal lattice enamel, bone seat.
+#   pod        sight cone empty; nothing past radius 1.0 below Y -0.6.
+#   variant    shell_rivet_calibrated: budget, contract, machinery at the same points.
+#   layers     shell_rivet_c2 to _c5: Core and Pod parts, detail budget and draws, panels inside
+#              the lattice and out of the sight cone; II all below Y -0.35; V hides Drill and
+#              carries a 0.20 m lens.
+#   rig        pilot_rivet_anim.glb: 25 ordered bones, meshes, triangles, seven clips.
+# The run must make EXPECTED_CHECKS checks, so an early return or a skipped loop fails it.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
-
-# C08 Rivet pod limits (artifacts/asset-sheet/ASSETS.md): the world-one shell plus the
-# unchanged pilot rig stay under the no-growth pod ceiling, the pod keeps its old
-# silhouette and its visor, rail, fins and twin stacks, and the rig, clips and node names
-# the game reads are intact. BASE is the shipped shell_rivet.glb (unchanged, kept for
-# hero_assets_test and perf_bench); BASE_POD_* were measured on it at base 4d69a55.
+const Cage := preload("res://tests/cage_contract_test.gd")
+const T := preload("res://tests/support/t.gd")
 
 const SHELL := "res://assets/models/world_one/shell_rivet.glb"
+const VARIANT := "res://assets/models/world_one/shell_rivet_calibrated.glb"
+const LAYER := "res://assets/models/world_one/shell_rivet_c%d.glb"
 const RIG := "res://assets/models/pilot_rivet_anim.glb"
-const MAX_V := 15000
-const MAX_T := 16000
-const MAX_DRAWS := 15
+const BUDGETS := "res://tools/asset_budgets.json"
+const REGISTRY := "res://assets/registry.json"
+const EXPECTED_CHECKS := 55
+const CORE_LIMIT := 0.985
+const LATTICE_OUTER := 0.975
+const LATTICE_INNER := 0.94
+const LENS := 0.12
+const HEAVY_LENS := 0.20
+const DRILL_STEPS := 3
+const STACK_RISE := 0.18
+const LAYER_DRAWS := {2: 1, 3: 2, 4: 1, 5: 3}
+const CONTROLS := ["Control_Grip_L", "Control_Grip_R", "Control_Trigger", "Control_Lever", "Control_WinchLever",
+	"Control_LapBar", "LapBar_L", "LapBar_R", "Control_Pedal_L", "Control_Pedal_R", "DecalPlate"]
+const MACHINERY := ["Drill", "DrillTip", "LaserMuzzle_L", "LaserMuzzle_R", "Exhaust_L", "Exhaust_R"]
 const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
 const RIG_BONES := [
 	"root", "pelvis", "spine_01", "spine_02", "neck", "head", "crest", "ear.L", "ear.R",
 	"goggles", "jaw", "snout", "shoulder.L", "upper_arm.L", "lower_arm.L", "hand.L", "curl.L",
 	"shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R", "curl.R", "tool.R", "tail.01", "tail.02",
 ]
-# The triangle range allows one percent of export variation; pod ceilings above stay fixed.
+# The triangle range allows one percent of export variation.
 const RIG_TRIS := Vector2i(4205, 4291)
 const RIG_MESHES := {"Claws_L": ["pilot"], "Claws_R": ["pilot"], "Pilot": ["pilot"]}
-const NODES := ["Core", "Pod", "Dome", "Pilot", "Gyro"]
-const BASE := "res://assets/models/shell_rivet.glb"
-const GROW := 0.002
-# Pod kit mesh bounds of the base shell in shell space.
-const BASE_POD_MIN := Vector3(-0.94, -0.7735, -1.015634)
-const BASE_POD_MAX := Vector3(0.94, 0.133, 0.94)
 
-var _failures := 0
+var _t := T.new("world_one_shell_rivet_test")
 
 
-func _report(label: String, ok: bool, detail: String) -> void:
-	if not ok:
-		_failures += 1
-	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+func _initialize() -> void:
+	_run.call_deferred()
 
 
-static func meshes(node: Node, out: Array = []) -> Array:
-	if node is MeshInstance3D:
-		out.append(node)
-	for c in node.get_children():
-		meshes(c, out)
+func _run() -> void:
+	var shell := _load(SHELL)
+	_t.check("shell loads", shell != null, SHELL)
+	if shell == null:
+		_finish()
+		return
+	root.add_child(shell)
+	_budget("shell", shell, "shell", _exception(SHELL))
+	var problems := Cage.contract_problems(shell)
+	_t.check("shell contract", problems.is_empty(), str(problems))
+	_tree(shell)
+	_drill(shell)
+	_stacks(shell)
+	_accent(shell)
+	_outline(shell)
+	_colours(shell)
+	_pod(shell)
+	_variant(shell)
+	_layers()
+	_check_rig()
+	shell.queue_free()
+	_finish()
+
+
+func _finish() -> void:
+	_t.eq("check count", _t.checks + 1, EXPECTED_CHECKS)
+	quit(_t.verdict())
+
+
+# --- helpers -------------------------------------------------------------------------------------
+
+static func _load(path: String) -> Node3D:
+	var packed := load(path) as PackedScene
+	return packed.instantiate() as Node3D if packed != null else null
+
+
+static func meshes(node: Node) -> Array:
+	return node.find_children("*", "MeshInstance3D", true, false) + ([node] if node is MeshInstance3D else [])
+
+
+static func slot_of(mesh: Mesh, surface: int) -> String:
+	var mat := mesh.surface_get_material(surface)
+	return mat.resource_name if mat != null else ""
+
+
+# Vertices of one mesh in the scene root's space (the shell's own frame), optionally one slot.
+static func points(mi: MeshInstance3D, top: Node3D, slot := "") -> PackedVector3Array:
+	var xf := top.global_transform.affine_inverse() * mi.global_transform
+	var out := PackedVector3Array()
+	for s in mi.mesh.get_surface_count():
+		if slot != "" and slot_of(mi.mesh, s) != slot:
+			continue
+		for v in mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX]:
+			out.append(xf * v)
 	return out
 
 
-static func to_root(node: Node, root: Node) -> Transform3D:
-	var t := Transform3D.IDENTITY
-	var n := node
-	while n != null and n != root:
-		if n is Node3D:
-			t = (n as Node3D).transform * t
-		n = n.get_parent()
-	return t
+static func at(top: Node3D, name: String) -> Node3D:
+	return top.find_child(name, true, false) as Node3D
 
 
-static func under(node: Node, name: String) -> bool:
-	var n := node
-	while n != null:
-		if String(n.name) == name:
-			return true
-		n = n.get_parent()
-	return false
+static func pos(top: Node3D, node: Node3D) -> Vector3:
+	return (top.global_transform.affine_inverse() * node.global_transform).origin
 
 
-# Vertex, triangle, surface counts, and the count of alpha surfaces.
 static func counts(scene: Node) -> Dictionary:
-	var out := {"v": 0, "t": 0, "s": 0, "alpha": 0}
-	for mi in meshes(scene):
-		for i in mi.mesh.get_surface_count():
-			var arrays := (mi.mesh as Mesh).surface_get_arrays(i)
-			out.v += (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
-			var index = arrays[Mesh.ARRAY_INDEX]
-			out.t += (index.size() if index != null else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
-			out.s += 1
-			if HeroAssets.slot_of(mi.mesh, i) == "glass":
-				out.alpha += 1
+	var out := {"tris": 0, "verts": 0, "draws": 0}
+	for mi: MeshInstance3D in meshes(scene):
+		for s in mi.mesh.get_surface_count():
+			var arrays := mi.mesh.surface_get_arrays(s)
+			out.draws += 1
+			out.verts += (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+			out.tris += (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 	return out
 
 
-# Every base vertex of a mesh node inside a region (shell space, Godot axes) must still
-# exist in the new shell, so a preserved feature cannot be dropped or reshaped.
-static func verts_in(scene: Node, node_name: String, region: AABB) -> Dictionary:
-	var out := {}
-	for mi in meshes(scene):
-		if String(mi.name) != node_name:
-			continue
-		var t := to_root(mi, scene)
-		for i in mi.mesh.get_surface_count():
-			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				var w := t * v
-				if region.has_point(w):
-					out[Vector3i((w * 1000.0).round())] = true
+func _exception(path: String) -> Dictionary:
+	var doc: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(REGISTRY))
+	for e in doc["assets"]:
+		if e.get("path", "") == path:
+			return e.get("exception", {})
+	return {}
+
+
+func _budget(label: String, scene: Node, klass: String, exception: Dictionary) -> void:
+	var cap: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BUDGETS))["classes"][klass]
+	var c := counts(scene)
+	var draws_cap := int(exception.get("draws", cap.draws))
+	print("%s budget: %d tris, %d verts, %d draws" % [label, c.tris, c.verts, c.draws])
+	_t.check(label + " tris and verts", c.tris > 0 and c.tris <= int(exception.get("tris", cap.tris))
+		and c.verts <= int(exception.get("verts", cap.verts)), "%d tris within %d, %d verts within %d" % [c.tris, cap.tris, c.verts, cap.verts])
+	_t.check(label + " draws", c.draws <= draws_cap, "%d draws within %d (%s)" % [c.draws, draws_cap, "registry exception" if exception.has("draws") else klass])
+
+
+# --- the base mecha --------------------------------------------------------------------------------
+
+func _tree(shell: Node3D) -> void:
+	var core := at(shell, "Core")
+	var pod := at(shell, "Pod")
+	var marks := 0
+	for i in 32:
+		marks += 1 if core != null and core.get_node_or_null("Hub_%02d" % i) != null else 0
+	for i in 30:
+		marks += 1 if core != null and core.get_node_or_null("Gap_%02d" % i) != null else 0
+	_t.eq("32 hubs and 30 gaps on Core", marks, 62)
+	var gyro := pod.get_node_or_null("Gyro") if pod != null else null
+	var dome := pod.get_node_or_null("Dome") if pod != null else null
+	_t.check("Pod > Gyro > GyroInner, WeaponRing, Dome > Pilot", gyro != null and gyro.get_node_or_null("GyroInner") != null
+		and pod.get_node_or_null("WeaponRing") != null and dome != null and dome.get_node_or_null("Pilot") is MeshInstance3D)
+	var ring := pod.get_node_or_null("WeaponRing") if pod != null else null
+	var on_ring := ["Drill", "DrillTip", "LaserMuzzle_L", "LaserMuzzle_R"].filter(func(n): return ring == null or ring.get_node_or_null(n) == null)
+	_t.check("drill and lasers ride WeaponRing", on_ring.is_empty() and ring.get_node("Drill") is MeshInstance3D, "missing %s" % [on_ring])
+	var on_pod := ["Exhaust_L", "Exhaust_R"].filter(func(n): return pod.get_node_or_null(n) == null)
+	_t.check("exhausts ride Pod", on_pod.is_empty(), "missing %s" % [on_pod])
+	var missing := CONTROLS.filter(func(n): return at(pod, n) == null)
+	_t.check("cockpit controls", missing.is_empty(), "missing %s" % [missing])
+
+
+func _drill(shell: Node3D) -> void:
+	var tip := at(shell, "DrillTip")
+	var left := at(shell, "LaserMuzzle_L")
+	var right := at(shell, "LaserMuzzle_R")
+	var drill := at(shell, "Drill") as MeshInstance3D
+	var fwd := Vector3(0, 0, -1)
+	var tip_fwd := -(tip.global_transform.basis.z).normalized()
+	var lasers_fwd := [-(left.global_transform.basis.z).normalized(), -(right.global_transform.basis.z).normalized()]
+	_t.check("DrillTip faces forward (+Y in Blender)", tip_fwd.dot(fwd) > 0.9999 and absf(pos(shell, tip).x) < 0.001,
+		"forward %s at %s" % [tip_fwd, pos(shell, tip)])
+	var lp := pos(shell, left)
+	var rp := pos(shell, right)
+	var tp := pos(shell, tip)
+	_t.check("DrillTip lines up with the laser fire", lasers_fwd.all(func(f): return f.dot(tip_fwd) > 0.9999)
+		and absf(lp.x + rp.x) < 0.001 and lp.x < -0.3 and rp.x > 0.3 and tp.z < -1.1 and lp.z < -1.0,
+		"muzzles %s %s, tip %s, all firing %s" % [lp, rp, tp, tip_fwd])
+	var lens := 0.0
+	for v in points(drill, shell, "class_accent"):
+		lens = maxf(lens, Vector2(v.x - tp.x, v.y - tp.y).length())
+	_t.near("lens is 0.12 m across", lens * 2.0, LENS, 0.004)
+	var levels := {}
+	for v in points(drill, shell, "copper"):
+		levels[snappedf(v.z, 0.005)] = true
+	_t.eq("three drill steps (four shoulder planes)", levels.size(), DRILL_STEPS + 1)
+
+
+func _stacks(shell: Node3D) -> void:
+	for tag in ["L", "R"]:
+		var p := pos(shell, at(shell, "Exhaust_" + tag))
+		var clock := rad_to_deg(atan2(p.x, p.y))
+		var outline := sqrt(LATTICE_OUTER * LATTICE_OUTER - p.x * p.x - p.z * p.z)
+		var side_ok := p.x < 0.0 if tag == "L" else p.x > 0.0
+		_t.check("stack %s at %s:30, rear, 0.18 m up" % [tag, "11" if tag == "L" else "12"],
+			side_ok and absf(absf(clock) - 15.0) < 4.0 and p.z > 0.1 and absf(p.y - outline - STACK_RISE) < 0.01,
+			"mouth %s, clock %.1f degrees from top, %.3f m past the outline" % [p, clock, p.y - outline])
+
+
+func _accent(shell: Node3D) -> void:
+	var owners := {}
+	var stray := 0
+	var mouths := [pos(shell, at(shell, "Exhaust_L")), pos(shell, at(shell, "Exhaust_R"))]
+	for mi: MeshInstance3D in meshes(shell):
+		for s in mi.mesh.get_surface_count():
+			if slot_of(mi.mesh, s) == "class_accent":
+				owners[String(mi.name)] = true
+		if String(mi.name) == "Pod":
+			for v in points(mi, shell, "class_accent"):
+				stray += 1 if mouths.all(func(m): return v.distance_to(m) > 0.06) else 0
+	_t.check("class_accent only on the lens and the exhaust mouths", owners.keys().size() == 2 and owners.has("Drill")
+		and owners.has("Pod") and stray == 0, "accent on %s, %d Pod accent vertices away from the mouths" % [owners.keys(), stray])
+
+
+func _outline(shell: Node3D) -> void:
+	var breaks := 0
+	for mi: MeshInstance3D in meshes(shell):
+		for v in points(mi, shell):
+			if Vector2(v.x, v.y).length() <= 0.99:
+				continue
+			var clock := fposmod(rad_to_deg(atan2(v.x, v.y)), 360.0)
+			breaks += 1 if absf(clock - 120.0) < 15.0 or absf(clock - 240.0) < 15.0 else 0
+	_t.eq("nothing breaks the outline at 4 or 8 o'clock", breaks, 0)
+	var core := at(shell, "Core") as MeshInstance3D
+	var far := 0.0
+	var fins := {"left": 0, "right": 0}
+	for v in points(core, shell):
+		far = maxf(far, v.length())
+	for v in points(core, shell, "copper"):
+		# Above the pins (0.977) and hub drums (0.975): only a fin's top face (0.983).
+		if v.length() > 0.981 and v.y < -0.35 and v.z < -0.5:
+			fins["left" if v.x < 0.0 else "right"] += 1
+	_t.check("fins lie flat in the front lower gaps", fins.left >= 6 and fins.right >= 6 and far <= CORE_LIMIT + 0.0001,
+		"%s copper vertices on the lattice face, Core reaches %.4f (limit %.3f, under 0.05 m proud)" % [fins, far, CORE_LIMIT])
+
+
+static func _near(c: Color, want: Color) -> bool:
+	var lin := want.srgb_to_linear()
+	return absf(c.r - lin.r) < 0.01 and absf(c.g - lin.g) < 0.01 and absf(c.b - lin.b) < 0.01
+
+
+static func _paint(mi: MeshInstance3D) -> Array:
+	var out := []
+	for s in mi.mesh.get_surface_count():
+		if slot_of(mi.mesh, s) == "paint":
+			out.append_array(Array(mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_COLOR]))
 	return out
 
 
-# Per-feature extent: bin Pod vertices into CELL-metre cells; every shell vertex must sit in
-# a cell the base also occupies, so a fin or stack cannot grow into empty space inside the
-# overall bounds. Returns the count of shell vertices in cells the base leaves empty.
-const CELL := 0.12
+func _colours(shell: Node3D) -> void:
+	var core := _paint(at(shell, "Core") as MeshInstance3D)
+	var charcoal := core.filter(func(c): return _near(c, Palette.CHARCOAL)).size()
+	var other := core.filter(func(c): return not _near(c, Palette.CHARCOAL) and not _near(c, Palette.SAND)).size()
+	_t.check("charcoal steel lattice", charcoal > 1000 and other == 0, "%d charcoal, %d off (bone is the chalk mark)" % [charcoal, other])
+	var seat := _paint(at(shell, "Pod") as MeshInstance3D)
+	_t.check("bone seat", not seat.is_empty() and seat.all(func(c): return _near(c, Palette.SAND)), "%d Pod paint colours" % seat.size())
 
 
-static func cell_of(w: Vector3) -> Vector3i:
-	return Vector3i((w / CELL).floor())
+func _pod(shell: Node3D) -> void:
+	var pod := at(shell, "Pod") as MeshInstance3D
+	_t.eq("sight cone empty", Cage.cone_hits(pod), 0)
+	var low := 0
+	for mi: MeshInstance3D in meshes(pod):
+		for v in points(mi, shell):
+			low += 1 if v.y < -0.6 and v.length() > 1.0 else 0
+	_t.eq("pod low reach", low, 0)
 
 
-static func occupied(scene: Node, node_name: String) -> Dictionary:
-	var out := {}
-	for mi in meshes(scene):
-		if String(mi.name) != node_name:
+# --- the Calibrated variant ----------------------------------------------------------------------
+
+func _variant(shell: Node3D) -> void:
+	var variant := _load(VARIANT)
+	_t.check("variant loads", variant != null, VARIANT)
+	if variant == null:
+		for i in 4:
+			_t.check("variant skipped", false)
+		return
+	root.add_child(variant)
+	_budget("variant", variant, "shell", _exception(VARIANT))
+	var problems := Cage.contract_problems(variant)
+	_t.check("variant contract", problems.is_empty(), str(problems))
+	var moved := []
+	for n in MACHINERY + CONTROLS:
+		var a := at(shell, n)
+		var b := at(variant, n)
+		if a == null or b == null or pos(shell, a).distance_to(pos(variant, b)) > 0.001:
+			moved.append(n)
+	_t.check("variant keeps the machinery where it was", moved.is_empty(), "moved or missing %s" % [moved])
+	variant.queue_free()
+
+
+# --- heft layers -----------------------------------------------------------------------------------
+
+func _layers() -> void:
+	for n in [2, 3, 4, 5]:
+		var path := LAYER % n
+		var layer := _load(path)
+		_t.check("c%d loads with Core and Pod" % n, layer != null and at(layer, "Core") != null and at(layer, "Pod") is MeshInstance3D, path)
+		if layer == null or not (at(layer, "Pod") is MeshInstance3D):
+			for i in 3:
+				_t.check("c%d skipped" % n, false)
 			continue
-		var t := to_root(mi, scene)
-		for i in mi.mesh.get_surface_count():
-			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				out[cell_of(t * v)] = true
-	return out
+		root.add_child(layer)
+		var c := counts(layer)
+		_t.check("c%d detail budget" % n, c.tris <= 1500 and c.verts <= 3000 and c.draws == LAYER_DRAWS[n]
+			and c.draws <= int(_exception(path).get("draws", 1)), "%d tris, %d verts, %d draws (want %d)" % [c.tris, c.verts, c.draws, LAYER_DRAWS[n]])
+		var pod := at(layer, "Pod") as MeshInstance3D
+		var far := 0.0
+		var low_top := -INF
+		for v in points(pod, layer, "paint"):
+			far = maxf(far, v.length())
+			low_top = maxf(low_top, v.y)
+		var problems := Cage.contract_problems(layer)
+		_t.check("c%d panels inside the lattice, out of the sight cone" % n, far > 0.85 and far <= LATTICE_INNER
+			and Cage.cone_hits(pod) == 0 and problems.is_empty(), "panels reach %.3f (inner face %.2f), cone %d, %s" % [far, LATTICE_INNER, Cage.cone_hits(pod), problems])
+		match n:
+			2:
+				_t.check("c2 panels below Y -0.35", low_top < -0.35, "highest panel vertex %.3f" % low_top)
+			3:
+				var caps := at(layer, "Core") as MeshInstance3D
+				var reach := 0.0
+				for v in (points(caps, layer, "rubber") if caps != null else PackedVector3Array()):
+					reach = maxf(reach, v.length())
+				_t.check("c3 wider tread caps on Core", caps != null and reach > 0.98 and reach <= CORE_LIMIT + 0.0001, "caps reach %.4f" % reach)
+			4:
+				var collars := 0
+				for v in points(pod, layer, "paint"):
+					collars += 1 if v.z > 0.1 and v.y > 0.7 else 0
+				_t.check("c4 collars round the stack bases", collars > 0, "%d collar vertices" % collars)
+			5:
+				var lens := 0.0
+				for v in points(pod, layer, "class_accent"):
+					lens = maxf(lens, Vector2(v.x, v.y + 0.22).length())
+				_t.check("c5 heavy drill replaces Drill, lens 0.20 m", at(layer, "Replace_Drill") != null and absf(lens * 2.0 - HEAVY_LENS) < 0.006,
+					"Replace_Drill %s, lens %.3f m" % [at(layer, "Replace_Drill") != null, lens * 2.0])
+		layer.queue_free()
 
 
-func _outside_cells(base: Node, shell: Node) -> int:
-	var have := occupied(base, "Pod")
-	var n := 0
-	for mi in meshes(shell):
-		if String(mi.name) != "Pod":
-			continue
-		var t := to_root(mi, shell)
-		for i in mi.mesh.get_surface_count():
-			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				var w := t * v
-				var ok := false
-				for dx in [-1, 0, 1]:
-					for dy in [-1, 0, 1]:
-						for dz in [-1, 0, 1]:
-							ok = ok or have.has(cell_of(w) + Vector3i(dx, dy, dz))
-				if not ok:
-					n += 1
-	return n
+# --- the rig (unchanged) ---------------------------------------------------------------------------
 
-
-func _kept(base: Node, shell: Node, node_name: String, region: AABB) -> String:
-	var want := verts_in(base, node_name, region)
-	var have := verts_in(shell, node_name, region.grow(0.002))
-	var lost := 0
-	for k in want:
-		var hit := false
-		for dx in [-1, 0, 1]:
-			for dy in [-1, 0, 1]:
-				for dz in [-1, 0, 1]:
-					hit = hit or have.has(k + Vector3i(dx, dy, dz))
-		if not hit:
-			lost += 1
-	return "%d of %d base vertices" % [lost, want.size()] if lost > 0 or want.is_empty() else ""
-
-
-# Scratch GLBs are read directly, so a red run never overwrites a delivered asset or its import.
-func _load_asset(path: String, environment: String) -> Node:
-	var scratch := OS.get_environment(environment)
-	if not scratch.is_empty():
-		var document := GLTFDocument.new()
-		var state := GLTFState.new()
-		var error := document.append_from_file(scratch, state)
-		_report("rivet scratch load", error == OK, "GLTF load error %d" % error)
-		return document.generate_scene(state) if error == OK else Node.new()
-	return (load(path) as PackedScene).instantiate()
-
-
-func _check_rig(rig: Node) -> void:
+func _check_rig() -> void:
+	var rig := _load(RIG)
+	if rig == null:
+		_t.check("rig loads", false, RIG)
+		return
 	var skeletons := rig.find_children("*", "Skeleton3D", true, false)
 	var names := []
 	if skeletons.size() == 1:
 		var skeleton := skeletons[0] as Skeleton3D
 		for i in skeleton.get_bone_count():
 			names.append(skeleton.get_bone_name(i))
-	_report("rivet rig bones", skeletons.size() == 1 and names == RIG_BONES,
-		"%d skeleton, %d bones; expected 1 skeleton and 25 ordered names, got %s" % [skeletons.size(), names.size(), names])
+	_t.check("rig bones", skeletons.size() == 1 and names == RIG_BONES, "%d skeleton, %d bones" % [skeletons.size(), names.size()])
 	var actual := {}
-	for mi in meshes(rig):
+	for mi: MeshInstance3D in meshes(rig):
 		var materials := []
 		for i in mi.mesh.get_surface_count():
-			var material: Material = mi.mesh.surface_get_material(i)
-			materials.append(material.resource_name if material != null else "<missing>")
+			materials.append(slot_of(mi.mesh, i) if mi.mesh.surface_get_material(i) != null else "<missing>")
 		actual[String(mi.name)] = materials
-	_report("rivet rig meshes", actual == RIG_MESHES, "mesh material names %s, expected %s" % [actual, RIG_MESHES])
-	var triangles: int = counts(rig).t
-	_report("rivet rig triangles", triangles >= RIG_TRIS.x and triangles <= RIG_TRIS.y,
-		"%d triangles, range %d..%d (1 percent around delivered geometry)" % [triangles, RIG_TRIS.x, RIG_TRIS.y])
+	_t.check("rig meshes", actual == RIG_MESHES, "mesh material names %s, expected %s" % [actual, RIG_MESHES])
+	var triangles: int = counts(rig).tris
+	_t.check("rig triangles", triangles >= RIG_TRIS.x and triangles <= RIG_TRIS.y, "%d in %d..%d" % [triangles, RIG_TRIS.x, RIG_TRIS.y])
 	var player := rig.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	var clips := []
-	if player != null:
-		clips = Array(player.get_animation_list())
+	var clips := Array(player.get_animation_list()) if player != null else []
 	var lost := CLIPS.keys().filter(func(c): return not (c in clips))
-	_report("rivet rig clips", player != null and lost.is_empty(), "seven pilot clips present (missing %s)" % [lost])
+	_t.check("rig clips", player != null and lost.is_empty(), "seven pilot clips present (missing %s)" % [lost])
 	for clip in CLIPS:
 		var length := player.get_animation(clip).length if clip in clips else -1.0
-		_report("rivet rig length " + clip, absf(length - CLIPS[clip]) <= 0.001,
-			"%.6f seconds, expected %.6f +/-0.001" % [length, CLIPS[clip]])
-
-
-func _initialize() -> void:
-	var shell: Node = _load_asset(SHELL, "SCRAPKEEP_TEST_SHELL")
-	var rig: Node = _load_asset(RIG, "SCRAPKEEP_TEST_RIG")
-	var a := counts(shell)
-	var b := counts(rig)
-	_report("rivet pod V", a.v + b.v <= MAX_V, "%d + %d = %d vertices, ceiling %d" % [a.v, b.v, a.v + b.v, MAX_V])
-	_report("rivet pod T", a.t + b.t <= MAX_T, "%d + %d = %d triangles, ceiling %d" % [a.t, b.t, a.t + b.t, MAX_T])
-	_report("rivet pod draws", a.s + b.s <= MAX_DRAWS, "%d + %d = %d surfaces, ceiling %d" % [a.s, b.s, a.s + b.s, MAX_DRAWS])
-	_report("rivet glass", a.alpha == 1 and b.alpha == 0, "one glass surface (%d shell, %d rig)" % [a.alpha, b.alpha])
-	var missing := NODES.filter(func(n): return shell.find_child(n, true, false) == null)
-	_report("rivet nodes", missing.is_empty(), "Core, Pod, Dome, Pilot, Gyro (missing %s)" % [missing])
-	var slots := []
-	for mi in meshes(shell):
-		for i in mi.mesh.get_surface_count():
-			var slot := HeroAssets.slot_of(mi.mesh, i)
-			if not HeroAssets.SLOTS.has(slot):
-				slots.append(slot)
-	_report("rivet slots", slots.is_empty(), "every surface is a section 9 slot %s" % [slots])
-	var paint_set := [Palette.VERDIGRIS, Palette.RUST, Palette.SAND]
-	var off := 0
-	for mi in meshes(shell):
-		for i in mi.mesh.get_surface_count():
-			if HeroAssets.slot_of(mi.mesh, i) == "paint":
-				for c in Array(mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]):
-					var near := false
-					for p in paint_set:
-						var lin: Color = (p as Color).srgb_to_linear()
-						near = near or (absf(c.r - lin.r) < 0.01 and absf(c.g - lin.g) < 0.01 and absf(c.b - lin.b) < 0.01)
-					if not near:
-						off += 1
-	_report("rivet paint", off == 0, "paint vertex colours are petrol, iron oxide or bone (%d off)" % off)
-	var core := shell.find_child("Core", true, false) as MeshInstance3D
-	var far := 0.0
-	for v in (core.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-		far = maxf(far, (core.transform * v).length())
-	_report("rivet core", far <= 0.981, "glass hull radius %.4f, collider 1.0" % far)
-	# Silhouette: the Pod kit mesh (plates, spool, mast, saddle) may not extend past the base
-	# shell's bounds. The gyro ring, glass and pilot are unchanged and fixed by other checks.
-	var lo := Vector3(INF, INF, INF)
-	var hi := Vector3(-INF, -INF, -INF)
-	for mi in meshes(shell):
-		if String(mi.name) != "Pod":
-			continue
-		var t := to_root(mi, shell)
-		for i in mi.mesh.get_surface_count():
-			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				var w := t * v
-				lo = lo.min(w)
-				hi = hi.max(w)
-	var grew := (lo - BASE_POD_MIN).x < -GROW or (lo - BASE_POD_MIN).y < -GROW or (lo - BASE_POD_MIN).z < -GROW \
-		or (hi - BASE_POD_MAX).x > GROW or (hi - BASE_POD_MAX).y > GROW or (hi - BASE_POD_MAX).z > GROW
-	_report("rivet silhouette", not grew, "pod bounds %s..%s within base %s..%s +%.3f" % [lo, hi, BASE_POD_MIN, BASE_POD_MAX, GROW])
-	# Preserved features, by region of the base shell: raked fins, twin stacks, optical rail,
-	# and the pilot with its visor and goggles (the Pilot mesh is not edited at all).
-	var base: Node = (load(BASE) as PackedScene).instantiate()
-	var everything := AABB(Vector3(-3, -3, -3), Vector3(6, 6, 6))
-	var features := {
-		"fins": ["Pod", AABB(Vector3(0.36, -3, -3), Vector3(3, 6, 6))],
-		"fins left": ["Pod", AABB(Vector3(-3.36, -3, -3), Vector3(3, 6, 6))],
-		"stacks": ["Pod", AABB(Vector3(-0.3, -0.3, 0.3), Vector3(0.6, 1, 1))],
-		"rail": ["Pod", AABB(Vector3(-0.3, -0.8, -1.2), Vector3(0.6, 1.2, 0.9))],
-		"pilot": ["Pilot", everything],
-		"gyro": ["Gyro", everything],
-	}
-	for key in features:
-		var lost := _kept(base, shell, features[key][0], features[key][1])
-		_report("rivet keeps " + key, lost == "", "base vertices still present (%s)" % lost)
-	var stray := _outside_cells(base, shell)
-	_report("rivet extent", stray == 0, "%d Pod vertices sit in space the base shell leaves empty (fins, stacks, rail cannot grow)" % stray)
-	base.free()
-	_check_rig(rig)
-
-	shell.free()
+		_t.near("rig length " + clip, length, CLIPS[clip], 0.001)
 	rig.free()
-	print("world_one_shell_rivet_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-	quit(0 if _failures == 0 else 1)

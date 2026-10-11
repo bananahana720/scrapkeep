@@ -1,13 +1,27 @@
-# C08 Rivet pod, world-one wear pass. Ports tools/blender/shell_rivet.py (read-only
-# reference; the port reproduces the shipped GLB byte for byte before wear() is added) and
-# adds broad wear and exposed mechanisms without growing the silhouette: chipped fin edges
-# and repair patches, riveted fin mounts, a rack and focus knob on the optical rail, lens
-# struts and bolts, stack heat shields, braces and a gauge, a worn saddle with weld beads.
-# Visor arc, optical rail, raked fins, twin stacks, node names, pilot and slots are unchanged.
-# Budget: shell + rig pod stays under the 16,000 T / 15,000 V no-growth ceiling.
+# PD-RIVET: Rivet's Hoberman mecha (ROSTER-LOOK section 0; pilots/rivet.md section 5), on the
+# shared base shell_base.hoberman(). Charcoal steel lattice, bone seat; a stepped drill nose hung
+# under the weapon ring's front arc whose lens is DrillTip; twin rapid-laser pods in copper on
+# the ring at 11 and 1 o'clock, muzzles forward; twin exhaust stacks on gap brackets at 11:30 and
+# 12:30, standing 0.18 m past the lattice; copper fins folded flat on the lattice in the front
+# lower gaps, raked into a forward V. Lens and exhaust mouths are the only class_accent.
+# Concept: artifacts/local/alpha/push/w13/concepts/codex/rivet/hero.png, chase.png and sheet.png,
+# with concepts/codex/base/base-hero.png and mechanism.png (approved after cleanup round 3,
+# docs/decisions.tsv w13-look rows of 2026-10-10). Heft layers: shell_rivet_plates.py.
 #
-#   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
-#     blender -b --factory-startup -P world_one/shell_rivet.py -- --out <file.glb>
+#   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
+#     --python world_one/shell_rivet.py -- [--variant calibrated] [--out <file.glb>]
+#
+# --variant calibrated builds the earned Calibrated shell (CUSTOMIZE section 8, pilots/rivet.md
+# section 7): the same machinery at the same points, with bone scale ticks on the outer struts,
+# bone calibration bands on the stacks and drill steps numbered by raised notches (1, 2, 3).
+#
+# The recipe extends three shell_base builders (lattice, cockpit, weapon_ring) by wrapping them
+# for the one hoberman() call, so the shared base stays PD-0's and Rivet's parts land on the
+# base meshes' existing slots. Draws: Core paint, copper, rubber; Pod paint, rubber, copper,
+# class_accent (exhaust mouths); Gyro; GyroInner; WeaponRing paint, rubber, copper (laser pods,
+# collar studs, drill hanger); Drill copper, class_accent (lens); the placeholder Pilot, which
+# fit_pilot_into hides in play (hero_assets.gd:1113-1115). 15 in the file, 14 drawn; the
+# registry row carries the draw exception.
 
 import math
 import os
@@ -15,163 +29,315 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
+import bmesh  # noqa: E402
+from mathutils import Vector  # noqa: E402
+
 import common  # noqa: E402
 import shell_base as sb  # noqa: E402
 from common import Part  # noqa: E402
 
-# Pod ceiling from ASSETS.md: 16,000 T with the unchanged pilot rig; base pod 14,332 T.
-POD_TRIS_MAX = 16000
-BASE_POD_TRIS = 14332
-BASE_SHELL_TRIS = 5956
-SHELL_TRIS = (3000, BASE_SHELL_TRIS + POD_TRIS_MAX - BASE_POD_TRIS)
+# Shell class (tools/asset_budgets.json): 11,000 tris with the placeholder pilot. The base without
+# the pilot stays under hero_assets_test's 6,500 band, so the hubs and caps are 6-sided (the
+# ROSTER-LOOK section 5 cut order: cheaper hubs before raising the target).
+SHELL_BAND = (3000, 11000)
+ENAMEL = "charcoal"
+SEAT = "bone"
+BANK = (("Lever", "lever"), ("WinchLever", "lever"))
 
-DOME_C = (0.0, -0.02, 0.84)
-DOME_R = 0.6
-FIN = [(0.0, 0.2), (0.12, 0.18), (0.56, -0.64), (0.47, -0.76), (0.0, -0.22)]
+# Drill nose (Blender axes): axis along +Y at x 0, hung under the ring's front arc so the collar
+# (radius 1.035 to 1.075, Z -0.07 to -0.04) clears the second step. Steps: (y0, y1, r0, r1).
+DRILL_Z = -0.22
+DRILL_Y0 = 0.88
+DRILL_STEPS = ((0.88, 1.00, 0.17, 0.155), (1.00, 1.10, 0.13, 0.11), (1.10, 1.18, 0.09, 0.07))
+LENS_R = 0.06                       # 0.12 m across at class I; class V's is in the c5 layer
+DRILL_SIDES = 10
+# Laser pods ride the ring band at 11 and 1 o'clock, parallel, muzzles forward (+Y).
+LASER_ANGLE = math.radians(30)
+LASER_RADIUS = 1.085
+LASER_R = 0.06
+LASER_LEN = 0.20
+# Exhaust stacks: straight up at 11:30 and 12:30 from behind, 0.18 m past the lattice outline.
+STACK_X = 0.25
+STACK_Y = -0.20
+STACK_BASE = 0.80
+STACK_R = 0.055
+STACK_RISE = 0.18
+STACK_TOP = round(math.sqrt(sb.LATTICE_OUTER ** 2 - STACK_X ** 2 - STACK_Y ** 2) + STACK_RISE, 3)
+# Gap bracket: one slim rod per stack from the seat back's top corner, outside the sight cone.
+BRACKET_FOOT = (0.22, -0.20, -0.12)
+BRACKET_R = 0.02
+# Fins: folded flat on the lattice (Core), radius 0.978 to 0.983, front lower, raked into a V
+# whose point leads toward the drill. (azimuth from +Y toward +X, elevation), degrees.
+FIN_AT = ((38.0, -32.0), (-38.0, -32.0))
+FIN_IN, FIN_OUT = 0.978, 0.983
+FIN_TIP, FIN_TAIL, FIN_HALF = 0.11, 0.07, 0.07
 
 
-def pod():
-    p = Part("Pod")
-    sb.saddle(p, color="oxide")
+def flag(name, default=None):
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    if name not in argv:
+        return default
+    i = argv.index(name)
+    return argv[i + 1] if i + 1 < len(argv) and not argv[i + 1].startswith("--") else True
+
+
+def direction(az_deg, el_deg):
+    az, el = math.radians(az_deg), math.radians(el_deg)
+    return Vector((math.cos(el) * math.sin(az), math.cos(el) * math.cos(az), math.sin(el)))
+
+
+# --- lattice extras (Core) ------------------------------------------------------------------
+
+
+def fin(part, centre_dir):
+    """A copper fin lying on the lattice: a raked triangle whose tip points toward the front gap,
+    each vertex on the sphere, the face split once so it follows the curve (20 tris)."""
+    d = centre_dir.normalized()
+    front = Vector((0, 1, 0))
+    u = (front - d * front.dot(d)).normalized()
+    v = d.cross(u).normalized()
+    tip = u * FIN_TIP
+    a = -u * FIN_TAIL + v * FIN_HALF
+    b = -u * FIN_TAIL - v * FIN_HALF
+    outline = [tip, (tip + a) / 2, a, (a + b) / 2, b, (b + tip) / 2]
+    def on(p, r):
+        return (d * FIN_OUT + p).normalized() * r
+    top = [part.bm.verts.new(on(p, FIN_OUT)) for p in outline]
+    bot = [part.bm.verts.new(on(p, FIN_IN)) for p in outline]
+    faces = []
+    for ring, flip in ((top, False), (bot, True)):
+        for tri in ((0, 1, 5), (1, 2, 3), (3, 4, 5), (1, 3, 5)):
+            vs = [ring[i] for i in tri]
+            faces.append(part.bm.faces.new(list(reversed(vs)) if flip else vs))
+    n = len(outline)
+    for i in range(n):
+        j = (i + 1) % n
+        faces.append(part.bm.faces.new((bot[i], bot[j], top[j], top[i])))
+    part.paint(faces, "copper")
+
+
+def scale_ticks(part, pairs):
+    """Calibrated: a bone scale tick on the first outer strut bar of every link, a quarter of the
+    way along from the five-way hub (one per link keeps the shell inside 11,600 verts)."""
+    hubs, links, _ = sb.lattice_layout()
+    r_bar = sb.LATTICE_OUTER - sb.STRUT_PAIR / 4
+    for i, j in links:
+        a, b = hubs[i], hubs[j]
+        s = a.cross(b).normalized()
+        span = sb.HUB_CLEAR / (sb.HUB_RADIUS * a.angle(b))
+        for k in range(min(pairs, 1)):
+            t0 = span + (1 - 2 * span) * k / pairs
+            t1 = span + (1 - 2 * span) * (k + 1) / pairs
+            # The outer bar of the pair, as lattice() lays it: a chord, so sit on its face.
+            p0 = sb._slerp(a, b, t0) * r_bar - s * sb.CHAIN_WIDTH / 2
+            p1 = sb._slerp(a, b, t1) * r_bar + s * sb.CHAIN_WIDTH / 2
+            n = ((p0 + p1) / 2).normalized()
+            p = p0.lerp(p1, 0.28) + n * (sb.STRUT_PAIR / 4 + 0.0015)
+            sb._disc(part, p, n, 0.03, 4, "paint", "bone", roll=0.785)
+
+
+def make_lattice(variant):
+    base = sb.lattice
+
+    def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None):
+        out = base(part, enamel, pairs, hub_sides, cap_sides, rng)
+        for az, el in FIN_AT:
+            fin(part, direction(az, el))
+        if variant:
+            scale_ticks(part, pairs)
+        # 6-sided hub drums turn 60 degrees a side, past the base's 0.9 rad split, so they would
+        # export faceted; 1.1 rad keeps them round and saves their split vertices. _sharpen only
+        # marks edges sharp, so the base's marks are cleared first.
+        for e in part.bm.edges:
+            e.smooth = True
+        sb._sharpen(part, angle=1.1)
+        return out
+    return lattice
+
+
+# --- cockpit extras (Pod) -------------------------------------------------------------------
+
+
+def stacks(p, variant):
+    """Twin copper stacks on slim gap brackets, a rubber rim, the glowing mouth on top."""
+    height = STACK_TOP - STACK_BASE
     for side in (-1, 1):
-        root_x = side * 0.58
-        p.box("bare_metal", (0.1, 0.46, 0.34), loc=(root_x, -0.02, 0.8))
-        for k, z in enumerate((0.68, 0.8, 0.92)):
-            reach = 1.0 - 0.12 * k
-            outline = [(side * (0.6 + x * reach), y) for x, y in FIN]
-            if side < 0:
-                outline.reverse()
-            outline = [(x - side * 0.6, y) for x, y in outline]
-            dihedral = common.mtx((side * 0.6, 0, z), (0, -side * 0.28, 0))
-            p.prism("class_accent", outline, 0.035, matrix=dihedral)
-        for z in (0.7, 0.9):
-            p.bolt((root_x + side * 0.05, 0.12, z), (side, 0, 0), r=0.025)
-    for side in (-1, 1):
-        base = (side * 0.2, -0.5, 0.78)
-        top = (side * 0.24, -0.72, 1.3)
-        p.rod("bare_metal", base, top, 0.07, 8)
-        p.rod("rubber", top, (top[0], top[1] - 0.02, top[2] + 0.06), 0.085, 8)
-        mid = [base[i] + (top[i] - base[i]) * 0.45 for i in range(3)]
-        p.rod("paint", (mid[0], mid[1] + 0.02, mid[2] - 0.05), (mid[0], mid[1] - 0.02, mid[2] + 0.05), 0.08, 8,
-              color="petrol")
-    p.box("paint", (0.36, 0.14, 0.12), loc=(0, -0.52, 0.78), color="petrol")
-    # The optical rail: a flat bed, not a barrel, with a slotted carriage and the lens.
-    # It runs forward and down from the pod, so the lens sits below the pilot's face.
-    tilt = -0.38
-    rail = common.mtx((0, 0.5, 0.78), (tilt, 0, 0))
-    p.box("bare_metal", (0.16, 0.9, 0.035), loc=rail @ common.Vector((0, 0.45, 0)), rot=(tilt, 0, 0))
-    p.box("rubber", (0.05, 0.88, 0.02), loc=rail @ common.Vector((0, 0.45, 0.025)), rot=(tilt, 0, 0))
-    p.box("paint", (0.14, 0.12, 0.08), loc=rail @ common.Vector((0, 0.3, 0.06)), rot=(tilt, 0, 0), color="bone")
-    lens = rail @ common.Vector((0, 0.95, 0))
-    p.cyl("paint", 0.14, 0.14, 0.1, 12, loc=lens, rot=(math.pi / 2 + tilt, 0, 0), color="petrol")
-    face = rail @ common.Vector((0, 1.01, 0))
-    p.ring("bare_metal", 0.1, 0.16, 0.04, 12, loc=face, rot=(math.pi / 2 + tilt, 0, 0))
-    p.cyl("class_accent", 0.1, 0.1, 0.02, 12, loc=rail @ common.Vector((0, 1.015, 0)), rot=(math.pi / 2 + tilt, 0, 0))
-    wear(p, rail, tilt)
-    return p
+        x = side * STACK_X
+        p.cyl("copper", STACK_R, STACK_R, height, 8, loc=(x, STACK_Y, STACK_BASE + height / 2))
+        p.cyl("rubber", STACK_R + 0.007, STACK_R + 0.007, 0.03, 8, loc=(x, STACK_Y, STACK_TOP - 0.012))
+        sb._disc(p, (x, STACK_Y, STACK_TOP + 0.0045), (0, 0, 1), STACK_R - 0.012, 6, "class_accent")
+        if variant:
+            for z in (STACK_BASE + 0.13, STACK_BASE + 0.19):
+                p.cyl("paint", STACK_R + 0.004, STACK_R + 0.004, 0.016, 8, loc=(x, STACK_Y, z), color="bone")
+        fx, fy, fz = BRACKET_FOOT
+        p.rod("rubber", (side * fx, fy, fz), (x, STACK_Y, STACK_BASE + 0.02), BRACKET_R, 6)
 
 
-def fin_pt(side, z0, reach, lx, ly):
-    """A point on a fin layer in pod space (same dihedral as pod())."""
-    return common.mtx((side * 0.6, 0, z0), (0, -side * 0.28, 0)) @ common.Vector((side * lx * reach, ly, 0))
+def make_cockpit(variant):
+    base = sb.cockpit
+
+    def cockpit(seat="bone", bank=BANK):
+        p = base(seat, bank)
+        stacks(p, variant)
+        # The Foundry Cutter sight at the lap bar's centre (the largest control, copper).
+        _, ly, lz = sb.LAP_HANDS["LapBar.R"]
+        p.cyl("copper", 0.03, 0.03, 0.02, 6, loc=(0, ly + 0.01, lz + 0.05), rot=(math.pi / 2, 0, 0))
+        p.rod("copper", (0, ly, lz), (0, ly + 0.01, lz + 0.035), 0.01, 4)
+        return p
+    return cockpit
 
 
-def wear(p, rail, tilt):
-    """Wear and exposed mechanisms; every piece stays inside the old pod extents."""
-    V = common.Vector
-    for side in (-1, 1):
-        # Fins: rubbed-through chips on the trailing edge, a mismatched repair plate.
-        for k, z in enumerate((0.68, 0.8, 0.92)):
-            reach = 1.0 - 0.12 * k
-            at = fin_pt(side, z, reach, 0.4, -0.5 - 0.05 * k)
-            p.box("bare_metal", (0.09, 0.07, 0.042), loc=at, rot=(0, -side * 0.28, 0.5 * side))
-        at = fin_pt(side, 0.8, 0.88, 0.22, -0.2)
-        p.box("paint", (0.12, 0.1, 0.05), loc=at, rot=(0, -side * 0.28, 0), color="bone" if side < 0 else "petrol")
-        # Fin mounts: a second row of rivets and a patch plate.
-        root_x = side * 0.58
-        for y in (-0.08,):
-            for z in (0.7, 0.9):
-                p.bolt((root_x + side * 0.05, y, z), (side, 0, 0), r=0.02, h=0.015, segs=5)
-        p.box("paint", (0.02, 0.2, 0.12), loc=(root_x + side * 0.055, 0.07, 0.8), color="bone")
-        # Stacks: standoff heat shield and a brace back to the saddle.
-        base = V((side * 0.2, -0.5, 0.78))
-        top = V((side * 0.24, -0.72, 1.3))
-        mid = base + (top - base) * 0.62
-        inner = V((mid.x - side * 0.09, mid.y, mid.z))
-        p.box("bare_metal", (0.016, 0.08, 0.26), loc=inner, rot=(-0.44, 0, 0))
-        p.beam("bare_metal", base + (top - base) * 0.3, (side * 0.4, -0.3, 0.78), 0.024)
-    # Gauge on the rear petrol box: bezel, bone face, needle, and a chip on its top.
-    g = (0.0, -0.593, 0.79)
-    p.ring("bare_metal", 0.045, 0.062, 0.02, 10, loc=g, rot=(math.pi / 2, 0, 0))
-    p.cyl("paint", 0.045, 0.045, 0.014, 10, loc=(0, -0.588, 0.79), rot=(math.pi / 2, 0, 0), color="bone")
-    p.rod("rubber", (0, -0.598, 0.79), (0.025, -0.598, 0.815), 0.006, 4)
-    p.box("bare_metal", (0.08, 0.06, 0.01), loc=(0.11, -0.52, 0.842), rot=(0, 0, 0.3))
-    # Optical rail: rack teeth on both edges, focus knob, lens struts and face bolts.
-    for side in (-1, 1):
-        for k in range(4):
-            y = 0.14 + 0.2 * k
-            p.box("bare_metal", (0.024, 0.04, 0.03), loc=rail @ V((side * 0.092, y, 0.0)), rot=(tilt, 0, 0))
-        strut_a = rail @ V((side * 0.08, 0.72, 0.02))
-        strut_b = rail @ V((side * 0.115, 0.9, 0.0))
-        p.beam("bare_metal", strut_a, strut_b, 0.024)
-    p.cyl("bare_metal", 0.045, 0.045, 0.04, 8, loc=rail @ V((0.1, 0.3, 0.06)), rot=(tilt, math.pi / 2, 0))
-    for k in range(2):
-        a = k * math.pi + math.pi / 4
-        q = rail @ V((0.13 * math.cos(a), 1.03, 0.13 * math.sin(a)))
-        n = rail.to_3x3() @ V((0, 1, 0))
-        p.bolt(q, n, r=0.014, h=0.012, segs=5)
-    # Saddle: two rubbed-through arcs, weld beads and two repair patches with rivets.
-    for start in (0.5, 3.7):
-        p.ring("bare_metal", 0.615, 0.643, 0.03, 4, loc=(0, 0, 0.8), arc=(start, start + 0.8))
-    for deg in (20, 150, 250):
-        a = math.radians(deg)
-        p.rod("bare_metal", (0.5 * math.cos(a), 0.5 * math.sin(a), 0.83),
-              (0.6 * math.cos(a), 0.6 * math.sin(a), 0.83), 0.014, 5)
-    for deg, col in ((75, "bone"), (200, "petrol")):
-        a = math.radians(deg)
-        p.box("paint", (0.1, 0.07, 0.03), loc=(0.56 * math.cos(a), 0.56 * math.sin(a), 0.835), rot=(0, 0, a), color=col)
-        for d in (0.0,):
-            p.bolt((0.56 * math.cos(a) - d * math.sin(a), 0.56 * math.sin(a) + d * math.cos(a), 0.85),
-                   (0, 0, 1), r=0.014, h=0.008, segs=5)
+# --- weapon ring extras -----------------------------------------------------------------------
+
+
+def drop_neutral_seat(r):
+    """Removes the neutral weapon seat (the box and rod in front of the band at 12 o'clock)."""
+    b_out = sb.RING_BAND[1]
+    seeds = [v for v in r.bm.verts if v.co.y > b_out + 0.02 and abs(v.co.x) < 0.09 and abs(v.co.z) < 0.08]
+    island, stack = set(seeds), list(seeds)
+    while stack:
+        v = stack.pop()
+        for e in v.link_edges:
+            w = e.other_vert(v)
+            if w not in island:
+                island.add(w)
+                stack.append(w)
+    r.bm.verts.index_update()
+    bmesh.ops.delete(r.bm, geom=sorted(island, key=lambda v: v.index), context="VERTS")
+
+
+def studs_to_copper(r):
+    """The collar's bearing studs show copper (ROSTER-LOOK 0.7); the ring now has a copper slot."""
+    c_in, c_out, _, c_z = sb.RING_COLLAR
+    studs = [f for f in r.bm.faces if len(f.verts) == 6
+             and all(abs(v.co.z - c_z) < 0.015 and c_out - 0.005 < Vector((v.co.x, v.co.y, 0)).length < c_out + 0.02
+                     for v in f.verts)]
+    r.bm.faces.index_update()
+    r.paint(sorted(studs, key=lambda f: f.index), "copper")
+    return len(studs)
+
+
+def laser_points():
+    return [(side, Vector((side * math.sin(LASER_ANGLE) * LASER_RADIUS, math.cos(LASER_ANGLE) * LASER_RADIUS,
+                           sb.RING_BAND[3]))) for side in (-1, 1)]
+
+
+def make_ring():
+    base = sb.weapon_ring
+
+    def weapon_ring(enamel_band="bone"):
+        r = base(enamel_band)
+        drop_neutral_seat(r)
+        studs = studs_to_copper(r)
+        if studs != 12:
+            raise SystemExit("expected 12 collar studs, found %d" % studs)
+        for _, c in laser_points():
+            r.cyl("copper", LASER_R, LASER_R, LASER_LEN, 8, loc=c, rot=(-math.pi / 2, 0, 0))
+            r.cyl("rubber", 0.032, 0.032, 0.05, 6, loc=c + Vector((0, LASER_LEN / 2 + 0.02, 0)), rot=(-math.pi / 2, 0, 0))
+        # The drill hanger: a copper strap from the collar down to the drill's second step.
+        r.box("copper", (0.07, 0.04, 0.035), loc=(0, (sb.RING_COLLAR[0] + sb.RING_COLLAR[1]) / 2, -0.0875))
+        sb._sharpen(r)
+        return r
+    return weapon_ring
+
+
+def drill(variant):
+    """The stepped drill cone (Drill, which spins about its own +Y axis) with the lens disc."""
+    d = Part("Drill")
+    for n, (y0, y1, r0, r1) in enumerate(DRILL_STEPS):
+        d.cyl("copper", r0, r1, y1 - y0, DRILL_SIDES, loc=(0, (y0 + y1) / 2, DRILL_Z), rot=(-math.pi / 2, 0, 0))
+        if variant:
+            # Numbered steps: step n carries n + 1 raised notches on its shoulder.
+            for k in range(n + 1):
+                a = math.pi / 2 + (k - n / 2) * 0.32
+                p = Vector((math.cos(a) * (r0 - 0.004), y0 + 0.012, DRILL_Z + math.sin(a) * (r0 - 0.004)))
+                d.box("copper", (0.018, 0.02, 0.018), loc=p)
+    tip = DRILL_STEPS[-1][1]
+    sb._disc(d, (0, tip + 0.0015, DRILL_Z), (0, 1, 0), LENS_R, 10, "class_accent")
+    sb._sharpen(d)
+    return d
+
+
+# --- pilot placeholder ------------------------------------------------------------------------
 
 
 def pilot():
+    """The seated mole the shell carries as its placeholder (hidden in play; the animated pilot
+    from pilot_rivet_anim.glb takes its place). Same shapes as the VD-01 seat, fewer segments."""
     f = Part("Pilot")
     fur = common.mix("charcoal", "bone", 0.32)
     pink = common.mix("oxide", "bone", 0.55)
-    f.uv("pilot", 0.23, 24, 16, loc=(0, 0, 1.1), scale=(1.12, 0.96, 0.93), color=fur)
-    f.uv("pilot", 0.1, 16, 10, loc=(0, 0.21, 1.045), scale=(1.05, 1.15, 0.72), color=pink)
-    f.uv("pilot", 0.055, 12, 8, loc=(0, 0.31, 1.052), scale=(1, 0.58, 0.68), color=pink)
-    f.ring("pilot", 0.224, 0.247, 0.035, 24, loc=(0, 0, 1.16), color="charcoal", arc=(math.pi - 0.2, 2 * math.pi + 0.2))
+    f.uv("pilot", 0.23, 12, 8, loc=(0, 0, 1.1), scale=(1.12, 0.96, 0.93), color=fur)
+    f.uv("pilot", 0.1, 8, 5, loc=(0, 0.21, 1.045), scale=(1.05, 1.15, 0.72), color=pink)
+    f.uv("pilot", 0.055, 6, 4, loc=(0, 0.31, 1.052), scale=(1, 0.58, 0.68), color=pink)
+    f.ring("pilot", 0.224, 0.247, 0.035, 10, loc=(0, 0, 1.16), color="charcoal", arc=(math.pi - 0.2, 2 * math.pi + 0.2))
     for side in (-1, 1):
-        f.uv("pilot", 0.06, 12, 8, loc=(side * 0.225, 0.0, 1.135), scale=(0.7, 0.75, 1), color=fur)
-        f.ring("pilot", 0.052, 0.076, 0.04, 16, loc=(side * 0.092, 0.195, 1.165), rot=(math.pi / 2, 0, 0), color="copper")
-        sb.eye(f, (side * 0.092, 0.218, 1.165), 0.047)
-        f.uv("pilot", 0.012, 8, 6, loc=(side * 0.023, 0.34, 1.055), scale=(1, 0.3, 0.7), color="charcoal")
-    f.rod("pilot", (-0.024, 0.212, 1.17), (0.024, 0.212, 1.17), 0.011, 8, color="copper")
+        f.uv("pilot", 0.06, 6, 4, loc=(side * 0.225, 0.0, 1.135), scale=(0.7, 0.75, 1), color=fur)
+        f.ring("pilot", 0.052, 0.076, 0.04, 8, loc=(side * 0.092, 0.195, 1.165), rot=(math.pi / 2, 0, 0), color="copper")
+        # The goggle lens, as shell_base.eye() draws it, at 8 by 5.
+        ex, ey, ez = side * 0.092, 0.218, 1.165
+        f.uv("pilot", 0.047, 8, 5, loc=(ex, ey, ez), scale=(1, 0.6, 1.1), color="charcoal")
+        f.box("pilot", (0.0235, 0.0141, 0.0235), loc=(ex + 0.0141, ey + 0.04, ez + 0.0165), color="bone")
+    f.rod("pilot", (-0.024, 0.212, 1.17), (0.024, 0.212, 1.17), 0.011, 6, color="copper")
+    for v in f.bm.verts:
+        v.co = (v.co - Vector((0, 0, 1.1))) * 1.2325 + Vector((0, 0.015, 0.17))
+    jacket = "bone"
+    f.uv("pilot", 0.26, 10, 6, loc=(0, -0.005, -0.17), scale=(1.07, 0.78, 1.0), color=jacket)
+    f.uv("pilot", 0.13, 6, 4, loc=(0, 0.035, 0.005), scale=(1.2, 0.75, 0.6), color="bone")
+    for side in (-1, 1):
+        f.uv("pilot", 0.12, 6, 4, loc=(side * 0.18, 0.18, -0.3), scale=(1, 1.5, 0.85), color="oxide")
+        f.rod("pilot", (side * 0.18, 0.2, -0.3), (side * 0.2, 0.38, -0.46), 0.09, 6, color="petrol")
+        f.uv("pilot", 0.1, 6, 4, loc=(side * 0.2, 0.45, -0.48), scale=(1, 1.4, 0.6), color="charcoal")
+        f.uv("pilot", 0.12, 6, 4, loc=(side * 0.22, 0.005, -0.09), scale=(1.0, 0.85, 1.12), color=jacket)
+        f.rod("pilot", (side * 0.24, 0.015, -0.09), (side * 0.36, 0.24, -0.12), 0.09, 6, color=jacket)
+        f.rod("pilot", (side * 0.36, 0.24, -0.12), (side * 0.32, 0.4, 0.04), 0.07, 6, color="charcoal")
+        f.uv("pilot", 0.075, 6, 4, loc=(side * 0.32, 0.4, 0.05), color="sandstone")
+        f.beam("pilot", (side * 0.16, 0.22, -0.25), (side * 0.14, 0.19, 0.06), 0.035, 0.02, color="copper")
+    sb._sharpen(f, angle=1.2)
     return f
 
 
-def visor():
-    """The visor is class_accent (section 9), so it is its own object under Pilot."""
-    v = Part("Visor")
-    v.ring("class_accent", 0.22, 0.29, 0.09, 12, loc=(0, 0.0, 1.14), arc=(0.35, math.pi - 0.35))
-    v.box("rubber", (0.05, 0.05, 0.06), loc=(-0.27, 0.02, 1.13))
-    return v
+# --- assembly -----------------------------------------------------------------------------------
+
+
+def build(variant=False):
+    """Builds Rivet's mecha under a new root and returns the hoberman() dict plus drill."""
+    saved = (sb.lattice, sb.cockpit, sb.weapon_ring)
+    sb.lattice, sb.cockpit, sb.weapon_ring = make_lattice(variant), make_cockpit(variant), make_ring()
+    try:
+        name = "RivetCalibrated" if variant else "Rivet"
+        shell = sb.hoberman(name, enamel=ENAMEL, seat=SEAT, pairs=2, bank=BANK, pilot=pilot(),
+                            hub_sides=6, cap_sides=6)
+    finally:
+        sb.lattice, sb.cockpit, sb.weapon_ring = saved
+    ring, pod = shell["ring"], shell["pod"]
+    shell["drill"] = drill(variant).to_object((0, DRILL_Y0, DRILL_Z), ring)
+    common.empty("DrillTip", (0, DRILL_STEPS[-1][1] + 0.0015, DRILL_Z), ring)
+    for side, c in laser_points():
+        common.empty("LaserMuzzle." + ("L" if side < 0 else "R"), c + Vector((0, LASER_LEN / 2 + 0.045, 0)), ring)
+    for side, tag in ((-1, "L"), (1, "R")):
+        common.empty("Exhaust." + tag, (side * STACK_X, STACK_Y, STACK_TOP + 0.0045), pod)
+    return shell
 
 
 def main():
     common.reset()
     common.preview_class("copper")
-    root, core_obj, pilot_obj = sb.spherical("Rivet", pod(), pilot())
-    shell_tris = common.tri_total(root, skip=(pilot_obj.name,))
-    ok = common.report("Rivet", [("shell", shell_tris, SHELL_TRIS), ("pilot", common.tris(pilot_obj), sb.PILOT_TRIS)])
-    radius = common.max_radius(core_obj)
-    print("CORE_RADIUS Rivet %.3f %s" % (radius, "ok" if radius <= 1.0 else "OUT"))
-    out = common.args()["out"] or os.path.join(common.MODELS, "world_one", "shell_rivet.glb")
-    common.export(root, out)
-    if not ok or radius > 1.0:
-        raise SystemExit("budget out of range for Rivet")
+    variant = flag("--variant")
+    if variant not in (None, "calibrated"):
+        raise SystemExit("unknown variant %s" % variant)
+    shell = build(variant == "calibrated")
+    name = "RivetCalibrated" if variant else "Rivet"
+    tris = common.tri_total(shell["root"], skip=(shell["pilot"].name,))
+    print("HOBERMAN %s tris=%d core=%d pod=%d ring=%d drill=%d pilot=%d"
+          % (name, tris, common.tris(shell["core"]), common.tris(shell["pod"]), common.tris(shell["ring"]),
+             common.tris(shell["drill"]), common.tris(shell["pilot"])))
+    print("STACK_TOP %.3f (lattice outline %.3f + %.2f)" % (STACK_TOP, STACK_TOP - STACK_RISE, STACK_RISE))
+    default = "shell_rivet_calibrated.glb" if variant else "shell_rivet.glb"
+    out = common.args()["out"] or os.path.join(common.MODELS, "world_one", default)
+    sb.finish(name, shell["root"], shell["core"], shell["pilot"], shell_band=SHELL_BAND,
+              pod_obj=shell["pod"], out=out)
 
 
-main()
+if __name__ == "__main__":
+    main()
