@@ -9,6 +9,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
 
 # The pause menu and its settings (DESIGN-V2 section 14.1). P, Esc or a pad's Start
 # opens it in play and closes it again. Each row is a ChoiceButton with its key's cap,
@@ -43,10 +44,18 @@ const ROWS := [
 	{"id": "ceremony", "key": "key_c", "words": "Ceremonies: full"},
 	{"id": "breath", "key": "key_b", "words": "Breath: hard"},
 	{"id": "settings", "key": "key_o", "words": "Settings"},
-	{"id": "quit", "key": "key_q", "words": "Quit"},
+	{"id": "quit", "key": "key_x", "words": "Quit"},
 ]
 # The keys that turn the notes a page while they are pinned; any other key unpins them.
 const NOTES_KEYS := [KEY_Q, KEY_E, KEY_TAB]
+# Quit is X held QUIT_HOLD seconds, with a ring filling round its keycap like the retry hold
+# (design-v3/SKILL-BAR.md section 5). Q is the ultimate now, the most-pressed key in a fight,
+# and muscle memory pressing it on an open menu must never end a run. A click on the row, or
+# Enter on it focused, still quits at once.
+const QUIT_KEY := KEY_X
+const QUIT_HOLD := 0.6
+
+signal quit_chosen
 
 var game
 var store
@@ -61,6 +70,9 @@ var _order: Array = []
 var _open := false
 var _notes_pinned := false
 var _tween: Tween
+var _quit_down := false
+var _quit_held := 0.0
+var _quit_ring: Control
 
 
 func _init() -> void:
@@ -121,6 +133,11 @@ func setup(game_ref) -> void:
 		_content.add_child(row)
 		_rows[spec["id"]] = row
 		_order.append(spec["id"])
+	_quit_ring = Control.new()
+	_quit_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_quit_ring.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_quit_ring.draw.connect(_draw_quit_ring)
+	_rows["quit"].add_child(_quit_ring)
 	_page = SettingsPages.new()
 	_page.visible = false
 	_page.setup(game, "key_esc")
@@ -227,7 +244,9 @@ func press(id: String) -> void:
 		"settings":
 			_enter_settings()
 		"quit":
-			get_tree().quit()
+			quit_chosen.emit()
+			if not game.test_mode:
+				get_tree().quit()
 		"ceremony":
 			_toggle_ceremony()
 		"breath":
@@ -309,8 +328,54 @@ func _input(event: InputEvent) -> void:
 			return
 		get_viewport().set_input_as_handled()
 		return
+	if _open and _quit_key(event):
+		get_viewport().set_input_as_handled()
+		return
 	if _open and _menu_key(event):
 		get_viewport().set_input_as_handled()
+
+
+# X down starts the quit hold and X up drops it; step_quit fills it.
+func _quit_key(event: InputEvent) -> bool:
+	if not (event is InputEventKey and event.physical_keycode == QUIT_KEY):
+		return false
+	if event.echo:
+		return true
+	_quit_down = event.pressed
+	if not event.pressed:
+		_quit_held = 0.0
+	_quit_ring.queue_redraw()
+	return true
+
+
+# One tick of the quit hold: QUIT_HOLD seconds of X down quits.
+func step_quit(delta: float) -> void:
+	if not _open or not _quit_down:
+		return
+	_quit_held += delta
+	_quit_ring.queue_redraw()
+	if _quit_held >= QUIT_HOLD:
+		_quit_down = false
+		_quit_held = 0.0
+		press("quit")
+
+
+# The hold's share, 0 to 1, for the ring and the tests.
+func quit_fill() -> float:
+	return clampf(_quit_held / QUIT_HOLD, 0.0, 1.0)
+
+
+# The ring round the quit row's X keycap, filling clockwise from twelve while X is held.
+func _draw_quit_ring() -> void:
+	var fill := quit_fill()
+	if fill <= 0.0:
+		return
+	var row: Control = _rows["quit"]
+	var cap := Keycap.size_of("key_x", ChoiceButton.KEY_H)
+	var centre := Vector2(ChoiceButton.PAD + cap.x * 0.5, row.size.y * 0.5)
+	var radius := maxf(cap.x, cap.y) * 0.5 + 6.0
+	_quit_ring.draw_arc(centre, radius, 0.0, TAU, 32, Color(Palette.CHARCOAL, 0.6), 4.0)
+	_quit_ring.draw_arc(centre, radius, -PI * 0.5, -PI * 0.5 + TAU * fill, 32, Palette.AMBER, 3.0)
 
 
 func _toggles(event: InputEvent) -> bool:
@@ -351,9 +416,6 @@ func _menu_key(event: InputEvent) -> bool:
 				return true
 			KEY_O:
 				press("settings")
-				return true
-			KEY_Q:
-				press("quit")
 				return true
 			KEY_C:
 				press("ceremony")
@@ -494,9 +556,12 @@ func _fade(show: bool) -> void:
 			visible = false)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not _open:
+		_quit_down = false
+		_quit_held = 0.0
 		return
+	step_quit(delta)
 	if _notes_pinned and not game.notes_held():
 		_notes_pinned = false
 	_root.visible = not game.notes_held()

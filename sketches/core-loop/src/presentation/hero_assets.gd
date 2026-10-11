@@ -12,9 +12,51 @@ const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
 const WARDEN_MANTLES := {
 	2: {"family": "reactor", "path": "res://assets/models/warden_mantle_meltdown.glb"},
 	4: {"family": "swarm", "path": "res://assets/models/warden_mantle_brood.glb"},
+	# Rows 5 and 6 stay until KF8b makes the stage 5 and 6 Wardens park anchors: today they take the
+	# clamp path, and the body path skips mantles (coordinator ruling at the KF8a merge, 2026-10-11).
 	5: {"family": "mind", "path": "res://assets/models/warden_mantle_hand.glb"},
 	6: {"family": "mind", "path": "res://assets/models/warden_mantle_choir.glb"},
 }
+# KF8a: a park Warden (spec "harpoon_anchor": true) of a kind with a recipe body wears that body
+# in place of the clamp base, kit and mantle; the authored boss arenas' Wardens keep the clamp.
+# Rows from artifacts/local/alpha/push/w13/wardens/<kind>/hero_assets_rows.txt (KF5 to KF7). The
+# mind body retired WARDEN_MANTLES 5 and 6 (wardens/mind.md section 8). Each body sits like the
+# clamp, origin at the collider's floor (position.y = -HALF_HEIGHT); "kits" ride under it.
+const WARDEN_BODIES := {
+	"reactor": {"body": "res://assets/models/warden_reactor.glb", "kits": [], "point": "WeakPoint",
+		# Mounting-only parts: the other mounting's are hidden.
+		"mount_parts": {"dam_face": ["GateL", "GateR"], "flume": ["PourLip"]}},
+	"swarm": {"body": "res://assets/models/warden_swarm.glb", "kits": ["res://assets/models/warden_swarm_kit_drones.glb"],
+		"point": "WeakPoint", "hang": "Suspension", "grips": ["Grip0", "Grip1", "Grip2"],
+		"shed_rings": ["Ring5", "Ring4", "Ring3", "Ring2"]},
+	"mind": {"body": "res://assets/models/warden_mind.glb", "kits": [], "point": "WeakPoint"},
+}
+# design-v3/wardens/<kind>.md section 5: the blend (s) each clip starts with.
+const WARDEN_BODY_BLENDS := {
+	"reactor": {"idle": 1.0, "pulse_warn": 2.0, "pulse": 0.1, "active": 0.5, "chunk_lost": 0.8, "chunk_lost_1": 0.8,
+		"chunk_lost_2": 0.8, "chunk_lost_3": 0.8, "shrug": 0.2, "gates_open": 0.3, "pour": 0.3, "final_quiet": 2.0},
+	"swarm": {"idle": 1.0, "pulse": 0.1, "active": 0.5, "hoist_ride": 0.3, "snip": 0.2, "stagger_open": 0.5,
+		"chunk_shed": 0.8, "brood_dark": 0.5, "break": 2.0},
+	"mind": {"idle": 1.0, "pulse_warn": 2.0, "pulse": 0.1, "active": 0.5, "chunk_lost": 0.8, "chunk_lost_ring": 0.8,
+		"chunk_lost_middle": 0.8, "chunk_lost_index": 0.8, "shrug": 0.2, "grip_falter": 0.5, "takeoff": 0.3,
+		"glide": 0.3, "land": 0.2, "knocked_down": 0.2, "final_quiet": 2.0},
+}
+# The clip each kind plays on the charge, the pulse's tail and the break. The swarm has no
+# pulse_warn: its pulse clip is the charge (2.0 s) then the slam (0.4 s), section 5.
+const WARDEN_BODY_CHARGE := {"reactor": "pulse_warn", "swarm": "pulse", "mind": "pulse_warn"}
+const WARDEN_BODY_FINAL := {"reactor": "final_quiet", "swarm": "break", "mind": "final_quiet"}
+const WARDEN_REACTOR_PULSE_EXTRA := {"dam_face": "gates_open", "flume": "pour"}
+# Chunk order (mind rows section 4): the chunk_lost clip by the finger it curls, and that finger's seam.
+const MIND_CHUNK_FINGERS := [
+	{"clip": "chunk_lost", "seam": "ancient_light_seam3"},        # little, first
+	{"clip": "chunk_lost_ring", "seam": "ancient_light_seam2"},
+	{"clip": "chunk_lost_middle", "seam": "ancient_light_seam1"},
+	{"clip": "chunk_lost_index", "seam": "ancient_light_seam0"},  # fourth; final_quiet puts out the thumb
+]
+# The lens bones: under the held perch only these take idle, pulse_warn, pulse and active.
+const MIND_LENS_BONES := ["Lens", "LensIris", "SmallLens0", "SmallLens1", "SmallLens2", "SmallLens3", "SmallLens4"]
+# Clips that move the whole hand: the perch hold lets them through.
+const MIND_FLIGHT_CLIPS := ["takeoff", "glide", "land", "knocked_down"]
 # Mount group name -> node path under HeroKit that receives the group's meshes.
 const MANTLE_MOUNTS := {
 	"MountBody": "Body", "MountVent0": "Vent0", "MountVent1": "Vent1", "MountVent2": "Vent2",
@@ -97,6 +139,14 @@ const SLOTS := {
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
 	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.72},
 	"ancient_light": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	# The mind body's own seam surfaces (KF7): one finger goes out per chunk lost, the thumb last.
+	"ancient_light_seam0": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	"ancient_light_seam1": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	"ancient_light_seam2": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	"ancient_light_seam3": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	"ancient_light_thumb": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	"ancient_light_knuckle": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	"ancient_light_lens": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
 	# Hoberman hubs, pivot pins, studs and the lap bar: its own slot so an equipped paint never
 	# tints copper (ROSTER-LOOK section 6).
 	"copper": {"color": Palette.COPPER, "metal": 0.6, "rough": 0.4},
@@ -1350,6 +1400,9 @@ func _dress_warden(warden) -> void:
 		return
 	if warden._look == null or warden._kit == null or not WARDEN_KITS.has(warden.family):
 		return
+	if _wears_body(warden):
+		_dress_warden_body(warden)
+		return
 	var base := _warden_scene(WARDEN_BASE)
 	var kit := _warden_scene("res://assets/models/warden_kit_%s.glb" % WARDEN_KITS[warden.family])
 	if base == null or kit == null:
@@ -1446,6 +1499,430 @@ void fragment() {
 		if not bus.stage_entered.is_connected(_warden_stage_entered):
 			bus.stage_entered.connect(_warden_stage_entered)
 	_dress_mast.call_deferred(warden)
+
+
+# --- Warden bodies (KF8a) -----------------------------------------------------------------
+# A park Warden's recipe body replaces the clamp, the kit and the mantle. It is visual only: the
+# Warden's collider, weak point (warden_kit.gd point_offset) and hardpoints are the fight's.
+# The clips follow what the fight already publishes, read once a frame: the charge (state_name),
+# the pulse (pulses), the stagger, the chunks, the swarm driver's rides and the mind driver's
+# took_off and landed signals. Each GLB clip keys every channel (Godot adds rest tracks), so what
+# must outlast a clip is held after the mixer (mixer_applied): a lost reactor jacket stays
+# hidden, a shed swarm ring stays at zero scale, a lost mind finger keeps its clip's end pose,
+# the mind's perch grip stays under idle, pulse_warn, pulse and active, and the Lens bone looks
+# at the ball last.
+
+func _wears_body(warden) -> bool:
+	return WARDEN_BODIES.has(warden.family) and bool(warden.get("harpoon_anchor"))
+
+
+func _body_scene(path: String) -> Node3D:
+	if not ResourceLoader.exists(path):
+		return null
+	var packed := load(path) as PackedScene
+	return packed.instantiate() as Node3D if packed != null else null
+
+
+func _dress_warden_body(warden) -> void:
+	var kind: String = warden.family
+	var row: Dictionary = WARDEN_BODIES[kind]
+	var body := _body_scene(row.body)
+	var weak := body.find_child(row.point, true, false) as Node3D if body != null else null
+	var player := body.find_child("AnimationPlayer", true, false) as AnimationPlayer if body != null else null
+	if body == null or weak == null or player == null:
+		if body != null: body.free()
+		_warn_once("warden_body:" + kind, "hero_assets: Warden body '%s' unavailable; keeping functional placeholders" % row.body)
+		return
+	body.name = "HeroWarden"
+	body.position.y = -warden.HALF_HEIGHT
+	for kit_path in row.kits:
+		var kit_part := _body_scene(kit_path)
+		if kit_part == null:
+			_warn_once("warden_body_kit:" + kit_path, "hero_assets: Warden body kit '%s' unavailable" % kit_path)
+			continue
+		body.add_child(kit_part)
+	var rec := {"warden": warden, "base": body, "body": body, "body_kind": kind, "weak": weak, "kit": null,
+		"hidden": [], "materials": {}, "seams": [], "cracks": [], "flights": [], "jaws": [], "mantle": null, "mantle_tool": null,
+		"players": body.find_children("*", "AnimationPlayer", true, false), "skeleton": null, "queue": [], "lost": [],
+		"dark": [], "final": false, "pose": null, "pose_base": Transform3D.IDENTITY, "perch_pose": {}, "lens": -1,
+		"seen": {"charging": false, "pulses": warden.pulses, "staggered": warden.staggered(),
+			"chunks": warden.chunks_left(), "rides": _driver_count(warden, "rides")}}
+	rec.skeleton = body.find_child("Skeleton3D", true, false) as Skeleton3D
+	_paint_body(body, rec)
+	match kind:
+		"reactor":
+			for mount in row.mount_parts:
+				for part in row.mount_parts[mount]:
+					var node := body.find_child(part, true, false) as Node3D
+					if node != null:
+						node.visible = mount == warden.mounting
+		"swarm":
+			_own_clip(rec.players[0], "chunk_shed")
+		"mind":
+			_rig_mind_body(warden, rec)
+	for child in warden._look.get_children():
+		if child is MeshInstance3D and child.material_override == warden._look.body_material:
+			_hide_warden_mesh(child, rec)
+	_hide_warden_tree(warden._look._jaws, rec)
+	_hide_warden_tree(warden._kit, rec)
+	warden.add_child(body)
+	var id: int = warden.get_instance_id()
+	for p in rec.players:
+		(p as AnimationPlayer).mixer_applied.connect(_hold_body.bind(id))
+	(rec.players[0] as AnimationPlayer).animation_finished.connect(_body_clip_finished.bind(id))
+	if kind == "mind" and warden.mount_driver != null and warden.mount_driver.has_signal("took_off"):
+		warden.mount_driver.took_off.connect(func(_a: int, _b: int): _play_body(rec, ["takeoff", "glide"]))
+		warden.mount_driver.landed.connect(func(_p: int): _play_body(rec, ["land"]))
+	_wardens[id] = rec
+	warden.tree_exiting.connect(_forget_warden.bind(id), CONNECT_ONE_SHOT)
+	_play_body(rec, ["idle"])
+	_update_warden(rec)
+	if warden.fight() == "posture" and warden.fleet != null:
+		var bus = warden.fleet.events()
+		if not bus.posture_changed.is_connected(_warden_posture_changed):
+			bus.posture_changed.connect(_warden_posture_changed)
+		if not bus.stage_entered.is_connected(_warden_stage_entered):
+			bus.stage_entered.connect(_warden_stage_entered)
+
+
+func _driver_count(warden, key: String) -> int:
+	var driver = warden.mount_driver
+	if driver == null or not (key in driver):
+		return 0
+	return int(driver.get(key))
+
+
+# Every surface by its slot, as the clamp is painted; the light and enamel slots are this
+# Warden's own copies, so seams go out per body.
+func _paint_body(root: Node, rec: Dictionary) -> void:
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		for i in mi.mesh.get_surface_count():
+			var slot := slot_of(mi.mesh, i)
+			if slot != "glass" and not SLOTS.has(slot):
+				_warn_once(slot, "hero_assets: unknown material slot '%s'" % slot)
+				continue
+			if not rec.materials.has(slot):
+				var own := slot.begins_with("ancient_light") or slot == "ancient_enamel"
+				rec.materials[slot] = material(slot).duplicate() if own else material(slot)
+			mi.set_surface_override_material(i, rec.materials[slot])
+			if slot == "glass":
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+# Gives this player its own copy of one clip, so a track filter on it touches no other body.
+func _own_clip(player: AnimationPlayer, clip: String) -> void:
+	var shared := player.get_animation_library(&"")
+	if shared == null or not shared.has_animation(clip):
+		return
+	var own := AnimationLibrary.new()
+	for clip_name in shared.get_animation_list():
+		var anim := shared.get_animation(clip_name)
+		own.add_animation(clip_name, anim.duplicate() if clip_name == clip else anim)
+	player.remove_animation_library(&"")
+	player.add_animation_library(&"", own)
+
+
+# The perch (spires): Pose takes PosePerch's transform once, and the perch clip's end pose is
+# the base every non-lens bone holds outside the flight clips (mind rows section 5).
+func _rig_mind_body(warden, rec: Dictionary) -> void:
+	var body: Node3D = rec.body
+	var skel: Skeleton3D = rec.skeleton
+	rec.pose = body.find_child("Pose", true, false) as Node3D
+	rec.lens = skel.find_bone("Lens") if skel != null else -1
+	# The GLB's WeakPoint sits 1.32 m out along the lens face; the fight's point (a 1.3 m sphere,
+	# warden.gd FAMILY_POINT_RADIUS) is the lens itself, so the marker rides the Lens bone's origin.
+	if rec.weak.get_parent() is BoneAttachment3D:
+		rec.weak.position = Vector3.ZERO
+	if warden.mounting == "spires":
+		var perch := body.find_child("PosePerch", true, false) as Node3D
+		if perch != null and rec.pose != null:
+			rec.pose.transform = perch.transform
+			rec.pose_base = perch.transform
+		var player: AnimationPlayer = rec.players[0]
+		if player.has_animation("perch"):
+			rec.perch_pose = _clip_end_pose(player.get_animation("perch"), skel, MIND_LENS_BONES, true)
+		else:
+			push_error("hero_assets: mind body has no clip 'perch'")
+
+
+# The pose a clip leaves at its last frame: {bone index: {position, rotation, scale}} for the
+# bones it keys, either only `names` or (except) every bone but them.
+func _clip_end_pose(anim: Animation, skel: Skeleton3D, names: Array, exclude := false) -> Dictionary:
+	var out := {}
+	for t in anim.get_track_count():
+		var path := anim.track_get_path(t)
+		if path.get_subname_count() == 0:
+			continue
+		var bone_name := String(path.get_subname(0))
+		if (bone_name in names) == exclude:
+			continue
+		var bone := skel.find_bone(bone_name)
+		if bone < 0:
+			continue
+		var entry: Dictionary = out.get(bone, {})
+		match anim.track_get_type(t):
+			Animation.TYPE_POSITION_3D:
+				entry["position"] = anim.position_track_interpolate(t, anim.length)
+			Animation.TYPE_ROTATION_3D:
+				entry["rotation"] = anim.rotation_track_interpolate(t, anim.length)
+			Animation.TYPE_SCALE_3D:
+				entry["scale"] = anim.scale_track_interpolate(t, anim.length)
+		out[bone] = entry
+	return out
+
+
+func _set_bone_pose(skel: Skeleton3D, bone: int, entry: Dictionary) -> void:
+	if entry.has("position"):
+		skel.set_bone_pose_position(bone, entry.position)
+	if entry.has("rotation"):
+		skel.set_bone_pose_rotation(bone, entry.rotation)
+	if entry.has("scale"):
+		skel.set_bone_pose_scale(bone, entry.scale)
+
+
+# Plays `clips` in order on every player of the body (the swarm's hive and drone kit share the
+# names); the first starts now with its section 5 blend. A clip a player lacks is an error.
+func _play_body(rec: Dictionary, clips: Array, backwards := false) -> void:
+	rec.queue = clips.slice(1)
+	_start_body_clip(rec, String(clips[0]), backwards)
+
+
+func _start_body_clip(rec: Dictionary, clip: String, backwards := false) -> void:
+	var blend: float = WARDEN_BODY_BLENDS[rec.body_kind].get(clip, -1.0)
+	for p in rec.players:
+		var player := p as AnimationPlayer
+		if not player.has_animation(clip):
+			push_error("hero_assets: %s Warden body player %s has no clip '%s'" % [rec.body_kind, player.get_parent().name, clip])
+			continue
+		if backwards:
+			player.play_backwards(clip, blend)
+		else:
+			player.play(clip, blend)
+
+
+func _body_clip_finished(clip: StringName, id: int) -> void:
+	var rec: Dictionary = _wardens.get(id, {})
+	if rec.is_empty() or not is_instance_valid(rec.warden):
+		return
+	if not rec.queue.is_empty():
+		_start_body_clip(rec, String(rec.queue.pop_front()))
+		return
+	# The break holds its last frame, and so does the falter while the stagger lasts.
+	if rec.final or (String(clip) == "grip_falter" and rec.warden.staggered() and rec.players[0].get_playing_speed() > 0.0):
+		return
+	_start_body_clip(rec, "idle")
+
+
+func _update_warden_body(rec: Dictionary) -> void:
+	var warden = rec.warden
+	var body: Node3D = rec.body
+	match rec.body_kind:
+		"reactor":
+			body.rotation.y = warden._look._jaws.rotation.y
+		"swarm":
+			# The swarm's ball side is its +Z.
+			body.rotation.y = warden._look._jaws.rotation.y + PI * 0.5
+		"mind":
+			# The driver drops the whole Warden by lens_drop in the falter while grip_falter drops
+			# the lens in the body: the body rises by the same amount so the lens stays on the point.
+			var driver = warden.mount_driver
+			var drop: float = float(driver.get("lens_drop")) if driver != null and "lens_drop" in driver else 0.0
+			body.position.y = -warden.HALF_HEIGHT + drop
+	var seam: float = warden._kit._seam_material.emission_energy_multiplier
+	for key in rec.materials:
+		if String(key).begins_with("ancient_light"):
+			(rec.materials[key] as StandardMaterial3D).emission_energy_multiplier = 0.0 if key in rec.dark else seam
+	var enamel := rec.materials.get("ancient_enamel") as StandardMaterial3D
+	if enamel != null:
+		enamel.albedo_color = Color.WHITE.lerp(warden._look.body_material.albedo_color, warden._flash)
+	_drive_body(rec)
+	_hold_body(warden.get_instance_id())
+
+
+# Reads the fight's facts once a frame and starts the clips they name.
+func _drive_body(rec: Dictionary) -> void:
+	var warden = rec.warden
+	var seen: Dictionary = rec.seen
+	var kind: String = rec.body_kind
+	var staggered: bool = warden.staggered()
+	if staggered != seen.staggered:
+		seen.staggered = staggered
+		_body_stagger(rec, staggered)
+	var charging: bool = warden.state_name() == "charging"
+	if charging and not seen.charging:
+		_play_body(rec, [WARDEN_BODY_CHARGE[kind]])
+	seen.charging = charging
+	if warden.pulses != seen.pulses:
+		seen.pulses = warden.pulses
+		_body_pulse(rec)
+	var chunks: int = warden.chunks_left()
+	if chunks < seen.chunks:
+		for n in range(5 - seen.chunks, 5 - chunks):
+			_body_chunk(rec, n)
+		seen.chunks = chunks
+	if kind == "swarm":
+		var rides := _driver_count(warden, "rides")
+		if rides != seen.rides:
+			seen.rides = rides
+			_play_body(rec, ["hoist_ride"])
+
+
+func _body_pulse(rec: Dictionary) -> void:
+	var warden = rec.warden
+	match rec.body_kind:
+		"swarm":
+			# The pulse clip's last 0.4 s is the slam; active follows it.
+			var player: AnimationPlayer = rec.players[0]
+			if player.current_animation == "pulse":
+				rec.queue = ["active"]
+			else:
+				_play_body(rec, ["active"])
+		"reactor":
+			var clips := ["pulse"]
+			if WARDEN_REACTOR_PULSE_EXTRA.has(warden.mounting):
+				clips.append(WARDEN_REACTOR_PULSE_EXTRA[warden.mounting])
+			clips.append("active")
+			_play_body(rec, clips)
+		"mind":
+			_play_body(rec, ["pulse", "active"])
+
+
+func _body_stagger(rec: Dictionary, open: bool) -> void:
+	var warden = rec.warden
+	match rec.body_kind:
+		"reactor":
+			# The open seam is the light slot at SEAM_OPEN (_update_warden_body); active splits the cage.
+			if open:
+				_play_body(rec, ["active"])
+		"swarm":
+			if open:
+				_play_body(rec, ["stagger_open"])
+		"mind":
+			if warden.mounting == "spires":
+				var driver = warden.mount_driver
+				var flying: bool = driver != null and driver.has_method("flying") and driver.flying()
+				if open:
+					_play_body(rec, ["knocked_down" if flying else "active"])
+			elif open:
+				_play_body(rec, ["grip_falter"])
+			elif rec.players[0].assigned_animation == "grip_falter":
+				_play_body(rec, ["grip_falter", "idle"], true)
+
+
+func _body_chunk(rec: Dictionary, n: int) -> void:
+	var body: Node3D = rec.body
+	var clip := ""
+	var entry := {}
+	match rec.body_kind:
+		"reactor":
+			clip = "chunk_lost" if n == 1 else "chunk_lost_%d" % (n - 1)
+			entry = {"node": body.find_child("Jacket%d" % (n - 1), true, false)}
+		"swarm":
+			var ring: String = WARDEN_BODIES.swarm.shed_rings[n - 1]
+			clip = "chunk_shed"
+			_filter_shed(rec.players[0], ring)
+			entry = {"bone": rec.skeleton.find_bone(ring) if rec.skeleton != null else -1}
+		"mind":
+			var finger: Dictionary = MIND_CHUNK_FINGERS[n - 1]
+			clip = finger.clip
+			var digit := String(finger.seam).right(1)
+			var bones := ["Finger%s_0" % digit, "Finger%s_1" % digit, "Finger%s_2" % digit]
+			var player: AnimationPlayer = rec.players[0]
+			if player.has_animation(clip):
+				entry = {"pose": _clip_end_pose(player.get_animation(clip), rec.skeleton, bones)}
+			rec.dark.append(finger.seam)
+	entry["clip"] = clip
+	rec.lost.append(entry)
+	var clips := [clip]
+	if n >= 4:
+		rec.final = true
+		clips.append(WARDEN_BODY_FINAL[rec.body_kind])
+		if rec.body_kind == "mind":
+			rec.dark.append("ancient_light_thumb")
+	_play_body(rec, clips)
+
+
+# chunk_shed keys the same fall on all four shed rings: only `ring` keeps its tracks.
+func _filter_shed(player: AnimationPlayer, ring: String) -> void:
+	if not player.has_animation("chunk_shed"):
+		return
+	var anim := player.get_animation("chunk_shed")
+	var rings: Array = WARDEN_BODIES.swarm.shed_rings
+	for t in anim.get_track_count():
+		var bone := String(anim.track_get_path(t)).get_slice(":", 1)
+		if bone in rings:
+			anim.track_set_enabled(t, bone == ring)
+
+
+# After the mixer: lost chunks stay lost, the perch grip holds, the Pose faces the ball and the
+# Lens bone looks at it. The newest lost chunk is left to its own clip while that clip plays.
+func _hold_body(id: int) -> void:
+	var rec: Dictionary = _wardens.get(id, {})
+	if rec.is_empty() or not is_instance_valid(rec.warden) or not is_instance_valid(rec.body):
+		return
+	var player: AnimationPlayer = rec.players[0]
+	var current := String(player.current_animation) if player.is_playing() else ""
+	var skel: Skeleton3D = rec.skeleton
+	var falling := -1
+	if not rec.lost.is_empty() and current == rec.lost.back().clip:
+		falling = rec.lost.size() - 1
+	match rec.body_kind:
+		"reactor":
+			for i in rec.lost.size():
+				var jacket = rec.lost[i].node
+				if is_instance_valid(jacket):
+					jacket.visible = i == falling
+		"swarm":
+			for i in rec.lost.size():
+				if i != falling and rec.lost[i].bone >= 0:
+					skel.set_bone_pose_scale(rec.lost[i].bone, Vector3.ZERO)
+		"mind":
+			_hold_mind(rec, current, falling)
+
+
+func _hold_mind(rec: Dictionary, current: String, falling: int) -> void:
+	var warden = rec.warden
+	var skel: Skeleton3D = rec.skeleton
+	if skel == null:
+		return
+	var moving: Dictionary = rec.lost[falling].get("pose", {}) if falling >= 0 else {}
+	if not rec.perch_pose.is_empty() and not current in MIND_FLIGHT_CLIPS:
+		for bone in rec.perch_pose:
+			if not moving.has(bone):
+				_set_bone_pose(skel, bone, rec.perch_pose[bone])
+	for i in rec.lost.size():
+		if i != falling:
+			var held: Dictionary = rec.lost[i].get("pose", {})
+			for bone in held:
+				_set_bone_pose(skel, bone, held[bone])
+	var to_ball: Vector3 = warden.flat_to_ball()
+	if rec.pose != null and to_ball.length() > 0.1:
+		# The hand's front is the model's -Z.
+		var yaw: float = atan2(-to_ball.x, -to_ball.z) - rec.body.global_rotation.y
+		rec.pose.transform = Transform3D(Basis(Vector3.UP, yaw), Vector3.ZERO) * rec.pose_base
+	_track_lens(rec)
+
+
+# mind rows section 5: turn the Lens bone (the cluster faces the model's -Z at rest) so it looks
+# at the ball, after the AnimationPlayer: pose = parent_global^-1 * looking_at(dir) * lens_rest,
+# lens_rest the bone's global rest, so the rest facing turns onto dir; dir in skeleton space.
+func _track_lens(rec: Dictionary) -> void:
+	var skel: Skeleton3D = rec.skeleton
+	var lens: int = rec.lens
+	var target = rec.warden.target
+	if lens < 0 or target == null or not target.has_method("ball_position"):
+		return
+	var parent := skel.get_bone_parent(lens)
+	var parent_pose := skel.get_bone_global_pose(parent) if parent >= 0 else Transform3D.IDENTITY
+	var origin: Vector3 = parent_pose * skel.get_bone_pose_position(lens)
+	var dir: Vector3 = skel.global_transform.affine_inverse() * (target.ball_position() as Vector3) - origin
+	if dir.length() < 0.1:
+		return
+	dir = dir.normalized()
+	var look := Basis.looking_at(dir, Vector3.UP if absf(dir.y) < 0.95 else Vector3.FORWARD)
+	var turned := parent_pose.basis.orthonormalized().inverse() * look * skel.get_bone_global_rest(lens).basis.orthonormalized()
+	skel.set_bone_pose_rotation(lens, turned.get_rotation_quaternion())
 
 
 # Mounts the stage's mantle (D5 contract) after the kit is painted and the lens is split off:
@@ -1723,6 +2200,9 @@ func _hide_warden_tree(node: Node, rec: Dictionary) -> void:
 
 
 func _update_warden(rec: Dictionary) -> void:
+	if rec.get("body") != null:
+		_update_warden_body(rec)
+		return
 	var warden = rec.warden
 	rec.base.rotation.y = warden._look._jaws.rotation.y
 	rec.weak.scale = warden._kit._open_node.scale
@@ -1850,7 +2330,7 @@ func _warden_chunk_mark(segment: MeshInstance3D) -> Node3D:
 
 func _update_warden_chunks(rec: Dictionary) -> void:
 	var warden = rec.warden
-	if warden.fight() != "posture":
+	if warden.fight() != "posture" or rec.get("body") != null:
 		return
 	var lost: int = 4 - warden.chunks_left()
 	var seen: int = 4 - rec.chunks_seen

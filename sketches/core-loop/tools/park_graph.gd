@@ -13,7 +13,9 @@ extends SceneTree
 #                detour_m, the path from the nearest line node to the pay point),
 #                each pocket's pay.rarities against the 2.12 pay ladder, and full_visit_ratio:
 #                spawn through all four doors in the best order to the beacon, over spawn to
-#                beacon (reported, start target at most 3.0)
+#                beacon (reported, start target at most 3.0), reward_ratio: the median
+#                spawn-to-pocket path over the spawn-to-beacon path (reported, start target at
+#                least 1.5), and the targets array that marks either one out of target
 #
 # The park file stays the authored truth: the graph checks the spawn, the landmark and the
 # activities and never moves them. Two runs on one park and bake give identical bytes.
@@ -82,6 +84,19 @@ const RING_M := 40.0
 const DETOUR_MIN_M := 150.0
 const DETOUR_MAX_M := 600.0
 const HIDDEN_ROUTES := 3
+# SR15 (K-UNITS KB8 round two), all start values. The beacon sits on an objective-fit node: every
+# ground node of a disc round it, radius reach_m (the Warden engage ring, PARK.md 2.12) times
+# BEACON_DISC_SHARE, is open and within BEACON_FLAT_M of the beacon's height. The fight is held
+# inside the ring, so the whole ring is the disc; the flat limit is half CLIMB_M, so the fight
+# floor never needs a climb. Comps note: comps/ror2/stage-anatomy.md:112 (the idea of an
+# objective-fit test only; its constants are not copied, Scrapkeep derives its own).
+const BEACON_DISC_SHARE := 1.0
+const BEACON_FLAT_M := 2.5
+# comps/isaac/floor-generation.md:107: the median spawn-to-reward walk is at least 1.5 times the
+# median spawn-to-objective walk. Reported, not gated (K-UNITS.md:138).
+const REWARD_RATIO_MIN := 1.5
+# comps/roboquest/stage-anatomy.md:125: the full-visit ratio is at most 3.0. Reported, not gated.
+const FULL_VISIT_RATIO_MAX := 3.0
 const ONLINE_KINDS := ["enemy_camp", "surge_run"]
 const REWARD_KINDS := ["cracked_cache"]
 const RISK_KINDS := ["ambush_altar", "hauler_bounty"]
@@ -854,6 +869,63 @@ static func spawn_check(graph, park: Dictionary) -> Dictionary:
 	return {"ok": d < INF and share <= 0.25, "d_landmark": d, "farther_share": share, "open": open}
 
 
+# SR15: is the beacon on an objective-fit node. The disc is read from the park file's beacon and
+# reach_m on the graph's ground lattice, so a planted beacon is judged where it stands. Returns
+# {"ok", "radius_m", "nodes", "rise_m", "closed", "decks", "reasons"}: closed counts disc nodes
+# that are not open (a roof, a hole), decks the deck nodes inside the disc, rise_m the largest
+# height difference from the beacon's node.
+static func beacon_check(graph, park: Dictionary) -> Dictionary:
+	var at := Vector2(float(park["landmark"]["beacon"][0]), float(park["landmark"]["beacon"][1]))
+	var radius := float(park["landmark"]["reach_m"]) * BEACON_DISC_SHARE
+	var centre: int = ParkGraph.lattice_index(at.x, at.y)
+	var base: float = graph.py[centre]
+	var nodes := 0
+	var closed := 0
+	var decks := 0
+	var rise := 0.0
+	for o in graph.disc_nodes(at, radius):
+		if o >= SIDE * SIDE:
+			continue
+		nodes += 1
+		if graph.node_flags[o] & ParkGraph.OPEN == 0:
+			closed += 1
+		rise = maxf(rise, absf(graph.py[o] - base))
+	# A deck row inside the disc (a ledge, a bridge) is a floor of its own: the beacon is then
+	# on a ledge or under one, and the fight has two floors.
+	for o in range(SIDE * SIDE, graph.node_count()):
+		if Vector2(graph.px[o], graph.pz[o]).distance_to(at) <= radius:
+			decks += 1
+			rise = maxf(rise, absf(graph.py[o] - base))
+	var reasons := []
+	if closed > 0:
+		reasons.append("%d of %d disc nodes are not open" % [closed, nodes])
+	if decks > 0:
+		reasons.append("%d deck nodes stand inside the disc" % decks)
+	if rise > BEACON_FLAT_M:
+		reasons.append("the disc rises %.2f m, want at most %.1f m" % [rise, BEACON_FLAT_M])
+	return {"ok": reasons.is_empty() and nodes > 0, "radius_m": radius, "nodes": nodes, "rise_m": rise,
+		"closed": closed, "decks": decks, "reasons": reasons}
+
+
+# SR15: the stage rules in order, the beacon before the spawn (the spawn rule measures from the
+# beacon, so it means nothing when the beacon is off). Stops at the first failure and names it:
+# {"ok", "checked", "first_failed", "beacon", "spawn"}; a rule not run is absent from "checked".
+static func stage_checks(graph, park: Dictionary) -> Dictionary:
+	var out := {"ok": false, "checked": [], "first_failed": "", "beacon": {}, "spawn": {}}
+	out["checked"].append("beacon_ok")
+	out["beacon"] = beacon_check(graph, park)
+	if not out["beacon"]["ok"]:
+		out["first_failed"] = "beacon_ok"
+		return out
+	out["checked"].append("spawn")
+	out["spawn"] = spawn_check(graph, park)
+	if not out["spawn"]["ok"]:
+		out["first_failed"] = "spawn"
+		return out
+	out["ok"] = true
+	return out
+
+
 # The four pockets (PARK.md 2.12): roles, door nodes, distances and breaches.
 static func pockets(graph, park: Dictionary) -> Dictionary:
 	var index := Index.new(graph, park)
@@ -985,7 +1057,40 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 	var ratio := INF
 	if full < INF and beacon_d > 0.0 and beacon_d < INF:
 		ratio = full / beacon_d
-	return {"rows": rows, "breaches": breaches, "beacon_d_spawn": beacon_d, "full_visit_m": full, "full_visit_ratio": ratio}
+	var reward_ratio := _reward_ratio(rows, beacon_d)
+	var targets := [
+		{"name": "reward_ratio", "value": reward_ratio, "target": "at least %.1f" % REWARD_RATIO_MIN, "ok": reward_ratio < INF and reward_ratio >= REWARD_RATIO_MIN},
+		{"name": "full_visit_ratio", "value": ratio, "target": "at most %.1f" % FULL_VISIT_RATIO_MAX, "ok": ratio < INF and ratio <= FULL_VISIT_RATIO_MAX},
+	]
+	return {"rows": rows, "breaches": breaches, "beacon_d_spawn": beacon_d, "full_visit_m": full, "full_visit_ratio": ratio,
+		"reward_ratio": reward_ratio, "targets": targets}
+
+
+# The median spawn-to-pocket path over the spawn-to-beacon path, across the off-line pockets
+# (reward, risk, hidden: the pockets that pay for a detour). INF when a door or the beacon is out
+# of reach or there is no such pocket.
+static func _reward_ratio(rows: Array, beacon_d: float) -> float:
+	var d := []
+	for row in rows:
+		if row["role"] in ["reward", "risk", "hidden"]:
+			d.append(row["d_spawn"])
+	if d.is_empty() or beacon_d <= 0.0 or beacon_d == INF or d.has(INF):
+		return INF
+	d.sort()
+	var mid := d.size() / 2
+	var median: float = d[mid] if d.size() % 2 == 1 else (d[mid - 1] + d[mid]) * 0.5
+	return median / beacon_d
+
+
+# One printable line per target, out of target marked: "reward_ratio 1.712 (target at least 1.5): in target".
+static func target_lines(ruling_rows: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	for row in ruling_rows.get("targets", []):
+		var v: float = row["value"]
+		var text := "unreachable" if (v == INF or v < 0.0) else "%.3f" % v
+		out.append("%s %s (start target %s, reported): %s" % [row["name"], text, row["target"], "in target" if row["ok"] else "OUT OF TARGET"])
+	return out
+
 
 
 # A row's pay as the activity pays it: {"rarities", "named"}. A named part the parts table
@@ -1137,7 +1242,9 @@ static func ruling(graph, park: Dictionary, built: Dictionary) -> Dictionary:
 				counts[ParkGraph.FLAG_NAMES[bit]] += 1
 	var longest := _longest(graph)
 	var spawn_beacon: float = graph.d_from[graph.beacon_node]
-	var spawn := spawn_check(graph, park)
+	var stage := stage_checks(graph, park)
+	var spawn_run: bool = stage["checked"].has("spawn")
+	var spawn: Dictionary = stage["spawn"] if spawn_run else {"ok": false, "d_landmark": INF, "farther_share": 0.0}
 	var pocket := pockets(graph, park)
 	var pocket_rows := []
 	for row in pocket["rows"]:
@@ -1150,15 +1257,24 @@ static func ruling(graph, park: Dictionary, built: Dictionary) -> Dictionary:
 	var ratio := "unreachable"
 	if pocket["full_visit_ratio"] < INF:
 		ratio = "%.3f" % pocket["full_visit_ratio"]
+	var reward := "unreachable"
+	if pocket["reward_ratio"] < INF:
+		reward = "%.3f" % pocket["reward_ratio"]
+	var targets := []
+	for row in pocket["targets"]:
+		targets.append({"name": row["name"], "value": -1.0 if row["value"] == INF else snappedf(row["value"], 0.001),
+			"target": row["target"], "ok": row["ok"]})
 	return {
 		"nodes": graph.node_count(), "edges": graph.edge_count(), "ride_edges": built["ride_edges"],
 		"flags": counts, "line_path_nodes": built["line_path"].size(),
 		"spawn_beacon_m": _json_m(spawn_beacon), "longest_est_m": _json_m(longest),
 		"spawn_beacon_share": "%.3f" % (spawn_beacon / longest if longest > 0.0 and spawn_beacon < INF else 0.0),
-		"spawn": {"ok": spawn["ok"], "d_landmark": _json_m(spawn["d_landmark"]), "farther_share": "%.3f" % spawn["farther_share"]},
+		"spawn": {"ok": spawn["ok"], "run": spawn_run, "d_landmark": _json_m(spawn["d_landmark"]), "farther_share": "%.3f" % spawn["farther_share"]},
+		"stage_checked": stage["checked"], "first_failed": stage["first_failed"],
 		"routes": route_steps(graph, park),
 		"pockets": pocket_rows, "breaches": pocket["breaches"],
 		"full_visit_m": _json_m(pocket["full_visit_m"]), "full_visit_ratio": ratio,
+		"reward_ratio": reward, "beacon_ok": stage["beacon"]["ok"], "targets": targets,
 	}
 
 
@@ -1212,6 +1328,10 @@ static func pocket_table(ruling_rows: Dictionary) -> String:
 		lines.append("Breaches (move: the graph moves the pocket; log: logged for the sitting; fix: the park file is wrong):")
 		for b in ruling_rows["breaches"]:
 			lines.append("- %s %s (%s): %s" % [b["pocket"], b["rule"], b["action"], b["detail"]])
+	lines.append("")
+	lines.append("Targets (reported, not gated):")
+	for line in target_lines(ruling_rows):
+		lines.append("- " + line)
 	return "\n".join(lines)
 
 
@@ -1229,8 +1349,15 @@ static func report_text(info: Dictionary) -> String:
 		lines.append("LINE BROKEN: %s" % problem)
 	lines.append("spawn to beacon %s m over the longest shortest path (estimate) %s m: share %s (start target 0.6, reported)" % [
 		info["spawn_beacon_m"], info["longest_est_m"], info["spawn_beacon_share"]])
-	lines.append("spawn d_landmark %s m, farther share of open nodes %s: %s" % [info["spawn"]["d_landmark"],
-		info["spawn"]["farther_share"], "farthest quarter" if info["spawn"]["ok"] else "NOT in the farthest quarter"])
+	if info["spawn"].get("run", true):
+		lines.append("spawn d_landmark %s m, farther share of open nodes %s: %s" % [info["spawn"]["d_landmark"],
+			info["spawn"]["farther_share"], "farthest quarter" if info["spawn"]["ok"] else "NOT in the farthest quarter"])
+	else:
+		lines.append("spawn rule not run: the beacon rule failed first")
+	if String(info.get("first_failed", "")) != "":
+		lines.append("first failed: %s" % info["first_failed"])
+	else:
+		lines.append("stage rules: %s passed" % ", ".join(info.get("stage_checked", [])))
 	var ids: Array = info["routes"].keys()
 	ids.sort()
 	for id in ids:
@@ -1240,5 +1367,6 @@ static func report_text(info: Dictionary) -> String:
 	lines.append("full visit: spawn through every pocket door to the beacon %s over spawn to beacon: full_visit_ratio %s (start target at most 3.0, reported)" % [
 		full if full == "unreachable" else full + " m", info["full_visit_ratio"]])
 	lines.append("")
-	lines.append(pocket_table({"rows": info["pockets"], "breaches": info["breaches"]}))
+	lines.append("beacon_ok: %s" % ("yes" if info["beacon_ok"] else "NO: the beacon is not on an objective-fit node"))
+	lines.append(pocket_table({"rows": info["pockets"], "breaches": info["breaches"], "targets": info["targets"]}))
 	return "\n".join(lines)
