@@ -51,7 +51,9 @@ func finish() -> void:
 
 
 func _run() -> void:
-	if not ResourceLoader.exists(GLB):
+	# ResourceLoader.exists() alone still answers true from the .import file and the
+	# .godot/imported cache after the source is deleted; the source file must exist.
+	if not FileAccess.file_exists(GLB) or not ResourceLoader.exists(GLB):
 		check("GLB present at " + GLB, false)
 		finish()
 		return
