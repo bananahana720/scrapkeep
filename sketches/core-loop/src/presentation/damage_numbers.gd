@@ -2,10 +2,12 @@ extends Control
 
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # Damage numbers (SR6, W13-INTEGRATION-3). One table gives a number and a hit effect the same
 # colour for a damage type and a team, so the layers cannot drift apart: effect_colour() is what
-# the number draws and what a burst should be tinted with. Every colour is a Palette row; none is
+# the number draws and what juice.gd tints the burst (a hit dealt) and the edge flash (a hit
+# taken) with. A crit takes the enemy_struck crit row's colour (brass), the burst's own. Every colour is a Palette row; none is
 # new. A number on one target merges with the next of the same type and team inside
 # MERGE_WINDOW_S, and the layer never shows more than MAX_VISIBLE.
 # Comps note: ror2/characters-and-feel (damage numbers coloured by type and team; the merge
@@ -42,10 +44,25 @@ static func type_of_kind(kind: String) -> String:
 	return KIND_TYPES.get(kind, "kinetic")
 
 
-static func effect_colour(type: String, team: String) -> Color:
+static func effect_colour(type: String, team: String, crit := false) -> Color:
 	if team == "player":
+		if crit:
+			return EventKinds.juice("enemy_struck")["crit"]["color"]
 		return PLAYER_COLOURS.get(type, Palette.COPPER)
 	return TEAM_COLOURS.get(team, Palette.SAND)
+
+
+# The team of a hit the player takes: the world's when nothing dealt it.
+static func team_of_source(source: String) -> String:
+	return "neutral" if source == "" else "monster"
+
+
+# The one crit rule, read by juice.gd for the stop, shake and burst and by the number: a
+# part softer than the body plating (a weak point) or a dealt figure above the punch.
+static func is_crit(result: Dictionary, body_plating: float) -> bool:
+	var dealt := float(result.get("dealt", 0.0))
+	var weak := String(result.get("part", "")) != "" and float(result.get("plating", 0.0)) < body_plating
+	return weak or dealt > float(result.get("punch", dealt)) * 1.01
 
 
 func _init() -> void:
@@ -61,9 +78,10 @@ func add(key: String, value: float, at, type: String, team: String, crit := fals
 			number["since"] = 0.0
 			number["at"] = at
 			number["crit"] = number["crit"] or crit
+			number["color"] = effect_colour(type, team, number["crit"])
 			return
 	_numbers.append({"key": key, "value": value, "at": at, "type": type, "team": team, "crit": crit,
-		"color": effect_colour(type, team), "age": 0.0, "since": 0.0})
+		"color": effect_colour(type, team, crit), "age": 0.0, "since": 0.0})
 	while _numbers.size() > MAX_VISIBLE:
 		var oldest := 0
 		for i in _numbers.size():

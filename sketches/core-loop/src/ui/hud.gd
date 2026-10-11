@@ -270,9 +270,10 @@ func setup(game_ref) -> void:
 	damage_numbers = DamageNumbers.new()
 	damage_numbers.project = _project_to_screen
 	add_child(damage_numbers)
-	game.events.enemy_struck.connect(_on_number_struck)
-	game.events.player_hit.connect(_on_number_taken)
-	_companion =TextureRect.new()
+	# Juice raises the numbers from the hits it draws, so a number and its effect agree.
+	if game.presentation != null and game.presentation.get("juice") != null:
+		game.presentation.juice.number_sink = Callable(damage_numbers, "add")
+	_companion = TextureRect.new()
 	_companion.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_companion.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_companion.custom_minimum_size = Vector2(TOAST_ICON, TOAST_ICON)
@@ -683,7 +684,7 @@ func _screen_size() -> Vector2:
 	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1600.0, 900.0)
 
 
-# Puts every piece in its band for a screen of this size (screen_regions.gd).
+# Where a world point sits on screen, null behind the camera (the damage-number layer's projector).
 func _project_to_screen(at: Vector3) -> Variant:
 	var cam: Camera3D = game.camera.cam
 	if cam.is_position_behind(at):
@@ -691,26 +692,7 @@ func _project_to_screen(at: Vector3) -> Variant:
 	return cam.unproject_position(at)
 
 
-# A hit the player lands: the dealt figure as combat resolves it (juice.gd reads the same),
-# a glancing hit shows none. Colour comes from DamageNumbers, the table the burst shares.
-func _on_number_struck(enemy: Node3D, kind: String, force: float) -> void:
-	if not is_instance_valid(enemy) or not enemy.is_inside_tree() or game.ctx.spawner == null:
-		return
-	var result: Dictionary = game.ctx.spawner.resolve(enemy, kind, force)
-	if not bool(result.get("full", true)):
-		return
-	var dealt := float(result.get("dealt", force))
-	var crit := dealt > float(result.get("punch", dealt)) * 1.01
-	damage_numbers.add(str(enemy.get_instance_id()), dealt, enemy.global_position + Vector3.UP * 1.6,
-		DamageNumbers.type_of_kind(kind), "player", crit)
-
-
-# A hit the player takes: monster-side unless the world dealt it (no source).
-func _on_number_taken(amount: float, source: String) -> void:
-	damage_numbers.add("player", amount, game.player.ball_position() + Vector3.UP * 1.4,
-		"kinetic", "neutral" if source == "" else "monster")
-
-
+# Puts every piece in its band for a screen of this size (screen_regions.gd).
 func layout(size: Vector2) -> void:
 	_laid_out = size
 	damage_numbers.size = size

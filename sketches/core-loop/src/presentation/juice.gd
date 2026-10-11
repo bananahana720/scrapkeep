@@ -2,6 +2,9 @@ extends Node
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
+# How far above an enemy's origin its damage number starts (world units).
+const NUMBER_LIFT := 1.6
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
@@ -80,6 +83,10 @@ var resolve_of: Callable
 # The body plating of an enemy (ctx.spawner.plating_of), so a part softer than the body
 # reads as a weak point.
 var plating_of: Callable
+# The HUD's damage-number layer (DamageNumbers.add), set by the HUD: key, value, world point,
+# type, team, crit. A number is raised from the same hit the burst is drawn from, so the two
+# share the crit decision and the colour table (SR6).
+var number_sink: Callable
 var shell := 1.0
 # The viewer's comfort, from the pause menu: 1 is full, 0 is none.
 var stop_scale := 1.0
@@ -323,9 +330,6 @@ func _on_dismounted(velocity: Vector3) -> void:
 # one stop, one shake and a handful of bursts.
 
 func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
-	if kind == "synergy":
-		# A synergy's shockwave is the build's doing, not a landing: no stop, no weak-point read.
-		return
 	var result := {"dealt": force, "punch": force, "full": true, "part": "", "plating": 0.0}
 	if resolve_of.is_valid() and is_instance_valid(enemy):
 		# enemy_struck goes out before the damage, so this is the hit as combat met it.
@@ -336,13 +340,23 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 	if is_instance_valid(enemy) and enemy.is_inside_tree():
 		at = enemy.global_position
 	var dealt := float(result.get("dealt", force))
-	var weak := String(result.get("part", "")) != "" and plating_of.is_valid() and is_instance_valid(enemy) \
-		and float(result.get("plating", 0.0)) < float(plating_of.call(enemy))
-	var crit := weak or dealt > float(result.get("punch", dealt)) * 1.01
+	var key := str(enemy.get_instance_id()) if is_instance_valid(enemy) else ""
+	if kind == "synergy":
+		# A synergy's shockwave is the build's doing, not a landing: no stop, no burst, no
+		# weak-point read. Its figure still shows.
+		_raise_number(key, dealt, at, kind, false)
+		return
+	var body_plating := float(plating_of.call(enemy)) if plating_of.is_valid() and is_instance_valid(enemy) else -INF
+	var crit := DamageNumbers.is_crit(result, body_plating)
 	var impact := EventKinds.impact(_impact_key(enemy, kind))
 	_hits.append({"at": at + Vector3.UP * 0.6, "contact": _contact_point(enemy, at + Vector3.UP * 0.6), "damage": dealt, "crit": crit, "heavy": impact["stop"] == "heavy", "kind": kind,
-		"stop": impact["stop"] != "none", "shake": float(impact["shake"])})
+		"stop": impact["stop"] != "none", "shake": float(impact["shake"]), "key": key, "world": at})
 	_queue_flush()
+
+
+func _raise_number(key: String, dealt: float, at: Vector3, kind: String, crit: bool) -> void:
+	if number_sink.is_valid():
+		number_sink.call(key, dealt, at + Vector3.UP * NUMBER_LIFT, DamageNumbers.type_of_kind(kind), "player", crit)
 
 
 # Where the hit met the body: on its skin along the line to the ball, not at its middle.
@@ -404,7 +418,6 @@ func _flush_hits() -> void:
 	if _hits.is_empty():
 		return
 	var row := EventKinds.juice("enemy_struck")
-	var color := EventKinds.color("enemy_struck")
 	var stop := 0.0
 	var shake := 0.0
 	var heavy := false
@@ -422,7 +435,8 @@ func _flush_hits() -> void:
 			heavy = true
 			contact = hit["at"]
 		if vfx != null and i < MAX_BURSTS:
-			vfx.play_fx("enemy_struck", hit["contact"], row["crit"]["color"] if hit["crit"] else color, "crit" if hit["crit"] else "")
+			vfx.play_fx("enemy_struck", hit["contact"], DamageNumbers.effect_colour(DamageNumbers.type_of_kind(hit["kind"]), "player", hit["crit"]), "crit" if hit["crit"] else "")
+		_raise_number(hit["key"], hit["damage"], hit["world"], hit["kind"], hit["crit"])
 	if stop > 0.0:
 		stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
 	if crit and audio != null:
@@ -547,17 +561,21 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 
 
 # A hit taken: the screen edge toward the source flashes and the shell winces. Never a camera shake: it would hide whether the hit was dodged.
-func _on_player_hit(amount: float, _source: String) -> void:
+func _on_player_hit(amount: float, source: String) -> void:
 	var row := EventKinds.juice("player_hit")
 	hook_log.append(["edge_flash", "player_hit"])
 	squash(float(row["squash"]), Vector3.ZERO)
+	# The number and the flash take one colour from DamageNumbers: rust from a monster, sand from the world.
+	var team := DamageNumbers.team_of_source(source)
+	if number_sink.is_valid():
+		number_sink.call("player", amount, player.ball_position() + Vector3.UP * 1.4, "kinetic", team, false)
 	if vfx == null:
 		return
 	var from = null
 	var last: Dictionary = ctx.spawner.get("last_player_hit") if ctx.spawner != null and ctx.spawner.get("last_player_hit") != null else {}
 	if not last.is_empty() and Engine.get_physics_frames() - int(last.get("frame", -100)) <= 2:
 		from = last["from"]
-	vfx.edge_flash(_screen_direction(from), row["color"], float(row["edge_alpha"]) * clampf(0.6 + amount / 25.0, 0.6, 1.0), float(row["edge_s"]))
+	vfx.edge_flash(_screen_direction(from), DamageNumbers.effect_colour("kinetic", team),float(row["edge_alpha"]) * clampf(0.6 + amount / 25.0, 0.6, 1.0), float(row["edge_s"]))
 
 
 # Where a world point sits from the screen's centre, as a unit 2D direction (x right, y
