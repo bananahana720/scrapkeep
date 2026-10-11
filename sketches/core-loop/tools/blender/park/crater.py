@@ -23,7 +23,7 @@ draw of the `detail` class. Detail shells are additive visuals with no collider:
 stands more than RIDE_PROUD over the surface, and the lanes along the fall line (LANE_DEG either side of +Z) stay clear
 of every block, boulder and cobble.
 
-Arizona palette only: cream limestone, sandstone, iron-oxide red, desert varnish, sage and juniper. No textures. No
+The vertex colours are the Arizona palette: cream limestone, sandstone, iron-oxide red, desert varnish, sage and juniper. No textures. No
 people are named; the crater is natural and older than any society.
 
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/park/crater.py -- [--out-dir DIR] [--count-only]
@@ -45,7 +45,10 @@ import common
 import kit
 
 MODELS = kit.SKETCH / "assets/models/park"
-MATERIAL = "crater_rock"
+# The one material is named for the shared slot `enamel` (src/presentation/material_slots.gd: a vertex-colour standard
+# material), because park_recipes.gd wears a surface in the slot its GLB material names and a GLB material of any other
+# name imports with vertex_color_use_as_albedo off, which draws white (probed 2026-10-11 on 4.7.2).
+MATERIAL = "enamel"
 # Godot's importer strips one "-col" suffix from a node name when it makes the collision body (probed 2026-10-11 on
 # 4.7.2: a node "<id>-col" arrives named "<id>"), while park_recipes.gd recognises the collider mesh by a name that
 # still ends in "-col". The node is therefore authored with the suffix twice, so it arrives as "<id>-col" with the
@@ -177,12 +180,14 @@ def in_lane(phi):
 
 
 # ---------------------------------------------------------------- colour
-def streak(phi, n=11, width=0.075):
+def streak(phi, depth, n=11, width=0.07):
+    """Desert varnish runs down the wall: each streak wanders a little with depth and thins toward the floor."""
     best = 0.0
     for k in range(n):
-        a = math.tau * h32(7, k)
+        a = math.tau * h32(7, k) + 0.05 * math.sin(11.0 * depth + 6.0 * h32(9, k))
         d = abs(math.atan2(math.sin(phi - a), math.cos(phi - a)))
-        best = max(best, max(0.0, 1.0 - d / width) * (0.55 + 0.45 * h32(8, k)))
+        w = width * (1.0 - 0.45 * depth)
+        best = max(best, max(0.0, 1.0 - d / w) * (0.4 + 0.6 * h32(8, k)) * (1.0 - 0.5 * depth))
     return best
 
 
@@ -208,7 +213,7 @@ def terrain_color(spec, rho, phi, y, i, j):
     else:
         col = mixc(OXIDE, PLAYA, smooth((d - 0.8) / 0.2))
     wall = smooth((d - 0.05) / 0.2) * (1.0 - smooth((d - 0.8) / 0.15))
-    col = mixc(col, VARNISH, 0.6 * streak(phi) * wall)
+    col = mixc(col, VARNISH, 0.34 * streak(phi, min(max(d, 0.0), 1.0)) * wall)
     return mixc(col, VARNISH, 0.07 * n)
 
 
@@ -298,14 +303,14 @@ def block(spec, i, kind, size, rho_lo, rho_hi, base_sink):
     verts = []
     corners = [(-1, 0, -1), (1, 0, -1), (1, 0, 1), (-1, 0, 1), (-1, 1, -1), (1, 1, -1), (1, 1, 1), (-1, 1, 1)]
     for c, (ax, ay, az) in enumerate(corners):
-        jx = lerp(-0.18, 0.18, h32(seed + 7, i, c))
-        jz = lerp(-0.18, 0.18, h32(seed + 8, i, c))
+        jx = lerp(-0.3, 0.3, h32(seed + 7, i, c))
+        jz = lerp(-0.3, 0.3, h32(seed + 8, i, c))
         jy = lerp(-0.12, 0.12, h32(seed + 9, i, c)) * (1 if ay else 0)
-        top_in = 0.8 if ay else 1.0
+        top_in = 0.62 if ay else 1.0
         lx, lz = (ax + jx) * sx * 0.5 * top_in, (az + jz) * sz * 0.5 * top_in
         verts.append((cx + lx * cy - lz * sn, gy - base_sink * s + ay * (sy + base_sink * s + jy * s), cz + lx * sn + lz * cy))
     faces = [(0, 2, 1), (0, 3, 2), (4, 5, 6), (4, 6, 7), (0, 1, 5), (0, 5, 4), (1, 2, 6), (1, 6, 5), (2, 3, 7), (2, 7, 6), (3, 0, 4), (3, 4, 7)]
-    tone = [CREAM, SANDSTONE, SLICK, mixc(CREAM, SANDSTONE, 0.5)][int(h32(seed + 10, i) * 4) % 4]
+    tone = [CREAM, SANDSTONE, mixc(CREAM, SANDSTONE, 0.5), mixc(SANDSTONE, SLICK, 0.35), CREAM, mixc(SANDSTONE, VARNISH, 0.25), mixc(CREAM, SANDSTONE, 0.3), SLICK][int(h32(seed + 10, i) * 8) % 8]
     cols = []
     for c, v in enumerate(verts):
         top = v[1] > gy + 0.2 * s
@@ -329,12 +334,12 @@ def shell1(spec):
         m.add(v, t, c, False, "out")
     # Strata ribbons: dashes of darker rock along four depths of the wall, 0.03 m proud.
     f = spec["f"]
-    width_rho = 0.012
+    width_rho = 0.008
     for b, d in enumerate((0.30, 0.42, 0.58, 0.80)):
         rho = 0.8 * math.sqrt(1.0 - d)
         segs = 64
         for k in range(segs):
-            if h32(spec["seed"] + 20, b, k) < 0.28:
+            if h32(spec["seed"] + 20, b, k) < 0.5:
                 continue
             p0, p1 = math.tau * k / segs, math.tau * (k + 1) / segs
             quad = []
@@ -342,7 +347,7 @@ def shell1(spec):
                 for ph in (p0, p1):
                     x, y, z = world(spec, rr, ph)
                     quad.append((x, y + 0.03, z))
-            tone = mixc(VARNISH, OXIDE, 0.3 + 0.4 * h32(spec["seed"] + 22, b, k))
+            tone = mixc(mixc(VARNISH, OXIDE, 0.3 + 0.4 * h32(spec["seed"] + 22, b, k)), SLICK, 0.55)
             m.add(quad, [(0, 2, 1), (1, 2, 3)], [tone] * 4, False)
     return m
 
@@ -387,7 +392,7 @@ def shell2(spec):
         base = [(math.cos(yaw + a) * s * lerp(0.8, 1.2, h32(seed + 4, i, k)), math.sin(yaw + a) * s * lerp(0.8, 1.2, h32(seed + 5, i, k)))
                 for k, a in enumerate((0, math.pi / 2, math.pi, 3 * math.pi / 2))]
         verts = [(cx + dx, gy - 0.05, cz + dz) for dx, dz in base] + [(cx + 0.1 * s, gy + s * lerp(0.4, 0.7, h32(seed + 6, i)), cz - 0.1 * s)]
-        tone = [CREAM, SANDSTONE, SLICK, SANDSTONE][int(h32(seed + 7, i) * 4) % 4]
+        tone = [CREAM, SANDSTONE, mixc(SANDSTONE, SLICK, 0.4), SANDSTONE, CREAM][int(h32(seed + 7, i) * 5) % 5]
         m.add(verts, [(0, 1, 4), (1, 2, 4), (2, 3, 4), (3, 0, 4)], [mixc(tone, VARNISH, 0.3)] * 4 + [tone], False, "out")
     for i in range(spec["tufts"]):
         v, t, c = tuft(spec, i, 0.9 * (spec["cobble"] / 0.28) ** 0.5)
@@ -409,8 +414,8 @@ def shell2(spec):
     for i in range(14):
         seed = spec["seed"] * 1000 + 60
         phi = math.tau * h32(seed, i)
-        a0 = lerp(0.05, 0.3, h32(seed + 1, i))
-        a1 = a0 + lerp(0.15, 0.3, h32(seed + 2, i))
+        a0 = lerp(0.12, 0.5, h32(seed + 1, i))
+        a1 = a0 + lerp(0.04, 0.09, h32(seed + 2, i))
         pts = []
         for rho in (a0, a1):
             for w in (-0.004, 0.004):
