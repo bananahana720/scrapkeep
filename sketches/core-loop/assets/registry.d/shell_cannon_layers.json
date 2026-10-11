@@ -18,7 +18,7 @@
    "exception": {
     "draws": 2
    },
-   "exception_why": "class III carries the side panels on Pod and the thicker tread caps on Core, two parts that move apart (ROSTER-LOOK section 5)"
+   "exception_why": "class III carries the side panels on Pod and the thicker tread caps on Core, two parts that move apart (ROSTER-LOOK section 5); the coordinator's 2026-10-10 cap call (docs/decisions.tsv: Hoberman pilot shells up to 16 draws, the class III layer up to 2, every other layer 1) allows these 2"
   },
   {
    "id": "shell_cannon_c4",

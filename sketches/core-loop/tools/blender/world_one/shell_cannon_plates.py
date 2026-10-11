@@ -5,7 +5,7 @@ Concept: artifacts/local/alpha/push/w13/concepts/codex/cannon/sheet.png (GAP PAN
 and V) and hero.png; design: ROSTER-LOOK sections 0.3, 2 and 5, pilots/cannon.md section 5.
 
   blender --background --threads 2 --python-exit-code 1 \
-    --python world_one/shell_cannon_plates.py -- [--outdir <dir>] [--count-only]
+    --python world_one/shell_cannon_plates.py -- [--outdir <dir>] [--count-only] [--ring-scrap]
 under prlimit's 12 GiB address-space cap (tools/blender/PILOT-RIG.md:72).
 
 Writes world_one/shell_cannon_c2.glb to shell_cannon_c5.glb. Each layer has the base's Core and
@@ -18,9 +18,14 @@ exception ROSTER-LOOK section 5 names).
   III  the side gaps, and the thicker tread caps on every hub
   IV   most of the rest; the crown stays open
   V    every gap but the sight gaps, and the heavy forms of the split ports and the rush ring
-Not built: the barrel-borne scrap of pilots/cannon.md section 5 (II muzzle brake, III breech
-jacket, IV skirt from the bearing collar). It must yaw with WeaponRing, and a layer mounts only
-Core and Pod (C4); on Pod it would leave the barrel and enter the ring's sweep.
+The barrel-borne scrap of pilots/cannon.md section 5 (II muzzle brake, III breech jacket, IV
+skirt from the bearing collar) is built on PD-0b's WeaponRing layer route (Pod > WeaponRing in a
+layer GLB rides the base ring and yaws with the aim) only under --ring-scrap, and is not shipped
+(PD-CANNON fix round 2): it is a mesh on a third moving frame beside Carapace on Pod (and the
+class III collars on Core), so each layer would cost one draw more, 2 / 3 / 2 at classes II to
+IV against the 1 / 2 / 1 layer caps, and no exception is granted. --ring-scrap with --outdir
+writes the measured candidates for the coordinator's call. The scrap rides WeaponRing, not
+MainBarrel, so it would hold the barrel's rest pitch; nothing pitches MainBarrel at run time yet.
 No panel ever fills a sight gap: the gaps on the 35 degree cone from the pilot's head to the
 chase eyes and to the front eyes stay open at every class. Panels hang inside the lattice
 (outer face 0.92 to 0.93, inner 0.89), outside the gimbal sweep (0.862), so none can enter the
@@ -64,7 +69,9 @@ DUST = common.mix(VERDIGRIS, "736b5a", 0.35)
 CLASSES = (2, 3, 4, 5)
 # Heavy forms at class V: a cast sleeve round each split port, a cast guard round the rush ring.
 GUARD = (sc.RUSH[1] + 0.014, sc.RUSH[1] + 0.036, 0.05, sc.RUSH[3] - 0.015)
-COLLAR = (0.072, 0.094, 0.950, 0.979)  # tread collar r_in, r_out, low, high (under CORE_LIMIT)
+# Tread collar r_in, r_out, low, high (under CORE_LIMIT): 0.002 m off the base tread cap and 0.022 m
+# wide, so it follows shell_base's cap (0.05 m radius since PD-0b; it was 0.072 to 0.094 on 0.07).
+COLLAR = (sb.HUB_CAP[0] + 0.002, sb.HUB_CAP[0] + 0.024, 0.950, 0.979)
 
 
 def flag(name):
@@ -191,13 +198,85 @@ def heavy_forms(part):
     part.ring("ancient_enamel", r_in, r_out, depth, 12, loc=(0, 0, z), color=RIM)
 
 
-def build_layer(n, panels, hubs, gaps, rng):
+# Barrel-borne scrap (--ring-scrap only, not shipped; see the header). Scrap iron and worn
+# verdigris under the section 11 enamel cap.
+SCRAP_IRON = common.mix("736b5a", "charcoal", 0.45)
+SCRAP_PLATE = common.mix(VERDIGRIS, "736b5a", 0.6)
+JACKET = (1.25, 0.11)          # breech-half jacket centre y and length, clear of the shutter
+SKIRT = (1.062, 0.012, 14)     # radius, thickness, plates round the collar
+
+
+def ring_scrap(n):
+    """(Part, origin) of class n's barrel-borne scrap in Pod space with the barrel at rest
+    pitch, or None: II a slotted muzzle brake, III a jacket over the breech half's top, IV a
+    short skirt of plates hung from the bearing collar."""
+    p = Part("RingScrap%d" % n)
+    y_m = sc.MUZZLE_Y
+    if n == 2:
+        p.ring("ancient_enamel", sc.MUZZLE_R[0], 0.125, 0.086, 8, loc=(0, y_m + 0.047, 0), rot=(math.pi / 2, 0, 0),
+               color=SCRAP_IRON)
+        for side in (-1, 1):
+            p.box("ancient_enamel", (0.035, 0.05, 0.10), loc=(side * 0.14, y_m + 0.047, 0), color=SCRAP_PLATE)
+        origin = sc.PIVOT
+    elif n == 3:
+        y, length = JACKET
+        r_in = sc.body_r(y - length / 2) + sc.BAND_PROUD + 0.004
+        p.ring("ancient_enamel", r_in, r_in + 0.028, length, 6, loc=(0, y, 0), rot=(math.pi / 2, 0, 0),
+               color=SCRAP_PLATE, arc=(math.pi / 6, 5 * math.pi / 6))
+        for dy in (-0.035, 0.035):
+            p.ring("ancient_enamel", r_in + 0.028, r_in + 0.038, 0.014, 6, loc=(0, y + dy, 0),
+                   rot=(math.pi / 2, 0, 0), color=SCRAP_IRON, arc=(math.pi / 6, 5 * math.pi / 6))
+        origin = sc.PIVOT
+    elif n == 4:
+        r, thick, count = SKIRT
+        c_in, c_out, c_h, c_z = sb.RING_COLLAR
+        top = c_z - c_h / 2
+        for k in range(count):
+            a = (k + 0.5) * math.tau / count
+            h = 0.07 + 0.02 * ((k * 5) % 3) / 2
+            p.box("ancient_enamel", (0.20, thick, h), loc=(r * math.cos(a), r * math.sin(a), top - h / 2),
+                  rot=(0, 0, a + math.pi / 2), color=SCRAP_PLATE if k % 2 else SCRAP_IRON)
+        origin = Vector()
+    else:
+        return None
+    sb._sharpen(p)
+    return p, origin
+
+
+def scrap_checks(obj, n, pod_points, step=0.01):
+    """(lattice clearance, Pod vertices inside the scrap's yaw sweep) for one class's scrap; the
+    barrel-borne pieces are taken over the barrel's whole pitch range."""
+    pitches = [sc.PITCH[0] + (sc.PITCH[1] - sc.PITCH[0]) * i / 18 for i in range(19)] if n in (2, 3) else [0.0]
+    bins, closest = {}, 9.0
+    for v in obj.data.vertices:
+        w = obj.matrix_world @ v.co
+        for deg in pitches:
+            q = sc._pitched(w, deg) if deg else w
+            closest = min(closest, q.length)
+            k, r = round(q.z / step), math.hypot(q.x, q.y)
+            lo, hi = bins.get(k, (r, r))
+            bins[k] = (min(lo, r), max(hi, r))
+    hits = 0
+    for p in pod_points:
+        for k in (math.floor(p.z / step), math.ceil(p.z / step)):
+            span = bins.get(k)
+            if span and span[0] - 0.01 <= math.hypot(p.x, p.y) <= span[1] + 0.01:
+                hits += 1
+                break
+    return closest, hits
+
+
+def build_layer(n, panels, hubs, gaps, rng, scrap=False):
     """One layer's root, Pod and the panel vertex positions (for the rush-ring check)."""
     root = common.empty("ShellCannonC%d" % n)
     core = common.empty("Core", (0, 0, 0), root)
     if n == 3:
         tread_collars(hubs).to_object((0, 0, 0), core)
     pod = common.empty("Pod", (0, 0, 0), root)
+    made = ring_scrap(n) if scrap else None
+    if made is not None:
+        ring = common.empty("WeaponRing", (0, 0, 0), pod)
+        made[0].to_object(made[1], ring)
     part = Part("Carapace%d" % n)
     centre = Vector()
     points = []
@@ -235,7 +314,15 @@ def nearest(pod):
     return best
 
 
-def check(n, root, pod, points, bins, count):
+def check(n, root, pod, points, bins, count, pod_points=()):
+    scrap_ok, extra = True, 0
+    for o in common.tree(pod):
+        if o.type == "MESH" and o.name.startswith("RingScrap"):
+            clear, hits = scrap_checks(o, n, pod_points)
+            extra = len(o.data.materials)
+            scrap_ok = clear > sb.CORE_LIMIT and hits == 0
+            print("RING_SCRAP c%d tris %d draws %d lattice clearance %.3f (> %.3f) Pod hits %d %s"
+                  % (n, common.tris(o), extra, clear, sb.CORE_LIMIT, hits, "ok" if scrap_ok else "OUT"))
     tris = common.tri_total(root)
     meshes = [o for o in common.tree(root) if o.type == "MESH"]
     draws = sum(len(o.data.materials) for o in meshes)
@@ -252,7 +339,8 @@ def check(n, root, pod, points, bins, count):
     print("LAYER c%d panels %d tris %d draws %d sight %d front %d sweep %d low %d nearest %.3f "
           "panel_outer %.3f core %.4f down %.1f (rush %.1f)"
           % (n, count, tris, draws, cone, front, sweep, low, inner, outer, core_far, down, rush))
-    return (count > 0 and tris <= LAYER_TRIS and draws == (2 if n == 3 else 1) and cone == 0 and front == 0
+    return (scrap_ok and count > 0 and tris <= LAYER_TRIS and draws == (2 if n == 3 else 1) + extra
+            and cone == 0 and front == 0
             and sweep == 0 and low == 0 and inner >= GIMBAL_CLEAR and outer <= sb.LATTICE_INNER - 0.005
             and core_far <= sb.CORE_LIMIT + 1e-4 and down >= rush + 1.0)
 
@@ -266,6 +354,11 @@ def main():
     common.reset()
     base = sc.build_shell("")
     bins = sc.sweep_bins(base["ring"], base["barrel"])
+    scrap = bool(flag("--ring-scrap"))
+    if scrap and not flag("--outdir") and not flag("--count-only"):
+        raise SystemExit("--ring-scrap writes unshipped candidates: give --outdir or --count-only")
+    pod_points = [o.matrix_world @ v.co for o in sb.cone_meshes(base["pod"])
+                  if o.name.split(".")[0] not in sc.SWEEP_SKIP for v in o.data.vertices] if scrap else []
     # Object names are global in Blender: the base's Core and Pod go before a layer takes them.
     remove(base["root"])
     hubs, _, gaps = sb.lattice_layout()
@@ -277,8 +370,8 @@ def main():
     outdir = flag("--outdir") or str(OUTDIR)
     bad = []
     for n in CLASSES:
-        root, pod, points = build_layer(n, classes[n], hubs, gaps, rng)
-        if not check(n, root, pod, points, bins, len(classes[n])):
+        root, pod, points = build_layer(n, classes[n], hubs, gaps, rng, scrap)
+        if not check(n, root, pod, points, bins, len(classes[n]), pod_points):
             bad.append(n)
         elif not flag("--count-only"):
             common.export(root, os.path.join(outdir, "shell_cannon_c%d.glb" % n))

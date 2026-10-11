@@ -25,8 +25,22 @@ Node tree, Blender +Y forward, +Z up (Godot -Z forward, +Y up):
                               origin (the trunnion, BarrelPivot) from -10 to +35 degrees;
                               LaneMuzzle, SectorShutter and SectorPivot ride it
 Draws: Core paint, copper, rubber; Pod rubber, copper; Gyro; GyroInner; WeaponRing paint;
-MainBarrel ancient_enamel, class_accent. Ten, the shell cap. The seat rides rubber and the whole
-ring rides paint so the barrel can carry the class glow in the same ten.
+MainBarrel ancient_enamel, class_accent. Ten, under the Hoberman pilot mecha cap of 16 (base 10
+plus machinery and the Pilot placeholder; coordinator call, docs/decisions.tsv 2026-10-10). The
+seat rides rubber and the whole ring rides paint so the barrel carries the class glow.
+
+Rebuilt 2026-10-10 (PD-CANNON fix round 2) on PD-0b's shell_base defaults: struts 0.06 m, tread
+caps 0.10 m (ROSTER-LOOK section 3 rule 7 as amended).
+
+Silhouette (coordinator call, docs/decisions.tsv 2026-10-10): the barrel is the Cannon's outline
+break (rule 4); it rides the level ring and breaks the outline at the equator once the aim swings
+off the camera's line. The split ports stay at 5 and 7 o'clock from the mid chase eye as the low
+read, and rule 4's 0.15 to 0.25 m break is not applied to them: rule 6 keeps everything past
+radius 1.0 above Z -0.6, which caps a break there at about 0.10 m from the far eye.
+Barrel length stays 0.37 m (breech 1.12 to muzzle 1.47 on Y), so the tip sits at radius 1.478.
+Rule 6's reach limits (modules to radius 1.25, nothing past 1.0 below Z -0.6) guard the low
+hemisphere, where slopes swallow machinery; the barrel rides the equator, so its tip past 1.25
+stands (coordinator call, PD-CANNON fix round 2; main() prints it on CANNON_REACH).
 """
 import math
 from pathlib import Path
@@ -45,7 +59,7 @@ MODEL = HERE.parents[2] / "assets/models/world_one/shell_cannon.glb"
 VARIANT_MODELS = {"choir": HERE.parents[2] / "assets/models/world_one/shell_cannon_choir.glb"}
 SHELL_BAND = (3000, 11000)
 TARGET_TRIS = 6600
-DRAW_CAP = 10
+DRAW_CAP = 16  # Hoberman pilot mecha shell cap (docs/decisions.tsv 2026-10-10)
 
 # Lattice enamel, seat and controls (ROSTER-LOOK 0.2, 6; PILOT-CLIPS section 5).
 ENAMEL = "petrol"
@@ -88,6 +102,7 @@ def body_r(y):
 # lattice, every vertex past radius 1.0 above Z -0.6 (ROSTER-LOOK section 3 rule 6). From the
 # mid chase eye their centres sit about 60 degrees below horizontal, 5 and 7 o'clock (ROSTER-LOOK
 # section 4; 4 and 8 is Tarn's), outside the 35 degree sight cone; main() prints the CLOCK line.
+# They are the low read, not the outline break: rule 4 is not applied to them (the barrel is).
 PORT_DIR = Vector((0.37, -0.83, -0.415))
 PORT_R = 1.045
 PORT_SIZE = (0.11, 0.26, 0.12)   # radial, forward, up
@@ -405,8 +420,8 @@ def main():
         below, hour = clock(port_axes(side)[0])
         ok = 55.0 <= below <= 65.0
         ports_ok = ports_ok and ok
-        print("CLOCK SplitExit.%s %.1f degrees below horizontal, %.2f o'clock from the mid chase eye %s"
-              % (tag, below, hour, "ok" if ok else "OUT"))
+        print("CLOCK SplitExit.%s %.1f degrees below horizontal, %.2f o'clock from the mid chase eye "
+              "(the low read; rule 4's break is the barrel, not the ports) %s" % (tag, below, hour, "ok" if ok else "OUT"))
     if hits or band_hits or closest <= sb.CORE_LIMIT or not ports_ok or n_draws > DRAW_CAP or reach > 1.25:
         raise SystemExit("cannon shell out of contract")
     # finish() reads a pilot node; the shell carries none, so it gets a detached empty.
