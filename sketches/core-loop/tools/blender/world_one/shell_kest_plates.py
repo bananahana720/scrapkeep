@@ -24,9 +24,11 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 import bmesh  # noqa: E402
+import bpy  # noqa: E402
 import common  # noqa: E402
 import shell_base as sb  # noqa: E402
 from common import Part, Vector  # noqa: E402
+from mathutils.bvhtree import BVHTree  # noqa: E402
 
 # --- the vents (VaneL, VaneR), shared with shell_kest.py ----------------------------------
 #
@@ -120,38 +122,61 @@ SATCHEL_INNER = 1.082                 # satchel faces start outside the weapon b
 BAND_COLOR = common.mix("amber", "oxide", 0.3)
 
 
-# C6 (P-UNITS PD common rules): Kest's layers hide no pilot pixel from the chase eyes. The pilot
-# box is pilot_kest_anim.glb's rest-pose bounds at the Pod origin (body, wing fans and upper
-# wings, x +/-0.437 to 0.597, y -0.268 to 0.59, z -0.54 to 0.57), padded 0.03 m. A tread-cap rim
-# whose ray from a chase eye goes on into the box stays off (the pilot-mask measure of the
-# 2026-10-10 fix round found 218 of 6,852 pilot pixels behind c3 rims at the mid camera).
-PILOT_BOX = (Vector((-0.63, -0.30, -0.57)), Vector((0.63, 0.62, 0.60)))
+# C6 (P-UNITS PD common rules): Kest's layers hide no pilot pixel from the chase eyes, or from
+# their mirror on the face side, where the cge look rows put the camera. The pilot is
+# pilot_kest_anim.glb's rig meshes in the rest pose at the Pod origin (its unit Icosphere is not
+# body). A tread-cap rim or a panel stays off when a ray from one of those eyes through one of
+# its sample points goes on to hit the pilot (the pilot-mask measure of the 2026-10-10 fix round
+# found c3 rims and c4 panels in front of pilot pixels).
+PILOT_GLB = os.path.join(common.MODELS, "pilot_kest_anim.glb")
+_PILOT = []
 
 
-def _ray_box(o, d, lo, hi):
-    """Exit distance of the ray o + t d (d unit) from the box, or None when it misses."""
-    t0, t1 = -math.inf, math.inf
-    for i in range(3):
-        if abs(d[i]) < 1e-12:
-            if o[i] < lo[i] or o[i] > hi[i]:
-                return None
+def pilot_tree():
+    """BVH of the pilot body, built once (imports the rig into the current scene)."""
+    if _PILOT:
+        return _PILOT[0]
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=PILOT_GLB)
+    new = [o for o in bpy.data.objects if o not in before]
+    for o in new:
+        if o.type == "ARMATURE":
+            o.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get()
+    verts, polys = [], []
+    for o in new:
+        if o.type != "MESH" or o.parent is None or o.parent.type != "ARMATURE":
             continue
-        a, b = (lo[i] - o[i]) / d[i], (hi[i] - o[i]) / d[i]
-        t0, t1 = max(t0, min(a, b)), min(t1, max(a, b))
-    return t1 if t0 <= t1 and t1 > 0 else None
+        ev = o.evaluated_get(dg)
+        m = ev.to_mesh()
+        base = len(verts)
+        verts += [o.matrix_world @ v.co for v in m.vertices]
+        polys += [[base + i for i in p.vertices] for p in m.polygons]
+        ev.to_mesh_clear()
+    for o in new:
+        bpy.data.objects.remove(o)
+    _PILOT.append(BVHTree.FromPolygons(verts, polys))
+    return _PILOT[0]
 
 
-def hides_pilot(points, eyes=sb.CHASE_EYES):
-    """True when any point sits on a chase eye's ray before that ray leaves the pilot box, so it
-    may stand in front of some pilot pixel (conservative: the box, not the body)."""
+def hides_pilot(points, eyes=sb.CHASE_EYES + FRONT_EYES):
+    """True when a ray from an eye through any point goes on to hit the pilot body."""
+    tree = pilot_tree()
     for e in eyes:
         for p in points:
             d = p - e
             dist = d.length
-            t = _ray_box(e, d / dist, *PILOT_BOX)
-            if t is not None and t > dist:
+            hit = tree.ray_cast(e, d / dist)
+            if hit[0] is not None and hit[3] > dist:
                 return True
     return False
+
+
+def samples(corners, n=4):
+    """Barycentric grid over a triangle, corners and edges included."""
+    a, b, c = corners
+    return [a * (i / n) + b * (j / n) + c * ((n - i - j) / n) for i in range(n + 1) for j in range(n + 1 - i)]
 
 
 def _cone_hit(p, eyes):
@@ -212,7 +237,8 @@ def classify():
         for tri in panels_for_gap(g):
             pts = panel_points(tri)
             if any(_cone_hit(p, sb.CHASE_EYES) or _cone_hit(p, FRONT_EYES) for p in pts) \
-                    or any((p - h).length < VANE_CLEAR for p in pts for h in hinges):
+                    or any((p - h).length < VANE_CLEAR for p in pts for h in hinges) \
+                    or hides_pilot(samples([v * PANEL_OUT for v in tri], 10) + pts[3:]):
                 excluded += 1
             else:
                 by_class[n].append(tri)
@@ -315,7 +341,7 @@ def main():
         outdir = argv[argv.index("--outdir") + 1]
     outdir = outdir or os.path.join(common.MODELS, "world_one")
     by_class, excluded = classify()
-    print("PLATES Kest %d of 60 gap triangles stay open (sight cones or vent hinges)" % excluded)
+    print("PLATES Kest %d of 60 gap triangles stay open (sight cones, vent hinges or in front of the pilot)" % excluded)
     ok = True
     for n in (2, 3, 4, 5):
         # A fresh scene per layer, so every layer's nodes are named Core and Pod, not Pod.001.
