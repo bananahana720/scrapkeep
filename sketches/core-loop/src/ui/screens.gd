@@ -238,6 +238,8 @@ func _on_flow_changed(state: String) -> void:
 			if game.ctx.profile != null and not game.ctx.profile.companion().is_empty():
 				_companion_action()
 			_action("camp", "key_k", "Camp")
+			if game.tuning != null and game.tuning.sitting():
+				_title.text = TITLE + " SITTING"
 			if game.flow.saved_run_cause != "":
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()

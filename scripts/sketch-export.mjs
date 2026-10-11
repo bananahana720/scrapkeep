@@ -347,6 +347,7 @@ export function howToRun({ sha7 }) {
       "3. Run ./core-loop.x86_64 from any directory.",
       "4. Saves live in ~/.local/share/godot/app_userdata/core-loop/. For a fresh first launch, rename that folder first and rename it back afterwards to keep your progress.",
       "5. On the title, press H for how to play and the controls.",
+      "6. To open all six pilots for a sitting, leaving your save alone: ./core-loop.x86_64 -- --profile=sitting",
     ].join("\n") + "\n"
   );
 }

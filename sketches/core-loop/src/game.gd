@@ -266,7 +266,7 @@ func continue_refusal() -> String:
 # A pilot is playable when it is a starter or the profile holds it. Only the keys and card
 # clicks ask; flow.choose_class stays ungated for bots and tests.
 func pilot_unlocked(def) -> bool:
-	return def.starter or ctx.profile.has_pilot(def.id)
+	return def.starter or (tuning != null and tuning.sitting()) or ctx.profile.has_pilot(def.id)
 
 
 func _exit_tree() -> void:
