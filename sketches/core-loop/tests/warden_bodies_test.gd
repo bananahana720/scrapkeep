@@ -203,9 +203,10 @@ func _case(case: Dictionary) -> void:
 		_check_mind_pose(label + " after the flight", case, warden, rec)
 	if case.get("fight", false):
 		await _fight(label, case, warden, rec)
+	var id := warden.get_instance_id()
 	warden.queue_free()
 	await _frames(3)
-	_t.check(label + ": the record goes with the Warden", not _hook._wardens.has(warden.get_instance_id()), "")
+	_t.check(label + ": the record and body go with the Warden", not _hook._wardens.has(id) and not is_instance_valid(body), "")
 
 
 func _check_draws(label: String, case: Dictionary, body: Node3D) -> void:
@@ -266,15 +267,18 @@ func _check_mind_pose(label: String, case: Dictionary, warden: Node3D, rec: Dict
 		var held := _end_pose(player.get_animation("perch"), "Finger1_2")
 		var bone := skel.find_bone("Finger1_2")
 		var err := rad_to_deg(skel.get_bone_pose_rotation(bone).angle_to(held))
-		_t.check(label + ": the perch grip holds under %s" % player.current_animation, err <= 1.0, "%.2f degrees off" % err)
+		# Positive control: idle alone keys that bone far from the perch grip, so the hold is what holds.
+		var idle_gap := rad_to_deg(_end_pose(player.get_animation("idle"), "Finger1_2", 0.0).angle_to(held))
+		_t.check(label + ": the perch grip holds under %s" % player.current_animation, err <= 1.0 and idle_gap >= 5.0,
+				"%.2f degrees off; idle alone %.1f degrees away" % [err, idle_gap])
 
 
-# The rotation a clip leaves on `bone` at its last frame.
-func _end_pose(anim: Animation, bone: String) -> Quaternion:
+# The rotation a clip leaves on `bone` at its last frame (or at `at` seconds).
+func _end_pose(anim: Animation, bone: String, at := -1.0) -> Quaternion:
 	for t in anim.get_track_count():
 		var path := anim.track_get_path(t)
 		if anim.track_get_type(t) == Animation.TYPE_ROTATION_3D and path.get_subname_count() > 0 and String(path.get_subname(0)) == bone:
-			return anim.rotation_track_interpolate(t, anim.length)
+			return anim.rotation_track_interpolate(t, anim.length if at < 0.0 else at)
 	return Quaternion.IDENTITY
 
 
@@ -407,8 +411,10 @@ func _check_held(label: String, case: Dictionary, rec: Dictionary, lost: int) ->
 				var bone := "Finger%s_2" % digit
 				var held := _end_pose(player.get_animation(finger.clip), bone)
 				var err := rad_to_deg(skel.get_bone_pose_rotation(skel.find_bone(bone)).angle_to(held))
-				ok = ok and err <= 1.0
-				detail += "%s %.2f deg " % [bone, err]
+				# Positive control: idle's own key for the bone is far from the curled end pose.
+				var idle_gap := rad_to_deg(_end_pose(player.get_animation("idle"), bone, 0.0).angle_to(held))
+				ok = ok and err <= 1.0 and idle_gap >= 5.0
+				detail += "%s %.2f deg (idle %.1f away) " % [bone, err, idle_gap]
 	_t.check(label, ok, detail)
 
 

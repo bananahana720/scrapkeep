@@ -673,6 +673,7 @@ func _run_group(group: String) -> void:
 		"ending": await _ending()
 		"customize": await _customize()
 		"cge": await _cge()
+		"warden_bodies": await _warden_bodies()
 		_:
 			printerr("look_harness: unknown group ", group)
 			failures += 1
@@ -870,6 +871,40 @@ func _arw2() -> void:
 	_anchor("warden", m.warden.global_position)
 	_anchor("ball", b)
 	await _shoot("arw_pit_b", {"warden": [m.warden.global_position.x, m.warden.global_position.y, m.warden.global_position.z]})
+
+
+# KF8a: one park Warden per kind (spec "harpoon_anchor": true), dressed in its recipe body by
+# hero_assets.gd, 60 m apart and out of the ball's reach so no pulse runs; each shoots alone.
+# The mind hangs from the island: lifted 14 m so the hand and its lens clear the ground.
+func _warden_bodies() -> void:
+	await _boot_play(1)
+	var b: Vector3 = game.player.ball_position()
+	game.player.body().freeze = true
+	var rows := [["warden_body_reactor", "reactor", 1, "dam_face", 0.0], ["warden_body_swarm", "swarm", 3, "headframe", 0.0],
+		["warden_body_mind", "mind", 5, "under_island", 14.0]]
+	var made: Array = []
+	for i in rows.size():
+		var r: Array = rows[i]
+		var warden = preload("res://src/combat/warden.gd").new()
+		game.ctx.root.add_child(warden)
+		warden.global_position = Vector3(b.x + 50.0 + 60.0 * i, 0.0, b.z + 40.0)
+		var spec: Dictionary = game.ctx.spawner.fleet.dress("warden", {"family": r[1], "stage": r[2], "plating": 90.0, "hp": 650.0, "reach": 30.0})
+		spec.merge({"harpoon_anchor": true, "family": r[1], "mounting": r[3], "variant": ""}, true)
+		warden.setup(game.player, game.ctx.terrain, game.ctx.root, Callable(game.flow, "in_play"), 1.0, spec)
+		warden.global_position.y += r[4]
+		warden.home = warden.global_position
+		made.append(warden)
+	await _frames(30)
+	for w in made:
+		w.set_physics_process(false)
+	for i in rows.size():
+		for j in made.size():
+			made[j].visible = j == i
+		var w: Node3D = made[i]
+		var centre: Vector3 = w.global_position + (Vector3.DOWN * 4.0 if rows[i][1] == "mind" else Vector3.ZERO)
+		_anchor("warden", centre, w)
+		var dressed: bool = not game.presentation.hero_assets.warden_of(w).get("body", null) == null
+		await _shoot(rows[i][0], {"family": rows[i][1], "mounting": rows[i][3], "body": dressed})
 
 
 func _spawn_devices(b: Vector3) -> Dictionary:
