@@ -1,0 +1,481 @@
+extends RefCounted
+
+# The stage graph (design-v3/PARK.md 2.11, K-UNITS KB8): the stage's one measured space. Built
+# by tools/park_graph.gd from the park file and its bake, read here from graph.bin. Every
+# system that asks "how far along the stage" asks this graph: the spawn and pocket checks
+# (2.12), the director's home arrivals (a home is ahead when its site's d_landmark is smaller
+# than the ball's), the traversal tool's progress_m.
+#
+# Nodes. The ground lattice comes first: one node per 8 m on the bake's 2 m grid (every fourth
+# vertex), 201 by 201, row-major (z, then x), node (I, J) at x = -800 + 8 I, z = -800 + 8 J, at
+# the ground height, or on a hole cell at the under.bin floor. Then the decks: for each park row
+# whose y is not null, in file order, its own lattice of 8 m steps along and across its yaw,
+# centred on its footprint, at that y. node_row(n) names the deck row, "" for the ground.
+#
+# Edges are directed, kept as CSR in both directions, each with its length in path metres and
+# the park or contraption row id of a ride edge ("" for ground). d_landmark and d_spawn are the
+# two distance fields the tool stores, INF where no path reaches.
+#
+# Flags are this graph's own bits; none are copied from any game (research/comps/
+# pocket-placement.md:58).
+
+const Stamps := preload("res://src/world/park/park_stamps.gd")
+
+const SCHEMA := "scrapkeep-park-graph/1"
+const MAGIC := "SKPG"
+const VERSION := 1
+
+const HALF_M := 800.0
+const STEP_M := 8.0
+const LATTICE := 4
+const SIDE := 201
+
+const OPEN := 1
+const LINE := 2
+const GUARDED := 4
+const WARDEN := 8
+const DOOR_OK := 16
+const SIGHT_OK := 32
+const UNDER := 64
+const DECK := 128
+const FLAG_NAMES := {OPEN: "open", LINE: "line", GUARDED: "guarded", WARDEN: "warden",
+	DOOR_OK: "door_ok", SIGHT_OK: "sight_ok", UNDER: "under", DECK: "deck"}
+
+var px := PackedFloat32Array()
+var py := PackedFloat32Array()
+var pz := PackedFloat32Array()
+var node_flags := PackedInt32Array()
+var node_rows := PackedInt32Array()
+var names := PackedStringArray()
+var off := PackedInt32Array()
+var to := PackedInt32Array()
+var length := PackedFloat32Array()
+var ride := PackedInt32Array()
+var roff := PackedInt32Array()
+var rto := PackedInt32Array()
+var rlength := PackedFloat32Array()
+var d_land := PackedFloat32Array()
+var d_from := PackedFloat32Array()
+var spawn_node := -1
+var beacon_node := -1
+# The search heap, (distance, node) pairs, ordered by distance then node.
+var _hd := PackedFloat32Array()
+var _hn := PackedInt32Array()
+
+
+static func read(path: String):
+	var file := FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+	if file == null:
+		return null
+	var bytes := PackedByteArray()
+	while not file.eof_reached():
+		var chunk := file.get_buffer(1 << 20)
+		if chunk.is_empty():
+			break
+		bytes.append_array(chunk)
+	file.close()
+	return from_bytes(bytes)
+
+
+static func from_bytes(bytes: PackedByteArray):
+	var s := StreamPeerBuffer.new()
+	s.data_array = bytes
+	if bytes.size() < 24 or s.get_data(4)[1].get_string_from_ascii() != MAGIC or s.get_u32() != VERSION:
+		return null
+	var g = new()
+	var nodes := s.get_u32()
+	var edges := s.get_u32()
+	var name_count := s.get_u32()
+	g.spawn_node = s.get_32()
+	g.beacon_node = s.get_32()
+	for k in name_count:
+		g.names.append(s.get_data(s.get_u32())[1].get_string_from_utf8())
+	g.px = _floats(s, nodes)
+	g.py = _floats(s, nodes)
+	g.pz = _floats(s, nodes)
+	g.node_flags = _ints(s, nodes)
+	g.node_rows = _ints(s, nodes)
+	g.d_land = _floats(s, nodes)
+	g.d_from = _floats(s, nodes)
+	g.off = _ints(s, nodes + 1)
+	g.to = _ints(s, edges)
+	g.length = _floats(s, edges)
+	g.ride = _ints(s, edges)
+	if g.off[nodes] != edges:
+		return null
+	g.reverse()
+	return g
+
+
+func to_bytes() -> PackedByteArray:
+	var s := StreamPeerBuffer.new()
+	s.big_endian = false
+	s.put_data(MAGIC.to_ascii_buffer())
+	s.put_u32(VERSION)
+	s.put_u32(px.size())
+	s.put_u32(to.size())
+	s.put_u32(names.size())
+	s.put_32(spawn_node)
+	s.put_32(beacon_node)
+	for name in names:
+		var b := name.to_utf8_buffer()
+		s.put_u32(b.size())
+		s.put_data(b)
+	s.put_data(px.to_byte_array())
+	s.put_data(py.to_byte_array())
+	s.put_data(pz.to_byte_array())
+	s.put_data(node_flags.to_byte_array())
+	s.put_data(node_rows.to_byte_array())
+	s.put_data(d_land.to_byte_array())
+	s.put_data(d_from.to_byte_array())
+	s.put_data(off.to_byte_array())
+	s.put_data(to.to_byte_array())
+	s.put_data(length.to_byte_array())
+	s.put_data(ride.to_byte_array())
+	return s.data_array
+
+
+static func _floats(s: StreamPeerBuffer, n: int) -> PackedFloat32Array:
+	return s.get_data(4 * n)[1].to_float32_array()
+
+
+static func _ints(s: StreamPeerBuffer, n: int) -> PackedInt32Array:
+	return s.get_data(4 * n)[1].to_int32_array()
+
+
+# Builds the reverse CSR from the forward one (stable: sources in node order).
+func reverse() -> void:
+	var n := px.size()
+	roff = PackedInt32Array()
+	roff.resize(n + 1)
+	for e in to.size():
+		roff[to[e] + 1] += 1
+	for k in n:
+		roff[k + 1] += roff[k]
+	var fill := roff.slice(0, n)
+	rto = PackedInt32Array()
+	rto.resize(to.size())
+	rlength = PackedFloat32Array()
+	rlength.resize(to.size())
+	for a in n:
+		for e in range(off[a], off[a + 1]):
+			var b := to[e]
+			rto[fill[b]] = a
+			rlength[fill[b]] = length[e]
+			fill[b] += 1
+
+
+func node_count() -> int:
+	return px.size()
+
+
+func edge_count() -> int:
+	return to.size()
+
+
+func position(node: int) -> Vector3:
+	return Vector3(px[node], py[node], pz[node])
+
+
+func flags(node: int) -> int:
+	return node_flags[node]
+
+
+func node_row(node: int) -> String:
+	return "" if node_rows[node] < 0 else names[node_rows[node]]
+
+
+func flag_names(node: int) -> PackedStringArray:
+	var out := PackedStringArray()
+	for bit in [OPEN, LINE, GUARDED, WARDEN, DOOR_OK, SIGHT_OK, UNDER, DECK]:
+		if node_flags[node] & bit != 0:
+			out.append(FLAG_NAMES[bit])
+	return out
+
+
+# The ground lattice index under (x, z), clamped to the square.
+static func lattice_index(x: float, z: float) -> int:
+	var i := clampi(roundi((x + HALF_M) / STEP_M), 0, SIDE - 1)
+	var j := clampi(roundi((z + HALF_M) / STEP_M), 0, SIDE - 1)
+	return j * SIDE + i
+
+
+# A Vector2 is a point on the ground plane: the ground (or tunnel floor) node under it. A
+# Vector3 is a point in space: the nearest node of any kind, decks included.
+func nearest(at) -> int:
+	if at is Vector2:
+		return lattice_index(at.x, at.y)
+	var p: Vector3 = at
+	var best := lattice_index(p.x, p.z)
+	var best_d := p.distance_squared_to(position(best))
+	for n in range(SIDE * SIDE, px.size()):
+		var d := p.distance_squared_to(Vector3(px[n], py[n], pz[n]))
+		if d < best_d:
+			best_d = d
+			best = n
+	# Ground nodes round the lattice point under p can be nearer in 3D on a slope.
+	var c := lattice_index(p.x, p.z)
+	var ci := c % SIDE
+	var cj := c / SIDE
+	for dj in range(-2, 3):
+		for di in range(-2, 3):
+			var i := ci + di
+			var j := cj + dj
+			if i < 0 or j < 0 or i >= SIDE or j >= SIDE:
+				continue
+			var n := j * SIDE + i
+			var d := p.distance_squared_to(position(n))
+			if d < best_d or (d == best_d and n < best):
+				best_d = d
+				best = n
+	return best
+
+
+# The node of `nodes` nearest p in 3D; ties go to the lower index. -1 for an empty set.
+func nearest_in(nodes: PackedInt32Array, p: Vector3) -> int:
+	var best := -1
+	var best_d := INF
+	for n in nodes:
+		var d := p.distance_squared_to(position(n))
+		if d < best_d or (d == best_d and n < best):
+			best_d = d
+			best = n
+	return best
+
+
+func _node(at) -> int:
+	if at is int:
+		return at
+	return nearest(at)
+
+
+func path_m(a, b) -> float:
+	var src := _node(a)
+	var dst := _node(b)
+	var dist := search(PackedInt32Array([src]), false, INF, dst)
+	return dist[dst]
+
+
+func d_landmark(at) -> float:
+	return d_land[_node(at)]
+
+
+func d_spawn(at) -> float:
+	return d_from[_node(at)]
+
+
+func d_landmark_node(node: int) -> float:
+	return d_land[node]
+
+
+func d_spawn_node(node: int) -> float:
+	return d_from[node]
+
+
+# Dijkstra from every source at 0. reverse walks edges backwards, so the result is the distance
+# TO the sources. Stops past cutoff, or once stop_at is settled. Ties settle the lower node
+# first, so the result never depends on insertion order.
+func search(sources: PackedInt32Array, reverse := false, cutoff := INF, stop_at := -1) -> PackedFloat32Array:
+	var n := px.size()
+	var dist := PackedFloat32Array()
+	dist.resize(n)
+	dist.fill(INF)
+	_hd = PackedFloat32Array()
+	_hn = PackedInt32Array()
+	for s in sources:
+		if dist[s] > 0.0:
+			dist[s] = 0.0
+			_push(0.0, s)
+	var o := roff if reverse else off
+	var e_to := rto if reverse else to
+	var e_len := rlength if reverse else length
+	while not _hn.is_empty():
+		var d := _hd[0]
+		var a := _hn[0]
+		_pop()
+		if d > dist[a]:
+			continue
+		if a == stop_at or d > cutoff:
+			break
+		for e in range(o[a], o[a + 1]):
+			var b := e_to[e]
+			var nd := d + e_len[e]
+			if nd < dist[b]:
+				dist[b] = nd
+				_push(nd, b)
+	if cutoff < INF:
+		for k in n:
+			if dist[k] > cutoff:
+				dist[k] = INF
+	return dist
+
+
+# Dijkstra that also keeps each node's predecessor, for the line path.
+func search_prev(source: int) -> Dictionary:
+	var n := px.size()
+	var dist := PackedFloat32Array()
+	dist.resize(n)
+	dist.fill(INF)
+	var prev := PackedInt32Array()
+	prev.resize(n)
+	prev.fill(-1)
+	_hd = PackedFloat32Array()
+	_hn = PackedInt32Array()
+	dist[source] = 0.0
+	_push(0.0, source)
+	while not _hn.is_empty():
+		var d := _hd[0]
+		var a := _hn[0]
+		_pop()
+		if d > dist[a]:
+			continue
+		for e in range(off[a], off[a + 1]):
+			var b := to[e]
+			var nd := d + length[e]
+			if nd < dist[b] or (nd == dist[b] and a < prev[b]):
+				dist[b] = nd
+				prev[b] = a
+				_push(nd, b)
+	return {"dist": dist, "prev": prev}
+
+
+# Every node reachable from the sources, one byte per node.
+func reach(sources: PackedInt32Array) -> PackedByteArray:
+	var seen := PackedByteArray()
+	seen.resize(px.size())
+	var stack := PackedInt32Array()
+	for s in sources:
+		if seen[s] == 0:
+			seen[s] = 1
+			stack.append(s)
+	while not stack.is_empty():
+		var a := stack[stack.size() - 1]
+		stack.resize(stack.size() - 1)
+		for e in range(off[a], off[a + 1]):
+			var b := to[e]
+			if seen[b] == 0:
+				seen[b] = 1
+				stack.append(b)
+	return seen
+
+
+static func _less(da: float, na: int, db: float, nb: int) -> bool:
+	return da < db or (da == db and na < nb)
+
+
+func _push(d: float, node: int) -> void:
+	_hd.append(d)
+	_hn.append(node)
+	var k := _hd.size() - 1
+	while k > 0:
+		var p := (k - 1) >> 1
+		if not _less(_hd[k], _hn[k], _hd[p], _hn[p]):
+			break
+		var td := _hd[k]
+		_hd[k] = _hd[p]
+		_hd[p] = td
+		var tn := _hn[k]
+		_hn[k] = _hn[p]
+		_hn[p] = tn
+		k = p
+
+
+func _pop() -> void:
+	var last := _hd.size() - 1
+	_hd[0] = _hd[last]
+	_hn[0] = _hn[last]
+	_hd.resize(last)
+	_hn.resize(last)
+	var k := 0
+	while true:
+		var l := 2 * k + 1
+		if l >= last:
+			break
+		var m := l
+		if l + 1 < last and _less(_hd[l + 1], _hn[l + 1], _hd[l], _hn[l]):
+			m = l + 1
+		if not _less(_hd[m], _hn[m], _hd[k], _hn[k]):
+			break
+		var td := _hd[k]
+		_hd[k] = _hd[m]
+		_hd[m] = td
+		var tn := _hn[k]
+		_hn[k] = _hn[m]
+		_hn[m] = tn
+		k = m
+
+
+# --- Footprints: which nodes stand for a park row, a disc or a box. ---
+
+# A route as the place ids it passes: from, the via rows, to, with repeats collapsed.
+static func route_sequence(route: Dictionary) -> PackedStringArray:
+	var seq := PackedStringArray()
+	for id in [route["from"]] + Array(route["via"]) + [route["to"]]:
+		if seq.is_empty() or seq[seq.size() - 1] != String(id):
+			seq.append(String(id))
+	return seq
+
+
+# Ground lattice nodes in the axis-aligned box lo..hi.
+func box_nodes(lo: Vector2, hi: Vector2) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	if lo.x > HALF_M or lo.y > HALF_M or hi.x < -HALF_M or hi.y < -HALF_M:
+		return out
+	var i0 := clampi(ceili((lo.x + HALF_M) / STEP_M), 0, SIDE - 1)
+	var i1 := clampi(floori((hi.x + HALF_M) / STEP_M), 0, SIDE - 1)
+	var j0 := clampi(ceili((lo.y + HALF_M) / STEP_M), 0, SIDE - 1)
+	var j1 := clampi(floori((hi.y + HALF_M) / STEP_M), 0, SIDE - 1)
+	for j in range(j0, j1 + 1):
+		for i in range(i0, i1 + 1):
+			out.append(j * SIDE + i)
+	return out
+
+
+# Ground lattice nodes within radius of p, and always the one under p, in node order.
+func disc_nodes(p: Vector2, radius: float) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for o in box_nodes(p - Vector2(radius, radius), p + Vector2(radius, radius)):
+		if Vector2(px[o], pz[o]).distance_to(p) <= radius:
+			out.append(o)
+	var below := lattice_index(p.x, p.y)
+	if not out.has(below):
+		out.append(below)
+	out.sort()
+	return out
+
+
+# Ground lattice nodes inside a park_stamps.gd frame's footprint.
+func inside_nodes(f: Dictionary) -> PackedInt32Array:
+	var box := Stamps.bounds(f)
+	var out := PackedInt32Array()
+	for o in box_nodes(Vector2(box[0], box[1]), Vector2(box[2], box[3])):
+		if Stamps.inside(f, px[o], pz[o]):
+			out.append(o)
+	return out
+
+
+# A park row's nodes: its deck (count nodes from start) when it has y, else the ground lattice
+# nodes inside its footprint, else the node under its centre.
+func footprint_nodes(row: Dictionary, start: int, count: int) -> PackedInt32Array:
+	if row["y"] != null:
+		var deck := PackedInt32Array()
+		for o in range(start, start + count):
+			deck.append(o)
+		return deck
+	var out := inside_nodes(Stamps.frame(row))
+	if out.is_empty():
+		out.append(lattice_index(float(row["at"][0]), float(row["at"][1])))
+	return out
+
+
+# The node a point on a site row stands on: the site's deck when it has y, else the ground.
+func site_node(park: Dictionary, row_index: Dictionary, deck_start: PackedInt32Array, deck_count: PackedInt32Array, p: Vector2, site: String) -> int:
+	if row_index.has(site):
+		var k: int = row_index[site]
+		var row: Dictionary = park["park_rows"][k]
+		if row["y"] != null and deck_count[k] > 0:
+			var deck := PackedInt32Array()
+			for o in range(deck_start[k], deck_start[k] + deck_count[k]):
+				deck.append(o)
+			return nearest_in(deck, Vector3(p.x, float(row["y"]), p.y))
+	return lattice_index(p.x, p.y)
