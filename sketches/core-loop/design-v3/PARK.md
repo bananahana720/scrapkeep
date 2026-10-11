@@ -74,7 +74,7 @@ One row per park element. A stage starts with 40 to 70 rows (start).
 | `element` | enum | Park element kind: `half_pipe`, `flow_line`, `grind_line`, `rail`, `bowl`, `terrace`, `tunnel`, `drop`, `flooded_cavern`, `elevated_line`, `ledge`, `crater_bowl`, `sky_island`, `kicker`, `bank`, `anchor_field`, `ground` |
 | `landform` | enum | The Arizona disguise: `slot_canyon`, `arroyo`, `dry_wash`, `slickrock`, `canal`, `flume`, `penstock`, `pipeline`, `dam_face`, `open_pit`, `tailings_bench`, `headframe`, `lava_tube`, `adit`, `shaft`, `spillway_tunnel`, `sinkhole`, `cenote_pool`, `flooded_shaft`, `cliff_dwelling`, `mesa_rim`, `butte`, `spire`, `hoodoo_field`, `saguaro_stand`, `travertine_terrace`, `horseshoe_bend`, `river_canyon`, `gooseneck`, `meteor_crater`, `sky_island` |
 | `society` | enum | Who made it: `none` (water and time), `hohokam`, `ancestral_puebloan`, `mining`, `dam_era`, `fleet` (the Furnace Fleet's present works), `ancient` (the pre-collapse machines) |
-| `at` | [x, z] | Centre of the footprint |
+| `at` | [x, z] | Centre of the footprint. A GLB recipe whose registry row says origin entry_lip is placed by the loader so its entry lip sits at the rear of the footprint and its ride runs +Z (turned by yaw_deg) through at to the far edge; park rows never carry a lip position (KC-INT, 2026-10-11). |
 | `y` | number or null | Absolute height for a piece that does not sit on the ground (a rail, a hung line, a floating island); null sits it on the baked ground |
 | `size` | [l, h, w] | Footprint and height in metres |
 | `yaw_deg` | number | Turn about the vertical axis |
