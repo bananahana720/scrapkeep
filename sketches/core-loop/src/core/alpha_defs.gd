@@ -6,7 +6,9 @@ const Worlds := preload("res://src/core/worlds.gd")
 # Warden, then Brindle as the boss. World one is the Spillway (1-1) then the Cable Reach (1-2);
 # stages 3 and 5 are the first zones of worlds two and three (the Dig, the Highdraft) and stages 4
 # and 6 their second zones (the deep works, the crown), each with its own map, packs drawn from
-# its world's kinds, and Warden variant key. The default table:
+# its world's kinds, and Warden variant key. Each world fights one Warden kind (PARK.md section 7,
+# KF0 2026-10-10): world 1 the reactor relic (stage 2 its meltdown variant), world 2 the swarm
+# remnant (stage 4 its brood), world 3 the Mind's hand (stage 6 its choir). The default table:
 # stage_defs.gd re-exports these rows, and `--table=alpha` picks this file directly.
 # Same shape as slice_defs.gd. It repeats that file's two lookups because a base script's
 # static functions would read the base's own DEFS, not this one's. Rows 3 to 6 scale rows 1
@@ -39,10 +41,12 @@ const PARTS := [
 # A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.
 const PICK_ON_CLASS_UP := true
 
+# World 1's packs (stages 1 and 2 use them). KF0 2026-10-10: the deflector's `rebound` pack left
+# world 1, so harpoon-spam answers enter from world 2 (decisions.tsv, "The deflector's rebound pack
+# leaves world 1"; PARK.md section 13 item 2).
 const PACKS := [
 	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
-	{"id": "rebound", "kinds": ["deflector", "chaser", "chaser"]},
 ]
 const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
 # The arrival of each stage that is the elite pack.
@@ -72,22 +76,22 @@ const DEFS := [
 		"warden_plating": 90.0, "warden_hp": 650.0, "warden_lesson": "",
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[0]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[0], "warden_hint": "Break its guard, then smash the core.",
 		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
-	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": "cable_reach"}, "warden_family": "swarm", "name": "The Cable Reach", "map": "reach", "threat": 1.0,
-		"unlock_base": 4, "ancient": "swarm_remnant",
+	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": "cable_reach"}, "warden_family": "reactor", "name": "The Cable Reach", "map": "reach", "threat": 1.0,
+		"unlock_base": 4, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[1]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[1], "warden_hint": "Bowl through its guard rack, then smash the core.",
-		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
-	{"stage": 3, "world": 2, "music": {"theme": 1, "ace": "dig_upper"}, "warden_family": "reactor", "name": "Dig: the upper bench", "map": "dig", "threat": 1.1,
-		"unlock_base": 2, "ancient": "reactor_relic",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[1]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[1], "warden_hint": "Break its guard, then smash the core.",
+		"packs": PACKS, "elite": ELITE, "warden_variant": "meltdown"},
+	{"stage": 3, "world": 2, "music": {"theme": 1, "ace": "dig_upper"}, "warden_family": "swarm", "name": "Dig: the upper bench", "map": "dig", "threat": 1.1,
+		"unlock_base": 2, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 130.0, "warden_hp": 950.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[2], "warden_hint": "Break its guard, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower"]},
 			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
-		], "elite": ELITE, "warden_variant": "meltdown"},
+		], "elite": ELITE, "warden_variant": ""},
 	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": "dig_deep"}, "warden_family": "swarm", "name": "Dig: the deep works", "map": "dig_deep", "threat": 1.2,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -107,7 +111,7 @@ const DEFS := [
 			{"id": "draft_cut", "kinds": ["line_cutter", "line_cutter", "kite_drone"]},
 			{"id": "draft_anchor", "kinds": ["anchor_crew", "line_cutter"]},
 			{"id": "draft_kites", "kinds": ["kite_drone", "kite_drone", "anchor_crew"]},
-		], "elite": ELITE, "warden_variant": "choir"},
+		], "elite": ELITE, "warden_variant": ""},
 	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": "highdraft_crown"}, "warden_family": "mind", "name": "Highdraft: the crown", "map": "highdraft_crown", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
