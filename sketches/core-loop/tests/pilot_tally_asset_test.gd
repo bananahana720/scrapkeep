@@ -1,4 +1,13 @@
 extends SceneTree
+# 2026-10-10 (PD-TALLY): the shell is now the Hoberman mecha (ROSTER-LOOK section 0, P-UNITS
+# PD-TALLY). Re-pinned only the shell half: slots trade glass for copper and the draw cap is the
+# registry exception (13); the glass-radius check becomes the lattice check (Core 0.95 to
+# 0.985 m) with machinery inside rule 6's 1.25 m; Flywheel.R/L keep 0.34 x 0.07 m and gain the
+# four window indices in vertex alpha; the sockets move with the mecha (ReaderExit to the
+# WeaponRing magazine, the card bays beside the right yoke, the drums to 3 and 9 o'clock over
+# the band, StampContact to the bottom), Grip.R/L become Control.Grip.R/L and the CardTab,
+# LapBar, Pedal and Trigger controls are pinned; the reader slot is the only class_accent.
+# The pilot half is unchanged.
 
 const PILOT := "res://assets/models/pilot_tally_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_tally.glb"
@@ -24,18 +33,29 @@ const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5,
 const KEY_POSES := {"drop_land": 16.0 / 30, "big_cheer": 24.0 / 30, "wince": 2.0 / 30,
 	"slump": 22.0 / 30, "phew": 9.0 / 30, "brace": 5.0 / 30, "heave": 6.0 / 30}
 const SOCKETS := {
-	"ReaderExit": Vector3(0, -0.32, -0.81),
-	"CardBay.0": Vector3(-0.23, -0.32, -0.80),
-	"CardBay.1": Vector3(0, -0.32, -0.80),
-	"CardBay.2": Vector3(0.23, -0.32, -0.80),
-	"FlywheelAxis.R": Vector3(0.50, -0.28, 0.35),
-	"FlywheelAxis.L": Vector3(-0.50, -0.28, 0.35),
-	"ReturnExit": Vector3(0, -0.48, -0.72),
-	"StampContact": Vector3(0, -0.82, -0.12),
+	"ReaderExit": Vector3(0, 0, -1.212),
+	"CardBay.0": Vector3(0.52, -0.262, -0.42),
+	"CardBay.1": Vector3(0.52, -0.262, -0.30),
+	"CardBay.2": Vector3(0.52, -0.262, -0.18),
+	"FlywheelAxis.R": Vector3(1.033, 0.23, 0),
+	"FlywheelAxis.L": Vector3(-1.033, 0.23, 0),
+	"ReturnExit": Vector3(0, -0.47, 0.27),
+	"StampContact": Vector3(0, -0.985, 0),
 	"LedgerMount": Vector3(-0.255, -0.20, -0.045),
-	"Grip.R": Vector3(0.32, 0.05, -0.40),
-	"Grip.L": Vector3(-0.32, 0.05, -0.40),
+	"Control.Grip.R": Vector3(0.32, 0.05, -0.40),
+	"Control.Grip.L": Vector3(-0.32, 0.05, -0.40),
+	"Control.Trigger": Vector3(0.32, 0.09, -0.43),
+	"Control.CardTab.0": Vector3(0.52, -0.27, -0.42),
+	"Control.CardTab.1": Vector3(0.52, -0.27, -0.30),
+	"Control.CardTab.2": Vector3(0.52, -0.27, -0.18),
+	"Control.LapBar": Vector3(0, -0.33, -0.05),
+	"Control.Pedal.L": Vector3(-0.13, -0.62, -0.45),
+	"Control.Pedal.R": Vector3(0.13, -0.62, -0.45),
 }
+# Window k of a drum face carries vertex alpha WINDOW_ALPHA[k] (shell_tally.py header).
+const WINDOW_ALPHA := [0.2, 0.4, 0.6, 0.8]
+const CORE_LIMIT := 0.985
+const REACH := 1.25
 
 var _failures := 0
 var _checks := 0
@@ -213,30 +233,35 @@ func _pilot(pilot: Node, document: Dictionary) -> void:
 
 
 func _shell(shell: Node, document: Dictionary) -> void:
-	_budget("shell", shell, Vector3i(11000, 11600, 10), ["paint", "bare_metal", "rubber", "class_accent", "glass"])
+	_budget("shell", shell, Vector3i(11000, 11600, 13), ["paint", "rubber", "class_accent", "copper"])
 	_check("shell has no skeleton", document.get("skins", []).is_empty())
 	_check("no duplicate pilot", shell.find_child("Pilot", true, false) == null)
 	var source_names: Array = document.get("nodes", []).map(func(n): return n.get("name", ""))
-	for name in ["Core", "Pod", "Dome", "Gyro", "ReaderCarriage", "Flywheel.R", "Flywheel.L"]:
+	for name in ["Core", "Pod", "Dome", "Gyro", "GyroInner", "WeaponRing", "ReaderCarriage", "Flywheel.R", "Flywheel.L", "Hub.00", "Gap.29"]:
 		_check("shell node " + name, name in source_names and _shell_node(shell, name) != null)
 	var pod := shell.find_child("Pod", true, false)
 	var dome := shell.find_child("Dome", true, false) as Node3D
 	_check("identity Dome", dome != null and dome.transform.is_equal_approx(Transform3D.IDENTITY))
-	for name in ["Gyro", "ReaderCarriage", "Flywheel.R", "Flywheel.L", "Dome"]:
+	for name in ["Gyro", "WeaponRing", "ReaderCarriage", "Flywheel.R", "Flywheel.L", "Dome"]:
 		var node := _shell_node(shell, name)
 		_check("upright " + name, node != null and node.get_parent() == pod)
 	var max_radius := 0.0
-	var glass_radius := 0.0
+	var core_radius := 0.0
+	var accents: Array = []
 	for mi in _meshes(shell):
 		var transform := _to_root(mi, shell)
 		for i in mi.mesh.get_surface_count():
+			var mat: Material = mi.mesh.surface_get_material(i)
+			if mat != null and mat.resource_name == "class_accent":
+				accents.append(String(mi.name))
 			for v in mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
 				var radius: float = (transform * v).length()
 				max_radius = maxf(max_radius, radius)
 				if String(mi.name) == "Core":
-					glass_radius = maxf(glass_radius, radius)
-	_check("resting radius", max_radius <= 0.98501, "%.6f m, cap 0.985" % max_radius)
-	_check("glass radius", absf(glass_radius - 0.98) < 0.0001, "%.6f m; imported vertex tolerance 0.1 mm" % glass_radius)
+					core_radius = maxf(core_radius, radius)
+	_check("machinery reach", max_radius <= REACH, "%.4f m, rule 6 cap %.2f" % [max_radius, REACH])
+	_check("lattice radius", core_radius >= 0.95 and core_radius <= CORE_LIMIT + 0.0001, "Core reaches %.4f m (0.95 to %.3f)" % [core_radius, CORE_LIMIT])
+	_check("reader slot is the only accent", accents == ["WeaponRing"], "class_accent surfaces on %s" % [accents])
 	for name in SOCKETS:
 		var node := _shell_node(shell, name) as Node3D
 		_check("socket " + name, name in source_names and node != null and (_to_root(node, shell).origin - SOCKETS[name]).length() < 0.00001,
@@ -250,6 +275,19 @@ func _shell(shell: Node, document: Dictionary) -> void:
 			_check("flywheel diameter " + side, absf(bounds.size.y - 0.34) < 0.001
 				and absf(bounds.size.z - 0.34) < 0.001 and absf(bounds.size.x - 0.07) < 0.0001,
 				"%s; wheel diameter 0.34 m; axial depth 0.07 m" % bounds.size)
+			# Pressure windows: one surface, four window indices in vertex alpha.
+			var found := {}
+			if wheel.mesh.get_surface_count() == 1:
+				var cols = wheel.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+				if cols != null:
+					for c in cols:
+						if c.a < 0.95:
+							found[snappedf(c.a, 0.05)] = true
+			var keys := found.keys()
+			keys.sort()
+			_check("drum windows " + side, wheel.mesh.get_surface_count() == 1 and keys.size() == 4
+				and keys.all(func(a): return WINDOW_ALPHA.any(func(w): return absf(a - w) < 0.01)),
+				"%d surface(s); window alphas %s" % [wheel.mesh.get_surface_count(), keys])
 
 
 func _initialize() -> void:
