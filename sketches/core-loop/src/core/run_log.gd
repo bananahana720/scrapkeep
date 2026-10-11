@@ -126,6 +126,8 @@ var _stage_clock := -1.0
 var _posture_starts := {}
 var _posture_wardens := {}
 var _posture_open := {}
+# A line skill load is waiting for its bite: the next line_skill_fired is that bite.
+var _line_waiting := false
 
 
 func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
@@ -153,6 +155,25 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	events.prompt_shown.connect(_on_prompt_shown)
 	events.cause_fired.connect(_on_cause_fired)
 	events.posture_changed.connect(_on_posture_changed)
+	# The skill bar and the set piece (design-v3/SKILL-BAR.md section 7, run log rows).
+	events.slot_cast.connect(func(slot: String, _id: String, _at: Vector3):
+		if not _record.is_empty() and slot in ["special", "line"]:
+			_count_in("slot_casts", slot))
+	events.slot_selected.connect(_on_slot_selected)
+	events.line_skill_loaded.connect(func(_id: String, _seconds: float):
+		_line_waiting = true
+		_count_line("loaded"))
+	events.line_skill_fired.connect(func(_id: String, _target: Node3D, _at: Vector3, _on: String):
+		_count_line("load_bitten" if _line_waiting else "on_line")
+		_line_waiting = false)
+	events.line_skill_expired.connect(func(_id: String):
+		_line_waiting = false
+		_count_line("load_expired"))
+	events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
+		if not _record.is_empty():
+			(_record["ultimates"] as Array).append(_ultimate_row()))
+	events.ultimate_landed.connect(func(_id: String, _at: Vector3, _hits: int, _damage: float): _close_ultimate())
+	events.ultimate_cancelled.connect(func(_id: String, _reason: String, _refunded: bool): _close_ultimate())
 
 
 func _on_run_started(class_id: String) -> void:
@@ -165,7 +186,10 @@ func _on_run_started(class_id: String) -> void:
 	run.set_meta("boss_attacks", {})
 	_record = {"run_id": run.run_id, "class": class_id, "table": _table_id(), "outcome": "running", "brindle_phase_reached": null,
 		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0,
-		"chains": [], "best_combo": 0, "misses": 0, "smash_damage": 0.0, "smash_damage_by_fight": []}
+		"chains": [], "best_combo": 0, "misses": 0, "smash_damage": 0.0, "smash_damage_by_fight": [],
+		"slot_casts": {"special": 0, "line": 0}, "snaps": {}, "picks": 0,
+		"line_skill": {"on_line": 0, "loaded": 0, "load_bitten": 0, "load_expired": 0}, "ultimates": []}
+	_line_waiting = false
 	_fight_open = false
 	_smash_base = -1.0
 	_traversal = null
@@ -334,6 +358,35 @@ func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
 		_count_in("verb_fails", verb)
 
 
+func _on_slot_selected(_slot: String, reason: String) -> void:
+	if _record.is_empty():
+		return
+	if reason == "pick":
+		_record["picks"] = int(_record["picks"]) + 1
+	else:
+		_count_in("snaps", reason)
+
+
+func _count_line(field: String) -> void:
+	if not _record.is_empty():
+		_count_in("line_skill", field)
+
+
+# The set piece's record as ultimate.gd keeps it on the run (the delivered-damage pattern):
+# {id, path, seconds, heft_class, volley_hits, landing_hits, damage, bailed, recalled,
+# fill_seconds}. One row per start; the landing or the cancel closes it with the final counts.
+func _ultimate_row() -> Dictionary:
+	return (run.get_meta("ultimate_record", {}) as Dictionary).duplicate(true)
+
+
+func _close_ultimate() -> void:
+	if _record.is_empty():
+		return
+	var rows: Array = _record["ultimates"]
+	if not rows.is_empty():
+		rows[rows.size() - 1] = _ultimate_row()
+
+
 func _count_in(key: String, name: String) -> void:
 	var counts: Dictionary = _record[key]
 	counts[name] = int(counts.get(name, 0)) + 1
@@ -489,6 +542,9 @@ func _write(outcome: String) -> void:
 	# W18: the Mind's attack commitments by family (mind.gd _commit_attack), so a soak reads
 	# which families it used without codex rows (dodged only) or damage sources (landed only).
 	line["boss_attacks"] = run.get_meta("boss_attacks", {})
+	# The ultimate meter's points by source this run (SKILL-BAR section 7, meter_points).
+	var meter = player.abilities.get("meter") if player != null and player.get("abilities") != null else null
+	line["meter_points"] = (meter.sources as Dictionary).duplicate() if meter != null else {}
 	# The durability prototype's per-run metrics (run_state.gd), present only in armour
 	# mode so a flag-off line is byte-identical to the base. reverse_seconds is an
 	# approximation: seconds with a spill live and the ball moving against the stage's

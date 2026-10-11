@@ -219,6 +219,12 @@ var _landing_theme := -1
 var _entered_ms := -1
 var _launch_stage := false
 var drop_log: Array = []
+# The set piece (SKILL-BAR section 4, music): the meter's lift is on (one synth intensity step,
+# one ACE pressure step), and a wind-up's build waits for its landing's drop. _pressure is
+# the last systemic pressure, which the ACE step sits on top of.
+var _ult_lift := false
+var _ult_armed := false
+var _pressure := 0.0
 var _miniboss: Node3D
 var _event_id := ""
 var _event_started_ms := -1
@@ -980,6 +986,14 @@ func _connect_all(events) -> void:
 	events.event_ended.connect(_on_event_ended)
 	events.launched.connect(_on_launched)
 	events.pressure_changed.connect(_on_pressure)
+	events.run_started.connect(func(_class_id: String): _set_ult_lift(false))
+	events.ultimate_ready.connect(_on_ultimate_ready)
+	events.ultimate_started.connect(_on_ultimate_started)
+	events.ultimate_peak.connect(func(_id: String, _at: Vector3): on_beat("ultimate_peak"))
+	events.ultimate_landed.connect(_on_ultimate_landed)
+	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
+	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
+	_wire_ultimate_beat()
 	wire_optional()
 	_wire_armor()
 
@@ -1640,6 +1654,89 @@ func _land_drop() -> void:
 	_landing_theme = -1
 
 
+# --- The set piece (SKILL-BAR section 4, music) -------------------------------------------
+
+# The set piece reads its flight's beat from the band: seconds per beat of the music playing,
+# 0 when none plays (the flight then takes 2.4 s).
+func _wire_ultimate_beat() -> void:
+	var spawner = ctx.spawner if ctx != null else null
+	if spawner == null or spawner.get("ultimate") == null:
+		return
+	spawner.ultimate.beat_seconds = func() -> float:
+		if not sound_ready or engine.mode != MusicEngine.PLAY:
+			return 0.0
+		return 60.0 / engine.bpm()
+
+
+func pressure_now() -> float:
+	return _pressure
+
+
+# What the ACE band hears as pressure: the systemic pressure plus the meter's step.
+func ace_pressure() -> float:
+	return _pressure + (AceSequencer.ULTIMATE_STEP if _ult_lift else 0.0)
+
+
+func _set_ult_lift(on: bool) -> void:
+	_ult_lift = on
+	engine.set_ultimate_lift(on)
+	if ace_playing():
+		ace.set_ultimate_lift(on)
+
+
+# Full: the class motif an octave up and a bell on the beat, and one layer lifts at the bar.
+func _on_ultimate_ready(_id: String) -> void:
+	_set_ult_lift(true)
+	on_beat("ultimate_ready")
+
+
+# The wind-up is the build, as a launch is: the riser carries the flight. A directed ACE piece
+# holds through the flight and hands over on the landing's beat, as a Warden launch does.
+func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vector3, seconds: float) -> void:
+	play("ultimate_started")
+	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == _boss_track():
+		return
+	_ult_armed = true
+	if ace_playing() and ace.mode == "piece":
+		_ace_flight = true
+		return
+	if ace_playing():
+		_ace_end(ace.grid_beat)
+	engine.start_build(seconds, true)
+
+
+# The landing is the drop, on the next beat, never more than one beat after touchdown; the
+# lift releases with it (the meter is empty).
+func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) -> void:
+	play("ultimate_landed")
+	if _ult_armed:
+		var touchdown := engine.clock
+		var at := engine.drop_now(4, 0.85, {}, -1, {"ult": false})
+		drop_log.append([touchdown, at])
+		if _ace_flight:
+			_ace_flight = false
+			if ace_playing():
+				ace.stop_at(at, ace.grid_beat)
+				_handover_at = at
+		cue_log.append(["ultimate_landed", "drop", "beat", at, 1.0])
+		_ult_armed = false
+	_set_ult_lift(false)
+
+
+# A cancel drops the build. A recall refunds the meter, so the lift stays; any other cancel
+# spent it, so the lift goes.
+func _on_ultimate_cancelled(_id: String, _reason: String, refunded: bool) -> void:
+	play("ultimate_cancelled")
+	if _ult_armed:
+		_ult_armed = false
+		if _ace_flight:
+			_ace_flight = false
+			_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
+		engine.cancel_build()
+	if not refunded:
+		_set_ult_lift(false)
+
+
 func _disarm_launch() -> void:
 	_ace_arrival_stage = 0
 	_ace_arrival_at = -1
@@ -1890,6 +1987,7 @@ func _on_synergy(_id: String, _category: String, first_time: bool) -> void:
 
 
 func _on_pressure(pressure: float) -> void:
+	_pressure = pressure
 	cue_log.append(["pressure_changed", "music_pressure", "music", engine.clock, 1.0])
 	engine.set_pressure(pressure)
 	if ace_playing():

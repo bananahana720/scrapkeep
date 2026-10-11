@@ -63,8 +63,12 @@ func _enemy(kind: String, dx: float, dz := 0.0) -> Node3D:
 	return enemy
 
 
+# The ball back on the shelf, at rest. The teleport lands on the next physics step, so this
+# waits for it before anything reads the ball's position.
 func _home() -> void:
 	_player.reset_to(_ground(0.0) + Vector3.UP * 1.0)
+	await physics_frame
+	await physics_frame
 	_player.kit.rewind_left = 0.0
 	_player.chain.reset()
 	_fails.clear()
@@ -158,14 +162,14 @@ func _run() -> void:
 	_t.eq("07 the record reads ready and full", [_player.abilities.ultimate()["state"], _player.abilities.ultimate()["fill"]], ["ready", 1.0])
 
 	# --- Refusals ------------------------------------------------------------------------
-	_home()
+	await _home()
 	_ult.meter.reset()
 	_t.eq("08 Q short of full is refused uncharged and spends nothing", [_ult.press(_sky()), _fails, _ult.phase(), _ult.meter.value],
 		["uncharged", [["ultimate", "uncharged"]], "idle", 0.0])
 	_t.eq("09 READS: Q is recall during the set piece", Bindings.READS["ultimate"]["set_piece"], "recall")
 
 	# --- The path order ------------------------------------------------------------------
-	_home()
+	await _home()
 	var target := _ground(20.0)
 	_t.eq("10 ground in arc reach plans an arc", String(_ult.plan(_player.ball_position(), _aim_at(target))["path"]), "arc")
 	_t.eq("11 nothing to aim at plans the hop", String(_ult.plan(_player.ball_position(), _sky())["path"]), "hop")
@@ -174,7 +178,9 @@ func _run() -> void:
 	_t.eq("12 a harpoon lock plans a line to it", [String(_ult.plan(_player.ball_position(), lock)["path"]), _ult.plan(_player.ball_position(), lock)["to"]],
 		["line", a.global_position])
 	_ult.rail_query = func(point: Vector3) -> Dictionary: return {"entry": point + Vector3(5.0, 0.0, 0.0), "to": point + Vector3(30.0, 0.0, 0.0)}
-	_t.eq("13 a rail entry within 12 m beats the arc", String(_ult.plan(_player.ball_position(), _aim_at(target))["path"]), "rail")
+	_t.eq("13 a rail entry within 12 m beats the arc in the framework order; ult_default (line, arc) keeps its arc",
+		[String(_ult.plan(_player.ball_position(), _aim_at(target), ["line", "rail", "arc"])["path"]),
+		String(_ult.plan(_player.ball_position(), _aim_at(target))["path"])], ["rail", "arc"])
 	_ult.rail_query = Callable()
 	var anchor: Vector3 = _player.ball_position() + Vector3(10.0, 4.0, 0.0)
 	_player.grapple_to(anchor, Vector3.LEFT, null)
@@ -187,7 +193,14 @@ func _run() -> void:
 	# --- Q with a line standing: the cut publishes no broke; a full meter never meets a dead Q
 	_lines.clear()
 	_fill()
+	_player.abilities.select(AbilityState.SPECIAL)
+	var picked_home: Array = []
+	var on_snap := func(slot: String, reason: String): picked_home.append([slot, reason])
+	ev.slot_selected.connect(on_snap)
 	_t.eq("16 Q at a full meter starts", _ult.press(_aim_at(target)), "")
+	ev.slot_selected.disconnect(on_snap)
+	_t.eq("16b the start snaps a picked slot home with the reason ultimate", [picked_home, _player.abilities.selected],
+		[[[AbilityState.WEAPON, "ultimate"]], AbilityState.WEAPON])
 	_t.eq("17 the start emits once with the planned path, and the meter locks", [_started.size(), _ult.phase(), _ult.meter.locked, _ult.meter.value],
 		[1, "windup", true, 0.0])
 	_t.eq("18 the ability record reads active", _player.abilities.ultimate()["state"], "active")
@@ -196,14 +209,14 @@ func _run() -> void:
 	_t.eq("19 the handover publishes no broke", broke, [])
 	_t.eq("20 the set piece lands once and goes idle", [_landed.size(), _ult.phase(), _ult.meter.locked], [1, "idle", false])
 
-	_home()
+	await _home()
 	_fill()
 	_ult.press(_sky())
 	_t.eq("21 a full meter with nothing to aim at hops", _started[0][1] if _started.size() > 0 else "", "hop")
 	await _ride_out()
 
 	# --- Busy -------------------------------------------------------------------------------
-	_home()
+	await _home()
 	_fill()
 	_ult.press(_sky())
 	await _sim(0.5)
@@ -212,7 +225,7 @@ func _run() -> void:
 	await _ride_out()
 
 	# --- Recall, bail, stage, death ---------------------------------------------------------
-	_home()
+	await _home()
 	_fill()
 	_ult.press(_aim_at(target))
 	await _sim(0.1)
@@ -221,24 +234,27 @@ func _run() -> void:
 	_t.eq("23 Q in the wind-up recalls with a full refund", [_cancelled, _ult.phase(), _ult.meter.value, _landed],
 		[[["ult_default", "recall", true]], "idle", 100.0, []])
 
-	_home()
+	await _home()
 	_fill()
 	_ult.press(_aim_at(target))
 	await _sim(0.6)
 	var in_flight: bool = _ult.phase() == "flight"
 	_source.press = {"jump_pressed": true}
 	await _sim(0.05)
-	_t.eq("24 Space in flight bails: spent, no landing", [in_flight, _cancelled, _ult.phase(), _ult.meter.value, _landed],
-		[true, [["ult_default", "bail", false]], "idle", 0.0, []])
+	# Spent: after the bail the ball still rolls fast, so speed may pay a few hundredths back.
+	_t.check("24 Space in flight bails: spent, no landing", in_flight and _cancelled == [["ult_default", "bail", false]] and _ult.phase() == "idle"
+		and _ult.meter.value < 1.0 and _landed.is_empty(), "flight %s, cancelled %s, meter %.3f, landed %s" % [in_flight, _cancelled, _ult.meter.value, _landed])
 
 	# --- Defence -----------------------------------------------------------------------------
-	_home()
+	await _home()
 	var run = _game.ctx.run
 	run.armor_mode = false
 	run.hp = 50.0
 	_fill()
 	_ult.press(_aim_at(target))
 	await _sim(0.1)
+	# Set right before the hit: the hull regenerates between ticks.
+	run.hp = 50.0
 	_combat._on_player_hit(20.0, Vector3.ZERO, "test")
 	var after_small: float = run.hp
 	_combat._on_player_hit(500.0, Vector3.ZERO, "test")
@@ -249,7 +265,7 @@ func _run() -> void:
 	await _ride_out()
 	run.hp = run.max_hp
 
-	_home()
+	await _home()
 	var c := _enemy("chaser", -8.0, -4.0)
 	holds.catch(c, "net", ["jump"])
 	var held: bool = holds.holding()
@@ -259,8 +275,11 @@ func _run() -> void:
 	await _ride_out()
 
 	# --- The landing pays and ends the chain; the run log -----------------------------------
-	_home()
+	await _home()
 	var d := _enemy("chaser", 20.0, 0.5)
+	# Tough enough to outlive the volleys and the ram on the way in, so the landing meets it.
+	d.max_hp = 5000.0
+	d.hp = 5000.0
 	for i in 3:
 		_player.grapple_to(d.global_position, Vector3.UP, d)
 		_player.release_grapple()
@@ -285,7 +304,7 @@ func _run() -> void:
 		and _game.ctx.run_log._record.has("line_skill"), "snaps %s" % [snaps])
 
 	# --- Wardens ----------------------------------------------------------------------------
-	_home()
+	await _home()
 	var w := _enemy("warden", 18.0, 0.0)
 	var before: float = w.posture()
 	_fill()
@@ -294,7 +313,7 @@ func _run() -> void:
 	var gained: float = w.posture() - before
 	_t.check("36 a closed guard takes at most 45 posture from one set piece", gained > 0.0 and gained <= 45.001 and w.chunks_left() == 4,
 		"gained %.2f, chunks %d" % [gained, w.chunks_left()])
-	_home()
+	await _home()
 	w._apply_posture({"gain": 100.0, "contact": false})
 	var open: bool = w.staggered()
 	_fill()
@@ -303,14 +322,14 @@ func _run() -> void:
 	_t.eq("37 an open core shatters on the landing", [open, w.chunks_left()], [true, 3])
 
 	# --- Aborts, last: these fire real reset facts on the bus -------------------------------
-	_home()
+	await _home()
 	_fill()
 	_ult.press(_aim_at(target))
 	await _sim(0.2)
 	ev.stage_content_cleared.emit("test")
 	_t.eq("38 a stage change aborts and spends", [_cancelled, _ult.phase(), _ult.meter.value], [[["ult_default", "stage", false]], "idle", 0.0])
 
-	_home()
+	await _home()
 	_fill()
 	_ult.press(_aim_at(target))
 	await _sim(0.2)
