@@ -133,7 +133,9 @@ func _run() -> void:
 
 	# A new run after dying on stage 2 (flow.gd _begin_run reuses the terrain): stages 2 and 3
 	# hold both render nodes, and use(1) must free stage 3 before stage 1 builds, so stage 1
-	# draws instead of standing as a bare collider.
+	# draws instead of standing as a bare collider. Stage 3 started building when stage 2's
+	# Warden woke (world.gd calls prepare on warden_engaged; KB4b), as stage 2 did above.
+	terrain.prepare(3)
 	for n in 3:
 		await process_frame
 	t.check("before the new run, stages 2 and 3 hold both render nodes", terrain._render_owner.has(1) and terrain._render_owner.has(2),
