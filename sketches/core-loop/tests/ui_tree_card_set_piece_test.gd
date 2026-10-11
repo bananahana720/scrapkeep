@@ -13,7 +13,7 @@ const T := preload("res://tests/support/t.gd")
 const TABLE := {
 	"stand_in": "Lands a second shockwave.",
 	"ult_pins": "Pins last longer.",
-	"stand_long": "Every shockwave pins the whole crowd for a breath, then lets the next one land harder.",
+	"stand_long": "Each shockwave pins the crowd.",
 }
 
 
@@ -51,7 +51,7 @@ func _initialize() -> void:
 		if String(table[id]).length() > longest.length():
 			longest = String(table[id])
 			longest_id = String(id)
-	var long_node := {"id": "x_l", "name": "Aftershock Overload", "effect": "A fairly long effect line that wraps onto two lines.", "key": "ultimate", "swap": {"ultimate": longest_id}}
+	var long_node := {"id": "x_l", "name": "Aftershock Overload", "effect": "Smash scatters five payloads.", "key": "ultimate", "swap": {"ultimate": longest_id}}
 	var fit = TreeCard.new(long_node, "key_1", Color.ORANGE, 4, true, true, table)
 	root.add_child(fit)
 	await process_frame
