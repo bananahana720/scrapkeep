@@ -242,8 +242,10 @@ func _specs(with_recipes: bool) -> Array:
 			out.append({"kind": "launcher", "id": "%s_%s" % [style, variant], "style": style, "at": Vector2(400 + k * 60, 0),
 				"radius": 3.5, "target": Vector3(400 + k * 60, 20, 100), "floor": 20.0, "min_flight": 2.5, "charge": 3.0})
 			k += 1
+	out.append({"kind": "launcher", "id": "cannon_east", "style": "cannon", "at": Vector2(900, 0), "radius": 4.0,
+		"target": Vector3(1000, 20, 0), "floor": 20.0, "min_flight": 2.5, "charge": 3.0})
 	if with_recipes:
-		var recipe_of := {"barge_skin": "barge", "lift_skin": "lift_platform", "cannon_skin": "cannon", "trebuchet_skin": "trebuchet",
+		var recipe_of := {"cannon_east": "cannon", "barge_skin": "barge", "lift_skin": "lift_platform", "cannon_skin": "cannon", "trebuchet_skin": "trebuchet",
 			"geyser_skin": "geyser_vent"}
 		for spec: Dictionary in out:
 			if recipe_of.has(spec["id"]):
@@ -291,6 +293,15 @@ func _check_draw_path() -> void:
 		_t.check("(d) %s draws no recipe view" % id, c.find_children("*", "MeshInstance3D", true, false).filter(
 			func(v): return v.has_meta(META_ID) and v.get_meta(META_ID) == id).is_empty())
 	_t.check("(d) the twin without recipes draws no recipe view at all", _tagged(twin).is_empty())
+	# The GLB's +Z is the launcher's aim: a cannon aimed along +x stands with its pad (the GLB's -z side) to the west of the mouth.
+	var east := _views(c, "cannon_east", "cannon")
+	var box := AABB()
+	for k in east.size():
+		var v := east[k] as MeshInstance3D
+		var b := v.global_transform * v.mesh.get_aabb()
+		box = b if k == 0 else box.merge(b)
+	_t.check("(d) a cannon aimed along +x lies west of its mouth, centred on the aim line", not east.is_empty() and box.get_center().x < 900.0 - 3.0
+		and absf(box.get_center().z) < 1.0, str(box))
 	# The primitive stays for the row without a recipe and goes for the row with one.
 	_t.check("(d) cannon_plain keeps its cylinder barrel", _primitive_count(c, "cannon_plain", "CylinderMesh") == 1)
 	_t.check("(d) cannon_skin drops the cylinder barrel", _primitive_count(c, "cannon_skin", "CylinderMesh") == 0)

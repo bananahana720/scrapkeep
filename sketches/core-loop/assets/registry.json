@@ -2280,6 +2280,215 @@
    }
   },
   {
+   "id": "park_contraption_barge",
+   "path": "res://assets/models/park/contraptions/barge.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/barge.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 a1d05412064e5e88aab476ec4121af268cccfbb4a1b976e43eb26ab874f29245"
+   }
+  },
+  {
+   "id": "park_contraption_barge_detail1",
+   "path": "res://assets/models/park/contraptions/barge_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/barge.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 6f4be04f77e67f9476c49ed535193eb06168e585bee5b6cb18dc4c3c3e391bd2"
+   }
+  },
+  {
+   "id": "park_contraption_barge_detail2",
+   "path": "res://assets/models/park/contraptions/barge_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/barge.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 dfc54556c23ba9c6b7b13ba7b3d7c2721d81d4b211254e5a4b7eff20d228dc1b"
+   }
+  },
+  {
+   "id": "park_contraption_cannon",
+   "path": "res://assets/models/park/contraptions/cannon.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/cannon.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 3eca89b1f9ed3188d0f147578b5fae6088c82ed0b3451a22f4c7df07cea2e8a2"
+   }
+  },
+  {
+   "id": "park_contraption_cannon_detail1",
+   "path": "res://assets/models/park/contraptions/cannon_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/cannon.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 c217ab419703f7660f379b8f8625dc26a572a03bc41963dd841d1219e82a5b42"
+   }
+  },
+  {
+   "id": "park_contraption_cannon_detail2",
+   "path": "res://assets/models/park/contraptions/cannon_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/cannon.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 4cfae634ab87fbb65dd5cb24e2b7ae3e83a1c68403b6bb2143f27cf8d6fd9dee"
+   }
+  },
+  {
+   "id": "park_contraption_gauge",
+   "path": "res://assets/models/park/contraptions/gauge.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/gauge.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 32fff127dc6b49416591f529e6bec169e9b4fe1660b696891cab5cb5771da301"
+   }
+  },
+  {
+   "id": "park_contraption_gauge_detail1",
+   "path": "res://assets/models/park/contraptions/gauge_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/gauge.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 295c6175c2488bab6ff96ec469a945b70eccf180acf6fa384b2c70be917e9f39"
+   }
+  },
+  {
+   "id": "park_contraption_gauge_detail2",
+   "path": "res://assets/models/park/contraptions/gauge_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/gauge.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 9b28f33c7f7c43418fe1f7db091edbebc647068bbc579e14ef438bf2471de284"
+   }
+  },
+  {
+   "id": "park_contraption_geyser_vent",
+   "path": "res://assets/models/park/contraptions/geyser_vent.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/geyser_vent.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 ab81ac154dabf3109c329690e51a58171e542c60622aa2670c0fa31fe083689f"
+   }
+  },
+  {
+   "id": "park_contraption_geyser_vent_detail1",
+   "path": "res://assets/models/park/contraptions/geyser_vent_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/geyser_vent.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 e33d5a814181d3c67e8f3576719fd8a43e3f38236791fd9e0c86d76cc8f6d105"
+   }
+  },
+  {
+   "id": "park_contraption_geyser_vent_detail2",
+   "path": "res://assets/models/park/contraptions/geyser_vent_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/geyser_vent.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 e3bb8a635f8b5c94cabe5c520189da74c375e3138b0007a17fb23e037d1ac129"
+   }
+  },
+  {
+   "id": "park_contraption_lift_platform",
+   "path": "res://assets/models/park/contraptions/lift_platform.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/lift_platform.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 3a129dd9f230f572bde47757858752a287e59219ef4dcf7c5d4b1f394cf76ded"
+   }
+  },
+  {
+   "id": "park_contraption_lift_platform_detail1",
+   "path": "res://assets/models/park/contraptions/lift_platform_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/lift_platform.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 777e8b654f7b4f5cdd6a4bf47ef2aee96b7d1fe2c2c80482c45b8f3a8646c506"
+   }
+  },
+  {
+   "id": "park_contraption_lift_platform_detail2",
+   "path": "res://assets/models/park/contraptions/lift_platform_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/lift_platform.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 ad2d24e9627e23423b701169f5e9e477b95506534e2742a751adb0808d34fde7"
+   }
+  },
+  {
+   "id": "park_contraption_trebuchet",
+   "path": "res://assets/models/park/contraptions/trebuchet.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/trebuchet.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 65264eb2c83ed8977c22a555ae80b7b59cc8c22c4df5861bc0ccd5a98cfc275b"
+   }
+  },
+  {
+   "id": "park_contraption_trebuchet_arm",
+   "path": "res://assets/models/park/contraptions/trebuchet_arm.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/trebuchet.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 8f54a65aa623a5a35742b1cee98e77d7504688122af66ca33b646d58b72a82a3"
+   }
+  },
+  {
+   "id": "park_contraption_trebuchet_detail1",
+   "path": "res://assets/models/park/contraptions/trebuchet_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/trebuchet.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 cee2e22cf0a92ec0384bc77e255fb063660667d85a6e652c8219fe834257c9f1"
+   }
+  },
+  {
+   "id": "park_contraption_trebuchet_detail2",
+   "path": "res://assets/models/park/contraptions/trebuchet_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "contraptions.gd _skin_views (a contraption row's recipe key; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/contraptions/trebuchet.py",
+    "notes": "KC9 contraption skin, wave 13. Authored procedurally in this repository from kit.Surface parts (tools/blender/park/contraptions/_park.py); no imported mesh, texture or scan. Arizona palette: dam-era concrete, dark iron, copper, desert varnish. sha256 9fc070e1c8b1db38bcedfc7217ccf9ba5b439aee1bdacafcdf9d5564f370c967"
+   }
+  },
+  {
    "id": "pilot_cannon_anim",
    "path": "res://assets/models/pilot_cannon_anim.glb",
    "class": "pilot",
@@ -3552,6 +3761,25 @@
   "ore_cart_detail1",
   "ore_cart_detail2",
   "ore_cart_wheel",
+  "park_contraption_barge",
+  "park_contraption_barge_detail1",
+  "park_contraption_barge_detail2",
+  "park_contraption_cannon",
+  "park_contraption_cannon_detail1",
+  "park_contraption_cannon_detail2",
+  "park_contraption_gauge",
+  "park_contraption_gauge_detail1",
+  "park_contraption_gauge_detail2",
+  "park_contraption_geyser_vent",
+  "park_contraption_geyser_vent_detail1",
+  "park_contraption_geyser_vent_detail2",
+  "park_contraption_lift_platform",
+  "park_contraption_lift_platform_detail1",
+  "park_contraption_lift_platform_detail2",
+  "park_contraption_trebuchet",
+  "park_contraption_trebuchet_arm",
+  "park_contraption_trebuchet_detail1",
+  "park_contraption_trebuchet_detail2",
   "pilot_cannon_anim",
   "pilot_tally_anim",
   "pilot_tarn_anim",
