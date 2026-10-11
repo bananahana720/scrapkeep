@@ -24,7 +24,7 @@ const T := preload("res://tests/support/t.gd")
 const MECHA_PATH := "res://src/presentation/mecha_motion.gd"
 
 const CLASS_ID := "pylon_engineer"
-const EXPECTED := 76
+const EXPECTED := 89
 
 var _t := T.new("pilot_clips_policy_test")
 var _phase := "idle"
@@ -78,6 +78,7 @@ func _playing(rec: Dictionary, clip: String) -> bool:
 func _fallback(hero, player, rec: Dictionary) -> void:
 	var animator: AnimationPlayer = rec.animator
 	_t.check("today's GLB lacks idle_loop", not animator.has_animation("idle_loop"))
+	_t.check("a clip the GLB lacks (smash) is refused", not hero.react(player, "slammed", [Vector3.ZERO, 30.0, 1.0]))
 	_t.check("near_miss plays phew", hero.react(player, "near_miss"))
 	Trigger.finish(rec)
 	_t.check("without idle_loop the clip end stops the animator", not animator.is_playing() and rec.reaction == "")
@@ -273,9 +274,9 @@ func _mecha() -> void:
 	var plunger: Node3D = pod.get_node("Control_Plunger")
 	motion.cast("cast_line", "Plunger", 0.0)
 	_run_for(motion, 0.08)
-	_t.near("the plunger presses 0.06 m", plunger.position.z, -0.06, 0.001)
+	_t.near("the plunger presses 0.06 m", plunger.position.y, -0.06, 0.001)
 	_run_for(motion, 0.26)
-	_t.near("the plunger returns", plunger.position.z, 0.0, 0.0001)
+	_t.near("the plunger returns", plunger.position.y, 0.0, 0.0001)
 	var trigger: Node3D = pod.get_node("Control_Trigger")
 	_t.check("a shot squeezes the trigger", motion.shot())
 	_t.check("a second shot inside 0.12 s does not", not motion.shot())
