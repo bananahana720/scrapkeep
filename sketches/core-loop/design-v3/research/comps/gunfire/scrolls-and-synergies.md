@@ -51,7 +51,7 @@ flowchart LR
 | Cursed offer frequency, sell values, enhanced price | not stated | wiki (public): absent |
 | Scrolls in shipped data | no scroll table identified; talent nodes number 360 and are a different system (the in-run ascension tree, inference) | shipped data tables (level 4 at measurement, scripts outside the repo): talentdata schema |
 
-Report note: the Occult_Scrolls total of 203 and the Unlockables sum agree, and the count pass matches both.
+Weapons and scrolls form two layers of one build. An inscription changes one weapon's own stats (crit multiplier, magazine, reload, rate of fire, element chance) and lives on that weapon. A scroll changes the player's rules for every weapon held. Scroll families key on the same stats an inscription tunes: the reload or ammo, element and weapon-damage families (25, 20 and 18 of 203 by the keyword heuristic) read the weapon's magazine, reload, element and damage, so a scroll's value depends on the weapon in hand (inference from category names and effect text; wiki (public): Occult_Scrolls page; rendered-table pass). The rare inscription kind changes a weapon's damage type and so unlocks scroll scaling that needs that type (wiki (public): Inscriptions page). The explicit bridge between the layers is the peculiar chest option that takes a cursed scroll and adds an exclusive inscription to a weapon (wiki (public): Inscriptions and Chests pages). Everything else in this paragraph beyond that trade is the scout's synthesis and is not stated by the pages.
 
 ## Why it works
 
@@ -66,6 +66,7 @@ Principles: **opt-in layers** and **readable-capped scaling**. Relationships to 
 
 Proposed relationships (design inference):
 
+- A two-layer build: weapon-local parts (change one built weapon's stats) and player-global parts (change rules for every weapon), with the build screen labelling which layer each part changes and which weapon stats a global part reads, plus at least one explicit trade that turns a global burden into a local weapon gain.
 - A rare "burden" part with a stated cost, taken only in an optional pocket the player can see from the open stage, so taking it is a choice.
 - A payout that reads the count of burdens held and caps through the ceiling curve from the RoR2 note, not a straight multiple.
 - One list of parts with several sources (find, shop, pocket reward), shown with its weights on the screen.

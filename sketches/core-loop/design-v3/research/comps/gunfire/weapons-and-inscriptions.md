@@ -4,7 +4,7 @@ Evidence: public wiki pages read by scouts (level 2, "wiki (public)", cited by p
 
 ## What it does
 
-A weapon belongs to one of nine classes. Each class has a stated trade-off envelope: for example, rifles trade accuracy and crit for rate of fire and magazine, snipers trade rate of fire for damage, and launchers put an explosion on every shot. Weapons vary inside that envelope. Each weapon shows damage, crit multiplier, rate of fire, magazine, reload time, an element with a per-hit effect chance, movement speed and one free column (projectile count, magnification or blast radius). Accuracy, stability, range, projectile speed and charge time are hidden.
+A weapon belongs to one of nine classes (nine per-class counts are given, but the scout report names only eight classes; the ninth is not named in the material read, though shotguns and bows appear elsewhere in it). Eight classes have a stated trade-off envelope: for example, rifles trade accuracy and crit for rate of fire and magazine, snipers trade rate of fire for damage, and launchers put an explosion on every shot. Weapons vary inside that envelope. Each weapon shows damage, crit multiplier, rate of fire, magazine, reload time, an element with a per-hit effect chance, movement speed and one free column (projectile count, magnification or blast radius). Accuracy, stability, range, projectile speed and charge time are hidden.
 
 A weapon also carries inscriptions, which are modifier slots. The number of slots follows the weapon's level, and the level follows the stage reached: a starting weapon has 1 slot, and slots grow to 5 by the third act. Inscriptions come in four kinds. Normal ones tune one stat. Rare ones change the weapon's damage type and so unlock scaling that other systems provide. Exclusive ones are gated by a talent, capped at 3, and often bound to a weapon class. Gemini ones only work when the second equipped weapon carries the same one, so each carries a visible partner. A craftsman spends copper to raise base damage in steps and to etch or reroll inscriptions, with fixed per-visit limits.
 
@@ -29,7 +29,7 @@ flowchart LR
 | Parameter | Value | Source |
 |---|---|---|
 | Weapon classes and total weapons | 9 classes, 67 weapons (per-class counts 9/7/11/7/10/9/7/4/3) | wiki (public): Weapons page, class list; stats table rows |
-| Class envelopes | one stated trade-off per class (rifle, SMG, pistol, sniper, launcher, injector, melee, staff) | wiki (public): Weapons page, class sections |
+| Class envelopes | one stated trade-off for each of 8 named classes (rifle, SMG, pistol, sniper, launcher, injector, melee, staff); the ninth class is not named in the material read | wiki (public): Weapons page, class sections |
 | Visible stat fields | damage, crit multiplier, rate of fire, magazine and ammo type, reload, element and chance, move speed, one free column | wiki (public): Weapon_Stats table header |
 | Hidden stats | accuracy, stability, effective range, projectile speed, charge time, lucky-shot chance | wiki (public): Weapons page, hidden-stat list |
 | Damage model | damage / (1/rate + reload/magazine); damage per projectile | wiki (public): rate-of-fire, magazine, reload and projectile pages (wiki formula, not checked in game) |

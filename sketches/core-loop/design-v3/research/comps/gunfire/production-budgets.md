@@ -59,7 +59,7 @@ Bones per skinned renderer (categories by object name only):
 | Unclassified (numeric-id names; many probably bosses, inference) | 3,201 | 5 | 79 | 187 | 454 (14%) | measured: production-budgets.md |
 | All | 8,885 | 5 | 49 | 203 | 598 (7%) | measured: production-budgets.md |
 
-Reading: a typical hero renderer carries 17 bones and the p90 is 20, so the high-bone tail (max 203) is a few outlier renderers. The numeric-id group holds 3,201 renderers (36%), and three of its top ids match boss-folder mesh ids, so the Monster row is likely understated at the top. 406 renderers have 0 bones.
+Reading: a typical hero renderer carries 17 bones and the p90 is 20, but the tail is not trivial: 49 of 662 hero renderers (7%) exceed 64 bones and the max is 203, so the median says low and the p90 and the 7% tail say some hero parts need much more. The numeric-id group holds 3,201 renderers (36%), and three of its top ids match boss-folder mesh ids, so the Monster row is likely understated at the top. 406 renderers have 0 bones.
 
 Textures (larger side; rows by size class):
 
@@ -75,7 +75,7 @@ Textures (larger side; rows by size class):
 | Unclassified | 2,607 | 2,104 | 1,977 | 398 | 177 | 55 | 0 | 2,048 | measured: production-budgets.md |
 | All | 16,188 | 10,351 | 10,830 | 2,899 | 2,166 | 292 | 1 | 8,192 | measured: production-budgets.md |
 
-Reading: 10,830 of 16,188 rows (67%) are 256 or smaller, driven by UI and VFX. Character and weapon textures cluster at 512 to 1024 and are block-compressed (hero rows: DXT5 85, DXT1 69, one RGB24). Only one texture in the whole game is above 2048, and it is an environment texture. Lightmaps (987 rows, BC6H) are scene bakes. UI holds 3,402 uncompressed RGBA32 rows; the 3,748 RGBA32 total is mostly UI.
+Reading: 10,830 of 16,188 rows (67%) are 256 or smaller, but that share comes from UI (6,775 rows) and VFX (1,974 rows); do not read it as a character budget. Character and weapon textures cluster at 512 to 1,024 and are block-compressed (hero rows: DXT5 85, DXT1 69, one RGB24). Only one texture in the whole game is above 2048, and it is an environment texture. Lightmaps (987 rows, BC6H) are scene bakes. UI holds 3,402 uncompressed RGBA32 rows; the 3,748 RGBA32 total is mostly UI.
 
 Animation clips (seconds):
 
@@ -110,11 +110,11 @@ Bundle shape: 3,478 bundles, 4.00 GB on disk. Median 0.06 MB, p90 1.68 MB, max 2
 
 ## Why it works
 
-The shape matches the RoR2 finding in a different style. Detail follows importance (heroes heaviest, props and terrain light), the numerous things stay cheap (two thirds of textures at 256 or smaller, props at a median of 232 triangles), and gameplay clips stay short. What differs is the rig budget: this game keeps a hero renderer near 17 bones, where RoR2 survivors carry 77. A stylized look buys a cheaper skeleton, not just a lower polygon count.
+The shape matches the RoR2 finding in a different style. Detail follows importance (heroes heaviest, props and terrain light), the numerous things stay cheap (two thirds of all texture rows at 256 or smaller, though those are UI and VFX rows; props at a median of 232 triangles), and gameplay clips stay short. What differs is the rig budget: this game keeps a hero renderer near 17 bones, where RoR2 survivors carry 77. A stylized look buys a cheaper skeleton, not just a lower polygon count.
 
 ## What Scrapkeep borrows
 
-Principle: **readability first**, with a second lever, **stylization lowers rig cost**. The relationship is a per-category budget with a floor, a ceiling and now a bone cap that a shipped game demonstrably lives under. Amendment target: the forge owner's pack file, not the Bible.
+Principle: **readability first**, as in the RoR2 note. One observation from this data, not a principle: the stylized game ships far lower rig budgets than RoR2. The relationship is a per-category budget with a floor, a ceiling and now a bone cap that a shipped game demonstrably lives under. Amendment target: the forge owner's pack file, not the Bible.
 
 Three-way comparison (all per piece; bands are whole-asset, so "inside" on pieces does not prove a whole asset is inside):
 
@@ -137,10 +137,10 @@ Three-way comparison (all per piece; bands are whole-asset, so "inside" on piece
 
 ### What this changes for the forge
 
-- Hero bones: a stylized shipped game keeps heroes at a median of 17 and a p90 of 20, so the proposed 80-bone hero cap is loose. A cap near 40 is supported by this game; RoR2 argues for the looser value. Keep 80 as a ceiling only if a hero needs a cloth or tail rig.
+- Hero bones: a stylized shipped game keeps heroes at a median of 17 and a p90 of 20, so the median supports a cap well under the proposed 80. The p90 of 20 does not carry the whole tail: 7% of hero renderers exceed 64 bones, and RoR2 (median 77) argues for the looser value. Treat 80 as a ceiling for outlier parts and a low per-part target as the norm, until a summed per-hero pass settles it.
 - Enemy bones: p90 is 49, above the proposed 40 cap in both games. If bosses get their own class, give that class the higher cap; the median of 6 says ordinary enemies sit far under 40.
-- Enemy triangles: the proposed 500 to 5,000 foe class holds in both games at p90 (3,460 and 4,814). The median is under the proposed floor in both (192 and 528), so a floor above 500 would reject typical enemy pieces.
-- Textures: two thirds of rows are 256 or smaller and no character texture exceeds 2,048. A 128 floor and a 1,024 character ceiling both fit.
+- Enemy triangles: Gunfire supports raising the kit ceiling (p90 3,460 against 1,500) and the 40-bone concern (p90 49), not the 500 floor. Its enemy median of 192 is under that floor, and RoR2's monster median of 528 only just clears it, so a floor at 500 would reject typical enemy pieces.
+- Textures: the small-texture share is UI and VFX; character and weapon textures sit at 512 to 1,024 and none exceeds 2,048. A 1,024 character ceiling fits; this data says nothing about a character floor, so the 128 floor rests on the RoR2 prop rows alone.
 - Weapons: p90 of 3,753 is above the prop ceiling of 1,500. If Scrapkeep ships held or mounted items, they need a class above prop, or the cap applies to the whole item, which this data cannot test.
 - Clips: gameplay clips stay under about 3 s at p90 for hero, monster and weapon; boss clips run to 5.2 s. A 3.5 s cap needs a boss exception.
 

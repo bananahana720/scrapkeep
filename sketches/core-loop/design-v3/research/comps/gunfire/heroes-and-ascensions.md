@@ -18,7 +18,7 @@ Evidence: wiki (public), read by scouts at file:line (level 2); wiki rendered ta
 
 Shipped data tables show the same tree as 360 nodes: 16 common nodes plus 16 heroes at 19 to 23 nodes each, typically seven each of three types. 252 nodes have three levels and 108 have one. The wiki's rendered tables give 12 heroes by 18 rows (216), 177 of which carry a three-value step. Three-level steps seen (five examples): rate of fire +40/+50/+60% for 6 seconds; damage under any elemental effect +30/+60/+120%; grenade capacity +4/+8/+12; weapon damage +100/+125/+150%; a trade-off of less damage dealt for more damage taken at each level.
 
-**Where picks point.** A keyword count over the 216 wiki rows (labels can overlap) gives weapons 36%, skill 36%, defenses 24%, movement 9% and other 26%. Movement is the thinnest bucket; several movement bonuses hang off skill or dash use, for example a stacking per-dash speed bonus capped at five stacks.
+**Where picks point.** A keyword count over the 216 wiki rows (labels can overlap) gives weapons 36%, skill 36%, defenses 24%, movement 9% and other 26%. Movement is the thinnest bucket; several movement bonuses hang off skill use; a stacking per-dash speed bonus capped at five stacks exists but is an inscription effect, covered on the weapons side.
 
 **Hero-flavoured hooks in the meta tree.** Each hero has a five-node tree; per run one option is drawn from each of three lists, the player takes one and may reroll. One talent raises the chance of level-3 ascensions and one raises an ascension by a level. Heroes unlock by talent level, soul cost, DLC or by default.
 
@@ -50,7 +50,7 @@ flowchart TD
 | Nodes by level count | 252 with 3 levels, 108 with 1 | shipped data tables (level 4 at measurement, scripts outside the repo) |
 | Rendered ascension rows | 216 (12 x 18), 177 with a three-value step | wiki (public): rendered Ascensions tables, counted by scout |
 | Target mix | weapons 36%, skill 36%, defenses 24%, movement 9%, other 26% | wiki (public): rendered Ascensions tables, keyword heuristic, overlapping labels |
-| Dash speed stacking | +12% per dash, 5 stacks, +60% | wiki (public): Movement Speed page |
+| Dash-linked speed stacking (inscription effect, weapons side, not a base hero mechanic) | +12% per dash, 5 stacks, +60% | wiki (public): Movement Speed page, line 76 |
 | Passives | stated for 2 heroes | wiki (public): two hero pages |
 | Hero meta tree | 5 nodes each, 1 random pick of 3 lists per run | wiki (public): Talents page |
 | Hero unlock | talent level 25 / 40 / 55; soul 400 / 600 | wiki (public): Talents and Unlockables pages |
@@ -72,7 +72,7 @@ flowchart TD
 - **Three levels, higher replaces lower** (principle: readable-capped scaling; every pick is a legible step with a cap). Anchor: BIBLE.md "Four slots and milestone progression" (line 527).
 - **One damage-multiplier table reused across every protection layer** (principle: readability first). Anchor: BIBLE.md "A committed attack means what it shows" (line 489).
 - **A forced-or-skip late pick** (principle: opt-in layers; the player may decline the corrupted offer). Anchor: BIBLE.md "Abilities, ultimates and combat rhythm" (line 499).
-- **A per-run random pick from three lists with a reroll in the meta tree** (principle: quick restart; each run starts with one small, visible choice). Anchor: TADR-008.
+- **A per-run random pick from three lists with a reroll in the meta tree** (principle: quick restart; each run starts with one small, visible choice). Anchor: BIBLE.md "Four slots and milestone progression" (line 527).
 
 ## What it must not copy
 

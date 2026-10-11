@@ -32,6 +32,7 @@ flowchart TD
 
 | Parameter | Value | Source |
 |---|---|---|
+| Room exit | opens when every enemy in the room is dead | wiki (public): Enemies page, line 5 |
 | Catalogue | 52 normal, 17 elite, 8 boss | wiki (public): Enemies page |
 | Per-act normal / elite / boss | 12, 19, 16, 8 / 3, 6, 6, 2 / 2 each | wiki (public): the four act pages |
 | Unique monster definitions | 277 (191 shared across modes) | shipped data tables (level 4 at measurement, scripts outside the repo) |
@@ -73,7 +74,7 @@ flowchart TD
 - **Ground-marker, then hit, on the same geometry** (principle: readability first). Anchor: BIBLE.md "A committed attack means what it shows" (line 489); the committed-geometry rule already requires damage and telegraph to share one shape, so the only borrow is a marker vocabulary: circle for area, line for lunge, text for a delayed devour. Avoid the deceptive-telegraph flaw the wiki notes.
 - **A coarse per-enemy threat rating beside the timing numbers** (principle: opt-in layers; director budgets and optional hard layers read one number). Anchor: TADR-010.
 - **Armor, shield and health as three visibly different bars** (principle: readability first). Anchor: BIBLE.md "Sound palette and audible information" (line 769) for the audible pair.
-- **Elite in an optional pocket whose death clears the pocket** (principle: opt-in layers). Anchor: BIBLE.md "Encounters, waves and enemies" (line 517) and TADR-002.
+- **Elite in an optional pocket whose death clears the pocket** (principle: opt-in layers). Anchor: BIBLE.md "Encounters, waves and enemies" (line 517) and TADR-010.
 
 ## What it must not copy
 

@@ -39,6 +39,7 @@ flowchart LR
 | Parameter | Value | Source |
 |---|---|---|
 | Regular stages per act | 4 / 3 / 3 / 2 (act 4 optional) | wiki (public): Acts page |
+| Room exit | opens when every enemy in the room is dead | wiki (public): Enemies page, line 5 |
 | Starting stage per act | 1, heals and saves from act 2 | wiki (public): Acts page |
 | Bosses per act | 1 by default, random | wiki (public): Acts page |
 | Layers and fight slots, main mode | 5 layers, 4/3/3/2/2 slots, 8 to 19 candidate levels per slot | shipped data tables (level 4 at measurement, scripts outside the repo) |
@@ -47,7 +48,7 @@ flowchart LR
 | Soul bonus, normal-enemy drop chance | +10% Elite, +20% Nightmare | wiki (public): Difficulty page |
 | Soul per elite | 14 Elite, 18 Nightmare | wiki (public): Difficulty page |
 | Soul per boss | 45 to 90 Elite, 60 to 105 Nightmare | wiki (public): Difficulty page |
-| Reincarnation level count | 8 or 10 (pages conflict) | wiki (public): Difficulty and Reincarnation pages |
+| Reincarnation level count | 8 or 10 (pages conflict; the notes call the last two "the top two Reincarnation levels") | wiki (public): Difficulty and Reincarnation pages |
 | Reincarnation health, act 1 | 2.9x to 5.9x over levels 1 to 7 | wiki (public): Reincarnation page |
 | Reincarnation health, acts 3 and 4 | 4.0x to 13.6x | wiki (public): Reincarnation page |
 | Reincarnation damage, act 1 / act 2 | 2.1x to 3.9x / 2.0x to 3.2x | wiki (public): Reincarnation page |
@@ -86,9 +87,9 @@ flowchart LR
 - **Threat and reward rising together per tier** (principle: opt-in layers; a harder layer pays more and the player chooses it). Anchor: BIBLE.md "Encounters, waves and enemies" (line 517).
 - **Health and damage on separate curves, with a per-region step** (principle: readable-capped scaling; two named dials, each capped). Anchor: BIBLE.md "Encounters, waves and enemies" (line 517), TADR-010.
 - **A between-run tree whose first nodes are small head starts and unlock an optional side pocket** (principle: quick restart; the next run begins better in seconds). Anchor: BIBLE.md "Four slots and milestone progression" (line 527).
-- **Gate one room with a short event that pays a graded chest** (principle: harmonize apparent contradictions; a required beat that still feels optional because the reward is visible). Anchor: BIBLE.md "Encounters, waves and enemies" (line 517) and TADR-002.
+- **A short event with a graded, visible chest, placed inside an optional pocket and never on the main route** (principle: opt-in layers; the player sees the reward before choosing the risk). Anchor: BIBLE.md "Encounters, waves and enemies" (line 517) and TADR-010. Not the wiki's required-clear gate, which Scrapkeep does not copy.
 - **A trade chest paying health or copper for power at fixed percentages** (principle: readability first; cost in the same units the HUD already shows). Anchor: BIBLE.md "Electromagnetic collection, recycling and growth" (line 507).
-- **Reset run currency, keep one meta currency** (principle: quick restart). Anchor: TADR-008.
+- **Reset run currency, keep one meta currency** (principle: quick restart). Anchor: BIBLE.md "Runs, regions, exits and saves" (line 578).
 
 ## What it must not copy
 
