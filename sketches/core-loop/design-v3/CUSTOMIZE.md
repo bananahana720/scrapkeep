@@ -86,10 +86,11 @@ The page, `cosmetic_presentation.gd` and `hero_assets.gd` all call it. `paint_ti
 
 ### Grant rows (`src/core/achievements.gd`)
 
-Two changes to the grammar, both small.
+Three changes to the grammar, all small.
 
 1. **`at_least`**, a new optional field: `{argument name: number}`. The fact counts only when each named argument is at or over its number. `validate` checks every key is an argument of `on` and every value a number, beside the `where` check (`achievements.gd:169-175`). `_evaluate` checks it after `where` and before the count (`progress.gd:244-251`). Rivet's and Tarn's "one set piece on six machines" need it, since `where` is exact match only (`progress.gd:245-247`).
 2. **A grant on one named discovery never filters `first_time`.** `validate` refuses a row whose `where` names a `synergy_id` and also `first_time`. The codex emits `first_time: true` only on the first find ever (`src/core/codex.gd:144-157`), so such a row could never pay a player who found the trick before the row existed. Without the filter, the next run that pulls the trick pays it. The existing distinct-discovery counters keep `first_time` and name no `synergy_id` (`achievements.gd:72-73`, `:78`, `:93`), so they are untouched.
+3. **A new grant names a condition, not a grind.** A row added from wave 13 on is met in one run or one moment: a discovery the kit detects, a `count` of 10 or less, or a run-summary condition. A lifetime count above 10 is refused by `validate` for new ids; the rows that predate the rule are listed by id in `GRANDFATHERED` until their cosmetics are re-granted.
 
 A new static `for_cosmetic(id) -> String` returns the row whose reward is that cosmetic, as `for_pilot` does (`achievements.gd:120-124`). The page uses it for the locked card's words.
 
@@ -342,7 +343,7 @@ Twenty-one rows: three per pilot from the sheets, and three shared rows for the 
 
 | Item id | Name | Slot | Grant row | Route and condition | Art from |
 | --- | --- | --- | --- | --- | --- |
-| `trail_sable_cable` | Cable Stitch | trail | `ach_sable_cable_runs` "Cable Runner": "Land 20 Cable Runs across your runs." (sheet: `sable_cable_runs`) | count: `on: ultimate_landed`, `where: {ultimate_id: cable_run}`, `count: 20` | trail art unit |
+| `trail_sable_cable` | Cable Stitch | trail | `ach_sable_cable_runs` "Cable Runner": "Land three Cable Runs in one run." (sheet: `sable_cable_runs`) | discovery `sable_cable_runs` (PC-SABLE detects it) | trail art unit |
 | `decal_sable_spool` | Spool and Wrench | decal, tile 8 | `ach_sable_parting_shot` "Parting Shot": "Kill a machine within a second of a pylon slingshot." | discovery `parting_shot`, which exists (`src/combat/codex_entries.gd:37-42`, detected at `src/combat/combat.gd:2551-2552`). The sheet's `first_time: true` is dropped; backfill pays players who already found it | decal tile unit |
 | `shell_sable_felt` | Felt Rig | shell | `ach_sable_switchback` "Switchback", hidden: "Bank Shot off a stake your Cable Run left." | discovery `switchback` (PC-SABLE detects it, `pilots/sable.md:334`); `first_time` dropped | P-D Sable |
 
@@ -350,7 +351,7 @@ Twenty-one rows: three per pilot from the sheets, and three shared rows for the 
 
 | Item id | Name | Slot | Grant row | Route and condition | Art from |
 | --- | --- | --- | --- | --- | --- |
-| `trail_rivet_swarf` | Swarf Curl | trail | `ach_rivet_line_true` "Line True": "Land 50 Line Drive punches." | count: `on: line_skill_fired`, `where: {ability_id: line_drive, on: body}`, `count: 50` | trail art unit |
+| `trail_rivet_swarf` | Swarf Curl | trail | `ach_rivet_line_true` "Line True": "Land ten Line Drive punches in one stage." | discovery `rivet_line_true` (PC-RIVET detects it) | trail art unit |
 | `outfit_rivet_hood` | Welding Hood | outfit | `ach_rivet_shrugged` "Shrugged Off": "Shrug off 30 holds and knocks in one run." | discovery `rivet_shrugged`, detected in Rivet's code on the 30th ignored hit of a run (`pilots/rivet.md:307`). The hood carries a clip named `ult_windup`, so it snaps down with the pilot's wind-up | outfit art unit |
 | `shell_rivet_calibrated` | Calibrated | shell | `ach_rivet_full_breach` "Full Breach": "Land one Foundry Cutter on six machines." | count: `on: ultimate_landed`, `where: {ultimate_id: foundry_cutter}`, `at_least: {hits: 6}`, `count: 1` | P-D Rivet |
 
@@ -368,7 +369,7 @@ Kest's amber cannot be a tint: it sits 0.09 from brass, inside the 0.2 refusal (
 
 | Item id | Name | Slot | Grant row | Route and condition | Art from |
 | --- | --- | --- | --- | --- | --- |
-| `trail_tarn_claw_marks` | Claw Marks | trail | `ach_tarn_dragged` "Fifty Dragged": "Drag 50 machines into your claws." (sheet: `tarn_dragged_50`) | count: `on: line_skill_fired`, `where: {ability_id: claw_drag, on: body}`, `count: 50` | trail art unit |
+| `trail_tarn_claw_marks` | Claw Marks | trail | `ach_tarn_dragged` "Ten in the Claws" (was "Fifty Dragged"): "Drag ten machines into your claws in one stage." (sheet: `tarn_dragged_50`) | discovery `tarn_dragged` (PC-TARN detects it) | trail art unit |
 | `shell_tarn_redjaw_teeth` | Redjaw Teeth | shell | `ach_tarn_six_at_once` "Six at Once": "Land Redjaw Rend on six machines at once." | count: `on: ultimate_landed`, `where: {ultimate_id: redjaw_rend}`, `at_least: {hits: 6}`, `count: 1` | P-D Tarn |
 | `outfit_tarn_steady_cap` | Steady Cap | outfit | `ach_tarn_hold_still` "Hold Still", hidden: "Break a hold with Redjaw Rend three times." | discovery `tarn_hold_still`, counted in Tarn's code from `hold_broken` with method `ultimate` (`pilots/tarn.md:353`). The outfit's `Replace.Cap` node hides the battered cap, which the P-D or P-E pilot rebuild must split into its own `Cap` node | outfit art unit |
 
@@ -376,8 +377,8 @@ Kest's amber cannot be a tint: it sits 0.09 from brass, inside the 0.2 refusal (
 
 | Item id | Name | Slot | Grant row | Route and condition | Art from |
 | --- | --- | --- | --- | --- | --- |
-| `trail_tally_punch_tape` | Punch Tape | trail, tint `f7f1e3` | `ach_tally_punch_tape` "Punch Tape": "Fire the ledger clip 50 times." | count: `on: line_skill_fired`, `where: {ability_id: link_clips}`, `count: 50` | trail art unit |
-| `outfit_tally_eyeshade` | Eyeshade | outfit | `ach_tally_eyeshade` "Eyeshade": "Settle 100 clips with Plate Return." | count: `on: ultimate_landed`, `where: {ultimate_id: plate_return}`, `sum: hits`, `count: 100`. Needs B3 to count each settled clip in Plate Return's `hits` | outfit art unit |
+| `trail_tally_punch_tape` | Punch Tape | trail, tint `f7f1e3` | `ach_tally_punch_tape` "Punch Tape": "Fire the ledger clip ten times in one stage." | discovery `tally_punch_tape` (PC-TALLY detects it) | trail art unit |
+| `outfit_tally_eyeshade` | Eyeshade | outfit | `ach_tally_eyeshade` "Eyeshade": "Settle twenty clips with Plate Return in one run." | discovery `tally_eyeshade` (PC-TALLY detects it). Needs B3 to count each settled clip in Plate Return's `hits` | outfit art unit |
 | `shell_tally_abacus` | Abacus Lattice (working name) | shell | `ach_tally_books_balanced` "Books Balanced", hidden: "Settle six clips with one landing." | discovery `tally_books_balanced` (`pilots/tally.md:308`) | P-D Tally |
 
 ### The Cannon (`remembered_cannon`)

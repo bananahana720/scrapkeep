@@ -10,7 +10,12 @@ const DigDeep := preload("res://src/world/map_dig_deep.gd")
 const HighdraftCrown := preload("res://src/world/map_highdraft_crown.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Scatter := preload("res://src/world/scatter.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 
+# A park map id (`--table=park`, park_defs.gd) reads its park file: src/world/park/<id>.json once a
+# stage unit (KD1 to KD6) lands it, else the stage-1 stand-in under assets/park/ (KD0). A park id
+# with neither stands on the old map of the same stage, so the table still runs end to end.
+const PARK_FILES := ["res://src/world/park/%s.json", "res://assets/park/%s_stage1.json"]
 const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach, "dig": Dig, "highdraft": Highdraft, "dig_deep": DigDeep, "highdraft_crown": HighdraftCrown}
 
 # Owned by writer D (world). The spine reads only the terrain API block below.
@@ -59,11 +64,26 @@ var _arena := false
 
 func _init(table = StageDefs) -> void:
 	for row in table.DEFS:
-		assert(MAPS.has(row["map"]), "terrain: stage %s names an unknown map '%s'" % [row["stage"], row["map"]])
-		maps.append(MAPS[row["map"]].new())
+		var id := String(row["map"])
+		if id.begins_with("park_"):
+			maps.append(_park_map(id, int(row["stage"])))
+		else:
+			assert(MAPS.has(id), "terrain: stage %s names an unknown map '%s'" % [row["stage"], id])
+			maps.append(MAPS[id].new())
 		_worlds.append(int(row.get("world", 1)))
 		_roots.append(null)
 		_heights.append(PackedFloat32Array())
+
+
+func _park_map(id: String, stage_number: int) -> RefCounted:
+	for pattern in PARK_FILES:
+		var path: String = pattern % id
+		if FileAccess.file_exists(path):
+			var park = ParkMap.new(path)
+			assert(park.ok, "terrain: %s fails the park schema: %s" % [path, str(park.errors)])
+			return park
+	var old: String = StageDefs.DEFS[clampi(stage_number, 1, StageDefs.COUNT) - 1]["map"]
+	return MAPS[old].new()
 
 
 func map() -> RefCounted:

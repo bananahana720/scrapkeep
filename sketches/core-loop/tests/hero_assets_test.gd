@@ -4,6 +4,15 @@ extends SceneTree
 # the neutral fixture shell; the three VD-01 glass shells keep the glass check until their P-D
 # units rebuild them on the lattice. The paint check adds ROSTER-LOOK section 6's enamels:
 # Rivet's charcoal steel and Tally's mulberry (sampled from concepts/codex/tally/hero.png).
+# 2026-10-10 (PD-0b): re-pin of 'gyro rolls'. A shell whose Gyro carries GyroInner (every
+# shell_base.hoberman() shell) turns its rings from the Core's turn (counter_tilt), not the
+# velocity, and counter_tilt reads global transforms, so it does nothing outside the tree.
+# For those shells the velocity check gives way to the gimbal case: the stub steers before it
+# is in the tree with no engine ERROR, then, in the tree with the Core turned by a known angle,
+# Gyro.rotation.x and GyroInner.rotation.y follow counter_tilt within 0.01 rad. It always runs
+# on the neutral shell, and on every pilot whose own shell has GyroInner. Shells without
+# GyroInner keep the velocity check. The heft-layer case: a layer's WeaponRing node rides the
+# base WeaponRing, so a module on it yaws with the aim.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -70,10 +79,29 @@ class StubPlayer:
 		return class_def.color if class_def != null else ClassDef.SABLE_COLOR
 
 
+# Engine errors, read as a count before and after one step.
+class ErrorLog extends Logger:
+	var errors: Array[String] = []
+
+	func _log_error(_function: String, file: String, line: int, code: String,
+			rationale: String, _editor_notify: bool, error_type: int,
+			_script_backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type != Logger.ERROR_TYPE_WARNING:
+			errors.append("%s:%d %s %s" % [file.get_file(), line, code, rationale])
+
+
+const GIMBAL_TURN := Vector3(0.4, 0.25, 0.0)
+
 var _failures := 0
 var _game
 var _ticks := 0
 var _gate_ids: Array = []
+var _errors := ErrorLog.new()
+# Class ids whose own shell has Gyro > GyroInner; _check_stub fills it.
+var _gimbal_ids: Array[String] = []
+# [hook, stub, label] fitted outside the tree; _check_gimbals turns them once in it.
+var _gimbals: Array = []
+var _in_tree_done := false
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -83,14 +111,20 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 
 func _initialize() -> void:
+	OS.add_logger(_errors)
 	_check_models()
 	_check_stub()
+	_fit_gimbals()
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
 
 
 func _physics_process(_delta: float) -> bool:
+	if not _in_tree_done:
+		_in_tree_done = true
+		_check_gimbals()
+		_check_layer_ring()
 	if _game.flow == null:
 		return false
 	_ticks += 1
@@ -326,6 +360,8 @@ func _check_stub() -> void:
 			"shell fitted: core under the rolling mesh, pod on the juice node, placeholder hidden")
 		var accent := _accent_color(pod)
 		_report("stub " + def.id + " accent", accent.is_equal_approx(def.color), "class_accent wears the class row colour")
+		if pod != null and pod.has_node("Gyro/GyroInner"):
+			_gimbal_ids.append(def.id)
 	# The vane check below is Kest's, so end the loop on Kest whatever order the roster ends in.
 	stub.class_def = ClassDef.by_id("demolitions_caster")
 	hook._process(0.016)
@@ -336,7 +372,9 @@ func _check_stub() -> void:
 	stub.state.velocity = Vector3(10.0, 0.0, 0.0)
 	hook._process(1.0)
 	var pod: Node3D = hook.shell_of(stub)["pod"]
-	_report("gyro rolls", not resting_gyro.basis.is_equal_approx(resting_basis), "real velocity moves the independent ring")
+	# A GyroInner shell's rings follow the Core, so _check_gimbals covers this class instead.
+	if not resting_gyro.has_node("GyroInner"):
+		_report("gyro rolls", not resting_gyro.basis.is_equal_approx(resting_basis), "real velocity moves the independent ring")
 	_report("pilot upright", pod.basis.y.is_equal_approx(Vector3.UP), "gyro leaves pilot upright")
 	var forward := -pod.transform.basis.z
 	_report("stub heading", forward.dot(Vector3.RIGHT) > 0.99, "pod faces the heading (%s)" % forward)
@@ -354,6 +392,113 @@ static func _accent_color(pod: Node) -> Color:
 			if HeroAssets.slot_of(mi.mesh, i) == "class_accent":
 				return (mi.get_surface_override_material(i) as StandardMaterial3D).albedo_color
 	return Color.BLACK
+
+
+# --- the Hoberman gimbal on a stub (PD-0b) ------------------------------------------------
+
+# Fits each GyroInner shell on a stub and steers it while root is still outside the tree
+# (_initialize runs before root enters it): the neutral shell as Sable's, plus every pilot
+# whose own shell has GyroInner.
+func _fit_gimbals() -> void:
+	var setups: Array = [["neutral", "pylon_engineer", {"pylon_engineer": NEUTRAL_SHELL}]]
+	for id in _gimbal_ids:
+		setups.append([id, id, {}])
+	for setup in setups:
+		var hook := HeroAssets.new()
+		hook.shell_assets = setup[2]
+		root.add_child(hook)
+		var stub := StubPlayer.new()
+		stub.class_def = ClassDef.by_id(setup[1])
+		root.add_child(stub)
+		hook.attach_player(stub)
+		var before := _errors.errors.size()
+		hook._process(0.016)
+		var pod = hook.shell_of(stub).get("pod")
+		var fitted: bool = pod != null and pod.has_node("Gyro/GyroInner") and not pod.is_inside_tree()
+		_report("gimbal %s out of tree" % setup[0], fitted and _errors.errors.size() == before,
+			"GyroInner shell steered outside the tree, engine errors %s" % [_errors.errors.slice(before)])
+		_gimbals.append([hook, stub, setup[0]])
+
+
+# In the tree: turn each stub's Core by GIMBAL_TURN; Gyro.rotation.x and GyroInner.rotation.y
+# follow counter_tilt (the Core's turn against the upright Pod) within 0.01 rad.
+func _check_gimbals() -> void:
+	for g in _gimbals:
+		var hook: Node = g[0]
+		var stub: StubPlayer = g[1]
+		var rec: Dictionary = hook.shell_of(stub)
+		var core: Node3D = rec.get("core")
+		var pod: Node3D = rec.get("pod")
+		var ok := core != null and pod != null and core.is_inside_tree()
+		var detail := "no shell in the tree"
+		if ok:
+			core.basis = Basis.from_euler(GIMBAL_TURN, EULER_ORDER_XYZ)
+			var before := _errors.errors.size()
+			hook._process(0.016)
+			var gyro := pod.get_node("Gyro") as Node3D
+			var inner := gyro.get_node("GyroInner") as Node3D
+			var rel := (pod.global_basis.orthonormalized().inverse() * core.global_basis.orthonormalized()).get_euler(EULER_ORDER_XYZ)
+			ok = _errors.errors.size() == before and absf(gyro.rotation.x - rel.x) < 0.01 and absf(inner.rotation.y - rel.y) < 0.01 \
+				and absf(gyro.rotation.x - GIMBAL_TURN.x) < 0.01 and absf(inner.rotation.y - GIMBAL_TURN.y) < 0.01
+			detail = "Gyro.x %.3f, GyroInner.y %.3f, counter_tilt %.3f, %.3f, turn %.2f, %.2f" % [gyro.rotation.x, inner.rotation.y, rel.x, rel.y, GIMBAL_TURN.x, GIMBAL_TURN.y]
+		_report("gimbal %s follows the Core" % g[2], ok, detail)
+		stub.free()
+		hook.free()
+	_gimbals.clear()
+
+
+# A heft layer whose Pod carries a WeaponRing node: its children ride the base WeaponRing, so
+# after steer_weapon_ring to a 30 degree yaw a module on it has the base ring's world yaw, and
+# it shows and hides with its class.
+func _check_layer_ring() -> void:
+	var layer := Node3D.new()
+	var lcore := Node3D.new()
+	lcore.name = "Core"
+	var lpod := Node3D.new()
+	lpod.name = "Pod"
+	var lring := Node3D.new()
+	lring.name = "WeaponRing"
+	var module := MeshInstance3D.new()
+	module.name = "RingModule"
+	module.mesh = BoxMesh.new()
+	module.position = Vector3(0.0, 0.0, -1.1)
+	layer.add_child(lcore)
+	layer.add_child(lpod)
+	lpod.add_child(lring)
+	lring.add_child(module)
+	for n in [lcore, lpod, lring, module]:
+		n.owner = layer
+	var packed := PackedScene.new()
+	packed.pack(layer)
+	layer.free()
+	var hook := HeroAssets.new()
+	hook.shell_assets = {"ring_fixture": NEUTRAL_SHELL, "ring_fixture_c2": "fixture://ring_layer"}
+	hook._scenes["fixture://ring_layer"] = packed
+	root.add_child(hook)
+	var ball := Node3D.new()
+	root.add_child(ball)
+	var rec: Dictionary = hook.fit_shell_into(ball, "pylon_engineer", "ring_fixture", 2, {})
+	var pod: Node3D = rec.get("pod")
+	var ring: Node3D = pod.get_node_or_null("WeaponRing") if pod != null else null
+	var carried: Node3D = ball.find_child("RingModule", true, false) as Node3D
+	_report("layer ring fitted", ring != null and carried != null, "the fixture's RingModule is in the fitted shell")
+	if ring != null and carried != null:
+		var want := deg_to_rad(30.0)
+		hook.steer_weapon_ring(pod, Vector3(-sin(want), 0.0, -cos(want)), 10.0)
+		var rz := ring.global_basis.z
+		var mz := carried.global_basis.z
+		var ring_yaw := atan2(rz.x, rz.z)
+		var module_yaw := atan2(mz.x, mz.z)
+		_report("layer ring yaws with the aim", ring.is_ancestor_of(carried) and absf(angle_difference(ring_yaw, want)) < 0.01
+			and absf(angle_difference(module_yaw, ring_yaw)) < 0.01,
+			"base ring %.3f rad, module %.3f rad, aim %.3f rad" % [ring_yaw, module_yaw, want])
+		var shown := carried.is_visible_in_tree()
+		hook.set_heft_class(rec, 1, false)
+		var hidden := not carried.is_visible_in_tree()
+		hook.set_heft_class(rec, 2, false)
+		_report("layer ring follows its class", shown and hidden and carried.is_visible_in_tree(), "shown at II %s, hidden at I %s, shown again %s" % [shown, hidden, carried.is_visible_in_tree()])
+	ball.free()
+	hook.free()
 
 
 # --- the hook in a running game --------------------------------------------------------
