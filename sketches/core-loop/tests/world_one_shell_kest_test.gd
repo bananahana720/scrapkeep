@@ -1,4 +1,12 @@
 extends SceneTree
+# 2026-10-10 (PD-KEST fix round): the gate's findings. Mortar is its own mesh under WeaponRing
+# with its origin on the cradle line, so the tubes and fuse tips pitch and recoil (pilots/kest.md
+# section 5): surfaces 14 -> 15, the one glow moves from WeaponRing to Mortar, and a new check
+# turns Mortar and watches the tubes move. The satchel bands are ochre (kest/hero.png) and carry
+# their index in UV2.x (1 to 3; 4 on the class IV satchel, whose faces carry UV2.y = 4); the class
+# IV satchel moved from the c4 layer (it hung on the Pod, which does not follow the ring's aim)
+# into the ring at 7:30, so the c4 check now wants no satchel in any layer. Two new checks: the
+# band indices and the band colour. EXPECTED_CHECKS 64 -> 67.
 # 2026-10-10 (PD-KEST): rewritten for the Hoberman mecha. The C09 glass-pod checks (one glass
 # surface, the old pod bounds, the kept satchel, mortar and vane vertices against the old
 # shell) no longer describe Kest's shell: shell_kest.py now builds on shell_base.hoberman() from
@@ -10,20 +18,21 @@ extends SceneTree
 # The pilot rig checks are unchanged (the body stays this wave, C9).
 #
 # What it checks, in order:
-#   budget    shell surfaces 14; tris without the pilot 3,000 to 6,500; verts within the shell
+#   budget    shell surfaces 15; tris without the pilot 3,000 to 6,500; verts within the shell
 #             class; shell plus rig under the 16,000 T / 15,000 V / 21 draw pod ceiling.
 #   tree      named nodes and parents, no FlightStick, exactly two pedals.
 #   materials section 9 slots only, no glass or requisition_tag, paint colours petrol, oxide,
-#             bone or charcoal, one class_accent surface (WeaponRing, at the launcher mouths),
+#             bone or charcoal, one class_accent surface (Mortar, at the launcher mouths),
 #             the petrol seat.
 #   lattice   Core radius 0.95 to 0.985 with Hub_00..Hub_31 and Gap_00..Gap_29.
 #   pod       sight cone empty (Gyro, WeaponRing and Dome skipped), no reach past 1.0 below -0.6,
 #             nothing past 1.25.
 #   vents     per vent: hinge radius, folded and open reach, folded clock, open band clearance and
 #             open sight cone.
-#   ring      launchers forward at 11 and 1 o'clock, satchels at 3, 6 and 9 hanging flat.
+#   ring      launchers forward at 11 and 1 o'clock, satchels at 3, 6 and 9 hanging flat, the band
+#             indices in UV2 and the ochre band colour, Mortar pitching about the cradle line.
 #   layers    c2..c5: Core and Pod nodes, surface count, bone and charcoal paint, panels inside
-#             0.92 m, sight cone and low reach; c3's rims on Core; c4's fourth satchel.
+#             0.92 m, sight cone and low reach; c3's rims on Core; no satchel (it rides the ring).
 #   variant   the Roost Frame keeps the machinery and node tree, with its own lattice.
 #   rig       the 25-bone rig, its meshes, triangles and the seven clips.
 # The run must make EXPECTED_CHECKS checks, so an early return or a skipped loop fails it.
@@ -32,12 +41,12 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 
-const EXPECTED_CHECKS := 64
+const EXPECTED_CHECKS := 67
 const SHELL := "res://assets/models/world_one/shell_kest.glb"
 const ROOST := "res://assets/models/world_one/shell_kest_roost.glb"
 const LAYER := "res://assets/models/world_one/shell_kest_c%d.glb"
 const RIG := "res://assets/models/pilot_kest_anim.glb"
-const SURFACES := 14
+const SURFACES := 15
 const SHELL_TRIS := Vector2i(3000, 6500)
 const SHELL_VERTS := 11600
 const MAX_V := 15000
@@ -48,6 +57,10 @@ const CORE_LIMIT := 0.985
 const REACH := 1.25
 const PANEL_OUT := 0.92
 const BAND_TOP := 0.04
+# The satchel band stripe: shell_kest_plates.BAND_COLOR, amber mixed 0.3 toward oxide in sRGB.
+const OCHRE := Color(206.8 / 255.0, 136.3 / 255.0, 65.0 / 255.0)
+# Mortar pivots on the cradle line (shell_kest.MORTAR_PIVOT, Blender (0, 0.95, 0.03)).
+const MORTAR_PIVOT := Vector3(0.0, 0.03, -0.95)
 # Godot axes: the head and the chase eyes (cage_contract_test.gd, ROSTER-LOOK section 3 rule 3).
 const HEAD := Vector3(0.0, 0.20, -0.02)
 const EYES := [Vector3(0.0, 1.06, 3.44), Vector3(0.0, 2.22, 7.17), Vector3(0.0, 3.55, 11.46)]
@@ -268,19 +281,19 @@ func _materials(shell: Node) -> void:
 			if slot == "class_accent":
 				accents.append(String(mi.name))
 		for c in colors(mi, "paint"):
-			if not near_any(c, [Palette.VERDIGRIS, Palette.RUST, Palette.SAND, Palette.CHARCOAL]):
+			if not near_any(c, [Palette.VERDIGRIS, Palette.RUST, Palette.SAND, Palette.CHARCOAL, OCHRE]):
 				off += 1
 	_t.check("slots", bad.is_empty(), "section 9 slots, no glass or requisition_tag %s" % [bad])
-	_t.check("paint colours", off == 0, "petrol, oxide, bone or charcoal (%d off)" % off)
-	_t.check("one glow", accents == ["WeaponRing"], "class_accent surfaces on %s, want only WeaponRing" % [accents])
-	var ring := shell.find_child("WeaponRing", true, false) as MeshInstance3D
+	_t.check("paint colours", off == 0, "petrol, oxide, bone, charcoal or the ochre band (%d off)" % off)
+	_t.check("one glow", accents == ["Mortar"], "class_accent surfaces on %s, want only Mortar" % [accents])
+	var mortar := shell.find_child("Mortar", true, false) as MeshInstance3D
 	var mouths := [shell.find_child("MortarMouth_L", true, false), shell.find_child("MortarMouth_R", true, false)]
 	var stray := 0
-	if ring != null and mouths[0] != null and mouths[1] != null:
-		for p in points(ring, shell, "class_accent"):
+	if mortar != null and mouths[0] != null and mouths[1] != null:
+		for p in points(mortar, shell, "class_accent"):
 			if minf((p - to_root(mouths[0], shell).origin).length(), (p - to_root(mouths[1], shell).origin).length()) > 0.06:
 				stray += 1
-	_t.check("glow at the fuse tips", ring != null and stray == 0, "%d class_accent vertices away from the launcher mouths" % stray)
+	_t.check("glow at the fuse tips", mortar != null and stray == 0, "%d class_accent vertices away from the launcher mouths" % stray)
 	var pod := shell.find_child("Pod", true, false) as MeshInstance3D
 	var seat := AABB(Vector3(-0.25, -0.45, -0.3), Vector3(0.5, 0.4, 0.6))
 	var seat_n := 0
@@ -382,6 +395,67 @@ func _ring(shell: Node) -> void:
 		"satchel paint vertices by clock %s" % [bins])
 	_t.check("satchels flat on the ring", y_lo >= -0.13 and y_hi <= BAND_TOP + 0.02,
 		"satchels span Y %.3f to %.3f; they hang flat under the band top" % [y_lo, y_hi])
+	_bands(shell, ring)
+	_mortar(shell)
+
+
+# The satchel bands: UV2.x is the band index on the ochre band faces, UV2.y the heft class a face
+# shows from. Ungated bands are exactly {1, 2, 3}; the class IV satchel carries band 4, gated to 4,
+# at 7:30 on the ring row.
+func _bands(shell: Node, ring: MeshInstance3D) -> void:
+	var open := {}
+	var gated := {}
+	var gate_off := 0
+	var band_n := 0
+	var band_off := 0
+	for s in ring.mesh.get_surface_count():
+		var arrays := ring.mesh.surface_get_arrays(s)
+		var uv2 = arrays[Mesh.ARRAY_TEX_UV2]
+		if uv2 == null:
+			continue
+		var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var cs = arrays[Mesh.ARRAY_COLOR]
+		var t := to_root(ring, shell)
+		for i in vs.size():
+			var band := int(roundf((uv2 as PackedVector2Array)[i].x))
+			var gate := int(roundf((uv2 as PackedVector2Array)[i].y))
+			if gate != 0:
+				var p: Vector3 = t * vs[i]
+				var clock := fposmod(rad_to_deg(atan2(p.x, -p.z)), 360.0)
+				if gate != 4 or absf(clock - 225.0) > 12.0:
+					gate_off += 1
+			if band == 0:
+				continue
+			band_n += 1
+			if cs == null or not near_any((cs as PackedColorArray)[i], [OCHRE]):
+				band_off += 1
+			if gate == 0:
+				open[band] = true
+			else:
+				gated[band] = true
+	var open_keys := open.keys()
+	open_keys.sort()
+	_t.check("satchel bands", open_keys == [1, 2, 3] and gated.keys() == [4] and gate_off == 0,
+		"ungated band indices %s (want [1, 2, 3]), gated %s (want [4]), %d gated vertices off the class IV satchel at 7:30" % [open_keys, gated.keys(), gate_off])
+	_t.check("band colour", band_n > 0 and band_off == 0, "%d band vertices, %d not ochre" % [band_n, band_off])
+
+
+# Mortar pitches about its cradle line: turning it moves the tubes.
+func _mortar(shell: Node) -> void:
+	var mortar := shell.find_child("Mortar", true, false) as MeshInstance3D
+	if mortar == null:
+		_t.check("mortar pitches", false, "Mortar is not a mesh")
+		return
+	var origin := to_root(mortar, shell).origin
+	var before := points(mortar, shell)
+	mortar.rotation.x = deg_to_rad(20.0)
+	var after := points(mortar, shell)
+	mortar.rotation.x = 0.0
+	var moved := 0.0
+	for i in before.size():
+		moved = maxf(moved, ((after[i] as Vector3) - (before[i] as Vector3)).length())
+	_t.check("mortar pitches", origin.distance_to(MORTAR_PIVOT) < 0.01 and moved > 0.02,
+		"Mortar origin %s (cradle line %s), tubes move %.3f m at 20 degrees" % [origin, MORTAR_PIVOT, moved])
 
 
 func _layer(n: int) -> void:
@@ -407,10 +481,10 @@ func _layer(n: int) -> void:
 		for col in colors(pod, "paint"):
 			if not near_any(col, [Palette.SAND, Palette.CHARCOAL, Palette.RUST, Palette.VERDIGRIS]):
 				off += 1
-	var rule := panel_far <= PANEL_OUT + 0.0025 and off == 0 and (outside > 0) == (n == 4)
+	var rule := panel_far <= PANEL_OUT + 0.0025 and off == 0 and outside == 0
 	rule = rule and pod != null and cone_hits(scene, pod) == 0 and low_reach(scene, pod) == 0
 	_t.check("c%d panels" % n, rule,
-		"panels reach %.4f m (outer face %.2f), %d off-colour, %d satchel vertices (only c4), sight cone and low reach clear"
+		"panels reach %.4f m (outer face %.2f), %d off-colour, %d vertices past 1.0 m (none: the class IV satchel rides the ring), sight cone and low reach clear"
 		% [panel_far, PANEL_OUT, off, outside])
 	if n == 3:
 		var rims := core as MeshInstance3D

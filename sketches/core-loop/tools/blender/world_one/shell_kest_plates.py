@@ -13,6 +13,9 @@
 # draw (ROSTER-LOOK veto 3). No panel enters the sight cones (chase eyes to the head, front
 # eyes to the face) or sits within VANE_CLEAR of a vane hinge (pilots/kest.md section 5).
 # Each layer GLB is a root with a Core and a Pod node, as hero_assets._split needs.
+# Class V's wide vents (ROSTER-LOOK section 5) are not in a layer: a layer's Pod hangs under
+# HeroPod, so it cannot follow VaneL/VaneR as they open; they are a per-class vane row for
+# PE-KEST or PE-0's mecha_motion. The class IV satchel rides the WeaponRing (SATCHEL4_CLOCK).
 
 import math
 import os
@@ -107,8 +110,48 @@ FRONT_EYES = tuple(Vector((e.x, -e.y, e.z)) for e in sb.CHASE_EYES)
 LOW_Z = -0.35
 SIDE_Z = (-0.6, 0.45)
 SPLIT_Z = 0.35
-# The fourth satchel joins the weapon ring's row at class IV (volley targets 3, 3, 3, 4, 4).
+# The fourth satchel joins the weapon ring's row at class IV (volley targets 3, 3, 3, 4, 4). It
+# is baked into the base WeaponRing (shell_kest.py, UV2.y = 4), because a layer hangs from the
+# Pod, which turns to the heading, while the ring yaws to the aim (hero_assets._steer_pod).
 SATCHEL4_CLOCK = 225.0
+SATCHEL_INNER = 1.082                 # satchel faces start outside the weapon band (1.08)
+# The band stripe: ochre as kest/hero.png paints it, on the matte paint slot (no glow), kept
+# off brass (d9b44a) by the oxide in the mix.
+BAND_COLOR = common.mix("amber", "oxide", 0.3)
+
+
+# C6 (P-UNITS PD common rules): Kest's layers hide no pilot pixel from the chase eyes. The pilot
+# box is pilot_kest_anim.glb's rest-pose bounds at the Pod origin (body, wing fans and upper
+# wings, x +/-0.437 to 0.597, y -0.268 to 0.59, z -0.54 to 0.57), padded 0.03 m. A tread-cap rim
+# whose ray from a chase eye goes on into the box stays off (the pilot-mask measure of the
+# 2026-10-10 fix round found 218 of 6,852 pilot pixels behind c3 rims at the mid camera).
+PILOT_BOX = (Vector((-0.63, -0.30, -0.57)), Vector((0.63, 0.62, 0.60)))
+
+
+def _ray_box(o, d, lo, hi):
+    """Exit distance of the ray o + t d (d unit) from the box, or None when it misses."""
+    t0, t1 = -math.inf, math.inf
+    for i in range(3):
+        if abs(d[i]) < 1e-12:
+            if o[i] < lo[i] or o[i] > hi[i]:
+                return None
+            continue
+        a, b = (lo[i] - o[i]) / d[i], (hi[i] - o[i]) / d[i]
+        t0, t1 = max(t0, min(a, b)), min(t1, max(a, b))
+    return t1 if t0 <= t1 and t1 > 0 else None
+
+
+def hides_pilot(points, eyes=sb.CHASE_EYES):
+    """True when any point sits on a chase eye's ray before that ray leaves the pilot box, so it
+    may stand in front of some pilot pixel (conservative: the box, not the body)."""
+    for e in eyes:
+        for p in points:
+            d = p - e
+            dist = d.length
+            t = _ray_box(e, d / dist, *PILOT_BOX)
+            if t is not None and t > dist:
+                return True
+    return False
 
 
 def _cone_hit(p, eyes):
@@ -201,14 +244,23 @@ def _panel(p, tri):
 
 def satchel(p, clock_deg, radius=1.14, z=-0.025):
     """One canvas satchel strapped flat to the ring row: oxide body, petrol flap, a horizontal
-    bone band (the band the volley count lights)."""
+    ochre band (the band the volley count lights; shell_kest.band_attributes indexes it)."""
     a = math.radians(clock_deg)
     out = Vector((math.sin(a), math.cos(a), 0))
     yaw = -a
     loc = out * radius + Vector((0, 0, z))
-    p.box("paint", (0.22, 0.11, 0.13), loc=loc, rot=(0, 0, yaw), color="oxide")
-    p.box("paint", (0.226, 0.03, 0.05), loc=loc + out * 0.05 + Vector((0, 0, 0.045)), rot=(0, 0, yaw), color="petrol")
-    p.box("paint", (0.228, 0.118, 0.03), loc=loc + Vector((0, 0, -0.025)), rot=(0, 0, yaw), color="bone")
+    body = p.box("paint", (0.22, 0.11, 0.13), loc=loc, rot=(0, 0, yaw), color="oxide")
+    flap = p.box("paint", (0.226, 0.03, 0.05), loc=loc + out * 0.05 + Vector((0, 0, 0.045)), rot=(0, 0, yaw), color="petrol")
+    p.box("paint", (0.228, 0.118, 0.03), loc=loc + Vector((0, 0, -0.025)), rot=(0, 0, yaw), color=BAND_COLOR)
+    # Faces nobody sees: the body's back against the weapon band, and the flap's underside and
+    # back buried in the body (16 tris for four satchels, which keeps the shell under 6,500).
+    hidden = []
+    for faces, dirs in ((body, (-out,)), (flap, (-out, Vector((0, 0, -1))))):
+        for f in faces:
+            f.normal_update()
+            if any(f.normal.dot(d) > 0.9 for d in dirs):
+                hidden.append(f)
+    bmesh.ops.delete(p.bm, geom=hidden, context="FACES")
 
 
 def layer(n, by_class):
@@ -216,16 +268,18 @@ def layer(n, by_class):
     pod = Part("Pod")
     for tri in by_class[n]:
         _panel(pod, tri)
-    if n == 4:
-        satchel(pod, SATCHEL4_CLOCK, radius=1.14, z=-0.12)
     sb._sharpen(pod)
     if n == 3:
         core = Part("Core")
         hubs, _, _ = sb.lattice_layout()
+        skipped = []
         r_in, r_out, lo, hi = CAP_RIM
         for d in hubs:
             e1, e2 = sb._frame(d)
             ring = [math.cos(k * math.tau / 8) * e1 + math.sin(k * math.tau / 8) * e2 for k in range(8)]
+            if hides_pilot([d * z + r_out * q for q in ring for z in (lo, hi)]):
+                skipped.append(d)
+                continue
             top_in = [core.bm.verts.new(d * hi + r_in * q) for q in ring]
             top_out = [core.bm.verts.new(d * hi + r_out * q) for q in ring]
             low_out = [core.bm.verts.new(d * lo + r_out * q) for q in ring]
@@ -243,6 +297,8 @@ def layer(n, by_class):
                     wall.normal_flip()
                 faces += [top, wall]
             core.paint(faces, "rubber")
+        print("RIMS Kest c3 %d of %d hubs get a rim; %d stay bare in front of the pilot (C6)"
+              % (len(hubs) - len(skipped), len(hubs), len(skipped)))
         sb._sharpen(core)
         core_obj = core.to_object((0, 0, 0), root)
     else:

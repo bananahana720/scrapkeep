@@ -13,19 +13,26 @@
 # The heft layers come from world_one/shell_kest_plates.py.
 #
 # Kest's parts and where they ride (ROSTER-LOOK sections 2 and 4):
-#   WeaponRing  two short launcher tubes in recoil cradles at 11 and 1 o'clock, parallel and
-#               pointing forward, an amber fuse tip in each mouth (class_accent, the only glow);
-#               three canvas satchels strapped flat at 3, 6 and 9 o'clock, each with a horizontal
-#               band; Mortar marks the cradle pair, MortarMouth.L/R the mouths. All of it folds
-#               into the ring mesh (paint, rubber, class_accent), so the ring is three draws.
+#   WeaponRing  the recoil cradles at 11 and 1 o'clock (charcoal saddles under oxide slides) and
+#               four canvas satchels strapped flat on the ring row at 3, 6, 9 and 7:30 o'clock,
+#               each with a horizontal ochre band, folded into the ring mesh (paint, rubber).
+#               The band faces carry their index in UV2.x (1 to 3 at 3, 6 and 9 o'clock, 4 on
+#               the 7:30 satchel, 0 elsewhere) and the 7:30 satchel's faces carry UV2.y = 4, the
+#               heft class it shows from (pilots/kest.md section 5: volley targets 3, 3, 3, 4, 4),
+#               so one lit_count/heft parameter on the one paint surface picks a band, one draw.
+#   Mortar      its own mesh under WeaponRing, origin on the cradle line, so kest_cage_state()
+#               can pitch it 20 or 45 degrees and recoil it 0.08 m: the two short launcher tubes,
+#               parallel and pointing forward, with an amber fuse tip in each mouth (class_accent,
+#               the only glow); MortarMouth.L/R mark the mouths (rubber, class_accent: 2 draws).
 #   Pod         the petrol seat (the sheet's "Perch"), FusePlunger (slot 2) and ChargeKey
 #               (slot 3) in the bank, the lap bar, two pedals; a gap bracket from each gimbal
 #               boss to a vent hinge (rubber).
 #   VaneL/R     the slotted vents, hinged at the side gaps (shell_kest_plates.vane_part).
 #   Dome>Pilot  a static head placeholder, hidden in play by fit_pilot_into; hero_assets_test
 #               reads it, and the animated pilot is pilot_kest_anim.glb.
-# Draws: Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 3, VaneL 1, VaneR 1, Pilot 1 = 14. The
-# base alone spends 10 (shell_base.hoberman header), so the shell keeps a registry exception.
+# Draws: Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2, Mortar 2, VaneL 1, VaneR 1, Pilot 1
+# = 15. The base alone spends 10 (shell_base.hoberman header), so the shell keeps a registry
+# exception.
 
 import json
 import math
@@ -50,7 +57,10 @@ TUBE_CLOCK = 28.0                 # 11 and 1 o'clock on the front arc
 TUBE_R = 0.05
 TUBE_Z = 0.03
 TUBE_Y = (0.86, 1.09)
-SATCHEL_CLOCKS = (90.0, 180.0, 270.0)
+MORTAR_PIVOT = (0.0, 0.95, TUBE_Z)   # the cradle line, where the tubes sit in their saddles
+# Band index by satchel clock; the last satchel shows from heft class IV (kp.SATCHEL4_CLOCK).
+SATCHELS = ((90.0, 1), (180.0, 2), (270.0, 3), (kp.SATCHEL4_CLOCK, 4))
+DRAWS = 15
 BANK = (("FusePlunger", "plunger"), ("ChargeKey", "key"))
 
 
@@ -67,20 +77,62 @@ def tube_x(side):
 
 
 def ring_kit():
-    """Kest's weapon ring parts in ring space (the ring sits at the Pod origin)."""
+    """Kest's weapon ring parts in ring space (the ring sits at the Pod origin): the recoil
+    cradles and the four satchels. The tubes ride the Mortar mesh (mortar_part)."""
     r = Part("RingKit")
     for side in (-1, 1):
         x = tube_x(side)
-        a, b = Vector((x, TUBE_Y[0], TUBE_Z)), Vector((x, TUBE_Y[1], TUBE_Z))
-        r.rod("rubber", a, b, TUBE_R, 6, r2=TUBE_R + 0.008)
         # The recoil cradle: a charcoal saddle straddling the band under an oxide slide.
         r.box("rubber", (0.13, 0.05, 0.08), loc=(x, 0.95, TUBE_Z - 0.03))
         r.box("paint", (0.09, 0.13, 0.025), loc=(x, 0.975, TUBE_Z - 0.062), color="oxide")
-        # The fuse tip of the loaded charge, amber in the mouth.
-        sb._disc(r, (x, TUBE_Y[1] + 0.002, TUBE_Z), (0, 1, 0), 0.034, 6, "class_accent")
-    for clock in SATCHEL_CLOCKS:
+    for clock, _ in SATCHELS:
         kp.satchel(r, clock)
     return r
+
+
+def mortar_part():
+    """The two launcher tubes and their fuse tips, one mesh that pitches and recoils in the
+    cradles; built in ring space, made into an object with its origin at MORTAR_PIVOT."""
+    m = Part("Mortar")
+    for side in (-1, 1):
+        x = tube_x(side)
+        a, b = Vector((x, TUBE_Y[0], TUBE_Z)), Vector((x, TUBE_Y[1], TUBE_Z))
+        m.rod("rubber", a, b, TUBE_R, 6, r2=TUBE_R + 0.008)
+        # The fuse tip of the loaded charge, amber in the mouth.
+        sb._disc(m, (x, TUBE_Y[1] + 0.002, TUBE_Z), (0, 1, 0), 0.034, 6, "class_accent")
+    return m
+
+
+def band_attributes(ring):
+    """UV2 on the ring mesh (glTF TEXCOORD_1, Godot UV2): x is the satchel band index (1 to 4)
+    on the ochre band faces and 0 elsewhere; y is the heft class a face shows from (4 on the
+    whole fourth satchel, 0 elsewhere). Blender's exporter writes V as 1 - v, so v is stored as
+    1 - class and Godot reads the class. Returns {band index: face count} and the gated count."""
+    mesh = ring.data
+    col = mesh.color_attributes["Color"]
+    ochre = common.rgba(kp.BAND_COLOR)
+    # A new UV layer starts as a per-face unit square, which would split every vertex; UV is
+    # unused (the slots read vertex colour), so both layers are written flat.
+    uv = mesh.uv_layers.new(name="UVMap")
+    band = mesh.uv_layers.new(name="Band")
+    for loop in uv.data:
+        loop.uv = (0.0, 0.0)
+    seen, gated = {}, 0
+    for poly in mesh.polygons:
+        c = poly.center
+        clock = math.degrees(math.atan2(c.x, c.y)) % 360.0
+        near = min(SATCHELS, key=lambda s: abs((clock - s[0] + 180.0) % 360.0 - 180.0))
+        off = abs((clock - near[0] + 180.0) % 360.0 - 180.0)
+        first = col.data[poly.loop_indices[0]].color
+        is_band = all(abs(first[k] - ochre[k]) < 1e-3 for k in range(3))
+        index = near[1] if is_band and off < 10.0 else 0
+        gate = 4 if near[1] == 4 and off < 10.0 and (is_band or math.hypot(c.x, c.y) > kp.SATCHEL_INNER) else 0
+        if index:
+            seen[index] = seen.get(index, 0) + 1
+        gated += 1 if gate else 0
+        for li in poly.loop_indices:
+            band.data[li].uv = (float(index), 1.0 - float(gate))
+    return seen, gated
 
 
 def strip_neutral_mount(ring):
@@ -246,8 +298,10 @@ def main():
     pod, ring = shell["pod"], shell["ring"]
     print("STRIP neutral weapon seat %d vertices" % strip_neutral_mount(ring))
     merge_into(ring, ring_kit())
+    bands, gated = band_attributes(ring)
+    print("BANDS Kest ring band faces by index %s, %d faces gated to class IV" % (sorted(bands.items()), gated))
     merge_into(pod, brackets())
-    mortar = common.empty("Mortar", (0, (TUBE_Y[0] + TUBE_Y[1]) / 2, TUBE_Z), ring)
+    mortar = mortar_part().to_object(MORTAR_PIVOT, ring)
     for side, tag in ((-1, "L"), (1, "R")):
         common.empty("MortarMouth." + tag, (tube_x(side), TUBE_Y[1], TUBE_Z), mortar)
     vanes = [kp.vane_part(vname, side).to_object(kp.vane_hinge(side), pod)
@@ -256,7 +310,7 @@ def main():
     reach = max(p.length for o in common.tree(pod) if o.type == "MESH" and o.name != "Pilot" for p in world_verts(o))
     n_draws = draws(root)
     print("REACH Kest Pod subtree %.3f m, limit %.2f %s" % (reach, REACH, "ok" if reach <= REACH else "OUT"))
-    print("DRAWS %s %d surfaces (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 3, VaneL 1, VaneR 1, Pilot 1)"
+    print("DRAWS %s %d surfaces (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2, Mortar 2, VaneL 1, VaneR 1, Pilot 1)"
           % (name, n_draws))
     vane_ok = vane_report(pod, ring, vanes)
     out = common.args()["out"] or os.path.join(common.MODELS, "world_one",
@@ -264,7 +318,8 @@ def main():
     band = (3000, 11000) if roost else SHELL_BAND
     sb.finish(name, root, shell["core"], shell["pilot"], shell_band=band, pod_obj=pod, out=out)
     stable_pilot_normals(out)
-    if reach > REACH or not vane_ok or n_draws != 14:
+    bands_ok = sorted(bands) == [1, 2, 3, 4] and gated > 0
+    if reach > REACH or not vane_ok or n_draws != DRAWS or not bands_ok:
         raise SystemExit("Kest machinery checks failed")
 
 
