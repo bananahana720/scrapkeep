@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (50 solo spawns of each pack kind, about 1,200 attacks)
+# smoke: solo timeout=360s (50 solo spawns of each pack kind, about 1,100 attacks; 260 s wall measured 2026-10-11 on a loaded machine)
 extends SceneTree
 
 # SQ1 pack-kind telegraph timing (W13-INTEGRATION-3.md SQ1; the lab measure of
@@ -43,8 +43,11 @@ const BASE_TICKS := 90
 const OFFSET := Vector3(12.0, 0.0, 0.0)
 const LOBBER_OFFSET := Vector3(15.0, 0.0, 0.0)
 const FRAME_LIMIT := 600
-const GRID := 24
-const WAVE_SAMPLES := 8
+const GRID := 16
+# A wave's front is swept over this many evenly spaced ages from leaving to its rim.
+const WAVE_SAMPLES := 9
+# The control: the same drawn area moved this share of its size must fall under the floor.
+const CONTROL_SHIFT := 0.5
 
 var _game
 var _test := T.new("telegraph_timing_pack_test")
@@ -54,6 +57,8 @@ var _tick := 1.0 / 90.0
 var _facts: Array = []
 var _hits: Array = []
 var _landed := -1
+# The overlap control runs on the first measured spawn of each kind.
+var _control_due := false
 
 
 func _initialize() -> void:
@@ -90,7 +95,8 @@ func _boot() -> bool:
 	Engine.max_physics_steps_per_frame = SPEED * 2
 	Engine.time_scale = float(SPEED)
 	await _frames(2)
-	_tick = root.get_physics_process_delta_time() * Engine.time_scale
+	# The step a node is handed, time scale included.
+	_tick = root.get_physics_process_delta_time()
 	var ctx = _game.ctx
 	_ball_at = ctx.terrain.drop_point(ctx.terrain.spawn_point(1).x, ctx.terrain.spawn_point(1).z, 1.05)
 	return _test.check("one physics step is 1/90 s", absf(_tick - 1.0 / float(BASE_TICKS)) < 0.000001,
@@ -161,8 +167,8 @@ func _overlap(drawn: Dictionary, tele: Node3D) -> float:
 	if tele.type == Threat.Type.WAVE:
 		ages = []
 		var run: float = tele.radius / maxf(tele.speed, 0.001)
-		for i in WAVE_SAMPLES * 4 + 1:
-			ages.append(tele.warn_seconds + run * float(i) / float(WAVE_SAMPLES * 4))
+		for i in WAVE_SAMPLES:
+			ages.append(tele.warn_seconds + run * float(i) / float(WAVE_SAMPLES - 1))
 	var saved_age: float = tele.age
 	var both := 0
 	var either := 0
@@ -187,6 +193,19 @@ func _overlap(drawn: Dictionary, tele: Node3D) -> float:
 	return float(both) / float(maxi(either, 1))
 
 
+# The drawn area moved sideways by CONTROL_SHIFT of its size: a telegraph that drew here
+# would not mean what it shows, and the overlap measure must say so.
+func _shifted(d: Dictionary) -> Dictionary:
+	var moved := d.duplicate()
+	var size: float = float(d["half_width"]) * 2.0 if String(d["form"]) == "lane" else float(d["r_out"]) * 2.0
+	var side := Vector3.RIGHT
+	if String(d["form"]) == "lane":
+		var dir: Vector3 = d["dir"]
+		side = Vector3(-dir.z, 0.0, dir.x)
+	moved["centre"] = Vector3(d["centre"]) + side * size * CONTROL_SHIFT
+	return moved
+
+
 # --- One spawn ---------------------------------------------------------------------------
 
 func _on_facts(facts: Dictionary) -> void:
@@ -209,6 +228,9 @@ func _clear_field() -> void:
 func _spawn(kind: String):
 	_game.player.reset_to(_ball_at)
 	var at: Vector3 = _ball_at + (LOBBER_OFFSET if kind == "lobber" else OFFSET)
+	# The mind hand braces against the ball's top habit; give it one to read.
+	if kind == "mind_hand":
+		_game.combat.fleet.habits.add("ram", 5.0)
 	var enemy = _game.combat.spawn_enemy(kind, _game.ctx.terrain.drop_point(at.x, at.z, 1.8))
 	return enemy
 
@@ -240,6 +262,7 @@ func _measure(kind: String) -> Dictionary:
 	var drawn := {}
 	var tele: Node3D = null
 	var shell = null
+	var control := -1.0
 	for f in FRAME_LIMIT:
 		await physics_frame
 		var now := Engine.get_physics_frames()
@@ -282,6 +305,9 @@ func _measure(kind: String) -> Dictionary:
 				var live: Node3D = enemy.telegraph() if is_instance_valid(enemy) else null
 				out = {"start": start, "onset": int(fact["frame"]), "drawn": drawn, "row": fact["row"],
 					"overlap": _overlap(drawn, live) if live != null else 0.0, "same_node": live == tele}
+				if live != null and _control_due:
+					_control_due = false
+					out["control"] = _overlap(_shifted(drawn), live)
 				break
 		if out.has("onset"):
 			break
@@ -337,6 +363,8 @@ func _run() -> void:
 		"%d pack kinds %s; record kinds %s" % [kinds.size(), sorted_kinds, recorded])
 	var report := {}
 	var outside: Array = []
+	# The measured wall time goes in the receipt: the smoke cap is the header's timeout.
+	var wall_start := Time.get_ticks_msec()
 	print("kind | attack | spawns | lead min/max s | record pre-shoot | overlap min | marker | band | radius | early hits")
 	for kind in kinds:
 		var id: String = _record.id_of(kind)
@@ -349,8 +377,12 @@ func _run() -> void:
 		var rows := {}
 		var early := 0
 		var skips: Array = []
+		var controls: Array = []
+		_control_due = true
 		for n in SPAWNS:
 			var m := await _measure(kind)
+			if m.has("control"):
+				controls.append(float(m["control"]))
 			if m.has("skip"):
 				skips.append(m["skip"])
 				continue
@@ -386,6 +418,9 @@ func _run() -> void:
 			"lead %.3f..%.3f s, record pre_shoot %.2f s, within one tick" % [lead_min, lead_max, float(rec.get("pre_shoot", -1.0))])
 		_test.check(kind + " telegraph and damage areas overlap", overlap_ok,
 			"min intersection over union %.3f over %d spawns, floor %.2f" % [overlap_min, SPAWNS, _record.OVERLAP_FLOOR])
+		if kind != "lobber" and kind != "swarm_remnant":
+			_test.check(kind + " overlap control: a moved drawing fails", controls.size() == 1 and float(controls[0]) < float(_record.OVERLAP_FLOOR),
+				"drawn area moved %.0f%% of its size: overlap %s, floor %.2f" % [CONTROL_SHIFT * 100.0, controls, _record.OVERLAP_FLOOR])
 		_test.check(kind + " no hit before onset", early == 0, "%d hits landed before damage onset" % early)
 		_test.check(kind + " one attack row", rows.size() == 1 and rows.has(id), "rows seen %s, record %s" % [rows.keys(), id])
 		_test.check(kind + " one marker class from the committed geometry", markers.size() == 1 and marker == String(rec.get("marker", "")),
@@ -407,6 +442,8 @@ func _run() -> void:
 			mismatched.append("%s in LEGIBILITY only" % id)
 	_test.check("LEGIBILITY section 2 equals the report", mismatched.is_empty() and legibility.size() == report.size(),
 		"%d LEGIBILITY rows, %d report rows; mismatched %s" % [legibility.size(), report.size(), mismatched])
+	print("measured wall time %.1f s for %d kinds x %d spawns (smoke cap 360 s)" % [
+		float(Time.get_ticks_msec() - wall_start) / 1000.0, kinds.size(), SPAWNS])
 	Engine.time_scale = 1.0
 	Engine.physics_ticks_per_second = BASE_TICKS
 	_game.free()

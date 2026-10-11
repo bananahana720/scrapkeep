@@ -34,7 +34,9 @@ const SPEED := 8
 const BASE_TICKS := 90
 const OFFSET := Vector3(12.0, 0.0, 0.0)
 const FRAME_LIMIT := 1500
-const STILL := 0.05
+# Standing: a hover unit settles a few centimetres after a dive; a walk would cover
+# walk_speed x RECOVERY, about 2.9 m.
+const STILL := 0.25
 
 var _game
 var _test := T.new("pack_telegraph_record_test")
@@ -78,7 +80,8 @@ func _boot() -> void:
 	Engine.max_physics_steps_per_frame = SPEED * 2
 	Engine.time_scale = float(SPEED)
 	await _frames(2)
-	_tick = root.get_physics_process_delta_time() * Engine.time_scale
+	# The step a node is handed, time scale included.
+	_tick = root.get_physics_process_delta_time()
 	var ctx = _game.ctx
 	_ball_at = ctx.terrain.drop_point(ctx.terrain.spawn_point(1).x, ctx.terrain.spawn_point(1).z, 1.05)
 
@@ -145,6 +148,9 @@ func _structure(kinds: Array) -> void:
 func _spawn(kind: String):
 	_game.player.reset_to(_ball_at)
 	var at: Vector3 = _ball_at + OFFSET
+	# The mind hand braces against the ball's top habit; give it one to read.
+	if kind == "mind_hand":
+		_game.combat.fleet.habits.add("ram", 5.0)
 	return _game.combat.spawn_enemy(kind, _game.ctx.terrain.drop_point(at.x, at.z, 1.8))
 
 
