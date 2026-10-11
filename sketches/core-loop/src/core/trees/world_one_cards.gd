@@ -50,6 +50,21 @@ const ROWS := {
 	"c_spare_kick": "Bank two recoil kicks.",
 	"c_spare_plate": "Bank two plates.",
 	"c_rush_shock": "Rush landings throw a shockwave.",
+	# Depth-3 and depth-4 ultimate cards (SKILL-BAR section 4, "Tree depths 3 and 4"): wave
+	# P-B unit B6 seeds one marked block per pilot; each P-C unit fills its own, one line a node
+	# in the voice above, and edits nothing else in this table.
+	# --- P-C Sable ultimate cards ---
+	# --- end Sable ---
+	# --- P-C Rivet ultimate cards ---
+	# --- end Rivet ---
+	# --- P-C Kest ultimate cards ---
+	# --- end Kest ---
+	# --- P-C Tarn ultimate cards ---
+	# --- end Tarn ---
+	# --- P-C Tally ultimate cards ---
+	# --- end Tally ---
+	# --- P-C Cannon ultimate cards ---
+	# --- end Cannon ---
 }
 
 

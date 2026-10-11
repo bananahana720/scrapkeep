@@ -418,6 +418,9 @@ func start(p: Dictionary) -> void:
 	# set piece draws its own cable to B.
 	if ctx.player.kit.hooked:
 		ctx.player.cut_line("ultimate")
+	# The breakout row: the holds node breaks every hold on ultimate_started, below.
+	if ctx.spawner != null and ctx.spawner.fleet.holds.holding():
+		combat._discover("set_piece_breakout", ctx.player.ball_position())
 	_record = {"id": _id, "path": p["path"], "seconds": snappedf(float(p["seconds"]), 0.001), "heft_class": _heft_index() + 1,
 		"volley_hits": 0, "landing_hits": 0, "damage": 0.0, "bailed": false, "recalled": false,
 		"fill_seconds": snappedf(_record_fill, 0.01)}
@@ -623,6 +626,7 @@ func _land(at: Vector3) -> void:
 
 # The landing strike: it pays the chain multiplier and ends the chain as a paid smash does.
 func _strike(at: Vector3) -> void:
+	var chain_links: int = ctx.player.chain.combo
 	var mult: float = ctx.player.pay_chain(at)
 	var row: Dictionary = _ult_rows.get(_id, {})
 	var result: Array = [0, 0.0]
@@ -631,6 +635,9 @@ func _strike(at: Vector3) -> void:
 	_record["landing_hits"] = int(_record.get("landing_hits", 0)) + int(result[0])
 	_record["damage"] = snappedf(float(_record.get("damage", 0.0)) + float(result[1]), 0.01)
 	ctx.events.ultimate_landed.emit(_id, at, int(result[0]), float(result[1]))
+	combat._discover("set_piece", at)
+	if chain_links >= 3:
+		combat._discover("set_piece_cash_in", at)
 
 
 func _encore_target(at: Vector3):
