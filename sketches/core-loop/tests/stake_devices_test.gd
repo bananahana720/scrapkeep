@@ -5,7 +5,6 @@ const Intent := preload("res://src/movement/intent.gd")
 const Interact := preload("res://src/world/interact.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
-const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
 
 # SI2 stake devices (W13-INTEGRATION-3 SI2): a trade chest, a blood shrine and a healing
@@ -81,12 +80,13 @@ func _begin() -> void:
 	_game.flow.press_start()
 	_game.flow.choose_class(RIVET)
 	_steps = [
-		[_noop, 30, _sweep],
+		[_noop, 30, _noop],
 		[_place, 8, _hold_e],
 		[_noop, 45, _check_bought],
 		[_noop, 1, _hold_e],
 		[_noop, 45, _check_once],
 		[_restart, 4, _check_restart],
+		[_noop, 1, _sweep],
 	]
 
 
@@ -100,10 +100,11 @@ func _luck(run_seed: int, run_id: String, device_id: String) -> RandomNumberGene
 	return rng
 
 
-# What a cost or payout is worth on one ladder: a part's rarity rung, else its number.
+# What a payout is worth on one ladder: a part's power tier read from Parts, else its number.
 func _rank(o: Dictionary) -> float:
 	if String(o["win_kind"]) == "part":
-		return float(ItemGen.RARITY[String(o["rarity"])]["rung"])
+		var d: Resource = Parts.def(String(o["win"]))
+		return float(d.tier) if d != null else -1.0
 	return float(o["win"])
 
 
@@ -140,11 +141,12 @@ func _sweep() -> void:
 		for kind in StakeDevices.KINDS:
 			kinds_seen[kind] = true
 			for pay in StakeDevices.pays(kind):
+				# The whole ladder is offered first, as a pocket of three would stand at once.
 				var ladder: Array = []
 				for tier in StakeDevices.TIERS:
 					var device_id := "%s_%s_%d" % [kind, pay, tier]
-					var o: Dictionary = StakeDevices.offer(kind, tier, pay, run, _luck(run_seed, run_id, device_id))
-					var again: Dictionary = StakeDevices.offer(kind, tier, pay, run, _luck(run_seed, run_id, device_id))
+					var o: Dictionary = StakeDevices.make_offer(kind, tier, pay, run, _luck(run_seed, run_id, device_id))
+					var again: Dictionary = StakeDevices.make_offer(kind, tier, pay, run, _luck(run_seed, run_id, device_id))
 					if o == again:
 						replay_ok += 1
 					if String(o.get("cost_kind", "")) == "scrap":
@@ -153,10 +155,13 @@ func _sweep() -> void:
 						parts_seen[String(o["win"])] = true
 					if String(o.get("cost_kind", "")) == "cogs":
 						cog_offers += 1
-						var tier_of: int = ItemGen.RARITY[String(o["rarity"])]["tier"]
-						var table := int(round(Fabricators.COG_PRICES["part_base"] * Fabricators.COG_PRICES["part_tier"].get(tier_of, 1.0)))
+						var tier_of: int = Parts.def(String(o["win"])).tier if Parts.def(String(o["win"])) != null else -1
+						var table := int(round(Fabricators.COG_PRICES["part_base"] * Fabricators.COG_PRICES["part_tier"].get(tier_of, -1.0)))
 						if int(o["cost"]) == table:
 							priced_from_table += 1
+					ladder.append(o)
+				for o: Dictionary in ladder:
+					var tier: int = o["tier"]
 					# Take it once from a known hull and wallet.
 					run.hp = run.max_hp * (0.2 if kind == "healing_ward" else 1.0)
 					run.cogs = 1000
@@ -165,11 +170,15 @@ func _sweep() -> void:
 					var before := _stat(run, cost_kind)
 					var scrap_before: int = run.scrap
 					var hp_before: float = run.hp
+					var max_before: float = run.max_hp
 					var parts_before: int = run.parts.size()
-					var shown_words: String = StakeDevices.words(o)
+					var shown_words: String = StakeDevices.offer_words(o)
 					var r: Dictionary = StakeDevices.take(o, run, Vector3.ZERO)
 					takes += 1
 					var charged := before - _stat(run, cost_kind)
+					# A max-health part the payout bolts on raises the hull by its gain (set_max_hp).
+					if cost_kind == "hp":
+						charged += run.max_hp - max_before
 					if bool(r.get("ok", false)) and is_equal_approx(charged, float(o["cost"])) and int(r.get("charged", -1)) == int(o["cost"]) and shown_words.contains(str(int(o["cost"]))):
 						shown_ok += 1
 					else:
@@ -177,7 +186,8 @@ func _sweep() -> void:
 					var paid := false
 					match String(o["win_kind"]):
 						"part":
-							paid = run.parts.size() == parts_before + 1 and String(run.parts[-1]) == String(o["win"])
+							# An evolution the new part completes may follow it onto the list.
+							paid = run.parts.size() > parts_before and String(run.parts[parts_before]) == String(o["win"]) and _rank(o) == float(tier)
 						"scrap":
 							paid = run.scrap - scrap_before == int(o["win"])
 						"heal":
@@ -186,19 +196,19 @@ func _sweep() -> void:
 						paid_ok += 1
 					else:
 						print("  payout mismatch: %s %s tier %d offer %s" % [kind, pay, tier, o])
-					ladder.append(o)
 					# The floor: one HP short of cost plus floor is refused and changes nothing;
 					# exactly cost plus floor is taken and leaves the hull at the floor.
 					if cost_kind == "hp":
 						floor_cases += 1
-						var fl: float = StakeDevices.floor_hp(run)
+						var fl: float = float(o.get("floor", -1))
 						stated_floor = int(o.get("floor", -1))
 						run.hp = float(o["cost"]) + fl - 1.0
 						var short_hp: float = run.hp
 						var refused: bool = not StakeDevices.can_take(o, run) and not bool(StakeDevices.take(o, run, Vector3.ZERO).get("ok", true)) and run.hp == short_hp
 						run.hp = float(o["cost"]) + fl
+						var max_at: float = run.max_hp
 						var taken: bool = StakeDevices.can_take(o, run) and bool(StakeDevices.take(o, run, Vector3.ZERO).get("ok", false))
-						if refused and taken and is_equal_approx(run.hp, fl) and fl > 0.0 and run.alive() and int(o.get("floor", -1)) == int(fl):
+						if refused and taken and is_equal_approx(run.hp - (run.max_hp - max_at), fl) and fl > 0.0 and run.alive() and int(o.get("floor", -1)) == int(fl):
 							floor_ok += 1
 						else:
 							print("  floor breach: %s %s tier %d cost %s floor %.1f hp %.1f refused %s taken %s" % [kind, pay, tier, o["cost"], fl, run.hp, refused, taken])
@@ -222,7 +232,7 @@ func _sweep() -> void:
 				if mono:
 					monotone_ok += 1
 				else:
-					print("  ladder not monotone: %s %s %s" % [kind, pay, ladder.map(func(o): return [o["cost"], o.get("rarity", o["win"])])])
+					print("  ladder not monotone: %s %s %s" % [kind, pay, ladder.map(func(o): return [o["cost"], _rank(o)])])
 	run.hp = run.max_hp
 	run.cogs = 0
 	run.bonus_cores = 0
