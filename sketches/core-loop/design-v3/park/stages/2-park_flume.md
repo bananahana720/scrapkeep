@@ -6,7 +6,7 @@ This page follows `design-v3/PARK.md` section 2 and `adr/TADR-011-park-terrain-a
 
 ## 1. The stage in one paragraph
 
-You drop in on the weir at the top of a mesa, where the reservoir behind stage 1's dam spills into a wooden flume. The flume runs 1.6 km across falling canal country on trestles that grow taller as the land drops away, and it ends at a penstock tower in the south-east, 90 m tall, with a blue beam on top. You can ride the flume the whole way as one long grind, or drop off it into the canal fields, the trestle hollow, or the rim road above a horseshoe bend. The lines pinch twice, at a gap between two buttes and at the siphon where the canal dives under the hollow. They meet again in the head house at the tower's foot, where a reactor relic sits on the flume's last channel and boils it.
+You drop in on the weir at the top of a mesa, where the reservoir behind stage 1's dam spills into a wooden flume. The flume runs 1.6 km across falling canal country on trestles that grow taller as the land drops away, and it ends at a penstock tower in the south-east, 90 m tall, with a green beam on top. You can ride the flume the whole way as one long grind, or drop off it into the canal fields, the trestle hollow, or the rim road above a horseshoe bend. The lines pinch twice, at a gap between two buttes and at the siphon where the canal dives under the hollow. They meet again in the head house at the tower's foot, where a reactor relic sits on the flume's last channel and boils it.
 
 ## 2. Arizona landform and society layer
 
@@ -20,7 +20,7 @@ You drop in on the weir at the top of a mesa, where the reservoir behind stage 1
 | `dam_era` | the weir, the flume and its trestles, the rim road, the siphon, the wasteway, the forecourt, the head house and its annex | timber, concrete, gauges; the flume crews' signs |
 | `hohokam` (reference) | the main canal, the gap cut, the lateral canal | graded canals, ridden as flow lines only |
 | `dam_era` (crew camp) | the flume crews' bunk ledges cut into the mesa's south face and their timber crane booms | ledges and swing pivots; the cliff-dwelling layer is stage 1's, so world 1 shows each real culture once |
-| `ancient` | the relic in the head house; a buried relic under the bend | Cherenkov-blue seams |
+| `ancient` | the relic in the head house; a buried relic under the bend | uranium-glass green (#9dff3c) seams |
 | `fleet` | a dropship lands on the south bench at tier 2 | a crew home |
 
 The guardrail holds (PARK.md:301): the canal rows house no home, are no event's site (including the water events), and carry only `ref_` fragments. The flash flood runs in the dam-era wasteway, not in a canal.
@@ -179,7 +179,7 @@ The winch drone is the flume's natural enemy: it is the one kind whose threat is
 | `culvert_wall` | cracked_wall | wasteway chute | Breaks at cruise into a culvert shortcut |
 | `forecourt_geyser` | launcher, `geyser_vent` | forecourt | Lobs you over the drum wall onto the relic's channel: the air entry into the fight |
 
-**Time of day: `morning`** (PARK.md:375). The sun has cleared the mesas; long shadows of the trestles fall west across the canal fields, and the head house's blue seams read against a pale sky.
+**Time of day: `morning`** (PARK.md:375). The sun has cleared the mesas; long shadows of the trestles fall west across the canal fields, and the head house's green seams read against a pale sky.
 
 **Weather.** `morning_clear` (always) and `dust_squall` from tier 2: 15 s warning, 60 s live, 90 s gap, ochre fog at 0.003, a `dust` sky, a squall hiss, a `squall_shaker` music layer, collapse odds 1.5 times and flash-flood odds 0.5 times. `handling` is `"none"`; the squall's push exists only as the `squall_lane` thermal. Today's squall is a stage event with its own codex row (`src/world/dust_squall.gd`; `squall_sail`, `codex_world.gd:33`); KE7 decides whether that event folds into this weather row.
 
@@ -396,7 +396,7 @@ Board `park-2-park_flume`. `p1_overhead` is plotted; the rest are generated. Thr
 
 **Frame 0, the plan.** The section 4 grid to scale: the mesa top-left, the flume's long S to the tower bottom-right, the pinches at the gap and the siphon, the gorges on the east.
 
-**Frame 1, the drop-in vista.** From the weir deck in clear morning light, looking south-east down a long fall of canal country. The flume leaves the weir at your feet on timber trestles and runs away in a long S, its trestles growing taller as the land drops; green canal lines cut the tan fields; two buttes stand at the first bend; at the far end, 1.3 km away and below you, a slim concrete tower with a blue beam stands beside a round head house on a bluff over a gorge.
+**Frame 1, the drop-in vista.** From the weir deck in clear morning light, looking south-east down a long fall of canal country. The flume leaves the weir at your feet on timber trestles and runs away in a long S, its trestles growing taller as the land drops; green canal lines cut the tan fields; two buttes stand at the first bend; at the far end, 1.3 km away and below you, a slim concrete tower with a green beam stands beside a round head house on a bluff over a gorge.
 
 **Frame 2, the first flow line.** Chase camera beside the ball grinding the flume 45 m above the ground, the timber channel a ribbon ahead, the trestle bents flicking past below, the butte gap opening ahead with the canal glinting through it.
 
@@ -406,6 +406,6 @@ Board `park-2-park_flume`. `p1_overhead` is plotted; the rest are generated. Thr
 
 **Frame 5, the landmark approach.** Up the wasteway chute toward the forecourt: the round head house filling the frame, the tower rising behind it, the flume's last reach entering its north wall, plated brutes walking the forecourt, a slam ring dusting the doorway.
 
-**Frame 6, the Warden fight.** Inside the drum: steel trusses overhead, the relic clamped on the flume's pour channel 12 m up with blue seams blazing, two orange slag lanes running down the floor toward the ball, and the ball in the air over one of them, a harpoon line taut to a truss.
+**Frame 6, the Warden fight.** Inside the drum: steel trusses overhead, the relic clamped on the flume's pour channel 12 m up with green seams blazing, two orange slag lanes running down the floor toward the ball, and the ball in the air over one of them, a harpoon line taut to a truss.
 
 **Frame 7, the exit.** Through the east doors after the break: the three gates on the bluff lip, the bay over the drum, the ball launched out across the lower gorge toward a smoke column and a furnace glow on the eastern horizon, where the Requisition waits.

@@ -6,7 +6,7 @@ This page follows the park schema in `design-v3/PARK.md` section 2 and `adr/TADR
 
 ## 1. The stage in one paragraph
 
-You drop in at dawn onto a survey deck on the top shelf, 1.3 km north of the dam. The dam's crest and its blue beam sit on the skyline the whole way down. The shelf rolls over slickrock domes to a lip, the lip throws you into one of three runs cut 25 m into the plateau (two slot canyons and a concrete-lined wash), and all three meet at the Eye, a hole worn through a sandstone fin. From the Eye you choose how to fall 100 m into the river canyon: down the spillway tunnel, along the cliff-room ledges, straight down the construction incline, or across the pipeline bridge and down the east haul road. Every way lands on the toe apron, under a 120 m concrete face with a reactor relic clamped to it 22 m up. The face is the biggest quarter pipe in the game.
+You drop in at dawn onto a survey deck on the top shelf, 1.3 km north of the dam. The dam's crest and its green beam sit on the skyline the whole way down. The shelf rolls over slickrock domes to a lip, the lip throws you into one of three runs cut 25 m into the plateau (two slot canyons and a concrete-lined wash), and all three meet at the Eye, a hole worn through a sandstone fin. From the Eye you choose how to fall 100 m into the river canyon: down the spillway tunnel, along the cliff-room ledges, straight down the construction incline, or across the pipeline bridge and down the east haul road. Every way lands on the toe apron, under a 120 m concrete face with a reactor relic clamped to it 22 m up. The face is the biggest quarter pipe in the game.
 
 ## 2. Arizona landform and society layer
 
@@ -20,14 +20,14 @@ You drop in at dawn onto a survey deck on the top shelf, 1.3 km north of the dam
 | `dam_era` | the survey deck, the wash liner, the overflow channel and spillway tunnel, the service ledge, the incline, the pipeline bridge, the haul road, the powerhouse, the dam | concrete, stencils, gauges, the crews' humour |
 | `ancestral_puebloan` (reference) | the cliff rooms in the west wall and their viga beams | rooms and roof beams, ridden as ledges and swing pivots only |
 | `dam_era` (headworks) | the canal lips on the east bench | the crews' concrete canal headworks, ridden as a grind line; the Hohokam canal layer belongs to stage 2 and the pit |
-| `ancient` | the Eye's carved marks, the vent pits at the dam's east toe, the relic itself | Cherenkov-blue seams; the thing that woke |
+| `ancient` | the Eye's carved marks, the vent pits at the dam's east toe, the relic itself | uranium-glass green (#9dff3c) seams; the thing that woke |
 | `fleet` | nothing at start; a dropship lands on the east bench at tier 1 | a crew home |
 
 The guardrail holds: the cliff rooms house no home, are no event's site, and carry only `ref_` fragments. The canal lips are dam-era concrete, so world 1 shows each real culture once: the cliff builders here, the canal builders on stage 2. The lobbers live on the dam-era service ledge, not in the rooms (PARK.md:589).
 
 ## 3. The hero landmark and the Warden's mounting
 
-**The spillway dam** (`landmark_dam`, `hero_landmark` budget, PARK.md:490). A curved concrete arch 320 m along the crest and 120 m tall, centred at [0, 620], facing -z (yaw 180) toward the whole park. Its crest sits at y 121, above the plateau's y 100, so the crest line and its two gate towers break the skyline from every open cell on the plateau. `sight_top` is [0, 141, 640], the gate tower tops. `light` is `ancient_beam`: a Cherenkov-blue column rises from the relic past the crest, so the dam reads through the monsoon haze at tier 2.
+**The spillway dam** (`landmark_dam`, `hero_landmark` budget, PARK.md:490). A curved concrete arch 320 m along the crest and 120 m tall, centred at [0, 620], facing -z (yaw 180) toward the whole park. Its crest sits at y 121, above the plateau's y 100, so the crest line and its two gate towers break the skyline from every open cell on the plateau. `sight_top` is [0, 141, 640], the gate tower tops. `light` is `ancient_beam`: a uranium-glass green column rises from the relic past the crest, so the dam reads through the monsoon haze at tier 2.
 
 **The mounting, `dam_face`** (PARK.md:424). The relic clamps to the face's centreline, anchor [0, 22, 590], 22 m above the toe apron. The face is a quarter pipe: it curves from flat at the toe (z 560) to vertical at about 30 m up. The engage ring is centred on the toe apron at [0, 575] with `reach_m` 30, the same radius as today's `beacon_radius` (`alpha_defs.gd:71`), so the pulse ring and the posture bands keep today's geometry.
 
@@ -181,7 +181,7 @@ All five set `stops_kind` true. Reinforcement numbers are starts for KE6, which 
 
 Keys are exactly today's spec keys (`map_gorge.gd:345-369`, `map_reach.gd:226-236`).
 
-**Time of day: `dawn`** (PARK.md:374, 387). Low sun from the east puts the dam face in shade and its blue seams bright; the canyon floor is in shadow until the drop. A `TIME_ROWS` row for KE7.
+**Time of day: `dawn`** (PARK.md:374, 387). Low sun from the east puts the dam face in shade and its green seams bright; the canyon floor is in shadow until the drop. A `TIME_ROWS` row for KE7.
 
 **Weather.** `dawn_still` (clear, always) and `monsoon_buildup` from tier 2: 20 s warning, 90 s live, 60 s gap, grey fog at 0.0014, a `storm_build` sky, far thunder, a `monsoon_pad` music layer, and event odds 2.5 times for the wash flash flood, 3 times for the dome lightning, 1.5 times for the pool flood. `handling` is `"none"`.
 
@@ -413,7 +413,7 @@ Board `park-1-park_dam`, panels per PARK.md:406. `p1_overhead` is plotted from s
 
 **Frame 0, the plan.** The section 4 grid drawn to scale: the shelf at the top, the slots converging on the Eye, the canyon, the dam across the bottom with its toe apron, every line in its pilot's colour.
 
-**Frame 1, the drop-in vista.** From the survey deck at dawn, 2 m above the ball, looking south. Slickrock domes roll away in pink and cream; two dark slot mouths and the pale lined wash cut the plateau beyond the lip; 1.3 km away the dam's crest is a pale bar across the canyon with a thin blue beam rising from its middle, and the monsoon clouds are only a grey line on the horizon.
+**Frame 1, the drop-in vista.** From the survey deck at dawn, 2 m above the ball, looking south. Slickrock domes roll away in pink and cream; two dark slot mouths and the pale lined wash cut the plateau beyond the lip; 1.3 km away the dam's crest is a pale bar across the canyon with a thin green beam rising from its middle, and the monsoon clouds are only a grey line on the horizon.
 
 **Frame 2, the first flow line.** Chase camera low behind the ball in the upper slot, walls 25 m high and close enough to touch, a stripe of sky overhead, the ball banked high on the outside of a meander. Ahead, the slot opens into the Eye's arch with daylight and the far canyon framed in it.
 

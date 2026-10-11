@@ -6,7 +6,7 @@ Settled by Andrew today (the plan's "Decisions settled today" table, `~/.claude/
 
 **Body direction changed tonight.** The plan settled an open gyro cage. Andrew rejected all 38 open-cage boards on the evening of 2026-10-10; `ROSTER-LOOK.md` §0, the Hoberman mecha, is now the live body direction and supersedes its own cage sections. Section 5 here follows §0. `ROSTER-LOOK.md` is being revised as this sheet is written, so it is cited by section, not by line.
 
-Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (every interface name here is its name), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (§0 the Hoberman mecha, §3 silhouette rules), `BIBLE.md` section 4.3 (`BIBLE.md:319-338`).
+Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (every interface name here is its name), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (§0 the Hoberman mecha, §0.7 its concept set rules, §3 silhouette rules), `BIBLE.md` section 4.3 (`BIBLE.md:319-338`).
 
 **Sources.** Tarn has no passage in `docs/CHARACTER-BIBLE.md`, `design-v2/I1-character-kits.md`, `DESIGN-V2.md` or `SOUND-STORY.md` (a search for "tarn" finds none). `design-v3/DESIGN-V3.md:182` gives one line ("Articulated claw melee"). Tarn's design history is the Bible (`BIBLE.md:135`, `:319-338`, `:412`, `:416`, `:430`, `:776`), the decision rows (`docs/decisions.tsv:117`, `:274`, `:278-280`) and the code. No playtest entry records how Tarn feels (`docs/playtests/PLAYTEST-LOG.md:35` names the kit only). Every number below is untested by a human.
 
@@ -59,7 +59,7 @@ Class row change (`src/core/class_def.gd:108-114`): `"line_id": "claw_drag"`, `"
 
 - **Does.** A ring under the ball, radius 4 to 7 m by gauge fraction. Every enemy inside is dragged toward the ball (knock 10, `event_kinds.gd:261`), takes 14 to 24 damage times weapon-damage tuning, and carries a clamp mark for 1.5 to 3.0 s (`weapons.gd:86-95`; `combat.gd:1429-1453`).
 - **Fire shape.** Gauge, full at 0.8 s (`ability_state.gd:66`), auto-fire after the 0.5 s grace (`SKILL-BAR.md:91`). Cooldown 6.0 s, 1 charge. On the bar: press 2, hold left click to grow the ring, release to clamp. The selection snaps back to 1 on the release.
-- **Sees.** The ring draws through `yours()`, so it takes Tarn's colour and cross ticks (`player_ball.gd:341-344`; `class_def.gd:111`). **New (body only):** both hooked claw arms open with the gauge fraction and snap inward on the release, and the pilot throws the clamp lever.
+- **Sees.** The ring draws through `yours()`, so it takes Tarn's colour and cross ticks (`player_ball.gd:341-344`; `class_def.gd:111`). **New (body only):** both hooked claw arms open with the gauge fraction and snap inward on the release, and the pilot throws the clamp lever in the lever bank beside the right yoke (`ROSTER-LOOK.md` §0.7).
 - **Hears.** The taps build as the gauge fills and the release is `tarn_latch_tear`, the long low A (`audio.gd:88`; `src/presentation/harmony.gd:127-128`, `:135`).
 - **Kept.** All of it. **Call:** no rule change, so `tests/tarn_kit_test.gd` cases f, g and i (`:248-396`) stay green unchanged.
 
@@ -101,13 +101,13 @@ Weights: `kite_drone.gd:35`, `chaser.gd:60`, `mag_trapper.gd:32`, `burrower.gd:3
 
 - **Does.** Plants a claw where the aim meets the world within 12 m and pulls the ball toward it at the larger of its planar speed and 1.5 x the dash floor (16 m/s, `tuning.gd:15`), so at least 24 m/s, with at least 2 m/s of lift. It lands as a ram (`augments.gd:104-108`, `:281-302`; ram knock 24, `augments.gd:70`). Cooldown 3.0 s (`ability_state.gd:65`).
 - **Fire shape.** Instant on Shift. A verb chip, never selectable (`SKILL-BAR.md:38`).
-- **Sees.** The hooked claw arm on the aim side shoots out from its side hub, and the pull drum low at the rear winds in (`ROSTER-LOOK.md` §0.2; today's nodes at `tools/blender/shell_tarn.py:120-129`).
+- **Sees.** The hooked claw arm on the aim side shoots out from its side hub, and the pull drum low at the rear winds in (`ROSTER-LOOK.md` §0.2; today's nodes at `tools/blender/shell_tarn.py:120-129`). The pilot stamps both pedals, the Shift control (§0.7).
 - **Kept.** All of it, and the tree nodes that build on it (for example the `dashed` procs at `tarn.gd:9-10`, `:32-33` and `:59-60`).
 
 ### Ctrl: rend (kept)
 
 - **Does.** The shared slam strikes within 9 m, then the rend pulls every enemy within 9 m inward at 26 x strength x 0.8, where strength is speed / 30 clamped to 0.4 to 1.6. It strikes nothing a second time (`player_ball.gd:48-50`, `:891-902`, `:917-929`; `augments.gd:66-68`).
-- **Sees.** The lattice folds about 8% on the landing and springs back over 0.25 s (`ROSTER-LOOK.md` §0.5, an extra on its veto list), and both claw arms hook inward from `RendContact` (`shell_tarn.py:130`).
+- **Sees.** If the fold extra is on (`ROSTER-LOOK.md` §0.5, off by default), the lattice folds about 8% on the landing and springs back over 0.25 s. Both claw arms hook inward from `RendContact` (`shell_tarn.py:130`) either way.
 - **Kept.** All of it; `tarn_kit_test.gd` case h (`:327-353`) stays.
 
 **Three inward pulls, on purpose.** Clamp, rend and claw drag all bring enemies in. They differ in reach and payoff: the clamp catches a ring around the ball and marks it; the rend gathers a landing area and marks nothing; the drag brings one far target and marks it. That is Tarn's identity, not a duplicate across pilots. It is on the veto list in case it reads as one mechanic three times.
@@ -120,7 +120,7 @@ The Bible's ultimate: "Successful committed contacts and useful holds earn an ex
  wind-up 0.35 s           flight: one beat, one claw over claw                 landing
  both claw arms close      beat 1: R arm grips the line, L snatches (10 m)      tow dropped at B
  on the line ahead         beat 2: L arm grips, R snatches (10 m)               rend: pull inward
-                           peak:   ring spins once, tow swings a 5 m ring       clamp marks 3.0 s
+                           peak:   weapon ring spins, tow swings a 5 m ring     clamp marks 3.0 s
  A ================================================================> B
        tow: light bodies only, up to 2 + heft class, held 3 m behind
 ```
@@ -136,7 +136,7 @@ The Bible's ultimate: "Successful committed contacts and useful holds earn an ex
 | 5 | landing | the framework's 60 x heft x `chain.multiplier()` within the class landing radius (6 to 10 m), but the knock points **inward**, like the rend: 26 x 0.8 = 20.8 (`player_ball.gd:50`, `augments.gd:68`). Towed bodies drop at the centre and take the landing damage x1.25. Every enemy hit that is not a Warden or a boss gets a clamp mark for 3.0 s, so the first sweeps after recovery deal x1.5. The landing ends the chain (framework). |
 | 6 | heft scaling beyond the default | tow limit 1.5 to 3.5 (table above); tow cap 2 + heft class |
 | 7 | music | below |
-| 8 | body | ready: the blade and claw tooth edges glow (the `class_accent` slot) and the claw arms flex once a second with the 1 Hz breathe. Wind-up: the lattice opens to full span, about 1.15 times its rest size, and the hub modules lock out (`ROSTER-LOOK.md` §0.5, an extra on its veto list); both claw arms close on the line ahead. Flight: the arms alternate grips on the beat, a visible metronome. Peak: the weapon ring spins one turn. Landing: the lattice folds back and both arms hook inward. |
+| 8 | body | ready: the blade and claw tooth edges glow (the `class_accent` slot) and the claw arms flex once a second with the 1 Hz breathe. Wind-up: if the full-span extra is on (`ROSTER-LOOK.md` §0.5, off by default), the lattice opens to full span, about 1.15 times its rest size, and the hub modules lock out; otherwise the lattice stays at rest size. Both claw arms close on the line ahead. Flight: the arms alternate grips on the beat, a visible metronome. Peak: the weapon ring spins one turn. Landing: if the full-span extra is on, the lattice folds back. Both arms hook inward. |
 | 9 | clips | `ult_ready` 0.6 s, `ult_windup` 0.35 s, `ult_strike` 0.6 s, `ult_recover` 0.8 s (section 6) |
 | 10 | depth 3 | `rake_run` and `vice_leap` (below) |
 | 11 | depth 4 | the four framework knobs, one per depth-4 node (below) |
@@ -200,7 +200,7 @@ All of these are keyed sounds, so they follow a Warden lift into Eb (`SOUND-STOR
 | Peak | the tow swings a 5 m ring, 18 x heft | crosscut: both ring blades cross forward, two lanes 10 m long and 1.5 m wide ahead of the ball at plus and minus 20 degrees, 24 x heft | the vice opens: the landing area (class radius + 2 m) draws on the ground and pulls every enemy inside toward its centre every 0.2 s, knock 6 (the gather loop, `combat.gd:1661-1672`) |
 | Landing | rend inward, tow dropped x1.25, marks 3.0 s | rend inward, then a 3.0 s sweep frenzy: the existing `overdrive`, sweeps at x1.6 rate (`weapons.gd:64-65`) | 60 x heft within class radius + 2 m, inward 20.8, hurled bodies x1.25, marks 4.0 s |
 | Music | taps D D Eb, peak long A | the taps doubled as sixteenth pairs on each beat: the rake | one tap per snatch; the long A held from the peak to the landing; the drop lands an octave lower |
-| Body | claw arms alternate grips | the ring blades held out to both sides, teeth sparking on the ground | both claw arms plant behind at the wind-up, the launch; then snatch and throw forward |
+| Body | claw arms alternate grips | the ring blades held out level to both sides at the equator; sparks fly where the strips cut the ground | both claw arms plant behind at the wind-up, the launch; then snatch and throw forward |
 | Plays well with | the clamp and the sweep | the Rend road's sweep upgrades, through the frenzy | the Anchor road's clamp and pull upgrades, through the marks |
 
 ABILITIES rows (B3 adds whatever other keys its `ult_default` row carries):
@@ -292,14 +292,14 @@ The brief asked for the open gyro cage. Andrew rejected it tonight, so this sect
 
 | Layer (`ROSTER-LOOK.md` §0.1) | Tarn's part (§0.2) | Nodes | What moves it |
 | --- | --- | --- | --- |
-| Weapon ring: level, turns to the aim | two big curved claw blades | new blade nodes under `WeaponRing` (P-D names them) | Sweep: the blades swing through the sweep once per volley. Rake Run: held out to both sides. Set-piece peak: the ring spins one full turn. |
-| Hub modules on the side hubs | two hooked claw arms | `ClawPivot.R/L` and `ClawTip.R/L` keep their names and move to the side hubs (§0.2's node rule; today at `tools/blender/shell_tarn.py:120-121`) | Shift: the aim-side arm shoots out. Clamp: both arms open with the gauge and snap inward. Claw drag: the arm on the line's side reaches along the cable. Set piece: the arms alternate grips on the beat. |
-| Hub module on a low rear hub | the pull drum, rubber with 12 rope grooves | `PullDrum`, `PullExit` (today at `shell_tarn.py:123-129`) | Claw drag: winds in. Heavy reversal: spins the other way. Shift: winds in. The rear tell, low centre. |
+| Weapon ring: level, turns to the aim | two big curved claw blades on the front arc at about 11 and 1 o'clock, edges forward (§0.7) | new blade nodes under `WeaponRing` (P-D names them) | Sweep: the blades swing through the sweep once per volley. Rake Run: held out to both sides. Set-piece peak: the ring spins one full turn. |
+| Gap brackets at 4 and 8 o'clock (rest pose: the side hubs) | two hooked claw arms | `ClawPivot.R/L` and `ClawTip.R/L` keep their names and move to gap brackets under Pod (ROSTER-LOOK §0.2 node rule, §4; today at `tools/blender/shell_tarn.py:120-121`) | Shift: the aim-side arm shoots out. Clamp: both arms open with the gauge and snap inward. Claw drag: the arm on the line's side reaches along the cable. Set piece: the arms alternate grips on the beat. |
+| Pod, low at the rear (rest pose: a low rear hub) | the pull drum, rubber with 12 rope grooves | `PullDrum`, `PullExit` (today at `shell_tarn.py:123-129`) | Claw drag: winds in. Heavy reversal: spins the other way. Shift: winds in. The rear tell, low centre. |
 | Gap panels | thick slabs scored with claw marks | `Gap.NN` empties | heft class, below |
-| Cockpit controls | twin yokes with grip triggers and a clamp lever (§0.2). **Proposed:** a drum lever by the right knee for slot 3. | in the pod | Fire: squeeze the grip triggers. Slot 2: throw the clamp lever. Slot 3: haul the drum lever. Q: both yokes hauled back together. The control and its clip read the same skill event (§0.4). |
+| Cockpit controls (§0.7) | twin yokes with grip triggers; a lever bank beside the right yoke with the clamp lever and the drum lever; a copper two-handed lap bar; exactly two pedals. Labels: "1: Claw sweep", "2: Claw clamp", "3: Claw Drag", "Q: Redjaw Rend", "Shift: Claw pull". | `Control.Trigger`, `Control.ClampLever`, `Control.DrumLever` under Pod (`PILOT-CLIPS.md` §5); `Control.LapBar`, `Control.Pedal.L/R` | 1: squeeze the grip triggers. 2: throw the clamp lever. 3: two hauls on the drum lever. Q: haul the lap bar back with both hands. Shift: stamp both pedals. The control and its clip read the same skill event (§0.4). |
 | Rend contact | the landing point under the pod | `RendContact` (today at `shell_tarn.py:130`) | Rend and every set-piece landing |
 
-**Colour.** ROSTER-LOOK's colour rule (§6, "Tarn's colour clash") makes Tarn's enamel bone and petrol, never oxide, because Tarn's class colour also means harm and Fleet paint. Its new §0.2 table lists Tarn's lattice as iron oxide red. This sheet follows §6 (open question 8). The tiger's stripes and the tooth-edge glow carry the class read.
+**Colour.** Every lattice strut takes Tarn's §0.2 enamel, iron oxide red, with copper only on pivot pins and hubs (§0.7, "Lattice enamel"). The old cage rule (§6, "Tarn's colour clash") kept oxide off Tarn's enamel, because Tarn's class colour also means harm and Fleet paint. §0.7 replaces it for the lattice (open question 8). The seat behind the head is bone, so the ash-brown head reads against it (§0.7, "Pilot on model"). Glow shows only at the blade and claw tooth edges (§0.7, "Colour discipline and glow"). The tiger's stripes and that glow carry the class read.
 
 ### Panels by heft class
 
@@ -309,7 +309,7 @@ Panels follow `heft_class_changed` and `heft_class_dropped` (`src/core/game_even
 | --- | --- | --- | --- | --- |
 | I | bare lattice, ring and pod; every gap open | claw arms tucked at 4 and 8 o'clock | 0.15 m | 1.5 |
 | II | panels in the lower gaps | claw-scored slabs in the gaps under the pod | 0.15 m | 2.0 |
-| III | panels in the side gaps, thicker tread caps | toothed tread caps on the hubs | 0.18 m | 2.5 |
+| III | panels in the side gaps, thicker tread caps | claw-scored slabs in the side gaps; the shared flat tread caps thicken (§0.7 keeps one cap style for all six) | 0.18 m | 2.5 |
 | IV | panels in most gaps; the sight cone stays open | a slab skirt round the drum; hinge guards on both claw arms | 0.21 m | 3.0 |
 | V | every non-sight gap; hub modules in heavy form | heavy claw arms: a second tooth row and longer hooks | 0.25 m | 3.5 |
 
@@ -317,26 +317,26 @@ Panels follow `heft_class_changed` and `heft_class_dropped` (`src/core/game_even
 
 ### The silhouette rule: bottom-heavy, and the blades keep time
 
-Every pilot now carries a weapon ring at the equator (§0.1), so the ring alone tells nobody apart. Tarn's tell sits below it and on it. Two hooked claw arms push the outline out 0.15 m at 4 and 8 o'clock, below the ring. Above the ring, only two small round ears break the lattice. While Tarn fires, the two curved blades on the ring swing once per volley, so the outline on the aim side pulses at 2 Hz.
+Every pilot now carries a weapon ring at the equator (§0.1), so the ring alone tells nobody apart. Tarn's tell sits below it and on it. Two hooked claw arms push the outline out 0.15 m at 4 and 8 o'clock, below the ring. Above the ring, no module breaks the lattice outline, and the small round ears show through the open upper gaps. While Tarn fires, the two curved blades on the ring swing once per volley, so the outline on the aim side pulses at 2 Hz.
 
 **Check.** In the blind greyscale thumbnails at the mid camera (`ROSTER-LOOK.md` §3, rule 10), Tarn's outline below the ring is wider than above it in every frame. A 1 s strip at the mid camera while firing shows the blade break change at 2 Hz. The Cannon's split ports also sit on low side hubs (§0.2); they do not move with fire, so the pulse separates the two (open question 3).
 
 ## 6. Clips
 
-Tarn's body is calm. The face never snarls; the claws carry the aggression (`BIBLE.md:325`). **Call.** Each skill has a cockpit control and the pilot works it when the skill fires (`ROSTER-LOOK.md` §0.4). Clips run at 30 fps on the shared `pilot-v1` rig by the `tools/blender/anim_tarn.py` route (its header: "seven neutral-to-neutral clips at 30 fps", `anim_tarn.py:1`). A5 confirms the ids and P-E builds them. A per-pilot clip rides a row's `class_clips` override (`src/presentation/pilot_reactions.gd:21-22`).
+Tarn's body is calm. The face never snarls; the claws carry the aggression (`BIBLE.md:325`). **Call.** Each skill has a cockpit control and the pilot works it when the skill fires (`ROSTER-LOOK.md` §0.4). Clips run at 30 fps on the shared `pilot-v1` rig by the `tools/blender/anim_tarn.py` route (its header: "seven neutral-to-neutral clips at 30 fps", `anim_tarn.py:1`). A5 confirms the ids and P-E builds them.
 
 | Clip id | Length | Trigger | Priority, cooldown | What Tarn does |
 | --- | --- | --- | --- | --- |
-| `idle` | 4.0 s loop (120 frames) | no reaction playing | lowest | Tests the clamp lever's latch with one finger, then rests the paw on it. Ears turn once; the tail sways. The Bible's "test a bent latch with one finger" (`BIBLE.md:325`). |
+| `idle_loop` | 4.0 s loop (120 frames) | no reaction playing | lowest | Tests the clamp lever's latch with one finger, then rests the paw on it. Ears turn once; the tail sways. The Bible's "test a bent latch with one finger" (`BIBLE.md:325`). |
 | `class_up` | 1.2 s (36) | `heft_class_changed` | 50, 4.0 s (`SKILL-BAR.md:480`) | Rolls both shoulders and flexes both yokes; the claw arms snap once as the new panels slam in |
-| `cast_special` | 0.7 s (21) | `slot_cast`, slot `special` | 30, 1.0 s | Throws the clamp lever: the vice closing |
-| `cast_line` | 0.8 s (24) | `line_skill_fired` | 32, 1.0 s | Two hauls on the drum lever while the drum winds |
-| `ult_ready` | 0.6 s (18) | `ultimate_ready` | 45, 10.0 s | One slow nod, a finger tap on the clamp lever, then both hands to the yokes |
-| `ult_windup` | 0.35 s (11) | `ultimate_started` | 70, 0.0 s | Both yokes hauled back together, head down: both hands on the big control |
-| `ult_strike` | 0.6 s (18) | `ultimate_peak` | 68, 0.0 s | Leans into the ring's spin with both yokes hard over, face focused |
+| `cast_special` | 0.7 s (21) | `slot_cast`, slot `special` | 30, 1.0 s | Throws the clamp lever (`Control.ClampLever`) beside the right yoke: the vice closing |
+| `cast_line` | 0.8 s (24) | `line_skill_fired` | 32, 1.0 s | Two hauls on the drum lever (`Control.DrumLever`) next to the clamp lever, while the pull drum winds |
+| `ult_ready` | 0.6 s (18) | `ultimate_ready` | 45, 10.0 s | One slow nod, a finger tap on the clamp lever, then both hands to the copper lap bar |
+| `ult_windup` | 0.35 s (11) | `ultimate_started` | 70, 0.0 s | Both hands haul the copper lap bar back, head down: the big control for Q |
+| `ult_strike` | 0.6 s (18) | `ultimate_peak` | 68, 0.0 s | Leans into the weapon ring's spin with the lap bar held hard back, face focused |
 | `ult_recover` | 0.8 s (24) | `ultimate_landed` | 65, 0.0 s | Settles, one long exhale, a small shoulder roll. Control returns at 0.25 s; the clip finishes under play. |
-| `smash_rend` | 0.6 s (18) | `slammed` (`game_events.gd:50`) through a `class_clips` override for `tarn` | 40, 1.0 s | Pulls both yokes to the chest as the claw arms hook inward: the inward pull in the body |
-| `unlock_tarn` | 3.0 s (90) | `achievement_earned("brindle_routed")` (`game_events.gd:174`) on the unlock card | ceremony | Climbs into the pod, sets down "a claw nobody issued" (`achievements.gd:39`), taps the clamp lever, nods once |
+| `smash` | 0.6 s (18) | `slammed` (`game_events.gd:50`), the shared roster row (PILOT-CLIPS.md section 1.1) | 36, 1.0 s | Pulls both yokes to the chest as the claw arms hook inward: the inward pull in the body |
+| `unlock` | 3.0 s (90) | `achievement_earned("brindle_routed")` (`game_events.gd:174`) on the unlock card | ceremony | Climbs into the pod, sets down "a claw nobody issued" (`achievements.gd:39`), taps the clamp lever, nods once |
 
 The seven existing reactions stay: `big_cheer`, `wince`, `slump`, `phew`, `brace`, `heave`, `drop_land` (`pilot_reactions.gd:6-17`; Tarn's bake in `anim_tarn.py`).
 
@@ -349,7 +349,7 @@ Tarn already has two paints: Redjaw Ash, the starter, and Dig Ochre, earned by s
 | Slot | Id | Name | Look | Earned by |
 | --- | --- | --- | --- | --- |
 | trail | `trail_tarn_claw_marks` | Claw Marks | two parallel scored lines 0.6 m apart in bone, broken every 1.5 m like tooth gaps | achievement `tarn_dragged_50`, "Drag 50 machines into your claws.": on `line_skill_fired` with `ability_id` `claw_drag` and `on` `body`, count 50 |
-| shell variant | `shell_tarn_redjaw_teeth` | Redjaw Teeth | bone-white replacement teeth with copper rivets (brass is the Furnace Fleet's colour, `ROSTER-LOOK.md:239`) on both ring blades and both claw arms, and a spare-tooth rack on a rear hub. The Redjaw benches keep worn teeth "until someone proves a better replacement" (`BIBLE.md:135`). | achievement `tarn_six_at_once`, "Land Redjaw Rend on six machines at once.": on `ultimate_landed` with `ultimate_id` `redjaw_rend` and `hits` 6 or more, count 1 |
+| shell variant | `shell_tarn_redjaw_teeth` | Redjaw Teeth | bone-white replacement teeth with copper rivets (brass is the Furnace Fleet's colour, `ROSTER-LOOK.md` §6 and §0.7) on both ring blades and both claw arms, and a spare-tooth rack on a rear hub. The Redjaw benches keep worn teeth "until someone proves a better replacement" (`BIBLE.md:135`). | achievement `tarn_six_at_once`, "Land Redjaw Rend on six machines at once.": on `ultimate_landed` with `ultimate_id` `redjaw_rend` and `hits` 6 or more, count 1 |
 | outfit | `outfit_tarn_steady_cap` | Steady Cap | a clean welding cap with one Redjaw stripe, in place of the battered one (`BIBLE.md:325`) | hidden discovery `tarn_hold_still`, "Hold still.": break a hostile hold with Q three times as Tarn (`hold_broken` with method `ultimate`, `game_events.gd:130`). **A2-CRITIC:** an achievement row cannot test the pilot (`src/core/progress.gd:259-288`), so Tarn's kit code counts the breaks and grants through `synergy_discovered`, as the Rivet and Kest sheets do. Beat text: "Hold still. The machine, I mean." (`BIBLE.md:329`) |
 
 A4 and B5 own the row grammar for the `where` filters. Hidden rows already exist (`achievements.gd:53`).
@@ -451,8 +451,8 @@ Each run must report a nonzero test count. `--test` matches a file's base name w
 5. Should a snatched enemy's attack telegraph be cancelled? **Default: no;** the set piece's x0.2 damage taken covers it. Revisit in play.
 6. Should the park tables mark big draggable pieces (boulders, barrels) for the claw drag? **Default: parked until wave K-D.**
 7. Should the depth-1 cards name the road's set piece ("Rend road: Rake Run")? **Default: no;** the depth-3 card names it when it is picked.
-8. `ROSTER-LOOK.md` §0.2 lists Tarn's lattice enamel as iron oxide red, but its §6 colour rule says never oxide, because oxide means harm. **Default: bone and petrol, per §6;** A3 resolves it in ROSTER-LOOK.
-9. Slot 3 needs a cockpit control; ROSTER-LOOK §0.2 gives Tarn only yokes and a clamp lever. **Default: a drum lever by the right knee;** A3 and A5 confirm.
+8. `ROSTER-LOOK.md` §0.2 lists Tarn's lattice enamel as iron oxide red, and §0.7 paints every strut in that enamel. The old cage colour rule in §6 says never oxide, because oxide means harm. **Default: an oxide lattice, per §0.7, with a bone seat behind the head and glow only at the tooth edges;** A3 resolves the §6 wording in ROSTER-LOOK.
+9. Where does slot 3's cockpit control sit? **Default: the drum lever, in the lever bank beside the right yoke next to the clamp lever** (`ROSTER-LOOK.md` §0.7; `DrumLever` in `PILOT-CLIPS.md` §5). Q is the copper lap bar and Shift is the two pedals. A3 and A5 confirm.
 
 ### Veto list (calls made under the creative charge)
 

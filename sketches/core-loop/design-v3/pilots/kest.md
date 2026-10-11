@@ -2,7 +2,7 @@
 
 Status: design spec for wave P-C, unit A2-kest of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `38ceda3`. Nothing here is built or played. Every `file:line` cites that commit. Paths without a prefix are under `sketches/core-loop/`; `docs/`, `adr/` and `BIBLE.md` are under the repo root. A number marked (start) is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
 
-Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the framework; every slot, signal, field and knob name here is its name), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the cage), and the A5 animation spec (clip ids).
+Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the framework; every slot, signal, field and knob name here is its name), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the Hoberman mecha, section 0), and the A5 animation spec, [PILOT-CLIPS.md](../PILOT-CLIPS.md) (clip ids).
 
 **Name.** The display name is Kest (`src/core/class_def.gd:101`). The class id stays `demolitions_caster`. Older docs, and the row's `bible_home` (`class_def.gd:105`), call this pilot "Fuse"; this sheet says Kest.
 
@@ -175,7 +175,7 @@ The arc is `RideRail.arc` (`src/world/ride_rail.gd:41-74`) ending at H, with `fl
 
 | Phase | Time | What happens | What you see | What you hear |
 | --- | --- | --- | --- | --- |
-| Wind-up | 0.35 s | the legs are planned and drawn | the arc, H, the stoop line and the landing ring at B in the live colour; the vents snap open, the mortar tube rises | `start_build` (`music_engine.gd:1021-1027`); a fuse fizz rises under it |
+| Wind-up | 0.35 s | the legs are planned and drawn | the arc, H, the stoop line and the landing ring at B in the live colour; the vents snap open, the mortar tubes on the weapon ring tilt up | `start_build` (`music_engine.gd:1021-1027`); a fuse fizz rises under it |
 | Arc beats | 4 beats, 1.40 s | one volley a beat at up to 3 targets round B | each throw's landing ring shows for the beat before it lands, her slot 1 read (`combat.gd:2021-2031`) | one muffled tom tick per volley, walking the motif down: D4, A3, F3 (62, 57, 53) |
 | Hold, beat 1 (peak) | 0.35 s | she hangs at H and cloaks; a volley | `ult_strike`: wings wide, head into the wind | the stinger: the falling triad 62, 57, 53 as three quick tom ticks |
 | Hold, beat 2 | 0.35 s | a volley | the stoop line brightens | one tick |
@@ -200,9 +200,9 @@ The arc is `RideRail.arc` (`src/world/ride_rail.gd:41-74`) ending at H, with `fl
 | arc reach (SKILL-BAR) | 40 m | 47 m | 55 m | 62 m | 70 m |
 | landing radius (SKILL-BAR), +1 m for the stoop | 7 m | 8 m | 9 m | 10 m | 11 m |
 | targets per volley (start) | 3 | 3 | 3 | 4 | 4 |
-| satchel bands on the cage | 3 | 3 | 3 | 4 | 4 |
+| satchel bands on the weapon ring | 3 | 3 | 3 | 4 | 4 |
 
-The last two rows are one fact. One function, `volley_targets(heft_class)`, feeds the set piece, Air Raid's charges per throw and the cage.
+The last two rows are one fact. One function, `volley_targets(heft_class)`, feeds the set piece, Air Raid's charges per throw and the weapon ring's satchel bands.
 
 ### Wardens and bosses
 
@@ -317,17 +317,24 @@ The tree checks this must pass are in section 9.
 
 Power from the bar and the ultimate is paid for in pack scale per world (plan, creative-charge list). This sheet adds no per-world pack numbers.
 
-## 5. The cage
+## 5. The mecha
 
-ROSTER-LOOK owns the shared cage. Its Kest row (`design-v3/ROSTER-LOOK.md:96`) sets the machinery: slotted fin vents (`VaneL`, `VaneR`) that the smoke blink vents through, a short mortar tube in a recoil cradle, satchels in horizontal bands only, fuse tips as the glow, perforated panels as the plates, and a petrol yoke and seat (`ROSTER-LOOK.md:195`). This section adds what the kit drives.
+ROSTER-LOOK section 0 owns the shared Hoberman mecha: a rolling lattice with hubs and gaps, a level weapon ring that yaws to aim, and a gimballed cockpit pod. Its Kest row (section 0.2), its concept rules (section 0.7) and the cleaned sheet (`artifacts/local/alpha/push/w13/concepts/codex/kest/sheet.png`) set her zord:
 
-### One fact, every part of the cage
+- **Lattice.** Petrol teal enamel. Copper hubs with black tread caps. Light perforated panels fill gaps as heft grows.
+- **Vents.** Two slotted fin vanes (`VaneL`, `VaneR`) open out of the side gaps for the glide. The smoke blink vents through their louvres, so this sheet calls them the vents. They stay under Pod, where the vane read finds them (`hero_assets.gd:481-486`). Like the weapon ring, they hold level outside the tumbling lattice, so the V at 2 and 10 o'clock holds while the ball rolls (section 11, item 17).
+- **Weapon ring.** The mortar is two short launcher tubes on the front arc at 11 and 1 o'clock, parallel and pointing forward. The ring yaws to the aim, so the tubes face where the charge lands. Satchels ride the ring in horizontal bands only. Fuse tips are the glow, in amber.
+- **Cockpit.** A petrol seat, which the sheet labels "Perch", hangs in the two-ring gimbal. Twin yokes take her wings, with the slot 1 trigger on a yoke. A lever bank beside the right yoke carries slots 2 and 3. A copper two-handed lap bar is the ultimate. Her feet rest on two pedals for Shift. The labels read "1: Sticky charge", "2: Detonation line", "3: Cable Charge", "Q: Windhover" and "Shift: Smoke blink".
 
-One read, `kest_cage_state()`, sits where `hero_assets.gd` reads `gliding` today (`hero_assets.gd:481-486`). It returns vent angle, fuse glow, mortar pitch and lit satchel bands. Nothing on the cage reads anything else.
+This section adds what the kit drives.
 
-| State | Source fact | Vents | Fuse tips (`class_accent`) | Mortar tube | Satchel bands |
+### One fact, every part of the mecha
+
+One read, `kest_cage_state()`, sits where `hero_assets.gd` reads `gliding` today (`hero_assets.gd:481-486`). Its id keeps the old word "cage". It returns vent angle, fuse glow, mortar pitch and lit satchel bands. Kest's own parts read nothing else. The lattice roll, the pod turn and the weapon ring's yaw to aim are shared motions (ROSTER-LOOK section 0.1).
+
+| State | Source fact | Vents | Fuse tips (`class_accent`) | Mortar tubes | Satchel bands |
 | --- | --- | --- | --- | --- | --- |
-| Rolling | none | folded, 0.10 m past the ring | dim | stowed, level | dark |
+| Rolling | none | folded, 0.10 m past the lattice | dim | stowed, level | dark |
 | Gliding | `kit.gliding` (`augments.gd:431`) | open 90 degrees, as today | dim | stowed | dark |
 | Cloaked | `kit.cloaked` (`combat.gd:2185`) | louvres puff smoke twice a second | off | stowed | dark |
 | Cable Charge loaded | `combat.line_load()` not empty | unchanged | one tip blinks at 2 Hz | unchanged | unchanged |
@@ -336,29 +343,29 @@ One read, `kest_cage_state()`, sits where `hero_assets.gd` reads `gliding` today
 | Flight | `"flight"` | open, smoke trailing | lit | recoils 0.08 m on each beat | one band goes dark per throw |
 | Landing | `ultimate_landed` | slam shut on the boom | dim | stowed | refill over 0.4 s |
 
-All angles and times are (start). Missing nodes are skipped, as `get_node_or_null` already does (`hero_assets.gd:483`), so the read works before the P-D cage lands.
+All angles and times are (start). Missing nodes are skipped, as `get_node_or_null` already does (`hero_assets.gd:483`), so the read works before the P-D mecha lands.
 
 ### Heft accretion, Kest's part
 
-ROSTER-LOOK section 5 sets the five stages (`ROSTER-LOOK.md:124-130`). Kest's rules on top:
+ROSTER-LOOK section 5 sets the five classes and their timings. Section 0.3 sets which gaps take panels at each class. Kest's rules on top:
 
-| Class | ROSTER-LOOK stage | Kest |
+| Class | ROSTER-LOOK section 0.3 | Kest |
 | --- | --- | --- |
-| I | open rider | base cage; folded vents at 2 and 10 o'clock; 3 satchel bands |
-| II | first plates | six perforated bowl panels below Z -0.35; 3 bands |
-| III | plated | tread shoes; 3 bands; while cloaked, smoke breathes out through the panel holes |
-| IV | heavy machine | flank armour at 3 and 9 o'clock, kept below the vent hinges so the V stays clear; 4 bands |
-| V | full | waist-high bowl armour; wide vents (`ROSTER-LOOK.md:130`); 4 bands |
+| I | every gap open | bare lattice, weapon ring and pod; folded vents at 2 and 10 o'clock; 3 satchel bands |
+| II | panels in the lower gaps, below the pod | six perforated panels in the lower gaps, below Z -0.35; 3 bands |
+| III | panels in the side gaps; thicker tread caps on the hubs | perforated side-gap panels, clear of the vent hinges; 3 bands; while cloaked, smoke breathes out through the panel holes |
+| IV | panels in most gaps; the sight gaps stay open | flank panels at 3 and 9 o'clock, kept below the vent hinges so the V stays clear; 4 bands |
+| V | every non-sight gap paneled; hub modules at their heavy form | every non-sight gap paneled, clear of the vent hinges; wide vents (ROSTER-LOOK section 5, class V); 4 bands |
 
-A class drop sheds the top layer and, at IV, its satchel band together (the 0.45 s fling, `ROSTER-LOOK.md:138`). The satchel count is `volley_targets(heft_class)` (section 3), so the cage shows how many targets each set-piece volley takes. The bands light through one `lit_count` shader parameter on one surface, not one mesh per band, so they cost one draw.
+A class drop flings the top layer's panels out of their gaps and, at IV, its satchel band with them (the 0.45 s fling, ROSTER-LOOK section 5). The satchel count is `volley_targets(heft_class)` (section 3), so the weapon ring shows how many targets each set-piece volley takes. The bands light through one `lit_count` shader parameter on one surface, not one mesh per band, so they cost one draw.
 
 ### Silhouette rule: the V at 2 and 10 o'clock
 
-From the chase camera Kest is the only pilot whose outline breaks symmetrically above the 3-to-9 line: two vents sweeping up and back at 2 and 10 o'clock, with one narrow crest centred between them. The others break elsewhere: Sable at 11 and 3, Rivet at 11:30 and 12:30 with a forward V at 4 and 8, Tarn at 4 and 8, Tally at 3 and 9, the Cannon at 5 and 7 (`ROSTER-LOOK.md:94-99`). Plates never cover the vent hinges at any class.
+From the chase camera Kest is the only pilot whose outline breaks symmetrically above the 3-to-9 line: two vents sweeping up and back at 2 and 10 o'clock, with one narrow crest centred between them. The others break elsewhere: Sable at 11 and 3, Rivet at 11:30 and 12:30 with a forward V at 4 and 8, Tarn at 4 and 8, Tally at 3 and 9, the Cannon at 5 and 7 (ROSTER-LOOK section 4). Gap panels never cover the vent hinges at any class.
 
-Check: at the far camera (12 m), with the pilot masked out, a blind reader names Kest from the cage outline alone, 3 of 3, at classes I, III and V. This narrows ROSTER-LOOK rule 10 to Kest.
+Check: at the far camera (12 m), with the pilot masked out, a blind reader names Kest from the mecha outline alone, 3 of 3, at classes I, III and V. This narrows ROSTER-LOOK rule 10 to Kest.
 
-The perch option (`ROSTER-LOOK.md:114`, `:362`) is the board's call, not this sheet's.
+The perch stays open (section 11, item 16).
 
 ## 6. Clips
 
@@ -366,16 +373,16 @@ A5 confirms ids, routes and lengths. Lengths are (start). **Wing** in this table
 
 | Clip | Length | Trigger | Priority, cooldown | Kest's pose |
 | --- | --- | --- | --- | --- |
-| `idle` | 4.0 s loop | the base layer when no reaction plays | n/a | head bobs in small corrections, shoulders still (`BIBLE.md:304`); beak checks a fuse tip on the satchel |
-| `class_up` | 0.9 s | `heft_class_changed` | 50, 4.0 s (SKILL-BAR section 7) | crest up, wings flare once, settles as the plates land |
-| `cast_special` | 0.5 s | `slot_cast` with slot `special` | 30, 1.0 s | one wing sweeps forward along the aim, drawing the lane |
-| `cast_line` | 0.45 s | `line_skill_fired` | 32, 1.0 s | beak taps the line, a flick, eyes follow the charge down it |
+| `idle_loop` | 4.0 s loop | the base layer when no reaction plays | n/a | head bobs in small corrections, shoulders still (`BIBLE.md:304`); eyes check the fuse tips on the weapon ring through the front gap |
+| `class_up` | 0.9 s | `heft_class_changed` | 50, 4.0 s (SKILL-BAR section 7) | crest up, wings flare once, settles as the gap panels slam in |
+| `cast_special` | 0.5 s | `slot_cast` with slot `special` | 30, 1.0 s | the right wing punches the fuse plunger (`FusePlunger`, "2: Detonation line") in the bank beside the right yoke, then sweeps forward along the aim, drawing the lane |
+| `cast_line` | 0.45 s | `line_skill_fired` | 32, 1.0 s | the right wing tip taps the charge key (`ChargeKey`, "3: Cable Charge") on the same bank; eyes follow the charge down the line |
 | `ult_ready` | 0.8 s | `ultimate_ready` | 45, 10.0 s | crest rises, head tips up to the sky |
-| `ult_windup` | 0.35 s | `ultimate_started` | 70, 0.0 s | hunches low over the stick (the rig has no leg bones, `tools/blender/PILOT-RIG.md:23-39`), wings half open, goggles down |
-| `ult_strike` | 0.5 s | `ultimate_peak` | 68, 0.0 s | wings flung wide, head into the wind: the hang pose |
-| `ult_recover` | 0.6 s | `ultimate_landed` | 65, 0.0 s | shakes the smoke out of her feathers; upper body only, control returns at 0.25 s |
-| `smash` | 0.6 s | `demo_slammed` (`src/core/game_events.gd:110`) | 40, 1.0 s | hunches and covers her head with a wing as the minis pop |
-| `unlock` | 3.0 s | `achievement_earned("dig_rescued")` at the rescue site (`achievements.gd:44-45`); again the first time her class card opens | n/a | rises out of the rubble (the `root` bone keyed; seated legs fixed), coughs dust, knocks twice on the cage ring; the gyro spins up on the third beat |
+| `ult_windup` | 0.35 s | `ultimate_started` | 70, 0.0 s | hunches low (the rig has no leg bones, `tools/blender/PILOT-RIG.md:23-39`), both wings close on the copper lap bar, goggles down |
+| `ult_strike` | 0.5 s | `ultimate_peak` | 68, 0.0 s | wings flung wide off the lap bar, head into the wind: the hang pose; both wings back on the bar by the last frame |
+| `ult_recover` | 0.6 s | `ultimate_landed` | 65, 0.0 s | lets go of the lap bar and shakes the smoke out of her feathers; upper body only, control returns at 0.25 s |
+| `smash` | 0.6 s | `slammed` (`game_events.gd:50`), the shared roster row (PILOT-CLIPS.md section 1.1) | 36, 1.0 s | hunches and covers her head with a wing as the minis pop |
+| `unlock` | 3.0 s | `achievement_earned("dig_rescued")` at the rescue site (`achievements.gd:44-45`); again the first time her class card opens | n/a | rises out of the rubble (the `root` bone keyed; seated legs fixed), coughs dust, knocks twice on the gimbal's outer ring; on the third beat the weapon ring spins round on its bearing to face forward |
 
 The unlock knock is a callback to her rescue line, "Says the wall knocked back the whole time" (`achievements.gd:45`), played in her motif's rhythm: knock, knock, spin.
 
@@ -387,7 +394,7 @@ Nothing is bought. Amber cannot be a cosmetic tint: Kest's amber `e5a044` (`src/
 | --- | --- | --- | --- | --- |
 | `trail_kest_fuse_smoke` | trail | Fuse Smoke | a grey smoke ribbon with a spark that crawls back along it, tint `8c8577` | the hidden discovery Blast Vault (codex row `kest_blast_vault`, section 8) |
 | `outfit_kest_rigger` | outfit | Rigger Harness | a load rigger's harness with carabiners and a coil of tag line: she "maintains suspended equipment" (`BIBLE.md:304`) | discovery `kest_homecoming`, "Homecoming", detected in `kest_kit.gd` when Kest enters world 3, granted through `synergy_discovered`. **A2-CRITIC:** an achievement row cannot test the pilot (`src/core/progress.gd:259-288`), so "enter the Highdraft as Kest" cannot be an achievement condition |
-| `shell_kest_roost` | shell variant | Roost Frame | the board's runner-up cage for Kest (`ROSTER-LOOK.md:207`), with its own four heft layers | achievement `kest_tick_tick_boom`, "Tick, Tick, Boom": one set piece whose charges and landing strike 8 different enemies (start) |
+| `shell_kest_roost` | shell variant | Roost Frame | a runner-up Kest mecha from the concept board, with its own four heft layers | achievement `kest_tick_tick_boom`, "Tick, Tick, Boom": one set piece whose charges and landing strike 8 different enemies (start) |
 
 The outfit and shell variant slots come from A4 and B5; today `cosmetics.gd` has only paint, trail, decal and companion paint (`cosmetics.gd:17`). B5 owns the reward key on achievement rows.
 
@@ -455,7 +462,7 @@ A table test in the shape of `tarn_kit_test` and `cannon_kit_test`. Scripted sou
 
 ## 10. Implementation map: unit PC-KEST (wave P-C)
 
-**GOAL.** Kest plays slot 2, the Cable Charge and Air Raid with its two variants from this sheet, with the tree's depths 3 and 4 wired to them, her earned cosmetics granted, and her kit proven headless.
+**GOAL.** Kest plays slot 2, the Cable Charge and Windhover with its two variants (Air Raid, Minelayer) from this sheet, with the tree's depths 3 and 4 wired to them, her earned cosmetics granted, and her kit proven headless.
 
 **SCOPE.**
 
@@ -464,7 +471,7 @@ A table test in the shape of `tarn_kit_test` and `cannon_kit_test`. Scripted sou
 | `src/combat/kest_kit.gd` (new) | the `cable_charge` row for `_line_skills` (`on_body`, `on_world`, `geometry`); the `air_raid`, `minelayer` and `windhover` rows for `_ult_rows` (`tech`, `peak`, `landing`); `minis_per_throw(heft_class)`; `kest_cage_state()` |
 | `src/combat/combat.gd` | one registration call into `kest_kit.gd` at setup; the detonation line preview ticks in `_line_geometry` (`:1839-1843`) |
 | `src/core/ability_state.gd` | four rows (section 3) beside `:59-63` |
-| `src/core/class_def.gd` | Kest's row (`:101-107`) gains `line_id: "cable_charge"` and `ultimate_id: "air_raid"` |
+| `src/core/class_def.gd` | Kest's row (`:101-107`) gains `line_id: "cable_charge"` and `ultimate_id: "windhover"` |
 | `src/core/trees/kest.gd` | the 24 node edits in section 3 |
 | `src/ui/class_kit.gd` | `WORDS` rows (`:15-46`): `cable_charge` "cable charge", `air_raid` "air raid", `minelayer` "minelayer", `windhover` "windhover" |
 | `src/combat/codex_entries.gd` | the three rows in section 8, with their detection points in `kest_kit.gd` |
@@ -480,11 +487,11 @@ A table test in the shape of `tarn_kit_test` and `cannon_kit_test`. Scripted sou
 - Pick 2 and click casts the detonation line; its preview ticks every caught charge, and only those are caught.
 - Pick 3 and click fires the Cable Charge along a standing line or loads it; it goes off when the line ends or on its fuse (2.0 s body, 6.0 s wall), never on a touch.
 - A let-go within 4.5 m of a wall charge with Space held emits `rocket_jumped`.
-- Q at a full meter starts Air Raid on an arc path when ground is in reach; mini charges stay inert until the landing and go off one group per eighth note, newest first.
+- Q at a full meter starts Windhover on an arc to H 14 m over B, holds 2 beats, then stoops; Air Raid's mini charges stay inert until its landing and go off one group per eighth note, newest first.
 - Kest is cloaked through the flight; raid damage never crits and never breaks the cloak.
-- Mini charges per throw follow the heft table; the cage's satchel bands show the same number.
-- Each depth-3 node swaps the ultimate to Minelayer or Windhover as in section 3; each depth-4 node adds its knob; `UpgradeTree.problems("demolitions_caster")` is empty.
-- Minelayer and Windhover meet their tables in section 3.
+- Mini charges per throw follow the heft table; the weapon ring's satchel bands show the same number.
+- Each depth-3 node swaps the ultimate to Minelayer or Air Raid as in section 3; each depth-4 node adds its knob; `UpgradeTree.problems("demolitions_caster")` is empty.
+- Air Raid and Minelayer meet their tables in section 3.
 - The three codex rows open once on their triggers; `codex_coverage_test` passes.
 - The three cosmetics are granted only by their achievement or discovery, and their tints pass the cosmetics row check.
 - `bot_six_demolitions_caster_test` wins world one with slot 2, slot 3 and an ultimate in each win; the posture bands stay green.
@@ -503,7 +510,7 @@ A table test in the shape of `tarn_kit_test` and `cannon_kit_test`. Scripted sou
 | B5 | the outfit and shell variant slots and the achievement reward key |
 | B6 | the framework codex rows Kest's rows sit beside |
 | A5 and P-E | the clip ids and the clips themselves; until then the reaction rows point at today's seven clips |
-| P-D | `VaneL`, `VaneR`, the mortar tube and the satchel band nodes on Kest's cage |
+| P-D | on Kest's mecha: `VaneL` and `VaneR` under Pod, and the mortar tubes and satchel band nodes under WeaponRing |
 
 ## 11. Open questions and veto items
 
@@ -511,17 +518,18 @@ Say "veto" on any line and it changes.
 
 1. Veto: the Cable Charge goes off when the line ends (let-go, smash, cut, break) or on its fuse, never on a touch.
 2. Veto: the Cable Charge has no reel burst on a wall; the blast vault is its wall move.
-3. Veto: Air Raid prefers the arc; a standing line still picks B, and she lobs there.
-4. Veto: Air Raid's mini charges stay inert until the landing, then go off one group per eighth note, back along the path.
+3. Veto: Windhover prefers the arc; a standing line still picks B, and she lobs above it.
+4. Veto: Air Raid (depth-3 variant): mini charges stay inert until the landing, then go off one group per eighth note, back along the path.
 5. Veto: Kest stays cloaked through the whole set piece and 1.5 s after; set-piece damage never crits.
-6. Veto: mini charges per throw run 2, 2, 3, 3, 4 by heft class, and the satchel bands show the same number.
+6. Veto: volley targets and Air Raid mini charges per throw run 3, 3, 3, 4, 4 by heft class (`volley_targets`), and the satchel bands show the same number.
 7. Veto: depth-3 and depth-4 nodes keep their old op and add the ultimate op, rather than being replaced.
-8. Veto: every depth-3 sibling pair offers Minelayer against Windhover.
+8. Veto: every depth-3 sibling pair offers Minelayer against Air Raid.
 9. Veto: the detonation line preview ticks each charge it will catch.
 10. Veto: slot 3's name avoids the word "line"; slot 2 stays "detonation line".
-11. Veto: the unlock clip knocks twice on the cage ring.
+11. Veto: the unlock clip knocks twice on the gimbal's outer ring.
 12. Open: does B3's `plan()` carry several legs? Windhover's hover and every `ult_encore` need it.
 13. Open: should the Cable Charge's wall blast also break cracked walls and breach plates, as a verb the park lane can place?
 14. Open: re-pin `tree_safe_picks_test` with eight new reports, or have B1 exempt ultimate swaps from the safe-growth check?
 15. Open: amber is too close to brass for cosmetic tints, so Kest's earned items use smoke grey and bone. Is that acceptable for her identity?
-16. Open: a perch in place of the seat for Kest is the board's call (`ROSTER-LOOK.md:114`).
+16. Open: ROSTER-LOOK section 0.2 gives Kest a perch, and the cleaned sheet labels her petrol seat "Perch" (`artifacts/local/alpha/push/w13/concepts/codex/kest/sheet.png`, cockpit panel). Does the perch change her seated rest pose, or is it the section 0.7 seat in her colours? PE-KEST waits on this answer (PILOT-CLIPS section 10).
+17. Open: ROSTER-LOOK section 0.2 lists the vents as hub modules, and hubs tumble with the lattice (section 0.1). This sheet keeps `VaneL` and `VaneR` under Pod, where `hero_assets.gd:481-486` reads them, so the V at 2 and 10 o'clock holds. Confirm, or move the vents and the read together.

@@ -19,7 +19,7 @@ A reactor relic is one of the pre-collapse machines that woke under the dam work
 
 - **A squat drum, wider than tall.** About 9 m across and 6 m tall, ribbed like a cooling jacket, sitting in the clamp's jaws. The core dome sits on top inside a lattice cage, so the core is visible through the bars from any side.
 - **Three control-rod stacks** rising 4 m from the drum's rim at 120 degrees, the existing vent stacks grown taller. On a pulse they lift 0.6 m and drop back: the kind's tell is vertical.
-- **Enamel stays dull petrol; only the seams glow** (`warden_kit.gd:6-9`). The seams are Cherenkov blue (`Roster.ANCIENT_LIGHT`, `warden_kit.gd:33`) and breathe with the pulse charge: dim at 0.8, brightening across the 2 s charge, blazing at 5.0 while the core stands open (`warden_kit.gd:19-20`).
+- **Enamel stays dull petrol; only the seams glow** (`warden_kit.gd:6-9`). The seams are uranium-glass green #9dff3c (`Roster.ANCIENT_LIGHT`, `warden_kit.gd:33`) and breathe with the pulse charge: dim at 0.8, brightening across the 2 s charge, blazing at 5.0 while the core stands open (`warden_kit.gd:19-20`).
 
 **At a glance against the other two kinds.**
 
@@ -145,7 +145,7 @@ Board `warden-reactor`, five panels (PARK.md:406). The concept board `artifacts/
 
 | Panel | Frame |
 | --- | --- |
-| `w1_body` | The relic alone on a plain ground at three-quarter view: the ribbed drum in the clamp's jaws, three rod stacks, the caged core dome, blue seams |
+| `w1_body` | The relic alone on a plain ground at three-quarter view: the ribbed drum in the clamp's jaws, three rod stacks, the caged core dome, green seams |
 | `w2_mount_a` | On the dam face from the toe apron: the relic 22 m up the curved concrete, the gates over it open, the sheet pouring |
 | `w3_mount_b` | Inside the head house: the relic on the flume's pour channel, two slag lanes running down the drum floor |
 | `w4_anchor` | The ball hanging on a harpoon line from a gate pier, swinging across the sheet's foot, firing at the relic |

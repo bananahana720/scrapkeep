@@ -18,10 +18,10 @@ The Mind is the superintelligence that ran the old works (SOUND-STORY.md:61). It
 **Body.** Today every Warden is the shared Fleet-built clamp (about 7 m tall and 8 m across, `warden_look.gd:9-12`) with a family kit on top. The mind kit is a 3 m jointed rod rising from the deck, a seam-lit joint, and a 0.9 m glass lens at 7.6 m that turns to face the ball every frame (`warden_kit.gd:98-115`, `137-141`). Stage 5 and 6 also mount presentation mantles, `warden_mantle_hand` and `warden_mantle_choir` (`hero_assets.gd:14-15`). K-F gives the kind its own body and drops the clamp, because neither mounting stands on the ground:
 
 - **A hand, 16 m from wrist to fingertip.** A palm plate 7 m across, four long fingers of three segments each and an opposed thumb, in dull petrol enamel.
-- **Four fingers, four chunks.** Each finger carries one Cherenkov seam. When a chunk shatters, one finger goes dark and curls shut (`boss_posture.gd:18`: four chunks). You can count what is left from 150 m.
-- **Three knuckle hardpoints** on the back of the hand, rimmed in the ancients' blue (PARK.md:414).
+- **Four fingers, four chunks.** Each finger carries one uranium-glass green (#9dff3c) seam. When a chunk shatters, one finger goes dark and curls shut (`boss_posture.gd:18`: four chunks). You can count what is left from 150 m.
+- **Three knuckle hardpoints** on the back of the hand, rimmed in the ancients' green (PARK.md:414).
 - **A wrist stalk, 8 m, ending in the lens cluster.** One big lens 1.8 m across (today's glass, `warden_kit.gd:112-115`) ringed by five small lenses. The cluster always faces the ball, as today (`warden_kit.gd:137-141`).
-- **Enamel stays dull; only the seams glow** (`warden_kit.gd:6-9`). The seams are Cherenkov blue (`Roster.ANCIENT_LIGHT`, `warden_kit.gd:33`) and breathe from 0.8 to 5.0 when the lens stands open (`warden_kit.gd:19-20`, `134`).
+- **Enamel stays dull; only the seams glow** (`warden_kit.gd:6-9`). The seams are uranium-glass green (`Roster.ANCIENT_LIGHT`, `warden_kit.gd:33`) and breathe from 0.8 to 5.0 when the lens stands open (`warden_kit.gd:19-20`, `134`).
 - **Two poses, one rig.** Under the island the hand is palm up, fingers curled up the island's tip, the wrist stalk hanging down with the lens 10 m below the palm. On the spires it is palm down, gripping a perch top like a bird's foot, the wrist raised and the lens 6 m above the perch.
 
 **At a glance against the other two kinds.**
@@ -205,7 +205,7 @@ Board `warden-mind`, five panels (PARK.md:406). The concept board `artifacts/loc
 
 | Panel | Frame |
 | --- | --- |
-| `w1_body` | The hand alone at three-quarter view on a plain ground: palm, four fingers and a thumb in dull petrol enamel, blue seams along each finger, the wrist stalk and the five-lens cluster turned toward the camera |
+| `w1_body` | The hand alone at three-quarter view on a plain ground: palm, four fingers and a thumb in dull petrol enamel, green seams along each finger, the wrist stalk and the five-lens cluster turned toward the camera |
 | `w2_mount_a` | Under the Hanging Isle from the net bowl: the upside-down mountain filling the top of the frame, the hand cupping its tip palm up, the lens hanging below, the three knuckle buttes round the bowl |
 | `w3_mount_b` | The Crown's bowl at dusk: the hand perched palm down on one of three short spires, a second perch empty, the 330 m Crown behind with its beam, lightning in the clouds |
 | `w4_anchor` | Under the island: the ball on a harpoon line from a knuckle, dragged across the bowl as the island tips 10 degrees, firing at the lens |

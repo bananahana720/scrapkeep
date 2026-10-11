@@ -1,6 +1,6 @@
 # The remembered Cannon, pilot sheet (`remembered_cannon`)
 
-Status: design spec for wave P-C, unit A2-cannon of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `38ceda3`. Nothing here is built or played. Every `file:line` cites that commit. Paths without a prefix are under `sketches/core-loop/`; `BIBLE.md`, `docs/` and `adr/` are under the repo root. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 lists them as vetoes.
+Status: design spec for wave P-C, unit A2-cannon of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `38ceda3`. Nothing here is built or played. Every `file:line` cites that commit. The body passages follow the Hoberman mecha in `design-v3/ROSTER-LOOK.md` section 0, which replaced the open cage on the evening of 2026-10-10. Paths without a prefix are under `sketches/core-loop/`; `BIBLE.md`, `docs/` and `adr/` are under the repo root. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 lists them as vetoes.
 
 This sheet fills the per-pilot contract in [SKILL-BAR.md](../SKILL-BAR.md) and uses its names exactly. It replaces the Cannon text in `design-v3/DESIGN-V3.md:185`. Its tree follows the structure the [Sable sheet](sable.md) set in its sections 3.6 and 3.7: every deep node keeps its op and gains one ultimate op, so the six trees read alike.
 
@@ -136,7 +136,7 @@ Build note: `_commit_cannon` (`combat.gd:1470-1489`) gains an optional overrides
 
 - **Does:** after the shared slam (`src/movement/player_ball.gd:891-902`), combat lays a rush ring about the landing through the nearest enemy within 14 m (`combat.gd:1588-1602`, `weapons.gd:138-139`). The flavour has no entry in the ball's `_smashes` table (`player_ball.gd:165`); combat owns it through `slammed` (`combat.gd:324`).
 - **Numbers:** an annulus 8 m wide (`mind_attacks.gd:48`, `:151-156`); 30 damage x slam strength clamped 0.5 to 1.5 (`combat.gd:1601`); warn 1.5 s (`mind_attacks.gd:46`); live 0.6 s (`:47`).
-- New: G4 on live; the `smash_rush` clip (section 6).
+- New: G4 on live; the `smash` clip (section 6).
 
 ## 3. The ultimate: Fire Mission
 
@@ -153,8 +153,8 @@ The Cannon fires itself along an arc. Each beat in the air it calls one of the M
 | 5 | Landing | the default (60 x heft x chain, radius 6 to 10 m by class, knock 26, ends the chain; SKILL-BAR.md:276). Every called zone goes live on the same beat |
 | 6 | Heft scaling | the default table. One override: the apex is capped at 20 m **start**; for flights whose apex would pass it, the carrier's gravity drops to 160 / t squared (t = flight seconds) |
 | 7 | Music | motif `cannon`; the calls play its notes as the build, the peak plays it whole an octave up, the landing strikes it as one chord on the drop (section 3.4) |
-| 8 | Cage | section 3.4 |
-| 9 | Clips | `ult_ready` 0.8 s, `ult_windup` 0.35 s, `ult_strike` 0.5 s, `ult_recover` 0.6 s (section 6) |
+| 8 | Mecha | section 3.4 |
+| 9 | Clips | `ult_ready` 0.8 s, `ult_windup` 0.35 s, `ult_strike` 0.5 s, `ult_recover` 0.6 s (section 6). Both paddles hold the copper lap bar, the Q control, through the flight in the shared `ult_ride_loop` |
 | 10 | Depth 3 | Creeping Barrage and Plate Mortar (section 3.5) |
 | 11 | Depth 4 | one knob on every leaf (section 3.6) |
 | 12 | Wardens and bosses | section 3.3 |
@@ -174,7 +174,7 @@ The gravity in play is 26 m/s squared (`tuning.gd:9`), so an arc's apex is 26 x 
 
 A 7-beat flight (2.44 s) at class II, 47 m of arc. Beats land every 0.349 s after the 0.35 s wind-up.
 
-| Time (s) | Beat | What happens | Sound | Pilot and cage |
+| Time (s) | Beat | What happens | Sound | Pilot and mecha |
 | --- | --- | --- | --- | --- |
 | 0.00 | Q | the arc is planned and drawn whole in live mint with its 3 m corridor; the meter is spent | `start_build(flight_seconds, true)` | `ult_windup`: the lattice folds to a shell casing |
 | 0.35 | launch | the `RideRail` arc departs (`src/world/ride_rail.gd:41-72`); damage taken x0.2 | the build | the barrel pitches down the path |
@@ -210,13 +210,13 @@ The defaults hold (SKILL-BAR.md:301-310). Cannon notes:
 - **Warden as anchor (wave K-F):** a `line` path may end on a Warden. Fire Mission tries the arc first; Creeping Barrage rides the Warden's line first.
 - **Check:** `alpha_posture_bands_test` must keep the grown band at 25 s or more with the Cannon (SKILL-BAR.md:645).
 
-### 3.4 The cage and the music moment
+### 3.4 The mecha and the music moment
 
-| Moment | Cage | Music, synth band | ACE band |
+| Moment | Mecha | Music, synth band | ACE band |
 | --- | --- | --- | --- |
 | Meter full | the four barrel bands light one per beat in motif order, then all four breathe at 1 Hz | the one-layer lift (SKILL-BAR.md:286); the `ultimate_ready` cue plays B4 E5 G5 and a small bell | one pressure step |
-| Wind-up | the Hoberman lattice folds to 85 percent of its radius in 0.35 s and the plates close up like a shell casing; the gun ring stays level; the sight cone stays open | `start_build(flight_seconds, true)` | the band holds |
-| Each call | the barrel snaps to the zone on its beat; that family's band flashes | the family note on the chime, -14 dB, on the beat | the same on the ACE grid |
+| Wind-up | the Hoberman lattice folds to 85 percent of its radius in 0.35 s and the gap panels close up like a shell casing; the weapon ring stays level and keeps its size; the sight cone stays open | `start_build(flight_seconds, true)` | the band holds |
+| Each call | the weapon ring yaws the barrel to the zone on its beat; that family's band flashes | the family note on the chime, -14 dB, on the beat | the same on the ACE grid |
 | Peak | muzzle straight down | the motif whole, an octave up, in sixteenths | the same stinger |
 | Landing | the lattice springs back to full size on the drop, in 0.12 s | `drop_now(4, 0.85)`; the four notes struck together as one chord on the chime at -6 dB; the band's next downbeat is D, home | the handover on the beat |
 
@@ -345,14 +345,14 @@ If the run's pilot is the Cannon, the gate stands empty, and the Cannon's own sh
 
 #### The payoff, part two: the unlock
 
-The summary shows the unlock beat (`achievements.gd:60`). The first time the Cannon's class card shows unlocked, the `unlock` clip plays once (section 6): the gun settles into an empty cradle, and the folded lattice unfolds round it in four steps, each on one note of the motif.
+The summary shows the unlock beat (`achievements.gd:60`). The first time the Cannon's class card shows unlocked, the `unlock` clip plays once (section 6): the gun settles into the empty cockpit seat, and the folded lattice unfolds round it in four steps, each on one note of the motif.
 
 #### The mirror, when the Cannon fights the Mind
 
 - The rim shows an empty cradle where the quiet gun lay. You are that gun.
 - The Mind still quotes you on each adaptation (`event_kinds.gd:127`, `src/core/game_events.gd:138`, `sfx_bank.gd:515-516`). The Cannon's motif comes back inverted and wrong: B3 F#3 D#3 G2 (`harmony.gd:176-185` applied to the cells at `:137`).
 - **Call:** one beat after each quote ends, the Cannon answers with its motif played right, B3 E4 G4 D5, at -10 dB **start**, and its barrel bands blink in order. The quote stays the telegraph (`SOUND-STORY.md:294`); the answer comes after it, never before.
-- When the Mind falls with the Cannon in the cage, `mind.gd` discovers `cannon_old_tune` (section 8), which grants the Choir Barrel (section 7).
+- When the Mind falls with the Cannon in the mecha, `mind.gd` discovers `cannon_old_tune` (section 8), which grants the Choir Barrel (section 7).
 
 The mirror for all six, computed from `harmony.gd:132-137` with `mind_quote` (`:176-185`):
 
@@ -387,60 +387,65 @@ A Cannon lane called down a live Mind lane's line (within 10 degrees and 2 m) be
 
 **World 3, the Mind's home.** The Highdraft's islands and gaps make Fire Mission a crossing as well as an attack: an arc to the next island lands the barrage on whatever waits there. The void rule (section 3.2) skips calls over the gaps. Lane Charge on a spire fires straight out of the spire. Warns are at their tightest. The final fight carries the mirror (section 3.7).
 
-## 5. The cage
+## 5. The mecha
 
-The roster's shared language starts from the plan's "Sphere body" row: an open cage round a seated, fully visible pilot in a cradle, with each pilot's machinery on the cage. Andrew's later direction the same evening sharpens it, and this sheet follows it:
+Andrew rejected the open cage on the evening of 2026-10-10 and chose a fully expanded Hoberman sphere mecha. `design-v3/ROSTER-LOOK.md` section 0 is the shared design for all six pilots, and this section follows it. The mecha has four layers, split by how each one moves (ROSTER-LOOK section 0.1):
 
-- The cage is a fully expanded **Hoberman sphere**: a lattice of scissor-hinged struts that folds and unfolds as one piece, with **nodes** where struts cross and **gaps** between them.
-- Panels and machinery tack onto the nodes and fill the gaps.
-- A weapon rides a **gyro-stabilized horizontal ring** that wraps over the top of the lattice and stays level while the ball rolls.
-- The cradle holds controls the pilot works with its hands, mecha-style, so the ball reads as the pilot's own machine and not a hamster ball.
+- **Lattice** (`Core`): a Hoberman sphere that tumbles with the true ball spin. Flat bars cross in X pairs at copper pivot pins and chain along great circles to **hubs**, with large open **gaps** between them.
+- **Hubs and gaps:** named empties under `Core`, `Hub.00` to `Hub.31` and `Gap.NN`, facing outward. Hub modules clamp at hubs. Gap panels fill gaps.
+- **Weapon ring** (`Pod > WeaponRing`): a flat band at the equator, outside the lattice. It is gyro-stabilised, so it stays level, and it yaws to the aim, not the heading.
+- **Cockpit pod** (`Pod`): upright on a two-axis gimbal, turning to the heading. The pilot works its controls mecha-style, so the ball reads as the pilot's own zord and not a hamster ball.
 
-Section 11 asks the coordinator to carry this into all six sheets.
+**The Cannon's mecha.**
 
-**The Cannon's cage.**
+- **Lattice:** dull petrol enamel on every strut, with copper only on the pivot pins and hubs (ROSTER-LOOK sections 0.2 and 0.7). Outer radius 0.975 m. Thirty scissor chains meet at 12 five-way and 20 three-way hubs, with about five X pairs between neighbouring hubs, so each gap is about as wide as the pilot's head. Every hub is a round copper body with a flat black rubber tread cap. The lattice rides the Core and rolls with the ball (`hero_assets.gd:49-52`). The pilot does not roll.
+- **Weapon ring, the machinery:** one flat band at the equator, radius 1.02 to 1.10 m and 0.08 m tall, with an air gap all round the lattice. Worn-bone segments joined by charcoal clamp blocks ride a full-diameter dark-steel bearing collar with copper studs. One big seamless cast barrel, `MainBarrel` with its `LaneMuzzle`, sits on the ring's front arc at 12 o'clock. The ring yaws to the aim on its collar, so the barrel always points down the aim. The barrel pitches from -10 to +35 degrees **start**. Length 1.1 ball radii, bore 0.28 ball radii **start**. Four raised family bands run from breech to muzzle: lane, split, rush, plate. Every pilot's weapon ring follows the aim (ROSTER-LOOK section 0.1). The Cannon's is the only ring with one big barrel (section 0.2).
+- **Hub modules:** the split ports, `SplitExit.R/L`, are twin-bore blocks on gap brackets from the Pod at 5 and 7 o'clock (rest pose at the low side hubs). The rush ring, `RushContact`, rides a gap bracket at the bottom (rest pose at the bottom hub) (ROSTER-LOOK sections 0.2 and 4).
+- **Cockpit and controls:** a compact pod on a two-axis gimbal. Two nested thin dark-steel rings hold the seat. The outer ring pivots left-right and the inner ring front-back, with copper pivot bosses at each axis. Both rings show through the front gap. The seat back is charcoal, for value contrast with the pilot (ROSTER-LOOK section 0.7). The controls follow the roster layout:
+  - twin yokes under the paddles, labelled "1: Cannon Lane";
+  - a lever bank beside the right yoke: the plate crank, "2: Cannon Plate", and under it the cable clamp lever, "3: Lane Charge";
+  - a copper two-handed lap bar, "Q: Fire Mission", the largest control;
+  - exactly two pedals, "Shift: Recoil Split".
 
-- **Lattice:** cast ancient enamel, bone struts with verdigris hinges, 30 nodes **start** (the classic Hoberman layout). It rides the Core and rolls with the ball (`hero_assets.gd:49-52`). The pilot does not roll.
-- **Gun ring, the machinery:** a horizontal ring round the lattice's crown, like a turret race (the ring a gun turret turns on). It rides the Pod, which stays upright and yaws (`hero_assets.gd:49-52`), so it stays level whatever the lattice does. The barrel housing turns on the race through a full circle to the aim and pitches from -10 to +35 degrees **start**. Length 1.1 ball radii, bore 0.28 ball radii **start**. Four raised family bands run from breech to muzzle: lane, split, rush, plate. It is the only machinery on the roster that follows the aim, not the heading.
-- **Cradle and controls:** a breech-shaped cradle. Two firing levers sit under the pilot's paddles, and a plate crank sits on the right. The pilot works them on each cast: one lever pull per lane call, both levers kicked back on Shift, half a crank turn on the plate, both levers slammed on the smash. The muzzle-head sits under the breech and looks down its own gun.
+  The pilot works them on each cast: a yoke trigger squeeze per lane call, half a crank turn on the plate, a paddle slap on the cable clamp lever for Lane Charge, and both paddles on the lap bar for Fire Mission. The two pedals kick down on Shift; the rig has no leg bones, so code moves them and no clip does (PILOT-CLIPS.md section 5). The smash has no control of its own, so the pilot slaps the seat frame on the slam. The muzzle-head sits above the ring and looks out the front gap along its own barrel.
 - **Bands read the bar.** A band lights when its slot is ready: lane on each call, split when Shift is ready, rush on each slam, plate when slot 2 is ready. The bands read the same `slots()` record the HUD reads (SKILL-BAR.md:435), so body and HUD cannot drift. A full meter lights all four (section 3.4).
-- **The fold:** in the wind-up the lattice folds to 85 percent of its radius **start** and the plates close up like a shell casing. On the landing it springs back to full size in 0.12 s. The Cannon fires itself as the shell, so its cage becomes one. The sight cone stays open throughout.
+- **The fold:** in the wind-up the lattice folds to 85 percent of its radius **start** and the gap panels close up like a shell casing. On the landing it springs back to full size in 0.12 s. The Cannon fires itself as the shell, so its mecha becomes one. The weapon ring stays level and full size throughout, and the sight cone stays open. The collider does not change. This fold stands in for the roster's full-span extra (ROSTER-LOOK section 0.5) on this pilot (question 10).
 
-**Plates accrete with heft class** (classes I to V at heft 1.0, 1.5, 2.2, 3.2 and 4.6, `src/core/run_state.gd:21`). Plates bolt to nodes and fill gaps from the bottom up. Two rules bind every class:
+**Gap panels fill with heft class** (classes I to V at heft 1.0, 1.5, 2.2, 3.2 and 4.6, `src/core/run_state.gd:21`). The Cannon's panels are seamless verdigris carapace plates, the roster's showcase (ROSTER-LOOK section 0.2). They drop into the `Gap` empties from the bottom up, and accretion chunks snap to the nearest hub (section 0.3). Two rules bind every class:
 
-1. **No plate ever enters the sight cone**, the cone from the chase camera to the pilot's head and paddles, so the pilot stays fully visible.
-2. **No plate enters the barrel's sweep**, so the gun can always turn.
+1. **No panel ever fills a sight gap.** The sight gaps lie on the cone from the chase camera to the pilot's head and paddles, so the pilot stays fully visible.
+2. **Nothing enters the weapon ring's sweep.** No panel or hub module stands out into the band's path, so the ring can always yaw.
 
-| Class | Added plates | Reads as |
+| Class | Added | Reads as |
 | --- | --- | --- |
-| I | none: bare lattice, gun ring and barrel | a rider in a gun cradle |
-| II | scrap pads on the 6 lowest nodes; a scrap muzzle brake on the barrel | a rider with a weapon |
-| III | the lowest third's gaps filled; a scrap jacket over the barrel's breech half | a gun carriage |
-| IV | every gap below the gun ring filled except the sight cone; a skirt round the race | an armoured carriage |
-| V | every gap filled except the sight cone and the barrel's sweep | a rolling turret |
+| I | none: bare lattice, the weapon ring with its barrel, and the pod; every gap open | a rider at a gun |
+| II | carapace panels in the lower gaps, below the pod; a scrap muzzle brake on the barrel | a rider with a weapon |
+| III | carapace panels in the side gaps as well; thicker tread caps on the hubs; a scrap jacket over the barrel's breech half | a gun carriage |
+| IV | carapace panels in most gaps, with only the sight gaps open; a short scrap skirt hung from the bearing collar | an armoured carriage |
+| V | every gap paneled except the sight gaps; the split ports and the rush ring grow to their heavy form | a rolling turret |
 
-Losing a class sheds the outermost layer's plates as scrap. Durability is scrap armour; the cage shows it. The heft layers are `detail` shells beside the cage's `shell`, and the Choir Barrel variant (section 7) swaps only the `BarrelHousing` node at every layer, so the shell variant and the heft layers share one loader path (the plan's creative-charge call).
+Losing a class flings the outermost layer's panels out of their gaps as scrap. Durability is scrap armour; the mecha shows it. The heft layers are `detail` shells beside the mecha's `shell`, and the Choir Barrel variant (section 7) swaps only the `BarrelHousing` node under `WeaponRing` at every layer, so the shell variant and the heft layers share one loader path (the plan's creative-charge call).
 
-**Silhouette rule at chase distance.** The Cannon is the only pilot with a level break on the crown that moves: the barrel rides 0.25 ball radii above the crown and turns with the aim, over the split ports at 5 and 7 o'clock. **A2-CRITIC:** the draft said "the only pilot whose machinery breaks the top of the outline", but Rivet's twin stacks stand at 11:30 and 12:30 (`pilots/rivet.md` section 5) and Sable's mast at 11. The separating facts are shape and motion: Rivet's stubs are vertical and still, the barrel is long, level and swings with the reticle. The far blind pair must name Rivet against the Cannon 3 of 3 with the aim held straight ahead, the hardest case. From behind it reads as a ball with a gun on top that points where you look. Rivet's drill nose points along the heading and sits at the front; the Cannon's barrel sits on top and follows the reticle. P-D's far blind pair checks the rule.
+**Silhouette rule at chase distance.** The barrel rides the weapon ring at the equator and swings with the aim. With the aim straight ahead, the ball hides it from the chase camera, as the concept picture shows (`artifacts/local/alpha/push/w13/concepts/codex/cannon/chase.png`). So the Cannon's chase read is low: the twin-bore split ports at 5 and 7 o'clock and the rush ring on the bottom hub. When the aim swings well off the camera's line, the long level barrel breaks the outline at the equator on that side. **A2-CRITIC** found that a crown break could not carry the Cannon, because Rivet's stacks and Sable's mast broke the crown too. The Cannon now puts nothing on the crown. Rivet's exhaust stacks stand on rear hubs, high; the Cannon's ports and rush ring sit low. On the ring, Rivet carries twin parallel barrels and the Cannon one big barrel (ROSTER-LOOK section 0.2). The far blind pair must name Rivet against the Cannon 3 of 3 with the aim held straight ahead, the hardest case. P-D's far blind pair checks the rule.
 
-Budgets come from the plan: the pilot GLB under the `pilot` class (4,600 tris, 3,100 verts, 5 draws); the cage with its barrel as `world_one/shell_cannon.glb` under `shell`; plate layers under `detail`. Today's pilot GLB stays (`hero_assets.gd:35`).
+Budgets come from the plan: the pilot GLB under the `pilot` class (4,600 tris, 3,100 verts, 5 draws); the lattice, weapon ring, barrel and pod as `world_one/shell_cannon.glb` under `shell`; gap-panel layers under `detail`. Today's pilot GLB stays (`hero_assets.gd:35`). The static shell takes the asset forge's shell brief (`tools/asset-forge/kinds/model/brief.shell.md`: +Y forward, centre pivot, `Core`, `Pod` and `Dome` nodes). That brief keeps every vertex within 0.985 m. The lattice fits; the weapon ring and barrel do not (question 11).
 
 ## 6. Clips
 
-The seven existing reactions stay: `drop_land`, `big_cheer`, `wince`, `slump`, `phew`, `brace`, `heave` (`tools/blender/pilot_cannon.py:35-52`, `src/presentation/pilot_reactions.gd:5-18`). New clips, lengths **start**, ids for A5 to confirm:
+The seven existing reactions stay: `drop_land`, `big_cheer`, `wince`, `slump`, `phew`, `brace`, `heave` (`tools/blender/pilot_cannon.py:35-52`, `src/presentation/pilot_reactions.gd:5-18`). New clips, lengths **start**, ids as the clip spec names them (`design-v3/PILOT-CLIPS.md` section 2):
 
 | Clip | What the pilot does | Length | Trigger | Priority, cooldown |
 | --- | --- | --- | --- | --- |
-| `idle` | taps a paddle on the breech every 2 beats; the lenses track the reticle | 2.79 s loop, 8 beats at 172 BPM, so the tap sits on the band | none; loops under every other clip | 0 |
-| `class_up` | pats the barrel; the bands flash in motif order as the new plates snap on | 0.9 s | `heft_class_changed`, rising only (`game_events.gd:36`) | 50, 4.0 s |
-| `cast_special` | turns the plate crank half a turn; the muzzle drops along the cone | 0.6 s | `slot_cast` with slot `special` | 30, 1.0 s |
-| `cast_line` | the right paddle slaps the cable clamp; the muzzle snaps along the cable | 0.45 s | `line_skill_fired` | 32, 1.0 s |
+| `idle_loop` | taps a paddle on a yoke every 2 beats; the lenses track the reticle | 2.79 s loop, 8 beats at 172 BPM, so the tap sits on the band | none; loops under every other clip | 0 |
+| `class_up` | pats a yoke; the bands flash in motif order as the new carapace panels slam into their gaps | 0.9 s | `heft_class_changed`, rising only (`game_events.gd:36`) | 50, 4.0 s |
+| `cast_special` | turns the plate crank, "2: Cannon Plate" in the lever bank beside the right yoke, half a turn; the muzzle drops along the cone | 0.6 s | `slot_cast` with slot `special` | 30, 1.0 s |
+| `cast_line` | the right paddle slaps the cable clamp lever, "3: Lane Charge", under the plate crank; the muzzle snaps along the cable | 0.45 s | `line_skill_fired` | 32, 1.0 s |
 | `ult_ready` | four lens blinks in the motif's rhythm, muzzle up | 0.8 s | `ultimate_ready` | 45, 10.0 s |
-| `ult_windup` | tucks into the cradle and grips both levers as the lattice folds | 0.35 s | `ultimate_started` | 70, 0 s |
-| `ult_strike` | at the apex: paddles wide, muzzle straight down | 0.5 s | `ultimate_peak` | 68, 0 s |
-| `ult_recover` | the lattice springs open; it lets go of the levers and shakes out the paddles; muzzle back level. The first 0.25 s is the framework recovery, the rest cancels on input | 0.6 s | `ultimate_landed` | 65, 0 s |
-| `smash_rush` | muzzle down at the landing, one paddle slap on the cradle rim | 0.55 s | `slammed`, through a `class_clips` override for `remembered_cannon` (`pilot_reactions.gd:21-22`) | 35, 1.0 s |
-| `unlock` | settles into an empty cradle; the folded lattice unfolds round it in four steps, one motif note each; it sits up and looks down the barrel | 2.79 s, 8 beats | the first time the class card shows the Cannon unlocked after `achievement_earned("mind_quieted")` (`game_events.gd:174`) | once per profile |
+| `ult_windup` | tucks into the seat and grips the copper lap bar, "Q: Fire Mission", with both paddles as the lattice folds; it holds the bar through the flight in the shared `ult_ride_loop` | 0.35 s | `ultimate_started` | 70, 0 s |
+| `ult_strike` | at the apex: paddles wide off the lap bar, muzzle straight down, then back on the bar | 0.5 s | `ultimate_peak` | 68, 0 s |
+| `ult_recover` | the lattice springs open; it lets go of the lap bar and shakes out the paddles; muzzle back level. The first 0.25 s is the framework recovery, the rest cancels on input | 0.6 s | `ultimate_landed` | 65, 0 s |
+| `smash` | muzzle down at the landing, one paddle slap on the seat frame; the smash has no control of its own | 0.55 s | `slammed` (`game_events.gd:50`), the shared roster row (PILOT-CLIPS.md section 1.1) | 36, 1.0 s |
+| `unlock` | settles into the empty cockpit seat; the folded lattice unfolds round it in four steps, one motif note each; it sits up and looks down the barrel | 2.79 s, 8 beats | the first time the class card shows the Cannon unlocked after `achievement_earned("mind_quieted")` (`game_events.gd:174`) | once per profile |
 
 Priorities and cooldowns for the shared signals are the framework's (SKILL-BAR.md:472-480). The pose route is A5's: pose tables to Blender actions on `pilot-v1` by the `anim_pilot_reactions.py` route.
 
@@ -486,7 +491,7 @@ The framework's five rows stay B6's (SKILL-BAR.md:456-464). The Cannon adds thes
 | `cannon_plate_mortar` | Plate Mortar | the first Plate Mortar lands | Brace them from above. | a high lob + plates + the landing | Every beat of the lob drops a plate. The landing hits every braced enemy as a slam, at 1.4 times. |
 | `cannon_recital` | Recital | lane, split, rush and plate strike in order within 6 s | The gun hums four notes when it is happy. | lane, split, rush, plate | Land the four families in the order the Cannon hums them and the tune plays whole. The plate comes back half charged. |
 | `cannon_time_on_target` | Time on Target | one Fire Mission landing strikes 8 or more enemies | Everything at once. | Fire Mission + a crowd | Every shell you called in the air landed on the same beat, on eight of them. |
-| `cannon_old_tune` | Old Tune | the Mind falls with the Cannon in the cage | It got your tune wrong all fight. | the Mind + its own gun | The Mind played your tune back wrong all fight. Its own gun played it right. |
+| `cannon_old_tune` | Old Tune | the Mind falls with the Cannon in the mecha | It got your tune wrong all fight. | the Mind + its own gun | The Mind played your tune back wrong all fight. Its own gun played it right. |
 | `mind_quiet_gun` | The Quiet Gun | the Mind falls with any pilot | One of its guns never fired. | the Mind's rim, listening | A gun on the rim never fired. It learned one note each time the Mind showed a new attack. |
 
 `cannon_lane_charge` and `cannon_fire_mission` are the first-time cards for slot 3 and the ultimate. The two variant rows are the first-time cards for depth 3. The last four stay hidden until found.
@@ -591,7 +596,8 @@ Headless proofs that fail loud, in the style of `tests/cannon_kit_test.gd` (the 
 7. ABILITIES `beats` has no stated meaning; default: 0 means the path length sets the beats, a positive number fixes them.
 8. Achievements cannot require a specific pilot (`progress.gd:258-285`); default: Cannon-only grants ride codex discoveries detected in code, as section 7 does.
 9. Six P-C units edit the same tables; default: B1 and B3 pre-seed one marked block per pilot.
-10. Andrew's later cage direction (a fully expanded Hoberman sphere, panels on nodes and gaps, a stabilized weapon ring over the top, mecha-style cradle controls) came after the plan's "Sphere body" row; default: this sheet follows it, and P-D and the other five sheets adopt the same lattice.
+10. The Cannon folds its lattice to 85 percent for Fire Mission, where the roster's full-span extra opens it past rest (ROSTER-LOOK.md section 0.5); default: the Cannon keeps the fold, and if the full-span extra is on, its landing springs past rest to the full span before it settles.
+11. The asset forge's shell brief keeps every vertex within 0.985 m, but the weapon ring reaches 1.10 m (ROSTER-LOOK.md section 0.1) and the barrel reaches further; default: P-D exempts `WeaponRing` and its children from that limit.
 
 ### Veto list (Calls under the creative charge; say "veto" on any line)
 
@@ -606,8 +612,8 @@ Headless proofs that fail loud, in the style of `tests/cannon_kit_test.gd` (the 
 9. The 45-posture cap covers the whole set piece, not the landing alone.
 10. Depth 3: Creeping Barrage (line first, lanes rolling ahead) against Plate Mortar (high lob, plates, a slam landing), every pair one of each, every old op kept.
 11. Depth 4: every leaf keeps its op and gains one `ult_*` knob; siblings differ.
-12. The barrel turns on a level gun ring at the lattice's crown and follows the aim; that is the silhouette rule.
-13. No plate ever enters the sight cone at any heft class.
+12. The barrel rides the level weapon ring at the equator and follows the aim; with the aim ahead, the low split ports and the rush ring carry the chase read.
+13. No gap panel ever fills a sight gap at any heft class.
 14. The Hoberman lattice folds into a shell casing for the wind-up and flight, and springs open on the landing.
 15. The quiet gun learns one note per Mind phase and plays the motif when the Mind falls.
 16. The ending shows the gun at the gate and lets it answer "Nobody answers from the next island"; no copy change.

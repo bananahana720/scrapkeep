@@ -2,7 +2,7 @@
 
 Status: design spec for wave P-C, unit A2-tally of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `38ceda3`. Nothing here is built or played. Every `file:line` cites that commit. Paths without a prefix are under `sketches/core-loop/`. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
 
-Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; this sheet uses its names exactly), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the cage language), [DESIGN-V3.md "Tally's program cards"](../DESIGN-V3.md) (`DESIGN-V3.md:192-241`, the kit decisions D1 to D15 this sheet keeps or replaces) and [LEGIBILITY.md](../LEGIBILITY.md). It supersedes the Tally text in DESIGN-V3 where the two disagree.
+Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; this sheet uses its names exactly), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the Hoberman mecha language; section 0 is the live design), [DESIGN-V3.md "Tally's program cards"](../DESIGN-V3.md) (`DESIGN-V3.md:192-241`, the kit decisions D1 to D15 this sheet keeps or replaces) and [LEGIBILITY.md](../LEGIBILITY.md). It supersedes the Tally text in DESIGN-V3 where the two disagree.
 
 Terms, defined once:
 
@@ -32,11 +32,11 @@ Terms, defined once:
 
 | Place | Name, ability id | Fire shape | What it does | Numbers (start where new) | What the player sees and hears | Stays from today | New |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 (home) | Balance Due, `ledger_reader` running card `balance_due` | tap | A capacitor ring discharges once at the aim point. Damage grows with planar speed at the press. | 1 pressure. Reach 30 m. Radius 3 m. Damage 10 + 1.2 per m/s, cap 56: 19 at the cruise floor (7.7 m/s), 29 at fast (16.1), 42 at blazing (26.6) (`src/movement/speed_tier.gd:8`, `tuning.gd:7`). Knock 6. Recovery 0.4 s. | The 3 m footprint in neutral sand at the aim (D15). Pressure pips on slot 1 and lit windows on the drum faces (section 5). `tally_balance_due` on the release (`src/presentation/audio.gd:88`). An empty reader shakes the pips 3 px with a slate flash and the dull tick. | `_run_balance` (`combat.gd:1754-1771`), constants `weapons.gd:100-101, 117-122`, pressure 3 (`ability_state.gd:68`), card dispatch (`combat.gd:1620-1645`). | `cards` shrinks to `["balance_due"]`, so `bay` is always 0. A dry press emits `verb_failed("fire", "cooling")`, today it is silent (`combat.gd:1696-1698`). |
+| 1 (home) | Balance Due, `ledger_reader` running card `balance_due` | tap | A capacitor ring discharges once at the aim point. Damage grows with planar speed at the press. | 1 pressure. Reach 30 m. Radius 3 m. Damage 10 + 1.2 per m/s, cap 56: 19 at the cruise floor (7.7 m/s), 29 at fast (16.1), 42 at blazing (26.6) (`src/movement/speed_tier.gd:8`, `tuning.gd:7`). Knock 6. Recovery 0.4 s. | The 3 m footprint in neutral sand at the aim (D15). Pressure pips on slot 1 and cream-filled windows on the drum faces (section 5). `tally_balance_due` on the release (`src/presentation/audio.gd:88`). An empty reader shakes the pips 3 px with a slate flash and the dull tick. | `_run_balance` (`combat.gd:1754-1771`), constants `weapons.gd:100-101, 117-122`, pressure 3 (`ability_state.gd:68`), card dispatch (`combat.gd:1620-1645`). | `cards` shrinks to `["balance_due"]`, so `bay` is always 0. A dry press emits `verb_failed("fire", "cooling")`, today it is silent (`combat.gd:1696-1698`). |
 | 2 | Gather Plate, `gather_plate` | tap | Plants a plate at the aim point. Ordinary enemies within the radius roll toward it, harder from farther out. No damage. Never the player or a Warden. | **Cooldown 6.0 s, 1 charge, no pressure (Call).** Reach 30 m. Radius 4 m. 4 s. Pull tick 0.2 s, knock 6 x clamp(distance / 4, 0.25, 1). One plate at a time; a new one replaces the old. | A cream disc with punched holes, its 4 m ring drawn at cast (`combat.gd:1709`). A copper plate ring on D3, `tally_plate` (new, keyed). The pulled enemies skid toward it. | `_run_gather`, `_step_plate`, `_ordinary` (`combat.gd:1703-1710, 1654-1672, 1647-1651`), constants `weapons.gd:104-107`. | Moves from a card to the special slot through B1's tap path (SKILL-BAR section 1). Drops `_spend_card`. Inherits plate return's 6 s slot cooldown, so the special-slot relics and tree nodes keep their meaning. |
 | 3 | Ledger Clip, `link_clips` (line skill) | tap | **On a body latch:** clips the latched enemy and its 2 nearest neighbours within 9 m for 4 s. Each clip pays 1 pressure at once. The next direct hit on any clip arcs once to every other clip. **On a world latch:** plants a clip post. The first 3 enemies that pass within 4 m of it in 4 s become clips and pay 1 pressure each. The ball also gets the default `reel_burst`, +8 m/s toward the anchor. **No line:** loads the next bite for 4 s. | **Cooldown 8.0 s, 1 charge, no pressure (Call).** Load 4.0 s. Clips at most 3. Arc damage max(8, 0.6 x the hit's force) x the chain multiplier stored at the cast (`chain.gd:49`). Pressure pay never passes the cap. | While slot 3 is selected and a line stands, the committed geometry: a 9 m ring round the latched enemy and a tick on each enemy it will clip. A cream paper tag on each clip, dotted cream thread between clips. Sound `tally_clip`: a paper-punch click and one ledger stroke per clip, D4, E4, F4, rising a semitone per chain link like `chain_link`. `cog_tick` per pressure point. A loaded bite shows a cream tag on the hook head. | `_run_link`, `_link_target`, `_on_card_struck` (`combat.gd:1734-1752, 1715-1732, 1775-1801`), constants `weapons.gd:110-115`. | Becomes a `_line_skills` row (SKILL-BAR section 7). The aim-ray target becomes the latched body. The clip post, the pressure pay and the stored chain multiplier are new. |
-| Shift chip | Flywheel Surge, `flywheel_surge` | instant | A kick-start: drives the ball along its travel, or along the aim when nearly still, and the spun-up drums pay 1 pressure. | Cooldown 4.0 s, 1 charge. Speed max(planar, 16 x 1.3 = 20.8 m/s); keeps vertical speed (`augments.gd:109-112, 305-315`; `tuning.gd:15`). **+1 pressure per surge, to the cap (start, A2-CRITIC Call).** | Unchanged cue, plus `cog_tick` for the pressure point. New body read: the ledger drums spin to 3x for 0.4 s, one drum window lights, and steam leaves `ReturnExit` (`tools/blender/shell_tally.py:159`). | The speed rule. | Never selectable (SKILL-BAR section 1). The pressure pay is new (A2-CRITIC): a speed floor is near Sable's shove and Rivet's sprint in feel, so the surge's purpose becomes the wallet. It raises her income by at most 1 point per 4 s, a quarter of what cruise rolling pays (1 per 2 s, `weapons.gd:122`). |
-| Ctrl chip | Stamp Slam, `stamp_slam` | instant | The shared slam, then the stamp: every enemy within 9 m turns into 1 pressure. A clip inside the stamp counts as a direct hit, so the stamp fires the clip arc. | Slam radius 9 m, knock 26 x strength (`augments.gd:67-68`, `player_ball.gd:891-903`). +1 pressure per enemy reached, to the cap (`player_ball.gd:934-942`). The stamp replaces the ordinary slam's +1 (`combat.gd:308-310`). | Unchanged cue, plus the `smash_stamp` clip (section 6). | All of it, including the arc: the shared slam strikes as `slam`, which reaches `_on_card_struck`. | Nothing in code. The clip combo is now taught by the codex row `tally_skim` (section 8). |
+| Shift chip | Flywheel Surge, `flywheel_surge` | instant | A kick-start: drives the ball along its travel, or along the aim when nearly still, and the spun-up drums pay 1 pressure. | Cooldown 4.0 s, 1 charge. Speed max(planar, 16 x 1.3 = 20.8 m/s); keeps vertical speed (`augments.gd:109-112, 305-315`; `tuning.gd:15`). **+1 pressure per surge, to the cap (start, A2-CRITIC Call).** | Unchanged cue, plus `cog_tick` for the pressure point. New body read: the ledger drums spin to 3x for 0.4 s, one more drum window fills cream, and steam leaves `ReturnExit` (`tools/blender/shell_tally.py:159`). | The speed rule. | Never selectable (SKILL-BAR section 1). The pressure pay is new (A2-CRITIC): a speed floor is near Sable's shove and Rivet's sprint in feel, so the surge's purpose becomes the wallet. It raises her income by at most 1 point per 4 s, a quarter of what cruise rolling pays (1 per 2 s, `weapons.gd:122`). |
+| Ctrl chip | Stamp Slam, `stamp_slam` | instant | The shared slam, then the stamp: every enemy within 9 m turns into 1 pressure. A clip inside the stamp counts as a direct hit, so the stamp fires the clip arc. | Slam radius 9 m, knock 26 x strength (`augments.gd:67-68`, `player_ball.gd:891-903`). +1 pressure per enemy reached, to the cap (`player_ball.gd:934-942`). The stamp replaces the ordinary slam's +1 (`combat.gd:308-310`). | Unchanged cue, plus the `smash` clip (section 6). | All of it, including the arc: the shared slam strikes as `slam`, which reaches `_on_card_struck`. | Nothing in code. The clip combo is now taught by the codex row `tally_skim` (section 8). |
 | Q | Plate Return, `plate_return` (ultimate) | press | The set piece in section 3. | Meter, wind-up, flight and defence from SKILL-BAR section 4. | Section 3. | The id, the name and the idea: the plate comes home. | All behaviour. The F-special gauge corridor (`combat.gd:1802-1836`) retires. |
 
 **Card lines** (8 words or fewer, for `class_card.gd` per SKILL-BAR section 5):
@@ -84,8 +84,8 @@ During a committed smash the clip fires and the haul continues (SKILL-BAR sectio
 | Landing | **Settle up.** The strike: 60 x heft multiplier x chain multiplier within the landing radius, knock 26 (framework). Then each clip outside the radius takes one settle arc from the landing point for 40% of the strike. Then pressure refills to full. The chain ends, as a paid smash ends it. |
 | Heft scaling beyond the default | the clip cap, below |
 | Music | below |
-| Cage | below |
-| Clips | `ult_ready` 0.8 s, `ult_windup` 0.35 s, `ult_strike` 0.5 s, `ult_recover` 0.7 s (section 6) |
+| Mecha | below |
+| Clips | `ult_ready` 0.8 s, `ult_windup` 0.35 s, `ult_strike` 0.5 s, `ult_recover` 0.7 s (section 6). Her paws take the copper lap bar at the wind-up and hold it through the flight in the shared `ult_ride_loop` (PILOT-CLIPS section 1). |
 | Card line, codex, run log | "Ride home. Every clip settles on landing."; codex row `tally_books_balanced` (section 8); run log `ultimates` rows with id `plate_return`, where `volley_hits` counts clips made and `landing_hits` counts strike hits plus settles |
 
 A clip inside the landing radius takes the strike, never a settle as well, so no enemy is paid twice. `ultimate_landed`'s `hits` counts strike hits plus settles.
@@ -131,13 +131,13 @@ Tally's leitmotif counts four strokes up the ledger and strikes the total an oct
 
 The books balance on the drop. A player who hears four strokes and no total knows the ride was bailed.
 
-### Cage during the ride
+### Mecha during the ride
 
 | Phase | What the machinery does |
 | --- | --- |
-| ready | `class_accent` glows at the reader slot; the drum tape turns one slow turn a second, in step with the 1 Hz ring breathe |
-| wind-up | all three cards stand up in the reader carriage; the drums spin up |
-| flight | drums at full spin; a card leaves `ReaderExit` on each volley (`shell_tally.py:158`) |
+| ready | `class_accent` glows at the card slot (`ReaderExit`) on the weapon ring, the only light on the mecha (ROSTER-LOOK section 0.7); the drum tape turns one slow turn a second, in step with the 1 Hz ring breathe |
+| wind-up | all three cards stand up in the card bank (`ReaderCarriage`); the drums spin up |
+| flight | drums at full spin; a card leaves `ReaderExit`, the card magazine's slot on the weapon ring, on each volley (`shell_tally.py:158`); the ring stays level and yaws with the aim |
 | peak | the tape tears and streams behind for the rest of the flight |
 | landing | `StampContact` stamps the ground (`shell_tally.py:159`); a ring of punched paper bursts out |
 
@@ -235,54 +235,56 @@ New `ABILITIES` rows (`ability_state.gd:48-75`), owned by the P-C unit:
 | 2, the Dig (the Waking; swarm-remnant Wardens) | 3 | The set-piece choice: Audit Trail or Flywheel Throw, each bundled with a kit perk. | Swarm adds count as ordinary (`combat.gd:1649-1651`), so plates and Flywheel Throw's small plates gather them. Audit Trail carpets a tunnel. Flywheel Throw clears a sinkhole bowl. Harpoon-spam answers enter here (plan, creative-charge list): a deflector cannot reflect a clip, because a clip is a tag, not a shot; Tally's answer to a deflector is clip it, then stamp a clip beside it. |
 | 3, the Highdraft (the Mind; the Mind's hands) | 4 | One set-piece modifier: encore, beats, radius, volley or settle. | Arc reach 62 to 70 m at heft IV and V crosses island gaps; encore legs hop to the next island. The Mind quotes her motif inverted with the total a semitone flat (`mind_tally`, `audio.gd:90`; SOUND-STORY.md:61), so the boss's telegraph is her own tune going wrong. |
 
-## 5. The cage
+## 5. The mecha
 
-The open gyro cage from ROSTER-LOOK section 2: tread rings on Core, the gyro hoop, and the upright Pod with yoke, cradle and seat, with Tally seated and fully visible. Her row is ROSTER-LOOK section 4 (`ROSTER-LOOK.md:98`). This section adds what her machinery reads.
+The Hoberman mecha from ROSTER-LOOK section 0. A mulberry lattice on Core tumbles with the roll and carries the Hub and Gap empties. A level weapon ring under Pod yaws to the aim. The upright Pod hangs in a two-axis gimbal and holds the seat, twin yokes, the card bank, a copper lap bar and two pedals. Tally sits centred at the equator, her face clear through the front gap. Her row is ROSTER-LOOK section 0.2. This section adds what her machinery reads.
 
-### Machinery: the ledger drums and the reader
+### Machinery: the ledger drums, the card bank and the card magazine
 
 | Part (node, `shell_tally.py`) | Form | What it reads (form mirrors function) |
 | --- | --- | --- |
-| Ledger drums, `Flywheel.R/L` and `FlywheelAxis.R/L` (`:132-143`) | Today's flywheels, wound with punched card tape. At 3 and 9 o'clock, level, 0.12 m past the ring (`ROSTER-LOOK.md:98`). | **Pressure.** Each drum face, the rear tell, carries four punched windows. One window lights cream per pressure point. The fourth stays capped with a copper blank until the shop part raises the cap to 4. The HUD pips and the windows read the same slot record (`ability_state.gd` `slots()`), so they cannot drift apart. Surge spins them; the set piece runs them flat out. |
-| Reader carriage, `ReaderCarriage` with `CardBay.0/1/2` (`:144-157`) | A petrol box with three punched cards in a row, behind the seat. | **Selection.** Bay 0 is slot 1, bay 1 slot 2, bay 2 slot 3. The selected slot's card stands 0.06 m proud; the others lie flat (DESIGN-V3 D11, now driven by `selected`). It slides in 0.12 s, the same time as the HUD mouse glyph. A cooling slot's card shows slate. |
-| `ReaderExit` (`:158`) | The card slot at the carriage top. | Glow point (`class_accent`) at ultimate ready. A card leaves here on each volley. |
-| `ReturnExit` (`:159`) | A vent low behind the seat. | Steam on every surge. |
-| `StampContact` (`:159`) | The stamp sole under the bowl. | Fires its stamp on the stamp slam and the set-piece landing. |
+| Ledger drums, `Flywheel.R/L` and `FlywheelAxis.R/L` (`:132-143`) | Today's flywheels, wound with punched card tape. Hub modules on the 3 and 9 o'clock hubs, 0.12 m proud of the lattice, just above the weapon ring (ROSTER-LOOK section 0.2). Section 11, coordinator item 6, asks how they stay level. | **Pressure.** Each drum face, the rear tell, carries four punched windows. One window shows cream per pressure point, from a punched card behind it. The windows never glow; only the card slot does (ROSTER-LOOK section 0.7). The fourth stays capped with a copper blank until the shop part raises the cap to 4. The HUD pips and the windows read the same slot record (`ability_state.gd` `slots()`), so they cannot drift apart. Surge spins them; the set piece runs them flat out. |
+| Card bank, `ReaderCarriage` with `CardBay.0/1/2` (`:144-157`) | A petrol box on Pod beside the right yoke, with three tabbed punched cards in a row, one per bar slot (ROSTER-LOOK sections 0.2 and 0.7). | **Selection.** Bay 0 is slot 1, bay 1 slot 2, bay 2 slot 3. The selected slot's card stands 0.06 m proud; the others lie flat (DESIGN-V3 D11, now driven by `selected`). It slides in 0.12 s, the same time as the HUD mouse glyph. A cooling slot's card shows slate. Tabs 2 and 3 are the levers she throws for slots 2 and 3. Slot 1 fires on a yoke trigger squeeze, so tab 1 only shows the selection (ROSTER-LOOK sections 0.4 and 0.7). |
+| `ReaderExit` (`:158`) | The card slot of the card magazine, on the front arc of the weapon ring at 12 o'clock, pointing forward (ROSTER-LOOK sections 0.2 and 0.7). It moves from the carriage top to WeaponRing. | **Aim.** The ring stays level and yaws to the aim, so the slot points where the shot goes. Glow point (`class_accent`) at ultimate ready, and the only light on the mecha. A card leaves here on each volley. |
+| `ReturnExit` (`:159`) | A vent on Pod, low behind the seat. The steam escapes through the rear gaps. | Steam on every surge. |
+| `StampContact` (`:159`) | The stamp sole on the bottom hub (ROSTER-LOOK section 0.2). | Fires its stamp on the stamp slam and the set-piece landing. |
 
-### Plates across heft classes
+**Cockpit controls** (ROSTER-LOOK sections 0.4 and 0.7): twin yokes, the card bank beside the right yoke, a copper two-handed lap bar across her lap and exactly two pedals. A callout sheet labels them "1: Balance Due" on the yoke triggers, "2: Gather Plate" and "3: Ledger Clip" on the card tabs, "Q: Plate Return" on the lap bar and "Shift: Flywheel Surge" on the pedals. Each control moves when its skill fires; section 6 names the clips.
 
-The stages are ROSTER-LOOK section 5. Tally's plate motif is square stamped plates with rows of punched holes (`ROSTER-LOOK.md:98`).
+### Gap panels across heft classes
+
+The stages are ROSTER-LOOK section 0.3: panels fill the gaps. Tally's gap panel is a square stamped plate with rows of punched holes (ROSTER-LOOK section 0.2).
 
 | Class | What accretes on Tally |
 | --- | --- |
-| I | Bare cage: rings, hoop, cradle, drums, reader. A rider. |
-| II | Six square bowl plates under the seat, like a filing tray, each stamped with two tally strokes. |
-| III | Tread shoes inside the rings, each stamped with three strokes. |
-| IV | **Harmonized:** ROSTER-LOOK puts class IV flank armour at 3 and 9 o'clock, exactly where her drums sit. For Tally the flank armour becomes two drum hoods: curved square plates over the top half of each drum. The drum faces, the pressure read, stay open. Four strokes. |
-| V | The bowl armoured to the waist, and big drums: diameter +30% with a second tape reel, the outline break grown to 0.20 m (inside the 0.25 m cap, ROSTER-LOOK section 3 rule 4). The plates carry the crossed five-bar gate. |
+| I | Bare lattice: struts, hubs, weapon ring, gimballed pod, drums, card bank. Every gap open. A rider. |
+| II | Square panels in the lower gaps, below the pod, like a filing tray, each stamped with two tally strokes. |
+| III | Panels in the side gaps, and thicker tread caps on the hubs. Each panel is stamped with three strokes. |
+| IV | Panels in most gaps; only the gaps on the sight cone to her head stay open (ROSTER-LOOK section 0.3). The drums sit proud of the lattice, so no panel covers a drum face. Her class IV extra is two drum hoods: curved square plates over the top half of each drum. The drum faces, the pressure read, stay open. Four strokes. |
+| V | Every gap paneled except the sight gaps, and the hub modules at their heavy form: big drums, diameter +30% with a second tape reel, the outline break grown to 0.20 m (inside the 0.25 m cap, ROSTER-LOOK section 3 rule 4). The panels carry the crossed five-bar gate. |
 
-Losing a class flings that layer's plates out over 0.45 s like loose ledger pages (ROSTER-LOOK section 5). The strokes count the class: four strokes and the slash are her motif's four strokes and the total. They read at the close camera only; they are flavour, not a read.
+Losing a class flings that layer's panels out of their gaps over 0.45 s like loose ledger pages (ROSTER-LOOK sections 0.3 and 5). The strokes count the class: four strokes and the slash are her motif's four strokes and the total. They read at the close camera only; they are flavour, not a read.
 
 ### Silhouette rule
 
-**Four circles on a square.** From behind, Tally is the only pilot whose outline breaks with a level, symmetric pair of round shapes at exactly 3 and 9 o'clock. With her two disc ears above (`ROSTER-LOOK.md:98`), the four circles sit on the corners of a square, which is her class shape (`class_def.gd:118`). Check: the greyscale identity test in ROSTER-LOOK section 3, rule 10.
+**Four circles on a square.** From behind, Tally is the only pilot whose outline breaks with a level, symmetric pair of round shapes at exactly 3 and 9 o'clock. With her two disc ears above (ROSTER-LOOK section 0.2, "echoing the ears"), the four circles sit on the corners of a square, which is her class shape (`class_def.gd:118`). The 2026-10-10 audit of the concept pictures found the read holds at game size: the drums show as bright discs and the ears as the best greyscale read (ROSTER-LOOK section 0.7, Tally). Check: the greyscale identity test in ROSTER-LOOK section 3, rule 10.
 
 ## 6. Clips
 
-The seven existing reactions stay as they are (`src/presentation/pilot_reactions.gd:5-18`). A5 confirms ids and the pose route; P-E builds them. Lengths are **start**. Rows follow the shape `{clip, priority, cooldown}` and the per-class override `class_clips` (`pilot_reactions.gd:21-22`).
+The seven existing reactions stay as they are (`src/presentation/pilot_reactions.gd:5-18`). A5 confirms ids and the pose route; P-E builds them. Lengths are **start**. Rows follow the shape `{clip, priority, cooldown}`. Clip names follow PILOT-CLIPS section 2, one name per role in every pilot's GLB. The cockpit controls drive the hands (ROSTER-LOOK section 0.4): the yoke triggers for slot 1, the card tabs for slots 2 and 3, the copper lap bar for Q and the pedals for Shift.
 
 | Clip | Length | Trigger signal | Priority, cooldown | Pose story |
 | --- | --- | --- | --- | --- |
-| `idle_tally` | 4.0 s loop | none; plays under every other clip | lowest | Licks a pencil, ticks the drum tape twice with it, glances down at the drum windows, tucks the pencil behind an ear. |
-| `class_up` | 1.0 s | `heft_class_changed` | 50, 4.0 s | Holds a fresh page up to the camera, then stamps it on her knee as the plates slam in. |
-| `cast_special` | 0.5 s | `slot_cast` with slot `special` | 30, 1.0 s | Deals a card from bay 1 forward with a flick, like a dealer. |
-| `cast_line` | 0.5 s | `line_skill_fired` | 32, 1.0 s | Punches a card into the reader and tugs the cable twice like ticker tape. |
+| `idle_loop` | 4.0 s loop | none; plays under every other clip | lowest | Licks a pencil, ticks the card tabs twice with it, glances out through a side gap at a drum window, tucks the pencil behind an ear. |
+| `class_up` | 1.0 s | `heft_class_changed` | 50, 4.0 s | Holds a fresh page up to the camera, then stamps it on her knee as the gap panels slam in. |
+| `cast_special` | 0.5 s | `slot_cast` with slot `special` | 30, 1.0 s | Flicks the slot-2 card tab (bay 1) forward, like a dealer dealing a card. |
+| `cast_line` | 0.5 s | `line_skill_fired` | 32, 1.0 s | Punches the slot-3 card tab (bay 2) down and tugs it twice like ticker tape. |
 | `ult_ready` | 0.8 s | `ultimate_ready` | 45, 10.0 s | Cracks her knuckles and pulls her visor down. |
-| `ult_windup` | 0.35 s | `ultimate_started` | 70, 0 s | Grabs both drum handles and leans into the cradle. |
-| `ult_strike` | 0.5 s | `ultimate_peak` | 68, 0 s | Rips the tape free and punches the air with the stamp. |
-| `ult_recover` | 0.7 s | `ultimate_landed` | 65, 0 s | Slams the book shut and sits back. Control returns at 0.25 s; the clip runs on as upper body only. |
-| `smash_stamp` | 0.45 s | `slammed`, through a `class_clips` override for `tally` | 35, 1.0 s | Both paws drive a rubber stamp down as the ball lands. |
-| `unlock_tally` | 3.0 s | `achievement_earned` with id `ledger_balanced` (`src/core/achievements.gd:62-63`), in Moss's bay | 90, once | Walks in holding the pen (the achievement beat line), climbs into the cradle, stamps the third leaf, and the drums spin up. |
+| `ult_windup` | 0.35 s | `ultimate_started` | 70, 0 s | Grabs the copper lap bar with both paws and leans into the seat. |
+| `ult_strike` | 0.5 s | `ultimate_peak` | 68, 0 s | Hauls the lap bar back so the drum tape rips free, punches the air with the stamp, and takes the bar again. |
+| `ult_recover` | 0.7 s | `ultimate_landed` | 65, 0 s | Lets go of the lap bar, slams the book shut and sits back. Control returns at 0.25 s; the clip runs on as upper body only. |
+| `smash` | 0.45 s | `slammed` (`game_events.gd:50`), the shared roster row (PILOT-CLIPS.md section 1.1) | 36, 1.0 s | Both paws drive a rubber stamp down as the ball lands. |
+| `unlock` | 3.0 s | `achievement_earned` with id `ledger_balanced` (`src/core/achievements.gd:62-63`), in Moss's bay | 90, once | Walks in holding the pen (the achievement beat line), climbs into the gimballed seat, stamps the third leaf, and the drums spin up. |
 
 Timing follows principle 15: key poses get short holds, and only the stamp and the punch are fast.
 
@@ -294,7 +296,7 @@ Nothing is bought. The slot kinds come from A4's scaffold (CUSTOMIZE.md); outfit
 | --- | --- | --- | --- | --- |
 | Punch Tape | trail | A ribbon of cream card tape with punched holes, tint `f7f1e3` | `ach_tally_punch_tape`: `on: "line_skill_fired"`, `where: {"ability_id": "link_clips"}`, `count: 50` | "Fire the ledger clip 50 times." |
 | Eyeshade | outfit | A mulberry visor and sleeve garters with a copper rim (brass is the Furnace Fleet's colour, `ROSTER-LOOK.md:239`); mulberry is the cloth colour (DESIGN-V3 D12) | `ach_tally_eyeshade`: `on: "ultimate_landed"`, `where: {"ultimate_id": "plate_return"}`, `sum: "hits"`, `count: 100` | "Settle 100 clips with Plate Return." |
-| Abacus Cage (working name) | shell variant | Her runner-up board variant (ROSTER-LOOK section 7); the working idea is copper abacus beads on the rings that slide with speed | `ach_tally_books_balanced`: `on: "synergy_discovered"`, `where: {"synergy_id": "tally_books_balanced"}`, `count: 1`, `hidden: true` | "Settle six clips with one landing." |
+| Abacus Lattice (working name) | shell variant | A shell variant per ROSTER-LOOK section 7; the working idea is copper abacus beads threaded on the lattice struts that slide with speed | `ach_tally_books_balanced`: `on: "synergy_discovered"`, `where: {"synergy_id": "tally_books_balanced"}`, `count: 1`, `hidden: true` | "Settle six clips with one landing." |
 
 `codex.mark_discovered` emits `synergy_discovered` (`src/core/codex.gd:143-157`), so a codex discovery can grant a cosmetic with no new evaluator.
 
@@ -417,11 +419,11 @@ Order: the Tally unit starts after B1, B3 and B4 merge. Its cosmetic rows wait f
 9. In world 2 the tree pick is always Audit Trail against Flywheel Throw.
 10. Depth 3 and 4 picks keep their old kit perk beside the ultimate change.
 11. Tally gets one knob of her own, a bigger settle share (40% to 70%).
-12. The selected slot's card stands up in the reader on her cage.
+12. The selected slot's card stands up in the card bank beside her right yoke.
 13. The drum faces show pressure as four punched windows.
-14. Class IV flank armour becomes hoods over her drums, so the drums stay visible.
-15. Her plates are stamped with tally marks that count the heft class.
-16. Earned items: Punch Tape trail, Eyeshade outfit, Abacus Cage shell.
+14. Class IV adds hoods over her drums; the drum faces stay open.
+15. Her gap panels are stamped with tally marks that count the heft class.
+16. Earned items: Punch Tape trail, Eyeshade outfit, Abacus Lattice shell.
 17. Each Flywheel Surge pays 1 pressure (A2-CRITIC), so her Shift feeds the wallet instead of copying Sable's shove.
 18. Her icons and trims use ledger cream and copper, never brass; the seven existing brass icons are recoloured (A2-CRITIC).
 
@@ -437,6 +439,7 @@ Order: the Tally unit starts after B1, B3 and B4 merge. Its cosmetic rows wait f
 3. Resolved by A2-CRITIC: the `target` key is SKILL-BAR section 12, item 2.
 4. Resolved by A2-CRITIC: B1 pre-seeds one marked block per pilot in `KNOBS` and the other shared tables (SKILL-BAR section 12, item 4).
 5. Cosmetic rows whose art lands in P-D. Default: rows land in P-C only if B5 accepts pending assets.
+6. Drums on tumbling hubs. ROSTER-LOOK section 0.2 puts the ledger drums on the 3 and 9 o'clock hubs and the stamp sole on the bottom hub. Hubs tumble with the lattice (ROSTER-LOOK section 0.1; Core is a child of the rolling node, `hero_assets.gd:401`). So once the ball rolls, the drums leave 3 and 9, which breaks the rear pressure read and the four-circle rule (section 5), and the sole leaves the bottom. Default: parent `Flywheel.R/L` and `FlywheelAxis.R/L` to WeaponRing at 3 and 9, so the drums stay level beside the gun they feed and swing with the aim. Place the stamp effect at the ground contact under the ball, and keep the sole on its hub as a look.
 
 ### Optional extras (separable, not in the unit)
 

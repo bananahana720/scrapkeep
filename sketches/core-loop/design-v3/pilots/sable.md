@@ -2,7 +2,7 @@
 
 Status: design spec for wave 13, unit A2-sable. Written 2026-10-10 on `cand/alpha-w13` (head `38ceda3`). Nothing here is built or played. Paths without a prefix are under `sketches/core-loop/`. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
 
-Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; every interface name here is that file's), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the cage), [PARK.md](../PARK.md) (the stages and Warden anchors), [LEGIBILITY.md](../LEGIBILITY.md) and [HOOK-CHAIN.md](../HOOK-CHAIN.md). Settled inputs: the "Decisions settled today" table and the creative-charge list in `~/.claude/plans/let-s-plan-this-session-glowing-beaver.md`.
+Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; every interface name here is that file's), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the Hoberman mecha), [PARK.md](../PARK.md) (the stages and Warden anchors), [LEGIBILITY.md](../LEGIBILITY.md) and [HOOK-CHAIN.md](../HOOK-CHAIN.md). Settled inputs: the "Decisions settled today" table and the creative-charge list in `~/.claude/plans/let-s-plan-this-session-glowing-beaver.md`.
 
 Terms, defined once:
 
@@ -104,7 +104,7 @@ The fields SKILL-BAR.md:159-173 asks every sheet to fill:
 | 5 | Landing | The beachhead. A discharge ring at B: 60 x heft multiplier x chain multiplier, within the class landing radius (6 to 10 m), knock 26 (SKILL-BAR.md:276). Then the slingshot exit (3.2). |
 | 6 | Heft scaling | The framework table (SKILL-BAR.md:232-236), plus the Mass-S bonus on the exit (3.3). |
 | 7 | Music | Section 3.5, motif `sable`. |
-| 8 | Cage | Ready: four wrenches lit, coil tip breathing. Wind-up: the spool locks with a clack and the coil mast sparks. Flight: the spool pays the cable out to B and a stake drops from the spool hatch each beat. Landing: the coil discharges white-mint and dims (section 5). |
+| 8 | Mecha | Ready: four wrenches lit, coil tip breathing. Wind-up: the spool locks with a clack and the coil mast sparks. Flight: the spool pays the cable out to B and a stake drops from the spool hatch each beat. Landing: the coil discharges white-mint and dims (section 5). |
 | 9 | Clips | `ult_ready` 0.8 s, `ult_windup` 0.35 s, `ult_strike` 0.7 s, `ult_recover` 0.6 s (section 6) |
 | 10 | Depth 3 | Ball Lightning and Outpost (3.6) |
 | 11 | Depth 4 | The four framework knobs, read per variant (3.7) |
@@ -141,7 +141,7 @@ Framework timing (SKILL-BAR.md:242-258): wind-up 0.35 s, flight = path length / 
 | Landing radius (framework) | 6 m | 7 m | 8 m | 9 m | 10 m |
 | Arc reach (framework) | 40 m | 47 m | 55 m | 62 m | 70 m |
 | Exit with Mass-S on, nominal flight | 27.7 m/s | 29.5 m/s | 32.1 m/s | 35.7 m/s | 35.7 m/s |
-| Cage | open rider | first plates | tread shoes | flank armour | doubled coil |
+| Mecha | bare lattice | lower gap panels | side gap panels | most gaps paneled | doubled coil |
 
 The Mass-S row: heft h gives mass (h - 1) x 450 (`augments.gd:95-96`), q = mass / 990 capped at 1, bonus q x 8 m/s (`augments.gd:93-94`). It applies only with Mass-S on (`--world-one-builds`, `augments.gd:90-92`); off, the exit is 27.7 m/s at every class. The stake count follows the beats, not the class, so heft buys hitting power and a faster exit, never a busier screen.
 
@@ -265,49 +265,50 @@ What the kit adds through the depth cap, and how each world's ground asks for it
 | Warden | the reactor on the dam face: ride the 3 s water sheet up, Bank Shot off a hardpoint into the core | the swarm remnant on the headframe hoist (exposed at the top 4 s of a 12 s cycle): a line path to the cage when it tops out; Outpost stakes round the headframe for the finisher | the Mind's hand moving between three perches every 8 s: Bank Shot off its hardpoint while it drags the ball |
 | Pressure the kit answers | packs in washes and culverts | the anti-spam answers enter (deflector, counter-ram, plan "Calls"). Bank Shot changes the approach angle, so she can come at a deflector's dish from the side (inference: the dish faces one way, `src/combat/codex_entries.gd:50-55`) | line cutters at cable anchors cut lines; stakes are her spare anchors |
 
-## 5. The cage
+## 5. The mecha
 
-**Body direction (A2-CRITIC, 2026-10-10).** Andrew rejected the open-cage boards that evening; ROSTER-LOOK §0, the Hoberman mecha, is the live body (`ROSTER-LOOK.md:3`, `:11-15`). Read "ring" below as "lattice" and "plate" as "gap panel" (§0 says so for the whole sheet). Sable's parts map onto §0.1 like this: the coil mast is a hub module on the upper hub at 11 o'clock; the winch spool and spool hatch sit on the side hub at 3 o'clock; the wrench rack sits on the pod's seat back; her twin arc emitter rides the weapon ring (§0.2). §0.2 also lists "pylon spike emitters on three or four upper hubs"; those would crowd the upper outline that Rivet's stacks and Kest's vanes use, so this sheet keeps one upper break, the coil mast, and stores the stakes inside the spool hatch (open for A3). The silhouette rule below is restated in PILOTS.md and that table is canonical; the clock positions this section cites for the other five come from ROSTER-LOOK §4 and are superseded.
+**Body direction (A2-CRITIC, 2026-10-10).** Andrew rejected the open-cage boards that evening. ROSTER-LOOK §0, the Hoberman mecha, is the live body (`ROSTER-LOOK.md:3`, `:11-15`), and this section is written to it. Sable's parts map onto §0.1 like this. The coil mast rides a gap bracket at 11 o'clock (rest pose: the upper hub). The winch spool and spool hatch ride a gap bracket at 3 o'clock (rest pose: the side hub). The wrench rack sits on the pod's seat back. Her twin arc emitter rides the weapon ring (§0.2). ROSTER-LOOK §0.2 lists one coil mast and no crown; the stakes ride inside the spool hatch. The silhouette rule below is restated in PILOTS.md, and that table is canonical. The clock positions this section cites for the other five come from PILOTS.md section 1.
 
-The shared cage is ROSTER-LOOK section 2: tread rings and struts on Core, the gyro hoop on Gyro, and the yoke, cradle, seat and intake coil on Pod, with the pilot seated and fully visible. Sable's row is ROSTER-LOOK.md:94. This section says how her machinery reads her kit.
+The shared mecha is ROSTER-LOOK §0.1. The Hoberman lattice on Core tumbles with the roll and carries the Hub and Gap empties that take modules and panels. The level WeaponRing under Pod yaws to the aim. The cockpit Pod hangs upright in a two-axis gimbal and holds the seat, the twin yokes, a lever bank beside the right yoke, the copper lap bar and two pedals (§0.7). The pilot sits in view through the open gaps. Sable's row is ROSTER-LOOK §0.2. This section says how her machinery reads her kit.
 
 | Part | Where | Reads | Motion and light |
 | --- | --- | --- | --- |
-| Coil mast | 11 o'clock from behind, 0.20 m past the ring | the discharge (slot 2) | Copper winding with a bare-metal core. Five winding bands light mint one at a time as the gauge fills, the same count as the rings and the notes (2.2). The tip is the only `class_accent` surface and breathes at 1 Hz when the meter is full. |
-| Winch spool | 3 o'clock, a 0.12 m bulge | the harpoon and Bank Shot | Spins out as the line pays out and in as Ctrl hauls. The ratchet pawl (`tools/blender/world_one/shell_sable.py:87`) clacks when Bank Shot locks the line. The cable leaves at `RopeExit` (`shell_sable.py:179`). |
+| Coil mast | a gap bracket at 11 o'clock from behind (rest pose: the upper hub at 11), standing 0.20 m past the lattice | the discharge (slot 2) | Copper winding with a bare-metal core. Five winding bands light mint one at a time as the gauge fills, the same count as the rings and the notes (2.2). The tip is the only `class_accent` surface and breathes at 1 Hz when the meter is full. |
+| Winch spool | a gap bracket at 3 o'clock (rest pose: the side hub at 3), a 0.12 m bulge | the harpoon and Bank Shot | Spins out as the line pays out and in as Ctrl hauls. The ratchet pawl (`tools/blender/world_one/shell_sable.py:87`) clacks when Bank Shot locks the line. The cable leaves at `RopeExit` (`shell_sable.py:179`). |
 | Wrench rack | on the seat back, the rear tell | the ultimate meter | Four wrenches on one mesh and one node. One lights per 25 meter points through a `lit_count` shader parameter on its single `class_accent` surface, so the rack is the meter in the world, read from the same `abilities.meter` as the HUD arc (SKILL-BAR.md:215), at one draw. At wind-up the whole rack turns a quarter turn, the engineer tightening up before the run. |
 | Spool hatch | under the spool | the stakes | One stake drops from it per beat of a Cable Run, with a puff and a clink. |
+| Cockpit controls | on the pod, in the §0.7 layout | the bar | A yoke trigger squeezes on each shot of "1: Arc caster" (`Control.Trigger`, PILOT-CLIPS.md section 5). The lever bank beside the right yoke holds the gauge lever, "2: Arc discharge" (`GaugeLever`), and the spool brake, "3: Bank Shot" (`SpoolBrake`). The copper lap bar is "Q: Cable Run". The two pedals carry "Shift: Boost". Each control throws when its skill fires, read from the same event as the clip (§0.4). |
 
-**Plates by heft class** (stages from ROSTER-LOOK.md:124-130). Her plates are small, rounded, felt-lined and rubber-bushed, the shell that "rattles least" (ROSTER-LOOK.md:94).
+**Gap panels by heft class** (stages from ROSTER-LOOK §0.3). Her gap panels are small, rounded, felt-lined and rubber-bushed (§0.2), the shell that "rattles least" (`VISUAL-LANGUAGE.md:307`).
 
-| Class | Sable's cage |
+| Class | Sable's mecha |
 | --- | --- |
-| I | the open rider: rings, struts, cradle, coil mast, spool, rack |
-| II | six small felt-backed plates round the seat bowl, below Z -0.35 |
-| III | tread shoes on the inner faces of the rings |
-| IV | flank armour at 3 and 9 o'clock. The 3 o'clock plate is a horseshoe cut round the spool, so the spool face and `RopeExit` stay clear: "Sable needs a readable cable exit" (`BIBLE.md:416`) |
-| V | the bowl armoured to the waist, and the doubled coil: a second winding layer on the same mast, which rises to 0.25 m. **Call:** one thicker mast, not a second one, so the silhouette rule below survives class V |
+| I | the bare lattice with every gap open, plus the weapon ring and twin arc emitter, the gimballed pod, the coil mast, the spool and the rack |
+| II | six small felt-backed panels in the lower gaps below the pod, under Z -0.35 |
+| III | panels in the side gaps, and thicker tread caps on the hubs |
+| IV | panels in most gaps. Only the sight gaps to the pilot stay open (ROSTER-LOOK §3 rule 1). The panels round the spool's hub at 3 o'clock are cut in a horseshoe, so the spool face and `RopeExit` stay clear: "Sable needs a readable cable exit" (`BIBLE.md:416`) |
+| V | every gap paneled except the sight gaps, and the coil mast's heavy form, the doubled coil: a second winding layer on the same mast, which rises to 0.25 m. **Call:** one thicker mast, not a second one, so the silhouette rule below survives class V |
 
-Losing a class (`heft_class_dropped`, `src/core/game_events.gd:37`) pops that class's plates off as scrap. The coil, spool and rack never shed.
+Losing a class (`heft_class_dropped`, `src/core/game_events.gd:37`) flings that class's gap panels out of their gaps as scrap (§0.3). The coil, spool and rack never shed.
 
-**Silhouette rule at chase distance: one spike, off-centre.** Sable is the only pilot with a single tall break at 11 o'clock, mint at its tip, and a round bump at 3 o'clock; nothing breaks the outline at 1 o'clock. Rivet's twin stacks stand at 11:30 and 12:30, Kest's vents make a V at 2 and 10, Tarn's jaws sit at 4 and 8, Tally's drums at 3 and 9, and the Cannon's ports at 5 and 7 (ROSTER-LOOK.md:94-99). At the fast camera the 0.20 m break is about 15 px (ROSTER-LOOK.md:62-67). Check: the greyscale 96 px blind-thumbnail test (ROSTER-LOOK.md:86).
+**Silhouette rule at chase distance: one spike, off-centre.** Sable is the only pilot with a single tall break at 11 o'clock, mint at its tip, and a round bump at 3 o'clock. Nothing breaks the outline at 1 o'clock. Rivet's twin stacks stand at 11:30 and 12:30, Kest's vents make a V at 2 and 10, Tarn's claw arms sit at 4 and 8, Tally's drums at 3 and 9, and the Cannon's ports at 5 and 7 (PILOTS.md section 1). At the fast camera the 0.20 m break is about 15 px (ROSTER-LOOK §1). Check: the greyscale 96 px blind-thumbnail test (ROSTER-LOOK §3 rule 10). The mast and spool ride gap brackets, level carriers, so 11 and 3 o'clock hold in a roll (ROSTER-LOOK §2, §4).
 
 ## 6. Clips
 
-All clips run on the shared 25-bone `pilot-v1` rig at 30 fps, through the `anim_pilot_reactions.py` route (`tools/blender/anim_pilot_reactions.py:22-29`, `:303`). A5 confirms the ids marked "provisional". Priorities and cooldowns for the framework triggers are SKILL-BAR.md:472-480.
+All clips run on the shared 25-bone `pilot-v1` rig at 30 fps, through the `anim_pilot_reactions.py` route (`tools/blender/anim_pilot_reactions.py:22-29`, `:303`). Clip names follow PILOT-CLIPS.md section 2, and each cast reaches the cockpit control named in its pose story (section 5 above, PILOT-CLIPS.md section 5). Priorities and cooldowns for the framework triggers are SKILL-BAR.md:472-480.
 
 | Clip | Length | Trigger | Pose story |
 | --- | --- | --- | --- |
-| `idle` (provisional id) | 4.0 s loop | none; the default | She leans toward her chosen exit while her eyes track the nearest enemy (`BIBLE.md:283`). Ears flick at 1.3 s and 3.1 s; one paw taps the spool brake lever. |
+| `idle_loop` | 4.0 s loop | none; the default | She leans toward her chosen exit while her eyes track the nearest enemy (`BIBLE.md:283`). Ears flick at 1.3 s and 3.1 s; one paw taps the spool brake lever in the bank beside the right yoke. |
 | `class_up` | 1.0 s | `heft_class_changed` | She reaches back to the rack and gives one wrench a quarter turn, then a short nod. |
-| `cast_special` | 0.6 s | `slot_cast` with slot `special` | She slaps the coil-mast lever, ears pinned back. |
-| `cast_line` | 0.5 s | `line_skill_fired` | Both paws haul the spool brake, the body leaning into the whip. |
+| `cast_special` | 0.6 s | `slot_cast` with slot `special` | She slaps the gauge lever (`GaugeLever`, "2: Arc discharge") in the bank beside the right yoke, ears pinned back. |
+| `cast_line` | 0.5 s | `line_skill_fired` | Both paws haul the spool brake (`SpoolBrake`, "3: Bank Shot") in the bank beside the right yoke, the body leaning into the whip. |
 | `ult_ready` | 0.8 s | `ultimate_ready` | A sidelong grin, one ear up, a tap on the full wrench rack. |
-| `ult_windup` | 0.35 s | `ultimate_started` | One paw on the coil mast, the other points down the drawn line at B. |
+| `ult_windup` | 0.35 s | `ultimate_started` | One paw grips the copper lap bar ("Q: Cable Run"), the other points down the drawn line at B, then joins it on the bar for the ride. |
 | `ult_strike` | 0.7 s | `ultimate_peak` | Spine stretched tall in the seat, one arm thrown up, ears forward, as the relay closes. (The rig has no leg bones, `tools/blender/PILOT-RIG.md:23-39`, so she cannot stand.) |
 | `ult_recover` | 0.6 s | `ultimate_landed` | She drops into the seat and leans the way the exit throws her. |
-| `smash` (provisional id) | 0.6 s | `arc_slammed`, priority 34, cooldown 1.0 s **start** | A paw slams the cradle rail, then her head snaps to the brightest tagged face. |
-| `unlock` (provisional id) | 2.4 s | Sable starts unlocked (`class_def.gd:92`), so this plays in the title's class preview the first time her card is focused on a profile, and on every focus under `--profile=sitting` | She drops into the cradle from above (the `root` bone keyed; the seated legs stay fixed), pulls her cap down, cinches the strap and checks the rack. |
+| `smash` | 0.6 s | `slammed` (`game_events.gd:50`), the shared roster row (PILOT-CLIPS.md section 1.1); priority 36, cooldown 1.0 s | A paw slams the seat rail, then her head snaps to the brightest tagged face. |
+| `unlock` | 2.4 s | Sable starts unlocked (`class_def.gd:92`), so this plays in the title's class preview the first time her card is focused on a profile, and on every focus under `--profile=sitting` | She drops into the seat from above (the `root` bone keyed; the seated legs stay fixed), pulls her cap down, cinches the strap and checks the rack. |
 
 The seven reactions stay as built (`src/presentation/pilot_reactions.gd:5-18`): `big_cheer` 2.8 s, `wince` 0.5 s, `slump` 1.5 s, `phew` 0.8 s, `brace` 0.6 s, `heave` 0.8 s (frame keys at `anim_pilot_reactions.py:22-29`), and `drop_land`.
 
@@ -319,9 +320,9 @@ Nothing is bought. Two rows already exist: Lagoon (starter) and Violet Static (g
 | --- | --- | --- | --- | --- |
 | `trail_sable_cable` "Cable Stitch" | trail | a dashed mint-and-copper cable that pays out behind the ball | achievement `sable_cable_runs` "Cable Runner": land 20 Cable Runs across runs | `"on": "ultimate_landed", "where": {"ultimate_id": "cable_run"}, "count": 20` (the `where` match, `src/core/progress.gd:244-247`) |
 | `decal_sable_spool` "Spool and Wrench" | decal, new atlas tile 8 | a spool crossed with a wrench on the seat-back DecalPlate (ROSTER-LOOK section 7) | discovery `parting_shot`: a kill within 1 s of a slingshot (`codex_entries.gd:37-42`, `combat.gd:90`) | `"on": "synergy_discovered", "where": {"synergy_id": "parting_shot", "first_time": true}` (emitted at `src/core/codex.gd:157`) |
-| `shell_sable_felt` "Felt Rig" | shell variant (A4 and B5 add the slot) | rings wrapped in grey felt bands with the rubber bushings showing: the Switchback Enclaves' noise control (`BIBLE.md:285`). The roll's rattle layer becomes a muffled thump; volumes do not change, so no audio information is lost | hidden discovery `switchback`: Bank Shot off one of your own stakes | `"on": "synergy_discovered", "where": {"synergy_id": "switchback", "first_time": true}` |
+| `shell_sable_felt` "Felt Rig" | shell variant (A4 and B5 add the slot) | lattice struts wrapped in grey felt bands, with rubber bushings showing at the pivot pins: the Switchback Enclaves' noise control (`BIBLE.md:285`). The roll's rattle layer becomes a muffled thump; volumes do not change, so no audio information is lost | hidden discovery `switchback`: Bank Shot off one of your own stakes | `"on": "synergy_discovered", "where": {"synergy_id": "switchback", "first_time": true}` |
 
-The trail draws along the set piece's path through the trail slot (SKILL-BAR.md:608). The shell variant and the heft plates share one loader path (plan, creative-charge list).
+The trail draws along the set piece's path through the trail slot (SKILL-BAR.md:608). The shell variant and the heft gap panels share one loader path (plan, creative-charge list).
 
 ## 8. Discovery and codex rows
 

@@ -116,7 +116,7 @@ One object per stage. It is the hero landmark and the Warden's home.
 | `warden` | object | `{"mounting": id, "anchor": [x, y, z], "path": [[x, y, z], ...], "hardpoints": n}`. `mounting` must be one of the stage's Warden kind's two mountings (section 7). `path` is empty unless the Warden moves |
 | `bay_dock` | object | `{"at": [x, z], "facing_deg": n}`: where Moss's bay docks after the break, so `bay.gd:120-169` never searches |
 | `gate_slots` | array | `[{"at": [x, z], "facing_deg": n}]`: the reward gates (the stage_map field, `stage_map.gd:33-35`) |
-| `light` | string | `ancient_beam` or `""`: a Cherenkov-blue column that keeps the landmark readable through fog |
+| `light` | string | `ancient_beam` or `""`: a uranium-glass green (#9dff3c) column that keeps the landmark readable through fog |
 | `music` | string | The `WORLD_ROWS` kind for its hum (today `landmark_hum`) |
 | `fragment` | string | Codex fragment found at the landmark |
 
@@ -415,7 +415,7 @@ A board spec uses the concept-board shape `tools/concept/gen_board.py` and `boar
 
 **Every Warden is a harpoon anchor.**
 
-- **Latch.** Each Warden carries 3 hardpoints (start), rimmed in the ancients' blue, that the harpoon bites from rope range (45 m, `src/movement/tuning.gd:18`). A hardpoint line is a world-style line that follows the body: the anchor moves with it, as `augments.gd:697-702` already does for enemies.
+- **Latch.** Each Warden carries 3 hardpoints (start), rimmed in the ancients' green, that the harpoon bites from rope range (45 m, `src/movement/tuning.gd:18`). A hardpoint line is a world-style line that follows the body: the anchor moves with it, as `augments.gd:697-702` already does for enemies.
 - **Ride.** On a hardpoint line the ball swings as on a world line (`augments.gd:670-688`) and the winch shortens it. Unlike an enemy line, it does not drop when the ball passes inside the minimum rope (`augments.gd:711`); the ball orbits or hangs.
 - **Fire from the line.** The weapon slot fires while the ball hangs. Gun bolts add 1.5 posture each, as today.
 - **Drag.** When the mounting moves (the hoist cage, the flying hand, the tilting island), the anchor moves and the rope's tension carries the ball. Letting go keeps the ball's velocity.
@@ -599,12 +599,12 @@ The index after the K-CRITIC coherence pass (2026-10-10). Each row is the stage 
 
 | Stage | Landmark (seen from the drop-in) | Warden kind and mounting | Signature flow line | Signature event |
 | --- | --- | --- | --- | --- |
-| 1 `park_dam` | The spillway dam: 120 m face, 320 m crest, blue beam, 1.3 km south of the drop-in | `reactor` on `dam_face`: each pulse opens the gates and a 3 s water sheet is a road up the face to the core | Survey deck, slickrock domes, the shelf lip, the upper slot, the Eye, the incline's 94 m drop, the toe apron | The plunge pool floods to 1.2 m (natural); the pump house boiler bursts (industrial) |
-| 2 `park_flume` | The penstock tower, 90 m, on the east bluff, blue beam | `reactor` on `flume` (`meltdown`): slag lanes run down the head house channel; the core window lasts 1.5 times longer | Weir deck, the main canal's bends to the butte gap, the lateral canal, the siphon, the wasteway, the forecourt, the drum | A trestle span collapses into a ramp (natural); the heat-exchanger annex blows at the Warden's second chunk (industrial) |
+| 1 `park_dam` | The spillway dam: 120 m face, 320 m crest, green beam, 1.3 km south of the drop-in | `reactor` on `dam_face`: each pulse opens the gates and a 3 s water sheet is a road up the face to the core | Survey deck, slickrock domes, the shelf lip, the upper slot, the Eye, the incline's 94 m drop, the toe apron | The plunge pool floods to 1.2 m (natural); the pump house boiler bursts (industrial) |
+| 2 `park_flume` | The penstock tower, 90 m, on the east bluff, green beam | `reactor` on `flume` (`meltdown`): slag lanes run down the head house channel; the core window lasts 1.5 times longer | Weir deck, the main canal's bends to the butte gap, the lateral canal, the siphon, the wasteway, the forecourt, the drum | A trestle span collapses into a ramp (natural); the heat-exchanger annex blows at the Warden's second chunk (industrial) |
 | 3 `park_pit` | The headframe, 120 m on a 100 m deep pit floor, its top 20 m above the plain | `swarm` on `headframe`: the hive rides the hoist on a 12 s cycle, low for contact, high for the line | The dump top's 55 m face, the arroyo half-pipe, the canal lip grind, the rim haul ramp, the benches down to the collar | A drill barge lands and sets up a drill crew home (Fleet); a tailings bench collapses (natural) |
 | 4 `park_sinkhole` | The sinkhole, 250 m wide and 120 m deep, with a light column | `swarm` on `sinkhole` (`brood`): a lamp guard; the pool floor rises 5 m per chunk lost | The cinder cone's crater bowl, the breach, the lava channel, the main tube, the great room, the gallery ring | A cave-in opens a new tube (natural); a machine erupts in a tube junction (ancient) |
 | 5 `park_islands` | The Hanging Isle: deck at 400 m, tip at 82 m, the one island that floats | `mind` on `under_island`: the island tips 10 degrees on each pulse and throws a latched ball | The Lookout's lip, the Slickrock Run S, the Saddle, the Fin Chute, 80 m of air off the fin nose, the Anvil ramp, the net bowl | A dropship lands and sets up an anchor crew home (Fleet); the cloud deck rises over the net (weather) |
-| 6 `park_crown` | The Crown Spire, 330 m, three perch spires, blue beam | `mind` on `spires` (`choir`): it flies perch to perch every 8 s and carries a latched ball | Watch Butte's nose, the slickrock S, the Turnstone, the gooseneck, the split spire, the Crown's bowl | Lightning strikes marked spires on the beat (natural); a Mind's hand erupts from a spire's foot (ancient) |
+| 6 `park_crown` | The Crown Spire, 330 m, three perch spires, green beam | `mind` on `spires` (`choir`): it flies perch to perch every 8 s and carries a latched ball | Watch Butte's nose, the slickrock S, the Turnstone, the gooseneck, the split spire, the Crown's bowl | Lightning strikes marked spires on the beat (natural); a Mind's hand erupts from a spire's foot (ancient) |
 
 After the Mind, the ending bowl (Meteor Crater, `crater_ending`) is the ending sequence's last set, not a stage (section 6, unit KC10).
 

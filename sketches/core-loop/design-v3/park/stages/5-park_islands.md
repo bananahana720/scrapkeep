@@ -13,7 +13,7 @@
 
 ## In one look
 
-You drop off a pine-topped mountain at golden hour and ride a downhill park of mesas. The animals have strung nets across every gap, so a fall always lands on rope. Over the far end of the park hangs an upside-down mountain, balanced on one hand lit in the ancients' blue. The fight is in the net bowl under it.
+You drop off a pine-topped mountain at golden hour and ride a downhill park of mesas. The animals have strung nets across every gap, so a fall always lands on rope. Over the far end of the park hangs an upside-down mountain, balanced on one hand lit in the ancients' green. The fight is in the net bowl under it.
 
 | Number | Value (start) |
 | --- | --- |
@@ -44,11 +44,11 @@ You drop off a pine-topped mountain at golden hour and ride a downhill park of m
 
 No `hohokam` or `ancestral_puebloan` row sits on this stage, so the guardrail in PARK.md section 4 has nothing to check here.
 
-**Material read.** Sandstone tan and slickrock pink, warm in low sun. The animals' rope in ochre. Mining in rust and timber grey. The Fleet in brass and soot. The ancients only in dull petrol enamel with Cherenkov seams (`src/combat/warden_kit.gd:8-9`).
+**Material read.** Sandstone tan and slickrock pink, warm in low sun. The animals' rope in ochre. Mining in rust and timber grey. The Fleet in brass and soot. The ancients only in dull petrol enamel with uranium-glass green (#9dff3c) seams (`src/combat/warden_kit.gd:8-9`).
 
 ## 2. The hero landmark and the Warden's mounting
 
-**The Hanging Isle.** An upside-down mountain: a pine-topped deck 180 m across at 400 m, tapering 318 m down to a tip 22 m above the net. A thin waterfall pours off its rim and turns to mist long before it reaches the net (visual only). It is the tallest thing in the park and the only thing that floats (PARK.md veto 10). A Cherenkov blue beam rises from its top deck (`light: "ancient_beam"`), so the cloud deck weather never hides it.
+**The Hanging Isle.** An upside-down mountain: a pine-topped deck 180 m across at 400 m, tapering 318 m down to a tip 22 m above the net. A thin waterfall pours off its rim and turns to mist long before it reaches the net (visual only). It is the tallest thing in the park and the only thing that floats (PARK.md veto 10). A uranium-glass green beam rises from its top deck (`light: "ancient_beam"`), so the cloud deck weather never hides it.
 
 **Why 400 m and not PARK.md's 260 m.** The landmark must be seen from 85% of open cells (PARK.md:474). With the floor at 60 m and mesas up to 220 m, a 260 m top reached about 0.72 in my rough model; a 400 m top with slimmer, lower occluders reaches about 0.88. Keeping the tip low (82 m) keeps the whole fight inside rope range. KD5's real sight test decides; the fallback is lowering the West Shelf and the Ore Bench further, not raising the floor.
 
@@ -402,11 +402,11 @@ What changes: the map id (`highdraft` to `park_islands`), the heading (today -z,
 
 Seven frames, in play order. Panels p1 to p6 of the stage board map onto frames 1 to 6; frame 7 is a spare for the exit.
 
-1. **Drop-in vista (p2_drop_in).** Golden hour from the drop-in on the Lookout's south end, 2 m above the ground, looking north. Relict pines frame the left edge; the fire lookout stands on the right rim. Below, the Slickrock Run curls down to the Saddle. Beyond, the Twin Fins, the net glinting between mesas, the two wing mesas and, 1.2 km away, the upside-down mountain with its blue beam. The three activity markers sit on the horizon line.
+1. **Drop-in vista (p2_drop_in).** Golden hour from the drop-in on the Lookout's south end, 2 m above the ground, looking north. Relict pines frame the left edge; the fire lookout stands on the right rim. Below, the Slickrock Run curls down to the Saddle. Beyond, the Twin Fins, the net glinting between mesas, the two wing mesas and, 1.2 km away, the upside-down mountain with its green beam. The three activity markers sit on the horizon line.
 2. **First flow line (p3_line).** Chase camera low behind the ball in the Fin Chute, mid-pump on the east wall, the west fin's sunlit face filling the left of frame. Ahead, the fin nose kicker and open sky; the island floats in the gap.
 3. **An enemy home (p4_home).** The Mooring Mesa's rim from the net below: brass winch posts, a moored patchwork balloon, an anchor crew's cable lane reaching down toward the ball as it crosses. The counter is in the frame: the roost ferry passing overhead.
 4. **An event firing (p5_event).** The fin rim collapse in two beats: the crumble line glowing along the west fin's rim with the 6 s mark, then the slab leaning against the fin as a new ramp, dust rolling over the net.
-5. **The landmark approach.** From the Anvil's altar ring: the net running north to the bowl, the knuckle buttes, and the isle filling the top half of frame, its tip 22 m above the net and the hand's blue seams visible.
+5. **The landmark approach.** From the Anvil's altar ring: the net running north to the bowl, the knuckle buttes, and the isle filling the top half of frame, its tip 22 m above the net and the hand's green seams visible.
 6. **The Warden fight (p6_warden).** Inside the bowl, looking up: the hand cupping the tip, the lens open in a stagger, a harpoon line from the ball to a knuckle, the island tilted 10 degrees. The pulse ring on the net.
 7. **The exit.** The hand dark in the net; the ball rolling up the north bank onto the Keel Bench; three reward gates and Moss's bay docking above them, the island still hanging overhead in the last light.
 

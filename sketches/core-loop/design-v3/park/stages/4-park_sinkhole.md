@@ -15,7 +15,7 @@ Terms used once and kept: a **lava tube** is a cave a lava river left when its c
 | Warden | kind `swarm` (the swarm remnant), mounting `sinkhole`, variant `brood` (both today's, `alpha_defs.gd:91`, `:100`) |
 | Time of day | `afternoon` (fixed) |
 | Weather | cave mist always; a monsoon cell from clock tier 2 |
-| Landmark | the sinkhole, 250 m across and 120 m deep at (0, 350), open to the sky, with a Cherenkov-blue light column 140 m tall (PARK.md:377) |
+| Landmark | the sinkhole, 250 m across and 120 m deep at (0, 350), open to the sky, with a uranium-glass green (#9dff3c) light column 140 m tall (PARK.md:377) |
 | Park | 1.6 km square; a basalt plateau with a cinder cone in the north, cut by lava tubes, mine drifts and flooded caverns |
 | Lines | six pilot lines of 1,572 to 1,898 m, estimated 62 to 79 s; floor line 1,686 m, about 84 s (section 9) |
 | Roof share | 50% or more of every measured line runs under a roof (PARK.md:583 asks for 40%) |
@@ -41,7 +41,7 @@ The granaries sit in the trench wall off every measured line, a quiet side loop 
 
 ## 2. The hero landmark and the Warden's mounting
 
-**The sinkhole.** A round collapse 250 m across that opens the plateau to the sky. Its walls are layered basalt over pale limestone, streaked with mineral stain, with the miners' timber gallery ring at the 100 m mark and the caisson's flooded pool in the middle. From the plateau you cannot see into it, so the landmark is its light column: a Cherenkov-blue beam 4 m wide (start) rising from the nest to `sight_top` [0, 140, 388], 140 m above the plain. The column is the brood's light, not daylight, so it reads as "the Warden is there" and never as a floor telegraph (section 8).
+**The sinkhole.** A round collapse 250 m across that opens the plateau to the sky. Its walls are layered basalt over pale limestone, streaked with mineral stain, with the miners' timber gallery ring at the 100 m mark and the caisson's flooded pool in the middle. From the plateau you cannot see into it, so the landmark is its light column: a uranium-glass green beam 4 m wide (start) rising from the nest to `sight_top` [0, 140, 388], 140 m above the plain. The column is the brood's light, not daylight, so it reads as "the Warden is there" and never as a floor telegraph (section 8).
 
 **The mounting (`sinkhole`).** The brood nests on the sinkhole's south wall at [0, -99, 388], over the pool's south edge, 21 m above the pool floor. It does not move (`warden.path` is empty). Its guard is a lamp swarm, as today's `brood` variant already makes it (`src/combat/warden.gd:31-32`, `225-228`). The mounting's one mechanism is PARK.md's (PARK.md:427): **the pool rises one step per chunk lost**, 5 m a step (start), lifting the fight floor toward the nest: floor y -120, then -115, -110, -105. The break floods the pool to the gallery ring (y -100), and the bay docks over the water. The kind sheet ([swarm.md](../../wardens/swarm.md) section 3.2) holds the full rule, including the hold that keeps a step from rising under the ball.
 
@@ -323,7 +323,7 @@ The ambush altar (`map_dig_deep.gd:54`) gives way to the hauler bounty, so the w
 
 Board id `park-4-park_sinkhole`. PARK.md section 6.1 panels in brackets. The pilot ball, where shown, is the expanded Hoberman-sphere mecha (`docs/decisions.tsv:417`).
 
-1. **Drop-in vista [p2_drop_in].** Behind the ball on the cinder cone's north rim in afternoon light, looking south. The crater bowl falls away in red-black cinder, breached on the far side. Beyond, a flat black basalt plateau runs to the horizon, pocked with a line of skylights. Far south, a thin Cherenkov-blue column rises out of the plateau where the sinkhole is. A monsoon cell builds in the south-west sky.
+1. **Drop-in vista [p2_drop_in].** Behind the ball on the cinder cone's north rim in afternoon light, looking south. The crater bowl falls away in red-black cinder, breached on the far side. Beyond, a flat black basalt plateau runs to the horizon, pocked with a line of skylights. Far south, a thin uranium-glass green column rises out of the plateau where the sinkhole is. A monsoon cell builds in the south-west sky.
 2. **First flow line [p3_line].** Chase camera low in the lava channel, a half-pipe of black cinder with glassy walls, the ball high on the left wall. Ahead, the fumarole vents white steam and the tube mouth gapes, a collapsed skylight with the tube's dark throat beyond.
 3. **An enemy home [p4_home].** The flooded west gallery: a dark lava tube half full of clear still water, three lamp-swarm lures hanging over the surface as the only light, their reflections below. The Rivet ball cuts a straight wake through the middle at speed, the lures swinging toward where it was.
 4. **An event firing [p5_event].** Inside the west tube, looking up. The roof's crust cracks in a glowing ring (the `crust_crack` telegraph) and dust sifts down. Second beat: the roof has fallen away into a sky-lit trench, rubble banked into ramps along the walls, and a ball rides the bank past it.

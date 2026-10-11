@@ -2,11 +2,11 @@
 
 Status: design spec, wave 13 unit A4, written 2026-10-10 on `cand/alpha-w13`. Nothing here is built or played. Paths without a prefix are under `sketches/core-loop/`. A number marked (start) is a starting value to tune in play.
 
-Reads with: [ROSTER-LOOK.md](ROSTER-LOOK.md) (the cage, heft plates and their budgets; section 0 is the live Hoberman direction), [PILOTS.md](PILOTS.md) and the six sheets in [pilots/](pilots/) (each sheet's section 7 proposes that pilot's items), [SKILL-BAR.md](SKILL-BAR.md) (the signals the grants listen to, section 7, and B5's touch points, section 10), and `adr/TADR-004-persistence.md` (the save rules this schema change follows).
+Reads with: [ROSTER-LOOK.md](ROSTER-LOOK.md) (section 0 is the Hoberman mecha: the rolling lattice with its hubs and gaps, the level weapon ring and the gimballed cockpit; sections 0.3 and 5 set the gap panels by heft class and their budgets), [PILOTS.md](PILOTS.md) and the six sheets in [pilots/](pilots/) (each sheet's section 7 proposes that pilot's items), [SKILL-BAR.md](SKILL-BAR.md) (the signals the grants listen to, section 7, and B5's touch points, section 10), and `adr/TADR-004-persistence.md` (the save rules this schema change follows).
 
-Settled today (session plan, "Decisions settled today"): scaffold the system and ship 2 or 3 earned items per pilot; leave room for pilot outfits, ball shell variants, companion skins and bay decoration beside today's paint, trail, decal and companion paint; achievements and discoveries only, nothing bought. Plan call: the cage gains scrap plates by heft class, and the shell-variant slot and the heft layers share one loader path.
+Settled today (session plan, "Decisions settled today"): scaffold the system and ship 2 or 3 earned items per pilot; leave room for pilot outfits, ball shell variants, companion skins and bay decoration beside today's paint, trail, decal and companion paint; achievements and discoveries only, nothing bought. Plan call: the mecha gains scrap gap panels by heft class (ROSTER-LOOK section 0.3), and the shell-variant slot and the heft layers share one loader path.
 
-**Terms, once.** A **slot** is one kind of look (paint, trail, and so on). A **row** is one item in `cosmetics.gd`. The **owner** is who wears a slot: a pilot id, `spil9` for the companion, or `bay` for Moss's workshop. A **grant** is the achievement row that unlocks an item. A **discovery** is a codex trick that kit code detects and the codex announces once. A **heft layer** is one detail shell of plates that shows at one heft class. A **variant** is a shell-slot item: a different cage build for one pilot.
+**Terms, once.** A **slot** is one kind of look (paint, trail, and so on). A **row** is one item in `cosmetics.gd`. The **owner** is who wears a slot: a pilot id, `spil9` for the companion, or `bay` for Moss's workshop. A **grant** is the achievement row that unlocks an item. A **discovery** is a codex trick that kit code detects and the codex announces once. A **heft layer** is one detail shell that shows at one heft class: gap panels, thicker tread caps on the hubs, or the heavy hub modules (ROSTER-LOOK section 0.3). A **variant** is a shell-slot item: a different lattice build for one pilot.
 
 ## 1. What exists today
 
@@ -24,10 +24,10 @@ Eight slots. The first four exist; the last four are new.
 
 | Slot id | Node it changes | Owner and saved key | How it renders | Budget class |
 | --- | --- | --- | --- | --- |
-| `paint` | every `paint` surface on HeroCore, HeroPod and every heft layer | per pilot, `<pilot>/paint` | the cached `paint` material for that tint (`hero_assets.gd:174-250`), attached by `paint()` (`:259-277`). Plates use `paint`, so a class-up keeps your colour (ROSTER-LOOK section 5) | none, a tint |
+| `paint` | every `paint` surface on HeroCore, HeroPod and every heft layer | per pilot, `<pilot>/paint` | the cached `paint` material for that tint (`hero_assets.gd:174-250`), attached by `paint()` (`:259-277`). Lattice struts and gap panels use `paint`, so a class-up keeps your colour (ROSTER-LOOK section 5) | none, a tint |
 | `trail` | `BallTrail`, a top-level pool beside the ball (`cosmetic_presentation.gd:36-39`) | per pilot, `<pilot>/trail` | pooled cards, at most 24, never instanced per frame (`:5`, `:225-311`). New: it also draws along a set piece's flight (section 4) | `scenery`, 120 tris and 2 draws per card, as the delivered trails are (`assets/registry.json:114-116`) |
 | `decal` | Pod > `DecalPlate`, the seat-back plate P-D adds (ROSTER-LOOK section 7). Fallback: today's projection onto Core `glass` or `paint` surfaces (`cosmetic_presentation.gd:109-112`) | per pilot, `<pilot>/decal` | a mask tile on one cached decal material per tile and tint. Tile size shrinks from 0.65 m (`:87`) to the plate's 0.36 m | a tile in the mask atlas; tiles 0 to 15 (today 0 to 7, `cosmetics.gd:111`) |
-| `outfit` | the pilot's `Skeleton3D` under Pod > AnimatedPilot: one `BoneAttachment3D` per top-level outfit node, named for a `pilot-v1` bone such as `head` or `spine_02` (`tools/blender/PILOT-RIG.md:23-40`) | per pilot, `<pilot>/outfit`; a row must name a pilot | painted from the shared cache. An optional `AnimationPlayer` in the outfit holds clips named like the pilot's clips; `react()` plays the outfit clip with the same name (`hero_assets.gd:572-595`), so Rivet's hood snaps down on the same trigger as his wind-up. A node named `Replace.<name>` hides the pilot's node `<name>` while the outfit is worn (section 6) | `detail` (cap 1,500 tris, 1 draw); target 400 tris (start) |
+| `outfit` | the pilot's `Skeleton3D` under Pod > AnimatedPilot: one `BoneAttachment3D` per top-level outfit node, named for a `pilot-v1` bone such as `head` or `spine_02` (`tools/blender/PILOT-RIG.md:23-40`) | per pilot, `<pilot>/outfit`; a row must name a pilot | painted from the shared cache. An optional `AnimationPlayer` in the outfit holds clips named like the pilot's clips; `react()` plays the outfit clip with the same name (`hero_assets.gd:572-595`), so Rivet's hood snaps down on `ult_windup`, as both his hands take the copper lap bar (Q: Foundry Cutter). A node named `Replace.<name>` hides the pilot's node `<name>` while the outfit is worn (section 6) | `detail` (cap 1,500 tris, 1 draw); target 400 tris (start) |
 | `shell` | HeroCore and HeroPod base, plus heft layers C2 to C5 | per pilot, `<pilot>/shell`; a row must name a pilot | the one lookup in section 6 | base under `shell` (cap 11,000 tris, 10 draws; target 6,600); each layer under `detail` (ROSTER-LOOK section 5) |
 | `companion_paint` | SPIL-9's Hull and Deck enamel | shared, `spil9/companion_paint` | vertex-alpha mask on a private mesh copy (`cosmetic_presentation.gd:137-215`) | none |
 | `companion_skin` | SPIL-9's skeleton: a `BoneAttachment3D` on `Hull` or `Deck` (`cosmetic_presentation.gd:173`) | shared, `spil9/companion_skin` | add-on parts painted from the cache. Riding bones instead of replacing the model keeps it working on every socket pair, since the body is one GLB per pair (`src/presentation/companion_body.gd:65-68`) | `detail`; target 600 tris (start) |
@@ -38,8 +38,8 @@ Eight slots. The first four exist; the last four are new.
 1. Looks only. No row key can carry a stat (`cosmetics.gd:99-101`).
 2. No hostile hue. Every row has a `tint`, refused within 0.2 of hazard or brass (`cosmetics.gd:19-20`, `:83-88`). The tint is also the swatch colour on the page card.
 3. No light node and no per-instance material on anything a slot mounts. Materials come from the shared cache, which outlives every node, so nothing a slot frees can take a material or a light with it. The wave 11 Vulkan crash was a light freed with its owner (ROSTER-LOOK section 8, `design-v3/HANDOFF.md:11`). `air_cue` builds and frees a `material_override` per ring (`hero_assets.gd:447-463`); no slot copies it.
-4. A variant never moves machinery, sockets or kit nodes, and never enters the sight cone (ROSTER-LOOK section 3, rule 3; section 7).
-5. A missing asset warns once and shows the default look (`cosmetics.gd:177-232`). A missing look never hides gameplay information; for heft plates see section 6.
+4. A variant never moves the weapon ring, the hubs, the hub modules, sockets or kit nodes, and never enters the sight cone (ROSTER-LOOK section 3, rule 3; section 7).
+5. A missing asset warns once and shows the default look (`cosmetics.gd:177-232`). A missing look never hides gameplay information; for gap panels see section 6.
 
 ## 3. Data model
 
@@ -221,22 +221,23 @@ func set_heft_class(rec: Dictionary, heft_class: int, animate := true) -> void
 | a default layer too | nothing for that class | once per pilot and class |
 | the default base | today's primitive fallback (`hero_assets.gd:381-389`) | as today |
 
-**Why the second row.** Heft plates are armour you can see (principle 19, ROSTER-LOOK section 5). A cosmetic must never cost that read, so a variant missing a layer borrows the default plate rather than showing a bare cage at class IV. Variant layers are used only on the variant's own base, because plate shapes fit their lattice.
+**Why the second row.** Gap panels are armour you can see (principle 19, ROSTER-LOOK sections 0.3 and 5). A cosmetic must never cost that read, so a variant missing a layer borrows the default panels rather than showing a bare lattice with every gap open at class IV. Variant layers are used only on the variant's own base, because panel shapes fit their lattice's gaps.
 
 ### Mounting
 
 ```
-ball (rolling mesh)                         juice node
- '-- HeroCore  (base Core, tumbles)          '-- HeroPod  (base Pod, upright, yaws)
-      |-- HeftC2 .. HeftC5  (Core part)           |-- HeftC2 .. HeftC5  (Pod part)
-      |                                           |-- Dome > AnimatedPilot > Skeleton3D > Outfit.<bone>
-      '-- (hub caps only, see below)              '-- DecalPlate
+ball (rolling mesh)                              juice node
+ '-- HeroCore  (base Core: lattice, tumbles)      '-- HeroPod  (base Pod: gimballed cockpit, upright, yaws)
+      |-- Hub.00 .. Hub.31, Gap.00 .. Gap.NN           |-- WeaponRing  (level, yaws to aim)
+      |-- HeftC2 .. HeftC5  (Core part)                |-- HeftC2 .. HeftC5  (Pod part)
+      |                                                |-- Dome > AnimatedPilot > Skeleton3D > Outfit.<bone>
+      '-- (hub and tread caps only, see below)         '-- DecalPlate
 ```
 
 - A layer GLB has the same top-level `Core` and `Pod` split as the base. The loader moves each part into a holder named `HeftC<N>` under HeroCore or HeroPod at identity, as `_fit` moves the base today (`hero_assets.gd:390-404`).
-- **Painted like the base.** `paint(holder, tints)` with the same `tints` (`:395-399`), so the equipped paint reaches every plate.
-- **Lights stripped before the tree.** Any `Light3D` in a base, layer, outfit, skin or decoration scene is removed and freed while the scene is still outside the tree, so the renderer never pairs it, and the loader warns once. The contract test also refuses it at build time (`cage_contract_test`, ROSTER-LOOK section 9).
-- **`Replace.<name>`.** A layer or outfit node named `Replace.CoilMast` hides the base node `CoilMast` while it shows, with `hide_placeholder` (`:279-281`), and restores the node's saved `layers` mask when it hides. The base node stays alive, so kit code that reads `RopeExit`, `VaneL` or `ClawTip.R` keeps working. This is how class V's heavy machinery replaces the light module (ROSTER-LOOK section 0.3, class V) and how Tarn's Steady Cap replaces his battered cap.
+- **Painted like the base.** `paint(holder, tints)` with the same `tints` (`:395-399`), so the equipped paint reaches every panel.
+- **Lights stripped before the tree.** Any `Light3D` in a base, layer, outfit, skin or decoration scene is removed and freed while the scene is still outside the tree, so the renderer never pairs it, and the loader warns once. The base unit's contract test also refuses it at build time (`cage_contract_test`, ROSTER-LOOK section 9; the unit is HOBERMAN-BASE after section 0.6).
+- **`Replace.<name>`.** A layer or outfit node named `Replace.CoilMast` hides the base node `CoilMast`, Sable's light coil mast on its 11 o'clock gap bracket, while it shows, with `hide_placeholder` (`:279-281`), and restores the node's saved `layers` mask when it hides. The base node stays alive, so kit code that reads `RopeExit`, `VaneL` or `ClawTip.R` keeps working. This is how class V's heavy hub modules replace the light ones (ROSTER-LOOK section 0.3, class V) and how Tarn's Steady Cap replaces his battered cap.
 - **Hide, never free, during a run.** All four layers load once at fit and toggle `visible`. Only `_fit`'s swap frees them, with the pair they belong to (`:369-374`). `_fit` refits when the class, the paint tint or now the variant changes (`:367`).
 
 ### Heft class
@@ -253,7 +254,7 @@ ROSTER-LOOK section 0.3 fills lattice gaps with panels, and section 0.1 puts the
 
 ### Ready glow, through the same cache
 
-SKILL-BAR asks the cage's machinery to glow when the ultimate is ready (`design-v3/SKILL-BAR.md:225`, `:608`). On `ultimate_ready` the loader swaps every `class_accent` surface on HeroCore, HeroPod and the visible layers from the cached `class_accent` material to a second cached key, `class_accent_ready`, emission 1.6 instead of 0.5 (`hero_assets.gd:88`) (start). On the set piece's start or cancel it swaps back. Two shared materials per class colour; no per-instance material; no light.
+SKILL-BAR asks the mecha's machinery to glow when the ultimate is ready (`design-v3/SKILL-BAR.md:225`, `:608`). On `ultimate_ready` the loader swaps every `class_accent` surface on HeroCore, HeroPod and the visible layers from the cached `class_accent` material to a second cached key, `class_accent_ready`, emission 1.6 instead of 0.5 (`hero_assets.gd:88`) (start). On the set piece's start or cancel it swaps back. Two shared materials per class colour; no per-instance material; no light.
 
 ### Outfits, skins and decorations use the same helpers
 
@@ -270,14 +271,14 @@ SKILL-BAR asks the cage's machinery to glow when the ultimate is ready (`design-
 |                                                | (Sable)(Rivet)(Kest)(Tarn)(Tally)(?)|  pilot strip
 |                                                +------------------------------------+
 |        LIVE PREVIEW                            | BALL    Paint     Lagoon            |
-|        your pilot seated in its cage,          |         Shell     Default        o  |  o = new items
+|        your pilot in its mecha's cockpit,      |         Shell     Default        o  |  o = new items
 |        turning slowly on Moss's bench          |         Trail     Salt Skip         |
 |                                                |         Decal     None              |
 |        drag to turn, wheel to zoom             | PILOT   Outfit    None           o  |
 |                                                | SPIL-9  Paint     Night Slate       |
 |                                                |         Skin      None              |
 |   HEFT   (I) (II) (III) (IV) (V)               | (Bay row hidden while it has no item)|
-|          plates show the armour you carry      +------------------------------------+
+|          panels show the armour you carry      +------------------------------------+
 |                                                | [Default][Felt Rig][  lock  ][ ? ]  |  card grid
 |                                                |                                     |
 |                                                | Cable Stitch. Land 20 Cable Runs    |  hover line
@@ -300,7 +301,7 @@ At 1920 by 1080 the preview takes 55% of the width and the cards are 132 px squa
 | hidden grant | a "?" card; hover shows "Hidden. Keep playing." and no progress (`achievements.gd:17`) |
 | pending art | not shown |
 
-- **Heft strip.** Five pips under the preview. Hover a pip to preview that class, with the real slam; click to pin it. The first time each variant is shown, the preview steps I to V once at 0.4 s per class (start), so the player sees the plates accrete. Any click stops it.
+- **Heft strip.** Five pips under the preview. Hover a pip to preview that class, with the real slam; click to pin it. The first time each variant is shown, the preview steps I to V once at 0.4 s per class (start), so the player sees the gap panels accrete. Any click stops it.
 
 ### Interaction and transitions
 
@@ -311,7 +312,7 @@ At 1920 by 1080 the preview takes 55% of the width and the cards are 132 px squa
 | mouse leaves the grid | the preview returns to what is worn | 0.12 s |
 | click an owned card | equip and save (`customize_page.gd:134-144`); the part pops | 0.18 s, 1.2 overshoot |
 | click a locked card | the card shakes 3 px; nothing equips | 0.15 s |
-| change shell | the old plates fling out, the new lattice snaps in | 0.20 s, then 0.18 s |
+| change shell | the old panels fling out, the new lattice snaps in | 0.20 s, then 0.18 s |
 | change pilot | the pilot hops out of the seat and the next hops in | 0.25 s |
 | switch slot | the grid cross-fades | 0.12 s |
 | close | `seen` marks save once, then the page slides out | 0.22 s |
@@ -329,7 +330,7 @@ Keyboard and pad keep working: up and down move between the pilot strip and the 
 - Camera: the close camera, 3.6 m at 17 degrees down and 65 degrees lens (ROSTER-LOOK section 3); wheel zooms 3.0 to 5.0 m. Turntable at 0.2 turns a second; drag turns 0.5 degrees per pixel; the spin resumes 1.5 s after release (start).
 - Light: one `DirectionalLight3D` and a `WorldEnvironment`, created once when the page attaches and never freed until quit. Nothing in the preview adds a light per item.
 - Trail tab: the ball rolls in place at a simulated 6 m/s and the trail's real pooled cards spawn behind it. SPIL-9 tabs: the companion stands beside the ball. Bay tab: the item sits alone on the bench.
-- The class card's preview moves to `fit_shell_into` too (`class_preview.gd:137-162`), so the card shows the equipped variant and paint, not the default glass.
+- The class card's preview moves to `fit_shell_into` too (`class_preview.gd:137-162`), so the card shows the equipped variant and paint, not the default shell.
 
 ## 8. Earned items, all six pilots
 
@@ -350,7 +351,7 @@ Twenty-one rows: three per pilot from the sheets, and three shared rows for the 
 | Item id | Name | Slot | Grant row | Route and condition | Art from |
 | --- | --- | --- | --- | --- | --- |
 | `trail_rivet_swarf` | Swarf Curl | trail | `ach_rivet_line_true` "Line True": "Land 50 Line Drive punches." | count: `on: line_skill_fired`, `where: {ability_id: line_drive, on: body}`, `count: 50` | trail art unit |
-| `outfit_rivet_hood` | Welding Hood | outfit | `ach_rivet_shrugged` "Shrugged Off": "Shrug off 30 holds and knocks in one run." | discovery `rivet_shrugged`, detected in Rivet's code on the 30th ignored hit of a run (`pilots/rivet.md:307`). The hood carries a clip named like the wind-up clip so it snaps down with it | outfit art unit |
+| `outfit_rivet_hood` | Welding Hood | outfit | `ach_rivet_shrugged` "Shrugged Off": "Shrug off 30 holds and knocks in one run." | discovery `rivet_shrugged`, detected in Rivet's code on the 30th ignored hit of a run (`pilots/rivet.md:307`). The hood carries a clip named `ult_windup`, so it snaps down with the pilot's wind-up | outfit art unit |
 | `shell_rivet_calibrated` | Calibrated | shell | `ach_rivet_full_breach` "Full Breach": "Land one Foundry Cutter on six machines." | count: `on: ultimate_landed`, `where: {ultimate_id: foundry_cutter}`, `at_least: {hits: 6}`, `count: 1` | P-D Rivet |
 
 ### Kest (`demolitions_caster`)
@@ -377,7 +378,7 @@ Kest's amber cannot be a tint: it sits 0.09 from brass, inside the 0.2 refusal (
 | --- | --- | --- | --- | --- | --- |
 | `trail_tally_punch_tape` | Punch Tape | trail, tint `f7f1e3` | `ach_tally_punch_tape` "Punch Tape": "Fire the ledger clip 50 times." | count: `on: line_skill_fired`, `where: {ability_id: link_clips}`, `count: 50` | trail art unit |
 | `outfit_tally_eyeshade` | Eyeshade | outfit | `ach_tally_eyeshade` "Eyeshade": "Settle 100 clips with Plate Return." | count: `on: ultimate_landed`, `where: {ultimate_id: plate_return}`, `sum: hits`, `count: 100`. Needs B3 to count each settled clip in Plate Return's `hits` | outfit art unit |
-| `shell_tally_abacus` | Abacus Cage (working name) | shell | `ach_tally_books_balanced` "Books Balanced", hidden: "Settle six clips with one landing." | discovery `tally_books_balanced` (`pilots/tally.md:308`) | P-D Tally |
+| `shell_tally_abacus` | Abacus Lattice (working name) | shell | `ach_tally_books_balanced` "Books Balanced", hidden: "Settle six clips with one landing." | discovery `tally_books_balanced` (`pilots/tally.md:308`) | P-D Tally |
 
 ### The Cannon (`remembered_cannon`)
 
@@ -462,7 +463,7 @@ All under `sketches/core-loop/`.
 ### TESTS
 
 - New `tests/customize_slots_test.gd`: `owner_for`, `fits` and `worn` for all eight slots and three owner kinds; the equip refusals (`customize_page.gd:134-144`).
-- New `tests/shell_layers_test.gd`: the lookup, the fallback table, mounting, visibility by class, instance-id stability, light stripping, paint on plates, `Replace.`. Fixtures are scenes the test packs and saves under `user://`, fed to `shell_path` through its `paths` map.
+- New `tests/shell_layers_test.gd`: the lookup, the fallback table, mounting, visibility by class, instance-id stability, light stripping, paint on panels, `Replace.`. Fixtures are scenes the test packs and saves under `user://`, fed to `shell_path` through its `paths` map.
 - New `tests/grant_grammar_test.gd`: `at_least`, the `first_time` rule, `backfill_discoveries`, the toast's item line, the one-grant-per-item invariant.
 - New fixture `tests/fixtures/profile_v3.json` and the schema 4 cases in `tests/profile_store_test.gd` (section 5).
 - Re-pins with dated headers: `profile_store_test.gd:9`, `:443`, the `:483` label; `pilot_locks_test.gd:128`; `customization_system_test.gd:198` (mask 8 becomes valid, 16 invalid) and `:181-183` (exempt `PENDING_ART`); `ui_customize_page_test.gd` layout checks; `customization_presentation_test.gd` decal placement.
@@ -505,7 +506,7 @@ Seven trails, two decal tiles, four outfits and one companion skin need art. P-D
 Calls made under the creative charge. Say "veto" on a line and it changes.
 
 1. Schema 4 adds one field, `seen`, for new-item marks; a returning profile's owned items count as already seen.
-2. A shell variant missing a heft layer borrows the default plate for that class, so the armour read never vanishes for a cosmetic.
+2. A shell variant missing a heft layer borrows the default panels for that class, so the armour read never vanishes for a cosmetic.
 3. Gap panels mount on the upright Pod and the tumbling Core takes only thin hub caps, which keeps the pilot visible (default for P-D; the loader supports either).
 4. One new grant field, `at_least`, used by Rivet's and Tarn's six-machine shells.
 5. Kest's eight-enemy shell grant becomes a discovery her code fires, because it spans several events.

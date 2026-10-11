@@ -165,7 +165,7 @@ Spec keys are today's (`src/world/contraptions.gd:86-101`; shapes as in `src/wor
 | `sump_geyser` | launcher (geyser), `geyser_vent` | `floor_sump` | at (-70, 128), target (0, -59.2, 240), floor 16, min flight 2.2 s, charge 3.0 s | a burst dewatering standpipe that throws you onto the tipple deck |
 | `rim_zip` | cable, `""` | `pit` | from (60, 3.2, -280) to (150, -57.6, -60), radius 3.4, floor 18 | a 240 m downhill grapple line from the north rim to bench 3 |
 | `adit_valve` | valve, `gauge` | `adit_east` | at (235, 0), door at (228, 18), 10 by 5 by 1 m, turn 2.16 | opens the adit's back door: a shortcut from bench 2 to bench 3 |
-| `sealed_portal` | cracked_wall, `""` | `deep_adit` | at (185, 240), 12 by 7 by 1.4 m, turn 1.24 | smash the seal before the eruption to see the blue seam early |
+| `sealed_portal` | cracked_wall, `""` | `deep_adit` | at (185, 240), 12 by 7 by 1.4 m, turn 1.24 | smash the seal before the eruption to see the green seam early |
 | `dust_devil_east` | thermal, `""` | `tailings_bench_east` | at (400, -60), radius 5, height 62 | a visible dust devil over hot tailings: a lift lane, never a push |
 | `dust_devil_floor` | thermal, `""` | `pit` | at (80, 60), radius 5, height 60 | Kest's lift over the floor bowl |
 
@@ -182,7 +182,7 @@ The dust devils are the weather's dust devils made into marked lanes, as PARK.md
 
 Both rows carry `handling: "none"`.
 
-**The Dig lamps veto, kept.** VX8 (`364e1e6`, on Andrew's wave 11 veto list, `design-v3/HANDOFF.md:17`) removed the amber lamp pools and the breach-plate daylight shaft because they read as false telegraphs. This stage adds no light pool, no light shaft and no warm OmniLight3D. Lamp lines on the bench faces keep white, unpooled lenses (`src/presentation/dig_scenery.gd:404-405`). Winze caps carry no light under them. The only coloured light on the floor is a telegraph or the hive's blue seams.
+**The Dig lamps veto, kept.** VX8 (`364e1e6`, on Andrew's wave 11 veto list, `design-v3/HANDOFF.md:17`) removed the amber lamp pools and the breach-plate daylight shaft because they read as false telegraphs. This stage adds no light pool, no light shaft and no warm OmniLight3D. Lamp lines on the bench faces keep white, unpooled lenses (`src/presentation/dig_scenery.gd:404-405`). Winze caps carry no light under them. The only coloured light on the floor is a telegraph or the hive's green seams.
 
 ## 9. Traversal lines
 
@@ -291,7 +291,7 @@ Board id `park-3-park_pit`. PARK.md section 6.1 panels in brackets. The pilot ba
 2. **First flow line [p3_line].** Low chase camera as the ball drops off the dump's tipping face into the arroyo, then carves high on the left wall. Cinder-red banks, a few saguaros on the lip, the canal lip ahead catching light. The ball is airborne for the first beat, wheels of dust behind it.
 3. **An enemy home [p4_home].** Rivet's line across the tailings pond on bench 1 east. Three dark burrow markers on the flat pale surface, one bulging lane committed toward the ball. The bench face behind is streaked with turquoise copper stain; a dust devil stands at the pond's edge.
 4. **An event firing [p5_event].** The tailings slump. Panel left: the telegraph, a dust curtain lifting along the bench 1 face and the `ground_slump` form crawling along its foot. Panel right, one bar later: the face has sheared into a smooth slide down to bench 2, and a ball is riding it.
-5. **The landmark approach [p3_line, second].** From the east dive kicker on the bench 2 lip, the ball in the air over bench 3 with the headframe filling the right half of frame. Inside the frame the hive hangs low at the collar, blue seams lit, a rack of drones forming on the floor between it and the ball.
+5. **The landmark approach [p3_line, second].** From the east dive kicker on the bench 2 lip, the ball in the air over bench 3 with the headframe filling the right half of frame. Inside the frame the hive hangs low at the collar, green seams lit, a rack of drones forming on the floor between it and the ball.
 6. **The Warden fight [p6_warden].** The hive at its high dwell just under the tipple deck. A harpoon line runs from a ringed grip cell down to the ball hanging 25 m above the floor. A file of drones climbs the rope toward the ball: the snip telegraph. Below, the hoist house and the floor dish.
 7. **The drop finisher [p6_warden, second].** Stagger. The hive has dropped to the collar, shutters blown open, the queen cell swollen and blazing blue. The ball falls from the tipple deck straight onto it.
 8. **The exit.** The bay's hover barge docked over the gate on the pit floor, the headframe dark and still behind it, and the stage launch arc rising out of the pit toward the south-west and the next zone.

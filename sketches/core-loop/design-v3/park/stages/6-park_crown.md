@@ -43,11 +43,11 @@ The run's last park. You drop off a butte at dusk under a building thunderstorm 
 
 **The guardrail, checked.** `alcove_ledge` is the only `ancestral_puebloan` row. It has no `home`, its fragment is `ref_alcove_masonry`, and no event row names it as a site (PARK.md:230). The anchors for that stretch are the natural rock horns above the alcove (`alcove_horns`, society `none`); the masonry carries no hardpoint or post. In game the alcove builders are a fictional people; the reference fragment describes the building technique only.
 
-**Material read.** Red-orange sandstone going violet as the light fails; pale hoodoo caps; wet slickrock that mirrors the lightning. The Fleet in brass and soot. The ancients only in dull petrol enamel with Cherenkov seams (`src/combat/warden_kit.gd:8-9`), which glow brighter as the sky darkens.
+**Material read.** Red-orange sandstone going violet as the light fails; pale hoodoo caps; wet slickrock that mirrors the lightning. The Fleet in brass and soot. The ancients only in dull petrol enamel with uranium-glass green (#9dff3c) seams (`src/combat/warden_kit.gd:8-9`), which glow brighter as the sky darkens.
 
 ## 2. The hero landmark and the Warden's mounting
 
-**The Crown Spire.** A single sandstone spire, 330 m tall and 50 m across at its base, standing in a scoured slickrock bowl at the park's north end. A Cherenkov blue beam rises from its tip (`light: "ancient_beam"`), and the storm's lightning prefers it. A Fleet lightning collector, a brass catwalk ringed with rods, clings to its south face at 64 m: the Fleet is harvesting the storm.
+**The Crown Spire.** A single sandstone spire, 330 m tall and 50 m across at its base, standing in a scoured slickrock bowl at the park's north end. A uranium-glass green beam rises from its tip (`light: "ancient_beam"`), and the storm's lightning prefers it. A Fleet lightning collector, a brass catwalk ringed with rods, clings to its south face at 64 m: the Fleet is harvesting the storm.
 
 **Why 330 m and not PARK.md's 300 m.** The sight rule asks for 85% of open cells (PARK.md:474). The bajada is open, but the Alcove, Signal and Gauntlet buttes cast shadows. With the buttes turned so their long axes point at the Crown and slimmed to 90 to 120 m wide, a 300 m spire reached about 0.85 in my rough model and 330 m reached 0.854 over 774 cells. The margin is thin. If KD6's real test misses, the first fix is lowering the Signal Butte; the second is 360 m.
 
@@ -393,7 +393,7 @@ What changes: the map id (`highdraft_crown` to `park_crown`), the heading (today
 
 Eight frames, in play order. Panels p1 to p6 of the stage board map onto frames 1 to 6; frames 7 and 8 are spares.
 
-1. **Drop-in vista (p2_drop_in).** Dusk from the Watch Butte's north edge, 2 m above the rock, looking north. The bajada fans out below, studded with fallen blocks. The Turnstone balances at the ramp's foot. The hoodoo forest stands to the left, the gooseneck glints in the centre, the east wash runs right. On the skyline the Crown Spire with its blue beam, three tiny perches at its foot, under a towering anvil cloud. A bolt strikes a needle on the left.
+1. **Drop-in vista (p2_drop_in).** Dusk from the Watch Butte's north edge, 2 m above the rock, looking north. The bajada fans out below, studded with fallen blocks. The Turnstone balances at the ramp's foot. The hoodoo forest stands to the left, the gooseneck glints in the centre, the east wash runs right. On the skyline the Crown Spire with its green beam, three tiny perches at its foot, under a towering anvil cloud. A bolt strikes a needle on the left.
 2. **First flow line (p3_line).** Chase camera behind the ball carving the drop ramp's S on wet slickrock, the bajada rushing up, first rain streaks, the Crown dead ahead.
 3. **An enemy home (p4_home).** The needles from inside the field: kite drones circling in a rain-lit updraft above the spire tips, a dive mark on the ground half lost in a lightning flash. The counter is in frame: the updraft column Kest could ride.
 4. **An event firing (p5_event).** The split spire strike in two beats: the blue-white mark crawling up the spire, then its top lying north as a ramp, fulgurite glowing at its foot.

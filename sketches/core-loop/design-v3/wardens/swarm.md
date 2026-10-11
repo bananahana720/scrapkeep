@@ -43,7 +43,7 @@ K-F gives the kind its own body (unit KF6, section 11) on the same clamp base, s
 
 ### 1.2 Light
 
-- Cherenkov blue only, the ancients' colour (`Roster.ANCIENT_LIGHT`, cited in `warden_kit.gd:33`). It lives in the cell seams as many small points, never one big glow.
+- uranium-glass green (#9dff3c) only, the ancients' colour (`Roster.ANCIENT_LIGHT`, cited in `warden_kit.gd:33`). It lives in the cell seams as many small points, never one big glow.
 - The seams use the kit's existing levels: dim at rest, brightening across the charge, blazing while the queen stands open (`warden_kit.gd:19-20`).
 - Stage 4's light column rises from the nest, 4 m wide. It dims when the guard is down and dies on the break.
 - No warm light on the body or the mounting. The wave 11 lamp veto (VX8, `364e1e6`) holds on both Dig stages: no light pools, no daylight shafts, no amber.
@@ -232,7 +232,7 @@ Board `warden-swarm`, five panels (PARK.md:406):
 | --- | --- |
 | `w1_body` | The hive alone on a plain ground: a lumpy honeycomb dome of hexagonal cells in dull petrol enamel, blue pinpricks in the seams, the queen cell taller on top, flat triangle drones crawling over it. |
 | `w2_mount_a` | The headframe: the hive hanging in the hoist cage at its high dwell under the tipple deck, the black steel frame and sheave wheels above, the pit's benches behind in noon light. |
-| `w3_mount_b` | The sinkhole: the nest on the banded south wall over a round pool, the timber gallery ring, the lamp guard circling over the water, the blue column rising to an afternoon sky. |
+| `w3_mount_b` | The sinkhole: the nest on the banded south wall over a round pool, the timber gallery ring, the lamp guard circling over the water, the green column rising to an afternoon sky. |
 | `w4_anchor` | A harpoon line from a grip cell to a ball hanging in the air, three drones walking the rope toward it. |
 | `w5_break` | The dome splitting along its seams into falling cells over the pool, drones dropping as dead triangles, seams going dark. |
 

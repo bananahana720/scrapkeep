@@ -2,7 +2,7 @@
 
 Status: design sheet for wave 13, unit A2, pilot Rivet (ClassDef id `runner_gunner`). Written 2026-10-10 on `cand/alpha-w13` at `22b8bb6`. Nothing here is built or played. Paths without a prefix are under `sketches/core-loop/`. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 lists them as the veto list.
 
-Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; this sheet uses its names exactly), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the cage language) and the sibling sheets in this folder. It supersedes the Rivet kit text in `design-v2/I1-character-kits.md:56-77`, `DESIGN-V2.md:30-50` and `docs/CHARACTER-BIBLE.md:64-74` where they disagree. The code wins over all three: Rivet's colour is copper (`src/core/class_def.gd:14`), not the mint of `CHARACTER-BIBLE.md:68`, and the sprint is on Shift (`src/movement/player_ball.gd:484-495`), not the RMB of `DESIGN-V2.md:34`.
+Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; this sheet uses its names exactly), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the Hoberman mecha, section 0) and the sibling sheets in this folder. It supersedes the Rivet kit text in `design-v2/I1-character-kits.md:56-77`, `DESIGN-V2.md:30-50` and `docs/CHARACTER-BIBLE.md:64-74` where they disagree. The code wins over all three: Rivet's colour is copper (`src/core/class_def.gd:14`), not the mint of `CHARACTER-BIBLE.md:68`, and the sprint is on Shift (`src/movement/player_ball.gd:484-495`), not the RMB of `DESIGN-V2.md:34`.
 
 Terms used here, defined once:
 
@@ -46,7 +46,7 @@ Terms used here, defined once:
 | 2 | Overdrive Blast (`overdrive_blast`) | gauge: hold left click, release | Gauge 1.0 s, grace 0.5 s (`ability_state.gd:56`, `:86`). Ring 12 m tapped to 18 m full; damage 30 to 45; knock 34 to 51 (`weapons.gd:61-67`). Then 3 s of laser rate x1.6, stacking to 6 s (`:64-65`, `:247`). Cooldown 6.0 s | `_specials` row and fire path (`combat.gd:298`, `:1400-1410`, `:1936-1964`) | Picked with 2 and cast with left click instead of F (SKILL-BAR section 1) |
 | 3 | Line Drive (`line_drive`) | tap | Punch: a ram at 60% of the ball's speed, knock 34. Haul: 24 m/s, crowd control slides off. Cooldown 8.0 s, 1 charge, load 4.0 s **start** | The harpoon, the ram rule and the rail maths it reuses | All of it. Full spec in 2.3 |
 | Shift chip | Overdrive Sprint (`overdrive_sprint`) | hold | 1 charge, 2.0 s, cooldown 5.0 s (`ability_state.gd:55`). Cruise x1.25 (`augments.gd:101`). Contact punch x1.25 (`weapons.gd:224`). Rebounds only off weight of at least heft x1.0, not x1.15 (`DESIGN-V2.md:56`, `player_ball.gd:1121-1125`) | `_sprint` (`augments.gd:215-247`), the crowd-control door (`player_ball.gd:357-367`) | A verb chip readout only; never selectable |
-| Ctrl chip | Shockwave Skid (`shockwave_skid`) | instant, airborne | The shared slam: 9 m ring, knock 26 x strength (`augments.gd:67-68`, `player_ball.gd:891-904`). The skid: no plant, exit speed is the speed along the ground plus 0.6 of the fall (`augments.gd:119`, `:503-514`). Cone ahead 10 m, half-angle 70 degrees, knock 26 x strength x falloff, +0.5 s of sprint back per hit (`player_ball.gd:43-47`, `:966-982`) | All of it | A verb chip readout and the `smash_skid` clip |
+| Ctrl chip | Shockwave Skid (`shockwave_skid`) | instant, airborne | The shared slam: 9 m ring, knock 26 x strength (`augments.gd:67-68`, `player_ball.gd:891-904`). The skid: no plant, exit speed is the speed along the ground plus 0.6 of the fall (`augments.gd:119`, `:503-514`). Cone ahead 10 m, half-angle 70 degrees, knock 26 x strength x falloff, +0.5 s of sprint back per hit (`player_ball.gd:43-47`, `:966-982`) | All of it | A verb chip readout and the `smash` clip |
 | Q | Foundry Cutter (`foundry_cutter`) | press at a full meter | A ride on the framework paths. One beam, 40 m, cutting 3 machines a beat for 12 x heft multiplier. Peak sweep 90 degrees, 18 x heft. Breach Skid landing 60 x heft multiplier x chain multiplier **start** | The rail maths, the aim query and the skid it reuses | All of it. Full spec in section 3 |
 
 ### 2.1 Slot 1: Rapid Laser
@@ -92,7 +92,7 @@ The line-skill contract, field by field (SKILL-BAR section 3):
 
 What it does: hold Shift for up to 2.0 s. Cruise rises 25%, contact hits 25% harder, and every hold and knock slides off while the damage lands (`player_ball.gd:357-367`). The ignored hit says so, at most every 250 ms per kind (`player_ball.gd:37-38`).
 
-Sees and hears: the exhaust mouths light copper (ROSTER-LOOK section 4). The closed-hat roll plays for the sprint's whole length, and an ignored hit is a cymbal choke (`SOUND-STORY.md:100-101`).
+Sees and hears: the exhaust mouths light copper (section 5; ROSTER-LOOK §0.2). The closed-hat roll plays for the sprint's whole length, and an ignored hit is a cymbal choke (`SOUND-STORY.md:100-101`).
 
 Card line: "Shift: sprint; crowd control slides off." (6 words)
 
@@ -132,8 +132,8 @@ The flight plays Rivet's motif stretched over the ride. The motif is A A A then 
 | 5. Landing | The Breach Skid. No plant. A forward cone along the path's heading, half-angle 70 degrees (the skid's cone, `player_ball.gd:46`), reaching 1.5 x the class landing radius (9, 10.5, 12, 13.5, 15 m), plus everything within 2.5 m. Damage 60 x heft multiplier x `chain.multiplier()`, then the chain ends (framework). Knock 26 forward x falloff x `ult_pins`, so thrown machines pin as the skid does (`player_ball.gd:966-982`). Exit: the ball leaves along the path's heading, flattened onto the ground, at its banked speed, which a ride never cuts (`src/world/ride_rail.gd:9-13`). **A2-CRITIC:** the earlier 27 m/s floor is gone, because Sable's Cable Run exit owns "leave faster than you came" and two line-first set pieces ending in the same speed gift read as one payoff. The landing also grants one sprint charge (the `grant_move` action, `combat.gd:2247`). **Call:** the Breach Skid counts as a slam for the burrower's marker and the drill crew's rig (`burrower.gd:5-6`, `drill_crew.gd:4-5`) |
 | 6. Heft scaling beyond the table | The beam's width follows the lens, which grows with the drill cone (section 5): 0.6 m at class I to 1.0 m at class V. The cone's reach is 1.5 x the framework's landing radius. Damage uses the framework multiplier, 1.00 to 1.60 |
 | 7. Music | Motif `rivet` (`src/presentation/harmony.gd:133`). Ready: A5 A5 A5 D6 as clav ticks and a small bell, the motif up an octave (the framework's ready cue). Wind-up: the launch build (framework). Flight: one clav A per beat, on the beam's flash, with the closed-hat roll in sixteenths under it. Peak stinger: the roll accelerates into the open-hat crash, the motif's own payoff (`SOUND-STORY.md:44`). Landing cadence: the D, the fourth home, lands on the drop beat with `drop_now` (framework) |
-| 8. Cage | Ready: the exhaust mouths breathe copper at 1 Hz and the drill turns at 0.5 revolutions a second. Wind-up: the drill spins up to 8 a second with a rising whine, and the lens lights. Flight: the drill at full spin, the exhausts lit, the beam leaving `DrillTip`. Peak: a lens flare, and the fin V opens 10 degrees. Landing: an exhaust puff; the drill spins down over 0.6 s |
-| 9. Clips | `ult_ready` 0.8 s, `ult_windup` 0.35 s, `ult_strike` 0.6 s, `ult_recover` 0.7 s (section 6) |
+| 8. Mecha | Ready: the exhaust mouths breathe copper at 1 Hz and the drill turns at 0.5 revolutions a second. Wind-up: the drill spins up to 8 a second with a rising whine, and the lens lights. Flight: the drill at full spin, the exhausts lit, the beam leaving `DrillTip`. Peak: a lens flare, and the fin V opens 10 degrees. Landing: an exhaust puff; the drill spins down over 0.6 s. Throughout, the weapon ring stays level and yaws to the aim, so the twin barrels point along the beam |
+| 9. Clips | `ult_ready` 0.8 s, `ult_windup` 0.35 s, `ult_strike` 0.6 s, `ult_recover` 0.7 s (section 6). The claws take the copper lap bar, the Q control, at wind-up and hold it through the flight in the shared `ult_ride_loop` (PILOT-CLIPS.md section 1) |
 | 10. Depth 3 | Prism Cutter and Juggernaut Drive, below |
 | 11. Depth 4 | Five knobs, below |
 | 12. Wardens and bosses | Below |
@@ -244,55 +244,57 @@ New `ABILITIES` rows (beside `src/core/ability_state.gd:54-58`):
 
 In one line each: world 1 is the runner, world 2 makes the set piece his, world 3 grows it.
 
-## 5. The cage
+## 5. The mecha
 
-**Body direction (A2-CRITIC, 2026-10-10).** ROSTER-LOOK §0, the Hoberman mecha, is now the live body and supersedes the cage anatomy below (`ROSTER-LOOK.md:3`, `:11-15`). Read "ring" as "lattice" and "plate" as "gap panel". Rivet's parts map onto §0.2: the drill nose is a module filling the front gap, the twin exhaust stacks sit on two rear upper hubs, the copper fins lie flat in the front lower gaps (section 5's fin row), and his twin laser barrels ride the weapon ring. The beam still leaves `DrillTip`. The silhouette rule below holds and PILOTS.md restates it; its clock positions for the other five come from ROSTER-LOOK §4 and are superseded there.
+**Body direction (A2-CRITIC, 2026-10-10; rewritten to the Hoberman mecha the same evening).** ROSTER-LOOK §0, the Hoberman mecha, is the live body (`ROSTER-LOOK.md:3`, `:11-15`), and this section follows it. Rivet's concept pictures are `artifacts/local/alpha/push/w13/concepts/codex/rivet/hero.png`, `chase.png` and `sheet.png`. The silhouette rule below holds and PILOTS.md restates it.
 
-ROSTER-LOOK is the canon for the shared cage (section 2 there): tread rings on Core, a gyro hoop on Gyro, and the yoke, cradle, seat and machinery on Pod, around a seated, fully visible pilot. This section fills in Rivet's row (`ROSTER-LOOK.md:95`).
+ROSTER-LOOK §0.1 is the canon for the shared mecha. The lattice on Core is a fully expanded Hoberman sphere that tumbles with the roll. Its named Hub and Gap empties take the parts: modules clamp at hubs, and heft panels fill gaps. The WeaponRing under Pod stays level on its bearing collar and yaws to the aim. The cockpit Pod hangs upright on a two-axis gimbal and turns to the heading. It holds the seat, the controls and a seated, fully visible pilot. This section fills in Rivet's row of §0.2: the drill nose is a module filling the front gap, the twin exhaust stacks sit on gap brackets at the upper rear (rest pose at two upper rear hubs), the copper fins lie flat in the front lower gaps, and his twin laser barrels ride the weapon ring. The beam still leaves `DrillTip`.
 
-### Machinery: the drill nose, the fins and the stacks
+### Machinery: the drill nose, the fins, the stacks, the weapon ring and the cockpit
 
 | Part | Form | Function it shows |
 | --- | --- | --- |
-| Drill nose | A stepped drill cone forward of the cradle, with the cutting lens at its tip. Three steps at class I; the lens 0.12 m across | The Foundry Cutter leaves from the lens. The drill spins with the set piece (section 3, item 8). It never bores the ground |
+| Drill nose | A stepped drill-cone module hung under the weapon ring's front arc, filling the front gap in the rest pose, with the cutting lens at its tip. Three steps at class I; the lens 0.12 m across | The Foundry Cutter leaves from the lens. The drill spins with the set piece (section 3, item 8). It never bores the ground |
 | Cooling fins | Copper fins on the front lower gaps, raked back so they form a V pointing forward, folded flat inside the lattice outline (under 0.05 m proud). They flare 10 degrees only at the set-piece peak. **A2-CRITIC:** the draft stood them out at 4 and 8 o'clock, which is Tarn's one defining break (`pilots/tarn.md` section 5) | Rivet's chevron, his class shape, read from the side and front, never from behind |
-| Twin exhaust stacks | Two short stacks at 11:30 and 12:30, 0.18 m tall | The rear tell. The mouths light copper during the sprint, the haul and the set piece |
+| Twin exhaust stacks | Two short stacks on gap brackets at the upper rear (rest pose at two upper rear hubs), at 11:30 and 12:30, 0.18 m tall | The rear tell. The mouths light copper during the sprint, the haul and the set piece |
+| Weapon ring | Twin rapid-laser barrels in copper housings on the ring's front arc, at about 11 and 1 o'clock, parallel, muzzles forward. The band is worn-bone segments with charcoal clamp blocks over a dark-steel bearing collar (ROSTER-LOOK §0.7) | The ring stays level and yaws to the aim, so the barrels point where the bolts go |
+| Cockpit | The seat hangs inside two nested dark-steel gimbal rings, both visible through the front gap, with a bone seat back behind the grey head. Twin yokes take the claws, and their triggers fire "1: Rapid Laser". A two-lever bank beside the right yoke holds "2: Overdrive Blast" and "3: Line Drive". The largest control is a copper two-handed lap bar with a sight at its centre: "Q: Foundry Cutter". Two pedals carry "Shift: Overdrive Sprint" (ROSTER-LOOK §0.7) | Each control moves when its skill fires, from the same event as its clip (ROSTER-LOOK §0.4; section 6) |
 
-Named nodes, for P-D to add and kit code to read: `DrillTip` (an empty at the lens facing +Y, as ROSTER-LOOK names it), `Drill` (the spinning cone) and `Exhaust.L` and `Exhaust.R` (the glow mouths). Glow is the `class_accent` slot at the lens tip and the exhaust mouths only (ROSTER-LOOK section 4).
+Named nodes, for P-D to add and kit code to read: `DrillTip` (an empty at the lens facing +Y, as ROSTER-LOOK names it) and `Drill` (the spinning cone) under Pod > WeaponRing, because the drill nose hangs under the ring's front arc; `Exhaust.L` and `Exhaust.R` (the glow mouths) on gap brackets from the Pod at 11:30 and 12:30 (ROSTER-LOOK §4; rest pose at the upper rear hubs). The cockpit controls under Pod take the clip spec's names: `Control.Trigger` on the yokes, `Control.Lever` for slot 2 and `Control.WinchLever` for slot 3 (PILOT-CLIPS.md section 5). Glow is the `class_accent` slot at the lens tip and the exhaust mouths only (ROSTER-LOOK §0.7, colour discipline and glow).
 
-### Plates across heft classes
+### Gap panels across heft classes
 
-Plates follow `heft_class_changed` and `heft_class_dropped` (`src/core/game_events.gd:36-37`). Losing a class sheds the outermost layer. The layers and budgets are ROSTER-LOOK section 5's; Rivet's plate motif is raked chevron plates.
+Gap panels follow `heft_class_changed` and `heft_class_dropped` (`src/core/game_events.gd:36-37`). Class up slams panels into their gaps. Losing a class flings the outermost layer out of its gaps. The budgets are ROSTER-LOOK section 5's and the gap order is §0.3's. Rivet's gap panels are raked chevron plates.
 
 | Class | Rivet's layer |
 | --- | --- |
-| I | Open cage: a rider. Three-step drill, fins, stacks |
-| II | Six raked chevron plates around the seat bowl, all below Z -0.35, points forward |
-| III | Tread shoes on the inner face of the rings, cut with chevron grooves |
-| IV | Flank armour that extends the fin V outward at 3 and 9 o'clock, to radius 1.12; collars round the stack bases |
-| V | The big drill cone: five steps, the lens 0.20 m across; waist armour to Z -0.15 |
+| I | Bare lattice, weapon ring and pod, with no gap panels: a rider. Three-step drill, fins, stacks |
+| II | Six raked chevron panels in the lower gaps below the pod, all below Z -0.35, points forward |
+| III | Chevron panels in the side gaps, and thicker hub tread caps with a chevron tread |
+| IV | Chevron panels in most gaps, carrying the fin V back along the flanks toward 3 and 9 o'clock inside the lattice outline. Only the sight gaps to the head stay open. Collars round the stack bases |
+| V | Every gap paneled except the front and rear sight gaps to the head. The drill module grows to its heavy form: the big drill cone, five steps, the lens 0.20 m across |
 
 One source, every layer: the heft class sets the lens size, and the lens size sets the beam width (0.6 m at class I to 1.0 m at class V). The bigger drill is why the beam is fatter.
 
 ### Silhouette rule
 
-**Two short stacks standing straight up over a broad, earless head means Rivet.** No other pilot breaks the outline above the head with two parallel vertical stubs: Sable's coil mast is single at 11, Kest's vents sweep at 2 and 10, Tarn's jaws sit low at 4 and 8, Tally's drums are level at 3 and 9, and the Cannon's ports sit at 5 and 7 (`ROSTER-LOOK.md:94-99`). From the side, the drill nose and the forward fin V finish the read.
+**Two short stacks standing straight up over a broad, earless head means Rivet.** No other pilot breaks the outline above the head with two parallel vertical stubs: Sable's single coil mast stands at 11 o'clock with nothing at 1, Kest's fin vanes sweep at 2 and 10, Tarn's claw arms sit low at 4 and 8, Tally's ledger drums are level at 3 and 9, and the Cannon's split ports sit low at 5 and 7 (ROSTER-LOOK §0.2 and the §0.7 game-size read). From the side, the drill nose and the forward fin V finish the read.
 
 ## 6. Clips
 
-All clips play on the shared 25-bone `pilot-v1` rig through the pose-table route. A5 confirms the ids and P-E builds them. Rivet's motion language: perfectly still, then exact. The head moves in small, precise increments and one claw taps a dial (`CHARACTER-BIBLE.md:70`). His rarest expression, the visor flipping up to show tiny proud eyes (`:73`), is saved for class-up and the unlock.
+All clips play on the shared 25-bone `pilot-v1` rig through the pose-table route. A5 confirms the ids and P-E builds them. Rivet's motion language: perfectly still, then exact. The head moves in small, precise increments and one claw taps a dial (`CHARACTER-BIBLE.md:70`). His rarest expression, the visor flipping up to show tiny proud eyes (`:73`), is saved for class-up and the unlock. At rest the claws sit on the twin yokes. The cast and ultimate clips work the cockpit controls in section 5 (ROSTER-LOOK §0.4, §0.7).
 
 | Clip | Length | Trigger signal | Pose beats |
 | --- | --- | --- | --- |
-| `idle` | 4.0 s loop | none; the base layer | Still. The head ticks in three exact steps, then back. One claw taps the dial twice |
+| `idle_loop` | 4.0 s loop | none; the base layer | Still. The head ticks in three exact steps, then back. One claw taps the dial twice |
 | `class_up` | 1.2 s | `heft_class_changed` | The visor flips up, tiny proud eyes for 0.5 s, then it snaps down. A firm nod |
-| `cast_special` | 0.6 s | `slot_cast` with slot `special` | Both claws slam the lever down; the shoulders brace against the ring |
-| `cast_line` | 0.5 s | `line_skill_fired` | One claw yanks the winch lever back hard. On a haul, the same pull flows into a forward lean |
+| `cast_special` | 0.6 s | `slot_cast` with slot `special` | Both claws slam the slot-2 lever (`Control.Lever`, in the bank beside the right yoke) down; the shoulders brace against the seat back |
+| `cast_line` | 0.5 s | `line_skill_fired` | The right claw yanks the slot-3 winch lever (`Control.WinchLever`, beside it in the bank) back hard. On a haul, the same pull flows into a forward lean |
 | `ult_ready` | 0.8 s | `ultimate_ready` | Two taps on the visor; a small nod |
-| `ult_windup` | 0.35 s | `ultimate_started` | The goggles drop, both claws go to the twin grips, the head lowers behind the sight |
-| `ult_strike` | 0.6 s | `ultimate_peak` | The head tracks the sweep; the shoulders turn with the beam |
-| `ult_recover` | 0.7 s | `ultimate_landed` | Sits back; one claw taps the dial: measured |
-| `smash` | 0.7 s | `skid_smashed` (`game_events.gd:109`) | A sideways lean into the skid, like a rider into a bend |
+| `ult_windup` | 0.35 s | `ultimate_started` | The goggles drop, both claws leave the yokes for the copper lap bar (the Q control), the head lowers behind the sight at its centre |
+| `ult_strike` | 0.6 s | `ultimate_peak` | Both claws on the lap bar. The head tracks the sweep; the shoulders turn with the beam |
+| `ult_recover` | 0.7 s | `ultimate_landed` | Sits back, claws back to the yokes; one claw taps the dial: measured |
+| `smash` | 0.7 s | `slammed` (`game_events.gd:50`), the shared roster row (PILOT-CLIPS.md section 1.1); priority 36, cooldown 1.0 s | A sideways lean into the skid, like a rider into a bend, both claws planted on the yokes |
 | `unlock` | 2.4 s | `rescue_completed("rivet")` (`game_events.gd:177`; `src/world/rescue_site.gd:14-17`) | In the rescue cage: still; a calliper claw measures the latch; a nod; the latch gives. Matches the achievement beat "Asked who locked the cage from inside" (`src/core/achievements.gd:42`) |
 
 The cast and ultimate rows' priorities and cooldowns are SKILL-BAR section 7's. The clip may outlast the control lock: `ult_recover` runs 0.7 s against the 0.25 s recovery, because timing follows what the action has to say (principle 15). The seven existing reactions stay as they are: `brace`, `heave`, `wince`, `slump`, `phew`, `big_cheer` and `drop_land` (`src/presentation/pilot_reactions.gd:5-18`).
@@ -305,7 +307,7 @@ Nothing is bought. Each item comes from an achievement row in the shape `src/cor
 | --- | --- | --- | --- |
 | Swarf Curl (`trail_rivet_swarf`) | trail | Curls of copper machining swarf peel off behind the ball, thicker while sprinting | `ach_rivet_line_true` "Line True": "Land 50 Line Drive punches." On `line_skill_fired`, where `ability_id` is `line_drive` and `on` is `body`, count 50 across runs |
 | Welding Hood (`outfit_rivet_hood`) | outfit | A flip-up welding hood over the visor. It snaps down on `ult_windup` | `ach_rivet_shrugged` "Shrugged Off": "Shrug off 30 holds and knocks in one run." **A2-CRITIC:** achievement rows cannot test the pilot (`src/core/progress.gd:259-288`), and `cc_ignored` also fires for any `grant_immunity` and for a mounted Sable with `mount_cc_immune` (`src/movement/player_ball.gd:357-362`). So the grant rides a discovery, `rivet_shrugged`, that Rivet's own code detects on the 30th ignored hit of a run, through `synergy_discovered` like the Cannon's grants |
-| Calibrated (`shell_rivet_calibrated`) | shell variant | Enamel scale marks on the rings, rubbed calibration bands (`BIBLE.md:369`), numbered drill steps | `ach_rivet_full_breach` "Full Breach": "Land one set piece on 6 machines." On `ultimate_landed` with a Rivet ultimate id and `hits` of 6 or more |
+| Calibrated (`shell_rivet_calibrated`) | shell variant | Enamel scale marks on the lattice struts, rubbed calibration bands (`BIBLE.md:369`), numbered drill steps | `ach_rivet_full_breach` "Full Breach": "Land one set piece on 6 machines." On `ultimate_landed` with a Rivet ultimate id and `hits` of 6 or more |
 
 The paint rows stay as they are: Moss as the starter and Forge Blue from 100 kills (`cosmetics.gd:28-29`, `achievements.gd:47`).
 
@@ -412,7 +414,7 @@ Bot hands for Rivet in `tools/bot_driver.gd` (B4 owns the shared helpers): cast 
 | B5 | The outfit and shell-variant slot kinds and the cosmetic reward path |
 | B6 | The codex framework rows, so `codex_coverage_test` counts Rivet's two on top |
 
-Order: the Rivet unit starts after B1, B3 and B4 merge. Its cosmetic rows wait for B5 and its codex rows for B6. It edits `combat.gd` and `player_ball.gd` after B3, never at the same time. The P-D Rivet unit adds `DrillTip`, `Drill` and `Exhaust.L/R`; until then the beam leaves the ball's centre and the cage reads in section 3 are skipped.
+Order: the Rivet unit starts after B1, B3 and B4 merge. Its cosmetic rows wait for B5 and its codex rows for B6. It edits `combat.gd` and `player_ball.gd` after B3, never at the same time. The P-D Rivet unit adds `DrillTip`, `Drill` and `Exhaust.L/R`; until then the beam leaves the ball's centre and the mecha reads in section 3 (item 8) are skipped.
 
 **Difficulty.** Rivet gains two power sources. P-C retunes Rivet's own **start** numbers first, against the bot clear time and damage taken on the pre-wave base. `pack_scale` (`src/core/alpha_defs.gd:60-63`) is shared by all six pilots, so it moves only at the wave close.
 
