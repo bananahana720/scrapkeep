@@ -2280,6 +2280,40 @@
    }
   },
   {
+   "id": "bench_coping",
+   "path": "res://assets/models/park/bench_coping.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; a park recipe GLB also carries its -col collision mesh (a second surface the registry test counts and park_recipes.gd never draws: it takes the mesh as the trimesh), so the base is 2 surfaces."
+  },
+  {
+   "id": "bench_coping_detail1",
+   "path": "res://assets/models/park/bench_coping_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "bench_coping_detail2",
+   "path": "res://assets/models/park/bench_coping_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
    "id": "canal_lip",
    "path": "res://assets/models/park/canal_lip.glb",
    "class": "landform",
@@ -2742,6 +2776,40 @@
    }
   },
   {
+   "id": "pit_haul_ramp",
+   "path": "res://assets/models/park/pit_haul_ramp.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; a park recipe GLB also carries its -col collision mesh (a second surface the registry test counts and park_recipes.gd never draws: it takes the mesh as the trimesh), so the base is 2 surfaces."
+  },
+  {
+   "id": "pit_haul_ramp_detail1",
+   "path": "res://assets/models/park/pit_haul_ramp_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "pit_haul_ramp_detail2",
+   "path": "res://assets/models/park/pit_haul_ramp_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
    "id": "slot_canyon_flow",
    "path": "res://assets/models/park/slot_canyon_flow.glb",
    "class": "landform",
@@ -2850,6 +2918,40 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "tailings_lip",
+   "path": "res://assets/models/park/tailings_lip.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; a park recipe GLB also carries its -col collision mesh (a second surface the registry test counts and park_recipes.gd never draws: it takes the mesh as the trimesh), so the base is 2 surfaces."
+  },
+  {
+   "id": "tailings_lip_detail1",
+   "path": "res://assets/models/park/tailings_lip_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "tailings_lip_detail2",
+   "path": "res://assets/models/park/tailings_lip_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
    }
   },
   {
@@ -4151,6 +4253,9 @@
   "bed_floor",
   "bed_recess",
   "bed_rubble",
+  "bench_coping",
+  "bench_coping_detail1",
+  "bench_coping_detail2",
   "bet_crate",
   "boss_brindle",
   "boss_brindle_scooter",
@@ -4331,6 +4436,9 @@
   "pipeline_rail",
   "pipeline_rail_detail1",
   "pipeline_rail_detail2",
+  "pit_haul_ramp",
+  "pit_haul_ramp_detail1",
+  "pit_haul_ramp_detail2",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",
@@ -4428,6 +4536,9 @@
   "spil9",
   "strut_bent",
   "strut_tall",
+  "tailings_lip",
+  "tailings_lip_detail1",
+  "tailings_lip_detail2",
   "thermal_air",
   "thermal_vent",
   "trail_atlas.png",
