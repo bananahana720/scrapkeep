@@ -10,7 +10,10 @@ const Roster := preload("res://src/combat/roster.gd")
 #   frame it is declared. Nothing holds the ball before its warning has run.
 # - Live is the unit's own mechanic (a subclass's _live). A hold goes through the holds
 #   node, which owns the crowd-control door, tenacity and breaking free.
-# - A hard hit in the warning (a knock at INTERRUPT) breaks the attack, as a chaser's.
+# - A hard hit in the warning (a knock at the unit's interrupt speed) breaks the attack
+#   and staggers the unit for STAGGER_WINDOW, the same window on every pack kind: it
+#   stands open, walks nowhere and starts nothing. impact_resist is the per-kind dial
+#   for how hard that hit must be; the Warden keeps its own posture break.
 # - A hold the player breaks by their own action ends the live phase for good: the pit
 #   shatters, the net tears, the cable snaps. It never re-catches on the next tick.
 #
@@ -20,6 +23,9 @@ const Roster := preload("res://src/combat/roster.gd")
 enum Phase { ROAM, WARN, LIVE }
 
 const INTERRUPT := 10.0
+# One interrupt window for every ordinary pack kind (W13-INTEGRATION-3 SQ3). Start value
+# from comps/roboquest/enemies-and-telegraphs.md:11 (1.25 s on nearly every row there).
+const STAGGER_WINDOW := 1.25
 const CREW_RADIUS := 0.8
 const CREW_HALF := 1.1
 const HEAD_RADIUS := 0.38
@@ -48,6 +54,13 @@ var live_seconds := 1.0
 var rest_seconds := 3.0
 var first_rest := 1.5
 var interruptible := true
+# The per-kind dial on the interrupt: a knock must reach INTERRUPT * impact_resist.
+var impact_resist := 1.0
+# Seconds left in the stagger window, and staggers taken, for tests and presentation.
+# Not stagger_left/staggered(): those names mark a posture fighter (boss_contract.gd,
+# combat.gd's Ram Prow guard), and a pack kind must still take the prow shove.
+var stun_left := 0.0
+var staggers := 0
 
 var _t := 0.0
 var _rest := 0.0
@@ -76,6 +89,15 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 
 func state_name() -> String:
 	return ["roam", "warn", "live"][phase]
+
+
+# The knock speed that breaks this unit's warning; INF when nothing does.
+func interrupt_speed() -> float:
+	return INTERRUPT * impact_resist if interruptible else INF
+
+
+func stunned() -> bool:
+	return stun_left > 0.0
 
 
 # --- Subclass hooks -------------------------------------------------------------------
@@ -136,20 +158,23 @@ func _physics_process(delta: float) -> void:
 		_idle(delta)
 		return
 	_t += delta
+	stun_left = maxf(0.0, stun_left - delta)
 	var to_ball := _flat_to_ball()
 	match phase:
 		Phase.ROAM:
 			_rest -= delta
-			_move(delta, _roam(to_ball))
-			if _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(to_ball):
+			_move(delta, Vector3.ZERO if stunned() else _roam(to_ball))
+			if not stunned() and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(to_ball):
 				_warn(to_ball)
 		Phase.WARN:
 			_move(delta, Vector3.ZERO)
 			var tele := telegraph()
 			if tele != null:
 				tele.set_progress(_warn_progress())
-			if tele == null or (interruptible and _knocked_speed() >= INTERRUPT):
+			if tele == null:
 				_end()
+			elif _knocked_speed() >= interrupt_speed():
+				_stagger()
 			elif _t >= warn_seconds:
 				last_warn = _t
 				phase = Phase.LIVE
@@ -211,6 +236,15 @@ func _on_hold_released(source_id: int, _kind: String, reason: String) -> void:
 
 func _on_broken(_method: String) -> void:
 	pass
+
+
+# The warning broke under a hard hit: the attack ends and the unit stands open for the
+# shared window. Nothing here touches the ball; its knock carries it as before.
+func _stagger() -> void:
+	_end()
+	staggers += 1
+	stun_left = STAGGER_WINDOW
+	_rest = maxf(_rest, STAGGER_WINDOW)
 
 
 func _end() -> void:
