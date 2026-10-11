@@ -104,7 +104,9 @@ PANEL_OUT = 0.92
 PANEL_IN = 0.88
 PANEL_SHRINK = 0.80
 HOLE = 0.022
-CAP_RIM = (0.070, 0.088, 0.955, 0.9805)   # inner and outer radius, inner and outer reach
+# Inner and outer radius, inner and outer reach. The rim hugs the base's tread cap, so it follows
+# sb.CAP_WIDTH (0.10 m since PD-0b; the rim was 0.070 to 0.088 on the 0.14 m cap).
+CAP_RIM = (sb.CAP_WIDTH / 2, sb.CAP_WIDTH / 2 + 0.018, 0.955, 0.9805)
 FRONT_EYES = tuple(Vector((e.x, -e.y, e.z)) for e in sb.CHASE_EYES)
 # Class rules (ROSTER-LOOK 0.3, pilots/kest.md section 5): II the lowest gaps (at most six) wholly
 # below Z -0.35; III the side gaps, the flanks at 3 and 9 under the hinges included; IV the rest

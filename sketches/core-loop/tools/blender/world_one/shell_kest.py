@@ -32,7 +32,9 @@
 #               reads it, and the animated pilot is pilot_kest_anim.glb.
 # Draws: Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2, Mortar 2, VaneL 1, VaneR 1, Pilot 1
 # = 15. The base alone spends 10 (shell_base.hoberman header), so the shell keeps a registry
-# exception.
+# exception, inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD,
+# 2026-10-10). The lattice struts and tread caps come from shell_base's defaults (0.06 m and
+# 0.10 m since PD-0b).
 
 import json
 import math

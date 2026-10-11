@@ -2872,7 +2872,7 @@
    "exception": {
     "draws": 15
    },
-   "exception_why": "PD-KEST 2026-10-10: the Hoberman base alone spends the 10-draw cap (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2); Kest adds the Mortar mesh that pitches and recoils in its cradles (tubes and the fuse-tip glow, 2), two hinged vents (VaneL, VaneR) and the static Pilot placeholder hero_assets_test reads, 15 surfaces",
+   "exception_why": "PD-KEST 2026-10-10: within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD call of 2026-10-10T21:29, base 10 plus up to 6 for machinery and the Pilot placeholder); the shell class cap stays 10 because the Hoberman base alone spends it (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2); Kest adds the Mortar mesh that pitches and recoils in its cradles (tubes and the fuse-tip glow, 2), two hinged vents (VaneL, VaneR) and the static Pilot placeholder hero_assets_test reads, 15 surfaces",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_kest.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -2899,7 +2899,7 @@
    "exception": {
     "draws": 2
    },
-   "exception_why": "ROSTER-LOOK section 5 (class III row: two parts cost 2 draws, a registry exception) and veto 3: class III adds Pod panels and thicker tread-cap rims on the tumbling Core, one draw each",
+   "exception_why": "ROSTER-LOOK section 5 (class III row: two parts cost 2 draws, a registry exception; the class III layer may spend up to 2 under the docs/decisions.tsv w13-PD call of 2026-10-10T21:29 that sets the 16-draw shell cap) and veto 3: class III adds Pod panels and thicker tread-cap rims on the tumbling Core, one draw each",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_kest_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/kest/sheet.png (GAP PANEL, heft row)"
@@ -2936,7 +2936,7 @@
    "exception": {
     "draws": 15
    },
-   "exception_why": "PD-KEST 2026-10-10: the same machinery and node tree as shell_kest (base 10 plus the Mortar mesh with its fuse-tip glow, two hinged vents and the Pilot placeholder)",
+   "exception_why": "PD-KEST 2026-10-10: within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD call of 2026-10-10T21:29); the same machinery and node tree as shell_kest (base 10 plus the Mortar mesh with its fuse-tip glow, two hinged vents and the Pilot placeholder)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_kest.py --variant roost",
     "helper": "tools/blender/shell_base.py hoberman()",
