@@ -47,8 +47,9 @@ MODELS = Path(common.SKETCH) / "assets/models/park"
 SHELF_Y = 2.5
 LANDFORM_TRIS = 8000
 DETAIL_TRIS = 1500
+DETAIL_VERTS = 3000        # tools/asset_budgets.json class detail; flat shading splits vertices, so about 3 per triangle
 MIN_DEPTH = 8.0
-CLEAR_ABOVE = 4.4          # nothing solid over the lane lower than this: ball 2 m, hop 0.4 m, and the beams stay targets
+CLEAR_ABOVE = 5.5          # nothing solid over the lane lower than this: ball top 2 m + a full jump (13^2 / (2 * 26) = 3.25 m, tuning.gd) + 0.25 m
 LANE_PAD = 0.6
 
 # Tones (top face, side face, underside), sRGB hex.
@@ -469,10 +470,15 @@ def mesa_rim_ledge(base, col, d1, d2):
     poly = profile(B_LEN, B_RAMP)
     strata(base, r, poly, -hx, hx, [(-8.0, -6.0, REDS), (-6.0, -3.6, CREAMS), (-3.6, -1.2, REDS), (-1.2, SHELF_Y + .1, SANDS)], recede=(-1.8, .3))
     shelf_col(col, B_LEN, B_RAMP, -hx, hx)
-    # The banked lip on the open edge: it rises 0.8 m over the last 2 m.
-    lip = [(hx - 2.0, SHELF_Y), (hx, SHELF_Y + .8), (hx, SHELF_Y)]
-    base.prism_z(lip, B_RAMP + 2.0, B_LEN - B_RAMP - 2.0, CREAM)
-    col.prism_z(lip, B_RAMP + 2.0, B_LEN - B_RAMP - 2.0, CREAM)
+    # The banked lip on the open edge: it rises 0.8 m over the last 2 m of x. Its ends taper to the shelf line over 4 m of z
+    # (no step face toward the fall line), so a ball banking along the edge meets a slope, never a wall.
+    lip_a, lip_d = B_RAMP + 2.0, B_LEN - B_RAMP - 2.0
+    lip_b, lip_c = lip_a + 4.0, lip_d - 4.0
+    lip_pts = [(hx - 2.0, SHELF_Y, lip_a), (hx, SHELF_Y, lip_a), (hx - 2.0, SHELF_Y, lip_d), (hx, SHELF_Y, lip_d),
+               (hx, SHELF_Y + .8, lip_b), (hx, SHELF_Y + .8, lip_c)]
+    lip_faces = [(0, 1, 3, 2), (1, 3, 5, 4), (0, 2, 5, 4), (0, 1, 4), (2, 3, 5)]
+    base.add(lip_pts, lip_faces, CREAM)
+    col.add(lip_pts, lip_faces, CREAM)
     # The mesa behind: three terraces per z window (red, cream, sand); the collider is the same boxes, so what the picture
     # shows is what the ball meets. Each bench is kept for the shell's stones and sage.
     benches = []
@@ -489,14 +495,14 @@ def mesa_rim_ledge(base, col, d1, d2):
             benches.append((za, zb, xb, xf, ytop))
     d = d1
     for za, zb, xb, xf, yt in benches:
-        for k in range(2):
+        for k in range(1):
             d.rock((r.uniform(xb + .5, xf - .5), yt + .15, r.uniform(za + .5, zb - .5)), (r.uniform(.6, 1.4), r.uniform(.4, .9), r.uniform(.6, 1.4)), pick(r, REDS + SANDS + CREAMS, None))
         d.tuft((r.uniform(xb + .5, xf - .5), yt + .05, r.uniform(za + .5, zb - .5)), r.uniform(.4, .8), SAGE)
     for z in (9.0, 24.0, 41.0, 53.0):
         d.tuft((-hx + 1.4, SHELF_Y + .05, z), 1.0, JUNIPER)
-    for k in range(18):
+    for k in range(10):
         d.tuft((-hx + r.uniform(1.4, 3.0), SHELF_Y + .08, r.uniform(3.0, 57.0)), r.uniform(.25, .5), SAGE)
-    for k in range(16):
+    for k in range(10):
         d.rock((hx - r.uniform(.1, 1.2), -r.uniform(.2, 4.2), r.uniform(6.0, 54.0)), (r.uniform(.7, 1.5), r.uniform(.4, .9), r.uniform(.7, 1.5)), r.choice([RED, CREAM]))
     for k in range(6):
         z = 14.0 + k * 6.4
@@ -519,7 +525,7 @@ def mesa_rim_ledge(base, col, d1, d2):
 # ---------------------------------------------------------------------------------------------------------------- recipe C
 C_LEN, C_RAMP, C_W = 36.0, 8.0, 12.0
 C_WALL_FRONT = -3.5
-C_BEAM_Y = SHELF_Y + 5.0
+C_BEAM_Y = SHELF_Y + 6.1      # beam underside 5.82 m over the shelf, above CLEAR_ABOVE
 C_BEAM_R = .28
 C_BEAM_ZS = (11.5, 16.0, 20.5, 25.0)
 C_BEAM_TIP = 8.0
@@ -531,11 +537,11 @@ def viga_pivot(base, col, d1, d2):
     poly = profile(C_LEN, C_RAMP)
     strata(base, r, poly, -hx, hx, [(-8.0, -5.6, REDS), (-5.6, -3.2, CREAMS), (-3.2, -.5, REDS), (-.5, SHELF_Y + .1, SANDS)])
     shelf_col(col, C_LEN, C_RAMP, -hx, hx)
-    cliff(base, col, r, -12.0, -hx, 3.0, C_LEN - 3.0, -8.0, SHELF_Y + 7.0, [REDS, CREAMS], col_front=-hx - 1.3)
+    cliff(base, col, r, -12.0, -hx, 3.0, C_LEN - 3.0, -8.0, SHELF_Y + 8.2, [REDS, CREAMS], col_front=-hx - 1.3)
     # The wall the beams grow from: a dry-laid masonry block on the shelf's back, a parapet on top.
-    base.box((-hx - 1.5, SHELF_Y, C_BEAM_ZS[0] - 3.0), (C_WALL_FRONT, SHELF_Y + 5.4, C_BEAM_ZS[-1] + 3.0), MASONRY, mottle=.08)
-    base.box((-hx, SHELF_Y + 5.4, C_BEAM_ZS[0] - 3.1), (C_WALL_FRONT + .2, SHELF_Y + 5.75, C_BEAM_ZS[-1] + 3.1), ADOBE, mottle=.06)
-    col.box((-hx, SHELF_Y, C_BEAM_ZS[0] - 3.0), (C_WALL_FRONT, SHELF_Y + 5.75, C_BEAM_ZS[-1] + 3.0))
+    base.box((-hx - 1.5, SHELF_Y, C_BEAM_ZS[0] - 3.0), (C_WALL_FRONT, SHELF_Y + 6.5, C_BEAM_ZS[-1] + 3.0), MASONRY, mottle=.08)
+    base.box((-hx, SHELF_Y + 6.5, C_BEAM_ZS[0] - 3.1), (C_WALL_FRONT + .2, SHELF_Y + 6.85, C_BEAM_ZS[-1] + 3.1), ADOBE, mottle=.06)
+    col.box((-hx, SHELF_Y, C_BEAM_ZS[0] - 3.0), (C_WALL_FRONT, SHELF_Y + 6.85, C_BEAM_ZS[-1] + 3.0))
     for z in C_BEAM_ZS:
         # a corbel stone under each beam, the beam, and a worn rope-polish band near the tip (a darker ring)
         base.box((C_WALL_FRONT - .5, C_BEAM_Y - C_BEAM_R - .45, z - .4), (C_WALL_FRONT, C_BEAM_Y - C_BEAM_R, z + .4), CREAM)
@@ -550,9 +556,9 @@ def viga_pivot(base, col, d1, d2):
     for z in C_BEAM_ZS:
         d.box((C_WALL_FRONT - .05, C_BEAM_Y + C_BEAM_R - .02, z - .5), (C_WALL_FRONT + .02, C_BEAM_Y + C_BEAM_R + .55, z + .5), CREAM)   # lintel stone over the beam
         d.box((C_WALL_FRONT - .6, C_BEAM_Y - C_BEAM_R - .52, z - .5), (C_WALL_FRONT - .02, C_BEAM_Y - C_BEAM_R - .45, z + .5), ADOBE)
-    d.box((-hx, SHELF_Y + 5.75, C_BEAM_ZS[0] - 3.1), (C_WALL_FRONT + .22, SHELF_Y + 6.1, C_BEAM_ZS[0] - 2.8), CREAM)
-    d.box((-hx, SHELF_Y + 5.75, C_BEAM_ZS[-1] + 2.8), (C_WALL_FRONT + .22, SHELF_Y + 6.1, C_BEAM_ZS[-1] + 3.1), CREAM)
-    d.box((C_WALL_FRONT - .05, SHELF_Y + 5.75, C_BEAM_ZS[0] - 3.1), (C_WALL_FRONT + .22, SHELF_Y + 6.1, C_BEAM_ZS[-1] + 3.1), CREAM)
+    d.box((-hx, SHELF_Y + 6.85, C_BEAM_ZS[0] - 3.1), (C_WALL_FRONT + .22, SHELF_Y + 7.2, C_BEAM_ZS[0] - 2.8), CREAM)
+    d.box((-hx, SHELF_Y + 6.85, C_BEAM_ZS[-1] + 2.8), (C_WALL_FRONT + .22, SHELF_Y + 7.2, C_BEAM_ZS[-1] + 3.1), CREAM)
+    d.box((C_WALL_FRONT - .05, SHELF_Y + 6.85, C_BEAM_ZS[0] - 3.1), (C_WALL_FRONT + .22, SHELF_Y + 7.2, C_BEAM_ZS[-1] + 3.1), CREAM)
     for k in range(12):
         d.rock((r.uniform(-5.8, -4.0), SHELF_Y + .15, r.uniform(5.0, 33.0)), (r.uniform(.4, .9), r.uniform(.3, .6), r.uniform(.4, .9)), SANDTOP)
     for k in range(14):
@@ -562,7 +568,7 @@ def viga_pivot(base, col, d1, d2):
     d = d2
     cr = random.Random(78)
     courses_front(d, C_WALL_FRONT, C_BEAM_ZS[0] - 2.9, C_BEAM_ZS[-1] + 2.9, SHELF_Y + .02, C_BEAM_Y - C_BEAM_R - .5, cr, MASONRY, 6, 7)
-    courses_front(d, C_WALL_FRONT, C_BEAM_ZS[0] - 2.9, C_BEAM_ZS[-1] + 2.9, C_BEAM_Y + C_BEAM_R + .6, SHELF_Y + 5.38, cr, MASONRY, 1, 7)
+    courses_front(d, C_WALL_FRONT, C_BEAM_ZS[0] - 2.9, C_BEAM_ZS[-1] + 2.9, C_BEAM_Y + C_BEAM_R + .6, SHELF_Y + 6.48, cr, MASONRY, 1, 7)
     for z in C_BEAM_ZS:
         for k in range(6):          # wear nicks along the top of each beam (visible as pale bite marks)
             xk = cr.uniform(0.0, C_BEAM_TIP - 1.0)
@@ -665,8 +671,10 @@ def main():
         for fname, surfaces in ((rid, [base, col]), (rid + "_detail1", [d1]), (rid + "_detail2", [d2])):
             path = out / (fname + ".glb")
             m = export_one(path, fname, surfaces)
+            if fname != rid:
+                assert m["vertices"] <= DETAIL_VERTS, (fname, "detail class verts cap", m["vertices"], DETAIL_VERTS)
             rows[rid][fname] = {"file": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "triangles": m["triangles"],
-                                "primitives": m["primitives"], "materials": m["materials"], "nodes": m["nodes"]}
+                                "vertices": m["vertices"], "primitives": m["primitives"], "materials": m["materials"], "nodes": m["nodes"]}
             print("LEDGES_EXPORT", fname, json.dumps(rows[rid][fname], sort_keys=True))
     if args.log and rows:
         Path(args.log).parent.mkdir(parents=True, exist_ok=True)
