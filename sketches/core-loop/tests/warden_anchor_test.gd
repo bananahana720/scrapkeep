@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const WardenScript := preload("res://src/combat/warden.gd")
 
 # KF1 (PARK.md section 7, "Every Warden is a harpoon anchor"): one bot per Warden kind, on
 # the alpha table's first stage of that kind, through real input and real physics. The bot
@@ -202,6 +203,14 @@ func _latch(from: Vector3, velocity := Vector3.ZERO) -> bool:
 
 
 func _run() -> void:
+	# The park row's landmark.warden carries "hardpoints" as a count (park_schema.gd WARDEN_FIELDS).
+	var two: Array = WardenScript.hardpoints_for({"hardpoints": 2})
+	var none: Array = WardenScript.hardpoints_for({"hardpoints": 0})
+	var named: Array = WardenScript.hardpoints_for({"hardpoint_offsets": [Vector3.UP]})
+	_report("a spec's hardpoints count picks that many", two.size() == 2 and two[1] == WardenScript.HARDPOINTS[1]
+			and none.size() == 1 and named == [Vector3.UP] and WardenScript.hardpoints_for({}).size() == 3,
+		"count 2 -> %d, count 0 -> %d, offsets -> %s, none -> %d" % [two.size(), none.size(), named,
+			WardenScript.hardpoints_for({}).size()])
 	for entry in KINDS:
 		await _bot(int(entry[0]), String(entry[1]), float(entry[2]))
 	print("warden_anchor_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))

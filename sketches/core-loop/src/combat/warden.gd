@@ -37,7 +37,9 @@ const Augments := preload("res://src/movement/augments.gd")
 # - The harpoon anchor (PARK.md section 7, unit KF1). Three hardpoints take the bite and
 #   a line on one rides as a world line that follows the body (augments.gd anchor_line),
 #   never dropping inside the minimum rope. The mounting is the stage's (MOUNTINGS, by
-#   family and variant); a per-kind driver (spec "mount_driver" or set_mount_driver)
+#   family and variant). The spec's "hardpoints" is a count, as in the park row
+#   (park_schema.gd WARDEN_FIELDS): the first n of HARDPOINTS; "hardpoint_offsets" names
+#   them outright. A per-kind driver (spec "mount_driver" or set_mount_driver)
 #   moves the body from its home, and the rope carries the ball at anchor_velocity. Once
 #   per pulse cycle the lined hardpoint flares through the charge and the pulse shrugs the
 #   line off, shrug_delay seconds late (the island's swing); the ball keeps its velocity.
@@ -141,7 +143,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	family = spec.get("family", Roster.warden_family(stage))
 	variant = _read_variant(String(spec.get("variant", "")))
 	mounting = String(spec.get("mounting", MOUNTINGS.get(family + ":" + variant, "")))
-	hardpoints = (spec.get("hardpoints", HARDPOINTS) as Array).duplicate()
+	hardpoints = hardpoints_for(spec)
 	shrug_delay = float(spec.get("shrug_delay", SHRUG_DELAYS.get(mounting, 0.0)))
 	mount_driver = spec.get("mount_driver")
 	var numbers: Dictionary = spec.get("posture", {})
@@ -439,6 +441,16 @@ func shrug_flare() -> float:
 
 func flaring_hardpoint() -> int:
 	return _flaring
+
+
+# The hardpoint offsets a spec asks for: "hardpoint_offsets" if given, else the first
+# "hardpoints" (a count, 1 to 3) of HARDPOINTS. Never empty.
+static func hardpoints_for(spec_in: Dictionary) -> Array:
+	var count := clampi(int(spec_in.get("hardpoints", HARDPOINTS.size())), 1, HARDPOINTS.size())
+	var offsets: Array = spec_in.get("hardpoint_offsets", HARDPOINTS.slice(0, count))
+	if offsets.is_empty():
+		return HARDPOINTS.duplicate()
+	return offsets.duplicate()
 
 
 func _nearest_hardpoint(offset: Vector3) -> int:
