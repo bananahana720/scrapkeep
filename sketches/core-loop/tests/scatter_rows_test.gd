@@ -264,7 +264,11 @@ func _park_chunks() -> void:
 				per_chunk_errors.append("%s/%s is empty" % [chunk.name, batch.name])
 			batches += 1
 			instances += multi.instance_count
-			for at: Vector3 in batch.get_meta("origins"):
+			# grounds: the ground point under each piece (its transform origin is sunk by the bury share).
+			var grounds: Array = batch.get_meta("grounds", [])
+			if grounds.size() != multi.instance_count:
+				per_chunk_errors.append("%s/%s has %d ground points for %d pieces" % [chunk.name, batch.name, grounds.size(), multi.instance_count])
+			for at: Vector3 in grounds:
 				if not tile.has_point(Vector2(at.x, at.z)):
 					off_tile += 1
 				if absf(at.y - terrain.height(at.x, at.z)) > 0.001:

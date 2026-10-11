@@ -11,6 +11,7 @@ extends RefCounted
 const ScatterRows := preload("res://src/world/scatter_rows.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const Palette := preload("res://src/core/palette.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 const COIL_INNER := 0.3
 const COIL_OUTER := 0.42
@@ -85,16 +86,23 @@ static func transforms(row: Dictionary, map, ground: Callable, aabb: AABB) -> Ar
 		var tilt := rng.randf_range(-0.25, 0.25)
 		if _kept_clear(keeps, Vector2(x, z)):
 			continue
-		var at: Vector3 = ground.call(x, z, 0.0)
-		var dx: float = (ground.call(x + SLOPE_PROBE, z, 0.0) as Vector3).y - (ground.call(x - SLOPE_PROBE, z, 0.0) as Vector3).y
-		var dz: float = (ground.call(x, z + SLOPE_PROBE, 0.0) as Vector3).y - (ground.call(x, z - SLOPE_PROBE, 0.0) as Vector3).y
-		var normal := Vector3(-dx, 2.0 * SLOPE_PROBE, -dz).normalized()
-		if normal.y < float(row["slope"]):
-			continue
-		var basis := _lean(normal) * Basis(Vector3.RIGHT, tilt) * Basis(Vector3.UP, yaw)
-		var sink := (aabb.position.y + aabb.size.y * float(row["bury"])) * s
-		out.append(Transform3D(basis.scaled(Vector3.ONE * s), at - normal * sink))
+		_stand(row, ground, aabb, x, z, yaw, s, tilt, out, [])
 	return out
+
+
+# One piece at (x, z) on the ground layer, leaned to its normal and sunk by its bury share; none on
+# ground steeper than the row's slope. grounds gets the ground point under each piece kept.
+static func _stand(row: Dictionary, ground: Callable, aabb: AABB, x: float, z: float, yaw: float, s: float, tilt: float, out: Array[Transform3D], grounds: Array) -> void:
+	var at: Vector3 = ground.call(x, z, 0.0)
+	var dx: float = (ground.call(x + SLOPE_PROBE, z, 0.0) as Vector3).y - (ground.call(x - SLOPE_PROBE, z, 0.0) as Vector3).y
+	var dz: float = (ground.call(x, z + SLOPE_PROBE, 0.0) as Vector3).y - (ground.call(x, z - SLOPE_PROBE, 0.0) as Vector3).y
+	var normal := Vector3(-dx, 2.0 * SLOPE_PROBE, -dz).normalized()
+	if normal.y < float(row["slope"]):
+		return
+	var basis := _lean(normal) * Basis(Vector3.RIGHT, tilt) * Basis(Vector3.UP, yaw)
+	var sink := (aabb.position.y + aabb.size.y * float(row["bury"])) * s
+	out.append(Transform3D(basis.scaled(Vector3.ONE * s), at - normal * sink))
+	grounds.append(at)
 
 
 static func _kept_clear(keeps: Array, at: Vector2) -> bool:
@@ -102,6 +110,297 @@ static func _kept_clear(keeps: Array, at: Vector2) -> bool:
 		if at.distance_to(keep[0] as Vector2) < float(keep[1]):
 			return true
 	return false
+
+
+# Inside a built footprint (park_map.gd keep_out: at, size along and across the facing, yaw).
+static func _kept_out(footprints: Array, at: Vector2) -> bool:
+	for f: Dictionary in footprints:
+		var yaw: float = f["yaw"]
+		var facing := Vector2(sin(yaw), cos(yaw))
+		var d: Vector2 = at - (f["at"] as Vector2)
+		var size: Vector2 = f["size"]
+		if absf(d.dot(facing)) <= size.x * 0.5 and absf(d.dot(Vector2(facing.y, -facing.x))) <= size.y * 0.5:
+			return true
+	return false
+
+
+# --- Park scatter in chunks (PARK.md section 3, K-UNITS KB5). ---
+#
+# A park's scatter is cut into the collider's 160 m tiles (park_terrain.gd TILE_M), one chunk per
+# tile, named as the tile. A chunk holds one MultiMeshInstance3D per kind (every row of a kind
+# merged: ScatterRows.kind_problems), each with its kind's visibility range and its own bounds, so
+# a far chunk stops drawing and the draws stay one per kind per near chunk. A chunk's pieces come
+# from a generator seeded by the row's seed and the chunk, so the chunks build on worker threads in
+# any order; the main thread only attaches finished chunks inside a frame budget. Pieces stand on
+# the ground callable, which on a park is terrain.gd's height() source (hole floors included).
+
+static func park_rows(map) -> Array:
+	var kit: Array = map.scatter.get("kit", []) if map.get("scatter") is Dictionary else []
+	return kit if not kit.is_empty() else ScatterRows.PARK_KIT
+
+
+static func chunk_rect(ci: int, cj: int) -> Rect2:
+	return Rect2(-ParkTerrain.HALF + ci * ParkTerrain.TILE_M, -ParkTerrain.HALF + cj * ParkTerrain.TILE_M, ParkTerrain.TILE_M, ParkTerrain.TILE_M)
+
+
+# Starts a park's chunked scatter under parent (threaded: worker threads, then a few chunks a frame;
+# else all at once) and returns its GroundScatter node; is_ready() and the built signal tell when
+# every chunk is attached, finish() completes it on the spot.
+static func build_chunked(parent: Node3D, map, ground: Callable, threaded: bool, rows: Array = []) -> Node3D:
+	var node := Chunked.new()
+	node.name = "GroundScatter"
+	parent.add_child(node)
+	node.start(map, ground, rows if not rows.is_empty() else park_rows(map), threaded)
+	return node
+
+
+# One row's pieces inside chunk (ci, cj): the old placement rule on the chunk's share of the play
+# rect, clear of the spawn, beacon, vault and every built footprint.
+static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB, ci: int, cj: int, grounds: Array) -> Array[Transform3D]:
+	var out: Array[Transform3D] = []
+	var rect: Rect2 = chunk_rect(ci, cj).intersection(map.play_rect)
+	if rect.get_area() <= 0.0:
+		return out
+	var clear: Dictionary = map.scatter["clear"]
+	var keeps := [[map.spawn, float(clear["spawn"])], [map.beacon, float(clear["beacon"])], [map.vault, float(clear["vault"])]]
+	var keep_out: Array = map.scatter.get("keep_out", [])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = ("%s/%d_%d" % [row["seed"], ci, cj]).hash()
+	var count := int(float(row["density"]) * rect.get_area() / 100.0)
+	var scale_range: Vector2 = row["scale"]
+	for i in count:
+		var x := rng.randf_range(rect.position.x, rect.end.x)
+		var z := rng.randf_range(rect.position.y, rect.end.y)
+		var yaw := rng.randf_range(0.0, TAU)
+		var s := rng.randf_range(scale_range.x, scale_range.y)
+		var tilt := rng.randf_range(-0.25, 0.25)
+		# The far edges belong to the next chunk.
+		if x >= rect.end.x or z >= rect.end.y:
+			continue
+		if _kept_clear(keeps, Vector2(x, z)) or _kept_out(keep_out, Vector2(x, z)):
+			continue
+		_stand(row, ground, aabb, x, z, yaw, s, tilt, out, grounds)
+	return out
+
+
+# The visual vertices a camera at eye draws from a chunked scatter: every batch whose bounds centre
+# lies inside its visibility range (the engine's measure, scatter.gd header).
+static func visible_vertices(holder: Node, eye: Vector3) -> int:
+	var verts := 0
+	for batch: MultiMeshInstance3D in _visible(holder, eye):
+		verts += batch.multimesh.instance_count * int(batch.get_meta("verts_per_instance"))
+	return verts
+
+
+static func visible_batches(holder: Node, eye: Vector3) -> int:
+	return _visible(holder, eye).size()
+
+
+static func _visible(holder: Node, eye: Vector3) -> Array[MultiMeshInstance3D]:
+	var found: Array[MultiMeshInstance3D] = []
+	for batch: MultiMeshInstance3D in holder.find_children("*", "MultiMeshInstance3D", true, false):
+		var d := eye.distance_to((batch.get_meta("bounds") as AABB).get_center())
+		if d >= batch.visibility_range_begin and (batch.visibility_range_end <= 0.0 or d <= batch.visibility_range_end):
+			found.append(batch)
+	return found
+
+
+# The 12 floats one instance takes in a MultiMesh buffer (TRANSFORM_3D, rows of the basis then origin).
+static func _pack(buffer: PackedFloat32Array, at: int, tr: Transform3D) -> void:
+	buffer[at] = tr.basis.x.x
+	buffer[at + 1] = tr.basis.y.x
+	buffer[at + 2] = tr.basis.z.x
+	buffer[at + 3] = tr.origin.x
+	buffer[at + 4] = tr.basis.x.y
+	buffer[at + 5] = tr.basis.y.y
+	buffer[at + 6] = tr.basis.z.y
+	buffer[at + 7] = tr.origin.y
+	buffer[at + 8] = tr.basis.x.z
+	buffer[at + 9] = tr.basis.y.z
+	buffer[at + 10] = tr.basis.z.z
+	buffer[at + 11] = tr.origin.z
+
+
+# A chunk's batches as data, built on any thread: per kind {buffer, origins, grounds, bounds}.
+static func chunk_batches(groups: Array, map, ground: Callable, ci: int, cj: int) -> Array:
+	var batches := []
+	for group: Dictionary in groups:
+		var source: Dictionary = group["source"]
+		var buffer := PackedFloat32Array()
+		var origins := PackedVector3Array()
+		var grounds := []
+		var bounds := AABB()
+		var first := true
+		for row: Dictionary in group["rows"]:
+			var xfs := chunk_transforms(row, map, ground, source["aabb"], ci, cj, grounds)
+			var at := buffer.size()
+			buffer.resize(at + xfs.size() * FLOATS)
+			for xf in xfs:
+				_pack(buffer, at, xf * (source["local"] as Transform3D))
+				at += FLOATS
+				origins.append(xf.origin)
+				var box: AABB = xf * (source["aabb"] as AABB)
+				bounds = box if first else bounds.merge(box)
+				first = false
+		if origins.is_empty():
+			continue
+		batches.append({"kind": group["kind"], "buffer": buffer, "origins": origins, "grounds": grounds, "bounds": bounds})
+	return batches
+
+
+class Chunked extends Node3D:
+	signal built
+
+	const Self := preload("res://src/world/scatter.gd")
+	const Rows := preload("res://src/world/scatter_rows.gd")
+	const Tiles := preload("res://src/world/park/park_terrain.gd")
+	const Colours := preload("res://src/core/palette.gd")
+	const ATTACH_BUDGET_USEC := 6000
+	const CHUNKS_PER_FRAME := 8
+
+	enum Phase { IDLE, BUILDING, ATTACHING, READY }
+
+	var phase := Phase.IDLE
+	# Chunks built on a thread other than the main one.
+	var worker_chunks := 0
+	# The longest main-thread _process step of a threaded build and where it was, and the longest
+	# whole frame while it built (park_terrain.gd's meter, PARK.md section 9).
+	var slowest_usec := 0
+	var slowest_step := ""
+	var frame_usec_max := 0
+	var _last_frame_usec := 0
+	var _map: RefCounted
+	var _ground: Callable
+	var _groups := []
+	var _results := []
+	var _group := -1
+	var _lock := Mutex.new()
+	var _next := 0
+
+	func is_ready() -> bool:
+		return phase == Phase.READY
+
+	# Mesh sources load here, on the main thread (a glb load is not for workers); the rows of a
+	# kind share one source.
+	func start(map, ground: Callable, rows: Array, threaded: bool) -> void:
+		_map = map
+		_ground = ground
+		var by_kind := {}
+		for row: Dictionary in rows:
+			var kind := String(row["kind"])
+			if not by_kind.has(kind):
+				var source: Dictionary = Self._source(row["mesh"])
+				if source.is_empty():
+					push_warning("scatter: %s has no mesh, the kind stays out" % row["mesh"])
+					by_kind[kind] = null
+					continue
+				by_kind[kind] = {"kind": kind, "source": source, "slot": row["slot"], "rows": []}
+				_groups.append(by_kind[kind])
+			if by_kind[kind] != null:
+				by_kind[kind]["rows"].append(row)
+		_results.resize(Tiles.TILE_COUNT)
+		phase = Phase.BUILDING
+		if threaded:
+			_group = WorkerThreadPool.add_group_task(_build_chunk, Tiles.TILE_COUNT, -1, true, "scatter chunks %s" % map.get("title"))
+			set_process(true)
+		else:
+			for c in Tiles.TILE_COUNT:
+				_build_chunk(c)
+			phase = Phase.ATTACHING
+			finish()
+
+	func finish() -> void:
+		if phase == Phase.BUILDING:
+			WorkerThreadPool.wait_for_group_task_completion(_group)
+			_group = -1
+			phase = Phase.ATTACHING
+		while phase == Phase.ATTACHING:
+			_attach_step(-1)
+
+	func _ready() -> void:
+		set_process(phase == Phase.BUILDING or phase == Phase.ATTACHING)
+
+	func _exit_tree() -> void:
+		if _group != -1:
+			WorkerThreadPool.wait_for_group_task_completion(_group)
+			_group = -1
+
+	func _process(_delta: float) -> void:
+		var t0 := Time.get_ticks_usec()
+		if _last_frame_usec > 0:
+			frame_usec_max = maxi(frame_usec_max, t0 - _last_frame_usec)
+		_last_frame_usec = t0
+		var was := phase
+		match phase:
+			Phase.BUILDING:
+				if WorkerThreadPool.is_group_task_completed(_group):
+					WorkerThreadPool.wait_for_group_task_completion(_group)
+					_group = -1
+					phase = Phase.ATTACHING
+			Phase.ATTACHING:
+				_attach_step(t0 + ATTACH_BUDGET_USEC)
+		var spent := Time.get_ticks_usec() - t0
+		if spent > slowest_usec:
+			slowest_usec = spent
+			slowest_step = "%s chunk %d" % [Phase.keys()[was], _next]
+
+	# Worker side: pure data, no scene tree.
+	func _build_chunk(c: int) -> void:
+		_results[c] = Self.chunk_batches(_groups, _map, _ground, c % Tiles.TILES_PER_SIDE, c / Tiles.TILES_PER_SIDE)
+		if OS.get_thread_caller_id() != OS.get_main_thread_id():
+			_lock.lock()
+			worker_chunks += 1
+			_lock.unlock()
+
+	# Main thread: attach finished chunks, a few a frame inside the budget (deadline -1: all).
+	func _attach_step(deadline: int) -> void:
+		var added := 0
+		while _next < Tiles.TILE_COUNT:
+			if deadline >= 0 and (added >= CHUNKS_PER_FRAME or Time.get_ticks_usec() > deadline):
+				return
+			_attach(_next)
+			_results[_next] = null
+			_next += 1
+			added += 1
+		phase = Phase.READY
+		set_process(false)
+		built.emit()
+
+	func _attach(c: int) -> void:
+		var batches: Array = _results[c]
+		if batches.is_empty():
+			return
+		var chunk := Node3D.new()
+		chunk.name = "Chunk%d_%d" % [c % Tiles.TILES_PER_SIDE, c / Tiles.TILES_PER_SIDE]
+		for data: Dictionary in batches:
+			var group: Dictionary = _group_of(data["kind"])
+			var buffer: PackedFloat32Array = data["buffer"]
+			var multi := MultiMesh.new()
+			multi.transform_format = MultiMesh.TRANSFORM_3D
+			multi.mesh = group["source"]["mesh"]
+			multi.instance_count = buffer.size() / Self.FLOATS
+			multi.buffer = buffer
+			multi.custom_aabb = data["bounds"]
+			var view := MultiMeshInstance3D.new()
+			view.name = "Scatter_%s" % data["kind"]
+			view.multimesh = multi
+			view.visibility_range_end = float(Rows.RANGE.get(data["kind"], 0.0))
+			view.set_meta("kind", data["kind"])
+			view.set_meta("instance_buffer", buffer)
+			view.set_meta("origins", data["origins"])
+			view.set_meta("grounds", data["grounds"])
+			view.set_meta("bounds", data["bounds"])
+			view.set_meta("verts_per_instance", group["source"]["verts"])
+			view.material_override = Colours.slot_material(group["slot"])
+			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			chunk.add_child(view)
+		add_child(chunk)
+
+	func _group_of(kind: String) -> Dictionary:
+		for group: Dictionary in _groups:
+			if group["kind"] == kind:
+				return group
+		return {}
 
 
 # Tilt +Y onto the ground normal.
