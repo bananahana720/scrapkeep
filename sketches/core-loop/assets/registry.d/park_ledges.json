@@ -1,0 +1,256 @@
+{
+ "assets": [
+  {
+   "id": "cliff_dwelling_row",
+   "path": "res://assets/models/park/cliff_dwelling_row.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -14,
+     -8,
+     0
+    ],
+    "max": [
+     7.287,
+     14.3102,
+     60
+    ],
+    "size": [
+     21.287,
+     22.3102,
+     60
+    ]
+   }
+  },
+  {
+   "id": "cliff_dwelling_row_detail1",
+   "path": "res://assets/models/park/cliff_dwelling_row_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -7.289,
+     -3.6747,
+     4.9497
+    ],
+    "max": [
+     7.6661,
+     9.0611,
+     54.8227
+    ],
+    "size": [
+     14.9552,
+     12.7358,
+     49.873
+    ]
+   }
+  },
+  {
+   "id": "cliff_dwelling_row_detail2",
+   "path": "res://assets/models/park/cliff_dwelling_row_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -4.8,
+     2.5,
+     12.55
+    ],
+    "max": [
+     -0.7448,
+     8.435,
+     47.45
+    ],
+    "size": [
+     4.0552,
+     5.935,
+     34.9
+    ]
+   }
+  },
+  {
+   "id": "mesa_rim_ledge",
+   "path": "res://assets/models/park/mesa_rim_ledge.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -25,
+     -8,
+     0
+    ],
+    "max": [
+     9.1729,
+     11.0219,
+     60
+    ],
+    "size": [
+     34.1729,
+     19.0219,
+     60
+    ]
+   }
+  },
+  {
+   "id": "mesa_rim_ledge_detail1",
+   "path": "res://assets/models/park/mesa_rim_ledge_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -17.3749,
+     -4.2613,
+     0.1817
+    ],
+    "max": [
+     9.7956,
+     11.6413,
+     58.8746
+    ],
+    "size": [
+     27.1705,
+     15.9026,
+     58.6929
+    ]
+   }
+  },
+  {
+   "id": "mesa_rim_ledge_detail2",
+   "path": "res://assets/models/park/mesa_rim_ledge_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -17.5749,
+     2.5,
+     -0.0307
+    ],
+    "max": [
+     8.8495,
+     11.3568,
+     59.6527
+    ],
+    "size": [
+     26.4244,
+     8.8568,
+     59.6835
+    ]
+   }
+  },
+  {
+   "id": "viga_pivot",
+   "path": "res://assets/models/park/viga_pivot.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh with its -col trimesh, material enamel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -12,
+     -8,
+     0
+    ],
+    "max": [
+     8.02,
+     9.5,
+     36
+    ],
+    "size": [
+     20.02,
+     17.5,
+     36
+    ]
+   }
+  },
+  {
+   "id": "viga_pivot_detail1",
+   "path": "res://assets/models/park/viga_pivot_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 1 at the base GLB's origin, visibility range from the landform class shells[0]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -6.4593,
+     -3.8807,
+     6.814
+    ],
+    "max": [
+     6.7017,
+     8.6,
+     32.1313
+    ],
+    "size": [
+     13.161,
+     12.4807,
+     25.3173
+    ]
+   }
+  },
+  {
+   "id": "viga_pivot_detail2",
+   "path": "res://assets/models/park/viga_pivot_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (detail shell 2 at the base GLB's origin, visibility range from the landform class shells[1]; material enamel)",
+   "provenance": {
+    "recipe": "tools/blender/park/ledges.py",
+    "notes": "design-v3/PARK.md section 4 (Elevated lines and ledges); build log with sha256: artifacts/local/alpha/push/w13/park-recipes/ledges/build_log.json (local evidence)"
+   },
+   "bounds": {
+    "min": [
+     -3.5,
+     2.5,
+     8.6
+    ],
+    "max": [
+     7.0265,
+     8.395,
+     27.9
+    ],
+    "size": [
+     10.5265,
+     5.895,
+     19.3
+    ]
+   }
+  }
+ ]
+}

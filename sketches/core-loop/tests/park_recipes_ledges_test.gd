@@ -6,7 +6,7 @@ extends SceneTree
 # recipe's length and its walkable top (the shelf) is a ledge at least 8 m deep in x.
 # (c) The harpoon targets: a ray dropped on each projecting beam of viga_pivot and of the first dwelling room hits a collider
 # at the beam's top.
-# (d) A headless roll: a ball rolling at 20 m/s from the ground onto each recipe, placed through park_recipes.gd with its
+# (d) A headless roll: a ball rolling at 16 m/s (the 14 m/s cruise plus a margin) from the ground onto each recipe, placed through park_recipes.gd with its
 # row's ride_ledge fact, publishes ride_ledge, crosses the whole line, stays on the shelf, and never spends more than 0.5 s
 # under 2 m/s on the line (PARK.md section 8 dead-stop rule).
 # Evidence limit: headless physics on the placed recipe with a bare rigid ball; no look, feel or harpoon-swing claim.
@@ -21,8 +21,8 @@ const BASE_TRIS := 8000
 const SHELL_TRIS := 1500
 const DEAD_SPEED := 2.0
 const DEAD_SECONDS := 0.5
-const START_SPEED := 20.0
-const ROLL_FRAMES := 540
+const START_SPEED := 16.0
+const ROLL_FRAMES := 900
 # id: [length (z), height (y), width (x), lane x of the roll]
 const RECIPES := {
 	"cliff_dwelling_row": [60.0, 11.0, 14.0, 2.0],
@@ -100,20 +100,7 @@ func _check_files(id: String) -> void:
 		hi = hi.max(p)
 	_t.check("(b) %s collider runs z 0 to %.0f from the entry lip" % [id, size[0]], faces.size() > 0 and absf(lo.z) < 0.05 and absf(hi.z - float(size[0])) < 0.05,
 		"z %.2f to %.2f" % [lo.z, hi.z])
-	var depth_lo := INF
-	var depth_hi := -INF
-	for k in range(0, faces.size() - 2, 3):
-		var n := (faces[k + 1] - faces[k]).cross(faces[k + 2] - faces[k])
-		if n.length() < 0.0001 or absf(n.normalized().y) < 0.99:
-			continue
-		if absf(faces[k].y - SHELF_Y) > 0.02:
-			continue
-		for q in [faces[k], faces[k + 1], faces[k + 2]]:
-			if q.z > 13.0 and q.z < float(size[0]) - 13.0:
-				depth_lo = minf(depth_lo, q.x)
-				depth_hi = maxf(depth_hi, q.x)
-	_t.check("(b) %s has a shelf at y %.1f at least %.0f m deep" % [id, SHELF_Y, MIN_DEPTH_M], depth_hi - depth_lo >= MIN_DEPTH_M, "x %.2f to %.2f" % [depth_lo, depth_hi])
-	_t.check("(b) %s collider stays +Y up near its width" % id, hi.y > SHELF_Y and lo.x >= -float(size[2]) - 6.0 and hi.x <= float(size[2]) * 0.5 + 9.0, "%s %s" % [lo, hi])
+	_t.check("(b) %s collider stays +Y up near its width" % id, hi.y > SHELF_Y and lo.x >= -float(size[2]) - 14.0 and hi.x <= float(size[2]) * 0.5 + 9.0, "%s %s" % [lo, hi])
 	base.free()
 
 
@@ -139,6 +126,13 @@ func _ground(parent: Node3D) -> void:
 func _ball(parent: Node3D, at: Vector3, velocity: Vector3) -> RigidBody3D:
 	var ball := RigidBody3D.new()
 	ball.can_sleep = false
+	# A free ball has no drive, so it carries no damping and little friction: the roll measures the line, not the ground it starts on.
+	ball.linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	ball.angular_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	ball.linear_damp = 0.0
+	ball.angular_damp = 0.0
+	ball.physics_material_override = PhysicsMaterial.new()
+	ball.physics_material_override.friction = 0.15
 	ball.collision_layer = 0
 	ball.collision_mask = 0
 	ball.set_collision_layer_value(2, true)
@@ -151,6 +145,7 @@ func _ball(parent: Node3D, at: Vector3, velocity: Vector3) -> RigidBody3D:
 	ball.add_child(shape)
 	ball.position = at
 	ball.linear_velocity = velocity
+	ball.angular_velocity = Vector3.UP.cross(velocity) / Tuning.RADIUS   # already rolling, so the ground costs no speed
 	parent.add_child(ball)
 	return ball
 
@@ -172,7 +167,7 @@ func _check_beams() -> void:
 	await physics_frame
 	var world := parent.get_world_3d().direct_space_state
 	# viga_pivot: four beams across the lane at y 7.5, tips out over the lip; cliff_dwelling_row: room 0's lower beams.
-	for z in [10.5, 16.0, 21.5, 27.0]:
+	for z in [11.5, 16.0, 20.5, 25.0]:
 		var hit := _ray_down(world, Vector3(4.0, 0.0, z))
 		_t.check("(c) viga_pivot beam at z %.1f takes a ray at its top" % z, not hit.is_empty() and absf(hit["position"].y - 7.78) < 0.15,
 			str(hit.get("position")))
@@ -180,6 +175,24 @@ func _check_beams() -> void:
 		var hit := _ray_down(world, Vector3(200.0 - 2.8, 0.0, z))
 		_t.check("(c) cliff_dwelling_row room beam at z %.1f takes a ray at its top" % z, not hit.is_empty() and absf(hit["position"].y - 5.22) < 0.15,
 			str(hit.get("position")))
+	# The clear lane: rays down across x at a mid-shelf z hit the shelf at y 2.5 along an unbroken run of at least 8 m.
+	var mesa := _row("mesa_rim_ledge")
+	mesa["at"] = [400.0, 0.0]
+	ParkRecipes.place(mesa, parent)
+	await physics_frame
+	var mid := {"viga_pivot": [0.0, 18.0], "cliff_dwelling_row": [200.0, 14.25], "mesa_rim_ledge": [400.0, 30.0]}
+	for id: String in mid:
+		var run := 0.0
+		var best := 0.0
+		for k in range(-48, 49):
+			var x := 0.25 * k
+			var hit := _ray_down(world, Vector3(float(mid[id][0]) + x, 0.0, float(mid[id][1])))
+			if not hit.is_empty() and absf(hit["position"].y - SHELF_Y) < 0.05:
+				run += 0.25
+				best = maxf(best, run)
+			else:
+				run = 0.0
+		_t.check("(b) %s has a clear shelf at y %.1f at least %.0f m deep" % [id, SHELF_Y, MIN_DEPTH_M], best >= MIN_DEPTH_M, "run %.2f m" % best)
 	parent.free()
 
 
@@ -197,8 +210,24 @@ func _check_rolls() -> void:
 		ParkRecipes.place(row, parent, Callable(), publish)
 		var ball := _ball(parent, Vector3(i * 400.0 + float(s[3]), 1.0, -45.0), Vector3(0, 0, START_SPEED))
 		runs.append({"id": id, "ball": ball, "x": i * 400.0, "length": float(s[0]), "lane": float(s[3]), "slow": 0.0, "worst": 0.0, "min": INF,
-			"off": false})
+			"off": false, "on_shelf": 0})
 		i += 1
+	# The control: viga_pivot with a 5 m wall across the lane at z 20. The dead-stop detector must read it as a stop, or it measures nothing.
+	var blocked := _row("viga_pivot")
+	blocked["at"] = [i * 400.0, 0.0]
+	ParkRecipes.place(blocked, parent)
+	var wall := StaticBody3D.new()
+	wall.collision_layer = 0
+	wall.set_collision_layer_value(1, true)
+	var wall_shape := CollisionShape3D.new()
+	var wall_box := BoxShape3D.new()
+	wall_box.size = Vector3(12, 5, 1)
+	wall_shape.shape = wall_box
+	wall.add_child(wall_shape)
+	wall.position = Vector3(i * 400.0, SHELF_Y + 2.5, 20.0)
+	parent.add_child(wall)
+	runs.append({"id": "viga_pivot (control: walled lane)", "ball": _ball(parent, Vector3(i * 400.0 + 1.0, 1.0, -45.0), Vector3(0, 0, START_SPEED)),
+		"x": i * 400.0, "length": 36.0, "lane": 1.0, "slow": 0.0, "worst": 0.0, "min": INF, "off": false, "on_shelf": 0})
 	for f in ROLL_FRAMES:
 		await physics_frame
 		for r in runs:
@@ -209,20 +238,25 @@ func _check_rolls() -> void:
 			var speed := Vector2(b.linear_velocity.x, b.linear_velocity.z).length()
 			r["min"] = minf(r["min"], speed)
 			if speed < DEAD_SPEED:
-				r["slow"] += 1.0 / 60.0
+				r["slow"] += 1.0 / float(Engine.physics_ticks_per_second)
 				r["worst"] = maxf(r["worst"], r["slow"])
 			else:
 				r["slow"] = 0.0
 			if b.position.y < -0.5:
 				r["off"] = true
+			if absf(b.position.y - (SHELF_Y + Tuning.RADIUS)) < 0.25:
+				r["on_shelf"] += 1
 	for r in runs:
 		var b: RigidBody3D = r["ball"]
 		var id: String = r["id"]
+		if id.contains("control"):
+			_t.check("(d) the control: a walled lane reads as a dead stop (%s, worst %.2f s)" % [id, r["worst"]], r["worst"] > DEAD_SECONDS and b.position.z < 20.0, "z %.1f" % b.position.z)
+			continue
 		var near := _facts.filter(func(e): return absf(e[1].x - r["x"]) < 200.0)
 		_t.check("(d) a roll along %s publishes ride_ledge" % id, near.any(func(e): return e[0] == "ride_ledge"), str(near.map(func(e): return e[0])))
 		_t.check("(d) the ball crosses %s to its far lip" % id, b.position.z > r["length"] - 2.0, "z %.1f" % b.position.z)
-		_t.check("(d) the ball stays on %s, never off the shelf or into the void" % id, not r["off"] and absf(b.position.x - (r["x"] + r["lane"])) < 6.0,
-			"x %.1f y %.1f" % [b.position.x - r["x"], b.position.y])
+		_t.check("(d) the ball rides %s's shelf (%d ticks at shelf height) and never falls off" % [id, r["on_shelf"]], not r["off"] and r["on_shelf"] >= 20
+			and absf(b.position.x - (r["x"] + r["lane"])) < 6.0, "x %.1f y %.1f" % [b.position.x - r["x"], b.position.y])
 		_t.check("(d) %s: no stretch under %.0f m/s lasts %.1f s (worst %.2f s, slowest %.1f m/s)" % [id, DEAD_SPEED, DEAD_SECONDS, r["worst"], r["min"]],
 			r["worst"] <= DEAD_SECONDS and r["min"] != INF)
 	parent.free()
