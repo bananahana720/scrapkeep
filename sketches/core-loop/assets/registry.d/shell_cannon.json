@@ -5,10 +5,23 @@
    "path": "res://assets/models/world_one/shell_cannon.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd",
+   "loader": "src/presentation/hero_assets.gd SHELLS remembered_cannon (fit_shell_into)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_cannon.py",
-    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/cannon/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
+   }
+  },
+  {
+   "id": "shell_cannon_choir",
+   "path": "res://assets/models/world_one/shell_cannon_choir.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into, shell variant shell_cannon_choir (classes II to V borrow the default layers)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_cannon.py --variant choir",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "design-v3/CUSTOMIZE.md section 8 (Choir Barrel); pilots/cannon.md section 7"
    }
   }
  ]
