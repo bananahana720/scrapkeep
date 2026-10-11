@@ -74,10 +74,10 @@ const SLOT_VERBS := {"weapon": "fire", "special": "special", "smash": "haul", "l
 const FANTASY := {
 	"pylon_engineer": "Plant a beachhead, launch like a cannonball.",
 	"runner_gunner": "Unstoppable sprinter. Crowd control is fuel.",
-	"demolitions_caster": "Vanish in smoke. Drop a line of fire.",
-	"tarn": "Claw in close. Clamp the threat, then rend.",
-	"tally": "Punch a card. Roll to refill. Make them pay.",
-	"remembered_cannon": "The Mind's guns, yours now. Call the shot.",
+	"demolitions_caster": "Vanish in smoke. Light the line.",
+	"tarn": "Claw in close. Clamp, then rend.",
+	"tally": "Punch a card. Roll. Make them pay.",
+	"remembered_cannon": "The Mind's guns. Call the shot.",
 }
 
 # 1 to 3: how many things the pilot juggles. Rivet holds sprint and fires; Kest times
