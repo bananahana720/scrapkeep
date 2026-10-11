@@ -99,6 +99,9 @@ var companion := {}
 # SG9's run-start offer: {"options": three ids, "rerolls_left": int, "taken": id or ""}. Drawn
 # from run_seed in begin(); {} on a run loaded from a doc saved before SG9, which offers nothing.
 var start_pick := {}
+# True once enter_stage has run in this run. A pick opens only after flow's enter_stage(1),
+# because enter_stage zeroes bonus_cores and would wipe a Bonus Core taken before it.
+var _stage_entered := false
 # One-time grant ids already settled (RS4); the profile keeps the same set and Progress
 # unions the two. Optional in the entrance doc.
 var settled: Array[String] = []
@@ -162,6 +165,7 @@ func begin(chosen_class: Resource) -> void:
 	world = 0
 	cogs = 0
 	start_pick = {}
+	_stage_entered = false
 	if chosen_class != null:
 		start_pick = {"options": StartPicks.draw(chosen_class.id, run_seed, 0), "rerolls_left": StartPicks.REROLLS, "taken": ""}
 	companion = {}
@@ -365,9 +369,15 @@ func start_pick_options() -> Array:
 	return (start_pick.get("options", []) as Array).duplicate()
 
 
+# The offer is open in the first stage only, untaken, on a live run; an untaken pick does not
+# follow the run into stage 2 through the entrance doc.
+func _start_pick_open() -> bool:
+	return alive() and stage == 1 and not start_pick.is_empty() and String(start_pick.get("taken", "")) == ""
+
+
 # The one reroll: shows the pilot list's other three. Refused once taken or spent.
 func reroll_start_pick() -> bool:
-	if not alive() or start_pick.is_empty() or String(start_pick.get("taken", "")) != "":
+	if not _start_pick_open():
 		return false
 	var left := int(start_pick.get("rerolls_left", 0))
 	if left <= 0:
@@ -380,9 +390,10 @@ func reroll_start_pick() -> bool:
 	return true
 
 
-# Takes option `index` of the three and grants it through the mutators above. Once per run.
+# Takes option `index` of the three and grants it through the mutators above. Once per run,
+# in stage 1, and only after enter_stage(1) so a Bonus Core is not zeroed by the stage entry.
 func take_start_pick(index: int) -> bool:
-	if not alive() or String(start_pick.get("taken", "")) != "":
+	if not _start_pick_open() or not _stage_entered:
 		return false
 	var options := start_pick_options()
 	if index < 0 or index >= options.size():
@@ -572,6 +583,7 @@ func record_milestone(event_id: String) -> void:
 func enter_stage(index: int) -> void:
 	stage = index
 	bonus_cores = 0
+	_stage_entered = true
 
 
 # The stage-start checkpoint: everything a retry puts back, including where and how

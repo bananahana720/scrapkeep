@@ -106,6 +106,8 @@ func _starts_table() -> void:
 			var b := _fresh(1000 + i)
 			var f0 := Engine.get_process_frames() + Engine.get_physics_frames()
 			b.begin(def)
+			# flow._begin_run: begin(def), then enter_stage(1) (flow.gd:249-255).
+			b.enter_stage(1)
 			var options: Array = b.start_pick_options()
 			frames_added += Engine.get_process_frames() + Engine.get_physics_frames() - f0
 			var all_list: Array = StartPicks.ids_for(def.id)
@@ -135,7 +137,8 @@ func _starts_table() -> void:
 					"cogs":
 						applied = b.cogs == cogs0 + int(row["amount"]) and b.parts.size() == parts0
 					"core":
-						applied = b.bonus_cores == cores0 + 1 and b.parts.size() == parts0
+						# The stage entry already ran, so the core is still there to spend.
+						applied = cores0 == 0 and b.bonus_cores == 1 and b.parts.size() == parts0
 				if not applied or String(b.start_pick.get("taken", "")) != id:
 					bad_effects += 1
 		var list: Array = StartPicks.list_for(def.id)
@@ -171,10 +174,40 @@ func _no_persist() -> void:
 		for index in StartPicks.OFFERED:
 			var run := _fresh(77)
 			run.begin(def)
+			run.enter_stage(1)
 			t.check("%s take slot %d" % [def.id, index], run.take_start_pick(index))
 			run.begin(def)
 			t.eq("%s slot %d gone after a new run" % [def.id, index], String(run.start_pick.get("taken", "")), "")
 			t.eq("%s slot %d new run equals a fresh one" % [def.id, index], _strip(run.to_entrance_doc()), clean)
+			# The entrance doc is not the whole run: a field outside it that begin() does not
+			# reset could carry a pick into the next run, so every script field is compared.
+			var drift := _state_drift(run, fresh)
+			t.check("%s slot %d no run field survives into the next run" % [def.id, index], drift.is_empty(), "%s" % [drift])
+
+
+# Script fields that legitimately differ between two runs: the id stream and what it draws
+# (run_id, run_seed), and the offer drawn from that seed.
+const RUN_SPECIFIC := {"run_id": true, "run_seed": true, "start_pick": true, "_id_rng": true}
+
+
+func _state_drift(run: RunState, fresh: RunState) -> Array:
+	var drift := []
+	var compared := 0
+	for prop in run.get_property_list():
+		if not (int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var name := String(prop["name"])
+		if RUN_SPECIFIC.has(name):
+			continue
+		compared += 1
+		var a = run.get(name)
+		var b = fresh.get(name)
+		if typeof(a) != typeof(b) or a != b:
+			drift.append("%s: %s vs fresh %s" % [name, a, b])
+	# A property list that came back empty would pass vacuously.
+	if compared < 30:
+		drift.append("only %d script fields compared" % compared)
+	return drift
 
 
 # run_id and seed differ between runs by design; start_pick options follow the seed, so the
@@ -204,6 +237,7 @@ func _replay() -> void:
 		t.eq("%s replay from the entrance save shows the same three" % def.id, b.start_pick_options(), first)
 		# A retry rewinds to the stage-start checkpoint: a pick taken after it comes back as the
 		# same open offer, and taking it again pays once.
+		a.enter_stage(1)
 		a.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
 		var parts0 := a.parts.size()
 		var cogs0 := a.cogs
@@ -223,6 +257,9 @@ func _replay() -> void:
 		d.from_entrance_doc(doc2)
 		t.eq("%s replay keeps the rerolled three" % def.id, d.start_pick_options(), second)
 		t.eq("%s replay keeps the reroll spent" % def.id, int(d.start_pick.get("rerolls_left", -1)), 0)
+		# flow's resume path calls enter_stage(run.stage) after from_entrance_doc (flow.gd:315-321).
+		d.enter_stage(d.stage)
+		t.check("%s replayed offer can be taken after the stage entry" % def.id, d.take_start_pick(0))
 	# An entrance doc from before SG9 still loads, with no pick offered.
 	var old := _fresh(5)
 	old.begin(ClassDef.all()[0])
@@ -242,6 +279,9 @@ func _reroll_rules() -> void:
 	var def: Resource = ClassDef.all()[0]
 	var run := _fresh(31)
 	run.begin(def)
+	t.check("take refused before enter_stage(1)", not run.take_start_pick(0))
+	t.eq("refused early take leaves the offer open", String(run.start_pick.get("taken", "")), "")
+	run.enter_stage(1)
 	var first: Array = run.start_pick_options()
 	t.check("one reroll allowed", run.reroll_start_pick())
 	var second: Array = run.start_pick_options()
@@ -257,12 +297,39 @@ func _reroll_rules() -> void:
 	t.check("a second take refused", not run.take_start_pick(0))
 	var run2 := _fresh(32)
 	run2.begin(def)
+	run2.enter_stage(1)
 	run2.take_start_pick(1)
 	t.check("reroll after a take refused", not run2.reroll_start_pick())
 	var dead := _fresh(33)
 	dead.begin(def)
+	dead.enter_stage(1)
 	dead.over = true
 	t.check("no take on an ended run", not dead.take_start_pick(0))
+	# A pick left untaken in stage 1 closes with it: the entrance doc still carries the offer,
+	# but stage 2 refuses it, whether reached live or through the doc.
+	var late := _fresh(34)
+	late.begin(def)
+	late.enter_stage(1)
+	late.enter_stage(2)
+	t.check("untaken pick refused in stage 2", not late.take_start_pick(0))
+	t.check("reroll refused in stage 2", not late.reroll_start_pick())
+	var late_doc = JSON.parse_string(JSON.stringify(late.to_entrance_doc()))
+	var loaded := _fresh(35)
+	loaded.begin(def)
+	t.check("stage 2 doc applies", loaded.from_entrance_doc(late_doc))
+	loaded.enter_stage(loaded.stage)
+	t.check("untaken pick refused after loading a stage 2 doc", not loaded.take_start_pick(0))
+	# Every core kind: taking the Bonus Core after the stage entry leaves exactly one core.
+	for d in ClassDef.all():
+		for id in StartPicks.ids_for(d.id):
+			if String(StartPicks.row(d.id, id).get("do", "")) != "core":
+				continue
+			var c := _fresh(36)
+			c.begin(d)
+			c.enter_stage(1)
+			c.start_pick["options"] = [id, "", ""]
+			t.check("%s %s taken" % [d.id, id], c.take_start_pick(0))
+			t.eq("%s %s leaves one core after the stage entry" % [d.id, id], c.bonus_cores, 1)
 
 
 # The card draws three tiles and never pauses or blocks input.
@@ -270,6 +337,7 @@ func _card() -> void:
 	var def: Resource = ClassDef.all()[1]
 	var run := _fresh(51)
 	run.begin(def)
+	run.enter_stage(1)
 	var card := StartPickCard.new()
 	root.add_child(card)
 	card.show_picks(run)
@@ -289,4 +357,10 @@ func _card() -> void:
 	run.take_start_pick(0)
 	card.show_picks(run)
 	t.check("card hides once the pick is taken", not card.showing())
+	var later := _fresh(52)
+	later.begin(def)
+	later.enter_stage(1)
+	later.enter_stage(2)
+	card.show_picks(later)
+	t.check("card hides past stage 1", not card.showing())
 	card.queue_free()

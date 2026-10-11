@@ -10,7 +10,13 @@ const Palette := preload("res://src/core/palette.gd")
 # draws: it takes no input and never pauses, so the first drop keeps every bit of its speed
 # and the pick costs one key press at most (memo 3, SG9 FORBIDDEN). The caller routes keys to
 # RunState.take_start_pick and reroll_start_pick and calls show_picks again; once a pick is
-# taken, or a run offers nothing, the card hides. The tiles take the pilot's colour.
+# taken, or a run offers nothing, or the run has left stage 1, the card hides. The tiles take
+# the pilot's colour.
+#
+# Call order for the wiring unit: flow._begin_run calls run.begin(def) and then enter_stage(1)
+# (flow.gd:249-255). Show the card and route keys only after enter_stage(1): RunState refuses
+# take_start_pick before it, because enter_stage zeroes bonus_cores and would wipe a Bonus Core
+# taken in between. Past stage 1 the offer is closed and both take and reroll are refused.
 
 const ICON := 40.0
 const KEY := 26.0
@@ -37,7 +43,7 @@ func show_picks(run) -> void:
 	_tiles = []
 	var taken := String(run.start_pick.get("taken", ""))
 	var pilot: String = run.class_id()
-	if taken == "":
+	if taken == "" and int(run.stage) == 1:
 		var options: Array = run.start_pick_options()
 		for i in mini(options.size(), KEYS.size()):
 			var row := StartPicks.row(pilot, String(options[i]))
