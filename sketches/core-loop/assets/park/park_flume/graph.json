@@ -1,0 +1,159 @@
+{
+  "bake_sha256": "ab84e62bf20bfd0f798dd3c23111dd56cc5ecba8d481802064bf46097eb7e2a6",
+  "breaches": [],
+  "bytes": 1174275,
+  "edges": 317439,
+  "flags": {
+    "deck": 450,
+    "door_ok": 39984,
+    "line": 331,
+    "open": 40638,
+    "sight_ok": 10798,
+    "under": 0
+  },
+  "full_visit_m": 1751,
+  "full_visit_ratio": "1.254",
+  "graph_sha256": "be80fe4443af35d378ba2452e26f8c3940bd2301e011f70b6e5f325cfb842a7d",
+  "line_errors": [],
+  "line_path_nodes": 134,
+  "longest_est_m": 2486,
+  "map": "park_flume",
+  "nodes": 40851,
+  "park_sha256": "27d8965db5a6bba33b334fecbd01c71a79d05563be26a346796b50faefd2b7d6",
+  "pockets": [
+    {
+      "clear_ring": [],
+      "d_landmark": 419,
+      "d_spawn": 980,
+      "detour_m": 0,
+      "door_at": [
+        -24,
+        176
+      ],
+      "door_m": 0,
+      "flags": [
+        "open",
+        "line",
+        "sight_ok"
+      ],
+      "id": "siphon_camp",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "loose_trigger",
+      "pay_rarities": [
+        "common"
+      ],
+      "role": "online",
+      "sight_ok": true,
+      "site": "the_siphon"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 702,
+      "d_spawn": 769,
+      "detour_m": 204,
+      "door_at": [
+        24,
+        -120
+      ],
+      "door_m": 204,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "bend_cache",
+      "kind": "cracked_cache",
+      "nearest_door": 236,
+      "nearest_door_id": "weir_valve",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": true,
+      "site": "bend_rim_ledge"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 415,
+      "d_spawn": 1136,
+      "detour_m": 193,
+      "door_at": [
+        -120,
+        336
+      ],
+      "door_m": 193,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "bench_bounty",
+      "kind": "hauler_bounty",
+      "nearest_door": 538,
+      "nearest_door_id": "bend_cache",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": true,
+      "site": "south_bench"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 908,
+      "d_spawn": 561,
+      "detour_m": 110,
+      "door_at": [
+        -152,
+        -248
+      ],
+      "door_m": 108,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "weir_valve",
+      "kind": "valve",
+      "nearest_door": 236,
+      "nearest_door_id": "bend_cache",
+      "pay_named": "",
+      "pay_rarities": [],
+      "role": "hidden",
+      "sight_ok": true,
+      "site": "butte_gap"
+    }
+  ],
+  "ride_edges": 13,
+  "routes": {
+    "annex_ramp_line": [],
+    "camp_rim": [],
+    "canal_lower": [],
+    "canal_mid": [],
+    "canal_upper": [],
+    "flume_lower": [],
+    "flume_mid": [],
+    "flume_upper": [],
+    "forecourt_entry": [],
+    "hollow_run": [],
+    "rim_lower": [],
+    "rim_mid": [],
+    "trestle_ramp_line": [],
+    "warden_exit": [],
+    "wasteway_wall": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1397,
+    "farther_share": "0.071",
+    "ok": true
+  },
+  "spawn_beacon_m": 1396,
+  "spawn_beacon_share": "0.562",
+  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+}
