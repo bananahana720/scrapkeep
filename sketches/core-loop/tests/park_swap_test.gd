@@ -4,12 +4,14 @@ extends SceneTree
 # collider build on worker threads while the current stage plays, with no main-thread frame
 # over 33 ms; the swap applies on the launch landing (terrain.use(), as the flow runs it on
 # stage_entered), and the ball lands on the next stage's collider. Only the active stage and
-# the next one stay resident. Fixture: a two-stage table of park_test.
+# the next one stay resident. Fixture: a three-stage table of park_test; a new run back on stage 1
+# (use(1) with stages 2 and 3 resident) frees stage 3 first so stage 1 gets a render node.
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 
-const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 1, "map": "park_test"}]}
+const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 1, "map": "park_test"},
+	{"stage": 3, "world": 1, "map": "park_test"}]}
 const FRAME_CAP_MS := 33.0
 const BUILD_FRAMES_MAX := 6000
 const LAND_FRAMES_MAX := 1200
@@ -59,6 +61,10 @@ func _run() -> void:
 	t.check("regions and tiles were built off the main thread", next != null and next.worker_pieces == 104, "%d pieces" % (next.worker_pieces if next != null else -1))
 	t.check("the build's frames were timed", worst > 0.0, "%.2f ms" % worst)
 	t.check("no main-thread frame over 33 ms while stage 2 builds", worst < FRAME_CAP_MS and use_ms < FRAME_CAP_MS, "worst %.2f ms, use(1) %.2f ms" % [worst, use_ms])
+	# frame_usec_max never sees the frame of the last attach step (built, then the props, then
+	# processing stops), so the slowest single step, timed around the whole pump, is capped too.
+	t.check("slowest main-thread step under 33 ms", next != null and next.slowest_usec / 1000.0 < FRAME_CAP_MS,
+		"%.2f ms at %s" % [next.slowest_usec / 1000.0 if next != null else -1.0, next.slowest_step if next != null else ""])
 	t.eq("stage 2 is still parked while stage 1 plays", terrain.stage, 1)
 
 	# The launch: the ball leaves stage 1, and the swap applies when it comes down to land.
@@ -108,6 +114,29 @@ func _run() -> void:
 		str(hit.get("collider")))
 	t.check("contains the ball", terrain.contains(at))
 	ball.queue_free()
+
+	# A new run after dying on stage 2 (flow.gd _begin_run reuses the terrain): stages 2 and 3
+	# hold both render nodes, and use(1) must free stage 3 before stage 1 builds, so stage 1
+	# draws instead of standing as a bare collider.
+	for n in 3:
+		await process_frame
+	t.check("before the new run, stages 2 and 3 hold both render nodes", terrain._render_owner.has(1) and terrain._render_owner.has(2),
+		str(terrain._render_owner))
+	terrain.use(1)
+	var first = terrain.park_ground(1)
+	t.check("the new run's stage 1 is built and ready", first != null and terrain.is_ready(1))
+	t.check("the new run's stage 1 draws into a Terrain3D node", first != null and first.terrain3d != null, str(terrain._render_owner))
+	t.check("a render node belongs to stage 1", terrain._render_owner.has(0), str(terrain._render_owner))
+	t.check("stage 3 left memory on the new run", terrain.park_ground(3) == null)
+	t.check("stage 2 stays as the next stage", terrain.park_ground(2) != null)
+	var shown := 0
+	for node in terrain._render:
+		if node.visible:
+			shown += 1
+			t.check("the shown render node is stage 1's", terrain._render_owner[terrain._render.find(node)] == 0)
+	t.eq("one render node shows on the new run", shown, 1)
+	for n in 3:
+		await process_frame
 	holder.queue_free()
 	await process_frame
 	quit(t.verdict())

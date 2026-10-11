@@ -229,7 +229,13 @@ func _ensure(index: int) -> int:
 # trimesh back to the world rebuilds its tree (measured at about 34 ms a swap).
 func use(index: int) -> void:
 	var started := Time.get_ticks_usec()
-	stage = _ensure(index) + 1
+	# Park stages that are neither the target nor its next leave first, so a target that is
+	# not resident (a new run back on stage 1) finds a free Terrain3D render node to draw into.
+	var target := _index(index)
+	for i in _roots.size():
+		if _roots[i] != null and _is_park[i] and i != target and i != target + 1:
+			_free_stage(i)
+	stage = _ensure(target + 1) + 1
 	_arena = false
 	var m = map()
 	overlays.clear()
@@ -237,9 +243,6 @@ func use(index: int) -> void:
 		overlays.append_array(m.start_overlays)
 	for i in _roots.size():
 		if _roots[i] == null:
-			continue
-		if _is_park[i] and i != stage - 1 and i != stage:
-			_free_stage(i)
 			continue
 		_park(_roots[i], i != stage - 1)
 		_roots[i].process_mode = Node.PROCESS_MODE_INHERIT
@@ -263,6 +266,10 @@ func _free_stage(i: int) -> void:
 	var slot := _render_owner.find(i)
 	if slot >= 0:
 		_render_owner[slot] = -1
+	# A ground still attaching must not add one more region to the render node it just gave up
+	# in the frames before queue_free lands; the stage that takes the node may already own it.
+	if _grounds[i] != null:
+		_grounds[i].set_process(false)
 	_roots[i].queue_free()
 	_roots[i] = null
 	_grounds[i] = null
