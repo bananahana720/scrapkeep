@@ -12,6 +12,10 @@ const WARDEN_KITS := {"reactor": "reactor", "swarm": "hive", "mind": "mind"}
 const WARDEN_MANTLES := {
 	2: {"family": "reactor", "path": "res://assets/models/warden_mantle_meltdown.glb"},
 	4: {"family": "swarm", "path": "res://assets/models/warden_mantle_brood.glb"},
+	# Rows 5 and 6 stay until KF8b makes the stage 5 and 6 Wardens park anchors: today they take the
+	# clamp path, and the body path skips mantles (coordinator ruling at the KF8a merge, 2026-10-11).
+	5: {"family": "mind", "path": "res://assets/models/warden_mantle_hand.glb"},
+	6: {"family": "mind", "path": "res://assets/models/warden_mantle_choir.glb"},
 }
 # KF8a: a park Warden (spec "harpoon_anchor": true) of a kind with a recipe body wears that body
 # in place of the clamp base, kit and mantle; the authored boss arenas' Wardens keep the clamp.
