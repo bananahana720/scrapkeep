@@ -61,7 +61,7 @@ Dawn, `dawn_still`; the monsoon builds from tier 2 (`1-park_dam.md:184-186`). Ti
 - **Pressure:** `enemy_camp`, three chasers, named pay `hot_rivets` (`1-park_dam.md:376`).
 - **Seconds:** waymark at 22 s for every line (`1-park_dam.md:196-202`).
 - **Music:** Calm layer; a fight lifts layers through `escalate` (`1-park_dam.md:225` names this for the runs; applying it here is inference).
-- **Panel:** NEW `j1-p01`, shared with beat 4. 1536x1024. Camera 3 m above the shelf lip, looking south at dawn, low sun on the left. Foreground: a slickrock lip curling up into a kicker. Below it, three run mouths cut 25 m into pink plateau: a pale concrete-lined wash on the right, a dark meandering slot ahead, a tighter corkscrew slot on the left. Three small chaser crews idle on a dome at the left edge. On the skyline, centred, the dam crest as a pale bar with two gate towers and a thin green beam. References: park-dam vista-1.png for palette and the dam, vista-2.png for the rock. No text, no pilot ball, green ancient light only, copper never brass.
+- **Panel:** NEW `j1-p01`, shared with beat 4. 1536x1024. Camera 3 m above slickrock domes 30 m north of a small camp, looking south at dawn, low sun on the left. Foreground: three small chaser crews idle on a pale dome. About 130 m on: a slickrock lip curling up into a kicker. Beyond it, three run mouths cut 25 m into pink plateau: a pale concrete-lined wash on the right, a dark meandering slot ahead, a tighter corkscrew slot on the left. On the skyline, centred, the dam crest as a pale bar with two gate towers and a thin green beam. References: park-dam vista-1.png for palette and the dam, vista-2.png for the rock. No text, no pilot ball, green ancient light only, copper never brass.
 
 **4. The shelf lip**
 - **Where:** `shelf_lip`, kicker, 20 by 30 m at [-90, -300] (`1-park_dam.md:320`).
@@ -126,12 +126,12 @@ Dawn, `dawn_still`; the monsoon builds from tier 2 (`1-park_dam.md:184-186`). Ti
 **10. The toe apron: the vents wake**
 - **Where:** `toe_apron`, `plunge_pool`, `toe_vent_pits`, `powerhouse` (`1-park_dam.md:340-343`).
 - **You:** You land on the apron carrying your speed. Tally pumps the pool bowl twice and surges out (`1-park_dam.md:214`).
-- **You see:** The face and the relic straight ahead. At the east toe a vent pit stirs, then a small relic erupts from it (`1-park_dam.md:150`). If the pool flood is live, the coping is lit in the flood colour and the ball rides the rim line (`1-park_dam.md:422`).
+- **You see:** The face and the relic straight ahead. East of the apron and short of the face, a vent pit stirs (`toe_vent_pits` at [140, 440], `1-park_dam.md:343`), then a small relic erupts from it (`1-park_dam.md:150`). If the pool flood is live, the coping is lit in the flood colour and the ball rides the rim line (`1-park_dam.md:422`).
 - **Pull:** The vent's 8 s `ancient_stirring` plays the Warden's sound for the first time, small; then the engage ring at [0, 575] (`1-park_dam.md:153`, `231`).
 - **Pressure:** `toe_vents_wake` (tier 2, 8 s telegraph, a `reactor_relic` miniboss, no route change) (`1-park_dam.md:150`). `plunge_pool_flood` (tier 1, 6 s `flood_rising`, 35 s of water, closes `pool_floor`, opens `pool_rim`) (`1-park_dam.md:146`). Home `powerhouse_trappers` (jump the disc or grow past it; tier 2, 35 s, 3 alive) (`1-park_dam.md:163`). Contraptions `pool_geyser`, `spray_thermal` (`1-park_dam.md:179-180`).
 - **Seconds:** arrival 84 to 98 s; tier 2 at 90 s lands on it (`1-park_dam.md:153`, `196-202`).
 - **Music:** The reactor's Ab pedal under the band, the Geiger tick speeding toward the eruption (`1-park_dam.md:231`).
-- **Panel:** NEW `j1-p05`. 1536x1024. Camera low on a flat concrete apron at the toe of a curved dam at dawn, looking east-south-east along the toe. Foreground: a shallow vent pit in the apron with a cast green-seamed plate, cracking open; a small ribbed drum with three stubby rod stacks bursting up through it in a ring of steam, seams blazing green. Behind it, the curved dam face rising out of frame with its larger green-seamed relic clamped high on the left; a steaming powerhouse at right. References: park-dam vista-3.png for the dam and powerhouse, warden-reactor warden-3.png for the relic body. No text, no pilot ball, green ancient light only, copper never brass.
+- **Panel:** NEW `j1-p05`. 1536x1024. Camera low on dry canyon floor north of a curved dam at dawn, looking south, low sun on the left. Foreground: a shallow vent pit beside the apron with a cast green-seamed plate, cracking open; a small ribbed drum with three stubby rod stacks bursting up through it in a ring of steam, seams blazing green. Just behind it, a steaming powerhouse. Across the back, the curved dam face rising out of frame, its larger green-seamed relic clamped low on the face right of centre, a flat concrete apron at its foot. References: park-dam vista-3.png for the dam and powerhouse, warden-reactor warden-3.png for the relic body. No text, no pilot ball, green ancient light only, copper never brass.
 
 ### Between the stages: the dam fight, the gates and the bay
 
@@ -174,13 +174,13 @@ Morning, `morning_clear`; the dust squall from tier 2 (`2-park_flume.md:182-184`
 - **Pressure:** home `weir_lobbers` on the rim road (tier 1, 30 s, 4 alive) (`2-park_flume.md:161`). Contraption `weir_valve` opens a cache pocket (`2-park_flume.md:173`).
 - **Seconds:** rest of segment 1, about 25 s on the canal (inference, 503 m).
 - **Music:** The held groove with `trestle_ticks` (`2-park_flume.md:222`).
-- **Panel:** NEW `j2-p01`, shared with beat 4. 1536x1024. Camera beside a timber flume 45 m above the ground in clear morning light, looking along its water channel as it runs away on tall trestle bents. Ahead, two red buttes stand either side of a gap; a canal glints through the gap below. Tan fields cut by green canal lines fall away to the right, long trestle shadows lying west across them. Far off at the right, a slim concrete tower with a green beam beside a round head house on a bluff. References: park-flume vista-1.png for the flume, buttes and tower. No text, no pilot ball, green ancient light only, copper never brass.
+- **Panel:** NEW `j2-p01`, shared with beat 4. 1536x1024. Camera beside a timber flume 45 m above the ground in clear morning light, looking along its water channel as it runs away on tall trestle bents. Ahead, two red buttes stand either side of a gap; a canal glints through the gap below. Tan fields cut by green canal lines fall away to the right, long trestle shadows lying west across them. Far off at the left, a slim concrete tower with a green beam beside a round head house on a bluff. References: park-flume vista-1.png for the flume, buttes and tower. No text, no pilot ball, green ancient light only, copper never brass.
 
 **4. The butte gap (first waymark)**
 - **Where:** `butte_gap`, `west_butte`, `east_butte` (`2-park_flume.md:310-312`).
 - **You:** You thread the 80 m gap. The buttes are harpoon anchors (`2-park_flume.md:128`); Kest rocket-jumps off the flume here onto the rim road (`2-park_flume.md:210`).
-- **You see:** The flume and the canal pinch together between the buttes; past them the lines fan out (`2-park_flume.md:287-291`).
-- **Pull:** The pinch, then five ways to the siphon.
+- **You see:** The flume and the canal pinch together between the buttes. Facing down the gap (yaw 30, south-south-east, `2-park_flume.md:310`), the mouths read by side. Ahead: the hollow's tallest trestles and the flume's hollow reach striding on them (`2-park_flume.md:72`, `306`, `317`). On the right: the lateral canal turning into the tan fields; the floor line's first point past the gap, [-320, -100], lies south-south-west (`2-park_flume.md:313`, `380`). On the left: the rim road, a dam-era terrace running east toward the bend (`2-park_flume.md:321`). Sides are inference from the row positions.
+- **Pull:** The pinch, then a choice by side: trestles ahead, fields right, rim road left.
 - **Pressure:** none.
 - **Seconds:** waymark at 31 to 38 s (`2-park_flume.md:194-199`).
 - **Music:** A one-bar break as the lines pinch, the groove back on the far side, cue `gap_break` (`2-park_flume.md:223`).
@@ -190,7 +190,7 @@ Morning, `morning_clear`; the dust squall from tier 2 (`2-park_flume.md:182-184`
 - **Where:** `trestle_hollow`, arroyo half-pipe; `flume_hollow_reach` at y 96 (`2-park_flume.md:306`, `317`).
 - **You:** You pump the hollow's walls under the 49 m trestles, or hold the grind on the hollow reach. The hollow lift raises you 30 m to the catwalk, inside harpoon range of the flume (`2-park_flume.md:176`).
 - **You see:** Winch drones roosting in the bents; the head house and tower on the far bluff (observed in vista-2).
-- **Pull:** The drones' winch lanes along the flume, and the span's groan.
+- **Pull:** The hollow itself: the arroyo runs on under the flume to the siphon, where the canal dives under the hollow (`hollow_run`, `2-park_flume.md:11`, `289`). The span's groan joins it only if call 5 is accepted; at tier 2 (90 s) it fires after a straight run has passed (`2-park_flume.md:145`, `194-199`).
 - **Pressure:** home `trestle_drones`: a 20 m winch lane hooks a ball on the grind; hold 19 m/s or jump and the cable snaps; tier 1, 35 s, 3 alive (`2-park_flume.md:162`). Event `hollow_trestle_collapse`: 6 s `trestle_groan`, the span falls into a ramp only when the ball is 20 m clear, closes `flume_mid`, opens `trestle_ramp_line` (`2-park_flume.md:145`, `151`).
 - **Seconds:** segment 2, 29 to 37 s (`2-park_flume.md:194-199`).
 - **Music:** Stage-band riser on the groan, the drop on the landing (`2-park_flume.md:224`).
@@ -210,7 +210,7 @@ Morning, `morning_clear`; the dust squall from tier 2 (`2-park_flume.md:182-184`
 - **Where:** `rim_road`, `bend_overlook`, `horseshoe_gorge` 95 m deep (`2-park_flume.md:321-323`).
 - **You:** You glide the bend from the overlook, or recoil-hop the gorge corner, then ride the 150 m bend zip (`2-park_flume.md:177`, `210`, `213`).
 - **You see:** Past the lower gorge, a smoke column and a furnace glow on the eastern horizon: Brindle (`2-park_flume.md:114`). The bend cache's amber marker at [150, -80] (`2-park_flume.md:360`).
-- **Pull:** The smoke on the horizon, and the zip.
+- **Pull:** Into the bend: the zip, which runs south-east down the rim to the overlook (`2-park_flume.md:352`). Out of the bend toward the siphon: pull missing, back to stage 2 page (`rim_mid` return; section 7, gap 6). The smoke is east and the tower beam south-south-east, both away from the siphon at [-20, 170], which lies about 250 m south-south-west of the zip's foot at [120, -40] (`2-park_flume.md:114`, `281`, `318`, `352`). Smallest existing candidate (inference from positions): on the right, the flume's hollow reach on its tallest trestles, which ends at the siphon (`flume_mid`, `2-park_flume.md:72`, `287`, `306`); Kest's line follows it back down through [40, 100] (`2-park_flume.md:375`).
 - **Pressure:** `bend_relic_wakes` (tier 2, 8 s `ancient_stirring`, a `reactor_relic` miniboss, no route change) (`2-park_flume.md:148`).
 - **Seconds:** segment 2, Kest and Cannon 37 s (`2-park_flume.md:196`, `199`).
 - **Music:** The Ab pedal and the Geiger tick at the wake (`2-park_flume.md:226`).
@@ -220,7 +220,7 @@ Morning, `morning_clear`; the dust squall from tier 2 (`2-park_flume.md:182-184`
 - **Where:** `the_siphon`, a canal drop under the hollow; activity `siphon_camp` at [-28, 176] (`2-park_flume.md:318`, `359`).
 - **You:** You drop through the siphon, `ride_drop` (`2-park_flume.md:318`). Every middle way ends here (`2-park_flume.md:287-291`).
 - **You see:** The siphon's plate: "Inverted siphon: the water goes down, under, and up again. So will you." (`2-park_flume.md:243`); the camp's lobbers on its lip.
-- **Pull:** The drop, and the concrete wasteway opening on the far side.
+- **Pull:** Three last ways in, each visible from the lip. The concrete wasteway opening on the far side (beat 9). Overhead, the flume's last reach running on to enter the head house's north wall (`2-park_flume.md:307`, `407`); Tarn claws up onto it here (`2-park_flume.md:211`). On the left, the squall lane's visible wind lane on the bluff rim, about 165 m south-east at [120, 260] (`2-park_flume.md:178`, `350`), the way onto the bluff (beat 10).
 - **Pressure:** `enemy_camp`, three lobbers, named pay `loose_trigger` (`2-park_flume.md:112`, `359`).
 - **Seconds:** waymark at about 60 to 75 s (segments 1 and 2, `2-park_flume.md:194-199`).
 - **Music:** A low-pass dip under the hollow, open on the far side (`2-park_flume.md:228`).
@@ -271,9 +271,11 @@ The reactor relic is a squat ribbed drum about 9 m across with three rod stacks 
 | Behaviour | Taught on the line | First used on a Warden | Tested in the climax |
 | --- | --- | --- | --- |
 | Latch, ride | Stage 1: the viga span, a world swing line (`1-park_dam.md:329`). Stage 2: the butte anchors and the crane booms (`2-park_flume.md:311-312`, `315`) | Dam: a gate pier, a pendulum over the apron (`reactor.md:78-79`) | Orbit round the relic under the trusses (`reactor.md:79`) |
-| Fire from the line | Nowhere on the line | Dam: hang from a pier, shoot during the charge (`reactor.md:80`) | Hang over the drum while the lanes burn (`reactor.md:80`) |
-| Shrug | Nowhere on the line | Dam: the throw arcs you up the face (`reactor.md:84`) | The throw lifts you over a fresh lane (`reactor.md:84`) |
-| Drag | none: the relic never moves (`reactor.md:81`) | none | none; drag arrives in world 2 (`PARK.md:421`, `430`) |
+| Fire from the line | Stage 1: hang from the viga span at [-135, 430], about 66 m from the service-ledge lobbers inside their 75 m range, and shoot them (`1-park_dam.md:162`, `329-330`). Stage 2: hang from the west butte, about 60 m from the weir lobbers on the rim road (`2-park_flume.md:161`, `311`, `316`). That the weapon slot fires on a world line is inference from "as today" (`PARK.md:420`) | Dam: hang from a pier, shoot during the charge (`reactor.md:80`) | Hang over the drum while the lanes burn (`reactor.md:80`) |
+| Shrug | Warden-only by definition: only a Warden's lined hardpoint flares and drops the line (`PARK.md:422`). The dam fight is its teaching beat | Dam: the throw arcs you up the face (`reactor.md:84`) | The throw lifts you over a fresh lane (`reactor.md:84`) |
+| Drag | World 2 by design: the relic never moves (`reactor.md:81`); drag needs a moving mounting (`PARK.md:421`) | none | none; drag arrives in world 2 (`PARK.md:421`, `430`) |
+
+Latch and ride are met on the line before the dam, but only on harpoon lines; fire from the line is met on the line only at the two spots above, both off the floor line. The floor line meets latch, ride and fire at the dam's piers, and the shrug is met there by every line. So the dam fight is the teaching beat for all three, and the head house is the test (call 6).
 
 ### 4.1 First meeting: the dam face (stage 1's end)
 
@@ -290,8 +292,8 @@ The reactor relic is a squat ribbed drum about 9 m across with three rod stacks 
 **D2. Ride the sheet**
 - **Where:** the face, a quarter pipe from flat at z 560 to vertical about 30 m up (`1-park_dam.md:32`).
 - **You:** On the pulse the gates open and a 24 m sheet runs down the face for 3 s. You enter it from the apron moving toward the face and ride up to core height with your planar speed kept (`reactor.md:55-57`).
-- **You see:** A white sheet centred on the relic; the core above its top.
-- **Pull:** The sheet is the road; a grown ball rams the core on it (`reactor.md:60`).
+- **You see:** A white sheet centred on the relic; the core above its top. Green-rimmed hardpoints on both gate piers, 45 m bite (`reactor.md:78`; `PARK.md:418`).
+- **Pull:** The sheet is the road; a grown ball rams the core on it (`reactor.md:60`). The piers: a line across the sheet's foot (`reactor.md:79`).
 - **Pressure:** none; missing the sheet costs nothing (`reactor.md:58`).
 - **Seconds:** the sheet lives 3 s (`reactor.md:60`).
 - **Music:** The pulse lands on the beat and the pedal stops as the vent blows (`reactor.md:106`).
@@ -335,7 +337,7 @@ The reactor relic is a squat ribbed drum about 9 m across with three rod stacks 
 - **Pressure:** none for 20 s after the break (`PARK.md:313`).
 - **Seconds:** the stage's skipper band is 50 to 90 s at the break, re-measured at KF2 (`1-park_dam.md:265`).
 - **Music:** `final_quiet`: the Ab pedal stops on the last seam (`reactor.md:102`). The unseal drop and the cadence home; the launch rides the cadence (`1-park_dam.md:237`).
-- **Panel:** NEW `j1-p07`. 1536x1024. Camera high on the crest's edge at early morning, looking down the curved dam face to the toe and back north. On the apron below, three reward gate arches in a row; behind them a hover barge with a workshop deck and a steam cradle hangs 46 m up. The relic on the face is dark, its jacket broken open. Beyond the crest to the south, a calm reservoir runs to a far mesa with a timber weir on its top in morning haze. References: park-dam vista-3.png for the dam and reservoir, warden-3.png for the broken relic. No text, no pilot ball, green ancient light only, copper never brass.
+- **Panel:** NEW `j1-p07`. 1536x1024. Camera above crest height over the canyon, north of a hovering barge, looking south at early morning. Foreground below: the barge with a workshop deck and a steam cradle, hanging 46 m up. Beyond it on a flat apron, three reward gate arches in a row facing the dam. Behind them the curved dam face, its relic dark, jacket broken open. Beyond the crest, a calm reservoir runs to a far mesa with a timber weir on its top in morning haze. References: park-dam vista-3.png for the dam and reservoir, warden-3.png for the broken relic. No text, no pilot ball, green ancient light only, copper never brass.
 
 ### 4.2 The climax: the head house (stage 2's end)
 
@@ -423,7 +425,7 @@ The reactor relic is a squat ribbed drum about 9 m across with three rod stacks 
 
 - Stage 2 is the world's last stage, so when the 0.6 s flight ends, `_finish_stage` calls `enter_boss` with the ball's velocity and Brindle's module places the ball in the Slag Bowl (`2-park_flume.md:114`; `flow.gd:667-671`). The arena stays small and authored (`PARK.md:383`).
 - After Brindle, the ball keeps rolling for 2.5 s, then the next world's first stage takes it with its velocity (`flow.gd:19-20`, `626-629`, `678-682`): `park_pit`, the Dig, at noon (`PARK.md:378`).
-- **What you carry.** Your speed, entering from above (`flow.gd:21-25`). The parts from both gate rows. Beating Brindle finds ledger leaf 1, which the profile keeps across runs (`DESIGN-V3.md:220`), and unlocks Tarn for the next run (`DESIGN-V3.md:182`). World 2 brings a fresh retry: the one retry is per world (`DESIGN-V3.md:29`).
+- **What you carry.** Your speed, entering from above (`flow.gd:21-25`). The parts from both gate rows. Build tree depths one and two, which world one reaches (`BIBLE.md:65`). Rivet, if the cage was reached (section 2, `DESIGN-V3.md:181`). The named pays `hot_rivets` and `loose_trigger`, if the camps were broken (`1-park_dam.md:376`; `2-park_flume.md:359`). Beating Brindle finds ledger leaf 1, which the profile keeps across runs (`DESIGN-V3.md:220`), and unlocks Tarn for the next run (`DESIGN-V3.md:182`). World 2 brings a fresh retry: the one retry is per world (`DESIGN-V3.md:29`).
 
 ## 5. Overhead route
 
@@ -492,7 +494,7 @@ The reactor relic is a squat ribbed drum about 9 m across with three rod stacks 
 3. **Rivet's cage gets an edge marker.** The cage at [60, -600] has no park key yet (`1-park_dam.md:273`). Smallest existing signpost: an edge marker, which already points at offscreen goals (`DESIGN-V3.md:134`). Back to the stage 1 page with the park-key question.
 4. **The landmark hum carries the stage 2 doorway.** The page gives no music at the forecourt (beat 11). Both landmark rows already carry `music` `landmark_hum` (`1-park_dam.md:292`; `2-park_flume.md:281`); this board has it rise on the forecourt. Back to stage 2 section 10.
 5. **Stage 2's tier-2 events miss a straight run.** The collapse, the bend relic, the dropship and the squall fire at 90 s (`2-park_flume.md:145-148`, `184`), while lines reach the drum at 87 to 98 s (`2-park_flume.md:194-199`) and pass the hollow and the bend around 35 to 75 s (inference from the segments). A skipper never sees the collapse or hears the bend relic. Proposed: move `hollow_trestle_collapse` and `bend_relic_wakes` to `clock_tier` 1, an existing trigger. Back to the stage 2 page.
-6. **The floor line meets its first latch at the Warden.** The floor lines carry no harpoon (`1-park_dam.md:192`; `2-park_flume.md:190`), so a floor-line player first latches on the dam's pier. Accepted: the pier is 45 m from the apron, the plate words lead, and the bay's practice yard follows (`bay.gd:26-27`).
+6. **The dam fight is the teaching beat; the head house is the test.** The floor lines carry no harpoon (`1-park_dam.md:192`; `2-park_flume.md:190`), so a floor-line player first latches and fires from a line on the dam's pier. Off the floor line, fire from the line has two on-line spots, the viga span by the ledge lobbers and the west butte by the weir lobbers (section 4 table). The shrug is Warden-only (`PARK.md:422`) and drag is world 2's by design (`PARK.md:421`). Accepted: the pier is 45 m from the apron, the plate words lead, and the bay's practice yard follows before the climax (`bay.gd:26-27`).
 7. **NEW briefs correct the existing Warden pictures.** `warden-1.png` and `warden-4.png` show two water streams; the sheet is one 24 m sheet centred on the relic (`reactor.md:56`). `warden-2.png` pours the lanes from beneath the relic; the lanes pour from the channel (`reactor.md:68`). `j1-p06` and `j2-p05` draw the rule.
 
 **What the pages did not settle (back to the page or sheet named).**
@@ -508,5 +510,8 @@ The reactor relic is a squat ribbed drum about 9 m across with three rod stacks 
 9. **The kind sheet cites the drop-finisher principle at `PARK.md:410`** (`reactor.md:45`); it is at `PARK.md:414`. Kind sheet.
 10. **No board slot for the approach, the exit or the bay.** The six-panel stage board (`PARK.md:410`) maps no panel to Frames 5 and 7 (`1-park_dam.md:405-412`; `2-park_flume.md:388-395`). The journey's NEW panels need a journey board or extra panel keys. PARK.md section 6.1.
 11. **The bend relic, not the hollow, carries stage 2's tell**, but the dam fight has already taught the pedal, so stage 2's tell is a reminder. If call 5 is vetoed, the climax still reads.
+12. **Gate count.** Both stage pages place three gate slots (`1-park_dam.md:36`; `2-park_flume.md:281`); today's code comment says two arches stand ahead of the ball (`reward_gates.gd:11-12`). Stage pages or the gate code.
+
+**Out-of-page cites checked (wave 13 fix round).** Each line cited here from `flow.gd`, `bay.gd`, `reward_gates.gd`, `DESIGN-V3.md`, `PARK.md`, `BIBLE.md` and `decisions.tsv` was read with `sed -n` at base `5d0c2d871b` and says what this board cites it for. The one mismatch is gap 12.
 
 **NEW panels:** `j1-p01` to `j1-p07` (7, of which 5 on the stage 1 line) and `j2-p01` to `j2-p07` (7, of which 4 on the stage 2 line): 14 in all.
