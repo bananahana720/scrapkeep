@@ -345,6 +345,8 @@ var _fill_from := 0.0
 var _fills: Array[float] = []
 var _fill_open := true
 var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0}
+# The meter's points by source at the first full meter, for the record only.
+var _first_fill_sources := {}
 
 
 # The seed mapping (seed % roster size) moves whenever the roster grows, so band tests
@@ -673,6 +675,19 @@ func _on_ultimate_ready() -> void:
 		return
 	_fill_open = false
 	_fills.append(snappedf(_play_clock - _fill_from, 0.01))
+	if _first_fill_sources.is_empty():
+		_first_fill_sources = _meter_sources()
+
+
+# The meter's points paid this run, by source (instrumentation for the record; no hand reads it).
+func _meter_sources() -> Dictionary:
+	var meter = game.player.abilities.get("meter")
+	if meter == null:
+		return {}
+	var out := {}
+	for key in meter.sources:
+		out[key] = snappedf(float(meter.sources[key]), 0.01)
+	return out
 
 
 func _boss_set(key: String, value) -> void:
@@ -2134,13 +2149,12 @@ func _cast_hands() -> void:
 				_cast_phase = "sent"
 				source.hold.erase("fire_held")
 				return
+			# A click is down on the tick it goes down, as a mouse reports it: the press and the
+			# hold together. A tap lets it up on the next tick. (2026-10-11 fix round: the tap
+			# used to send the press with the click already up, an input no mouse makes.)
 			source.press["fire_pressed"] = true
-			if _cast_hold > 0.0:
-				source.hold["fire_held"] = true
-				_cast_phase = "hold"
-			else:
-				source.hold.erase("fire_held")
-				_cast_phase = "release"
+			source.hold["fire_held"] = true
+			_cast_phase = "hold" if _cast_hold > 0.0 else "release"
 		"hold":
 			_cast_hold -= 1.0 / Engine.physics_ticks_per_second
 			source.hold["fire_held"] = true
@@ -2481,4 +2495,7 @@ func record(wall_seconds: float) -> Dictionary:
 		"slot_casts": {"special": _totals["slot_casts_special"], "line": _totals["slot_casts_line"]},
 		"ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
 		"ult_fill_s": _fills, "play_s": snappedf(_play_clock, 0.01),
+		# The meter's points by source: over the run, and at the first full meter. A record for
+		# reading why a fill band is red; no hand reads either.
+		"ult_sources": _meter_sources(), "ult_sources_first_fill": _first_fill_sources,
 	}

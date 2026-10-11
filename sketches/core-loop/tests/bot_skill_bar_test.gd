@@ -22,14 +22,17 @@ const T := preload("res://tests/support/t.gd")
 #     while the set piece runs the hands send neither Space nor Q and cast nothing.
 #
 # Fill bands (section 4, "target fill times, checked by bots in B4"), over seeds 1 to 16 on the
-# default table: the completionist's median first fill is at most COMPLETIONIST_MEDIAN_S of play,
-# the camper's at least CAMPER_MEDIAN_S. A run that never fills counts as its play seconds, which
+# default table: the completionist's median first fill is at least COMPLETIONIST_FLOOR_S and at
+# most COMPLETIONIST_MEDIAN_S of play, the camper's at least CAMPER_MEDIAN_S. A run that never fills counts as its play seconds, which
 # for the camper is at least the band only when it played that long. Runs are capped, so a
 # completionist that has not filled by its cap counts above the band. Where a run fired a set
 # piece, its run log row carries fill_seconds.
 const SCAN_TICKS := 1800
 const SEEDS := 16
 const COMPLETIONIST_MEDIAN_S := 90.0
+# 2026-10-11 (wave 13 B4 fix round): the floor under the completionist's median, section 4's
+# chaining-player floor; the band was one-sided before.
+const COMPLETIONIST_FLOOR_S := 45.0
 const CAMPER_MEDIAN_S := 180.0
 # Ticks per capped run: the completionist past its band, the camper past its own.
 const COMPLETIONIST_TICKS := 9000
@@ -161,13 +164,16 @@ func _hand_cases() -> void:
 	abilities.refill()
 	abilities.snap_back("test")
 	# 1. Pick and click on one tick reach the router as the special's press.
-	driver.source.hold = {"fire_held": true}
+	# 2026-10-11 (wave 13 B4 fix round): re-pinned from "click up" to "click down". A mouse
+	# reports a click as pressed and held on the tick it goes down; the tap lets it up on the
+	# release tick (case 03). The click-up press stalled demolitions seed 4 at Brindle.
+	driver.source.hold = {}
 	driver.source.press = {}
 	var cast_ok: bool = driver._cast(2)
 	driver._cast_hands()
 	var press: Dictionary = driver.source.press.duplicate()
-	_t.check("01 _cast(2) on a ready slot sends slot_pick 1 and fire_pressed on one tick, click up",
-		cast_ok and press.get("slot_pick", -1) == 1 and press.get("fire_pressed", false) == true and not driver.source.hold.get("fire_held", false),
+	_t.check("01 _cast(2) on a ready slot sends slot_pick 1 and fire_pressed on one tick, click down",
+		cast_ok and press.get("slot_pick", -1) == 1 and press.get("fire_pressed", false) == true and driver.source.hold.get("fire_held", false),
 		"cast %s press %s hold %s" % [cast_ok, press, driver.source.hold])
 	driver.source.poll(player.intent)
 	player._route_slots(DT)
@@ -176,8 +182,9 @@ func _hand_cases() -> void:
 			player.intent.special_pressed, player.intent.fire_pressed, abilities.selected])
 	# 3. With slot 2 still picked (no combat tick ran, so no cast committed), the release tick sends 1.
 	driver._cast_hands()
-	_t.check("03 a cast that did not commit sends 1 on the release tick", driver.source.press.get("slot_pick", -1) == 0 and driver._cast_phase == "",
-		"press %s phase '%s'" % [driver.source.press, driver._cast_phase])
+	_t.check("03 a cast that did not commit sends 1 and lets the click up on the release tick", driver.source.press.get("slot_pick", -1) == 0
+		and driver._cast_phase == "" and not driver.source.hold.get("fire_held", false),
+		"press %s hold %s phase '%s'" % [driver.source.press, driver.source.hold, driver._cast_phase])
 	driver.source.poll(player.intent)
 	player._route_slots(DT)
 	_t.eq("04 the 1 sends the pick home", abilities.selected, AbilityState.WEAPON)
@@ -365,9 +372,12 @@ func _bands() -> void:
 			continue
 		var fill := _first_fill(bot)
 		(by[trial["policy"]] as Array).append(fill)
-		lines.append("%s %s: first fill %.1f s (%s), play %.1f s, fills %s, set pieces %d, casts %s, outcome %s" % [trial["id"], bot.get("class", ""),
+		# 2026-10-11 (wave 13 B4 fix round): each row names the meter's points by source at the first
+		# fill and over the run, so a red band says which source drove it (SKILL-BAR section 4).
+		lines.append("%s %s: first fill %.1f s (%s), play %.1f s, fills %s, set pieces %d, casts %s, outcome %s, first-fill sources %s, run sources %s" % [trial["id"], bot.get("class", ""),
 			fill, "filled" if not (bot.get("ult_fill_s", []) as Array).is_empty() else "never", float(bot.get("play_s", 0.0)),
-			bot.get("ult_fill_s", []), int(bot.get("ultimates", 0)), bot.get("slot_casts", {}), bot.get("outcome", "")])
+			bot.get("ult_fill_s", []), int(bot.get("ultimates", 0)), bot.get("slot_casts", {}), bot.get("outcome", ""),
+			bot.get("ult_sources_first_fill", {}), bot.get("ult_sources", {})])
 		if int(bot.get("ultimates", 0)) > 0:
 			fired += 1
 			var rows: Array = (trial["run"] as Dictionary).get("ultimates", [])
@@ -381,6 +391,10 @@ func _bands() -> void:
 	var camp: Array = by["camper"]
 	_t.check("the completionist's median first fill over %d seeds is at most %.0f s of play" % [SEEDS, COMPLETIONIST_MEDIAN_S],
 		comp.size() == SEEDS and _median(comp) <= COMPLETIONIST_MEDIAN_S, "median %.1f s over %d runs: %s" % [_median(comp), comp.size(), comp])
+	# 2026-10-11 (wave 13 B4 fix round, SKILL-BAR section 4 "a chaining player 45 to 60 s"): the
+	# completionist band gets a floor, so a meter that fills in seconds cannot pass it.
+	_t.check("the completionist's median first fill over %d seeds is at least %.0f s of play" % [SEEDS, COMPLETIONIST_FLOOR_S],
+		comp.size() == SEEDS and _median(comp) >= COMPLETIONIST_FLOOR_S, "median %.1f s over %d runs: %s" % [_median(comp), comp.size(), comp])
 	_t.check("the camper's median first fill over %d seeds is at least %.0f s of play" % [SEEDS, CAMPER_MEDIAN_S],
 		camp.size() == SEEDS and _median(camp) >= CAMPER_MEDIAN_S, "median %.1f s over %d runs: %s" % [_median(camp), camp.size(), camp])
 	_t.check("every run that fired a set piece logged fill_seconds in its run log row", fired > 0 and logged == fired,
