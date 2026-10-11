@@ -202,8 +202,12 @@ func _check_convention() -> void:
 	var parent := Node3D.new()
 	root.add_child(parent)
 	var nodes := {}
+	var lane_x := {}
+	var n := 0
 	for recipe: String in RECIPES:
-		nodes[recipe] = ParkRecipes.place(_row("c_" + recipe, recipe, Vector2(0, 0)), parent)
+		lane_x[recipe] = (n + 1) * LANE
+		nodes[recipe] = ParkRecipes.place(_row("c_" + recipe, recipe, Vector2(lane_x[recipe], 0)), parent)
+		n += 1
 	await physics_frame
 	await physics_frame
 	var space := root.get_world_3d().direct_space_state
@@ -212,6 +216,7 @@ func _check_convention() -> void:
 		if node == null:
 			_t.check("(d) %s places" % recipe, false)
 			continue
+		var x0: float = lane_x[recipe]
 		var faces := _faces(node)
 		if not _t.check("(d) %s: the -col trimesh has faces" % recipe, faces.size() >= 3):
 			continue
@@ -222,17 +227,21 @@ func _check_convention() -> void:
 			"x %.2f..%.2f" % [box.position.x, box.end.x])
 		_t.check("(d) %s: starts before the lip and ends past it along +Z" % recipe, box.position.z <= -3.0 and box.end.z >= float(size[0]) - 8.0,
 			"z %.2f..%.2f" % [box.position.z, box.end.z])
-		var lip_y := _ray_y(space, 0.0, -2.0)
+		# The far end of the centre line: a bowed or ragged crest leaves the box end past it at the edges.
+		var line_end := box.end.z
+		while is_nan(_ray_y(space, x0, line_end)) and line_end > 0.0:
+			line_end -= 0.25
+		var lip_y := _ray_y(space, x0, -2.0)
 		_t.check("(d) %s: the approach is level with the ground at the entry lip (y 0)" % recipe, absf(lip_y) < 0.02, "y %.3f" % lip_y)
-		var end_y := _ray_y(space, 0.0, box.end.z - 1.0)
+		var end_y := _ray_y(space, x0, line_end - 1.0)
 		_t.check("(d) %s: the line falls at least %.1f m toward +Z" % [recipe, spec["drop"]], lip_y - end_y >= float(spec["drop"]), "end y %.2f" % end_y)
 		var steepest := 0.0
 		var worst_step := 0.0
 		var prev := lip_y
 		var z := -3.5
 		var ys := {}
-		while z <= box.end.z - 1.0:
-			var y := _ray_y(space, 0.0, z)
+		while z <= line_end - 1.0:
+			var y := _ray_y(space, x0, z)
 			ys[snappedf(z, 0.01)] = y
 			if is_nan(y):
 				_t.check("(d) %s: the centre line is continuous at z %.2f" % [recipe, z], false)
@@ -247,9 +256,9 @@ func _check_convention() -> void:
 			var best := INF
 			var zc := -1.0
 			while zc <= 4.0:
-				var p0 := Vector2(zc - 0.5, _ray_y(space, 0.0, zc - 0.5))
-				var p1 := Vector2(zc, _ray_y(space, 0.0, zc))
-				var p2 := Vector2(zc + 0.5, _ray_y(space, 0.0, zc + 0.5))
+				var p0 := Vector2(zc - 0.5, _ray_y(space, x0, zc - 0.5))
+				var p1 := Vector2(zc, _ray_y(space, x0, zc))
+				var p2 := Vector2(zc + 0.5, _ray_y(space, x0, zc + 0.5))
 				var convex := (p1 - p0).cross(p2 - p1) < -0.0001
 				if convex:
 					best = minf(best, _radius(p0, p1, p2))
@@ -257,7 +266,7 @@ func _check_convention() -> void:
 			_t.check("(d) %s: the coping lip is a convex fillet of %.1f m radius (tightest %.2f, within 20 percent)" % [recipe, COPING_R, best],
 				best >= COPING_R * 0.8 and best <= COPING_R * 1.2)
 		else:
-			var grade := (lip_y - end_y) / (box.end.z - 1.0)
+			var grade := (lip_y - end_y) / (line_end - 1.0)
 			_t.check("(d) %s: haul grade between 5 and 12 percent (%.3f)" % [recipe, grade], grade >= 0.05 and grade <= 0.12)
 	parent.free()
 

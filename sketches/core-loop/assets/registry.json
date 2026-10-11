@@ -2280,6 +2280,108 @@
    }
   },
   {
+   "id": "bench_coping",
+   "path": "res://assets/models/park/bench_coping.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; a park recipe GLB also carries its -col collision mesh (a second surface the registry test counts and park_recipes.gd never draws: it takes the mesh as the trimesh), so the base is 2 surfaces."
+  },
+  {
+   "id": "bench_coping_detail1",
+   "path": "res://assets/models/park/bench_coping_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "bench_coping_detail2",
+   "path": "res://assets/models/park/bench_coping_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "pit_haul_ramp",
+   "path": "res://assets/models/park/pit_haul_ramp.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   },
+   "exception": {
+    "draws": 3
+   },
+   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; this recipe has a stone ground surface, a steel surface for the two trolley poles (harpoon anchors for the stage 3 anchor rule) and the -col mesh the registry test counts and park_recipes.gd never draws, so the base is 3 surfaces."
+  },
+  {
+   "id": "pit_haul_ramp_detail1",
+   "path": "res://assets/models/park/pit_haul_ramp_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "pit_haul_ramp_detail2",
+   "path": "res://assets/models/park/pit_haul_ramp_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "tailings_lip",
+   "path": "res://assets/models/park/tailings_lip.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "design-v3/PARK.md section 9 sets landform at 1 draw for the render mesh; a park recipe GLB also carries its -col collision mesh (a second surface the registry test counts and park_recipes.gd never draws: it takes the mesh as the trimesh), so the base is 2 surfaces."
+  },
+  {
+   "id": "tailings_lip_detail1",
+   "path": "res://assets/models/park/tailings_lip_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
+   "id": "tailings_lip_detail2",
+   "path": "res://assets/models/park/tailings_lip_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/bowls.py"
+   }
+  },
+  {
    "id": "pilot_cannon_anim",
    "path": "res://assets/models/pilot_cannon_anim.glb",
    "class": "pilot",
@@ -3415,6 +3517,9 @@
   "bed_floor",
   "bed_recess",
   "bed_rubble",
+  "bench_coping",
+  "bench_coping_detail1",
+  "bench_coping_detail2",
   "bet_crate",
   "boss_brindle",
   "boss_brindle_scooter",
@@ -3555,6 +3660,9 @@
   "pilot_cannon_anim",
   "pilot_tally_anim",
   "pilot_tarn_anim",
+  "pit_haul_ramp",
+  "pit_haul_ramp_detail1",
+  "pit_haul_ramp_detail2",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",
@@ -3633,6 +3741,9 @@
   "spil9",
   "strut_bent",
   "strut_tall",
+  "tailings_lip",
+  "tailings_lip_detail1",
+  "tailings_lip_detail2",
   "thermal_air",
   "thermal_vent",
   "trail_atlas.png",
