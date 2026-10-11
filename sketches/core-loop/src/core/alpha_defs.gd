@@ -36,6 +36,9 @@ const PARTS := [
 	"pylon_capacitor", "runner_overclock",
 	"sunforged_core", "gatling_heart",
 	"grip_tread", "live_line", "vent_baffle", "spare_cell", "spring_shims", "drop_weight",
+	# SG4 burden parts: never offered by a pool (Parts.offer_pool skips them); listed so a pocket's
+	# pay.named is in play.
+	"cracked_plating", "thin_pickings", "slack_coil",
 ]
 
 # A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.

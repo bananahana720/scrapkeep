@@ -35,7 +35,7 @@ const TARGET_HP := 600.0
 const BASE_DPS := 60.0
 const ENEMY_DPS := 5.0
 const HAZARD_HITS := 4
-const HAZARD_DAMAGE := 12.0
+const HAZARD_DAMAGE := 8.0
 const JITTER := 0.25
 
 var _t := preload("res://tests/support/t.gd").new("burden_parts_test")
