@@ -13,7 +13,7 @@ const Activities := preload("res://src/world/activities.gd")
 # Rows: 3 worlds x 2 stages x 20 seeds = 120 stage rows, plus 60 (seed, world) rows.
 
 const SEEDS := 20
-const STAGES := 6
+const STAGES := ShopModel.STAGE_COUNT
 
 var _failures := 0
 

@@ -43,7 +43,7 @@ const BOT_ACTIVITY_RATE := 0.85
 const BOT_KILLS := 30
 const BOT_KILL_VALUE := 4.0
 const BOT_JITTER := 0.15
-const STAGE_COUNT := 6
+const STAGE_COUNT := StageDefs.COUNT
 
 var _out_dir := ""
 
