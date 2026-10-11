@@ -21,6 +21,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
+const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Sight := preload("res://src/combat/sight.gd")
@@ -203,6 +204,9 @@ var _line_load := {}
 # The last line skill that fired: {id, on, target, at, fraction, mult}. Read only outside.
 var last_line := {}
 var sticky
+# The device ledger (devices.gd): per-kind caps, refills and the leash for sticky and mini
+# charges and the Sentry Post. Cleared with the fight. Read only outside.
+var devices
 # Rivet's Run and Gun wear trail (world one, --wear=on); wear_trail.gd.
 var wear_trail
 # The last gauge release: {id, fraction, geometry}, the geometry exactly as drawn.
@@ -300,6 +304,8 @@ func setup(ctx_ref) -> void:
 	sticky = Sticky.new()
 	sticky.name = "StickyCharges"
 	ctx.root.add_child(sticky)
+	devices = Devices.new()
+	sticky.ledger = devices
 	wear_trail = WearTrail.new()
 	wear_trail.setup(ctx, effects, _floor_at)
 	wear_trail.deal = _trail_deal
@@ -1120,6 +1126,7 @@ func _physics_process(delta: float) -> void:
 	bolts.step(delta, space, enemies, shells)
 	for charge in sticky.step(delta, space, enemies):
 		_detonate(charge)
+	_step_devices(delta)
 	wear_trail.step(delta, enemies)
 	_pin_step(enemies)
 	_bat_by_ball(shells)
@@ -2401,9 +2408,10 @@ func _throw_sticky(landing: Vector3) -> void:
 	if count > 1:
 		damage *= Weapons.RAIN_DAMAGE / float(count)
 		radius *= Weapons.RAIN_RADIUS
+	devices.set_cap(Devices.STICKY, int(_knob("sticky_max_live")) * count)
 	for i in count:
 		var live: Array = sticky.live()
-		if live.size() >= int(_knob("sticky_max_live")) * count:
+		if live.size() >= devices.cap(Devices.STICKY):
 			_detonate(sticky.take(live[0]))
 		var spot := landing
 		if count > 1:
@@ -2689,7 +2697,12 @@ func _tick_upgrades(delta: float) -> void:
 # Sentry Post: stepping off a pylon leaves it firing turret bolts at the nearest enemy.
 func _on_dismounted_sentry(_velocity: Vector3) -> void:
 	if _knob("sentry") > 0.0 and ctx.flow.in_play():
-		_sentry = {"at": ctx.player.kit.mount_face + ctx.player.kit.mount_normal * 1.2, "left": _knob("sentry"), "next": 0.0}
+		var at: Vector3 = ctx.player.kit.mount_face + ctx.player.kit.mount_normal * 1.2
+		# At the cap the standing sentry is replaced; with its slot still refilling, none stands.
+		var placed: Dictionary = devices.deploy(Devices.SENTRY, at)
+		if int(placed["id"]) <= 0:
+			return
+		_sentry = {"at": at, "left": _knob("sentry"), "next": 0.0, "id": int(placed["id"])}
 
 
 func _tick_sentry(delta: float) -> void:
@@ -2698,6 +2711,7 @@ func _tick_sentry(delta: float) -> void:
 	_sentry["left"] -= delta
 	_sentry["next"] -= delta
 	if _sentry["left"] <= 0.0:
+		devices.remove(int(_sentry.get("id", 0)), "expired")
 		_sentry = {}
 		return
 	if _sentry["next"] > 0.0:
@@ -2717,6 +2731,19 @@ func _tick_sentry(delta: float) -> void:
 		"wave_amp": 0.0, "wave_hz": 0.0, "phase": 0.0,
 		"source": "persistent_actor",
 	})
+
+
+# The device ledger's clock: refills tick, and a device left past the leash is recalled
+# (it leaves without acting: a charge does not go off, the sentry stops firing).
+func _step_devices(delta: float) -> void:
+	if not _sentry.is_empty():
+		devices.move(int(_sentry.get("id", 0)), _sentry["at"])
+	for gone in devices.step(delta, ctx.player.ball_position()):
+		if gone["kind"] == Devices.SENTRY:
+			if int(_sentry.get("id", 0)) == int(gone["id"]):
+				_sentry = {}
+		else:
+			sticky.recall(int(gone["id"]))
 
 
 # Crater Slam: a smash row that spends the special fires a full discharge on landing.
@@ -2988,6 +3015,7 @@ func _clear_fight() -> void:
 			node.queue_free()
 	bolts.clear()
 	sticky.clear()
+	devices.clear()
 	effects.clear()
 	_free_cannon()
 

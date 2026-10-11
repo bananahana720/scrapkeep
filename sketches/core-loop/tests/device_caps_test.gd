@@ -281,6 +281,8 @@ func _check_live_sentry() -> void:
 	var row: Dictionary = _rows()["sentry"]
 	var knobs: Dictionary = _game.player.tree._knobs
 	knobs["sentry"] = 4.0
+	# The pylon face the pilot steps off is beside the pilot, inside the leash.
+	_game.player.kit.mount_face = _game.player.ball_position()
 	_combat._on_dismounted_sentry(Vector3.ZERO)
 	_t.check("dismount leaves a sentry", not _combat._sentry.is_empty())
 	_t.eq("one sentry counted", _devices().count("sentry"), 1)
