@@ -20,6 +20,14 @@ const SEED := 8008
 const OPS := 1000
 const STEP := 1.0 / 60.0
 const LIMIT := 30.0
+# The lab rows, pinned here so a drift in Devices.ROWS fails the test instead of moving the
+# expectation with it. Change a value here only together with its start value in devices.gd
+# (comps/ror2/companions.md). sticky's cap is Kest's kit knob default (Weapons.STICKY_MAX_LIVE).
+const LAB_ROWS := {
+	"sticky": {"cap": 3, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
+	"mini": {"cap": 8, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
+	"sentry": {"cap": 1, "refill": 2.0, "leash_m": 60.0, "recall_after": 1.0},
+}
 
 var _t := T.new("device_caps_test")
 var _game
@@ -49,6 +57,7 @@ func _physics_process(_delta: float) -> bool:
 		quit(_t.verdict())
 		return true
 	_check_table()
+	_check_pinned()
 	_check_cap_pure()
 	_check_refill_pure()
 	_check_recall_pure()
@@ -104,6 +113,27 @@ func _check_table() -> void:
 	_t.check("validate_rows catches a NaN refill", not Devices.validate_rows(broken).is_empty())
 
 
+# Every shipped row and a fresh ledger's default cap equal the pinned lab row, field by field,
+# and no kind ships without a pinned row.
+func _check_pinned() -> void:
+	var rows := _rows()
+	_t.eq("ROWS kinds match the lab rows", _sorted(rows.keys()), _sorted(LAB_ROWS.keys()))
+	var ledger = Devices.new()
+	for kind in LAB_ROWS:
+		var lab: Dictionary = LAB_ROWS[kind]
+		var row: Dictionary = rows.get(kind, {})
+		_t.eq("%s cap matches the lab row" % kind, int(row.get("cap", -1)), int(lab["cap"]))
+		_t.eq("%s ledger cap matches the lab row" % kind, int(ledger.cap(kind)), int(lab["cap"]))
+		for field in ["refill", "leash_m", "recall_after"]:
+			_t.near("%s %s matches the lab row" % [kind, field], float(row.get(field, -1.0)), float(lab[field]), 0.0001)
+
+
+func _sorted(a: Array) -> Array:
+	var out := a.duplicate()
+	out.sort()
+	return out
+
+
 # Seeded random deploys, destructions, expiries and steps on a fresh ledger: the count of
 # every kind stays at or under its cap and live plus refilling never passes it.
 func _check_cap_pure() -> void:
@@ -139,18 +169,18 @@ func _check_cap_pure() -> void:
 				over += 1
 	_t.eq("count never above cap (%d seeded ops)" % OPS, over, 0)
 	for kind in rows:
-		_t.check("%s reached its cap" % kind, worst[kind] == ledger.cap(kind), "peak %d, cap %d" % [worst[kind], ledger.cap(kind)])
+		_t.check("%s reached its lab cap" % kind, worst[kind] == int(LAB_ROWS[kind]["cap"]), "peak %d, lab cap %d" % [worst[kind], int(LAB_ROWS[kind]["cap"])])
 
 
 # A destroyed device leaves the count at once; its slot comes back after the row's refill.
 func _check_refill_pure() -> void:
-	for kind in _rows():
-		var row: Dictionary = _rows()[kind]
+	for kind in LAB_ROWS:
+		var row: Dictionary = LAB_ROWS[kind]
 		var ledger = Devices.new()
 		var ids := []
 		for i in ledger.cap(kind):
 			ids.append(int(ledger.deploy(kind, Vector3.ZERO)["id"]))
-		_t.eq("%s fills to cap" % kind, ledger.count(kind), ledger.cap(kind))
+		_t.eq("%s fills to the lab cap" % kind, ledger.count(kind), int(row["cap"]))
 		ledger.remove(ids[0], "destroyed")
 		_t.eq("%s destroyed leaves the count" % kind, ledger.count(kind), ledger.cap(kind) - 1)
 		ledger.remove(ids[0], "destroyed")
@@ -168,8 +198,8 @@ func _check_refill_pure() -> void:
 # A device past the leash for the row's recall time is recalled; inside it never is, and
 # coming back inside resets the wait.
 func _check_recall_pure() -> void:
-	for kind in _rows():
-		var row: Dictionary = _rows()[kind]
+	for kind in LAB_ROWS:
+		var row: Dictionary = LAB_ROWS[kind]
 		var far := Vector3(float(row["leash_m"]) + 5.0, 0.0, 0.0)
 		var ledger = Devices.new()
 		var id: int = ledger.deploy(kind, far)["id"]
@@ -278,7 +308,7 @@ func _check_live_sentry() -> void:
 	if _devices() == null:
 		return
 	_as_class("pylon_engineer")
-	var row: Dictionary = _rows()["sentry"]
+	var row: Dictionary = LAB_ROWS["sentry"]
 	var knobs: Dictionary = _game.player.tree._knobs
 	knobs["sentry"] = 4.0
 	# The pylon face the pilot steps off is beside the pilot, inside the leash.
@@ -288,7 +318,7 @@ func _check_live_sentry() -> void:
 	_t.eq("one sentry counted", _devices().count("sentry"), 1)
 	for i in 3:
 		_combat._on_dismounted_sentry(Vector3.ZERO)
-	_t.eq("sentries never above the cap", _devices().count("sentry"), _devices().cap("sentry"))
+	_t.eq("sentries never above the lab cap", _devices().count("sentry"), int(row["cap"]))
 	var t := 0.0
 	while not _combat._sentry.is_empty() and t < LIMIT:
 		_combat._tick_sentry(STEP)
@@ -313,7 +343,7 @@ func _check_live_recall() -> void:
 		_t.check("a sentry stands for the recall check", false)
 		return
 	var owner: Vector3 = _game.player.ball_position()
-	var row: Dictionary = _rows()["sentry"]
+	var row: Dictionary = LAB_ROWS["sentry"]
 	_combat._sentry["at"] = owner + Vector3(float(row["leash_m"]) + 5.0, 0.0, 0.0)
 	_combat._sentry["left"] = 99.0
 	var t := 0.0
@@ -323,7 +353,7 @@ func _check_live_recall() -> void:
 	_t.near("live sentry recall matches the row", t, float(row["recall_after"]), STEP + 0.0001)
 	_t.eq("recalled sentry leaves the count", _devices().count("sentry"), 0)
 	_as_class("demolitions_caster")
-	var mini_row: Dictionary = _rows()["mini"]
+	var mini_row: Dictionary = LAB_ROWS["mini"]
 	var booms := [0]
 	var count := func(_at: Vector3, _crit: bool): booms[0] += 1
 	_game.events.sticky_detonated.connect(count)
