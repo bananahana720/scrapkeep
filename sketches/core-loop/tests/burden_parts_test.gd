@@ -78,6 +78,8 @@ func _rows() -> void:
 		_t.check("%s is a pure stated downside" % id, pure and costs, "hp %s magnet %s scrap %s mods %s" % [d.max_hp_bonus, d.magnet, d.kill_scrap, d.mods])
 		_t.check("%s in the alpha parts list" % id, AlphaDefs.part_in_play(id), "")
 		_t.check("%s is in no loot table" % id, not Parts.rows().has(id) and not id in Parts.ids(), "")
+	_t.eq("the alpha burden list is the burden rows", AlphaDefs.BURDEN_PARTS, burdens)
+	_t.check("no burden sits in the loot parts list", AlphaDefs.PARTS.all(func(id): return not Parts.is_burden(id)), "")
 	_t.check("the two hot-wired parts are not burdens", not Parts.is_burden("riveted_shell") and not Parts.is_burden("spark_tread"), "")
 
 
