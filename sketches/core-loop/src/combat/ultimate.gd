@@ -123,6 +123,10 @@ func setup(ctx_ref, combat_ref) -> void:
 	name = "Ultimate"
 	ctx.player.abilities.meter = meter
 	ctx.player.set_piece_phase = Callable(self, "phase")
+	# The defence runs inside RunState.damage, the one choke point every hit passes (a boss's
+	# slag, charge and the Mind's attacks call it directly).
+	ctx.run.defend_hook = Callable(self, "defend")
+	ctx.run.ride_hook = Callable(self, "active")
 	var ev = ctx.events
 	ev.enemy_struck.connect(_on_struck)
 	ev.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _feed("smash", ctx.player.chain.multiplier()))
@@ -290,16 +294,18 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 	var order: Array = paths if not paths.is_empty() else row.get("paths", ["line", "rail", "arc"])
 	var harpoon: Dictionary = aim.get("harpoon", kit.aim)
 	var point = _aim_point(aim, ARC_REACH[heft] + RAIL_SEARCH)
-	if found.is_empty() and order.has("line"):
-		if kit.hooked:
-			found = {"path": "line", "to": kit.anchor, "target": kit.anchor_body if kit.on_body else null}
-		elif harpoon.get("state", Augments.AIM_NONE) != Augments.AIM_NONE and harpoon.has("point") \
-				and ball.distance_to(harpoon["point"]) <= ctx.player.grapple_range():
-			found = {"path": "line", "to": harpoon["point"], "target": harpoon.get("body")}
+	# The row's order decides: a row that lists arc before line takes the arc even with a
+	# line standing (section 4, "unless the pilot's sheet reorders paths").
 	for path in order:
 		if not found.is_empty():
 			break
-		if path == "rail" and rail_query.is_valid() and point != null:
+		if path == "line":
+			if kit.hooked:
+				found = {"path": "line", "to": kit.anchor, "target": kit.anchor_body if kit.on_body else null}
+			elif harpoon.get("state", Augments.AIM_NONE) != Augments.AIM_NONE and harpoon.has("point") \
+					and ball.distance_to(harpoon["point"]) <= ctx.player.grapple_range():
+				found = {"path": "line", "to": harpoon["point"], "target": harpoon.get("body")}
+		elif path == "rail" and rail_query.is_valid() and point != null:
 			var rail: Dictionary = rail_query.call(point)
 			if not rail.is_empty() and (rail["entry"] as Vector3).distance_to(point) <= RAIL_SEARCH:
 				found = {"path": "rail", "to": rail.get("to", rail["entry"]), "entry": rail["entry"]}

@@ -184,13 +184,21 @@ func _run() -> void:
 	_ult.rail_query = Callable()
 	var anchor: Vector3 = _player.ball_position() + Vector3(10.0, 4.0, 0.0)
 	_player.grapple_to(anchor, Vector3.LEFT, null)
+	# Two ticks so the line is published as standing before Q cuts it; without them the cut
+	# would publish nothing either way and check 19 could not fail (fix round, 2026-10-11).
+	await physics_frame
+	await physics_frame
 	_t.eq("14 a standing line beats every other path", [String(_ult.plan(_player.ball_position(), lock)["path"]), _ult.plan(_player.ball_position(), lock)["to"]],
 		["line", anchor])
+	_t.eq("14b a row that orders arc before line takes the arc with a line standing",
+		String(_ult.plan(_player.ball_position(), _aim_at(target), ["arc", "line"])["path"]), "arc")
 	var p: Dictionary = _ult.plan(_player.ball_position(), _aim_at(target))
 	_t.check("15 a plan carries one leg and a flight of 1.6 to 3.2 s", (p["legs"] as Array).size() == 1 and float(p["flight"]) >= 1.6 and float(p["flight"]) <= 3.2,
 		"legs %d, flight %.2f" % [(p["legs"] as Array).size(), float(p["flight"])])
 
 	# --- Q with a line standing: the cut publishes no broke; a full meter never meets a dead Q
+	_t.check("15b the line stands before the press (check 19's precondition)", _player.kit.hooked and _player._line_standing,
+		"hooked %s, standing %s" % [_player.kit.hooked, _player._line_standing])
 	_lines.clear()
 	_fill()
 	_player.abilities.select(AbilityState.SPECIAL)
@@ -259,6 +267,25 @@ func _run() -> void:
 	var after_small: float = run.hp
 	_combat._on_player_hit(500.0, Vector3.ZERO, "test")
 	_t.eq("27 damage taken is x0.2 and health floors at 1", [after_small, run.hp], [46.0, 1.0])
+	# A boss's direct hit (Brindle's slag, the Mind) calls run.damage itself; the defence runs
+	# there too, and no death goes out (fix round, 2026-10-11).
+	var died: Array = []
+	var on_died := func(): died.append(true)
+	ev.player_died.connect(on_died)
+	run.hp = 50.0
+	run.damage(20.0, "brindle_slag")
+	var direct_small: float = run.hp
+	run.damage(500.0, "brindle_slag")
+	_t.eq("27b a direct run.damage hit is x0.2, floors at 1, and no death goes out", [direct_small, run.hp, died], [46.0, 1.0, []])
+	run.armor_mode = true
+	run.mitigation = 0.0
+	run.hp = 50.0
+	run.mass = 200.0
+	var mass_before: float = run.mass
+	run.damage(500.0, "brindle_charge")
+	_t.eq("27c in armour mode the ride knocks no scrap loose and the hull floors at 1", [run.mass, run.hp, died], [mass_before, 1.0, []])
+	run.armor_mode = false
+	ev.player_died.disconnect(on_died)
 	var holds = _combat.fleet.holds
 	var b := _enemy("chaser", -8.0, 4.0)
 	_t.eq("28 no hostile hold can start during the ride", holds.catch(b, "net", ["jump"]), false)

@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The set piece in the music (design-v3/SKILL-BAR.md section 4, "Music" and "Duration"),
@@ -90,7 +91,12 @@ func _run() -> void:
 	var beat: float = float(ult.beat_seconds.call()) if ult != null and ult.beat_seconds.is_valid() else -1.0
 	_t.check("07 the set piece reads its beat from the band", absf(beat - 60.0 / engine.bpm()) < 0.0001, "beat %.4f s, band %.1f BPM" % [beat, engine.bpm()])
 
+	# A level ACE band that ended for the flight keeps its sequencer: an off-mode stub stands
+	# in for it, so the lift it holds can be read after the landing (fix round, 2026-10-11).
+	var ace_stub := AceSequencer.new("")
+	_audio.ace = ace_stub
 	ev.ultimate_ready.emit("ult_default")
+	_t.check("08a the stopped ACE band's sequencer hears the lift", ace_stub.ultimate_lift and ace_stub.mode == "off")
 	_t.check("08 ultimate_ready queues the lift and sends the ACE band one pressure step", _audio.ace_pressure() > _audio.pressure_now() + 0.0001,
 		"ace %.2f over %.2f" % [_audio.ace_pressure(), _audio.pressure_now()])
 	engine.render(Harmony.BAR + Harmony.STEP)
@@ -116,6 +122,8 @@ func _run() -> void:
 		"touchdown %d, drop %d (%.2f beats)" % [touchdown, at, float(at - touchdown) / engine.beat_len()])
 	engine.render(Harmony.BAR + Harmony.STEP)
 	_t.check("14 the lift and the ACE step release with the drop", not engine.ultimate_lift and absf(_audio.ace_pressure() - _audio.pressure_now()) < 0.0001)
+	_t.check("14b the stopped ACE band's own lift clears with the landing", not ace_stub.ultimate_lift and absf(ace_stub.effective_pressure() - ace_stub.pressure) < 0.0001,
+		"lift %s, effective %.2f over %.2f" % [ace_stub.ultimate_lift, ace_stub.effective_pressure(), ace_stub.pressure])
 
 	ev.ultimate_ready.emit("ult_default")
 	ev.ultimate_started.emit("ult_default", "hop", Vector3.ZERO, Vector3.ZERO, 1.95)
@@ -126,5 +134,34 @@ func _run() -> void:
 	ev.ultimate_cancelled.emit("ult_default", "bail", false)
 	engine.render(Harmony.BAR + Harmony.STEP)
 	_t.check("16 a bail cancels the build and releases the lift", not engine.building() and not engine.ultimate_lift)
+
+	# --- A retry: the lift follows the restored meter (fix round, 2026-10-11) --------------
+	# The handlers the stage_entered connection calls, ultimate's first; emitting the bus fact
+	# would restart the stage.
+	var stage: int = _game.ctx.run.stage
+	ult.meter.locked = false
+	ult.meter.reset()
+	ult._on_stage_entered(stage, false)
+	ult.meter.refund(ult.meter.CAP)
+	ev.ultimate_ready.emit("ult_default")
+	engine.render(Harmony.BAR + Harmony.STEP)
+	var lift_before: bool = engine.ultimate_lift
+	ult._on_stage_entered(stage, true)
+	_audio._on_stage_entered(stage, true)
+	await process_frame
+	engine.render(Harmony.BAR + Harmony.STEP)
+	_t.check("17 a retry to an empty entry value drops a lift the mid-stage fill raised", lift_before and not ult.meter.full() and not engine.ultimate_lift,
+		"before %s, meter %.1f, lift %s" % [lift_before, ult.meter.value, engine.ultimate_lift])
+	ult.meter.refund(ult.meter.CAP)
+	ult._on_stage_entered(stage, false)
+	ev.ultimate_cancelled.emit("ult_default", "death", false)
+	engine.render(Harmony.BAR + Harmony.STEP)
+	var cleared: bool = not engine.ultimate_lift
+	ult._on_stage_entered(stage, true)
+	_audio._on_stage_entered(stage, true)
+	await process_frame
+	engine.render(Harmony.BAR + Harmony.STEP)
+	_t.check("18 a retry to a full entry value brings back a lift the death cancel cleared", cleared and ult.meter.full() and engine.ultimate_lift,
+		"cleared %s, meter %.1f, lift %s" % [cleared, ult.meter.value, engine.ultimate_lift])
 	_game.free()
 	quit(_t.verdict())

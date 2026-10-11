@@ -2760,10 +2760,9 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
-	# The set piece's defence: damage x0.2, health floored at 1, no knockback (SKILL-BAR section 4).
+	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
+	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
 	var riding: bool = ultimate != null and ultimate.active()
-	if riding:
-		amount = ultimate.defend(amount, ctx.run.hp)
 	ctx.run.damage(amount, source)
 	if ctx.calm or riding:
 		return

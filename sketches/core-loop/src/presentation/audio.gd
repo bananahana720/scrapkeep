@@ -645,6 +645,7 @@ func ace_ready() -> bool:
 	_ace_from = ace_manifest
 	ace.clock = engine.clock
 	ace.set_breath(breath())
+	ace.ultimate_lift = _ult_lift
 	return true
 
 
@@ -1407,6 +1408,9 @@ func _on_flow_changed(state: String) -> void:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_line_was = ""
+	# A retry restores the meter to its stage-entry value silently; the lift follows the meter
+	# once every stage_entered handler has run (SKILL-BAR section 4, one fact for every layer).
+	sync_ult_lift.call_deferred()
 	engine.set_overcharge(0)
 	if retry:
 		_disarm_launch()
@@ -1659,7 +1663,7 @@ func _land_drop() -> void:
 # The set piece reads its flight's beat from the band: seconds per beat of the music playing,
 # 0 when none plays (the flight then takes 2.4 s).
 func _wire_ultimate_beat() -> void:
-	var spawner = ctx.spawner if ctx != null else null
+	var spawner = ctx.get("spawner") if ctx != null else null
 	if spawner == null or spawner.get("ultimate") == null:
 		return
 	spawner.ultimate.beat_seconds = func() -> float:
@@ -1680,8 +1684,20 @@ func ace_pressure() -> float:
 func _set_ult_lift(on: bool) -> void:
 	_ult_lift = on
 	engine.set_ultimate_lift(on)
-	if ace_playing():
+	# Written whether or not the band plays: a level band that ended for the flight keeps its
+	# sequencer, and a resume must not carry a lift the landing already released.
+	if ace != null:
 		ace.set_ultimate_lift(on)
+
+
+# The lift reads the meter: on when it is full, off otherwise. No meter, no change.
+func sync_ult_lift() -> void:
+	var player = ctx.get("player") if ctx != null else null
+	if player == null or player.abilities.meter == null:
+		return
+	var full: bool = player.abilities.meter.full()
+	if full != _ult_lift:
+		_set_ult_lift(full)
 
 
 # Full: the class motif an octave up and a bell on the beat, and one layer lifts at the bar.
