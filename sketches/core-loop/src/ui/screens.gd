@@ -227,7 +227,7 @@ func _on_flow_changed(state: String) -> void:
 			# it; a saved file this build cannot use names its cause under the buttons and
 			# leaves New run, focused, as the next step.
 			game.flow.saved_run()
-			_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+			_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 			if game.flow.continue_ready:
 				_action("continue", "key_c", "Continue")
 			var saved: bool = game.flow.continue_ready or game.flow.saved_run_cause != ""
@@ -405,7 +405,7 @@ func toggle_help() -> void:
 	if _help.visible:
 		_show("HOW TO PLAY", Palette.AMBER, "")
 	else:
-		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 	_fade(true)
 
 
@@ -424,7 +424,7 @@ func toggle_achievements() -> void:
 		_achievements.refresh(game.ctx.profile, game.progress)
 		_show("ACHIEVEMENTS", Palette.AMBER, "")
 	else:
-		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 	_fade(true)
 
 
@@ -443,7 +443,7 @@ func toggle_settings() -> void:
 		refresh_lab_row()
 	else:
 		_breath_row.visible = false
-		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 	_fade(true)
 
 
@@ -459,7 +459,7 @@ func toggle_camp() -> void:
 		_show("CAMP", Palette.AMBER, "")
 		_camp.button_for("launch").grab_focus()
 	else:
-		_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 		get_viewport().gui_release_focus()
 	_fade(true)
 
@@ -476,7 +476,7 @@ func _close_camp_silently() -> void:
 # under an overlay.
 func _camp_companion() -> void:
 	_close_camp_silently()
-	_show(TITLE, Palette.AMBER, FieldNotes.OBJECTIVE)
+	_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
 	_layout_backdrop()
 	game.get_node("Workshop").open_companion()
 
@@ -659,6 +659,11 @@ func _pad_enters_title(event: InputEvent) -> bool:
 					child.grab_focus()
 					return true
 	return false
+
+
+# The title's name, with the one-word SITTING tag while --profile=sitting is on.
+func _title_name() -> String:
+	return TITLE + " SITTING" if game.tuning != null and game.tuning.sitting() else TITLE
 
 
 func _show(title: String, color: Color, body: String) -> void:

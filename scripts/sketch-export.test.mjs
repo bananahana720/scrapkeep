@@ -214,10 +214,11 @@ test("howToRun names the files, the save folder and H, with no table", () => {
     "core-loop.x86_64",
     "app_userdata/core-loop",
     "press H",
+    "./core-loop.x86_64 -- --profile=sitting",
   ])
     assert.ok(text.includes(part), part);
   assert.ok(!text.includes("|"));
-  assert.ok(text.split(/\s+/).filter(Boolean).length < 120);
+  assert.ok(text.split(/\s+/).filter(Boolean).length < 140);
 });
 
 test("packageName and tarArgs", () => {

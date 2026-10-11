@@ -21,6 +21,7 @@ const EXPECTED := {
 	"hotwire-shell": ["hotwire_shell", "on", "bogus", "launch"],
 	"hotwire-tread": ["hotwire_tread", "on", "bogus", "launch"],
 	"companion-stub": ["companion_stub", "on", "bogus", "launch"],
+	"profile": ["profile", "sitting", "bogus", "launch"],
 }
 
 # The lab's winners are the shipping defaults: a bare Tuning reports each one.
