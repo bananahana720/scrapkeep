@@ -25,6 +25,7 @@ const DIR := "user://meta_options_test/"
 class FakeRun:
 	extends RefCounted
 	var parts := 0
+	var settled: Array = []
 
 	func class_id() -> String:
 		return "runner_gunner"

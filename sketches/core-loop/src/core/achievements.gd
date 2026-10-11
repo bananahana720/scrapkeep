@@ -19,15 +19,16 @@ extends RefCounted
 # hidden   optional: the card shows no text until it is earned
 # beat     a pilot reward row's story line, BEAT_WORDS or fewer, crew voice: the earned toast's
 #          second line and the line under a locked pilot card's condition
-# reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id};
-#          a pilot id is a ClassDef id or a PENDING_PILOTS id
+# reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id},
+#          {"option": id}; a pilot id is a ClassDef id or a PENDING_PILOTS id; an option id is a
+#          meta_options.gd node row (MetaOptions.validate checks both directions)
 
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 
 const FIELDS := ["name", "text", "on", "where", "at_least", "sum", "count", "need", "min", "max", "hidden", "beat", "reward"]
 const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries"]
 const EVALUATOR_KEYS := ["class", "won", "world"]
-const REWARD_KINDS := ["pilot", "cosmetic", "world"]
+const REWARD_KINDS := ["pilot", "cosmetic", "world", "option"]
 const NAME_WORDS := 3
 const TEXT_WORDS := 12
 const BEAT_WORDS := 14
@@ -103,6 +104,17 @@ const ROWS := {
 		"where": {"synergy_id": "set_piece_core"}, "count": 1, "reward": {"cosmetic": "decal_curtain_call"}},
 	"ach_any_cash_in": {"name": "Cash In", "text": "Pay a chain of three with an ultimate landing.", "on": "synergy_discovered",
 		"where": {"synergy_id": "set_piece_cash_in"}, "count": 1, "reward": {"cosmetic": "companion_skin_till_bell"}},
+	# SG12 between-run options: one grant per meta_options.gd node, each a one-run accomplishment
+	# with a count of MetaOptions.MAX_GRANT_COUNT or below. The pocket key opens on a hidden
+	# pocket's discovery: cracked_cache.gd emits world_fact("cache_spent") when its chest opens.
+	"ach_meta_spare_reroll": {"name": "Busy Hands", "text": "Finish three activities.", "on": "activity_done",
+		"count": 3, "reward": {"option": "spare_reroll"}},
+	"ach_meta_shelf_preview": {"name": "Wall Crumbler", "text": "Crumble two cracked walls.", "on": "world_fact",
+		"where": {"kind": "wall_crumbled"}, "count": 2, "reward": {"option": "shelf_preview"}},
+	"ach_meta_pocket_key": {"name": "Pocket Finder", "text": "Open the cache behind a cracked wall.", "on": "world_fact",
+		"where": {"kind": "cache_spent"}, "count": 1, "reward": {"option": "pocket_key"}},
+	"ach_meta_pocket_tint": {"name": "Fresh Eyes", "text": "Discover three new synergies.", "on": "synergy_discovered",
+		"where": {"first_time": true}, "count": 3, "reward": {"option": "pocket_tint"}},
 	# --- pylon_engineer (Sable): P-C Sable adds its grant rows here ---
 	# --- end pylon_engineer ---
 	# --- runner_gunner (Rivet): P-C Rivet adds its grant rows here ---
@@ -260,6 +272,8 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 				problems.append("%s: reward cosmetic %s does not resolve" % [id, target])
 			elif kind == "world" and target == "":
 				problems.append("%s: reward world must name a world" % id)
+			elif kind == "option" and target == "":
+				problems.append("%s: reward option must name a meta_options node" % id)
 	return problems
 
 
