@@ -1,4 +1,9 @@
 extends SceneTree
+# 2026-10-10 (PD-0): the glass-hull check becomes a lattice check for Hoberman shells (Core
+# outer radius 0.95 to 0.985, no glass slot; Pod > Gyro and Pod > Dome > Pilot kept), run on
+# the neutral fixture shell; the three VD-01 glass shells keep the glass check until their P-D
+# units rebuild them on the lattice. The paint check adds ROSTER-LOOK section 6's enamels:
+# Rivet's charcoal steel and Tally's mulberry (sampled from concepts/codex/tally/hero.png).
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -23,6 +28,9 @@ const WARDEN_BASE_TRIS := Vector2i(4000, 6000)
 const WARDEN_KIT_TRIS := Vector2i(800, 1500)
 const ANCIENT_SLOTS := ["ancient_enamel", "ancient_light", "bare_metal", "rubber"]
 const ENAMEL_CAP := 0.45
+const NEUTRAL_SHELL := "res://assets/models/world_one/shell_neutral.glb"
+const MULBERRY := Color("8a3d46")
+const LATTICE_RADIUS := Vector2(0.95, 0.985)
 
 
 class StubState:
@@ -169,7 +177,8 @@ func _band(label: String, n: int, band: Vector2i) -> void:
 
 func _check_models() -> void:
 	var slots: Array = HeroAssets.SLOTS.keys()
-	var paint_set := [Palette.VERDIGRIS, Palette.RUST, Palette.SAND]
+	var paint_set := [Palette.VERDIGRIS, Palette.RUST, Palette.SAND, Palette.CHARCOAL, MULBERRY]
+	_check_lattice(slots, paint_set)
 	for shell in ["sable", "rivet", "kest"]:
 		var scene: Node = (load(MODELS + "shell_%s.glb" % shell) as PackedScene).instantiate()
 		var all := meshes(scene)
@@ -187,15 +196,19 @@ func _check_models() -> void:
 			for v in core.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
 				far = maxf(far, (core.transform * v).length())
 		_report(shell + " core", far <= Tuning.RADIUS, "rolling core reaches %.3f m, collider %.2f m" % [far, Tuning.RADIUS])
-		var glass_vertices := 0
-		var sphere_error := 0.0
-		for surface in core.mesh.get_surface_count():
-			if HeroAssets.slot_of(core.mesh, surface) == "glass":
-				for v in core.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
-					glass_vertices += 1
-					sphere_error = maxf(sphere_error, absf((core.transform * v).length() - 0.98))
-		_report(shell + " sphere", glass_vertices > 500 and sphere_error < 0.001,
-			"full radius-0.98 glass hull (%d vertices, error %.6f)" % [glass_vertices, sphere_error])
+		if core.find_child("Hub_00", false, false) != null:
+			_report(shell + " lattice", _lattice_ok(core), "Hoberman Core, outer radius %.2f to %.3f, no glass slot" % [LATTICE_RADIUS.x, LATTICE_RADIUS.y])
+		else:
+			# A VD-01 glass shell, until its P-D unit rebuilds it on the lattice.
+			var glass_vertices := 0
+			var sphere_error := 0.0
+			for surface in core.mesh.get_surface_count():
+				if HeroAssets.slot_of(core.mesh, surface) == "glass":
+					for v in core.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
+						glass_vertices += 1
+						sphere_error = maxf(sphere_error, absf((core.transform * v).length() - 0.98))
+			_report(shell + " sphere", glass_vertices > 500 and sphere_error < 0.001,
+				"full radius-0.98 glass hull (%d vertices, error %.6f)" % [glass_vertices, sphere_error])
 		var pilot_far := 0.0
 		for surface in pilot.mesh.get_surface_count():
 			for v in pilot.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
@@ -248,6 +261,40 @@ func _check_models() -> void:
 		_report("kit " + fam + " weak point", kit.find_child("WeakPoint", true, false) != null, "WeakPoint node")
 		_check_enamel("kit " + fam, kit)
 		kit.free()
+
+
+# A Hoberman Core: outer radius inside LATTICE_RADIUS and no glass slot.
+static func _lattice_ok(core: MeshInstance3D) -> bool:
+	var far := 0.0
+	for i in core.mesh.get_surface_count():
+		if HeroAssets.slot_of(core.mesh, i) == "glass":
+			return false
+		for v in core.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
+			far = maxf(far, (core.transform * v).length())
+	return far >= LATTICE_RADIUS.x and far <= LATTICE_RADIUS.y + 0.0001
+
+
+# PD-0's neutral Hoberman shell: the lattice check, slot names, paint colours and the node
+# tree every pilot shell keeps (Pod > Gyro, Pod > Dome > Pilot, Pod > WeaponRing).
+func _check_lattice(slots: Array, paint_set: Array) -> void:
+	var packed := load(NEUTRAL_SHELL) as PackedScene
+	_report("neutral shell", packed != null, NEUTRAL_SHELL)
+	if packed == null:
+		return
+	var scene: Node = packed.instantiate()
+	_slots_ok("neutral", scene, slots)
+	var core := scene.find_child("Core", true, false) as MeshInstance3D
+	var pod := scene.find_child("Pod", true, false) as Node3D
+	var dome: Node3D = null
+	if pod != null:
+		dome = pod.get_node_or_null("Dome") as Node3D
+	_report("neutral lattice", core != null and _lattice_ok(core) and core.find_child("Hub_00", false, false) != null,
+		"Hoberman Core, outer radius %.2f to %.3f, no glass slot" % [LATTICE_RADIUS.x, LATTICE_RADIUS.y])
+	_report("neutral nodes", pod != null and pod.get_node_or_null("Gyro") != null and pod.get_node_or_null("WeaponRing") != null
+		and dome != null and dome.get_node_or_null("Pilot") != null, "Pod > Gyro, Pod > WeaponRing, Pod > Dome > Pilot")
+	var off := slot_colors(scene, "paint").filter(func(c): return not _near_any(c, paint_set))
+	_report("neutral paint", off.is_empty(), "paint vertex colours are section 6 enamels (%d off)" % off.size())
+	scene.free()
 
 
 # Section 11: ancient enamel never passes HSV value or saturation 45%.

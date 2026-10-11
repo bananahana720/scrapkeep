@@ -148,20 +148,35 @@ def assemble(name, core, pod, dome_part, pilot, dome_center, extras=()):
     return root, core_obj, pilot_obj
 
 
-def finish(name, root, core_obj, pilot_obj):
+def finish(name, root, core_obj, pilot_obj, shell_band=SHELL_TRIS, pod_obj=None, out=None):
+    """Reports, checks and exports a shell. The Core check is at CORE_LIMIT (ROSTER-LOOK
+    section 3 rule 6). With pod_obj (Hoberman shells) it also checks the Pod's reach below
+    Z -0.6 and the sight cone (sight_cone_hits). A pilot that is an empty has no tri band."""
     a = common.args()
     shell_tris = common.tri_total(root, skip=(pilot_obj.name,))
-    ok = common.report(name, [("shell", shell_tris, SHELL_TRIS),
-                              ("pilot", common.tris(pilot_obj), PILOT_TRIS)])
+    rows = [("shell", shell_tris, shell_band)]
+    if pilot_obj.type == "MESH":
+        rows.append(("pilot", common.tris(pilot_obj), PILOT_TRIS))
+    ok = common.report(name, rows)
     radius = common.max_radius(core_obj)
-    print("CORE_RADIUS %s %.3f %s" % (name, radius, "ok" if radius <= 1.0 else "OUT"))
-    common.export(root, a["out"] or common.default_out("shell_" + name.lower()))
+    core_ok = radius <= CORE_LIMIT + 1e-4
+    print("CORE_RADIUS %s %.4f limit %.3f %s" % (name, radius, CORE_LIMIT, "ok" if core_ok else "OUT"))
+    pod_ok = True
+    if pod_obj is not None:
+        low = low_reach(pod_obj)
+        cone = sight_cone_hits(pod_obj)
+        print("POD_LOW_REACH %s %d vertices past radius %.2f below Z %.2f %s"
+              % (name, low, LOW_RADIUS, LOW_Z, "ok" if low == 0 else "OUT"))
+        print("SIGHT_CONE %s %d solid Pod vertices inside the %.0f degree cone %s"
+              % (name, cone, SIGHT_HALF_ANGLE, "ok" if cone == 0 else "OUT"))
+        pod_ok = low == 0 and cone == 0
+    common.export(root, out or a["out"] or common.default_out("shell_" + name.lower()))
     if a["render"]:
         common.render_turntable(root, "shell_" + name.lower(), a["render"], [
             ("game", 8.0, 0.30, 65, (1920, 1080), 0.5),
             ("close", 3.6, 0.28, 38, (640, 640)),
         ], ground_z=-1.0, target=(0, 0, 0.25))
-    if not ok or radius > 1.0:
+    if not ok or not core_ok or not pod_ok:
         raise SystemExit("budget out of range for " + name)
 
 
@@ -239,3 +254,393 @@ def spherical(name, kit, animal, extras=()):
                 v.co = kit_point(v.co)
             item.to_object(kit_point(origin), pod)
     return root, core, pilot_obj
+
+
+# --- Hoberman mecha (ROSTER-LOOK section 0; unit PD-0 HOBERMAN-BASE) ----------------------
+#
+# hoberman() builds the base every pilot shell stands on. Node tree, origin at the ball centre:
+#   Core                the fully expanded Hoberman lattice; tumbles with the ball. 32 copper hubs
+#                       with rubber tread caps, Hub.00 to Hub.11 five-way and Hub.12 to Hub.31
+#                       three-way, joined by 60 scissor chains of X-pairs, and Gap.00 to Gap.29
+#                       empties at the 30 open diamonds.
+#   Pod                 upright, turns to the heading: seat, DecalPlate, the CONTROLS layout, the
+#                       outer gimbal bosses and axles.
+#   Pod > Gyro          the two nested gimbal rings, one mesh (see GIMBAL_INNER).
+#   Pod > WeaponRing    the level band over its bearing collar; hero_assets yaws it to the aim.
+#                       WeaponMount marks the weapon's seat on the front arc.
+#   Pod > Dome > Pilot  where the animated pilot sits; an empty unless the recipe passes a body.
+# Every Hub, Gap and Control empty faces outward or up: its local +Z (Godot +Y) points away
+# from the centre for Hub and Gap. Blender +Y forward, +Z up; Godot -Z forward, +Y up.
+# Draws (one per slot per mesh): Core paint, copper, rubber; Pod paint, rubber, copper; Gyro
+# rubber; WeaponRing paint, rubber, copper. That is 10, the shell class cap
+# (tools/asset_budgets.json). A slot a recipe adds to any of these meshes costs a draw.
+
+# Copper keeps its colour under any equipped paint (ROSTER-LOOK section 6); hero_assets.SLOTS
+# carries the runtime row.
+common.SLOTS.setdefault("copper", {"color": "copper", "metal": 0.6, "rough": 0.4})
+
+# Lattice radii (ROSTER-LOOK sections 0.1 and 2). The strut pair is 0.035 m thick, outer face
+# 0.975, inner face 0.94; the hub caps' tread faces reach CORE_LIMIT.
+LATTICE_OUTER = 0.975
+STRUT_PAIR = 0.035
+LATTICE_INNER = LATTICE_OUTER - STRUT_PAIR
+HUB_RADIUS = LATTICE_OUTER - STRUT_PAIR / 2
+BAR_WIDTH = 0.10
+CHAIN_WIDTH = 0.12
+HUB_BODY = (0.10, 0.937, LATTICE_OUTER)      # radius, inner and outer reach of the copper drum
+HUB_CAP = (0.07, 0.962, 0.9824)              # the rubber tread cap; its rim reaches CORE_LIMIT
+HUB_CLEAR = 0.075                            # chain ends tuck under the hub drum
+# One equator gap faces the front (+Y) and one the rear, so the face and the head show
+# through open diamonds in the rest pose.
+LATTICE_TWIST = math.radians(72)
+# Gimbal rings: inside clears the kept-clip envelope of Tarn, Tally and the Cannon (0.799 m,
+# PD-0 envelope-kept.json) by 0.03 m; the outer ring stays inside the lattice inner face, and
+# inside it at the 0.92 landing fold. Rivet's, Sable's and Kest's kept clips reach 0.92 to
+# 1.03 m, past the lattice itself (cage_contract_test KNOWN_OVER); no ring here can clear them,
+# so their clip units (PE-RIVET, PE-SABLE, PE-KEST) re-key those clips.
+GIMBAL_INNER = (0.830, 0.846)
+GIMBAL_OUTER = (0.848, 0.862)
+GIMBAL_DEPTH = 0.04
+# Weapon ring: band 1.03 to 1.08 m, 0.08 m tall, at the equator; the collar sits under it.
+RING_BAND = (1.03, 1.08, 0.08, 0.0)
+RING_COLLAR = (1.035, 1.075, 0.03, -0.055)
+RING_SEGMENTS = 40
+# The cockpit control layout, the same in all six (ROSTER-LOOK 0.7, PILOT-CLIPS section 5).
+# Each name becomes a Control.<name> empty under Pod at its point (Blender metres, Pod space).
+# BANK holds the slot 2 and slot 3 points beside the right yoke; a recipe names them through
+# hoberman(bank=...), e.g. (("GaugeLever", "lever"), ("SpoolBrake", "lever")) for Sable.
+CONTROLS = {
+    "Grip.L": (-0.32, 0.40, 0.05),
+    "Grip.R": (0.32, 0.40, 0.05),
+    "Trigger": (0.32, 0.43, 0.09),
+    "LapBar": (0.0, 0.05, -0.33),
+    "Pedal.L": (-0.13, 0.45, -0.62),
+    "Pedal.R": (0.13, 0.45, -0.62),
+}
+LAP_HANDS = {"LapBar.L": (-0.14, 0.28, -0.17), "LapBar.R": (0.14, 0.28, -0.17)}
+BANK = [(0.52, 0.30, -0.27), (0.52, 0.18, -0.27)]
+BANK_KINDS = ("lever", "button", "plunger", "crank", "key", "tab")
+SEAT_TOP = -0.30
+SEAT_BACK_TOP = -0.10
+DECAL_PLATE = ((0.0, -0.2325, -0.25), (0.36, 0.015, 0.30))
+# Sight cone (ROSTER-LOOK section 3 rule 3): from the pilot's head to the chase eyes at the
+# close, mid and far cameras (section 9 step 6, here in Blender axes), half-angle 35 degrees.
+HEAD = Vector((0.0, 0.02, 0.20))
+CHASE_EYES = (Vector((0.0, -3.44, 1.06)), Vector((0.0, -7.17, 2.22)), Vector((0.0, -11.46, 3.55)))
+SIGHT_HALF_ANGLE = 35.0
+LOW_RADIUS = 1.0
+LOW_Z = -0.6
+
+
+def lattice_layout(twist=LATTICE_TWIST):
+    """Unit directions of the icosahedral Hoberman layout: (hubs, links, gaps). hubs[0:12] are
+    the five-way hubs (icosahedron vertices), hubs[12:32] the three-way hubs (face centres);
+    links pair a five-way and a three-way index (60); gaps are the 30 diamond centres, each
+    the midpoint of two neighbouring five-way hubs. accretion.gd mirrors this layout."""
+    zr, rr = 1 / 5 ** 0.5, 2 / 5 ** 0.5
+    five = [Vector((0, 0, 1))]
+    for k in range(5):
+        a = twist + k * math.tau / 5
+        five.append(Vector((rr * math.cos(a), rr * math.sin(a), zr)))
+    for k in range(5):
+        a = twist + math.pi / 5 + k * math.tau / 5
+        five.append(Vector((rr * math.cos(a), rr * math.sin(a), -zr)))
+    five.append(Vector((0, 0, -1)))
+    edge = min((five[0] - p).length for p in five[1:])
+    edges = [(i, j) for i in range(12) for j in range(i + 1, 12) if abs((five[i] - five[j]).length - edge) < 1e-6]
+    linked = set(edges)
+    faces = [(i, j, k) for i, j in edges for k in range(j + 1, 12) if (i, k) in linked and (j, k) in linked]
+    three = [(five[i] + five[j] + five[k]).normalized() for i, j, k in faces]
+    links = [(v, 12 + f) for f, face in enumerate(faces) for v in face]
+    gaps = [(five[i] + five[j]).normalized() for i, j in edges]
+    return five + three, links, gaps
+
+
+def _frame(n):
+    """Two unit vectors spanning the plane normal to n, e1 x e2 = n."""
+    n = Vector(n).normalized()
+    e1 = Vector((0, 0, 1)).cross(n) if abs(n.z) < 0.9 else Vector((1, 0, 0)).cross(n)
+    e1.normalize()
+    return e1, n.cross(e1)
+
+
+def _bar(part, a, b, width, thick, slot, color=None):
+    """A flat bar from a to b lying on the sphere: width across the surface, thick radially.
+    Four faces, open ends (8 triangles); the ends hide under a pin, the next bar or a hub."""
+    a, b = Vector(a), Vector(b)
+    d = (b - a).normalized()
+    n = ((a + b) / 2).normalized()
+    u = d.cross(n).normalized()
+    n = u.cross(d)
+    corners = [(1, 1), (-1, 1), (-1, -1), (1, -1)]
+    ra = [part.bm.verts.new(a + u * (sx * width / 2) + n * (sy * thick / 2)) for sx, sy in corners]
+    rb = [part.bm.verts.new(b + u * (sx * width / 2) + n * (sy * thick / 2)) for sx, sy in corners]
+    faces = [part.bm.faces.new((ra[k], rb[k], rb[(k + 1) % 4], ra[(k + 1) % 4])) for k in range(4)]
+    return part.paint(faces, slot, color)
+
+
+def _disc(part, centre, normal, radius, sides, slot, color=None, roll=0.0):
+    """A flat polygon facing along normal (a pin head, a stud, the chalk mark)."""
+    c = Vector(centre)
+    e1, e2 = _frame(normal)
+    vs = [part.bm.verts.new(c + radius * (math.cos(roll + k * math.tau / sides) * e1
+                                          + math.sin(roll + k * math.tau / sides) * e2)) for k in range(sides)]
+    return part.paint([part.bm.faces.new(vs)], slot, color)
+
+
+def _drum(part, direction, radius, r_in, r_out, sides, slot, roll=0.0, bottom=True, color=None):
+    """A drum on the radial axis through direction, from radius r_in to r_out from the centre."""
+    n = Vector(direction).normalized()
+    e1, e2 = _frame(n)
+    ring = [math.cos(roll + k * math.tau / sides) * e1 + math.sin(roll + k * math.tau / sides) * e2
+            for k in range(sides)]
+    lo = [part.bm.verts.new(n * r_in + radius * p) for p in ring]
+    hi = [part.bm.verts.new(n * r_out + radius * p) for p in ring]
+    faces = [part.bm.faces.new(hi)]
+    if bottom:
+        faces.append(part.bm.faces.new(list(reversed(lo))))
+    sides_f = [part.bm.faces.new((lo[k], lo[(k + 1) % sides], hi[(k + 1) % sides], hi[k])) for k in range(sides)]
+    return part.paint(faces + sides_f, slot, color)
+
+
+def _sharpen(part, angle=0.9):
+    """Rounded parts read smooth, flat parts keep hard edges: smooth faces stay smooth across
+    shallow edges only, so the exporter splits vertices only where the shape turns a corner."""
+    part.bm.normal_update()
+    for f in part.bm.faces:
+        f.smooth = True
+    for e in part.bm.edges:
+        if e.is_manifold and e.calc_face_angle() > angle:
+            e.smooth = False
+
+
+def _slerp(a, b, t):
+    om = a.angle(b)
+    return (a * math.sin((1 - t) * om) + b * math.sin(t * om)) / math.sin(om)
+
+
+def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None):
+    """The Core: hubs with tread caps and the scissor chains between them. Returns the layout."""
+    rng = rng or random.Random("scrapkeep-hoberman")
+    hubs, links, gaps = lattice_layout()
+    r_outer_bar = LATTICE_OUTER - STRUT_PAIR / 4
+    r_inner_bar = LATTICE_INNER + STRUT_PAIR / 4
+    for i, j in links:
+        a, b = hubs[i], hubs[j]
+        s = a.cross(b).normalized()
+        span = HUB_CLEAR / (HUB_RADIUS * a.angle(b))
+        for k in range(pairs):
+            t0 = span + (1 - 2 * span) * k / pairs
+            t1 = span + (1 - 2 * span) * (k + 1) / pairs
+            c0, c1, cm = _slerp(a, b, t0), _slerp(a, b, t1), _slerp(a, b, (t0 + t1) / 2)
+            _bar(part, c0 * r_outer_bar - s * CHAIN_WIDTH / 2, c1 * r_outer_bar + s * CHAIN_WIDTH / 2,
+                 BAR_WIDTH, STRUT_PAIR / 2, "paint", enamel)
+            _bar(part, c0 * r_inner_bar + s * CHAIN_WIDTH / 2, c1 * r_inner_bar - s * CHAIN_WIDTH / 2,
+                 BAR_WIDTH, STRUT_PAIR / 2, "paint", enamel)
+            _disc(part, cm * (LATTICE_OUTER + 0.002), cm, 0.028, 6, "copper")
+            if k > 0:
+                for side in (-1, 1):
+                    p = c0 * (LATTICE_OUTER + 0.002) + s * (side * CHAIN_WIDTH / 2)
+                    _disc(part, p, p, 0.022, 6, "copper")
+    for h, d in enumerate(hubs):
+        _drum(part, d, HUB_BODY[0], HUB_BODY[1], HUB_BODY[2], hub_sides, "copper", roll=0.0)
+        # Rule 8: each cap's tread turns differently, so the pattern cannot strobe.
+        _drum(part, d, HUB_CAP[0], HUB_CAP[1], HUB_CAP[2], cap_sides, "rubber",
+              roll=rng.uniform(0, math.tau), bottom=False)
+    # The chalk balance mark on one tread cap, so the eye can count a turn (rule 8).
+    e1, _ = _frame(hubs[0])
+    _disc(part, hubs[0] * (HUB_CAP[2] + 0.0003) + e1 * 0.035, hubs[0], 0.018, 6, "paint", "bone")
+    _sharpen(part)
+    return hubs, links, gaps
+
+
+def _point_empty(name, direction, radius, parent):
+    d = Vector(direction).normalized()
+    obj = common.empty(name, d * radius, parent)
+    obj.rotation_euler = Vector((0, 0, 1)).rotation_difference(d).to_euler()
+    return obj
+
+
+def weapon_ring(enamel_band="bone"):
+    """The level band (worn bone segments, charcoal clamp blocks) over its dark collar with
+    dark studs, and a neutral mount block on the front arc."""
+    r = Part("WeaponRing")
+    b_in, b_out, b_h, b_z = RING_BAND
+    r.ring("paint", b_in, b_out, b_h, RING_SEGMENTS, loc=(0, 0, b_z), color=enamel_band)
+    for k in range(10):
+        a = (k + 0.5) * math.tau / 10
+        r.box("rubber", (0.06, b_out - b_in + 0.012, b_h + 0.012), loc=((b_in + b_out) / 2 * math.cos(a),
+              (b_in + b_out) / 2 * math.sin(a), b_z), rot=(0, 0, a + math.pi / 2))
+    c_in, c_out, c_h, c_z = RING_COLLAR
+    r.ring("rubber", c_in, c_out, c_h, RING_SEGMENTS, loc=(0, 0, c_z))
+    # The collar studs and the mount rod ride the rubber slot, so WeaponRing is two draws and
+    # the gimbal's inner ring can be its own mesh inside the 10-draw shell cap.
+    for k in range(12):
+        a = k * math.tau / 12 + 0.13
+        n = Vector((math.cos(a), math.sin(a), 0))
+        _disc(r, n * (c_out + 0.002) + Vector((0, 0, c_z)), n, 0.012, 6, "rubber")
+    # Neutral weapon seat at 12 o'clock; a pilot recipe replaces it with its weapon.
+    r.box("rubber", (0.14, 0.07, 0.11), loc=(0, b_out + 0.03, b_z))
+    r.rod("rubber", (0, b_out + 0.06, b_z), (0, b_out + 0.13, b_z), 0.025, 8)
+    _sharpen(r)
+    return r
+
+
+def gimbal():
+    """The two nested gimbal rings, both upright and facing the front (mechanism.png panel C):
+    Gyro, the outer ring, pivots on Pod's left-right axis (the Pod axles); GyroInner, the inner
+    ring and the two bosses that join it to the outer ring at top and bottom, pivots on that
+    vertical axis. Returns (outer, inner) Parts; each is one rubber draw."""
+    outer = Part("Gyro")
+    outer.ring("rubber", GIMBAL_OUTER[0], GIMBAL_OUTER[1], GIMBAL_DEPTH, RING_SEGMENTS, rot=(math.pi / 2, 0, 0))
+    _sharpen(outer)
+    inner = Part("GyroInner")
+    inner.ring("rubber", GIMBAL_INNER[0], GIMBAL_INNER[1], GIMBAL_DEPTH, RING_SEGMENTS, rot=(math.pi / 2, 0, 0))
+    for side in (-1, 1):
+        inner.box("rubber", (0.05, GIMBAL_DEPTH + 0.02, GIMBAL_OUTER[1] - GIMBAL_INNER[0]),
+                  loc=(0, 0, side * (GIMBAL_INNER[0] + GIMBAL_OUTER[1]) / 2))
+    _sharpen(inner)
+    return outer, inner
+
+
+def _bank_control(p, point, kind):
+    x, y, z = point
+    if kind == "button":
+        p.cyl("copper", 0.03, 0.03, 0.03, 8, loc=(x, y, z + 0.05))
+    elif kind == "plunger":
+        p.rod("rubber", (x, y, z), (x, y, z + 0.16), 0.016, 6)
+        p.box("copper", (0.08, 0.02, 0.02), loc=(x, y, z + 0.17))
+    elif kind == "crank":
+        p.cyl("rubber", 0.06, 0.06, 0.02, 8, loc=(x - 0.02, y, z + 0.06), rot=(0, math.pi / 2, 0))
+        p.rod("copper", (x - 0.03, y, z + 0.11), (x + 0.03, y, z + 0.11), 0.012, 6)
+    elif kind in ("key", "tab"):
+        p.box("copper", (0.03, 0.05, 0.08), loc=(x, y, z + 0.06))
+    else:
+        p.rod("rubber", (x, y, z), (x, y + 0.04, z + 0.17), 0.014, 6)
+        p.uv("copper", 0.025, 6, 4, loc=(x, y + 0.04, z + 0.18))
+
+
+def cockpit(seat="bone", bank=(("Slot2", "lever"), ("Slot3", "lever"))):
+    """The upright Pod: seat and DecalPlate, twin yokes, the slot 2 and 3 bank beside the right
+    yoke, the copper lap bar, two pedals, and the outer gimbal axles with copper bosses. Pod
+    geometry stays inside the gimbal sweep (radius 0.829) except the bosses on the ring axis."""
+    p = Part("Pod")
+    p.box("paint", (0.44, 0.42, 0.07), loc=(0, 0.04, SEAT_TOP - 0.035), color=seat)
+    p.box("paint", (0.44, 0.07, SEAT_BACK_TOP - SEAT_TOP + 0.1), loc=(0, -0.19, (SEAT_BACK_TOP + SEAT_TOP - 0.1) / 2),
+          color=seat)
+    p.box("rubber", (0.30, 0.30, 0.10), loc=(0, 0.0, SEAT_TOP - 0.12))
+    (dx, dy, dz), size = DECAL_PLATE
+    p.box("paint", size, loc=(dx, dy, dz), color=seat)
+    # Floor rail to the pedals.
+    p.beam("rubber", (0, 0.10, SEAT_TOP - 0.16), (0, 0.42, -0.66), 0.06)
+    for side in (-1, 1):
+        gx, gy, gz = CONTROLS["Grip.R"]
+        p.rod("rubber", (side * gx, 0.30, SEAT_TOP - 0.06), (side * gx, gy, gz - 0.06), 0.02, 6)
+        p.rod("rubber", (side * gx, gy, gz - 0.07), (side * gx, gy, gz + 0.07), 0.03, 8)
+        px, py, pz = CONTROLS["Pedal.R"]
+        p.box("rubber", (0.09, 0.15, 0.02), loc=(side * px, py, pz + 0.03), rot=(-0.5, 0, 0))
+        # Outer gimbal axle and its copper boss on the ring axis.
+        p.rod("rubber", (side * 0.24, -0.02, SEAT_TOP + 0.02), (side * 0.80, 0, 0), 0.02, 6)
+        p.rod("copper", (side * 0.80, 0, 0), (side * 0.89, 0, 0), 0.04, 8)
+    tx, ty, tz = CONTROLS["Trigger"]
+    p.box("copper", (0.02, 0.03, 0.04), loc=(tx, ty, tz))
+    # The lap bar: the largest control, copper, both hands on it for the ultimate.
+    lx = LAP_HANDS["LapBar.R"][0] + 0.12
+    _, ly, lz = LAP_HANDS["LapBar.R"]
+    p.rod("copper", (-lx, ly, lz), (lx, ly, lz), 0.028, 8)
+    hx, hy, hz = CONTROLS["LapBar"]
+    for side in (-1, 1):
+        p.rod("copper", (side * lx, ly, lz), (side * (lx - 0.02), hy, hz), 0.02, 6)
+    # The bank beside the right yoke.
+    p.box("rubber", (0.10, 0.26, 0.05), loc=(BANK[0][0], (BANK[0][1] + BANK[1][1]) / 2, BANK[0][2] - 0.02))
+    for (name, kind), point in zip(bank, BANK):
+        if kind not in BANK_KINDS:
+            raise ValueError("unknown bank control kind %s for %s" % (kind, name))
+        _bank_control(p, point, kind)
+    _sharpen(p)
+    return p
+
+
+def hoberman(name, enamel="petrol", seat="bone", pairs=2, bank=(("Slot2", "lever"), ("Slot3", "lever")),
+             pilot=None, hub_sides=8, cap_sides=8):
+    """Builds the Hoberman base under a new root. pilot: a Part for the seated body (a recipe's
+    placeholder), or None for an empty Pilot node. Returns {root, core, pod, gyro, ring, pilot,
+    hubs, gaps} (Blender objects; hubs and gaps are the empties in index order)."""
+    if len(bank) != len(BANK):
+        raise ValueError("bank names the slot 2 and slot 3 controls, %d given" % len(bank))
+    root = common.empty("Shell" + name)
+    core_part = Part("Core")
+    hub_dirs, _, gap_dirs = lattice(core_part, enamel, pairs, hub_sides, cap_sides, rng_for(name + "-lattice"))
+    core = core_part.to_object((0, 0, 0), root)
+    hubs = [_point_empty("Hub.%02d" % i, d, HUB_RADIUS, core) for i, d in enumerate(hub_dirs)]
+    gaps = [_point_empty("Gap.%02d" % i, d, HUB_RADIUS, core) for i, d in enumerate(gap_dirs)]
+    pod = cockpit(seat, bank).to_object((0, 0, 0), root)
+    outer, inner = gimbal()
+    gyro = outer.to_object((0, 0, 0), pod)
+    inner.to_object((0, 0, 0), gyro)
+    ring = weapon_ring().to_object((0, 0, 0), pod)
+    common.empty("WeaponMount", (0, RING_BAND[1] + 0.13, RING_BAND[3]), ring)
+    for cname, point in CONTROLS.items():
+        common.empty("Control." + cname, point, pod)
+    lap = bpy_object(pod, "Control.LapBar")
+    for hname, point in LAP_HANDS.items():
+        common.empty(hname, point, lap)
+    for (cname, _), point in zip(bank, BANK):
+        common.empty("Control." + cname, point, pod)
+    common.empty("DecalPlate", (DECAL_PLATE[0][0], DECAL_PLATE[0][1] - DECAL_PLATE[1][1] / 2, DECAL_PLATE[0][2]), pod)
+    dome = common.empty("Dome", (0, 0, 0), pod)
+    pilot_obj = pilot.to_object((0, 0, 0), dome) if pilot is not None else common.empty("Pilot", (0, 0, 0), dome)
+    return {"root": root, "core": core, "pod": pod, "gyro": gyro, "ring": ring, "pilot": pilot_obj,
+            "hubs": hubs, "gaps": gaps}
+
+
+def bpy_object(parent, name):
+    return next(c for c in parent.children if c.name == name)
+
+
+def low_reach(pod_obj):
+    """Pod-subtree vertices past LOW_RADIUS below LOW_Z (rule 6: slopes must not swallow them)."""
+    bad = 0
+    for o in common.tree(pod_obj):
+        if o.type != "MESH":
+            continue
+        mw = o.matrix_world
+        for v in o.data.vertices:
+            w = mw @ v.co
+            if w.z < LOW_Z and w.length > LOW_RADIUS:
+                bad += 1
+    return bad
+
+
+def sight_cone_hits(pod_obj, head=HEAD, eyes=CHASE_EYES, half_angle=SIGHT_HALF_ANGLE):
+    """Solid Pod vertices inside the sight cone from the head to any chase eye, over every mesh
+    under Pod (heft layers and pilot modules included). Gyro and GyroInner (thin moving rings)
+    and WeaponRing (the band) may cross the cone (rule 3) and are skipped with their children,
+    as is Dome with the pilot."""
+    cos_half = math.cos(math.radians(half_angle))
+    axes = [(e - head).normalized() for e in eyes]
+    bad = 0
+    for o in cone_meshes(pod_obj):
+        mw = o.matrix_world
+        for v in o.data.vertices:
+            d = (mw @ v.co) - head
+            if d.length < 1e-6:
+                continue
+            d.normalize()
+            if any(d.dot(a) > cos_half for a in axes):
+                bad += 1
+    return bad
+
+
+CONE_SKIP = ("Gyro", "WeaponRing", "Dome")
+
+
+def cone_meshes(obj, top=True):
+    """Meshes under obj that the sight cone counts: obj itself and every descendant, minus the
+    subtrees rooted at a CONE_SKIP node (a recipe's numbered duplicate such as Dome.001 too)."""
+    if not top and obj.name.split(".")[0] in CONE_SKIP:
+        return []
+    out = [obj] if obj.type == "MESH" else []
+    for c in obj.children:
+        out += cone_meshes(c, False)
+    return out

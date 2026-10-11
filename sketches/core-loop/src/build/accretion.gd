@@ -26,6 +26,16 @@ const POP_RATE := 12.0
 # The shell's scale per heft class above I, and how long a stolen chunk flies.
 const SHELL_PER_CLASS := 0.07
 const FLING_SECONDS := 0.45
+# Hoberman shells (ROSTER-LOOK section 5): chunks clamp onto the lattice, a hub or a strut,
+# instead of floating in its open gaps, and the gap panels carry the growth read, so the shell
+# does not scale per class. The layout mirrors tools/blender/shell_base.lattice_layout() in Godot
+# axes (Blender x, y, z is Godot x, z, -y): 12 five-way hubs, 20 three-way hubs, 60 links,
+# turned LATTICE_TWIST about the vertical. Chunk centres sit at LATTICE_SEAT, just outside the
+# strut mid surface at LATTICE_HUB_RADIUS.
+const LATTICE_SHELL_PER_CLASS := 0.0
+const LATTICE_TWIST := 72.0 * PI / 180.0
+const LATTICE_HUB_RADIUS := 0.9575
+const LATTICE_SEAT := 0.99
 
 const RARITY_COLORS := {
 	"common": Palette.COPPER,
@@ -50,6 +60,9 @@ var _chunk_mesh: BoxMesh
 var _chunk_material: StandardMaterial3D
 var _flung: Array[Dictionary] = []
 var _shell_class := 1
+# True while the ball wears a Hoberman shell; set_lattice() re-seats the chunks.
+var lattice := false
+static var _layout := {}
 
 
 func setup() -> void:
@@ -63,8 +76,79 @@ static func chunks_for(mass: float) -> int:
 	return mini(MAX_CHUNKS, int(sqrt(maxf(0.0, mass)) * CHUNK_PER_ROOT_SCRAP))
 
 
-static func shell_scale(heft_class: int) -> float:
-	return 1.0 + SHELL_PER_CLASS * float(maxi(1, heft_class) - 1)
+static func shell_scale(heft_class: int, on_lattice := false) -> float:
+	var per := LATTICE_SHELL_PER_CLASS if on_lattice else SHELL_PER_CLASS
+	return 1.0 + per * float(maxi(1, heft_class) - 1)
+
+
+func set_lattice(on: bool) -> void:
+	lattice = on
+	scale = Vector3.ONE * shell_scale(_shell_class, lattice)
+	for i in _chunks.size():
+		_chunks[i].position = chunk_point(i)
+
+
+# Where chunk index sits: on the unit-sphere spread, or clamped onto the lattice.
+func chunk_point(index: int) -> Vector3:
+	var dir := _slot(index, MAX_CHUNKS)
+	return lattice_snap(dir) * LATTICE_SEAT if lattice else dir * 1.02
+
+
+# {hubs: unit directions, five-way first; links: [five-way index, three-way index]}.
+static func lattice_layout() -> Dictionary:
+	if not _layout.is_empty():
+		return _layout
+	var zr := 1.0 / sqrt(5.0)
+	var rr := 2.0 / sqrt(5.0)
+	var five: Array[Vector3] = [Vector3(0, 0, 1)]
+	for k in 5:
+		var a := LATTICE_TWIST + k * TAU / 5.0
+		five.append(Vector3(rr * cos(a), rr * sin(a), zr))
+	for k in 5:
+		var a := LATTICE_TWIST + PI / 5.0 + k * TAU / 5.0
+		five.append(Vector3(rr * cos(a), rr * sin(a), -zr))
+	five.append(Vector3(0, 0, -1))
+	var edge := INF
+	for p in five.slice(1):
+		edge = minf(edge, five[0].distance_to(p))
+	var linked := {}
+	for i in 12:
+		for j in range(i + 1, 12):
+			if absf(five[i].distance_to(five[j]) - edge) < 0.0001:
+				linked[Vector2i(i, j)] = true
+	var hubs: Array[Vector3] = []
+	for p in five:
+		hubs.append(Vector3(p.x, p.z, -p.y))
+	var links: Array[Vector2i] = []
+	for e: Vector2i in linked:
+		for k in range(e.y + 1, 12):
+			if linked.has(Vector2i(e.x, k)) and linked.has(Vector2i(e.y, k)):
+				var f := hubs.size()
+				hubs.append((hubs[e.x] + hubs[e.y] + hubs[k]).normalized())
+				links.append_array([Vector2i(e.x, f), Vector2i(e.y, f), Vector2i(k, f)])
+	_layout = {"hubs": hubs, "links": links}
+	return _layout
+
+
+# The point of the lattice (a hub or a strut's arc) nearest dir, as a unit direction.
+static func lattice_snap(dir: Vector3) -> Vector3:
+	var d := dir.normalized()
+	var layout := lattice_layout()
+	var hubs: Array[Vector3] = layout["hubs"]
+	var best := hubs[0]
+	for link: Vector2i in layout["links"]:
+		var a := hubs[link.x]
+		var b := hubs[link.y]
+		var n := a.cross(b).normalized()
+		var q := d - n * d.dot(n)
+		var p := a if d.dot(a) > d.dot(b) else b
+		if q.length_squared() > 0.000001:
+			q = q.normalized()
+			if a.cross(q).dot(n) >= 0.0 and q.cross(b).dot(n) >= 0.0:
+				p = q
+		if p.dot(d) > best.dot(d):
+			best = p
+	return best
 
 
 func chunk_count() -> int:
@@ -86,7 +170,7 @@ func shell_class() -> int:
 # Idempotent: draws exactly this mass, part list, synergy set and heft class.
 func show_build(mass: float, parts: Array, synergies: Array, heft_class := 1) -> void:
 	_shell_class = heft_class
-	scale = Vector3.ONE * shell_scale(heft_class)
+	scale = Vector3.ONE * shell_scale(heft_class, lattice)
 	var want := chunks_for(mass)
 	while _chunks.size() > want:
 		_chunks.pop_back().queue_free()
@@ -130,7 +214,7 @@ func _add_chunk(index: int) -> void:
 	chunk.mesh = _chunk_mesh
 	chunk.material_override = _chunk_material
 	var dir := _slot(index, MAX_CHUNKS)
-	chunk.position = dir * 1.02
+	chunk.position = chunk_point(index)
 	chunk.basis = _facing(dir) * Basis(Vector3.UP, float(index) * 1.3)
 	chunk.scale = Vector3.ONE * POP_SCALE
 	add_child(chunk)

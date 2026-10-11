@@ -642,6 +642,7 @@ func _run_group(group: String) -> void:
 		"title2": await _title2()
 		"ending": await _ending()
 		"customize": await _customize()
+		"cge": await _cge()
 		_:
 			printerr("look_harness: unknown group ", group)
 			failures += 1
@@ -1114,6 +1115,34 @@ func _customize() -> void:
 	page.press("decal")
 	await _frames(5)
 	await _shoot("cus_page_decal", {"decal": profile.equipped(page.pilot, "decal")})
+
+
+# ---------------------------------------------------------------- Hoberman mecha per pilot (PD-0)
+# Each pilot boots once (its row's "pilot" is the class index), the ball stands frozen, and each
+# heft row shows that class's chunk load. Until each pilot's P-D unit lands, the shell is the
+# pilot's current one (VD-01 glass); the heft layers land with B5 and the pilot units.
+const CGE_MASS := {1: 0.0, 3: 60.0, 5: 400.0}
+
+
+func _cge() -> void:
+	for pilot in 6:
+		var mine: Array = Subjects.in_group("cge").filter(func(n): return int(Subjects.SUBJECTS[n]["pilot"]) == pilot and _wants(n))
+		if mine.is_empty():
+			continue
+		mine.sort_custom(func(a, b): return int(Subjects.SUBJECTS[a]["heft"]) < int(Subjects.SUBJECTS[b]["heft"]))
+		if game != null:
+			game.free()
+			game = null
+			await process_frame
+		class_index = pilot
+		await _boot_play(1)
+		game.player.body().freeze = true
+		for n in mine:
+			var heft := int(Subjects.SUBJECTS[n]["heft"])
+			game.build.accretion.show_build(CGE_MASS[heft], [], [], heft)
+			await _frames(5)
+			_anchor("ball", game.player.ball_position())
+			await _shoot(n, {"pilot": pilot, "heft": heft, "shell": game.presentation.hero_assets.shell_of(game.player).get("class", "")})
 
 
 # ---------------------------------------------------------------- boss smoke
