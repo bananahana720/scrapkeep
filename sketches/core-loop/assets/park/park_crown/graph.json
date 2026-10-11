@@ -1,0 +1,161 @@
+{
+  "bake_sha256": "8987d306183554cb4075dea0b5377b5a85015136ec98a3f042544c3736791ef2",
+  "breaches": [],
+  "bytes": 889390,
+  "edges": 317654,
+  "flags": {
+    "deck": 411,
+    "door_ok": 39295,
+    "line": 408,
+    "open": 40472,
+    "sight_ok": 8185,
+    "under": 0
+  },
+  "full_visit_m": 1777,
+  "full_visit_ratio": "1.437",
+  "graph_sha256": "f8203b44e44409b419815ba3bdf0516c0b0df0af891cbbe13a8f7deb841fa678",
+  "line_errors": [],
+  "line_path_nodes": 145,
+  "longest_est_m": 2477,
+  "map": "park_crown",
+  "nodes": 40812,
+  "park_sha256": "4d5960cda2544d98bfef8dc124d3ee4a10e9f6a19caf5ddb3074bc2de922c84d",
+  "pockets": [
+    {
+      "clear_ring": [],
+      "d_landmark": 597,
+      "d_spawn": 639,
+      "detour_m": 0,
+      "door_at": [
+        0,
+        -120
+      ],
+      "door_m": 0,
+      "flags": [
+        "open",
+        "line",
+        "sight_ok"
+      ],
+      "id": "camp_signal",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "rivet_plating",
+      "pay_rarities": [
+        "common"
+      ],
+      "role": "online",
+      "sight_ok": true,
+      "site": "bajada"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 880,
+      "d_spawn": 552,
+      "detour_m": 231,
+      "door_at": [
+        -232,
+        -304
+      ],
+      "door_m": 231,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "cache_turnstone",
+      "kind": "cracked_cache",
+      "nearest_door": 384,
+      "nearest_door_id": "meander_wall",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": true,
+      "site": "turnstone_scree"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 525,
+      "d_spawn": 867,
+      "detour_m": 199,
+      "door_at": [
+        200,
+        32
+      ],
+      "door_m": 199,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "bounty_gauntlet",
+      "kind": "hauler_bounty",
+      "nearest_door": 239,
+      "nearest_door_id": "meander_wall",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": true,
+      "site": "gauntlet_toe"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 672,
+      "d_spawn": 629,
+      "detour_m": 80,
+      "door_at": [
+        88,
+        -160
+      ],
+      "door_m": 80,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "meander_wall",
+      "kind": "cracked_wall",
+      "nearest_door": 239,
+      "nearest_door_id": "bounty_gauntlet",
+      "pay_named": "",
+      "pay_rarities": [],
+      "role": "hidden",
+      "sight_ok": true,
+      "site": "meander_bend"
+    }
+  ],
+  "ride_edges": 12,
+  "routes": {
+    "east": [],
+    "gauntlet": [],
+    "hoodoo": [],
+    "last_masts": [],
+    "last_needles": [],
+    "last_net": [],
+    "last_ramp": [],
+    "last_shelf": [],
+    "last_toppled": [],
+    "main": [],
+    "mid_centre": [],
+    "mid_east": [],
+    "mid_hoodoo": [],
+    "mid_wash": [],
+    "mid_west": [],
+    "toppled": [],
+    "west": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1236,
+    "farther_share": "0.147",
+    "ok": true
+  },
+  "spawn_beacon_m": 1236,
+  "spawn_beacon_share": "0.499",
+  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+}
