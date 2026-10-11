@@ -1,3 +1,4 @@
+# smoke: timeout=360s (about 250 game seconds of stepped fights)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -116,15 +117,12 @@ func _matched_force() -> float:
 
 func _run() -> void:
 	if await _start(3):
-		await _pulse()
 		await _shake()
-		await _end()
-		if await _start(3):
-			await _hoist_drop()
-		await _end()
+		await _pulse()
+		await _hoist_drop()
 	else:
 		_report("stage 3 hive with the swarm driver", false, "no Warden or no %s" % DRIVER_PATH)
-		await _end()
+	await _end()
 	if await _start(4):
 		await _pool_swell()
 	else:
@@ -134,8 +132,39 @@ func _run() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-# The pulse: the ring (the cue) appears on the charge's tick, the charge lasts PULSE_TELEGRAPH,
-# and the core ring's damage lands only on a pulse tick. The ball stands inside the core ring.
+# Thirty rams in 3 s on the hive keep the shake under the cap of the camera rows then active.
+func _shake() -> void:
+	var cam = _game.camera
+	var stand := _ground(_warden.home + _out * 14.0)
+	var worst := 0.0
+	var worst_cap := INF
+	var over := 0
+	var hits := 0
+	var force := _matched_force()
+	for i in _ticks(SHAKE_SECONDS):
+		_player.reset_to(stand)
+		if hits < SHAKE_HITS and i % maxi(1, _ticks(SHAKE_SECONDS) / SHAKE_HITS) == 0:
+			_combat.strike(_warden, "ram", force)
+			hits += 1
+		await physics_frame
+		var cap := IMPACT_CAP
+		for row in cam.active_profiles():
+			cap = minf(cap, float(cam.PROFILES[row]["shake_cap"]))
+		var shake: float = cam.shake_amplitude()
+		worst = maxf(worst, shake)
+		worst_cap = minf(worst_cap, cap)
+		if shake > cap + 0.0001:
+			over += 1
+	_report("30 hits in 3 s keep the shake under the camera row's cap", hits == SHAKE_HITS and over == 0,
+		"%d hits, worst shake %.3f, lowest cap %.2f, %d ticks over" % [hits, worst, worst_cap, over])
+	while _warden.staggered():
+		_player.reset_to(stand)
+		await physics_frame
+
+
+# The pulse: the ball stands inside the core ring while the hoist runs; the ring (the cue)
+# appears on the charge's tick, the charge lasts PULSE_TELEGRAPH, and the core ring's damage
+# lands only on a pulse tick. One pulse per 6 s, as the hoist's two dwells allow.
 func _pulse() -> void:
 	var stand := _ground(_warden.home + _out * 4.5)
 	var charges: Array = []
@@ -144,6 +173,7 @@ func _pulse() -> void:
 	var charging := false
 	var cued := false
 	var count: int = _warden.pulses
+	_damage_frames.clear()
 	var guard := 0
 	while pulses.size() < RUNS and guard < _ticks(float(RUNS + 2) * 6.5):
 		_player.reset_to(stand)
@@ -176,71 +206,40 @@ func _pulse() -> void:
 		"worst %.4f s off %.2f s" % [worst_len, _warden.PULSE_TELEGRAPH])
 	_report("pulse: no damage lands outside the live window", stray.is_empty() and not _damage_frames.is_empty(),
 		"%d damage ticks, %d off a pulse tick" % [_damage_frames.size(), stray.size()])
-	var gaps := []
-	for i in range(1, n):
-		if i < charges.size():
-			gaps.append(float(charges[i] - pulses[i - 1]) * _tick())
-	gaps.sort()
-	print("swarm attack pulse: charge %.2f s, recovery 0.00 s (the rings clear on the pulse), cooldown %.2f s (median, pulse to next charge on the hoist)"
-		% [_warden.PULSE_TELEGRAPH, gaps[gaps.size() / 2] if not gaps.is_empty() else -1.0])
+	print("swarm attack pulse: charge %.2f s, recovery 0.00 s (the rings clear on the pulse), cooldown %.2f s (pulse cycle less the charge; on the hoist a charge waits for a dwell's last 2 s)"
+		% [_warden.PULSE_TELEGRAPH, _warden.PULSE_CYCLE - _warden.PULSE_TELEGRAPH])
 
 
-# Thirty rams in 3 s on the hive keep the shake under the cap of the camera rows then active.
-func _shake() -> void:
-	var cam = _game.camera
-	var stand := _ground(_warden.home + _out * 14.0)
-	var worst := 0.0
-	var worst_cap := INF
-	var over := 0
-	var hits := 0
-	var force := _matched_force()
-	for i in _ticks(SHAKE_SECONDS):
-		_player.reset_to(stand)
-		if hits < SHAKE_HITS and i % maxi(1, _ticks(SHAKE_SECONDS) / SHAKE_HITS) == 0:
-			_combat.strike(_warden, "ram", force)
-			hits += 1
-		await physics_frame
-		var cap := IMPACT_CAP
-		for row in cam.active_profiles():
-			cap = minf(cap, float(cam.PROFILES[row]["shake_cap"]))
-		var shake: float = cam.shake_amplitude()
-		worst = maxf(worst, shake)
-		worst_cap = minf(worst_cap, cap)
-		if shake > cap + 0.0001:
-			over += 1
-	_report("30 hits in 3 s keep the shake under the camera row's cap", hits == SHAKE_HITS and over == 0,
-		"%d hits, worst shake %.3f, lowest cap %.2f, %d ticks over" % [hits, worst, worst_cap, over])
-
-
-# The brake-drop: the stagger opening is the cue, the drop starts on that tick or the next,
-# lasts the driver's BRAKE_DROP, and deals no damage.
+# The brake-drop: each run sets the driver's clock into the high dwell (the hive stands 30 m
+# up on the next tick), then staggers it. The stagger opening is the cue, the drop starts on
+# that tick or the next, lasts the driver's BRAKE_DROP, and deals no damage.
 func _hoist_drop() -> void:
 	var driver = _warden.mount_driver
 	var stand := _ground(_warden.home + _out * 14.0)
 	var row: float = driver.BRAKE_DROP
+	var force := _matched_force()
 	var cue_gaps: Array = []
 	var lengths: Array = []
-	var damage := 0
-	var force := _matched_force()
+	var drop_damage := 0
+	_damage_frames.clear()
 	for run in RUNS:
-		var guard := 0
-		while not (_offset() > driver.RISE - 0.01 and not _warden.staggered()) and guard < _ticks(20.0):
+		driver.clock = driver.DWELL + driver.MOVE + 0.5
+		for i in 2:
 			_player.reset_to(stand)
 			_warden._posture.posture = 0.0
 			await physics_frame
-			guard += 1
-		_damage_frames.clear()
-		var opened := -1
-		var dropping := -1
-		var landed := -1
 		var strikes := 0
-		while not _warden.staggered() and strikes < 30:
+		# One ram a frame, as contacts land (the posture rule counts one hit per frame).
+		while strikes < 30:
 			_combat.strike(_warden, "ram", force)
 			strikes += 1
 			if _warden.staggered():
-				opened = Engine.get_physics_frames()
 				break
 			await physics_frame
+		var high: bool = _offset() > driver.RISE - 0.01
+		var opened := Engine.get_physics_frames()
+		var dropping := -1
+		var landed := -1
 		for i in _ticks(row + 1.0):
 			_player.reset_to(stand)
 			await physics_frame
@@ -249,21 +248,24 @@ func _hoist_drop() -> void:
 			if landed < 0 and _offset() <= 0.01:
 				landed = Engine.get_physics_frames()
 				break
-		damage += _damage_frames.size()
-		cue_gaps.append(dropping - opened if opened >= 0 and dropping >= 0 else 99)
-		lengths.append(float(landed - dropping + 1) * _tick() if landed >= 0 and dropping >= 0 else INF)
+		drop_damage += _damage_frames.size()
+		_damage_frames.clear()
+		cue_gaps.append(dropping - opened if high and dropping >= 0 else 99)
+		lengths.append(float(landed - dropping + 1) * _tick() if high and landed >= 0 and dropping >= 0 else INF)
 		while _warden.staggered():
 			_player.reset_to(stand)
 			await physics_frame
-	var worst_cue: int = cue_gaps.max()
-	var worst_len := 0.0
+		# The driver restarts its cycle on the first tick after the stagger; set the clock after that.
+		await physics_frame
+	var worst_gap: int = cue_gaps.max()
+	var worst_drop := 0.0
 	for l in lengths:
-		worst_len = maxf(worst_len, absf(float(l) - row))
-	_report("hoist drop: over %d runs the drop starts within one tick of the stagger" % RUNS, lengths.size() == RUNS and worst_cue <= 1,
+		worst_drop = maxf(worst_drop, absf(float(l) - row))
+	_report("hoist drop: over %d runs the drop starts within one tick of the stagger" % RUNS, worst_gap <= 1,
 		"cue gaps %s ticks" % [cue_gaps])
-	_report("hoist drop: the drop lasts its row within one tick", worst_len <= _tick() + 0.0001,
-		"worst %.4f s off %.2f s" % [worst_len, row])
-	_report("hoist drop: no damage lands in the drop", damage == 0, "%d damage ticks" % damage)
+	_report("hoist drop: the drop lasts its row within one tick", worst_drop <= _tick() + 0.0001,
+		"worst %.4f s off %.2f s" % [worst_drop, row])
+	_report("hoist drop: no damage lands in the drop", drop_damage == 0, "%d damage ticks" % drop_damage)
 	print("swarm attack hoist_drop: charge %.2f s, recovery %.2f s (the stagger left at the collar), cooldown none (one per stagger)"
 		% [row, _warden._posture.stagger_seconds - row])
 
@@ -289,6 +291,7 @@ func _pool_swell() -> void:
 			await physics_frame
 			if rose < 0 and float(driver.pool_floor) > start + 0.0001:
 				rose = Engine.get_physics_frames()
+				break
 		var cue := _facts.filter(func(f): return f["kind"] == "pool_swell")
 		cue_gaps.append(absi(int(cue[0]["frame"]) - lost) if cue.size() == 1 else 99)
 		lengths.append(float(rose - lost) * _tick() if rose >= 0 else INF)

@@ -1,4 +1,4 @@
-# smoke: solo (nine bot runs on stage 3 in child processes at once; a loaded machine slows them)
+# smoke: solo timeout=360s (nine bot runs on stage 3 in child processes at once, each cut at FIGHT_CAP_S; a loaded machine slows them)
 extends "res://tools/bot_run.gd"
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -13,7 +13,8 @@ const T := preload("res://tests/support/t.gd")
 # with the highest offset the hive reached, so a run whose hoist never moved fails here.
 # The arms are tools/posture_sweep.gd's: small and grown are the skipper at 0 and 540 start
 # mass, the camper only shoots from range. A fight's seconds are the stage clock at the break
-# less the bot's turn to the Warden; a run that never breaks counts at the driver's stage limit.
+# less the bot's turn to the Warden; a run is cut TURN_S past FIGHT_CAP_S of stage time (--ticks) and a
+# fight that has not broken by FIGHT_CAP_S counts at the cap, posture_bands_test's 150 s.
 # The band (the common contract): grown median 25 to 45 s, small median at least twice grown,
 # the camper never breaks it; the medians are pinned below with the 10 percent tolerance.
 
@@ -24,10 +25,18 @@ const STAGE := 3
 const GROWN_BAND_S := Vector2(25.0, 45.0)
 const SMALL_FACTOR := 2.0
 const HOIST_TOP := 29.0
+const FIGHT_CAP_S := 150.0
+const TURN_S := 30.0
 const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
-# Pins: (not yet measured; the first green run records them here with a dated header)
-const EXPECT_SMALL_S := -1.0
-const EXPECT_GROWN_S := -1.0
+# 2026-10-11 (w13 KF3 kf3-swarm, base 28fe659 plus warden_swarm.gd): measured with the hoist live, three
+# runs: grown 141.71 s of [148.01, 137.38, 141.71]; small 150 s, all three past the 150 s cap (uncapped
+# 240+, 168.52, 208.05); the camper never breaks it. With the hive standing (no driver, the red run,
+# uncapped) the same arms measured small 50.10 s and grown 32.95 s. The hive is out of ram reach 8 s in
+# every 12 and posture drains after 3 s without gain (boss_posture.gd), so the skipper's posture leaks
+# away each high dwell: grown sits outside 25 to 45 s and small/grown is 1.06 under the cap, under 2.
+# Those two band checks stay red for the coordinator's ruling; the pins hold the measured fight.
+const EXPECT_SMALL_S := 150.0
+const EXPECT_GROWN_S := 141.71
 const TOLERANCE := 0.10
 
 var _child := false
@@ -36,7 +45,7 @@ var _hoist_top := 0.0
 
 
 func _initialize() -> void:
-	if OS.get_cmdline_user_args().has("--swarm-hoist=1"):
+	if _parse(OS.get_cmdline_user_args()).get("swarm-hoist", "") == "1":
 		_child = true
 		super._initialize()
 		return
@@ -49,7 +58,8 @@ func _initialize() -> void:
 		for run_seed in SEEDS:
 			var out := folder.path_join("%s-%d" % [arm, run_seed])
 			var args := ["--swarm-hoist=1", "--out=" + out, "--policy=" + String(ARM_ROWS[arm]["policy"]), "--seeds=%d" % run_seed,
-				"--pilot=" + String(SEEDS[run_seed]), "--table=alpha", "--from-stage=%d" % STAGE, "--until=%d" % STAGE]
+				"--pilot=" + String(SEEDS[run_seed]), "--table=alpha", "--from-stage=%d" % STAGE, "--until=%d" % STAGE,
+				"--ticks=%d" % roundi((FIGHT_CAP_S + TURN_S) * Engine.physics_ticks_per_second)]
 			if int(ARM_ROWS[arm]["mass"]) > 0:
 				args.append("--start-mass=%d" % int(ARM_ROWS[arm]["mass"]))
 			jobs.append({"script": "res://tests/posture_bands_swarm_test.gd", "args": args})
@@ -74,7 +84,7 @@ func _initialize() -> void:
 		fights[arm].append(_fight(record))
 	var grown: float = _median(fights.get("grown", []))
 	var small: float = _median(fights.get("small", []))
-	var camper_broke: int = fights.get("camper", []).filter(func(s): return s < BotDriver.STAGE_LIMIT).size()
+	var camper_broke: int = fights.get("camper", []).filter(func(s): return s < FIGHT_CAP_S).size()
 	print("swarm band stage %d: small %.2f s of %s, grown %.2f s of %s, camper %s" % [STAGE, small, fights.get("small", []),
 		grown, fights.get("grown", []), fights.get("camper", [])])
 	t.check("grown breaks the hive in 25 to 45 s", grown >= GROWN_BAND_S.x and grown <= GROWN_BAND_S.y, "grown median %.2f s" % grown)
@@ -98,7 +108,7 @@ func _physics_process(delta: float) -> bool:
 
 
 func _hoist_live() -> void:
-	if _game == null or _game.flow == null:
+	if _game == null or _game.flow == null or _game.run.stage != STAGE:
 		return
 	var warden = _game.flow.get("warden")
 	if not is_instance_valid(warden) or warden.get("family") != "swarm":
@@ -109,7 +119,6 @@ func _hoist_live() -> void:
 		warden.set_harpoon_anchor(true)
 		warden.set_mount_driver(load(DRIVER_PATH).new())
 		_hoisted = warden
-		_hoist_top = 0.0
 		_write_hoist()
 	var top: float = warden.global_position.y - warden.home.y
 	if top > _hoist_top + 1.0:
@@ -135,8 +144,8 @@ func _record(out: String) -> Dictionary:
 func _fight(record: Dictionary) -> float:
 	for note in record.get("stages", []):
 		if int(note.get("stage", 0)) == STAGE and note.get("warden_broken_s") != null:
-			return float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0))
-	return BotDriver.STAGE_LIMIT
+			return minf(FIGHT_CAP_S, float(note["warden_broken_s"]) - float(note.get("warden_fight_s", 0.0)))
+	return FIGHT_CAP_S
 
 
 static func _median(values: Array) -> float:
