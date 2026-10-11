@@ -716,7 +716,11 @@ class Placer extends Node3D:
 				var slot: Dictionary = Slots.row(role)
 				if String(slot.get("kind", "")) == "resource" and ResourceLoader.exists(String(slot["path"])) and not wanted.has(slot["path"]):
 					wanted.append(String(slot["path"]))
-		for path: String in wanted:
+		# Only a threaded build loads on the loader thread. A synchronous build (finish() below, in the same call) loads
+		# on the main thread through place()'s load(): with requests in flight its main-thread meshes raced the loader's
+		# RIDs ("Attempting to initialize the wrong RID" in place_greybox, and a null material on a part's free): 2 of 96
+		# park_holes_test runs six at a time before, 0 of 216 after (artifacts/local/alpha/push/w13/place/rid_sync/).
+		for path: String in (wanted if threaded else []):
 			if ResourceLoader.load_threaded_request(path) == OK:
 				_pending.append(path)
 				threaded_loads += 1
