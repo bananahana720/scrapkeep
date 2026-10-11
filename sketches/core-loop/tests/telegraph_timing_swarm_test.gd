@@ -150,7 +150,9 @@ func _pulse() -> void:
 		_warden._posture.posture = 0.0
 		await physics_frame
 		guard += 1
-		var frame := Engine.get_physics_frames()
+		# physics_frame resumes this loop before the nodes' step on the new frame, so what it
+		# reads happened on the frame before (the frame a hit_player inside the step records).
+		var frame := Engine.get_physics_frames() - 1
 		if _warden._charging and not charging:
 			charges.append(frame)
 		charging = _warden._charging

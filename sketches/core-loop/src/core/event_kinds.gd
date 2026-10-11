@@ -867,6 +867,12 @@ const WORLD_ROWS := {
 	"ride_drop": {"group": "event", "color": Palette.SANDSTONE, "shape": "arrow", "sound": "dash_whoosh", "sound_next": "ride_drop_swoop", "hud": "", "objective": "", "priority": 1},
 	"ride_ledge": {"group": "event", "color": Palette.SANDSTONE, "shape": "bar", "sound": "boost_whoosh", "sound_next": "ride_ledge_scuff", "hud": "", "objective": "", "priority": 1},
 	"ride_hop": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "dash_whoosh", "sound_next": "ride_hop_lift", "hud": "", "objective": "", "priority": 1},
+	# w13 KF3: the swarm Warden's mountings (design-v3/wardens/swarm.md section 3), published by
+	# warden_swarm.gd. hoist_ride: a ball rode the headframe hoist's rise and the stop threw it, a
+	# lift like ride_hop's chevron, the winch whine tuned to G (section 6). pool_swell: the sinkhole
+	# pool's 2 s swell before its floor rises a step, a wave, a pitchless low water swell.
+	"hoist_ride": {"group": "event", "color": Palette.SANDSTONE, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "hoist_winch_g5", "hud": "", "objective": "", "priority": 1},
+	"pool_swell": {"group": "event", "color": Palette.SANDSTONE, "shape": "wave", "sound": "boost_whoosh", "sound_next": "pool_low_swell", "hud": "", "objective": "", "priority": 1},
 	"landmark_hum": {"group": "event", "color": ANCIENT_LIGHT, "shape": "wave", "sound": "beacon_hum", "sound_next": "landmark_sub_pulse", "hud": "", "objective": "", "priority": 0},
 	"thermal_ride": {"group": "event", "color": Palette.SAND, "shape": "wave", "sound": "boost_whoosh", "sound_next": "thermal_updraft_swell", "hud": "", "objective": "", "priority": 1},
 	"wall_crumbled": {"group": "event", "color": Palette.SANDSTONE, "shape": "burst", "sound": "shatter", "sound_next": "cracked_wall_crumble", "hud": "", "objective": "", "priority": 1},

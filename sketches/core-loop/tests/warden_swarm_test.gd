@@ -26,6 +26,9 @@ const DWELL := 4.0
 const MOVE := 2.0
 const RISE := 30.0
 const BRAKE_LIMIT := 1.0
+# Frames a dwell may run long: it waits on its pulse, which the warden's float clocks can
+# land up to three ticks after the window (warden_swarm.gd charge_allowed).
+const DWELL_SLACK := 3
 const THROW_MIN := 12.0
 const POOL_STEP := 5.0
 const SWELL := 2.0
@@ -33,6 +36,9 @@ const POOL_RISE := 3.0
 const HOLD_FALLBACK := 6.0
 const RACK_POSTURE := 25.0
 const LIFT := 10.0
+# The smash's hit-stop slows game time for a few frames, so a swell counted in frames right
+# after a real smash runs a little long; telegraph_timing_swarm_test holds it to one tick.
+const SLOW_TOLERANCE := 0.1
 
 var _game
 var _combat
@@ -103,6 +109,16 @@ func _start(stage: int) -> bool:
 	_clear_enemies()
 	await _frames(2)
 	return true
+
+
+# The hoist checks run with no posture build-up and no guard on the floor, so a drone's hit
+# never moves the ball or the bar (the guard's own rule is warden_guard_posture_test's).
+func _quiet() -> void:
+	_warden._posture.posture = 0.0
+	_warden._guard_wait = 999.0
+	if _warden.guard != null:
+		for enemy in _warden.guard.alive():
+			enemy.queue_free()
 
 
 func _clear_enemies() -> void:
@@ -226,7 +242,7 @@ func _hoist_cycle(driver) -> void:
 	var charge_phases: Array = []
 	for i in _ticks(2.0 * (2.0 * (DWELL + MOVE)) + 0.5):
 		_player.reset_to(stand)
-		_warden._posture.posture = 0.0
+		_quiet()
 		await physics_frame
 		var y := _offset()
 		top = maxf(top, y)
@@ -246,8 +262,8 @@ func _hoist_cycle(driver) -> void:
 		(lows if run[0] == 0 else (highs if run[0] == 2 else moves)).append(run[1])
 	if not runs.is_empty() and runs[0][0] == 0:
 		lows.push_front(runs[0][1])
-	var ok_low := lows.size() >= 2 and lows.all(func(n): return absi(n - _ticks(DWELL)) <= 2)
-	var ok_high := highs.size() >= 2 and highs.all(func(n): return absi(n - _ticks(DWELL)) <= 2)
+	var ok_low := lows.size() >= 2 and lows.all(func(n): return absi(n - _ticks(DWELL)) <= DWELL_SLACK)
+	var ok_high := highs.size() >= 2 and highs.all(func(n): return absi(n - _ticks(DWELL)) <= DWELL_SLACK)
 	var ok_move := moves.size() >= 3 and moves.all(func(n): return absi(n - _ticks(MOVE)) <= 2)
 	_report("headframe: dwells 4 s low and 4 s high, moves 30 m in 2 s each way", ok_low and ok_high and ok_move
 			and absf(top - RISE) < 0.01,
@@ -284,7 +300,7 @@ func _brake_drop(driver) -> void:
 	var guard := 0
 	while _offset() < RISE - 0.01 and guard < _ticks(14.0):
 		_player.reset_to(stand)
-		_warden._posture.posture = 0.0
+		_quiet()
 		await physics_frame
 		guard += 1
 	await _frames(_ticks(0.5))
@@ -308,7 +324,7 @@ func _brake_drop(driver) -> void:
 	var low := 0
 	while _offset() <= 0.01 and low < _ticks(10.0):
 		_player.reset_to(stand)
-		_warden._posture.posture = 0.0
+		_quiet()
 		await physics_frame
 		low += 1
 	_report("headframe: the cycle resumes from the low dwell when the stagger ends", absi(low - _ticks(DWELL)) <= 2,
@@ -325,7 +341,7 @@ func _ride(_driver) -> void:
 	var stand := _ground(_warden.home + _out * 6.0)
 	for i in _ticks(1.0):
 		_player.reset_to(stand)
-		_warden._posture.posture = 0.0
+		_quiet()
 		await physics_frame
 	_warden._pulse_clock = 0.0
 	_facts.clear()
@@ -336,7 +352,7 @@ func _ride(_driver) -> void:
 	var drop_clock := -1.0
 	var was_held := false
 	for i in _ticks(DWELL + MOVE + 0.5):
-		_warden._posture.posture = 0.0
+		_quiet()
 		await physics_frame
 		var held := _held()
 		if held and float(driver.clock) > DWELL and float(driver.clock) < DWELL + MOVE:
@@ -351,7 +367,8 @@ func _ride(_driver) -> void:
 	var rides := _facts.filter(func(f): return f["kind"] == "hoist_ride").size()
 	_report("headframe: a ball latched through the rise leaves the stop with at least 12 m/s upward",
 		held_rise >= _ticks(MOVE) - 3 and absf(drop_clock - (DWELL + MOVE)) <= 2.0 * _tick() and dropped_vy >= THROW_MIN,
-		"held %d frames of the rise, line dropped at hoist clock %.3f, upward %.2f m/s" % [held_rise, drop_clock, dropped_vy])
+		"held %d frames of the rise, line dropped at hoist clock %.3f (%s), upward %.2f m/s" % [held_rise, drop_clock,
+			_player.kit.line_end, dropped_vy])
 	_report("headframe: the hoist_ride fact fires on the ride", rides == 1, "%d hoist_ride facts" % rides)
 	await _frames(_ticks(1.5))
 
@@ -366,7 +383,7 @@ func _held() -> bool:
 func _snip(driver) -> void:
 	var guard := 0
 	while not (_offset() > RISE - 0.01 and float(driver.clock) < 2.0 * DWELL + MOVE - 2.5) and guard < _ticks(14.0):
-		_warden._posture.posture = 0.0
+		_quiet()
 		await physics_frame
 		guard += 1
 	_warden._pulse_clock = _warden.PULSE_CYCLE
@@ -380,7 +397,7 @@ func _snip(driver) -> void:
 	var dropped := false
 	var lifted := false
 	for i in _ticks(4.0):
-		_warden._posture.posture = 0.0
+		_quiet()
 		var v: Vector3 = _player.body().linear_velocity
 		await physics_frame
 		if not _held():
@@ -493,8 +510,8 @@ func _pool_step(driver, floor_y: float, _centre: Vector3) -> void:
 			done_at = Engine.get_physics_frames()
 	var swells := _facts.filter(func(f): return f["kind"] == "pool_swell").size()
 	_report("sinkhole: a chunk lost raises the pool floor 5 m behind a 2 s swell", lost and absf(target - (floor_y + POOL_STEP)) < 0.001
-			and swells == 1 and rose_at > 0 and absf(float(rose_at - lost_frame) * _tick() - SWELL) <= 3.0 * _tick()
-			and done_at > 0 and absf(float(done_at - rose_at) * _tick() - POOL_RISE) <= 3.0 * _tick(),
+			and swells == 1 and rose_at > 0 and absf(float(rose_at - lost_frame) * _tick() - SWELL) <= SLOW_TOLERANCE
+			and done_at > 0 and absf(float(done_at - rose_at) * _tick() - POOL_RISE) <= SLOW_TOLERANCE,
 		"lost %s, floor %.2f to target %.2f (want %.2f), %d swells, rose %.3f s after the loss, took %.3f s" % [lost, start,
 			target, floor_y + POOL_STEP, swells, float(rose_at - lost_frame) * _tick(), float(done_at - rose_at) * _tick()])
 	await _frames(_ticks(4.5))

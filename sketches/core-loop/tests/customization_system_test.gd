@@ -188,6 +188,9 @@ func _assets() -> void:
 	_t.check("delivered rows were checked", delivered >= 20, str(delivered))
 
 
+# 2026-10-11 (w13 KF3 kf3-swarm): event_kinds.WORLD_ROWS gains hoist_ride and pool_swell; its digest moves
+# f3da5b1a -> 9e6705954294b3b6a5ec228be59a94df7aa6e64c9bc31b7353a96a8ded8cce4e. The pin is
+# content_registry.gd GOLDEN_HASHES, outside this unit's fence, for the coordinator's merge re-pin.
 func _validation() -> void:
 	var snapshot := Registry.snapshot()
 	for table in Registry.GOLDEN_HASHES:
