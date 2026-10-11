@@ -2900,7 +2900,7 @@
    "exception": {
     "draws": 14
    },
-   "exception_why": "PD-SABLE Hoberman mecha: PD-0's base takes all 10 (Core 3, Pod 3, Gyro, GyroInner, WeaponRing 2); the hidden placeholder Pilot, the CoilMast tip and the WrenchRack each need their own node and the emitter coils add copper on the ring",
+   "exception_why": "PD-SABLE Hoberman mecha, 14 draws inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10: base 10 plus machinery and the Pilot placeholder); PD-0's base takes 10 (Core 3, Pod 3, Gyro, GyroInner, WeaponRing 2), the hidden placeholder Pilot, the CoilMast tip and the WrenchRack each need their own node and the emitter coils add copper on the ring",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -2927,7 +2927,7 @@
    "exception": {
     "draws": 2
    },
-   "exception_why": "ROSTER-LOOK section 5 class III: thicker tread caps on Core plus side-gap panels on Pod, one draw per part",
+   "exception_why": "ROSTER-LOOK section 5 class III: thicker tread caps on Core plus side-gap panels on Pod, one draw per part; within the 2-draw class III layer cap (docs/decisions.tsv 2026-10-10, ROSTER-LOOK:250)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (GAP PANEL, heft I, III, V)"
@@ -2949,11 +2949,7 @@
    "path": "res://assets/models/world_one/shell_sable_c5.glb",
    "class": "detail",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC5 holder under HeroPod; Replace_CoilMast hides the base CoilMast tip)",
-   "exception": {
-    "draws": 3
-   },
-   "exception_why": "class V adds the coil mast's heavy form (copper winding and the mint tip, which must stay class_accent) beside the panel surface",
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC5 holder under HeroPod; the coil mast's open copper winding, one draw; the base CoilMast mint tip stays shown inside it)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (heft V, HUB MODULE)"
@@ -2968,7 +2964,7 @@
    "exception": {
     "draws": 14
    },
-   "exception_why": "same node set as shell_sable (see its row)",
+   "exception_why": "same node set as shell_sable (see its row): 14 draws, inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable.py --variant felt",
     "helper": "tools/blender/shell_base.py hoberman()",

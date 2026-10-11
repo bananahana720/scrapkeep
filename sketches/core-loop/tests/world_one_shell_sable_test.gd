@@ -5,6 +5,9 @@ extends SceneTree
 # (P-UNITS PD-SABLE, ROSTER-LOOK sections 0 to 6, pilots/sable.md section 5). The pod ceiling
 # keeps 16,000 T / 15,000 V; draws rise from 15 to 19 (shell 14 by its registry exception, rig 5).
 # The rig checks are unchanged. The run must make EXPECTED_CHECKS checks.
+# Fix round 2 (PD-0b base, docs/decisions.tsv 2026-10-10): shell cap 16 draws, class III layer 2,
+# every other layer 1, checked per layer. Class V is the doubled coil alone (one copper surface,
+# no Replace_ node, the base mint tip stays); its three top panels moved into c4.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -13,7 +16,7 @@ const SHELL := "res://assets/models/world_one/shell_sable.glb"
 const FELT := "res://assets/models/world_one/shell_sable_felt.glb"
 const LAYER := "res://assets/models/world_one/shell_sable_c%d.glb"
 const RIG := "res://assets/models/pilot_sable_anim.glb"
-const EXPECTED_CHECKS := 56
+const EXPECTED_CHECKS := 60
 const MAX_V := 15000
 const MAX_T := 16000
 const MAX_DRAWS := 19
@@ -312,6 +315,8 @@ func _check_layers() -> void:
 		_report("sable c%d split" % n, core != null and pod != null, "Core and Pod at the top, panels on the Pod")
 		_report("sable c%d budget" % n, c.t <= LAYER_TRIS and problems(layer).is_empty(),
 			"%d triangles within %d, clean slots and no overrides" % [c.t, LAYER_TRIS])
+		var cap := 2 if n == 3 else 1
+		_report("sable c%d draws" % n, c.s <= cap, "%d surfaces, layer cap %d (class III 2, others 1)" % [c.s, cap])
 		if pod != null:
 			var pod_slots := []
 			for i in pod.mesh.get_surface_count():
@@ -324,15 +329,24 @@ func _check_layers() -> void:
 				out_r = maxf(out_r, p.length())
 			if n == 2:
 				_report("sable c2 low", top < -0.35, "class II panels top out at Y %.3f, below -0.35" % top)
-			_report("sable c%d panels" % n, pod_slots == ["paint"] and out_r <= 0.93, "one paint surface inside the lattice (%s, reach %.3f)" % [pod_slots, out_r])
+			if n < 5:
+				_report("sable c%d panels" % n, pod_slots == ["paint"] and out_r <= 0.93, "one paint surface inside the lattice (%s, reach %.3f)" % [pod_slots, out_r])
+			else:
+				var coil_top := Vector3.ZERO
+				for p in pts:
+					if p.length() > coil_top.length():
+						coil_top = p
+				_report("sable c5 heavy coil", pod_slots == ["copper"] and absf(out_r - (LATTICE_OUT + MAST_HEAVY_PAST)) <= TOL
+					and clock(coil_top) >= 10.5 and clock(coil_top) <= 11.5,
+					"the doubled coil is one copper surface (%s) reaching %.3f at %.2f o'clock, want %.3f at 11 (one mast, 0.25 m)"
+					% [pod_slots, out_r, clock(coil_top), LATTICE_OUT + MAST_HEAVY_PAST])
 		if n == 3:
 			var caps := far(points(core as MeshInstance3D, layer)) if core is MeshInstance3D else INF
 			_report("sable c3 caps", caps <= CORE_LIMIT + 0.0001, "thicker tread caps reach %.4f, limit %.3f" % [caps, CORE_LIMIT])
 		if n == 5:
-			var heavy := layer.find_child("Replace_CoilMast", true, false) as MeshInstance3D
-			var reach := far(points(heavy, layer, "class_accent")) if heavy != null else 0.0
-			_report("sable c5 heavy mast", heavy != null and absf(reach - (LATTICE_OUT + MAST_HEAVY_PAST)) <= TOL,
-				"Replace_CoilMast's mint tip at radius %.3f, want %.3f (one mast, 0.25 m)" % [reach, LATTICE_OUT + MAST_HEAVY_PAST])
+			# The winding replaces nothing: the base CoilMast mint tip stays the mast's class_accent.
+			var replaces := layer.find_children("Replace_*", "", true, false)
+			_report("sable c5 keeps the tip", replaces.is_empty(), "no Replace_ node in c5 (%d), so the base mint tip shows" % replaces.size())
 		layer.free()
 
 
