@@ -1,0 +1,218 @@
+{
+ "kc5_cenote_pool": {
+  "group": "park_recipes",
+  "stage": 4,
+  "kind": "scene",
+  "owner": "KC5",
+  "anchor": "park_west_cenote",
+  "tick": 120,
+  "park_recipe": "cenote_pool",
+  "cameras": [
+   [
+    "close",
+    [
+     0,
+     0.02,
+     4.5
+    ],
+    [
+     0,
+     -3.38,
+     22.0
+    ],
+    62.0
+   ],
+   [
+    "mid",
+    [
+     20,
+     16,
+     -20
+    ],
+    [
+     0,
+     -8,
+     30
+    ],
+    62.0
+   ],
+   [
+    "far",
+    [
+     58,
+     40,
+     -62
+    ],
+    [
+     0,
+     -6,
+     35
+    ],
+    55.0
+   ]
+  ],
+  "ball": {
+   "close": [
+    0,
+    -3.18,
+    13.0
+   ],
+   "mid": [
+    0,
+    -3.18,
+    13.0
+   ],
+   "far": [
+    0,
+    -3.18,
+    13.0
+   ]
+  },
+  "ball_reason": "the ball stands on the ride line at z 13 of the recipe (centre line, on the floor), inside every frame",
+  "stager": "no look_harness group stages a park recipe yet: group park_recipes must place park_recipes.place(row) at the anchor row and take eye and target in recipe space (+Y up, +Z the ride direction, origin on the entry lip). Eyes and targets here are recipe space."
+ },
+ "kc5_flooded_shaft": {
+  "group": "park_recipes",
+  "stage": 4,
+  "kind": "scene",
+  "owner": "KC5",
+  "anchor": "",
+  "tick": 120,
+  "park_recipe": "flooded_shaft",
+  "cameras": [
+   [
+    "close",
+    [
+     0,
+     1.03,
+     6.0
+    ],
+    [
+     0,
+     -2.47,
+     24.0
+    ],
+    66.0
+   ],
+   [
+    "mid",
+    [
+     7,
+     13,
+     -14
+    ],
+    [
+     0,
+     -6,
+     34
+    ],
+    66.0
+   ],
+   [
+    "far",
+    [
+     30,
+     36,
+     -40
+    ],
+    [
+     0,
+     -6,
+     40
+    ],
+    58.0
+   ]
+  ],
+  "ball": {
+   "close": [
+    0,
+    -1.97,
+    14.0
+   ],
+   "mid": [
+    0,
+    -1.97,
+    14.0
+   ],
+   "far": [
+    0,
+    -1.97,
+    14.0
+   ]
+  },
+  "ball_reason": "the ball stands on the ride line at z 14 of the recipe (centre line, on the floor), inside every frame",
+  "stager": "no look_harness group stages a park recipe yet: group park_recipes must place park_recipes.place(row) at the anchor row and take eye and target in recipe space (+Y up, +Z the ride direction, origin on the entry lip). Eyes and targets here are recipe space."
+ },
+ "kc5_cavern_shell": {
+  "group": "park_recipes",
+  "stage": 4,
+  "kind": "scene",
+  "owner": "KC5",
+  "anchor": "park_west_gallery_1",
+  "tick": 120,
+  "park_recipe": "cavern_shell",
+  "cameras": [
+   [
+    "close",
+    [
+     0,
+     3.71,
+     11.5
+    ],
+    [
+     0,
+     0.51,
+     30.0
+    ],
+    62.0
+   ],
+   [
+    "mid",
+    [
+     15,
+     18,
+     -22
+    ],
+    [
+     0,
+     -6,
+     55
+    ],
+    62.0
+   ],
+   [
+    "far",
+    [
+     48,
+     72,
+     -72
+    ],
+    [
+     0,
+     -4,
+     100
+    ],
+    58.0
+   ]
+  ],
+  "ball": {
+   "close": [
+    0,
+    0.51,
+    20.0
+   ],
+   "mid": [
+    0,
+    0.51,
+    20.0
+   ],
+   "far": [
+    0,
+    0.51,
+    20.0
+   ]
+  },
+  "ball_reason": "the ball stands on the ride line at z 20 of the recipe (centre line, on the floor), inside every frame",
+  "stager": "no look_harness group stages a park recipe yet: group park_recipes must place park_recipes.place(row) at the anchor row and take eye and target in recipe space (+Y up, +Z the ride direction, origin on the entry lip). Eyes and targets here are recipe space."
+ }
+}
