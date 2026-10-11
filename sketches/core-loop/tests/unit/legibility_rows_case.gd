@@ -27,6 +27,12 @@ const LIVE_ALLOWED := {
 	"grapple_fired": "Sable's own move in her class colour; vfx draws it in the pilot's class colour",
 	"vault_kicked": "Sable's own move in her class colour",
 	"arc_slammed": "Sable's own move in her class colour",
+	# 2026-10-11 (w13 coordinator, B3 merged): the ultimate's three live rows are named on purpose. SKILL-BAR.md
+	# section 4 "Ready cue: one fact, every layer" makes the rim turn live mint at full, "your verb works now"
+	# (LEGIBILITY.md:23), and the set piece in flight and at its peak is that verb working (section 7 rows).
+	"ultimate_ready": "the meter's ready cue by design: live mint means the ultimate works now (SKILL-BAR.md section 4)",
+	"ultimate_started": "the set piece in flight, the ultimate verb working (SKILL-BAR.md section 7, unit B3)",
+	"ultimate_peak": "the set piece's peak, the same verb (SKILL-BAR.md section 7, unit B3)",
 }
 # Scrap, rewards and rides: the world offering or paying.
 const PAYING := {"ROWS": ["scrap_collected", "core_gained", "stage_cleared", "run_ended", "beacon_unsealed", "launched"],
@@ -138,7 +144,9 @@ func run(t) -> void:
 		if String(row.get("fail", "")) == "":
 			missing_fields.append("%s has no fail cue" % id)
 	t.check("every VERBS intent field exists on Intent", missing_fields.is_empty(), "unknown fields: %s" % [missing_fields])
-	t.check("nine verbs", Bindings.VERBS.size() == 9, "%d verbs" % Bindings.VERBS.size())
+	# 2026-10-11 (w13 coordinator, B1 and B3 merged): nine to eleven. select (caps 1, 2, 3) and ultimate (Q)
+	# joined the table and the retired special keeps its row (SKILL-BAR.md section 6; bindings_table_test.gd header).
+	t.check("eleven verbs", Bindings.VERBS.size() == 11, "%d verbs" % Bindings.VERBS.size())
 
 	var states: Array = EventKinds.LINE_ROWS.keys()
 	states.sort()
