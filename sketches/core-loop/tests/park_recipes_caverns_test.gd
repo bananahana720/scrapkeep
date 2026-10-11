@@ -17,6 +17,7 @@ extends SceneTree
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Augments := preload("res://src/movement/augments.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Row size is [length along +z, height, width] (park_schema.gd); the recipe's nominal size matches the stage rows
@@ -62,6 +63,7 @@ func _run() -> void:
 	for id in RECIPES:
 		_check_placed(id, placed[id])
 		_check_pool(id, placed[id])
+		_check_bites(id, placed[id])
 	await _check_controls(world)
 	await _check_rolls(world, placed)
 	world.free()
@@ -159,6 +161,41 @@ func _check_placed(id: String, node: Node3D) -> void:
 	_t.check("(c) %s draws are views only (no -col drawn)" % id, views.size() >= 3 and not views.any(func(v): return String(v.name).ends_with(ParkRecipes.COL_SUFFIX)),
 		"%d views" % views.size())
 	_t.check("(c) %s has a ride sensor" % id, node.find_child("Ride", true, false) != null)
+
+
+# The harpoon bites what a world-layer ray hits (augments.gd _hook_ray, intersect_ray on WORLD_MASK); the placed node
+# copies no Anchor empty, so each anchor must stand in the -col soup. A ray from the lane, 5 m under and 6 m before an
+# anchor eye, must stop within 1 m of the eye, not run on to the roof.
+const BITE_TOLERANCE_M := 1.0
+
+func _check_bites(id: String, node: Node3D) -> void:
+	if node == null:
+		return
+	var scene := _load_scene(ParkRecipes.paths(id, "park_large")["base"])
+	if scene == null:
+		return
+	var origin := Transform3D(Basis.IDENTITY, ParkRecipes.ride_frame(_row(id, Vector2.ZERO))["origin"])
+	var space := root.get_world_3d().direct_space_state
+	var missed: Array = []
+	var count := 0
+	for n in scene.find_children("Anchor*", "Node3D", true, false):
+		var local := Transform3D(Basis.IDENTITY, Vector3(0, 0, 0))
+		var walk: Node = n
+		while walk != null and walk != scene:
+			if walk is Node3D:
+				local = (walk as Node3D).transform * local
+			walk = walk.get_parent()
+		var eye: Vector3 = node.global_transform * origin * local.origin
+		var from := Vector3(node.global_position.x, eye.y - 5.0, eye.z - 6.0)
+		var to := from + (eye - from) * ((from.distance_to(eye) + 2.0) / from.distance_to(eye))
+		var q := PhysicsRayQueryParameters3D.create(from, to, Augments.WORLD_MASK)
+		var hit := space.intersect_ray(q)
+		count += 1
+		if hit.is_empty() or (hit["position"] as Vector3).distance_to(eye) > BITE_TOLERANCE_M:
+			missed.append("%s at %s hit %s" % [n.name, eye, hit.get("position")])
+	scene.free()
+	_t.check("(d) %s: a ray from the lane bites each of its %d anchors within %.0f m (collision, not a bare empty)" % [id, count, BITE_TOLERANCE_M],
+		count > 0 and missed.is_empty(), str(missed))
 
 
 # --- (d) ---------------------------------------------------------------------------------------------------------

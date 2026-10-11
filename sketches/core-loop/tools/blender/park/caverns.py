@@ -15,7 +15,8 @@ POOL_DEPTH (1.1 m), under the 1.2 m a ball rolls out of (PARK.md:294, :357).
 
 Files per recipe (the loader's names, park_recipes.paths): <recipe>.glb = a "Rock" mesh (slot stone: shell, stalactites,
 timbers, pipe and anchor eyes, painted by vertex colour), a "Water" mesh (slot glass: the flat sheet, teal vertex colour), a
-"<recipe>-col-col" trimesh node (the floor, walls, roof and timbers at half the ring density, never drawn; Godot strips
+"<recipe>-col-col" trimesh node (the floor, walls, roof at half the ring density, timbers, anchor stalactites and a block at
+each anchor eye so the harpoon's world ray bites it, never drawn; Godot strips
 one "-col" on import, so the imported node is "<recipe>-col" with its StaticBody3D and trimesh, the name park_recipes.gd looks for) and Anchor.NN empties (Godot
 imports them as Anchor_NN); <recipe>_detail1.glb and <recipe>_detail2.glb = additive stone shells at the same origin (class
 detail). Stalactite anchors: a copper eye hangs from each anchor stalactite's tip, the Anchor.NN empty at the eye's centre;
@@ -412,9 +413,19 @@ def roof_keeper(hall, soup, rows, stations):
     return keep
 
 
-def stalactites(hall, soup, rng, anchors):
-    """Hanging cones from the roof: filler stalactites on a loose lattice, then the anchor stalactites with copper eyes.
-    Returns the anchor positions [(x, y, z)] (eye centres)."""
+# The harpoon bites what a world-layer ray hits (src/movement/augments.gd _hook_ray), and the loader copies no Anchor
+# empty, so every anchor stalactite and every copper eye also goes to the collider soup; the eye as a solid block the
+# size of the ring, since a ray through the ring's hole would miss it (KC-INT R6).
+EYE_HALF = (0.4, 0.4, 0.15)
+
+
+def eye_block(col, center):
+    col.box(tuple(c - h for c, h in zip(center, EYE_HALF)), tuple(c + h for c, h in zip(center, EYE_HALF)), (1, 1, 1))
+
+
+def stalactites(hall, soup, rng, anchors, col):
+    """Hanging cones from the roof: filler stalactites on a loose lattice, then the anchor stalactites with copper eyes;
+    the anchor cones and eyes also go to col. Returns the anchor positions [(x, y, z)] (eye centres)."""
     out = []
     z = 6.0
     while z < hall.length - 4:
@@ -430,8 +441,10 @@ def stalactites(hall, soup, rng, anchors):
         x, y, zz = hall.point(zs, u)
         length = rng.span(3.6, 4.6)
         soup.cone((x, y, zz), 0.75, length, 8, (0.84, 0.8, 0.74), (0.74, 0.7, 0.64), mid=0.6)
+        col.cone((x, y, zz), 0.75, length, 8, (1, 1, 1), (1, 1, 1), mid=0.6)
         ey = y - length - 0.18
         soup.eye((x, ey, zz), COPPER)
+        eye_block(col, (x, ey, zz))
         out.append((x, ey, zz))
     return out
 
@@ -489,11 +502,12 @@ def build_base(name):
     rock, col = Soup(), Soup()
     rows, stations = ring_rows(hall, rock)
     rock.grid(rows, True, roof_keeper(hall, rock, rows, stations))
-    anchors = stalactites(hall, rock, rng, ANCHORS[name]) if name != "flooded_shaft" else []
+    anchors = stalactites(hall, rock, rng, ANCHORS[name], col) if name != "flooded_shaft" else []
     if name == "flooded_shaft":
         anchors = timbers(hall, rock, col)
         for p in anchors:
             rock.eye(p, COPPER)
+            eye_block(col, p)
     crow, cst = ring_rows(hall, col, stride=2, with_color=False)
     col.grid(crow, True, roof_keeper(hall, col, crow, cst))
     return {"hall": hall, "rock": rock, "col": col, "water": water_sheet(hall), "anchors": anchors}
