@@ -2,12 +2,15 @@ KC5 flooded caverns build log (2026-10-11)
 recipe: sketches/core-loop/tools/blender/park/caverns.py (Blender 5.2.2 LTS, headless, prlimit --as=12884901888, --threads 2)
 determinism: a second build into a scratch directory matched all 9 sha256 below byte for byte (compared 2026-10-11)
 file	sha256	tris	verts	draws	budget
-cenote_pool.glb	71ef05b0195814e7963578452ada3e2b3f1433f2d2657cecfc39f6a47ee2f671	7710	8285	3	park_large 16000/48000/draws 3 by exception
-cenote_pool_detail1.glb	580875379c3c7cfcacf6e3fc77231a5a8f34dca6c8309ac3c679840bbf8bc399	750	461	1	detail 1500/3000/1
-cenote_pool_detail2.glb	3d13de4f09ee4010baf4760e58e085f82e3f015806e14c3b91f4d2371eb59151	1152	864	1	detail 1500/3000/1
-flooded_shaft.glb	9ab0bd4b14b120a5bc3e191b6bfcb23a635c891579371e128810603ae204033f	7042	9163	3	park_large 16000/48000/draws 3 by exception
-flooded_shaft_detail1.glb	1d9ed53a599556eb4a8d7bc66f41d1d6a243abcb7e7a2943477cfb740b3009b9	960	594	1	detail 1500/3000/1
-flooded_shaft_detail2.glb	3927c4f779bb1b949e43fde2cba1ba1e5542f80605fc2eed50801c2fbfbf39e5	1080	810	1	detail 1500/3000/1
+cenote_pool.glb	b4d116155409c3e65b580ed8990da6c0d78a93d8d8e3503254ad301bcba918e5	7710	8293	3	park_large 16000/48000/draws 3 by exception
+cenote_pool_detail1.glb	f7b15769bea896dcff5551b2884c0c9228b001dad68765212ce4720e91c21113	750	461	1	detail 1500/3000/1
+cenote_pool_detail2.glb	9255013ec5a751d394ea4ca224c93458b04f59e32fb80e14b2f071128e3b75eb	1152	864	1	detail 1500/3000/1
+flooded_shaft.glb	4d5e05a511f0163d9aa1ab126b7c4a3fb38ac47beec7bc3e9e68410d663f0366	7042	9131	3	park_large 16000/48000/draws 3 by exception
+flooded_shaft_detail1.glb	8645536345fb201eeaa163121f9824a4b273c4ae9b8127f760087306b23e06f9	960	594	1	detail 1500/3000/1
+flooded_shaft_detail2.glb	af0e9bc0ad0192688cc4f7004ade7488859510722f496a8e38d2ea4b551795e0	1080	810	1	detail 1500/3000/1
 cavern_shell.glb	4492f768f875e70a72c490531ff342e1e2d29ce8e49573ad457f58eec89a92de	14436	16537	3	park_large 16000/48000/draws 3 by exception
 cavern_shell_detail1.glb	4db1988774b6324421b81d351963be30bd6f683435de85fe1e56fe2265a7315e	760	464	1	detail 1500/3000/1
 cavern_shell_detail2.glb	ba09fc821f04c80cc8e06e0b36e27126b7315d26327242c582e3e3a85c9eb2dc	1296	972	1	detail 1500/3000/1
+
+fix round (2026-10-11, on c71fad0): the exit paths of cenote_pool and flooded_shaft no longer rise. cenote_pool ends (52,-9) to (70,-11.5), a falling runout; flooded_shaft ends (62,-9) to (80,-9), flat. The six hashes above are the rebuilt files; cavern_shell*.glb are unchanged. A second build into a scratch directory matched all six byte for byte (cmp).
+reason: a ball leaving the pool at 5 to 6 m/s could not climb the old 4 to 5 m exit rise and rolled back (gate finding); the pool-drop test now tracks the dead-stop rule every frame and requires the ball to reach length-1.

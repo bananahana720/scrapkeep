@@ -9,8 +9,8 @@ or below y 0; a pool is a dip in a flat shelf with the water sheet at the shelf'
 POOL_DEPTH (1.1 m), under the 1.2 m a ball rolls out of (PARK.md:294, :357).
 
   recipe          nominal L x H x W (m)   stage row it matches                         ride
-  cenote_pool     70 x 20 x 60            park_sinkhole west_cenote (70, 20, 60)       scree ramp, pool, exit ramp
-  flooded_shaft   80 x 24 x 16            none yet (caisson_bowl is a greybox)         timbered decline, sump, exit rise
+  cenote_pool     70 x 20 x 60            park_sinkhole west_cenote (70, 20, 60)       scree ramp, pool, falling runout
+  flooded_shaft   80 x 24 x 16            none yet (caisson_bowl is a greybox)         timbered decline, sump, flat runout
   cavern_shell    190 x 16 x 30           park_sinkhole west_gallery_1 (190, 16, 30)   gallery with two steps and a pool
 
 Files per recipe (the loader's names, park_recipes.paths): <recipe>.glb = a "Rock" mesh (slot stone: shell, stalactites,
@@ -218,15 +218,15 @@ def cenote_pool():
         ring = (x / 17.0) ** 2 + ((z - 33.0) / 13.0) ** 2
         return z < 14.0 or z > 58.0 or ring < 1.0 + 0.35 * (fbm(x * 0.2, 0.0, z * 0.2, 41) - 0.5)
 
-    return Hall("cenote_pool", 70.0, 60.0, 1.25, 40, [(0, 0), (3, 0), (24, -9), (52, -9), (70, -4)], 5.0, 3.0,
+    return Hall("cenote_pool", 70.0, 60.0, 1.25, 40, [(0, 0), (3, 0), (24, -9), (52, -9), (70, -11.5)], 5.0, 3.0,
                 lambda z: 1.5, 1.5, 1.0, 11, half=lambda z: 27.0 + 1.5 * (2.0 * fbm(0, 0, z * 0.05, 21) - 1.0),
                 spring=lambda z: 0.0, roof_open=roof_open, pool=(27.0, 49.0), rim_lock=True)
 
 
 def flooded_shaft():
-    return Hall("flooded_shaft", 80.0, 16.0, 1.25, 24, [(0, 0), (4, 0), (30, -9), (34, -9), (62, -9), (80, -5)], 8.0, 8.0,
+    return Hall("flooded_shaft", 80.0, 16.0, 1.25, 24, [(0, 0), (4, 0), (30, -9), (34, -9), (62, -9), (80, -9)], 8.0, 8.0,
                 lambda z: 3.8, 0.10, 0.10, 17, half=lambda z: 7.85, spring=lambda z: path_y(
-                    [(0, 0), (4, 0), (30, -9), (34, -9), (62, -9), (80, -5)], z) + 3.2, pool=(38.0, 58.0))
+                    [(0, 0), (4, 0), (30, -9), (34, -9), (62, -9), (80, -9)], z) + 3.2, pool=(38.0, 58.0))
 
 
 def cavern_shell():
