@@ -20,6 +20,11 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Interactables := preload("res://src/world/interactables.gd")
+const Companion := preload("res://src/core/companion.gd")
+# SR7: the shortest gap between two chirps of one companion cue (start value, comps
+# ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
+const CHIRP_COOLDOWN := 0.75
+const CHIRP_LOG_CAP := 256
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -168,6 +173,8 @@ var sound_ready := false
 var _pitch_rng := RandomNumberGenerator.new()
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
+var chirp_log: Array = []
+var _chirp_last := {}
 var volumes := {"Music": 0.8, "SFX": 1.0, "UI": 1.0}
 var muted := false
 # False on the dummy driver (headless tests, or a machine with no sound device): no
@@ -828,6 +835,27 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 		_duck(0.55, 0.35)
 	if sound in DANGER_SOUNDS:
 		engine.duck_bass(0.3, 0.45)
+	return true
+
+
+# SPIL-9's chirp (SR7): it reads the cue the body shows from the same Companion.CUES row, so
+# animation, chirp and motif cannot drift apart, and sounds a cue at most once per
+# CHIRP_COOLDOWN s (a start value; the lab tunes it). now is seconds; -1 reads the clock.
+# chirp_log rows are [cue, kind, motif sound, now, fired]. True when it sounded.
+func chirp(cue: String, now := -1.0) -> bool:
+	var kind := String(Companion.CUES.get(cue, {}).get("chirp", ""))
+	if kind == "":
+		return false
+	if now < 0.0:
+		now = Time.get_ticks_msec() / 1000.0
+	var fired: bool = not _chirp_last.has(cue) or now - float(_chirp_last[cue]) >= CHIRP_COOLDOWN
+	chirp_log.append([cue, kind, String(EventKinds.UI_ROWS.get(kind, {}).get("sound", "")), now, fired])
+	if chirp_log.size() > CHIRP_LOG_CAP:
+		chirp_log.pop_front()
+	if not fired:
+		return false
+	_chirp_last[cue] = now
+	play(kind, 0.0, 1.0, "UI")
 	return true
 
 

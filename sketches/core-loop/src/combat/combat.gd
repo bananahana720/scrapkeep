@@ -232,6 +232,9 @@ var _spring_until := -1.0
 # dir, length, half_width, friction, hold, until}), both cleared on run start and stage entry.
 # escape_acts counts acts this run, and escape_acted fires once per act.
 signal escape_acted(piece: String, style: String)
+# The companion's driver rows (Companion.DRIVERS); every module act asks Companion.pick()
+# against this table, so a test or the lab can reorder rows without a code edit.
+var drivers: Dictionary = Companion.DRIVERS
 var escape_acts := 0
 var escape_lane := {}
 var _escape := {}
@@ -551,32 +554,39 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 # The primer_coil's PRIMER_COIL_MULT is applied through _strike_mult, before this consumes
 # the prime; _result stays for the companion tests that pass one and is not changed.
 func _primer_hit(enemy: Node3D, kind: String, cls: String, _result := {}) -> String:
+	var row := _primer_driver(enemy, kind, cls)
+	var id := enemy.get_instance_id()
+	match String(row.get("act", "")):
+		"prime":
+			var live: bool = float(_primed.get(id, -1.0)) > _clock
+			_primed[id] = _clock + Companion.PRIMER_SECONDS
+			if not live:
+				effects.spark(enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
+		"consume":
+			_primed.erase(id)
+			effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
+			return Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
+	return ""
+
+
+# The primer driver row a hit of this kind and source class picks on this enemy now, or {}.
+# The trigger is "weapon" for a weapon hit, "contact" for a ball contact, "special" for a
+# special, else "other". Posture fighters never take part.
+func _primer_driver(enemy: Node3D, kind: String, cls: String) -> Dictionary:
 	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
 	if piece == "" or _fights_posture(enemy):
-		return ""
-	var id := enemy.get_instance_id()
-	if cls == "weapon":
-		var live: bool = float(_primed.get(id, -1.0)) > _clock
-		_primed[id] = _clock + Companion.PRIMER_SECONDS
-		if not live:
-			effects.spark(enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
-		return ""
-	if _primer_consumes(enemy, kind, cls) == "":
-		return ""
-	_primed.erase(id)
-	effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
-	return piece
+		return {}
+	var on := "weapon" if cls == "weapon" else ("contact" if kind in CONTACT_KINDS else ("special" if cls == "special" else "other"))
+	return Companion.pick({"piece": piece, "on": on,
+		"primed": float(_primed.get(enemy.get_instance_id(), -1.0)) > _clock}, drivers)
 
 
 # The seated primer piece a hit of this kind and source class would consume on this
 # enemy now, or "". Reads only; _primer_hit does the consuming.
 func _primer_consumes(enemy: Node3D, kind: String, cls: String) -> String:
-	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
-	if piece == "" or cls == "weapon" or _fights_posture(enemy):
+	if _primer_driver(enemy, kind, cls).get("act", "") != "consume":
 		return ""
-	if float(_primed.get(enemy.get_instance_id(), -1.0)) <= _clock:
-		return ""
-	return piece if kind in CONTACT_KINDS or cls == "special" else ""
+	return Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
 
 
 # What strike() multiplies resolve()'s dealt by, beyond the plating rule: the cannon's
@@ -627,14 +637,20 @@ func primer_expired(enemy_id: int) -> bool:
 # Runs after the strike resolved and its facts went out; it shoves and arms, and never
 # strikes, hits or fires itself. Posture fighters (staggered()) keep their own rules.
 func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
-	if kind != "ram":
-		return
 	var piece := Companion.seated(ctx.run.companion, Companion.RAM_BRACE)
-	if piece == "ram_prow" and is_instance_valid(enemy) and not enemy.has_method("staggered") \
-			and not (enemy.has_method("is_dead") and enemy.is_dead()):
-		var id := enemy.get_instance_id()
-		if _clock >= float(_prow_until.get(id, -1.0)):
-			_prow_until[id] = _clock + PROW_STAGGER
+	if piece == "":
+		return
+	var valid := is_instance_valid(enemy)
+	var free: bool = valid and not enemy.has_method("staggered") and not (enemy.has_method("is_dead") and enemy.is_dead())
+	var row := Companion.pick({"piece": piece, "on": kind, "foe_free": free,
+		"prow_ready": valid and _clock >= float(_prow_until.get(enemy.get_instance_id(), -1.0)),
+		"dealt": float(result.get("dealt", 0.0)) > 0.0}, drivers)
+	match String(row.get("act", "")):
+		"shove":
+			# A row edited to drop foe_free still never shoves a freed foe.
+			if not valid:
+				return
+			_prow_until[enemy.get_instance_id()] = _clock + PROW_STAGGER
 			var flat: Vector3 = enemy.global_position - ctx.player.ball_position()
 			flat.y = 0.0
 			var flat_dir: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else Vector3.FORWARD
@@ -642,9 +658,9 @@ func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 			if enemy.has_method("knock"):
 				enemy.knock(flat_dir + Vector3.UP * 0.35, PROW_SHOVE * (float(weight) if weight != null else 1.0))
 			effects.ring(enemy.global_position, 2.5, Palette.VERDIGRIS)
-	if piece == "ram_spring" and float(result.get("dealt", 0.0)) > 0.0:
-		_spring_until = _clock + SPRING_WINDOW
-		effects.spark(ctx.player.ball_position(), Palette.VERDIGRIS)
+		"arm":
+			_spring_until = _clock + SPRING_WINDOW
+			effects.spark(ctx.player.ball_position(), Palette.VERDIGRIS)
 
 
 # --- Companion: escape corridor ------------------------------------------------------
@@ -655,9 +671,10 @@ func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 func _escape_act() -> void:
 	var piece := Companion.seated(ctx.run.companion, Companion.ESCAPE_CORRIDOR)
 	var esc := Companion.escape_of(piece)
-	if esc.is_empty() or not ctx.run.alive():
+	var row := Companion.pick({"piece": piece, "on": "escape_window", "alive": ctx.run.alive()}, drivers)
+	if esc.is_empty() or row.is_empty():
 		return
-	var style := String(esc["style"])
+	var style := String(row["act"])
 	_escape = {"piece": piece, "style": style, "until": _clock + float(esc["seconds"])}
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.planar_velocity()
