@@ -1,0 +1,165 @@
+{
+  "bake_sha256": "03ef1ceaa6615ec84bf4035fc776120b2c3c3f62a25138fd0c32ab113b01457d",
+  "breaches": [],
+  "bytes": 1093958,
+  "edges": 314051,
+  "flags": {
+    "deck": 12,
+    "door_ok": 39924,
+    "line": 339,
+    "open": 40404,
+    "sight_ok": 10129,
+    "under": 0
+  },
+  "full_visit_m": 2210,
+  "full_visit_ratio": "1.719",
+  "graph_sha256": "c773d2cff55091a7d71dcc054c23b440b0d470c741d3e2ecd3af2391a2fd4e7c",
+  "line_errors": [],
+  "line_path_nodes": 112,
+  "longest_est_m": 2651,
+  "map": "park_pit",
+  "nodes": 40413,
+  "park_sha256": "4f073ef23e12a00c5e8fea3e8f3ded1102cf0865a8965c3cbe7cd0492227233c",
+  "pockets": [
+    {
+      "clear_ring": [],
+      "d_landmark": 462,
+      "d_spawn": 1265,
+      "detour_m": 238,
+      "door_at": [
+        312,
+        -16
+      ],
+      "door_m": 238,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "cache_lip",
+      "kind": "cracked_cache",
+      "nearest_door": 462,
+      "nearest_door_id": "bench3_altar",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": true,
+      "site": "pit"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 487,
+      "d_spawn": 1031,
+      "detour_m": 8,
+      "door_at": [
+        184,
+        -160
+      ],
+      "door_m": 8,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "switchback_camp_site",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "rivet_plating",
+      "pay_rarities": [
+        "common"
+      ],
+      "role": "online",
+      "sight_ok": true,
+      "site": "switchback_camp"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 407,
+      "d_spawn": 902,
+      "detour_m": 216,
+      "door_at": [
+        -112,
+        -80
+      ],
+      "door_m": 216,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "bench3_altar",
+      "kind": "ambush_altar",
+      "nearest_door": 409,
+      "nearest_door_id": "adit_valve",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": true,
+      "site": "pit"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 698,
+      "d_spawn": 836,
+      "detour_m": 68,
+      "door_at": [
+        88,
+        -368
+      ],
+      "door_m": 68,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "adit_valve",
+      "kind": "valve",
+      "nearest_door": 409,
+      "nearest_door_id": "bench3_altar",
+      "pay_named": "",
+      "pay_rarities": [],
+      "role": "hidden",
+      "sight_ok": true,
+      "site": "adit_back_door"
+    }
+  ],
+  "ride_edges": 17,
+  "routes": {
+    "barge_ramp": [],
+    "bench_dive": [],
+    "conveyor_line": [],
+    "deep_adit_floor": [],
+    "east_benches": [],
+    "east_loop": [],
+    "eruption_lip": [],
+    "floor_bowl": [],
+    "hoist_roof_line": [],
+    "hoist_yard": [],
+    "main": [],
+    "north_dive": [],
+    "north_plateau": [],
+    "rim_zip_line": [],
+    "side_7a_east": [],
+    "side_7a_winze": [],
+    "south_loop": [],
+    "sump_floor": [],
+    "tailings_slide": [],
+    "west_loop": [],
+    "west_swing": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1286,
+    "farther_share": "0.017",
+    "ok": true
+  },
+  "spawn_beacon_m": 1286,
+  "spawn_beacon_share": "0.485",
+  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+}
