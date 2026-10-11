@@ -46,7 +46,13 @@ const PLANT_POINT := [-72, -16]
 const PLANT_TICK_LIMIT := 90 * 30
 # The fixture plant: the bench's west face (bench at [300, 200], 160 by 200, 6 m high), met at
 # about (196, 123), south of the bench ramp's z 180 to 220.
-const PARK_ROUTE_HEAD := ["drop_in", [-150, -400], "wash_camp", [-40, 0], [60, 100]]
+# 2026-10-11 (w13 KB9 round 3): with the park rows placed, the control's intermediate waypoints move onto the schema
+# lanes (park_recipes.gd clear_zones: the waymarks chain and the routes, which the anchor posts keep out of). Old:
+# [-150, -400], [-40, 0], [60, 100]; [60, 100] lay 40 m off the wash_camp-to-tube lane, and both runs dead-stopped on a
+# grey_c3 post at (38.3, 97.8). New: [-138, -400] on the drop_in-to-wash_camp centreline, [-25, 0] and [25, 120] on the
+# wash_camp-to-tube centreline; [25, 120] is north of grey_c3's footprint (z <= 105), so the planted leg to the bench
+# runs clear of the field's edge posts. The dead-stop rule, the plant point and the checks are unchanged.
+const PARK_ROUTE_HEAD := ["drop_in", [-138, -400], "wash_camp", [-25, 0], [25, 120]]
 const PARK_ROUTE_TAIL := ["tube", "landmark"]
 const PARK_PLANT_POINT := [300, 140]
 const PARK_PLANT_TICK_LIMIT := 90 * 45
