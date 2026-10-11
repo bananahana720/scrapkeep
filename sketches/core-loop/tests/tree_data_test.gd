@@ -13,6 +13,11 @@ const GameEvents := preload("res://src/core/game_events.gd")
 # build, and branch_tags read-only.
 #
 # Evidence limit: data and API only. tree_apply_test checks the effects in a live game.
+# Re-pinned 2026-10-10 for the skill bar (design-v3/SKILL-BAR.md sections 1 and 12, wave P-B
+# unit B1): a node's key may be line or ultimate, a swap may name the ultimate, the
+# validators read SWAPPABLE (the five slots plus the ultimate), a swap that replaces the
+# held ultimate with an unrelated row is still refused, and apply_pick puts a swapped
+# ultimate in Q's place without touching a slot.
 
 var _failures := 0
 
@@ -29,6 +34,7 @@ func _initialize() -> void:
 		_leaves(def)
 		_floors(def)
 	_guards()
+	_skill_bar()
 	print("tree_data_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -116,6 +122,22 @@ func _floors(def) -> void:
 				where = "%s gap on %s" % [p["node"], tree.path()]
 	_report("%s cooldown floor" % def.display_name, lowest >= AbilityState.COOLDOWN_FLOOR,
 		"lowest repeat across the 16 builds %.2f s (%s), floor %.1f s" % [lowest, where, AbilityState.COOLDOWN_FLOOR])
+
+
+func _skill_bar() -> void:
+	_report("keys gain line and ultimate", UpgradeTree.KEYS.has("line") and UpgradeTree.KEYS.has("ultimate"), str(UpgradeTree.KEYS))
+	_report("SWAPPABLE is the five slots plus the ultimate", AbilityState.SWAPPABLE == AbilityState.SLOTS + ["ultimate"]
+		and AbilityState.SLOTS.size() == 5 and not AbilityState.SLOTS.has("ultimate"), str(AbilityState.SWAPPABLE))
+	var held := UpgradeTree.safe_pick_problems("pylon_engineer", {"id": "fixture_keep", "swap": {"ultimate": "ult_default"}})
+	var replaced := UpgradeTree.safe_pick_problems("pylon_engineer", {"id": "fixture_replace", "swap": {"ultimate": "line_reel"}})
+	_report("an ultimate swap is checked against the held ultimate", held.is_empty() and replaced.size() == 1,
+		"keep %s, replace %s" % [held, replaced])
+	var a := AbilityState.new()
+	a.fit(ClassDef.by_id("pylon_engineer"))
+	var before: Array = AbilityState.SLOTS.map(func(s): return a.id_of(s))
+	UpgradeTree.apply_pick(a, {"swap": {"ultimate": "line_reel"}})
+	_report("apply_pick swaps the ultimate in Q's place only", a.ultimate_id == "line_reel"
+		and AbilityState.SLOTS.map(func(s): return a.id_of(s)) == before, "ultimate %s" % a.ultimate_id)
 
 
 func _guards() -> void:

@@ -25,6 +25,13 @@ const T := preload("res://tests/support/t.gd")
 #     state that holds;
 #   - F1, F3 and F4 do nothing without --dev and work with it;
 #   - the field notes, class cards, controls diagram and ability bar name only the table's keys.
+# Re-pinned 2026-10-10 for the skill bar (design-v3/SKILL-BAR.md sections 1 and 6, wave P-B
+# unit B1): the table holds eleven rows, ten live verbs plus the retired special, whose
+# cl_special keeps no key, so F does nothing in play. select owns 1, 2 and 3 (the old card
+# bays) and ultimate owns Q, so Q is no longer a cut key: pressing it fills ultimate_pressed
+# and nothing else, and the source still names no KEY_Q (the key comes from the table). The
+# set_piece state sits above the rest, and the bar shows 1, 2, 3 on its slots and Shift and
+# Ctrl on its chips. The field-notes row count stays nine until the HUD unit (B2) re-pins it.
 
 const CUT_NAMES := ["cl_reel", "cl_dash", "KEY_Q", "WHEEL"]
 const MENU_GLYPHS := ["key_tab", "key_p", "key_r"]
@@ -89,7 +96,13 @@ func _table() -> void:
 				seen_keys[id] = verb
 	_t.eq("every verb has an action with a key or a button", bare, [])
 	_t.eq("no key is bound to two verbs", duplicated, [])
-	_t.eq("nine verbs", Bindings.VERBS.size(), 9)
+	var retired: Array = Bindings.VERBS.keys().filter(func(v): return Bindings.VERBS[v].get("retired", false))
+	_t.eq("eleven rows, the special the one retired", [Bindings.VERBS.size(), retired], [11, ["special"]])
+	_t.eq("1, 2, 3 are select and Q is ultimate", [Bindings.VERBS["select"]["actions"].keys(), Bindings.VERBS["ultimate"]["actions"].keys(),
+		Bindings.VERBS["ultimate"]["actions"]["cl_ultimate"]["keys"]], [["cl_bay_1", "cl_bay_2", "cl_bay_3"], ["cl_ultimate"], [KEY_Q]])
+	_t.check("F does nothing in play: cl_special has no event and no action holds F",
+		InputMap.has_action("cl_special") and InputMap.action_get_events("cl_special").is_empty() and not seen_keys.has(KEY_F),
+		"cl_special events %d, F bound %s" % [InputMap.action_get_events("cl_special").size() if InputMap.has_action("cl_special") else -1, seen_keys.has(KEY_F)])
 
 	var table_actions := Bindings.actions()
 	var strays: Array = []
@@ -99,6 +112,8 @@ func _table() -> void:
 	_t.eq("every action in the InputMap comes from the table", strays, [])
 	var missing: Array = []
 	for action in table_actions:
+		if action == "cl_special":
+			continue
 		if not InputMap.has_action(action) or InputMap.action_get_events(action).is_empty():
 			missing.append(action)
 	_t.eq("every table action is registered with an event", missing, [])
@@ -154,8 +169,24 @@ func _states() -> void:
 					for button in buttons:
 						if Bindings.verbs_on(state, 0, button).size() != 1:
 							ambiguous.append("button %d in %s" % [button, state])
+	# The set piece sits above every other state; in it only the roll and Space (bail) read.
+	var live_in_set_piece: Array = []
+	for line in ["", "body", "world"]:
+		for charging in [false, true]:
+			var state := Bindings.ball_state(line, charging, false, true, true)
+			reached[state] = true
+			if state != "set_piece":
+				wrong_state.append("%s %s set piece gave %s" % [line, charging, state])
+	for key in keys:
+		var on := Bindings.verbs_on("set_piece", key, 0)
+		if on.size() > 1:
+			ambiguous.append("%s in set_piece" % OS.get_keycode_string(key))
+		for verb in on:
+			if not verb in live_in_set_piece:
+				live_in_set_piece.append(verb)
 	_t.eq("the ball's state is the highest that holds, a world swing included", wrong_state, [])
 	_t.eq("every key reads as exactly one verb in every state", ambiguous, [])
+	_t.eq("in a set piece only the roll and the bail read", [live_in_set_piece, Bindings.reading("jump", "set_piece")], [["roll", "jump"], "bail"])
 	var order := Bindings.STATES.duplicate()
 	var seen: Array = reached.keys()
 	seen.sort_custom(func(a, b): return order.find(a) < order.find(b))
@@ -195,7 +226,7 @@ func _cut_keys() -> void:
 	var keyboard := Intent.Keyboard.new()
 	var intent := Intent.new()
 	var quiet := Intent.new()
-	for code in [KEY_Q, KEY_C]:
+	for code in [KEY_C]:
 		_press(_key(code, true))
 		keyboard.poll(intent)
 		_press(_key(code, false))
@@ -209,7 +240,18 @@ func _cut_keys() -> void:
 		var name: String = info["name"]
 		if info["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE != 0 and intent.get(name) != quiet.get(name):
 			changed.append(name)
-	_t.eq("Q, C and the wheel change no intent field", changed, [])
+	_t.eq("C and the wheel change no intent field", changed, [])
+	# Q last: a just-pressed key reads as pressed until the frame turns over.
+	var q_intent := Intent.new()
+	_press(_key(KEY_Q, true))
+	keyboard.poll(q_intent)
+	_press(_key(KEY_Q, false))
+	var q_changed: Array = []
+	for info in quiet.get_property_list():
+		var q_name: String = info["name"]
+		if info["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE != 0 and q_intent.get(q_name) != quiet.get(q_name):
+			q_changed.append(q_name)
+	_t.eq("Q fills ultimate_pressed and nothing else", q_changed, ["ultimate_pressed"])
 
 
 func _dev_keys() -> void:
@@ -253,6 +295,8 @@ func _readers() -> void:
 	var glyphs: Array = []
 	for verb in Bindings.VERBS:
 		glyphs.append(Bindings.glyph(verb))
+	# select is one verb on three keys; its row's glyph is key_1, and 2 and 3 are its own too.
+	glyphs.append_array(["key_2", "key_3"])
 	var allowed: Array = glyphs.duplicate()
 	allowed.append_array(MENU_GLYPHS)
 	for key in "wasd":
@@ -297,9 +341,10 @@ func _readers() -> void:
 	_t.eq("the class kit rows and the diagram name only table keys, each pilot's movement on its own", slot_strays, [])
 
 	var bar_strays: Array = []
-	var want_keys := {AbilityState.WEAPON: "fire", AbilityState.MOVEMENT: "harpoon", AbilityState.SPECIAL: "special", AbilityState.SMASH: "haul"}
+	var want_keys := {AbilityState.WEAPON: "1", AbilityState.MOVEMENT: Bindings.label("boost"), AbilityState.SPECIAL: "2",
+		AbilityState.SMASH: Bindings.label("haul"), AbilityState.LINE: "3"}
 	for slot in want_keys:
-		if AbilityState.KEYS[slot] != Bindings.label(want_keys[slot]):
+		if AbilityState.KEYS[slot] != want_keys[slot]:
 			bar_strays.append("%s reads %s" % [slot, AbilityState.KEYS[slot]])
 	for record in _game.player.abilities.slots():
 		if not ("key_" + String(record["key"]).to_lower()) in glyphs:

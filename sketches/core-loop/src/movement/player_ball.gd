@@ -111,6 +111,9 @@ var line_load_of := Callable()
 # The release latch: after a snap back with left click still down, the weapon ignores left
 # click until it comes up, so a held cast never rolls into weapon fire.
 var _fire_latched := false
+# Left click as the source polled it this tick, before the router moves it to slot 2 or 3. A
+# cast's snap back lands after the router cleared fire_*, so the latch reads this.
+var _click_held := false
 
 var _rigid
 # The draw rig. _visual_root follows the shown position and never rotates; _juice is
@@ -478,6 +481,7 @@ func _charging() -> bool:
 # ahead of combat's (the player is added to the tree first), so combat reads the routed
 # fields on the same tick.
 func _route_slots(delta: float) -> void:
+	_click_held = intent.fire_held
 	var phase := String(set_piece_phase.call()) if set_piece_phase.is_valid() else "idle"
 	if phase != "idle" and phase != "":
 		_swallow_for_set_piece()
@@ -570,7 +574,7 @@ func _line_loaded() -> bool:
 func snap_slots(reason: String) -> void:
 	if not abilities.snap_back(reason):
 		return
-	if intent.fire_held:
+	if intent.fire_held or _click_held:
 		_fire_latched = true
 	events.slot_selected.emit(AbilityState.WEAPON, reason)
 
