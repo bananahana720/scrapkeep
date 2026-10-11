@@ -1,0 +1,160 @@
+{
+  "bake_sha256": "5d3e086cab5ca96994e83ab0af92ba4d6eb96f7e107d88b714649f26d054e6eb",
+  "breaches": [],
+  "bytes": 1266006,
+  "edges": 314475,
+  "flags": {
+    "deck": 0,
+    "door_ok": 39969,
+    "line": 352,
+    "open": 40401,
+    "sight_ok": 8600,
+    "under": 0
+  },
+  "full_visit_m": 2199,
+  "full_visit_ratio": "1.627",
+  "graph_sha256": "945b6de898b95b45265ab65528861db19ef7ce7d317ecfeb8fc3e13c792b07b2",
+  "line_errors": [],
+  "line_path_nodes": 159,
+  "longest_est_m": 2375,
+  "map": "park_dam",
+  "nodes": 40401,
+  "park_sha256": "3278a40ee89501130d9cba905559094b10ad39fce33983d136b21df80c491826",
+  "pockets": [
+    {
+      "clear_ring": [],
+      "d_landmark": 1015,
+      "d_spawn": 344,
+      "detour_m": 0,
+      "door_at": [
+        -48,
+        -392
+      ],
+      "door_m": 0,
+      "flags": [
+        "open",
+        "line",
+        "sight_ok"
+      ],
+      "id": "domes_camp",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "hot_rivets",
+      "pay_rarities": [
+        "common"
+      ],
+      "role": "online",
+      "sight_ok": true,
+      "site": "slickrock_domes"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 408,
+      "d_spawn": 1065,
+      "detour_m": 307,
+      "door_at": [
+        -208,
+        304
+      ],
+      "door_m": 307,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "rim_cache",
+      "kind": "cracked_cache",
+      "nearest_door": 302,
+      "nearest_door_id": "gallery_valve",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": true,
+      "site": "west_rim_bench"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 455,
+      "d_spawn": 1137,
+      "detour_m": 251,
+      "door_at": [
+        208,
+        248
+      ],
+      "door_m": 251,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "bench_altar",
+      "kind": "ambush_altar",
+      "nearest_door": 557,
+      "nearest_door_id": "rim_cache",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": true,
+      "site": "east_rim_bench"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 197,
+      "d_spawn": 1338,
+      "detour_m": 185,
+      "door_at": [
+        -184,
+        544
+      ],
+      "door_m": 177,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "gallery_valve",
+      "kind": "valve",
+      "nearest_door": 302,
+      "nearest_door_id": "rim_cache",
+      "pay_named": "",
+      "pay_rarities": [],
+      "role": "hidden",
+      "sight_ok": true,
+      "site": "service_ledge"
+    }
+  ],
+  "ride_edges": 15,
+  "routes": {
+    "bucket_flight": [],
+    "canal_run": [],
+    "corkscrew_run": [],
+    "crest_line": [],
+    "dropship_ramp": [],
+    "face": [],
+    "incline_line": [],
+    "ledge_drop": [],
+    "ledge_line": [],
+    "pool_floor": [],
+    "pool_rim": [],
+    "powerhouse_floor": [],
+    "roof_ramp_line": [],
+    "shelf": [],
+    "upper_slot_run": [],
+    "west_wash_run": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1352,
+    "farther_share": "0.132",
+    "ok": true
+  },
+  "spawn_beacon_m": 1352,
+  "spawn_beacon_share": "0.569",
+  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+}
