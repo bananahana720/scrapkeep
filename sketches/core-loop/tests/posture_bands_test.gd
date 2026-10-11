@@ -46,8 +46,14 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # they stand. KF1's drift to 59.2 / 31.6 came from the slice Warden being a harpoon anchor: forced back on, the bot
 # breaks it in 60.9 / 33.6 with Ctrl hauls ungated and stalls (150 / 130 s) with them gated to the stagger; KF1b
 # makes anchors opt in (spec "harpoon_anchor": true), and the slice Warden does not, so neither the haul gate nor the drift reaches it.
-const EXPECT_SMALL_S := 66.6
-const EXPECT_GROWN_S := 32.3
+# 2026-10-10 (wave 13 B4, the bot's skill-bar adapter): re-pinned to the measured medians 59.8 / 30.9 after
+# the bots cast slot 2 through the bar and fire the set piece on Q (SKILL-BAR.md section 8), which the
+# old bot never pressed; small came in at 59.8 s, 0.14 s outside 10 percent of 66.6. Grown stays inside
+# 25 to 45 s and the camper still never breaks it; the slice row and the sweep table are unchanged. The
+# live small/grown ratio is 1.94, under the sweep table's 2.0 band (checked on the table, see below);
+# was 66.6 / 32.3.
+const EXPECT_SMALL_S := 59.8
+const EXPECT_GROWN_S := 30.9
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 

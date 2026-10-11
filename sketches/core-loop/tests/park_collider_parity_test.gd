@@ -6,6 +6,8 @@ extends SceneTree
 # one surface: at 10,000 seeded points off the hole cells a downward ray on the collider and
 # height() agree within 1 cm. The fixture is park_test (src/world/park/park_test.json, baked to
 # assets/park/park_test/).
+# 2026-10-11 (w13 KB9 round 3): the rays exclude the bodies under terrain.park_rows(1), so they judge the terrain
+# collider alone.
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -86,6 +88,12 @@ func _run() -> void:
 	await physics_frame
 	await physics_frame
 	var space := holder.get_world_3d().direct_space_state
+	# The placed park rows (KB9) stand on the terrain; this test judges the terrain collider alone.
+	var rows_rids: Array[RID] = []
+	var rows_node: Node = terrain.park_rows(1)
+	if rows_node != null:
+		for body in rows_node.find_children("*", "CollisionObject3D", true, false):
+			rows_rids.append((body as CollisionObject3D).get_rid())
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SEED
 	var sampled := 0
@@ -101,7 +109,7 @@ func _run() -> void:
 			continue
 		sampled += 1
 		var want: float = terrain.height(x, z)
-		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(x, want + 20.0, z), Vector3(x, want - 20.0, z)))
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(x, want + 20.0, z), Vector3(x, want - 20.0, z), 0xFFFFFFFF, rows_rids))
 		var err := INF if hit.is_empty() else absf(float(hit["position"].y) - want)
 		worst = maxf(worst, err)
 		if err > TOLERANCE:

@@ -4,6 +4,8 @@ const ActivityView := preload("res://src/world/activity_view.gd")
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Interact := preload("res://src/world/interact.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
+const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
 
@@ -373,6 +375,28 @@ func _bounty_died(s: Site, where: Vector3) -> void:
 
 # ---- The pay ----
 
+# What the stand pays from, read by the pay below and by the readout before commit: `named` is
+# the authored part when the table offers it ("" otherwise), `rarities` the table the roll
+# draws from, or the named part's own tier. A named part the table does not offer
+# (not in ctx.stages.part_in_play) rolls like any other pay.
+func pay_table(s: Site) -> Dictionary:
+	var pay: Dictionary = s.rule["pay"]
+	if pay.has("named"):
+		var named := String(pay["named"])
+		if Parts.rows().has(named) and ctx.stages.part_in_play(named):
+			return {"named": named, "rarities": [Parts.rarity_of(named)]}
+	return {"named": "", "rarities": ItemGen.resolve_rarities(pay.get("rarities", ["common"]))}
+
+
+# What a stand shows before the ball commits (SG13): the rarities its pay can hold, each with
+# its weight from ItemGen.TIER_WEIGHTS, and the readout line for them. A named part is a sure
+# thing, so it shows its own tier at 100%.
+func stand_odds(s: Site) -> Dictionary:
+	var table := pay_table(s)
+	var odds: Array = ItemGen.odds(table["rarities"]) if table["named"] != "" \
+			else OddsReadout.odds_for(table["rarities"], ctx.run.class_id())
+	return {"named": table["named"], "rarities": table["rarities"], "odds": odds, "text": OddsReadout.text(odds)}
+
 func _finish(s: Site, at: Vector3) -> void:
 	if s.done:
 		return
@@ -380,16 +404,11 @@ func _finish(s: Site, at: Vector3) -> void:
 	s.view.finish()
 	if s.cap != null:
 		s.cap.visible = false
-	var pay: Dictionary = s.rule["pay"]
-	if pay.has("named"):
-		var named := String(pay["named"])
-		# A named part the table does not offer (not in ctx.stages.part_in_play) rolls like any other pay.
-		if Parts.rows().has(named) and ctx.stages.part_in_play(named):
-			s.pickup_part = named
-		else:
-			s.pickup_part = _roll(s.id, pay.get("rarities", ["common"]))
+	var table := pay_table(s)
+	if table["named"] != "":
+		s.pickup_part = table["named"]
 	else:
-		s.pickup_part = _roll(s.id, pay["rarities"])
+		s.pickup_part = _roll(s.id, table["rarities"])
 	if s.pickup_part != "":
 		s.pickup = ActivityView.gem(s.id)
 		s.add_child(s.pickup)

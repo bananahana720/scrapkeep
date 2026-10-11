@@ -103,10 +103,14 @@ func _run() -> void:
 	Push.click(root, _page._tabs["display"])
 	_t.eq("a click on the Display tab opens Display", _page.current_page(), "display")
 
-	# The d-pad reaches every row of every page, Back included.
+	# The d-pad reaches every row of every page, Back included. Re-pinned 2026-10-10 (wave 13 unit
+	# B2, design-v3/SKILL-BAR.md section 6): the special's rows retired; the pick's three keys
+	# (select_1 to select_3) and the ultimate each have a key row and a pad row.
 	var want := {
 		"display": ["fullscreen", "quality", "reduced_motion", "back"],
-		"controls": ["jump", "pad_jump", "fire", "pad_fire", "harpoon", "pad_harpoon", "haul", "pad_haul", "boost", "pad_boost", "special", "pad_special", "interact", "pad_interact", "reset", "back"],
+		"controls": ["jump", "pad_jump", "fire", "pad_fire", "harpoon", "pad_harpoon", "haul", "pad_haul", "boost", "pad_boost",
+			"select_1", "pad_select_1", "select_2", "pad_select_2", "select_3", "pad_select_3", "ultimate", "pad_ultimate",
+			"interact", "pad_interact", "reset", "back"],
 		"look": ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist", "back"],
 	}
 	for index in SettingsPages.PAGES.size():

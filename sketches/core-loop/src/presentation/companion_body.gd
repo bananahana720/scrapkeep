@@ -7,6 +7,10 @@ extends Node3D
 # The escape piece wears a lamp read from combat.escape_phase(): lit while ready, a flare (vent)
 # or a rail flick (rail) for the act's seconds with the escape_acted chirp, dimmed once spent.
 # A missing model leaves a plain hull box so the companion is still seen, and warns once.
+# SR7: every beat goes through cue(), which plays the clip and asks audio.chirp() for the
+# sound from one Companion.CUES row, and state() reports the cue shown. With no leader (the
+# run not alive) Companion.leash_step stalls it at the leader's last live spot; a respawn
+# or a long stretch past the leash recalls it beside the ball.
 
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -51,6 +55,8 @@ var _armed := false
 var _warned := false
 var _lamp: MeshInstance3D
 var _escape_cue := "none"
+var _leash := {}
+var _state := "idle"
 
 
 func setup(ctx_ref) -> void:
@@ -127,9 +133,58 @@ func _process(delta: float) -> void:
 		_rebuild(seats, key)
 	if key == "":
 		return
+	var lead := Companion.leash_step(_leash, delta, _leader_alive(), ctx.player.shown_position(), global_position)
+	_leash = lead
+	if lead["recall"]:
+		_snap = true
+	if lead["event"] != "":
+		cue(lead["event"])
+	if lead["state"] == "stalled":
+		_hold(delta, lead["safe"])
+		return
 	_follow(delta)
 	_escape_beat()
 	_beats()
+
+
+# The leader is the ball while the run is alive; a dead or finished run leaves none.
+func _leader_alive() -> bool:
+	var run = ctx.get("run")
+	return run == null or not run.has_method("alive") or run.alive()
+
+
+# Stalled: hover beside the leader's last live spot and wait there, idle.
+func _hold(delta: float, safe: Vector3) -> void:
+	var target := safe + _heading.cross(Vector3.UP).normalized() * SIDE
+	target.y = safe.y - Tuning.RADIUS + HULL_LIFT
+	if _snap:
+		global_position = target
+		_snap = false
+	else:
+		global_position = global_position.lerp(target, 1.0 - exp(-FOLLOW_RATE * delta))
+	_moving = false
+	_state = "stalled"
+	if _anim != null and not _is_beat():
+		_play("idle")
+
+
+# The cue the body shows now: a CUES key while its beat is the latest, else idle, follow
+# or stalled.
+func state() -> String:
+	return _state
+
+
+# The one place a companion cue is shown: the clip and the chirp both read
+# Companion.CUES[event], so the gesture, the sound and the motif cannot disagree.
+func cue(event: String) -> void:
+	var row: Dictionary = Companion.CUES.get(event, {})
+	if row.is_empty():
+		return
+	_state = event
+	_beat(String(row["clip"]))
+	var audio = get_parent().get("audio") if get_parent() != null else null
+	if audio != null and audio.has_method("chirp"):
+		audio.chirp(event)
 
 
 func _rebuild(seats: Array, key: String) -> void:
@@ -145,6 +200,8 @@ func _rebuild(seats: Array, key: String) -> void:
 	_armed = false
 	_lamp = null
 	_escape_cue = "none"
+	_leash = {}
+	_state = "idle"
 	visible = key != ""
 	_snap = true
 	if key == "":
@@ -207,31 +264,28 @@ func escape_cue() -> String:
 	return _escape_cue
 
 
-func _light(cue: String) -> void:
-	_escape_cue = cue
-	var row: Dictionary = EventKinds.UI_ROWS["companion_spent" if cue == "spent" else ("companion_ready" if cue == "ready" else "escape_acted")]
+func _light(lamp: String) -> void:
+	_escape_cue = lamp
+	var row: Dictionary = EventKinds.UI_ROWS["companion_spent" if lamp == "spent" else ("companion_ready" if lamp == "ready" else "escape_acted")]
 	var mat := _lamp.material_override as StandardMaterial3D
-	mat.albedo_color = row["color"].darkened(0.6) if cue == "spent" else row["color"]
+	mat.albedo_color = row["color"].darkened(0.6) if lamp == "spent" else row["color"]
 	mat.emission = row["color"]
-	mat.emission_energy_multiplier = LAMP_ENERGY[cue]
-	_lamp.scale = LAMP_SCALE[cue]
+	mat.emission_energy_multiplier = LAMP_ENERGY[lamp]
+	_lamp.scale = LAMP_SCALE[lamp]
 
 
 func _escape_beat() -> void:
 	if _lamp == null or combat == null or not combat.has_method("escape_phase"):
 		return
 	var phase: String = combat.escape_phase()
-	var cue := "ready" if phase == "ready" else ("spent" if phase == "spent" else String(ESCAPE_CUES.get(combat.escape_style(), "flare")))
-	if cue == _escape_cue:
+	var lamp := "ready" if phase == "ready" else ("spent" if phase == "spent" else String(ESCAPE_CUES.get(combat.escape_style(), "flare")))
+	if lamp == _escape_cue:
 		return
-	if cue == "flare" or cue == "flick":
-		_beat("escape_spent")
-		var audio = get_parent().get("audio") if get_parent() != null else null
-		if audio != null and audio.has_method("play"):
-			audio.play("escape_acted", 0.0, 1.0, "UI")
-	elif cue == "ready" and _escape_cue == "spent":
-		_beat("escape_rearm")
-	_light(cue)
+	if lamp == "flare" or lamp == "flick":
+		cue("escape_acted")
+	elif lamp == "ready" and _escape_cue == "spent":
+		cue("escape_rearm")
+	_light(lamp)
 
 
 func _follow(delta: float) -> void:
@@ -253,8 +307,10 @@ func _follow(delta: float) -> void:
 	else:
 		global_position = global_position.lerp(target, 1.0 - exp(-FOLLOW_RATE * delta))
 	global_basis = Basis.looking_at(_heading, Vector3.UP)
-	if _anim != null and not _is_beat():
-		_play("follow" if _moving else "idle")
+	if not _is_beat():
+		_state = "follow" if _moving else "idle"
+		if _anim != null:
+			_play(_state)
 
 
 func _is_beat() -> bool:
@@ -293,14 +349,14 @@ func _beats() -> void:
 				any = true
 				live[enemy.get_instance_id()] = true
 		if any and not _primed:
-			_beat("primer_set")
+			cue("primer_set")
 		elif _primed and not any:
 			var expired := true
 			for id in _primed_ids:
 				if not combat.primer_expired(id):
 					expired = false
 					break
-			_beat("primer_expire" if expired else "primer_consume")
+			cue("primer_expire" if expired else "primer_consume")
 		_primed = any
 		_primed_next = _primed_ids
 		_primed_ids = live
@@ -317,11 +373,11 @@ func _beats() -> void:
 		_staggered_next = _staggered
 		_staggered = live
 		if fresh:
-			_beat("prow_response")
+			cue("prow_response")
 	if key.contains("ram_spring"):
 		var armed: bool = combat.spring_armed()
 		if armed and not _armed:
-			_beat("spring_arm")
+			cue("spring_arm")
 		elif _armed and not armed:
-			_beat("spring_spend")
+			cue("spring_spend")
 		_armed = armed

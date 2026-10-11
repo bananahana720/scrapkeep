@@ -1,6 +1,8 @@
 # smoke: solo timeout=360s (four full skipper runs of one pilot in child processes at once, stage 1 to the win)
 # The six-pilot slice: this file plays Sable and is the template; bot_six_<pilot>_test.gd extends it
 # for each other pilot, one solo test per pilot so each stays under the runner's 360 s cap.
+# 2026-10-10 (wave 13 B4): re-pinned for the skill bar; each winning run must also cast slots 2
+# and 3 and fire a set piece (SKILL-BAR.md section 10, B4 acceptance). The win rule is unchanged.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -47,10 +49,17 @@ func _initialize() -> void:
 		var won := outcome == "won" and int(record.get("stage_reached", 0)) == StageDefs.COUNT
 		if won:
 			wins += 1
+			# 2026-10-10 (wave 13 B4, SKILL-BAR section 10): a winning run casts slot 2 and slot 3 at
+			# least once each and fires at least one set piece, through the bot's number keys and Q.
+			var casts: Dictionary = record.get("slot_casts", {})
+			t.check("%s seed %d won with slot 2 and slot 3 cast and a set piece fired" % [pilot, s],
+				int(casts.get("special", 0)) >= 1 and int(casts.get("line", 0)) >= 1 and int(record.get("ultimates", 0)) >= 1,
+				"slot casts %s, set pieces %s, fills %s" % [casts, record.get("ultimates", 0), record.get("ult_fill_s", [])])
 		else:
 			_keep_loss(pilot, s, String(result["log"]), rows)
-		table.append("six-pilot %s seed %d: %s at stage %d, %d ticks, %.1f wall seconds" % [pilot, s, outcome,
-			int(record.get("stage_reached", 0)), int(record.get("ticks", 0)), float(record.get("wall_seconds", 0.0))])
+		table.append("six-pilot %s seed %d: %s at stage %d, %d ticks, %.1f wall seconds, casts %s, set pieces %s" % [pilot, s, outcome,
+			int(record.get("stage_reached", 0)), int(record.get("ticks", 0)), float(record.get("wall_seconds", 0.0)),
+			record.get("slot_casts", {}), record.get("ultimates", 0)])
 	for line in table:
 		print(line)
 	t.check("%s won at least %d of seeds %s" % [pilot, MIN_WINS, SEEDS], wins >= MIN_WINS, "%d won" % wins)

@@ -23,15 +23,20 @@ const Palette := preload("res://src/core/palette.gd")
 # icon, family and tags a row leaves out, and holds every description to eight words.
 
 const PREFIX := "gen"
+# The one tier-weight row (SG13). The roll (pick_rarity) and every readout (odds) read these
+# numbers and no others; RARITY["weight"] below points here. 87 / 10 / 3 are this game's start
+# values, not RoR2's 0.8 / 0.2 / 0.01 (comps/ror2/items-and-stacking.md), which is the shape of
+# the idea only: a visible weight per tier. Evolved stays 0 until a unit rolls it.
+const TIER_WEIGHTS := {"common": 87.0, "rare": 10.0, "relic": 3.0, "evolved": 0.0}
 # The one rarity table (RR1). Every reader resolves a rarity through it: colour, roll
 # weight, stamp glyph, ladder rung 0..3, tier and the affix scale. Uncommon folded into
 # common and rare_plus became relic; evolved is the top rung, reserved for the two
 # evolutions a later unit builds, so it carries weight 0 and nothing rolls it yet.
 const RARITY := {
-	"common": {"color": Palette.SANDSTONE, "weight": 87.0, "stamp": "COMMON", "rung": 0, "tier": 1, "affix": 1.12},
-	"rare": {"color": Palette.AMBER, "weight": 10.0, "stamp": "RARE", "rung": 1, "tier": 3, "affix": 1.5},
-	"relic": {"color": Palette.ARC, "weight": 3.0, "stamp": "RELIC", "rung": 2, "tier": 3, "affix": 2.0},
-	"evolved": {"color": Palette.ANCIENT, "weight": 0.0, "stamp": "EVOLVED", "rung": 3, "tier": 3, "affix": 2.0},
+	"common": {"color": Palette.SANDSTONE, "weight": TIER_WEIGHTS["common"], "stamp": "COMMON", "rung": 0, "tier": 1, "affix": 1.12},
+	"rare": {"color": Palette.AMBER, "weight": TIER_WEIGHTS["rare"], "stamp": "RARE", "rung": 1, "tier": 3, "affix": 1.5},
+	"relic": {"color": Palette.ARC, "weight": TIER_WEIGHTS["relic"], "stamp": "RELIC", "rung": 2, "tier": 3, "affix": 2.0},
+	"evolved": {"color": Palette.ANCIENT, "weight": TIER_WEIGHTS["evolved"], "stamp": "EVOLVED", "rung": 3, "tier": 3, "affix": 2.0},
 }
 const RARITIES := ["common", "rare", "relic", "evolved"]
 # Old ids that a saved recipe id or a stale caller may still carry, resolved on read.
@@ -142,13 +147,32 @@ static func pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
 		return "common"
 	var total := 0.0
 	for r in allowed:
-		total += RARITY[r]["weight"]
+		total += weight_of(r)
 	var x := rng.randf() * total
 	for r in allowed:
-		x -= RARITY[r]["weight"]
+		x -= weight_of(r)
 		if x < 0.0:
 			return r
 	return allowed[-1]
+
+
+# A rarity's roll weight, from the one weight row.
+static func weight_of(rarity: String) -> float:
+	return float(TIER_WEIGHTS[resolve_rarity(rarity)])
+
+
+# What a table can contain, as the roll sees it: one {rarity, weight, share} per resolved
+# rarity in the table's order, the weight from TIER_WEIGHTS and the share its part of the
+# table's total (0 for every row when the total is 0). An empty or unknown table is [].
+static func odds(allowed: Array) -> Array:
+	var ids := resolve_rarities(allowed)
+	var total := 0.0
+	for r in ids:
+		total += weight_of(r)
+	var out: Array = []
+	for r in ids:
+		out.append({"rarity": r, "weight": weight_of(r), "share": weight_of(r) / total if total > 0.0 else 0.0})
+	return out
 
 
 # The catalogue row for a recipe id, or {} for an id that is not one.

@@ -21,8 +21,10 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 
 signal back_requested
 
-# The seven verbs a player can rebind, in the order the rows read.
-const VERBS := ["jump", "fire", "harpoon", "haul", "boost", "special", "interact"]
+# The rows a player can rebind, in the order they read: one per verb, and the pick's three keys
+# a row each (select_1 to select_3, design-v3/SKILL-BAR.md section 6). The F special retired.
+const VERBS := ["jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact"]
+const SELECT_ROW := "select_"
 const FIXED := ["roll", "look"]
 const PAGES := ["display", "controls", "look"]
 const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look"}
@@ -30,8 +32,11 @@ const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look
 const TRIGGER_VERBS := ["fire", "harpoon"]
 const TRIGGER_PULL := 0.6
 # Stick clicks are bindable on top of the glyphed buttons; the table has no pad glyph for
-# them, so the row draws a plain L3 or R3 cap. The d-pad and Back stay with the menus.
-const PAD_EXTRA := {JOY_BUTTON_LEFT_STICK: "key_l3", JOY_BUTTON_RIGHT_STICK: "key_r3"}
+# them, so the row draws a plain L3 or R3 cap. The d-pad's left, up and right are the pick's
+# defaults (SKILL-BAR section 6), so they bind too, drawn as plain D-LEFT, D-UP and D-RIGHT caps;
+# its down and Back stay with the menus.
+const PAD_EXTRA := {JOY_BUTTON_LEFT_STICK: "key_l3", JOY_BUTTON_RIGHT_STICK: "key_r3",
+	JOY_BUTTON_DPAD_LEFT: "key_d-left", JOY_BUTTON_DPAD_UP: "key_d-up", JOY_BUTTON_DPAD_RIGHT: "key_d-right"}
 # The look rows: the setting each steps, its words, its values low to high, and what a shown
 # percent is measured against (0 shows on/off).
 const LOOK := [
@@ -209,14 +214,32 @@ func _tab_pressed(index: int) -> void:
 	focus_first()
 
 
-# The action a verb's one row binds.
-static func action_of(verb: String) -> String:
-	return String(Bindings.VERBS[verb]["actions"].keys()[0])
+# The action a row binds: a verb's one action, or the pick key a select row names.
+static func action_of(row: String) -> String:
+	var bare := row_of(row)
+	var n := _select_number(bare)
+	if n > 0:
+		return String(Bindings.SELECT_ACTIONS[n - 1])
+	return String(Bindings.VERBS[bare]["actions"].keys()[0])
 
 
-# The verb a key row or a pad row ("pad_jump") stands for.
-static func verb_of(id: String) -> String:
+# The row a key row or a pad row ("pad_jump", "pad_select_2") stands for.
+static func row_of(id: String) -> String:
 	return id.trim_prefix("pad_")
+
+
+# The bindings verb a row binds: select for the three pick rows.
+static func verb_of(id: String) -> String:
+	var bare := row_of(id)
+	return "select" if _select_number(bare) > 0 else bare
+
+
+# 1 to 3 for a select row, else 0.
+static func _select_number(row: String) -> int:
+	if not row.begins_with(SELECT_ROW):
+		return 0
+	var n := row.substr(SELECT_ROW.length()).to_int()
+	return n if n >= 1 and n <= Bindings.SELECT_ACTIONS.size() else 0
 
 
 # The cap a pad button draws on a row, or "" for a button no row binds.
@@ -236,7 +259,8 @@ func glyph_of(verb: String) -> String:
 				MOUSE_BUTTON_RIGHT:
 					return "key_rmb"
 			return "key_m%d" % event.button_index
-	return Bindings.glyph(verb)
+	var n := _select_number(row_of(verb))
+	return "key_%d" % n if n > 0 else Bindings.glyph(verb_of(verb))
 
 
 # The pad glyph id of the verb's pad row: the pad button or trigger the player saved last,
@@ -251,7 +275,7 @@ func pad_glyph_of(verb: String) -> String:
 		if last is InputEventJoypadButton:
 			return pad_cap(last.button_index) if pad_cap(last.button_index) != "" else "pad_a"
 		return String(Glyphs.PAD_TRIGGERS.get(last.axis, "pad_rt"))
-	var record: Dictionary = Bindings.VERBS[verb]["actions"][action_of(verb)]
+	var record: Dictionary = Bindings.VERBS[verb_of(verb)]["actions"][action_of(verb)]
 	if record.has("pad"):
 		return String(Glyphs.PAD_BUTTONS.get(record["pad"], "pad_a"))
 	if record.has("axis"):
@@ -302,9 +326,9 @@ func _add_plain(id: String, page: String) -> void:
 
 # A key row or a pad row; the pad row's glyph is a pad button or trigger.
 func _bind_button(id: String) -> Button:
-	var verb := verb_of(id)
-	var glyph := pad_glyph_of(verb) if id.begins_with("pad_") else glyph_of(verb)
-	var button := ChoiceButton.new(id, glyph, verb.capitalize())
+	var row := row_of(id)
+	var glyph := pad_glyph_of(row) if id.begins_with("pad_") else glyph_of(row)
+	var button := ChoiceButton.new(id, glyph, _caption(id))
 	button.pressed.connect(press.bind(id))
 	return button
 
@@ -399,14 +423,16 @@ func press(id: String) -> void:
 		_:
 			if not _look_spec(id).is_empty():
 				_step_look(id, 1, true)
-			elif verb_of(id) in VERBS:
+			elif row_of(id) in VERBS:
 				_capturing = id
-				rows[id].text = "%s: press" % verb_of(id).capitalize()
+				rows[id].text = "%s: press" % _caption(id)
 	focus(id)
 
 
+# A row's words: the verb, or "Slot 2" for a pick row.
 func _caption(id: String) -> String:
-	return verb_of(id).capitalize()
+	var n := _select_number(row_of(id))
+	return "Slot %d" % n if n > 0 else verb_of(id).capitalize()
 
 
 func _clear_notice() -> void:
@@ -518,10 +544,10 @@ func _cancel() -> void:
 # True when an action other than this verb's already holds this key or button in the
 # InputMap, the pause and retry actions included. A trigger is never Taken: fire and harpoon
 # swap triggers instead (_commit_trigger).
-func _held_elsewhere(verb: String, event: InputEvent) -> bool:
-	var own: Dictionary = Bindings.VERBS[verb]["actions"]
+func _held_elsewhere(row: String, event: InputEvent) -> bool:
+	var own := action_of(row)
 	for action in Bindings.actions():
-		if own.has(action):
+		if action == own:
 			continue
 		for held in InputMap.action_get_events(action):
 			if event is InputEventKey and held is InputEventKey and held.physical_keycode == event.physical_keycode:
@@ -536,11 +562,11 @@ func _held_elsewhere(verb: String, event: InputEvent) -> bool:
 func _commit(id: String, event: InputEvent) -> void:
 	_capturing = ""
 	var verb := verb_of(id)
-	if _held_elsewhere(verb, event):
+	if _held_elsewhere(row_of(id), event):
 		_taken = id
-		rows[id].text = "%s: Taken" % verb.capitalize()
+		rows[id].text = "%s: Taken" % _caption(id)
 		return
-	var action := action_of(verb)
+	var action := action_of(row_of(id))
 	if event is InputEventJoypadMotion:
 		_hand_over_trigger(verb, event.axis)
 	_store().merge_binding(action, [event])

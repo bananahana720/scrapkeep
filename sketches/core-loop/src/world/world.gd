@@ -90,6 +90,8 @@ func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "World"
 	terrain = Terrain.new(ctx.stages)
+	# A park row's ride sensor publishes on the game bus (KB9; park_recipes.gd _sensor).
+	terrain.publish = ctx.events.world_fact.emit
 	terrain.build(ctx.root)
 	ctx.terrain = terrain
 	_wire_terrain()

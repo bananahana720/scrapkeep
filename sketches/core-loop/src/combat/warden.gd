@@ -57,7 +57,9 @@ const Augments := preload("res://src/movement/augments.gd")
 #   when the driver has it. A park Warden (spec "harpoon_anchor": true) that names no
 #   "mount_driver" loads res://src/combat/warden_<family>.gd when that file exists, so a
 #   kind's file attaches itself to every park Warden of its kind and to none of the authored
-#   boss arenas (KF2 to KF4 write those files; _kind_driver below).
+#   boss arenas (KF2 to KF4 write those files; _kind_driver below). A driver may also answer
+#   lane_origin(warden) -> Vector3, where a meltdown slag lane is laid from (KF2c); without it the
+#   lane starts at the body, and the windup, strike and recover facts publish "at" the lane's origin.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -396,16 +398,22 @@ func _slag_phase(lane: Dictionary, phase: String) -> void:
 	var geometry: Dictionary = node.descriptor() if is_instance_valid(node) else {}
 	attack_phase.emit({"instance": lane["instance"], "row": "W01", "owner": kind, "phase": phase,
 		"committed": not geometry.is_empty(), "progress": 1.0 if phase != PHASE_WINDUP else 0.0,
-		"geometry": geometry, "at": global_position})
+		"geometry": geometry, "at": lane["from"]})
 
 
 func _leave_slag() -> void:
-	var out := flat_to_ball()
+	var origin := global_position
+	if mount_driver != null and mount_driver.has_method("lane_origin"):
+		origin = mount_driver.lane_origin(self)
+	var out := Vector3.ZERO
+	if target != null:
+		var ball: Vector3 = target.ball_position()
+		out = Vector3(ball.x - origin.x, 0.0, ball.z - origin.z)
 	var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
-	var node := Telegraph.lane(world_root, terrain, Threat.Type.LANE, global_position, dir, SLAG_LENGTH, SLAG_WIDTH)
+	var node := Telegraph.lane(world_root, terrain, Threat.Type.LANE, origin, dir, SLAG_LENGTH, SLAG_WIDTH)
 	node.set_progress(0.0)
 	_attack_serial += 1
-	var lane := {"from": global_position, "dir": dir, "length": SLAG_LENGTH, "width": SLAG_WIDTH,
+	var lane := {"from": origin, "dir": dir, "length": SLAG_LENGTH, "width": SLAG_WIDTH,
 			"left": SLAG_SECONDS, "age": 0.0, "phase": "", "instance": _attack_serial, "node": node}
 	slag_lanes.append(lane)
 	_slag_phase(lane, PHASE_WINDUP)
