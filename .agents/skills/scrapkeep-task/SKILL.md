@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-task
-description: Execute an authorized Scrapkeep task card with isolated work, independent review and serial admission. Use when asked to implement or continue an approved Scrapkeep card or bounded scope.
+description: Execute an authorized Scrapkeep task card with isolated work, independent review and serial admission. Use when asked to implement or continue an approved Scrapkeep card or bounded scope, including research or documentation cards the coordinator drafts with Andrew in-session; its admission step carries the card size rule and the shared-register base check.
 ---
 
 # Execute an authorized Scrapkeep task

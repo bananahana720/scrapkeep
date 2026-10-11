@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-verify
-description: Verify a Scrapkeep artifact or change using its documented checks and evidence limits. Use for game verification, regression checks, playtest qualification or documentation/configuration validation.
+description: Verify a Scrapkeep artifact or change using its documented checks and evidence limits. Use for game verification, regression checks, playtest qualification or documentation/configuration validation, and for the receipts a reviewer gates from.
 ---
 
 # Verify a Scrapkeep artifact
