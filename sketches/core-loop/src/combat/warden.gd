@@ -6,6 +6,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Habits := preload("res://src/combat/habits.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -33,6 +34,16 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 #   seats every ADAPT_CYCLE and a stagger braces against the ball's top habit, as a
 #   Mind hand does. The point keeps the name "lens"; drawing three lenses is
 #   warden_kit's job and is not done here.
+# - The harpoon anchor (PARK.md section 7, unit KF1). Three hardpoints take the bite and
+#   a line on one rides as a world line that follows the body (augments.gd anchor_line),
+#   never dropping inside the minimum rope. The mounting is the stage's (MOUNTINGS, by
+#   family and variant). The spec's "hardpoints" is a count, as in the park row
+#   (park_schema.gd WARDEN_FIELDS): the first n of HARDPOINTS; "hardpoint_offsets" names
+#   them outright. A per-kind driver (spec "mount_driver" or set_mount_driver)
+#   moves the body from its home, and the rope carries the ball at anchor_velocity. Once
+#   per pulse cycle the lined hardpoint flares through the charge and the pulse shrugs the
+#   line off, shrug_delay seconds late (the island's swing); the ball keeps its velocity.
+#   A stagger cancels the charge, so every hardpoint holds through it.
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -63,6 +74,15 @@ const SLAG_HOP_HEIGHT := 8.0
 const ADAPT_CYCLE := 8.0
 const CHOIR_RADIUS := 1.6
 const CHOIR_BRACE_MULT := 1.6
+# The mounting each kind and variant fights from (PARK.md section 7 table); a row's
+# "mounting" overrides it.
+const MOUNTINGS := {"reactor:": "dam_face", "reactor:meltdown": "flume", "swarm:": "headframe",
+		"swarm:brood": "sinkhole", "mind:": "under_island", "mind:choir": "spires"}
+# Under the island the line drops when the swing stops, 1.2 s after the pulse (wardens/mind.md
+# section 10, call 1); every other mounting drops it on the pulse.
+const SHRUG_DELAYS := {"under_island": 1.2}
+# The crown and the two flanks, from the body's centre; a mounting row may place its own.
+const HARDPOINTS := [Vector3(0.0, HALF_HEIGHT, 0.0), Vector3(RADIUS, 0.0, 0.0), Vector3(-RADIUS, 0.0, 0.0)]
 
 # Variant values already warned about, so a bad row warns once, not once per Warden.
 static var warned_variants := {}
@@ -83,6 +103,16 @@ var slag_lanes: Array = []
 # choir: the lens seat open now (0..2) and the strike kinds the stagger braces against.
 var open_lens := 0
 var braced_kinds: Array = []
+# The harpoon anchor: the mounting id, the hardpoints as offsets from the body, the shrug's
+# lateness, the per-kind driver ({mount_offset(warden, clock) -> Vector3} or null), where
+# the body stands with no offset, how fast the mounting moves it, and the shrugs so far.
+var mounting := ""
+var hardpoints: Array = []
+var shrug_delay := 0.0
+var mount_driver = null
+var home := Vector3.ZERO
+var mount_velocity := Vector3.ZERO
+var shrugs := 0
 
 var _pulse_clock := 0.0
 var _charging := false
@@ -99,6 +129,10 @@ var _guard_scatter_frame := -1
 var _guard_paid_scatters := 0
 var _slag_burn := 0.0
 var _lens_clock := 0.0
+var _mount_clock := 0.0
+# The hardpoint flaring for this charge (-1 for none) and the seconds left on a late shrug.
+var _flaring := -1
+var _shrug_left := -1.0
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
@@ -108,6 +142,10 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	reach = spec.get("reach", DEFAULT_REACH)
 	family = spec.get("family", Roster.warden_family(stage))
 	variant = _read_variant(String(spec.get("variant", "")))
+	mounting = String(spec.get("mounting", MOUNTINGS.get(family + ":" + variant, "")))
+	hardpoints = hardpoints_for(spec)
+	shrug_delay = float(spec.get("shrug_delay", SHRUG_DELAYS.get(mounting, 0.0)))
+	mount_driver = spec.get("mount_driver")
 	var numbers: Dictionary = spec.get("posture", {})
 	if variant == "meltdown" and not numbers.has("stagger_seconds"):
 		numbers = numbers.duplicate()
@@ -125,6 +163,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	half_height = HALF_HEIGHT
 	# Clamped to the mast base: sits on the ground under the point it was given.
 	global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
+	home = global_position
 	_build_body()
 
 
@@ -247,11 +286,13 @@ func _physics_process(delta: float) -> void:
 	if not _in_play() or target == null:
 		return
 	_since_pulse += delta
+	_step_mounting(delta)
 	var inside := _flat_to_ball().length() <= reach
 	_step_posture(delta)
 	if family == Roster.SWARM:
 		_step_guard(delta)
 	_step_pulse(delta, inside)
+	_step_shrug(delta)
 	_step_slag(delta)
 	_step_choir(delta)
 
@@ -354,6 +395,115 @@ func _step_choir(delta: float) -> void:
 		open_lens = (open_lens + 1) % 3
 
 
+# --- The harpoon anchor (PARK.md section 7, unit KF1) ---------------------------------
+
+# Where hardpoint `index` is now, in the world.
+func hardpoint_at(index: int) -> Vector3:
+	return global_position + (hardpoints[index] as Vector3)
+
+
+# The hardpoint a bite at `point` takes: the nearest one. A latched line rides from it;
+# a committed haul still homes on the bite itself (Augments._follow).
+func anchor_point(point: Vector3) -> Vector3:
+	return hardpoint_at(_nearest_hardpoint(point - global_position))
+
+
+# How fast the anchor moves this tick; the rope carries the ball at it (Augments._ride_anchor).
+func anchor_velocity() -> Vector3:
+	return mount_velocity
+
+
+# The per-kind hook: an object with mount_offset(warden, clock) -> Vector3, the body's
+# offset from home at that mounting clock; null stands the body at home.
+func set_mount_driver(driver) -> void:
+	mount_driver = driver
+	_mount_clock = 0.0
+
+
+# The hardpoint the ball's line is on, or -1.
+func lined_hardpoint() -> int:
+	var kit = target.get("kit") if target != null else null
+	if kit == null or not kit.hooked or not kit.on_body or kit.anchor_body != self:
+		return -1
+	# A committed haul homes on its bite, off the hardpoints, so the shrug leaves it be.
+	if kit.line_state != Augments.LINE_LATCHED:
+		return -1
+	return _nearest_hardpoint(kit.anchor_offset)
+
+
+# How brightly the lined hardpoint flares: the charge's fill, then full while a late shrug
+# waits; 0 when nothing flares. Read by the look.
+func shrug_flare() -> float:
+	if _flaring < 0:
+		return 0.0
+	return 1.0 if _shrug_left >= 0.0 else maxf(charge_fraction(), 0.01)
+
+
+func flaring_hardpoint() -> int:
+	return _flaring
+
+
+# The hardpoint offsets a spec asks for: "hardpoint_offsets" if given, else the first
+# "hardpoints" (a count, 1 to 3) of HARDPOINTS. Never empty.
+static func hardpoints_for(spec_in: Dictionary) -> Array:
+	var count := clampi(int(spec_in.get("hardpoints", HARDPOINTS.size())), 1, HARDPOINTS.size())
+	var offsets: Array = spec_in.get("hardpoint_offsets", HARDPOINTS.slice(0, count))
+	if offsets.is_empty():
+		return HARDPOINTS.duplicate()
+	return offsets.duplicate()
+
+
+func _nearest_hardpoint(offset: Vector3) -> int:
+	var best := 0
+	for i in hardpoints.size():
+		if offset.distance_to(hardpoints[i]) < offset.distance_to(hardpoints[best]):
+			best = i
+	return best
+
+
+# The mounting moves the body from home; the pulse rings committed this charge go with it.
+func _step_mounting(delta: float) -> void:
+	if mount_driver == null or delta <= 0.0:
+		mount_velocity = Vector3.ZERO
+		return
+	_mount_clock += delta
+	var before := global_position
+	global_position = home + mount_driver.mount_offset(self, _mount_clock)
+	var shift := global_position - before
+	mount_velocity = shift / delta
+	var flat := Vector3(shift.x, 0.0, shift.z)
+	if flat.length_squared() > 0.0:
+		_carry_ring(telegraph(), flat)
+		_carry_ring(_core_ring, flat)
+
+
+func _carry_ring(ring: Node3D, flat: Vector3) -> void:
+	if not is_instance_valid(ring):
+		return
+	ring.center += flat
+	ring.global_position += flat
+
+
+# A late shrug counts down after its pulse; a stagger cancels it.
+func _step_shrug(delta: float) -> void:
+	if _shrug_left < 0.0 or staggered():
+		return
+	_shrug_left -= delta
+	if _shrug_left <= 0.0:
+		_shrug()
+
+
+# The pulse shrugs the line off the flaring hardpoint. The ball keeps its velocity: the line
+# is cut, nothing else, and the pulse's lift has already been given.
+func _shrug() -> void:
+	_flaring = -1
+	_shrug_left = -1.0
+	if lined_hardpoint() < 0 or not target.has_method("cut_line"):
+		return
+	target.cut_line("shrugged")
+	shrugs += 1
+
+
 # The pulse cycle runs while you are in reach; once charging starts it is committed and
 # lands even if you leave, but only a ball its rings contain feels it.
 func _step_pulse(delta: float, inside: bool) -> void:
@@ -361,6 +511,8 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		return
 	if _charging:
 		_charge_time += delta
+		if _flaring < 0:
+			_flaring = lined_hardpoint()
 		var ring := telegraph()
 		if ring != null:
 			ring.set_progress(_charge_time / _charge_len)
@@ -376,6 +528,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_charging = true
 		_charge_time = 0.0
 		_charge_len = PULSE_TELEGRAPH
+		_flaring = lined_hardpoint()
 		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP, Palette.SAND)
 		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
 		_core_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
@@ -391,6 +544,10 @@ func _pulse() -> void:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
 		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
+	if _flaring >= 0:
+		_shrug_left = shrug_delay
+		if shrug_delay <= 0.0:
+			_shrug()
 	pulses += 1
 	if family == Roster.REACTOR:
 		if fleet != null:
@@ -524,6 +681,8 @@ func _step_posture(delta: float) -> void:
 
 
 func _begin_stagger() -> void:
+	_flaring = -1
+	_shrug_left = -1.0
 	_charging = false
 	_charge_time = 0.0
 	_pulse_clock = 0.0
