@@ -31,6 +31,10 @@ func _run() -> void:
 
 	var holder := Node3D.new()
 	root.add_child(holder)
+	# Terrain3D follows the active camera, as the game's; without one it prints an error each run.
+	var camera := Camera3D.new()
+	holder.add_child(camera)
+	camera.make_current()
 	var terrain = Terrain.new(TABLE)
 	terrain.build(holder)
 	terrain.use(1)

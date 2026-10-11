@@ -26,6 +26,10 @@ func _initialize() -> void:
 func _run() -> void:
 	var holder := Node3D.new()
 	root.add_child(holder)
+	# Terrain3D follows the active camera, as the game's; without one it prints an error each run.
+	var camera := Camera3D.new()
+	holder.add_child(camera)
+	camera.make_current()
 	var terrain = Terrain.new(TABLE)
 	terrain.build(holder)
 	terrain.use(1)
@@ -64,6 +68,7 @@ func _run() -> void:
 	raw.close()
 	var holes := FileAccess.get_file_as_bytes(BAKED + "/holes.bin")
 	var vertex_misses := 0
+	var render_misses := 0
 	for k in 50:
 		var i := (k * 97) % 801
 		var j := (k * 53 + 11) % 801
@@ -73,7 +78,10 @@ func _run() -> void:
 			continue
 		if absf(terrain.height(clampf(x, -799.99, 799.99), clampf(z, -799.99, 799.99)) - h[j * 801 + i]) > 0.001:
 			vertex_misses += 1
+		if absf(float(ground.terrain3d.data.get_height(Vector3(x, 0.0, z))) - h[j * 801 + i]) > 0.001:
+			render_misses += 1
 	t.eq("height() at grid vertices reads ground.bin", vertex_misses, 0)
+	t.eq("Terrain3D regions draw ground.bin at grid vertices", render_misses, 0)
 
 	await physics_frame
 	await physics_frame
