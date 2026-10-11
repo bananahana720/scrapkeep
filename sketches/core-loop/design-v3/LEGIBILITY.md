@@ -53,6 +53,16 @@ Ten situations. Each has one source table.
 | An activity is on offer | A standing amber beam and ground ring from stage start with the family glyph on top. No timer and no toast. Its goal is a gauge on the object itself. | At the site | `ACTIVITY_ROWS` |
 | A reward is paid | The part rises from the exact spot the goal completed, the won sound plays, and its glyph flies onto the ball with a two-word name. | The completion spot, then the ball | `LOOT_ROWS` |
 
+**Defence bars (SG7).** Three bar classes, each with one regen rule and one existing palette row, so a bar's look predicts how to attack it. The table lives in `src/core/defence_bars.gd` (`CLASSES`, `STATES`); `tests/defence_bars_test.gd` holds it. Every defence state maps to exactly one class, no two classes share a colour, and no class takes the live or hazard colour.
+
+| Class | Colour (`Palette`) | Pattern cue | Rule | What the player reads |
+| --- | --- | --- | --- | --- |
+| Armour | `BRASS` | Segmented blocks | Breaks at zero, never regenerates | Break it once and it stays broken |
+| Shield | `ANCIENT` | Hollow outline | Regenerates after a declared delay (start 5 s, then 10 percent per second) | Burst it before it recovers |
+| Health | `SAND` (neutral ink) | Solid fill | No regeneration, no break state | Just damage |
+
+The pattern cue carries the class for a deuteranope, who reads `ANCIENT` as `BRASS`. At the 150 m read distance the pattern is under a pixel, so colour alone separates the classes there: the test reads a hazed fixture frame and requires each bar's class. Start values (delay, rate, haze) sit in named constants citing `comps/gunfire/enemies-and-bosses.md`.
+
 **One rule per meaning.** The builder critic found the draft would give one harpoon bite three rows. So: `LINE_ROWS` replaces the `harpoon_bit` and `harpoon_smashed` rows in `ROWS`. `CAUSE_ROWS` is keyed by the ids in `synergies.gd` and holds presentation only; names are read from `synergies.gd`. `STATE_ROWS.held` replaces `hold_started`'s presentation. A test fails when one id has presentation in two tables.
 
 **Telegraph timing.** A boss hazard warns for at least 1.0 s (`src/boss/hazard.gd:19`). Pack kinds set their own warning, 0.5 to 1.4 s today: seven sit under 1.0 s (bola thrower 0.5, chaser 0.6, line cutter 0.6, kite drone 0.8, swatter 0.8, deflector 0.9, lamp swarm 0.9; for example `src/combat/bola_thrower.gd:34`, `src/combat/chaser.gd:12`), and the longest is the mind hand at 1.4 (`src/combat/mind_hand.gd:26`). A charge longer than 3 s belongs to a Warden or a miniboss. Warning time is a per-kind choice read against these numbers, never derived from an attack's size or damage. The warn sound, the wind-up pose and the floor fill start on the same tick, and damage comes only from the committed telegraph, only inside its live window (`src/combat/telegraph.gd:6-10`). Feedback is bounded: camera shake never exceeds the active camera row's `shake_cap` (1.2, and 0.6 in a Warden fight, `chase_camera.gd:27-29`), and hitstop stays inside its row's clamp (`juice.gd:355`). `tests/telegraph_timing_test.gd` holds each line for the Warden kinds from wave 13; the pack kinds' rows join it in the next wave.

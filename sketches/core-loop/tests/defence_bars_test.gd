@@ -105,7 +105,7 @@ func _states() -> void:
 func _colours() -> void:
 	var palette_rows := {}
 	for name in ["SAND", "SANDSTONE", "RUST", "COPPER", "CHARCOAL", "VERDIGRIS", "AMBER", "ARC", "ANCIENT", "CABLE", "HAZARD", "BRASS", "LEDGER", "SLATE"]:
-		palette_rows[name] = Palette.get(name)
+		palette_rows[name] = Palette.new().get_script().get_script_constant_map()[name]
 	var seen := {}
 	var patterns := {}
 	for id in DefenceBars.CLASS_IDS:
