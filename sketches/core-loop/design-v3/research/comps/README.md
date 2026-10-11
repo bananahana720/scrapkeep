@@ -1,6 +1,6 @@
 # Comps: what Scrapkeep borrows from the games Andrew loves
 
-Research pack for [CS-01](../../../../../BACKLOG.md#cs-01), 10 October 2026. Risk of Rain 2 and The Binding of Isaac: Rebirth (Afterbirth+ data) are covered here; Gunfire Reborn and Roboquest are the follow-up cards CS-02 and CS-03. Coordinator: Claude Fable 5.1, with Haiku scouts on the sources, Sonnet data workers on the measurements, Sonnet writers on the notes, and an Opus verifier and reviewer on the result.
+Research pack for [CS-01](../../../../../BACKLOG.md#cs-01), 10 October 2026. Risk of Rain 2 and The Binding of Isaac: Rebirth (Afterbirth+ data) are covered under CS-01; Gunfire Reborn under [CS-02](../../../../../BACKLOG.md#cs-02) (11 October 2026, a static study of a clone of the install plus the public wiki); Roboquest is the follow-up card CS-03, which also completes the [three-game map comparison](maps-compared.md). Coordinator: Claude Fable 5.1, with Haiku scouts on the sources, Sonnet data workers on the measurements, Sonnet writers on the notes, and an Opus verifier and reviewer on the result.
 
 ## Posture
 
@@ -15,6 +15,11 @@ We borrow relationships, formulas and structure, and we reimplement them. We mea
 | Risk of Rain 2 wiki and forums | riskofrain2.wiki.gg Directors, Difficulty, Environments, Teleporter, Drones; Steam threads | public, summarized pages; wiki numbers are likely data-mined from the same files, so they corroborate the read, not the design |
 | Isaac data files | the game's own resource extractor; a parser validated to the byte on 26 room files (15,965 rooms), plus items, pools, entities, stages, waves, curses, challenges, music | 4 at measurement; level 2 from the repo alone |
 | Isaac design writing | Boris the Brave's floor-generation article, wiki Level Generation, Room, Item Pool, Devil Room, Transformations, Boss Rush, the modding docs | public, summarized pages; conflicts between sources are stated in the notes |
+| Gunfire Reborn wiki | 215 pages fetched as wikitext through the wiki's API, five table-heavy pages rendered; eight Haiku scouts, one topic each, citing page and line | public, summarized pages |
+| Gunfire Reborn data tables | UnityPy over every bundle after its 50-byte prefix: 234 gzip JSON tables keyed by id (stage slots and level pools, 277 monster definitions, 3,571 states, a 360-node in-run tree); 39 localization tables skipped by rule | 4 at measurement; level 2 from the repo alone |
+| Gunfire Reborn stage chunks | 118 of 296 chunk archives decoded (a length-prefixed protobuf frame chain): floor bounding boxes, a 2-unit walkability raster, point pairs; statistics only, chunks not mapped to acts | 4 at measurement; level 2 from the repo alone |
+| Gunfire Reborn asset metadata | UnityPy over 3,478 bundles, zero errors: 6,636 meshes, 16,188 textures, 8,885 rigs, 9,182 clips, 1,323 audio clips; counts and dimensions only | 4 at measurement; level 2 from the repo alone |
+| Gunfire Reborn logic | not read: IL2CPP metadata encrypted, native logic library packed; stated as the gap in every note that would need it | none |
 | Andrew | four structured questions on rooms, stage shape, companions and the companion fantasy | owner decision |
 
 Every note has the same six sections: what it does, parameters with a source per row, why it works, what Scrapkeep borrows, what it must not copy, and one lab measure. Each carries a diagram.
@@ -50,6 +55,15 @@ Each row is a relationship, the principle it serves, and the existing text it wo
 | 15 | Pacing trades: deal odds that fall when you took one recently, sacrifice odds that rise at full health, a clock that rewards speed without gating, curses as run modifiers | Isaac, [pacing and trades](isaac/pacing-and-trades.md) | Opt-in layers; momentum is sacred | TADR-010 |
 | 16 | Production budgets measured by category, compared with the asset forge's bands | RoR2, [production budgets](ror2/production-budgets.md) | Production conventions | `tools/asset-forge/packs/core-loop.toml` on the forge branch |
 | 17 | Middleware roles as a checklist for the native build; Noto Sans and Liberation Sans as OFL font candidates | RoR2, [provenance](ror2/provenance.md) | Production conventions | HF-01; `docs/project/ASSETS.md` |
+| 18 | Slot and pool: a fixed number of authored pocket slots per stage, each drawing one pocket from an authored pool, so variety comes from library breadth (Gunfire draws 8 to 19 hand-made levels per slot) rather than a generator; refines pocket-placement.md's card draw | Gunfire, [stage anatomy](gunfire/stage-anatomy.md) | Opt-in layers; readability first | TADR-010; `BIBLE.md` § 3 "Reading the catalogue" (line 167) |
+| 19 | Pocket grammar from the vault: a trigger visible from the open space, opening announced to all players, and a four-kind ladder (movement test, arena, elite arena, objective under a limit) that sets the reward tier and the credit price | Gunfire, [stage anatomy](gunfire/stage-anatomy.md) | Opt-in layers; momentum is sacred | TADR-010; `BIBLE.md` § 6 "Themed loot, attunement and fixed secrets" (line 556) |
+| 20 | Difficulty adds to the same map: a per-world allowance of one major event, traps that switch off when a pocket is cleared, and higher tiers that add events and hazards without changing the route; health and damage scale on separate capped curves | Gunfire, [stage anatomy](gunfire/stage-anatomy.md), [run pacing](gunfire/run-pacing-and-economy.md) | Readable-capped scaling | TADR-010; `BIBLE.md` § 6 "Encounters, waves and enemies" (line 517) |
+| 21 | Burden parts: a rare item that is a pure stated downside, offered only in a visible optional pocket, paid out by other effects that read the count of burdens held and cap through the ceiling curve of row 7 | Gunfire, [scrolls and synergies](gunfire/scrolls-and-synergies.md) | Opt-in layers; readable-capped scaling | `BIBLE.md` § 5.4 "Attunement and transformative combinations" (line 448) |
+| 22 | Attachment slots that grow at stage milestones with a visible table, and paired attachments that pay off only when a second built part (or a crew bot) carries the matching tag, with the missing partner shown | Gunfire, [weapons and inscriptions](gunfire/weapons-and-inscriptions.md) | Class identities; opt-in layers | `BIBLE.md` § 5.1 "Shared baseline and class roles" (line 398); "Four slots and milestone progression" (line 527); TADR-011 |
+| 23 | One element marks a target with a status that raises damage from every source, drawn on the committed geometry the telegraph uses; a small fixed fusion grid resolves once with its area drawn before it fires; resistance caps and additive pools named in the build screen | Gunfire, [elements and fusion](gunfire/elements-and-fusion.md) | Readability first; harmonize apparent contradictions | `BIBLE.md` "A committed attack means what it shows" (line 489); TADR-009 |
+| 24 | Picks with three levels where higher replaces lower; movement kept out of the generic pick pool so it stays a character trait; a late forced-or-skip offer the player may decline | Gunfire, [heroes and ascensions](gunfire/heroes-and-ascensions.md) | Readable-capped scaling; momentum is sacred; class identities | `BIBLE.md` "Four slots and milestone progression" (line 527); "Movement, camera and active aim" (line 479) |
+| 25 | An elite affix as one behaviour plus one stat change named on the enemy; boss phases at health thresholds with one new read each; a coarse per-enemy threat rating beside the timing numbers for the director | Gunfire, [enemies and bosses](gunfire/enemies-and-bosses.md) | Readability first | `BIBLE.md` "A silhouette has a job" (line 719); § 6 line 517; TADR-010 |
+| 26 | A second budget data point from a stylized first-person game: hero rigs at 17 bones median, enemy bones p90 49, textures mostly 256 or smaller, thousands of small bundles | Gunfire, [production budgets](gunfire/production-budgets.md) | Production conventions | the same forge pack as row 16 |
 
 ## Proposed asset-forge budget deltas
 
@@ -58,6 +72,7 @@ From the measured tables in [production budgets](ror2/production-budgets.md), fo
 1. Foes: add a class of 500 to 5,000 triangles, bosses up to 10,000, with a 40-bone cap. Our kit band of 800 to 1,500 is too tight against the measured monsters (median 528, p90 4,814).
 2. Props and pickups: lower the prop floor from 150 to 40 triangles, add a pickup class of 70 to 2,200 triangles with an 8-bone cap, and lower the terrain texture floor from 256 to 128.
 3. Missing caps: hero 80 bones, gameplay clips at most 3.5 s, at most 50 clips per hero. Keep the hero band of 3,000 to 6,500.
+4. Gunfire's measurements (CS-02) support deltas 1 and 3 and sharpen two of them: enemy bones exceed the proposed 40 at p90 in both games (49 and 155), so the cap is a median target, not a hard ceiling; a stylized hero ships at 17 bones median, far under 80, so the hero cap is a ceiling with room, not a budget to fill; boss clips reach 5.2 s at p90, so the 3.5 s clip cap needs a boss exception or applies to gameplay clips only. Per-piece caveat as above.
 
 ## Veto list for Andrew
 
@@ -77,7 +92,8 @@ Decisions the pack makes that he can strike. Each is a default, not a question.
 
 ## Follow-ups
 
-- CS-02 Gunfire Reborn and CS-03 Roboquest, same shape, stage anatomy first, ending in a three-game map comparison.
+- CS-03 Roboquest, same shape, stage anatomy first, completing [maps-compared.md](maps-compared.md) (started under CS-02 with Roboquest as an unstudied column).
+- Gunfire gaps no source closed: rooms per level, connection shape, waves per room and enemy combat stats live in the native library; chunk files are not mapped to acts. A play-session count by hand would close the first two if CS-03 wants the comparison tighter.
 - Fetching a free font or source is its own admission under `docs/project/ASSETS.md`, with license evidence.
 - AD-10 amendment: add Risk of Rain 2 (open stages, director, holdout objective) as a named relationship, and widen Isaac's named relationship from transformative combinations to floor placement, room authoring and pacing trades (rows 5, 6, 15). Proposed here, not applied.
 - DF-05 (Andrew's principles into the Bible) is the card that would make the principle column Bible text; it is not authorized by this pack.
@@ -87,3 +103,5 @@ Decisions the pack makes that he can strike. Each is a default, not a question.
 - [pocket-placement.md](pocket-placement.md): the reconciled placement spec, Isaac's detour rule on Risk of Rain 2's graph.
 - [ror2/](ror2/README.md): stage anatomy, events and objectives, director and difficulty, [run flow](ror2/run-flow.md), companions, items and stacking, characters and feel, progression and music, architecture, production budgets, provenance, `data/stage-graphs.csv` (a numbers-only projection of the measured table: three text columns dropped, line endings normalized).
 - [isaac/](isaac/README.md): floor generation, rooms, items and synergies, pacing and trades, [data tables](isaac/data-tables.md).
+- [gunfire/](gunfire/README.md): stage anatomy, run pacing and economy, weapons and inscriptions, scrolls and synergies, elements and fusion, heroes and ascensions, enemies and bosses, production budgets, data tables, provenance.
+- [maps-compared.md](maps-compared.md): the three-game map comparison, started under CS-02.
