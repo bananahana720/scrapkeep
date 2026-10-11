@@ -1,0 +1,204 @@
+{
+  "bake_sha256": "04d8143db72dcda7af89ce25abcf29885080a221606477b33ec1d27511057c54",
+  "breaches": [
+    {
+      "action": "move",
+      "detail": "within 40 m of the door: home wash_chasers (site run_wash)",
+      "pocket": "wash_camp",
+      "rule": "clear_ring"
+    },
+    {
+      "action": "move",
+      "detail": "within 40 m of the door: machine_eruption tube_wakes (site tube)",
+      "pocket": "tube_cache",
+      "rule": "clear_ring"
+    },
+    {
+      "action": "fix",
+      "detail": "306 m from the beacon, want at least 320",
+      "pocket": "tube_cache",
+      "rule": "beacon"
+    },
+    {
+      "action": "log",
+      "detail": "detour 73 m, want 150 to 600",
+      "pocket": "tube_cache",
+      "rule": "detour"
+    },
+    {
+      "action": "log",
+      "detail": "no clear ray from the door to a line node within 240 m",
+      "pocket": "bench_altar",
+      "rule": "sight"
+    },
+    {
+      "action": "move",
+      "detail": "within 40 m of the door: home dropship_crew (site bench)",
+      "pocket": "bench_altar",
+      "rule": "clear_ring"
+    },
+    {
+      "action": "log",
+      "detail": "detour unreachable m, want 150 to 600",
+      "pocket": "bench_altar",
+      "rule": "detour"
+    },
+    {
+      "action": "log",
+      "detail": "no clear ray from the door to a line node within 240 m",
+      "pocket": "ledge_valve",
+      "rule": "sight"
+    },
+    {
+      "action": "move",
+      "detail": "within 40 m of the door: home ledge_lobbers (site service_ledge)",
+      "pocket": "ledge_valve",
+      "rule": "clear_ring"
+    },
+    {
+      "action": "fix",
+      "detail": "site service_ledge lists 1 routes, want at least 3",
+      "pocket": "ledge_valve",
+      "rule": "hidden_routes"
+    },
+    {
+      "action": "log",
+      "detail": "reward detour 73 m is not larger than the risk's unreachable m",
+      "pocket": "tube_cache",
+      "rule": "detour_order"
+    }
+  ],
+  "bytes": 822349,
+  "edges": 321126,
+  "flags": {
+    "deck": 68,
+    "door_ok": 39872,
+    "line": 442,
+    "open": 40420,
+    "sight_ok": 12777,
+    "under": 49
+  },
+  "graph_sha256": "3671cdd8dd2c93e940a406b57cb6d2862edcd7067e059716951c89f69cf08e3d",
+  "line_errors": [],
+  "line_path_nodes": 124,
+  "longest_est_m": 2314,
+  "map": "park_test",
+  "nodes": 40469,
+  "park_sha256": "6fe5ad19e2c0005ef02970464bf4eb5bfa390794ccadb4ee9002ff800afbf502",
+  "pockets": [
+    {
+      "clear_ring": [
+        "home wash_chasers (site run_wash)"
+      ],
+      "d_landmark": 935,
+      "d_spawn": 425,
+      "detour": 57,
+      "door_at": [
+        -152,
+        -296
+      ],
+      "flags": [
+        "open",
+        "line",
+        "sight_ok"
+      ],
+      "id": "wash_camp",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "role": "online",
+      "sight_ok": true,
+      "site": "run_wash"
+    },
+    {
+      "clear_ring": [
+        "machine_eruption tube_wakes (site tube)"
+      ],
+      "d_landmark": 306,
+      "d_spawn": 1070,
+      "detour": 73,
+      "door_at": [
+        120,
+        320
+      ],
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "tube_cache",
+      "kind": "cracked_cache",
+      "nearest_door": 241,
+      "nearest_door_id": "bench_altar",
+      "role": "reward",
+      "sight_ok": true,
+      "site": "tube"
+    },
+    {
+      "clear_ring": [
+        "home dropship_crew (site bench)"
+      ],
+      "d_landmark": 486,
+      "d_spawn": -1,
+      "detour": -1,
+      "door_at": [
+        320,
+        224
+      ],
+      "flags": [
+        "open",
+        "door_ok"
+      ],
+      "id": "bench_altar",
+      "kind": "ambush_altar",
+      "nearest_door": 241,
+      "nearest_door_id": "tube_cache",
+      "role": "risk",
+      "sight_ok": false,
+      "site": "bench"
+    },
+    {
+      "clear_ring": [
+        "home ledge_lobbers (site service_ledge)"
+      ],
+      "d_landmark": 535,
+      "d_spawn": 972,
+      "detour": 203,
+      "door_at": [
+        -189,
+        222
+      ],
+      "flags": [
+        "open",
+        "door_ok",
+        "deck"
+      ],
+      "id": "ledge_valve",
+      "kind": "valve",
+      "nearest_door": 363,
+      "nearest_door_id": "tube_cache",
+      "role": "hidden",
+      "sight_ok": false,
+      "site": "service_ledge"
+    }
+  ],
+  "ride_edges": 6,
+  "routes": {
+    "canal": [
+      "tube -> bench: no path"
+    ],
+    "ledge": [],
+    "main": [],
+    "pool_floor": [],
+    "pool_rim": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1303,
+    "farther_share": "0.152",
+    "ok": true
+  },
+  "spawn_beacon_m": 1303,
+  "spawn_beacon_share": "0.563",
+  "tool_sha256": "835314e24263f23ab55e317eb25e45b3624a93ab2d7831c9f0009e53c6c865bf"
+}

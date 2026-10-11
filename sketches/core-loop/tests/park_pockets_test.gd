@@ -77,9 +77,28 @@ func _run() -> void:
 
 
 # The fixture as a stage would carry its pockets. park_test.json predates 2.12 and is KB2's
-# file; these overrides touch only activity and contraption rows, which the bake never reads, so
-# the committed bake and graph serve them unchanged.
+# file: on its own graph wash_chasers' wash holds the camp's door (readings rule 4: the home
+# moves), the cache sits in the tube the relic wakes in, 306 m from the beacon, the altar stands
+# on the bench a 6 m sheer step keeps off the graph, and neither sealed contraption sits on a
+# three-route site. These overrides touch only home, activity and contraption rows, which
+# neither the bake nor the graph reads (no launcher, cable, thermal or lift moves, and no waymark),
+# so the committed bake and graph serve them unchanged. The rows sit where tools/park_graph.gd's
+# path distances put them inside every 2.12 rule.
 static func pocket_fixture(park: Dictionary) -> Dictionary:
+	for home in park["home_rows"]:
+		if home["id"] == "wash_chasers":
+			home["site"] = "lip"
+			home["landform"] = "slickrock"
+	for act in park["activity_rows"]:
+		if act["id"] == "tube_cache":
+			act["at"] = [-400, -320]
+		elif act["id"] == "bench_altar":
+			act["at"] = [240, -120]
+	for c in park["contraption_rows"]:
+		if c["id"] == "tube_wall":
+			c["site"] = "pool"
+			c["at"] = [-80, 450]
+			c["cache"] = {"at": [-86, 456]}
 	return park
 
 

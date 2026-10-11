@@ -54,7 +54,7 @@ func _run() -> void:
 		return
 	var park: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PARK))
 	_loader(graph, park)
-	_routes(tool, graph, park)
+	_routes(tool, bake, graph, park)
 	_spawn(tool, graph, park)
 	_wall(tool, bake, park)
 	_ride(tool, bake, park)
@@ -118,14 +118,24 @@ func loader_flag(graph, name: String) -> int:
 	return int(graph.get_script().get(name))
 
 
-func _routes(tool: GDScript, graph, park: Dictionary) -> void:
-	var breaks: Array = tool.route_breaks(graph, park)
-	t.eq("every fixture route is connected through its via rows", breaks, [])
+# The fixture as committed: the bench is a 6 m plateau with a sheer edge (park_stamps.gd: one
+# grid step of slope) and nothing rides onto it, so the graph finds canal broken there and only
+# there. With one planted ramp onto the bench's west edge (baked in scratch), every fixture route
+# is connected through its via rows.
+func _routes(tool: GDScript, bake: GDScript, graph, park: Dictionary) -> void:
 	var checked: Array = tool.route_steps(graph, park).keys()
 	checked.sort()
 	var want := ROUTES.duplicate()
 	want.sort()
 	t.eq("the route check walked every fixture route", checked, want)
+	t.eq("on the committed fixture only canal breaks, at the 6 m sheer bench step",
+		tool.route_breaks(graph, park), [{"route": "canal", "step": "tube -> bench: no path"}])
+	var ramped := park.duplicate(true)
+	# Ramp: falls by 6 m from its start (x 199, the bench edge) to its end (x 160), yaw -90.
+	ramped["park_rows"].append(_row("bench_ramp", "ground", [179.5, 200], null, [39, 6, 40], -90, "ramp", []))
+	var fixed = _bake_build(tool, bake, ramped, "ramp")
+	if fixed != null:
+		t.eq("with a ramp onto the bench every fixture route is connected", tool.route_breaks(fixed, ramped), [])
 
 
 func _spawn(tool: GDScript, graph, park: Dictionary) -> void:
@@ -149,7 +159,7 @@ func _wall(tool: GDScript, bake: GDScript, park: Dictionary) -> void:
 	for b in breaks:
 		broken.append(b["route"])
 	t.check("a wall across main breaks main", broken.has("main"), str(breaks))
-	t.check("the routes beyond the wall stay connected", not broken.has("canal") and not broken.has("pool_rim"), str(breaks))
+	t.check("the routes beyond the wall stay connected", not broken.has("ledge") and not broken.has("pool_rim"), str(breaks))
 
 
 # A full-width trench (channel, z 120 to 180, floor 30 m down) that no ground edge climbs out
@@ -189,6 +199,17 @@ func _ride(tool: GDScript, bake: GDScript, park: Dictionary) -> void:
 		return
 	var gone: Dictionary = tool.route_steps(built["graph"], without)
 	t.check("without the kicker the route breaks at the deck", str(gone.get("gap_ride", [])).contains("gap_deck"), str(gone.get("gap_ride")))
+
+	# And the climb out is the thermal's: without it the trench floor never reaches rim B.
+	var grounded := planted.duplicate(true)
+	var kept_rows := []
+	for row in grounded["contraption_rows"]:
+		if row["id"] != "gap_thermal":
+			kept_rows.append(row)
+	grounded["contraption_rows"] = kept_rows
+	var no_lift: Dictionary = tool.build(grounded, bake_data, {"sight": false})
+	var stuck: Dictionary = tool.route_steps(no_lift["graph"], grounded)
+	t.eq("without the thermal the route breaks climbing out of the trench", stuck.get("gap_ride"), ["trench -> rim_b: no path"])
 
 
 func _bake_build(tool: GDScript, bake: GDScript, park: Dictionary, name: String):
