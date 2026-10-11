@@ -10,8 +10,9 @@ artifacts/local/alpha/push/w13/concepts/codex/tally/{hero,chase,sheet}.png and
 concepts/codex/base/{base-hero,mechanism}.png. Design: ROSTER-LOOK sections 0, 2 to 6 and 9,
 pilots/tally.md section 5, PILOTS.md section 1, PILOT-CLIPS section 5, CUSTOMIZE section 8.
 
-  prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
+  blender --background --threads 2 --python-exit-code 1 \
     --python sketches/core-loop/tools/blender/shell_tally.py -- [--out <glb>] [--variant abacus]
+wrapped in prlimit with a 12884901888-byte address-space cap, as world_one/shell_neutral.py runs.
 
 Calls made here (P-UNITS PD common rule C6 reading, listed in the PD-TALLY report):
 - The drums ride the upright Pod on gap brackets off the outer gimbal axle bosses, not the

@@ -19,8 +19,8 @@ below Z -0.6. Each class is one mesh on one paint surface per part.
 Pictures: artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL and heft
 I, III, V panels) and hero.png.
 
-  prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
-    --python sketches/core-loop/tools/blender/shell_tally_plates.py -- [--outdir <dir>]
+Run it as shell_tally.py's header runs that recipe (the same 12 GiB prlimit and two threads),
+with this script's path and the optional arguments -- [--outdir <dir>].
 """
 import json
 import math
