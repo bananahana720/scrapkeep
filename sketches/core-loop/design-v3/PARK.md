@@ -253,7 +253,7 @@ Readers: the spawn and pocket checks (2.12), `director.gd`'s home arrivals (a ho
 
 ### 2.12 Pockets
 
-Every stage carries four pockets: its three `activity_rows` and one hidden pocket. One activity sits on the line, an `enemy_camp` or `surge_run`, usually a waymark. The other two sit off it: one reward (`cracked_cache`) and one risk (`ambush_altar` or `hauler_bounty`). The hidden pocket is a `contraption_rows` row that opens a sealed space, a `valve` or a `cracked_wall`, with a visible tell, and its site row's `routes` lists three or more route ids. Detour is the price: the farther a pocket pulls you off the line, the more it holds, and a player who skips every pocket loses only the detour.
+Every stage carries four pockets: its three `activity_rows` and one hidden pocket. One activity sits on the line, an `enemy_camp`, usually a waymark; a `surge_run` qualifies once `src/world/activities.gd` has a rule for it (today it has none, so a park row naming it builds nothing, `activities.gd:13-15`). The other two sit off it: one reward (`cracked_cache`) and one risk (`ambush_altar` or `hauler_bounty`). The hidden pocket is a `contraption_rows` row that opens a sealed space, a `valve` or a `cracked_wall`, with a visible tell, and its site row's `routes` lists three or more route ids. Detour is the price, and the pay follows it. The on-line activity's part is `common` only (the camp's named Hot Rivets already is, and a named part wins over the roll, `activities.gd:378-382`); the off-line pocket with the smaller detour rolls `common` or `rare`, today's roll (`activities.gd:27`); the one with the larger detour, which this section makes the reward, rolls `rare` only (start). Scrap stays 180 on every activity (`activities.gd:28`), so the heft pace does not move and no price is set (BIBLE.md:513). Each activity row carries its `pay.rarities` in the park file. A player who skips every pocket loses only the detour.
 
 The rules scale the comps pocket spec (`research/comps/pocket-placement.md:30-42`) by four, the park's size against a small stage (section 1). Every distance is a path distance on the stage graph (2.11), from the door node, the graph node nearest the activity's `at`.
 
@@ -269,6 +269,14 @@ The rules scale the comps pocket spec (`research/comps/pocket-placement.md:30-42
 | Count | 3 to 5, plus one per stage, cap 8 | four on every stage in wave 13 |
 
 The on-line activity keeps only the clear ring and the sightline. The hidden pocket keeps every rule except the beacon distance: its door opens a sealed space and pulls no play toward the Warden, so it needs only to stay off `warden` nodes. A door that fails a rule moves within its site row first, then the KD unit moves the activity's `at` or its site row in the stage's park file; the band tables of section 8 do not move to make a pocket pass (PARK.md:476).
+
+**Readings fixed after the draft round (2026-10-11).** Two rounds of straight-line checks on the six journey drafts disagreed with each other and with the journeys, so the rules above read this way from here on:
+
+1. Every distance in the table is a path distance on KB8's graph. Until a stage has its `graph.bin`, a straight-line estimate is advisory, is written as `_est`, and never moves an activity or a row.
+2. The on-line activity may be a waymark, and its kind is whatever the journey puts on the line (a `hauler_bounty` on the line is allowed when the journey has it there). The off-line pair stays one reward and one risk.
+3. The journey's positions win over the starting values. This narrows the sentence above: a KD unit moves a pocket only when the graph shows a breach of the clear ring, the door-to-door minimum or the route-open rule; a detour or sightline miss is logged for the sitting and the band tables still do not move.
+4. The clear ring counts home sites, destructive event sites (cave-in, collapse, blow, eruption) and contraption hazards. A flood or a drain is not destructive, so a door may stand inside its site. When a home and a door collide, the home moves, not the door.
+5. A draft that moved a pocket off its journey position to satisfy a straight-line estimate carries both positions; the KD unit picks by the graph and restores the journey's position when rule 3 allows it.
 
 ## 3. The terrain route on Terrain3D v1.0.2
 
