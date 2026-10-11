@@ -37,7 +37,9 @@ const UNKNOWN_CAUSE := "unspecified"
 # fraction of ticks at speed tier 2 or better. A dead stop is more than 0.5 s under tier 1
 # with no brake, mount or interaction, or one contact that takes more than half of the
 # planar speed the ball had in the last CONTACT_WINDOW seconds. The slow clock arms once
-# the ball has first reached tier 1, so a standing start is not a stop.
+# the ball has first reached tier 1, so a standing start is not a stop. The park adds
+# (PARK.md section 8) the airborne share (ticks with no ground contact over all ticks), the
+# peak planar speed and the ticks at the blazing tier (3), read the same way on every tick.
 class Traversal:
 	extends RefCounted
 
@@ -46,10 +48,14 @@ class Traversal:
 	const DEAD_SECONDS := 0.5
 	const HALVED := 0.5
 	const CONTACT_WINDOW := 0.1
+	const BLAZING_TIER := 3
 
 	var ticks := 0
 	var flow_ticks := 0
 	var dead_stops := 0
+	var airborne_ticks := 0
+	var blazing_ticks := 0
+	var peak_speed := 0.0
 	var _tps := 90
 	var _moving_speed := 0.0
 	var _armed := false
@@ -73,10 +79,15 @@ class Traversal:
 		_slow_counted = false
 		_recent.clear()
 
-	func step(tier: int, planar_speed: float, braking: bool, exempt: bool) -> void:
+	func step(tier: int, planar_speed: float, braking: bool, exempt: bool, airborne := false) -> void:
 		ticks += 1
 		if tier >= FLOW_TIER:
 			flow_ticks += 1
+		if tier >= BLAZING_TIER:
+			blazing_ticks += 1
+		if airborne:
+			airborne_ticks += 1
+		peak_speed = maxf(peak_speed, planar_speed)
 		if braking or exempt:
 			_slow_ticks = 0
 			_recent.clear()
@@ -104,6 +115,12 @@ class Traversal:
 
 	func flow_share():
 		return float(flow_ticks) / float(ticks) if ticks > 0 else null
+
+	func airborne_share():
+		return float(airborne_ticks) / float(ticks) if ticks > 0 else null
+
+	func blazing_seconds() -> float:
+		return float(blazing_ticks) / float(_tps)
 
 var events
 var run
