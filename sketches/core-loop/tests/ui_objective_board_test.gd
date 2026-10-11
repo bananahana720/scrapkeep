@@ -190,7 +190,10 @@ func _play_view() -> void:
 	_game.events.heft_class_dropped.emit(1, 1.2)
 	_hud._process(0.0)
 	var words: Array = WordBudget.count(_hud)["items"].map(func(item): return item["text"])
-	var clock := words.filter(func(text): return String(text).contains(":"))
+	# 2026-10-11 (w13 coordinator): a clock word is a time, digits round a colon. The achievement
+	# toast "<title>\nNew look: <item>" (achievements.gd:147, unit B5) carries a colon and is not a clock.
+	var clock_re := RegEx.create_from_string("\\d:\\d\\d")
+	var clock := words.filter(func(text): return clock_re.search(String(text)) != null)
 	var absent: bool = _hud.get("callouts") == null and _hud.get("_heft") == null and _hud.get("_scrap") == null \
 		and _hud._objective.get("plating") == null and _hud._objective.get("cores") == null and _hud._status.get("seconds") == null
 	_report("O1-4 play view", gone.is_empty() and kept.is_empty() and absent and clock.is_empty() and _hud.toast_texts() == toasts_before,

@@ -312,10 +312,27 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 
 
 # A ride, a launch, a deflect or a throw sets the velocity outright, and a harpoon line
-# would fight it, so it lets go.
-func set_velocity_now(velocity: Vector3) -> void:
-	cut_line("launched")
+# would fight it, so it lets go. The set piece passes the cause "ultimate", which publishes
+# no "broke" (SKILL-BAR section 4, line cut cause).
+func set_velocity_now(velocity: Vector3, cause := "launched") -> void:
+	cut_line(cause)
 	_rigid.set_velocity_now(velocity)
+
+
+# The set piece's landing pays the chain as a paid smash does: returns the multiplier and
+# publishes the chain's end.
+func pay_chain(at: Vector3) -> float:
+	var paid: Dictionary = chain.pay()
+	_publish_chain(paid["events"], null, at)
+	return float(paid["mult"])
+
+
+# True while the set piece rides (wind-up to recovery).
+func in_set_piece() -> bool:
+	if not set_piece_phase.is_valid():
+		return false
+	var phase := String(set_piece_phase.call())
+	return phase != "idle" and phase != ""
 
 
 # Fits the class's movement kit, smash and ability slots. Everyone keeps jump, double
@@ -487,8 +504,7 @@ func _route_slots(delta: float) -> void:
 	if _fire_latched and not intent.fire_held:
 		_fire_latched = false
 		intent.fire_released = false
-	var phase := String(set_piece_phase.call()) if set_piece_phase.is_valid() else "idle"
-	if phase != "idle" and phase != "":
+	if in_set_piece():
 		_swallow_for_set_piece()
 		return
 	# The timeout runs before the click is routed: a click on the tick the pick goes stale is
@@ -737,21 +753,28 @@ func _publish_chain(emitted: Array, target: Node3D, at: Vector3) -> void:
 		events.line_state_changed.emit(e["id"], target, at, e["cause"])
 
 
+# During the set piece the chain clock is frozen: no grace runs out and no landing ends it
+# until the set piece's own landing pays it (SKILL-BAR section 4, landing strike).
 func _tick_chain(delta: float) -> void:
+	if in_set_piece():
+		return
 	_publish_chain(chain.tick(delta, state.grounded, kit.hooked), null, ball_position())
 
 
-# Publishes how the line that stood has ended: a let-go or a break with its cause. A landing
-# or a reset publishes nothing here.
+# Publishes how the line that stood has ended: a let-go or a break with its cause. A landing,
+# a reset or the set piece's own cut (cause "ultimate") publishes nothing here.
+const QUIET_ENDS := ["landed", "reset", "ultimate", ""]
+
+
 func _publish_end() -> void:
 	_line_standing = false
 	var end: String = kit.line_end
 	kit.line_end = ""
-	if end != "landed" and end != "reset" and end != "":
+	if not end in QUIET_ENDS:
 		chain.let_go()
 	if end == "let_go":
 		_emit_line("let_go", _line_target_alive(), _line_anchor, "", LET_GO_HOLD)
-	elif end != "landed" and end != "reset" and end != "":
+	elif not end in QUIET_ENDS:
 		_emit_line("broke", _line_target_alive(), _line_anchor, end, BROKE_HOLD)
 
 

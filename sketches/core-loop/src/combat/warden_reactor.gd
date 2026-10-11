@@ -19,11 +19,12 @@ const Palette := preload("res://src/core/palette.gd")
 #   The face's downhill direction is the sheet's heading; on level ground it is the heading to the
 #   ball at the first pulse, kept for the fight (a mounting row's "sheet_dir" names it outright).
 # - flume (stage 2, variant meltdown): warden.gd's own _leave_slag lays the W01 lane. This driver
-#   makes every lane start at the pour channel (POUR_OFFSET from home, or the row's "pour_offset"):
-#   on the tick the charge will land, it stands the relic's origin at the pour channel for that
-#   one pulse and puts it back in on_pulse, so the lane is laid, published and burned from the one
-#   geometry, and the body is home again before anything else reads it. slag_hop is untouched.
-#   The core window is MELTDOWN_WINDOW times longer (warden.gd's setup already does this).
+#   gives it the lane origin (lane_origin, KF2c): the pour channel (POUR_OFFSET from home, or the
+#   row's "pour_offset"), so the lane is laid there from the first tick and the windup, strike and
+#   recover facts and their geometry all read the one channel. The body never leaves home (KF2b:
+#   moving it for the pour let a stagger opened on the landing tick strand it at the pour channel
+#   and spike anchor_velocity). slag_hop is untouched. The core window is MELTDOWN_WINDOW times longer (warden.gd's
+#   setup already does this).
 
 const SHEET_SECONDS := 3.0
 const SHEET_WIDTH := 24.0
@@ -51,10 +52,6 @@ var sheet_dir := Vector3.ZERO
 var riding := false
 
 var _entry_speed := 0.0
-# The charge's clock, summed as warden.gd sums _charge_time, so both reach its length on one tick.
-var _charge_clock := -1.0
-var _charge_len := 0.0
-var _poured := false
 var _sheet_view: MeshInstance3D
 
 
@@ -69,40 +66,23 @@ func sheet_live() -> bool:
 # --- The hook ------------------------------------------------------------------------------
 
 func step(warden, delta: float) -> void:
-	if _poured:
-		_pour_back(warden)
 	if sheet_left > 0.0:
 		sheet_left = maxf(0.0, sheet_left - delta)
 		if sheet_left <= 0.0:
 			_close_sheet()
 		else:
 			_ride(warden, delta)
-	if _charge_clock >= 0.0 and warden.variant == "meltdown" and not warden.staggered():
-		_charge_clock += delta
-		# The charge lands on this tick's pulse step (warden.gd _step_pulse adds the same delta).
-		if _charge_clock >= _charge_len:
-			_pour(warden)
 
 
-func on_charge(_warden, seconds: float) -> void:
-	_charge_clock = 0.0
-	_charge_len = seconds
+func on_charge(_warden, _seconds: float) -> void:
 	if sheet_live():
 		sheet_left = 0.0
 		_close_sheet()
 
 
 func on_pulse(warden, _lifted: bool) -> void:
-	_charge_clock = -1.0
-	if _poured:
-		_pour_back(warden)
 	if warden.mounting == "dam_face":
 		_open_sheet(warden)
-
-
-func on_stagger(_warden, open: bool) -> void:
-	if open:
-		_charge_clock = -1.0
 
 
 # --- dam_face: the spillway sheet ----------------------------------------------------------
@@ -242,12 +222,6 @@ func pour_point(warden) -> Vector3:
 	return warden.home + offset
 
 
-func _pour(warden) -> void:
-	_charge_clock = -1.0
-	_poured = true
-	warden.global_position = pour_point(warden)
-
-
-func _pour_back(warden) -> void:
-	_poured = false
-	warden.global_position = warden.home
+# warden.gd's _leave_slag asks for this: every slag lane is laid from the pour channel.
+func lane_origin(warden) -> Vector3:
+	return pour_point(warden)

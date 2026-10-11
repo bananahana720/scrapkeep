@@ -23,6 +23,11 @@ const DEVICES := {
 	"ambush_altar": preload("res://src/world/ambush_altar.gd"),
 	"cracked_cache": preload("res://src/world/cracked_cache.gd"),
 	"bet_crate": preload("res://src/world/bet_crate.gd"),
+	# Stake devices (SI2): one script, its kind read from the spec's `device`. Each draws
+	# from luck(spec id), the stream bet_crate.gd uses, so a restart rebuilds the same offer.
+	"trade_chest": preload("res://src/world/stake_devices.gd"),
+	"blood_shrine": preload("res://src/world/stake_devices.gd"),
+	"healing_ward": preload("res://src/world/stake_devices.gd"),
 }
 
 var ctx

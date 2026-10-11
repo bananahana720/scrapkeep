@@ -336,6 +336,10 @@ func _warden_tricks() -> void:
 	var all_found := true
 	var pending_ok := true
 	for id in CodexEntries.ids():
+		# 2026-10-10 (wave 13, B6): the five skill bar rows need an ultimate and a loaded bite, which
+		# this staging does not run; tests/discovery_skill_bar_test.gd opens each on its trigger.
+		if id in ["loaded_line", "set_piece", "set_piece_core", "set_piece_cash_in", "set_piece_breakout"]:
+			continue
 		# 2026-10-04 (wave 9): detector-pending entries declare a hint but no enemy fires them yet.
 		if CodexEntries.DETECTOR_PENDING.has(id):
 			pending_ok = pending_ok and not _combat.discovered.has(id)

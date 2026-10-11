@@ -5,7 +5,8 @@ extends RefCounted
 # assemble() runs at intermission. Run state consumes the escape corridor after a
 # survived low-hull hit; it never revives and never
 # spends or refills a retry; the ready/spent flag is what the body and chirp cues show.
-# Combat (combat.gd) runs the conductive primer, the ram brace and the escape piece's act.
+# Combat (combat.gd) runs the conductive primer, the ram brace and the escape piece's act,
+# each chosen by pick() from the DRIVERS rows; the body and its chirp read the CUES rows.
 
 const CHASSIS := "spil9"
 const SOCKETS := 2
@@ -52,6 +53,52 @@ const PIECES := [
 		"effect": "After a survived low-hull hit, lays a short slick lane once for you to ride out on.",
 		"escape": {"style": "lane", "seconds": ESCAPE_SECONDS}},
 ]
+# Module drivers (SR7; comps/ror2/companions.md "Skill-driver list as the behavior model"):
+# each family is an ordered list of rows and pick() runs the first row the state meets, so
+# behaviour is edited as data. A row names its piece ("" for any seated piece of the family),
+# the triggers it answers ("on"), the state flags it needs, the act combat runs and the cue
+# (a CUES key) the body's animation, its chirp and the chirp's motif all read.
+const DRIVERS := {
+	CONDUCTIVE_PRIMER: [
+		{"id": "primer_consume", "piece": "", "on": ["contact", "special"], "needs": {"primed": true},
+			"act": "consume", "cue": "primer_consume"},
+		{"id": "primer_prime", "piece": "", "on": ["weapon"], "needs": {}, "act": "prime", "cue": "primer_set"},
+	],
+	RAM_BRACE: [
+		{"id": "prow_shove", "piece": "ram_prow", "on": ["ram"], "needs": {"foe_free": true, "prow_ready": true},
+			"act": "shove", "cue": "prow_response"},
+		{"id": "spring_arm", "piece": "ram_spring", "on": ["ram"], "needs": {"dealt": true}, "act": "arm", "cue": "spring_arm"},
+	],
+	ESCAPE_CORRIDOR: [
+		{"id": "escape_shove", "piece": "escape_vent", "on": ["escape_window"], "needs": {"alive": true},
+			"act": "shove", "cue": "escape_acted"},
+		{"id": "escape_lane", "piece": "escape_rail", "on": ["escape_window"], "needs": {"alive": true},
+			"act": "lane", "cue": "escape_acted"},
+	],
+}
+# One row per thing the companion shows: the clip the body plays and the UI row its chirp
+# sounds ("" stays silent). Chirps mark availability and recovery (BIBLE.md:570); the escape
+# piece's ready and spent chirps stay with the HUD's companion_ready / companion_spent rows.
+const CUES := {
+	"primer_set": {"clip": "primer_set", "chirp": "companion_ready"},
+	"primer_consume": {"clip": "primer_consume", "chirp": ""},
+	"primer_expire": {"clip": "primer_expire", "chirp": ""},
+	"prow_response": {"clip": "prow_response", "chirp": ""},
+	"spring_arm": {"clip": "spring_arm", "chirp": "companion_ready"},
+	"spring_spend": {"clip": "spring_spend", "chirp": ""},
+	"escape_acted": {"clip": "escape_spent", "chirp": "escape_acted"},
+	"escape_rearm": {"clip": "escape_rearm", "chirp": ""},
+	"stalled": {"clip": "idle", "chirp": ""},
+	"rejoined": {"clip": "follow", "chirp": "companion_ready"},
+}
+# The leash (comps/ror2/companions.md:157, "use a Scrapkeep value tuned in the lab"): start
+# values. With no leader the companion stalls after STALL_AFTER s (must stay under 1 s) and
+# waits where its leader last stood alive; a companion over LEASH_RANGE m from a live leader
+# for LEASH_SECONDS s is recalled beside it. Respawn clears the stall and recalls it.
+const STALL_AFTER := 0.5
+const LEASH_RANGE := 14.0
+const LEASH_SECONDS := 2.0
+
 # The order run-found pieces arrive: the first two make a legal pair, and escape comes first.
 const DROP_ORDER := ["escape_vent", "ram_prow", "primer_coil", "escape_rail", "ram_spring", "primer_mesh"]
 
@@ -74,6 +121,102 @@ static func family_of(id: String) -> String:
 # The piece's escape act {style, seconds}, empty for a piece that has none.
 static func escape_of(id: String) -> Dictionary:
 	return _row(id).get("escape", {})
+
+
+# The first driver row of the state's piece family that the state meets, or {}. state holds
+# "piece" (the seated piece, "" for none), "on" (the trigger) and the flags rows may need.
+static func pick(state: Dictionary, table: Dictionary = DRIVERS) -> Dictionary:
+	var piece := String(state.get("piece", ""))
+	var family := family_of(piece)
+	if family == "":
+		return {}
+	for row in table.get(family, []):
+		var for_piece := String(row.get("piece", ""))
+		if for_piece != "" and for_piece != piece:
+			continue
+		if not (row.get("on", []) as Array).has(state.get("on", "")):
+			continue
+		var needs: Dictionary = row.get("needs", {})
+		var met := true
+		for flag in needs:
+			if state.get(flag) != needs[flag]:
+				met = false
+				break
+		if met:
+			return row
+	return {}
+
+
+# Problems in a driver table, empty when it is sound.
+static func validate_drivers(table: Dictionary = DRIVERS) -> Array:
+	var problems := []
+	var seen := {}
+	for family in FAMILIES:
+		var rows = table.get(family)
+		if typeof(rows) != TYPE_ARRAY or rows.is_empty():
+			problems.append("%s: no driver rows" % family)
+			continue
+		var served := {}
+		for row in rows:
+			var id := String(row.get("id", ""))
+			if id == "" or seen.has(id):
+				problems.append("bad or duplicate driver id: %s" % id)
+			seen[id] = true
+			var piece := String(row.get("piece", ""))
+			if piece != "" and family_of(piece) != family:
+				problems.append("%s: piece %s is not a %s piece" % [id, piece, family])
+			if typeof(row.get("on")) != TYPE_ARRAY or (row["on"] as Array).is_empty():
+				problems.append("%s: needs at least one trigger" % id)
+			if typeof(row.get("needs", {})) != TYPE_DICTIONARY:
+				problems.append("%s: needs must be a dictionary" % id)
+			if String(row.get("act", "")) == "":
+				problems.append("%s: missing act" % id)
+			if not CUES.has(row.get("cue", "")):
+				problems.append("%s: cue not in CUES" % id)
+			var esc := escape_of(piece)
+			if not esc.is_empty() and esc["style"] != row.get("act"):
+				problems.append("%s: act must be the piece's escape style" % id)
+			if piece == "":
+				for p in PIECES:
+					if p["family"] == family:
+						served[p["id"]] = true
+			else:
+				served[piece] = true
+		for p in PIECES:
+			if p["family"] == family and not served.has(p["id"]):
+				problems.append("%s: no driver row serves it" % p["id"])
+	for family in table:
+		if not FAMILIES.has(family):
+			problems.append("%s: not a family" % family)
+	return problems
+
+
+# One leash tick. prev is the last result ({} to start). Returns {state: "follow" or
+# "stalled", lost, far, safe, event: "" / "stalled" / "rejoined", recall}. Pure: the same
+# inputs give the same result, so a seed's replay stalls on the same frame.
+static func leash_step(prev: Dictionary, delta: float, leader_alive: bool, leader_at: Vector3, at: Vector3) -> Dictionary:
+	var out := {"state": String(prev.get("state", "follow")), "lost": float(prev.get("lost", 0.0)),
+		"far": float(prev.get("far", 0.0)), "safe": prev.get("safe", leader_at), "event": "", "recall": false}
+	if leader_alive:
+		out["safe"] = leader_at
+		out["lost"] = 0.0
+		if out["state"] == "stalled":
+			out["state"] = "follow"
+			out["event"] = "rejoined"
+			out["recall"] = true
+			out["far"] = 0.0
+			return out
+		out["far"] = float(out["far"]) + delta if at.distance_to(leader_at) > LEASH_RANGE else 0.0
+		if float(out["far"]) >= LEASH_SECONDS:
+			out["recall"] = true
+			out["far"] = 0.0
+		return out
+	out["far"] = 0.0
+	out["lost"] = float(out["lost"]) + delta
+	if out["state"] != "stalled" and float(out["lost"]) >= STALL_AFTER:
+		out["state"] = "stalled"
+		out["event"] = "stalled"
+	return out
 
 
 # The seated piece of `family` in a to_dict document, or "" (also for a malformed doc).

@@ -9,7 +9,7 @@ const Push := preload("res://tests/workshop/push.gd")
 
 # Tab's field notes as pictures (v3 W12, playtest entry 8: "a whole essay of text").
 # For each class, in a real run with Tab held:
-#   - the Keys, What hurts and Growth pages each read in 40 words or fewer;
+#   - the Keys page reads in 45 words or fewer, What hurts and Growth in 40;
 #   - the controls diagram lights exactly the pilot's own keys (class_kit.gd, from the
 #     class row) in the row's colour, and nothing else;
 #   - Q and E turn pages, the mouse wheel and buttons turn them too, hovering a page
@@ -17,6 +17,12 @@ const Push := preload("res://tests/workshop/push.gd")
 # The title's Help page draws the same diagram, with no pilot lit.
 
 const CALM_BUDGET := 40
+# The Keys page reads in 45 words or fewer since the skill bar (re-pinned 40 -> 45 on 2026-10-10,
+# wave 13 unit B2, design-v3/SKILL-BAR.md section 5): the diagram gains the pick keys 1 and 2 and
+# Q, each lit with the pilot's ability words (the weapon now on 1, the ultimate on Q), and LMB
+# reads "fire"; F and its word go. Sable, with vault kick and wall mount, is the most at 45.
+# What hurts and Growth keep CALM_BUDGET.
+const KEYS_BUDGET := 45
 const SETTLE := 0.4
 const PICTURES := ["keys", "hurts", "grow"]
 
@@ -89,8 +95,9 @@ func _check_pages(notes) -> void:
 		notes.show_page(i)
 		var seen: Dictionary = WordBudget.count(notes)
 		print("  %s %s words: %s" % [def.display_name, PICTURES[i], " | ".join(seen["items"].map(func(it): return "%s %d \"%s\"" % [it["node"], it["words"], it["text"]]))])
-		_report("%s %s budget" % [def.display_name, PICTURES[i]], notes.current_page() == PICTURES[i] and seen["hud"] > 0 and seen["hud"] <= CALM_BUDGET,
-			"%d words on %s (budget %d)" % [seen["hud"], PICTURES[i], CALM_BUDGET])
+		var budget: int = KEYS_BUDGET if PICTURES[i] == "keys" else CALM_BUDGET
+		_report("%s %s budget" % [def.display_name, PICTURES[i]], notes.current_page() == PICTURES[i] and seen["hud"] > 0 and seen["hud"] <= budget,
+			"%d words on %s (budget %d)" % [seen["hud"], PICTURES[i], budget])
 	notes.show_page(0)
 	var lit: Dictionary = notes.diagram().lit_keys()
 	var own: Array = ClassKit.by_key(def).keys()

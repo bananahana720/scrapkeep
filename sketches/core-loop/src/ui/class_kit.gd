@@ -36,8 +36,8 @@ const WORDS := {
 	"flywheel_surge": "flywheel surge",
 	"plate_return": "plate return",
 	"stamp_slam": "stamp slam",
-	"gather_plate": "gather",
-	"link_clips": "link",
+	"gather_plate": "gather plate",
+	"link_clips": "link clips",
 	"balance_due": "balance due",
 	"cannon_lane": "cannon lane",
 	"cannon_recoil": "recoil split",
@@ -45,6 +45,10 @@ const WORDS := {
 	"cannon_rush": "rush ring",
 	"line_reel": "line reel",
 	"ult_default": "set piece",
+	# The shared chips that are no ability row: the harpoon every pilot fires, and Sable's boost
+	# (her movement row is the grapple, which is the harpoon).
+	"harpoon": "harpoon line",
+	"boost": "boost",
 	# --- P-C Sable words ---
 	# --- end Sable ---
 	# --- P-C Rivet words ---
@@ -66,9 +70,13 @@ const EXTRAS := {
 	"glide": {"verb": "jump", "icon": "ab_kest_glide", "words": "glide + rocket", "card": true},
 	"pylon": {"verb": "interact", "icon": "ab_sable_mount", "words": "wall mount", "card": false},
 }
-# The verb each slot's key comes from. The movement slot is the harpoon for the pilot whose
-# movement is the line, and the pilot's go verb (Shift) for the others.
-const SLOT_VERBS := {"weapon": "fire", "special": "special", "smash": "haul", "line": "select"}
+# The verb each slot's key comes from (design-v3/SKILL-BAR.md sections 1 and 5): the numbered
+# slots are picked by select's 1, 2 and 3, Q is the ultimate, Ctrl the smash. The movement slot
+# is the harpoon for the pilot whose movement is the line, and the pilot's go verb (Shift) for
+# the others.
+const SLOT_VERBS := {"weapon": "select", "special": "select", "smash": "haul", "line": "select", "ultimate": "ultimate"}
+# The card's two rows: the bar as it plays, then the chips no number picks.
+const BAR_ROW := ["weapon", "special", "line", "ultimate"]
 
 # DESIGN-V2 section 2's Fantasy row, cut to fit a card.
 const FANTASY := {
@@ -87,26 +95,47 @@ const DIFFICULTY := {"pylon_engineer": 3, "runner_gunner": 1, "demolitions_caste
 const DIFFICULTY_MAX := 3
 
 
-# One record per key the pilot owns, slots first in the bar's order, then extras:
-# {slot, ability, icon, key, words, card}.
+# One record per key the pilot owns: the bar row as it plays ([1 weapon] [2 special] [3 line
+# skill] [Q ultimate]), then the chips ([RMB harpoon] [Shift verb] [Ctrl smash]), then the
+# movement kit's extras: {slot, ability, icon, key, words, card, row}, row bar, chip or extra.
+# Sable's harpoon chip is her movement row (the grapple) and her Shift chip her boost.
 static func keys(def) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if def == null:
 		return out
-	for slot in AbilityState.SLOTS:
+	for slot in BAR_ROW:
 		var ability := String(def.get("%s_id" % slot))
-		var row: Dictionary = AbilityState.ABILITIES.get(ability, {})
-		out.append({"slot": slot, "ability": ability,
-			"icon": row.get("icon", "ab_%s_%s" % [AbilitySlots.pilot_of(def), AbilitySlots.ROLES.get(slot, slot)]),
-			"key": "key_%d" % AbilityState.NUMBER[slot] if slot == AbilityState.LINE else Bindings.glyph(slot_verb(slot, def)),
-			"words": WORDS.get(ability, ability.replace("_", " ")), "card": true})
-	var movement: Dictionary = AbilityState.ABILITIES.get(String(def.movement_id), {})
+		var key := "key_%d" % AbilityState.NUMBER[slot] if AbilityState.NUMBER.has(slot) else Bindings.glyph(slot_verb(slot, def))
+		out.append(_record(def, slot, ability, key, "bar"))
+	var movement_id := String(def.movement_id)
+	var movement: Dictionary = AbilityState.ABILITIES.get(movement_id, {})
+	var grapple: bool = "grapple" in movement.get("augments", [])
+	if grapple:
+		out.append(_record(def, AbilityState.MOVEMENT, movement_id, Bindings.glyph("harpoon"), "chip"))
+		out.append(_shared(def, "boost", "chip"))
+	else:
+		out.append(_shared(def, "harpoon", "chip"))
+		out.append(_record(def, AbilityState.MOVEMENT, movement_id, Bindings.glyph("boost"), "chip"))
+	out.append(_record(def, AbilityState.SMASH, String(def.smash_id), Bindings.glyph("haul"), "chip"))
 	for grant in movement.get("augments", []):
 		if EXTRAS.has(grant):
 			var extra: Dictionary = EXTRAS[grant]
 			out.append({"slot": "extra", "ability": grant, "icon": extra["icon"], "key": Bindings.glyph(extra["verb"]),
-				"words": extra["words"], "card": extra["card"]})
+				"words": extra["words"], "card": extra["card"], "row": "extra"})
 	return out
+
+
+static func _record(def, slot: String, ability: String, key: String, row_name: String) -> Dictionary:
+	var row: Dictionary = AbilityState.ABILITIES.get(ability, {})
+	return {"slot": slot, "ability": ability,
+		"icon": row.get("icon", "ab_%s_%s" % [AbilitySlots.pilot_of(def), AbilitySlots.ROLES.get(slot, slot)]),
+		"key": key, "words": WORDS.get(ability, ability.replace("_", " ")), "card": true, "row": row_name}
+
+
+# A chip no ability row fills: the shared harpoon, or Sable's boost.
+static func _shared(_def, verb: String, row_name: String) -> Dictionary:
+	return {"slot": verb, "ability": verb, "icon": Bindings.icon(verb), "key": Bindings.glyph(verb),
+		"words": WORDS.get(verb, verb), "card": true, "row": row_name}
 
 
 static func slot_verb(slot: String, def) -> String:

@@ -81,6 +81,11 @@ var brace_hook := Callable()
 # overflow, returns the hull to hold instead. Both run inside the one damage order.
 var deflect_hook := Callable()
 var ward_hook := Callable()
+# The set piece's defence (SKILL-BAR section 4): Callable(amount, hp) -> the amount to take,
+# x0.2 and never below 1 health; ride_hook answers whether a set piece rides, when no scrap
+# is knocked loose. The one choke point every hit passes, so a boss's direct hit obeys it too.
+var defend_hook := Callable()
+var ride_hook := Callable()
 # Whole wear units owed but not yet taken from the mass.
 var _wear_accum := 0.0
 # The armour metrics the run log carries; a retry adds to them, they are never restored.
@@ -166,8 +171,11 @@ func begin(chosen_class: Resource) -> void:
 	cogs = 0
 	start_pick = {}
 	_stage_entered = false
-	if chosen_class != null:
-		start_pick = {"options": StartPicks.draw(chosen_class.id, run_seed, 0), "rerolls_left": StartPicks.REROLLS, "taken": ""}
+	# 2026-10-11 (w13 coordinator, after SG9): a class without an id offers no pick. The run identity
+	# case begins runs with a bare Resource, which read chosen_class.id as a script error.
+	var pick_class := String(chosen_class.get("id")) if chosen_class != null and chosen_class.get("id") != null else ""
+	if pick_class != "":
+		start_pick = {"options": StartPicks.draw(pick_class, run_seed, 0), "rerolls_left": StartPicks.REROLLS, "taken": ""}
 	companion = {}
 	settled.clear()
 	escape_window_left = 0.0
@@ -433,6 +441,8 @@ func heal(amount: float) -> void:
 func damage(amount: float, source: String) -> void:
 	if not alive() or amount <= 0.0:
 		return
+	if defend_hook.is_valid():
+		amount = float(defend_hook.call(amount, hp))
 	if armor_mode:
 		_damage_armored(amount, source)
 		return
@@ -458,7 +468,9 @@ func _damage_armored(amount: float, source: String) -> void:
 		_try_escape_window()
 		events.player_hit.emit(amount, source)
 		return
-	var absorbed := minf(left, mass / scrap_per_hp)
+	# No scrap is knocked loose during a set piece: the defended hit goes to the hull.
+	var riding: bool = ride_hook.is_valid() and bool(ride_hook.call())
+	var absorbed := 0.0 if riding else minf(left, mass / scrap_per_hp)
 	var removed := absorbed * scrap_per_hp
 	var overflow := left - absorbed
 	if removed > 0.0:

@@ -1,17 +1,23 @@
 extends RefCounted
 
+const AbilityState := preload("res://src/core/ability_state.gd")
+const Bindings := preload("res://src/core/bindings.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 const Icons := preload("res://src/ui/icons.gd")
 
 # The ability bar's one input (CONTRACTS, Ability slots): an ordered array of slot
-# records in the bar's order, weapon (LMB), movement (RMB), special (F) and smash
-# (Ctrl). The ball's ability state publishes them (player.abilities.slots(), W3). This
-# reads that and names the icon and key the way the Icons contract does: an icon that
-# is not an Icons id becomes ab_<pilot>_<role>, the pilot being the class row's
-# display name, and a key label (LMB, F) becomes its key glyph id (key_lmb, key_f).
+# records in the bar's order (design-v3/SKILL-BAR.md section 5): the numbered slots 1, 2
+# and 3 (weapon, special, line skill), then the chips (movement on Shift, smash on Ctrl).
+# The ball's ability state publishes them (player.abilities.slots(), W3) in its own SLOTS
+# order; this puts them in the bar's and names the icon and key the way the Icons contract
+# does: an icon that names no picture becomes ab_<pilot>_<role>, the pilot being the class
+# row's display name, a numbered slot's key is the key its select action holds (key_1 until
+# rebound), and a key label (Shift) becomes its key glyph id (key_shift).
 
 const FIELDS := ["id", "icon", "key", "cooldown_frac", "charges", "max_charges", "state"]
 const STATES := ["ready", "cooling", "active", "unavailable"]
-const ROLES := {"weapon": "weapon", "movement": "move", "special": "special", "smash": "smash"}
+const ROLES := {"weapon": "weapon", "movement": "move", "special": "special", "smash": "smash", "line": "line",
+	"ultimate": "ult"}
 
 var _warned := false
 
@@ -20,9 +26,19 @@ func slots(game) -> Array:
 	var abilities = game.player.get("abilities") if game.player != null else null
 	if abilities == null or not abilities.has_method("slots"):
 		return []
-	var out := []
+	var by_slot := {}
+	var rest := []
 	for record in abilities.slots():
-		out.append(normalized(record, game.run.class_def))
+		var entry := normalized(record, game.run.class_def)
+		if entry.has("slot"):
+			by_slot[entry["slot"]] = entry
+		else:
+			rest.append(entry)
+	var out := []
+	for name in AbilityState.BAR + AbilityState.CHIPS:
+		if by_slot.has(name):
+			out.append(by_slot[name])
+	out.append_array(rest)
 	if valid(out):
 		return out
 	if not _warned:
@@ -33,13 +49,41 @@ func slots(game) -> Array:
 
 static func normalized(record: Dictionary, def) -> Dictionary:
 	var out := record.duplicate()
-	if not Icons.has(String(out.get("icon", ""))):
+	var icon := String(out.get("icon", ""))
+	if not (Icons.has(icon) or Icons.EXTRA.has(icon)):
 		out["icon"] = "ab_%s_%s" % [pilot_of(def), ROLES.get(out.get("slot", ""), "weapon")]
+	var number := int(out.get("number", 0))
+	if number >= 1 and number <= Bindings.SELECT_ACTIONS.size():
+		out["key"] = Glyphs.of_action(Bindings.SELECT_ACTIONS[number - 1], "key_%d" % number)
 	var key := String(out.get("key", ""))
 	if not (key.begins_with("key_") or key.begins_with("pad_")):
 		out["key"] = "key_" + key.to_lower()
 	out["gauge"] = float(out.get("gauge", 0.0))
 	return out
+
+
+# Q's record for the HUD: {id, icon, key, fill, state} off player.abilities.ultimate(), the
+# fill 0 to 1 and the state charging, ready or active. This is the HUD's one door to the
+# ultimate meter. B3 (src/core/ultimate_meter.gd) fills player.abilities.meter; until it lands,
+# or with no player, the record reads empty and charging at 0, so the HUD draws an empty arc
+# and no Q.
+static func ultimate_of(game) -> Dictionary:
+	var empty := {"id": "", "icon": "", "key": Glyphs.of("ultimate"), "fill": 0.0, "state": "charging"}
+	var player = game.get("player") if game != null else null
+	var abilities = player.get("abilities") if player != null else null
+	if abilities == null or not abilities.has_method("ultimate"):
+		return empty
+	var record: Dictionary = abilities.ultimate()
+	var out := empty.duplicate()
+	out.merge(record, true)
+	out["fill"] = clampf(float(out.get("fill", 0.0)), 0.0, 1.0)
+	out["key"] = Glyphs.of("ultimate")
+	return out
+
+
+# The meter's fill, 0 to 1: 0.0 while no ultimate meter exists yet (B3's seam).
+static func meter_fill(game) -> float:
+	return float(ultimate_of(game)["fill"])
 
 
 # The pilot's name in icon ids: sable, rivet, kest.

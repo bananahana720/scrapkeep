@@ -2,7 +2,8 @@ extends RefCounted
 
 # The player's progress as one versioned document, saved as profile.json: unlocked
 # pilots, worlds and cosmetics, earned achievements, equipped cosmetics, stats and the
-# last pilot. Preferences live in settings_store.gd. The store knows no starters and
+# last pilot and the between-run nodes opened (SG12, an id list added inside schema 4: a
+# file without it reads as none opened). Preferences live in settings_store.gd. The store knows no starters and
 # reads no clock; the caller passes the time an achievement was earned. Mutators change
 # memory and save() writes. A store cannot save until it has loaded, and a save that finds
 # a newer generation on disk merges it in instead of replacing it. A file this build
@@ -30,6 +31,7 @@ const SHAPE := {
 	"settled": SafeStore.STRINGS,
 	"companion": SafeStore.DICT,
 	"seen": SafeStore.STRINGS,
+	"options": SafeStore.STRINGS,
 }
 
 var path := ""
@@ -121,7 +123,7 @@ func save() -> bool:
 # (else theirs) and the saver's escape flag. The generation is the larger of the two.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
-	for key in ["pilots", "worlds", "cosmetics", "settled", "seen"]:
+	for key in ["pilots", "worlds", "cosmetics", "settled", "seen", "options"]:
 		if not out.has(key):
 			out[key] = []
 		for id in theirs.get(key, []):
@@ -274,6 +276,24 @@ func seen_ids() -> Array:
 	return _doc["seen"].duplicate()
 
 
+# Between-run nodes opened (meta_options.gd). A list of ids and nothing else: no count, price
+# or stat travels with them. Memory only; save() writes.
+func has_option(id: String) -> bool:
+	return _doc["options"].has(id)
+
+
+# True the first time a node is opened, false after.
+func open_option(id: String) -> bool:
+	if has_option(id):
+		return false
+	_doc["options"].append(id)
+	return true
+
+
+func option_ids() -> Array:
+	return _doc["options"].duplicate()
+
+
 func rewards_settled() -> bool:
 	return bool(_doc["rewards_settled"])
 
@@ -380,6 +400,7 @@ func _defaults() -> Dictionary:
 		"companion": {},
 		"rewards_settled": false,
 		"seen": [],
+		"options": [],
 	}
 
 

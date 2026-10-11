@@ -91,7 +91,9 @@ const READS := {
 	"boost": {"any": "go", "mounted": "refused", "set_piece": ""},
 	"interact": {"any": "interact", "mounted": "dismount", "set_piece": ""},
 	"select": {"any": "pick", "charging": "swap", "set_piece": ""},
-	"ultimate": {"any": "ultimate", "set_piece": ""},
+	# Q reads "recall" in the set piece: it cancels the wind-up with a full refund (SKILL-BAR
+	# sections 2 and 4); in flight the press is refused busy.
+	"ultimate": {"any": "ultimate", "set_piece": "recall"},
 }
 
 
