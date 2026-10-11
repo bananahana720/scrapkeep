@@ -117,6 +117,23 @@ func _run() -> void:
 		% [scatter_frame_ms, after_worst, scatter_step_ms, scatter.slowest_step if scatter != null else ""])
 	t.check("no main-thread frame over 33 ms with the scatter attaching", scatter_frame_ms < FRAME_CAP_MS, "scatter %.2f ms (ground meter %.2f ms)" % [scatter_frame_ms, after_worst])
 	t.check("no scatter step over 8 ms", scatter_step_ms < 8.0, "%.2f ms" % scatter_step_ms)
+	# Stage 2's park rows (KB9) placed beside the scatter: GLBs and slot materials on the loader thread, rows built on a
+	# worker, a few attached a frame; their slowest main-thread step is capped like the scatter's.
+	var rows: Node = terrain.park_rows(2)
+	var row_frames := 0
+	while rows != null and not rows.is_ready() and row_frames < BUILD_FRAMES_MAX:
+		await process_frame
+		row_frames += 1
+	var row_step_ms: float = rows.slowest_usec / 1000.0 if rows != null else INF
+	var row_frame_ms: float = rows.frame_usec_max / 1000.0 if rows != null else INF
+	print("park_swap_test: stage 2 rows placed (%d extra frames): %d nodes, %d loads on the loader thread, %d rows built on a worker, worst frame %.2f ms, slowest step %.2f ms at %s"
+		% [row_frames, rows.get_child_count() if rows != null else -1, rows.threaded_loads if rows != null else -1, rows.worker_rows if rows != null else -1,
+		row_frame_ms, row_step_ms, rows.slowest_step if rows != null else ""])
+	t.check("stage 2 places its park rows", rows != null and rows.is_ready() and rows.get_child_count() > 0, "%d extra frames" % row_frames)
+	t.check("stage 2's recipe GLBs and materials load on the loader thread", rows != null and rows.threaded_loads > 0, str(rows.threaded_loads if rows != null else -1))
+	t.check("stage 2's rows build off the main thread", rows != null and rows.worker_rows == rows.get_child_count(), "%d of %d" % [rows.worker_rows if rows != null else -1, rows.get_child_count() if rows != null else -1])
+	t.check("no main-thread frame over 33 ms with the rows placing", row_frame_ms < FRAME_CAP_MS, "%.2f ms" % row_frame_ms)
+	t.check("no row placement step over 8 ms", row_step_ms < 8.0, "%.2f ms at %s" % [row_step_ms, rows.slowest_step if rows != null else ""])
 	t.check("stage 1 left memory (only the active and next stage stay)", terrain.park_ground(1) == null and holder.get_node_or_null("Stage1") == null)
 	var at := ball.global_position
 	var floor_y: float = terrain.height(at.x, at.z)
@@ -153,6 +170,31 @@ func _run() -> void:
 			shown += 1
 			t.check("the shown render node is stage 1's", terrain._render_owner[terrain._render.find(node)] == 0)
 	t.eq("one render node shows on the new run", shown, 1)
+
+	# The swap while a stage's rows are still placing (KB9): stage 3 builds, and use(3) lands the frame its ground is
+	# ready, before its rows have all attached; the swap stays under the cap and the rows finish on their own.
+	terrain.prepare(3)
+	var ground_frames := 0
+	while not terrain.is_ready(3) and ground_frames < BUILD_FRAMES_MAX:
+		await process_frame
+		ground_frames += 1
+	var placing: Node = terrain.park_rows(3)
+	var placing_at_swap: bool = placing != null and not placing.is_ready()
+	terrain.use(3)
+	var placing_swap_ms: float = terrain.last_use_usec / 1000.0
+	var tail := 0
+	while placing != null and not placing.is_ready() and tail < BUILD_FRAMES_MAX:
+		await process_frame
+		tail += 1
+	var placing_step_ms: float = placing.slowest_usec / 1000.0 if placing != null else INF
+	print("park_swap_test: use(3) with its rows placing %s: %.2f ms; rows done %d frames later, worst frame %.2f ms, slowest step %.2f ms at %s"
+		% [placing_at_swap, placing_swap_ms, tail, placing.frame_usec_max / 1000.0 if placing != null else -1.0, placing_step_ms, placing.slowest_step if placing != null else ""])
+	t.check("the swap lands while the stage's rows are still placing", placing_at_swap)
+	t.check("the swap with rows placing is under 33 ms", placing_swap_ms < FRAME_CAP_MS, "%.2f ms" % placing_swap_ms)
+	t.check("the rows finish placing after the swap", placing != null and placing.is_ready(), "%d frames" % tail)
+	t.check("no row placement step over 8 ms across the swap", placing_step_ms < 8.0, "%.2f ms" % placing_step_ms)
+	t.check("no main-thread frame over 33 ms while rows place across the swap", placing != null and placing.frame_usec_max / 1000.0 < FRAME_CAP_MS,
+		"%.2f ms" % (placing.frame_usec_max / 1000.0 if placing != null else -1.0))
 	for n in 3:
 		await process_frame
 	holder.queue_free()

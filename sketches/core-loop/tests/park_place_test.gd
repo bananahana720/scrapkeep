@@ -32,6 +32,7 @@ var t := T.new("park_place_test")
 var _heard: Array = []
 # Untyped, so a method the base lacks is looked up at run time (red first).
 var _recipes = load("res://src/world/park/park_recipes.gd")
+var _runout := float((_recipes as Script).get_script_constant_map().get("ANCHOR_RUNOUT_M", 0.0))
 
 
 func _initialize() -> void:
@@ -145,14 +146,16 @@ func _run() -> void:
 	var points := 0
 	var non_world := []
 	var skipped_points := 0
+	var blocked_points := 0
 	var over_points := 0
 	var over_list := []
 	var lane_worst := 0.0
 	var lane_at := Vector3.ZERO
 	var lane_points := 0
 	var lane_over := 0
-	# A lattice point inside another built row's footprint (the wash, the pool, the landmark) is that row's to anchor,
-	# not the field's: the fixture's fields are density placeholders laid over the whole park (park_test.json). A point
+	# A lattice point inside another built row's footprint or its run-out (the wash, the pool, the landmark; posts stand
+	# ANCHOR_RUNOUT_M back) is that row's to anchor, not the field's: the fixture's fields are density placeholders laid
+	# over the whole park (park_test.json). A point
 	# in a route lane (park_recipes.gd clear_zones) is the line's; its gap is reported here and judged by the sweep's
 	# max_anchor_gap_m, since posts may not stand in a lane.
 	var zones: Array = _recipes.call("clear_zones", park) if _has_static("clear_zones") else []
@@ -170,6 +173,7 @@ func _run() -> void:
 		var gaps := _field_gaps(space, row, floor_at, owned, lanes)
 		points += gaps["points"]
 		skipped_points += gaps["owned"]
+		blocked_points += gaps["blocked"]
 		over_points += gaps["over"]
 		over_list.append_array(gaps["over_at"])
 		lane_points += gaps["lane_points"]
@@ -181,9 +185,9 @@ func _run() -> void:
 			lane_worst = gaps["lane_worst"]
 			lane_at = gaps["lane_at"]
 	print("park_place_test: %d anchor fields, %d posts; %d field lattice points, %d over 40 m, worst gap %.1f m at %s" % [fields, posts, points, over_points, worst, worst_at])
-	print("park_place_test: %d points inside other rows' footprints left out; %d route-lane points, %d over 40 m, worst %.1f m at %s (report)" % [skipped_points, lane_points, lane_over, lane_worst, lane_at])
+	print("park_place_test: %d points inside other rows' footprints or run-outs and %d inside posts left out; %d route-lane points, %d over 40 m, worst %.1f m at %s (report)" % [skipped_points, blocked_points, lane_points, lane_over, lane_worst, lane_at])
 	report["anchor"] = {"fields": fields, "posts": posts, "points": points, "points_over_band": over_points, "over_at": over_list,
-		"worst_gap_m": snappedf(worst, 0.1), "worst_at": [worst_at.x, worst_at.z], "points_in_other_rows": skipped_points,
+		"worst_gap_m": snappedf(worst, 0.1), "worst_at": [worst_at.x, worst_at.z], "points_in_other_rows": skipped_points, "points_inside_posts": blocked_points,
 		"lane_points": lane_points, "lane_over_band": lane_over, "lane_worst_gap_m": snappedf(lane_worst, 0.1) if is_finite(lane_worst) else -1.0, "lane_worst_at": [lane_at.x, lane_at.z]}
 	t.check("the fixture's anchor fields place posts", fields > 0 and posts > fields, "%d fields, %d posts" % [fields, posts])
 	t.check("anchor posts are world-layer static bodies", non_world.is_empty(), str(non_world))
@@ -246,6 +250,7 @@ func _field_gaps(space: PhysicsDirectSpaceState3D, row: Dictionary, floor_at: Ca
 	var worst_at := centre
 	var points := 0
 	var skipped := 0
+	var blocked := 0
 	var over := 0
 	var over_at := []
 	var lane_worst := 0.0
@@ -257,10 +262,17 @@ func _field_gaps(space: PhysicsDirectSpaceState3D, row: Dictionary, floor_at: Ca
 	for i in range(-ni, ni + 1):
 		for j in range(-nj, nj + 1):
 			var p := centre + across * (i * LATTICE_M) + along * (j * LATTICE_M)
-			if not owned.is_empty() and _recipes.call("in_clear", owned, Vector2(p.x, p.z), 0.0):
+			if not owned.is_empty() and _recipes.call("in_clear", owned, Vector2(p.x, p.z), _runout):
 				skipped += 1
 				continue
 			var from := Vector3(p.x, float(floor_at.call(p.x, p.z)) + Tuning.RADIUS, p.z)
+			# A point inside a post is no place for the ball, and a ray cast from inside a box cannot see that box.
+			var inside := PhysicsPointQueryParameters3D.new()
+			inside.position = from
+			inside.collision_mask = 1
+			if not space.intersect_point(inside, 1).is_empty():
+				blocked += 1
+				continue
 			var nearest := INF
 			for pitch in PROBE_PITCHES:
 				for s in PROBE_SPOKES:
@@ -284,7 +296,7 @@ func _field_gaps(space: PhysicsDirectSpaceState3D, row: Dictionary, floor_at: Ca
 			if nearest > worst:
 				worst = nearest
 				worst_at = from
-	return {"worst": worst, "at": worst_at, "points": points, "owned": skipped, "over": over, "over_at": over_at,
+	return {"worst": worst, "at": worst_at, "points": points, "owned": skipped, "blocked": blocked, "over": over, "over_at": over_at,
 		"lane_worst": lane_worst, "lane_at": lane_at, "lane_points": lane_points, "lane_over": lane_over}
 
 
@@ -315,7 +327,9 @@ func _meets(space: PhysicsDirectSpaceState3D, row: Dictionary, node: Node3D, flo
 			v += step
 		u += step
 	var kind := "under or inside the stamped ground"
-	if above > 0:
+	if node.has_meta("stamp_replaces"):
+		kind = "replaced by its stamp (no solid)"
+	elif above > 0:
 		kind = "lips above the stamped ground" if lip > 0.5 else "sits on the stamped ground"
 	return {"recipe": row["recipe"], "stamp": row["stamp"], "glb": not _recipes.call("stands_in", row) if _has_static("stands_in") else false,
 		"samples": samples, "recipe_on_top": above, "max_above_ground_m": snappedf(lip, 0.01), "reads": kind}
