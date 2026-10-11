@@ -209,7 +209,7 @@ Until P-C, B1 gives every pilot but Tally one shared placeholder row, `line_reel
 - Cap 100 points (start). No decay. Taking damage costs nothing. Overflow is lost.
 - The meter starts at 0 each run and carries across stages and worlds. A retry restores its stage-entry value.
 - It does not fill during a set piece, in the bay, or during a ceremony.
-- Target fill times, checked by bots in B4: a chaining player 45 to 60 s of play, an average fight 75 to 90 s, the hold-fire camper at least 180 s. The weapon limit is what keeps the camper slow.
+- Target fill times, checked by bots in B4: a chaining player 45 to 60 s of play, an average fight 75 to 90 s, the hold-fire camper at least 180 s. The near-miss and weapon limits are what keep the camper slow.
 - **Harmonized with BIBLE.md:400**, which says the ultimate "unlocks through play during world one". The slot is on the bar from the drop, but it starts empty every run, so the first one is earned by playing. No separate unlock gate.
 
 ### Ready cue: one fact, every layer
