@@ -34,6 +34,8 @@ const CGE_CAMERAS := [["close", Vector3(0, 1.06, 3.44), Vector3(0, 0.2, 0), 65.0
 	["far", Vector3(0, 3.55, 11.46), Vector3(0, 0.2, 0), 65.0]]
 const CGE_BALL := {"close": Vector3(0, -0.2, 0), "mid": Vector3(0, -0.2, 0), "far": Vector3(0, -0.2, 0)}
 const CGE_BALL_REASON := "the ball is the subject: it stays under the camera target"
+const WARDEN_BODY_CAMERAS := [["over_shoulder", Vector3(0, 6, 24), Vector3(0, 2, 0), 62.0], ["boss_high", Vector3(34, 20, 34), Vector3(0, -2, 0), 62.0],
+	["boss_low", Vector3(40, 3, 0), Vector3(0, 6, 0), 62.0], ["three_q", Vector3(-9, 4, 6), Vector3(0, 2, 0), 55.0]]
 
 const SUBJECTS := {
 	# ---------------------------------------------------------------- miniboss, swarm, vault (stage 1)
@@ -270,10 +272,18 @@ const SUBJECTS := {
 	"cge_cannon_rule_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 5, "heft": 1, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
 	"cge_cannon_rule_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 5, "heft": 3, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
 	"cge_cannon_rule_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 5, "heft": 5, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	# ---------------------------------------------------------------- Warden bodies (KF8a, wave 13)
+	# A park Warden of each kind in its recipe body, staged in the open on stage 1 (look_harness
+	# _warden_bodies); the warden camera group (arw_pit_b's names), over_shoulder from the warden
+	# anchor since the ball stands beside each camera's target. The mind hangs (under_island), its
+	# anchor the hand's middle 4 m under the Warden's centre.
+	"warden_body_reactor": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "tick": 200, "cameras": WARDEN_BODY_CAMERAS},
+	"warden_body_swarm": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "tick": 230, "cameras": WARDEN_BODY_CAMERAS},
+	"warden_body_mind": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "tick": 260, "cameras": WARDEN_BODY_CAMERAS},
 }
 
 # The order --all boots the groups in; every group a row names appears once.
-const GROUPS := ["smalls", "pickup", "dig_fx", "hd_fx", "hd_redo", "arenas", "arw2", "devices", "props", "bay", "cages", "scrap", "workshop", "dig_deep", "title", "title2", "ending", "customize", "cge"]
+const GROUPS := ["smalls", "pickup", "dig_fx", "hd_fx", "hd_redo", "arenas", "arw2", "devices", "props", "bay", "cages", "scrap", "workshop", "dig_deep", "title", "title2", "ending", "customize", "cge", "warden_bodies"]
 
 
 static func names() -> Array:
