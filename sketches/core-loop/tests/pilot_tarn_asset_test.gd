@@ -1,4 +1,21 @@
 extends SceneTree
+# 2026-10-11 (PD-TARN fix round 3, docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17): the Pod copper
+# fold is vetoed, so Pod keeps a copper surface beside paint (the lap bar is the ultimate control
+# and paint never tints it, ROSTER-LOOK section 6), and Tarn carries a documented 17-draw
+# exception to the 16 cap (four articulated two-surface jaws). The shell is pinned to exactly
+# SHELL_DRAWS surfaces and the registry exception must match it.
+# 2026-10-10 (PD-TARN fix round 2, the 16-draw cap in docs/decisions.tsv w13-PD): the pull drum
+# is symmetric and untextured, so it rides the Pod mesh and PullDrum becomes an empty at its
+# axle; the registry exception (16 draws) is the shell budget the check reads.
+# 2026-10-10 (PD-TARN fix round): each claw jaw is a paint body plus a class_accent tooth strip
+# (P-UNITS PD-TARN "jaw-tooth edges are the only class_accent"; hero.png bone jaws).
+# 2026-10-10 (PD-TARN): the shell is the Hoberman mecha (shell_tarn.py on shell_base.hoberman()):
+# sockets move to the claw arms' gap brackets (ClawPivot, ClawTip), the low rear pull drum
+# (PullExit) and the base's yokes (Control.Grip); the shell budget reads its registry exception
+# and the copper slot replaces glass; the envelope check becomes Core inside 0.985, every mesh
+# inside 1.25 and nothing past 1.0 below Y -0.6; the base's Pilot placeholder is an empty;
+# the blades ride WeaponRing. The pilot gains one mesh node, Cap, rigid on head, so the skin
+# check expects the Pilot and Cap meshes.
 
 const T := preload("res://tests/support/t.gd")
 const PILOT := "res://assets/models/pilot_tarn_anim.glb"
@@ -11,10 +28,14 @@ const PARENTS := {
 	"lower_arm.R": "upper_arm.R", "lower_arm.L": "upper_arm.L", "hand.R": "lower_arm.R", "hand.L": "lower_arm.L",
 	"curl.R": "hand.R", "curl.L": "hand.L", "tail.01": "pelvis", "tail.02": "tail.01", "tool.R": "hand.R",
 }
-const SOCKETS := {"Grip.R": Vector3(.32, .05, -.4), "Grip.L": Vector3(-.32, .05, -.4),
-	"ClawPivot.R": Vector3(.58, -.31, -.32), "ClawPivot.L": Vector3(-.58, -.31, -.32),
-	"ClawTip.R": Vector3(.58, -.36, -.55), "ClawTip.L": Vector3(-.58, -.36, -.55),
-	"PullExit": Vector3(0, -.29, .74), "RendContact": Vector3(0, -.79, -.23)}
+const SOCKETS := {"Control.Grip.R": Vector3(.32, .05, -.4), "Control.Grip.L": Vector3(-.32, .05, -.4),
+	"ClawPivot.R": Vector3(.7168, -.3496, -.3719), "ClawPivot.L": Vector3(-.7168, -.3496, -.3719),
+	"ClawTip.R": Vector3(.9164, -.4470, -.4754), "ClawTip.L": Vector3(-.9164, -.4470, -.4754),
+	"PullExit": Vector3(0, -.54, .552), "RendContact": Vector3(0, -.79, -.23)}
+const SHELL_ID := "shell_tarn"
+const SHELL_DRAWS := 17
+const CORE_LIMIT := .985
+const REACH := 1.25
 
 var _t := T.new("pilot_tarn_asset_test")
 var _done := false
@@ -44,7 +65,7 @@ func _meshes(scene: Node) -> Array:
 	return found
 
 
-func _budget(scene: Node, label: String, cap: Dictionary, allowed: Array) -> void:
+func _budget(scene: Node, label: String, cap: Dictionary, allowed: Array) -> int:
 	var tris := 0
 	var verts := 0
 	var draws := 0
@@ -66,6 +87,7 @@ func _budget(scene: Node, label: String, cap: Dictionary, allowed: Array) -> voi
 		"%d triangles / %d vertices / %d surfaces; caps %d / %d / %d" % [tris, verts, draws, cap.tris, cap.verts, cap.draws])
 	_t.check(label + " materials", slots.size() <= 5 and wrong.is_empty(), "slots %s; wrong %s" % [slots.keys(), wrong])
 	print("TARN_BUDGET %s: %d T / %d V / %d surfaces" % [label, tris, verts, draws])
+	return draws
 
 
 func _rig(scene: Node) -> void:
@@ -147,7 +169,7 @@ func _rig(scene: Node) -> void:
 			for side in sides:
 				var hand := skeleton.find_bone("hand." + side)
 				if hand >= 0:
-					grip = maxf(grip, skeleton.get_bone_global_pose(hand).origin.distance_to(SOCKETS["Grip." + side]))
+					grip = maxf(grip, skeleton.get_bone_global_pose(hand).origin.distance_to(SOCKETS["Control.Grip." + side]))
 		_t.check("anchored " + clip, drift < .0001 and grip < .004, "pelvis drift %.7f; grip error %.7f" % [drift, grip])
 		_t.check("glass and root " + clip, radius < .98 and root_error < .0001, "half-frame vertex radius %.7f m; root motion/scale error %.7f" % [radius, root_error])
 	player.stop()
@@ -170,7 +192,21 @@ func _rig(scene: Node) -> void:
 						bad += 1
 				if ones != 1:
 					bad += 1
-	_t.check("one rigid skin", skinned == 1 and bad == 0, "%d skinned mesh, %d invalid weights" % [skinned, bad])
+	_t.check("one rigid skin", skinned == 2 and bad == 0, "%d skinned meshes (Pilot and Cap), %d invalid weights" % [skinned, bad])
+	var cap := scene.find_child("Cap", true, false) as MeshInstance3D
+	var off_head := -1
+	if cap != null and cap.skin != null:
+		off_head = 0
+		for surface in cap.mesh.get_surface_count():
+			var arrays: Array = cap.mesh.surface_get_arrays(surface)
+			for vertex in arrays[Mesh.ARRAY_VERTEX].size():
+				var bind: int = arrays[Mesh.ARRAY_BONES][vertex * 4]
+				var bone := cap.skin.get_bind_bone(bind)
+				var bone_name: String = skeleton.get_bone_name(bone) if bone >= 0 else cap.skin.get_bind_name(bind)
+				if bone_name != "head":
+					off_head += 1
+	_t.check("cap node", cap != null and cap.mesh.get_surface_count() == 1 and off_head == 0,
+		"one Cap mesh rigid on head (%d vertices off head)" % off_head)
 
 
 func _shell(scene: Node) -> void:
@@ -180,7 +216,7 @@ func _shell(scene: Node) -> void:
 	_t.check("Core Pod Dome Gyro", core != null and pod != null and dome != null and core.get_parent() == pod.get_parent()
 		and dome.get_parent() == pod and dome.transform.is_equal_approx(Transform3D.IDENTITY)
 		and pod.get_node_or_null("Gyro") != null, "sphere-centred rolling Core and upright Pod > Dome/Gyro")
-	_t.check("separate pilot", scene.find_child("Pilot", true, false) == null and scene.find_children("*", "Skeleton3D", true, false).is_empty(), "no duplicate animal or shell skeleton")
+	_t.check("separate pilot", not (scene.find_child("Pilot", true, false) is MeshInstance3D) and scene.find_children("*", "Skeleton3D", true, false).is_empty(), "Pilot is the base's empty placeholder; no shell skeleton")
 	if pod == null or core == null:
 		return
 	for name in SOCKETS:
@@ -190,19 +226,39 @@ func _shell(scene: Node) -> void:
 	for side in ["R", "L"]:
 		for kind in ["Upper", "Lower"]:
 			var jaw := pod.get_node_or_null("Claw" + kind + "_" + side) as MeshInstance3D
-			_t.check("claw " + kind + side, jaw != null and jaw.mesh.get_surface_count() == 1, "independent single-material vice jaw")
-	_t.check("pull drum", pod.get_node_or_null("PullDrum") is MeshInstance3D, "independent rear tension drum")
+			var slots := []
+			if jaw != null:
+				for s in jaw.mesh.get_surface_count():
+					slots.append(jaw.mesh.surface_get_material(s).resource_name)
+				slots.sort()
+			_t.check("claw " + kind + side, slots == ["class_accent", "paint"], "independent jaw: paint body, class_accent tooth strip; got %s" % [slots])
+		var blade := pod.get_node_or_null("WeaponRing/Blade_" + side) as MeshInstance3D
+		_t.check("blade " + side, blade != null and blade.mesh.get_surface_count() == 1, "single-material blade under WeaponRing")
+	var pod_slots := []
+	if pod is MeshInstance3D:
+		for s in (pod as MeshInstance3D).mesh.get_surface_count():
+			pod_slots.append((pod as MeshInstance3D).mesh.surface_get_material(s).resource_name)
+		pod_slots.sort()
+	_t.check("pod copper", pod_slots == ["copper", "paint"],
+		"Pod keeps its copper surface beside paint, so paint never tints the lap bar (ROSTER-LOOK section 6); got %s" % [pod_slots])
+	var drum := pod.get_node_or_null("PullDrum") as Node3D
+	_t.check("pull drum", drum != null and not (drum is MeshInstance3D) and drum.position.y < -.4,
+		"PullDrum is an empty at the low rear axle; the drum rides the Pod mesh")
 	var far := 0.0
-	var glass_error := 0.0
+	var core_far := 0.0
+	var low := 0
 	for mi: MeshInstance3D in _meshes(scene):
 		var transform: Transform3D = scene.global_transform.affine_inverse() * mi.global_transform
 		for surface in mi.mesh.get_surface_count():
 			for vertex in mi.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
-				var radius: float = (transform * vertex).length()
-				far = maxf(far, radius)
+				var point: Vector3 = transform * vertex
+				far = maxf(far, point.length())
 				if mi == core:
-					glass_error = maxf(glass_error, absf(radius - .98))
-	_t.check("resting envelope", far <= .985001 and glass_error < .0001, "max %.7f m; imported glass radius error %.7f" % [far, glass_error])
+					core_far = maxf(core_far, point.length())
+				if point.y < -.6 and point.length() > 1.0:
+					low += 1
+	_t.check("resting envelope", core_far <= CORE_LIMIT + .0001 and far <= REACH and low == 0,
+		"Core %.4f m (limit %.3f); every mesh %.4f m (cap %.2f); %d vertices past 1.0 below Y -0.6" % [core_far, CORE_LIMIT, far, REACH, low])
 
 
 func _process(_delta: float) -> bool:
@@ -215,7 +271,14 @@ func _process(_delta: float) -> bool:
 	root.add_child(pilot)
 	root.add_child(shell)
 	_budget(pilot, "pilot", budgets.classes.pilot, ["pilot", "rubber", "bare_metal"])
-	_budget(shell, "shell", budgets.classes.shell, ["paint", "bare_metal", "rubber", "class_accent", "glass"])
+	var shell_cap: Dictionary = budgets.classes.shell.duplicate()
+	var fragment = JSON.parse_string(FileAccess.get_file_as_string("res://assets/registry.d/shell_tarn.json"))
+	for row in fragment.assets:
+		if row.get("id", "") == SHELL_ID:
+			shell_cap.merge(row.get("exception", {}), true)
+	var shell_draws := _budget(shell, "shell", shell_cap, ["paint", "copper", "bare_metal", "rubber", "class_accent"])
+	_t.check("shell draws pinned", shell_draws == SHELL_DRAWS and int(shell_cap.draws) == SHELL_DRAWS,
+		"%d surfaces, registry exception %d; both must be %d (Tarn 17, 2026-10-11 w13-PD)" % [shell_draws, int(shell_cap.draws), SHELL_DRAWS])
 	_rig(pilot)
 	_shell(shell)
 	pilot.free()

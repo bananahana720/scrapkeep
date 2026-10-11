@@ -2858,10 +2858,67 @@
    "path": "res://assets/models/world_one/shell_cannon.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd",
+   "loader": "src/presentation/hero_assets.gd SHELLS remembered_cannon (fit_shell_into)",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_cannon.py",
-    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/cannon/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
+   }
+  },
+  {
+   "id": "shell_cannon_c2",
+   "path": "res://assets/models/world_one/shell_cannon_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into, heft class II layer of shell_cannon",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_cannon_plates.py"
+   }
+  },
+  {
+   "id": "shell_cannon_c3",
+   "path": "res://assets/models/world_one/shell_cannon_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into, heft class III layer of shell_cannon",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_cannon_plates.py"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "class III carries the side panels on Pod and the thicker tread caps on Core, two parts that move apart (ROSTER-LOOK section 5); the coordinator's 2026-10-10 cap call (docs/decisions.tsv: Hoberman pilot shells up to 16 draws, the class III layer up to 2, every other layer 1) allows these 2"
+  },
+  {
+   "id": "shell_cannon_c4",
+   "path": "res://assets/models/world_one/shell_cannon_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into, heft class IV layer of shell_cannon",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_cannon_plates.py"
+   }
+  },
+  {
+   "id": "shell_cannon_c5",
+   "path": "res://assets/models/world_one/shell_cannon_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into, heft class V layer of shell_cannon",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_cannon_plates.py"
+   }
+  },
+  {
+   "id": "shell_cannon_choir",
+   "path": "res://assets/models/world_one/shell_cannon_choir.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into, shell variant shell_cannon_choir (classes II to V borrow the default layers)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_cannon.py --variant choir",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "design-v3/CUSTOMIZE.md section 8 (Choir Barrel); pilots/cannon.md section 7"
    }
   },
   {
@@ -2870,9 +2927,78 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd:38-40",
    "exception": {
-    "draws": 16
+    "draws": 15
    },
-   "exception_why": "Kest pod ceiling 21 draws; its pilot takes 5"
+   "exception_why": "PD-KEST 2026-10-10: within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD call of 2026-10-10T21:29, base 10 plus up to 6 for machinery and the Pilot placeholder); the shell class cap stays 10 because the Hoberman base alone spends it (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2); Kest adds the Mortar mesh that pitches and recoils in its cradles (tubes and the fuse-tip glow, 2), two hinged vents (VaneL, VaneR) and the static Pilot placeholder hero_assets_test reads, 15 surfaces",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_kest.py",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/kest/hero.png, chase.png and sheet.png"
+   }
+  },
+  {
+   "id": "shell_kest_c2",
+   "path": "res://assets/models/world_one/shell_kest_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class II layer)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_kest_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/kest/sheet.png (GAP PANEL, heft row)"
+   }
+  },
+  {
+   "id": "shell_kest_c3",
+   "path": "res://assets/models/world_one/shell_kest_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class III layer)",
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "ROSTER-LOOK section 5 (class III row: two parts cost 2 draws, a registry exception; the class III layer may spend up to 2 under the docs/decisions.tsv w13-PD call of 2026-10-10T21:29 that sets the 16-draw shell cap) and veto 3: class III adds Pod panels and thicker tread-cap rims on the tumbling Core, one draw each",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_kest_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/kest/sheet.png (GAP PANEL, heft row)"
+   }
+  },
+  {
+   "id": "shell_kest_c4",
+   "path": "res://assets/models/world_one/shell_kest_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class IV layer)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_kest_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/kest/sheet.png (GAP PANEL, heft row)"
+   }
+  },
+  {
+   "id": "shell_kest_c5",
+   "path": "res://assets/models/world_one/shell_kest_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class V layer)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_kest_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/kest/sheet.png (GAP PANEL, heft row)"
+   }
+  },
+  {
+   "id": "shell_kest_roost",
+   "path": "res://assets/models/world_one/shell_kest_roost.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (shell variant Roost Frame, CUSTOMIZE section 8; layers borrow the default)",
+   "exception": {
+    "draws": 15
+   },
+   "exception_why": "PD-KEST 2026-10-10: within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD call of 2026-10-10T21:29); the same machinery and node tree as shell_kest (base 10 plus the Mortar mesh with its fuse-tip glow, two hinged vents and the Pilot placeholder)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_kest.py --variant roost",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/kest/hero.png and sheet.png"
+   }
   },
   {
    "id": "shell_neutral",
@@ -2890,13 +3016,158 @@
    "path": "res://assets/models/world_one/shell_rivet.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd:38-40"
+   "loader": "src/presentation/hero_assets.gd:38-40",
+   "exception": {
+    "draws": 15
+   },
+   "exception_why": "PD-RIVET Hoberman mecha: the 10-draw base plus the placeholder Pilot (hidden in play by fit_pilot_into), class_accent on Pod (exhaust mouths), copper on WeaponRing (laser pods) and the spinning Drill (copper, lens); 14 drawn in play. Within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10: PD-0 base 10 plus up to 6 for machinery and the Pilot placeholder)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_rivet.py",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/hero.png, chase.png and sheet.png"
+   }
+  },
+  {
+   "id": "shell_rivet_c2",
+   "path": "res://assets/models/world_one/shell_rivet_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class II layer of shell_rivet)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_rivet_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png"
+   }
+  },
+  {
+   "id": "shell_rivet_c3",
+   "path": "res://assets/models/world_one/shell_rivet_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class III layer of shell_rivet)",
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "ROSTER-LOOK section 5, class III row: two parts, the Pod's side-gap panels and the Core's wider chevron tread caps, one draw each; the row prices them at 2 draws with this exception (the class III layer allowance, docs/decisions.tsv w13-PD, 2026-10-10)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_rivet_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png"
+   }
+  },
+  {
+   "id": "shell_rivet_c4",
+   "path": "res://assets/models/world_one/shell_rivet_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class IV layer of shell_rivet)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_rivet_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png"
+   }
+  },
+  {
+   "id": "shell_rivet_c5",
+   "path": "res://assets/models/world_one/shell_rivet_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft class V layer of shell_rivet: the heavy drill on the layer's WeaponRing, which rides the base ring)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_rivet_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png"
+   }
+  },
+  {
+   "id": "shell_rivet_calibrated",
+   "path": "res://assets/models/world_one/shell_rivet_calibrated.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (Rivet's earned Calibrated shell variant, CUSTOMIZE section 8; layers borrowed from shell_rivet)",
+   "exception": {
+    "draws": 15
+   },
+   "exception_why": "the same mecha as shell_rivet, whose row gives the draw breakdown; 14 drawn in play, within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_rivet.py --variant calibrated",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/sheet.png; design-v3/pilots/rivet.md section 7"
+   }
   },
   {
    "path": "res://assets/models/world_one/shell_sable.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd:38-40"
+   "loader": "src/presentation/hero_assets.gd:38-40",
+   "exception": {
+    "draws": 14
+   },
+   "exception_why": "PD-SABLE Hoberman mecha, 14 draws inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10: base 10 plus machinery and the Pilot placeholder); PD-0's base takes 10 (Core 3, Pod 3, Gyro, GyroInner, WeaponRing 2), the hidden placeholder Pilot, the CoilMast tip and the WrenchRack each need their own node and the emitter coils add copper on the ring",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable.py",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/hero.png, chase.png and sheet.png; concepts/codex/base/base-hero.png and mechanism.png"
+   }
+  },
+  {
+   "id": "shell_sable_c2",
+   "path": "res://assets/models/world_one/shell_sable_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC2 holder under HeroPod, shown at heft class II and up)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (GAP PANEL, heft I, III, V)"
+   }
+  },
+  {
+   "id": "shell_sable_c3",
+   "path": "res://assets/models/world_one/shell_sable_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC3 holders under HeroCore and HeroPod)",
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "ROSTER-LOOK section 5 class III: thicker tread caps on Core plus side-gap panels on Pod, one draw per part; within the 2-draw class III layer cap (docs/decisions.tsv 2026-10-10, ROSTER-LOOK:250)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (GAP PANEL, heft I, III, V)"
+   }
+  },
+  {
+   "id": "shell_sable_c4",
+   "path": "res://assets/models/world_one/shell_sable_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC4 holder under HeroPod)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (GAP PANEL, heft I, III, V)"
+   }
+  },
+  {
+   "id": "shell_sable_c5",
+   "path": "res://assets/models/world_one/shell_sable_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (HeftC5 holder under HeroPod; the coil mast's open copper winding, one draw; the base CoilMast mint tip stays shown inside it)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (heft V, HUB MODULE)"
+   }
+  },
+  {
+   "id": "shell_sable_felt",
+   "path": "res://assets/models/world_one/shell_sable_felt.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (shell variant shell_sable_felt, CUSTOMIZE section 8 Felt Rig; layers borrow the default shell_sable_c2..c5)",
+   "exception": {
+    "draws": 14
+   },
+   "exception_why": "same node set as shell_sable (see its row): 14 draws, inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_sable.py --variant felt",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/sable/hero.png, chase.png and sheet.png"
+   }
   },
   {
    "id": "shell_tally",
@@ -2906,7 +3177,68 @@
    "loader": "src/presentation/hero_assets.gd",
    "provenance": {
     "recipe": "tools/blender/shell_tally.py",
-    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
+   }
+  },
+  {
+   "id": "shell_tally_abacus",
+   "path": "res://assets/models/world_one/shell_tally_abacus.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (shell variant; classes II to V borrow the default layers)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tally.py --variant abacus",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tally_c2",
+   "path": "res://assets/models/world_one/shell_tally_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class II)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tally_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL)"
+   }
+  },
+  {
+   "id": "shell_tally_c3",
+   "path": "res://assets/models/world_one/shell_tally_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class III)",
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "ROSTER-LOOK section 5: class III adds plates on the Pod part and thicker tread caps on the Core part, two parts and two draws; the coordinator's Hoberman pilot mecha call (docs/decisions.tsv w13-PD 2026-10-10T21:29:13: shell cap 16, class III layer up to 2, other layers 1) admits it",
+   "provenance": {
+    "recipe": "tools/blender/shell_tally_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL, heft III)"
+   }
+  },
+  {
+   "id": "shell_tally_c4",
+   "path": "res://assets/models/world_one/shell_tally_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class IV)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tally_plates.py",
+    "concept": "pilots/tally.md section 5 (class IV drum hoods); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tally_c5",
+   "path": "res://assets/models/world_one/shell_tally_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd fit_shell_into (heft layer, class V; Replace.Flywheel.R and .L)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tally_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (heft V)"
    }
   },
   {
@@ -2915,9 +3247,78 @@
    "class": "shell",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd",
+   "exception": {
+    "draws": 17
+   },
+   "exception_why": "PD-TARN: a documented 17-draw exception to the 16-draw cap for Hoberman pilot mechas (cap: docs/decisions.tsv 2026-10-10 w13-PD, base 10 plus up to 6 for machinery and the Pilot placeholder; exception: docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17). Reason: four articulated claw jaws at two surfaces each are the character, each its own hinged mesh with a bone paint body and a class_accent tooth strip (8), and the Pod keeps its copper surface beside paint because the copper lap bar is the ultimate control on every pilot and paint must never tint it (ROSTER-LOOK section 6). 17 draws: jaws 8, two swinging blades 2, Gyro and GyroInner 2, Core paint and copper 2, Pod paint and copper 2, WeaponRing 1; rubber on Core, Pod and WeaponRing folds into paint in charcoal vertex colour; the pull drum rides the Pod mesh; ball at class V 17 + pilot 3 + layers 5",
    "provenance": {
     "recipe": "tools/blender/shell_tarn.py",
-    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/hero.png, chase.png, sheet.png; concepts/codex/base/base-hero.png, mechanism.png"
+   }
+  },
+  {
+   "id": "shell_tarn_c2",
+   "path": "res://assets/models/world_one/shell_tarn_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class II layer)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tarn_c3",
+   "path": "res://assets/models/world_one/shell_tarn_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class III layer)",
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "ROSTER-LOOK section 5: class III adds side-gap panels on the Pod and thicker tread caps on the Core, two parts at one draw each, within the class III layer cap of 2 draws (ROSTER-LOOK:250; docs/decisions.tsv 2026-10-10 w13-PD)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tarn_c4",
+   "path": "res://assets/models/world_one/shell_tarn_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class IV layer)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tarn_c5",
+   "path": "res://assets/models/world_one/shell_tarn_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class V layer)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tarn_redjaw_teeth",
+   "path": "res://assets/models/world_one/shell_tarn_redjaw_teeth.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, variant shell_tarn_redjaw_teeth; classes II to V borrow the default layers)",
+   "exception": {
+    "draws": 17
+   },
+   "exception_why": "PD-TARN: the earned Redjaw Teeth shell keeps the default's machinery and its copper Pod surface, so it keeps the default's 17 draws, a documented exception to the 16-draw cap for Hoberman pilot mechas (cap: docs/decisions.tsv 2026-10-10 w13-PD; exception: docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17): four articulated two-surface jaws are the character and the copper lap bar is never tinted by paint (ROSTER-LOOK section 6)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn.py --variant teeth",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "design-v3/CUSTOMIZE.md section 8 (shell_tarn_redjaw_teeth); artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
    }
   },
   {
@@ -3311,6 +3712,7 @@
   "ram_spring__escape_vent",
   "ram_spring__primer_coil",
   "ram_spring__primer_mesh",
+  "res://assets/models/world_one/shell_rivet.glb",
   "rescue_cage",
   "return_ramp_skin",
   "return_ramp_skin_rusted-salvaged-plate.webp",
@@ -3324,11 +3726,41 @@
   "scrap_crate",
   "scrap_pickups",
   "shell_cannon",
+  "shell_cannon_c2",
+  "shell_cannon_c3",
+  "shell_cannon_c4",
+  "shell_cannon_c5",
+  "shell_cannon_choir",
   "shell_crescent",
+  "shell_kest_c2",
+  "shell_kest_c3",
+  "shell_kest_c4",
+  "shell_kest_c5",
+  "shell_kest_roost",
   "shell_neutral",
+  "shell_rivet_c2",
+  "shell_rivet_c3",
+  "shell_rivet_c4",
+  "shell_rivet_c5",
+  "shell_rivet_calibrated",
+  "shell_sable_c2",
+  "shell_sable_c3",
+  "shell_sable_c4",
+  "shell_sable_c5",
+  "shell_sable_felt",
   "shell_saddle",
   "shell_tally",
+  "shell_tally_abacus",
+  "shell_tally_c2",
+  "shell_tally_c3",
+  "shell_tally_c4",
+  "shell_tally_c5",
   "shell_tarn",
+  "shell_tarn_c2",
+  "shell_tarn_c3",
+  "shell_tarn_c4",
+  "shell_tarn_c5",
+  "shell_tarn_redjaw_teeth",
   "sky_blades",
   "sky_cloud",
   "sky_cradle",

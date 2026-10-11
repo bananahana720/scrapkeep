@@ -49,6 +49,15 @@ const Augments := preload("res://src/movement/augments.gd")
 #   differs); the authored boss arenas' Wardens are not, so their fights are unchanged. Ctrl on an anchor line hauls only inside the stagger
 #   (Augments.haul_open). The flare is picked once per charge, and the shrug cuts only the
 #   flaring hardpoint's line; the flare goes out when that line does.
+# - The per-kind hook (KF1, widened 2026-10-11 for KF2 to KF4). The driver must answer
+#   mount_offset(warden, clock) -> Vector3 and may answer step(warden, delta) every physics
+#   tick after the body moved, charge_allowed(warden) -> bool before a charge starts (false
+#   lets the pulse clock run and starts no charge), on_charge(warden, seconds), on_pulse(warden,
+#   lifted), on_stagger(warden, open) and on_chunk_lost(warden, left); each is called only
+#   when the driver has it. A park Warden (spec "harpoon_anchor": true) that names no
+#   "mount_driver" loads res://src/combat/warden_<family>.gd when that file exists, so a
+#   kind's file attaches itself to every park Warden of its kind and to none of the authored
+#   boss arenas (KF2 to KF4 write those files; _kind_driver below).
 
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
@@ -160,6 +169,8 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	shrug_delay = float(spec.get("shrug_delay", SHRUG_DELAYS.get(mounting, 0.0)))
 	mount_driver = _driver_or_null(spec.get("mount_driver"))
 	set_harpoon_anchor(anchor_from(spec))
+	if mount_driver == null and harpoon_anchor:
+		mount_driver = _kind_driver()
 	var numbers: Dictionary = spec.get("posture", {})
 	if variant == "meltdown" and not numbers.has("stagger_seconds"):
 		numbers = numbers.duplicate()
@@ -301,6 +312,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_since_pulse += delta
 	_step_mounting(delta)
+	_hook("step", [self, delta])
 	var inside := _flat_to_ball().length() <= reach
 	_step_posture(delta)
 	if family == Roster.SWARM:
@@ -432,6 +444,48 @@ func anchor_point(point: Vector3, from = null) -> Vector3:
 # How fast the anchor moves this tick; the rope carries the ball at it (Augments._ride_anchor).
 func anchor_velocity() -> Vector3:
 	return mount_velocity
+
+
+# The hook's last view of the stagger and the chunk count, so on_stagger and on_chunk_lost
+# fire once per change, on the frame of the hit or the tick that closed the stagger.
+var _hook_staggered := false
+var _hook_chunks := -1
+
+
+# Calls the driver's optional `method` with `args` when it has one (see the header).
+func _hook(method: String, args: Array) -> void:
+	if mount_driver != null and mount_driver.has_method(method):
+		mount_driver.callv(method, args)
+
+
+# Whether the driver lets a charge start now; a driver without the method always does.
+func _charge_allowed() -> bool:
+	if mount_driver == null or not mount_driver.has_method("charge_allowed"):
+		return true
+	return mount_driver.charge_allowed(self) == true
+
+
+func _hook_posture() -> void:
+	if _hook_chunks < 0:
+		_hook_chunks = _posture.chunks
+	if _posture.staggered != _hook_staggered:
+		_hook_staggered = _posture.staggered
+		_hook("on_stagger", [self, _hook_staggered])
+	if _posture.chunks < _hook_chunks:
+		_hook_chunks = _posture.chunks
+		_hook("on_chunk_lost", [self, _hook_chunks])
+	_hook_chunks = _posture.chunks
+
+
+# The kind's own driver file, once KF2 to KF4 have written it; no file is no driver.
+func _kind_driver():
+	var path := "res://src/combat/warden_%s.gd" % family
+	if not ResourceLoader.exists(path):
+		return null
+	var script = load(path)
+	if not script is GDScript:
+		return null
+	return _driver_or_null(script.new())
 
 
 # The per-kind hook: an object with mount_offset(warden, clock) -> Vector3, the body's
@@ -597,7 +651,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH:
+	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH and _charge_allowed():
 		_charging = true
 		_charge_time = 0.0
 		_charge_len = PULSE_TELEGRAPH
@@ -608,6 +662,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_core_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
 		if family == Roster.REACTOR and fleet != null:
 			fleet.events().vent_charging.emit(global_position, _charge_len)
+		_hook("on_charge", [self, _charge_len])
 
 
 func _pulse() -> void:
@@ -636,6 +691,7 @@ func _pulse() -> void:
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()
 	_core_ring = null
+	_hook("on_pulse", [self, last_pulse_lifted])
 
 
 func _exit_tree() -> void:
@@ -744,6 +800,7 @@ func _apply_posture(result: Dictionary) -> void:
 	if _posture.staggered and not was_staggered:
 		_begin_stagger()
 	_publish_posture(before)
+	_hook_posture()
 
 
 func _step_posture(delta: float) -> void:
@@ -752,6 +809,7 @@ func _step_posture(delta: float) -> void:
 	if not _posture.staggered:
 		braced_kinds = []
 	_publish_posture(before)
+	_hook_posture()
 
 
 func _begin_stagger() -> void:

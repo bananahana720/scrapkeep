@@ -1,56 +1,94 @@
 extends SceneTree
+# 2026-10-10 (PD-KEST fix round): the gate's findings. Mortar is its own mesh under WeaponRing
+# with its origin on the cradle line, so the tubes and fuse tips pitch and recoil (pilots/kest.md
+# section 5): surfaces 14 -> 15, the one glow moves from WeaponRing to Mortar, and a new check
+# turns Mortar and watches the tubes move. The satchel bands are ochre (kest/hero.png) and carry
+# their index in UV2.x (1 to 3; 4 on the class IV satchel, whose faces carry UV2.y = 4); the class
+# IV satchel moved from the c4 layer (it hung on the Pod, which does not follow the ring's aim)
+# into the ring at 7:30, so the c4 check now wants no satchel in any layer. Two new checks: the
+# band indices and the band colour. EXPECTED_CHECKS 64 -> 67.
+# 2026-10-10 (PD-KEST): rewritten for the Hoberman mecha. The C09 glass-pod checks (one glass
+# surface, the old pod bounds, the kept satchel, mortar and vane vertices against the old
+# shell) no longer describe Kest's shell: shell_kest.py now builds on shell_base.hoberman() from
+# the approved concept set (concepts/codex/kest/). The new checks follow P-UNITS PD-KEST and
+# ROSTER-LOOK sections 0 to 6: node tree and controls, budget and the 14-surface draw count, the
+# vents at 2 and 10 o'clock (0.10 m past the lattice folded, 0.25 m open, clear of the sight
+# cone and the weapon band), the twin launchers at 11 and 1 o'clock with the only glow, the
+# satchels flat on the ring, the petrol seat, the four heft layers and the Roost Frame variant.
+# The pilot rig checks are unchanged (the body stays this wave, C9).
+#
+# What it checks, in order:
+#   budget    shell surfaces 15; tris without the pilot 3,000 to 6,500; verts within the shell
+#             class; shell plus rig under the 16,000 T / 15,000 V / 21 draw pod ceiling.
+#   tree      named nodes and parents, no FlightStick, exactly two pedals.
+#   materials section 9 slots only, no glass or requisition_tag, paint colours petrol, oxide,
+#             bone or charcoal, one class_accent surface (Mortar, at the launcher mouths),
+#             the petrol seat.
+#   lattice   Core radius 0.95 to 0.985 with Hub_00..Hub_31 and Gap_00..Gap_29.
+#   pod       sight cone empty (Gyro, WeaponRing and Dome skipped), no reach past 1.0 below -0.6,
+#             nothing past 1.25.
+#   vents     per vent: hinge radius, folded and open reach, folded clock, open band clearance and
+#             open sight cone.
+#   ring      launchers forward at 11 and 1 o'clock, satchels at 3, 6 and 9 hanging flat, the band
+#             indices in UV2 and the ochre band colour, Mortar pitching about the cradle line.
+#   layers    c2..c5: Core and Pod nodes, surface count, bone and charcoal paint, panels inside
+#             0.92 m, sight cone and low reach; c3's rims on Core; no satchel (it rides the ring).
+#   variant   the Roost Frame keeps the machinery and node tree, with its own lattice.
+#   rig       the 25-bone rig, its meshes, triangles and the seven clips.
+# The run must make EXPECTED_CHECKS checks, so an early return or a skipped loop fails it.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
+const T := preload("res://tests/support/t.gd")
 
-# C09 Kest pod limits (artifacts/asset-sheet/ASSETS.md): the world-one shell plus the
-# unchanged pilot rig stay under the no-growth pod ceiling, the pod keeps its old
-# silhouette and its crest, satchels, mortar mouth and open vane, and the rig, clips and
-# node names the game reads are intact. BASE is the shipped shell_kest.glb (unchanged, kept
-# for hero_assets_test and perf_bench); BASE_POD_* were measured on it at base bcd0a7e
-# (shell 10,292 T / 10,654 V / 16 surfaces, rig 4,492 T / 3,098 V / 5, pod 14,784 T /
-# 13,752 V / 21 draws).
-
+const EXPECTED_CHECKS := 67
 const SHELL := "res://assets/models/world_one/shell_kest.glb"
+const ROOST := "res://assets/models/world_one/shell_kest_roost.glb"
+const LAYER := "res://assets/models/world_one/shell_kest_c%d.glb"
 const RIG := "res://assets/models/pilot_kest_anim.glb"
+const SURFACES := 15
+const SHELL_TRIS := Vector2i(3000, 6500)
+const SHELL_VERTS := 11600
 const MAX_V := 15000
 const MAX_T := 16000
 const MAX_DRAWS := 21
+const LATTICE_OUTER := 0.975
+const CORE_LIMIT := 0.985
+const REACH := 1.25
+const PANEL_OUT := 0.92
+const BAND_TOP := 0.04
+# The satchel band stripe: shell_kest_plates.BAND_COLOR, amber mixed 0.3 toward oxide in sRGB.
+const OCHRE := Color(206.8 / 255.0, 136.3 / 255.0, 65.0 / 255.0)
+# Mortar pivots on the cradle line (shell_kest.MORTAR_PIVOT, Blender (0, 0.95, 0.03)).
+const MORTAR_PIVOT := Vector3(0.0, 0.03, -0.95)
+# Godot axes: the head and the chase eyes (cage_contract_test.gd, ROSTER-LOOK section 3 rule 3).
+const HEAD := Vector3(0.0, 0.20, -0.02)
+const EYES := [Vector3(0.0, 1.06, 3.44), Vector3(0.0, 2.22, 7.17), Vector3(0.0, 3.55, 11.46)]
+const SIGHT_HALF_ANGLE := 35.0
+const CONE_SKIP := ["Gyro", "WeaponRing", "Dome"]
+const NODES := ["Core", "Hub_00", "Hub_31", "Gap_00", "Gap_29", "Pod", "Gyro", "GyroInner", "WeaponRing",
+	"Mortar", "MortarMouth_L", "MortarMouth_R", "VaneL", "VaneR", "Dome", "Pilot", "DecalPlate",
+	"Control_Grip_L", "Control_Grip_R", "Control_Trigger", "Control_FusePlunger", "Control_ChargeKey",
+	"Control_LapBar", "LapBar_L", "LapBar_R", "Control_Pedal_L", "Control_Pedal_R"]
+const PARENTS := {"VaneL": "Pod", "VaneR": "Pod", "WeaponRing": "Pod", "Mortar": "WeaponRing", "Gyro": "Pod",
+	"GyroInner": "Gyro", "Dome": "Pod", "Pilot": "Dome"}
 const CLIPS := {"drop_land": 2.2, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
 const RIG_BONES := [
 	"root", "pelvis", "spine_01", "spine_02", "neck", "head", "crest", "ear.L", "ear.R",
 	"goggles", "jaw", "snout", "shoulder.L", "upper_arm.L", "lower_arm.L", "hand.L", "curl.L",
 	"shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R", "curl.R", "tool.R", "tail.01", "tail.02",
 ]
-# The triangle range allows one percent of export variation; pod ceilings above stay fixed.
 const RIG_TRIS := Vector2i(4447, 4537)
 const RIG_MESHES := {"Pilot": ["pilot"], "WingFan_L": ["pilot"], "WingFan_R": ["pilot"], "WingUpper_L": ["pilot"], "WingUpper_R": ["pilot"]}
-const NODES := ["Core", "Pod", "Dome", "Pilot", "Gyro", "VaneL", "VaneR"]
-const BASE := "res://assets/models/shell_kest.glb"
-const GROW := 0.002
-# Counts at this branch's base before the correction.
-const NO_GROWTH_V := 11596
-const NO_GROWTH_T := 10788
-# Pod kit mesh bounds of the base shell in shell space.
-const BASE_POD_MIN := Vector3(-0.94, -0.7735, -0.94)
-const BASE_POD_MAX := Vector3(0.94, 0.133, 0.94)
 
-# Blade mesh bounds of the base shell (folded pose, shell space); the blades are the open vane.
-const BASE_VANE := {
-	"VaneL": [Vector3(-0.0402, -0.1326, 0.1474), Vector3(0.01675, 0.0818, 0.6834)],
-	"VaneR": [Vector3(-0.01675, -0.1326, 0.1474), Vector3(0.0402, 0.0818, 0.6834)],
-}
-# Base surface count per mesh: the wear may not add a slot, so no mesh gains a draw.
-const BASE_SURFACES := {"Core": 1, "Pod": 5, "Pilot": 1, "Gyro": 3, "VaneL": 3, "VaneR": 3}
-
-var _failures := 0
+var _t := T.new("world_one_shell_kest_test")
 
 
-func _report(label: String, ok: bool, detail: String) -> void:
-	if not ok:
-		_failures += 1
-	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+func _initialize() -> void:
+	_run.call_deferred()
 
+
+# --- helpers -----------------------------------------------------------------------------
 
 static func meshes(node: Node, out: Array = []) -> Array:
 	if node is MeshInstance3D:
@@ -70,173 +108,411 @@ static func to_root(node: Node, root: Node) -> Transform3D:
 	return t
 
 
-static func under(node: Node, name: String) -> bool:
+static func under_any(node: Node, names: Array, stop: Node) -> bool:
 	var n := node
-	while n != null:
-		if String(n.name) == name:
+	while n != null and n != stop:
+		if String(n.name) in names:
 			return true
 		n = n.get_parent()
 	return false
 
 
-# Vertex, triangle, surface counts, and the count of alpha surfaces.
+# Vertices of a mesh in root space, optionally one slot's surfaces only.
+static func points(mi: MeshInstance3D, root: Node, slot := "") -> Array:
+	var t := to_root(mi, root)
+	var out := []
+	for s in mi.mesh.get_surface_count():
+		if slot != "" and HeroAssets.slot_of(mi.mesh, s) != slot:
+			continue
+		for v in (mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
+			out.append(t * v)
+	return out
+
+
+static func colors(mi: MeshInstance3D, slot: String) -> Array:
+	var out := []
+	for s in mi.mesh.get_surface_count():
+		if HeroAssets.slot_of(mi.mesh, s) == slot:
+			var cs = mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_COLOR]
+			if cs != null:
+				out.append_array(Array(cs))
+	return out
+
+
 static func counts(scene: Node) -> Dictionary:
-	var out := {"v": 0, "t": 0, "s": 0, "alpha": 0}
+	var out := {"v": 0, "t": 0, "s": 0, "t_no_pilot": 0}
 	for mi in meshes(scene):
 		for i in mi.mesh.get_surface_count():
 			var arrays := (mi.mesh as Mesh).surface_get_arrays(i)
-			out.v += (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+			var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			var index = arrays[Mesh.ARRAY_INDEX]
-			out.t += (index.size() if index != null else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
+			var tris: int = (index.size() if index != null else vs.size()) / 3
+			out.v += vs.size()
+			out.t += tris
 			out.s += 1
-			if HeroAssets.slot_of(mi.mesh, i) == "glass":
-				out.alpha += 1
+			if String(mi.name) != "Pilot":
+				out.t_no_pilot += tris
 	return out
 
 
-# Every base vertex of a mesh node inside a region (shell space, Godot axes) must still
-# exist in the new shell, so a preserved feature cannot be dropped or reshaped.
-static func verts_in(scene: Node, node_name: String, region: AABB) -> Dictionary:
-	var out := {}
-	for mi in meshes(scene):
-		if String(mi.name) != node_name:
-			continue
-		var t := to_root(mi, scene)
-		for i in mi.mesh.get_surface_count():
-			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				var w := t * v
-				if region.has_point(w):
-					out[Vector3i((w * 1000.0).round())] = true
-	return out
+static func near_any(c: Color, set: Array) -> bool:
+	for p in set:
+		var lin: Color = (p as Color).srgb_to_linear()
+		if absf(c.r - lin.r) < 0.01 and absf(c.g - lin.g) < 0.01 and absf(c.b - lin.b) < 0.01:
+			return true
+	return false
 
 
-# Per-feature extent: bin Pod vertices into CELL-metre cells; every shell vertex must sit in
-# a cell the base also occupies, so a fin or stack cannot grow into empty space inside the
-# overall bounds. Returns the count of shell vertices in cells the base leaves empty.
-const CELL := 0.12
+static func in_cone(p: Vector3) -> bool:
+	var d := p - HEAD
+	if d.length() < 1e-6:
+		return false
+	var cos_half := cos(deg_to_rad(SIGHT_HALF_ANGLE))
+	for e in EYES:
+		if d.normalized().dot(((e as Vector3) - HEAD).normalized()) > cos_half:
+			return true
+	return false
 
 
-static func cell_of(w: Vector3) -> Vector3i:
-	return Vector3i((w / CELL).floor())
-
-
-static func occupied(scene: Node, node_names: Array) -> Dictionary:
-	var out := {}
-	for mi in meshes(scene):
-		if not (String(mi.name) in node_names):
-			continue
-		var t := to_root(mi, scene)
-		for i in mi.mesh.get_surface_count():
-			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				out[cell_of(t * v)] = true
-	return out
-
-
-func _outside_cells(base: Node, shell: Node, node_name: String, allowed: Array) -> int:
-	var have := occupied(base, allowed)
+# Solid Pod vertices in the sight cone, skipping the Gyro, WeaponRing and Dome subtrees.
+static func cone_hits(scene: Node, pod: Node) -> int:
 	var n := 0
-	for mi in meshes(shell):
-		if String(mi.name) != node_name:
+	for mi in meshes(pod):
+		if mi != pod and under_any(mi, CONE_SKIP, pod):
 			continue
-		var t := to_root(mi, shell)
-		for i in mi.mesh.get_surface_count():
-			for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-				var w := t * v
-				var ok := false
-				for dx in [-1, 0, 1]:
-					for dy in [-1, 0, 1]:
-						for dz in [-1, 0, 1]:
-							ok = ok or have.has(cell_of(w) + Vector3i(dx, dy, dz))
-				if not ok:
-					n += 1
+		for p in points(mi, scene):
+			if in_cone(p):
+				n += 1
 	return n
 
 
-func _kept(base: Node, shell: Node, node_name: String, region: AABB) -> String:
-	var want := verts_in(base, node_name, region)
-	var have := verts_in(shell, node_name, region.grow(0.002))
-	var lost := 0
-	for k in want:
-		var hit := false
-		for dx in [-1, 0, 1]:
-			for dy in [-1, 0, 1]:
-				for dz in [-1, 0, 1]:
-					hit = hit or have.has(k + Vector3i(dx, dy, dz))
-		if not hit:
-			lost += 1
-	return "%d of %d base vertices" % [lost, want.size()] if lost > 0 or want.is_empty() else ""
+static func low_reach(scene: Node, pod: Node) -> int:
+	var n := 0
+	for mi in meshes(pod):
+		for p in points(mi, scene):
+			if (p as Vector3).y < -0.6 and (p as Vector3).length() > 1.0:
+				n += 1
+	return n
 
 
-# C09 correction 1: the wear on the working edges. The working faces are the Pod paint
-# triangles of the satchels (canvas bodies and flaps) and the mortar tube: paint triangles in
-# the region whose base colour is not already bone. Over them, the share that reads as worn
-# in the shell: bone on any vertex, with the original material slot intact. Triangles are matched to
-# the base by centroid (the wear adds no geometry, so the centroids are identical).
-const WEAR_MIN := {"satchel right": 0.4, "satchel rear": 0.4, "satchel left": 0.4, "mortar": 0.2}
-const WEAR_REGIONS := {
-	"satchel right": AABB(Vector3(0.376, -0.52, -0.106), Vector3(0.32, 0.32, 0.32)),
-	"satchel rear": AABB(Vector3(-0.12, -0.53, 0.376), Vector3(0.32, 0.32, 0.32)),
-	"satchel left": AABB(Vector3(-0.656, -0.54, -0.36), Vector3(0.32, 0.32, 0.32)),
-	"mortar": AABB(Vector3(-0.56, -0.36, 0.05), Vector3(0.3, 0.45, 0.4)),
-}
+static func far(pts: Array) -> float:
+	var r := 0.0
+	for p in pts:
+		r = maxf(r, (p as Vector3).length())
+	return r
 
 
-# Pod triangles by rounded centroid: {key: [slot, has_bone_vertex, centroid]}.
-static func pod_tris(scene: Node) -> Dictionary:
-	var bone: Color = Palette.SAND.srgb_to_linear()
-	var out := {}
-	for mi in meshes(scene):
-		if String(mi.name) != "Pod":
+func _load(path: String) -> Node:
+	var packed := load(path) as PackedScene
+	_t.check("loads " + path.get_file(), packed != null, path)
+	return packed.instantiate() if packed != null else null
+
+
+# --- checks ------------------------------------------------------------------------------
+
+func _run() -> void:
+	var shell := _load(SHELL)
+	var rig := _load(RIG)
+	if shell == null or rig == null:
+		_finish()
+		return
+	_budget(shell, rig)
+	_tree(shell)
+	_materials(shell)
+	_lattice(shell)
+	var pod := shell.find_child("Pod", true, false)
+	_t.check("pod sight cone", cone_hits(shell, pod) == 0, "%d solid Pod vertices in the 35 degree cone" % cone_hits(shell, pod))
+	_t.check("pod low reach", low_reach(shell, pod) == 0, "%d Pod vertices past 1.0 m below Y -0.6" % low_reach(shell, pod))
+	var reach := 0.0
+	for mi in meshes(pod):
+		if not under_any(mi, ["Dome"], pod):
+			reach = maxf(reach, far(points(mi, shell)))
+	_t.check("pod reach", reach <= REACH, "machinery reaches %.3f m, limit %.2f" % [reach, REACH])
+	_vents(shell, pod)
+	_ring(shell)
+	for n in [2, 3, 4, 5]:
+		_layer(n)
+	_variant(shell)
+	_check_rig(rig)
+	shell.free()
+	rig.free()
+	_finish()
+
+
+func _finish() -> void:
+	_t.eq("check count", _t.checks + 1, EXPECTED_CHECKS)
+	quit(_t.verdict())
+
+
+func _budget(shell: Node, rig: Node) -> void:
+	var a := counts(shell)
+	var b := counts(rig)
+	_t.eq("shell surfaces", a.s, SURFACES)
+	_t.check("shell tris", a.t_no_pilot >= SHELL_TRIS.x and a.t_no_pilot <= SHELL_TRIS.y,
+		"%d tris without the pilot, band %d..%d" % [a.t_no_pilot, SHELL_TRIS.x, SHELL_TRIS.y])
+	_t.check("shell verts", a.v <= SHELL_VERTS, "%d vertices, shell class %d" % [a.v, SHELL_VERTS])
+	_t.check("pod ceiling", a.t + b.t <= MAX_T and a.v + b.v <= MAX_V and a.s + b.s <= MAX_DRAWS,
+		"%d T, %d V, %d draws with the rig; ceiling %d T, %d V, %d draws" % [a.t + b.t, a.v + b.v, a.s + b.s, MAX_T, MAX_V, MAX_DRAWS])
+
+
+func _tree(shell: Node) -> void:
+	var missing := NODES.filter(func(n): return shell.find_child(n, true, false) == null)
+	_t.check("nodes", missing.is_empty(), "missing %s" % [missing])
+	var wrong := []
+	for child in PARENTS:
+		var node := shell.find_child(child, true, false)
+		if node == null or String(node.get_parent().name) != PARENTS[child]:
+			wrong.append(child)
+	_t.check("parents", wrong.is_empty(), "nodes under the wrong parent %s" % [wrong])
+	var pedals := shell.find_children("Control_Pedal*", "", true, false).size()
+	_t.check("controls", shell.find_child("Control_FlightStick", true, false) == null and pedals == 2,
+		"no FlightStick (the lap bar takes the ride), %d pedals, want 2" % pedals)
+
+
+func _materials(shell: Node) -> void:
+	var bad := []
+	var accents := []
+	var off := 0
+	for mi in meshes(shell):
+		for s in mi.mesh.get_surface_count():
+			var slot := HeroAssets.slot_of(mi.mesh, s)
+			if not HeroAssets.SLOTS.has(slot) or slot in ["glass", "requisition_tag", "fleet_paint"]:
+				bad.append("%s:%s" % [mi.name, slot])
+			if slot == "class_accent":
+				accents.append(String(mi.name))
+		for c in colors(mi, "paint"):
+			if not near_any(c, [Palette.VERDIGRIS, Palette.RUST, Palette.SAND, Palette.CHARCOAL, OCHRE]):
+				off += 1
+	_t.check("slots", bad.is_empty(), "section 9 slots, no glass or requisition_tag %s" % [bad])
+	_t.check("paint colours", off == 0, "petrol, oxide, bone, charcoal or the ochre band (%d off)" % off)
+	_t.check("one glow", accents == ["Mortar"], "class_accent surfaces on %s, want only Mortar" % [accents])
+	var mortar := shell.find_child("Mortar", true, false) as MeshInstance3D
+	var mouths := [shell.find_child("MortarMouth_L", true, false), shell.find_child("MortarMouth_R", true, false)]
+	var stray := 0
+	if mortar != null and mouths[0] != null and mouths[1] != null:
+		for p in points(mortar, shell, "class_accent"):
+			if minf((p - to_root(mouths[0], shell).origin).length(), (p - to_root(mouths[1], shell).origin).length()) > 0.06:
+				stray += 1
+	_t.check("glow at the fuse tips", mortar != null and stray == 0, "%d class_accent vertices away from the launcher mouths" % stray)
+	var pod := shell.find_child("Pod", true, false) as MeshInstance3D
+	var seat := AABB(Vector3(-0.25, -0.45, -0.3), Vector3(0.5, 0.4, 0.6))
+	var seat_n := 0
+	var seat_off := 0
+	var t := to_root(pod, shell)
+	for s in pod.mesh.get_surface_count():
+		if HeroAssets.slot_of(pod.mesh, s) != "paint":
 			continue
-		var t := to_root(mi, scene)
-		for i in mi.mesh.get_surface_count():
-			var slot := HeroAssets.slot_of(mi.mesh, i)
-			var arrays := (mi.mesh as Mesh).surface_get_arrays(i)
-			var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-			var cs = arrays[Mesh.ARRAY_COLOR]
-			var index = arrays[Mesh.ARRAY_INDEX]
-			var n: int = index.size() if index != null else vs.size()
-			for k in range(0, n, 3):
-				var ids: Array = [index[k], index[k + 1], index[k + 2]] if index != null else [k, k + 1, k + 2]
-				var centre: Vector3 = t * ((vs[ids[0]] + vs[ids[1]] + vs[ids[2]]) / 3.0)
-				var has_bone := false
-				if cs != null:
-					for id in ids:
-						var c: Color = cs[id]
-						has_bone = has_bone or (absf(c.r - bone.r) < 0.01 and absf(c.g - bone.g) < 0.01 and absf(c.b - bone.b) < 0.01)
-				out[Vector3i((centre * 1000.0).round())] = [slot, has_bone, centre]
-	return out
+		var arrays := pod.mesh.surface_get_arrays(s)
+		var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var cs: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+		for i in vs.size():
+			if seat.has_point(t * vs[i]):
+				seat_n += 1
+				if not near_any(cs[i], [Palette.VERDIGRIS]):
+					seat_off += 1
+	_t.check("petrol seat", seat_n > 0 and seat_off == 0, "%d seat paint vertices, %d not petrol" % [seat_n, seat_off])
 
 
-# [worn, working, missing]: working = base paint triangles in the region with no bone vertex.
-static func wear_share(base_tris: Dictionary, shell_tris: Dictionary, region: AABB) -> Array:
-	var worn := 0
-	var working := 0
-	var missing := 0
-	for key in base_tris:
-		var b: Array = base_tris[key]
-		if b[0] != "paint" or b[1] or not region.has_point(b[2]):
+func _lattice(shell: Node) -> void:
+	var core := shell.find_child("Core", true, false) as MeshInstance3D
+	var r := far(points(core, shell))
+	var hubs := 0
+	var gaps := 0
+	for c in core.get_children():
+		hubs += 1 if String(c.name).begins_with("Hub_") else 0
+		gaps += 1 if String(c.name).begins_with("Gap_") else 0
+	_t.check("lattice", r >= 0.95 and r <= CORE_LIMIT + 0.0001 and hubs == 32 and gaps == 30,
+		"Core radius %.4f (0.95 to %.3f), %d hubs, %d gaps" % [r, CORE_LIMIT, hubs, gaps])
+
+
+func _vents(shell: Node, pod: Node) -> void:
+	for side in [-1.0, 1.0]:
+		var name := "VaneL" if side < 0 else "VaneR"
+		var vane := shell.find_child(name, true, false) as MeshInstance3D
+		if vane == null:
+			for i in 6:
+				_t.check(name, false, "missing")
 			continue
-		working += 1
-		if not shell_tris.has(key):
-			missing += 1
+		var hinge := to_root(vane, shell).origin
+		_t.check(name + " hinge", absf(hinge.length() - 0.90) < 0.01 and signf(hinge.x) == side,
+			"hinge at %s, radius %.3f, side %d" % [hinge, hinge.length(), side])
+		var folded := points(vane, shell)
+		var tip: Vector3 = folded[0]
+		for p in folded:
+			if (p as Vector3).length() > tip.length():
+				tip = p
+		var clock := rad_to_deg(atan2(absf(tip.x), tip.y))
+		_t.check(name + " folded", absf(tip.length() - LATTICE_OUTER - 0.10) <= 0.03 and clock >= 45.0 and clock <= 75.0,
+			"tip %.3f m past the lattice (0.10 +/-0.03) at %.0f degrees from the top (2 or 10 o'clock: 45 to 75)" % [tip.length() - LATTICE_OUTER, clock])
+		vane.rotation.z = -side * PI * 0.5
+		var opened := points(vane, shell)
+		var o_far := far(opened)
+		_t.check(name + " open", absf(o_far - LATTICE_OUTER - 0.25) <= 0.03 and o_far <= REACH,
+			"open %.3f m past the lattice (0.25 +/-0.03), radius %.3f, limit %.2f" % [o_far - LATTICE_OUTER, o_far, REACH])
+		var low := INF
+		var cone := 0
+		for p in opened:
+			if (p as Vector3).length() > 0.98:
+				low = minf(low, (p as Vector3).y)
+			if in_cone(p):
+				cone += 1
+		_t.check(name + " open over the band", low > BAND_TOP + 0.05, "lowest open point past 0.98 m at Y %.3f, band top %.2f" % [low, BAND_TOP])
+		_t.check(name + " open sight cone", cone == 0, "%d open vent vertices in the sight cone" % cone)
+		var out_x := 0.0
+		for p in opened:
+			out_x = maxf(out_x, (p as Vector3).x * side)
+		var spread: bool = tip.x * side > 0.0 and out_x > 1.0
+		_t.check(name + " opens outward", spread, "open vent reaches past 1.0 m on its own side")
+		vane.rotation.z = 0.0
+
+
+func _ring(shell: Node) -> void:
+	var mouths := []
+	for tag in ["L", "R"]:
+		var m := shell.find_child("MortarMouth_" + tag, true, false) as Node3D
+		mouths.append(to_root(m, shell).origin if m != null else Vector3.ZERO)
+	var ok := true
+	for i in 2:
+		var p: Vector3 = mouths[i]
+		var clock := rad_to_deg(atan2(p.x, -p.z))
+		ok = ok and p.z < -1.0 and absf(absf(clock) - 30.0) <= 8.0 and signf(p.x) == (-1.0 if i == 0 else 1.0)
+	_t.check("launchers at 11 and 1", ok, "mouths %s, forward (Godot -Z) at 22 to 38 degrees each side" % [mouths])
+	var ring := shell.find_child("WeaponRing", true, false) as MeshInstance3D
+	var bins := {90: 0, 180: 0, 270: 0}
+	var y_lo := INF
+	var y_hi := -INF
+	for p in points(ring, shell, "paint"):
+		var flat := Vector2(p.x, p.z)
+		if flat.length() < 1.12:
 			continue
-		var s: Array = shell_tris[key]
-		if s[0] == "paint" and s[1]:
-			worn += 1
-	return [worn, working, missing]
+		var clock := fposmod(rad_to_deg(atan2(p.x, -p.z)), 360.0)
+		for b in bins:
+			if absf(clock - b) < 12.0:
+				bins[b] += 1
+				y_lo = minf(y_lo, p.y)
+				y_hi = maxf(y_hi, p.y)
+	_t.check("satchels at 3, 6 and 9", bins.values().all(func(n): return n > 0),
+		"satchel paint vertices by clock %s" % [bins])
+	_t.check("satchels flat on the ring", y_lo >= -0.13 and y_hi <= BAND_TOP + 0.02,
+		"satchels span Y %.3f to %.3f; they hang flat under the band top" % [y_lo, y_hi])
+	_bands(shell, ring)
+	_mortar(shell)
 
 
-# Scratch GLBs are read directly, so a red run never overwrites a delivered asset or its import.
-func _load_asset(path: String, environment: String) -> Node:
-	var scratch := OS.get_environment(environment)
-	if not scratch.is_empty():
-		var document := GLTFDocument.new()
-		var state := GLTFState.new()
-		var error := document.append_from_file(scratch, state)
-		_report("kest scratch load", error == OK, "GLTF load error %d" % error)
-		return document.generate_scene(state) if error == OK else Node.new()
-	return (load(path) as PackedScene).instantiate()
+# The satchel bands: UV2.x is the band index on the ochre band faces, UV2.y the heft class a face
+# shows from. Ungated bands are exactly {1, 2, 3}; the class IV satchel carries band 4, gated to 4,
+# at 7:30 on the ring row.
+func _bands(shell: Node, ring: MeshInstance3D) -> void:
+	var open := {}
+	var gated := {}
+	var gate_off := 0
+	var band_n := 0
+	var band_off := 0
+	for s in ring.mesh.get_surface_count():
+		var arrays := ring.mesh.surface_get_arrays(s)
+		var uv2 = arrays[Mesh.ARRAY_TEX_UV2]
+		if uv2 == null:
+			continue
+		var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var cs = arrays[Mesh.ARRAY_COLOR]
+		var t := to_root(ring, shell)
+		for i in vs.size():
+			var band := int(roundf((uv2 as PackedVector2Array)[i].x))
+			var gate := int(roundf((uv2 as PackedVector2Array)[i].y))
+			if gate != 0:
+				var p: Vector3 = t * vs[i]
+				var clock := fposmod(rad_to_deg(atan2(p.x, -p.z)), 360.0)
+				if gate != 4 or absf(clock - 225.0) > 12.0:
+					gate_off += 1
+			if band == 0:
+				continue
+			band_n += 1
+			if cs == null or not near_any((cs as PackedColorArray)[i], [OCHRE]):
+				band_off += 1
+			if gate == 0:
+				open[band] = true
+			else:
+				gated[band] = true
+	var open_keys := open.keys()
+	open_keys.sort()
+	_t.check("satchel bands", open_keys == [1, 2, 3] and gated.keys() == [4] and gate_off == 0,
+		"ungated band indices %s (want [1, 2, 3]), gated %s (want [4]), %d gated vertices off the class IV satchel at 7:30" % [open_keys, gated.keys(), gate_off])
+	_t.check("band colour", band_n > 0 and band_off == 0, "%d band vertices, %d not ochre" % [band_n, band_off])
+
+
+# Mortar pitches about its cradle line: turning it moves the tubes.
+func _mortar(shell: Node) -> void:
+	var mortar := shell.find_child("Mortar", true, false) as MeshInstance3D
+	if mortar == null:
+		_t.check("mortar pitches", false, "Mortar is not a mesh")
+		return
+	var origin := to_root(mortar, shell).origin
+	var before := points(mortar, shell)
+	mortar.rotation.x = deg_to_rad(20.0)
+	var after := points(mortar, shell)
+	mortar.rotation.x = 0.0
+	var moved := 0.0
+	for i in before.size():
+		moved = maxf(moved, ((after[i] as Vector3) - (before[i] as Vector3)).length())
+	_t.check("mortar pitches", origin.distance_to(MORTAR_PIVOT) < 0.01 and moved > 0.02,
+		"Mortar origin %s (cradle line %s), tubes move %.3f m at 20 degrees" % [origin, MORTAR_PIVOT, moved])
+
+
+func _layer(n: int) -> void:
+	var scene := _load(LAYER % n)
+	if scene == null:
+		for i in 3:
+			_t.check("c%d" % n, false, "missing")
+		return
+	var core := scene.find_child("Core", true, false)
+	var pod := scene.find_child("Pod", true, false) as MeshInstance3D
+	var c := counts(scene)
+	_t.check("c%d nodes and draws" % n, core != null and pod != null and c.s == (2 if n == 3 else 1),
+		"Core and Pod present, %d surfaces (want %d)" % [c.s, 2 if n == 3 else 1])
+	var panel_far := 0.0
+	var off := 0
+	var outside := 0
+	if pod != null:
+		for p in points(pod, scene, "paint"):
+			if (p as Vector3).length() < 1.0:
+				panel_far = maxf(panel_far, (p as Vector3).length())
+			else:
+				outside += 1
+		for col in colors(pod, "paint"):
+			if not near_any(col, [Palette.SAND, Palette.CHARCOAL, Palette.RUST, Palette.VERDIGRIS]):
+				off += 1
+	var rule := panel_far <= PANEL_OUT + 0.0025 and off == 0 and outside == 0
+	rule = rule and pod != null and cone_hits(scene, pod) == 0 and low_reach(scene, pod) == 0
+	_t.check("c%d panels" % n, rule,
+		"panels reach %.4f m (outer face %.2f), %d off-colour, %d vertices past 1.0 m (none: the class IV satchel rides the ring), sight cone and low reach clear"
+		% [panel_far, PANEL_OUT, off, outside])
+	if n == 3:
+		var rims := core as MeshInstance3D
+		var r := far(points(rims, scene)) if rims != null else 99.0
+		var slot := HeroAssets.slot_of(rims.mesh, 0) if rims != null else ""
+		_t.check("c3 tread rims", rims != null and slot == "rubber" and r <= CORE_LIMIT + 0.0001,
+			"thicker tread caps on Core: %s slot, radius %.4f, limit %.3f" % [slot, r, CORE_LIMIT])
+	else:
+		_t.check("c%d core" % n, core != null and not (core is MeshInstance3D), "panels hang from the Pod; Core is an empty")
+	scene.free()
+
+
+func _variant(shell: Node) -> void:
+	var roost := _load(ROOST)
+	if roost == null:
+		for i in 2:
+			_t.check("roost", false, "missing")
+		return
+	var missing := NODES.filter(func(n): return roost.find_child(n, true, false) == null)
+	var c := counts(roost)
+	_t.check("roost tree", missing.is_empty() and c.s == SURFACES, "missing %s, %d surfaces" % [missing, c.s])
+	var a := shell.find_child("Core", true, false) as MeshInstance3D
+	var b := roost.find_child("Core", true, false) as MeshInstance3D
+	var ta: int = counts(a).t
+	var tb: int = counts(b).t
+	var rb := far(points(b, roost))
+	_t.check("roost lattice", tb < ta and rb <= CORE_LIMIT + 0.0001, "Roost Frame Core %d tris against the default %d, radius %.4f" % [tb, ta, rb])
+	roost.free()
 
 
 func _check_rig(rig: Node) -> void:
@@ -246,8 +522,8 @@ func _check_rig(rig: Node) -> void:
 		var skeleton := skeletons[0] as Skeleton3D
 		for i in skeleton.get_bone_count():
 			names.append(skeleton.get_bone_name(i))
-	_report("kest rig bones", skeletons.size() == 1 and names == RIG_BONES,
-		"%d skeleton, %d bones; expected 1 skeleton and 25 ordered names, got %s" % [skeletons.size(), names.size(), names])
+	_t.check("kest rig bones", skeletons.size() == 1 and names == RIG_BONES,
+		"%d skeleton, %d bones; expected 1 skeleton and 25 ordered names" % [skeletons.size(), names.size()])
 	var actual := {}
 	for mi in meshes(rig):
 		var materials := []
@@ -255,132 +531,17 @@ func _check_rig(rig: Node) -> void:
 			var material: Material = mi.mesh.surface_get_material(i)
 			materials.append(material.resource_name if material != null else "<missing>")
 		actual[String(mi.name)] = materials
-	_report("kest rig meshes", actual == RIG_MESHES, "mesh material names %s, expected %s" % [actual, RIG_MESHES])
+	_t.check("kest rig meshes", actual == RIG_MESHES, "mesh material names %s, expected %s" % [actual, RIG_MESHES])
 	var triangles: int = counts(rig).t
-	_report("kest rig triangles", triangles >= RIG_TRIS.x and triangles <= RIG_TRIS.y,
-		"%d triangles, range %d..%d (1 percent around delivered geometry)" % [triangles, RIG_TRIS.x, RIG_TRIS.y])
+	_t.check("kest rig triangles", triangles >= RIG_TRIS.x and triangles <= RIG_TRIS.y,
+		"%d triangles, range %d..%d" % [triangles, RIG_TRIS.x, RIG_TRIS.y])
 	var player := rig.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	var clips := []
 	if player != null:
 		clips = Array(player.get_animation_list())
 	var lost := CLIPS.keys().filter(func(c): return not (c in clips))
-	_report("kest rig clips", player != null and lost.is_empty(), "seven pilot clips present (missing %s)" % [lost])
+	_t.check("kest rig clips", player != null and lost.is_empty(), "seven pilot clips present (missing %s)" % [lost])
 	for clip in CLIPS:
 		var length := player.get_animation(clip).length if clip in clips else -1.0
-		_report("kest rig length " + clip, absf(length - CLIPS[clip]) <= 0.001,
+		_t.check("kest rig length " + clip, absf(length - CLIPS[clip]) <= 0.001,
 			"%.6f seconds, expected %.6f +/-0.001" % [length, CLIPS[clip]])
-
-
-func _initialize() -> void:
-	var shell: Node = _load_asset(SHELL, "SCRAPKEEP_TEST_SHELL")
-	var rig: Node = _load_asset(RIG, "SCRAPKEEP_TEST_RIG")
-	var a := counts(shell)
-	var b := counts(rig)
-	_report("kest no growth", a.v <= NO_GROWTH_V and a.t <= NO_GROWTH_T, "shell %d V and %d T, no more than %d V and %d T before the wear correction" % [a.v, a.t, NO_GROWTH_V, NO_GROWTH_T])
-	_report("kest pod V", a.v + b.v <= MAX_V, "%d + %d = %d vertices, ceiling %d" % [a.v, b.v, a.v + b.v, MAX_V])
-	_report("kest pod T", a.t + b.t <= MAX_T, "%d + %d = %d triangles, ceiling %d" % [a.t, b.t, a.t + b.t, MAX_T])
-	_report("kest pod draws", a.s + b.s <= MAX_DRAWS, "%d + %d = %d surfaces, ceiling %d" % [a.s, b.s, a.s + b.s, MAX_DRAWS])
-	_report("kest glass", a.alpha == 1 and b.alpha == 0, "one glass surface (%d shell, %d rig)" % [a.alpha, b.alpha])
-	var missing := NODES.filter(func(n): return shell.find_child(n, true, false) == null)
-	_report("kest nodes", missing.is_empty(), "Core, Pod, Dome, Pilot, Gyro, VaneL, VaneR (missing %s)" % [missing])
-	var slots := []
-	for mi in meshes(shell):
-		for i in mi.mesh.get_surface_count():
-			var slot := HeroAssets.slot_of(mi.mesh, i)
-			if not HeroAssets.SLOTS.has(slot):
-				slots.append(slot)
-	_report("kest slots", slots.is_empty(), "every surface is a section 9 slot %s" % [slots])
-	var paint_set := [Palette.VERDIGRIS, Palette.RUST, Palette.SAND]
-	var off := 0
-	for mi in meshes(shell):
-		for i in mi.mesh.get_surface_count():
-			if HeroAssets.slot_of(mi.mesh, i) == "paint":
-				for c in Array(mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]):
-					var near := false
-					for p in paint_set:
-						var lin: Color = (p as Color).srgb_to_linear()
-						near = near or (absf(c.r - lin.r) < 0.01 and absf(c.g - lin.g) < 0.01 and absf(c.b - lin.b) < 0.01)
-					if not near:
-						off += 1
-	_report("kest paint", off == 0, "paint vertex colours are petrol, iron oxide or bone (%d off)" % off)
-	var core := shell.find_child("Core", true, false) as MeshInstance3D
-	var far := 0.0
-	for v in (core.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-		far = maxf(far, (core.transform * v).length())
-	_report("kest core", far <= 0.981, "glass hull radius %.4f, collider 1.0" % far)
-	# Silhouette: the Pod kit mesh (satchels, mortar, saddle, vane spine) and each blade may not
-	# extend past the base bounds. The gyro ring, glass and pilot are fixed by other checks.
-	var bounds := {"Pod": [BASE_POD_MIN, BASE_POD_MAX], "VaneL": BASE_VANE["VaneL"], "VaneR": BASE_VANE["VaneR"]}
-	for name in bounds:
-		var lo := Vector3(INF, INF, INF)
-		var hi := Vector3(-INF, -INF, -INF)
-		for mi in meshes(shell):
-			if String(mi.name) != name:
-				continue
-			var t := to_root(mi, shell)
-			for i in mi.mesh.get_surface_count():
-				for v in (mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-					var w := t * v
-					lo = lo.min(w)
-					hi = hi.max(w)
-		var bmin: Vector3 = bounds[name][0]
-		var bmax: Vector3 = bounds[name][1]
-		var grew := (lo - bmin).x < -GROW or (lo - bmin).y < -GROW or (lo - bmin).z < -GROW \
-			or (hi - bmax).x > GROW or (hi - bmax).y > GROW or (hi - bmax).z > GROW
-		_report("kest silhouette " + name, not grew, "bounds %s..%s within base %s..%s +%.3f" % [lo, hi, bmin, bmax, GROW])
-	# No mesh gains a surface, so the wear costs no draw.
-	var gained := []
-	for mi in meshes(shell):
-		if int(BASE_SURFACES.get(String(mi.name), -1)) != mi.mesh.get_surface_count():
-			gained.append("%s %d" % [mi.name, mi.mesh.get_surface_count()])
-	_report("kest surfaces", gained.is_empty(), "each mesh keeps its base surface count (differs: %s)" % [gained])
-	# Preserved features, by region of the base shell (Godot axes, after the 0.67 kit refit):
-	# the three satchels, the mortar and its mouth, the vane spine and blades, the saddle, and
-	# the pilot with its crest (the Pilot mesh is not edited at all). Every base vertex in a
-	# region must still exist in the new shell.
-	var base: Node = (load(BASE) as PackedScene).instantiate()
-	var base_tris := pod_tris(base)
-	var shell_tris := pod_tris(shell)
-	for key in WEAR_REGIONS:
-		var w := wear_share(base_tris, shell_tris, WEAR_REGIONS[key])
-		var share := float(w[0]) / maxf(1.0, float(w[1]))
-		_report("kest wear " + key, w[1] > 0 and w[2] == 0 and share >= WEAR_MIN[key], "%d of %d working paint triangles read as worn = %.2f, minimum %.2f (%d not matched to base)" % [w[0], w[1], share, WEAR_MIN[key], w[2]])
-	var moved := 0
-	for key in base_tris:
-		if shell_tris.has(key) and base_tris[key][0] != shell_tris[key][0]:
-			moved += 1
-	_report("kest working slots", moved == 0, "%d base triangles changed material slot, want 0" % moved)
-	var everything := AABB(Vector3(-3, -3, -3), Vector3(6, 6, 6))
-	var features := {
-		"satchel right": ["Pod", AABB(Vector3(0.376, -0.52, -0.106), Vector3(0.32, 0.32, 0.32))],
-		"satchel rear": ["Pod", AABB(Vector3(-0.12, -0.53, 0.376), Vector3(0.32, 0.32, 0.32))],
-		"satchel left": ["Pod", AABB(Vector3(-0.656, -0.54, -0.36), Vector3(0.32, 0.32, 0.32))],
-		"mortar": ["Pod", AABB(Vector3(-0.56, -0.36, 0.05), Vector3(0.3, 0.45, 0.4))],
-		"mortar mouth": ["Pod", AABB(Vector3(-0.56, -0.12, 0.05), Vector3(0.24, 0.24, 0.24))],
-		"vane spine": ["Pod", AABB(Vector3(-0.06, -0.26, 0.1), Vector3(0.12, 0.1, 0.55))],
-		"saddle": ["Pod", AABB(Vector3(-0.45, -0.15, -0.4), Vector3(0.9, 0.3, 0.9))],
-		"vane left": ["VaneL", everything],
-		"vane right": ["VaneR", everything],
-		"pilot crest": ["Pilot", everything],
-		"gyro": ["Gyro", everything],
-		"pod all": ["Pod", everything],
-	}
-	for key in features:
-		var lost := _kept(base, shell, features[key][0], features[key][1])
-		_report("kest keeps " + key, lost == "", "base vertices still present (%s)" % lost)
-	# Per-cell extent: a piece cannot sit in space the base leaves empty inside its bounds.
-	var vane_names := ["Pod", "VaneL", "VaneR"]
-	var stray := {
-		"Pod": _outside_cells(base, shell, "Pod", vane_names),
-		"VaneL": _outside_cells(base, shell, "VaneL", ["VaneL"]),
-		"VaneR": _outside_cells(base, shell, "VaneR", ["VaneR"]),
-	}
-	for name in stray:
-		_report("kest extent " + name, stray[name] == 0, "%d %s vertices sit in space the base shell leaves empty" % [stray[name], name])
-	base.free()
-	_check_rig(rig)
-
-	shell.free()
-	rig.free()
-	print("world_one_shell_kest_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
-	quit(0 if _failures == 0 else 1)
