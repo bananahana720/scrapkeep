@@ -360,14 +360,23 @@ func _fight(label: String, case: Dictionary, warden: Node3D, rec: Dictionary) ->
 		_shatter(warden)
 		var clip := _chunk_clip(case.family, n)
 		_t.check(label + ": chunk %d plays %s" % [n, clip], await _wait_clip(clip, from, 0.5), str(_names(from)))
+		var waited := 0.0
+		if case.family == "swarm" and n < 4:
+			# Only the lost ring falls: the rings still on keep their rest place and size.
+			var length: float = rec.body.find_child("AnimationPlayer", true, false).get_animation(clip).length
+			await _frames(_ticks(0.5))
+			_check_unlost(label + ": chunk %d mid-clip, the other rings stay on" % n, rec, n)
+			await _frames(_ticks(maxf(length - 0.55, 0.0)))
+			_check_unlost(label + ": chunk %d clip end, the other rings stay on" % n, rec, n)
+			waited = maxf(length - 0.05, 0.5)
 		if n == 1:
-			await _frames(_ticks(1.0 + 2.0))
+			await _frames(_ticks(maxf(1.0 + 2.0 - waited, 0.0)))
 			_check_held(label + ": chunk 1 held 2 s after its clip", case, rec, 1)
 			await _frames(_ticks(4.5))
 			_t.check(label + ": an idle loop ran after chunk 1", _seen.slice(from).any(func(e): return e[0] == "idle"), "")
 			_check_held(label + ": chunk 1 held after an idle loop", case, rec, 1)
 		else:
-			await _frames(_ticks(1.2))
+			await _frames(_ticks(maxf(1.2 - waited, 0.0)))
 	_t.check(label + ": the last chunk plays " + FINAL_CLIP[case.family], await _wait_clip(FINAL_CLIP[case.family], from, 1.5)
 			and _in_order(_names(from), [_chunk_clip(case.family, 4), FINAL_CLIP[case.family]]), str(_names(from)))
 	_check_held(label + ": every chunk held at the end", case, rec, 4)
@@ -415,6 +424,21 @@ func _check_held(label: String, case: Dictionary, rec: Dictionary, lost: int) ->
 				var idle_gap := rad_to_deg(_end_pose(player.get_animation("idle"), bone, 0.0).angle_to(held))
 				ok = ok and err <= 1.0 and idle_gap >= 5.0
 				detail += "%s %.2f deg (idle %.1f away) " % [bone, err, idle_gap]
+	_t.check(label, ok, detail)
+
+
+# The shed rings not yet lost (shed_rings[lost ..]) sit at their rest place at full size.
+func _check_unlost(label: String, rec: Dictionary, lost: int) -> void:
+	var skel := (rec.body as Node3D).find_child("Skeleton3D", true, false) as Skeleton3D
+	var rings: Array = _hook.WARDEN_BODIES.swarm.shed_rings
+	var ok := skel != null and lost < rings.size()
+	var detail := ""
+	for i in range(lost, rings.size()):
+		var bone := skel.find_bone(rings[i])
+		var s := skel.get_bone_pose_scale(bone)
+		var drift := skel.get_bone_pose_position(bone).distance_to(skel.get_bone_rest(bone).origin)
+		ok = ok and bone >= 0 and s.distance_to(Vector3.ONE) <= 0.05 and drift <= 0.25
+		detail += "%s scale %s drift %.3f " % [rings[i], s, drift]
 	_t.check(label, ok, detail)
 
 

@@ -904,6 +904,9 @@ func _warden_bodies() -> void:
 		var centre: Vector3 = w.global_position + (Vector3.DOWN * 4.0 if rows[i][1] == "mind" else Vector3.ZERO)
 		_anchor("warden", centre, w)
 		var dressed: bool = not game.presentation.hero_assets.warden_of(w).get("body", null) == null
+		if not dressed:
+			printerr("look_harness: %s is not dressed in its body (clamp kit shown)" % rows[i][0])
+			failures += 1
 		await _shoot(rows[i][0], {"family": rows[i][1], "mounting": rows[i][3], "body": dressed})
 
 
