@@ -26,13 +26,22 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # a jump there is a vault. Those vault-only ticks spend none of the jump prompt's allowance.
 # LET GO is the right-mouse prompt for a line standing on the world: the RMB keycap, a fling arrow and the words, at the anchor below
 # the winch prompt, on the first RETIRE_AFTER["letgo"] world latches of a profile only.
+# The ultimate's prompt (design-v3/SKILL-BAR.md section 5) is the Q keycap in the meter arc's gap
+# at the reticle, on ticks the meter is full and a press would start the set piece; it follows
+# the same retire and return rules (its first availability in a run is the run's first full
+# meter) and wears ULTIMATE until the profile has used it RETIRE_AFTER["ultimate"] times. While it
+# shows, the reticle leaves its own Q off.
 
-const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost"]
+const AimReticle := preload("res://src/ui/aim_reticle.gd")
+
+const PROMPT_VERBS := ["haul", "interact", "jump", "harpoon", "boost", "ultimate"]
 const BALL_VERBS := ["boost", "interact", "jump"]
+const RETICLE_VERBS := ["ultimate"]
 const LETGO := "letgo"
 const LETGO_WORD := "LET GO"
+const ULTIMATE_WORD := "ULTIMATE"
 const MAX_PROMPTS := 2
-const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3, "interact": 3, "jump": 3, "letgo": 3}
+const RETIRE_AFTER := {"harpoon": 3, "haul": 3, "smash": 5, "boost": 3, "interact": 3, "jump": 3, "letgo": 3, "ultimate": 3}
 const LINE_STAND := 1.5
 const FAIL_RETURN := 3.0
 const IDLE_RETURN := 90.0
@@ -77,6 +86,9 @@ func setup(game_ref, profile_ref) -> void:
 	game.events.dismounted.connect(func(velocity: Vector3):
 		if velocity.length() > 0.1:
 			record_use("jump"))
+	if game.events.has_signal("ultimate_started"):
+		game.events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
+			record_use("ultimate"))
 
 
 # A new run: every prompt is owed its first availability, and nothing is overdue.
@@ -153,7 +165,18 @@ func word_for(verb: String, line: String) -> String:
 		return EventKinds.LINE_ROWS["locked"]["word"]
 	if verb == "haul" and line == "body" and profile.uses("smash") == 0:
 		return EventKinds.LINE_ROWS["latched_body"]["word"]
+	if verb == "ultimate" and profile.uses("ultimate") < RETIRE_AFTER["ultimate"]:
+		return ULTIMATE_WORD
 	return ""
+
+
+# Q would start the set piece this tick: the meter is full (AbilityState.ultimate()) and the
+# ball is free to act. B3's set piece answers the rest when its press is refused.
+static func ultimate_ready(player) -> bool:
+	var abilities = player.get("abilities")
+	if abilities == null or not abilities.has_method("ultimate"):
+		return false
+	return String(abilities.ultimate().get("state", "")) == AbilityState.READY and player.get("_frozen") != true
 
 
 # What the prompts need to know of the ball this tick, read off the player.
@@ -162,8 +185,9 @@ static func view_of(player) -> Dictionary:
 	var special = player.abilities.gauge(AbilityState.SPECIAL)
 	var ready := {}
 	for verb in PROMPT_VERBS:
-		ready[verb] = player.verb_ready(verb)
+		ready[verb] = player.verb_ready(verb) if not verb in RETICLE_VERBS else false
 	ready["interact"] = player.mount_ready()
+	ready["ultimate"] = ultimate_ready(player)
 	var jump_possible: bool = ready["jump"]
 	ready["jump"] = ready["jump"] and kit.mounted
 	return {
@@ -193,6 +217,10 @@ func step(delta: float, view: Dictionary) -> void:
 			_revived[verb] = true
 	_vault = vault_anchor()
 	var ready: Dictionary = view["ready"].duplicate()
+	# A view that names no verb (one built before the ultimate) reads it not ready.
+	for verb in PROMPT_VERBS:
+		if not ready.has(verb):
+			ready[verb] = false
 	var vault_open: bool = _vault != Vector3.INF and view.get("jump_possible", true)
 	var vault_only: bool = vault_open and not ready["jump"]
 	if vault_open:
@@ -275,8 +303,10 @@ static func glyph_of(verb: String) -> String:
 
 
 # Whether the screen draws a prompt: its anchor is a real point, in front of the camera
-# and inside the view.
+# and inside the view. A reticle prompt sits at the screen centre, always in view.
 func _drawn(prompt: Dictionary) -> bool:
+	if prompt["verb"] in RETICLE_VERBS:
+		return true
 	var world: Vector3 = _points.get("haul" if prompt["verb"] == LETGO else prompt["verb"], Vector3.INF)
 	if world == Vector3.INF:
 		return false
@@ -317,7 +347,11 @@ func drawn_words() -> PackedStringArray:
 	var out := PackedStringArray()
 	if not visible:
 		return out
+	# Only the prompts the screen draws: one whose anchor left the view shows no words, and the
+	# bar keeps its own cap for that key (shown_glyphs), so the count matches the picture.
 	for prompt in shown:
+		if not _drawn(prompt):
+			continue
 		out.append_array(Keycap.words(glyph_of(prompt["verb"])))
 		if prompt["word"] != "":
 			out.append(prompt["word"])
@@ -342,6 +376,11 @@ func _placements() -> Array:
 	var stacked := 0
 	for prompt in shown:
 		if not _drawn(prompt):
+			continue
+		if prompt["verb"] in RETICLE_VERBS:
+			# The meter arc's gap at six o'clock (aim_reticle.gd).
+			var gap := (cam.get_viewport().get_visible_rect().size * 0.5 + Vector2(0.0, AimReticle.meter_radius())).round()
+			out.append({"verb": prompt["verb"], "at": gap, "word": prompt["word"], "glyph": glyph_of(prompt["verb"]), "icon": ""})
 			continue
 		var world: Vector3 = _points.get("haul" if prompt["verb"] == LETGO else prompt["verb"], Vector3.INF)
 		var at := cam.unproject_position(world).round()

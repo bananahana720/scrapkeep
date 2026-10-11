@@ -43,8 +43,13 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	var glyphs = _game.hud.key_glyphs
 	var ready := {"harpoon": true, "haul": false, "boost": true, "interact": false, "jump": false}
+	# Re-pinned 2026-10-10 (wave 13 unit B2): the prompts' words count only for a prompt the screen
+	# draws (key_glyphs.drawn_words, so the HUD word budget matches the picture), so the anchors sit
+	# 5 m ahead of the camera, in view. Was Vector3.ONE, which the drop's camera does not see.
+	var cam: Camera3D = _game.camera.cam
+	var ahead: Vector3 = cam.global_position - cam.global_transform.basis.z * 5.0
 	var view := {"ready": ready, "line": "", "charging": false, "mounted": false, "airborne": false, "winching": false,
-		"points": {"harpoon": Vector3.ONE, "haul": Vector3.ONE, "boost": Vector3.ONE, "interact": Vector3.ONE, "jump": Vector3.ONE}}
+		"points": {"harpoon": ahead, "haul": ahead, "boost": ahead, "interact": ahead, "jump": ahead}}
 	glyphs.new_run()
 	glyphs.step(0.016, view)
 	var fresh: Array = glyphs.shown_verbs()

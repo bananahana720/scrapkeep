@@ -32,6 +32,10 @@ const T := preload("res://tests/support/t.gd")
 # and nothing else, and the source still names no KEY_Q (the key comes from the table). The
 # set_piece state sits above the rest, and the bar shows 1, 2, 3 on its slots and Shift and
 # Ctrl on its chips. The field-notes row count stays nine until the HUD unit (B2) re-pins it.
+# Re-pinned 2026-10-10 (wave 13 unit B2, SKILL-BAR section 5): the field notes list ten verbs,
+# the special row retired and select (caps 1, 2, 3) and ultimate (Q) added; Q names the ultimate's
+# row and no cut key. The class kit's movement record is found by its slot, since the card now
+# leads with the bar row (1, 2, 3, Q) before the chips.
 
 const CUT_NAMES := ["cl_reel", "cl_dash", "KEY_Q", "WHEEL"]
 const MENU_GLYPHS := ["key_tab", "key_p", "key_r"]
@@ -308,15 +312,17 @@ func _readers() -> void:
 	for i in FieldNotes.VERB_ROWS.size():
 		var verb: String = FieldNotes.VERB_ROWS[i][0]
 		var row: Dictionary = rows[i]
-		var caps_ok: bool = row["caps"] == [Bindings.glyph(verb)] or (verb == "roll" and row["caps"] == ["key_w", "key_a", "key_s", "key_d"])
+		var caps_ok: bool = row["caps"] == [Bindings.glyph(verb)] or (verb == "roll" and row["caps"] == ["key_w", "key_a", "key_s", "key_d"]) \
+			or (verb == "select" and row["caps"] == ["key_1", "key_2", "key_3"])
 		if row["keys"] != Bindings.label(verb) or not caps_ok:
 			verb_rows_ok = false
 			detail.append("%s: keys %s caps %s" % [verb, row["keys"], row["caps"]])
-	_t.check("the field notes list the nine verbs with their table keys, in order", verb_rows_ok and FieldNotes.VERB_ROWS.size() == 9, "; ".join(detail))
+	_t.check("the field notes list the ten verbs with their table keys, in order", verb_rows_ok and FieldNotes.VERB_ROWS.size() == 10
+		and not FieldNotes.VERB_ROWS.any(func(r): return r[0] == "special"), "; ".join(detail))
 	var named: Array = []
 	for row in rows:
 		var keys: String = row["keys"]
-		if keys.begins_with("Q") or keys.contains("wheel") or keys == "C":
+		if (keys.begins_with("Q") and keys != Bindings.label("ultimate")) or keys.contains("wheel") or keys == "C":
 			named.append(keys)
 	_t.eq("no field-notes row names Q, C or the wheel as a key", named, [])
 	var cap_strays: Array = []
@@ -331,7 +337,7 @@ func _readers() -> void:
 		for record in ClassKit.keys(def):
 			if not record["key"] in glyphs:
 				slot_strays.append("%s %s" % [def.display_name, record["key"]])
-		var movement: Dictionary = ClassKit.keys(def)[1]
+		var movement: Dictionary = ClassKit.keys(def).filter(func(r): return r["slot"] == AbilityState.MOVEMENT)[0]
 		var want := "key_rmb" if "grapple" in AbilityState.ABILITIES[String(def.movement_id)].get("augments", []) else "key_shift"
 		if movement["key"] != want:
 			slot_strays.append("%s movement %s, want %s" % [def.display_name, movement["key"], want])

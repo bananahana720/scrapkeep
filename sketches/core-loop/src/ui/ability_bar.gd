@@ -4,16 +4,27 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
-# The bottom-centre ability bar: one slot per published ability slot (ability_slots.gd),
-# key glyph under each, charge pips under the key. Each state reads by more than colour:
-# ready is a bright solid frame, cooling is a petrol wedge that uncovers the icon
-# clockwise from twelve over a dimmed icon, active is a doubled frame and a lifted slot,
-# unavailable is a faded icon struck through. A slot whose cooldown ends swells once,
-# with a rim flash and its class shape flaring in the class colour. State colours come
-# from event_kinds' v2 W1 UI rows; the icon's accent is the class colour
-# (VISUAL-LANGUAGE.md section 7). A slot whose key a prompt on screen already shows draws
-# no keycap while it does (hide_keys), so one key is never drawn twice.
+# The bottom-centre skill bar (design-v3/SKILL-BAR.md section 5): the numbered slots 1, 2 and 3
+# (weapon, special, line skill), then CHIP_GAP to the right the two chips (Shift and Ctrl) at
+# CHIP_SCALE with no number, one per published slot record (ability_slots.gd), key glyph under
+# each, charge pips under the key. Each state reads by more than colour: ready is a bright
+# solid frame, cooling is a petrol wedge that uncovers the icon clockwise from twelve over a
+# dimmed icon, active is a doubled frame, a 3 px lift and the class tint, unavailable is a
+# faded icon struck through. A slot whose cooldown ends swells once, with a rim flash and its
+# class shape flaring in the class colour. State colours come from event_kinds' v2 W1 UI rows;
+# the icon's accent is the class colour (VISUAL-LANGUAGE.md section 7). A slot whose key a
+# prompt on screen already shows draws no keycap while it does (hide_keys), so one key is
+# never drawn twice.
+#
+# Selection is not the active frame. The selected slot (the one left click casts) wears an
+# inverted keycap (sand fill, charcoal digit) and the mouse glyph above it: the LMB picture,
+# no letters, literally where left click goes. A pick slides the glyph there in GLYPH_SLIDE
+# seconds and a snap-back slides it home; its underline drains over the pick's timeout. A
+# refused pick shakes the slot SHAKE px and flashes slate, and the glyph stays. A loaded line
+# skill wears a hook badge in the class colour on slot 3. During the set piece the bar dims
+# to SET_PIECE_ALPHA, because its keys are swallowed.
 
 const SLOT := 56.0
 const GAP := 14.0
@@ -24,12 +35,42 @@ const PIP_GAP := 4.0
 const PULSE_SECONDS := 0.18
 const PULSE_SCALE := 0.12
 const SWEEP_STEP := TAU / 64.0
+const NUMBERED := 3
+const CHIP_SCALE := 0.75
+const CHIP_GAP := 24.0
+const GLYPH_SLIDE := 0.12
+const GLYPH_H := 18.0
+const GLYPH_GAP := 7.0
+const UNDERLINE := 2.0
+const SHAKE := 3.0
+const SHAKE_TIME := 0.25
+const SHAKE_HZ := 40.0
+const BADGE := 18.0
+const SET_PIECE_ALPHA := 0.4
 
 var slots: Array = []
 var tint := Color.WHITE
 # The class row's shape (ring, chevron, burst): the ready swell and the charge pips wear
 # it, so the bar speaks in the class's motif.
 var motif := "ring"
+# A line skill waits for the next bite (combat.line_load()): slot 3 wears the hook badge.
+var line_loaded := false:
+	set(value):
+		if value != line_loaded:
+			line_loaded = value
+			queue_redraw()
+# The set piece runs: the bar dims, since every key on it is swallowed.
+var set_piece := false:
+	set(value):
+		set_piece = value
+		modulate.a = SET_PIECE_ALPHA if value else 1.0
+# The mouse glyph's centre x in bar space; it slides toward the selected slot's centre.
+var glyph_x := -1.0
+var _glyph_from := 0.0
+var _glyph_to := -1.0
+var _glyph_t := GLYPH_SLIDE
+var _refusals := {}
+var _clock := 0.0
 var _hidden: Array[String] = []
 var _pulses := {}
 var _last_state := {}
@@ -41,9 +82,41 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-static func bar_size(count: int) -> Vector2:
-	var n := maxi(count, 1)
-	return Vector2(n * SLOT + (n - 1) * GAP, SLOT + KEY_GAP + KEY_H + PIP_GAP + PIP * 2.0)
+# The bar's size for `count` published slots: up to NUMBERED numbered slots, the rest chips.
+static func bar_size(count := NUMBERED + 2) -> Vector2:
+	var n := clampi(count, 1, NUMBERED)
+	var chips := maxi(count - NUMBERED, 0)
+	var width := n * SLOT + (n - 1) * GAP
+	if chips > 0:
+		width += CHIP_GAP + chips * SLOT * CHIP_SCALE + (chips - 1) * GAP * CHIP_SCALE
+	return Vector2(width, SLOT + KEY_GAP + KEY_H + PIP_GAP + PIP * 2.0)
+
+
+static func is_chip(entry: Dictionary) -> bool:
+	return entry.get("group", "bar") == "chip"
+
+
+static func slot_name(entry: Dictionary) -> String:
+	return String(entry.get("slot", entry.get("id", "")))
+
+
+# Each slot's resting rect in bar space, by slot name: the numbered slots left to right, then
+# the chips CHIP_GAP further on at CHIP_SCALE, centred on the slot row.
+func slot_rects() -> Dictionary:
+	var out := {}
+	var x := 0.0
+	var prev := ""
+	for entry in slots:
+		var chip := is_chip(entry)
+		if prev == "chip":
+			x += GAP * CHIP_SCALE
+		elif prev == "bar":
+			x += CHIP_GAP if chip else GAP
+		var side := SLOT * CHIP_SCALE if chip else SLOT
+		out[slot_name(entry)] = Rect2(Vector2(x, (SLOT - side) * 0.5), Vector2(side, side))
+		x += side
+		prev = "chip" if chip else "bar"
+	return out
 
 
 func update_slots(list: Array, class_tint: Color, class_shape := "ring") -> void:
@@ -90,7 +163,15 @@ func hide_keys(glyphs: Array[String]) -> void:
 	queue_redraw()
 
 
+# The prompts' live glyphs (key_glyphs.shown_glyphs), read wherever the bar answers what it
+# shows, so a prompt that appears on a physics tick hides the bar's cap on that same tick and
+# a key is never drawn twice between the prompt step and the next HUD frame.
+var hidden_source := Callable()
+
+
 func key_hidden(entry: Dictionary) -> bool:
+	if hidden_source.is_valid():
+		return entry["key"] in hidden_source.call()
 	return entry["key"] in _hidden
 
 
@@ -98,15 +179,92 @@ func pulse_left(id: String) -> float:
 	return _pulses.get(id, 0.0)
 
 
-func _process(delta: float) -> void:
+# A pick the ball refused: the slot shakes and flashes slate for SHAKE_TIME.
+func refuse(slot: String) -> void:
+	_refusals[slot] = SHAKE_TIME
+	queue_redraw()
+
+
+func shake_offset(slot: String) -> Vector2:
+	if _refusals.get(slot, 0.0) <= 0.0:
+		return Vector2.ZERO
+	return Vector2(sin(_clock * TAU * SHAKE_HZ) * SHAKE, 0.0)
+
+
+func flash_color(slot: String) -> Color:
+	return Color(Palette.SLATE, clampf(_refusals.get(slot, 0.0) / SHAKE_TIME, 0.0, 1.0))
+
+
+func badge_shown() -> bool:
+	return line_loaded and slot_rects().has("line")
+
+
+func selected_entry() -> Dictionary:
+	for entry in slots:
+		if entry.get("selected", false):
+			return entry
+	return {}
+
+
+# The underline under the mouse glyph: the share of the pick's timeout still to run.
+func underline_share() -> float:
+	return float(selected_entry().get("select_left", 0.0))
+
+
+# Where the glyph is headed: the selected slot's centre, else slot 1's.
+func glyph_target() -> float:
+	var rects := slot_rects()
+	var entry := selected_entry()
+	var name := slot_name(entry) if not entry.is_empty() else (slot_name(slots[0]) if not slots.is_empty() else "")
+	return (rects[name] as Rect2).get_center().x if rects.has(name) else 0.0
+
+
+# How a slot draws, as data, so selected and active read apart by more than one cue: the
+# keycap's fill and digit colour, the lift, whether the frame doubles and whether the mouse
+# glyph rides it.
+func slot_look(entry: Dictionary) -> Dictionary:
+	var state: String = entry["state"]
+	var selected: bool = entry.get("selected", false)
+	var active := state == "active"
+	var ink: Color = tint if active else Color(Palette.SAND, 0.5 if state == "unavailable" else 0.95)
+	return {"cap_fill": Palette.SAND if selected else Color(Palette.CHARCOAL, 0.92),
+		"cap_ink": Palette.CHARCOAL if selected else ink, "lift": 3.0 if active else 0.0, "doubled": active,
+		"glyph": selected}
+
+
+func step(delta: float) -> void:
+	_clock += delta
 	for id in _pulses.keys():
 		_pulses[id] = maxf(0.0, _pulses[id] - delta)
 		if _pulses[id] <= 0.0:
 			_pulses.erase(id)
-	# Only the swell animates on its own; slot readings redraw in update_slots.
-	if not _pulses.is_empty() or _was_pulsing:
+	var refusing := not _refusals.is_empty()
+	for slot in _refusals.keys():
+		_refusals[slot] = _refusals[slot] - delta
+		if _refusals[slot] <= 0.0:
+			_refusals.erase(slot)
+	var target := glyph_target()
+	var gliding := _glyph_t < GLYPH_SLIDE
+	if glyph_x < 0.0:
+		glyph_x = target
+		_glyph_to = target
+	elif not is_equal_approx(target, _glyph_to):
+		_glyph_from = glyph_x
+		_glyph_to = target
+		_glyph_t = 0.0
+		gliding = true
+	if _glyph_t < GLYPH_SLIDE:
+		_glyph_t = minf(GLYPH_SLIDE, _glyph_t + delta)
+		glyph_x = lerpf(_glyph_from, _glyph_to, smoothstep(0.0, 1.0, _glyph_t / GLYPH_SLIDE))
+	# Only the swell, a refusal, the glide and the draining underline animate on their own;
+	# slot readings redraw in update_slots.
+	if not _pulses.is_empty() or _was_pulsing or refusing or gliding or underline_share() > 0.0:
 		queue_redraw()
 	_was_pulsing = not _pulses.is_empty()
+
+
+func _process(delta: float) -> void:
+	step(delta)
 
 
 func drawn_words() -> PackedStringArray:
@@ -118,23 +276,32 @@ func drawn_words() -> PackedStringArray:
 
 
 func _draw() -> void:
-	for i in slots.size():
-		_draw_slot(slots[i], Rect2(Vector2(i * (SLOT + GAP), 0.0), Vector2(SLOT, SLOT)))
+	var rects := slot_rects()
+	for entry in slots:
+		var name := slot_name(entry)
+		_draw_slot(entry, rects[name], CHIP_SCALE if is_chip(entry) else 1.0)
+	if not slots.is_empty():
+		_draw_glyph()
 
 
-func _draw_slot(entry: Dictionary, rect: Rect2) -> void:
+func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
+	var name := slot_name(entry)
 	var state: String = entry["state"]
+	var look := slot_look(entry)
 	var color: Color = tint if state == "active" else EventKinds.UI_ROWS.get("ability_" + state, {}).get("color", Palette.SAND)
+	var shake := shake_offset(name)
+	rect.position += shake
 	var key_centre := Vector2(rect.get_center().x, SLOT + KEY_GAP + KEY_H * 0.5)
 	var left := pulse_left(entry["id"])
 	if left > 0.0:
-		rect = rect.grow(SLOT * PULSE_SCALE * 0.5 * sin(PI * (1.0 - left / PULSE_SECONDS)))
-	if state == "active":
+		rect = rect.grow(rect.size.x * PULSE_SCALE * 0.5 * sin(PI * (1.0 - left / PULSE_SECONDS)))
+	if look["doubled"]:
 		rect = rect.grow(2.0)
-		rect.position.y -= 3.0
+	rect.position.y -= look["lift"]
+	var radius := int(9.0 * scale)
 	var back := StyleBoxFlat.new()
 	back.bg_color = Color(Palette.CHARCOAL, 0.88) if state != "unavailable" else Color(Palette.VERDIGRIS, 0.5)
-	back.set_corner_radius_all(9)
+	back.set_corner_radius_all(radius)
 	draw_style_box(back, rect)
 
 	var icon_alpha: float = {"ready": 1.0, "active": 1.0, "cooling": 0.4, "unavailable": 0.28}[state]
@@ -144,37 +311,81 @@ func _draw_slot(entry: Dictionary, rect: Rect2) -> void:
 	if state == "cooling":
 		_draw_sweep(rect, float(entry["cooldown_frac"]))
 	if state == "unavailable":
-		draw_line(rect.position + Vector2(8.0, rect.size.y - 8.0), rect.end - Vector2(8.0, rect.size.y - 8.0), Color(color, 0.9), 3.0)
+		var inset := 8.0 * scale
+		draw_line(rect.position + Vector2(inset, rect.size.y - inset), rect.end - Vector2(inset, rect.size.y - inset), Color(color, 0.9), 3.0)
+	var flash := flash_color(name)
+	if flash.a > 0.0:
+		var wash := StyleBoxFlat.new()
+		wash.bg_color = Color(flash, flash.a * 0.55)
+		wash.set_corner_radius_all(radius)
+		draw_style_box(wash, rect)
 
 	var frame := StyleBoxFlat.new()
 	frame.draw_center = false
-	frame.border_color = tint if left > 0.0 else color
+	frame.border_color = tint if left > 0.0 else (Color(flash, 1.0) if flash.a > 0.0 else color)
 	frame.set_border_width_all({"ready": 3, "active": 3, "cooling": 1, "unavailable": 1}[state])
-	frame.set_corner_radius_all(9)
+	frame.set_corner_radius_all(radius)
 	draw_style_box(frame, rect)
-	if state == "active":
+	if look["doubled"]:
 		var outer := StyleBoxFlat.new()
 		outer.draw_center = false
 		outer.border_color = Color(color, 0.55)
 		outer.set_border_width_all(2)
-		outer.set_corner_radius_all(12)
+		outer.set_corner_radius_all(radius + 3)
 		draw_style_box(outer, rect.grow(5.0))
 
-	var key_color := tint if state == "active" else Color(Palette.SAND, 0.5 if state == "unavailable" else 0.95)
 	if left > 0.0:
 		var t := 1.0 - left / PULSE_SECONDS
 		var reach := rect.size.x * (0.7 + 0.5 * t)
 		draw_texture_rect(Icons.shape(motif), Rect2(rect.get_center() - Vector2(reach, reach) * 0.5, Vector2(reach, reach)), false, Color(tint, 0.6 * (1.0 - t)))
+	if name == "line" and line_loaded:
+		var badge := Rect2(Vector2(rect.end.x - BADGE * 0.6, rect.position.y - BADGE * 0.4), Vector2(BADGE, BADGE))
+		draw_circle(badge.get_center(), BADGE * 0.55, Color(Palette.CHARCOAL, 0.92))
+		draw_texture_rect(Icons.texture(Icons.REEL), badge, false, Icons.tint(Icons.REEL, tint))
 	if not key_hidden(entry):
-		Keycap.draw(self, key_centre, entry["key"], key_color, KEY_H)
+		_draw_cap(key_centre + Vector2(shake.x, 0.0), entry["key"], look, KEY_H * scale)
 	var max_charges: int = entry["max_charges"]
 	if max_charges > 1:
-		var step := PIP * 3.0
+		var step_x := PIP * 3.0
 		var y := SLOT + KEY_GAP + KEY_H + PIP_GAP + PIP
 		for c in max_charges:
-			var at := Vector2(key_centre.x + (c - (max_charges - 1) * 0.5) * step, y)
+			var at := Vector2(key_centre.x + (c - (max_charges - 1) * 0.5) * step_x, y)
 			var pip := Rect2(at - Vector2(PIP, PIP) * 1.3, Vector2(PIP, PIP) * 2.6)
 			draw_texture_rect(Icons.shape(motif), pip, false, tint if c < int(entry["charges"]) else Color(tint, 0.25))
+
+
+# A slot's keycap: the shared drawn key, or on the selected slot the inverted cap (sand fill,
+# charcoal digit), so the pick reads on the number itself.
+func _draw_cap(at: Vector2, key: String, look: Dictionary, height: float) -> void:
+	if not look["glyph"] or Keycap.is_mouse(key):
+		Keycap.draw(self, at, key, look["cap_ink"], height)
+		return
+	var cap := Keycap.size_of(key, height)
+	var box := StyleBoxFlat.new()
+	box.bg_color = look["cap_fill"]
+	box.border_color = look["cap_fill"]
+	box.set_border_width_all(2)
+	box.border_width_bottom = 4
+	box.set_corner_radius_all(int(height * 0.2))
+	draw_style_box(box, Rect2(at - cap * 0.5, cap))
+	var fs := Keycap.font_size(height)
+	var text := Keycap.label(key)
+	var font := UiFonts.bold()
+	var baseline := at.y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5 - 1.0
+	draw_string(font, Vector2(at.x - UiFonts.width(text, fs) * 0.5, baseline), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, look["cap_ink"])
+
+
+# The mouse glyph over the selected slot, and its underline draining over the timeout.
+func _draw_glyph() -> void:
+	var x := glyph_x if glyph_x >= 0.0 else glyph_target()
+	var w := GLYPH_H * 0.8
+	var top := -GLYPH_GAP - GLYPH_H - UNDERLINE - 2.0
+	var rect := Rect2(Vector2(x - w * 0.5, top), Vector2(w, GLYPH_H))
+	draw_texture_rect(Icons.texture("key_lmb"), rect, false, Icons.tint("key_lmb", Palette.SAND))
+	var share := underline_share()
+	if share > 0.0:
+		var y := rect.end.y + 2.0 + UNDERLINE * 0.5
+		draw_line(Vector2(x - w * 0.5, y), Vector2(x - w * 0.5 + w * share, y), Palette.SAND, UNDERLINE)
 
 
 # The remaining cooldown as a petrol wedge: it covers the part of the slot still to come
