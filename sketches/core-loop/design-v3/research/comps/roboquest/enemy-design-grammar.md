@@ -4,41 +4,41 @@ Evidence: shipped data tables (level 4 at measurement, scripts outside the repo;
 
 ## What it does
 
-**Families by chassis and movement.** The wiki groups enemies in six categories by chassis (bots, pawns, flies, workers, pods, minibosses); the asset folders add a big-unit family. Movement class is a separate axis in the tables: static on 58 rows, walking on 45, flying on 36. Read as one rule per family (inference from table classes and wiki one-line attacks):
+**Families by chassis and movement.** The wiki groups enemies in six categories by chassis, and the asset folders use six family tokens that do not map one to one onto the wiki's six or onto the table's classes. This note renames the families in its own words: ground walker, airborne, fixed emplacement, small walker, rail labourer, pod and heavy. Movement class is a separate axis in the tables: 58 rows fixed, 45 ground-moving, 36 airborne. Read as one rule per family (inference from table classes and wiki one-line attacks):
 
-- **Ground pawn:** walks, shoots a blaster, throws a grenade; the stable infantry read. Health median 135.
-- **Flying:** hovers or dives; its attacks are a charge-up then a dive, a slow-tracking ray, or a flash. Health median 120, speed up to 1,600 cm/s.
-- **Turret:** static, health median 120, speed 400 cm/s where it moves at all; the read is "it stays where it is", and the anchor placement decides the threat.
-- **Bot:** short-range walker, health median 60, the smallest body; chase-and-explode.
-- **Worker:** rail-bound, health median 80, speed 400 cm/s; the rail is the read, and some spawn a fixed child type so the spawner is the target.
-- **Big:** seven flagged rows, median health 1,050; fewer, slower to kill, longer to read.
+- **Ground walker:** walks, shoots a blaster, throws a grenade; the stable infantry read. Health median 135.
+- **Airborne:** hovers or dives; its attacks are a charge-up then a dive, a slow-tracking ray, or a flash. Health median 120, speed up to 1,600 cm/s.
+- **Fixed emplacement:** fixed, health median 120, speed 400 cm/s where it moves at all; the read is "it stays where it is", and the anchor placement decides the threat.
+- **Small walker:** short-range, health median 60, the smallest body; chase-and-explode.
+- **Rail labourer:** rail-bound, health median 80, speed 400 cm/s; the rail is the read, and some spawn a fixed child type so the spawner is the target.
+- **Heavy:** seven flagged rows, median health 1,050; fewer, slower to kill, longer to read.
 
 **Production bands per family.** From the asset report (whole-asset LOD0 triangles; bones per whole rig):
 
-| Family | Bones median | Triangles median | Clips (median seconds) |
+| Family (own words) | Bones median | Triangles median | Clips (median seconds) |
 |---|---|---|---|
 | Pod | 16 | 12,331 | 288 (0.04) |
-| Fly | 16 | 9,691 | 304 (0.46) |
-| Bot | 37 | 11,442 | 283 (0.71) |
-| Pawn | 54 | 19,767 | 211 (0.62) |
-| Worker | 24 | 15,038 | 57 (0.46) |
-| Big | 46 | 24,320 | 127 (0.62) |
+| Airborne | 16 | 9,691 | 304 (0.46) |
+| Small walker | 37 | 11,442 | 283 (0.71) |
+| Ground walker | 54 | 19,767 | 211 (0.62) |
+| Rail labourer | 24 | 15,038 | 57 (0.46) |
+| Heavy | 46 | 24,320 | 127 (0.62) |
 
 Across all enemies, bones have a median of 27 and a 90th percentile of 55; bosses run a median of 59 and up to 143.
 
 **What makes a silhouette read (inference).** The wiki and tables do not say; the pattern across the one-line attack texts is that each enemy has one threat feature and that feature is also its warning: a lens or light that charges before a flash or beam, a body that hides then strikes, a rail that declares its path. Each boss is described by one signature mechanic that changes its arena or rules: proximity detonation, burrowing, rail-bound movement, a forcefield, floor collapse (Bosses.txt:11, 25, 54, 68, 86). Boss time-to-kill was tuned to be similar across bosses (Updates.txt:1190).
 
-**Squad anchors.** Arena and corridor pieces carry enemy anchors with a facing direction and a type; the type is flying (1,892 placements) or turret (1,091). The anchor fixes the chassis class, and the spawner picks the specific enemy (inference). Wave counts per anchor are not decoded.
+**Squad anchors.** Arena and corridor pieces carry 5,979 enemy anchors. Each records the connector side it sits on, not a facing, and a type. The tallies of non-default values are 1,892 airborne and 1,091 fixed, and the tally skips default values, so about 3,000 anchors carry the default type (PIECES-MEASURED.md:16, 81, 102). The anchor fixes the chassis class, and the spawner picks the specific enemy (inference). Wave counts per anchor are not decoded.
 
 **Respawn rule.** Arena respawns lower the chance of the type just killed (Updates.txt:1180-1181), spreading families across the arena.
 
 ```mermaid
 flowchart TD
-    C[Chassis class: ground, flying, turret, bot, worker, big] --> M[Movement class: static, walking, flying]
+    C[Chassis class: six families] --> M[Movement class: fixed, ground-moving, airborne]
     C --> B[Production band: bones and triangles]
     C --> F[One threat feature = its warning]
     F --> K[Skill list: 0 to 6 attacks]
-    A[Squad anchor: direction and type] --> C
+    A[Squad anchor: connector side and type] --> C
     K --> Z[Respawn avoids the type just killed]
 ```
 
@@ -46,19 +46,19 @@ flowchart TD
 
 | Parameter | Value | Source |
 |---|---|---|
-| Enemy rows by class | flying 36, turret 34, bot 14, pawn 10, worker 6, unlabelled 39 | tables (level 4 at measurement), enemy statistics |
-| Movement class | static 58, walking 45, flying 36 | tables, summary |
-| Wiki categories | bots 14, pawns 5, flies 12, workers 3, pods 18, minibosses 2 (54 rows) | wiki (public), Enemies.txt:7-323 |
-| Health median by class | bot 60, worker 80, flying 120, turret 120, pawn 135 | tables, per-class summary |
-| Big units | 7 rows, median health 1,050 | tables |
-| Bones median per family | pod 16, fly 16, bot 37, pawn 54, worker 24, big 46 | asset report (whole rigs) |
+| Enemy rows by class | airborne 36, fixed 34, small walker 14, ground walker 10, rail labourer 6, unlabelled 39 (14 boss, 7 elite, 5 heavy, 13 minion) | tables (level 4 at measurement), enemy statistics |
+| Movement class | fixed 58, ground-moving 45, airborne 36 | tables, summary |
+| Wiki categories | six, with 14, 5, 12, 3, 18 and 2 entries (54 rows) | wiki (public), Enemies.txt:7-323 |
+| Health median by class | small walker 60, labourer 80, airborne 120, fixed 120, ground walker 135 | tables, per-class summary |
+| Heavy units | 7 rows, median health 1,050 | tables |
+| Bones median per family | pod 16, airborne 16, small walker 37, ground walker 54, labourer 24, heavy 46 | asset report (whole rigs) |
 | Bones, all enemies / bosses | median 27, 90th 55 / median 59, 90th 99, max 143 | asset report |
-| LOD0 triangles median per family | pod 12,331, fly 9,691, bot 11,442, pawn 19,767, worker 15,038, big 24,320 | asset report (whole assets) |
-| Triangles 90th percentile per family | pod 17,877, fly 14,508, bot 15,272, pawn 31,912, worker 19,051, big 40,593 | asset report |
-| Clips per family | pod 288, fly 304, bot 283, pawn 211, worker 57, big 127 | asset report |
+| LOD0 triangles median per family | pod 12,331, airborne 9,691, small walker 11,442, ground walker 19,767, labourer 15,038, heavy 24,320 | asset report (whole assets) |
+| Triangles 90th percentile per family | pod 17,877, airborne 14,508, small walker 15,272, ground walker 31,912, labourer 19,051, heavy 40,593 | asset report |
+| Clips per family | pod 288, airborne 304, small walker 283, ground walker 211, labourer 57, heavy 127 | asset report |
 | Clip median seconds | 0.04 to 0.71 by family | asset report |
-| Squad anchor type | flying 1,892, turret 1,091 | pieces report, placements |
-| Skills per enemy | 0 to 6; 41 none, 54 one | tables |
+| Squad anchors | 5,979 total; non-default type tallies 1,892 and 1,091, so about 3,000 at the default type; direction values are connector sides | pieces report (PIECES-MEASURED.md:16, 81, 102) |
+| Skills per enemy | 0 to 6; 28 none, 54 one | tables |
 | Boss signature mechanics | five described, one each | wiki (public), Bosses.txt:11, 25, 54, 68, 86 |
 | Summoner spawns a fixed child type | stated | wiki (public), Enemies.txt:259, 299 |
 | Respawn rule | lowers chance of the type just killed | wiki (public), Updates.txt:1180-1181 |
@@ -79,7 +79,7 @@ flowchart TD
 - **Threat feature equals warning feature** (principle: readability first). Refines BIBLE.md "A committed attack means what it shows" (line 489).
 - **One signature mechanic per boss and miniboss** (principle: harmonize apparent contradictions). Refines BIBLE.md "Encounters, waves and enemies" (line 517) and TADR-010 (the director places minibosses).
 - **Family budget bands for the forge:** bones and triangles per class as ranges to test, with the ratios below. The forge authors from a free base, so the bands only size the work.
-- **Proportion ratios, numbers only.** Relative to the flying family's median triangles (1.00): pod 1.27, bot 1.18, worker 1.55, pawn 2.04, big 2.51. Relative to the pod and fly bone median (1.00): worker 1.5, big 2.9, bot 2.3, pawn 3.4. Health relative to the pawn median (1.00): bot 0.44, worker 0.59, flying and turret 0.89, big 7.8.
+- **Proportion ratios, numbers only.** Relative to the airborne family's median triangles (1.00): pod 1.27, small walker 1.18, labourer 1.55, ground walker 2.04, heavy 2.51. Relative to the pod and airborne bone median (1.00): labourer 1.5, heavy 2.9, small walker 2.3, ground walker 3.4. Health relative to the ground walker median (1.00): small walker 0.44, labourer 0.59, airborne and fixed 0.89, heavy 7.8.
 - **A forge recipe, as a relationship:** pick a free base, assign it a chassis class, give it one lens or light as its threat feature, set budget and rig size from the family band, and let the telegraph note's four fields describe its attacks.
 - **Anchors that fix class and the spawner that picks the member** (principle: opt-in layers). Anchor: TADR-010's director.
 - **Respawns that avoid the type just killed.** Anchor: line 517.
@@ -93,13 +93,13 @@ Andrew asked whether a shipped enemy mesh could be ripped and resculpted. No: a 
 | 1 | Quaternius on Poly Pizza, a flying robot enemy | CC0, verified on the page | one drone-like robot | FBX, glTF |
 | 2 | Quaternius, an animated low-poly robot on OpenGameArt | CC0, verified | one robot with about 14 clips (snippet) | zip; check for glTF inside |
 | 3 | Quaternius, the same robot and the animated monsters and animals packs on itch | CC0 per snippet; pages returned errors, verify first | robots; simple creatures | not verified |
-| 4 | Daniel Darko, a low-poly robot on Sketchfab (mirrored) | CC BY 4.0, verified; attribution text given | one stylized robot, about 3,250 faces | GLB, glTF |
+| 4 | Daniel Darko, a low-poly robot on Sketchfab (found on a mirror site; admission must fetch from the original Sketchfab page, ASSETS.md:23, and re-read the license there) | CC BY 4.0 as read on the mirror; attribution text given | one stylized robot, about 3,250 faces | GLB, glTF |
 | 5 | Cough-E, a low-poly robot on OpenGameArt | CC0, verified | one untextured robot, shape reference | Blender file only |
 | For blockouts | Kay Lousberg, prototype bits | free commercial use, no attribution, no resale of unmodified copies (snippet) | 64 or more blockout pieces, no robots | not verified |
 
 Not usable as bases: Kenney ships no 3D robots (its robot pack is 2D); Mixamo is humanoid-only and not a Creative Commons license; Blender Studio's security-bot rig is a finished CC-BY character, a reference rather than a base. Not checked: Polyhaven, ambientCG, the Unity Asset Store.
 
-Provenance recipe for the forge (TADR-003 admission): one sidecar per fetched base with the source URL and exact title, the license name and version as printed plus the saved license line, the access date, the file list with sizes and a SHA-256 per archive, the creator and any attribution text, and the commercial-use statement; re-check the license line before a build ships and keep the sidecar beside the asset.
+Provenance recipe for the forge (TADR-003 admission): one sidecar per fetched base with the source URL and exact title, the license name and version as printed plus the saved license line, the download URL, the access date, the saved HTML of the page's license line, the file list with sizes and a SHA-256 per archive, the creator and any attribution text, and the commercial-use statement; re-check the license line before a build ships and keep the sidecar beside the asset.
 
 ## What it must not copy
 

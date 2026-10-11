@@ -41,7 +41,7 @@ flowchart TD
 | Demolition category | 8 / 1.55 / 15 / 2 | same |
 | Spread of category medians | clip 5x (7 to 35), spread cap 3x (10 to 30), reload 1.15x (1.35 to 1.55) | arithmetic on the five rows above |
 | Affixes per weapon | 0 on 12, 1 on 35, 2 on 36, 3 on 9 weapons | shipped data tables |
-| Affix rows by rarity | 92 common, 58 rare, 1 elite (151 rows) | same |
+| Affix rows by rarity | three tiers: 92, 58 and 1 rows (151 rows) | same |
 | Weapons an affix can appear on (min / median / p90 / max) | 0 / 3 / 49 / 87 (quantile order read from the report's convention, inference) | same |
 | Affix bonus-damage values | 10 / 20 / 50 / 100, on 36 rows; a luck value 0 to 50 on 21 rows | same |
 | Affix categories | preset, green, blue, alternative fire; elements count as affixes | wiki (public): Affixes page, line 1 |
@@ -55,8 +55,8 @@ flowchart TD
 | Weapon level scaling | +10% damage per level above 1 | wiki (public): Calculators page, lines 1676 to 1690; constants unreconciled with page base damage |
 | Critical rule | 1.25x by default on weak points; highest listed weapon multiplier 3.75x | wiki (public): Criticals page, line 6; Weapons page, lines 276 to 281 |
 | Player attack profiles | damage median 28, max 180; fire interval median 0.32 s; charge time nonzero on 96 of 168 | shipped data tables, player-skill table (weapons and abilities probably share it, inference) |
-| Damage types in that table | bullet 51, explosion 48, laser 35, physical 23, burn 5, cold 3, shock 3 | same |
-| Status rules | burn lasts 3.5 s; cold slow 60% before freeze, freeze 6 s, boss slow after freeze 14%; shock stun 3.5 s; cold and shock decay after 1 s | wiki (public): Elements page, lines 5 to 21 |
+| Damage types in that table | seven damage types with row counts 51, 48, 35, 23, 5, 3 and 3 | same |
+| Status rules | the wiki gives three statuses: a damage-over-time one lasting 3.5 s, a slow of 60% that turns into a 6 s freeze (14% slow on a boss after), and a 3.5 s stun; the slowing and stunning ones decay after 1 s | wiki (public): Elements page, lines 5 to 21 |
 | Status application rate by source | burn: own element 0.7x, non-elemental weapon with the affix 0.3x, perk 0.35x, converted ability 0.7x; cold and shock 0.9x | wiki (public): Elements page, lines 7, 9, 16, 21 |
 | Item tiers and prices | four colour tiers plus a corrupted tier with a bonus and a penalty; prices 6 / 8 / 12 / 6 | wiki (public): Buyable Items page, lines 6, 226, 404, 504 |
 | Rarity damage scaling, level cap, drop odds, elemental damage formula | not stated | gap |

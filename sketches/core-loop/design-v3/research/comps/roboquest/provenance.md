@@ -2,7 +2,7 @@
 
 Evidence: inventory of folder, plugin and library file names in the install clone, the container listing and the parse probe, names and sizes only (level 2), plus engine format facts read from the container header (level 4 for those counts). License labels marked "known" come from general knowledge of the named project, not from a license file read in the game; no license text was read in this study, so every other license cell says "not checked". Nothing was executed. Nothing from the game is fetched or copied; a "yes" below means the original project can be obtained from its own source under its own license, through the admission rule in `docs/project/ASSETS.md` and `adr/TADR-003-content-pipeline.md`.
 
-The install clone is retained by Andrew's decision as a private modding archive, outside the Scrapkeep study folder, under a path the coordinator records in the tracking file. Nothing in the Scrapkeep pipeline reads it, and no note, script or build in this repository points to it.
+The install clone is retained by Andrew's decision as a private modding archive, outside the Scrapkeep study folder, as a private archive. This is Andrew's recorded exception outside the Scrapkeep pipeline (see `docs/project/ASSETS.md`, "Comps study posture", line 23, which says study copies live outside the repository). The archive sits at ~/Projects/roboquest-mod/archive/. Nothing in the Scrapkeep pipeline reads it, and no note, script or build in this repository points to it.
 
 ## What it does
 

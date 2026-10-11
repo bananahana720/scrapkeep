@@ -82,7 +82,7 @@ Textures (larger side of the top level; DXT block formats dominate):
 | User interface | 2,167 | 980 | 829 | 131 | 116 | 111 | 7,680 | measured: same |
 | All game | 4,094 | 1,137 | 1,081 | 541 | 922 | 413 | 7,680 | measured: same |
 
-Reading: character textures cluster at 2,048 for enemies and weapons, but the hero set is mostly above that (21 of 31, which means 4,096 given the maximum; n is small). Formats across all 4,094: block-compressed colour with alpha 1,715, colour 1,411, uncompressed 611 (mostly interface), normal-map format 336, single-channel 15. 2,320 textures have a single level and 1,736 have nine or more.
+Reading: character textures cluster at 2,048 for enemies and weapons, but the hero set is mostly above that (21 of 31, which means 4,096 given the maximum; n is small). Formats across all 4,094: block-compressed colour with alpha 1,715, colour 1,411, uncompressed 611 (mostly interface), normal-map format 336, single-channel 15, other 6 (3 modern block format, 2 floating-point, 1 single-channel block). 2,320 textures have a single level and 1,736 have nine or more.
 
 Animation clips (seconds):
 
@@ -140,7 +140,7 @@ Three-way comparison. Triangle rows differ in unit (Roboquest skeletal rows are 
 ### What this supports and what it does not
 
 - It does not support lowering any band. At p90 every Roboquest triangle category sits above the forge's ceiling and the static prop and terrain medians sit inside the band, so the third game gives no reason to tighten. Only clip length and median bone counts sit under the proposed caps.
-- It shows a stylized game can ship characters at roughly 18 to 74 times the other two games' per-piece medians for hero, enemy and weapon and still read (inference: the unit difference accounts for an unknown share of that, and "read" is a judgment from a static measurement, not a playtest). It is evidence that the band top is a cost choice, not a readability limit.
+- It shows a stylized game can ship characters at roughly 18 to 74 times the other two games' per-piece medians for hero, enemy and weapon (inference: the unit difference accounts for an unknown share of that, and whether it still reads was not measured). Bosses have their own ratio: 29,384 against 480 (Risk of Rain 2, without the giant) is about 61 times, and against 90 (Gunfire boss folder) about 326 times, both with the unit caveat. Inference only: the band top may be a cost choice rather than a readability limit; no playtest tested it.
 - It supports the proposed 80-bone hero cap as a ceiling: the heaviest hero rig has 68. It supports delta 1's ceiling side and its 5,000 and 10,000 limits only as lower bounds. It cannot test the 500 floor.
 - It supports the proposed 3.5 s clip cap for gameplay clips (p90 under 1.8 s in every character category) and repeats the boss exception need (a 17.67 s maximum).
 - It cannot say what a summed per-character total looks like in the other two games, so the whole-asset comparison stays one-sided: their figures are lower bounds on their assets.
@@ -166,4 +166,4 @@ Proposed forge delta (proposed, for the forge owner, not applied): add a hero, e
 
 ## Lab measure
 
-Add the headless budget audit proposed in the other two notes: load every promoted asset, count triangles, bones, clips, longest clip and texture size, group by category, compare to the caps, print a nonzero count per category (an empty selection fails) and print median and p90 per category beside this three-way table. Add a second column that sums triangles per whole character, since this game's rows are whole assets and ours are checked per asset.
+Pass when every forge pack's summed per-character triangles, bones and clip lengths sit inside the band the README names, and the count of assets checked is recorded and nonzero. Method: add the headless budget audit proposed in the other two notes: load every promoted asset, count triangles, bones, clips, longest clip and texture size, group by category, compare to the caps, print a nonzero count per category (an empty selection fails) and print median and p90 per category beside this three-way table. Add a second column that sums triangles per whole character, since this game's rows are whole assets and ours are checked per asset.

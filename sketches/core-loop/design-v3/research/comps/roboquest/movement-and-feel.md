@@ -44,8 +44,8 @@ flowchart LR
 | Explosives class speed | +0.5% per stack of its passive | wiki (public): explosives-class page, line 27 |
 | Cooldown shortening from combat | damage taken shortens the dash cooldown by 2 s (a perk); damage taken shortens the stealth cooldown by 2 s (a perk); a javelin hit shortens it by 1 s | wiki (public): dash-class page, line 45; stealth-class page, lines 61 and 79 |
 | Derived buff uptime | stealth about 27% (4 of 15 s); overdrive about 75% (6 of 8 s) if the cooldown starts at activation, about 43% if it starts at expiry; the wiki does not say which | arithmetic on the rows above (inference) |
-| Enemy move speed (min / median / p90 / max) | 0 / 600 / 1250 / 1600 cm/s | shipped data tables (level 4 at measurement, scripts outside the repo), enemy table |
-| Player run versus enemy speeds | run is 2.5x the median enemy and 1.2x the p90 enemy | arithmetic on the rows above |
+| Enemy move speed (min / median / p90 / max) | 60 / 650 / 1250 / 1600 cm/s | shipped data tables (level 4 at measurement, scripts outside the repo), enemy table |
+| Player run versus enemy speeds | run is about 2.35x the median enemy and 1.2x the p90 enemy | arithmetic on the rows above |
 | Frame counts for dash, slide, jump arc, any wall-run | not available | gap: no capture |
 
 Source check: the speeds and heights were re-read from the page at the cited lines and match the scout's report.
@@ -54,12 +54,12 @@ Source check: the speeds and heights were re-read from the page at the cited lin
 
 - **Slide as a stored-speed trade.** Starting well above running and decaying to walking makes the slide a short, committed burst. The jump near its end converts that burst into air time, so the skill is timing, not a new button (the timing claim is stated on the wiki, the effect on feel is inference).
 - **Run is gated by direction.** Running only forward keeps strafing slow, so aiming at a target while retreating costs speed. Inference from the stated restriction.
-- **Player outruns most enemies by a wide margin.** At 2.5x the median enemy, positioning is mostly the player's choice; only the fastest enemies approach run speed. Inference from two datasets read separately.
+- **Player outruns most enemies by a wide margin.** At about 2.35x the median enemy, positioning is mostly the player's choice; only the fastest enemies approach run speed. Inference from two datasets read separately.
 - **Class difference sits in an ability with a cooldown.** The base verbs are learned once, and each class adds one timed spike. Combat events that shorten the cooldown reward fighting while moving. Stated for the perks above; the reading is inference.
 
 ## What Scrapkeep borrows
 
-Principles: **momentum is sacred** and **three characters with their own movement** (Andrew's, `docs/playtests/PLAYTEST-LOG.md` entry 6, lines 98 to 105). Bible anchors, each checked with `grep -n` on BIBLE.md: "Movement, camera and active aim" (`BIBLE.md:479`), "A committed attack means what it shows" (`BIBLE.md:489`), "Abilities, ultimates and combat rhythm" (`BIBLE.md:499`) and "Four slots and milestone progression" (`BIBLE.md:527`, its mobility row). TADR-008 puts any such ability through the one ability contract. Everything below is proposal.
+Principles: **momentum is sacred** and **three characters with their own movement** (Andrew's, `docs/playtests/PLAYTEST-LOG.md` line 83). Bible anchors, each checked with `grep -n` on BIBLE.md: "Movement, camera and active aim" (`BIBLE.md:479`), "A committed attack means what it shows" (`BIBLE.md:489`), "Abilities, ultimates and combat rhythm" (`BIBLE.md:499`) and "Four slots and milestone progression" (`BIBLE.md:527`, its mobility row). TADR-008 puts any such ability through the one ability contract. Everything below is proposal.
 
 - **A speed bank with a spend window.** A roll or slide that starts above cruising speed and decays to it, with a jump or release inside the last part of the decay keeping the speed, so slowing down is the player's choice and momentum is never taken away unseen. Starting ratios to test: 1.2x to 1.3x the cruise speed for the burst, with the window inside the final 25% of the decay (both proposals).
 - **Shared base verbs, a distinct mobility slot per character.** Roboquest gives all classes the same ground rules and puts difference in one timed movement ability. Scrapkeep's principle is stronger (each of three characters moves differently), so borrow only the structure: a shared floor of verbs plus the mobility slot of the four-slot table carrying the character-specific verb, with its own cooldown and a visible state.
