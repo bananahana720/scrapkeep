@@ -16,7 +16,7 @@ const T := preload("res://tests/support/t.gd")
 # every lane starts at the pour channel, slag_hop still fires over a burning lane, and the
 # core window is MELTDOWN_WINDOW times the posture rule's stagger. The relic never moves on
 # either mounting: mount_offset is zero and anchor_velocity stays zero on every tick.
-# KF2b: the flume rebuilds the newest lane from the pour channel instead of moving the body, so a
+# KF2b/KF2c: the flume lays the lane from the pour channel (the driver's lane_origin) instead of moving the body, so a
 # wrapping recorder installed as the step hook (it forwards every call to the real driver) samples
 # the body and anchor_velocity inside every tick, including a run that opens a stagger on the
 # charge's landing tick, after the driver's step and before the pulse.
@@ -418,6 +418,9 @@ class Recorder:
 			forced = true
 			strike.call(warden)
 			sample(warden)
+
+	func lane_origin(warden) -> Vector3:
+		return inner.lane_origin(warden) if inner.has_method("lane_origin") else warden.global_position
 
 	func charge_allowed(warden) -> bool:
 		return inner.charge_allowed(warden) == true if inner.has_method("charge_allowed") else true

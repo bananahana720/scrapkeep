@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const ReactorDriver := preload("res://src/combat/warden_reactor.gd")
 
 # The meltdown Warden's slag lane is telegraphed: it appears at progress 0 on the pulse,
 # fills over SLAG_WARN before it burns, publishes windup then strike through
@@ -26,6 +27,7 @@ var _game
 var _failures := 0
 var _hits: Array = []
 var _phases: Array = []
+var _facts: Array = []
 const DT := 1.0 / 90.0
 
 
@@ -49,6 +51,7 @@ func _on_hit(amount: float, _push: Vector3) -> void:
 
 func _on_phase(facts: Dictionary) -> void:
 	_phases.append(String(facts["phase"]))
+	_facts.append(facts)
 	if facts["row"] != "W01":
 		_failures += 1
 
@@ -128,6 +131,9 @@ func _check() -> void:
 		"progress < 1 until %.2f s, first damage at %.2f s, SLAG_WARN %.2f" % [filling, damage_at, Warden.SLAG_WARN])
 	_report("windup then strike", _phases.size() >= 2 and _phases[0] == "windup" and _phases[1] == "strike",
 		"phases %s" % [_phases])
+	var home_at: Vector3 = _facts[0]["at"] if not _facts.is_empty() else Vector3(INF, INF, INF)
+	_report("no hook: windup is published at home", home_at.distance_to(warden.global_position) <= 0.05
+		and lane["from"].distance_to(warden.global_position) <= 0.05, "windup at %s, home %s" % [home_at, warden.global_position])
 	# A ball outside the lane takes nothing while it burns.
 	_place_ball(outside)
 	_hits.clear()
@@ -135,5 +141,45 @@ func _check() -> void:
 		warden._step_slag(DT)
 	_report("outside the lane takes none", _hits.is_empty() and not warden.slag_lanes.is_empty(),
 		"hits %d, lanes %d" % [_hits.size(), warden.slag_lanes.size()])
+	warden.free()
+	fleet.free()
+	_check_flume_origin()
+
+
+# A flume reactor with its driver mounted: the lane origin is the pour channel from the first tick, so
+# the windup fact and its geometry read the pour channel, not home.
+func _check_flume_origin() -> void:
+	var fleet := preload("res://src/combat/fleet.gd").new()
+	var ctx := CtxDouble.new()
+	ctx.events = _game.events
+	fleet.ctx = ctx
+	fleet.combat = _game.ctx.spawner
+	var driver := ReactorDriver.new()
+	var warden := Warden.new()
+	_game.add_child(warden)
+	warden.position = Vector3(-40.0, 0.0, 0.0)
+	warden.setup(_game.player, _game.ctx.terrain, _game, func(): return false, 1.0,
+		fleet.dress("warden", {"family": Roster.REACTOR, "stage": 1, "fleet": fleet, "plating": 30.0, "hp": 800.0,
+			"mount_driver": driver}))
+	_facts.clear()
+	warden.attack_phase.connect(_on_phase)
+	_place_ball(warden.global_position + Vector3(0.0, 1.0, 12.0))
+	var guard := 0
+	while warden.pulses == 0 and guard < 2000:
+		warden._step_pulse(DT, true)
+		guard += 1
+	var pour: Vector3 = driver.pour_point(warden)
+	var windup: Dictionary = _facts[0] if not _facts.is_empty() else {}
+	var at: Vector3 = windup.get("at", Vector3(INF, INF, INF))
+	var geometry: Dictionary = windup.get("geometry", {})
+	var origin = geometry.get("centre", Vector3(INF, INF, INF))
+	var origin_flat := Vector3(INF, INF, INF)
+	if origin is Vector3:
+		origin_flat = origin
+	var at_flat := Vector2(at.x - pour.x, at.z - pour.z).length()
+	var origin_off := Vector2(origin_flat.x - pour.x, origin_flat.z - pour.z).length()
+	_report("flume: windup is published at the pour channel", windup.get("phase", "") == "windup" and at_flat <= 0.05
+		and origin_off <= 0.05, "at %.3f m, geometry origin %.3f m from the pour channel; geometry keys %s"
+		% [at_flat, origin_off, geometry.keys()])
 	warden.free()
 	fleet.free()
