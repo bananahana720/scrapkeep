@@ -6403,14 +6403,14 @@ Andrew installed Risk of Rain 2, Gunfire Reborn, Roboquest and The Binding of Is
 
 ### CS-03: Roboquest comps notes
 
-**Card revision:** 1 · **Owner:** Design research · **Size:** M · **Lane:** Comps study
+**Card revision:** 2 · **Owner:** Design research · **Size:** M · **Lane:** Comps study
 
 **Source and inputs:** [CS-01](#cs-01) note shape and posture; the installed game (Unreal 4, compiled C++; play notes, frame-counted capture and a pak reader for metadata).
 
 **Dependencies:** [CS-01](#cs-01). **Blocking questions:** None.
 
-**Files touched:** `sketches/core-loop/design-v3/research/comps/roboquest/**`.
+**Files touched:** `sketches/core-loop/design-v3/research/comps/roboquest/**`; `comps/maps-compared.md` (the Roboquest column and completion) and `comps/README.md` (method rows, decisions, borrow rows, forge delta, follow-ups) as the CS-02 pattern set; card revision 2 (11 October 2026) widened the files and renamed the comparison four-game.
 
-**Definition of done:** stage anatomy as the lead note (handcrafted stages with branching exits, in-stage objectives and secrets, the basecamp between runs), movement feel with frame-counted values, class perks, production budgets by metadata, and the three-game map comparison completed against Scrapkeep's open-stage-with-pockets shape. Same six-section shape and bans as CS-01.
+**Definition of done:** stage anatomy as the lead note (handcrafted stages with branching exits, in-stage objectives and secrets, the basecamp between runs), movement feel with frame-counted values, class perks, production budgets by metadata, and the four-game map comparison completed against Scrapkeep's open-stage-with-pockets shape. Same six-section shape and bans as CS-01.
 
 **Verification and evidence:** as CS-01. **Boundary:** as CS-01; the pak reader is chosen at card start and built from source or a package registry.
