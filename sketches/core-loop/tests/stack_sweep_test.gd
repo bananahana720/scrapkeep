@@ -15,15 +15,17 @@ const BuildSweep := preload("res://tools/build_sweep.gd")
 #     one copy; the live pool holds at most one spike per tier, and a planted pool with
 #     two tier-3 spikes or a spike capped at 20x is refused.
 # (c) the composition arm: 10,000 random 6-part builds drawn through Parts.roll reach 3
-#     or more tags in at least 30% of builds, leave zero unspecified tag pairs, and an
-#     offer repeats a part at most once per 10,000 draws; the same seed gives the same
-#     numbers. Planted controls prove each counter can fire.
+#     or more tags in at least 30% of builds, leave zero unspecified tag pairs, and no
+#     single offer shows a part twice; the same seed gives the same numbers. The comps
+#     measure, a part repeating within a run, is printed against its target of 1 per
+#     10,000 draws and is report-only until the owner rules (BuildSweep.WITHIN_RUN_GATED);
+#     its counter and its gate each have a planted control that must fire.
 # Time to kill is printed per stack row (report now; the numbers gate nothing yet).
 
 const EPS := 1e-6
 # A runtime script error aborts a check function without failing the run, so every
 # check must report: fewer than this many verdicts is itself a failure.
-const EXPECTED_REPORTS := 8
+const EXPECTED_REPORTS := 9
 
 var _failures := 0
 var _reports := 0
@@ -134,10 +136,13 @@ func _check_compose_arm() -> void:
 	var stats: Dictionary = BuildSweep.compose_arm(BuildSweep.DEFAULT_SEED, BuildSweep.COMPOSE_BUILDS)
 	BuildSweep.print_compose_table(stats)
 	_report("composition arm", stats["builds"] == 10000 and stats["draws"] >= 60000 and stats["tag3_share"] >= 0.30
-		and stats["unspecified_pairs"] == 0 and stats["repeats_per_10k"] <= 1.0,
-		"%d builds, %d draws, %.1f%% reach 3+ tags, %d unspecified pairs, %.2f offer repeats per 10,000 draws"
+		and stats["unspecified_pairs"] == 0 and stats["offer_repeats"] == 0
+		and is_finite(stats["run_repeats_per_10k"]) and stats["run_repeats"] >= 0
+		and BuildSweep.compose_problems(stats).is_empty(),
+		"%d builds, %d draws, %.1f%% reach 3+ tags, %d unspecified pairs, %d in-offer repeats, %.2f within-run repeats per 10,000 draws (target %.0f, %s)"
 			% [stats["builds"], stats["draws"], 100.0 * stats["tag3_share"], stats["unspecified_pairs"],
-				stats["repeats_per_10k"]])
+				stats["offer_repeats"], stats["run_repeats_per_10k"], BuildSweep.REPEAT_TARGET_PER_10K,
+				"gated" if BuildSweep.WITHIN_RUN_GATED else "report-only"])
 	var again: Dictionary = BuildSweep.compose_arm(7, 300)
 	var twice: Dictionary = BuildSweep.compose_arm(7, 300)
 	var other: Dictionary = BuildSweep.compose_arm(8, 300)
@@ -149,3 +154,16 @@ func _check_compose_arm() -> void:
 	_report("composition controls fire", planted_unknown > 0 and planted_repeat == 1
 		and BuildSweep.unspecified_pairs([["frost"], ["arc", "speed"]]) == 0,
 		"unknown tag -> %d unspecified pairs; duplicate offer -> %d repeat" % [planted_unknown, planted_repeat])
+	# The within-run measure: a part shown earlier this run counts, a fresh one does not,
+	# and the gate, once switched on, refuses a run over the target.
+	var planted_run: int = BuildSweep.run_repeats({"cross_split": 1}, ["cross_split", "fresh_part"])
+	var clean_run: int = BuildSweep.run_repeats({"other_part": 2}, ["cross_split", "fresh_part"])
+	var over := {"tag3_share": 1.0, "unspecified_pairs": 0, "offer_repeats": 0,
+		"run_repeats": 5, "run_repeats_per_10k": 5.0}
+	var under := over.duplicate()
+	under["run_repeats_per_10k"] = 0.5
+	var gated_over: Array = BuildSweep.compose_problems(over, true)
+	_report("within-run repeat controls fire", planted_run == 1 and clean_run == 0
+		and gated_over.size() == 1 and BuildSweep.compose_problems(under, true).is_empty()
+		and BuildSweep.compose_problems(over, false).is_empty(),
+		"seen part -> %d, fresh parts -> %d; gate on, 5.0 per 10,000 -> %s" % [planted_run, clean_run, gated_over])

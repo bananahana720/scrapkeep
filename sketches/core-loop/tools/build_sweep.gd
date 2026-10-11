@@ -22,7 +22,10 @@ const Synergies := preload("res://src/build/synergies.gd")
 #          the spike ceiling), not gated here.
 # compose  COMPOSE_BUILDS random 6-part builds drawn through Parts.roll, one 2-part offer
 #          per pick, one class per build in turn: the share of builds reaching 3 or more
-#          distinct tags, tag pairs with no specified outcome, and parts an offer repeats.
+#          distinct tags, tag pairs with no specified outcome, parts one offer shows twice
+#          (a structural invariant, gated at zero) and parts a run's offers show again
+#          (the comps measure, compared with REPEAT_TARGET_PER_10K; gated only when
+#          WITHIN_RUN_GATED is true).
 #
 # Exit 0 when the arm printed nonzero rows and found no problem, else 1. Evidence limit:
 # a numbers model; time to kill reads the stat as a damage bonus on a fixed dummy, not
@@ -38,9 +41,14 @@ const COMPOSE_BUILDS := 10000
 const BUILD_SIZE := 6
 const OFFER_SIZE := 2
 # The comps targets (comps/isaac/items-and-synergies.md:89): at least 30% of builds reach
-# 3 or more tags; an offer repeats a part at most once per 10,000 draws.
+# 3 or more tags; a run's offers repeat a part at most once per 10,000 draws.
 const TAG3_TARGET := 0.30
 const REPEAT_TARGET_PER_10K := 1.0
+# Within-run repeats are report-only until the owner rules (SR4 fix round, 2026-10-11):
+# Parts.roll weights a shown part down rather than excluding it, and stacking families
+# want copies, so seed 1 measures about 568 per 10,000 draws against the target of 1.
+# Flip to true to gate them; compose_problems then fails the arm.
+const WITHIN_RUN_GATED := false
 const EPS := 1e-6
 # Families the pool may not use yet get one synthetic probe each, so every family runs.
 const PROBES := {
@@ -251,6 +259,18 @@ static func offer_repeats(offer: Array) -> int:
 	return repeats
 
 
+# Parts an offer shows that this run's earlier offers already showed (offered maps id to
+# times shown this run). The comps measure (comps/isaac/items-and-synergies.md:89) is a
+# part repeating within a run; offer_repeats above only sees one offer, which Parts.roll
+# never duplicates.
+static func run_repeats(offered: Dictionary, offer: Array) -> int:
+	var count := 0
+	for key in offer:
+		if offered.has(key):
+			count += 1
+	return count
+
+
 static func compose_arm(run_seed: int, builds: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = run_seed
@@ -259,6 +279,7 @@ static func compose_arm(run_seed: int, builds: int) -> Dictionary:
 	var tag3 := 0
 	var unspecified := 0
 	var repeats := 0
+	var within_run := 0
 	var held_copies := 0
 	var empty_offers := 0
 	var outcomes := {"named": 0, "rule": 0, "independent": 0}
@@ -273,6 +294,7 @@ static func compose_arm(run_seed: int, builds: int) -> Dictionary:
 			var offer: Array = Parts.roll(rng, rarities, class_id, held, OFFER_SIZE, [], offered)
 			draws += offer.size()
 			repeats += offer_repeats(offer)
+			within_run += run_repeats(offered, offer)
 			if offer.is_empty():
 				empty_offers += 1
 				continue
@@ -309,6 +331,8 @@ static func compose_arm(run_seed: int, builds: int) -> Dictionary:
 		"unspecified_pairs": unspecified,
 		"offer_repeats": repeats,
 		"repeats_per_10k": 10000.0 * repeats / maxf(draws, 1),
+		"run_repeats": within_run,
+		"run_repeats_per_10k": 10000.0 * within_run / maxf(draws, 1),
 		"held_copies": held_copies,
 		"empty_offers": empty_offers,
 		"outcomes": outcomes,
@@ -316,19 +340,25 @@ static func compose_arm(run_seed: int, builds: int) -> Dictionary:
 	}
 
 
-static func compose_problems(stats: Dictionary) -> Array:
+static func compose_problems(stats: Dictionary, gate_within_run: bool = WITHIN_RUN_GATED) -> Array:
 	var out: Array = []
 	if stats["tag3_share"] < TAG3_TARGET:
 		out.append("%.1f%% of builds reach 3+ tags, under %d%%" % [100.0 * stats["tag3_share"], int(TAG3_TARGET * 100)])
 	if stats["unspecified_pairs"] > 0:
 		out.append("%d unspecified tag pairs" % stats["unspecified_pairs"])
-	if stats["repeats_per_10k"] > REPEAT_TARGET_PER_10K:
-		out.append("%.2f offer repeats per 10,000 draws" % stats["repeats_per_10k"])
+	if stats["offer_repeats"] > 0:
+		out.append("%d parts shown twice in one offer" % stats["offer_repeats"])
+	if gate_within_run and stats["run_repeats_per_10k"] > REPEAT_TARGET_PER_10K:
+		out.append("%.2f within-run repeats per 10,000 draws, over %.0f"
+			% [stats["run_repeats_per_10k"], REPEAT_TARGET_PER_10K])
 	return out
 
 
 static func print_compose_table(stats: Dictionary) -> void:
-	print("build_sweep compose | seed %d | builds %d | draws %d | 3+ tags %.1f%% (target %d%%) | distinct tag sets %d | unspecified pairs %d | offer repeats %d (%.2f per 10,000 draws) | picks of a part already held %d | empty offers %d | pair outcomes %s"
+	print("build_sweep compose | seed %d | builds %d | draws %d | 3+ tags %.1f%% (target %d%%) | distinct tag sets %d | unspecified pairs %d | offer repeats %d (%.2f per 10,000 draws) | within-run repeats %d (%.2f per 10,000 draws, target %.0f, %s, %s) | picks of a part already held %d | empty offers %d | pair outcomes %s"
 		% [stats["seed"], stats["builds"], stats["draws"], 100.0 * stats["tag3_share"], int(TAG3_TARGET * 100),
 			stats["distinct_tag_sets"], stats["unspecified_pairs"], stats["offer_repeats"], stats["repeats_per_10k"],
+			stats["run_repeats"], stats["run_repeats_per_10k"], REPEAT_TARGET_PER_10K,
+			"over target" if stats["run_repeats_per_10k"] > REPEAT_TARGET_PER_10K else "within target",
+			"gated" if WITHIN_RUN_GATED else "report-only pending owner ruling",
 			stats["held_copies"], stats["empty_offers"], stats["outcomes"]])
