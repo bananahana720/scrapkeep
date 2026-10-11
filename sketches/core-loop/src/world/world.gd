@@ -92,6 +92,7 @@ func setup(ctx_ref) -> void:
 	terrain = Terrain.new(ctx.stages)
 	terrain.build(ctx.root)
 	ctx.terrain = terrain
+	_wire_terrain()
 	flood = Flood.new()
 	flood.name = "Flood"
 	ctx.root.add_child(flood)
@@ -150,6 +151,27 @@ func _setup_gorge() -> void:
 	ctx.root.add_child(bay)
 	bay.setup(g, cruise)
 	terrain.bay = bay
+
+
+# The next park stage builds from the moment this stage's Warden wakes, so the launch lands on
+# ground already built (KB4b); a stage with no Warden (ctx.calm) starts it when its gates open.
+# prepare() is a no-op for an old map or a stage already built or building. A stage terrain
+# frees takes its contraptions with it, so the cache entry goes too and a rebuild adds new ones.
+func _wire_terrain() -> void:
+	terrain.stage_freed.connect(_on_stage_freed)
+	ctx.events.warden_engaged.connect(_prepare_after)
+	ctx.events.flow_changed.connect(func(state: String):
+		if state == "gates":
+			_prepare_after(ctx.run.stage))
+
+
+func _prepare_after(stage: int) -> void:
+	if stage >= 1 and stage < terrain.maps.size():
+		terrain.prepare(stage + 1)
+
+
+func _on_stage_freed(stage: int) -> void:
+	contraptions.erase(stage)
 
 
 # Contraptions for every stage whose ground is built and that has none yet. Setup covers

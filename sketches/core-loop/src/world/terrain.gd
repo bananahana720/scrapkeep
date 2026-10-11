@@ -19,8 +19,9 @@ const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 # A park file's ground is park_terrain.gd (KB4, PARK.md section 3): its bake as Terrain3D regions
 # and a tiled trimesh over the 1.6 km square. A park stage is never built with its world: the
 # first stage builds at setup, a later one when first read or from prepare(), which builds it
-# on worker threads; use() starts the next park stage's prepare and frees any park stage that
-# is neither active nor next, so at most two are resident.
+# on worker threads. world.gd calls prepare(stage + 1) when the stage's Warden is engaged (or its
+# gates open on a stage with no Warden), so the launch finds the next stage built (KB4b); use()
+# frees any park stage that is neither active nor next, so at most two are resident.
 const PARK_FILES := ["res://src/world/park/%s.json", "res://assets/park/%s_stage1.json"]
 const MAPS := {"spillway": Spillway, "gorge": Gorge, "reach": Reach, "dig": Dig, "highdraft": Highdraft, "dig_deep": DigDeep, "highdraft_crown": HighdraftCrown}
 
@@ -80,6 +81,10 @@ var _render_owner: Array[int] = []
 # (park_terrain.gd meter); PARK.md section 9 caps a frame at 33 ms.
 var last_use_usec := 0
 const SWAP_METER_FRAMES := 120
+
+# A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
+# root (world.gd's contraptions) drops them.
+signal stage_freed(index: int)
 
 
 func _init(table = StageDefs) -> void:
@@ -246,8 +251,6 @@ func use(index: int) -> void:
 			continue
 		_park(_roots[i], i != stage - 1)
 		_roots[i].process_mode = Node.PROCESS_MODE_INHERIT
-	if stage < maps.size():
-		prepare(stage + 1)
 	_show_render()
 	if _is_park[stage - 1]:
 		_grounds[stage - 1].meter(SWAP_METER_FRAMES)
@@ -276,6 +279,7 @@ func _free_stage(i: int) -> void:
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
 	_under[i] = PackedFloat32Array()
+	stage_freed.emit(i + 1)
 
 
 # The arena is not a stage: every map is hidden and its colliders leave the physics
