@@ -20,7 +20,7 @@
    "exception": {
     "draws": 2
    },
-   "exception_why": "ROSTER-LOOK section 5: class III adds plates on the Pod part and thicker tread caps on the Core part, two parts and two draws",
+   "exception_why": "ROSTER-LOOK section 5: class III adds plates on the Pod part and thicker tread caps on the Core part, two parts and two draws; the coordinator's Hoberman pilot mecha call (docs/decisions.tsv w13-PD 2026-10-10T21:29:13: shell cap 16, class III layer up to 2, other layers 1) admits it",
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (GAP PANEL, heft III)"

@@ -15,15 +15,19 @@ pilots/tally.md section 5, PILOTS.md section 1, PILOT-CLIPS section 5, CUSTOMIZE
 wrapped in prlimit with a 12884901888-byte address-space cap, as world_one/shell_neutral.py runs.
 
 Calls made here (P-UNITS PD common rule C6 reading, listed in the PD-TALLY report):
+- Struts 0.06 m and tread caps 0.10 m, inherited from shell_base.py's defaults (PD-0b strut
+  rule, ROSTER-LOOK section 3 rule 7 as amended 2026-10-10); this recipe passes no width.
 - One X-pair per link on the default shell as well as the variant (fix round 2026-10-11):
   ROSTER-LOOK section 3 rule 1 names it the first cut when the lattice hides the pilot, and it
   brings the base under the 6,600 target (section 5 cut order).
 - The drums ride the upright Pod on gap brackets off the outer gimbal axle bosses, not the
   WeaponRing. The heft layers mount under Pod (B5's loader), so the class IV hoods and the
   class V heavy drums only stay on their drums if the drums share that carrier, and the Pod
-  holds 3 and 9 o'clock to the heading, which the chase camera sits behind. (Open design call
-  for the coordinator; ROSTER-LOOK section 4 names the ring.)
-- Draws, held to the shell class's 10: Core 3 (paint, copper, rubber), Pod 2, Gyro 1,
+  holds 3 and 9 o'clock to the heading, which the chase camera sits behind. (Accepted by the
+  coordinator: docs/decisions.tsv w13-PD register 2026-10-10T21:29:13, which amends ROSTER-LOOK
+  section 4 and tally.md:246.)
+- Draws, held to 10 under the Hoberman pilot mecha cap of 16 (docs/decisions.tsv w13-PD
+  register 2026-10-10T21:29:13): Core 3 (paint, copper, rubber), Pod 2, Gyro 1,
   GyroInner 1, WeaponRing 2 (paint, class_accent) and one drum mesh. Both drums sit on one
   axis (X, through Z DRUM_Z), so they are one mesh, Flywheel.R, that spins about that axis;
   Flywheel.L is an empty at the left drum's centre. The rubber parts hoberman() puts on Pod and
@@ -345,9 +349,9 @@ def main():
           % (variant or "default", tris, common.tris(shell["core"]), TARGET_TRIS,
              "fits" if tris <= TARGET_TRIS else "over target", shell["dropped"], shell["folded"]))
     draws = sum(len(o.data.materials) for o in common.tree(root) if o.type == "MESH")
-    print("DRAWS Tally %d (shell class cap 10) %s" % (draws, "ok" if draws <= 10 else "OVER"))
+    print("DRAWS Tally %d (unit budget 10, Hoberman pilot cap 16) %s" % (draws, "ok" if draws <= 10 else "OVER"))
     if draws > 10:
-        raise SystemExit("Tally shell spends %d draws, over the shell class's 10" % draws)
+        raise SystemExit("Tally shell spends %d draws, over the unit's budget of 10" % draws)
     for d in shell["drums"]:
         print("DRUM %s radius %.4f" % (d.name, common.max_radius(d)))
     out = flag("--out") or (ABACUS_OUT if variant == "abacus" else OUT)
