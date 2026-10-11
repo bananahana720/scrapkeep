@@ -50,7 +50,7 @@ func _check_table() -> void:
 	_t.check("the stage cap is a positive finite number", is_finite(AbilityState.STAGE_REFUND_CAP)
 		and AbilityState.STAGE_REFUND_CAP > 0.0, "cap %s" % AbilityState.STAGE_REFUND_CAP)
 	var row: Dictionary = EventKinds.UI_ROWS.get("cooldown_refunded", {})
-	var ok := not row.is_empty() and row.get("color") is Color and row.get("group", "") in EventKinds.GROUPS \
+	var ok: bool = not row.is_empty() and row.get("color") is Color and row.get("group", "") in EventKinds.GROUPS \
 		and row.get("shape", "") in EventKinds.SHAPES and String(row.get("sound", "")) != ""
 	for field in EventKinds.FIELDS:
 		ok = ok and row.has(field)
