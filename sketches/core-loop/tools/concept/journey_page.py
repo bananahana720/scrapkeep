@@ -79,11 +79,16 @@ def load_manifest(mdir, n):
     return out
 
 
-def panel_info(text, prior):
-    """Return (key, display id, explicit path or None, same-as beat or None) from a Panel line."""
+def panel_info(text, prior, stage=None):
+    """Return (key, display id, explicit path or None, same-as beat or None) from a Panel line.
+
+    A share ("shared with beat 4") only matches an earlier beat of the same stage: labels repeat across
+    stages, and a forward share (the later beat is not parsed yet) resolves the picture on this beat."""
     for m in re.finditer(r"(?i)\bshare[sd]?\s+(?:with\s+)?(?:beats?\s+)?(" + LABEL + r")\b", text):
         ref = m.group(1)
         for b in reversed(prior):
+            if stage is not None and b.get("stage") != stage:
+                continue
             if b["label"] == ref or ref in [x.strip() for x in b["label"].split(",")]:
                 return ("beat:" + b["id"], "", None, b)
     ticks = re.findall(r"`([^`]+)`", text)
@@ -91,12 +96,12 @@ def panel_info(text, prior):
     if path:
         pid = re.sub(r"\.\w+$", "", "/".join(path.split("/")[-2:]))
         return (path, pid, path, None)
-    bare = next((t for t in ticks if t.lower().endswith((".png", ".jpg"))), None)
-    if bare:
-        return (bare, re.sub(r"\.\w+$", "", bare), None, None)
     m = re.search(r"\bNEW\s+`?([\w.-]*\w)`?", text)
     if m:
         return (m.group(1), m.group(1), None, None)
+    bare = next((t for t in ticks if t.lower().endswith((".png", ".jpg"))), None)
+    if bare:
+        return (bare, re.sub(r"\.\w+$", "", bare), None, None)
     if ticks:
         return (ticks[0], ticks[0], None, None)
     m = re.search(r"(?i)\bshares?\s+`?([\w.-]*\w)`?", text)
@@ -143,8 +148,13 @@ def parse_world(path):
                 stage = ("s" + re.match(r"Stage\s+(\d+)", text).group(1), text); group = text; in_warden = False
             elif "Warden" in text and lvl == 2:
                 stage = ("warden", text); group = text; in_warden = True
+            elif lvl == 2 and re.search(r"between the stages|bay between", text, re.I):
+                # the connective section between the two stages: its level-3 headings are beats
+                stage = ("between", text); group = text; in_warden = False
             elif in_warden and lvl == 3:
                 group = text
+            elif stage and stage[0] == "between" and lvl == 3:
+                cur = dict(label="bay", title=text, stage=stage, group=group, fields=[], notes=[], last=None)
             else:
                 stage = None; in_warden = False; group = None
             continue
@@ -377,7 +387,7 @@ def main():
             ids.add(bid)
             b["id"], b["world"], b["stageName"] = bid, wkey, b["stage"][0]
             ptext = next((v for k, v in b["fields"] if k == "Panel"), "")
-            key, pid, ppath, same = panel_info(ptext, done) if ptext else ("", "", None, None)
+            key, pid, ppath, same = panel_info(ptext, done, b.get("stage")) if ptext else ("", "", None, None)
             if not same and key:
                 same = next((d for d in done if d.get("pkey") == key), None)
             if not same and pid and "/" not in pid:
@@ -399,6 +409,12 @@ def main():
                 if img:
                     shot = f'<img src="{html.escape(img)}" alt="{html.escape(b["title"])}" data-panel="{html.escape(pid)}" loading="lazy">'
                     nres += 1
+                    # a line naming more than one NEW panel ("Stage 5 NEW W-C; stage 6 NEW W-D") shows each
+                    for extra in re.findall(r"\bNEW\s+`?([\w.-]*\w)`?", ptext or "")[1:]:
+                        more = manifest.get(extra.lower())
+                        if more and os.path.exists(more):
+                            shot += f'<img src="{html.escape(more)}" alt="{html.escape(b["title"])}" data-panel="{html.escape(extra)}" loading="lazy">'
+                            nres += 1
                 else:
                     shot = f'<div class="pending">panel pending: {html.escape(pid or "no panel named on the page")}</div>'
                     npend += 1
