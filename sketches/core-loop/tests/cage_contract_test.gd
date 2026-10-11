@@ -1,6 +1,10 @@
 extends SceneTree
 # 2026-10-10 (PD-0): new. The Hoberman mecha contract every pilot shell inherits (ROSTER-LOOK
 # sections 0 to 8, P-UNITS PD-0 acceptance 1 to 8), checked on the neutral fixture shell.
+# 2026-10-10 (PD-0 fix round): the inner gimbal ring is its own mesh (Gyro > GyroInner) and both
+# rings follow the tumble; the sight cone walks every mesh under Pod and refuses a seeded one;
+# hero_assets.sync_lattice turns the lattice snap on for Hoberman shells only; KNOWN_OVER rows
+# name their owning clip units. EXPECTED_CHECKS 39 -> 45.
 
 # What it checks, in order:
 #   budget     the neutral shell sits inside the shell class: tris, verts and draws (surfaces).
@@ -9,12 +13,15 @@ extends SceneTree
 #   lattice    32 hubs, 12 five-way and 20 three-way; 30 gaps; empties face outward; strut pairs
 #              0.035 m; Core radius 0.95 to 0.985; no glass on Core.
 #   ring       WeaponRing under Pod, band radius 1.02 to 1.10 and 0.08 m tall; it reaches a new
-#              aim within 0.2 s at rate 14 and stays level while Core tumbles.
-#   pod        no Pod vertex past radius 1.0 below Y -0.6; the sight cone is empty of the Pod.
-#   gimbal     both rings clear every pilot's kept-clip radius by 0.03 m, stay inside the
-#              lattice inner face and clear the 0.92 landing fold.
+#              aim within 0.2 s at rate 14 and stays level while Core tumbles; both gimbal rings
+#              turn while Core tumbles and the inner ring's axis follows the lattice.
+#   pod        no Pod vertex past radius 1.0 below Y -0.6; the sight cone is empty of every Pod
+#              mesh but Gyro, WeaponRing and Dome, and refuses a seeded mesh child inside it.
+#   gimbal     Gyro > GyroInner; both rings clear every pilot outside KNOWN_OVER by 0.03 m, stay
+#              inside the lattice inner face and clear the 0.92 landing fold.
 #   chunks     36 chunks on a lattice shell seat within 0.05 m of a hub or strut; the shell
-#              does not scale per class there and still does elsewhere.
+#              does not scale per class there and still does elsewhere; sync_lattice turns the
+#              snap on for the Hoberman Core and off for a glass shell.
 #   copper     the copper slot is Palette.COPPER, metallic 0.6, roughness 0.4, never tinted.
 # The run must make EXPECTED_CHECKS checks, so an early return or a skipped loop fails it.
 # SCRAPKEEP_ENVELOPE_OUT=<abs path> also writes the per-pilot kept-clip envelope as JSON.
@@ -26,7 +33,7 @@ const T := preload("res://tests/support/t.gd")
 
 const NEUTRAL := "res://assets/models/world_one/shell_neutral.glb"
 const BUDGETS := "res://tools/asset_budgets.json"
-const EXPECTED_CHECKS := 39
+const EXPECTED_CHECKS := 45
 const CORE_LIMIT := 0.985
 const STRUT_PAIR := 0.035
 const LATTICE_INNER := 0.94
@@ -52,6 +59,9 @@ const SLAB := 0.05
 # to 0.920 m, Sable's big_cheer raises one to 0.925 m, Kest's slump hangs a wing to 1.034 m. The
 # check holds each to its measured reach (no worse) and fails once one fits, so the row is
 # removed when the clip units re-key them. Every other pilot must clear by CLEARANCE.
+# Owners (the clip units that re-key the clip to a reach of 0.80 m or less, inner ring 0.830
+# minus CLEARANCE): runner_gunner (Rivet) PE-RIVET, pylon_engineer (Sable) PE-SABLE,
+# demolitions_caster (Kest) PE-KEST.
 const KNOWN_OVER := {"runner_gunner": 0.9204, "pylon_engineer": 0.9246, "demolitions_caster": 1.0344}
 
 var _t := T.new("cage_contract_test")
@@ -275,9 +285,19 @@ func _ring(scene: Node3D, core: MeshInstance3D, pod: MeshInstance3D) -> void:
 	var level := 1.0
 	var elapsed := 0.0
 	var reached := INF
+	var gyro := pod.get_node_or_null("Gyro") as Node3D
+	var inner: Node3D = gyro.get_node_or_null("GyroInner") if gyro != null else null
+	var outer_turn := [INF, -INF]
+	var inner_turn := [INF, -INF]
+	var follows := 1.0
 	while elapsed < 0.4:
 		rolling.rotate(Vector3(1, 0.3, 0.2).normalized(), 0.51)
 		hook.steer_weapon_ring(pod, aim, 1.0 / 60.0)
+		if inner != null:
+			HeroAssets.counter_tilt(pod, gyro, core)
+			outer_turn = [minf(outer_turn[0], gyro.rotation.x), maxf(outer_turn[1], gyro.rotation.x)]
+			inner_turn = [minf(inner_turn[0], inner.rotation.y), maxf(inner_turn[1], inner.rotation.y)]
+			follows = minf(follows, inner.global_basis.z.normalized().dot(core.global_basis.z.normalized()))
 		elapsed += 1.0 / 60.0
 		level = minf(level, ring.global_basis.y.normalized().dot(Vector3.UP))
 		var f := -ring.global_basis.z
@@ -286,6 +306,13 @@ func _ring(scene: Node3D, core: MeshInstance3D, pod: MeshInstance3D) -> void:
 	_t.check("ring reaches the aim", reached <= 0.2 + 0.0001, "within 0.1 rad of a %.2f rad turn after %.3f s (rate %.0f)" % [absf(angle_difference(0.7, want)), reached, HeroAssets.WEAPON_RING_RATE])
 	_t.check("ring stays level", level > 0.9999, "min up-dot %.6f while Core tumbled %.0f rad" % [level, 0.51 * 24])
 	_t.eq("ring rate", HeroAssets.WEAPON_RING_RATE, RING_RATE)
+	_t.check("both gimbal rings move", inner != null and outer_turn[1] - outer_turn[0] > 0.5 and inner_turn[1] - inner_turn[0] > 0.2,
+		"outer ring swept %.2f rad, inner %.2f rad while Core tumbled" % [outer_turn[1] - outer_turn[0], inner_turn[1] - inner_turn[0]])
+	_t.check("inner ring follows the lattice", inner != null and follows > 0.9999, "min dot of the inner ring's axis with Core's %.6f" % follows)
+	if gyro != null:
+		gyro.rotation = Vector3.ZERO
+	if inner != null:
+		inner.rotation = Vector3.ZERO
 	hook.free()
 	pod.reparent(scene, false)
 	core.reparent(scene, false)
@@ -302,29 +329,66 @@ func _pod(pod: MeshInstance3D) -> void:
 		for v in points(mi, pod):
 			low += 1 if v.y < -0.6 and v.length() > 1.0 else 0
 	_t.check("pod low reach", low == 0, "%d Pod vertices past radius 1.0 below Y -0.6" % low)
+	var inside := cone_hits(pod)
+	_t.check("sight cone empty", inside == 0, "%d solid Pod vertices inside the %.0f degree cone (Gyro, WeaponRing and Dome may cross)" % [inside, SIGHT_HALF_ANGLE])
+	# Seeded: a heft-layer box hung under Pod, and a bracket under that, inside the cone.
+	var planted := MeshInstance3D.new()
+	planted.name = "HeftC2"
+	var box := BoxMesh.new()
+	box.size = Vector3.ONE * 0.06
+	planted.mesh = box
+	planted.position = HEAD + (EYES[1] - HEAD).normalized() * 0.5
+	pod.add_child(planted)
+	var bracket := planted.duplicate() as MeshInstance3D
+	bracket.name = "Bracket"
+	bracket.position = Vector3.ZERO
+	planted.add_child(bracket)
+	var seeded := cone_hits(pod)
+	_t.check("sight cone refuses a seeded Pod mesh", seeded >= 2 * box.get_mesh_arrays()[Mesh.ARRAY_VERTEX].size(),
+		"%d vertices inside with a box child and grandchild under Pod" % seeded)
+	pod.remove_child(planted)
+	planted.free()
+
+
+# Solid Pod vertices inside the sight cone: every mesh under Pod except the subtrees rooted at
+# Gyro, WeaponRing and Dome (shell_base.sight_cone_hits and CONE_SKIP do the same in Blender).
+static func cone_hits(pod: MeshInstance3D) -> int:
 	var cos_half := cos(deg_to_rad(SIGHT_HALF_ANGLE))
 	var axes := EYES.map(func(e): return (e - HEAD).normalized())
 	var inside := 0
-	for v in points(pod, pod):
-		var d := (v - HEAD).normalized()
-		for a in axes:
-			if d.dot(a) > cos_half:
-				inside += 1
-				break
-	_t.check("sight cone empty", inside == 0, "%d solid Pod vertices inside the %.0f degree cone (Gyro and WeaponRing may cross)" % [inside, SIGHT_HALF_ANGLE])
+	for mi in cone_meshes(pod, pod):
+		for v in points(mi, pod):
+			var d := (v - HEAD).normalized()
+			for a in axes:
+				if d.dot(a) > cos_half:
+					inside += 1
+					break
+	return inside
+
+
+static func cone_meshes(node: Node, top: Node) -> Array:
+	if node != top and String(node.name).get_slice("_", 0) in ["Gyro", "WeaponRing", "Dome"]:
+		return []
+	var out := [node] if node is MeshInstance3D and (node as MeshInstance3D).mesh != null else []
+	for c in node.get_children():
+		out += cone_meshes(c, top)
+	return out
 
 
 # --- gimbal against the kept-clip envelope ------------------------------------------------------
 
 func _gimbal(pod: MeshInstance3D) -> void:
 	var gyro := pod.get_node_or_null("Gyro") as MeshInstance3D
-	_t.check("Gyro under Pod", gyro != null, "Pod > Gyro holds both gimbal rings")
+	_t.check("Gyro under Pod", gyro != null, "Pod > Gyro, the outer gimbal ring")
+	var inner: MeshInstance3D = gyro.get_node_or_null("GyroInner") if gyro != null else null
+	_t.check("GyroInner under Gyro", inner != null and inner.mesh != null, "Gyro > GyroInner, the inner ring as its own mesh")
 	var lo := 9.0
 	var hi := 0.0
 	if gyro != null:
-		for v in points(gyro, pod):
-			lo = minf(lo, v.length())
-			hi = maxf(hi, v.length())
+		for mi: MeshInstance3D in meshes(gyro):
+			for v in points(mi, pod):
+				lo = minf(lo, v.length())
+				hi = maxf(hi, v.length())
 	var envelope := kept_envelope()
 	var worst := 0.0
 	var known := []
@@ -466,7 +530,20 @@ func _chunks(core: MeshInstance3D) -> void:
 	acc.set_lattice(false)
 	acc.show_build(1.0e6, [], [], 5)
 	_t.check("other shells still grow", acc.scale.x > 1.2, "accretion scale %.2f at class V off the lattice" % acc.scale.x)
-	acc.free()
+	# The game wires it: hero_assets.sync_lattice reads the worn Core.
+	var roll := Node3D.new()
+	root.add_child(roll)
+	acc.reparent(roll, false)
+	HeroAssets.sync_lattice(core, roll)
+	acc.show_build(1.0e6, [], [], 5)
+	_t.check("Hoberman shell turns the snap on", acc.lattice and acc.scale.is_equal_approx(Vector3.ONE), "lattice %s, scale %s at class V" % [acc.lattice, acc.scale])
+	var glass_scene: Node3D = (load(HeroAssets.SHELLS[HeroAssets.DEFAULT_CLASS]) as PackedScene).instantiate()
+	var glass_core := glass_scene.find_child("Core", true, false)
+	HeroAssets.sync_lattice(glass_core, roll)
+	_t.check("glass shell leaves the snap off", glass_core != null and not acc.lattice and acc.scale.x > 1.2,
+		"lattice %s, scale %.2f with %s" % [acc.lattice, acc.scale.x, HeroAssets.SHELLS[HeroAssets.DEFAULT_CLASS]])
+	glass_scene.free()
+	roll.free()
 
 
 # Distance from p to the strut mid surface along the great-circle arc from a to b.
@@ -498,5 +575,5 @@ func _copper(scene: Node3D) -> void:
 			var mat := mi.get_surface_override_material(s) as StandardMaterial3D
 			if mat == null or mat.albedo_color != Palette.COPPER or not is_equal_approx(mat.metallic, 0.6) or not is_equal_approx(mat.roughness, 0.4):
 				wrong.append(mi.name)
-	_t.check("copper surfaces keep copper under paint", copper >= 3 and wrong.is_empty(), "%d copper surfaces, wrong on %s" % [copper, wrong])
+	_t.check("copper surfaces keep copper under paint", copper >= 2 and wrong.is_empty(), "%d copper surfaces, wrong on %s" % [copper, wrong])
 	hook.free()

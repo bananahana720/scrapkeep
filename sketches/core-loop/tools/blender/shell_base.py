@@ -296,7 +296,8 @@ LATTICE_TWIST = math.radians(72)
 # Gimbal rings: inside clears the kept-clip envelope of Tarn, Tally and the Cannon (0.799 m,
 # PD-0 envelope-kept.json) by 0.03 m; the outer ring stays inside the lattice inner face, and
 # inside it at the 0.92 landing fold. Rivet's, Sable's and Kest's kept clips reach 0.92 to
-# 1.03 m, past the lattice itself (cage_contract_test KNOWN_OVER); no ring here can clear them.
+# 1.03 m, past the lattice itself (cage_contract_test KNOWN_OVER); no ring here can clear them,
+# so their clip units (PE-RIVET, PE-SABLE, PE-KEST) re-key those clips.
 GIMBAL_INNER = (0.830, 0.846)
 GIMBAL_OUTER = (0.848, 0.862)
 GIMBAL_DEPTH = 0.04
@@ -462,7 +463,7 @@ def _point_empty(name, direction, radius, parent):
 
 def weapon_ring(enamel_band="bone"):
     """The level band (worn bone segments, charcoal clamp blocks) over its dark collar with
-    copper studs, and a neutral mount block on the front arc."""
+    dark studs, and a neutral mount block on the front arc."""
     r = Part("WeaponRing")
     b_in, b_out, b_h, b_z = RING_BAND
     r.ring("paint", b_in, b_out, b_h, RING_SEGMENTS, loc=(0, 0, b_z), color=enamel_band)
@@ -472,28 +473,34 @@ def weapon_ring(enamel_band="bone"):
               (b_in + b_out) / 2 * math.sin(a), b_z), rot=(0, 0, a + math.pi / 2))
     c_in, c_out, c_h, c_z = RING_COLLAR
     r.ring("rubber", c_in, c_out, c_h, RING_SEGMENTS, loc=(0, 0, c_z))
+    # The collar studs and the mount rod ride the rubber slot, so WeaponRing is two draws and
+    # the gimbal's inner ring can be its own mesh inside the 10-draw shell cap.
     for k in range(12):
         a = k * math.tau / 12 + 0.13
         n = Vector((math.cos(a), math.sin(a), 0))
-        _disc(r, n * (c_out + 0.002) + Vector((0, 0, c_z)), n, 0.012, 6, "copper")
+        _disc(r, n * (c_out + 0.002) + Vector((0, 0, c_z)), n, 0.012, 6, "rubber")
     # Neutral weapon seat at 12 o'clock; a pilot recipe replaces it with its weapon.
     r.box("rubber", (0.14, 0.07, 0.11), loc=(0, b_out + 0.03, b_z))
-    r.rod("copper", (0, b_out + 0.06, b_z), (0, b_out + 0.13, b_z), 0.025, 8)
+    r.rod("rubber", (0, b_out + 0.06, b_z), (0, b_out + 0.13, b_z), 0.025, 8)
     _sharpen(r)
     return r
 
 
 def gimbal():
-    """Gyro: the outer ring (pivots on Pod's left-right axis) and the inner ring inside it,
-    joined at top and bottom. One mesh keeps the shell at 10 draws."""
-    g = Part("Gyro")
-    for r_in, r_out in (GIMBAL_INNER, GIMBAL_OUTER):
-        g.ring("rubber", r_in, r_out, GIMBAL_DEPTH, RING_SEGMENTS, rot=(math.pi / 2, 0, 0))
+    """The two nested gimbal rings, both upright and facing the front (mechanism.png panel C):
+    Gyro, the outer ring, pivots on Pod's left-right axis (the Pod axles); GyroInner, the inner
+    ring and the two bosses that join it to the outer ring at top and bottom, pivots on that
+    vertical axis. Returns (outer, inner) Parts; each is one rubber draw."""
+    outer = Part("Gyro")
+    outer.ring("rubber", GIMBAL_OUTER[0], GIMBAL_OUTER[1], GIMBAL_DEPTH, RING_SEGMENTS, rot=(math.pi / 2, 0, 0))
+    _sharpen(outer)
+    inner = Part("GyroInner")
+    inner.ring("rubber", GIMBAL_INNER[0], GIMBAL_INNER[1], GIMBAL_DEPTH, RING_SEGMENTS, rot=(math.pi / 2, 0, 0))
     for side in (-1, 1):
-        g.box("rubber", (0.05, GIMBAL_DEPTH + 0.02, GIMBAL_OUTER[1] - GIMBAL_INNER[0]),
-              loc=(0, 0, side * (GIMBAL_INNER[0] + GIMBAL_OUTER[1]) / 2))
-    _sharpen(g)
-    return g
+        inner.box("rubber", (0.05, GIMBAL_DEPTH + 0.02, GIMBAL_OUTER[1] - GIMBAL_INNER[0]),
+                  loc=(0, 0, side * (GIMBAL_INNER[0] + GIMBAL_OUTER[1]) / 2))
+    _sharpen(inner)
+    return outer, inner
 
 
 def _bank_control(p, point, kind):
@@ -568,7 +575,9 @@ def hoberman(name, enamel="petrol", seat="bone", pairs=2, bank=(("Slot2", "lever
     hubs = [_point_empty("Hub.%02d" % i, d, HUB_RADIUS, core) for i, d in enumerate(hub_dirs)]
     gaps = [_point_empty("Gap.%02d" % i, d, HUB_RADIUS, core) for i, d in enumerate(gap_dirs)]
     pod = cockpit(seat, bank).to_object((0, 0, 0), root)
-    gyro = gimbal().to_object((0, 0, 0), pod)
+    outer, inner = gimbal()
+    gyro = outer.to_object((0, 0, 0), pod)
+    inner.to_object((0, 0, 0), gyro)
     ring = weapon_ring().to_object((0, 0, 0), pod)
     common.empty("WeaponMount", (0, RING_BAND[1] + 0.13, RING_BAND[3]), ring)
     for cname, point in CONTROLS.items():
@@ -604,20 +613,34 @@ def low_reach(pod_obj):
 
 
 def sight_cone_hits(pod_obj, head=HEAD, eyes=CHASE_EYES, half_angle=SIGHT_HALF_ANGLE):
-    """Solid Pod vertices inside the sight cone from the head to any chase eye. The Pod mesh
-    itself is solid; Gyro (thin moving rings) and WeaponRing (the band) may cross the cone
-    (rule 3) and are not counted, nor is the pilot."""
-    if pod_obj.type != "MESH":
-        return 0
+    """Solid Pod vertices inside the sight cone from the head to any chase eye, over every mesh
+    under Pod (heft layers and pilot modules included). Gyro and GyroInner (thin moving rings)
+    and WeaponRing (the band) may cross the cone (rule 3) and are skipped with their children,
+    as is Dome with the pilot."""
     cos_half = math.cos(math.radians(half_angle))
     axes = [(e - head).normalized() for e in eyes]
-    mw = pod_obj.matrix_world
     bad = 0
-    for v in pod_obj.data.vertices:
-        d = (mw @ v.co) - head
-        if d.length < 1e-6:
-            continue
-        d.normalize()
-        if any(d.dot(a) > cos_half for a in axes):
-            bad += 1
+    for o in cone_meshes(pod_obj):
+        mw = o.matrix_world
+        for v in o.data.vertices:
+            d = (mw @ v.co) - head
+            if d.length < 1e-6:
+                continue
+            d.normalize()
+            if any(d.dot(a) > cos_half for a in axes):
+                bad += 1
     return bad
+
+
+CONE_SKIP = ("Gyro", "WeaponRing", "Dome")
+
+
+def cone_meshes(obj, top=True):
+    """Meshes under obj that the sight cone counts: obj itself and every descendant, minus the
+    subtrees rooted at a CONE_SKIP node (a recipe's numbered duplicate such as Dome.001 too)."""
+    if not top and obj.name.split(".")[0] in CONE_SKIP:
+        return []
+    out = [obj] if obj.type == "MESH" else []
+    for c in obj.children:
+        out += cone_meshes(c, False)
+    return out
