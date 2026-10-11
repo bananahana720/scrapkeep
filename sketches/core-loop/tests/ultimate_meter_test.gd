@@ -8,6 +8,11 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 # with overflow lost, no decay, speed by tier, the lock while a set piece rides, spend and
 # refund, and the stage-entry mark a retry restores. Loaded by path so the red run fails loud
 # on a missing file. Evidence limit: the rule, not a played fill time (B4's bots own those).
+# 2026-10-11 (w13 B3b): near misses get a rate limit like weapon hits (NEAR_MISS_RATE_CAP 0.05
+# points per s, NEAR_MISS_BURST 4.0, one near miss). B4's bot measured the hold-fire camper's
+# median first fill at 41.1 s over seeds 1 to 16 against the 180 s band, 69 to 95 of its first
+# 100 points from near misses at 4.0 each. Check 01 follows the new constants; checks 21 to 24 are
+# the camper-path cap and the chainer stream.
 
 var _t := T.new("ultimate_meter_test")
 
@@ -21,7 +26,8 @@ func _initialize() -> void:
 	var m = Meter.new()
 
 	# 1. The constants of section 9.
-	_t.eq("01 cap 100, weapon rate cap 0.4 per s", [m.CAP, m.WEAPON_RATE_CAP], [100.0, 0.4])
+	_t.eq("01 cap 100, weapon rate cap 0.4 per s, near miss rate cap 0.05 per s holding 4", [m.CAP, m.WEAPON_RATE_CAP,
+		m.get("NEAR_MISS_RATE_CAP"), m.get("NEAR_MISS_BURST")], [100.0, 0.4, 0.05, 4.0])
 	_t.eq("02 the weights of section 4", [m.WEIGHTS["weapon"], m.WEIGHTS["contact"], m.WEIGHTS["smash"], m.WEIGHTS["chain_link"],
 		m.WEIGHTS["near_miss"], m.WEIGHTS["kill"], m.WEIGHTS["stagger"], m.WEIGHTS["shatter"], m.WEIGHTS["fast"], m.WEIGHTS["blazing"]],
 		[0.25, 2.0, 5.0, 2.0, 4.0, 1.0, 8.0, 12.0, 0.5, 1.2])
@@ -120,5 +126,42 @@ func _initialize() -> void:
 	_t.eq("19 a retry restores the stage-entry value and unlocks", [m.value, m.locked], [8.0, false])
 	m.reset()
 	_t.eq("20 a new run starts at 0 with no sources", [m.value, m.sources], [0.0, {}])
+
+	# 10. The camper path is capped (w13 B3b): near misses at the old camper rate, one every 2 s for
+	# 60 s (120 points at 4.0 each unlimited), pay at most 50.
+	m.reset()
+	for i in 600:
+		m.tick(0.1, SpeedTier.CRUISE)
+		if i % 20 == 0:
+			m.add("near_miss")
+	_t.check("21 a near miss every 2 s for 60 s pays at most 50 points", m.value <= 50.0, "%.2f points" % m.value)
+	m.reset()
+	for i in 1800:
+		m.tick(0.1, SpeedTier.CRUISE)
+		if i % 10 == 0:
+			m.add("near_miss")
+	_t.check("22 a near miss every second for 180 s pays at most 4 + 0.05 per s", m.value <= 4.0 + 0.05 * 180.0 + 0.0001,
+		"%.2f points" % m.value)
+	m.reset()
+	m.add("near_miss")
+	for i in 800:
+		m.tick(0.1, SpeedTier.CRUISE)
+	_t.near("23 after 80 s quiet a near miss pays its full 4 again", m.add("near_miss"), 4.0)
+
+	# 11. The chainer still fills fast: every 6 s a smash on a x2 chain and two chain links, blazing
+	# throughout, a near miss every 3 s, fills in under 60 s.
+	m.reset()
+	var filled_at := -1.0
+	for i in 600:
+		m.tick(0.1, SpeedTier.BLAZING)
+		if i % 60 == 0:
+			m.add("smash", 2.0)
+			m.add("chain_link")
+			m.add("chain_link")
+		if i % 30 == 0:
+			m.add("near_miss")
+		if m.full() and filled_at < 0.0:
+			filled_at = float(i + 1) * 0.1
+	_t.check("24 a chaining stream fills in under 60 s", filled_at > 0.0 and filled_at < 60.0, "full at %.1f s, %.1f points" % [filled_at, m.value])
 
 	quit(_t.verdict())
