@@ -8,8 +8,9 @@ extends SceneTree
 #   that tick, for STAGGER_WINDOW, the same frame count on every kind within one tick;
 # - a knock under the interrupt speed staggers nothing (the negative control);
 # - a kind that cannot be interrupted keeps its attack and never staggers;
-# - the ball, rolling free beside it, never loses speed on the tick a target staggers or
-#   in the window after (a stall is a one-tick drop over STALL_SHARE).
+# - the ball, rolling free from one fixed spot, never runs slower through the stagger
+#   window than the same roll with no enemy at all (a stall is any tick more than
+#   STALL_SHARE under that baseline).
 # The Warden keeps its own posture break (boss_posture.gd STAGGER_SECONDS 4.0).
 
 const Game := preload("res://src/game.gd")
@@ -20,8 +21,7 @@ const Counter := preload("res://src/combat/counter.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
 
-const TICK := 1.0 / 60.0
-const WARN_LIMIT := 360
+const WARN_LIMIT := 540
 const STALL_SHARE := 0.05
 const BALL_SPEED := 14.0
 const OFFSET := Vector3(15.0, 0.0, 0.0)
@@ -29,6 +29,9 @@ const OFFSET := Vector3(15.0, 0.0, 0.0)
 var _game
 var _test := T.new("pack_stagger_test")
 var _rows: Array = []
+var _tick := 1.0 / 90.0
+var _ball_at := Vector3.ZERO
+var _baseline: Array = []
 
 
 func _initialize() -> void:
@@ -57,6 +60,9 @@ func _boot() -> void:
 	await _frames(3)
 	for enemy in get_nodes_in_group("enemy"):
 		enemy.free()
+	_tick = 1.0 / float(Engine.physics_ticks_per_second)
+	var ctx = _game.ctx
+	_ball_at = ctx.terrain.drop_point(ctx.terrain.spawn_point(1).x, ctx.terrain.spawn_point(1).z, 1.05)
 
 
 func _kinds() -> Array:
@@ -68,7 +74,8 @@ func _kinds() -> Array:
 
 
 func _spawn(kind: String):
-	var at: Vector3 = _game.player.ball_position() + OFFSET
+	_game.player.reset_to(_ball_at)
+	var at: Vector3 = _ball_at + OFFSET
 	var enemy = _game.combat.spawn_enemy(kind, _game.ctx.terrain.drop_point(at.x, at.z, 1.8))
 	return enemy
 
@@ -79,17 +86,34 @@ func _to_warn(enemy) -> bool:
 		await physics_frame
 		if not is_instance_valid(enemy):
 			return false
-		if enemy.phase == Counter.Phase.WARN and enemy._t >= TICK * 2.0:
+		if enemy.phase == Counter.Phase.WARN and enemy._t >= _tick * 2.0:
 			return true
-		# Keep the ball where the unit can reach it.
-		if frame % 60 == 59:
-			_game.player.reset_to(enemy.global_position - OFFSET * 0.6)
+		if frame % 90 == 89:
+			_game.player.reset_to(_ball_at)
 	return false
 
 
 func _ball_speed() -> float:
 	var v: Vector3 = _game.player.body().linear_velocity
 	return Vector2(v.x, v.z).length()
+
+
+func _window_ticks() -> int:
+	return int(ceil(Counter.STAGGER_WINDOW / _tick)) + 10
+
+
+# The same roll with no enemy on the field: the speed per tick a stagger is held to.
+func _roll() -> void:
+	_game.player.reset_to(_ball_at, Vector3(-BALL_SPEED, 0.0, 0.0))
+	await _frames(2)
+
+
+func _measure_baseline() -> void:
+	await _roll()
+	_baseline = [_ball_speed()]
+	for i in _window_ticks() + 1:
+		await physics_frame
+		_baseline.append(_ball_speed())
 
 
 # One kind: knock it in its warning with a real ram, log the knock and the stagger.
@@ -109,10 +133,8 @@ func _probe(kind: String) -> Dictionary:
 		if is_instance_valid(enemy):
 			enemy.free()
 		return row
-	# The ball rolls free away from the unit; nothing touches it during the window.
-	var start: Vector3 = enemy.global_position - OFFSET * 1.2
-	_game.player.reset_to(_game.ctx.terrain.drop_point(start.x, start.z, 1.05), Vector3(-BALL_SPEED, 0.0, 0.0))
-	await _frames(2)
+	# The ball rolls free from the fixed spot, away from the unit, as in the baseline.
+	await _roll()
 	var ram: Dictionary = EventKinds.impact("ram")
 	var before := _ball_speed()
 	_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, float(ram["knock"]), "", "", "ram")
@@ -121,16 +143,13 @@ func _probe(kind: String) -> Dictionary:
 	var after := _ball_speed()
 	row["staggered_on_tick"] = enemy.staggered()
 	row["phase_after"] = enemy.state_name()
-	var worst := after / maxf(before, 0.001)
+	var worst := after / maxf(float(_baseline[1]), 0.001)
 	var frames := 1 if enemy.staggered() else 0
-	var last := after
-	for i in int(ceil(Counter.STAGGER_WINDOW / TICK)) + 10:
+	for i in _window_ticks():
 		await physics_frame
-		var now := _ball_speed()
-		worst = minf(worst, now / maxf(last, 0.001))
-		last = now
 		if enemy.staggered():
 			frames += 1
+			worst = minf(worst, _ball_speed() / maxf(float(_baseline[i + 2]), 0.001))
 		elif frames > 0:
 			break
 	row["frames"] = frames
@@ -163,14 +182,18 @@ func _run() -> void:
 		"Counter.STAGGER_WINDOW %.3f s (start value, comps/roboquest/enemies-and-telegraphs.md:11)" % Counter.STAGGER_WINDOW)
 	_test.check("Warden posture break untouched", BossPosture.STAGGER_SECONDS == 4.0,
 		"boss_posture.gd STAGGER_SECONDS %.2f" % BossPosture.STAGGER_SECONDS)
+	await _measure_baseline()
+	_test.check("baseline roll", _baseline.size() > _window_ticks() and float(_baseline[0]) > BALL_SPEED * 0.5,
+		"%d ticks, %.2f -> %.2f m/s with no enemy" % [_baseline.size(), _baseline[0], _baseline[-1]])
 	var kinds := _kinds()
 	for kind in kinds:
 		_rows.append(await _probe(kind))
 		await _frames(3)
-	var expected := int(round(Counter.STAGGER_WINDOW / TICK))
+	var expected := int(round(Counter.STAGGER_WINDOW / _tick))
 	var windows: Array = []
 	var probed := 0
 	var stalls := 0
+	print("physics %d ticks/s; window %.3f s = %d ticks" % [Engine.physics_ticks_per_second, Counter.STAGGER_WINDOW, expected])
 	print("kind | interruptible | impact_resist | interrupt m/s | logged knock m/s | staggered on tick | phase | window frames | ball worst tick | soft knock -> staggered")
 	for row in _rows:
 		if row.has("skip"):
@@ -199,11 +222,13 @@ func _run() -> void:
 		else:
 			_test.check(row["kind"] + " immune keeps its attack", not bool(row["staggered_on_tick"]) and row["phase_after"] != "roam" and int(row["frames"]) == 0,
 				"not interruptible: staggered %s, phase %s" % [row["staggered_on_tick"], row["phase_after"]])
+		if int(row["frames"]) == 0:
+			continue
 		var stalled: bool = float(row["ball_worst_tick"]) < 1.0 - STALL_SHARE
 		if stalled:
 			stalls += 1
 		_test.check(row["kind"] + " ball keeps speed", not stalled,
-			"worst one-tick ball speed ratio %.4f over the stagger window (ball %.2f -> %.2f m/s on the stagger tick)"
+			"worst ball speed against the no-enemy roll %.4f over the stagger window (ball %.2f -> %.2f m/s on the stagger tick)"
 				% [row["ball_worst_tick"], row["ball_at_stagger"][0], row["ball_at_stagger"][1]])
 	_test.check("kinds probed", probed >= 10, "%d of %d built Fleet kinds probed in their warning" % [probed, kinds.size()])
 	_test.check("windows staggered", windows.size() >= 5, "%d interruptible kinds staggered" % windows.size())
