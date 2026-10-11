@@ -20,6 +20,14 @@ var _companion := {}
 var _art := Cosmetics.art_manifest()
 var _enemies: Array[Node3D] = []
 var _threats: Array[Vector3] = []
+var _skin := {}
+var _bay := {}
+var _bay_clock := 0.0
+# True between a set piece's start and its landing or cancel.
+var set_piece := false
+# Decal materials by placement, asset and tint: two refits reuse one instance.
+var _decal_materials := {}
+var _decal_shaders := {}
 
 
 func setup(context, hook) -> void:
@@ -37,16 +45,34 @@ func setup(context, hook) -> void:
 	trail.name = "BallTrail"
 	trail.top_level = true
 	add_child(trail)
+	# The skill bar unit lands these later; connect only when declared (CUSTOMIZE.md section 9).
+	if events != null:
+		_connect_optional(events, "ultimate_started", _on_set_piece.bind(true))
+		_connect_optional(events, "ultimate_landed", _on_set_piece.bind(false))
+		_connect_optional(events, "ultimate_cancelled", _on_set_piece.bind(false))
 
 
+func _connect_optional(bus: Object, signal_name: String, callback: Callable) -> void:
+	if not bus.has_signal(signal_name):
+		return
+	for info in bus.get_signal_list():
+		if String(info.name) == signal_name:
+			bus.connect(signal_name, callback.unbind(info.args.size()) if info.args.size() > 0 else callback)
+			return
+
+
+# While a set piece flies, the trail keeps drawing in the air, at the ball's height.
+func _on_set_piece(flying: bool) -> void:
+	set_piece = flying
+
+
+# The one ownership rule (Cosmetics.worn) decides the id; a pending-art row shows the default.
 func effective(pilot: String, slot: String) -> Dictionary:
 	var profile = hero.profile
 	if profile == null:
 		return {}
-	var owner := Cosmetics.owner_for(pilot, slot)
-	var id: String = profile.equipped(owner, slot)
-	var row := Cosmetics.row(id)
-	if row.is_empty() or not Cosmetics.fits(id, owner, slot) or not (row["starter"] or profile.has_cosmetic(id)):
+	var id := Cosmetics.worn(profile, Cosmetics.owner_for(pilot, slot), slot)
+	if id == "" or Cosmetics.is_pending(id):
 		return {}
 	return resolver.resolve(id, assets)
 
@@ -61,7 +87,49 @@ func _process(delta: float) -> void:
 	var pilot: String = rec["class"]
 	_apply_decal(rec, effective(pilot, "decal"))
 	_apply_companion(effective(pilot, "companion_paint"))
+	_apply_companion_skin(effective(pilot, "companion_skin"))
+	_bay_clock += delta
+	_apply_bay_decor(effective(pilot, "bay_decor"))
 	_step_trail(delta, effective(pilot, "trail"))
+
+
+func _apply_companion_skin(row: Dictionary) -> void:
+	var body = hero.get_parent().get_node_or_null("CompanionBody")
+	var model = body.get("_model") if body != null else null
+	var key: String = row.get("asset", "")
+	if _skin.get("model") == model and _skin.get("key", "") == key:
+		return
+	_skin = {"model": model, "key": key}
+	if model != null and is_instance_valid(model):
+		fit_companion_skin(model, _id_of(row))
+
+
+# Mounts SPIL-9's skin through the hero painter's add-on path (lights stripped, cached paint).
+func fit_companion_skin(model: Node3D, id: String) -> Array:
+	return hero.fit_companion_skin(model, id)
+
+
+func _apply_bay_decor(row: Dictionary) -> void:
+	var key: String = row.get("asset", "")
+	var workshop = _bay.get("workshop")
+	if _bay.get("key", "") == key and (key == "" or (workshop != null and is_instance_valid(workshop))):
+		return
+	if _bay_clock < 1.0 and _bay.get("key", "") == key:
+		return
+	_bay_clock = 0.0
+	workshop = ctx.root.find_child("HeroWorkshop", true, false) if ctx.get("root") != null else null
+	if workshop == null:
+		_bay = {"key": key, "workshop": null}
+		return
+	_bay = {"key": key, "workshop": workshop}
+	hero.fit_bay_decor(workshop, _id_of(row))
+
+
+static func _id_of(row: Dictionary) -> String:
+	for id in Cosmetics.ROWS:
+		if Cosmetics.ROWS[id].get("asset", "") == row.get("asset", "-") and Cosmetics.ROWS[id]["slot"] == row.get("slot", ""):
+			return id
+	return ""
 
 
 func _detail(group: String, id: String) -> Dictionary:
@@ -71,22 +139,82 @@ func _detail(group: String, id: String) -> Dictionary:
 	return {}
 
 
-# Core's only surface is glass in the delivered shells. Compose a worn lower-shell
-# paint patch into that surface, retaining its original glass response everywhere else.
+const PLATE_TILE_M := 0.36
+const PLATE_SHADER := """shader_type spatial;
+render_mode cull_back, diffuse_burley, specular_schlick_ggx;
+uniform sampler2D decal_mask : source_color, filter_linear_mipmap;
+uniform vec4 decal_tint : source_color;
+uniform vec4 patch_tint : source_color = vec4(0.141176, 0.164706, 0.156863, 1.0);
+void fragment() {
+	float ink = texture(decal_mask, UV).a;
+	ALBEDO = mix(patch_tint.rgb, decal_tint.rgb, ink);
+	ROUGHNESS = 0.8;
+}
+"""
+
+
+# The seat-back DecalPlate on the Pod (ROSTER-LOOK section 7) takes the decal when the shell
+# has one; else the decal projects onto Core glass or paint as before. Both placements use one
+# cached material per placement, tile and tint, so refits never build a new one.
 func _apply_decal(rec: Dictionary, row: Dictionary) -> void:
 	var core = rec.get("core")
+	var pod = rec.get("pod")
 	var key: String = row.get("asset", "")
-	if _decal.get("core") == core and _decal.get("key", "") == key:
+	if _decal.get("core") == core and _decal.get("pod") == pod and _decal.get("key", "") == key:
 		return
-	if not _decal.is_empty() and is_instance_valid(_decal["core"]):
+	if not _decal.is_empty():
 		for saved in _decal["surfaces"]:
-			saved["mesh"].set_surface_override_material(saved["surface"], saved["material"])
-	_decal = {"core": core, "key": key, "surfaces": []}
+			if is_instance_valid(saved["mesh"]):
+				saved["mesh"].set_surface_override_material(saved["surface"], saved["material"])
+	_decal = {"core": core, "pod": pod, "key": key, "surfaces": []}
 	if core == null or row.is_empty():
 		return
-	var size: Array = _detail("decals", key.trim_suffix("_mask.png")).get("tile_size_m", [0.65, 0.65])
-	var shader := Shader.new()
-	shader.code = """shader_type spatial;
+	var plate = pod.find_child("DecalPlate", true, false) if pod != null and is_instance_valid(pod) else null
+	if plate != null:
+		var plate_mat := decal_material("plate", row)
+		for mesh in _meshes(plate):
+			for surface in mesh.mesh.get_surface_count():
+				_decal["surfaces"].append({"mesh": mesh, "surface": surface, "material": mesh.get_surface_override_material(surface)})
+				mesh.set_surface_override_material(surface, plate_mat)
+		if not _decal["surfaces"].is_empty():
+			return
+	var mat := decal_material("core", row)
+	for mesh in _meshes(core):
+		for surface in mesh.mesh.get_surface_count():
+			var original: Material = mesh.get_active_material(surface)
+			if original == null or not original.resource_name in ["glass", "paint"]:
+				continue
+			_decal["surfaces"].append({"mesh": mesh, "surface": surface, "material": mesh.get_surface_override_material(surface)})
+			mesh.set_surface_override_material(surface, mat)
+	if _decal["surfaces"].is_empty():
+		resolver._warn(key)
+
+
+# The cached decal material for a placement ("plate" or "core") and a resolved decal row.
+func decal_material(placement: String, row: Dictionary) -> ShaderMaterial:
+	var key: String = row.get("asset", "")
+	var tint: Color = row.get("tint", Color.WHITE)
+	var cache_key := "%s:%s:%s" % [placement, key, tint.to_html()]
+	if _decal_materials.has(cache_key):
+		return _decal_materials[cache_key]
+	if not _decal_shaders.has(placement):
+		var shader := Shader.new()
+		shader.code = PLATE_SHADER if placement == "plate" else _core_decal_code()
+		_decal_shaders[placement] = shader
+	var mat := ShaderMaterial.new()
+	mat.resource_name = "DecalMask"
+	mat.shader = _decal_shaders[placement]
+	mat.set_shader_parameter("decal_mask", row["resource"])
+	mat.set_shader_parameter("decal_tint", tint)
+	if placement == "core":
+		var size: Array = _detail("decals", key.trim_suffix("_mask.png")).get("tile_size_m", [0.65, 0.65])
+		mat.set_shader_parameter("tile_size", Vector2(size[0], size[1]))
+	_decal_materials[cache_key] = mat
+	return mat
+
+
+static func _core_decal_code() -> String:
+	return """shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 uniform sampler2D decal_mask : source_color, filter_linear_mipmap;
 uniform vec4 decal_tint : source_color;
@@ -106,21 +234,6 @@ void fragment() {
 	SPECULAR = mix(0.08 + edge * 0.5, 0.08, patch);
 }
 """
-	for mesh in _meshes(core):
-		for surface in mesh.mesh.get_surface_count():
-			var original: Material = mesh.get_active_material(surface)
-			if original == null or not original.resource_name in ["glass", "paint"]:
-				continue
-			var mat := ShaderMaterial.new()
-			mat.resource_name = "DecalMask"
-			mat.shader = shader
-			mat.set_shader_parameter("decal_mask", row["resource"])
-			mat.set_shader_parameter("decal_tint", row["tint"])
-			mat.set_shader_parameter("tile_size", Vector2(size[0], size[1]))
-			_decal["surfaces"].append({"mesh": mesh, "surface": surface, "material": mesh.get_surface_override_material(surface)})
-			mesh.set_surface_override_material(surface, mat)
-	if _decal["surfaces"].is_empty():
-		resolver._warn(key)
 
 
 func _meshes(node: Node) -> Array[MeshInstance3D]:
@@ -242,7 +355,8 @@ func _step_trail(delta: float, row: Dictionary) -> void:
 		_trail_id = key
 	var player = ctx.player
 	var velocity: Vector3 = player.planar_velocity()
-	if row.is_empty() or not ctx.flow.in_play() or get_tree().paused or not player.state.grounded or velocity.length() < 1.0:
+	var flying: bool = set_piece and not player.state.grounded
+	if row.is_empty() or not ctx.flow.in_play() or get_tree().paused or not (player.state.grounded or flying) or (velocity.length() < 1.0 and not flying):
 		_clear_cards()
 		return
 	var ball: Vector3 = player.shown_position()
@@ -272,7 +386,8 @@ func _step_trail(delta: float, row: Dictionary) -> void:
 	var node: Node3D = card["node"]
 	node.visible = true
 	node.global_position = ball - velocity.normalized() * 0.12
-	node.global_position.y = ball.y - Tuning.RADIUS + 0.04
+	# Along a set piece's flight the card rides at the ball's height, not the ground's.
+	node.global_position.y = ball.y if flying else ball.y - Tuning.RADIUS + 0.04
 	node.rotation.y = atan2(-velocity.x, -velocity.z)
 	for pair in card["clips"]:
 		(pair[0] as AnimationPlayer).stop()

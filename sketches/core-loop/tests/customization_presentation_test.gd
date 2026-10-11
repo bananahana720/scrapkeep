@@ -62,6 +62,28 @@ func _run() -> void:
 	_t.check("CUS-6 today's paint still tints shell enamel", _has_paint(view, rec["pod"], Cosmetics.row("paint_any_night")["tint"]))
 	_t.eq("cosmetics leave run summary unchanged", JSON.stringify(_game.run.summary()), gameplay_before)
 	_t.eq("cosmetics leave physics mass unchanged", _game.player.body().mass, ball_mass)
+	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md sections 2 and 9): the decal lands on the Pod's
+	# DecalPlate when the shell has one and on Core otherwise; two refits reuse one material.
+	view._decal["key"] = "-"
+	view._process(0.016)
+	_t.check("B5 a refit reuses the cached decal material", core_mesh.get_active_material(0) == decal)
+	var plate := MeshInstance3D.new()
+	plate.name = "DecalPlate"
+	plate.mesh = QuadMesh.new()
+	rec["pod"].add_child(plate)
+	view._decal["key"] = "-"
+	view._process(0.016)
+	var plate_mat := plate.get_active_material(0) as ShaderMaterial
+	_t.check("B5 decal lands on DecalPlate when it exists", plate_mat != null and plate_mat.resource_name == "DecalMask" and plate_mat.get_shader_parameter("decal_mask") == load("res://assets/cosmetics/decals/decal_fern_mask.png"))
+	_t.check("B5 with a plate, Core keeps its glass", core_mesh.get_active_material(0) == glass)
+	view._decal["key"] = "-"
+	view._process(0.016)
+	_t.check("B5 a plate refit reuses its cached material", plate.get_active_material(0) == plate_mat)
+	rec["pod"].remove_child(plate)
+	plate.free()
+	view._decal["key"] = "-"
+	view._process(0.016)
+	_t.check("B5 without a plate the decal returns to Core, same material", core_mesh.get_active_material(0) == decal)
 
 	var body = _game.presentation.get_node("CompanionBody")
 	_t.eq("seat real SPIL-9 for run", body.seat_for_capture("primer_coil", "ram_prow"), "")
@@ -116,6 +138,16 @@ func _run() -> void:
 	player.state.grounded = false
 	view._process(0.04)
 	_t.eq("airborne ball suppresses cosmetic trail", view._cards.size(), 0)
+	# B5: between a set piece's start and its landing the trail draws along the flight at ball height.
+	view.set_piece = true
+	view._trail_clock = 1.0
+	view._process(0.04)
+	_t.check("B5 a set piece's flight draws the trail", view._cards.size() > 0)
+	if not view._cards.is_empty():
+		_t.check("B5 set-piece cards ride at the ball's height", absf((view._cards[-1]["node"] as Node3D).global_position.y - player.shown_position().y) < 0.001)
+	view.set_piece = false
+	view._process(0.04)
+	_t.eq("B5 the landing ends the airborne trail", view._cards.size(), 0)
 	player.state.grounded = true
 	player.state.velocity = Vector3.ZERO
 	view._process(0.04)

@@ -124,6 +124,7 @@ func setup(ctx_ref) -> void:
 		profile = ctx.get("profile")
 	name = "HeroAssets"
 	_connect_pilot_events()
+	_connect_shell_events()
 	_prewarm_warden_strokes()
 	_dress_bay.call_deferred()
 	if ctx != null and ctx.player != null:
@@ -359,12 +360,26 @@ func _equipped_paint(id: String) -> String:
 	return profile.equipped(id, "paint")
 
 
+# The equipped shell variant's asset id for a pilot, or "" for the default cage.
+func _equipped_variant(id: String) -> String:
+	var worn := Cosmetics.worn(profile, id, "shell")
+	return String(Cosmetics.row(worn).get("asset", "")) if worn != "" else ""
+
+
+func _run_heft_class() -> int:
+	var run = ctx.get("run") if ctx != null else null
+	if run != null and run.has_method("heft_class"):
+		return maxi(1, int(run.heft_class()))
+	return 1
+
+
 func _fit(rec: Dictionary) -> void:
 	var player: Node3D = rec["player"]
 	var id := class_id(player)
 	var paint_id := _equipped_paint(id)
 	var tint = paint_tint(id, paint_id) if paint_id != "" else null
-	if rec["class"] == id and rec.get("tint") == tint:
+	var variant := _equipped_variant(id)
+	if rec["class"] == id and rec.get("tint") == tint and rec.get("variant", "") == variant:
 		return
 	for key in ["core", "pod"]:
 		var old = rec[key]
@@ -373,36 +388,28 @@ func _fit(rec: Dictionary) -> void:
 			old.queue_free()
 		rec[key] = null
 	rec["animator"] = null
+	rec["shell"] = {}
 	rec["class"] = id
 	rec["tint"] = tint
+	rec["variant"] = variant
 	var rolling := player.roll_node().get_parent() as MeshInstance3D
 	rolling.layers = rec.layers
 	rolling.cast_shadow = rec.shadow
-	var shell := _scene(SHELLS[id])
-	if shell == null:
-		return
-	var core := shell.find_child("Core", true, false) as Node3D
-	var pod := shell.find_child("Pod", true, false) as Node3D
-	if core == null or pod == null:
-		shell.free()
-		_warn_once("scene:" + SHELLS[id], "hero_assets: scene '%s' lacks Core/Pod; keeping primitive fallback" % SHELLS[id])
-		return
-	core.get_parent().remove_child(core)
-	pod.get_parent().remove_child(pod)
-	shell.free()
-	core.name = "HeroCore"
-	pod.name = "HeroPod"
 	var tints := {"class": player.class_color()}
 	if tint != null:
 		tints["paint"] = tint
-	paint(core, tints)
-	paint(pod, tints)
+	var shell := fit_shell_into(rolling, id, variant, _run_heft_class(), tints, player.juice_node())
+	if shell.is_empty():
+		return
 	hide_placeholder(rolling)
-	rolling.add_child(core)
-	player.juice_node().add_child(pod)
-	rec["core"] = core
-	rec["pod"] = pod
+	rec["shell"] = shell
+	rec["core"] = shell.core
+	rec["pod"] = shell.pod
 	_fit_pilot(rec)
+	if rec.get("pilot") != null and profile != null:
+		var outfit := Cosmetics.worn(profile, id, "outfit")
+		if outfit != "":
+			fit_outfit(rec.pilot, outfit, tints)
 
 
 func _process(delta: float) -> void:
@@ -489,6 +496,531 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 # The shell the player wears, for tests and tools: {class, core, pod} or {}.
 func shell_of(player: Node) -> Dictionary:
 	return _players.get(player.get_instance_id(), {})
+
+
+# --- shell variants and heft layers (design-v3/CUSTOMIZE.md section 6) ----------------
+#
+# One loader path for a pilot's shell: the base (class 1) and its four detail layers
+# (classes 2 to 5), by variant. The pilot body is a Hoberman mecha; heft fills the lattice
+# gaps with panels, so a layer is a detail shell shown up to the heft class. Layers load once
+# at fit and only toggle visibility during a run; _fit's swap frees them with their pair.
+
+const HEFT_LAYERS := [2, 3, 4, 5]
+const HEFT_SLAM_FROM := 0.10
+const HEFT_SLAM_SECONDS := 0.18
+const HEFT_STAGGER := 0.06
+const HEFT_FLING_SECONDS := Accretion.FLING_SECONDS
+# A node named Replace_<name> (the importer turns "Replace.<name>" into this) hides <name>.
+const REPLACE_PREFIXES := ["Replace_", "Replace."]
+const READY_EMIT := 1.6
+const DECOR_SPOT := Vector3(-12.6, 1.2, 1.8)
+
+# Asset id -> path for variants and add-ons; a key equal to a pilot id overrides that pilot's
+# default base (tests). Read lazily so a painter that never fits a variant never reads the registry.
+var shell_assets := {}
+var _shell_assets_read := false
+# Every warning this painter printed, once each, for tests and tools.
+var warning_log: Array[String] = []
+var _ready_glow := false
+
+
+func _assets() -> Dictionary:
+	if not _shell_assets_read and shell_assets.is_empty():
+		shell_assets = Cosmetics.asset_paths()
+	_shell_assets_read = true
+	return shell_assets
+
+
+static func _layer_path(base: String, heft_class: int) -> String:
+	return "%s_c%d.%s" % [base.get_basename(), heft_class, base.get_extension()]
+
+
+# The one lookup: the GLB for a pilot's shell, by variant and heft class. Class 1 is the base;
+# classes 2 to 5 are its detail layers, named <base>_c<N>.glb. variant "" is the pilot's
+# default (SHELLS); otherwise it is a shell row's asset id, resolved through paths
+# (Cosmetics.asset_paths(), or a test's own map). "" for an unknown pilot, variant or class.
+static func shell_path(pilot: String, variant: String, heft_class: int, paths: Dictionary) -> String:
+	if not SHELLS.has(pilot) or heft_class < 1 or heft_class > 5:
+		return ""
+	var base := ""
+	if variant == "":
+		base = String(paths.get(pilot, SHELLS[pilot]))
+	else:
+		var row := Cosmetics.row(variant)
+		if not row.is_empty() and (row.get("slot", "") != "shell" or row.get("pilot", "") != pilot):
+			return ""
+		if not paths.has(variant):
+			return ""
+		base = String(paths[variant])
+		if heft_class > 1 and paths.has("%s_c%d" % [variant, heft_class]):
+			return String(paths["%s_c%d" % [variant, heft_class]])
+	return base if heft_class == 1 else _layer_path(base, heft_class)
+
+
+func _loadable(path: String) -> bool:
+	if path == "":
+		return false
+	if _scenes.has(path):
+		return _scenes[path] != null
+	return ResourceLoader.exists(path)
+
+
+func _warn_logged(key: String, text: String) -> void:
+	if not _warned.has(key):
+		warning_log.append(text)
+	_warn_once(key, text)
+
+
+# The five paths a fit loads, index 0 the base, after the fallback rules: a missing variant
+# base shows the default base and layers; a missing variant layer borrows the default layer
+# for that class (the armour read never vanishes for a cosmetic); a missing default layer
+# shows nothing for that class; a missing default base leaves index 0 "".
+func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var use := variant
+	if use != "" and not _loadable(shell_path(pilot, use, 1, paths)):
+		_warn_logged("shell_variant:" + use, "hero_assets: shell variant '%s' unavailable for %s; showing the default shell" % [use, pilot])
+		use = ""
+	var base := shell_path(pilot, use, 1, paths)
+	out.append(base if _loadable(base) else "")
+	for n in HEFT_LAYERS:
+		var path := shell_path(pilot, use, n, paths)
+		if use != "" and not _loadable(path):
+			_warn_logged("shell_layer:%s:%d" % [use, n], "hero_assets: shell variant '%s' lacks its class %d layer; borrowing the default" % [use, n])
+			path = shell_path(pilot, "", n, paths)
+		if not _loadable(path):
+			_warn_logged("shell_default_layer:%s:%d" % [pilot, n], "hero_assets: %s has no class %d layer; nothing shows for it" % [pilot, n])
+			path = ""
+		out.append(path)
+	return out
+
+
+# Removes and frees every Light3D under a scene that is still outside the tree, so the
+# renderer never pairs a light with a node a slot will free (CUSTOMIZE.md section 2, rule 3).
+func _strip_lights(root: Node, source: String) -> int:
+	var lights: Array[Node] = []
+	if root is Light3D:
+		lights.append(root)
+	lights.append_array(root.find_children("*", "Light3D", true, false))
+	for light in lights:
+		if light == root:
+			continue
+		light.get_parent().remove_child(light)
+		light.free()
+	if not lights.is_empty():
+		_warn_logged("light:" + source, "hero_assets: '%s' ships %d light node(s); stripped" % [source, lights.size()])
+	return lights.size()
+
+
+# An add-on scene, instanced outside the tree with its lights stripped, or null.
+func _addon(path: String) -> Node:
+	if path == "":
+		return null
+	var node := _scene(path)
+	if node != null:
+		_strip_lights(node, path)
+	return node
+
+
+static func _replace_target(node_name: String) -> String:
+	for prefix in REPLACE_PREFIXES:
+		if node_name.begins_with(prefix):
+			return node_name.substr(prefix.length())
+	return ""
+
+
+# Shows or hides the base nodes the Replace_ nodes under source name, searching scope. A hidden
+# node keeps living (kit code reads it); its layers mask is saved and restored. Counted, so two
+# sources replacing one node restore it only when both hide.
+static func apply_replacements(scope: Node, source: Node, on: bool) -> int:
+	var changed := 0
+	var stack: Array[Node] = [source]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		stack.append_array(node.get_children())
+		var target_name := _replace_target(String(node.name))
+		if target_name == "":
+			continue
+		var target := _find_outside(scope, target_name, source)
+		if target == null:
+			continue
+		var visuals: Array[Node] = [target]
+		visuals.append_array(target.find_children("*", "VisualInstance3D", true, false))
+		var count := int(target.get_meta("replace_count", 0))
+		if on:
+			target.set_meta("replace_count", count + 1)
+			if count > 0:
+				continue
+			for v in visuals:
+				if v is VisualInstance3D and not v.has_meta("replace_layers"):
+					v.set_meta("replace_layers", v.layers)
+					v.layers = 0
+		else:
+			if count <= 0:
+				continue
+			target.set_meta("replace_count", count - 1)
+			if count > 1:
+				continue
+			for v in visuals:
+				if v is VisualInstance3D and v.has_meta("replace_layers"):
+					v.layers = int(v.get_meta("replace_layers"))
+					v.remove_meta("replace_layers")
+		changed += 1
+	return changed
+
+
+static func _find_outside(scope: Node, node_name: String, exclude: Node) -> Node:
+	var stack: Array[Node] = [scope]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if node == exclude:
+			continue
+		if String(node.name) == node_name:
+			return node
+		stack.append_array(node.get_children())
+	return null
+
+
+# Moves a scene's Core and Pod parts out of it; {} when either is missing. Frees the rest.
+static func _split(scene: Node) -> Dictionary:
+	var core := scene.find_child("Core", true, false) as Node3D
+	var pod := scene.find_child("Pod", true, false) as Node3D
+	if core == null or pod == null:
+		scene.free()
+		return {}
+	core.get_parent().remove_child(core)
+	pod.get_parent().remove_child(pod)
+	scene.free()
+	return {"core": core, "pod": pod}
+
+
+# Builds the shell under ball: HeroCore and HeroPod plus one holder per layer, painted with
+# tints, layers shown up to heft_class. pod_parent receives HeroPod (the game's juice node);
+# null puts it under ball (previews). The game's _fit, the class card preview and the customize
+# preview all call it. Returns {core, pod, layers: {2: {core, pod}, ...}, variant, heft} or {}
+# when even the default base is unavailable.
+func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: int, tints: Dictionary, pod_parent: Node3D = null) -> Dictionary:
+	var paths := _assets()
+	var layers := shell_layers(pilot, variant, paths)
+	if layers[0] == "":
+		return {}
+	var base := _addon(layers[0])
+	if base == null:
+		return {}
+	var parts := _split(base)
+	if parts.is_empty():
+		_warn_once("scene:" + layers[0], "hero_assets: scene '%s' lacks Core/Pod; keeping primitive fallback" % layers[0])
+		return {}
+	var core: Node3D = parts.core
+	var pod: Node3D = parts.pod
+	core.name = "HeroCore"
+	pod.name = "HeroPod"
+	var rec := {"core": core, "pod": pod, "layers": {}, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
+	for i in HEFT_LAYERS.size():
+		var n: int = HEFT_LAYERS[i]
+		var core_holder := Node3D.new()
+		core_holder.name = "HeftC%d" % n
+		var pod_holder := Node3D.new()
+		pod_holder.name = "HeftC%d" % n
+		var layer := _addon(layers[i + 1])
+		if layer != null:
+			var layer_parts := _split(layer)
+			if layer_parts.is_empty():
+				_warn_logged("layer_split:" + layers[i + 1], "hero_assets: layer '%s' lacks Core/Pod; nothing shows for it" % layers[i + 1])
+			else:
+				for key in ["core", "pod"]:
+					var part: Node3D = layer_parts[key]
+					part.transform = Transform3D.IDENTITY
+					(core_holder if key == "core" else pod_holder).add_child(part)
+		for holder in [core_holder, pod_holder]:
+			holder.visible = false
+			for mi in holder.find_children("*", "MeshInstance3D", true, false):
+				mi.set_meta("heft_rest", (mi as Node3D).position)
+		core.add_child(core_holder)
+		pod.add_child(pod_holder)
+		rec.layers[n] = {"core": core_holder, "pod": pod_holder}
+		rec.shown[n] = false
+	paint(core, tints)
+	paint(pod, tints)
+	ball.add_child(core)
+	(pod_parent if pod_parent != null else ball).add_child(pod)
+	set_heft_class(rec, heft_class, false)
+	if _ready_glow:
+		_glow_rec(rec, true)
+	return rec
+
+
+# Shows layers up to heft_class; animates the change when animate is true. Class up: each new
+# holder shows and its meshes slam in from HEFT_SLAM_FROM outward. Class down: each lost
+# holder's meshes fling outward, then the holder hides and the meshes return to rest.
+func set_heft_class(rec: Dictionary, heft_class: int, animate := true) -> void:
+	if rec.is_empty():
+		return
+	rec["heft"] = heft_class
+	var stagger := 0
+	for n in HEFT_LAYERS:
+		var want: bool = n <= heft_class
+		if bool(rec.shown.get(n, false)) == want:
+			continue
+		rec.shown[n] = want
+		var pair: Dictionary = rec.layers[n]
+		for key in ["core", "pod"]:
+			var holder: Node3D = pair[key]
+			if not is_instance_valid(holder):
+				continue
+			var scope: Node = rec.core if key == "core" else rec.pod
+			var old = holder.get_meta("heft_tween") if holder.has_meta("heft_tween") else null
+			if old is Tween and old.is_valid():
+				old.kill()
+			_rest(holder)
+			if want:
+				holder.visible = true
+				apply_replacements(scope, holder, true)
+				if animate and holder.is_inside_tree():
+					_slam(holder, stagger * HEFT_STAGGER)
+			else:
+				apply_replacements(scope, holder, false)
+				if animate and holder.is_inside_tree():
+					_fling(holder)
+				else:
+					holder.visible = false
+		stagger += 1
+
+
+static func _rest(holder: Node3D) -> void:
+	for mi in holder.find_children("*", "MeshInstance3D", true, false):
+		if mi.has_meta("heft_rest"):
+			(mi as Node3D).position = mi.get_meta("heft_rest")
+
+
+static func _outward(mi: Node3D) -> Vector3:
+	var rest: Vector3 = mi.get_meta("heft_rest", mi.position)
+	var dir := rest.normalized() if rest.length() > 0.001 else Vector3.UP
+	return dir
+
+
+# Tweens run on the holder, so a refit that frees the holder ends them. Position only: a fade
+# would need a per-instance material.
+func _slam(holder: Node3D, delay: float) -> void:
+	var tween := holder.create_tween().set_parallel(true)
+	for mi in holder.find_children("*", "MeshInstance3D", true, false):
+		var rest: Vector3 = mi.get_meta("heft_rest", (mi as Node3D).position)
+		(mi as Node3D).position = rest + _outward(mi) * HEFT_SLAM_FROM
+		tween.tween_property(mi, "position", rest, HEFT_SLAM_SECONDS).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	holder.set_meta("heft_tween", tween)
+
+
+func _fling(holder: Node3D) -> void:
+	var tween := holder.create_tween()
+	tween.set_parallel(true)
+	var any := false
+	for mi in holder.find_children("*", "MeshInstance3D", true, false):
+		var rest: Vector3 = mi.get_meta("heft_rest", (mi as Node3D).position)
+		tween.tween_property(mi, "position", rest + _outward(mi) * 0.6, HEFT_FLING_SECONDS).set_ease(Tween.EASE_IN)
+		any = true
+	if not any:
+		tween.kill()
+		holder.visible = false
+		return
+	tween.chain().tween_callback(func():
+		holder.visible = false
+		_rest(holder))
+	holder.set_meta("heft_tween", tween)
+
+
+func _on_heft_class(heft_class: int, _heft: float) -> void:
+	for rec in _players.values():
+		var shell = rec.get("shell", {})
+		if shell is Dictionary and not shell.is_empty() and is_instance_valid(rec.get("core")):
+			set_heft_class(shell, heft_class, true)
+
+
+# The ready glow (SKILL-BAR asks the cage's machinery to glow when the ultimate is ready):
+# every class_accent surface swaps between two cached materials per class colour. No light.
+func ready_material(tint: Color) -> Material:
+	var key := "class_accent_ready:%s" % tint.to_html()
+	if _materials.has(key):
+		return _materials[key]
+	var base := material("class_accent", tint) as StandardMaterial3D
+	var mat := base.duplicate() as StandardMaterial3D
+	mat.resource_name = "class_accent_ready"
+	mat.emission_energy_multiplier = READY_EMIT
+	_materials[key] = mat
+	return mat
+
+
+func _glow_rec(rec: Dictionary, on: bool) -> int:
+	var swapped := 0
+	var tint: Color = rec.get("tints", {}).get("class", Color.WHITE)
+	var calm := material("class_accent", tint)
+	var lit := ready_material(tint)
+	for root in [rec.get("core"), rec.get("pod")]:
+		if root == null or not is_instance_valid(root):
+			continue
+		var meshes: Array[Node] = [root]
+		meshes.append_array(root.find_children("*", "MeshInstance3D", true, false))
+		for mi in meshes:
+			if not (mi is MeshInstance3D) or mi.mesh == null:
+				continue
+			for i in mi.mesh.get_surface_count():
+				var current: Material = mi.get_surface_override_material(i)
+				if on and current == calm:
+					mi.set_surface_override_material(i, lit)
+					swapped += 1
+				elif not on and current == lit:
+					mi.set_surface_override_material(i, calm)
+					swapped += 1
+	return swapped
+
+
+func set_ready_glow(on: bool) -> void:
+	_ready_glow = on
+	for rec in _players.values():
+		var shell = rec.get("shell", {})
+		if shell is Dictionary and not shell.is_empty():
+			_glow_rec(shell, on)
+
+
+# Connects a callback to a bus signal only when it is declared, whatever its argument count.
+func _connect_optional(bus: Object, signal_name: String, callback: Callable) -> void:
+	if bus == null or not bus.has_signal(signal_name):
+		return
+	for info in bus.get_signal_list():
+		if String(info.name) == signal_name:
+			var bound := callback.unbind(info.args.size()) if info.args.size() > 0 else callback
+			bus.connect(signal_name, bound)
+			_reaction_connections.append({"bus": bus, "event": signal_name, "callback": bound})
+			return
+
+
+func _connect_shell_events() -> void:
+	if ctx == null or ctx.events == null:
+		return
+	var bus = ctx.events
+	if bus.has_signal("heft_class_changed") and not bus.is_connected("heft_class_changed", _on_heft_class):
+		bus.connect("heft_class_changed", _on_heft_class)
+		_reaction_connections.append({"bus": bus, "event": "heft_class_changed", "callback": _on_heft_class})
+	if bus.has_signal("heft_class_dropped") and not bus.is_connected("heft_class_dropped", _on_heft_class):
+		bus.connect("heft_class_dropped", _on_heft_class)
+		_reaction_connections.append({"bus": bus, "event": "heft_class_dropped", "callback": _on_heft_class})
+	# The skill bar unit lands these later; connect only when declared (CUSTOMIZE.md section 9).
+	_connect_optional(bus, "ultimate_ready", set_ready_glow.bind(true))
+	_connect_optional(bus, "ultimate_started", set_ready_glow.bind(false))
+	_connect_optional(bus, "ultimate_cancelled", set_ready_glow.bind(false))
+
+
+# --- add-ons: outfits and bay decoration (CUSTOMIZE.md section 6) ----------------------
+
+func _addon_path(id: String, slot: String) -> String:
+	var row := Cosmetics.row(id)
+	if row.is_empty() or row.get("slot", "") != slot or not row.has("asset"):
+		return ""
+	var path := String(_assets().get(row["asset"], ""))
+	if path == "" or not _loadable(path):
+		_warn_logged("addon:" + id, "hero_assets: %s '%s' has no delivered art; showing the default look" % [slot, id])
+		return ""
+	return path
+
+
+# Mounts an outfit on the pilot's Skeleton3D: one BoneAttachment3D per top-level outfit node,
+# named for its bone. Lights stripped, painted from the cache, Replace_ applied on the pilot.
+# Removes any outfit already worn. Returns the attachments (empty for "" or missing art).
+func fit_outfit(pilot_node: Node3D, id: String, tints := {}) -> Array:
+	return fit_outfit_scene(pilot_node, _addon_path(id, "outfit") if id != "" else "", tints)
+
+
+# The same mount from a scene path (tools and tests with fixture outfits).
+func fit_outfit_scene(pilot_node: Node3D, path: String, tints := {}) -> Array:
+	remove_outfit(pilot_node)
+	var outfit := _addon(path)
+	if outfit == null:
+		return []
+	return _mount_on_bones(pilot_node, outfit, tints, "outfit")
+
+
+func remove_outfit(pilot_node: Node3D) -> void:
+	_remove_bone_mounts(pilot_node, "outfit")
+
+
+func _mount_on_bones(scope: Node3D, scene: Node, tints: Dictionary, kind: String) -> Array:
+	var found := scope.find_children("*", "Skeleton3D", true, false)
+	var skeleton: Skeleton3D = found[0] if not found.is_empty() else null
+	var mounts: Array = []
+	if skeleton == null:
+		_warn_logged("%s:no_skeleton" % kind, "hero_assets: no Skeleton3D to mount the %s on" % kind)
+		scene.free()
+		return mounts
+	paint(scene, tints)
+	for part in scene.get_children():
+		var bone := String(part.name)
+		if part is AnimationPlayer or skeleton.find_bone(bone) < 0:
+			continue
+		scene.remove_child(part)
+		var attach := BoneAttachment3D.new()
+		attach.name = "%s_%s" % [kind.capitalize(), bone]
+		attach.bone_name = bone
+		attach.set_meta("addon", kind)
+		attach.add_child(part)
+		skeleton.add_child(attach)
+		mounts.append(attach)
+	for mount in mounts:
+		apply_replacements(scope, mount, true)
+	# An optional AnimationPlayer rides the skeleton; its clips address parts as
+	# "<Kind>_<bone>/<part>" and share the pilot's clip names, so react() plays both.
+	var player := scene.find_child("AnimationPlayer", false, false) as AnimationPlayer
+	if player != null and not mounts.is_empty():
+		scene.remove_child(player)
+		player.name = "%sAnimator" % kind.capitalize()
+		player.set_meta("addon", kind)
+		player.root_node = NodePath("..")
+		skeleton.add_child(player)
+		mounts.append(player)
+	scene.free()
+	return mounts
+
+
+func _remove_bone_mounts(scope: Node3D, kind: String) -> void:
+	if scope == null or not is_instance_valid(scope):
+		return
+	for skeleton in scope.find_children("*", "Skeleton3D", true, false):
+		for child in skeleton.get_children():
+			if child.get_meta("addon", "") == kind:
+				if child is BoneAttachment3D:
+					apply_replacements(scope, child, false)
+				skeleton.remove_child(child)
+				child.queue_free()
+
+
+# Mounts the equipped bay decoration in Moss's workshop at its DecorSpot, else DECOR_SPOT.
+# One item at a time; adds no light. Returns the mounted node or null.
+func fit_bay_decor(workshop: Node3D, id: String) -> Node3D:
+	if workshop == null:
+		return null
+	for child in workshop.get_children():
+		if child.get_meta("addon", "") == "bay_decor":
+			workshop.remove_child(child)
+			child.queue_free()
+	var path := _addon_path(id, "bay_decor") if id != "" else ""
+	var decor := _addon(path) as Node3D
+	if decor == null:
+		return null
+	decor.name = "BayDecor"
+	decor.set_meta("addon", "bay_decor")
+	paint(decor, {"class": Palette.AMBER})
+	var spot := workshop.find_child("DecorSpot", true, false) as Node3D
+	decor.position = workshop.to_local(spot.global_position) if spot != null and spot.is_inside_tree() else (spot.position if spot != null else DECOR_SPOT)
+	workshop.add_child(decor)
+	return decor
+
+
+# Mounts a companion skin on SPIL-9: top-level parts named Hull or Deck ride those bones.
+func fit_companion_skin(model: Node3D, id: String) -> Array:
+	_remove_bone_mounts(model, "companion_skin")
+	var path := _addon_path(id, "companion_skin") if id != "" else ""
+	var skin := _addon(path)
+	if skin == null:
+		return []
+	return _mount_on_bones(model, skin, {"class": Palette.AMBER}, "companion_skin")
 
 
 # --- cosmetic pilot reactions ------------------------------------------------------
@@ -592,6 +1124,12 @@ func react(player: Node, event: String, args: Array = []) -> bool:
 	# No blend on impact: the authored recoil must be visible in its first frames.
 	animator.play(clip, 0.0)
 	animator.advance(0.0)
+	# A worn outfit's clip with the same name plays on the same trigger (Rivet's hood snaps down).
+	var pilot_node = rec.get("pilot")
+	if pilot_node != null and is_instance_valid(pilot_node):
+		for outfit_player in pilot_node.find_children("OutfitAnimator", "AnimationPlayer", true, false):
+			if outfit_player.has_animation(clip):
+				outfit_player.play(clip, 0.0)
 	return true
 
 
