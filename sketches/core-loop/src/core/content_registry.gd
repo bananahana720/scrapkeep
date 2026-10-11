@@ -92,7 +92,7 @@ const GOLDEN_HASHES := {
 	"windup_rows.ROWS": "a38f788e68affd8fb5c71c0ff4e0f0883cbeac1eac85a4bb8d7c45a9ae62cfc8",  # 2026-10-08 (wave 10 GP6 and AU2): idle, death and wind-up cue fields per kind
 	"upgrade_tree.TREES": "55786d60308e54612ab34205749dc173d281016e2222e047b26e1ea2ed8629f9",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
 	"upgrade_tree.WORLD_ONE_NODES": "d649afcb0e003763c8fc9488a275f44ddfc2049ca02963fa078c8c8f887df7a8",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
-	"combat.codex_entries.ENTRIES": "2453798590e7bca6fc3491b07ea876024a4ffb7b2a909118a8670dd0c34aa42c",  # 2026-10-08 (wave 10 ST4): entries for every spawning kind and the Highdraft tricks
+	"combat.codex_entries.ENTRIES": "310d6ec7fe5ec359bd5ef08f7b8090a70774ebf52c2ce300d722c78b2f7fd6e6",  # 2026-10-11 (w13 B6): the five skill-bar discovery entries on top of the ST4 set
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned
 	"boss.codex_entries.WAKING": "6b6074ef43fd2de4eb04f2c60d971eb7922d6e152e532b9b94454a8e017f60ea",
