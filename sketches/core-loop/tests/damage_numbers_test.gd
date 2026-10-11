@@ -132,6 +132,11 @@ func _hud_checks() -> void:
 	var warden = _game.flow.warden
 	var before: int = layer.visible_count()
 	_game.ctx.spawner.strike(warden, "arc", 1.0)
+	_report("glancing hit", layer.visible_count() == before, "an arc strike the Warden's plating turns away adds no number (%d -> %d)" % [before, layer.visible_count()])
+	var target := Node3D.new()
+	_game.add_child(target)
+	target.global_position = _game.player.ball_position() + Vector3(0.0, 0.0, -4.0)
+	_game.events.enemy_struck.emit(target, "arc", 30.0)
 	var dealt: Array = layer.shown()
 	var arc_ok = dealt.size() == before + 1 and dealt[dealt.size() - 1]["color"] == DamageNumbers.effect_colour("arc", "player")
-	_report("hit dealt", arc_ok, "an arc strike on the Warden adds one arc/player number (%d -> %d)" % [before, dealt.size()])
+	_report("hit dealt", arc_ok, "an arc strike on a plain target adds one arc/player number (%d -> %d)" % [before, dealt.size()])
