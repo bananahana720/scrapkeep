@@ -10,6 +10,7 @@ const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
 
 # The skill bar's HUD (design-v3/SKILL-BAR.md sections 5 and 10, unit B2), on the real game:
 #   - the bar draws three numbered slots and two chips at 0.75 scale, 24 px right of slot 3, and
@@ -19,7 +20,14 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 #   - selected and active are distinct: the colours the bar draws a selected slot's keycap with
 #     (sand fill, charcoal digit, no lift) differ from an active slot's (charcoal cap, class tint,
 #     3 px lift and a doubled frame). Headless Godot runs the dummy renderer, which has no pixels
-#     to sample, so this checks the colours the control draws with, not a framebuffer;
+#     to sample, so the smoke checks the colours the control draws with (slot_look);
+#   - re-pinned 2026-10-11 (B2 fix round, gate finding 2): on a real renderer the test also draws
+#     two bars and the reticle into a 1920x1080 SubViewport, samples the keycap fill and the 3 px
+#     lift row of slot 2 selected+ready and slot 2 active (slot 1 selected), asserts they differ,
+#     and saves the frame as the 1080p blind still of both rings at a full meter. Run it windowed
+#     on workspace 10 (the PNG lands under --out=, default artifacts/local/w13-b2-pixel/):
+#       claude-open godot --path sketches/core-loop --resolution 1920x1080 --script res://tests/ui_skill_bar_test.gd -- --out=/abs/dir
+#     Headless it prints a SKIP line for the pixel case and the data checks above stand;
 #   - a refused pick shakes the slot 3 px and flashes slate, and the glyph stays put; a loaded
 #     line skill wears the hook badge on slot 3;
 #   - the meter arc sits 10 px outside the gauge ring, sweeps 270 degrees clockwise round a gap
@@ -31,9 +39,14 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 #   - during the set piece the bar dims to 40 percent;
 #   - Q does nothing on the pause menu and X held 0.6 s quits;
 #   - the field notes retire the special row and add select and ultimate;
-#   - with a full meter in a fight the HUD reads 25 words or fewer.
+#   - with a full meter in a fight the HUD reads 25 words or fewer and draws Q exactly once
+#     (re-pinned 2026-10-11, gate finding 1: was "at least once"); with the Q prompt live the
+#     reticle leaves its Q off, with the prompt retired the reticle draws it.
 
 const FIGHT_BUDGET := 25
+const PIXEL_SIZE := Vector2i(1920, 1080)
+const PIXEL_BACK := Color(0.32, 0.36, 0.34)
+const PIXEL_TOLERANCE := 0.04
 
 
 # A stand-in for B3's UltimateMeter: only what ability_state.ultimate() reads.
@@ -54,6 +67,8 @@ var _failures := 0
 var _phase := "boot"
 var _wait := 0
 var _quits := 0
+var _pixel_view: SubViewport
+var _pixel_bars: Array = []
 
 
 func _initialize() -> void:
@@ -93,8 +108,20 @@ func _process(_delta: float) -> bool:
 			_check_fight_words()
 			_check_set_piece()
 			_check_notes()
-			_phase = "pause"
+			_phase = "pixels"
 			_wait = 0
+		"pixels":
+			if DisplayServer.get_name() == "headless":
+				print("[selected vs active pixels] SKIP: headless runs the dummy renderer; run windowed for the pixel case and the 1080p still")
+				_phase = "pause"
+				_wait = 0
+				return false
+			if _wait == 1:
+				_build_pixel_view()
+			if _wait == 6:
+				_check_pixels()
+				_phase = "pause"
+				_wait = 0
 		"pause":
 			if _wait == 1:
 				_open_pause()
@@ -307,8 +334,53 @@ func _check_fight_words() -> void:
 	_refresh()
 	var seen: Dictionary = WordBudget.count(_game.hud)
 	print("  fight words: %s" % " | ".join(seen["items"].map(func(i): return "%s %d \"%s\"" % [i["node"], i["words"], i["text"]])))
-	var q_words: int = (1 if _game.hud.reticle.q_shown() else 0) + (1 if "ultimate" in _game.hud.key_glyphs.shown_verbs() else 0)
-	_report("fight budget", seen["hud"] <= FIGHT_BUDGET and q_words >= 1, "%d HUD words with a full meter (budget %d); Q drawn %d times" % [seen["hud"], FIGHT_BUDGET, q_words])
+	# Q is drawn exactly once: the words the HUD draws hold one Q, by the reticle or the prompt.
+	var q_words: int = _q_drawn(seen)
+	_report("fight budget", seen["hud"] <= FIGHT_BUDGET and q_words == 1, "%d HUD words with a full meter (budget %d); Q drawn %d times" % [seen["hud"], FIGHT_BUDGET, q_words])
+	_check_q_handoff()
+
+
+# The handoff between the reticle's Q and the prompt's Q (hud._step_ultimate sets hide_q from
+# key_glyphs.shown_glyphs): with the prompt live the reticle leaves its Q off; with the prompt
+# retired the reticle draws it. Either way the HUD draws one Q.
+func _check_q_handoff() -> void:
+	var glyphs = _game.hud.key_glyphs
+	var reticle = _game.hud.reticle
+	var profile = glyphs.profile
+	glyphs.new_run()
+	glyphs.step(0.016, KeyGlyphs.view_of(_game.player))
+	_refresh()
+	var live_prompt: bool = "ultimate" in glyphs.shown_verbs()
+	var live_reticle: bool = reticle.q_shown()
+	var live_q: int = _q_drawn(WordBudget.count(_game.hud))
+	# Retire the prompt: the profile has used Q RETIRE_AFTER times, and no first, forced or
+	# revived showing is owed this run.
+	while profile.uses("ultimate") < KeyGlyphs.RETIRE_AFTER["ultimate"]:
+		profile.add_use("ultimate")
+	glyphs._first["ultimate"] = false
+	glyphs._forced["ultimate"] = 0.0
+	glyphs._revived["ultimate"] = false
+	glyphs._unused["ultimate"] = 0.0
+	glyphs.step(0.016, KeyGlyphs.view_of(_game.player))
+	_refresh()
+	var retired_prompt: bool = "ultimate" in glyphs.shown_verbs()
+	var retired_reticle: bool = reticle.q_shown()
+	var retired_q: int = _q_drawn(WordBudget.count(_game.hud))
+	_report("Q handoff", live_prompt and not live_reticle and live_q == 1 and not retired_prompt and retired_reticle and retired_q == 1,
+		"prompt live: prompt %s, reticle Q %s, Q drawn %d; prompt retired: prompt %s, reticle Q %s, Q drawn %d"
+			% [live_prompt, live_reticle, live_q, retired_prompt, retired_reticle, retired_q])
+	glyphs.new_run()
+
+
+# How many times the HUD draws the Q key's label, read off the words it draws.
+func _q_drawn(seen: Dictionary) -> int:
+	var q: String = Keycap.label("key_q")
+	var n := 0
+	for item in seen["items"]:
+		for token in String(item["text"]).replace(" / ", " ").split(" ", false):
+			if token == q:
+				n += 1
+	return n
 
 
 func _check_set_piece() -> void:
@@ -340,6 +412,91 @@ func _check_notes() -> void:
 			and String(rows.get("fire", "")).contains("picked") and String(rows.get("harpoon", "")).contains("line skill loaded")
 			and menu.contains("X (hold)"),
 		"verbs %s; pause row \"%s\"" % [verbs, menu])
+
+
+# Two bars and the reticle in a fixed 1920x1080 SubViewport, so the window's size never
+# changes the frame: bar A has slot 2 selected and ready, bar B has slot 2 active with slot 1
+# selected; the reticle shows the gauge and the meter both full.
+func _build_pixel_view() -> void:
+	_pixel_view = SubViewport.new()
+	_pixel_view.size = PIXEL_SIZE
+	_pixel_view.transparent_bg = false
+	_pixel_view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(_pixel_view)
+	var back := ColorRect.new()
+	back.color = PIXEL_BACK
+	back.size = Vector2(PIXEL_SIZE)
+	_pixel_view.add_child(back)
+	var tint: Color = _game.run.class_def.color
+	var shape: String = _game.run.class_def.shape
+	var live: Array = AbilitySlots.new().slots(_game)
+	var picked: Array = []
+	var active: Array = []
+	for entry in live:
+		var a: Dictionary = (entry as Dictionary).duplicate(true)
+		a.merge({"state": "ready", "selected": a["slot"] == "special", "select_left": 0.0}, true)
+		picked.append(a)
+		var b: Dictionary = (entry as Dictionary).duplicate(true)
+		b.merge({"state": "active" if b["slot"] == "special" else "ready", "selected": b["slot"] == "weapon", "select_left": 0.0}, true)
+		active.append(b)
+	var y := 960.0
+	for list in [picked, active]:
+		var bar := AbilityBar.new()
+		bar.position = Vector2(160.0 + 520.0 * _pixel_bars.size(), y)
+		_pixel_view.add_child(bar)
+		bar.update_slots(list, tint, shape)
+		bar.step(1.0)
+		_pixel_bars.append(bar)
+	var reticle := AimReticle.new()
+	_pixel_view.add_child(reticle)
+	reticle.setup(_game.player, null)
+	reticle.gauge = 1.0
+	reticle.gauge_color = tint
+	reticle.meter = 1.0
+	reticle.meter_full = true
+	reticle.meter_color = AimReticle.meter_fill_color(tint)
+	reticle.hide_q = false
+
+
+func _check_pixels() -> void:
+	var image: Image = _pixel_view.get_texture().get_image()
+	var at := func(bar: Control, local: Vector2) -> Color:
+		var p := bar.position + local
+		return image.get_pixel(int(p.x), int(p.y))
+	var rects: Dictionary = (_pixel_bars[0] as Control).call("slot_rects")
+	var cx: float = (rects["special"] as Rect2).get_center().x
+	var cap: Vector2 = Keycap.size_of("key_2", AbilityBar.KEY_H)
+	# Inside the keycap, past its 2 px border and clear of the digit; and the row 3.5 px above
+	# the slot's resting top, which only a lifted (active) slot's frame reaches.
+	var cap_at := Vector2(cx - cap.x * 0.5 + 4.0, AbilityBar.SLOT + AbilityBar.KEY_GAP + AbilityBar.KEY_H * 0.5)
+	var lift_at := Vector2(cx, -3.5)
+	var sel_cap: Color = at.call(_pixel_bars[0], cap_at)
+	var act_cap: Color = at.call(_pixel_bars[1], cap_at)
+	var sel_lift: Color = at.call(_pixel_bars[0], lift_at)
+	var act_lift: Color = at.call(_pixel_bars[1], lift_at)
+	var ok := (_near(sel_cap, Palette.SAND) and _far(act_cap, Palette.SAND) and act_cap.get_luminance() < 0.3
+		and _near(sel_lift, PIXEL_BACK) and _far(act_lift, PIXEL_BACK))
+	_report("selected vs active pixels", ok,
+		"keycap fill: selected %s (sand %s), active %s; lift row: selected %s (back %s), active %s"
+			% [sel_cap.to_html(false), Palette.SAND.to_html(false), act_cap.to_html(false),
+				sel_lift.to_html(false), PIXEL_BACK.to_html(false), act_lift.to_html(false)])
+	var out := ProjectSettings.globalize_path("res://").path_join("../../artifacts/local/w13-b2-pixel").simplify_path()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--out="):
+			out = arg.trim_prefix("--out=")
+	DirAccess.make_dir_recursive_absolute(out)
+	var path := out.path_join("skill_bar_1080p.png")
+	var saved := image.save_png(path)
+	_report("1080p still", saved == OK and image.get_size() == PIXEL_SIZE, "%dx%d saved to %s (error %d)" % [image.get_width(), image.get_height(), path, saved])
+	_pixel_view.queue_free()
+
+
+func _near(a: Color, b: Color) -> bool:
+	return absf(a.r - b.r) <= PIXEL_TOLERANCE and absf(a.g - b.g) <= PIXEL_TOLERANCE and absf(a.b - b.b) <= PIXEL_TOLERANCE
+
+
+func _far(a: Color, b: Color) -> bool:
+	return absf(a.r - b.r) + absf(a.g - b.g) + absf(a.b - b.b) > 0.3
 
 
 func _open_pause() -> void:
