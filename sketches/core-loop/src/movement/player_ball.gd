@@ -482,10 +482,19 @@ func _charging() -> bool:
 # fields on the same tick.
 func _route_slots(delta: float) -> void:
 	_click_held = intent.fire_held
+	# The latch lasts only until the click comes up, whichever slot is picked meanwhile, so
+	# a stale latch never eats a later click.
+	if _fire_latched and not intent.fire_held:
+		_fire_latched = false
+		intent.fire_released = false
 	var phase := String(set_piece_phase.call()) if set_piece_phase.is_valid() else "idle"
 	if phase != "idle" and phase != "":
 		_swallow_for_set_piece()
 		return
+	# The timeout runs before the click is routed: a click on the tick the pick goes stale is
+	# the weapon's, never both a slot cast and a weapon shot.
+	if abilities.tick_selection(delta, abilities.charging()):
+		snap_slots("timeout", intent.fire_held and not intent.fire_pressed)
 	if intent.slot_pick >= 0 and intent.slot_pick < AbilityState.BAR.size():
 		_pick(AbilityState.BAR[intent.slot_pick])
 	var picked: String = abilities.selected
@@ -500,13 +509,7 @@ func _route_slots(delta: float) -> void:
 		intent.line_released = intent.line_released or intent.fire_released
 		_clear_fire()
 	elif _fire_latched:
-		if intent.fire_held:
-			_clear_fire()
-		else:
-			_fire_latched = false
-			intent.fire_released = false
-	if abilities.tick_selection(delta, abilities.charging()):
-		snap_slots("timeout")
+		_clear_fire()
 
 
 # During the set piece only the roll (steering), Space (bail) and Q (recall) reach the ball.
@@ -570,11 +573,12 @@ func _line_loaded() -> bool:
 
 
 # The one door for a snap back to slot 1 (SKILL-BAR section 1): publishes slot_selected with
-# the reason when the selection moves, and latches left click if it is still down.
-func snap_slots(reason: String) -> void:
+# the reason when the selection moves, and latches left click if it is still down. The
+# timeout passes its own reading: a click pressed on the timeout tick is fresh, not held.
+func snap_slots(reason: String, latch := true) -> void:
 	if not abilities.snap_back(reason):
 		return
-	if intent.fire_held or _click_held:
+	if latch and (intent.fire_held or _click_held):
 		_fire_latched = true
 	events.slot_selected.emit(AbilityState.WEAPON, reason)
 

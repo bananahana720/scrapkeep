@@ -2485,13 +2485,28 @@ func _proc_actions() -> Dictionary:
 		"volley": _proc_volley,
 		"charge": _proc_charges,
 		"detonate": _proc_detonate,
-		"grant_special": func(_scale: float): abilities.call().grant(AbilityState.SPECIAL),
+		"grant_special": func(_scale: float): _grant_special(abilities.call()),
 		"grant_move": func(_scale: float): abilities.call().grant(AbilityState.MOVEMENT),
-		"refund_special": func(scale: float): abilities.call().refund(AbilityState.SPECIAL, scale),
+		"refund_special": func(scale: float): _refund_special(abilities.call(), scale),
 		"refund_move": func(scale: float): abilities.call().refund(AbilityState.MOVEMENT, scale),
 		"overdrive": func(scale: float): _boost(scale),
 		"air": func(_scale: float): ctx.player.state.air_actions = 1,
 	}
+
+
+# A special that spends another slot's charges (Tally's gather plate pays from slot 1's
+# pressure, SKILL-BAR section 2) takes its grant there. Pressure never refills by time, so a
+# refund on such a pool returns one charge instead; the proc's gap is its throttle.
+func _grant_special(abilities) -> void:
+	abilities.grant(abilities.pool_of(AbilityState.SPECIAL))
+
+
+func _refund_special(abilities, scale: float) -> void:
+	var pool: String = abilities.pool_of(AbilityState.SPECIAL)
+	if pool == AbilityState.SPECIAL:
+		abilities.refund(AbilityState.SPECIAL, scale)
+	else:
+		abilities.grant(pool)
 
 
 func _proc_volley(scale: float) -> void:

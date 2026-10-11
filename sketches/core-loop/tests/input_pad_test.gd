@@ -14,6 +14,9 @@ const T := preload("res://tests/support/t.gd")
 #   S1-4 the retry hold on cl_retry restarts at 0.5 s and not before;
 #   S1-5 the pad maps to the title, death and summary screens' keys;
 #   S1-6 the last device follows the last event.
+# Re-pinned 2026-10-10 (wave P-B unit B1, design-v3/SKILL-BAR.md sections 1, 4 and 6): a
+# retired verb (the special, F) has no key and no pad, so S1-1 skips it and checks it stays
+# padless; keys 1, 2, 3 pick on the D-pad left, up and right, and the ultimate (Q) is LB.
 
 const STEPS := ["title", "play", "die_a", "dead_a", "die_b", "dead_b", "summary", "done"]
 
@@ -103,7 +106,13 @@ func _table() -> void:
 	var shared: Array = []
 	var bare: Array = []
 	var all := Bindings.actions()
+	var retired_pads: Array = []
 	for verb in Bindings.VERBS:
+		if Bindings.VERBS[verb].get("retired", false):
+			for action in Bindings.VERBS[verb]["actions"]:
+				if (all[action] as Dictionary).has("pad") or (all[action] as Dictionary).has("axis"):
+					retired_pads.append(action)
+			continue
 		var has_pad := false
 		for action in Bindings.VERBS[verb]["actions"]:
 			var record: Dictionary = all[action]
@@ -121,6 +130,10 @@ func _table() -> void:
 				shared.append("%d: %s and %s" % [record["pad"], owner_of[record["pad"]], verb])
 			owner_of[record["pad"]] = verb
 	_t.eq("S1-1 every verb has a pad button or an axis", bare, [])
+	_t.eq("S1-1 a retired verb has no pad reading", retired_pads, [])
+	_t.eq("S1-1 1, 2, 3 pick on the D-pad", Bindings.SELECT_ACTIONS.map(func(a): return int(all[a].get("pad", -1))),
+		[JOY_BUTTON_DPAD_LEFT, JOY_BUTTON_DPAD_UP, JOY_BUTTON_DPAD_RIGHT])
+	_t.eq("S1-1 the ultimate is LB", int(all["cl_ultimate"].get("pad", -1)), JOY_BUTTON_LEFT_SHOULDER)
 	_t.eq("S1-1 no pad button serves two verbs", shared, [])
 	for action in ["cl_look_left", "cl_look_right", "cl_look_up", "cl_look_down", "cl_retry", "cl_pause"]:
 		_t.check("S1-1 %s is registered with an event" % action, InputMap.has_action(action) and not InputMap.action_get_events(action).is_empty(), "")

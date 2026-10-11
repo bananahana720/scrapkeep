@@ -337,4 +337,40 @@ func _run() -> void:
 	_game.events.run_ended.emit(false)
 	_t.eq("29 run end snaps home (reset)", [_abilities().selected, _last_reason()], ["weapon", "reset"])
 
+	# 30. A click on the timeout tick is the weapon's: the stale pick goes home first, so
+	# no gauge begins and nothing fires twice (fix round, 2026-10-10).
+	_fresh()
+	_tick({"slot_pick": 1}, 0.0)
+	for i in 299:
+		_tick({}, 0.01)
+	out = _tick({"fire_pressed": true, "fire_held": true}, 0.02)
+	var timeout_click: Array = [_gauge().charging, _abilities().selected, out.fire_pressed, out.special_pressed]
+	_tick({"fire_held": true})
+	_t.eq("30 a click on the timeout tick goes to the weapon", [timeout_click, _specials, _last_reason()],
+		[[false, "weapon", true, false], 0, "timeout"])
+
+	# 31. A latch set by a snap is dropped once the click comes up, even with another slot
+	# picked meanwhile: the auto-fire latches the held click, 2 is picked again with the click
+	# still down, the click comes up, the pick times out with the click up, and the very next
+	# click reaches the weapon (fix round, 2026-10-10).
+	_fresh()
+	_tick({"slot_pick": 1})
+	_tick({"fire_pressed": true, "fire_held": true})
+	_ticks(1.6, {"fire_held": true})
+	var latched_after_auto: bool = _player._fire_latched
+	_abilities().refill()
+	_tick({"slot_pick": 1, "fire_held": true}, 0.0)
+	var repicked: bool = _abilities().selected == "special"
+	_tick({"fire_released": true}, 0.0)
+	for i in 299:
+		_tick({}, 0.01)
+	_tick({}, 0.02)
+	var timed_out: bool = _abilities().selected == "weapon" and _last_reason() == "timeout"
+	out = _tick({"fire_pressed": true, "fire_held": true})
+	_t.check("31 a stale latch never eats a later click",
+		latched_after_auto and repicked and timed_out and out.fire_pressed and out.fire_held and not _player._fire_latched,
+		"latched after auto-fire %s, re-picked %s, timed out %s, later press %s, latch %s" % [latched_after_auto, repicked,
+		timed_out, out.fire_pressed, _player._fire_latched])
+
+
 	quit(_t.verdict())
