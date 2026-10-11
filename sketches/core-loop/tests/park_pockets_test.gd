@@ -1,13 +1,16 @@
 extends SceneTree
 
-# Rule: the four pockets of design-v3/PARK.md 2.12 hold on the stage graph (2.11, K-UNITS KB8),
-# every distance a path distance from the door node: the reward and risk doors at least 240 m
-# from the spawn and 320 m from the beacon, every pair of off-line doors at least 200 m apart,
-# each door sight_ok and clear of home sites, destructive event sites and contraption hazards
-# for 40 m, the reward and risk doors off the line with a detour of 150 to 600 m (the reward's
-# the larger), and the hidden pocket off the line, off the warden ring and on a site row with
-# three or more routes. Three planted rows each break the rule they plant: a door 100 m from the
-# spawn, a door on a line node, a hidden pocket whose site lists one route.
+# Rule: the four pockets of design-v3/PARK.md 2.12 hold on the stage graph (2.11, K-UNITS KB8)
+# for the committed fixture as it stands (no in-memory overrides), every distance a path distance
+# on the graph. Two distances, two points (2.12): door_m is the path from the nearest line node
+# to the door node, and the door rules read the door (sight_ok, off the line, at least 240 m from
+# the spawn and 320 m from the beacon, every pair of off-line doors at least 200 m apart, clear of
+# home sites, destructive event sites and contraption hazards for 40 m); detour_m is the path from
+# the nearest line node to the pay point (the activity row's at, the hidden pocket's cache), and
+# the reward and risk detour_m lie in 150 to 600 m, the reward's the larger. The hidden pocket
+# stays off the line, off the warden ring and on a site row with three or more routes. Three
+# planted rows each break the rule they plant: a door 100 m from the spawn, a door on a line node
+# (which also has no detour), a hidden pocket whose site lists one route.
 #
 # The pay ladder (2.12): the on-line part is common (the camp's named Hot Rivets, which wins over
 # the roll, activities.gd _finish), the larger-detour off-line pocket pays rare only and the
@@ -39,7 +42,7 @@ func _run() -> void:
 	if not t.check("graph.bin loads", graph != null):
 		quit(t.verdict())
 		return
-	var park: Dictionary = pocket_fixture(JSON.parse_string(FileAccess.get_file_as_string(PARK)))
+	var park: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PARK))
 
 	var ruling: Dictionary = tool.pockets(graph, park)
 	_print(tool, ruling)
@@ -50,6 +53,7 @@ func _run() -> void:
 	roles.sort()
 	t.eq("one on-line, one reward, one risk, one hidden", roles, ["hidden", "online", "reward", "risk"])
 	t.eq("every 2.12 rule holds on the fixture", ruling["breaches"], [])
+	_distances(ruling)
 
 	# Planted: the risk door 100 m from the spawn.
 	var near := park.duplicate(true)
@@ -67,7 +71,9 @@ func _run() -> void:
 		var p: Vector3 = graph.position(line_node)
 		var on_line := park.duplicate(true)
 		_activity(on_line, "tube_cache")["at"] = [p.x, p.z]
-		t.check("a door on a line node breaks off-the-line", _breaks(tool.pockets(graph, on_line), "tube_cache", "off_line"))
+		var on_ruling: Dictionary = tool.pockets(graph, on_line)
+		t.check("a door on a line node breaks off-the-line", _breaks(on_ruling, "tube_cache", "off_line"))
+		t.check("a pay point on a line node breaks the detour band", _breaks(on_ruling, "tube_cache", "detour"))
 
 	# Planted: the hidden pocket's site row lists one route.
 	var hidden_id := ""
@@ -85,7 +91,7 @@ func _run() -> void:
 	var detour := {}
 	for row in ruling["rows"]:
 		pay[row["role"]] = row["pay_rarities"]
-		detour[row["role"]] = row["detour"]
+		detour[row["role"]] = row.get("detour_m", -1.0)
 	var far_role := "reward" if detour.get("reward", 0.0) >= detour.get("risk", 0.0) else "risk"
 	var near_role := "risk" if far_role == "reward" else "reward"
 	t.eq("the on-line part is common (named Hot Rivets)", pay.get("online"), ["common"])
@@ -115,33 +121,35 @@ func _run() -> void:
 	quit(t.verdict())
 
 
-# The fixture as a stage would carry its pockets. park_test.json predates 2.12 and is KB2's
-# file: on its own graph wash_chasers' wash holds the camp's door (readings rule 4: the home
-# moves), the cache sits in the tube the relic wakes in, 306 m from the beacon, the altar stands
-# on the bench a 6 m sheer step keeps off the graph, neither sealed contraption sits on a
-# three-route site, and the cache and altar carry an empty pay (the ladder came later; the
-# cache, the larger detour, gets rare and the altar today's common or rare). These overrides touch only home, activity and contraption rows, which
-# neither the bake nor the graph reads (no launcher, cable, thermal or lift moves, and no waymark),
-# so the committed bake and graph serve them unchanged. The rows sit where tools/park_graph.gd's
-# path distances put them inside every 2.12 rule.
-static func pocket_fixture(park: Dictionary) -> Dictionary:
-	for home in park["home_rows"]:
-		if home["id"] == "wash_chasers":
-			home["site"] = "lip"
-			home["landform"] = "slickrock"
-	for act in park["activity_rows"]:
-		if act["id"] == "tube_cache":
-			act["at"] = [-400, -320]
-			act["pay"] = {"rarities": ["rare"]}
-		elif act["id"] == "bench_altar":
-			act["at"] = [240, -120]
-			act["pay"] = {"rarities": ["common", "rare"]}
-	for c in park["contraption_rows"]:
-		if c["id"] == "tube_wall":
-			c["site"] = "pool"
-			c["at"] = [-80, 450]
-			c["cache"] = {"at": [-86, 456]}
-	return park
+# The two distances of 2.12 on the loaded fixture: the door rules on door_m, the detour band
+# and its order on detour_m.
+func _distances(ruling: Dictionary) -> void:
+	var reward := {}
+	var risk := {}
+	for row in ruling["rows"]:
+		if not (row.has("door_m") and row.has("detour_m")):
+			t.check("%s carries door_m and detour_m" % row["id"], false, str(row.keys()))
+			continue
+		var door_m: float = row["door_m"]
+		var detour_m: float = row["detour_m"]
+		if row["role"] == "online":
+			t.check("the on-line door is on the line (door_m within 8 m)", door_m <= 8.0, "%.1f m" % door_m)
+			continue
+		t.check("%s door is reached from the line and is off it" % row["id"], door_m > 0.0 and door_m < INF, "%.1f m" % door_m)
+		t.check("%s door is sight_ok" % row["id"], row["sight_ok"])
+		t.check("%s door is at least 240 m from the spawn" % row["id"], row["d_spawn"] >= 240.0, "%.1f m" % row["d_spawn"])
+		t.check("%s door is at least 200 m from the nearest door" % row["id"], row["nearest_door"] >= 200.0, "%.1f m" % row["nearest_door"])
+		if row["role"] == "hidden":
+			continue
+		t.check("%s door is at least 320 m from the beacon" % row["id"], row["d_landmark"] >= 320.0, "%.1f m" % row["d_landmark"])
+		t.check("%s detour_m (line to pay point) is 150 to 600 m" % row["id"], detour_m >= 150.0 and detour_m <= 600.0, "%.1f m" % detour_m)
+		if row["role"] == "reward":
+			reward = row
+		else:
+			risk = row
+	if not reward.is_empty() and not risk.is_empty():
+		t.check("the reward carries the larger detour_m", reward["detour_m"] > risk["detour_m"],
+			"%.1f vs %.1f m" % [reward["detour_m"], risk["detour_m"]])
 
 
 func _activity(park: Dictionary, id: String) -> Dictionary:

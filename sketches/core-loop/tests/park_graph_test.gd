@@ -3,8 +3,9 @@ extends SceneTree
 # Rule: the stage graph (design-v3/PARK.md 2.11, K-UNITS KB8) is the stage's one measured space.
 # The committed graph of park_test is fresh and a rebuild reproduces it byte for byte; a park or
 # bake.json edit without a rerun goes stale; the runtime loader answers nearest, path_m, flags,
-# d_landmark and d_spawn from graph.bin; every fixture route is connected through its via rows,
-# and a planted wall across main breaks main; a planted route that crosses a full-width trench
+# d_landmark and d_spawn from graph.bin; every fixture route is connected through its via rows
+# on the committed graph (canal climbs onto the bench by bench_ramp), and a planted wall across
+# main breaks main; a planted route that crosses a full-width trench
 # only by a kicker onto a raised deck and climbs back out by a thermal is connected, and the same
 # route without the kicker is not; the spawn's d_landmark lies in the farthest quarter of open
 # nodes, and a spawn planted 100 m from the beacon fails. The fixture file is never edited: the
@@ -54,7 +55,7 @@ func _run() -> void:
 		return
 	var park: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PARK))
 	_loader(graph, park)
-	_routes(tool, bake, graph, park)
+	_routes(tool, graph, park)
 	_spawn(tool, graph, park)
 	_wall(tool, bake, park)
 	_ride(tool, bake, park)
@@ -64,7 +65,7 @@ func _run() -> void:
 # The park file or bake.json changing without a rerun makes the graph stale, naming the hash.
 func _stale(tool: GDScript) -> void:
 	var text := FileAccess.get_file_as_string(PARK)
-	var edited := text.replace('"at": [320, 220]', '"at": [324, 220]')
+	var edited := text.replace('"at": [240, -120]', '"at": [244, -120]')
 	t.check("the park edit changes one row", edited != text)
 	_write(SCRATCH + "/edited.json", edited.to_utf8_buffer())
 	var stale: Array = tool.freshness(SCRATCH + "/edited.json", BAKED, BAKED)
@@ -119,23 +120,16 @@ func loader_flag(graph, name: String) -> int:
 
 
 # The fixture as committed: the bench is a 6 m plateau with a sheer edge (park_stamps.gd: one
-# grid step of slope) and nothing rides onto it, so the graph finds canal broken there and only
-# there. With one planted ramp onto the bench's west edge (baked in scratch), every fixture route
-# is connected through its via rows.
-func _routes(tool: GDScript, bake: GDScript, graph, park: Dictionary) -> void:
+# grid step of slope), and bench_ramp falls 6 m from the bench's west edge (x 199) to x 160, so
+# canal climbs from the tube onto the bench and every fixture route is connected through its via
+# rows on the committed graph.
+func _routes(tool: GDScript, graph, park: Dictionary) -> void:
 	var checked: Array = tool.route_steps(graph, park).keys()
 	checked.sort()
 	var want := ROUTES.duplicate()
 	want.sort()
 	t.eq("the route check walked every fixture route", checked, want)
-	t.eq("on the committed fixture only canal breaks, at the 6 m sheer bench step",
-		tool.route_breaks(graph, park), [{"route": "canal", "step": "tube -> bench: no path"}])
-	var ramped := park.duplicate(true)
-	# Ramp: falls by 6 m from its start (x 199, the bench edge) to its end (x 160), yaw -90.
-	ramped["park_rows"].append(_row("bench_ramp", "ground", [179.5, 200], null, [39, 6, 40], -90, "ramp", []))
-	var fixed = _bake_build(tool, bake, ramped, "ramp")
-	if fixed != null:
-		t.eq("with a ramp onto the bench every fixture route is connected", tool.route_breaks(fixed, ramped), [])
+	t.eq("on the committed fixture every route is connected", tool.route_breaks(graph, park), [])
 
 
 func _spawn(tool: GDScript, graph, park: Dictionary) -> void:
