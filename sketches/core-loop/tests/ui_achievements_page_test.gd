@@ -19,6 +19,9 @@ const T := preload("res://tests/support/t.gd")
 #     from Progress.count_of; an earned row shows its date;
 #   - achievement_earned shows one toast with the row's name for 3 s; while a Warden fight
 #     is live toasts wait, then show in order.
+#   - 2026-10-10 (w13 B5 fix round, re-pin): a toast may carry a second "New look: <item>"
+#     line (CUSTOMIZE section 4), so the toast checks expect Achievements.toast_text(id), the
+#     one source of the toast's words, instead of bare names.
 #   - PG10: a won run's bus facts earn first_win and mind_quieted, and the page shows both with their date.
 
 const ROW_WORDS := 15
@@ -70,7 +73,9 @@ func _run() -> void:
 	var page = screens.achievements_page()
 	var rows: Dictionary = page.rows
 	_t.eq("P3-3 one row per achievement", rows.keys(), Achievements.ids())
-	_t.eq("P3-3 thirty-six rows today", rows.size(), 36)
+	# 2026-10-10 (w13 B5 fix round, re-pin): B5 ships the skill bar's three shared grant rows
+	# (CUSTOMIZE section 8, Shared), 36 + 3.
+	_t.eq("P3-3 thirty-nine rows today", rows.size(), 39)
 	await _frames(2)
 	_t.check("Back stays visible during page entry", root.get_visible_rect().encloses(page.back.get_global_rect()))
 	await _reach_rows(page)
@@ -109,7 +114,7 @@ func _run() -> void:
 	var hud = _game.hud
 	_game.events.achievement_earned.emit("first_win")
 	await _frames(3)
-	_t.eq("P3-5 an earn shows one toast with the row's name", hud.ach_toasts(), ["Run Won"])
+	_t.eq("P3-5 an earn shows one toast with the row's name", hud.ach_toasts(), [Achievements.toast_text("first_win")])
 	await _settle(3.4)
 	_t.check("P3-5 the toast ends after about 3 s", hud.ach_toasts().is_empty(), "%s" % [hud.ach_toasts()])
 	_game.flow._engage()
@@ -117,7 +122,7 @@ func _run() -> void:
 	_game.events.achievement_earned.emit("first_event")
 	_game.events.achievement_earned.emit("full_rack")
 	await _settle(0.5)
-	_t.check("P3-5 during a live Warden fight the toast waits", hud.ach_toasts().is_empty() and hud.ach_waiting() == ["Event Won", "Full Rack"], "showing %s waiting %s" % [hud.ach_toasts(), hud.ach_waiting()])
+	_t.check("P3-5 during a live Warden fight the toast waits", hud.ach_toasts().is_empty() and hud.ach_waiting() == [Achievements.toast_text("first_event"), Achievements.toast_text("full_rack")], "showing %s waiting %s" % [hud.ach_toasts(), hud.ach_waiting()])
 	_game.flow._unseal()
 	await _settle(0.5)
 	# 2026-10-04 (fix round D): since HW2 the Warden's break offers a hot-wired part, and the
@@ -126,11 +131,11 @@ func _run() -> void:
 	if hud.hotwire_screen != null and hud.hotwire_screen.is_open():
 		hud.hotwire_screen.choose("recycle")
 		await _frames(3)
-	_t.eq("P3-5 after the fight the first shows", hud.ach_toasts(), ["Event Won"])
+	_t.eq("P3-5 after the fight the first shows", hud.ach_toasts(), [Achievements.toast_text("first_event")])
 	await _settle(3.4)
-	_t.eq("P3-5 then the next, in order", hud.ach_toasts(), ["Full Rack"])
+	_t.eq("P3-5 then the next, in order", hud.ach_toasts(), [Achievements.toast_text("full_rack")])
 	await _settle(3.4)
-	_t.eq("P3-5 the Warden's own earn comes last", hud.ach_toasts(), ["Warden Breaker"])
+	_t.eq("P3-5 the Warden's own earn comes last", hud.ach_toasts(), [Achievements.toast_text("warden_broken")])
 	# 2026-10-05 (wave 14, prog-G10): the page after a won run's bus facts, on its own bus.
 	var bus = GameEvents.new()
 	_game.add_child(bus)

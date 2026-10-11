@@ -802,8 +802,11 @@ static func _outward(mi: Node3D) -> Vector3:
 # Tweens run on the holder, so a refit that frees the holder ends them. Position only: a fade
 # would need a per-instance material.
 func _slam(holder: Node3D, delay: float) -> void:
+	var meshes := holder.find_children("*", "MeshInstance3D", true, false)
+	if meshes.is_empty():
+		return  # No layer art yet: an empty tween would log "started with no Tweeners".
 	var tween := holder.create_tween().set_parallel(true)
-	for mi in holder.find_children("*", "MeshInstance3D", true, false):
+	for mi in meshes:
 		var rest: Vector3 = mi.get_meta("heft_rest", (mi as Node3D).position)
 		(mi as Node3D).position = rest + _outward(mi) * HEFT_SLAM_FROM
 		tween.tween_property(mi, "position", rest, HEFT_SLAM_SECONDS).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -811,17 +814,15 @@ func _slam(holder: Node3D, delay: float) -> void:
 
 
 func _fling(holder: Node3D) -> void:
-	var tween := holder.create_tween()
-	tween.set_parallel(true)
-	var any := false
-	for mi in holder.find_children("*", "MeshInstance3D", true, false):
-		var rest: Vector3 = mi.get_meta("heft_rest", (mi as Node3D).position)
-		tween.tween_property(mi, "position", rest + _outward(mi) * 0.6, HEFT_FLING_SECONDS).set_ease(Tween.EASE_IN)
-		any = true
-	if not any:
-		tween.kill()
+	var meshes := holder.find_children("*", "MeshInstance3D", true, false)
+	if meshes.is_empty():
 		holder.visible = false
 		return
+	var tween := holder.create_tween()
+	tween.set_parallel(true)
+	for mi in meshes:
+		var rest: Vector3 = mi.get_meta("heft_rest", (mi as Node3D).position)
+		tween.tween_property(mi, "position", rest + _outward(mi) * 0.6, HEFT_FLING_SECONDS).set_ease(Tween.EASE_IN)
 	tween.chain().tween_callback(func():
 		holder.visible = false
 		_rest(holder))

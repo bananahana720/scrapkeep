@@ -4,11 +4,16 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
 
 # ST5-3: every achievement row that unlocks a pilot carries a beat line of at most
 # BEAT_WORDS words, validate refuses a pilot row without one or with one past the cap, the
 # earned toast's text is the name then the beat, and a locked pilot card shows the beat
 # under its condition.
+# 2026-10-10 (w13 B5 fix round, re-pin): a beat-less row with a delivered cosmetic reward
+# toasts its name then "New look: <item>" (CUSTOMIZE section 4); validate now gets the real
+# cosmetic ids, and the beat checks filter on validate's beat messages only, so a reward id
+# that happens to contain "beat" (trail_any_downbeat) is not counted as a beat problem.
 
 var _t := preload("res://tests/support/t.gd").new("achievement_beat_test")
 var _game
@@ -36,7 +41,9 @@ func _run() -> void:
 		_t.check("%s beat within cap" % id, beat != "" and words <= Achievements.BEAT_WORDS, "%d words: %s" % [words, beat])
 		_t.eq("%s toast second line" % id, Achievements.toast_text(id), "%s\n%s" % [row["name"], beat])
 	_t.eq("pilot unlock rows", pilots, 5)
-	_t.eq("a row without a beat toasts its name", Achievements.toast_text("kills_100"), "Hundred Down")
+	_t.eq("a row without a beat toasts its name first", Achievements.toast_text("kills_100").split("\n")[0], "Hundred Down")
+	_t.eq("a delivered cosmetic reward toasts New look", Achievements.toast_text("kills_100"), "Hundred Down\nNew look: %s" % Cosmetics.row("paint_rivet_forge")["name"])
+	_t.eq("a pending cosmetic reward toasts its name only", Achievements.toast_text(Achievements.for_cosmetic("trail_any_downbeat")), Achievements.row(Achievements.for_cosmetic("trail_any_downbeat"))["name"])
 
 	var signals := Achievements.bus_signals()
 	var ids: Array = []
@@ -46,9 +53,12 @@ func _run() -> void:
 	bare.erase("beat")
 	var long: Dictionary = Achievements.row("brindle_routed").duplicate(true)
 	long["beat"] = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen"
-	_t.check("validate refuses a pilot row with no beat", not Achievements.validate({"x": bare}, signals, ids, []).filter(func(p): return p.contains("beat")).is_empty(), "")
-	_t.check("validate refuses a beat past the cap", not Achievements.validate({"x": long}, signals, ids, []).filter(func(p): return p.contains("beat")).is_empty(), "")
-	_t.check("the table validates", Achievements.validate(Achievements.ROWS, signals, ids, []).filter(func(p): return p.contains("beat")).is_empty(), "")
+	var cosmetics := Cosmetics.ids()
+	var beat_problem := func(p): return p.contains(": beat ") or p.contains("beat line")
+	_t.check("validate refuses a pilot row with no beat", not Achievements.validate({"x": bare}, signals, ids, cosmetics).filter(beat_problem).is_empty(), "")
+	_t.check("validate refuses a beat past the cap", not Achievements.validate({"x": long}, signals, ids, cosmetics).filter(beat_problem).is_empty(), "")
+	var table_beat := Achievements.validate(Achievements.ROWS, signals, ids, cosmetics).filter(beat_problem)
+	_t.check("the table validates", table_beat.is_empty(), "%s" % [table_beat])
 
 	_game = Game.new()
 	_game.test_mode = true
