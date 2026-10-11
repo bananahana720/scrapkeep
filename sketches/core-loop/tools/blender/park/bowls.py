@@ -261,13 +261,13 @@ def rgba_name(name):
 
 
 # palette multipliers on the sandstone shader (linear): oxide faces, bone worn lips, varnish berms, copper-green bloom
-OXIDE = lin(1.0, 0.80, 0.70)
+OXIDE = lin(0.95, 0.60, 0.48)
 SAND = lin(1.0, 0.95, 0.84)
 BONE = lin(1.0, 0.97, 0.90)
 VARNISH = lin(0.62, 0.52, 0.44)
-BLOOM = lin(0.74, 0.92, 0.80)
-FINES = lin(0.95, 0.93, 0.86)
-FINES_RUST = lin(1.0, 0.86, 0.76)
+BLOOM = lin(0.62, 0.90, 0.72)
+FINES = lin(1.0, 0.99, 0.92)
+FINES_RUST = lin(1.0, 0.74, 0.60)
 ROAD = lin(0.60, 0.56, 0.50)
 RUT = lin(0.40, 0.37, 0.34)
 CUT = lin(0.98, 0.76, 0.66)
@@ -280,7 +280,7 @@ def skin_color(name, skin, x, y, z, nrm_y):
     u = abs(x)
     if name == "bench_coping":
         if nrm_y < 0.93:
-            return OXIDE if int((y + 40) * 1.7) % 3 else lin(0.95, 0.72, 0.62)   # oxide faces, a darker bed now and then
+            return OXIDE if int((y + 40) * 1.7) % 3 else lin(0.78, 0.44, 0.35)   # iron-oxide faces, a darker bed now and then
         if u > 8.0 and skin.cross(x) > 0.3:
             return VARNISH
         return BONE if nrm_y > 0.985 and skin.cross(x) == 0.0 and y > -0.5 else SAND
