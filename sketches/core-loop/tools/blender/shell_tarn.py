@@ -16,12 +16,18 @@ the picture paints oxide are petrol here.
 shell_tarn_redjaw_teeth): the same machinery, sockets and sight cone; only the hub tread caps
 change, to ten-sided toothed caps whose rims alternate long and short teeth.
 
-Draws: PD-0's base already spends the 10-draw shell cap (Core 3, Pod 3, Gyro, GyroInner,
-WeaponRing 2). Tarn's seven moving parts are each their own mesh so code can hinge, spin and
-swing them: four claw jaws, each a bone paint body plus a toothed class_accent strip along its
-biting edge (the tooth edges are the working device, the only class_accent), the pull drum on
-rubber and two blades on bare_metal. 21 draws; the registry fragment carries the exception,
-pending the owner's call on the shell draw cap for Hoberman pilots with moving parts.
+Draws, held to the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10
+w13-PD; fix round 2 cut 21 to 16): the four claw jaws are each their own mesh so code can
+hinge them, each a bone paint body plus a toothed class_accent strip along its biting edge
+(the tooth edges are the working device, the only class_accent): 8. The two blades swing, one
+bare_metal mesh each: 2. Gyro and GyroInner: 2. The static meshes keep one surface beside
+their enamel: Core 2 (paint, copper; the rubber tread caps fold into paint in charcoal vertex
+colour), Pod 1 and WeaponRing 1 (their rubber and the Pod's copper fold into paint in
+charcoal and copper vertex colour, as shell_tally.py does). The pull drum and its wraps are
+rotationally symmetric and untextured, so they ride the Pod mesh and PullDrum is an empty at
+the axle. Call, for the coordinator: the Pod's copper (lap bar, bank knobs, gimbal and claw
+hinge bosses, drum cheeks) now takes an equipped paint's tint, against ROSTER-LOOK section 6;
+the hub copper on Core keeps its slot.
 
 Claw reach by class (CLAW_REACH) is not carried on the jaws: the base GLB's jaws and ClawTip
 sit at class I reach and the layers' bone hooks show the longer reach. Moving the reach onto
@@ -160,22 +166,21 @@ def claws(pod):
 
 
 def drum_parts(pod):
-    """The rope pull drum (its own rubber mesh, so code can spin it on X), its copper cheeks
-    and rubber axle stays on the Pod mesh, and the PullExit socket at the rope mouth."""
+    """The rope pull drum, its copper cheeks and rubber axle stays, all on the Pod mesh (fix
+    round 2: the drum and its wraps are rotationally symmetric and untextured, so a spin of
+    its own mesh showed nothing for a draw); PullDrum is an empty at the axle for the clip
+    and loader code, and PullExit the socket at the rope mouth."""
     extra = Part("TarnPodDrum")
     c = DRUM_CENTRE
     for sx in (-1, 1):
         extra.cyl("copper", 0.125, 0.125, 0.02, 10, loc=(sx * (DRUM_HALF + 0.012), c.y, c.z), rot=(0, math.pi / 2, 0))
         extra.rod("rubber", (sx * 0.15, -0.10, -0.40), (sx * (DRUM_HALF + 0.012), c.y, c.z), 0.018, 6)
-    drum = Part("PullDrum")
-    drum.cyl("rubber", DRUM_RADIUS, DRUM_RADIUS, 2 * DRUM_HALF, 12, rot=(0, math.pi / 2, 0))
+    extra.cyl("rubber", DRUM_RADIUS, DRUM_RADIUS, 2 * DRUM_HALF, 12, loc=tuple(c), rot=(0, math.pi / 2, 0))
     # Three raised rope wraps read as the winding at the chase camera.
     for k in (-1, 0, 1):
-        drum.ring("rubber", DRUM_RADIUS - 0.002, DRUM_RADIUS + 0.012, 0.03, 12, loc=(k * 0.095, 0, 0), rot=(0, math.pi / 2, 0))
-    sb._sharpen(drum)
-    # Built at the origin, then placed: the drum's origin is its axle, so a spin stays put.
-    drum_obj = drum.to_object((0, 0, 0), pod)
-    drum_obj.location = c
+        extra.ring("rubber", DRUM_RADIUS - 0.002, DRUM_RADIUS + 0.012, 0.03, 12, loc=(c.x + k * 0.095, c.y, c.z),
+                   rot=(0, math.pi / 2, 0))
+    drum_obj = common.empty("PullDrum", tuple(c), pod)
     drum_obj["world_origin"] = list(c)
     exit_point = c + Vector((0, -(DRUM_RADIUS + 0.012), 0))
     socket("PullExit", tuple(exit_point), pod, (0, -1, 0))
@@ -235,6 +240,32 @@ def join_into(target, part_obj):
             poly.material_index = dense[poly.material_index]
 
 
+def fold_slot(obj, slot, color):
+    """Moves obj's faces on slot onto its paint surface in color (vertex colour) and drops the
+    slot, so obj spends one draw fewer (shell_tally.py fold_rubber, generalised). Returns the
+    faces moved."""
+    names = [m.name for m in obj.data.materials]
+    if slot not in names or "paint" not in names:
+        return 0
+    src, pai = names.index(slot), names.index("paint")
+    rgba = common.rgba(color)
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    col = bm.loops.layers.float_color.get("Color")
+    moved = 0
+    for f in bm.faces:
+        if f.material_index == src:
+            f.material_index = pai
+            for loop in f.loops:
+                loop[col] = rgba
+            moved += 1
+    bm.to_mesh(obj.data)
+    bm.free()
+    # pop() shifts the face indices above the removed slot down by one.
+    obj.data.materials.pop(index=src)
+    return moved
+
+
 def drop_neutral_seat(ring):
     """Removes PD-0's neutral weapon seat (box and rod at 12 o'clock past the band); Tarn's
     blades take the front arc. The 12 o'clock clamp block on the band stays."""
@@ -289,6 +320,15 @@ def build_shell(variant=""):
     drum_extra, exit_point = drum_parts(pod)
     join_into(pod, drum_extra.to_object((0, 0, 0), pod))
     join_into(ring, blades(ring).to_object((0, 0, 0), ring))
+    # Fix round 2, the 16-draw cap (docs/decisions.tsv 2026-10-10 w13-PD): every static mesh
+    # keeps one surface beside its own enamel, so the seven moving parts keep theirs.
+    folds = {
+        "Core rubber": fold_slot(core, "rubber", "charcoal"),
+        "Pod rubber": fold_slot(pod, "rubber", "charcoal"),
+        "Pod copper": fold_slot(pod, "copper", "copper"),
+        "WeaponRing rubber": fold_slot(ring, "rubber", "charcoal"),
+    }
+    print("FOLDS " + ", ".join("%s %d faces" % kv for kv in folds.items()))
     socket("RendContact", (0, 0.23, -0.79), pod, (0, 0, -1))
     bpy.context.view_layer.update()
     return shell, points, exit_point

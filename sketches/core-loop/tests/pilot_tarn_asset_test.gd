@@ -1,4 +1,7 @@
 extends SceneTree
+# 2026-10-10 (PD-TARN fix round 2, the 16-draw cap in docs/decisions.tsv w13-PD): the pull drum
+# is symmetric and untextured, so it rides the Pod mesh and PullDrum becomes an empty at its
+# axle; the registry exception (16 draws) is the shell budget the check reads.
 # 2026-10-10 (PD-TARN fix round): each claw jaw is a paint body plus a class_accent tooth strip
 # (P-UNITS PD-TARN "jaw-tooth edges are the only class_accent"; hero.png bone jaws).
 # 2026-10-10 (PD-TARN): the shell is the Hoberman mecha (shell_tarn.py on shell_base.hoberman()):
@@ -224,8 +227,9 @@ func _shell(scene: Node) -> void:
 			_t.check("claw " + kind + side, slots == ["class_accent", "paint"], "independent jaw: paint body, class_accent tooth strip; got %s" % [slots])
 		var blade := pod.get_node_or_null("WeaponRing/Blade_" + side) as MeshInstance3D
 		_t.check("blade " + side, blade != null and blade.mesh.get_surface_count() == 1, "single-material blade under WeaponRing")
-	var drum := pod.get_node_or_null("PullDrum") as MeshInstance3D
-	_t.check("pull drum", drum != null and drum.position.y < -.4, "independent rear tension drum, low")
+	var drum := pod.get_node_or_null("PullDrum") as Node3D
+	_t.check("pull drum", drum != null and not (drum is MeshInstance3D) and drum.position.y < -.4,
+		"PullDrum is an empty at the low rear axle; the drum rides the Pod mesh")
 	var far := 0.0
 	var core_far := 0.0
 	var low := 0
