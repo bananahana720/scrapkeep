@@ -66,6 +66,18 @@
       "detail": "reward detour 73 m is not larger than the risk's unreachable m",
       "pocket": "tube_cache",
       "rule": "detour_order"
+    },
+    {
+      "action": "fix",
+      "detail": "no pay.rarities and no named part the parts table knows",
+      "pocket": "tube_cache",
+      "rule": "pay"
+    },
+    {
+      "action": "fix",
+      "detail": "no pay.rarities and no named part the parts table knows",
+      "pocket": "bench_altar",
+      "rule": "pay"
     }
   ],
   "bytes": 822349,
@@ -78,6 +90,8 @@
     "sight_ok": 12777,
     "under": 49
   },
+  "full_visit_m": -1,
+  "full_visit_ratio": "unreachable",
   "graph_sha256": "3671cdd8dd2c93e940a406b57cb6d2862edcd7067e059716951c89f69cf08e3d",
   "line_errors": [],
   "line_path_nodes": 124,
@@ -106,6 +120,10 @@
       "kind": "enemy_camp",
       "nearest_door": -1,
       "nearest_door_id": "",
+      "pay_named": "hot_rivets",
+      "pay_rarities": [
+        "common"
+      ],
       "role": "online",
       "sight_ok": true,
       "site": "run_wash"
@@ -130,6 +148,8 @@
       "kind": "cracked_cache",
       "nearest_door": 241,
       "nearest_door_id": "bench_altar",
+      "pay_named": "",
+      "pay_rarities": [],
       "role": "reward",
       "sight_ok": true,
       "site": "tube"
@@ -153,6 +173,8 @@
       "kind": "ambush_altar",
       "nearest_door": 241,
       "nearest_door_id": "tube_cache",
+      "pay_named": "",
+      "pay_rarities": [],
       "role": "risk",
       "sight_ok": false,
       "site": "bench"
@@ -177,6 +199,8 @@
       "kind": "valve",
       "nearest_door": 363,
       "nearest_door_id": "tube_cache",
+      "pay_named": "",
+      "pay_rarities": [],
       "role": "hidden",
       "sight_ok": false,
       "site": "service_ledge"
@@ -200,5 +224,5 @@
   },
   "spawn_beacon_m": 1303,
   "spawn_beacon_share": "0.563",
-  "tool_sha256": "835314e24263f23ab55e317eb25e45b3624a93ab2d7831c9f0009e53c6c865bf"
+  "tool_sha256": "f6ef55bba4a9fb0c3f200d63459e536cf24010d7cd90be5b3a418df18bfdc450"
 }

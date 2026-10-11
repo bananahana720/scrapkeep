@@ -8,6 +8,12 @@ extends SceneTree
 # the larger), and the hidden pocket off the line, off the warden ring and on a site row with
 # three or more routes. Three planted rows each break the rule they plant: a door 100 m from the
 # spawn, a door on a line node, a hidden pocket whose site lists one route.
+#
+# The pay ladder (2.12): the on-line part is common (the camp's named Hot Rivets, which wins over
+# the roll, activities.gd _finish), the larger-detour off-line pocket pays rare only and the
+# smaller one common or rare. A planted swap, the camp paying rare and the larger-detour pocket
+# common, breaks the ladder on both rows, and a row with no pay.rarities and no named part breaks
+# it too. The full visit (spawn, all four doors in the best order, beacon) is reported and finite.
 
 const T := preload("res://tests/support/t.gd")
 
@@ -73,14 +79,48 @@ func _run() -> void:
 		if row["id"] == hidden_id:
 			row["site"] = "tube"
 	t.check("a hidden pocket whose site lists one route breaks the three-route rule", _breaks(tool.pockets(graph, one_route), hidden_id, "hidden_routes"))
+
+	# The pay ladder on the fixture: which off-line pocket is far is the graph's call.
+	var pay := {}
+	var detour := {}
+	for row in ruling["rows"]:
+		pay[row["role"]] = row["pay_rarities"]
+		detour[row["role"]] = row["detour"]
+	var far_role := "reward" if detour.get("reward", 0.0) >= detour.get("risk", 0.0) else "risk"
+	var near_role := "risk" if far_role == "reward" else "reward"
+	t.eq("the on-line part is common (named Hot Rivets)", pay.get("online"), ["common"])
+	t.eq("the larger-detour pocket pays rare only", pay.get(far_role), ["rare"])
+	t.eq("the smaller-detour pocket rolls common or rare", pay.get(near_role), ["common", "rare"])
+	var far_id: String = tool._role(ruling["rows"], far_role)["id"]
+
+	# Planted: the tiers swapped, the camp paying rare and the larger-detour pocket common.
+	var swapped := park.duplicate(true)
+	_activity(swapped, "wash_camp")["pay"] = {"rarities": ["rare"]}
+	_activity(swapped, far_id)["pay"] = {"rarities": ["common"]}
+	var swap_ruling: Dictionary = tool.pockets(graph, swapped)
+	t.check("a camp paying rare breaks the pay ladder", _breaks(swap_ruling, "wash_camp", "pay"))
+	t.check("a larger-detour pocket paying common breaks the pay ladder", _breaks(swap_ruling, far_id, "pay"))
+
+	# Planted: an off-line row with no pay.rarities and no named part.
+	var bare := park.duplicate(true)
+	_activity(bare, far_id)["pay"] = {}
+	t.check("a row with no pay.rarities breaks the pay ladder", _breaks(tool.pockets(graph, bare), far_id, "pay"))
+
+	# The full visit is reported: finite, and at least the spawn-to-beacon path.
+	var full: float = ruling["full_visit_m"]
+	var ratio: float = ruling["full_visit_ratio"]
+	t.check("full_visit_ratio is finite", full < INF and ratio < INF, "%.1f m, ratio %.3f" % [full, ratio])
+	t.check("the full visit is no shorter than spawn to beacon", ratio >= 1.0, "%.3f" % ratio)
+	print("[full_visit] %.1f m, ratio %.3f (start target at most 3.0, reported)" % [full, ratio])
 	quit(t.verdict())
 
 
 # The fixture as a stage would carry its pockets. park_test.json predates 2.12 and is KB2's
 # file: on its own graph wash_chasers' wash holds the camp's door (readings rule 4: the home
 # moves), the cache sits in the tube the relic wakes in, 306 m from the beacon, the altar stands
-# on the bench a 6 m sheer step keeps off the graph, and neither sealed contraption sits on a
-# three-route site. These overrides touch only home, activity and contraption rows, which
+# on the bench a 6 m sheer step keeps off the graph, neither sealed contraption sits on a
+# three-route site, and the cache and altar carry an empty pay (the ladder came later; the
+# cache, the larger detour, gets rare and the altar today's common or rare). These overrides touch only home, activity and contraption rows, which
 # neither the bake nor the graph reads (no launcher, cable, thermal or lift moves, and no waymark),
 # so the committed bake and graph serve them unchanged. The rows sit where tools/park_graph.gd's
 # path distances put them inside every 2.12 rule.
@@ -92,8 +132,10 @@ static func pocket_fixture(park: Dictionary) -> Dictionary:
 	for act in park["activity_rows"]:
 		if act["id"] == "tube_cache":
 			act["at"] = [-400, -320]
+			act["pay"] = {"rarities": ["rare"]}
 		elif act["id"] == "bench_altar":
 			act["at"] = [240, -120]
+			act["pay"] = {"rarities": ["common", "rare"]}
 	for c in park["contraption_rows"]:
 		if c["id"] == "tube_wall":
 			c["site"] = "pool"

@@ -8,7 +8,10 @@ extends SceneTree
 #                d_spawn), zstd
 #   graph.json   schema, map, the park file's, bake.json's, the tool's and graph.bin's sha256,
 #                the counts, and the ruling: route connectivity, the spawn check and the pocket
-#                table (every distance a path distance on this graph, PARK.md 2.12 readings)
+#                table (every distance a path distance on this graph, PARK.md 2.12 readings),
+#                each pocket's pay.rarities against the 2.12 pay ladder, and full_visit_ratio:
+#                spawn through all four doors in the best order to the beacon, over spawn to
+#                beacon (reported, start target at most 3.0)
 #
 # The park file stays the authored truth: the graph checks the spawn, the landmark and the
 # activities and never moves them. Two runs on one park and bake give identical bytes.
@@ -47,6 +50,7 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const Stamps := preload("res://src/world/park/park_stamps.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 const TOOL_FILES := ["res://tools/park_graph.gd", "res://src/world/park/park_graph.gd"]
 const PARK_DIR := "res://src/world/park"
@@ -89,6 +93,13 @@ const HAZARD_CONTRAPTIONS := ["launcher"]
 # Readings rule 3: a breach of these moves the pocket; a detour or sightline miss is logged.
 const MOVE_RULES := ["clear_ring", "door_to_door"]
 const LOG_RULES := ["detour", "detour_order", "sight"]
+# The pay ladder (PARK.md 2.12): the on-line part is common only, the off-line pocket with the
+# smaller detour rolls today's common or rare (activities.gd PAY_RARITIES), the one with the
+# larger detour rare only. A named part the parts table knows wins over the roll
+# (activities.gd _finish), so its rarity is the row's.
+const PAY_ONLINE := ["common"]
+const PAY_NEAR := ["common", "rare"]
+const PAY_FAR := ["rare"]
 
 
 func _initialize() -> void:
@@ -865,8 +876,9 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 			role = "reward"
 		elif RISK_KINDS.has(act["activity"]):
 			role = "risk"
+		var pay := _pay(act.get("pay", {}))
 		rows.append({"id": String(act["id"]), "role": role, "kind": String(act["activity"]),
-			"site": String(act["site"]), "at": act["at"]})
+			"site": String(act["site"]), "at": act["at"], "pay_rarities": pay["rarities"], "pay_named": pay["named"]})
 	# The hidden pocket: the first valve or cracked_wall that seals a cache (the stage 1 draft's
 	# gallery_valve shape), else the first valve or cracked_wall.
 	var hidden := {}
@@ -876,7 +888,7 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 	if not hidden.is_empty():
 		var at: Array = hidden["door"]["at"] if hidden.has("door") else hidden["at"]
 		rows.append({"id": String(hidden["id"]), "role": "hidden", "kind": String(hidden["kind"]),
-			"site": String(hidden["site"]), "at": at})
+			"site": String(hidden["site"]), "at": at, "pay_rarities": [], "pay_named": ""})
 
 	var roles := []
 	for row in rows:
@@ -955,7 +967,96 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 	var risk := _role(rows, "risk")
 	if not reward.is_empty() and not risk.is_empty() and reward["detour"] <= risk["detour"]:
 		breaches.append(_breach(reward["id"], "detour_order", "reward detour %s m is not larger than the risk's %s m" % [_m(reward["detour"]), _m(risk["detour"])]))
-	return {"rows": rows, "breaches": breaches, "beacon_d_spawn": beacon_d}
+	breaches.append_array(_pay_ladder(rows))
+	var full := _full_visit(graph, rows, forward)
+	var ratio := INF
+	if full < INF and beacon_d > 0.0 and beacon_d < INF:
+		ratio = full / beacon_d
+	return {"rows": rows, "breaches": breaches, "beacon_d_spawn": beacon_d, "full_visit_m": full, "full_visit_ratio": ratio}
+
+
+# A row's pay as the activity pays it: {"rarities", "named"}. A named part the parts table
+# knows wins over the roll; rarities is [] when the row carries neither that nor pay.rarities.
+static func _pay(pay: Dictionary) -> Dictionary:
+	if pay.has("named"):
+		var named := String(pay["named"])
+		if Parts.rows().has(named):
+			return {"rarities": [String(Parts.rows()[named]["rarity"])], "named": named}
+	var out := []
+	if pay.get("rarities") is Array:
+		for r in pay["rarities"]:
+			out.append(String(r))
+	return {"rarities": out, "named": ""}
+
+
+static func _within(rarities: Array, allowed: Array) -> bool:
+	if rarities.is_empty():
+		return false
+	for r in rarities:
+		if not allowed.has(r):
+			return false
+	return true
+
+
+# The pay ladder over the activity rows. The off-line pair is ranked by detour, the reward taken
+# as the larger on a tie (detour_order already logs the tie).
+static func _pay_ladder(rows: Array) -> Array:
+	var out := []
+	for row in rows:
+		if row["role"] != "hidden" and row["pay_rarities"].is_empty():
+			out.append(_breach(row["id"], "pay", "no pay.rarities and no named part the parts table knows"))
+	var online := _role(rows, "online")
+	if not online.is_empty() and not online["pay_rarities"].is_empty() and not _within(online["pay_rarities"], PAY_ONLINE):
+		out.append(_breach(online["id"], "pay", "the on-line part pays %s, want %s" % [_rarity_text(online), ", ".join(PAY_ONLINE)]))
+	var reward := _role(rows, "reward")
+	var risk := _role(rows, "risk")
+	if reward.is_empty() or risk.is_empty():
+		return out
+	var far := reward
+	var near := risk
+	if risk["detour"] > reward["detour"]:
+		far = risk
+		near = reward
+	if not far["pay_rarities"].is_empty() and far["pay_rarities"] != PAY_FAR:
+		out.append(_breach(far["id"], "pay", "the larger detour (%s m) pays %s, want %s only" % [_m(far["detour"]), _rarity_text(far), ", ".join(PAY_FAR)]))
+	if not near["pay_rarities"].is_empty() and not _within(near["pay_rarities"], PAY_NEAR):
+		out.append(_breach(near["id"], "pay", "the smaller detour (%s m) pays %s, want within %s" % [_m(near["detour"]), _rarity_text(near), ", ".join(PAY_NEAR)]))
+	return out
+
+
+static func _rarity_text(row: Dictionary) -> String:
+	if row["role"] == "hidden":
+		return "-"
+	if row["pay_rarities"].is_empty():
+		return "missing"
+	var text := ", ".join(PackedStringArray(row["pay_rarities"]))
+	return text if row["pay_named"] == "" else "%s (%s)" % [text, row["pay_named"]]
+
+
+# The shortest path from the spawn through every pocket door, in any order, to the beacon
+# (K-UNITS KB8, reported): d_spawn to the first door, door to door by forward search, d_landmark
+# from the last. INF when no order has a path.
+static func _full_visit(graph, rows: Array, forward: Dictionary) -> float:
+	if rows.is_empty():
+		return INF
+	var left := []
+	for i in rows.size():
+		left.append(i)
+	return _visit_from(graph, rows, forward, -1, left, 0.0)
+
+
+static func _visit_from(graph, rows: Array, forward: Dictionary, at: int, left: Array, so_far: float) -> float:
+	if left.is_empty():
+		return so_far + graph.d_land[rows[at]["door"]]
+	var best := INF
+	for i in left:
+		var leg: float = graph.d_from[rows[i]["door"]] if at < 0 else forward[rows[at]["id"]][rows[i]["door"]]
+		if leg == INF:
+			continue
+		var rest: Array = left.duplicate()
+		rest.erase(i)
+		best = minf(best, _visit_from(graph, rows, forward, i, rest, so_far + leg))
+	return best
 
 
 static func _role(rows: Array, role: String) -> Dictionary:
@@ -1031,7 +1132,11 @@ static func ruling(graph, park: Dictionary, built: Dictionary) -> Dictionary:
 			"door_at": row["door_at"], "d_spawn": _json_m(row["d_spawn"]), "d_landmark": _json_m(row["d_landmark"]),
 			"detour": _json_m(row["detour"]) if row["detour"] < INF else -1, "sight_ok": row["sight_ok"],
 			"clear_ring": Array(row["clear_ring"]), "nearest_door": _json_m(row["nearest_door"]),
-			"nearest_door_id": row["nearest_door_id"], "flags": Array(row["flags"])})
+			"nearest_door_id": row["nearest_door_id"], "flags": Array(row["flags"]),
+			"pay_rarities": row["pay_rarities"], "pay_named": row["pay_named"]})
+	var ratio := "unreachable"
+	if pocket["full_visit_ratio"] < INF:
+		ratio = "%.3f" % pocket["full_visit_ratio"]
 	return {
 		"nodes": graph.node_count(), "edges": graph.edge_count(), "ride_edges": built["ride_edges"],
 		"flags": counts, "line_path_nodes": built["line_path"].size(),
@@ -1040,6 +1145,7 @@ static func ruling(graph, park: Dictionary, built: Dictionary) -> Dictionary:
 		"spawn": {"ok": spawn["ok"], "d_landmark": _json_m(spawn["d_landmark"]), "farther_share": "%.3f" % spawn["farther_share"]},
 		"routes": route_steps(graph, park),
 		"pockets": pocket_rows, "breaches": pocket["breaches"],
+		"full_visit_m": _json_m(pocket["full_visit_m"]), "full_visit_ratio": ratio,
 	}
 
 
@@ -1075,15 +1181,16 @@ static func _max_finite(d: PackedFloat32Array) -> float:
 # The pocket table a KD unit pastes (Markdown), and the breaches under it.
 static func pocket_table(ruling_rows: Dictionary) -> String:
 	var lines := PackedStringArray()
-	lines.append("| pocket | role | door [x, z] | d_spawn m | d_landmark m | detour m | sight_ok | clear ring 40 m | nearest door m |")
-	lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	lines.append("| pocket | role | door [x, z] | d_spawn m | d_landmark m | detour m | sight_ok | clear ring 40 m | nearest door m | pay.rarities |")
+	lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for row in ruling_rows["rows"]:
 		var ring: Array = Array(row["clear_ring"])
-		lines.append("| %s | %s | [%d, %d] | %s | %s | %s | %s | %s | %s |" % [row["id"], row["role"],
+		lines.append("| %s | %s | [%d, %d] | %s | %s | %s | %s | %s | %s | %s |" % [row["id"], row["role"],
 			row["door_at"][0], row["door_at"][1], _cell(row["d_spawn"]), _cell(row["d_landmark"]),
 			_cell(row["detour"]), "yes" if row["sight_ok"] else "no",
 			"clear" if ring.is_empty() else "; ".join(ring),
-			"-" if row["nearest_door_id"] == "" else "%s (%s)" % [_cell(row["nearest_door"]), row["nearest_door_id"]]])
+			"-" if row["nearest_door_id"] == "" else "%s (%s)" % [_cell(row["nearest_door"]), row["nearest_door_id"]],
+			_rarity_text(row)])
 	if ruling_rows["breaches"].is_empty():
 		lines.append("")
 		lines.append("Breaches: none.")
@@ -1116,6 +1223,9 @@ static func report_text(info: Dictionary) -> String:
 	for id in ids:
 		var steps: Array = info["routes"][id]
 		lines.append("route %s: %s" % [id, "connected" if steps.is_empty() else "; ".join(steps)])
+	var full := _cell(info["full_visit_m"])
+	lines.append("full visit: spawn through every pocket door to the beacon %s over spawn to beacon: full_visit_ratio %s (start target at most 3.0, reported)" % [
+		full if full == "unreachable" else full + " m", info["full_visit_ratio"]])
 	lines.append("")
 	lines.append(pocket_table({"rows": info["pockets"], "breaches": info["breaches"]}))
 	return "\n".join(lines)
