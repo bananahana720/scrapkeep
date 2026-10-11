@@ -4,7 +4,7 @@ const T := preload("res://tests/support/t.gd")
 
 # Collision mode the test asks of Terrain3D. Park terrain is visual only (TADR-011): the
 # trimesh collider is ours, so this stays 0 (Terrain3DCollision.DISABLED).
-const COLLISION_MODE := 1
+const COLLISION_MODE := 0
 
 # Wave 13 KB1: Terrain3D v1.0.2 loads headless from the vendored copy, with collision off
 # and no editor plugin entry. Plain region of 64 m, one pixel per metre, no sketch code.
