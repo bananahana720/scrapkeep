@@ -28,6 +28,13 @@ const ALPHA_TICKS := 30000
 # its upper half; the ceilings stay. Pushing the medians themselves up is the tuning sweep's job.
 # GP3F 2026-10-08: the default Breath now plays the rows as written (no hard multiplier on top); the
 # medians are Spillway 61.8 s of [61.81, 50.82] and Reach 46.7 s of [40.25, 46.67]. Bands unchanged.
+# KF0 2026-10-10 (unit KF0 Reconciliation): one Warden kind per world (PARK.md section 7), so the
+# Reach Warden is now the reactor relic's meltdown variant, not the swarm remnant, and world 1's packs
+# lost the deflector's rebound pack (decisions.tsv). Re-measured on this file's runs: Spillway skipper
+# 63.5 s of [52.02, 63.52], Reach skipper 54.5 s of [54.46, 51.67], Reach completionist 32.6 s of
+# [28.72, 32.57]. The w23 test, whose Warden band derives from REACH_SKIPPER_S, measured stage 3 (now
+# the swarm remnant) 53.5 s and stage 5 (the Mind's hand, no choir) 93.6 s, two of six pilots past
+# 125 s. All inside their windows, so the bands stay: they are fixed, not fit to results.
 const SPILLWAY_SKIPPER_S := Vector2(50.0, 90.0)
 const REACH_SKIPPER_S := Vector2(35.0, 80.0)
 # The Reach completionist's median fight is at most this many times the skipper's.

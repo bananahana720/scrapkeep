@@ -5,6 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const RosterDig := preload("res://src/combat/roster_dig.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
+const StageDefs := preload("res://src/core/stage_defs.gd")
 
 # The enemy roster (DESIGN-V2 sections 10, 11 and 15): one row per spawnable kind, and
 # the one source for what each enemy is. The spawner, the director's pack names, the
@@ -48,7 +49,7 @@ const FACTIONS := {
 	MIND: {"era": "ancient", "voice": "mind_quote", "arrival": "mind_quote"},
 }
 
-# The stage Wardens, one ancient family per stage (DESIGN-V2 section 11).
+# The Warden kinds, one ancient family per world, in world order (PARK.md section 7).
 const WARDEN_FAMILIES := [REACTOR, SWARM, MIND]
 
 const T_INSTANT := Threat.Type.INSTANT
@@ -182,8 +183,14 @@ static func is_reinforcement(id: String) -> bool:
 	return id in COUNTERS or id in ANCIENTS
 
 
+# A stage's Warden kind when its row names none: its world's family on the default table
+# (KF0 2026-10-10; it indexed by stage before). A stage past the table clamps to the last world.
 static func warden_family(stage: int) -> String:
-	return WARDEN_FAMILIES[clampi(stage, 1, WARDEN_FAMILIES.size()) - 1]
+	return world_warden_family(StageDefs.world_of(stage))
+
+
+static func world_warden_family(world: int) -> String:
+	return WARDEN_FAMILIES[clampi(world, 1, WARDEN_FAMILIES.size()) - 1]
 
 
 # A boss piece kind ("brindle_hull") begins with a Worlds.BOSSES row's kind plus "_". A

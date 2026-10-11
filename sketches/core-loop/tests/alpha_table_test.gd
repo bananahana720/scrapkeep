@@ -1,5 +1,7 @@
 extends SceneTree
 # F6 2026-10-04: the rows no longer carry warden_fight; every Warden fights on posture.
+# KF0 2026-10-10: one Warden kind per world, so the variants are stage 2 meltdown, stage 4
+# brood and stage 6 choir (PARK.md section 7); world 1 has two packs once rebound leaves.
 
 const Game := preload("res://src/game.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
@@ -63,7 +65,7 @@ func _initialize() -> void:
 		var row: Dictionary = A.DEFS[i]
 		_check("row %d keys" % (i + 1), _missing(row).is_empty(), "missing %s" % str(_missing(row)))
 		_check("row %d stage number" % (i + 1), int(row.get("stage", 0)) == i + 1, str(row.get("stage", 0)))
-	_check("packs", A.packs().size() == 3 and not A.elite().is_empty(), "%d packs" % A.packs().size())
+	_check("packs", A.packs().size() == 2 and not A.elite().is_empty(), "%d packs" % A.packs().size())
 	# Every row's map builds from the table without error.
 	var terrain = Terrain.new(AlphaDefs)
 	_check("terrain maps", terrain.maps.size() == A.COUNT, "%d maps" % terrain.maps.size())
@@ -71,7 +73,7 @@ func _initialize() -> void:
 		var row: Dictionary = A.DEFS[i]
 		_check("row %d placeholder name" % (i + 1), not String(row["name"]).contains("placeholder"), String(row["name"]))
 		_check("row %d title" % (i + 1), String(terrain.maps[i].title) == String(row["name"]), "%s vs %s" % [terrain.maps[i].title, row["name"]])
-		var want := {2: "meltdown", 3: "brood", 4: "choir", 5: "choir"}.get(i, "") as String
+		var want := {1: "meltdown", 3: "brood", 5: "choir"}.get(i, "") as String
 		_check("row %d variant" % (i + 1), String(row["warden_variant"]) == want, String(row["warden_variant"]))
 	for pair in [[2, 2], [3, 2], [4, 3], [5, 3]]:
 		var world_kinds := Roster.world_kinds(pair[1])

@@ -56,7 +56,10 @@ func _physics_process(_delta: float) -> bool:
 
 func _check(warden: Node3D) -> void:
 	var family: String = warden.family
-	_report("stage %d family" % _stage, family == Roster.warden_family(_stage) and warden.fight() == "posture",
+	# KF0 2026-10-10: Roster.warden_family is the by-world fallback; the double's rows name
+	# their family, so the expected value is the running row's.
+	var want := String(_game.flow.stage_def().get("warden_family", Roster.warden_family(_stage)))
+	_report("stage %d family" % _stage, family == want and warden.fight() == "posture",
 		"stage %d Warden is the %s family on %s" % [_stage, family, warden.fight()])
 	warden.set_physics_process(false)
 	warden._physics_process(Warden.GUARD_RESPAWN)
