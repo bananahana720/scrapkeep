@@ -16,6 +16,10 @@ const T := preload("res://tests/support/t.gd")
 const BAND_LOW := 0.25
 const BAND_HIGH := 0.75
 const GATE_BAND := false # PC-PACK flips this to true.
+# Specials that grant the fire boost through _overdrive_blast with boost left true
+# (combat.gd:2180 default, :2194-2195 grants _boost(OVERDRIVE_SECONDS)): _fire_point_blank
+# (combat.gd:1489-1493) is one. They carry no "duration" key, so the scan below names them.
+const BOOST_SPECIALS := ["overdrive_blast", "point_blank"]
 
 
 # One row per timed buff. duration is read from the source the game reads, never retyped:
@@ -27,6 +31,8 @@ func _buffs() -> Array:
 		{"pilot": "Rivet", "id": "overdrive_sprint", "slot": AbilityState.MOVEMENT,
 			"duration": float(rows["overdrive_sprint"].get("duration", 0.0))},
 		{"pilot": "Rivet", "id": "overdrive_blast", "slot": AbilityState.SPECIAL,
+			"duration": Weapons.OVERDRIVE_SECONDS},
+		{"pilot": "Rivet", "id": "point_blank", "slot": AbilityState.SPECIAL,
 			"duration": Weapons.OVERDRIVE_SECONDS},
 		{"pilot": "Kest", "id": "smoke_blink", "slot": AbilityState.MOVEMENT,
 			"duration": Weapons.CLOAK_SECONDS},
@@ -63,6 +69,9 @@ func _initialize() -> void:
 			must.append(id)
 	for id in must:
 		t.check("buff row %s is in the uptime table" % id, tabled.has(id), "")
+	for id in BOOST_SPECIALS:
+		t.check("boost special %s is in the uptime table" % id, tabled.has(id), "")
+		t.check("boost special %s exists in ABILITIES" % id, AbilityState.ABILITIES.has(id), "")
 	t.check("the scan found the tabled buff rows", must.size() >= 2, "%d scanned" % must.size())
 
 	print("")
