@@ -183,8 +183,8 @@ func _feed(source: String, amount := 1.0) -> void:
 		_check_full()
 
 
-# A harpoon link pays once per enemy per chain (UltimateMeter.chain_link); the first link of a
-# chain only starts the count.
+# A harpoon link beyond a chain's first pays once per enemy per UltimateMeter.CHAIN_LINK_GAP
+# (UltimateMeter.chain_link).
 func _feed_link(target: Node3D) -> void:
 	var id := target.get_instance_id() if is_instance_valid(target) else 0
 	if meter.chain_link(id, int(ctx.player.chain.combo), _fills()) > 0.0:

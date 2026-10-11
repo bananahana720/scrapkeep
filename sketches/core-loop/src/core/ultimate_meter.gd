@@ -23,6 +23,8 @@ const WEAPON_BURST := 0.5
 # miss (4.0). B4's camper filled in a median 41.1 s, 69 to 95 of its first 100 points from near misses.
 const NEAR_MISS_RATE_CAP := 0.05
 const NEAR_MISS_BURST := 4.0
+# 2026-10-11 (w13 B3b): a chain link on one enemy pays at most once per this many seconds.
+const CHAIN_LINK_GAP := 1.0
 # The rate-limited sources: [points per second the budget refills, the most it holds].
 const RATE_LIMITS := {
 	"weapon": [WEAPON_RATE_CAP, WEAPON_BURST],
@@ -37,8 +39,9 @@ var locked := false
 var _entry := 0.0
 # Points each rate-limited source may still pay now.
 var _budgets := {}
-# Enemies already linked in the chain running now (instance id -> true).
-var _chain_linked := {}
+# Meter time (tick's delta summed) and the meter time each enemy's last paid link came at.
+var _clock := 0.0
+var _linked_at := {}
 
 
 func _init() -> void:
@@ -67,22 +70,22 @@ func add(source: String, amount := 1.0) -> float:
 	return paid
 
 
-# A harpoon link on an enemy at this combo. 2026-10-11 (w13 B3b): a link pays once per enemy per
-# chain, beyond the first; combo 1 starts a new chain. Tally's bot bit one boss over and over in a
-# chain and earned up to 2719 link points a run. With pay false the link is only counted (out of
-# play), so the chain's record stays whole.
+# A harpoon link on an enemy at this combo. 2026-10-11 (w13 B3b): a link beyond the first pays
+# once per enemy per CHAIN_LINK_GAP of meter time. Tally's bot bites one boss about 13 times a
+# second inside one chain and earned up to 2719 link points a run. With pay false the link is
+# only counted (out of play).
 func chain_link(enemy_id: int, combo: int, pay := true) -> float:
 	if combo <= 1:
-		_chain_linked = {enemy_id: true}
 		return 0.0
-	if _chain_linked.has(enemy_id):
+	if _clock - float(_linked_at.get(enemy_id, -INF)) < CHAIN_LINK_GAP:
 		return 0.0
-	_chain_linked[enemy_id] = true
+	_linked_at[enemy_id] = _clock
 	return add("chain_link") if pay else 0.0
 
 
 # Time passes: the rate budgets refill, and speed pays by tier.
 func tick(delta: float, speed_tier: int) -> void:
+	_clock += delta
 	for source in RATE_LIMITS:
 		var limit: Array = RATE_LIMITS[source]
 		_budgets[source] = minf(float(limit[1]), float(_budgets[source]) + float(limit[0]) * delta)
@@ -128,5 +131,6 @@ func reset() -> void:
 	sources = {}
 	locked = false
 	_entry = 0.0
-	_chain_linked = {}
+	_clock = 0.0
+	_linked_at = {}
 	_fill_budgets()

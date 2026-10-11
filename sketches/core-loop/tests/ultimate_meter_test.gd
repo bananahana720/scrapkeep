@@ -188,7 +188,7 @@ func _initialize() -> void:
 		_link(m, 10 + k, k + 1)
 	_link(m, 11, 5)
 	_t.near("27 four distinct enemies in one chain pay three links; a repeat inside the gap pays nothing", m.value, 6.0)
-	for i in 10:
+	for i in 11:
 		m.tick(0.1, SpeedTier.CRUISE)
 	_link(m, 11, 6)
 	_t.near("28 the same enemy pays again once the gap has passed", m.value, 8.0)
