@@ -8,6 +8,9 @@ extends SceneTree
 # the band, StampContact to the bottom), Grip.R/L become Control.Grip.R/L and the CardTab,
 # LapBar, Pedal and Trigger controls are pinned; the reader slot is the only class_accent.
 # The pilot half is unchanged.
+# 2026-10-11 (PD-TALLY fix round): the draw cap returns to the shell class's 10 (the gate
+# refused the 13-draw exception). Both drums now share one mesh, Flywheel.R, spinning on their
+# common X axis (span 2 x 1.033 + 0.07 m); Flywheel.L is an empty at the left drum's centre.
 
 const PILOT := "res://assets/models/pilot_tally_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_tally.glb"
@@ -233,7 +236,7 @@ func _pilot(pilot: Node, document: Dictionary) -> void:
 
 
 func _shell(shell: Node, document: Dictionary) -> void:
-	_budget("shell", shell, Vector3i(11000, 11600, 13), ["paint", "rubber", "class_accent", "copper"])
+	_budget("shell", shell, Vector3i(11000, 11600, 10), ["paint", "rubber", "class_accent", "copper"])
 	_check("shell has no skeleton", document.get("skins", []).is_empty())
 	_check("no duplicate pilot", shell.find_child("Pilot", true, false) == null)
 	var source_names: Array = document.get("nodes", []).map(func(n): return n.get("name", ""))
@@ -268,26 +271,31 @@ func _shell(shell: Node, document: Dictionary) -> void:
 			"expected %s" % SOCKETS[name])
 	var bays := shell.find_children("CardBay_*", "", true, false)
 	_check("exactly three card bays", bays.size() == 3, "bay count %d" % bays.size())
-	for side in ["R", "L"]:
-		var wheel := _shell_node(shell, "Flywheel." + side) as MeshInstance3D
-		if wheel != null:
-			var bounds := wheel.mesh.get_aabb()
-			_check("flywheel diameter " + side, absf(bounds.size.y - 0.34) < 0.001
-				and absf(bounds.size.z - 0.34) < 0.001 and absf(bounds.size.x - 0.07) < 0.0001,
-				"%s; wheel diameter 0.34 m; axial depth 0.07 m" % bounds.size)
-			# Pressure windows: one surface, four window indices in vertex alpha.
-			var found := {}
-			if wheel.mesh.get_surface_count() == 1:
-				var cols = wheel.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
-				if cols != null:
-					for c in cols:
-						if c.a < 0.95:
-							found[snappedf(c.a, 0.05)] = true
-			var keys := found.keys()
-			keys.sort()
-			_check("drum windows " + side, wheel.mesh.get_surface_count() == 1 and keys.size() == 4
-				and keys.all(func(a): return WINDOW_ALPHA.any(func(w): return absf(a - w) < 0.01)),
-				"%d surface(s); window alphas %s" % [wheel.mesh.get_surface_count(), keys])
+	var left := _shell_node(shell, "Flywheel.L") as Node3D
+	_check("Flywheel.L marks the left drum", left != null and not (left is MeshInstance3D)
+		and (_to_root(left, shell).origin - SOCKETS["FlywheelAxis.L"]).length() < 0.00001,
+		"expected an empty at %s" % SOCKETS["FlywheelAxis.L"])
+	var wheel := _shell_node(shell, "Flywheel.R") as MeshInstance3D
+	_check("one drum mesh", wheel != null)
+	if wheel != null:
+		var bounds := wheel.mesh.get_aabb()
+		# Both drums: 0.34 m across, 0.07 m deep each, outer faces 2 x 1.033 + 0.07 m apart.
+		_check("flywheel diameter", absf(bounds.size.y - 0.34) < 0.001
+			and absf(bounds.size.z - 0.34) < 0.001 and absf(bounds.size.x - 2.136) < 0.0001,
+			"%s; wheel diameter 0.34 m; span 2.136 m" % bounds.size)
+		# Pressure windows: one surface, four window indices in vertex alpha.
+		var found := {}
+		if wheel.mesh.get_surface_count() == 1:
+			var cols = wheel.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+			if cols != null:
+				for c in cols:
+					if c.a < 0.95:
+						found[snappedf(c.a, 0.05)] = true
+		var keys := found.keys()
+		keys.sort()
+		_check("drum windows", wheel.mesh.get_surface_count() == 1 and keys.size() == 4
+			and keys.all(func(a): return WINDOW_ALPHA.any(func(w): return absf(a - w) < 0.01)),
+			"%d surface(s); window alphas %s" % [wheel.mesh.get_surface_count(), keys])
 
 
 func _initialize() -> void:

@@ -2,8 +2,8 @@
 drums at 3 and 9 o'clock whose punched windows show pressure, the reader carriage with three
 tabbed cards beside the right yoke, a stamp sole on the bottom hub, and a drum magazine on the
 weapon ring whose card slot is the only class_accent. --variant abacus builds the earned
-Abacus Lattice shell (CUSTOMIZE section 8): one X-pair per link threaded with cream beads and
-six-sided tread caps; the machinery, its sockets and the sight cone do not move.
+Abacus Lattice shell (CUSTOMIZE section 8): cream enamel with a copper bead threaded on each
+chain and six-sided tread caps; the machinery, its sockets and the sight cone do not move.
 
 Pictures (approved as one set, docs/decisions.tsv w13-look rows of 2026-10-10 18:30):
 artifacts/local/alpha/push/w13/concepts/codex/tally/{hero,chase,sheet}.png and
@@ -15,17 +15,23 @@ pilots/tally.md section 5, PILOTS.md section 1, PILOT-CLIPS section 5, CUSTOMIZE
 wrapped in prlimit with a 12884901888-byte address-space cap, as world_one/shell_neutral.py runs.
 
 Calls made here (P-UNITS PD common rule C6 reading, listed in the PD-TALLY report):
+- One X-pair per link on the default shell as well as the variant (fix round 2026-10-11):
+  ROSTER-LOOK section 3 rule 1 names it the first cut when the lattice hides the pilot, and it
+  brings the base under the 6,600 target (section 5 cut order).
 - The drums ride the upright Pod on gap brackets off the outer gimbal axle bosses, not the
   WeaponRing. The heft layers mount under Pod (B5's loader), so the class IV hoods and the
   class V heavy drums only stay on their drums if the drums share that carrier, and the Pod
-  holds 3 and 9 o'clock to the heading, which the chase camera sits behind.
-- Draws: the hoberman() base already spends the shell class's 10 (Core 3, Pod 3, Gyro 1,
-  GyroInner 1, WeaponRing 2). The magazine and carriage fold into the WeaponRing and Pod
-  meshes; the card slot adds class_accent to WeaponRing and each drum is its own one-surface
-  mesh so it can spin: 13 draws, a registry exception.
-- Pressure windows: four per drum face, on the drum's one paint surface. Vertex colour alpha
-  carries the window index (0.2, 0.4, 0.6, 0.8 for windows 0 to 3; 1.0 elsewhere), so a cached
-  shader with a per-instance lit count can light windows 0..n-1 cream on that drum instance
+  holds 3 and 9 o'clock to the heading, which the chase camera sits behind. (Open design call
+  for the coordinator; ROSTER-LOOK section 4 names the ring.)
+- Draws, held to the shell class's 10: Core 3 (paint, copper, rubber), Pod 2, Gyro 1,
+  GyroInner 1, WeaponRing 2 (paint, class_accent) and one drum mesh. Both drums sit on one
+  axis (X, through Z DRUM_Z), so they are one mesh, Flywheel.R, that spins about that axis;
+  Flywheel.L is an empty at the left drum's centre. The rubber parts hoberman() puts on Pod and
+  WeaponRing fold into their paint surface in charcoal vertex colour, as the drum's punch marks
+  and hub boss already do.
+- Pressure windows: four per drum face, on the drum mesh's one paint surface. Vertex colour
+  alpha carries the window index (0.2, 0.4, 0.6, 0.8 for windows 0 to 3; 1.0 elsewhere), so a
+  cached shader with a per-instance lit count can light windows 0..n-1 cream on the drum mesh
   (ROSTER-LOOK section 8: no material_override). At rest windows 0 to 2 show cream and window 3
   is the dark blank the shop part lifts.
 """
@@ -153,12 +159,13 @@ def tint_alpha(part, faces, alpha):
             loop[part.col] = (c[0], c[1], c[2], alpha)
 
 
-def drum(name, side, centre, radius=DRUM_R, depth=DRUM_DEPTH, reel=False):
+def drum(name, side, centre, radius=DRUM_R, depth=DRUM_DEPTH, reel=False, part=None):
     """One ledger drum on one paint surface, axis along X, outer face toward side: a cream
     punched-tape reel between petrol flanges, a charcoal hub boss and four windows in a square
     on the outer face. reel adds the class V second tape reel ring on the face. Every vertex
-    stays inside x in [-depth/2, depth/2] and radius in the drum's local frame."""
-    p = Part(name)
+    stays inside x in [-depth/2, depth/2] and radius in the drum's local frame. part appends
+    the drum to an existing Part (both drums share one mesh) instead of a new one."""
+    p = part if part is not None else Part(name)
     c = Vector(centre)
     half = depth / 2
     flange = 0.008
@@ -232,8 +239,9 @@ def stamp_sole(p):
 
 
 def beads(core_part):
-    """Abacus Lattice: one cream bead threaded on each of the 60 chains, pushed to one end or
-    the other by link, like counted beads (two per chain is 12,609 verts, over the 11,600 cap)."""
+    """Abacus Lattice: one copper bead (pilots/tally.md section 6) threaded on each of the 60
+    chains, pushed to one end or the other by link, like counted beads (two per chain is 12,609
+    verts, over the 11,600 cap). Copper is a surface Core already has, so beads cost no draw."""
     hubs, links, _ = sb.lattice_layout()
     for n, (i, j) in enumerate(links):
         a, b = hubs[i], hubs[j]
@@ -241,16 +249,41 @@ def beads(core_part):
             c = sb._slerp(a, b, t)
             d = (sb._slerp(a, b, t + 0.01) - sb._slerp(a, b, t - 0.01)).normalized()
             centre = c * sb.HUB_RADIUS
-            core_part.rod("paint", centre - d * 0.018, centre + d * 0.018, 0.026, 6, color=CREAM)
+            core_part.rod("copper", centre - d * 0.018, centre + d * 0.018, 0.026, 6)
+
+
+def fold_rubber(obj):
+    """Moves obj's rubber faces onto its paint surface in charcoal vertex colour and drops the
+    rubber slot, so the object spends one draw fewer. Returns the faces moved."""
+    names = [m.name for m in obj.data.materials]
+    if "rubber" not in names or "paint" not in names:
+        return 0
+    rub, pai = names.index("rubber"), names.index("paint")
+    charcoal = common.rgba("charcoal")
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    col = bm.loops.layers.float_color.get("Color")
+    moved = 0
+    for f in bm.faces:
+        if f.material_index == rub:
+            f.material_index = pai
+            for loop in f.loops:
+                loop[col] = charcoal
+            moved += 1
+    bm.to_mesh(obj.data)
+    bm.free()
+    # pop() shifts the face indices above the removed slot down by one.
+    obj.data.materials.pop(index=rub)
+    return moved
 
 
 def build(variant=""):
     """Builds the shell under a new root "ShellTally" (pilot_tally.previews() calls this too) and
     returns the hoberman() dict plus the drum objects."""
     abacus = variant == "abacus"
-    pairs = 1 if abacus else 2
     caps = 6 if abacus else 8
-    shell = sb.hoberman("Tally", enamel=MULBERRY, seat="petrol", pairs=pairs, hub_sides=8, cap_sides=caps,
+    shell = sb.hoberman("Tally", enamel=CREAM if abacus else MULBERRY, seat="petrol", pairs=1, hub_sides=8,
+                        cap_sides=caps,
                         bank=(("CardTab.1", "tab"), ("CardTab.2", "tab")))
     root, core, pod, ring = shell["root"], shell["core"], shell["pod"], shell["ring"]
     # Tally's pilot is its own GLB (pilot_tally_anim.glb); the shell carries no Pilot node.
@@ -272,13 +305,16 @@ def build(variant=""):
         bracket(cab, side)
     sb._sharpen(cab)
     merge(pod, cab)
-    drums = []
+    shell["folded"] = fold_rubber(pod) + fold_rubber(ring)
+    # Both drums in one mesh on the shared X axis, origin at the right drum's centre.
+    wheels = Part("Flywheel.R")
     for name, side in (("R", 1), ("L", -1)):
         centre = (side * DRUM_X, 0.0, DRUM_Z)
-        obj = drum("Flywheel." + name, side, centre).to_object(centre, pod)
-        drums.append(obj)
+        drum("Flywheel." + name, side, centre, part=wheels)
         axis = common.empty("FlywheelAxis." + name, centre, pod)
         axis.rotation_euler = (0, math.pi / 2, 0)
+    drums = [wheels.to_object((DRUM_X, 0.0, DRUM_Z), pod)]
+    common.empty("Flywheel.L", (-DRUM_X, 0.0, DRUM_Z), pod)
     reader = common.empty("ReaderCarriage", (BAY_X, 0.30, -0.30), pod)
     for i, y in enumerate(BAY_YS):
         common.empty("CardBay." + str(i), (BAY_X, y, BAY_Z), reader)
@@ -305,9 +341,13 @@ def main():
     root = shell["root"]
     dome = sb.bpy_object(shell["pod"], "Dome")
     tris = common.tri_total(root)
-    print("HOBERMAN Tally variant=%s tris=%d core=%d target=%d %s; neutral mount verts dropped %d"
+    print("HOBERMAN Tally variant=%s tris=%d core=%d target=%d %s; neutral mount verts dropped %d; rubber faces folded %d"
           % (variant or "default", tris, common.tris(shell["core"]), TARGET_TRIS,
-             "fits" if tris <= TARGET_TRIS else "over target", shell["dropped"]))
+             "fits" if tris <= TARGET_TRIS else "over target", shell["dropped"], shell["folded"]))
+    draws = sum(len(o.data.materials) for o in common.tree(root) if o.type == "MESH")
+    print("DRAWS Tally %d (shell class cap 10) %s" % (draws, "ok" if draws <= 10 else "OVER"))
+    if draws > 10:
+        raise SystemExit("Tally shell spends %d draws, over the shell class's 10" % draws)
     for d in shell["drums"]:
         print("DRUM %s radius %.4f" % (d.name, common.max_radius(d)))
     out = flag("--out") or (ABACUS_OUT if variant == "abacus" else OUT)

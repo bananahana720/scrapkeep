@@ -2904,10 +2904,6 @@
    "class": "shell",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd",
-   "exception": {
-    "draws": 13
-   },
-   "exception_why": "PD-TALLY 2026-10-10: the hoberman() base spends all 10 shell draws (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2); the card slot adds class_accent to WeaponRing and the two ledger drums are one-surface meshes of their own so they can spin and carry a per-instance window count",
    "provenance": {
     "recipe": "tools/blender/shell_tally.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -2920,10 +2916,6 @@
    "class": "shell",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd fit_shell_into (shell variant; classes II to V borrow the default layers)",
-   "exception": {
-    "draws": 13
-   },
-   "exception_why": "PD-TALLY 2026-10-10: the earned Abacus Lattice variant keeps the default shell's machinery and draws (see shell_tally)",
    "provenance": {
     "recipe": "tools/blender/shell_tally.py --variant abacus",
     "helper": "tools/blender/shell_base.py hoberman()",
