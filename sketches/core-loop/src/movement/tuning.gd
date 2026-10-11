@@ -83,6 +83,9 @@ const STICK_ACCEL := 22.0
 const STICK_SPEED := 18.0
 const QUAD_DRAG := 0.0045
 const RADIUS := 1.0
+# A Warden hardpoint line's winch stops at this length (start value), so a ball holding the
+# harpoon reels in and then hangs or orbits instead of grinding into the body.
+const ANCHOR_MIN_ROPE := 6.0
 const SKIN := 0.12
 
 var _values := {}
