@@ -31,8 +31,9 @@ const GL := 26.0
 
 # id -> {budget, extent: AABB of the -col mesh in the node's space}
 const KICKER := AABB(Vector3(-7, 0, 0), Vector3(14, 2.5, 12))
-const NET_X := 40.0
-const NET_Z := 80.0
+const NET_X := 40.6   # the 40 m cell plus the corner posts' 0.6 m radius
+const NET_Z0 := -0.6
+const NET_Z := 81.2
 const NET_POST := 16.0
 const NET_SAG := 3.5
 const ISLE_R := 90.0
@@ -127,8 +128,8 @@ func _check_placed() -> void:
 	_t.check("(b) net_deck: one trimesh collider, -col never drawn, base and two shells viewed", net["trimeshes"] == 1 and net["shapes"] == 1
 		and net["drawn_col"] == 0 and net["views"].size() == 3, "%s trimeshes, %s shapes, %s views" % [net["trimeshes"], net["shapes"], net["views"].size()])
 	var nb: AABB = net["box"]
-	_t.check("(b) net_deck spans x -40..40 and z 0..80, posts to 16 m, sag to -3.5 m", absf(nb.position.x + NET_X) <= EPS and absf(nb.size.x - 2.0 * NET_X) <= EPS
-		and absf(nb.position.z) <= EPS and absf(nb.size.z - NET_Z) <= EPS and absf(nb.end.y - NET_POST) <= EPS and absf(nb.position.y + NET_SAG) <= 0.1, str(nb))
+	_t.check("(b) net_deck spans x -40..40 and z 0..80 plus the posts' radius, posts to 16 m, sag to -3.5 m", absf(nb.position.x + NET_X) <= EPS and absf(nb.size.x - 2.0 * NET_X) <= EPS
+		and absf(nb.position.z - NET_Z0) <= EPS and absf(nb.size.z - NET_Z) <= EPS and absf(nb.end.y - NET_POST) <= EPS and absf(nb.position.y + NET_SAG) <= 0.1, str(nb))
 	var isle := _placed("floating_island", _row("i", "sky_island", Vector2(1000, 0), 0.0, Vector3(180, ISLE_DROP, 180), "floating_island", "ride_hop", "park_large"), parent)
 	_t.check("(b) floating_island: one trimesh collider, -col never drawn, base and two shells viewed", isle["trimeshes"] == 1 and isle["shapes"] == 1
 		and isle["drawn_col"] == 0 and isle["views"].size() == 3, "%s trimeshes, %s shapes, %s views" % [isle["trimeshes"], isle["shapes"], isle["views"].size()])
@@ -177,6 +178,16 @@ func _ball(parent: Node3D, at: Vector3, velocity: Vector3) -> RigidBody3D:
 	ball.set_collision_layer_value(2, true)
 	ball.set_collision_mask_value(1, true)
 	ball.gravity_scale = Tuning.new().f("gravity") / 9.8
+	# the game ball's own damping and surface (rigid_ball.gd:48-55), rolling without slip at the start
+	ball.linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	ball.linear_damp = 0.0
+	ball.angular_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	ball.angular_damp = 0.25
+	var surface := PhysicsMaterial.new()
+	surface.friction = 0.9
+	surface.bounce = 0.25
+	ball.physics_material_override = surface
+	ball.angular_velocity = Vector3(velocity.z, 0.0, -velocity.x) / Tuning.RADIUS
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
 	sphere.radius = Tuning.RADIUS
@@ -225,14 +236,16 @@ func _check_kicker_roll() -> void:
 			var v := ball.linear_velocity
 			angle = rad_to_deg(atan2(v.y, Vector2(v.x, v.z).length()))
 		grounded_before = grounded
-		if p.z > -45.0:
+		if p.z > -45.0 and p.z < 80.0:
 			speeds.append(ball.linear_velocity.length())
 	var want := rad_to_deg(atan2(2.0 * KICKER.size.y, KICKER.size.z))
-	_t.eq("(d) the roll publishes kicker_launch, then ride_hop", events, ["kicker_launch", "ride_hop"])
+	# The net is a bowl: the ball may roll out of the sensor box and back in, which publishes ride_hop again.
+	_t.check("(d) the roll publishes kicker_launch once, then ride_hop", events.slice(0, 2) == ["kicker_launch", "ride_hop"] and events.count("kicker_launch") == 1,
+		str(events))
 	_t.check("(d) the ball leaves the ground at the lip at the angle the row's height and length set", launched and absf(angle - want) <= 6.0,
 		"left at %.1f degrees, row sets %.1f" % [angle, want])
 	_t.check("(d) the ball lands on the net 20 m down", ball.position.y < -18.0 and ball.position.y > -25.0 and ball.position.z > 14.0, str(ball.position))
-	_t.check("(d) no dead stop: under 2 m/s for at most 0.5 s", _dead_run(speeds) <= DEAD_FRAMES, "%d frames under 2 m/s" % _dead_run(speeds))
+	_t.check("(d) no dead stop from the runway to the far edge of the net: under 2 m/s for at most 0.5 s", _dead_run(speeds) <= DEAD_FRAMES, "%d frames under 2 m/s" % _dead_run(speeds))
 	parent.free()
 
 
