@@ -1408,6 +1408,9 @@ func _on_flow_changed(state: String) -> void:
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_line_was = ""
 	engine.set_overcharge(0)
+	# The ultimate lift follows the meter's full() at every stage entry: a retry that restores
+	# a lower meter clears a lift left on, and a full restore keeps it (SKILL-BAR.md section 4).
+	_set_ult_lift(_ult_meter_full())
 	if retry:
 		_disarm_launch()
 	elif _launch_armed:
@@ -1659,7 +1662,8 @@ func _land_drop() -> void:
 # The set piece reads its flight's beat from the band: seconds per beat of the music playing,
 # 0 when none plays (the flight then takes 2.4 s).
 func _wire_ultimate_beat() -> void:
-	var spawner = ctx.spawner if ctx != null else null
+	# get(): a test's stand-in context may carry no spawner at all.
+	var spawner = ctx.get("spawner") if ctx != null else null
 	if spawner == null or spawner.get("ultimate") == null:
 		return
 	spawner.ultimate.beat_seconds = func() -> float:
@@ -1675,6 +1679,14 @@ func pressure_now() -> float:
 # What the ACE band hears as pressure: the systemic pressure plus the meter's step.
 func ace_pressure() -> float:
 	return _pressure + (AceSequencer.ULTIMATE_STEP if _ult_lift else 0.0)
+
+
+func _ult_meter_full() -> bool:
+	var player = ctx.get("player") if ctx != null else null
+	if player == null or player.get("abilities") == null:
+		return false
+	var meter = player.abilities.meter
+	return meter != null and meter.full()
 
 
 func _set_ult_lift(on: bool) -> void:

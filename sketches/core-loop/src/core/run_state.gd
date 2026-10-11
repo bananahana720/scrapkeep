@@ -80,6 +80,11 @@ var brace_hook := Callable()
 # overflow, returns the hull to hold instead. Both run inside the one damage order.
 var deflect_hook := Callable()
 var ward_hook := Callable()
+# The ultimate's set-piece defence (SKILL-BAR.md section 4): Callable(amount, hp) returning
+# null when no set piece is up, else the hull damage to take (x0.2, never below 1 health).
+# A defended hit skips the armour order, so no scrap is knocked loose; every source of
+# damage (enemy hits, boss slag and charge, the Mind) passes through here.
+var defence_hook := Callable()
 # Whole wear units owed but not yet taken from the mass.
 var _wear_accum := 0.0
 # The armour metrics the run log carries; a retry adds to them, they are never restored.
@@ -371,6 +376,18 @@ func heal(amount: float) -> void:
 # the scrap removed spills as recovery clusters and the rest is destroyed.
 func damage(amount: float, source: String) -> void:
 	if not alive() or amount <= 0.0:
+		return
+	var defended = defence_hook.call(amount, hp) if defence_hook.is_valid() else null
+	if defended != null:
+		var before := hp
+		hp = maxf(0.0, hp - maxf(0.0, float(defended)))
+		if armor_mode and metrics.has("hull_damage"):
+			metrics["hull_damage"] += before - hp
+		since_damage = 0.0
+		_try_escape_window()
+		events.player_hit.emit(float(defended), source)
+		if hp <= 0.0:
+			events.player_died.emit()
 		return
 	if armor_mode:
 		_damage_armored(amount, source)

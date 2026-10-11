@@ -152,7 +152,18 @@ func _run() -> void:
 	_ult.meter.add("stagger")
 	_ult._on_stage_entered(_game.ctx.run.stage, true)
 	_t.near("05 a retry restores the stage-entry value", _ult.meter.value, 0.0)
+	# 2026-10-10 fix round: a retry that restores a full entry publishes ultimate_ready, so the
+	# layers that read it (music lift, glow, HUD) show full again (section 4).
+	_ult.meter.refund(_ult.meter.CAP)
+	_ult._on_stage_entered(_game.ctx.run.stage, false)
+	_ult.meter.value = 0.0
+	_ready.clear()
+	_ult._on_stage_entered(_game.ctx.run.stage, true)
+	_t.eq("05b a retry restoring a full meter emits ultimate_ready", [_ready, _ult.meter.full()], [["ult_default"], true])
 	_ult.meter.reset()
+	# Back to an empty entry through the handlers, so the next fill reads as a fresh one.
+	_ult._on_stage_entered(_game.ctx.run.stage, false)
+	_ult._on_stage_entered(_game.ctx.run.stage, true)
 	_ult.meter.refund(99.0)
 	_ready.clear()
 	ev.enemy_killed.emit("chaser", Vector3.ZERO, 1)
@@ -259,6 +270,22 @@ func _run() -> void:
 	var after_small: float = run.hp
 	_combat._on_player_hit(500.0, Vector3.ZERO, "test")
 	_t.eq("27 damage taken is x0.2 and health floors at 1", [after_small, run.hp], [46.0, 1.0])
+	# 2026-10-10 fix round: the defence lives in RunState.damage, so a boss's direct run.damage
+	# (Brindle's slag and charge, the Mind) is defended too, and armour sheds no scrap.
+	var riding_still: bool = _ult.active()
+	run.hp = 50.0
+	run.damage(500.0, "brindle_charge")
+	var direct_hp: float = run.hp
+	run.armor_mode = true
+	var mass_was: float = run.mass
+	run.mass = 40.0
+	var mass_before: float = run.mass
+	run.hp = 50.0
+	run.damage(500.0, "brindle_slag")
+	_t.eq("27b a direct run.damage in the ride is defended; armour sheds no scrap",
+		[riding_still, direct_hp, run.hp, run.mass], [true, 1.0, 1.0, mass_before])
+	run.mass = mass_was
+	run.armor_mode = false
 	var holds = _combat.fleet.holds
 	var b := _enemy("chaser", -8.0, 4.0)
 	_t.eq("28 no hostile hold can start during the ride", holds.catch(b, "net", ["jump"]), false)
@@ -320,6 +347,39 @@ func _run() -> void:
 	_ult.press(_aim_at(_ground(18.0)))
 	await _ride_out()
 	_t.eq("37 an open core shatters on the landing", [open, w.chunks_left()], [true, 3])
+
+	# --- A real harpoon smash pays 5 x the multiplier its landing paid (2026-10-10 fix round) -
+	# chain.pay() zeroes the combo before harpoon_smashed goes out, so the feed must read the
+	# landing's paid multiplier, not chain.multiplier() at emit time.
+	await _home()
+	var s := _enemy("chaser", 6.0, -8.0)
+	s.max_hp = 5000.0
+	s.hp = 5000.0
+	_ult.meter.reset()
+	var smashes: Array = []
+	var on_smash := func(_e: Node3D, _at: Vector3, _speed: float): smashes.append(true)
+	ev.harpoon_smashed.connect(on_smash)
+	# Three links, then the committed haul lands through the player's own landing pair, as
+	# hook_chain_test check 13 lands one: _begin_landing pays the chain, _finish_landing emits
+	# harpoon_smashed. Run in one step, so no physics tick can end the chain in between. (A
+	# physics-driven haul in this scene ended the chain with cause "ground" on the contact
+	# frame before the landing paid it; reported as a follow-up, outside this unit.)
+	for i in 2:
+		_player.grapple_to(s.global_position, Vector3.UP, s)
+		_player.release_grapple()
+	_player.grapple_to(s.global_position, Vector3.UP, s)
+	_player.kit.line_state = Augments.LINE_SMASH
+	var landed: bool = _player._begin_landing(s)
+	_player._finish_landing(s, 20.0)
+	ev.harpoon_smashed.disconnect(on_smash)
+	var smash_row: Dictionary = _player.chain.finished.back() if _player.chain.finished.size() > 0 else {}
+	var combo := int(smash_row.get("combo", 0))
+	var paid_mult := 1.0 + 0.3 * maxf(0.0, minf(float(combo), 6.0) - 1.0)
+	var smash_pts := float(_ult.meter.sources.get("smash", 0.0))
+	_t.check("38b a real smash on a %d-link chain pays 5 x %.2f to the meter" % [combo, paid_mult],
+		landed and smashes.size() == 1 and bool(smash_row.get("paid", false)) and combo >= 3 and absf(smash_pts - 5.0 * paid_mult) < 0.001,
+		"smashes %d, row %s, smash points %.3f" % [smashes.size(), smash_row, smash_pts])
+	await _sim(0.3)
 
 	# --- Aborts, last: these fire real reset facts on the bus -------------------------------
 	await _home()

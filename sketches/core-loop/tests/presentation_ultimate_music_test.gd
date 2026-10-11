@@ -126,5 +126,29 @@ func _run() -> void:
 	ev.ultimate_cancelled.emit("ult_default", "bail", false)
 	engine.render(Harmony.BAR + Harmony.STEP)
 	_t.check("16 a bail cancels the build and releases the lift", not engine.building() and not engine.ultimate_lift)
+
+	# 2026-10-10 fix round: a retry follows the meter's full(). The handlers are called in the
+	# game's module order (combat's ultimate, then audio); emitting the bus fact would restart
+	# the stage. A fill then a retry to a lower entry clears the lift; a full restore lifts it.
+	var stage: int = _game.ctx.run.stage
+	ult.meter.reset()
+	ult._on_stage_entered(stage, false)
+	ult.meter.refund(ult.meter.CAP)
+	ult._check_full()
+	engine.render(Harmony.BAR + Harmony.STEP)
+	var lifted: bool = engine.ultimate_lift
+	ult._on_stage_entered(stage, true)
+	_audio._on_stage_entered(stage, true)
+	engine.render(Harmony.BAR + Harmony.STEP)
+	_t.check("17 a retry to a lower meter clears the lift and the ACE step", lifted and not engine.ultimate_lift
+		and absf(_audio.ace_pressure() - _audio.pressure_now()) < 0.0001, "lifted %s, lift %s" % [lifted, engine.ultimate_lift])
+	ult.meter.refund(ult.meter.CAP)
+	ult._on_stage_entered(stage, false)
+	ult.meter.value = 0.0
+	_audio._set_ult_lift(false)
+	ult._on_stage_entered(stage, true)
+	_audio._on_stage_entered(stage, true)
+	engine.render(Harmony.BAR + Harmony.STEP)
+	_t.check("18 a retry restoring a full meter lifts the music", ult.meter.full() and engine.ultimate_lift)
 	_game.free()
 	quit(_t.verdict())

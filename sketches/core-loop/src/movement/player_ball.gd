@@ -1251,6 +1251,12 @@ func _begin_landing(enemy: Node3D) -> bool:
 	return true
 
 
+# The chain multiplier the resolving smash landing paid: chain.pay() has already zeroed the
+# combo, so a harpoon_smashed listener reads the paid value here (1.0 outside a landing).
+func last_landing_mult() -> float:
+	return _landing_mult
+
+
 # A landing contact's force, raised so the damage combat derives from it is the chain's
 # multiplier times the plain landing (combat's rows are linear in force: a + force * b).
 func _landing_force(kind: String, force: float) -> float:

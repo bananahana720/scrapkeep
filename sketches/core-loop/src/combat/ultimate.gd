@@ -123,9 +123,11 @@ func setup(ctx_ref, combat_ref) -> void:
 	name = "Ultimate"
 	ctx.player.abilities.meter = meter
 	ctx.player.set_piece_phase = Callable(self, "phase")
+	if ctx.run != null and "defence_hook" in ctx.run:
+		ctx.run.defence_hook = Callable(self, "defence_for")
 	var ev = ctx.events
 	ev.enemy_struck.connect(_on_struck)
-	ev.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _feed("smash", ctx.player.chain.multiplier()))
+	ev.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _feed("smash", ctx.player.last_landing_mult()))
 	ev.line_state_changed.connect(func(state: String, _target: Node3D, _at: Vector3, _cause: String):
 		if state == "chain_link" and ctx.player.chain.combo > 1:
 			_feed("chain_link"))
@@ -166,6 +168,11 @@ func _on_stage_entered(_stage: int, retry: bool) -> void:
 	if retry:
 		meter.restore_entry()
 		_was_full = meter.full()
+		# A retry that restores a full meter publishes it, so every layer that reads
+		# ultimate_ready shows full again (section 4); a lower restore is read from full() by
+		# audio's own stage handler, which runs after this one (game.gd module order).
+		if _was_full:
+			ctx.events.ultimate_ready.emit(_ult_id())
 	else:
 		meter.mark_entry()
 
@@ -656,6 +663,14 @@ func defend(amount: float, hp: float) -> float:
 	if not active():
 		return amount
 	return clampf(amount * DAMAGE_TAKEN, 0.0, maxf(0.0, hp - 1.0))
+
+
+# RunState.defence_hook: null when no set piece is up, so the hit takes the normal order;
+# else the defended hull damage, which skips the scrap layer (section 4: no scrap loose).
+func defence_for(amount: float, hp: float) -> Variant:
+	if not active():
+		return null
+	return defend(amount, hp)
 
 
 # Posture a hit on a closed Warden guard may still add in this set piece: the 45 cap counts
