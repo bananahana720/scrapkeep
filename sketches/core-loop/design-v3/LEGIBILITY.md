@@ -58,7 +58,7 @@ Ten situations. Each has one source table.
 | Class | Colour (`Palette`) | Pattern cue | Rule | What the player reads |
 | --- | --- | --- | --- | --- |
 | Armour | `BRASS` | Segmented blocks | Breaks at zero, never regenerates | Break it once and it stays broken |
-| Shield | `ANCIENT` | Hollow outline | Regenerates after a declared delay (start 5 s, then 10 percent per second) | Burst it before it recovers |
+| Shield | `ANCIENT` | Hollow outline | Regenerates after a declared delay (`SHIELD_REGEN_DELAY`, then `SHIELD_REGEN_PER_S` of max per second, `src/core/defence_bars.gd`) | Burst it before it recovers |
 | Health | `SAND` (neutral ink) | Solid fill | No regeneration, no break state | Just damage |
 
 The pattern cue carries the class for a deuteranope, who reads `ANCIENT` as `BRASS`. At the 150 m read distance the pattern is under a pixel, so colour alone separates the classes there: the test reads a hazed fixture frame and requires each bar's class. Start values (delay, rate, haze) sit in named constants citing `comps/gunfire/enemies-and-bosses.md`.
