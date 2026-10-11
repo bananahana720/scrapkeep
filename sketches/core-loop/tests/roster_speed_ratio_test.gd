@@ -118,13 +118,20 @@ func _run() -> void:
 			% [pilot["id"], pilot["cruise"], pilot["cruise"] / stats["median"], pilot["cruise"] / stats["p90"], pilot["boost"], pilot["boost"] / stats["median"]])
 		var fast := _above(speeds, pilot["cruise"] * Roster.FAST_ENEMY_RATIO)
 		for entry in fast:
-			print("  above %.1fx cruise: %s top %.1f m/s, telegraph %s" % [Roster.FAST_ENEMY_RATIO, entry["kind"], entry["top"], entry["telegraph"]])
-		_t.check("fast list rows carry a telegraph %s" % pilot["id"], fast.all(func(e): return e["telegraph"] != ""))
+			print("  above %.1fx cruise: %s top %.1f m/s, telegraph %s" % [Roster.FAST_ENEMY_RATIO, entry["kind"], entry["top"], entry["telegraph"] if entry["telegraph"] != "" else "none"])
+		_t.check("fast list rows carry a telegraph %s" % pilot["id"], fast.all(_has_telegraph))
 	# Positive control: a planted kind faster than any cruise must be listed.
 	var planted := speeds.duplicate()
 	planted["planted_fast"] = {"travel": 99.0, "burst": 99.0}
 	var listed := _above(planted, 14.0 * Roster.FAST_ENEMY_RATIO).any(func(e): return e["kind"] == "planted_fast")
 	_t.check("planted fast kind is listed", listed)
+	# Negative control: a fast kind with no roster row has no telegraph, and the predicate must fail it.
+	var untelegraphed := _above(planted, 14.0 * Roster.FAST_ENEMY_RATIO).filter(func(e): return e["kind"] == "planted_fast")
+	_t.check("planted fast kind without a telegraph fails the predicate", untelegraphed.size() == 1 and not _has_telegraph(untelegraphed[0]))
+
+
+func _has_telegraph(entry: Dictionary) -> bool:
+	return String(entry["telegraph"]) != ""
 
 
 func _above(speeds: Dictionary, limit: float) -> Array:
@@ -132,7 +139,7 @@ func _above(speeds: Dictionary, limit: float) -> Array:
 	for kind in speeds:
 		var top: float = maxf(speeds[kind]["travel"], speeds[kind]["burst"])
 		if top > limit:
-			var tele := "none"
+			var tele := ""
 			if Roster.has(kind):
 				var t: int = int(Roster.ROWS[kind].get("telegraph", -1))
 				if t >= 0:
