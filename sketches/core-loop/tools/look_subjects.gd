@@ -44,6 +44,11 @@ const CGE_BALL_REASON := "the ball is the subject: it stays under the camera tar
 # ball is pinned beside the body.
 const WARDEN_BODY_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZERO, 62.0, "warden_bounds"], ["boss_high", Vector3(-1.04, 1.4709, 1.04), Vector3.ZERO, 62.0, "warden_bounds"],
 	["boss_low", Vector3(-2.0, -0.25, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"]]
+# The mind's boss_low eye sits level with the bounds centre (y 0.1 radii, not -0.25): from below,
+# the camera-facing objective badge above the hand projected onto the middle fingertip (w13 KF8-CAM
+# fix round). The mind's other three cameras are WARDEN_BODY_CAMERAS unchanged.
+const WARDEN_BODY_MIND_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZERO, 62.0, "warden_bounds"], ["boss_high", Vector3(-1.04, 1.4709, 1.04), Vector3.ZERO, 62.0, "warden_bounds"],
+	["boss_low", Vector3(-2.0, 0.1, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"]]
 const WARDEN_BODY_BALL := {"boss_high": Vector3(6.4, 0, 6.4), "boss_low": Vector3(0, 0, 9.0)}
 const WARDEN_BODY_BALL_REASON := "the ball stands on the floor beside the body, off the eye-to-target line, so it stays small"
 
@@ -289,7 +294,7 @@ const SUBJECTS := {
 	# anchor the hand's middle 4 m under the Warden's centre.
 	"warden_body_reactor": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "scale": true, "tick": 200, "cameras": WARDEN_BODY_CAMERAS, "ball": WARDEN_BODY_BALL, "ball_reason": WARDEN_BODY_BALL_REASON},
 	"warden_body_swarm": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "scale": true, "tick": 230, "cameras": WARDEN_BODY_CAMERAS, "ball": WARDEN_BODY_BALL, "ball_reason": WARDEN_BODY_BALL_REASON},
-	"warden_body_mind": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "scale": true, "tick": 260, "cameras": WARDEN_BODY_CAMERAS, "ball": WARDEN_BODY_BALL, "ball_reason": WARDEN_BODY_BALL_REASON},
+	"warden_body_mind": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "scale": true, "tick": 260, "cameras": WARDEN_BODY_MIND_CAMERAS, "ball": WARDEN_BODY_BALL, "ball_reason": WARDEN_BODY_BALL_REASON},
 }
 
 # The order --all boots the groups in; every group a row names appears once.
