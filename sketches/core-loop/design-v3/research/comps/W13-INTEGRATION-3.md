@@ -2,7 +2,7 @@
 
 Integration memo for the coordinator, 11 October 2026, the third in the series after `W13-INTEGRATION.md` (CS-01, Risk of Rain 2 and The Binding of Isaac, "the first memo") and `W13-INTEGRATION-2.md` (CS-02 Gunfire Reborn and CS-03 Roboquest, "memo 2"). Base `4701b10`. It re-dispositions every proposal the per-note scouts drew from the four pack notes and the two cross-pack notes under Andrew's rule of 11 October, and turns each adopted borrow into a unit block, a paste block for an existing unit, or a scheduled line. Nothing here is applied: the coordinator dispatches the units and applies the paste blocks; no design source, brief, budget file or forge pack was edited.
 
-Path conventions are memo 2's (its line 5). Paths starting `src/`, `tools/`, `tests/`, `assets/` and `design-v3/` are under `sketches/core-loop/`, except `tools/asset-forge/`, which is at the repository root, and `scripts/`, which is the repository's own. `comps/` means `sketches/core-loop/design-v3/research/comps/`. `K-UNITS.md` and `P-UNITS.md` are the gitignored briefs at `artifacts/local/alpha/push/w13/design/` in the candidate checkout. `decisions.tsv:473c` to `:482c` are rows on the candidate after this base (this base's `docs/decisions.tsv` ends at line 472). Names from the four games are evidence labels only; nothing from them (code, text, layout, art) enters the repo (`docs/project/ASSETS.md:23`). Every number the notes measured is a start value the unit's lab line tests, never a copied constant.
+Path conventions are memo 2's (its line 5). Paths starting `src/`, `tools/`, `tests/`, `assets/` and `design-v3/` are under `sketches/core-loop/`, except `tools/asset-forge/`, which is at the repository root, and `scripts/`, which is the repository's own. `comps/` means `sketches/core-loop/design-v3/research/comps/`. `K-UNITS.md` and `P-UNITS.md` are the gitignored briefs at `artifacts/local/alpha/push/w13/design/` in the candidate checkout. `decisions.tsv:473c` to `:487c` are rows on the candidate after this base (this base's `docs/decisions.tsv` ends at line 472). Names from the four games are evidence labels only; nothing from them (code, text, layout, art) enters the repo (`docs/project/ASSETS.md:23`). Every number the notes measured is a start value the unit's lab line tests, never a copied constant.
 
 ## 1. The rule and what changed
 
@@ -12,15 +12,15 @@ Two terms are used throughout. **This push**: the borrow rides a unit already in
 
 | Pack | Earlier memo | Earlier parked | Earlier rejected | Scout proposals | This push | Next push | Blocked | Owner | Done |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Gunfire Reborn (CS-02) | memo 2 | 7 | 3 | 52 | 7 | 37 | 0 | 3 | 5 |
-| Roboquest (CS-03) | memo 2 | 7 | 3 | 54 | 19 | 26 | 0 | 5 | 4 |
-| Risk of Rain 2 (CS-01) | first memo | 4 | 1 | 82 | 13 | 45 | 2 | 3 | 19 |
+| Gunfire Reborn (CS-02) | memo 2 | 7 | 3 | 52 | 8 | 37 | 0 | 3 | 4 |
+| Roboquest (CS-03) | memo 2 | 7 | 3 | 54 | 19 | 27 | 0 | 4 | 4 |
+| Risk of Rain 2 (CS-01) | first memo | 4 | 1 | 82 | 16 | 45 | 2 | 3 | 16 |
 | The Binding of Isaac (CS-01) | first memo | 2 | 0 | 27 | 1 | 19 | 1 | 0 | 6 |
 | Pocket placement (cross-pack) | none | | | 15 | 0 | 11 | 0 | 0 | 4 |
 | Maps compared (cross-pack) | none | | | 3 | 0 | 1 | 0 | 0 | 2 |
-| **Total** | | **20** | **7** | **233** | **40** | **139** | **3** | **11** | **40** |
+| **Total** | | **20** | **7** | **233** | **44** | **140** | **3** | **10** | **36** |
 
-The earlier memos counted README borrow rows; this memo counts the scouts' proposals, finer grained, so the columns compare outcomes, not rows. Of 233 proposals, 179 are adopted and scheduled (40 this push, 139 next push), 40 are already in code or in a merged or in-flight brief, 11 wait on Andrew under rule (c) and 3 are blocked by an ADR line. The new work is 56 units on lane S (section 3), PD-PROV promoted into this push, and paste blocks for 12 existing units (KF2 to KF4, KE1, KE4, KE6, KE8, KE9, KE10, PC-POOL, PD-INT, PE-INT), the PC and PD common rules, both dispatch tables and the forge pack (section 4).
+The earlier memos counted README borrow rows; this memo counts the scouts' proposals, finer grained, so the columns compare outcomes, not rows. Of 233 proposals, 184 are adopted and scheduled (44 this push, 140 next push), 36 are already in code or in a merged or in-flight brief, 10 wait on Andrew under rule (c) and 3 are blocked by an ADR line. The new work is 58 units on lane S (section 3), PD-PROV promoted into this push, and paste blocks for 18 existing units (KF2 to KF4, KE1, KE4, KE6, KE8, KE9, KE10, KD1 to KD6, PC-POOL, PD-INT, PE-INT), the PC, PD and PE common rules, both dispatch tables and the forge pack (section 4).
 
 Where each earlier parked or rejected row went:
 
@@ -38,7 +38,7 @@ Where each earlier parked or rejected row went:
 | memo 2 row 26, forge budget point | parked | SQ18 (conditional on the C5b sums) |
 | memo 2 row 27, closable sockets | parked | SQ13, SQ15 |
 | memo 2 row 29a, secret tint | parked | SQ16 |
-| memo 2 row 30b, scattered-mark objective | parked | Owner item 8 (Q-P38) |
+| memo 2 row 30b, scattered-mark objective | parked | SQ5, an optional objective kind that never gates the exit (Q-P38 stays open) |
 | memo 2 row 31a, fast wind-up bands | rejected | SQ1 band classes, every kind still at or above the 0.4 s floor |
 | memo 2 row 31e, one stagger window | parked | SQ3, pack kinds only; the Warden keeps its 4.0 s posture break |
 | memo 2 row 31f, elite flat stat tier | rejected | SG6's tier-1 row |
@@ -69,20 +69,20 @@ One row per scout proposal, merged where two notes propose one system (every mer
 | gunfire/scrolls-and-synergies:burden-count-payout | A payout part reads the burden count through the ceiling curve `1 - 1/(1 + a*x)` (`comps/README.md:55`), cap shown on the part and the build screen | next push | SG5 | C | Burden sweep step 2: payout below its cap at every count, step from n to n+1 never grows, net power at 10 burdens at most 3x the zero-burden build | SG4 |
 | gunfire/enemies-and-bosses:affix-named-on-enemy; gunfire/enemies-and-bosses:act-scaled-constants; roboquest/enemies-and-telegraphs:elite-flat-stat-tier | An elite carries one added behaviour plus one stat change and its name lists both; the stat steps in three published values per world (note shape: -40/-50/-60 percent defence, 10/20/30 percent shield; Scrapkeep sets its own), never health from the dial; a flat elite stat tier exists only on the opt-in run tier | next push | SG6 | G | 50 solo spawns per affix per world step: telegraph lead at least 0.4 s; exactly 1 behaviour and 1 stat per name; 3 published values per constant, monotone, at or under the cap; each affixed row still passes the no-reskins test (`src/combat/roster.gd:12-15`) | KE6, KE9 |
 | gunfire/enemies-and-bosses:boss-phase-one-new-read | Each Warden gate adds exactly one new mechanic or ends one plating state; the gates are the existing posture events (`engaged`, `stagger`, `chunk_1` to `chunk_3`, `broken`) | this push | KF2 to KF4 (paste 4a) | A | Per kind, stepped bot run over 20 seeds: each gate activates exactly 1 new mechanic; posture band unchanged (grown median 25 to 45 s) | KF1 (merged) |
-| gunfire/enemies-and-bosses:threat-rating-per-enemy | One coarse integer threat number per enemy, read as the director card cost | done | KE9 card `cost` (`K-UNITS.md:346`) | F | KE9's credit and posture checks | KE6 |
-| gunfire/enemies-and-bosses:telegraph-marker-vocabulary | Marker by meaning (circle for area, line for lunge, text for a delayed devour), the same geometry as the damage shape, applied to every pack kind | next push | SQ1 | C | 50 solo spawns per pack kind: one marker class per attack; overlap at least 95 percent | KF2 (creates `telegraph_timing_test.gd`) |
+| gunfire/enemies-and-bosses:threat-rating-per-enemy | One coarse integer threat number per enemy, read as the director card cost | this push | KE9 card `cost` (`K-UNITS.md:346`) | F | KE9's credit and posture checks | KE6 |
+| gunfire/enemies-and-bosses:telegraph-marker-vocabulary | Marker by meaning (circle for area, line for lunge, text for a delayed devour), the same geometry as the damage shape, applied to every pack kind | next push | SQ1 | C | 50 solo spawns per pack kind: one marker class per attack; overlap at least 95 percent | KF2 report (SQ1 writes its own `telegraph_timing_pack_test.gd`, `decisions.tsv:486c`) |
 | gunfire/enemies-and-bosses:telegraph-lead-and-overlap-lab-measure; roboquest/enemies-and-telegraphs:telegraph-shape-matches-damage | Lead from telegraph start to damage at least the reaction floor (target 0.4 s), telegraph and damage areas overlap at least 95 percent, zero archetypes outside (`comps/gunfire/enemies-and-bosses.md:89`) | this push | KF2 to KF4 overlap line (paste 4a); pack kinds in SQ1 | A | 50 spawns per archetype: lead at least 0.4 s, overlap at least 95 percent | KF1 (merged) |
 | gunfire/enemies-and-bosses:three-defence-bars | Armour, shield and health read as three bars with one rule each (armour breaks at zero and does not regenerate; shield regenerates after a delay) | this push | SG7 | A | Each defence state shows exactly one bar class, each class one regen rule, zero shared colours | None |
 | gunfire/enemies-and-bosses:elite-in-pocket-clears-pocket | An elite sits in an optional pocket; killing it clears the pocket's remaining enemies | next push | SQ5 (elite arena kind) | F | 20 seeds per stage: zero pocket enemies alive 1 s after the elite dies; elite arrivals per stage at most 3 | KD8, KE6 |
-| gunfire/heroes-and-ascensions:identity-weighted-pools; roboquest/classes-and-perks:class-weighted-offers; roboquest/classes-and-perks:neutral-repeat-shelf | Each pilot draws from a pool weighted to its own kit (declared share 60 to 80%) plus a neutral fallback shelf of flat small parts (sources 6% to 12%) with a repeat cap | next push | SQ19 | F | 200 draws per pilot, greedy and random bot (`comps/roboquest/classes-and-perks.md:82`, `comps/gunfire/heroes-and-ascensions.md:87`): weighted share in 60 to 80%; top-10 overlap between any two pilots under 50%; movement share at most 15%; neutral repeat cap held; each pilot wins at least 3 of seeds 1 to 4 | PC-POOL |
+| gunfire/heroes-and-ascensions:identity-weighted-pools; roboquest/classes-and-perks:class-weighted-offers; roboquest/classes-and-perks:neutral-repeat-shelf | Each pilot draws from a pool weighted to its own kit (declared share 60 to 80%) plus a neutral fallback shelf of flat small parts (sources 6% to 12%) with a repeat cap | next push | SQ19 | F | 200 draws per pilot, greedy and random bot (`comps/roboquest/classes-and-perks.md:82`, `comps/gunfire/heroes-and-ascensions.md:87`): weighted share in 60 to 80%; top-10 overlap between any two pilots under 50%; each pilot's two dominant offer buckets differ from every other pilot's pair; movement share at most 15%; neutral repeat cap held; each pilot wins at least 3 of seeds 1 to 4 | PC-POOL |
 | gunfire/heroes-and-ascensions:movement-out-of-pool; roboquest/classes-and-perks:movement-in-kit-not-pool | The five shared mobility parts (`grip_tread`, `live_line`, `vent_baffle`, `spring_shims`, `drop_weight`, `src/build/parts.gd:52-74`) become class parts or non-movement mods | next push | PC-POOL (paste 4c, scheduled) | E | `parts_pool_movement_test`: zero shared parts with a movement mod in 200 offer draws per pilot (5 of 18 today) | PC-PACK |
 | gunfire/heroes-and-ascensions:three-level-replace | Parts pick in three levels, a higher level replacing the lower | next push | SG15 | G | Offer draws with level state: no offer of a part at level 3; each pilot wins at least 3 of seeds 1 to 4 | SQ19 (same file) |
 | gunfire/heroes-and-ascensions:forced-or-skip-late-offer | A late-world offer the player takes or skips, never rerolled, at safe grounded moments on depth-4 offers | next push | SG8 | D | 200 draws per pilot: skip always available and free; no offer reappears after a skip within the run | PC-SABLE to PC-CANNON (depth-4 nodes) |
 | gunfire/heroes-and-ascensions:run-start-pick-of-three | At run start the player takes one of three drawn small options, one reroll, from the pilot's own list | this push | SG9 | A | 200 run starts per pilot: time to first input unchanged within noise; no option raises a movement knob; each of 3 options taken at least once | None (B5 merged) |
-| gunfire/run-pacing-and-economy:price-ladder-by-stage | One reference item's shelf price non-decreasing across a region's stages and jumping at each region boundary (price to income 0.5 to 2.0, 3 regions, 20 seeds, `comps/gunfire/run-pacing-and-economy.md:104`) | owner | Section 6 item 4 | | | Andrew: prices are open (`BIBLE.md:513`; `adr/TADR-010-open-stages-and-event-director.md:63`) |
+| gunfire/run-pacing-and-economy:price-ladder-by-stage | One reference item's shelf price non-decreasing across a region's stages and jumping at each region boundary (price to income 0.5 to 2.0, 3 regions, 20 seeds, `comps/gunfire/run-pacing-and-economy.md:104`) | owner | Section 6 item 4 (the numbers); SG16 measures today's prices now | B | SG16's price-to-income report | Andrew: prices are open (`BIBLE.md:513`; `adr/TADR-010-open-stages-and-event-director.md:63`) |
 | gunfire/run-pacing-and-economy:opt-in-tier-pays-more; gunfire/scrolls-and-synergies:enhanced-variant-keeps-slot | A player-chosen harder run tier, unlocked by a win, raises threat and pay together, shown before the choice; on it a part may come as an enhanced variant (same slot and rarity, bigger bonus or smaller downside, one version held) | next push | SG10 | G | Park table at tier 0 and tier 1, 20 seeds each: tier 1 raises both threat and pay on every seed; pay gain under its cap; tier 0 numbers unchanged | KE9, SG4 |
 | gunfire/run-pacing-and-economy:separate-hp-damage-dials; gunfire/stage-anatomy:difficulty-adds-to-same-map; roboquest/enemies-and-telegraphs:three-axis-scaling; ror2/director-and-difficulty:boss-scaling-by-dial | Enemy health and enemy damage on two named capped dials with a per-world step, aggression as its own axis, route unchanged across tiers; active only on the opt-in tier, so tier 0 keeps `hp_scale()` equal to the stage threat (`src/world/director.gd:168-170`); Warden scaling by the dial (note shape `1 + D/2.5` health, `1 + D/30` damage) also opt-in only | next push | SG11 | H | Each axis swept alone: moves only its own quantity, never above its cap; hp and damage curves independent (one change leaves the other bit-identical); route and pocket list identical across tiers; tier 0 equals today | SG10, KE6 |
-| gunfire/run-pacing-and-economy:meta-options-tree; roboquest/stage-anatomy:secret-reward-unlocks-later | A between-run tree of small non-power head starts (an extra reroll, a pre-shown shelf, a pocket key); a hidden pocket may hold a permanent option unlock. Each node opens on a one-run accomplishment, not a meta currency, because `BIBLE.md:513` bars "replacement collection thresholds" and "invented prices"; the currency form is section 6 item 4 | next push | SG12 | C | Five simulated runs: no node row carries a price, cost or stat key that changes combat power; level equals nodes opened; the profile round-trips; no stat field differs from a fresh profile | B6, KD8 |
+| gunfire/run-pacing-and-economy:meta-options-tree; roboquest/stage-anatomy:secret-reward-unlocks-later | A between-run tree of small non-power head starts (an extra reroll, a pre-shown shelf, a pocket key); a hidden pocket may hold a permanent option unlock. Each node opens on a one-run accomplishment, not a meta currency, because `BIBLE.md:513` bars "replacement collection thresholds" and "invented prices"; the currency form is section 6 item 4 | next push | SG12 | B | Five simulated runs: no node row carries a price, cost or stat key that changes combat power; level equals nodes opened; the profile round-trips; no stat field differs from a fresh profile | B6, KD8 |
 | gunfire/run-pacing-and-economy:meta-start-cogs-discount-nodes | Permanent starting cogs (100 to 500), double-cog chance, 5 to 25% shop discount | owner | Section 6 item 5 | | | Bible amendment (`BIBLE.md:475`, `:586`); default keep |
 | gunfire/run-pacing-and-economy:reset-run-currency | Run currency resets at run end | done | `src/core/run_state.gd:159` (`cogs = 0`) | | Two runs: cogs 0 at every run start over 20 seeds | None |
 | gunfire/run-pacing-and-economy:optional-graded-challenge-pocket; gunfire/stage-anatomy:four-kind-arena-ladder; roboquest/stage-anatomy:pocket-kind-content-bundles; pocket-placement:content-bundle-per-pocket-kind; pocket-placement:pocket-grammar-ladder | Pocket kinds as a ladder: movement test (a course, no enemies), arena, elite arena, objective under a limit (about 60 s); each kind a fixed bundle (arena: spawners, then heal and chest on clear); the reward tier shown on the stand before commit; never gating the exit | next push | SQ5 | F | Reward tier rises across the four kinds on every stage file; shown rarity equals paid rarity over 20 seeds; zero main-route gating; the exit opens with every pocket skipped | KD8, KE1, KE6 |
@@ -95,10 +95,10 @@ One row per scout proposal, merged where two notes propose one system (every mer
 | gunfire/stage-anatomy:hazards-off-on-clear | A pocket arena's own traps switch off for good when cleared; the crew-repair use waits for the crew | next push | SQ5 | F | Zero hazard damage in a pocket after its clear in 100% of seeded runs; each authored arena carries at least one hazard that switched off | KD1 to KD6, KE1 |
 | gunfire/weapons-and-inscriptions:paired-part-partner-shown | A paired part shows its missing partner | done | `src/build/parts.gd:374-382` | | Pair margin folds into SG14 | None |
 | gunfire/weapons-and-inscriptions:bot-as-pair-partner | A crew bot may be the pair partner; the one SPIL-9 is the only partner today | next push | SR16 | after alpha | Pair margin 15% to 40% with a companion partner | Crew ruling (`decisions.tsv:476c`) |
-| gunfire/weapons-and-inscriptions:fixed-price-upgrade-with-cap | A scrap upgrade at a fixed visible price per step with a hard cap (note: 50 to 600 copper per level, 2 per visit; not copied) | owner | Section 6 item 4 | | | Andrew: prices are open (`BIBLE.md:513`) |
+| gunfire/weapons-and-inscriptions:fixed-price-upgrade-with-cap | A scrap upgrade at a fixed visible price per step with a hard cap (note: 50 to 600 copper per level, 2 per visit; not copied) | owner | Section 6 item 4 (the numbers); SG16 measures today's prices now | B | SG16's price-to-income report | Andrew: prices are open (`BIBLE.md:513`) |
 | gunfire/weapons-and-inscriptions:slot-growth-sweep-arm | Per milestone: slot count and best legal set DPS on a fixed dummy, pair met and missing (`comps/gunfire/weapons-and-inscriptions.md:93`) | next push | SG14 | E | (a) slots never decrease and reach their maximum at the last milestone; (b) paired beats unpaired by 15% to 40%; (c) last best set within 6x of the first | PC-PACK, SR4 |
 | gunfire/production-budgets:headless-budget-audit; roboquest/production-budgets:headless-budget-audit; ror2/production-budgets:headless-budget-audit; roboquest/production-budgets:texture-ceiling-and-exception; ror2/production-budgets:foe-bones-40 | One headless audit loads every promoted asset and prints triangles, bones, clips, longest clip and texture side by category, median and p90 beside the three-game table, a per-whole-character sum column, a texture exception field above 2,048, and a foe bone check at 40; fails on an empty category | this push | SQ17 | A | Zero assets over their category cap; every category non-empty with a printed nonzero count; median and p90 printed (`comps/ror2/production-budgets.md:137`) | None (reads `tools/asset_budgets.json`, edits nothing) |
-| gunfire/production-budgets:per-pilot-sum-c5b; roboquest/production-budgets:per-pilot-sum-in-pd-report | Each PD pilot reports base shell, each heft layer, pilot body, total tris and draws at classes I, III and V; worst case by caps 6,476 + 4 x 1,500 + 4,600 = 17,076 tris | this push | PD C5b (paste 4d); PD-INT fallback line | A | Six pilots, three classes, inspect status pass with nonzero counts; a class V total over 16,000 tris stops the forge delta | PD fix round 2 (in flight) |
+| gunfire/production-budgets:per-pilot-sum-c5b; roboquest/production-budgets:per-pilot-sum-in-pd-report | Each PD pilot reports base shell, each heft layer, pilot body, total tris and draws at classes I, III and V; worst case by the measured neutral shell plus layer and pilot caps 6,476 + 4 x 1,500 + 4,600 = 17,076 tris (`W13-INTEGRATION-2.md:63`; the shell cap itself is 11,000) | this push | PD C5b (paste 4d); PD-INT fallback line | A | Six pilots, three classes, inspect status pass with nonzero counts; a class V total over 16,000 tris stops the forge delta | PD fix round 2 (in flight) |
 | gunfire/production-budgets:hero-bones-low-target; ror2/production-budgets:hero-band-80-bones; gunfire/production-budgets:enemy-class-bands; ror2/production-budgets:foe-class-widen; gunfire/production-budgets:texture-and-weapon-class; ror2/production-budgets:pickup-class; ror2/production-budgets:pickup-bones-8; roboquest/production-budgets:second-budget-point-delta4 | The forge pack proposal of memo 2 section 3f made live after the sums: hero band from measured class V sums with an 80-bone ceiling (pilots keep the 25-bone rig); bosses get a bone cap above ordinary enemies; a held-item class above prop (Gunfire weapon median 420, p90 3,753) and a pickup class 70 to 2,200 tris, 8 bones; enemy class cap moves only when a member exceeds 1,100 | next push | SQ18 (conditional) | C | Audit rows per class non-empty; zero assets over the new caps; no class edited without a measured member | SQ17, C5b sums reported, SQ4 |
 | gunfire/production-budgets:clip-length-cap; ror2/production-budgets:gameplay-clip-3p5s; ror2/production-budgets:clip-count-50 | Gameplay clips capped at about 3.5 s with a named boss exception (Gunfire boss p90 5.20 s); at most 50 clips per hero | next push | SQ17 clip column, run as a PE-INT acceptance line (paste 4d) | E | Zero non-boss clips over 3.5 s; boss exceptions listed by name; every hero at or under 50 clips; counts nonzero | PE-0 to PE-CANNON (P-UNITS wave P-E) |
 
@@ -106,34 +106,34 @@ One row per scout proposal, merged where two notes propose one system (every mer
 
 | Ids | What, with the note's numbers | Disposition | Lands in | Wave | Lab measure and pass | Dependency |
 | --- | --- | --- | --- | --- | --- | --- |
-| roboquest/classes-and-perks:perk-pairs-tree-children | Pick one, unlock two: every nonterminal node has two children | done | `BIBLE.md:65`, `src/core/upgrade_tree.gd` | | Every pilot reaches a depth-four endpoint with both bots | None |
+| roboquest/classes-and-perks:perk-pairs-tree-children | Pick one, unlock two: every nonterminal node has two children | done | `BIBLE.md:65`, `src/core/upgrade_tree.gd`; SQ19 runs the endpoint check | F | Every pilot reaches a depth-four endpoint with both bots (`comps/roboquest/classes-and-perks.md:82` (d)) | None |
 | roboquest/classes-and-perks:cooldown-refund-from-combat; roboquest/movement-and-feel:combat-cooldown-refunds | Hits landed and damage taken shorten the mobility or Shift cooldown by 1 to 2 s on 8 to 15 s cooldowns, per-pilot cap, shown on the cooldown chip | this push | SQ6 | A | Per pilot, scripted hits: each refund 1 to 2 s; no effective Shift cooldown under half its base; no mobility at 100% uptime; posture bands unchanged | None (`ability_state.gd:320` already refunds) |
 | roboquest/classes-and-perks:baseline-asymmetry-ratios | Each pilot's baseline stated as a ratio to the others (for example one at double another's health, the lighter growing more slowly), tuned in the lab | next push | SQ8 | E | 200 bot runs: ratios inside the declared tolerance; every pilot wins at least 3 of seeds 1 to 4; band tests unchanged | PC-PACK |
 | roboquest/classes-and-perks:drone-partner-as-crew-role; roboquest/stage-anatomy:trade-pocket-workbench; ror2/companions:scrap-bot-crew; ror2/companions:crew-growth; ror2/companions:crew-repair-revive; ror2/progression-and-music:crew-voice-stems | The scrap-bot crew: up to three persistent bots (guard, repair, harvest) as driver lists with their own motifs, a pocket workbench, growth from the run's tally with a per-role allow-list and two-fork trees (no 2^n curve), repair for scrap, a downed bot as a later rescue, a stem per acting bot | next push | SR16 | after alpha | Crew of three through three stage loads, owner killed in stage two (`comps/ror2/companions.md:157`): bots exist after each load; stalled within 1 s; repair spends exactly the declared scrap; zero bark mismatches in 100 events | Alpha merge and the Bible section 6 amendment by ADR (`decisions.tsv:476c`) |
-| roboquest/enemies-and-telegraphs:four-field-telegraph-record | Every enemy attack has one record: pre-shoot, recovery, cooldown, radius; Roboquest bands as starts (burst 0.25 to 0.75 s, projectile 0.75 s, ray 1 to 2.5 s, recovery 0.75 s), checked against a 0.4 s floor | this push | KF2 to KF4 (paste 4a); pack kinds in SQ1 | A | 50 runs per attack on a stationary dummy (`comps/roboquest/enemies-and-telegraphs.md:110`): pre-shoot at least 0.4 s; overlap at least 95 percent | KF1 (merged) |
+| roboquest/enemies-and-telegraphs:four-field-telegraph-record | Every enemy attack has one record: pre-shoot, recovery, cooldown, radius; Roboquest bands as starts (burst 0.25 to 0.5 s, max 0.75 s, `comps/roboquest/enemies-and-telegraphs.md:59`; projectile 0.75 s, ray 1 to 2.5 s, recovery 0.75 s), checked against a 0.4 s floor | this push | KF2 to KF4 (paste 4a); pack kinds in SQ1 | A | 50 runs per attack on a stationary dummy (`comps/roboquest/enemies-and-telegraphs.md:110`): pre-shoot at least 0.4 s; overlap at least 95 percent | KF1 (merged) |
 | roboquest/enemies-and-telegraphs:fast-windup-bands-by-class; roboquest/enemies-and-telegraphs:single-recovery-rule | Short wind-up classes (area burst 0.25 to 0.5 s, projectile 0.75 s, ray 1 to 2.5 s) as a declared per-kind choice above the floor; one lab-tuned recovery for ordinary attacks (Roboquest median 0.75 s), Warden attacks on an exception list | next push | SQ1 | C | Each pack kind inside its class band or logged; none under 0.4 s; recovery inside the stated band; each exception listed | KF2 report |
-| roboquest/enemies-and-telegraphs:simultaneous-attacker-cap | A cap on enemies in WARN or LIVE at once, Warden exempt; trigger start more than 6 | next push | SQ2 | G | 20 seeded encounters at the top threat step: the count never exceeds the cap, zero violations | KE9 (peak report) |
+| roboquest/enemies-and-telegraphs:simultaneous-attacker-cap | A cap on enemies in WARN or LIVE at once, Warden exempt; trigger start more than 6 (memo 2's assumption, `W13-INTEGRATION-2.md:303`, not the note's) | next push | SQ2 | G | 20 seeded encounters at the top threat step: the count never exceeds the cap, zero violations | KE9 (peak report) |
 | roboquest/enemies-and-telegraphs:universal-stagger-window | One interrupt window for ordinary pack kinds (Roboquest 1.25 s, impact resistance as the dial); the Warden keeps `STAGGER_SECONDS` 4.0 (`src/combat/boss_posture.gd:17`); a stagger never stalls the ball | this push | SQ3 | A | Every knock over the interrupt speed (`src/combat/counter.gd:151`) interrupts; window equal across pack kinds within one tick; zero ball stalls | None (KF1b merged) |
 | roboquest/enemies-and-telegraphs:respawn-avoid-last-kind; roboquest/enemy-design-grammar:respawn-avoids-last-type | Arrivals less likely to repeat the kind just killed; the pack-id repeat ban exists (`src/world/director.gd:293`), the kind weight does not | next push | KE9 (paste 4b) | F | 20 seeds x 30 stepped minutes: repeat-kind rate below the no-rule baseline on every seed | KE6 |
 | roboquest/enemies-and-telegraphs:free-base-meshes-for-enemy-chassis; roboquest/enemy-design-grammar:cc0-base-meshes; roboquest/production-budgets:free-base-mesh-shortlist | Start the first forge enemy family from a CC0 base (Quaternius first), reshaped, with a provenance sidecar | owner | Section 6 item 1 | | One base reshaped under the 1,100-tri enemy cap; blind silhouette at least 18 of 20; sidecar complete | Andrew's yes per download |
 | roboquest/enemy-design-grammar:chassis-class-column; roboquest/enemy-design-grammar:threat-feature-is-warning; roboquest/movement-and-feel:player-to-enemy-speed-ratio | Roster rows gain a chassis class, movement class and one threat feature that is also the warning; a speed table states each pilot's cruise against the median enemy speed (source near 2.35x) and lists kinds faster than 1.2x cruise | this push | SQ4 | A | 20 stills at game camera, three reviewers: at least 18 of 20 named for class and threat feature; column on 19 of 19 rows; every kind above 1.2x cruise listed with its telegraph row | None |
 | roboquest/enemy-design-grammar:one-signature-per-boss | One signature mechanic per Warden and miniboss that changes its arena or rules; time to kill across Wardens within a lab-set spread (start +/-25 percent of the median) | this push | KF2 to KF4 and KE4 (paste 4a, 4b) | A | Exactly one named signature per kind; bot time-to-kill spread inside the band | KF1 (merged) |
-| roboquest/enemy-design-grammar:family-budget-bands; roboquest/enemy-design-grammar:proportion-ratios; roboquest/enemy-design-grammar:forge-recipe; roboquest/production-budgets:per-family-bands | Report bands per chassis family (bones median 16 pod and airborne, 24 labourer, 37 small walker, 46 heavy, 54 ground walker), proportion ratios as lab-config starts, and a from-scratch forge recipe (base, chassis, one lens as threat feature, band); never an edit to the 1,100-tri enemy cap | next push | SQ18 | C | Every enemy kind inside its lab-config band; zero edits to the enemy class cap; one from-scratch family within band and 18 of 20 blind stills | SQ17, SQ4 |
+| roboquest/enemy-design-grammar:family-budget-bands; roboquest/enemy-design-grammar:proportion-ratios; roboquest/enemy-design-grammar:forge-recipe; roboquest/production-budgets:per-family-bands | Report bands per chassis family (bones median 16 pod and airborne, 24 labourer, 37 small walker, 46 heavy, 54 ground walker), proportion ratios as lab-config starts, and a from-scratch forge recipe (base, chassis, one lens as threat feature, band); never an edit to the 1,100-tri enemy cap | next push | SQ18 (recipe, bands); SQ20 (the first from-scratch family, its lab run) | C, D | Every enemy kind inside its lab-config band; zero edits to the enemy class cap; one from-scratch family within band and 18 of 20 blind stills | SQ17, SQ4 |
 | roboquest/enemy-design-grammar:base-provenance-sidecar; roboquest/production-budgets:provenance-recipe | One sidecar per fetched base: source URL and title, license name and version with the saved line, download URL, access date, file list with sizes and SHA-256, creator and attribution, commercial-use statement, pre-ship re-check | this push | PD-PROV (paste 4e, promoted) | B | A planted asset with no recipe and no provenance fails; a planted download missing its hash fails; every current asset passes | None |
-| roboquest/enemy-design-grammar:anchors-fix-class-spawner-picks | A home names a chassis class, the director picks the member | this push | KE6 (paste 4b) | E | Every home row carries a class; every spawn from a home matches it in 100 percent of seeded runs | SQ4 (class field) |
+| roboquest/enemy-design-grammar:anchors-fix-class-spawner-picks | A home names a chassis class, the director picks the member | this push | KE6 (paste 4b) | E | `director.gd` maps every home's kind to a class (no park file edit); every spawn from a home matches it in 100 percent of seeded runs | SQ4 (class field) |
 | roboquest/movement-and-feel:speed-bank-spend-window | The shared roll starts at 1.2 to 1.3x cruise and decays to cruise; a jump inside the last 25% of the decay keeps at least 90% of the burst, outside it does not; tuned per pilot so traces differ in shape | next push | SQ9 | D | Scripted roll, slide and jump per pilot: burst ratio 1.2 to 1.3; window rule holds; traces differ in shape, not only scale (`comps/roboquest/movement-and-feel.md:81` capture method stays owed) | B3, PC-SABLE, PC-RIVET (`player_ball.gd`) |
 | roboquest/movement-and-feel:buff-uptime-band | Every timed movement or speed buff states its uptime (duration over cooldown, start rule named) inside 25% to 75%; Rivet's 3 s x1.6 Overdrive Blast checked first | this push | SQ7; PC common line (paste 4c) | A | Uptime per pilot buff from the ability table: none outside 25% to 75%; each row names its cooldown start rule | None |
 | roboquest/movement-and-feel:shared-floor-distinct-mobility-slot | Shared roll, jump, harpoon, slam; each pilot's own Shift | done | `design-v3/PILOTS.md:11-18`; `tests/char_movement_test.gd` | | Existing test | None |
 | roboquest/stage-anatomy:closable-entrance-sockets; pocket-placement:closable-entrance-sockets | Each authored zone has 2 to 4 openings; a builder closes unused ones with a filler landform off the shortest route; a pocket anchor keeps exactly one | next push | SQ15 | C | 1,000 seeds per arm: pocket count 3 to 8; re-roll under 10% and at most half the fixed rate; full-visit ratio at most 3.0; on at least 95% of seeds (`comps/roboquest/stage-anatomy.md:125`) | SQ13, KC0 (merged) |
 | roboquest/stage-anatomy:secret-map-tint | An amber edge marker for a discovered hidden pocket door inside the 240 m `sight_ok` range, reusing the HUD pointers (`src/ui/edge_markers.gd:8-12`) | next push | SQ16 | B | All six stages: marker absent outside 240 m or without `sight_ok`, present inside both; none for an undiscovered door | KB8 |
-| roboquest/stage-anatomy:full-visit-ratio; maps-compared/full-visit-ratio | Shortest tour from spawn through all four pocket doors to the beacon over the spawn-to-beacon path, start at most 3.0 | done | KB8 report (in flight); gated by SR15 | | KB8 report column | None |
+| roboquest/stage-anatomy:full-visit-ratio; maps-compared/full-visit-ratio | Shortest tour from spawn through all four pocket doors to the beacon over the spawn-to-beacon path, start at most 3.0 | done | KB8 report (in flight); gated per stage by KD1 to KD6 (paste 4f) | | KB8 report column | None |
 | roboquest/stage-anatomy:elite-cap-per-stage | Elite arrivals capped at 3 per stage, lifted only by a stage modifier (today no cap, `src/world/director.gd:99-101`) | this push | KE6 (paste 4b) | E | 20 seeds x 30 stepped minutes on `--table=park`: no seed over 3 without a modifier | KE1 (KE6's own) |
-| roboquest/stage-anatomy:scattered-mark-objective | 3 to 4 marks at least 80 m apart in the far half, any order, exit open from the first mark | owner | Section 6 item 8 | | | Q-P38, exit requirements (`adr/TADR-010-open-stages-and-event-director.md:63`) |
+| roboquest/stage-anatomy:scattered-mark-objective | 3 to 4 marks at least 80 m apart in the far half, any order, an optional objective kind that never gates the exit (`comps/roboquest/stage-anatomy.md:109`) | next push | SQ5 | F | 1,000 seeded stages: 3 to 4 marks on every stage that draws the kind, each pair at least 80 m apart by path and every mark in the far half by path distance; the exit opens with zero marks taken in 100% | KE1. No Bible or ADR line bars it: TADR-010 expects one ("A timed objective, if Q-P38 selects one, counts ticks and is an objective", `adr/TADR-010-open-stages-and-event-director.md:45`); Q-P38 (`:63`) stays open for what an exit requires |
 | roboquest/stage-anatomy:difficulty-fills-same-map | Difficulty scales level, modifiers and elites without changing the route | done | `design-v3/PARK.md:363`; KE6 | | | None |
 | roboquest/weapons-and-affixes:two-layer-build; roboquest/weapons-and-affixes:tier-count-top-mechanic | A weapon-local attachment layer on each pilot's one weapon beside the player-global tree; attachment tier sets count 0 to 3 and the top tier always adds a second fire mode, shown before equipping; swaps rebuild, never stack (`BIBLE.md:552`) | next push | SQ11 | E | 1,000 weapons per category on a fixed dummy: a global perk changes DPS by a similar share on every category, within 15% of one another; removing an attachment returns DPS to baseline exactly; no tier outside its count range | PC-PACK, B2 |
 | roboquest/weapons-and-affixes:category-envelope | Each pilot weapon as an envelope of shown numbers (clip, reload, spread, range): reload within 1.2x across the six weapons, clip and spread medians each spanning at least 3x | this push | SQ10 | A | Envelope table from `src/combat/weapons.gd:32-45`: reload within 1.2x; clip and spread each span at least 3x | None |
 | roboquest/weapons-and-affixes:source-weighted-status | A status from a source built for it builds at least 2x as fast as from an incidental source (observed 0.7 against 0.3 and 0.35) | this push | PC common stacking line (paste 4c) | C | Build-up timing, built-for against incidental: at least 2x | None |
-| roboquest/weapons-and-affixes:flat-tier-price-step | Reroll and level-up of an attachment cost one flat scrap step per tier with a hard cap | owner | Section 6 item 4 | | | Andrew: prices are open (`BIBLE.md:513`) |
+| roboquest/weapons-and-affixes:flat-tier-price-step | Reroll and level-up of an attachment cost one flat scrap step per tier with a hard cap | owner | Section 6 item 4 (the numbers); SG16 measures today's prices now | B | SG16's price-to-income report | Andrew: prices are open (`BIBLE.md:513`) |
 
 ### Risk of Rain 2 (CS-01)
 
@@ -151,12 +151,12 @@ One row per scout proposal, merged where two notes propose one system (every mer
 | ror2/characters-and-feel:shake-cap-stress; ror2/characters-and-feel:melee-hitstop-never-holds-player | A global per-frame shake cap under stacked hits; hitstop only on the attacker's own melee, at most 60 ms (`SPINE_CAP_MS`, `src/presentation/juice.gd:25`), never freezing the player, never on a roll | this push | SR5 | A | 30-hit stress: peak shake under the cap every frame; zero player-movement freezes from hitstop; none on ball roll | None |
 | ror2/characters-and-feel:damage-number-shared-colour-merge | Numbers and hit effects colour from one source; numbers merge in a short window | next push | SR6 | B | Zero number and effect colour mismatches across every type and team; visible numbers under a declared cap at 20 hits per second | B2 |
 | ror2/characters-and-feel:one-move-verb-per-character | Each pilot keeps its own movement verb | done | P-UNITS movement rule (`P-UNITS.md:238`); PC-POOL | | | None |
-| ror2/companions:driver-list-data; ror2/companions:leash-stalled; ror2/companions:chirp-state-bus | The SPIL-9's modules as ordered driver rows (first passing row runs); a leash with a stalled state at the last safe spot and a delayed return near the leader; chirp, gesture and animation read one state with a per-trigger cooldown | this push | SR7 | B | Reordering two rows changes which fires with no code edit in 100 of 100 ticks; stalled within 1 s of owner loss, clears on respawn; zero mismatches in 100 events; no new combat key or health economy (`BIBLE.md:570`) | None |
+| ror2/companions:driver-list-data; ror2/companions:leash-stalled; ror2/companions:chirp-state-bus | The SPIL-9's modules as ordered driver rows (first passing row runs); a leash with a stalled state at the last safe spot and a delayed return near the leader; chirp, gesture and animation read one state with a per-trigger cooldown | this push | SR7 | C | Reordering two rows changes which fires with no code edit in 100 of 100 ticks; stalled within 1 s of owner loss, clears on respawn; zero mismatches in 100 events; no new combat key or health economy (`BIBLE.md:570`) | None |
 | ror2/companions:devices-caps | Devices: a per-kind capacity cap (note: 2, 2, 3, 4), timed refill, recall by the leash, removal on destruction | next push | SR8 | F | Deployed count never above the cap; refill and recall times match the lab values | SR7 |
 | ror2/director-and-difficulty:credit-paced-spawning; ror2/stage-anatomy:monster-credit-pair | Credit director: income `I0 * (1 + K * dial)`, cards with cost, weight, stage cap | next push | KE9 (scheduled, wave F) | F | Credits spent within 5% of the income integral over 30 stepped minutes, 20 seeds; never more than 24 alive (`comps/ror2/director-and-difficulty.md:129`) | KE6 |
-| ror2/director-and-difficulty:capped-stepped-dial | One capped stepped dial as a named constant | done | KE6 brief (`K-UNITS.md:314`) | | | KE1 |
-| ror2/director-and-difficulty:per-stage-dial-multiplier; ror2/director-and-difficulty:elite-refund; ror2/events-and-objectives:boss-credit-miniboss; ror2/events-and-objectives:squad-and-scripted-packs; ror2/stage-anatomy:enemy-home-turf; pocket-placement:interactable-exclusion | KE9 lines: a per-stage factor on the dial (1.15^k shape, readable-capped); an elite's price refunds on death; the relay miniboss budget `max(override, floor(c * sqrt(D)))`; authored activity packs bypass credits; home-region card weights; no spend inside a door ring | next push | KE9 (paste 4b) | F | Dial monotone in stage and time under its cap; refund equals price; miniboss credit monotone and sqrt-shaped; authored packs consume no credit; at least 70% of each kind's arrivals in its home region (start); zero spends inside a ring over 20 seeds | KE6 |
-| ror2/director-and-difficulty:elite-cost-multiplier | Elites as a card cost multiplier | done | KE9 brief (`K-UNITS.md:346`) | | | KE6 |
+| ror2/director-and-difficulty:capped-stepped-dial | One capped stepped dial as a named constant | this push | KE6 brief (`K-UNITS.md:314`) | E | KE6's clock-tier line | KE1 |
+| ror2/director-and-difficulty:per-stage-dial-multiplier; ror2/director-and-difficulty:elite-refund; ror2/events-and-objectives:boss-credit-miniboss; ror2/events-and-objectives:squad-and-scripted-packs; ror2/stage-anatomy:enemy-home-turf; pocket-placement:interactable-exclusion | KE9 lines: a geometric per-stage factor on the dial (start value from the lab, readable-capped; the note's constants are not copied, `comps/ror2/director-and-difficulty.md:123`); an elite's price refunds on death; the relay miniboss budget `max(override, floor(c * sqrt(D)))`; authored activity packs bypass credits; home-region card weights; no spend inside a door ring | next push | KE9 (paste 4b) | F | Dial monotone in stage and time under its cap; refund equals price; miniboss credit monotone and sqrt-shaped; authored packs consume no credit; at least 70% of each kind's arrivals in its home region (start); zero spends inside a ring over 20 seeds | KE6 |
+| ror2/director-and-difficulty:elite-cost-multiplier | Elites as a card cost multiplier | this push | KE9 brief (`K-UNITS.md:346`) | F | KE9's credit checks | KE6 |
 | ror2/director-and-difficulty:spawn-distance-bands | Arrivals pick from named distance bands and never land inside a minimum radius of the ball | this push | KE6 (paste 4b) | E | Zero arrivals inside the minimum radius over 30 stepped minutes, 20 seeds | KE1 |
 | ror2/director-and-difficulty:dial-priced-shops-gold-xp | Prices, gold and XP scaled by the time-driven dial | blocked | Section 5 | | | `adr/TADR-010-open-stages-and-event-director.md:45` |
 | ror2/director-and-difficulty:team-level-curve | An XP level curve with per-level stat growth and an ambient level | owner | Section 6 item 6 | | | Bible amendment (`BIBLE.md:432`, `:538`); default keep |
@@ -169,17 +169,17 @@ One row per scout proposal, merged where two notes propose one system (every mer
 | ror2/items-and-stacking:three-families-and-proc-coefficients | Linear, hyperbolic, capped; `proc_coeff` 1 direct, 0.2 to 0.35 child | done | `src/build/part_def.gd:56`; `P-UNITS.md:237` | | | None |
 | ror2/items-and-stacking:capped-spike-family; ror2/items-and-stacking:full-inventory-stack-sweep; isaac/items-and-synergies:build-sweep-lab-measure | A fourth rare family, `spike`, always capped at 8x base, at most one per tier; a whole-pool stack sweep 1 to 20 copies with time to kill; 10,000 random 6-part builds through the pool rules | this push | SR4 | B | (a) every ceiling stat at stack 20 under its cap with shrinking steps; (b) no spike above 8x; (c) at least 30% of builds reach 3 or more tags, zero unspecified pairs, repeats at most once per 10,000 draws (`comps/isaac/items-and-synergies.md:89`) | None |
 | ror2/items-and-stacking:per-hit-chain-mask | One bit per proc type per hit, so no type repeats in one chain | next push | SR11 | E | Five distinct sources in one hit: each fires at most once, zero same-type repeats | PC-PACK (the second chaining part ships in a PC unit) |
-| ror2/items-and-stacking:scrap-tier-economy | Scrap typed by item tier and a fixed trade-up ratio | owner | Section 6 item 4 | | | Changes what scrap is (`BIBLE.md:65`, `:513`) |
+| ror2/items-and-stacking:scrap-tier-economy | Scrap typed by item tier and a fixed trade-up ratio | owner | Section 6 item 4 (the numbers); SG16 measures today's prices now | B | SG16's price-to-income report | Changes what scrap is (`BIBLE.md:65`, `:513`) |
 | ror2/items-and-stacking:power-earns-layer-not-number; ror2/progression-and-music:release-after-clear | Power earns an added music layer, never rising master volume; after a stage clear the busiest layers release within one phrase | next push | KE10 (paste 4b) | F | Layers rise in steps over a 1 to 20 power sweep with peak level under its ceiling; release within one phrase of a clear (`BIBLE.md:755`) | KE10 |
 | ror2/progression-and-music:run-parameter-score; ror2/progression-and-music:phrase-quantizer | Threat, approach and armour parameters sampled four times per bar; changes wait for a phrase except danger | next push | KE10 (scheduled, wave F) | F | Zero values out of range and zero mid-phrase changes over 5 minutes (`comps/ror2/progression-and-music.md:106`) | KE8, B3, KB8 |
-| ror2/progression-and-music:unlocks-as-lessons | Grants teach one-run conditions, no new lifetime count above 10 | done | PC-SABLE, PC-RIVET, PC-TARN, PC-TALLY grant lines (`P-UNITS.md:289`) | | | None |
+| ror2/progression-and-music:unlocks-as-lessons | Grants teach one-run conditions, no new lifetime count above 10 | this push | PC-SABLE, PC-RIVET, PC-TARN, PC-TALLY grant lines (`P-UNITS.md:289`) | C | `grant_grammar_test` | None |
 | ror2/progression-and-music:logbook-page; ror2/progression-and-music:run-tallies | A read-only logbook page over codex entries with status and the `seen` list as the only prompt; run tallies (stages cleared, time, kills, deaths, Wardens seen) | this push | SR12 | C | Every registered entry resolves to a status and opening clears its marker; a scripted run's tallies equal its run log | None |
 | ror2/run-flow:six-beat-stage-rhythm | Six named beats (arrive, loot, find, hold, fight, leave), each with one owning module, logged with time and seed | next push | SR13 | E | 50 seeded bot runs (`comps/ror2/run-flow.md:82`): every run reaches the exit with no beat skipped; a seed replay reproduces beat timings to the frame | KB8, KE1 |
 | ror2/run-flow:weighted-destination-at-exit | A weighted draw of the next world | owner | Section 6 item 7 | | | Bible amendment (`BIBLE.md:580`); default keep |
-| ror2/run-flow:difficulty-recalc-at-stage-load | The dial recomputes once at stage load under its cap | this push | KE6 (paste 4b) | E | One recalc per stage load, no drift, 20 seeds | KE1 |
+| ror2/run-flow:difficulty-recalc-at-stage-load | The dial's stage-indexed term recomputes once at stage load under its cap; the in-stage clock tier keeps stepping | this push | KE6 (paste 4b) | E | One stage-term recalc per load, the stage term constant within a stage, 20 seeds | KE1 |
 | ror2/run-flow:seeded-fast-restart | Exit to the next stage's first control frame under the quick-restart target; a seed replays identically | next push | SR14 | F | Latency under the target the coordinator names from the register; same seed, same beat timings | KB4, KD1, SR13 |
 | ror2/stage-anatomy:one-graph-many-readers; ror2/stage-anatomy:far-quarter-spawn-by-path; ror2/stage-anatomy:objective-and-pocket-flags-baked; maps-compared/spawn-far-by-path | The baked graph, far-quarter spawn by path, `door_ok`, `line`, `sight_ok` flags | done | KB8 (in flight) | | `park_graph_test`, `park_pockets_test` | None |
-| ror2/stage-anatomy:baked-objective-eligibility; ror2/stage-anatomy:objective-first-then-spawn; isaac/floor-generation:pocket-placer-lab-measure | A `beacon_ok` flag (a flat open disc from the Warden engage ring, not RoR2's 15 m / 7 m / 20 rays); the check order beacon then spawn; a reward-to-objective median ratio at least 1.5; `full_visit_ratio` promoted to a gate | next push | SR15 | B | Beacon node passes on all six files and a planted ledge beacon fails; ratio at least 1.5 on every stage; `full_visit_ratio` at most 3.0 | KB8 |
+| ror2/stage-anatomy:baked-objective-eligibility; ror2/stage-anatomy:objective-first-then-spawn; isaac/floor-generation:pocket-placer-lab-measure | A `beacon_ok` flag (a flat open disc from the Warden engage ring, not RoR2's 15 m / 7 m / 20 rays); the check order beacon then spawn; a reward-to-objective median ratio at least 1.5; `full_visit_ratio` reported by SR15 and gated per stage by KD1 to KD6 | next push | SR15; KD1 to KD6 (paste 4f) | B, C | Beacon node passes on all six files and a planted ledge beacon fails; ratio at least 1.5 and `full_visit_ratio` at most 3.0, each gated by its stage's KD unit | KB8 |
 | ror2/stage-anatomy:pocket-door-rules; ror2/stage-anatomy:door-visible-from-main-route | Door distances and `sight_ok` | done | `design-v3/PARK.md:254-271`; KB8 | | | None |
 | ror2/stage-anatomy:detour-priced-pay | Detour sets pay | done | KD8 (in flight) | | | None |
 | ror2/stage-anatomy:pocket-credit-pool-card-draw; pocket-placement:pocket-credit-pool-and-refund; ror2/stage-anatomy:interactable-spend-after-pockets; ror2/stage-anatomy:200-seed-stage-lab-measure; maps-compared/stage-size-and-pocket-footprint | A pocket credit pool (start 150 against 400 interactable credits) priced by reward, footprint and detour, with a refund and the next anchor on a failed placement; interactable scatter after pockets outside door rings; 200-seed and size sweeps (352 to 611 m a side; a pocket about 1% of the floor) | next push | SQ14 | F | 200 seeds per template: zero credit lost; 3 to 5 pockets plus one on at least 95%; zero interactables in rings; spawn-to-objective share at least 0.6 on 95%; size sweep re-roll under 10% | SQ12, SQ13 |
@@ -190,7 +190,7 @@ One row per scout proposal, merged where two notes propose one system (every mer
 | Ids | What, with the note's numbers | Disposition | Lands in | Wave | Lab measure and pass | Dependency |
 | --- | --- | --- | --- | --- | --- | --- |
 | isaac/floor-generation:graph-anchors; pocket-placement:zone-graph-anchors | Landform zones joined by one-move crossings; degree-1 zones ranked by path distance as pocket anchors | next push | SQ13 | B | 1,000 seeded jitters: guaranteed pockets at the two costliest anchors off the shortest route on 95%; re-roll at most 20% | KB8 |
-| isaac/floor-generation:guaranteed-pockets-off-route; isaac/floor-generation:hidden-pocket-three-zones; isaac/floor-generation:seen-before-entered; isaac/pacing-and-trades:hidden-pocket; pocket-placement:door-rules; pocket-placement:detour-price-and-guaranteed-pair; pocket-placement:hidden-pocket; pocket-placement:objective-and-spawn-by-path-distance | Guaranteed pockets off route, a hidden pocket bordering three routes with a tell, every door seen first, objective then spawn by path | done | `design-v3/PARK.md:254-271`; KB8, KD8 | | `park_pockets_test` | None |
+| isaac/floor-generation:guaranteed-pockets-off-route; isaac/floor-generation:hidden-pocket-three-zones; isaac/floor-generation:seen-before-entered; isaac/pacing-and-trades:hidden-pocket; pocket-placement:door-rules; pocket-placement:detour-price-and-guaranteed-pair; pocket-placement:hidden-pocket; pocket-placement:objective-and-spawn-by-path-distance | Guaranteed pockets off route, a hidden pocket bordering three routes with a tell, every door seen first, objective then spawn by path | done | `design-v3/PARK.md:254-271`; KB8, KD8; SQ13 adds the three-zone check | C | `park_pockets_test`; SQ13: every hidden pocket borders at least 3 zones (`comps/isaac/floor-generation.md:107` (c)) | None |
 | isaac/floor-generation:chance-pockets-and-growth; pocket-placement:chance-pockets; pocket-placement:pocket-count-growth; isaac/floor-generation:large-pockets-first; pocket-placement:large-pockets-first | Chance pockets at 25% per leftover anchor; count 3 to 5 on the first stage, plus one per stage, cap 8; large pockets tried first and only where they cut no route | next push | SQ14 | F | 1,000 seeds: counts match the table; chance rate 25% within +/-3 points; zero routes cut; re-roll at most 20% | SQ12, SQ13 |
 | isaac/floor-generation:stage-pocket-modifier; isaac/pacing-and-trades:stage-modifier; pocket-placement:stage-modifier | At most one stage modifier per stage, shown before it starts, scaling pocket count or visibility or restricting anchors to the farthest few; never touches handling | next push | SI3 | G | Shown pre-stage in 100%; counts within cap; specials only in the farthest-N anchors; handling identical over 600 ticks; modifier off is byte-identical | KE7, SQ14 |
 | isaac/items-and-synergies:tag-composition-no-bespoke-pairs | Every new pair is a `synergies.gd` row | done | PC common line (`P-UNITS.md:237`) | | | None |
@@ -198,7 +198,7 @@ One row per scout proposal, merged where two notes propose one system (every mer
 | isaac/items-and-synergies:stat-cache-on-pickup | Parts declare the stat categories they touch; the cache recomputes only those on pickup and respec | next push | SI5 | F | 1,000 random builds: cached stats equal full recompute; zero recomputes per tick outside pickups and respec | PC-PACK |
 | isaac/items-and-synergies:pool-decay-multi-source | Flat weights with decay; parts in two or three sources | done | `src/build/parts.gd:429-433`, `:465` | | | None |
 | isaac/items-and-synergies:set-of-three-transformation | Three distinct parts of one set give an optional rule change shown on the mech; losing one undoes it, the discovery stays (`BIBLE.md:564`) | next push | SI6 | G | A reported completion share in the sweep; respec removes the effect and keeps the discovery; no set required to clear a route | SI4, SI5 |
-| isaac/pacing-and-trades:two-trade-families; isaac/pacing-and-trades:trade-odds-recency; isaac/pacing-and-trades:curse-pocket; isaac/pacing-and-trades:sacrifice-pocket; isaac/pacing-and-trades:odds-codex | A risk trade family (strong part for a shown run resource) closes the safe family for the run; refusing raises safe odds; trade odds x0.5 two stages after a trade and x0.25 right after; curse pockets 1 in 7 per stage with a lower-weight pool (0.2 floor); a sacrifice pocket 1 in 7 with a bump at full health; every applied modifier listed on the results screen | next push | SI1 | D | 10,000 runs of 8 stages, always-risk and never (`comps/isaac/pacing-and-trades.md:97`): mean 1.5 to 3 trade pockets; back-to-back at most 30%; closure 100%; refusing raises safe odds at least 1.2x in 80%; idle entry takes no damage in the first 2 s in 95% of 50 runs | KD8, KD1 to KD6 |
+| isaac/pacing-and-trades:two-trade-families; isaac/pacing-and-trades:trade-odds-recency; isaac/pacing-and-trades:curse-pocket; isaac/pacing-and-trades:sacrifice-pocket; isaac/pacing-and-trades:odds-codex | A risk trade family (strong part for a shown run resource) closes the safe family for the run; refusing raises safe odds; trade odds x0.5 two stages after a trade and x0.25 right after; curse pockets 1 in 7 per stage with a lower-weight pool (0.2 floor); a sacrifice pocket 1 in 7 with a bump at full health; every applied modifier listed on the results screen | next push | SI1 | D | 10,000 runs of 8 stages, always-risk and never (`comps/isaac/pacing-and-trades.md:97`): mean 1.5 to 3 trade pockets; back-to-back at most 30%; closure 100%; refusing raises safe odds at least 1.2x in 80%; idle entry takes no damage in the first 2 s in 95% of 50 runs; a skip-all policy adds zero main-route time (`:97` (e)) | KD8, KD1 to KD6 |
 | isaac/pacing-and-trades:gauntlet-clock | A stage clock that closes a door | blocked | Section 5 | | | `adr/TADR-010-open-stages-and-event-director.md:45` |
 | isaac/rooms:readable-on-entry; isaac/rooms:density-and-difficulty-dial | From the entry spot every hazard, enemy start and one safe path are visible; no hazard inside the entry radius (start: the 40 m clear ring, `design-v3/PARK.md:266`); density 60 to 70% terrain, 20 to 30% enemies, 5 to 10% pickups; difficulty 1/5/10 rising by health sum first | next push | SQ12 | D | 50 idle and 50 dodger entries per pocket (`comps/isaac/rooms.md:101`): idle takes no damage in 2 s in 95%; dodger clears at least 80% of difficulty 1 and fewer than 80% of difficulty 10 | KD1 to KD6, KD8 |
 ## 3. New unit blocks
@@ -217,7 +217,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 - **ACCEPTANCE.**
   - For every bonus on the screen the displayed pool and total equal the simulated result in a scripted build; resistance never shows above its declared cap.
   - 100 percent of part rows carry `layer` `local` or `global`; every global part names the stats it reads.
-  - A family at its cap shows the cap on the card (the cap values come from `PartDef.STACK_RULES`, `src/build/part_def.gd:56`).
+  - A family at its cap shows the cap on the card (each part's `stack_cap` read through `Stacking.value`, `src/build/part_def.gd:128-141`; `STACK_RULES` at `:56` holds only the rule names).
   - The tree card shows depth 2 for world one and depths 3 and 4 for later worlds, read from the tree data, not typed.
   - Each of the six class cards shows exactly one trade-off line; `ui_word_budget_test` still holds the fight case at 25 words or fewer (`P-UNITS.md:135`).
   - The ability chip flashes once per `cooldown_refunded` event.
@@ -262,12 +262,12 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 ### SG1 Arc mark
 
 - **GOAL.** An arc hit marks its target for a timed window in which damage from every source rises by one declared fraction, drawn on the committed geometry.
-- **SCOPE.** `src/combat/damage_door.gd` (SR1's file: one mark step in the declared order), `src/combat/combat.gd` (the arc source sets the mark; the plate's `_exposed` dictionary at `:241-245` generalizes from contact kinds, `:573`, to every source), `tests/arc_mark_test.gd` (new).
+- **SCOPE.** `src/combat/damage_door.gd` (SR1's file: one mark step in the declared order), `src/combat/combat.gd` (the arc source sets the mark as its own entry kind in the shared `_exposed` table at `:241-245`, read by the damage door for every source; plate entries keep the `CONTACT_KINDS` filter at `:573`), `tests/arc_mark_test.gd` (new).
 - **CONTEXT.** `combat.gd:240-245`, `:573` (today the plate boosts contact strikes only); `src/build/elements.gd:15` (`ELEMENTS` frost, arc, kinetic); `BIBLE.md:493` (geometry resolved once); `comps/gunfire/elements-and-fusion.md` (shock +10% for 5 s, a start value).
 - **ACCEPTANCE.**
   - Dummy marked by arc, then hit by contact, projectile, area and companion: each source's damage rises by the same declared fraction while marked and returns to base on expiry.
   - The mark's drawn shape equals the committed geometry in every frame; no extra hit is granted.
-  - The plate's existing exposure keeps its numbers (`MindAttacks.BRACE_MULT`, `combat.gd:241`).
+  - The plate's existing exposure keeps its numbers and its reach (`MindAttacks.BRACE_MULT`, `combat.gd:241`): a plate-exposed dummy hit by a projectile or an area takes base damage, so Tally's kit, which the PC units own (`P-UNITS.md:236`), does not change.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'arc_mark_test' --test 'damage_door_test' --test 'posture_bands_test' --test 'alpha_posture_bands_test'` (4 files).
 - **TIMEBOX.** 3 h.
 - **FORBIDDEN.** A second exposure table; a new element; health scaling.
@@ -392,7 +392,23 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'meta_options_test' --test 'profile_store_test' --test 'grant_grammar_test' --test 'profile_purity_test'` (4 files).
 - **TIMEBOX.** 3 h.
 - **FORBIDDEN.** A meta currency; starting cogs or discounts.
-- **Depends on.** B6, KD8. **Shares files with.** `achievements.gd` with the six PC units (rows outside their pre-seeded blocks, `P-UNITS.md:232`); `profile.gd` with SR12 (merge after it).
+- **Depends on.** B6, KD8. **Shares files with.** `achievements.gd` with the six PC units (rows outside their pre-seeded blocks, `P-UNITS.md:232`); `profile.gd` with SR12 (SG12 merges first, in wave B; SR12 follows in C).
+
+**Shop prices measured before anyone sets them.** Exact costs stay Andrew's (`BIBLE.md:513`, owner item 4), but measuring today's prices against income decides nothing, so it runs now.
+
+### SG16 Shop price-to-income report
+
+- **GOAL.** A report-only shop model logs one reference item's price and the bot's scrap income per stage across the three worlds, so owner item 4 decides on measured ratios.
+- **SCOPE.** `tools/shop_model.gd` (new: reads `PAY_SCRAP`, `src/world/activities.gd:28`, and `COG_PRICES`, `src/build/fabricators.gd:24`; writes a report under `artifacts/local/`), `tests/shop_model_report_test.gd` (new).
+- **CONTEXT.** `comps/gunfire/run-pacing-and-economy.md:104` (the lab measure: 3 regions, 20 seeds, price to income 0.5 to 2.0 as a target); `BIBLE.md:513` (costs remain open, no invented prices); `adr/TADR-010-open-stages-and-event-director.md:63`; `tests/shop_economy_test.gd`.
+- **ACCEPTANCE.**
+  - 3 worlds, 20 seeds, a fixed-skill bot: per stage the report prints the reference item's price, the scrap income and their ratio, and flags every stage outside 0.5 to 2.0 and every price that falls inside a world or does not rise at a world boundary.
+  - Reports only: zero price constants change; `shop_economy_test` green and unchanged.
+  - The test fails on a planted empty income log (a nonzero row count is required).
+- **VERIFY.** Base checks; `"$GODOT_BIN" --headless --path sketches/core-loop --script res://tools/shop_model.gd -- --seeds=1-20` (60 stage rows); `npm run sketch:smoke -- --sketch core-loop --test 'shop_model_report_test' --test 'shop_economy_test'` (2 files).
+- **TIMEBOX.** 2 h.
+- **FORBIDDEN.** Editing `activities.gd`, `fabricators.gd` or any price; proposing a number as adopted (a proposal goes to owner item 4).
+- **Depends on.** Nothing. **Shares files with.** None.
 
 ### SG13 Visible offer odds
 
@@ -443,7 +459,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 ### SQ1 Pack-kind telegraph record
 
 - **GOAL.** Every pack-kind attack has one record (pre-shoot, recovery, cooldown, radius, marker class, band class), measured against the reaction floor and its damage area.
-- **SCOPE.** `src/combat/telegraph_record.gd` (new), `src/combat/counter.gd` (ordinary attacks read `recovery` from the record; `warn_seconds` default at `:46`), `tests/telegraph_timing_test.gd` (pack-kind rows after KF4's), `tests/pack_telegraph_record_test.gd` (new), `design-v3/LEGIBILITY.md` (the marker classes and band classes beside the line memo 2 fixed at `:58`).
+- **SCOPE.** `src/combat/telegraph_record.gd` (new), `src/combat/counter.gd` (ordinary attacks read `recovery` from the record; `warn_seconds` default at `:46`), `tests/telegraph_timing_pack_test.gd` (new: pack-kind rows; the Warden kinds keep their own `telegraph_timing_<kind>_test` files, `decisions.tsv:486c`), `tests/pack_telegraph_record_test.gd` (new), `design-v3/LEGIBILITY.md` (the marker classes and band classes beside the line memo 2 fixed at `:58`).
 - **CONTEXT.** `comps/roboquest/enemies-and-telegraphs.md:110`; `comps/gunfire/enemies-and-bosses.md:89`; pack warns today: bola thrower 0.5 (`src/combat/bola_thrower.gd:34`), chaser 0.6 (`src/combat/chaser.gd:12`), mind hand 1.4 (`src/combat/mind_hand.gd:26`); `src/boss/hazard.gd:19`; Warden cycle (`src/combat/warden.gd:51-52`).
 - **ACCEPTANCE.**
   - 50 solo spawns per pack kind: lead from telegraph start to damage at least 0.4 s; telegraph and damage areas overlap at least 95 percent; zero kinds outside.
@@ -451,10 +467,10 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
   - Each kind's warn sits in its class band (area burst 0.25 to 0.5 s, projectile 0.75 s, ray 1 to 2.5 s, start) or its record logs a reason; none under 0.4 s.
   - Ordinary attacks read one recovery value (start 0.75 s); Warden attacks are on a listed exception set; the report prints each kind's recovery before and after.
   - LEGIBILITY section 2's list equals the report on every kind.
-- **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'telegraph_timing_test' --test 'pack_telegraph_record_test' --test 'enemy_counters_test' --test 'posture_bands_test' --test 'alpha_posture_bands_test'` (5 files).
+- **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'telegraph_timing_pack_test' --test 'pack_telegraph_record_test' --test 'enemy_counters_test' --test 'posture_bands_test' --test 'alpha_posture_bands_test'` (5 files).
 - **TIMEBOX.** 4 h.
 - **FORBIDDEN.** Raising or lowering a warn to fit a band without a logged reason; editing `warden.gd`.
-- **Depends on.** KF2 (creates the test file), KF3, KF4. **Shares files with.** `telegraph_timing_test.gd` (after KF4); `counter.gd` (after SQ3); `LEGIBILITY.md` (after SG7).
+- **Depends on.** The KF2, KF3 and KF4 REPORTs (each Warden kind's four-field rows, for the exception list); no KF merge, since the three kinds and SQ1 write separate test files (`decisions.tsv:486c`). **Shares files with.** `counter.gd` (after SQ3); `LEGIBILITY.md` (after SG7).
 
 ### SQ3 Pack stagger window
 
@@ -507,11 +523,25 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
   - The hero band comes from the measured class V sums; pilots keep the 25-bone rig under the 80-bone ceiling.
   - `held_item` and `pickup` each have at least one member before a cap is set, and each cap equals its largest member (the json's own rule); the enemy cap moves only if a member exceeds 1,100.
   - Family bands print per chassis (from SQ4's column) and edit no cap.
-  - The recipe names base, chassis, one lens as threat feature, band and rig size; it is validated by re-describing one existing enemy (the plated brute); the first new enemy batch is its lab run.
+  - The recipe names base, chassis, one lens as threat feature, band and rig size; it is validated by re-describing one existing enemy (the plated brute); SQ20 forges the first from-scratch family as its lab run.
 - **VERIFY.** `node sketches/core-loop/tools/budget_audit.mjs` (every category nonzero); `node --test scripts/budget-audit.test.mjs` (states its case count); `npm run sketch:smoke -- --sketch core-loop --test 'asset_registry_test'` (1 file); lint; fence.
 - **TIMEBOX.** 3 h.
 - **FORBIDDEN.** Any download; an enemy cap change without a member over 1,100.
 - **Depends on.** SQ17, SQ4, the six C5b sums. **Shares files with.** `asset_budgets.json` (KC0 merged); `budget-audit.test.mjs` (after SQ17).
+
+### SQ20 First from-scratch enemy family
+
+- **GOAL.** One new enemy family is forged from SQ18's recipe under the 1,100-tri enemy cap and passes the note's band and blind-still read, so the recipe has its lab run.
+- **SCOPE.** The forge's model kind (`tools/asset-forge/kinds/model/`) run with `brief.enemy.md`; the family's promoted model files at the paths the unit lists in its REPORT before the first write; `artifacts/local/` for stills and the report. **Writer.** Opus (it must locate the promote paths).
+- **CONTEXT.** `comps/roboquest/enemy-design-grammar.md:113` (the lab measure); SQ18's recipe and family bands; SQ4's `chassis` column; `tools/asset_budgets.json:3-8` (enemy 1,100 tris); owner item 1 (a CC0 base only if Andrew approves a named batch; otherwise from scratch).
+- **ACCEPTANCE.**
+  - Bones and triangles inside the band for its chassis class from SQ18's lab config; triangles at or under 1,100; the REPORT records bones, triangles, authored clips and threat-feature visibility.
+  - 20 stills at game camera distance, three readers with picks recorded before the key opens: at least 18 of 20 name the chassis class and the threat feature; zero stills with the threat feature hidden.
+  - `budget_audit.mjs` lists the family inside every enemy cap.
+- **VERIFY.** `node sketches/core-loop/tools/budget_audit.mjs` (every category nonzero); `npm run sketch:smoke -- --sketch core-loop --test 'asset_registry_test'` (1 file); the 20 stills through the look harness on card 1 and the uat runner (receipt path in REPORT); lint; fence.
+- **TIMEBOX.** 4 h.
+- **FORBIDDEN.** Any download; a roster row or any gameplay use of the family; an enemy cap change.
+- **Depends on.** SQ18, SQ4. **Shares files with.** None (new files only; the registry refold is the coordinator's at merge).
 
 **The stage anatomy and the pocket library with its draw.** The draw answers Q-P23 for pockets only, as "seeded authored encounter assembly", one of the two candidates the Bible keeps open (`BIBLE.md:580`; `adr/TADR-010-open-stages-and-event-director.md:63`); stage layout stays assembled from the run-level layout stream before entry, never by the director (`adr/TADR-010-open-stages-and-event-director.md:43`).
 
@@ -520,7 +550,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 - **GOAL.** The stage graph also bakes landform zones joined by one-move crossings and ranks degree-1 zones as pocket anchors by path distance.
 - **SCOPE.** `tools/park_graph.gd` (a zone pass), `src/world/park/park_graph.gd` (`zones()`, `anchors()`), `tests/park_zones_test.gd` (new).
 - **CONTEXT.** KB8 (`K-UNITS.md:127-143`); `comps/pocket-placement.md:62`; `comps/isaac/floor-generation.md:107`.
-- **ACCEPTANCE.** Two bakes byte-identical; over 1,000 seeded jitters of each door among its `door_ok` nodes, the guaranteed pockets sit at the two costliest anchors off the shortest route on at least 95% of seeds; re-roll rate at most 20%.
+- **ACCEPTANCE.** Two bakes byte-identical; over 1,000 seeded jitters of each door among its `door_ok` nodes, the guaranteed pockets sit at the two costliest anchors off the shortest route on at least 95% of seeds; every hidden pocket borders at least 3 zones (`comps/isaac/floor-generation.md:107` (c)); re-roll rate at most 20%.
 - **VERIFY.** Base checks; the tool twice on `park_test` and `cmp`; `npm run sketch:smoke -- --sketch core-loop --test 'park_zones_test' --test 'park_graph_test' --test 'park_pockets_test'` (3 files).
 - **TIMEBOX.** 3 h.
 - **FORBIDDEN.** Moving any authored position.
@@ -555,13 +585,13 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 ### SQ14 Pocket draw
 
 - **GOAL.** Fixed pocket slots per stage draw from the authored library through a pocket credit pool, so variety comes from library breadth while every drawn set keeps PARK.md 2.12's rules.
-- **SCOPE.** `src/world/park/pocket_draw.gd` (new: slots 3 on stage 1, plus one per stage, cap 8; weight draw from the layout stream; credit pool 150 with refund and the next anchor on a failed placement; chance pockets at 25% per leftover anchor; large pockets first; interactable scatter outside door rings), `tools/park_graph.gd` (a `--pockets=draw` arm and a size sweep), `src/world/director.gd` (the bonus side door after an objective, odds `p0/(n+1)`, from the director stream), `tests/pocket_draw_test.gd` (new).
+- **SCOPE.** `src/world/park/pocket_draw.gd` (new: slots 3 on stage 1, plus one per stage, cap 8; weight draw from the layout stream; credit pool 150 with refund and the next anchor on a failed placement; chance pockets at 25% per leftover anchor; large pockets first; interactable scatter outside door rings; candidate bonus side-door sites drawn at assembly from the layout stream), `tools/park_graph.gd` (a `--pockets=draw` arm and a size sweep), `src/world/director.gd` (after an objective the director only opens one of the pre-drawn candidate doors, odds `p0/(n+1)`, from the director stream; it never places one), `tests/pocket_draw_test.gd` (new).
 - **CONTEXT.** `comps/pocket-placement.md:62`; `comps/ror2/stage-anatomy.md:121`; `comps/gunfire/stage-anatomy.md:114`; `comps/maps-compared.md` (352 to 611 m a side; a pocket about 1% of the floor); `adr/TADR-010-open-stages-and-event-director.md:43`.
 - **ACCEPTANCE.**
   - 1,000 seeded stages: at least 8 distinct pocket sets per template; every interior drawn at least once; pocket count 3 to 8 on at least 95%; p90 over p10 detour ratio at least 2.
   - 200 seeds per template: zero credit lost after a failed placement; 3 to 5 pockets plus one hidden on at least 95%; spawn-to-objective share at least 0.6 on 95%; zero interactables in door rings.
   - Chance rate 25% within +/-3 points; zero routes cut by a large pocket.
-  - Bonus door: probability at count n equals `p0/(n+1)` within sampling error; every door inside its 0 to 30 m band and `sight_ok`; zero exits gated.
+  - Bonus door: probability at count n equals `p0/(n+1)` within sampling error; every candidate site is fixed at assembly before stage entry (`adr/TADR-010-open-stages-and-event-director.md:43`) and the director only opens one; every door inside its 0 to 30 m band and `sight_ok`; zero exits gated.
   - Every drawn set passes `park_pockets_test`'s rules.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'pocket_draw_test' --test 'park_pockets_test' --test 'park_zones_test' --test 'world_director_test'` (4 files); the draw arm at 1,000 seeds.
 - **TIMEBOX.** 5 h.
@@ -581,8 +611,8 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 
 ### SQ5 Pocket kinds ladder
 
-- **GOAL.** Pockets come in a ladder of kinds with fixed bundles and a shown reward tier: movement course, arena, elite arena, objective under a limit, round arena and ambush.
-- **SCOPE.** `src/world/activities.gd` (RULES rows `movement_course`, `arena`, `elite_arena`, `objective_limit`, `round_arena`; the ambush wave script; heal and chest on clear; a pocket's own hazards off on clear; the stand's tier shown before commit), `src/world/events/pocket_fog.gd` (new: the round arena's fog and safe zone as an event row), `tests/pocket_kinds_test.gd` (new).
+- **GOAL.** Pockets come in a ladder of kinds with fixed bundles and a shown reward tier: movement course, arena, elite arena, objective under a limit, round arena and ambush, plus an optional scattered-mark objective that never gates the exit.
+- **SCOPE.** `src/world/activities.gd` (RULES rows `movement_course`, `arena`, `elite_arena`, `objective_limit`, `round_arena`, `scattered_marks`; the ambush wave script; heal and chest on clear; a pocket's own hazards off on clear; the stand's tier shown before commit), `src/world/events/pocket_fog.gd` (new: the round arena's fog and safe zone as an event row), `tests/pocket_kinds_test.gd` (new).
 - **CONTEXT.** `activities.gd:13-46`; KD8 (`K-UNITS.md:255-269`, which forbade a `surge_run` rule as "a design unit of its own"; this is that unit); `design-v3/PARK.md:256`, `:266`; `BIBLE.md:519`; `comps/gunfire/stage-anatomy.md`, `comps/ror2/events-and-objectives.md`, `comps/isaac/pacing-and-trades.md:97`.
 - **ACCEPTANCE.**
   - The reward tier rises across movement course, arena, elite arena and objective on every stage file; the shown tier equals the paid tier over 20 seeds.
@@ -591,6 +621,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
   - Ambush: 3 waves of 1 to 5; the exit opens on clear in 100%; zero main-route placements.
   - Zero hazard damage in a pocket after its clear in 100% of seeded runs; each authored arena carries at least one hazard that switched off.
   - The objective kind is a timed pickup that counts ticks (`adr/TADR-010-open-stages-and-event-director.md:45`); the movement course has no gate; the exit opens with every pocket skipped.
+  - Scattered marks (`comps/roboquest/stage-anatomy.md:109`), over 1,000 seeded stages that draw the kind: 3 to 4 marks, each pair at least 80 m apart by path, every mark in the far half by path distance, found in any order; the exit opens with zero marks taken in 100%. The kind is optional and pays like any pocket; what an exit requires stays Q-P38 (`adr/TADR-010-open-stages-and-event-director.md:63`).
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'pocket_kinds_test' --test 'activities_test' --test 'activities_camp_test' --test 'activities_pay_test' --test 'bot_explorer_activities_test'` (5 files).
 - **TIMEBOX.** 5 h.
 - **FORBIDDEN.** Changing `PAY_SCRAP`; a pocket that holds the exit.
@@ -631,7 +662,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 - **GOAL.** Each pilot's offers lean to its own kit by a declared share, with a neutral shelf that never stalls a build.
 - **SCOPE.** `src/build/parts.gd` (`offer_pool` at `:400`: class-weighted share; neutral rows with a repeat cap), `tests/offer_weights_test.gd` (new).
 - **CONTEXT.** `parts.gd:399-415`; `comps/roboquest/classes-and-perks.md:82`; `comps/gunfire/heroes-and-ascensions.md:87`; `BIBLE.md:65`.
-- **ACCEPTANCE.** 200 draws per pilot with a greedy and a random bot: weighted share inside 60 to 80% for every pilot; top-10 most-offered overlap between any two pilots under 50%; movement share at most 15%; no neutral part over its repeat cap; a draw with no weighted part still shows a neutral choice; each pilot wins at least 3 of seeds 1 to 4.
+- **ACCEPTANCE.** 200 draws per pilot with a greedy and a random bot: weighted share inside 60 to 80% for every pilot; top-10 most-offered overlap between any two pilots under 50%; each pilot's two dominant offer buckets (weapon, skill, defence, movement) differ from every other pilot's pair (`comps/gunfire/heroes-and-ascensions.md:87`); every pilot's tree reaches an endpoint in each slot by the last milestone with both bots (`comps/roboquest/classes-and-perks.md:82` (d)); movement share at most 15%; no neutral part over its repeat cap; a draw with no weighted part still shows a neutral choice; each pilot wins at least 3 of seeds 1 to 4.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'offer_weights_test' --test 'parts_pool_movement_test' --test 'bot_six_pilots_test'` (3 files).
 - **TIMEBOX.** 2.5 h.
 - **FORBIDDEN.** Another class's mod in an offer.
@@ -646,13 +677,13 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'cooldown_refund_test' --test 'ability_swap_pressure_test' --test 'spine_event_kinds_test' --test 'posture_bands_test' --test 'alpha_posture_bands_test'` (5 files).
 - **TIMEBOX.** 2.5 h.
 - **FORBIDDEN.** A pilot's base cooldown.
-- **Depends on.** Nothing (B1 merged). **Shares files with.** `ability_state.gd` and `event_kinds.gd` with B3 (merge after B3; the six PC units merge after SQ6).
+- **Depends on.** Nothing (B1 merged). **Shares files with.** `ability_state.gd` with B3 (merge after B3; the six PC units merge after SQ6); `src/core/event_kinds.gd` with B3, KF2 and KE1 (order B3, SQ6, KF2, KE1, after KC0's merged `K-UNITS.md:161` order; SQ6 and KF2 add disjoint rows, so if KF2, already in flight, is ready first it merges first and SQ6 rebases).
 
 ### SQ7 Uptime table
 
 - **GOAL.** Every timed movement or speed buff states its uptime, and the band 25% to 75% is checked.
 - **SCOPE.** `tests/pilot_uptime_test.gd` (new: reads the buff rows in `ability_state.gd`), `design-v3/PILOTS.md` (an uptime column and each row's cooldown start rule).
-- **CONTEXT.** `design-v3/PILOTS.md:11-18`; `comps/roboquest/movement-and-feel.md` (25% to 75%; Rivet's 3 s x1.6 Overdrive Blast first).
+- **CONTEXT.** `design-v3/PILOTS.md:11-18`; `comps/roboquest/movement-and-feel.md` (25% to 75%); Rivet's 3 s x1.6 Overdrive Blast first (`design-v3/PILOTS.md:14`).
 - **ACCEPTANCE.** Every buff row prints duration over cooldown and names whether the cooldown starts at activation or at expiry; today's rows are reported; from PC-PACK the test gates every row inside 25% to 75%.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'pilot_uptime_test'` (1 file).
 - **TIMEBOX.** 1.5 h.
@@ -675,13 +706,13 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 ### SQ9 Speed bank
 
 - **GOAL.** The shared roll banks speed: it starts above cruise, decays to it, and a jump late in the decay keeps the burst.
-- **SCOPE.** `src/movement/player_ball.gd` (the bank and the spend window), `src/core/tuning.gd` (per-pilot bank rows), `tests/speed_bank_test.gd` (new).
+- **SCOPE.** `src/movement/player_ball.gd` (the bank and the spend window), `src/movement/tuning.gd` (per-pilot bank rows), `tests/speed_bank_test.gd` (new).
 - **CONTEXT.** `comps/roboquest/movement-and-feel.md` (1.2 to 1.3x; last 25%; at least 90%); `design-v3/PILOTS.md:11-18`; `P-UNITS.md:120` (`player_ball.gd` shared with B3, PC-SABLE, PC-RIVET).
 - **ACCEPTANCE.** Scripted roll, slide and jump from a fixed start for each pilot: burst-to-cruise inside 1.2 to 1.3; a jump inside the last 25% of the decay keeps at least 90% of the burst and one outside does not; the six traces differ in shape, not only scale; `char_movement_test` green; traversal on the alpha table for six pilots at 8 seeds stays inside its bands.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'speed_bank_test' --test 'char_movement_test' --test 'bot_six_pilots_test'` (3 files); `tools/traversal_line.gd` per pilot as `K-UNITS.md:240` runs it.
 - **TIMEBOX.** 3 h.
 - **FORBIDDEN.** A pilot's Shift; a traversal band.
-- **Depends on.** B3, PC-SABLE, PC-RIVET. **Shares files with.** `player_ball.gd` (after them); `tuning.gd` (after any PC unit that lists it).
+- **Depends on.** B3, PC-SABLE, PC-RIVET. **Shares files with.** `player_ball.gd` (after them); `src/movement/tuning.gd` (B7 wrote it and has merged, `P-UNITS.md:219`; SQ9 merges after any PC unit that lists it; section 8's merge order).
 
 **Production budgets, all three packs.**
 
@@ -706,14 +737,14 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 
 ### SR15 Graph checks, round two
 
-- **GOAL.** The stage graph also checks that the beacon sits on an objective-fit node, checks beacon before spawn, reports the reward-to-objective ratio, and gates the full-visit ratio.
+- **GOAL.** The stage graph also checks that the beacon sits on an objective-fit node, checks beacon before spawn, and reports the reward-to-objective ratio and the full-visit ratio; the KD stage units gate both ratios on their own files (paste 4f).
 - **SCOPE.** `tools/park_graph.gd` (a `beacon_ok` flag: a flat open disc whose radius derives from the Warden engage ring), `tests/park_graph_test.gd`, `tests/park_pockets_test.gd`.
 - **CONTEXT.** KB8 (`K-UNITS.md:127-143`); `comps/ror2/stage-anatomy.md:97`, `:112` (copy no RoR2 constants); `comps/isaac/floor-generation.md:107`; `W13-INTEGRATION-2.md:44`.
-- **ACCEPTANCE.** The fixture beacon passes `beacon_ok` and a planted ledge beacon turns the test red; beacon is checked before spawn and a failure names which rule failed first; the median spawn-to-reward over spawn-to-objective ratio is at least 1.5; `full_visit_ratio` at most 3.0 now gates.
+- **ACCEPTANCE.** The fixture beacon passes `beacon_ok` and a planted ledge beacon turns the test red; beacon is checked before spawn and a failure names which rule failed first; the report prints the median spawn-to-reward over spawn-to-objective ratio (target at least 1.5) and `full_visit_ratio` (target at most 3.0), reported, not gated, as KB8 left it (`K-UNITS.md:138`); a planted fixture row that breaks either target is printed as out of target.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'park_graph_test' --test 'park_pockets_test'` (2 files).
 - **TIMEBOX.** 2 h.
 - **FORBIDDEN.** Moving a beacon or spawn.
-- **Depends on.** KB8. **Shares files with.** `park_graph.gd` and both tests (after KB8; must merge before the KD greyboxes).
+- **Depends on.** KB8. **Shares files with.** `park_graph.gd` and both tests (after KB8; merges before the KD greyboxes so their runs print the two ratios).
 
 **Stacking families, proc coefficient and chain mask.**
 
@@ -781,7 +812,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 - **GOAL.** Trade pockets come in a risk family and a safe family with opposing memory, recency-weighted odds, curse and sacrifice kinds, and every applied modifier on the results screen.
 - **SCOPE.** `src/world/trade_pockets.gd` (new: families, recency x0.5 and x0.25, curse 1 in 7 with a 0.2-floor pool, sacrifice 1 in 7 with a full-health bump), `src/world/activities.gd` (RULES rows `trade_risk`, `trade_safe`, `curse`, `sacrifice`; the family an authored trade site shows is rolled at stage entry from the layout stream), `src/core/run_state.gd` (run-scoped trade memory), `src/ui/results_odds.gd` (new), `tests/trade_pockets_test.gd` (new).
 - **CONTEXT.** `comps/isaac/pacing-and-trades.md:97`; `src/world/bet_crate.gd:3-14`; `adr/TADR-010-open-stages-and-event-director.md:47` (no director fact is durable; this memory is run state, ending with the run).
-- **ACCEPTANCE.** 10,000 simulated runs of 8 stages, policies always-risk and never: mean trade pockets per run 1.5 to 3; back-to-back stages in at most 30% of runs; the safe family gone after a risk trade in 100%; refusing raises safe odds at least 1.2x in at least 80%; a price shows before entry on every trade pocket; idle entry takes no damage in the first 2 s in 95% of 50 runs; every seen pocket lists its modifiers on the results screen.
+- **ACCEPTANCE.** 10,000 simulated runs of 8 stages, policies always-risk and never: mean trade pockets per run 1.5 to 3; back-to-back stages in at most 30% of runs; the safe family gone after a risk trade in 100%; refusing raises safe odds at least 1.2x in at least 80%; a price shows before entry on every trade pocket; idle entry takes no damage in the first 2 s in 95% of 50 runs; every seen pocket lists its modifiers on the results screen; a skip-all policy adds zero main-route time (`comps/isaac/pacing-and-trades.md:97` (e)).
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'trade_pockets_test' --test 'activities_test' --test 'activities_pay_test'` (3 files).
 - **TIMEBOX.** 4 h.
 - **FORBIDDEN.** A permanent loss of a main resource; a price in scrap.
@@ -899,7 +930,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'logbook_test' --test 'codex_coverage_test' --test 'profile_store_test'` (3 files).
 - **TIMEBOX.** 3 h.
 - **FORBIDDEN.** A new grant row.
-- **Depends on.** Nothing. **Shares files with.** `profile.gd` (SG12, SG10 after); `run_state.gd` (after SG9).
+- **Depends on.** Nothing. **Shares files with.** `profile.gd` (after SG12; SG10 after); `run_state.gd` (after SG9).
 
 ### SR13 Stage beats report
 
@@ -963,7 +994,7 @@ Each block names its target and the anchor line it goes after. Lines already in 
 
 ### 4a. KF2 to KF4: one new read per gate, the four-field record, one signature
 
-**Target: `K-UNITS.md` KF2 to KF4 (`:402-419`), ACCEPTANCE, after the bullet that begins `` - `tests/telegraph_timing_test.gd`, the kind's own attacks ``.** KF2 is in wave A, KF3 and KF4 in wave B; KF1 has merged.
+**Target: `K-UNITS.md` KF2 to KF4 (`:402-419`), ACCEPTANCE, after the bullet that begins `` - `tests/telegraph_timing_test.gd`, the kind's own attacks ``, which each kind now runs as its own `tests/telegraph_timing_<kind>_test.gd` (`decisions.tsv:486c` superseded the shared file; the lines below land in each kind's file).** KF2 is in wave A, KF3 and KF4 in wave B; KF1 has merged.
 
 ```markdown
 - **One new read per gate (comps: gunfire/enemies-and-bosses).** Each posture gate (`engaged`, `stagger`, `chunk_1` to `chunk_3`, `broken`) adds exactly one new mechanic or ends one plating state. A stepped bot run over 20 seeds logs which, per gate; no gate adds two and no gate adds none. The plating states read SG7's defence-bar classes once SG7 has merged; before that they keep the kind sheet's look.
@@ -972,7 +1003,7 @@ Each block names its target and the anchor line it goes after. Lines already in 
 - **One signature (comps: roboquest/enemy-design-grammar).** The kind sheet names exactly one signature mechanic that changes the arena or a rule (the mounting's mechanism counts). The REPORT prints the grown bot's time to kill beside each merged kind's; a spread wider than plus or minus 25 percent of the median (start) is reported to the coordinator, not tuned here, since the posture band owns the numbers.
 ```
 
-**Same target, Shares line, append:** `SQ1 merges after KF4 on tests/telegraph_timing_test.gd (pack-kind rows only).`
+No Shares line: SQ1 writes its own `tests/telegraph_timing_pack_test.gd` and reads the KF REPORTs, so the three kinds still merge in any order.
 
 ### 4b. The K-E lines
 
@@ -993,8 +1024,8 @@ Each block names its target and the anchor line it goes after. Lines already in 
 ```markdown
 - **Elite cap (comps: roboquest/stage-anatomy:110).** On `--table=park`, elite arrivals are capped at 3 per stage, lifted only by a stage modifier. Over 20 seeds x 30 stepped minutes, no seed exceeds 3 without a modifier; the alpha table is bit-identical to today.
 - **Distance bands (comps: ror2/director-and-difficulty).** Arrivals pick from named distance bands (near, mid, far; start values from the lab) and never land inside a minimum radius of the ball. Zero arrivals inside the radius over 30 stepped minutes, 20 seeds.
-- **Recalc at stage load (comps: ror2/run-flow).** The dial recomputes once at stage load, under its cap: one recalc per load, no drift within a stage, 20 seeds.
-- **Homes name a chassis class (comps: roboquest/enemy-design-grammar).** Each home row names a chassis class from SQ4's `chassis` column, and the director picks the member. Every spawn from a home matches its class in 100 percent of seeded runs.
+- **Recalc at stage load (comps: ror2/run-flow).** The stage-indexed term of the dial recomputes once at stage load, under its cap, and holds for the stage; the in-stage clock tier keeps stepping as the tier lines above state. 20 seeds: one stage-term recalc per load, and the stage term never changes within a stage.
+- **Homes name a chassis class (comps: roboquest/enemy-design-grammar).** `director.gd` maps each home's kind to a chassis class from SQ4's `chassis` column (no park file edit; the home rows stay the KD units'), and the director picks the member from that class. Every spawn from a home matches its class in 100 percent of seeded runs.
 ```
 
 **Same target, Depends on, append:** `SQ4 merged (the chassis column).`
@@ -1008,7 +1039,7 @@ Each block names its target and the anchor line it goes after. Lines already in 
 **Target: `K-UNITS.md` KE9 (`:343-358`). Replace `(next wave)` in the heading with `(wave F)`. Append to ACCEPTANCE.**
 
 ```markdown
-- **Per-stage factor.** The dial carries a per-stage factor (shape `1.15^k`, start) under a named cap; the dial is monotone in stage and in time and never exceeds the cap.
+- **Per-stage factor.** The dial carries a geometric per-stage factor (start value from the lab; the note's constants are not copied, `comps/ror2/director-and-difficulty.md:123`) under a named cap; the dial is monotone in stage and in time and never exceeds the cap.
 - **Elite refund.** An elite's cost returns to the balance when it dies; refund equals price on every seed.
 - **Relay miniboss budget (first memo row 4).** The relay miniboss credit is `max(override, floor(c * sqrt(D)))`: monotone and sqrt-shaped across the dial.
 - **Authored packs bypass.** Authored activity packs (KD8's camps, SQ5's pocket waves) consume no credit.
@@ -1033,7 +1064,6 @@ Each block names its target and the anchor line it goes after. Lines already in 
 KE6 ─> KE9 ─> KE10 (KE10 also after KE8, B3, KB8)
 SQ4 ─> KE6 (chassis column)
 KB8 ─> SR15 ─> KDn greybox
-KF2 ─> KF3 ─> KF4 ─> SQ1 (telegraph_timing_test.gd)
 ```
 
 **Target: `K-UNITS.md` dispatch table (`:467-481`), append a row after wave 9, then a sentence after the table.**
@@ -1041,7 +1071,7 @@ KF2 ─> KF3 ─> KF4 ─> SQ1 (telegraph_timing_test.gd)
 ```markdown
 | 10 | KE9, KE10 | KE9 after KE6; KE10 after KE8, B3 and KB8 |
 
-Lane S (W13-INTEGRATION-3.md section 8) shares the machine with this table: at most 8 K units and 8 S units run at once, and the smoke slots stay 2 machine-wide.
+Lane S (W13-INTEGRATION-3.md section 8) shares the machine with this table: at most 8 K units and 8 S units run at once, and every new brief runs smoke with `SMOKE_SLOTS=6` (`decisions.tsv:487c`).
 ```
 
 ### 4c. P lane: the PC common lines and PC-POOL
@@ -1080,6 +1110,12 @@ Lane S (W13-INTEGRATION-3.md section 8) shares the machine with this table: at m
 - **Clip lengths and counts (comps: gunfire/production-budgets, ror2/production-budgets).** SQ17's audit over all six heroes: zero non-boss gameplay clips over 3.5 s (start), boss exceptions listed by name, every hero at or under 50 clips, every count nonzero.
 ```
 
+**Target: `P-UNITS.md` PE common rules (`:473-483`), after the bullet that begins `- Eleven new clips per pilot`.** The PE units that author the clips (PE-TARN and PE-CANNON in wave C, the other four in wave D) learn the cap before PE-INT gates it.
+
+```markdown
+- **Clip target (comps: gunfire/production-budgets, ror2/production-budgets).** Report and target, not a gate here: the REPORT lists each new gameplay clip's length and the pilot's clip count; a non-boss gameplay clip over 3.5 s (start) or a count over 50 is named with its reason. PE-INT gates both at the wave close.
+```
+
 **Target: `tools/asset-forge/packs/core-loop.toml`, before the line `# Real-world size sanity per category: longest bounding-box edge in metres, [low, high].`.** Insert memo 2's comment block (`W13-INTEGRATION-2.md:204-220`) as written, with its first line replaced by:
 
 ```toml
@@ -1107,6 +1143,14 @@ Lane S (W13-INTEGRATION-3.md section 8) shares the machine with this table: at m
 - **DEPENDS ON.** Nothing. Must merge before any external base is fetched.
 - **SHARES.** `asset_registry_test.gd` with PD-TARN and PD-CANNON (merge after their fix round 2).
 ```
+
+### 4f. KD1 to KD6: the two graph ratios as each stage's own gate
+
+**Target: `K-UNITS.md` KD1 to KD6 (`:219-243`), ACCEPTANCE, after the bullet that begins `` - `tools/park_graph.gd` run on the stage ``.** SR15 prints both ratios; each stage unit owns its pass or fail. The six drafts still carry open detour and sightline conflicts (`decisions.tsv:471`, `:480c`), so a stage that misses a target reports it to the coordinator in the same fix round as those.
+
+```markdown
+- **Graph ratios (comps: ror2/stage-anatomy:97, roboquest/stage-anatomy:125).** On the stage's own graph: the median spawn-to-reward over spawn-to-objective path ratio is at least 1.5 and `full_visit_ratio` is at most 3.0 (both start values, printed by SR15's report). A miss names the pocket or route that causes it.
+```
 ## 5. Blocked rows
 
 Three proposals conflict with an accepted ADR. Each stays out until the ADR changes; none has a workaround that keeps the borrow's point.
@@ -1115,16 +1159,16 @@ Three proposals conflict with an accepted ADR. Each stays out until the ADR chan
 | --- | --- | --- |
 | ror2/architecture:server-authority-networking | Server-owned damage and spawns | `adr/TADR-005-networking-scope.md:23`: "Recommend **offline solo play with no networking subsystem**." and "Do not add accounts, lobbies, replication, server deployment or speculative rollback/lockstep infrastructure." The single-authority part of the borrow is already true (TADR-002's one local simulation authority) and SR1 gives it one damage door. |
 | ror2/director-and-difficulty:dial-priced-shops-gold-xp | Prices, gold and XP scaled by the time-driven dial | `adr/TADR-010-open-stages-and-event-director.md:45`: "It may not open or close an exit, advance a tree, price an upgrade or cache, or otherwise gate progression". `BIBLE.md:538` says the same for trees ("Elapsed time never advances a tree, opens an exit or prices an offer"). The pressure half lands in KE9; the price half is also owner item 4. |
-| isaac/pacing-and-trades:gauntlet-clock | A stage clock that closes a door | `adr/TADR-010-open-stages-and-event-director.md:45`, the same sentence ("may not open or close an exit"). The scout cited `:47`, which is the durable-fact rule; `:45` is the line that blocks. A timed objective that counts ticks stays open under Q-P38 (owner item 8). |
+| isaac/pacing-and-trades:gauntlet-clock | A stage clock that closes a door | `adr/TADR-010-open-stages-and-event-director.md:45`, the same sentence ("may not open or close an exit"). The scout cited `:47`, which is the durable-fact rule; `:45` is the line that blocks. A timed objective that counts ticks stays open under Q-P38; SQ5's objective kinds never gate the exit. |
 
 ## 6. Owner items
 
-Eight calls are yours. Each has both branches and a default; "none of these" is always an answer, and it keeps the default.
+Seven calls are yours. Each has both branches and a default; "none of these" is always an answer, and it keeps the default.
 
 1. **Free base meshes: the first download.** You ruled yes to CC0 and CC-BY bases with provenance (`decisions.tsv:474c`), Quaternius first. What is still yours under rule (c) is each download.
    - Yes: after PD-PROV merges (wave B), a scout names one batch (source, licence, files, sizes) and you approve it; the first forge enemy family starts from it under the 1,100-tri cap, with a blind silhouette read of at least 18 of 20 and a complete sidecar.
-   - No: every enemy is built from scratch as today, and SQ18's from-scratch recipe is the route.
-   - Default: no download until you approve a named batch. Nothing waits on it; SQ18's recipe runs either way.
+   - No: every enemy is built from scratch as today, and SQ18's from-scratch recipe is the route; SQ20 forges its first family.
+   - Default: no download until you approve a named batch. Nothing waits on it; SQ18's recipe and SQ20's family run either way.
 2. **The Bible's Mobility row.** `BIBLE.md:535` ends "class versus item stays open". Memo 2's amendment, replacing that sentence: "Movement that changes how a pilot moves belongs to that pilot: its own tree, its Shift and parts bound to it. Shared parts may change what a verb does, never how far or fast the ball moves. Optional transformative items keep the exception in Movement, camera and active aim."
    - Adopt: the Bible says what PC-POOL and SQ19 build.
    - Keep the line open: PC-POOL and SQ19 still land, as one pilot-first reading of an open line, and a later item could move the ball.
@@ -1134,9 +1178,10 @@ Eight calls are yours. Each has both branches and a default; "none of these" is 
    - Earlier: the ADR is written now and SR16 joins wave G; this needs your Bible amendment first.
    - Default: as ruled.
 4. **Prices and the scrap economy.** `BIBLE.md:513` keeps every cost open and bars "invented prices"; TADR-010 lists "every cache and scrap price" as open (`adr/TADR-010-open-stages-and-event-director.md:63`). Four proposals wait here: a shelf price ladder that rises by stage and jumps at each world, a fixed visible price per upgrade step with a hard cap, a flat scrap step per attachment tier, and scrap typed by item tier with a trade-up ratio (which also changes what scrap is, `BIBLE.md:65`). SG12's currency form (between-run options bought with a meta currency) is here too.
-   - Set prices: a pricing unit writes one ladder, run against the note's lab line (price to income 0.5 to 2.0 across 3 worlds, 20 seeds), and you approve the numbers.
+   The measurement is not yours to wait on: SG16 (wave B) runs the note's lab line now, report only (price to income 0.5 to 2.0 across 3 worlds, 20 seeds, `comps/gunfire/run-pacing-and-economy.md:104`), on today's `PAY_SCRAP` and `COG_PRICES`, and proposes numbers where a ratio falls outside. What stays yours is approving numbers.
+   - Approve: the numbers SG16 proposes become one ladder and the four borrows land with them.
    - Keep open: prices stay as today (`PAY_SCRAP` 180, `COG_PRICES` provisional); SG12 opens nodes by accomplishment, SI2 charges health or the existing cogs prices.
-   - Default: keep open until a playtest says the shop is the problem.
+   - Default: keep today's prices until you approve a proposal from SG16's report.
 5. **Permanent starting cogs and shop discounts.** Proposed: 100 to 500 starting cogs, a double-cog chance, 5 to 25 percent discounts as between-run nodes. `BIBLE.md:475`: "combat power is rebuilt each run without permanent stat boosts"; `:586`: "The next run rebuilds equipment power".
    - Amend: the Bible allows a small permanent economy head start, and SG12 adds the nodes.
    - Keep: SG12 ships options, discoveries and pocket keys only.
@@ -1149,10 +1194,8 @@ Eight calls are yours. Each has both branches and a default; "none of these" is 
    - Amend: the exit offers a weighted next world.
    - Keep: the fixed three-world order.
    - Default: keep.
-8. **A scattered-mark objective.** Proposed: 3 to 4 marks at least 80 m apart in the far half of a stage, any order, the exit opening from the first mark. What an exit requires is Q-P38, open in TADR-010 (`:63`).
-   - Answer Q-P38 with it: an optional objective kind beside the Warden fight; SQ5 adds it as a pocket-kind row after KE1.
-   - Keep: the Warden posture fight stays the only stage objective.
-   - Default: keep until a stage page asks for a second objective.
+
+**Note, not a call: Q-P38.** The scattered-mark objective is adopted as an optional SQ5 kind that never gates the exit (section 2). No Bible or ADR line bars it, and TADR-010 expects such an objective (`adr/TADR-010-open-stages-and-event-director.md:45`). What an exit requires stays Q-P38 (`:63`).
 
 **Your hands, not a decision.** A 60 fps capture of Roboquest's movement on your machine (`comps/roboquest/movement-and-feel.md:81`) gives SQ9's speed bank its source side. SQ9 builds from the start values without it; the capture turns its traces into a comparison.
 
@@ -1193,20 +1236,21 @@ Every arm is report-first in its own unit and gates from the unit's merge; the p
 | Offer weights, levels, late offer, start pick | SQ19, SG15, SG8, SG9 | 200 draws or starts per pilot |
 | Visible odds | SG13 | 10,000 draws per table against shown weights |
 | Zones, sockets, pocket draw | SQ13, SQ15, SQ14 (`tools/park_graph.gd`) | 1,000 seeded jitters or stages |
-| Graph checks | SR15 | `beacon_ok`; reward-to-objective ratio; full-visit ratio |
+| Graph checks | SR15; KD1 to KD6 (paste 4f) | `beacon_ok`; reward-to-objective ratio and full-visit ratio, reported by SR15 and gated per stage by its KD unit |
+| Shop price to income | SG16 (`tools/shop_model.gd`) | 3 worlds, 20 seeds; price, income and ratio per stage, report only |
 | Pocket library entry | SQ12 | Idle and dodger entries per pocket |
 | Pocket kinds, trades, stakes, modifiers | SQ5, SI1, SI2, SI3 | Round credit curve; trade memory over 10,000 runs; cost shown equals charged |
 | Relay charge and stack | SR9, SR10 | `T/share^s`; credit `base x (1 + k)` |
 | SPIL-9 drivers, devices | SR7, SR8 | Row reorder; stalled within 1 s; caps |
 | Music | KE8, KE10 | 5 minute trace; layer steps over a power sweep |
-| Budget audit | SQ17, SQ18 (`node sketches/core-loop/tools/budget_audit.mjs`, not Godot) | Per-category medians and p90 beside the three reference games |
+| Budget audit | SQ17, SQ18, SQ20 (`node sketches/core-loop/tools/budget_audit.mjs`, not Godot) | Per-category medians and p90 beside the three reference games; SQ20's family inside its chassis band |
 
 **Bot driver** (`tools/bot_run.gd` and `tools/balance_report.gd`, `--table=park` unless named):
 
 | Arm | Unit | Measure |
 | --- | --- | --- |
 | Credit director | KE9 (`--director=interval|credit`) | Income integral within 5 percent; attacker peak; home turf; repeat kind |
-| Homes, elites, distance bands | KE6 | Elite cap 3; zero arrivals inside the radius; one recalc per load |
+| Homes, elites, distance bands | KE6 | Elite cap 3; zero arrivals inside the radius; one stage-term recalc per load |
 | Attacker budget | SQ2 | Simultaneous attackers never over the cap |
 | Run tier and dials | SG10, SG11, SG6 | Tier 0 and tier 1 over 20 seeds; each dial alone; affix telegraph lead |
 | Stage beats and restart | SR13, SR14 | 50 runs, six beats; latency under target; seed replays |
@@ -1220,21 +1264,38 @@ Every arm is report-first in its own unit and gates from the unit's merge; the p
 | --- | --- | --- |
 | Blind chassis stills | SQ4 | 20 stills, three readers, picks recorded before the key opens: at least 18 of 20 |
 | Defence-bar read at 150 m | SG7 | Each bar's class named in a fixture frame |
+| From-scratch family stills | SQ20 | 20 stills, three readers: at least 18 of 20 name chassis class and threat feature |
 | Base-mesh silhouette | Owner item 1, if approved | At least 18 of 20 against the reshaped base |
 
 Each uat run writes a receipt directory; the unit's REPORT names its path, and a flow it did not exercise is a stated gap. A blind read by a model is not Andrew's read; the look pages still go to his Chrome at each wave close.
 
+**Unit tests and reports** (the tables above list harness arms only; these lab measures run in the unit's own test or REPORT):
+
+| Measure | Unit | Where it runs |
+| --- | --- | --- |
+| Readout equals simulation; caps shown | SG3 | `ui_build_readout_test` |
+| Five simulated runs, no price or stat key | SG12 | `meta_options_test` |
+| Visible numbers under the cap at 20 hits per second | SR6 | `damage_numbers_test` |
+| Run tallies equal the run log | SR12 | `logbook_test` |
+| Pocket marker on all six stages | SQ16 | `ui_edge_marker_pocket_test` |
+| One major event per world at the default | KE1 (paste 4b) | `park_events_test` |
+| Shared parts never change how the ball moves | PC-POOL | `parts_pool_movement_test` |
+| Status build-up at least 2x from a built source | The six PC units (paste 4c) | each unit's own test |
+| Per-pilot triangle and draw sums at classes I, III and V | PD fix round 2, PD-INT (C5b, paste 4d) | the REPORT's inspect table |
+| Provenance record complete; planted rows fail | PD-PROV (paste 4e) | `asset_provenance_test`, `asset_registry_test` |
+| Clip lengths and counts, report and target | PE units (paste 4d) | the REPORT; PE-INT gates |
+
 ## 8. Wave map
 
-Four lanes. P is `P-UNITS.md`'s pilot lane, K is `K-UNITS.md`'s park lane, S is this memo's systems lane, and polish is small S units (presentation or a probe) that run beside the S lane's eight. A wave starts when the merges it names have landed. The S lane starts at most 8 units per wave; the P and K lanes keep their own tables' caps (`P-UNITS.md:630-643`, `K-UNITS.md:467-481`); the smoke slots stay 2 machine-wide. Gunfire Reborn and Roboquest units go first in every S wave they can (`decisions.tsv:475c`).
+Four lanes. P is `P-UNITS.md`'s pilot lane, K is `K-UNITS.md`'s park lane, S is this memo's systems lane, and polish is small S units (presentation or a probe) that run beside the S lane's eight. A wave starts when the merges it names have landed. The S lane starts at most 8 units per wave; the P and K lanes keep their own tables' caps (`P-UNITS.md:630-643`, `K-UNITS.md:467-481`); every new unit brief runs smoke with `SMOKE_SLOTS=6` (`decisions.tsv:487c`). Gunfire Reborn and Roboquest units go first in every S wave they can (`decisions.tsv:475c`).
 
 | Wave | Starts when | P lane | K lane | S lane | Polish |
 | --- | --- | --- | --- | --- | --- |
 | A | now | B2, B3, B4, B6 and the PD fix round 2 in flight (with C5b, paste 4d) | KB8, KD8 in flight; then K-UNITS wave 3 (KB4, KC1 to KC7) and KF2 (with paste 4a) as slots free | SG7, SG9, SQ3, SQ4, SQ6, SQ7, SQ10, SQ17 | SR5 |
-| B | B2, B3, B6, KB8, KD8 and the PD fix round 2 merged | PE-0, PD-INT (with the C5b fallback) | KB5, KC8, KF3, KF4, KB7 | SG3, SG4, SG13, SQ13, PD-PROV, SR4, SR7, SR15 | SQ16, SR6 |
-| C | P-B closed; KB4, KB7, KB8, KD8, KC0 merged | PC-SABLE, PC-RIVET, PC-KEST, PC-TARN, PC-TALLY, PC-CANNON (with paste 4c), PE-TARN, PE-CANNON | KB6, KD1 to KD6 greybox (SR15 merged first), KC10 | SG5, SG12, SQ1, SQ15, SQ18 (if the six C5b sums allow), SR12 | |
-| D | wave C's PC units merged; KD1 greybox merged | PC-PACK, PE-SABLE, PE-RIVET, PE-KEST, PE-TALLY | KE1 (with paste 4b), KC9 | SG8, SQ9, SQ12, SI1, SI2 | |
-| E | PC-PACK and KE1 merged | PE-INT (with the clip line), PC-POOL | KE2 to KE8 (KE4, KE6, KE8 with paste 4b) | SG14, SQ8, SQ11, SR1, SR3, SR9, SR11, SR13 | |
+| B | B2, B3, B6, KB8, KD8 and the PD fix round 2 merged | PE-0, PD-INT (with the C5b fallback) | KB5, KC8, KF3, KF4, KB7 | SG3, SG4, SG12, SG13, SQ13, PD-PROV, SR4, SR15 | SQ16, SR6, SG16 |
+| C | P-B closed; KB4, KB7, KB8, KD8, KC0 merged; SQ1 also needs the KF2 to KF4 REPORTs | PC-SABLE, PC-RIVET, PC-KEST, PC-TARN, PC-TALLY, PC-CANNON (with paste 4c), PE-TARN, PE-CANNON (with the PE clip target, paste 4d) | KB6, KD1 to KD6 greybox (SR15 merged first; paste 4f), KC10 | SG5, SQ1, SQ15, SQ18 (if the six C5b sums allow), SR7, SR12 | |
+| D | wave C's PC units merged; KD1 greybox merged; SQ12 and SI1 also need KD2 to KD6 greybox merged | PC-PACK, PE-SABLE, PE-RIVET, PE-KEST, PE-TALLY (with the PE clip target) | KE1 (with paste 4b), KC9 | SG8, SQ9, SQ12, SQ20, SI1, SI2 | |
+| E | PC-PACK and KE1 merged; PE-INT also needs all PE merged | PE-INT (with the clip line), PC-POOL | KE2 to KE8 (KE4, KE6, KE8 with paste 4b) | SG14, SQ8, SQ11, SR1, SR3, SR9, SR11, SR13 | |
 | F | KE6, SR1, PC-POOL, SQ12 merged | | KE9, KE10 (paste 4b), KD1 to KD6 dressed, KF8 | SG1, SQ5, SQ14, SQ19, SI4, SI5, SR2, SR8 | SR14 |
 | G | KE9, SR9, SG1, SQ14, SQ19, SI4, SI5 merged | | | SG2, SG6, SG10, SG15, SQ2, SR10, SI3, SI6 | |
 | H | SG10 merged | | KD7 (coordinator) | SG11 | |
@@ -1252,10 +1313,11 @@ Four lanes. P is `P-UNITS.md`'s pilot lane, K is `K-UNITS.md`'s park lane, S is 
 | `src/world/director.gd` | KE6, KE9, SQ14, SG11 |
 | `src/world/director_cards.gd` | KE9, SR10, SG10, SG6 |
 | `tools/park_graph.gd` | KB8, SR15, SQ13, SQ15, SQ14 |
-| `src/core/profile.gd` | SR12, SG12, SG10 |
+| `src/core/profile.gd` | SG12, SR12, SG10 |
 | `src/core/run_state.gd` | SG9, SR12, SI1 |
 | `src/core/ability_state.gd` | B3, SQ6, the PC units, SR3 |
-| `tests/telegraph_timing_test.gd` | KF2, KF3, KF4, SQ1 |
+| `src/core/event_kinds.gd` | B3, SQ6, KF2, KE1 (SQ6 and KF2 add disjoint rows; whichever is ready first merges first) |
+| `src/movement/tuning.gd` | the PC units that list it, SQ9 |
 | `design-v3/PILOTS.md` | SQ7, SQ10, SQ8 |
 
 **Wave closes.** The coordinator runs the full smoke, the gate and an export at each S wave close, as the P and K tables do at theirs, and the alpha export grows with each close (`decisions.tsv:475c`). The fun gate still applies: no lab arm in this memo certifies feel, and each wave's look and play go to Andrew before the next wave's heavy units start.
