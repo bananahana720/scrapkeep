@@ -231,6 +231,45 @@ Wind that pushes the ball is never weather. A visible wind lane is a `thermal` c
 - a home row's `landform` differs from its site row's;
 - a row whose `society` is `hohokam` or `ancestral_puebloan` has a `home`, a `fragment` that is not a `ref_` id, or is the `site` of an event row of kind `cave_in`, `collapse`, `impact`, `machine_eruption`, `fleet_landing`, `boiler_burst` or `reactor_blow` (the guardrail in section 4).
 
+### 2.11 The stage graph
+
+The bake has a second step. `tools/park_graph.gd` reads the park file and the bake's `ground.bin`, `holes.bin` and `under.bin` and writes `assets/park/<map_id>/graph.bin` (nodes, edges, flags and two distance fields, zstd) and `graph.json` (schema, map, the park file's and `bake.json`'s sha256, node and edge counts). The graph is the stage's one measured space. The park file stays the authored truth: the graph checks the spawn, the landmark and the activities and never moves them.
+
+| Part | Rule (start) |
+| --- | --- |
+| Node | One per 8 m on the 2 m grid (every fourth cell), at the ground height, or on a hole cell at the `under.bin` floor; plus one per 8 m over the footprint of every park row whose `y` is not null, at that `y` (the net deck, a hung rail, a floating island) |
+| Ground edge | Joins 8-neighbours both ways when the climb is at most 4 m over 8 m; any drop is a one-way edge down |
+| Ride edge | Read from the stage's own rows, never inferred from terrain, and tagged with its row id. A `launch` park row (a `kicker`) gives a one-way edge from its takeoff node to the nearest node of the row that follows it in each route's `via` (its authored landing); a `launcher` contraption a one-way edge to its `target`; a `cable` contraption a one-way edge from `from` to `to`; a `grind` park row (`grind_line`, `rail`) joins its two end nodes both ways along its line; a `thermal` or `lift` contraption a one-way edge up from its `at` to the nearest node within its `height` or `rise`; a `glide` park row a one-way edge down along its yaw. Its length in path metres is its straight length |
+| `open` | No roof above the node: the sight test's open cell (8) |
+| `line` | Within 8 m of the shortest graph path from `spawn.at` through the `waymarks` in order to `landmark.beacon` (the same 8 m corridor as event rule 2, section 5) |
+| `guarded` | Inside a row whose `society` is `hohokam` or `ancestral_puebloan` (the guardrail in 2.10) |
+| `warden` | Inside the engage ring, `reach_m` round `landmark.beacon` |
+| `door_ok` | `open`, not `line`, not `guarded`, not `warden` |
+| `sight_ok` | A clear ray from 2 m above the node to a `line` node within 240 m |
+| `d_landmark` | Path metres to `landmark.beacon` |
+| `d_spawn` | Path metres from `spawn.at` |
+
+Readers: the spawn and pocket checks (2.12), `director.gd`'s home arrivals (a home is ahead when its site's `d_landmark` is smaller than the ball's), the traversal tool's `progress_m`, and `tools/park_plot.py`, which draws the `line` nodes under the journey polylines. Two rules hold on every stage: every route in `routes` is a connected path in the graph through its `via` rows over ground and ride edges, so the authored graph and the measured one agree (stage 5's `main` crosses by `fin_nose_kicker` to the raised `net_deck`, `design-v3/park/stages/5-park_islands.md:478`; PARK.md:380); and the spawn's `d_landmark` lies in the farthest quarter of `open` nodes. The spawn-to-beacon path over the graph's longest shortest path is reported per stage (start target 0.6), not gated.
+
+### 2.12 Pockets
+
+Every stage carries four pockets: its three `activity_rows` and one hidden pocket. One activity sits on the line, an `enemy_camp` or `surge_run`, usually a waymark. The other two sit off it: one reward (`cracked_cache`) and one risk (`ambush_altar` or `hauler_bounty`). The hidden pocket is a `contraption_rows` row that opens a sealed space, a `valve` or a `cracked_wall`, with a visible tell, and its site row's `routes` lists three or more route ids. Detour is the price: the farther a pocket pulls you off the line, the more it holds, and a player who skips every pocket loses only the detour.
+
+The rules scale the comps pocket spec (`research/comps/pocket-placement.md:30-42`) by four, the park's size against a small stage (section 1). Every distance is a path distance on the stage graph (2.11), from the door node, the graph node nearest the activity's `at`.
+
+| Rule | Comps start | Park (start) |
+| --- | --- | --- |
+| Door to spawn | at least 60 m | at least 240 m |
+| Door to `landmark.beacon` | at least 80 m | at least 320 m |
+| Door to door | at least 50 m | at least 200 m |
+| Sightline | a `line` node within 60 m | `sight_ok`: a `line` node within 240 m |
+| Clear ring | 10 m round each door | 40 m round each door: no home site, no event `site` footprint, no `contraption_rows` hazard |
+| Off the line | guaranteed pockets not on the shortest route | reward and risk doors are not `line` nodes |
+| Detour | price grows with detour | `d_spawn(door) + d_landmark(door) - d_spawn(beacon)` is 150 to 600 m for the reward and risk pockets, about 10 to 30 s at the 20 m/s mean the stage lines assume; the reward carries the larger detour |
+| Count | 3 to 5, plus one per stage, cap 8 | four on every stage in wave 13 |
+
+The on-line activity keeps only the clear ring and the sightline. The hidden pocket keeps every rule except the beacon distance: its door opens a sealed space and pulls no play toward the Warden, so it needs only to stay off `warden` nodes. A door that fails a rule moves within its site row first, then the KD unit moves the activity's `at` or its site row in the stage's park file; the band tables of section 8 do not move to make a pocket pass (PARK.md:476).
+
 ## 3. The terrain route on Terrain3D v1.0.2
 
 **Regions.** Rendering uses `vertex_spacing` 1.0 m and `region_size` 1024 vertices, so a region is 1024 m square. Four regions, at region coordinates (-1,-1), (0,-1), (-1,0) and (0,0), cover -1024 m to +1024 m: the 1600 m play square and a 224 m apron. The apron holds the rims, mesas and walls that rise into the skyline. Beyond 1024 m there is no ground; the sky and distant silhouette cards close the view. The probe found Terrain3D snaps the import origin to its region grid and fixed it with a region-aligned image (P-ADDON A3), so the bake writes region-aligned images.
@@ -321,7 +360,9 @@ Every event row obeys five rules. The tests in unit KE1 hold each one.
 | ancient | `machine_eruption` | `miniboss` (a roster ancient kind), `swap` |
 | industrial | `boiler_burst`, `reactor_blow` | `hazard`, `hazard_m`, `damage`, `swap` |
 
-**Triggers.** `clock_tier` reads the director's `effective_tier()`: tiers rise every 45 s up to 2 (`director.gd:83-85`, `160-161`), and the spike after a Warden break adds 2. `warden_phase` reads the fight: `engaged` (`flow.gd:778`), `stagger` (each one, `warden.gd:526`), `chunk_1` to `chunk_3` (a chunk lost), `broken`.
+**The dial.** `clock_tier` reads the director's `effective_tier()`: the clock tier, one step every 45 s up to `MAX_TIME_TIERS` (2 on the alpha table, 4 on park stages with veto item 16), plus 2 after a Warden break (`director.gd:83-85`, `160-165`). The cap is a design constant chosen with the stages, not a tuning knob: it changes only with a dated decisions row. The dial raises how many enemies come and how soon (`cap()`, `interval()`) and which event rows may fire. It never raises enemy health, a price or a Warden's numbers (`director.gd:7-8`; TADR-010:45).
+
+**Triggers.** `warden_phase` reads the fight: `engaged` (`flow.gd:778`), `stagger` (each one, `warden.gd:526`), `chunk_1` to `chunk_3` (a chunk lost), `broken`.
 
 One example row per family:
 
