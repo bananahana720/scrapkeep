@@ -1,0 +1,319 @@
+# smoke: timeout=300s (one full attack and recovery per pack kind)
+extends SceneTree
+
+# SQ1 pack telegraph record (W13-INTEGRATION-3.md SQ1): every pack-kind attack has one
+# record (pre-shoot, recovery, cooldown, radius, marker class, band class) in
+# src/combat/telegraph_record.gd.
+# - Structure: one row per pack kind, fields filled and finite, a known marker class and
+#   band class, pre-shoot at or above the reaction floor, and a pre-shoot outside its class
+#   band only with a logged reason.
+# - The record matches the code: a counter.gd kind's pre-shoot is its warn_seconds and its
+#   cooldown is rest_seconds less the shared recovery; an own-clock kind's numbers are its
+#   own constants, and the own-clock list names why it does not read the shared recovery.
+# - Ordinary attacks read one recovery value: every counter.gd kind's recovery_seconds is
+#   TelegraphRecord.RECOVERY, and one live attack per kind ends in a recovery that lasts
+#   RECOVERY within one tick, standing still, with no new warning inside it. The report
+#   prints each kind's recovery before (the record's recovery_before) and after (measured).
+# - Warden attacks sit on the listed exception set: every warden-group ATTACK_ROWS id is on
+#   it, and no pack attack is.
+# - LEGIBILITY section 2's pack list equals the record on every kind.
+
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const Roster := preload("res://src/combat/roster.gd")
+const Counter := preload("res://src/combat/counter.gd")
+const Chaser := preload("res://src/combat/chaser.gd")
+const Lobber := preload("res://src/combat/lobber.gd")
+const Swarm := preload("res://src/combat/swarm.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const T := preload("res://tests/support/t.gd")
+const RECORD_PATH := "res://src/combat/telegraph_record.gd"
+const LEGIBILITY_PATH := "res://design-v3/LEGIBILITY.md"
+
+const SPEED := 8
+const BASE_TICKS := 90
+const OFFSET := Vector3(12.0, 0.0, 0.0)
+const FRAME_LIMIT := 1500
+const STILL := 0.05
+
+var _game
+var _test := T.new("pack_telegraph_record_test")
+var _record
+var _ball_at := Vector3.ZERO
+var _tick := 1.0 / 90.0
+var _phases: Array = []
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _frames(count: int) -> void:
+	for i in count:
+		await physics_frame
+
+
+func _boot() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	_game.table = "slice"
+	root.add_child(_game)
+	while _game.flow == null:
+		await physics_frame
+	_game.ctx.calm = true
+	_game.ctx.rng.seed = 11
+	_game.player.source = Intent.Scripted.new()
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	_game.run.set_max_hp(99999.0)
+	_game.presentation.juice.hit_stop_sink = func(_seconds: float): pass
+	await _frames(3)
+	for enemy in get_nodes_in_group("enemy"):
+		enemy.free()
+	for node in [_game.presentation, _game.hud, _game.screens, _game.notes, _game.panel, _game.camera, _game.world,
+			_game.build, _game.boss, _game.beacon, _game.run_log, _game.codex, _game.progress]:
+		if node != null:
+			node.process_mode = Node.PROCESS_MODE_DISABLED
+	Engine.physics_ticks_per_second = BASE_TICKS * SPEED
+	Engine.max_physics_steps_per_frame = SPEED * 2
+	Engine.time_scale = float(SPEED)
+	await _frames(2)
+	_tick = root.get_physics_process_delta_time() * Engine.time_scale
+	var ctx = _game.ctx
+	_ball_at = ctx.terrain.drop_point(ctx.terrain.spawn_point(1).x, ctx.terrain.spawn_point(1).z, 1.05)
+
+
+func _pack_kinds() -> Array:
+	var kinds: Array = []
+	for id in Roster.ROWS:
+		var kind := String(id)
+		if kind in ["warden", "vault", "miniboss"]:
+			continue
+		if kind in ["chaser", "lobber"] or _game.combat.fleet.makes(kind):
+			kinds.append(kind)
+	return kinds
+
+
+func _finite(v) -> bool:
+	return (typeof(v) == TYPE_FLOAT or typeof(v) == TYPE_INT) and is_finite(float(v))
+
+
+# --- Structure ---------------------------------------------------------------------------
+
+func _structure(kinds: Array) -> void:
+	_test.check("shared recovery constant", _finite(_record.RECOVERY) and float(_record.RECOVERY) > 0.0,
+		"RECOVERY %.2f s (start value, comps/roboquest/enemies-and-telegraphs.md:59)" % _record.RECOVERY)
+	_test.check("reaction floor", absf(float(_record.REACTION_FLOOR) - 0.4) < 0.0001, "REACTION_FLOOR %.2f s" % _record.REACTION_FLOOR)
+	_test.check("bands", _record.BANDS.size() == 3 and _record.BANDS.has("area_burst") and _record.BANDS.has("projectile") and _record.BANDS.has("ray"),
+		"BANDS %s" % [_record.BANDS])
+	_test.check("rows exist", _record.ROWS.size() == kinds.size() and kinds.size() >= 10,
+		"%d rows for %d pack kinds" % [_record.ROWS.size(), kinds.size()])
+	var seen := {}
+	for id in _record.ROWS:
+		var row: Dictionary = _record.ROWS[id]
+		var kind := String(row.get("kind", ""))
+		var problems: Array = []
+		if not kind in kinds:
+			problems.append("kind %s is not a pack kind" % kind)
+		if seen.has(kind):
+			problems.append("kind twice")
+		seen[kind] = true
+		for field in ["pre_shoot", "cooldown", "radius", "recovery_before"]:
+			if not _finite(row.get(field)) or float(row.get(field)) < 0.0:
+				problems.append(field)
+		if not String(row.get("marker", "")) in _record.MARKERS:
+			problems.append("marker")
+		if not _record.BANDS.has(String(row.get("band", ""))):
+			problems.append("band")
+		if float(row.get("pre_shoot", 0.0)) < float(_record.REACTION_FLOOR):
+			problems.append("pre_shoot under the floor")
+		if not _record.in_band(id) and String(row.get("reason", "")).strip_edges() == "":
+			problems.append("outside its band with no reason")
+		if not EventKinds.ATTACK_ROWS.has(id) or String(EventKinds.ATTACK_ROWS[id]["owner"]) != kind:
+			problems.append("attack row %s is not %s's" % [id, kind])
+		var recovery: float = _record.recovery(kind)
+		if not _finite(recovery):
+			problems.append("recovery")
+		_test.check(id + " " + kind + " record row", problems.is_empty(), "problems %s" % [problems])
+	for kind in _record.OWN_CLOCK:
+		_test.check(kind + " own-clock reason", kind in kinds and String(_record.OWN_CLOCK[kind]).strip_edges() != "",
+			"%s: %s" % [kind, _record.OWN_CLOCK[kind]])
+
+
+# --- The record against the code -------------------------------------------------------
+
+func _spawn(kind: String):
+	_game.player.reset_to(_ball_at)
+	var at: Vector3 = _ball_at + OFFSET
+	return _game.combat.spawn_enemy(kind, _game.ctx.terrain.drop_point(at.x, at.z, 1.8))
+
+
+func _clear_field() -> void:
+	for group in ["enemy", "enemy_shot", "telegraph"]:
+		for node in get_nodes_in_group(group):
+			if is_instance_valid(node):
+				node.free()
+
+
+func _own_numbers(kind: String) -> Dictionary:
+	match kind:
+		"chaser":
+			return {"pre_shoot": Chaser.WINDUP, "cooldown": Chaser.REST, "recovery": Chaser.RECOVER}
+		"lobber":
+			return {"pre_shoot": Lobber.FLIGHT, "cooldown": Lobber.CYCLE - Lobber.TELEGRAPH, "recovery": 0.0}
+		"swarm_remnant":
+			return {"pre_shoot": Swarm.LOCK_WARN, "cooldown": Swarm.REST, "recovery": 0.0}
+	return {}
+
+
+func _on_phase(facts: Dictionary) -> void:
+	_phases.append([Engine.get_physics_frames(), String(facts["phase"])])
+
+
+# One live attack of a counter.gd kind: the recovery measured after it ends.
+func _recovery(kind: String) -> Dictionary:
+	_phases.clear()
+	var enemy = _spawn(kind)
+	for unit in get_nodes_in_group("enemy"):
+		unit.hp = 1.0e6
+	enemy.attack_phase.connect(_on_phase)
+	enemy._rest = 0.0
+	var ended := -1
+	var frames := 0
+	var at := Vector3.ZERO
+	var drift := 0.0
+	var warned_inside := false
+	var out := {"skip": "no recover in %d frames" % FRAME_LIMIT}
+	for f in FRAME_LIMIT:
+		await physics_frame
+		if f % 60 == 59:
+			_game.player.reset_to(_ball_at)
+		if not is_instance_valid(enemy):
+			out = {"skip": "unit gone"}
+			break
+		if ended < 0:
+			for p in _phases:
+				if p[1] == "recover":
+					ended = int(p[0])
+					at = enemy.global_position
+			if ended >= 0 and enemy.recovering():
+				frames = 1
+			continue
+		if enemy.recovering():
+			frames += 1
+			var flat: Vector3 = enemy.global_position - at
+			drift = maxf(drift, Vector2(flat.x, flat.z).length())
+			if enemy.phase != Counter.Phase.ROAM:
+				warned_inside = true
+		else:
+			out = {"seconds": float(frames) * _tick, "drift": drift, "warned_inside": warned_inside,
+				"reads": float(enemy.recovery_seconds)}
+			break
+	_clear_field()
+	await physics_frame
+	return out
+
+
+func _against_code(kinds: Array) -> void:
+	print("kind | attack | clock | pre-shoot record/code | cooldown record/code | recovery before | recovery after (measured) | drift m")
+	for kind in kinds:
+		var id: String = _record.id_of(kind)
+		var row: Dictionary = _record.ROWS.get(id, {})
+		if _record.OWN_CLOCK.has(kind):
+			var own := _own_numbers(kind)
+			var ok: bool = not own.is_empty() and absf(float(row.get("pre_shoot", -1.0)) - float(own["pre_shoot"])) < 0.0001 \
+				and absf(float(row.get("cooldown", -1.0)) - float(own["cooldown"])) < 0.0001 \
+				and absf(_record.recovery(kind) - float(own["recovery"])) < 0.0001
+			print("%s | %s | own | %.2f/%.2f | %.2f/%.2f | %.2f | %.2f (own clock) | -" % [kind, id, row.get("pre_shoot", -1.0),
+				own.get("pre_shoot", -1.0), row.get("cooldown", -1.0), own.get("cooldown", -1.0), row.get("recovery_before", -1.0),
+				_record.recovery(kind)])
+			_test.check(kind + " own-clock numbers match the record", ok, "record %s, code %s" % [row, own])
+			continue
+		var probe = _spawn(kind)
+		var is_counter: bool = probe is Counter
+		var warn: float = probe.warn_seconds if is_counter else -1.0
+		var rest: float = probe.rest_seconds if is_counter else -1.0
+		var reads: float = float(probe.get("recovery_seconds")) if probe.get("recovery_seconds") != null else -1.0
+		_clear_field()
+		await physics_frame
+		_test.check(kind + " is a counter.gd kind or on the own-clock list", is_counter, "script %s" % kind)
+		if not is_counter:
+			continue
+		_test.check(kind + " pre-shoot is its warn", absf(float(row.get("pre_shoot", -1.0)) - warn) < 0.0001,
+			"record %.2f, warn_seconds %.2f" % [row.get("pre_shoot", -1.0), warn])
+		_test.check(kind + " cooldown is its rest less the recovery", absf(float(row.get("cooldown", -1.0)) - (rest - float(_record.RECOVERY))) < 0.0001,
+			"record %.2f, rest_seconds %.2f - recovery %.2f" % [row.get("cooldown", -1.0), rest, _record.RECOVERY])
+		_test.check(kind + " reads the shared recovery", absf(reads - float(_record.RECOVERY)) < 0.0001,
+			"recovery_seconds %.2f, RECOVERY %.2f" % [reads, _record.RECOVERY])
+		var m := await _recovery(kind)
+		if m.has("skip"):
+			_test.check(kind + " recovery measured", false, String(m["skip"]))
+			continue
+		print("%s | %s | counter | %.2f/%.2f | %.2f/%.2f | %.2f | %.3f | %.3f" % [kind, id, row.get("pre_shoot", -1.0), warn,
+			row.get("cooldown", -1.0), rest - float(_record.RECOVERY), row.get("recovery_before", -1.0), m["seconds"], m["drift"]])
+		_test.check(kind + " recovery lasts the shared value", absf(float(m["seconds"]) - float(_record.RECOVERY)) <= _tick + 0.0001,
+			"measured %.3f s, RECOVERY %.2f s, within one tick" % [m["seconds"], _record.RECOVERY])
+		_test.check(kind + " stands still and starts nothing in recovery", float(m["drift"]) <= STILL and not bool(m["warned_inside"]),
+			"drift %.3f m (at most %.2f), warned inside %s" % [m["drift"], STILL, m["warned_inside"]])
+
+
+# --- Exceptions and LEGIBILITY ---------------------------------------------------------
+
+func _exceptions() -> void:
+	var warden_ids: Array = []
+	for id in EventKinds.ATTACK_ROWS:
+		if String(EventKinds.ATTACK_ROWS[id]["group"]) == "warden":
+			warden_ids.append(String(id))
+	var missing: Array = warden_ids.filter(func(id): return not _record.WARDEN_EXCEPTIONS.has(id))
+	var pack: Array = _record.WARDEN_EXCEPTIONS.keys().filter(func(id): return _record.ROWS.has(id))
+	print("Warden exception set: %s" % [_record.WARDEN_EXCEPTIONS.keys()])
+	_test.check("every Warden attack on the exception set", missing.is_empty() and not warden_ids.is_empty(),
+		"%d warden rows, missing %s" % [warden_ids.size(), missing])
+	_test.check("no pack attack on the exception set", pack.is_empty(), "pack ids on it %s" % [pack])
+	for id in _record.WARDEN_EXCEPTIONS:
+		_test.check(String(id) + " exception reason", String(_record.WARDEN_EXCEPTIONS[id]).strip_edges() != "",
+			String(_record.WARDEN_EXCEPTIONS[id]))
+
+
+func _legibility() -> void:
+	var rows := {}
+	var text := FileAccess.get_file_as_string(LEGIBILITY_PATH)
+	var in_section := false
+	for line in text.split("\n"):
+		if line.begins_with("## "):
+			in_section = line.begins_with("## 2.")
+			continue
+		if not in_section or not line.begins_with("| E"):
+			continue
+		var cells: Array = []
+		for cell in line.split("|"):
+			cells.append(cell.strip_edges().replace("`", ""))
+		if cells.size() >= 6:
+			rows[cells[1]] = {"kind": cells[2], "marker": cells[3], "band": cells[4], "pre_shoot": cells[5]}
+	var mismatched: Array = []
+	for id in _record.ROWS:
+		var row: Dictionary = _record.ROWS[id]
+		var want := {"kind": String(row["kind"]), "marker": String(row["marker"]), "band": String(row["band"]),
+			"pre_shoot": "%.2f" % float(row["pre_shoot"])}
+		if rows.get(id, {}) != want:
+			mismatched.append("%s record %s legibility %s" % [id, want, rows.get(id, "missing")])
+	_test.check("LEGIBILITY section 2 lists every record row", mismatched.is_empty() and rows.size() == _record.ROWS.size(),
+		"%d LEGIBILITY rows, %d record rows; mismatched %s" % [rows.size(), _record.ROWS.size(), mismatched])
+
+
+func _run() -> void:
+	if not ResourceLoader.exists(RECORD_PATH):
+		_test.check("telegraph record exists", false, "%s missing" % RECORD_PATH)
+		quit(_test.verdict())
+		return
+	_record = load(RECORD_PATH)
+	await _boot()
+	var kinds := _pack_kinds()
+	_structure(kinds)
+	_exceptions()
+	_legibility()
+	await _against_code(kinds)
+	Engine.time_scale = 1.0
+	Engine.physics_ticks_per_second = BASE_TICKS
+	_game.free()
+	quit(_test.verdict())
