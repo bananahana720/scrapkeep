@@ -4,8 +4,7 @@ extends SceneTree
 # "<id>-col" trimesh and two detail shells (<id>_detail1.glb, <id>_detail2.glb), placed through park_recipes.gd.
 #
 # Convention under test (tools/blender/park/halfpipes.py header): +Y up, the ride direction +Z (the fall line), origin
-# at the entry lip on the ground (y 0 is the rim and apron level for every piece: a channel's floor lies one wall height
-# below it, the drop-in's floor one drop below its deck), a "socket_exit" node where the next
+# at the entry lip, the channel floor at y 0 there (the drop-in's deck at y 0), a "socket_exit" node where the next
 # piece's origin goes (its yaw is the bend), "gauge_l" and "gauge_r" on the wall crests at the exit end.
 # (a) Every GLB exists, imports as a scene, sits inside its budget class (base landform with the -col counted, shells detail).
 # (b) park_recipes.place() makes a real recipe node: one world collider holding the -col trimesh, the -col mesh never
@@ -185,9 +184,7 @@ func _check_geometry() -> void:
 		var yaw := rad_to_deg(atan2(exit_xf.basis.z.x, exit_xf.basis.z.z))
 		_t.near("(c) %s exit yaw is its bend" % id, yaw, float(RECIPES[id]["bend"]), BEND_TOL_DEG)
 		_t.check("(c) %s runs 30 m or more along its heading" % id, exit_xf.origin.length() >= 30.0, str(exit_xf.origin))
-		var floor_entry := -float(RECIPES[id]["drop"]) if float(RECIPES[id]["drop"]) > 0.0 else -wall
-		_t.check("(c) %s floor falls toward the exit" % id, exit_xf.origin.y < floor_entry - 0.5, "exit y %.2f, entry floor %.2f" % [exit_xf.origin.y, floor_entry])
-		_t.check("(c) %s rim sits at the ground plane at the entry and falls with the path" % id, l.y <= 0.05 and l.y > -3.0, "crest y %.2f" % l.y)
+		_t.check("(c) %s floor falls toward the exit" % id, exit_xf.origin.y < -0.5, "exit y %.2f" % exit_xf.origin.y)
 		scene.free()
 
 
@@ -225,17 +222,16 @@ func _check_roll() -> void:
 		var scene := (load(_glb(id)) as PackedScene).instantiate()
 		var exit_local := _local(_socket(scene, "socket_exit"), scene)
 		var gl := _local(_socket(scene, "gauge_l"), scene).origin
-		var entry_floor := -(gl.y - exit_local.origin.y)
 		scene.free()
 		var at := Vector2(i * SPACING, 0.0)
 		var row := _row(id, at, Vector3(48, 10, 24))
 		var node := ParkRecipes.place(row, parent, Callable(), publish)
 		var drop := float(RECIPES[id]["drop"])
-		# A channel's ball starts 1.4 m over the entry floor (a wall height under the ground plane), a drop-in's 6 m back on the deck, 1.4 m over it.
+		# A channel's ball starts 1.4 m over the entry floor, a drop-in's 6 m back on the deck, 1.4 m over it.
 		var start_z := 2.0 if drop == 0.0 else -6.0
 		for lane in [0.0, 4.5]:
 			# The off-centre ball starts higher in a channel, so it falls onto the wall's transition instead of into it.
-			var local_start := Vector3(lane, 1.4 if drop > 0.0 else entry_floor + (1.4 if lane == 0.0 else 4.0), start_z)
+			var local_start := Vector3(lane, 1.4 if (lane == 0.0 or drop > 0.0) else 4.0, start_z)
 			var ball := _ball(parent, node.global_transform * local_start, node.global_transform.basis * Vector3(0, 0, START_SPEED))
 			runs.append({"id": id, "lane": lane, "node": node, "ball": ball, "exit": exit_local, "half": absf(gl.x) + 1.0,
 				"slow": 0, "worst": 0, "published": false})

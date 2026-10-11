@@ -6,9 +6,16 @@ Recipes (each writes <id>.glb, <id>_detail1.glb and <id>_detail2.glb under asset
   wash_dropin_lip           the drop-in onto a wash: a deck, a concrete-capped lip, a curved drop and a run-out
 
 Convention, the same for every piece of the family (the park_recipes.gd placement rules):
-  +Y up, the ride direction +Z (the fall line), the origin at the entry lip on the ground. A channel's floor is at y 0 at
-  the entry and falls GRADE (3 percent) along its path; its walls rise from the floor and the crest is the wall height
-  above the floor at every point. The drop-in's deck is at y 0 behind the lip (z < 0) and its floor falls DROP metres.
+  +Y up, the ride direction +Z (the fall line), the origin at the entry lip. One datum for every piece: y 0 is the ground
+  height at the origin, as the park bake leaves it. A channel (half_pipe_concrete, slot_canyon_flow and its bends) starts
+  ON ITS FLOOR: the bake's wash or channel stamp lowers the terrain to that floor along the footprint, the walls rise from
+  it (10 m concrete, 13 m slot) and their crests, with the rim and apron sheets, meet the surrounding terrain, so the piece
+  reads as a cut into the rock and not as a wall standing on the sand. The floor falls GRADE (3 percent) along the path and
+  the crest is the wall height above the floor at every point. The drop-in starts on its deck (the unstamped ground behind
+  the lip, z < 0) and its floor falls DROP metres below y 0. Why the channel floor and not its rim is y 0: park_recipes.gd
+  puts the ride sensor from the row's y upward only, so a ball rolling in a channel cut below y 0 would never fire its
+  ride fact (measured at 3e7087d, a cut-below-y-0 build: 4 of 125 checks red, all ride_chute; the attempt is kept as
+  cut_datum_attempt.patch beside the build log).
   A bend turns RIGHT (toward +X) about a circle of RADIUS_* metres; a left turn is not built (follow-up).
   Reference nodes in the base GLB: socket_entry (the origin), socket_exit (where the next piece's origin goes; its yaw is
   the bend, +Y rotation), gauge_l and gauge_r (the wall crests at the exit end: their distance is the crest-to-crest
