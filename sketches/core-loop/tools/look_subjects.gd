@@ -231,6 +231,7 @@ const SUBJECTS := {
 	# ---------------------------------------------------------------- Hoberman mecha per pilot (PD-0)
 	# pilot: the class index the cge group boots; heft: the class it shows. The cge prefix is kept
 	# so the P-D briefs and the harness agree.
+	# chunks: false shows the heft class's layers without its chunk load (the rule rows).
 	"cge_sable_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 0, "heft": 1, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
 	"cge_sable_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 0, "heft": 3, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
 	"cge_sable_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 0, "heft": 5, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
@@ -249,6 +250,26 @@ const SUBJECTS := {
 	"cge_cannon_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 5, "heft": 1, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
 	"cge_cannon_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 5, "heft": 3, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
 	"cge_cannon_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 5, "heft": 5, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	# The rule rows (PD-0b): the same eyes and heft layers with no chunks ("chunks": false), the
+	# view ROSTER-LOOK section 3 rules 1 to 3 define; the rows above stay as the heft rows.
+	"cge_sable_rule_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 0, "heft": 1, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_sable_rule_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 0, "heft": 3, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_sable_rule_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 0, "heft": 5, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_rivet_rule_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 1, "heft": 1, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_rivet_rule_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 1, "heft": 3, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_rivet_rule_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 1, "heft": 5, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_kest_rule_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 2, "heft": 1, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_kest_rule_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 2, "heft": 3, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_kest_rule_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 2, "heft": 5, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tarn_rule_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 3, "heft": 1, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tarn_rule_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 3, "heft": 3, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tarn_rule_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 3, "heft": 5, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tally_rule_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 4, "heft": 1, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tally_rule_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 4, "heft": 3, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tally_rule_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 4, "heft": 5, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_cannon_rule_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 5, "heft": 1, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_cannon_rule_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 5, "heft": 3, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_cannon_rule_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0b", "anchor": "ball", "pilot": 5, "heft": 5, "chunks": false, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
 }
 
 # The order --all boots the groups in; every group a row names appears once.

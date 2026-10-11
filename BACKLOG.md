@@ -6354,3 +6354,63 @@ Andrew authorized this documentation-only round at TRACKING EV-0579 after playin
 **Verification and evidence:** Headless Blender probes and generation under `systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G`; AT-01 checks on all four exports; rendered image inspection; `npm run check:scope -- <base> <candidate>` and its required commands; independent review. No browser flow changes; browser UAT is not applicable.
 
 **Boundary:** Local original mesh tooling and neutral fixtures only. No paid provider, new dependency, clothing rig, engine migration, game change, paused-sprint mutation or acceptance of pending hero/boss designs.
+
+## Comps study: learn from the games Andrew loves (10 October 2026)
+
+Andrew installed Risk of Rain 2, Gunfire Reborn, Roboquest and The Binding of Isaac: Rebirth and asked what Scrapkeep can take from them without reinventing the wheel, with one hard line: no copyright infringement. The pack takes mechanics, formulas, tuning numbers and structure (ideas and facts), measures production budgets (metadata only, nothing exported) and traces free upstream sources (fetched from the original under their own license, never from the game). Models, textures, audio, code text, names, characters and level layouts are never copied. The study tree and extracted data live outside the repository and are deleted when the notes are accepted. The lead lens is map design, the events on the map and the run's objectives; companions are the second lens.
+
+<a id="cs-01"></a>
+
+### CS-01: Risk of Rain 2 and Isaac comps pack
+
+**Card revision:** 1 · **Owner:** Design research · **Size:** M · **Lane:** Comps study
+
+**Source and inputs:** Andrew's request and decisions of 10 October 2026 (open stage with authored pockets; a crew of scrap bots that grow, persist and have personality); `BIBLE.md` AD-10 (line 673); `docs/DISCOVERY.md:69`; TRACKING EV-0479; `docs/CONCEPT-STUDY-01.md:25`; `docs/project/ASSETS.md`; `docs/tech/sections/TH-19-asset-import-export.md`; the decompiled Risk of Rain 2 study tree and the official Isaac resource extractor output, both in scratch outside the repository.
+
+**Dependencies:** None. **Blocking questions:** None.
+
+**Files touched:** `sketches/core-loop/design-v3/research/comps/**`; `docs/project/ASSETS.md` (comps posture paragraph only); BACKLOG and TRACKING (coordinator).
+
+**Definition of done:**
+
+1. `comps/README.md` carries the borrow list: each borrowed relationship mapped to a Bible principle and the Bible section or ADR it would amend, plus the proposed asset-forge budget deltas and the Gunfire and Roboquest follow-ups.
+2. `comps/ror2/` holds notes on stage anatomy (lead), events and objectives, director and difficulty, run flow, companions (lead for the scrap-bot crew), items and stacking, characters and feel, progression and music, architecture, production budgets and provenance, with a measured stage table under `data/`.
+3. `comps/isaac/` holds notes on floor generation, rooms, items and synergies, pacing and trades, and curated data tables.
+4. Every note has the six fixed sections (what it does, parameters with sources, why it works, what Scrapkeep borrows, what it must not copy, lab measure) and one diagram. No game code, text, names used as Scrapkeep names, layouts or art appear.
+5. The pack is handed to the main Scrapkeep session with the branch, head and borrow list.
+
+**Verification and evidence:** greps over the diff for C# tokens and local disk paths (0 hits); `npm run check:docs`; independent review of structure and Bible fit; scratch cleanup recorded in TRACKING.
+
+**Boundary:** Research and documentation only. No game change, no asset import, no dependency, no ADR edit (amendments are proposed in the README, not applied).
+
+<a id="cs-02"></a>
+
+### CS-02: Gunfire Reborn comps notes
+
+**Card revision:** 1 · **Owner:** Design research · **Size:** M · **Lane:** Comps study
+
+**Source and inputs:** [CS-01](#cs-01) note shape and posture; the installed game (Unity IL2CPP, so logic is native; wiki and play notes are the primary sources, asset tables readable for budgets only).
+
+**Dependencies:** [CS-01](#cs-01). **Blocking questions:** None.
+
+**Files touched:** `sketches/core-loop/design-v3/research/comps/gunfire/**`.
+
+**Definition of done:** stage anatomy as the lead note (room-by-room act structure, placement of vaults, challenge rooms and shops, wave events per room), weapon-and-scroll synergy and elemental fusion, run and act pacing, production budgets by metadata, and a three-game map comparison started. Same six-section shape and the same bans as CS-01.
+
+**Verification and evidence:** as CS-01. **Boundary:** as CS-01; no IL2CPP decompilation unless a single number the wiki lacks is needed, and then it is stated.
+
+<a id="cs-03"></a>
+
+### CS-03: Roboquest comps notes
+
+**Card revision:** 1 · **Owner:** Design research · **Size:** M · **Lane:** Comps study
+
+**Source and inputs:** [CS-01](#cs-01) note shape and posture; the installed game (Unreal 4, compiled C++; play notes, frame-counted capture and a pak reader for metadata).
+
+**Dependencies:** [CS-01](#cs-01). **Blocking questions:** None.
+
+**Files touched:** `sketches/core-loop/design-v3/research/comps/roboquest/**`.
+
+**Definition of done:** stage anatomy as the lead note (handcrafted stages with branching exits, in-stage objectives and secrets, the basecamp between runs), movement feel with frame-counted values, class perks, production budgets by metadata, and the three-game map comparison completed against Scrapkeep's open-stage-with-pockets shape. Same six-section shape and bans as CS-01.
+
+**Verification and evidence:** as CS-01. **Boundary:** as CS-01; the pak reader is chosen at card start and built from source or a package registry.

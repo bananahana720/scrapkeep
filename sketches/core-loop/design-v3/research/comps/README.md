@@ -1,0 +1,89 @@
+# Comps: what Scrapkeep borrows from the games Andrew loves
+
+Research pack for [CS-01](../../../../../BACKLOG.md#cs-01), 10 October 2026. Risk of Rain 2 and The Binding of Isaac: Rebirth (Afterbirth+ data) are covered here; Gunfire Reborn and Roboquest are the follow-up cards CS-02 and CS-03. Coordinator: Claude Fable 5.1, with Haiku scouts on the sources, Sonnet data workers on the measurements, Sonnet writers on the notes, and an Opus verifier and reviewer on the result.
+
+## Posture
+
+We borrow relationships, formulas and structure, and we reimplement them. We measure production budgets from metadata and export nothing. We trace free upstream sources and fetch them from the original under their own license. No model, texture, audio, music, code text, layout or art from any of these games enters the repository or a build, none seeds image generation, and no name from them is used as a Scrapkeep name. Names appear in these notes only as evidence labels. The rule is written where asset admission lives: `docs/project/ASSETS.md`, "Comps study posture". The study copies live outside the repository and are deleted when this pack is accepted; the receipts that survive are the notes' parameter tables, the numbers-only CSV and the scripts' names recorded in TRACKING.
+
+## Method and evidence
+
+| Source | How it was read | Evidence level |
+| --- | --- | --- |
+| Risk of Rain 2 game code | Mono assemblies decompiled with ILSpy into a scratch tree; nine Haiku scouts, one question each, citing class and member | 2 to 3 (static read, code paths walked) |
+| Risk of Rain 2 asset tables | UnityPy over every bundle: 17,898 meshes, 10,775 textures, 5,068 rigs, 4,923 clips; 151 node-graph objects and 76 stage credit records read through generated typetrees; the CSV has 93 rows because non-stage scenes (menus, bazaar, test scenes) are kept for completeness | 4 at the time of measurement (scripts rerun with identical output); the scripts live outside the repo, so from the repo alone these are level 2 |
+| Risk of Rain 2 wiki and forums | riskofrain2.wiki.gg Directors, Difficulty, Environments, Teleporter, Drones; Steam threads | public, summarized pages; wiki numbers are likely data-mined from the same files, so they corroborate the read, not the design |
+| Isaac data files | the game's own resource extractor; a parser validated to the byte on 26 room files (15,965 rooms), plus items, pools, entities, stages, waves, curses, challenges, music | 4 at measurement; level 2 from the repo alone |
+| Isaac design writing | Boris the Brave's floor-generation article, wiki Level Generation, Room, Item Pool, Devil Room, Transformations, Boss Rush, the modding docs | public, summarized pages; conflicts between sources are stated in the notes |
+| Andrew | four structured questions on rooms, stage shape, companions and the companion fantasy | owner decision |
+
+Every note has the same six sections: what it does, parameters with a source per row, why it works, what Scrapkeep borrows, what it must not copy, and one lab measure. Each carries a diagram.
+
+**Principle vocabulary.** The principles named below are Andrew's, recorded in `docs/playtests/PLAYTEST-LOG.md` entry 6 and paraphrased here in the short forms the project already uses (momentum is sacred, quick restart, opt-in layers, insane scaling bounded by visual clarity, class identities, high-BPM jazzy EDM, harmonize apparent contradictions), plus readability first and the Arizona jungle-gym landforms from later entries. The notes call "insane scaling bounded by visual clarity" by its short name, readable-capped scaling; the two are the same principle. They are not yet Bible text; card DF-05 carries them into the Bible and is not authorized. The "Bible anchor" column names the Bible or ADR text that exists today and would change.
+
+## Andrew's decisions this session
+
+1. **Stage shape:** one open stage carrying the main objective, with authored pockets (arenas, secret rooms, trade rooms) embedded as optional content visible from the open space.
+2. **Great rooms** (from a thousand hours of Isaac): layouts you can solve on entry, enemy mixes that force movement, optional risk pockets. The authored library is the means, those three are the ends.
+3. **Companions:** a crew of scrap bots assembled from scrap over the run, each with a role. Fully fleshed means they grow with the run, persist across stages and can be repaired or revived, and have personality and voice. Direct command controls were not chosen. This conflicts with the Bible's one-companion rule; see the veto list.
+
+## The borrow list
+
+Each row is a relationship, the principle it serves, and the existing text it would amend. Nothing here is applied; it is proposed for the main session and Andrew to admit.
+
+| # | Relationship borrowed | From | Principle (Andrew's) | Bible anchor today |
+| --- | --- | --- | --- | --- |
+| 1 | One spatial graph of the stage is the single truth for enemy spawn placement, interactable placement, objective eligibility and AI navigation; player spawn sits in the farthest quarter from the objective | RoR2, [stage anatomy](ror2/stage-anatomy.md) | Readability first | TADR-010; `BIBLE.md` § 6 "Encounters, waves and enemies" (line 517) |
+| 2 | Credit economies spend the stage: interactable credits scale with player count, monster credits with the difficulty dial, director income with `1 + 0.4 × dial`; cards have cost, weight, category and per-stage caps | RoR2, [director and difficulty](ror2/director-and-difficulty.md) | Insane scaling bounded by visual clarity | TADR-010; `BIBLE.md` § 6 line 517 |
+| 3 | A difficulty dial with a player term, a floored-minute time term and a per-stage multiplier, and an ambient level with a hard cap; time scales threat and never gates progression | RoR2, [director and difficulty](ror2/director-and-difficulty.md) | Insane scaling bounded by visual clarity | TADR-010; `BIBLE.md` § 6 line 517; the cap value is open question Q-P24 |
+| 4 | The objective is a holdout whose charge rate is the share of living players inside, with a radius, a boss budget of `600 × sqrt(dial)`, shrine stacks that multiply the boss budget and the rewards, and the stay-or-leave trade once charged (the exact cost of staying was not traced) | RoR2, [events and objectives](ror2/events-and-objectives.md) | Momentum is sacred; opt-in layers | TADR-010; `BIBLE.md` § 3 "Reading the catalogue" (line 167) |
+| 5 | Optional content placed by detour: anchors ranked by path distance from spawn and objective, guaranteed pockets at the costliest anchors off the main route, a hidden pocket where several zones meet, chance pockets whose odds read player state; the objective itself stays in the open stage | Isaac and RoR2, [pocket placement](pocket-placement.md) (the reconciled spec), [floor generation](isaac/floor-generation.md), [stage anatomy](ror2/stage-anatomy.md) | Opt-in layers; momentum is sacred | TADR-010; `BIBLE.md` § 3 line 167 |
+| 6 | An authored pocket library with difficulty and weight fields, difficulty bands that shift with stage depth, a density budget per pocket, and a readable-on-entry rule (no hazard at a door) | Isaac, [rooms](isaac/rooms.md) | Readability first | TH-14 randomness and generation; a new pocket-library section |
+| 7 | Stacking families (linear, hyperbolic `1 − 1/(1 + a·x)`, exponential, special), a proc coefficient per hit and a chain mask that forbids a proc type repeating in one chain | RoR2, [items and stacking](ror2/items-and-stacking.md) | Insane scaling bounded by visual clarity | TADR-008 ability contract; `BIBLE.md` § 5 Weapons & Items (line 392) |
+| 8 | Composition by flags: an item sets bits, the tear code checks bits independently, so pairs interact without bespoke code; pools decay the weight of items already seen; a set of three completes a transformation | Isaac, [items and synergies](isaac/items-and-synergies.md) | Harmonize apparent contradictions; transformative combinations | `BIBLE.md` AD-10 (line 673) and § 5.4 (line 448) |
+| 9 | Companion architecture: ownership and leash, a priority list of data-driven skill drivers (target, move, aim, distance band, health window), item inheritance through an explicit filter, repair as a cost; and the seven gaps that made drones feel half-baked. Studied but not borrowed: per-kind slot limits and the 2^n growth curve | RoR2, [companions](ror2/companions.md) | Opt-in layers; readability first | `BIBLE.md` § 6 "Devices and one main companion" (line 566), which the crew decision conflicts with |
+| 10 | Skill slots with stock and recharge, interrupt priorities, state duration divided by attack speed, sprint cancel on activation | RoR2, [characters and feel](ror2/characters-and-feel.md) | Class identities | TADR-008 ability contract |
+| 11 | Telegraph grammar: a long fixed charge scaled by attack speed with its own sound and effect, a named hitbox on the animation or one aimed blast, and bounded feedback (hitstop only on melee, shake that decays, damage colors by type) | RoR2, [characters and feel](ror2/characters-and-feel.md) | Readability first | `BIBLE.md` § 8 "Movement, impacts and combat rhythm" (line 782); the lightning contract's telegraph rule |
+| 12 | Adaptive music driven by run parameters (player health, enemy value from proximity and look, objective distance, direction and in-radius) plus a boss state, updated four times a second, with a main and a boss track per stage | RoR2, [progression and music](ror2/progression-and-music.md) | High-BPM jazzy EDM | `R3-adaptive-music.md`; `BIBLE.md` § 8 Audio & Feel |
+| 13 | Architecture patterns: catalogs filled from content packs, body versus master, state machines as data, one damage pipeline with event hooks, pooled effects | RoR2, [architecture](ror2/architecture.md) | Production conventions (not a design principle) | TADR-002 runtime model; HF-01 |
+| 14 | Achievements as a teaching surface (loop once, finish stages without healing), a logbook built from the catalogs, run tallies | RoR2 and Isaac, [progression and music](ror2/progression-and-music.md), [pacing and trades](isaac/pacing-and-trades.md) | Opt-in layers | `BIBLE.md` § 6 "Four slots and milestone progression" (line 527) and "Runs, regions, exits and saves" (line 576) |
+| 15 | Pacing trades: deal odds that fall when you took one recently, sacrifice odds that rise at full health, a clock that rewards speed without gating, curses as run modifiers | Isaac, [pacing and trades](isaac/pacing-and-trades.md) | Opt-in layers; momentum is sacred | TADR-010 |
+| 16 | Production budgets measured by category, compared with the asset forge's bands | RoR2, [production budgets](ror2/production-budgets.md) | Production conventions | `tools/asset-forge/packs/core-loop.toml` on the forge branch |
+| 17 | Middleware roles as a checklist for the native build; Noto Sans and Liberation Sans as OFL font candidates | RoR2, [provenance](ror2/provenance.md) | Production conventions | HF-01; `docs/project/ASSETS.md` |
+
+## Proposed asset-forge budget deltas
+
+From the measured tables in [production budgets](ror2/production-budgets.md), for the forge owner on branch `claude/reverse-engineer-asset-pipeline-a5025f`. Caveat: the game's mesh rows are per piece and our caps are per asset, so a summed per-character pass should confirm each delta before it lands.
+
+1. Foes: add a class of 500 to 5,000 triangles, bosses up to 10,000, with a 40-bone cap. Our kit band of 800 to 1,500 is too tight against the measured monsters (median 528, p90 4,814).
+2. Props and pickups: lower the prop floor from 150 to 40 triangles, add a pickup class of 70 to 2,200 triangles with an 8-bone cap, and lower the terrain texture floor from 256 to 128.
+3. Missing caps: hero 80 bones, gameplay clips at most 3.5 s, at most 50 clips per hero. Keep the hero band of 3,000 to 6,500.
+
+## Veto list for Andrew
+
+Decisions the pack makes that he can strike. Each is a default, not a question.
+
+1. Scrapkeep's stage graph (row 1) becomes the stage's single spatial truth; pockets are placed on it with the reconciled spec in [pocket-placement.md](pocket-placement.md) (row 5).
+2. The difficulty dial keeps Risk of Rain 2's shape with our own constants (row 3); the cap is a design constant chosen under Q-P24, not a tuning knob.
+3. The scrap-bot crew gets its own ADR (row 9), scoped to the three requirements he chose; command controls stay out. **This conflicts with the Bible as written:** `BIBLE.md` § 6 "Devices and one main companion" (lines 566 to 575) says one main companion anchors the support build and temporary helpers do not create a second roster. The crew would amend that section; Risk of Rain 2's deployable slots map onto the Bible's Devices, and its drone ownership, inheritance and repair architecture onto the companion. Nothing is built until the Bible decision is made, and the question is open in TRACKING under CS-01-A1.
+4. Pocket authoring starts as a small library with difficulty and weight (row 6) before any procedural room shape.
+5. The asset forge's bands move only where the deltas above say so, after the per-character sum confirms them.
+
+## Lab arms proposed
+
+- Spawner arm: the current spawner versus a credit director with the dial of row 3, measured on time-to-first-pressure and peak concurrent enemies.
+- Pocket arm: pockets placed by the reconciled spec versus uniform placement, measured on the share of pockets a scripted runner sees from the open stage and the re-roll rate.
+- Companion arm: a crew that persists and repairs versus stage-bound summons, measured on damage share and losses per stage.
+
+## Follow-ups
+
+- CS-02 Gunfire Reborn and CS-03 Roboquest, same shape, stage anatomy first, ending in a three-game map comparison.
+- Fetching a free font or source is its own admission under `docs/project/ASSETS.md`, with license evidence.
+- AD-10 amendment: add Risk of Rain 2 (open stages, director, holdout objective) as a named relationship, and widen Isaac's named relationship from transformative combinations to floor placement, room authoring and pacing trades (rows 5, 6, 15). Proposed here, not applied.
+- DF-05 (Andrew's principles into the Bible) is the card that would make the principle column Bible text; it is not authorized by this pack.
+
+## Folders
+
+- [pocket-placement.md](pocket-placement.md): the reconciled placement spec, Isaac's detour rule on Risk of Rain 2's graph.
+- [ror2/](ror2/README.md): stage anatomy, events and objectives, director and difficulty, [run flow](ror2/run-flow.md), companions, items and stacking, characters and feel, progression and music, architecture, production budgets, provenance, `data/stage-graphs.csv` (a numbers-only projection of the measured table: three text columns dropped, line endings normalized).
+- [isaac/](isaac/README.md): floor generation, rooms, items and synergies, pacing and trades, [data tables](isaac/data-tables.md).
