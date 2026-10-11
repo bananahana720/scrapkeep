@@ -9,13 +9,13 @@ and pit_haul_ramp, each with two detail shells.
                  and cut bank on the inner edge, and two trolley poles 35 m apart on the berm (harpoon anchors).
 
 The bowl floor itself is the terrain height stamp (park_bake); these recipes sit on it. Each recipe is one GLB:
-  <id>.glb          the drawn mesh (one "stone" surface, plus a "steel" surface for the haul ramp's poles) and the
+  <id>.glb          the drawn mesh (one "stone" surface; the haul ramp's poles are steel and copper by vertex colour) and the
                     "<id>-col" mesh that park_recipes.gd turns into a ConcavePolygonShape3D (never drawn); the GLB node is
                     named "<id>-col-col" because the importer strips one -col hint (see build_recipe)
   <id>_detail1.glb  detail shell 1 (mid range), one "stone" surface, class `detail`
   <id>_detail2.glb  detail shell 2 (close range), one "stone" surface, class `detail`
 The draws in the base GLB count the -col mesh as one surface (asset_registry_test counts every surface), so the base of
-each recipe carries a registry exception on draws only (2, and 3 for the haul ramp), citing PARK.md section 9.
+each recipe carries a registry exception on draws only (2), citing PARK.md section 9.
 
 Convention, the same for the whole family: metres, +Y up, the ride direction and the fall line are +Z, the origin is the
 centre of the ENTRY LIP on the ground: the level approach runs from z -4 to z 0 at y 0, the first coping fillet starts at
@@ -157,7 +157,7 @@ RECIPES = {
     },
     "pit_haul_ramp": {
         "segs": [("flat", 4.0), ("ramp", math.degrees(math.atan(0.10)), 44.0, 30.0, 30.0), ("flat", 5.0)],
-        "half": 15.0, "cross": haul_cross, "warp": None, "corridor": 10.0, "lip": False, "draws": 3,
+        "half": 15.0, "cross": haul_cross, "warp": None, "corridor": 10.0, "lip": False, "draws": 2,
         "xs": [-15, -14.2, -13.2, -12.2, -11, -8.8, -6.6, -4.4, -2.2, 0, 2.2, 4.4, 6.6, 8.8, 10.0, 11.2, 12.3, 13.4, 14.4, 15],
         "size": [56.0, 5.0, 30.0],
     },
@@ -304,7 +304,7 @@ def skin_normal_y(skin, x, z):
 
 
 def build_base(name, skin):
-    """(drawn Mesh, col Mesh, pole Mesh or None)."""
+    """(drawn Mesh, col Mesh); the haul ramp's poles are built into the drawn mesh (steel and copper by vertex colour)."""
     grid = skin.grid()
     rows, cols = len(grid), len(grid[0])
     up = (0, 1, 0)
@@ -324,12 +324,10 @@ def build_base(name, skin):
         low = [drawn.vert((p[0], floor if out[2] == 0 else floor, p[2]), VARNISH) for p in pts]
         for k in range(len(pts) - 1):
             drawn.quad(top[k], top[k + 1], low[k + 1], low[k], out)
-    poles = None
     if name == "pit_haul_ramp":
-        poles = Mesh()
         for px, pz in POLES:
-            build_pole(poles, col, skin, px, pz)
-    return drawn, col, poles
+            build_pole(drawn, col, skin, px, pz)
+    return drawn, col
 
 
 def build_pole(poles, col, skin, px, pz):
@@ -662,10 +660,8 @@ def build_recipe(name, out_dir, count_only):
     spec = RECIPES[name]
     skin = Skin(spec)
     surface = check_surface(name, skin)
-    drawn, col, poles = build_base(name, skin)
+    drawn, col = build_base(name, skin)
     parts = [(name + "_ground", drawn, "stone", True)]
-    if poles is not None:
-        parts.append((name + "_poles", poles, "steel", False))
     # Godot's importer strips one "-col" hint from a node name and keeps the mesh, adding the StaticBody3D child (probed
     # 2026-10-11 on this build); park_recipes.gd looks for a mesh named "<name>-col" after import, so the node carries the
     # hint twice and the imported scene's mesh is named "<id>-col".
