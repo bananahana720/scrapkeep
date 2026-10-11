@@ -2549,6 +2549,191 @@
    }
   },
   {
+   "id": "half_pipe_concrete",
+   "path": "res://assets/models/park/half_pipe_concrete.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+  },
+  {
+   "id": "half_pipe_concrete_detail1",
+   "path": "res://assets/models/park/half_pipe_concrete_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "half_pipe_concrete_detail2",
+   "path": "res://assets/models/park/half_pipe_concrete_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow",
+   "path": "res://assets/models/park/slot_canyon_flow.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+  },
+  {
+   "id": "slot_canyon_flow_bend15",
+   "path": "res://assets/models/park/slot_canyon_flow_bend15.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+  },
+  {
+   "id": "slot_canyon_flow_bend15_detail1",
+   "path": "res://assets/models/park/slot_canyon_flow_bend15_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend15_detail2",
+   "path": "res://assets/models/park/slot_canyon_flow_bend15_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend30",
+   "path": "res://assets/models/park/slot_canyon_flow_bend30.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+  },
+  {
+   "id": "slot_canyon_flow_bend30_detail1",
+   "path": "res://assets/models/park/slot_canyon_flow_bend30_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_bend30_detail2",
+   "path": "res://assets/models/park/slot_canyon_flow_bend30_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_detail1",
+   "path": "res://assets/models/park/slot_canyon_flow_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "slot_canyon_flow_detail2",
+   "path": "res://assets/models/park/slot_canyon_flow_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "wash_dropin_lip",
+   "path": "res://assets/models/park/wash_dropin_lip.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "The -col collision mesh is a second mesh node in the base GLB (park_recipes.gd COL_SUFFIX), so the surface count the registry test takes is 2 where the landform class's 1 draw is the drawn mesh alone; triangles and vertices count both meshes and stay inside the class. PARK.md section 9 recipes row: landform 8,000 triangles, 1 draw, with the collider the section 4 table requires."
+  },
+  {
+   "id": "wash_dropin_lip_detail1",
+   "path": "res://assets/models/park/wash_dropin_lip_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "wash_dropin_lip_detail2",
+   "path": "res://assets/models/park/wash_dropin_lip_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe id; base GLB with its -col node, <id>_detail1 and <id>_detail2 shells on the landform ranges)",
+   "provenance": {
+    "recipe": "tools/blender/park/halfpipes.py",
+    "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
    "id": "pilot_cannon_anim",
    "path": "res://assets/models/pilot_cannon_anim.glb",
    "class": "pilot",
@@ -3901,6 +4086,9 @@
   "geyser_launcher_drum",
   "geyser_launcher_fittings",
   "geyser_launcher_grate",
+  "half_pipe_concrete",
+  "half_pipe_concrete_detail1",
+  "half_pipe_concrete_detail2",
   "impeller_hub",
   "impeller_rim_sector",
   "impeller_vane",
@@ -4060,6 +4248,15 @@
   "sky_cradle",
   "sky_loom",
   "sky_mesa",
+  "slot_canyon_flow",
+  "slot_canyon_flow_bend15",
+  "slot_canyon_flow_bend15_detail1",
+  "slot_canyon_flow_bend15_detail2",
+  "slot_canyon_flow_bend30",
+  "slot_canyon_flow_bend30_detail1",
+  "slot_canyon_flow_bend30_detail2",
+  "slot_canyon_flow_detail1",
+  "slot_canyon_flow_detail2",
   "spil9",
   "strut_bent",
   "strut_tall",
@@ -4089,6 +4286,9 @@
   "warden_mantle_choir",
   "warden_mantle_hand",
   "warden_mantle_meltdown",
-  "warden_mantle_meltdown_MantleStripes025m.png"
+  "warden_mantle_meltdown_MantleStripes025m.png",
+  "wash_dropin_lip",
+  "wash_dropin_lip_detail1",
+  "wash_dropin_lip_detail2"
  ]
 }
