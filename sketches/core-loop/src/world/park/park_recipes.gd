@@ -164,7 +164,7 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 		for view in _views(scene, node, body):
 			_range(view, mid_end, 0.0, 0.0)
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_sensor(node, row, publish)
+	_sensor(node, row, publish, true)
 	return node
 
 
@@ -203,7 +203,7 @@ static func place_greybox(row: Dictionary, element: String, parent: Node3D, grou
 	view.set_meta(RecipeProps.META_FADE, true)
 	node.add_child(view)
 	body.add_child(shape)
-	_sensor(node, row, publish)
+	_sensor(node, row, publish, false)
 	return node
 
 
@@ -272,8 +272,8 @@ static func _range(view: GeometryInstance3D, begin: float, end: float, margin: f
 
 
 # The ride sensor: an Area3D over the footprint reaching SENSOR_ABOVE_M above the top, hearing only the ball's layer.
-# None when the row's fact is no WORLD_ROWS kind or no publish callable is given.
-static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
+# entry_origin is true for a GLB recipe (origin at the entry lip). None when the row's fact is no WORLD_ROWS kind or no publish callable is given.
+static func _sensor(node: Node3D, row: Dictionary, publish: Callable, entry_origin: bool) -> void:
 	var fact := String(row.get("ride_fact", ""))
 	if not publish.is_valid() or not EventKinds.WORLD_ROWS.has(fact):
 		return
@@ -289,6 +289,9 @@ static func _sensor(node: Node3D, row: Dictionary, publish: Callable) -> void:
 	box.size = Vector3(float(size[2]), float(size[1]) + SENSOR_ABOVE_M, float(size[0]))
 	shape.shape = box
 	shape.position.y = box.size.y * 0.5
+	# A GLB recipe's origin is its entry lip, so its footprint runs 0..length along +z; a greybox is centred.
+	if entry_origin:
+		shape.position.z = box.size.z * 0.5
 	area.add_child(shape)
 	node.add_child(area)
 	area.body_entered.connect(func(ball: Node3D) -> void: publish.call(fact, ball.global_position))

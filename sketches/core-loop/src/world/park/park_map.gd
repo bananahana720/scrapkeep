@@ -59,10 +59,7 @@ func _fill() -> void:
 	for row in park["park_rows"]:
 		if row["element"] != "kicker":
 			continue
-		# The lip is the footprint's far end along the piece's facing; width is its cross size.
-		var dir := _dir(float(row["yaw_deg"]))
-		kickers.append({"id": row["id"], "at": _v2(row["at"]) + dir * float(row["size"][0]) * 0.5,
-			"dir": dir, "width": float(row["size"][2])})
+		kickers.append(kicker_entry(row))
 
 	contraptions = []
 	for row in park["contraption_rows"]:
@@ -90,6 +87,16 @@ func _fill() -> void:
 
 
 # The ground-plane direction a yaw faces: 0 faces +z, turning toward +x (PARK.md 2.1).
+# One kicker row's lip: the footprint's far end along the piece's facing; width is its cross size. A GLB recipe's
+# origin is its entry lip (PARK.md section 4), so its lip is a whole length on; a greybox is centred, so half a length.
+static func kicker_entry(row: Dictionary) -> Dictionary:
+	var recipe := String(row.get("recipe", ""))
+	var entry_origin := recipe != "" and not recipe.begins_with("greybox:")
+	var dir := _dir(float(row["yaw_deg"]))
+	var reach := float(row["size"][0]) * (1.0 if entry_origin else 0.5)
+	return {"id": row["id"], "at": _v2(row["at"]) + dir * reach, "dir": dir, "width": float(row["size"][2])}
+
+
 static func _dir(yaw_deg: float) -> Vector2:
 	var a := deg_to_rad(yaw_deg)
 	return Vector2(sin(a), cos(a))

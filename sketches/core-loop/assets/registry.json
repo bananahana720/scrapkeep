@@ -2809,6 +2809,39 @@
    }
   },
   {
+   "id": "floating_island",
+   "path": "res://assets/models/park/floating_island.glb",
+   "class": "park_large",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "floating_island recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "floating_island_detail1",
+   "path": "res://assets/models/park/floating_island_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "floating_island recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "floating_island_detail2",
+   "path": "res://assets/models/park/floating_island_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "floating_island recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
    "id": "flooded_shaft",
    "path": "res://assets/models/park/flooded_shaft.glb",
    "class": "park_large",
@@ -3019,6 +3052,43 @@
    }
   },
   {
+   "id": "mesa_lip_kicker",
+   "path": "res://assets/models/park/mesa_lip_kicker.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "PARK.md section 9 gives landform 1 draw. The base GLB holds the render mesh and its undrawn -col trimesh (park_recipes.gd COL_SUFFIX), and the inspector and asset_registry_test count every primitive, so the file measures 2. The render mesh is one draw; triangles and vertices stay inside the class."
+  },
+  {
+   "id": "mesa_lip_kicker_detail1",
+   "path": "res://assets/models/park/mesa_lip_kicker_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "mesa_lip_kicker_detail2",
+   "path": "res://assets/models/park/mesa_lip_kicker_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "mesa_lip_kicker recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
    "id": "mesa_rim_ledge",
    "path": "res://assets/models/park/mesa_rim_ledge.glb",
    "class": "landform",
@@ -3100,6 +3170,43 @@
      8.8384,
      59.3243
     ]
+   }
+  },
+  {
+   "id": "net_deck",
+   "path": "res://assets/models/park/net_deck.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "PARK.md section 9 gives landform 1 draw. The base GLB holds the render mesh and its undrawn -col trimesh (park_recipes.gd COL_SUFFIX), and the inspector and asset_registry_test count every primitive, so the file measures 2. The render mesh is one draw; triangles and vertices stay inside the class."
+  },
+  {
+   "id": "net_deck_detail1",
+   "path": "res://assets/models/park/net_deck_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "net_deck_detail2",
+   "path": "res://assets/models/park/net_deck_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (a park row's recipe places it: base mesh, -col trimesh collider, two detail shells; PARK.md section 4)",
+   "provenance": {
+    "recipe": "tools/blender/park/skyislands.py",
+    "notes": "net_deck recipe of the sky-island family (KC8); built by this script, no external mesh"
    }
   },
   {
@@ -4906,6 +5013,9 @@
   "fabricator_hoop",
   "fabricator_hoop_detail1",
   "fabricator_hoop_detail2",
+  "floating_island",
+  "floating_island_detail1",
+  "floating_island_detail2",
   "flooded_shaft",
   "flooded_shaft_detail1",
   "flooded_shaft_detail2",
@@ -4968,6 +5078,9 @@
   "lift_platform_detail2",
   "lift_platform_glass",
   "lift_platform_pump",
+  "mesa_lip_kicker",
+  "mesa_lip_kicker_detail1",
+  "mesa_lip_kicker_detail2",
   "mesa_rim_ledge",
   "mesa_rim_ledge_detail1",
   "mesa_rim_ledge_detail2",
@@ -4983,6 +5096,9 @@
   "moss_jukebox_detail2",
   "moss_jukebox_feet",
   "moss_jukebox_trim",
+  "net_deck",
+  "net_deck_detail1",
+  "net_deck_detail2",
   "net_edge",
   "net_shoe",
   "net_tile",
