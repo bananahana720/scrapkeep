@@ -94,25 +94,36 @@ IRON = common.mix("charcoal", "petrol", 0.25)
 DUST = common.mix("petrol", "sandstone", 0.35)
 UNDER = common.mix("petrol", "charcoal", 0.4)
 
-# Fingers, index to little (thumb side +X): x at the knuckle line, segment lengths, and the rest
-# fan in radians about +Y (positive turns the tip toward -X), so the four read as a hand and not a
-# rake while every tip stays inside the 3.8 m band.
+# 2026-10-11 (w13 KF7b): the blind read (decisions.tsv KF8-LOOK) never called this body a hand:
+# its read cameras see the hand from its side, where four fingers of one height and a thumb at
+# the fingers' height fuse into one plank. So the thumb now sits on the -X side (the side the
+# Pose's yaw turns toward those cameras) under the fingers with sky between them, the fingers
+# are slimmer with wider gaps, cascade down from index to little and differ in length so four
+# tips step, the knuckle drums bulge on the back of the hand, the palm has a heel and a knuckle
+# ridge, and a cuff marks the wrist.
+# Fingers, index to little (thumb side -X): x at the knuckle line, segment lengths, the rest fan
+# in radians about +Y (positive turns the tip toward -X) and each segment's droop in radians
+# (the cascade: index straight, little most bent), so the four read as a hand and not a rake
+# while every tip stays inside the 3.8 m band and above 1.6 m (the perch's band).
 FINGERS = [
-    ("index", 2.25, (3.3, 2.75, 2.35), -0.095),
-    ("middle", 0.75, (3.6, 3.0, 2.6), -0.03),
-    ("ring", -0.75, (3.3, 2.75, 2.35), 0.035),
-    ("little", -2.25, (2.8, 2.35, 2.0), 0.11),
+    ("index", -2.0, (3.2, 2.7, 2.3), 0.15, (0.0, 0.03, 0.08)),
+    ("middle", -0.68, (3.5, 2.95, 2.5), 0.05, (0.03, 0.08, 0.15)),
+    ("ring", 0.68, (3.2, 2.7, 2.3), -0.05, (0.06, 0.13, 0.22)),
+    ("little", 2.0, (2.7, 2.25, 1.95), -0.155, (0.09, 0.18, 0.3)),
 ]
 FINGER_ORDER = ["little", "ring", "middle", "index"]  # the order chunks put them out
 KNUCKLE_Z = -3.2
-FINGER_Y = 3.55
-FINGER_W = 1.25
-FINGER_H = 1.0
+FINGER_W = 0.95
+FINGER_H = 0.72
+FINGER_Y = 4.05 - FINGER_H / 2  # the root's top stays where the perch grip measures it
 PALM_Y = (2.4, 3.4)
-THUMB = {"x": 3.3, "y": 2.85, "w": 0.8, "h": 0.8,
-         "pts": [(3.25, 2.85, 1.6), (3.35, 2.85, -1.0), (3.3, 2.85, -3.1), (3.2, 2.85, -4.8)]}
+# The opposed thumb: from the thenar pad at the heel, forward along the -X flank under the index
+# with sky between them, its tip turned in under the index's first joint. Its underside stays
+# above 2 m (beyond r 2.8, the low band) and its seam faces up.
+THUMB = {"x": -3.3, "y": 2.5, "w": 0.95, "h": 0.74,
+         "pts": [(-3.0, 2.5, 0.9), (-3.3, 2.5, -2.0), (-3.2, 2.53, -4.5), (-2.45, 2.56, -6.3)]}
 KNUCKLES = [("west", (-2.0, 2.25, -2.4)), ("east", (2.0, 2.25, -2.4)), ("north", (0.0, 2.25, -2.95))]
-STALK = [("Stalk0", 0.0, -1.6, 0.78), ("Stalk1", -1.9, -3.3, 0.7), ("Stalk2", -3.6, -5.0, 0.62)]
+STALK = [("Stalk0", 0.0, -1.6, 0.95), ("Stalk1", -1.9, -3.3, 0.78), ("Stalk2", -3.6, -5.0, 0.66)]
 DROP = 10.0
 SEAM_SLOTS = ["ancient_light_seam%d" % i for i in range(4)] + ["ancient_light_thumb", "ancient_light_knuckle",
                                                                "ancient_light_lens"]
@@ -199,47 +210,55 @@ def seam(part, bone, slot, a, b, out, width):
     part.on(bone, part.beam, slot, B(a + out * 0.04), B(b + out * 0.04), width, 0.06, roll=0.0)
 
 
-def joint(part, bone, at, r, length):
-    """A dark iron knuckle drum across the finger (axis X)."""
-    part.on(bone, part.cyl, "ancient_enamel", r, r, length, 8, loc=B(at), rot=(0, math.pi / 2, 0), color=IRON)
+def joint(part, bone, at, r, length, drop=0.0):
+    """A dark iron knuckle drum across the finger (axis X), dropped toward the back of the hand
+    (-Y in the hang) so each joint bulges on the finger's dorsal edge like a knuckle."""
+    c = Vector(at) - Vector((0, drop, 0))
+    part.on(bone, part.cyl, "ancient_enamel", r, r, length, 8, loc=B(c), rot=(0, math.pi / 2, 0), color=IRON)
 
 
-def finger_points(x, lengths, fan):
-    d = Vector((-math.sin(fan), 0, -math.cos(fan)))
+def finger_points(x, lengths, fan, droop):
     pts = [Vector((x, FINGER_Y, KNUCKLE_Z))]
-    for seg in lengths:
+    for seg, p in zip(lengths, droop):
+        d = Vector((-math.sin(fan) * math.cos(p), -math.sin(p), -math.cos(fan) * math.cos(p)))
         pts.append(pts[-1] + d * seg)
     return pts
+
+
+# The palm, lofted heel to knuckles along -Z: (z, half width, underside y, top y, chamfer). A heel
+# with raised pads at +Z, a cupped middle, and a thick knuckle ridge at the finger line, so the
+# side view shows a palm's profile and not a slab.
+PALM = [(4.15, 1.45, 2.45, 3.3, 0.3), (3.5, 2.45, 2.15, 3.7, 0.45), (2.0, 2.9, 2.2, 3.55, 0.4),
+        (0.0, 2.95, 2.35, 3.3, 0.3), (-2.2, 2.95, 2.3, 3.45, 0.3), (-3.2, 2.85, 2.2, 3.7, 0.4),
+        (-3.75, 2.45, 2.45, 3.5, 0.35)]
 
 
 def build_body():
     p = RigPart("Body")
     bones = []  # (name, head, parent)
     bones.append(("Hand", CENTRE, None))
-    # Wrist collar, origin to the palm: within r 1.6, below the 2 m band's 2.8.
-    p.on("Hand", p.cyl, "ancient_enamel", 1.15, 1.45, 1.5, 12, loc=B((0, 0.75, 0)), color=ENAMEL)
-    p.on("Hand", p.cyl, "ancient_enamel", 1.6, 1.6, 0.35, 12, loc=B((0, 1.65, 0)), color=IRON)
-    p.on("Hand", p.cyl, "ancient_enamel", 1.45, 1.75, 0.6, 12, loc=B((0, 2.1, 0)), color=ENAMEL)
-    # Palm plate: a chamfered slab, wider at the knuckle line, the heel at +Z.
+    # The wrist, origin to the palm, all within r 1.95 below the 2 m band's 2.8: the forearm's
+    # top, a cuff (a lighter band with an iron lip) and a narrow wrist neck that flares into the
+    # heel of the hand, so the stalk reads as the arm the hand belongs to.
+    p.on("Hand", p.cyl, "ancient_enamel", 1.25, 1.12, 0.8, 12, loc=B((0, 0.4, 0)), color=ENAMEL)
+    p.on("Hand", p.cyl, "ancient_enamel", 1.42, 1.42, 0.62, 12, loc=B((0, 1.1, 0)), color=DUST)
+    for y in (0.8, 1.4):
+        p.on("Hand", p.cyl, "ancient_enamel", 1.55, 1.55, 0.12, 12, loc=B((0, y, 0)), color=IRON)
+    p.on("Hand", p.cyl, "ancient_enamel", 0.98, 1.08, 0.6, 12, loc=B((0, 1.76, 0)), color=ENAMEL)
+    p.on("Hand", p.cyl, "ancient_enamel", 1.08, 2.0, 0.36, 12, loc=B((0, 2.24, 0)), color=ENAMEL)
+    # Palm plate: the lofted palm, then the thenar pad at the thumb root and the smaller pad
+    # opposite, both raised on the palm side at the heel.
     bones.append(("Palm", (0.0, 2.9, 0.0), "Hand"))
-    outline = [(2.95, -3.35), (2.95, -1.0), (2.75, 1.5), (2.35, 3.0), (1.3, 3.75), (-1.3, 3.75), (-2.35, 3.0),
-               (-2.75, 1.5), (-2.95, -1.0), (-2.95, -3.35), (-1.6, -3.6), (1.6, -3.6)]
-    y0, y1 = PALM_Y
-
-    def ring(y, inset):
-        out = []
-        for x, z in outline:
-            v = Vector((x, 0, z))
-            out.append(Vector((x - math.copysign(inset, x), y, z - math.copysign(inset, z))) if v.length else v)
-        return out
-    rows = [ring(y0, 0.3), ring(y0 + 0.25, 0.0), ring(y1 - 0.3, 0.0), ring(y1, 0.3)]
+    rows = [section(Vector((0, (yb + yt) / 2, z)), Vector((1, 0, 0)), Vector((0, 1, 0)), 2 * hw, yt - yb, ch)
+            for z, hw, yb, yt, ch in PALM]
     p.on("Palm", loft, p, rows, "ancient_enamel", ENAMEL)
-    # Thenar pad at the thumb root and a shallow lip round the palm's cup.
-    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((2.55, 3.0, 1.0)), scale=(0.85, 1.8, 0.55), color=ENAMEL)
-    p.on("Palm", p.ring, "ancient_enamel", 1.2, 1.55, 0.18, 12, loc=B((0, y1 + 0.05, 0.4)), color=IRON)
+    y0, y1 = PALM_Y
+    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((-2.3, 3.35, 1.4)), scale=(0.95, 2.0, 0.55), color=ENAMEL)
+    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((2.1, 3.35, 2.4)), scale=(0.8, 1.3, 0.45), color=ENAMEL)
+    p.on("Palm", p.ring, "ancient_enamel", 1.2, 1.55, 0.18, 12, loc=B((0, 3.32, 0.4)), color=IRON)
     # The back of the hand: radial ribs from the wrist collar toward the fingers.
     for k, x in enumerate((-2.0, 0.0, 2.0)):
-        p.on("Palm", p.beam, "ancient_enamel", B((x * 0.45, y0 - 0.05, -0.8)), B((x, y0 - 0.05, -3.1)), 0.5, 0.18,
+        p.on("Palm", p.beam, "ancient_enamel", B((x * 0.45, y0 - 0.1, -0.8)), B((x, y0 - 0.1, -3.1)), 0.5, 0.18,
              color=IRON)
     # Knuckle hardpoints on the back: a dome, a dark groove and a green rim, bottoms at 2.05 m.
     for i, (_, at) in enumerate(KNUCKLES):
@@ -250,10 +269,10 @@ def build_body():
              color=ENAMEL)
         p.on(name, p.ring, "rubber", 0.6, 0.86, 0.14, 12, loc=B(c + Vector((0, 0.12, 0))))
         p.on(name, p.ring, "ancient_light_knuckle", 0.66, 0.8, 0.16, 12, loc=B(c + Vector((0, 0.1, 0))))
-    # Fingers: three segments, a drum at each joint, the seam on top and underneath.
-    for fi, (fname, x, lengths, fan) in enumerate(FINGERS):
+    # Fingers: three segments, a knuckle drum at each joint, the seam on top and underneath.
+    for fi, (fname, x, lengths, fan, droop) in enumerate(FINGERS):
         slot = "ancient_light_seam%d" % fi
-        pts = finger_points(x, lengths, fan)
+        pts = finger_points(x, lengths, fan, droop)
         parent = "Palm"
         scale = (1.0, 0.94, 0.86, 0.78)
         for s in range(3):
@@ -263,16 +282,18 @@ def build_body():
             w0, w1 = FINGER_W * scale[s], FINGER_W * scale[s + 1]
             h0, h1 = FINGER_H * scale[s], FINGER_H * scale[s + 1]
             _, up = segment(p, name, pts[s], pts[s + 1], w0, h0, w1, h1)
-            joint(p, name, pts[s], h0 * 0.5, w0 * 0.92)
-            a = pts[s] + Vector((0, 0, -0.55))
-            b = pts[s + 1] + Vector((0, 0, 0.45))
-            seam(p, name, slot, a + up * (h0 + h1) / 4, b + up * (h0 + h1) / 4, up, 0.11)
-            seam(p, name, slot, a - up * (h0 + h1) / 4, b - up * (h0 + h1) / 4, -up, 0.11)
+            joint(p, name, pts[s], h0 * 0.5 + 0.11, w0 * 1.02, drop=0.13)
+            d = (pts[s + 1] - pts[s]).normalized()
+            a = pts[s] + d * 0.6
+            b = pts[s + 1] - d * 0.45
+            seam(p, name, slot, a + up * (h0 + h1) / 4, b + up * (h0 + h1) / 4, up, 0.1)
+            seam(p, name, slot, a - up * (h0 + h1) / 4, b - up * (h0 + h1) / 4, -up, 0.1)
         # The fingertip: a blunt cast cap.
         tip = pts[3]
-        p.on(parent, p.ico, "ancient_enamel", 0.5, 1, loc=B(tip + Vector((0, 0, 0.1))), scale=(0.95, 0.75, 0.8),
+        d = (pts[3] - pts[2]).normalized()
+        p.on(parent, p.ico, "ancient_enamel", 0.42, 1, loc=B(tip - d * 0.08), scale=(0.95, 0.8, 0.8),
              color=ENAMEL)
-    # Thumb, opposed along the +X side, below the index.
+    # Thumb, opposed along the -X side under the index, its tip turned in.
     tp = [Vector(v) for v in THUMB["pts"]]
     parent = "Palm"
     for s in range(3):
@@ -286,7 +307,7 @@ def build_body():
         d = (tp[s + 1] - tp[s]).normalized()
         seam(p, name, "ancient_light_thumb", tp[s] + d * 0.4 + up * THUMB["h"] * k0 * 0.5,
              tp[s + 1] - d * 0.3 + up * THUMB["h"] * k1 * 0.5, up, 0.09)
-    p.on(parent, p.ico, "ancient_enamel", 0.36, 1, loc=B(tp[3]), scale=(0.95, 0.85, 0.85), color=ENAMEL)
+    p.on(parent, p.ico, "ancient_enamel", 0.4, 1, loc=B(tp[3]), scale=(0.95, 0.85, 0.85), color=ENAMEL)
     # The wrist stalk: three ribbed sleeves, each with a dark core that hides in the sleeve
     # above it at rest and bridges the gap when the stalk telescopes down 10 m.
     parent = "Hand"
@@ -418,7 +439,7 @@ def scale(out, name, s):
     out[name] = (rot, loc, Vector((scl.x * sv.x, scl.y * sv.z, scl.z * sv.y)))
 
 
-SPLAY = [-0.02, -0.01, 0.01, 0.03]  # extra fan about +Y, index to little, on top of the rest fan
+SPLAY = [0.02, 0.01, -0.01, -0.03]  # extra fan about +Y, index (-X) to little, outward on the rest fan
 CURL_SHUT = (1.2, 1.35, 1.15)
 # A lost finger's fold: the middle segment pitches down, then both swing inward (toward the
 # hand's middle) to these world yaws, the last segment flat, so the dead finger lies folded
@@ -447,8 +468,10 @@ def fold_finger(out, fi, c, shiver=0.0):
     # finger's own side (FOLD_YAW[1] - tau), so mid-fold it never points out past the band.
     swing1 = ease(c / 0.7)
     swing2 = ease((c - 0.35) / 0.65)
-    w1 = qrot((0, 1, 0), s * FOLD_YAW[0] * swing1) @ qrot((1, 0, 0), -FOLD_PITCH * drop + shiver)
-    w2 = qrot((0, 1, 0), s * (FOLD_YAW[1] - math.tau) * swing2) @ qrot((1, 0, 0), shiver * 0.5)
+    # The rest droop is taken back out, so the folded segments sit where a flat finger's would.
+    droop = FINGERS[fi][4]
+    w1 = qrot((0, 1, 0), s * FOLD_YAW[0] * swing1) @ qrot((1, 0, 0), (droop[1] - FOLD_PITCH) * drop + shiver)
+    w2 = qrot((0, 1, 0), s * (FOLD_YAW[1] - math.tau) * swing2) @ qrot((1, 0, 0), droop[2] * drop + shiver * 0.5)
     for name, rot in (("Finger%d_1" % fi, w1), ("Finger%d_2" % fi, w1.inverted() @ w2)):
         _, loc, scl = out.get(name, (Quaternion(), Vector(), Vector((1, 1, 1))))
         out[name] = (rot, loc, scl)
@@ -495,9 +518,9 @@ def pose(clip, t):
         fold_finger(out, fidx[fname], c, shiver)
     elif clip == "perch":
         # Held, one pose for the whole clip: the land clip and the mixer's blend bring it in.
-        for fi, (_, _, lengths, _) in enumerate(FINGERS):
-            c1 = math.asin(min(1.0, GRIP_DROP / lengths[1]))
-            curl_finger(out, fi, (0.0, c1, math.pi + 0.1 - c1))
+        for fi, (_, _, lengths, _, droop) in enumerate(FINGERS):
+            c1 = math.asin(min(1.0, GRIP_DROP / lengths[1])) + droop[1]
+            curl_finger(out, fi, (0.0, c1, math.pi + 0.1 + droop[2] - c1))
         turn(out, "Thumb_1", (1, 0, 0), 0.45)
         turn(out, "Thumb_2", (1, 0, 0), 0.6)
         lift = perch_lift()
@@ -529,7 +552,7 @@ def pose(clip, t):
         for fi in range(4):
             curl_finger(out, fi, tuple(a * f for a in CURL_SHUT))
         for s, a in enumerate((0.5, 0.6, 0.5)):
-            turn(out, "Thumb_%d" % s, (0, 1, 0), a * f)
+            turn(out, "Thumb_%d" % s, (0, 1, 0), -a * f)
     elif clip == "glide":
         for fi in range(4):
             wave = math.sin(math.tau * t + fi * 0.6)
@@ -543,7 +566,7 @@ def pose(clip, t):
         for fi in range(4):
             turn(out, "Finger%d_0" % fi, (0, 1, 0), SPLAY[fi] * opened)
             curl_finger(out, fi, (-0.04 * opened + 0.75 * clamp, -0.02 * opened + 0.9 * clamp, 0.7 * clamp))
-        turn(out, "Thumb_0", (0, 1, 0), 0.35 * clamp)
+        turn(out, "Thumb_0", (0, 1, 0), -0.35 * clamp)
     elif clip == "knocked_down":
         r = ease(t)
         turn(out, "Hand", (0, 0, 1), math.pi * r)
@@ -554,7 +577,7 @@ def pose(clip, t):
     elif clip == "final_quiet":
         c = ease(t / 0.6)
         for s, a in enumerate((0.5, 0.7, 0.6)):
-            turn(out, "Thumb_%d" % s, (0, 1, 0), a * c)
+            turn(out, "Thumb_%d" % s, (0, 1, 0), -a * c)
         shut = ease((t - 0.4) / 0.6)
         scale(out, "LensIris", (max(0.02, 1 - shut), max(0.02, 1 - shut), 1))
         for k in range(5):
