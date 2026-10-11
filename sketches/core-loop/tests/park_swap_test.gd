@@ -117,8 +117,9 @@ func _run() -> void:
 		% [scatter_frame_ms, after_worst, scatter_step_ms, scatter.slowest_step if scatter != null else ""])
 	t.check("no main-thread frame over 33 ms with the scatter attaching", scatter_frame_ms < FRAME_CAP_MS, "scatter %.2f ms (ground meter %.2f ms)" % [scatter_frame_ms, after_worst])
 	t.check("no scatter step over 8 ms", scatter_step_ms < 8.0, "%.2f ms" % scatter_step_ms)
-	# Stage 2's park rows (KB9) placed beside the scatter: GLBs and slot materials on the loader thread, rows built on a
-	# worker, a few attached a frame; their slowest main-thread step is capped like the scatter's.
+	# Stage 2's park rows (KB9) placed beside the scatter: GLBs and slot materials on the loader thread, then a few rows a
+	# frame on the main thread (a row makes meshes and shapes, which stay off workers); the slowest step is capped like
+	# the scatter's.
 	var rows: Node = terrain.park_rows(2)
 	var row_frames := 0
 	while rows != null and not rows.is_ready() and row_frames < BUILD_FRAMES_MAX:
@@ -126,12 +127,12 @@ func _run() -> void:
 		row_frames += 1
 	var row_step_ms: float = rows.slowest_usec / 1000.0 if rows != null else INF
 	var row_frame_ms: float = rows.frame_usec_max / 1000.0 if rows != null else INF
-	print("park_swap_test: stage 2 rows placed (%d extra frames): %d nodes, %d loads on the loader thread, %d rows built on a worker, worst frame %.2f ms, slowest step %.2f ms at %s"
-		% [row_frames, rows.get_child_count() if rows != null else -1, rows.threaded_loads if rows != null else -1, rows.worker_rows if rows != null else -1,
+	print("park_swap_test: stage 2 rows placed (%d extra frames): %d nodes, %d loads on the loader thread, placed over %d frames, costliest row %.2f ms, worst frame %.2f ms, slowest step %.2f ms at %s"
+		% [row_frames, rows.get_child_count() if rows != null else -1, rows.threaded_loads if rows != null else -1, rows.build_frames if rows != null else -1, rows.row_usec_max / 1000.0 if rows != null else -1.0,
 		row_frame_ms, row_step_ms, rows.slowest_step if rows != null else ""])
 	t.check("stage 2 places its park rows", rows != null and rows.is_ready() and rows.get_child_count() > 0, "%d extra frames" % row_frames)
 	t.check("stage 2's recipe GLBs and materials load on the loader thread", rows != null and rows.threaded_loads > 0, str(rows.threaded_loads if rows != null else -1))
-	t.check("stage 2's rows build off the main thread", rows != null and rows.worker_rows == rows.get_child_count(), "%d of %d" % [rows.worker_rows if rows != null else -1, rows.get_child_count() if rows != null else -1])
+	t.check("stage 2's rows place over several frames, not in one", rows != null and rows.build_frames > 1, "%d frames" % (rows.build_frames if rows != null else -1))
 	t.check("no main-thread frame over 33 ms with the rows placing", row_frame_ms < FRAME_CAP_MS, "%.2f ms" % row_frame_ms)
 	t.check("no row placement step over 8 ms", row_step_ms < 8.0, "%.2f ms at %s" % [row_step_ms, rows.slowest_step if rows != null else ""])
 	t.check("stage 1 left memory (only the active and next stage stay)", terrain.park_ground(1) == null and holder.get_node_or_null("Stage1") == null)
