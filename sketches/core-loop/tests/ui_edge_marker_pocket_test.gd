@@ -145,4 +145,13 @@ func _live() -> void:
 		for i in 5:
 			await physics_frame
 		_t.check("live: the door 300 m away does not show", not pockets.call().any(func(t): return t["pocket"] == doors[0]["id"]))
+		# A new run forgets what the last run found: door keys repeat across runs, so a door found
+		# in run 1 must not show in run 2 until the player sees it again.
+		_t.check("live: run 1 latched the doors", not markers.discovered.is_empty())
+		_game.player.reset_to(Vector3(at.x + 30.0, _game.world.terrain.height(at.x + 30.0, at.y) + 2.0, at.y))
+		_game.flow.new_run()
+		for i in 5:
+			await physics_frame
+		_t.check("live: a new run clears the discovered doors", markers.discovered.is_empty(), str(markers.discovered))
+		_t.check("live: no pocket target shows beside an undiscovered door in run 2", not pockets.call().any(func(t): return t["pocket"] == doors[0]["id"]))
 	_game.free()
