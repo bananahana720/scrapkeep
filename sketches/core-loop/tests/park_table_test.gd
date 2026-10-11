@@ -5,10 +5,8 @@ extends SceneTree
 # stage 1 from the park file (a ParkMap that passed the schema) and the other five from the old
 # map of their stage until their park files land; a run on the park table starts on park_dam and
 # the ball is placed at the park file's spawn.
-# KNOWN GAP, closes with KB4: the stand-in spawn is [-100, -700] but the 400 m Terrain grid only
-# covers |x|,|z| < 199, so the ball is placed over void and Terrain.contains(at) is false today.
-# The run starts on park_dam but is not playable on this table until KB4 brings the 1.6 km terrain.
-# The test prints contains(at) and does not fail on it; flip it to a check when KB4 lands.
+# KB4: the park ground spans the 1.6 km square, so the stand-in spawn at [-100, -700] is inside
+# the terrain and Terrain.contains(at) is a check.
 
 const Game := preload("res://src/game.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
@@ -93,7 +91,7 @@ func _physics_process(_delta: float) -> bool:
 	var spawn: Vector2 = map.spawn
 	var flat := Vector2(at.x, at.z).distance_to(spawn)
 	_check("ball placed at the park spawn", flat < 60.0, "%.1f m from spawn %s after %d ticks" % [flat, str(spawn), _ticks])
-	print("park_table_test: KNOWN GAP (closes with KB4): terrain.contains(ball) = %s at %s" % [str(ctx.terrain.contains(at)), str(at)])
+	_check("terrain contains the ball", ctx.terrain.contains(at), "at %s (KB4: the 1.6 km park ground)" % str(at))
 	_game.queue_free()
 	print("park_table_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(1 if _failures > 0 else 0)
