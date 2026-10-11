@@ -263,10 +263,12 @@ class Chunked extends Node3D:
 	var phase := Phase.IDLE
 	# Chunks built on a thread other than the main one.
 	var worker_chunks := 0
-	# The longest main-thread _process step of a threaded build and where it was, and the longest
+	# The longest main-thread step of a threaded build (start() or a _process step) and where it was, and the longest
 	# whole frame while it built (park_terrain.gd's meter, PARK.md section 9).
 	var slowest_usec := 0
 	var slowest_step := ""
+	# start()'s own main-thread cost (mesh sources, glb load), also folded into slowest_usec.
+	var start_usec := 0
 	var frame_usec_max := 0
 	var _last_frame_usec := 0
 	var _map: RefCounted
@@ -282,7 +284,9 @@ class Chunked extends Node3D:
 
 	# Mesh sources load here, on the main thread (a glb load is not for workers); the rows of a
 	# kind share one source.
+	# Its cost lands in the stage-build frame, so it is metered as the START step.
 	func start(map, ground: Callable, rows: Array, threaded: bool) -> void:
+		var t0 := Time.get_ticks_usec()
 		_map = map
 		_ground = ground
 		var by_kind := {}
@@ -302,6 +306,8 @@ class Chunked extends Node3D:
 		phase = Phase.BUILDING
 		if threaded:
 			_group = WorkerThreadPool.add_group_task(_build_chunk, Tiles.TILE_COUNT, -1, true, "scatter chunks %s" % map.get("title"))
+			start_usec = Time.get_ticks_usec() - t0
+			_meter(start_usec, "START")
 			set_process(true)
 		else:
 			for c in Tiles.TILE_COUNT:
@@ -339,10 +345,12 @@ class Chunked extends Node3D:
 					phase = Phase.ATTACHING
 			Phase.ATTACHING:
 				_attach_step(t0 + ATTACH_BUDGET_USEC)
-		var spent := Time.get_ticks_usec() - t0
+		_meter(Time.get_ticks_usec() - t0, "%s chunk %d" % [Phase.keys()[was], _next])
+
+	func _meter(spent: int, step: String) -> void:
 		if spent > slowest_usec:
 			slowest_usec = spent
-			slowest_step = "%s chunk %d" % [Phase.keys()[was], _next]
+			slowest_step = step
 
 	# Worker side: pure data, no scene tree.
 	func _build_chunk(c: int) -> void:

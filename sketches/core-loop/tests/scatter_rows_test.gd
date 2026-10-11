@@ -233,11 +233,12 @@ func _park_chunks() -> void:
 		holder.free()
 		return
 	var slowest_ms: float = chunks.slowest_usec / 1000.0
-	print("scatter_rows_test: park scatter built over %d frames, %d chunks on worker threads, slowest main-thread step %.2f ms at %s, worst frame %.2f ms"
-		% [frames, chunks.worker_chunks, slowest_ms, chunks.slowest_step, chunks.frame_usec_max / 1000.0])
+	print("scatter_rows_test: park scatter built over %d frames, %d chunks on worker threads, start() %.2f ms, slowest main-thread step %.2f ms at %s, worst frame %.2f ms"
+		% [frames, chunks.worker_chunks, chunks.start_usec / 1000.0, slowest_ms, chunks.slowest_step, chunks.frame_usec_max / 1000.0])
 	t.check("the build spanned frames", frames > 1, "%d frames" % frames)
 	t.eq("every chunk was built off the main thread", chunks.worker_chunks, ParkTerrain.TILE_COUNT)
-	t.check("no main-thread scatter step over 8 ms during the build", chunks.slowest_usec > 0 and chunks.slowest_usec < FRAME_CAP_USEC, "%.2f ms" % slowest_ms)
+	t.check("start() is metered", chunks.start_usec > 0 and chunks.slowest_usec >= chunks.start_usec, "%d usec" % chunks.start_usec)
+	t.check("no main-thread scatter step over 8 ms during the build, start() included", chunks.slowest_usec > 0 and chunks.slowest_usec < FRAME_CAP_USEC, "%.2f ms" % slowest_ms)
 
 	# One MultiMesh per kind per chunk; no node for a kind a chunk has none of; each chunk sits in
 	# its collider tile; every piece stands on height().
