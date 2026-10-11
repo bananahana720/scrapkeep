@@ -733,6 +733,10 @@ const UI_ROWS := {
 	"ability_cooling": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"ability_active": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"ability_unavailable": {"group": "combat", "color": Palette.SANDSTONE, "shape": "cross", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	# SQ6: a hit landed or taken moved the mobility chip's cooldown along (ability_state
+	# combat_refund, read through drain_refunds). The chip flashes once per record; the chevron
+	# says the wedge jumped forward.
+	"cooldown_refunded": {"group": "combat", "color": Palette.SAND, "shape": "chevron", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
 	"key_glyph": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "ui_tick", "hud": "", "objective": "", "priority": 1},
 	"run_timer": {"group": "flow", "color": Palette.SAND, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"callout_scrap": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "callout_chime", "hud": "Scrap = heft", "objective": "", "priority": 2},

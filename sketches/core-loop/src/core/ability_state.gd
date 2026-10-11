@@ -40,6 +40,29 @@ const UNAVAILABLE := "unavailable"
 
 # No modifier may drive a cooldown below this (DESIGN-V2 section 6, risk 4).
 const COOLDOWN_FLOOR := 0.4
+# Combat cooldown refunds (W13-INTEGRATION-3 SQ6): a hit landed or a hit taken moves the
+# mobility cooldown along, so fighting feeds movement. Start values from
+# comps/roboquest/movement-and-feel.md:45 and :66 (a 1 s hit refund, a 2 s damage refund,
+# inside its 1 to 2 s band); the caps are Scrapkeep's own. Every refund goes through refund().
+const HIT_LANDED := "hit_landed"
+const DAMAGE_TAKEN := "damage_taken"
+const REFUNDS := {
+	HIT_LANDED: {"seconds": 1.0},
+	DAMAGE_TAKEN: {"seconds": 2.0},
+}
+# No grant falls outside this band: a grant the caps would cut under REFUND_MIN is dropped whole.
+const REFUND_MIN := 1.0
+const REFUND_MAX := 2.0
+# At most this share of one charge's cooldown comes back from combat, so the effective
+# cooldown never drops under half its base (start).
+const REFUND_CYCLE_SHARE := 0.5
+# Seconds of refund one stage hands out; a stage entry (refill) resets the tally (start).
+const STAGE_REFUND_CAP := 20.0
+# The slot a refund feeds: the first in this order whose ability has a cooldown. Sable's
+# grapple has none and her Shift boost lives in the movement state, so hers feeds the line.
+const REFUND_SLOTS := [MOVEMENT, LINE]
+# The kind each refund record carries (event_kinds UI_ROWS row; the chip flash reads it).
+const REFUND_KIND := "cooldown_refunded"
 # A skill shot draws exactly its committed geometry; the hit test forgives a hull this
 # share beyond the drawn edge, so what you see is never bigger than what can hit.
 const FORGIVENESS := 0.18
@@ -197,6 +220,8 @@ class Slot:
 	var item_scale := 1.0
 	# What a pressure row lifted the cap by, so a swap away hands back only the slot's own cap.
 	var pressure_bonus := 0
+	# Combat refund seconds landed on the charge now recharging (REFUND_CYCLE_SHARE).
+	var cycle_refunded := 0.0
 
 
 # The key the movement chip shows: Shift for every pilot (player_ball sets it).
@@ -211,6 +236,10 @@ var _select_held := 0.0
 # fills `meter`; until then it is null and the ultimate reads as charging at 0.
 var ultimate_id := ""
 var meter = null
+# Combat refund seconds handed out this stage (STAGE_REFUND_CAP), and the refund records not
+# yet read: {kind, slot, id, source, seconds}, oldest first.
+var stage_refunded := 0.0
+var _refunds := []
 
 
 func _init() -> void:
@@ -314,6 +343,7 @@ func grant(name: String, count := 1) -> void:
 	s.charges = mini(s.max_charges, s.charges + count)
 	if s.charges == s.max_charges:
 		s.recharge = 0.0
+		s.cycle_refunded = 0.0
 
 
 # Moves the recharging charge along by this many seconds (the skid's refund).
@@ -321,11 +351,58 @@ func refund(name: String, seconds: float) -> void:
 	_recharge(_slots[name], seconds)
 
 
+# The slot combat refunds feed: the first REFUND_SLOTS slot whose ability has a cooldown, or "".
+func refund_slot() -> String:
+	for name in REFUND_SLOTS:
+		if cooldown_of(name) > 0.0 and not ABILITIES.get(id_of(name), {}).has("pressure"):
+			return name
+	return ""
+
+
+# A hit landed or taken (a REFUNDS source) moves the refund slot's recharging charge along,
+# through refund(). Returns the seconds granted: REFUND_MIN to REFUND_MAX, or 0 when the slot is
+# full, the source is unknown, or the cycle share or the stage cap has too little left. A grant
+# queues one cooldown_refunded record for drain_refunds().
+func combat_refund(source: String) -> float:
+	var row: Dictionary = REFUNDS.get(source, {})
+	var name := refund_slot()
+	if row.is_empty() or name == "":
+		return 0.0
+	var s: Slot = _slots[name]
+	if s.charges >= s.max_charges:
+		return 0.0
+	var cd := cooldown_of(name)
+	var grant: float = minf(float(row["seconds"]), REFUND_MAX)
+	grant = minf(grant, cd * REFUND_CYCLE_SHARE - s.cycle_refunded)
+	grant = minf(grant, STAGE_REFUND_CAP - stage_refunded)
+	if grant < REFUND_MIN:
+		return 0.0
+	var before := s.charges
+	s.cycle_refunded += grant
+	stage_refunded += grant
+	refund(name, grant)
+	# A grant that finishes a charge carries its overflow into the next one; that overflow
+	# counts against the next charge's share.
+	if s.charges > before:
+		s.cycle_refunded = minf(s.recharge, grant) if s.charges < s.max_charges else 0.0
+	_refunds.append({"kind": REFUND_KIND, "slot": name, "id": s.id, "source": source, "seconds": grant})
+	return grant
+
+
+# The refund records since the last call, oldest first; the queue empties.
+func drain_refunds() -> Array:
+	var out := _refunds
+	_refunds = []
+	return out
+
+
 func refill() -> void:
+	stage_refunded = 0.0
 	for name in SLOTS:
 		var s: Slot = _slots[name]
 		s.charges = s.max_charges
 		s.recharge = 0.0
+		s.cycle_refunded = 0.0
 		s.active = false
 		if s.gauge != null:
 			s.gauge.cancel()
@@ -365,6 +442,7 @@ func _recharge(s: Slot, seconds: float) -> void:
 	while s.recharge >= cd and s.charges < s.max_charges:
 		s.recharge -= cd
 		s.charges += 1
+		s.cycle_refunded = 0.0
 	if s.charges >= s.max_charges:
 		s.recharge = 0.0
 
