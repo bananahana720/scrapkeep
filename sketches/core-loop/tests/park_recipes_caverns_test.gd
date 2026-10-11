@@ -37,8 +37,10 @@ const APPROACH_SPEED := 14.0
 const POOL_SPEED := 10.0
 const ROLLING_RESISTANCE := 0.3
 const ROLL_FRAMES := 3600
+const POOL_FRAMES := 2400
 const SPACING := 400.0
 const APPROACH_M := 14.0
+const SENSOR_LEAD_M := 6.0
 
 var _t := T.new("park_recipes_caverns_test")
 var _facts: Array = []
@@ -324,10 +326,13 @@ func _check_rolls(world: Node3D, placed: Dictionary) -> void:
 			continue
 		var x0 := node.position.x
 		# An approach plank on the ground before the lip, so the ball arrives rolling at y 0.
+		# The plank reaches back past the ride sensor (park_recipes.gd centres it on the row origin, so it spans z -L/2 .. L/2),
+		# so the ball starts outside the sensor and the fact comes from the sensor's own entry, not from the spawn.
+		var lead := maxf(APPROACH_M, length * 0.5 + SENSOR_LEAD_M)
 		var plank := PackedVector3Array()
-		plank.append_array(_quad(Vector3(-width * 0.5, 0, -APPROACH_M), Vector3(-width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, -APPROACH_M)))
+		plank.append_array(_quad(Vector3(-width * 0.5, 0, -lead), Vector3(-width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, -lead)))
 		_trimesh_body(world, plank).position = Vector3(x0, 0, 0)
-		var ball := _ball(world, Vector3(x0, Tuning.RADIUS + 0.02, -APPROACH_M + 2.0), Vector3(0, 0, APPROACH_SPEED))
+		var ball := _ball(world, Vector3(x0, Tuning.RADIUS + 0.02, -lead + 2.0), Vector3(0, 0, APPROACH_SPEED))
 		rolls[id] = {"ball": ball, "tracker": {"run": 0, "worst": 0, "frames": 0}, "done": false, "x0": x0, "length": length,
 			"exit_speed": 0.0, "min_y": 0.0, "end_frame": -1, "end_y": 0.0}
 		i += 1
@@ -364,7 +369,7 @@ func _check_rolls(world: Node3D, placed: Dictionary) -> void:
 		_t.check("(e) %s: no dead stop (under 2 m/s for over 0.5 s)" % id, r["done"] and worst <= DEAD_SECONDS, "worst %.2f s" % worst)
 		_t.check("(e) %s: leaves at speed" % id, r["exit_speed"] >= DEAD_SPEED * 2.0, "%.1f m/s" % r["exit_speed"])
 		var near := _facts.filter(func(e): return absf(e[1].x - r["x0"]) < SPACING * 0.5)
-		_t.check("(e) %s: the roll publishes ride_drop" % id, near.any(func(e): return e[0] == "ride_drop"), str(near.map(func(e): return e[0])))
+		_t.check("(e) %s: the roll publishes ride_drop (from the sensor entry, the ball started outside it)" % id, near.any(func(e): return e[0] == "ride_drop"), str(near.map(func(e): return e[0])))
 		ball.queue_free()
 	await _check_pool_drop(world, placed)
 
@@ -382,21 +387,27 @@ func _check_pool_drop(world: Node3D, placed: Dictionary) -> void:
 		var z_in := box.position.z + box.size.z * 0.25
 		var z_out := box.position.z + box.size.z
 		var ball := _ball(world, Vector3(box.get_center().x, box.position.y + 5.0, z_in), Vector3(0, 0, POOL_SPEED))
-		drops[id] = {"ball": ball, "z_out": z_out, "tracker": {"run": 0, "worst": 0, "frames": 0}, "out_speed": -1.0, "min_y": INF,
+		drops[id] = {"ball": ball, "z_out": z_out, "length": float(RECIPES[id]["size"][0]), "done": false, "tracker": {"run": 0, "worst": 0, "frames": 0}, "out_speed": -1.0, "min_y": INF,
 			"water_y": box.position.y}
-	for f in 900:
+	for f in POOL_FRAMES:
 		for id in drops:
 			if drops[id] != null:
 				_resist(drops[id]["ball"])
 		await physics_frame
 		for id in drops:
 			var d = drops[id]
-			if d == null or d["out_speed"] >= 0.0:
+			if d == null or d["done"]:
 				continue
 			var ball: RigidBody3D = d["ball"]
-			d["min_y"] = minf(d["min_y"], ball.position.y)
-			if ball.position.z >= d["z_out"] + 2.0:
+			if d["out_speed"] < 0.0:
+				d["min_y"] = minf(d["min_y"], ball.position.y)
+			_track(ball, d["tracker"], true)
+			if d["out_speed"] < 0.0 and ball.position.z >= d["z_out"] + 2.0:
 				d["out_speed"] = Vector2(ball.linear_velocity.x, ball.linear_velocity.z).length()
+			if ball.position.z >= float(d["length"]) - 1.0:
+				d["done"] = true
+		if drops.values().all(func(d): return d == null or d["done"]):
+			break
 	for id in RECIPES:
 		var d = drops[id]
 		if not _t.check("(e) %s pool drop: a pool exists" % id, d != null):
@@ -407,4 +418,8 @@ func _check_pool_drop(world: Node3D, placed: Dictionary) -> void:
 			"min y %.2f, water y %.2f" % [d["min_y"], d["water_y"]])
 		_t.check("(e) %s pool drop: it rolls out by its own planar speed" % id, d["out_speed"] >= DEAD_SPEED,
 			"out speed %.1f at z %.1f (z_out %.1f)" % [d["out_speed"], ball.position.z, d["z_out"]])
+		var worst: float = float(d["tracker"]["worst"]) / Engine.physics_ticks_per_second
+		_t.check("(e) %s pool drop: the ball leaves the recipe (z >= length - 1 within 2400 frames)" % id, d["done"],
+			"z %.1f of %.1f" % [ball.position.z, d["length"]])
+		_t.check("(e) %s pool drop: no dead stop (under 2 m/s for over 0.5 s)" % id, d["done"] and worst <= DEAD_SECONDS, "worst %.2f s" % worst)
 		ball.queue_free()
