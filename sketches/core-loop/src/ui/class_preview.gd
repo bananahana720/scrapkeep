@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 
 # The class card's portrait and live ability preview: the pilot's real hero shell
 # (hero_assets.gd's glb, painted by its own paint()) in a tiny world of its own. The
@@ -207,7 +208,7 @@ func _sync_variant() -> void:
 	while node != null:
 		var profile = node.get("_profile")
 		if profile != null:
-			var worn := Cosmetics.worn(profile, def.id, "shell")
+			var worn := CosmeticWear.worn(profile, def.id, "shell")
 			variant = String(Cosmetics.row(worn).get("asset", "")) if worn != "" else ""
 			return
 		node = node.get_parent()

@@ -54,6 +54,9 @@ func _with(extra: Dictionary) -> Dictionary:
 		else:
 			r[key] = extra[key]
 	var rows := {"paint_ok": r}
+	# The table-level PENDING_ART check wants each pending id to be a row; reuse the real rows.
+	for pending in Cosmetics.PENDING_ART:
+		rows[pending] = Cosmetics.ROWS[pending]
 	for i in range(Cosmetics.MIN_ROWS - 1):
 		rows["pad_%d" % i] = {"slot": "paint", "pilot": "", "name": "Pad", "starter": false, "tint": Color("669933")}
 	return rows
@@ -88,7 +91,8 @@ func run(t) -> void:
 			starters += 1
 	t.check("no real tint is a hostile hue", hostile.is_empty(), "hostile tints on %s" % [hostile])
 	t.check("at least one starter paint exists", starters >= 1, "%d starter paints" % starters)
-	t.eq("cosmetic slots are paint plus the three P-R7 slots", Cosmetics.SLOTS, ["paint", "trail", "decal", "companion_paint"])
+	# The eight slots are the P-R7 customization scaffold: outfit, shell, companion_skin and bay_decor join the four approved ones.
+	t.eq("cosmetic slots are paint plus the three P-R7 slots", Cosmetics.SLOTS, ["paint", "trail", "decal", "companion_paint", "outfit", "shell", "companion_skin", "bay_decor"])
 	var bare: Array = []
 	for pilot in _pilots():
 		var owned := false

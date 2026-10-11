@@ -1,6 +1,7 @@
 extends Node3D
 
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const TRAIL_LIMIT := 24
 const TRAIL_DISTANCE := 1.8
@@ -66,12 +67,12 @@ func _on_set_piece(flying: bool) -> void:
 	set_piece = flying
 
 
-# The one ownership rule (Cosmetics.worn) decides the id; a pending-art row shows the default.
+# The one ownership rule (CosmeticWear.worn) decides the id; a pending-art row shows the default.
 func effective(pilot: String, slot: String) -> Dictionary:
 	var profile = hero.profile
 	if profile == null:
 		return {}
-	var id := Cosmetics.worn(profile, Cosmetics.owner_for(pilot, slot), slot)
+	var id := CosmeticWear.worn(profile, Cosmetics.owner_for(pilot, slot), slot)
 	if id == "" or Cosmetics.is_pending(id):
 		return {}
 	return resolver.resolve(id, assets)
