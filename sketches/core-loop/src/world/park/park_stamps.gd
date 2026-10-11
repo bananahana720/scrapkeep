@@ -97,12 +97,6 @@ static func inside(f: Dictionary, x: float, z: float) -> bool:
 	return absf(p.x) <= 0.5 and absf(p.y) <= 0.5
 
 
-# The rectangle footprint alone, for hole rows (a tunnel mouth, an opening) whatever their stamp.
-static func inside_rect(f: Dictionary, x: float, z: float) -> bool:
-	var p := local(f, x, z)
-	return absf(p.x) <= 0.5 and absf(p.y) <= 0.5
-
-
 # The stamp's height offset at (x, z), zero outside its footprint.
 static func offset(f: Dictionary, x: float, z: float) -> float:
 	var p := local(f, x, z)

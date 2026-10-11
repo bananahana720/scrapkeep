@@ -2,7 +2,8 @@ extends SceneTree
 
 # Rule: the committed bake of park_test.json is fresh, a fresh bake reproduces it byte for byte,
 # a one-row table edit turns the freshness check red until a rebake turns it green, `hole` rows
-# mark exactly the 2 m cells under their footprint, and the stamps land where PARK.md 2.2 and
+# mark exactly the 2 m cells under their footprint (the inscribed ellipse for an elliptic
+# stamp, never the rectangle corners), and the stamps land where PARK.md 2.2 and
 # section 3 put them: additive on the y 0 base plain, a `ramp` falling by its height from its
 # start to its end along its yaw (park/stages/1-park_dam.md section 2). K-UNITS KB3.
 
@@ -46,6 +47,7 @@ func _run() -> void:
 	_stamps(bake, stamps)
 	_holes(bake, BAKED, 1)
 	_edit(bake)
+	_ellipse(bake)
 	quit(t.verdict())
 
 
@@ -131,3 +133,55 @@ func _stamps(bake: GDScript, stamps: GDScript) -> void:
 	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BAKED + "/bake.json"))
 	t.eq("bake.json names the map", info.get("map"), "park_test")
 	t.eq("apron is the 1 m ring outside the play square", int(info["cells"]["apron"]), 2048 * 2048 - 1601 * 1601)
+
+
+# An elliptic stamp on a hole row (stage 4's sinkhole skylights) marks only the inscribed ellipse:
+# the tube row turned into a sinkhole marks the cells with 4(u^2 + v^2) <= 1 and none of the
+# rectangle corners, and bake.json and under.bin count exactly those cells.
+func _ellipse(bake: GDScript) -> void:
+	var text := FileAccess.get_file_as_string(PARK)
+	var edited := text.replace('"recipe": "lava_tube_run", "stamp": "", "hole": true',
+		'"recipe": "lava_tube_run", "stamp": "sinkhole", "hole": true')
+	t.check("the sinkhole edit changes one row", edited != text)
+	var park_path := SCRATCH + "/park_ellipse.json"
+	var f := FileAccess.open(park_path, FileAccess.WRITE)
+	f.store_string(edited)
+	f.close()
+	var dir := SCRATCH + "/ellipse"
+	var rebake: Dictionary = bake.bake(park_path, dir)
+	if not t.check("sinkhole hole row bakes", rebake["ok"], str(rebake["errors"])):
+		return
+	var holes := FileAccess.get_file_as_bytes(dir + "/holes.bin")
+	if not t.eq("holes.bin is one byte per 2 m cell (ellipse)", holes.size(), CELLS * CELLS):
+		return
+	var a := deg_to_rad(-10.0)
+	var along := Vector2(sin(a), cos(a))
+	var across := Vector2(cos(a), -sin(a))
+	var want := 0
+	var marked := 0
+	var corners := 0
+	var corners_marked := 0
+	var outside_marked := 0
+	for j in CELLS:
+		for i in CELLS:
+			var rel := Vector2(-800.0 + 2.0 * i + 1.0, -800.0 + 2.0 * j + 1.0) - Vector2(100.0, 300.0)
+			var u := rel.dot(along) / 200.0
+			var v := rel.dot(across) / 16.0
+			var hole := holes[j * CELLS + i] == 1
+			if 4.0 * (u * u + v * v) <= 1.0:
+				want += 1
+				if hole:
+					marked += 1
+			elif absf(u) <= 0.5 and absf(v) <= 0.5:
+				corners += 1
+				if hole:
+					corners_marked += 1
+			elif hole:
+				outside_marked += 1
+	t.check("the ellipse holds cells and the corners exist", want > 500 and corners > 100, "%d in, %d corners" % [want, corners])
+	t.eq("every ellipse cell is a hole", marked, want)
+	t.eq("no rectangle corner cell is a hole", corners_marked, 0)
+	t.eq("no hole cell outside the ellipse", outside_marked, 0)
+	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir + "/bake.json"))
+	t.eq("bake.json counts the ellipse hole cells", int(info["cells"]["holes"]), want)
+	t.eq("under.bin has one float per ellipse hole cell", FileAccess.get_file_as_bytes(dir + "/under.bin").size(), 4 * want)

@@ -98,7 +98,7 @@ static func bake(park_path: String, out_dir: String) -> Dictionary:
 				var x := -HALF + STEP * i + 1.0
 				if paints and slot >= 0 and Stamps.inside(f, x, z):
 					surface[j * CELLS + i] = slot
-				if row["hole"] and Stamps.inside_rect(f, x, z):
+				if row["hole"] and Stamps.inside(f, x, z):
 					holes[j * CELLS + i] = 1
 
 	var under := PackedFloat32Array()
