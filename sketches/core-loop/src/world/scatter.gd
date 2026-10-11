@@ -131,7 +131,11 @@ static func _kept_out(footprints: Array, at: Vector2) -> bool:
 # merged: ScatterRows.kind_problems), each with its kind's visibility range and its own bounds, so
 # a far chunk stops drawing and the draws stay one per kind per near chunk. A chunk's pieces come
 # from a generator seeded by the row's seed and the chunk, so the chunks build on worker threads in
-# any order; the main thread only attaches finished chunks inside a frame budget. Pieces stand on
+# any order; the main thread only attaches finished chunks inside a frame budget. terrain.gd starts the
+# build when a park stage's ground is done (_on_park_built). The strut glb and the resource slot
+# materials (stone.tres took 80 ms cold) load on the loader thread, so no heavy load lands on a frame;
+# the chunk build takes WORKERS threads at normal priority so the next stage's ground build keeps the
+# rest. Pieces stand on
 # the ground callable, which on a park is terrain.gd's height() source (hole floors included).
 
 static func park_rows(map) -> Array:
@@ -257,8 +261,10 @@ class Chunked extends Node3D:
 	const Colours := preload("res://src/core/palette.gd")
 	const ATTACH_BUDGET_USEC := 6000
 	const CHUNKS_PER_FRAME := 8
+	# Threads the chunk build may take, at normal priority: the next stage's ground build (park_terrain.gd) shares the pool.
+	const WORKERS := 4
 
-	enum Phase { IDLE, BUILDING, ATTACHING, READY }
+	enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 
 	var phase := Phase.IDLE
 	# Chunks built on a thread other than the main one.
@@ -278,44 +284,105 @@ class Chunked extends Node3D:
 	var _group := -1
 	var _lock := Mutex.new()
 	var _next := 0
+	var _threaded := false
+	# Glb sources requested on the loader thread instead of loaded here (cache bypassed).
+	var threaded_loads := 0
+	# Slot materials loaded on the loader thread instead of on the main thread at the first attach.
+	var threaded_materials := 0
 
 	func is_ready() -> bool:
 		return phase == Phase.READY
 
-	# Mesh sources load here, on the main thread (a glb load is not for workers); the rows of a
-	# kind share one source.
+	# The rows of a kind share one source. A threaded build requests a glb source on the loader
+	# thread, cache bypassed (a glb load is the costliest step and is not for the main thread, and
+	# the build is cold whatever the process has cached), and the main thread only turns the
+	# loaded scene into a source in a later frame (LOADING); a kit or primitive mesh is built here.
 	# Its cost lands in the stage-build frame, so it is metered as the START step.
 	func start(map, ground: Callable, rows: Array, threaded: bool) -> void:
 		var t0 := Time.get_ticks_usec()
 		_map = map
 		_ground = ground
+		_threaded = threaded
 		var by_kind := {}
 		for row: Dictionary in rows:
 			var kind := String(row["kind"])
 			if not by_kind.has(kind):
-				var source: Dictionary = Self._source(row["mesh"])
-				if source.is_empty():
-					push_warning("scatter: %s has no mesh, the kind stays out" % row["mesh"])
-					by_kind[kind] = null
-					continue
-				by_kind[kind] = {"kind": kind, "source": source, "slot": row["slot"], "rows": []}
+				by_kind[kind] = {"kind": kind, "spec": String(row["mesh"]), "source": {}, "slot": row["slot"], "rows": []}
 				_groups.append(by_kind[kind])
-			if by_kind[kind] != null:
-				by_kind[kind]["rows"].append(row)
+			by_kind[kind]["rows"].append(row)
+		for group: Dictionary in _groups:
+			var spec: String = group["spec"]
+			if threaded and spec.begins_with("glb:") and ResourceLoader.exists(spec.trim_prefix("glb:")):
+				var path := spec.trim_prefix("glb:")
+				if ResourceLoader.load_threaded_request(path, "PackedScene", false, ResourceLoader.CACHE_MODE_IGNORE) == OK:
+					group["path"] = path
+					threaded_loads += 1
+			if not group.has("path"):
+				group["source"] = Self._source(spec)
+			# A slot that is a material resource (stone.tres: shader and textures, 80 ms cold) loads on the
+			# loader thread too; the other slots are built in code and cost well under a millisecond.
+			var slot_row: Dictionary = Colours.SLOT_TABLE.row(group["slot"])
+			if threaded and String(slot_row.get("kind", "")) == "resource" and ResourceLoader.exists(String(slot_row["path"])):
+				if ResourceLoader.load_threaded_request(String(slot_row["path"]), "Material") == OK:
+					group["material_path"] = String(slot_row["path"])
+					threaded_materials += 1
 		_results.resize(Tiles.TILE_COUNT)
-		phase = Phase.BUILDING
 		if threaded:
-			_group = WorkerThreadPool.add_group_task(_build_chunk, Tiles.TILE_COUNT, -1, true, "scatter chunks %s" % map.get("title"))
+			if threaded_loads + threaded_materials > 0:
+				phase = Phase.LOADING
+			else:
+				_launch()
 			start_usec = Time.get_ticks_usec() - t0
 			_meter(start_usec, "START")
 			set_process(true)
 		else:
+			_launch()
+			finish()
+
+	# Drops the kinds with no source, then cuts the chunks onto worker threads (or builds them here).
+	func _launch() -> void:
+		_groups = _groups.filter(func(g: Dictionary) -> bool:
+			if (g["source"] as Dictionary).is_empty():
+				push_warning("scatter: %s has no mesh, the kind stays out" % g["spec"])
+				return false
+			return true)
+		phase = Phase.BUILDING
+		if _threaded:
+			_group = WorkerThreadPool.add_group_task(_build_chunk, Tiles.TILE_COUNT, WORKERS, false, "scatter chunks %s" % _map.get("title"))
+		else:
 			for c in Tiles.TILE_COUNT:
 				_build_chunk(c)
 			phase = Phase.ATTACHING
-			finish()
+
+	# Turns each finished load into its kind's source; with block, waits for the loader thread.
+	func _poll_loading(block: bool) -> void:
+		var waiting := false
+		for group: Dictionary in _groups:
+			if group.has("path"):
+				var path: String = group["path"]
+				var status := ResourceLoader.load_threaded_get_status(path)
+				if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS and not block:
+					waiting = true
+				else:
+					group.erase("path")
+					if status != ResourceLoader.THREAD_LOAD_FAILED and status != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+						group["source"] = Self._scene_source(ResourceLoader.load_threaded_get(path) as PackedScene)
+			if group.has("material_path"):
+				var mat_path: String = group["material_path"]
+				var mat_status := ResourceLoader.load_threaded_get_status(mat_path)
+				if mat_status == ResourceLoader.THREAD_LOAD_IN_PROGRESS and not block:
+					waiting = true
+				else:
+					group.erase("material_path")
+					if mat_status != ResourceLoader.THREAD_LOAD_FAILED and mat_status != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+						group["material"] = ResourceLoader.load_threaded_get(mat_path) as Material
+						(group["material"] as Material).resource_name = String(group["slot"])
+		if not waiting:
+			_launch()
 
 	func finish() -> void:
+		while phase == Phase.LOADING:
+			_poll_loading(true)
 		if phase == Phase.BUILDING:
 			WorkerThreadPool.wait_for_group_task_completion(_group)
 			_group = -1
@@ -324,7 +391,7 @@ class Chunked extends Node3D:
 			_attach_step(-1)
 
 	func _ready() -> void:
-		set_process(phase == Phase.BUILDING or phase == Phase.ATTACHING)
+		set_process(phase == Phase.LOADING or phase == Phase.BUILDING or phase == Phase.ATTACHING)
 
 	func _exit_tree() -> void:
 		if _group != -1:
@@ -338,6 +405,8 @@ class Chunked extends Node3D:
 		_last_frame_usec = t0
 		var was := phase
 		match phase:
+			Phase.LOADING:
+				_poll_loading(false)
 			Phase.BUILDING:
 				if WorkerThreadPool.is_group_task_completed(_group):
 					WorkerThreadPool.wait_for_group_task_completion(_group)
@@ -399,7 +468,7 @@ class Chunked extends Node3D:
 			view.set_meta("grounds", data["grounds"])
 			view.set_meta("bounds", data["bounds"])
 			view.set_meta("verts_per_instance", group["source"]["verts"])
-			view.material_override = Colours.slot_material(group["slot"])
+			view.material_override = group["material"] if group.get("material") != null else Colours.slot_material(group["slot"])
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			chunk.add_child(view)
 		add_child(chunk)
@@ -442,15 +511,22 @@ static func _source(spec: String) -> Dictionary:
 		var path := spec.trim_prefix("glb:")
 		if not ResourceLoader.exists(path):
 			return {}
-		var scene := (load(path) as PackedScene).instantiate()
-		var found := {}
-		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
-			if view.mesh != null and view.mesh.get_surface_count() > 0:
-				found = _found(view.mesh, DigScenery._relative(view, scene))
-				break
-		scene.free()
-		return found
+		return _scene_source(load(path) as PackedScene)
 	return {}
+
+
+# The first mesh of a kit GLB's scene, as a source ({} when it has none).
+static func _scene_source(packed: PackedScene) -> Dictionary:
+	if packed == null:
+		return {}
+	var scene := packed.instantiate()
+	var found := {}
+	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		if view.mesh != null and view.mesh.get_surface_count() > 0:
+			found = _found(view.mesh, DigScenery._relative(view, scene))
+			break
+	scene.free()
+	return found
 
 
 static func _found(mesh: Mesh, local: Transform3D) -> Dictionary:

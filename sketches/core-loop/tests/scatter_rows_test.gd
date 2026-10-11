@@ -42,6 +42,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# The park section runs first, so the process's resource cache holds none of what the build reads.
+	await _park_chunks()
 	var seeds := {}
 	var row_errors := []
 	var relief_errors := []
@@ -159,7 +161,6 @@ func _run() -> void:
 	print("scatter_rows_test: old-map scatter hash ", old_hash)
 	t.eq("the old maps' scatter transforms are byte-identical to d204cea", old_hash, OLD_MAPS_HASH)
 
-	await _park_chunks()
 	quit(t.verdict())
 
 
@@ -230,12 +231,10 @@ func _park_chunks() -> void:
 	var terrain = Terrain.new(PARK_TABLE)
 	var map = terrain.map_for(1)
 	map.scatter["kit"] = fixture_kit
-	# What the strut glb load would cost on the main thread against a cold cache (CACHE_MODE_IGNORE
-	# reads the file again whatever the cache holds); reported beside the build's own steps.
-	var cold0 := Time.get_ticks_usec()
-	var cold_scene = ResourceLoader.load(STRUT, "PackedScene", ResourceLoader.CACHE_MODE_IGNORE)
-	var cold_load_ms := (Time.get_ticks_usec() - cold0) / 1000.0
-	t.check("the strut glb loads for the cold-cost comparison", cold_scene != null)
+	# Cold run: this section runs first, so the process holds none of what the build reads; the strut glb
+	# is also requested with the cache bypassed, so it is cold on every run.
+	var stone_path := String(Palette.SLOT_TABLE.row("stone").get("path", ""))
+	t.check("the cold run: neither the strut glb nor the stone material is in the resource cache yet", not ResourceLoader.has_cached(STRUT) and not ResourceLoader.has_cached(stone_path), "strut %s, stone %s" % [ResourceLoader.has_cached(STRUT), ResourceLoader.has_cached(stone_path)])
 	terrain.build(holder)
 	terrain.use(1)
 	var stage_root: Node3D = terrain.geometry_root(1)
@@ -253,8 +252,8 @@ func _park_chunks() -> void:
 		holder.free()
 		return
 	var slowest_ms: float = chunks.slowest_usec / 1000.0
-	print("scatter_rows_test: park scatter built over %d frames, %d chunks on worker threads, start() %.2f ms, slowest main-thread step %.2f ms at %s, worst frame %.2f ms; strut glb %.2f ms if loaded cold on the main thread"
-		% [frames, chunks.worker_chunks, chunks.start_usec / 1000.0, slowest_ms, chunks.slowest_step, chunks.frame_usec_max / 1000.0, cold_load_ms])
+	print("scatter_rows_test: park scatter built over %d frames, %d chunks on worker threads, start() %.2f ms, slowest main-thread step %.2f ms at %s, worst frame %.2f ms"
+		% [frames, chunks.worker_chunks, chunks.start_usec / 1000.0, slowest_ms, chunks.slowest_step, chunks.frame_usec_max / 1000.0])
 	t.check("the build spanned frames", frames > 1, "%d frames" % frames)
 	t.eq("every chunk was built off the main thread", chunks.worker_chunks, ParkTerrain.TILE_COUNT)
 	t.eq("the stage root holds all 100 chunks", chunks.get_child_count(), ParkTerrain.TILE_COUNT)
@@ -262,6 +261,7 @@ func _park_chunks() -> void:
 	# The glb source is requested on the loader thread with the cache bypassed, so the main thread never
 	# loads it and the build is cold whatever the process has cached (KB5's receipt ran warm).
 	t.eq("the glb mesh sources load on the loader thread, not the main thread", chunks.get("threaded_loads"), 1)
+	t.check("the slot materials that are resources load on the loader thread", int(chunks.get("threaded_materials")) >= 1, str(chunks.get("threaded_materials")))
 	t.check("no main-thread scatter step over 8 ms during the build, start() included", chunks.slowest_usec > 0 and chunks.slowest_usec < FRAME_CAP_USEC, "%.2f ms" % slowest_ms)
 
 	# One MultiMesh per kind per chunk; no node for a kind a chunk has none of; each chunk sits in
