@@ -13,9 +13,10 @@ const Achievements := preload("res://src/core/achievements.gd")
 
 # The class cards that sell a pilot (v3 W12, playtest entry 8). On the real class
 # select, driven by pushed mouse and key events:
-#   - every card shows its class row's four slots (LMB, then RMB or Shift by pilot, F, Ctrl) with the row's
-#     ability icons, plus its Space extra, and wears the row's colour;
-#   - at rest the whole screen reads in 50 words or fewer;
+#   - every card shows its class row's bar (1, 2, 3, Q) over its chips (RMB, Shift, Ctrl) with
+#     the rows' ability icons, plus its Space extra, and wears the row's colour;
+#   - at rest the whole screen reads in 75 words or fewer: the keycaps are the same on every
+#     card, so they read on the open card only (re-pinned 2026-10-10, unit B2);
 #   - hovering a card opens that card alone: it lifts, its words fade in, its preview
 #     plays and moves, the others step back; the extra words all belong to it;
 #   - with nothing focused, Right opens the first card, Right again the second, and
@@ -163,6 +164,19 @@ func _stub(id: String) -> Resource:
 
 # Each card's keys are its class row's slots, in the bar's order, with the ability
 # rows' icons, then its Space extras.
+# Re-pinned 2026-10-10 (wave 13 unit B2, SKILL-BAR section 5): a card shows the bar as it plays,
+# [1 weapon] [2 special] [3 line skill] [Q ultimate], over a chip row [RMB harpoon] [Shift verb]
+# [Ctrl smash] and the Space extras. Sable's harpoon chip is her grapple row and her Shift chip
+# her boost. Was one row of LMB, RMB or Shift, F, Ctrl. The bar cells keep 2 or 3 words; the
+# chips draw an icon and a small keycap and no words, so the six-card row keeps its floor.
+const BAR_KEYS := ["key_1", "key_2", "key_3", "key_q"]
+const CHIP_KEYS := ["key_rmb", "key_shift", "key_ctrl"]
+
+
+func _icon(id: String) -> String:
+	return String(AbilityState.ABILITIES.get(id, {}).get("icon", ""))
+
+
 func _check_rows(cards: Array) -> void:
 	var classes: Array = _game.flow.classes
 	_report("one card per class", cards.size() == classes.size(), "%d cards for %d classes" % [cards.size(), classes.size()])
@@ -170,21 +184,23 @@ func _check_rows(cards: Array) -> void:
 		var card = cards[i]
 		var def = classes[i]
 		var shown: Array = card.keys_shown()
-		var want := []
-		for slot in AbilityState.SLOTS:
-			want.append({"key": Bindings.glyph(ClassKit.slot_verb(slot, def)),
-				"icon": AbilityState.ABILITIES[def.get("%s_id" % slot)]["icon"]})
-		var slots_ok := shown.size() >= 4
-		for j in mini(4, shown.size()):
-			slots_ok = slots_ok and shown[j]["key"] == want[j]["key"] and shown[j]["icon"] == want[j]["icon"] \
-				and shown[j]["words"].split(" ", false).size() in [2, 3]
-		var extras: Array = shown.slice(4).map(func(k): return k["key"])
-		var want_extras: Array = ClassKit.card_keys(def).slice(4).map(func(k): return k["key"])
+		var grapple: bool = "grapple" in AbilityState.ABILITIES[def.movement_id].get("augments", [])
+		var want_icons := [_icon(def.weapon_id), _icon(def.special_id), _icon(def.line_id), _icon(def.ultimate_id),
+			_icon(def.movement_id) if grapple else Bindings.icon("harpoon"),
+			Bindings.icon("boost") if grapple else _icon(def.movement_id), _icon(def.smash_id)]
+		var want_keys: Array = BAR_KEYS + CHIP_KEYS
+		var slots_ok := shown.size() >= want_keys.size()
+		for j in mini(want_keys.size(), shown.size()):
+			var words_ok: bool = shown[j]["words"].split(" ", false).size() in [2, 3] if j < BAR_KEYS.size() else shown[j]["words"] == ""
+			slots_ok = slots_ok and shown[j]["key"] == want_keys[j] and shown[j]["icon"] == want_icons[j] and words_ok
+		var rows: Array = card.key_rows()
+		var rows_ok: bool = rows.size() == 2 and rows[0] == BAR_KEYS and rows[1].slice(0, 3) == CHIP_KEYS
+		var extras: Array = shown.slice(want_keys.size()).map(func(k): return k["key"])
 		var worn: Color = card.get_theme_stylebox("normal").border_color
-		_report("%s keys" % def.display_name, slots_ok and extras == want_extras and extras.all(func(k): return k == "key_space")
+		_report("%s keys" % def.display_name, slots_ok and rows_ok and extras.all(func(k): return k == "key_space")
 				and card.def == def and Color(worn, 1.0).is_equal_approx(def.color),
-			"shows %s; extras %s; edge %s for row colour %s"
-				% [shown.map(func(k): return "%s %s \"%s\"" % [k["key"], k["icon"], k["words"]]), extras, worn.to_html(false), def.color.to_html(false)])
+			"shows %s; rows %s; extras %s; edge %s for row colour %s"
+				% [shown.map(func(k): return "%s %s \"%s\"" % [k["key"], k["icon"], k["words"]]), rows, extras, worn.to_html(false), def.color.to_html(false)])
 
 
 # Which cards should be open when only card `i` is: one entry per card on the row.

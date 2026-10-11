@@ -19,6 +19,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const MetaOptions := preload("res://src/core/meta_options.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
@@ -71,7 +72,7 @@ const TABLES := {
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "028b78afb8c873159c19c8128f52c513d1e5e29d54ec952a858fe486945d8275",  # 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
+	"achievements.ROWS": "9f88aba2f6fe18ae2243942d6a9e13a6d1d384b9d87a07642cecbfd4a4254296",  # 2026-10-11 (w13 SG12 sg12-meta-options): four ach_meta_* grant rows paying {"option": <node>}; was 028b78af, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
 	"cosmetics.ROWS": "26e34e89d31537480501baf914721349d737fe04d233bedd3bc33b1f5a8e0283",  # 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): Downbeat trail, Curtain Call decal tile 9, Till Bell companion skin, all pending art; was c0f10ab8, P-R7: delivered decal mask ids, trails and SPIL-9 paints
 	"event_kinds.ROWS": "c374e25980772cfb6cff9af3f4297012ce0ffeb284f651b57974dd7ef6c412db",  # 2026-10-11 (w13 skill-bar step 1, 7b7e2aa): ultimate_* rows, re-pinned by the coordinator at the systems wave A merge; was 1326ff10, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 3e903494, 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
@@ -92,7 +93,7 @@ const GOLDEN_HASHES := {
 	"windup_rows.ROWS": "a38f788e68affd8fb5c71c0ff4e0f0883cbeac1eac85a4bb8d7c45a9ae62cfc8",  # 2026-10-08 (wave 10 GP6 and AU2): idle, death and wind-up cue fields per kind
 	"upgrade_tree.TREES": "55786d60308e54612ab34205749dc173d281016e2222e047b26e1ea2ed8629f9",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
 	"upgrade_tree.WORLD_ONE_NODES": "d649afcb0e003763c8fc9488a275f44ddfc2049ca02963fa078c8c8f887df7a8",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
-	"combat.codex_entries.ENTRIES": "2453798590e7bca6fc3491b07ea876024a4ffb7b2a909118a8670dd0c34aa42c",  # 2026-10-08 (wave 10 ST4): entries for every spawning kind and the Highdraft tricks
+	"combat.codex_entries.ENTRIES": "310d6ec7fe5ec359bd5ef08f7b8090a70774ebf52c2ce300d722c78b2f7fd6e6",  # 2026-10-11 (w13 B6): the five skill-bar discovery entries on top of the ST4 set
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned
 	"boss.codex_entries.WAKING": "6b6074ef43fd2de4eb04f2c60d971eb7922d6e152e532b9b94454a8e017f60ea",
@@ -204,6 +205,8 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 				var targets = (pilots + Achievements.PENDING_PILOTS) if reward == "pilot" else _ids(tables.get("cosmetics.ROWS", {}))
 				if reward == "world":
 					targets = Worlds.ROWS.map(func(w): return str(w.id))
+				elif reward == "option":
+					targets = MetaOptions.ids()
 				_ref(issues, name, id, "reward kind", reward, Achievements.REWARD_KINDS)
 				_ref(issues, name, id, "reward", row.reward[reward], targets)
 			for problem in Achievements.validate({id: row}, bus, pilots, _ids(tables.get("cosmetics.ROWS", {}))):

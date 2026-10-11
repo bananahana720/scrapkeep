@@ -252,6 +252,7 @@ func setup(game_ref) -> void:
 
 	ability_bar = AbilityBar.new()
 	add_child(ability_bar)
+	ability_bar.hidden_source = key_glyphs.shown_glyphs
 	_speed = SpeedGlyph.new()
 	add_child(_speed)
 	_health = Gauge.new("res_health", HEALTH_BAR, true)
@@ -276,6 +277,7 @@ func setup(game_ref) -> void:
 	reticle = AimReticle.new()
 	add_child(reticle)
 	reticle.setup(game.player, game.camera.cam)
+	game.events.verb_failed.connect(_on_verb_failed)
 	why_callout = WhyCallout.new()
 	add_child(why_callout)
 	why_callout.setup(game, profile)
@@ -699,7 +701,8 @@ func layout(size: Vector2) -> void:
 	_toasts.custom_minimum_size = Vector2(toast_width, 0.0)
 	_toasts.size = Vector2(toast_width, 0.0)
 
-	var bar_size: Vector2 = ability_bar.bar_size(maxi(ability_bar.slots.size(), 4))
+	# Three numbered slots and two chips (SKILL-BAR section 5); the chain counter sits right of the chips.
+	var bar_size: Vector2 = ability_bar.bar_size(maxi(ability_bar.slots.size(), AbilityBar.NUMBERED + 2))
 	var bar_y := bottom.position.y + (bottom.size.y - bar_size.y) * 0.5
 	ability_bar.position = Vector2((size.x - bar_size.x) * 0.5, bar_y)
 	var slot_mid := bar_y + AbilityBar.SLOT * 0.5
@@ -714,7 +717,7 @@ func layout(size: Vector2) -> void:
 # The sizes layout() depends on. Relayout when one changes, not every frame: each
 # extent() call shapes text.
 func _piece_sizes() -> Array:
-	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), 4), _plate_size()]
+	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), AbilityBar.NUMBERED + 2), _plate_size()]
 
 
 # The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. Its
@@ -942,12 +945,49 @@ func _process(delta: float) -> void:
 	if interact != null:
 		reticle.gauge = maxf(reticle.gauge, interact.hold_fraction())
 	reticle.gauge_color = tint
+	_step_ultimate(tint)
 	if _piece_sizes() != _laid_pieces:
 		layout(size)
 
 	var hold: float = game.restart_hold_fraction()
 	_restart.set_fraction(hold)
 	_restart.visible = hold > 0.0
+
+
+# The skill bar's live reads (SKILL-BAR section 5): the ultimate meter on the reticle, the set
+# piece's dim on the bar, and the loaded line skill's badge on slot 3. Every layer reads the
+# one record (AbilitySlots.ultimate_of), so the arc, the Q and the dim cannot drift apart.
+func _step_ultimate(tint: Color) -> void:
+	var ult: Dictionary = AbilitySlots.ultimate_of(game)
+	var active: bool = ult["state"] == "active"
+	reticle.meter_active = active
+	reticle.meter_full = ult["state"] == "ready"
+	reticle.meter = _set_piece_left(float(ult["fill"])) if active else float(ult["fill"])
+	reticle.meter_color = AimReticle.meter_fill_color(tint)
+	reticle.hide_q = key_glyphs.shown_glyphs().has(reticle.q_glyph())
+	ability_bar.set_piece = active
+	var combat = game.get("combat")
+	ability_bar.line_loaded = combat != null and combat.has_method("line_load") and not (combat.line_load() as Dictionary).is_empty()
+
+
+# The arc drains with the flight during the set piece: B3's set piece reports its progress
+# (0 at the wind-up, 1 at the landing) if it offers one; else the meter's own fill stands.
+func _set_piece_left(fill: float) -> float:
+	var combat = game.get("combat")
+	var piece = combat.get("ultimate") if combat != null else null
+	if piece != null and piece is Object and piece.has_method("progress"):
+		return clampf(1.0 - float(piece.progress()), 0.0, 1.0)
+	return fill
+
+
+# A refused pick shakes the slot the number named (SKILL-BAR section 5). The router emits the
+# refusal on the tick the pick is read, while the intent still holds it.
+func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
+	if verb != "select" or game.player == null:
+		return
+	var pick: int = int(game.player.intent.slot_pick)
+	var bar: Array = AbilitySlots.AbilityState.BAR
+	ability_bar.refuse(bar[pick] if pick >= 0 and pick < bar.size() else "line")
 
 
 # Simulated time: the tally of a build's trying and the part name's 1.2 s run on the physics

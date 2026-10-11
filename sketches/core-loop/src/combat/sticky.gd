@@ -18,6 +18,11 @@ const FLIGHT_MIN := 0.35
 const FLIGHT_MAX := 1.1
 
 var charges: Array = []
+# The device ledger (devices.gd) combat hands in: every charge holds a slot of its kind
+# (thrown "sticky" or dropped "mini") while it stands. Null outside combat.
+var ledger = null
+# Charges a deploy at the cap pushed out; they go off on the next step, never vanish.
+var _evicted: Array = []
 
 # A thrown charge bit into the world here; presentation pops on it. Read-only.
 signal stuck(at: Vector3)
@@ -81,6 +86,8 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> Arr
 		elif not charge["stuck"]:
 			_fly(charge, delta, space)
 		(charge["node"] as Node3D).global_position = charge["pos"]
+		if ledger != null:
+			ledger.move(int(charge.get("device_id", 0)), charge["pos"])
 		if charge["fuse"] <= 0.0:
 			gone.append(charge)
 		elif charge["arm"] <= 0.0 and rider == null:
@@ -92,20 +99,40 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> Arr
 				gone.append(charge)
 	for charge in gone:
 		take(charge)
+	gone.append_array(_evicted)
+	_evicted = []
 	return gone
 
 
+# A charge leaves the world (it went off, was caught or cleared): it leaves the count.
 func take(charge: Dictionary) -> Dictionary:
 	charges.erase(charge)
-	var node: Node3D = charge.get("node")
-	if is_instance_valid(node):
-		node.queue_free()
+	_free(charge)
+	if ledger != null:
+		ledger.remove(int(charge.get("device_id", 0)), "destroyed")
 	return charge
+
+
+# The ledger recalled this charge past the leash: it leaves without going off.
+func recall(device_id: int) -> bool:
+	for charge in charges:
+		if int(charge.get("device_id", 0)) == device_id:
+			charges.erase(charge)
+			_free(charge)
+			return true
+	return false
 
 
 func clear() -> void:
 	for charge in charges.duplicate():
 		take(charge)
+	_evicted = []
+
+
+func _free(charge: Dictionary) -> void:
+	var node: Node3D = charge.get("node")
+	if is_instance_valid(node):
+		node.queue_free()
 
 
 func _fly(charge: Dictionary, delta: float, space: PhysicsDirectSpaceState3D) -> void:
@@ -140,6 +167,17 @@ func _touching(charge: Dictionary, enemies: Array):
 
 
 func _add(charge: Dictionary) -> Dictionary:
+	if ledger != null:
+		var placed: Dictionary = ledger.deploy("mini" if charge["mini"] else "sticky", charge["pos"])
+		for id in placed["evicted"]:
+			for old in charges.duplicate():
+				if int(old.get("device_id", 0)) == id:
+					charges.erase(old)
+					_free(old)
+					_evicted.append(old)
+		if int(placed["id"]) <= 0:
+			return charge
+		charge["device_id"] = int(placed["id"])
 	var node := MeshInstance3D.new()
 	var ball := SphereMesh.new()
 	ball.radius = 0.28 if charge["mini"] else 0.4

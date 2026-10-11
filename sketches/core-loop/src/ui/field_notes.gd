@@ -46,19 +46,20 @@ const TRY_FIRST := [
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
 
-# The key list. The nine verbs come first, their keys read from the bindings table; the rest
+# The key list. The ten verbs come first, their keys read from the bindings table; the rest
 # are menu and screen keys, which are not verbs. A row with "caps" and "short" is drawn on the
 # controls diagram (Tab's Keys page and the title's Help page), as its keycaps and those one
-# or two words.
+# or two words. The F special retired into slot 2 (design-v3/SKILL-BAR.md section 5).
 const VERB_ROWS := [
 	["roll", "drive, relative to where the camera looks", "drive"],
 	["look", "look", "look"],
 	["jump", "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump", "jump"],
-	["fire", "the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw", "weapon"],
-	["harpoon", "the harpoon: press bites the aim point, hold keeps the line, release flings. During a charge it cancels", "harpoon"],
+	["fire", "left click fires the picked slot: the weapon unless you picked 2 or 3. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw. A special fills while held and fires on release", "fire"],
+	["select", "1, 2, 3 pick what left click does: 1 the weapon, 2 the special, 3 the line skill. A cast, or 3 s without one, returns to 1", "pick"],
+	["harpoon", "the harpoon: press bites the aim point, hold keeps the line, release flings. During a charge it cancels. With a line skill loaded, the next bite carries it", "harpoon"],
 	["haul", "haul the line in: a smash on a body, a winch on the world. With no line: the brake on the ground, the slam in the air", "haul"],
 	["boost", "your go verb: Sable's boost, Rivet's sprint (hold), Kest's smoke blink", "boost"],
-	["special", "the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free", "special"],
+	["ultimate", "Q when the ring round the crosshair is full: ride a line or a launch to where you aim; your tech fires on the way. Space bails out", "ultimate"],
 	["interact", "interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off", "use / ride"],
 ]
 const MENU_ROWS := [
@@ -66,7 +67,7 @@ const MENU_ROWS := [
 	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
 	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
 	{"keys": "M", "does": "mute or unmute"},
-	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume, quit", "caps": ["key_p"], "short": "pause"},
+	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume; quit with X (hold)", "caps": ["key_p"], "short": "pause"},
 	{"keys": "R (hold)", "does": "retry the stage from its start (in the arena, the fight); release before holding again", "caps": ["key_r"], "short": "hold retry"},
 	{"keys": "F1", "does": "launched with --dev only: tuning panel (frees the mouse)"},
 	{"keys": "F3", "does": "launched with --dev only: physics interpolation on/off (off by default)"},
@@ -95,8 +96,12 @@ static func controls() -> Array:
 	return out
 
 
-# The caps a verb draws on the diagram: its glyph, or one cap per drive key for the roll.
+# The caps a verb draws on the diagram: its glyph, one cap per drive key for the roll, and one
+# per number key for the pick.
 static func verb_caps(verb: String) -> Array:
+	if verb == "select":
+		return Bindings.SELECT_ACTIONS.map(func(action):
+			return "key_" + OS.get_keycode_string(Bindings.VERBS["select"]["actions"][action]["keys"][0]).to_lower())
 	if verb != "roll":
 		return [Bindings.glyph(verb)]
 	var caps := []

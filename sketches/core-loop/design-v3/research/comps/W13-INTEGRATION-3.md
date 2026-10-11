@@ -231,7 +231,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 ### SG4 Burden parts
 
 - **GOAL.** Rare burden parts, each a pure stated downside, are offered only as the named pay of a visible optional pocket, and from world 2 a pilot may hold more than one hot-wired part.
-- **SCOPE.** `src/build/parts.gd` (burden rows in `HOTWIRED`, `:187-196`; the one-held rule at `:288-302` becomes one in world one and the per-world cap from world 2; `offer_pool` never returns a burden), `src/core/alpha_defs.gd` (the burden ids in the parts list only), `tests/burden_parts_test.gd` (new).
+- **SCOPE.** `src/build/parts.gd` (burden rows in `HOTWIRED`, `:187-196`; the one-held rule at `:288-302` becomes one in world one and the per-world cap from world 2; `offer_pool` never returns a burden), `src/core/alpha_defs.gd` (the burden ids in the parts list only), `tests/burden_parts_test.gd` (new), `src/world/activities.gd` (one line, `:387`: the named-part rule reads `Parts.rows().has(named) or Parts.is_burden(named)`; ruling 2026-10-11 w13-systems round 3), `src/build/build.gd` (`:612-616`: `hotwire_offer` takes `ctx.run.world` and `_hotwire_spent` re-arms per world; same ruling), `tests/hotwire_offer_flow_test.gd` (a world-2 second offer check; same ruling).
 - **CONTEXT.** `parts.gd:187-196` (two hot-wired rows: `riveted_shell`, `spark_tread`), `:288-302` (the one-held rule), `:399-415` (`offer_pool`); `src/world/activities.gd:378-382` (a named part wins over the roll, so a pocket row's `pay.named` offers the burden); KD8 (`K-UNITS.md:255-269`); `comps/gunfire/scrolls-and-synergies.md:86`; `design-v3/research/build-systems/BUILD-SYSTEMS.md:76`.
 - **ACCEPTANCE.**
   - Each burden row shows a cost icon and at most three words in the hot-wired row shape (`parts.gd:190-191`).
@@ -240,7 +240,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
   - Burden sweep step 1: a dummy build holds 0 to 10 burdens against a fixed target; the test prints damage per second and damage taken per count, and 5 burdens survive a fixed scripted encounter at least as often as 0.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'burden_parts_test' --test 'hotwire_offer_flow_test' --test 'hotwire_shell_offer_test' --test 'ui_hotwire_screen_test' --test 'activities_pay_test'` (5 files).
 - **TIMEBOX.** 3 h.
-- **FORBIDDEN.** A burden in a shop shelf or a tree offer; editing `activities.gd`.
+- **FORBIDDEN.** A burden in a shop shelf or a tree offer; editing `activities.gd` beyond the named-part line at `:387` (ruling 2026-10-11 w13-systems round 3).
 - **Depends on.** KD8 merged. **Shares files with.** `parts.gd` with PC-POOL, SQ19, SG15, SR9 (they merge after SG4); `alpha_defs.gd` with PC-PACK and KD7 (merge before PC-PACK).
 
 ### SG5 Burden payout and sweep
@@ -459,7 +459,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 ### SQ1 Pack-kind telegraph record
 
 - **GOAL.** Every pack-kind attack has one record (pre-shoot, recovery, cooldown, radius, marker class, band class), measured against the reaction floor and its damage area.
-- **SCOPE.** `src/combat/telegraph_record.gd` (new), `src/combat/counter.gd` (ordinary attacks read `recovery` from the record; `warn_seconds` default at `:46`), `tests/telegraph_timing_pack_test.gd` (new: pack-kind rows; the Warden kinds keep their own `telegraph_timing_<kind>_test` files, `decisions.tsv:486c`), `tests/pack_telegraph_record_test.gd` (new), `design-v3/LEGIBILITY.md` (the marker classes and band classes beside the line memo 2 fixed at `:58`).
+- **SCOPE.** `src/combat/telegraph_record.gd` (new), `src/combat/counter.gd` (ordinary attacks read `recovery` from the record; `warn_seconds` default at `:46`), `tests/telegraph_timing_pack_test.gd` (new: pack-kind rows; the Warden kinds keep their own `telegraph_timing_<kind>_test` files, `decisions.tsv:486c`), `tests/pack_telegraph_record_test.gd` (new), `design-v3/LEGIBILITY.md` (the marker classes and band classes beside the line memo 2 fixed at `:58`), `src/combat/chaser.gd` (`RECOVER` reads `TelegraphRecord.RECOVERY`), `src/combat/lobber.gd` and `src/combat/swarm.gd` (a standing recovery tail of the shared value after each attack, so the exception set is Warden-only; ruling 2026-10-11 w13-systems round 3).
 - **CONTEXT.** `comps/roboquest/enemies-and-telegraphs.md:110`; `comps/gunfire/enemies-and-bosses.md:89`; pack warns today: bola thrower 0.5 (`src/combat/bola_thrower.gd:34`), chaser 0.6 (`src/combat/chaser.gd:12`), mind hand 1.4 (`src/combat/mind_hand.gd:26`); `src/boss/hazard.gd:19`; Warden cycle (`src/combat/warden.gd:51-52`).
 - **ACCEPTANCE.**
   - 50 solo spawns per pack kind: lead from telegraph start to damage at least 0.4 s; telegraph and damage areas overlap at least 95 percent; zero kinds outside.
@@ -753,7 +753,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 - **GOAL.** A whole-pool sweep proves every stacking family stays readable, and a rare capped spike family exists for the big-jump feel.
 - **SCOPE.** `src/build/part_def.gd` (`STACK_RULES` gains `spike`, capped at 8x base, at most one per tier, `:56`), `tools/build_sweep.gd` (new: a stack arm, 1 to 20 copies per family with time to kill; a composition arm, 10,000 random 6-part builds), `tests/stack_sweep_test.gd` (new).
 - **CONTEXT.** `part_def.gd:56`, `:128-141`; `src/build/triggers.gd:23`; `comps/ror2/items-and-stacking.md:96`; `comps/isaac/items-and-synergies.md:89`; the first memo's default 9 ("no exponential family", `W13-INTEGRATION.md:311`), which this replaces with a capped one.
-- **ACCEPTANCE.** (a) every ceiling-family stat at stack 20 sits under its cap and rises with shrinking steps; (b) no spike above 8x base, at most one spike part per tier; (c) the composition arm: at least 30% of builds reach 3 or more tags, zero unspecified pairs, pool repeats at most once per 10,000 draws; time to kill printed per row.
+- **ACCEPTANCE.** (a) every ceiling-family stat at stack 20 sits under its cap and rises with shrinking steps; (b) no spike above 8x base, at most one spike part per tier; (c) the composition arm: at least 30% of builds reach 3 or more tags, zero unspecified pairs against an explicit independent-pairs table (an undeclared pair counts as unspecified), within-run repeats reported per 10,000 draws against a target of 1 and not gated (ruling 2026-10-11 w13-systems round 3: the stacking families want copies, so the Isaac no-repeat rule is report-only here); time to kill printed per row.
 - **VERIFY.** Base checks; `"$GODOT_BIN" --headless --path sketches/core-loop --script res://tools/build_sweep.gd -- --arm=stack` and `--arm=compose` (nonzero rows); `npm run sketch:smoke -- --sketch core-loop --test 'stack_sweep_test' --test 'build_parts_test' --test 'synergy_slice_test'` (3 files).
 - **TIMEBOX.** 3 h.
 - **FORBIDDEN.** An uncapped spike.
@@ -889,12 +889,12 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 ### SR6 Damage numbers
 
 - **GOAL.** Damage numbers and hit effects take one colour per damage type and team, and numbers merge in a short window.
-- **SCOPE.** `src/presentation/damage_numbers.gd` (new), `src/ui/hud.gd` (one layer), `tests/damage_numbers_test.gd` (new).
+- **SCOPE.** `src/presentation/damage_numbers.gd` (new), `src/ui/hud.gd` (one layer), `src/presentation/juice.gd` (the number is raised from the hit record that draws its burst; the crit rule and the burst and edge-flash tints read `DamageNumbers`; ruling 2026-10-11 w13-systems round 3, a brief defect), `tests/damage_numbers_test.gd` (new).
 - **CONTEXT.** `src/presentation/juice.gd`; `BIBLE.md:782`; B2 (`P-UNITS.md:122-142`).
 - **ACCEPTANCE.** Zero number and effect colour mismatches across every type and team pair; at 20 hits per second the visible numbers stay under a declared cap.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'damage_numbers_test' --test 'ui_word_budget_test'` (2 files).
 - **TIMEBOX.** 2 h.
-- **FORBIDDEN.** A new meaning colour.
+- **FORBIDDEN.** A new meaning colour; the hit-taken flash keeps the `player_hit` row colour for every team (a distinct monster or world hit colour is an owner call; ruling 2026-10-11 w13-systems round 3).
 - **Depends on.** B2. **Shares files with.** `hud.gd` (after B2).
 
 ### SR9 Relay charge rule

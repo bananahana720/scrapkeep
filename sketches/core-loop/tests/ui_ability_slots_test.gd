@@ -8,18 +8,20 @@ const Icons := preload("res://src/ui/icons.gd")
 
 # The ability bar reads W3's published slots (player.abilities.slots()) through the UI's
 # normaliser (CONTRACTS, Ability slots):
-#   - each pilot's four slots, in bar order, carry that pilot's ab_ icons (all Icons ids)
-#     and key glyph ids, with every field well formed;
-#   - Rivet's held F makes the special active and fills its gauge, which the HUD hands
-#     to the reticle ring; letting go fires it and puts the slot to cooling;
+#   - each pilot's five slots, in bar order (slots 1, 2, 3, then the Shift and Ctrl chips),
+#     carry that pilot's ab_ icons (slot 3 wears its row's picture) and key glyph ids, with
+#     every field well formed;
+#   - Rivet's routed special (the router's special_* output, which a pick of 2 and a click
+#     feed) makes the special active and fills its gauge, which the HUD hands to the reticle
+#     ring; letting go fires it and puts the slot to cooling;
 #   - a malformed record empties the bar instead of drawing it;
 #   - a slot whose cooldown ends swells once, and the pips and swell wear the class shape.
 
 const PILOTS := ["sable", "rivet", "kest"]
-const KEYS := ["key_lmb", "key_rmb", "key_f", "key_ctrl"]
-# Under the harpoon RMB is the line, so Rivet's and Kest's movement slot reads Shift (--harpoon-keys=shift);
-# Sable's movement is the grapple and keeps RMB.
-const HARPOON_KEYS := ["key_lmb", "key_shift", "key_f", "key_ctrl"]
+# Re-pinned 2026-10-10 (wave 13 unit B2, SKILL-BAR sections 1 and 5): the bar is slots 1, 2
+# and 3 on the number keys, then the Shift and Ctrl chips; the movement chip reads Shift for
+# every pilot, Sable included (her chip is her boost). Was LMB, RMB or Shift, F, Ctrl.
+const KEYS := ["key_1", "key_2", "key_3", "key_shift", "key_ctrl"]
 const CHARGE_TICKS := 45
 
 var _game
@@ -60,9 +62,10 @@ func _physics_process(_delta: float) -> bool:
 			if _wait == 20:
 				var list: Array = _adapter.slots(_game)
 				var pilot: String = PILOTS[_class]
-				var want := ["ab_%s_weapon" % pilot, "ab_%s_move" % pilot, "ab_%s_special" % pilot, "ab_%s_smash" % pilot]
-				_report("%s slots" % pilot, AbilitySlots.valid(list) and _field(list, "icon") == want and _field(list, "key") == (KEYS if pilot == "sable" else HARPOON_KEYS)
-						and want.all(func(id): return Icons.has(id)),
+				var want := ["ab_%s_weapon" % pilot, "ab_%s_special" % pilot, Icons.REEL, "ab_%s_move" % pilot, "ab_%s_smash" % pilot]
+				_report("%s slots" % pilot, AbilitySlots.valid(list) and _field(list, "icon") == want and _field(list, "key") == KEYS
+						and _field(list, "slot") == ["weapon", "special", "line", "movement", "smash"] and _field(list, "number") == [1, 2, 3, 0, 0]
+						and want.all(func(id): return Icons.has(id) or Icons.EXTRA.has(id)),
 					"ids %s icons %s keys %s states %s" % [_field(list, "id"), _field(list, "icon"), _field(list, "key"), _field(list, "state")])
 				_class += 1
 				_game.run.damage(99999.0, "test")
@@ -81,12 +84,12 @@ func _physics_process(_delta: float) -> bool:
 				var list: Array = _adapter.slots(_game)
 				var gauge: float = AbilitySlots.gauge_of(list)
 				var ring: float = _game.hud.reticle.gauge
-				_report("charging", list[2]["state"] == "active" and gauge > 0.2 and gauge < 1.0 and absf(ring - gauge) < 0.05,
-					"F held %d ticks: special %s, gauge %.2f, reticle ring %.2f" % [CHARGE_TICKS, list[2]["state"], gauge, ring])
+				_report("charging", list[1]["state"] == "active" and gauge > 0.2 and gauge < 1.0 and absf(ring - gauge) < 0.05,
+					"special held %d ticks: special %s, gauge %.2f, reticle ring %.2f" % [CHARGE_TICKS, list[1]["state"], gauge, ring])
 				_source.hold.erase("special_held")
 			if _wait == 30 + CHARGE_TICKS:
 				var list: Array = _adapter.slots(_game)
-				var special: Dictionary = list[2]
+				var special: Dictionary = list[1]
 				_report("released", special["state"] == "cooling" and special["cooldown_frac"] > 0.0 and special["charges"] == 0
 						and special["gauge"] == 0.0 and _game.hud.reticle.gauge == 0.0,
 					"after the release: special %s at %.2f with %d charge, gauge %.2f, reticle ring %.2f"

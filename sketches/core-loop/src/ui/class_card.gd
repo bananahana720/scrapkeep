@@ -47,6 +47,8 @@ const CELL_ICON := 40.0
 const CELL_CAP := 26.0
 const MOUSE_CAP := 36.0
 const PIP := 9.0
+const CHIP_ICON := 18.0
+const CHIP_CAP := 14.0
 const WORD_SIZE := 13
 const WORD_MIN := 9
 const SHAKE := 0.25
@@ -96,7 +98,8 @@ var openness := 0.0
 var preview
 var _details: Array[CanvasItem] = []
 var _cells: Array = []
-var _keys_row: HBoxContainer
+var _keys_row: VBoxContainer
+var _rows_shown: Array = []
 var _box: VBoxContainer
 var _fade_rect: TextureRect
 var _preview_h := PREVIEW_H
@@ -163,29 +166,57 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	line.custom_minimum_size = Vector2(0.0, 58.0)
 	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	box.add_child(line)
-	var keys := HBoxContainer.new()
-	keys.alignment = BoxContainer.ALIGNMENT_CENTER
-	keys.add_theme_constant_override("separation", 4)
+	# Two rows (design-v3/SKILL-BAR.md section 5): the bar as it plays (1, 2, 3, Q), then the
+	# chips (RMB, Shift, Ctrl) and the Space extras, one short line of icons. The keycaps are the
+	# same on every card, so they read on the open card only, beside the words; the icons sell
+	# the pilot at rest.
+	var keys := VBoxContainer.new()
+	keys.alignment = BoxContainer.ALIGNMENT_BEGIN
+	keys.add_theme_constant_override("separation", 2)
 	keys.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	keys.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(keys)
 	_keys_row = keys
 	var records := ClassKit.card_keys(def)
-	var room := width - 2.0 * PAD - 4.0 * (records.size() - 1)
-	var fit := _fit_cells(records, room / maxf(1.0, records.size()), floorf(room))
-	for record in records:
-		keys.add_child(_cell(record, color, fit["side"], fit["scale"]))
+	var bar := records.filter(func(r): return r.get("row", "bar") == "bar")
+	var chips := records.filter(func(r): return r.get("row", "bar") != "bar")
+	for row_records in [bar, chips]:
+		if row_records.is_empty():
+			continue
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 4)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		keys.add_child(row)
+		var chip: bool = row_records == chips
+		var room: float = width - 2.0 * PAD - 4.0 * (row_records.size() - 1)
+		var fit := _fit_cells(row_records, room / maxf(1.0, row_records.size()), floorf(room))
+		var keys_in_row: Array = []
+		for record in row_records:
+			row.add_child(_chip(record, color, fit["scale"]) if chip else _cell(record, color, fit["side"], fit["scale"]))
+			keys_in_row.append(record["key"])
+		_rows_shown.append(keys_in_row)
 	_apply()
 
 
-# The four slots and any Space extra, as {key, icon, words} in the bar's order.
+# The bar row's keys and the chip row's, then any Space extra, as {key, icon, words}.
 func keys_shown() -> Array:
 	return _cells.map(func(c): return {"key": c["key"], "icon": c["icon"], "words": c["words"]})
 
 
-# The key cells and the name label, for layout checks.
+# The keys of each row: [[the bar], [the chips and extras]].
+func key_rows() -> Array:
+	return _rows_shown.duplicate(true)
+
+
+# The key cells, both rows, for layout checks.
 func key_cells() -> Array:
-	return _keys_row.get_children() if _keys_row != null else []
+	var out := []
+	if _keys_row == null:
+		return out
+	for row in _keys_row.get_children():
+		out.append_array(row.get_children())
+	return out
 
 
 func name_label() -> Label:
@@ -446,6 +477,30 @@ func _cap_height(key_name: String) -> float:
 	return MOUSE_CAP if Keycap.is_mouse(key_name) else CELL_CAP
 
 
+# A chip: a small icon over, on the open card, a small keycap, and no words, so the row under
+# the bar stays short and the six-card row keeps its floor (roster_test R8). The chips are the
+# shared grammar (harpoon, go verb, smash); the field notes' Keys page names them in words.
+func _chip(record: Dictionary, color: Color, _cap_scale: float) -> VBoxContainer:
+	var cell := VBoxContainer.new()
+	cell.add_theme_constant_override("separation", 1)
+	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var icon := TextureRect.new()
+	icon.texture = Icons.texture(record["icon"])
+	icon.modulate = Icons.tint(record["icon"], color)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = Vector2(CHIP_ICON, CHIP_ICON)
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(icon)
+	var cap := KeycapView.new(record["key"], ScrapFrame.wear(color, _serial + record["key"].hash()), CHIP_CAP)
+	cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	cell.add_child(cap)
+	_details.append(cap)
+	_cells.append({"key": record["key"], "icon": record["icon"], "words": ""})
+	return cell
+
+
 func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> VBoxContainer:
 	var cell := VBoxContainer.new()
 	cell.custom_minimum_size = Vector2(width, 0.0)
@@ -465,6 +520,7 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	# Letter caps sit in the mouse cap's height, so every key's words start on one line.
 	cap.custom_minimum_size.y = maxf(cap.custom_minimum_size.y, MOUSE_CAP)
 	cell.add_child(cap)
+	_details.append(cap)
 	# Every key's words stack on two lines, so no label wraps on its own and the row reads even.
 	var words: String = record["words"]
 	var gap := words.find(" ")

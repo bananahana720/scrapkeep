@@ -2,6 +2,7 @@ extends Button
 
 const Palette := preload("res://src/core/palette.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
@@ -27,10 +28,11 @@ var depth := 1
 var color := Palette.SAND
 var _name: Label
 var _effect: Label
+var _set_piece: Label
 var _lift := 0.0
 
 
-func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false) -> void:
+func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES) -> void:
 	node = node_row
 	key = key_id
 	color = class_color
@@ -58,19 +60,38 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	box.add_child(_name)
 	_effect = _text(WorldOneCards.effect_line(node, world_one, shell), 18, Palette.SAND)
 	box.add_child(_effect)
+	# The set-piece line, dimmer than the effect so the effect stays the brighter line.
+	var piece := WorldOneCards.set_piece_line(node, set_piece_table)
+	_set_piece = _text(piece, 16, Color(Palette.SAND, 0.85))
+	_set_piece.visible = piece != ""
+	box.add_child(_set_piece)
 	mouse_entered.connect(func():
 		if not disabled:
 			grab_focus())
 
 
-# The slot key the node changes, as a key glyph id: weapon is key_lmb, smash key_ctrl.
+# The slot key the node changes, as a key glyph id (design-v3/SKILL-BAR.md section 5): the bar
+# slots their number (weapon key_1, special key_2, line key_3), the chips key_shift and
+# key_ctrl, the ultimate key_q.
 static func slot_key(node_row: Dictionary) -> String:
-	return "key_" + String(AbilityState.KEYS.get(node_row.get("key", ""), "")).to_lower()
+	var slot := String(node_row.get("key", ""))
+	if slot == AbilityState.ULTIMATE:
+		return Bindings.glyph("ultimate")
+	return "key_" + String(AbilityState.KEYS.get(slot, "")).to_lower()
 
 
 # The effect line as drawn: the world-one copy under the flag, else the node's own.
 func effect_text() -> String:
 	return _effect.text
+
+
+# The set-piece line as drawn under the effect: "" when the node seeds none (label hidden).
+func set_piece_text() -> String:
+	return _set_piece.text if _set_piece.visible else ""
+
+
+func set_piece_visible() -> bool:
+	return _set_piece.visible
 
 
 func node_id() -> String:

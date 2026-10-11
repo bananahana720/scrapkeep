@@ -32,6 +32,13 @@ const T := preload("res://tests/support/t.gd")
 # and nothing else, and the source still names no KEY_Q (the key comes from the table). The
 # set_piece state sits above the rest, and the bar shows 1, 2, 3 on its slots and Shift and
 # Ctrl on its chips. The field-notes row count stays nine until the HUD unit (B2) re-pins it.
+# Re-pinned 2026-10-10 (wave 13 unit B2, SKILL-BAR section 5): the field notes list ten verbs,
+# the special row retired and select (caps 1, 2, 3) and ultimate (Q) added; Q names the ultimate's
+# row and no cut key. The class kit's movement record is found by its slot, since the card now
+# leads with the bar row (1, 2, 3, Q) before the chips.
+# Re-pinned 2026-10-10 for the set piece (wave P-B unit B3): SKILL-BAR sections 2 and 4 let Q
+# through during the set piece as recall (a full refund in the wind-up), so in set_piece the
+# roll, Space (bail) and Q (recall) read, and nothing else.
 
 const CUT_NAMES := ["cl_reel", "cl_dash", "KEY_Q", "WHEEL"]
 const MENU_GLYPHS := ["key_tab", "key_p", "key_r"]
@@ -169,7 +176,7 @@ func _states() -> void:
 					for button in buttons:
 						if Bindings.verbs_on(state, 0, button).size() != 1:
 							ambiguous.append("button %d in %s" % [button, state])
-	# The set piece sits above every other state; in it only the roll and Space (bail) read.
+	# The set piece sits above every other state; in it only the roll, Space (bail) and Q (recall) read.
 	var live_in_set_piece: Array = []
 	for line in ["", "body", "world"]:
 		for charging in [false, true]:
@@ -186,7 +193,9 @@ func _states() -> void:
 				live_in_set_piece.append(verb)
 	_t.eq("the ball's state is the highest that holds, a world swing included", wrong_state, [])
 	_t.eq("every key reads as exactly one verb in every state", ambiguous, [])
-	_t.eq("in a set piece only the roll and the bail read", [live_in_set_piece, Bindings.reading("jump", "set_piece")], [["roll", "jump"], "bail"])
+	_t.eq("in a set piece only the roll, the bail and the recall read",
+		[live_in_set_piece, Bindings.reading("jump", "set_piece"), Bindings.reading("ultimate", "set_piece")],
+		[["roll", "jump", "ultimate"], "bail", "recall"])
 	var order := Bindings.STATES.duplicate()
 	var seen: Array = reached.keys()
 	seen.sort_custom(func(a, b): return order.find(a) < order.find(b))
@@ -308,15 +317,17 @@ func _readers() -> void:
 	for i in FieldNotes.VERB_ROWS.size():
 		var verb: String = FieldNotes.VERB_ROWS[i][0]
 		var row: Dictionary = rows[i]
-		var caps_ok: bool = row["caps"] == [Bindings.glyph(verb)] or (verb == "roll" and row["caps"] == ["key_w", "key_a", "key_s", "key_d"])
+		var caps_ok: bool = row["caps"] == [Bindings.glyph(verb)] or (verb == "roll" and row["caps"] == ["key_w", "key_a", "key_s", "key_d"]) \
+			or (verb == "select" and row["caps"] == ["key_1", "key_2", "key_3"])
 		if row["keys"] != Bindings.label(verb) or not caps_ok:
 			verb_rows_ok = false
 			detail.append("%s: keys %s caps %s" % [verb, row["keys"], row["caps"]])
-	_t.check("the field notes list the nine verbs with their table keys, in order", verb_rows_ok and FieldNotes.VERB_ROWS.size() == 9, "; ".join(detail))
+	_t.check("the field notes list the ten verbs with their table keys, in order", verb_rows_ok and FieldNotes.VERB_ROWS.size() == 10
+		and not FieldNotes.VERB_ROWS.any(func(r): return r[0] == "special"), "; ".join(detail))
 	var named: Array = []
 	for row in rows:
 		var keys: String = row["keys"]
-		if keys.begins_with("Q") or keys.contains("wheel") or keys == "C":
+		if (keys.begins_with("Q") and keys != Bindings.label("ultimate")) or keys.contains("wheel") or keys == "C":
 			named.append(keys)
 	_t.eq("no field-notes row names Q, C or the wheel as a key", named, [])
 	var cap_strays: Array = []
@@ -331,7 +342,7 @@ func _readers() -> void:
 		for record in ClassKit.keys(def):
 			if not record["key"] in glyphs:
 				slot_strays.append("%s %s" % [def.display_name, record["key"]])
-		var movement: Dictionary = ClassKit.keys(def)[1]
+		var movement: Dictionary = ClassKit.keys(def).filter(func(r): return r["slot"] == AbilityState.MOVEMENT)[0]
 		var want := "key_rmb" if "grapple" in AbilityState.ABILITIES[String(def.movement_id)].get("augments", []) else "key_shift"
 		if movement["key"] != want:
 			slot_strays.append("%s movement %s, want %s" % [def.display_name, movement["key"], want])
