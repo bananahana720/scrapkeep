@@ -165,24 +165,34 @@ func _distinct(a: Array) -> bool:
 
 
 # A pick lives in this run only: the next begin() puts back a fresh run, and the entrance
-# doc of the new run carries none of it.
+# doc of the new run carries none of it. Every row of every pilot's list is forced into slot 0
+# and taken, so a row the seed's first draw never offers is covered too.
 func _no_persist() -> void:
+	var total := 0
 	for def in ClassDef.all():
 		var fresh := _fresh(77)
 		fresh.begin(def)
 		var clean := _strip(fresh.to_entrance_doc())
-		for index in StartPicks.OFFERED:
+		var ids: Array = StartPicks.ids_for(def.id)
+		var exercised := 0
+		for id in ids:
 			var run := _fresh(77)
 			run.begin(def)
 			run.enter_stage(1)
-			t.check("%s take slot %d" % [def.id, index], run.take_start_pick(index))
+			run.start_pick["options"] = [id, "", ""]
+			t.check("%s take %s" % [def.id, id], run.take_start_pick(0))
+			exercised += 1
 			run.begin(def)
-			t.eq("%s slot %d gone after a new run" % [def.id, index], String(run.start_pick.get("taken", "")), "")
-			t.eq("%s slot %d new run equals a fresh one" % [def.id, index], _strip(run.to_entrance_doc()), clean)
+			t.eq("%s %s gone after a new run" % [def.id, id], String(run.start_pick.get("taken", "")), "")
+			t.eq("%s %s new run equals a fresh one" % [def.id, id], _strip(run.to_entrance_doc()), clean)
 			# The entrance doc is not the whole run: a field outside it that begin() does not
 			# reset could carry a pick into the next run, so every script field is compared.
 			var drift := _state_drift(run, fresh)
-			t.check("%s slot %d no run field survives into the next run" % [def.id, index], drift.is_empty(), "%s" % [drift])
+			t.check("%s %s no run field survives into the next run" % [def.id, id], drift.is_empty(), "%s" % [drift])
+		t.check("%s no-persist covered every list row" % def.id, ids.size() > 0 and exercised == ids.size(),
+			"%d of %d" % [exercised, ids.size()])
+		total += exercised
+	print("start-pick no-persist: %d rows exercised across %d pilots" % [total, ClassDef.all().size()])
 
 
 # Script fields that legitimately differ between two runs: the id stream and what it draws
