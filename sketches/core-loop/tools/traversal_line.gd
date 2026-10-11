@@ -5,6 +5,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const ParkSchema := preload("res://src/world/park/park_schema.gd")
 
 # The traversal measure (design-v3/TRAVERSAL.md): one pilot's traversal bot crosses the slice
 # table's stage once per seed, from the spawn to the Warden's engagement, and one JSON file
@@ -22,6 +23,32 @@ const Augments := preload("res://src/movement/augments.gd")
 # kicker_launch and thermal_ride fired, by name) and
 # uphill_m (the most z the ball gave back from its furthest point toward the Warden). The summary
 # holds each one's median.
+#
+# The park (PARK.md section 8, unit KB7) runs a park stage for any of the six pilots, or the
+# floor line (the stick and the brake only: no harpoon, no skill, no smash, no jump):
+#
+#   ... traversal_line.gd -- --table=park --stage=<n> --pilot=sable|rivet|kest|tarn|tally|cannon
+#     [--floor] [--seeds=...] [--out=<dir>] [--lines=<file>] [--ref=<pilot>] [--commit=<sha>] [--trace]
+#
+# Stage 1 to 6 is the park table's row. Stage 0 is the park_test fixture: the park table has no
+# fixture row (park_defs.gd), so the tool reloads park_defs.gd in this process with stage 1's map
+# named park_test, and the fixture rides as stage 1. The line comes from
+# tools/park_lines/<map_id>.json (--lines= names another file), its named waymarks resolve
+# through the park file, and the default out is artifacts/local/traversal/park/<map_id>, one
+# <pilot>.json or floor.json. With --floor, --pilot picks the class that rolls (Rivet when
+# absent) and --ref the pilot whose summary in the same out directory sets the floor band
+# (Rivet when absent).
+#
+# Park measures, per seed, beside today's: airborne_share (ticks with no ground contact over all
+# counted ticks), peak_speed_mps, tier3_s (seconds at speed tier 3, blazing, or above),
+# segments_s (stage seconds between waymark passes, a waymark counting as passed within 12 m;
+# the landmark also passes at the Warden's engagement) and segment_s (the longest of them),
+# quiet_max_s (the longest stretch with no ride fact, kicker launch, bite or drop of 4 m or
+# more), distinct_verbs (how many different ride facts and verbs fired, named in verbs),
+# length_ratio (path over the straight distance from the drop to the engage centre),
+# dead_stop_at (stage second and place of each dead stop) and progress_m (the drop in the stage
+# graph's d_landmark per second; null without assets/park/<map_id>/graph.bin, said once). The
+# summary holds each measure's median and names every band with whether its median is inside.
 
 const TABLE := "slice"
 const ROUTES := "res://tools/traversal_lines.json"
@@ -34,6 +61,52 @@ const PROBE_SPOKES := 12
 const PROBE_PITCHES := [0.0, 0.4, 0.8]
 const RIDE_FACTS := ["ride_grapple_line", "ride_chute", "ride_skylight", "ride_glide_drop", "wall_crumbled", "thermal_ride"]
 const KICKER_LAUNCH := "kicker_launch"
+
+# The park (PARK.md section 8). Pilot keys and their class_def ids (src/core/class_def.gd:87-122).
+const PARK := "park"
+const PARK_PILOTS := {"sable": "pylon_engineer", "rivet": "runner_gunner", "kest": "demolitions_caster",
+	"tarn": "tarn", "tally": "tally", "cannon": "remembered_cannon"}
+const FLOOR := "floor"
+const FLOOR_CLASS := "rivet"
+const FLOOR_HANDS := ["move", "brake_held"]
+const PARK_DEFS := "res://src/core/park_defs.gd"
+const PARK_LINES := "res://tools/park_lines/%s.json"
+const PARK_OUT := "res://../../artifacts/local/traversal/park"
+const FIXTURE_STAGE := 0
+const FIXTURE_MAP := "park_test"
+const FIXTURE_SWAP := ["\"map\": \"park_dam\"", "\"map\": \"park_test\""]
+const GRAPH_LOADER := "res://src/world/park/park_graph.gd"
+const GRAPH_FILE := "res://assets/park/%s/graph.bin"
+const WAYMARK_PASSED := 12.0
+const DROP_EVENT := 4.0
+# Ride facts the park adds to the slice's: terrain craters and lifts are rides too.
+const PARK_RIDE_FACTS := ["crater_ride", "lift_fired"]
+# Verbs by the bus signal that reports them.
+const VERB_SIGNALS := {"jumped": "jump", "boosted": "boost", "dashed": "dash", "slammed": "slam", "special_used": "special",
+	"vault_kicked": "vault", "sprint_started": "sprint", "rocket_jumped": "rocket_jump", "blink_used": "blink",
+	"mounted": "mount", "shield_vaulted": "shield_vault"}
+
+# The bands, PARK.md section 8's table (start). Numbers are the design doc's; never tune here.
+const BAND_REACHED := "8 of 8 seeds"
+const BAND_TIME := [60.0, 120.0]
+const BAND_TIME_WORST := 150.0
+const BAND_SEGMENT := [12.0, 45.0]
+const BAND_FLOW := 0.70
+const BAND_FLOW_WORST := 0.60
+const BAND_AIRBORNE := [0.12, 0.45]
+const BAND_AIRBORNE_HIGH := [0.25, 0.60]
+const BAND_AIRBORNE_HIGH_STAGES := [5, 6]
+const BAND_PEAK := 26.6
+const BAND_TIER3 := 3.0
+const BAND_QUIET := 20.0
+const BAND_ANCHOR := 40.0
+const BAND_VERBS := 3
+const BAND_LENGTH := [1.3, 2.0]
+const BAND_FLOOR := 2.0
+
+# How many times this process said a stage has no graph (once is enough).
+static var graph_notes := 0
+static var _park_defs_source := ""
 
 
 # One seed's measurement, fed once per physics tick from the spawn until the Warden engages.
@@ -55,16 +128,78 @@ class Sampler:
 	var _uphill := 0.0
 	var tracing := false
 	var trace: Array = []
+	# The park's measures (PARK.md section 8).
+	var park := false
+	var waymarks: Array = []
+	var graph = null
+	var graph_note := ""
+	var dead_stop_at: Array = []
+	var _mark_times: Array = []
+	var _verbs: Array[String] = []
+	var _last_event := 0.0
+	var _quiet_max := 0.0
+	var _drop_top := -INF
+	var _start := Vector3.INF
+	var _start_time := 0.0
+	var _straight := 0.0
+	var _graph_start = null
 
 	func _init(game_ref) -> void:
 		game = game_ref
 		traversal = RunLog.Traversal.new(Engine.physics_ticks_per_second, game.player.tuning.f("cruise"))
 		game.events.warden_engaged.connect(_on_engaged)
 		game.events.world_fact.connect(_on_fact)
+		game.events.line_state_changed.connect(_on_line)
+		for signal_name in VERB_SIGNALS:
+			if game.events.has_signal(signal_name):
+				var verb: String = VERB_SIGNALS[signal_name]
+				game.events.connect(signal_name, func(_a = null, _b = null, _c = null): _on_verb(verb))
+
+	# Turns on the park's waymark clock and graph: waymarks are {id, at: Vector2} in line order,
+	# the first the drop-in; graph is open_graph's result (null without one).
+	func setup_park(marks: Array, graph_ref) -> void:
+		park = true
+		waymarks = marks
+		graph = graph_ref
+		_mark_times = []
+		_mark_times.resize(marks.size())
+		if graph == null:
+			graph_note = "no stage graph: progress_m is null"
+
+	func _counting() -> bool:
+		return not engaged and game.flow.in_stage()
 
 	func _on_fact(kind: String, _at: Vector3) -> void:
-		if not engaged and kind in RIDE_FACTS and not kind in _rides:
+		if not _counting():
+			return
+		if kind in RIDE_FACTS and not kind in _rides:
 			_rides.append(kind)
+		if kind in RIDE_FACTS or kind in PARK_RIDE_FACTS or kind.begins_with("ride_"):
+			_event()
+			_verb(kind)
+
+	func _on_line(state: String, _target, _at: Vector3, _cause: String) -> void:
+		if not _counting():
+			return
+		if state.begins_with("latched"):
+			_event()
+			_verb("bite")
+		elif state == "smash_lands":
+			_verb("smash")
+
+	func _on_verb(verb: String) -> void:
+		if _counting():
+			_verb(verb)
+
+	func _verb(name: String) -> void:
+		if not name in _verbs:
+			_verbs.append(name)
+
+	# A ride fact, kicker launch, bite or drop ends the quiet stretch.
+	func _event() -> void:
+		var now: float = game.run.stage_time
+		_quiet_max = maxf(_quiet_max, now - _last_event)
+		_last_event = now
 
 	func _on_engaged(_stage: int) -> void:
 		if engaged:
@@ -72,6 +207,10 @@ class Sampler:
 		engaged = true
 		time_to_warden = snappedf(game.run.stage_time, 0.01)
 		_close_gap()
+		_close_quiet()
+		var last := waymarks.size() - 1
+		if park and last > 0 and _mark_times[last] == null:
+			_mark_times[last] = game.run.stage_time
 
 	func sample() -> void:
 		if engaged or not game.flow.in_stage() or game.run.stage_time <= _clock:
@@ -79,22 +218,66 @@ class Sampler:
 		_clock = game.run.stage_time
 		var player = game.player
 		var ball: Vector3 = player.ball_position()
+		if _start == Vector3.INF:
+			_begin(ball)
 		if _last_ball != Vector3.INF:
 			_path += ball.distance_to(_last_ball)
 		_last_ball = ball
 		_furthest_z = maxf(_furthest_z, ball.z)
 		_uphill = maxf(_uphill, _furthest_z - ball.z)
 		var grounded: bool = player.state.grounded
-		if _was_grounded and not grounded and game.ctx.terrain.map().near_kicker_lip(Vector2(ball.x, ball.z)) and not KICKER_LAUNCH in _rides:
-			_rides.append(KICKER_LAUNCH)
+		if _was_grounded and not grounded and game.ctx.terrain.map().near_kicker_lip(Vector2(ball.x, ball.z)):
+			if not KICKER_LAUNCH in _rides:
+				_rides.append(KICKER_LAUNCH)
+			_event()
+			_verb(KICKER_LAUNCH)
 		_was_grounded = grounded
 		if _anchored(ball):
 			max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
 			_last_anchor = _path
+		_watch_drop(ball)
+		_watch_marks(ball)
 		var intent = player.intent
-		traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, RunLog.Traversal.is_exempt(player))
+		var stops := traversal.dead_stops
+		traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, RunLog.Traversal.is_exempt(player), not grounded)
+		if traversal.dead_stops > stops:
+			dead_stop_at.append({"time": snappedf(game.run.stage_time, 0.01), "at": [snappedf(ball.x, 0.1), snappedf(ball.z, 0.1)]})
 		if tracing:
 			_record_tick(player, ball, grounded)
+
+	func _begin(ball: Vector3) -> void:
+		_start = ball
+		_start_time = game.run.stage_time
+		_last_event = _start_time
+		_drop_top = ball.y
+		var stage: int = game.run.stage
+		var engage: Vector3 = game.ctx.terrain.beacon_point(stage)
+		_straight = Vector2(ball.x, ball.z).distance_to(Vector2(engage.x, engage.z))
+		if park and not _mark_times.is_empty():
+			_mark_times[0] = _start_time
+		if graph != null:
+			_graph_start = float(graph.d_landmark(ball))
+
+	func _watch_drop(ball: Vector3) -> void:
+		_drop_top = maxf(_drop_top, ball.y)
+		if _drop_top - ball.y >= DROP_EVENT:
+			_event()
+			_drop_top = ball.y
+
+	# Waymarks pass in line order; the next one counts within WAYMARK_PASSED metres.
+	func _watch_marks(ball: Vector3) -> void:
+		if not park:
+			return
+		for i in range(1, waymarks.size()):
+			if _mark_times[i] != null:
+				continue
+			if Vector2(ball.x, ball.z).distance_to(waymarks[i]["at"]) <= WAYMARK_PASSED:
+				_mark_times[i] = game.run.stage_time
+			break
+
+	func _close_quiet() -> void:
+		var now: float = game.run.stage_time
+		_quiet_max = maxf(_quiet_max, now - _last_event)
 
 	func _record_tick(player, ball: Vector3, grounded: bool) -> void:
 		var contacts: Array = []
@@ -107,6 +290,7 @@ class Sampler:
 			"velocity": [snappedf(velocity.x, 0.01), snappedf(velocity.y, 0.01), snappedf(velocity.z, 0.01)],
 			"planar_speed": snappedf(player.planar_velocity().length(), 0.01), "tier": player.speed_tier(),
 			"grounded": grounded, "contacts": contacts, "dead_stops": traversal.dead_stops,
+			"frozen": player.frozen(), "mounted": player.kit.mounted, "state": game.flow.state_name(),
 		})
 
 	func _anchored(ball: Vector3) -> bool:
@@ -129,10 +313,33 @@ class Sampler:
 	func _close_gap() -> void:
 		max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
 
+	func _segments() -> Array:
+		var out: Array = []
+		for i in range(1, _mark_times.size()):
+			var a = _mark_times[i - 1]
+			var b = _mark_times[i]
+			out.append(snappedf(float(b) - float(a), 0.01) if a != null and b != null else null)
+		return out
+
+	func _progress():
+		if graph == null or _graph_start == null or _last_ball == Vector3.INF:
+			return null
+		var seconds: float = (time_to_warden if time_to_warden != null else game.run.stage_time) - _start_time
+		if seconds <= 0.0:
+			return null
+		return snappedf((float(_graph_start) - float(graph.d_landmark(_last_ball))) / seconds, 0.01)
+
 	func result(seed_number: int, outcome: String) -> Dictionary:
 		if not engaged:
 			_close_gap()
+			_close_quiet()
 		var share = traversal.flow_share()
+		var airborne = traversal.airborne_share()
+		var segments := _segments()
+		var longest = null
+		for s in segments:
+			if s != null:
+				longest = s if longest == null else maxf(float(longest), float(s))
 		return {
 			"seed": seed_number,
 			"flow_share": snappedf(float(share), 0.0001) if share != null else 0.0,
@@ -145,6 +352,17 @@ class Sampler:
 			"uphill_m": snappedf(_uphill, 0.1),
 			"outcome": outcome,
 			"ticks": traversal.ticks,
+			"airborne_share": snappedf(float(airborne), 0.0001) if airborne != null else 0.0,
+			"peak_speed_mps": snappedf(traversal.peak_speed, 0.01),
+			"tier3_s": snappedf(traversal.blazing_seconds(), 0.01),
+			"segments_s": segments,
+			"segment_s": longest,
+			"quiet_max_s": snappedf(_quiet_max, 0.01),
+			"distinct_verbs": _verbs.size(),
+			"verbs": _verbs.duplicate(),
+			"length_ratio": snappedf(_path / _straight, 0.01) if _straight > 0.0 else null,
+			"dead_stop_at": dead_stop_at.duplicate(true),
+			"progress_m": _progress(),
 		}
 
 
@@ -176,6 +394,123 @@ static func document(pilot: String, table: String, commit: String, runs: Array, 
 		"median_path_length_m": snappedf(median(lengths), 0.1), "median_uphill_m": snappedf(median(uphills), 0.1),
 		"median_rides": median(ride_counts),
 	}
+
+
+# The park's file: today's document plus the map, the stage, each measure's median and one
+# row per PARK.md section 8 band ({measure, band, median, worst, inside}). inside is null when
+# no seed gave the measure. floor_ref is {} or {"pilot", "median_time_to_warden_s"} for --floor.
+static func park_document(pilot: String, map_id: String, stage: int, commit: String, runs: Array, bar: Dictionary, floor_ref: Dictionary) -> Dictionary:
+	var doc := document(pilot, PARK, commit, runs, bar)
+	doc["map"] = map_id
+	doc["stage"] = stage
+	var medians := {}
+	for key in ["time_to_warden_s", "flow_share", "airborne_share", "peak_speed_mps", "tier3_s", "segment_s", "quiet_max_s",
+			"distinct_verbs", "max_anchor_gap_m", "length_ratio", "progress_m", "path_length_m", "dead_stops"]:
+		var values := _values(runs, key)
+		medians[key] = snappedf(median(values), 0.0001) if not values.is_empty() else null
+	var segment_medians: Array = []
+	var count := 0
+	for run in runs:
+		count = maxi(count, (run.get("segments_s", []) as Array).size())
+	for i in count:
+		var values: Array = []
+		for run in runs:
+			var segs: Array = run.get("segments_s", [])
+			if i < segs.size() and segs[i] != null:
+				values.append(float(segs[i]))
+		segment_medians.append(snappedf(median(values), 0.01) if not values.is_empty() else null)
+	medians["segments_s"] = segment_medians
+	doc["medians"] = medians
+
+	var bands: Array = []
+	var reached := 0
+	for run in runs:
+		if run.get("reached_warden", false):
+			reached += 1
+	bands.append(_band("reached_warden", BAND_REACHED, reached, null, not runs.is_empty() and reached == runs.size()))
+	var times := _values(runs, "time_to_warden_s")
+	var time_worst = _worst(times, true) if times.size() == runs.size() else null
+	bands.append(_band("time_to_warden_s", "median %s to %s s; no seed over %s s" % [BAND_TIME[0], BAND_TIME[1], BAND_TIME_WORST],
+		medians["time_to_warden_s"], time_worst,
+		_and(_within(medians["time_to_warden_s"], BAND_TIME), null if times.is_empty() else (time_worst != null and float(time_worst) <= BAND_TIME_WORST))))
+	var segments_inside = null
+	if not segment_medians.is_empty():
+		segments_inside = true
+		for m in segment_medians:
+			if m == null or float(m) < BAND_SEGMENT[0] or float(m) > BAND_SEGMENT[1]:
+				segments_inside = false
+	bands.append(_band("segment_s", "each segment's median %s to %s s" % [BAND_SEGMENT[0], BAND_SEGMENT[1]], segment_medians, medians["segment_s"], segments_inside))
+	var flows := _values(runs, "flow_share")
+	var flow_worst = _worst(flows, false)
+	bands.append(_band("flow_share", "median at least %s; no seed under %s" % [BAND_FLOW, BAND_FLOW_WORST], medians["flow_share"], flow_worst,
+		_and(_at_least(medians["flow_share"], BAND_FLOW), _at_least(flow_worst, BAND_FLOW_WORST))))
+	var air := airborne_band(bar, stage)
+	bands.append(_band("airborne_share", "%s to %s" % [air[0], air[1]], medians["airborne_share"], null, _within(medians["airborne_share"], air)))
+	var dead := _values(runs, "dead_stops")
+	var dead_worst = _worst(dead, true)
+	bands.append(_band("dead_stops", "0 on every seed", medians["dead_stops"], dead_worst, null if dead.is_empty() else float(dead_worst) == 0.0))
+	var peaks := _values(runs, "peak_speed_mps")
+	var peak_worst = _worst(peaks, false)
+	bands.append(_band("peak_speed_mps", "at least %s m/s on every seed" % BAND_PEAK, medians["peak_speed_mps"], peak_worst, _at_least(peak_worst, BAND_PEAK)))
+	bands.append(_band("tier3_s", "median at least %s s at the blazing tier" % BAND_TIER3, medians["tier3_s"], null, _at_least(medians["tier3_s"], BAND_TIER3)))
+	bands.append(_band("quiet_max_s", "at most %s s" % BAND_QUIET, medians["quiet_max_s"], _worst(_values(runs, "quiet_max_s"), true), _at_most(medians["quiet_max_s"], BAND_QUIET)))
+	bands.append(_band("max_anchor_gap_m", "at most %s m" % BAND_ANCHOR, medians["max_anchor_gap_m"], _worst(_values(runs, "max_anchor_gap_m"), true), _at_most(medians["max_anchor_gap_m"], BAND_ANCHOR)))
+	bands.append(_band("distinct_verbs", "at least %d" % BAND_VERBS, medians["distinct_verbs"], _worst(_values(runs, "distinct_verbs"), false), _at_least(medians["distinct_verbs"], BAND_VERBS)))
+	bands.append(_band("length_ratio", "%s to %s" % [BAND_LENGTH[0], BAND_LENGTH[1]], medians["length_ratio"], null, _within(medians["length_ratio"], BAND_LENGTH)))
+	if pilot == FLOOR:
+		var ref = floor_ref.get("median_time_to_warden_s")
+		var limit = BAND_FLOOR * float(ref) if ref != null else null
+		var inside = null
+		if limit != null and medians["time_to_warden_s"] != null:
+			inside = reached == runs.size() and float(medians["time_to_warden_s"]) <= float(limit) and dead_worst != null and float(dead_worst) == 0.0
+		bands.append(_band("floor", "reaches the Warden in at most %s times %s's median time, 0 dead stops" % [BAND_FLOOR, floor_ref.get("pilot", "the pilot line")],
+			medians["time_to_warden_s"], limit, inside))
+	doc["bands"] = bands
+	return doc
+
+
+static func airborne_band(bar: Dictionary, stage: int) -> Array:
+	var given = bar.get("airborne_share")
+	if given is Array and (given as Array).size() == 2:
+		return [float(given[0]), float(given[1])]
+	return BAND_AIRBORNE_HIGH if stage in BAND_AIRBORNE_HIGH_STAGES else BAND_AIRBORNE
+
+
+static func _band(measure: String, band: String, value, worst, inside) -> Dictionary:
+	return {"measure": measure, "band": band, "median": value, "worst": worst, "inside": inside}
+
+
+static func _values(runs: Array, key: String) -> Array:
+	var out: Array = []
+	for run in runs:
+		var v = run.get(key)
+		if v != null and (v is float or v is int):
+			out.append(float(v))
+	return out
+
+
+static func _worst(values: Array, high: bool):
+	if values.is_empty():
+		return null
+	return values.max() if high else values.min()
+
+
+static func _within(value, band: Array):
+	return null if value == null else float(value) >= float(band[0]) and float(value) <= float(band[1])
+
+
+static func _at_least(value, floor_value: float):
+	return null if value == null else float(value) >= floor_value
+
+
+static func _at_most(value, cap: float):
+	return null if value == null else float(value) <= cap
+
+
+static func _and(a, b):
+	if a == null or b == null:
+		return null if a != false and b != false else false
+	return a and b
 
 
 static func median(values: Array) -> float:
@@ -211,6 +546,132 @@ static func route_of(routes: Dictionary, pilot: String) -> Array[Vector2]:
 	return points
 
 
+# --- The park's lines, fixture and graph ---
+
+static func load_lines(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return parsed if parsed is Dictionary else {}
+
+
+# Where a waymark id stands on the park file: drop_in is the spawn, landmark the engage centre
+# (the landmark's beacon), any other id a park row's or an activity's at. INF when none.
+static func place_of(park: Dictionary, id: String) -> Vector2:
+	if id == ParkSchema.DROP_IN:
+		return _pair(park.get("spawn", {}).get("at"))
+	if id == ParkSchema.LANDMARK:
+		return _pair(park.get("landmark", {}).get("beacon"))
+	for table in ["park_rows", "activity_rows"]:
+		for row in park.get(table, []):
+			if row is Dictionary and row.get("id") == id:
+				return _pair(row.get("at"))
+	return Vector2.INF
+
+
+static func _pair(value) -> Vector2:
+	if value is Array and (value as Array).size() >= 2:
+		return Vector2(float(value[0]), float(value[1]))
+	return Vector2.INF
+
+
+# One line's bot route (every point after the drop-in, waymarks resolved) and its waymarks
+# ({id, at} in line order). key is a pilot key or FLOOR.
+static func line_of(lines: Dictionary, key: String, park: Dictionary) -> Dictionary:
+	var line: Dictionary = lines.get("floor", {}) if key == FLOOR else lines.get("pilots", {}).get(key, {})
+	var route: Array[Vector2] = []
+	var marks: Array = []
+	for point in line.get("waypoints", []):
+		var at := Vector2.INF
+		if point is String:
+			at = place_of(park, point)
+			if at != Vector2.INF:
+				marks.append({"id": point, "at": at})
+			if point == ParkSchema.DROP_IN:
+				continue
+		else:
+			at = _pair(point)
+		if at != Vector2.INF:
+			route.append(at)
+	return {"route": route, "waymarks": marks, "bar": line.get("bar", {})}
+
+
+# The floor line's hands: only the stick and the brake reach the ball.
+static func floor_hands(hold: Dictionary, press: Dictionary) -> Dictionary:
+	var kept := {}
+	for key in hold:
+		if key in FLOOR_HANDS:
+			kept[key] = hold[key]
+	return {"hold": kept, "press": {}}
+
+
+# The park table has no fixture row: this reloads park_defs.gd in this process with stage 1's
+# map named park_test, so --table=park rides the fixture as stage 1. True when the swap holds.
+static func use_fixture() -> bool:
+	var script: GDScript = load(PARK_DEFS)
+	if _park_defs_source == "":
+		_park_defs_source = script.source_code
+	var swapped := _park_defs_source.replace(FIXTURE_SWAP[0], FIXTURE_SWAP[1])
+	if swapped == _park_defs_source:
+		return false
+	script.source_code = swapped
+	if script.reload() != OK:
+		return false
+	var defs: Array = script.get_script_constant_map().get("DEFS", [])
+	return not defs.is_empty() and defs[0].get("map") == FIXTURE_MAP
+
+
+static func restore_park_defs() -> void:
+	if _park_defs_source == "":
+		return
+	var script: GDScript = load(PARK_DEFS)
+	script.source_code = _park_defs_source
+	script.reload()
+
+
+static func map_of(stage: int) -> String:
+	if stage == FIXTURE_STAGE:
+		return FIXTURE_MAP
+	var script: GDScript = load(PARK_DEFS)
+	var defs: Array = script.get_script_constant_map().get("DEFS", [])
+	return String(defs[clampi(stage, 1, defs.size()) - 1].get("map", "")) if not defs.is_empty() else ""
+
+
+# The stage graph (unit KB8's src/world/park/park_graph.gd over assets/park/<map_id>/graph.bin),
+# or null. A missing graph is said once per process.
+static func open_graph(map_id: String):
+	var file := GRAPH_FILE % map_id
+	var graph = null
+	if FileAccess.file_exists(file) and ResourceLoader.exists(GRAPH_LOADER):
+		graph = _construct_graph(load(GRAPH_LOADER), ProjectSettings.globalize_path(file), file)
+	if graph == null and graph_notes == 0:
+		graph_notes += 1
+		print("traversal_line: %s has no stage graph (%s with %s); progress_m reads null" % [map_id, file, GRAPH_LOADER])
+	return graph
+
+
+static func _construct_graph(script: GDScript, absolute: String, file: String):
+	if script == null:
+		return null
+	var init_args := 0
+	for method in script.get_script_method_list():
+		if method["name"] == "_init":
+			init_args = (method["args"] as Array).size()
+	var graph = null
+	if init_args >= 1:
+		graph = script.new(file)
+	else:
+		graph = script.new()
+		for name in ["load_file", "open", "load_graph", "read"]:
+			if graph.has_method(name):
+				graph.call(name, file)
+				break
+	if graph == null or not graph.has_method("d_landmark"):
+		push_warning("traversal_line: %s has no d_landmark(at); progress_m reads null (%s)" % [GRAPH_LOADER, absolute])
+		return null
+	return graph
+
+
 var _settings := {}
 var _seeds: Array[int] = []
 var _pilot := ""
@@ -220,14 +681,28 @@ var _game
 var _driver
 var _sampler: Sampler
 var _runs: Array = []
+# The park run: the stage number (0 the fixture), its map, the line file, the line and the class key.
+var _park := false
+var _stage := 1
+var _map_id := ""
+var _lines := {}
+var _line := {}
+var _class_key := ""
+var _floor := false
 
 
 func _initialize() -> void:
 	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
 	_pilot = String(_settings.get("pilot", ""))
-	if not _pilot in PILOTS:
-		printerr("traversal_line: usage: -- --pilot=sable|rivet|kest [--seeds=1,2,3] [--out=<dir>] [--commit=<sha>] [--trace]")
+	_park = String(_settings.get("table", TABLE)) == PARK
+	if _park:
+		if not _setup_park():
+			quit(2)
+			return
+	elif not _pilot in PILOTS:
+		printerr("traversal_line: usage: -- --pilot=sable|rivet|kest [--seeds=1,2,3] [--out=<dir>] [--commit=<sha>] [--trace]"
+			+ " | --table=park --stage=<0-6> --pilot=<sable|rivet|kest|tarn|tally|cannon> [--floor] [--lines=<file>] [--ref=<pilot>]")
 		quit(2)
 		return
 	var seeds: Array = DEFAULT_SEEDS
@@ -239,6 +714,36 @@ func _initialize() -> void:
 		_seeds.append(int(value))
 	_routes = load_routes()
 	_next()
+
+
+func _setup_park() -> bool:
+	_floor = _settings.has("floor")
+	_class_key = _pilot if _pilot != "" else (FLOOR_CLASS if _floor else "")
+	if not PARK_PILOTS.has(_class_key):
+		printerr("traversal_line: usage: -- --table=park --stage=<0-6> --pilot=sable|rivet|kest|tarn|tally|cannon [--floor] [--seeds=...] [--out=<dir>] [--lines=<file>] [--ref=<pilot>]")
+		return false
+	_pilot = FLOOR if _floor else _class_key
+	_stage = int(_settings.get("stage", "1"))
+	if _stage < FIXTURE_STAGE or _stage > 6:
+		printerr("traversal_line: --stage=%d is not 0 (the park_test fixture) or a park table row 1 to 6" % _stage)
+		return false
+	if _stage == FIXTURE_STAGE and not use_fixture():
+		printerr("traversal_line: could not ride park_test as the park table's stage 1 (park_defs.gd stage 1 map is no longer park_dam)")
+		return false
+	_map_id = map_of(_stage)
+	var lines_path := String(_settings.get("lines", PARK_LINES % _map_id))
+	_lines = load_lines(lines_path)
+	if _lines.is_empty():
+		printerr("traversal_line: no line file at %s" % lines_path)
+		return false
+	print("traversal_line: park %s (stage %d%s), %s line from %s" % [_map_id, _stage, ", the fixture as stage 1" if _stage == FIXTURE_STAGE else "",
+		_pilot, lines_path])
+	return true
+
+
+# The game's stage number for the park run: the fixture rides as stage 1.
+func _game_stage() -> int:
+	return 1 if _stage == FIXTURE_STAGE else _stage
 
 
 static func _parse(args: PackedStringArray) -> Dictionary:
@@ -260,7 +765,7 @@ func _next() -> void:
 	seed(_seeds[_index])
 	_game = Game.new()
 	_game.test_mode = true
-	_game.table = TABLE
+	_game.table = PARK if _park else TABLE
 	root.add_child(_game)
 	_driver = null
 
@@ -270,39 +775,102 @@ func _physics_process(delta: float) -> bool:
 		return false
 	if _driver == null:
 		_driver = BotDriver.new(_game, "traversal", _seeds[_index])
-		_driver.class_index = PILOTS.find(_pilot)
-		_driver.route = route_of(_routes, _pilot)
-		_driver.start()
-		_sampler = Sampler.new(_game)
+		if _park:
+			if not _start_park_driver():
+				return false
+		else:
+			_driver.class_index = PILOTS.find(_pilot)
+			_driver.route = route_of(_routes, _pilot)
+			_driver.start()
+			_sampler = Sampler.new(_game)
 		_sampler.tracing = _settings.has("trace")
 		return false
 	var over: bool = _driver.tick(delta)
+	if _floor:
+		var hands := floor_hands(_driver.source.hold, _driver.source.press)
+		_driver.source.hold = hands["hold"]
+		_driver.source.press = hands["press"]
 	_sampler.sample()
 	if not over and not _sampler.engaged:
 		return false
 	var run := _sampler.result(_seeds[_index], "engaged" if _sampler.engaged else _driver.outcome)
 	_runs.append(run)
 	if _sampler.tracing:
-		var trace_path := String(_settings.get("out", ProjectSettings.globalize_path(DEFAULT_OUT))).path_join("%s-seed-%d-trace.json" % [_pilot, _seeds[_index]])
+		var trace_path := _out_dir().path_join("%s-seed-%d-trace.json" % [_pilot, _seeds[_index]])
 		write_document(trace_path, {"pilot": _pilot, "seed": _seeds[_index], "ticks": _sampler.trace})
 	print("traversal_line: %s seed %d -> %s, flow share %.3f, dead stops %d, anchor gap %.1f m, to Warden %s s, path %.1f m, rides %s, uphill %.1f m"
 		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"],
 			run["path_length_m"], run["rides"], run["uphill_m"]])
+	if _park:
+		print("traversal_line: %s seed %d park: airborne %.3f, peak %.1f m/s, tier 3 %.1f s, segments %s s (longest %s), quiet max %.1f s, verbs %d %s, length ratio %s, progress %s, dead stops at %s"
+			% [_pilot, run["seed"], run["airborne_share"], run["peak_speed_mps"], run["tier3_s"], run["segments_s"], run["segment_s"],
+				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["length_ratio"], run["progress_m"], run["dead_stop_at"]])
 	_game.free()
 	_game = null
 	_next()
 	return false
 
 
+func _start_park_driver() -> bool:
+	var stage := _game_stage()
+	var map = _game.ctx.terrain.map_for(stage)
+	var park = map.get("park")
+	if not park is Dictionary or (park as Dictionary).is_empty():
+		printerr("traversal_line: stage %d has no park file loaded (map %s); its waymarks cannot resolve" % [_stage, map.get("title")])
+		_game.free()
+		_game = null
+		quit(2)
+		return false
+	_line = line_of(_lines, _pilot, park)
+	_driver.class_index = BotDriver.class_index_for(_seeds[_index], PARK_PILOTS[_class_key])
+	_driver.route = _line["route"]
+	_driver.start()
+	if stage != 1:
+		_game.flow.enter_stage(stage, Vector3.ZERO, false)
+	_sampler = Sampler.new(_game)
+	_sampler.setup_park(_line["waymarks"], open_graph(_map_id))
+	return true
+
+
+func _out_dir() -> String:
+	if _settings.has("out"):
+		return String(_settings["out"])
+	if _park:
+		return ProjectSettings.globalize_path(PARK_OUT).path_join(_map_id)
+	return ProjectSettings.globalize_path(DEFAULT_OUT)
+
+
 func _finish() -> void:
-	var bar: Dictionary = _routes.get("pilots", {}).get(_pilot, {}).get("bar", {})
-	var doc := document(_pilot, TABLE, _commit(), _runs, bar)
-	var out := String(_settings.get("out", ProjectSettings.globalize_path(DEFAULT_OUT)))
+	var out := _out_dir()
 	var path := out.path_join("%s.json" % _pilot)
+	var doc := {}
+	if _park:
+		doc = park_document(_pilot, _map_id, _stage, _commit(), _runs, _line.get("bar", {}), _floor_ref(out))
+		doc["class"] = PARK_PILOTS[_class_key]
+		doc["graph"] = "present" if open_graph(_map_id) != null else "missing: progress_m is null"
+	else:
+		var bar: Dictionary = _routes.get("pilots", {}).get(_pilot, {}).get("bar", {})
+		doc = document(_pilot, TABLE, _commit(), _runs, bar)
 	var written := write_document(path, doc)
+	if _park:
+		for band in doc["bands"]:
+			var verdict := "no data" if band["inside"] == null else ("inside" if band["inside"] else "OUTSIDE")
+			print("traversal_line: %s band %s (%s): median %s, worst %s -> %s" % [_pilot, band["measure"], band["band"], band["median"], band["worst"], verdict])
 	print("traversal_line: %s median flow share %.3f, worst seed %s, written %s to %s"
 		% [_pilot, doc["median_flow_share"], doc["worst_seed"], written, path])
+	if _park and _stage == FIXTURE_STAGE:
+		restore_park_defs()
 	quit(0 if written else 1)
+
+
+# The floor band's reference: the --ref pilot's (Rivet's by default) summary in the same out.
+func _floor_ref(out: String) -> Dictionary:
+	if not _floor:
+		return {}
+	var ref := String(_settings.get("ref", FLOOR_CLASS))
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(out.path_join("%s.json" % ref))) if FileAccess.file_exists(out.path_join("%s.json" % ref)) else null
+	var time = parsed.get("medians", {}).get("time_to_warden_s") if parsed is Dictionary else null
+	return {"pilot": ref, "median_time_to_warden_s": time}
 
 
 func _commit() -> String:
