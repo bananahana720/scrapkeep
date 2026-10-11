@@ -2915,9 +2915,78 @@
    "class": "shell",
    "ships": true,
    "loader": "src/presentation/hero_assets.gd",
+   "exception": {
+    "draws": 17
+   },
+   "exception_why": "PD-TARN: the Hoberman base takes the 10-draw cap; Tarn's seven moving parts (four claw jaws, the pull drum, two blades) are one single-material mesh each so code can hinge, spin and swing them; ball at class V 17 + pilot 3 + layers 5",
    "provenance": {
     "recipe": "tools/blender/shell_tarn.py",
-    "build_spec": "/home/andrew/Projects/scrapkeep/.claude/worktrees/game-completion-plan-75f776/artifacts/local/alpha/push/w1/D6/out/BUILD-SPEC.md"
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/hero.png, chase.png, sheet.png; concepts/codex/base/base-hero.png, mechanism.png"
+   }
+  },
+  {
+   "id": "shell_tarn_c2",
+   "path": "res://assets/models/world_one/shell_tarn_c2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class II layer)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tarn_c3",
+   "path": "res://assets/models/world_one/shell_tarn_c3.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class III layer)",
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "ROSTER-LOOK section 5: class III adds side-gap panels on the Pod and thicker tread caps on the Core, two parts at one draw each",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tarn_c4",
+   "path": "res://assets/models/world_one/shell_tarn_c4.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class IV layer)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tarn_c5",
+   "path": "res://assets/models/world_one/shell_tarn_c5.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class V layer)",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn_plates.py",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
+   }
+  },
+  {
+   "id": "shell_tarn_redjaw_teeth",
+   "path": "res://assets/models/world_one/shell_tarn_redjaw_teeth.glb",
+   "class": "shell",
+   "ships": true,
+   "loader": "src/presentation/hero_assets.gd (fit_shell_into, variant shell_tarn_redjaw_teeth; classes II to V borrow the default layers)",
+   "exception": {
+    "draws": 17
+   },
+   "exception_why": "PD-TARN: the earned Redjaw Teeth shell keeps the default's machinery, so it keeps its 17 draws",
+   "provenance": {
+    "recipe": "tools/blender/shell_tarn.py --variant teeth",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "design-v3/CUSTOMIZE.md section 8 (shell_tarn_redjaw_teeth); artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
    }
   },
   {
@@ -3329,6 +3398,11 @@
   "shell_saddle",
   "shell_tally",
   "shell_tarn",
+  "shell_tarn_c2",
+  "shell_tarn_c3",
+  "shell_tarn_c4",
+  "shell_tarn_c5",
+  "shell_tarn_redjaw_teeth",
   "sky_blades",
   "sky_cloud",
   "sky_cradle",

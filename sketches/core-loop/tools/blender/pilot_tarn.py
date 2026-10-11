@@ -101,9 +101,9 @@ def build_model():
         if q.y > .10 and q.z > .085:
             stripe = abs(q.x) < .026 or (.11 < q.z < .145 and abs(q.x) < .13)
             t.part.paint([face], "pilot", "oxide" if stripe else ASH)
-    # The Bible's battered welding cap takes precedence over its omission on the sheet.
-    t.sculpt("head", (0, -.005, .401), (.133, .116, .018), 16, 6, "petrol")
-    t.add("head", "beam", "pilot", (-.10, .102, .396), (.10, .102, .396), .026, .011, color="petrol")
+    # The Bible's battered welding cap takes precedence over its omission on the sheet. It is
+    # its own mesh node, Cap, so the Steady Cap outfit's Replace.Cap can hide it (PD-TARN,
+    # CUSTOMIZE section 8); build_cap makes it with the same shapes this line used to add.
     # Bone-coloured cheek wedges taper into the same square jaw silhouette.
     for side, sign in (("R", 1), ("L", -1)):
         t.sculpt("head", (sign * .23, .13, .13), (.065, .08, .10), 12, 8, "bone",
@@ -202,6 +202,18 @@ def build_model():
     return obj
 
 
+def build_cap():
+    """The battered welding cap: crown and brim, rigid on head, one pilot-slot mesh named Cap."""
+    cap = common.Part("Cap")
+    crown = cap.uv("pilot", 1, 13, 4, loc=(0, -.005, .401), scale=(.133, .116, .018), color="petrol")
+    for face in crown:
+        face.smooth = True
+    cap.beam("pilot", (-.10, .102, .396), (.10, .102, .396), .026, .011, color="petrol")
+    obj = cap.to_object()
+    obj.vertex_groups.new(name="head").add([v.index for v in obj.data.vertices], 1, "REPLACE")
+    return obj
+
+
 def make_rig(mesh):
     # The common schema dispatch only accepts the original three. Reuse its unchanged
     # Rivet body anchors and fit Tarn's head/ear/tail anchors locally.
@@ -238,19 +250,37 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     common.reset()
     mesh = build_model()
-    assert common.tris(mesh) <= 4600, common.tris(mesh)
+    cap = build_cap()
+    assert common.tris(mesh) + common.tris(cap) <= 4600, common.tris(mesh) + common.tris(cap)
     if args.model:
         root = common.empty("TarnNeutral")
         mesh.parent = root
+        cap.parent = root
         common.export(root, str(args.out or OUT / "pilot_tarn_neutral.glb"))
-        print("TARN_MODEL: PASS", common.tris(mesh), "triangles")
+        print("TARN_MODEL: PASS", common.tris(mesh) + common.tris(cap), "triangles")
         if args.preview:
             from preview_tarn import render_model
             render_model(mesh)
     else:
         from anim_tarn import animate_and_export
         arm = make_rig(mesh)
-        animate_and_export(arm, mesh, args.out or SKETCH / "assets/models/pilot_tarn_anim.glb")
+        cap.parent = arm
+        cap.modifiers.new("Rigid cap weight", "ARMATURE").object = arm
+        destination = args.out or SKETCH / "assets/models/pilot_tarn_anim.glb"
+        animate_and_export(arm, mesh, destination)
+        # animate_and_export exports the body only; export again with the Cap node selected,
+        # with its settings, so the GLB gains exactly the one Cap mesh (PD-TARN).
+        bpy.ops.object.select_all(action="DESELECT")
+        for obj in (arm, mesh, cap):
+            obj.select_set(True)
+        bpy.context.view_layer.objects.active = arm
+        bpy.ops.export_scene.gltf(filepath=str(destination), export_format="GLB", use_selection=True,
+            export_animations=True, export_animation_mode="ACTIONS", export_anim_slide_to_zero=True,
+            export_frame_range=False, export_force_sampling=True, export_def_bones=False,
+            export_skins=True, export_yup=True, export_materials="EXPORT", export_vertex_color="ACTIVE",
+            export_cameras=False, export_lights=False)
+        common.canonical_indices(str(destination))
+        print("TARN_CAP: PASS Cap node", common.tris(cap), "triangles, rigid on head")
         if args.preview:
             from preview_tarn import render_delivery
             render_delivery(arm, mesh)
