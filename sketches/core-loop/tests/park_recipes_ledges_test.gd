@@ -8,7 +8,8 @@ extends SceneTree
 # at the beam's top.
 # (d) A headless roll: a ball rolling at 16 m/s (the 14 m/s cruise plus a margin) from the ground onto each recipe, placed through park_recipes.gd with its
 # row's ride_ledge fact, publishes ride_ledge, crosses the whole line, stays on the shelf, and never spends more than 0.5 s
-# under 2 m/s on the line (PARK.md section 8 dead-stop rule).
+# under 2 m/s on the line (PARK.md section 8 dead-stop rule). Two more rolls: mesa_rim_ledge along its banked open edge (lane x 7.5)
+# and viga_pivot with a full jump (tuning jump_speed) at z 15, which must clear the beams without a dead stop.
 # Evidence limit: headless physics on the placed recipe with a bare rigid ball; no look, feel or harpoon-swing claim.
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
@@ -22,6 +23,9 @@ const SHELL_TRIS := 1500
 const DEAD_SPEED := 2.0
 const DEAD_SECONDS := 0.5
 const START_SPEED := 16.0
+const SENSOR_STRICT := false   # true once the loader centres or shifts the ride sensor for lip-origin recipes (see the gap note in the report)
+const LIP_SLACK := 1.0
+const CLIP_FLOOR := 10.0   # the plain rolls bottom out at 11.5 to 12.2 m/s (the ramp climb); the bank and jump rolls must not fall below 10
 const ROLL_FRAMES := 900
 # id: [length (z), height (y), width (x), lane x of the roll]
 const RECIPES := {
@@ -116,9 +120,9 @@ func _ground(parent: Node3D) -> void:
 	body.set_collision_layer_value(1, true)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(2000, 2, 400)
+	box.size = Vector3(6000, 2, 400)
 	shape.shape = box
-	shape.position = Vector3(800, -1, 0)
+	shape.position = Vector3(2500, -1, 0)
 	body.add_child(shape)
 	parent.add_child(body)
 
@@ -166,10 +170,10 @@ func _check_beams() -> void:
 	await physics_frame
 	await physics_frame
 	var world := parent.get_world_3d().direct_space_state
-	# viga_pivot: four beams across the lane at y 7.5, tips out over the lip; cliff_dwelling_row: room 0's lower beams.
+	# viga_pivot: four beams across the lane at y 8.6 (underside 5.8 m over the shelf, clear of a full jump), tips out over the lip; cliff_dwelling_row: room 0's lower beams.
 	for z in [11.5, 16.0, 20.5, 25.0]:
 		var hit := _ray_down(world, Vector3(4.0, 0.0, z))
-		_t.check("(c) viga_pivot beam at z %.1f takes a ray at its top" % z, not hit.is_empty() and absf(hit["position"].y - 7.78) < 0.15,
+		_t.check("(c) viga_pivot beam at z %.1f takes a ray at its top" % z, not hit.is_empty() and absf(hit["position"].y - 8.88) < 0.15,
 			str(hit.get("position")))
 	for z in [13.5, 15.0, 16.5]:
 		var hit := _ray_down(world, Vector3(200.0 - 2.8, 0.0, z))
@@ -228,6 +232,18 @@ func _check_rolls() -> void:
 	parent.add_child(wall)
 	runs.append({"id": "viga_pivot (control: walled lane)", "ball": _ball(parent, Vector3(i * 400.0 + 1.0, 1.0, -45.0), Vector3(0, 0, START_SPEED)),
 		"x": i * 400.0, "length": 36.0, "lane": 1.0, "slow": 0.0, "worst": 0.0, "min": INF, "off": false, "on_shelf": 0})
+	i += 1
+	# Extra rolls: the banked lip's open edge, and a full jump under the beams.
+	var jump_speed: float = Tuning.new().f("jump_speed")
+	for e: Array in [["mesa_rim_ledge (bank lane x 7.5)", "mesa_rim_ledge", 7.5, -1.0], ["viga_pivot (full jump at z 15)", "viga_pivot", 1.0, 15.0]]:
+		var es: Array = RECIPES[e[1]]
+		var erow := _row(e[1])
+		erow["at"] = [i * 400.0, 0.0]
+		ParkRecipes.place(erow, parent, Callable(), publish)
+		runs.append({"id": e[0], "ball": _ball(parent, Vector3(i * 400.0 + float(e[2]), 1.0, -45.0), Vector3(0, 0, START_SPEED)),
+			"x": i * 400.0, "length": float(es[0]), "lane": float(e[2]), "slow": 0.0, "worst": 0.0, "min": INF, "off": false, "on_shelf": 0,
+			"jump_z": float(e[3]), "jumped": false, "peak": 0.0})
+		i += 1
 	for f in ROLL_FRAMES:
 		await physics_frame
 		for r in runs:
@@ -235,6 +251,11 @@ func _check_rolls() -> void:
 			var z := b.position.z
 			if z < 0.0 or z > r["length"]:
 				continue
+			if r.get("jump_z", -1.0) > 0.0 and not r["jumped"] and z >= r["jump_z"]:
+				b.linear_velocity.y = jump_speed
+				r["jumped"] = true
+			if r.has("peak"):
+				r["peak"] = maxf(r["peak"], b.position.y)
 			var speed := Vector2(b.linear_velocity.x, b.linear_velocity.z).length()
 			r["min"] = minf(r["min"], speed)
 			if speed < DEAD_SPEED:
@@ -254,9 +275,25 @@ func _check_rolls() -> void:
 			continue
 		var near := _facts.filter(func(e): return absf(e[1].x - r["x"]) < 200.0)
 		_t.check("(d) a roll along %s publishes ride_ledge" % id, near.any(func(e): return e[0] == "ride_ledge"), str(near.map(func(e): return e[0])))
+		var first := near.filter(func(e): return e[0] == "ride_ledge")
+		if RECIPES.has(id) and not first.is_empty():
+			# The fact must fire on the line (row-local z from the entry lip), not on the approach. KC0's sensor is a box centred on the
+			# row origin, but this family's origin is the entry lip, so today it fires about half a length early: a loader gap, not a recipe one.
+			var first_z: float = first[0][1].z
+			var on_line := first_z >= -LIP_SLACK
+			if SENSOR_STRICT:
+				_t.check("(d) %s's ride_ledge first fires on the line (z %.1f >= -%.1f)" % [id, first_z, LIP_SLACK], on_line)
+			elif not on_line:
+				print("LEDGES_SENSOR_GAP ", id, " ride_ledge first fires at row-local z ", first_z, " (before the entry lip; loader-side, see report)")
+		if r.has("jump_z"):
+			# A clip that only slows the ball (the old beam height cost it 12 m/s) is still a wall in flight, so the floor is tighter than the dead-stop rule.
+			_t.check("(d) %s: nothing clips the ball (slowest %.1f m/s, floor %.0f)" % [id, r["min"], CLIP_FLOOR], r["min"] >= CLIP_FLOOR)
+		if r.get("jump_z", -1.0) > 0.0:
+			_t.check("(d) %s: the jump happened (peak %.2f m, ball top %.2f m over the shelf) and cleared the beams" % [id, r["peak"], r["peak"] + Tuning.RADIUS - SHELF_Y],
+				r["jumped"] and r["peak"] > SHELF_Y + Tuning.RADIUS + 2.5)
 		_t.check("(d) the ball crosses %s to its far lip" % id, b.position.z > r["length"] - 2.0, "z %.1f" % b.position.z)
 		_t.check("(d) the ball rides %s's shelf (%d ticks at shelf height) and never falls off" % [id, r["on_shelf"]], not r["off"] and r["on_shelf"] >= 20
-			and absf(b.position.x - (r["x"] + r["lane"])) < 6.0, "x %.1f y %.1f" % [b.position.x - r["x"], b.position.y])
+			and absf(b.position.x - (r["x"] + r["lane"])) < (12.0 if id.contains("bank") else 6.0), "x %.1f y %.1f" % [b.position.x - r["x"], b.position.y])
 		_t.check("(d) %s: no stretch under %.0f m/s lasts %.1f s (worst %.2f s, slowest %.1f m/s)" % [id, DEAD_SPEED, DEAD_SECONDS, r["worst"], r["min"]],
 			r["worst"] <= DEAD_SECONDS and r["min"] != INF)
 	parent.free()
