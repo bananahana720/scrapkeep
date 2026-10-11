@@ -16,6 +16,10 @@ const T := preload("res://tests/support/t.gd")
 # every lane starts at the pour channel, slag_hop still fires over a burning lane, and the
 # core window is MELTDOWN_WINDOW times the posture rule's stagger. The relic never moves on
 # either mounting: mount_offset is zero and anchor_velocity stays zero on every tick.
+# KF2b: the flume rebuilds the newest lane from the pour channel instead of moving the body, so a
+# wrapping recorder installed as the step hook (it forwards every call to the real driver) samples
+# the body and anchor_velocity inside every tick, including a run that opens a stagger on the
+# charge's landing tick, after the driver's step and before the pulse.
 
 const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 const AWAY := Vector3(70.0, 0.0, 70.0)
@@ -365,5 +369,139 @@ func _flume() -> void:
 	_t.check("flume: the relic never moves", moved == 0.0 and carried == 0.0
 			and driver.mount_offset(warden, 3.0) == Vector3.ZERO,
 		"moved %.4f m from home, anchor speed %.4f m/s" % [moved, carried])
+	await _per_tick(warden, driver)
 	warden.queue_free()
 	await _frames(2)
+
+
+# The hook's view of the body, tick by tick: a wrapper installed as the Warden's mount driver
+# forwards every hook call to the real driver and samples the body's distance from home and
+# anchor_velocity before and after the driver's step, after each pulse and after each stagger
+# change. With stagger_on_landing, it opens a stagger (rams until the bar fills) inside the
+# hook on the tick the charge will land, after the driver's step and before _step_pulse.
+class Recorder:
+	var inner
+	var home: Vector3
+	var moved := 0.0
+	var carried := 0.0
+	var ticks := 0
+	var stagger_on_landing := false
+	var forced := false
+	var strike: Callable
+
+	func _init(real, at: Vector3, opener: Callable) -> void:
+		inner = real
+		home = at
+		strike = opener
+
+	func sample(warden) -> void:
+		moved = maxf(moved, warden.global_position.distance_to(home))
+		carried = maxf(carried, warden.anchor_velocity().length())
+
+	func reset() -> void:
+		moved = 0.0
+		carried = 0.0
+		ticks = 0
+		forced = false
+
+	func mount_offset(warden, clock: float):
+		return inner.mount_offset(warden, clock)
+
+	func step(warden, delta: float) -> void:
+		sample(warden)
+		if inner.has_method("step"):
+			inner.step(warden, delta)
+		sample(warden)
+		ticks += 1
+		if stagger_on_landing and not forced and warden._charging and not warden.staggered() \
+				and warden._charge_time + delta >= warden._charge_len:
+			forced = true
+			strike.call(warden)
+			sample(warden)
+
+	func charge_allowed(warden) -> bool:
+		return inner.charge_allowed(warden) == true if inner.has_method("charge_allowed") else true
+
+	func on_charge(warden, seconds: float) -> void:
+		if inner.has_method("on_charge"):
+			inner.on_charge(warden, seconds)
+
+	func on_pulse(warden, lifted: bool) -> void:
+		if inner.has_method("on_pulse"):
+			inner.on_pulse(warden, lifted)
+		sample(warden)
+
+	func on_stagger(warden, open: bool) -> void:
+		if inner.has_method("on_stagger"):
+			inner.on_stagger(warden, open)
+		sample(warden)
+
+	func on_chunk_lost(warden, left: int) -> void:
+		if inner.has_method("on_chunk_lost"):
+			inner.on_chunk_lost(warden, left)
+
+
+# Opens the stagger inside one tick: contact gains in one frame do not stack (boss_posture.gd
+# judge), so the bar is set one point short of full and a plating-level ram fills it through the
+# real strike path (on_struck, _apply_posture, _begin_stagger, on_stagger).
+func _open_stagger(warden) -> void:
+	warden._posture.posture = BossPosture.FULL - 1.0
+	var guard := 0
+	while not warden.staggered() and guard < 40:
+		var force := 1.0
+		while _combat.punch_of("ram", force) < float(warden.plating):
+			force += 0.05
+		_combat.strike(warden, "ram", force)
+		guard += 1
+
+
+# One full meltdown cycle sampled inside every tick, then a cycle whose stagger opens on the
+# landing tick: the body stays home and anchor_velocity stays zero throughout both.
+func _per_tick(warden: Node3D, driver) -> void:
+	var home: Vector3 = warden.home
+	var recorder := Recorder.new(driver, home, Callable(self, "_open_stagger"))
+	warden.mount_driver = recorder
+	# A full cycle: charge, pulse, the lane laid from the pour channel, the lane's fill.
+	var pulses: int = warden.pulses
+	var lanes: int = warden.slag_lanes.size()
+	warden._pulse_clock = warden.PULSE_CYCLE - warden.PULSE_TELEGRAPH
+	for i in _seconds(warden.PULSE_TELEGRAPH + 0.5):
+		if not warden._charging:
+			_player.reset_to(_ground(warden.global_position + BALL_OUT))
+		await physics_frame
+		recorder.sample(warden)
+	var laid: bool = warden.pulses == pulses + 1 and warden.slag_lanes.size() > lanes
+	var from_pour := -1.0
+	if laid:
+		var lane: Dictionary = warden.slag_lanes[warden.slag_lanes.size() - 1]
+		var pour: Vector3 = driver.pour_point(warden)
+		from_pour = Vector2(lane["from"].x - pour.x, lane["from"].z - pour.z).length()
+	_t.check("flume, per tick: through a full cycle the relic stays home and anchor_velocity is zero", laid
+			and from_pour <= 0.1 and recorder.ticks >= _seconds(warden.PULSE_TELEGRAPH) and recorder.moved == 0.0 and recorder.carried == 0.0,
+		"pulsed and laid %s, lane %.2f m from the pour channel, %d hook ticks, moved %.4f m, anchor speed %.4f m/s"
+			% [laid, from_pour, recorder.ticks, recorder.moved, recorder.carried])
+	# Let the lane age out, then the same cycle with a stagger opened on the landing tick.
+	for i in _seconds(6.5):
+		_quiet(warden)
+		await physics_frame
+		recorder.sample(warden)
+	recorder.reset()
+	recorder.stagger_on_landing = true
+	pulses = warden.pulses
+	warden._pulse_clock = warden.PULSE_CYCLE - warden.PULSE_TELEGRAPH
+	var after := -1
+	for i in _seconds(warden.PULSE_TELEGRAPH + 1.5):
+		if not warden._charging and not recorder.forced:
+			_player.reset_to(_ground(warden.global_position + BALL_OUT))
+		await physics_frame
+		recorder.sample(warden)
+		if recorder.forced:
+			after += 1
+			if after >= _seconds(0.5):
+				break
+	_t.check("flume, per tick: a stagger opened on the landing tick leaves the relic home and anchor_velocity zero",
+			recorder.forced and warden.staggered() and warden.pulses == pulses and after >= 2 and recorder.moved == 0.0
+			and recorder.carried == 0.0,
+		"stagger forced on the landing tick %s, staggered %s, pulses %d -> %d, %d ticks after, moved %.4f m, anchor speed %.4f m/s"
+			% [recorder.forced, warden.staggered(), pulses, warden.pulses, after, recorder.moved, recorder.carried])
+	warden.mount_driver = driver
