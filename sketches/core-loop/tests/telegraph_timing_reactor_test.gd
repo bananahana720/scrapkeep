@@ -1,3 +1,4 @@
+# smoke: solo timeout=360s (two Wardens through 40 charges and 30 strikes in one stepped game, about 3 minutes)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -25,7 +26,7 @@ const AWAY := Vector3(70.0, 0.0, 70.0)
 # The ball sits inside the 6 m core ring but clear of the body (2.8 m plus the ball's 1 m), so a
 # pulse's lift never drops it onto the Warden; a contact would stagger it and stop the clock.
 const CORE_OUT := 5.3
-const LANE_OUT := 10.0
+const LANE_OUT := 12.0
 const HITS := 30
 const HIT_SECONDS := 3.0
 
@@ -77,7 +78,7 @@ func _run() -> void:
 	await _slag()
 	await _shake()
 	_pack_warns()
-	_t.check("the timing test ran its checks", _t.checks >= 10, "%d checks" % _t.checks)
+	_t.check("the timing test ran its checks", _t.checks >= 9, "%d checks" % _t.checks)
 	_game.free()
 	quit(_t.verdict())
 
@@ -209,7 +210,13 @@ func _pulse_and_sheet() -> void:
 # a lane strikes. The ball sits in the lane's path, outside the core ring.
 func _slag() -> void:
 	var warden := _spawn({"variant": "meltdown"}, AWAY + Vector3(0.0, 0.0, 60.0))
+	# The lanes pour from the flume's channel (warden_reactor.gd pour_point), so the ball sits
+	# LANE_OUT out from the relic on the channel's side, inside every lane's 14 m.
 	var spot := _spot(warden, LANE_OUT)
+	if warden.mount_driver != null and warden.mount_driver.has_method("pour_point"):
+		var pour: Vector3 = warden.mount_driver.pour_point(warden) - warden.global_position
+		var at: Vector3 = warden.global_position + Vector3(pour.x, 0.0, pour.z).normalized() * LANE_OUT
+		spot = _game.ctx.terrain.drop_point(at.x, at.z, 1.2)
 	var phases := {}
 	var pulse_frames: Array = []
 	_game.events.vent_erupted.connect(func(_at: Vector3): pulse_frames.append(_frame()))

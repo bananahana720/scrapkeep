@@ -162,7 +162,7 @@ func _cycles(warden: Node3D, driver) -> void:
 	var carried := 0.0
 	var gates_before: int = driver.gates_opened
 	var pulses_before: int = warden.pulses
-	for i in _seconds(3.0 * warden.PULSE_CYCLE + 0.5):
+	for i in _seconds(3.0 * warden.PULSE_CYCLE + SHEET_SECONDS + 0.5):
 		if _player.ball_position().distance_to(spot) > 3.0 and not warden._charging:
 			_player.reset_to(spot)
 		var pulses: int = warden.pulses

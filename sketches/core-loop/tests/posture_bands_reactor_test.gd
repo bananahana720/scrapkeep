@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (nine bot runs in child processes, up to six at once; a loaded machine slows them)
+# smoke: solo timeout=360s (nine bot runs in child processes at once; a loaded machine slows them)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -16,7 +16,7 @@ const T := preload("res://tests/support/t.gd")
 # on it through set_mount_driver, so every pulse opens the gates and lays the sheet. The arms
 # are tools/posture_sweep.gd's (small: skipper from mass 0; grown: skipper from 540; camper:
 # shoots from range), seeds 0, 1 and 2, one child process each, a run that never breaks counting
-# as the 150 s cap. Bands: grown median 25 to 45 s, small median at least twice grown's, the
+# as the 120 s cap (posture_bands_test.gd's smoke limit). Bands: grown median 25 to 45 s, small median at least twice grown's, the
 # camper never breaks it; the live medians stay within 10 percent of the pins below.
 # The child is this script run with --arm (posture_sweep.gd's child shape on the alpha table).
 # The Warden is not made a harpoon anchor here: KF1b measured the bot stalling on the
@@ -24,11 +24,15 @@ const T := preload("res://tests/support/t.gd")
 
 const SEEDS := [0, 1, 2]
 const ARMS := ["small", "grown", "camper"]
-const CAP := 150.0
+# A run that never breaks counts as this cap; the camper's run lasts it, so it bounds the wall time.
+const CAP := 120.0
 const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
-# 2026-10-11 (w13 KF2): first pin, measured on 28fe659 plus KF2 with the dam_face sheet live.
-const EXPECT_SMALL_S := 0.0
-const EXPECT_GROWN_S := 0.0
+# 2026-10-11 (w13 KF2): first pin, measured on 28fe659 plus KF2 with the dam_face sheet live (SHEET_TOP 14 m):
+# small 76.7 s of [58.1, 79.8, 76.7], grown 34.4 s of [34.4, 47.7, 19.9], ratio 2.23, campers capped; a repeat
+# measured 79.8 / 34.4. Without the sheet the same runs gave 46.1 / 20.4 (grown under the band); with the ride
+# carried to the core itself (SHEET_TOP 4 m) 54.7 / 38.1 (ratio 1.44), so the lip distance is the dial.
+const EXPECT_SMALL_S := 76.7
+const EXPECT_GROWN_S := 34.4
 const TOLERANCE := 0.10
 const WALL_S := 330.0
 
@@ -59,7 +63,7 @@ func _initialize() -> void:
 			if mass > 0.0:
 				args.append("--start-mass=%d" % int(mass))
 			jobs.append({"script": "res://tests/posture_bands_reactor_test.gd", "args": args})
-	var results := ChildRuns.run(jobs.slice(0, 6), WALL_S * 0.55) + ChildRuns.run(jobs.slice(6), WALL_S * 0.45)
+	var results := ChildRuns.run(jobs, WALL_S)
 	var rows := {}
 	for i in jobs.size():
 		var arm: String = ARMS[i / SEEDS.size()]
@@ -73,8 +77,10 @@ func _initialize() -> void:
 			rows[arm] = []
 		rows[arm].append(cols)
 	var all_rows: Array = rows.values().reduce(func(acc, r): return acc + r, [])
-	t.check("every run mounted the reactor driver and opened the gates", all_rows.size() == 9
-			and all_rows.all(func(c): return c.size() >= 6 and c[3] == "true" and int(c[4]) > 0),
+	# A fast break can come before the first pulse; the camper's full-length runs must see the gates.
+	t.check("every run mounted the reactor driver; the gates opened in every camper run", all_rows.size() == 9
+			and all_rows.all(func(c): return c.size() >= 6 and c[3] == "true")
+			and rows.get("camper", []).all(func(c): return c.size() >= 6 and int(c[4]) > 0),
 		"attached and gates per run %s" % [all_rows.map(func(c): return "%s/%s" % [c[3], c[4]] if c.size() >= 6 else "?")])
 	var small := _median(rows.get("small", []))
 	var grown := _median(rows.get("grown", []))
