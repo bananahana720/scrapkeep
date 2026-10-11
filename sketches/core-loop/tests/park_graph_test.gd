@@ -12,7 +12,7 @@ extends SceneTree
 # node (tool.beacon_check, design-v3/PARK.md 2.11, SR15): every ground node of a flat disc
 # round the beacon is open and within BEACON_FLAT_M of the beacon's height, the disc radius
 # derived from the engage ring (reach_m). The fixture beacon passes and a beacon planted under
-# the service ledge, and one planted on the bench's sheer edge, fail. stage_checks runs the
+# the cliff rooms, and one planted on the bench's sheer edge, fail. stage_checks runs the
 # beacon rule before the spawn rule and names the first rule that failed; the spawn rule is not
 # run once the beacon fails. The fixture file is never edited: the
 # planted parks are written to user:// and baked there.
@@ -158,11 +158,11 @@ func _beacon(tool: GDScript, graph, park: Dictionary) -> void:
 	print("[beacon_ok] radius %.1f m, %d nodes, rise %.2f m (flat at most %.1f m)" % [
 		float(fixture.get("radius_m", -1.0)), int(fixture.get("nodes", 0)), float(fixture.get("rise_m", -1.0)), float(tool.BEACON_FLAT_M)])
 
-	# Planted: the beacon under the service ledge (a deck 20 m up roofs the ground below it).
+	# Planted: the beacon under the cliff rooms (a deck 40 m up roofs a strip of the ground below it).
 	var ledge := park.duplicate(true)
-	ledge["landmark"]["beacon"] = [-200, 200]
+	ledge["landmark"]["beacon"] = [-250, 100]
 	var under: Dictionary = tool.beacon_check(graph, ledge)
-	t.check("a beacon planted under the ledge fails beacon_ok", not under.get("ok", true), str(under))
+	t.check("a beacon planted under the cliff-rooms ledge fails beacon_ok", not under.get("ok", true), str(under))
 
 	# Planted: the beacon on the bench's sheer edge (a 6 m step inside the disc).
 	var edge := park.duplicate(true)

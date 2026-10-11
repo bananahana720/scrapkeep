@@ -1,5 +1,6 @@
 {
   "bake_sha256": "90ff33f9b920fdcf9d5a0deb9ac16c5463629e9c3c712b0ea2e25f1c1b90ea47",
+  "beacon_ok": true,
   "breaches": [],
   "bytes": 824822,
   "edges": 321135,
@@ -129,6 +130,7 @@
       "site": "pool"
     }
   ],
+  "reward_ratio": "0.542",
   "ride_edges": 6,
   "routes": {
     "canal": [],
@@ -145,5 +147,19 @@
   },
   "spawn_beacon_m": 1303,
   "spawn_beacon_share": "0.575",
-  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+  "targets": [
+    {
+      "name": "reward_ratio",
+      "ok": false,
+      "target": "at least 1.5",
+      "value": 0.542
+    },
+    {
+      "name": "full_visit_ratio",
+      "ok": true,
+      "target": "at most 3.0",
+      "value": 1.624
+    }
+  ],
+  "tool_sha256": "5b2ae55a7d1f85b803e95b8e63c9f9b8a9002e33f86ce90d84ae78c4c96b1072"
 }
