@@ -2,7 +2,7 @@
 
 **Approved product reference · 6 September 2026**
 
-Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work. Throwaway Godot sketches under `sketches/` run separately in the [light play lane](ORCHESTRATOR.md#light-play-lane) that Andrew authorized on 22 September 2026 ([TRACKING](TRACKING.md) line 12, EV-0479, EV-0480); promoting a sketch into this Bible remains a heavy-lane decision. On 26 September 2026 this edition was harmonized in place (card DF-04, TRACKING EV-0579) with Andrew's verdicts in the [playtest log](docs/playtests/PLAYTEST-LOG.md), entries 1 to 5, and with the [accepted engineering ADRs](adr/README.md) TADR-006 to TADR-010: the run's level unit is now the open stage, and orchard-era material is marked superseded prototype evidence where it stands.
+Read this before writing, drawing, modeling or changing the game. SCRAPKEEP's shared identity is greasy electromagnetic salvage, expressive rolling mechs, visible internal fabrication and expansive Southwest landscapes. Andrew approved this Art & Game Bible as the source of truth for what the game is. Explicit creative selections and implementation details marked open below remain open; this approval does not select an A/B/C direction or authorize build work. Throwaway Godot sketches under `sketches/` run separately in the [light play lane](ORCHESTRATOR.md#light-play-lane) that Andrew authorized on 22 September 2026 ([TRACKING](TRACKING.md) line 12, EV-0479, EV-0480); promoting a sketch into this Bible remains a heavy-lane decision. On 26 September 2026 this edition was harmonized in place (card DF-04, TRACKING EV-0579) with Andrew's verdicts in the [playtest log](docs/playtests/PLAYTEST-LOG.md), entries 1 to 5, and with the [accepted engineering ADRs](adr/README.md) TADR-006 to TADR-010: the run's level unit is now the open stage, and orchard-era material is marked superseded prototype evidence where it stands. On 10 October 2026 Andrew replaced the one main companion with a crew of scrap bots ([TADR-011](adr/TADR-011-scrap-bot-crew.md), TRACKING EV-0599); § 6 "Devices and one main companion" is amended in place and keeps its heading so existing links resolve.
 
 Start with the three pillars, then read the section relevant to your work. Use the same names, material language and system rules across disciplines. The [cohesion report](COHESION_REPORT.md) records image and text review; the [decisions list](BIBLE_DECISIONS.md) collects the choices still belonging to Andrew.
 
@@ -43,7 +43,7 @@ SCRAPKEEP is a solo-first, close-third-person action roguelite about piloting an
 
 The target is a standalone PC/controller game. A successful run crosses four worlds through open stages, each a bounded 3D space on momentum terrain that the player enters, roams for loot, secrets and threats, and leaves through an exit, with a boss in each world. The 60–75 minute length is a target to be measured in open-stage play. Transitions offer two random next-world destinations. The catalogue, starting world, route order and final-boss placement remain open. The browser prototypes test parts of the experience; they do not establish the full run or choose the production engine.
 
-Combat power is rebuilt each run. Permanent discoveries and unlocks broaden future options. The four build slots are weapon, main hero skill, mobility and ultimate, with themed loot, quick autonomous devices and one main assembled companion adding combinations around them. The game must earn interest through its own movement, decisions and replay value.
+Combat power is rebuilt each run. Permanent discoveries and unlocks broaden future options. The four build slots are weapon, main hero skill, mobility and ultimate, with themed loot, quick autonomous devices and a crew of assembled scrap bots (TADR-011) adding combinations around them. The game must earn interest through its own movement, decisions and replay value.
 
 ### The three pillars
 
@@ -62,7 +62,7 @@ Use these decision tests:
 
 Collecting scrap should feel like taking possession of the fight. Electromagnetic coils pull material into the mech's growing body; internal recycling turns that material into working changes to weapons and skills. Show both parts of the process. A fuller silhouette conveys accumulation; a changed mechanism explains its new action.
 
-Each slot follows one route through a binary tree: one root forks to two upgrade nodes, those fork to four, and those fork to eight endpoints. The selected route stays within one lineage, without crosspathing. Milestones during play open and deepen those routes. Loot can change how compatible attacks, devices and the main companion work together; exceptional combinations may become overwhelming. Growth still fits ordinary routes, while enemies, surroundings and battle consequences can become enormous. Material prices and the supply needed to meet milestones are still design work.
+Each slot follows one route through a binary tree: one root forks to two upgrade nodes, those fork to four, and those fork to eight endpoints. The selected route stays within one lineage, without crosspathing. Milestones during play open and deepen those routes. Loot can change how compatible attacks, devices and the crew work together; exceptional combinations may become overwhelming. Growth still fits ordinary routes, while enemies, surroundings and battle consequences can become enormous. Material prices and the supply needed to meet milestones are still design work.
 
 Use these decision tests:
 
@@ -451,7 +451,7 @@ Attunement means that an item works with a particular character, another item, o
 
 (Superseded prototype evidence, 22 Sep 2026; see TADR-010.) The orchard lightning prototype gives a bounded example. Ground Loop adds lightning chains to body impacts, including rams and landing rebounds. Echo repeats eligible player, conductor and companion attacks once; it cannot repeat an echo. Shear Linkages strengthen body rams and the first equips the existing priming companion. Brace parts improve burst recovery. These are current prototype behaviors, not the future game's complete item system, recipes or class assignments.
 
-The future build can include transformative items that replace movement or attacks, and one main companion assembled through run loot. Its support can prime enemies, buff the pilot or intervene in a clutch moment. Exact component slots and chassis rules remain open. Equipment silhouettes should expose the active modification so a rescue, repeat or changed attack feels caused by the machine the player assembled.
+The future build can include transformative items that replace movement or attacks, and a crew of scrap bots assembled from run salvage (TADR-011). Their support can prime enemies, buff the pilot, repair, harvest or intervene in a clutch moment. Exact component slots, chassis rules and the crew cap remain open. Equipment silhouettes should expose the active modification so a rescue, repeat or changed attack feels caused by the machine the player assembled.
 
 ### 5.5 What a discovery changes
 
@@ -565,13 +565,15 @@ Discovery can persist as knowledge between runs. The active combat effect still 
 
 ### Devices and one main companion
 
+(Amended 10 October 2026 by TADR-011: the one main companion became a crew of scrap bots. The heading is kept so existing links resolve.)
+
 Devices extend the character's reach through quick autonomous deployment. They should do useful work independently and leave opportunities for deliberate intervention. Position, attack geometry and compatible equipment connect them to the player's decisions. Capacity, lifetime, recall, resource rules and persistence across levels remain open; the prototype's conductor limits are not full-game rules.
 
-One main companion anchors the run's assembled support build. Loot acquisition and assembly can change how it primes enemies, buffs the player or creates a clutch escape opportunity. Temporary helper effects are possible, but they do not establish a second companion management roster. Exact chassis and assembly rules remain unresolved.
+A crew of scrap bots anchors the run's assembled support build (TADR-011, Andrew's decision of 10 October 2026, replacing the one main companion). A bot is found as salvage and repaired, or assembled from banked scrap at a pocket workbench. One crew cap, proposed at three, limits the roster, and each bot has a role; guard, repair and harvest are the starting candidates. The crew grows with the run through small upgrade paths of its own and an explicit, readable share of found items. It persists across stages, and a downed bot becomes a salvage pile that scrap repairs. There are no direct command controls: the player shapes the crew by what is built, repaired and upgraded, never by orders. Temporary helper effects remain bounded effect windows, not crew members. Exact chassis, assembly, cap, role and repair-price rules remain unresolved (Q-P15).
 
-The desired loop is notice the companion's contribution, exploit the opportunity and learn when its help is available again. A rescue should give the player a recoverable moment. It does not silently grant another standard revival. Readable animation and effects make support dependable without turning the pilot into a passenger.
+The desired loop is notice a bot's contribution, exploit the opportunity and learn when its help is available again. Every crew action has its own silhouette, sound motif and bark, so the player hears what the crew is doing without looking. A rescue should give the player a recoverable moment. It does not silently grant another standard revival, and a bot left dead past a stage boundary becomes a rescue objective, not a free life. Readable animation and effects make support dependable without turning the pilot into a passenger.
 
-The orchard's priming companion demonstrates one contribution and supports intermission reconfiguration. Its automatic acquisition through prototype Shear progression does not decide the future loot-assembly process.
+(Superseded prototype evidence, 22 Sep 2026; see TADR-011.) The orchard's priming companion demonstrates one contribution and supports intermission reconfiguration. Its automatic acquisition through prototype Shear progression does not decide the crew's assembly process.
 
 ### Runs, regions, exits and saves
 
@@ -605,7 +607,7 @@ Readable workshop instrumentation uses solid dark backing, clear labels and rest
 
 The orchard keeps authoritative combat in `src/orchard/simulation.js`, rendering in `scene.js`, procedural models in `models.js`, and input/UI orchestration in `main.js` (this file map is superseded prototype evidence, 22 Sep 2026, and describes the browser proof only). Damage and telegraphs share committed geometry. Both `/` and `/orchard.html` remain available. The current locked Three.js/Vite stack supports the prototypes. The [accepted engineering ADRs](adr/README.md) define the separate production direction without changing what these proofs currently implement.
 
-Future content definitions describe possible characters, trees, items, encounters and recipes. Encounter simulation owns immediate actions and outcomes. Run state carries selections, inventory, route choices, companion, revival and checkpoint status. Permanent progression stores discoveries and unlocked options. Rendering consumes those decisions; it must not reroll loot, miscasts or route offers.
+Future content definitions describe possible characters, trees, items, encounters and recipes. Encounter simulation owns immediate actions and outcomes. Run state carries selections, inventory, route choices, crew, revival and checkpoint status. Permanent progression stores discoveries and unlocked options. Rendering consumes those decisions; it must not reroll loot, miscasts or route offers.
 
 The next systems design work should settle milestone and material allocation, route policy, respec scope, attunement and recipe disclosure, plus revival and interruption behavior. These unresolved details constrain implementation; the approved Bible is not approval to code them. Full-run progression and saving require their own scenario tests and human play, beyond the existing encounter evidence.
 
@@ -896,6 +898,7 @@ These definitions record how this Bible uses a reference. They grant no permissi
 | Joyful physical mastery | Pillar requiring satisfying movement, active aim, understandable threats and a useful starting kit. |
 | Respec | A branch change permitted through a special opportunity. Ordinary between-fight equipment reconfiguration is separate. |
 | Scrap becomes your build | Pillar connecting electromagnetic accumulation and internal fabrication to visibly changed working equipment and earned combinations. |
+| Scrap-bot crew | The run's roster of assembled scrap bots under one crew cap, each with a role; replaced the one main companion on 10 October 2026 (TADR-011). Also called the crew. |
 | Standard revival | The run's single recovery from lethal defeat. A later death ends the run; companion rescue does not silently replenish it. |
 | World | Run-region containing open stages and a boss. Four worlds form a successful run; five catalogue candidates do not select its route. A stage is one bounded 3D space on momentum terrain, entered, roamed and left through an exit; it replaces the earlier compact encounter level. |
 

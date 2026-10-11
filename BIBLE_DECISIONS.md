@@ -41,7 +41,7 @@ These need bounded design before implementation. They do not require an arbitrar
 | BD-12 | Route and final encounter details | Four worlds and two next-world offers are established. Starting world, catalogue/repeat rules, levels per world and final-boss placement remain open. |
 | BD-13 | Chaos limits | Directed fire, short automatic field, multiple effects and occasional harmful/inconvenient miscasts are established. Element pool, warning design, frequency, severity and which actions can miscast remain open. |
 | BD-14 | Loot, attunement and secret recipes | World-themed items and fixed endpoint-combination bonuses are established. Exact recipes, eligibility, disclosure and harmful combinations remain open. |
-| BD-15 | Companion and device lifecycle | One main assembled companion, useful autonomous support and quick class deployment are established. Component structure, commands, recall, persistence and caps outside the prototype remain open. |
+| BD-15 | Crew and device lifecycle | A crew of scrap bots under one cap replaced the one main assembled companion on 10 October 2026 (TADR-011); useful autonomous support and quick class deployment are established. Crew cap (proposed three), roles, assembly and repair prices, component structure, recall, persistence shape and device caps outside the prototype remain open; direct commands were not chosen. |
 | BD-16 | Revival and interruption behavior | One standard revival and completed-level resume at the next entrance are established. Revival health/placement and unfinished-level quit/crash behavior remain open. |
 
 ## Sound and presentation proposal
