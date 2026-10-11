@@ -171,8 +171,11 @@ func begin(chosen_class: Resource) -> void:
 	cogs = 0
 	start_pick = {}
 	_stage_entered = false
-	if chosen_class != null:
-		start_pick = {"options": StartPicks.draw(chosen_class.id, run_seed, 0), "rerolls_left": StartPicks.REROLLS, "taken": ""}
+	# 2026-10-11 (w13 coordinator, after SG9): a class without an id offers no pick. The run identity
+	# case begins runs with a bare Resource, which read chosen_class.id as a script error.
+	var pick_class := String(chosen_class.get("id")) if chosen_class != null and chosen_class.get("id") != null else ""
+	if pick_class != "":
+		start_pick = {"options": StartPicks.draw(pick_class, run_seed, 0), "rerolls_left": StartPicks.REROLLS, "taken": ""}
 	companion = {}
 	settled.clear()
 	escape_window_left = 0.0
