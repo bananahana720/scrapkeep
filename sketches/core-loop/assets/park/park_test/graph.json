@@ -1,87 +1,8 @@
 {
-  "bake_sha256": "04d8143db72dcda7af89ce25abcf29885080a221606477b33ec1d27511057c54",
-  "breaches": [
-    {
-      "action": "move",
-      "detail": "within 40 m of the door: home wash_chasers (site run_wash)",
-      "pocket": "wash_camp",
-      "rule": "clear_ring"
-    },
-    {
-      "action": "move",
-      "detail": "within 40 m of the door: machine_eruption tube_wakes (site tube)",
-      "pocket": "tube_cache",
-      "rule": "clear_ring"
-    },
-    {
-      "action": "fix",
-      "detail": "306 m from the beacon, want at least 320",
-      "pocket": "tube_cache",
-      "rule": "beacon"
-    },
-    {
-      "action": "log",
-      "detail": "detour 73 m, want 150 to 600",
-      "pocket": "tube_cache",
-      "rule": "detour"
-    },
-    {
-      "action": "log",
-      "detail": "no clear ray from the door to a line node within 240 m",
-      "pocket": "bench_altar",
-      "rule": "sight"
-    },
-    {
-      "action": "move",
-      "detail": "within 40 m of the door: home dropship_crew (site bench)",
-      "pocket": "bench_altar",
-      "rule": "clear_ring"
-    },
-    {
-      "action": "log",
-      "detail": "detour unreachable m, want 150 to 600",
-      "pocket": "bench_altar",
-      "rule": "detour"
-    },
-    {
-      "action": "log",
-      "detail": "no clear ray from the door to a line node within 240 m",
-      "pocket": "ledge_valve",
-      "rule": "sight"
-    },
-    {
-      "action": "move",
-      "detail": "within 40 m of the door: home ledge_lobbers (site service_ledge)",
-      "pocket": "ledge_valve",
-      "rule": "clear_ring"
-    },
-    {
-      "action": "fix",
-      "detail": "site service_ledge lists 1 routes, want at least 3",
-      "pocket": "ledge_valve",
-      "rule": "hidden_routes"
-    },
-    {
-      "action": "log",
-      "detail": "reward detour 73 m is not larger than the risk's unreachable m",
-      "pocket": "tube_cache",
-      "rule": "detour_order"
-    },
-    {
-      "action": "fix",
-      "detail": "no pay.rarities and no named part the parts table knows",
-      "pocket": "tube_cache",
-      "rule": "pay"
-    },
-    {
-      "action": "fix",
-      "detail": "no pay.rarities and no named part the parts table knows",
-      "pocket": "bench_altar",
-      "rule": "pay"
-    }
-  ],
-  "bytes": 822349,
-  "edges": 321126,
+  "bake_sha256": "806028e715725ef567e8adbf3e0a5d369a8e680da6d47ced77ec273885a33be9",
+  "breaches": [],
+  "bytes": 823102,
+  "edges": 321135,
   "flags": {
     "deck": 68,
     "door_ok": 39872,
@@ -90,27 +11,26 @@
     "sight_ok": 12777,
     "under": 49
   },
-  "full_visit_m": -1,
-  "full_visit_ratio": "unreachable",
-  "graph_sha256": "3671cdd8dd2c93e940a406b57cb6d2862edcd7067e059716951c89f69cf08e3d",
+  "full_visit_m": 2116,
+  "full_visit_ratio": "1.624",
+  "graph_sha256": "87f47176e723a7fc8f111d14abe8e829359669a7d2370b787b294d58c87b69c9",
   "line_errors": [],
   "line_path_nodes": 124,
-  "longest_est_m": 2314,
+  "longest_est_m": 2267,
   "map": "park_test",
   "nodes": 40469,
-  "park_sha256": "6fe5ad19e2c0005ef02970464bf4eb5bfa390794ccadb4ee9002ff800afbf502",
+  "park_sha256": "304bdd715a8a583b6c1e422bd6e5e5bf7ba60b10c511945f0d42c14109bb61ec",
   "pockets": [
     {
-      "clear_ring": [
-        "home wash_chasers (site run_wash)"
-      ],
+      "clear_ring": [],
       "d_landmark": 935,
       "d_spawn": 425,
-      "detour": 57,
+      "detour_m": 0,
       "door_at": [
         -152,
         -296
       ],
+      "door_m": 0,
       "flags": [
         "open",
         "line",
@@ -129,16 +49,15 @@
       "site": "run_wash"
     },
     {
-      "clear_ring": [
-        "machine_eruption tube_wakes (site tube)"
-      ],
-      "d_landmark": 306,
-      "d_spawn": 1070,
-      "detour": 73,
+      "clear_ring": [],
+      "d_landmark": 1057,
+      "d_spawn": 504,
+      "detour_m": 260,
       "door_at": [
-        120,
-        320
+        -400,
+        -320
       ],
+      "door_m": 260,
       "flags": [
         "open",
         "door_ok",
@@ -146,71 +65,73 @@
       ],
       "id": "tube_cache",
       "kind": "cracked_cache",
-      "nearest_door": 241,
+      "nearest_door": 724,
       "nearest_door_id": "bench_altar",
       "pay_named": "",
-      "pay_rarities": [],
+      "pay_rarities": [
+        "rare"
+      ],
       "role": "reward",
       "sight_ok": true,
-      "site": "tube"
+      "site": "plain"
     },
     {
-      "clear_ring": [
-        "home dropship_crew (site bench)"
-      ],
-      "d_landmark": 486,
-      "d_spawn": -1,
-      "detour": -1,
+      "clear_ring": [],
+      "d_landmark": 796,
+      "d_spawn": 706,
+      "detour_m": 245,
       "door_at": [
-        320,
-        224
+        240,
+        -120
       ],
-      "flags": [
-        "open",
-        "door_ok"
-      ],
-      "id": "bench_altar",
-      "kind": "ambush_altar",
-      "nearest_door": 241,
-      "nearest_door_id": "tube_cache",
-      "pay_named": "",
-      "pay_rarities": [],
-      "role": "risk",
-      "sight_ok": false,
-      "site": "bench"
-    },
-    {
-      "clear_ring": [
-        "home ledge_lobbers (site service_ledge)"
-      ],
-      "d_landmark": 535,
-      "d_spawn": 972,
-      "detour": 203,
-      "door_at": [
-        -189,
-        222
-      ],
+      "door_m": 245,
       "flags": [
         "open",
         "door_ok",
-        "deck"
+        "sight_ok"
       ],
-      "id": "ledge_valve",
-      "kind": "valve",
-      "nearest_door": 363,
-      "nearest_door_id": "tube_cache",
+      "id": "bench_altar",
+      "kind": "ambush_altar",
+      "nearest_door": 701,
+      "nearest_door_id": "tube_wall",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": true,
+      "site": "plain"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 161,
+      "d_spawn": 1154,
+      "detour_m": 110,
+      "door_at": [
+        -80,
+        448
+      ],
+      "door_m": 110,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "tube_wall",
+      "kind": "cracked_wall",
+      "nearest_door": 701,
+      "nearest_door_id": "bench_altar",
       "pay_named": "",
       "pay_rarities": [],
       "role": "hidden",
-      "sight_ok": false,
-      "site": "service_ledge"
+      "sight_ok": true,
+      "site": "pool"
     }
   ],
   "ride_edges": 6,
   "routes": {
-    "canal": [
-      "tube -> bench: no path"
-    ],
+    "canal": [],
     "ledge": [],
     "main": [],
     "pool_floor": [],
@@ -223,6 +144,6 @@
     "ok": true
   },
   "spawn_beacon_m": 1303,
-  "spawn_beacon_share": "0.563",
-  "tool_sha256": "f6ef55bba4a9fb0c3f200d63459e536cf24010d7cd90be5b3a418df18bfdc450"
+  "spawn_beacon_share": "0.575",
+  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
 }

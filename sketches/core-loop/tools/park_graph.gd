@@ -8,7 +8,9 @@ extends SceneTree
 #                d_spawn), zstd
 #   graph.json   schema, map, the park file's, bake.json's, the tool's and graph.bin's sha256,
 #                the counts, and the ruling: route connectivity, the spawn check and the pocket
-#                table (every distance a path distance on this graph, PARK.md 2.12 readings),
+#                table (every distance a path distance on this graph, PARK.md 2.12 readings;
+#                per pocket door_m, the path from the nearest line node to the door, and
+#                detour_m, the path from the nearest line node to the pay point),
 #                each pocket's pay.rarities against the 2.12 pay ladder, and full_visit_ratio:
 #                spawn through all four doors in the best order to the beacon, over spawn to
 #                beacon (reported, start target at most 3.0)
@@ -878,7 +880,7 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 			role = "risk"
 		var pay := _pay(act.get("pay", {}))
 		rows.append({"id": String(act["id"]), "role": role, "kind": String(act["activity"]),
-			"site": String(act["site"]), "at": act["at"], "pay_rarities": pay["rarities"], "pay_named": pay["named"]})
+			"site": String(act["site"]), "at": act["at"], "pay_at": act["at"], "pay_rarities": pay["rarities"], "pay_named": pay["named"]})
 	# The hidden pocket: the first valve or cracked_wall that seals a cache (the stage 1 draft's
 	# gallery_valve shape), else the first valve or cracked_wall.
 	var hidden := {}
@@ -887,8 +889,9 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 			hidden = c
 	if not hidden.is_empty():
 		var at: Array = hidden["door"]["at"] if hidden.has("door") else hidden["at"]
+		var pay_at: Array = hidden["cache"]["at"] if hidden.get("cache") is Dictionary and hidden["cache"].has("at") else at
 		rows.append({"id": String(hidden["id"]), "role": "hidden", "kind": String(hidden["kind"]),
-			"site": String(hidden["site"]), "at": at, "pay_rarities": [], "pay_named": ""})
+			"site": String(hidden["site"]), "at": at, "pay_at": pay_at, "pay_rarities": [], "pay_named": ""})
 
 	var roles := []
 	for row in rows:
@@ -901,15 +904,25 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 			breaches.append(_breach(row["id"], "count", "a %s is none of on-line, reward or risk" % row["kind"]))
 
 	var beacon_d: float = graph.d_from[graph.beacon_node]
+	# Two distances, two points (PARK.md 2.12): door_m from the nearest line node to the door
+	# node, detour_m from the nearest line node to the pay point's node (the activity row's at,
+	# the hidden pocket's cache, else its door). An activity row has one at, so its two coincide.
+	var line_nodes := PackedInt32Array()
+	for o in graph.node_count():
+		if graph.node_flags[o] & ParkGraph.LINE != 0:
+			line_nodes.append(o)
+	var from_line: PackedFloat32Array = graph.search(line_nodes)
 	var forward := {}
 	for row in rows:
 		var door := index.door(row["at"], row["site"])
+		var pay_node := index.door(row["pay_at"], row["site"])
 		var p: Vector3 = graph.position(door)
 		row["door"] = door
 		row["door_at"] = [roundi(p.x), roundi(p.z)]
 		row["d_spawn"] = graph.d_from[door]
 		row["d_landmark"] = graph.d_land[door]
-		row["detour"] = graph.d_from[door] + graph.d_land[door] - beacon_d
+		row["door_m"] = from_line[door]
+		row["detour_m"] = from_line[pay_node]
 		row["sight_ok"] = graph.node_flags[door] & ParkGraph.SIGHT_OK != 0
 		row["flags"] = graph.flag_names(door)
 		forward[row["id"]] = graph.search(PackedInt32Array([door]))
@@ -961,12 +974,12 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 			breaches.append(_breach(id, "open", "the door has a roof"))
 		if row["d_landmark"] < DOOR_BEACON_M:
 			breaches.append(_breach(id, "beacon", "%s m from the beacon, want at least %d" % [_m(row["d_landmark"]), DOOR_BEACON_M]))
-		if row["detour"] < DETOUR_MIN_M or row["detour"] > DETOUR_MAX_M:
-			breaches.append(_breach(id, "detour", "detour %s m, want %d to %d" % [_m(row["detour"]), DETOUR_MIN_M, DETOUR_MAX_M]))
+		if row["detour_m"] < DETOUR_MIN_M or row["detour_m"] > DETOUR_MAX_M:
+			breaches.append(_breach(id, "detour", "detour %s m from the line to the pay point, want %d to %d" % [_m(row["detour_m"]), DETOUR_MIN_M, DETOUR_MAX_M]))
 	var reward := _role(rows, "reward")
 	var risk := _role(rows, "risk")
-	if not reward.is_empty() and not risk.is_empty() and reward["detour"] <= risk["detour"]:
-		breaches.append(_breach(reward["id"], "detour_order", "reward detour %s m is not larger than the risk's %s m" % [_m(reward["detour"]), _m(risk["detour"])]))
+	if not reward.is_empty() and not risk.is_empty() and reward["detour_m"] <= risk["detour_m"]:
+		breaches.append(_breach(reward["id"], "detour_order", "reward detour %s m is not larger than the risk's %s m" % [_m(reward["detour_m"]), _m(risk["detour_m"])]))
 	breaches.append_array(_pay_ladder(rows))
 	var full := _full_visit(graph, rows, forward)
 	var ratio := INF
@@ -1014,13 +1027,13 @@ static func _pay_ladder(rows: Array) -> Array:
 		return out
 	var far := reward
 	var near := risk
-	if risk["detour"] > reward["detour"]:
+	if risk["detour_m"] > reward["detour_m"]:
 		far = risk
 		near = reward
 	if not far["pay_rarities"].is_empty() and far["pay_rarities"] != PAY_FAR:
-		out.append(_breach(far["id"], "pay", "the larger detour (%s m) pays %s, want %s only" % [_m(far["detour"]), _rarity_text(far), ", ".join(PAY_FAR)]))
+		out.append(_breach(far["id"], "pay", "the larger detour (%s m) pays %s, want %s only" % [_m(far["detour_m"]), _rarity_text(far), ", ".join(PAY_FAR)]))
 	if not near["pay_rarities"].is_empty() and not _within(near["pay_rarities"], PAY_NEAR):
-		out.append(_breach(near["id"], "pay", "the smaller detour (%s m) pays %s, want within %s" % [_m(near["detour"]), _rarity_text(near), ", ".join(PAY_NEAR)]))
+		out.append(_breach(near["id"], "pay", "the smaller detour (%s m) pays %s, want within %s" % [_m(near["detour_m"]), _rarity_text(near), ", ".join(PAY_NEAR)]))
 	return out
 
 
@@ -1130,7 +1143,7 @@ static func ruling(graph, park: Dictionary, built: Dictionary) -> Dictionary:
 	for row in pocket["rows"]:
 		pocket_rows.append({"id": row["id"], "role": row["role"], "kind": row["kind"], "site": row["site"],
 			"door_at": row["door_at"], "d_spawn": _json_m(row["d_spawn"]), "d_landmark": _json_m(row["d_landmark"]),
-			"detour": _json_m(row["detour"]) if row["detour"] < INF else -1, "sight_ok": row["sight_ok"],
+			"door_m": _json_m(row["door_m"]), "detour_m": _json_m(row["detour_m"]), "sight_ok": row["sight_ok"],
 			"clear_ring": Array(row["clear_ring"]), "nearest_door": _json_m(row["nearest_door"]),
 			"nearest_door_id": row["nearest_door_id"], "flags": Array(row["flags"]),
 			"pay_rarities": row["pay_rarities"], "pay_named": row["pay_named"]})
@@ -1181,13 +1194,13 @@ static func _max_finite(d: PackedFloat32Array) -> float:
 # The pocket table a KD unit pastes (Markdown), and the breaches under it.
 static func pocket_table(ruling_rows: Dictionary) -> String:
 	var lines := PackedStringArray()
-	lines.append("| pocket | role | door [x, z] | d_spawn m | d_landmark m | detour m | sight_ok | clear ring 40 m | nearest door m | pay.rarities |")
-	lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+	lines.append("| pocket | role | door [x, z] | d_spawn m | d_landmark m | door_m (line to door) | detour_m (line to pay) | sight_ok | clear ring 40 m | nearest door m | pay.rarities |")
+	lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 	for row in ruling_rows["rows"]:
 		var ring: Array = Array(row["clear_ring"])
-		lines.append("| %s | %s | [%d, %d] | %s | %s | %s | %s | %s | %s | %s |" % [row["id"], row["role"],
+		lines.append("| %s | %s | [%d, %d] | %s | %s | %s | %s | %s | %s | %s | %s |" % [row["id"], row["role"],
 			row["door_at"][0], row["door_at"][1], _cell(row["d_spawn"]), _cell(row["d_landmark"]),
-			_cell(row["detour"]), "yes" if row["sight_ok"] else "no",
+			_cell(row["door_m"]), _cell(row["detour_m"]), "yes" if row["sight_ok"] else "no",
 			"clear" if ring.is_empty() else "; ".join(ring),
 			"-" if row["nearest_door_id"] == "" else "%s (%s)" % [_cell(row["nearest_door"]), row["nearest_door_id"]],
 			_rarity_text(row)])

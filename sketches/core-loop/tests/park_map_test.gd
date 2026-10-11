@@ -109,7 +109,9 @@ func _activities(map) -> void:
 	_report("camp carries its pack and pay", camp["pack"] == ["chaser", "chaser", "chaser"]
 		and camp["pay"] == {"named": "hot_rivets"} and camp["row"] == "wash_camp", str(camp))
 	var cache: Dictionary = sites.filter(func(s): return s["id"] == "cracked_cache")[0]
-	_report("an empty pack keeps the rule's own", not cache.has("pack") and not cache.has("pay"), str(cache))
+	# Re-pinned 2026-10-11 (KB8b): the fixture's cache now carries its PARK.md 2.12 pay.rarities.
+	_report("an empty pack keeps the rule's own and the row's pay passes through",
+		not cache.has("pack") and cache.get("pay") == {"rarities": ["rare"]}, str(cache))
 
 
 func _scatter(map) -> void:
