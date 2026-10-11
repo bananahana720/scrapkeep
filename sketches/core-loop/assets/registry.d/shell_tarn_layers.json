@@ -20,7 +20,7 @@
    "exception": {
     "draws": 2
    },
-   "exception_why": "ROSTER-LOOK section 5: class III adds side-gap panels on the Pod and thicker tread caps on the Core, two parts at one draw each",
+   "exception_why": "ROSTER-LOOK section 5: class III adds side-gap panels on the Pod and thicker tread caps on the Core, two parts at one draw each, within the class III layer cap of 2 draws (ROSTER-LOOK:250; docs/decisions.tsv 2026-10-10 w13-PD)",
    "provenance": {
     "recipe": "tools/blender/shell_tarn_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
