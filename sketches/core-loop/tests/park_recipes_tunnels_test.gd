@@ -25,7 +25,7 @@ const RECIPES := {
 	"lava_tube_run_bend_p30": {"fact": "ride_chute", "size": [48.0, 12.0, 16.0], "exit": [12.28, -5.045, 45.84, 30.0]},
 	"lava_tube_run_bend_n30": {"fact": "ride_chute", "size": [48.0, 12.0, 16.0], "exit": [-12.28, -5.045, 45.84, -30.0]},
 	"adit_mouth": {"fact": "ride_chute", "size": [56.0, 6.0, 8.0], "exit": [0.0, -3.915, 56.0, 0.0]},
-	"shaft_drop": {"fact": "ride_drop", "size": [26.0, 18.0, 12.0], "exit": [0.0, -21.53, 26.0, 0.0]},
+	"shaft_drop": {"fact": "ride_drop", "size": [26.0, 18.0, 12.0], "exit": [0.0, -22.67, 26.0, 0.0]},
 	"spillway_tunnel": {"fact": "ride_drop", "size": [90.0, 9.0, 11.0], "exit": [0.0, -35.5, 90.0, 0.0]},
 }
 const CHAIN := ["lava_tube_run", "lava_tube_run_bend_p30", "lava_tube_run", "lava_tube_run_bend_n30", "lava_tube_run"]
@@ -62,6 +62,7 @@ func _run() -> void:
 	_check_budgets()
 	_check_mouths()
 	_check_placement()
+	await _check_shaft_landing()
 	await _check_rolls()
 	await _check_chain()
 	quit(_t.verdict())
@@ -217,6 +218,48 @@ func _check_placement() -> void:
 		_t.check("(d) %s is the GLB, not the greybox stand-in" % id, greybox == null)
 		parent.remove_child(node)
 		node.free()
+	parent.free()
+
+
+# shaft_drop: a ball leaving the entry lip at cruise speed lands on the pit floor before it meets any wall. The sphere is
+# swept along its flight; the first surface it touches must be walkable ground (normal.y >= WALKABLE), because a face
+# meeting a ball in flight is a wall (TRAVERSAL.md; KC-INT R5).
+const WALKABLE := 0.7
+
+func _check_shaft_landing() -> void:
+	var parent := Node3D.new()
+	root.add_child(parent)
+	var origin := Vector3(-SPACING, 0, 0)
+	ParkRecipes.place(_row("shaft_drop", origin), parent)
+	await physics_frame
+	await physics_frame
+	var space := root.get_world_3d().direct_space_state
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS
+	var g: float = Tuning.new().f("gravity")
+	var dt := 1.0 / 240.0
+	var at := origin + Vector3(0, Tuning.RADIUS + 0.05, 0.5)
+	var hit := {}
+	for k in 960:
+		var t0 := k * dt
+		var t1 := t0 + dt
+		var p0 := at + Vector3(0, -0.5 * g * t0 * t0, START_SPEED * t0)
+		var p1 := at + Vector3(0, -0.5 * g * t1 * t1, START_SPEED * t1)
+		var q := PhysicsShapeQueryParameters3D.new()
+		q.shape = sphere
+		q.collision_mask = 1
+		q.transform = Transform3D(Basis.IDENTITY, p0)
+		q.motion = p1 - p0
+		var frac := space.cast_motion(q)
+		if frac.size() == 2 and frac[1] < 1.0:
+			q.transform = Transform3D(Basis.IDENTITY, p0 + (p1 - p0) * frac[1])
+			q.motion = Vector3.ZERO
+			hit = space.get_rest_info(q)
+			hit["at"] = p0 + (p1 - p0) * frac[1] - origin
+			break
+	var normal: Vector3 = hit.get("normal", Vector3.ZERO)
+	_t.check("(e) shaft_drop: at %.0f m/s the ball's first touch after the lip is the pit floor, not a wall" % START_SPEED,
+		not hit.is_empty() and normal.y >= WALKABLE, "first touch at %s, normal %s" % [hit.get("at"), normal])
 	parent.free()
 
 

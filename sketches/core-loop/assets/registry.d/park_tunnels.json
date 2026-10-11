@@ -153,7 +153,7 @@
    "loader": "src/world/park/park_recipes.gd place (mesh shaft_drop drawn, shaft_drop-col becomes the trimesh, shells fade by park_large ranges)",
    "provenance": {
     "recipe": "tools/blender/park/tunnels.py",
-    "notes": "wave 13 KC4, PARK.md section 4 tunnels family; row size [26, 18, 12] pit 12 m deep walls to 18 m, then a 14 m drift; +Y up, ride +Z, origin at the entry lip, socket_exit at the exit lip"
+    "notes": "wave 13 KC4, PARK.md section 4 tunnels family; row size [26, 18, 12] pit 20 m long with walls to 18 m and a vertical far wall past the landing run (KC-INT R5), then a 6 m drift; +Y up, ride +Z, origin at the entry lip, socket_exit at the exit lip"
    }
   },
   {

@@ -522,9 +522,13 @@ def spillway_shell2(tube):
 
 # ------------------------------------------------------------------------------------------------ shaft_drop
 
-PIT_W, PIT_L, PIT_DEPTH = 6.0, 12.0, 18.0
+# The pit is long enough that a ball leaving the entry lip at cruise (14 m/s, gravity 26) lands on the floor, at about
+# z 18, before it reaches the far wall at z PIT_L; the far wall is vertical, so nothing faces the ball in flight
+# (TRAVERSAL.md: a face meeting a ball in flight is a wall; KC-INT R5 replaced the 60 degree batter that did).
+# The row stays [26, 18, 12]: the drift shortens to the rest of the length.
+PIT_W, PIT_L, PIT_DEPTH = 6.0, 20.0, 18.0
 PIT_TAN = math.tan(math.radians(12))
-DRIFT_L, DRIFT_TAN = 14.0, math.tan(math.radians(4))
+DRIFT_L, DRIFT_TAN = 6.0, math.tan(math.radians(4))
 
 
 def pit_floor_y(z):
@@ -552,12 +556,12 @@ def shaft_palette(side, s, i, tube):
 
 def build_shaft(render):
     soup = Soup()
-    drift = Tube("shaft_drop", shaft_drift(), DRIFT_L, DRIFT_L * DRIFT_TAN, 0, 2.5, 2.8, [0, 3, 7, 11, 14],
+    drift = Tube("shaft_drop", shaft_drift(), DRIFT_L, DRIFT_L * DRIFT_TAN, 0, 2.5, 2.8, [0, 2, 4, 6],
                  .08, shaft_palette)
     y0 = pit_floor_y(PIT_L)
     d = drift.build(render)
     d.verts = [tuple(Vector(v) + Vector((0, y0, PIT_L))) for v in d.verts]
-    rows = [0, 3, 6, 9, 12]
+    rows = [0, 4, 8, 12, 16, 20]
     cols = [-PIT_W, -PIT_W / 3, PIT_W / 3, PIT_W]
     ts = (0, .25, .5, .75, 1.0)  # 0 is the ground, 1 the floor
     floor = [[Vector((x, pit_floor_y(z), z)) for x in cols] for z in rows]
@@ -567,15 +571,13 @@ def build_shaft(render):
         soup.strip(wall, lambda r, i, side=side: shaft_wall_color(i, r, side), "in", lambda r: Vector((0, -6, rows[r])), closed=False)
     north = [[Vector((x, pit_floor_y(0) * t, 0)) for t in ts] for x in cols]
     soup.strip(north, lambda r, i: shaft_wall_color(i, r, 0), "in", lambda r: Vector((cols[r], -6, 4)), closed=False)
-    # the south wall: a rectangle with the drift's arch cut out, then a 60 degree batter up to the ground
+    # the south wall: vertical from the floor to the ground, past the landing run, with the drift's arch cut out
     inner = [(-3.0, drift_floor(-3.0)), (-3.5, 1.4)] + ellipse(0, 2.8, 3.5, 2.6, math.pi, 0.0, 9) + [(3.5, 1.4), (3.0, drift_floor(3.0))]
-    top = -12.0 - y0
+    top = -y0
     outer = rect_loop(len(inner), PIT_W, top)
     w_in = [Vector((x, y0 + y, PIT_L)) for x, y in inner]
     w_out = [Vector((x, y0 + y, PIT_L)) for x, y in outer]
-    soup.strip([w_in, w_out], lambda r, i: shaft_wall_color(0, 2, 1), "in", lambda r: Vector((0, -10, 6)), closed=False)
-    batter = [[Vector((x, y0 + top, PIT_L)) for x in cols], [Vector((x, 0.0, PIT_L + 7.0)) for x in cols]]
-    soup.strip(batter, lambda r, i: tint(C["rock_red"], .15, i), "in", lambda r: Vector((0, -6, PIT_L)), closed=False)
+    soup.strip([w_in, w_out], lambda r, i: shaft_wall_color(0, 2, 1), "in", lambda r: Vector((0, -10, PIT_L / 2)), closed=False)
     merge(soup, d)
     if render:
         merge(soup, shaft_collar())
@@ -604,8 +606,8 @@ def rect_loop(n, half, top):
 def shaft_collar():
     """A timber collar set into the ground on the three sides the ball does not enter by: drawn only, 0.5 m high."""
     soup = Soup()
-    soup.box(Vector((-PIT_W - .4, .1, 6)), (.8, .5, PIT_L + 1.6), C["timber"])
-    soup.box(Vector((PIT_W + .4, .1, 6)), (.8, .5, PIT_L + 1.6), C["timber"])
+    soup.box(Vector((-PIT_W - .4, .1, PIT_L / 2)), (.8, .5, PIT_L + 1.6), C["timber"])
+    soup.box(Vector((PIT_W + .4, .1, PIT_L / 2)), (.8, .5, PIT_L + 1.6), C["timber"])
     soup.box(Vector((0, .1, PIT_L + .4)), (2 * PIT_W, .5, .8), C["timber"])
     return soup
 
@@ -634,7 +636,7 @@ def shaft_shell1():
     for k, h in enumerate([-16, -12.5, -9, -5.5, -2]):  # cross cribbing, drawn as heavy beams
         soup.box(Vector((0, h - PIT_TAN * 6, .25)), (2 * PIT_W - .1, .4, .5), tint(C["timber"], .2, k))
         for side in (-1, 1):
-            soup.box(Vector((side * (PIT_W - .25), h - PIT_TAN * 6, 6)), (.5, .4, PIT_L - .2), tint(C["timber"], .2, k + 7 * side))
+            soup.box(Vector((side * (PIT_W - .25), h - PIT_TAN * PIT_L / 2, PIT_L / 2)), (.5, .4, PIT_L - .2), tint(C["timber"], .2, k + 7 * side))
     return soup
 
 
