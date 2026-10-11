@@ -1,0 +1,170 @@
+{
+  "bake_sha256": "b241394c6e833683113f88447f039189bc07d7ebd9e3ffa19fdcb44c1aca47fc",
+  "breaches": [],
+  "bytes": 925034,
+  "edges": 315231,
+  "flags": {
+    "deck": 55,
+    "door_ok": 39920,
+    "line": 410,
+    "open": 40456,
+    "sight_ok": 9691,
+    "under": 0
+  },
+  "full_visit_m": 1909,
+  "full_visit_ratio": "1.363",
+  "graph_sha256": "de66bcb098ea7210598a7c3960d0b97789df67a35bd5dc510680822b15ada852",
+  "line_errors": [],
+  "line_path_nodes": 175,
+  "longest_est_m": 2038,
+  "map": "park_sinkhole",
+  "nodes": 40456,
+  "park_sha256": "bb3d008ddaf6b7f94b6f7c65546ecb8e35e81bf1437483e0301a7e3e8701f69b",
+  "pockets": [
+    {
+      "clear_ring": [],
+      "d_landmark": 395,
+      "d_spawn": 1040,
+      "detour_m": 4,
+      "door_at": [
+        0,
+        -16
+      ],
+      "door_m": 4,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "great_room_camp",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "pylon_capacitor",
+      "pay_rarities": [
+        "common"
+      ],
+      "role": "online",
+      "sight_ok": true,
+      "site": "great_room"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 387,
+      "d_spawn": 1213,
+      "detour_m": 196,
+      "door_at": [
+        176,
+        40
+      ],
+      "door_m": 196,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "east_chamber_bounty",
+      "kind": "hauler_bounty",
+      "nearest_door": 304,
+      "nearest_door_id": "sealed_crosscut",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": true,
+      "site": "east_chamber"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 459,
+      "d_spawn": 941,
+      "detour_m": 209,
+      "door_at": [
+        -224,
+        -16
+      ],
+      "door_m": 209,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "west_chamber_cache",
+      "kind": "cracked_cache",
+      "nearest_door": 238,
+      "nearest_door_id": "sealed_crosscut",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": true,
+      "site": "west_chamber"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 233,
+      "d_spawn": 1170,
+      "detour_m": 43,
+      "door_at": [
+        -80,
+        152
+      ],
+      "door_m": 43,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "sealed_crosscut",
+      "kind": "cracked_wall",
+      "nearest_door": 238,
+      "nearest_door_id": "west_chamber_cache",
+      "pay_named": "",
+      "pay_rarities": [],
+      "role": "hidden",
+      "sight_ok": true,
+      "site": "crosscut_drift"
+    }
+  ],
+  "ride_edges": 57,
+  "routes": {
+    "bore_shaft": [],
+    "breach_caps": [],
+    "cannon_tube": [],
+    "cenote_floor": [],
+    "crosscut": [],
+    "crosscut_east": [],
+    "crosscut_return": [],
+    "east_chamber_spur": [],
+    "east_drift": [],
+    "east_haulage": [],
+    "east_loop": [],
+    "eruption_lip": [],
+    "main": [],
+    "main_lower": [],
+    "main_upper": [],
+    "plateau_drop": [],
+    "pump_ramp": [],
+    "rim_line": [],
+    "skylight_chain": [],
+    "south_loop": [],
+    "upper_cap_drop": [],
+    "warden_line": [],
+    "west_breakthrough": [],
+    "west_chamber_spur": [],
+    "west_gallery": [],
+    "west_loop": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1401,
+    "farther_share": "0.008",
+    "ok": true
+  },
+  "spawn_beacon_m": 1401,
+  "spawn_beacon_share": "0.687",
+  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+}
