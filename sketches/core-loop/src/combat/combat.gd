@@ -22,6 +22,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
+const Ultimate := preload("res://src/combat/ultimate.gd")
 const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
@@ -260,6 +261,8 @@ var _restored_frame := {}
 # whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
 # empty outside that emission and for a strike that names no row. All read only.
 var near_miss
+# The set piece on Q (ultimate.gd), a child like near_miss; it owns the meter.
+var ultimate
 var last_player_hit := {}
 var last_impact := {}
 var _cloud := {}
@@ -330,6 +333,13 @@ func setup(ctx_ref) -> void:
 		# --- end Cannon ---
 	}
 	ctx.player.line_load_of = line_load
+	# The set piece (SKILL-BAR section 4) and the shared placeholder every pilot carries until
+	# wave P-C: paths line then arc, a volley of the pilot's own weapon per beat, the default
+	# landing. A pilot's own row goes in its marked block in ultimate.gd's _ult_rows.
+	ultimate = Ultimate.new()
+	add_child(ultimate)
+	ultimate.setup(ctx, self)
+	ultimate.register("ult_default", {"tech": _ult_volley, "peak": _ult_peak, "landing": _ult_landing})
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(_anchor: Vector3): _bite_load())
@@ -477,6 +487,12 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 		return
 	if enemy.has_method("is_dead") and enemy.is_dead():
+		return
+	# The ball's own contacts while the set piece rides count under its 45-posture cap on a
+	# closed Warden guard, volleys and landing together (SKILL-BAR section 12, item 7).
+	if ultimate != null and ultimate.active() and kind in CONTACT_KINDS and enemy.has_method("_apply_posture") \
+			and enemy.has_method("staggered") and not enemy.staggered():
+		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part))
 		return
 	var result := resolve(enemy, kind, force, part)
 	var cls := _classify_source(kind, source if source != "" else _forced_source)
@@ -1794,6 +1810,80 @@ func _line_reel_body(target: Node3D, _fraction: float, mult: float) -> void:
 	_hit(target, "line", LINE_REEL_DAMAGE * mult, ctx.player.ball_position() - target.global_position, LINE_REEL_KNOCK, "", "special")
 
 
+# --- ult_default, the placeholder set piece (SKILL-BAR section 4) -----------------------
+
+# One volley a beat: the pilot's own weapon at up to volley_targets() enemies within 10 m of
+# the ball, those within 25 degrees of the reticle first. Returns the hits.
+func _ult_volley(_beat: int, ball: Vector3, aim: Vector3, _heft_mult: float) -> int:
+	var picks: Array = []
+	var bias := deg_to_rad(Ultimate.VOLLEY_BIAS_DEG)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		var gap: float = enemy.global_position.distance_to(ball)
+		if gap > Ultimate.VOLLEY_RADIUS:
+			continue
+		var to: Vector3 = enemy.global_position - ball
+		var biased: bool = aim.length() > 0.01 and to.length() > 0.01 and aim.angle_to(to) <= bias
+		picks.append([(0.0 if biased else 100.0) + gap, enemy])
+	picks.sort_custom(func(a, b): return a[0] < b[0])
+	var weapon := active_weapon()
+	var kind := weapon if weapon != "" else "ultimate"
+	var hits := 0
+	for entry in picks.slice(0, ultimate.volley_targets()):
+		var enemy: Node3D = entry[1]
+		effects.arc(ball + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, ctx.player.class_color())
+		_ult_hit(enemy, kind, Ultimate.VOLLEY_DAMAGE * _heft_mult, ball, false)
+		hits += 1
+	return hits
+
+
+func _ult_peak(at: Vector3) -> void:
+	effects.ring(at, Ultimate.VOLLEY_RADIUS, ctx.player.class_color())
+
+
+# The landing strike: 60 x heft multiplier x chain multiplier within the class's landing
+# radius, knock 26. Returns [hits, damage].
+func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
+	var radius: float = ultimate.landing_radius()
+	effects.ring(at, radius, ctx.player.class_color())
+	var hits := 0
+	var dealt := 0.0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		if enemy.global_position.distance_to(at) > radius:
+			continue
+		dealt += _ult_hit(enemy, "ultimate", Ultimate.LANDING_DAMAGE * heft_mult * chain_mult, at, true)
+		hits += 1
+	return [hits, dealt]
+
+
+# One set-piece hit. A Warden fights on posture: an open core takes the landing as a harpoon
+# smash (it shatters); a closed guard takes posture under the set piece's 45 cap, the volleys
+# at half, and shows the slate glance. A boss takes half and its windows stay as they are.
+func _ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing: bool) -> float:
+	if enemy.has_method("_apply_posture") and enemy.has_method("staggered"):
+		if landing and enemy.staggered():
+			var held: Node3D = ctx.player.smash_landing
+			ctx.player.smash_landing = enemy
+			_hit(enemy, "slam", damage, enemy.global_position - from, 0.0, "", "special", "slam")
+			ctx.player.smash_landing = held
+			return damage
+		var punch := damage if landing else damage * Ultimate.WARDEN_VOLLEY
+		ultimate.warden_posture(enemy, enemy.judge_hit("slam" if landing else kind, punch, landing, 0))
+		effects.spark(enemy.global_position + Vector3.UP, Palette.SLATE)
+		return 0.0
+	if _target_class(enemy) == "boss":
+		damage *= Ultimate.BOSS_MULT
+	if not (enemy.has_method("knock") and enemy.has_method("flash")):
+		strike(enemy, kind, damage, "", "special")
+		return damage
+	_hit(enemy, kind, damage, enemy.global_position - from, Ultimate.LANDING_KNOCK if landing else 3.0, "", "special",
+		"slam" if landing else "")
+	return damage
+
+
 # The default on a world latch: one +8 m/s burst toward the anchor.
 func _reel_burst(anchor: Vector3, _fraction: float, _mult: float) -> void:
 	var body: RigidBody3D = ctx.player.body()
@@ -2670,8 +2760,11 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
+	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
+	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
+	var riding: bool = ultimate != null and ultimate.active()
 	ctx.run.damage(amount, source)
-	if ctx.calm:
+	if ctx.calm or riding:
 		return
 	# The damage always lands; what the hit may take is the stop, and that goes through
 	# the player's crowd-control door, which Rivet's sprint shuts.

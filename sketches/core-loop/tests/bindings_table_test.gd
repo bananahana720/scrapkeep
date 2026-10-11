@@ -36,6 +36,9 @@ const T := preload("res://tests/support/t.gd")
 # the special row retired and select (caps 1, 2, 3) and ultimate (Q) added; Q names the ultimate's
 # row and no cut key. The class kit's movement record is found by its slot, since the card now
 # leads with the bar row (1, 2, 3, Q) before the chips.
+# Re-pinned 2026-10-10 for the set piece (wave P-B unit B3): SKILL-BAR sections 2 and 4 let Q
+# through during the set piece as recall (a full refund in the wind-up), so in set_piece the
+# roll, Space (bail) and Q (recall) read, and nothing else.
 
 const CUT_NAMES := ["cl_reel", "cl_dash", "KEY_Q", "WHEEL"]
 const MENU_GLYPHS := ["key_tab", "key_p", "key_r"]
@@ -173,7 +176,7 @@ func _states() -> void:
 					for button in buttons:
 						if Bindings.verbs_on(state, 0, button).size() != 1:
 							ambiguous.append("button %d in %s" % [button, state])
-	# The set piece sits above every other state; in it only the roll and Space (bail) read.
+	# The set piece sits above every other state; in it only the roll, Space (bail) and Q (recall) read.
 	var live_in_set_piece: Array = []
 	for line in ["", "body", "world"]:
 		for charging in [false, true]:
@@ -190,7 +193,9 @@ func _states() -> void:
 				live_in_set_piece.append(verb)
 	_t.eq("the ball's state is the highest that holds, a world swing included", wrong_state, [])
 	_t.eq("every key reads as exactly one verb in every state", ambiguous, [])
-	_t.eq("in a set piece only the roll and the bail read", [live_in_set_piece, Bindings.reading("jump", "set_piece")], [["roll", "jump"], "bail"])
+	_t.eq("in a set piece only the roll, the bail and the recall read",
+		[live_in_set_piece, Bindings.reading("jump", "set_piece"), Bindings.reading("ultimate", "set_piece")],
+		[["roll", "jump", "ultimate"], "bail", "recall"])
 	var order := Bindings.STATES.duplicate()
 	var seen: Array = reached.keys()
 	seen.sort_custom(func(a, b): return order.find(a) < order.find(b))
