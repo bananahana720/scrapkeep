@@ -7,6 +7,7 @@ extends SceneTree
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const ClassPreview := preload("res://src/ui/class_preview.gd")
 const T := preload("res://tests/support/t.gd")
 
 const DIR := "user://shell_layers_test/"
@@ -64,6 +65,7 @@ func _initialize() -> void:
 	await _stability()
 	_outfit_replace()
 	await _game_swap()
+	_class_preview()
 	_clear()
 	quit(_t.verdict())
 
@@ -364,3 +366,39 @@ func _game_swap() -> void:
 	_no_lights_or_overrides("game shell", [swapped.core, swapped.pod])
 	player.free()
 	hero.free()
+
+
+func _paint_material(node: Node, mesh_name: String) -> Material:
+	var mi := node.find_child(mesh_name, true, false) as MeshInstance3D
+	if mi == null:
+		return null
+	for s in mi.mesh.get_surface_count():
+		if HeroAssets.slot_of(mi.mesh, s) == "paint":
+			return mi.get_surface_override_material(s)
+	return null
+
+
+# The class card's preview builds through fit_shell_into, so it shows the equipped variant and
+# paint (CUSTOMIZE.md section 7, the live preview, last bullet).
+func _class_preview() -> void:
+	var def = ClassDef.by_id(PILOT)
+	var plain = ClassPreview.new(def)
+	plain._painter.shell_assets = _paths
+	plain.variant = VARIANT
+	var preview = ClassPreview.new(def)
+	preview._painter.shell_assets = _paths
+	preview.paint_id = "paint_any_night"
+	preview.variant = VARIANT
+	_t.check("class preview fits through fit_shell_into", not preview._shell_rec.is_empty() and preview._shell_rec.layers.size() == 4)
+	_t.eq("class preview shows the equipped variant", String(preview._shell_rec.get("variant", "")), VARIANT)
+	_t.check("class preview mounts the variant's lattice", preview._core.find_child("PlateVarC1", true, false) != null and preview._core.find_child("PlateDefC1", true, false) == null)
+	var plate: Material = _paint_material(preview._core, "PlateVarC1")
+	var cap: Material = _paint_material(preview._pod, "Cap")
+	_t.check("class preview paints the variant with the equipped paint", plate != null and plate == cap and plate != _paint_material(plain._core, "PlateVarC1"))
+	preview.heft_class = 3
+	_t.check("class preview shows layers up to its heft class", preview._shell_rec.layers[3].core.visible and not preview._shell_rec.layers[4].core.visible)
+	_no_lights_or_overrides("class preview", [preview._core, preview._pod])
+	preview.variant = ""
+	_t.check("class preview returns to the default lattice", preview._core.find_child("PlateDefC1", true, false) != null)
+	plain.free()
+	preview.free()

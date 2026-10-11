@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Customize := preload("res://src/ui/customize_page.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const Achievements := preload("res://src/core/achievements.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -102,15 +103,31 @@ func _run() -> void:
 	Push.click(root, entry)
 	await _frames()
 	_t.check("mouse opens Customize", page.is_visible_in_tree())
-	page.focus("paint")
-	var paint_before: String = page.selected("paint")
+	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 7): mouse first. A click on a slot row
+	# shows its cards; a click on an owned card equips and saves. Every control fits at 1280 by
+	# 720 and 1920 by 1080, not only today's row list.
+	for i in 120:
+		if is_zero_approx(page.position.x):
+			break
+		await process_frame
+	page.focus("trail")
 	Push.click(root, page.rows["paint"])
 	await _frames()
-	_t.check("mouse cycles paint", page.selected("paint") != paint_before)
-	for id in Customize.ORDER:
-		var rect: Rect2 = page.rows[id].get_global_rect()
-		var screen: Vector2 = screens._screen()
-		_t.check("%s row fits viewport" % id, rect.position.x >= 0 and rect.position.y >= 0 and rect.end.x <= screen.x and rect.end.y <= screen.y, str(rect))
+	_t.eq("mouse click on a slot row shows its cards", page.slot, "paint")
+	var paint_before: String = page.selected("paint")
+	var target = null
+	for card in page.cards:
+		if card.state == "owned" and card.id != paint_before:
+			target = card
+			break
+	_t.check("an owned paint card to click", target != null)
+	if target != null:
+		var target_id: String = target.id
+		Push.click(root, target)
+		await _frames()
+		_t.eq("mouse click on an owned card equips it", page.selected("paint"), target_id)
+		_t.check("the equip counts its slot", profile.stat("cos.equip.paint") >= 1.0)
+	await _page_checks(page, profile, screens)
 	Push.pad(root, JOY_BUTTON_B)
 	await _frames()
 	_t.check("pad B returns to camp", not page.visible and screens.camp_open())
@@ -121,3 +138,153 @@ func _run() -> void:
 	_t.check("ui_cancel returns to camp", not page.visible and screens.camp_open())
 	_game.free()
 	quit(_t.verdict())
+
+
+func _fits(label: String, control: Control, screen: Vector2) -> void:
+	var rect := control.get_global_rect()
+	_t.check(label, rect.size.x > 0.0 and rect.position.x >= 0.0 and rect.position.y >= 0.0 and rect.end.x <= screen.x + 0.5 and rect.end.y <= screen.y + 0.5, str(rect))
+
+
+# CUSTOMIZE.md section 9 ACCEPTANCE, the page bullet.
+func _page_checks(page, profile, screens) -> void:
+	# Hover tries on without saving; leaving the grid returns to what is worn.
+	page._select_slot("decal")
+	page._select_slot("paint")
+	var worn: String = page.selected("paint")
+	var saved_before: float = profile.stat("cos.equip.paint")
+	var other = null
+	for card in page.cards:
+		if card.state in ["owned", "new"] and card.id != worn and card.id != "":
+			other = card
+			break
+	_t.check("an owned card to hover", other != null)
+	if other != null:
+		page._hover_card(other)
+		_t.eq("hover tries the card on", page.look("paint"), other.id)
+		_t.eq("hover saves nothing", page.selected("paint"), worn)
+		_t.eq("hover counts no equip", profile.stat("cos.equip.paint"), saved_before)
+		var tint = page._painter.paint_tint(page.pilot, other.id)
+		_t.check("the preview wears the hovered paint", tint != null and page.preview_rec().get("tints", {}).get("paint") == tint)
+		page._leave_grid()
+		_t.eq("leaving the grid returns to what is worn", page.look("paint"), worn)
+	# A locked card names its grant and progress; a hidden grant shows "?" and no progress.
+	var locked = null
+	var hidden = null
+	for card in page.cards:
+		if card.state == "locked" and locked == null:
+			locked = card
+		if card.state == "hidden" and hidden == null:
+			hidden = card
+	_t.check("a locked paint card shows", locked != null)
+	if locked != null:
+		var grant := Achievements.for_cosmetic(locked.id)
+		var line: String = page.hover_text(locked)
+		_t.check("a locked card names its grant", grant != "" and line.contains(String(Achievements.row(grant)["name"])), line)
+		_t.check("a locked card shows its progress", line.contains(" / %d" % int(Achievements.row(grant).get("count", 1))), line)
+		var equipped_before: String = page.selected("paint")
+		_t.check("clicking a locked card equips nothing", not page.click_card(locked) and page.selected("paint") == equipped_before)
+	_t.check("the hidden grant's card shows", hidden != null and hidden.id == "paint_any_ink")
+	if hidden != null:
+		_t.eq("a hidden grant shows only its hint", page.hover_text(hidden), "Hidden. Keep playing.")
+	# Pending art is never shown; a slot with nothing that fits is hidden with its group heading.
+	page._select_slot("paint")
+	for id in Cosmetics.PENDING_ART:
+		_t.check("pending %s has no card" % id, page.card_for(id) == null and not id in page.shown_ids(Cosmetics.row(id)["slot"]))
+	for slot in ["shell", "outfit", "companion_skin", "bay_decor"]:
+		_t.check("empty slot %s is hidden" % slot, not page.rows[slot].visible and not slot in page.order())
+	_t.check("an empty owner group is hidden", not page._group_labels["PILOT"].visible and not page._group_labels["BAY"].visible)
+	# New marks clear after 0.6 s on screen and seen saves once, on close.
+	var fresh := "paint_any_night"
+	profile.unlock_cosmetic(fresh)
+	profile._doc["seen"].erase(fresh)
+	page.refresh()
+	await _frames()
+	_t.eq("a new item's card is marked new", page.card_for(fresh).state if page.card_for(fresh) != null else "", "new")
+	_t.check("its slot row holds a new mark", page.slot_has_new("paint"))
+	page._scroll.ensure_control_visible(page.card_for(fresh))
+	await _frames()
+	page._age_new_marks(0.3)
+	_t.check("the mark stays under 0.6 s", not profile.is_seen(fresh))
+	page._age_new_marks(0.4)
+	_t.check("the mark clears after 0.6 s on screen", profile.is_seen(fresh) and page.card_for(fresh).state == "owned" and not page.slot_has_new("paint"))
+	# Layout at both target sizes: every visible control inside the screen.
+	for screen in [Vector2(1280, 720), Vector2(1920, 1080)]:
+		page.layout(screen)
+		await _frames(3)
+		var tag := "%dx%d" % [int(screen.x), int(screen.y)]
+		_t.eq("%s card columns" % tag, page._grid.columns, 3 if screen.x < 1600.0 else 4)
+		for id in page.order():
+			_fits("%s row %s fits" % [tag, id], page.rows[id], screen)
+		for id in page._portraits:
+			_fits("%s portrait %s fits" % [tag, id], page._portraits[id], screen)
+		for i in page._pips.size():
+			_fits("%s heft pip %d fits" % [tag, i + 1], page._pips[i], screen)
+		_fits("%s preview fits" % tag, page._container, screen)
+		_fits("%s card grid fits" % tag, page._scroll, screen)
+		_fits("%s hover line fits" % tag, page._hover, screen)
+		_t.check("%s preview takes 55%% of the width" % tag, absf(page._container.position.x + page._container.size.x + Customize.MARGIN * 0.5 - screen.x * Customize.PREVIEW_SHARE) < 1.0, str(page._container.size))
+	page.layout(screens._screen())
+	await _frames(2)
+	# The heft pips preview a class and pin it.
+	page.pin_heft(4)
+	var rec: Dictionary = page.preview_rec()
+	_t.check("the preview is built by fit_shell_into", not rec.is_empty() and rec.has("layers") and rec.layers.size() == 4)
+	if not rec.is_empty():
+		_t.eq("a pinned pip sets the preview's heft class", int(rec.heft), 4)
+	page.pin_heft(1)
+	# Reduced motion drops the spin, the shake and the hop.
+	page.reduced_motion = true
+	var turn: float = page._pivot.rotation.y
+	page._spin_wait = 0.0
+	page._process(0.5)
+	_t.eq("reduced motion: no turntable spin", page._pivot.rotation.y, turn)
+	if locked != null:
+		page._select_slot("decal")
+		page._select_slot("paint")
+		var lock_card = page.card_for(locked.id)
+		var tweens := get_processed_tweens().size()
+		page.click_card(lock_card)
+		_t.eq("reduced motion: a locked click does not shake", get_processed_tweens().size(), tweens)
+		page.reduced_motion = false
+		lock_card = page.card_for(locked.id)
+		tweens = get_processed_tweens().size()
+		page.click_card(lock_card)
+		_t.check("full motion: a locked click shakes", get_processed_tweens().size() > tweens)
+	page.reduced_motion = false
+	page._process(0.5)
+	_t.check("full motion: the turntable spins", not is_equal_approx(page._pivot.rotation.y, turn))
+	if page._pilots.size() >= 2:
+		var a: String = page._pilots[0]
+		var b: String = page._pilots[1]
+		page.reduced_motion = true
+		page.pick_pilot(a)
+		page.pick_pilot(b)
+		var seat_y: float = page.preview_rec().pilot.position.y if page.preview_rec().get("pilot") != null else 0.0
+		page.reduced_motion = false
+		page.pick_pilot(a)
+		page.pick_pilot(b)
+		var hop_y: float = page.preview_rec().pilot.position.y if page.preview_rec().get("pilot") != null else 0.0
+		_t.check("reduced motion drops the hop that full motion plays", page.preview_rec().get("pilot") != null and hop_y - seat_y > 0.4, "%f vs %f" % [hop_y, seat_y])
+		page.pick_pilot(a)
+	# The preview never adds a light per item, and nothing fitted carries a light or override.
+	var lights: Array = page._viewport.find_children("*", "Light3D", true, false)
+	_t.eq("the preview keeps its one light", lights.size(), 1)
+	var overrides := 0
+	rec = page.preview_rec()
+	for key in ["core", "pod"]:
+		if rec.get(key) == null:
+			continue
+		for node in rec[key].find_children("*", "GeometryInstance3D", true, false):
+			if node.material_override != null:
+				overrides += 1
+	_t.eq("no material_override under the preview shell", overrides, 0)
+	# Close saves the seen marks once; a second open and close with nothing new saves nothing.
+	var saves: int = page.seen_saves
+	page.close()
+	_t.eq("seen saves once on close", page.seen_saves, saves + 1)
+	page.open(profile)
+	await _frames()
+	page.close()
+	_t.eq("a close with no new marks saves nothing", page.seen_saves, saves + 1)
+	page.open(profile)
+	await _frames()
