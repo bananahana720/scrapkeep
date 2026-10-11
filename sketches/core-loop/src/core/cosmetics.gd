@@ -6,15 +6,25 @@ const Palette := preload("res://src/core/palette.gd")
 # cannot ride in on a cosmetic. A tint is a new colour, never a hostile hue: those mean
 # danger on screen (Palette.HAZARD for threats, BRASS for the boss).
 #
-# slot    paint, trail, decal or companion_paint; the latter belongs to SPIL-9
-# pilot   a pilot id, or "" for any pilot
-# name    the label shown on the class card's paint picker
-# starter owned from the first run
-# tint    a Color, required
-# asset   optional art id; required for the three additional slots
-# mask    decal atlas tile, zero-based; forbidden on other slots
+# slot    one of SLOTS (design-v3/CUSTOMIZE.md section 2); OWNERS slots belong to SPIL-9 or the bay
+# pilot   a pilot id, or "" for any pilot; required on a PILOT_ONLY slot, forbidden on an OWNERS slot
+# name    the label shown on the class card's paint picker and the customize page's card
+# starter owned from the first run; only a paint may be a starter
+# tint    a Color, required; also the card's swatch
+# asset   art id; required on every slot but paint. A shell row's asset is its GLB stem
+# mask    decal atlas tile, zero-based, below MASK_TILES; forbidden on other slots
 
-const SLOTS := ["paint", "trail", "decal", "companion_paint"]
+const SLOTS := ["paint", "trail", "decal", "companion_paint", "outfit", "shell", "companion_skin", "bay_decor"]
+# Slots worn by someone other than the pilot. Every other slot is worn per pilot.
+const OWNERS := {"companion_paint": "spil9", "companion_skin": "spil9", "bay_decor": "bay"}
+# Slots whose rows must name a pilot: they fit one body.
+const PILOT_ONLY := ["outfit", "shell"]
+# Slots that mount a scene (resolve to a PackedScene with no light and no collision).
+const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
+const MASK_TILES := 16
+# Row ids whose art has not landed. The page hides them; a grant still records them.
+# The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
+const PENDING_ART := ["trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell"]
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -59,6 +69,22 @@ const ROWS := {
 	"companion_paint_salt": {"slot": "companion_paint", "pilot": "", "name": "Salt White", "starter": false, "tint": Color("e9ecea"), "asset": "companion_paint_salt"},
 	"companion_paint_dusk": {"slot": "companion_paint", "pilot": "", "name": "Dusk Pink", "starter": false, "tint": Color("d68ab0"), "asset": "companion_paint_dusk"},
 	"companion_paint_moth": {"slot": "companion_paint", "pilot": "", "name": "Moth Grey", "starter": false, "tint": Color("a39cb3"), "asset": "companion_paint_moth"},
+	# Shared: the skill bar's three earned items (CUSTOMIZE.md section 8). Pending art.
+	"trail_any_downbeat": {"slot": "trail", "pilot": "", "name": "Downbeat", "starter": false, "tint": Color("8a5a3a"), "asset": "trail_any_downbeat"},
+	"decal_curtain_call": {"slot": "decal", "pilot": "", "name": "Curtain Call", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_curtain_call_mask.png", "mask": 9},
+	"companion_skin_till_bell": {"slot": "companion_skin", "pilot": "", "name": "Till Bell", "starter": false, "tint": Color("8a5a3a"), "asset": "companion_skin_till_bell"},
+	# --- pylon_engineer (Sable): P-C Sable adds its rows here ---
+	# --- end pylon_engineer ---
+	# --- runner_gunner (Rivet): P-C Rivet adds its rows here ---
+	# --- end runner_gunner ---
+	# --- demolitions_caster (Kest): P-C Kest adds its rows here ---
+	# --- end demolitions_caster ---
+	# --- tarn (Tarn): P-C Tarn adds its rows here ---
+	# --- end tarn ---
+	# --- tally (Tally): P-C Tally adds its rows here ---
+	# --- end tally ---
+	# --- remembered_cannon (the Cannon): P-C Cannon adds its rows here ---
+	# --- end remembered_cannon ---
 }
 
 
@@ -108,15 +134,19 @@ static func validate(rows: Dictionary, pilots: Array) -> Array:
 		if r.has("asset") and (not (r["asset"] is String) or str(r["asset"]).strip_edges() == ""):
 			problems.append("%s: asset must be a nonempty id" % id)
 		if slot == "decal":
-			if not (r.get("mask") is int) or int(r.get("mask", -1)) < 0 or int(r.get("mask", -1)) > 7:
-				problems.append("%s: decal needs a mask tile from 0 to 7" % id)
+			if not (r.get("mask") is int) or int(r.get("mask", -1)) < 0 or int(r.get("mask", -1)) > MASK_TILES - 1:
+				problems.append("%s: decal needs a mask tile from 0 to %d" % [id, MASK_TILES - 1])
 		elif r.has("mask"):
 			problems.append("%s: mask belongs only to a decal" % id)
-		if slot == "companion_paint" and r.get("pilot", "") != "":
-			problems.append("%s: companion paint cannot name a pilot" % id)
+		if OWNERS.has(slot) and r.get("pilot", "") != "":
+			problems.append("%s: %s is worn by %s and cannot name a pilot" % [id, slot, OWNERS[slot]])
 		var pilot = r.get("pilot")
 		if not (pilot is String) or (pilot != "" and not pilots.has(pilot)):
 			problems.append("%s: pilot %s is neither empty nor a real pilot" % [id, pilot])
+		elif PILOT_ONLY.has(slot) and pilot == "":
+			problems.append("%s: %s fits one body and must name a pilot" % [id, slot])
+		if r.get("starter", false) == true and slot != "paint":
+			problems.append("%s: only a paint can be a starter" % id)
 		if str(r.get("name", "")) == "":
 			problems.append("%s: name is empty" % id)
 		if not (r.get("starter") is bool):
@@ -131,20 +161,44 @@ static func validate(rows: Dictionary, pilots: Array) -> Array:
 			starter_paints += 1
 	if starter_paints < 1:
 		problems.append("table: needs at least one starter paint")
+	# Table-level: content_registry validates one row at a time and skips "table:" problems.
+	for id in PENDING_ART:
+		if not rows.has(id):
+			problems.append("table: PENDING_ART id %s is not a row" % id)
+		elif rows[id].get("starter", false) == true:
+			problems.append("table: PENDING_ART id %s is a starter" % id)
 	return problems
 
 
+static func is_pending(id: String) -> bool:
+	return PENDING_ART.has(id)
+
+
 static func owner_for(pilot: String, slot: String) -> String:
-	return "spil9" if slot == "companion_paint" else pilot
+	return OWNERS.get(slot, pilot)
 
 
 static func fits(id: String, owner: String, slot: String) -> bool:
 	var r := row(id)
 	if r.is_empty() or r["slot"] != slot:
 		return false
-	if slot == "companion_paint":
-		return owner == "spil9"
-	return owner != "spil9" and (r["pilot"] == "" or r["pilot"] == owner)
+	if OWNERS.has(slot):
+		return owner == OWNERS[slot]
+	return owner != "" and not OWNERS.values().has(owner) and (r["pilot"] == "" or r["pilot"] == owner)
+
+
+static func owns(profile, id: String) -> bool:
+	var data := row(id)
+	return profile != null and not data.is_empty() and (data["starter"] or profile.has_cosmetic(id))
+
+
+# The id worn in a slot, or "" when nothing fitting and owned is equipped. The one copy of
+# the ownership rule: the customize page, cosmetic_presentation.gd and hero_assets.gd ask it.
+static func worn(profile, owner: String, slot: String) -> String:
+	if profile == null:
+		return ""
+	var id: String = profile.equipped(owner, slot)
+	return id if id != "" and owns(profile, id) and fits(id, owner, slot) else ""
 
 
 # Consumers supply art ids mapped to imported resources or resource paths. Empty means
@@ -189,7 +243,7 @@ func resolve(id: String, assets: Dictionary) -> Dictionary:
 	var resource = source
 	if resource is String:
 		resource = load(resource) if ResourceLoader.exists(resource) else null
-	var valid: bool = (r["slot"] == "trail" and resource is PackedScene) or (r["slot"] == "decal" and resource is Texture2D) or (r["slot"] == "companion_paint" and resource is StandardMaterial3D)
+	var valid: bool = (SCENE_SLOTS.has(r["slot"]) and resource is PackedScene) or (r["slot"] == "decal" and resource is Texture2D) or (r["slot"] == "companion_paint" and resource is StandardMaterial3D)
 	if valid and resource is PackedScene and resource.get_state().get_node_count() == 0:
 		valid = false
 	if valid and resource is PackedScene:
@@ -200,7 +254,7 @@ func resolve(id: String, assets: Dictionary) -> Dictionary:
 		while not stack.is_empty():
 			var node: Node = stack.pop_back()
 			stack.append_array(node.get_children())
-			if node is CollisionObject3D:
+			if node is CollisionObject3D or node is Light3D:
 				valid = false
 			if node is MeshInstance3D:
 				if node.mesh == null or node.mesh.get_surface_count() == 0:

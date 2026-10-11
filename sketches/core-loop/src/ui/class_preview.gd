@@ -3,6 +3,7 @@ extends SubViewportContainer
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
 
 # The class card's portrait and live ability preview: the pilot's real hero shell
 # (hero_assets.gd's glb, painted by its own paint()) in a tiny world of its own. The
@@ -49,8 +50,25 @@ var paint_id := "":
 	set(value):
 		paint_id = value
 		if _core != null:
+			_sync_variant()
 			_paint_shell()
+# The equipped shell variant's asset id, "" for the default cage. Setting it refits the shell
+# through HeroAssets.fit_shell_into, the game's own loader (CUSTOMIZE.md section 7).
+var variant := "":
+	set(value):
+		if value == variant:
+			return
+		variant = value
+		if _core != null and _shell_rec.size() > 0:
+			_refit_shell()
+# The heft class shown, 1 to 5; layers show up to it.
+var heft_class := 1:
+	set(value):
+		heft_class = clampi(value, 1, 5)
+		if _painter != null and not _shell_rec.is_empty():
+			_painter.set_heft_class(_shell_rec, heft_class, is_inside_tree())
 
+var _shell_rec := {}
 var _viewport: SubViewport
 var _camera: Camera3D
 var _core: Node3D
@@ -112,20 +130,7 @@ func _build_stage() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	_camera.environment = env
 	_viewport.add_child(_camera)
-	var sun := DirectionalLight3D.new()
-	sun.name = "PreviewSun"
-	sun.rotation_degrees = WorldLook.PREVIEW.sun_rotation
-	sun.light_energy = WorldLook.PREVIEW.sun_energy
-	_viewport.add_child(sun)
-	# The class-tinted rim from behind is directional: the preview closes with its screen, and a
-	# positional light freed with it is the stage-freed light class.
-	var rim := DirectionalLight3D.new()
-	rim.name = "PreviewRim"
-	rim.rotation_degrees = WorldLook.PREVIEW.rim_rotation
-	rim.light_color = tint
-	rim.light_energy = WorldLook.PREVIEW.rim_energy
-	rim.shadow_enabled = false
-	_viewport.add_child(rim)
+	preview_lights(_viewport, tint, true)
 	var ground := CylinderMesh.new()
 	ground.top_radius = FLOOR
 	ground.bottom_radius = FLOOR
@@ -134,32 +139,87 @@ func _build_stage() -> void:
 	_mesh(_torus(FLOOR - 0.06, FLOOR + 0.02), _mat(tint, 1.0), Vector3.ZERO)
 
 
+# The lights of a UI preview's own world: the sun and, with rim, a class-tinted rim from behind.
+# Both are directional and live under a SubViewport with own_world_3d that its screen owns, so
+# no stage change frees them (lint L6). The customize page's live preview takes the sun only.
+static func preview_lights(viewport: Node, tint: Color, rim_light: bool) -> Array:
+	var made: Array = []
+	var sun := DirectionalLight3D.new()
+	sun.name = "PreviewSun"
+	sun.rotation_degrees = WorldLook.PREVIEW.sun_rotation
+	sun.light_energy = WorldLook.PREVIEW.sun_energy
+	viewport.add_child(sun)
+	made.append(sun)
+	if rim_light:
+		# The class-tinted rim from behind is directional: the preview closes with its screen, and a
+		# positional light freed with it is the stage-freed light class.
+		var rim := DirectionalLight3D.new()
+		rim.name = "PreviewRim"
+		rim.rotation_degrees = WorldLook.PREVIEW.rim_rotation
+		rim.light_color = tint
+		rim.light_energy = WorldLook.PREVIEW.rim_energy
+		rim.shadow_enabled = false
+		viewport.add_child(rim)
+		made.append(rim)
+	return made
+
+
 func _build_shell() -> void:
 	if _painter == null:
 		_painter = HeroAssets.new()
 	ball = Node3D.new()
 	ball.name = "Shell"
 	_viewport.add_child(ball)
-	var shell: Node = _painter._scene(HeroAssets.SHELLS[def.id])
-	if shell == null:
+	# The game's one loader path (hero_assets.gd fit_shell_into): base, heft layers, variant.
+	_shell_rec = _painter.fit_shell_into(ball, def.id, variant, heft_class, _tints())
+	if _shell_rec.is_empty():
 		_build_primitive_shell()
 		return
-	if (shell.find_child("Core", true, false) as Node3D) == null or (shell.find_child("Pod", true, false) as Node3D) == null:
-		shell.free()
-		_painter._warn_once("scene:" + HeroAssets.SHELLS[def.id],
-			"hero_assets: scene '%s' lacks Core/Pod; keeping primitive fallback" % HeroAssets.SHELLS[def.id])
-		_build_primitive_shell()
-		return
-	for part in ["Core", "Pod"]:
-		var node := shell.find_child(part, true, false) as Node3D
-		node.get_parent().remove_child(node)
-		node.owner = null
-		ball.add_child(node)
-	_core = ball.get_node("Core")
-	_pod = ball.get_node("Pod")
-	shell.free()
-	_paint_shell()
+	_core = _shell_rec.core
+	_pod = _shell_rec.pod
 	_fit_pilot()
+
+
+# Swaps the shell for the current variant, keeping the ball and its pose.
+func _refit_shell() -> void:
+	var at := _core.transform
+	var facing := _pod.rotation.y
+	for node in [_core, _pod]:
+		ball.remove_child(node)
+		node.free()
+	_pilot = null
+	_shell_rec = _painter.fit_shell_into(ball, def.id, variant, heft_class, _tints())
+	if _shell_rec.is_empty():
+		_build_primitive_shell()
+		return
+	_core = _shell_rec.core
+	_pod = _shell_rec.pod
+	_core.transform = at
+	_pod.rotation.y = facing
+	_fit_pilot()
+	_paint_shell()
+
+
+# The card's profile, read from the nearest ancestor that holds one (class_card.gd _profile),
+# so the card shows the equipped variant without the card knowing about variants.
+func _sync_variant() -> void:
+	var node := get_parent()
+	while node != null:
+		var profile = node.get("_profile")
+		if profile != null:
+			var worn := Cosmetics.worn(profile, def.id, "shell")
+			variant = String(Cosmetics.row(worn).get("asset", "")) if worn != "" else ""
+			return
+		node = node.get_parent()
+
+
+func _tints() -> Dictionary:
+	var tints := {"class": def.color}
+	if paint_id != "" and _painter != null:
+		var tint = _painter.paint_tint(def.id, paint_id)
+		if tint != null:
+			tints["paint"] = tint
+	return tints
 
 
 # The game's pilot for this class (hero_assets.gd fit_pilot_into), seated the way
@@ -190,11 +250,9 @@ func _build_primitive_shell() -> void:
 
 
 func _paint_shell() -> void:
-	var tints := {"class": def.color}
-	if paint_id != "":
-		var tint = _painter.paint_tint(def.id, paint_id)
-		if tint != null:
-			tints["paint"] = tint
+	var tints := _tints()
+	if not _shell_rec.is_empty():
+		_shell_rec["tints"] = tints
 	_painter.paint(_core, tints)
 	_painter.paint(_pod, tints)
 	if _pilot != null:

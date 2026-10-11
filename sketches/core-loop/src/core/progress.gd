@@ -36,12 +36,14 @@ var _now := Callable()
 var _world := 0
 var _won := false
 var _rows_on := {}
+var _codex
 
 
-func setup(events, run, profile, now := Callable()) -> void:
+func setup(events, run, profile, now := Callable(), codex = null) -> void:
 	_events = events
 	_run = run
 	_profile = profile
+	_codex = codex
 	_now = now if now.is_valid() else Callable(Time, "get_unix_time_from_system")
 	_rows_on.clear()
 	for id in rows:
@@ -64,6 +66,7 @@ func setup(events, run, profile, now := Callable()) -> void:
 		if arg_names.has(signal_name):
 			_connect(signal_name, arg_names[signal_name])
 	backfill_rewards()
+	backfill_discoveries()
 	if open_met_pilots() > 0 and _profile.can_save and not _profile.save():
 		warnings += 1
 		push_warning("progress: earned pilots opened but not saved: %s" % _profile.last_error)
@@ -83,6 +86,27 @@ func backfill_rewards() -> int:
 			if grant_once("reward:%s:%s" % [id, kind], String(kind), String(reward[kind])):
 				granted += 1
 	return granted
+
+
+# Earns every row on synergy_discovered whose where names one synergy_id the codex already
+# knows (CUSTOMIZE.md section 4), so a trick found before its row existed pays at the next
+# launch. _earn and the settle-once ledger keep it idempotent. Returns the rows earned.
+func backfill_discoveries() -> int:
+	if _profile == null or _codex == null or not _codex.has_method("known"):
+		return 0
+	var earned := 0
+	for id in rows:
+		var row: Dictionary = rows[id]
+		if row.get("on", "") != "synergy_discovered" or _profile.earned(id):
+			continue
+		var where: Dictionary = row.get("where", {})
+		if not where.has("synergy_id") or not _codex.known(String(where["synergy_id"])):
+			continue
+		if _profile.stat(STAT_PREFIX + id) < float(row.get("count", 1)):
+			_profile.set_stat(STAT_PREFIX + id, float(row.get("count", 1)))
+		_earn(id, row)
+		earned += 1
+	return earned
 
 
 # The saved count toward a row (read-only), for the achievements page.
@@ -244,6 +268,11 @@ func _evaluate(id: String, fact: Dictionary) -> void:
 	var where: Dictionary = row.get("where", {})
 	for key in where:
 		if not fact.has(key) or fact[key] != where[key]:
+			return
+	var at_least: Dictionary = row.get("at_least", {})
+	for key in at_least:
+		var value = fact.get(key)
+		if not (value is int or value is float) or float(value) < float(at_least[key]):
 			return
 	var amount := 1.0
 	if row.has("sum"):

@@ -178,9 +178,14 @@ func _assets() -> void:
 	var second_resolver := Cosmetics.new()
 	second_resolver.resolve("trail_salt_skip", {})
 	_t.eq("multiple consumers emit one warning for the same asset", Cosmetics._warning_counts["trail_salt_skip"], 1)
+	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 9): PENDING_ART rows have no art yet and are exempt;
+	# every other non-paint row still resolves to delivered art.
+	var delivered := 0
 	for id in Cosmetics.ids():
-		if Cosmetics.row(id)["slot"] != "paint":
+		if Cosmetics.row(id)["slot"] != "paint" and not Cosmetics.PENDING_ART.has(id):
+			delivered += 1
 			_t.check("every delivered item resolves: " + id, not resolver.resolve(id, paths).is_empty())
+	_t.check("delivered rows were checked", delivered >= 20, str(delivered))
 
 
 func _validation() -> void:
@@ -194,6 +199,10 @@ func _validation() -> void:
 		var bad := Cosmetics.ROWS.duplicate(true)
 		bad[ITEMS[slot]].erase("asset")
 		_t.check("%s without asset is rejected" % slot, not Cosmetics.validate(bad, pilots).is_empty())
+	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 3): the atlas grows to 16 tiles, so 8 is valid and 16 is not.
 	var bad := Cosmetics.ROWS.duplicate(true)
-	bad["decal_fern"]["mask"] = 8
+	bad["decal_fern"]["mask"] = 16
 	_t.check("invalid decal tile rejected", not Cosmetics.validate(bad, pilots).is_empty())
+	var eight := Cosmetics.ROWS.duplicate(true)
+	eight["decal_fern"]["mask"] = 8
+	_t.eq("decal tile 8 is valid", Cosmetics.validate(eight, pilots), [])

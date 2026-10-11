@@ -62,8 +62,10 @@ func _fresh():
 
 
 func _tables() -> void:
-	_t.eq("F1 thirty-six achievements", Achievements.ids().size(), 36)
-	_t.eq("F1 thirty-eight cosmetics", Cosmetics.ids().size(), 38)
+	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows and
+	# their three items; was 36 and 38.
+	_t.eq("F1 thirty-nine achievements", Achievements.ids().size(), 39)
+	_t.eq("F1 forty-one cosmetics", Cosmetics.ids().size(), 41)
 	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty())
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 

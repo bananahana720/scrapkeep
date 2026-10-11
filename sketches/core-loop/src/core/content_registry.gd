@@ -71,8 +71,8 @@ const TABLES := {
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "d50e7ffc23deb805190e89fc74ad42672acba364c2a11a9e3ffb6727e317e8a9",  # 2026-10-08 (wave 10 ST5): one story beat per pilot unlock; was P-R7: twenty customization rewards
-	"cosmetics.ROWS": "c0f10ab88faa487ec1b0e838e547d7c86ebb1e61343536947e6ea3e5ef3f2a0e",  # P-R7: delivered decal mask ids, trails and SPIL-9 paints
+	"achievements.ROWS": "028b78afb8c873159c19c8128f52c513d1e5e29d54ec952a858fe486945d8275",  # 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
+	"cosmetics.ROWS": "26e34e89d31537480501baf914721349d737fe04d233bedd3bc33b1f5a8e0283",  # 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): Downbeat trail, Curtain Call decal tile 9, Till Bell companion skin, all pending art; was c0f10ab8, P-R7: delivered decal mask ids, trails and SPIL-9 paints
 	"event_kinds.ROWS": "1326ff102e432c2c54517ec23e78ea21411cca8f39dc8ef5d740b55ff288c595",  # 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 3e903494, 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",

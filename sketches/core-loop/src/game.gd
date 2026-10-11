@@ -293,7 +293,7 @@ func _physics_process(delta: float) -> void:
 	# builds its own Progress on this bus in its first frame hears each fact once.
 	if not _progress_ready:
 		_progress_ready = true
-		progress.setup(events, run, ctx.profile)
+		progress.setup(events, run, ctx.profile, Callable(), codex)
 	player.drive_basis = camera.yaw_basis()
 	flow.physics_step(delta)
 	if flow.in_play():
