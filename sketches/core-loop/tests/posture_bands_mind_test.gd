@@ -1,4 +1,10 @@
 # smoke: solo timeout=360s (nine stage-5 bot runs in child processes at once; a loaded machine slows them)
+# KNOWN RED (2026-10-11, wave 13 KF4 fix round): the two band checks ("grown breaks it in 25 to 45 s",
+# "small takes at least twice grown's time") fail on stage 5 and stay gating on purpose. Verifier receipt
+# artifacts/local/receipts/named-8fb7ff58fe13-2026-10-11T08-38-56-121Z.json: grown 46.5 s, small/grown 1.40.
+# The miss is in the stage-5 plating and health (alpha_defs.gd), outside this unit's scope: with no driver
+# the ratio is already 1.89. Awaiting a coordinator or owner ruling: a stage-5 tuning unit, then re-measure
+# and re-pin, or a QUARANTINE.tsv row (coordinator-owned). The pins and the camper check pass.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -20,7 +26,10 @@ const T := preload("res://tests/support/t.gd")
 # The Warden is not made a harpoon anchor here: with "harpoon_anchor" on, Ctrl hauls are gated to
 # the stagger and the bot breaks no Warden in 150 s with or without the tilt (2026-10-11, 9 of 9
 # runs capped both ways; posture_bands_test.gd's 2026-10-10 header saw the same stall), so the
-# anchor's own effect on the band waits on the bot. KF4_BANDS_ANCHOR=1 and KF4_BANDS_DRIVER=0 in
+# anchor's own effect on the band waits on the bot (rerun 2026-10-11 fix round, KF4_BANDS_ANCHOR=1: every
+# run that reported, 4 of 9, capped at 150 s unbroken; the other 5 hit the 330 s child cap on a loaded
+# machine). This is a named deviation from mind.md section 7 "the sweep runs with the mechanism on": the
+# latch, drag and throw half of under_island is not in the measured band. KF4_BANDS_ANCHOR=1 and KF4_BANDS_DRIVER=0 in
 # the environment rerun those arms. The alpha stage-5 Warden stands on the ground until KD5 and
 # KF8 hang it under the island, so this is the tilt on the ground, not the mounted fight.
 
