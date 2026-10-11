@@ -19,6 +19,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Counter := preload("res://src/combat/counter.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const Companion := preload("res://src/core/companion.gd")
 const T := preload("res://tests/support/t.gd")
 
 const WARN_LIMIT := 540
@@ -172,6 +173,37 @@ func _probe(kind: String) -> Dictionary:
 	return row
 
 
+# combat.gd's Ram Prow shove skips posture fighters by duck type (has_method("staggered")),
+# and the boss contract reads stagger_left() as a method. A pack kind must carry neither
+# name, so a seated Ram Prow still shoves and prow-staggers it.
+func _prow_checks() -> void:
+	var kind := "hooker"
+	var probe = _spawn(kind)
+	_test.check(kind + " is a counter kind", probe is Counter, "%s on %s" % [kind, probe.get_script().resource_path])
+	_test.check(kind + " carries no posture-fighter names", not probe.has_method("staggered") and not probe.has_method("stagger_left") \
+			and probe.get("stagger_left") == null,
+		"has_method staggered %s, stagger_left %s; property stagger_left %s" % [probe.has_method("staggered"),
+			probe.has_method("stagger_left"), probe.get("stagger_left") != null])
+	probe.free()
+	var saved = _game.ctx.run.companion
+	var c := Companion.new()
+	for id in ["ram_prow", "escape_vent"]:
+		c.acquire(id)
+	var seat_err: String = c.assemble(["ram_prow", "escape_vent"])
+	_game.ctx.run.companion = c.to_dict()
+	_test.check("ram_prow seated", seat_err == "" and Companion.seated(_game.ctx.run.companion, Companion.RAM_BRACE) == "ram_prow",
+		"assemble '%s', seated '%s'" % [seat_err, Companion.seated(_game.ctx.run.companion, Companion.RAM_BRACE)])
+	var enemy = _spawn(kind)
+	enemy.hp = 100000.0
+	await _frames(2)
+	_game.combat.strike(enemy, "ram", 20.0)
+	_test.check(kind + " prow staggered by a seated Ram Prow", _game.combat.prow_staggered(enemy),
+		"combat.prow_staggered(%s) after a ram with ram_prow seated" % kind)
+	if is_instance_valid(enemy):
+		enemy.free()
+	_game.ctx.run.companion = saved
+
+
 func enemy_interruptible(row: Dictionary) -> bool:
 	return bool(row.get("interruptible", false))
 
@@ -236,5 +268,6 @@ func _run() -> void:
 		_test.check("one window for every pack kind", windows.max() - windows.min() <= 1,
 			"window frames min %d max %d (want equal within one physics tick)" % [windows.min(), windows.max()])
 	_test.check("zero stalls", stalls == 0, "%d stalls in the scripted run" % stalls)
+	await _prow_checks()
 	_game.free()
 	quit(_test.verdict())
