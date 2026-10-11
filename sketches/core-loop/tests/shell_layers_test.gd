@@ -1,4 +1,6 @@
 extends SceneTree
+# 2026-10-10 (PD-TARN): the "default with no layers" case no longer leans on Tarn's shipped
+# GLBs, which now have layers. BARE_PILOT's default base is a fixture with no _cN files.
 
 # CUSTOMIZE.md sections 6 and 9: the one loader path for a pilot's shell. The lookup, the
 # fallback table, mounting, visibility by heft class, holder instance-id stability, light
@@ -13,6 +15,9 @@ const T := preload("res://tests/support/t.gd")
 const DIR := "user://shell_layers_test/"
 const PILOT := "pylon_engineer"
 const VARIANT := "shell_fix_var"
+# shell_path only answers for a SHELLS key; the fixture map overrides this one's base, so the
+# real pilot's layers never reach the no-layers case.
+const BARE_PILOT := "tarn"
 const TINT := Color("3f6b4f")
 const CLASS_TINT := Color("2fc6b5")
 
@@ -140,6 +145,8 @@ func _make_fixtures() -> void:
 	_save_shell("var_c3.scn", "VarC3", {"light": true})
 	# var_c4.scn is missing on purpose: the default C4 shows in its place.
 	_save_shell("var_c5.scn", "VarC5")
+	# A default base with no bare_c2 to bare_c5 beside it.
+	_save_shell("bare.scn", "BareC1")
 	# An outfit: a top-level node per bone, one replacing the pilot's Cap.
 	var outfit := Node3D.new()
 	outfit.name = "Outfit"
@@ -266,9 +273,10 @@ func _fit_and_fallback() -> void:
 	gone.core.free()
 	gone.pod.free()
 	# A pilot whose default has no layers shows nothing for those classes, warned once per class.
-	var bare: Dictionary = hero.fit_shell_into(ball, "tarn", "", 5, tints)
-	_t.check("a default with no layers fits its base", not bare.is_empty() and bare.layers[2].core.get_child_count() == 0)
-	_t.check("a missing default layer warns", hero.warning_log.any(func(w): return w.contains("tarn has no class 2 layer")))
+	hero.shell_assets[BARE_PILOT] = DIR + "bare.scn"
+	var bare: Dictionary = hero.fit_shell_into(ball, BARE_PILOT, "", 5, tints)
+	_t.check("a default with no layers fits its base", not bare.is_empty() and bare.core.find_child("PlateBareC1", true, false) != null and bare.layers[2].core.get_child_count() == 0)
+	_t.check("a missing default layer warns", hero.warning_log.any(func(w): return w.contains("%s has no class 2 layer" % BARE_PILOT)))
 	_no_lights_or_overrides("default shell fit", [bare.core, bare.pod])
 	bare.core.free()
 	bare.pod.free()
