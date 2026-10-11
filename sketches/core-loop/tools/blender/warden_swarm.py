@@ -23,8 +23,10 @@ Builds two GLBs:
                                Bones: Root > Hull, Yoke, Ring0..5 > Cell<i> > Shutter<i>_0..2 and
                                Seam<i>; Cell0 > QueenCore. Ring0 is the queen (Cell0), Ring1 6 shuttered cells round
                                it, Ring2 12 shuttered cells (19 shuttered: section 1.1), Ring3 to
-                               Ring5 the lower comb (34 small cells). chunk_shed drops Ring5, the
-                               lowest; KF8 hides a shed ring per chunk by its ring bone.
+                               Ring5 the lower comb (34 small cells). chunk_shed keys the same
+                               fall (drop, drift, spin) on each shed ring bone, SHED_RINGS (Ring5,
+                               Ring4, Ring3, Ring2), with the cells static under it; KF8 enables
+                               only chunk n's ring track, then hides that ring by its ring bone.
   warden_swarm_kit_drones.glb  warden_kit, the drone dressing: SwarmDrones (armature) > eight
                                flat cast triangles, bone Drone<i> each, in the same frame.
 Both carry every section 5 clip by name and length, so KF8 plays one name on both players:
@@ -95,6 +97,9 @@ RINGS = [
 ]
 BALL_AZ = -90.0          # Blender -Y is the ball's side
 GRIP_CELLS = (1, 3, 5)   # Ring1 cells at -90, 30 and 150 degrees
+# The ring each chunk sheds, chunk 1 to 4 (section 3.2: lowest first); chunk_shed keys all four.
+SHED_RINGS = ("Ring5", "Ring4", "Ring3", "Ring2")
+RING_REST = {}           # ring bone -> rest axes (3x3), filled once the armature exists
 YOKE_AZ = (-60.0, 60.0, 180.0)
 SEAM_DIM = -0.05
 SEAM_OFF = -0.13
@@ -420,7 +425,6 @@ def body_pose(clip, t, cells, plates):
     """Per-bone (location in the bone's rest axes, quaternion, scale) at time t of a clip."""
     pose = {}
     L = CLIPS[clip]
-    shed = [c["name"] for c in cells if c["ring"] == "Ring5"]
     for c in cells:
         h = c["h"]
         loc, rot, scale = Vector(), Quaternion(), 1.0
@@ -457,16 +461,10 @@ def body_pose(clip, t, cells, plates):
             else:
                 scale = 1.0 + 0.03 * o
         elif clip == "chunk_shed":
-            if c["name"] in shed:
-                i = shed.index(c["name"])
-                t0 = 0.12 * (i % 4) / 3.0
-                k = max(0.0, t - t0)
-                world = c["axis"] * (1.4 * k) + Vector((0, 0, -0.5 * 9.8 * k * k))
-                loc = local_vector(c["rest"], world)
-                rot = Quaternion((1, 0, 0), 2.5 * k * (1 if i % 2 else -1))
-                seam = SEAM_OFF
-            else:
-                scale = 1.0 + 0.04 * math.exp(-5 * t) * math.sin(math.tau * t / 0.25)
+            # The fall rides the ring bones (below); every cell only shudders and its pinpricks
+            # flicker, so one clip serves whichever ring KF8 lets fall.
+            scale = 1.0 + 0.04 * math.exp(-5 * t) * math.sin(math.tau * t / 0.25)
+            seam = SEAM_DIM + (SEAM_OFF - SEAM_DIM) * math.exp(-4 * t) * abs(math.sin(math.tau * t / 0.2))
         elif clip == "brood_dark":
             seam = SEAM_DIM + (SEAM_OFF - SEAM_DIM) * smooth(t / 0.8)
             scale = 1.0 - 0.015 * smooth(t / 0.8)
@@ -526,7 +524,22 @@ def body_pose(clip, t, cells, plates):
     pose["QueenCore"] = (Vector((0, core_loc, 0)), Quaternion(), Vector((core_scale, core_scale, core_scale)))
     for ring in ["Ring0"] + [r[0] for r in RINGS]:
         pose[ring] = (Vector(), Quaternion(), Vector((1, 1, 1)))
+        if clip == "chunk_shed" and ring in SHED_RINGS:
+            pose[ring] = ring_fall(t, RING_REST[ring])
     return pose
+
+
+def ring_fall(t, rest3):
+    """One shed ring breaking away: it drops under gravity, drifts off the ball's side and
+    spreads a little, spinning about the hive's axis and tumbling. Identical on every shed ring
+    bone (all share the rest axes), so KF8 picks the ring by which track it enables."""
+    k = max(0.0, t - 0.08)
+    world = Vector((0, 1.2 * k, -0.5 * 9.8 * k * k))
+    loc = local_vector(rest3, world)
+    spin = Quaternion((0, 1, 0), 1.6 * k)             # the bone's Y is the hive's axis
+    tumble = Quaternion((1, 0, 0), 0.6 * k)
+    spread = 1.0 + 0.12 * smooth(k / 0.5)
+    return (loc, tumble @ spin, Vector((spread, spread, spread)))
 
 
 def smooth(x):
@@ -807,6 +820,22 @@ def check(path, name):
             problems.append("clip %s missing" % clip)
         elif abs(lengths[clip] - length) > 0.05:
             problems.append("clip %s is %.3f s, want %.2f" % (clip, lengths[clip], length))
+    if name == "warden_swarm":
+        # Each shed ring bone carries the fall in chunk_shed (KF8 enables chunk n's track).
+        node_ids = {nd.get("name"): i for i, nd in enumerate(g["nodes"])}
+        shed = next((a for a in g.get("animations", []) if a["name"] == "chunk_shed"), None)
+        for ring in SHED_RINGS:
+            drop = 0.0
+            for ch in (shed or {}).get("channels", []):
+                if ch["target"].get("node") == node_ids.get(ring) and ch["target"]["path"] == "translation":
+                    acc = g["accessors"][shed["samplers"][ch["sampler"]]["output"]]
+                    view = g["bufferViews"][acc["bufferView"]]
+                    base = bin_start + view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+                    ys = [struct.unpack_from("<fff", data, base + k * view.get("byteStride", 12))
+                          for k in range(acc["count"])]
+                    drop = max(math.dist(ys[0], v) for v in ys)
+            if drop < 2.0:
+                problems.append("chunk_shed moves %s only %.2f m (want a fall on every shed ring)" % (ring, drop))
     if "KHR_lights_punctual" in json.dumps(g.get("extensionsUsed", [])) or any("extensions" in nd and "KHR_lights_punctual" in nd["extensions"] for nd in g["nodes"]):
         problems.append("a light node")
     low = high = 0.0
@@ -875,6 +904,8 @@ def main():
     arm, hive, markers, cells, plates = build_body()
     for c in cells:
         c["rest"] = arm.data.bones[c["name"]].matrix_local.to_3x3()
+    for ring in SHED_RINGS:
+        RING_REST[ring] = arm.data.bones[ring].matrix_local.to_3x3()
     print("KF6_COUNT body tris=%d bones=%d cells=%d shuttered=%d" % (
         common.tris(hive), len(arm.data.bones), len(cells), sum(1 for c in cells if c["shutters"])))
     if a.count_only:

@@ -33,6 +33,8 @@ const POINT_TOLERANCE := 0.05
 const QUEEN_CORE_RADIUS := 1.0
 const SHUTTERED_CELLS := 19
 const GRIPS := 3
+const SHED_RINGS := ["Ring5", "Ring4", "Ring3", "Ring2"]
+const SHED_DROP := 2.0
 
 var failures := 0
 
@@ -112,6 +114,30 @@ func check_clips(label: String, scene: Node3D) -> void:
 				"%.3f s, want %.2f within %.2f" % [length, CLIPS[clip], LENGTH_TOLERANCE])
 			check("%s clip %s moves something" % [label, clip], player.get_animation(clip).get_track_count() > 0,
 				"%d tracks" % player.get_animation(clip).get_track_count())
+
+
+# Section 3.2: each of the four chunks sheds a ring, and the falling ring is the visible cause of
+# the pool's rise. chunk_shed carries the fall on every shed ring bone, so KF8 enables chunk n's.
+func check_shed_rings(scene: Node3D) -> void:
+	var players := scene.find_children("*", "AnimationPlayer", true, false)
+	if players.size() != 1 or not (players[0] as AnimationPlayer).has_animation("chunk_shed"):
+		check("chunk_shed for the shed rings", false, "no chunk_shed clip")
+		return
+	var anim := (players[0] as AnimationPlayer).get_animation("chunk_shed")
+	for ring in SHED_RINGS:
+		var drop := 0.0
+		var found := false
+		for track in anim.get_track_count():
+			if anim.track_get_type(track) != Animation.TYPE_POSITION_3D:
+				continue
+			if String(anim.track_get_path(track)).get_slice(":", 1) != ring:
+				continue
+			found = true
+			var first := anim.position_track_interpolate(track, 0.0)
+			var last := anim.position_track_interpolate(track, anim.length)
+			drop = first.y - last.y
+		check("chunk_shed has a position track on %s" % ring, found)
+		check("chunk_shed drops %s" % ring, drop >= SHED_DROP, "%.2f m down, want at least %.1f" % [drop, SHED_DROP])
 
 
 func check_collider(label: String, scene: Node3D) -> void:
@@ -202,6 +228,7 @@ func _run() -> void:
 			if skel.get_bone_name(i).begins_with("Shutter") and skel.get_bone_name(i).ends_with("_0"):
 				shutters += 1
 		check("shuttered cells", shutters == SHUTTERED_CELLS, "%d, want %d" % [shutters, SHUTTERED_CELLS])
+		check_shed_rings(body)
 	for i in GRIPS:
 		check("grip cell %d" % i, body.find_child("Grip%d" % i, true, false) != null)
 	var top := -INF
