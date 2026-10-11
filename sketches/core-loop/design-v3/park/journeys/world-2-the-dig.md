@@ -2,11 +2,11 @@
 
 Journey board for world 2, wave 13, 10 October 2026. Status: **draft for Andrew's veto list**. It joins the two stage pages and the Warden kind sheet into one ride, beat by beat, from the drop onto the spoil dump to the launch out of the sinkhole. It adds no mechanic. Every fact carries a `(file:line)` cite. A cite with no number is an inference, and it says so.
 
-Cite keys. `3-park_pit.md` and `4-park_sinkhole.md` are `design-v3/park/stages/`. `swarm.md` is `design-v3/wardens/swarm.md`. `PARK.md`, `DESIGN-V3.md` and `ALPHA-PLAN.md` are in `design-v3/`. `BIBLE.md` and `docs/decisions.tsv` are at the repository root. `.gd` files are under `sketches/core-loop/src/`. Picture paths are under the repository root and are gitignored, so they resolve in the candidate worktree `scrapkeep-wt-cand-alpha-w13`.
+Cite keys. `3-park_pit.md` and `4-park_sinkhole.md` are `design-v3/park/stages/`. `swarm.md` is `design-v3/wardens/swarm.md`. `PARK.md`, `DESIGN-V3.md` and `ALPHA-PLAN.md` are in `design-v3/`. `BIBLE.md` and `docs/decisions.tsv` are at the repository root. `.gd` files are under `sketches/core-loop/src/`. Picture paths are under the repository root and are gitignored, so they resolve in the candidate worktree `scrapkeep-wt-cand-alpha-w13`. Cites into `.gd` files, `DESIGN-V3.md`, `ALPHA-PLAN.md` and `docs/decisions.tsv` lie outside the review's sources (the two stage pages, the kind sheet and PARK.md); they await the coordinator's check against those files.
 
 ## The journey in one paragraph
 
-You land on a spoil dump at noon on the north-west corner of a copper pit, and the black headframe already stands over the far rim 1,168 m away (3-park_pit.md:76, :43, :189). You drop the dump's 55 m face, carve an arroyo, grind the old canal and crest the rim, where the whole pit opens below you (3-park_pit.md:201). You take a way down the benches to the floor and fight the swarm remnant's hive as it rides the hoist rope, and the hoist teaches you every rope trick the world will ask for (swarm.md:74-80, :110-120). Moss's bay docks over the reward gates, you take a part, and a gate fires you into the afternoon (bay.gd:11-28, launch.gd:6-10). On a cinder cone's rim a thin green column on the far skyline marks the same Warden's nest (4-park_sinkhole.md:44, :326). You drop under the basalt, ride the dark tubes, burst onto the sinkhole's gallery ring under open sky, and break the brood while the pool rises toward it one chunk at a time (4-park_sinkhole.md:232, swarm.md:89). The pool floods to the ring, the bay docks over the water, and the launch arc carries you up the sinkhole's throat to the Waking and then to world 3 (4-park_sinkhole.md:333, field_notes.gd:25).
+You land on a spoil dump at noon on the north-west corner of a copper pit, and the black headframe already stands over the far rim 1,168 m away (3-park_pit.md:76, :43, :189). You drop the dump's 55 m face, carve an arroyo, grind the old canal and crest the rim, where the whole pit opens below you (3-park_pit.md:201). You take a way down the benches to the floor and fight the swarm remnant's hive as it rides the hoist rope, and the hoist teaches you every rope trick the world will ask for (swarm.md:74-80, :110-120). Moss's bay docks over the reward gates, you take a part, and a gate fires you into the afternoon (bay.gd:11-28, launch.gd:6-10). On a cinder cone's rim a thin green column on the far skyline marks the nest of the same kind, the swarm's brood (4-park_sinkhole.md:44, :326, swarm.md:7-10). You drop under the basalt, ride the dark tubes, burst onto the sinkhole's gallery ring under open sky, and break the brood while the pool rises toward it one chunk at a time (4-park_sinkhole.md:232, swarm.md:89). The pool floods to the ring, the bay docks over the water, and the launch arc carries you up the sinkhole's throat to the Waking and then to world 3 (4-park_sinkhole.md:333, field_notes.gd:25).
 
 ## The world arc
 
@@ -59,9 +59,9 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 - Music: full groove (3-park_pit.md:237).
 - Panel: shares `S3-A`.
 
-**Beat 4. The canal lip grind (rope lesson 1: latch)**
+**Beat 4. The canal lip grind (rope lesson 1 offered: latch)**
 - Where: `canal_lip`, a 380 m grind line at y +3, waymark 2, society `hohokam` (3-park_pit.md:98, :363, :34).
-- You: you bite the lip with the harpoon and grind it east, or roll its channel (3-park_pit.md:201). This is the first `ride_grapple_line` of the world, so the bite is taught here (3-park_pit.md:98).
+- You: you bite the lip with the harpoon and grind it east, or roll its channel (3-park_pit.md:201). This is the first bite on the main line: the canal lip is a `ride_grapple_line` row on route `main`, and the earlier `saguaro_stand` sits only on the optional `west_swing` (3-park_pit.md:98, :338-339, :362). Rolling the channel skips the bite.
 - You see: the haul road bending around the canal, and the headframe's top over the rim ahead, because it shows from every plateau cell (3-park_pit.md:39, :43). This is the Warden's second sighting.
 - Pull: the line sweeps off the canal onto the rim haul ramp at (-300, -330) (3-park_pit.md:78).
 - Pressure: none; no home and no ground-changing event may sit on this row (3-park_pit.md:34).
@@ -69,7 +69,7 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 - Music: the grind adds one held lead note (3-park_pit.md:237).
 - Panel: shares `S3-A`.
 
-> **NEW `S3-A`, the arroyo to the canal.** 1536x1024. Low chase camera at ball height in a dry arroyo half-pipe, 36 m wide, cinder-red banks, saguaros on the lip, at noon with short shadows. The arroyo bends right into a long straight stone-lined canal running level across the plateau, its lip catching hard light; a dirt haul road visibly detours around the canal. Far ahead, just over the pit's rim, the top of a black steel headframe and its two sheave wheels. Heat shimmer. No ball, no figures. References for continuity: park-pit vista-1 (palette, canal, saguaros), park-pit vista-2 (headframe). No text. Green ancient light only, none here. Copper and rust tones, never brass.
+> **NEW `S3-A`, the arroyo to the canal.** 1536x1024. Low chase camera at ball height in a dry arroyo half-pipe, 36 m wide, cinder-red banks, saguaros on the lip, at noon with short shadows. The arroyo bends left into a long straight stone-lined canal running level across the plateau, its lip catching hard light; a dirt haul road visibly detours around the canal. Far ahead, just over the pit's rim, the top of a black steel headframe and its two sheave wheels. Heat shimmer. No ball, no figures. References for continuity: park-pit vista-1 (palette, canal, saguaros), park-pit vista-2 (headframe). No text. Green ancient light only, none here. Copper and rust tones, never brass.
 
 **Beat 5. The rim haul ramp: the reveal**
 - Where: `rim_haul_ramp`, 197 m from (-300, -330) to (-140, -215) (3-park_pit.md:78, :364).
@@ -86,7 +86,7 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 - You: you smash the cache on the way past at cruise, then pick your way down (DESIGN-V3.md:130). Every pilot line splits here (3-park_pit.md:201).
 - You see: the north dive kicker at (-80, -177), the haul road starting at (-140, -215), and the rim zip's cable from (60, -280) down to bench 3 (3-park_pit.md:371, :124, :166). The headframe stays on the far side as the target.
 - Pull: the choice. Bench lips and kickers for the drop lines; the haul road for the floor line; the rim zip for a rope line.
-- Pressure: contraptions `rim_zip` (a 240 m downhill grapple line, rope lesson 2: ride) and `incline_skip` (a 9 s ride down the north wall) (3-park_pit.md:166, :163).
+- Pressure: contraptions `rim_zip` (a 240 m downhill grapple line, rope lesson 2 offered: ride) and `incline_skip` (a 9 s ride down the north wall) (3-park_pit.md:166, :163).
 - Seconds: 24.5 to 30.7 s elapsed; floor line 36.8 s (sums of 3-park_pit.md:193-199).
 - Music: from here, a fill on each kicker launch (3-park_pit.md:239).
 - Panel: shares `park-pit/vista-2.png`.
@@ -95,25 +95,26 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 - Where: `pit` benches 1 to 3, `north_dive`, `east_dive`, `bench2_east_bank`, `tailings_bench_east`, `haul_road_west_1..2` (3-park_pit.md:100-105).
 - You: you dive a bench per two bars and land on the downbeat, because treads are about 75 m wide at 27 m/s (3-park_pit.md:27). Sable takes the east dive kicker, Rivet sprints the bench 1 contour across the tailings pond, Kest glides from the bench 2 west lip, Tarn takes the north dive, Tally surges the bench 2 bank, the Cannon dives to bench 3 east (3-park_pit.md:193-198).
 - You see: turquoise copper stain on the faces, dark burrow markers on the pale pond, the headframe growing on every dive (3-park_pit.md:292, :150).
-- Pull: the next bench lip below, a drop every two bars.
+- Pull: the next bench lip below, a drop every two bars; every way down ends on the floor bowl at the headframe's foot (3-park_pit.md:201). Beat 7 leads straight to Beat 8, the floor approach. The roaming loop 7a below is a side loop off the bench lips, not a link in the chain.
 - Pressure: event `tailings_slump` at clock tier 1 (45 s): a 6 s `ground_slump` telegraph, then the bench 1 to 2 face slumps into a slide ramp over 4 s and opens `tailings_slide` (3-park_pit.md:138). Home `tailings_burrowers` on the pond: slam the 1.6 m marker, which reads from 40 m (3-park_pit.md:150).
 - Seconds: inside the 34.8 to 44.1 s third segment; a direct run meets the slump mid-pit at 45 s (3-park_pit.md:193-198, :144).
 - Music: a fill on each kicker; the slump is a low sub riser into a dust hit (3-park_pit.md:239, :244).
 - Panel: NEW `S3-B`.
 
-> **NEW `S3-B`, the tailings slump.** 1536x1024, two halves split vertically, same camera. Camera on bench 2 of a desert copper pit at noon, looking up at the 20 m bench 1 face streaked turquoise and rust. Left half: a dust curtain lifting along the face and a crawling crack along its foot, the telegraph. Right half, one bar later: the face sheared into one smooth slide ramp down to bench 2, treads intact. The pale flat tailings pond with dark burrow markers on bench 1 above. The black headframe stands on the pit floor at frame edge right. References: park-pit vista-1, park-pit vista-2. No ball, no text. Green ancient light only, none here. Copper never brass.
+> **NEW `S3-B`, the tailings slump.** 1536x1024, two halves split vertically, same camera. Camera on bench 1 of a desert copper pit at noon, at the inner edge of a pale flat tailings pond with dark burrow markers, looking down-slope south-west along the curving 20 m bench 1 to 2 face, streaked turquoise and rust. Left half: a dust curtain lifting along the face and a crawling crack along its foot, the telegraph. Right half, one bar later: the face sheared into one smooth slide ramp down to bench 2, treads intact. The black headframe stands on the far pit floor at frame centre-left. References: park-pit vista-1, park-pit vista-2. No ball, no text. Green ancient light only, none here. Copper never brass.
 
-**Beat 8. Mid-pit homes, winzes and Kest's cage (the roaming beat)**
+**Side loop 7a. Mid-pit homes, winzes and Kest's cage (off the chain)**
 - Where: `winze_west`, `winze_north`, `winze_east`, `adit_east`, `conveyor_gallery`, `deep_adit`, `switchback_camp` (3-park_pit.md:106-112, :116).
 - You: off the measured lines, you slam a winze cap to drop one bench, clear a home, ride the conveyor gallery, or free Kest from the cage on bench 4 west (3-park_pit.md:126, :85). The rescue unlocks Kest (ALPHA-PLAN.md:194).
 - You see: white unpooled lamp lenses on the faces and a bright lure bloom in a winze collar's noon shadow (3-park_pit.md:185, :152). Kest's cage at (-150, 110) sits about 54 m from the altar's lit ring at (-170, 60), so the altar signposts the cage (inference from 3-park_pit.md:84-85).
-- Pull: a home to clear or a cap to slam. Homes `winze_lamps` (-200, 40) and `adit_drill_crews` (215, 30) (3-park_pit.md:82).
+- Pull in, from the bench lips of Beat 7: the altar's lit ring on bench 4, seen across the pit (3-park_pit.md:87), and the bright lure bloom in the `winze_west` collar's noon shadow (3-park_pit.md:152). Homes to clear on the way: `winze_lamps` (-200, 40) and `adit_drill_crews` (215, 30) (3-park_pit.md:82).
+- Pull out, back to Beat 8: every way down ends on the floor bowl at the headframe's foot, and each winze cap drops you one bench closer to it (3-park_pit.md:201, :126). The headframe stays in view over the floor (inference: it stands 120 m tall on the floor, 3-park_pit.md:43).
 - Pressure: `winze_lamps`, ram at tier 2, 50 hp; `adit_drill_crews`, smash 80 hp, drop on the rig from bench 2 (3-park_pit.md:151-152). At clock tier 2 (90 s): `bench3_drill_barge` with a 10 s telegraph opens `barge_ramp`, and `sump_flood` with a 6 s telegraph closes `sump_floor` (3-park_pit.md:139-140). Tier 3 `deep_adit_wakes` needs veto item 16 (3-park_pit.md:134, :141).
 - Seconds: not on a measured line; no number given.
 - Music: barge, Brindle's anvil and brass; flood, a rising filtered pad (3-park_pit.md:244).
 - Panel: shares `S3-B` (bench faces) and `park-pit/vista-2.png` (conveyor gallery); no new panel.
 
-**Beat 9. The floor approach**
+**Beat 8. The floor approach**
 - Where: `pit` floor dish, 260 m across; `haul_road_west_3..5`, `floor_sump`, `hoist_house` (3-park_pit.md:27, :101, :113-114).
 - You: you land on the floor bowl and pump it for speed toward the collar. Kest rides `dust_devil_floor` for height, the Cannon recoil-turns to line up a ram (3-park_pit.md:209, :212).
 - You see: the headframe filling the frame, the hive low at the collar with its green seams lit, a drone rack forming on the floor (3-park_pit.md:294). Fourth sighting. The edge marker points at the Warden whenever it is off screen (edge_markers.gd:8-12).
@@ -125,7 +126,7 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 
 > **NEW `S3-C`, the landmark approach.** 1536x1024. Camera in the air just off a bench 2 lip kicker of a desert copper pit at noon, looking down and south across bench 3 to the round dusty floor. A 120 m black riveted steel A-frame headframe fills the right half of frame, two sheave wheels at top, a tipple deck 40 m up, a brick hoist house on its left. Inside the frame a hive of hexagonal cells in dull petrol enamel hangs low at the shaft collar, green pinpricks in its seams; a loose rack of small flat triangle drones forms on the floor before it. References: park-pit vista-3, warden-swarm warden-2, warden-swarm warden-1. No ball, no text. Green ancient light only. Copper never brass.
 
-**Beat 10. The headframe Warden: ride the hoist (rope lessons 3 to 5: fire, drag, shrug)**
+**Beat 9. The headframe Warden: ride the hoist (rope lessons 3 to 5 offered: fire, drag, shrug)**
 - Where: the floor dish round the collar; the hive on the hoist rope, anchor [0, -96, 255] to [0, -66, 255] (3-park_pit.md:335).
 - You: in the 4 s low dwell you ram the hive or scatter its drone rack at cruise for 25 posture (swarm.md:74, :99). In the 4 s high dwell you latch a green-rimmed grip cell on its crown, hang under it and fire (swarm.md:76, :110-112). Ride the 2 s rise and the hoist drags you up at 15 m/s and throws you over the tipple deck rail (swarm.md:75, :80). Once a cycle three drones walk your rope and cut it on the pulse; you keep your speed plus the 10 m/s lift (swarm.md:116).
 - You see: the hive going up and down inside the frame; the snip as three drones on your rope, the rope's green flickering (swarm.md:116, :132).
@@ -135,7 +136,7 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 - Music: the swarm's G5 buzz over the band, locking into D5 G5 C6 F6 on each pulse; the snip bends G5 up to C6; the winch whine is tuned to G (3-park_pit.md:241, swarm.md:154, :159).
 - Panel: `artifacts/local/alpha/push/w13/concepts/codex/park/warden-swarm/warden-2.png` (observed: the hive hanging under the deck in the frame, drones over the floor) with `artifacts/local/alpha/push/w13/concepts/codex/park/park-pit/vista-3.png` for scale (observed: the hive low at the collar, a green ring in the shaft, the hoist house left). The rope-and-snip moment has no picture; it is the climax panel `C-A` below.
 
-**Beat 11. The stagger and the drop from the tipple deck**
+**Beat 10. The stagger and the drop from the tipple deck**
 - Where: `tipple_deck` at y -60, 40 m above the collar (3-park_pit.md:43, :384).
 - You: at 100 posture the hoist brakes and the hive falls to the collar in 1.0 s with its queen open for 4 s (swarm.md:79). Leave the deck within 1 s and the 2.9 s fall lands you on the open queen; or stay latched from the high dwell and ride the brake-drop down; or slam the queen from the floor (swarm.md:79, :120, 3-park_pit.md:47). One chunk per stagger, four chunks (swarm.md:57).
 - You see: shutters blown open and the queen swollen and blazing green; each lost chunk is a ring of cells falling into the shaft (swarm.md:133-134).
@@ -147,7 +148,7 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 
 > **NEW `S3-D`, the drop from the tipple deck.** 1536x1024. Point-of-view shot from the edge of a riveted steel tipple deck 40 m up inside a black A-frame headframe, looking straight down at noon. Far below, at the square shaft collar on a dusty pit floor, a hive of hexagonal petrol-enamel cells has dropped and stopped, every iris shutter blown open, the tall queen cell in the middle swollen and blazing green. The hoist rope runs slack from above into the frame. Stepped bench walls ring the floor; short hard shadows. References: park-pit vista-3, warden-swarm warden-4 (the open cells), warden-swarm warden-1. No ball, no text. Green ancient light only. Copper never brass.
 
-**Beat 12. The break, the bay and the gates**
+**Beat 11. The break, the bay and the gates**
 - Where: gate slot (60, 280) facing +z; bay dock (60, 300), behind and above the gate inside the gates' 110 m hold (3-park_pit.md:49, reward_gates.gd:36).
 - You: the hive splits into falling cells and the plate says "Roll through a gate" (swarm.md:136, DESIGN-V3.md:138). Ride the steam cradle up to Moss's bay if you want the practice yard, the lap or a companion change, or roll straight on (bay.gd:11-28, DESIGN-V3.md:248). Roll through one of two arches to take its part; the gate fires you up a rail of rings (reward_gates.gd:11-14, launch.gd:6-10).
 - You see: the bay's hover barge over the gates, the headframe dark behind it, the launch arc rising toward the south-west (3-park_pit.md:297).
@@ -157,7 +158,7 @@ Fixed noon, heat shimmer always, short straight shadows so the benches read as s
 - Music: the chord breaks into detuned notes and stops; the band's next downbeat is the drop (3-park_pit.md:243).
 - Panel: NEW `S3-E`.
 
-> **NEW `S3-E`, the bay over the gates.** 1536x1024. Wide shot from the pit floor at noon, looking south past a dark, still black steel headframe whose hive is gone. In the foreground two roll-through reward arches stand on the dusty floor. Above and behind them a hover barge, a small floating workshop with a banked rim track and a steam cradle beside the arches, docks over the gates. A rail of hoops arcs up out of the pit toward the south-west sky. Stepped benches ring the floor. References: park-pit vista-3, park-pit vista-2. No ball, no figures, no text. Green ancient light only, none lit here. Copper never brass.
+> **NEW `S3-E`, the bay over the gates.** 1536x1024. Wide shot from the south edge of a desert copper pit's floor at noon, looking north: two roll-through reward arches in the foreground, and a hover barge, a small floating workshop with a banked rim track and a steam cradle, docked just above them. Behind the barge a dark, still black steel headframe whose hive is gone. A rail of hoops arcs up out of frame left toward the south-west. Stepped benches ring the floor. References: park-pit vista-3, park-pit vista-2. No ball, no figures, no text. Green ancient light only, none lit here. Copper never brass.
 
 ## Stage 4: The Dig, the sinkhole, the line
 
@@ -225,7 +226,7 @@ Fixed afternoon with the sun in the south-west; underground, light comes in only
 - Music: the filter half-opens and the reverb widens (4-park_sinkhole.md:273).
 - Panel: NEW `S4-B`.
 
-> **NEW `S4-B`, the great room junction.** 1536x1024. Wide shot inside a lava-tube cavern 90 m across, a smooth banked basalt bowl under a dark ribbed roof, lit only by the dim sky colour from two small roof skylights and white unpooled miners' lamps. Five tube mouths open high round the upper wall where the routes arrive; three lower tube mouths fall away on the far side. A rusted ore hauler machine sits near the bowl's centre. A miners' cage lift and a capped shaft in the floor. Cool cave mist. References: park-sinkhole vista-2 (tube shapes, timber), park-sinkhole vista-1 (palette). No ball, no text, no light shafts or pools. Green ancient light only, none here. Copper never brass.
+> **NEW `S4-B`, the great room junction.** 1536x1024. Wide shot inside a lava-tube cavern 90 m across, a smooth banked basalt bowl under a dark ribbed roof, lit only by the dim sky colour from two small roof skylights and white unpooled miners' lamps. Three tube mouths open high round the upper wall: the main tube, a flooded gallery and a timbered drift; three lower tube mouths fall away on the far side. A rusted ore hauler machine sits near the bowl's centre. A miners' cage lift and a capped shaft in the floor. Cool cave mist. References: park-sinkhole vista-2 (tube shapes, timber), park-sinkhole vista-1 (palette). No ball, no text, no light shafts or pools. Green ancient light only, none here. Copper never brass.
 
 **Beat 7. The lower tubes and the cave-in**
 - Where: `main_tube_lower_1..5`, `east_haulage_1..4`, `west_breakthrough_1..4`, `west_tube_roof` (4-park_sinkhole.md:117-120).
@@ -255,7 +256,7 @@ Fixed afternoon with the sun in the south-west; underground, light comes in only
 
 **The approach.** The world's last Warden is the brood on stage 4's sinkhole mounting (4-park_sinkhole.md:46). You first read it from the cone rim as the green column, then from the channel, then through the lower tube's mouth as the nest on the far wall (beats 1, 3 and 8 above). Its harpoon hardpoints are two gallery-ring posts 20 m either side of the nest at y -96 and one grip cell on the nest's crown, each with a thick green rim (swarm.md:41, :110).
 
-**Where the rope was taught.** Latch, on the canal lip (stage 3 beat 4). Ride, on the rim zip and the saguaro stand (stage 3 beats 2 and 6). Fire from the line, drag and shrug, on the headframe's high dwell, rise and snip (stage 3 beat 10). Refresher, on the east drift's timber sets (stage 4 beat 5). Drag does not return here: the nest never moves and the pool rises under you instead (swarm.md:113).
+**Where the rope was offered.** Every lesson below is offered, none is required: the canal lip can be rolled instead of bitten, the rim zip and the saguaro stand are optional detours, and the floor line wins the headframe with no harpoon (3-park_pit.md:201, :166, :339, :47, :199). Latch, offered on the canal lip (stage 3 beat 4). Ride, offered on the rim zip and the saguaro stand (stage 3 beats 2 and 6). Fire from the line, drag and shrug, offered on the headframe's high dwell, rise and snip (stage 3 beat 9). Refresher, offered on the east drift's timber sets (stage 4 beat 5). Drag does not return here: the nest never moves and the pool rises under you instead (swarm.md:113). The first latch the world requires is here, at the brood's first stagger (gaps item 12).
 
 **Beat C1. Engage on the ring**
 - Where: `gallery_ring` and `caisson_bowl`; nest anchor [0, -99, 388], 21 m above the pool floor at y -120 (4-park_sinkhole.md:46, :369).
@@ -345,7 +346,7 @@ Fixed afternoon with the sun in the south-west; underground, light comes in only
 
 **Beat C9. The break and the exit**
 - Where: the pool flooded to the ring at y -100; gate (0, 305) facing the arriving ball; bay dock (0, 320) (swarm.md:89, 4-park_sinkhole.md:50, :369).
-- You: the dome splits along its seams and the drones drop as dead triangles (swarm.md:136). The plate says "Roll through a gate" (DESIGN-V3.md:138). You take a part and the gate fires you up a rail of rings out of the sinkhole's throat (reward_gates.gd:11-14, launch.gd:6-10, 4-park_sinkhole.md:333). Each world's last stage launches you into its boss arena: the Waking, then world 3 (field_notes.gd:25). You carry the parts you took, the scrap you grew and the Cogs you earned; Kest is unlocked if you freed the cage (ALPHA-PLAN.md:192, :194).
+- You: the dome splits along its seams and the drones drop as dead triangles (swarm.md:136). The plate says "Roll through a gate" (DESIGN-V3.md:138). You take a part and the gate fires you up a rail of rings out of the sinkhole's throat (reward_gates.gd:11-14, launch.gd:6-10, 4-park_sinkhole.md:333). Each world's last stage launches you into its boss arena: the Waking, then world 3 (field_notes.gd:25). The brood is world 2's climax; the Waking is an interlude after it, not part of that climax (veto call 8; PARK.md:383 names the Waking only as a boss arena). You carry the parts you took, the scrap you grew and the Cogs you earned; Kest is unlocked if you freed the cage (ALPHA-PLAN.md:192, :194).
 - You see: flat bright water, the nest dark and dripping, the column dead, the bay's barge docked over the water (4-park_sinkhole.md:333, swarm.md:48).
 - Pull: the gate arches, then the arc up the open throat.
 - Pressure: none for 20 s (PARK.md:313).
@@ -400,13 +401,14 @@ The plot tool draws each route from the appendix's `routes[].via` row ids, at ea
 ## Gaps and calls
 
 **Calls made under the creative charge (veto list).**
-1. The rope is taught across stage 3: latch on the canal lip, ride on the rim zip and saguaros, fire, drag and shrug on the headframe. Stage 4's east drift timber sets are the refresher.
+1. The rope is offered across stage 3, never required there: latch on the canal lip, ride on the rim zip and saguaros, fire, drag and shrug on the headframe. Stage 4's east drift timber sets are the refresher. The first required latch is the brood's first stagger (gaps item 12).
 2. Under the stage 4 roof, the edge-marker chevron is the Warden's signpost (edge_markers.gd:8-12). No new light: the lamp veto holds (4-park_sinkhole.md:210-216).
 3. Kest's cage is signposted by the altar's lit ring 54 m away; no new marker (3-park_pit.md:84-85, :87).
 4. Stage 4 keeps no rescue: Kest is the Dig's one rescue (ALPHA-PLAN.md:194). This answers 4-park_sinkhole.md:351 for this board.
 5. The bay is the world's breather: opt-in, no event for 20 s, companion changes at the intermission (bay.gd:12-13, PARK.md:313, DESIGN-V3.md:248).
 6. Tier 2 events and weather may fire during either fight, because direct runs arrive at 62 to 79 s and tier 2 starts at 90 s. They stay as written: every site is outside the engage ring (3-park_pit.md:144, 4-park_sinkhole.md:164-170).
 7. The stage 4 exit goes to the Waking's arena, then to world 3 (field_notes.gd:25). The park pages do not place it (PARK.md:383).
+8. The brood is world 2's climax and endpoint; the Waking is an interlude after it, not part of world 2's climax. The pages name the Waking only as one of the boss arenas (PARK.md:383), so this is a call for Andrew to confirm or veto.
 
 **What the pages did not settle.**
 1. Per-beat seconds. The pages give three segment times per line, so beats inside one segment share a time (3-park_pit.md:193-199, 4-park_sinkhole.md:224-230). KD3 and KD4's bots should log a time at each beat's row.
@@ -420,3 +422,5 @@ The plot tool draws each route from the appendix's `routes[].via` row ids, at ea
 9. Picture mismatches. Stage 4 vista-1 shows red sandstone where the page says black basalt (4-park_sinkhole.md:326). Stage 3 vista-1 shows the headframe standing in the pit centre, not over the far rim (3-park_pit.md:290). Swarm.md's veto item 1 moves the finisher to the tipple deck while PARK.md:430 still says the sheave wheel (swarm.md:83).
 10. The rescue has no schema home (3-park_pit.md:315). Tier 3 events need veto item 16 and never fire without it (3-park_pit.md:134, 4-park_sinkhole.md:161).
 11. The bay and the launch have no music cue of their own beyond the break's drop (3-park_pit.md:243). The board leaves the band running and gives the bay its jukebox (bay.gd:25-27).
+12. No rope lesson is required before the brood. The canal lip can be rolled, the rim zip and the saguaro stand are detours, and the floor line wins the headframe without a harpoon (3-park_pit.md:201, :166, :339, :47, :199). The first required latch is the brood's first stagger from the line: the nest sits 21 m above the first pool floor, so early staggers come from the line and the pulse (swarm.md:87, :93). A player can meet that latch cold. Back to the stage page: decide whether one stage 3 rope moment becomes required, or whether the brood's ring posts teach it on the spot.
+13. Several load-bearing cites point outside the stage pages, the kind sheet and PARK.md: `edge_markers.gd` (the only Warden signpost under the stage 4 roof, call 2), `field_notes.gd` (the Waking), `ALPHA-PLAN.md` (Kest, the Cogs), `bay.gd`, `launch.gd`, `reward_gates.gd` and `DESIGN-V3.md`. The coordinator should confirm each against its source file before Andrew reads the board.
