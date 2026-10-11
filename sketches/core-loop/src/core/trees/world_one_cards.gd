@@ -5,7 +5,7 @@ extends RefCounted
 # without a row (and every card with the flag off) reads exactly as before. Source:
 # design-v3/research/build-systems/BUILD-SYSTEMS.md, the bold line of each node. Sable, Kest,
 # Rivet, Tarn, Tally and remembered cannon rows join this table in their own units; nothing else
-# needs to change.
+# needs to change. Depth-3 and depth-4 ultimate cards read SET_PIECE_LINES below instead.
 
 const ROWS := {
 	# Sable, S1 to S6.
@@ -50,20 +50,25 @@ const ROWS := {
 	"c_spare_kick": "Bank two recoil kicks.",
 	"c_spare_plate": "Bank two plates.",
 	"c_rush_shock": "Rush landings throw a shockwave.",
-	# Depth-3 and depth-4 ultimate cards (SKILL-BAR section 4, "Tree depths 3 and 4"): wave
-	# P-B unit B6 seeds one marked block per pilot; each P-C unit fills its own, one line a node
-	# in the voice above, and edits nothing else in this table.
-	# --- P-C Sable ultimate cards ---
+}
+
+# The second line of a depth-3 or depth-4 ultimate card (SKILL-BAR section 12, item 5), keyed by
+# ultimate id or by the pilot's ult_ knob. Unlike ROWS it shows at every depth and with the
+# world-one flag on or off, and the node keeps its own `effect`. Wave P-B unit B6 seeds one
+# marked block per pilot; each P-C unit fills its own, one line a key in the voice of ROWS, and
+# edits nothing else in this table.
+const SET_PIECE_LINES := {
+	# --- P-C Sable set piece lines ---
 	# --- end Sable ---
-	# --- P-C Rivet ultimate cards ---
+	# --- P-C Rivet set piece lines ---
 	# --- end Rivet ---
-	# --- P-C Kest ultimate cards ---
+	# --- P-C Kest set piece lines ---
 	# --- end Kest ---
-	# --- P-C Tarn ultimate cards ---
+	# --- P-C Tarn set piece lines ---
 	# --- end Tarn ---
-	# --- P-C Tally ultimate cards ---
+	# --- P-C Tally set piece lines ---
 	# --- end Tally ---
-	# --- P-C Cannon ultimate cards ---
+	# --- P-C Cannon set piece lines ---
 	# --- end Cannon ---
 }
 
@@ -90,3 +95,19 @@ static func effect_line(node: Dictionary, world_one: bool, shell: bool) -> Strin
 	if world_one and ROWS.has(id):
 		return String(ROWS[id])
 	return String(node.get("effect", ""))
+
+
+# The set piece line for a node: its swapped-in ultimate id first, then any ult_ knob it sets.
+# "" when none is seeded. Independent of the world-one flag.
+static func set_piece_line(node: Dictionary, table: Dictionary = SET_PIECE_LINES) -> String:
+	var swap = node.get("swap", {})
+	if swap is Dictionary and swap.has("ultimate"):
+		var id := String(swap["ultimate"])
+		if table.has(id):
+			return String(table[id])
+	var knob = node.get("knob", {})
+	if knob is Dictionary:
+		for k in knob:
+			if String(k).begins_with("ult_") and table.has(String(k)):
+				return String(table[String(k)])
+	return ""
