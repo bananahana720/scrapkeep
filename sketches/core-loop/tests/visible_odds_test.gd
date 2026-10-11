@@ -106,6 +106,13 @@ func _row() -> void:
 		_t.near("%s: shares sum to one" % name, sum, 1.0, 0.0001)
 
 
+# The table's rarities that hold at least one part for the run's class, derived from the pool
+# itself and not from the code under test.
+func _avail(table: Array) -> Array:
+	var class_id: String = _game.ctx.run.class_id()
+	return ItemGen.resolve_rarities(table).filter(func(r): return not Parts.offer_pool(class_id, [r]).is_empty())
+
+
 func _tolerance(share: float) -> float:
 	return maxf(TOLERANCE_FLOOR, TOLERANCE_SD * sqrt(share * (1.0 - share) / float(DRAWS)))
 
@@ -158,7 +165,15 @@ func _frequencies() -> void:
 				continue
 			var r := _rarity_of_id(String(ids[0]))
 			rolled[r] = int(rolled.get(r, 0)) + 1
-		_check_frequencies("%s roll" % name, rolled, odds)
+		# What Parts.roll can deliver: the table's rarities that hold a part for this class. A rarity
+		# with no part is not shown; a table with none shows nothing and rolls nothing.
+		var live := _avail(rarities)
+		var shown: Array = OddsReadout.odds_for(rarities, class_id)
+		_t.check("%s: roll table shows what the pool holds %s" % [name, live], live.is_empty() == shown.is_empty() and (live.is_empty() or _matches_row(shown, live)), var_to_str(shown))
+		if live.is_empty():
+			_t.eq("%s: an empty table rolls nothing" % name, rolled.size(), 0)
+		else:
+			_check_frequencies("%s roll" % name, rolled, shown)
 
 
 func _rarity_of_id(part_id: String) -> String:
@@ -194,9 +209,11 @@ func _shelf() -> void:
 	var shop = _game.ctx.build.shop
 	shop.enter()
 	_t.check("the shelf is stocked", shop.shelf.size() == Shop.SHELF_SIZE, str(shop.shelf.size()))
-	var want := ItemGen.odds(Shop.SHELF_RARITIES)
+	var live := _avail(Shop.SHELF_RARITIES)
+	_t.eq("the shelf table holds both its rarities", live, Shop.SHELF_RARITIES)
+	var want := ItemGen.odds(live)
 	for entry in shop.shelf:
-		_t.check("shelf record %s carries its odds" % entry["part_id"], entry.has("odds") and _matches_row(entry["odds"], Shop.SHELF_RARITIES), var_to_str(entry.get("odds", "none")))
+		_t.check("shelf record %s carries its odds" % entry["part_id"], entry.has("odds") and _matches_row(entry["odds"], live), var_to_str(entry.get("odds", "none")))
 	for offer in shop.shelf_offers():
 		_t.eq("offer %d odds equal the shelf table's" % offer["index"], offer.get("odds", []), want)
 		_t.eq("offer %d odds text is the readout's" % offer["index"], offer.get("odds_text", ""), OddsReadout.text(want))
@@ -204,9 +221,9 @@ func _shelf() -> void:
 	_t.check("the top shelf has a part", not top.is_empty(), var_to_str(top))
 	if not top.is_empty():
 		var table: Array = Shop.TOP_RARITIES if Parts.rarity_of(top["part_id"]) in Shop.TOP_RARITIES else Shop.SHELF_RARITIES
-		_t.check("the top shelf carries the odds of the table it drew from", _matches_row(top.get("odds", []), table), var_to_str(top.get("odds", "none")))
+		_t.check("the top shelf carries the odds of the table it drew from", _matches_row(top.get("odds", []), _avail(table)), var_to_str(top.get("odds", "none")))
 	shop.reroll()
-	_t.check("a rerolled shelf carries odds too", shop.shelf.all(func(entry): return entry.has("odds") and _matches_row(entry["odds"], Shop.SHELF_RARITIES)), "reroll")
+	_t.check("a rerolled shelf carries odds too", shop.shelf.all(func(entry): return entry.has("odds") and _matches_row(entry["odds"], live)), "reroll")
 
 
 func _paid(kind: String, pay: Dictionary, seed_value: int) -> Dictionary:
@@ -235,7 +252,8 @@ func _stands() -> void:
 				rows += 1
 				var rarity := _rarity_of_id(part)
 				var table: Array = shown.get("rarities", [])
-				var ok := part != "" and rarity in table and _matches_row(shown.get("odds", []), table) \
+				var expected: Array = table if String(shown.get("named", "")) != "" else _avail(table)
+				var ok := part != "" and rarity in table and _matches_row(shown.get("odds", []), expected) \
 						and String(shown.get("text", "")) == OddsReadout.text(shown.get("odds", []))
 				if not ok:
 					_t.check("%s %s seed %d: shown table holds the paid rarity" % [kind, var_to_str(pay), i], false, "paid %s (%s), shown %s" % [part, rarity, var_to_str(shown)])
@@ -259,6 +277,10 @@ func _readout() -> void:
 	_t.check("the readout names each rarity and its percent", "COMMON" in text and "RARE" in text and "%d%%" % roundi(float(odds[0]["share"]) * 100.0) in text, text)
 	_t.check("a zero-weight rarity is not listed", not "EVOLVED" in OddsReadout.text(ItemGen.odds(["common", "evolved"])), OddsReadout.text(ItemGen.odds(["common", "evolved"])))
 	_t.eq("an empty table reads empty", OddsReadout.text([]), "")
+	# A table whose rarity holds no part shows only the rarities that do (relic holds none here).
+	var class_id: String = _game.ctx.run.class_id()
+	_t.eq("a rarity with no part is not shown", OddsReadout.odds_for(["rare", "relic"], class_id).map(func(row): return row["rarity"]), _avail(["rare", "relic"]))
+	_t.eq("a table with no part shows nothing", OddsReadout.odds_for(["evolved"], class_id), [])
 	for row in OddsReadout.rows(odds):
 		_t.check("readout row %s has a colour, a label and a percent" % row["rarity"], row.has("color") and String(row["label"]) != "" and int(row["percent"]) > 0, var_to_str(row))
 
