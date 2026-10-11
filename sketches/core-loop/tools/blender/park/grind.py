@@ -191,7 +191,7 @@ def canal_body(s):
         for side in (-1, 1):
             # Berm core: sandstone fill and red slickrock toe bands, the crest inset 4 cm under the coping.
             ring = [(side * x, y) for x, y in [(c["floor"], c["bottom"]), (c["toe"], c["bottom"]), (c["crest_out"], c["top"] - 0.04), (c["crest_in"], c["top"] - 0.04), (c["floor"], 0.0)]]
-            solid(s, ring if side > 0 else ring[::-1], z0, z1, tone(SAND, SLICK, k + (side > 0), 0.28))
+            solid(s, ring if side > 0 else ring[::-1], z0, z1, tone(SLICK, SAND, k + (side > 0), 0.35))
             # Coping: cream cut stone, 2 cm joints between bays, flush at the collider's top.
             xa, xb = sorted((side * c["crest_in"], side * c["crest_out"]))
             block(s, xa, xb, c["top"] - 0.04, c["top"], z0 + 0.02, z1 - 0.02, tone(CREAM, SAND, k * 3 + (side > 0), 0.2))
@@ -344,14 +344,14 @@ def flume_detail1(s):
     f = FLUME
     for z in flume_bents():
         for side in (-1, 1):
-            for dy in (4.6, 6.0, 7.2):
+            for dy in (4.8, 6.6):
                 frac = (dy - f["under"]) / (f["top"] - f["under"])
                 stud(s, (side * (f["base_out"] + 0.06 + (f["crest_out"] - f["base_out"]) * frac), dy, z + 0.2), (0, 0, 1), 0.06, 0.04, tone(IRON, DARK, int(z)))
         for sx in (-3.7, 3.7):
             stud(s, (sx, f["under"] - 0.3, z + 0.35), (0, 0, 1), 0.07, 0.05, tone(IRON, DARK, 3))
     for k in range(1, int(LENGTH / 3.0)):
         z = k * 3.0
-        if k % 2 == 0:
+        if k % 4 == 0:
             for side in (-1, 1):
                 xa, xb = sorted((side * (f["crest_in"] + 0.15), side * (f["crest_out"] - 0.15)))
                 block(s, xa, xb, f["top"], f["top"] + 0.012, z - 0.1, z + 0.1, tone(IRON, VARNISH, k))
@@ -436,7 +436,7 @@ def pen_detail1(s):
         z = k * p["flange"]
         for i in range(n):
             a = math.pi / n + math.tau * i / n
-            if i % 3 or math.sin(a) > 0.82:
+            if i % 4 or math.sin(a) > 0.82:
                 continue
             for dz in (-0.14, 0.14):
                 stud(s, (math.cos(a) * (p["r"] + 0.16), p["cy"] + math.sin(a) * (p["r"] + 0.16), z + dz), (0, 0, dz), 0.07, 0.05, tone(IRON, DARK, k + i))
