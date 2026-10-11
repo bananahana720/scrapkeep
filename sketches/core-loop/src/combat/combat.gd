@@ -21,6 +21,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
+const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Sight := preload("res://src/combat/sight.gd")
@@ -203,6 +204,9 @@ var _line_load := {}
 # The last line skill that fired: {id, on, target, at, fraction, mult}. Read only outside.
 var last_line := {}
 var sticky
+# The device ledger (devices.gd): per-kind caps, refills and the leash for sticky and mini
+# charges and the Sentry Post. Cleared with the fight. Read only outside.
+var devices
 # Rivet's Run and Gun wear trail (world one, --wear=on); wear_trail.gd.
 var wear_trail
 # The last gauge release: {id, fraction, geometry}, the geometry exactly as drawn.
@@ -232,6 +236,9 @@ var _spring_until := -1.0
 # dir, length, half_width, friction, hold, until}), both cleared on run start and stage entry.
 # escape_acts counts acts this run, and escape_acted fires once per act.
 signal escape_acted(piece: String, style: String)
+# The companion's driver rows (Companion.DRIVERS); every module act asks Companion.pick()
+# against this table, so a test or the lab can reorder rows without a code edit.
+var drivers: Dictionary = Companion.DRIVERS
 var escape_acts := 0
 var escape_lane := {}
 var _escape := {}
@@ -297,6 +304,8 @@ func setup(ctx_ref) -> void:
 	sticky = Sticky.new()
 	sticky.name = "StickyCharges"
 	ctx.root.add_child(sticky)
+	devices = Devices.new()
+	sticky.ledger = devices
 	wear_trail = WearTrail.new()
 	wear_trail.setup(ctx, effects, _floor_at)
 	wear_trail.deal = _trail_deal
@@ -551,32 +560,39 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 # The primer_coil's PRIMER_COIL_MULT is applied through _strike_mult, before this consumes
 # the prime; _result stays for the companion tests that pass one and is not changed.
 func _primer_hit(enemy: Node3D, kind: String, cls: String, _result := {}) -> String:
+	var row := _primer_driver(enemy, kind, cls)
+	var id := enemy.get_instance_id()
+	match String(row.get("act", "")):
+		"prime":
+			var live: bool = float(_primed.get(id, -1.0)) > _clock
+			_primed[id] = _clock + Companion.PRIMER_SECONDS
+			if not live:
+				effects.spark(enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
+		"consume":
+			_primed.erase(id)
+			effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
+			return Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
+	return ""
+
+
+# The primer driver row a hit of this kind and source class picks on this enemy now, or {}.
+# The trigger is "weapon" for a weapon hit, "contact" for a ball contact, "special" for a
+# special, else "other". Posture fighters never take part.
+func _primer_driver(enemy: Node3D, kind: String, cls: String) -> Dictionary:
 	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
 	if piece == "" or _fights_posture(enemy):
-		return ""
-	var id := enemy.get_instance_id()
-	if cls == "weapon":
-		var live: bool = float(_primed.get(id, -1.0)) > _clock
-		_primed[id] = _clock + Companion.PRIMER_SECONDS
-		if not live:
-			effects.spark(enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
-		return ""
-	if _primer_consumes(enemy, kind, cls) == "":
-		return ""
-	_primed.erase(id)
-	effects.arc(ctx.player.ball_position() + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
-	return piece
+		return {}
+	var on := "weapon" if cls == "weapon" else ("contact" if kind in CONTACT_KINDS else ("special" if cls == "special" else "other"))
+	return Companion.pick({"piece": piece, "on": on,
+		"primed": float(_primed.get(enemy.get_instance_id(), -1.0)) > _clock}, drivers)
 
 
 # The seated primer piece a hit of this kind and source class would consume on this
 # enemy now, or "". Reads only; _primer_hit does the consuming.
 func _primer_consumes(enemy: Node3D, kind: String, cls: String) -> String:
-	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
-	if piece == "" or cls == "weapon" or _fights_posture(enemy):
+	if _primer_driver(enemy, kind, cls).get("act", "") != "consume":
 		return ""
-	if float(_primed.get(enemy.get_instance_id(), -1.0)) <= _clock:
-		return ""
-	return piece if kind in CONTACT_KINDS or cls == "special" else ""
+	return Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
 
 
 # What strike() multiplies resolve()'s dealt by, beyond the plating rule: the cannon's
@@ -627,14 +643,20 @@ func primer_expired(enemy_id: int) -> bool:
 # Runs after the strike resolved and its facts went out; it shoves and arms, and never
 # strikes, hits or fires itself. Posture fighters (staggered()) keep their own rules.
 func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
-	if kind != "ram":
-		return
 	var piece := Companion.seated(ctx.run.companion, Companion.RAM_BRACE)
-	if piece == "ram_prow" and is_instance_valid(enemy) and not enemy.has_method("staggered") \
-			and not (enemy.has_method("is_dead") and enemy.is_dead()):
-		var id := enemy.get_instance_id()
-		if _clock >= float(_prow_until.get(id, -1.0)):
-			_prow_until[id] = _clock + PROW_STAGGER
+	if piece == "":
+		return
+	var valid := is_instance_valid(enemy)
+	var free: bool = valid and not enemy.has_method("staggered") and not (enemy.has_method("is_dead") and enemy.is_dead())
+	var row := Companion.pick({"piece": piece, "on": kind, "foe_free": free,
+		"prow_ready": valid and _clock >= float(_prow_until.get(enemy.get_instance_id(), -1.0)),
+		"dealt": float(result.get("dealt", 0.0)) > 0.0}, drivers)
+	match String(row.get("act", "")):
+		"shove":
+			# A row edited to drop foe_free still never shoves a freed foe.
+			if not valid:
+				return
+			_prow_until[enemy.get_instance_id()] = _clock + PROW_STAGGER
 			var flat: Vector3 = enemy.global_position - ctx.player.ball_position()
 			flat.y = 0.0
 			var flat_dir: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else Vector3.FORWARD
@@ -642,9 +664,9 @@ func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 			if enemy.has_method("knock"):
 				enemy.knock(flat_dir + Vector3.UP * 0.35, PROW_SHOVE * (float(weight) if weight != null else 1.0))
 			effects.ring(enemy.global_position, 2.5, Palette.VERDIGRIS)
-	if piece == "ram_spring" and float(result.get("dealt", 0.0)) > 0.0:
-		_spring_until = _clock + SPRING_WINDOW
-		effects.spark(ctx.player.ball_position(), Palette.VERDIGRIS)
+		"arm":
+			_spring_until = _clock + SPRING_WINDOW
+			effects.spark(ctx.player.ball_position(), Palette.VERDIGRIS)
 
 
 # --- Companion: escape corridor ------------------------------------------------------
@@ -655,9 +677,10 @@ func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 func _escape_act() -> void:
 	var piece := Companion.seated(ctx.run.companion, Companion.ESCAPE_CORRIDOR)
 	var esc := Companion.escape_of(piece)
-	if esc.is_empty() or not ctx.run.alive():
+	var row := Companion.pick({"piece": piece, "on": "escape_window", "alive": ctx.run.alive()}, drivers)
+	if esc.is_empty() or row.is_empty():
 		return
-	var style := String(esc["style"])
+	var style := String(row["act"])
 	_escape = {"piece": piece, "style": style, "until": _clock + float(esc["seconds"])}
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.planar_velocity()
@@ -1103,6 +1126,7 @@ func _physics_process(delta: float) -> void:
 	bolts.step(delta, space, enemies, shells)
 	for charge in sticky.step(delta, space, enemies):
 		_detonate(charge)
+	_step_devices(delta)
 	wear_trail.step(delta, enemies)
 	_pin_step(enemies)
 	_bat_by_ball(shells)
@@ -2384,9 +2408,10 @@ func _throw_sticky(landing: Vector3) -> void:
 	if count > 1:
 		damage *= Weapons.RAIN_DAMAGE / float(count)
 		radius *= Weapons.RAIN_RADIUS
+	devices.set_cap(Devices.STICKY, int(_knob("sticky_max_live")) * count)
 	for i in count:
 		var live: Array = sticky.live()
-		if live.size() >= int(_knob("sticky_max_live")) * count:
+		if live.size() >= devices.cap(Devices.STICKY):
 			_detonate(sticky.take(live[0]))
 		var spot := landing
 		if count > 1:
@@ -2672,7 +2697,12 @@ func _tick_upgrades(delta: float) -> void:
 # Sentry Post: stepping off a pylon leaves it firing turret bolts at the nearest enemy.
 func _on_dismounted_sentry(_velocity: Vector3) -> void:
 	if _knob("sentry") > 0.0 and ctx.flow.in_play():
-		_sentry = {"at": ctx.player.kit.mount_face + ctx.player.kit.mount_normal * 1.2, "left": _knob("sentry"), "next": 0.0}
+		var at: Vector3 = ctx.player.kit.mount_face + ctx.player.kit.mount_normal * 1.2
+		# At the cap the standing sentry is replaced; with its slot still refilling, none stands.
+		var placed: Dictionary = devices.deploy(Devices.SENTRY, at)
+		if int(placed["id"]) <= 0:
+			return
+		_sentry = {"at": at, "left": _knob("sentry"), "next": 0.0, "id": int(placed["id"])}
 
 
 func _tick_sentry(delta: float) -> void:
@@ -2681,6 +2711,7 @@ func _tick_sentry(delta: float) -> void:
 	_sentry["left"] -= delta
 	_sentry["next"] -= delta
 	if _sentry["left"] <= 0.0:
+		devices.remove(int(_sentry.get("id", 0)), "expired")
 		_sentry = {}
 		return
 	if _sentry["next"] > 0.0:
@@ -2700,6 +2731,19 @@ func _tick_sentry(delta: float) -> void:
 		"wave_amp": 0.0, "wave_hz": 0.0, "phase": 0.0,
 		"source": "persistent_actor",
 	})
+
+
+# The device ledger's clock: refills tick, and a device left past the leash is recalled
+# (it leaves without acting: a charge does not go off, the sentry stops firing).
+func _step_devices(delta: float) -> void:
+	if not _sentry.is_empty():
+		devices.move(int(_sentry.get("id", 0)), _sentry["at"])
+	for gone in devices.step(delta, ctx.player.ball_position()):
+		if gone["kind"] == Devices.SENTRY:
+			if int(_sentry.get("id", 0)) == int(gone["id"]):
+				_sentry = {}
+		else:
+			sticky.recall(int(gone["id"]))
 
 
 # Crater Slam: a smash row that spends the special fires a full discharge on landing.
@@ -2971,6 +3015,7 @@ func _clear_fight() -> void:
 			node.queue_free()
 	bolts.clear()
 	sticky.clear()
+	devices.clear()
 	effects.clear()
 	_free_cannon()
 
