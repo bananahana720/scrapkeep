@@ -2280,6 +2280,111 @@
    }
   },
   {
+   "id": "cavern_shell",
+   "path": "res://assets/models/park/cavern_shell.glb",
+   "class": "park_large",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py",
+    "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
+   },
+   "exception": {
+    "draws": 3
+   },
+   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+  },
+  {
+   "id": "cavern_shell_detail1",
+   "path": "res://assets/models/park/cavern_shell_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "cavern_shell_detail2",
+   "path": "res://assets/models/park/cavern_shell_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "cenote_pool",
+   "path": "res://assets/models/park/cenote_pool.glb",
+   "class": "park_large",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py",
+    "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
+   },
+   "exception": {
+    "draws": 3
+   },
+   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+  },
+  {
+   "id": "cenote_pool_detail1",
+   "path": "res://assets/models/park/cenote_pool_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "cenote_pool_detail2",
+   "path": "res://assets/models/park/cenote_pool_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "flooded_shaft",
+   "path": "res://assets/models/park/flooded_shaft.glb",
+   "class": "park_large",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py",
+    "notes": "Procedural, no external mesh. Southwest palette; copper eyes mark the harpoon anchors (Anchor_NN nodes)."
+   },
+   "exception": {
+    "draws": 3
+   },
+   "exception_why": "PARK.md section 9 sets park_large at 2 draws, but each flooded-cavern recipe draws a stone shell and a water sheet (two material slots, stone and glass) and carries the -col collider mesh, which asset_registry_test counts as a draw: 3. The water sheet cannot join the stone mesh (a different slot) and the collider is the section 4 trimesh the loader needs."
+  },
+  {
+   "id": "flooded_shaft_detail1",
+   "path": "res://assets/models/park/flooded_shaft_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
+   "id": "flooded_shaft_detail2",
+   "path": "res://assets/models/park/flooded_shaft_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "park_recipes",
+   "provenance": {
+    "recipe": "tools/blender/park/caverns.py"
+   }
+  },
+  {
    "id": "pilot_cannon_anim",
    "path": "res://assets/models/pilot_cannon_anim.glb",
    "class": "pilot",
@@ -3445,6 +3550,12 @@
   "cannon_launcher_gauge",
   "cart_body",
   "cart_wheel",
+  "cavern_shell",
+  "cavern_shell_detail1",
+  "cavern_shell_detail2",
+  "cenote_pool",
+  "cenote_pool_detail1",
+  "cenote_pool_detail2",
   "cottonwood_crown",
   "cottonwood_detail1",
   "cottonwood_detail2",
@@ -3489,6 +3600,9 @@
   "fabricator_hoop",
   "fabricator_hoop_detail1",
   "fabricator_hoop_detail2",
+  "flooded_shaft",
+  "flooded_shaft_detail1",
+  "flooded_shaft_detail2",
   "gauge_dial_bezel",
   "gauge_dial_detail1",
   "gauge_dial_detail2",

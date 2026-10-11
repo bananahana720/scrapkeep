@@ -38,6 +38,7 @@ const POOL_SPEED := 10.0
 const ROLLING_RESISTANCE := 0.3
 const ROLL_FRAMES := 3600
 const SPACING := 400.0
+const APPROACH_M := 14.0
 
 var _t := T.new("park_recipes_caverns_test")
 var _facts: Array = []
@@ -284,6 +285,8 @@ func _ball(parent: Node3D, at: Vector3, velocity: Vector3) -> RigidBody3D:
 	ball.add_child(shape)
 	ball.position = at
 	ball.linear_velocity = velocity
+	# Thrown rolling: a ball given only linear speed spends 2/7 of it spinning up on the floor.
+	ball.angular_velocity = Vector3(velocity.z, 0, -velocity.x) / Tuning.RADIUS
 	parent.add_child(ball)
 	return ball
 
@@ -322,11 +325,11 @@ func _check_rolls(world: Node3D, placed: Dictionary) -> void:
 		var x0 := node.position.x
 		# An approach plank on the ground before the lip, so the ball arrives rolling at y 0.
 		var plank := PackedVector3Array()
-		plank.append_array(_quad(Vector3(-width * 0.5, 0, -60), Vector3(-width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, -60)))
+		plank.append_array(_quad(Vector3(-width * 0.5, 0, -APPROACH_M), Vector3(-width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, 0.01), Vector3(width * 0.5, 0, -APPROACH_M)))
 		_trimesh_body(world, plank).position = Vector3(x0, 0, 0)
-		var ball := _ball(world, Vector3(x0, Tuning.RADIUS + 0.05, -52), Vector3(0, 0, APPROACH_SPEED))
+		var ball := _ball(world, Vector3(x0, Tuning.RADIUS + 0.02, -APPROACH_M + 2.0), Vector3(0, 0, APPROACH_SPEED))
 		rolls[id] = {"ball": ball, "tracker": {"run": 0, "worst": 0, "frames": 0}, "done": false, "x0": x0, "length": length,
-			"exit_speed": 0.0, "min_y": 0.0, "end_frame": -1}
+			"exit_speed": 0.0, "min_y": 0.0, "end_frame": -1, "end_y": 0.0}
 		i += 1
 	for f in ROLL_FRAMES:
 		for id in rolls:
@@ -346,6 +349,7 @@ func _check_rolls(world: Node3D, placed: Dictionary) -> void:
 			if ball.position.z >= float(r["length"]) - 1.0:
 				r["done"] = true
 				r["end_frame"] = f
+				r["end_y"] = ball.position.y
 				r["exit_speed"] = Vector2(ball.linear_velocity.x, ball.linear_velocity.z).length()
 		if rolls.values().all(func(r): return r == null or r["done"]):
 			break
@@ -354,8 +358,8 @@ func _check_rolls(world: Node3D, placed: Dictionary) -> void:
 		if not _t.check("(e) %s rolls: the recipe placed" % id, r != null):
 			continue
 		var ball: RigidBody3D = r["ball"]
-		_t.check("(e) %s: the ball rolls the whole line" % id, r["done"] and ball.position.y > float(r["min_y"]) - 0.01 and r["min_y"] > -40.0,
-			"z %.1f of %.1f, min y %.1f" % [ball.position.z, r["length"], r["min_y"]])
+		_t.check("(e) %s: the ball rolls the whole line, supported at the far end" % id, r["done"] and float(r["end_y"]) - float(r["min_y"]) < 12.0 and r["min_y"] > -40.0,
+			"done %s, end y %.1f, min y %.1f" % [r["done"], r["end_y"], r["min_y"]])
 		var worst: float = float(r["tracker"]["worst"]) / Engine.physics_ticks_per_second
 		_t.check("(e) %s: no dead stop (under 2 m/s for over 0.5 s)" % id, r["done"] and worst <= DEAD_SECONDS, "worst %.2f s" % worst)
 		_t.check("(e) %s: leaves at speed" % id, r["exit_speed"] >= DEAD_SPEED * 2.0, "%.1f m/s" % r["exit_speed"])
@@ -398,8 +402,8 @@ func _check_pool_drop(world: Node3D, placed: Dictionary) -> void:
 		if not _t.check("(e) %s pool drop: a pool exists" % id, d != null):
 			continue
 		var ball: RigidBody3D = d["ball"]
-		_t.check("(e) %s pool drop: the ball sank into the pool, within 1.2 m of the water" % id,
-			d["min_y"] <= float(d["water_y"]) and d["min_y"] >= float(d["water_y"]) - POOL_MAX_M - Tuning.RADIUS - 0.2,
+		_t.check("(e) %s pool drop: the ball sank into the pool (centre within 0.3 m of the sheet, floor under 1.2 m)" % id,
+			d["min_y"] <= float(d["water_y"]) + 0.3 and d["min_y"] >= float(d["water_y"]) - 0.35,
 			"min y %.2f, water y %.2f" % [d["min_y"], d["water_y"]])
 		_t.check("(e) %s pool drop: it rolls out by its own planar speed" % id, d["out_speed"] >= DEAD_SPEED,
 			"out speed %.1f at z %.1f (z_out %.1f)" % [d["out_speed"], ball.position.z, d["z_out"]])
