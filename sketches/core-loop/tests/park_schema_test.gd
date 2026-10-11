@@ -130,19 +130,24 @@ func _fixture_lines() -> Dictionary:
 		"floor": {"waypoints": ["drop_in", "wash_camp", "tube", "landmark"]}}
 
 
-func _plant_line(label: String, id: String, mutate: Callable) -> void:
+# detail narrows the hit to one check, so a plant cannot pass on a sibling check's error.
+func _plant_line(label: String, id: String, mutate: Callable, detail := "") -> void:
 	var lines := _fixture_lines()
 	mutate.call(lines)
 	var errors := ParkSchema.validate_lines(lines, _fixture)
-	var hit := errors.any(func(e): return e["id"] == id and e["rule"] == "line")
+	var hit := errors.any(func(e): return e["id"] == id and e["rule"] == "line" and (detail == "" or e["detail"].contains(detail)))
 	_report("%s fails as %s [line]" % [label, id], hit, ParkSchema.describe(errors))
 
 
 func _planted_lines() -> void:
 	var clean := ParkSchema.validate_lines(_fixture_lines(), _fixture)
 	_report("fixture lines load with zero errors", clean.is_empty(), ParkSchema.describe(clean))
-	_plant_line("line not starting at drop_in", "rivet", func(l): l["pilots"]["rivet"]["waypoints"][0] = [0, -700])
-	_plant_line("line not ending at landmark", "floor", func(l): l["floor"]["waypoints"].pop_back())
+	# A coordinate before drop_in or after landmark keeps the named waymarks in order, so only
+	# the start and end checks can catch these two.
+	_plant_line("line not starting at drop_in", "rivet",
+		func(l): l["pilots"]["rivet"]["waypoints"].push_front([0, -700]), "does not start at")
+	_plant_line("line not ending at landmark", "floor",
+		func(l): l["floor"]["waypoints"].push_back([0, 640]), "does not end at")
 	_plant_line("waymarks out of order", "kest", func(l):
 		l["pilots"]["kest"]["waypoints"] = ["drop_in", "tube", "wash_camp", "landmark"])
 	_plant_line("waymark skipped", "sable", func(l): l["pilots"]["sable"]["waypoints"].erase("wash_camp"))
