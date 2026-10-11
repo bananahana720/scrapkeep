@@ -2280,6 +2280,45 @@
    }
   },
   {
+   "id": "canal_lip",
+   "path": "res://assets/models/park/canal_lip.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's canal_lip-rail_NN empties."
+   },
+   "exception": {
+    "tris": 8000,
+    "verts": 24000,
+    "draws": 2
+   },
+   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the canal_lip-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+  },
+  {
+   "id": "canal_lip_detail1",
+   "path": "res://assets/models/park/canal_lip_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 1 of canal_lip, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "canal_lip_detail2",
+   "path": "res://assets/models/park/canal_lip_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 2 of canal_lip, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
    "id": "park_contraption_barge",
    "path": "res://assets/models/park/contraptions/barge.glb",
    "class": "landform",
@@ -2549,6 +2588,45 @@
    }
   },
   {
+   "id": "flume_span",
+   "path": "res://assets/models/park/flume_span.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's flume_span-rail_NN empties."
+   },
+   "exception": {
+    "tris": 8000,
+    "verts": 24000,
+    "draws": 2
+   },
+   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the flume_span-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+  },
+  {
+   "id": "flume_span_detail1",
+   "path": "res://assets/models/park/flume_span_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 1 of flume_span, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "flume_span_detail2",
+   "path": "res://assets/models/park/flume_span_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 2 of flume_span, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
    "id": "half_pipe_concrete",
    "path": "res://assets/models/park/half_pipe_concrete.glb",
    "class": "landform",
@@ -2583,6 +2661,84 @@
    "provenance": {
     "recipe": "tools/blender/park/halfpipes.py",
     "notes": "W13 KC1 half-pipe family (design-v3/PARK.md section 4 row 1). Built by the recipe from procedural sections, no external mesh or texture; vertex colour under the enamel slot name. Convention: +Y up, ride +Z, origin at the entry lip, nodes socket_entry, socket_exit, gauge_l, gauge_r. Guardrail: no living people named or depicted; the liners and the lip are dam-era works."
+   }
+  },
+  {
+   "id": "penstock_run",
+   "path": "res://assets/models/park/penstock_run.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's penstock_run-rail_NN empties."
+   },
+   "exception": {
+    "tris": 8000,
+    "verts": 24000,
+    "draws": 2
+   },
+   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the penstock_run-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+  },
+  {
+   "id": "penstock_run_detail1",
+   "path": "res://assets/models/park/penstock_run_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 1 of penstock_run, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "penstock_run_detail2",
+   "path": "res://assets/models/park/penstock_run_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 2 of penstock_run, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "pipeline_rail",
+   "path": "res://assets/models/park/pipeline_rail.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Procedural, authored in this repository from Blender bmesh solids; no external mesh. PARK.md section 4 grind family; the rail line is the GLB's pipeline_rail-rail_NN empties."
+   },
+   "exception": {
+    "tris": 8000,
+    "verts": 24000,
+    "draws": 2
+   },
+   "exception_why": "PARK.md section 9 landform is 8,000 triangles and 1 drawn mesh; the second mesh is the pipeline_rail-col collision trimesh that park_recipes.gd turns into the body's one ConcavePolygonShape3D and never draws, so drawn meshes stay 1."
+  },
+  {
+   "id": "pipeline_rail_detail1",
+   "path": "res://assets/models/park/pipeline_rail_detail1.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 1 of pipeline_rail, drawn by range (the detail class), additive to the base."
+   }
+  },
+  {
+   "id": "pipeline_rail_detail2",
+   "path": "res://assets/models/park/pipeline_rail_detail2.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd",
+   "provenance": {
+    "recipe": "tools/blender/park/grind.py",
+    "note": "Detail shell 2 of pipeline_rail, drawn by range (the detail class), additive to the base."
    }
   },
   {
@@ -4019,6 +4175,9 @@
   "breach_wedge_c_14x10",
   "bridge_skin",
   "bridge_skin_rusted-salvaged-plate.webp",
+  "canal_lip",
+  "canal_lip_detail1",
+  "canal_lip_detail2",
   "cannon_launcher_body",
   "cannon_launcher_detail1",
   "cannon_launcher_detail2",
@@ -4075,6 +4234,9 @@
   "fabricator_hoop",
   "fabricator_hoop_detail1",
   "fabricator_hoop_detail2",
+  "flume_span",
+  "flume_span_detail1",
+  "flume_span_detail2",
   "gauge_dial_bezel",
   "gauge_dial_detail1",
   "gauge_dial_detail2",
@@ -4160,9 +4322,15 @@
   "park_contraption_trebuchet_arm",
   "park_contraption_trebuchet_detail1",
   "park_contraption_trebuchet_detail2",
+  "penstock_run",
+  "penstock_run_detail1",
+  "penstock_run_detail2",
   "pilot_cannon_anim",
   "pilot_tally_anim",
   "pilot_tarn_anim",
+  "pipeline_rail",
+  "pipeline_rail_detail1",
+  "pipeline_rail_detail2",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",
