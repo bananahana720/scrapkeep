@@ -121,6 +121,12 @@ func _check_place() -> void:
 		var drawn_col := views.filter(func(v): return String(v.name).ends_with(ParkRecipes.COL_SUFFIX))
 		_t.check("(b) %s draws the base and two shells, never the -col" % id, views.size() == 3 and drawn_col.is_empty(),
 			"%d views, %d -col" % [views.size(), drawn_col.size()])
+		var enamel := 0
+		for v: MeshInstance3D in views:
+			var worn := v.get_surface_override_material(0) as BaseMaterial3D
+			if worn != null and worn.vertex_color_use_as_albedo:
+				enamel += 1
+		_t.check("(b) %s views wear the enamel slot, so their vertex colour shows" % id, enamel == views.size(), "%d of %d" % [enamel, views.size()])
 		var bodies := node.find_children("*", "StaticBody3D", true, false)
 		var shapes := node.find_children("*", "CollisionShape3D", true, false).filter(func(s): return s.get_parent() is StaticBody3D)
 		var faces := 0
@@ -232,7 +238,10 @@ func _check_roll() -> void:
 	for f in ROLL_FRAMES:
 		await physics_frame
 		for run in runs:
+			if run.has("reached"):
+				continue
 			var ball: RigidBody3D = run["ball"]
+			run["min"] = minf(run.get("min", 1e9), ball.linear_velocity.length())
 			if ball.linear_velocity.length() < MIN_SPEED:
 				run["slow"] += 1
 				run["worst"] = maxi(run["worst"], run["slow"])
@@ -250,7 +259,7 @@ func _check_roll() -> void:
 		_t.check("(d) %s reaches its exit end" % label, run.has("reached"), "farthest z %.1f" % run.get("farthest", -1e9))
 		var dead_ticks := int(DEAD_STOP_S * TICKS)
 		_t.check("(d) %s never sits under %.0f m/s for %.1f s" % [label, MIN_SPEED, DEAD_STOP_S], run["worst"] <= dead_ticks,
-			"%d ticks slow, limit %d" % [run["worst"], dead_ticks])
+			"%d ticks slow, limit %d, lowest speed %.1f m/s" % [run["worst"], dead_ticks, run.get("min", 0.0)])
 		_t.check("(d) %s stays over the exit floor line" % label, run.get("lowest", -1e9) > -6.0, "lowest %.1f above the exit floor" % run.get("lowest", -1e9))
 	for id in RECIPES:
 		if not _have(id):
