@@ -67,6 +67,8 @@ func _run() -> void:
 	for attack in ATTACKS:
 		_cues[attack] = []
 		_landings[attack] = []
+	# Frozen, the ball's teleport lands at once, so the hand-stepped Warden sees it.
+	_player.body().freeze = true
 	var island := _spawn(5, "", Vector3.ZERO)
 	var spires := _spawn(6, "choir", Vector3(0.0, 0.0, 300.0))
 	if _driver(island) == null or _driver(spires) == null:
@@ -74,10 +76,11 @@ func _run() -> void:
 			spires.mount_driver])
 	else:
 		_pulse_runs(island)
-		_knock_runs(spires)
+		await _knock_runs(spires)
 		_report_rows(_driver(island))
 	island.queue_free()
 	spires.queue_free()
+	_player.body().freeze = false
 	await _shake()
 	await _frames(2)
 	_game.free()
@@ -173,10 +176,12 @@ func _knock_runs(warden: Node3D) -> void:
 		for i in _ticks(1.0):
 			_step(warden, ball)
 		ball = warden.global_position + Vector3(0.0, float(driver.floor_offset) - (warden.global_position.y - warden.home.y), 0.0)
-		for i in 20:
-			if warden.staggered():
-				break
-			_combat.strike(warden, "ram", force)
+		# One contact gain counts per engine frame and the Warden is stepped by hand, so each
+		# stagger waits for a fresh engine frame, the bar is filled to just under full and one
+		# matched ram staggers it. The hand-stepped Warden does not run on that frame.
+		await physics_frame
+		warden._posture.posture = warden._posture.FULL - 1.0
+		_combat.strike(warden, "ram", force)
 		staggers.append(_tick)
 		guard = 0
 		while warden.staggered() and guard < _ticks(8.0):

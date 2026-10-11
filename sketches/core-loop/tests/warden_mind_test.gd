@@ -35,9 +35,10 @@ const LATE_MAX := 2.0
 const FLIGHT_S := 3.0
 const KNOCK_S := 1.0
 const CLIMB_S := 2.0
-# The knuckles on the back of the palm, 6 m off the axis and 8 m above the anchor (section 3.1:
-# palm at 82 m, knuckles at 88 m, anchor at 80 m).
-const KNUCKLES := [Vector3(6.0, 8.0, 0.0), Vector3(-6.0, 8.0, 0.0), Vector3(0.0, 8.0, -6.0)]
+# Knuckle hardpoints off the shared clamp's collider, as a mounting row places them (KF8 owns
+# the real offsets): a ball hanging 6 m under one must not touch the body, since any touch
+# rebounds the ball and cuts the line (warden_anchor_test.gd does the same with its piers).
+const KNUCKLES := [Vector3(14.0, 10.0, 0.0), Vector3(-14.0, 10.0, 0.0), Vector3(0.0, 10.0, -14.0)]
 
 var t := T.new("warden_mind_test")
 var _game
@@ -85,10 +86,12 @@ func _run() -> void:
 		if id == "idle" or cause != "":
 			_ends.append(cause))
 	_clear_enemies()
+	await _throw()
+	# Frozen, the ball's teleport lands at once, so the hand-stepped Warden sees it.
+	_player.body().freeze = true
 	_hook()
 	_tilt()
 	_falter()
-	await _throw()
 	_flight()
 	_perch_stagger()
 	_knock_down()
@@ -126,7 +129,9 @@ func _site() -> Vector3:
 func _step(warden: Node3D, count := 1, ball_at = null) -> void:
 	for i in count:
 		if ball_at is Callable:
-			_player.reset_to(ball_at.call())
+			var at: Vector3 = ball_at.call()
+			_player.reset_to(at)
+			_player.body().global_position = at
 		_tick += 1
 		warden._physics_process(_dt)
 
@@ -142,13 +147,12 @@ func _matched_force(warden: Node3D) -> float:
 	return force
 
 
-# Rams until the Warden staggers; false when it never does.
+# The bar is filled to just under full (the stepped Warden shares one engine frame, and the
+# posture rule counts one contact gain per frame), then one matched ram staggers it.
 func _stagger(warden: Node3D) -> bool:
-	var force := _matched_force(warden)
-	for i in 20:
-		if warden.staggered():
-			return true
-		_combat.strike(warden, "ram", force)
+	if not warden.staggered():
+		warden._posture.posture = warden._posture.FULL - 1.0
+		_combat.strike(warden, "ram", _matched_force(warden))
 	return warden.staggered()
 
 
@@ -238,6 +242,8 @@ func _falter() -> void:
 		warden.queue_free()
 		return
 	var driver = warden.mount_driver
+	# Mounted: the hand hangs 20 m over its floor, as under the island (28 m in the park).
+	warden.home += Vector3.UP * 20.0
 	var far := func(): return warden.home + Vector3(80.0, 0.0, 0.0)
 	_step(warden, 5, far)
 	var lens0: Vector3 = warden.family_point_at()
@@ -262,6 +268,19 @@ func _falter() -> void:
 		"stagger closed after %d ticks, lens %.3f m off, knuckle %.3f m off" % [guard, back,
 			warden.hardpoint_at(0).distance_to(knuckle0)])
 	warden.queue_free()
+	# A hand still standing on the ground (the alpha table before KD5 hangs it) keeps its open
+	# lens above the ground, in reach.
+	var grounded := _spawn(5, "", Vector3(0.0, 0.0, 160.0))
+	var near := func(): return grounded.home + Vector3(80.0, 0.0, 0.0)
+	_step(grounded, 5, near)
+	var lens1: Vector3 = grounded.family_point_at()
+	var ground_staggered := _stagger(grounded)
+	_step(grounded, _ticks(0.6), near)
+	t.check("under_island: a hand on the ground keeps its lens above the ground", ground_staggered
+			and grounded.global_position.y >= grounded.home.y - 0.01 and absf(grounded.family_point_at().y - lens1.y) <= 0.01,
+		"staggered %s, body %.2f m from home, lens moved %.2f m" % [ground_staggered,
+			grounded.global_position.y - grounded.home.y, grounded.family_point_at().y - lens1.y])
+	grounded.queue_free()
 
 
 func _aim_at(point: Vector3) -> void:
@@ -279,7 +298,7 @@ func _held(warden: Node3D) -> bool:
 # A ball latched to a knuckle at the pulse rides the swing and is thrown when it stops. Real
 # physics, the real harpoon press (the lock bites the knuckle facing the ball), the key held.
 func _throw() -> void:
-	var warden := _spawn(5, "", Vector3(0.0, 0.0, -120.0))
+	var warden := _spawn(5, "", Vector3(0.0, 0.0, 40.0))
 	if not _driver_ok(warden, "under_island: the throw"):
 		warden.queue_free()
 		return
@@ -287,9 +306,10 @@ func _throw() -> void:
 	warden.hardpoints = KNUCKLES.duplicate()
 	warden.set_physics_process(true)
 	await _frames(2)
-	var from: Vector3 = warden.home + Vector3(16.0, 8.0, 0.0)
+	var from: Vector3 = warden.home + Vector3(28.0, 10.0, 0.0)
 	_game.camera.snap(warden.global_position - from)
 	for i in _ticks(0.4):
+		_player.body().sleeping = false
 		_player.reset_to(from)
 		_aim_at(warden.global_position)
 		warden._pulse_clock = 0.0
@@ -302,7 +322,8 @@ func _throw() -> void:
 	var latched := _held(warden)
 	var lined: int = warden.lined_hardpoint()
 	t.check("under_island: the ball latches a knuckle", latched and lined == 0,
-		"latched %s, lined hardpoint %d" % [latched, lined])
+		"flow %s, paused %s, frozen %s, latched %s, lined hardpoint %d, ball %s, body %s, ends %s, hooked %s" % [_game.flow.state_name(), paused, _player.body().freeze, latched, lined, _player.ball_position(),
+			warden.global_position, _ends, _player.kit.hooked])
 	if not latched:
 		_source.hold = {}
 		warden.queue_free()
@@ -331,7 +352,7 @@ func _throw() -> void:
 	var after := float(dropped - at_pulse) / Engine.physics_ticks_per_second if at_pulse >= 0 and dropped >= 0 else -1.0
 	t.check("under_island: the line drops when the swing stops", at_pulse >= 0 and absf(after - SWING_OUT_S) <= 0.1
 			and _ends.has("shrugged"),
-		"pulse at tick %d, line dropped %.2f s after it, ends %s" % [at_pulse, after, _ends])
+		"pulse at tick %d, line dropped at tick %d, %.2f s after the pulse, ends %s" % [at_pulse, dropped, after, _ends])
 	t.check("under_island: the throw leaves at 20 m/s or more across the ground", dropped >= 0
 			and _flat(v_drop).length() >= THROW_SPEED,
 		"planar %.1f m/s at the drop (vertical %+.1f), anchor peak %.1f m/s" % [_flat(v_drop).length(), v_drop.y, anchor_peak])
@@ -358,6 +379,7 @@ func _flight() -> void:
 		warden.queue_free()
 		return
 	var driver = warden.mount_driver
+	warden.home += Vector3.UP * 80.0
 	var under := func(): return warden.global_position + Vector3(10.0, 0.0, 0.0)
 	var takeoffs := []
 	var landings := []
@@ -376,11 +398,12 @@ func _flight() -> void:
 				and not warden._charging:
 			warden._pulse_clock = warden.PULSE_CYCLE - warden.PULSE_TELEGRAPH
 			forced = true
-		var flying_before: bool = driver.flying()
 		_step(warden, 1, under)
+		# The mounting steps before the pulse in a tick, so the phase after the tick is the one
+		# the charge was allowed or refused in.
 		if warden._charging and not was_charging:
 			charges += 1
-			if flying_before or driver.flying():
+			if driver.flying():
 				charges_in_flight += 1
 		was_charging = warden._charging
 		if warden.pulses > pulses:
@@ -433,6 +456,7 @@ func _perch_stagger() -> void:
 		warden.queue_free()
 		return
 	var driver = warden.mount_driver
+	warden.home += Vector3.UP * 80.0
 	var under := func(): return warden.global_position + Vector3(60.0, 0.0, 0.0)
 	# Fly once, so the seat is checked on a perch other than the first.
 	var guard := 0
@@ -478,6 +502,8 @@ func _knock_down() -> void:
 	if not _driver_ok(warden, "spires: the knock-down"):
 		warden.queue_free()
 		return
+	# Mounted high over its bowl, so the 30 m fall to the floor stays above the ground.
+	warden.home += Vector3.UP * 80.0
 	var driver = warden.mount_driver
 	var far := func(): return warden.home + Vector3(0.0, 0.0, 200.0)
 	var guard := 0
@@ -506,7 +532,7 @@ func _knock_down() -> void:
 	var perched := -1
 	for i in _ticks(CLIMB_S + 1.0):
 		_step(warden, 1, far)
-		if perched < 0 and _perch_of(driver, warden.global_position - warden.home) >= 0:
+		if perched < 0 and driver.phase == "perched" and _perch_of(driver, warden.global_position - warden.home) >= 0:
 			perched = _tick - end_tick
 	t.check("spires: back on a perch 2 s after the stagger ends", absi(perched - _ticks(CLIMB_S)) <= 1
 			and driver.phase == "perched",

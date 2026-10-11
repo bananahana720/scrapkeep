@@ -13,11 +13,16 @@ const T := preload("res://tests/support/t.gd")
 # and the camper, each on seeds 0, 1 and 2 with the pilots posture_bands_test.gd names. Every
 # run is its own process (this script with --arm), so a run repeats: the alpha table, the
 # skipper or camper bot, stage 5 entered as tools/bot_run.gd --from-stage does, and the stage's
-# Warden made a park Warden (a harpoon anchor with the kind's driver, src/combat/warden_mind.gd)
-# as the park loader will make it. A fight runs from the later of the bot's turn and its first
-# contact to the break (posture_sweep.gd measure); a run that never breaks counts as the cap.
-# Bands: grown median 25 to 45 s, small median at least twice grown's, the camper never breaks
-# it; the measured medians are pinned below with the 10 percent tolerance.
+# Warden given the kind's driver (src/combat/warden_mind.gd). A fight runs from the later of the
+# bot's turn and its first contact to the break (posture_sweep.gd measure); a run that never
+# breaks counts as the cap. Bands: grown median 25 to 45 s, small median at least twice grown's,
+# the camper never breaks it; the measured medians are pinned below with the 10 percent tolerance.
+# The Warden is not made a harpoon anchor here: with "harpoon_anchor" on, Ctrl hauls are gated to
+# the stagger and the bot breaks no Warden in 150 s with or without the tilt (2026-10-11, 9 of 9
+# runs capped both ways; posture_bands_test.gd's 2026-10-10 header saw the same stall), so the
+# anchor's own effect on the band waits on the bot. KF4_BANDS_ANCHOR=1 and KF4_BANDS_DRIVER=0 in
+# the environment rerun those arms. The alpha stage-5 Warden stands on the ground until KD5 and
+# KF8 hang it under the island, so this is the tilt on the ground, not the mounted fight.
 
 const SEEDS := [0, 1, 2]
 const PILOTS := {0: "pylon_engineer", 1: "runner_gunner", 2: "demolitions_caster"}
@@ -27,9 +32,12 @@ const STAGE := 5
 const CAP_S := 150.0
 const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # Pins (median fight seconds over the three seeds), measured with the tilt live:
-# 2026-10-11 (wave 13 KF4): not yet measured.
-const EXPECT_SMALL_S := 0.0
-const EXPECT_GROWN_S := 0.0
+# 2026-10-11 (wave 13 KF4): measured 66.4 / 49.4 s (small/grown 1.34) with the tilt; the same arms with
+# no driver measured 78.6 / 41.5 s (1.89). The band misses both ways (grown over 45 s with the tilt, small
+# under twice grown with and without it), so the stage-5 numbers need a tuning call, not this unit's dials
+# (the tilt angle is fixed at 10 degrees, and the lens height means nothing on the ground).
+const EXPECT_SMALL_S := 66.4
+const EXPECT_GROWN_S := 49.4
 const TOLERANCE := 0.10
 
 var _settings := {}
@@ -66,7 +74,9 @@ func _parent() -> void:
 		for run_seed in SEEDS:
 			var home := folder.path_join("%s-%d" % [arm, run_seed])
 			DirAccess.make_dir_recursive_absolute(home)
-			var args := ["--arm=" + arm, "--run-seed=%d" % run_seed, "--result=" + home.path_join("result.tsv"), "--home=" + home]
+			var args := ["--arm=" + arm, "--run-seed=%d" % run_seed, "--result=" + home.path_join("result.tsv"), "--home=" + home,
+				"--anchor=%s" % OS.get_environment("KF4_BANDS_ANCHOR") if OS.has_environment("KF4_BANDS_ANCHOR") else "--anchor=0",
+				"--driver=%s" % OS.get_environment("KF4_BANDS_DRIVER") if OS.has_environment("KF4_BANDS_DRIVER") else "--driver=1"]
 			if int(ARMS[arm]["mass"]) > 0:
 				args.append("--start-mass=%d" % int(ARMS[arm]["mass"]))
 			jobs.append({"script": "res://tests/posture_bands_mind_test.gd", "args": args})
@@ -173,8 +183,9 @@ func _attach() -> void:
 	var warden = _game.flow.warden
 	if not is_instance_valid(warden):
 		return
-	warden.set_harpoon_anchor(true)
-	var script = load(DRIVER_PATH) if ResourceLoader.exists(DRIVER_PATH) else null
+	if String(_settings.get("anchor", "0")) == "1":
+		warden.set_harpoon_anchor(true)
+	var script = load(DRIVER_PATH) if ResourceLoader.exists(DRIVER_PATH) and String(_settings.get("driver", "1")) != "0" else null
 	if script != null:
 		var driver = script.new()
 		warden.set_mount_driver(driver)
