@@ -13,6 +13,10 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 # median first fill at 41.1 s over seeds 1 to 16 against the 180 s band, 69 to 95 of its first
 # 100 points from near misses at 4.0 each. Check 01 follows the new constants; checks 21 to 24 are
 # the camper-path cap and the chainer stream.
+# 2026-10-11 (w13 B3b, second change): a chain link pays once per enemy per chain
+# (UltimateMeter.chain_link). Tally's losing seeds 1, 3 and 4 at the Brindle boss earned 852 to
+# 2719 chain_link points in one run, biting the same boss over and over in one chain. Checks 25 to
+# 27; check 24's chainer links four distinct enemies a chain.
 
 var _t := T.new("ultimate_meter_test")
 
@@ -156,12 +160,37 @@ func _initialize() -> void:
 		m.tick(0.1, SpeedTier.BLAZING)
 		if i % 60 == 0:
 			m.add("smash", 2.0)
-			m.add("chain_link")
-			m.add("chain_link")
+			_link(m, 1, 1)
+			_link(m, 2, 2)
+			_link(m, 3, 3)
 		if i % 30 == 0:
 			m.add("near_miss")
 		if m.full() and filled_at < 0.0:
 			filled_at = float(i + 1) * 0.1
 	_t.check("24 a chaining stream fills in under 60 s", filled_at > 0.0 and filled_at < 60.0, "full at %.1f s, %.1f points" % [filled_at, m.value])
 
+	# 12. A chain link pays once per enemy per chain; combo 1 starts a new chain.
+	_t.check("25 the meter has chain_link(enemy_id, combo)", m.has_method("chain_link"))
+	m.reset()
+	_link(m, 7, 1)
+	for bite in range(2, 52):
+		_link(m, 7, bite)
+	_t.near("26 fifty more bites on the same enemy in one chain pay nothing", m.value, 0.0)
+	m.reset()
+	for k in 4:
+		_link(m, 10 + k, k + 1)
+	_link(m, 11, 5)
+	_t.near("27 a chain over four distinct enemies pays three links; a repeat pays nothing", m.value, 6.0)
+	_link(m, 11, 1)
+	_link(m, 12, 2)
+	_t.near("28 a new chain pays its distinct enemies again", m.value, 8.0)
+
 	quit(_t.verdict())
+
+
+# The meter's chain-link entry, or the plain add before it existed (the red run).
+func _link(meter, enemy_id: int, combo: int) -> void:
+	if meter.has_method("chain_link"):
+		meter.chain_link(enemy_id, combo)
+	elif combo > 1:
+		meter.add("chain_link")
