@@ -20,8 +20,10 @@
 #   artifacts/local/alpha/push/w13/concepts/codex/base/base-hero.png, mechanism.png
 # The Felt Rig variant (CUSTOMIZE section 8, shell_sable_felt) swaps structure only: felt pads
 # (rubber) on every scissor pivot instead of copper pins, and rounder eight-sided felt tread caps;
-# same two X-pairs per link (a third pair costs 14,386 verts, past the 11,600 shell cap) and the
-# machinery stays where it is.
+# same lattice and the machinery stays where it is.
+# One X-pair per hub-to-hub link (LATTICE_PAIRS): ROSTER-LOOK section 3 rule 1 names it the first
+# cut when the lattice hides the pilot, and hero.png draws single wide bars round open diamonds.
+# Two pairs hid about 41 percent of the head box at the class I mid camera (PD-SABLE fix round).
 # Heft layers c2 to c5 come from world_one/shell_sable_plates.py.
 #
 #   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
@@ -47,6 +49,7 @@ from common import Part  # noqa: E402
 BASE_BAND = (3000, 6500)
 VARIANT_BAND = (3000, 11000)
 LATTICE_OUT = sb.LATTICE_OUTER
+LATTICE_PAIRS = 1
 
 HUBS, _, GAPS = sb.lattice_layout()
 MAST_HUB = 14            # (-0.607, 0, 0.795): 10.8 o'clock from behind, the upper hub at 11
@@ -221,7 +224,7 @@ def felt_pads(core):
 def build(variant=""):
     felt = variant == "felt"
     name = "SableFelt" if felt else "Sable"
-    shell = sb.hoberman(name, enamel="petrol", seat="bone", pairs=2,
+    shell = sb.hoberman(name, enamel="petrol", seat="bone", pairs=LATTICE_PAIRS,
                         bank=(("GaugeLever", "lever"), ("SpoolBrake", "lever")), pilot=pilot(),
                         hub_sides=6, cap_sides=8 if felt else 6)
     pod, ring = shell["pod"], shell["ring"]
