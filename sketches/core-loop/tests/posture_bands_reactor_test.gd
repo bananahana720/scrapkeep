@@ -1,0 +1,186 @@
+# smoke: solo timeout=360s (nine bot runs in child processes at once; a loaded machine slows them)
+extends SceneTree
+
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
+const PostureSweep := preload("res://tools/posture_sweep.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const Game := preload("res://src/game.gd")
+const T := preload("res://tests/support/t.gd")
+
+# The reactor band (design-v3/wardens/reactor.md section 7; K-UNITS wave K-F, KF2), modelled on
+# tests/posture_bands_test.gd: a solo bot sweep on the reactor's first stage, the alpha table's
+# stage 1 (Spillway, plating 90, hp 650, curve 2.0, ram_shatters false), with the dam_face
+# mechanism live: once the stage's Warden stands, the child mounts src/combat/warden_reactor.gd
+# on it through set_mount_driver, so every pulse opens the gates and lays the sheet. The arms
+# are tools/posture_sweep.gd's (small: skipper from mass 0; grown: skipper from 540; camper:
+# shoots from range), seeds 0, 1 and 2, one child process each, a run that never breaks counting
+# as the 120 s cap (posture_bands_test.gd's smoke limit). Bands: grown median 25 to 45 s, small median at least twice grown's, the
+# camper never breaks it; the live medians stay within 10 percent of the pins below.
+# The child is this script run with --arm (posture_sweep.gd's child shape on the alpha table).
+# The Warden is not made a harpoon anchor here: KF1b measured the bot stalling on the
+# stagger-gated haul (posture_bands_test.gd header), and KF8 wires the park's anchors.
+
+const SEEDS := [0, 1, 2]
+const ARMS := ["small", "grown", "camper"]
+# A run that never breaks counts as this cap; the camper's run lasts it, so it bounds the wall time.
+const CAP := 120.0
+const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
+# 2026-10-11 (w13 KF2): first pin, measured on 28fe659 plus KF2 with the dam_face sheet live (SHEET_TOP 14 m):
+# small 76.7 s of [58.1, 79.8, 76.7], grown 34.4 s of [34.4, 47.7, 19.9], ratio 2.23, campers capped; a repeat
+# measured 79.8 / 34.4. Without the sheet the same runs gave 46.1 / 20.4 (grown under the band); with the ride
+# carried to the core itself (SHEET_TOP 4 m) 54.7 / 38.1 (ratio 1.44), so the lip distance is the dial.
+const EXPECT_SMALL_S := 76.7
+const EXPECT_GROWN_S := 34.4
+const TOLERANCE := 0.10
+const WALL_S := 330.0
+
+var _settings := {}
+var _game
+var _driver
+var _reactor
+var _done := false
+var _attached := false
+var _struck_s := -1.0
+var _run_seed := 0
+
+
+func _initialize() -> void:
+	_settings = PostureSweep._parse(OS.get_cmdline_user_args())
+	if _settings.has("arm"):
+		_begin_child()
+		return
+	var t := T.new("posture_bands_reactor_test")
+	var folder := OS.get_user_data_dir().path_join("posture-bands-reactor-%d" % OS.get_process_id())
+	DirAccess.make_dir_recursive_absolute(folder)
+	var jobs := []
+	for arm in ARMS:
+		for run_seed in SEEDS:
+			var args := ["--arm=" + arm, "--run-seed=%d" % run_seed, "--result=" + folder.path_join("%s-%d.tsv" % [arm, run_seed]),
+				"--home=" + folder.path_join("%s-%d" % [arm, run_seed])]
+			var mass := float(PostureSweep.arm_named(arm)["mass"])
+			if mass > 0.0:
+				args.append("--start-mass=%d" % int(mass))
+			jobs.append({"script": "res://tests/posture_bands_reactor_test.gd", "args": args})
+	var results := ChildRuns.run(jobs, WALL_S)
+	var rows := {}
+	for i in jobs.size():
+		var arm: String = ARMS[i / SEEDS.size()]
+		var run_seed: int = SEEDS[i % SEEDS.size()]
+		var path := folder.path_join("%s-%d.tsv" % [arm, run_seed])
+		var line := FileAccess.get_file_as_string(path).strip_edges() if FileAccess.file_exists(path) else ""
+		var cols := line.split("\t")
+		t.check("%s seed %d ran" % [arm, run_seed], results[i]["code"] == 0 and not results[i]["timed_out"] and cols.size() >= 6,
+			"exit %s, timed out %s, row '%s'" % [results[i]["code"], results[i]["timed_out"], line])
+		if not rows.has(arm):
+			rows[arm] = []
+		rows[arm].append(cols)
+	var all_rows: Array = rows.values().reduce(func(acc, r): return acc + r, [])
+	# A fast break can come before the first pulse; the camper's full-length runs must see the gates.
+	t.check("every run mounted the reactor driver; the gates opened in every camper run", all_rows.size() == 9
+			and all_rows.all(func(c): return c.size() >= 6 and c[3] == "true")
+			and rows.get("camper", []).all(func(c): return c.size() >= 6 and int(c[4]) > 0),
+		"attached and gates per run %s" % [all_rows.map(func(c): return "%s/%s" % [c[3], c[4]] if c.size() >= 6 else "?")])
+	var small := _median(rows.get("small", []))
+	var grown := _median(rows.get("grown", []))
+	var camper_broke: int = rows.get("camper", []).filter(func(c): return c.size() >= 6 and c[1] == "true").size()
+	var small_broke: int = rows.get("small", []).filter(func(c): return c.size() >= 6 and c[1] == "true").size()
+	print("[report] medians small %.1f s, grown %.1f s, ratio %.2f; small %s, grown %s, camper %s; rides per run %s" % [small, grown,
+		small / grown if grown > 0.0 else 0.0, _fights(rows.get("small", [])), _fights(rows.get("grown", [])),
+		_fights(rows.get("camper", [])), all_rows.map(func(c): return c[5] if c.size() >= 6 else "?")])
+	t.check("grown breaks it in 25 to 45 s", grown >= 25.0 and grown <= 45.0, "grown median %.1f s" % grown)
+	t.check("small takes at least twice grown's time", grown > 0.0 and small >= 2.0 * grown, "small %.1f s, grown %.1f s" % [small, grown])
+	t.eq("small breaks it in every run", small_broke, SEEDS.size())
+	t.eq("the camper never breaks it", camper_broke, 0)
+	t.check("small median within 10 percent of the pin", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
+		"small %.1f s, pin %.1f s" % [small, EXPECT_SMALL_S])
+	t.check("grown median within 10 percent of the pin", absf(grown - EXPECT_GROWN_S) <= TOLERANCE * EXPECT_GROWN_S,
+		"grown %.1f s, pin %.1f s" % [grown, EXPECT_GROWN_S])
+	if t.failures == 0:
+		PostureSweep._remove_tree(folder)
+	quit(t.verdict())
+
+
+func _fights(rows: Array) -> Array:
+	return rows.map(func(c): return c[2] if c.size() >= 6 else "?")
+
+
+func _median(rows: Array) -> float:
+	var fights := rows.filter(func(c): return c.size() >= 6).map(func(c): return float(c[2]))
+	return PostureSweep.median(fights) if not fights.is_empty() else 0.0
+
+
+# ---- Child: one run on the alpha table's stage 1 --------------------------------------------
+
+func _begin_child() -> void:
+	SimClock.ticks = true
+	_run_seed = int(_settings.get("run-seed", "0"))
+	seed(_run_seed)
+	Engine.time_scale = 1.0
+	_game = Game.new()
+	_game.test_mode = true
+	_game.table = "alpha"
+	root.add_child(_game)
+
+
+func _physics_process(delta: float) -> bool:
+	if _done or _game == null or _game.flow == null or not _settings.has("arm"):
+		return false
+	if _driver == null:
+		var home := String(_settings["home"])
+		DirAccess.make_dir_recursive_absolute(home)
+		_game.codex.storage_dir = home
+		_game.run_log.storage_dir = home
+		var arm := PostureSweep.arm_named(String(_settings["arm"]))
+		_driver = BotDriver.new(_game, String(arm["policy"]), _run_seed)
+		_driver.stage_limit = CAP * 4.0
+		_driver.fight_limit = CAP
+		_game.presentation.audio.bake_now()
+		_game.events.enemy_struck.connect(_on_struck)
+		_driver.start()
+		return false
+	_mount()
+	var over: bool = _driver.tick(delta)
+	if not over and _driver.warden_broken():
+		_driver._end("broken")
+		over = true
+	if not over:
+		return false
+	_done = true
+	_record()
+	_game.free()
+	_game = null
+	quit(0)
+	return false
+
+
+# The stage's Warden takes the reactor's driver once it stands (the file must exist).
+func _mount() -> void:
+	if _attached or _game.flow == null or not is_instance_valid(_game.flow.warden):
+		return
+	_attached = true
+	if not ResourceLoader.exists(DRIVER_PATH):
+		_attached = false
+		return
+	_reactor = load(DRIVER_PATH).new()
+	_game.flow.warden.set_mount_driver(_reactor)
+
+
+func _on_struck(enemy: Node3D, _kind: String, _force: float) -> void:
+	if _struck_s >= 0.0 or not is_instance_valid(enemy) or _game.flow == null or enemy != _game.flow.warden:
+		return
+	_struck_s = _game.run.stage_time
+
+
+# One row: arm, broke, fight seconds, driver mounted, gates opened, sheet rides.
+func _record() -> void:
+	var note: Dictionary = _driver.stage_notes[_driver.stage_notes.size() - 1] if not _driver.stage_notes.is_empty() else {}
+	var run := PostureSweep.measure(note, CAP, _struck_s)
+	var mounted := _reactor != null
+	var line := "\t".join([String(_settings["arm"]), str(run["broke"]), "%.2f" % float(run["fight"]), str(mounted),
+		str(_reactor.gates_opened if mounted else 0), str(_reactor.rides if mounted else 0),
+		ClassDef.all()[_driver.class_index].id])
+	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
+	file.store_string(line + "\n")
+	file.close()
