@@ -526,7 +526,7 @@ The traversal measure (`design-v3/TRAVERSAL.md`) carries over with its definitio
 
 **Where it is recorded.** Per seed and summary JSON under `artifacts/local/traversal/park/<map_id>/<pilot>.json` (local evidence, not committed), a committed table per stage in `design-v3/park/TRAVERSAL-PARK.md` written at each greybox pass and each dressed pass, and a `docs/decisions.tsv` row when a stage passes. A stage that misses a band does not merge; its unit's fix round reworks the park rows, not the band. The numbers judge a bot; Andrew's sitting judges the fun (`TRAVERSAL.md:123`).
 
-**Two more stage tests.** `park_landmark_sight_test.gd`: on a 50 m grid over the play square, excluding hole and roofed cells, at least `sight_share` of points have a clear ray from 2 m above the ground to `landmark.sight_top` over the baked heights. `park_density_test.gd`: no open play cell lies more than 80 m from a park row's footprint (start).
+**Two more stage tests.** `park_landmark_sight_test.gd`: on a 50 m grid over the play square, excluding hole and roofed cells, at least `sight_share` of points have a clear ray from 2 m above the ground to `landmark.sight_top` over the baked heights. `park_density_test.gd`: no open play cell lies more than 80 m from a non-ground park row's footprint (start; the base `plain` ground row covers the whole square and would make the rule vacuous, so `ground` rows do not count, the same split `park_map.gd` makes for the scatter keep-out; coordinator ruling at the KD-T merge, 2026-10-11).
 
 ## 9. Performance budgets
 
