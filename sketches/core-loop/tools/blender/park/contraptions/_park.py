@@ -31,9 +31,10 @@ TONES = {
     "iron_hi": "3d3732",
     "copper": "b77843",        # the palette copper
     "copper_dk": "8d5a32",
-    "concrete": "8e8c84",      # dam-era concrete
-    "concrete_dk": "6f6d66",   # form-board joint
-    "concrete_lt": "a29f95",
+    "concrete": "7f7d76",      # dam-era concrete
+    "concrete_dk": "5c5a54",   # form-board joint
+    "concrete_lt": "96938a",
+    "deck": "56534e",          # the barge floor, darker than the sand it floats over
     "oxide": "9b513a",
     "rust": "7a4430",
     "varnish": "3e3029",       # desert varnish

@@ -37,7 +37,7 @@ def shell(s):
     rows.append(((HULL[-1][0], HULL[-1][1], HULL[-1][2] + SEAM), "iron"))
     rows += [(row, "iron") for row in RIM]
     h, r, y1, y0 = WALL
-    rows += [((h, r, y1 - SEAM), "concrete_lt"), ((h, r, y0 + SEAM), "concrete_lt"), ((h, r, y0), "concrete_lt")]
+    rows += [((h, r, y1 - SEAM), "concrete_lt"), ((h, r, y0 + SEAM), "concrete_lt"), ((h, r, y0), "deck")]
     rings = [pk.plan(*row, seg=SEG) for row, _ in rows]
     n = len(rings[0])
     verts = [v for ring in rings for v in ring]
@@ -124,7 +124,7 @@ def detail1(s):
 
 def detail2(s):
     for k in range(-6, 7):                                                       # deck board lines on the floor
-        s.box((0.04, 0.012, 11.6), (k * 1.0, FLOOR + 0.006, 0), T["concrete_dk"])
+        s.box((0.04, 0.012, 11.6), (k * 1.0, FLOOR + 0.006, 0), T["concrete"])
     for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):                          # floor corner clamps
         s.box((0.9, 0.03, 0.9), (sx * 5.6, FLOOR + 0.015, sz * 5.6), T["copper"])
         for dx, dz in ((-0.3, -0.3), (0.3, 0.3)):

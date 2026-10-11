@@ -3,7 +3,7 @@ section 4, recipe `geyser_vent`).
 
 A Gorge-era pressure vent in Southwest salvage: a collar of dam-era concrete board rings (form-board joints) around the steam
 mouth, a dark-iron lip with a grate of flat iron bars across the opening, a copper strap band, sandstone chunks heaped against
-the collar's foot, desert-varnish streaks and a dark-iron relief stack on the back side. The steam column is the code's (the
+the collar's foot, desert-varnish streaks and a dark-iron relief stack 2.6 m tall on the back side, which stands outside the steam column (radius 1.6 at the base, 2.4 at 10 m). The steam column is the code's (the
 animated `arm`, radius 1.6 at its base, src/world/contraptions.gd:454), so the mouth stays open: nothing above the grate rises
 into radius 1.5.
 
@@ -25,7 +25,7 @@ MOUTH_R = 1.75           # the hole: wider than the steam column's base (1.6)
 COLLAR_R = 2.8
 GROUND = -1.0
 LIP_TOP = -0.2
-STACK_TOP = 0.15
+STACK_TOP = 2.6
 
 
 def base(s):
@@ -92,7 +92,7 @@ def detail2(s):
 def check_base(s):
     lo, hi = pk.bounds(s)
     rmax = max(math.hypot(x, z) for x, y, z in s.verts)
-    assert abs(lo[1] - GROUND) < 0.05 and hi[1] <= 0.2, ("vent height", lo, hi)
+    assert abs(lo[1] - GROUND) < 0.05 and hi[1] <= 3.0, ("vent height", lo, hi)
     assert rmax <= 2.9, ("vent leaves the ring's inner radius", rmax)
     for x, y, z in s.verts:
         assert not (math.hypot(x, z) < 1.5 and y > -0.7), ("the steam mouth is capped", (x, y, z))

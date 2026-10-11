@@ -172,7 +172,7 @@ func _check_convention() -> void:
 		if Vector2(p.x, p.z).length() < 1.5 and p.y > -0.7:
 			capped = true
 	_t.check("(c) geyser vent: ground at y -1, collar inside the ring, column mouth open", not geyser.is_empty()
-		and absf(hmin + 1.0) < EPS and rmax <= 2.9 and hmax <= 0.2 and not capped, "r %s, y %s..%s, capped %s" % [rmax, hmin, hmax, capped])
+		and absf(hmin + 1.0) < EPS and rmax <= 2.9 and hmax <= 3.0 and not capped, "r %s, y %s..%s, capped %s" % [rmax, hmin, hmax, capped])
 	# Lift: the origin is the plate's centre; the deck top is the collider top (y +0.5) and nothing rises past it; radius 4.5.
 	var lift := _box("lift_platform")
 	_t.check("(c) lift deck top is the collider top, radius 4.5", absf(lift.end.y - 0.5) < 0.02 and absf(lift.size.x - 9.0) < 0.3

@@ -50,17 +50,22 @@ def base(s):
         pk.tube(s, at(s_ - 0.25), at(s_ + 0.25), r_at(s_ - 0.25) + 0.12, r_at(s_ + 0.25) + 0.12, 16, T["copper"])
     pk.tube(s, at(S_MUZZLE - 0.5), at(S_MUZZLE), r_at(S_MUZZLE) + 0.1, r_at(S_MUZZLE) + 0.14, 16, T["iron_hi"])   # muzzle lip
     pk.tube(s, at(S_MUZZLE), at(S_MUZZLE + 0.06), 1.75, 1.75, 14, T["charcoal"])         # the bore, seen end on
-    for sx in (-1, 1):                                                                   # iron cheeks and the trunnion
-        s.box((0.8, 4.0, 3.2), (sx * 3.1, 1.8, -5.0), T["iron"])
-        s.box((0.9, 0.5, 3.4), (sx * 3.1, -0.1, -5.0), T["iron_hi"])
+    for sx in (-1, 1):                                                                   # A-frame cheeks, sole plates, bearings
+        x = sx * 3.1
+        pk.strut(s, (x, 0.1, -6.6), (x, 2.0, -5.0), 0.7, 0.8, T["iron"])
+        pk.strut(s, (x, 0.1, -3.7), (x, 2.0, -5.0), 0.7, 0.8, T["iron"])
+        s.box((0.9, 0.5, 3.8), (x, -0.1, -5.0), T["iron_hi"])
+        s.box((0.9, 1.6, 1.5), (x, 2.0, -5.0), T["iron_hi"])
     pk.tube(s, (-3.6, C.y, C.z), (3.6, C.y, C.z), 0.42, 0.42, 10, T["copper"])
 
 
 def detail1(s):
     for sx in (-1, 1):
-        for row in range(5):
-            for col in range(3):
-                pk.hexstud(s, (sx * 3.5, 0.2 + row * 0.7, -5.0 + (col - 1) * 1.0), (sx, 0, 0), 0.08, 0.07, T["iron_hi"])
+        for row in range(3):
+            for col in range(2):
+                pk.hexstud(s, (sx * 3.55, 1.5 + row * 0.5, -5.0 + (col - 0.5) * 0.8), (sx, 0, 0), 0.08, 0.07, T["copper_dk"])
+        for k in range(5):
+            pk.hexstud(s, (sx * 3.1, 0.15, -6.5 + k * 0.7), (0, 1, 0), 0.08, 0.06, T["iron"])
     u = Vector((1.0, 0.0, 0.0))
     v = D.cross(u)
     for s_ in (-1.0, 1.0, 3.0):                                                          # hoop studs
