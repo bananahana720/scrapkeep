@@ -1,1 +1,3 @@
 test	owner	reason	added	deadline
+posture_bands_swarm_test	coordinator w13	band measured without the bot's latch arm; grown 151.7 s against 25 to 45 s (KF3 b73ea39); mechanism tests gate as normal	2026-10-11	KF-BOT merge
+posture_bands_mind_test	coordinator w13	anchor-off sweep, pins moved up to 49 percent between sweeps, grown 46.5 to 53.8 s against 25 to 45 s (KF4 868e052); mechanism tests gate as normal	2026-10-11	KF-BOT merge
