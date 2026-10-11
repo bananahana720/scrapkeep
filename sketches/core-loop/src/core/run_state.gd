@@ -7,6 +7,7 @@ extends RefCounted
 
 const Companion := preload("res://src/core/companion.gd")
 const Relics := preload("res://src/build/relics.gd")
+const StartPicks := preload("res://src/core/start_picks.gd")
 const MAX_HP := 100.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
@@ -95,6 +96,9 @@ var world := 0
 # Damage, theft, wear and mass recovery never touch it; only add_cogs and spend_cogs do.
 var cogs := 0
 var companion := {}
+# SG9's run-start offer: {"options": three ids, "rerolls_left": int, "taken": id or ""}. Drawn
+# from run_seed in begin(); {} on a run loaded from a doc saved before SG9, which offers nothing.
+var start_pick := {}
 # One-time grant ids already settled (RS4); the profile keeps the same set and Progress
 # unions the two. Optional in the entrance doc.
 var settled: Array[String] = []
@@ -157,6 +161,9 @@ func begin(chosen_class: Resource) -> void:
 	run_seed = hash(run_id)
 	world = 0
 	cogs = 0
+	start_pick = {}
+	if chosen_class != null:
+		start_pick = {"options": StartPicks.draw(chosen_class.id, run_seed, 0), "rerolls_left": StartPicks.REROLLS, "taken": ""}
 	companion = {}
 	settled.clear()
 	escape_window_left = 0.0
@@ -353,6 +360,49 @@ func part_count(part_id: String) -> int:
 	return parts.count(part_id)
 
 
+# SG9: the three options on offer; empty once nothing is offered (an old doc).
+func start_pick_options() -> Array:
+	return (start_pick.get("options", []) as Array).duplicate()
+
+
+# The one reroll: shows the pilot list's other three. Refused once taken or spent.
+func reroll_start_pick() -> bool:
+	if not alive() or start_pick.is_empty() or String(start_pick.get("taken", "")) != "":
+		return false
+	var left := int(start_pick.get("rerolls_left", 0))
+	if left <= 0:
+		return false
+	var options := StartPicks.draw(class_id(), run_seed, StartPicks.REROLLS - left + 1)
+	if options.size() != StartPicks.OFFERED:
+		return false
+	start_pick["options"] = options
+	start_pick["rerolls_left"] = left - 1
+	return true
+
+
+# Takes option `index` of the three and grants it through the mutators above. Once per run.
+func take_start_pick(index: int) -> bool:
+	if not alive() or String(start_pick.get("taken", "")) != "":
+		return false
+	var options := start_pick_options()
+	if index < 0 or index >= options.size():
+		return false
+	var id := String(options[index])
+	if not StartPicks.apply(self, class_id(), id):
+		return false
+	start_pick["taken"] = id
+	return true
+
+
+static func _start_pick_from(value) -> Dictionary:
+	if typeof(value) != TYPE_DICTIONARY or (value as Dictionary).is_empty():
+		return {}
+	var options := []
+	for id in value.get("options", []):
+		options.append(String(id))
+	return {"options": options, "rerolls_left": int(value.get("rerolls_left", 0)), "taken": String(value.get("taken", ""))}
+
+
 # Build owns what parts do; a max-health part routes through here so a restore can
 # put the old ceiling back.
 func set_max_hp(value: float) -> void:
@@ -545,6 +595,8 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		# The hot-wired offer (id, state, spent) rides the checkpoint with the cogs a Recycle
 		# pays, so a retry returns both to the pre-choice state together.
 		"hotwire": (extra.get("hotwire", {}) as Dictionary).duplicate(true),
+		# A retry rewinds a run-start pick with the part or cogs it paid, and offers the same three.
+		"start_pick": start_pick.duplicate(true),
 		"entry_position": entry_position,
 		"entry_velocity": entry_velocity,
 		"camera_yaw": camera_yaw,
@@ -603,6 +655,7 @@ func restore() -> void:
 		extra.erase("hotwire")
 	else:
 		extra["hotwire"] = hotwire.duplicate(true)
+	start_pick = _start_pick_from(_snapshot.get("start_pick", {}))
 	stage_time = 0.0
 	since_damage = 99.0
 	retries += 1
@@ -646,7 +699,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -698,6 +751,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"companion": companion.duplicate(true),
 		"settled": Array(settled),
 		"relics": relics.duplicate(),
+		"start_pick": start_pick.duplicate(true),
 	}, true)
 	return doc
 
@@ -793,6 +847,7 @@ func from_entrance_doc(doc) -> bool:
 	cogs = int(doc.get("cogs", 0))
 	companion = (doc["companion"] as Dictionary).duplicate(true) if doc.has("companion") else {}
 	settled.assign(doc.get("settled", []))
+	start_pick = _start_pick_from(doc.get("start_pick", {}))
 	extra = {}
 	for key in doc:
 		if not ENTRANCE_KEYS.has(key) and not ENTRANCE_OPTIONAL.has(key):

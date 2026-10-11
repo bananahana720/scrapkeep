@@ -18,9 +18,10 @@ const T := preload("res://tests/support/t.gd")
 const STARTS := 200
 # A tile name is a glance, not a sentence.
 const NAME_WORDS := 3
-# "Unchanged within noise": the pick may add at most this many microseconds to a run start,
-# far under one 60 Hz frame (16,667 us), so no input frame is lost to it.
-const NOISE_US := 500.0
+# "Unchanged within noise": the offer is ready in the same frame begin() runs in, and the card
+# pauses nothing, so the first input lands on the same tick as with no pick. Tests may not read
+# the wall clock (lint L1), so the cost is counted in frames and paused ticks, both zero.
+const NOISE_FRAMES := 0
 
 var t: T
 var events
@@ -98,19 +99,15 @@ func _starts_table() -> void:
 		var rerolls := 0
 		var bad_offers := 0
 		var bad_effects := 0
-		var base_us := 0.0
-		var pick_us := 0.0
+		var frames_added := 0
 		for i in STARTS:
-			# Baseline: a run start with the pick removed afterwards costs begin() alone.
-			var a := _fresh(1000 + i)
-			var t0 := Time.get_ticks_usec()
-			a.begin(def)
-			base_us += Time.get_ticks_usec() - t0
+			# begin() draws the offer; the frames between it and an offer ready to show are the
+			# delay the pick adds before the first input. The no-pick baseline adds none.
 			var b := _fresh(1000 + i)
-			t0 = Time.get_ticks_usec()
+			var f0 := Engine.get_process_frames() + Engine.get_physics_frames()
 			b.begin(def)
 			var options: Array = b.start_pick_options()
-			pick_us += Time.get_ticks_usec() - t0
+			frames_added += Engine.get_process_frames() + Engine.get_physics_frames() - f0
 			var all_list: Array = StartPicks.ids_for(def.id)
 			var well_formed := options.size() == StartPicks.OFFERED and _distinct(options)
 			for id in options:
@@ -142,18 +139,15 @@ func _starts_table() -> void:
 				if not applied or String(b.start_pick.get("taken", "")) != id:
 					bad_effects += 1
 		var list: Array = StartPicks.list_for(def.id)
-		var mean_base := base_us / STARTS
-		var mean_pick := pick_us / STARTS
-		table.append("start-pick %s: %d starts, taken by slot %s, %d of %d rows taken, %d rerolls, begin %.1f us, begin+draw %.1f us"
-			% [def.id, STARTS, taken_by_index, taken_ids.size(), list.size(), rerolls, mean_base, mean_pick])
+		table.append("start-pick %s: %d starts, taken by slot %s, %d of %d rows taken, %d rerolls, frames added before first input %d"
+			% [def.id, STARTS, taken_by_index, taken_ids.size(), list.size(), rerolls, frames_added])
 		t.eq("%s every start offered three distinct rows of its own list" % def.id, bad_offers, 0)
 		t.eq("%s every take applied exactly its row" % def.id, bad_effects, 0)
 		t.check("%s each of the three slots taken at least once" % def.id, taken_by_index.min() >= 1, "%s" % [taken_by_index])
 		t.check("%s every list row taken at least once in %d starts" % [def.id, STARTS], taken_ids.size() == list.size(),
 			"%d of %d" % [taken_ids.size(), list.size()])
 		t.check("%s rerolls happened" % def.id, rerolls > 0, str(rerolls))
-		t.check("%s draw adds under %.0f us to a start" % [def.id, NOISE_US], is_finite(mean_pick)
-			and mean_pick - mean_base < NOISE_US, "%.1f vs %.1f" % [mean_pick, mean_base])
+		t.eq("%s the pick adds no frame before the first input" % def.id, frames_added, NOISE_FRAMES)
 	for line in table:
 		print(line)
 
