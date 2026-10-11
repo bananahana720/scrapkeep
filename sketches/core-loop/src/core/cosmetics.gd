@@ -187,20 +187,6 @@ static func fits(id: String, owner: String, slot: String) -> bool:
 	return owner != "" and not OWNERS.values().has(owner) and (r["pilot"] == "" or r["pilot"] == owner)
 
 
-static func owns(profile, id: String) -> bool:
-	var data := row(id)
-	return profile != null and not data.is_empty() and (data["starter"] or profile.has_cosmetic(id))
-
-
-# The id worn in a slot, or "" when nothing fitting and owned is equipped. The one copy of
-# the ownership rule: the customize page, cosmetic_presentation.gd and hero_assets.gd ask it.
-static func worn(profile, owner: String, slot: String) -> String:
-	if profile == null:
-		return ""
-	var id: String = profile.equipped(owner, slot)
-	return id if id != "" and owns(profile, id) and fits(id, owner, slot) else ""
-
-
 # Consumers supply art ids mapped to imported resources or resource paths. Empty means
 # the slot's unmodified appearance; a missing optional asset is warned once per art id.
 var _warned := {}

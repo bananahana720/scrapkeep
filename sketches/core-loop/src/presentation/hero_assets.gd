@@ -26,6 +26,7 @@ const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
 const PILOTS := {
 	"runner_gunner": "res://assets/models/pilot_rivet_anim.glb",
@@ -368,7 +369,7 @@ func _equipped_paint(id: String) -> String:
 
 # The equipped shell variant's asset id for a pilot, or "" for the default cage.
 func _equipped_variant(id: String) -> String:
-	var worn := Cosmetics.worn(profile, id, "shell")
+	var worn := CosmeticWear.worn(profile, id, "shell")
 	return String(Cosmetics.row(worn).get("asset", "")) if worn != "" else ""
 
 
@@ -413,7 +414,7 @@ func _fit(rec: Dictionary) -> void:
 	rec["pod"] = shell.pod
 	_fit_pilot(rec)
 	if rec.get("pilot") != null and profile != null:
-		var outfit := Cosmetics.worn(profile, id, "outfit")
+		var outfit := CosmeticWear.worn(profile, id, "outfit")
 		if outfit != "":
 			fit_outfit(rec.pilot, outfit, tints)
 

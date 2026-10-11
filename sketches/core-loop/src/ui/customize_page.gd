@@ -1,6 +1,7 @@
 extends Control
 
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
@@ -569,7 +570,7 @@ static func backfill(profile, progress) -> int:
 
 
 static func owns(profile, id: String) -> bool:
-	return Cosmetics.owns(profile, id)
+	return CosmeticWear.owns(profile, id)
 
 
 static func equip(profile, owner: String, slot_id: String, id: String) -> bool:
@@ -622,7 +623,7 @@ func choices(slot_id: String) -> Array:
 func selected(slot_id: String) -> String:
 	if _profile == null:
 		return ""
-	return Cosmetics.worn(_profile, Cosmetics.owner_for(pilot, slot_id), slot_id)
+	return CosmeticWear.worn(_profile, Cosmetics.owner_for(pilot, slot_id), slot_id)
 
 
 # Presentation reads this result, not the raw saved id. An empty row means no trail,
