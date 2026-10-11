@@ -110,19 +110,84 @@ const irrelevant = new Set([
   "KHR_texture_transform",
   "KHR_lights_punctual",
 ]);
-function extensions(value, location = "document") {
+// Texture-only extensions that never change geometry; accepted when a caller opts in.
+const textureOnly = new Set(["EXT_texture_webp"]);
+function extensions(value, location = "document", lenient = false) {
   if (!value || typeof value !== "object") return;
   if (value.extensions)
     for (const name of Object.keys(value.extensions))
       check(
-        irrelevant.has(name),
+        irrelevant.has(name) || (lenient && textureOnly.has(name)),
         `Unsupported extension ${name} at ${location}; export uncompressed core glTF geometry`,
       );
   for (const [key, item] of Object.entries(value))
     if (key !== "extras" && key !== "extensions")
-      extensions(item, `${location}.${key}`);
+      extensions(item, `${location}.${key}`, lenient);
 }
 
+// Longest animation in seconds: the largest keyframe time over every sampler input.
+function longestClip(animations, parsed) {
+  let longest = 0;
+  for (const clip of animations)
+    for (const s of list(clip.samplers, "animation samplers")) {
+      const input = ref(parsed, s.input, "sampler input accessor");
+      check(
+        input.type === "SCALAR" && input.componentType === 5126,
+        "Animation sampler input must be float SCALAR",
+      );
+      for (let i = 0; i < input.count; i++)
+        longest = Math.max(longest, input.read(i, 0));
+    }
+  return longest;
+}
+// Larger side in pixels over the embedded PNG and JPEG images (0 when there are none).
+function imageSides(images, views, bin) {
+  let side = 0;
+  for (const image of images) {
+    if (image.bufferView === undefined) {
+      const m = /^data:[^;,]*;base64,(.*)$/s.exec(image.uri ?? "");
+      if (m) side = Math.max(side, pixelSide(Buffer.from(m[1], "base64")));
+      continue;
+    }
+    const v = views[image.bufferView],
+      b = bin.subarray(v.byteOffset ?? 0, (v.byteOffset ?? 0) + v.byteLength);
+    side = Math.max(side, pixelSide(b));
+  }
+  return side;
+}
+export function webpSide(b) {
+  if (
+    b.length < 30 ||
+    b.toString("latin1", 0, 4) !== "RIFF" ||
+    b.toString("latin1", 8, 12) !== "WEBP"
+  )
+    return 0;
+  const kind = b.toString("latin1", 12, 16);
+  if (kind === "VP8X")
+    return Math.max(b.readUIntLE(24, 3) + 1, b.readUIntLE(27, 3) + 1);
+  if (kind === "VP8L") {
+    const bits = b.readUInt32LE(21);
+    return Math.max((bits & 0x3fff) + 1, ((bits >> 14) & 0x3fff) + 1);
+  }
+  if (kind === "VP8 ")
+    return Math.max(b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff);
+  return 0;
+}
+export function pixelSide(b) {
+  const webp = webpSide(b);
+  if (webp) return webp;
+  if (b.length >= 24 && b.readUInt32BE(0) === 0x89504e47)
+    return Math.max(b.readUInt32BE(16), b.readUInt32BE(20));
+  if (b.length > 4 && b[0] === 0xff && b[1] === 0xd8)
+    for (let i = 2; i + 9 < b.length; ) {
+      if (b[i] !== 0xff) return 0;
+      const marker = b[i + 1];
+      if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker))
+        return Math.max(b.readUInt16BE(i + 5), b.readUInt16BE(i + 7));
+      i += 2 + b.readUInt16BE(i + 2);
+    }
+  return 0;
+}
 export function inspectGlb(bytes, selection = {}) {
   check(bytes.length >= 20, "Truncated GLB header");
   check(
@@ -166,11 +231,20 @@ export function inspectGlb(bytes, selection = {}) {
       (!doc.asset.minVersion || doc.asset.minVersion === "2.0"),
     "Expected glTF asset version 2.0",
   );
+  // selection.textureLenient: measure geometry of a file whose images are external, data
+  // URIs or WebP. Geometry checks stay strict; only image sourcing is relaxed.
+  const lenient = selection.textureLenient === true;
   for (const name of list(doc.extensionsRequired, "extensionsRequired"))
-    check(irrelevant.has(name), `Unsupported required extension ${name}`);
+    check(
+      irrelevant.has(name) || (lenient && textureOnly.has(name)),
+      `Unsupported required extension ${name}`,
+    );
   for (const name of list(doc.extensionsUsed, "extensionsUsed"))
-    check(irrelevant.has(name), `Unsupported extension ${name}`);
-  extensions(doc);
+    check(
+      irrelevant.has(name) || (lenient && textureOnly.has(name)),
+      `Unsupported extension ${name}`,
+    );
+  extensions(doc, "document", lenient);
   const buffers = list(doc.buffers, "buffers"),
     bin = chunks[1]?.data ?? Buffer.alloc(0);
   check(buffers.length <= 1, "Only one embedded GLB buffer is supported");
@@ -264,6 +338,7 @@ export function inspectGlb(bytes, selection = {}) {
     skins = list(doc.skins, "skins"),
     animations = list(doc.animations, "animations");
   for (const image of images) {
+    if (lenient && image.uri !== undefined) continue;
     check(
       image.uri === undefined,
       "External/data image URIs unsupported; embed images in bufferViews",
@@ -275,7 +350,8 @@ export function inspectGlb(bytes, selection = {}) {
     check(primitives.length > 0, `Mesh ${id} has no primitives`);
     const box = bounds();
     let triangles = 0,
-      vertices = 0;
+      vertices = 0,
+      welded = 0;
     const geometry = primitives.map((p) => {
       check(
         (p.mode ?? 4) === 4,
@@ -342,6 +418,18 @@ export function inspectGlb(bytes, selection = {}) {
         extend(box, [pos.read(i, 0), pos.read(i, 1), pos.read(i, 2)]);
       triangles += count / 3;
       vertices += pos.count;
+      // Vertices left after merging identical ones: same value in every attribute.
+      const accessorsOf = Object.values(p.attributes).map((a) => parsed[a]);
+      const seen = new Set();
+      for (let i = 0; i < pos.count; i++)
+        seen.add(
+          accessorsOf
+            .map((a) =>
+              Array.from({ length: a.width }, (_, j) => a.read(i, j)).join(","),
+            )
+            .join("|"),
+        );
+      welded += seen.size;
       return { pos, morph: !!p.targets?.length };
     });
     return {
@@ -349,6 +437,7 @@ export function inspectGlb(bytes, selection = {}) {
       name: mesh.name ?? null,
       triangles,
       vertices,
+      welded_vertices: welded,
       primitives: primitives.length,
       local_static_bounds: box,
       geometry,
@@ -455,12 +544,17 @@ export function inspectGlb(bytes, selection = {}) {
       meshes: meshes.length,
       triangles: meshes.reduce((n, m) => n + m.triangles, 0),
       vertices: meshes.reduce((n, m) => n + m.vertices, 0),
+      welded_vertices: meshes.reduce((n, m) => n + m.welded_vertices, 0),
       primitives: meshes.reduce((n, m) => n + m.primitives, 0),
       materials: materials.length,
       textures: textures.length,
       images: images.length,
       skins: skins.length,
       animations: animations.length,
+      bones: new Set(skins.flatMap((k) => list(k.joints, "skin joints"))).size,
+      clips: animations.length,
+      longest_clip_s: longestClip(animations, parsed),
+      texture_max_side: imageSides(images, views, bin),
     },
     meshes: meshes.map(({ geometry, ...m }) => m),
     selection: {

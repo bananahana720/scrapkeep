@@ -159,6 +159,13 @@ test("over the triangle cap fails; an exception raises that asset's cap", () => 
   assert.ok(evaluate(still, budgets).failures.some((f) => /big.*tris/.test(f)));
 });
 
+test("an unshipped model over its cap is a note, not a failure", () => {
+  const r = evaluate(base().concat(asset({ id: "unwired", tris: 999, ships: false })), budgets);
+  assert.deepEqual(r.failures, []);
+  assert.ok(r.notes.some((n) => /unwired.*tris/.test(n)));
+  assert.equal(r.rows.find((x) => x.category === "prop").count, 1);
+});
+
 test("verts and draws are capped too", () => {
   assert.ok(evaluate(base().concat(asset({ id: "v", verts: 611 })), budgets).failures.some((f) => /v.*verts/.test(f)));
   assert.ok(evaluate(base().concat(asset({ id: "d", draws: 2 })), budgets).failures.some((f) => /d.*draws/.test(f)));
@@ -210,6 +217,8 @@ test("the real registry audits clean with every counted category nonzero", () =>
   assert.deepEqual(r.failures, []);
   assert.ok(r.rows.filter((x) => !x.pending).every((x) => x.count > 0));
   assert.ok(characters(measured).length >= 6);
+  assert.ok(r.rows.find((x) => x.category === "texture").stats.texture_side.max > 0, "texture sides read");
+  assert.ok(measured.filter((a) => a.class === "pilot").every((a) => a.bones > 0 && a.clips > 0), "pilot rigs read");
 });
 
 test("the CLI exits 0, prints median, p90 and reference rows, and edits no budget file", () => {
