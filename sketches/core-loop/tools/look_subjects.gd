@@ -40,7 +40,7 @@ const CGE_BALL_REASON := "the ball is the subject: it stays under the camera tar
 # tan(fov / 2) * 1.25, which leaves the body's bounding sphere inside the frame with margin.
 # boss_high looks down 45 degrees from the -x,+z diagonal and boss_low from -x just under the
 # centre; both sides were free of the stage's walls and mounds for all three bodies (scout contact
-# sheets, w13 KF8-CAM). over_shoulder stays the gameplay-height camera from the warden anchor. The
+# sheets, w13 KF8-CAM). over_shoulder and three_q frame from warden_bounds as well, at gameplay height and
 # ball is pinned beside the body.
 const WARDEN_BODY_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZERO, 62.0, "warden_bounds"], ["boss_high", Vector3(-1.04, 1.4709, 1.04), Vector3.ZERO, 62.0, "warden_bounds"],
 	["boss_low", Vector3(-2.0, -0.25, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"]]
