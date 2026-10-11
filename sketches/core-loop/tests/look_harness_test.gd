@@ -1,4 +1,6 @@
 extends SceneTree
+# 2026-10-10 (PD-0b): adds pair_problem (a missing or empty baseline, or 0 pairs, fails --pair)
+# and the cge rule rows (no chunks, chase from behind).
 
 # tools/look_subjects.gd and tools/look_harness.gd, headless: the subject rows are sound and
 # stand on alpha stages, the frame metrics call a black frame and a flat sky frame dead and a
@@ -30,6 +32,11 @@ func _run() -> void:
 		_t.check("group %s listed once" % g, not groups.has(g))
 		groups[g] = true
 		_t.check("group %s stages at least one subject" % g, not Subjects.in_group(g).is_empty())
+	var rule_rows := Subjects.in_group("cge").filter(func(n): return not Subjects.SUBJECTS[n].get("chunks", true))
+	var rule_hefts := {}
+	for n in rule_rows:
+		rule_hefts["%d/%d" % [Subjects.SUBJECTS[n]["pilot"], Subjects.SUBJECTS[n]["heft"]]] = true
+	_t.check("every pilot has a chunk-free cge rule row at classes I, III and V", rule_rows.size() == 18 and rule_hefts.size() == 18, "%d rows, %d pilot/class pairs" % [rule_rows.size(), rule_hefts.size()])
 	for n in ["arb_bowl", "arm_crown", "arw_pit", "cv2_camp_bay", "ttl_stage_ball", "ttl_stage_spil9", "gpd_cache", "cache_activity"]:
 		_t.check("re-aimed row %s says why" % n, Subjects.SUBJECTS[n].has("reaim"))
 
@@ -91,6 +98,14 @@ func _run() -> void:
 		_t.check("pair %s side a follows the coin" % id, a_is_base == Subjects.coin("gpd_bet", row[0]))
 		_t.eq("key.json names side a of %s" % id, key["pairs"][id]["a"], "base" if a_is_base else "head")
 	_t.check("key.json names the adapter refusal", String(key["pairs"]["gpd_altar__front"]).begins_with("adapter_mismatch"))
+	# A blind pair that proves nothing fails loud (PD-0b): a missing or empty baseline, or 0 pairs.
+	var empty_base := ProjectSettings.globalize_path(TMP + "/empty_base")
+	DirAccess.make_dir_recursive_absolute(empty_base)
+	_t.check("a missing baseline is a pair problem", Harness.pair_problem(ProjectSettings.globalize_path(TMP + "/no_such_base")).contains("does not exist"))
+	_t.check("an empty baseline is a pair problem", Harness.pair_problem(empty_base).contains("is empty"))
+	var base_abs := ProjectSettings.globalize_path(TMP + "/base")
+	_t.check("0 pairs against a baseline is a pair problem", Harness.pair_problem(base_abs, 0).begins_with("0 pairs"))
+	_t.eq("a baseline that made pairs is sound", Harness.pair_problem(base_abs, made), "")
 
 	var turned := {"miniboss": {"point": Vector3(10, 0, 0), "basis": Basis(Vector3.UP, PI / 2.0), "radius": 1.0}}
 	var v := Subjects.resolve("pmb_miniboss_stalk", Subjects.SUBJECTS["pmb_miniboss_stalk"]["cameras"][0], turned)
