@@ -9,7 +9,9 @@ extends RefCounted
 # name     3 words or fewer
 # text     what to do, 12 words or fewer, shown on a locked card
 # on       the signal name
-# where    optional: signal argument name -> the value it must carry
+# where    optional: signal argument name -> the value it must carry. A row whose where names one
+#          synergy_id never also filters first_time (the codex sets it only on the first find ever)
+# at_least optional: signal argument name -> a number the argument must reach for the fact to count
 # sum      optional: a signal argument to add up instead of counting 1 per emission
 # count    threshold, at least 1
 # need     optional: a run summary key (SUMMARY_KEYS) or one of class, won, world
@@ -20,7 +22,9 @@ extends RefCounted
 # reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id};
 #          a pilot id is a ClassDef id or a PENDING_PILOTS id
 
-const FIELDS := ["name", "text", "on", "where", "sum", "count", "need", "min", "max", "hidden", "beat", "reward"]
+const Cosmetics := preload("res://src/core/cosmetics.gd")
+
+const FIELDS := ["name", "text", "on", "where", "at_least", "sum", "count", "need", "min", "max", "hidden", "beat", "reward"]
 const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries"]
 const EVALUATOR_KEYS := ["class", "won", "world"]
 const REWARD_KINDS := ["pilot", "cosmetic", "world"]
@@ -91,6 +95,26 @@ const ROWS := {
 	"ach_d7_salt_white": {"name": "Salt White", "text": "Break three Wardens.", "on": "beacon_unsealed", "count": 3, "reward": {"cosmetic": "companion_paint_salt"}},
 	"ach_d7_dusk_pink": {"name": "Dusk Pink", "text": "Win 15 world events.", "on": "milestone_won", "count": 15, "reward": {"cosmetic": "companion_paint_dusk"}},
 	"ach_d7_moth_grey": {"name": "Moth Grey", "text": "Discover ten distinct synergies.", "on": "synergy_discovered", "count": 10, "where": {"first_time": true}, "reward": {"cosmetic": "companion_paint_moth"}},
+	# Shared: the skill bar's three grants (CUSTOMIZE.md section 8). B6 kit code fires the discoveries.
+	# A grant on one named discovery never filters first_time, so a trick found before the row existed still pays.
+	"ach_any_set_piece": {"name": "Set Piece", "text": "Land your first ultimate.", "on": "synergy_discovered",
+		"where": {"synergy_id": "set_piece"}, "count": 1, "reward": {"cosmetic": "trail_any_downbeat"}},
+	"ach_any_curtain_call": {"name": "Curtain Call", "text": "Shatter an open Warden core with an ultimate landing.", "on": "synergy_discovered",
+		"where": {"synergy_id": "set_piece_core"}, "count": 1, "reward": {"cosmetic": "decal_curtain_call"}},
+	"ach_any_cash_in": {"name": "Cash In", "text": "Pay a chain of three with an ultimate landing.", "on": "synergy_discovered",
+		"where": {"synergy_id": "set_piece_cash_in"}, "count": 1, "reward": {"cosmetic": "companion_skin_till_bell"}},
+	# --- pylon_engineer (Sable): P-C Sable adds its grant rows here ---
+	# --- end pylon_engineer ---
+	# --- runner_gunner (Rivet): P-C Rivet adds its grant rows here ---
+	# --- end runner_gunner ---
+	# --- demolitions_caster (Kest): P-C Kest adds its grant rows here ---
+	# --- end demolitions_caster ---
+	# --- tarn (Tarn): P-C Tarn adds its grant rows here ---
+	# --- end tarn ---
+	# --- tally (Tally): P-C Tally adds its grant rows here ---
+	# --- end tally ---
+	# --- remembered_cannon (the Cannon): P-C Cannon adds its grant rows here ---
+	# --- end remembered_cannon ---
 }
 
 
@@ -110,16 +134,31 @@ static func beat_of(id: String) -> String:
 	return String(row(id).get("beat", ""))
 
 
-# The earned toast's words: the row's name, then its beat on a second line when it has one.
+# The earned toast's words: the row's name, then its beat on a second line when it has one,
+# else "New look: <item>" for a cosmetic reward whose art has landed. A pending item's toast
+# shows the name only, so a toast never names a look the page cannot show.
 static func toast_text(id: String) -> String:
 	var title := String(row(id).get("name", id))
 	var beat := beat_of(id)
-	return title if beat == "" else "%s\n%s" % [title, beat]
+	if beat != "":
+		return "%s\n%s" % [title, beat]
+	var item := String(reward_of(id).get("cosmetic", ""))
+	if item != "" and not Cosmetics.is_pending(item) and not Cosmetics.row(item).is_empty():
+		return "%s\nNew look: %s" % [title, Cosmetics.row(item)["name"]]
+	return title
 
 
 static func for_pilot(pilot_id: String) -> String:
 	for id in ROWS:
 		if ROWS[id].get("reward", {}).get("pilot", "") == pilot_id and pilot_id != "":
+			return id
+	return ""
+
+
+# The row whose reward is that cosmetic, or "" (starters have none).
+static func for_cosmetic(cosmetic_id: String) -> String:
+	for id in ROWS:
+		if ROWS[id].get("reward", {}).get("cosmetic", "") == cosmetic_id and cosmetic_id != "":
 			return id
 	return ""
 
@@ -173,6 +212,17 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 			for key in where:
 				if signals.has(on) and not args.has(key):
 					problems.append("%s: where key %s is not an argument of %s" % [id, key, on])
+			if where.has("synergy_id") and where.has("first_time"):
+				problems.append("%s: a grant on one named discovery cannot filter first_time" % id)
+		var at_least = r.get("at_least", {})
+		if not (at_least is Dictionary):
+			problems.append("%s: at_least must be a dictionary of argument to number" % id)
+		else:
+			for key in at_least:
+				if signals.has(on) and not args.has(key):
+					problems.append("%s: at_least key %s is not an argument of %s" % [id, key, on])
+				if not (at_least[key] is int or at_least[key] is float):
+					problems.append("%s: at_least %s must be a number" % [id, key])
 		if r.has("sum") and signals.has(on) and not args.has(r["sum"]):
 			problems.append("%s: sum %s is not an argument of %s" % [id, r["sum"], on])
 		if not (r.get("count", 0) is int) or int(r.get("count", 0)) < 1:

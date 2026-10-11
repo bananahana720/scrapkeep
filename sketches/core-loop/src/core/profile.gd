@@ -11,10 +11,10 @@ extends RefCounted
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 
-const SCHEMA := 3
+const SCHEMA := 4
 
 # From-version to the method that returns the document one version up.
-const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2"}
+const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2", 3: "_migrate_3"}
 
 # Pilot ids every schema 2 build let anyone fly (Rivet was a starter, Kest came free with it).
 # Frozen history, not a rule: a returning v2 profile keeps them under the v3 locks.
@@ -29,6 +29,7 @@ const SHAPE := {
 	"stats": SafeStore.NUMBERS,
 	"settled": SafeStore.STRINGS,
 	"companion": SafeStore.DICT,
+	"seen": SafeStore.STRINGS,
 }
 
 var path := ""
@@ -120,7 +121,7 @@ func save() -> bool:
 # (else theirs) and the saver's escape flag. The generation is the larger of the two.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
-	for key in ["pilots", "worlds", "cosmetics", "settled"]:
+	for key in ["pilots", "worlds", "cosmetics", "settled", "seen"]:
 		if not out.has(key):
 			out[key] = []
 		for id in theirs.get(key, []):
@@ -256,6 +257,23 @@ func settled_ids() -> Array:
 	return _doc["settled"].duplicate()
 
 
+# Cosmetic ids the player has looked at on the customize page; the new-item marks read it.
+func is_seen(id: String) -> bool:
+	return _doc["seen"].has(id)
+
+
+# True the first time an id is marked seen. Memory only; save() writes.
+func mark_seen(id: String) -> bool:
+	if is_seen(id):
+		return false
+	_doc["seen"].append(id)
+	return true
+
+
+func seen_ids() -> Array:
+	return _doc["seen"].duplicate()
+
+
 func rewards_settled() -> bool:
 	return bool(_doc["rewards_settled"])
 
@@ -361,6 +379,7 @@ func _defaults() -> Dictionary:
 		"settled": [],
 		"companion": {},
 		"rewards_settled": false,
+		"seen": [],
 	}
 
 
@@ -396,4 +415,22 @@ func _migrate_2(doc: Dictionary) -> Dictionary:
 				pilots.append(id)
 		out["pilots"] = pilots
 	out["schema"] = 3
+	return out
+
+
+# Schema 3 to 4 adds the seen marks. Everything a v3 profile owned counts as seen, so only
+# items earned after the upgrade glow as new. A seen list already in the file (from a tool)
+# is kept and unioned. Nothing is removed. A malformed cosmetics or seen value is left for
+# _shape_ok to reject after migration.
+func _migrate_3(doc: Dictionary) -> Dictionary:
+	var out := _defaults()
+	for key in doc:
+		out[key] = doc[key]
+	if out["seen"] is Array and out["cosmetics"] is Array:
+		var seen: Array = (out["seen"] as Array).duplicate()
+		for id in out["cosmetics"]:
+			if id is String and not seen.has(id):
+				seen.append(id)
+		out["seen"] = seen
+	out["schema"] = 4
 	return out

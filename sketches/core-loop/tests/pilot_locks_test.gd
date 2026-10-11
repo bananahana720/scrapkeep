@@ -125,7 +125,8 @@ func _gp5_2_v2_fixture() -> void:
 	_t.eq("GP5-2 v2 fixture opens Sable, Rivet, Kest and Tarn", _open(profile), want)
 	_t.check("GP5-2 setup saved the opened pilots", FileAccess.file_exists(path + ".v2") and FileAccess.get_file_as_bytes(path + ".v2") == original, "backup %s" % (path + ".v2"))
 	var saved = JSON.parse_string(FileAccess.get_file_as_string(path))
-	_t.check("GP5-2 file is schema 3, unknown key and last pilot kept", saved is Dictionary and saved.get("schema") == Profile.SCHEMA and Profile.SCHEMA == 3
+	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 5): schema 4; the v2 fixture chains v2 to v3 to v4.
+	_t.check("GP5-2 file is schema 4, unknown key and last pilot kept", saved is Dictionary and saved.get("schema") == Profile.SCHEMA and Profile.SCHEMA == 4
 		and saved.get("kept_from_a_tool", {}).get("note") == "unknown keys ride through" and saved.get("last_pilot") == RIVET, str(saved))
 	var again := Profile.new(path)
 	again.load_profile()

@@ -127,16 +127,17 @@ static func backfill(profile, progress) -> int:
 
 
 static func owns(profile, id: String) -> bool:
-	var data := Cosmetics.row(id)
-	return profile != null and not data.is_empty() and (data["starter"] or profile.has_cosmetic(id))
+	return Cosmetics.owns(profile, id)
 
 
 static func equip(profile, owner: String, slot: String, id: String) -> bool:
 	if profile == null or not slot in Cosmetics.SLOTS or owner == "":
 		return false
-	if (slot == "companion_paint") != (owner == "spil9"):
+	if Cosmetics.OWNERS.has(slot) != (owner == Cosmetics.OWNERS.get(slot, "")):
 		return false
-	if slot != "companion_paint" and ClassDef.by_id(owner) == null:
+	if not Cosmetics.OWNERS.has(slot) and ClassDef.by_id(owner) == null:
+		return false
+	if id != "" and Cosmetics.is_pending(id):
 		return false
 	if id != "" and (not owns(profile, id) or not Cosmetics.fits(id, owner, slot)):
 		return false
@@ -155,9 +156,7 @@ func choices(slot: String) -> Array:
 func selected(slot: String) -> String:
 	if _profile == null:
 		return ""
-	var owner := Cosmetics.owner_for(pilot, slot)
-	var id: String = _profile.equipped(owner, slot)
-	return id if owns(_profile, id) and Cosmetics.fits(id, owner, slot) else ""
+	return Cosmetics.worn(_profile, Cosmetics.owner_for(pilot, slot), slot)
 
 
 # Presentation reads this result, not the raw saved id. An empty row means no trail,

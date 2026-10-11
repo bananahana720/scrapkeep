@@ -6,8 +6,10 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 
 const FIXTURES := "res://tests/fixtures/profile/"
 const DIR := "user://profile_store_test/"
-const KNOWN_FIELDS := ["schema", "generation", "pilots", "worlds", "achievements", "cosmetics", "equipped", "stats", "last_pilot", "settled", "companion", "rewards_settled"]
+# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 5): schema 4 adds the seen list.
+const KNOWN_FIELDS := ["schema", "generation", "pilots", "worlds", "achievements", "cosmetics", "equipped", "stats", "last_pilot", "settled", "companion", "rewards_settled", "seen"]
 const V1_FIXTURE := "res://tests/fixtures/profile_v1.json"
+const V3_FIXTURE := "res://tests/fixtures/profile_v3.json"
 
 var _t := T.new("profile_store_test")
 var _n := 0
@@ -36,6 +38,9 @@ func _initialize() -> void:
 	_v1_migrates_to_2()
 	_companion_and_settled_round_trip()
 	_schema_3_never_saves()
+	_v3_migrates_to_4()
+	_v3_seen_already_present()
+	_seen_merge()
 	_source_is_clean()
 	_clear_dir()
 	quit(_t.verdict())
@@ -191,7 +196,7 @@ func _rule_6_every_known_field() -> void:
 	var wrong := {
 		"schema": "one", "generation": "two", "pilots": "runner_gunner", "worlds": [4], "cosmetics": {"a": "b"},
 		"achievements": {"a": "late"}, "equipped": {"a": 4}, "stats": {"a": "many"}, "last_pilot": 4,
-		"settled": [3], "companion": [], "rewards_settled": "yes",
+		"settled": [3], "companion": [], "rewards_settled": "yes", "seen": [7],
 	}
 	for field in KNOWN_FIELDS:
 		_t.check("F3-4 rule 6 has a case for %s" % field, wrong.has(field))
@@ -440,7 +445,10 @@ func _v1_migrates_to_2() -> void:
 	_t.check("META-7 v1 saves", p.save(), p.last_error)
 	_t.check("META-7 v1 backup holds the original bytes", _bytes(path + ".v1") == original)
 	var saved = JSON.parse_string(FileAccess.get_file_as_string(path))
-	_t.check("META-7 v1 file is now schema 3, generation 13, unknown key kept", saved is Dictionary and saved.get("schema") == 3 and saved.get("generation") == 13 and saved.get("kept_from_a_tool", {}).get("note") == "unknown keys ride through", str(saved))
+	# Re-pinned 2026-10-10 (w13 B5): the literal 3 became Profile.SCHEMA; schema 4 chains v1 to v4
+	# and counts the v1 file's two owned cosmetics as seen.
+	_t.check("META-7 v1 file is now the current schema, generation 13, unknown key kept", saved is Dictionary and saved.get("schema") == Profile.SCHEMA and saved.get("generation") == 13 and saved.get("kept_from_a_tool", {}).get("note") == "unknown keys ride through", str(saved))
+	_t.check("B5 v1 cosmetics count as seen", p.is_seen("paint_verdigris") and p.is_seen("paint_rust") and p.seen_ids().size() == 2, str(p.seen_ids()))
 	var q := Profile.new(path)
 	q.load_profile()
 	_t.check("META-7 v2 reload keeps every unlock", q.has_pilot("runner_gunner") and q.has_cosmetic("paint_rust") and q.earned("first_win") and q.has_world("slag_bowl"))
@@ -480,6 +488,8 @@ func _companion_and_settled_round_trip() -> void:
 	_t.check("META-7 two writers union owned pieces and keep an assembly", c.companion()["owned"].size() == 4 and c.companion()["sockets"].size() == 2, str(c.companion()))
 
 
+# Re-labelled 2026-10-10 (w13 B5): the file is SCHEMA + 1, so the label says "newer schema"
+# instead of a number that goes stale on every bump. Logic unchanged.
 func _schema_3_never_saves() -> void:
 	var path := _fresh_path()
 	var bytes := _future_bytes()
@@ -488,8 +498,74 @@ func _schema_3_never_saves() -> void:
 	p.load_profile()
 	p.settle("x")
 	p.set_companion({"chassis": "spil9"})
-	_t.check("META-7 schema 3 refuses to save", not p.can_save and not p.save() and p.last_error.contains("newer build"), p.last_error)
-	_t.check("META-7 schema 3 bytes and backups untouched", _bytes(path) == bytes and not FileAccess.file_exists(path + ".v2") and not FileAccess.file_exists(path + ".v1"))
+	_t.check("META-7 newer schema refuses to save", not p.can_save and not p.save() and p.last_error.contains("newer build"), p.last_error)
+	_t.check("META-7 newer schema bytes and backups untouched", _bytes(path) == bytes and not FileAccess.file_exists(path + ".v2") and not FileAccess.file_exists(path + ".v1"))
+
+
+# CUSTOMIZE.md section 5: a wave 12 save loads losslessly, its owned cosmetics count as seen,
+# and the first save keeps the original bytes as .v3.
+func _v3_migrates_to_4() -> void:
+	var path := _fresh_path()
+	var original := FileAccess.get_file_as_bytes(V3_FIXTURE)
+	var source: Dictionary = JSON.parse_string(original.get_string_from_utf8())
+	_write(path, original)
+	var p := Profile.new(path)
+	_t.check("B5 v3 loads", p.load_profile() and p.can_save, p.last_error)
+	_t.eq("B5 v3 pilots kept", p._doc["pilots"], source["pilots"])
+	_t.eq("B5 v3 worlds kept", p._doc["worlds"], source["worlds"])
+	_t.eq("B5 v3 cosmetics kept", p._doc["cosmetics"], source["cosmetics"])
+	_t.check("B5 v3 achievements and times kept", p.earned_at("warden_broken") == 1790100000 and p.earned_at("kills_100") == 1790100900 and p._doc["achievements"].size() == 2)
+	_t.check("B5 v3 equipped kept", p.equipped("pylon_engineer", "paint") == "paint_any_night" and p.equipped("pylon_engineer", "trail") == "trail_salt_skip" and p.equipped("spil9", "companion_paint") == "companion_paint_night" and p._doc["equipped"].size() == 3)
+	_t.check("B5 v3 stats kept", p.stat("runs") == 14.0 and p.stat("ach.kills_100") == 100.0 and p.stat("ach.ach_d7_paw") == 37.0)
+	_t.eq("B5 v3 settled kept", p.settled_ids(), source["settled"])
+	_t.eq("B5 v3 companion kept", p.companion(), source["companion"])
+	_t.check("B5 v3 rewards_settled and last pilot kept", p.rewards_settled() and p.last_pilot() == "pylon_engineer")
+	_t.eq("B5 v3 owned cosmetics count as seen", p.seen_ids(), source["cosmetics"])
+	_t.check("B5 v3 no backup before save", not FileAccess.file_exists(path + ".v3"))
+	_t.check("B5 v3 saves", p.save(), p.last_error)
+	var saved = JSON.parse_string(FileAccess.get_file_as_string(path))
+	_t.check("B5 v3 file is schema 4, generation +1", saved is Dictionary and saved.get("schema") == 4 and saved.get("generation") == 22, str(saved))
+	_t.check("B5 v3 unknown key rides through", saved is Dictionary and saved.get("kept_from_a_tool", {}).get("note") == "unknown keys ride through")
+	_t.check("B5 v3 backup holds the original bytes", _bytes(path + ".v3") == original)
+	var q := Profile.new(path)
+	_t.check("B5 v4 reload", q.load_profile(), q.last_error)
+	_t.check("B5 v4 reload keeps all", q._doc["cosmetics"] == source["cosmetics"] and q.seen_ids() == source["cosmetics"] and q.settled_ids() == source["settled"] and q.companion() == source["companion"] and q.equipped("spil9", "companion_paint") == "companion_paint_night" and q.earned("kills_100"))
+	_t.check("B5 v4 resave makes no second backup", q.save() and _bytes(path + ".v3") == original and not FileAccess.file_exists(path + ".v3.1"))
+
+
+func _v3_seen_already_present() -> void:
+	var path := _fresh_path()
+	var doc: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(V3_FIXTURE))
+	doc["seen"] = ["x", "trail_salt_skip"]
+	_write(path, JSON.stringify(doc).to_utf8_buffer())
+	var p := Profile.new(path)
+	_t.check("B5 v3 with seen loads", p.load_profile(), p.last_error)
+	var seen := p.seen_ids()
+	var dupes := false
+	for id in seen:
+		if seen.count(id) > 1:
+			dupes = true
+	_t.check("B5 v3 seen keeps x plus every owned id, no duplicates", seen.has("x") and seen.size() == 6 and not dupes and seen.has("companion_paint_night"), str(seen))
+	_t.check("B5 mark_seen is true once", p.mark_seen("y") and not p.mark_seen("y") and p.is_seen("y"))
+
+
+func _seen_merge() -> void:
+	var path := _fresh_path()
+	var base := Profile.new(path)
+	base.load_profile()
+	base.save()
+	var a := Profile.new(path)
+	var b := Profile.new(path)
+	a.load_profile()
+	b.load_profile()
+	a.mark_seen("trail_any_downbeat")
+	b.mark_seen("decal_curtain_call")
+	_t.check("B5 seen merge writers save", a.save() and b.save(), b.last_error)
+	var c := Profile.new(path)
+	c.load_profile()
+	_t.check("B5 two writers union their seen ids", c.is_seen("trail_any_downbeat") and c.is_seen("decal_curtain_call") and c.seen_ids().size() == 2, str(c.seen_ids()))
+	var merged := Profile.merge({"seen": ["a"], "pilots": [], "worlds": [], "cosmetics": [], "settled": [], "achievements": {}, "stats": {}, "equipped": {}}, {"seen": ["b", "a"]})
+	_t.eq("B5 merge unions seen", merged["seen"], ["a", "b"])
 
 
 func _source_is_clean() -> void:
