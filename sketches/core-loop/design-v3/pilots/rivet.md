@@ -305,7 +305,7 @@ Nothing is bought. Each item comes from an achievement row in the shape `src/cor
 
 | Item | Slot | Look | Granted by |
 | --- | --- | --- | --- |
-| Swarf Curl (`trail_rivet_swarf`) | trail | Curls of copper machining swarf peel off behind the ball, thicker while sprinting | `ach_rivet_line_true` "Line True": "Land 50 Line Drive punches." On `line_skill_fired`, where `ability_id` is `line_drive` and `on` is `body`, count 50 across runs |
+| Swarf Curl (`trail_rivet_swarf`) | trail | Curls of copper machining swarf peel off behind the ball, thicker while sprinting | `ach_rivet_line_true` "Line True": "Land ten Line Drive punches in one stage."; discovery `rivet_line_true` |
 | Welding Hood (`outfit_rivet_hood`) | outfit | A flip-up welding hood over the visor. It snaps down on `ult_windup` | `ach_rivet_shrugged` "Shrugged Off": "Shrug off 30 holds and knocks in one run." **A2-CRITIC:** achievement rows cannot test the pilot (`src/core/progress.gd:259-288`), and `cc_ignored` also fires for any `grant_immunity` and for a mounted Sable with `mount_cc_immune` (`src/movement/player_ball.gd:357-362`). So the grant rides a discovery, `rivet_shrugged`, that Rivet's own code detects on the 30th ignored hit of a run, through `synergy_discovered` like the Cannon's grants |
 | Calibrated (`shell_rivet_calibrated`) | shell variant | Enamel scale marks on the lattice struts, rubbed calibration bands (`BIBLE.md:369`), numbered drill steps | `ach_rivet_full_breach` "Full Breach": "Land one set piece on 6 machines." On `ultimate_landed` with a Rivet ultimate id and `hits` of 6 or more |
 
