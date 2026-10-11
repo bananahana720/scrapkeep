@@ -1,4 +1,6 @@
 extends SceneTree
+# 2026-10-10 (PD-TARN fix round): each claw jaw is a paint body plus a class_accent tooth strip
+# (P-UNITS PD-TARN "jaw-tooth edges are the only class_accent"; hero.png bone jaws).
 # 2026-10-10 (PD-TARN): the shell is the Hoberman mecha (shell_tarn.py on shell_base.hoberman()):
 # sockets move to the claw arms' gap brackets (ClawPivot, ClawTip), the low rear pull drum
 # (PullExit) and the base's yokes (Control.Grip); the shell budget reads its registry exception
@@ -214,8 +216,12 @@ func _shell(scene: Node) -> void:
 	for side in ["R", "L"]:
 		for kind in ["Upper", "Lower"]:
 			var jaw := pod.get_node_or_null("Claw" + kind + "_" + side) as MeshInstance3D
-			_t.check("claw " + kind + side, jaw != null and jaw.mesh.get_surface_count() == 1
-				and jaw.mesh.surface_get_material(0).resource_name == "class_accent", "independent single-material toothed jaw on class_accent")
+			var slots := []
+			if jaw != null:
+				for s in jaw.mesh.get_surface_count():
+					slots.append(jaw.mesh.surface_get_material(s).resource_name)
+				slots.sort()
+			_t.check("claw " + kind + side, slots == ["class_accent", "paint"], "independent jaw: paint body, class_accent tooth strip; got %s" % [slots])
 		var blade := pod.get_node_or_null("WeaponRing/Blade_" + side) as MeshInstance3D
 		_t.check("blade " + side, blade != null and blade.mesh.get_surface_count() == 1, "single-material blade under WeaponRing")
 	var drum := pod.get_node_or_null("PullDrum") as MeshInstance3D

@@ -2916,9 +2916,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd",
    "exception": {
-    "draws": 17
+    "draws": 21
    },
-   "exception_why": "PD-TARN: the Hoberman base takes the 10-draw cap; Tarn's seven moving parts (four claw jaws, the pull drum, two blades) are one single-material mesh each so code can hinge, spin and swing them; ball at class V 17 + pilot 3 + layers 5",
+   "exception_why": "PD-TARN: the Hoberman base takes the 10-draw cap; Tarn's seven moving parts (four claw jaws, each a bone paint body plus a class_accent tooth strip; the pull drum; two blades) are each their own mesh so code can hinge, spin and swing them; ball at class V 21 + pilot 3 + layers 5; pending the owner's shell draw cap call for Hoberman pilots with moving parts",
    "provenance": {
     "recipe": "tools/blender/shell_tarn.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -2980,9 +2980,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd (fit_shell_into, variant shell_tarn_redjaw_teeth; classes II to V borrow the default layers)",
    "exception": {
-    "draws": 17
+    "draws": 21
    },
-   "exception_why": "PD-TARN: the earned Redjaw Teeth shell keeps the default's machinery, so it keeps its 17 draws",
+   "exception_why": "PD-TARN: the earned Redjaw Teeth shell keeps the default's machinery, so it keeps its 21 draws",
    "provenance": {
     "recipe": "tools/blender/shell_tarn.py --variant teeth",
     "helper": "tools/blender/shell_base.py hoberman()",

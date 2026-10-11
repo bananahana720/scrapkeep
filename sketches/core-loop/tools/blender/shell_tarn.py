@@ -17,10 +17,15 @@ shell_tarn_redjaw_teeth): the same machinery, sockets and sight cone; only the h
 change, to ten-sided toothed caps whose rims alternate long and short teeth.
 
 Draws: PD-0's base already spends the 10-draw shell cap (Core 3, Pod 3, Gyro, GyroInner,
-WeaponRing 2). Tarn's seven moving parts are each one single-material mesh so code can hinge,
-spin and swing them: four claw jaws on class_accent (the tooth plates are the working device,
-the only class_accent), the pull drum on rubber and two blades on bare_metal. 17 draws; the
-registry fragment carries the exception.
+WeaponRing 2). Tarn's seven moving parts are each their own mesh so code can hinge, spin and
+swing them: four claw jaws, each a bone paint body plus a toothed class_accent strip along its
+biting edge (the tooth edges are the working device, the only class_accent), the pull drum on
+rubber and two blades on bare_metal. 21 draws; the registry fragment carries the exception,
+pending the owner's call on the shell draw cap for Hoberman pilots with moving parts.
+
+Claw reach by class (CLAW_REACH) is not carried on the jaws: the base GLB's jaws and ClawTip
+sit at class I reach and the layers' bone hooks show the longer reach. Moving the reach onto
+the jaws needs loader or clip code outside this recipe (P-UNITS PD-TARN review, 2026-10-10).
 """
 import math
 from pathlib import Path
@@ -78,22 +83,28 @@ def claw_frame(sign):
     return d, axis, up
 
 
-def jaw_outline(length, sign_v):
-    """A toothed jaw plate from the hinge (u 0) to its hooked tip (u length); sign_v +1 is the
-    upper jaw, its teeth on the lower edge. (u, v) pairs, counter-clockwise either way."""
-    # Traced clockwise for the upper jaw: up the hinge end, along the back, round the hook,
-    # then back along the toothed edge.
-    pts = [(0.0, 0.0), (0.0, 0.045), (0.55 * length, 0.060), (0.86 * length, 0.048),
-           (length, 0.006), (0.95 * length, -0.034), (0.88 * length, -0.004)]
-    teeth = 4
-    for k in range(teeth):
+TOOTH_TOP = 0.014         # the seam between the bone jaw body and its tooth strip
+
+
+def jaw_outlines(length, sign_v):
+    """A jaw plate from the hinge (u 0) to its hooked tip (u length) as two outlines that share
+    the seam at v TOOTH_TOP: the bone body (back and hook) and the toothed strip along its
+    biting edge, the only class_accent (P-UNITS PD-TARN; pilots/tarn.md section 5). sign_v +1
+    is the upper jaw, teeth on its lower edge. (u, v) pairs, counter-clockwise either way."""
+    # Each traced clockwise for the upper jaw, then reversed.
+    body = [(0.0, 0.0), (0.0, 0.045), (0.55 * length, 0.060), (0.86 * length, 0.048),
+            (length, 0.006), (0.95 * length, -0.034), (0.88 * length, -0.004),
+            (0.86 * length, TOOTH_TOP), (0.12 * length, TOOTH_TOP)]
+    teeth = [(0.12 * length, TOOTH_TOP), (0.86 * length, TOOTH_TOP), (0.88 * length, -0.004)]
+    for k in range(4):
         u0 = 0.80 * length - k * 0.15 * length
-        pts.append((u0 - 0.04 * length, -0.024))
-        pts.append((u0 - 0.075 * length, 0.004))
-    pts.append((0.12 * length, 0.004))
-    if sign_v < 0:
-        return [(u, -v) for u, v in pts]
-    return list(reversed(pts))
+        teeth.append((u0 - 0.04 * length, -0.024))
+        teeth.append((u0 - 0.075 * length, 0.004))
+    teeth.append((0.12 * length, 0.004))
+    out = []
+    for pts in (body, teeth):
+        out.append([(u, -v) for u, v in pts] if sign_v < 0 else list(reversed(pts)))
+    return out
 
 
 def claw_points(sign, reach):
@@ -136,7 +147,9 @@ def claws(pod):
         length = (tip - hinge).length
         for label, sign_v in (("Upper", 1), ("Lower", -1)):
             jaw = Part("Claw" + label + "." + side)
-            _plane_prism(jaw, "class_accent", jaw_outline(length, sign_v), JAW_THICK, hinge, d, up)
+            body, teeth = jaw_outlines(length, sign_v)
+            _plane_prism(jaw, "paint", body, JAW_THICK, hinge, d, up, color="bone")
+            _plane_prism(jaw, "class_accent", teeth, JAW_THICK, hinge, d, up)
             sb._sharpen(jaw)
             jaw.to_object(tuple(hinge), pod)
         socket("ClawPivot." + side, tuple(hinge), pod, tuple(axis))
@@ -307,8 +320,9 @@ def check(shell, points):
     ok &= far <= REACH_CAP
     for o in common.tree(shell["pod"]):
         if o.name.startswith("Claw") and o.type == "MESH":
-            single = len(o.data.materials) == 1 and o.data.materials[0].name == "class_accent"
-            ok &= single
+            names = sorted(m.name for m in o.data.materials)
+            used = {o.data.materials[p.material_index].name for p in o.data.polygons}
+            ok &= names == ["class_accent", "paint"] and used == {"class_accent", "paint"}
     oxide = Vector(common.rgba("oxide")[:3])
     for o in common.tree(shell["root"]):
         if o.type != "MESH" or o == shell["core"] or not o.data.color_attributes:
