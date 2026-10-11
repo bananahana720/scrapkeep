@@ -318,7 +318,7 @@ Nothing is bought. Two rows already exist: Lagoon (starter) and Violet Static (g
 
 | Item | Slot | Look | Granted by | How the grant reads in today's evaluator |
 | --- | --- | --- | --- | --- |
-| `trail_sable_cable` "Cable Stitch" | trail | a dashed mint-and-copper cable that pays out behind the ball | achievement `sable_cable_runs` "Cable Runner": land 20 Cable Runs across runs | `"on": "ultimate_landed", "where": {"ultimate_id": "cable_run"}, "count": 20` (the `where` match, `src/core/progress.gd:244-247`) |
+| `trail_sable_cable` "Cable Stitch" | trail | a dashed mint-and-copper cable that pays out behind the ball | "Cable Runner": land three Cable Runs in one run | discovery `sable_cable_runs` |
 | `decal_sable_spool` "Spool and Wrench" | decal, new atlas tile 8 | a spool crossed with a wrench on the seat-back DecalPlate (ROSTER-LOOK section 7) | discovery `parting_shot`: a kill within 1 s of a slingshot (`codex_entries.gd:37-42`, `combat.gd:90`) | `"on": "synergy_discovered", "where": {"synergy_id": "parting_shot", "first_time": true}` (emitted at `src/core/codex.gd:157`) |
 | `shell_sable_felt` "Felt Rig" | shell variant (A4 and B5 add the slot) | lattice struts wrapped in grey felt bands, with rubber bushings showing at the pivot pins: the Switchback Enclaves' noise control (`BIBLE.md:285`). The roll's rattle layer becomes a muffled thump; volumes do not change, so no audio information is lost | hidden discovery `switchback`: Bank Shot off one of your own stakes | `"on": "synergy_discovered", "where": {"synergy_id": "switchback", "first_time": true}` |
 
@@ -447,7 +447,7 @@ PC-SABLE can start once B1 and B3 have merged. Felt Rig waits for B5; the card l
 11. The gauge draws five rings to match the five motif notes.
 12. Shift stays the plain boost.
 13. Pit Coil and Storm Crater stop being crater relics and become Bank Shot relics.
-14. Earned items: Cable Stitch for 20 Cable Runs, Spool and Wrench for Parting Shot, Felt Rig for the hidden Switchback.
+14. Earned items: Cable Stitch for three Cable Runs in one run, Spool and Wrench for Parting Shot, Felt Rig for the hidden Switchback.
 15. Class V thickens the one coil mast instead of adding a second spike.
 16. The wrench rack lights one wrench per 25 meter points, the meter in the world.
 

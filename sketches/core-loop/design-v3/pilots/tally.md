@@ -294,8 +294,8 @@ Nothing is bought. The slot kinds come from A4's scaffold (CUSTOMIZE.md); outfit
 
 | Item | Slot | Look | Grant row | Condition |
 | --- | --- | --- | --- | --- |
-| Punch Tape | trail | A ribbon of cream card tape with punched holes, tint `f7f1e3` | `ach_tally_punch_tape`: `on: "line_skill_fired"`, `where: {"ability_id": "link_clips"}`, `count: 50` | "Fire the ledger clip 50 times." |
-| Eyeshade | outfit | A mulberry visor and sleeve garters with a copper rim (brass is the Furnace Fleet's colour, `ROSTER-LOOK.md:239`); mulberry is the cloth colour (DESIGN-V3 D12) | `ach_tally_eyeshade`: `on: "ultimate_landed"`, `where: {"ultimate_id": "plate_return"}`, `sum: "hits"`, `count: 100` | "Settle 100 clips with Plate Return." |
+| Punch Tape | trail | A ribbon of cream card tape with punched holes, tint `f7f1e3` | `ach_tally_punch_tape`: discovery `tally_punch_tape` | "Fire the ledger clip ten times in one stage." |
+| Eyeshade | outfit | A mulberry visor and sleeve garters with a copper rim (brass is the Furnace Fleet's colour, `ROSTER-LOOK.md:239`); mulberry is the cloth colour (DESIGN-V3 D12) | `ach_tally_eyeshade`: discovery `tally_eyeshade` | "Settle twenty clips with Plate Return in one run." |
 | Abacus Lattice (working name) | shell variant | A shell variant per ROSTER-LOOK section 7; the working idea is copper abacus beads threaded on the lattice struts that slide with speed | `ach_tally_books_balanced`: `on: "synergy_discovered"`, `where: {"synergy_id": "tally_books_balanced"}`, `count: 1`, `hidden: true` | "Settle six clips with one landing." |
 
 `codex.mark_discovered` emits `synergy_discovered` (`src/core/codex.gd:143-157`), so a codex discovery can grant a cosmetic with no new evaluator.

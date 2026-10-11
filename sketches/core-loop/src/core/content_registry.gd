@@ -80,7 +80,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.ACTIVITY_ROWS": "3b128af84df85ddccc150f1d6f5847b194a39dd1625cd0c8a1d2c2c3b4ae2607",
 	"event_kinds.LOOT_ROWS": "1d99aa491419dc9a8bbd2da1cfd747d991c3848e5cf01e7cc8e099698d8b3b6e",
 	"event_kinds.UI_ROWS": "f8c0f271ee5a6f5d41ce209283d2b499f1183831465a081d6de308e19179a51e",  # 2026-10-08 (alpha wave 11 GP4 escape corridor): escape_acted row; was c6a2047c (wave 13 companion cues)
-	"event_kinds.WORLD_ROWS": "7284c5453342ce3f69febfebbb4c27362068f15ea2626bf42b89585e2203b9dd",  # 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 686afd81, 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
+	"event_kinds.WORLD_ROWS": "f3da5b1ac923d37557fa6851c579bde31839364cb52dfa74069dfb521abb9fe2",  # 2026-10-10 (w13 KC0 park placement): ride_bowl, ride_drop, ride_ledge, ride_hop rows; was 7284c545, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 686afd81, 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
 	"event_kinds.IMPACT": "6131066a6305444600f0678a8f8dc9aaae7212e9f4581cc4f58c3e293067052c",  # 2026-10-05 (alpha wave 15 cannon-kit): cannon row

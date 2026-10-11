@@ -32,6 +32,10 @@ const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 
 const NEUTRAL := "res://assets/models/world_one/shell_neutral.glb"
+# 2026-10-10 (PD-0b) re-pin: the glass fixture was SHELLS[DEFAULT_CLASS], which turns into a
+# lattice once Sable's row points at her Hoberman shell. It is now the legacy VD-01 root glass
+# shell below, which no pilot's SHELLS row names, so the check no longer moves with the roster.
+const GLASS := "res://assets/models/shell_sable.glb"
 const BUDGETS := "res://tools/asset_budgets.json"
 const EXPECTED_CHECKS := 45
 const CORE_LIMIT := 0.985
@@ -537,11 +541,11 @@ func _chunks(core: MeshInstance3D) -> void:
 	HeroAssets.sync_lattice(core, roll)
 	acc.show_build(1.0e6, [], [], 5)
 	_t.check("Hoberman shell turns the snap on", acc.lattice and acc.scale.is_equal_approx(Vector3.ONE), "lattice %s, scale %s at class V" % [acc.lattice, acc.scale])
-	var glass_scene: Node3D = (load(HeroAssets.SHELLS[HeroAssets.DEFAULT_CLASS]) as PackedScene).instantiate()
+	var glass_scene: Node3D = (load(GLASS) as PackedScene).instantiate()
 	var glass_core := glass_scene.find_child("Core", true, false)
 	HeroAssets.sync_lattice(glass_core, roll)
-	_t.check("glass shell leaves the snap off", glass_core != null and not acc.lattice and acc.scale.x > 1.2,
-		"lattice %s, scale %.2f with %s" % [acc.lattice, acc.scale.x, HeroAssets.SHELLS[HeroAssets.DEFAULT_CLASS]])
+	_t.check("glass shell leaves the snap off", glass_core != null and not glass_core.has_node("Hub_00") and not acc.lattice and acc.scale.x > 1.2,
+		"lattice %s, scale %.2f with %s" % [acc.lattice, acc.scale.x, GLASS])
 	glass_scene.free()
 	roll.free()
 
