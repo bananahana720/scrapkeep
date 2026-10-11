@@ -5,9 +5,10 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 # The ultimate meter (design-v3/SKILL-BAR.md section 4), pure rules like chain.gd. Points come
 # from play by source; the cap is 100 with the overflow lost; there is no decay and taking
 # damage drains nothing. Weapon hits pay slowly: never more than WEAPON_RATE_CAP points a
-# second over time (a budget that refills at that rate, holding at most WEAPON_BURST), so the
-# hold-fire camper is the slowest road. Only src/combat/ultimate.gd writes it; the HUD and bots
-# read it through AbilityState.ultimate().
+# second over time (a budget that refills at that rate, holding at most WEAPON_BURST), and near
+# misses the same way under NEAR_MISS_RATE_CAP and NEAR_MISS_BURST, so the hold-fire camper,
+# who dodges a lot and chains nothing, is the slowest road. Only src/combat/ultimate.gd writes
+# it; the HUD and bots read it through AbilityState.ultimate().
 
 const CAP := 100.0
 # Points per unit of each source. A per-second source (fast, blazing) is added by tick().
@@ -18,6 +19,15 @@ const WEIGHTS := {
 const WEAPON_RATE_CAP := 0.4
 # The most weapon points that can wait in the budget: two fresh hits, then the rate holds.
 const WEAPON_BURST := 0.5
+# 2026-10-11 (w13 B3b): near misses pay at most 0.05 points a second over time, holding one near
+# miss (4.0). B4's camper filled in a median 41.1 s, 69 to 95 of its first 100 points from near misses.
+const NEAR_MISS_RATE_CAP := 0.05
+const NEAR_MISS_BURST := 4.0
+# The rate-limited sources: [points per second the budget refills, the most it holds].
+const RATE_LIMITS := {
+	"weapon": [WEAPON_RATE_CAP, WEAPON_BURST],
+	"near_miss": [NEAR_MISS_RATE_CAP, NEAR_MISS_BURST],
+}
 
 var value := 0.0
 # Points actually paid, by source, this run.
@@ -25,18 +35,30 @@ var sources := {}
 # True while a set piece rides: nothing fills the meter.
 var locked := false
 var _entry := 0.0
-var _weapon_budget := WEAPON_BURST
+# Points each rate-limited source may still pay now.
+var _budgets := {}
+# Enemies already linked in the chain running now (instance id -> true).
+var _chain_linked := {}
+
+
+func _init() -> void:
+	_fill_budgets()
+
+
+func _fill_budgets() -> void:
+	for source in RATE_LIMITS:
+		_budgets[source] = float(RATE_LIMITS[source][1])
 
 
 # Adds a source's weight times amount and returns the points actually paid (0 when locked,
-# full, unknown, or a weapon hit past the rate limit).
+# full, unknown, or a rate-limited source past its limit).
 func add(source: String, amount := 1.0) -> float:
 	if locked or not WEIGHTS.has(source) or amount <= 0.0:
 		return 0.0
 	var points: float = float(WEIGHTS[source]) * amount
-	if source == "weapon":
-		points = minf(points, _weapon_budget)
-		_weapon_budget -= points
+	if _budgets.has(source):
+		points = minf(points, float(_budgets[source]))
+		_budgets[source] = float(_budgets[source]) - points
 	var paid := clampf(points, 0.0, CAP - value)
 	if paid <= 0.0:
 		return 0.0
@@ -45,9 +67,25 @@ func add(source: String, amount := 1.0) -> float:
 	return paid
 
 
-# Time passes: the weapon budget refills, and speed pays by tier.
+# A harpoon link on an enemy at this combo. 2026-10-11 (w13 B3b): a link pays once per enemy per
+# chain, beyond the first; combo 1 starts a new chain. Tally's bot bit one boss over and over in a
+# chain and earned up to 2719 link points a run. With pay false the link is only counted (out of
+# play), so the chain's record stays whole.
+func chain_link(enemy_id: int, combo: int, pay := true) -> float:
+	if combo <= 1:
+		_chain_linked = {enemy_id: true}
+		return 0.0
+	if _chain_linked.has(enemy_id):
+		return 0.0
+	_chain_linked[enemy_id] = true
+	return add("chain_link") if pay else 0.0
+
+
+# Time passes: the rate budgets refill, and speed pays by tier.
 func tick(delta: float, speed_tier: int) -> void:
-	_weapon_budget = minf(WEAPON_BURST, _weapon_budget + WEAPON_RATE_CAP * delta)
+	for source in RATE_LIMITS:
+		var limit: Array = RATE_LIMITS[source]
+		_budgets[source] = minf(float(limit[1]), float(_budgets[source]) + float(limit[0]) * delta)
 	if speed_tier >= SpeedTier.BLAZING:
 		add("blazing", delta)
 	elif speed_tier == SpeedTier.FAST:
@@ -90,4 +128,5 @@ func reset() -> void:
 	sources = {}
 	locked = false
 	_entry = 0.0
-	_weapon_budget = WEAPON_BURST
+	_chain_linked = {}
+	_fill_budgets()
