@@ -369,8 +369,8 @@ def flume_detail2(s):
         for side in (-1, 1):
             block(s, side * 3.9 - 0.04, side * 3.9 + 0.04, f["under"] - 0.5, f["under"] - 0.05, z + 0.2, z + 0.3, tone(OXIDE, IRON, int(z)))
     for k, z in enumerate(flume_bents()):
-        tuft(s, 3.9 + 0.2 * (k % 3), f["ground"], z + 0.8, 0.9, k)
-        tuft(s, -3.9 - 0.2 * (k % 3), f["ground"], z - 0.8, 0.8, k + 1)
+        tuft(s, 3.9 + 0.2 * (k % 3), 0.0, z + 0.8, 0.9, k)
+        tuft(s, -3.9 - 0.2 * (k % 3), 0.0, z - 0.8, 0.8, k + 1)
 
 
 # ---------------------------------------------------------------- penstock_run
@@ -459,9 +459,9 @@ def pen_detail2(s):
         ang = math.radians(10 + 12 * (k % 4))
         block(s, side * (p["r"] * math.cos(ang)) - 0.01, side * (p["r"] * math.cos(ang)) + 0.01, p["cy"] - 1.2, p["cy"] + 0.6, z, z + 0.14, VARNISH)
     for k, z in enumerate(_saddles()):
-        tuft(s, 2.6, p["ground"], z + 0.9, 0.9, k)
-        tuft(s, -2.6, p["ground"], z - 0.9, 0.8, k + 1)
-    rocks(s, [(((k * 5) % 7 - 3) * 0.9, p["ground"], 2.0 + k * 6.3, 0.5 + 0.15 * (k % 3), 0.5 * k) for k in range(18)], SAND, SLICK)
+        tuft(s, 2.6, 0.0, z + 0.9, 0.9, k)
+        tuft(s, -2.6, 0.0, z - 0.9, 0.8, k + 1)
+    rocks(s, [(((k * 5) % 7 - 3) * 0.9, 0.0, 2.0 + k * 6.3, 0.5 + 0.15 * (k % 3), 0.5 * k) for k in range(18)], SAND, SLICK)
 
 
 # ---------------------------------------------------------------- pipeline_rail
@@ -538,13 +538,13 @@ def pipe_detail1(s):
 def pipe_detail2(s):
     p = PIPE
     for k, z in enumerate(pipe_stands()):
-        tuft(s, 2.4, p["ground"], z + 0.6, 0.8, k)
-        tuft(s, -2.4, p["ground"], z - 0.6, 0.8, k + 1)
+        tuft(s, 2.4, 0.0, z + 0.6, 0.8, k)
+        tuft(s, -2.4, 0.0, z - 0.6, 0.8, k + 1)
     for k in range(12):
         z = 3.0 + k * 9.7
         sx = -1 if k % 2 else 1
         block(s, sx * p["pipe_x"] - 0.12, sx * p["pipe_x"] + 0.12, p["pipe_y"] - p["pipe_r"] - 0.006, p["pipe_y"] - p["pipe_r"] + 0.0, z, z + 0.2, VARNISH)
-    rocks(s, [(((k * 5) % 7 - 3) * 0.7, p["ground"], 2.0 + k * 6.3, 0.4 + 0.12 * (k % 3), 0.5 * k) for k in range(16)], SAND, SLICK)
+    rocks(s, [(((k * 5) % 7 - 3) * 0.7, 0.0, 2.0 + k * 6.3, 0.4 + 0.12 * (k % 3), 0.5 * k) for k in range(16)], SAND, SLICK)
 
 
 # ---------------------------------------------------------------- shared
