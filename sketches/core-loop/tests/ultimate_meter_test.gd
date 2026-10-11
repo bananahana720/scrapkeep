@@ -13,10 +13,12 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 # median first fill at 41.1 s over seeds 1 to 16 against the 180 s band, 69 to 95 of its first
 # 100 points from near misses at 4.0 each. Check 01 follows the new constants; checks 21 to 24 are
 # the camper-path cap and the chainer stream.
-# 2026-10-11 (w13 B3b, second change): a chain link pays once per enemy per chain
-# (UltimateMeter.chain_link). Tally's losing seeds 1, 3 and 4 at the Brindle boss earned 852 to
-# 2719 chain_link points in one run, biting the same boss over and over in one chain. Checks 25 to
-# 27; check 24's chainer links four distinct enemies a chain.
+# 2026-10-11 (w13 B3b, second change): a chain link pays once per enemy per CHAIN_LINK_GAP
+# (1.0 s of meter time; UltimateMeter.chain_link). Tally's losing seeds 1, 3 and 4 at the Brindle
+# boss earned 852 to 2719 chain_link points in one run, biting the same boss about 13 times a
+# second. A first try paid once per enemy per chain: seeds 2 to 4 won but seed 1 stalled at the
+# Brindle boss with 2 set pieces in 420 s, while the base meter won it with 24 in the run. Checks
+# 25 to 28; check 24's chainer links three distinct enemies a chain.
 
 var _t := T.new("ultimate_meter_test")
 
@@ -169,21 +171,27 @@ func _initialize() -> void:
 			filled_at = float(i + 1) * 0.1
 	_t.check("24 a chaining stream fills in under 60 s", filled_at > 0.0 and filled_at < 60.0, "full at %.1f s, %.1f points" % [filled_at, m.value])
 
-	# 12. A chain link pays once per enemy per chain; combo 1 starts a new chain.
-	_t.check("25 the meter has chain_link(enemy_id, combo)", m.has_method("chain_link"))
+	# 12. A chain link pays once per enemy per CHAIN_LINK_GAP (1.0 s); combo 1 pays nothing.
+	_t.check("25 the meter has chain_link(enemy_id, combo) and CHAIN_LINK_GAP 1.0", m.has_method("chain_link")
+		and m.get("CHAIN_LINK_GAP") == 1.0)
 	m.reset()
 	_link(m, 7, 1)
-	for bite in range(2, 52):
+	var bite := 2
+	for i in 100:
+		m.tick(0.1, SpeedTier.CRUISE)
 		_link(m, 7, bite)
-	_t.near("26 fifty more bites on the same enemy in one chain pay nothing", m.value, 0.0)
+		bite += 1
+	_t.check("26 ten bites a second on one enemy for 10 s pay one link a second", m.value <= 2.0 * 11.0 + 0.0001 and m.value >= 2.0 * 9.0,
+		"%.2f points" % m.value)
 	m.reset()
 	for k in 4:
 		_link(m, 10 + k, k + 1)
 	_link(m, 11, 5)
-	_t.near("27 a chain over four distinct enemies pays three links; a repeat pays nothing", m.value, 6.0)
-	_link(m, 11, 1)
-	_link(m, 12, 2)
-	_t.near("28 a new chain pays its distinct enemies again", m.value, 8.0)
+	_t.near("27 four distinct enemies in one chain pay three links; a repeat inside the gap pays nothing", m.value, 6.0)
+	for i in 10:
+		m.tick(0.1, SpeedTier.CRUISE)
+	_link(m, 11, 6)
+	_t.near("28 the same enemy pays again once the gap has passed", m.value, 8.0)
 
 	quit(_t.verdict())
 
