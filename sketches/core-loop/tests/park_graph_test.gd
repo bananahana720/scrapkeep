@@ -185,6 +185,20 @@ func _beacon(tool: GDScript, graph, park: Dictionary) -> void:
 	t.eq("a bad spawn alone is named second", later.get("first_failed"), "spawn")
 	t.eq("both rules ran when the beacon passed", later.get("checked"), ["beacon_ok", "spawn"])
 
+	# The tool's own output (graph.json and the printed report) carries the same order.
+	var built_stub := {"ride_edges": 0, "line_path": PackedInt32Array()}
+	var good_rule: Dictionary = tool.ruling(graph, park, built_stub)
+	t.eq("the ruling names no failed rule on the fixture", good_rule.get("first_failed"), "")
+	t.eq("the ruling lists both rules run on the fixture", good_rule.get("stage_checked"), ["beacon_ok", "spawn"])
+	var bad_rule: Dictionary = tool.ruling(graph, both, built_stub)
+	t.check("the ruling of a bad beacon has beacon_ok false", not bad_rule.get("beacon_ok", true), str(bad_rule.get("beacon_ok")))
+	t.eq("the ruling of a bad beacon and bad spawn names beacon_ok first", bad_rule.get("first_failed"), "beacon_ok")
+	t.eq("the ruling does not run spawn after the beacon fails", bad_rule.get("stage_checked"), ["beacon_ok"])
+	var bad_report: String = tool.report_text(bad_rule)
+	t.check("the report of a bad beacon prints the first failed rule", bad_report.contains("first failed: beacon_ok"), bad_report.substr(0, 400))
+	var good_report: String = tool.report_text(good_rule)
+	t.check("the report of the fixture prints the stage rules passed", good_report.contains("stage rules: beacon_ok, spawn passed"), good_report.substr(0, 400))
+
 
 # A full-width wall row across z -115, between run_wash and lip, baked in scratch.
 func _wall(tool: GDScript, bake: GDScript, park: Dictionary) -> void:
