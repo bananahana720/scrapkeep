@@ -34,8 +34,18 @@ const CGE_CAMERAS := [["close", Vector3(0, 1.06, 3.44), Vector3(0, 0.2, 0), 65.0
 	["far", Vector3(0, 3.55, 11.46), Vector3(0, 0.2, 0), 65.0]]
 const CGE_BALL := {"close": Vector3(0, -0.2, 0), "mid": Vector3(0, -0.2, 0), "far": Vector3(0, -0.2, 0)}
 const CGE_BALL_REASON := "the ball is the subject: it stays under the camera target"
-const WARDEN_BODY_CAMERAS := [["over_shoulder", Vector3(0, 6, 24), Vector3(0, 2, 0), 62.0], ["boss_high", Vector3(34, 20, 34), Vector3(0, -2, 0), 62.0],
-	["boss_low", Vector3(40, 3, 0), Vector3(0, 6, 0), 62.0], ["three_q", Vector3(-9, 4, 6), Vector3(0, 2, 0), 55.0]]
+# KF8-CAM: boss_high, boss_low and three_q frame the dressed body's bounds (look_harness
+# _warden_bodies puts the anchor "warden_bounds" at the centre of the visible meshes, radius = half
+# their diagonal), so the eye is that many radii out along the direction: distance = radius /
+# tan(fov / 2) * 1.25, which leaves the body's bounding sphere inside the frame with margin.
+# boss_high looks down 45 degrees from the -x,+z diagonal and boss_low from -x just under the
+# centre; both sides were free of the stage's walls and mounds for all three bodies (scout contact
+# sheets, w13 KF8-CAM). over_shoulder stays the gameplay-height camera from the warden anchor. The
+# ball is pinned beside the body.
+const WARDEN_BODY_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vector3.ZERO, 62.0, "warden_bounds"], ["boss_high", Vector3(-1.04, 1.4709, 1.04), Vector3.ZERO, 62.0, "warden_bounds"],
+	["boss_low", Vector3(-2.0, -0.25, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"]]
+const WARDEN_BODY_BALL := {"boss_high": Vector3(6.4, 0, 6.4), "boss_low": Vector3(0, 0, 9.0)}
+const WARDEN_BODY_BALL_REASON := "the ball stands on the floor beside the body, off the eye-to-target line, so it stays small"
 
 const SUBJECTS := {
 	# ---------------------------------------------------------------- miniboss, swarm, vault (stage 1)
@@ -277,9 +287,9 @@ const SUBJECTS := {
 	# _warden_bodies); the warden camera group (arw_pit_b's names), over_shoulder from the warden
 	# anchor since the ball stands beside each camera's target. The mind hangs (under_island), its
 	# anchor the hand's middle 4 m under the Warden's centre.
-	"warden_body_reactor": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "tick": 200, "cameras": WARDEN_BODY_CAMERAS},
-	"warden_body_swarm": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "tick": 230, "cameras": WARDEN_BODY_CAMERAS},
-	"warden_body_mind": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "tick": 260, "cameras": WARDEN_BODY_CAMERAS},
+	"warden_body_reactor": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "scale": true, "tick": 200, "cameras": WARDEN_BODY_CAMERAS, "ball": WARDEN_BODY_BALL, "ball_reason": WARDEN_BODY_BALL_REASON},
+	"warden_body_swarm": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "scale": true, "tick": 230, "cameras": WARDEN_BODY_CAMERAS, "ball": WARDEN_BODY_BALL, "ball_reason": WARDEN_BODY_BALL_REASON},
+	"warden_body_mind": {"group": "warden_bodies", "stage": 1, "kind": "actor", "owner": "KF8a", "anchor": "warden", "scale": true, "tick": 260, "cameras": WARDEN_BODY_CAMERAS, "ball": WARDEN_BODY_BALL, "ball_reason": WARDEN_BODY_BALL_REASON},
 }
 
 # The order --all boots the groups in; every group a row names appears once.

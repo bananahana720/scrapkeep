@@ -903,6 +903,8 @@ func _warden_bodies() -> void:
 		var w: Node3D = made[i]
 		var centre: Vector3 = w.global_position + (Vector3.DOWN * 4.0 if rows[i][1] == "mind" else Vector3.ZERO)
 		_anchor("warden", centre, w)
+		var bx := subject_bounds(game.presentation.hero_assets.warden_of(w).get("body", w))
+		_anchor("warden_bounds", bx.get_center(), null, bx.size.length() * 0.5)
 		var dressed: bool = not game.presentation.hero_assets.warden_of(w).get("body", null) == null
 		if not dressed:
 			printerr("look_harness: %s is not dressed in its body (clamp kit shown)" % rows[i][0])
