@@ -26,6 +26,7 @@ class III collars on Core), so each layer would cost one draw more, 2 / 3 / 2 at
 IV against the 1 / 2 / 1 layer caps, and no exception is granted. --ring-scrap with --outdir
 writes the measured candidates for the coordinator's call. The scrap rides WeaponRing, not
 MainBarrel, so it would hold the barrel's rest pitch; nothing pitches MainBarrel at run time yet.
+Ruling R2 (2026-10-11): dropped for the alpha; gap panels carry heft, the barrel stays seamless.
 No panel ever fills a sight gap: the gaps on the 35 degree cone from the pilot's head to the
 chase eyes and to the front eyes stay open at every class. Panels hang inside the lattice
 (outer face 0.92 to 0.93, inner 0.89), outside the gimbal sweep (0.862), so none can enter the

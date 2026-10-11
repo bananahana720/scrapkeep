@@ -9,9 +9,14 @@ extends SceneTree
 # from the mid chase eye (P-UNITS PD-CANNON GOAL; ROSTER-LOOK section 4), so SplitExit.R/L
 # re-pin; the 0.40 m breech face moves the sector shield out, so SectorPivot re-pins to its
 # inner radius 0.18. Directions are unchanged.
+# 2026-10-11 (PD-CANNON round 3, coordinator ruling R3): the Choir Barrel's tip at 1.572 m is
+# allowed under the equator-barrel reading, so shell_cannon_choir.glb gets its own bound,
+# BARREL_REACH_CHOIR 1.60; the base keeps BARREL_REACH 1.50. SCRAPKEEP_PCN_TEST_CHOIR swaps in a
+# damaged choir GLB for the negative control, as SCRAPKEEP_PCN_TEST_RIG does for the rig.
 
 const PILOT := "res://assets/models/pilot_cannon_anim.glb"
 const SHELL := "res://assets/models/world_one/shell_cannon.glb"
+const CHOIR := "res://assets/models/world_one/shell_cannon_choir.glb"
 const BUDGETS := "res://tools/asset_budgets.json"
 const CLIPS := {"drop_land": 2.1666667, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
 const PARENTS := {
@@ -37,6 +42,7 @@ const SHELL_SLOTS := ["paint", "ancient_enamel", "rubber", "class_accent", "copp
 const CORE_LIMIT := .985
 const MODULE_REACH := 1.25
 const BARREL_REACH := 1.50
+const BARREL_REACH_CHOIR := 1.60
 var failures := 0
 
 
@@ -61,7 +67,7 @@ func glb_json(path: String) -> Dictionary:
 
 
 func load_pilot(path: String) -> Node3D:
-	if path == PILOT:
+	if path == PILOT or path == CHOIR:
 		var packed := load(path) as PackedScene
 		return packed.instantiate() as Node3D if packed != null else null
 	# Negative controls load a damaged GLB outside production assets.
@@ -270,6 +276,24 @@ func check_shell(shell: Node3D) -> void:
 	check("kit SectorShutter", shutter != null and shutter.get_parent() == barrel)
 
 
+# The Choir Barrel variant swaps only the barrel; its ring and barrel reach get their own bound.
+func check_choir(choir: Node3D) -> void:
+	var ring := choir.find_child("WeaponRing", true, false) as Node3D
+	check("choir WeaponRing", ring != null)
+	if ring == null:
+		return
+	var reach := 0.0
+	var parts := meshes(ring)
+	if ring is MeshInstance3D:
+		parts.append(ring)
+	for mi: MeshInstance3D in parts:
+		var transform := to_root(mi, choir)
+		for surface in mi.mesh.get_surface_count():
+			for v in mi.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
+				reach = maxf(reach, (transform * v).length())
+	check("choir barrel reach", reach > 1.02 and reach <= BARREL_REACH_CHOIR, "WeaponRing and MainBarrel reach %.3f in 1.02..%.2f" % [reach, BARREL_REACH_CHOIR])
+
+
 func _run() -> void:
 	var path := OS.get_environment("SCRAPKEEP_PCN_TEST_RIG")
 	if path == "":
@@ -288,5 +312,14 @@ func _run() -> void:
 		check_shell(shell)
 		pilot.free()
 		shell.free()
+	var choir_path := OS.get_environment("SCRAPKEEP_PCN_TEST_CHOIR")
+	if choir_path == "":
+		choir_path = CHOIR
+	var choir := load_pilot(choir_path)
+	check("choir loads", choir != null, choir_path)
+	if choir != null:
+		root.add_child(choir)
+		check_choir(choir)
+		choir.free()
 	print("pilot_cannon_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)

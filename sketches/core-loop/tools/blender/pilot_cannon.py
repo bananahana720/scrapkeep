@@ -2,6 +2,9 @@
 
 blender -b --threads 2 --python-exit-code 1 --python this_file.py
 Add -- --preview to render CPU Cycles turnarounds and clip key poses.
+Add -- --no-shell to leave world_one/shell_cannon.glb untouched: without it this recipe re-exports
+the shell through common.export, not shell_cannon.py's finish(), so its bytes would change
+(P-UNITS section 0.4 item 14; shell_cannon.py owns that GLB).
 Evidence and editable intermediate models stay in artifacts/local/dress-preview/PCN.
 """
 import argparse
@@ -50,6 +53,11 @@ OBSERVATIONS = {
     "brace": "Motion bottom-middle: forward chest and muzzle, both grips planted; overlap panels, no squash.",
     "heave": "Motion bottom-right: one anatomical RIGHT punch, left counterbrace; one drive then settle.",
 }
+# PD-CANNON round 3 (coordinator ruling R1, 2026-10-11): the muzzle-head rides 0.08 m higher on a
+# short cast neck collar, so it sits above the weapon ring and clears rule 1's 45 px head floor at
+# the chase mid eye (it measured 39 px). The head's shape, snout and lenses are unchanged; the
+# head, snout and jaw controls move up with it.
+HEAD_LIFT = .08
 
 
 class PilotPart(Part):
@@ -184,16 +192,19 @@ def paddle(p, a, b):
 
 def model():
     p = PilotPart()
-    p.piece("head", cast_form, p, (.34, .30, .30), (0, .04, .21), u=16, v=8, squared=.90)
+    lift = HEAD_LIFT
+    p.piece("head", cast_form, p, (.34, .30, .30), (0, .04, .21+lift), u=16, v=8, squared=.90)
     p.piece("snout", p.ring, "ancient_enamel", .03, .065, .12, 20,
-            loc=(0, .24, .19), rot=(math.pi/2, 0, 0), color="bone")
+            loc=(0, .24, .19+lift), rot=(math.pi/2, 0, 0), color="bone")
     p.piece("snout", p.cyl, "rubber", .029, .029, .005, 16,
-            loc=(0, .215, .19), rot=(math.pi/2, 0, 0))
+            loc=(0, .215, .19+lift), rot=(math.pi/2, 0, 0))
     for s in (-1, 1):
-        p.piece("head", cast_form, p, (.055, .025, .055), (s*.11, .16, .24),
+        p.piece("head", cast_form, p, (.055, .025, .055), (s*.11, .16, .24+lift),
                 slot="rubber", u=12, v=8)
         p.piece("head", p.ring, "ancient_enamel", .0275, .038, .014, 12,
-                loc=(s*.11, .156, .24), rot=(math.pi/2, 0, 0), color=common.mix("bone", "charcoal", .18))
+                loc=(s*.11, .156, .24+lift), rot=(math.pi/2, 0, 0), color=common.mix("bone", "charcoal", .18))
+    # One cast collar bridges the chest casting (top at Z .08) and the lifted head (base .14).
+    p.piece("neck", cast_form, p, (.18, .16, .12), (0, .03, .12), colour="petrol", u=12, v=6)
     # An inset front oval and two overlapping rear cast panels carry the torso.
     p.piece("spine_01", cast_form, p, (.56, .41, .43), (0, -.005, -.17), colour="petrol", u=16, v=8)
     p.piece("spine_02", cast_form, p, (.28, .19, .13), (0, .02, .015), colour="petrol", u=12, v=6)
@@ -228,8 +239,8 @@ def skeleton(mesh):
     bpy.context.view_layer.objects.active = arm
     arm.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
-    fitted = {"head": (0, .04, .21), "snout": (0, .24, .19),
-              "jaw": (0, .19, .12), "tail.01": (0, -.22, -.27), "tail.02": (0, -.30, -.27)}
+    fitted = {"head": (0, .04, .21+HEAD_LIFT), "snout": (0, .24, .19+HEAD_LIFT),
+              "jaw": (0, .19, .12+HEAD_LIFT),"tail.01": (0, -.22, -.27), "tail.02": (0, -.30, -.27)}
     spec = [(name, fitted.get(name, pos), parent) for name, pos, parent in rig.bone_spec("rivet", [])]
     for name, position, parent in spec:
         bone = arm.data.edit_bones.new(name)
@@ -463,6 +474,7 @@ def previews(arm, mesh, acts, shell):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--preview", action="store_true")
+    parser.add_argument("--no-shell", action="store_true")
     args = parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
     OUT.mkdir(parents=True, exist_ok=True)
     common.reset()
@@ -471,9 +483,11 @@ def main():
     common.SLOTS["ancient_light"] = dict(common.SLOTS["ancient_light"], emit=.45)
     # Both models precede rigging. Retain the unrigged source and export the shell.
     mesh = model()
-    mod = shell_module()
-    shell = mod.build()
-    common.export(shell, str(mod.MODEL))
+    shell = None
+    if not args.no_shell:
+        mod = shell_module()
+        shell = mod.build()
+        common.export(shell, str(mod.MODEL))
     bpy.ops.wm.save_as_mainfile(filepath=str(OUT/"pilot_cannon-model.blend"))
     arm, spec = skeleton(mesh)
     acts, tables = actions(arm)
