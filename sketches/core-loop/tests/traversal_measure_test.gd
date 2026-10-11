@@ -1,4 +1,5 @@
 extends SceneTree
+# smoke: timeout=360s   (2026-10-11 w13 coordinator: the runner reads this marker in the first five lines only and clamps it at 360 s; KB7b put it on line 11, so the file was killed at the 180 s default under load)
 
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
@@ -8,7 +9,6 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const T := preload("res://tests/support/t.gd")
 
-# smoke: timeout=600s
 # One short traversal of the Cable Reach on the slice table (design-v3/TRAVERSAL.md): the
 # measure's JSON carries every field, flow share lies in 0 to 1, and the human-shaped bot
 # keeps its limits (no reaction under 150 ms, no two verbs inside 0.4 s). Then the run log
