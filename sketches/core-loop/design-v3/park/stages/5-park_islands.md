@@ -1,0 +1,552 @@
+# Stage 5: Highdraft, the sky islands (`park_islands`)
+
+**Status: storyboard draft, waiting for Andrew's approval.** Unit K-W3, wave 13, 10 October 2026. Nothing here is built. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
+
+| Field | Value |
+| --- | --- |
+| Stage and world | 5, The Highdraft (world 3) |
+| Map id and display name | `park_islands`, "Highdraft: the sky islands" |
+| Warden | `mind` (the Mind's hand) on `under_island`, variant `""` (today `choir`, `src/core/alpha_defs.gd:110`; PARK.md:441 drops it) |
+| Time of day | `golden` (today a morning light, `src/presentation/world_look.gd:35`) |
+| Kind sheet | `design-v3/wardens/mind.md` |
+| Boards | stage board `park-5-park_islands` (panels p1 to p6); key art in the concept board `park-w3` |
+
+## In one look
+
+You drop off a pine-topped mountain at golden hour and ride a downhill park of mesas. The animals have strung nets across every gap, so a fall always lands on rope. Over the far end of the park hangs an upside-down mountain, balanced on one hand lit in the ancients' blue. The fight is in the net bowl under it.
+
+| Number | Value (start) |
+| --- | --- |
+| Drop-in | the Lookout's top, 220 m |
+| Net deck | 60 m, under the whole park |
+| Mesas and buttes | 120 to 220 m tops; three low rocks below that on purpose (the Anvil 72 m, the knuckles 80 m) |
+| The Hanging Isle | top deck 400 m, tip 82 m, 180 m across |
+| The Warden | a 16 m hand: palm 82 m, knuckle hardpoints 88 m, lens 72 m; net bowl floor 44 m |
+| Pilot lines, drop-in to engage | 1,516 to 1,787 m, 58 to 89 s at 20 to 26 m/s |
+| Sight share (rough model) | 0.877 over 701 cells |
+
+## 1. The Arizona landform and the society layer
+
+**The real place.** The Madrean sky islands of south-east Arizona: forested ranges that rise out of the desert, pine on top, desert below, and relict species stranded up high when the valleys dried. Around them sit slickrock, hoodoos and dry washes. The park takes the silhouette and the ecology, not a real name (PARK.md veto 18, `BIBLE.md:979`).
+
+**The park disguise.** Each mesa is a sky island: a height stamp with a flat, pine-dotted top. The gaps between them are the animals' net deck at 60 m (PARK.md:378 and veto 10; `design-v3/BIBLE-AMENDMENT-park.md:105`). Mesas are where you ride. Nets are where you land. Thermals, cables and balloon lifts take you back up.
+
+**Who built what.** One society per row, so the codex reads the land.
+
+| Society | Where on this stage | What it left | What it means in play |
+| --- | --- | --- | --- |
+| `none` (water and time) | the mesas, the Twin Fins, the hoodoos, the washes, the relict pines | slickrock, varnish, balanced caps | the ground itself: ramps, banks, chutes |
+| the animals (no society id; filed under `none`) | the net deck, the bowl net, the posts, the balloon lifts | rope, posts, patched envelopes | the floor and the way back up; the posts are harpoon anchors |
+| `dam_era` | the fire lookout on the Lookout's east rim; the stone switchback stair down its west face | a lookout log, stamped stair stones | two of the three ways off the drop-in mesa |
+| `mining` | the aerial tram's timber top station on the Saddle, the tramway to the Ore Bench, the adit through it, the ore chute down to the Anvil | a ledger, an assay, a lamp, worn chute boards | the east fan: cable, tunnel, grind |
+| `fleet` | the Mooring Mesa: winch posts, a moored balloon, a landing pad | mooring tags | the anchor crews' home and the dropship's landing site |
+| `ancient` | the Lens Rocks (a buried hand under the east butte); the Hanging Isle | a hum, grip marks | the eruption event and the Warden |
+
+No `hohokam` or `ancestral_puebloan` row sits on this stage, so the guardrail in PARK.md section 4 has nothing to check here.
+
+**Material read.** Sandstone tan and slickrock pink, warm in low sun. The animals' rope in ochre. Mining in rust and timber grey. The Fleet in brass and soot. The ancients only in dull petrol enamel with Cherenkov seams (`src/combat/warden_kit.gd:8-9`).
+
+## 2. The hero landmark and the Warden's mounting
+
+**The Hanging Isle.** An upside-down mountain: a pine-topped deck 180 m across at 400 m, tapering 318 m down to a tip 22 m above the net. A thin waterfall pours off its rim and turns to mist long before it reaches the net (visual only). It is the tallest thing in the park and the only thing that floats (PARK.md veto 10). A Cherenkov blue beam rises from its top deck (`light: "ancient_beam"`), so the cloud deck weather never hides it.
+
+**Why 400 m and not PARK.md's 260 m.** The landmark must be seen from 85% of open cells (PARK.md:474). With the floor at 60 m and mesas up to 220 m, a 260 m top reached about 0.72 in my rough model; a 400 m top with slimmer, lower occluders reaches about 0.88. Keeping the tip low (82 m) keeps the whole fight inside rope range. KD5's real sight test decides; the fallback is lowering the West Shelf and the Ore Bench further, not raising the floor.
+
+**The mounting, `under_island`.** The Mind's hand cups the tip from beneath and holds the mountain up. The hand is 16 m from wrist to fingertip, the same body as on the Crown's perches. Its palm cups the tip at 82 m and its fingers curl up the rock; three knuckle hardpoints sit at 88 m, 6 m off the axis; the wrist stalk hangs below with the lens cluster at 72 m (`anchor` [0, 80, 520]). The lens follows the ball, as the mind kit does today (`src/combat/warden_kit.gd:15-16`).
+
+**The arena.** The net bowl under the isle: a 200 m net slung from the 60 m deck down to a 44 m floor. Three knuckle buttes stand in it 60 m from the axis (west, east, north), tops at 80 m, each with a banked spiral up its outside. The south side is open: that is where you arrive. From a knuckle top to the nearest hardpoint is about 37 m, inside the 45 m rope (`src/movement/tuning.gd:18`). From the bowl floor to the lens is 28 m. The engage ring (`reach_m` 120) covers the bowl; the pulse ring stays the kind sheet's 30 m.
+
+**The one mechanism: the pendulum tilt.** On each pulse the hand tips the island 10 degrees toward the ball (PARK.md:428). Because the island pivots high, the tip and the hand swing about 21 m away from the ball over 1.2 s, then back over 2.8 s. A camper loses the lens. A ball latched to a knuckle rides the swing and is thrown at its far end. The kind sheet has the numbers.
+
+**Gates and bay.** The Keel Bench, north of the bowl at 80 m. Gates at z 720 facing +z. Moss's bay docks at [0, 650], 70 m behind the gates and inside the gates' 110 m hold (`src/world/bay.gd:21-23`).
+
+**After the break.** The hand opens, goes dark and sinks into the bowl net. The island stays up, held by its own beam. No event starts in the next 20 s (PARK.md:311). You roll up the bowl's north bank onto the Keel Bench and the gates.
+
+## 3. Region sketch
+
+The 1.6 km square, -800 to +800 m on both axes. The fall line runs up the page, from the drop-in at the south to the landmark at the north.
+
+```
+        -800 m (west)                                      +800 m (east)
+z (m)
+  750                    kb kb GT kb                  
+  650                    kb kb BY kb                  
+  550  .. .. ro ro ro .. is is LM is .. lr lr .. .. ..
+  450  .. .. ro C4 C1 ww is is is C2 ew lr lr .. .. ..
+  350  .. .. ro ro ro C7 ww .. .. ew C8 .. .. .. .. ..
+  250  .. .. .. .. .. ww ww .. .. ew ew .. .. .. .. ..
+  150  .. .. .. .. .. ww ww .. .. ew ew .. .. .. .. ..
+   50  .. .. .. .. mo C9 ww .. A2 ew C6 .. .. .. .. ..
+  -50  .. .. .. .. mo H3 mo fn mi H2 mi mi mi .. .. ..
+ -150  .. .. .. .. mo mo mo fn mi mi mi A3 mi .. .. ..
+ -250  .. .. .. .. .. ws ws C0 mi mi mi mi mi .. .. ..
+ -350  .. .. .. .. .. ws ws fn mi C3 mi mi mi .. .. ..
+ -450  .. .. .. .. .. ws ws sd mi mi mi mi mi .. .. ..
+ -550  .. .. .. .. .. .. lk lk lk lk .. .. .. .. .. ..
+ -650                    lk lk lk lk                  
+ -750                    lk lk DI lk                  
+```
+
+Each cell is 100 m. North (+z, the landmark side) is up.
+
+| Code | Region |
+| --- | --- |
+| `lk` | Lookout Mesa |
+| `sd` | Saddle |
+| `ws` | West Shelf and hoodoos |
+| `fn` | Twin Fins |
+| `mi` | Tram and Ore Bench (the mine) |
+| `mo` | Moorings |
+| `ww` | West Wing and cloud wash |
+| `ew` | East Wing and cloud wash |
+| `ro` | Kite Roost |
+| `lr` | Lens Rocks |
+| `is` | Hanging Isle, net bowl, knuckles |
+| `kb` | Keel Bench |
+| `..` | Open net deck at 60 m |
+
+| Mark | What | At [x, z] |
+| --- | --- | --- |
+| `A1` | enemy_camp `camp_moorings` | [-250, -40] |
+| `A2` | ambush_altar `altar_anvil` | [0, 60] |
+| `A3` | hauler_bounty `bounty_ore_bench` | [330, -110] |
+| `H1` | home `tram_cutters` (line_cutter) | [101, -389] |
+| `H2` | home `chute_cutters` (line_cutter) | [191, -19] |
+| `H3` | home `mooring_anchor_crew` (anchor_crew) | [-239, -9] |
+| `H4` | home `dropship_anchor_crew` (anchor_crew, dormant) | [-239, 51] |
+| `H5` | home `roost_kites` (kite_drone) | [-439, 471] |
+| `C0` | thermal `fin_thermal` | [-90, -230] |
+| `C1` | thermal `roost_thermal` | [-400, 420] |
+| `C2` | thermal `bowl_thermal` | [110, 470] |
+| `C3` | cable `tramway` | [100, -390] |
+| `C4` | cable `roost_line` | [-420, 470] |
+| `C5` | lift `west_balloon_lift` | [-210, 80] |
+| `C6` | lift `east_balloon_lift` | [210, 80] |
+| `C7` | launcher `cloud_cannon_west` | [-210, 390] |
+| `C8` | launcher `cloud_cannon_east` | [210, 390] |
+| `C9` | barge `roost_ferry` | [-280, 60] |
+| `BY` | bay dock | [0, 650] |
+| `GT` | reward gates | [0, 720] |
+| `LM` | landmark `hanging_isle` and the Warden | [0, 520] |
+| `DI` | drop-in | [0, -720] |
+
+Read it as three fans between four waymarks. The drop-in fan runs from the Lookout to the Saddle. The middle fan runs from the Saddle to the Anvil, with the Moorings and the West Shelf to the west, the Twin Fins in the centre and the mine to the east. The last fan runs from the Anvil to the bowl, with a wing mesa on each side. The Kite Roost and the Lens Rocks sit off the lines on the far flanks: you see them, and you choose them.
+
+## 4. `park_rows` draft
+
+Conventions on this stage. `size` h of a stamped row is its top above the base plain at y = 0, because the bake raises the stamp by h. Rows that hang (nets, the chute, the grind) carry an absolute `y`. The `net_deck` row is one recipe at 60 m under the whole play rect. It sags up to 14 m between mesa feet, so every fall lands on rope (PARK.md veto 10). These are 30 rows; KD5 grows them toward PARK.md 2.2's 40 to 70 with detail rows (posts, pine stands, scrap).
+
+**Anchor cover.** The bar is a max anchor gap of 40 m (PARK.md:464), and walkable ground is not a target (`design-v3/TRAVERSAL.md:14`). Open net and flat mesa tops are walkable. So the animals' posts carry the anchors: the `net_deck` recipe stands a 16 m post (today's post height, `src/world/map_highdraft.gd:46`) on an 80 m lattice, and every mesa top that a line crosses carries a relict pine stand with a trunk within 45 m of any point. The posts are what the nets and balloons hang from, so the anchors explain themselves.
+
+| id | element / landform | society | at, y | size l x h x w, yaw | verb, ride fact | stamp, budget | routes | home | fragment |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `lookout_mesa` | sky_island / sky_island | none | [0, -660], null | 260 x 220 x 300 | drop, ride_drop | mesa, landform | main, west, east, slab, envelope |  | none_sky_island_relicts |
+| `fire_lookout` | anchor_field / mesa_rim | dam_era | [130, -640], null | 8 x 24 x 8 | swing, ride_grapple_line | none, detail | east |  | dam_era_lookout_log |
+| `lookout_stair` | flow_line / mesa_rim | dam_era | [-110, -560], null | 240 x 45 x 14, 20 deg | roll, ride_ledge | ramp, landform | west, envelope |  | dam_era_switchback_stones |
+| `slickrock_run` | flow_line / slickrock | none | [0, -560], null | 220 x 45 x 90 | pump, ride_chute | ramp, landform | main, slab |  |  |
+| `east_ribs` | kicker / slickrock | none | [110, -500], null | 14 x 2.5 x 50, -30 deg | launch, ride_hop | ramp, landform | east |  |  |
+| `saddle` | bank / slickrock | none | [0, -400], null | 100 x 175 x 220 | bank, ride_bowl | ridge, landform | main, west, east, slab, envelope |  |  |
+| `twin_fins` | sky_island / butte | none | [0, -230], null | 260 x 140 x 120 | drop, ride_drop | mesa, landform | main, slab |  | none_fin_varnish |
+| `fin_chute` | half_pipe / butte | none | [0, -230], 128 | 260 x 12 x 40 | pump, ride_chute | none, landform | main |  |  |
+| `fin_nose_kicker` | kicker / butte | none | [0, -95], null | 16 x 4 x 30 | launch, ride_hop | ramp, landform | main |  |  |
+| `net_deck` | bowl / sky_island | none | [0, 0], 60 | 1500 x 14 x 1100 | bank, ride_bowl | none, park_large | main, west, slab, envelope |  | net_knot_tally |
+| `anvil_rock` | sky_island / butte | none | [0, 60], null | 40 x 72 x 40 | launch, ride_hop | butte, landform | main, west, east, slab, envelope |  | none_desert_varnish |
+| `west_shelf` | terrace / mesa_rim | none | [-200, -280], null | 300 x 130 x 160 | bank, ride_bowl | terrace, landform | west, envelope |  |  |
+| `hoodoo_garden` | anchor_field / hoodoo_field | none | [-250, -160], null | 120 x 40 x 100 | swing, ride_grapple_line | none, landform | west |  | none_hoodoo_ash |
+| `mooring_mesa` | sky_island / mesa_rim | fleet | [-240, -10], null | 180 x 130 x 160 | drop, ride_drop | mesa, landform | west, envelope | mooring_anchor_crew | fleet_mooring_tags |
+| `mooring_pad` | ground / mesa_rim | fleet | [-240, 50], null | 50 x 2 x 40 | roll, (none) | plateau, landform | (none) | dropship_anchor_crew |  |
+| `tram_head` | anchor_field / mesa_rim | mining | [100, -390], null | 20 x 26 x 20 | swing, ride_grapple_line | none, landform | east | tram_cutters | mining_tram_ledger |
+| `ore_bench` | terrace / tailings_bench | mining | [290, -150], null | 220 x 130 x 200 | bank, ride_bowl | terrace, landform | east |  | mining_ore_bench_assay |
+| `ore_adit` | tunnel / adit | mining | [290, -130], null | 100 x 10 x 12 | drop, ride_drop | none, hole, park_large | east |  | mining_adit_lamp |
+| `ore_chute` | grind_line / flume | mining | [190, -20], 100 | 233 x 4 x 3, -59 deg | grind, ride_grapple_line | none, landform | east | chute_cutters | mining_ore_chute |
+| `west_wing` | sky_island / mesa_rim | none | [-210, 250], null | 320 x 120 x 120 | drop, ride_drop | mesa, landform | west |  |  |
+| `cloud_wash_west` | half_pipe / dry_wash | none | [-210, 250], null | 320 x 10 x 30 | pump, ride_chute | wash, landform | west |  |  |
+| `east_wing` | sky_island / mesa_rim | none | [210, 250], null | 320 x 120 x 120 | drop, ride_drop | mesa, landform | east |  |  |
+| `cloud_wash_east` | half_pipe / dry_wash | none | [210, 250], null | 320 x 10 x 30 | pump, ride_chute | wash, landform | east |  |  |
+| `kite_roost` | sky_island / butte | none | [-440, 470], null | 140 x 170 x 140 | lift, thermal_ride | butte, landform | (none) | roost_kites |  |
+| `lens_rocks` | sky_island / butte | ancient | [430, 470], null | 120 x 150 x 120 | drop, ride_drop | butte, landform | (none) |  | ancient_lens_rock_hum |
+| `net_bowl` | bowl / sky_island | none | [0, 520], 44 | 200 x 16 x 200 | bank, ride_bowl | none, park_large | main, west, east, slab, envelope |  | net_bowl_mends |
+| `knuckle_w` | bank / butte | none | [-60, 520], null | 36 x 80 x 36 | bank, ride_bowl | butte, landform | west |  |  |
+| `knuckle_e` | bank / butte | none | [60, 520], null | 36 x 80 x 36 | bank, ride_bowl | butte, landform | east |  |  |
+| `knuckle_n` | bank / butte | none | [0, 580], null | 36 x 80 x 36 | bank, ride_bowl | butte, landform | (none) |  |  |
+| `keel_bench` | ground / mesa_rim | none | [0, 700], null | 120 x 80 x 240 | roll, (none) | plateau, landform | (none) |  |  |
+
+Row notes:
+
+- `lookout_mesa`: the drop-in. Its flat top carries the relict pines and the two dam-era pieces. Three ways off it: the Slickrock Run north, the stair west, the fire lookout swing east.
+- `saddle`: the first waymark. A bank 220 m wide between the Lookout and the Fins; every line carves it.
+- `twin_fins` and `fin_chute`: two parallel fins of rock with a 40 m half-pipe between them, floor at 128 m. The `fin_nose_kicker` at their north end throws you over 80 m of air onto the net short of the Anvil.
+- `anvil_rock`: the second waymark and the ambush altar. A 72 m stub rising 12 m out of the net, with a 0.3 grade ramp on its south side (today's ramp grade, `src/world/map_highdraft.gd:38`), so the floor line climbs it.
+- `ore_adit`: the stage's one tunnel. Mouths face along the fall line and the roof lips bevel back 3 m (PARK.md section 4, `design-v3/TRAVERSAL.md:110`).
+- `west_wing` and `east_wing`: long low mesas that carry the cloud washes and the cannons into the arena.
+- `knuckle_w`, `knuckle_e`, `knuckle_n`: the arena's launch towers; their spirals are `bank` rides.
+- `keel_bench`: the gates' ground, level with the bowl's north rim.
+
+## 5. Routes, waymarks and activities
+
+| route | via | open at start |
+| --- | --- | --- |
+| `main` | lookout_mesa, slickrock_run, saddle, twin_fins, fin_chute, fin_nose_kicker, net_deck, anvil_rock, net_bowl | yes |
+| `west` | lookout_mesa, lookout_stair, saddle, west_shelf, hoodoo_garden, mooring_mesa, net_deck, anvil_rock, west_wing, cloud_wash_west, knuckle_w, net_bowl | yes |
+| `east` | lookout_mesa, fire_lookout, east_ribs, saddle, tram_head, ore_bench, ore_adit, ore_chute, anvil_rock, east_wing, cloud_wash_east, knuckle_e, net_bowl | yes |
+| `slab` | lookout_mesa, slickrock_run, saddle, twin_fins, net_deck, anvil_rock, net_bowl | no, an event opens it |
+| `envelope` | lookout_mesa, lookout_stair, saddle, west_shelf, mooring_mesa, net_deck, anvil_rock, net_bowl | no, an event opens it |
+
+Only `fin_rim_collapse` closes a route (`main`). `west` and `east` can never close, so "a route always open" holds under every overlap (PARK.md section 5). The two event routes open shortcuts; they never replace a closed one.
+
+| id | activity | site | at | pack | pay |
+| --- | --- | --- | --- | --- | --- |
+| `camp_moorings` | enemy_camp | `mooring_mesa` | [-250, -40] | anchor_crew, anchor_crew, line_cutter | {"named": "rivet_plating"} |
+| `altar_anvil` | ambush_altar | `anvil_rock` | [0, 60] | (row default) | (row default) |
+| `bounty_ore_bench` | hauler_bounty | `ore_bench` | [330, -110] | (row default) | (row default) |
+
+Waymarks, in order: `drop_in`, `saddle`, `altar_anvil`, `landmark`.
+
+The three activities are signposted from the drop-in. The altar is a waymark, so every line crosses its ring (as today's altar sits on the chain, `src/world/map_highdraft.gd:98-106`). The camp and the bounty sit one fan off the centre: the west line and the east line pass them.
+
+## 6. `event_rows` draft
+
+| id | kind (family) | site | trigger | lead s, form | live s | effect | routes | hold m, cooldown s, once | music cue |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `fin_rim_collapse` | collapse (natural) | `twin_fins` | clock_tier 1 | 6, cave_in_crumble | 0 | depth_m 8.0, swap "fin_slab_ramp" | closes main; opens slab | 25, 0, true | riser_natural then drop_collapse |
+| `mooring_burner_blow` | boiler_burst (industrial) | `mooring_mesa` | clock_tier 2 | 5, boiler_pressure | 10 | hazard "burner_flare", hazard_m [22, 12], damage 6.0, swap "envelope_drape" | opens envelope | 16, 0, true | riser_industrial then drop_boiler |
+| `mooring_dropship` | fleet_landing (fleet) | `mooring_pad` | clock_tier 2 | 10, fleet_inbound | 0 | vessel "dropship", home "dropship_anchor_crew", footprint_m [36, 16] | none | 25, 0, true | riser_fleet then drop_fleet_anvil |
+| `lens_rocks_wake` | machine_eruption (ancient) | `lens_rocks` | clock_tier 2 | 9, ancient_stirring | 0 | miniboss "mind_hand", swap "lens_rock_crater" | none | 18, 0, true | riser_mind_quote then drop_mind_wrong |
+| `isle_shed` | impact (natural) | `west_wing` | warden_phase chunk_1 | 6, impact_incoming | 0 | strike_m 20.0, damage 8.0, swap "crater_event" | none | 30, 0, true | riser_natural then drop_impact |
+
+What each one looks like in play:
+
+- **`fin_rim_collapse` (natural, tier 1, about 45 s in).** The west fin's rim cracks along a crumble line for 6 s, then a 260 m slab drops 8 m and leans against the fin as a ramp. The chute closes; the slab ramp opens a slower line down to the net. It fires while most lines are past the Saddle, so you see it from above or beside it, never under it.
+- **`mooring_burner_blow` (industrial, tier 2).** The moored balloon's burner shrieks for 5 s (the steam whistle rising), then flares a 22 by 12 m jet for 10 s. The envelope collapses over the mesa's north edge and drapes into a soft ramp down to the net: the `envelope` route.
+- **`mooring_dropship` (Fleet, tier 2).** A Fleet dropship crosses the sky for 10 s (Brindle's anvil and brass, PARK.md:310) and settles on the mooring pad. Its ramp wakes the dormant `dropship_anchor_crew` home. The ramp doubles as a kicker.
+- **`lens_rocks_wake` (ancient, tier 2, weight 0.6).** The Lens Rocks hum a wrong note for 9 s, then a Mind's hand erupts as a miniboss and leaves a crater. It is off every line on purpose: you choose it.
+- **`isle_shed` (natural, the Warden's first chunk).** The tilt shakes a boulder loose from the island's rim. It falls 6 s after the mark appears and leaves a 40 m crater on the West Wing (the `crater_event` recipe, PARK.md veto 13). The crater is a bowl you can ride; it changes the west approach for a second attempt.
+
+Timing. Tiers come every 45 s and stop at 2 today (`src/world/director.gd:83-84`); a spike adds 2 (`director.gd:164-165`). Tier 1 lands mid-route on most lines; tier 2 lands near the landmark for a skipper and mid-stage for a completionist. This stage uses no tier 3 or 4, so it does not depend on veto 16.
+
+Leads: 6 s for the collapse, 5 s for the burner, 10 s for the dropship, 9 s for the eruption, 6 s for the shed. Each meets its floor (PARK.md:311) and rounds up to the next downbeat. Four rows change the ground (collapse, burner, eruption, shed); the director's cap of two at once holds them apart.
+
+New `WORLD_ROWS` forms this table needs (KE units): `boiler_pressure`, `fleet_inbound`, `ancient_stirring`. `cave_in_crumble` and `impact_incoming` exist (`src/core/event_kinds.gd:826-850`).
+
+## 7. `home_rows` draft
+
+| id | enemy | site (landform) | advantage | counter | reinforce: from tier, every s, max, pack | break: by, hp, scrap | stops kind | dormant |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `tram_cutters` | line_cutter | `tram_head` (tram station, mesa rim) | The tramway is the east fan's air path; cutters on the station deck throw across the cable while you hang on it. | Drop off the cable early onto the Ore Bench or glide under the arc; the deck sits level with the saddle's east lip, so a ram from the lip reaches it. | 1, 30, 3, `draft_cut` | ram, 120, 30 | true | false |
+| `chute_cutters` | line_cutter | `ore_chute` (flume) | Trestle tops overlook the grind; a cut line drops you off the chute's high end onto the net. | Grind it low and fast: the reticle closes on where you will be, and the chute's speed carries you past it. | 2, 40, 2, `draft_cut` | ram, 100, 25 | false | false |
+| `mooring_anchor_crew` | anchor_crew | `mooring_mesa` (mesa_rim) | Winch posts line the mooring rim over the net; a ball crossing below is hooked onto the deck. | Jump the cable lane before it fills, or come in high off the roost ferry and slam the post from above. | 0, 35, 3, `draft_anchor` | slam, 140, 35 | true | false |
+| `dropship_anchor_crew` | anchor_crew | `mooring_pad` (mesa_rim) | The landed dropship's ramp is a winch deck facing the net; it doubles the moorings' crew. | Its ramp is also a kicker: roll up it at speed and smash the winch on the way over. | 2, 30, 3, `draft_anchor` | smash, 160, 40 | false | true |
+| `roost_kites` | kite_drone | `kite_roost` (butte) | The roost's sunny face holds a thermal that keeps them above ram reach. | Shoot them while they circle or leave the dive mark; Kest rides the same column above them and slams. | 1, 25, 4, `draft_kites` | damage, 160, 30 | true | false |
+
+All five use today's stage 5 packs (`src/core/alpha_defs.gd:106-110`). Each kind lives where its mechanic is strongest (PARK.md:385): line cutters where you hang on cables and grinds, anchor crews on the mooring rim over the net, kite drones in a thermal column. The director's ancient pack (`src/world/director.gd:25`, `70`) still brings Mind's hands; this stage gives them no home, only the eruption.
+
+## 8. `contraption_rows` draft
+
+| id | kind | site | recipe | spec keys (contraptions.gd) |
+| --- | --- | --- | --- | --- |
+| `fin_thermal` | thermal | `twin_fins` | (primitive) | at [-90, -230], radius 6.0, height 240.0 |
+| `roost_thermal` | thermal | `kite_roost` | (primitive) | at [-400, 420], radius 6.0, height 220.0 |
+| `bowl_thermal` | thermal | `knuckle_e` | (primitive) | at [110, 470], radius 6.0, height 160.0 |
+| `tramway` | cable | `tram_head` | (primitive) | from [100, 199, -390], to [260, 134, -230], radius 4.5, floor 18.0 |
+| `roost_line` | cable | `kite_roost` | (primitive) | from [-420, 172, 470], to [-75, 82, 515], radius 4.5, floor 18.0 |
+| `west_balloon_lift` | lift | `west_wing` | lift_platform | at [-210, 80], radius 5.0, rise 60.0, charge 4.0, offset 0.0 |
+| `east_balloon_lift` | lift | `east_wing` | lift_platform | at [210, 80], radius 5.0, rise 60.0, charge 4.0, offset 2.0 |
+| `cloud_cannon_west` | launcher | `cloud_wash_west` | cannon | style "cannon", at [-210, 390], radius 4.0, target [-75, 82, 505], floor 30.0, min_flight 3.0, charge 2.5 |
+| `cloud_cannon_east` | launcher | `cloud_wash_east` | cannon | style "cannon", at [210, 390], radius 4.0, target [75, 82, 505], floor 30.0, min_flight 3.0, charge 2.5 |
+| `roost_ferry` | barge | `mooring_mesa` | barge | a [-280, 129, 60], b [-410, 169, 400], size [14, 2, 14], travel 18.0, dwell 3.0, offset 0.0 |
+
+Thermals are the only wind (PARK.md:188). A cable rides one way, `from` to `to`, at an 18 m/s floor (`src/world/contraptions.gd:215-222`). The two balloon lifts are the way back up for a ball that fell to the net beside a wing: the floor line never needs them, a lost ball does. The roost ferry is a moving island, as today's barges are (`src/world/map_highdraft.gd:91-96`).
+
+## 9. Weather and the fixed time of day
+
+**Time: `golden`.** A low sun from the west-north-west, so the fall line north is side-lit and every mesa throws a long blue shadow east. Proposed `TIME_ROWS` row for KE7 (start): sun elevation 14 degrees, colour #ffc98a, energy 1.1, ambient #a7b6c9 at 0.45. Today's Highdraft light is a low morning amber (`src/presentation/world_look.gd:35`); veto 2 in PARK.md moves it.
+
+| id | kind | trigger | lead, live, gap s | fog | sky, sound, music layer | event odds |
+| --- | --- | --- | --- | --- | --- | --- |
+| `golden_air` | clear | always | 0, 0, 0 | 0.0025, #fff1dc | clear, high_wind_bed, (none) | none |
+| `cloud_rise` | cloud_deck | clock_tier 2 | 8, 60, 60 | 0.006, #ece7da | clear, cloud_hush_bed, layer_cloud_pad | `mooring_dropship` x2 |
+
+**The cloud rise.** From tier 2 the cloud deck climbs out of the void below the net, over 8 s, and holds for 60 s. It stops 4 m under the net, never over it, so the net reads as the only floor and the mesas stand out of a white sea. It doubles the dropship's odds. Handling never changes (PARK.md 2.7).
+
+## 10. Traversal lines
+
+**The flow line.** A skater drops off the Lookout's north lip and carves the Slickrock Run as an S. They bank across the Saddle and pump the Fin Chute, wall to wall, for 260 m. Then they hit the fin nose kicker and take 80 m of air over the net. They roll up the Anvil's ramp through the altar ring, then cross the net to the bowl, one long carve. That is the `floor` line: 1,269 m with no harpoon and no contraption. The pilot lines take a side fan in at least one of the three segments, which gives them length, air and a second verb.
+
+| line | fans taken (segment 1, 2, 3) | length m | straight m | ratio | segment lengths m | time at 20 to 26 m/s | segments at 20 m/s |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | W, C, E | 1531 | 1120 | 1.37 | 464, 495, 572 | 59 to 77 s | 23 s, 25 s, 29 s |
+| rivet | E, E, C | 1630 | 1120 | 1.45 | 449, 811, 370 | 63 to 82 s | 22 s, 41 s, 18 s |
+| kest | C, T, E | 1624 | 1120 | 1.45 | 405, 648, 572 | 62 to 81 s | 20 s, 32 s, 29 s |
+| tarn | W, W, W | 1784 | 1120 | 1.59 | 464, 747, 572 | 69 to 89 s | 23 s, 37 s, 29 s |
+| tally | E, C, W | 1516 | 1120 | 1.35 | 449, 495, 572 | 58 to 76 s | 22 s, 25 s, 29 s |
+| cannon | C, E, W | 1787 | 1120 | 1.6 | 405, 811, 572 | 69 to 89 s | 20 s, 41 s, 29 s |
+| floor | C, C, C | 1269 | 1120 | 1.13 | 405, 495, 370 | 49 to 63 s | 20 s, 25 s, 18 s |
+
+Every pilot line sits inside PARK.md's ratio band of 1.3 to 2.0 (PARK.md:466). The floor line is held to its own bar: reach the Warden within twice the pilot median (PARK.md:467). Segments run 18 to 41 s at 20 m/s, inside the 12 to 45 s band. At 26 m/s Tally's and Sable's lines finish just under 60 s; if the bot averages that fast, the fix is a longer carve in the last fan, not a slower park.
+
+**The tricks each line offers.**
+
+- **Sable (vault and slingshot): west, centre, east.** Off the Lookout's west rim down the dam-era stair, vaulting the switchback lips. Carve the Saddle, pump the Fin Chute, and slingshot off a pylon at the fin nose: the longest flight on the stage. From the altar, east to the balloon lift, the cloud wash and the cannon onto the east knuckle.
+- **Rivet (sprint): east, east, centre.** Swing the fire lookout off the east rim and sprint the ribs into the Saddle. Grapple the tram head and ride the tramway down to the Ore Bench. Drop through the adit, sprint onto the ore chute and grind 60 m down to the Anvil. Then a flat-out sprint across the net into the bowl: the stage's peak-speed line.
+- **Kest (glide and rocket jump): centre, thermal, east.** Carve the Run, then rocket-jump from the Saddle's west lip into the fin thermal. Climb to about 250 m, then glide west over the shelf and the Moorings and down to the altar. Finish east; or take the bowl thermal at the end for a first slam from above the hand.
+- **Tarn (claw pull): west, west, west.** Claw down the stair's cairns and across the West Shelf. Pull from hoodoo to hoodoo through the garden and drop off the Moorings to the net. Then the west balloon lift, the cloud wash and the cannon.
+- **Tally (surge): east, centre, west.** The lookout swing and the ribs, then a surge down the Fin Chute that holds chute speed into the kicker. Finish west.
+- **The Cannon (recoil): centre, east, west.** Recoil-hop out of the Run's lips, grapple the tram head and ride the tramway. Recoil off the bench edge onto the chute, then cross west to the lift, the wash and the cannon. A cannon riding a cannon.
+
+**Against the bands** (PARK.md:452-468), as designed and before any bot run:
+
+| Band | How this park meets it |
+| --- | --- |
+| Time to engage, 60 to 120 s | 58 to 89 s at 20 to 26 m/s; see the note on fast bots above |
+| Segments, 12 to 45 s | 18 to 41 s at 20 m/s; the longest are the east middle fan (811 m) |
+| Flow share at least 0.70 | the park falls 176 m from drop-in to bowl floor; no line climbs except the Anvil ramp (12 m) and the knuckle spirals after engage |
+| Airborne 0.25 to 0.60 | the fin nose flight (about 2.5 s), the cannon flights (at least 3 s each, `min_flight`), the tramway and roost line (rail time has no ground contact), the thermal climbs and glides, the Lookout's lips. Estimate 0.30 to 0.45 (start); KD5 measures |
+| Peak speed at least 26.6 m/s, 3 s at that tier | the Slickrock Run drops 45 m, the fin nose flight drops 80 m, the ore chute drops 60 m |
+| Quiet stretch at most 20 s | every line meets a ride fact at most about 300 m apart (12 to 15 s): lips, chutes, banks, kickers, cables, cannons |
+| Max anchor gap 40 m | the post lattice and pine stands (section 4); mesa faces and the fins' walls |
+| Distinct verbs at least 3 | 4 to 6 per line (roll, pump, bank, launch, swing, grind, drop, lift, glide) |
+| Distinct lines at least 3 | Sable, Rivet and Kest share no fan |
+
+**`tools/park_lines/park_islands.json` draft.** Waypoints are [x, z] or a waymark id.
+
+```json
+{
+ "map": "park_islands",
+ "stage": 5,
+ "pilots": {
+  "sable": {"waypoints": ["drop_in", [-110, -680], [-150, -580], [-90, -470], "saddle", [-18, -340], [18, -280], [-18, -220], [18, -160], [0, -95], "altar_anvil", [180, 150], [210, 260], [210, 390], [100, 455], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "rivet": {"waypoints": ["drop_in", [100, -660], [150, -560], [110, -500], "saddle", [100, -390], [260, -230], [290, -180], [290, -80], [90, 40], "altar_anvil", [-40, 180], [30, 300], [0, 400], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "kest": {"waypoints": ["drop_in", [-50, -630], [50, -530], [-20, -450], "saddle", [-20, -300], [-90, -230], [-200, -60], [-120, 30], "altar_anvil", [180, 150], [210, 260], [210, 390], [100, 455], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "tarn": {"waypoints": ["drop_in", [-110, -680], [-150, -580], [-90, -470], "saddle", [-180, -300], [-250, -160], [-230, -20], "altar_anvil", [-180, 150], [-210, 260], [-210, 390], [-100, 455], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "tally": {"waypoints": ["drop_in", [100, -660], [150, -560], [110, -500], "saddle", [-18, -340], [18, -280], [-18, -220], [18, -160], [0, -95], "altar_anvil", [-180, 150], [-210, 260], [-210, 390], [-100, 455], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "cannon": {"waypoints": ["drop_in", [-50, -630], [50, -530], [-20, -450], "saddle", [100, -390], [260, -230], [290, -180], [290, -80], [90, 40], "altar_anvil", [-180, 150], [-210, 260], [-210, 390], [-100, 455], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}}
+ },
+ "floor": {"waypoints": ["drop_in", [-50, -630], [50, -530], [-20, -450], "saddle", [-18, -340], [18, -280], [-18, -220], [18, -160], [0, -95], "altar_anvil", [-40, 180], [30, 300], [0, 400], "landmark"]}
+}
+```
+
+## 11. The music arc
+
+The stage keeps today's music: theme 2 with the `highdraft` ACE set (`src/core/alpha_defs.gd:101`; `src/presentation/music_rows.gd:12`). The arc follows the gem rules: keep the core, escalate on game-state thresholds, add layers and never swap them, and land the payoff on the gameplay moment (G11, `src/presentation/MUSIC-GEMS.md`). The Mind never enters the band (`SOUND-STORY.md:280`); its quote is a cue on the game frame (`SOUND-STORY.md:72`).
+
+| Where or what | What you hear | Rule |
+| --- | --- | --- |
+| Drop-in on the Lookout | the theme's intro bars over the high wind bed | G1 |
+| Off the Lookout's lip | the launch is the build, the landing on the Saddle is the first drop | G9 |
+| The Fin Chute | the hats layer joins while you pump | G10, add a layer |
+| The fin nose flight | the longest build on the stage: the A7b9 holds through the air, the net landing resolves it | G2, G9 |
+| The Moorings, while a crew is live | the Fleet's anvil and brass, one layer per difficulty tick | `SOUND-STORY.md:74` |
+| The cloud rise | `layer_cloud_pad` while it holds | weather `music_layer` |
+| The landmark approach | the landmark hum under the band (`landmark_hum`, `src/core/event_kinds.gd:847`) | |
+| Engage | the Warden pivot | G3 |
+| Engage | the Mind's quote, once: your class motif inverted, last note flat, on sine, on the frame | `SOUND-STORY.md:61`; kind sheet section 6 |
+| Each charge | only the quote's wrong last note, held on sine for the 2 s charge, landing on the pulse as the island tips | kind sheet section 6 |
+| Half broken; three quarters | the key lift; the sinister break | G7 |
+| The break | the unseal drop, then the rice-cooker clear | G2, G9 |
+
+Event cues (proposed ids for KE8's `CUES` table, PARK.md 2.4): `riser_natural` into `drop_collapse` or `drop_impact`; `riser_industrial` into `drop_boiler` (the steam whistle rising into a percussion hit, PARK.md:310); `riser_fleet` into `drop_fleet_anvil`; `riser_mind_quote` into `drop_mind_wrong`. Each land cue hits the downbeat the event lands on.
+
+## 12. Codex fragments from the society layer
+
+Draft copy, one line each, in the voice of the lore lines (`SOUND-STORY.md:212-219`). Ids match the `fragment` fields.
+
+| Id | Found at | Text (draft) |
+| --- | --- | --- |
+| `none_sky_island_relicts` | `lookout_mesa` | The pines up here are relicts, stranded when the valleys dried. They are not the only thing up here that got stranded. |
+| `dam_era_lookout_log` | `fire_lookout` | Lookout log: smoke at the fins, 14:10. Smoke at the fins, 14:12. It is not smoke. It is going the wrong way. |
+| `dam_era_switchback_stones` | `lookout_stair` | Every stair stone is stamped with a crew number. Crew 7 stamped theirs upside down, all the way down. |
+| `none_fin_varnish` | `twin_fins` | Desert varnish takes centuries per shade. One stripe on the west fin is fresh. |
+| `net_knot_tally` | `net_deck` | Knot count, west gap: 40,112. Re-tied after the storm: 40,112. Someone is counting with us. |
+| `none_desert_varnish` | `anvil_rock` | The Anvil rings when the wind is right. The wind is never right at noon. |
+| `none_hoodoo_ash` | `hoodoo_garden` | A hoodoo's cap is welded ash; the soft stone under it goes first. Balance is borrowed time. |
+| `fleet_mooring_tags` | `mooring_mesa` | Mooring tag: INVENTORY. DO NOT FLOAT. |
+| `mining_tram_ledger` | `tram_head` | Tram ledger: buckets up, 212. Buckets down, 212. Buckets that came down heavier than they went up: 3. |
+| `mining_ore_bench_assay` | `ore_bench` | Assay: copper, good. Silver, fair. One sample blue and warm; it would not go in the crucible. |
+| `mining_adit_lamp` | `ore_adit` | Carbide lamp found burning. The carbide ran out years ago. |
+| `mining_ore_chute` | `ore_chute` | The chute boards are worn smooth on the inside. Also, oddly, on the outside. |
+| `ancient_lens_rock_hum` | `lens_rocks` | The rocks hum one step below whatever you are whistling. |
+| `net_bowl_mends` | `net_bowl` | Mend log: the bowl net under the isle never needs mending. Nobody mends it. |
+| `ancient_keel_grip` | the landmark | The grip marks on the isle's tip are older than the rock they grip. |
+
+Today's 3-1 lore lines (`src/core/lore_rows.gd:232-288`, the post docket at `:274` and the beacon watch at `:278`) stay; they still fit a park of posts and a lens.
+
+## 13. What stays from today's stage
+
+| Kept | Where it lives |
+| --- | --- |
+| Packs `draft_cut`, `draft_anchor`, `draft_kites` | `src/core/alpha_defs.gd:106-110` |
+| Warden plating 170, health 1,250, posture curve 2.0 x 1.10, ram does not shatter | `alpha_defs.gd:104-105`, pressure row `alpha_defs.gd:64` |
+| Beacon seconds 25; scrap density 1.0; kill scrap 5 | `alpha_defs.gd:103` |
+| Music theme 2, ACE `highdraft` | `alpha_defs.gd:101`; `music_rows.gd:12` |
+| The world 3 Warden band: 0.7 x 35 to 1.6 x 80 s, so 24.5 to 128 s | `tests/alpha_posture_bands_w23_test.gd:26-27` |
+| Line cutter, anchor crew, kite drone, Mind's hand, unchanged | `src/combat/line_cutter.gd:3-16`, `anchor_crew.gd:3-16`, `kite_drone.gd:5-18`, `mind_hand.gd:7-28` |
+
+What changes: the map id (`highdraft` to `park_islands`), the heading (today -z, `src/world/map_highdraft.gd:68`; the park runs +z), the variant (`choir` to `""`), the time of day, and `beacon_radius` 30 becomes the landmark's `reach_m` 120.
+
+**Tests to re-pin, each with a dated header.**
+
+| Test | What it pins today | After |
+| --- | --- | --- |
+| `tests/highdraft_zone_test.gd` | slots, the 10 m net deck, the bridge route (`:10`) | replaced by `tests/park_park_islands_test.gd` (KD5) |
+| `tests/highdraft_lift_test.gd` | posts on island rims, three thermals (`:11`) | the post lattice and the contraption rows |
+| `tests/bot_highdraft_lift_test.gd` | a bot rides the Lift | the bot rides `fin_thermal` |
+| `tests/highdraft_warden_bot_test.gd` | the skipper breaks the stage 5 choir Warden (`:10`) | re-measured on `under_island`, variant `""` |
+| `tests/highdraft_gate_bot_test.gd` | the skipper reaches the gates (`:10`) | the Keel Bench gates |
+| `tests/highdraft_light_test.gd` | the morning light and cream cloud deck (`:7`) | the `golden` row |
+| `tests/highdraft_scenery_test.gd`, `highdraft_materials_test.gd`, `highdraft_fx_test.gd`, `highdraft_tone_test.gd` | today's island kit (`highdraft_scenery_test.gd:16`, `highdraft_materials_test.gd:9`) | retire with the old map at KD7; the recipe tests replace them |
+| `tests/warden_variants_test.gd` | variants reach the Warden (`:7`) | stage 5 now has none |
+| `tests/alpha_posture_bands_w23_test.gd` | stage 5 inside the world 3 band | re-measured and re-pinned (PARK.md:444) |
+| The ending fly-over | copies the Highdraft terrain and hides its grid floor (`src/ui/ending_sequence.gd:233-234`) | reads the park terrain; checked in KD7 |
+
+## 14. Storyboard frames
+
+Seven frames, in play order. Panels p1 to p6 of the stage board map onto frames 1 to 6; frame 7 is a spare for the exit.
+
+1. **Drop-in vista (p2_drop_in).** Golden hour from the drop-in on the Lookout's south end, 2 m above the ground, looking north. Relict pines frame the left edge; the fire lookout stands on the right rim. Below, the Slickrock Run curls down to the Saddle. Beyond, the Twin Fins, the net glinting between mesas, the two wing mesas and, 1.2 km away, the upside-down mountain with its blue beam. The three activity markers sit on the horizon line.
+2. **First flow line (p3_line).** Chase camera low behind the ball in the Fin Chute, mid-pump on the east wall, the west fin's sunlit face filling the left of frame. Ahead, the fin nose kicker and open sky; the island floats in the gap.
+3. **An enemy home (p4_home).** The Mooring Mesa's rim from the net below: brass winch posts, a moored patchwork balloon, an anchor crew's cable lane reaching down toward the ball as it crosses. The counter is in the frame: the roost ferry passing overhead.
+4. **An event firing (p5_event).** The fin rim collapse in two beats: the crumble line glowing along the west fin's rim with the 6 s mark, then the slab leaning against the fin as a new ramp, dust rolling over the net.
+5. **The landmark approach.** From the Anvil's altar ring: the net running north to the bowl, the knuckle buttes, and the isle filling the top half of frame, its tip 22 m above the net and the hand's blue seams visible.
+6. **The Warden fight (p6_warden).** Inside the bowl, looking up: the hand cupping the tip, the lens open in a stagger, a harpoon line from the ball to a knuckle, the island tilted 10 degrees. The pulse ring on the net.
+7. **The exit.** The hand dark in the net; the ball rolling up the north bank onto the Keel Bench; three reward gates and Moss's bay docking above them, the island still hanging overhead in the last light.
+
+p1_overhead is plotted from this park file by `tools/park_plot.py`, not generated.
+
+## 15. Calls made here, and open questions
+
+**Calls made under the creative charge (veto list).**
+
+1. The Hanging Isle is an upside-down mountain: top at 400 m, not 260 m, for the sight rule; its tip at 82 m keeps the fight in rope range.
+2. The net deck is one park-wide recipe at 60 m with 16 m posts on an 80 m lattice; the posts are the open-net anchors.
+3. Relict pine stands on mesa tops are the mesa-top anchors.
+4. The arena is a bowl net with three knuckle buttes; the south side stays open.
+5. The under-island mechanism is the pendulum tilt (kind sheet).
+6. Three waymarks, with the Anvil's altar as the second one, so the segments balance (370 to 811 m).
+7. The cloud deck rises to 4 m under the net and never over it.
+8. The fin rim collapse closes the centre route at tier 1 and opens the slab ramp.
+9. The moored balloon's burner is the industrial event; its envelope becomes a ramp.
+10. The island sheds a boulder on the Warden's first chunk; the crater is a ride.
+11. `reach_m` is 120, so the engage ring covers the bowl; the pulse ring stays 30 m.
+12. The animals' nets, posts and balloons carry society `none`, with `net_` fragments.
+
+**Open questions for the coordinator.**
+
+- The animals have no society id. Add `animal`, or keep `none`?
+- The sight numbers come from a box model on a 50 m grid (section 16). KD5's test is the judge.
+
+## 16. Checks run on this draft
+
+- Schema: a Python mirror of PARK.md 2.10's checks (enums, references, home landform equals site landform, packs in the stage row, lead floors by family, the society guardrail, `handling` "none", contraption keys per kind) passed with no issues.
+- Routes: with every closing event live, `west` and `east` stay open.
+- Lines: lengths clipped at the engage ring, segment lengths between waymark passes.
+- Sight: a 50 m grid over the play rect, eye 2 m above a box model of the stamped rows on a 60 m floor, cells under the island excluded, ray sampled every 10 m: 0.877 over 701 cells.
+- None of this ran in Godot. The traversal bands, the sight test and the density test run in KD5.
+
+## Appendix: the park file draft
+
+`src/world/park/park_islands.json`, as KD5 should start it. The tables above are generated from this same object.
+
+```json
+{
+ "schema": "scrapkeep-park/1",
+ "map": "park_islands",
+ "size_m": 1600,
+ "time_of_day": "golden",
+ "spawn": {"at": [0, -720], "heading_deg": 0},
+ "play_rect": [-560, -780, 1120, 1540],
+ "landmark": {
+  "id": "hanging_isle",
+  "kind": "sky_island",
+  "at": [0, 520],
+  "size": [180, 318, 180],
+  "yaw_deg": 0,
+  "recipe": "landmark_sky_island",
+  "budget": "hero_landmark",
+  "sight_top": [0, 400, 520],
+  "sight_share": 0.85,
+  "beacon": [0, 520],
+  "reach_m": 120,
+  "warden": {"mounting": "under_island", "anchor": [0, 80, 520], "path": [], "hardpoints": 3},
+  "bay_dock": {"at": [0, 650], "facing_deg": 0},
+  "gate_slots": [{"at": [-20, 720], "facing_deg": 0}, {"at": [0, 720], "facing_deg": 0}, {"at": [20, 720], "facing_deg": 0}],
+  "light": "ancient_beam",
+  "music": "landmark_hum",
+  "fragment": "ancient_keel_grip"
+ },
+ "waymarks": ["drop_in", "saddle", "altar_anvil", "landmark"],
+ "routes": [
+  {"id": "main", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "slickrock_run", "saddle", "twin_fins", "fin_chute", "fin_nose_kicker", "net_deck", "anvil_rock", "net_bowl"]},
+  {"id": "west", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_stair", "saddle", "west_shelf", "hoodoo_garden", "mooring_mesa", "net_deck", "anvil_rock", "west_wing", "cloud_wash_west", "knuckle_w", "net_bowl"]},
+  {"id": "east", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "fire_lookout", "east_ribs", "saddle", "tram_head", "ore_bench", "ore_adit", "ore_chute", "anvil_rock", "east_wing", "cloud_wash_east", "knuckle_e", "net_bowl"]},
+  {"id": "slab", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "slickrock_run", "saddle", "twin_fins", "net_deck", "anvil_rock", "net_bowl"]},
+  {"id": "envelope", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_stair", "saddle", "west_shelf", "mooring_mesa", "net_deck", "anvil_rock", "net_bowl"]}
+ ],
+ "park_rows": [
+  {"id": "lookout_mesa", "element": "sky_island", "landform": "sky_island", "society": "none", "at": [0, -660], "y": null, "size": [260, 220, 300], "yaw_deg": 0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:sky_island", "stamp": "mesa", "hole": false, "budget": "landform", "routes": ["main", "west", "east", "slab", "envelope"], "fragment": "none_sky_island_relicts"},
+  {"id": "fire_lookout", "element": "anchor_field", "landform": "mesa_rim", "society": "dam_era", "at": [130, -640], "y": null, "size": [8, 24, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": ["east"], "fragment": "dam_era_lookout_log"},
+  {"id": "lookout_stair", "element": "flow_line", "landform": "mesa_rim", "society": "dam_era", "at": [-110, -560], "y": null, "size": [240, 45, 14], "yaw_deg": 20, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:flow_line", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["west", "envelope"], "fragment": "dam_era_switchback_stones"},
+  {"id": "slickrock_run", "element": "flow_line", "landform": "slickrock", "society": "none", "at": [0, -560], "y": null, "size": [220, 45, 90], "yaw_deg": 0, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["main", "slab"], "fragment": ""},
+  {"id": "east_ribs", "element": "kicker", "landform": "slickrock", "society": "none", "at": [110, -500], "y": null, "size": [14, 2.5, 50], "yaw_deg": -30, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["east"], "fragment": ""},
+  {"id": "saddle", "element": "bank", "landform": "slickrock", "society": "none", "at": [0, -400], "y": null, "size": [100, 175, 220], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ridge", "hole": false, "budget": "landform", "routes": ["main", "west", "east", "slab", "envelope"], "fragment": ""},
+  {"id": "twin_fins", "element": "sky_island", "landform": "butte", "society": "none", "at": [0, -230], "y": null, "size": [260, 140, 120], "yaw_deg": 0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:sky_island", "stamp": "mesa", "hole": false, "budget": "landform", "routes": ["main", "slab"], "fragment": "none_fin_varnish"},
+  {"id": "fin_chute", "element": "half_pipe", "landform": "butte", "society": "none", "at": [0, -230], "y": 128, "size": [260, 12, 40], "yaw_deg": 0, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:half_pipe", "stamp": "", "hole": false, "budget": "landform", "routes": ["main"], "fragment": ""},
+  {"id": "fin_nose_kicker", "element": "kicker", "landform": "butte", "society": "none", "at": [0, -95], "y": null, "size": [16, 4, 30], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["main"], "fragment": ""},
+  {"id": "net_deck", "element": "bowl", "landform": "sky_island", "society": "none", "at": [0, 0], "y": 60, "size": [1500, 14, 1100], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bowl", "stamp": "", "hole": false, "budget": "park_large", "routes": ["main", "west", "slab", "envelope"], "fragment": "net_knot_tally"},
+  {"id": "anvil_rock", "element": "sky_island", "landform": "butte", "society": "none", "at": [0, 60], "y": null, "size": [40, 72, 40], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:sky_island", "stamp": "butte", "hole": false, "budget": "landform", "routes": ["main", "west", "east", "slab", "envelope"], "fragment": "none_desert_varnish"},
+  {"id": "west_shelf", "element": "terrace", "landform": "mesa_rim", "society": "none", "at": [-200, -280], "y": null, "size": [300, 130, 160], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:terrace", "stamp": "terrace", "hole": false, "budget": "landform", "routes": ["west", "envelope"], "fragment": ""},
+  {"id": "hoodoo_garden", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [-250, -160], "y": null, "size": [120, 40, 100], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "landform", "routes": ["west"], "fragment": "none_hoodoo_ash"},
+  {"id": "mooring_mesa", "element": "sky_island", "landform": "mesa_rim", "society": "fleet", "at": [-240, -10], "y": null, "size": [180, 130, 160], "yaw_deg": 0, "verb": "drop", "ride_fact": "ride_drop", "home": "mooring_anchor_crew", "recipe": "greybox:sky_island", "stamp": "mesa", "hole": false, "budget": "landform", "routes": ["west", "envelope"], "fragment": "fleet_mooring_tags"},
+  {"id": "mooring_pad", "element": "ground", "landform": "mesa_rim", "society": "fleet", "at": [-240, 50], "y": null, "size": [50, 2, 40], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "dropship_anchor_crew", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "tram_head", "element": "anchor_field", "landform": "mesa_rim", "society": "mining", "at": [100, -390], "y": null, "size": [20, 26, 20], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "tram_cutters", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "landform", "routes": ["east"], "fragment": "mining_tram_ledger"},
+  {"id": "ore_bench", "element": "terrace", "landform": "tailings_bench", "society": "mining", "at": [290, -150], "y": null, "size": [220, 130, 200], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:terrace", "stamp": "terrace", "hole": false, "budget": "landform", "routes": ["east"], "fragment": "mining_ore_bench_assay"},
+  {"id": "ore_adit", "element": "tunnel", "landform": "adit", "society": "mining", "at": [290, -130], "y": null, "size": [100, 10, 12], "yaw_deg": 0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:tunnel", "stamp": "", "hole": true, "budget": "park_large", "routes": ["east"], "fragment": "mining_adit_lamp"},
+  {"id": "ore_chute", "element": "grind_line", "landform": "flume", "society": "mining", "at": [190, -20], "y": 100, "size": [233, 4, 3], "yaw_deg": -59, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "chute_cutters", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "landform", "routes": ["east"], "fragment": "mining_ore_chute"},
+  {"id": "west_wing", "element": "sky_island", "landform": "mesa_rim", "society": "none", "at": [-210, 250], "y": null, "size": [320, 120, 120], "yaw_deg": 0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:sky_island", "stamp": "mesa", "hole": false, "budget": "landform", "routes": ["west"], "fragment": ""},
+  {"id": "cloud_wash_west", "element": "half_pipe", "landform": "dry_wash", "society": "none", "at": [-210, 250], "y": null, "size": [320, 10, 30], "yaw_deg": 0, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:half_pipe", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["west"], "fragment": ""},
+  {"id": "east_wing", "element": "sky_island", "landform": "mesa_rim", "society": "none", "at": [210, 250], "y": null, "size": [320, 120, 120], "yaw_deg": 0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:sky_island", "stamp": "mesa", "hole": false, "budget": "landform", "routes": ["east"], "fragment": ""},
+  {"id": "cloud_wash_east", "element": "half_pipe", "landform": "dry_wash", "society": "none", "at": [210, 250], "y": null, "size": [320, 10, 30], "yaw_deg": 0, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:half_pipe", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["east"], "fragment": ""},
+  {"id": "kite_roost", "element": "sky_island", "landform": "butte", "society": "none", "at": [-440, 470], "y": null, "size": [140, 170, 140], "yaw_deg": 0, "verb": "lift", "ride_fact": "thermal_ride", "home": "roost_kites", "recipe": "greybox:sky_island", "stamp": "butte", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "lens_rocks", "element": "sky_island", "landform": "butte", "society": "ancient", "at": [430, 470], "y": null, "size": [120, 150, 120], "yaw_deg": 0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:sky_island", "stamp": "butte", "hole": false, "budget": "landform", "routes": [], "fragment": "ancient_lens_rock_hum"},
+  {"id": "net_bowl", "element": "bowl", "landform": "sky_island", "society": "none", "at": [0, 520], "y": 44, "size": [200, 16, 200], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bowl", "stamp": "", "hole": false, "budget": "park_large", "routes": ["main", "west", "east", "slab", "envelope"], "fragment": "net_bowl_mends"},
+  {"id": "knuckle_w", "element": "bank", "landform": "butte", "society": "none", "at": [-60, 520], "y": null, "size": [36, 80, 36], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "butte", "hole": false, "budget": "landform", "routes": ["west"], "fragment": ""},
+  {"id": "knuckle_e", "element": "bank", "landform": "butte", "society": "none", "at": [60, 520], "y": null, "size": [36, 80, 36], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "butte", "hole": false, "budget": "landform", "routes": ["east"], "fragment": ""},
+  {"id": "knuckle_n", "element": "bank", "landform": "butte", "society": "none", "at": [0, 580], "y": null, "size": [36, 80, 36], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "butte", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "keel_bench", "element": "ground", "landform": "mesa_rim", "society": "none", "at": [0, 700], "y": null, "size": [120, 80, 240], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
+ ],
+ "event_rows": [
+  {"id": "fin_rim_collapse", "kind": "collapse", "family": "natural", "site": "twin_fins", "trigger": {"on": "clock_tier", "value": 1}, "weight": 1.0, "telegraph": {"lead_s": 6.0, "form": "cave_in_crumble", "on_bar": true}, "live_s": 0.0, "effect": {"depth_m": 8.0, "swap": "fin_slab_ramp"}, "route_change": {"closes": ["main"], "opens": ["slab"]}, "hold_clear_m": 25.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_natural", "land": "drop_collapse"}},
+  {"id": "mooring_burner_blow", "kind": "boiler_burst", "family": "industrial", "site": "mooring_mesa", "trigger": {"on": "clock_tier", "value": 2}, "weight": 1.0, "telegraph": {"lead_s": 5.0, "form": "boiler_pressure", "on_bar": true}, "live_s": 10.0, "effect": {"hazard": "burner_flare", "hazard_m": [22, 12], "damage": 6.0, "swap": "envelope_drape"}, "route_change": {"closes": [], "opens": ["envelope"]}, "hold_clear_m": 16.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_industrial", "land": "drop_boiler"}},
+  {"id": "mooring_dropship", "kind": "fleet_landing", "family": "fleet", "site": "mooring_pad", "trigger": {"on": "clock_tier", "value": 2}, "weight": 1.0, "telegraph": {"lead_s": 10.0, "form": "fleet_inbound", "on_bar": true}, "live_s": 0.0, "effect": {"vessel": "dropship", "home": "dropship_anchor_crew", "footprint_m": [36, 16]}, "route_change": {"closes": [], "opens": []}, "hold_clear_m": 25.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_fleet", "land": "drop_fleet_anvil"}},
+  {"id": "lens_rocks_wake", "kind": "machine_eruption", "family": "ancient", "site": "lens_rocks", "trigger": {"on": "clock_tier", "value": 2}, "weight": 0.6, "telegraph": {"lead_s": 9.0, "form": "ancient_stirring", "on_bar": true}, "live_s": 0.0, "effect": {"miniboss": "mind_hand", "swap": "lens_rock_crater"}, "route_change": {"closes": [], "opens": []}, "hold_clear_m": 18.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_mind_quote", "land": "drop_mind_wrong"}},
+  {"id": "isle_shed", "kind": "impact", "family": "natural", "site": "west_wing", "trigger": {"on": "warden_phase", "value": "chunk_1"}, "weight": 1.0, "telegraph": {"lead_s": 6.0, "form": "impact_incoming", "on_bar": true}, "live_s": 0.0, "effect": {"strike_m": 20.0, "damage": 8.0, "swap": "crater_event"}, "route_change": {"closes": [], "opens": []}, "hold_clear_m": 30.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_natural", "land": "drop_impact"}}
+ ],
+ "home_rows": [
+  {"id": "tram_cutters", "enemy": "line_cutter", "site": "tram_head", "landform": "mesa_rim", "advantage": "The tramway is the east fan's air path; cutters on the station deck throw across the cable while you hang on it.", "counter": "Drop off the cable early onto the Ore Bench or glide under the arc; the deck sits level with the saddle's east lip, so a ram from the lip reaches it.", "reinforce": {"from_tier": 1, "every_s": 30.0, "max_alive": 3, "pack": "draft_cut"}, "break": {"by": "ram", "hp": 120.0, "scrap": 30}, "stops_kind": true, "dormant": false},
+  {"id": "chute_cutters", "enemy": "line_cutter", "site": "ore_chute", "landform": "flume", "advantage": "Trestle tops overlook the grind; a cut line drops you off the chute's high end onto the net.", "counter": "Grind it low and fast: the reticle closes on where you will be, and the chute's speed carries you past it.", "reinforce": {"from_tier": 2, "every_s": 40.0, "max_alive": 2, "pack": "draft_cut"}, "break": {"by": "ram", "hp": 100.0, "scrap": 25}, "stops_kind": false, "dormant": false},
+  {"id": "mooring_anchor_crew", "enemy": "anchor_crew", "site": "mooring_mesa", "landform": "mesa_rim", "advantage": "Winch posts line the mooring rim over the net; a ball crossing below is hooked onto the deck.", "counter": "Jump the cable lane before it fills, or come in high off the roost ferry and slam the post from above.", "reinforce": {"from_tier": 0, "every_s": 35.0, "max_alive": 3, "pack": "draft_anchor"}, "break": {"by": "slam", "hp": 140.0, "scrap": 35}, "stops_kind": true, "dormant": false},
+  {"id": "dropship_anchor_crew", "enemy": "anchor_crew", "site": "mooring_pad", "landform": "mesa_rim", "advantage": "The landed dropship's ramp is a winch deck facing the net; it doubles the moorings' crew.", "counter": "Its ramp is also a kicker: roll up it at speed and smash the winch on the way over.", "reinforce": {"from_tier": 2, "every_s": 30.0, "max_alive": 3, "pack": "draft_anchor"}, "break": {"by": "smash", "hp": 160.0, "scrap": 40}, "stops_kind": false, "dormant": true},
+  {"id": "roost_kites", "enemy": "kite_drone", "site": "kite_roost", "landform": "butte", "advantage": "The roost's sunny face holds a thermal that keeps them above ram reach.", "counter": "Shoot them while they circle or leave the dive mark; Kest rides the same column above them and slams.", "reinforce": {"from_tier": 1, "every_s": 25.0, "max_alive": 4, "pack": "draft_kites"}, "break": {"by": "damage", "hp": 160.0, "scrap": 30}, "stops_kind": true, "dormant": false}
+ ],
+ "contraption_rows": [
+  {"id": "fin_thermal", "kind": "thermal", "site": "twin_fins", "recipe": "", "at": [-90, -230], "radius": 6.0, "height": 240.0},
+  {"id": "roost_thermal", "kind": "thermal", "site": "kite_roost", "recipe": "", "at": [-400, 420], "radius": 6.0, "height": 220.0},
+  {"id": "bowl_thermal", "kind": "thermal", "site": "knuckle_e", "recipe": "", "at": [110, 470], "radius": 6.0, "height": 160.0},
+  {"id": "tramway", "kind": "cable", "site": "tram_head", "recipe": "", "from": [100, 199, -390], "to": [260, 134, -230], "radius": 4.5, "floor": 18.0},
+  {"id": "roost_line", "kind": "cable", "site": "kite_roost", "recipe": "", "from": [-420, 172, 470], "to": [-75, 82, 515], "radius": 4.5, "floor": 18.0},
+  {"id": "west_balloon_lift", "kind": "lift", "site": "west_wing", "recipe": "lift_platform", "at": [-210, 80], "radius": 5.0, "rise": 60.0, "charge": 4.0, "offset": 0.0},
+  {"id": "east_balloon_lift", "kind": "lift", "site": "east_wing", "recipe": "lift_platform", "at": [210, 80], "radius": 5.0, "rise": 60.0, "charge": 4.0, "offset": 2.0},
+  {"id": "cloud_cannon_west", "kind": "launcher", "site": "cloud_wash_west", "recipe": "cannon", "style": "cannon", "at": [-210, 390], "radius": 4.0, "target": [-75, 82, 505], "floor": 30.0, "min_flight": 3.0, "charge": 2.5},
+  {"id": "cloud_cannon_east", "kind": "launcher", "site": "cloud_wash_east", "recipe": "cannon", "style": "cannon", "at": [210, 390], "radius": 4.0, "target": [75, 82, 505], "floor": 30.0, "min_flight": 3.0, "charge": 2.5},
+  {"id": "roost_ferry", "kind": "barge", "site": "mooring_mesa", "recipe": "barge", "a": [-280, 129, 60], "b": [-410, 169, 400], "size": [14, 2, 14], "travel": 18.0, "dwell": 3.0, "offset": 0.0}
+ ],
+ "weather_rows": [
+  {"id": "golden_air", "kind": "clear", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#fff1dc"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"},
+  {"id": "cloud_rise", "kind": "cloud_deck", "trigger": {"on": "clock_tier", "value": 2}, "lead_s": 8.0, "live_s": 60.0, "gap_s": 60.0, "fog": {"density": 0.006, "color": "#ece7da"}, "sky": "clear", "sound": "cloud_hush_bed", "music_layer": "layer_cloud_pad", "event_odds": {"mooring_dropship": 2.0}, "handling": "none"}
+ ],
+ "activity_rows": [
+  {"id": "camp_moorings", "activity": "enemy_camp", "site": "mooring_mesa", "at": [-250, -40], "pack": ["anchor_crew", "anchor_crew", "line_cutter"], "pay": {"named": "rivet_plating"}},
+  {"id": "altar_anvil", "activity": "ambush_altar", "site": "anvil_rock", "at": [0, 60], "pack": [], "pay": {}},
+  {"id": "bounty_ore_bench", "activity": "hauler_bounty", "site": "ore_bench", "at": [330, -110], "pack": [], "pay": {}}
+ ]
+}
+```
