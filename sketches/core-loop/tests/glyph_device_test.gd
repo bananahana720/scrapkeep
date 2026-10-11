@@ -20,6 +20,9 @@ const T := preload("res://tests/support/t.gd")
 # pick a slot on the D-pad (input_pad_test pins the buttons); the bar is five slots, 1, Shift,
 # 2, Ctrl, 3. The pad bar's number caps stay key_1..key_3 until wave P-B's HUD unit draws
 # them (B2): Glyphs has no D-pad picture yet.
+# Re-pinned 2026-10-10 (wave 13 unit B2, SKILL-BAR section 5): the HUD draws the bar in its own
+# order, the numbered slots 1, 2, 3 and then the Shift and Ctrl chips. The number caps read the
+# select actions' keys, which stay key_1..key_3 on the pad (no D-pad glyph yet).
 
 var _t := T.new("glyph_device_test")
 var _game
@@ -153,9 +156,9 @@ func _device_switch() -> void:
 	var cam: Camera3D = _game.camera.cam
 	var point := cam.global_position - cam.global_transform.basis.z * 6.0
 	_game.note_device(_key_event())
-	_t.eq("S4-4 bar on the keyboard", _bar_keys(), ["key_1", "key_shift", "key_2", "key_ctrl", "key_3"])
+	_t.eq("S4-4 bar on the keyboard", _bar_keys(), ["key_1", "key_2", "key_3", "key_shift", "key_ctrl"])
 	_game.note_device(_pad_event())
-	_t.eq("S4-4 bar on the pad", _bar_keys(), ["key_1", "pad_b", "key_2", "pad_x", "key_3"])
+	_t.eq("S4-4 bar on the pad", _bar_keys(), ["key_1", "key_2", "key_3", "pad_b", "pad_x"])
 	glyphs.new_run()
 	glyphs.step(0.016, _view(point))
 	glyphs._process(0.0)
@@ -163,4 +166,4 @@ func _device_switch() -> void:
 	_game.note_device(_key_event())
 	glyphs._process(0.0)
 	_t.eq("S4-4 prompt back on the keyboard", glyphs._placed.map(func(p): return p["glyph"]), ["key_space"])
-	_t.eq("S4-4 bar back on the keyboard", _bar_keys(), ["key_1", "key_shift", "key_2", "key_ctrl", "key_3"])
+	_t.eq("S4-4 bar back on the keyboard", _bar_keys(), ["key_1", "key_2", "key_3", "key_shift", "key_ctrl"])

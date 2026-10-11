@@ -302,6 +302,8 @@ var _warden_broken := false
 var escalation := ""
 # Heft class steps above the first: each lifts the band's intensity one step.
 var heft_lift := 0
+# A full ultimate meter adds one more step, the same size (SKILL-BAR section 4, music).
+var ultimate_lift := false
 var _mid := PackedFloat32Array()
 var _left := PackedFloat32Array()
 var _right := PackedFloat32Array()
@@ -823,6 +825,19 @@ func set_heft_lift(steps: int) -> void:
 	if next == heft_lift:
 		return
 	_queue({"heft": next})
+
+
+# The ultimate meter is full: one intensity step from the next bar line, the step
+# set_heft_lift uses. A layer is added, never swapped (MUSIC-GEMS.md G11); the landing's drop
+# or a cancel that spends the meter releases it at the next bar.
+func set_ultimate_lift(on: bool) -> void:
+	for item in _bar_queue:
+		if (item["set"] as Dictionary).has("ult"):
+			item["set"]["ult"] = on
+			return
+	if on == ultimate_lift:
+		return
+	_queue({"ult": on})
 
 
 # The player's class motif (a Harmony.MOTIFS id) seeds the counter-line on its
@@ -1415,6 +1430,11 @@ func _run(action: Dictionary) -> void:
 				section = change.get("section", section)
 			if change.has("key"):
 				_set_key(int(change["key"]))
+			# The set piece's landing drop releases the meter's lift on its own beat: the drop
+			# clears the bar queue, so a release queued for the next bar would be lost.
+			if change.has("ult") and bool(change["ult"]) != ultimate_lift:
+				ultimate_lift = bool(change["ult"])
+				events_log.append(["ult", clock, ultimate_lift])
 			if track == "warden":
 				section = "drop"
 				if not lap:
@@ -1507,6 +1527,10 @@ func _on_bar() -> void:
 			events_log.append(["heft", clock, heft_lift])
 			_revoice()
 			_retarget()
+		if change.has("ult") and bool(change["ult"]) != ultimate_lift:
+			ultimate_lift = bool(change["ult"])
+			events_log.append(["ult", clock, ultimate_lift])
+			_retarget()
 		_new_phrase()
 	# A planned drop counts down its bars and lands on the downbeat.
 	if not _pending_drop.is_empty():
@@ -1547,7 +1571,7 @@ func _retarget() -> void:
 	if mode == PLAY and building():
 		effective = maxf(effective, build_level())
 	if mode == PLAY:
-		effective = minf(1.0, effective + HEFT_STEP * heft_lift)
+		effective = minf(1.0, effective + HEFT_STEP * (heft_lift + (1 if ultimate_lift else 0)))
 	_intensity = effective
 	var gains := layer_gains(effective)
 	for layer in gains.size():

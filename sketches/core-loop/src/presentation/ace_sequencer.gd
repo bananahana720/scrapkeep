@@ -41,6 +41,8 @@ const BAY_RAMP := 8820
 const TRAVEL_UP := 0.4
 const TRAVEL_DOWN := 0.2
 const TRAVEL_THREAT := 2
+# The ultimate meter's pressure step: a full meter at rest pressure still reaches travel.
+const ULTIMATE_STEP := 0.4
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
 
 
@@ -100,6 +102,7 @@ var breath := "hard"
 var mode := "off"
 var warden_state := "closed"
 var pressure := 0.0
+var ultimate_lift := false
 var threat := 0
 var in_bay := false
 var built := false
@@ -274,6 +277,18 @@ func stop_at(at: int, ramp := STOP_RAMP) -> void:
 func set_pressure(value: float) -> void:
 	pressure = value
 	_follow()
+
+
+# A full ultimate meter is one pressure step for the ACE band, as set_ultimate_lift is one
+# intensity step for the synth (SKILL-BAR section 4, music). The landing or a spent cancel
+# releases it. It sits on top of the systemic pressure; set_pressure keeps its own value.
+func set_ultimate_lift(on: bool) -> void:
+	ultimate_lift = on
+	_follow()
+
+
+func effective_pressure() -> float:
+	return pressure + (ULTIMATE_STEP if ultimate_lift else 0.0)
 
 
 func threat_rose(tier: int) -> void:
@@ -587,7 +602,8 @@ func _desired() -> String:
 	match mode:
 		"level":
 			var up: bool = section == "travel" or pending.get("section", "") == "travel"
-			if pressure >= TRAVEL_UP or threat >= TRAVEL_THREAT or (up and pressure >= TRAVEL_DOWN):
+			var p := effective_pressure()
+			if p >= TRAVEL_UP or threat >= TRAVEL_THREAT or (up and p >= TRAVEL_DOWN):
 				return "travel"
 			return "calm"
 		"warden":

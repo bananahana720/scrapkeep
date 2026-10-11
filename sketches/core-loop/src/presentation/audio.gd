@@ -20,6 +20,11 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Interactables := preload("res://src/world/interactables.gd")
+const Companion := preload("res://src/core/companion.gd")
+# SR7: the shortest gap between two chirps of one companion cue (start value, comps
+# ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
+const CHIRP_COOLDOWN := 0.75
+const CHIRP_LOG_CAP := 256
 
 # The audio director. It hears every GameEvents fact, picks the sound its event_kinds
 # row names and decides one thing: now or on the beat.
@@ -168,6 +173,8 @@ var sound_ready := false
 var _pitch_rng := RandomNumberGenerator.new()
 # Every cue decided: [kind, sound, "now" | "beat" | "music" | "skip", start_sample, pitch].
 var cue_log: Array = []
+var chirp_log: Array = []
+var _chirp_last := {}
 var volumes := {"Music": 0.8, "SFX": 1.0, "UI": 1.0}
 var muted := false
 # False on the dummy driver (headless tests, or a machine with no sound device): no
@@ -219,6 +226,12 @@ var _landing_theme := -1
 var _entered_ms := -1
 var _launch_stage := false
 var drop_log: Array = []
+# The set piece (SKILL-BAR section 4, music): the meter's lift is on (one synth intensity step,
+# one ACE pressure step), and a wind-up's build waits for its landing's drop. _pressure is
+# the last systemic pressure, which the ACE step sits on top of.
+var _ult_lift := false
+var _ult_armed := false
+var _pressure := 0.0
 var _miniboss: Node3D
 var _event_id := ""
 var _event_started_ms := -1
@@ -639,6 +652,7 @@ func ace_ready() -> bool:
 	_ace_from = ace_manifest
 	ace.clock = engine.clock
 	ace.set_breath(breath())
+	ace.ultimate_lift = _ult_lift
 	return true
 
 
@@ -824,6 +838,27 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	return true
 
 
+# SPIL-9's chirp (SR7): it reads the cue the body shows from the same Companion.CUES row, so
+# animation, chirp and motif cannot drift apart, and sounds a cue at most once per
+# CHIRP_COOLDOWN s (a start value; the lab tunes it). now is seconds; -1 reads the clock.
+# chirp_log rows are [cue, kind, motif sound, now, fired]. True when it sounded.
+func chirp(cue: String, now := -1.0) -> bool:
+	var kind := String(Companion.CUES.get(cue, {}).get("chirp", ""))
+	if kind == "":
+		return false
+	if now < 0.0:
+		now = Time.get_ticks_msec() / 1000.0
+	var fired: bool = not _chirp_last.has(cue) or now - float(_chirp_last[cue]) >= CHIRP_COOLDOWN
+	chirp_log.append([cue, kind, String(EventKinds.UI_ROWS.get(kind, {}).get("sound", "")), now, fired])
+	if chirp_log.size() > CHIRP_LOG_CAP:
+		chirp_log.pop_front()
+	if not fired:
+		return false
+	_chirp_last[cue] = now
+	play(kind, 0.0, 1.0, "UI")
+	return true
+
+
 # Moss says a line (SOUND-STORY section 8): one babble blip per letter, baked in the
 # live key once per line and beat. beat is SfxBank's 1 to 6 for the conversation loop,
 # BABBLE_LEVEL for a bark or BABBLE_RELENT for the sigh. SFX bus at the babble trim and
@@ -980,6 +1015,14 @@ func _connect_all(events) -> void:
 	events.event_ended.connect(_on_event_ended)
 	events.launched.connect(_on_launched)
 	events.pressure_changed.connect(_on_pressure)
+	events.run_started.connect(func(_class_id: String): _set_ult_lift(false))
+	events.ultimate_ready.connect(_on_ultimate_ready)
+	events.ultimate_started.connect(_on_ultimate_started)
+	events.ultimate_peak.connect(func(_id: String, _at: Vector3): on_beat("ultimate_peak"))
+	events.ultimate_landed.connect(_on_ultimate_landed)
+	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
+	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
+	_wire_ultimate_beat()
 	wire_optional()
 	_wire_armor()
 
@@ -1393,6 +1436,9 @@ func _on_flow_changed(state: String) -> void:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_line_was = ""
+	# A retry restores the meter to its stage-entry value silently; the lift follows the meter
+	# once every stage_entered handler has run (SKILL-BAR section 4, one fact for every layer).
+	sync_ult_lift.call_deferred()
 	engine.set_overcharge(0)
 	if retry:
 		_disarm_launch()
@@ -1638,6 +1684,101 @@ func _land_drop() -> void:
 	cue_log.append(["landed", "drop", "beat", at, 1.0])
 	_launch_armed = false
 	_landing_theme = -1
+
+
+# --- The set piece (SKILL-BAR section 4, music) -------------------------------------------
+
+# The set piece reads its flight's beat from the band: seconds per beat of the music playing,
+# 0 when none plays (the flight then takes 2.4 s).
+func _wire_ultimate_beat() -> void:
+	var spawner = ctx.get("spawner") if ctx != null else null
+	if spawner == null or spawner.get("ultimate") == null:
+		return
+	spawner.ultimate.beat_seconds = func() -> float:
+		if not sound_ready or engine.mode != MusicEngine.PLAY:
+			return 0.0
+		return 60.0 / engine.bpm()
+
+
+func pressure_now() -> float:
+	return _pressure
+
+
+# What the ACE band hears as pressure: the systemic pressure plus the meter's step.
+func ace_pressure() -> float:
+	return _pressure + (AceSequencer.ULTIMATE_STEP if _ult_lift else 0.0)
+
+
+func _set_ult_lift(on: bool) -> void:
+	_ult_lift = on
+	engine.set_ultimate_lift(on)
+	# Written whether or not the band plays: a level band that ended for the flight keeps its
+	# sequencer, and a resume must not carry a lift the landing already released.
+	if ace != null:
+		ace.set_ultimate_lift(on)
+
+
+# The lift reads the meter: on when it is full, off otherwise. No meter, no change.
+func sync_ult_lift() -> void:
+	var player = ctx.get("player") if ctx != null else null
+	if player == null or player.abilities.meter == null:
+		return
+	var full: bool = player.abilities.meter.full()
+	if full != _ult_lift:
+		_set_ult_lift(full)
+
+
+# Full: the class motif an octave up and a bell on the beat, and one layer lifts at the bar.
+func _on_ultimate_ready(_id: String) -> void:
+	_set_ult_lift(true)
+	on_beat("ultimate_ready")
+
+
+# The wind-up is the build, as a launch is: the riser carries the flight. A directed ACE piece
+# holds through the flight and hands over on the landing's beat, as a Warden launch does.
+func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vector3, seconds: float) -> void:
+	play("ultimate_started")
+	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == _boss_track():
+		return
+	_ult_armed = true
+	if ace_playing() and ace.mode == "piece":
+		_ace_flight = true
+		return
+	if ace_playing():
+		_ace_end(ace.grid_beat)
+	engine.start_build(seconds, true)
+
+
+# The landing is the drop, on the next beat, never more than one beat after touchdown; the
+# lift releases with it (the meter is empty).
+func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) -> void:
+	play("ultimate_landed")
+	if _ult_armed:
+		var touchdown := engine.clock
+		var at := engine.drop_now(4, 0.85, {}, -1, {"ult": false})
+		drop_log.append([touchdown, at])
+		if _ace_flight:
+			_ace_flight = false
+			if ace_playing():
+				ace.stop_at(at, ace.grid_beat)
+				_handover_at = at
+		cue_log.append(["ultimate_landed", "drop", "beat", at, 1.0])
+		_ult_armed = false
+	_set_ult_lift(false)
+
+
+# A cancel drops the build. A recall refunds the meter, so the lift stays; any other cancel
+# spent it, so the lift goes.
+func _on_ultimate_cancelled(_id: String, _reason: String, refunded: bool) -> void:
+	play("ultimate_cancelled")
+	if _ult_armed:
+		_ult_armed = false
+		if _ace_flight:
+			_ace_flight = false
+			_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
+		engine.cancel_build()
+	if not refunded:
+		_set_ult_lift(false)
 
 
 func _disarm_launch() -> void:
@@ -1890,6 +2031,7 @@ func _on_synergy(_id: String, _category: String, first_time: bool) -> void:
 
 
 func _on_pressure(pressure: float) -> void:
+	_pressure = pressure
 	cue_log.append(["pressure_changed", "music_pressure", "music", engine.clock, 1.0])
 	engine.set_pressure(pressure)
 	if ace_playing():

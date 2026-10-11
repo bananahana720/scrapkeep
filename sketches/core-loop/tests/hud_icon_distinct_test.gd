@@ -14,7 +14,10 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # Re-pinned 11 -> 9 on 2026-10-04 (alpha wave 7 fix round E): the icon split changed no
 # word; 254db18's six-stage, three-world default table puts the world card "Spillway
 # Works" (2 words) where stage 1's card "Spillway: the top shelf" (4) stood on this frame.
-const HUD_WORDS := 9
+# Re-pinned 9 -> 11 on 2026-10-10 (wave 13 unit B2, SKILL-BAR section 5): the skill bar draws
+# five keycap words (1, 2, 3, Shift, Ctrl) where the four-slot bar drew three (Shift, F, Ctrl;
+# the LMB glyph has no letters). The fight-case budget stays 25 (LEGIBILITY.md:114).
+const HUD_WORDS := 11
 
 var _game
 var _frames := 0

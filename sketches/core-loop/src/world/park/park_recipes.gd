@@ -15,6 +15,8 @@ extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const Stamps := preload("res://src/world/park/park_stamps.gd")
 
 const BUDGETS_PATH := "res://tools/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
@@ -85,6 +87,29 @@ const ELEMENT_FACTS := {
 # Greybox wedges: +1 rises toward the facing end (a kicker's lip, park_map.gd), -1 falls by its height from start to end
 # along the yaw (the drop convention of park/stages/1-park_dam.md). Every other element is a box.
 const WEDGES := {"kicker": 1.0, "drop": -1.0}
+
+# A greybox anchor field at runtime (PARK.md:430, the hoodoo forests; band "max anchor gap at most 40 m", PARK.md:519):
+# square posts of the row's height on a staggered lattice, every second row shifted half a pitch, so a ball anywhere in
+# the footprint has a post side within 40 m in one of the traversal probe's 12 directions (tools/traversal_line.gd
+# _anchored). Posts keep out of every other built footprint (ANCHOR_RUNOUT_M back from its ends on its facing, where a
+# ride enters and leaves; ANCHOR_SIDE_M from its sides, where a full run-out left a fixture point 41.1 m from any
+# anchor), and out of a lane ROUTE_LANE_HALF_M each side of every route leg and
+# of the waymarks chain (the line every pilot rides names the waymarks in order, park_schema.gd validate_lines), so a
+# line through a field rolls clear. A lane is lined with edge posts every ANCHOR_EDGE_STEP_M on both sides inside the
+# field, so a lane point keeps an anchor. The half width is bounded by the 40 m band where lanes overlap: two lanes
+# that fork or run side by side clear one corridor, and its middle must stay within 40 m of an edge post. On the
+# fixture 20 m holds every field point within 40 m (worst 33.3 m); 22 m leaves 3 points beyond reach and 26 m 90
+# (tests/park_place_test.gd). An edge step of 12 m puts a post under one of the two spokes nearest square to the lane.
+const ANCHOR_PITCH_M := 20.0
+const ANCHOR_POST_M := 8.0
+const ANCHOR_SINK_M := 1.0
+const ANCHOR_RUNOUT_M := 10.0
+const ANCHOR_SIDE_M := 6.0
+const ROUTE_LANE_HALF_M := 20.0
+const ANCHOR_EDGE_STEP_M := 12.0
+# The waymark names that are no row: the spawn and the landmark (park_schema.gd DROP_IN and LANDMARK).
+const DROP_IN := "drop_in"
+const LANDMARK := "landmark"
 
 static var _budgets := {}
 static var _origins := {}
@@ -377,3 +402,425 @@ static func _relative(node: Node3D, top: Node) -> Transform3D:
 			xf = (walk as Node3D).transform * xf
 		walk = walk.get_parent()
 	return xf
+
+
+# --- Placement at runtime (K-UNITS KB9) ---
+#
+# A park stage places its rows when its ground is built (terrain.gd _on_park_built): every row whose recipe is not "",
+# through place(), plus two runtime rules. A greybox stand-in (a greybox: id, or a recipe whose GLB is missing) of a
+# stamped row places its node and ride sensor but no solid: the stamp replaces it (PARK.md section 4: a landform is
+# "height stamp plus a recipe"; the stamp shapes the ground, and a greybox has no lip or rim to add). A greybox
+# anchor_field becomes a post field (place_anchor_field). A GLB recipe stands where place() puts it, its -col mesh on
+# top of the stamped ground. Only the park file's schema fields are read, never a stage's ids.
+
+
+# The park rows that place something: recipe not "".
+static func placed_rows(park: Dictionary) -> Array:
+	return (park.get("park_rows", []) as Array).filter(func(row: Dictionary) -> bool: return String(row.get("recipe", "")) != "")
+
+
+# Where anchor posts keep out: every built footprint ({"at", "size": [along, across], "yaw"}, the ground and anchor
+# fields excepted, and the landmark), and a lane ({"a", "b", "half"}) along each leg of each route, from its `from`
+# through its `via` rows to its `to`, and of the waymarks chain. A route leg joins its two places where they are
+# nearest: a park row's place is either end of its footprint on its facing (ride_frame's entry and exit; a ball leaves a
+# tube or a wash by an end, never its middle). A waymarks leg joins the places a pilot line aims at, a row's at
+# (traversal_line.gd place_of). The drop-in is the spawn, the landmark its beacon, an activity its at.
+static func clear_zones(park: Dictionary) -> Array:
+	var out := []
+	var places := {}
+	var ends := {}
+	for row: Dictionary in park.get("park_rows", []):
+		var yaw := deg_to_rad(float(row.get("yaw_deg", 0.0)))
+		var half := Vector2(sin(yaw), cos(yaw)) * float(row["size"][0]) * 0.5
+		places[row["id"]] = [_v2(row["at"])]
+		ends[row["id"]] = [_v2(row["at"]) - half, _v2(row["at"]) + half]
+		if row["element"] != "ground" and row["element"] != "anchor_field":
+			out.append(_zone(row))
+	for row: Dictionary in park.get("activity_rows", []):
+		places[row["id"]] = [_v2(row["at"])]
+	var mark: Dictionary = park.get("landmark", {})
+	if not mark.is_empty():
+		out.append(_zone(mark))
+		places[LANDMARK] = [_v2(mark["beacon"])]
+	if park.has("spawn"):
+		places[DROP_IN] = [_v2(park["spawn"]["at"])]
+	var by_end := places.duplicate()
+	by_end.merge(ends, true)
+	var chains: Array = [[park.get("waymarks", []), places]]
+	for route: Dictionary in park.get("routes", []):
+		var chain: Array = [route["from"]]
+		chain.append_array(route["via"])
+		chain.append(route["to"])
+		chains.append([chain, by_end])
+	for pair: Array in chains:
+		var chain: Array = pair[0]
+		var at: Dictionary = pair[1]
+		for k in range(1, chain.size()):
+			if not at.has(chain[k - 1]) or not at.has(chain[k]) or chain[k - 1] == chain[k]:
+				continue
+			var best := INF
+			var leg := []
+			for pa: Vector2 in at[chain[k - 1]]:
+				for pb: Vector2 in at[chain[k]]:
+					if pa.distance_to(pb) < best:
+						best = pa.distance_to(pb)
+						leg = [pa, pb]
+			if best > 0.001:
+				out.append({"a": leg[0], "b": leg[1], "half": ROUTE_LANE_HALF_M})
+	return out
+
+
+static func _zone(row: Dictionary) -> Dictionary:
+	return {"at": _v2(row["at"]), "size": Vector2(float(row["size"][0]), float(row["size"][2])), "yaw": deg_to_rad(float(row.get("yaw_deg", 0.0)))}
+
+
+static func _v2(a: Array) -> Vector2:
+	return Vector2(float(a[0]), float(a[1]))
+
+
+# Whether a disc of radius r at p touches a clear zone.
+static func in_clear(zones: Array, p: Vector2, r: float, side := -1.0) -> bool:
+	for z: Dictionary in zones:
+		if z.has("a"):
+			var a: Vector2 = z["a"]
+			var ab: Vector2 = (z["b"] as Vector2) - a
+			var t := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+			if p.distance_to(a + ab * t) <= float(z["half"]) + r:
+				return true
+		else:
+			var yaw: float = z["yaw"]
+			var d: Vector2 = p - (z["at"] as Vector2)
+			var size: Vector2 = z["size"]
+			if absf(d.dot(Vector2(sin(yaw), cos(yaw)))) <= size.x * 0.5 + r and absf(d.dot(Vector2(cos(yaw), -sin(yaw)))) <= size.y * 0.5 + (r if side < 0.0 else side):
+				return true
+	return false
+
+
+# An anchor field's post centres on the ground plane: rows every pitch along the facing, posts every pitch across,
+# every second row shifted half a pitch, inside the footprint and clear of zones.
+static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PITCH_M) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var size: Array = row["size"]
+	var half_l := float(size[0]) * 0.5
+	var half_w := float(size[2]) * 0.5
+	var yaw := deg_to_rad(float(row.get("yaw_deg", 0.0)))
+	var along := Vector2(sin(yaw), cos(yaw))
+	var across := Vector2(cos(yaw), -sin(yaw))
+	var at := _v2(row["at"])
+	var rows := int(floor(2.0 * half_l / pitch))
+	var cols := int(floor(2.0 * half_w / pitch))
+	var lanes := zones.filter(func(z: Dictionary) -> bool: return z.has("a"))
+	var footprints := zones.filter(func(z: Dictionary) -> bool: return not z.has("a"))
+	var r := ANCHOR_POST_M * 0.5
+	var clear := func(p: Vector2) -> bool: return not in_clear(lanes, p, r) and not in_clear(footprints, p, r + ANCHOR_RUNOUT_M, r + ANCHOR_SIDE_M)
+	for j in rows + 1:
+		var lz := -rows * pitch * 0.5 + j * pitch
+		var lx := -cols * pitch * 0.5 + (pitch * 0.5 if j % 2 == 1 else 0.0)
+		while lx <= half_w + 0.001:
+			var p := at + across * lx + along * lz
+			if clear.call(p):
+				out.append(p)
+			lx += pitch
+	# The lane edges: a post every ANCHOR_EDGE_STEP_M just outside each lane, on both sides, where it lands in the field.
+	var inside := func(p: Vector2) -> bool:
+		var d := p - at
+		return absf(d.dot(along)) <= half_l and absf(d.dot(across)) <= half_w
+	for lane: Dictionary in lanes:
+		var a: Vector2 = lane["a"]
+		var ab: Vector2 = (lane["b"] as Vector2) - a
+		var length := ab.length()
+		var dir := ab / length
+		var side := Vector2(-dir.y, dir.x) * (float(lane["half"]) + r + 0.5)
+		# Only the stretch of the lane whose edges can fall in this field.
+		var reach := Vector2(half_l, half_w).length() + side.length()
+		var t := (at - a).dot(dir)
+		if absf((at - a).dot(Vector2(-dir.y, dir.x))) > reach or t < -reach or t > length + reach:
+			continue
+		var s := maxf(0.0, floorf((t - reach) / ANCHOR_EDGE_STEP_M) * ANCHOR_EDGE_STEP_M)
+		var s_end := minf(length, t + reach)
+		while s <= s_end + 0.001:
+			for p: Vector2 in [a + dir * s + side, a + dir * s - side]:
+				if inside.call(p) and clear.call(p):
+					out.append(p)
+			s += ANCHOR_EDGE_STEP_M
+	return out
+
+
+# A greybox anchor field: the row's node with one StaticBody3D of square posts (ANCHOR_POST_M across, the row's
+# height above the ground under each, sunk ANCHOR_SINK_M) and one MultiMesh view of them, greybox tint.
+# posts: the field's post centres when already worked out (Placer does that on a worker), else anchor_posts() here.
+static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callable(), zones: Array = [], pitch := ANCHOR_PITCH_M, posts = null) -> Node3D:
+	var node := _node(row, parent, ground)
+	var body := _body(node)
+	var tall := float(row["size"][1]) + ANCHOR_SINK_M
+	var extent := Vector3(ANCHOR_POST_M, tall, ANCHOR_POST_M)
+	var mesh := BoxMesh.new()
+	mesh.size = extent
+	if posts == null:
+		posts = anchor_posts(row, zones, pitch)
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.mesh = mesh
+	multi.instance_count = posts.size()
+	var inv := node.transform.affine_inverse()
+	var box := BoxShape3D.new()
+	box.size = extent
+	for k in posts.size():
+		var p: Vector2 = posts[k]
+		var base := float(ground.call(p.x, p.y)) if ground.is_valid() else node.position.y
+		var local := inv * Vector3(p.x, base - ANCHOR_SINK_M + tall * 0.5, p.y)
+		var shape := CollisionShape3D.new()
+		shape.shape = box
+		shape.position = local
+		body.add_child(shape)
+		multi.set_instance_transform(k, Transform3D(Basis.IDENTITY, local))
+	var view := MultiMeshInstance3D.new()
+	view.name = "Posts"
+	view.multimesh = multi
+	var material := StandardMaterial3D.new()
+	material.albedo_color = GREYBOX_TINT
+	view.material_override = material
+	view.set_meta(RecipeProps.META_FADE, true)
+	node.add_child(view)
+	node.set_meta("anchor_posts", posts.size())
+	return node
+
+
+# One row at runtime: an anchor field's posts, or place(). A greybox stand-in of a stamped row keeps its node and ride
+# sensor but drops its box and collider: the stamp is already its shape, and a box of the row's size on one height
+# cannot follow the stamped ground (a 300 m bank box stood 8 m over the fixture's pool). Its node stands on the plain
+# the stamp raised (seat), so the sensor spans the raise.
+static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), zones: Array = [], posts = null) -> Node3D:
+	var recipe := String(row.get("recipe", ""))
+	if recipe == GREYBOX + "anchor_field":
+		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
+	var node := place(row, parent, seat(row, ground), publish)
+	if node != null and stamp_replaces(row):
+		# PARK.md section 4's rows are "height stamp plus a recipe": for a greybox stand-in (the fixture's deck, lip and
+		# apron) the stamp is the whole shape, so the row keeps no Collider of its own and the stamped ground collides.
+		# park_place_test's collider-vs-stamp report records this reading per row.
+		for part in ["Collider", "Greybox"]:
+			var child := node.get_node_or_null(part)
+			if child != null:
+				node.remove_child(child)
+				child.free()
+		node.set_meta("stamp_replaces", true)
+	return node
+
+
+# Whether a row's stamp stands in for its greybox solid: a greybox stand-in with a stamp and no absolute y.
+static func stamp_replaces(row: Dictionary) -> bool:
+	return String(row.get("stamp", "")) != "" and row.get("y") == null and stands_in(row)
+
+
+# The ground a row's node stands on: a stamp_replaces row stands on the ground less its own stamp's raise (the plain
+# the stamp raised; a cut keeps its floor, so the sensor reaches into it); everything else on the ground itself.
+static func seat(row: Dictionary, ground: Callable) -> Callable:
+	if not ground.is_valid() or not stamp_replaces(row):
+		return ground
+	var f := Stamps.frame(row)
+	return func(x: float, z: float) -> float: return float(ground.call(x, z)) - maxf(Stamps.offset(f, x, z), 0.0)
+
+
+# Whether a row places as a greybox: a greybox id, or a recipe whose base GLB has not landed.
+static func stands_in(row: Dictionary) -> bool:
+	var recipe := String(row.get("recipe", ""))
+	if recipe == "" or recipe.begins_with(GREYBOX):
+		return recipe != ""
+	return not ResourceLoader.exists(paths(recipe, _budget(row))["base"])
+
+
+static func _budget(row: Dictionary) -> String:
+	return String(row.get("budget", ROWS.get(String(row.get("recipe", "")), {}).get("budget", "landform")))
+
+
+# Every GLB a row's placement reads.
+static func row_paths(row: Dictionary) -> Array:
+	var recipe := String(row.get("recipe", ""))
+	if recipe == "" or recipe.begins_with(GREYBOX):
+		return []
+	var p := paths(recipe, _budget(row))
+	var out: Array = [p["base"]]
+	out.append_array(p["shells"])
+	for key in ["mid", "far"]:
+		if p.has(key):
+			out.append(p[key])
+	return out.filter(func(path: String) -> bool: return ResourceLoader.exists(path))
+
+
+# Starts placing a park's rows under parent (a "ParkRows" node it returns); threaded: the GLBs and slot materials load
+# on the loader thread, then the main thread places a few rows a frame inside a budget. Else all now. The rows build on
+# the main thread because a row makes server resources (meshes, multimeshes, shapes), and a mesh made on a worker
+# raced the main thread's in the headless renderer ("Attempting to initialize the wrong RID", 2 of 10 park_swap_test
+# runs, artifacts/local/alpha/push/w13/place/swap10/); scatter.gd keeps its worker to data for the same reason.
+static func build_placed(parent: Node3D, park: Dictionary, ground: Callable, publish: Callable, threaded: bool) -> Node3D:
+	var node := Placer.new()
+	node.name = "ParkRows"
+	parent.add_child(node)
+	node.start(park, ground, publish, threaded)
+	return node
+
+
+class Placer extends Node3D:
+	signal built
+
+	const Self := preload("res://src/world/park/park_recipes.gd")
+	const Slots := preload("res://src/presentation/material_slots.gd")
+	const BUILD_BUDGET_USEC := 4000
+
+	enum Phase { IDLE, LOADING, BUILDING, READY }
+
+	var phase := Phase.IDLE
+	# The longest main-thread step (start() or a _process step) and where, and the longest whole frame while placing.
+	var slowest_usec := 0
+	var slowest_step := ""
+	var start_usec := 0
+	var frame_usec_max := 0
+	# Resources requested on the loader thread, and the frames the rows took to place (one when not threaded).
+	var threaded_loads := 0
+	var build_frames := 0
+	# The costliest single row on the main thread.
+	var row_usec_max := 0
+	var _last_frame_usec := 0
+	var _rows: Array = []
+	var _zones: Array = []
+	var _ground: Callable
+	var _publish: Callable
+	var _pending: Array = []
+	# Loaded resources held for the build, so its load() calls find them cached.
+	var _held: Array = []
+	var _next := 0
+	var _threaded := false
+	# Anchor-field post centres by row index, worked out on a worker (pure arithmetic, no server resources).
+	var _posts := {}
+	var _task := -1
+
+	func is_ready() -> bool:
+		return phase == Phase.READY
+
+	func start(park: Dictionary, ground: Callable, publish: Callable, threaded: bool) -> void:
+		var t0 := Time.get_ticks_usec()
+		_rows = Self.placed_rows(park)
+		_zones = Self.clear_zones(park)
+		_ground = ground
+		_publish = publish
+		_threaded = threaded
+		var wanted := []
+		for row: Dictionary in _rows:
+			for path: String in Self.row_paths(row):
+				if not wanted.has(path):
+					wanted.append(path)
+		# A recipe surface naming a material slot wears it (recipe_props.gd); those slots are the resource ones.
+		if not wanted.is_empty():
+			for role: String in Slots.SLOTS:
+				var slot: Dictionary = Slots.row(role)
+				if String(slot.get("kind", "")) == "resource" and ResourceLoader.exists(String(slot["path"])) and not wanted.has(slot["path"]):
+					wanted.append(String(slot["path"]))
+		# Only a threaded build loads on the loader thread. A synchronous build (finish() below, in the same call) loads
+		# on the main thread through place()'s load(): with requests in flight its main-thread meshes raced the loader's
+		# RIDs ("Attempting to initialize the wrong RID" in place_greybox, and a null material on a part's free): 2 of 96
+		# park_holes_test runs six at a time before, 0 of 216 after (artifacts/local/alpha/push/w13/place/rid_sync/).
+		for path: String in (wanted if threaded else []):
+			if ResourceLoader.load_threaded_request(path) == OK:
+				_pending.append(path)
+				threaded_loads += 1
+		if threaded:
+			_task = WorkerThreadPool.add_task(_work_posts, false, "park anchor posts")
+		else:
+			_work_posts()
+		phase = Phase.LOADING
+		start_usec = Time.get_ticks_usec() - t0
+		_meter(start_usec, "START")
+		if threaded:
+			set_process(true)
+		else:
+			finish()
+
+	func _work_posts() -> void:
+		for i in _rows.size():
+			if String(_rows[i].get("recipe", "")) == Self.GREYBOX + "anchor_field":
+				_posts[i] = Self.anchor_posts(_rows[i], _zones)
+
+	func _wait_posts() -> void:
+		if _task != -1:
+			WorkerThreadPool.wait_for_task_completion(_task)
+			_task = -1
+
+	func finish() -> void:
+		while phase == Phase.LOADING:
+			_poll_loading(true)
+		_wait_posts()
+		while phase == Phase.BUILDING:
+			_build_step(-1)
+
+	func _ready() -> void:
+		set_process(phase == Phase.LOADING or phase == Phase.BUILDING)
+
+	# A stage freed before its rows are placed (the next stage prepared, then the run ends) retrieves every threaded
+	# request here, so none stays open on the loader.
+	func _exit_tree() -> void:
+		_wait_posts()
+		for path: String in _pending:
+			ResourceLoader.load_threaded_get(path)
+		_pending.clear()
+		_held.clear()
+
+	func _process(_delta: float) -> void:
+		var t0 := Time.get_ticks_usec()
+		if _last_frame_usec > 0:
+			frame_usec_max = maxi(frame_usec_max, t0 - _last_frame_usec)
+		_last_frame_usec = t0
+		var was := phase
+		match phase:
+			Phase.LOADING:
+				_poll_loading(false)
+			Phase.BUILDING:
+				if _task == -1 or WorkerThreadPool.is_task_completed(_task):
+					_wait_posts()
+					_build_step(t0 + BUILD_BUDGET_USEC)
+		_meter(Time.get_ticks_usec() - t0, "%s row %d" % [Phase.keys()[was], _next])
+
+	func _meter(spent: int, step: String) -> void:
+		if spent > slowest_usec:
+			slowest_usec = spent
+			slowest_step = step
+
+	func _poll_loading(block: bool) -> void:
+		var still := []
+		for path: String in _pending:
+			var status := ResourceLoader.load_threaded_get_status(path)
+			if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS and not block:
+				still.append(path)
+				continue
+			var res := ResourceLoader.load_threaded_get(path)
+			if res != null:
+				_held.append(res)
+		_pending = still
+		if _pending.is_empty():
+			phase = Phase.BUILDING
+
+	# Main thread: place rows, at least one a step, until the budget is spent (deadline -1: all).
+	func _build_step(deadline: int) -> void:
+		build_frames += 1
+		var added := 0
+		var last := 0
+		while _next < _rows.size():
+			# Stop before a row that would likely end past the deadline (rows of one park cost alike).
+			if deadline >= 0 and added > 0 and Time.get_ticks_usec() + last > deadline:
+				return
+			var r0 := Time.get_ticks_usec()
+			# Built outside the tree, then added once.
+			var holder := Node3D.new()
+			var node := Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next))
+			if node != null:
+				holder.remove_child(node)
+				add_child(node)
+			holder.free()
+			last = Time.get_ticks_usec() - r0
+			row_usec_max = maxi(row_usec_max, last)
+			_next += 1
+			added += 1
+		_held.clear()
+		phase = Phase.READY
+		set_process(false)
+		built.emit()

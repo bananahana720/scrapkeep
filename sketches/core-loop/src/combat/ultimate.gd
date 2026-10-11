@@ -1,13 +1,79 @@
 extends Node
 
-# The set piece on Q (design-v3/SKILL-BAR.md section 4). Wave P-B's ultimate unit builds the
-# node: can_start, plan, start, recall, bail, phase, active, and the meter's one writer. The
-# skill-bar unit seeds only the dispatch table, so the six pilot units of wave P-C each fill
-# their own marked block and never edit the same lines (section 12, item 4).
+const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const Augments := preload("res://src/movement/augments.gd")
+const RideRail := preload("res://src/world/ride_rail.gd")
+const Weapons := preload("res://src/combat/weapons.gd")
+const Palette := preload("res://src/core/palette.gd")
 
-# ultimate_id -> {tech: Callable(beat, ball, aim, heft_mult), peak: Callable(at),
-# landing: Callable(at, heft_mult, chain_mult)}, plus the optional
-# target: Callable(ball, aim) -> Dictionary of section 12, item 2.
+# The set piece on Q (design-v3/SKILL-BAR.md section 4). The meter's one writer: it listens
+# to the bus for the sources of section 4 and pays them into `meter`, which the ability
+# record carries for the HUD and bots (AbilityState.meter, AbilityState.ultimate()).
+#
+# A Q at a full meter plans the path once (plan), commits it (start) and rides it on the
+# physics tick: wind-up WINDUP s, the flight on a RideRail carrier, a landing strike, then
+# RECOVER s. Q in the wind-up recalls with a full refund; Space in flight bails (spent, no
+# landing); a stage change, a death or a run end aborts (spent; a retry restores the meter
+# with the rest of the stage-entry state). The router (player_ball.gd) swallows every key
+# but the roll, Space and Q while phase() is not idle.
+#
+# Each ultimate is a row in _ult_rows: {tech: Callable(beat, ball, aim, heft_mult) -> int
+# (hits), peak: Callable(at), landing: Callable(at, heft_mult, chain_mult) -> Array [hits,
+# damage]}, plus the optional target: Callable(ball, aim) -> Dictionary of section 12, item 2.
+# combat.gd registers the shared ult_default row; wave P-C fills one marked block per pilot.
+
+const IDLE := "idle"
+const WINDUP := "windup"
+const FLIGHT := "flight"
+const RECOVER := "recover"
+
+const WINDUP_SECONDS := 0.35
+const RECOVER_SECONDS := 0.25
+const FLIGHT_SPEED := 18.0
+const FLIGHT_MIN := 1.6
+const FLIGHT_MAX := 3.2
+const FLIGHT_NO_MUSIC := 2.4
+# With the music off the flight still keeps a beat for its volleys: this many to 2.4 s.
+const NO_MUSIC_BEATS := 7
+const RAIL_SEARCH := 12.0
+const HOP_HEIGHT := 8.0
+const HOP_SECONDS := 1.6
+const CORRIDOR := 3.0
+const STEER_SPEED := 6.0
+const VOLLEY_TARGETS := 3
+const VOLLEY_RADIUS := 10.0
+const VOLLEY_DAMAGE := 12.0
+const VOLLEY_BIAS_DEG := 25.0
+const LANDING_DAMAGE := 60.0
+const LANDING_KNOCK := 26.0
+const ENCORE_REACH := 30.0
+# Heft class I to V.
+const HEFT_MULT := [1.0, 1.15, 1.30, 1.45, 1.60]
+const ARC_REACH := [40.0, 47.0, 55.0, 62.0, 70.0]
+const LANDING_RADIUS := [6.0, 7.0, 8.0, 9.0, 10.0]
+const DAMAGE_TAKEN := 0.2
+# On a closed Warden guard one set piece adds at most this much posture, volleys and landing
+# together (section 12, item 7). Volleys on a Warden deal half damage; a boss takes half.
+const WARDEN_POSTURE_CAP := 45.0
+const WARDEN_VOLLEY := 0.5
+const BOSS_MULT := 0.5
+const CONTACT_GAP := 0.5
+# The ball strays this far from the drawn point when something on the path stopped it: the
+# flight ends there as a landing.
+const BLOCKED := 2.5
+const GRAVITY := 26.0
+
+var ctx
+var combat
+var meter := UltimateMeter.new()
+# Seconds per beat of the music playing, 0 with none; audio wires it.
+var beat_seconds := Callable()
+# A world rail entry near a point: Callable(point) -> {entry, to} or {}; the world wires it
+# when it has rails. Unwired, no rail path is offered.
+var rail_query := Callable()
+# ultimate_id -> row (see the header). P-C fills its own marked block.
 var _ult_rows := {
 	# --- P-C Sable ultimate ---
 	# --- end Sable ---
@@ -22,3 +88,598 @@ var _ult_rows := {
 	# --- P-C Cannon ultimate ---
 	# --- end Cannon ---
 }
+# The last plan started, as drawn. Read only outside.
+var last_plan := {}
+
+var _phase := IDLE
+var _left := 0.0
+var _plan := {}
+var _id := ""
+var _leg := 0
+var _ride
+var _leg_time := 0.0
+var _beat_len := 0.0
+var _beat_clock := 0.0
+var _beat := 0
+var _beats := 0
+var _peaked := false
+var _offset := 0.0
+var _expected := Vector3.ZERO
+var _posture_spent := {}
+var _record := {}
+var _clock := 0.0
+var _contact_at := {}
+var _staggered := {}
+var _chunks := {}
+var _was_full := false
+var _fill_since := 0.0
+# Seconds from the last empty meter to the last full one, for the run log's fill_seconds.
+var _record_fill := 0.0
+
+
+func setup(ctx_ref, combat_ref) -> void:
+	ctx = ctx_ref
+	combat = combat_ref
+	name = "Ultimate"
+	ctx.player.abilities.meter = meter
+	ctx.player.set_piece_phase = Callable(self, "phase")
+	# The defence runs inside RunState.damage, the one choke point every hit passes (a boss's
+	# slag, charge and the Mind's attacks call it directly).
+	ctx.run.defend_hook = Callable(self, "defend")
+	ctx.run.ride_hook = Callable(self, "active")
+	var ev = ctx.events
+	ev.enemy_struck.connect(_on_struck)
+	ev.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _feed("smash", ctx.player.chain.multiplier()))
+	ev.line_state_changed.connect(func(state: String, _target: Node3D, _at: Vector3, _cause: String):
+		if state == "chain_link" and ctx.player.chain.combo > 1:
+			_feed("chain_link"))
+	ev.near_miss.connect(func(_kind: String, _at: Vector3): _feed("near_miss"))
+	ev.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): _feed("kill"))
+	ev.posture_changed.connect(_on_posture)
+	ev.run_started.connect(func(_class_id: String):
+		_abort("stage")
+		meter.reset()
+		_was_full = false
+		_fill_since = _clock
+		_contact_at = {}
+		_staggered = {}
+		_chunks = {}
+		_record = {}
+		ctx.run.set_meta("ultimate_record", {}))
+	ev.stage_entered.connect(_on_stage_entered)
+	ev.stage_content_cleared.connect(func(_reason: String): _abort("stage"))
+	ev.player_died.connect(func(): _abort("death"))
+	ev.run_ended.connect(func(_won: bool): _abort("stage"))
+
+
+# Registers a row (combat.gd's ult_default; a pilot unit uses its own marked block instead).
+func register(id: String, row: Dictionary) -> void:
+	_ult_rows[id] = row
+
+
+func phase() -> String:
+	return _phase
+
+
+func active() -> bool:
+	return _phase != IDLE
+
+
+func _on_stage_entered(_stage: int, retry: bool) -> void:
+	_abort("stage")
+	if retry:
+		meter.restore_entry()
+		_was_full = meter.full()
+	else:
+		meter.mark_entry()
+
+
+# --- The meter --------------------------------------------------------------------------
+
+func _feed(source: String, amount := 1.0) -> void:
+	if not _fills():
+		return
+	if meter.add(source, amount) > 0.0:
+		_check_full()
+
+
+# The meter fills in play only: not in the bay, not between screens (a ceremony pauses the
+# tree), and never during a set piece (the meter is locked then).
+func _fills() -> bool:
+	if ctx.flow == null or not ctx.flow.in_play():
+		return false
+	return ctx.terrain == null or not ctx.terrain.has_method("in_bay") or not ctx.terrain.in_bay(ctx.player.ball_position())
+
+
+func _check_full() -> void:
+	var full := meter.full()
+	if full and not _was_full:
+		_record_fill = _clock - _fill_since
+		ctx.events.ultimate_ready.emit(_ult_id())
+	_was_full = full
+
+
+func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	if kind in ["stomp", "ram", "slam"]:
+		var id := enemy.get_instance_id() if is_instance_valid(enemy) else 0
+		if _clock - float(_contact_at.get(id, -INF)) < CONTACT_GAP:
+			return
+		_contact_at[id] = _clock
+		_feed("contact")
+	elif Weapons.BASE.has(kind):
+		_feed("weapon")
+
+
+func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
+	if not is_instance_valid(enemy):
+		return
+	var id := enemy.get_instance_id()
+	if staggered and not bool(_staggered.get(id, false)):
+		_feed("stagger")
+	_staggered[id] = staggered
+	if enemy.has_method("chunks_left"):
+		var left: int = enemy.chunks_left()
+		if _chunks.has(id) and left < int(_chunks[id]):
+			_feed("shatter")
+		_chunks[id] = left
+
+
+func _ult_id() -> String:
+	return String(ctx.player.abilities.ultimate_id)
+
+
+# --- Q ----------------------------------------------------------------------------------
+
+# Why a Q press would be refused now: "" (it would start), "busy" or "uncharged".
+func can_start() -> String:
+	if active() or ctx.flow == null or not ctx.flow.in_play() or ctx.flow.state_name() == "launch" or ctx.player.frozen():
+		return "busy"
+	if ctx.terrain != null and ctx.terrain.has_method("in_bay") and ctx.terrain.in_bay(ctx.player.ball_position()):
+		return "busy"
+	if not meter.full():
+		return "uncharged"
+	return ""
+
+
+# A Q press with this aim ({origin, forward}, optionally harpoon: the lock record). Recalls in
+# the wind-up; otherwise starts, or is refused with its verb_failed reason, which it returns.
+func press(aim := {}) -> String:
+	if _phase == WINDUP:
+		recall()
+		return ""
+	var refusal := can_start()
+	if refusal != "":
+		ctx.events.verb_failed.emit("ultimate", refusal, ctx.player.ball_position())
+		return refusal
+	if aim.is_empty():
+		aim = _live_aim()
+	start(plan(ctx.player.ball_position(), aim))
+	return ""
+
+
+func _live_aim() -> Dictionary:
+	return {"origin": ctx.aim_origin(), "forward": ctx.aim_forward(), "harpoon": ctx.player.kit.aim}
+
+
+func _heft_index() -> int:
+	var c := 1
+	if ctx.run != null and ctx.run.has_method("heft_class"):
+		c = int(ctx.run.heft_class())
+	return clampi(c - 1, 0, HEFT_MULT.size() - 1)
+
+
+func _row() -> Dictionary:
+	return AbilityState.ABILITIES.get(_ult_id(), {})
+
+
+func _knob(knob: String, fallback):
+	if UpgradeTree.KNOBS.has(knob):
+		return ctx.player.tree.knob(knob)
+	return fallback
+
+
+# The path, planned once with the harpoon's own target query, in the row's `paths` order
+# (default line, rail, arc), then the hop. Returns {path, from, to, target, beats, seconds,
+# flight, legs}; seconds is the wind-up plus the flight.
+func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
+	var row := _row()
+	var heft := _heft_index()
+	var kit = ctx.player.kit
+	var found := {}
+	var custom: Dictionary = _ult_rows.get(_ult_id(), {})
+	if custom.has("target"):
+		found = (custom["target"] as Callable).call(ball, aim)
+	# The row's own order (ult_default: line then arc); `paths` overrides it for a caller that
+	# plans another row's order (a variant preview, a test).
+	var order: Array = paths if not paths.is_empty() else row.get("paths", ["line", "rail", "arc"])
+	var harpoon: Dictionary = aim.get("harpoon", kit.aim)
+	var point = _aim_point(aim, ARC_REACH[heft] + RAIL_SEARCH)
+	# The row's order decides: a row that lists arc before line takes the arc even with a
+	# line standing (section 4, "unless the pilot's sheet reorders paths").
+	for path in order:
+		if not found.is_empty():
+			break
+		if path == "line":
+			if kit.hooked:
+				found = {"path": "line", "to": kit.anchor, "target": kit.anchor_body if kit.on_body else null}
+			elif harpoon.get("state", Augments.AIM_NONE) != Augments.AIM_NONE and harpoon.has("point") \
+					and ball.distance_to(harpoon["point"]) <= ctx.player.grapple_range():
+				found = {"path": "line", "to": harpoon["point"], "target": harpoon.get("body")}
+		elif path == "rail" and rail_query.is_valid() and point != null:
+			var rail: Dictionary = rail_query.call(point)
+			if not rail.is_empty() and (rail["entry"] as Vector3).distance_to(point) <= RAIL_SEARCH:
+				found = {"path": "rail", "to": rail.get("to", rail["entry"]), "entry": rail["entry"]}
+		elif path == "arc" and point != null and _ground_hit(aim, ARC_REACH[heft]) != null:
+			found = {"path": "arc", "to": _ground_hit(aim, ARC_REACH[heft])}
+	if found.is_empty():
+		found = {"path": "hop", "to": ball}
+	var mode: String = found["path"]
+	var to: Vector3 = found["to"]
+	var length := ball.distance_to(to)
+	var beat := _beat_now()
+	var flight := HOP_SECONDS if mode == "hop" else round_flight(length, beat)
+	var fixed := int(row.get("beats", 0))
+	var beats := _beats_in(flight, beat)
+	if fixed > 0 and mode != "hop":
+		beats = fixed
+		flight = fixed * (beat if beat > 0.0 else FLIGHT_NO_MUSIC / NO_MUSIC_BEATS)
+	var extra := int(_knob("ult_beats", 0))
+	if extra > 0:
+		var each := flight / maxi(beats, 1)
+		beats += extra
+		flight += extra * each
+	# One leg by default (section 12, item 1). A rail is two: a short arc onto the entry, then
+	# the rail itself; only the last leg ends in a landing strike.
+	var legs := [{"mode": mode, "to": to, "beats": beats, "seconds": flight, "strike": true}]
+	if mode == "rail":
+		var first := maxi(1, beats / 3)
+		var each := flight / maxi(beats, 1)
+		legs = [{"mode": "arc", "to": found["entry"], "beats": first, "seconds": first * each, "strike": false},
+			{"mode": "line", "to": to, "beats": beats - first, "seconds": (beats - first) * each, "strike": true}]
+	return {"path": mode, "from": ball, "to": to, "target": found.get("target"), "beats": beats,
+		"flight": flight, "seconds": WINDUP_SECONDS + flight, "legs": legs}
+
+
+# The flight seconds for a path length: length / 18 m/s clamped to 1.6 to 3.2 s, then whole
+# beats of the music so the landing falls on a beat, kept inside the clamp. 2.4 s with none.
+static func round_flight(length: float, beat: float) -> float:
+	if beat <= 0.0:
+		return FLIGHT_NO_MUSIC
+	var raw := clampf(length / FLIGHT_SPEED, FLIGHT_MIN, FLIGHT_MAX)
+	var beats := maxi(1, roundi(raw / beat))
+	if beats * beat < FLIGHT_MIN - 0.0001:
+		beats += 1
+	if beats * beat > FLIGHT_MAX + 0.0001:
+		beats -= 1
+	return beats * beat
+
+
+static func _beats_in(flight: float, beat: float) -> int:
+	if beat <= 0.0:
+		return NO_MUSIC_BEATS
+	return maxi(1, roundi(flight / beat))
+
+
+func _beat_now() -> float:
+	return maxf(0.0, float(beat_seconds.call())) if beat_seconds.is_valid() else 0.0
+
+
+func _aim_point(aim: Dictionary, reach: float):
+	if not aim.has("origin") or not aim.has("forward"):
+		return null
+	var space := _space()
+	if space == null:
+		return null
+	var from: Vector3 = aim["origin"]
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + (aim["forward"] as Vector3).normalized() * reach, Augments.WORLD_MASK))
+	return hit["position"] if not hit.is_empty() else from + (aim["forward"] as Vector3).normalized() * reach
+
+
+# Ground (a walkable face) at the aim point within reach of the ball, or null.
+func _ground_hit(aim: Dictionary, reach: float):
+	var space := _space()
+	if space == null or not aim.has("origin"):
+		return null
+	var from: Vector3 = aim["origin"]
+	var dir: Vector3 = (aim["forward"] as Vector3).normalized()
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + dir * (reach + 10.0), Augments.WORLD_MASK))
+	if hit.is_empty() or (hit["normal"] as Vector3).y < 0.7:
+		return null
+	var at: Vector3 = hit["position"]
+	if at.distance_to(ctx.player.ball_position()) > reach:
+		return null
+	return at
+
+
+func _space() -> PhysicsDirectSpaceState3D:
+	if ctx == null or ctx.root == null or not ctx.root.is_inside_tree():
+		return null
+	return ctx.root.get_world_3d().direct_space_state
+
+
+# Commits a plan: spends the meter, breaks every hold, cuts the line without a "broke",
+# draws the path and starts the wind-up.
+func start(p: Dictionary) -> void:
+	if p.is_empty() or not meter.spend():
+		return
+	_id = _ult_id()
+	_plan = p
+	last_plan = p
+	meter.locked = true
+	_was_full = false
+	_phase = WINDUP
+	_left = WINDUP_SECONDS
+	_leg = 0
+	_ride = null
+	_posture_spent = {}
+	_peaked = false
+	_offset = 0.0
+	# The line goes with the cause "ultimate", which publishes nothing, as a landing does; the
+	# set piece draws its own cable to B.
+	if ctx.player.kit.hooked:
+		ctx.player.cut_line("ultimate")
+	# The breakout row: the holds node breaks every hold on ultimate_started, below.
+	if ctx.spawner != null and ctx.spawner.fleet.holds.holding():
+		combat._discover("set_piece_breakout", ctx.player.ball_position())
+	_record = {"id": _id, "path": p["path"], "seconds": snappedf(float(p["seconds"]), 0.001), "heft_class": _heft_index() + 1,
+		"volley_hits": 0, "landing_hits": 0, "damage": 0.0, "bailed": false, "recalled": false,
+		"fill_seconds": snappedf(_record_fill, 0.01)}
+	ctx.run.set_meta("ultimate_record", _record)
+	_fill_since = _clock
+	ctx.events.ultimate_started.emit(_id, String(p["path"]), p["from"], p["to"], float(p["seconds"]))
+	_draw_path(p)
+
+
+func _draw_path(p: Dictionary) -> void:
+	if combat == null or combat.effects == null:
+		return
+	var from: Vector3 = p["from"]
+	for leg in p["legs"]:
+		combat.effects.arc(from + Vector3.UP * 0.5, (leg["to"] as Vector3) + Vector3.UP * 0.5, Palette.ARC)
+		from = leg["to"]
+
+
+# Q in the wind-up: cancel with a full refund.
+func recall() -> void:
+	if _phase != WINDUP:
+		return
+	meter.locked = false
+	meter.refund(UltimateMeter.CAP)
+	_was_full = true
+	_record["recalled"] = true
+	_end("recall", true)
+
+
+# Space in flight: leave the path now with the current velocity. Spent, no landing strike.
+func bail() -> void:
+	if _phase != FLIGHT:
+		return
+	_record["bailed"] = true
+	_end("bail", false)
+
+
+func _abort(reason: String) -> void:
+	if _phase == IDLE:
+		return
+	# Already landed: the recovery just ends; there is nothing left to cancel.
+	if _phase == RECOVER:
+		_phase = IDLE
+		meter.locked = false
+		return
+	_end(reason, false)
+
+
+func _end(reason: String, refunded: bool) -> void:
+	_phase = IDLE
+	_ride = null
+	meter.locked = false
+	ctx.run.set_meta("ultimate_record", _record)
+	ctx.events.ultimate_cancelled.emit(_id, reason, refunded)
+
+
+# --- The ride ---------------------------------------------------------------------------
+
+func _physics_process(delta: float) -> void:
+	if ctx == null or ctx.run.class_def == null:
+		return
+	step(delta)
+
+
+func step(delta: float) -> void:
+	_clock += delta
+	var player = ctx.player
+	var intent = player.intent
+	if _phase == IDLE:
+		if _fills():
+			meter.tick(delta, player.speed_tier())
+			_check_full()
+		if intent.ultimate_pressed:
+			press()
+		return
+	if intent.ultimate_pressed:
+		if _phase == WINDUP:
+			recall()
+			return
+		ctx.events.verb_failed.emit("ultimate", "busy", player.ball_position())
+	match _phase:
+		WINDUP:
+			_left -= delta
+			if _left <= 0.0:
+				_begin_flight()
+		FLIGHT:
+			if intent.jump_pressed:
+				bail()
+				return
+			_fly(delta)
+		RECOVER:
+			_left -= delta
+			if _left <= 0.0:
+				_phase = IDLE
+				meter.locked = false
+
+
+func _begin_flight() -> void:
+	_phase = FLIGHT
+	var leg: Dictionary = _plan["legs"][_leg]
+	_beats = int(leg["beats"])
+	_beat_len = float(leg["seconds"]) / maxi(_beats, 1)
+	_beat = 0
+	_beat_clock = 0.0
+	_ride = _carrier(ctx.player.ball_position(), leg)
+	_leg_time = 0.0
+	_expected = ctx.player.ball_position()
+	ctx.player.set_velocity_now(_ride.velocity_at(0.0), "ultimate")
+
+
+# A RideRail held to exactly the drawn leg over its seconds: a straight line, an arc, or the
+# hop straight up HOP_HEIGHT and down on the same spot.
+func _carrier(from: Vector3, leg: Dictionary):
+	var to: Vector3 = leg["to"]
+	var seconds: float = maxf(0.2, float(leg["seconds"]))
+	var ride = RideRail.new()
+	ride.kind = "ultimate"
+	ride.origin = from
+	ride.target = to
+	ride.flight = seconds
+	ride.active = true
+	var flat := Vector3(to.x - from.x, 0.0, to.z - from.z)
+	ride.heading = flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
+	ride.release_speed = ctx.player.planar_velocity().length()
+	if String(leg["mode"]) == "line":
+		ride.mode = RideRail.LINE
+		ride.velocity = (to - from) / seconds
+	else:
+		ride.mode = RideRail.ARC
+		var g := GRAVITY
+		if String(leg["mode"]) == "hop":
+			g = 8.0 * HOP_HEIGHT / (seconds * seconds)
+		ride.gravity = g
+		ride.velocity = flat / seconds + Vector3.UP * ((to.y - from.y + 0.5 * g * seconds * seconds) / seconds)
+	return ride
+
+
+func _fly(delta: float) -> void:
+	var player = ctx.player
+	var ball: Vector3 = player.ball_position()
+	# Something on the path stopped the ball: the flight ends there as a landing.
+	if _leg_time > 0.1 and ball.distance_to(_expected) > BLOCKED:
+		_land(ball)
+		return
+	_leg_time += delta
+	_beat_clock += delta
+	while _beat_clock >= _beat_len and _beat < _beats:
+		_beat_clock -= _beat_len
+		_beat += 1
+		_volley()
+		if not _peaked and _beat >= ceili(_beats / 2.0):
+			_peaked = true
+			_peak(player.ball_position())
+	var v = _ride.step(delta)
+	if v == null:
+		_land(_ride.target)
+		return
+	# Steering: up to CORRIDOR either side of the drawn path.
+	var side := Vector3(-_ride.heading.z, 0.0, _ride.heading.x)
+	var want: float = clampf(_offset + float(player.intent.move.x) * STEER_SPEED * delta, -CORRIDOR, CORRIDOR)
+	var steer: float = (want - _offset) / delta if delta > 0.0 else 0.0
+	_offset = want
+	_expected = _ride.point_at(_ride.time) + side * _offset
+	player.set_velocity_now(v + side * steer, "ultimate")
+
+
+func _peak(at: Vector3) -> void:
+	var row: Dictionary = _ult_rows.get(_id, {})
+	if row.has("peak"):
+		(row["peak"] as Callable).call(at)
+	ctx.events.ultimate_peak.emit(_id, at)
+
+
+func _volley() -> void:
+	var row: Dictionary = _ult_rows.get(_id, {})
+	if not row.has("tech"):
+		return
+	var hits: int = int((row["tech"] as Callable).call(_beat, ctx.player.ball_position(), ctx.aim_forward(), HEFT_MULT[_heft_index()]))
+	_record["volley_hits"] = int(_record.get("volley_hits", 0)) + hits
+
+
+func _land(at: Vector3) -> void:
+	var legs: Array = _plan["legs"]
+	var leg: Dictionary = legs[_leg]
+	_leg += 1
+	# ult_encore: a second leg if a target sits within 30 m of the landing.
+	if _leg == legs.size() and _knob("ult_encore", false):
+		var next = _encore_target(at)
+		if next != null:
+			legs.append({"mode": "arc", "to": next, "beats": _beats, "seconds": _beats * _beat_len, "strike": true})
+	if bool(leg.get("strike", true)):
+		_strike(at)
+	if _leg < legs.size():
+		_begin_flight()
+		return
+	var release: Vector3 = _ride.release_velocity() if _ride != null else Vector3.ZERO
+	_ride = null
+	ctx.player.set_velocity_now(release, "ultimate")
+	_phase = RECOVER
+	_left = RECOVER_SECONDS
+	ctx.run.set_meta("ultimate_record", _record)
+
+
+# The landing strike: it pays the chain multiplier and ends the chain as a paid smash does.
+func _strike(at: Vector3) -> void:
+	var chain_links: int = ctx.player.chain.combo
+	var mult: float = ctx.player.pay_chain(at)
+	var row: Dictionary = _ult_rows.get(_id, {})
+	var result: Array = [0, 0.0]
+	if row.has("landing"):
+		result = (row["landing"] as Callable).call(at, HEFT_MULT[_heft_index()], mult)
+	_record["landing_hits"] = int(_record.get("landing_hits", 0)) + int(result[0])
+	_record["damage"] = snappedf(float(_record.get("damage", 0.0)) + float(result[1]), 0.01)
+	ctx.events.ultimate_landed.emit(_id, at, int(result[0]), float(result[1]))
+	combat._discover("set_piece", at)
+	if chain_links >= 3:
+		combat._discover("set_piece_cash_in", at)
+
+
+func _encore_target(at: Vector3):
+	var best = null
+	var gap := ENCORE_REACH
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		var d: float = enemy.global_position.distance_to(at)
+		if d > 1.0 and d <= gap:
+			gap = d
+			best = enemy.global_position
+	return best
+
+
+# --- Helpers the rows share ---------------------------------------------------------------
+
+# The landing radius for this heft class, with ult_radius.
+func landing_radius() -> float:
+	return LANDING_RADIUS[_heft_index()] + float(_knob("ult_radius", 0.0))
+
+
+func volley_targets() -> int:
+	return VOLLEY_TARGETS + int(_knob("ult_volley", 0))
+
+
+# Damage taken during the set piece: x0.2 and never below 1 health. The amount to take.
+func defend(amount: float, hp: float) -> float:
+	if not active():
+		return amount
+	return clampf(amount * DAMAGE_TAKEN, 0.0, maxf(0.0, hp - 1.0))
+
+
+# Posture a hit on a closed Warden guard may still add in this set piece: the 45 cap counts
+# volleys and landing together. Applies `result` (the Warden's own judge) with its gain cut
+# to what is left.
+func warden_posture(warden: Node3D, result: Dictionary) -> void:
+	var id := warden.get_instance_id()
+	var spent := float(_posture_spent.get(id, 0.0))
+	var gain := minf(float(result.get("gain", 0.0)), maxf(0.0, WARDEN_POSTURE_CAP - spent))
+	result["gain"] = gain
+	result["shatter"] = false
+	result["crack"] = false
+	_posture_spent[id] = spent + gain
+	warden._apply_posture(result)

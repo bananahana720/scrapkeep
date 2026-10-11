@@ -38,7 +38,8 @@ const TENACITY_HOLD := 1.8
 const TENACITY_WINDOW := 4.0
 const TENACITY_IMMUNE := 2.5
 # The breaks that are the player's own action, and so pay the refund.
-const PLAYER_BREAKS := ["jump", "boost", "smash", "glide", "speed"]
+# "ultimate" is Q: the set piece breaks every hold it starts in (SKILL-BAR section 2).
+const PLAYER_BREAKS := ["jump", "boost", "smash", "glide", "speed", "ultimate"]
 const BREAK_KICK := 4.0
 const SNAP_KICK := 7.0
 const BREAK_REFUND := 0.6
@@ -92,6 +93,8 @@ func setup(ctx_ref) -> void:
 	events.sprint_started.connect(func(_dir: Vector3): _player_action("boost"))
 	events.slammed.connect(func(_at: Vector3, _strength: float, _flatness: float): _player_action("smash"))
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
+	events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
+		break_all("ultimate"))
 	events.stage_content_cleared.connect(func(_reason: String): clear())
 	_lines = MeshInstance3D.new()
 	_lines.mesh = ImmediateMesh.new()
@@ -146,6 +149,10 @@ func accumulated() -> float:
 # point the binding draws to, or null for the source itself. Returns true when held.
 func catch(source: Node3D, kind: String, breaks: Array, max_seconds := 0.0, shove := Vector3.ZERO, anchor = null) -> bool:
 	if source == null or immune():
+		return false
+	# No hostile hold can start while the set piece rides (SKILL-BAR section 4, defence).
+	if player.has_method("in_set_piece") and player.in_set_piece():
+		ignored += 1
 		return false
 	var id := source.get_instance_id()
 	if active.has(id):
@@ -231,6 +238,12 @@ func clear() -> void:
 		_release_id(id, "cleared")
 	_samples.clear()
 	immune_left = 0.0
+
+
+# A player action that breaks every hold whatever its own breaks list says (Q's set piece).
+func break_all(method: String) -> void:
+	for id in active.keys():
+		_release_id(id, method)
 
 
 func _player_action(method: String) -> void:

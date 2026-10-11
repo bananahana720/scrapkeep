@@ -4,6 +4,7 @@ const Parts := preload("res://src/build/parts.gd")
 const Items := preload("res://src/build/items.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const OddsReadout := preload("res://src/ui/odds_readout.gd")
 
 # Moss's workshop economy (DESIGN-V2 section 12): the shelf, the reroll, charge cells,
 # sell-back, the heft-locked top shelf and the conversation loop. It has no geometry:
@@ -200,7 +201,10 @@ func greeting_line() -> Dictionary:
 func shelf_offers() -> Array:
 	var out: Array = []
 	for i in shelf.size():
-		out.append(_offer(shelf[i]["part_id"], shelf[i]["sold"], i))
+		var offer := _offer(shelf[i]["part_id"], shelf[i]["sold"], i)
+		offer["odds"] = shelf[i].get("odds", [])
+		offer["odds_text"] = OddsReadout.text(offer["odds"])
+		out.append(offer)
 	return out
 
 
@@ -319,8 +323,10 @@ func top_shelf() -> Dictionary:
 	if top.is_empty():
 		return {}
 	var locked: bool = ctx.run.heft_class() < top["lock_class"]
+	# The table the hook was drawn from: the top rarities, or the shelf's when _roll_one fell back.
+	var table: Array = TOP_RARITIES if Parts.rarity_of(top["part_id"]) in TOP_RARITIES else SHELF_RARITIES
 	return {"part_id": top["part_id"], "name": Parts.display_name(top["part_id"]), "price": price(top["part_id"]),
-		"locked": locked, "needs_class": top["lock_class"], "heft_class": ctx.run.heft_class(),
+		"odds": OddsReadout.odds_for(table, ctx.run.class_id()), "locked": locked, "needs_class": top["lock_class"], "heft_class": ctx.run.heft_class(),
 		"lock_icon": "res_heft", "sold": top["sold"], "relented": talks["relented"]}
 
 
@@ -423,8 +429,11 @@ func _result(ok: bool, reason: String, line_id := "", part_id := "", cost := 0) 
 func _stock() -> Array:
 	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE)
 	var out: Array = []
+	# Each record carries the odds of the table it was drawn from (SG13), read from the same
+	# SHELF_RARITIES and weight row the roll above reads.
+	var odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
 	for part_id in picks:
-		out.append({"part_id": part_id, "sold": false})
+		out.append({"part_id": part_id, "sold": false, "odds": odds})
 	return out
 
 

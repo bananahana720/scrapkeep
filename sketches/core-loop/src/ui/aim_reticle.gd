@@ -3,6 +3,8 @@ extends Control
 const AimStyle := preload("res://src/movement/aim_style.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Keycap := preload("res://src/ui/keycap.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 
 const RING := 13.0
 const DIAMOND := 15.0
@@ -13,11 +15,23 @@ const HARPOON_WIDTH := 2.5
 const DRY_SHAKE := 3.0
 const DRY_SHAKE_TIME := 0.25
 const SHAKE_HZ := 40.0
+# The ultimate meter (design-v3/SKILL-BAR.md section 5): an arc METER_GAP outside the gauge
+# ring, METER_WIDTH thick, sweeping METER_SWEEP clockwise round a gap centred on six o'clock,
+# where the Q keycap (METER_Q_H tall) sits once the meter is full.
+const METER_GAP := 10.0
+const METER_WIDTH := 4.0
+const METER_SWEEP := TAU * 0.75
+const METER_Q_H := 20.0
+# The full meter breathes at 1 Hz; the hook lock pulses at 2 Hz, so the two never read alike.
+const BREATH_HZ := 1.0
+const BREATH_DEPTH := 0.12
 
 # The reticle carries no words: its shape and colour are the aim state (AimStyle), and
 # a grapple target in reach adds the right-mouse key glyph beside it (key_glyphs.gd).
 # While a hold-gauge-release shot charges, a ring round it fills clockwise from twelve,
-# linearly, in the class colour, and closes when the gauge is full.
+# linearly, in the class colour, and closes when the gauge is full. The one exception is the
+# full ultimate meter's Q keycap in the arc's gap, drawn here only while the Q prompt is not
+# (key_glyphs.gd), so Q is never drawn twice.
 var player
 var camera: Camera3D
 var gauge := 0.0
@@ -25,8 +39,17 @@ var gauge_color := Color.WHITE
 # The inner ring is the harpoon's readiness: 1 when a press would bite, filling as the hook docks
 # after a smash. It reads the kit's own rewind, so a kill that refunds it fills the ring at once.
 var harpoon_fill := 1.0
+# The ultimate meter, 0 to 1, as the HUD reads it (AbilitySlots.ultimate_of); during the set
+# piece it is the flight still to run. meter_full is the one ready fact every layer reads.
+var meter := 0.0
+var meter_full := false
+var meter_active := false
+var meter_color := Color.WHITE
+# The Q prompt draws the keycap in the gap this tick.
+var hide_q := false
 var _shake_left := 0.0
 var _shake_clock := 0.0
+var _breath_clock := 0.0
 
 
 func setup(player_ref, camera_ref: Camera3D) -> void:
@@ -51,7 +74,49 @@ func _process(delta: float) -> void:
 func step(delta: float) -> void:
 	_shake_left = maxf(0.0, _shake_left - delta)
 	_shake_clock += delta
+	_breath_clock = _breath_clock + delta if meter_full else 0.0
 	harpoon_fill = harpoon_readiness()
+
+
+static func meter_radius() -> float:
+	return GAUGE_RING + METER_GAP
+
+
+# The meter arc's start and end angles for a fill (screen angles: 0 at three o'clock, growing
+# clockwise). It starts left of the gap and fills clockwise over twelve to the gap's far side.
+static func meter_span(fill: float) -> Vector2:
+	var start := PI * 0.5 + (TAU - METER_SWEEP) * 0.5
+	return Vector2(start, start + METER_SWEEP * clampf(fill, 0.0, 1.0))
+
+
+# The fill is the class colour (identity); where the class colour is the live mint itself, the
+# fill draws in sand-light bare metal, so mint still means only "ready" (SKILL-BAR section 12).
+static func meter_fill_color(class_color: Color) -> Color:
+	if Color(class_color, 1.0).is_equal_approx(EventKinds.role_color("live")):
+		return EventKinds.role_color("neutral").lightened(0.25)
+	return class_color
+
+
+# The rim turns live mint at full ("your verb works now"); below full it is a dark track.
+static func meter_rim(full: bool) -> Color:
+	return EventKinds.role_color("live") if full else Color(0.0, 0.0, 0.0, 0.55)
+
+
+# The full meter's width scale at `t` seconds into the breath: one breath a second.
+static func breathe(t: float) -> float:
+	return 1.0 + BREATH_DEPTH * sin(TAU * BREATH_HZ * t)
+
+
+func q_shown() -> bool:
+	return meter_full and not meter_active and not hide_q
+
+
+func q_glyph() -> String:
+	return Glyphs.of("ultimate")
+
+
+func drawn_words() -> PackedStringArray:
+	return Keycap.words(q_glyph()) if q_shown() else PackedStringArray()
 
 
 func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String) -> void:
@@ -113,6 +178,7 @@ func _draw() -> void:
 		draw_arc(centre, GAUGE_RING, 0.0, TAU, 48, Color(0.0, 0.0, 0.0, 0.55), GAUGE_WIDTH + 2.0)
 		draw_arc(centre, GAUGE_RING, -PI * 0.5, -PI * 0.5 + TAU * clampf(gauge, 0.0, 1.0), 48, gauge_color,
 			GAUGE_WIDTH + (1.5 if gauge >= 1.0 else 0.0))
+	_draw_meter(centre)
 	match drawn_shape(style):
 		"dot":
 			draw_circle(centre, 2.5, color)
@@ -144,3 +210,24 @@ func _draw() -> void:
 				at + Vector2(0.0, -DIAMOND), at + Vector2(DIAMOND, 0.0),
 				at + Vector2(0.0, DIAMOND), at + Vector2(-DIAMOND, 0.0), at + Vector2(0.0, -DIAMOND)])
 			draw_polyline(points, color, 2.5)
+
+
+# The ultimate meter: nothing at 0, so the aim stays clear until the first point; then a dark
+# track over the whole sweep, the fill in the class colour, and at full a mint rim, a 1 Hz
+# breath and the Q keycap in the gap.
+func _draw_meter(centre: Vector2) -> void:
+	if meter <= 0.0 and not meter_full:
+		return
+	var r := meter_radius()
+	var whole := meter_span(1.0)
+	var span := meter_span(meter)
+	draw_arc(centre, r, whole.x, whole.y, 48, meter_rim(false), METER_WIDTH + 2.0)
+	var width := METER_WIDTH * (breathe(_breath_clock) if meter_full else 1.0)
+	if span.y > span.x:
+		draw_arc(centre, r, span.x, span.y, 48, meter_color, width)
+	if meter_full:
+		var rim := meter_rim(true)
+		draw_arc(centre, r + width * 0.5 + 1.0, whole.x, whole.y, 48, rim, 1.5)
+		draw_arc(centre, r - width * 0.5 - 1.0, whole.x, whole.y, 48, rim, 1.5)
+	if q_shown():
+		Keycap.draw(self, centre + Vector2(0.0, r), q_glyph(), meter_rim(true), METER_Q_H)
