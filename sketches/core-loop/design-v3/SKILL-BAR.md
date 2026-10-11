@@ -222,7 +222,7 @@ Every layer reads `abilities.meter.full()` or the `ultimate_ready` signal, so th
 | sound | `ultimate_ready`: the class motif's three notes an octave up and a small bell, in the live key (`KEYED_SOUNDS`, `src/presentation/audio.gd:85-90`); the rice-cooker end-of-cycle tune is the reference |
 | music | one layer lifts at the next bar line (below) |
 | pilot | the `ult_ready` clip |
-| body | the weapon's working device on the weapon ring glows brighter in the class colour. It is the only place a mecha glows (ROSTER-LOOK.md 0.7, colour discipline). The P-D mechas read the signal |
+| body | the working device on the weapon housing glows brighter in the class colour (the ring band stays bone). It is the only place a mecha glows (ROSTER-LOOK.md 0.7, colour discipline). The P-D mechas read the signal |
 | words | the Q keycap and the word ULTIMATE for the first 3 ready states on a profile, then the keycap alone |
 
 ### Payoff by heft class
@@ -319,7 +319,7 @@ The player picks B by aiming and steers on the way. That keeps BIBLE's ultimates
 6. Heft scaling beyond the default table, if any.
 7. Music: the motif quoted at the peak (a `Harmony.MOTIFS` id) and any cadence choice at the landing.
 8. Mecha: how the weapon ring and the hub modules read ready, wind-up and flight. Only the weapon's working device glows (ROSTER-LOOK.md 0.7). The full-span lattice is an optional extra (ROSTER-LOOK.md 0.5).
-9. Clips (A5 confirms): `ult_ready`, `ult_windup`, `ult_strike`, `ult_recover`, with lengths. The hands take the copper lap bar, the Q control, at wind-up and hold it through the flight in the shared `ult_ride_loop` (PILOT-CLIPS.md section 1).
+9. Clips (A5 confirms): `ult_ready`, `ult_windup`, `ult_strike`, `ult_recover`. Clip lengths come from PILOT-CLIPS.md section 1.2, not from this page. The hands take the copper lap bar, the Q control, at wind-up and hold it through the flight in the shared `ult_ride_loop` (PILOT-CLIPS.md section 1).
 10. Depth 3: two variant rows, each changing the path type or the tech, not only a number.
 11. Depth 4: modifiers on those variants (knob names below).
 12. Warden and boss notes beyond the defaults.
@@ -467,7 +467,7 @@ Tree card copy for depth-3 and depth-4 ultimate nodes goes in `src/core/trees/wo
 
 ### Pilot reaction triggers (`src/presentation/pilot_reactions.gd:5-18`)
 
-Rows point at clips that exist today; A5 and P-E re-point them at the new clips.
+Rows point at clips that exist today; A5 and P-E re-point them at the new clips. Clip lengths are not given here. PILOT-CLIPS.md section 1.2 is the source of every clip length.
 
 | Signal | Clip today | Final clip (A5) | Priority | Cooldown |
 | --- | --- | --- | --- | --- |
@@ -605,7 +605,7 @@ Order: B1 lands first and alone, because it owns every shared declaration (signa
 
 CUSTOMIZE.md owns the scaffold; this unit adds only what the bar feeds it.
 
-- SCOPE: rows in `src/core/achievements.gd` for "first set piece", "Curtain Call" and "Cash In 6", each granting one earned cosmetic; `src/presentation/cosmetic_presentation.gd` reads `ultimate_started` to draw the set-piece trail through the trail cosmetic slot and `ultimate_ready` to brighten the shell variant's working device on the weapon ring, the only place a mecha glows (ROSTER-LOOK.md 0.7).
+- SCOPE: rows in `src/core/achievements.gd` for "first set piece", "Curtain Call" and "Cash In 6", each granting one earned cosmetic; `src/presentation/cosmetic_presentation.gd` reads `ultimate_started` to draw the set-piece trail through the trail cosmetic slot and `ultimate_ready` to brighten the shell variant's working device on the weapon housing, the only place a mecha glows (ROSTER-LOOK.md 0.7).
 - ACCEPTANCE: a scripted run that lands a set piece grants the row once and saves it; the trail slot's equipped trail draws along the path.
 - Runs beside B1. Its only shared contract is the signal names in section 7.
 

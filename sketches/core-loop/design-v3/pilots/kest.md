@@ -156,7 +156,7 @@ Section 3.
 | 5 | landing | the stoop: 60 x heft x chain x 1.25 within the class landing radius + 1 m (7 to 11 m), knock 26, ends the chain. The cloak runs on 1.5 s. Exit: the banked speed handed back along the arc's flat heading (`src/world/ride_rail.gd:5-14`) |
 | 6 | heft beyond the default | targets per volley: 3, 3, 3, 4, 4 at classes I to V |
 | 7 | music | motif `kest` (`harmony.gd:134`); one tom tick per volley walking D4, A3, F3; the stinger is the falling triad; the stoop lands on the low root (below) |
-| 8 | cage | vents and mortar by phase (section 5) |
+| 8 | Mecha | vents and mortar by phase (section 5) |
 | 9 | clips | `ult_ready` 0.8 s, `ult_windup` 0.35 s, `ult_strike` 0.5 s (the hang pose), `ult_recover` 0.6 s |
 | 10 | depth 3 | Air Raid (an inert carpet that rolls back after the landing) and Minelayer (path `line`, lingering mines) |
 | 11 | depth 4 | `ult_encore`, `ult_beats`, `ult_radius`, `ult_volley`, read per variant |
@@ -394,7 +394,7 @@ Nothing is bought. Amber cannot be a cosmetic tint: Kest's amber `e5a044` (`src/
 | --- | --- | --- | --- | --- |
 | `trail_kest_fuse_smoke` | trail | Fuse Smoke | a grey smoke ribbon with a spark that crawls back along it, tint `8c8577` | the hidden discovery Blast Vault (codex row `kest_blast_vault`, section 8) |
 | `outfit_kest_rigger` | outfit | Rigger Harness | a load rigger's harness with carabiners and a coil of tag line: she "maintains suspended equipment" (`BIBLE.md:304`) | discovery `kest_homecoming`, "Homecoming", detected in `kest_kit.gd` when Kest enters world 3, granted through `synergy_discovered`. **A2-CRITIC:** an achievement row cannot test the pilot (`src/core/progress.gd:259-288`), so "enter the Highdraft as Kest" cannot be an achievement condition |
-| `shell_kest_roost` | shell variant | Roost Frame | a runner-up Kest mecha from the concept board, with its own four heft layers | achievement `kest_tick_tick_boom`, "Tick, Tick, Boom": one set piece whose charges and landing strike 8 different enemies (start) |
+| `shell_kest_roost` | shell variant | Roost Frame | a variant lattice drawn for the shell slot, with its own four heft layers | achievement `kest_tick_tick_boom`, "Tick, Tick, Boom": one set piece whose charges and landing strike 8 different enemies (start) |
 
 The outfit and shell variant slots come from A4 and B5; today `cosmetics.gd` has only paint, trail, decal and companion paint (`cosmetics.gd:17`). B5 owns the reward key on achievement rows.
 

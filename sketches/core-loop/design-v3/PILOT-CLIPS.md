@@ -56,7 +56,7 @@ The shells (`world_one/shell_<id>.glb`) carry no animations (parsed: 0 animation
 
 ## 1. The clip set
 
-Eighteen clips per pilot: the seven that exist, plus eleven new. The plan's list (idle loop, class-up pulse, two skill casts, ultimate wind-up, strike and recovery, smash flavour, unlock ceremony) is nine. SKILL-BAR adds `ult_ready` (`SKILL-BAR.md:224`). This sheet adds `ult_ride_loop`, so the pilot holds the big control through the flight instead of dropping back to idle mid-air (section 1.3).
+Eighteen clips per pilot: the seven that exist, plus eleven new. The plan's list (idle loop, class-up pulse, two skill casts, ultimate wind-up, strike and recovery, smash flavour, unlock ceremony) is nine. SKILL-BAR adds `ult_ready` (`SKILL-BAR.md` section 4, "Ready cue"). This sheet adds `ult_ride_loop`, so the pilot holds the big control through the flight instead of dropping back to idle mid-air (section 1.3).
 
 ### 1.1 Roster table: one row per clip, the same in all six GLBs
 
@@ -107,7 +107,7 @@ Blend rule: impact and commitment clips (a hit, a cast, a slam, the wind-up, the
  -1 [idle_loop] ....... the base the rest of the time
 ```
 
-**Three changes to SKILL-BAR section 7's trigger table** (`SKILL-BAR.md:472-480`), each on the veto list:
+**Three changes to SKILL-BAR section 7's trigger table** (`SKILL-BAR.md` section 7, "Pilot reaction triggers"), each on the veto list:
 
 - `ultimate_landed` rises from 65 to 69. At 65 it lost to a strike still playing (68), so a short beat-rounded flight could end with no recovery.
 - `ultimate_cancelled` gets a row at 72, so a recall during the wind-up (70) still brings the pilot back to rest.
@@ -132,7 +132,7 @@ End frames, with seconds in brackets. Lengths come from each sheet's section 6, 
 | `unlock` | 73 (2.4) | 73 (2.4) | 91 (3.0) | 91 (3.0) | 91 (3.0) | 85 (2.8) |
 | **New seconds, total** | 13.1 | 13.4 | 13.3 | 14.2 | 13.4 | 11.8 |
 
-The wind-up clip is 0.333 s against the framework's 0.35 s wind-up (`SKILL-BAR.md:242`). It reaches the ride pose 17 ms before the flight starts, and `ult_ride_loop` takes over from there.
+The wind-up clip is 0.333 s against the framework's 0.35 s wind-up (`SKILL-BAR.md` section 4, "The set piece contract"). It reaches the ride pose 17 ms before the flight starts, and `ult_ride_loop` takes over from there.
 
 Pose stories stay in each sheet's section 6. Pilot-specific limits the clip author must keep:
 
@@ -147,7 +147,7 @@ Pose stories stay in each sheet's section 6. Pilot-specific limits the clip auth
 
 ### 1.3 How the chains read
 
-**The ultimate.** One chain of clips follows the framework's phases (`SKILL-BAR.md:242`):
+**The ultimate.** One chain of clips follows the framework's phases (`SKILL-BAR.md` section 4, "The set piece contract"):
 
 ```
 Q press      wind-up 0.35 s        flight 1.6 to 3.2 s (beat-rounded)           landing  recovery
@@ -196,7 +196,7 @@ Today the seated pose is a bone reset (`hero_assets.gd:604-609`). An idle loop r
 2. **The anchor decides the hand-off.** A one-shot that ends on `ride` while the set piece is not in flight hands off to `ult_recover`. A ride pose never snaps to rest.
 3. **A queued clip goes first.** A row marked `queue` that lost on priority while the current clip had at most that many seconds left plays when the current clip ends, if its cooldown allows and the set piece is idle. One slot; the higher priority wins it.
 4. **Idle frame 0 equals rest exactly.** Every rest-anchored clip starts and ends on rest, so the hand-off is seamless, and "returns every bone to seated rest" (`tests/pilot_reactions_test.gd:148`) still holds at the hand-off frame.
-5. **Idle amplitude cap.** No bone departs rest by more than 6 degrees on the spine, neck and head, 0.02 m at either hand, or 15 degrees on ears, tail, crest, jaw and curls. A clip that starts with no blend over a moving idle then pops by 1 to 2 px at chase distance (the 0.4 m head at 10.5 m, `ROSTER-LOOK.md:129`). The verifier enforces the cap.
+5. **Idle amplitude cap.** No bone departs rest by more than 6 degrees on the spine, neck and head, 0.02 m at either hand, or 15 degrees on ears, tail, crest, jaw and curls. A clip that starts with no blend over a moving idle then pops by 1 to 2 px at chase distance (the 0.4 m head at 10.5 m, `ROSTER-LOOK.md` section 3). The verifier enforces the cap.
 6. **The ride loop obeys the same cap around the ride pose.**
 7. **Fallback that works.** A GLB without `idle_loop` keeps today's stop and reset and warns once per pilot through `_warn_once` (`hero_assets.gd:307`). A pilot with no AnimationPlayer skips the seat entirely (trap 1).
 8. **Base loops never hand back by themselves.** Godot does not emit `animation_finished` for a looping animation (Godot 4.7 docs, AnimationMixer), so `_pilot_finished` only ever runs for one-shots.
@@ -316,8 +316,8 @@ Run from the repo root (`PILOT-RIG.md:45`). Blender 5.2.2, two threads, a 12 GiB
 **Call: code moves every part of the mecha; clips move only pilot bones.** Three reasons:
 
 1. **Continuous motion follows live values** a clip cannot know: roll speed, aim, the glide state. The code already does this (`hero_assets.gd:474-486`).
-2. **Shells are swapped.** `_fit` frees and rebuilds the shell on a class change (`hero_assets.gd:369-374`), and P-D adds heft layers and shell variants on one loader path (`ROSTER-LOOK.md:274`). Clips inside shells would multiply by variant and layer, and each shell would need its own AnimationPlayer kept in step with the pilot's.
-3. **One fact, read twice.** A control moves when the pilot's hand reaches it. The contact frame lives once, in the pose table. `pilot_clips.py` keys the hand to it; the mecha motion code reads the same number from the same JSON and starts the control's throw then. The hands always match the bar (`ROSTER-LOOK.md:63`).
+2. **Shells are swapped.** `_fit` frees and rebuilds the shell on a class change (`hero_assets.gd:369-374`), and P-D adds heft layers and shell variants on one loader path (`ROSTER-LOOK.md` section 5). Clips inside shells would multiply by variant and layer, and each shell would need its own AnimationPlayer kept in step with the pilot's.
+3. **One fact, read twice.** A control moves when the pilot's hand reaches it. The contact frame lives once, in the pose table. `pilot_clips.py` keys the hand to it; the mecha motion code reads the same number from the same JSON and starts the control's throw then. The hands always match the bar (`ROSTER-LOOK.md` section 0.4).
 
 | Motion | Node | Reads | Driver and owner | Starting values |
 | --- | --- | --- | --- | --- |
@@ -325,20 +325,20 @@ Run from the repo root (`PILOT-RIG.md:45`). Blender 5.2.2, two threads, a 12 GiB
 | Gimbal rings hold the pod level | Pod > Gyro, today's hoop, becomes the outer gimbal ring; a new inner ring sits inside it (`ROSTER-LOOK.md` sections 0.1 and 0.7) | the lattice's tumble around the upright Pod | code in `_steer_pod`, replacing today's speed spin (`:477-480`); P-D base mecha unit | the outer ring pivots left-right, the inner ring front-back |
 | Pod turn to heading | Pod | heading above 1.5 m/s | `_steer_pod` (`:474-476`); exists | rate 10 |
 | Vanes open | VaneL, VaneR | `kit.gliding` | `_steer_pod` (`:481-486`); exists | 90 degrees, rate 8 |
-| Weapon ring yaw to aim | Pod > WeaponRing | aim direction | code in `_steer_pod`; P-D base mecha unit, HOBERMAN-BASE (`ROSTER-LOOK.md:26`, section 0.6) | rate 14 |
+| Weapon ring yaw to aim | Pod > WeaponRing | aim direction | code in `_steer_pod`; P-D base mecha unit, HOBERMAN-BASE (`ROSTER-LOOK.md` sections 0.1 and 0.6) | rate 14 |
 | Gap panels slam in and fling out | Pod > `HeftC2`..`HeftC5` panel holders (outer face at radius 0.92, at the rest-pose positions the `Gap.NN` empties mark); the Core part of class III carries only the thicker tread caps (`ROSTER-LOOK.md` sections 0.3 and 5; `CUSTOMIZE.md` section 6) | `heft_class_changed`, `heft_class_dropped` | code tweens; P-D (`ROSTER-LOOK.md` section 0.3, timings in section 5) | in 0.18 s with 1.2 overshoot; out 0.45 s |
-| Machinery glow when ready | `class_accent` emission | `ultimate_ready` until `ultimate_started` | code; P-D (`SKILL-BAR.md:225`) | 1 Hz breathe |
-| Lattice fold on landing (extra) | Core scale | `landed` impact | code tween; P-D, on the veto list (`ROSTER-LOOK.md:67`) | 0.92, back over 0.25 s |
+| Machinery glow when ready | `class_accent` emission | `ultimate_ready` until `ultimate_started` | code; P-D (`SKILL-BAR.md` section 4, "Ready cue") | 1 Hz breathe |
+| Lattice fold on landing (extra) | Core scale | `landed` impact | code tween; P-D, on the veto list (`ROSTER-LOOK.md` section 0.5) | 0.92, back over 0.25 s |
 | Lattice full span for the ultimate (extra) | Core scale | `ultimate_started` opens it; `ultimate_landed` or `ultimate_cancelled` folds it back | code tween; P-D, on the veto list (`ROSTER-LOOK.md` section 0.5) | about 1.15, hub modules locked out |
 | Cannon fold for Fire Mission | Core scale | `ultimate_started` folds to 0.85, `ultimate_landed` or `ultimate_cancelled` springs back in 0.12 s | code tween; PE-0 | base, not an extra |
-| **Control throw on a cast** | Pod > `Control.<name>`, in the slot 2 and 3 bank beside the right yoke | the row's signal, at the clip's contact time | **`src/presentation/cage_motion.gd`, new in PE-0** | lever 35 degrees, crank half a turn, plunger 0.06 m; throw 0.08 s, return 0.25 s |
-| **Trigger squeeze on fire** | Pod > `Control.Trigger`, on the twin yokes (label "1: <weapon>") | `shot_fired` | `cage_motion.gd`, PE-0; at most once per 0.12 s | 12 degrees, 0.06 s |
-| Pedal kick on Shift | Pod > `Control.Pedal.L`, `Control.Pedal.R` | the movement chip's signal | `cage_motion.gd`, PE-0 | 20 degrees, 0.06 s |
-| Lap bar haul | Pod > `Control.LapBar` | `ultimate_started` to `ultimate_landed` or `ultimate_cancelled` | `cage_motion.gd`, PE-0 | 25 degrees back |
+| **Control throw on a cast** | Pod > `Control.<name>`, in the slot 2 and 3 bank beside the right yoke | the row's signal, at the clip's contact time | **`src/presentation/mecha_motion.gd`, new in PE-0** | lever 35 degrees, crank half a turn, plunger 0.06 m; throw 0.08 s, return 0.25 s |
+| **Trigger squeeze on fire** | Pod > `Control.Trigger`, on the twin yokes (label "1: <weapon>") | `shot_fired` | `mecha_motion.gd`, PE-0; at most once per 0.12 s | 12 degrees, 0.06 s |
+| Pedal kick on Shift | Pod > `Control.Pedal.L`, `Control.Pedal.R` | the movement chip's signal | `mecha_motion.gd`, PE-0 | 20 degrees, 0.06 s |
+| Lap bar haul | Pod > `Control.LapBar` | `ultimate_started` to `ultimate_landed` or `ultimate_cancelled` | `mecha_motion.gd`, PE-0 | 25 degrees back |
 
 The weapon gets no pilot clip. At fire rates of 15 to 22 shots a second (Tally, `PILOTS.md:37`) a clip per shot would block every reaction. The yoke trigger squeeze carries it.
 
-**Controls per pilot**, from ROSTER-LOOK's cockpit column (`ROSTER-LOOK.md:36-43`), its cockpit control rule (section 0.7) and the sheets' pose stories. Section 0.7 sets one layout for all six:
+**Controls per pilot**, from ROSTER-LOOK's cockpit column (`ROSTER-LOOK.md` section 0.2), its cockpit control rule (section 0.7) and the sheets' pose stories. Section 0.7 sets one layout for all six:
 
 - The twin yokes take the hands and carry the weapon trigger, labelled "1: <weapon>".
 - Slots 2 and 3 sit in a small lever or button bank beside the right yoke, labelled "2: <slot 2>" and "3: <slot 3>".
@@ -356,7 +356,7 @@ Shared nodes for all six: `Control.Grip.L` and `Control.Grip.R` on the twin yoke
 | Rivet | `Lever`, "2: Overdrive Blast" (both claws slam down) | `WinchLever`, "3: Line Drive" (one claw yanks) | `LapBar`, "Q: Foundry Cutter" | lean into the skid, both yokes planted |
 | Kest | `FusePlunger`, "2: Detonation line" (a wing punches it, then sweeps along the aim) | `ChargeKey`, "3: Cable Charge" (a wing tip taps it) | `LapBar`, "Q: Windhover" | one wing over her head, the other on its yoke |
 | Tarn | `ClampLever`, "2: Claw clamp" | `DrumLever`, "3: Claw Drag" (two hauls) | `LapBar`, "Q: Redjaw Rend" | both yokes to the chest |
-| Tally | `CardTab.1`, "2: Gather Plate" (deal a card) | `CardTab.2`, "3: Ledger Clip" (punch the tab down, tug twice) | `LapBar`, "Q: Plate Return" | both paws drive the yokes down like a stamp; the stamp sole hub fires below (`ROSTER-LOOK.md:42`) |
+| Tally | `CardTab.1`, "2: Gather Plate" (deal a card) | `CardTab.2`, "3: Ledger Clip" (punch the tab down, tug twice) | `LapBar`, "Q: Plate Return" | both paws drive the yokes down like a stamp; the stamp sole hub fires below (`ROSTER-LOOK.md` section 0.2) |
 | Cannon | `PlateCrank`, "2: Cannon Plate" (half a turn) | `CableClamp`, "3: Lane Charge" (paddle slap) | `LapBar`, "Q: Fire Mission" | one paddle slaps the seat frame |
 
 `CardTab.0`, `CardTab.1` and `CardTab.2` sit on `CardBay.0`, `CardBay.1` and `CardBay.2`; Tally's slot 2 control is `CardTab.1` and her slot 3 control is `CardTab.2`.
@@ -454,7 +454,7 @@ The queue holds card 1's lock for the run and exports `CUDA_VISIBLE_DEVICES` (`t
 
 ### PE-0: clip framework
 
-- **SCOPE.** `src/presentation/pilot_reactions.gd` (the new rows; row keys `blend`, `arg` as `[index, value]` in place of the unused `near_arg`, and `queue` in seconds; a `BASES` table). `src/presentation/hero_assets.gd` (`_pilot_event_5`; `react()` reads the new keys; `_to_base` replaces `_seat_pilot`; the anchor hand-off; the queue slot; the null-animator guard; calls into the mecha motion code). `src/presentation/cage_motion.gd` (new). `src/presentation/clips/roster.json` (new). `src/ui/class_preview.gd` (idle and first-focus unlock). `src/world/rescue_site.gd` (unlock when spent). `src/core/run_log.gd` (the `pilot_clips` row). `tools/blender/pilot_clips.py`, `verify_pilot_clips.py`, `render_pilot_clips.py` (new). `tools/blender/pilot_cannon.py` (the `--no-shell` flag only). `tests/support/pilot_clip_trigger.gd`, `tests/pilot_clips_policy_test.gd` (new). `tests/pilot_reactions_test.gd` (re-pin, below).
+- **SCOPE.** `src/presentation/pilot_reactions.gd` (the new rows; row keys `blend`, `arg` as `[index, value]` in place of the unused `near_arg`, and `queue` in seconds; a `BASES` table). `src/presentation/hero_assets.gd` (`_pilot_event_5`; `react()` reads the new keys; `_to_base` replaces `_seat_pilot`; the anchor hand-off; the queue slot; the null-animator guard; calls into the mecha motion code). `src/presentation/mecha_motion.gd` (new). `src/presentation/clips/roster.json` (new). `src/ui/class_preview.gd` (idle and first-focus unlock). `src/world/rescue_site.gd` (unlock when spent). `src/core/run_log.gd` (the `pilot_clips` row). `tools/blender/pilot_clips.py`, `verify_pilot_clips.py`, `render_pilot_clips.py` (new). `tools/blender/pilot_cannon.py` (the `--no-shell` flag only). `tests/support/pilot_clip_trigger.gd`, `tests/pilot_clips_policy_test.gd` (new). `tests/pilot_reactions_test.gd` (re-pin, below).
 - **Rows go live at once.** `react()` already refuses a clip the GLB lacks (`hero_assets.gd:585`), so a pilot without the new clips simply does not react, as today. `pilot_reactions_test.gd:47` is re-pinned with a dated header: a pilot whose `src/presentation/clips/<pilot>.json` exists must carry all 18 clips; a pilot without one must carry the seven. `:52` allows loops only for names ending in `_loop`; `:131` expects `idle_loop` playing after a clip when the GLB has it.
 - **ACCEPTANCE.**
   - With today's GLBs every existing test passes, and the base falls back to stop and reset with one warning per pilot.
@@ -489,7 +489,7 @@ The queue holds card 1's lock for the run and exports `CUDA_VISIBLE_DEVICES` (`t
 | File | Writers |
 | --- | --- |
 | `hero_assets.gd` | PE-0 (`react`, seat, events); the P-D units (PILOTS and SHELLS rows, `_steer_pod`). Different functions; the coordinator merges PE-0 and P-D serially |
-| `pilot_reactions.gd`, `roster.json`, `cage_motion.gd` | PE-0 only |
+| `pilot_reactions.gd`, `roster.json`, `mecha_motion.gd` | PE-0 only |
 | `src/presentation/clips/<pilot>.json`, `pilot_<pilot>_anim.glb` | that pilot's unit only |
 | `tools/blender/shell_<pilot>.py` and `world_one/shell_<pilot>.py` (`CONTROLS`) | P-D only; P-E reads |
 | `run_log.gd` | B3 (ultimate rows), then PE-0 (one field); sequential waves |
@@ -506,7 +506,7 @@ The queue holds card 1's lock for the run and exports `CUDA_VISIBLE_DEVICES` (`t
 
 The projection scales each pilot's measured rate (Tarn 10.6 KB per second of animation, the Cannon 5.1, likely because its rigid cast keeps every scale constant) by the new seconds in 1.2. Godot's import keeps `animation/remove_immutable_tracks=true` and `animation/fps=30` (`assets/models/pilot_tarn_anim.glb.import`), which drops constant tracks.
 
-**Runtime.** Today the animator stops between clips (`hero_assets.gd:605`). With a base loop, one AnimationPlayer and one 25-bone Skeleton3D update every frame for the player's pilot, plus one on the class card. That is small next to the 16,000-tri, 19-draw ball budget (`ROSTER-LOOK.md:283`). PE-INT measures it against the pre-wave base on card 1 under the 1.3x rule; absolute frame times come only from Andrew's display. The mecha motion code adds tweens on a handful of nodes and must not add a light or a per-instance `material_override` (`ROSTER-LOOK.md:279-280`).
+**Runtime.** Today the animator stops between clips (`hero_assets.gd:605`). With a base loop, one AnimationPlayer and one 25-bone Skeleton3D update every frame for the player's pilot, plus one on the class card. That is small next to the ball budget in `ROSTER-LOOK.md` sections 5 and 8. PE-INT measures it against the pre-wave base on card 1 under the 1.3x rule; absolute frame times come only from Andrew's display. The mecha motion code adds tweens on a handful of nodes and must not add a light or a per-instance `material_override` (`ROSTER-LOOK.md` section 8).
 
 **Build cost.** CPU Blender at two threads under a 12 GiB cap, as `PILOT-RIG.md:72` records. Strips are the only GPU work.
 
@@ -521,7 +521,7 @@ The projection scales each pilot's measured rate (Tarn 10.6 KB per second of ani
 | The pose table drifts from the bytes | check 2 compares lengths, check 14 compares contact frames, every build |
 | Base scenes for Rivet, Sable and Kest go stale or missing in the main checkout's ignored folder | check 16 fails on a stale base; a missing base stops PE-RIVET, PE-SABLE or PE-KEST with BLOCKED, not a rebuild from guesses |
 | The rescue cage plays `unlock` at scale 1.6 with the root moving (`rescue_site.gd:110-115`) | the unit renders one strip frame in the cage pose |
-| A pose table under `src/` might not ship in the exported build (`export_presets.cfg` has an empty `include_filter` at `:9` and `:28`), so the mecha motion code would lose its contact frames | PE-INT reads one contact frame in the `sketch:export` build; if the table is absent, `cage_motion.gd` falls back to 40 percent of the clip length and warns once |
+| A pose table under `src/` might not ship in the exported build (`export_presets.cfg` has an empty `include_filter` at `:9` and `:28`), so the mecha motion code would lose its contact frames | PE-INT reads one contact frame in the `sketch:export` build; if the table is absent, `mecha_motion.gd` falls back to 40 percent of the clip length and warns once |
 
 ## 11. Veto list
 
