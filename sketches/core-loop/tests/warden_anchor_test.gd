@@ -15,10 +15,12 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # through the per-kind hook (KF2 to KF4 supply the real ones). The mind under the island
 # drops the line 1.2 s after the pulse (wardens/mind.md section 10, call 1).
 
-const KINDS := [[1, "reactor"], [3, "swarm"], [5, "mind"]]
+# Stage, kind, and how high the mounting hangs the body (the headframe's hive and the
+# island's hand are suspended, wardens/swarm.md and mind.md section 4; the reactor stands).
+const KINDS := [[1, "reactor", 0.0], [3, "swarm", 20.0], [5, "mind", 20.0]]
 # Where the bite is taken from: about 37 m from the crown, inside the 45 m rope.
-const BITE_FROM := Vector3(-30.0, 22.0, 0.0)
-const BITE_THROW := Vector3(-8.0, 4.0, 6.0)
+const BITE_OUT := 30.0
+const BITE_UP := 22.0
 const SWING_SECONDS := 1.5
 const DRAG_SECONDS := 2.0
 const DRAG_VELOCITY := Vector3(6.0, 12.0, 0.0)
@@ -50,6 +52,13 @@ var _failures := 0
 var _smashed := 0
 var _bolts := 0
 var _ends: Array = []
+var _latch_note := ""
+# Ticks the first line has held without a break, counted while the bot swings, fires and winches.
+var _riding := false
+var _ride_ticks := 0
+# The open side the bot works from (flat, unit) and the heading across it.
+var _out := Vector3.LEFT
+var _side := Vector3.FORWARD
 
 
 func _report(label: String, ok: bool, detail: String) -> void:
@@ -104,6 +113,10 @@ func _on_hardpoint() -> bool:
 
 
 func _keep_quiet() -> void:
+	if _riding and _held():
+		_ride_ticks += 1
+	else:
+		_riding = false
 	if is_instance_valid(_warden) and not _warden._charging:
 		_warden._pulse_clock = 0.0
 
@@ -147,14 +160,42 @@ func _start(stage: int) -> bool:
 	return true
 
 
-# The real press: aim at the Warden, press the harpoon, and the lock bites.
+# The stage's terrain differs per kind: the bot works from the first of eight headings
+# whose bite point, swing and approach see the crown with nothing of the world between.
+func _pick_side() -> void:
+	var space: PhysicsDirectSpaceState3D = _game.get_world_3d().direct_space_state
+	var crown: Vector3 = _warden.global_position + Vector3.UP * _warden.HALF_HEIGHT
+	for i in 8:
+		var out := Vector3.LEFT.rotated(Vector3.UP, TAU * float(i) / 8.0)
+		var clear := true
+		for spot in [out * BITE_OUT + Vector3.UP * BITE_UP, out * 20.0 + Vector3.UP * 6.0, out * 12.0 + Vector3.UP * 4.0]:
+			var query := PhysicsRayQueryParameters3D.create(crown, crown + spot, Augments.WORLD_MASK)
+			clear = clear and space.intersect_ray(query).is_empty()
+		if clear:
+			_out = out
+			_side = out.cross(Vector3.UP).normalized()
+			return
+	_out = Vector3.LEFT
+	_side = Vector3.FORWARD
+
+
+# The real press: aim at the Warden, press the harpoon, and the lock bites. The ball is held
+# at the spot while the chase camera catches up, so the lock cone sits on the crosshair.
 func _latch(from: Vector3, velocity := Vector3.ZERO) -> bool:
 	_source.hold = {}
-	_player.reset_to(from, velocity)
-	for i in 3:
+	# The swarm's guard respawns; the lock is for the Warden.
+	for enemy in get_nodes_in_group("enemy"):
+		if enemy != _warden and enemy.get("kind") != "vault":
+			enemy.queue_free()
+	_game.camera.snap(_warden.global_position - from)
+	for i in _seconds(0.4):
+		_player.reset_to(from, velocity)
 		_aim_at(_warden.global_position)
 		await physics_frame
+	_player.reset_to(from, velocity)
 	_aim_at(_warden.global_position)
+	_latch_note = "rewind %.2f, cooldown %.2f, ball %.1f m from the body" % [_kit().rewind_left, _player.chain.miss_left,
+			_player.ball_position().distance_to(_warden.global_position)]
 	_source.press = {"harpoon_pressed": true}
 	await _frames(2)
 	return _held()
@@ -162,12 +203,12 @@ func _latch(from: Vector3, velocity := Vector3.ZERO) -> bool:
 
 func _run() -> void:
 	for entry in KINDS:
-		await _bot(int(entry[0]), String(entry[1]))
+		await _bot(int(entry[0]), String(entry[1]), float(entry[2]))
 	print("warden_anchor_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
 
-func _bot(stage: int, family: String) -> void:
+func _bot(stage: int, family: String, hang: float) -> void:
 	if not await _start(stage):
 		_report("%s: a Warden" % family, false, "stage %d spawned no Warden" % stage)
 		if _game != null:
@@ -181,13 +222,16 @@ func _bot(stage: int, family: String) -> void:
 		"set_mount_driver %s, hardpoint_at %s, anchor_velocity %s" % [_warden.has_method("set_mount_driver"),
 			_warden.has_method("hardpoint_at"), _warden.has_method("anchor_velocity")])
 	var hoist := Hoist.new()
+	hoist._offset = Vector3.UP * hang
 	if framework:
 		_warden.set_mount_driver(hoist)
+		await _frames(2)
+	_pick_side()
 	await _latch_and_ride(family, framework)
+	await _fire(family)
+	await _winch_in(family)
 	if framework:
 		await _drag(family, hoist)
-	await _winch_in(family)
-	await _fire(family)
 	if framework:
 		await _shrug(family, hoist)
 	await _drop(family)
@@ -199,9 +243,11 @@ func _bot(stage: int, family: String) -> void:
 
 func _latch_and_ride(family: String, framework: bool) -> void:
 	_keep_quiet()
-	var from: Vector3 = _warden.global_position + BITE_FROM
+	var from: Vector3 = _warden.global_position + _out * BITE_OUT + Vector3.UP * BITE_UP
 	# Thrown outward at the bite: a free ball would stretch the line by metres.
-	var latched := await _latch(from, BITE_THROW)
+	var latched := await _latch(from, _out * 8.0 + Vector3.UP * 4.0 + _side * 6.0)
+	_riding = latched
+	_ride_ticks = 0
 	var kit = _kit()
 	var on_point: bool = framework and latched and _on_hardpoint()
 	_report("%s: latches a hardpoint from rope range" % family, latched and from.distance_to(kit.anchor) > 30.0
@@ -248,33 +294,51 @@ func _drag(family: String, hoist) -> void:
 		"ball rose %.1f m while the mounting rose %.1f m, worst stretch %.2f m" % [rose, moved.y, worst])
 
 
-# Right mouse held winches the line in; it never drops inside the minimum rope.
+# Right mouse held winches the line in, and the line never drops inside the minimum rope.
+# An orbiting ball winches in only so far (the pull meets the orbit's centripetal need), so
+# when the winch leaves it outside, the bot bites again level with the body, still, and hangs.
 func _winch_in(family: String) -> void:
 	if not _held():
-		var again := await _latch(_warden.global_position + Vector3(-12.0, 4.0, 0.0))
+		var again := await _latch(_warden.global_position + _out * 12.0 + Vector3.UP * 4.0)
 		if not again:
 			_report("%s: rides inside the minimum rope" % family, false, "no line to winch")
 			return
 	var inside: float = Augments.MIN_ROPE + Tuning.RADIUS + float(_warden.radius)
-	var closest := INF
-	var ticks_inside := 0
-	var held := true
+	var rope_before: float = _kit().rope
+	var watch := {"closest": INF, "inside": 0, "held": true}
 	_source.hold = {"harpoon_held": true}
-	for tick in _seconds(WINCH_SECONDS):
+	await _watch_inside(watch, inside, WINCH_SECONDS)
+	_source.hold = {}
+	var rode := float(_ride_ticks) / Engine.physics_ticks_per_second
+	_report("%s: rides one line at least 3 s" % family, rode >= 3.0, "the first line held %.2f s through swing, fire and winch" % rode)
+	_riding = false
+	var winched: bool = watch["held"] and rope_before - _kit().rope > 5.0
+	_report("%s: the winch shortens the line" % family, winched,
+		"held %s, rope %.1f to %.1f m" % [watch["held"], rope_before, _kit().rope])
+	var how := "winched"
+	if watch["held"] and int(watch["inside"]) <= _seconds(0.5):
+		how = "hung level"
+		watch["held"] = await _latch(_warden.global_position + _out * 7.0)
+		await _watch_inside(watch, inside, 1.5)
+	_report("%s: rides inside the minimum rope" % family, watch["held"] and int(watch["inside"]) > _seconds(0.5),
+		"%s: held %s, closest %.2f m (the enemy line drops at %.2f m), %d ticks inside, ends %s" % [how, watch["held"],
+			watch["closest"], inside, int(watch["inside"]), _ends])
+
+
+func _watch_inside(watch: Dictionary, inside: float, seconds: float) -> void:
+	watch["inside"] = 0
+	for tick in _seconds(seconds):
 		_keep_quiet()
 		await physics_frame
-		held = held and _held()
-		if not held:
-			break
+		watch["held"] = watch["held"] and _held()
+		if not watch["held"]:
+			return
 		var gap: float = _player.ball_position().distance_to(_warden.global_position)
-		closest = minf(closest, gap)
+		watch["closest"] = minf(watch["closest"], gap)
 		if gap <= inside:
-			ticks_inside += 1
-			if ticks_inside > _seconds(0.5):
-				break
-	_source.hold = {}
-	_report("%s: rides inside the minimum rope" % family, held and ticks_inside > _seconds(0.5),
-		"held %s, closest %.2f m (drop line was %.2f m), %d ticks inside, ends %s" % [held, closest, inside, ticks_inside, _ends])
+			watch["inside"] = int(watch["inside"]) + 1
+			if int(watch["inside"]) > _seconds(0.5):
+				return
 
 
 # The weapon slot fires while the ball hangs; each bolt is posture.
@@ -290,15 +354,15 @@ func _fire(family: String) -> void:
 		held = held and _held()
 	_source.hold = {}
 	_report("%s: fires from the line" % family, held and _bolts > 0 and _warden.posture() > posture,
-		"held %s, %d bolts struck it, posture %.1f to %.1f" % [held, _bolts, posture, _warden.posture()])
+		"held %s, %d bolts struck it, posture %.1f to %.1f, ends %s" % [held, _bolts, posture, _warden.posture(), _ends])
 
 
 # Once per pulse cycle the lined hardpoint flares for the telegraph, then the line drops;
 # the ball keeps its velocity (plus the lift if the reach ring held it).
 func _shrug(family: String, hoist) -> void:
 	_warden._posture.posture = 0.0
-	var from: Vector3 = _warden.global_position + Vector3(-14.0, -4.0, 0.0)
-	var latched := await _latch(from, Vector3(0.0, 0.0, 10.0))
+	var from: Vector3 = _warden.global_position + _out * 14.0 + Vector3.DOWN * 4.0
+	var latched := await _latch(from, _side * 10.0)
 	if not latched:
 		_report("%s: shrugged once with its velocity kept" % family, false, "no line for the shrug")
 		return
@@ -373,7 +437,7 @@ func _drop(family: String) -> void:
 		guard += 1
 	var chunks: int = _warden.chunks_left()
 	var top: Vector3 = _warden.global_position + Vector3.UP * _warden.HALF_HEIGHT
-	var latched := await _latch(top + Vector3(-6.0, 8.0, 0.0))
+	var latched := await _latch(top + _out * 6.0 + Vector3.UP * 8.0)
 	var held := latched
 	for tick in _seconds(0.5):
 		await physics_frame
@@ -387,7 +451,7 @@ func _drop(family: String) -> void:
 	_source.hold = {}
 	await _frames(2)
 	var left: int = _warden.chunks_left() if is_instance_valid(_warden) else 0
-	_report("%s: every hardpoint holds in the stagger" % family, latched and held, "latched %s, held %s" % [latched, held])
+	_report("%s: every hardpoint holds in the stagger" % family, latched and held, "latched %s, held %s (%s)" % [latched, held, _latch_note])
 	_report("%s: the drop finisher removes a chunk" % family, _smashed == 1 and left == chunks - 1,
 		"staggered %s, smashes %d, chunks %d to %d" % [_warden.staggered() if is_instance_valid(_warden) else false, _smashed, chunks, left])
 
