@@ -1723,6 +1723,7 @@ func _step_line(intent, delta: float) -> void:
 			var waiting := _line_load
 			_line_load = {}
 			_fire_line_skill(String(waiting["id"]), float(waiting["fraction"]))
+			_discover("loaded_line", kit.anchor)
 	if not _line_load.is_empty():
 		_line_load["left"] = float(_line_load["left"]) - delta
 		if float(_line_load["left"]) <= 0.0:
@@ -1865,6 +1866,7 @@ func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 func _ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing: bool) -> float:
 	if enemy.has_method("_apply_posture") and enemy.has_method("staggered"):
 		if landing and enemy.staggered():
+			_discover("set_piece_core", enemy.global_position)
 			var held: Node3D = ctx.player.smash_landing
 			ctx.player.smash_landing = enemy
 			_hit(enemy, "slam", damage, enemy.global_position - from, 0.0, "", "special", "slam")

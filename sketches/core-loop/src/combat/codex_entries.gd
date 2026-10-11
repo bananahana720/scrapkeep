@@ -145,8 +145,38 @@ const ENTRIES := [
 		"clue": "a choir Warden's open lens + a move it has not braced",
 		"text": "A staggered choir Warden braces against your most-used move; hit it with a different one while its lens is open.",
 	},
-	# The skill bar's framework entries are wave P-B's discovery unit's (SKILL-BAR section 7). Each
-	# pilot owns one marked block for its line-skill and set-piece entries (section 12, item 4).
+	# The skill bar's framework entries (SKILL-BAR section 7, wave P-B unit B6). Each pilot owns
+	# one marked block below for its line-skill and set-piece entries (section 12, item 4).
+	{
+		"id": "loaded_line", "name": "Loaded Line",
+		"hint": "A skill can wait for the rope.",
+		"clue": "a cast with no line out + the next bite",
+		"text": "Cast your line skill with no line out, then bite something inside four seconds: the skill fires through the bite.",
+	},
+	{
+		"id": "set_piece", "name": "Set Piece",
+		"hint": "A full meter is a stage direction.",
+		"clue": "a full ultimate meter + Q",
+		"text": "Fill the meter and press Q. The ball rides a drawn path and the landing strikes everything at its end.",
+	},
+	{
+		"id": "set_piece_core", "name": "Curtain Call",
+		"hint": "An open core is an open door.",
+		"clue": "a Warden's open core + a set piece landing",
+		"text": "Stagger a Warden until its core opens, then land a set piece on it: the core shatters.",
+	},
+	{
+		"id": "set_piece_cash_in", "name": "Cash In",
+		"hint": "A long chain wants a bigger finish.",
+		"clue": "a chain of three or more + a set piece landing",
+		"text": "Land a set piece with three or more links on your chain: the landing pays the whole chain.",
+	},
+	{
+		"id": "set_piece_breakout", "name": "Breakout",
+		"hint": "Nothing holds a ball with a plan.",
+		"clue": "a hostile hold + Q",
+		"text": "Press Q while an enemy holds you: the hold breaks as the set piece starts.",
+	},
 	# --- P-C Sable entries ---
 	# --- end Sable ---
 	# --- P-C Rivet entries ---
@@ -188,6 +218,11 @@ const DETECTORS := {
 	"slag_hop": {"kind": "warden", "variant": "meltdown", "script": "res://src/combat/warden.gd"},
 	"brood_dark": {"kind": "warden", "variant": "brood", "script": "res://src/combat/warden.gd"},
 	"choir_switch": {"kind": "warden", "variant": "choir", "script": "res://src/combat/warden.gd"},
+	"loaded_line": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"set_piece": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"set_piece_core": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"set_piece_cash_in": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"set_piece_breakout": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 }
 
 
