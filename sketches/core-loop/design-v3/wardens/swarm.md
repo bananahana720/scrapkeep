@@ -177,7 +177,7 @@ The evidence behind the world 2 row. PARK.md:548 has `tests/posture_bands_test.g
 | Predicted, `headframe` | 60 to 85 s (the hive is out of ram reach 8 s in every 12) | this sheet |
 | Predicted, `sinkhole` | 45 to 70 s (the first stagger is from 21 m below) | this sheet |
 
-**The band for the swarm kind:** median break time over eight seeds inside 24.5 to 128 s on each mounting, the same band as the world. Two mechanism checks ride with it, so a win that skips the mechanism fails the test instead of passing quietly:
+**The band for the swarm kind:** grown median 25 to 45 s and small at least twice grown on each mounting, measured with the latch arm on (the table above); the 24.5 to 128 s world band applies to the pilots row only (coordinator ruling at the KF3 merge, 2026-10-11 w13-wardens: the earlier wording named the world band here and contradicted the table; until the bot has a latch arm, KF-BOT, the sweep measures the no-latch path and `posture_bands_swarm_test` sits in `tests/QUARANTINE.tsv`). Two mechanism checks ride with it, so a win that skips the mechanism fails the test instead of passing quietly:
 
 - `headframe`: at least half the seeds land a stagger during a low dwell and at least one finish from a latch.
 - `sinkhole`: the pool rises one step per chunk lost in every seed, and no step rises under a grounded ball.

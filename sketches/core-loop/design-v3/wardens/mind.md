@@ -22,7 +22,7 @@ The Mind is the superintelligence that ran the old works (SOUND-STORY.md:61). It
 - **Three knuckle hardpoints** on the back of the hand, rimmed in the ancients' green (PARK.md:414).
 - **A wrist stalk, 8 m, ending in the lens cluster.** One big lens 1.8 m across (today's glass, `warden_kit.gd:112-115`) ringed by five small lenses. The cluster always faces the ball, as today (`warden_kit.gd:137-141`).
 - **Enamel stays dull; only the seams glow** (`warden_kit.gd:6-9`). The seams are uranium-glass green (`Roster.ANCIENT_LIGHT`, `warden_kit.gd:33`) and breathe from 0.8 to 5.0 when the lens stands open (`warden_kit.gd:19-20`, `134`).
-- **Two poses, one rig.** Under the island the hand is palm up, fingers curled up the island's tip, the wrist stalk hanging down with the lens 10 m below the palm. On the spires it is palm down, gripping a perch top like a bird's foot, the wrist raised and the lens 6 m above the perch.
+- **Two poses, one rig.** Under the island the hand is palm up with the fingers laid along the island's flank inside the -1 to 4.2 m approach band, the wrist stalk hanging down with the lens 10 m below the palm (coordinator ruling at the KF7 merge, 2026-10-11 w13-wardens: a curl up the island's tip leaves the band, so the curl is a KF8 held hang-clip option for the segments the island mesh hides). On the spires it is palm down, gripping a perch top like a bird's foot, the wrist raised and the lens 6 m above the perch.
 
 **At a glance against the other two kinds.**
 
@@ -165,7 +165,7 @@ The KF7 body exports these clips in the shape of the boss bodies' clip tables (`
 | camper | never breaks it | never breaks it |
 | world 3 pilots (`alpha_posture_bands_w23_test.gd`) | 24.5 to 128 s, re-measured on the park after KD5, dated header | the same after KD6 |
 
-The sweep runs with the mechanism on. The tuning dials are the mechanism's, not the band: under the island, the lens height and the tilt angle; on the spires, the flight time and the perch spacing. If the knock-down makes the Crown's grown arm faster than 25 s, the knock-down's 4 s on the floor shortens before anything else.
+The sweep runs with the mechanism on (coordinator ruling at the KF4 merge, 2026-10-11 w13-wardens: the bot cannot yet latch an anchored Warden, so until KF-BOT adds the latch arm `posture_bands_mind_test` sits in `tests/QUARANTINE.tsv`, and the anchor-off numbers it recorded, grown 46.5 to 53.8 s, are not the band). The tuning dials are the mechanism's, not the band: under the island, the lens height and the tilt angle; on the spires, the flight time and the perch spacing. If the knock-down makes the Crown's grown arm faster than 25 s, the knock-down's 4 s on the floor shortens before anything else.
 
 ## 8. K-F implementation units
 

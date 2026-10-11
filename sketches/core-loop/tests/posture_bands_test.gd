@@ -1,4 +1,4 @@
-# smoke: solo (nine bot runs in child processes, up to six at once; a loaded machine slows them)
+# smoke: solo timeout=360s (nine bot runs in child processes, up to six at once; a loaded machine slows them past the 180 s default cap, measured 2026-10-11 w13-wardens at load 36 to 78)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")

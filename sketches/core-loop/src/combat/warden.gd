@@ -169,7 +169,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	shrug_delay = float(spec.get("shrug_delay", SHRUG_DELAYS.get(mounting, 0.0)))
 	mount_driver = _driver_or_null(spec.get("mount_driver"))
 	set_harpoon_anchor(anchor_from(spec))
-	if mount_driver == null and harpoon_anchor:
+	if mount_driver == null and harpoon_anchor and not spec.has("mount_driver"):
 		mount_driver = _kind_driver()
 	var numbers: Dictionary = spec.get("posture", {})
 	if variant == "meltdown" and not numbers.has("stagger_seconds"):
