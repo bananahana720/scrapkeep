@@ -71,6 +71,8 @@ const TUCK_GONE := 0.30
 const POD_TURN_RATE := 10.0
 const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
+# Hoberman weapon ring yaw toward the aim (PILOT-CLIPS section 5, start value).
+const WEAPON_RING_RATE := 14.0
 # The shell's air-factor cue: a flat ring on the pod, in the row's colour and shape, that swells
 # out on the rise and draws in on the return (a different motion from juice.gd's shell pulse,
 # which means heft). No overlay: it is a mesh under the pod.
@@ -93,6 +95,9 @@ const SLOTS := {
 	"requisition_tag": {"color": Palette.BRASS, "metal": 0.5, "rough": 0.4},
 	"ancient_enamel": {"color": Color.WHITE, "vertex": true, "rough": 0.72},
 	"ancient_light": {"color": Palette.ANCIENT, "emit": 2.4, "rough": 0.3},
+	# Hoberman hubs, pivot pins, studs and the lap bar: its own slot so an equipped paint never
+	# tints copper (ROSTER-LOOK section 6).
+	"copper": {"color": Palette.COPPER, "metal": 0.6, "rough": 0.4},
 	# Warden mantle working throat: hazard, lit by the Warden's charge_fraction (see _update_mantle).
 	"mantle_tool": {"color": Palette.HAZARD, "emit": 0.0, "rough": 0.5},
 	"rarity": {"from": "rarity", "emit": 1.4, "rough": 0.5},
@@ -484,6 +489,35 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		if vane != null:
 			var side := -1.0 if vane_name == "VaneL" else 1.0
 			vane.rotation.z = lerpf(vane.rotation.z, -side * open * PI * 0.5, 1.0 - exp(-VANE_RATE * delta))
+	steer_weapon_ring(pod, _aim_of(v), delta)
+
+
+# Where the weapon ring points: the shot's aim (context.aim_forward, the lens rest), or the
+# travel direction when no camera aims (stub players, tools).
+func _aim_of(velocity: Vector3) -> Vector3:
+	if ctx != null and ctx.get("camera") != null:
+		return ctx.aim_forward()
+	return velocity
+
+
+# Hoberman shells (PILOT-CLIPS section 5): Pod > WeaponRing stays level under the upright pod
+# and yaws to the aim at WEAPON_RING_RATE, independent of the pod's turn to the heading, so the
+# weapon points where the shot goes. A shell without the ring is left alone.
+func steer_weapon_ring(pod: Node3D, aim: Vector3, delta: float) -> void:
+	var ring := pod.get_node_or_null("WeaponRing") as Node3D
+	if ring == null or not ring.is_inside_tree():
+		return
+	var pz := pod.global_basis.z
+	var rz := ring.global_basis.z
+	var yaw := weapon_ring_yaw(atan2(rz.x, rz.z), aim, delta)
+	ring.rotation = Vector3(0.0, wrapf(yaw - atan2(pz.x, pz.z), -PI, PI), 0.0)
+
+
+# One step of the ring's world yaw toward aim; a vertical or empty aim holds it.
+static func weapon_ring_yaw(yaw: float, aim: Vector3, delta: float) -> float:
+	if Vector2(aim.x, aim.z).length_squared() < 0.0001:
+		return yaw
+	return lerp_angle(yaw, atan2(-aim.x, -aim.z), 1.0 - exp(-WEAPON_RING_RATE * delta))
 
 
 # The shell the player wears, for tests and tools: {class, core, pod} or {}.

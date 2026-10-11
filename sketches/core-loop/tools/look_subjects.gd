@@ -28,6 +28,12 @@ extends RefCounted
 
 const DEAD := {"black": 0.8, "sky": 0.6}
 const STAGES := 6
+# The Hoberman mecha rows (PD-0, ROSTER-LOOK section 9 step 6): chase eyes behind the heading at
+# 3.6, 7.5 and 12 m on the 0.30 rad chase pitch, all on the ball, which stays where it stands.
+const CGE_CAMERAS := [["close", Vector3(0, 1.06, 3.44), Vector3(0, 0.2, 0), 65.0], ["mid", Vector3(0, 2.22, 7.17), Vector3(0, 0.2, 0), 65.0],
+	["far", Vector3(0, 3.55, 11.46), Vector3(0, 0.2, 0), 65.0]]
+const CGE_BALL := {"close": Vector3(0, -0.2, 0), "mid": Vector3(0, -0.2, 0), "far": Vector3(0, -0.2, 0)}
+const CGE_BALL_REASON := "the ball is the subject: it stays under the camera target"
 
 const SUBJECTS := {
 	# ---------------------------------------------------------------- miniboss, swarm, vault (stage 1)
@@ -222,10 +228,31 @@ const SUBJECTS := {
 		"dead_frame": {"black": 0.8, "sky": 0.85}, "dead_reason": "a UI page: the panel fill (35,44,44) is flat by design, so the flat share runs near 0.8"},
 	"cus_page_decal": {"group": "customize", "stage": 1, "kind": "ui", "owner": "VX-LIGHT", "tick": 0, "cameras": [["page", Vector3.ZERO, Vector3.ZERO, 55.0]],
 		"dead_frame": {"black": 0.8, "sky": 0.85}, "dead_reason": "a UI page: the panel fill (35,44,44) is flat by design, so the flat share runs near 0.8"},
+	# ---------------------------------------------------------------- Hoberman mecha per pilot (PD-0)
+	# pilot: the class index the cge group boots; heft: the class it shows. The cge prefix is kept
+	# so the P-D briefs and the harness agree.
+	"cge_sable_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 0, "heft": 1, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_sable_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 0, "heft": 3, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_sable_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 0, "heft": 5, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_rivet_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 1, "heft": 1, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_rivet_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 1, "heft": 3, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_rivet_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 1, "heft": 5, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_kest_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 2, "heft": 1, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_kest_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 2, "heft": 3, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_kest_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 2, "heft": 5, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tarn_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 3, "heft": 1, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tarn_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 3, "heft": 3, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tarn_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 3, "heft": 5, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tally_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 4, "heft": 1, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tally_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 4, "heft": 3, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_tally_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 4, "heft": 5, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_cannon_c1": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 5, "heft": 1, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_cannon_c3": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 5, "heft": 3, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
+	"cge_cannon_c5": {"group": "cge", "stage": 1, "kind": "actor", "owner": "PD-0", "anchor": "ball", "pilot": 5, "heft": 5, "tick": 120, "cameras": CGE_CAMERAS, "ball": CGE_BALL, "ball_reason": CGE_BALL_REASON},
 }
 
 # The order --all boots the groups in; every group a row names appears once.
-const GROUPS := ["smalls", "pickup", "dig_fx", "hd_fx", "hd_redo", "arenas", "arw2", "devices", "props", "bay", "cages", "scrap", "workshop", "dig_deep", "title", "title2", "ending", "customize"]
+const GROUPS := ["smalls", "pickup", "dig_fx", "hd_fx", "hd_redo", "arenas", "arw2", "devices", "props", "bay", "cages", "scrap", "workshop", "dig_deep", "title", "title2", "ending", "customize", "cge"]
 
 
 static func names() -> Array:
