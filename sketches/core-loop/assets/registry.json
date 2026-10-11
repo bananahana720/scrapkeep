@@ -2959,7 +2959,16 @@
    "path": "res://assets/models/world_one/shell_rivet.glb",
    "class": "shell",
    "ships": true,
-   "loader": "src/presentation/hero_assets.gd:38-40"
+   "loader": "src/presentation/hero_assets.gd:38-40",
+   "exception": {
+    "draws": 15
+   },
+   "exception_why": "PD-RIVET Hoberman mecha: the 10-draw base plus the placeholder Pilot (hidden in play by fit_pilot_into), class_accent on Pod (exhaust mouths), copper on WeaponRing (laser pods) and the spinning Drill (copper, lens); 14 drawn in play. Within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10: PD-0 base 10 plus up to 6 for machinery and the Pilot placeholder)",
+   "provenance": {
+    "recipe": "tools/blender/world_one/shell_rivet.py",
+    "helper": "tools/blender/shell_base.py hoberman()",
+    "concept": "artifacts/local/alpha/push/w13/concepts/codex/rivet/hero.png, chase.png and sheet.png"
+   }
   },
   {
    "id": "shell_rivet_c2",
@@ -3577,6 +3586,7 @@
   "ram_spring__escape_vent",
   "ram_spring__primer_coil",
   "ram_spring__primer_mesh",
+  "res://assets/models/world_one/shell_rivet.glb",
   "rescue_cage",
   "return_ramp_skin",
   "return_ramp_skin_rusted-salvaged-plate.webp",
