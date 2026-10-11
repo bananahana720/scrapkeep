@@ -1,0 +1,132 @@
+extends "res://src/world/stage_map.gd"
+
+# A stage map read from a park file (design-v3/PARK.md 2.1 and 2.9). It loads the JSON once,
+# validates it with park_schema.gd, and fills the fields today's systems already read, so the
+# bay, flow, director, reward gates, activities and contraptions keep their interfaces. A park
+# that fails the schema fills nothing: errors holds the schema's rows and ok stays false.
+# Heights stay the base plain's until the bake (tools/park_bake.gd) lands.
+
+const ParkSchema := preload("res://src/world/park/park_schema.gd")
+
+const FIXTURE := "res://src/world/park/park_test.json"
+
+var path := ""
+var ok := false
+var errors: Array = []
+# The parsed park file, kept for the readers that come later (bake, event director, sight test).
+var park := {}
+# The landmark's light, the one point every layer finds (terrain.gd landmark_point): sight_top.
+var landmark := Vector3.INF
+# Contraption specs for contraptions.gd: the park rows with arrays turned into vectors.
+var contraptions: Array = []
+# Where Moss's bay docks after the break: {"at": Vector2, "facing": Vector3}.
+var bay_dock := {}
+# The engage ring's radius (alpha_defs beacon_radius today).
+var reach_m := 0.0
+var time_of_day := ""
+
+
+func _init(park_path := FIXTURE) -> void:
+	path = park_path
+	var read := ParkSchema.load_park(path)
+	errors = read["errors"]
+	if not errors.is_empty():
+		push_warning("park_map: %s fails the park schema: %s" % [path, ParkSchema.describe(errors)])
+		return
+	park = read["data"]
+	_fill()
+	ok = true
+
+
+func _fill() -> void:
+	if true:
+		return  # red-first stub
+	title = String(park["map"])
+	time_of_day = String(park["time_of_day"])
+	spawn = _v2(park["spawn"]["at"])
+	heading = facing(float(park["spawn"]["heading_deg"]))
+	var r: Array = park["play_rect"]
+	play_rect = Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+
+	var mark: Dictionary = park["landmark"]
+	beacon = _v2(mark["beacon"])
+	reach_m = float(mark["reach_m"])
+	landmark = _v3(mark["sight_top"])
+	bay_dock = {"at": _v2(mark["bay_dock"]["at"]), "facing": facing(float(mark["bay_dock"]["facing_deg"]))}
+	gate_slots = []
+	for slot in mark["gate_slots"]:
+		gate_slots.append({"at": _v2(slot["at"]), "facing": facing(float(slot["facing_deg"]))})
+
+	kickers = []
+	for row in park["park_rows"]:
+		if row["element"] != "kicker":
+			continue
+		# The lip is the footprint's far end along the piece's facing; width is its cross size.
+		var dir := _dir(float(row["yaw_deg"]))
+		kickers.append({"id": row["id"], "at": _v2(row["at"]) + dir * float(row["size"][0]) * 0.5,
+			"dir": dir, "width": float(row["size"][2])})
+
+	contraptions = []
+	for row in park["contraption_rows"]:
+		contraptions.append(vectors(row))
+
+	activity_sites = []
+	for row in park["activity_rows"]:
+		# activities.gd keys its rule by the activity kind; an empty pack or pay keeps the rule's own.
+		var site := {"id": row["activity"], "row": row["id"], "site": row["site"], "at": _v2(row["at"])}
+		if not (row["pack"] as Array).is_empty():
+			site["pack"] = row["pack"].duplicate()
+		if not (row["pay"] as Dictionary).is_empty():
+			site["pay"] = row["pay"].duplicate(true)
+		activity_sites.append(site)
+
+	# Scatter keeps out of every built footprint (PARK.md 2.9); the kit rows come with KB5.
+	scatter = scatter.duplicate(true)
+	var keep_out := []
+	for row in park["park_rows"]:
+		if row["element"] == "ground":
+			continue
+		keep_out.append(_footprint(row))
+	keep_out.append(_footprint(mark))
+	scatter["keep_out"] = keep_out
+
+
+# The ground-plane direction a yaw faces: 0 faces +z, turning toward +x (PARK.md 2.1).
+static func _dir(yaw_deg: float) -> Vector2:
+	var a := deg_to_rad(yaw_deg)
+	return Vector2(sin(a), cos(a))
+
+
+static func facing(yaw_deg: float) -> Vector3:
+	var d := _dir(yaw_deg)
+	return Vector3(d.x, 0.0, d.y)
+
+
+static func _footprint(row: Dictionary) -> Dictionary:
+	return {"id": row["id"], "at": _v2(row["at"]), "size": Vector2(float(row["size"][0]), float(row["size"][2])),
+		"yaw": deg_to_rad(float(row["yaw_deg"]))}
+
+
+# A JSON value with every [x, z] turned into a Vector2 and every [x, y, z] into a Vector3,
+# through nested objects and lists (PARK.md 2.6: arrays become vectors in park_map.gd).
+static func vectors(value):
+	if value is Dictionary:
+		var out := {}
+		for key in value:
+			out[key] = vectors(value[key])
+		return out
+	if value is Array:
+		if ParkSchema._is_vec(value, 2):
+			return _v2(value)
+		if ParkSchema._is_vec(value, 3):
+			return _v3(value)
+		return value.map(func(v): return vectors(v))
+	return value
+
+
+static func _v2(a: Array) -> Vector2:
+	return Vector2(float(a[0]), float(a[1]))
+
+
+static func _v3(a: Array) -> Vector3:
+	return Vector3(float(a[0]), float(a[1]), float(a[2]))
