@@ -45,12 +45,6 @@ class _Stub:
 
 
 func _run() -> void:
-	var names := []
-	for m in EdgeMarkers.get_script_method_list():
-		names.append(m["name"])
-	if not _t.check("pocket API exists", names.has("pocket_doors") and names.has("pocket_targets")):
-		quit(_t.verdict())
-		return
 	_t.near("range is the 240 m sight_ok range", EdgeMarkers.POCKET_RANGE, 240.0)
 	var amber := EventKinds.role_color("amber")
 
@@ -140,9 +134,15 @@ func _live() -> void:
 	# Put the ball beside the first door on the real terrain: that door must show.
 	if not doors.is_empty():
 		var at: Vector2 = doors[0]["at"]
-		_game.player.global_position = Vector3(at.x + 30.0, _game.world.terrain.height(at.x + 30.0, at.y) + 2.0, at.y)
+		_game.player.reset_to(Vector3(at.x + 30.0, _game.world.terrain.height(at.x + 30.0, at.y) + 2.0, at.y))
 		for i in 5:
 			await physics_frame
 		var shown: Array = pockets.call()
-		_t.check("live: the door beside the ball shows", shown.any(func(t): return t["pocket"] == doors[0]["id"]), "%d shown" % shown.size())
+		_t.check("live: the door beside the ball shows", shown.any(func(t): return t["pocket"] == doors[0]["id"]),
+			"%d shown, ball %s, door %s" % [shown.size(), _game.player.ball_position(), at])
+		# Far from the door (past 240 m) the live target is gone.
+		_game.player.reset_to(Vector3(at.x + 300.0, _game.world.terrain.height(at.x + 300.0, at.y) + 2.0, at.y))
+		for i in 5:
+			await physics_frame
+		_t.check("live: the door 300 m away does not show", not pockets.call().any(func(t): return t["pocket"] == doors[0]["id"]))
 	_game.free()

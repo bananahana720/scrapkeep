@@ -10,6 +10,11 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 # its objective glyph behind. Closer targets draw bigger. No words: the glyph is the
 # objective plate's own (objectives.gd, through objective_id) and the colour is the
 # target's event_kinds row.
+#
+# One more kind (SQ16): a discovered hidden-pocket door (a valve's door or a cracked wall)
+# shows an amber chevron while the ball is inside POCKET_RANGE of it with a clear ray to it.
+# PARK.md:265 sets the range at 240 m (sight_ok), never the comps note's 60 m (memo 2, row 29a).
+# It is a pointer, not a map: no panel, no list, and no marker once the door is open.
 
 const SIDE_INSET := 0.035
 const BAND_CLEARANCE := 16.0
@@ -17,6 +22,14 @@ const MIN_SIZE := 13.0
 const MAX_SIZE := 30.0
 const NEAR := 25.0
 const FAR := 180.0
+# Hidden-pocket doors (W13-INTEGRATION-2.md row 29a; PARK.md:248, :265): the sight_ok range, the eye
+# height the ray starts from, the ray's sample spacing and the marker's height above the door's
+# ground. The range check adds a hair for float32 positions, so a door at exactly 240 m counts.
+const POCKET_RANGE := 240.0
+const POCKET_EYE_M := 2.0
+const POCKET_STEP_M := 4.0
+const POCKET_DOOR_LIFT := 1.5
+const POCKET_RANGE_SLACK := 0.01
 
 var game
 # The objective row the plate shows now, set by the HUD each frame.
@@ -24,6 +37,9 @@ var objective_id := ""
 # Whether the Warden fight is engaged, set by the HUD each frame; activity markers hide while it is.
 var engaged := false
 var gate_points: Array[Vector3] = []
+# Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
+# is discovered once and stays so for the run; an undiscovered door never gets a marker.
+var discovered := {}
 var _shown: Array[Dictionary] = []
 
 
@@ -54,6 +70,7 @@ func targets() -> Array[Dictionary]:
 			if not engaged:
 				for site in unfinished_sites():
 					out.append({"at": site.global_position, "kind": site.id, "activity": site.id, "icon": Objectives.glyph("find_activity")})
+				out.append_array(_pocket_targets_now())
 		"gates":
 			for at in gate_points:
 				out.append({"at": at, "kind": "reward_offered", "icon": _glyph("obj_gate")})
@@ -68,6 +85,102 @@ func unfinished_sites() -> Array:
 	for site in game.world.activities.sites:
 		if is_instance_valid(site) and not site.done:
 			out.append(site)
+	return out
+
+
+# The hidden-pocket doors of a map: a valve's door or a cracked wall, each {id, key, at (x, z), kind}.
+# The key names a door by id and place, so it holds across maps.
+static func pocket_doors(map) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if map == null or not "contraptions" in map:
+		return out
+	for spec in map.contraptions:
+		var where = null
+		match spec["kind"]:
+			"valve":
+				where = spec["door"]["at"]
+			"cracked_wall":
+				where = spec["at"]
+		if where == null:
+			continue
+		var at := Vector2(where.x, where.y if where is Vector2 else where.z)
+		out.append({"id": spec["id"], "key": "%s@%d,%d" % [spec["id"], roundi(at.x), roundi(at.y)], "at": at, "kind": spec["kind"]})
+	return out
+
+
+# One amber target per door that is discovered, not done, inside POCKET_RANGE of the ball and
+# seen over the ground from the ball's eye. ground is (x, z) to height.
+static func pocket_targets(doors: Array, found: Dictionary, ball: Vector3, ground: Callable) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for door in doors:
+		if door.get("done", false) or not found.has(door["key"]):
+			continue
+		var at: Vector2 = door["at"]
+		var door_pos := Vector3(at.x, ground.call(at.x, at.y) + POCKET_DOOR_LIFT, at.y)
+		if ball.distance_to(door_pos) > POCKET_RANGE + POCKET_RANGE_SLACK:
+			continue
+		if not sight_clear(ground, ball + Vector3.UP * POCKET_EYE_M, door_pos):
+			continue
+		out.append({"at": door_pos, "kind": "pocket_door", "pocket": door["id"], "color": EventKinds.role_color("amber"),
+			"icon": Objectives.glyph("find_activity")})
+	return out
+
+
+# True when no ground between the two points rises above the ray, sampled every POCKET_STEP_M
+# and stopping short of the far end so the door's own slope never hides it.
+static func sight_clear(ground: Callable, from: Vector3, to: Vector3) -> bool:
+	var span := from.distance_to(to)
+	var steps := int(span / POCKET_STEP_M)
+	for i in range(1, steps):
+		var p := from.lerp(to, float(i) * POCKET_STEP_M / span)
+		if ground.call(p.x, p.z) > p.y:
+			return false
+	return true
+
+
+# The pocket targets for the stage in play, doors the player has opened left out.
+func _pocket_targets_now() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if game == null or game.world == null or game.player == null:
+		return out
+	var terrain = game.world.terrain
+	var doors := pocket_doors(terrain.map())
+	var opened := _opened_ids(game.world.contraptions.get(terrain.stage))
+	for door in doors:
+		door["done"] = opened.has(door["id"])
+	return pocket_targets(doors, discovered, game.player.ball_position(), Callable(terrain, "height"))
+
+
+# Latches every door that is in view, in range and in sight as discovered. Called each frame.
+func note_pockets(size: Vector2) -> void:
+	if game == null or game.world == null or game.player == null or not game.flow.in_play():
+		return
+	var terrain = game.world.terrain
+	var cam: Camera3D = game.camera.cam
+	var ground := Callable(terrain, "height")
+	var ball: Vector3 = game.player.ball_position()
+	for door in pocket_doors(terrain.map()):
+		if discovered.has(door["key"]):
+			continue
+		var seen := pocket_targets([door], {door["key"]: true}, ball, ground)
+		if seen.is_empty():
+			continue
+		var at: Vector3 = seen[0]["at"]
+		if not cam.is_position_behind(at) and Rect2(Vector2.ZERO, size).has_point(cam.unproject_position(at)):
+			discovered[door["key"]] = true
+
+
+# Ids of the stage's doors already opened or broken: a valve's id, a wall's id.
+static func _opened_ids(contraptions) -> Dictionary:
+	var out := {}
+	if contraptions == null:
+		return out
+	for v in contraptions.valves:
+		if v["open"]:
+			out[v["spec"]["id"]] = true
+	for w in contraptions.walls:
+		if w["broken"]:
+			out[w["spec"]["id"]] = true
 	return out
 
 
@@ -117,6 +230,8 @@ func markers(size: Vector2) -> Array[Dictionary]:
 
 
 static func marker_color(target: Dictionary) -> Color:
+	if target.has("color"):
+		return target["color"]
 	if target.has("activity"):
 		return EventKinds.activity_color(target["activity"])
 	return EventKinds.state_color(target["state"]) if target.has("state") else EventKinds.color(target["kind"])
@@ -138,6 +253,7 @@ static func _on_edge(view: Rect2, centre: Vector2, dir: Vector2) -> Vector2:
 func _process(_delta: float) -> void:
 	if game == null:
 		return
+	note_pockets(get_viewport_rect().size)
 	var now := markers(get_viewport_rect().size)
 	if now != _shown:
 		_shown = now
