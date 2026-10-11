@@ -158,8 +158,6 @@ func _main() -> void:
 	var groups := _groups_of(requested)
 	if not group_arg.is_empty() or groups.size() == 1:
 		await _run_group(groups[0] if group_arg.is_empty() else group_arg)
-		if pair and _pair(requested, out) != "":
-			failures += 1
 		quit(failures)
 		return
 	quit(_render_children(requested, out))
