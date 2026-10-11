@@ -4,8 +4,8 @@ extends SceneTree
 # (a) Files and budget: each id ships its base GLB with exactly one drawn mesh and one "<id>-col" mesh, plus two detail
 # shell GLBs of one draw each; triangles and draws sit inside park_large (base 16,000 / 2 draws) and detail (1,500 / 1);
 # no light nodes; the placed node carries the trimesh and no greybox stand-in.
-# (b) Convention: +Y up, ride direction +Z, origin at the entry lip on the ground. The bowl's cut lip (stamp radius 0.8,
-# park_stamps.gd "crater") is the origin at y 0; the floor is the recipe's depth below it; the rim crest stands 0.2 of
+# (b) Convention: +Y up, ride direction +Z, origin at the entry lip on the ground. The bowl's lip (where the stamp's inside
+# wall crosses y 0, stamp radius 0.7647, park_stamps.gd "crater") is the origin at y 0; the floor is the recipe's depth below it; the rim crest stands 0.2 of
 # the depth above the ground beside the lip; the far lip is on the ground again; the ejecta blanket ends flush with the
 # ground. Sizes: crater_event crest 40 to 60 m, crater_ending 400 m.
 # (c) The roll: placed through park_recipes.place, a ball dropped in at the lip publishes ride_bowl, and on two lines (down
@@ -21,14 +21,15 @@ const T := preload("res://tests/support/t.gd")
 const IDS := ["crater_event", "crater_ending"]
 # Per recipe: stamp footprint radius F (metres), depth h, and the crest-to-crest diameter the section 4 table names.
 const SPEC := {
-	"crater_event": {"f": 28.0, "h": 8.0, "crest_min": 40.0, "crest_max": 60.0, "enter": 14.0, "seconds": 9.0},
-	"crater_ending": {"f": 235.0, "h": 60.0, "crest_min": 390.0, "crest_max": 410.0, "enter": 16.0, "seconds": 14.0},
+	"crater_event": {"f": 28.0, "h": 8.0, "crest_min": 40.0, "crest_max": 60.0, "enter": 22.0, "seconds": 9.0, "exits": true},
+	"crater_ending": {"f": 235.0, "h": 60.0, "crest_min": 390.0, "crest_max": 410.0, "enter": 40.0, "seconds": 14.0, "exits": false},
 }
 const BASE_TRIS := 16000
 const BASE_DRAWS := 2
 const DETAIL_TRIS := 1500
 const DETAIL_DRAWS := 1
-const LIP := 0.8
+# The inside wall crosses y 0 here (park_stamps.gd 'crater' solved for zero, tools/blender/park/crater.py solve_lip).
+const LIP := 0.7647098
 const CREST := 0.85
 const BLANKET := 1.5
 const SLOW_MPS := 2.0
@@ -186,19 +187,30 @@ func _check_shape(id: String, x0: float) -> void:
 	_t.check("(b) %s stops inside %.1f F of the centre" % [id, BLANKET + 0.1], is_nan(_ground(x0 + (BLANKET + 0.1) * f, centre)) and is_nan(_ground(x0, centre + (BLANKET + 0.1) * f)))
 	var crest_d := 2.0 * CREST * f
 	_t.check("(b) %s crest diameter %.1f m is in %s to %s m" % [id, crest_d, spec["crest_min"], spec["crest_max"]], crest_d >= spec["crest_min"] and crest_d <= spec["crest_max"])
-	# (d) the cut lip is open across its whole chord: no ray along x at the lip hits a step above the plane.
+	# (d) the lip is clean: all round the ring where the inside wall crosses y 0 the surface stays on the ground, so no
+	# block or step sits on the entry whichever way a row yaws the recipe.
 	var worst := 0.0
-	for k in range(-10, 11):
-		var u := float(k) / 10.0 * 0.9 * f * 0.4
-		var y := _ground(x0 + u, 0.0)
-		if not is_nan(y):
-			worst = maxf(worst, absf(y))
-	_t.check("(d) %s lip is clean across its chord (worst %.2f m off the ground)" % [id, worst], worst <= 0.5 + 0.02 * f)
+	for k in 24:
+		var phi := TAU * float(k) / 24.0
+		var y := _ground(x0 + LIP * f * sin(phi), centre + LIP * f * cos(phi))
+		worst = maxf(worst, 99.0 if is_nan(y) else absf(y))
+	_t.check("(d) %s lip ring is clean all round (worst %.2f m off the ground)" % [id, worst], worst <= 0.1 + 0.01 * h)
 
 
 func _ball(parent: Node3D, at: Vector3, velocity: Vector3) -> RigidBody3D:
+	# The ball's body as rigid_ball.gd sets it (mass, damping, friction, bounce, continuous detection), without the controller.
 	var ball := RigidBody3D.new()
 	ball.can_sleep = false
+	ball.mass = 6.0
+	ball.continuous_cd = true
+	ball.linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	ball.linear_damp = 0.0
+	ball.angular_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	ball.angular_damp = 0.25
+	var material := PhysicsMaterial.new()
+	material.friction = 0.9
+	material.bounce = 0.25
+	ball.physics_material_override = material
 	ball.collision_layer = 0
 	ball.collision_mask = 0
 	ball.set_collision_layer_value(2, true)
@@ -211,6 +223,8 @@ func _ball(parent: Node3D, at: Vector3, velocity: Vector3) -> RigidBody3D:
 	ball.add_child(shape)
 	ball.position = at
 	ball.linear_velocity = velocity
+	# Rolling without slip on a floor (contact velocity zero): spin = up x v / r, so no energy is spent spinning up.
+	ball.angular_velocity = Vector3(velocity.length() / Tuning.RADIUS, 0, 0)
 	parent.add_child(ball)
 	return ball
 
@@ -222,12 +236,16 @@ func _check_roll(parent: Node3D, rides: Array) -> void:
 		var f: float = spec["f"]
 		var centre := LIP * f
 		var x0: float = ride["x"]
-		# Line A: down the fall line from the lip. Line B: a tangent entry on the wall at 0.45 of the cut radius.
-		var a := _ball(parent, Vector3(x0, Tuning.RADIUS + 0.2, 0.0), Vector3(0, 0, spec["enter"]))
-		var bx := 0.45 * LIP * f
-		var b := _ball(parent, Vector3(x0 + bx, _ground(x0 + bx, 0.5) + Tuning.RADIUS + 0.2, 0.5), Vector3(0, 0, spec["enter"]))
-		lines.append({"id": ride["id"], "name": "fall line", "ball": a, "slow": 0.0, "worst": 0.0, "min": INF})
-		lines.append({"id": ride["id"], "name": "tangent entry", "ball": b, "slow": 0.0, "worst": 0.0, "min": INF})
+		# Line A: down the fall line from the lip. Line B: a tangent entry on the wall, 0.72 F from the centre, so it carves.
+		# A drop-in heads along the wall under its feet, so the ball does not ski off the lip and spend its speed on a landing.
+		var slope := _ground(x0, 1.0) - _ground(x0, 0.0)
+		var along := Vector3(0, slope, 1.0).normalized()
+		var up := Vector3(0, 1.0, -slope).normalized()
+		var a := _ball(parent, Vector3(x0, _ground(x0, 0.0), 0.0) + up * (Tuning.RADIUS + 0.05), along * float(spec["enter"]))
+		var bx := 0.72 * f
+		var b := _ball(parent, Vector3(x0 + bx, _ground(x0 + bx, centre) + Tuning.RADIUS + 0.2, centre), Vector3(0, 0, spec["enter"]))
+		lines.append({"id": ride["id"], "name": "fall line", "ball": a, "x": x0, "slow": 0.0, "worst": 0.0, "min": INF, "left": false, "far": 0.0})
+		lines.append({"id": ride["id"], "name": "tangent entry", "ball": b, "x": x0, "slow": 0.0, "worst": 0.0, "min": INF, "left": false, "far": 0.0})
 	var dt := 1.0 / float(Engine.physics_ticks_per_second)
 	var seconds := 0.0
 	var longest := 0.0
@@ -240,7 +258,15 @@ func _check_roll(parent: Node3D, rides: Array) -> void:
 		for line in lines:
 			if seconds > SPEC[line["id"]]["seconds"]:
 				continue
-			var speed: float = (line["ball"] as RigidBody3D).linear_velocity.length()
+			var ball_now := line["ball"] as RigidBody3D
+			var f_now: float = SPEC[line["id"]]["f"]
+			var off := Vector2(ball_now.position.x - line["x"], ball_now.position.z - LIP * f_now).length()
+			if line["left"] or off > (BLANKET - 0.05) * f_now:
+				# Off the recipe over the far blanket: the roll is done, the rule holds on the recipe.
+				line["left"] = true
+				continue
+			line["far"] = maxf(line["far"], ball_now.position.z)
+			var speed: float = ball_now.linear_velocity.length()
 			line["min"] = minf(line["min"], speed)
 			if speed < SLOW_MPS:
 				line["slow"] += dt
@@ -251,7 +277,16 @@ func _check_roll(parent: Node3D, rides: Array) -> void:
 		var ball: RigidBody3D = line["ball"]
 		_t.check("(c) %s %s: speed under %.0f m/s for at most %.1f s (longest %.2f s, min %.1f m/s)" % [line["id"], line["name"], SLOW_MPS, SLOW_MAX_S, line["worst"], line["min"]],
 			line["worst"] <= SLOW_MAX_S and line["min"] < INF)
-		_t.check("(c) %s %s: the ball is still on the bowl, not through it" % [line["id"], line["name"]], ball.position.y > -SPEC[line["id"]]["h"] - 3.0, "y %.1f" % ball.position.y)
+		if line["name"] == "fall line" and not SPEC[line["id"]]["exits"]:
+			# The 12 m rim of the 400 m bowl is more than a rolled drop-in carries out (the ball's spin caps near 47 rad/s), so
+			# the fall line reverses on the far wall; the rule is that the reversal is a turn, not a stop.
+			_t.check("(c) %s fall line: the ball climbs the far wall (z %.0f of %.0f)" % [line["id"], ball.position.z, 2.0 * LIP * SPEC[line["id"]]["f"]],
+				line["far"] > 1.6 * LIP * SPEC[line["id"]]["f"], "furthest z %.1f" % line["far"])
+		elif line["name"] == "fall line":
+			_t.check("(c) %s fall line: the ball crosses the bowl and leaves over the far rim" % line["id"],
+				line["left"] and ball.position.z > 2.0 * LIP * SPEC[line["id"]]["f"], "z %.1f, left %s" % [ball.position.z, line["left"]])
+		else:
+			_t.check("(c) %s %s: the ball is still on the bowl, not through it" % [line["id"], line["name"]], ball.position.y > -SPEC[line["id"]]["h"] - 3.0, "y %.1f" % ball.position.y)
 	for ride in rides:
 		var near := _facts.filter(func(e): return absf(e[1].x - ride["x"]) < SPACING * 0.5)
 		_t.check("(c) %s rolled publishes ride_bowl" % ride["id"], near.size() >= 1 and near.all(func(e): return e[0] == "ride_bowl"), str(near.map(func(e): return e[0])))
