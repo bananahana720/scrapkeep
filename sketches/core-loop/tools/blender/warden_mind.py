@@ -20,14 +20,21 @@
 #           island hang: palm up, fingers flat along -Z, the stalk hanging with the lens 10 m
 #           under the palm surface (lens at y = -6.4, the weak point 8 m under the centre).
 #           PoseHang and PosePerch are marker nodes beside Pose: copying PosePerch's transform
-#           onto Pose gives the perch (palm down, a 180 degree turn about Z through the centre,
-#           the stalk raised). No clip animates Pose, so a played clip never resets the pose.
+#           onto Pose turns the hand palm down (a 180 degree turn about Z through the Palm bone,
+#           y 2.9, so the palm stays inside the collider and the fingers sit under it). The held
+#           'perch' clip then gives the perch its shape: the stalk telescopes so the lens stands
+#           6 m above the grip (the fingers' palm-side face, the perch top), and each finger's
+#           last two segments hook down round the perch top like a bird's foot (mind.md
+#           section 1). No clip animates Pose, so a played clip never resets the pose.
 #   sockets WeakPoint on the Lens bone (the big lens's face) and Hardpoint0..2 on the Knuckle
 #           bones (west, east, north on the back of the hand), as bone-attached nodes.
 #   bones   every bone points along -Z with roll 0, so its local axes are the model's axes.
 #
 # Clips are section 5's table, one glTF animation per row, plus the per-finger and per-knuckle
-# variants of chunk_lost and shrug (chunk_lost is the little finger, the first to go). Keyed
+# variants of chunk_lost and shrug (chunk_lost is the little finger, the first to go) and the
+# held 'perch' grip. A lost finger folds shut under its neighbours: the last two segments drop
+# about a metre and swing inward flat, so its held end pose stays inside the approach band in
+# both poses (a fold toward the palm cannot: a 9 m finger at the band's edge has no room). Keyed
 # on the armature as actions and exported the way anim_pilot_reactions.py does (ACTIONS mode,
 # forced sampling at 30 fps, slid to zero).
 #
@@ -60,6 +67,12 @@ SIL_X = RADIUS + REACH
 SIL_Y = (-REACH, 2 * HALF_HEIGHT + REACH)
 LENS_Y = -6.4
 POINT_OFFSET = (0.0, LENS_Y - HALF_HEIGHT, 0.0)
+# The perch: palm down by a half turn about Z through the Palm bone's head, so the GLB's y maps
+# to 2 * PERCH_PIVOT_Y - y and the stalk root (the base) sits at PERCH_BASE.
+PERCH_PIVOT_Y = 2.9
+PERCH_BASE = 2 * PERCH_PIVOT_Y
+GRIP_TO_LENS = 6.0  # mind.md section 1: the lens 6 m above the perch
+GRIP_DROP = 2.4  # how far a gripping finger's middle segment hooks down past the perch top
 BUDGET = {"tris": 5000, "verts": 9600, "draws": 32}
 
 # Section 5: name -> (length, blend) in seconds. The extras below repeat a row for the
@@ -73,6 +86,7 @@ CLIPS = {
 EXTRA_CLIPS = {
     "chunk_lost_ring": (1.0, 0.8), "chunk_lost_middle": (1.0, 0.8), "chunk_lost_index": (1.0, 0.8),
     "shrug_1": (0.4, 0.2), "shrug_2": (0.4, 0.2),
+    "perch": (1.0, 0.3),  # held: the grip and the short stalk while perched (stage 6)
 }
 
 ENAMEL = "petrol"
@@ -406,6 +420,38 @@ def scale(out, name, s):
 
 SPLAY = [-0.02, -0.01, 0.01, 0.03]  # extra fan about +Y, index to little, on top of the rest fan
 CURL_SHUT = (1.2, 1.35, 1.15)
+# A lost finger's fold: the middle segment pitches down, then both swing inward (toward the
+# hand's middle) to these world yaws, the last segment flat, so the dead finger lies folded
+# under its neighbours and never leaves |x| <= 3.8, 1.6 <= y <= 4.2 (both poses' band).
+FOLD_PITCH = 0.36
+FOLD_YAW = (2.0, 4.2)
+# The perch stalk: the lens moves up the stalk by perch_lift(), shared Stalk1, Stalk2, LensMount.
+PERCH_LIFT_SHARE = (0.22, 0.38, 0.40)
+
+
+def grip_hang_y():
+    """The fingers' palm-side face at rest (hang y), the face that sits on a perch top."""
+    return FINGER_Y + FINGER_H / 2 + 0.064  # the top seam's lift; check() measures the real face
+
+
+def perch_lift():
+    lens_perch = PERCH_BASE - grip_hang_y() + GRIP_TO_LENS
+    return (PERCH_BASE - lens_perch) - LENS_Y
+
+
+def fold_finger(out, fi, c, shiver=0.0):
+    """The chunk_lost fold of finger fi at progress c (0..1)."""
+    s = 1.0 if FINGERS[fi][1] > 0 else -1.0
+    drop = ease(c / 0.4)
+    # The middle segment swings first; the last swings after it, the short way back toward the
+    # finger's own side (FOLD_YAW[1] - tau), so mid-fold it never points out past the band.
+    swing1 = ease(c / 0.7)
+    swing2 = ease((c - 0.35) / 0.65)
+    w1 = qrot((0, 1, 0), s * FOLD_YAW[0] * swing1) @ qrot((1, 0, 0), -FOLD_PITCH * drop + shiver)
+    w2 = qrot((0, 1, 0), s * (FOLD_YAW[1] - math.tau) * swing2) @ qrot((1, 0, 0), shiver * 0.5)
+    for name, rot in (("Finger%d_1" % fi, w1), ("Finger%d_2" % fi, w1.inverted() @ w2)):
+        _, loc, scl = out.get(name, (Quaternion(), Vector(), Vector((1, 1, 1))))
+        out[name] = (rot, loc, scl)
 
 
 def pose(clip, t):
@@ -444,9 +490,19 @@ def pose(clip, t):
     elif clip.startswith("chunk_lost"):
         fname = {"chunk_lost": "little", "chunk_lost_ring": "ring", "chunk_lost_middle": "middle",
                  "chunk_lost_index": "index"}[clip]
-        c = ease(min(1.0, t / 0.8))
-        shiver = 0.04 * math.sin(math.tau * 3 * t) * (1 - c)
-        curl_finger(out, fidx[fname], tuple(a * c + shiver for a in CURL_SHUT))
+        c = min(1.0, t / 0.8)
+        shiver = 0.04 * math.sin(math.tau * 3 * t) * (1 - ease(c))
+        fold_finger(out, fidx[fname], c, shiver)
+    elif clip == "perch":
+        # Held, one pose for the whole clip: the land clip and the mixer's blend bring it in.
+        for fi, (_, _, lengths, _) in enumerate(FINGERS):
+            c1 = math.asin(min(1.0, GRIP_DROP / lengths[1]))
+            curl_finger(out, fi, (0.0, c1, math.pi + 0.1 - c1))
+        turn(out, "Thumb_1", (1, 0, 0), 0.45)
+        turn(out, "Thumb_2", (1, 0, 0), 0.6)
+        lift = perch_lift()
+        for name, share in zip(("Stalk1", "Stalk2", "LensMount"), PERCH_LIFT_SHARE):
+            move(out, name, (0, lift * share, 0))
     elif clip.startswith("shrug"):
         k = {"shrug": 0, "shrug_1": 1, "shrug_2": 2}[clip]
         _, at = KNUCKLES[k]
@@ -519,6 +575,7 @@ def controls(clip):
         "glide": fingers + ["Lens", "Hand"], "land": fingers + ["Thumb_0"],
         "knocked_down": fingers + ["Hand", "Lens"],
         "final_quiet": ["Thumb_0", "Thumb_1", "Thumb_2", "LensIris", "Lens"] + small,
+        "perch": fingers + ["Thumb_1", "Thumb_2", "Stalk1", "Stalk2", "LensMount"],
     }
     if clip.startswith("chunk_lost"):
         return fingers
@@ -574,9 +631,10 @@ def build():
     pose_node = common.empty("Pose", (0, 0, 0), root)
     common.empty("PoseHang", (0, 0, 0), root)
     perch = common.empty("PosePerch", (0, 0, 0), root)
-    # The perch: a half turn about the approach axis through the Warden's centre.
-    perch.matrix_world = (Matrix.Translation(B(CENTRE)) @ Matrix.Rotation(math.pi, 4, B((0, 0, 1)))
-                          @ Matrix.Translation(-B(CENTRE)))
+    # The perch: a half turn about the approach axis through the Palm bone's head.
+    pivot = B((0.0, PERCH_PIVOT_Y, 0.0))
+    perch.matrix_world = (Matrix.Translation(pivot) @ Matrix.Rotation(math.pi, 4, B((0, 0, 1)))
+                          @ Matrix.Translation(-pivot))
     part, bones = build_body()
     groups = list(part.groups)
     body = part.to_object((0, 0, 0))
@@ -622,15 +680,19 @@ def collider_rule(points, fingers, base_y=0.0):
 
 
 def perch_points(points):
-    return [Vector((-p.x, 2 * HALF_HEIGHT - p.y, p.z)) for p in points]
+    return [Vector((-p.x, PERCH_BASE - p.y, p.z)) for p in points]
 
 
 # Clips whose fingers must stay in the approach band at every frame, and the poses they play in.
-# The rest curl a finger shut, make a fist, clamp a perch or tumble the hand: reported, not gated.
+# chunk_lost* are held after they play (a lost finger stays folded) and perch is held while the
+# hand sits on a perch, so they are gated. The rest make a fist (takeoff), clamp in transit
+# (land) or tumble the hand (knocked_down): transient, reported, not gated.
 STEADY = {"idle": ("hang", "perch"), "pulse_warn": ("hang", "perch"), "pulse": ("hang", "perch"),
           "active": ("hang", "perch"), "quote": ("hang", "perch"), "shrug": ("hang", "perch"),
           "shrug_1": ("hang", "perch"), "shrug_2": ("hang", "perch"), "grip_falter": ("hang",),
-          "glide": ("perch",)}
+          "glide": ("perch",), "chunk_lost": ("hang", "perch"), "chunk_lost_ring": ("hang", "perch"),
+          "chunk_lost_middle": ("hang", "perch"), "chunk_lost_index": ("hang", "perch"),
+          "perch": ("perch",)}
 
 
 def clip_bands(arm, body, actions):
@@ -671,6 +733,34 @@ def clip_bands(arm, body, actions):
 
 
 INF = float("inf")
+
+
+def perch_lens(arm, body, actions):
+    """At the held perch clip, in the perch frame: the grip (the lowest point of the fingers'
+    first segments, which sit on the perch top) and the lens centre (the Lens bone head)."""
+    scene = bpy.context.scene
+    act = next(a for a in actions if a.name == "perch")
+    arm.animation_data.action = act
+    if getattr(act, "slots", None) and len(act.slots):
+        arm.animation_data.action_slot = act.slots[0]
+    rest_pose(arm)
+    scene.frame_set(int(round(act.frame_range[1])))
+    names = {i: g.name for i, g in enumerate(body.vertex_groups)}
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = body.evaluated_get(dg)
+    mesh = ev.to_mesh()
+    first = []
+    for v, src in zip(mesh.vertices, body.data.vertices):
+        g = names[src.groups[0].group] if src.groups else ""
+        if g.startswith("Finger") and g.endswith("_0"):
+            first.append(G(body.matrix_world @ v.co))
+    ev.to_mesh_clear()
+    grip = min(PERCH_BASE - p.y for p in first)
+    lens = G(arm.matrix_world @ arm.pose.bones["Lens"].head)
+    arm.animation_data.action = None
+    rest_pose(arm)
+    scene.frame_set(1)
+    return grip, PERCH_BASE - lens.y
 
 
 def glb_info(path):
@@ -717,7 +807,7 @@ def check(path, body, arm, actions):
     pts = rest_points(body)
     mask = finger_vertex_mask(body)
     rows = []
-    for label, p, base_y in (("hang", pts, 0.0), ("perch", perch_points(pts), 2 * HALF_HEIGHT)):
+    for label, p, base_y in (("hang", pts, 0.0), ("perch", perch_points(pts), PERCH_BASE)):
         for rule, value, limit, ok in collider_rule(p, mask, base_y):
             rows.append((label, rule, value, limit, ok))
             if not ok:
@@ -736,6 +826,11 @@ def check(path, body, arm, actions):
         print("CHECK clip band %s %s |x| %.3f y %.3f..%.3f %s" % (clip, label, x, y0, y1, state))
         if gated and not ok:
             problems.append("clip %s (%s) moves a finger out of the band" % (clip, label))
+    grip, lens_y = perch_lens(arm, body, actions)
+    print("CHECK perch grip y %.3f lens y %.3f: lens %.3f above the grip (wants %.1f), %.3f above the "
+          "Warden's centre" % (grip, lens_y, lens_y - grip, GRIP_TO_LENS, lens_y - HALF_HEIGHT))
+    if abs(lens_y - grip - GRIP_TO_LENS) > 0.1:
+        problems.append("perch lens %.3f above the grip, wants %.1f" % (lens_y - grip, GRIP_TO_LENS))
     print("CHECK sha256 %s" % info["sha256"])
     if problems:
         raise SystemExit("warden_mind check failed: " + "; ".join(problems))
@@ -772,7 +867,7 @@ def main():
     if "--count-only" in argv:
         pts = rest_points(body)
         mask = finger_vertex_mask(body)
-        for label, p, base_y in (("hang", pts, 0.0), ("perch", perch_points(pts), 2 * HALF_HEIGHT)):
+        for label, p, base_y in (("hang", pts, 0.0), ("perch", perch_points(pts), PERCH_BASE)):
             for rule, value, limit, ok in collider_rule(p, mask, base_y):
                 print("COUNT collider %s %s %.3f limit %.3f %s" % (label, rule, value, limit, "ok" if ok else "OUT"))
         return
