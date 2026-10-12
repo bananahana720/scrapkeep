@@ -43,6 +43,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 var _settings := {}
 var _seeds: Array[int] = []
 var _index := -1
+var _next_pending := false
 var _game
 var _driver
 var _started_msec := 0
@@ -142,6 +143,10 @@ func _next() -> void:
 		return
 	# A hit-stop cut short by the previous game's free would leave time slowed.
 	Engine.time_scale = 1.0
+	# Freeing Game leaves the viewport's Jolt space and its body allocation history alive.
+	# Keep the old world alive until the viewport has detached its rendering scenario.
+	var _previous_world := root.world_3d
+	root.world_3d = World3D.new()
 	_scrap_serial = 0
 	_counter_serial = 0
 	seed(_seeds[_index])
@@ -155,6 +160,9 @@ func _next() -> void:
 
 
 func _physics_process(delta: float) -> bool:
+	if _next_pending:
+		_next_pending = false
+		_next()
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
@@ -204,7 +212,9 @@ func _physics_process(delta: float) -> bool:
 	_game.free()
 	_game = null
 	_tick_trace = null
-	_next()
+	# Match a fresh process: start the driver before the new camera's first render update.
+	Engine.time_scale = 1.0
+	_next_pending = true
 	return false
 
 
@@ -238,6 +248,8 @@ func _snapshot(delta: float) -> Dictionary:
 		"velocity": _vector(_game.player.body().linear_velocity), "hp": _game.run.hp,
 		"mass": _game.run.mass, "scrap": _game.run.scrap, "caught": caught,
 		"bot_rng": str(_driver.rng.state), "run_rng": str(_game.ctx.rng.state),
+		"camera_rng": str(_game.camera._shake_rng.state),
+		"aim_origin": _vector(_game.ctx.aim_origin()), "aim_forward": _vector(_game.ctx.aim_forward()),
 		"yaw": _game.camera.yaw, "pitch": _game.camera.pitch, "enemies": enemies}
 
 

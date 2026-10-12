@@ -571,7 +571,13 @@ func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
 func _place_beacon() -> void:
 	var def := stage_def()
 	var seconds: float = beacon_seconds_override if beacon_seconds_override >= 0.0 else def["beacon_seconds"]
-	beacon.place(ctx.terrain.beacon_point(ctx.run.stage), seconds, def["beacon_radius"])
+	var radius: float = def["beacon_radius"]
+	if ctx.stages == preload("res://src/core/park_defs.gd"):
+		const ParkMap := preload("res://src/world/park/park_map.gd")
+		var map = ctx.terrain.map()
+		if map is ParkMap and map.ok:
+			radius = map.reach_m
+	beacon.place(ctx.terrain.beacon_point(ctx.run.stage), seconds, radius)
 	if is_instance_valid(warden):
 		warden.queue_free()
 	_engaged = false
