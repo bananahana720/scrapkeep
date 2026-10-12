@@ -1,4 +1,4 @@
-# 2026-10-11 (PC-SABLE round 2): Pin 67 checks with non-Sable ultimate beat boundaries.
+# 2026-10-11 (PC-SABLE round 2): Pin 69 checks with non-Sable ultimate beat boundaries.
 extends SceneTree
 # PC-SABLE: real router, harpoon, combat, grants and immutable world-one fixtures.
 # Expected check count is pinned below; missing cases fail.
@@ -19,7 +19,7 @@ const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 67
+const EXPECTED_CHECKS := 69
 const DT := 1.0 / 60.0
 var _t := T.new("sable_kit_test")
 var _game
@@ -219,6 +219,8 @@ func _other_pilot_beats() -> void:
 		ult._ride = ult._carrier(at, {"to": at + Vector3.FORWARD * 10.0, "seconds": 3.0, "mode": "line"})
 		ult._fly(0.0)
 		_t.eq("%s keeps its original beat boundary" % id, ult._beat, 0)
+		ult._fly(0.000005)
+		_t.eq("%s fires on its original beat boundary" % id, ult._beat, 1)
 		ult.free()
 
 
