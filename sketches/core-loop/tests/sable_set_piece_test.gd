@@ -1,3 +1,4 @@
+# 2026-10-11 (PC-SABLE): Pin 39 checks after adding the peak motif cue assertion.
 extends SceneTree
 # PC-SABLE: real physics flights, hook rays, timed stake life and Warden resolutions.
 # Expected check count is pinned below; an empty or truncated run fails.

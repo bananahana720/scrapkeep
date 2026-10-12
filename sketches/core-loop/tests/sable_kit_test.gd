@@ -1,3 +1,4 @@
+# 2026-10-11 (PC-SABLE): Pin 65 checks after adding bank grace, mounted exits and completed-run grants.
 extends SceneTree
 # PC-SABLE: real router, harpoon, combat, grants and immutable world-one fixtures.
 # Expected check count is pinned below; missing cases fail.
