@@ -1,6 +1,9 @@
-# smoke: solo timeout=360s (four full skipper runs of one pilot in child processes at once, stage 1 to the win)
+# smoke: bots timeout=1500s (four full skipper runs of one pilot in child processes at once, stage 1 to the win)
+# 2026-10-12 (W13 coordinator): on 00a1bdf, pre-kit Kest won 4/4 at 637, 739, 742, 791 s wall
+# (435 to 626 s game) with an 1100 s child cap; Cannon won 4/4 at 442 to 471 s wall.
+# At the old 330 s child cap every child was killed (coordinator receipts, 2026-10-12).
 # The six-pilot slice: this file plays Sable and is the template; bot_six_<pilot>_test.gd extends it
-# for each other pilot, one solo test per pilot so each stays under the runner's 360 s cap.
+# for each other pilot, one bot-tier test per pilot under the runner's 1500 s head cap.
 # 2026-10-10 (wave 13 B4): re-pinned for the skill bar; each winning run must also cast slots 2
 # and 3 and fire a set piece (SKILL-BAR.md section 10, B4 acceptance). The win rule is unchanged.
 extends SceneTree
@@ -13,8 +16,8 @@ const T := preload("res://tests/support/t.gd")
 # strands one pilot fails here. One seed may lose to run luck (P-R19: Tally seeds 6 and 7 stall).
 const SEEDS := [1, 2, 3, 4]
 const MIN_WINS := 3
-# Under the 360 s head cap, with room for the parent's start and the record reads.
-const CHILD_CAP_S := 330.0
+# Under the 1500 s head cap, with room for the parent's start and the record reads.
+const CHILD_CAP_S := 1380.0
 # A losing seed's child log and record land here, under <pilot>/, for the report.
 const LOSS_DIR := "../../artifacts/local/bots/six"
 
