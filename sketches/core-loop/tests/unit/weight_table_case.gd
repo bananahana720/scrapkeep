@@ -1,0 +1,280 @@
+extends RefCounted
+
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Juice := preload("res://src/presentation/juice.gd")
+const Rows := preload("res://src/presentation/rows.gd")
+const Bank := preload("res://src/presentation/sfx_bank.gd")
+const Fx := preload("res://src/presentation/fx_library.gd")
+const Events := preload("res://src/core/game_events.gd")
+const Windup := preload("res://src/presentation/windup_rows.gd")
+const Posture := preload("res://src/combat/boss_posture.gd")
+const CLASSES := ["none", "hit", "heavy", "massive", "climax"]
+const FIELDS := ["stop_ms", "shake", "kick", "punch_fov", "fx_scale", "body", "body_st"]
+const EXPECTED_CHECKS := 22
+var event_script: Script = EventKinds
+const PRESENTATION := ["juice", "vfx", "audio"]
+const RULES := ["strike", "death_parts", "amount", "gauge", "posture"]
+
+
+func run(t) -> void:
+	var before: int = t.checks
+	var constants: Dictionary = event_script.get_script_constant_map()
+	var present := constants.has("WEIGHT") and constants.has("WEIGHTED") and constants.has("WEIGHT_EXEMPT") and event_script.has_method("weigh")
+	t.check("weight contract present", present, "WEIGHT, WEIGHTED, WEIGHT_EXEMPT and weigh required")
+	if not present:
+		t.eq("weight case check count", t.checks - before + 1, EXPECTED_CHECKS)
+		return
+	var weights: Dictionary = constants.WEIGHT
+	var facts: Dictionary = constants.WEIGHTED
+	var exemptions: Dictionary = constants.WEIGHT_EXEMPT
+	t.eq("exact weight classes", _sorted(weights.keys()), _sorted(CLASSES))
+	var bad_fields := []
+	for key in weights:
+		if FIELDS.any(func(field): return not weights[key].has(field)):
+			bad_fields.append(key)
+	t.eq("weight fields", bad_fields, [])
+	var band_ok: bool = weights.hit.stop_ms == "hit" and weights.heavy.stop_ms == "heavy"
+	for damage in [0.0, 10.0, 30.0, 60.0]:
+		band_ok = band_ok and is_equal_approx(_record("hit", damage).stop_ms, Juice.stop_ms_for(damage))
+		band_ok = band_ok and is_equal_approx(_record("heavy", damage).stop_ms, Juice.stop_ms_for(damage, false, true))
+	t.check("stops resolve through Juice", band_ok, "hit and heavy delegate at damage 0, 10, 30, 60")
+	t.check("strict stop order", _stop_order(weights), "none < hit < heavy < massive < climax <= 60")
+	t.check("strict shake order", _scalar_order(weights, "shake", Juice.SHAKE_CAP), "none through climax within SHAKE_CAP")
+	t.check("strict fx order", _scalar_order(weights, "fx_scale"), "fx_scale increases through all five classes")
+	t.check("body presence and bake", _bodies(weights), "none/hit empty; heavy/massive/climax bake nonempty samples")
+	var measurements := _body_measurements(weights)
+	t.check("baked register and length order", _body_order(measurements), str(measurements))
+	var db_ok := true
+	for key in CLASSES:
+		db_ok = db_ok and _record(key).get("body_db", -1.0) == 0.0
+	t.check("body layers use db zero", db_ok, "bank priority trims remain in charge")
+	var bad := coverage(facts, weights)
+	t.eq("weighted coverage", bad, [])
+	var listeners := connected_signals()
+	var uncovered := uncovered_listeners(listeners, facts, exemptions)
+	t.eq("presentation listener coverage", uncovered, [])
+	t.eq("grammar has no presentation listener", constants.GRAMMAR_SIGNALS.filter(func(fact): return fact in listeners), [])
+	var planted := facts.duplicate(true)
+	planted["planted_impact"] = {"class": "none", "allegiance": "player", "visual": ""}
+	t.eq("coverage positive control", coverage(planted, weights), ["planted_impact"])
+	var swapped := weights.duplicate(true)
+	swapped.heavy = weights.massive
+	swapped.massive = weights.heavy
+	t.check("order positive control", not _stop_order(swapped) and not _scalar_order(swapped, "shake"), "swapping heavy and massive fails")
+	var hostile_ok: bool = facts.get("player_hit", {}).get("allegiance") == "hostile" and facts.get("player_died", {}).get("allegiance") == "hostile"
+	for fact in facts:
+		if facts[fact].allegiance == "hostile" or fact in ["player_hit", "player_died"]:
+			for strength in [0.0, 0.5, 1.0]:
+				var record: Dictionary = event_script.call("weigh", fact, {"strength": strength, "amount": 24.0})
+				hostile_ok = hostile_ok and record.allegiance == "hostile" and record.stop_ms == 0.0 and record.shake == 0.0 and record.kick == 0.0
+	t.check("hostile clamp", hostile_ok, "every hostile at strengths 0, 0.5, 1; player damage cannot become player allegiance")
+	var no_stop := true
+	for fact in facts:
+		if facts[fact].allegiance in ["motion", "reward"]:
+			for strength in [0.0, 0.5, 1.0]:
+				no_stop = no_stop and event_script.call("weigh", fact, {"strength": strength}).stop_ms == 0.0
+	for fact in ["landed", "beacon_unsealed"]:
+		no_stop = no_stop and event_script.call("weigh", fact, {}).stop_ms == 0.0
+	t.check("motion and reward stop clamp", no_stop, "motion and rewards never freeze")
+	var collisions := []
+	var slam: Dictionary = event_script.call("weigh", "slammed", {})
+	for fact in ["arc_slammed", "skid_smashed", "demo_slammed", "ultimate_landed"]:
+		var other: Dictionary = event_script.call("weigh", fact, {})
+		var shared := _bank_ids(slam).filter(func(id): return id in _bank_ids(other))
+		if not shared.is_empty():
+			collisions.append([fact, shared])
+	t.eq("same frame sound collision", collisions, [])
+	t.eq("class rule boundaries", _rule_errors(), [])
+	var bounded := true
+	for strength in [-1.0, 0.0, 0.5, 1.0, 2.0]:
+		var record: Dictionary = event_script.call("weigh", "slammed", {"strength": strength})
+		bounded = bounded and is_equal_approx(record.strength, clampf(strength, 0.0, 1.0))
+	t.check("strength bounded", bounded, "explicit strength clamps to 0..1")
+	var args := {"kind": "ram", "damage": 30.0, "strength": 0.5}
+	var snapshot := args.duplicate(true)
+	var first: Dictionary = event_script.call("weigh", "enemy_struck", args)
+	first.shake = 999.0
+	t.check("weigh is pure", args == snapshot and event_script.call("weigh", "enemy_struck", args).shake != 999.0, "arguments and shared rows remain unchanged")
+	t.eq("weight case check count", t.checks - before + 1, EXPECTED_CHECKS)
+
+
+func _record(key: String, damage := 0.0) -> Dictionary:
+	var kinds := {"none": "arc_slammed", "hit": "enemy_pinned", "heavy": "slammed", "massive": "ultimate_landed", "climax": "boss_defeated"}
+	return event_script.call("weigh", kinds[key], {"damage": damage})
+
+
+func _stop(row: Dictionary, damage: float) -> float:
+	if row.get("stop_ms") is String:
+		return Juice.stop_ms_for(damage, false, row.stop_ms == "heavy")
+	return float(row.get("stop_ms", -1.0))
+
+
+func _stop_order(weights: Dictionary) -> bool:
+	for damage in [0.0, 10.0, 30.0, 60.0]:
+		var previous := -1.0
+		for key in CLASSES:
+			var stop := _stop(weights.get(key, {}), damage)
+			if stop <= previous or stop > Juice.SPINE_CAP_MS or (key == "none" and stop != 0.0):
+				return false
+			previous = stop
+	return true
+
+
+func _scalar_order(weights: Dictionary, field: String, cap := INF) -> bool:
+	var previous := -1.0
+	for key in CLASSES:
+		var value := float(weights.get(key, {}).get(field, -1.0))
+		if value <= previous or value > cap:
+			return false
+		previous = value
+	return true
+
+
+func _bodies(weights: Dictionary) -> bool:
+	for key in CLASSES:
+		var id := String(weights.get(key, {}).get("body", ""))
+		if key in ["none", "hit"]:
+			if id != "":
+				return false
+		elif not Bank.has_recipe(id) or Bank.samples(id).is_empty():
+			return false
+	return true
+
+
+func _body_measurements(weights: Dictionary) -> Array:
+	var out := []
+	for key in ["heavy", "massive", "climax"]:
+		var row: Dictionary = weights.get(key, {})
+		var id := String(row.get("body", ""))
+		if not Bank.has_recipe(id):
+			return []
+		var samples := Bank.samples(id)
+		var ratio := pow(2.0, float(row.get("body_st", 0.0)) / 12.0)
+		var crosses := 0
+		for i in range(1, samples.size()):
+			if (samples[i - 1] < 0.0) != (samples[i] < 0.0):
+				crosses += 1
+		var seconds := float(samples.size()) / Bank.RATE / ratio
+		out.append({"class": key, "zcr": crosses / seconds, "seconds": seconds})
+	return out
+
+
+func _body_order(measurements: Array) -> bool:
+	if measurements.size() != 3:
+		return false
+	for i in range(1, measurements.size()):
+		if measurements[i].zcr >= measurements[i - 1].zcr or measurements[i].seconds < measurements[i - 1].seconds:
+			return false
+	return true
+
+
+func coverage(facts: Dictionary, weights: Dictionary) -> Array:
+	var bus := Events.new()
+	var bad := []
+	for fact in facts:
+		var row: Dictionary = facts[fact]
+		var real: bool = bus.has_signal(fact) or fact == "posture_break"
+		var class_ok: bool = weights.has(row.get("class", "")) or row.get("rule", "") in RULES
+		var allegiance_ok: bool = row.get("allegiance", "") in ["player", "motion", "hostile", "reward"]
+		var visual := String(row.get("visual", ""))
+		var visual_ok: bool = not Fx.effects(fact).is_empty() or Rows.shape(fact) != "none" or not Fx.spec(visual).is_empty()
+		var sound := String(row.get("sound", Rows.sound(fact)))
+		var possible: Array = [row.get("class", "")] if row.has("class") else _rule_classes(String(row.get("rule", "")))
+		var sound_ok := not possible.is_empty()
+		for key in possible:
+			sound_ok = sound_ok and (Bank.has_recipe(sound) or Bank.has_recipe(String(weights.get(key, {}).get("body", ""))))
+		if not real or not class_ok or not allegiance_ok or not visual_ok or not sound_ok:
+			bad.append(fact)
+	bus.free()
+	bad.sort()
+	return bad
+
+
+func _rule_classes(rule: String) -> Array:
+	match rule:
+		"strike": return ["none", "hit", "heavy"]
+		"death_parts": return ["hit", "heavy", "massive", "climax"]
+		"amount": return ["hit", "heavy", "massive"]
+		"gauge": return ["hit", "heavy"]
+		"posture": return ["none", "heavy", "massive"]
+	return []
+
+
+# Read direct connections, optional helpers and the arrays used by dynamic listeners.
+func connected_signals(source_overrides := {}) -> Array:
+	var found := []
+	for node in PRESENTATION:
+		var path := "res://src/presentation/%s.gd" % node
+		var source := String(source_overrides.get(node, FileAccess.get_file_as_string(path)))
+		var patterns := [r"events\.([a-z_]+)\.connect\(", r'_listen\(events,\s*"([a-z_]+)"', r'events\.connect\("([a-z_]+)"']
+		for pattern in patterns:
+			var regex := RegEx.create_from_string(pattern)
+			for hit in regex.search_all(source):
+				if not hit.get_string(1) in found:
+					found.append(hit.get_string(1))
+		var arrays := RegEx.create_from_string(r'for (?:signal_name|kind) in \[([^\]]+)\]')
+		for hit in arrays.search_all(source):
+			for literal in RegEx.create_from_string(r'"([a-z_]+)"').search_all(hit.get_string(1)):
+				if not literal.get_string(1) in found:
+					found.append(literal.get_string(1))
+		if node == "audio":
+			var audio_constants: Dictionary = load(path).get_script_constant_map()
+			for key in ["CHARACTER_KINDS", "ENEMY_KINDS"]:
+				for fact in audio_constants[key]:
+					if not fact in found:
+						found.append(fact)
+	found.sort()
+	return found
+
+
+func uncovered_listeners(listeners: Array, facts: Dictionary, exemptions: Dictionary) -> Array:
+	return listeners.filter(func(fact): return not facts.has(fact) and String(exemptions.get(fact, "")).strip_edges().is_empty())
+
+
+func _bank_ids(record: Dictionary) -> Array:
+	var ids := []
+	for field in ["sound", "body"]:
+		var id := String(record.get(field, ""))
+		if id != "":
+			ids.append(id)
+	return ids
+
+
+func _rule_errors() -> Array:
+	var errors := []
+	var examples := [
+		["gauge_released", {"fraction": 0.999}, "hit"], ["gauge_released", {"fraction": 1.0}, "heavy"],
+		["player_hit", {"amount": 9.99}, "hit"], ["player_hit", {"amount": 10.0}, "heavy"],
+		["player_hit", {"amount": 19.99}, "heavy"], ["player_hit", {"amount": 20.0}, "massive"],
+		["posture_changed", {"staggered": false}, "none"], ["posture_changed", {"staggered": true}, "massive"],
+		["posture_changed", {"chunks_lost": 1}, "heavy"], ["posture_break", {"staggered": true}, "massive"],
+	]
+	for kind in Windup.ROWS:
+		var parts: int = Windup.ROWS[kind].death.parts
+		var expected := "climax" if kind == "warden" else ("massive" if parts >= 8 else ("heavy" if parts >= 5 else "hit"))
+		examples.append(["enemy_killed", {"kind": kind}, expected])
+	for kind in EventKinds.IMPACT:
+		examples.append(["enemy_struck", {"kind": kind}, EventKinds.IMPACT[kind].stop])
+	for fact in ["slammed", "sticky_detonated", "enemy_rebounded", "boss_weak_point_hit"]:
+		examples.append([fact, {}, "heavy"])
+	for fact in ["cloak_broken", "hold_broken", "swarm_scattered", "enemy_pinned"]:
+		examples.append([fact, {}, "hit"])
+	for fact in ["arc_slammed", "skid_smashed", "demo_slammed", "cloak_started", "sprint_started", "cc_ignored", "blink_used", "vault_kicked"]:
+		examples.append([fact, {}, "none"])
+	for fact in ["ultimate_landed", "player_died"]:
+		examples.append([fact, {}, "massive"])
+	examples.append(["boss_defeated", {}, "climax"])
+	for example in examples:
+		var record: Dictionary = event_script.call("weigh", example[0], example[1])
+		if record.weight != example[2]:
+			errors.append([example, record.weight])
+	var chunk: Dictionary = event_script.call("weigh", "posture_changed", {"chunks_lost": 1})
+	if not is_equal_approx(chunk.strength, 1.0 / Posture.CHUNKS):
+		errors.append(["chunk strength", chunk.strength])
+	return errors
+
+
+func _sorted(values: Array) -> Array:
+	var out := values.duplicate()
+	out.sort()
+	return out
