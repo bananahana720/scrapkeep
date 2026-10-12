@@ -20,6 +20,7 @@ var _sites := {}
 var _lines := []
 var _stopped := ""
 var _held := {}
+var _pack_positions := {}
 
 
 func _initialize() -> void:
@@ -118,6 +119,11 @@ func _physics_process(_delta: float) -> bool:
 			_observed += 1
 			if _phase == 1:
 				_violations += int(not _from_live_home(a, _game.ctx.terrain.map().park.home_rows))
+				_violations += int(a.at.distance_to(_ball) < 25.0)
+				if Director.KIND_NAMES[a.kind] == "chaser" and a.has("pack"):
+					if not _pack_positions.has(a.pack):
+						_pack_positions[a.pack] = []
+					_pack_positions[a.pack].append(a.at)
 			elif _phase == 2:
 				_violations += int(Director.KIND_NAMES[a.kind] == _stopped)
 			_check_corridor(a.at)
@@ -128,6 +134,7 @@ func _physics_process(_delta: float) -> bool:
 		if _phase == 1:
 			_check("forward-window arrivals use live home rows", _observed > 0 and _violations == 0,
 				"%d arrivals, %d wrong homes/window/kinds" % [_observed, _violations])
+			_check_pack_spread()
 			_check("break transition exists on live Game director", d.has_method("break_home"))
 			if d.has_method("break_home"):
 				d.break_home(_home.id)
@@ -172,6 +179,43 @@ func _physics_process(_delta: float) -> bool:
 		quit(0 if _failures == 0 else 1)
 		return true
 	return false
+
+
+func _check_pack_spread() -> void:
+	var repeated := 0
+	var separated := true
+	for points in _pack_positions.values():
+		if points.size() < 2:
+			continue
+		repeated += 1
+		for i in points.size():
+			for j in range(i + 1, points.size()):
+				separated = separated and points[i].distance_to(points[j]) >= Director.PACK_SPREAD - 0.0001
+	_check("home pack members preserve PACK_SPREAD", repeated > 0 and separated, str(_pack_positions))
+	var centre := _at(_sites[_home.site])
+	var heading := (centre - _ball).normalized()
+	var side := Vector2(-heading.y, heading.x)
+	var expected := []
+	var fits := true
+	for i in 3:
+		var spot := centre + side * Director.PACK_SPREAD * (i - 1.5)
+		expected.append(spot)
+		var ahead: float = _graph.d_landmark(_ball) - _graph.d_landmark(spot)
+		fits = fits and ParkMap.footprint_contains(_sites[_home.site], spot)
+		fits = fits and ahead >= 60.0 and ahead <= 250.0 and spot.distance_to(_ball) >= 25.0
+		for line in _lines:
+			for j in range(1, line.size()):
+				fits = fits and Geometry2D.get_closest_point_to_segment(spot, line[j - 1], line[j]).distance_to(spot) > CLEARANCE
+	_check("fixture permits original side-by-side offsets", fits, str(expected))
+	var matches := false
+	for points in _pack_positions.values():
+		if points.size() != expected.size():
+			continue
+		var same := true
+		for i in expected.size():
+			same = same and points[i].distance_to(expected[i]) < 0.0001
+		matches = matches or same
+	_check("home group keeps original offsets when footprint permits", fits and matches)
 
 
 func _place_ball() -> void:
