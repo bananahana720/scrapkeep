@@ -12,7 +12,7 @@ const Schema := preload("res://src/world/park/park_schema.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const KINDS := ["movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
 const STAGES := ["park_dam", "park_test"]
-const EXPECTED_CHECKS := 30
+const EXPECTED_CHECKS := 31
 const H := 1.0 / 60.0
 
 class Checks extends "res://tests/support/t.gd":
@@ -104,7 +104,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 10, "admission": 3, "cues": 3, "pay": 3}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 11, "admission": 3, "cues": 3, "pay": 3}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -314,6 +314,7 @@ func _rounds() -> void:
 	var additions := true
 	var lead := true
 	var pay_count := 0
+	var clear_has_no_bonus := true
 	var granted_before := paid.size()
 	var cogs_before: int = game.run.cogs
 	var announced := -1.0
@@ -329,15 +330,18 @@ func _rounds() -> void:
 		for enemy in s.pack:
 			seen[String(enemy.kind)] = true
 		additions = additions and s.round_elements.size() == round_index + 1 and seen.keys() == s.round_elements
+		var wallet_before_clear: int = game.run.cogs
 		_kill(s.pack)
 		acts.step_pocket(s, H, s.global_position)
+		clear_has_no_bonus = clear_has_no_bonus and game.run.cogs == wallet_before_clear
 		for reward in s.round_rewards.duplicate():
 			reward.inside = false
 			acts._watch_round_pickups(s, reward.pickup.global_position)
 		pay_count += 1
 	t.check("round credits formula within 1 percent with D capped", formula, "(12 + 6 x (round - 1)) x min(D,3); three rounds")
 	t.check("each round adds exactly one element", additions and s.round_elements == ["chaser", "lobber", "plated_brute"], str(s.round_elements))
-	t.check("pay events equal round count", s.round_payments == pay_count and pay_count == 3 and s.done and paid.size() - granted_before == 3 and game.run.cogs - cogs_before == 702, "payments=%d grants=%d cogs=%d expected=702 done=%s" % [s.round_payments, paid.size() - granted_before, game.run.cogs - cogs_before, s.done])
+	t.check("pay events equal round count", s.round_payments == pay_count and pay_count == 3 and s.done and paid.size() - granted_before == 3 and game.run.cogs - cogs_before == pay_count * Activities.PAY_SCRAP, "payments=%d grants=%d cogs=%d expected=%d done=%s" % [s.round_payments, paid.size() - granted_before, game.run.cogs - cogs_before, pay_count * Activities.PAY_SCRAP, s.done])
+	t.check("round clear adds no bonus cogs before collection", clear_has_no_bonus, "encounter credits fund spawns only; wallet rises on collected rewards")
 	t.check("safe zone announced at least natural family lead", lead, "all three safe zones announced at least 3 s before spawn")
 	acts.clear()
 
