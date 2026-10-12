@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for 24cc872.
+# Sable slot 3 line_reel -> bank_shot.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

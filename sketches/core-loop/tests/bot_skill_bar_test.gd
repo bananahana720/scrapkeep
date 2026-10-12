@@ -1,4 +1,5 @@
-# smoke: solo timeout=360s (in-process hand cases, then 32 capped bot runs in child processes, 16 at a time)
+# smoke: bots timeout=1020s (in-process hand cases, then 32 capped bot runs in child processes, 16 at a time)
+# 2026-10-12, W13 smoke triage: PASS in 674.124 s alone; 1.5x rounded up to 10 s is 1020 s, beyond the 360 s ordinary cap.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

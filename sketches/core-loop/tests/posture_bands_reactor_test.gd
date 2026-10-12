@@ -2,6 +2,7 @@
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
+const BotOptions := preload("res://tools/bot_options.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const PostureSweep := preload("res://tools/posture_sweep.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
@@ -53,6 +54,7 @@ const TOLERANCE := 0.10
 const WALL_S := 330.0
 
 var _settings := {}
+var _bot_options
 var _game
 var _driver
 var _reactor
@@ -64,6 +66,7 @@ var _run_seed := 0
 
 func _initialize() -> void:
 	_settings = PostureSweep._parse(OS.get_cmdline_user_args())
+	_bot_options = BotOptions.new(_settings, self)
 	if _settings.has("arm"):
 		_begin_child()
 		return
@@ -154,7 +157,9 @@ func _physics_process(delta: float) -> bool:
 		_driver.stage_limit = CAP * 4.0
 		_driver.fight_limit = CAP
 		_game.presentation.audio.bake_now()
+		_bot_options.apply_audio(_game.presentation.audio)
 		_game.events.enemy_struck.connect(_on_struck)
+		_game.run.run_seed_override = _run_seed
 		_driver.start()
 		return false
 	_mount()

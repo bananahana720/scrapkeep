@@ -1,4 +1,5 @@
-# smoke: solo (four isolated seeded bot children at a time)
+# smoke: solo timeout=360s (four isolated seeded bot children at a time)
+# 2026-10-12, W13 smoke triage: 352.550 s alone; 1.5x exceeds the ordinary ceiling, so cap at 360 s. The fixed 5/16 band still fails at 4/16.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

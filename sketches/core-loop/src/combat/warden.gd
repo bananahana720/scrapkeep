@@ -126,6 +126,7 @@ var braced_kinds: Array = []
 # the body stands with no offset, how fast the mounting moves it, and the shrugs so far.
 var mounting := ""
 var hardpoints: Array = []
+var pulse_radius := DEFAULT_REACH
 var shrug_delay := 0.0
 var mount_driver = null
 var home := Vector3.ZERO
@@ -164,6 +165,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	kind = "warden"
 	stage = spec.get("stage", 1)
 	reach = spec.get("reach", DEFAULT_REACH)
+	pulse_radius = DEFAULT_REACH if spec.get("park_landmark", false) else reach
 	family = spec.get("family", Roster.warden_family(stage))
 	variant = _read_variant(String(spec.get("variant", "")))
 	mounting = String(spec.get("mounting", MOUNTINGS.get(family + ":" + variant, "")))
@@ -188,8 +190,11 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	weight = 1000.0
 	radius = RADIUS
 	half_height = HALF_HEIGHT
-	# Clamped to the mast base: sits on the ground under the point it was given.
-	global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
+	if spec.get("park_landmark", false) and spec.has("anchor"):
+		var anchor: Array = spec["anchor"]
+		global_position = Vector3(float(anchor[0]), float(anchor[1]), float(anchor[2]))
+	else:
+		global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
 	home = global_position
 	_build_body()
 
@@ -665,7 +670,7 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_charge_len = PULSE_TELEGRAPH
 		_flaring = lined_hardpoint()
 		_flare_picked = _flaring >= 0
-		_commit_ring(Threat.Type.INSTANT, global_position, reach, LIFT_REACH_UP, Palette.SAND)
+		_commit_ring(Threat.Type.INSTANT, global_position, pulse_radius, LIFT_REACH_UP, Palette.SAND)
 		_core_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
 		_core_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
 		if family == Roster.REACTOR and fleet != null:

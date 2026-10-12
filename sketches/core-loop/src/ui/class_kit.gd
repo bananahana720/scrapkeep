@@ -37,7 +37,7 @@ const WORDS := {
 	"plate_return": "plate return",
 	"stamp_slam": "stamp slam",
 	"gather_plate": "gather plate",
-	"link_clips": "link clips",
+	"link_clips": "ledger clip",
 	"balance_due": "balance due",
 	"cannon_lane": "cannon lane",
 	"cannon_recoil": "recoil split",
@@ -57,7 +57,7 @@ const WORDS := {
 	"tradeoff_runner_gunner": "Ignores knockback, still takes damage.",
 	# --- end Rivet ---
 	# --- P-C Kest words ---
-	"cable_charge": "cable charge", "windhover": "windhover",
+	"cable_charge": "cable charge", "windhover": "hovering mortar",
 	"air_raid": "air raid", "minelayer": "minelayer",
 	"tradeoff_demolitions_caster": "Delayed blasts, needs fuse timing.",
 	# --- end Kest ---
@@ -66,6 +66,7 @@ const WORDS := {
 	"tradeoff_tarn": "Heavy claws, must fight close.",
 	# --- end Tarn ---
 	# --- P-C Tally words ---
+	"plate_audit": "audit trail", "plate_flywheel": "flywheel throw",
 	"tradeoff_tally": "Linked payoff, needs pressure from rolling.",
 	# --- end Tally ---
 	# --- P-C Cannon words ---
@@ -98,7 +99,7 @@ const FANTASY := {
 	"runner_gunner": "Unstoppable sprinter. Crowd control is fuel.",
 	"demolitions_caster": "Vanish in smoke. Light the line.",
 	"tarn": "Claw in close. Clamp, then rend.",
-	"tally": "Punch a card. Roll. Make them pay.",
+	"tally": "Gather. Clip on the line. Make them pay.",
 	"remembered_cannon": "The Mind's guns. Call the shot.",
 }
 

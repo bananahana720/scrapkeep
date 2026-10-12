@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const BotOptions := preload("res://tools/bot_options.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -105,6 +106,7 @@ class Table extends RefCounted:
 
 
 var _settings := {}
+var _bot_options
 var _cap := 240.0
 var _parent := false
 var _done := false
@@ -137,6 +139,7 @@ var _counter_serial := 0
 func _initialize() -> void:
 	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
+	_bot_options = BotOptions.new(_settings, self)
 	_cap = float(_settings.get("cap", "240"))
 	if _settings.has("arm"):
 		_begin_child()
@@ -221,17 +224,10 @@ func _process(_delta: float) -> bool:
 
 func _spawn(job: Dictionary) -> void:
 	var cell: Dictionary = _cells[job["cell"]]
-	var arm := arm_named(job["arm"])
-	# Each invocation owns its data folder (the parent's process id is in the path) and each job its own
-	# folder under it, which is removed once the run is recorded.
+	# Each job owns an isolated result and state folder.
 	var home := _sweep_dir.path_join("job%d" % job["n"])
 	DirAccess.make_dir_recursive_absolute(home)
-	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
-			"--script", "res://tools/posture_sweep.gd", "--", "--arm=" + String(job["arm"]), "--run-seed=%d" % job["seed"],
-			"--plating=%s" % cell["plating"], "--curve=%s" % cell["curve"], "--shatter=%s" % cell["ram_shatters"],
-			"--cap=%s" % _cap, "--result=" + home.path_join("result.tsv"), "--home=" + home])
-	if float(arm["mass"]) > 0.0:
-		args.append("--start-mass=%d" % int(arm["mass"]))
+	var args := child_args(_settings, job, cell, _cap, home)
 	var previous := {}
 	for kind in ["DATA", "CONFIG", "CACHE"]:
 		var key: String = "XDG_%s_HOME" % kind
@@ -247,6 +243,22 @@ func _spawn(job: Dictionary) -> void:
 	job["home"] = home
 	job["started"] = Time.get_ticks_msec()
 	_running.append(job)
+
+
+static func child_args(settings: Dictionary, job: Dictionary, cell: Dictionary, cap: float, home: String) -> PackedStringArray:
+	var arm := arm_named(job["arm"])
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+			"--script", "res://tools/posture_sweep.gd", "--", "--arm=" + String(job["arm"]), "--run-seed=%d" % job["seed"],
+			"--plating=%s" % cell["plating"], "--curve=%s" % cell["curve"], "--shatter=%s" % cell["ram_shatters"],
+			"--cap=%s" % cap, "--result=" + home.path_join("result.tsv"), "--home=" + home])
+	if settings.get("gate", "0") == "1":
+		args.append("--gate=1")
+	for key in BotOptions.FAST_FLAGS:
+		if settings.has(key):
+			args.append("--%s=%s" % [key, settings[key]])
+	if float(arm["mass"]) > 0.0:
+		args.append("--start-mass=%d" % int(arm["mass"]))
+	return args
 
 
 func _reap(run: Dictionary, timed_out: bool) -> void:
@@ -436,7 +448,9 @@ func _physics_process(_delta: float) -> bool:
 		_driver.stage_limit = _cap * 4.0
 		_driver.fight_limit = _cap
 		_game.presentation.audio.bake_now()
+		_bot_options.apply_audio(_game.presentation.audio)
 		_game.events.enemy_struck.connect(_on_struck)
+		_game.run.run_seed_override = _run_seed
 		_driver.start()
 		return false
 	var over: bool = _driver.tick(_delta)

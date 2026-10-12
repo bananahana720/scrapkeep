@@ -1,3 +1,5 @@
+# 2026-10-12 FIXTURE-ADAPT: bd3e0ed added wrapping Tradeoff text; reserve a fixed-height slot above the keys.
+# 2026-10-12 R5: open every pilot and measure the reserved Tradeoff slot and complete wrapped text.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -70,6 +72,7 @@ func _run() -> void:
 	_check_fit(cards)
 	_check_words(cards)
 	_check_rows(cards, "R8", "six cards")
+	await _check_tradeoffs(cards)
 	root.gui_release_focus()
 	await _frames(2)
 	for i in 6:
@@ -188,6 +191,37 @@ func _check_rows(cards: Array, tag: String, label: String) -> void:
 	_t.check("%s key rows end on the card floor" % tag, m["floors"] and not cards.is_empty(), "%s: %s" % [label, m["detail"]])
 	_t.check("%s one key-row bottom edge" % tag, m["edge"], "%s: spread %.2f px" % [label, m["spread"]])
 	_t.check("%s one preview height in [%d, %d]" % [tag, int(ClassCard.PREVIEW_MIN), int(ClassCard.PREVIEW_H)], m["preview"], "%s: %s" % [label, m["detail"]])
+
+
+func _check_tradeoffs(cards: Array) -> void:
+	for card in cards:
+		card.grab_focus()
+		await _settle(0.7)
+		var label := card.find_child("Tradeoff", true, false) as Label
+		if not _t.check("%s open card has Tradeoff" % card.def.id, card.is_open() and label != null):
+			continue
+		var slot := label.get_parent() as Control
+		var card_rect: Rect2 = card.get_global_rect()
+		var slot_rect := slot.get_global_rect()
+		var label_rect := label.get_global_rect()
+		var font := label.get_theme_font("font")
+		var font_size := label.get_theme_font_size("font_size")
+		var flags := TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND | TextServer.BREAK_ADAPTIVE
+		var text_size := font.get_multiline_string_size(label.text, label.horizontal_alignment, label.size.x, font_size, -1, flags)
+		var spacing := label.get_theme_constant("line_spacing") * maxi(label.get_line_count() - 1, 0)
+		var required_height := text_size.y + spacing
+		var scale_y: float = card.scale.y
+		_t.check("%s Tradeoff common nonzero reserved height" % card.def.id,
+			ClassCard.TRADEOFF_H > 0.0 and slot.custom_minimum_size.y == ClassCard.TRADEOFF_H
+			and is_equal_approx(slot.size.y, ClassCard.TRADEOFF_H) and is_equal_approx(label.size.y, slot.size.y),
+			"minimum %.1f, slot %.1f, label %.1f, reserved %.1f" % [slot.custom_minimum_size.y, slot.size.y, label.size.y, ClassCard.TRADEOFF_H])
+		_t.check("%s Tradeoff slot and label contained in card" % card.def.id,
+			card_rect.grow(0.5).encloses(slot_rect) and card_rect.grow(0.5).encloses(label_rect) and slot_rect.grow(0.5).encloses(label_rect))
+		_t.check("%s Tradeoff complete wrapped text fits" % card.def.id,
+			label.size.x > 0.0 and label_rect.size.y >= required_height * scale_y and label.visible_characters == -1 and label.max_lines_visible == -1,
+			"text %s, width %.1f, font %d, needs %.1f, measured %.1f" % [label.text, label.size.x, font_size, required_height * scale_y, label_rect.size.y])
+	root.gui_release_focus()
+	await _settle(0.7)
 
 
 # R9: the preview never gives up more than PREVIEW_H - PREVIEW_MIN, and a zero ask changes nothing.

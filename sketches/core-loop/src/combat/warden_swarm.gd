@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 
 # The swarm remnant's per-kind driver (unit KF3, design-v3/wardens/swarm.md sections 3 and 4).
 # warden.gd loads it for every park Warden of the swarm family (spec "harpoon_anchor": true,
@@ -262,7 +263,7 @@ func _build_slab(warden) -> void:
 	parent.add_child(body)
 	body.global_position = Vector3(pool_centre.x, pool_floor - POOL_THICKNESS * 0.5, pool_centre.z)
 	_slab = body
-	warden.tree_exiting.connect(func():
+	SignalLifetime.listen(body, warden.tree_exiting, func():
 		if is_instance_valid(body):
 			body.queue_free())
 
@@ -330,7 +331,7 @@ func _listen(warden) -> void:
 	if _listening or warden.fleet == null:
 		return
 	_listening = true
-	warden.fleet.events().enemy_struck.connect(func(enemy: Node3D, hit_kind: String, force: float):
+	SignalLifetime.listen(warden, warden.fleet.events().enemy_struck, func(enemy: Node3D, hit_kind: String, force: float):
 		if hit_kind != "ram" or enemy == null or enemy != _lamp or not is_instance_valid(warden) or warden.target == null:
 			return
 		if SpeedTier.of(force, warden.target.tuning.f("cruise")) >= SpeedTier.CRUISE:

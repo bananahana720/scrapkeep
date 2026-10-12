@@ -1,14 +1,18 @@
+# 2026-10-12 FIXTURE-ADAPT: 7a90eee added the contact rate/burst budget; check 03 reads its constants.
+# 2026-10-12, W13 smoke triage: class c re-pin for 24cc872.
+# Sable ultimate id ult_default -> cable_run; default rail-query result arc -> rail because Cable Run declares line, rail, arc.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The set piece on Q (design-v3/SKILL-BAR.md sections 2, 4, 7), wave P-B unit B3, 2026-10-10.
-# A real Game with Sable and the shared ult_default row. The ball flies on the physics tick;
+# A real Game with Sable and the shared cable_run row. The ball flies on the physics tick;
 # the plan and the Q press are called with a scripted aim so the path is chosen on purpose.
 # Covers: the Q refusals (uncharged, busy), the path order line, rail, arc, hop; the meter
 # sources and the stage-entry restore; recall refunds, bail spends, a stage change and a
@@ -131,7 +135,7 @@ func _run() -> void:
 	ev.hold_broken.connect(func(kind: String, method: String): _broken.append([kind, method]))
 
 	# --- The meter on the record and its sources ---------------------------------------
-	_t.check("01 the meter is the ability record's meter", _player.abilities.meter == _ult.meter and _player.abilities.ultimate()["id"] == "ult_default",
+	_t.check("01 the meter is the ability record's meter", _player.abilities.meter == _ult.meter and _player.abilities.ultimate()["id"] == "cable_run",
 		"ultimate %s" % [_player.abilities.ultimate()])
 	_ult.meter.reset()
 	var a := _enemy("chaser", 14.0, 6.0)
@@ -140,9 +144,19 @@ func _run() -> void:
 	ev.enemy_struck.emit(a, "ram", 10.0)
 	ev.enemy_struck.emit(a, "ram", 10.0)
 	_t.near("02 kill 1 + near miss 4 + one contact 2 (the second inside 0.5 s is gated)", _ult.meter.value, 7.0)
+	var contact_clock: float = _ult.meter._clock
+	var first_contact := minf(float(UltimateMeter.WEIGHTS["contact"]), UltimateMeter.CONTACT_BURST)
 	await _sim(0.6)
 	ev.enemy_struck.emit(a, "ram", 10.0)
-	_t.check("03 a contact on the same enemy after 0.5 s pays again", absf(_ult.meter.value - 9.0) < 0.6, "%.2f" % _ult.meter.value)
+	var elapsed: float = _ult.meter._clock - contact_clock
+	var refill := minf(UltimateMeter.CONTACT_BURST, UltimateMeter.CONTACT_RATE_CAP * elapsed)
+	var contact_expected := first_contact + minf(float(UltimateMeter.WEIGHTS["contact"]), refill)
+	var contact_paid: float = _ult.meter.sources.get("contact", 0.0)
+	var speed_paid: float = _ult.meter.sources.get("fast", 0.0) + _ult.meter.sources.get("blazing", 0.0)
+	var expected := float(UltimateMeter.WEIGHTS["kill"]) + float(UltimateMeter.WEIGHTS["near_miss"]) + contact_expected + speed_paid
+	_t.check("03 a contact after 0.5 s pays only the refilled contact budget",
+		absf(_ult.meter.value - expected) < 0.6 and is_equal_approx(contact_paid, contact_expected),
+		"meter %.4f expected %.4f; contact %.4f expected %.4f over %.4f s" % [_ult.meter.value, expected, contact_paid, contact_expected, elapsed])
 	_ult.meter.reset()
 	ev.enemy_struck.emit(a, _player.abilities.id_of(AbilityState.WEAPON), 12.0)
 	_t.near("04 a weapon hit pays 0.25", _ult.meter.value, 0.25)
@@ -158,7 +172,7 @@ func _run() -> void:
 	ev.enemy_killed.emit("chaser", Vector3.ZERO, 1)
 	ev.enemy_killed.emit("chaser", Vector3.ZERO, 1)
 	await _sim(0.05)
-	_t.eq("06 ultimate_ready goes out once on reaching full", _ready, ["ult_default"])
+	_t.eq("06 ultimate_ready goes out once on reaching full", _ready, ["cable_run"])
 	_t.eq("07 the record reads ready and full", [_player.abilities.ultimate()["state"], _player.abilities.ultimate()["fill"]], ["ready", 1.0])
 
 	# --- Refusals ------------------------------------------------------------------------
@@ -178,9 +192,9 @@ func _run() -> void:
 	_t.eq("12 a harpoon lock plans a line to it", [String(_ult.plan(_player.ball_position(), lock)["path"]), _ult.plan(_player.ball_position(), lock)["to"]],
 		["line", a.global_position])
 	_ult.rail_query = func(point: Vector3) -> Dictionary: return {"entry": point + Vector3(5.0, 0.0, 0.0), "to": point + Vector3(30.0, 0.0, 0.0)}
-	_t.eq("13 a rail entry within 12 m beats the arc in the framework order; ult_default (line, arc) keeps its arc",
+	_t.eq("13 a rail entry within 12 m beats the arc in the framework order; cable_run (line, rail, arc) takes its rail",
 		[String(_ult.plan(_player.ball_position(), _aim_at(target), ["line", "rail", "arc"])["path"]),
-		String(_ult.plan(_player.ball_position(), _aim_at(target))["path"])], ["rail", "arc"])
+		String(_ult.plan(_player.ball_position(), _aim_at(target))["path"])], ["rail", "rail"])
 	_ult.rail_query = Callable()
 	var anchor: Vector3 = _player.ball_position() + Vector3(10.0, 4.0, 0.0)
 	_player.grapple_to(anchor, Vector3.LEFT, null)
@@ -240,7 +254,7 @@ func _run() -> void:
 	_source.press = {"ultimate_pressed": true}
 	await _sim(0.05)
 	_t.eq("23 Q in the wind-up recalls with a full refund", [_cancelled, _ult.phase(), _ult.meter.value, _landed],
-		[[["ult_default", "recall", true]], "idle", 100.0, []])
+		[[["cable_run", "recall", true]], "idle", 100.0, []])
 
 	await _home()
 	_fill()
@@ -250,7 +264,7 @@ func _run() -> void:
 	_source.press = {"jump_pressed": true}
 	await _sim(0.05)
 	# Spent: after the bail the ball still rolls fast, so speed may pay a few hundredths back.
-	_t.check("24 Space in flight bails: spent, no landing", in_flight and _cancelled == [["ult_default", "bail", false]] and _ult.phase() == "idle"
+	_t.check("24 Space in flight bails: spent, no landing", in_flight and _cancelled == [["cable_run", "bail", false]] and _ult.phase() == "idle"
 		and _ult.meter.value < 1.0 and _landed.is_empty(), "flight %s, cancelled %s, meter %.3f, landed %s" % [in_flight, _cancelled, _ult.meter.value, _landed])
 
 	# --- Defence -----------------------------------------------------------------------------
@@ -318,7 +332,7 @@ func _run() -> void:
 	_t.check("30 the landing pays the chain x%.2f and ends it" % mult, mult > 1.0 and bool(row.get("paid", false)) and _player.chain.combo == 0,
 		"finished %s" % [row])
 	_t.check("31 the landing strike hits the enemy at B", _landed.size() == 1 and int(_landed[0][1]) >= 1 and float(_landed[0][2]) > 0.0, "landed %s" % [_landed])
-	_t.eq("32 a peak went out on the middle beat", _peaks, ["ult_default"])
+	_t.eq("32 a peak went out on the middle beat", _peaks, ["cable_run"])
 	var log_rows: Array = _game.ctx.run_log._record.get("ultimates", [])
 	var last: Dictionary = log_rows.back() if log_rows.size() > 0 else {}
 	_t.check("33 the run log keeps one ultimates row per start", log_rows.size() >= 5 and String(last.get("path", "")) == "arc" and int(last.get("landing_hits", 0)) >= 1
@@ -354,13 +368,13 @@ func _run() -> void:
 	_ult.press(_aim_at(target))
 	await _sim(0.2)
 	ev.stage_content_cleared.emit("test")
-	_t.eq("38 a stage change aborts and spends", [_cancelled, _ult.phase(), _ult.meter.value], [[["ult_default", "stage", false]], "idle", 0.0])
+	_t.eq("38 a stage change aborts and spends", [_cancelled, _ult.phase(), _ult.meter.value], [[["cable_run", "stage", false]], "idle", 0.0])
 
 	await _home()
 	_fill()
 	_ult.press(_aim_at(target))
 	await _sim(0.2)
 	ev.player_died.emit()
-	_t.eq("39 a death aborts and spends", [_cancelled, _ult.phase(), _ult.meter.value], [[["ult_default", "death", false]], "idle", 0.0])
+	_t.eq("39 a death aborts and spends", [_cancelled, _ult.phase(), _ult.meter.value], [[["cable_run", "death", false]], "idle", 0.0])
 
 	quit(_t.verdict())

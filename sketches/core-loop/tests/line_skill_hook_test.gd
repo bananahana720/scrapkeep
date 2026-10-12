@@ -1,3 +1,4 @@
+# 2026-10-12 FIXTURE-ADAPT: 24cc872 gave Sable Bank Shot; Rivet still carries the shared line_reel.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -7,7 +8,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The line skill hook (design-v3/SKILL-BAR.md section 3), wave P-B unit B1, 2026-10-10.
-# Sable's slot 3 carries the shared line_reel placeholder. Scripted through a real Game's
+# Rivet's slot 3 carries the shared line_reel placeholder. Scripted through a real Game's
 # router, harpoon and combat: a cast with a line standing fires along it now; with none it
 # loads, the next bite within 4.0 s carries it, a dry fire keeps the load, and the load
 # expires between 3.99 and 4.01 s. A loaded bite adds exactly one chain link, the flavour
@@ -109,7 +110,11 @@ func _run() -> void:
 	_player = _game.player
 	_player.source = _source
 	_game.flow.press_start()
-	_game.flow.choose_class(0)
+	var pilot_index: int = _game.flow.classes.map(func(def): return def.id).find("runner_gunner")
+	if not _t.check("setup: Rivet is explicitly selected", pilot_index >= 0):
+		quit(_t.verdict())
+		return
+	_game.flow.choose_class(pilot_index)
 	_combat = _game.combat
 	await _sim(0.6)
 	_combat.heft_override = 1.0
@@ -120,7 +125,7 @@ func _run() -> void:
 	_game.events.enemy_struck.connect(func(enemy: Node3D, kind: String, _force: float): _struck.append([enemy.get_instance_id(), kind]))
 	_player.set_physics_process(false)
 	var a := _enemy(0.0)
-	_t.eq("setup: Sable's slot 3 is the shared line_reel", [_player.abilities.id_of("line"), _player.kit.on(Augments.GRAPPLE)],
+	_t.eq("setup: Rivet's slot 3 is the shared line_reel", [_player.abilities.id_of("line"), _player.kit.on(Augments.GRAPPLE)],
 		["line_reel", true])
 
 	# 1. A line stands on a body: the cast fires now along it, and adds no chain link.
