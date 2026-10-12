@@ -90,6 +90,8 @@ const KNOBS := {
 	# --- P-C Tarn knob ---
 	# --- end Tarn ---
 	# --- P-C Tally knob ---
+	# Plate Return's settle share (pilots/tally.md section 3, depth 4); Weapons.SETTLE_SHARE.
+	"ult_settle": {"default": Weapons.SETTLE_SHARE},
 	# --- end Tally ---
 	# --- P-C Cannon knob ---
 	# --- end Cannon ---
