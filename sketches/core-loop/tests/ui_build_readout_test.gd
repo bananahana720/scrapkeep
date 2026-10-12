@@ -8,7 +8,47 @@ const Sheet := preload("res://src/build/build_sheet.gd")
 const Effects := preload("res://src/build/item_effects.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
-const FIXED_CHECKS := 19
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+# Authored row review: parts.gd CATALOGUE/EVOLVED, items.gd TABLE/CELLS;
+# alpha_defs.gd PARTS is a subset. This oracle is literal, independent of PartDef.
+const EXPECTED_LAYERS := {
+	"hot_rivets": "local", "loose_trigger": "local", "long_barrel": "local",
+	"long_spool": "global", "tread_plating": "global", "boost_coil": "global",
+	"dash_vane": "global", "rivet_plating": "global", "magnet_spool": "global",
+	"grip_tread": "global", "live_line": "global", "vent_baffle": "global",
+	"spring_shims": "global", "drop_weight": "global", "slag_rounds": "local",
+	"double_feed": "local", "focus_lens": "local", "cross_split": "local",
+	"spiral_wave": "local", "chain_arc": "local", "frost_vane": "global",
+	"arc_coil": "global", "pylon_capacitor": "global", "runner_overclock": "global",
+	"sunforged_core": "local", "gatling_heart": "local", "horizon_optic": "local",
+	"rime_rounds": "local", "galvanic_rounds": "local", "ram_plow": "global",
+	"spare_cell": "global", "tempest_core": "local", "rime_heart": "global",
+	"scrap_gravity": "global",
+	"cap_relay": "global", "vault_battery": "global", "sprint_cell": "global",
+	"cloak_flask": "global", "quick_spool": "global", "overcharge_coil": "global",
+	"reserve_tank": "global", "flywheel": "global", "pin_setter": "global",
+	"spring_hull": "global", "long_lane": "global", "gutter_guard": "global",
+	"ten_pin": "global", "ballast_drum": "global", "strike_pocket": "global",
+	"re_rack": "global", "fan_spread": "local", "ring_wave": "global",
+	"helix_drill": "local", "scrap_geyser": "global", "echo_charge": "global",
+	"feedback_loop": "global", "momentum_thief": "global", "domino_wire": "global",
+	"hairline_fracture": "global", "barrage_spring": "global", "warhead_slug": "global",
+	"static_burr": "global", "frost_barb": "global", "overpressure": "global",
+	"clean_break": "global", "tracer_round": "local", "impact_driver": "global",
+	"last_word": "global", "light_frame": "global", "glide_vane": "global",
+	"grapple_coil": "global", "tumbler_bearing": "global", "slipstream": "global",
+	"anchor_spring": "global", "jet_vent": "global", "low_rider": "global",
+	"rivet_seam": "global", "shock_liner": "global", "crush_guard": "global",
+	"deflect_plate": "global", "brace_frame": "global", "scrap_armor": "global",
+	"rebound_skin": "global", "warden_ward": "global", "magnet_coil": "global",
+	"cache_key": "global", "beacon_lamp": "global", "fast_hands": "global",
+	"echo_locator": "global", "synergy_lens": "global", "salvage_drone": "global",
+	"par_chip": "global", "cell_weapon": "global", "cell_movement": "global",
+	"cell_special": "global", "cell_smash": "global",
+	"breaker_drive": "local", "bladestorm_rotor": "local", "storm_mast": "local",
+	"grounding_spike": "local",
+}
+const FIXED_CHECKS := 26
 const FITTED_PARTS := ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",
 	"crush_guard", "cap_relay", "cap_relay", "cap_relay", "cap_relay", "magnet_spool", "cross_split"]
 
@@ -28,8 +68,8 @@ func _initialize() -> void:
 	var unique := {}
 	for id in FITTED_PARTS:
 		unique[id] = true
-	# 19 fixed + one per class + three per authored row + two per expected pool + one per fitted part.
-	EXPECTED_CHECKS = FIXED_CHECKS + ClassDef.all().size() + 3 * _authored_rows().size() \
+	# 26 fixed + one per class + four per authored row + two per expected pool + one per fitted part.
+	EXPECTED_CHECKS = FIXED_CHECKS + ClassDef.all().size() + 4 * _authored_rows().size() \
 		+ 2 * _expected_pools(_held()).size() + unique.size()
 	print("ui_build_readout_test: EXPECTED_CHECKS=%d" % EXPECTED_CHECKS)
 	if not ResourceLoader.exists("res://src/ui/build_readout.gd"):
@@ -151,9 +191,9 @@ func _check_build() -> void:
 	var capped := false
 	for row in data["parts"]:
 		if row["id"] == "cap_relay":
-			capped = row["copies"] == 4 and row["cap"] == 3 and row["at_cap"] and "cap 3" in row["text"]
+			capped = row["copies"] == 4 and row["cap"] == 3 and row["at_cap"] and "stops at 3 copies" in row["text"]
 		_report("part %s" % row["id"], row["text"] != "" and row["text"] in view.visible_text(), row["text"])
-	_report("family cap shown", capped, "four Cap Relay copies show cap 3")
+	_report("family cap shown", capped, "four Cap Relay copies show stops at 3 copies")
 	for key in pools:
 		var row: Dictionary = pools[key]
 		var neutral := 1.0 if row["pool"] == "multiplying" else 0.0
@@ -171,15 +211,10 @@ func _authored_rows() -> Dictionary:
 	return rows
 
 
-func _expected_layer(row: Dictionary) -> String:
-	return "global" if float(row.get("max_hp_bonus", 0.0)) != 0.0 \
-		or not row.get("effect", {}).is_empty() or not row.get("charges", {}).is_empty() \
-		or row.get("trigger", "") != "" or float(row.get("magnet", 1.0)) != 1.0 \
-		or float(row.get("cooldown_scale", 1.0)) != 1.0 or float(row.get("kill_scrap", 1.0)) != 1.0 else "local"
-
-
-func _layer_mismatch(id: String, row: Dictionary, actual: String) -> String:
-	var expected := _expected_layer(row)
+func _layer_mismatch(id: String, actual: String) -> String:
+	if not EXPECTED_LAYERS.has(id):
+		return "%s: missing from EXPECTED_LAYERS" % id
+	var expected: String = EXPECTED_LAYERS[id]
 	return "" if actual == expected else "%s: expected %s, got %s" % [id, expected, actual]
 
 
@@ -187,15 +222,59 @@ func _player_words(words: String) -> bool:
 	return not "_" in words and _dotted_key.search(words) == null
 
 
+func _stat_keys(rows: Dictionary) -> Array:
+	var keys := {}
+	for id in rows:
+		var d = Parts.def(id)
+		for key in d.reads:
+			keys[key] = true
+		var data: Dictionary = _readout.describe([id])
+		for key in data["pools"]:
+			keys[key] = true
+		var effect_key := Effects.stack_key(String(d.effect.get("do", "")))
+		if effect_key != "" and d.effect.has(effect_key):
+			keys[String(d.effect["do"]) + "." + effect_key] = true
+	return keys.keys()
+
+
+func _missing_stat_words(keys: Array, words: Dictionary) -> Array:
+	var missing: Array = []
+	for key in keys:
+		if not words.has(key) or String(words[key]).strip_edges() == "":
+			missing.append(key)
+	missing.sort()
+	return missing
+
+
 func _check_catalog() -> void:
 	var rows := _authored_rows()
 	_report("authored rows exist", not rows.is_empty(), "%d authored rows" % rows.size())
+	var missing_ids: Array = []
+	var extra_ids: Array = []
+	for id in rows:
+		if not EXPECTED_LAYERS.has(id):
+			missing_ids.append(id)
+	for id in EXPECTED_LAYERS:
+		if not rows.has(id):
+			extra_ids.append(id)
+	_report("literal layer table coverage", missing_ids.is_empty() and extra_ids.is_empty(),
+		"%d rows, %d expectations; missing %s; unauthored %s" % [rows.size(), EXPECTED_LAYERS.size(), missing_ids, extra_ids])
+	_report("alpha parts covered", AlphaDefs.PARTS.all(func(id): return rows.has(id) and EXPECTED_LAYERS.has(id)),
+		"%d alpha offer ids present in the authored table" % AlphaDefs.PARTS.size())
 	for id in rows:
 		var d = Parts.def(id)
-		var mismatch := _layer_mismatch(id, rows[id], d.layer)
-		_report("layer %s" % id, mismatch == "", "%s layer %s" % [id, d.layer] if mismatch == "" else mismatch)
-		_report("reads %s" % id, d.layer == "local" or not d.reads.is_empty(), str(d.reads))
 		var data: Dictionary = _readout.describe([id])
+		var mismatch := _layer_mismatch(id, d.layer)
+		var shown: Dictionary = data["parts"][0]
+		var layer_words := "weapon-local" if EXPECTED_LAYERS.get(id) == "local" else "player-global"
+		_report("layer %s" % id, mismatch == "" and _layer_mismatch(id, shown["layer"]) == "" and layer_words in shown["text"],
+			"%s layer %s" % [id, d.layer] if mismatch == "" else mismatch)
+		var raw: Dictionary = rows[id].duplicate(true)
+		raw.erase("layer")
+		var derived = PartDef.from_row(id, raw)
+		var derived_mismatch := _layer_mismatch(id, derived.layer)
+		_report("derived layer %s" % id, derived_mismatch == "", "PartDef rule agrees with table" if derived_mismatch == "" else derived_mismatch)
+		_report("reads %s" % id, d.layer == "local" or not d.reads.is_empty() and "\nReads: " in shown["text"], str(d.reads))
 		var words_ok := true
 		for part in data["parts"]:
 			for line in String(part["text"]).split("\n"):
@@ -206,11 +285,23 @@ func _check_catalog() -> void:
 		for pool in data["pools"].values():
 			words_ok = words_ok and _player_words(pool["text"])
 		_report("player words %s" % id, words_ok, str(data))
-	var planted: Dictionary = rows["rivet_plating"].duplicate(true)
-	planted["layer"] = "local"
-	var planted_def = PartDef.from_row("planted_rivet_plating", planted)
-	var planted_mismatch := _layer_mismatch("planted_rivet_plating", planted, planted_def.layer)
-	_report("planted layer control", planted_mismatch != "" and _expected_layer(planted) == "global", planted_mismatch)
+	var stat_keys := _stat_keys(rows)
+	var missing_words := _missing_stat_words(stat_keys, _readout.STAT_WORDS)
+	_report("STAT_WORDS coverage", missing_words.is_empty(), "missing %s from %d read, pool and bonus keys" % [missing_words, stat_keys.size()])
+	var planted_words: Dictionary = _readout.STAT_WORDS.duplicate()
+	planted_words.erase("magnet")
+	var planted_missing := _missing_stat_words(stat_keys, planted_words)
+	_report("planted STAT_WORDS control", "magnet" in planted_missing, "missing %s" % [planted_missing])
+	var capped_mod: Dictionary = _readout.describe(["tracer_round", "tracer_round", "tracer_round", "tracer_round", "tracer_round"])
+	var mod_text: String = capped_mod["parts"][0]["bonuses"][0]["text"]
+	_report("multiplying cap unit", "total x" in mod_text and "cap x" in mod_text, mod_text)
+	_report("remaining pool player phrase", "shrinks what is left" in _readout.describe(["crush_guard"])["pools"]["resistance"]["text"], "resistance uses shrinks what is left")
+	for control in [{"id": "spring_shims", "layer": "local"}, {"id": "hot_rivets", "layer": "global"}]:
+		var planted: Dictionary = rows[control["id"]].duplicate(true)
+		planted["layer"] = control["layer"]
+		var planted_def = PartDef.from_row(control["id"], planted)
+		var planted_mismatch := _layer_mismatch(control["id"], planted_def.layer)
+		_report("planted layer control %s" % control["id"], planted_mismatch != "" and planted_def.layer == control["layer"], planted_mismatch)
 
 
 func _check_tree() -> void:
