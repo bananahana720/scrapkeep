@@ -42,7 +42,7 @@ func _run() -> void:
 				w.ctx.events.world_fact.emit(fact.fact, fact.at)
 				phases.append(fact)
 				if row.family == "natural":
-					_check_mark(row.id + " " + fact.phase, handler.active[row.id].mark, EventKinds.world_row(fact.fact))
+					_check_mark(row.id + " " + fact.phase, handler.active[row.id].mark, EventKinds.world_row(fact.fact), row, w.events._park.park_rows[0])
 		t.eq(kind + " both cue phases", phases.size(), 2)
 		var cues: Array = audio.cue_log.filter(func(c): return c[0] == "world_fact" and c[2] == "now")
 		t.eq(kind + " one sound per phase", cues.size(), 2)
@@ -61,26 +61,38 @@ func _run() -> void:
 	quit(t.verdict())
 
 
-func _check_mark(label: String, mark: Node3D, spec: Dictionary) -> void:
+func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary, site: Dictionary) -> void:
 	var meshes := mark.get_children().filter(func(child): return child is MeshInstance3D)
 	var shape_ok := not meshes.is_empty()
 	var color_ok := shape_ok
+	var min_radius := INF
+	var max_radius := -INF
+	var max_cross := 0.0
+	var half := Vector2(float(site.size[2]), float(site.size[0])) * 0.5
+	var yaw := deg_to_rad(float(site.yaw_deg))
+	if row.kind == "lightning":
+		half = Vector2.ONE * float(row.effect.strike_m)
+		yaw = 0.0
 	for mesh: MeshInstance3D in meshes:
 		var material := mesh.material_override as StandardMaterial3D
 		color_ok = color_ok and material != null and material.albedo_color == spec.color
-		match spec.shape:
-			"wave":
-				shape_ok = shape_ok and mesh.mesh is ArrayMesh
-				if mesh.mesh is ArrayMesh:
-					var vertices: PackedVector3Array = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
-					var low := INF
-					var high := -INF
-					for vertex in vertices:
-						low = minf(low, vertex.y)
-						high = maxf(high, vertex.y)
-					shape_ok = shape_ok and high - low > 0.05
-			"cross": shape_ok = shape_ok and mesh.mesh is BoxMesh and meshes.size() == 2
-			"burst": shape_ok = shape_ok and mesh.mesh is SphereMesh
-			"ring": shape_ok = shape_ok and mesh.mesh is TorusMesh
-	t.check(label + " actual mesh follows WORLD_ROWS shape " + spec.shape, shape_ok)
+		shape_ok = shape_ok and mesh.mesh is ArrayMesh
+		var vertices: PackedVector3Array = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		var low := INF
+		var high := -INF
+		for vertex in vertices:
+			var point: Vector3 = mesh.global_transform * vertex
+			var local := Vector2(point.x, point.z).rotated(yaw)
+			min_radius = minf(min_radius, (local / half).length())
+			max_radius = maxf(max_radius, (local / half).length())
+			max_cross = maxf(max_cross, minf(absf(local.x), absf(local.y)))
+			low = minf(low, point.y)
+			high = maxf(high, point.y)
+			match spec.shape:
+				"cross": shape_ok = shape_ok and (absf(local.x) <= 0.1501 or absf(local.y) <= 0.1501)
+				"burst": shape_ok = shape_ok and (local / half).length() <= 1.0001
+				"ring": shape_ok = shape_ok and (local / half).length() >= 0.9649 and (local / half).length() <= 1.0001
+		if spec.shape == "wave":
+			shape_ok = shape_ok and high - low > 0.05
+	t.check(label + " actual mesh follows WORLD_ROWS shape " + spec.shape, shape_ok, "radius=%s..%s cross=%s" % [min_radius, max_radius, max_cross])
 	t.check(label + " actual material follows WORLD_ROWS color", color_ok)

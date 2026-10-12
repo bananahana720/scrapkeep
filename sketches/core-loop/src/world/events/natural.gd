@@ -7,7 +7,6 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Flood := preload("res://src/world/flood.gd")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
-const LocalMesh := preload("res://src/world/local_mesh.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
@@ -60,12 +59,23 @@ class WaterView:
 class WaterSurface:
 	extends RefCounted
 	var mesh: ArrayMesh
+	var vertices := PackedVector3Array()
 	var cells := {}
 	func height(point: Vector2) -> float:
 		var cell := Vector2i(floori(point.x / ParkTerrain.STEP), floori(point.y / ParkTerrain.STEP))
-		var corners: PackedFloat64Array = cells[cell]
-		var f := point / ParkTerrain.STEP - Vector2(cell)
-		return corners[0] + (corners[1] - corners[0]) * f.x + (corners[2] - corners[0]) * f.y if f.x + f.y <= 1.0 else corners[3] + (corners[2] - corners[3]) * (1.0 - f.x) + (corners[1] - corners[3]) * (1.0 - f.y)
+		for k in cells.get(cell, []):
+			var a := vertices[k]
+			var b := Vector2(vertices[k + 1].x - a.x, vertices[k + 1].z - a.z)
+			var c := Vector2(vertices[k + 2].x - a.x, vertices[k + 2].z - a.z)
+			var d := point - Vector2(a.x, a.z)
+			var determinant := b.cross(c)
+			if absf(determinant) < 0.0000001:
+				continue
+			var u := d.cross(c) / determinant
+			var v := b.cross(d) / determinant
+			if u >= -0.00001 and v >= -0.00001 and u + v <= 1.00001:
+				return a.y + u * (vertices[k + 1].y - a.y) + v * (vertices[k + 2].y - a.y)
+		return -INF
 
 
 # Terrain's material queries use the same surfaces the Flood nodes draw.
@@ -114,26 +124,6 @@ class OverlayMap:
 			return -INF
 		var local := (Vector2(x, z) - Vector2(float(p.site.at[0]), float(p.site.at[1]))).rotated(deg_to_rad(float(p.site.yaw_deg)))
 		return float(p.height.call(local.x, local.y))
-
-
-class Surface:
-	extends RefCounted
-	var size := Vector2.ZERO
-	var nx := 0
-	var nz := 0
-	var heights := PackedFloat64Array()
-	func height(x: float, z: float) -> float:
-		var gx := clampf((x / size.x + 0.5) * nx, 0.0, float(nx))
-		var gz := clampf((z / size.y + 0.5) * nz, 0.0, float(nz))
-		var i := mini(int(gx), nx - 1)
-		var j := mini(int(gz), nz - 1)
-		var fx := gx - i
-		var fz := gz - j
-		var a := heights[j * (nx + 1) + i]
-		var b := heights[j * (nx + 1) + i + 1]
-		var c := heights[(j + 1) * (nx + 1) + i]
-		var d := heights[(j + 1) * (nx + 1) + i + 1]
-		return a + (b - a) * fx + (c - a) * fz if fx + fz <= 1.0 else d + (c - d) * (1.0 - fx) + (b - d) * (1.0 - fz)
 
 
 func setup(world_ref) -> void:
@@ -209,17 +199,22 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 
 func _process(_delta: float) -> void:
 	for state in active.values():
-		if state.phase != "telegraph":
-			continue
-		var dust = state.mark.get_node_or_null("DustCurtain")
-		var crack = state.mark.get_node_or_null("CrawlingCrack")
-		if dust == null or crack == null:
+		if state.phase != "telegraph" or not state.mark.has_node("DustCurtain"):
 			continue
 		var row: Dictionary = _original_map.park.event_rows.filter(func(r): return r.id == state.mark.get_meta("row_id"))[0]
 		var progress := clampf((world.events.stage_time - float(state.announced_s)) / float(row.telegraph.lead_s), 0.001, 1.0)
-		dust.scale.y = progress
-		crack.scale.z = progress
-		crack.position.z = -float(state.geometry.half.y) * (1.0 - progress)
+		if int(progress * 30.0) == int(float(state.get("warning_progress", -1.0)) * 30.0):
+			continue
+		state.warning_progress = progress
+		var spec: Dictionary = Kinds.world_row(row.telegraph.form)
+		var half: Vector2 = state.geometry.half
+		var dust = state.mark.get_node("DustCurtain")
+		dust.mesh = _project_surface(state.geometry,
+			[_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)],
+			func(local, _base): return float(spec.dust_height_m) * progress * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)).mesh
+		var crack = state.mark.get_node("CrawlingCrack")
+		crack.mesh = _project_surface(state.geometry,
+			[_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), Vector2(half.x, lerpf(-half.y, half.y, progress)))]).mesh
 
 
 func _at(site: Dictionary) -> Vector3:
@@ -257,55 +252,70 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	_water_field.refresh()
 
 
+func _rectangle(low: Vector2, high: Vector2) -> Array:
+	return [low, Vector2(high.x, low.y), high, Vector2(low.x, high.y)]
+
+
 func _prepare_water(geometry: Dictionary) -> WaterSurface:
+	return _project_surface(geometry, [_rectangle(-geometry.half, geometry.half)], Callable(), true)
+
+
+# Clip each shape to the terrain's actual 2 m triangles before projecting. The resulting
+# triangles, including their interiors, share terrain.gd's b-c diagonal and interpolation.
+func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(), water := false) -> WaterSurface:
 	var surface := WaterSurface.new()
-	var half: Vector2 = geometry.half
 	var centre := Vector2(geometry.at.x, geometry.at.z)
 	var yaw: float = geometry.yaw
-	var low := Vector2.INF
-	var high := -Vector2.INF
-	for corner in [Vector2(-half.x, -half.y), Vector2(half.x, -half.y), half, Vector2(-half.x, half.y)]:
-		var point: Vector2 = corner.rotated(-yaw) + centre
-		low = low.min(point)
-		high = high.max(point)
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
-	var ground_vertices := {}
-	for j in range(floori(low.y / ParkTerrain.STEP), floori(high.y / ParkTerrain.STEP) + 1):
-		for i in range(floori(low.x / ParkTerrain.STEP), floori(high.x / ParkTerrain.STEP) + 1):
-			var cell := Vector2i(i, j)
-			var corners := PackedFloat64Array()
-			for delta in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i.ONE]:
-				var vertex: Vector2i = cell + delta
-				if not ground_vertices.has(vertex):
-					ground_vertices[vertex] = _water_ground(Vector2(vertex) * ParkTerrain.STEP)
-				corners.append(ground_vertices[vertex])
-			if "_holes" in world.terrain:
-				var terrain = world.terrain
-				var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], (i + 0.5) * ParkTerrain.STEP, (j + 0.5) * ParkTerrain.STEP)
-				if not is_nan(floor_y):
-					for k in 4:
-						corners[k] = minf(corners[k], floor_y)
-			surface.cells[cell] = corners
-			var a := Vector2(i, j) * ParkTerrain.STEP
-			var b := a + Vector2.RIGHT * ParkTerrain.STEP
-			var c := a + Vector2.DOWN * ParkTerrain.STEP
-			var d := a + Vector2.ONE * ParkTerrain.STEP
-			for triangle in [[a, b, c], [b, d, c]]:
-				var polygon: Array = triangle.map(func(p): return (p - centre).rotated(yaw))
-				for axis in 2:
-					polygon = _clip_water(polygon, axis, half[axis], 1.0)
-					polygon = _clip_water(polygon, axis, half[axis], -1.0)
-				for k in range(1, polygon.size() - 1):
-					var face := PackedVector3Array()
-					for local in [polygon[0], polygon[k], polygon[k + 1]]:
-						var point: Vector2 = local.rotated(-yaw) + centre
-						var f := (point - a) / ParkTerrain.STEP
-						var y: float = corners[0] + (corners[1] - corners[0]) * f.x + (corners[2] - corners[0]) * f.y if triangle[0] == a else corners[3] + (corners[2] - corners[3]) * (1.0 - f.x) + (corners[1] - corners[3]) * (1.0 - f.y)
-						face.append(Vector3(point.x, y, point.y))
-					var normal := (face[2] - face[0]).cross(face[1] - face[0]).normalized()
-					vertices.append_array(face)
-					normals.append_array([normal, normal, normal])
+	for shape: Array in shapes:
+		var polygon := shape.map(func(p): return p.rotated(-yaw) + centre)
+		var low := Vector2.INF
+		var high := -Vector2.INF
+		for point: Vector2 in polygon:
+			low = low.min(point)
+			high = high.max(point)
+		for j in range(floori(low.y / ParkTerrain.STEP), floori(high.y / ParkTerrain.STEP) + 1):
+			for i in range(floori(low.x / ParkTerrain.STEP), floori(high.x / ParkTerrain.STEP) + 1):
+				var cell := Vector2i(i, j)
+				var a := Vector2(i, j) * ParkTerrain.STEP
+				var b := a + Vector2.RIGHT * ParkTerrain.STEP
+				var c := a + Vector2.DOWN * ParkTerrain.STEP
+				var d := a + Vector2.ONE * ParkTerrain.STEP
+				var heights := PackedFloat64Array()
+				for point in [a, b, c, d]:
+					var y: float = _water_ground(point) if water else world.terrain.height(point.x, point.y)
+					if not water and "_heights" in world.terrain:
+						y = maxf(y, world.terrain._grid_height(world.terrain._heights[world.terrain.stage - 1], point.x, point.y))
+					heights.append(y)
+				if water and "_holes" in world.terrain:
+					var terrain = world.terrain
+					var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], a.x + ParkTerrain.STEP * 0.5, a.y + ParkTerrain.STEP * 0.5)
+					if not is_nan(floor_y):
+						for k in 4:
+							heights[k] = minf(heights[k], floor_y)
+				for triangle in [[a, b, c], [b, d, c]]:
+					var clipped: Array = polygon
+					for edge in 3:
+						clipped = _clip_edge(clipped, triangle[edge], triangle[(edge + 1) % 3])
+					for k in range(1, clipped.size() - 1):
+						var face := PackedVector3Array()
+						for point: Vector2 in [clipped[0], clipped[k], clipped[k + 1]]:
+							var f := (point - a) / ParkTerrain.STEP
+							var y: float = heights[0] + (heights[1] - heights[0]) * f.x + (heights[2] - heights[0]) * f.y if triangle[0] == a else heights[3] + (heights[2] - heights[3]) * (1.0 - f.x) + (heights[1] - heights[3]) * (1.0 - f.y)
+							if offset.is_valid():
+								y += maxf(0.0, float(offset.call((point - centre).rotated(yaw), y)))
+							face.append(Vector3(point.x, y, point.y))
+						var normal := (face[2] - face[0]).cross(face[1] - face[0])
+						if normal.length_squared() < 0.00000001:
+							continue
+						if not surface.cells.has(cell):
+							surface.cells[cell] = []
+						surface.cells[cell].append(vertices.size())
+						vertices.append_array(face)
+						normal = normal.normalized()
+						normals.append_array([normal, normal, normal])
+	surface.vertices = vertices
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
@@ -315,8 +325,26 @@ func _prepare_water(geometry: Dictionary) -> WaterSurface:
 		indices.append(k)
 	arrays[Mesh.ARRAY_INDEX] = indices
 	surface.mesh = ArrayMesh.new()
-	surface.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	if not vertices.is_empty():
+		surface.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return surface
+
+
+func _clip_edge(polygon: Array, a: Vector2, b: Vector2) -> Array:
+	var clipped := []
+	if polygon.is_empty():
+		return clipped
+	var previous: Vector2 = polygon[-1]
+	var previous_distance := (b - a).cross(previous - a)
+	for point: Vector2 in polygon:
+		var distance := (b - a).cross(point - a)
+		if (distance >= 0.0) != (previous_distance >= 0.0):
+			clipped.append(previous.lerp(point, previous_distance / (previous_distance - distance)))
+		if distance >= 0.0:
+			clipped.append(point)
+		previous = point
+		previous_distance = distance
+	return clipped
 
 
 func _water_ground(point: Vector2) -> float:
@@ -332,23 +360,6 @@ func _water_ground(point: Vector2) -> float:
 			if not is_nan(floor_y):
 				ground = minf(ground, floor_y)
 	return ground
-
-
-func _clip_water(polygon: Array, axis: int, extent: float, sign_axis: float) -> Array:
-	var clipped := []
-	if polygon.is_empty():
-		return clipped
-	var previous: Vector2 = polygon[-1]
-	var previous_distance := previous[axis] * sign_axis - extent
-	for point: Vector2 in polygon:
-		var distance := point[axis] * sign_axis - extent
-		if (distance <= 0.0) != (previous_distance <= 0.0):
-			clipped.append(previous.lerp(point, previous_distance / (previous_distance - distance)))
-		if distance <= 0.0:
-			clipped.append(point)
-		previous = point
-		previous_distance = distance
-	return clipped
 
 
 func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
@@ -382,21 +393,20 @@ func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
 		if kind == "collapse":
 			return base + 2.0 * clampf((z + half.y) / (2.0 * half.y), 0.0, 1.0)
 		return base + Gorge.rubble_profile(Vector2(x, z).length() * Gorge.RUBBLE_RADIUS / radius)
-	var step := maxf(0.5, minf(half.x, half.y) / 8.0)
-	var surface := Surface.new()
-	surface.size = half * 2.0
-	surface.nx = ceili(surface.size.x / step)
-	surface.nz = ceili(surface.size.y / step)
-	for j in surface.nz + 1:
-		for i in surface.nx + 1:
-			var x := -half.x + i * surface.size.x / surface.nx
-			var z := -half.y + j * surface.size.y / surface.nz
-			surface.heights.append(float(height.call(x, z)))
-	var sampled := Callable(surface, "height")
-	var body := LocalMesh.grid(self, "Natural_" + row.id, half * 2.0, step, sampled,
-		func(_x, _z): return Palette.SANDSTONE)
-	body.position = Vector3(at.x, 0.0, at.z)
-	body.rotation.y = yaw
+	var surface := _project_surface(record.geometry, [_rectangle(-half, half)],
+		func(local, base): return float(height.call(local.x, local.y)) - base)
+	var sampled := func(x: float, z: float) -> float:
+		return surface.height(Vector2(x, z).rotated(-yaw) + Vector2(at.x, at.z))
+	var body := StaticBody3D.new()
+	body.name = "Natural_" + row.id
+	var view := MeshInstance3D.new()
+	view.mesh = surface.mesh
+	view.material_override = Palette.ground_material()
+	var collider := CollisionShape3D.new()
+	collider.shape = surface.mesh.create_trimesh_shape()
+	body.add_child(view)
+	body.add_child(collider)
+	add_child(body)
 	var before: Node3D = null
 	if world.terrain.has_method("geometry_root"):
 		before = world.terrain.geometry_root(world.terrain.stage).find_child("Park_" + str(row.site), true, false) as Node3D
@@ -461,50 +471,39 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var mark := Node3D.new()
 	mark.set_meta("row_id", row.id)
 	add_child(mark)
-	mark.position = geometry.at + Vector3.UP * 0.15
-	mark.rotation.y = geometry.yaw
+	mark.position = Vector3.UP * 0.15
 	var form: String = row.telegraph.form
 	var spec: Dictionary = Kinds.world_row(world.events.PARK_LAND_FACTS[form] if landed else form)
 	var half: Vector2 = geometry.half
 	var mesh := MeshInstance3D.new()
+	mesh.name = "Style"
+	mesh.set_meta("shape", spec.shape)
+	var shapes := []
+	var offset := Callable()
 	if spec.shape == "dust_crack":
 		mesh.name = "DustCurtain"
-		var curtain := BoxMesh.new()
-		curtain.size = Vector3(float(spec.crack_width_m), float(spec.dust_height_m), half.y * 2.0)
-		mesh.mesh = curtain
-		mesh.position = Vector3(half.x, float(spec.dust_height_m) * 0.5, 0.0)
+		shapes = [_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)]
+		offset = func(local, _base): return float(spec.dust_height_m) * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)
 		var crack := MeshInstance3D.new()
 		crack.name = "CrawlingCrack"
-		var strip := BoxMesh.new()
-		strip.size = Vector3(float(spec.crack_width_m), 0.1, half.y * 2.0)
-		crack.mesh = strip
-		crack.position.x = half.x
+		crack.mesh = _project_surface(geometry, shapes).mesh
 		crack.material_override = Palette.unshaded(spec.color)
 		mark.add_child(crack)
-	elif spec.shape == "burst":
-		var shape := SphereMesh.new()
-		shape.radius = 1.0
-		shape.height = 2.0
-		mesh.mesh = shape
-		mesh.scale = Vector3(half.x, 0.3, half.y)
 	elif spec.shape == "cross":
-		var shape := BoxMesh.new()
-		shape.size = Vector3(half.x * 2.0, 0.1, 0.3)
-		mesh.mesh = shape
-		var other := MeshInstance3D.new()
-		var other_shape := BoxMesh.new()
-		other_shape.size = Vector3(0.3, 0.1, half.y * 2.0)
-		other.mesh = other_shape
-		other.material_override = Palette.unshaded(spec.color)
-		mark.add_child(other)
+		shapes = [_rectangle(Vector2(-half.x, -0.15), Vector2(half.x, 0.15)),
+			_rectangle(Vector2(-0.15, -half.y), Vector2(0.15, half.y))]
 	elif spec.shape == "wave":
-		mesh.mesh = _wave_mesh(half)
+		shapes = [_rectangle(-half, half)]
+		offset = func(local, _base): return 0.2 * (1.0 + sin((local.y / (half.y * 2.0) + 0.5) * TAU * 3.0))
 	else:
-		var shape := TorusMesh.new()
-		shape.inner_radius = 0.97
-		shape.outer_radius = 1.0
-		mesh.mesh = shape
-		mesh.scale = Vector3(half.x, 0.05, half.y)
+		var segments := 32
+		for k in segments:
+			var a := Vector2(cos(TAU * k / segments), sin(TAU * k / segments)) * half
+			var b := Vector2(cos(TAU * (k + 1) / segments), sin(TAU * (k + 1) / segments)) * half
+			shapes.append([Vector2.ZERO, a, b] if spec.shape == "burst" else [a, b, b * 0.97, a * 0.97])
+		if spec.shape == "burst":
+			offset = func(local, _base): return 0.3 * maxf(0.0, 1.0 - (local / half).length_squared())
+	mesh.mesh = _project_surface(geometry, shapes, offset).mesh
 	mesh.material_override = Palette.unshaded(spec.color)
 	mark.add_child(mesh)
 	if row.kind != "lightning":
@@ -520,44 +519,12 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 
 func _footprint_mesh(geometry: Dictionary) -> ArrayMesh:
 	var half: Vector2 = geometry.half
-	var vertices := PackedVector3Array()
-	var indices := PackedInt32Array()
-	for inset in [0.0, 0.3]:
-		var edge: Vector2 = (half - Vector2.ONE * float(inset)).max(Vector2.ZERO)
-		for corner in [Vector2(-edge.x, -edge.y), Vector2(edge.x, -edge.y), edge, Vector2(-edge.x, edge.y)]:
-			var point: Vector2 = corner.rotated(-float(geometry.yaw)) + Vector2(geometry.at.x, geometry.at.z)
-			var y: float = world.terrain.height(point.x, point.y) - geometry.at.y
-			vertices.append(Vector3(corner.x, y, corner.y))
-	for k in 4:
-		var next := (k + 1) % 4
-		indices.append_array([k, next, k + 4, next, next + 4, k + 4])
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_INDEX] = indices
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	return mesh
-
-
-func _wave_mesh(half: Vector2) -> ArrayMesh:
-	var vertices := PackedVector3Array()
-	var indices := PackedInt32Array()
-	var segments := 32
-	for j in segments + 1:
-		var z := lerpf(-half.y, half.y, float(j) / segments)
-		var y := sin(float(j) / segments * TAU * 3.0) * 0.2
-		vertices.append_array([Vector3(-half.x, y, z), Vector3(half.x, y, z)])
-		if j < segments:
-			var a := j * 2
-			indices.append_array([a, a + 1, a + 2, a + 1, a + 3, a + 2])
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_INDEX] = indices
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	return mesh
+	var inset := (half - Vector2.ONE * 0.3).max(Vector2.ZERO)
+	return _project_surface(geometry, [
+		_rectangle(-half, Vector2(half.x, -inset.y)),
+		_rectangle(Vector2(-half.x, inset.y), half),
+		_rectangle(Vector2(-half.x, -inset.y), Vector2(-inset.x, inset.y)),
+		_rectangle(Vector2(inset.x, -inset.y), Vector2(half.x, inset.y))]).mesh
 
 
 func _show_landing(row: Dictionary, state: Dictionary) -> void:
