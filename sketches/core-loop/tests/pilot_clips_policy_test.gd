@@ -3,9 +3,10 @@ extends SceneTree
 # PE-0 (design-v3/PILOT-CLIPS.md sections 1.1, 3, 5 and 8): the clip router's policy on
 # synthetic clips, and the mecha motion code on a fixture cockpit.
 #
-# Routing: today's GLBs carry the seven kept clips only, so the eleven new names are copies of
-# drop_land cut to Sable's end frames (tests/support/pilot_clip_trigger.gd), the way the policy
-# fixture in pilot_reactions_test duplicates drop_land. It proves the stop-and-reset fallback with
+# Routing: the test first strips Sable's animator to the seven kept clips, so it does not depend
+# on whether Sable has shipped all 18. The eleven new names are then copies of drop_land cut to
+# Sable's end frames (tests/support/pilot_clip_trigger.gd), the way the policy fixture in
+# pilot_reactions_test duplicates drop_land. It proves the stop-and-reset fallback with
 # one warning, the base hand-off, the ride base, the chain priorities, the one-slot queue, the
 # miss cut-in, the argument filter and a five-argument signal reaching react.
 #
@@ -51,6 +52,7 @@ func _run() -> void:
 		_done(game)
 		return
 	player.set_piece_phase = func() -> String: return _phase
+	Trigger.strip_to_kept(rec.animator)
 	_fallback(hero, player, rec)
 	Trigger.add_synthetic_clips(rec.animator, CLASS_ID)
 	hero._process(20.0)
@@ -74,10 +76,10 @@ func _playing(rec: Dictionary, clip: String) -> bool:
 	return animator.is_playing() and animator.current_animation == clip
 
 
-# Today's GLB has no idle_loop: a clip end stops and resets, and warns once for the pilot.
+# The stripped GLB has no idle_loop: a clip end stops and resets, and warns once for the pilot.
 func _fallback(hero, player, rec: Dictionary) -> void:
 	var animator: AnimationPlayer = rec.animator
-	_t.check("today's GLB lacks idle_loop", not animator.has_animation("idle_loop"))
+	_t.check("the stripped GLB lacks idle_loop", not animator.has_animation("idle_loop"))
 	_t.check("a clip the GLB lacks (smash) is refused", not hero.react(player, "slammed", [Vector3.ZERO, 30.0, 1.0]))
 	_t.check("near_miss plays phew", hero.react(player, "near_miss"))
 	Trigger.finish(rec)
