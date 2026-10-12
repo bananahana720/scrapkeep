@@ -6,7 +6,7 @@ import sys
 import bpy
 from mathutils import Euler, Vector
 
-HERE = Path(__file__).resolve().parents[1]
+HERE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(HERE / 'tools/blender'))
 import pilot_clips
 import pilot_arm

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/blender'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/blender'))
 from check_pilot_clip_cells import renderer_functions
 
 
