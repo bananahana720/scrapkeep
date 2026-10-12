@@ -154,6 +154,7 @@ func _run() -> void:
 				Engine.time_scale = 10.0
 				await _frames(45)
 				Engine.time_scale = 1.0
+				t.check("real Warden closes cracked stagger before the next cycle", not warden.staggered(), "stagger left %s" % warden.stagger_left())
 		t.eq("real combat loses two Warden chunks", warden.chunks_left(), 2)
 	Engine.time_scale = 10.0
 	await _frames(150)
