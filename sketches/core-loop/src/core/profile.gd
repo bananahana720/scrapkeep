@@ -47,6 +47,9 @@ var _on_disk := false
 var _loaded_generation := 0
 var _backup_path := ""
 var _backup_bytes := PackedByteArray()
+var _loaded_tally_prefixes := {}
+var _pending_tally_settlements := {}
+var _last_closed_tally_run := ""
 
 
 func _init(file_path := "user://profile.json") -> void:
@@ -64,6 +67,9 @@ func load_profile() -> bool:
 	_loaded_generation = 0
 	_backup_path = ""
 	_backup_bytes = PackedByteArray()
+	_loaded_tally_prefixes = {}
+	_pending_tally_settlements = {}
+	_last_closed_tally_run = ""
 	var read := _read()
 	if read["state"] == "missing":
 		return true
@@ -74,6 +80,7 @@ func load_profile() -> bool:
 	_doc = read["doc"]
 	_on_disk = true
 	_loaded_generation = int(_doc["generation"])
+	_remember_run_tallies()
 	if read["from_version"] < SCHEMA:
 		_backup_path = "%s.v%d" % [path, read["from_version"]]
 		_backup_bytes = read["bytes"]
@@ -95,6 +102,7 @@ func save() -> bool:
 		last_error = "not saving: %s changed since it was loaded and cannot be read (%s)" % [path, read["why"]]
 		return false
 	if read["state"] == "ok" and (not _on_disk or int(read["doc"]["generation"]) != _loaded_generation):
+		_discard_compacted_tallies(next["stats"], read["doc"]["stats"])
 		next = merge(next, read["doc"])
 		if backup_path.is_empty() and read["from_version"] < SCHEMA:
 			backup_path = "%s.v%d" % [path, read["from_version"]]
@@ -106,6 +114,7 @@ func save() -> bool:
 			return false
 		_backup_path = ""
 		_backup_bytes = PackedByteArray()
+	_compact_run_tallies(next["stats"])
 	next["generation"] = int(next["generation"]) + 1
 	var err := SafeStore.write_atomic(path, JSON.stringify(next, "  ", true, true))
 	if err != OK:
@@ -114,6 +123,10 @@ func save() -> bool:
 	_doc = next
 	_on_disk = true
 	_loaded_generation = int(next["generation"])
+	_remember_run_tallies()
+	if not _pending_tally_settlements.is_empty():
+		_last_closed_tally_run = _pending_tally_settlements.keys().back()
+		_pending_tally_settlements.clear()
 	last_error = ""
 	return true
 
@@ -239,6 +252,8 @@ func set_stat(stat_name: String, value: float) -> void:
 func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
 	if run_id.is_empty() or totals.size() != RUN_TALLY_KEYS.size():
 		return false
+	if run_id == _last_closed_tally_run or _pending_tally_settlements.has(run_id):
+		return false
 	var prefix := RUN_TALLY_PREFIX + run_id + "."
 	for key in RUN_TALLY_KEYS:
 		var value = totals.get(key)
@@ -262,6 +277,48 @@ func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
 			add_stat(key, delta)
 			set_stat(prefix + key, value)
 	return changed
+
+
+func settle_run_tallies(run_id: String) -> bool:
+	if run_id.is_empty() or run_id == _last_closed_tally_run or _pending_tally_settlements.has(run_id):
+		return false
+	_pending_tally_settlements[run_id] = true
+	return true
+
+
+func _remember_run_tallies() -> void:
+	_loaded_tally_prefixes = {}
+	for stat_name in _doc["stats"]:
+		if String(stat_name).begins_with(RUN_TALLY_PREFIX):
+			_loaded_tally_prefixes[String(stat_name).substr(0, String(stat_name).rfind(".") + 1)] = true
+
+
+func _discard_compacted_tallies(stats: Dictionary, saved: Dictionary) -> void:
+	# A newer save folded these loaded contributions into its base. A stale writer
+	# must not bring their per-run keys back, even if its snapshot advanced afterward.
+	for prefix in _loaded_tally_prefixes:
+		var still_open := false
+		for key in RUN_TALLY_KEYS:
+			still_open = still_open or saved.has(prefix + key)
+		if not still_open:
+			for key in RUN_TALLY_KEYS:
+				stats.erase(prefix + key)
+
+
+func _compact_run_tallies(stats: Dictionary) -> void:
+	if _pending_tally_settlements.is_empty():
+		return
+	for run_id in _pending_tally_settlements:
+		var prefix: String = RUN_TALLY_PREFIX + run_id + "."
+		for key in RUN_TALLY_KEYS:
+			var base: String = RUN_TALLY_BASE + key
+			if not stats.has(base):
+				stats[base] = float(stats.get(key, 0.0)) - _run_contributions(stats, key)
+			stats[base] += float(stats.get(prefix + key, 0.0))
+			stats.erase(prefix + key)
+	for key in RUN_TALLY_KEYS:
+		if stats.has(RUN_TALLY_BASE + key):
+			stats[key] = float(stats[RUN_TALLY_BASE + key]) + _run_contributions(stats, key)
 
 
 static func _run_contributions(stats: Dictionary, key: String) -> float:

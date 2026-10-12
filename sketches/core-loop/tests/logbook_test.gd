@@ -8,9 +8,10 @@ const Intent := preload("res://src/movement/intent.gd")
 const RunLog := preload("res://src/core/run_log.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
+const GameEvents := preload("res://src/core/game_events.gd")
 const PAGE := "res://src/ui/logbook_page.gd"
-const KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
-const EXPECTED_CHECKS := 49
+const KEYS := Profile.RUN_TALLY_KEYS
+const EXPECTED_CHECKS := 65
 
 # A full three-stage flow, as spine_run_log_test uses, with combat and boss doubles.
 class ScriptedGame extends Game:
@@ -19,7 +20,8 @@ class ScriptedGame extends Game:
 
 var _t := T.new("logbook_test")
 var _game
-var _expected := {"stages_cleared": 0, "time": 0.0, "kills": 0, "deaths": 0, "wardens_seen": 0}
+var _expected := _zero_tallies()
+var _expected_wardens := {}
 
 
 func _initialize() -> void:
@@ -53,7 +55,9 @@ func _run() -> void:
 	_game.flow.force_warden = true
 	_game.player.source = Intent.Scripted.new()
 	_game.events.stage_cleared.connect(func(_stage: int): _expected["stages_cleared"] += 1)
-	_game.events.warden_engaged.connect(func(_stage: int): _expected["wardens_seen"] += 1)
+	_game.events.warden_engaged.connect(func(stage: int):
+		_expected_wardens["%d/%d" % [_game.run.world, stage]] = true
+		_expected["wardens_seen"] = _expected_wardens.size())
 	_game.events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): _expected["kills"] += 1)
 	_game.events.player_died.connect(func(): _expected["deaths"] += 1)
 	_game.flow.press_start()
@@ -102,17 +106,24 @@ func _check_page(codex, profile) -> void:
 
 
 func _check_run(spawner, run, profile) -> void:
-	_advance(run, 2.25)
+	_advance(run, 2.5)
 	spawner.strike(_game.flow.warden, "arc", 99999.0)
 	run.record_kill("chaser", Vector3.ZERO, 0)
 	run.damage(99999.0, "test")
 	var at_death: Dictionary = run.tallies()
+	var open_profile := Profile.new(profile.path)
+	var open_entrance := run.to_entrance_doc()
+	open_entrance.erase("run_tallies")
+	var resumed := RunState.new(null, 123)
+	var resumed_ok := open_profile.load_profile() and resumed.from_entrance_doc(open_entrance)
+	resumed.reconcile_tallies(open_profile.run_tallies(run.run_id))
+	_t.check("SR12 open run retains logged contributions on resume", resumed_ok and _same_tallies(resumed.tallies(), at_death))
 	_game.flow.retry_stage()
 	_t.eq("SR12 retry retains cumulative tallies", run.tallies(), at_death)
 	_t.check("SR12 tally kills survive combat checkpoint rewind", int(run.tallies()["kills"]) > run.kills)
 	for stage in range(1, _game.flow.final_stage() + 1):
 		_t.eq("SR12 scripted flow reaches stage %d" % stage, run.stage, stage)
-		_advance(run, float(stage) + 0.125)
+		_advance(run, float(stage) + 0.5)
 		spawner.strike(_game.flow.warden, "arc", 99999.0)
 		if stage == 1:
 			_t.eq("SR12 retried stage counts its Warden once", run.tallies()["wardens_seen"], 1)
@@ -130,14 +141,23 @@ func _check_run(spawner, run, profile) -> void:
 	var stages: Array = record.get("stages", [])
 	var logged_deaths := 0
 	var logged_clears := 0
+	var logged_wardens := 0
+	var logged_ticks := 0
 	for row in stages:
 		logged_deaths += row["deaths"].size()
 		logged_clears += 1 if row["heft_at_exit"] != null else 0
+		logged_wardens += 1 if row["ticks_to_warden_engaged"] != null else 0
+		logged_ticks += int(row["ticks_to_warden_break"])
+		for death in row["deaths"]:
+			logged_ticks += int(death["ticks"])
+	_t.eq("SR12 distinct Wardens agree with stage log", tallies["wardens_seen"], logged_wardens)
+	_t.near("SR12 time agrees with run log tick fields", tallies["time"], float(logged_ticks) / Engine.physics_ticks_per_second, 0.000001)
 	_t.check("SR12 existing stage log agrees with clears and deaths", logged_clears == tallies["stages_cleared"] and logged_deaths == tallies["deaths"])
 	var stored := {}
 	for key in KEYS:
 		stored[key] = profile.stat(key)
 	_t.check("SR12 profile receives cumulative tallies once", _same_tallies(stored, tallies), JSON.stringify(stored))
+	_t.check("SR12 won run leaves no per-run profile keys", _has_no_run_tallies(profile))
 	_t.check("SR12 repeated tally settlement changes nothing", not profile.record_run_tallies(run.run_id, tallies) and profile.stat("kills") == tallies["kills"])
 	var reload := Profile.new(profile.path)
 	_t.check("SR12 tallied profile reloads", reload.load_profile(), reload.last_error)
@@ -148,35 +168,71 @@ func _check_run(spawner, run, profile) -> void:
 	var entrance: Dictionary = run.to_entrance_doc()
 	var restored := RunState.new(null, 123)
 	_t.check("SR12 entrance tallies survive JSON round-trip", restored.from_entrance_doc(JSON.parse_string(JSON.stringify(entrance))) and restored.tallies() == tallies)
+	var restored_events := GameEvents.new()
+	var encountered := RunState.new(restored_events, 123)
+	var encountered_ok := encountered.from_entrance_doc(JSON.parse_string(JSON.stringify(entrance)))
+	restored_events.warden_engaged.emit(run.stage)
+	_t.check("SR12 saved entrance counts a known Warden once", encountered_ok and encountered.tallies()["wardens_seen"] == tallies["wardens_seen"])
+	encountered.world += 1
+	restored_events.warden_engaged.emit(run.stage)
+	_t.eq("SR12 same stage in another world is a distinct Warden", encountered.tallies()["wardens_seen"], tallies["wardens_seen"] + 1)
+	restored_events.free()
 	var broken := entrance.duplicate(true)
 	broken["run_tallies"]["deaths"] = -1
 	_t.check("SR12 invalid entrance tally rejected without applying", not restored.from_entrance_doc(broken) and restored.tallies() == tallies)
 	broken = entrance.duplicate(true)
 	broken["run_tallies"]["time"] += 1.0
 	_t.check("SR12 inconsistent entrance clock rejected", not restored.from_entrance_doc(broken) and restored.tallies() == tallies)
+	broken = entrance.duplicate(true)
+	broken["seen_wardens"].append(broken["seen_wardens"][0])
+	_t.check("SR12 duplicate saved Warden rejected atomically", not restored.from_entrance_doc(broken) and restored.tallies() == tallies)
+	broken = entrance.duplicate(true)
+	broken["seen_wardens"][0] = "not/a/warden"
+	_t.check("SR12 malformed saved Warden rejected atomically", not restored.from_entrance_doc(broken) and restored.tallies() == tallies)
 	var legacy := entrance.duplicate(true)
 	legacy.erase("run_tallies")
 	_t.check("SR12 old entrance remains readable", restored.from_entrance_doc(legacy) and restored.tallies()["kills"] == run.kills)
-	restored.reconcile_tallies(reload.run_tallies(run.run_id))
-	_t.check("SR12 resumed entrance retains logged contributions", _same_tallies(restored.tallies(), tallies))
 	var invalid := tallies.duplicate()
 	invalid["time"] = NAN
 	var before: Dictionary = profile._doc.duplicate(true)
 	_t.check("SR12 nonfinite tally rejected atomically", not profile.record_run_tallies("bad", invalid) and profile._doc == before)
 	_game.flow.new_run()
-	_t.eq("SR12 new run clears tallies", run.tallies(), {"stages_cleared": 0, "time": 0.0, "kills": 0, "deaths": 0, "wardens_seen": 0})
+	_t.eq("SR12 new run clears tallies", run.tallies(), _zero_tallies())
 	run.record_kill("chaser", Vector3.ZERO, 0)
 	run.advance(1.5)
 	_game.run_log.abandon_open_run()
 	_t.check("SR12 abandoned run feeds profile", profile.stat("kills") == tallies["kills"] + 1 and profile.stat("time") == tallies["time"] + 1.5)
+	_t.check("SR12 abandoned second run leaves no per-run profile keys", _has_no_run_tallies(profile))
 	var doc_before: Dictionary = profile._doc.duplicate(true)
-	_t.check("SR12 stale snapshot cannot reduce totals", not profile.record_run_tallies(run.run_id, {"stages_cleared": 0, "time": 0.0, "kills": 0, "deaths": 0, "wardens_seen": 0}) and profile._doc == doc_before)
+	_t.check("SR12 stale snapshot cannot reduce totals", not profile.record_run_tallies(run.run_id, _zero_tallies()) and profile._doc == doc_before)
 	_t.check("SR12 second run saves and reloads", reload.load_profile() and reload.stat("kills") == tallies["kills"] + 1 and reload.stat("time") == tallies["time"] + 1.5)
+	_t.check("SR12 reloaded terminal profile leaves no per-run keys", _has_no_run_tallies(reload))
+	var folded := {}
+	for key in KEYS:
+		folded[key] = reload.stat(Profile.RUN_TALLY_BASE + key)
+	var expected_lifetime: Dictionary = tallies.duplicate()
+	expected_lifetime["kills"] += 1
+	expected_lifetime["time"] += 1.5
+	_t.check("SR12 terminal base holds all lifetime contributions", _same_tallies(folded, expected_lifetime))
 
 
 func _advance(run, seconds: float) -> void:
 	run.advance(seconds)
 	_expected["time"] += seconds
+
+
+static func _zero_tallies() -> Dictionary:
+	var totals := {}
+	for key in KEYS:
+		totals[key] = 0.0 if key == "time" else 0
+	return totals
+
+
+func _has_no_run_tallies(profile) -> bool:
+	for key in profile._doc["stats"]:
+		if String(key).begins_with(Profile.RUN_TALLY_PREFIX):
+			return false
+	return true
 
 
 func _same_tallies(got, want: Dictionary) -> bool:
@@ -205,3 +261,16 @@ func _check_tally_merge() -> void:
 	var loaded := merged.load_profile()
 	_t.check("SR12 merged tallies retain both runs and prior stats", loaded and merged.stat("kills") == 15.0 and merged.stat("time") == 9.0 and merged.stat("stages_cleared") == 2.0 and merged.stat("deaths") == 1.0 and merged.stat("wardens_seen") == 2.0,
 		"kills %s, time %s, stages %s" % [merged.stat("kills"), merged.stat("time"), merged.stat("stages_cleared")])
+	var stale := Profile.new(path)
+	var stale_loaded := stale.load_profile()
+	_t.check("SR12 first stale writer compacts its terminal run", a.settle_run_tallies("merge_a") and a.save(), a.last_error)
+	_t.check("SR12 second stale writer compacts without double counting", b.settle_run_tallies("merge_b") and b.save() and b.stat("kills") == 15.0 and b.stat("time") == 9.0 and _has_no_run_tallies(b), b.last_error)
+	var advanced := {"stages_cleared": 1, "time": 4.0, "kills": 9, "deaths": 0, "wardens_seen": 1}
+	var stale_advanced := stale.record_run_tallies("merge_a", advanced)
+	stale.add_stat("unrelated", 1.0)
+	_t.check("SR12 stale writer cannot resurrect a compacted run", stale_loaded and stale_advanced and stale.save() and stale.stat("kills") == 15.0 and stale.stat("time") == 9.0 and stale.stat("unrelated") == 1.0 and _has_no_run_tallies(stale), stale.last_error)
+	_t.check("SR12 compacted totals survive reload", merged.load_profile() and merged.stat("kills") == 15.0 and merged.stat("time") == 9.0 and _has_no_run_tallies(merged))
+	var new_totals := _zero_tallies()
+	new_totals["kills"] = 2
+	_t.check("SR12 new run adds onto compacted base", stale.record_run_tallies("merge_c", new_totals) and stale.save() and stale.stat("kills") == 17.0)
+	_t.check("SR12 later terminal run preserves compacted totals", stale.settle_run_tallies("merge_c") and stale.save() and stale.stat("kills") == 17.0 and _has_no_run_tallies(stale))

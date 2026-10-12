@@ -352,7 +352,10 @@ func append_line(path: String, text: String) -> bool:
 			var profile = _profile()
 			if profile != null:
 				var changed: bool = profile.record_run_tallies(run.run_id, totals)
-				if profile.can_save and (changed or not profile.last_error.is_empty()) and not profile.save():
+				var settled := false
+				if line.get("outcome", "") in ["won", "dead", "lost", "abandoned"]:
+					settled = profile.settle_run_tallies(run.run_id)
+				if profile.can_save and (changed or settled or not profile.last_error.is_empty()) and not profile.save():
 					last_error = "run tallies not saved: %s" % profile.last_error
 	var file: FileAccess
 	if FileAccess.file_exists(path):

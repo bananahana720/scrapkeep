@@ -8,6 +8,7 @@ extends RefCounted
 const Companion := preload("res://src/core/companion.gd")
 const Relics := preload("res://src/build/relics.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
+const Profile := preload("res://src/core/profile.gd")
 const MAX_HP := 100.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
@@ -58,7 +59,8 @@ var relics := {}
 var kills := 0
 var events_won: Array[String] = []
 var run_time := 0.0
-var _tallies := {"stages_cleared": 0, "kills": 0, "deaths": 0, "wardens_seen": 0}
+var _tallies := {}
+var _seen_wardens := {}
 var stage_time := 0.0
 var since_damage := 99.0
 var retries := 0
@@ -142,13 +144,20 @@ func _init(events_ref = null, session_seed = null) -> void:
 	# draw the moment it is created, before any node exists; a bare RunState draws here.
 	_id_rng.seed = session_seed if session_seed != null else randi() # lint: session seed
 	events = events_ref
+	for key in Profile.RUN_TALLY_KEYS:
+		if key != "time" and key != "wardens_seen":
+			_tallies[key] = 0
 	reset_metrics()
 	if events != null:
 		events.stage_entered.connect(_on_stage_entered)
 		events.stage_cleared.connect(func(_stage: int): _tallies["stages_cleared"] += 1)
 		events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): _tallies["kills"] += 1)
 		events.player_died.connect(func(): _tallies["deaths"] += 1)
-		events.warden_engaged.connect(func(_stage: int): _tallies["wardens_seen"] += 1)
+		events.warden_engaged.connect(_on_warden_engaged)
+
+
+func _on_warden_engaged(index: int) -> void:
+	_seen_wardens["%d/%d" % [world, index]] = true
 
 
 # The highest heft class this run has been rewarded for (the slice table opens one tree pick
@@ -194,6 +203,7 @@ func begin(chosen_class: Resource) -> void:
 	kills = 0
 	events_won.clear()
 	run_time = 0.0
+	_seen_wardens.clear()
 	for key in _tallies:
 		_tallies[key] = 0
 	stage_time = 0.0
@@ -701,10 +711,9 @@ func restore() -> void:
 
 
 func tallies() -> Dictionary:
-	# Encounters count warden_engaged, once per attempt, rather than spawning offscreen.
-	# Unlike checkpoint combat kills, these lifetime contributions survive a retry.
 	var totals := _tallies.duplicate()
 	totals["time"] = run_time
+	totals["wardens_seen"] = _seen_wardens.size()
 	return totals
 
 
@@ -747,7 +756,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tallies": "dict"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tallies": "dict", "seen_wardens": "strs"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -801,6 +810,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"relics": relics.duplicate(),
 		"start_pick": start_pick.duplicate(true),
 		"run_tallies": tallies(),
+		"seen_wardens": _seen_wardens.keys(),
 	}, true)
 	return doc
 
@@ -861,13 +871,23 @@ static func validate_entrance_doc(doc) -> String:
 			return "wrong type for retries_spent[%s]" % str(w)
 	if doc.has("run_tallies"):
 		var totals: Dictionary = doc["run_tallies"]
-		if totals.size() != 5:
-			return "run_tallies must have five keys"
-		for key in ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]:
+		if totals.size() != Profile.RUN_TALLY_KEYS.size():
+			return "run_tallies must have %d keys" % Profile.RUN_TALLY_KEYS.size()
+		for key in Profile.RUN_TALLY_KEYS:
 			if not _entrance_kind_ok(totals.get(key), "num" if key == "time" else "int") or totals[key] < 0:
 				return "invalid run tally: %s" % key
 		if totals["time"] != doc["run_time"]:
 			return "run tally time differs from run_time"
+	var seen := {}
+	for id in doc.get("seen_wardens", []):
+		var ids: PackedStringArray = id.split("/")
+		if ids.size() != 2 or not ids[0].is_valid_int() or not ids[1].is_valid_int():
+			return "invalid seen Warden: %s" % id
+		if int(ids[0]) < 0 or int(ids[1]) < 1 or id != "%d/%d" % [int(ids[0]), int(ids[1])] or seen.has(id):
+			return "invalid seen Warden: %s" % id
+		seen[id] = true
+	if doc.has("seen_wardens") and doc.has("run_tallies") and doc["run_tallies"]["wardens_seen"] != seen.size():
+		return "run tally Wardens differ from seen_wardens"
 	return ""
 
 
@@ -896,6 +916,9 @@ func from_entrance_doc(doc) -> bool:
 	kills = int(doc["kills"])
 	events_won.assign(doc["events_won"])
 	run_time = float(doc["run_time"])
+	_seen_wardens = {}
+	for id in doc.get("seen_wardens", []):
+		_seen_wardens[id] = true
 	var totals: Dictionary = doc.get("run_tallies", {})
 	for key in _tallies:
 		# Older entrances can recover checkpoint kills, but contain no encounter history.
