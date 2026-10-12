@@ -74,9 +74,13 @@ func _run() -> void:
 				broken.append("%s: %s" % [id, info["routes"][id]])
 		t.check("every route connected", broken.is_empty() and info["routes"].size() == park["routes"].size(), "; ".join(broken))
 		t.check("spawn in the farthest quarter", bool(info["spawn"]["ok"]), str(info["spawn"]))
+		t.check("the beacon is on an objective-fit node (beacon_ok, SR15)", bool(info.get("beacon_ok", false)) and String(info.get("first_failed", "x")) == "",
+			"beacon_ok %s, first_failed %s" % [info.get("beacon_ok"), info.get("first_failed")])
 		var by_id := {}
 		for p in info["pockets"]:
 			by_id[String(p["id"])] = p
+		var rule_fails := pocket_rule_failures(info["pockets"])
+		t.check("every pocket meets PARK.md 2.12 by path on graph.json", rule_fails.is_empty(), "; ".join(rule_fails))
 		for id in POCKETS:
 			if not t.check("pocket %s in graph.json" % id, by_id.has(id)):
 				continue
@@ -110,7 +114,54 @@ func _run() -> void:
 	var plant_stale: Array = ParkBake.freshness(PLANT_PATH, BAKE_DIR)
 	t.check("planted copy is stale against the committed bake", not plant_stale.is_empty(), "%d reasons" % plant_stale.size())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PLANT_PATH))
+
+	# Planted: the reward pocket's door 60 m from the spawn, its detour under the risk's, and
+	# a door 120 m from another breaks three distance rules.
+	var rows: Array = []
+	if info is Dictionary:
+		rows = (info["pockets"] as Array).duplicate(true)
+	for p in rows:
+		if String(p["role"]) == "reward":
+			p["d_spawn"] = 60
+			p["detour_m"] = 100
+			p["nearest_door"] = 120
+	var planted_rules := pocket_rule_failures(rows)
+	print("[planted rules] %s" % "; ".join(planted_rules))
+	t.check("planted pocket rows break the 2.12 rules", planted_rules.size() >= 3, "%d: %s" % [planted_rules.size(), "; ".join(planted_rules)])
 	quit(t.verdict())
+
+
+# PARK.md 2.12 on graph.json's pocket rows (distances by path on the stage graph, rulings R1 and R2):
+# every off-line door at least 240 m from the spawn and 200 m from any other door; the reward
+# and risk doors at least 320 m from the beacon (the hidden pocket keeps every rule but the
+# beacon distance) with a detour to the pay of 150 to 600 m, the reward's larger; every door
+# sight_ok with a clear 40 m ring; the on-line camp keeps only the ring and the sightline.
+static func pocket_rule_failures(pockets: Array) -> Array:
+	var out := []
+	var detours := {}
+	for p in pockets:
+		var id := String(p["id"])
+		var role := String(p["role"])
+		if not bool(p["sight_ok"]):
+			out.append("%s door not sight_ok" % id)
+		if not (p["clear_ring"] as Array).is_empty():
+			out.append("%s clear ring holds %s" % [id, p["clear_ring"]])
+		if role == "online":
+			continue
+		if int(p["d_spawn"]) < 240:
+			out.append("%s door %d m from the spawn, want at least 240" % [id, int(p["d_spawn"])])
+		if int(p["nearest_door"]) < 200:
+			out.append("%s door %d m from %s, want at least 200" % [id, int(p["nearest_door"]), p["nearest_door_id"]])
+		if role == "hidden":
+			continue
+		if int(p["d_landmark"]) < 320:
+			out.append("%s door %d m from the beacon, want at least 320" % [id, int(p["d_landmark"])])
+		if int(p["detour_m"]) < 150 or int(p["detour_m"]) > 600:
+			out.append("%s detour %d m, want 150 to 600" % [id, int(p["detour_m"])])
+		detours[role] = int(p["detour_m"])
+	if detours.has("reward") and detours.has("risk") and detours["reward"] <= detours["risk"]:
+		out.append("reward detour %d m not over the risk's %d m" % [detours["reward"], detours["risk"]])
+	return out
 
 
 static func pin_failures(park: Dictionary) -> Array:

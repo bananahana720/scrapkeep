@@ -1,30 +1,32 @@
 {
-  "bake_sha256": "ab84e62bf20bfd0f798dd3c23111dd56cc5ecba8d481802064bf46097eb7e2a6",
+  "bake_sha256": "38ce76a3d589fe5cd3c8d8afc4e2bc4b631647410da596acb5af5f63d11fb7f2",
+  "beacon_ok": true,
   "breaches": [],
-  "bytes": 1174275,
-  "edges": 317439,
+  "bytes": 951112,
+  "edges": 316701,
+  "first_failed": "",
   "flags": {
-    "deck": 450,
-    "door_ok": 39984,
-    "line": 331,
-    "open": 40638,
-    "sight_ok": 10798,
+    "deck": 371,
+    "door_ok": 39992,
+    "line": 286,
+    "open": 40601,
+    "sight_ok": 10821,
     "under": 0
   },
-  "full_visit_m": 1751,
-  "full_visit_ratio": "1.254",
-  "graph_sha256": "be80fe4443af35d378ba2452e26f8c3940bd2301e011f70b6e5f325cfb842a7d",
+  "full_visit_m": 1788,
+  "full_visit_ratio": "1.271",
+  "graph_sha256": "1feded5de376cd5189530447677c499228a20f67d5b9a14df24ec20410341178",
   "line_errors": [],
-  "line_path_nodes": 134,
-  "longest_est_m": 2486,
+  "line_path_nodes": 132,
+  "longest_est_m": 2499,
   "map": "park_flume",
-  "nodes": 40851,
-  "park_sha256": "27d8965db5a6bba33b334fecbd01c71a79d05563be26a346796b50faefd2b7d6",
+  "nodes": 40772,
+  "park_sha256": "ff31aa5ebe6a4823e1704a4432332886585e700b0f3e82d1b4f2abb21253af91",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 419,
-      "d_spawn": 980,
+      "d_landmark": 422,
+      "d_spawn": 986,
       "detour_m": 0,
       "door_at": [
         -24,
@@ -50,14 +52,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 702,
-      "d_spawn": 769,
-      "detour_m": 204,
+      "d_landmark": 732,
+      "d_spawn": 754,
+      "detour_m": 226,
       "door_at": [
-        24,
-        -120
+        40,
+        -144
       ],
-      "door_m": 204,
+      "door_m": 226,
       "flags": [
         "open",
         "door_ok",
@@ -65,7 +67,7 @@
       ],
       "id": "bend_cache",
       "kind": "cracked_cache",
-      "nearest_door": 236,
+      "nearest_door": 243,
       "nearest_door_id": "weir_valve",
       "pay_named": "",
       "pay_rarities": [
@@ -79,12 +81,12 @@
       "clear_ring": [],
       "d_landmark": 415,
       "d_spawn": 1136,
-      "detour_m": 193,
+      "detour_m": 194,
       "door_at": [
         -120,
         336
       ],
-      "door_m": 193,
+      "door_m": 194,
       "flags": [
         "open",
         "door_ok",
@@ -92,7 +94,7 @@
       ],
       "id": "bench_bounty",
       "kind": "hauler_bounty",
-      "nearest_door": 538,
+      "nearest_door": 569,
       "nearest_door_id": "bend_cache",
       "pay_named": "",
       "pay_rarities": [
@@ -105,14 +107,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 908,
+      "d_landmark": 913,
       "d_spawn": 561,
-      "detour_m": 110,
+      "detour_m": 102,
       "door_at": [
         -152,
         -248
       ],
-      "door_m": 108,
+      "door_m": 102,
       "flags": [
         "open",
         "door_ok",
@@ -120,7 +122,7 @@
       ],
       "id": "weir_valve",
       "kind": "valve",
-      "nearest_door": 236,
+      "nearest_door": 243,
       "nearest_door_id": "bend_cache",
       "pay_named": "",
       "pay_rarities": [],
@@ -129,9 +131,11 @@
       "site": "butte_gap"
     }
   ],
-  "ride_edges": 13,
+  "reward_ratio": "0.536",
+  "ride_edges": 17,
   "routes": {
     "annex_ramp_line": [],
+    "bench_run": [],
     "camp_rim": [],
     "canal_lower": [],
     "canal_mid": [],
@@ -149,11 +153,30 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1397,
-    "farther_share": "0.071",
-    "ok": true
+    "d_landmark": 1407,
+    "farther_share": "0.069",
+    "ok": true,
+    "run": true
   },
-  "spawn_beacon_m": 1396,
-  "spawn_beacon_share": "0.562",
-  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+  "spawn_beacon_m": 1407,
+  "spawn_beacon_share": "0.563",
+  "stage_checked": [
+    "beacon_ok",
+    "spawn"
+  ],
+  "targets": [
+    {
+      "name": "reward_ratio",
+      "ok": false,
+      "target": "at least 1.5",
+      "value": 0.536
+    },
+    {
+      "name": "full_visit_ratio",
+      "ok": true,
+      "target": "at most 3.0",
+      "value": 1.271
+    }
+  ],
+  "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"
 }
