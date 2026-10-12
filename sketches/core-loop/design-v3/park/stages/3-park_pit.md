@@ -1,6 +1,8 @@
 # The Dig: the open pit (`park_pit`, stage 3)
 
-Stage 3, the first zone of world 2. Unit KD3, wave 13. The greybox and dressed candidate are built from `src/world/park/park_pit.json`; measurements and acceptance limits are recorded below and in `traversal/park_pit.md`. The storyboard remains a reference for the coordinator's stills and Andrew's visual verdict. Values described as starts or predictions remain unmeasured.
+Stage 3, the first zone of world 2. Unit KD3, wave 13. The greybox is built from `src/world/park/park_pit.json`; measurements and acceptance limits are recorded below and in `traversal/park_pit.md`. The storyboard remains a reference for the coordinator's stills and Andrew's visual verdict. Values described as starts or predictions remain unmeasured.
+
+**Status, 2026-10-12:** the merged greybox remains the carried geometry. The dressed candidate `36e3164` failed traversal after two reworks of the arroyo site and is retained in Git history. Sable reached the Warden on 2 of 8 seeds, with 126 dead stops on the worst seed. Other dressed lines and the dressed win proof were not run. This stage is not qualified as dressed.
 
 Read with [PARK.md](../../PARK.md) (the tables and bands), [TADR-011](../../../../../adr/TADR-011-park-terrain-and-warden-kinds.md) (the decision) and the Warden kind sheet [wardens/swarm.md](../../wardens/swarm.md). Paths are under `sketches/core-loop/` unless they start with `adr/`, `docs/` or `BIBLE.md`.
 
@@ -18,7 +20,7 @@ Terms used once and kept: a **bench** is one step of the pit (a flat **tread** y
 | Landmark | the headframe, 120 m tall, on the pit floor at (0, 255) |
 | Park | 1.6 km square; an open-pit copper mine 900 m across and 100 m deep in its middle |
 | Lines | Six pilot lines, median paths 1583 to 2034 m and median times 61.78 to 100.94 s; floor line 90.41 s (section 9) |
-| Current size | 122 park rows, 5 events, 4 homes, 12 contraptions, 2 weather rows, 3 activities, 21 routes |
+| Greybox size | 109 park rows, 5 events, 4 homes, 12 contraptions, 2 weather rows, 3 activities, 21 routes |
 
 ## 1. Landform and society layer
 
@@ -134,135 +136,6 @@ Polylines (x, z): `dump_wash` (-540, -640) to (-500, -540) to (-380, -470); `hau
 
 **Density gaps for KD3.** The rows above leave the far corners (A1, A8, H3, H7, H8) more than 80 m from any footprint, which `park_density_test.gd` would flag (PARK.md section 8). KD3 fills them with `ground` rows or widens `ne_mesa`, `west_slickrock` and `south_wash`.
 
-### Dressed placement, 2026-10-12
-
-The fixed-size family meshes replace 38 greybox or empty recipes, with one further flume tile continuing the original long launder. Rows use the exported mesh bounds, with no scaling. Thirteen macro terrain stamps keep their original dimensions and order on separate `_terrain` rows, because a 900 m pit or a 300 m canal cannot be the footprint of one fixed-size piece. The original element stays on each terrain row so density measures the landform rather than a ground canvas. Each terrain row has no recipe, home or codex fragment; its companion places the family mesh.
-
-| Row | Family recipe | Footprint, length / height / width (m) |
-| --- | --- | --- |
-| `spoil_dump` | `tailings_lip` | 45.3353 / 11 / 28 |
-| `dump_wash_1` | `half_pipe_concrete` | 60 / 11.9797 / 34.64 |
-| `dump_wash_2` | `half_pipe_concrete` | 60 / 11.9797 / 34.64 |
-| `canal_lip` | `canal_lip` | 120.1375 / 11.0967 / 12.018 |
-| `rim_haul_ramp` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `haul_road_west_1` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `haul_road_west_2` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `haul_road_west_3` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `haul_road_west_4` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `haul_road_west_5` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `tailings_bench_east` | `tailings_lip` | 45.3353 / 11 / 28 |
-| `bench2_east_bank` | `bench_coping` | 33.936 / 10.9 / 24 |
-| `adit_east` | `adit_mouth` | 56 / 14.0678 / 13.2465 |
-| `winze_west` | `shaft_drop` | 26.8 / 24.8808 / 13.6 |
-| `winze_north` | `shaft_drop` | 26.8 / 24.8808 / 13.6 |
-| `winze_east` | `shaft_drop` | 26.8 / 24.8808 / 13.6 |
-| `conveyor_gallery` | `pipeline_rail` | 120.4797 / 11.0151 / 4.4784 |
-| `deep_adit` | `adit_mouth` | 56 / 14.0678 / 13.2465 |
-| `eruption_lip` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `bench1_haul_lane` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `rim_road_lane_1` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `rim_road_lane_2` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `bench2_north_lane` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `bench2_camp_lane` | `pit_haul_ramp` | 58.7519 / 15.8652 / 30 |
-| `leach_pads` | `tailings_lip` | 45.3353 / 11 / 28 |
-| `mill_launder_1` | `flume_span` | 120.8129 / 17.0284 / 8.6 |
-| `ne_mesa` | `mesa_rim_ledge` | 60 / 19.0219 / 34.1729 |
-| `tailings_dam` | `tailings_lip` | 45.3353 / 11 / 28 |
-| `south_wash` | `half_pipe_concrete` | 60 / 11.9797 / 34.64 |
-| `camp_dive` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `north_dive` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `bench3_dive` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `bench4_dive` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `floor_dive` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `east_dive` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `east_dive_2` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `east_dive_3` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `west_dive` | `mesa_lip_kicker` | 12 / 2.5 / 14 |
-| `mill_launder_2` | `flume_span` | 120.8129 / 17.0284 / 8.6 |
-
-The first arroyo liner sits on its ground query. A 3.5 m wash stamp lowers its bed under the original macro wash, keeping the north wall clear of the incoming dump flight without creating an isolated graph deck. The north winze moved to (-60, -130), outside the measured bench tread. The canal piece faces 75 degrees to receive the arroyo line through its mouth; every line continues through the recipe exit at (-298, -485) before turning toward the rim. The 300 m channel stamp retains its 45-degree heading. A 34 m ore silo at (203, -174), beside the camp and clear of the flight path, supplies the missing grapple face on the high camp-dive flight. A static replay located the two long gaps on that flight; final traversal verifies the change.
-
-The three shaft pieces open their terrain mouths. The bake reports 280 hole cells whose under-floor query still falls back to the baked ground; the recipe collider supplies the physical shaft floor. Cap-breaking and rescue support remain coordinator work.
-
-The following rows have no matching complete piece. They retain their terrain stamp or greybox placement. These reasons describe the remaining work and do not establish visual acceptance.
-
-| Row | Retained recipe | Reason |
-| --- | --- | --- |
-| `saguaro_stand` | `greybox:anchor_field` | No saguaro family recipe; the runtime post field supplies anchors. |
-| `pit` | `terrain only` | No whole bowl or concentric bench recipe; the family exports local edge tiles. |
-| `pit_bench_2` | `terrain only` | No whole bowl or concentric bench recipe; the family exports local edge tiles. |
-| `pit_bench_3` | `terrain only` | No whole bowl or concentric bench recipe; the family exports local edge tiles. |
-| `pit_bench_4` | `terrain only` | No whole bowl or concentric bench recipe; the family exports local edge tiles. |
-| `pit_floor` | `terrain only` | No whole bowl or concentric bench recipe; the family exports local edge tiles. |
-| `adit_back_door` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `back_door_portal` | `greybox:ledge` | The ground portal tell has no separate timber-portal recipe. |
-| `barge_apron` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `floor_sump` | `greybox:bowl` | No whole bowl or concentric bench recipe; the family exports local edge tiles. |
-| `collar_dish` | `greybox:bowl` | No whole bowl or concentric bench recipe; the family exports local edge tiles. |
-| `hoist_house` | `greybox:ledge` | No headframe building recipe for the hoist house or tipple deck. |
-| `tipple_deck` | `greybox:ledge` | No headframe building recipe for the hoist house or tipple deck. |
-| `gate_apron` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `switchback_camp` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `west_slickrock` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `dump_berm_east` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `dump_berm_west` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `rim_road_berm` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `haul_ramp_berm` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `wash_berm` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `bench3_dive_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `bench4_ore_bin` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `bench3_west_berm` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `camp_dive_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `camp_dive_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `canal_saguaros` | `greybox:anchor_field` | No saguaro family recipe; the runtime post field supplies anchors. |
-| `camp_ore_bin` | `greybox:ledge` | No ore-bin recipe. |
-| `camp_dive_windrow_3` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `north_dive_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `north_dive_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `bench3_dive_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `bench4_dive_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `bench4_dive_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `floor_dive_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `floor_dive_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `east_dive_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `east_dive_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `east_dive_2_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `east_dive_2_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `east_dive_3_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `east_dive_3_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `west_dive_windrow_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `west_dive_windrow_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `ore_pile_east` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `ore_pile_mid` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `ore_pile_north` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `ore_pile_west` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `ore_pile_sw` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `ore_pile_nw` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_1` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_2` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `spoil_heap_3` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_4` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_5` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_6` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_7` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_8` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_9` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_10` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_11` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_12` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `spoil_heap_13` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `spoil_heap_14` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_15` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `spoil_heap_16` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_17` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `spoil_heap_18` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `spoil_heap_19` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_20` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `slickrock_21` | `terrain only` | Terrain-only ridge, berm, ore pile or service ground; no matching discrete recipe. |
-| `camp_dive_ore_bin` | `greybox:ledge` | No ore-bin recipe. This 34 m silo beside the bench-2 camp keeps a grapple face in reach during Sable's high camp-dive flight; it is clear of the recorded landing line. |
-
-The shipped JSON below is the placement authority. The earlier family table and lane notes describe the greybox decisions. Current traversal numbers follow after the dressed run.
-
 ## 5. `event_rows` draft
 
 Five rows, all four families. Trigger tiers: tier 1 at 45 s, tier 2 at 90 s (`src/world/director.gd:83-85`, as cited in PARK.md section 5); tiers 3 and 4 need veto item 16 (`MAX_TIME_TIERS` raised to 4).
@@ -340,7 +213,7 @@ The tails:
 - **S, the skip.** The `skip_cable` from the camp over bench 3 to bench 4, then the `floor_dive` lip to the floor.
 - **W, the west winze.** The `bench2_haul_cable` west along bench 2, the `west_dive` lip to bench 3, then the `west_winze_cable` over bench 4 to the floor's west side, and across the floor through `dust_devil_floor` at (-30, 160), which lifts a gliding ball, to the collar. The line's last waypoint before the fix round, (-60, 205), ran into the `hoist_house` box once KB9 placed it (three dead stops at (-39, 181) on the first fix-round run, against an ore pile beside the thermal's first place); the line now passes (-45, 163) and (-15, 157), straight through the thermal's centre.
 
-Measured on the merged candidate, 2026-10-12. Eight seeds per completed line; floor flow share is reported only under kd-common-r.md item 4. Full band and worst-seed values are in `traversal/park_pit.md`.
+Greybox measured on the merged candidate, 2026-10-12, before the failed dressing attempt. Eight seeds per completed line; floor flow share is reported only under kd-common-r.md item 4. Full band and worst-seed values are in `traversal/park_pit.md`.
 
 | Line | Head + tail | Time to Warden, median (s) | Segments, medians (s) | Ratio | Ride facts, KB7b set |
 | --- | --- | --- | --- | --- | --- |
@@ -352,7 +225,7 @@ Measured on the merged candidate, 2026-10-12. Eight seeds per completed line; fl
 | The Cannon | C + E | 97.64 | 18.12 / 39.06 / 40.59 | 1.710 | 4 |
 | Floor line | A + the S dives, no cable | 90.41 | 19.53 / 39.41 / 31.59 | 1.450 | 4 |
 
-**Distinct lines.** Rivet, Kest and Tarn are pairwise distinct on all eight current traces: every directed share of ticks within 8 m of any point in the other 3D trace is below 0.50. The largest share is 0.4742, Tarn against Kest on seed 6. The comparison uses exact spatial bins, with all neighboring bins searched; the full 24-row receipt is in `traversal/park_pit.md`. This establishes the required three distinct lines across the six pilots.
+**Greybox distinct lines.** Rivet, Kest and Tarn are pairwise distinct on all eight current traces: every directed share of ticks within 8 m of any point in the other 3D trace is below 0.50. The largest share is 0.4742, Tarn against Kest on seed 6. The comparison uses exact spatial bins, with all neighboring bins searched; the full 24-row receipt is in `traversal/park_pit.md`. This establishes the required three distinct lines across the six pilots.
 
 **Why the berms, windrows and ore piles.** They were cut when the runtime placed no recipe row, so the harpoon's anchors were stamped steep faces only (section 7); they stay, because the stamped rows (no recipe) are still terrain only. The rows that keep every line inside the 40 m anchor band are these:
 
@@ -363,645 +236,22 @@ Measured on the merged candidate, 2026-10-12. Eight seeds per completed line; fl
 - `camp_ore_bin` (fix round), a 10 m greybox ore bin 14 m tall on bench 1 at (160, -218), beside the camp dive. Sable's flight off the dive runs about 45 m at bench 1 height with no face in reach (anchor gap 40.7 to 46.7 m on three seeds before it, 23 to 30 m after).
 - Six ore piles on the floor: `ore_pile_east`, `_mid`, `_north`, `_west`, `_sw` and `_nw`.
 
-Two pieces of geometry were moved to clear dead stops. The canal channel is 16 m wide, so the arroyo's 40 degree turn into it does not stop a ball against the far wall. The camp dive's east windrow starts 60 m east of the lip, clear of Sable's overshoot. The fix round moved four more pieces for the same reason, once KB9 made kickers solid wedges: the camp dive (section 14 call 8) and the three east dives, widened to 30 to 40 m in the greybox. The dressed pass uses each recipe's native 14 m width; the traversal receipts below test that footprint.
+Two pieces of geometry were moved to clear dead stops. The canal channel is 16 m wide, so the arroyo's 40 degree turn into it does not stop a ball against the far wall. The camp dive's east windrow starts 60 m east of the lip, clear of Sable's overshoot. The fix round moved four more pieces for the same reason, once KB9 made kickers solid wedges: the camp dive (section 14 call 8) and the three east dives, now 30 to 40 m wide.
 
 **Tricks it offers each pilot.** Unchanged in intent from the draft. Sable vaults the camp dive lip at 45 m/s and lands on bench 2 beside the camp. Rivet sprints the rim road to the zip. Kest rides two cables in a row down the west side, then glides up `dust_devil_floor` on the floor for height before the collar. Tarn and Tally take the skip cable down two benches at once. The Cannon recoils off the east dives.
 
 **Draft for `tools/park_lines/park_pit.json`.** This block is the shipped file; every `bar` is the canonical object, PARK.md section 8 with this stage's airborne band of 0.12 to 0.45.
 
 ```
-{
-  "map": "park_pit",
-  "stage": 3,
-  "pilots": {
-    "sable": {
-      "waypoints": [
-        "drop_in",
-        [
-          -498,
-          -540
-        ],
-        [
-          -433,
-          -522
-        ],
-        "canal_lip",
-        [
-          -298.0,
-          -485.0
-        ],
-        [
-          -235,
-          -380
-        ],
-        [
-          -240,
-          -330
-        ],
-        [
-          -232,
-          -262
-        ],
-        [
-          -150,
-          -242
-        ],
-        [
-          40,
-          -240
-        ],
-        [
-          95,
-          -228
-        ],
-        "switchback_camp",
-        [
-          300,
-          -150
-        ],
-        [
-          345,
-          -125
-        ],
-        [
-          337,
-          -40
-        ],
-        [
-          337,
-          110
-        ],
-        [
-          322,
-          130
-        ],
-        [
-          290,
-          135
-        ],
-        [
-          240,
-          148
-        ],
-        [
-          210,
-          155
-        ],
-        [
-          165,
-          168
-        ],
-        [
-          135,
-          175
-        ],
-        "landmark"
-      ],
-      "bar": {
-        "band": "PARK.md section 8",
-        "airborne_share": [
-          0.12,
-          0.45
-        ]
-      }
-    },
-    "rivet": {
-      "waypoints": [
-        "drop_in",
-        [
-          -498,
-          -540
-        ],
-        [
-          -433,
-          -522
-        ],
-        "canal_lip",
-        [
-          -298.0,
-          -485.0
-        ],
-        [
-          -235,
-          -380
-        ],
-        [
-          -195,
-          -372
-        ],
-        [
-          -175,
-          -330
-        ],
-        [
-          -130,
-          -302
-        ],
-        [
-          -20,
-          -300
-        ],
-        [
-          60,
-          -298
-        ],
-        [
-          150,
-          -178
-        ],
-        "switchback_camp",
-        [
-          300,
-          -150
-        ],
-        [
-          345,
-          -125
-        ],
-        [
-          337,
-          -40
-        ],
-        [
-          337,
-          110
-        ],
-        [
-          322,
-          130
-        ],
-        [
-          290,
-          135
-        ],
-        [
-          240,
-          148
-        ],
-        [
-          210,
-          155
-        ],
-        [
-          165,
-          168
-        ],
-        [
-          135,
-          175
-        ],
-        "landmark"
-      ],
-      "bar": {
-        "band": "PARK.md section 8",
-        "airborne_share": [
-          0.12,
-          0.45
-        ]
-      }
-    },
-    "kest": {
-      "waypoints": [
-        "drop_in",
-        [
-          -498,
-          -540
-        ],
-        [
-          -433,
-          -522
-        ],
-        "canal_lip",
-        [
-          -298.0,
-          -485.0
-        ],
-        [
-          -235,
-          -380
-        ],
-        [
-          -240,
-          -330
-        ],
-        [
-          -232,
-          -262
-        ],
-        [
-          -150,
-          -242
-        ],
-        [
-          40,
-          -240
-        ],
-        [
-          95,
-          -228
-        ],
-        "switchback_camp",
-        [
-          100,
-          -150
-        ],
-        [
-          60,
-          -150
-        ],
-        [
-          -90,
-          -150
-        ],
-        [
-          -140,
-          -140
-        ],
-        [
-          -158,
-          -125
-        ],
-        [
-          -160,
-          -90
-        ],
-        [
-          -155,
-          -55
-        ],
-        [
-          -150,
-          -25
-        ],
-        [
-          -100,
-          170
-        ],
-        [
-          -45,
-          163
-        ],
-        [
-          -15,
-          157
-        ],
-        "landmark"
-      ],
-      "bar": {
-        "band": "PARK.md section 8",
-        "airborne_share": [
-          0.12,
-          0.45
-        ]
-      }
-    },
-    "tarn": {
-      "waypoints": [
-        "drop_in",
-        [
-          -498,
-          -540
-        ],
-        [
-          -433,
-          -522
-        ],
-        "canal_lip",
-        [
-          -298.0,
-          -485.0
-        ],
-        [
-          -235,
-          -380
-        ],
-        [
-          -240,
-          -330
-        ],
-        [
-          -232,
-          -262
-        ],
-        [
-          -160,
-          -232
-        ],
-        [
-          -150,
-          -210
-        ],
-        [
-          -150,
-          -176
-        ],
-        [
-          -100,
-          -168
-        ],
-        [
-          100,
-          -168
-        ],
-        "switchback_camp",
-        [
-          175,
-          -125
-        ],
-        [
-          120,
-          25
-        ],
-        [
-          85,
-          45
-        ],
-        [
-          70,
-          55
-        ],
-        [
-          70,
-          80
-        ],
-        [
-          35,
-          167
-        ],
-        "landmark"
-      ],
-      "bar": {
-        "band": "PARK.md section 8",
-        "airborne_share": [
-          0.12,
-          0.45
-        ]
-      }
-    },
-    "tally": {
-      "waypoints": [
-        "drop_in",
-        [
-          -498,
-          -540
-        ],
-        [
-          -433,
-          -522
-        ],
-        "canal_lip",
-        [
-          -298.0,
-          -485.0
-        ],
-        [
-          -235,
-          -380
-        ],
-        [
-          -195,
-          -372
-        ],
-        [
-          -175,
-          -330
-        ],
-        [
-          -130,
-          -302
-        ],
-        [
-          -20,
-          -300
-        ],
-        [
-          60,
-          -298
-        ],
-        [
-          150,
-          -178
-        ],
-        "switchback_camp",
-        [
-          175,
-          -125
-        ],
-        [
-          120,
-          25
-        ],
-        [
-          85,
-          45
-        ],
-        [
-          70,
-          55
-        ],
-        [
-          70,
-          80
-        ],
-        [
-          35,
-          167
-        ],
-        "landmark"
-      ],
-      "bar": {
-        "band": "PARK.md section 8",
-        "airborne_share": [
-          0.12,
-          0.45
-        ]
-      }
-    },
-    "cannon": {
-      "waypoints": [
-        "drop_in",
-        [
-          -498,
-          -540
-        ],
-        [
-          -433,
-          -522
-        ],
-        "canal_lip",
-        [
-          -298.0,
-          -485.0
-        ],
-        [
-          -235,
-          -380
-        ],
-        [
-          -240,
-          -330
-        ],
-        [
-          -232,
-          -262
-        ],
-        [
-          -160,
-          -232
-        ],
-        [
-          -150,
-          -210
-        ],
-        [
-          -150,
-          -176
-        ],
-        [
-          -100,
-          -168
-        ],
-        [
-          100,
-          -168
-        ],
-        "switchback_camp",
-        [
-          300,
-          -150
-        ],
-        [
-          345,
-          -125
-        ],
-        [
-          337,
-          -40
-        ],
-        [
-          337,
-          110
-        ],
-        [
-          322,
-          130
-        ],
-        [
-          290,
-          135
-        ],
-        [
-          240,
-          148
-        ],
-        [
-          210,
-          155
-        ],
-        [
-          165,
-          168
-        ],
-        [
-          135,
-          175
-        ],
-        "landmark"
-      ],
-      "bar": {
-        "band": "PARK.md section 8",
-        "airborne_share": [
-          0.12,
-          0.45
-        ]
-      }
-    }
-  },
-  "floor": {
-    "waypoints": [
-      "drop_in",
-      [
-        -498,
-        -540
-      ],
-      [
-        -433,
-        -522
-      ],
-      "canal_lip",
-      [
-        -298.0,
-        -485.0
-      ],
-      [
-        -235,
-        -380
-      ],
-      [
-        -240,
-        -330
-      ],
-      [
-        -232,
-        -262
-      ],
-      [
-        -150,
-        -242
-      ],
-      [
-        40,
-        -240
-      ],
-      [
-        95,
-        -228
-      ],
-      "switchback_camp",
-      [
-        195,
-        -130
-      ],
-      [
-        205,
-        -118
-      ],
-      [
-        205,
-        -90
-      ],
-      [
-        115,
-        -35
-      ],
-      [
-        110,
-        -28
-      ],
-      [
-        110,
-        -5
-      ],
-      [
-        75,
-        45
-      ],
-      [
-        70,
-        55
-      ],
-      [
-        70,
-        80
-      ],
-      [
-        35,
-        167
-      ],
-      "landmark"
-    ]
-  }
-}
+{"map": "park_pit", "stage": 3, "pilots": {
+  "sable": {"waypoints": ["drop_in", [-498, -540], [-433, -522], "canal_lip", [-235, -380], [-240, -330], [-232, -262], [-150, -242], [40, -240], [95, -228], "switchback_camp", [300, -150], [345, -125], [337, -40], [337, 110], [322, 130], [290, 135], [240, 148], [210, 155], [165, 168], [135, 175], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}},
+  "rivet": {"waypoints": ["drop_in", [-498, -540], [-433, -522], "canal_lip", [-235, -380], [-195, -372], [-175, -330], [-130, -302], [-20, -300], [60, -298], [150, -178], "switchback_camp", [300, -150], [345, -125], [337, -40], [337, 110], [322, 130], [290, 135], [240, 148], [210, 155], [165, 168], [135, 175], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}},
+  "kest": {"waypoints": ["drop_in", [-498, -540], [-433, -522], "canal_lip", [-235, -380], [-240, -330], [-232, -262], [-150, -242], [40, -240], [95, -228], "switchback_camp", [100, -150], [60, -150], [-90, -150], [-140, -140], [-158, -125], [-160, -90], [-155, -55], [-150, -25], [-100, 170], [-45, 163], [-15, 157], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}},
+  "tarn": {"waypoints": ["drop_in", [-498, -540], [-433, -522], "canal_lip", [-235, -380], [-240, -330], [-232, -262], [-160, -232], [-150, -210], [-150, -176], [-100, -168], [100, -168], "switchback_camp", [175, -125], [120, 25], [85, 45], [70, 55], [70, 80], [35, 167], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}},
+  "tally": {"waypoints": ["drop_in", [-498, -540], [-433, -522], "canal_lip", [-235, -380], [-195, -372], [-175, -330], [-130, -302], [-20, -300], [60, -298], [150, -178], "switchback_camp", [175, -125], [120, 25], [85, 45], [70, 55], [70, 80], [35, 167], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}},
+  "cannon": {"waypoints": ["drop_in", [-498, -540], [-433, -522], "canal_lip", [-235, -380], [-240, -330], [-232, -262], [-160, -232], [-150, -210], [-150, -176], [-100, -168], [100, -168], "switchback_camp", [300, -150], [345, -125], [337, -40], [337, 110], [322, 130], [290, 135], [240, 148], [210, 155], [165, 168], [135, 175], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}}
+ },
+ "floor": {"waypoints": ["drop_in", [-498, -540], [-433, -522], "canal_lip", [-235, -380], [-240, -330], [-232, -262], [-150, -242], [40, -240], [95, -228], "switchback_camp", [195, -130], [205, -118], [205, -90], [115, -35], [110, -28], [110, -5], [75, 45], [70, 55], [70, 80], [35, 167], "landmark"]}}
 ```
 
 ## 10. Music arc
@@ -1069,10 +319,28 @@ Board id `park-3-park_pit`. PARK.md section 6.1 panels in brackets. The pilot ba
 2. **First flow line [p3_line].** Low chase camera as the ball drops off the dump's tipping face into the arroyo, then carves high on the left wall. Cinder-red banks, a few saguaros on the lip, the canal lip ahead catching light. The ball is airborne for the first beat, wheels of dust behind it.
 3. **An enemy home [p4_home].** Rivet's line on the `tailings_conveyor` cable across the tailings pond on bench 2 east. Three dark burrow markers on the flat pale surface, one bulging lane committed toward the ball. The bench face behind is streaked with turquoise copper stain; a dust devil stands at the pond's edge.
 4. **An event firing [p5_event].** The tailings slump. Panel left: the telegraph, a dust curtain lifting along the bench 1 face and the `ground_slump` form crawling along its foot. Panel right, one bar later: the face has sheared into a smooth slide down to bench 2, and a ball is riding it.
-5. **The landmark approach [p3_line, second].** From the `east_dive` kicker on the bench 2 east lip at (307, 130), between its two crest windrows, the ball in the air over bench 3 with the headframe filling the right half of frame. Inside the frame the hive hangs low at the collar, green seams lit, a rack of drones forming on the floor between it and the ball.
+5. **The landmark approach [p3_line, second].** From the `east_dive` kicker on the bench 2 east lip at (301, 130), between its two crest windrows, the ball in the air over bench 3 with the headframe filling the right half of frame. Inside the frame the hive hangs low at the collar, green seams lit, a rack of drones forming on the floor between it and the ball.
 6. **The Warden fight [p6_warden].** The hive at its high dwell just under the tipple deck. A harpoon line runs from a ringed grip cell down to the ball hanging 25 m above the floor. A file of drones climbs the rope toward the ball: the snip telegraph. Below, the hoist house and the floor dish.
 7. **The drop finisher [p6_warden, second].** Stagger. The hive has dropped to the collar, shutters blown open, the queen cell swollen and blazing green. The ball falls from the tipple deck straight onto it.
 8. **The exit.** The bay's hover barge docked over the gate on the pit floor, the headframe dark and still behind it, and the stage launch arc rising out of the pit toward the south-west and the next zone.
+
+## Dressed attempt, 2026-10-12
+
+The native-family attempt replaced 38 greybox or empty recipes and added a second flume tile. It used piece bounds, separate macro terrain stamps, an aligned canal exit, open shaft mouths and a camp-flight silo. The eight-file smoke passed on `36e3164`. Traversal failed at the first arroyo liner and canal entrance, so the branch carries the original passing greybox geometry. The attempted source, bake, graph and lines remain at `36e3164`; these failed measurements are not measurements of the carried file.
+
+| Pilot | Seeds | Reached Warden | Dead stops, median / worst | Time to engage, median | Status |
+| --- | --- | --- | --- | --- | --- |
+| Sable | 8 | 2 / 8 | 117.5 / 126 | 65.565 s among completed seeds | MISS |
+| Rivet | Not run | Not measured | Not measured | Not measured | NOT QUALIFIED |
+| Kest | Not run | Not measured | Not measured | Not measured | NOT QUALIFIED |
+| Tarn | Not run | Not measured | Not measured | Not measured | NOT QUALIFIED |
+| Tally | Not run | Not measured | Not measured | Not measured | NOT QUALIFIED |
+| The Cannon | Not run | Not measured | Not measured | Not measured | NOT QUALIFIED |
+| Floor line | Not run | Not measured | Not measured | Not measured | NOT QUALIFIED |
+
+The first absolute-y seating cleared the incoming flight but disconnected the graph. The second, a 3.5 m bed cut, reconnected the graph but restored the wall collisions. The first liner stops the ball near (-492, -527); the canal stops it near (-384, -508). The complete band table is the second section of `traversal/park_pit.md`.
+
+The attempted heaviest-view inventory counted 108 explicit mesh surfaces and 116,744 triangles. These are headless proxies, excluding Terrain3D clipmaps, renderer-generated geometry and occlusion. They are not rendered draw calls, rendered triangles or p99 performance. The three stills remain a coordinator capture plan. No visual or human-feel verdict is claimed.
 
 ## 14. Calls, veto list and open questions
 
@@ -1123,7 +391,7 @@ The anchor and ride-fact rows of sections 7 and 9 are new. These draft gaps stay
 
 ## Appendix: draft park file
 
-Generated from the tables above and checked for enums, id references, home landforms, pack membership, lead floors and the real-culture rule (no failures on this stage). It is the schema-exact form for `src/world/park/park_pit.json`; KD3 replaces target recipes with `greybox:<element>` for the greybox pass. **Shipped candidate, dressed pass, 2026-10-12:** the block below is now the shipped `src/world/park/park_pit.json`, so the page's park file and its section 9 lines agree; the original draft is in git history (`5f2139b`).
+Generated from the tables above and checked for enums, id references, home landforms, pack membership, lead floors and the real-culture rule (no failures on this stage). It is the schema-exact form for `src/world/park/park_pit.json`; KD3 replaces target recipes with `greybox:<element>` for the greybox pass. **Shipped (KD3 greybox, 2026-10-11; re-synced in the fix round):** the block below is now the shipped `src/world/park/park_pit.json`, so the page's park file and its section 9 lines agree; the original draft is in git history (`5f2139b`).
 
 ```json
 {
@@ -1153,70 +421,56 @@ Generated from the tables above and checked for enums, id references, home landf
   {"id": "eruption_lip", "from": "deep_adit", "to": "landmark", "via": ["deep_adit", "eruption_lip", "collar_dish"]},
   {"id": "hoist_yard", "from": "hoist_house", "to": "landmark", "via": ["hoist_house"]},
   {"id": "hoist_roof_line", "from": "hoist_house", "to": "landmark", "via": ["hoist_house", "tipple_deck"]},
-  {"id": "north_plateau", "from": "drop_in", "to": "rim_haul_ramp", "via": ["leach_pads", "mill_launder_1", "mill_launder_2", "ne_mesa"]},
+  {"id": "north_plateau", "from": "drop_in", "to": "rim_haul_ramp", "via": ["leach_pads", "mill_launder_1", "ne_mesa"]},
   {"id": "east_loop", "from": "tailings_dam", "to": "pit", "via": ["tailings_dam"]},
   {"id": "south_loop", "from": "south_wash", "to": "pit", "via": ["south_wash"]},
   {"id": "west_loop", "from": "west_slickrock", "to": "pit", "via": ["west_slickrock"]}
  ],
  "park_rows": [
-  {"id": "spoil_dump_terrain", "element": "drop", "landform": "tailings_bench", "society": "mining", "at": [-532.0, -665.7], "y": null, "size": [260.0, 55, 120], "yaw_deg": 15.0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "spoil_dump", "element": "drop", "landform": "tailings_bench", "society": "mining", "at": [-532.0, -665.7], "y": null, "size": [45.3353, 11, 28], "yaw_deg": 15.0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "tailings_lip", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": "mining_dump_tally"},
-  {"id": "dump_wash_1_terrain", "element": "half_pipe", "landform": "arroyo", "society": "none", "at": [-465.7, -531.2], "y": null, "size": [67.8, 10, 36], "yaw_deg": 74.8, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "wash", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "dump_wash_1_seat", "element": "ground", "landform": "arroyo", "society": "none", "at": [-465.7, -531.2], "y": null, "size": [60, 3.5, 34.64], "yaw_deg": 74.8, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "wash", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "dump_wash_1", "element": "half_pipe", "landform": "arroyo", "society": "none", "at": [-465.7, -531.2], "y": null, "size": [60, 11.9797, 34.64], "yaw_deg": 74.8, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "half_pipe_concrete", "stamp": "", "hole": false, "budget": "landform", "routes": ["main"], "fragment": ""},
-  {"id": "dump_wash_2_terrain", "element": "half_pipe", "landform": "arroyo", "society": "none", "at": [-402.3, -519.4], "y": null, "size": [61.7, 10, 36], "yaw_deg": 84.6, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "wash", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "dump_wash_2", "element": "half_pipe", "landform": "arroyo", "society": "none", "at": [-402.3, -519.4], "y": null, "size": [60, 11.9797, 34.64], "yaw_deg": 84.6, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "half_pipe_concrete", "stamp": "", "hole": false, "budget": "landform", "routes": ["main"], "fragment": ""},
+  {"id": "spoil_dump", "element": "drop", "landform": "tailings_bench", "society": "mining", "at": [-532.0, -665.7], "y": null, "size": [260.0, 55, 120], "yaw_deg": 15.0, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": "mining_dump_tally"},
+  {"id": "dump_wash_1", "element": "half_pipe", "landform": "arroyo", "society": "none", "at": [-465.7, -531.2], "y": null, "size": [67.8, 10, 36], "yaw_deg": 74.8, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:half_pipe", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["main"], "fragment": ""},
+  {"id": "dump_wash_2", "element": "half_pipe", "landform": "arroyo", "society": "none", "at": [-402.3, -519.4], "y": null, "size": [61.7, 10, 36], "yaw_deg": 84.6, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:half_pipe", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["main"], "fragment": ""},
   {"id": "saguaro_stand", "element": "anchor_field", "landform": "saguaro_stand", "society": "none", "at": [-600, -400], "y": null, "size": [200, 2, 160], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "landform", "routes": ["west_swing"], "fragment": ""},
-  {"id": "canal_lip_terrain", "element": "grind_line", "landform": "canal", "society": "hohokam", "at": [-356, -501], "y": null, "size": [300.0, 0.1, 16], "yaw_deg": 45.0, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "", "stamp": "channel", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "canal_lip", "element": "grind_line", "landform": "canal", "society": "hohokam", "at": [-356, -501], "y": null, "size": [120.1375, 11.0967, 12.018], "yaw_deg": 75.0, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "canal_lip", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": "ref_canal_gradient"},
-  {"id": "rim_haul_ramp_terrain", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-240, -330], "y": null, "size": [110, -20, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "rim_haul_ramp", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-240, -330], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing", "north_dive", "east_benches", "bench_dive", "rim_zip_line", "conveyor_line", "floor_bowl", "north_plateau"], "fragment": "mining_haul_grade"},
+  {"id": "canal_lip", "element": "grind_line", "landform": "canal", "society": "hohokam", "at": [-356, -501], "y": null, "size": [300.0, 0.1, 16], "yaw_deg": 45.0, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "channel", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": "ref_canal_gradient"},
+  {"id": "rim_haul_ramp", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-240, -330], "y": null, "size": [110, -20, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["main", "west_swing", "north_dive", "east_benches", "bench_dive", "rim_zip_line", "conveyor_line", "floor_bowl", "north_plateau"], "fragment": "mining_haul_grade"},
   {"id": "pit", "element": "bowl", "landform": "open_pit", "society": "mining", "at": [0, 175], "y": null, "size": [900, 20, 900], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "terrace", "hole": false, "budget": "landform", "routes": ["main", "west_swing", "north_dive", "east_benches", "bench_dive", "rim_zip_line", "conveyor_line", "floor_bowl", "side_7a_winze", "side_7a_east", "sump_floor", "tailings_slide", "east_loop", "south_loop", "west_loop"], "fragment": "mining_bench_survey"},
   {"id": "pit_bench_2", "element": "terrace", "landform": "open_pit", "society": "mining", "at": [0, 185], "y": null, "size": [750, -20, 750], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "pit_bench_3", "element": "terrace", "landform": "open_pit", "society": "mining", "at": [0, 195], "y": null, "size": [600, -20, 600], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "pit_bench_4", "element": "terrace", "landform": "open_pit", "society": "mining", "at": [0, 205], "y": null, "size": [450, -20, 450], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "pit_floor", "element": "terrace", "landform": "open_pit", "society": "mining", "at": [0, 215], "y": null, "size": [300, -20, 300], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "haul_road_west_1_terrain", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-412.5, -80.0], "y": null, "size": [140, -20, 40], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "haul_road_west_1", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-412.5, -80.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
-  {"id": "haul_road_west_2_terrain", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-337.5, 80.0], "y": null, "size": [140, -20, 40], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "haul_road_west_2", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-337.5, 80.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
-  {"id": "haul_road_west_3_terrain", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-262.5, 240.0], "y": null, "size": [140, -20, 40], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "haul_road_west_3", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-262.5, 240.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
-  {"id": "haul_road_west_4_terrain", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-187.5, 240.0], "y": null, "size": [140, -20, 40], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "haul_road_west_4", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-187.5, 240.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
-  {"id": "haul_road_west_5", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-95.0, 200.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 60.9, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
-  {"id": "tailings_bench_east", "element": "terrace", "landform": "tailings_bench", "society": "mining", "at": [337.5, 110], "y": null, "size": [45.3353, 11, 28], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_bowl", "home": "tailings_burrowers", "recipe": "tailings_lip", "stamp": "", "hole": false, "budget": "landform", "routes": ["east_benches", "tailings_slide"], "fragment": "mining_tailings_pond"},
-  {"id": "bench2_east_bank", "element": "bank", "landform": "open_pit", "society": "mining", "at": [337.5, -60], "y": null, "size": [33.936, 10.9, 24], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "bench_coping", "stamp": "", "hole": false, "budget": "landform", "routes": ["bench_dive"], "fragment": ""},
-  {"id": "adit_east", "element": "tunnel", "landform": "adit", "society": "mining", "at": [292.5, 120], "y": null, "size": [56, 14.0678, 13.2465], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_chute", "home": "adit_drill_crews", "recipe": "adit_mouth", "stamp": "", "hole": false, "budget": "park_large", "routes": ["bench_dive", "side_7a_east"], "fragment": "mining_adit_docket"},
+  {"id": "haul_road_west_1", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-412.5, -80.0], "y": null, "size": [140, -20, 40], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
+  {"id": "haul_road_west_2", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-337.5, 80.0], "y": null, "size": [140, -20, 40], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
+  {"id": "haul_road_west_3", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-262.5, 240.0], "y": null, "size": [140, -20, 40], "yaw_deg": 180, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
+  {"id": "haul_road_west_4", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-187.5, 240.0], "y": null, "size": [140, -20, 40], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
+  {"id": "haul_road_west_5", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-95.0, 200.0], "y": null, "size": [103.0, 0.1, 24], "yaw_deg": 60.9, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
+  {"id": "tailings_bench_east", "element": "terrace", "landform": "tailings_bench", "society": "mining", "at": [337.5, 110], "y": null, "size": [140, 0.1, 40], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_bowl", "home": "tailings_burrowers", "recipe": "greybox:terrace", "stamp": "", "hole": false, "budget": "landform", "routes": ["east_benches", "tailings_slide"], "fragment": "mining_tailings_pond"},
+  {"id": "bench2_east_bank", "element": "bank", "landform": "open_pit", "society": "mining", "at": [337.5, -60], "y": null, "size": [190, 0.1, 40], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "", "hole": false, "budget": "landform", "routes": ["bench_dive"], "fragment": ""},
+  {"id": "adit_east", "element": "tunnel", "landform": "adit", "society": "mining", "at": [292.5, 120], "y": null, "size": [60, 8, 14], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_chute", "home": "adit_drill_crews", "recipe": "", "stamp": "", "hole": false, "budget": "park_large", "routes": ["bench_dive", "side_7a_east"], "fragment": "mining_adit_docket"},
   {"id": "adit_back_door", "element": "ground", "landform": "adit", "society": "mining", "at": [88, -368], "y": null, "size": [40, 0, 30], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "landform", "routes": ["east_benches", "bench_dive", "rim_zip_line"], "fragment": ""},
   {"id": "back_door_portal", "element": "ledge", "landform": "adit", "society": "mining", "at": [100, -386], "y": null, "size": [8, 6, 3], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:ledge", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "winze_west", "element": "drop", "landform": "shaft", "society": "mining", "at": [-337.5, -20], "y": null, "size": [26.8, 24.8808, 13.6], "yaw_deg": 0, "verb": "slam", "ride_fact": "ride_drop", "home": "winze_lamps", "recipe": "shaft_drop", "stamp": "", "hole": true, "budget": "park_large", "routes": ["side_7a_winze"], "fragment": "mining_winze_stencil"},
-  {"id": "winze_north", "element": "drop", "landform": "shaft", "society": "mining", "at": [-60.0, -130.0], "y": null, "size": [26.8, 24.8808, 13.6], "yaw_deg": 0, "verb": "slam", "ride_fact": "ride_drop", "home": "", "recipe": "shaft_drop", "stamp": "", "hole": true, "budget": "park_large", "routes": ["north_dive", "side_7a_winze"], "fragment": ""},
-  {"id": "winze_east", "element": "drop", "landform": "shaft", "society": "mining", "at": [382.5, 120], "y": null, "size": [26.8, 24.8808, 13.6], "yaw_deg": 0, "verb": "slam", "ride_fact": "ride_drop", "home": "", "recipe": "shaft_drop", "stamp": "", "hole": true, "budget": "park_large", "routes": ["bench_dive", "side_7a_east"], "fragment": ""},
-  {"id": "conveyor_gallery", "element": "rail", "landform": "pipeline", "society": "mining", "at": [-262.5, 40.0], "y": null, "size": [120.4797, 11.0151, 4.4784], "yaw_deg": 0.0, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "pipeline_rail", "stamp": "", "hole": false, "budget": "landform", "routes": ["conveyor_line"], "fragment": "mining_conveyor_tag"},
+  {"id": "winze_west", "element": "drop", "landform": "shaft", "society": "mining", "at": [-337.5, -20], "y": null, "size": [12, 20, 12], "yaw_deg": 0, "verb": "slam", "ride_fact": "ride_drop", "home": "winze_lamps", "recipe": "", "stamp": "", "hole": false, "budget": "park_large", "routes": ["side_7a_winze"], "fragment": "mining_winze_stencil"},
+  {"id": "winze_north", "element": "drop", "landform": "shaft", "society": "mining", "at": [-60, -162.5], "y": null, "size": [12, 20, 12], "yaw_deg": 0, "verb": "slam", "ride_fact": "ride_drop", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "park_large", "routes": ["north_dive", "side_7a_winze"], "fragment": ""},
+  {"id": "winze_east", "element": "drop", "landform": "shaft", "society": "mining", "at": [382.5, 120], "y": null, "size": [12, 20, 12], "yaw_deg": 0, "verb": "slam", "ride_fact": "ride_drop", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "park_large", "routes": ["bench_dive", "side_7a_east"], "fragment": ""},
+  {"id": "conveyor_gallery", "element": "rail", "landform": "pipeline", "society": "mining", "at": [-262.5, 40.0], "y": null, "size": [200.0, 0.4, 6], "yaw_deg": 0.0, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:rail", "stamp": "", "hole": false, "budget": "landform", "routes": ["conveyor_line"], "fragment": "mining_conveyor_tag"},
   {"id": "barge_apron", "element": "ground", "landform": "open_pit", "society": "mining", "at": [-337.5, 250], "y": null, "size": [60, 0, 40], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "landform", "routes": ["side_7a_winze", "barge_ramp"], "fragment": ""},
-  {"id": "deep_adit", "element": "tunnel", "landform": "adit", "society": "ancient", "at": [262.5, 330], "y": null, "size": [56, 14.0678, 13.2465], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "adit_mouth", "stamp": "", "hole": false, "budget": "park_large", "routes": ["side_7a_east", "deep_adit_floor", "eruption_lip"], "fragment": "ancient_adit_seal"},
-  {"id": "eruption_lip", "element": "kicker", "landform": "adit", "society": "ancient", "at": [215, 330], "y": null, "size": [12, 2.5, 14], "yaw_deg": -90, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": ["eruption_lip"], "fragment": ""},
+  {"id": "deep_adit", "element": "tunnel", "landform": "adit", "society": "ancient", "at": [262.5, 330], "y": null, "size": [50, 10, 14], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "park_large", "routes": ["side_7a_east", "deep_adit_floor", "eruption_lip"], "fragment": "ancient_adit_seal"},
+  {"id": "eruption_lip", "element": "kicker", "landform": "adit", "society": "ancient", "at": [215, 330], "y": null, "size": [12, 2.5, 14], "yaw_deg": -90, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": ["eruption_lip"], "fragment": ""},
   {"id": "floor_sump", "element": "bowl", "landform": "open_pit", "society": "mining", "at": [-90, 120], "y": null, "size": [40, 5, 40], "yaw_deg": 0, "verb": "pump", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bowl", "stamp": "bowl", "hole": false, "budget": "landform", "routes": ["floor_bowl", "sump_floor"], "fragment": "mining_sump_gauge"},
   {"id": "collar_dish", "element": "bowl", "landform": "open_pit", "society": "mining", "at": [0, 255], "y": null, "size": [70, 10, 70], "yaw_deg": 0, "verb": "pump", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bowl", "stamp": "bowl", "hole": false, "budget": "landform", "routes": ["main", "west_swing", "north_dive", "east_benches", "bench_dive", "rim_zip_line", "conveyor_line", "floor_bowl", "side_7a_winze", "side_7a_east", "eruption_lip"], "fragment": ""},
   {"id": "hoist_house", "element": "ledge", "landform": "headframe", "society": "mining", "at": [-75, 215], "y": null, "size": [44, 16, 26], "yaw_deg": -63, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:ledge", "stamp": "", "hole": false, "budget": "landform", "routes": ["hoist_yard", "hoist_roof_line"], "fragment": "mining_hoist_boiler"},
   {"id": "tipple_deck", "element": "ledge", "landform": "headframe", "society": "mining", "at": [0, 240], "y": -60, "size": [24, 2, 16], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:ledge", "stamp": "", "hole": false, "budget": "detail", "routes": ["conveyor_line", "hoist_roof_line"], "fragment": ""},
   {"id": "gate_apron", "element": "ground", "landform": "open_pit", "society": "mining", "at": [60, 292], "y": null, "size": [70, 0, 50], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "landform", "routes": ["main", "west_swing"], "fragment": ""},
   {"id": "switchback_camp", "element": "ground", "landform": "open_pit", "society": "mining", "at": [180, -160], "y": null, "size": [16, 0, 16], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "landform", "routes": ["north_dive", "east_benches"], "fragment": ""},
-  {"id": "bench1_haul_lane", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-20.0, -241.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 90.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "rim_road_lane_1", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-152.5, -316.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 58.1, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "rim_road_lane_2", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-30.0, -300.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 90.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "bench2_north_lane", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [0.0, -168.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 90.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "bench2_camp_lane", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [250.0, -152.0], "y": null, "size": [58.7519, 15.8652, 30], "yaw_deg": 90.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "pit_haul_ramp", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "leach_pads_terrain", "element": "terrace", "landform": "tailings_bench", "society": "mining", "at": [180, -640], "y": null, "size": [420, 3, 260], "yaw_deg": 90, "verb": "pump", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "mesa", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "leach_pads", "element": "terrace", "landform": "tailings_bench", "society": "mining", "at": [180, -640], "y": null, "size": [45.3353, 11, 28], "yaw_deg": 90, "verb": "pump", "ride_fact": "ride_bowl", "home": "", "recipe": "tailings_lip", "stamp": "", "hole": false, "budget": "landform", "routes": ["north_plateau"], "fragment": "mining_leach_ticket"},
-  {"id": "mill_launder_1", "element": "grind_line", "landform": "flume", "society": "mining", "at": [535, -435], "y": null, "size": [120.8129, 17.0284, 8.6], "yaw_deg": -27, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "flume_span", "stamp": "", "hole": false, "budget": "landform", "routes": ["north_plateau"], "fragment": "mining_launder_note"},
-  {"id": "ne_mesa_terrain", "element": "ledge", "landform": "mesa_rim", "society": "none", "at": [650, -700], "y": null, "size": [240, 20, 240], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "ne_mesa", "element": "ledge", "landform": "mesa_rim", "society": "none", "at": [650, -700], "y": null, "size": [60, 19.0219, 34.1729], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "mesa_rim_ledge", "stamp": "", "hole": false, "budget": "landform", "routes": ["north_plateau"], "fragment": ""},
-  {"id": "tailings_dam_terrain", "element": "bank", "landform": "tailings_bench", "society": "mining", "at": [640, 150], "y": null, "size": [300, 35, 220], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "mesa", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "tailings_dam", "element": "bank", "landform": "tailings_bench", "society": "mining", "at": [640, 150], "y": null, "size": [45.3353, 11, 28], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "tailings_lip", "stamp": "", "hole": false, "budget": "landform", "routes": ["east_loop"], "fragment": ""},
-  {"id": "south_wash_terrain", "element": "half_pipe", "landform": "dry_wash", "society": "none", "at": [0, 720], "y": null, "size": [700, 8, 40], "yaw_deg": 90, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "wash", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "south_wash", "element": "half_pipe", "landform": "dry_wash", "society": "none", "at": [0, 720], "y": null, "size": [60, 11.9797, 34.64], "yaw_deg": 90, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "half_pipe_concrete", "stamp": "", "hole": false, "budget": "landform", "routes": ["south_loop"], "fragment": ""},
+  {"id": "bench1_haul_lane", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-20.0, -241.0], "y": null, "size": [80.0, 0.1, 24], "yaw_deg": 90.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "rim_road_lane_1", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-152.5, -316.0], "y": null, "size": [53.0, 0.1, 20], "yaw_deg": 58.1, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "rim_road_lane_2", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [-30.0, -300.0], "y": null, "size": [60.0, 0.1, 20], "yaw_deg": 90.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "bench2_north_lane", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [0.0, -168.0], "y": null, "size": [80.0, 0.1, 20], "yaw_deg": 90.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "bench2_camp_lane", "element": "flow_line", "landform": "open_pit", "society": "mining", "at": [250.0, -152.0], "y": null, "size": [70.0, 0.1, 20], "yaw_deg": 90.0, "verb": "roll", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "leach_pads", "element": "terrace", "landform": "tailings_bench", "society": "mining", "at": [180, -640], "y": null, "size": [420, 3, 260], "yaw_deg": 90, "verb": "pump", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "mesa", "hole": false, "budget": "landform", "routes": ["north_plateau"], "fragment": "mining_leach_ticket"},
+  {"id": "mill_launder_1", "element": "grind_line", "landform": "flume", "society": "mining", "at": [535, -435], "y": null, "size": [282, 1.5, 6], "yaw_deg": -27, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "landform", "routes": ["north_plateau"], "fragment": "mining_launder_note"},
+  {"id": "ne_mesa", "element": "ledge", "landform": "mesa_rim", "society": "none", "at": [650, -700], "y": null, "size": [240, 20, 240], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": ["north_plateau"], "fragment": ""},
+  {"id": "tailings_dam", "element": "bank", "landform": "tailings_bench", "society": "mining", "at": [640, 150], "y": null, "size": [300, 35, 220], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "mesa", "hole": false, "budget": "landform", "routes": ["east_loop"], "fragment": ""},
+  {"id": "south_wash", "element": "half_pipe", "landform": "dry_wash", "society": "none", "at": [0, 720], "y": null, "size": [700, 8, 40], "yaw_deg": 90, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["south_loop"], "fragment": ""},
   {"id": "west_slickrock", "element": "bank", "landform": "slickrock", "society": "none", "at": [-600, 450], "y": null, "size": [360, 18, 300], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": ["west_loop"], "fragment": ""},
   {"id": "dump_berm_east", "element": "bank", "landform": "open_pit", "society": "mining", "at": [-510.9, -664.1], "y": null, "size": [250.0, 4.0, 4.0], "yaw_deg": 15.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "dump_berm_west", "element": "bank", "landform": "open_pit", "society": "mining", "at": [-549.6, -653.7], "y": null, "size": [250.0, 4.0, 4.0], "yaw_deg": 15.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
@@ -1226,33 +480,33 @@ Generated from the tables above and checked for enums, id references, home landf
   {"id": "bench3_dive_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [247.0, -113.0], "y": null, "size": [30.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench4_ore_bin", "element": "bank", "landform": "open_pit", "society": "mining", "at": [-168.0, 32.5], "y": null, "size": [45.0, 14.0, 8.0], "yaw_deg": 0.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench3_west_berm", "element": "bank", "landform": "open_pit", "society": "mining", "at": [-185.0, -52.5], "y": null, "size": [45.0, 3.0, 4.0], "yaw_deg": 0.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "camp_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [134.0, -197.0], "y": null, "size": [12, 2.5, 14], "yaw_deg": 51.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "camp_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [134.0, -197.0], "y": null, "size": [12, 2.5, 14], "yaw_deg": 51.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "camp_dive_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [85.0, -197.4], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "camp_dive_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [248.0, -198.0], "y": null, "size": [40.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "canal_saguaros", "element": "anchor_field", "landform": "saguaro_stand", "society": "none", "at": [-356, -501], "y": null, "size": [300.0, 10, 70], "yaw_deg": 45.0, "verb": "swing", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "camp_ore_bin", "element": "ledge", "landform": "open_pit", "society": "mining", "at": [160.0, -218.0], "y": null, "size": [10.0, 14, 10.0], "yaw_deg": 0.0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:ledge", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "camp_dive_windrow_3", "element": "bank", "landform": "open_pit", "society": "mining", "at": [175.0, -198.0], "y": null, "size": [30.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "north_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [-150, -197], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": ["north_dive"], "fragment": ""},
+  {"id": "camp_dive_windrow_3","element": "bank", "landform": "open_pit", "society": "mining", "at": [175.0, -198.0], "y": null, "size": [30.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "north_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [-150, -197], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": ["north_dive"], "fragment": ""},
   {"id": "north_dive_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [-95.0, -198.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "north_dive_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [-205.0, -198.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "bench3_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [205, -112], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "bench3_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [205, -112], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "bench3_dive_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [150.0, -113.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "bench4_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [110, -27], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": ["north_dive"], "fragment": ""},
+  {"id": "bench4_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [110, -27], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": ["north_dive"], "fragment": ""},
   {"id": "bench4_dive_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [165.0, -28.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench4_dive_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [55.0, -28.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "floor_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [70, 58], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "floor_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [70, 58], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "floor_dive_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [125.0, 57.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "floor_dive_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [15.0, 57.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "east_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [307, 130], "y": null, "size": [12, 2.5, 14], "yaw_deg": -90.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": ["east_benches"], "fragment": ""},
+  {"id": "east_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [307, 130], "y": null, "size": [12, 2.5, 30], "yaw_deg": -90.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": ["east_benches"], "fragment": ""},
   {"id": "east_dive_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [308.0, 185.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 0.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "east_dive_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [308.0, 75.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 0.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "east_dive_2", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [232, 133], "y": null, "size": [12, 2.5, 14], "yaw_deg": -90.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "east_dive_2", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [232, 133], "y": null, "size": [12, 2.5, 40], "yaw_deg": -90.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "east_dive_2_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [233.0, 205.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 0.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "east_dive_2_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [233.0, 83.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 0.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "east_dive_3", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [157, 170], "y": null, "size": [12, 2.5, 14], "yaw_deg": -90.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "east_dive_3", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [157, 170], "y": null, "size": [12, 2.5, 30], "yaw_deg": -90.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "east_dive_3_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [158.0, 225.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 0.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "east_dive_3_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [158.0, 115.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 0.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "west_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [-160, -112], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "mesa_lip_kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "west_dive", "element": "kicker", "landform": "open_pit", "society": "mining", "at": [-160, -112], "y": null, "size": [12, 2.5, 14], "yaw_deg": 0.0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "west_dive_windrow_1", "element": "bank", "landform": "open_pit", "society": "mining", "at": [-105.0, -113.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "west_dive_windrow_2", "element": "bank", "landform": "open_pit", "society": "mining", "at": [-215.0, -113.0], "y": null, "size": [60.0, 3.0, 4.0], "yaw_deg": 90.0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "ore_pile_east", "element": "bank", "landform": "tailings_bench", "society": "mining", "at": [95, 245], "y": null, "size": [12, 6, 12], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
@@ -1281,9 +535,7 @@ Generated from the tables above and checked for enums, id references, home landf
   {"id": "spoil_heap_18", "element": "bank", "landform": "tailings_bench", "society": "mining", "at": [112, -416], "y": null, "size": [50, 6, 50], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "spoil_heap_19", "element": "bank", "landform": "tailings_bench", "society": "mining", "at": [672, -480], "y": null, "size": [200, 6, 200], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "slickrock_20", "element": "bank", "landform": "slickrock", "society": "none", "at": [-400, -770], "y": null, "size": [50, 6, 50], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "slickrock_21", "element": "bank", "landform": "slickrock", "society": "none", "at": [-290, -600], "y": null, "size": [40, 6, 40], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "mill_launder_2", "element": "grind_line", "landform": "flume", "society": "mining", "at": [480.1521, -327.3549], "y": -3.0, "size": [120.8129, 17.0284, 8.6], "yaw_deg": -27, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "flume_span", "stamp": "", "hole": false, "budget": "landform", "routes": ["north_plateau"], "fragment": ""},
-  {"id": "camp_dive_ore_bin", "element": "ledge", "landform": "open_pit", "society": "mining", "at": [203.0, -174.0], "y": null, "size": [10.0, 34.0, 10.0], "yaw_deg": 0.0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:ledge", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
+  {"id": "slickrock_21", "element": "bank", "landform": "slickrock", "society": "none", "at": [-290, -600], "y": null, "size": [40, 6, 40], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
  ],
  "event_rows": [
   {"id": "tailings_slump", "kind": "collapse", "family": "natural", "site": "tailings_bench_east", "trigger": {"on": "clock_tier", "value": 1}, "weight": 1.0, "telegraph": {"lead_s": 6.0, "form": "ground_slump", "on_bar": true}, "live_s": 0.0, "effect": {"depth_m": 20.0, "fill_s": 4.0, "material": "tailings", "swap": "tailings_slide_ramp"}, "route_change": {"closes": [], "opens": ["tailings_slide"]}, "hold_clear_m": 25.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_natural", "land": "drop_collapse"}},

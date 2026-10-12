@@ -130,3 +130,417 @@ Distinct lines, all 8 seeds. Exact 3D nearest-trace-point comparison at 8 m, bot
 | 8 | kest / tarn | 0.4137 | 0.4644 | PASS |
 
 Floor time 90.41 s / all-pilot median 88.24 s = 1.025, limit 2.0.
+
+## Dressed attempt, 2026-10-12, stopped at the two-rework limit
+
+Input head `36e3164130026611ec3f69f85d74c1b359517014`. The stage does not qualify. Sable was completed before the batch stopped; other dressed lines and the dressed win proof were not run. Greybox results are historical and do not qualify this changed geometry.
+
+| Line | Measure | Band | Median | Worst seed | Result |
+| --- | --- | --- | --- | --- | --- |
+| sable | reached_warden | 8 of 8 seeds | 2 | False (seed 3) | MISS |
+| sable | time_to_warden_s | median 60.0 to 120.0 s; no seed over 150.0 s | 65.565 | not reached (seed 3, 4, 5, 6, 7, 8); longest completed 65.73 (seed 2) | MISS |
+| sable | segment_s | each segment's median 12.0 to 45.0 s | [17.09, 22.1, 26.38] | 26.84 (seed 1) | PASS |
+| sable | flow_share | median at least 0.7; no seed under 0.6 | 0.0504 | 0.0496 (seed 4) | MISS |
+| sable | airborne_share | 0.12 to 0.45 | 0.0217 | 0.0195 (seed 3) | MISS |
+| sable | dead_stops | 0 on every seed | 117.5 | 126 (seed 6) | MISS |
+| sable | peak_speed_mps | at least 26.6 m/s (the blazing tier) on every seed | 56.9 | 56.9 (seed 1) | PASS |
+| sable | tier3_s | median at least 3.0 s at the blazing tier | 6.51 | 6.37 (seed 4) | PASS |
+| sable | quiet_max_s | at most 20.0 s | 227.9 | 227.91 (seed 5) | MISS |
+| sable | max_anchor_gap_m | at most 40.0 m | 13.2 | 35.3 (seed 2) | PASS |
+| sable | distinct_verbs | at least 3 different ride facts | 2.0 | 2 (seed 3) | MISS |
+| sable | length_ratio | 1.3 to 2.0 | 1.06 | 0.81 (seed 6) | MISS |
+| sable | Floor comparison | at most 2.0 times pilot median; no dead stops | NOT MEASURED | NOT MEASURED | NOT RUN |
+| sable | Distinct lines | at least three; directed 8 m share below 0.50 | NOT MEASURED | NOT MEASURED | NOT RUN |
+
+| Seed | Outcome | Reached Warden | Engage time (s) | Dead stops | Max anchor gap (m) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | engaged | True | 65.4 | 3 | 23.4 |
+| 2 | engaged | True | 65.73 | 3 | 35.3 |
+| 3 | stalled | False | None | 117 | 13.2 |
+| 4 | stalled | False | None | 118 | 13.2 |
+| 5 | stalled | False | None | 122 | 13.2 |
+| 6 | stalled | False | None | 126 | 13.2 |
+| 7 | stalled | False | None | 110 | 13.2 |
+| 8 | stalled | False | None | 119 | 13.2 |
+
+Representative dead-stop locations and times. Complete lists remain in the source JSON and traces:
+
+```json
+[
+  {
+    "seed": 1,
+    "total": 3,
+    "first_three": [
+      {
+        "at": [
+          -492.2,
+          -526.6
+        ],
+        "time": 8.26
+      },
+      {
+        "at": [
+          -383.8,
+          -508.3
+        ],
+        "time": 13.72
+      },
+      {
+        "at": [
+          -382.9,
+          -512.5
+        ],
+        "time": 14.21
+      }
+    ],
+    "last": [
+      {
+        "at": [
+          -382.9,
+          -512.5
+        ],
+        "time": 14.21
+      }
+    ]
+  },
+  {
+    "seed": 2,
+    "total": 3,
+    "first_three": [
+      {
+        "at": [
+          -492.2,
+          -526.7
+        ],
+        "time": 8.26
+      },
+      {
+        "at": [
+          -383.9,
+          -508.2
+        ],
+        "time": 13.61
+      },
+      {
+        "at": [
+          -384.0,
+          -508.1
+        ],
+        "time": 13.88
+      }
+    ],
+    "last": [
+      {
+        "at": [
+          -384.0,
+          -508.1
+        ],
+        "time": 13.88
+      }
+    ]
+  },
+  {
+    "seed": 3,
+    "total": 117,
+    "first_three": [
+      {
+        "at": [
+          -492.2,
+          -526.6
+        ],
+        "time": 8.26
+      },
+      {
+        "at": [
+          -383.3,
+          -509.6
+        ],
+        "time": 13.73
+      },
+      {
+        "at": [
+          -384.3,
+          -507.7
+        ],
+        "time": 14.29
+      }
+    ],
+    "last": [
+      {
+        "at": [
+          -384.1,
+          -508.0
+        ],
+        "time": 238.3
+      }
+    ]
+  },
+  {
+    "seed": 4,
+    "total": 118,
+    "first_three": [
+      {
+        "at": [
+          -492.2,
+          -526.6
+        ],
+        "time": 8.26
+      },
+      {
+        "at": [
+          -383.8,
+          -508.3
+        ],
+        "time": 13.7
+      },
+      {
+        "at": [
+          -384.5,
+          -507.5
+        ],
+        "time": 13.9
+      }
+    ],
+    "last": [
+      {
+        "at": [
+          -384.0,
+          -508.0
+        ],
+        "time": 239.19
+      }
+    ]
+  },
+  {
+    "seed": 5,
+    "total": 122,
+    "first_three": [
+      {
+        "at": [
+          -492.2,
+          -526.6
+        ],
+        "time": 8.26
+      },
+      {
+        "at": [
+          -450.1,
+          -524.9
+        ],
+        "time": 9.89
+      },
+      {
+        "at": [
+          -383.6,
+          -508.8
+        ],
+        "time": 13.62
+      }
+    ],
+    "last": [
+      {
+        "at": [
+          -384.2,
+          -507.9
+        ],
+        "time": 239.85
+      }
+    ]
+  },
+  {
+    "seed": 6,
+    "total": 126,
+    "first_three": [
+      {
+        "at": [
+          -492.2,
+          -526.6
+        ],
+        "time": 8.26
+      },
+      {
+        "at": [
+          -383.7,
+          -508.3
+        ],
+        "time": 13.71
+      },
+      {
+        "at": [
+          -383.7,
+          -508.4
+        ],
+        "time": 13.79
+      }
+    ],
+    "last": [
+      {
+        "at": [
+          -384.1,
+          -508.0
+        ],
+        "time": 239.8
+      }
+    ]
+  },
+  {
+    "seed": 7,
+    "total": 110,
+    "first_three": [
+      {
+        "at": [
+          -492.2,
+          -526.6
+        ],
+        "time": 8.26
+      },
+      {
+        "at": [
+          -384.0,
+          -508.1
+        ],
+        "time": 13.69
+      },
+      {
+        "at": [
+          -383.9,
+          -508.2
+        ],
+        "time": 13.77
+      }
+    ],
+    "last": [
+      {
+        "at": [
+          -383.8,
+          -508.3
+        ],
+        "time": 238.2
+      }
+    ]
+  },
+  {
+    "seed": 8,
+    "total": 119,
+    "first_three": [
+      {
+        "at": [
+          -492.2,
+          -526.6
+        ],
+        "time": 8.26
+      },
+      {
+        "at": [
+          -450.2,
+          -524.9
+        ],
+        "time": 9.89
+      },
+      {
+        "at": [
+          -383.6,
+          -509.0
+        ],
+        "time": 13.61
+      }
+    ],
+    "last": [
+      {
+        "at": [
+          -383.9,
+          -508.1
+        ],
+        "time": 239.52
+      }
+    ]
+  }
+]
+```
+
+| rivet | reached_warden | 8 of 8 seeds | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | time_to_warden_s | median 60.0 to 120.0 s; no seed over 150.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | segment_s | each segment's median 12.0 to 45.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | flow_share | median at least 0.7; no seed under 0.6 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | airborne_share | 0.12 to 0.45 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | dead_stops | 0 on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | peak_speed_mps | at least 26.6 m/s (the blazing tier) on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | tier3_s | median at least 3.0 s at the blazing tier | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | quiet_max_s | at most 20.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | max_anchor_gap_m | at most 40.0 m | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | distinct_verbs | at least 3 different ride facts | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | length_ratio | 1.3 to 2.0 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | Floor comparison | at most 2.0 times pilot median; no dead stops | NOT MEASURED | NOT MEASURED | NOT RUN |
+| rivet | Distinct lines | at least three; directed 8 m share below 0.50 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | reached_warden | 8 of 8 seeds | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | time_to_warden_s | median 60.0 to 120.0 s; no seed over 150.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | segment_s | each segment's median 12.0 to 45.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | flow_share | median at least 0.7; no seed under 0.6 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | airborne_share | 0.12 to 0.45 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | dead_stops | 0 on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | peak_speed_mps | at least 26.6 m/s (the blazing tier) on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | tier3_s | median at least 3.0 s at the blazing tier | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | quiet_max_s | at most 20.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | max_anchor_gap_m | at most 40.0 m | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | distinct_verbs | at least 3 different ride facts | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | length_ratio | 1.3 to 2.0 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | Floor comparison | at most 2.0 times pilot median; no dead stops | NOT MEASURED | NOT MEASURED | NOT RUN |
+| kest | Distinct lines | at least three; directed 8 m share below 0.50 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | reached_warden | 8 of 8 seeds | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | time_to_warden_s | median 60.0 to 120.0 s; no seed over 150.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | segment_s | each segment's median 12.0 to 45.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | flow_share | median at least 0.7; no seed under 0.6 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | airborne_share | 0.12 to 0.45 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | dead_stops | 0 on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | peak_speed_mps | at least 26.6 m/s (the blazing tier) on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | tier3_s | median at least 3.0 s at the blazing tier | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | quiet_max_s | at most 20.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | max_anchor_gap_m | at most 40.0 m | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | distinct_verbs | at least 3 different ride facts | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | length_ratio | 1.3 to 2.0 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | Floor comparison | at most 2.0 times pilot median; no dead stops | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tarn | Distinct lines | at least three; directed 8 m share below 0.50 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | reached_warden | 8 of 8 seeds | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | time_to_warden_s | median 60.0 to 120.0 s; no seed over 150.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | segment_s | each segment's median 12.0 to 45.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | flow_share | median at least 0.7; no seed under 0.6 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | airborne_share | 0.12 to 0.45 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | dead_stops | 0 on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | peak_speed_mps | at least 26.6 m/s (the blazing tier) on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | tier3_s | median at least 3.0 s at the blazing tier | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | quiet_max_s | at most 20.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | max_anchor_gap_m | at most 40.0 m | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | distinct_verbs | at least 3 different ride facts | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | length_ratio | 1.3 to 2.0 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | Floor comparison | at most 2.0 times pilot median; no dead stops | NOT MEASURED | NOT MEASURED | NOT RUN |
+| tally | Distinct lines | at least three; directed 8 m share below 0.50 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | reached_warden | 8 of 8 seeds | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | time_to_warden_s | median 60.0 to 120.0 s; no seed over 150.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | segment_s | each segment's median 12.0 to 45.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | flow_share | median at least 0.7; no seed under 0.6 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | airborne_share | 0.12 to 0.45 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | dead_stops | 0 on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | peak_speed_mps | at least 26.6 m/s (the blazing tier) on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | tier3_s | median at least 3.0 s at the blazing tier | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | quiet_max_s | at most 20.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | max_anchor_gap_m | at most 40.0 m | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | distinct_verbs | at least 3 different ride facts | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | length_ratio | 1.3 to 2.0 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | Floor comparison | at most 2.0 times pilot median; no dead stops | NOT MEASURED | NOT MEASURED | NOT RUN |
+| cannon | Distinct lines | at least three; directed 8 m share below 0.50 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | reached_warden | 8 of 8 seeds | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | time_to_warden_s | median 60.0 to 120.0 s; no seed over 150.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | segment_s | each segment's median 12.0 to 45.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | flow_share | median at least 0.7; no seed under 0.6 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | airborne_share | 0.12 to 0.45 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | dead_stops | 0 on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | peak_speed_mps | at least 26.6 m/s (the blazing tier) on every seed | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | tier3_s | median at least 3.0 s at the blazing tier | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | quiet_max_s | at most 20.0 s | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | max_anchor_gap_m | at most 40.0 m | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | distinct_verbs | at least 3 different ride facts | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | length_ratio | 1.3 to 2.0 | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | Floor comparison | at most 2.0 times pilot median; no dead stops | NOT MEASURED | NOT MEASURED | NOT RUN |
+| floor | Distinct lines | at least three; directed 8 m share below 0.50 | NOT MEASURED | NOT MEASURED | NOT RUN |
+
+Peak speed and blazing time share one PARK.md band; they are split above for readability. The table records every canonical band, including the unmeasured floor and distinct-line criteria. A tool median flag is not a full-stage pass. Progress is reported only.

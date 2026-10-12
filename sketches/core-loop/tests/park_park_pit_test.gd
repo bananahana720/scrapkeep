@@ -11,9 +11,6 @@ extends SceneTree
 # swapped waymark order fails the order pin, a waypoint off the play square fails to resolve. K-UNITS KD3,
 # greybox pass, 2026-10-11. Fix round, 2026-10-11: the reward pocket stands at least 150 m in a straight line from
 # every pilot and floor line, and the Kest line crosses dust_devil_floor's column; each has its planted control.
-# Dressed pass, 2026-10-12: the ten kicker rows use the 12 by 2.5 by 14 m mesa lip recipe; the canal, arroyo,
-# haul lanes, pipeline, adits and winzes use shipped family pieces. Macro stamps stay separate from fixed-size
-# meshes. A planted return of the canal recipe to greybox fails the dressing pin before the live pin is trusted.
 
 const T := preload("res://tests/support/t.gd")
 
@@ -53,12 +50,6 @@ func _run() -> void:
 	if not t.check("park file, lines file and graph.bin load", park != null and lines != null and graph != null):
 		quit(t.verdict())
 		return
-	var undressed := park.duplicate(true)
-	for row in undressed["park_rows"]:
-		if row["id"] == "canal_lip":
-			row["recipe"] = "greybox:grind_line"
-	t.check("planted: the canal back on greybox fails the dressing pin", not _dressed(undressed).is_empty())
-	t.eq("shipped family recipes and fixed-size kicker footprints", _dressed(park), [])
 
 	# Planted controls: each must go red before its pin's green is trusted.
 	DirAccess.make_dir_recursive_absolute(SCRATCH)
@@ -130,27 +121,6 @@ func _run() -> void:
 	var kest := _line_distance(park, lines["pilots"]["kest"], Vector2(float(at[0]), float(at[1])))
 	t.check("the kest line crosses dust_devil_floor's column", kest <= float(thermal["radius"]), "%.1f m from its centre" % kest)
 	quit(t.verdict())
-
-
-func _dressed(park: Dictionary) -> Array:
-	var expected := {"canal_lip": "canal_lip", "dump_wash_1": "half_pipe_concrete", "dump_wash_2": "half_pipe_concrete",
-		"conveyor_gallery": "pipeline_rail", "adit_east": "adit_mouth", "deep_adit": "adit_mouth",
-		"winze_west": "shaft_drop", "winze_north": "shaft_drop", "winze_east": "shaft_drop"}
-	var errors := []
-	for row in park["park_rows"]:
-		var id: String = row["id"]
-		if expected.has(id):
-			if row["recipe"] != expected[id]:
-				errors.append(id + " recipe differs")
-			expected.erase(id)
-		if row["element"] == "flow_line" and not id.ends_with("_terrain") and row["recipe"] != "pit_haul_ramp":
-			errors.append(id + " haul recipe differs")
-		if row["element"] == "kicker":
-			if row["recipe"] != "mesa_lip_kicker" or row["size"] != [12.0, 2.5, 14.0]:
-				errors.append(id + " kicker recipe or footprint differs")
-	for id in expected:
-		errors.append(id + " recipe row missing")
-	return errors
 
 
 func _activity(park: Dictionary, id: String) -> Dictionary:
