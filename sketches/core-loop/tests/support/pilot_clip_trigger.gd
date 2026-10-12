@@ -47,6 +47,20 @@ static func stem_of(class_id: String) -> String:
 	return ""
 
 
+# Removes the eleven new roster clips from the animator, so a policy fixture starts from the
+# seven kept clips whether or not the pilot has shipped all 18 (PE-SABLE round 2, 2026-10-11).
+# Stops the animator first, since it may be playing idle_loop. Returns the names removed.
+static func strip_to_kept(animator: AnimationPlayer) -> Array:
+	animator.stop()
+	var imported := animator.get_animation_library("")
+	var removed: Array = []
+	for clip in roster().get("new", []):
+		if imported.has_animation(clip):
+			imported.remove_animation(clip)
+			removed.append(String(clip))
+	return removed
+
+
 # Adds every roster clip the animator lacks as a copy of drop_land, cut to the pilot's end
 # frame from PILOT-CLIPS section 1.2 ((E - 1) / 30 s), looping for the _loop names. The same
 # move the policy fixture in pilot_reactions_test makes for the kept clips. Returns the names added.

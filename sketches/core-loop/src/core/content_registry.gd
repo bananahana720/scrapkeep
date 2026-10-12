@@ -73,8 +73,8 @@ const TABLES := {
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
 # 2026-10-11, sg5-burden-sweep: parts.rows adds the capped Load Dividend payout.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "9f88aba2f6fe18ae2243942d6a9e13a6d1d384b9d87a07642cecbfd4a4254296",  # 2026-10-11 (w13 SG12 sg12-meta-options): four ach_meta_* grant rows paying {"option": <node>}; was 028b78af, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
-	"cosmetics.ROWS": "26e34e89d31537480501baf914721349d737fe04d233bedd3bc33b1f5a8e0283",  # 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): Downbeat trail, Curtain Call decal tile 9, Till Bell companion skin, all pending art; was c0f10ab8, P-R7: delivered decal mask ids, trails and SPIL-9 paints
+	"achievements.ROWS": "d584902d24f3322b233f6b5c4d9d014acb10097b85079574c19de54d1459c016",  # 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 9f88aba2, 2026-10-11 (w13 SG12 sg12-meta-options): four ach_meta_* grant rows paying {"option": <node>}; was 028b78af, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
+	"cosmetics.ROWS": "1148576f3d7bf5aff5caa762067e44e30088ab4911630f8df1c0fefd6a862105",  # 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 26e34e89, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): Downbeat trail, Curtain Call decal tile 9, Till Bell companion skin, all pending art; was c0f10ab8, P-R7: delivered decal mask ids, trails and SPIL-9 paints
 	"event_kinds.ROWS": "c374e25980772cfb6cff9af3f4297012ce0ffeb284f651b57974dd7ef6c412db",  # 2026-10-11 (w13 skill-bar step 1, 7b7e2aa): ultimate_* rows, re-pinned by the coordinator at the systems wave A merge; was 1326ff10, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 3e903494, 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
@@ -92,9 +92,9 @@ const GOLDEN_HASHES := {
 	"lore_rows.ROWS": "e19ddad31b36bb6462e736c355c11a0370ad547ec7343302016dc494643ef054",  # 2026-10-08 (wave 10 ST6): Dig and Highdraft lore take the approved sample lines; was 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "f9e1cca796c86aa8044002aee416b6999ab8554aab078fc87545d8f59a3ec7ea",
 	"windup_rows.ROWS": "a38f788e68affd8fb5c71c0ff4e0f0883cbeac1eac85a4bb8d7c45a9ae62cfc8",  # 2026-10-08 (wave 10 GP6 and AU2): idle, death and wind-up cue fields per kind
-	"upgrade_tree.TREES": "55786d60308e54612ab34205749dc173d281016e2222e047b26e1ea2ed8629f9",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
+	"upgrade_tree.TREES": "10a325b317228f9c8e82067ce583c2fcb580093317403bdc911f594695a00645",  # 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 55786d60, 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
 	"upgrade_tree.WORLD_ONE_NODES": "d649afcb0e003763c8fc9488a275f44ddfc2049ca02963fa078c8c8f887df7a8",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
-	"combat.codex_entries.ENTRIES": "310d6ec7fe5ec359bd5ef08f7b8090a70774ebf52c2ce300d722c78b2f7fd6e6",  # 2026-10-11 (w13 B6): the five skill-bar discovery entries on top of the ST4 set
+	"combat.codex_entries.ENTRIES": "64a0d1d48f19bb018bd02792a7b809cb66351b4961922e2b7c306ddfd1c15611",  # 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 310d6ec7, 2026-10-11 (w13 B6): the five skill-bar discovery entries on top of the ST4 set
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned
 	"boss.codex_entries.WAKING": "6b6074ef43fd2de4eb04f2c60d971eb7922d6e152e532b9b94454a8e017f60ea",
@@ -363,7 +363,8 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 							_ref(issues, name, id, "knob", knob, Trees.KNOBS)
 					"swap", "charges", "cooldown":
 						for slot in node.get(op, {}):
-							_ref(issues, name, id, "slot", slot, AbilityState.SLOTS)
+							# A swap may replace Q's ultimate; charges and cooldowns stay on the five bar slots.
+							_ref(issues, name, id, "slot", slot, AbilityState.SWAPPABLE if op == "swap" else AbilityState.SLOTS)
 							if op == "swap":
 								_ref(issues, name, id, "ability", node[op][slot], AbilityState.ABILITIES)
 							elif not _type_matches(node[op][slot], NUMBER) or node[op][slot] <= 0:

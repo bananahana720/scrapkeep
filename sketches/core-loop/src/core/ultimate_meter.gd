@@ -23,12 +23,17 @@ const WEAPON_BURST := 0.5
 # miss (4.0). B4's camper filled in a median 41.1 s, 69 to 95 of its first 100 points from near misses.
 const NEAR_MISS_RATE_CAP := 0.05
 const NEAR_MISS_BURST := 4.0
+# 2026-10-11 (PC-TARN ruling 2): contact budget from 32 round-2 pacing records;
+# 0.14 points/s holding one contact predicts Tarn camper 228.09 s, completionist 88.12 s.
+const CONTACT_RATE_CAP := 0.14
+const CONTACT_BURST := 2.0
 # 2026-10-11 (w13 B3b): a chain link on one enemy pays at most once per this many seconds.
 const CHAIN_LINK_GAP := 1.0
 # The rate-limited sources: [points per second the budget refills, the most it holds].
 const RATE_LIMITS := {
 	"weapon": [WEAPON_RATE_CAP, WEAPON_BURST],
 	"near_miss": [NEAR_MISS_RATE_CAP, NEAR_MISS_BURST],
+	"contact": [CONTACT_RATE_CAP, CONTACT_BURST],
 }
 
 var value := 0.0
