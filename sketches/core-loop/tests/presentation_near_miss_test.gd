@@ -148,9 +148,13 @@ func _process(_delta: float) -> bool:
 	var juice = _game.presentation.juice
 	juice.reset_stops()
 	_game.events.near_miss.emit("threat_lane", _game.player.ball_position())
-	var answered: bool = juice.hook_log.has(["hit_stop", "near_miss"]) and juice.hook_log.has(["punch_fov", "near_miss"])
+	# A dodge never freezes time (juice.gd STRIKE_STOP_FACTS; BIBLE: momentum is sacred): the near
+	# miss asks for its stop, and the budget logs it at zero and sends nothing.
+	var refused: bool = juice.hit_stop_log.any(func(s: Array): return s[2] == "near_miss" and float(s[1]) == 0.0)
+	var froze: bool = juice.hook_log.has(["hit_stop", "near_miss"])
+	var answered: bool = refused and not froze and juice.hook_log.has(["punch_fov", "near_miss"])
 	_check("juice answers", answered and watch_on_bus and _game.presentation.vfx.spawned.get("near_miss", 0) >= 2,
-		"combat runs its own watch %s; a near_miss gets the dodge tick, the zoom-in and the chevron and ring (%d glyphs)" % [watch_on_bus, _game.presentation.vfx.spawned.get("near_miss", 0)])
+		"combat runs its own watch %s; a near_miss asks for no time freeze (refused %s, froze %s), gets the zoom-in and the chevron and ring (%d glyphs)" % [watch_on_bus, refused, froze, _game.presentation.vfx.spawned.get("near_miss", 0)])
 	print("presentation_near_miss_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)

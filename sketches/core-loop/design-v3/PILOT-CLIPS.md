@@ -58,6 +58,8 @@ The shells (`world_one/shell_<id>.glb`) carry no animations (parsed: 0 animation
 
 Eighteen clips per pilot: the seven that exist, plus eleven new. The plan's list (idle loop, class-up pulse, two skill casts, ultimate wind-up, strike and recovery, smash flavour, unlock ceremony) is nine. SKILL-BAR adds `ult_ready` (`SKILL-BAR.md` section 4, "Ready cue"). This sheet adds `ult_ride_loop`, so the pilot holds the big control through the flight instead of dropping back to idle mid-air (section 1.3).
 
+Pose keys may include `"pelvis": {"pitch": 0, "roll": 0, "yaw": 0}`. These optional angles use the torso's XYZ convention in degrees and rotate the `pelvis` bone at its fixed seated head. They do not move `root` or replace the torso's 55/45 spine split. Omitted pelvis fields use rest rotation. The builder applies pelvis rotation before solving the hands; the verifier retains the fixed pelvis-head, clearance, anchor and planted-hand checks. In loops, pelvis rotation has the same 6-degree cap as the spine.
+
 ### 1.1 Roster table: one row per clip, the same in all six GLBs
 
 Blend in is the `custom_blend` seconds passed to `AnimationPlayer.play()`. Every clip hands back to a base loop with a 0.1 s blend when it ends (section 3).
@@ -183,7 +185,7 @@ Once per profile uses the existing seen list: `ui_profile.seen()` and `mark_seen
 
 1. **The seven existing names stay**, spelled as they are: `drop_land`, `big_cheer`, `wince`, `slump`, `phew`, `brace`, `heave`. Their action data stays as built (the verifier checks it, section 6).
 2. **One name per role in all six GLBs.** The GLB is the pilot's namespace. The sheets' `idle`, `idle_tally`, `smash_rush`, `smash_stamp`, `smash_rend`, `unlock_tally` and `unlock_tarn` become `idle_loop`, `smash` and `unlock`. `class_clips` stays in the router for a future exception; no row uses it.
-3. **A loop's name ends in `_loop`. A one-shot's name never starts or ends with `loop` or `cycle`.** Godot 4.7 imports any animation whose name starts or ends with those tokens as looping, with no hyphen needed (Godot docs, "Node type customization using name suffixes", animation loop). The pilot GLBs import with `nodes/use_name_suffixes=true` (`assets/models/pilot_tarn_anim.glb.import`), so the name alone sets the loop. No import file edit.
+3. **A loop's name ends in `_loop`. A one-shot's name never starts or ends with `loop` or `cycle`.** The names keep that rule, but the import does not rely on it. Godot 4.7 strips a `_loop` suffix from the clip name when `nodes/use_name_suffixes=true` (Godot docs, "Node type customization using name suffixes"), so each pilot's committed `.import` sets `nodes/use_name_suffixes=false` and gives `idle_loop` and `ult_ride_loop` `"settings/loop_mode": 1` (candidate 9f8e36b). `tests/pilot_reactions_test.gd` fails if either setting is lost.
 4. **Lower snake case, role first**: `cast_special`, `ult_strike`. Prefixes group roles: `cast_` for bar slots, `ult_` for the ultimate chain.
 5. **A new role is a roster change.** It goes into `src/presentation/clips/roster.json` and all six GLBs in the same wave, or into none.
 6. **No `RESET` action is exported.** Today's tests skip `RESET` (`tests/pilot_reactions_test.gd:49`); the import keeps `animation/import_rest_as_RESET=false`.
@@ -276,6 +278,7 @@ The pose JSON tables exist only for `drop_land` (`tools/blender/{rivet,sable,kes
 | --- | --- | --- |
 | `torso.height` | spine scale; 1 is rest. Refused when `torso_scale` is false (the Cannon) | `anim_tarn.py:116-119` |
 | `torso.pitch`, `.yaw`, `.roll` | split 55/45 over `spine_01` and `spine_02` | `anim_tarn.py:114-115` |
+| `pelvis.pitch`, `.roll`, `.yaw` | optional XYZ rotation on `pelvis`, in degrees; head stays fixed | section 1; `pilot_clips.apply` |
 | `head.pitch`, `.yaw`, `.roll` | `head` | `anim_pilot_reactions.py:181` |
 | `neck.drop` | `neck` location z | `anim_pilot_drop.py:50` |
 | `shoulder.lift` | `shoulder.R/L` location z | `anim_tarn.py:125` |
@@ -405,9 +408,9 @@ The pilot hangs directly under Pod (`hero_assets.gd:526`), so hand and control s
 | Item | Value |
 | --- | --- |
 | Rows | Row 1: the resting chase camera (7.5-unit arm, 65-degree vertical field of view, pitch -0.30, anchor height 0.8, `PILOT-RIG.md:58`), Core visible. Row 2: a three-quarter front close-up, 2.6 m, 35 degrees, Core hidden so the pose reads |
-| Frames | One-shots: 5 per row at the table's key beats (start, anticipation, contact or peak, release, end). Loops: 6 per row, evenly spaced, the last next to frame 1 to show the seam |
+| Frames | Every clip: 5 per row. Collapse each consecutive run of equal key poses, ignoring `frame` and `note`, to its first frame. Always include the first contact beat, identified by the clip's `contact.frame`, a key's `contact` field or its contact note. Fill the other cells evenly from the remaining beats in time order. With fewer than 5 beats, use even frame spacing while retaining the first contact beat. Loops include their end beat to show the seam |
 | Cell size | 480 by 360 px, with a 24 px label band (clip, frame, seconds) |
-| Strip size | 2,400 by 768 px for one-shots, 2,880 by 768 px for loops |
+| Strip size | 2,400 by 768 px for every clip, so width does not reveal whether it loops |
 | Video | `<clip>.mp4`, chase row only, 960 by 540, 30 fps; loops play three times |
 | Contact sheet | `sheet.png`: all 18 clips, the chase cell at each clip's contact or peak frame |
 | Path | `artifacts/local/alpha/push/w13/clips/<pilot>/<clip>.png`, `<clip>.mp4`, `sheet.png` |

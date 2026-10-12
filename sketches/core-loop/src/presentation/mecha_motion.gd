@@ -262,7 +262,8 @@ func _core_valid() -> bool:
 	return _core != null and is_instance_valid(_core)
 
 
-# A node under the Pod by its shell name; Godot's glTF import turns "." into "_".
+# Shell paths win over name search. The loader splits and renames Core/Pod, so their
+# declared names also resolve through the references passed at construction.
 func _node(node_name: String) -> Node3D:
 	if _nodes.has(node_name):
 		var cached = _nodes[node_name]
@@ -270,9 +271,40 @@ func _node(node_name: String) -> Node3D:
 	var found: Node3D = null
 	if is_instance_valid(_pod):
 		for candidate in [node_name, node_name.replace(".", "_")]:
-			found = _pod.find_child(candidate, true, false) as Node3D
+			if candidate == "Core" and _core_valid():
+				found = _core
+			elif candidate == "Pod":
+				found = _pod
+			elif candidate.begins_with("Core/") and _core_valid():
+				found = _core.get_node_or_null(candidate.trim_prefix("Core/")) as Node3D
+			elif candidate.begins_with("Pod/"):
+				found = _pod.get_node_or_null(candidate.trim_prefix("Pod/")) as Node3D
+			else:
+				var shell_root := _pod.get_parent()
+				if shell_root != null:
+					found = shell_root.get_node_or_null(candidate) as Node3D
+				if found == null:
+					found = _pod.get_node_or_null(candidate) as Node3D
+				if found == null and _core_valid():
+					found = _core.get_node_or_null(candidate) as Node3D
 			if found != null:
 				break
+		if found == null:
+			var scopes: Array = [_pod]
+			if _core_valid():
+				scopes.append(_core)
+			if _pod.get_parent() != null:
+				for sibling in _pod.get_parent().get_children():
+					if sibling != _pod and not sibling in scopes:
+						scopes.append(sibling)
+			var name_only := node_name.get_file()
+			for scope in scopes:
+				for candidate in [name_only, name_only.replace(".", "_")]:
+					found = scope if String(scope.name) == candidate and scope is Node3D else scope.find_child(candidate, true, false) as Node3D
+					if found != null:
+						break
+				if found != null:
+					break
 	if found == null:
 		_skip("SKIP control " + node_name.trim_prefix("Control."))
 	_nodes[node_name] = found

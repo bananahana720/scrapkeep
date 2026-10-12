@@ -47,7 +47,7 @@ const POLYPHONY := 32
 const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
-	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60,
+	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
 	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Weak-point hits inside this window climb like a kill chain. Pickups and kills climb by
@@ -63,6 +63,7 @@ const MENU_STATES := ["title", "class_select", "summary", "dead"]
 const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0, "claw_sweep": -5.0, "cannon_lane": -7.0,
 	"gather_plate": 2.0, "link_clips": 3.0, "balance_due": 5.0}
 const VOLUME_STEP := 0.1
+const VAULT_KILL_SOUND := "vault_drop"
 
 # The harpoon line's grammar (design-v3/LEGIBILITY.md sections 3 and 5). Gaps are in seconds on
 # the audio clock, which _process advances by its delta so a test can step it.
@@ -99,7 +100,12 @@ const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tic
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer"]
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
+	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate"]
+# --- P-C Kest sounds ---
+const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
+	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
+# --- end Kest ---
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
 # row's sound, a shattered chunk plays its row's sound over a low hit.
@@ -464,6 +470,7 @@ func _poly_player(bus: String, node_name: String) -> AudioStreamPlayer:
 
 func _process(delta: float) -> void:
 	clock += delta
+	_step_cannon_cues()
 	if not sound_ready:
 		if _poll_bake():
 			_on_ready()
@@ -840,7 +847,7 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
 	if not _admit(kind, sound, pitch):
 		return false
-	if sound in KEYED_SOUNDS:
+	if sound in KEYED_SOUNDS or sound in KEST_SOUNDS:
 		pitch *= Harmony.ratio(live_key())
 	_start(kind, sound, SfxBank.stream(sound), SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)] + db, pitch, bus)
 	if Rows.priority(kind) >= 2:
@@ -981,6 +988,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 # --- Facts --------------------------------------------------------------------------
 
 func _connect_all(events) -> void:
+	_wire_cannon(events)
 	events.run_started.connect(func(class_id: String):
 		_heft_class = 1
 		_hull_seen = 0.0
@@ -1030,10 +1038,17 @@ func _connect_all(events) -> void:
 	events.run_started.connect(func(_class_id: String): _set_ult_lift(false))
 	events.ultimate_ready.connect(_on_ultimate_ready)
 	events.ultimate_started.connect(_on_ultimate_started)
-	events.ultimate_peak.connect(func(_id: String, _at: Vector3): on_beat("ultimate_peak"))
+	events.ultimate_peak.connect(_on_ultimate_peak)
 	events.ultimate_landed.connect(_on_ultimate_landed)
 	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
 	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
+	events.line_skill_fired.connect(_sable_bank)
+	events.stage_content_cleared.connect(func(_reason: String): _sable_bank_wait = false)
+	events.player_died.connect(func(): _sable_bank_wait = false)
+	events.dismounted.connect(func(_v: Vector3):
+		if _sable_bank_wait:
+			_sable_bank_wait = false
+			_sable_bank_sound())
 	events.line_skill_fired.connect(_on_tarn_claw_drag)
 	events.line_skill_fired.connect(_on_rivet_line_drive)
 	_wire_ultimate_beat()
@@ -1284,7 +1299,7 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String)
 				_chain_bite_ms = -100000.0
 			return
 		"smash_lands":
-			if _recent_ms("slam_boom") > MIN_GAP_MS["slam_boom"]:
+			if _recent_ms(Rows.sound("slammed")) > int(MIN_GAP_MS.get(Rows.sound("slammed"), 60)):
 				_grammar_cue("harpoon_smashed", sound)
 			_grammar_cue("harpoon_smashed", "smash_crack")
 			return
@@ -1628,7 +1643,7 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		_miniboss = null
 	if _kind == "vault":
 		# A small drop, on the moment the vault breaks.
-		play("enemy_killed", 2.0, 1.0, "SFX", "vault_drop")
+		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
 	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
 
@@ -1708,6 +1723,7 @@ func _wire_ultimate_beat() -> void:
 	var spawner = ctx.get("spawner") if ctx != null else null
 	if spawner == null or spawner.get("ultimate") == null:
 		return
+	spawner.ultimate.stakes.note = sable_note
 	spawner.ultimate.beat_seconds = func() -> float:
 		if not sound_ready or engine.mode != MusicEngine.PLAY:
 			return 0.0
@@ -1752,7 +1768,9 @@ func _on_ultimate_ready(_id: String) -> void:
 # holds through the flight and hands over on the landing's beat, as a Warden launch does.
 func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vector3, seconds: float) -> void:
 	play("ultimate_started")
-	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == _boss_track():
+	if not sound_ready or engine.mode != MusicEngine.PLAY:
+		return
+	if engine.track == _boss_track() and not _id.begins_with("cannon_"):
 		return
 	_ult_armed = true
 	if ace_playing() and ace.mode == "piece":
@@ -1763,13 +1781,57 @@ func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vecto
 	engine.start_build(seconds, true)
 
 
+func _on_ultimate_peak(id: String, _at: Vector3) -> void:
+	if id.begins_with("cannon_"):
+		cannon_motif("cannon_peak", false, false, 12)
+	elif id in ["windhover", "air_raid", "minelayer"]:
+		kest_cue("ultimate_peak", "raid_kest_stinger")
+	elif id in ["cable_run", "ball_lightning", "outpost"]:
+		on_beat("ultimate_peak", PRIORITY_DB[Rows.priority("ultimate_peak")], false, 1, String(SABLE_SOUNDS["sable_peak"]))
+	else:
+		on_beat("ultimate_peak")
+
+
+func kest_cue(kind: String, sound: String, grid := "beat", pitch := 1.0) -> int:
+	var keyed_pitch := pitch * Harmony.ratio(live_key())
+	if not _admit(kind, sound, keyed_pitch):
+		return -1
+	var priority_db: float = PRIORITY_DB[Rows.priority(kind)]
+	var gain: float = SfxBank.trim_db(sound) + priority_db
+	if grid == "now":
+		_start(kind, sound, SfxBank.stream(sound), gain, keyed_pitch, "SFX")
+		return engine.clock
+	var at := engine.next_beat()
+	if grid == "eighth":
+		var eighth := maxi(1, engine.beat_len() / 2)
+		at = engine.clock + posmod(eighth - posmod(engine.clock - engine.grid_origin, eighth), eighth)
+	engine.schedule_stinger_at(sound, at, priority_db)
+	_duck(0.6, float(at - engine.clock + SfxBank.STINGER_BEATS.get(sound, 1) * engine.beat_len()) / Harmony.RATE)
+	cue_log.append([kind, sound, grid, at, keyed_pitch, gain])
+	return at
+
+
+func kest_roll(note: int) -> int:
+	return kest_cue("ultimate_peak", "tick_kest_%d" % note, "eighth")
+
+
 # The landing is the drop, on the next beat, never more than one beat after touchdown; the
 # lift releases with it (the meter is empty).
 func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) -> void:
 	play("ultimate_landed")
+	if _id.begins_with("cannon_"):
+		cannon_motif("cannon_landing", false, true)
+	if _id in ["windhover", "air_raid", "minelayer"]:
+		kest_cue("ultimate_landed", "raid_kest_boom")
 	if _ult_armed:
 		var touchdown := engine.clock
-		var at := engine.drop_now(4, 0.85, {}, -1, {"ult": false})
+		var at: int
+		if _id.begins_with("cannon_"):
+			# Time on target shares touchdown; waiting for the next beat separates the shells from the drop.
+			at = touchdown
+			engine._add_action(at, {"type": "drop", "bars": 4, "weight": 0.85, "then": {}, "theme": -1, "set": {"ult": false}})
+		else:
+			at = engine.drop_now(4, 0.85, {}, -1, {"ult": false})
 		drop_log.append([touchdown, at])
 		if _ace_flight:
 			_ace_flight = false
@@ -2244,6 +2306,143 @@ func _show_mixer() -> void:
 		_overlay.text = "Music %d%%  (- =)    Effects %d%%  ([ ])    M mutes" % [roundi(volumes["Music"] * 100.0), roundi(volumes["SFX"] * 100.0)]
 	_overlay.visible = true
 	_overlay_until = Time.get_ticks_msec() + 1600
+
+
+# --- P-C Sable audio ---------------------------------------------------------------
+# Reuse the shipped octave, ratchet and motif recipes at the bank's calibrated levels.
+const SABLE_SOUNDS := {"sable_bank": "vault_rise", "sable_ratchet": "pylon_plant", "sable_peak": "sable_arpeggio"}
+const SABLE_NOTES := [62, 65, 69, 72, 76, 74, 77, 81, 84, 88, 86]
+var sable_note_log: Array = []
+var _sable_bank_wait := false
+
+
+func _sable_bank(id: String, _target: Node3D, _at: Vector3, _on: String) -> void:
+	if id != "bank_shot":
+		return
+	if ctx.player.kit.line_state == Augments.LINE_SMASH:
+		_sable_bank_wait = true
+	else:
+		_sable_bank_sound()
+
+
+func _sable_bank_sound() -> void:
+	var speed: float = ctx.player.state.velocity.length()
+	var pitch := Harmony.ratio(12.0 * clampf(speed / 45.0, 0.0, 1.0) + mini(5, maxi(0, ctx.player.chain.combo - 1)))
+	play("line_skill_fired", 0.0, 1.0, "SFX", SABLE_SOUNDS["sable_ratchet"])
+	play("line_skill_fired", 0.0, pitch, "SFX", SABLE_SOUNDS["sable_bank"])
+
+
+func sable_note(kind: String, number: int) -> void:
+	var midi: int = 62 if kind in ["rain", "sentry"] else SABLE_NOTES[clampi(number - 1, 0, SABLE_NOTES.size() - 1)]
+	var at := engine.next_beat() if engine.mode == MusicEngine.PLAY else engine.clock
+	sable_note_log.append({"kind": kind, "number": number, "sample": at, "midi": midi})
+	if sound_ready:
+		if engine.mode == MusicEngine.PLAY:
+			var id := SfxBank.cause_note_id(midi)
+			if _admit("ultimate_peak", id, 1.0):
+				engine.schedule_stinger_at(id, at, PRIORITY_DB[Rows.priority("ultimate_peak")])
+		else:
+			play("ultimate_peak", 0.0, Harmony.ratio(live_key()), "SFX", SfxBank.cause_note_id(midi))
+
+
+# --- P-C Cannon cues -------------------------------------------------------------------
+const CANNON_CUES := {
+	"cannon_live": {"row": "special_used"},
+	"cannon_call": {"row": "special_used"},
+	"cannon_weapon": {"row": "shot_fired"},
+	"cannon_recoil": {"row": "dashed"},
+	"cannon_smash": {"row": "slammed"},
+	"cannon_line": {"row": "line_skill_fired"},
+	"cannon_line_live": {"row": "line_skill_fired"},
+	"cannon_peak": {"row": "ultimate_peak"},
+	"cannon_landing": {"row": "ultimate_landed"},
+	"cannon_recital": {"row": "synergy_discovered"},
+	"cannon_answer": {"row": "mind_adapted"},
+	"mind_quiet_gun_phase": {"row": "boss_phase_changed"},
+	"mind_quiet_gun_fall": {"row": "boss_defeated"},
+	"ending_cannon": {"row": "run_ended"},
+}
+var cannon_log: Array = []
+var _cannon_queue: Array = []
+var _cannon_threat_at := -INF
+static var _cannon_streams := {}
+
+
+func _wire_cannon(events) -> void:
+	events.mind_adapted.connect(_cannon_answer)
+	events.boss_attack_telegraphed.connect(func(_id: String, _warn: float): _cannon_threat_at = clock)
+	events.run_started.connect(func(_id: String): _cannon_queue.clear())
+
+
+func _cannon_beat_delay() -> float:
+	var delay := float(engine.next_beat() - engine.clock) / Harmony.RATE
+	if clock - _cannon_threat_at <= 0.2:
+		delay += float(engine.beat_len()) / Harmony.RATE
+	return maxf(0.0, delay)
+
+
+func cannon_family(family: String, onbeat := false, kind := "cannon_live") -> void:
+	var note := Harmony.family_note(family)
+	if note < 0:
+		return
+	_cannon_cue(kind, [note], _cannon_beat_delay() if onbeat else 0.0)
+
+
+func cannon_line(combo: int) -> void:
+	var notes := Harmony.motif_notes("cannon")
+	if combo < 5:
+		_cannon_cue("cannon_line", [notes[clampi(combo - 1, 0, 3)]])
+	else:
+		_cannon_cue("cannon_line", notes, 0.0, false)
+
+
+func cannon_motif(kind: String, onbeat := false, chord := false, octave := 0) -> void:
+	var notes := Harmony.motif_notes("cannon").map(func(note): return int(note) + octave)
+	_cannon_cue(kind, notes, _cannon_beat_delay() if onbeat else 0.0, chord)
+
+
+func _cannon_answer(_habit: String, _icon: String) -> void:
+	if _motif != "cannon":
+		return
+	var quote := SfxBank.stream("mind_cannon")
+	var delay: float = quote.get_length() / Harmony.ratio(live_key()) + float(engine.beat_len()) / Harmony.RATE
+	_cannon_cue("cannon_answer", Harmony.motif_notes("cannon"), delay, false)
+
+
+func _cannon_cue(kind: String, notes: Array, delay := 0.0, chord := true) -> void:
+	var row := {"kind": kind, "notes": notes, "due": clock + delay, "chord": chord}
+	if delay > 0.0:
+		_cannon_queue.append(row)
+	else:
+		_cannon_play(row)
+
+
+func _cannon_play(row: Dictionary) -> void:
+	var notes: Array = row["notes"]
+	var key := "%s:%s" % [str(notes), row["chord"]]
+	var kind: String = CANNON_CUES[row["kind"]]["row"]
+	var sound := Rows.sound(kind, cue_context())
+	var db: float = SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)]
+	var pitch := Harmony.ratio(live_key())
+	cannon_log.append({"kind": row["kind"], "row": kind, "sound": sound, "notes": notes.duplicate(), "at": clock, "due": row["due"], "db": db, "chord": row["chord"]})
+	if not _admit(kind, sound, pitch):
+		return
+	if not _cannon_streams.has(key):
+		var buf := Synth.buffer(Synth.seconds(2.6) + Harmony.STEP * notes.size())
+		for i in notes.size():
+			Synth.add_into(buf, Synth.note("chime", int(notes[i])), 0 if row["chord"] else i * Harmony.STEP, 0.7 / sqrt(float(notes.size())))
+		_cannon_streams[key] = Synth.to_wav(buf)
+	_start(kind, sound, _cannon_streams[key], db, pitch, "SFX")
+
+
+func _step_cannon_cues() -> void:
+	var waiting: Array = []
+	for row in _cannon_queue:
+		if clock + 0.000001 >= float(row["due"]):
+			_cannon_play(row)
+		else:
+			waiting.append(row)
+	_cannon_queue = waiting
 
 
 # --- P-C Tarn line_claw_drag ---

@@ -130,6 +130,10 @@ const ABILITIES := {
 	"line_reel": {"icon": "ab_sable_reel", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"ult_default": {"icon": "ab_sable_reel", "cooldown": 0.0, "paths": ["line", "arc"], "beats": 0},
 	# --- P-C Sable rows (line skill, ultimate, depth-3 variants) -------------------------
+	"bank_shot": {"icon": "ab_sable_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"cable_run": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
+	"ball_lightning": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["arc"], "variant_of": "cable_run"},
+	"outpost": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "cable_run"},
 	# --- end Sable ---
 	# --- P-C Rivet rows ------------------------------------------------------------------
 	"line_drive": {"icon": "ab_rivet_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
@@ -138,6 +142,11 @@ const ABILITIES := {
 	"juggernaut_drive": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter"},
 	# --- end Rivet ---
 	# --- P-C Kest rows -------------------------------------------------------------------
+	# 2026-10-11 (PC-KEST round 3): fourteen seconds preserves both fixed bands after the contact cap.
+	"cable_charge": {"icon": "ab_kest_line", "cooldown": 14.0, "line": true, "load_seconds": 4.0},
+	"windhover": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "hold_beats": 2},
+	"air_raid": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "windhover"},
+	"minelayer": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "windhover"},
 	# --- end Kest ---
 	# --- P-C Tarn rows -------------------------------------------------------------------
 	"claw_drag": {"icon": "ab_tarn_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
@@ -148,6 +157,10 @@ const ABILITIES := {
 	# --- P-C Tally rows ------------------------------------------------------------------
 	# --- end Tally ---
 	# --- P-C Cannon rows -----------------------------------------------------------------
+	"cannon_lane_charge": {"icon": "ab_cannon_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "family": "lane"},
+	"cannon_fire_mission": {"icon": "ab_cannon_ult", "paths": ["arc", "line", "rail"], "beats": 0},
+	"cannon_creeping_barrage": {"icon": "ab_cannon_ult", "paths": ["line", "rail", "arc"], "beats": 0, "variant_of": "cannon_fire_mission"},
+	"cannon_plate_mortar": {"icon": "ab_cannon_ult", "paths": ["arc"], "beats": 6, "variant_of": "cannon_fire_mission"},
 	# --- end Cannon ---
 }
 const ICON_DIR := "res://assets/icons/"

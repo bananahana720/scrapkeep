@@ -208,7 +208,7 @@ The defaults hold (SKILL-BAR.md:301-310). Cannon notes:
 - **The peak's plate** exposes a Warden as the special does. Exposure multiplies damage, never posture.
 - **Brindle, the Waking, the Mind:** x0.5, phase windows untouched, the brace pose and the "nope" glyph.
 - **Warden as anchor (wave K-F):** a `line` path may end on a Warden. Fire Mission tries the arc first; Creeping Barrage rides the Warden's line first.
-- **Check:** `alpha_posture_bands_test` must keep the grown band at 25 s or more with the Cannon (SKILL-BAR.md:645).
+- **Check:** with the Cannon, each grown Warden must break at 25 s or more (SKILL-BAR.md:645), measured by the Cannon `tools/bot_run.gd` rows in section 10; `alpha_posture_bands_test` does not sample the Cannon.
 
 ### 3.4 The mecha and the music moment
 
@@ -440,7 +440,7 @@ The seven existing reactions stay: `drop_land`, `big_cheer`, `wince`, `slump`, `
 | `class_up` | pats a yoke; the bands flash in motif order as the new carapace panels slam into their gaps | 0.9 s | `heft_class_changed`, rising only (`game_events.gd:36`) | 50, 4.0 s |
 | `cast_special` | turns the plate crank, "2: Cannon Plate" in the lever bank beside the right yoke, half a turn; the muzzle drops along the cone | 0.6 s | `slot_cast` with slot `special` | 30, 1.0 s |
 | `cast_line` | the right paddle slaps the cable clamp lever, "3: Lane Charge", under the plate crank; the muzzle snaps along the cable | 0.45 s | `line_skill_fired` | 32, 1.0 s |
-| `ult_ready` | four lens blinks in the motif's rhythm, muzzle up | 0.8 s | `ultimate_ready` | 45, 10.0 s |
+| `ult_ready` | four small head nods in the motif's rhythm, muzzle up (the lenses stay static, PILOT-CLIPS.md:146; ruled 2026-10-12) | 0.8 s | `ultimate_ready` | 45, 10.0 s |
 | `ult_windup` | tucks into the seat and grips the copper lap bar, "Q: Fire Mission", with both paddles as the lattice folds; it holds the bar through the flight in the shared `ult_ride_loop` | 0.35 s | `ultimate_started` | 70, 0 s |
 | `ult_strike` | at the apex: paddles wide off the lap bar, muzzle straight down, then back on the bar | 0.5 s | `ultimate_peak` | 68, 0 s |
 | `ult_recover` | the lattice springs open; it lets go of the lap bar and shakes out the paddles; muzzle back level. The first 0.25 s is the framework recovery, the rest cancels on input | 0.6 s | `ultimate_landed` | 65, 0 s |
@@ -575,7 +575,7 @@ Headless proofs that fail loud, in the style of `tests/cannon_kit_test.gd` (the 
 - The three cosmetics validate and each grants once from its discovery.
 - `tests/cannon_kit_test.gd` steps a to j pass unchanged; every test in section 9 passes or is re-pinned with a dated header.
 - `bot_six_remembered_cannon_test` wins world one with at least one Lane Charge and one Fire Mission per winning run.
-- `alpha_posture_bands_test` keeps the grown band at 25 s or more with the Cannon.
+- With the Cannon, each grown Warden breaks at 25 s or more after its turn: `tools/bot_run.gd -- --policy=skipper --seeds=6 --pilot=remembered_cannon --table=alpha --from-stage=3 --until=4`, then `--from-stage=5`. `alpha_posture_bands_test` does not sample the Cannon (gate note, 2026-10-12). First measured at merge: 27.54 s and 31.04 s.
 - `git diff --name-status` shows only the SCOPE files.
 
 **VERIFY:** `tools/coordinator/compile_check.sh`; `node scripts/sketch-lint.mjs --sketch core-loop`; the section 9 tests by name, each reporting a nonzero case count; `npm run sketch:smoke -- --sketch core-loop`. Automated play does not establish feel: the sitting judges whether time on target lands as a drop and whether the quiet gun is heard.

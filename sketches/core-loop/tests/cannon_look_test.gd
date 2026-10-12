@@ -1,4 +1,5 @@
 extends SceneTree
+# 2026-10-11 (PC-CANNON): add line/ultimate icons and the family-note map; shell pins stay PD-owned.
 
 const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -72,6 +73,11 @@ func _process(_delta: float) -> bool:
 	_check_row()
 	_check_model()
 	_check_icons()
+	for family in ["lane", "split_lane", "rush", "plate"]:
+		_t.eq("family note " + family, Harmony.family_note(family), Harmony.motif_notes("cannon")[["lane", "split_lane", "rush", "plate"].find(family)])
+	for icon in ["ab_cannon_line", "ab_cannon_ult"]:
+		_t.check(icon + " ancient green", FileAccess.get_file_as_string("res://assets/icons/" + icon + ".svg").contains("#9dff3c"))
+		_t.check(icon + " resolves", Icons.texture(icon) != null)
 	_check_motif()
 	_check_feel()
 	_check_ticks()
