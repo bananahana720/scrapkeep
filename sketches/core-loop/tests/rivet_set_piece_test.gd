@@ -28,7 +28,7 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 147
+	_expected_checks = 148
 	super._initialize()
 
 
@@ -194,6 +194,9 @@ func _shape_dispatch_fixture() -> void:
 	past_inner.set_physics_process(false)
 	_combat.ultimate._strike(_player.ball_position())
 	_t.check("Breach Skid inner ring keeps its centre-based radius", _hits(past_inner).is_empty())
+	await _fresh()
+	_kit._draw_shape("rivet_scar", {"kind": "rivet_volume", "origin": _player.ball_position(), "cells": [{"faces": [], "planes": []}]})
+	_t.check("an empty clipped volume never starts a mesh surface", not _player.indicator.shapes.has("rivet_scar") and not _kit.volume_indicator.shapes.has("rivet_scar"))
 	await _fresh()
 
 
