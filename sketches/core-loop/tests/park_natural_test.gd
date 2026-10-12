@@ -42,12 +42,16 @@ class Terrain:
 	var flood = null
 	var overlays: Array[String] = []
 	var geometry: Node3D
+	var bench_depth := 0.0
+	var bench_low := 0.0
+	func ground(x: float, _z: float) -> float:
+		return bench_low + bench_depth * clampf((x - 3.0) / 2.0, 0.0, 1.0)
 	func geometry_root(_stage: int) -> Node3D:
 		return geometry
 	func map():
 		return maps[stage - 1]
 	func height(x: float, z: float) -> float:
-		var h := 0.0
+		var h := ground(x, z)
 		for id in overlays:
 			h = maxf(h, map().overlay_height(id, x, z, 0.0))
 		return h
@@ -83,6 +87,8 @@ func _initialize() -> void:
 func _row(kind: String, form: String) -> Dictionary:
 	var water := kind in ["flood_fill", "drain", "flash_flood"]
 	var effect := {"depth_m": ParkSchema.MAX_EVENT_WATER_M * 2.0, "fill_s": 2.0, "material": "water"} if water else {"swap": "rubble_ramp", "strike_m": 6.0, "damage": 8.0}
+	if kind == "collapse":
+		effect.merge({"depth_m": 20.0, "fill_s": 4.0, "swap": "rubble_ramp"}, true)
 	if kind == "lightning":
 		effect.erase("swap")
 	return {"id": kind, "kind": kind, "family": "natural", "site": "site",
@@ -110,14 +116,18 @@ func _fixture(row: Dictionary, sound := false, more_rows: Array = [], site_overr
 	map.park = {"map": "fixture", "park_rows": [{"id": "site", "at": [0, 0], "y": 0,
 		"size": [20, 2, 10], "yaw_deg": 30}], "event_rows": [row] + more_rows, "weather_rows": [],
 		"routes": [{"id": "main", "from": "drop_in", "to": "landmark"}]}
+	if row.kind == "collapse":
+		map.park.park_rows[0].yaw_deg = 0.0
+		w.terrain.bench_depth = float(row.effect.depth_m)
+		w.terrain.bench_low = 1.5 if with_before else 0.0
 	map.park.park_rows[0].merge(site_override, true)
 	w.terrain.maps = [map]
 	w.terrain.geometry = w
 	if with_before:
 		w.terrain.overlays.append("rubble_ramp_before")
 		var body := LocalMesh.grid(w, "Park_site", Vector2(10, 20), 1.0,
-			func(_x, _z): return 1.5, func(_x, _z): return Color.WHITE)
-		body.rotation.y = deg_to_rad(30.0)
+			func(x, z): return w.terrain.ground(x, z), func(_x, _z): return Color.WHITE)
+		body.rotation.y = deg_to_rad(float(map.park.park_rows[0].yaw_deg))
 	w.events = Director.new(823, {}, map, 14.0, Callable(w.terrain, "height"))
 	var script: Script = load("res://src/world/events/natural.gd")
 	var handler = script.new()
@@ -191,6 +201,7 @@ func _run() -> void:
 	_water_lifecycle()
 	_geometry_boundaries()
 	await _terrain_overlap()
+	await _collapse_contract()
 	t.check("all seven kinds tested", t.checks >= 50, str(t.checks))
 	quit(t.verdict())
 
@@ -243,9 +254,11 @@ func _terrain_overlap() -> void:
 	var before: Node3D = w.find_child("Park_site", true, false)
 	var before_position := before.position
 	var before_visible := before.visible
-	var probe := Vector2(4, 8).rotated(-deg_to_rad(30.0))
+	var probe := Vector2(0, 8)
 	var prior_height: float = w.terrain.height(probe.x, probe.y)
-	var expected_live_height := 1.5 + 2.0 * (8.0 + 10.0) / 20.0
+	var lower_tread := Vector2(-5, 1.5)
+	var upper_tread := Vector2(5, lower_tread.y + float(first.effect.depth_m))
+	var expected_live_height := lerpf(lower_tread.y, upper_tread.y, (probe.x - lower_tread.x) / (upper_tread.x - lower_tread.x))
 	t.near("shared swap starts on the authored before height", prior_height, 1.5)
 	t.check("shared swap prepares one collider for both rows", handler._prepared[first.id].overlay == handler._prepared[second.id].overlay)
 	for i in 53:
@@ -326,19 +339,19 @@ func _geometry_boundaries() -> void:
 		var w = fixture[0]
 		var handler = fixture[1]
 		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1})
-		_footprint_mark(kind, handler.active[kind].mark, half, yaw)
+		_footprint_mark(kind, handler.active[kind].mark, half, 0.0 if kind == "collapse" else yaw)
 		for i in 75:
 			w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1})
 		var state: Dictionary = handler.active[kind]
-		_footprint_mark(kind + " landing", state.mark, half, yaw, w.terrain)
-		var inside := (half * 0.95).rotated(-yaw)
-		var outside := Vector2(half.x + 0.1, half.y * 0.95).rotated(-yaw)
+		_footprint_mark(kind + " landing", state.mark, half, 0.0 if kind == "collapse" else yaw, w.terrain)
+		var inside := (half * 0.95).rotated(0.0 if kind == "collapse" else -yaw)
+		var outside := Vector2(half.x + 0.1, half.y * 0.95).rotated(0.0 if kind == "collapse" else -yaw)
 		if kind == "flood_fill":
 			t.check("rotated water wets the long-axis corner", state.water.in_basin(Vector3(inside.x, 0, inside.y)))
 			t.check("rotated water excludes outside the width", not state.water.in_basin(Vector3(outside.x, 0, outside.y)))
 		else:
 			t.check("rotated terrain changes the long-axis corner", w.terrain.height(inside.x, inside.y) > 0.0)
-			t.near("rotated terrain excludes outside the width", w.terrain.height(outside.x, outside.y), 0.0)
+			t.near("terrain excludes outside the width", w.terrain.height(outside.x, outside.y), w.terrain.ground(outside.x, outside.y))
 		handler.release()
 		w.free()
 	var lightning := _row("lightning", "lightning_charge")
@@ -358,5 +371,38 @@ func _geometry_boundaries() -> void:
 	t.eq("lightning outside strike radius preserves armour", w.ctx.run.mass, 20)
 	w.events.advance(0.1, Vector3(float(lightning.effect.strike_m) - 0.01, 0, 0), Vector3.ZERO, {"clock_tier": 1})
 	t.eq("lightning inside strike radius costs authored armour", w.ctx.run.mass, 20 - ceili(float(lightning.effect.damage)))
+	handler.release()
+	w.free()
+
+
+func _collapse_contract() -> void:
+	var row := _row("collapse", "ground_slump")
+	var fixture := _fixture(row)
+	var w = fixture[0]
+	var handler = fixture[1]
+	# Independently specified KD3-like bench: low tread x<=3, face 3..5, high tread x>=5.
+	var low := Vector2(-5, 0)
+	var high := Vector2(5, float(row.effect.depth_m))
+	while not handler.active.has(row.id) or handler.active[row.id].phase == "telegraph":
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true})
+	for fraction in [0.0, 0.5, 1.0]:
+		if fraction > 0.0:
+			w.events.advance(float(row.effect.fill_s) * 0.5, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true})
+		var expected := lerpf(0.0, lerpf(low.y, high.y, (0.0 - low.x) / (high.x - low.x)), fraction)
+		t.near("collapse authored progress %s height" % fraction, w.terrain.height(0, 0), expected)
+		var state: Dictionary = handler.active[row.id]
+		var verts := _mesh_vertices(state.overlay)
+		var centre_vertices := verts.filter(func(v): return absf(v.x) < 0.0001 and absf(v.z) < 0.0001)
+		t.check("collapse authored progress %s rendered centre exists" % fraction, not centre_vertices.is_empty())
+		t.check("collapse authored progress %s mesh agrees" % fraction, centre_vertices.all(func(v): return absf(v.y - expected) < 0.0001), str(centre_vertices))
+		await physics_frame
+		await physics_frame
+		var ray := PhysicsRayQueryParameters3D.create(Vector3(0, high.y + 10, 0), Vector3(0, -10, 0))
+		var hit: Dictionary = w.get_world_3d().direct_space_state.intersect_ray(ray)
+		t.check("collapse authored progress %s collider hits" % fraction, not hit.is_empty())
+		if not hit.is_empty():
+			t.near("collapse authored progress %s ray agrees" % fraction, hit.position.y, expected, 0.001)
+		t.near("collapse lower tread intact at %s" % fraction, w.terrain.height(low.x, 0), low.y)
+		t.near("collapse upper tread intact at %s" % fraction, w.terrain.height(high.x, 0), high.y)
 	handler.release()
 	w.free()
