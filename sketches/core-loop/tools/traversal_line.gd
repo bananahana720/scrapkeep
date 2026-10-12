@@ -805,8 +805,13 @@ func _next() -> void:
 		_finish()
 		return
 	Engine.time_scale = 1.0
+	# Freeing Game leaves the viewport's Jolt space and its body allocation history alive.
+	# Keep the old world alive until the viewport has detached its rendering scenario.
+	var _previous_world := root.world_3d
+	root.world_3d = World3D.new()
 	seed(_seeds[_index])
 	_game = Game.new()
+	_game.name = "Game"
 	_game.test_mode = true
 	_game.table = PARK if _park else TABLE
 	root.add_child(_game)

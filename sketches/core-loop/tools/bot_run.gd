@@ -35,7 +35,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 #                        report can name entries no run discovered.
 # A run ends on run_ended (won or lost), death, stall, or --until/--stages; a stalled
 # or missing-boss run has no spine record (the run log writes only at death and run end), so
-# its bots.ndjson line is the only trace. Each seed gets a fresh process and data folder,
+# its bots.ndjson line is the only trace. Each seed gets a fresh Game and physics world,
 # seeded RNG streams, spawn-order signs instead of object-ID-dependent choices, a
 # completed audio bake, and physics-tick hit-stop gates (src/core/sim_clock.gd).
 # Replay evidence is specific to the checked machine, build, policy and table.
@@ -73,49 +73,7 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(_out)
 	for part in String(_settings.get("seeds", "1")).split(",", false):
 		_seeds.append(int(part))
-	if _seeds.size() > 1:
-		_run_children()
-		return
 	_next()
-
-
-# A fresh physics server and presentation caches for every seed, including list runs.
-func _run_children() -> void:
-	# Each child has its own data folder, so --out goes to it as an absolute path the parent resolved.
-	var forwarded := PackedStringArray(["--out=" + _out])
-	for arg in OS.get_cmdline_user_args():
-		if not arg.begins_with("--seeds=") and not arg.begins_with("--out="):
-			forwarded.append(arg)
-	for i in _seeds.size():
-		var previous := {}
-		var state_dir := _out.path_join("state-%d" % i)
-		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, state_dir.path_join(kind.to_lower()))
-		var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path",
-			ProjectSettings.globalize_path("res://"), "--script", "res://tools/bot_run.gd", "--"])
-		args.append_array(forwarded)
-		args.append("--seeds=%d" % _seeds[i])
-		var output := []
-		var code := OS.execute(OS.get_executable_path(), args, output, true)
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
-		for chunk in output:
-			print(String(chunk).strip_edges())
-		if code != 0:
-			quit(code)
-			return
-	var rows := FileAccess.get_file_as_string(_out.path_join("bots.ndjson")).split("\n", false).size()
-	if rows < _seeds.size():
-		printerr("bot_run: %d child run(s) but %d row(s) in %s" % [_seeds.size(), rows, _out.path_join("bots.ndjson")])
-		quit(1)
-		return
-	print("bot_run: %d isolated run(s) written to %s" % [_seeds.size(), _out])
-	quit(0)
 
 
 # res:// and user:// resolve in this process; a relative path resolves against the working folder.
@@ -142,10 +100,15 @@ func _next() -> void:
 		return
 	# A hit-stop cut short by the previous game's free would leave time slowed.
 	Engine.time_scale = 1.0
+	# Freeing Game leaves the viewport's Jolt space and its body allocation history alive.
+	# Keep the old world alive until the viewport has detached its rendering scenario.
+	var _previous_world := root.world_3d
+	root.world_3d = World3D.new()
 	_scrap_serial = 0
 	_counter_serial = 0
 	seed(_seeds[_index])
 	_game = Game.new()
+	_game.name = "Game"
 	_game.test_mode = true
 	_game.run_store_path = _out.path_join("entrance.json")
 	root.add_child(_game)
