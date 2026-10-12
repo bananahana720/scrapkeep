@@ -265,6 +265,8 @@ func _aim_at(point: Vector3) -> void:
 
 # Bar presses: slot 1 is a click at home; slot 2 (index 1) and slot 3 (index 2) pick, then click.
 func _press_slot(index: int) -> void:
+	# Physics catch-up can precede the render frame that commits a new camera pitch.
+	_game.camera._process(0.0)
 	if index == 0:
 		_source.press = {"fire_pressed": true}
 		return
