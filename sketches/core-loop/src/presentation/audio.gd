@@ -175,6 +175,7 @@ var _ace_arrival_at := -1
 var _band_fade_start := -1
 # v2 W3 characters: which of CHARACTER_KINDS are already connected.
 var _character_wired := {}
+var _optional_listeners := {}
 # v2 W9: the run's class motif id (class_def motif), from run_started.
 var _motif := ""
 # Moss's babble, baked once per line, beat and key: {"beat|key|text": AudioStreamWAV}.
@@ -1052,44 +1053,44 @@ func _connect_all(events) -> void:
 func wire_optional() -> void:
 	var events = ctx.events
 	_wire_armor()
-	_listen(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
-	_listen(events, "heft_class_changed", _on_heft_class)
-	_listen(events, "heft_class_dropped", _on_heft_dropped)
-	_listen(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
-	_listen(events, "strike_deflected", _on_deflected)
-	_listen(events, "posture_changed", _on_posture_changed)
-	_listen(events, "threat_rose", func(tier: int):
+	_listen_optional(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
+	_listen_optional(events, "heft_class_changed", _on_heft_class)
+	_listen_optional(events, "heft_class_dropped", _on_heft_dropped)
+	_listen_optional(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
+	_listen_optional(events, "strike_deflected", _on_deflected)
+	_listen_optional(events, "posture_changed", _on_posture_changed)
+	_listen_optional(events, "threat_rose", func(tier: int):
 		on_beat("threat_rose", minf(tier, 3) * 1.0)
 		engine.set_fleet_ticks(tier)
 		if ace_playing():
 			ace.threat_rose(tier))
 	# The reactor relic is the only ancient that colours the band: a tritone pedal
 	# under the sub while its vent charges (DESIGN-V2 section 11 audio rulings).
-	_listen(events, "vent_charging", func(at: Vector3, _seconds: float):
+	_listen_optional(events, "vent_charging", func(at: Vector3, _seconds: float):
 		if _is_warden_at(at):
 			_warden_charging = true
 		play("vent_charging")
 		engine.set_reactor_pedal(true))
-	_listen(events, "vent_erupted", func(at: Vector3):
+	_listen_optional(events, "vent_erupted", func(at: Vector3):
 		if _is_warden_at(at):
 			_warden_charging = false
 		play("vent_erupted")
 		engine.set_reactor_pedal(false))
 	# Moss's lounge is a layer mask over the stage theme, entered and left with the
 	# bay (SOUND-STORY.md section 8).
-	_listen(events, "bay_entered", func(_banked_speed: float):
+	_listen_optional(events, "bay_entered", func(_banked_speed: float):
 		play("bay_entered")
 		engine.set_lounge(true)
 		if ace_playing():
 			ace.set_bay(true))
-	_listen(events, "bay_left", func(_velocity: Vector3):
+	_listen_optional(events, "bay_left", func(_velocity: Vector3):
 		play("bay_left")
 		engine.set_lounge(false)
 		if ace_playing():
 			ace.set_bay(false))
 	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
 	# no row plays nothing, since play() already skips an empty sound override.
-	_listen(events, "world_fact", func(kind: String, _at: Vector3):
+	_listen_optional(events, "world_fact", func(kind: String, _at: Vector3):
 		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context())))
 	# The shell's air factor moved (build.gd shell_air_changed): the row's spring, up a fifth on the
 	# rise and down a fourth on the return, so the two read apart without looking.
@@ -1101,47 +1102,47 @@ func wire_optional() -> void:
 		ctx.build.hotwire_offered.connect(_on_hotwire_offered)
 	# v3 interact: each fact in its family's sound register (world/interactables.gd), so
 	# a bet's drum roll, clunk and crack and an altar's anvil and riser come from the row.
-	_listen(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
+	_listen_optional(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
 		play("interact_armed", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound(family, "arm"), cue_context())))
-	_listen(events, "interact_fired", func(family: String, _id: String, _at: Vector3):
+	_listen_optional(events, "interact_fired", func(family: String, _id: String, _at: Vector3):
 		play("interact_fired", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound(family, "fire"), cue_context())))
-	_listen(events, "ambush_ended", func(_id: String, won: bool, _at: Vector3):
+	_listen_optional(events, "ambush_ended", func(_id: String, won: bool, _at: Vector3):
 		play("ambush_ended", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("fight", "won" if won else "lost"), cue_context())))
-	_listen(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
+	_listen_optional(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
 		play("bet_resolved", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("bet", "won" if won else "lost"), cue_context())))
-	_listen(events, "activity_done", func(id: String, _at: Vector3):
+	_listen_optional(events, "activity_done", func(id: String, _at: Vector3):
 		play("activity_done", 0.0, 1.0, "SFX", Rows.heard(EventKinds.activity_row(id), cue_context())))
-	_listen(events, "core_gained", _on_core)
-	_listen(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
-	_listen(events, "synergy_discovered", _on_synergy)
-	_listen(events, "line_state_changed", _on_line_state)
-	_listen(events, "grapple_released", _stop_hum, true)
-	_listen(events, "verb_failed", _on_verb_failed)
-	_listen(events, "cause_armed", _on_cause_armed)
-	_listen(events, "cause_fired", _on_cause_fired)
-	_listen(events, "interaction_found", func(): play("interaction_found"), true)
-	_listen(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
+	_listen_optional(events, "core_gained", _on_core)
+	_listen_optional(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
+	_listen_optional(events, "synergy_discovered", _on_synergy)
+	_listen_optional(events, "line_state_changed", _on_line_state)
+	_listen_optional(events, "grapple_released", _stop_hum, true)
+	_listen_optional(events, "verb_failed", _on_verb_failed)
+	_listen_optional(events, "cause_armed", _on_cause_armed)
+	_listen_optional(events, "cause_fired", _on_cause_fired)
+	_listen_optional(events, "interaction_found", func(): play("interaction_found"), true)
+	_listen_optional(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
 		play("element_resolved", 0.0, 1.0, "SFX", Rows.element_sound(behaviour)))
-	_listen(events, "warden_engaged", func(_stage: int):
+	_listen_optional(events, "warden_engaged", func(_stage: int):
 		_begin_boss("warden_engaged", "warden")
 		if ace_playing():
 			ace.commit_warden())
-	_listen(events, "boss_arena_entered", func():
+	_listen_optional(events, "boss_arena_entered", func():
 		_boss_phase = 1
 		_disarm_launch()
 		_begin_boss("boss_arena_entered", _boss_track()), true)
 	var phase_args := _argc(events, "boss_phase_changed")
 	if phase_args >= 1:
-		_listen(events, "boss_phase_changed", _on_boss_phase_with.unbind(phase_args - 1) if phase_args > 1 else _on_boss_phase_with)
+		_listen_optional(events, "boss_phase_changed", _on_boss_phase_with.unbind(phase_args - 1) if phase_args > 1 else _on_boss_phase_with)
 	else:
-		_listen(events, "boss_phase_changed", _on_boss_phase, true)
-	_listen(events, "boss_defeated", func(): _on_boss_defeated(), true)
-	_listen(events, "boss_attack_telegraphed", _on_boss_telegraph)
-	_listen(events, "boss_weak_point_hit", _on_weak_point)
-	_listen(events, "event_progress", _on_event_progress)
+		_listen_optional(events, "boss_phase_changed", _on_boss_phase, true)
+	_listen_optional(events, "boss_defeated", func(): _on_boss_defeated(), true)
+	_listen_optional(events, "boss_attack_telegraphed", _on_boss_telegraph)
+	_listen_optional(events, "boss_weak_point_hit", _on_weak_point)
+	_listen_optional(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
 	# resolves into the arena music instead of a landing.
-	_listen(events, "stage_content_cleared", func(reason: String):
+	_listen_optional(events, "stage_content_cleared", func(reason: String):
 		_disarm_launch()
 		_event_id = ""
 		_chase_lead0 = -1.0
@@ -1160,9 +1161,9 @@ func wire_optional() -> void:
 		play("stage_content_cleared"))
 	# v2 W9: a hold sounds the holding unit's loop, and a pack its faction's arrival (the
 	# Fleet stamp, the reactor tick, the swarm lock, the Mind's quote of your motif).
-	_listen(events, "hold_started", func(kind: String, _at: Vector3):
+	_listen_optional(events, "hold_started", func(kind: String, _at: Vector3):
 		play("hold_started", 0.0, 1.0, "SFX", Rows.sound("hold_started", cue_context().merged({"hold": kind}))))
-	_listen(events, "pack_arrived", func(faction: String, _at: Vector3, _kinds: Array):
+	_listen_optional(events, "pack_arrived", func(faction: String, _at: Vector3, _kinds: Array):
 		play("pack_arrived", 0.0, 1.0, "SFX", Rows.sound("pack_arrived", cue_context().merged({"faction": faction}))))
 	# v2 W3 characters: each class-ability fact plays its event row's sound_next once W5
 	# has baked it (resolved for the run's class), else its stand-in.
@@ -1186,6 +1187,16 @@ static func motif_of(class_id: String) -> String:
 # octave at the vault cap (SOUND-STORY section 3), so a weak kick falls short of it.
 func _on_vault_kicked(_at: Vector3, speed: float) -> void:
 	play("vault_kicked", 0.0, Harmony.ratio(12.0 * clampf(speed / Augments.VAULT_CAP, 0.0, 1.0)))
+
+
+# Optional facts have one handler each; reuse its identity when late wiring runs again.
+func _listen_optional(events: Object, signal_name: String, callable: Callable, loose := false) -> bool:
+	if not events.has_signal(signal_name):
+		return false
+	var key := "%d:%s" % [events.get_instance_id(), signal_name]
+	if not _optional_listeners.has(key):
+		_optional_listeners[key] = callable
+	return _listen(events, signal_name, _optional_listeners[key], loose)
 
 
 # Connects once. loose drops whatever arguments the signal carries.

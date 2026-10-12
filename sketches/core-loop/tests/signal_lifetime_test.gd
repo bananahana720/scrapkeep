@@ -199,10 +199,16 @@ func _mind_body() -> void:
 	while game.flow == null:
 		await physics_frame
 	game.ctx.calm = true
+	var audio = game.presentation.audio
+	var before: int = game.events.element_resolved.get_connections().filter(func(c): return c.callable.get_object() == audio).size()
+	audio.wire_optional()
+	audio.wire_optional()
+	var after: int = game.events.element_resolved.get_connections().filter(func(c): return c.callable.get_object() == audio).size()
+	_report("optional wiring reuses one listener", before == 1 and after == 1, "Audio element listeners %d -> %d want=1" % [before, after])
+	var spec := {"kind": "warden", "family": "mind", "stage": 6, "variant": "choir", "harpoon_anchor": true, "fleet": game.combat.fleet}
 	var warden := WardenScript.new()
 	game.add_child(warden)
-	warden.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0,
-		{"kind": "warden", "family": "mind", "stage": 6, "variant": "choir", "harpoon_anchor": true, "fleet": game.combat.fleet})
+	warden.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0, spec)
 	warden.set_physics_process(false)
 	await process_frame
 	var assets = game.presentation.hero_assets
@@ -220,6 +226,21 @@ func _mind_body() -> void:
 		"remaining=%d want=0" % driver.landed.get_connections().size())
 	driver.took_off.emit(0, 1)
 	driver.landed.emit(1)
+	warden = WardenScript.new()
+	game.add_child(warden)
+	warden.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0, spec)
+	warden.set_physics_process(false)
+	await process_frame
+	assets._dress_warden(warden)
+	driver = warden.mount_driver
+	assets.get_parent().remove_child(assets)
+	await process_frame
+	_report("retired Mind body disconnects before Warden", driver.took_off.get_connections().is_empty() and driver.landed.get_connections().is_empty(),
+		"takeoff=%d landing=%d want=0 while Warden alive" % [driver.took_off.get_connections().size(), driver.landed.get_connections().size()])
+	driver.took_off.emit(0, 1)
+	driver.landed.emit(1)
+	assets.free()
+	warden.free()
 	game.free()
 
 func _run() -> void:

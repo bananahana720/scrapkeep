@@ -1924,8 +1924,8 @@ func _dress_warden_body(warden) -> void:
 		(p as AnimationPlayer).mixer_applied.connect(_hold_body.bind(id))
 	(rec.players[0] as AnimationPlayer).animation_finished.connect(_body_clip_finished.bind(id))
 	if kind == "mind" and warden.mount_driver != null and warden.mount_driver.has_signal("took_off"):
-		SignalLifetime.listen(warden, warden.mount_driver.took_off, func(_a: int, _b: int): _play_body(rec, ["takeoff", "glide"]))
-		SignalLifetime.listen(warden, warden.mount_driver.landed, func(_p: int): _play_body(rec, ["land"]))
+		SignalLifetime.listen(body, warden.mount_driver.took_off, func(_a: int, _b: int): _play_body(rec, ["takeoff", "glide"]))
+		SignalLifetime.listen(body, warden.mount_driver.landed, func(_p: int): _play_body(rec, ["land"]))
 	_wardens[id] = rec
 	warden.tree_exiting.connect(_forget_warden.bind(id), CONNECT_ONE_SHOT)
 	_play_body(rec, ["idle"])
