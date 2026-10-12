@@ -542,8 +542,8 @@ func _clip_cell(cell: Dictionary, plane: Dictionary) -> Dictionary:
 # Subtract a convex shadow, retaining disjoint convex parts outside its half-spaces.
 func _subtract_shadow(cell: Dictionary, shadow: Array) -> Array:
 	for plane in shadow:
-		if (cell["faces"] as Array).all(func(face): return face.all(func(v): return (v - plane["at"]).dot(plane["normal"]) >= -0.0001)):
-			return [_clip_cell(cell, {"at": plane["at"], "normal": -plane["normal"], "terrain": true, "solid": true})] if plane.get("solid", false) else [cell]
+		if not plane.get("solid", false) and (cell["faces"] as Array).all(func(face): return face.all(func(v): return (v - plane["at"]).dot(plane["normal"]) >= -0.0001)):
+			return [cell]
 	var lit: Array = []
 	var remaining := cell
 	for plane in shadow:
@@ -567,12 +567,15 @@ func _face_shadow(origin: Vector3, face: Array) -> Array:
 		return []
 	if facing < 0.0:
 		normal = -normal
-	var planes: Array = [{"at": face[0], "normal": normal, "terrain": true, "solid": true}]
+	var contact := {"at": face[0], "normal": normal, "terrain": true, "solid": true}
+	var planes: Array = []
 	for i in face.size():
 		normal = ((face[i] as Vector3) - origin).cross((face[(i + 1) % face.size()] as Vector3) - origin).normalized()
 		if normal.dot(centre - origin) > 0.0:
 			normal = -normal
 		planes.append({"at": origin, "normal": normal, "terrain": true})
+	# Partition the silhouette first; its contact plane cannot restrict exposed hulls outside it.
+	planes.append(contact)
 	return planes
 
 
