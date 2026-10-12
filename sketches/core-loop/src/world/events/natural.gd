@@ -149,6 +149,8 @@ func setup(world_ref) -> void:
 		var record := {"site": site, "at": at, "geometry": geometry, "overlay": null}
 		if row.kind in ["flood_fill", "drain", "flash_flood"]:
 			record.water_surface = _prepare_water(geometry)
+		if row.kind == "collapse":
+			geometry.crack_foot_x = _bench_face_foot(geometry)
 		if row.kind in ["cave_in", "collapse", "impact"]:
 			_prepare_overlay(row, record)
 		_prepared[row.id] = record
@@ -220,9 +222,32 @@ func _process(_delta: float) -> void:
 		dust.mesh = _project_surface(state.geometry,
 			[_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)],
 			func(local, _base): return float(spec.dust_height_m) * progress * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)).mesh
+		var foot: float = state.geometry.crack_foot_x
 		var crack = state.mark.get_node("CrawlingCrack")
 		crack.mesh = _project_surface(state.geometry,
-			[_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), Vector2(half.x, lerpf(-half.y, half.y, progress)))]).mesh
+			[_rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, progress)))]).mesh
+
+
+func _bench_face_foot(geometry: Dictionary) -> float:
+	var half: Vector2 = geometry.half
+	var centre := Vector2(geometry.at.x, geometry.at.z)
+	var count := ceili(2.0 * half.x / (ParkTerrain.STEP * 0.5))
+	var foot := -half.x
+	var steepest := -INF
+	var previous := -half.x
+	var point := Vector2(previous, 0.0).rotated(-float(geometry.yaw)) + centre
+	var previous_y: float = world.terrain.height(point.x, point.y)
+	for i in range(1, count + 1):
+		var x := lerpf(-half.x, half.x, float(i) / count)
+		point = Vector2(x, 0.0).rotated(-float(geometry.yaw)) + centre
+		var y: float = world.terrain.height(point.x, point.y)
+		var slope := (y - previous_y) / (x - previous)
+		if slope > steepest:
+			steepest = slope
+			foot = previous
+		previous = x
+		previous_y = y
+	return foot
 
 
 func _at(site: Dictionary) -> Vector3:
@@ -555,9 +580,10 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 		shapes = [_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)]
 		var initial := 1.0 if landed else 0.001
 		offset = func(local, _base): return float(spec.dust_height_m) * initial * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)
+		var foot: float = geometry.crack_foot_x
 		var crack := MeshInstance3D.new()
 		crack.name = "CrawlingCrack"
-		crack.mesh = _project_surface(geometry, [_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), Vector2(half.x, lerpf(-half.y, half.y, initial)))]).mesh
+		crack.mesh = _project_surface(geometry, [_rectangle(Vector2(foot - float(spec.crack_width_m), -half.y), Vector2(foot, lerpf(-half.y, half.y, initial)))]).mesh
 		crack.material_override = Palette.unshaded(spec.color)
 		mark.add_child(crack)
 	elif spec.shape == "cross":
