@@ -13,6 +13,7 @@ extends RefCounted
 const SafeStore := preload("res://src/core/safe_store.gd")
 
 const SCHEMA := 4
+const RUN_TALLY_KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
 
 # From-version to the method that returns the document one version up.
 const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2", 3: "_migrate_3"}
@@ -224,6 +225,39 @@ func add_stat(stat_name: String, amount := 1.0) -> void:
 
 func set_stat(stat_name: String, value: float) -> void:
 	_doc["stats"][stat_name] = value
+
+
+# Cumulative run snapshots pay only the delta since this run's last logged snapshot.
+# The existing stats map carries the high-water marks, so a death, end or replayed
+# record cannot count the same kills or time twice. No grant rows consume these keys.
+func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
+	if run_id.is_empty() or totals.size() != RUN_TALLY_KEYS.size():
+		return false
+	var prefix := "run_tallies.%s." % run_id
+	for key in RUN_TALLY_KEYS:
+		var value = totals.get(key)
+		if not (value is int or value is float) or not is_finite(value) or value < 0.0:
+			return false
+		if key != "time" and value != floorf(value):
+			return false
+		if value < stat(prefix + key) or not is_finite(stat(key) + value - stat(prefix + key)):
+			return false
+	var changed := false
+	for key in RUN_TALLY_KEYS:
+		var value := float(totals[key])
+		var delta := value - stat(prefix + key)
+		if delta > 0.0:
+			add_stat(key, delta)
+			set_stat(prefix + key, value)
+			changed = true
+	return changed
+
+
+func run_tallies(run_id: String) -> Dictionary:
+	var totals := {}
+	for key in RUN_TALLY_KEYS:
+		totals[key] = stat("run_tallies.%s.%s" % [run_id, key])
+	return totals
 
 
 func last_pilot() -> String:

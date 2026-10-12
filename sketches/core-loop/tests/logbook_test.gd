@@ -10,7 +10,7 @@ const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 const PAGE := "res://src/ui/logbook_page.gd"
 const KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
-const EXPECTED_CHECKS := 36
+const EXPECTED_CHECKS := 43
 
 # A full three-stage flow, as spine_run_log_test uses, with combat and boss doubles.
 class ScriptedGame extends Game:
@@ -123,7 +123,7 @@ func _check_run(spawner, run, profile) -> void:
 	var lines := FileAccess.get_file_as_string(_game.storage_dir.path_join(RunLog.LOG_FILE)).strip_edges().split("\n", false)
 	_t.eq("SR12 death and end each write a run log", lines.size(), 2)
 	var record: Dictionary = JSON.parse_string(lines[-1]) if not lines.is_empty() else {}
-	_t.check("SR12 actual run log tallies match run", record.get("tallies") == tallies and record.get("outcome") == "won", JSON.stringify(record.get("tallies")))
+	_t.check("SR12 actual run log tallies match run", _same_tallies(record.get("tallies"), tallies) and record.get("outcome") == "won", JSON.stringify(record.get("tallies")))
 	var stages: Array = record.get("stages", [])
 	var logged_deaths := 0
 	var logged_clears := 0
@@ -134,25 +134,53 @@ func _check_run(spawner, run, profile) -> void:
 	var stored := {}
 	for key in KEYS:
 		stored[key] = profile.stat(key)
-	_t.eq("SR12 profile receives cumulative tallies once", stored, tallies)
+	_t.check("SR12 profile receives cumulative tallies once", _same_tallies(stored, tallies), JSON.stringify(stored))
 	_t.check("SR12 repeated tally settlement changes nothing", not profile.record_run_tallies(run.run_id, tallies) and profile.stat("kills") == tallies["kills"])
 	var reload := Profile.new(profile.path)
 	_t.check("SR12 tallied profile reloads", reload.load_profile(), reload.last_error)
 	var saved := {}
 	for key in KEYS:
 		saved[key] = reload.stat(key)
-	_t.eq("SR12 all five profile tallies round-trip", saved, tallies)
+	_t.check("SR12 all five profile tallies round-trip", _same_tallies(saved, tallies), JSON.stringify(saved))
 	var entrance: Dictionary = run.to_entrance_doc()
 	var restored := RunState.new(null, 123)
 	_t.check("SR12 entrance tallies survive JSON round-trip", restored.from_entrance_doc(JSON.parse_string(JSON.stringify(entrance))) and restored.tallies() == tallies)
+	var broken := entrance.duplicate(true)
+	broken["run_tallies"]["deaths"] = -1
+	_t.check("SR12 invalid entrance tally rejected without applying", not restored.from_entrance_doc(broken) and restored.tallies() == tallies)
+	broken = entrance.duplicate(true)
+	broken["run_tallies"]["time"] += 1.0
+	_t.check("SR12 inconsistent entrance clock rejected", not restored.from_entrance_doc(broken) and restored.tallies() == tallies)
+	var legacy := entrance.duplicate(true)
+	legacy.erase("run_tallies")
+	_t.check("SR12 old entrance remains readable", restored.from_entrance_doc(legacy) and restored.tallies()["kills"] == run.kills)
+	restored.reconcile_tallies(reload.run_tallies(run.run_id))
+	_t.check("SR12 resumed entrance retains logged contributions", _same_tallies(restored.tallies(), tallies))
 	var invalid := tallies.duplicate()
 	invalid["time"] = NAN
 	var before: Dictionary = profile._doc.duplicate(true)
 	_t.check("SR12 nonfinite tally rejected atomically", not profile.record_run_tallies("bad", invalid) and profile._doc == before)
 	_game.flow.new_run()
 	_t.eq("SR12 new run clears tallies", run.tallies(), {"stages_cleared": 0, "time": 0.0, "kills": 0, "deaths": 0, "wardens_seen": 0})
+	run.record_kill("chaser", Vector3.ZERO, 0)
+	run.advance(1.5)
+	_game.run_log.abandon_open_run()
+	_t.check("SR12 abandoned run feeds profile", profile.stat("kills") == tallies["kills"] + 1 and profile.stat("time") == tallies["time"] + 1.5)
+	var doc_before: Dictionary = profile._doc.duplicate(true)
+	_t.check("SR12 stale snapshot cannot reduce totals", not profile.record_run_tallies(run.run_id, {"stages_cleared": 0, "time": 0.0, "kills": 0, "deaths": 0, "wardens_seen": 0}) and profile._doc == doc_before)
+	_t.check("SR12 second run saves and reloads", reload.load_profile() and reload.stat("kills") == tallies["kills"] + 1 and reload.stat("time") == tallies["time"] + 1.5)
 
 
 func _advance(run, seconds: float) -> void:
 	run.advance(seconds)
 	_expected["time"] += seconds
+
+
+func _same_tallies(got, want: Dictionary) -> bool:
+	if not got is Dictionary or got.size() != KEYS.size():
+		return false
+	for key in KEYS:
+		var value = got.get(key)
+		if not (value is int or value is float) or not is_finite(value) or float(value) != float(want[key]):
+			return false
+	return true

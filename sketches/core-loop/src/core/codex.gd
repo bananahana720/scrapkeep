@@ -16,6 +16,7 @@ const Parts := preload("res://src/build/parts.gd")
 const CATEGORIES := ["build", "world", "enemy", "npc", "coop"]
 const STATE_FILE := "codex.json"
 const LOG_FILE := "codex-log.ndjson"
+const STATUSES := ["none", "unencountered", "new", "available"]
 
 # A new field note became known; the id is a LoreRows field_note row.
 signal lore_found(id: String)
@@ -114,7 +115,7 @@ func category_of(id: String) -> String:
 	return _entries[id]["category"] if _entries.has(id) else "build"
 
 
-func entries(category := "") -> Array:
+func entries(category := "", profile = null) -> Array:
 	var list: Array = []
 	for id in _order:
 		var entry: Dictionary = _entries[id]
@@ -122,8 +123,35 @@ func entries(category := "") -> Array:
 			continue
 		var shown := entry.duplicate()
 		shown["known"] = known(id)
+		shown["status"] = status(id, profile)
 		list.append(shown)
 	return list
+
+
+func status(id: String, profile = null) -> String:
+	if not _entries.has(id):
+		return "none"
+	if not known(id):
+		return "unencountered"
+	var reader = profile if profile != null else _profile()
+	return "available" if reader != null and reader.is_seen(id) else "new"
+
+
+func open_entry(id: String, profile = null) -> bool:
+	if not _entries.has(id) or not known(id):
+		return false
+	var reader = profile if profile != null else _profile()
+	if reader == null or not reader.mark_seen(id):
+		return false
+	if reader.can_save and not reader.save():
+		last_error = "logbook marker not saved: %s" % reader.last_error
+	return true
+
+
+func _profile():
+	if flow != null and flow.get("ctx") != null:
+		return flow.ctx.profile
+	return null
 
 
 func completion(category: String) -> float:
@@ -190,6 +218,9 @@ func _on_run_started(_class_id: String) -> void:
 # A stage retry (R, or T replaying stage 3 from its start) rewinds everything since
 # the stage began, the arena attempt included.
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	var profile = _profile()
+	if run != null and profile != null:
+		run.reconcile_tallies(profile.run_tallies(run.run_id))
 	_enter_zone(stage)
 	if retry:
 		_rewind(_attempt_seen + _stage_seen_before_arena, _attempt_found + _stage_found_before_arena)
@@ -310,6 +341,19 @@ func _log(fields: Dictionary) -> void:
 
 
 func append_line(path: String, text: String) -> bool:
+	# RunLog already writes through this adapter. Keep its schema owner untouched while
+	# adding SR12's shared run snapshot to death, completion and abandonment records.
+	if path.get_file() == "runs.ndjson" and run != null:
+		var line = JSON.parse_string(text)
+		if line is Dictionary:
+			var totals: Dictionary = run.tallies()
+			line["tallies"] = totals
+			text = JSON.stringify(line)
+			var profile = _profile()
+			if profile != null:
+				var changed: bool = profile.record_run_tallies(run.run_id, totals)
+				if profile.can_save and (changed or not profile.last_error.is_empty()) and not profile.save():
+					last_error = "run tallies not saved: %s" % profile.last_error
 	var file: FileAccess
 	if FileAccess.file_exists(path):
 		file = FileAccess.open(path, FileAccess.READ_WRITE)
