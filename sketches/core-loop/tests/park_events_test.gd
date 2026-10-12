@@ -3,6 +3,8 @@ extends SceneTree
 const Director := preload("res://src/world/event_director.gd")
 const Kinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const H := 0.05
 const BAR := 240.0 / 172.0
 const FAR := Vector3(1000.0, 1.0, 1000.0)
@@ -25,6 +27,9 @@ func _initialize() -> void:
 		_leads()
 		_warning_grammar()
 		_clearance()
+		_site_footprints()
+		_site_clearance()
+		_site_corridors()
 		_water_lifetime()
 		_overlap()
 		_held_announcements()
@@ -186,6 +191,153 @@ func _clearance() -> void:
 		_step(d, H, ball)
 	_check("water pauses mid-fill", water_checks.under == 0 and water_checks.safe > 0 and water_checks.depth, "rise hooks under grounded ball=%d; safe=%d; depth cap=%s" % [water_checks.under, water_checks.safe, water_checks.depth])
 	_check(LABELS[2], not bad and started and water_checks.under == 0 and water_checks.safe > 0 and water_checks.depth, "clearance, projected travel, mid-fill grounding and 1.2 m water cap")
+
+
+# These fixtures use hand-computed yaw-30 coordinates: cos=√3/2, sin=1/2.
+# The centre is [17,-23], local X is width, and local Z is length along the facing.
+func _site_world(local: Vector2, yaw := 30.0) -> Vector2:
+	if yaw == 0.0:
+		return Vector2(17, -23) + local
+	return Vector2(17 + 0.866025403784 * local.x + 0.5 * local.y,
+		-23 - 0.5 * local.x + 0.866025403784 * local.y)
+
+
+func _long_site(yaw := 30.0) -> Dictionary:
+	return {"id": "site", "element": "ground", "at": [17, -23], "y": 0,
+		"size": [100, 2, 20], "yaw_deg": yaw, "recipe": "greybox:ground", "ride_fact": ""}
+
+
+func _site_director(row: Dictionary, yaw := 30.0):
+	var map := Map.new()
+	map.park = {"map": "fixture", "event_rows": [row], "weather_rows": [], "park_rows": [_long_site(yaw)],
+		"routes": [{"id": "main", "from": "drop_in", "to": "landmark"}, {"id": "bypass", "from": "drop_in", "to": "landmark"}]}
+	return Director.new(891, {}, map, 14.0, func(_x, _z): return 0.0)
+
+
+func _site_footprints() -> void:
+	var row := _long_site()
+	var parent := Node3D.new()
+	root.add_child(parent)
+	var placed := ParkRecipes.place_greybox(row, "ground", parent)
+	var shape: BoxShape3D = placed.get_node("Collider").get_child(0).shape
+	var collider_half := Vector2(shape.size.x, shape.size.z) * 0.5
+	var geometry: Script = ParkMap
+	var helpers := geometry.has_method("footprint_half_extents") and geometry.has_method("footprint_contains")
+	_check("shared site footprint helpers exist", helpers, "non-square yaw-30 greybox collider half=%s; require ParkMap helpers" % collider_half)
+	if not helpers:
+		parent.free()
+		return
+	var half: Vector2 = geometry.call("footprint_half_extents", row)
+	_check("site footprint agrees with placed collider", half.is_equal_approx(collider_half) and half.is_equal_approx(Vector2(10, 50)),
+		"helper=%s collider=%s hand expected=[10,50]" % [half, collider_half])
+	var bad := []
+	# Each edge has a point 0.1 m inside and outside; repeat with a 2 m margin.
+	for margin in [0.0, 2.0]:
+		for edge in [[Vector2(9.9 + margin, 0), true], [Vector2(10.1 + margin, 0), false],
+			[Vector2(-9.9 - margin, 0), true], [Vector2(-10.1 - margin, 0), false],
+			[Vector2(0, 49.9 + margin), true], [Vector2(0, 50.1 + margin), false],
+			[Vector2(0, -49.9 - margin), true], [Vector2(0, -50.1 - margin), false]]:
+			var point := _site_world(edge[0])
+			var inside: bool = geometry.call("footprint_contains", row, point, margin)
+			if inside != edge[1]:
+				bad.append([edge[0], margin, inside, edge[1]])
+	_check("rotated site containment at every edge", bad.is_empty(), "16 hand-computed inside/outside points; mismatches=%s" % [bad])
+	parent.free()
+
+
+func _site_clearance() -> void:
+	for fixture in [["covered", Vector2(0, 40), Vector2.ZERO], ["margin", Vector2(0, 55), Vector2.ZERO],
+		["travel", Vector2(-40, 40), Vector2(30, 0)]]:
+		var row := _row("site_hold")
+		row.live_s = 0.0
+		var d = _site_director(row)
+		var hooks := {"land": 0}
+		d.register_family("natural", func(action, _r, _ctx):
+			if action == "land":
+				hooks.land += 1)
+		var facts := []
+		var point := _site_world(fixture[1])
+		var travel: Vector2 = _site_world(fixture[2]) - Vector2(17, -23)
+		for i in 180:
+			facts.append_array(_step(d, H, Vector3(point.x, 1, point.y), Vector3(travel.x, 0, travel.y)))
+		var announced: int = facts.filter(func(f): return f.kind == "announced").size()
+		var starts: int = facts.filter(func(f): return f.kind == "started").size()
+		var landing: int = facts.filter(func(f): return f.kind == "world" and f.get("phase") == "land").size()
+		_check("site-derived %s holds landing" % fixture[0], announced == 1 and starts == 0 and landing == 0 and hooks.land == 0,
+			"local=%s velocity=%s announced=%d started=%d landing_world=%d land_hooks=%d" % [fixture[1], fixture[2], announced, starts, landing, hooks.land])
+		var released := []
+		for i in 100:
+			released.append_array(_step(d))
+		_check("site-derived %s lands after clearance" % fixture[0], released.filter(func(f): return f.kind == "started").size() == 1
+			and released.filter(func(f): return f.kind == "world" and f.get("phase") == "land").size() == 1 and hooks.land == 1,
+			"clearance returned at 9 s; one start, landing fact and callback required")
+	# Flood landing itself must wait for a grounded ball covered only by the long Z side.
+	var water := _row("site_water", "flash_flood", "natural", 5.0)
+	water.hold_clear_m = 0.0
+	water.effect = {"depth_m": 1.2, "fill_s": 10.0, "material": "water"}
+	water.live_s = 20.0
+	var d = _site_director(water)
+	var point := _site_world(Vector2(0, 40))
+	var under := Vector3(point.x, 1, point.y)
+	var facts := []
+	var hooks := {"land": 0, "unsafe": 0, "safe": 0, "before": -1.0, "resumed": -1.0}
+	d.register_family("natural", func(action, _r, ctx):
+		if action == "land":
+			hooks.land += 1
+		if action == "step":
+			if ctx.grounded and ctx.ball.is_equal_approx(under) and ctx.rise_s < 10.0:
+				hooks.unsafe += 1
+			else:
+				hooks.safe += 1
+				if ctx.clock_s <= 11.0 + 0.000001:
+					hooks.before = ctx.rise_s
+				elif ctx.clock_s >= 16.0 - 0.000001 and hooks.resumed < 0.0:
+					hooks.resumed = ctx.rise_s)
+	for i in 180:
+		facts.append_array(_step(d, H, under))
+	_check("site-derived grounded flood holds landing", facts.filter(func(f): return f.kind == "announced").size() == 1
+		and facts.filter(func(f): return f.kind == "started").is_empty()
+		and facts.filter(func(f): return f.kind == "world" and f.get("phase") == "land").is_empty() and hooks.land == 0,
+		"grounded local [0,40], no footprint override; land_hooks=%d" % hooks.land)
+	var released := []
+	for i in 40:
+		released.append_array(_step(d))
+	_check("site-derived grounded flood lands after clearance", released.filter(func(f): return f.kind == "started").size() == 1
+		and released.filter(func(f): return f.kind == "world" and f.get("phase") == "land").size() == 1 and hooks.land == 1,
+		"grounded ball clears at 9 s; one landing required")
+	for i in 100:
+		_step(d, H, under)
+	for i in 20:
+		_step(d)
+	_check("site-derived live flood pauses under grounded ball", hooks.unsafe == 0 and hooks.safe > 0 and hooks.before > 0.0
+		and absf(hooks.resumed - hooks.before - H) < 0.000001,
+		"unsafe=%d safe=%d fill before=%.3f resumed=%.3f expected increment=%.2f" % [hooks.unsafe, hooks.safe, hooks.before, hooks.resumed, H])
+
+
+func _site_corridors() -> void:
+	for spec in [["fleet_landing", "fleet"], ["machine_eruption", "ancient"]]:
+		for yaw in [0.0, 30.0]:
+			# The long side ends at local Z=50; the corridor ends at Z=58.
+			for fixture in [["held", 57.0, false, 0], ["clear", 59.0, false, 1], ["alternate", 57.0, true, 1]]:
+				var row := _row("site_corridor", spec[0], spec[1])
+				row.live_s = 0.0
+				if fixture[2]:
+					row.route_change = {"closes": ["main"], "opens": ["bypass"]}
+				var d = _site_director(row, yaw)
+				var hooks := {"land": 0}
+				d.register_family(spec[1], func(action, _r, _ctx):
+					if action == "land":
+						hooks.land += 1)
+				var lines := [[_site_world(Vector2(-30, fixture[1]), yaw), _site_world(Vector2(30, fixture[1]), yaw)]]
+				var facts := []
+				for i in 400:
+					facts.append_array(_step(d, H, FAR, Vector3.ZERO, {"pilot_lines": lines}))
+				var announced: int = facts.filter(func(f): return f.kind == "announced").size()
+				var starts: int = facts.filter(func(f): return f.kind == "started").size()
+				var landing: int = facts.filter(func(f): return f.kind == "world" and f.get("phase") == "land").size()
+				_check("site-derived corridor %s yaw %.0f %s" % [spec[1], yaw, fixture[0]], announced == 1
+					and starts == fixture[3] and landing == fixture[3] and hooks.land == fixture[3],
+					"local line Z=%s announced=%d started=%d landing_world=%d land_hooks=%d expected=%d" % [fixture[1], announced, starts, landing, hooks.land, fixture[3]])
 
 
 func _water_lifetime() -> void:
