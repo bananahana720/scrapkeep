@@ -15,6 +15,10 @@ var _game
 var _ticks := 0
 var _announcements := {}
 var _starts := {}
+var _routed := {}
+var _director_times := {}
+var _sample_due := {}
+var _land_samples := {}
 
 func _initialize() -> void:
 	var row_script: Script = MusicRows
@@ -70,6 +74,7 @@ func _fixture_checks() -> void:
 		sounds.append(first_pcm)
 		e._actions.clear()
 		e._voices.clear()
+		e.park_cue_log.clear()
 		e.clock = 0
 		e.call("park_cue", id, LEAD, 0, {}, 0.0)
 		# Render through the actual sequencer. This detects a one-beat late start,
@@ -104,8 +109,14 @@ func _physics_process(_delta: float) -> bool:
 		_game.ctx.calm = true
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
-		_game.events.event_announced.connect(func(id, seconds): _announcements[id] = seconds)
-		_game.events.event_started.connect(func(id): _starts[id] = true)
+		_game.events.event_announced.connect(func(id, seconds):
+			_announcements[id] = seconds
+			_routed[id] = audio.engine._actions.filter(func(a): return a.get("type") == "park_cue").duplicate(true)
+			_director_times[id] = _game.world.events.stage_time
+			_sample_due[id] = audio.engine.clock + roundi(seconds * Harmony.RATE))
+		_game.events.event_started.connect(func(id):
+			_starts[id] = _game.world.events.stage_time
+			_land_samples[id] = audio.engine._actions.filter(func(a): return a.get("type") == "park_cue" and not a.row.rise).duplicate(true))
 		audio.bake_now()
 		# The real director's public tier input unlocks unchanged park_dam rows.
 		_game.world.events.set_clock_tier(1)
@@ -115,8 +126,11 @@ func _physics_process(_delta: float) -> bool:
 	_check("real Game park_dam", _game.ctx.terrain.map().title == "park_dam", _game.ctx.terrain.map().title)
 	var heard: Array = audio.engine.get("park_cue_log")
 	var queued: Array = audio.engine._actions.filter(func(a): return a.get("type") == "park_cue")
-	_check("real Game director telegraph reaches engine", _announcements.has("plunge_pool_flood") and (heard + queued).any(func(a): return a.id == "riser_natural"), str([_announcements, heard.size(), queued.size()]))
+	_check("real Game director telegraph reaches engine", _announcements.has("plunge_pool_flood") and _routed.get("plunge_pool_flood", []).any(func(a): return a.id == "riser_natural"), str([_announcements, heard.size(), queued.size()]))
 	_check("real Game director landing reaches engine", _starts.has("plunge_pool_flood") and (heard + queued).any(func(a): return a.id == "drop_flood"), str(_starts))
+	var drops: Array = _land_samples.get("plunge_pool_flood", []).filter(func(a): return a.id == "drop_flood")
+	_check("real Game mapped director downbeat", drops.size() == 1 and drops[0].at == _sample_due.get("plunge_pool_flood", -1), str([drops.map(func(a): return a.at), _sample_due, audio.park_cue_late]))
+	_check("real Game director lead", _starts.has("plunge_pool_flood") and _starts["plunge_pool_flood"] >= _director_times["plunge_pool_flood"] + _announcements["plunge_pool_flood"], str([_starts, _director_times]))
 	_game.queue_free()
 	_game = null
 	_finish()

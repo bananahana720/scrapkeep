@@ -204,7 +204,12 @@ class Voice:
 	var layer := -1
 	var to_stinger := false
 	var mono := false
+	var park_owned := false
+	var park_owner := ""
 
+
+var park_cue_log: Array[Dictionary] = []
+var _park_pcm := {}
 
 var clock := 0
 var bar_origin := 0
@@ -1120,6 +1125,76 @@ func voice_count() -> int:
 	return _voices.size()
 
 
+# The caller supplies the director's landing sample, including any held landing.
+func park_cue(id: String, lead_frames := 0, at := -1, context: Dictionary = {}, priority_db := 0.0, owner := "") -> int:
+	var options := context.duplicate()
+	options["theme"] = options.get("theme", theme)
+	var row := MusicRows.cue(id, options)
+	if row.is_empty():
+		push_error("music: missing park cue " + id)
+		return -1
+	var start: int = clock if at < 0 else at
+	if row.rise:
+		var count: int = row.notes.size()
+		for i in count:
+			var from := roundi(float(lead_frames) * i / count)
+			var until := roundi(float(lead_frames) * (i + 1) / count)
+			_add_action(start + from, {"type": "park_cue", "id": id, "row": row, "cell": i,
+				"length": maxi(1, until - from), "progress": float(i) / count, "priority_db": priority_db, "owner": owner})
+	else:
+		_add_action(start, {"type": "park_cue", "id": id, "row": row, "cell": 0,
+			"length": beat_len() * 2, "progress": 1.0, "priority_db": priority_db, "owner": owner})
+	return start
+
+
+func cancel_park_cue(owner: String) -> void:
+	_actions = _actions.filter(func(a): return a.get("type") != "park_cue" or a.get("owner", "") != owner)
+	for voice in _voices:
+		if voice.park_owner == owner and voice.park_owned:
+			voice.end = mini(voice.end, voice.pos + RELEASE)
+
+
+func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
+	var row: Dictionary = action.row
+	var signature := str([row, action.cell, action.length, action.progress, live_key, step_len])
+	if _park_pcm.has(signature):
+		return _park_pcm[signature]
+	var buf: PackedFloat32Array
+	if row.has("sound"):
+		buf = SfxBank.samples_at(row.sound, step_len, live_key, theme)
+	else:
+		var n: int = action.length
+		var midi: int = row.notes[action.cell] + live_key
+		match row.voice:
+			"lead": buf = Synth.lead(midi, n)
+			"brass": buf = Synth.brass(midi, n)
+			"talk": buf = Synth.talk(midi, n)
+			"sub": buf = Synth.sub(midi, n)
+			"buzz": buf = Synth.buzz(midi, n, 0.0)
+			"chime": buf = Synth.chime(midi, n)
+			"steam_whistle":
+				buf = Synth.buffer(n)
+				var phase := 0.0
+				var hz := Harmony.hz(midi)
+				var rng := RandomNumberGenerator.new()
+				rng.seed = 0x57EA
+				for i in n:
+					phase += TAU * hz * lerpf(1.0, Harmony.ratio(2), float(i) / n) / Harmony.RATE
+					buf[i] = sin(phase) + 0.12 * rng.randf_range(-1.0, 1.0)
+			_: buf = Synth.note(row.voice, midi).slice(0, n)
+		if row.has("accent"):
+			Synth.add_into(buf, Synth.drum(row.accent), 0, 0.35)
+		buf = Synth.normalize(buf)
+		if row.rise:
+			for i in buf.size():
+				buf[i] *= lerpf(0.25, 1.0, float(action.progress) + float(i) / maxi(1, buf.size()) / row.notes.size())
+		buf = Synth.declick(buf)
+	if _park_pcm.size() >= 64:
+		_park_pcm.clear()
+	_park_pcm[signature] = buf
+	return buf
+
+
 func render(frames: int) -> void:
 	out_music.resize(frames)
 	out_stinger.resize(frames)
@@ -1282,6 +1357,19 @@ func _run(action: Dictionary) -> void:
 			var buf := SfxBank.samples_at(id, step_len, key, theme)
 			_start(buf, buf.size(), -1, db_to_linear(SfxBank.trim_db(id)), 0.0, true)
 			events_log.append(["door_tick", clock, id])
+		"park_cue":
+			var live_key: int = key if grid == null else grid.key_at(clock)
+			var buf := park_cue_samples(action, live_key)
+			var row: Dictionary = action.row
+			var db := SfxBank.trim_db(row.trim_sound) + float(action.priority_db)
+			var voice := _start(buf, buf.size(), -1, db_to_linear(db), 0.0, true)
+			voice.park_owned = true
+			voice.park_owner = action.owner
+			park_cue_log.append({"id": action.id, "at": clock, "scheduled": action.at, "end": clock + voice.end,
+				"key": live_key, "pitch": Harmony.ratio(live_key), "db": linear_to_db(voice.gl), "trim_sound": row.trim_sound,
+				"voice": row.voice, "cell": action.cell, "owner": action.owner})
+			if park_cue_log.size() > 256:
+				park_cue_log.pop_front()
 		"stinger":
 			# Pitched stingers sound in the live key, and a themed one in this level's motif.
 			var music: bool = action.get("music", false)

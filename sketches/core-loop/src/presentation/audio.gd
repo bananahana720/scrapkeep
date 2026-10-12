@@ -247,6 +247,9 @@ var _ult_lift := false
 var _ult_armed := false
 var _pressure := 0.0
 var _miniboss: Node3D
+var _park_cues := {}
+var park_cue_late: Array[Dictionary] = []
+
 var _event_id := ""
 var _event_started_ms := -1
 var _event_progress_live := false
@@ -1027,7 +1030,7 @@ func _connect_all(events) -> void:
 	events.special_used.connect(func(_special: String, _at: Vector3): play("special_used"))
 	events.reward_offered.connect(_on_offered)
 	events.reward_chosen.connect(func(_part: String): play("reward_chosen"))
-	events.event_announced.connect(func(_event_id: String, _seconds: float): on_beat("event_announced"))
+	events.event_announced.connect(_on_event_announced)
 	events.event_started.connect(_on_event_started)
 	events.event_ended.connect(_on_event_ended)
 	events.launched.connect(_on_launched)
@@ -1417,7 +1420,59 @@ func _on_hotwire_offered(_part_id: String, _recycle: int) -> void:
 	play("hotwire_offer", 0.0, 1.0, "SFX", "hotwire_offer")
 
 
+# Resolve the bus id against the same authored row the director reads.
+func _park_event_row(event_id: String) -> Dictionary:
+	if ctx == null or ctx.get("terrain") == null:
+		return {}
+	var map = ctx.terrain.map()
+	if not "park" in map:
+		return {}
+	for row in map.park.get("event_rows", []):
+		if row.id == event_id:
+			return row
+	return {}
+
+
+func _on_event_announced(event_id: String, seconds: float) -> void:
+	var row := _park_event_row(event_id)
+	if row.is_empty():
+		on_beat("event_announced")
+		return
+	if sound_ready:
+		_flush_flow()
+	engine.cancel_park_cue(event_id)
+	var options := {"theme": engine.theme, "motif": _motif,
+		"ancient": MusicRows.ANCIENT_VOICES.get(row.effect.get("miniboss", ""), "reactor")}
+	var lead := roundi(seconds * Harmony.RATE)
+	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead}
+	engine.park_cue(row.music_cue.telegraph, lead, engine.clock, options,
+		PRIORITY_DB[Rows.priority("event_announced")], event_id)
+	_duck(0.6, seconds)
+
+
+func _park_event_land(event_id: String) -> bool:
+	if not _park_cues.has(event_id):
+		return false
+	var cue: Dictionary = _park_cues[event_id]
+	engine.cancel_park_cue(event_id)
+	var at: int = cue.due
+	if at < engine.clock:
+		# A held site is committed only on started. Never play a predicted impact.
+		var bar_s := 240.0 / 172.0
+		var bar_frames := roundi(bar_s * Harmony.RATE)
+		at += ceili(float(engine.clock - at) / bar_frames) * bar_frames
+		park_cue_late.append({"id": event_id, "due": cue.due, "clock": engine.clock, "at": at})
+		if park_cue_late.size() > 32:
+			park_cue_late.pop_front()
+	engine.park_cue(cue.row.music_cue.land, 0, at, cue.options,
+		PRIORITY_DB[Rows.priority("event_started")], event_id)
+	_park_cues.erase(event_id)
+	return true
+
+
 func _on_event_started(event_id: String) -> void:
+	if _park_event_land(event_id):
+		return
 	on_beat("event_started")
 	if event_id in EVENT_SECONDS:
 		_event_id = event_id
@@ -1427,6 +1482,10 @@ func _on_event_started(event_id: String) -> void:
 # A win drops back into the level with the milestone stinger on the drop beat; a pass
 # or a loss settles home gracefully, with no punishing sting.
 func _on_event_ended(event_id: String, outcome: String) -> void:
+	if not _park_event_row(event_id).is_empty():
+		engine.cancel_park_cue(event_id)
+		_park_cues.erase(event_id)
+		return
 	var participatory := event_id == _event_id
 	_event_id = ""
 	if not participatory or not sound_ready:
@@ -1461,6 +1520,9 @@ func _on_flow_changed(state: String) -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	for event_id in _park_cues:
+		engine.cancel_park_cue(event_id)
+	_park_cues.clear()
 	_line_was = ""
 	# A retry restores the meter to its stage-entry value silently; the lift follows the meter
 	# once every stage_entered handler has run (SKILL-BAR section 4, one fact for every layer).
