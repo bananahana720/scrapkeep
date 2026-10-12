@@ -71,9 +71,51 @@ const PREVIEW := {"energy": 0.6, "sun_energy": 1.4, "sun_rotation": Vector3(-48.
 	"rim_energy": 1.6, "rim_rotation": Vector3(-20.0, 200.0, 0.0)}
 const NODE := "WorldLook"
 
+# Time of day (KE7; PARK.md section 6): one day across a run, dawn at the dam to dusk at the crown.
+# Each stage enters at its time; the row lays its sun and ambient over the world row. The sun's
+# height is minus its pitch (sun_rotation.x): it peaks at noon and is lowest at dawn and dusk.
+const TIME_ORDER := ["dawn", "morning", "noon", "afternoon", "golden", "dusk"]
+const STAGE_TIME := {1: "dawn", 2: "morning", 3: "noon", 4: "afternoon", 5: "golden", 6: "dusk"}
+const TIME_ROWS := {
+	"dawn": {"sun_rotation": Vector3(-8.0, -100.0, 0.0), "sun_color": Color("ffb27a"), "sun_energy": 1.4,
+		"ambient": Color("9db5cf"), "energy": 0.22},
+	"morning": {"sun_rotation": Vector3(-28.0, -70.0, 0.0), "sun_color": Color("ffd49a"), "sun_energy": 2.0,
+		"ambient": Color("a9c4d6"), "energy": 0.26},
+	"noon": {"sun_rotation": Vector3(-62.0, -40.0, 0.0), "sun_color": Color("fff1dc"), "sun_energy": 2.6,
+		"ambient": Color("dbe6ec"), "energy": 0.32},
+	"afternoon": {"sun_rotation": Vector3(-45.0, -15.0, 0.0), "sun_color": Color("ffd7a0"), "sun_energy": 2.3,
+		"ambient": Color("c9c0a8"), "energy": 0.29},
+	"golden": {"sun_rotation": Vector3(-16.0, 20.0, 0.0), "sun_color": Color("ffa35c"), "sun_energy": 1.9,
+		"ambient": Color("e0b58a"), "energy": 0.25},
+	"dusk": {"sun_rotation": Vector3(-6.0, 60.0, 0.0), "sun_color": Color("e06f4a"), "sun_energy": 1.1,
+		"ambient": Color("5d6b86"), "energy": 0.16},
+}
+# Weather skies (KE7): the sky ids the weather rows name, with the tint and cloud amount each one
+# sets. The fog itself comes from the row.
+const WEATHER_SKY := {
+	"clear": {"cloud": 0.0, "tint": Color("ffffff")},
+	"dust": {"cloud": 0.1, "tint": Color("c9a36b")},
+	"storm_build": {"cloud": 0.6, "tint": Color("6b7480")},
+}
+
 
 static func row(world: int) -> Dictionary:
 	return ROWS.get(world, {})
+
+
+static func time_id(stage: int) -> String:
+	return STAGE_TIME.get(stage, "")
+
+
+static func time_row(stage: int) -> Dictionary:
+	return TIME_ROWS.get(time_id(stage), {})
+
+
+# The world row with the stage's time of day laid over it: sun, and the ambient colour and energy.
+static func stage_look(stage: int, world: int) -> Dictionary:
+	var look := row(world).duplicate()
+	look.merge(time_row(stage), true)
+	return look
 
 
 # The Environment values a row sets. Every row writes the same keys, so an arena's row covers
@@ -133,11 +175,11 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	var root: Node3D = terrain.geometry_root(stage)
 	var world: int = ctx.stages.world_of(stage)
 	var GraphicsPreset := load("res://src/presentation/graphics_preset.gd")
-	GraphicsPreset.enter_world(root, terrain.environment, row(world))
+	var look := stage_look(stage, world)
+	GraphicsPreset.enter_world(root, terrain.environment, look)
 	var game = ctx.root
 	if game != null and game.get("world") != null and game.world.view != null:
 		game.world.view.record_fog()
-	var look := row(world)
 	if look.has("lamps") and ctx.player != null:
 		var pool := LampPool.find(root)
 		if pool == null:
