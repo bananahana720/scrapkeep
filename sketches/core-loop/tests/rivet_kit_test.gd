@@ -13,9 +13,10 @@ const AudioRows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 50 checks,
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 51 checks,
 # 2026-10-12 (PC-RIVET round 3): arrival preview, early cues, shared guard feedback and cue gain/key.
 # 2026-10-12 (PC-RIVET r4): 45 -> 50, inspect actual PCM cue offsets and duration at key 3.
+# 2026-10-12 (coordinator, KE9 r1 gate): 50 -> 51, a freed target drops its pulse without an error.
 # including the count assertion, so an empty or short run fails. Real game and router, scripted
 # calm shelf with no AI attacks; the kit is stepped by hand so every number is read on its tick.
 const DT := 1.0 / 60.0
@@ -64,7 +65,7 @@ func _cue_timing() -> void:
 
 
 var _t := T.new("rivet_kit_test")
-var _expected_checks := 50
+var _expected_checks := 51
 var _game
 var _player
 var _combat
@@ -248,6 +249,15 @@ func _run() -> void:
 	_t.check("knock runs along the cable, away from the ball", knock.length() > 1.0 and rad_to_deg(knock.angle_to(Vector3.RIGHT)) <= 1.0, str(a._knock))
 	_t.check("the line stays latched on the machine", _player.kit.hooked and _player.kit.on_body and _player.kit.anchor_body == a)
 	_t.eq("Line Drive refuses a pick while cooling", _player.abilities.ready("line"), false)
+
+	# A target freed while its pulse runs drops the pulse without a script error (KE9 r1 gate).
+	await _fresh()
+	var gone := _enemy("chaser", 15.0)
+	_cast(gone)
+	var pending: int = _kit.pulses.size()
+	gone.free()
+	_kit.step(0.2)
+	_t.check("a freed target's pulse is dropped", pending == 1 and _kit.pulses.is_empty(), "%d then %d" % [pending, _kit.pulses.size()])
 
 	# The floor: a slow ball still punches at 8. Chain and sprint multiply.
 	await _fresh()
