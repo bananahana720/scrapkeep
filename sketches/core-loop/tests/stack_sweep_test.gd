@@ -18,14 +18,14 @@ const BuildSweep := preload("res://tools/build_sweep.gd")
 #     or more tags in at least 30% of builds, leave zero unspecified tag pairs, and no
 #     single offer shows a part twice; the same seed gives the same numbers. The comps
 #     measure, a part repeating within a run, is printed against its target of 1 per
-#     10,000 draws and is report-only until the owner rules (BuildSweep.WITHIN_RUN_GATED);
-#     its counter and its gate each have a planted control that must fire.
+#     10,000 draws and is report-only by ruling. Its counter has a planted control;
+#     a known tag pair removed from the independent table must become unspecified.
 # Time to kill is printed per stack row (report now; the numbers gate nothing yet).
 
 const EPS := 1e-6
 # A runtime script error aborts a check function without failing the run, so every
 # check must report: fewer than this many verdicts is itself a failure.
-const EXPECTED_REPORTS := 9
+const EXPECTED_REPORTS := 10
 
 var _failures := 0
 var _reports := 0
@@ -36,6 +36,7 @@ func _initialize() -> void:
 	_check_spike_curve()
 	_check_spike_pool_rule()
 	_check_stack_arm()
+	_check_independent_pairs()
 	_check_compose_arm()
 	if _reports != EXPECTED_REPORTS:
 		_failures += 1
@@ -132,6 +133,39 @@ func _ramp(start: float, step: float, accelerate := false) -> Array:
 	return out
 
 
+func _check_independent_pairs() -> void:
+	# Reflection keeps the red test runnable before the explicit table exists.
+	var script: Script = load("res://tools/build_sweep.gd")
+	var constants: Dictionary = script.get_script_constant_map()
+	if not constants.has("INDEPENDENT_PAIRS"):
+		var count: int = BuildSweep.unspecified_pairs([["frost"], ["frost"]])
+		_report("missing independent pair control fires", false,
+			"INDEPENDENT_PAIRS is missing; frost/frost -> %d unspecified pair, expected 1" % count)
+		return
+	var bad: Array = []
+	var checked := 0
+	for i in PartDef.TAGS.size():
+		for j in range(i, PartDef.TAGS.size()):
+			var a: String = PartDef.TAGS[i]
+			var b: String = PartDef.TAGS[j]
+			var outcome: String = BuildSweep.pair_outcome(a, b)
+			checked += 1
+			if outcome == "" or outcome != BuildSweep.pair_outcome(b, a):
+				bad.append([a, b])
+	for pair in constants["INDEPENDENT_PAIRS"]:
+		if BuildSweep.pair_outcome(pair[0], pair[1]) != "independent":
+			bad.append(pair)
+	var reduced: Array = constants["INDEPENDENT_PAIRS"].duplicate(true)
+	var removed: bool = reduced.has(["frost", "frost"])
+	reduced.erase(["frost", "frost"])
+	var unspecified: int = script.call("unspecified_pairs", [["frost"], ["frost"]], reduced)
+	var planted := {"tag3_share": 1.0, "unspecified_pairs": unspecified, "offer_repeats": 0}
+	var problems: Array = BuildSweep.compose_problems(planted)
+	_report("missing independent pair control fires", bad.is_empty() and removed and unspecified == 1 and problems.size() == 1,
+		"%d tag pairs checked, problems %s; removed frost/frost -> %d unspecified pair, composition problems %s"
+			% [checked, bad, unspecified, problems])
+
+
 func _check_compose_arm() -> void:
 	var stats: Dictionary = BuildSweep.compose_arm(BuildSweep.DEFAULT_SEED, BuildSweep.COMPOSE_BUILDS)
 	BuildSweep.print_compose_table(stats)
@@ -142,7 +176,7 @@ func _check_compose_arm() -> void:
 		"%d builds, %d draws, %.1f%% reach 3+ tags, %d unspecified pairs, %d in-offer repeats, %.2f within-run repeats per 10,000 draws (target %.0f, %s)"
 			% [stats["builds"], stats["draws"], 100.0 * stats["tag3_share"], stats["unspecified_pairs"],
 				stats["offer_repeats"], stats["run_repeats_per_10k"], BuildSweep.REPEAT_TARGET_PER_10K,
-				"gated" if BuildSweep.WITHIN_RUN_GATED else "report-only"])
+				"report-only by ruling"])
 	var again: Dictionary = BuildSweep.compose_arm(7, 300)
 	var twice: Dictionary = BuildSweep.compose_arm(7, 300)
 	var other: Dictionary = BuildSweep.compose_arm(8, 300)
@@ -154,16 +188,11 @@ func _check_compose_arm() -> void:
 	_report("composition controls fire", planted_unknown > 0 and planted_repeat == 1
 		and BuildSweep.unspecified_pairs([["frost"], ["arc", "speed"]]) == 0,
 		"unknown tag -> %d unspecified pairs; duplicate offer -> %d repeat" % [planted_unknown, planted_repeat])
-	# The within-run measure: a part shown earlier this run counts, a fresh one does not,
-	# and the gate, once switched on, refuses a run over the target.
+	# Ruling 1 keeps the counter and makes an over-target run report-only.
 	var planted_run: int = BuildSweep.run_repeats({"cross_split": 1}, ["cross_split", "fresh_part"])
 	var clean_run: int = BuildSweep.run_repeats({"other_part": 2}, ["cross_split", "fresh_part"])
 	var over := {"tag3_share": 1.0, "unspecified_pairs": 0, "offer_repeats": 0,
 		"run_repeats": 5, "run_repeats_per_10k": 5.0}
-	var under := over.duplicate()
-	under["run_repeats_per_10k"] = 0.5
-	var gated_over: Array = BuildSweep.compose_problems(over, true)
 	_report("within-run repeat controls fire", planted_run == 1 and clean_run == 0
-		and gated_over.size() == 1 and BuildSweep.compose_problems(under, true).is_empty()
-		and BuildSweep.compose_problems(over, false).is_empty(),
-		"seen part -> %d, fresh parts -> %d; gate on, 5.0 per 10,000 -> %s" % [planted_run, clean_run, gated_over])
+		and BuildSweep.compose_problems(over).is_empty(),
+		"seen part -> %d, fresh parts -> %d; 5.0 per 10,000 -> report-only by ruling" % [planted_run, clean_run])
