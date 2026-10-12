@@ -11,17 +11,18 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 67
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 72
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
 # :356), so its discovery is gone; the three Rivet cards now open in the codex after their
 # framework card, Line True on the tenth punch; the Breach Skid reads player_ball's skid cone.
+# 2026-10-12 (PC-RIVET round 3): exercise the framework's encore transition and both legs' rams.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 67
+	_expected_checks = 72
 	super._initialize()
 
 
@@ -34,7 +35,8 @@ func _piece(id: String, heading := Vector3.RIGHT, release := 20.0) -> void:
 	ult._plan = {"path": "line", "from": from, "to": to, "flight": 2.4, "seconds": 2.75, "beats": 7,
 		"legs": [{"mode": "line", "to": to, "seconds": 2.4, "beats": 7, "strike": true}]}
 	ult.last_plan = ult._plan
-	ult._leg = 0
+	# _strike is called after _land advances the index. Most cases dispatch that final strike.
+	ult._leg = 1
 	ult._beats = 7
 	ult._beat_len = 2.4 / 7.0
 	ult._peaked = false
@@ -228,6 +230,27 @@ func _run() -> void:
 	ult._strike(_player.ball_position())
 	_t.check("crowd control slides off 2.0 s past the recovery", _player.immune_left >= Ultimate.RECOVER_SECONDS + 2.0 - 0.001, str(_player.immune_left))
 	_t.check("the collisions come back after the landing", _player.body().get_collision_exceptions().is_empty())
+
+	# The framework appends the encore before the first strike and emits started only once.
+	await _fresh()
+	_piece("juggernaut_drive")
+	ult._leg = 0
+	_knob("ult_encore", true)
+	var first_ram := _enemy("chaser", 1.5)
+	_kit._step_piece(DT)
+	_player.reset_to(ult._ride.target)
+	_enemy("chaser", 15.0)
+	ult._land(_player.ball_position())
+	_t.check("a machine within 30 m starts the encore leg", ult._leg == 1 and ult._plan["legs"].size() == 2 and ult.phase() == Ultimate.FLIGHT)
+	_t.check("the encore keeps the first leg's collision exceptions", _kit._excepted.has(first_ram) and _player.body().get_collision_exceptions().has(first_ram))
+	var second_ram := _enemy("chaser", 1.5)
+	_kit._step_piece(DT)
+	_kit._step_piece(DT)
+	_t.eq("the encore still rams each machine once", _damage(second_ram), [snappedf(Weapons.DRIVE_DAMAGE * Weapons.DRIVE_RAM_MULT, 0.01)])
+	_t.check("the encore also excepts its new machine", _kit._excepted.has(second_ram) and _player.body().get_collision_exceptions().has(second_ram))
+	_knob("ult_encore", false)
+	ult._land(_player.ball_position())
+	_t.check("the last leg releases all Drive state and collisions", _kit._piece == "" and _kit._excepted.is_empty() and _player.body().get_collision_exceptions().is_empty())
 
 	# ult_beats: two more beats in the plan.
 	await _fresh()
