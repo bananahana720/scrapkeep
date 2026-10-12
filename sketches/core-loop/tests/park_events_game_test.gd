@@ -52,24 +52,30 @@ func _run() -> void:
 		while game.combat.punch_of("ram", force) < float(warden.plating):
 			force += 0.05
 		for chunk in 2:
-			for hit in 30:
+			for cycle in 2:
+				for hit in 30:
+					if warden.staggered():
+						break
+					game.combat.strike(warden, "ram", force)
+					await _frames(2)
+				game.combat.strike(warden, "ram", force, warden.family_point())
+				await _frames(2)
 				if warden.chunks_left() <= 3 - chunk:
 					break
-				game.player.set_velocity_now(Vector3.RIGHT * game.tuning.f("cruise") * 3.0)
-				game.combat.strike(warden, "ram", force, warden.family_point() if warden.staggered() else "")
-				await _frames(2)
-			await _frames(2)
+				Engine.time_scale = 10.0
+				await _frames(45)
+				Engine.time_scale = 1.0
 		t.eq("real combat loses two Warden chunks", warden.chunks_left(), 2)
 	Engine.time_scale = 10.0
 	await _frames(150)
 	Engine.time_scale = 1.0
-	t.check("real Warden chunk_2 triggers the park row", announced.has("powerhouse_boiler") and started.has("powerhouse_boiler"), str(announced))
+	t.check("real Warden chunk_2 triggers the park row", announced.has("powerhouse_boiler") and forms.has("boiler_pressure"), str(announced))
 	var handlers = game.world.get("event_families")
 	t.check("stage owns the loaded natural family", handlers is Dictionary and handlers.has("natural"))
 	if handlers is Dictionary and handlers.has("natural"):
 		var old = game.world.events
 		var first: WeakRef = weakref(handlers.natural)
-		game.events.stage_entered.emit(1, true)
+		game.flow.retry_stage()
 		await _frames(3)
 		t.check("rebuild unregisters old stage handlers", old._park_families.is_empty(), str(old._park_families.keys()))
 		t.check("rebuild releases old stage handlers", first.get_ref() == null)
