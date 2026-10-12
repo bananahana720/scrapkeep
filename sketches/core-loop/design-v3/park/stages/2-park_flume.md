@@ -169,7 +169,7 @@ The gap span's base is y 61, keeping its entry below the turn's ground before th
 
 `turnout_kicker` now sits at [-177, 142], base y 31, 30×8×18 m. Its low entry stays below the hollow floor and its exit meets the south-end ground. `bend_return_wash` is 50 m wide. The head flume begins 32 m farther down its heading, clearing the Cannon's siphon crossing. Rock outcrops `bend_outcrop_5`, `bench_outcrop_4` and `bluff_outcrop_7` sit at [153, 12], [-30, 390] and [50, 385], outside the fixed collision sites.
 
-The siphon approach bank retains its footprint at [-135, 149], yaw 76 and size 100×56 m. Round 3 reduces its height from 6 to 2 m after fixed-tool Tally seed 5 reproduced a terrain stop on the rising hollow exit. The solo repair diagnostic reaches the Warden with zero stops. The full final population determines the aggregate bands.
+The siphon approach bank remains at [-135, 149], yaw 76. Round 3 first reduced its 6 m rise to 2 m: Tally seed 5 cleared its terrain stop, but the eight-seed flow median fell to 0.6941. The second and last repair restores the 6 m rise and broadens the bank from 100×56 to 132×104 m, spreading the grade while retaining downhill carry. The final fixed-tool population determines the bands.
 
 ## 6. `event_rows` (5 rows)
 
@@ -583,7 +583,7 @@ The park file, verbatim (park_schema_test reads this block):
   {"id": "bench_coping_kicker", "element": "kicker", "landform": "slickrock", "society": "dam_era", "at": [-5, 438], "y": 2, "size": [8, 3, 24], "yaw_deg": 88, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "forecourt_pad_kicker", "element": "kicker", "landform": "penstock", "society": "dam_era", "at": [62, 419], "y": 0, "size": [8, 3, 20], "yaw_deg": 57, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench_coping_pier", "element": "grind_line", "landform": "slickrock", "society": "dam_era", "at": [50, 470], "y": null, "size": [16, 28, 8], "yaw_deg": 90, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "siphon_approach_bank", "element": "bank", "landform": "slickrock", "society": "none", "at": [-135, 149], "y": null, "size": [100, 2, 56], "yaw_deg": 76, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
+  {"id": "siphon_approach_bank", "element": "bank", "landform": "slickrock", "society": "none", "at": [-135, 149], "y": null, "size": [132, 6, 104], "yaw_deg": 76, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
  ],
  "event_rows": [
   {"id": "hollow_trestle_collapse", "kind": "collapse", "family": "natural", "site": "trestle_hollow", "trigger": {"on": "clock_tier", "value": 2}, "weight": 1.0, "telegraph": {"lead_s": 6.0, "form": "trestle_groan", "on_bar": true}, "live_s": 0.0, "effect": {"swap": "trestle_ramp"}, "route_change": {"closes": ["flume_mid"], "opens": ["trestle_ramp_line"]}, "hold_clear_m": 20.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_natural", "land": "drop_collapse"}},
