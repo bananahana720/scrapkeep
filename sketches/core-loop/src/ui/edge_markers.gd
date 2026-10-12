@@ -71,7 +71,7 @@ func targets() -> Array[Dictionary]:
 				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "state": game.beacon.state_id(), "icon": _glyph("obj_beacon")})
 			if not engaged:
 				for site in unfinished_sites():
-					out.append({"at": site.global_position, "kind": site.id, "activity": site.id, "icon": Objectives.glyph("find_activity")})
+					out.append({"at": site.global_position, "kind": site.id, "activity": String(site.rule.get("cue", {}).get("view", site.id)), "icon": Objectives.glyph("find_activity")})
 				out.append_array(_pocket_targets_now())
 		"gates":
 			for at in gate_points:

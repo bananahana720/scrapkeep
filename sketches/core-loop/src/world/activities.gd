@@ -821,7 +821,8 @@ func _finish(s: Site, at: Vector3) -> void:
 		hazard.stop()
 	if s.rule.has("bundle"):
 		_heal(s)
-		_cue(s, "clear")
+		if s.id != "round_arena":
+			_cue(s, "clear")
 	s.view.finish()
 	if s.tier_label != null:
 		s.tier_label.visible = false
