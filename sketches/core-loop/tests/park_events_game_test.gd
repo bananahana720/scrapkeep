@@ -115,7 +115,10 @@ func _run() -> void:
 	t.eq("real Game uses park_dam", game.ctx.terrain.map().title, "park_dam")
 	game.player.set_frozen(true)
 	Engine.time_scale = 10.0
-	await _frames(900)
+	for block in 120:
+		await _frames(30)
+		if ended.has("plunge_pool_flood") and flash_checked:
+			break
 	Engine.time_scale = 1.0
 	t.check("clock_tier flood telegraphs through the game loop", announced.has("plunge_pool_flood") and forms.has("flood_rising"), str(announced))
 	t.check("clock_tier flood lands through the game loop", started.has("plunge_pool_flood") and forms.has("flood_landed"), str(started))

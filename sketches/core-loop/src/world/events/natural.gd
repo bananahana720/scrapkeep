@@ -4,6 +4,7 @@ const Kinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Flood := preload("res://src/world/flood.gd")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
 const TerrainEvent := preload("res://src/world/terrain_event.gd")
@@ -48,10 +49,28 @@ class WaterClock:
 class WaterView:
 	extends Flood
 	var site := {}
+	var surface: WaterSurface
+	var query_xz := Vector2.ZERO
 	func in_basin(point: Vector3) -> bool:
+		query_xz = Vector2(point.x, point.z)
 		return visible and ParkMap.footprint_contains(site, Vector2(point.x, point.z))
+	func surface_y() -> float:
+		return surface.height(query_xz) + cycle.metres
+	func render() -> void:
+		_plane.position = Vector3.UP * cycle.metres
 	func external_accel(_point: Vector3, _velocity: Vector3) -> Vector3:
 		return Vector3.ZERO
+
+
+class WaterSurface:
+	extends RefCounted
+	var mesh: ArrayMesh
+	var cells := {}
+	func height(point: Vector2) -> float:
+		var cell := Vector2i(floori(point.x / ParkTerrain.STEP), floori(point.y / ParkTerrain.STEP))
+		var corners: PackedFloat64Array = cells[cell]
+		var f := point / ParkTerrain.STEP - Vector2(cell)
+		return corners[0] + (corners[1] - corners[0]) * f.x + (corners[2] - corners[0]) * f.y if f.x + f.y <= 1.0 else corners[3] + (corners[2] - corners[3]) * (1.0 - f.x) + (corners[1] - corners[3]) * (1.0 - f.y)
 
 
 # Terrain's material queries use the same surfaces the Flood nodes draw.
@@ -135,6 +154,8 @@ func setup(world_ref) -> void:
 		var site: Dictionary = _sites[row.site]
 		var at := _at(site)
 		var record := {"site": site, "at": at, "overlay": null, "model": null}
+		if row.kind in ["flood_fill", "drain", "flash_flood"]:
+			record.water_surface = _prepare_water(site)
 		if row.kind in ["cave_in", "collapse", "impact"]:
 			_prepare_overlay(row, record)
 			var half := ParkMap.footprint_half_extents(site)
@@ -214,20 +235,116 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	state.start_depth_m = depth if row.kind == "drain" else 0.0
 	for existing in _water_field.surfaces:
 		if existing.site.id == state.site.id and existing.visible:
-			state.start_depth_m = clampf(existing.surface_y() - state.at.y, 0.0, ParkSchema.MAX_EVENT_WATER_M)
+			state.start_depth_m = existing.cycle.metres
 	state.depth_m = state.start_depth_m
 	water.cycle.metres = state.depth_m
 	var half := ParkMap.footprint_half_extents(state.site)
 	var centre := Vector2(state.at.x, state.at.z)
 	water.configure({"centre": centre, "radius": half.length(), "plane_centre": centre,
 		"plane_size": half * 2.0, "depth": depth}, state.at.y, state.at)
-	water._plane.rotation.y = deg_to_rad(float(state.site.yaw_deg))
+	water.surface = state.water_surface
+	water.query_xz = centre
+	water._plane.mesh = water.surface.mesh
 	water._mast.visible = false
 	water._lamp_mesh.visible = false
 	water.render()
 	state.water = water
 	_water_field.surfaces.append(water)
 	_water_field.refresh()
+
+
+func _prepare_water(site: Dictionary) -> WaterSurface:
+	var surface := WaterSurface.new()
+	var half := ParkMap.footprint_half_extents(site)
+	var centre := Vector2(float(site.at[0]), float(site.at[1]))
+	var yaw := deg_to_rad(float(site.yaw_deg))
+	var low := Vector2.INF
+	var high := -Vector2.INF
+	for corner in [Vector2(-half.x, -half.y), Vector2(half.x, -half.y), half, Vector2(-half.x, half.y)]:
+		var point: Vector2 = corner.rotated(-yaw) + centre
+		low = low.min(point)
+		high = high.max(point)
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var ground_vertices := {}
+	for j in range(floori(low.y / ParkTerrain.STEP), floori(high.y / ParkTerrain.STEP) + 1):
+		for i in range(floori(low.x / ParkTerrain.STEP), floori(high.x / ParkTerrain.STEP) + 1):
+			var cell := Vector2i(i, j)
+			var corners := PackedFloat64Array()
+			for delta in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i.ONE]:
+				var vertex: Vector2i = cell + delta
+				if not ground_vertices.has(vertex):
+					ground_vertices[vertex] = _water_ground(Vector2(vertex) * ParkTerrain.STEP)
+				corners.append(ground_vertices[vertex])
+			if "_holes" in world.terrain:
+				var terrain = world.terrain
+				var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], (i + 0.5) * ParkTerrain.STEP, (j + 0.5) * ParkTerrain.STEP)
+				if not is_nan(floor_y):
+					for k in 4:
+						corners[k] = minf(corners[k], floor_y)
+			surface.cells[cell] = corners
+			var a := Vector2(i, j) * ParkTerrain.STEP
+			var b := a + Vector2.RIGHT * ParkTerrain.STEP
+			var c := a + Vector2.DOWN * ParkTerrain.STEP
+			var d := a + Vector2.ONE * ParkTerrain.STEP
+			for triangle in [[a, b, c], [b, d, c]]:
+				var polygon: Array = triangle.map(func(p): return (p - centre).rotated(yaw))
+				for axis in 2:
+					polygon = _clip_water(polygon, axis, half[axis], 1.0)
+					polygon = _clip_water(polygon, axis, half[axis], -1.0)
+				for k in range(1, polygon.size() - 1):
+					var face := PackedVector3Array()
+					for local in [polygon[0], polygon[k], polygon[k + 1]]:
+						var point: Vector2 = local.rotated(-yaw) + centre
+						var f := (point - a) / ParkTerrain.STEP
+						var y: float = corners[0] + (corners[1] - corners[0]) * f.x + (corners[2] - corners[0]) * f.y if triangle[0] == a else corners[3] + (corners[2] - corners[3]) * (1.0 - f.x) + (corners[1] - corners[3]) * (1.0 - f.y)
+						face.append(Vector3(point.x, y, point.y))
+					var normal := (face[2] - face[0]).cross(face[1] - face[0]).normalized()
+					vertices.append_array(face)
+					normals.append_array([normal, normal, normal])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	var indices := PackedInt32Array()
+	for k in vertices.size():
+		indices.append(k)
+	arrays[Mesh.ARRAY_INDEX] = indices
+	surface.mesh = ArrayMesh.new()
+	surface.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return surface
+
+
+func _water_ground(point: Vector2) -> float:
+	var ground: float = world.terrain.height(point.x, point.y)
+	if world.terrain.has_method("_floor"):
+		ground = world.terrain._floor(world.terrain._ensure(world.terrain.stage), point.x, point.y)
+	# Lower shared seam vertices to either hole floor, so neither adjoining cell exceeds the cap.
+	if "_holes" in world.terrain:
+		var terrain = world.terrain
+		for delta in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2.ONE]:
+			var probe: Vector2 = point + delta * ParkTerrain.STEP * 0.5
+			var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], probe.x, probe.y)
+			if not is_nan(floor_y):
+				ground = minf(ground, floor_y)
+	return ground
+
+
+func _clip_water(polygon: Array, axis: int, extent: float, sign_axis: float) -> Array:
+	var clipped := []
+	if polygon.is_empty():
+		return clipped
+	var previous: Vector2 = polygon[-1]
+	var previous_distance := previous[axis] * sign_axis - extent
+	for point: Vector2 in polygon:
+		var distance := point[axis] * sign_axis - extent
+		if (distance <= 0.0) != (previous_distance <= 0.0):
+			clipped.append(previous.lerp(point, previous_distance / (previous_distance - distance)))
+		if distance <= 0.0:
+			clipped.append(point)
+		previous = point
+		previous_distance = distance
+	return clipped
 
 
 func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
