@@ -106,6 +106,7 @@ func _physics_process(_delta: float) -> bool:
 		_game.flow.enter_stage(1, Vector3.ZERO, false)
 		d = _game.world.director
 		d.stage_time = 90.0
+		d._next_pack = d.authored[0].duplicate(true)
 		_ball = _window_ball(_sites[_home.site])
 		_phase = 1
 		_ticks = 0

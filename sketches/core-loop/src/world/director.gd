@@ -255,7 +255,8 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 
 
 # One pack's members side by side across the line from the ball, on one ring timer.
-func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> void:
+func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> int:
+	var queued := 0
 	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
 	var side := Vector2(-heading.y, heading.x)
 	for i in kinds.size():
@@ -286,7 +287,10 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> void:
 			if spot == Vector2.INF or not _park_safe(spot) or spot.distance_to(ball) < MIN_GAP:
 				continue
 		arrivals.append({"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq})
-	_pack_seq += 1
+		queued += 1
+	if _park_map == null or queued > 0:
+		_pack_seq += 1
+	return queued
 
 
 # An authored arrival: the pack due next waits until the cap has room for all of it.
@@ -299,8 +303,10 @@ func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vec
 	var at := spawn_spot(ball, velocity, forward)
 	if at == Vector2.INF:
 		return
+	var queued := _place_pack(at, kinds, ball)
+	if _park_map != null and queued == 0:
+		return
 	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})
-	_place_pack(at, kinds, ball)
 	_last_was_elite = _next_pack == elite
 	if not _last_was_elite:
 		_last_pack_id = _next_pack["id"]
