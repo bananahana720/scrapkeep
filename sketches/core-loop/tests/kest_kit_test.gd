@@ -16,8 +16,8 @@ const Codex := preload("res://src/core/codex.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const T := preload("res://tests/support/t.gd")
 const DT := 1.0 / 60.0
-# 2026-10-11 (PC-KEST): prove load presses stay quiet until the line skill bites.
-const EXPECTED_CHECKS := 64
+# 2026-10-11 (PC-KEST): quiet loads, bite events and the tuned twelve-second reload.
+const EXPECTED_CHECKS := 66
 
 var _t
 var _game
@@ -138,6 +138,11 @@ func _run() -> void:
 func _cases() -> void:
 	_fresh()
 	_t.eq("Kest has Cable Charge on 3 and Windhover on Q", [_player.abilities.id_of("line"), _player.abilities.ultimate_id], ["cable_charge", "windhover"])
+	_player.abilities.spend("line")
+	_player.abilities.tick(8.0)
+	_t.check("Cable Charge is still cooling at the former eight-second reload", not _player.abilities.ready("line"))
+	_player.abilities.tick(4.0)
+	_t.check("Cable Charge reloads at twelve seconds", _player.abilities.ready("line"))
 	var lane: Dictionary = _combat._line_geometry(1.0)
 	var from: Vector3 = lane["from"]
 	var dir: Vector3 = (lane["to"] - from).normalized()
