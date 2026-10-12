@@ -13,7 +13,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
 const CLASSES := ["none", "hit", "heavy", "massive", "climax"]
 const FIELDS := ["stop_ms", "shake", "kick", "punch_fov", "fx_scale", "body", "body_st"]
-const EXPECTED_CHECKS := 32
+const EXPECTED_CHECKS := 35
 const OWNER := {
 	"enemy_struck": "neutral", "enemy_killed": "neutral", "gauge_released": "neutral",
 	"posture_changed": "neutral", "posture_break": "neutral", "ultimate_landed": "neutral",
@@ -23,6 +23,23 @@ const OWNER := {
 	"enemy_pinned": "neutral", "arc_slammed": "pylon_engineer", "skid_smashed": "runner_gunner",
 	"demo_slammed": "demolitions_caster", "cloak_started": "demolitions_caster", "cc_ignored": "runner_gunner",
 }
+const SAME_FRAME_PAIRS := [
+	["slammed", "arc_slammed"], ["slammed", "skid_smashed"],
+	["slammed", "demo_slammed"], ["slammed", "ultimate_landed"],
+	["enemy_struck", "enemy_killed"],
+	["slammed", "harpoon_smashed"], ["slammed", "line:smash_lands"],
+	["ultimate_landed", "vault_kill"],
+]
+
+class AudioCtx:
+	extends RefCounted
+	var events: Node
+	var player = null
+	var run = null
+	var flow = null
+	var spawner = null
+	var calm := false
+
 var event_script: Script = EventKinds
 const PRESENTATION := ["juice", "vfx", "audio"]
 const RULES := ["strike", "death_parts", "amount", "gauge", "posture"]
@@ -108,23 +125,18 @@ func run(t) -> void:
 	for fact in ["landed", "beacon_unsealed"]:
 		no_stop = no_stop and event_script.call("weigh", fact, {}).stop_ms == 0.0
 	t.check("motion and reward stop clamp", no_stop, "motion and rewards never freeze")
-	var collisions := []
-	var slam: Dictionary = event_script.call("weigh", "slammed", {})
-	for fact in ["arc_slammed", "skid_smashed", "demo_slammed", "ultimate_landed"]:
-		var other: Dictionary = event_script.call("weigh", fact, {})
-		var shared := _bank_ids(slam).filter(func(id): return id in _bank_ids(other))
-		if not shared.is_empty():
-			collisions.append([fact, shared])
-	var ultimate: Dictionary = event_script.call("weigh", "ultimate_landed", {})
-	var vault: Dictionary = event_script.call("weigh", "enemy_killed", {"kind": "vault"})
 	var audio_script: Script = Audio
 	var audio_constants := audio_script.get_script_constant_map()
 	t.check("vault kill cue constant", audio_constants.has("VAULT_KILL_SOUND") and Bank.has_recipe(String(audio_constants.get("VAULT_KILL_SOUND", ""))), "audio.gd owns the vault kill cue")
-	var shared_cues := [ultimate.sound].filter(func(id): return id != "" and id in [vault.sound, audio_constants.get("VAULT_KILL_SOUND", "")])
-	if not shared_cues.is_empty():
-		collisions.append(["ultimate_landed", "enemy_killed: vault", shared_cues])
-	t.eq("same frame sound collision", collisions, [])
-	var slam_cue := _measure("slam_boom")
+	t.eq("same frame sound collision", _same_frame_collisions(), [])
+	t.check("same frame collision planted control", not _same_frame_collisions({"slammed": "smash_crack"}).is_empty(), "slammed bound to smash_crack collides with the harpoon crack")
+	var frame := _harpoon_smash_frame()
+	t.check("harpoon smash frame cues", frame.ok, str(frame))
+	var shared_slam := _measure(Rows.sound("slammed"))
+	var kest_slam := _measure("slam_boom")
+	t.check("shared slam acoustic weight", not shared_slam.is_empty() and shared_slam.peak_db >= -3.0 and absf(shared_slam.rms_db - kest_slam.rms_db) <= 3.0 and shared_slam.onset_ms <= 20.0, str([shared_slam, kest_slam]))
+	var ultimate: Dictionary = event_script.call("weigh", "ultimate_landed", {})
+	var slam_cue := _measure(Rows.sound("slammed"))
 	var ultimate_cue := _measure(ultimate.sound)
 	t.check("ultimate cue lower and longer than heavy slam", not ultimate_cue.is_empty() and not slam_cue.is_empty() and ultimate_cue.zcr < slam_cue.zcr and ultimate_cue.seconds >= slam_cue.seconds, str([slam_cue, ultimate_cue]))
 	t.eq("class rule boundaries", _rule_errors(), [])
@@ -139,6 +151,52 @@ func run(t) -> void:
 	first.shake = 999.0
 	t.check("weigh is pure", args == snapshot and event_script.call("weigh", "enemy_struck", args).shake != 999.0, "arguments and shared rows remain unchanged")
 	t.eq("weight case check count", t.checks - before + 1, EXPECTED_CHECKS)
+
+
+func _frame_ids(fact: String, overrides: Dictionary) -> Array:
+	if fact == "vault_kill":
+		return [Rows.sound("enemy_killed"), Audio.VAULT_KILL_SOUND]
+	if fact == "line:smash_lands":
+		return [EventKinds.line_sound("smash_lands"), "smash_crack"]
+	if fact == "harpoon_smashed":
+		return [Rows.sound(fact), "smash_crack"]
+	var record: Dictionary = event_script.call("weigh", fact, {})
+	if overrides.has(fact):
+		record.sound = overrides[fact]
+	return _bank_ids(record)
+
+
+func _same_frame_collisions(overrides := {}) -> Array:
+	var collisions := []
+	for pair in SAME_FRAME_PAIRS:
+		var right := _frame_ids(pair[1], overrides)
+		var shared := _frame_ids(pair[0], overrides).filter(func(id): return id in right)
+		if not shared.is_empty():
+			collisions.append([pair[0], pair[1], shared])
+	return collisions
+
+
+func _harpoon_smash_frame() -> Dictionary:
+	var events := Events.new()
+	var ctx := AudioCtx.new()
+	ctx.events = events
+	var audio := Audio.new()
+	audio.setup(ctx)
+	audio.bake_now()
+	var frame := Engine.get_process_frames()
+	# player_ball._finish_landing emits these three facts synchronously in this order.
+	events.slammed.emit(Vector3.ZERO, 1.0, 1.0)
+	events.harpoon_smashed.emit(null, Vector3.ZERO, 30.0)
+	events.line_state_changed.emit("smash_lands", null, Vector3.ZERO, "")
+	var counts := {}
+	for cue in audio.cue_log:
+		if cue[2] == "now":
+			counts[cue[1]] = int(counts.get(cue[1], 0)) + 1
+	var ok: bool = frame == Engine.get_process_frames() and counts.values().all(func(n): return n == 1) and counts.get(Rows.sound("slammed"), 0) == 1 and counts.get("womp", 0) == 1
+	var result := {"ok": ok, "counts": counts, "cue_log": audio.cue_log.duplicate(true)}
+	audio.free()
+	events.free()
+	return result
 
 
 func _record(key: String, damage := 0.0) -> Dictionary:
