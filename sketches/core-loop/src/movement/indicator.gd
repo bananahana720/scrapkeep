@@ -130,6 +130,8 @@ func _process(delta: float) -> void:
 
 func _origin(shape: Dictionary) -> Vector3:
 	match String(shape.get("kind", "")):
+		"rivet_volume":
+			return shape["origin"]
 		"ring":
 			return shape["centre"]
 		"line":
@@ -153,6 +155,13 @@ func _draw(shape: Dictionary, now: float) -> void:
 	var dashed: bool = look["dashed"]
 	var ticks := String(shape.get("ticks", "")) if not shape.get("blocked", false) else ""
 	match String(shape.get("kind", "")):
+		"rivet_volume":
+			for cell in shape["cells"]:
+				for face in cell["faces"]:
+					for i in range(1, face.size() - 1):
+						_triangle(face[0], face[i], face[i + 1], fill)
+					for i in face.size():
+						_ribbon(face[i], face[(i + 1) % face.size()], EDGE, edge)
 		"ring":
 			var centre: Vector3 = shape["centre"]
 			var radius: float = shape["radius"]

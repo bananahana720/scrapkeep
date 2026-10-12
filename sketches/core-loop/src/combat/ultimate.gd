@@ -82,15 +82,7 @@ var _ult_rows := {
 	"outpost": {"tech": _sable_tech, "peak": _sable_peak, "landing": _outpost_landing, "release": _sable_release},
 	# --- end Sable ---
 	# --- P-C Rivet ultimate ---
-	"foundry_cutter": {"tech": func(beat, ball, aim, mult): return combat.get_node("RivetKit").tech("foundry_cutter", beat, ball, aim, mult),
-		"peak": func(at): combat.get_node("RivetKit").peak("foundry_cutter", at),
-		"landing": func(at, heft, chain): return combat.get_node("RivetKit").landing("foundry_cutter", at, heft, chain)},
-	"prism_cutter": {"tech": func(beat, ball, aim, mult): return combat.get_node("RivetKit").tech("prism_cutter", beat, ball, aim, mult),
-		"peak": func(at): combat.get_node("RivetKit").peak("prism_cutter", at),
-		"landing": func(at, heft, chain): return combat.get_node("RivetKit").landing("prism_cutter", at, heft, chain)},
-	"juggernaut_drive": {"tech": func(beat, ball, aim, mult): return combat.get_node("RivetKit").tech("juggernaut_drive", beat, ball, aim, mult),
-		"peak": func(at): combat.get_node("RivetKit").peak("juggernaut_drive", at),
-		"landing": func(at, heft, chain): return combat.get_node("RivetKit").landing("juggernaut_drive", at, heft, chain)},
+	# Rows are installed from RivetKit.SHAPE_DISPATCH in setup.
 	# --- end Rivet ---
 	# --- P-C Kest ultimate ---
 	# --- end Kest ---
@@ -145,6 +137,11 @@ var _record_fill := 0.0
 func setup(ctx_ref, combat_ref) -> void:
 	ctx = ctx_ref
 	combat = combat_ref
+	# --- P-C Rivet ultimate ---
+	var rivet = load("res://src/combat/rivet_kit.gd")
+	for id in rivet.SHAPE_DISPATCH:
+		_ult_rows[id] = rivet.ultimate_row(combat, id)
+	# --- end Rivet ---
 	stakes = Stakes.new()
 	ctx.root.add_child(stakes)
 	stakes.setup(ctx, combat, self)

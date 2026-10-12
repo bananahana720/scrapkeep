@@ -11,7 +11,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 86
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 145
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -21,11 +21,13 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # Closed Warden guards remain collidable; a staggered core may be passed.
 # 2026-10-12 (PC-RIVET r4): 75 -> 86, elevated/covered beam fixtures, camera parallax,
 # re-closed guard and independent Breach Skid damage expectation, coordinator rulings.
+# 2026-10-12 (PC-RIVET r5): 86 -> 145, ten real shape dispatches, independent height,
+# terrain and kit-constant expectations, and selected geometry versus rendered vertices.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 141
+	_expected_checks = 145
 	super._initialize()
 
 
@@ -89,6 +91,8 @@ func _shape_dispatch_fixture() -> void:
 		"juggernaut_drive/tech", "juggernaut_drive/peak", "juggernaut_drive/landing", "juggernaut_drive/drive_step"]
 	_t.eq("shape dispatch count guard", paths.size(), 10)
 	_t.eq("every registered shape dispatch has an independent fixture", paths.map(func(p): return p["id"] + "/" + p["entry"]), expected)
+	_t.eq("framework shape rows come from the kit dispatch registry", _combat.ultimate._ult_rows.keys().filter(func(id): return id in Kit.SHAPE_DISPATCH), Kit.SHAPE_DISPATCH.keys())
+	_t.eq("every Rivet set piece is in the shape dispatch registry", Kit.SHAPE_DISPATCH.keys(), Kit.SET_PIECES)
 	for path in paths:
 		await _fresh()
 		var id: String = path["id"]
@@ -146,6 +150,34 @@ func _shape_dispatch_fixture() -> void:
 			_t.near("Full Cut drawn width equals the independent kit constant", float(scar.get("width", -1.0)), Weapons.FULL_CUT_WIDTH)
 			_t.near("Full Cut drawn angle equals the independent kit constant", float(scar.get("half_angle", -1.0)), deg_to_rad(Weapons.FULL_CUT_DEG * 0.5))
 			_t.check("Full Cut committed centre stops at the independent wall face", scar.has("centre_endpoint") and absf((scar["centre_endpoint"] as Vector3).x - _player.ball_position().x - (wall_x - 0.25)) < 0.001)
+			var vertices: Array = []
+			for cell in scar.get("cells", []):
+				for face in cell["faces"]:
+					vertices.append_array(face)
+			var origin: Vector3 = _player.ball_position()
+			_t.check("Full Cut drawn volume stays inside independent height and terrain limits", not vertices.is_empty() and vertices.all(func(v): return absf(v.y - origin.y) <= Weapons.FULL_CUT_WIDTH * 0.5 + 0.001 and v.x - origin.x <= wall_x - 0.25 + 0.001))
+			var indicator = _player.indicator
+			var other_shapes: Dictionary = indicator.shapes
+			indicator.shapes = {"rivet_scar": scar}
+			indicator._process(0.0)
+			var arrays: Array = indicator._tris.surface_get_arrays(0)
+			var rendered: Array = []
+			for i in (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
+				if arrays[Mesh.ARRAY_COLOR][i].a < 1.0:
+					rendered.append(arrays[Mesh.ARRAY_VERTEX][i])
+			var expected_vertices: Array = []
+			if selected is Array and not selected.is_empty():
+				for cell in selected[0]["cells"]:
+					for face in cell["faces"]:
+						for i in range(1, face.size() - 1):
+							for v in [face[0], face[i], face[i + 1]]:
+								expected_vertices.append(v + Vector3.UP * indicator.LIFT)
+			var max_error := 0.0
+			if rendered.size() == expected_vertices.size():
+				for i in rendered.size():
+					max_error = maxf(max_error, rendered[i].distance_to(expected_vertices[i]))
+			_t.check("Full Cut rendered fill matches the selection snapshot", not expected_vertices.is_empty() and rendered.size() == expected_vertices.size() and max_error < 0.001, "%d rendered, %d selected vertices, max error %s" % [rendered.size(), expected_vertices.size(), max_error])
+			indicator.shapes = other_shapes
 		wall.queue_free()
 	await _fresh()
 

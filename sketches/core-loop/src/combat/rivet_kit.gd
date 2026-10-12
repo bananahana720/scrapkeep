@@ -43,6 +43,7 @@ var haul := {}
 var last_cue := {}
 var last_punch := {}
 var beam_shapes: Array = []
+var selected_shapes: Array = []
 
 
 static func shape_paths() -> Array:
@@ -51,6 +52,12 @@ static func shape_paths() -> Array:
 		for entry in SHAPE_DISPATCH[id]:
 			paths.append({"id": id, "entry": entry})
 	return paths
+
+
+static func ultimate_row(owner, id: String) -> Dictionary:
+	return {"tech": func(beat, ball, aim, mult): return owner.get_node("RivetKit").tech(id, beat, ball, aim, mult),
+		"peak": func(at): owner.get_node("RivetKit").peak(id, at),
+		"landing": func(at, heft, chain): return owner.get_node("RivetKit").landing(id, at, heft, chain)}
 # The aim the last beat read (ctx.aim_forward() on that tick); the peak, which gets only a
 # point, cuts along it.
 var _last_aim := Vector3.ZERO
@@ -355,24 +362,183 @@ func _commit_beam(from: Vector3, dir: Vector3, length: float, width: float) -> D
 	if not cover.is_empty():
 		endpoint = cover["position"]
 	return ctx.player.yours({"origin": from, "direction": dir, "endpoint": endpoint, "width": width,
-		"kind": "line", "from": from, "to": endpoint, "full_to": endpoint, "fill": 1.0})
+		"kind": "line", "rivet_shape": true, "from": from, "to": endpoint, "full_to": endpoint, "fill": 1.0,
+		"cover": [cover["position"], cover["normal"]]} if not cover.is_empty() else {"origin": from, "direction": dir, "endpoint": endpoint, "width": width,
+		"kind": "line", "rivet_shape": true, "from": from, "to": endpoint, "full_to": endpoint, "fill": 1.0})
 
 
-# Drawing and hull selection consume the same world-clipped, three-dimensional beam.
-func on_beam(beam: Dictionary) -> Array:
-	var from: Vector3 = beam["origin"]
-	var dir: Vector3 = beam["direction"]
-	var length: float = from.distance_to(beam["endpoint"])
+# Every area hit selects from its committed record, including its terrain planes.
+func select(shape: Dictionary) -> Array:
+	selected_shapes.append(shape.duplicate(true))
 	var picks: Array = []
 	for enemy in _enemies():
-		var to: Vector3 = enemy.global_position - from
-		var hull: float = combat._hull(enemy)
+		if _in_shape(shape, enemy.global_position, combat._hull(enemy)):
+			picks.append(enemy)
+	var origin: Vector3 = shape["origin"]
+	if shape["kind"] == "line":
+		picks.sort_custom(func(a, b): return (a.global_position - origin).dot(shape["direction"]) < (b.global_position - origin).dot(shape["direction"]))
+	else:
+		picks.sort_custom(func(a, b): return a.global_position.distance_squared_to(origin) < b.global_position.distance_squared_to(origin))
+	return picks
+
+
+func _in_shape(shape: Dictionary, point: Vector3, hull: float) -> bool:
+	var to: Vector3 = point - (shape["origin"] as Vector3)
+	if shape["kind"] == "line":
+		var dir: Vector3 = shape["direction"]
 		var along := to.dot(dir)
 		var side := (to - dir * along).length()
-		if along >= -hull and along - hull <= length and side - hull <= float(beam["width"]) * 0.5:
-			picks.append([along, enemy])
-	picks.sort_custom(func(a, b): return a[0] < b[0])
-	return picks.map(func(p): return p[1])
+		if shape.has("cover") and (point - (shape["cover"][0] as Vector3)).dot(shape["cover"][1]) < -0.0001:
+			return false
+		return along >= -hull and along - hull <= (shape["endpoint"] as Vector3).distance_to(shape["origin"]) and side - hull <= float(shape["width"]) * 0.5
+	for cell in shape["cells"]:
+		var inside := true
+		var blocked := false
+		for plane in cell["planes"]:
+			if (point - (plane["at"] as Vector3)).dot(plane["normal"]) > 0.0001:
+				inside = false
+				blocked = blocked or bool(plane["terrain"])
+		if blocked or (cell["faces"] as Array).is_empty():
+			continue
+		if inside:
+			return true
+		for face in cell["faces"]:
+			for i in range(1, face.size() - 1):
+				if point.distance_squared_to(_closest_triangle(point, face[0], face[i], face[i + 1])) <= hull * hull:
+					return true
+	return false
+
+
+static func _closest_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector3:
+	var ab := b - a
+	var ac := c - a
+	var ap := p - a
+	var d1 := ab.dot(ap)
+	var d2 := ac.dot(ap)
+	if d1 <= 0.0 and d2 <= 0.0:
+		return a
+	var bp := p - b
+	var d3 := ab.dot(bp)
+	var d4 := ac.dot(bp)
+	if d3 >= 0.0 and d4 <= d3:
+		return b
+	var vc := d1 * d4 - d3 * d2
+	if vc <= 0.0 and d1 >= 0.0 and d3 <= 0.0:
+		return a + ab * d1 / (d1 - d3)
+	var cp := p - c
+	var d5 := ab.dot(cp)
+	var d6 := ac.dot(cp)
+	if d6 >= 0.0 and d5 <= d6:
+		return c
+	var vb := d5 * d2 - d1 * d6
+	if vb <= 0.0 and d2 >= 0.0 and d6 <= 0.0:
+		return a + ac * d2 / (d2 - d6)
+	var va := d3 * d6 - d5 * d4
+	if va <= 0.0 and d4 - d3 >= 0.0 and d5 - d6 >= 0.0:
+		return b + (c - b) * (d4 - d3) / ((d4 - d3) + (d5 - d6))
+	var denominator := va + vb + vc
+	if absf(denominator) < 0.000001:
+		return Geometry3D.get_closest_point_to_segment(p, a, b)
+	return a + ab * vb / denominator + ac * vc / denominator
+
+
+func _clip_faces(faces: Array, at: Vector3, normal: Vector3) -> Array:
+	var clipped: Array = []
+	var rim: Array = []
+	for face in faces:
+		var polygon: Array = []
+		for i in face.size():
+			var a: Vector3 = face[i]
+			var b: Vector3 = face[(i + 1) % face.size()]
+			var da := (a - at).dot(normal)
+			var db := (b - at).dot(normal)
+			if da <= 0.0001:
+				polygon.append(a)
+			if (da < 0.0) != (db < 0.0):
+				var cross := a.lerp(b, da / (da - db))
+				polygon.append(cross)
+				if not rim.any(func(v): return v.is_equal_approx(cross)):
+					rim.append(cross)
+		if polygon.size() >= 3:
+			clipped.append(polygon)
+	if rim.size() >= 3:
+		var centre := Vector3.ZERO
+		for v in rim:
+			centre += v
+		centre /= rim.size()
+		var u: Vector3 = (rim[0] - centre).normalized()
+		var v := normal.cross(u)
+		rim.sort_custom(func(a, b): return atan2((a - centre).dot(v), (a - centre).dot(u)) < atan2((b - centre).dot(v), (b - centre).dot(u)))
+		clipped.append(rim)
+	return clipped
+
+
+func _terrain_margin() -> float:
+	var margin := 0.0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		margin = maxf(margin, combat._hull(enemy))
+	return margin
+
+
+func _commit_cell(origin: Vector3, polygon: Array, up: Vector3, half_height: float, hull_margin: float) -> Dictionary:
+	var top: Array = polygon.map(func(v): return v + up * half_height)
+	var bottom: Array = polygon.map(func(v): return v - up * half_height)
+	var centre := Vector3.ZERO
+	for v in polygon:
+		centre += v
+	centre /= polygon.size()
+	var faces: Array = [top, bottom]
+	for i in polygon.size():
+		var j: int = (i + 1) % polygon.size()
+		faces.append([top[i], top[j], bottom[j], bottom[i]])
+	var planes: Array = []
+	for face in faces:
+		var normal: Vector3 = ((face[1] as Vector3) - face[0]).cross((face[2] as Vector3) - face[0]).normalized()
+		if normal.dot(centre - (face[0] as Vector3)) > 0.0:
+			normal = -normal
+		planes.append({"at": face[0], "normal": normal, "terrain": false})
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	for tip in top + bottom + [centre]:
+		var end: Vector3 = tip + (tip - origin).normalized() * hull_margin
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, end, Hitscan.WORLD))
+		if hit.is_empty():
+			continue
+		var normal: Vector3 = -(hit["normal"] as Vector3)
+		var at: Vector3 = hit["position"]
+		if planes.any(func(plane): return plane["terrain"] and (plane["at"] as Vector3).is_equal_approx(at) and (plane["normal"] as Vector3).is_equal_approx(normal)):
+			continue
+		planes.append({"at": at, "normal": normal, "terrain": true})
+		faces = _clip_faces(faces, at, normal)
+	return {"faces": faces, "planes": planes}
+
+
+func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, width: float, inner := 0.0) -> Dictionary:
+	var side := dir.cross(Vector3.UP).normalized()
+	if side.length_squared() < 0.001:
+		side = Vector3.RIGHT
+	var up := side.cross(dir).normalized()
+	var cells: Array = []
+	var segments: int = ctx.player.indicator.SEGMENTS
+	var margin := _terrain_margin()
+	for i in segments:
+		var a := dir.rotated(up, lerpf(-half, half, float(i) / segments))
+		var b := dir.rotated(up, lerpf(-half, half, float(i + 1) / segments))
+		var sa := a.cross(up) * width * 0.5
+		var sb := b.cross(up) * width * 0.5
+		var polygon: Array = [origin + sa, origin + a * reach + sa, origin + b * reach - sb, origin - sb] if width > 0.0 else [origin, origin + a * reach, origin + b * reach]
+		cells.append(_commit_cell(origin, polygon, up, maxf(width * 0.5, inner), margin))
+	if inner > 0.0:
+		for i in segments:
+			var a := dir.rotated(up, TAU * float(i) / segments)
+			var b := dir.rotated(up, TAU * float(i + 1) / segments)
+			cells.append(_commit_cell(origin, [origin, origin + a * inner, origin + b * inner], up, inner, margin))
+	var centre := _commit_beam(origin, dir, reach, width)
+	return ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": origin, "direction": dir,
+		"length": reach, "half_angle": half, "width": width, "cells": cells, "centre_endpoint": centre["endpoint"]})
+
+
+func _draw_shape(layer: String, shape: Dictionary) -> void:
+	ctx.player.indicator.set_shape(layer, shape)
 
 
 func _draw_beam(index: int, beam: Dictionary) -> void:
@@ -405,6 +571,7 @@ func _peak_beat(beat: int) -> bool:
 
 
 func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
+	selected_shapes.clear()
 	_clear_beams()
 	_last_aim = aim
 	if id == "juggernaut_drive":
@@ -420,14 +587,14 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 			var dir := centre.rotated(Vector3.UP, deg_to_rad(Weapons.PRISM_SPREAD_DEG * float(i - 1)))
 			var beam := _commit_beam(ball, dir, Weapons.PRISM_LENGTH, beam_width(id))
 			_draw_beam(i, beam)
-			for enemy in on_beam(beam).slice(0, Weapons.PRISM_PIERCE + extra):
+			for enemy in select(beam).slice(0, Weapons.PRISM_PIERCE + extra):
 				_beam_hit(enemy, Weapons.PRISM_DAMAGE * heft, ball)
 				hits += 1
 		return hits
 	var d := _beam_aim(ball, aim, Weapons.CUTTER_LENGTH)
 	var beam := _commit_beam(ball, d, Weapons.CUTTER_LENGTH, beam_width(id))
 	_draw_beam(0, beam)
-	for enemy in on_beam(beam).slice(0, Weapons.CUTTER_PIERCE + extra):
+	for enemy in select(beam).slice(0, Weapons.CUTTER_PIERCE + extra):
 		_beam_hit(enemy, Weapons.CUTTER_DAMAGE * heft, ball)
 		hits += 1
 	return hits
@@ -437,15 +604,19 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 func _bow_wave(ball: Vector3) -> int:
 	var heading := _flat(_heading()).normalized()
 	var side := Vector3(-heading.z, 0.0, heading.x)
+	var cells: Array = []
+	var margin := _terrain_margin()
+	for sign in [-1.0, 1.0]:
+		var near: Vector3 = side * Weapons.DRIVE_WAVE_NEAR * sign
+		var far: Vector3 = side * Weapons.DRIVE_WAVE_FAR * sign
+		cells.append(_commit_cell(ball, [ball + near, ball + far, ball + far + heading * Weapons.DRIVE_WAVE_AHEAD, ball + near + heading * Weapons.DRIVE_WAVE_AHEAD], Vector3.UP, ctx.player.tuning.RADIUS, margin))
+	var shape: Dictionary = ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": ball, "cells": cells})
+	_draw_shape("rivet_wave", shape)
 	var thrown := 0
-	for enemy in _enemies():
+	for enemy in select(shape):
 		if _warden(enemy) or _boss(enemy):
 			continue
-		var to := _flat(enemy.global_position - ball)
-		var ahead := to.dot(heading)
-		var lateral := to.dot(side)
-		if ahead < 0.0 or ahead > Weapons.DRIVE_WAVE_AHEAD or absf(lateral) < Weapons.DRIVE_WAVE_NEAR or absf(lateral) > Weapons.DRIVE_WAVE_FAR:
-			continue
+		var lateral: float = (enemy.global_position - ball).dot(side)
 		var falloff := 1.0 - (absf(lateral) - Weapons.DRIVE_WAVE_NEAR) / (Weapons.DRIVE_WAVE_FAR - Weapons.DRIVE_WAVE_NEAR)
 		enemy.knock(side * signf(lateral) + Vector3.UP * 0.3, Weapons.DRIVE_WAVE_KNOCK * falloff)
 		enemy.flash()
@@ -454,6 +625,7 @@ func _bow_wave(ball: Vector3) -> int:
 
 
 func peak(id: String, at: Vector3) -> void:
+	selected_shapes.clear()
 	var heft: float = Ultimate.HEFT_MULT[_class() - 1]
 	var hits := 0
 	if id == "juggernaut_drive":
@@ -464,11 +636,11 @@ func peak(id: String, at: Vector3) -> void:
 		var d := _beam_aim(at, _peak_aim(), Weapons.CUTTER_LENGTH)
 		var beam := _commit_beam(at, d, Weapons.CUTTER_LENGTH, Weapons.PRISM_FOCUS_WIDTH)
 		_draw_beam(0, beam)
-		for enemy in on_beam(beam).slice(0, Weapons.PRISM_FOCUS_PIERCE):
+		for enemy in select(beam).slice(0, Weapons.PRISM_FOCUS_PIERCE):
 			_beam_hit(enemy, Weapons.PRISM_FOCUS_DAMAGE * heft, at)
 			hits += 1
 	else:
-		hits = full_cut(at, beam_dir(_peak_aim()), heft)
+		hits = full_cut(at, _beam_aim(at, _peak_aim(), Weapons.FULL_CUT_REACH), heft)
 	if combat.ultimate != null and not combat.ultimate._record.is_empty():
 		combat.ultimate._record["volley_hits"] = int(combat.ultimate._record.get("volley_hits", 0)) + hits
 
@@ -480,20 +652,12 @@ func _peak_aim() -> Vector3:
 # Full Cut: the beam widens and sweeps FULL_CUT_DEG, half to each side of the aim, out to
 # FULL_CUT_REACH; every machine it crosses takes FULL_CUT_DAMAGE x heft once, no pierce cap.
 func full_cut(at: Vector3, dir: Vector3, heft: float) -> int:
-	var half := deg_to_rad(Weapons.FULL_CUT_DEG * 0.5)
+	var shape := _commit_sector(at, dir, Weapons.FULL_CUT_REACH, deg_to_rad(Weapons.FULL_CUT_DEG * 0.5), Weapons.FULL_CUT_WIDTH)
 	var hits := 0
-	for enemy in _enemies():
-		var to := _flat(enemy.global_position - at)
-		var reach: float = to.length() - combat._hull(enemy)
-		if reach > Weapons.FULL_CUT_REACH:
-			continue
-		var edge := 0.0 if to.length() < 0.01 else atan2(Weapons.FULL_CUT_WIDTH * 0.5 + combat._hull(enemy), to.length())
-		if to.length() > 0.01 and absf(dir.signed_angle_to(to.normalized(), Vector3.UP)) > half + edge:
-			continue
+	for enemy in select(shape):
 		_beam_hit(enemy, Weapons.FULL_CUT_DAMAGE * heft, at)
 		hits += 1
-	ctx.player.indicator.set_shape("rivet_scar", ctx.player.yours({"kind": "cone", "apex": at, "dir": dir,
-		"length": Weapons.FULL_CUT_REACH, "half_angle": half}))
+	_draw_shape("rivet_scar", shape)
 	_scar_left = Weapons.FULL_CUT_SCAR
 	return hits
 
@@ -503,24 +667,18 @@ func breach_reach() -> float:
 	return Weapons.BREACH_REACH_SCALE * float(Ultimate.LANDING_RADIUS[_class() - 1]) + float(_knob("ult_radius", 0.0))
 
 
-# The Breach Skid's cone is the Shockwave Skid's (player_ball.gd in_skid_cone) at the breach
-# reach plus the machine's hull, with the 2.5 m ring.
-func in_breach(at: Vector3, heading: Vector3, enemy: Node3D) -> bool:
-	return PlayerBall.in_skid_cone(enemy.global_position - at, heading, breach_reach() + combat._hull(enemy), Weapons.BREACH_INNER)
-
-
 # The Breach Skid: no plant. A forward cone along the path's heading hits for 60 x heft x chain,
 # throws machines forward (x ult_pins) so they pin, exits flat at the banked speed and hands back
 # a sprint charge. It counts as a slam for a burrower's marker and a drill crew's rig.
 func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
+	selected_shapes.clear()
 	var heading := _flat(_heading()).normalized()
 	var reach := breach_reach()
 	var pins: float = float(_knob("ult_pins", 1.0))
 	var hits := 0
 	var dealt := 0.0
-	for enemy in _enemies():
-		if not in_breach(at, heading, enemy):
-			continue
+	var shape := _commit_sector(at, heading, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
+	for enemy in select(shape):
 		var damage: float = Ultimate.LANDING_DAMAGE * heft * chain
 		if _warden(enemy) or _boss(enemy):
 			dealt += combat._ult_hit(enemy, "slam", damage, at, true)
@@ -531,8 +689,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 			combat._hit(enemy, "slam", slam_force(damage), heading, Ultimate.LANDING_KNOCK * falloff * pins, "", "special", "slam")
 			dealt += damage
 		hits += 1
-	ctx.player.indicator.set_shape("rivet_breach", ctx.player.yours({"kind": "cone", "apex": at, "dir": heading,
-		"length": reach, "half_angle": acos(PlayerBall.SKID_CONE)}))
+	_draw_shape("rivet_breach", shape)
 	_scar_left = maxf(_scar_left, Weapons.FULL_CUT_SCAR)
 	# Exit flat along the heading at the banked speed: the ride's release keeps its speed and
 	# loses the fall (A2-CRITIC: no floor; the speed gift is Sable's alone).
@@ -576,6 +733,7 @@ func drive_reach() -> float:
 
 
 func drive_step(ball: Vector3) -> int:
+	selected_shapes.clear()
 	var heading := _flat(_heading()).normalized()
 	var heft: float = Ultimate.HEFT_MULT[_class() - 1]
 	var body: PhysicsBody3D = ctx.player.body()
@@ -589,8 +747,12 @@ func drive_step(ball: Vector3) -> int:
 		if enemy is PhysicsBody3D and not closed_guard and not _excepted.has(enemy) and to.length() < Weapons.DRIVE_WAVE_AHEAD * 2.0:
 			body.add_collision_exception_with(enemy)
 			_excepted.append(enemy)
+	var shape := _commit_sector(ball, heading, drive_reach(), PI, 0.0, ctx.player.tuning.RADIUS)
+	_draw_shape("rivet_ram", shape)
+	for enemy in select(shape):
+		var to: Vector3 = enemy.global_position - ball
 		var id: int = enemy.get_instance_id()
-		if _rammed.has(id) or to.length() - combat._hull(enemy) > drive_reach():
+		if _rammed.has(id):
 			continue
 		_rammed[id] = true
 		var damage: float = Weapons.DRIVE_DAMAGE * heft * Weapons.DRIVE_RAM_MULT * (Weapons.DRIVE_SHOULDER_MULT if _shoulder > 0.0 else 1.0)
@@ -661,9 +823,12 @@ func _clear_piece() -> void:
 	_release_exceptions()
 	if ctx != null:
 		_clear_beams()
+		ctx.player.indicator.clear("rivet_wave")
+		ctx.player.indicator.clear("rivet_ram")
 
 
 func _clear() -> void:
+	selected_shapes.clear()
 	pulses.clear()
 	if not haul.is_empty():
 		_end_haul(false)
@@ -671,5 +836,5 @@ func _clear() -> void:
 	_clear_piece()
 	_scar_left = 0.0
 	if ctx != null:
-		for layer in ["rivet_line", "rivet_arrival", "rivet_haul", "rivet_scar", "rivet_breach"]:
+		for layer in ["rivet_line", "rivet_arrival", "rivet_haul", "rivet_scar", "rivet_breach", "rivet_wave", "rivet_ram"]:
 			ctx.player.indicator.clear(layer)
