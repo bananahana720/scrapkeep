@@ -159,6 +159,7 @@ func _physics_process(delta: float) -> bool:
 		_game.presentation.audio.bake_now()
 		_bot_options.apply_audio(_game.presentation.audio)
 		_game.events.enemy_struck.connect(_on_struck)
+		_game.run.run_seed_override = _run_seed
 		_driver.start()
 		return false
 	_mount()
