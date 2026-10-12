@@ -159,7 +159,7 @@ func _ladder() -> void:
 
 func _combat() -> void:
 	var s = _site("arena")
-	game.run.hp = game.run.max_hp - 100.0
+	game.run.hp = game.run.max_hp * 0.5
 	var hurt: float = game.run.hp
 	acts.step_pocket(s, H, s.global_position)
 	t.check("arena fixed bundle", s.started and s.pack.size() == 3 and s.hazards.size() >= 1, "three enemies and an active pocket hazard")
