@@ -14,7 +14,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 206
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 219
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -32,11 +32,13 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 # 2026-10-12 (PC-RIVET r7): 198 -> 206, captured alpha Reach peak and bowl landing,
 # frozen draw reuse and independent positive damage/terrain controls.
+# 2026-10-12 (PC-RIVET r7): 206 -> 219, actual cylinder ray/shadow controls and the
+# captured bowl peak, whose terrain extractor previously discarded the whole volume.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 206
+	_expected_checks = 219
 	super._initialize()
 
 
@@ -358,14 +360,76 @@ func _alpha_terrain_cost_fixture() -> void:
 	_t.check("captured alpha bowl landing retains exposed volume", not (_kit.selected_shapes[0]["cells"] as Array).is_empty())
 	_t.eq("captured alpha bowl landing hits the exposed target exactly once", [snappedf(health_before - float(front.hp), 0.01), _hits(front).size()], [Ultimate.LANDING_DAMAGE * Ultimate.HEFT_MULT[2], 1])
 	_game.run.mass = prior_mass
+	var peak_at := Vector3(-5.500791, 52.43582, 115.2811)
+	var peak_aim := Vector3(0.672423, 0.593669, 0.442046).normalized()
+	_player.reset_to(peak_at)
+	await physics_frame
+	await physics_frame
+	_piece("foundry_cutter", arena_heading)
+	_tech("foundry_cutter", 4, peak_aim)
+	var peak_front := _enemy("chaser", 0.0)
+	peak_front.global_position = peak_at + peak_aim * 5.0
+	peak_front.set_physics_process(false)
+	_t.check("captured bowl peak front target has an independent clear ray", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(peak_at, peak_front.global_position, 1)).is_empty())
+	var peak_health: float = peak_front.hp
+	_combat.ultimate._peak(_player.ball_position())
+	_t.eq("captured bowl peak commits through one selector", _kit.selected_shapes.size(), 1)
+	_t.check("captured bowl peak retains exposed volume beside cylinder terrain", not (_kit.selected_shapes[0]["cells"] as Array).is_empty())
+	_t.eq("captured bowl peak hits its exposed target exactly once", [snappedf(peak_health - float(peak_front.hp), 0.01), _hits(peak_front).size()], [Weapons.FULL_CUT_DAMAGE, 1])
 	arena.queue_free()
 	_game.ctx.terrain.use(1)
+	await _fresh()
+
+
+func _cylinder_terrain_fixture() -> void:
+	await _fresh()
+	_piece("foundry_cutter")
+	var origin: Vector3 = _player.ball_position()
+	var radius := 1.3
+	var distance := 6.5
+	var wall := StaticBody3D.new()
+	wall.collision_layer = 1
+	var collision := CollisionShape3D.new()
+	var cylinder := CylinderShape3D.new()
+	cylinder.radius = radius
+	cylinder.height = 30.0
+	collision.shape = cylinder
+	wall.add_child(collision)
+	_game.add_child(wall)
+	wall.global_position = origin + Vector3.RIGHT * distance
+	var front := _enemy("chaser", 5.0)
+	var covered := _enemy("chaser", 8.0)
+	var exposed := _enemy("chaser", 8.0, 1.6)
+	for enemy in [front, covered, exposed]:
+		enemy.set_physics_process(false)
+	await physics_frame
+	await physics_frame
+	# A ray tangent to the circle has this slope. Perpendicular distance to that
+	# tangent independently qualifies the whole-hull negative and exposed-hull positive.
+	var slope := radius / sqrt(distance * distance - radius * radius)
+	var whole_clearance := slope * 8.0 / sqrt(1.0 + slope * slope)
+	var edge_clearance := (slope * 8.0 - 1.6) / sqrt(1.0 + slope * slope)
+	_t.check("cylinder independently covers the whole rear hull", whole_clearance > _combat._hull(covered) and 8.0 - _combat._hull(covered) > distance + radius)
+	_t.check("cylinder front target has an independent clear ray", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, front.global_position, 1)).is_empty())
+	_t.check("cylinder rear target has an independent blocked ray", not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, covered.global_position, 1)).is_empty())
+	_t.check("cylinder boundary hull independently exposes an edge", edge_clearance > 0.0 and edge_clearance < _combat._hull(exposed))
+	_t.check("cylinder boundary centre ray is independently blocked", not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, exposed.global_position, 1)).is_empty())
+	var front_health: float = front.hp
+	var exposed_health: float = exposed.hp
+	_tech("foundry_cutter", 4)
+	_combat.ultimate._peak(origin)
+	_t.eq("cylinder front target is hit exactly once", [snappedf(front_health - float(front.hp), 0.01), _hits(front).size()], [Weapons.FULL_CUT_DAMAGE, 1])
+	_t.eq("cylinder fully covered target receives no hits", _hits(covered).size(), 0)
+	_t.eq("cylinder exposed hull is hit exactly once", [snappedf(exposed_health - float(exposed.hp), 0.01), _hits(exposed).size()], [Weapons.FULL_CUT_DAMAGE, 1])
+	_t.check("cylinder clipped drawing consumes the selected record", _kit.volume_indicator.shapes.get("rivet_scar", {}) == _kit.selected_shapes[0])
+	wall.queue_free()
 	await _fresh()
 
 
 func _run() -> void:
 	await _boot()
 	await _alpha_terrain_cost_fixture()
+	await _cylinder_terrain_fixture()
 	await _shape_dispatch_fixture()
 	await _terrain_shadow_fixture()
 	var ult = _combat.ultimate
