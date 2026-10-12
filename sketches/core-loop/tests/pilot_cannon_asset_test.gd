@@ -140,13 +140,17 @@ func check_rig(pilot: Node3D, raw: Dictionary) -> void:
 		return
 	var player := players[0] as AnimationPlayer
 	var clips := Array(player.get_animation_list()).filter(func(name): return name != "RESET")
-	var lost := CLIPS.keys().filter(func(name): return not name in clips)
-	var unexpected := clips.filter(func(name): return not CLIPS.has(name))
-	check("exact seven clips", clips.size() == 7 and lost.is_empty() and unexpected.is_empty(), "count %d missing %s extra %s" % [clips.size(), lost, unexpected])
+	# 2026-10-11 (PE-CANNON): seven kept reactions plus eleven pilot clips.
+	var required := CLIPS.keys() + ["idle_loop", "ult_ride_loop", "class_up", "cast_special", "cast_line", "ult_ready", "ult_windup", "ult_strike", "ult_recover", "smash", "unlock"]
+	var lost := required.filter(func(name): return not name in clips)
+	var unexpected := clips.filter(func(name): return not name in required)
+	check("exact eighteen clips", clips.size() == 18 and lost.is_empty() and unexpected.is_empty(), "count %d missing %s extra %s" % [clips.size(), lost, unexpected])
 	var raw_names := []
 	for animation in raw.get("animations", []):
 		raw_names.append(animation.get("name", ""))
-	check("seven exported clips", raw_names.size() == 7 and CLIPS.keys().all(func(name): return name in raw_names))
+	check("eighteen exported clips", raw_names.size() == 18 and required.all(func(name): return name in raw_names))
+	for clip in clips:
+		check("loop mode " + clip, (player.get_animation(clip).loop_mode != Animation.LOOP_NONE) == String(clip).ends_with("_loop"))
 	var rigid := true
 	var skins := {}
 	for mi: MeshInstance3D in meshes(pilot):
