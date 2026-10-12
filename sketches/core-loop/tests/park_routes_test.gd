@@ -109,16 +109,10 @@ func _stepped_facts(park: Dictionary) -> void:
 			land_hooks.append(row.id))
 	var bad := []
 	for i in 10000:
-		# A zero-duration arrival stays live until its family reports completion.
-		for row in park.event_rows:
-			if row.live_s == 0.0 and live.has(row.id):
-				for f in d.finish_row(row.id):
-					_observe(f, park, live, started, bad)
 		var phases: Array = ["engaged", "stagger", "chunk_1", "chunk_2", "chunk_3"] if i % 800 == 0 else []
 		if i % 2000 == 200:
 			phases.append("broken")
-		# Route evidence isolates graph changes from the separate pilot corridor hold.
-		for f in d.call("advance", 0.1, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 4, "warden_phases": phases, "grounded": true, "pilot_lines": []}):
+		for f in d.call("advance", 0.1, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 4, "warden_phases": phases, "grounded": true}):
 			if f.kind == "announced":
 				announced[f.id] = true
 			if f.kind == "world" and f.get("phase") == "land":
