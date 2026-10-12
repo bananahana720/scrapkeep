@@ -2322,7 +2322,7 @@ func _cannon_play(row: Dictionary) -> void:
 		for i in notes.size():
 			Synth.add_into(buf, Synth.note("chime", int(notes[i])), 0 if row["chord"] else i * Harmony.STEP, 0.7 / sqrt(float(notes.size())))
 		_cannon_streams[key] = Synth.to_wav(buf)
-	_start(row["kind"], "cannon:" + key, _cannon_streams[key], float(row["db"]), 1.0, "SFX")
+	_start(row["kind"], "cannon:" + key, _cannon_streams[key], float(row["db"]), Harmony.ratio(live_key()), "SFX")
 
 
 func _step_cannon_cues() -> void:
