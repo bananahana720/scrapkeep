@@ -185,6 +185,15 @@ func _physics_process(delta: float) -> bool:
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
+		# --director=interval|credit follows every fresh stage director, including retries.
+		var director_mode := String(_settings.get("director", "interval"))
+		if director_mode not in ["interval", "credit"]:
+			printerr("bot_run: --director must be interval or credit")
+			quit(2)
+			return true
+		var select_director := func(_stage: int, _retry: bool): _game.world.director.mode = director_mode
+		_game.events.stage_entered.connect(select_director)
+		_game.world.director.mode = director_mode
 		# Point the codex and the run log at --out; nothing has been written yet.
 		_game.codex.storage_dir = _out
 		_game.run_log.storage_dir = _out

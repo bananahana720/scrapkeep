@@ -44,6 +44,7 @@ enum { CHASER, LOBBER }
 
 const Roster := preload("res://src/combat/roster.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Cards := preload("res://src/world/director_cards.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
@@ -111,6 +112,10 @@ const BREATH := {
 }
 
 var stage_time := 0.0
+var mode := "interval"
+var credits := 0.0
+var credits_accrued := 0.0
+var credits_spent := 0.0
 var spike := false
 # The stage's threat dial from stage_defs.gd: more enemies alive, arriving sooner, and
 # the one input to enemy HP.
@@ -229,6 +234,9 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				due.append({"kind": a["kind"], "at": a["at"]})
 	if paused:
 		return due
+	if mode == "credit":
+		_credit_advance(delta, alive_count + due.size(), ball, velocity, forward)
+		return due
 	_timer -= delta
 	while _timer <= 0.0:
 		_timer += interval()
@@ -252,6 +260,94 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 			continue
 		_place_pack(at, pack, ball)
 	return due
+
+
+func income_per_second() -> float:
+	return Cards.I0 * (1.0 + Cards.K * effective_tier())
+
+
+func credit_pack_cost(kinds: Array, is_elite := false) -> float:
+	return Cards.cost(kinds, is_elite)
+
+
+func _credit_advance(delta: float, alive_count: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> void:
+	var room := cap() - alive_count - arrivals.size()
+	if room <= 0:
+		return
+	if _next_pack.is_empty():
+		_next_pack = _draw_credit()
+	if _next_pack.is_empty() or _next_pack.kinds.size() > room:
+		return
+	var income := delta * income_per_second()
+	credits += income
+	credits_accrued += income
+	while room > 0:
+		if _next_pack.is_empty():
+			_next_pack = _draw_credit()
+		if _next_pack.is_empty():
+			return
+		var kinds: Array = _next_pack.kinds
+		var is_elite: bool = _next_pack == elite
+		var price := credit_pack_cost(kinds, is_elite)
+		if kinds.size() > room or price > credits:
+			return
+		var at := spawn_spot(ball, velocity, forward)
+		if at == Vector2.INF:
+			return
+		var first := arrivals.size()
+		var queued := _place_pack(at, kinds, ball)
+		if queued == 0:
+			return
+		var placed := []
+		for arrival in arrivals.slice(first):
+			placed.append(KIND_NAMES[arrival.kind])
+		var spent := credit_pack_cost(placed, is_elite)
+		credits -= spent
+		credits_spent += spent
+		packs.append({"id": _next_pack.id, "kinds": placed, "tests": _next_pack.get("tests", "")})
+		_last_was_elite = is_elite
+		if not is_elite:
+			_last_pack_id = _next_pack.id
+		_next_pack = {}
+		_arrivals_made += 1
+		room -= queued
+
+
+func _draw_credit() -> Dictionary:
+	if not elite.is_empty() and elite_arrival > 0:
+		if _arrivals_made + 1 == elite_arrival:
+			return elite
+		if _arrivals_made + 1 > elite_arrival and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate"):
+			return elite
+	var choices: Array = authored
+	var weights := {}
+	if choices.is_empty():
+		choices = [{"id": "chaser", "kinds": ["chaser"]}, {"id": "lobber", "kinds": ["lobber"]}]
+		var share := reinforcement_weight()
+		weights = {"chaser": (1.0 - share) * (1.0 - lobber_share()), "lobber": (1.0 - share) * lobber_share()}
+		var open := open_packs()
+		for id in open:
+			var pack: Dictionary = PACKS[id]
+			choices.append({"id": id, "kinds": [pack.controller, pack.punisher], "tests": pack.tests})
+			weights[id] = share * (1.0 - ANCIENT_SHARE) * pack_weight(id) / open.size()
+		if effective_tier() > 0:
+			var ancient := _ancient()
+			choices.append({"id": ancient, "kinds": [ancient], "tests": "ancient"})
+			weights[ancient] = share * ANCIENT_SHARE
+	var pool := choices.filter(func(p: Dictionary) -> bool: return p.id != _last_pack_id)
+	if pool.is_empty():
+		pool = choices
+	var total := 0.0
+	for pack in pool:
+		total += Cards.weight(pack.kinds) * float(weights.get(pack.id, 1.0))
+	if total <= 0.0:
+		return {}
+	var pick := _rng.randf() * total
+	for pack in pool:
+		pick -= Cards.weight(pack.kinds) * float(weights.get(pack.id, 1.0))
+		if pick < 0.0:
+			return pack
+	return pool[-1]
 
 
 # One pack's members side by side across the line from the ball, on one ring timer.

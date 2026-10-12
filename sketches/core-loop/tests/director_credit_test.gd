@@ -9,7 +9,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_CHECKS := 621
+const EXPECTED_CHECKS := 627
 
 var _t := T.new("director_credit_test")
 
@@ -70,6 +70,12 @@ func _cards() -> void:
 	_t.check("every park pack and elite has a positive explicit price", covered)
 	var normal: float = d.credit_pack_cost(Park.ELITE.kinds, false)
 	_t.near("elite costs its multiplier", d.credit_pack_cost(Park.ELITE.kinds, true), normal * cards.ELITE_MULTIPLIER)
+	_t.check("unknown kinds never receive a fallback price", not is_finite(d.credit_pack_cost(["unpriced"])))
+	_t.check("stage_cap rejects an oversized kind group", not is_finite(d.credit_pack_cost(["chaser", "chaser", "chaser", "chaser", "chaser"])))
+	_t.near("prices do not scale with dial", d.credit_pack_cost(Park.PACKS[0].kinds), 5.0)
+	d.stage_time = 1800.0
+	d.spike = true
+	_t.near("prices still fixed at highest dial", d.credit_pack_cost(Park.PACKS[0].kinds), 5.0)
 	var free = _director(8, {}, "credit")
 	free.advance(120.0, 0)
 	_t.check("credit also schedules unauthored arrivals", not free.arrivals.is_empty() and free.get("credits_spent") > 0.0)
@@ -91,6 +97,7 @@ func _boundaries() -> void:
 	d.advance(30.0, 0)
 	_t.check("pause accrues no income and schedules nothing", d.get("credits_accrued") == 0.0 and d.arrivals.is_empty())
 	d.paused = false
+	d.stage_time = 90.0
 	d.advance(30.0, d.cap())
 	_t.check("cap binds: no income or purchase", d.get("credits_accrued") == 0.0 and d.get("credits_spent") == 0.0)
 	d.set("credits", 1000.0)
@@ -107,6 +114,16 @@ func _boundaries() -> void:
 	for step in 120:
 		due += park.advance(H, 0, at).size()
 	_t.check("credit uses real park corridor-safe fallback", due > 0 and park.get("credits_spent") > 0.0)
+	var partial = _director(913, Park.of(1), "credit", true)
+	partial.play_rect = park.play_rect
+	partial.break_home("culvert_chasers")
+	partial._next_pack = Park.PACKS[0]
+	partial.set("credits", 5.0)
+	partial.advance(0.0, 0, at)
+	_t.check("only queued members are charged after home break", partial.get("credits_spent") == 2.0 and partial.arrivals.size() == 1 and partial.packs[0].kinds == ["lobber"])
+	partial._next_pack = {"id": "stopped", "kinds": ["chaser"]}
+	partial.advance(0.0, 0, at)
+	_t.check("zero placed members spend nothing and retain the draw", partial.get("credits_spent") == 2.0 and partial._next_pack.id == "stopped")
 
 
 func _calibration() -> void:
@@ -142,12 +159,17 @@ func _sweeps() -> void:
 					for death in live.duplicate():
 						if death <= time:
 							live.erase(death)
-					var expected_room: bool = live.size() + d.arrivals.size() < d.cap()
+					var room: int = d.cap() - live.size() - d.arrivals.size()
+					var held_size: int = d._next_pack.get("kinds", []).size()
+					var spent_before: float = d.get("credits_spent")
 					# The credit branch uses the post-step dial. No income while the reservation cap binds.
 					var dial := mini(int((d.stage_time + H) / Director.TIER_SECONDS), Director.MAX_TIME_TIERS) + Director.SPIKE_TIERS
-					if expected_room:
-						integral += H * cards.I0 * (1.0 + cards.K * dial)
 					var due: Array = d.advance(H, live.size())
+					if mode == "credit":
+						if held_size == 0 and d.get("credits_spent") == spent_before:
+							held_size = d._next_pack.get("kinds", []).size()
+						if room > 0 and held_size <= room:
+							integral += H * cards.I0 * (1.0 + cards.K * dial)
 					for _spawn in due:
 						# Hold the first crowd until minute 15, then run a deterministic lifetime arm.
 						live.append(maxf(900.0, time + 18.0 + seed_value % 7))
