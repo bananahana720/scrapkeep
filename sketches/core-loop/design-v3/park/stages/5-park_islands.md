@@ -1,6 +1,6 @@
 # Stage 5: Highdraft, the sky islands (`park_islands`)
 
-**Status: storyboard draft, waiting for Andrew's approval.** Unit K-W3, wave 13, 10 October 2026. Nothing here is built. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
+**Status: greybox candidate, awaiting the coordinator's gate and Andrew's play.** Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
 
 | Field | Value |
 | --- | --- |
@@ -110,7 +110,7 @@ Each cell is 100 m. North (+z, the landmark side) is up.
 | Mark | What | At [x, z] |
 | --- | --- | --- |
 | `A1` | enemy_camp `camp_anvil` (was `camp_moorings` at the Moorings; KD5, R7) | [0, 104] |
-| `A2` | cracked_cache `cache_east_wing` (was ambush_altar `altar_anvil` on the Anvil; KD5, R7) | [232, 236] |
+| `A2` | cracked_cache `cache_east_wing` (was ambush_altar `altar_anvil` on the Anvil; KD5, R7) | [210, 236] |
 | `A3` | hauler_bounty `bounty_ore_bench` | [186, -60] (draft [330, -110]) |
 | `H1` | home `tram_cutters` (line_cutter) | [101, -389] |
 | `H2` | home `chute_cutters` (line_cutter) | [191, -19] |
@@ -186,112 +186,112 @@ Row notes:
 
 **Shipped (KD5 greybox, 2026-10-11): how the greybox file differs from this table.** The shipped file is generated, not hand-edited, and the appendix holds it whole. Its ground is a stepped fall line, not the mesa-and-net silhouette above: park-wide `ground` shelves set each band's floor, 1,120 m `drop` ramps with sheer north edges make the steps (the Lookout steps, the Run steps, the Fin fan steps, the landing step, the Anvil steps and the carve steps), and spire-stamped `anchor_field` rows (the cairns and the hoodoo posts, about 280 of them) stand 24 m or more off every planned line and 14 m or more off every measured ball trace as the harpoon anchors. The named rows of this table keep their ids, routes, ride facts and fragments. KB9 places every row at runtime, so two shapes changed in this unit: a greybox row with no stamp stood as a flat box of its size on the ground under its centre, proud of the steps (a 2 m slab on `east_ribs`, a 10 m block for `ore_adit`), so those marker rows now carry a 1 cm `plateau` stamp, which replaces the box and keeps the ride sensor; and the step lips (`*_step_lip_*`, 1,120 m `kicker` rows on the steps' own sheer edges) became markers the same way, because their wedges met a fast ball face-on (Rivet fell from 19.8 to 7 m/s on `carve_step_lip_7`). `lookout_lip` and `fin_nose_kicker` keep their wedges. The mesa silhouette, the net deck at 60 m and the island read are the dressed pass's job (section 16).
 
-**Fix round (2026-10-12).** Every 1,120 m sheet row (shelves, drops, lips, the stamped bands) now runs the full 1,600 m square at x 0, so the margins outside the play rect are stage ground instead of a 115 to 270 m drop to y 0; PARK.md section 8's density and sight tests read the whole square (worst open node was 404.5 m from a row, sight share 0.751). `isle_apron` is a `terrace` row (one 6 m bench cut, no ride sensor) and the arena rows changed as section 2 says. `tram_head` is the mesa-rim station ledge of the KD5 note: a `ledge` with a 3 m `plateau` stamp, 30 m square at [118, -398], one climb step over the Saddle (the 22 m spire it was had no path from the Saddle, so route `east` broke). Removed: `isle_post_1` to `_4`, `_7`, `_8` (spires inside the flat beacon disc) and `hoodoo_post_283`, `_284` (Sable met them leaving the tramway). Added: `isle_post_9`, `_10` (16 m spires on the carve's last shelf at [-100, 398] and [100, 398]), `hoodoo_post_287` at [235, -72], `keel_rib_w`, `keel_rib_e`; `isle_post_5`, `_6` stand 30 m. The park file has 406 rows.
+**Fix round (2026-10-12).** Every 1,120 m sheet row (shelves, drops, lips, the stamped bands) now runs the full 1,600 m square at x 0, so the margins outside the play rect are stage ground instead of a 115 to 270 m drop to y 0; PARK.md section 8's density and sight tests read the whole square (worst open node was 404.5 m from a row, sight share 0.751). `isle_apron` is a `terrace` row (one 6 m bench cut, no ride sensor) and the arena rows changed as section 2 says. `tram_head` is the mesa-rim station ledge of the KD5 note: a `ledge` with a 3 m `plateau` stamp, 30 m square at [118, -398], one climb step over the Saddle (the 22 m spire it was had no path from the Saddle, so route `east` broke). Removed: `isle_post_1` to `_4`, `_7`, `_8` (spires inside the flat beacon disc) and `hoodoo_post_283`, `_284` (Sable met them leaving the tramway). Added: `isle_post_9`, `_10` (16 m spires on the carve's last shelf at [-100, 398] and [100, 398]), `hoodoo_post_287` at [235, -72], `keel_rib_w`, `keel_rib_e`; `isle_post_5`, `_6` stand 30 m. The park file has 404 rows.
 
 ## 5. Routes, waymarks and activities
 
-**Shipped (KD5 greybox, 2026-10-11).** The file has 13 routes: the five whole-stage routes below, plus one route per fan of each segment (`fan_chute`, `fan_west`, `fan_east`, `fan_slab`, `fan_envelope` from the Saddle to the Anvil; `carve_net`, `wing_west`, `wing_east` from the Anvil to the bowl), so the graph tool checks every fan on its own. `lookout_lip` and `mooring_pad_ramp` join the vias; `fire_lookout` leaves `east` (it is an anchor post beside the drop, not a place on the line).
+**Shipped routes and activities, KD5 continuation, 2026-10-12.** Values below come from the park file.
 
-| route | via | open at start |
-| --- | --- | --- |
-| `main` | lookout_mesa, lookout_lip, slickrock_run, saddle, twin_fins, fin_chute, fin_nose_kicker, net_deck, anvil_rock, net_post_run, net_bowl | yes |
-| `west` | lookout_mesa, lookout_lip, lookout_stair, saddle, west_shelf, hoodoo_garden, mooring_mesa, mooring_pad_ramp, net_deck, anvil_rock, west_wing, cloud_wash_west, knuckle_w, net_bowl | yes |
-| `east` | lookout_mesa, lookout_lip, east_ribs, saddle, tram_head, ore_bench, ore_adit, ore_chute, anvil_rock, east_wing, cloud_wash_east, knuckle_e, net_bowl | yes |
-| `slab` | lookout_mesa, lookout_lip, slickrock_run, saddle, twin_fins, net_deck, anvil_rock, net_bowl | no, an event opens it |
-| `envelope` | lookout_mesa, lookout_lip, lookout_stair, saddle, west_shelf, mooring_mesa, net_deck, anvil_rock, net_bowl | no, an event opens it |
-
-Only `fin_rim_collapse` closes a route (`main`). `west` and `east` can never close, so "a route always open" holds under every overlap (PARK.md section 5). The two event routes open shortcuts; they never replace a closed one.
-
-| id | activity | site | at | pack | pay | role (PARK.md 2.12) |
-| --- | --- | --- | --- | --- | --- | --- |
-| `camp_anvil` | enemy_camp | `anvil_rock` | [0, 104] | anchor_crew, anchor_crew, line_cutter | {"named": "rivet_plating"} | on the line |
-| `cache_east_wing` | cracked_cache | `east_wing` | [232, 236] | (row default) | {"rarities": ["rare"]} | reward |
-| `bounty_ore_bench` | hauler_bounty | `ore_bench` | [186, -60] | (row default) | {"rarities": ["common", "rare"]} | risk |
-| `saddle_seam` (contraption) | cracked_wall, cache at [236, -426] | `saddle` | [230, -420] | - | - | hidden |
+| Route | From | To | Via |
+| --- | --- | --- | --- |
+| `main` | drop_in | landmark | lookout_mesa, lookout_lip, slickrock_run, saddle, twin_fins, fin_chute, fin_nose_kicker, net_deck, anvil_rock, net_post_run, net_bowl |
+| `west` | drop_in | landmark | lookout_mesa, lookout_lip, lookout_stair, saddle, west_shelf, hoodoo_garden, mooring_mesa, mooring_pad_ramp, net_deck, anvil_rock, west_wing, cloud_wash_west, knuckle_w, net_bowl |
+| `east` | drop_in | landmark | lookout_mesa, lookout_lip, east_ribs, saddle, tram_head, ore_bench, ore_adit, ore_chute, anvil_rock, east_wing, cloud_wash_east, knuckle_e, net_bowl |
+| `slab` | drop_in | landmark | lookout_mesa, lookout_lip, slickrock_run, saddle, twin_fins, net_deck, anvil_rock, net_bowl |
+| `envelope` | drop_in | landmark | lookout_mesa, lookout_lip, lookout_stair, saddle, west_shelf, mooring_mesa, net_deck, anvil_rock, net_bowl |
+| `fan_chute` | saddle | anvil_rock | saddle, twin_fins, fin_chute, fin_nose_kicker, net_deck, anvil_rock |
+| `fan_west` | saddle | anvil_rock | saddle, west_shelf, hoodoo_garden, mooring_mesa, mooring_pad_ramp, net_deck, anvil_rock |
+| `fan_east` | saddle | anvil_rock | saddle, tram_head, ore_bench, ore_adit, ore_chute, anvil_rock |
+| `fan_slab` | saddle | anvil_rock | saddle, twin_fins, net_deck, anvil_rock |
+| `fan_envelope` | saddle | anvil_rock | saddle, west_shelf, mooring_mesa, net_deck, anvil_rock |
+| `carve_net` | anvil_rock | net_bowl | anvil_rock, net_post_run, net_bowl |
+| `wing_west` | anvil_rock | net_bowl | anvil_rock, west_wing, cloud_wash_west, knuckle_w, net_bowl |
+| `wing_east` | anvil_rock | net_bowl | anvil_rock, east_wing, cloud_wash_east, knuckle_e, net_bowl |
 
 Waymarks, in order: `drop_in`, `saddle`, `anvil_rock`, `landmark`.
 
-**Renames and moves (KD5, ruling R7: PARK.md 2.12 wins over a journey beat's pocket placement).** The draft's altar on the Anvil (`altar_anvil`, a waymark) cannot be a reward, risk or hidden pocket on the line (R2), and the camp at the Moorings sat off every line but the west. So the camp moved onto the Anvil, the on-line pocket (`camp_moorings` -> `camp_anvil`), and the reward became a cracked cache on the East Wing (`altar_anvil` -> `cache_east_wing`): the Kite Roost, where the draft re-check put it, is 440 m off the line and fails sight_ok (R1), and the East Wing keeps its door inside 240 m of the east fan while its detour stays deep. The bounty's door moved from [330, -110] toward the east fan to [184, -128]. The Anvil (`anvil_rock`) is now waymark 2. The pocket numbers are in section 16.
+| Activity | Kind | Site | At [x, z] | Pack | Pay |
+| --- | --- | --- | --- | --- | --- |
+| `camp_anvil` | enemy_camp | anvil_rock | [0, 104] | anchor_crew, anchor_crew, line_cutter | `{"named": "rivet_plating"}` |
+| `cache_east_wing` | cracked_cache | east_wing | [210, 236] | default | `{"rarities": ["rare"]}` |
+| `bounty_ore_bench` | hauler_bounty | ore_bench | [186, -60] | default | `{"rarities": ["common", "rare"]}` |
 
-**Fix round (2026-10-12).** An activity row has one `at`, so its door is its pay point (R1; park_schema.gd has no door field on activity rows), and "door near the line, pay deep" cannot be split. Two 2.12 rules then rule out the Kite Roost for the cache: no line node lies within 240 m of the roost, and every roost-side point within 240 m of the line is inside 320 m of the beacon. The cache stays on the East Wing and moves deep to [232, 236] (detour 235 m by path); the bounty moves to [186, -60] at the bench's north-west corner (detour 184 m), where its door sees the line between the hoodoo posts that hid [184, -128]. So the reward's detour is the larger, the reward pays rare and the bounty common or rare, on the ladder. The deviation from the KD5 note's roost placement is listed for a coordinator ruling.
+Renames under R7: `camp_moorings` became `camp_anvil`; `altar_anvil` became `cache_east_wing`.
+The Anvil landform is waymark 2; the camp is its on-line common-part activity. The reward is
+a rare cracked cache on the East Wing; the risk is a common-or-rare bounty at the Ore Bench.
+The Kite Roost cache was not restored: activity rows have one `at` and no separate door field,
+so the graph requires the door and pay point to share a site within 240 m sight distance.
+The East Wing departure from the journey remains a coordinator ruling, with old and new
+journey sentences in the unit report. The cache moved clear of Kest's east-wing path after
+the traversal bot collided with its old position. The graph pocket table is in section 16.
+
+Only the fin collapse closes routes; `west` and `east` remain open. The burner opens the
+envelope without closing a route, which R7's event ruling allows. Hidden pocket `saddle_seam`
+remains a cracked wall at [230, -420], pay at [236, -426], on the Saddle site.
 
 ## 6. `event_rows` draft
 
-| id | kind (family) | site | trigger | lead s, form | live s | effect | routes | hold m, cooldown s, once | music cue |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `fin_rim_collapse` | collapse (natural) | `twin_fins` | clock_tier 1 | 6, cave_in_crumble | 0 | depth_m 8.0, swap "fin_slab_ramp" | closes main; opens slab | 25, 0, true | riser_natural then drop_collapse |
-| `mooring_burner_blow` | boiler_burst (industrial) | `mooring_mesa` | clock_tier 2 | 5, boiler_pressure | 10 | hazard "burner_flare", hazard_m [22, 12], damage 6.0, swap "envelope_drape" | opens envelope | 16, 0, true | riser_industrial then drop_boiler |
-| `mooring_dropship` | fleet_landing (fleet) | `mooring_pad` | clock_tier 2 | 10, fleet_inbound | 0 | vessel "dropship", home "dropship_anchor_crew", footprint_m [36, 16] | none | 25, 0, true | riser_fleet then drop_fleet_anvil |
-| `lens_rocks_wake` | machine_eruption (ancient) | `lens_rocks` | clock_tier 2 | 9, ancient_stirring | 0 | miniboss "mind_hand", swap "lens_rock_crater" | none | 18, 0, true | riser_mind_quote then drop_mind_wrong |
-| `isle_shed` | impact (natural) | `west_wing` | warden_phase chunk_1 | 6, impact_incoming | 0 | strike_m 20.0, damage 8.0, swap "crater_event" | none | 30, 0, true | riser_natural then drop_impact |
+**Shipped events, KD5 continuation, 2026-10-12.**
 
-What each one looks like in play:
+| Event | Kind / family | Site | Trigger | Lead / live (s) | Effect | Route change |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fin_rim_collapse` | collapse / natural | twin_fins | `{"on": "clock_tier", "value": 1}` | 6.0 / 0.0 | `{"depth_m": 8.0, "swap": "fin_slab_ramp"}` | `{"closes": ["main", "fan_chute"], "opens": ["slab", "fan_slab"]}` |
+| `mooring_burner_blow` | boiler_burst / industrial | mooring_mesa | `{"on": "clock_tier", "value": 2}` | 5.0 / 10.0 | `{"hazard": "burner_flare", "hazard_m": [22, 12], "damage": 6.0, "swap": "envelope_drape"}` | `{"closes": [], "opens": ["envelope", "fan_envelope"]}` |
+| `mooring_dropship` | fleet_landing / fleet | mooring_pad | `{"on": "clock_tier", "value": 2}` | 10.0 / 0.0 | `{"vessel": "dropship", "home": "dropship_anchor_crew", "footprint_m": [36, 16]}` | `{"closes": [], "opens": []}` |
+| `lens_rocks_wake` | machine_eruption / ancient | lens_rocks | `{"on": "clock_tier", "value": 2}` | 9.0 / 0.0 | `{"miniboss": "mind_hand", "swap": "lens_rock_crater"}` | `{"closes": [], "opens": []}` |
+| `isle_shed` | impact / natural | west_wing | `{"on": "warden_phase", "value": "chunk_1"}` | 6.0 / 0.0 | `{"strike_m": 20.0, "damage": 8.0, "swap": "crater_event"}` | `{"closes": [], "opens": []}` |
 
-- **`fin_rim_collapse` (natural, tier 1, about 45 s in).** The west fin's rim cracks along a crumble line for 6 s, then a 260 m slab drops 8 m and leans against the fin as a ramp. The chute closes; the slab ramp opens a slower line down to the net. It fires while most lines are past the Saddle, so you see it from above or beside it, never under it.
-- **`mooring_burner_blow` (industrial, tier 2).** The moored balloon's burner shrieks for 5 s (the steam whistle rising), then flares a 22 by 12 m jet for 10 s. The envelope collapses over the mesa's north edge and drapes into a soft ramp down to the net: the `envelope` route.
-- **`mooring_dropship` (Fleet, tier 2).** A Fleet dropship crosses the sky for 10 s (Brindle's anvil and brass, PARK.md:310) and settles on the mooring pad. Its ramp wakes the dormant `dropship_anchor_crew` home. The ramp doubles as a kicker.
-- **`lens_rocks_wake` (ancient, tier 2, weight 0.6).** The Lens Rocks hum a wrong note for 9 s, then a Mind's hand erupts as a miniboss and leaves a crater. It is off every line on purpose: you choose it.
-- **`isle_shed` (natural, the Warden's first chunk).** The tilt shakes a boulder loose from the island's rim. It falls 6 s after the mark appears and leaves a 40 m crater on the West Wing (the `crater_event` recipe, PARK.md veto 13). The crater is a bowl you can ride; it changes the west approach for a second attempt.
-
-**Shipped (KD5 greybox).** The five rows ship as drafted: same ids, sites, triggers and effects. `mooring_burner_blow` closes no route, which the event grammar allows. Tier 2 can fire during the Warden fight: on the measured lines the engage comes at 70 to 95 s, after tier 1 (45 s) and before or around tier 2 (90 s). PARK.md:313's 20 s calm before a Warden is the event director's rule (KE1), not this file's; reported, not fixed here.
-
-Timing. Tiers come every 45 s and stop at 2 today (`src/world/director.gd:83-84`); a spike adds 2 (`director.gd:164-165`). Tier 1 lands mid-route on most lines; tier 2 lands near the landmark for a skipper and mid-stage for a completionist. This stage uses no tier 3 or 4, so it does not depend on veto 16.
-
-Leads: 6 s for the collapse, 5 s for the burner, 10 s for the dropship, 9 s for the eruption, 6 s for the shed. Each meets its floor (PARK.md:311) and rounds up to the next downbeat. Four rows change the ground (collapse, burner, eruption, shed); the director's cap of two at once holds them apart.
-
-New `WORLD_ROWS` forms this table needs (KE units): `boiler_pressure`, `fleet_inbound`, `ancient_stirring`. `cave_in_crumble` and `impact_incoming` exist (`src/core/event_kinds.gd:826-850`).
+No event director rule is changed here. Tier-2 events may overlap the approach or fight; the calm period is shared director behavior and remains a coordinator follow-up. The five events keep their authored music cues and on-bar telegraphs.
 
 ## 7. `home_rows` draft
 
-| id | enemy | site (landform) | advantage | counter | reinforce: from tier, every s, max, pack | break: by, hp, scrap | stops kind | dormant |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `tram_cutters` | line_cutter | `tram_head` (tram station, mesa rim) | The tramway is the east fan's air path; cutters on the station deck throw across the cable while you hang on it. | Drop off the cable early onto the Ore Bench or glide under the arc; the deck sits level with the saddle's east lip, so a ram from the lip reaches it. | 1, 30, 3, `draft_cut` | ram, 120, 30 | true | false |
-| `chute_cutters` | line_cutter | `ore_chute` (flume) | Trestle tops overlook the grind; a cut line drops you off the chute's high end onto the net. | Grind it low and fast: the reticle closes on where you will be, and the chute's speed carries you past it. | 2, 40, 2, `draft_cut` | ram, 100, 25 | false | false |
-| `mooring_anchor_crew` | anchor_crew | `mooring_mesa` (mesa_rim) | Winch posts line the mooring rim over the net; a ball crossing below is hooked onto the deck. | Jump the cable lane before it fills, or come in high off the roost ferry and slam the post from above. | 0, 35, 3, `draft_anchor` | slam, 140, 35 | true | false |
-| `dropship_anchor_crew` | anchor_crew | `mooring_pad` (mesa_rim) | The landed dropship's ramp is a winch deck facing the net; it doubles the moorings' crew. | Its ramp is also a kicker: roll up it at speed and smash the winch on the way over. | 2, 30, 3, `draft_anchor` | smash, 160, 40 | false | true |
-| `roost_kites` | kite_drone | `kite_roost` (butte) | The roost's sunny face holds a thermal that keeps them above ram reach. | Shoot them while they circle or leave the dive mark; Kest rides the same column above them and slams. | 1, 25, 4, `draft_kites` | damage, 160, 30 | true | false |
+**Shipped homes, KD5 continuation, 2026-10-12.**
 
-**Shipped (KD5 greybox).** The five rows ship as drafted; the graph tool finds no home inside any pocket door's 40 m ring (section 16).
+| Home | Enemy | Site / landform | Reinforcement | Break | Dormant |
+| --- | --- | --- | --- | --- | --- |
+| `tram_cutters` | line_cutter | tram_head / mesa_rim | `{"from_tier": 1, "every_s": 30.0, "max_alive": 3, "pack": "draft_cut"}` | `{"by": "ram", "hp": 120.0, "scrap": 30}` | False |
+| `chute_cutters` | line_cutter | ore_chute / flume | `{"from_tier": 2, "every_s": 40.0, "max_alive": 2, "pack": "draft_cut"}` | `{"by": "ram", "hp": 100.0, "scrap": 25}` | False |
+| `mooring_anchor_crew` | anchor_crew | mooring_mesa / mesa_rim | `{"from_tier": 0, "every_s": 35.0, "max_alive": 3, "pack": "draft_anchor"}` | `{"by": "slam", "hp": 140.0, "scrap": 35}` | False |
+| `dropship_anchor_crew` | anchor_crew | mooring_pad / mesa_rim | `{"from_tier": 2, "every_s": 30.0, "max_alive": 3, "pack": "draft_anchor"}` | `{"by": "smash", "hp": 160.0, "scrap": 40}` | True |
+| `roost_kites` | kite_drone | kite_roost / butte | `{"from_tier": 1, "every_s": 25.0, "max_alive": 4, "pack": "draft_kites"}` | `{"by": "damage", "hp": 160.0, "scrap": 30}` | False |
 
-All five use today's stage 5 packs (`src/core/alpha_defs.gd:106-110`). Each kind lives where its mechanic is strongest (PARK.md:385): line cutters where you hang on cables and grinds, anchor crews on the mooring rim over the net, kite drones in a thermal column. The director's ancient pack (`src/world/director.gd:25`, `70`) still brings Mind's hands; this stage gives them no home, only the eruption.
+Line cutters occupy the tram and ore chute; anchor crews occupy the Moorings and dropship pad; kite drones occupy the Roost. The graph checks the home sites against every pocket clear ring.
 
 ## 8. `contraption_rows` draft
 
-| id | kind | site | recipe | spec keys (contraptions.gd) |
+**Shipped contraptions, KD5 continuation, 2026-10-12.**
+
+| Contraption | Kind | Site | Recipe | Spec |
 | --- | --- | --- | --- | --- |
-| `fin_thermal` | thermal | `twin_fins` | (primitive) | at [-90, -230], radius 6.0, height 240.0 |
-| `roost_thermal` | thermal | `kite_roost` | (primitive) | at [-400, 420], radius 6.0, height 220.0 |
-| `bowl_thermal` | thermal | `knuckle_e` | (primitive) | at [110, 470], radius 6.0, height 160.0 |
-| `bowl_thermal_w` | thermal | `knuckle_w` | (primitive) | at [-110, 470], radius 6.0, height 160.0 (fix round: the west knuckle's way up, so route `west` reaches it) |
-| `tramway` | cable | `tram_head` | (primitive) | from [95, 192.6, -372], to [262, 165.2, -216], radius 4.5, floor 18.0 |
-| `ore_line` | cable | `ore_chute` | (primitive) | from [236, 119.6, -36], to [40, 113.2, 40], radius 4.5, floor 18.0 |
-| `roost_line` | cable | `kite_roost` | (primitive) | from [-420, 173.0, 470], to [-75, 62.7, 515], radius 4.5, floor 18.0 |
-| `west_tether` | cable | `anvil_rock` | (primitive) | from [-60, 108.0, 84], to [-208, 89.1, 160], radius 4.5, floor 18.0 |
-| `east_tether` | cable | `anvil_rock` | (primitive) | from [60, 108.0, 84], to [208, 89.1, 160], radius 4.5, floor 18.0 |
-| `keel_line` | cable | `net_post_run` | (primitive) | from [60, 74.7, 316], to [-60, 69.0, 392], radius 4.5, floor 18.0 |
-| `west_balloon_lift` | lift | `west_wing` | lift_platform | at [-400, 180], radius 5.0, rise 60.0, charge 4.0, offset 0.0 |
-| `east_balloon_lift` | lift | `east_wing` | lift_platform | at [400, 180], radius 5.0, rise 60.0, charge 4.0, offset 2.0 |
-| `cloud_cannon_west` | launcher | `cloud_wash_west` | cannon | style "cannon", at [-210, 392], radius 4.0, target [-75, 82, 505], floor 30.0, min_flight 3.0, charge 2.5 |
-| `cloud_cannon_east` | launcher | `cloud_wash_east` | cannon | style "cannon", at [210, 392], radius 4.0, target [75, 82, 505], floor 30.0, min_flight 3.0, charge 2.5 |
-| `roost_ferry` | barge | `mooring_mesa` | barge | a [-280, 108.4, 60], b [-430, 172.5, 420], size [14, 2, 14], travel 18.0, dwell 3.0, offset 0.0 |
-| `saddle_seam` | cracked_wall | `saddle` | (primitive) | at [230, -420], size [10, 6, 1.4], turn 1.2, cache {at [236, -426]} |
+| `fin_thermal` | thermal | twin_fins | primitive | `{"at": [-90, -230], "radius": 6.0, "height": 240.0}` |
+| `roost_thermal` | thermal | kite_roost | primitive | `{"at": [-400, 420], "radius": 6.0, "height": 220.0}` |
+| `bowl_thermal` | thermal | knuckle_e | primitive | `{"at": [110, 470], "radius": 6.0, "height": 160.0}` |
+| `bowl_thermal_w` | thermal | knuckle_w | primitive | `{"at": [-110, 470], "radius": 6.0, "height": 160.0}` |
+| `tramway` | cable | tram_head | primitive | `{"from": [95, 192.6, -372], "to": [262, 165.2, -216], "radius": 4.5, "floor": 18.0}` |
+| `ore_line` | cable | ore_chute | primitive | `{"from": [236, 119.6, -36], "to": [40, 113.2, 40], "radius": 4.5, "floor": 18.0}` |
+| `roost_line` | cable | kite_roost | primitive | `{"from": [-420, 173.0, 470], "to": [-75, 62.7, 515], "radius": 4.5, "floor": 18.0}` |
+| `west_tether` | cable | anvil_rock | primitive | `{"from": [-60, 108.0, 84], "to": [-208, 89.1, 160], "radius": 4.5, "floor": 18.0}` |
+| `east_tether` | cable | anvil_rock | primitive | `{"from": [60, 108.0, 84], "to": [208, 89.1, 160], "radius": 4.5, "floor": 18.0}` |
+| `keel_line` | cable | net_post_run | primitive | `{"from": [60, 74.7, 316], "to": [-60, 69.0, 392], "radius": 4.5, "floor": 18.0}` |
+| `west_balloon_lift` | lift | west_wing | lift_platform | `{"at": [-400, 180], "radius": 5.0, "rise": 60.0, "charge": 4.0, "offset": 0.0}` |
+| `east_balloon_lift` | lift | east_wing | lift_platform | `{"at": [400, 180], "radius": 5.0, "rise": 60.0, "charge": 4.0, "offset": 2.0}` |
+| `cloud_cannon_west` | launcher | cloud_wash_west | cannon | `{"style": "cannon", "at": [-210, 392], "radius": 4.0, "target": [-75, 82, 505], "floor": 30.0, "min_flight": 3.0, "charge": 2.5}` |
+| `cloud_cannon_east` | launcher | cloud_wash_east | cannon | `{"style": "cannon", "at": [210, 392], "radius": 4.0, "target": [75, 82, 505], "floor": 30.0, "min_flight": 3.0, "charge": 2.5}` |
+| `roost_ferry` | barge | mooring_mesa | barge | `{"a": [-280, 108.4, 60], "b": [-430, 172.5, 420], "size": [14, 2, 14], "travel": 18.0, "dwell": 3.0, "offset": 0.0}` |
+| `saddle_seam` | cracked_wall | saddle | primitive | `{"at": [230, -420], "size": [10, 6, 1.4], "turn": 1.2, "cache": {"at": [236, -426]}}` |
 
-**Shipped (KD5 greybox).** Every cable's `from` sits 1.5 m over the baked ground and its `to` 2.5 m over it, because a cable fires only when the ball's centre passes within 4.5 m of `from`. Every line rides one cable: the centre carve rides `keel_line` (new), the west and east finishes ride the two Anvil tethers (new: the draft's net crossing had no ride fact on the centre line), and the east fan rides the tramway. `ore_line` (new) is the ore chute's ride, kept off the east fan's line so that fan reaches the Anvil down the landing hill at speed; a pilot can still take it. The balloon lifts moved off every line to the wing edges, and the cloud cannons stay off the lines: a 3 s cannon arc has no anchor in reach, which breaks the 40 m anchor band before the engage ring.
-
-Thermals are the only wind (PARK.md:188). A cable rides one way, `from` to `to`, at an 18 m/s floor (`src/world/contraptions.gd:215-222`). The two balloon lifts are the way back up for a ball that fell to the net beside a wing: the floor line never needs them, a lost ball does. The roost ferry is a moving island, as today's barges are (`src/world/map_highdraft.gd:91-96`).
+Cables use their explicit world coordinates. Balloon lifts and cloud cannons remain optional side rides; the measured lines take the Anvil tethers or keel cable. Thermals use the shipped primitive, with no thermal recipe id invented.
 
 ## 9. Weather and the fixed time of day
 
-**Time: `golden`.** A low sun from the west-north-west, so the fall line north is side-lit and every mesa throws a long blue shadow east. Proposed `TIME_ROWS` row for KE7 (start): sun elevation 14 degrees, colour #ffc98a, energy 1.1, ambient #a7b6c9 at 0.45. Today's Highdraft light is a low morning amber (`src/presentation/world_look.gd:35`); veto 2 in PARK.md moves it.
+**Shipped weather, KD5 continuation, 2026-10-12.** Time of day is `golden`.
 
-| id | kind | trigger | lead, live, gap s | fog | sky, sound, music layer | event odds |
-| --- | --- | --- | --- | --- | --- | --- |
-| `golden_air` | clear | always | 0, 0, 0 | 0.0025, #fff1dc | clear, high_wind_bed, (none) | none |
-| `cloud_rise` | cloud_deck | clock_tier 2 | 8, 60, 60 | 0.006, #ece7da | clear, cloud_hush_bed, layer_cloud_pad | `mooring_dropship` x2 |
+| Weather | Kind | Trigger | Spec |
+| --- | --- | --- | --- |
+| `golden_air` | clear | `{"on": "always"}` | `{"lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0025, "color": "#fff1dc"}, "sky": "clear", "sound": "high_wind_bed", "music_layer": "", "event_odds": {}, "handling": "none"}` |
+| `cloud_rise` | cloud_deck | `{"on": "clock_tier", "value": 2}` | `{"lead_s": 8.0, "live_s": 60.0, "gap_s": 60.0, "fog": {"density": 0.006, "color": "#ece7da"}, "sky": "clear", "sound": "cloud_hush_bed", "music_layer": "layer_cloud_pad", "event_odds": {"mooring_dropship": 2.0}, "handling": "none"}` |
 
-**Shipped (KD5 greybox).** `golden` and both weather rows ship as drafted.
-
-**The cloud rise.** From tier 2 the cloud deck climbs out of the void below the net, over 8 s, and holds for 60 s. It stops 4 m under the net, never over it, so the net reads as the only floor and the mesas stand out of a white sea. It doubles the dropship's odds. Handling never changes (PARK.md 2.7).
+The cloud deck rises below the net; handling is unchanged. Weather and music are the authored rows, not listening acceptance.
 
 ## 10. Traversal lines
 
@@ -429,7 +429,7 @@ What changes: the map id (`highdraft` to `park_islands`), the heading (today -z,
 
 **Shipped (KD5 greybox, 2026-10-11).** `tests/park_park_islands_test.gd` is in: it pins the bake and graph freshness, the waymark order, the four pocket roles and their 2.12 distances, the landmark and the mind Warden's `under_island` row, and that every named waypoint of the seven lines resolves, each pin with a planted copy that must fail. The `highdraft_*` tests keep pinning today's map, which `--table=alpha` still plays, until KD7 retires it; the packs, Warden numbers, beacon seconds and music rows above are unchanged by the park file.
 
-**Fix round (2026-10-12).** The stage test's header is re-dated; its PARK.md 2.12 distances now come from tools/park_graph.gd's own constants (SIGHT_M, DOOR_SPAWN_M, DOOR_BEACON_M, DOOR_DOOR_M, DETOUR_MIN_M, DETOUR_MAX_M) instead of copied literals, and its graph-ruling pin (no breach, `beacon_ok`, 13 routes connected, the spawn rule passing) holds on the shipped file. `tests/park_table_test.gd`'s "stage 5 stands on its old map" check flips red the moment this park file lands; that is the shared test's integration flip, outside this stage's files.
+**Fix round (2026-10-12).** The stage test's header is re-dated; its PARK.md 2.12 distances now come from tools/park_graph.gd's own constants (SIGHT_M, DOOR_SPAWN_M, DOOR_BEACON_M, DOOR_DOOR_M, DETOUR_MIN_M, DETOUR_MAX_M) instead of copied literals, and its graph-ruling pin (no breach, `beacon_ok`, 13 routes connected, the spawn rule passing) holds on the shipped file. `tests/park_table_test.gd` now accepts a valid ParkMap for stage 5 when its park file is present, from the candidate fix 1f09581. It remains a shared test outside this unit's write scope.
 
 ## 14. Storyboard frames
 
@@ -475,29 +475,36 @@ p1_overhead is plotted from this park file by `tools/park_plot.py`, not generate
 - Sight: a 50 m grid over the play rect, eye 2 m above a box model of the stamped rows on a 60 m floor, cells under the island excluded, ray sampled every 10 m: 0.877 over 701 cells.
 - None of this ran in Godot. The traversal bands, the sight test and the density test run in KD5.
 
-**Measured on the shipped greybox (KD5 fix round, 2026-10-12), from `assets/park/park_islands/graph.json`.** The
-shipped `tools/park_graph.gd` now finishes on this stage in about 18 s and writes graph.bin and graph.json byte for byte
-as committed (sha256 of graph.bin a4b73c2d...4254). The first greybox's sloped apron (z 406 to 760) made its float32
-search re-relax without end; that is still a latent defect of `ParkGraph.search` (src/world/park/park_graph.gd:302,
-334: a float64 sum compared against a float32-stored distance), reported as a follow-up, not fixed in this stage.
-The ruling is clean: `beacon_ok` true, the spawn rule run and passing (farther share 0.135, at most 0.25), all 13 routes
-connected, no breach.
+**Measured on the shipped greybox, KD5 continuation, 2026-10-12.**
+The shipped graph tool includes the accepted float32 comparison fix and lower-index predecessor ties.
+The coordinator admitted the regression and fix as d86e7a9 and 3fd07ae and rebuilt park_test in 9ac8969.
+The unit report names the final head, exact commands, tool times and artifact hashes. The headless
+numbers qualify the checks they measure; Andrew's stage board and play remain the visual and feel verdict.
 
-| pocket | role | door [x, z] | d_spawn m | d_landmark m | door_m | detour_m | sight_ok | clear ring | nearest door m | pay |
+Graph ruling: beacon_ok True, spawn.run True, spawn.ok True, farther_share 0.135; 13 routes, 13 connected; 0 breaches.
+
+| Pocket | Role | Graph door [x,z] | d_spawn | d_beacon | door_m | detour_m | sight_ok | Clear ring | Nearest door | Pay |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `camp_anvil` | on the line | [0, 104] | 857 | 451 | 0 | 0 | yes | clear | - | common (`rivet_plating`) |
-| `cache_east_wing` | reward | [232, 240] | 1084 | 399 | 235 | 235 | yes | clear | 327 | rare |
-| `bounty_ore_bench` | risk | [184, -56] | 757 | 685 | 184 | 184 | yes | clear | 327 | common, rare |
-| `saddle_seam` | hidden | [232, -416] | 408 | 1073 | 235 | 240 | yes | clear | 389 | - |
+| camp_anvil | online | [0, 104] | 856 | 451 | 0 | 0 | True | [] | -1 | common / rivet_plating |
+| cache_east_wing | reward | [208, 240] | 1073 | 389 | 208 | 208 | True | [] | 318 | rare |
+| bounty_ore_bench | risk | [184, -56] | 757 | 685 | 184 | 184 | True | [] | 318 | common, rare |
+| saddle_seam | hidden | [232, -416] | 408 | 1073 | 235 | 240 | True | [] | 390 |  |
 
-Spawn to beacon 1306 m by path; full_visit_ratio 1.339 (target at most 3.0, in target); reward_ratio 0.580 (start
-target at least 1.5, reported, not gated, out of target). The reward ratio is the median spawn-to-door path of the three
-off-line pockets over spawn-to-beacon; with every door inside 240 m of a line that runs spawn to beacon, a median over
-1.5 times the line would need a door past the beacon, which the 320 m beacon rule forbids. It is out of target by the
-stage's shape, not by a misplaced pocket; listed for the coordinator.
+Spawn to beacon 1305 m by path. Reward ratio 0.580 against the reported 1.5 target; full_visit_ratio 1.313 against 3.0. The reward-ratio miss is reported, not gated.
 
-Sight (`park_landmark_sight_test`): share 0.9412 of 1,089 points, threshold 0.85. Density (`park_density_test`): worst
-open node 40.0 m from a row (the square's corner, [-800, 800]), none over 80 m.
+The cache moved off Kest's east-wing path to [210,236]. Its nearby hoodoo post moved
+from [204,241] to [280,241] to clear the door's ray. The Anvil's third artificial step
+was reduced from 2.5 m to 0.01 m after Sable's trace showed a ground contact halving
+speed during a return turn across z84. The main Anvil slope and named waymark remain.
+The Run's third artificial step was also reduced from 4 m to 0.01 m for Kest's
+turn. Three hoodoo posts beside the Anvil-to-east-tether flight were raised from
+10 m to 30 m after the diagnostic sampler located 52 m and 69 m anchor gaps above
+the short posts. These are geometry reworks; the acceptance bands are unchanged.
+
+Current traversal bands and all seed misses are in `design-v3/park/traversal/park_islands.md`.
+The unit report retains prior failed runs, the bounded reworks and the final acceptance result.
+The dressed pass starts only after the whole greybox list passes. No recipe coverage, draws,
+triangles, stills or human acceptance is claimed for this greybox.
 
 ## Appendix: the park file as shipped
 
@@ -563,7 +570,7 @@ open node 40.0 m from a row (the square's corner, [-800, 800]), none over 80 m.
   {"id": "run_step_lip_1", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -570.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_2", "element": "drop", "landform": "slickrock", "society": "none", "at": [0, -548.0], "y": null, "size": [32.0, 4, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_lip_2", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -538.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "run_step_3", "element": "drop", "landform": "slickrock", "society": "none", "at": [0, -516.0], "y": null, "size": [32.0, 4, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "run_step_3", "element": "drop", "landform": "slickrock", "society": "none", "at": [0, -516.0], "y": null, "size": [32.0, 0.01, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_lip_3", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -506.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_4", "element": "drop", "landform": "slickrock", "society": "none", "at": [0, -484.0], "y": null, "size": [32.0, 4, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_lip_4", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -474.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
@@ -607,7 +614,7 @@ open node 40.0 m from a row (the square's corner, [-800, 800]), none over 80 m.
   {"id": "landing_step_lip_1", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -51.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "anvil_step_1", "element": "drop", "landform": "butte", "society": "none", "at": [0, -11.0], "y": null, "size": [38.0, 2.5, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "anvil_step_2", "element": "drop", "landform": "butte", "society": "none", "at": [0, 27.0], "y": null, "size": [38.0, 2.5, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "anvil_step_3", "element": "drop", "landform": "butte", "society": "none", "at": [0, 65.0], "y": null, "size": [38.0, 2.5, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "anvil_step_3", "element": "drop", "landform": "butte", "society": "none", "at": [0, 65.0], "y": null, "size": [38.0, 0.01, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "anvil_step_4", "element": "drop", "landform": "butte", "society": "none", "at": [0, 103.0], "y": null, "size": [38.0, 2.5, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "carve_step_1", "element": "drop", "landform": "sky_island", "society": "none", "at": [0, 146.0], "y": null, "size": [40.0, 2, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "carve_step_lip_1", "element": "kicker", "landform": "sky_island", "society": "none", "at": [0, 160.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
@@ -876,7 +883,7 @@ open node 40.0 m from a row (the square's corner, [-800, 800]), none over 80 m.
   {"id": "hoodoo_post_223", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [30, 110], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_224", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [43, 127], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_225", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [52, 144], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "hoodoo_post_226", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [113, 145], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "hoodoo_post_226", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [113, 145], "y": null, "size": [8, 30, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_227", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [64, 181], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_228", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [121, 201], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_229", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [64, 216], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
@@ -891,14 +898,14 @@ open node 40.0 m from a row (the square's corner, [-800, 800]), none over 80 m.
   {"id": "hoodoo_post_238", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [-63, 361], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_239", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [91, 68], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_240", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [108, 77], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "hoodoo_post_241", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [129, 151], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "hoodoo_post_242", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [172, 110], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "hoodoo_post_241", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [129, 151], "y": null, "size": [8, 30, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "hoodoo_post_242", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [172, 110], "y": null, "size": [8, 30, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_243", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [165, 169], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_244", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [212, 130], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_245", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [187, 180], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_246", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [197, 198], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_247", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [203, 219], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "hoodoo_post_248", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [204, 241], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "hoodoo_post_248", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [280, 241], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_249", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [201, 260], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_250", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [195, 279], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_post_251", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [189, 294], "y": null, "size": [8, 10, 8], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
@@ -972,7 +979,7 @@ open node 40.0 m from a row (the square's corner, [-800, 800]), none over 80 m.
  ],
  "activity_rows": [
   {"id": "camp_anvil", "activity": "enemy_camp", "site": "anvil_rock", "at": [0, 104], "pack": ["anchor_crew", "anchor_crew", "line_cutter"], "pay": {"named": "rivet_plating"}},
-  {"id": "cache_east_wing", "activity": "cracked_cache", "site": "east_wing", "at": [232, 236], "pack": [], "pay": {"rarities": ["rare"]}},
+  {"id": "cache_east_wing", "activity": "cracked_cache", "site": "east_wing", "at": [210, 236], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bounty_ore_bench", "activity": "hauler_bounty", "site": "ore_bench", "at": [186, -60], "pack": [], "pay": {"rarities": ["common", "rare"]}}
  ]
 }

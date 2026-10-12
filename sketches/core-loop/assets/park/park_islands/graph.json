@@ -1,32 +1,32 @@
 {
-  "bake_sha256": "bc8aafcab2b3f09b9aadadca78caf90e43f350afabf31ef98fd631cbfa5d96f1",
+  "bake_sha256": "94fdc22fe8edf7a11be55c343a98c96eba1a59bb13580bcc01940ac395f964b3",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 839170,
-  "edges": 307614,
+  "bytes": 859011,
+  "edges": 308212,
   "first_failed": "",
   "flags": {
     "deck": 0,
     "door_ok": 39277,
     "line": 439,
     "open": 40401,
-    "sight_ok": 10241,
+    "sight_ok": 10244,
     "under": 0
   },
-  "full_visit_m": 1749,
-  "full_visit_ratio": "1.339",
-  "graph_sha256": "a4b73c2d9eaf6b28b4f05701136e2bae9bc01ad781819a97046ed99456da4254",
+  "full_visit_m": 1714,
+  "full_visit_ratio": "1.313",
+  "graph_sha256": "a1c803f19a6cfd9c7507e502051ce98b0c10c96a349eb3cffa390bb20131158d",
   "line_errors": [],
   "line_path_nodes": 157,
-  "longest_est_m": 2356,
+  "longest_est_m": 2355,
   "map": "park_islands",
   "nodes": 40401,
-  "park_sha256": "ca82b0cb6969d46c8ccfa0a99a9769e433fd6d2fb378677985ff4ba9424ebd2f",
+  "park_sha256": "de8dc3701b3aaa1a2ad3845054342463050129ff8e2790fdbeeec538066059cc",
   "pockets": [
     {
       "clear_ring": [],
       "d_landmark": 451,
-      "d_spawn": 857,
+      "d_spawn": 856,
       "detour_m": 0,
       "door_at": [
         0,
@@ -52,14 +52,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 399,
-      "d_spawn": 1084,
-      "detour_m": 235,
+      "d_landmark": 389,
+      "d_spawn": 1073,
+      "detour_m": 208,
       "door_at": [
-        232,
+        208,
         240
       ],
-      "door_m": 235,
+      "door_m": 208,
       "flags": [
         "open",
         "door_ok",
@@ -67,7 +67,7 @@
       ],
       "id": "cache_east_wing",
       "kind": "cracked_cache",
-      "nearest_door": 327,
+      "nearest_door": 318,
       "nearest_door_id": "bounty_ore_bench",
       "pay_named": "",
       "pay_rarities": [
@@ -94,7 +94,7 @@
       ],
       "id": "bounty_ore_bench",
       "kind": "hauler_bounty",
-      "nearest_door": 327,
+      "nearest_door": 318,
       "nearest_door_id": "cache_east_wing",
       "pay_named": "",
       "pay_rarities": [
@@ -150,13 +150,13 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1306,
+    "d_landmark": 1305,
     "farther_share": "0.135",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1306,
-  "spawn_beacon_share": "0.555",
+  "spawn_beacon_m": 1305,
+  "spawn_beacon_share": "0.554",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -172,8 +172,100 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.339
+      "value": 1.313
     }
   ],
-  "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"
+  "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
+  "zones": {
+    "anchors": [
+      {
+        "cost": 1348.7,
+        "d_landmark": 389.3,
+        "name": "lens_rocks",
+        "on_route": false,
+        "rank": 1,
+        "viable": true
+      },
+      {
+        "cost": 1342.6,
+        "d_landmark": 132.8,
+        "name": "knuckle_w",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1341.6,
+        "d_landmark": 132.8,
+        "name": "knuckle_e",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1239.2,
+        "d_landmark": 85.3,
+        "name": "keel_rib_e",
+        "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1237.9,
+        "d_landmark": 85.3,
+        "name": "keel_rib_w",
+        "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1160.3,
+        "d_landmark": 143.9,
+        "name": "carve_step_lip_7.2",
+        "on_route": true,
+        "rank": 0,
+        "viable": true
+      },
+      {
+        "cost": 642.8,
+        "d_landmark": 770.1,
+        "name": "fin_west",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 319.1,
+        "d_landmark": -1.0,
+        "name": "open",
+        "on_route": false,
+        "rank": 3,
+        "viable": true
+      },
+      {
+        "cost": 51.5,
+        "d_landmark": 1350.7,
+        "name": "slickrock_run_shelf",
+        "on_route": false,
+        "rank": 4,
+        "viable": true
+      }
+    ],
+    "count": 191,
+    "crossings": {
+      "drop": 96,
+      "ride": 13,
+      "walk": 347
+    },
+    "hidden": [
+      {
+        "count": 2,
+        "id": "saddle_seam",
+        "zones": [
+          "saddle_step_1",
+          "slickrock_run.2"
+        ]
+      }
+    ]
+  }
 }

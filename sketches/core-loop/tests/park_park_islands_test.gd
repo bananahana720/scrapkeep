@@ -12,9 +12,9 @@ extends SceneTree
 #
 # Greybox pass, 2026-10-11 (KD5); fix round 2026-10-12 (flat arena, full-width sheets, the tram
 # station ledge, the pockets moved). The byte-identity of two builds is a CLI receipt of the unit,
-# not rerun here: the bake takes about 8 s and the shipped graph tool about 18 s on this stage
-# (the greybox's sloped apron made the tool's float32 search re-relax without end; the flat
-# arena does not), and the freshness pin below holds the committed graph to the shipped tool.
+# not rerun here: the continuation's bake took 11.002 s and the shipped graph tool
+# 8.380 s. The accepted float32 search fix makes comparison and storage agree, with tied
+# predecessors resolved by lower index. The freshness pin holds the graph to that shipped tool.
 #
 # The PARK.md 2.12 distances are read from tools/park_graph.gd, so this test cannot drift from the
 # tool that rules them. sight_share 0.85 is the stage page's own landmark row.
