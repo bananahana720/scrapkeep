@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for 5b903a3, bbe53ec, 17429d6.
+# counter.gd SHA256 56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca -> 5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554; merged pack stagger, rename and shared-recovery changes.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -6,7 +8,7 @@ const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/enemy_gyro_jammer.glb"
 const BASE_CONSTS := {"FIELD_RADIUS": 7.0, "DRIFT": 11.0, "DRIFT_HZ": 0.7, "HP": 40.0}
 const BASE_INHERITED := {
-	"counter": "56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca",
+	"counter": "5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554",
 	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
 }
 const BASE_CONFIGURE := """func _configure(threat: float) -> void:

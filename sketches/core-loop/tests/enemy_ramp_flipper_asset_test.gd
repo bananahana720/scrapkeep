@@ -1,10 +1,12 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for 5b903a3, bbe53ec, 17429d6.
+# counter.gd SHA256 56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca -> 5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554; merged pack stagger, rename and shared-recovery changes.
 extends SceneTree
 
 const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
 const BASE_MECHANIC_SHA := "b52181b178e4e9fab039ae3ae2acb13ccdb56d3d4dc3c6bbbacc4e4c56a16bde"
 const BASE_PARENTS := {
-	"counter": "56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca",
+	"counter": "5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554",
 	"enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b",
 }
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
