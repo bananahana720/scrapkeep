@@ -20,6 +20,8 @@ const SEED := 8008
 const OPS := 1000
 const STEP := 1.0 / 60.0
 const LIMIT := 30.0
+# 2026-10-12 SR8 round 3: 216 existing checks plus 128 run-end lifecycle checks.
+const EXPECTED_CHECKS := 344
 # The lab rows, pinned here so a drift in Devices.ROWS fails the test instead of moving the
 # expectation with it. Change a value here only together with its start value in devices.gd
 # (comps/ror2/companions.md). sticky's cap is Kest's kit knob default (Weapons.STICKY_MAX_LIVE).
@@ -27,6 +29,9 @@ const LAB_ROWS := {
 	"sticky": {"cap": 3, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
 	"mini": {"cap": 8, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
 	"sentry": {"cap": 1, "refill": 2.0, "leash_m": 60.0, "recall_after": 1.0},
+	"kest_mine": {"cap": 10, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
+	"kest_raid": {"cap": 64, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
+	"sable_stake": {"cap": 11, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
 }
 
 var _t := T.new("device_caps_test")
@@ -63,9 +68,14 @@ func _physics_process(_delta: float) -> bool:
 	_check_recall_pure()
 	_check_live_minis()
 	_check_live_thrown()
+	_check_external_charge_exit()
 	_check_live_sentry()
 	_check_live_recall()
+	_check_live_kit_payloads()
+	_check_live_stakes()
 	_check_cleared()
+	_check_run_ended()
+	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
 	return true
 
@@ -147,6 +157,9 @@ func _check_cap_pure() -> void:
 	for kind in rows:
 		ids[kind] = []
 		worst[kind] = 0
+		for i in int(rows[kind]["cap"]):
+			ids[kind].append(ledger.deploy(kind, Vector3.ZERO)["id"])
+		worst[kind] = ledger.count(kind)
 	for i in OPS:
 		var kind: String = rows.keys()[rng.randi_range(0, rows.size() - 1)]
 		var roll := rng.randi_range(0, 9)
@@ -302,6 +315,54 @@ func _check_live_thrown() -> void:
 	_combat.sticky.clear()
 
 
+# External destruction must release ordinary charges too, before their next step. Test
+# both freeing the node and leaving the tree, then repeat take() beside a live survivor.
+func _check_external_charge_exit() -> void:
+	if _devices() == null:
+		return
+	_as_class("demolitions_caster")
+	var manager = _combat.sticky
+	var at: Vector3 = _game.player.ball_position()
+	for mini in [false, true]:
+		var kind := "mini" if mini else "sticky"
+		for freed in [true, false]:
+			var label := "%s external %s" % [kind, "free" if freed else "exit"]
+			var charge: Dictionary = manager.drop(at, 0.0, 1.0, 99.0, 99.0) if mini \
+				else manager.throw(at, at, 0.0, 1.0, 99.0, false)
+			var survivor: Dictionary = manager.drop(at, 0.0, 1.0, 99.0, 99.0) if mini \
+				else manager.throw(at, at, 0.0, 1.0, 99.0, false)
+			var id := int(charge["device_id"])
+			var node: Node3D = charge["node"]
+			_t.eq("%s starts with two slots" % label, _devices().count(kind), 2)
+			if freed:
+				node.free()
+			else:
+				manager.remove_child(node)
+			_t.eq("%s immediately releases its slot" % label, _devices().count(kind), 1)
+			_t.eq("%s removes its ledger id" % label, _devices().kind_of(id), "")
+			_t.eq("%s immediately leaves the manager" % label, manager.charges.has(charge), false)
+			_t.eq("%s next step returns no detonation" % label, manager.step(STEP, null, []), [])
+			_t.eq("%s next step preserves only the survivor" % label, manager.charges, [survivor])
+			manager.take(charge)
+			manager.take(charge)
+			_t.eq("%s repeated take preserves the other slot" % label, _devices().count(kind), 1)
+			_t.eq("%s repeated take preserves the manager" % label, manager.charges, [survivor])
+			_t.eq("%s does not create refill debt" % label, _devices().refilling(kind), 0)
+			if not freed:
+				node.free()
+			manager.clear()
+			_t.eq("%s survivor cleanup releases its slot" % label, _devices().count(kind), 0)
+		# take() releases first; the later tree-exit signal must be a no-op too.
+		var taken: Dictionary = manager.drop(at, 0.0, 1.0, 99.0, 99.0) if mini \
+			else manager.throw(at, at, 0.0, 1.0, 99.0, false)
+		var taken_node: Node3D = taken["node"]
+		manager.take(taken)
+		_t.eq("%s take releases before node exit" % kind, _devices().count(kind), 0)
+		taken_node.free()
+		_t.eq("%s take then exit keeps zero slots" % kind, _devices().count(kind), 0)
+		_t.eq("%s take then exit keeps manager empty" % kind, manager.charges, [])
+
+
 # Live Sentry Post: one turret per dismount, replaced by the next; it expires on its knob;
 # its slot refills after the row's refill time.
 func _check_live_sentry() -> void:
@@ -369,6 +430,91 @@ func _check_live_recall() -> void:
 	_t.eq("recalled mini leaves the count", _devices().count("mini"), 0)
 
 
+func _check_live_kit_payloads() -> void:
+	_as_class("demolitions_caster")
+	var ult = _combat.ultimate
+	var owner: Vector3 = _game.player.ball_position()
+	var booms := [0]
+	var hear := func(_at: Vector3, _crit: bool): booms[0] += 1
+	_game.events.sticky_detonated.connect(hear)
+	for pair in [["minelayer", "kest_mine"], ["air_raid", "kest_raid"]]:
+		ult.clear_payloads()
+		ult._id = pair[0]
+		var kind: String = pair[1]
+		var cap: int = LAB_ROWS[kind]["cap"]
+		var over := 0
+		var mismatches := 0
+		for i in cap * 3:
+			ult._drop(owner + Vector3.RIGHT * 5.0, 0.0, 0.0)
+			if ult.payloads.charges.size() > cap:
+				over += 1
+			if _devices().count(kind) != ult.payloads.charges.size():
+				mismatches += 1
+		_t.eq("%s live count never exceeds its cap" % kind, over, 0)
+		_t.eq("%s ledger equals live payloads" % kind, mismatches, 0)
+		_t.eq("%s fills its own kind" % kind, _devices().count(kind), cap)
+		_t.eq("%s does not spend normal mini slots" % kind, _devices().count("mini"), 0)
+		ult.take_charge(ult.payloads.charges[0])
+		_t.eq("%s destroyed payload leaves immediately" % kind, _devices().count(kind), cap - 1)
+		var destroyed: Dictionary = ult.payloads.charges[0]
+		destroyed["node"].free()
+		_t.eq("%s external destruction leaves the count" % kind, _devices().count(kind), cap - 2)
+		_t.eq("%s external destruction leaves the manager" % kind, ult.payloads.charges.has(destroyed), false)
+		var charge: Dictionary = ult.payloads.charges[0]
+		charge["pos"] = owner + Vector3.RIGHT * 65.0
+		booms[0] = 0
+		_combat._step_devices(0.99)
+		_t.eq("%s stays before recall deadline" % kind, _devices().count(kind), cap - 2)
+		_combat._step_devices(0.01)
+		_t.eq("%s recalled payload leaves the world" % kind, ult.payloads.charges.has(charge), false)
+		_t.eq("%s recalled payload leaves the count" % kind, _devices().count(kind), cap - 3)
+		_t.eq("%s recall never detonates" % kind, booms[0], 0)
+		ult.clear_payloads()
+		_t.eq("%s clear releases every slot" % kind, _devices().count(kind), 0)
+	_game.events.sticky_detonated.disconnect(hear)
+	ult._id = ""
+
+
+func _check_live_stakes() -> void:
+	_as_class("pylon_engineer")
+	var stakes = _combat.ultimate.stakes
+	stakes.set_physics_process(false)
+	stakes.fold()
+	var kind := "sable_stake"
+	var cap: int = LAB_ROWS[kind]["cap"]
+	var owner: Vector3 = _game.player.ball_position()
+	var over := 0
+	var mismatches := 0
+	for i in cap * 3:
+		stakes.plant(owner + Vector3.RIGHT * 5.0)
+		if stakes.nodes.size() > cap:
+			over += 1
+		if _devices().count(kind) != stakes.nodes.size():
+			mismatches += 1
+	_t.eq("stakes never exceed the table cap", over, 0)
+	_t.eq("stake ledger matches physical stakes", mismatches, 0)
+	_t.eq("stakes fill their own kind", _devices().count(kind), cap)
+	stakes.nodes[0].free()
+	_t.eq("external stake destruction leaves the count", _devices().count(kind), cap - 1)
+	_t.eq("external stake destruction leaves the manager", stakes.nodes.size(), cap - 1)
+	var stake = stakes.nodes[0]
+	stake.global_position = owner + Vector3.RIGHT * 65.0
+	_combat._step_devices(0.99)
+	_t.eq("stake stays before recall deadline", _devices().count(kind), cap - 1)
+	_combat._step_devices(0.01)
+	_t.eq("recalled stake leaves the manager", stakes.nodes.has(stake), false)
+	_t.eq("recalled stake leaves the count", _devices().count(kind), cap - 2)
+	stakes.arm()
+	stakes.step(5.99)
+	_t.eq("stakes survive before authored lifetime", _devices().count(kind), cap - 2)
+	stakes.step(0.01)
+	_t.eq("expired stakes leave every slot", _devices().count(kind), 0)
+	stakes.plant(owner)
+	stakes.fold()
+	_t.eq("fold releases stake slots", _devices().count(kind), 0)
+	stakes.set_physics_process(true)
+
+
 # The ledger is per attempt: a new attempt starts every kind empty with no slot refilling.
 func _check_cleared() -> void:
 	if _devices() == null:
@@ -379,3 +525,87 @@ func _check_cleared() -> void:
 	for kind in _rows():
 		left += _devices().count(kind) + _devices().refilling(kind)
 	_t.eq("a new attempt clears every device and slot", left, 0)
+
+
+# End the run directly with every kind live. Landed payloads must leave even when
+# the inherited ultimate abort returns from IDLE or only ends RECOVER.
+func _check_run_ended() -> void:
+	var ult = _combat.ultimate
+	var stakes = ult.stakes
+	stakes.set_physics_process(false)
+	var booms := [0]
+	var stages := [0]
+	var hear := func(_at: Vector3, _crit: bool): booms[0] += 1
+	var stage_clear := func(_reason: String): stages[0] += 1
+	_game.events.sticky_detonated.connect(hear)
+	_game.events.stage_content_cleared.connect(stage_clear)
+	for phase in [ult.IDLE, ult.RECOVER]:
+		var label := "run end %s" % ["IDLE" if phase == ult.IDLE else "RECOVER"]
+		_combat.sticky.clear()
+		ult.clear_payloads()
+		stakes.fold()
+		_devices().clear()
+		_as_class("pylon_engineer")
+		_game.player.tree._knobs["sentry"] = 4.0
+		_game.player.kit.mount_face = _game.player.ball_position()
+		_combat._on_dismounted_sentry(Vector3.ZERO)
+		_as_class("demolitions_caster")
+		var at: Vector3 = _game.player.ball_position()
+		var sticky: Dictionary = _combat.sticky.throw(at, at, 0.0, 1.0, 99.0, false)
+		var mini: Dictionary = _combat.sticky.drop(at, 0.0, 1.0, 99.0, 99.0)
+		ult._id = "minelayer"
+		var mine: Dictionary = ult._drop(at, 0.0, 1.0)
+		ult._id = "air_raid"
+		var raid: Dictionary = ult._drop(at, 0.0, 1.0)
+		# _drop creates flight payloads; landing makes these persistent, armed payloads.
+		for charge in [mine, raid]:
+			charge["_inert"] = false
+			charge["fuse"] = 6.0
+		var stake = stakes.plant(at)
+		stakes.arm()
+		var ids := {"sticky": int(sticky["device_id"]), "mini": int(mini["device_id"]),
+			"sentry": int(_combat._sentry["id"]), "kest_mine": int(mine["device_id"]),
+			"kest_raid": int(raid["device_id"]), "sable_stake": int(stake.device_id)}
+		var nodes := [sticky["node"], mini["node"], mine["node"], raid["node"], stake]
+		for kind in LAB_ROWS:
+			_t.eq("%s starts with live %s" % [label, kind], _devices().count(kind), 1)
+			_t.eq("%s starts with registered %s" % [label, kind], _devices().kind_of(ids[kind]), kind)
+		_t.check("%s starts with all physical nodes in the tree" % label,
+			nodes.all(func(node): return is_instance_valid(node) and node.is_inside_tree()))
+		_t.eq("%s starts with two landed payloads" % label, ult.payloads.charges.size(), 2)
+		ult._id = "minelayer"
+		ult._phase = phase
+		_t.eq("%s starts in the intended ultimate phase" % label, ult._phase, phase)
+		booms[0] = 0
+		stages[0] = 0
+		_game.events.run_ended.emit(phase == ult.RECOVER)
+		_t.eq("%s never emits stage clear" % label, stages[0], 0)
+		_check_run_end_empty(label + " immediate", ids, booms[0])
+		_game.events.run_ended.emit(phase == ult.RECOVER)
+		# clear() queues deletion. Force those later exits now, after repeated cleanup.
+		for node in nodes:
+			if is_instance_valid(node):
+				node.free()
+		_t.eq("%s next sticky step returns no detonation" % label, _combat.sticky.step(STEP, null, []), [])
+		ult._step_payloads(STEP)
+		stakes.step(STEP)
+		_combat._step_devices(STEP)
+		_combat._tick_sentry(STEP)
+		_check_run_end_empty(label + " repeated and node exits", ids, booms[0])
+		_t.eq("%s repeated cleanup never emits stage clear" % label, stages[0], 0)
+	_game.events.sticky_detonated.disconnect(hear)
+	_game.events.stage_content_cleared.disconnect(stage_clear)
+	ult._id = ""
+	stakes.set_physics_process(true)
+
+
+func _check_run_end_empty(label: String, ids: Dictionary, booms: int) -> void:
+	_t.eq("%s sticky manager empty" % label, _combat.sticky.charges, [])
+	_t.eq("%s payload manager empty" % label, _combat.ultimate.payloads.charges, [])
+	_t.eq("%s stake manager empty" % label, _combat.ultimate.stakes.nodes.size(), 0)
+	_t.eq("%s sentry manager empty" % label, _combat._sentry, {})
+	for kind in LAB_ROWS:
+		_t.eq("%s %s live count zero" % [label, kind], _devices().count(kind), 0)
+		_t.eq("%s %s refill count zero" % [label, kind], _devices().refilling(kind), 0)
+		_t.eq("%s %s ledger id absent" % [label, kind], _devices().kind_of(ids[kind]), "")
+	_t.eq("%s never detonates" % label, booms, 0)
