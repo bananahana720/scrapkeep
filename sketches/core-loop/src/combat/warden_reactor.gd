@@ -195,9 +195,9 @@ func _ride(warden, delta: float) -> void:
 	var speed := planar.length()
 	if speed > 0.01 and speed < _entry_speed:
 		push = planar / speed * (_entry_speed - speed) / delta
-	if mounted and target.has_method("set_velocity_now"):
+	if mounted and target.has_method("body") and target.body().has_method("set_velocity_now"):
 		var held: Vector3 = planar.normalized() * maxf(speed, _entry_speed)
-		target.set_velocity_now(Vector3(held.x, want_vy, held.z))
+		target.body().set_velocity_now(Vector3(held.x, want_vy, held.z))
 	else:
 		target.add_external_accel(Vector3(push.x, maxf(up, 0.0), push.z))
 
