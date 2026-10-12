@@ -60,6 +60,12 @@
           "note": "The right fingertip uncurls beside its yoke."
         },
         {
+          "frame": 19,
+          "curl.R": -4,
+          "tail": 4,
+          "note": "The right fingertip uncurls beside its yoke. Hold this visible beat for four frames."
+        },
+        {
           "frame": 31,
           "hand.R": {
             "at": [
@@ -100,6 +106,19 @@
           "note": "The right paw settles back against its yoke."
         },
         {
+          "frame": 52,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "tail": 12,
+          "note": "The right paw settles back against its yoke. Hold this visible beat for four frames."
+        },
+        {
           "frame": 64,
           "tail": 14,
           "note": "The tail reaches the right end of its sway."
@@ -119,7 +138,24 @@
           "pose": "rest",
           "note": "Both paws finish at the bind-pose yokes."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 16,
+        "contact": 49,
+        "peak": 49,
+        "release": 106
+      },
+      "moving_hands": {
+        "anticipation": [
+          "R"
+        ],
+        "contact": [
+          "R"
+        ],
+        "peak": [
+          "R"
+        ]
+      }
     },
     "ult_ride_loop": {
       "end": 43,
@@ -173,6 +209,37 @@
           "note": "The shoulders rise slightly against the lap bar."
         },
         {
+          "frame": 14,
+          "torso": {
+            "height": 0.975,
+            "pitch": -9
+          },
+          "head": {
+            "pitch": -7
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "shoulder": {
+            "lift": 0.006
+          },
+          "tail": 4,
+          "note": "The shoulders rise slightly against the lap bar. Hold this visible beat for four frames."
+        },
+        {
           "frame": 22,
           "torso": {
             "height": 0.955,
@@ -199,6 +266,34 @@
           },
           "tail": -4,
           "note": "The seated torso settles into the next cable grip."
+        },
+        {
+          "frame": 25,
+          "torso": {
+            "height": 0.955,
+            "pitch": -11
+          },
+          "head": {
+            "pitch": -9
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "tail": -4,
+          "note": "The seated torso settles into the next cable grip. Hold this visible beat for four frames."
         },
         {
           "frame": 33,
@@ -233,7 +328,27 @@
           "pose": "ride",
           "note": "Both paws hold the hauled-back lap bar."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 11,
+        "contact": 22,
+        "peak": 22,
+        "release": 33
+      },
+      "moving_hands": {
+        "anticipation": [
+          "R",
+          "L"
+        ],
+        "contact": [
+          "R",
+          "L"
+        ],
+        "peak": [
+          "R",
+          "L"
+        ]
+      }
     },
     "class_up": {
       "end": 37,
@@ -249,221 +364,215 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both paws start at the yokes."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         },
         {
           "frame": 4,
+          "note": "Both shoulders roll up and forward together, paws mirror beside seat frame.",
           "torso": {
-            "pitch": -14
+            "pitch": -12
           },
           "shoulder": {
             "lift": 0.045
           },
           "head": {
-            "pitch": 14
+            "pitch": 12
           },
           "hand.R": {
             "at": [
               0.43,
-              0.1,
+              0.3,
               0.1
             ]
           },
           "hand.L": {
             "at": [
               -0.43,
-              0.1,
+              0.3,
               0.1
             ]
-          },
-          "curl.R": -10,
-          "curl.L": -10,
-          "note": "Both shoulders roll forward by 14 degrees; both paws draw back beside the seat frame."
+          }
         },
         {
           "frame": 7,
+          "note": "Both shoulders roll up and forward together, paws mirror beside seat frame. Hold this beat.",
           "torso": {
-            "pitch": -14
+            "pitch": -12
           },
           "shoulder": {
             "lift": 0.045
           },
           "head": {
-            "pitch": 14
+            "pitch": 12
           },
           "hand.R": {
             "at": [
               0.43,
-              0.1,
+              0.3,
               0.1
             ]
           },
           "hand.L": {
             "at": [
               -0.43,
-              0.1,
+              0.3,
               0.1
             ]
-          },
-          "curl.R": -10,
-          "curl.L": -10,
-          "note": "Hold the forward shoulder roll beside the seat frame."
+          }
         },
         {
-          "frame": 10,
-          "shoulder": {
-            "lift": 0.05
-          },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0.1,
-              -0.08,
-              0.1
-            ]
-          },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              -0.1,
-              -0.08,
-              0.1
-            ]
-          },
-          "note": "The shoulders pass through upright as both yokes begin to spread."
-        },
-        {
-          "frame": 13,
+          "frame": 12,
+          "note": "Both shoulders complete the back/down roll symmetrically.",
           "torso": {
-            "pitch": 14
+            "pitch": 12
           },
           "shoulder": {
-            "lift": 0.025
+            "lift": 0.018
           },
           "head": {
-            "pitch": -14
+            "pitch": -12
           },
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0.18,
-              -0.12,
-              0.1
+            "at": [
+              0.44,
+              0.36,
+              0.09
             ]
           },
           "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              -0.18,
-              -0.12,
-              0.1
+            "at": [
+              -0.44,
+              0.36,
+              0.09
             ]
-          },
-          "curl.R": -18,
-          "curl.L": -18,
-          "note": "Both shoulders roll back by 14 degrees and both paws flex the yokes outward and back, opposite the chest pull."
+          }
         },
         {
           "frame": 16,
+          "note": "Both yokes flex outward at once; both shoulders roll back and down, chest out.",
           "torso": {
-            "pitch": 14
+            "pitch": 35
           },
           "shoulder": {
-            "lift": 0.025
+            "lift": -0.005
           },
           "head": {
-            "pitch": -14
+            "pitch": -35
           },
           "hand.R": {
             "control": "Grip.R",
             "offset": [
-              0.18,
-              -0.12,
-              0.1
+              0.14,
+              -0.04,
+              0.04
             ]
           },
           "hand.L": {
             "control": "Grip.L",
             "offset": [
-              -0.18,
-              -0.12,
-              0.1
+              -0.14,
+              -0.04,
+              0.04
             ]
           },
           "curl.R": -18,
-          "curl.L": -18,
-          "note": "Hold the outward yoke flex for four frames."
+          "curl.L": -18
         },
         {
-          "frame": 28,
+          "frame": 19,
+          "note": "Both yokes flex outward at once; both shoulders roll back and down, chest out. Hold this beat.",
           "torso": {
-            "pitch": 3
+            "pitch": 35
           },
           "shoulder": {
-            "lift": -0.015
+            "lift": -0.005
           },
           "head": {
-            "pitch": -3
+            "pitch": -35
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0.14,
+              -0.04,
+              0.04
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              -0.14,
+              -0.04,
+              0.04
+            ]
+          },
+          "curl.R": -18,
+          "curl.L": -18
+        },
+        {
+          "frame": 26,
+          "note": "Small chest-out finish, both hands ease yokes together.",
+          "torso": {
+            "pitch": 15
+          },
+          "head": {
+            "pitch": -15
           },
           "hand.R": {
             "control": "Grip.R",
             "offset": [
               0.05,
-              -0.03,
-              0.03
+              -0.02,
+              0.02
             ]
           },
           "hand.L": {
             "control": "Grip.L",
             "offset": [
               -0.05,
-              -0.03,
-              0.03
+              -0.02,
+              0.02
             ]
-          },
-          "note": "Both yokes ease inward after the outward flex; shoulders lower with the face neutral."
+          }
         },
         {
-          "frame": 31,
+          "frame": 30,
+          "note": "Chest settles, both paws approach yokes.",
           "torso": {
-            "pitch": 3
-          },
-          "shoulder": {
-            "lift": -0.015
+            "pitch": 4
           },
           "head": {
-            "pitch": -3
+            "pitch": -4
           },
           "hand.R": {
             "control": "Grip.R",
             "offset": [
-              0.05,
-              -0.03,
-              0.03
+              0,
+              0,
+              0
             ]
           },
           "hand.L": {
             "control": "Grip.L",
             "offset": [
-              -0.05,
-              -0.03,
-              0.03
+              0,
+              0,
+              0
             ]
-          },
-          "note": "Hold the eased yokes before the return."
+          }
         },
         {
           "frame": 37,
-          "pose": "rest",
-          "note": "Both shoulders and paws finish at seated rest."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         }
       ],
       "beats": {
         "anticipation": 7,
-        "contact": 13,
-        "peak": 13,
-        "release": 28
+        "contact": 16,
+        "peak": 16,
+        "release": 30
       },
       "beat_targets": {
         "anticipation": {
@@ -478,10 +587,25 @@
       "strip_frames": [
         1,
         7,
-        13,
-        28,
+        16,
+        26,
         37
-      ]
+      ],
+      "beat_note": "Beat marks are measured from rebuilt GLB. strip_frames documents the unchanged shipped renderer key-index selection.",
+      "moving_hands": {
+        "anticipation": [
+          "R",
+          "L"
+        ],
+        "contact": [
+          "R",
+          "L"
+        ],
+        "peak": [
+          "R",
+          "L"
+        ]
+      }
     },
     "cast_special": {
       "end": 22,
@@ -499,46 +623,66 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "The right paw begins on its yoke."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
+        },
+        {
+          "frame": 2,
+          "note": "Right shoulder starts down; paw travels low from yoke to clamp bank.",
+          "torso": {
+            "pitch": -6,
+            "roll": 8,
+            "yaw": -5
+          },
+          "hand.R": {
+            "at": [
+              0.42,
+              0.38,
+              -0.06
+            ]
+          }
         },
         {
           "frame": 3,
+          "note": "Right forearm reaches low toward clamp bank, right shoulder drops with a rightward torso lean.",
           "torso": {
-            "yaw": 3,
-            "pitch": -2
+            "pitch": -12,
+            "roll": 16,
+            "yaw": -10
           },
           "hand.R": {
             "control": "ClampLever",
             "offset": [
-              -0.09,
               0,
-              0.49
+              0.06,
+              0.09
             ]
-          },
-          "note": "The right paw rises above the clamp bank, left paw planted on its yoke."
+          }
         },
         {
           "frame": 6,
+          "note": "Right forearm reaches low toward clamp bank, right shoulder drops with a rightward torso lean. Hold this beat.",
           "torso": {
-            "yaw": 3,
-            "pitch": -2
+            "pitch": -12,
+            "roll": 16,
+            "yaw": -10
           },
           "hand.R": {
             "control": "ClampLever",
             "offset": [
-              -0.09,
               0,
-              0.49
+              0.06,
+              0.09
             ]
-          },
-          "note": "Hold the raised clamp reach before the fast throw."
+          }
         },
         {
           "frame": 7,
+          "note": "Right paw closes on actual clamp knob; shoulder stays down.",
           "torso": {
-            "yaw": 5,
-            "pitch": -3
+            "pitch": -20,
+            "roll": 20,
+            "yaw": -12
           },
           "hand.R": {
             "control": "ClampLever",
@@ -548,66 +692,125 @@
               0
             ]
           },
-          "curl.R": -16,
-          "note": "The right paw closes around the clamp lever knob."
+          "curl.R": -20
+        },
+        {
+          "frame": 8,
+          "note": "Right paw closes on actual clamp knob; shoulder stays down. Hold.",
+          "torso": {
+            "pitch": -20,
+            "roll": 20,
+            "yaw": -12
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -20
         },
         {
           "frame": 10,
+          "note": "Right forearm pushes forward and down along clamp throw; body drives the vice shut.",
           "torso": {
-            "height": 0.98,
-            "pitch": 3,
-            "yaw": 4
-          },
-          "head": {
-            "pitch": -3
+            "pitch": -20,
+            "roll": 20,
+            "yaw": -12
           },
           "hand.R": {
             "control": "ClampLever",
             "offset": [
               0,
-              -0.08,
-              0.02
+              0.07,
+              -0.025
             ]
           },
-          "curl.R": -24,
-          "note": "The right paw throws the clamp lever back."
+          "curl.R": -24
         },
         {
           "frame": 13,
+          "note": "Right forearm pushes forward and down along clamp throw; body drives the vice shut. Hold this beat.",
           "torso": {
-            "height": 0.99,
-            "pitch": 2,
-            "yaw": 3
+            "pitch": -20,
+            "roll": 20,
+            "yaw": -12
           },
           "hand.R": {
             "control": "ClampLever",
             "offset": [
               0,
-              -0.08,
-              0.02
+              0.07,
+              -0.025
             ]
           },
-          "curl.R": -20,
-          "note": "The right paw holds the lever at the end of its throw."
+          "curl.R": -24
         },
         {
-          "frame": 17,
+          "frame": 14,
+          "note": "Right forearm pushes forward and down along clamp throw; body drives the vice shut. Hold this beat. Hold.",
           "torso": {
-            "yaw": 2
+            "pitch": -20,
+            "roll": 20,
+            "yaw": -12
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              0.07,
+              -0.025
+            ]
+          },
+          "curl.R": -24
+        },
+        {
+          "frame": 16,
+          "note": "Right shoulder rises as forearm releases the clamp.",
+          "torso": {
+            "pitch": -8,
+            "roll": 8
           },
           "hand.R": {
             "at": [
-              0.4,
-              0.32,
-              0.025
+              0.44,
+              0.38,
+              -0.1
             ]
+          }
+        },
+        {
+          "frame": 18,
+          "note": "Right shoulder rises as forearm releases the clamp. Hold.",
+          "torso": {
+            "pitch": -8,
+            "roll": 8
           },
-          "note": "The right paw lifts off the lever toward the yoke."
+          "hand.R": {
+            "at": [
+              0.44,
+              0.38,
+              -0.1
+            ]
+          }
+        },
+        {
+          "frame": 19,
+          "note": "Right paw nears yoke.",
+          "hand.R": {
+            "at": [
+              0.35,
+              0.4,
+              0.03
+            ]
+          }
         },
         {
           "frame": 22,
-          "pose": "rest",
-          "note": "The right paw returns to its yoke."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         }
       ],
       "contact": {
@@ -616,10 +819,10 @@
         "control": "ClampLever"
       },
       "beats": {
-        "anticipation": 4,
-        "contact": 7,
+        "anticipation": 6,
+        "contact": 10,
         "peak": 10,
-        "release": 17
+        "release": 19
       },
       "beat_targets": {
         "anticipation": {
@@ -631,11 +834,23 @@
       },
       "strip_frames": [
         1,
-        4,
-        7,
-        17,
+        6,
+        10,
+        16,
         22
-      ]
+      ],
+      "beat_note": "Beat marks are measured from rebuilt GLB. strip_frames documents the unchanged shipped renderer key-index selection.",
+      "moving_hands": {
+        "anticipation": [
+          "R"
+        ],
+        "contact": [
+          "R"
+        ],
+        "peak": [
+          "R"
+        ]
+      }
     },
     "cast_line": {
       "end": 25,
@@ -653,30 +868,44 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "The right paw begins on its yoke."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         },
         {
           "frame": 2,
+          "note": "Short low reach to drum bank.",
           "torso": {
-            "yaw": 5,
-            "pitch": -3
+            "pitch": -4
           },
           "hand.R": {
             "control": "DrumLever",
             "offset": [
-              -0.02,
-              0.1,
-              0.06
+              0,
+              0.03,
+              0.03
             ]
+          }
+        },
+        {
+          "frame": 3,
+          "note": "Right paw approaches drum knob.",
+          "torso": {
+            "pitch": -4
           },
-          "note": "Short anticipation: the right paw takes the drum handle forward before the first haul."
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              0,
+              0.01,
+              0.01
+            ]
+          }
         },
         {
           "frame": 4,
+          "note": "Right paw grips actual drum knob after bite, below shoulder height.",
           "torso": {
-            "yaw": 5,
-            "pitch": -3
+            "pitch": 0
           },
           "hand.R": {
             "control": "DrumLever",
@@ -686,54 +915,77 @@
               0
             ]
           },
-          "curl.R": -16,
-          "note": "The right paw contacts the actual drum knob three frames after the line bite."
+          "curl.R": -18
         },
         {
-          "frame": 7,
+          "frame": 5,
+          "note": "Right paw grips actual drum knob after bite, below shoulder height. Hold this beat.",
           "torso": {
-            "pitch": 8,
-            "yaw": 5
-          },
-          "head": {
-            "pitch": -5
+            "pitch": 4
           },
           "hand.R": {
             "control": "DrumLever",
             "offset": [
-              -0.02,
-              -0.1,
-              0.49
+              0,
+              0,
+              0
             ]
           },
-          "curl.R": -22,
-          "note": "First haul peak: the right paw draws the drum lever back and up, above the ring band."
+          "curl.R": -18
         },
         {
-          "frame": 10,
+          "frame": 6,
+          "note": "Right paw grips actual drum knob after bite, below shoulder height. Hold this beat.",
           "torso": {
-            "pitch": 8,
-            "yaw": 5
-          },
-          "head": {
-            "pitch": -5
+            "pitch": 8
           },
           "hand.R": {
             "control": "DrumLever",
             "offset": [
-              -0.02,
-              -0.1,
-              0.49
+              0,
+              0,
+              0
             ]
           },
-          "curl.R": -22,
-          "note": "Hold the first haul peak for four frames."
+          "curl.R": -18
+        },
+        {
+          "frame": 8,
+          "note": "First haul: right forearm pulls back toward chest, torso leans back.",
+          "torso": {
+            "pitch": 16
+          },
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              -0.04,
+              -0.17,
+              0.22
+            ]
+          },
+          "curl.R": -24
         },
         {
           "frame": 11,
+          "note": "First haul: right forearm pulls back toward chest, torso leans back. Hold this beat.",
           "torso": {
-            "yaw": 5,
-            "pitch": -3
+            "pitch": 16
+          },
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              -0.04,
+              -0.17,
+              0.22
+            ]
+          },
+          "curl.R": -24
+        },
+        {
+          "frame": 12,
+          "note": "Re-reach to drum lever between hauls.",
+          "torso": {
+            "pitch": 8
           },
           "hand.R": {
             "control": "DrumLever",
@@ -743,55 +995,43 @@
               0
             ]
           },
-          "curl.R": -16,
-          "note": "The right paw returns the drum knob forward before the second haul."
+          "curl.R": -18
         },
         {
-          "frame": 15,
+          "frame": 16,
+          "note": "Second haul: right forearm pulls back toward chest again, torso leans back.",
           "torso": {
-            "pitch": 10,
-            "yaw": 5
-          },
-          "head": {
-            "pitch": -6
+            "pitch": 16
           },
           "hand.R": {
             "control": "DrumLever",
             "offset": [
-              -0.02,
-              -0.1,
-              0.49
+              -0.04,
+              -0.17,
+              0.22
             ]
           },
-          "curl.R": -22,
-          "note": "Second haul peak: the right paw repeats the large back-and-up drum pull."
-        },
-        {
-          "frame": 18,
-          "torso": {
-            "pitch": 10,
-            "yaw": 5
-          },
-          "head": {
-            "pitch": -6
-          },
-          "hand.R": {
-            "control": "DrumLever",
-            "offset": [
-              -0.02,
-              -0.1,
-              0.49
-            ]
-          },
-          "curl.R": -22,
-          "note": "Hold the second haul peak for four frames."
+          "curl.R": -24
         },
         {
           "frame": 19,
+          "note": "Second haul: right forearm pulls back toward chest again, torso leans back. Hold this beat.",
           "torso": {
-            "yaw": 5,
-            "pitch": -3
+            "pitch": 16
           },
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              -0.04,
+              -0.17,
+              0.22
+            ]
+          },
+          "curl.R": -24
+        },
+        {
+          "frame": 21,
+          "note": "Second re-reach and release at drum lever.",
           "hand.R": {
             "control": "DrumLever",
             "offset": [
@@ -800,52 +1040,14 @@
               0
             ]
           },
-          "curl.R": -16,
-          "note": "The right paw returns the drum knob after its second haul."
-        },
-        {
-          "frame": 21,
           "torso": {
-            "yaw": 2
-          },
-          "hand.R": {
-            "at": [
-              0.43,
-              0.3,
-              0.18
-            ]
-          },
-          "note": "The drum returns forward and the right paw rises away toward its yoke."
-        },
-        {
-          "frame": 22,
-          "torso": {
-            "yaw": 2
-          },
-          "hand.R": {
-            "at": [
-              0.43,
-              0.3,
-              0.18
-            ]
-          },
-          "note": "The right paw clears the bank on the return."
-        },
-        {
-          "frame": 23,
-          "hand.R": {
-            "at": [
-              0.35,
-              0.38,
-              0.09
-            ]
-          },
-          "note": "The right paw nears the yoke."
+            "pitch": 8
+          }
         },
         {
           "frame": 25,
-          "pose": "rest",
-          "note": "The right paw finishes at its yoke."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         }
       ],
       "contact": {
@@ -854,9 +1056,9 @@
         "control": "DrumLever"
       },
       "beats": {
-        "anticipation": 7,
-        "contact": 15,
-        "peak": 15,
+        "anticipation": 4,
+        "contact": 8,
+        "peak": 16,
         "release": 21
       },
       "beat_targets": {
@@ -869,12 +1071,23 @@
       },
       "strip_frames": [
         1,
-        7,
-        15,
-        21,
+        4,
+        8,
+        16,
         25
       ],
-      "beat_note": "The strip shows the two haul peaks at f7 and f15. Verifier contact stays f4, inside the bite window. The shared shell driver has one throw and no second-haul input."
+      "beat_note": "Beat marks are measured from rebuilt GLB. strip_frames documents the unchanged shipped renderer key-index selection.",
+      "moving_hands": {
+        "anticipation": [
+          "R"
+        ],
+        "contact": [
+          "R"
+        ],
+        "peak": [
+          "R"
+        ]
+      }
     },
     "ult_ready": {
       "end": 19,
@@ -890,41 +1103,69 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both paws start at the yokes."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         },
         {
-          "frame": 4,
+          "frame": 3,
+          "note": "Chin starts a slow downward nod, hands stay below shoulders.",
           "head": {
-            "pitch": -10
+            "pitch": -12
+          }
+        },
+        {
+          "frame": 6,
+          "note": "Slow head nod peaks; both paws stay low on yokes, no salute.",
+          "head": {
+            "pitch": -30
+          },
+          "neck": {
+            "drop": -0.015
           },
           "hand.R": {
             "at": [
-              0.22,
-              0.2,
-              0.28
+              0.32,
+              0.4,
+              0.05
             ]
           },
-          "note": "One slow nod with the right paw beside the visor, clear of the clamp bank."
-        },
-        {
-          "frame": 7,
-          "head": {
-            "pitch": -10
-          },
-          "hand.R": {
+          "hand.L": {
             "at": [
-              0.22,
-              0.2,
-              0.28
+              -0.32,
+              0.4,
+              0.05
             ]
-          },
-          "note": "Hold the nod beside the visor for four frames."
+          }
         },
         {
           "frame": 9,
+          "note": "Slow head nod peaks; both paws stay low on yokes, no salute. Hold this beat.",
           "head": {
-            "pitch": -3
+            "pitch": -30
+          },
+          "neck": {
+            "drop": -0.015
+          },
+          "hand.R": {
+            "at": [
+              0.32,
+              0.4,
+              0.05
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.32,
+              0.4,
+              0.05
+            ]
+          }
+        },
+        {
+          "frame": 10,
+          "note": "One low finger tap on clamp knob, chin rises.",
+          "head": {
+            "pitch": -8
           },
           "hand.R": {
             "control": "ClampLever",
@@ -934,11 +1175,50 @@
               0
             ]
           },
-          "curl.R": -6,
-          "note": "The right fingertip taps the actual clamp knob once as the chin rises."
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -6
         },
         {
-          "frame": 12,
+          "frame": 13,
+          "note": "One low finger tap on clamp knob, chin rises. Hold this beat.",
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -6
+        },
+        {
+          "frame": 14,
+          "note": "Both paws settle on copper lap bar; body settles left with the nod.",
+          "torso": {
+            "pitch": -3,
+            "roll": -16
+          },
+          "head": {
+            "pitch": -25
+          },
           "hand.R": {
             "control": "LapBar.R",
             "offset": [
@@ -954,80 +1234,50 @@
               0,
               0
             ]
-          },
-          "note": "Both paws settle on the copper lap bar after the single clamp tap."
-        },
-        {
-          "frame": 15,
-          "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "note": "Hold both paws on the lap bar for four frames."
-        },
-        {
-          "frame": 16,
-          "hand.R": {
-            "at": [
-              0.22,
-              0.33,
-              -0.06
-            ]
-          },
-          "hand.L": {
-            "at": [
-              -0.22,
-              0.33,
-              -0.06
-            ]
-          },
-          "note": "Both paws leave the lap bar together."
+          }
         },
         {
           "frame": 17,
+          "note": "Both paws settle on copper lap bar; body settles left with the nod. Hold this beat.",
+          "torso": {
+            "pitch": -3,
+            "roll": -16
+          },
+          "head": {
+            "pitch": -25
+          },
           "hand.R": {
-            "at": [
-              0.28,
-              0.38,
-              0.02
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
             ]
           },
           "hand.L": {
-            "at": [
-              -0.28,
-              0.38,
-              0.02
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
             ]
-          },
-          "note": "Both paws approach the yokes together."
+          }
         },
         {
           "frame": 19,
-          "pose": "rest",
-          "note": "Both paws finish at seated rest for idle."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         }
       ],
       "beats": {
-        "anticipation": 7,
-        "contact": 12,
-        "peak": 12,
-        "release": 16
+        "anticipation": 6,
+        "contact": 14,
+        "peak": 6,
+        "release": 17
       },
       "beat_targets": {
         "anticipation": {
-          "R": "visor"
+          "R": "yoke grips"
         },
         "contact": {
           "R": "Control.LapBar",
@@ -1036,11 +1286,26 @@
       },
       "strip_frames": [
         1,
-        7,
-        12,
-        16,
+        6,
+        10,
+        14,
         19
-      ]
+      ],
+      "beat_note": "Beat marks are measured from rebuilt GLB. strip_frames documents the unchanged shipped renderer key-index selection.",
+      "moving_hands": {
+        "anticipation": [
+          "R",
+          "L"
+        ],
+        "contact": [
+          "R",
+          "L"
+        ],
+        "peak": [
+          "R",
+          "L"
+        ]
+      }
     },
     "ult_windup": {
       "end": 11,
@@ -1085,69 +1350,61 @@
           "note": "Both paws reach down toward the lap bar."
         },
         {
-          "frame": 5,
+          "frame": 6,
           "torso": {
-            "height": 0.98,
-            "pitch": -6
+            "height": 0.99,
+            "pitch": -3
           },
           "head": {
-            "pitch": -5
+            "pitch": -3
           },
           "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.24,
+              0.34,
+              -0.08
             ]
           },
           "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.24,
+              0.34,
+              -0.08
             ]
           },
-          "curl.R": -12,
-          "curl.L": -12,
-          "note": "Both paws close around the copper lap bar."
+          "note": "Both paws reach down toward the lap bar. Hold the low reach."
         },
         {
           "frame": 8,
-          "torso": {
-            "height": 0.965,
-            "pitch": -9
-          },
-          "head": {
-            "pitch": -7
-          },
-          "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              -0.067,
-              0.062
-            ]
-          },
-          "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              -0.067,
-              0.062
-            ]
-          },
-          "curl.R": -16,
-          "curl.L": -16,
-          "note": "Both paws haul the lap bar toward the seated torso."
+          "pose": "ride",
+          "note": "Both paws finish the lap-bar haul and hold it through ride hand-off."
         },
         {
           "frame": 11,
           "pose": "ride",
-          "note": "The head stays down over the fully hauled lap bar."
+          "note": "Exact ride anchor retained at hand-off."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 3,
+        "contact": 8,
+        "peak": 8,
+        "release": 11
+      },
+      "moving_hands": {
+        "anticipation": [
+          "R",
+          "L"
+        ],
+        "contact": [
+          "R",
+          "L"
+        ],
+        "peak": [
+          "R",
+          "L"
+        ]
+      }
     },
     "ult_strike": {
       "end": 19,
@@ -1173,9 +1430,9 @@
           "frame": 4,
           "torso": {
             "height": 0.945,
-            "pitch": -13,
-            "yaw": 7,
-            "roll": -3
+            "pitch": -22,
+            "yaw": 15,
+            "roll": -9
           },
           "head": {
             "pitch": -9,
@@ -1199,19 +1456,19 @@
           },
           "curl.R": -22,
           "curl.L": -22,
-          "note": "The seated torso leans into the ring spin."
+          "note": "Lean and twist visibly into the ring spin while lap bar stays held."
         },
         {
           "frame": 7,
           "torso": {
-            "height": 0.94,
-            "pitch": -14,
-            "yaw": 10,
-            "roll": -4
+            "height": 0.945,
+            "pitch": -22,
+            "yaw": 15,
+            "roll": -9
           },
           "head": {
-            "pitch": -10,
-            "yaw": 4
+            "pitch": -9,
+            "yaw": 3
           },
           "hand.R": {
             "control": "LapBar.R",
@@ -1229,9 +1486,9 @@
               0.08218
             ]
           },
-          "curl.R": -28,
-          "curl.L": -28,
-          "note": "Both paws lock the lap bar at the peak of the spin."
+          "curl.R": -22,
+          "curl.L": -22,
+          "note": "Lean and twist visibly into the ring spin while lap bar stays held. Hold the spin peak four frames."
         },
         {
           "frame": 12,
@@ -1270,7 +1527,27 @@
           "pose": "ride",
           "note": "Both paws retain the hauled-back lap bar after the spin."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 4,
+        "contact": 7,
+        "peak": 7,
+        "release": 12
+      },
+      "moving_hands": {
+        "anticipation": [
+          "R",
+          "L"
+        ],
+        "contact": [
+          "R",
+          "L"
+        ],
+        "peak": [
+          "R",
+          "L"
+        ]
+      }
     },
     "ult_recover": {
       "end": 25,
@@ -1322,32 +1599,32 @@
         {
           "frame": 7,
           "torso": {
-            "height": 0.96,
-            "pitch": -8
+            "height": 0.935,
+            "pitch": -12
           },
           "head": {
-            "pitch": -7
-          },
-          "shoulder": {
-            "lift": -0.004
+            "pitch": -10
           },
           "hand.R": {
             "control": "LapBar.R",
             "offset": [
               0,
-              -0.035,
-              0.032
+              -0.08916,
+              0.08218
             ]
           },
           "hand.L": {
             "control": "LapBar.L",
             "offset": [
               0,
-              -0.035,
-              0.032
+              -0.08916,
+              0.08218
             ]
           },
-          "note": "The lap bar moves forward beneath both paws."
+          "shoulder": {
+            "lift": -0.006
+          },
+          "note": "The seated torso sinks into the landing settle. Hold this visible beat for four frames."
         },
         {
           "frame": 9,
@@ -1375,6 +1652,33 @@
             ]
           },
           "note": "The lap bar reaches its neutral position as play control returns."
+        },
+        {
+          "frame": 12,
+          "torso": {
+            "height": 0.98,
+            "pitch": -5
+          },
+          "head": {
+            "pitch": -4
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "note": "The lap bar reaches its neutral position as play control returns. Hold this visible beat for four frames."
         },
         {
           "frame": 14,
@@ -1436,7 +1740,27 @@
           "pose": "rest",
           "note": "Both paws settle on the yokes in seated bind pose."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 4,
+        "contact": 9,
+        "peak": 9,
+        "release": 19
+      },
+      "moving_hands": {
+        "anticipation": [
+          "R",
+          "L"
+        ],
+        "contact": [
+          "R",
+          "L"
+        ],
+        "peak": [
+          "R",
+          "L"
+        ]
+      }
     },
     "smash": {
       "end": 19,
@@ -1523,7 +1847,7 @@
           "frame": 6,
           "torso": {
             "height": 0.97,
-            "pitch": 10
+            "pitch": -20
           },
           "head": {
             "pitch": -12
@@ -1549,13 +1873,13 @@
           },
           "curl.R": -26,
           "curl.L": -26,
-          "note": "Both paws pull the yokes to the chest, with the head down in a compact hunch."
+          "note": "Both yokes pull inward toward chest under a deep head-down hunch."
         },
         {
           "frame": 9,
           "torso": {
             "height": 0.97,
-            "pitch": 10
+            "pitch": -20
           },
           "head": {
             "pitch": -12
@@ -1581,7 +1905,7 @@
           },
           "curl.R": -26,
           "curl.L": -26,
-          "note": "Hold both paws at the chest and the head-down hunch for four frames."
+          "note": "Both yokes pull inward toward chest under a deep head-down hunch."
         },
         {
           "frame": 14,
@@ -1642,7 +1966,21 @@
         6,
         14,
         19
-      ]
+      ],
+      "moving_hands": {
+        "anticipation": [
+          "R",
+          "L"
+        ],
+        "contact": [
+          "R",
+          "L"
+        ],
+        "peak": [
+          "R",
+          "L"
+        ]
+      }
     },
     "unlock": {
       "end": 91,
@@ -1658,135 +1996,150 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Tarn begins in seated rest before the climb."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         },
         {
-          "frame": 8,
+          "frame": 2,
+          "note": "Start raised and offset above seat after mandatory rest anchor.",
           "root": [
-            -0.2,
-            -0.14,
-            0.28
+            -0.15,
+            0,
+            0.48
           ],
-          "torso": {
-            "pitch": -6
-          },
           "hand.R": {
             "at": [
-              0.1,
-              0.19,
-              0.45
+              0.3,
+              0.45,
+              0.42
             ]
           },
           "hand.L": {
             "at": [
-              -0.45,
-              0.25,
-              0.17
+              -0.4,
+              0.42,
+              0.38
             ]
-          },
-          "curl.R": -18,
-          "note": "The pilot lifts out of the seat toward its left rail."
+          }
         },
         {
-          "frame": 17,
+          "frame": 6,
+          "note": "Brace above the pod seat.",
           "root": [
-            -0.38,
-            -0.18,
-            0.55
+            -0.15,
+            0,
+            0.48
           ],
           "torso": {
-            "pitch": -8
-          },
-          "head": {
-            "pitch": 3
-          },
-          "hand.R": {
-            "at": [
-              0.05,
-              0.22,
-              0.6
-            ]
-          },
-          "hand.L": {
-            "at": [
-              -0.66,
-              0.24,
-              0.45
-            ]
-          },
-          "curl.R": -18,
-          "curl.L": -18,
-          "note": "The pilot climbs above and left of the seat, braced on the seat rail."
-        },
-        {
-          "frame": 20,
-          "root": [
-            -0.38,
-            -0.18,
-            0.55
-          ],
-          "torso": {
-            "pitch": -8
-          },
-          "head": {
-            "pitch": 3
-          },
-          "hand.R": {
-            "at": [
-              0.05,
-              0.22,
-              0.6
-            ]
-          },
-          "hand.L": {
-            "at": [
-              -0.66,
-              0.24,
-              0.45
-            ]
-          },
-          "curl.R": -18,
-          "curl.L": -18,
-          "note": "Hold the climb peak above the seat for four frames."
-        },
-        {
-          "frame": 30,
-          "torso": {
-            "height": 0.92,
-            "pitch": -8
-          },
-          "head": {
             "pitch": -5
           },
           "hand.R": {
             "at": [
-              0.32,
-              0.2,
-              0.17
+              0.3,
+              0.45,
+              0.42
             ]
           },
           "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.4,
+              0.42,
+              0.38
             ]
-          },
-          "curl.R": -18,
-          "note": "The pilot drops into the seat, the claw gesture still raised in the right paw."
+          }
         },
         {
-          "frame": 34,
+          "frame": 12,
+          "note": "Lean into the climb before seated drop.",
+          "root": [
+            -0.15,
+            0,
+            0.48
+          ],
           "torso": {
-            "pitch": -3
+            "pitch": -10
           },
           "hand.R": {
             "at": [
+              0.3,
+              0.45,
+              0.42
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.4,
+              0.42,
+              0.38
+            ]
+          }
+        },
+        {
+          "frame": 20,
+          "note": "Pilot holds above seat, braced low/forward on visible rail before dropping in.",
+          "root": [
+            -0.15,
+            0,
+            0.48
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "hand.R": {
+            "at": [
+              0.3,
+              0.45,
+              0.42
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.4,
+              0.42,
+              0.38
+            ]
+          },
+          "curl.R": -18
+        },
+        {
+          "frame": 23,
+          "note": "Pilot holds above seat, braced low/forward on visible rail before dropping in. Hold this beat.",
+          "root": [
+            -0.15,
+            0,
+            0.48
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "hand.R": {
+            "at": [
+              0.3,
+              0.45,
+              0.42
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.4,
+              0.42,
+              0.38
+            ]
+          },
+          "curl.R": -18
+        },
+        {
+          "frame": 30,
+          "note": "Drop into seat, root returns to rest.",
+          "torso": {
+            "height": 0.92,
+            "pitch": -10
+          },
+          "hand.R": {
+            "at": [
+              0.42,
               0.38,
-              0.12,
-              0.04
+              0.08
             ]
           },
           "hand.L": {
@@ -1796,76 +2149,46 @@
               0,
               0
             ]
-          },
-          "curl.R": -18,
-          "note": "The body rises from the seat landing before setting the claw down."
+          }
         },
         {
-          "frame": 43,
+          "frame": 36,
+          "note": "Recover from seat drop, claw remains in right paw.",
           "torso": {
-            "pitch": -6,
-            "yaw": 7
-          },
-          "head": {
-            "pitch": -5,
-            "yaw": 6
-          },
-          "hand.R": {
-            "at": [
-              0.4,
-              0.12,
-              -0.17
-            ]
-          },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "curl.R": 5,
-          "note": "The right paw sets the unissued claw gesture down beside the seat frame and opens."
-        },
-        {
-          "frame": 46,
-          "torso": {
-            "pitch": -6,
-            "yaw": 7
-          },
-          "head": {
-            "pitch": -5,
-            "yaw": 6
-          },
-          "hand.R": {
-            "at": [
-              0.4,
-              0.12,
-              -0.17
-            ]
-          },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "curl.R": 5,
-          "note": "Hold the open right paw at the claw set-down for four frames."
-        },
-        {
-          "frame": 58,
-          "torso": {
-            "yaw": 4
+            "pitch": -12
           },
           "hand.R": {
             "at": [
               0.46,
-              0.24,
-              0.12
+              0.38,
+              -0.06
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 46,
+          "note": "Set the unissued claw gesture down low and forward beyond the ring band; right paw opens. Hold four frames.",
+          "torso": {
+            "pitch": -35,
+            "roll": -18,
+            "yaw": -8
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.46,
+              0.48,
+              -0.24
             ]
           },
           "hand.L": {
@@ -1876,12 +2199,65 @@
               0
             ]
           },
-          "note": "The right paw lifts off the seat frame toward the clamp bank."
+          "curl.R": 5
         },
         {
-          "frame": 64,
+          "frame": 49,
+          "note": "Set the unissued claw gesture down low and forward beyond the ring band; right paw opens. Hold four frames.",
           "torso": {
-            "yaw": 3
+            "pitch": -35,
+            "roll": -18,
+            "yaw": -8
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.46,
+              0.48,
+              -0.24
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": 5
+        },
+        {
+          "frame": 58,
+          "note": "Lift fingertip toward clamp bank.",
+          "torso": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              0,
+              0.06
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 60,
+          "note": "One low finger tap on clamp lever after claw set-down.",
+          "torso": {
+            "pitch": -8,
+            "yaw": -6
           },
           "hand.R": {
             "control": "ClampLever",
@@ -1899,37 +2275,16 @@
               0
             ]
           },
-          "curl.R": -6,
-          "note": "The right fingertip taps the actual clamp knob once."
+          "curl.R": -6
         },
         {
-          "frame": 67,
-          "torso": {
-            "yaw": 3
-          },
-          "hand.R": {
-            "control": "ClampLever",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "curl.R": -6,
-          "note": "Hold the single clamp tap for four frames."
-        },
-        {
-          "frame": 76,
+          "frame": 72,
+          "note": "One slow finishing nod with both paws returned to yokes.",
           "head": {
-            "pitch": -14
+            "pitch": -26
+          },
+          "neck": {
+            "drop": -0.012
           },
           "hand.R": {
             "control": "Grip.R",
@@ -1946,13 +2301,16 @@
               0,
               0
             ]
-          },
-          "note": "With both paws back on the yokes, the chin lowers into one distinct nod."
+          }
         },
         {
-          "frame": 79,
+          "frame": 75,
+          "note": "One slow finishing nod with both paws returned to yokes. Hold this beat.",
           "head": {
-            "pitch": -14
+            "pitch": -26
+          },
+          "neck": {
+            "drop": -0.012
           },
           "hand.R": {
             "control": "Grip.R",
@@ -1969,11 +2327,11 @@
               0,
               0
             ]
-          },
-          "note": "Hold the lowered chin for four frames; this is the only nod."
+          }
         },
         {
-          "frame": 84,
+          "frame": 80,
+          "note": "Chin rises to complete the only nod.",
           "head": {
             "pitch": 2
           },
@@ -1992,20 +2350,39 @@
               0,
               0
             ]
+          }
+        },
+        {
+          "frame": 86,
+          "note": "Settle quietly onto seat.",
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
           },
-          "note": "The chin rises to complete the nod."
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
         },
         {
           "frame": 91,
-          "pose": "rest",
-          "note": "Tarn finishes at exact seated rest."
+          "note": "Exact seated rest anchor.",
+          "pose": "rest"
         }
       ],
       "beats": {
         "anticipation": 20,
-        "contact": 43,
+        "contact": 46,
         "peak": 20,
-        "release": 76
+        "release": 86
       },
       "beat_targets": {
         "anticipation": {
@@ -2013,17 +2390,31 @@
           "L": "seat rail"
         },
         "contact": {
-          "R": "seat frame"
+          "R": "right seat edge"
         }
       },
       "strip_frames": [
+        1,
         20,
-        43,
-        64,
-        76,
+        46,
+        72,
         91
       ],
-      "beat_note": "Five ceremony cells show climb peak, claw set-down, clamp tap, nod, and rest. Root returns to zero at f30. The pilot has no separate claw prop; curl.R and the open-paw set-down are the gesture stand-in."
+      "beat_note": "Beat marks are measured from rebuilt GLB. strip_frames documents the unchanged shipped renderer key-index selection.",
+      "moving_hands": {
+        "anticipation": [
+          "R",
+          "L"
+        ],
+        "contact": [
+          "R",
+          "L"
+        ],
+        "peak": [
+          "R",
+          "L"
+        ]
+      }
     }
   },
   "machinery": [
