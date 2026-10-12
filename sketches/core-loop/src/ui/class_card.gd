@@ -105,6 +105,7 @@ var _fade_rect: TextureRect
 var _preview_h := PREVIEW_H
 var _name_label: Label
 var _role_label: Label
+var _tradeoff: Label
 var _serial := 0
 var locked := false
 var hint_text := ""
@@ -166,6 +167,11 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	line.custom_minimum_size = Vector2(0.0, 58.0)
 	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	box.add_child(line)
+	_tradeoff = _text(ClassKit.tradeoff(def), WORD_SIZE, Palette.SAND)
+	_tradeoff.name = "Tradeoff"
+	_tradeoff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_tradeoff)
+	_details.append(_tradeoff)
 	# Two rows (design-v3/SKILL-BAR.md section 5): the bar as it plays (1, 2, 3, Q), then the
 	# chips (RMB, Shift, Ctrl) and the Space extras, one short line of icons. The keycaps are the
 	# same on every card, so they read on the open card only, beside the words; the icons sell
@@ -225,6 +231,10 @@ func name_label() -> Label:
 
 func role_label() -> Label:
 	return _role_label
+
+
+func tradeoff_text() -> String:
+	return _tradeoff.text if _tradeoff != null else ""
 
 
 # How far the built column runs past the card's floor; zero when it fits.
