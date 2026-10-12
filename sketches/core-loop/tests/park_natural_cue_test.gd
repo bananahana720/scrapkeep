@@ -18,6 +18,11 @@ func _run() -> void:
 	var alternate_water := _row("flash_flood", "lightning_charge")
 	alternate_water.id = "alternate_flash_flood"
 	cases.append(alternate_water)
+	var slump := _row("collapse", "ground_slump")
+	slump.id = "authored_slump_form"
+	slump.effect.depth_m = 20.0
+	slump.effect.fill_s = 4.0
+	cases.append(slump)
 	for family in [["fleet", "fleet_landing", "fleet_inbound"], ["ancient", "machine_eruption", "ancient_stirring"], ["industrial", "boiler_burst", "boiler_pressure"]]:
 		var row := _row(family[1], family[2])
 		row.family = family[0]
@@ -57,7 +62,7 @@ func _run() -> void:
 		t.check(kind + " releases sound listener", not w.ctx.events.world_fact.is_connected(Callable(handler, "_on_world_sound")))
 		t.check(kind + " restores original listener", original.is_valid() and w.ctx.events.world_fact.is_connected(original))
 		w.free()
-	t.check("seven natural, alternate forms and shared family cue paths checked", cases.size() == 12)
+	t.check("seven natural, alternate forms and shared family cue paths checked", cases.size() == 13)
 	quit(t.verdict())
 
 
@@ -79,6 +84,7 @@ func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary,
 		shape_ok = shape_ok and mesh.mesh is ArrayMesh
 		var vertices: PackedVector3Array = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 		var low := INF
+		var max_clearance := -INF
 		var high := -INF
 		for vertex in vertices:
 			var point: Vector3 = mesh.global_transform * vertex
@@ -86,12 +92,17 @@ func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary,
 			min_radius = minf(min_radius, (local / half).length())
 			max_radius = maxf(max_radius, (local / half).length())
 			max_cross = maxf(max_cross, minf(absf(local.x), absf(local.y)))
+			max_clearance = maxf(max_clearance, point.y - mark.get_parent().world.terrain.height(point.x, point.z))
 			low = minf(low, point.y)
 			high = maxf(high, point.y)
+			if spec.get("pattern", "") == "dust_crack":
+				shape_ok = shape_ok and local.x >= half.x - float(spec.crack_width_m) - 0.0001 and local.x <= half.x + 0.0001 and absf(local.y) <= half.y + 0.0001
 			match spec.shape:
 				"cross": shape_ok = shape_ok and (absf(local.x) <= 0.1501 or absf(local.y) <= 0.1501)
 				"burst": shape_ok = shape_ok and (local / half).length() <= 1.0001
 				"ring": shape_ok = shape_ok and (local / half).length() >= 0.9649 and (local / half).length() <= 1.0001
+		if spec.get("pattern", "") == "dust_crack":
+			t.near(label + " " + str(mesh.name) + " height reads canonical record", max_clearance, 0.15 + float(spec.dust_height_m) if mesh.name == "DustCurtain" else 0.15)
 		if spec.shape == "wave":
 			shape_ok = shape_ok and high - low > 0.05
 	t.check(label + " actual mesh follows WORLD_ROWS shape " + spec.shape, shape_ok, "radius=%s..%s cross=%s" % [min_radius, max_radius, max_cross])
