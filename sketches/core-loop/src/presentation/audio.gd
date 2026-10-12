@@ -100,7 +100,11 @@ const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tic
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
-	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate"]
+	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
+	# --- P-C Tally keyed sounds ---
+	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
+	# --- end Tally ---
+]
 # --- P-C Kest sounds ---
 const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
 	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
@@ -475,6 +479,7 @@ func _process(delta: float) -> void:
 		ace.pause_gain = engine.pause_gain
 	_flush_flow()
 	_play_due_notes()
+	_tend_tally()
 	_tend_hum()
 	_follow_warden()
 	_follow_escalation()
@@ -1042,6 +1047,7 @@ func _connect_all(events) -> void:
 			_sable_bank_wait = false
 			_sable_bank_sound())
 	events.line_skill_fired.connect(_on_tarn_claw_drag)
+	_wire_tally(events)
 	_wire_ultimate_beat()
 	wire_optional()
 	_wire_armor()
@@ -2454,3 +2460,101 @@ func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) 
 	if _admit("line_skill_fired", "line_claw_drag", pitch):
 		_start("line_skill_fired", "line_claw_drag", _line_claw_stream, SfxBank.trim_db("line_claw_drag") + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
 # --- end Tarn ---
+
+
+# --- P-C Tally audio ---
+# Notes are baked at their written pitch, then transposed together into the live key.
+# The four bank recipes carry the paper punch and bell independently of cog_tick.
+const TALLY_SOUNDS := {"plate": "plate_tally", "clip": "clip_tally", "stroke": "stroke_tally", "settle": "settle_tally"}
+const TALLY_CUES := {
+	"tally_plate": {"kind": "special_used", "sound": "plate_tally", "steps": [-12]},
+	"tally_clip": {"kind": "line_skill_fired", "sound": "clip_tally", "steps": [0, 2, 3]},
+	"tally_stroke": {"kind": "ultimate_peak", "sound": "stroke_tally", "steps": [0, 2, 3, 5]},
+	"tally_total": {"kind": "ultimate_landed", "sound": "stroke_tally", "steps": [12]},
+	"tally_settle": {"kind": "ultimate_landed", "sound": "settle_tally", "steps": [0, 3, 5, 7, 10, 12, 15, 17, 19, 22]},
+}
+const TALLY_PIECES := ["plate_return", "plate_audit", "plate_flywheel"]
+const TALLY_SIXTEENTHS := 4.0
+# SOUND-STORY.md:31, the tempo her strokes keep when no music plays.
+const TALLY_HOME_BPM := 172.0
+var _tally_notes: Array = []
+var _tally_beat := -1
+var _tally_streams := {}
+
+
+func _wire_tally(events) -> void:
+	events.special_used.connect(func(id: String, _at: Vector3):
+		if id == "gather_plate":
+			_tally_cue("tally_plate", 0))
+	events.line_skill_fired.connect(func(id: String, _target: Node3D, _at: Vector3, _on: String):
+		if id != "link_clips":
+			return
+		var combat = ctx.get("spawner") if ctx != null else null
+		var clips: int = int(combat.last_card.get("hits", 1)) if combat != null else 1
+		var lift := maxi(0, int(ctx.player.chain.combo) - 1)
+		for i in clampi(clips, 1, TALLY_CUES["tally_clip"]["steps"].size()):
+			_tally_cue("tally_clip", i, lift, i))
+	events.ultimate_peak.connect(func(id: String, _at: Vector3):
+		if id in TALLY_PIECES:
+			for i in TALLY_CUES["tally_stroke"]["steps"].size():
+				_tally_cue("tally_stroke", i, 0, i))
+	events.ultimate_landed.connect(func(id: String, _at: Vector3, _hits: int, _damage: float):
+		if not id in TALLY_PIECES:
+			return
+		_tally_cue("tally_total", 0)
+		var combat = ctx.get("spawner") if ctx != null else null
+		var settles: int = int(combat.tally_last_settle.get("settles", 0)) if combat != null else 0
+		for i in mini(settles, TALLY_CUES["tally_settle"]["steps"].size()):
+			_tally_cue("tally_settle", i, 0, i + 1))
+
+
+# Seconds per sixteenth of the music playing, or of the motif's 172 BPM home with none.
+func _tally_sixteenth() -> float:
+	var bpm: float = engine.bpm() if engine != null and engine.mode == MusicEngine.PLAY else 0.0
+	return 60.0 / (bpm if bpm > 0.0 else TALLY_HOME_BPM) / TALLY_SIXTEENTHS
+
+
+# Queues one note of a TALLY_CUES row: step index `step`, lifted `lift` semitones, `slot`
+# sixteenths from now.
+func _tally_cue(cue: String, step: int, lift := 0, slot := 0) -> void:
+	var row: Dictionary = TALLY_CUES[cue]
+	var steps: Array = row["steps"]
+	var semis: int = int(steps[step % steps.size()]) + lift
+	var note := [clock + slot * _tally_sixteenth(), row["kind"], row["sound"], 62 + semis, cue == "tally_total"]
+	if slot == 0:
+		_tally_play(note)
+	else:
+		_tally_notes.append(note)
+
+
+# Plays due notes, and one ledger stroke per flight beat of her set piece (D, E, F, G, round again).
+func _tend_tally() -> void:
+	var combat = ctx.get("spawner") if ctx != null else null
+	if combat != null and combat.get("ultimate") != null and combat.get("tally_piece") != null:
+		var ult = combat.ultimate
+		if ult.phase() == "flight" and String(combat.tally_piece) != "":
+			if int(ult._beat) != _tally_beat and int(ult._beat) > 0:
+				_tally_cue("tally_stroke", int(ult._beat) - 1)
+			_tally_beat = int(ult._beat)
+		else:
+			_tally_beat = -1
+	var waiting: Array = []
+	for note in _tally_notes:
+		if float(note[0]) > clock:
+			waiting.append(note)
+		else:
+			_tally_play(note)
+	_tally_notes = waiting
+
+
+func _tally_play(note: Array) -> void:
+	var kind := String(note[1])
+	var sound := String(note[2])
+	var pitch := Harmony.ratio(live_key())
+	if not _admit(kind, sound, pitch):
+		return
+	var key := "%s:%d:%s" % [sound, int(note[3]), bool(note[4])]
+	if not _tally_streams.has(key):
+		_tally_streams[key] = Synth.to_wav(SfxBank.tally_recipe(sound, int(note[3]), bool(note[4])))
+	_start(kind, sound, _tally_streams[key], SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)], pitch, "SFX")
+# --- end Tally ---

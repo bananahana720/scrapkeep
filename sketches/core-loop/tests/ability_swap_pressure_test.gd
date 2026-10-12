@@ -37,17 +37,25 @@ func _initialize() -> void:
 	# Re-pinned 2026-10-10 for the skill bar (SKILL-BAR.md section 1, "Tally's deck, re-cut",
 	# wave P-B unit B1): a row's pool names the slot whose charges it spends, so Tally's slot 2
 	# (gather plate) and slot 3 (link clips) draw from the reader's one pressure pool.
+	# Re-pinned 2026-10-11 for wave P-C unit PC-TALLY (design-v3/pilots/tally.md sections 2 and 3,
+	# Calls): Gather Plate leaves the pressure pool for its own 6 s cooldown and the ledger clip
+	# carries no pool, so slots 2 and 3 spend their own charge and an empty reader leaves them
+	# ready. Measured: [3, 0, 0] after one cast of each, and [true, true, 0] with the reader empty.
+	# No ability row carries a pool after this unit; pool_of stays and the last case still covers
+	# a row without one.
 	var d := AbilityState.new()
 	d.swap(w, "ledger_reader")
 	d.swap(AbilityState.SPECIAL, "gather_plate")
 	d.swap(AbilityState.LINE, "link_clips")
 	d.spend(AbilityState.SPECIAL)
 	d.spend(AbilityState.LINE)
-	_t.eq("slots 2 and 3 spend the reader's pressure", [d.slot(w).charges, d.slot(AbilityState.SPECIAL).charges,
-		d.slot(AbilityState.LINE).charges], [1, 1, 1])
-	d.spend(w)
-	_t.eq("an empty pool cools all three", [d.ready(AbilityState.SPECIAL), d.ready(AbilityState.LINE),
-		d.state_of(AbilityState.SPECIAL), d.spend(AbilityState.LINE)], [false, false, AbilityState.COOLING, false])
+	_t.eq("slots 2 and 3 spend their own charge, never the reader's pressure", [d.slot(w).charges, d.slot(AbilityState.SPECIAL).charges,
+		d.slot(AbilityState.LINE).charges], [3, 0, 0])
+	d.refill()
+	for i in 3:
+		d.spend(w)
+	_t.eq("an empty reader leaves slots 2 and 3 ready", [d.ready(AbilityState.SPECIAL), d.ready(AbilityState.LINE),
+		d.slot(w).charges], [true, true, 0])
 	d.swap(AbilityState.SPECIAL, "detonation_gauge")
 	_t.eq("a row with no pool spends its own charge", d.pool_of(AbilityState.SPECIAL), AbilityState.SPECIAL)
 	quit(_t.verdict())
