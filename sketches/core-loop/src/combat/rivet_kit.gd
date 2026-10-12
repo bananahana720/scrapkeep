@@ -266,6 +266,9 @@ func _step_pulses(delta: float) -> void:
 		if float(rec["left"]) > 0.0:
 			continue
 		pulses.erase(rec)
+		# A target freed while the pulse ran cannot be assigned to a typed local; drop the pulse.
+		if not is_instance_valid(rec["target"]):
+			continue
 		var target: Node3D = rec["target"]
 		var kit = ctx.player.kit
 		# The pulse runs down the cable: a line cut before it arrives carries nothing.
