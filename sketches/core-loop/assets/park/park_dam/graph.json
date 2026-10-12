@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "29ef1f58d7c5487450167b6274cf949c2e9392f3aa21444b0c40c731d5578c98",
+  "bake_sha256": "11de9274139c0e564ffbaedc318d499c294b01e2e1992bc982f5891eb70d8f3d",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1318579,
-  "edges": 314077,
+  "bytes": 1317838,
+  "edges": 314129,
   "first_failed": "",
   "flags": {
     "deck": 0,
     "door_ok": 39988,
     "line": 294,
     "open": 40401,
-    "sight_ok": 8519,
+    "sight_ok": 8598,
     "under": 0
   },
   "full_visit_m": 2316,
   "full_visit_ratio": "1.716",
-  "graph_sha256": "bb2b1fbd9dde6227c2e7ec999c6f5aa123c3f1b90177cb5602d50bd104acfeaf",
+  "graph_sha256": "f8ef41e63966f492d9a69020817b54843739147a4b2f6594934b76f9f0e9a3b1",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2371,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "7271cf3af4701988f7ff5b3dbfce4d492ed166612bca7afa18c55cfd3343922a",
+  "park_sha256": "1b2e169805320c943810fb3226062320df1bb7a1329ef5fab5baa8782bc4e774",
   "pockets": [
     {
       "clear_ring": [],
@@ -311,7 +311,7 @@
       },
       {
         "cost": 695.7,
-        "d_landmark": 905.0,
+        "d_landmark": 903.2,
         "name": "hoodoo_stack_10",
         "on_route": false,
         "rank": 0,
@@ -327,7 +327,7 @@
       },
       {
         "cost": 576.0,
-        "d_landmark": 1117.6,
+        "d_landmark": 1115.8,
         "name": "hoodoo_stack_9",
         "on_route": false,
         "rank": 0,
@@ -351,7 +351,7 @@
       },
       {
         "cost": 499.7,
-        "d_landmark": 1491.8,
+        "d_landmark": 1490.0,
         "name": "hoodoo_stack_11",
         "on_route": false,
         "rank": 0,
@@ -375,7 +375,7 @@
       },
       {
         "cost": 428.9,
-        "d_landmark": 1322.0,
+        "d_landmark": 1320.3,
         "name": "hoodoo_stack_8",
         "on_route": false,
         "rank": 0,
@@ -502,11 +502,11 @@
         "viable": true
       }
     ],
-    "count": 142,
+    "count": 143,
     "crossings": {
-      "drop": 41,
+      "drop": 43,
       "ride": 12,
-      "walk": 251
+      "walk": 252
     },
     "hidden": [
       {
