@@ -105,7 +105,7 @@ class OverlayMap:
 		entry.body.visible = changed
 		if is_instance_valid(entry.before):
 			entry.before.position = entry.before_home + Vector3.DOWN * Gorge.SWAP_PARK if changed else entry.before_home
-			entry.before.visible = not changed
+			entry.before.visible = false if changed else entry.before_visible
 	func overlay_height(id: String, x: float, z: float, ground: float) -> float:
 		if not profiles.has(id):
 			return source.overlay_height(id, x, z, ground)
@@ -337,6 +337,13 @@ func _clip_water(polygon: Array, axis: int, extent: float, sign_axis: float) -> 
 
 
 func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
+	var id: String = str(row.effect.get("swap", row.id))
+	if id == "":
+		id = row.id
+	if _overlay_map != null and _overlay_map.swaps.has(id):
+		record.overlay = _overlay_map.swaps[id].body
+		record.swap = id
+		return
 	if _overlay_map == null:
 		_overlay_map = OverlayMap.new(_original_map.path)
 		for property in _original_map.get_property_list():
@@ -378,26 +385,45 @@ func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
 	var before: Node3D = null
 	if world.terrain.has_method("geometry_root"):
 		before = world.terrain.geometry_root(world.terrain.stage).find_child("Park_" + str(row.site), true, false) as Node3D
-	var id: String = str(row.effect.get("swap", row.id))
-	if id == "":
-		id = row.id
 	_overlay_map.swaps[id] = {"body": body, "home": body.position, "before": before,
-		"before_home": before.position if is_instance_valid(before) else Vector3.ZERO}
+		"before_home": before.position if is_instance_valid(before) else Vector3.ZERO,
+		"before_visible": before.visible if is_instance_valid(before) else false, "owners": {}}
 	_overlay_map.profiles[id + "_after"] = {"site": site, "height": sampled, "surface": surface}
-	_overlay_map.apply_swap(id, false)
+	body.position += Vector3.DOWN * Gorge.SWAP_PARK
+	body.visible = false
 	record.overlay = body
 	record.swap = id
 
 
 func _set_overlay(row: Dictionary, changed: bool) -> void:
 	var id: String = _prepared[row.id].swap
-	_overlay_map.apply_swap(id, changed)
+	var entry: Dictionary = _overlay_map.swaps[id]
+	var overlays = world.terrain.overlays
 	if changed:
-		world.terrain.overlays.erase(id + "_before")
-		if not world.terrain.overlays.has(id + "_after"):
-			world.terrain.overlays.append(id + "_after")
+		if entry.owners.has(row.id):
+			return
+		if entry.owners.is_empty():
+			entry.before_index = overlays.find(id + "_before")
+			entry.had_after = overlays.has(id + "_after")
+			if is_instance_valid(entry.before):
+				entry.before_home = entry.before.position
+				entry.before_visible = entry.before.visible
+			_overlay_map.apply_swap(id, true)
+			overlays.erase(id + "_before")
+			if not entry.had_after:
+				overlays.append(id + "_after")
+		entry.owners[row.id] = true
 	else:
-		world.terrain.overlays.erase(id + "_after")
+		if not entry.owners.has(row.id):
+			return
+		entry.owners.erase(row.id)
+		if not entry.owners.is_empty():
+			return
+		_overlay_map.apply_swap(id, false)
+		if not entry.had_after:
+			overlays.erase(id + "_after")
+		if entry.before_index >= 0 and not overlays.has(id + "_before"):
+			overlays.insert(mini(entry.before_index, overlays.size()), id + "_before")
 
 
 func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
