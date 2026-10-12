@@ -14,6 +14,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraphTool := preload("res://tools/park_graph.gd")
 
 const MAP := "park_sinkhole"
@@ -47,6 +48,8 @@ func _run() -> void:
 	if not t.check("graph.json and the lines file parse", graph is Dictionary and lines is Dictionary):
 		quit(t.verdict())
 		return
+	var seating := floor_seating(park)
+	t.check("great-room floor seats beneath terrain at entry and exit", seating.is_empty(), "\n".join(seating))
 	var errors := pins(park, graph, lines)
 	t.check("every stage pin holds", errors.is_empty(), "\n".join(errors))
 
@@ -81,6 +84,11 @@ func _run() -> void:
 	var g3: Dictionary = graph.duplicate(true)
 	g3["spawn"]["run"] = false
 	t.check("plant: an unqualified spawn run fails", not pins(park, g3, lines).is_empty())
+	var raised_floor: Dictionary = park.duplicate(true)
+	for row in raised_floor["park_rows"]:
+		if row["id"] == "great_room_floor":
+			row["y"] = float(row["y"]) + 3.0
+	t.check("plant: a floor raised 3 m fails seating", not floor_seating(raised_floor).is_empty())
 	quit(t.verdict())
 
 
@@ -95,7 +103,7 @@ static func _v3(a) -> Vector3:
 
 # The stage's facts, as error lines; [] when every pin holds.
 static func pins(park: Dictionary, graph: Dictionary, lines: Dictionary) -> Array:
-	var out := []
+	var out := floor_seating(park)
 	if park.get("map") != MAP:
 		out.append("map is %s" % park.get("map"))
 	if park["waymarks"] != WAYMARKS:
@@ -164,3 +172,47 @@ static func pins(park: Dictionary, graph: Dictionary, lines: Dictionary) -> Arra
 		if String(r["recipe"]) == "":
 			out.append("row %s (%s) has no recipe" % [r["id"], r["element"]])
 	return out
+
+
+static func floor_seating(park: Dictionary) -> Array:
+	var rows: Array = park["park_rows"].filter(func(row): return row["id"] == "great_room_floor")
+	if rows.size() != 1:
+		return ["great_room_floor must name exactly one supporting floor row"]
+	var raw := FileAccess.open_compressed(BAKED + "/ground.bin", FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+	if raw == null:
+		return ["floor seating cannot read the committed terrain"]
+	var heights := raw.get_buffer(801 * 801 * 4).to_float32_array()
+	raw.close()
+	if heights.size() != 801 * 801:
+		return ["floor seating needs the complete 2 m terrain grid"]
+	var holes := FileAccess.get_file_as_bytes(BAKED + "/holes.bin")
+	if holes.size() != 800 * 800:
+		return ["floor seating needs the terrain hole mask"]
+	var row: Dictionary = rows[0]
+	var ground := func(x: float, z: float) -> float: return _baked_surface(heights, Vector2(x, z))
+	var frame := ParkRecipes.row_transform(row, ground)
+	var size: Array = row["size"]
+	var errors := []
+	for end in [-1.0, 1.0]:
+		var top: Vector3 = frame * Vector3(0.0, float(size[1]), end * float(size[0]) * 0.5)
+		var at := Vector2(top.x, top.z)
+		var cell := Vector2i(floori((at.x + 800.0) / 2.0), floori((at.y + 800.0) / 2.0))
+		if cell.x < 0 or cell.x >= 800 or cell.y < 0 or cell.y >= 800:
+			errors.append("floor join %s lies outside the terrain" % at)
+			continue
+		var terrain_y := _baked_surface(heights, at)
+		if holes[cell.y * 800 + cell.x] != 0 or top.y > terrain_y + 0.00001:
+			errors.append("great_room_floor %s top %.5f exceeds supporting terrain %.5f at %s" % ["entry" if end < 0.0 else "exit", top.y, terrain_y, at])
+	return errors
+
+
+# Barycentric heights from the committed grid's triangles, independent of the runtime sampler.
+static func _baked_surface(heights: PackedFloat32Array, at: Vector2) -> float:
+	var grid := (at + Vector2(800.0, 800.0)) / 2.0
+	var cell := Vector2i(floori(grid.x), floori(grid.y))
+	var uv := grid - Vector2(cell)
+	var origin := cell.y * 801 + cell.x
+	var corners := [heights[origin], heights[origin + 1], heights[origin + 801], heights[origin + 802]]
+	if uv.x + uv.y <= 1.0:
+		return corners[0] * (1.0 - uv.x - uv.y) + corners[1] * uv.x + corners[2] * uv.y
+	return corners[1] * (1.0 - uv.y) + corners[2] * (1.0 - uv.x) + corners[3] * (uv.x + uv.y - 1.0)
