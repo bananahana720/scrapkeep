@@ -5,10 +5,12 @@ const Activities := preload("res://src/world/activities.gd")
 const Graph := preload("res://src/world/park/park_graph.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+const Schema := preload("res://src/world/park/park_schema.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const KINDS := ["movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
 const STAGES := ["park_dam", "park_test"]
-const EXPECTED_CHECKS := 28
+const EXPECTED_CHECKS := 29
 const H := 1.0 / 60.0
 
 class Checks extends "res://tests/support/t.gd":
@@ -38,7 +40,7 @@ func _run() -> void:
 		var index := args.find("--only")
 		if index + 1 < args.size():
 			only = args[index + 1]
-		if not only in ["ladder", "ambush", "hazards", "exit", "recovery"]:
+		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission"]:
 			t.check("valid control selection", false, str(args))
 			quit(t.verdict())
 			return
@@ -71,6 +73,7 @@ func _run() -> void:
 	for id in STAGES:
 		graphs[id] = Graph.read("res://assets/park/%s/graph.bin" % id)
 	if only == "":
+		_admission()
 		_ladder()
 		await _combat()
 		_objectives()
@@ -80,6 +83,8 @@ func _run() -> void:
 		await _hazards()
 		await _marks()
 		await _exit()
+	elif only == "admission":
+		_admission()
 	elif only == "ladder":
 		_ladder()
 	elif only == "ambush":
@@ -92,7 +97,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 10}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 10, "admission": 3}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -112,6 +117,43 @@ func _kill(pack: Array) -> void:
 	for enemy in pack.duplicate():
 		if is_instance_valid(enemy) and not enemy.is_dead():
 			enemy._die()
+
+
+func _admitted(stage: String, kind: String, row_index: int, default_pay := false) -> Array:
+	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % stage))
+	data.activity_rows[row_index].activity = kind
+	if default_pay:
+		data.activity_rows[row_index].pay = {}
+	var errors: Array = Schema.validate(data)
+	if not errors.is_empty():
+		return []
+	var path := "user://pocket-admission.json"
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(data))
+	file.close()
+	var map := ParkMap.new(path)
+	if not map.ok:
+		return []
+	var index: int = game.ctx.terrain.stage - 1
+	var previous = game.ctx.terrain.maps[index]
+	game.ctx.terrain.maps[index] = map
+	acts._on_stage_entered(game.run.stage, false)
+	game.ctx.terrain.maps[index] = previous
+	return [acts.sites[row_index], map.activity_sites[row_index]]
+
+
+func _admission() -> void:
+	var admitted := 0
+	var pay_retained := true
+	for stage in STAGES:
+		for kind in KINDS:
+			var built := _admitted(stage, kind, 0)
+			if not built.is_empty():
+				admitted += int(built[0].id == kind and built[1].id == kind)
+				var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % stage))
+				pay_retained = pay_retained and built[1].pay == data.activity_rows[0].pay
+			acts.clear()
+	t.check("new kinds admitted through schema ParkMap and stage entry", admitted == 14 and pay_retained, "%d/14 substitutions across park_dam and park_test; authored pay retained" % admitted)
 
 
 func _ladder() -> void:
