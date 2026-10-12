@@ -13,7 +13,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
 const CLASSES := ["none", "hit", "heavy", "massive", "climax"]
 const FIELDS := ["stop_ms", "shake", "kick", "punch_fov", "fx_scale", "body", "body_st"]
-const EXPECTED_CHECKS := 31
+const EXPECTED_CHECKS := 32
 const OWNER := {
 	"enemy_struck": "neutral", "enemy_killed": "neutral", "gauge_released": "neutral",
 	"posture_changed": "neutral", "posture_break": "neutral", "ultimate_landed": "neutral",
@@ -68,6 +68,12 @@ func run(t) -> void:
 		if facts[fact].has("sound") or record.sound != Rows.sound(fact):
 			sound_drift.append(fact)
 	t.eq("weighted sound matches Rows", sound_drift, [])
+	var release_drift := []
+	var releases := {"kest": ["kest_low_thump"], "rivet": ["rivet_hihat_roll"]}
+	for motif in releases:
+		if Rows.releases(motif) != releases[motif]:
+			release_drift.append([motif, Rows.releases(motif)])
+	t.eq("pilot release candidates exclude primary cues", release_drift, [])
 	t.eq("player weighted owner coverage", facts.keys().filter(func(fact): return facts[fact].allegiance == "player" and not OWNER.has(fact)), [])
 	var identity := _identity_errors(facts)
 	t.eq("player cue hostile identity", identity.hostile, [])
