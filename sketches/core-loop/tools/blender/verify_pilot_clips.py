@@ -15,16 +15,16 @@ reads in hero_assets.gd _pilot_table). A GLB with only the seven kept clips pass
 `PASS <pilot> 7 clips` while that file is absent; with the file present it fails "seven clips,
 no pose table", and an 18-clip GLB fails while the file is absent.
 
---selftest builds a clean 18-clip GLB from the shipped Sable GLB in a temp dir (the eleven new
-clips keyed at rest, at Sable's end frames), seeds four defects one at a time (a clip missing,
-a loop whose last frame differs from its first, a kept clip changed against the baseline, a
-track on a mesh node), requires a FAIL for each and a PASS for the clean copy, and exits 0.
+--selftest builds a clean 18-clip GLB from shipped Sable, then seeds structure, endpoint,
+seam, kept-action, planted-hand and contact defects. Real Kest and Tally geometry fixtures
+test preen distance and ledger overlap. Every defect must FAIL and the clean copies PASS.
 
-Checks not yet implemented, printed as NOTE on an 18-clip GLB: planted hands (13), contact
-distance to the shell's CONTROLS (14) and the pilot extras (17). They need the pose tables and
-the shell CONTROLS tables the PE pilot units bring.
+Planted targets and contact controls use pilot_arm's shared shell lookup. Check 17
+measures Kest's retained preen and any explicit preen_frames in new clips, and Tally's
+ledger/arm triangle overlaps on every new clip. --table accepts a scratch pose table.
 """
 import argparse
+from functools import lru_cache
 import hashlib
 import json
 import math
@@ -34,6 +34,7 @@ import sys
 import tempfile
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 SKETCH = HERE.parents[1]
 ROOT = HERE.parents[3]
 ROSTER = SKETCH / 'src/presentation/clips/roster.json'
@@ -280,7 +281,8 @@ def _hierarchy(doc, joints):
 
 def check_pose(glb, data, pilot, table, info):
     import bpy
-    from mathutils import Quaternion, Vector
+    import pilot_arm
+    from mathutils import Vector
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = FPS
     bpy.ops.import_scene.gltf(filepath=str(glb))
@@ -295,7 +297,7 @@ def check_pose(glb, data, pilot, table, info):
     expect = expected_clips(data, pilot, table)
     rigid = table is not None and table.get('torso_scale') is False or pilot == 'cannon'
     report = {}
-    ride_start = None
+    info['pose'] = report
     chain = {}
     for clip in data['new']:
         action = _action(bpy, clip)
@@ -310,6 +312,27 @@ def check_pose(glb, data, pilot, table, info):
         last = _basis(arm, bpy, end)
         chain[clip] = (first, last)
         row = {'seconds': end, 'half_frame_samples': halves}
+        report[clip] = row
+        definition = (table or {}).get('clips', {}).get(clip, {})
+        plants = pilot_arm.planted_targets(pilot, definition, table or {})
+        grip_error = 0.0
+        contact_error = 0.0
+        overlaps = 0
+        preen_error = None
+        contact = definition.get('contact')
+        if contact:
+            _basis(arm, bpy, (contact['frame'] - 1) / FPS)
+            at = arm.matrix_world @ arm.pose.bones['hand.' + contact['hand']].head
+            contact_error = (at - pilot_arm.control(pilot, contact['control'], contact['hand'])).length
+            row['contact_error'] = contact_error
+            require_metric(info, 14, contact_error, .010, '%s contact hand %s' % (clip, contact['hand']))
+        if pilot == 'kest':
+            for frame in definition.get('preen_frames', []):
+                if not 1 <= frame <= expect[clip]['end']:
+                    raise Failure('check 17: %s preen frame %s is outside the clip' % (clip, frame))
+                _basis(arm, bpy, (frame - 1) / FPS)
+                preen_error = max(preen_error or 0, check_preen(arm))
+                require_metric(info, 17, preen_error, .005, '%s preen contact' % clip)
         if expect[clip]['from'] == 'rest' and _from_rest(first) > REST_TOL:
             raise Failure('check 8: %s does not start at rest (%.6f)' % (clip, _from_rest(first)))
         if expect[clip]['to'] == 'rest' and _from_rest(last) > REST_TOL:
@@ -321,6 +344,14 @@ def check_pose(glb, data, pilot, table, info):
         for half in range(halves):
             t = half / (2.0 * FPS)
             basis = _basis(arm, bpy, t)
+            for side, target in plants.items():
+                grip_error = max(grip_error, (arm.matrix_world @ arm.pose.bones['hand.' + side].head - target).length)
+            row['grip_error'] = grip_error
+            require_metric(info, 13, grip_error, .003, '%s planted hand' % clip)
+            if pilot == 'tally':
+                overlaps += ledger_overlaps(bpy, meshes)
+                row['ledger_arm_triangle_overlaps'] = overlaps
+                require_metric(info, 17, overlaps, 0, '%s ledger-to-arm overlaps' % clip)
             if clip != 'unlock':
                 pelvis = arm.matrix_world @ arm.pose.bones['pelvis'].head
                 drift = max(drift, (pelvis - Vector(PELVIS)).length)
@@ -343,15 +374,19 @@ def check_pose(glb, data, pilot, table, info):
             raise Failure('check 11: %s moves the pelvis by %.7f m' % (clip, drift))
         if rigid and scale_error > 1e-5:
             raise Failure('check 15: %s scales a bone of a rigid cast by %.6f' % (clip, scale_error))
-        if amplitude > 1.0:
+        # glTF stores float32 quaternions; exact six-degree keys can round above the cap.
+        if amplitude > 1.0 + 1e-5:
             raise Failure('check 10: %s exceeds its amplitude cap (%.2f of the cap)' % (clip, amplitude))
         radius = 0.0
-        for frame in range(int(round(end * FPS)) + 1):
-            bpy.context.scene.frame_set(frame)
+        for half in range(halves):
+            frame = half / 2.0
+            bpy.context.scene.frame_set(int(frame), subframe=frame % 1)
             radius = max(radius, _radius(bpy, meshes))
         if clip != 'unlock' and radius >= CLEARANCE:
             raise Failure('check 12: %s reaches %.4f m (clearance %.2f)' % (clip, radius, CLEARANCE))
-        row.update({'pelvis_drift': drift, 'amplitude_of_cap': amplitude, 'envelope': radius, 'rigid_scale_error': scale_error})
+        row.update({'pelvis_drift': drift, 'amplitude_of_cap': amplitude, 'envelope': radius, 'rigid_scale_error': scale_error,
+                    'grip_error': grip_error, 'contact_error': contact_error,
+                    'preen_contact_error': preen_error, 'ledger_arm_triangle_overlaps': overlaps})
         report[clip] = row
     ride = chain['ult_ride_loop'][0]
     for clip, end_kind in (('ult_windup', 1), ('ult_strike', 0), ('ult_strike', 1), ('ult_recover', 0)):
@@ -359,6 +394,81 @@ def check_pose(glb, data, pilot, table, info):
         if error > RIDE_TOL:
             raise Failure('check 8: %s %s is %.6f off the ride pose' % (clip, 'end' if end_kind else 'start', error))
     info['pose'] = report
+    if pilot == 'kest':
+        # The retained drop_land is the existing route's mandatory preen positive control.
+        import pilot_drop_timing
+        arm.animation_data.action = _action(bpy, 'drop_land')
+        arm.animation_data.action_slot = arm.animation_data.action.slots[0]
+        frames = pilot_drop_timing.FRAMES['kest']
+        _basis(arm, bpy, (frames[11] - 1) / FPS)
+        info['preen_contact_error'] = check_preen(arm)
+        require_metric(info, 17, info['preen_contact_error'], .005, 'Kest retained preen contact')
+    for check in (13, 14, 17):
+        info['checks'][str(check)]['status'] = 'PASS'
+
+
+def require_metric(info, check, value, cap, label):
+    row = info.setdefault('checks', {}).setdefault(str(check), {})
+    row['maximum'] = max(row.get('maximum', 0), value)
+    row['limit'] = cap
+    if value > cap:
+        row['status'] = 'FAIL'
+        raise Failure('check %d: %s %.7f exceeds %.7f' % (check, label, value, cap))
+
+
+def check_preen(arm):
+    from pilot_kest_poses import contact, FEATHER_TIP
+    bone = arm.pose.bones['hand.R']
+    tip = bone.matrix @ bone.bone.matrix_local.inverted() @ FEATHER_TIP
+    error = (tip - contact(arm)).length
+    if error >= .005:
+        raise Failure('check 17: Kest preen contact %.7f m is not under .005 m' % error)
+    return error
+
+
+@lru_cache(maxsize=1)
+def ledger_tree():
+    """Recover the recipe's ledger tags by bind-space vertex position after glTF export."""
+    import bpy
+    from mathutils.kdtree import KDTree
+    import pilot_tally
+    source, _ = pilot_tally.model()
+    tags = source.data.attributes['tally_ledger'].data
+    points = [vertex.co.copy() for vertex, tag in zip(source.data.vertices, tags) if tag.value == 1]
+    tree = KDTree(len(points))
+    for i, point in enumerate(points):
+        tree.insert(point, i)
+    tree.balance()
+    source_mesh = source.data
+    bpy.data.objects.remove(source, do_unlink=True)
+    bpy.data.meshes.remove(source_mesh)
+    return tree
+
+
+def ledger_overlaps(bpy, meshes):
+    from mathutils.bvhtree import BVHTree
+    tree = ledger_tree()
+    positions, arms, ledger = [], [], []
+    for obj in meshes:
+        evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        mesh = evaluated.to_mesh()
+        start = len(positions)
+        positions.extend(evaluated.matrix_world @ vertex.co for vertex in mesh.vertices)
+        groups = {group.index: group.name for group in obj.vertex_groups}
+        bones = [groups[max(vertex.groups, key=lambda group: group.weight).group] if vertex.groups else ''
+                 for vertex in mesh.vertices]
+        for polygon in mesh.polygons:
+            names = [bones[i] for i in polygon.vertices]
+            face = [start + i for i in polygon.vertices]
+            if all(name.startswith(('shoulder.', 'upper_arm.', 'lower_arm.', 'hand.', 'curl.')) for name in names):
+                arms.append(face)
+            elif all(name == 'spine_01' for name in names) and all(
+                    tree.find(obj.data.vertices[i].co)[2] < 1e-6 for i in polygon.vertices):
+                ledger.append(face)
+        evaluated.to_mesh_clear()
+    if not arms or not ledger:
+        raise Failure('check 17: Tally ledger/arm geometry is missing')
+    return len(BVHTree.FromPolygons(positions, arms).overlap(BVHTree.FromPolygons(positions, ledger)))
 
 
 def _action(bpy, clip):
@@ -413,15 +523,16 @@ def _radius(bpy, meshes):
 
 # --- the run -------------------------------------------------------------------------------
 
-def verify(pilot, glb, baseline, has_table=None, pose=True, quiet=False):
+def verify(pilot, glb, baseline, has_table=None, pose=True, quiet=False, table=None):
     """Returns (passed, line, info)."""
     data = roster()
     if pilot not in data['pilots']:
         raise SystemExit('unknown pilot %s; roster has %s' % (pilot, sorted(data['pilots'])))
-    table = pose_table(pilot)
+    table = pose_table(pilot) if table is None else table
     if has_table is None:
         has_table = table_exists(pilot)
     info = {'pilot': pilot, 'glb': str(glb), 'baseline': str(baseline) if baseline else None, 'has_table': has_table}
+    info['checks'] = {str(n): {'status': 'NOT_RUN'} for n in (13, 14, 17)}
     try:
         doc, binary, blob = read_glb(glb)
         info['glb_sha256'] = hashlib.sha256(blob).hexdigest()
@@ -431,11 +542,13 @@ def verify(pilot, glb, baseline, has_table=None, pose=True, quiet=False):
         check_structure(doc, binary, blob, base_doc, base_bin, data, pilot, has_table, table, info)
         if not info['transitional'] and pose:
             check_pose(glb, data, pilot, table, info)
-            info['not_checked'] = ['13 planted hands', '14 contact to CONTROLS', '17 pilot extras']
         line = 'PILOT_CLIPS: PASS %s %d clips' % (pilot, len(info['clips']))
         info['verdict'] = 'PASS'
         return True, line, info
     except Failure as error:
+        for check in (13, 14, 17):
+            if str(error).startswith('check %d:' % check):
+                info['checks'][str(check)]['status'] = 'FAIL'
         info['verdict'] = 'FAIL'
         info['failure'] = str(error)
         return False, 'PILOT_CLIPS: FAIL %s: %s' % (pilot, error), info
@@ -493,6 +606,28 @@ def seed(clean, out, defect):
         mesh_node = next(i for i, n in enumerate(doc['nodes']) if 'mesh' in n)
         sampler = next(c['sampler'] for c in anim['channels'] if c['target']['path'] == 'translation')
         anim['channels'].append({'sampler': sampler, 'target': {'node': mesh_node, 'path': 'translation'}})
+    elif defect == 'endpoint':
+        anim = anims['class_up']
+        channel = next(c for c in anim['channels'] if c['target']['path'] == 'rotation'
+                       and doc['nodes'][c['target']['node']]['name'] == 'head')
+        sampler = anim['samplers'][channel['sampler']]
+        from mathutils import Quaternion
+        rest = values(doc, binary, sampler['output'])[0]
+        q = Quaternion((rest[3], *rest[:3])) @ Quaternion((1, 0, 0), math.radians(3))
+        sampler['output'] = append_accessor(doc, binary, [rest, (q.x, q.y, q.z, q.w)], 'VEC4')
+    elif defect == 'loop-name':
+        anims['idle_loop']['name'] = 'idle'
+    elif defect in ('planted', 'contact'):
+        anim = anims['cast_special' if defect == 'planted' else 'cast_line']
+        channel = next(c for c in anim['channels'] if c['target']['path'] == 'translation'
+                       and doc['nodes'][c['target']['node']]['name'] == 'hand.R')
+        sampler = anim['samplers'][channel['sampler']]
+        rest = values(doc, binary, sampler['output'])[0]
+        end = clip_span(doc, anim)[1]
+        time = end / 2 if defect == 'planted' else 5 / FPS
+        sampler['input'] = append_accessor(doc, binary, [(0,), (time,), (end,)], 'SCALAR')
+        shifted = (rest[0] + (.005 if defect == 'planted' else .015), *rest[1:])
+        sampler['output'] = append_accessor(doc, binary, [rest, shifted, rest], 'VEC3')
     write_glb(out, doc, binary)
     return out
 
@@ -503,15 +638,90 @@ def selftest():
     folder = Path(tempfile.mkdtemp(prefix='pilot-clips-selftest-'))
     clean = synthetic(base, pilot, folder / 'clean.glb')
     ok = True
-    for defect in ('missing', 'seam', 'kept', 'nonbone'):
+    table = {'clips': {'cast_special': {'planted': ['R']},
+                       'cast_line': {'contact': {'frame': 6, 'hand': 'R', 'control': 'Grip.R'}}}}
+    original = pose_table
+    globals()['pose_table'] = lambda name: table if name == pilot else original(name)
+    for defect in ('missing', 'seam', 'kept', 'nonbone', 'endpoint', 'loop-name'):
         glb = seed(clean, folder / ('%s.glb' % defect), defect)
         passed, line, _ = verify(pilot, glb, base, has_table=True)
         print(line.replace('PILOT_CLIPS: FAIL %s:' % pilot, 'PILOT_CLIPS: FAIL selftest-%s:' % defect)
               if not passed else 'PILOT_CLIPS: SELFTEST MISSED %s (%s)' % (defect, line))
         ok = ok and not passed
+    for defect, check in (('planted', 13), ('contact', 14)):
+        glb = seed(clean, folder / ('%s.glb' % defect), defect)
+        passed, line, _ = verify(pilot, glb, base, has_table=True)
+        caught = not passed and 'check %d:' % check in line
+        print('PILOT_CLIPS_SELFTEST %s: %s (%s)' % (defect, 'FAIL caught' if caught else 'MISSED', line))
+        ok = ok and caught
+    import bpy
+    from mathutils import Vector
+    sys.path.insert(0, str(HERE))
+    import pilot_kest_poses
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=str(SKETCH / roster()['pilots']['kest']['glb']))
+    arm = next(o for o in bpy.context.scene.objects if o.type == 'ARMATURE')
+    for track in arm.animation_data.nla_tracks:
+        track.mute = True
+    arm.animation_data.action = None
+    pilot_kest_poses.pose(arm, 12)
+    hand = arm.pose.bones['hand.R']
+    matrix = hand.matrix.copy()
+    tip = matrix @ hand.bone.matrix_local.inverted() @ pilot_kest_poses.FEATHER_TIP
+    matrix.translation += pilot_kest_poses.contact(arm) - tip + Vector((.006, 0, 0))
+    hand.matrix = matrix
+    bpy.context.view_layer.update()
+    caught = False
+    try:
+        check_preen(arm)
+    except Failure as error:
+        caught = 'check 17:' in str(error)
+        print('PILOT_CLIPS_SELFTEST preen-6mm: FAIL caught (%s)' % error)
+    except NameError:
+        print('PILOT_CLIPS_SELFTEST preen-6mm: MISSED (check 17 absent)')
+    ok = ok and caught
+    matrix.translation -= Vector((.006, 0, 0))
+    hand.matrix = matrix
+    bpy.context.view_layer.update()
+    clean_preen = check_preen(arm)
+    print('PILOT_CLIPS_SELFTEST preen-clean: PASS (%.8f)' % clean_preen)
+    # Exercise the same triangle classifier used on reimported Tally clips.
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    import pilot_tally
+    source, _ = pilot_tally.model()
+    tags = source.data.attributes['tally_ledger'].data
+    face = next(face for face in source.data.polygons if len(face.vertices) == 3
+                and all(tags[i].value == 1 for i in face.vertices))
+    points = [source.data.vertices[i].co.copy() for i in face.vertices]
+    centre = sum(points, Vector()) / 3
+    normal = (points[1] - points[0]).cross(points[2] - points[0]).normalized()
+    tangent = (points[1] - points[0]).normalized()
+    arm_points = [centre + normal * .01, centre - normal * .01 + tangent * .01,
+                  centre - normal * .01 - tangent * .01]
+    mesh = bpy.data.meshes.new('ledger-overlap-fixture')
+    mesh.from_pydata(points + arm_points, [], [(0, 1, 2), (3, 4, 5)])
+    fixture = bpy.data.objects.new('ledger-overlap-fixture', mesh)
+    bpy.context.collection.objects.link(fixture)
+    fixture.vertex_groups.new(name='spine_01').add([0, 1, 2], 1, 'REPLACE')
+    fixture.vertex_groups.new(name='hand.R').add([3, 4, 5], 1, 'REPLACE')
+    overlaps = ledger_overlaps(bpy, [fixture])
+    caught = False
+    try:
+        require_metric({}, 17, overlaps, 0, 'Tally ledger-to-arm overlaps')
+    except Failure as error:
+        caught = 'check 17:' in str(error)
+        print('PILOT_CLIPS_SELFTEST ledger-overlap: FAIL caught (%s)' % error)
+    ok = ok and caught
+    for vertex in mesh.vertices[3:]:
+        vertex.co += normal * .1
+    bpy.context.view_layer.update()
+    clean_ledger = ledger_overlaps(bpy, [fixture]) == 0
+    print('PILOT_CLIPS_SELFTEST ledger-clear: %s' % ('PASS' if clean_ledger else 'FAIL'))
+    ok = ok and clean_ledger
     passed, line, info = verify(pilot, clean, base, has_table=True)
     print(line.replace('PASS %s' % pilot, 'PASS selftest-clean'))
     ok = ok and passed
+    globals()['pose_table'] = original
     (folder / 'clean-verify.json').write_text(json.dumps(info, indent=2, default=str) + '\n')
     print('PILOT_CLIPS_SELFTEST: %s (%s)' % ('PASS' if ok else 'FAIL', folder))
     return ok
@@ -524,6 +734,7 @@ def main():
     parser.add_argument('--baseline')
     parser.add_argument('--glb')
     parser.add_argument('--evidence')
+    parser.add_argument('--table', type=Path)
     parser.add_argument('--selftest', action='store_true')
     args = parser.parse_args(argv)
     if args.selftest:
@@ -532,7 +743,9 @@ def main():
         parser.error('a pilot or --selftest')
     data = roster()
     glb = Path(args.glb) if args.glb else SKETCH / data['pilots'][args.pilot]['glb']
-    passed, line, info = verify(args.pilot, glb, Path(args.baseline) if args.baseline else None)
+    table = json.loads(args.table.read_text()) if args.table else None
+    passed, line, info = verify(args.pilot, glb, Path(args.baseline) if args.baseline else None,
+                              has_table=True if args.table else None, table=table)
     folder = Path(args.evidence) if args.evidence else EVIDENCE / args.pilot
     folder.mkdir(parents=True, exist_ok=True)
     (folder / 'verify.json').write_text(json.dumps(info, indent=2, default=str) + '\n')
