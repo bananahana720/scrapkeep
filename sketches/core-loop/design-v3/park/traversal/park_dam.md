@@ -1,10 +1,63 @@
 # park_dam traversal receipts
 
+## 2026-10-12: round 5 final greybox
+
+Measured on runtime head `c3c143ed114d1c7194ace87cbd29039b498f0606`, after merge `76757a256dfc31145f92d06dbb105a629c8584fe` of candidate `d8e507777a8c46ef641b5842e04a83116de9bc83`, using the committed traversal tool at fixed 90 FPS through the CPU queue at nice 10. All seven untraced eight-seed batches are complete, 56 rows. The independent PARK.md section 8 audit judges each gated worst seed and each required median. The floor uses its own row with Rivet as reference. Later page edits preserve these runtime inputs, checked by SHA256 across 391 files. Verdict: PASS+NOTES, evidence level 4. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r5/final-sweep/`.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS |
+| time_to_warden_s | 63.48 (worst 64.99), PASS | 80.9 (worst 80.93), PASS | 80.22 (worst 86.43), PASS | 73.87 (worst 75.7), PASS | 80.27 (worst 80.86), PASS | 84.68 (worst 84.82), PASS | 86.57 (worst 86.57), reported, pilot band, not the floor's |
+| segment_s | 27.53, 17.24, 18.7 (worst 28.51), PASS | 38.16, 29.26, 13.48 (worst 38.41), PASS | 30.08, 30.89, 19.24 (worst 31.26), PASS | 31.56, 26.13, 16.17 (worst 33.09), PASS | 32.31, 31.23, 16.71 (worst 32.46), PASS | 29.51, 29.22, 25.93 (worst 30.53), PASS | 39.01, 31.84, 15.7 (worst 39.27), reported, pilot band, not the floor's |
+| flow_share | 0.9276 (worst 0.9241), PASS | 0.8445 (worst 0.8354), PASS | 0.7691 (worst 0.758), PASS | 0.9687 (worst 0.9433), PASS | 0.8156 (worst 0.7646), PASS | 0.9273 (worst 0.9003), PASS | 0.7684 (worst 0.7684), reported, pilot band, not the floor's |
+| airborne_share | 0.2143 (worst 0.2143, 0.2598), PASS | 0.1633 (worst 0.1633, 0.1697), PASS | 0.3 (worst 0.2157, 0.325), PASS | 0.2128 (worst 0.2081, 0.2219), PASS | 0.1636 (worst 0.1636, 0.1681), PASS | 0.1889 (worst 0.1717, 0.1889), PASS | 0.1162 (worst 0.1082, 0.1162), reported, pilot band, not the floor's |
+| dead_stops | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS |
+| peak_speed_mps | 52.66 (worst 52.66); tier3 median 47.31 s, PASS | 42.55 (worst 42.49); tier3 median 10.16 s, PASS | 28.29 (worst 27.5); tier3 median 13.52 s, PASS | 39.7 (worst 38.5); tier3 median 12.62 s, PASS | 44.36 (worst 43.98); tier3 median 8.8 s, PASS | 35.74 (worst 35.74); tier3 median 12.44 s, PASS | 42.99 (worst 42.47); tier3 median 11.67 s, reported, pilot band, not the floor's |
+| quiet_max_s | 8.41 (worst 8.41), PASS | 12.14 (worst 12.14), PASS | 11.8 (worst 12.31), PASS | 10.5 (worst 10.84), PASS | 12.06 (worst 12.49), PASS | 10.91 (worst 11.82), PASS | 12.53 (worst 12.58), reported, pilot band, not the floor's |
+| max_anchor_gap_m | 36.4 (worst 36.4), PASS | 33.2 (worst 33.2), PASS | 36.8 (worst 36.8), PASS | 35.6 (worst 35.6), PASS | 33.7 (worst 33.7), PASS | 35 (worst 35), PASS | 33.1 (worst 33.1), reported, pilot band, not the floor's |
+| distinct_verbs | 5 (worst 5), PASS | 6 (worst 6), PASS | 7 (worst 7), PASS | 6 (worst 6), PASS | 6 (worst 6), PASS | 6 (worst 6), PASS | 5 (worst 5), reported, pilot band, not the floor's |
+| length_ratio | 1.65 (worst 1.65, 1.69), PASS | 1.33 (worst 1.32, 1.33), PASS | 1.34 (worst 1.34, 1.34), PASS | 1.38 (worst 1.38, 1.38), PASS | 1.32 (worst 1.32, 1.32), PASS | 1.45 (worst 1.45, 1.45), PASS | 1.38 (worst 1.38, 1.38), reported, pilot band, not the floor's |
+| floor | - | - | - | - | - | - | 86.57 (worst 86.57); cap 161.8 s, PASS |
+| distinct_lines | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | - |
+
+| Line | time_to_warden_s: max | segment_s: max | flow_share: min | airborne_share: both | dead_stops: max | peak_speed_mps: min | tier3_s: min | quiet_max_s: max | max_anchor_gap_m: max | distinct_ride_facts: min | length_ratio: both |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 64.99 (seed 3) | 28.51 (seed 3) | 0.9241 (seed 3) | 0.2143 (seed 1,2,4,5,6,7,8) / 0.2598 (seed 3) | 0 (seed 1,2,3,4,5,6,7,8) | 52.66 (seed 1,2,4,5,6,7,8) | 47.18 (seed 3) | 8.41 (seed 1,2,4,5,6,7,8) | 36.4 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,4,5,6,7,8) | 1.65 (seed 1,2,4,5,6,7,8) / 1.69 (seed 3) |
+| rivet | 80.93 (seed 4) | 38.41 (seed 4) | 0.8354 (seed 4) | 0.1633 (seed 1,2,3,5,6,7,8) / 0.1697 (seed 4) | 0 (seed 1,2,3,4,5,6,7,8) | 42.49 (seed 4) | 10.16 (seed 1,2,3,5,6,7,8) | 12.14 (seed 1,2,3,5,6,7,8) | 33.2 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.32 (seed 4) / 1.33 (seed 1,2,3,5,6,7,8) |
+| kest | 86.43 (seed 4) | 31.26 (seed 4) | 0.758 (seed 3) | 0.2157 (seed 2) / 0.325 (seed 4) | 0 (seed 1,2,3,4,5,6,7,8) | 27.5 (seed 4) | 2.93 (seed 4) | 12.31 (seed 3) | 36.8 (seed 1,2,3,4,5,6,7,8) | 7 (seed 1,2,3,4,5,6,7,8) | 1.34 (seed 1,2,3,4,5,6,7,8) / 1.34 (seed 1,2,3,4,5,6,7,8) |
+| tarn | 75.7 (seed 6) | 33.09 (seed 6) | 0.9433 (seed 6) | 0.2081 (seed 6) / 0.2219 (seed 3,4) | 0 (seed 1,2,3,4,5,6,7,8) | 38.5 (seed 3,4) | 12.62 (seed 1,2,5,7,8) | 10.84 (seed 6) | 35.6 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+| tally | 80.86 (seed 3) | 32.46 (seed 3) | 0.7646 (seed 3) | 0.1636 (seed 1,2,4,5,6,7,8) / 0.1681 (seed 3) | 0 (seed 1,2,3,4,5,6,7,8) | 43.98 (seed 3) | 8.8 (seed 1,2,4,5,6,7,8) | 12.49 (seed 3) | 33.7 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.32 (seed 1,2,3,4,5,6,7,8) / 1.32 (seed 1,2,3,4,5,6,7,8) |
+| cannon | 84.82 (seed 3) | 30.53 (seed 3) | 0.9003 (seed 3) | 0.1717 (seed 3) / 0.1889 (seed 1,2,5,6,7,8) | 0 (seed 1,2,3,4,5,6,7,8) | 35.74 (seed 1,2,5,6,7,8) | 12.44 (seed 1,2,5,6,7,8) | 11.82 (seed 4) | 35 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,5,6,7,8) | 1.45 (seed 1,2,3,4,5,6,7,8) / 1.45 (seed 1,2,3,4,5,6,7,8) |
+| floor | 86.57 (seed 1,2,3,5,7,8) | 39.27 (seed 6) | 0.7684 (seed 1,2,3,5,7,8) | 0.1082 (seed 4) / 0.1162 (seed 1,2,3,5,7,8) | 0 (seed 1,2,3,4,5,6,7,8) | 42.47 (seed 4) | 11.47 (seed 4) | 12.58 (seed 6) | 33.1 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+
+Raw stops: 0 on 56 rows. Terrain stops: 0. Pack stops: 0. The final runs contain no stop to attribute when this count is zero. Any unresolved final stop counts as terrain under ruling 25. The historical failure and full trace remain preserved below and in the round-4 and round-5 folders.
+
+| Stop classification | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Terrain stops | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed |
+| Pack stops | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed |
+
+### Kest wall-tip repair
+
+The merged pre-repair Kest seed-4 trace reproduces the round-4 terrain stop at tick 7583, 84.224 s, [54.37,0.94,531.97], and matches all 7875 ticks of the retained read-only enemy probe. Ground/Tiles/Tile5_8 is the only contact in the preceding 90 ticks. Inspection of every authored footprint within 40 m and the baked grid identifies `training_wall_east`'s ridge tip: at [52,532] it contributes 4.5 m, while [54,532] has no ridge contribution, a 4.413469 m rise over a 2 m cell after the apron offset. The stop occurs as the 1 m ball turns into this east face. Round 5 shortens this row only, length 65 to 45 m at unchanged [50,502.5], height 8, width 8 and yaw 0. Its end moves from z 535 to 525. The new committed regression checks the recorded approach against the wall footprint with the ball radius; restoring the old tip in a copied input fails that clearance check. The new solo seed 4 has zero stops and matches its eight-seed batch row. Evidence: `cause.json`, `nearby-rows.json`, `red-baked-grid.log`, `green-baked-grid.log`, `baseline-agreement.json`, `f1-committed-red.log`, `f1-stage-green.log`, `green-kest/` and `final-audit.json` in the round-5 folder.
+
+Rivet, Kest and Cannon pass within 60 m of the old wall footprint. All seven lines were rerun; `affected-lines.json` gives the independent segment distances. The six seed-1 traced runs also match the untraced batch summaries and establish the distinct-line count.
+
+### Mounted reactor win proof, round 5
+
+| Seed | Outcome | Engage s | Break s | Engage to break s | Damage | After break |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | stages_done | 169.07 | 347.03 | 177.96 | {'ram': 243.8, 'runner': 54.2, 'slam': 297.9, 'stomp': 54.2} | stage 2, exit 355.62 s |
+| 2 | stalled | 169.03 | None | None | {'ram': 243.9, 'slam': 243.9} | stage 1, exit 600.0 s |
+| 3 | stalled | 157.49 | None | None | {'slam': 162.6, 'stomp': 162.6} | stage 1, exit 600.01 s |
+
+Every completed seed uses the scratch wrapper with a 600 s stage limit before the first driver tick, through the eight-core CPU queue with an 1800 s TERM timeout and 10 s kill grace. The original serial sequence hit its wall-time cap with seeds 1 and 2 complete, exit 124, so it is INCONCLUSIVE for three seeds. Seed 3 completed separately in a fresh output and XDG folder under the same wrapper, policy and queue. The final proof combines these completed per-seed records, with source paths in final-audit.json; this is not presented as an exact replay of the interrupted child. Every seed must reach and engage under ruling 23. A fight that exceeds the limit belongs to WT-PARK. Ruling 26 requires no `get_rid` error; none occurs in any win log. The Warden row and authored dam-face anchor are unchanged.
+
 ## 2026-10-12: Eye OPEN history exception
 
 ddd2be0 added the Eye OPEN control and guard together. The final guards work, but the committed-red order was not met for that commit. The coordinator accepted an explicit exception for round 5: the retained pre-fix scratch red receipts and final mutation evidence stand in for a committed red. Existing commits and mutation receipts remain intact; this exception does not authorize history rewriting or waive the new changes' red-first requirement. Evidence: `/home/andrew/scratch/w13/cgate/kd1-dam-r4/red-history.json`, `f3-parent-state.log`, and `/home/andrew/scratch/w13/sol/kd1-dam-r4/f3-red.log`. The round-4 report's blanket claim that all findings were fixed did not establish the required committed order.
 
-## 2026-10-12: round 4 final greybox
+## 2026-10-12: round 4 final greybox, superseded by round 5
 
 Measured on the runtime inputs of merged head `1c3ef9f79b96afabcd418f14ff9eb6f0e832d486` using the committed candidate `tools/traversal_line.gd`, fixed 90 FPS, eight seeds per line, through the CPU queue at nice 10. All 56 rows are complete. Runtime hashes match the final branch; later commits change tests and pages only. This round supersedes earlier measurements. Verdict: FAIL, evidence level 4. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r4/final-sweep/`. The floor is judged by its own row, using Rivet's median as the reference.
 
