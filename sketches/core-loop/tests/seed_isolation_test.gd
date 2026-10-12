@@ -9,17 +9,22 @@ const BOT_TICKS := 30
 func _initialize() -> void:
 	var t := T.new("seed_isolation_test")
 	var base := OS.get_user_data_dir().path_join("seed-isolation-%d" % OS.get_process_id())
+	DirAccess.make_dir_recursive_absolute(base)
 	var jobs := []
 	for mode in ["batch", "isolated"]:
 		jobs.append({"script": "res://tools/traversal_line.gd", "args": [
 			"--pilot=sable", "--seeds=1,2" if mode == "batch" else "--seeds=2",
 			"--trace", "--out=" + base.path_join(mode)]})
 	for mode in ["bot-batch", "bot-isolated"]:
-		jobs.append({"script": "res://tools/bot_run.gd", "state": base.path_join(mode + "-state"), "args": [
+		var launcher := base.path_join(mode + ".gd")
+		var file := FileAccess.open(launcher, FileAccess.WRITE)
+		file.store_string(_bot_launcher(base.path_join(mode + "-state")))
+		file.close()
+		jobs.append({"script": launcher, "args": [
 			"--pilot=pylon_engineer", "--policy=brawler", "--table=slice",
 			"--seeds=1,2" if mode == "bot-batch" else "--seeds=2", "--trace-ticks=1",
 			"--ticks=%d" % BOT_TICKS, "--out=" + base.path_join(mode)]})
-	var results := _run(jobs, base, 85.0)
+	var results := ChildRuns.run(jobs, 85.0)
 	var hashes: Array[String] = []
 	var traces: Array = []
 	for i in jobs.size():
@@ -59,35 +64,18 @@ func _initialize() -> void:
 	quit(code)
 
 
-# Launch with per-job XDG state, then wait on all children under one deadline.
-func _run(jobs: Array, base: String, timeout_s: float) -> Array:
-	var running := []
-	DirAccess.make_dir_recursive_absolute(base)
-	for i in jobs.size():
-		var job: Dictionary = jobs[i]
-		var previous := {}
-		if job.has("state"):
-			for kind in ["DATA", "CONFIG", "CACHE"]:
-				var key: String = "XDG_%s_HOME" % kind
-				previous[key] = OS.get_environment(key)
-				OS.set_environment(key, String(job["state"]).path_join(kind.to_lower()))
-		var log_path := base.path_join("child-%d.log" % i)
-		var args: Array = ["--headless", "--fixed-fps", "90", "--log-file", log_path, "--path",
-			ProjectSettings.globalize_path("res://"), "--script", job["script"], "--"] + job["args"]
-		running.append({"pid": OS.create_process(OS.get_executable_path(), PackedStringArray(args)), "log": log_path})
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
-	var start := Time.get_ticks_msec()
-	while running.any(func(r): return OS.is_process_running(r["pid"])) and Time.get_ticks_msec() - start < timeout_s * 1000.0:
-		OS.delay_msec(200)
-	var results := []
-	for child in running:
-		var timed_out := OS.is_process_running(child["pid"])
-		if timed_out:
-			OS.kill(child["pid"])
-		results.append({"code": -1 if timed_out else OS.get_process_exit_code(child["pid"]),
-			"log": FileAccess.get_file_as_string(child["log"]), "timed_out": timed_out})
-	return results
+# A small launcher gives each bot job clean saved state while ChildRuns owns the deadline.
+func _bot_launcher(state_dir: String) -> String:
+	return """extends SceneTree
+func _initialize() -> void:
+	for kind in ["DATA", "CONFIG", "CACHE"]:
+		OS.set_environment("XDG_%%s_HOME" %% kind, %s.path_join(kind.to_lower()))
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", %s,
+		"--script", "res://tools/bot_run.gd", "--"])
+	args.append_array(OS.get_cmdline_user_args())
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	for chunk in output:
+		print(String(chunk).strip_edges())
+	quit(code)
+""" % [JSON.stringify(state_dir), JSON.stringify(ProjectSettings.globalize_path("res://"))]
