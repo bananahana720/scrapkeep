@@ -67,7 +67,7 @@ func _check_classes() -> void:
 
 
 func _check_build() -> void:
-	var held: Array = ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",
+	var held: Array[String] = ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",
 		"crush_guard", "cap_relay", "cap_relay", "cap_relay", "cap_relay", "magnet_spool", "cross_split"]
 	for i in 30:
 		held.append("crush_guard")
