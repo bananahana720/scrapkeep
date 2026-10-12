@@ -81,6 +81,12 @@ const CATALOGUE := {
 		"text": "+15% slam speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["mass"],
 		"mods": {"slam_speed": 1.15}},
+	# W13 SR9: a copy tightens the Hold the Relay ring and speeds its charge. The numbers
+	# under "relay" are read by hold_relay.gd tuned(); a capped stack of three copies.
+	"relay_convergence": {"name": "Relay Convergence", "verb": "Tighten on the relay", "pitch": "Ring pulls in, charge quickens",
+		"text": "Tighter relay ring, faster charge", "icon": "utility",
+		"rarity": "common", "tier": 1, "family": "stat", "tags": ["arc"],
+		"stack": "capped", "cap": 3, "relay": {"radius_div": 2.0, "charge_per": 0.3}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
 	"slag_rounds": {"name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
