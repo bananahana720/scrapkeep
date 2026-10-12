@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "bd3384b360e06ed7ff4c5c408482e34f229393af130c4323bd81073b0f5ff6f5",
+  "bake_sha256": "9763442ddbdf1699fe30818bf430a9727b9f1f79326c9165a081845cf45333ba",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 979054,
-  "edges": 320833,
+  "bytes": 979424,
+  "edges": 320927,
   "first_failed": "",
   "flags": {
     "deck": 627,
     "door_ok": 39506,
     "line": 384,
     "open": 40650,
-    "sight_ok": 8933,
+    "sight_ok": 8945,
     "under": 0
   },
   "full_visit_m": 1780,
   "full_visit_ratio": "1.441",
-  "graph_sha256": "cd6fc1c20500c5bf8cf70cffc80f875ffd1ba40bea62711692f16101e8ddf7cb",
+  "graph_sha256": "bbff8db214d1a9acf58b2c7c0211b0a02909d25326b6f0389efcc8f555c51388",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
   "nodes": 41028,
-  "park_sha256": "da19bf2f358b8b2c3807845ec110fadaa3765b1e1fa8e8d30710143f6157a36a",
+  "park_sha256": "262d2990469f7de67a62230e987757804f36c6fca4b3707cf6641b32921e3282",
   "pockets": [
     {
       "clear_ring": [],
@@ -287,7 +287,7 @@
         "viable": true
       },
       {
-        "cost": 459.3,
+        "cost": 459.2,
         "d_landmark": 587.0,
         "name": "meander",
         "on_route": false,
