@@ -1,4 +1,4 @@
-# 2026-10-12 (PC-SABLE round 5): Pin 39 checks for guard windows and retargeted casts.
+# 2026-10-12 (PC-SABLE round 7): Pin 50 checks, adding a closed-guard hold across cast and Q reads.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -6,7 +6,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 39
+const EXPECTED_CHECKS := 50
 const DT := 1.0 / 90.0
 
 var _t := T.new("sable_bot_hands_test")
@@ -152,6 +152,7 @@ func _run() -> void:
 		_player.kit.aim = {"state": Augments.AIM_BODY, "body": target, "point": target.global_position, "normal": Vector3.LEFT}
 		_hand(target)
 		_t.check("%s still loads slot 3 on its planned bite" % id, _player.intent.line_pressed and _player.intent.harpoon_pressed)
+	_closed_guard_hold(guard)
 	_retarget_casts(target, guard)
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
@@ -190,3 +191,28 @@ func _retarget_casts(body: Node3D, guard: Node3D) -> void:
 	_player.abilities.meter.locked = false
 	_driver._ultimate_hands(guard)
 	_t.check("Q remains available on the open core after retarget", _driver.source.press.get("ultimate_pressed", false))
+
+
+func _closed_guard_hold(guard: Node3D) -> void:
+	_fresh("bank_shot")
+	guard.harpoon_anchor = false
+	guard._posture.staggered = false
+	guard._posture.stagger_left = 0.0
+	_player.grapple_to(guard.global_position, Vector3.LEFT, guard)
+	Augments.commit_smash(_player.kit, _player.tuning, _player.state.velocity)
+	_driver._fight_target = guard
+	_player.abilities.meter.value = _player.abilities.meter.CAP
+	_player.abilities.meter.locked = false
+	for tick in 3:
+		_hand(guard)
+		_t.check("closed-guard tick %d refuses slot 2" % tick, not _driver._cast(2))
+		_t.eq("closed-guard tick %d keeps await_smash after slot 2" % tick, _driver._cast_phase, "await_smash")
+		_driver._ultimate_hands(guard)
+		_t.check("closed-guard tick %d keeps await_smash and refuses Q" % tick,
+			_driver._cast_phase == "await_smash" and not _driver.source.press.get("ultimate_pressed", false))
+	guard._posture.staggered = true
+	guard._posture.stagger_left = 3.0
+	_hand(guard)
+	_t.check("stagger casts Bank Shot on the next harpoon tick", _player.intent.line_pressed)
+	_consume()
+	_t.eq("closed-guard hold ends with one smash cast", _casts, [Augments.LINE_SMASH])
