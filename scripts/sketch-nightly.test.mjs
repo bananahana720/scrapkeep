@@ -120,7 +120,11 @@ test("nightly launches bot-tier tests with their smoke marker caps", async () =>
 async function fixture(fn) {
   const outDir = mkdtempSync(path.join(os.tmpdir(), "sketch-nightly-test-"));
   try {
+    mkdirSync(path.join(outDir, "tests"));
+    for (const script of scripts)
+      writeFileSync(path.join(outDir, script.replace(/^res:\/\//, "")), "extends SceneTree\n");
     const plan = buildPlan(options, {
+      directory: outDir,
       scripts,
       baseline,
       outDir,
@@ -210,7 +214,7 @@ test("plan matches checkpoint commands, optional import and serial wall-clock te
       [false, true, false, true, false, true],
     );
     assert.equal(
-      buildPlan(options, { scripts, baseline, outDir, imported: false })[0]
+      buildPlan(options, { directory: outDir, scripts, baseline, outDir, imported: false })[0]
         .kind,
       "import",
     );
@@ -627,7 +631,7 @@ test("empty receipt is red and contains no fabricated flake rate", () => {
 test("export step is opt-in, first after import, alone and unrendered", async () =>
   fixture(({ outDir }) => {
     const build = (opts, imported) =>
-      buildPlan(opts, { scripts, baseline, outDir, imported });
+      buildPlan(opts, { directory: outDir, scripts, baseline, outDir, imported });
     const exportOptions = { ...options, export: true };
     assert.equal(
       build(options, true).filter((s) => s.kind === "export").length,
@@ -678,6 +682,7 @@ test("fake export run reports in the receipt and a failing export is red", async
   fixture(async ({ outDir }) => {
     const exportOptions = { ...options, export: true };
     const plan = buildPlan(exportOptions, {
+      directory: outDir,
       scripts,
       baseline,
       outDir,
@@ -710,6 +715,7 @@ test("fake export run reports in the receipt and a failing export is red", async
       false,
     );
     const plain = buildPlan(options, {
+      directory: outDir,
       scripts,
       baseline,
       outDir,
