@@ -47,7 +47,11 @@ func _run() -> void:
 				w.ctx.events.world_fact.emit(fact.fact, fact.at)
 				phases.append(fact)
 				if row.family == "natural":
-					_check_mark(row.id + " " + fact.phase, handler.active[row.id].mark, EventKinds.world_row(fact.fact), row, w.events._park.park_rows[0])
+					_check_mark(row.id + " " + fact.phase, handler.active[row.id].mark, EventKinds.world_row(fact.fact), row, w.events._park.park_rows[0], 0.0 if fact.phase == "telegraph" else 1.0)
+			if row.telegraph.form == "ground_slump" and i == ceili(float(row.telegraph.lead_s) / 0.1 * 0.5):
+				handler._process(0.0)
+				_check_mark(row.id + " half warning", handler.active[row.id].mark,
+					EventKinds.world_row(row.telegraph.form), row, w.events._park.park_rows[0], 0.5)
 		t.eq(kind + " both cue phases", phases.size(), 2)
 		var cues: Array = audio.cue_log.filter(func(c): return c[0] == "world_fact" and c[2] == "now")
 		t.eq(kind + " one sound per phase", cues.size(), 2)
@@ -66,7 +70,7 @@ func _run() -> void:
 	quit(t.verdict())
 
 
-func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary, site: Dictionary) -> void:
+func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary, site: Dictionary, progress := 1.0) -> void:
 	var meshes := mark.get_children().filter(func(child): return child is MeshInstance3D)
 	var shape_ok := not meshes.is_empty()
 	var color_ok := shape_ok
@@ -110,7 +114,10 @@ func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary,
 				"ring": shape_ok = shape_ok and (local / half).length() >= 0.9649 and (local / half).length() <= 1.0001
 		if spec.get("pattern", "") == "dust_crack":
 			if mesh.name == "DustCurtain":
-				t.near(label + " curtain height above crack reads canonical record", dust_lift, float(spec.dust_height_m))
+				if progress == 0.0:
+					t.check(label + " curtain begins below authored full height", dust_lift > 0.0 and dust_lift < float(spec.dust_height_m), str(dust_lift))
+				else:
+					t.near(label + " curtain height above crack reads canonical record", dust_lift, float(spec.dust_height_m) * progress)
 			else:
 				t.check(label + " crawling crack retains terrain clearance", min_clearance >= 0.1499, str(min_clearance))
 		if spec.shape == "wave":
