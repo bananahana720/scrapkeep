@@ -1,4 +1,4 @@
-# 2026-10-12 (PC-SABLE round 4): Pin 22 checks for bite, haul and Bank Shot order.
+# 2026-10-12 (PC-SABLE round 4): Pin 28 checks for bite, haul and Bank Shot's guard window.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -6,7 +6,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 22
+const EXPECTED_CHECKS := 28
 const DT := 1.0 / 90.0
 
 var _t := T.new("sable_bot_hands_test")
@@ -37,6 +37,7 @@ func _fresh(line_id: String) -> void:
 	_player._fire_latched = false
 	_player._brake_was_held = false
 	_player.bank_last = {}
+	_player._bank_pending = {}
 	_player.set_velocity_now(Vector3.RIGHT * 20.0)
 	_player.state.grounded = true
 	_game.combat._line_load = {}
@@ -114,6 +115,31 @@ func _run() -> void:
 	_t.check("real landing consumes the committed line", _player._begin_landing(target))
 	_player._finish_landing(target, 20.0)
 	_t.check("landing pays the deferred Bank Shot exit", _player._bank_pending.is_empty() and not _player.bank_last.is_empty())
+	var guard = _game.combat.spawn_enemy("warden", _player.ball_position() + Vector3(9.0, 1.0, 0.0))
+	_t.check("real guard fixture is available", is_instance_valid(guard))
+	if not is_instance_valid(guard):
+		_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
+		quit(_t.verdict())
+		return
+	_fresh("bank_shot")
+	guard.live = _never
+	guard.harpoon_anchor = false
+	guard._posture.staggered = false
+	guard._posture.stagger_left = 0.0
+	_player.grapple_to(guard.global_position, Vector3.LEFT, guard)
+	_hand(guard)
+	_consume()
+	_t.eq("closed guard still receives the committed haul", _player.kit.line_state, Augments.LINE_SMASH)
+	_hand(guard)
+	_t.check("closed guard haul keeps Bank Shot in hand", not _player.intent.line_pressed and _driver._harpoon_held)
+	_consume()
+	_t.eq("closed guard did not spend Bank Shot", _casts, [])
+	guard._posture.staggered = true
+	guard._posture.stagger_left = 3.0
+	_hand(guard)
+	_t.check("open core permits Bank Shot on the committed haul", _player.intent.line_pressed)
+	_consume()
+	_t.eq("open core Bank Shot still observes LINE_SMASH", _casts, [Augments.LINE_SMASH])
 	_fresh("bank_shot")
 	_player.grapple_to(target.global_position, Vector3.LEFT, target)
 	_hand(target)
