@@ -659,7 +659,7 @@ func _watch_layer(delta: float, ball: Vector3) -> void:
 
 func _on_reward_offered(offers: Array) -> void:
 	if ctx.flow.in_stage() and ctx.flow.state_name() == "gates":
-		bay.dock(offers, Callable(terrain, "height"), ctx.root.get_world_3d().direct_space_state if ctx.root.is_inside_tree() else null)
+		bay.dock(offers, Callable(terrain, "height"), ctx.root.get_world_3d().direct_space_state if ctx.root.is_inside_tree() else null, terrain.map())
 
 
 func _on_flow_changed(state: String) -> void:
