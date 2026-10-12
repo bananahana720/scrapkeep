@@ -509,6 +509,25 @@ static func gate(result: Dictionary) -> Array:
 	var sockets: Dictionary = result["sockets"]
 	if sockets["seeds"] <= 0 or sockets["seeds"] != fixed["seeds"]:
 		errors.append("expected equal nonempty seeded arms")
+	for arm in ["fixed", "sockets"]:
+		var stats: Dictionary = result[arm]
+		var rows: Array = stats["rows"]
+		var seeds: int = stats["seeds"]
+		if rows.size() != seeds:
+			errors.append("%s row count disagrees with seeds" % arm)
+		var failed := 0
+		var identities := true
+		for i in rows.size():
+			identities = identities and rows[i]["seed"] == i + 1
+			failed += 1 if rows[i]["reroll"] else 0
+		if not identities:
+			errors.append("%s rows must identify seeds 1 through %d exactly" % [arm, seeds])
+		var expected := {"rerolls": failed, "successes": rows.size() - failed,
+			"success_share": float(rows.size() - failed) / maxf(seeds, 1),
+			"reroll_share": float(failed) / maxf(seeds, 1)}
+		for field in expected:
+			if stats[field] != expected[field]:
+				errors.append("%s %s disagrees with rows" % [arm, field])
 	if sockets["success_share"] < SUCCESS_MIN:
 		errors.append("fewer than 95% of socket seeds meet every stage criterion")
 	for metric in ["count_ok", "off_route", "visit_ok"]:
