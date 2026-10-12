@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   utimesSync,
@@ -14,6 +15,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import * as smoke from "./sketch-smoke.mjs";
 import {
   HEARTBEAT_MS,
   STALE_CLAIM_MS,
@@ -45,6 +47,114 @@ import {
   isSoloScript,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
+
+test("a bot head marker has its own timeout bounded at 1800 s", () => {
+  assert.equal(testTimeoutMs("# smoke: bots timeout=1500s\nextends SceneTree\n"), 1_500_000);
+  assert.equal(testTimeoutMs("# smoke: bots timeout=9999s\n"), 1_800_000);
+  assert.equal(testTimeoutMs("# smoke: bots timeout=600s\n"), 600_000);
+});
+
+test("a bot head marker without a timeout gets 1200 s", () => {
+  assert.equal(testTimeoutMs("# smoke: bots\nextends SceneTree\n"), 1_200_000);
+  assert.equal(testTimeoutMs("# smoke: bots\r\n"), 1_200_000);
+});
+
+test("bot markers are recognized only in the first five lines", () => {
+  assert.equal(smoke.isBot("#smoke:bots\r\n"), true);
+  assert.equal(isSolo("# smoke: bots timeout=1500s\n"), true);
+  assert.equal(smoke.isBot("# comment\n".repeat(4) + "# smoke: bots timeout=1500s\n"), true);
+  const late = "# comment\n".repeat(5) + "# smoke: bots timeout=1500s\n";
+  assert.equal(smoke.isBot(late), false);
+  assert.equal(testTimeoutMs(late), 180_000);
+  assert.equal(smoke.isBot('var s := "# smoke: bots"\n'), false);
+  assert.equal(smoke.isBot("# smoke: botswain\n"), false);
+});
+
+test("parseArgs selects the bot tier with its own receipt label", () => {
+  assert.equal(parseArgs(["--bots"]).bots, true);
+  assert.equal(parseArgs(["--bots"]).receipt, "bots");
+  assert.equal(parseArgs([]).bots, false);
+  assert.equal(parseArgs(["--bots", "--receipt", "gate-bots"]).receipt, "gate-bots");
+  assert.match(gateFlagsError(parseArgs(["--bots", "--receipt", "gate-bots", "--flags", "--scrap=armor"])), /refuses launch flags/);
+});
+
+// Run the real CLI with a fake Godot, so selection, serial scheduling and receipts
+// are checked together without playing whole runs in the script suite.
+function botTierFixture(args, check) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-bot-tier-"));
+  try {
+    mkdirSync(path.join(dir, "scripts"));
+    writeFileSync(path.join(dir, "scripts/sketch-smoke.mjs"), readFileSync(new URL("./sketch-smoke.mjs", import.meta.url)));
+    const tests = path.join(dir, "sketches/core-loop/tests");
+    mkdirSync(tests, { recursive: true });
+    writeFileSync(path.join(dir, "sketches/core-loop/project.godot"), "config_version=5\n");
+    writeFileSync(path.join(tests, "ordinary_test.gd"), "extends SceneTree\n");
+    writeFileSync(path.join(tests, "solo_test.gd"), "# smoke: solo timeout=360s\n");
+    writeFileSync(path.join(tests, "bot_a_test.gd"), "# smoke: bots timeout=1500s\n");
+    writeFileSync(path.join(tests, "bot_b_test.gd"), "# smoke: bots\n");
+    const fake = path.join(dir, "godot");
+    writeFileSync(fake, `#!${process.execPath}
+import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+if (args.includes("--version")) { console.log("fake"); process.exit(0); }
+const script = args[args.indexOf("--script") + 1];
+const name = args.includes("--script") ? script.split("/").pop().replace(/\\.gd$/, "") : args.includes("--import") ? "import" : "boot";
+appendFileSync(process.env.FIXTURE_LOG, "start " + name + "\\n");
+setTimeout(() => {
+  appendFileSync(process.env.FIXTURE_LOG, "end " + name + "\\n");
+  if (args.includes("--script")) console.log(name + ": PASS (1 checks)");
+}, 40);
+`, { mode: 0o755 });
+    const log = path.join(dir, "jobs.log");
+    const run = spawnSync(process.execPath, [path.join(dir, "scripts/sketch-smoke.mjs"), "--sketch", "core-loop", ...args], {
+      encoding: "utf8", timeout: 20_000,
+      env: { ...process.env, GODOT_BIN: fake, SMOKE_JOBS: "4", SMOKE_SLOTS: "6", SCRAPKEEP_LOCK_DIR: dir, SMOKE_FLAGS: "", FIXTURE_LOG: log },
+    });
+    assert.equal(run.status, 0, run.stdout + run.stderr);
+    const receipts = path.join(dir, "artifacts/local/receipts");
+    const receipt = JSON.parse(readFileSync(path.join(receipts, readdirSync(receipts)[0]), "utf8"));
+    check(run.stdout, receipt, readFileSync(log, "utf8"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("default smoke excludes and names bot tests without failures or missing verdicts", () => {
+  botTierFixture([], (output, receipt, log) => {
+    assert.match(output, /bot tier: 2 not run \(npm run sketch:bots\)/);
+    assert.match(output, /  bot_a_test\.gd\n  bot_b_test\.gd/);
+    assert.deepEqual(receipt.bot_tier_not_run, ["bot_a_test.gd", "bot_b_test.gd"]);
+    assert.equal(receipt.totals.failed, 0);
+    assert.equal(receipt.totals.missing_verdict, 0);
+    assert.equal(receipt.totals.runs, 4);
+    assert.doesNotMatch(log, /bot_[ab]_test/);
+  });
+});
+
+test("--bots runs only bot tests one at a time", () => {
+  botTierFixture(["--bots"], (output, receipt, log) => {
+    assert.deepEqual(log.trim().split("\n"), ["start import", "end import", "start bot_a_test", "end bot_a_test", "start bot_b_test", "end bot_b_test"]);
+    assert.equal(receipt.width, 1);
+    assert.equal(receipt.label, "bots");
+    assert.deepEqual(receipt.bot_tier_not_run, []);
+    assert.equal(receipt.results.filter((row) => row.solo).length, 2);
+  });
+});
+
+test("a named glob runs matching bot tests solo and keeps their timeouts", () => {
+  botTierFixture(["--test", "bot_*"], (output, receipt, log) => {
+    assert.deepEqual(log.trim().split("\n"), ["start import", "end import", "start bot_a_test", "end bot_a_test", "start bot_b_test", "end bot_b_test"]);
+    assert.equal(receipt.results.filter((row) => row.solo).length, 2);
+    assert.deepEqual(receipt.bot_tier_not_run, []);
+    assert.equal(testTimeoutMs("# smoke: bots timeout=1500s\n"), 1_500_000);
+  });
+});
+
+test("old receipt callers get an empty bot-tier exclusion array", () => {
+  const receipt = buildReceipt({ label: "old", argv: [], root: "/r", git: null, godot: {}, sketches: [], flags: [], width: 1, lockWaitMs: 0, startedAt: "t", wallMs: 0, stems: {}, results: [] });
+  assert.deepEqual(receipt.bot_tier_not_run, []);
+  assert.equal(receipt.ok, true);
+});
 
 test("a head marker can raise one test's cap, bounded at 360 s", () => {
   assert.equal(testTimeoutMs("extends SceneTree\n"), 180_000);
