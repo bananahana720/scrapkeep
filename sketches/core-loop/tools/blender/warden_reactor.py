@@ -87,7 +87,7 @@ COPPER = "copper"
 SAND = common.mix("sandstone", "petrol", 0.22)
 SAND_DARK = common.mix("sandstone", "charcoal", 0.45)
 TOOTH = common.mix("sandstone", "bone", 0.35)  # the lightest value on the body: teeth over the dark jacket
-ROD_STEEL = common.mix("ice", "bone", 0.25)
+ROD_STEEL = common.mix("ice", "bone", 0.45)
 COPPER_DARK = common.mix("copper", "charcoal", 0.6)
 DUST = common.mix("petrol", "sandstone", 0.3)
 
