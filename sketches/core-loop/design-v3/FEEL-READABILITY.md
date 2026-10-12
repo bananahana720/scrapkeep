@@ -464,6 +464,8 @@ Row numbers use coordinator `ROADMAP.md` at `494cd44`. Rows 5 and 6 are owned he
 
 `EventKinds.WEIGHT` owns impact weight. `EventKinds.WEIGHTED` gives each fact a class or an argument rule, an allegiance and a visual. `EventKinds.weigh(fact, args)` returns the shared record for hit-stop, shake, camera, VFX and sound. Presentation must consume that record together. Impact must never hide a telegraph or change a ring's measured reach.
 
+Start values; `EventKinds.WEIGHT` is authoritative.
+
 | Class | Stop, ms | Shake | Kick, m | FOV punch, degrees | FX scale | Body and pitch |
 | --- | --- | --- | --- | --- | --- | --- |
 | none | 0 | 0 | 0 | 0 | 0.8 | none |
@@ -483,6 +485,6 @@ Hit and heavy stops read the existing damage band through `Juice.stop_ms_for`. N
 
 Heavier means lower and longer, never louder. Every body layer plays at db 0 through the existing bank and priority trims. The baked `womp` is 0.62 seconds and `chunk_low` is 0.55 seconds at its original pitch. Lowering `chunk_low` by 12 and 17 semitones gives massive and climax longer playback and strictly lower zero-crossing rates than heavy. No new recipe is needed. Listening acceptance still belongs to Andrew.
 
-Class slams must keep distinct bank ids on the frame they share with `slammed`. The stand-ins are `clank` for `skid_smashed` and `reactor_erupt` for `demo_slammed`. The weight record overrides `ultimate_landed` to `vault_drop`; the next presentation unit must read that sound from the record. Its existing ROWS sound remains `slam_boom` until that consumer lands.
+Class slams must keep distinct bank ids on the frame they share with `slammed`. The three stand-in swaps are `clank` for `skid_smashed`, `reactor_erupt` for `demo_slammed` and `ally_hum_kest` for `ultimate_landed`. Each sound lives in `EventKinds.ROWS` and resolves through `Rows.sound`; `WEIGHTED` holds no sound override. The ultimate also keeps its cue distinct from a vault kill's `vault_drop` on the same frame. At unshifted playback, `ally_hum_kest` measures 376.75 zero crossings per second over 2.2721 seconds, below and longer than the heavy slam cue's 924.71 crossings per second over 0.85 seconds. Class bodies retain their separate lower-and-longer order. The borrowed Kest phrase is a stand-in for listening review.
 
 Owner default: the Warden-break freeze rides the player's `posture_break` strike, and `beacon_unsealed` stays a reward with no stop. Andrew may veto this default and amend this page.

@@ -180,7 +180,7 @@ const ROWS := {
 	"ultimate_ready": {"group": "combat", "color": Palette.ARC, "shape": "ring", "sound": "found_chime", "sound_next": "ultimate_ready", "hud": "", "objective": "", "priority": 1},
 	"ultimate_started": {"group": "combat", "color": Palette.ARC, "shape": "lane", "sound": "launch_roar", "hud": "", "objective": "", "priority": 1},
 	"ultimate_peak": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "sound_next": "motif_stinger", "hud": "", "objective": "", "priority": 1},
-	"ultimate_landed": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
+	"ultimate_landed": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "ally_hum_kest", "hud": "", "objective": "", "priority": 1},
 	"ultimate_cancelled": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
 }
 
@@ -309,7 +309,7 @@ const WEIGHT := {
 }
 
 # Empty visual uses ROWS or the fact's FxLibrary effects. The posture sub-fact uses
-# an existing spark spec. Sound overrides stay here when a paired fact shares ROWS.
+# an existing spark spec. Sound always resolves through Rows.sound.
 const WEIGHTED := {
 	"enemy_struck": {"rule": "strike", "allegiance": "player", "visual": ""},
 	"enemy_killed": {"rule": "death_parts", "allegiance": "player", "visual": ""},
@@ -317,7 +317,7 @@ const WEIGHTED := {
 	"player_hit": {"rule": "amount", "allegiance": "hostile", "visual": ""},
 	"posture_changed": {"rule": "posture", "allegiance": "player", "visual": "spark_core"},
 	"posture_break": {"class": "massive", "allegiance": "player", "visual": "spark_core"},
-	"ultimate_landed": {"class": "massive", "allegiance": "player", "visual": "", "sound": "vault_drop"},
+	"ultimate_landed": {"class": "massive", "allegiance": "player", "visual": ""},
 	"boss_defeated": {"class": "climax", "allegiance": "player", "visual": ""},
 	"boss_weak_point_hit": {"class": "heavy", "allegiance": "player", "visual": ""},
 	"player_died": {"class": "massive", "allegiance": "hostile", "visual": ""},
@@ -469,7 +469,7 @@ static func weigh(fact: String, args: Dictionary = {}) -> Dictionary:
 		"kick": 0.0 if allegiance == "hostile" else float(profile.kick) * strength,
 		"punch_fov": float(profile.punch_fov) * strength, "fx_scale": float(profile.fx_scale),
 		"body": String(profile.body), "body_ratio": pow(2.0, float(profile.body_st) / 12.0), "body_db": 0.0,
-		"visual": String(entry.get("visual", "")), "sound": String(entry.get("sound", rows_script.sound(fact))),
+		"visual": String(entry.get("visual", "")), "sound": rows_script.sound(fact),
 	}
 
 
