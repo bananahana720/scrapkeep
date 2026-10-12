@@ -42,6 +42,7 @@ const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
 const GraphLoader := preload("res://src/world/park/park_graph.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 const PARK_PATH := "res://src/world/park/park_crown.json"
 const BAKE_DIR := "res://assets/park/park_crown"
@@ -122,10 +123,12 @@ func _run() -> void:
 	for row in park["park_rows"]:
 		by_row[String(row["id"])] = row
 	var perches_ok := true
+	var clear_zones := ParkRecipes.clear_zones(park)
 	var path: Array = park["landmark"]["warden"]["path"]
 	for i in range(3):
 		var perch: Dictionary = by_row["perch_spire_%d" % (i + 1)]
 		perches_ok = perches_ok and perch["at"] == [path[i][0], path[i][2]] and String(perch["stamp"]) == ""
+		perches_ok = perches_ok and not ParkRecipes.anchor_posts(perch, clear_zones).is_empty()
 	t.check("the three physical perches retain the Warden path without raising the fight floor", perches_ok)
 	t.eq("the bowl keeps its 12 m depth", float(by_row["crown_bowl"]["size"][1]), 12.0)
 
