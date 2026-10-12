@@ -1816,7 +1816,7 @@ func _fire_line_skill(id: String, fraction: float) -> void:
 		return
 	var kit = ctx.player.kit
 	var mult := float(ctx.player.chain.multiplier())
-	var target: Node3D = kit.anchor_body if kit.on_body and is_instance_valid(kit.anchor_body) and not Augments.anchor_line(kit.anchor_body) else null
+	var target: Node3D = kit.anchor_body if kit.on_body and is_instance_valid(kit.anchor_body) and not (id == "bank_shot" and Augments.anchor_line(kit.anchor_body)) else null
 	var at: Vector3 = kit.anchor
 	var on := "body" if target != null else "world"
 	var prev_source := _forced_source
