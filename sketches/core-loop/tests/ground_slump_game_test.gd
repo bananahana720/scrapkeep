@@ -18,6 +18,9 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	if not t.check("named KD3 park_pit export is present", FileAccess.file_exists("res://src/world/park/park_pit.json")):
+		quit(t.verdict())
+		return
 	game = Game.new()
 	game.test_mode = true
 	game.table = "park"
