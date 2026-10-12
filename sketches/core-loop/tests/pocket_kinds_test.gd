@@ -12,7 +12,7 @@ const Schema := preload("res://src/world/park/park_schema.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const KINDS := ["movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
 const STAGES := ["park_dam", "park_test"]
-const EXPECTED_CHECKS := 29
+const EXPECTED_CHECKS := 30
 const H := 1.0 / 60.0
 
 class Checks extends "res://tests/support/t.gd":
@@ -42,7 +42,7 @@ func _run() -> void:
 		var index := args.find("--only")
 		if index + 1 < args.size():
 			only = args[index + 1]
-		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues"]:
+		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay"]:
 			t.check("valid control selection", false, str(args))
 			quit(t.verdict())
 			return
@@ -77,6 +77,7 @@ func _run() -> void:
 	if only == "":
 		_admission()
 		_ladder()
+		await _authored_pay()
 		await _combat()
 		_objectives()
 		_rounds()
@@ -85,6 +86,8 @@ func _run() -> void:
 		await _hazards()
 		await _marks()
 		await _exit()
+	elif only == "pay":
+		await _authored_pay()
 	elif only == "cues":
 		_cues()
 	elif only == "admission":
@@ -101,7 +104,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 10, "admission": 3, "cues": 3}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 10, "admission": 3, "cues": 3, "pay": 3}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -123,11 +126,13 @@ func _kill(pack: Array) -> void:
 			enemy._die()
 
 
-func _admitted(stage: String, kind: String, row_index: int, default_pay := false) -> Array:
+func _admitted(stage: String, kind: String, row_index: int, default_pay := false, override := {}) -> Array:
 	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % stage))
 	data.activity_rows[row_index].activity = kind
 	if default_pay:
 		data.activity_rows[row_index].pay = {}
+	if not override.is_empty():
+		data.activity_rows[row_index].pay = override
 	var errors: Array = Schema.validate(data)
 	if not errors.is_empty():
 		return []
@@ -173,7 +178,11 @@ func _ladder() -> void:
 		for row in data.activity_rows:
 			var previous := 0
 			for kind in KINDS.slice(0, 4):
-				var s = _site(kind, Vector2(row.at[0], row.at[1]))
+				var admitted := _admitted(stage, kind, data.activity_rows.find(row), true)
+				if admitted.is_empty():
+					rise = false
+					continue
+				var s = admitted[0]
 				var tier: int = acts.stand_odds(s).tier
 				rise = rise and tier > previous
 				previous = tier
@@ -201,6 +210,51 @@ func _ladder() -> void:
 	t.check("tier rises on both stage files", rise, "park_dam and park_test: every authored activity site, four ascending rungs")
 	t.check("shown-equals-paid over 20 seeds", equals_paid and checks == 480 and grants == 840, "%d chests / %d real part grants, expected 480/840" % [checks, grants])
 	t.check("tier shown before commit", shown, "all 24 stands carry their reward tier")
+
+
+func _authored_pay() -> void:
+	var correct := true
+	var cases := 0
+	var grants := 0
+	for stage in STAGES:
+		for kind in KINDS:
+			for override in [{}, {"rarities": ["common"]}, {"rarities": ["rare"]}, {"named": "hot_rivets", "rarities": ["rare"]}]:
+				var admitted := _admitted(stage, kind, 0, false, override)
+				if admitted.is_empty():
+					correct = false
+					continue
+				var s = admitted[0]
+				var pay: Dictionary = admitted[1].pay
+				var named := String(pay.get("named", ""))
+				var rarity := Parts.rarity_of(named) if named != "" else String(pay.rarities[0])
+				var count := 1 if named != "" else int(Activities.RULES[kind].pay.parts)
+				var tier := count + (0 if rarity == "common" else 1)
+				correct = correct and acts.stand_odds(s).tier == tier and s.tier_label.text.contains("Tier %d" % tier)
+				correct = correct and s.tier_label.text.contains(named if named != "" else rarity)
+				for seed_value in 20:
+					game.ctx.rng.seed = 700 + seed_value
+					var before := paid.size()
+					if kind == "round_arena":
+						s.round = 1
+						s.fog.begin(1)
+						acts._pay_round(s)
+						for reward in s.round_rewards.duplicate():
+							reward.inside = false
+							acts._watch_round_pickups(s, reward.pickup.global_position)
+					else:
+						acts._finish(s, s.global_position)
+						s.inside_pickup = false
+						acts._watch_pickup(s, s.pickup.global_position)
+					var taken: Array = paid.slice(before)
+					correct = correct and taken.size() == count and taken.all(func(part): return Parts.rarity_of(part) == rarity and (named == "" or part == named))
+					grants += taken.size()
+					cases += 1
+					s.done = false
+					s.pickup_taken = false
+					s.heal_paid = false
+				acts.clear()
+				await physics_frame
+	t.check("authored pay overrides default bundles over 20 seeds", correct and cases == 1120, "%d/1120 cases, %d actual grants; both parks x seven kinds x authored/common/rare/named x 20 seeds; shown tier from resolved payout" % [cases, grants])
 
 
 func _combat() -> void:
