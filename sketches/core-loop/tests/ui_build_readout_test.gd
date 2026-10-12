@@ -234,6 +234,8 @@ func _stat_keys(rows: Dictionary) -> Array:
 		var effect_key := Effects.stack_key(String(d.effect.get("do", "")))
 		if effect_key != "" and d.effect.has(effect_key):
 			keys[String(d.effect["do"]) + "." + effect_key] = true
+	for key in _expected_pools(rows.keys()):
+		keys[key] = true
 	return keys.keys()
 
 
