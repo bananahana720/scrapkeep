@@ -116,3 +116,55 @@ Progress from the fresh stage graph, reported:
 - tally: median 14.03 m/s, worst 14.03 m/s.
 - cannon: median 15.12 m/s, worst 15.12 m/s.
 - floor: median 13.61 m/s, worst 13.61 m/s.
+
+## Continuation rework1-probe, 2026-10-12
+
+Source head `60f1a3fa882eeea84571e10528379b908440dace`; evidence `/tmp/claude-1000/w13-sol/kd2-flume-r1/rework1-probe`. Seeds per line: {"sable": 2, "rivet": 1, "kest": 1, "tarn": 1, "tally": 1, "cannon": 1, "floor": 1}. Mixed counts or fewer than eight seeds are diagnostic and do not qualify acceptance. Per-seed limits use the worst column, including quiet time and anchor gap. Floor flow is reported.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden, 8/8 | 2 / 2 seeds MISS | 1 / 1 seeds MISS | 1 / 1 seeds MISS | 1 / 1 seeds MISS | 1 / 1 seeds MISS | 1 / 1 seeds MISS | 1 / 1 seeds MISS |
+| Time s, median 60–120; worst ≤150 | 64.785 / 65.4 pass | 107.47 / 107.47 pass | 95.01 / 95.01 pass | 80.69 / 80.69 pass | 94.62 / 94.62 pass | 94.71 / 94.71 pass | 100.72 / 100.72 pass |
+| Segments s, medians 12–45 | [27.01, 18.24, 19.525] / 27.02 pass | [26.89, 46.33, 34.23] / 46.33 MISS | [26.2, 41.92, 26.88] / 41.92 pass | [23.48, 28.24, 28.96] / 28.96 pass | [26.48, 33.54, 34.59] / 34.59 pass | [25.9, 42.86, 25.94] / 42.86 pass | [27.95, 36, 36.77] / 36.77 pass |
+| Flow, median ≥.70; worst ≥.60; floor reported | 0.8757 / 0.868 pass | 0.644 / 0.644 MISS | 0.5292 / 0.5292 MISS | 0.9456 / 0.9456 pass | 0.7364 / 0.7364 pass | 0.8189 / 0.8189 pass | 0.5828 / 0.5828 reported |
+| Airborne, median .12–.45 | 0.236 / [0.2241, 0.2479] pass | 0.1181 / [0.1181, 0.1181] MISS | 0.1668 / [0.1668, 0.1668] pass | 0.169 / [0.169, 0.169] pass | 0.139 / [0.139, 0.139] pass | 0.2564 / [0.2564, 0.2564] pass | 0.1237 / [0.1237, 0.1237] pass |
+| Dead stops, every seed 0 | 1.5 / 2 MISS | 4 / 4 MISS | 3 / 3 MISS | 1 / 1 MISS | 1 / 1 MISS | 7 / 7 MISS | 1 / 1 MISS |
+| Peak m/s / tier-3 s, worst peak ≥26.6; median time ≥3 | [54.77, 39.005] / [54.52, 38.18] pass | [36.26, 7.77] / [36.26, 7.77] pass | [30.98, 6.92] / [30.98, 6.92] pass | [33.99, 9.06] / [33.99, 9.06] pass | [35.77, 8.28] / [35.77, 8.28] pass | [31.19, 12.7] / [31.19, 12.7] pass | [35.18, 8.68] / [35.18, 8.68] pass |
+| Quiet s, worst ≤20 | 12.92 / 13.22 pass | 11.39 / 11.39 pass | 17.64 / 17.64 pass | 13.64 / 13.64 pass | 14.07 / 14.07 pass | 16.79 / 16.79 pass | 16.71 / 16.71 pass |
+| Anchor gap m, worst ≤40 | 47.65 / 59.5 MISS | 53 / 53 MISS | 34.8 / 34.8 pass | 32.1 / 32.1 pass | 70.2 / 70.2 MISS | 218.5 / 218.5 MISS | 29.6 / 29.6 pass |
+| Ride facts, at least 3 | 4 / 4 pass | 5 / 5 pass | 5 / 5 pass | 5 / 5 pass | 5 / 5 pass | 5 / 5 pass | 5 / 5 pass |
+| Length ratio, median 1.3–2.0 | 1.445 / [1.43, 1.46] pass | 1.46 / [1.46, 1.46] pass | 1.35 / [1.35, 1.35] pass | 1.35 / [1.35, 1.35] pass | 1.34 / [1.34, 1.34] pass | 1.47 / [1.47, 1.47] pass | 1.36 / [1.36, 1.36] pass |
+| Floor, ≤2× Rivet median; 0 stops | not applicable | not applicable | not applicable | not applicable | not applicable | not applicable | 100.72 / max 100.72; cap 214.94 MISS |
+| Distinct lines, at least 3 | 4 / stage pass | 4 / stage pass | 4 / stage pass | 4 / stage pass | 4 / stage pass | 4 / stage pass | 4 / stage pass |
+
+Distinct seed-1 lines: 4 sable, rivet, tally, cannon.
+
+| Shared fraction | sable | rivet | kest | tarn | tally | cannon |
+| --- | --- | --- | --- | --- | --- | --- |
+| sable | 1.000 | 0.286 | 0.088 | 0.384 | 0.251 | 0.093 |
+| rivet | 0.332 | 1.000 | 0.647 | 0.580 | 0.379 | 0.449 |
+| kest | 0.074 | 0.699 | 1.000 | 0.317 | 0.313 | 0.470 |
+| tarn | 0.407 | 0.646 | 0.332 | 1.000 | 0.685 | 0.341 |
+| tally | 0.256 | 0.421 | 0.314 | 0.665 | 1.000 | 0.335 |
+| cannon | 0.109 | 0.490 | 0.467 | 0.334 | 0.331 | 1.000 |
+
+Dead-stop sites by seed:
+
+- sable seed 1: [{"at": [-96.7, 159.0], "time": 42.48}]
+- sable seed 2: [{"at": [-212.1, -528.1], "time": 10.77}, {"at": [-189.3, -513.3], "time": 12.17}]
+- rivet seed 1: [{"at": [-280.6, -230.6], "time": 27.45}, {"at": [-248.6, -224.6], "time": 32.35}, {"at": [82.8, -44.5], "time": 54.45}, {"at": [83.3, -45.1], "time": 55.46}]
+- kest seed 1: [{"at": [-281.3, -229.3], "time": 26.8}, {"at": [-248.4, -225.0], "time": 31.13}, {"at": [86.9, -36.0], "time": 52.69}]
+- tarn seed 1: [{"at": [-282.0, -228.1], "time": 24.13}]
+- tally seed 1: [{"at": [-281.9, -228.1], "time": 27.14}]
+- cannon seed 1: [{"at": [-280.5, -230.8], "time": 26.51}, {"at": [-279.6, -232.5], "time": 27.21}, {"at": [-275.8, -240.3], "time": 28.45}, {"at": [-247.8, -226.2], "time": 31.47}, {"at": [68.0, 260.4], "time": 77.11}, {"at": [86.9, 278.5], "time": 79.7}, {"at": [86.0, 279.5], "time": 80.41}]
+- floor seed 1: [{"at": [-280.8, -230.4], "time": 28.49}]
+
+Progress from the fresh stage graph, reported:
+
+- sable: median 21.13 m/s, worst 21.06 m/s.
+- rivet: median 12.78 m/s, worst 12.78 m/s.
+- kest: median 14.5 m/s, worst 14.5 m/s.
+- tarn: median 17.03 m/s, worst 17.03 m/s.
+- tally: median 14.56 m/s, worst 14.56 m/s.
+- cannon: median 14.14 m/s, worst 14.14 m/s.
+- floor: median 13.67 m/s, worst 13.67 m/s.
