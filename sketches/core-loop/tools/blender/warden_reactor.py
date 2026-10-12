@@ -96,23 +96,32 @@ DRUM_R = 2.42
 DRUM_Z = (2.5, 5.75)
 JACKET_R = (2.5, 2.6)  # the jacket's skin and its ribs
 BAND_R = (2.38, 2.62)
-JAW_R = (2.98, 3.12)  # the jaw frame's inner and outer face: 0.36 m off the bands
-JAW_Z = (2.4, 6.9)  # KF7c: taller, so the two rows of teeth stand far apart
+# 2026-10-11 (w13 KF7c fix round): the drum stays at r 2.42, not KF7b's 3.22. Measured reason: the
+# jaw must stand 0.3 m off the jacket (SIL_JAW_STANDOFF) and its teeth 0.5 m past every other part's
+# outline (SIL_TOOTH_OUT_M), all inside the 3.8 m reach. A 3.22 drum puts the jaw's inner face at
+# 3.52 at least and its outer face at 3.6, which leaves a tooth 0.2 m of reach: the teeth check
+# cannot pass. Here: jacket ribs 2.6, jaw 2.98 to 3.2, teeth to 3.78 (0.58 proud of the lips).
+JAW_R = (2.98, 3.2)  # the jaw's inner and outer face: 0.36 m off the bands
+JAW_Z = (2.4, 6.9)  # the jaw's foot and crown
 JAW_SPAN = math.radians(50)
-MANDIBLE_H = 0.35
-CHEEK_SPAN = math.radians(6)
-# The bite: two big light teeth per mandible, the lower row rising and the upper row hanging, tip
-# to tip with 1.4 m of dark drum between them. Each tooth runs out past the frame to r 3.76, so
-# from the side it breaks the jaw's outline. At jaw-local -15 degrees a tooth of each row stands
-# on the outline of the three_q read camera for both jaws (SIL_YAW_DEG); +25 balances the bite
-# face on, 40 degrees round, so it never shares that outline.
-TOOTH_DEG = (-15.0, 25.0)
-TOOTH_R = (2.98, 3.76, 3.2)  # inner face, root's outer face, point's outer face
-TOOTH_W = 0.9
-# The lower +25 tooth's root stays in at r 3.3: proud, it stood over the far ram's barrel in the
-# over_shoulder view and hid its top (it only has to read face on, in the bite).
-TOOTH_LOWER_BACK_R = 3.3
-TOOTH_H = (1.1, 1.0)  # lower, upper
+# KF7c fix round: the gate read KF7c's frame jaw (two thin mandibles and two upright cheeks) as
+# scaffold posts. Each jaw is now a mouth: a lower and an upper lip, 0.5 m thick at the middle,
+# whose inner edges curve to meet at the jaw's two corners, so face on the jaw is a lens-shaped
+# maw of dark drum ringed by light sandstone, with three big light fangs on each lip pointing at
+# the other row. No upright member stands anywhere in the jaw.
+LIP_H = 0.5
+JAW_SEGS = 10
+MOUTH_Z = sum(JAW_Z) / 2  # where the lips meet at the corners
+MOUTH_G = (JAW_Z[1] - JAW_Z[0]) / 2 - LIP_H  # the maw's half height at the middle
+# The fangs, per lip: (jaw-local degrees, lower height, upper height, base width). The middle
+# fangs are the biggest; tip to tip about 0.9 m of dark drum shows between the rows. Each root
+# runs out past the lip to r 3.78, so from the side every fang breaks the jaw's outline.
+TEETH = ((0.0, 1.4, 1.25, 1.15), (-27.0, 1.0, 0.95, 0.9), (27.0, 1.0, 0.95, 0.9))
+TOOTH_R = (2.98, 3.78, 3.25)  # inner face, root's outer face, point's outer face
+TOOTH_W_OUT = 0.6  # the root's outer face width
+# The side fangs' roots stay in at r 3.3: proud, their corners stood at 3.57 across the front read
+# camera and hid the middle fangs' roots behind the same outline.
+TOOTH_SIDE_R = 3.3
 STACK_R = 2.5
 STACK_BASE = 5.95
 STACK_ANGLES = (90.0, 210.0, 330.0)
@@ -131,21 +140,24 @@ HINGE = Vector((JAW_R[1], 0.0, JAW_Z[0]))
 # is r 1.25 to 1.1, the barrels are fatter (r 0.4, out to 2.78) and stand from the ground to 1.55
 # m under a light gland collar, and the light rod slants out of the gland past the drum's edge to
 # a lug under the jaw (outer face r 3.5): from the side the barrel stands clear of the stem.
+# 2026-10-11 (w13 KF7c fix round): the gate read the upright barrels as copper legs on the ground.
+# Each ram is now one straight diagonal piston, like an excavator's: a fat copper barrel pinned to
+# the stem 0.35 m up, slanting out at 50 degrees under the skirt to a light gland collar, then the
+# light rod out past the drum's edge to a lug on the jaw's corner. Nothing touches the ground but
+# the stem. The line crosses r 2.8 above 2 m, so below 2 m everything stays inside the collider.
 PED_R = (1.0, 1.1)  # the pedestal stem's bottom and top radius
-RAM_R = 2.38  # the rams' axis radius: barrel r 0.4 and gland r 0.41 stay inside r 2.8 below 2 m
-RAM_BARREL = (0.15, 1.55)  # the copper barrel's z range; the gland and rod show above it
-RAM_BARREL_R = 0.4
-RAM_GLAND = 0.17  # the gland collar's height
-RAM_ROD_R = 0.14
-RAM_LUG = (3.1, 3.5)  # the jaw lug's inner and outer face; the rod ends at 3.05 inside it
-RAM_LUG_Z = 0.6  # the lug's middle above the jaw's foot
-RAM_DEG = 50.0  # each ram sits this far round from its jaw's middle, front and back
+RAM_FOOT = (1.15, 0.35)  # (r, z) of the barrel's pin on the stem
+RAM_END = (3.4, 3.0)  # (r, z) of the rod's pin in the jaw lug
+RAM_SPLIT = 0.5  # the barrel's share of the line; the gland collar follows it
+RAM_BARREL_R = 0.45
+RAM_GLAND = (0.06, 0.47)  # the gland collar's share of the line and its radius
+RAM_ROD_R = 0.16
+RAM_LUG = (3.15, 3.68)  # the jaw lug's inner and outer face; the rod's eye, counted as the ram's end
+RAM_DEG = 50.0  # each ram sits at a corner of its jaw, front and back
 # 2026-10-11 (w13 KF7c): the silhouette check (see "silhouette check" below).
-# The read cameras: (name, eye offset in radii, look_subjects.gd constant and row). SIL_YAW_DEG is
-# the reactor body's staged yaw in look_harness.gd _warden_bodies (hero_assets.gd sets
-# body.rotation.y from warden_look _jaws, still turning toward the ball when the harness freezes it):
-# the probe read 138.66 and 139.36 degrees in two runs, so 139.0.
-SIL_YAW_DEG = 139.0
+# The read cameras: (name, eye offset in radii, look_subjects.gd constant and row). Each looks along
+# -normalize(offset) in the body frame (coordinator ruling at the KF7c fix round: no probed staging
+# yaw; a read direction tuned until the body passes is not a read).
 SIL_CAMERAS = [
     ("over_shoulder", (0.0, 0.6, 2.0), "WARDEN_BODY_CAMERAS row 0"),
     ("three_q", (-1.97, 0.42, 1.31), "WARDEN_BODY_CAMERAS row 3"),
@@ -185,6 +197,30 @@ def sweep(part, slot, profile, a0, a1, segs, color=None, caps=True):
     return part.paint(faces, slot, color)
 
 
+def sweep_var(part, slot, profile_at, a0, a1, segs, color=None):
+    """sweep() with a profile that changes with the angle: profile_at(a) gives the (r, z) loop."""
+    rows = []
+    for k in range(segs + 1):
+        a = a0 + (a1 - a0) * k / segs
+        ca, sa = math.cos(a), math.sin(a)
+        rows.append([part.bm.verts.new((r * ca, r * sa, z)) for r, z in profile_at(a)])
+    faces = []
+    n = len(rows[0])
+    for k in range(segs):
+        for i in range(n):
+            j = (i + 1) % n
+            faces.append(part.bm.faces.new((rows[k][i], rows[k + 1][i], rows[k + 1][j], rows[k][j])))
+    faces.append(part.bm.faces.new(list(reversed(rows[0]))))
+    faces.append(part.bm.faces.new(rows[-1]))
+    return part.paint(faces, slot, color)
+
+
+def maw(a):
+    """(lower lip top, upper lip bottom) at jaw-local angle a: an ellipse that closes at the corners."""
+    g = MOUTH_G * math.sqrt(max(0.0, 1.0 - (a / JAW_SPAN) ** 2))
+    return MOUTH_Z - g, MOUTH_Z + g
+
+
 def smooth(faces):
     for f in faces:
         f.smooth = True
@@ -212,17 +248,20 @@ def polar(r, deg, z):
     return Vector((r * math.cos(a), r * math.sin(a), z))
 
 
+def ram_point(deg, t):
+    """A point on the ram line at bearing deg, t from the stem pin (0) to the jaw lug pin (1)."""
+    return polar(RAM_FOOT[0] + (RAM_END[0] - RAM_FOOT[0]) * t, deg, RAM_FOOT[1] + (RAM_END[1] - RAM_FOOT[1]) * t)
+
+
 # --- silhouette check (w13 KF7c) -----------------------------------------------------------
 # 2026-10-11 (w13 KF7c): two blind reads failed in one class: the named parts did not break the
 # body's outline from the read cameras. This check measures that on the rest-pose mesh and fails
 # the build, so geometry is tuned against a number and a regression fails here, not in a read.
 # The read directions copy sketches/core-loop/tools/look_subjects.gd (WARDEN_BODY_CAMERAS /
-# WARDEN_BODY_MIND_CAMERAS: eye offset in radii from the warden_bounds centre). Those offsets are
-# world-fixed, and look_harness.gd _warden_bodies stages each body turned by its runtime yaw
-# (measured with a probe in two KF7c runs; SIL_YAW_DEG below), so each offset is turned into the
-# body frame by -yaw. An orthographic projection along the view direction stands in for the
-# harness's perspective at about two radii. Thresholds are fixed by the KF7c packet; never lower
-# them to pass a candidate.
+# WARDEN_BODY_MIND_CAMERAS: eye offset in radii from the warden_bounds centre), and the view
+# direction is -normalize(offset) in the body frame. An orthographic projection along the view
+# direction stands in for the harness's perspective at about two radii. Thresholds are fixed by the
+# KF7c packet; never lower them to pass a candidate (raising one to hold a gain is allowed).
 
 
 def _sub(a, b):
@@ -242,12 +281,9 @@ def _unit(a):
     return (a[0] / n, a[1] / n, a[2] / n)
 
 
-def sil_axes(offset, yaw_deg):
-    """(view, up, right) in the body's Godot frame for a world eye offset and the body's yaw."""
-    c, s = math.cos(math.radians(yaw_deg)), math.sin(math.radians(yaw_deg))
-    x, y, z = offset
-    body = (x * c - z * s, y, x * s + z * c)  # Basis(UP, -yaw) * offset
-    view = _unit((-body[0], -body[1], -body[2]))
+def sil_axes(offset):
+    """(view, up, right) in the body's Godot frame for an eye offset: view = -normalize(offset)."""
+    view = _unit((-offset[0], -offset[1], -offset[2]))
     up0 = (0.0, 1.0, 0.0) if abs(view[1]) <= 0.9 else (0.0, 0.0, -1.0)
     up = _unit(_sub(up0, tuple(view[i] * _dot(up0, view) for i in range(3))))
     return view, up, _cross(up, view)
@@ -408,15 +444,15 @@ def silhouette(root):
             o.data.attributes.remove(o.data.attributes[SIL_LAYER])
     fails = []
     for name, off, src in SIL_CAMERAS:
-        view, up, right = sil_axes(off, SIL_YAW_DEG)
-        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s yaw %.1f view_body=(%.3f, %.3f, %.3f)"
-              % (name, off[0], off[1], off[2], src, SIL_YAW_DEG, view[0], view[1], view[2]))
+        view, up, right = sil_axes(off)
+        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s view=(%.3f, %.3f, %.3f)"
+              % (name, off[0], off[1], off[2], src, view[0], view[1], view[2]))
     rams = sorted(set(l for l in labels if l.startswith("ram")))
     teeth = sorted(set(l for l in labels if l.startswith("tooth_")))
     by_label = {}
     for p, l in zip(pts, labels):
         by_label.setdefault(l, []).append(p)
-    axes = {name: sil_axes(off, SIL_YAW_DEG) for name, off, _ in SIL_CAMERAS}
+    axes = {name: sil_axes(off) for name, off, _ in SIL_CAMERAS}
     best_ram = best_tooth = (-1, "")
     for cam in SIL_APPROACH:
         good_rams = good_teeth = 0
@@ -463,16 +499,18 @@ def drum(root):
     p = Part("Drum")
     # Pedestal: a narrow stem; everything under 2 m stays inside r = 2.8.
     p.cyl("ancient_enamel", PED_R[0], PED_R[1], 2.0, 16, loc=(0, 0, 1.0), color=ENAMEL)
-    # KF7b: the jaws' rams, two under each jaw (its front and back quarter), free of the stem: a
-    # thick copper barrel on a sandstone clevis foot, an iron gland at its mouth, the jaw's
-    # bright piston rod rising out of it. Inside r 2.8 below 2 m.
+    # KF7c fix round: the jaws' rams, one at each jaw corner: a dark pin block on the stem, the fat
+    # copper barrel slanting out from it with a dark band at its foot, and the light gland collar
+    # at its mouth (the rod is the jaw's). Inside r 2.8 below 2 m.
     for a in (-RAM_DEG, RAM_DEG, 180.0 - RAM_DEG, 180.0 + RAM_DEG):
-        tagged(p, ram_label(a), p.box, "ancient_enamel", (0.7, 0.7, 0.15), loc=polar(RAM_R, a, 0.075),
-               rot=(0, 0, math.radians(a)), color=SAND_DARK)
-        tagged(p, ram_label(a), p.cyl, "ancient_enamel", RAM_BARREL_R, RAM_BARREL_R, RAM_BARREL[1] - RAM_BARREL[0], 8,
-               loc=polar(RAM_R, a, sum(RAM_BARREL) / 2), color=COPPER)
-        tagged(p, ram_label(a), p.cyl, "ancient_enamel", RAM_BARREL_R + 0.01, RAM_ROD_R + 0.08, RAM_GLAND, 8,
-               loc=polar(RAM_R, a, RAM_BARREL[1] + RAM_GLAND / 2), color=TOOTH)
+        tagged(p, ram_label(a), p.box, "ancient_enamel", (0.5, 0.6, 0.55), loc=ram_point(a, 0.0),
+               rot=(0, 0, math.radians(a)), color=IRON)
+        tagged(p, ram_label(a), p.rod, "ancient_enamel", ram_point(a, 0.04), ram_point(a, RAM_SPLIT), RAM_BARREL_R, 8,
+               color=COPPER)
+        tagged(p, ram_label(a), p.rod, "ancient_enamel", ram_point(a, 0.06), ram_point(a, 0.13), RAM_BARREL_R + 0.03, 8,
+               color=IRON)
+        tagged(p, ram_label(a), p.rod, "ancient_enamel", ram_point(a, RAM_SPLIT),
+               ram_point(a, RAM_SPLIT + RAM_GLAND[0]), RAM_GLAND[1], 8, color=TOOTH)
     p.ring("rubber", PED_R[1] - 0.05, PED_R[1] + 0.14, 0.18, 16, loc=(0, 0, 1.5))
     # Skirt flares above 2 m from the stem to the drum, an overhang the jaws' lower mandibles
     # stand clear of.
@@ -567,10 +605,11 @@ def core(root):
     return finish(p, (0, 0, CORE_Z), root)
 
 
-def tooth(part, r0, r1, deg, z, width, height, color, r_tip=None):
-    """A fang in the jaw's arc at angle deg: a base width wide from r0 to r1 on z, its point
-    height above it (negative points down) as an edge from r0 to r_tip, so the outer face slopes
-    back toward the drum and only the root stands proud of the frame (KF7c). Returns its faces."""
+def tooth(part, r0, r1, deg, z, width, height, color, r_tip=None, width_out=None):
+    """A fang in the jaw's arc at angle deg: a base width wide at r0 (width_out at r1) on z, its
+    point height above it (negative points down) as an edge from r0 to r_tip, so the outer face
+    slopes back toward the drum and only the root stands proud of the lip (KF7c). The narrower
+    outer root keeps its corners inside the 3.8 m reach. Returns its faces."""
     a = math.radians(deg)
     t = Vector((-math.sin(a), math.cos(a), 0.0))
     n = Vector((math.cos(a), math.sin(a), 0.0))
@@ -578,7 +617,8 @@ def tooth(part, r0, r1, deg, z, width, height, color, r_tip=None):
     base = Vector((0.0, 0.0, z))
     r_tip = r1 if r_tip is None else r_tip
     bm = part.bm
-    b = [bm.verts.new(base + n * r + t * s) for r, s in ((r0, -width / 2), (r1, -width / 2), (r1, width / 2),
+    wo = width if width_out is None else width_out
+    b = [bm.verts.new(base + n * r + t * s) for r, s in ((r0, -width / 2), (r1, -wo / 2), (r1, wo / 2),
                                                          (r0, width / 2))]
     tip = [bm.verts.new(base + n * r + up * height) for r in (r0, r_tip)]
     faces = [bm.faces.new(b), bm.faces.new((b[1], b[2], tip[1])), bm.faces.new((b[3], b[0], tip[0])),
@@ -597,36 +637,33 @@ def jaw(root, side):
     the teeth (light, triangular, gaps of dark jacket between them) bite into the drum, and
     the mandible's ledge breaks the drum's outline at the side. A lug under the lower
     mandible carries the ram's piston rod, which rises out of its copper barrel on the base
-    when the jaw leans open (the barrel is the Drum's)."""
+    when the jaw leans open (the barrel is the Drum's).
+    2026-10-11 (w13 KF7c fix round): now two lips that close at the corners round a lens-shaped
+    maw, three fangs per lip (see LIP_H and TEETH), the rams' lugs on the corners."""
     p = Part("JawR" if side > 0 else "JawL")
     r0, r1 = JAW_R
     z0, z1 = JAW_Z
-    h = MANDIBLE_H
-    # 2026-10-11 (w13 KF7c): the jaw is a frame standing 0.36 m off the drum: a lower and an upper
-    # mandible joined by a cheek at each end, the middle open, so the drum shows dark between the
-    # rows of teeth and the frame casts a shade line on the jacket.
+    # 2026-10-11 (w13 KF7c fix round): the jaw is a mouth standing 0.36 m off the drum (see LIP_H).
     slab = "jawslab_" + p.name
-    tagged(p, slab, sweep, p, "ancient_enamel", [(r0, z0), (r0 + 0.04, z0), (r1, z0 + 0.15), (r1, z0 + h), (r0, z0 + h)],
-           -JAW_SPAN, JAW_SPAN, 8, SAND)
-    tagged(p, slab, sweep, p, "ancient_enamel", [(r0, z1 - h), (r1, z1 - h), (r1, z1), (r0, z1)], -JAW_SPAN, JAW_SPAN, 8,
-           SAND)
-    for a0, a1 in ((-JAW_SPAN, -JAW_SPAN + CHEEK_SPAN), (JAW_SPAN - CHEEK_SPAN, JAW_SPAN)):
-        tagged(p, slab, sweep, p, "ancient_enamel", [(r0, z0 + h), (r1, z0 + h), (r1, z1 - h), (r0, z1 - h)], a0, a1, 1,
-               SAND)
-    for n, deg in enumerate(TOOTH_DEG):
-        proud = TOOTH_R[1] if n == 0 else TOOTH_LOWER_BACK_R
-        tagged(p, "tooth_%s_lower_%d" % (p.name, n), tooth, p, TOOTH_R[0], proud, deg, z0 + h, TOOTH_W,
-               TOOTH_H[0], TOOTH, min(proud, TOOTH_R[2]))
-        tagged(p, "tooth_%s_upper_%d" % (p.name, n), tooth, p, TOOTH_R[0], TOOTH_R[1], deg, z1 - h, TOOTH_W,
-               -TOOTH_H[1], TOOTH, TOOTH_R[2])
-    # The rams' lugs on the cheeks' outer faces, 0.6 m over the frame's foot, and the piston rods
-    # slanting up and out of the glands into them (inside r 2.8 below 2 m), so from the side the
-    # barrel stands clear under the frame's chamfered foot.
+    tagged(p, slab, sweep_var, p, "ancient_enamel",
+           lambda a: [(r0 + 0.05, z0), (r1, z0 + 0.35), (r1, maw(a)[0]), (r0, maw(a)[0])], -JAW_SPAN, JAW_SPAN, JAW_SEGS, SAND)
+    tagged(p, slab, sweep_var, p, "ancient_enamel",
+           lambda a: [(r0, maw(a)[1]), (r1, maw(a)[1]), (r1, z1 - 0.3), (r0 + 0.05, z1)], -JAW_SPAN, JAW_SPAN, JAW_SEGS, SAND)
+    for n, (deg, h_low, h_up, width) in enumerate(TEETH):
+        low, up = maw(math.radians(deg))
+        root_r = TOOTH_R[1] if deg == 0.0 else TOOTH_SIDE_R
+        tagged(p, "tooth_%s_lower_%d" % (p.name, n), tooth, p, TOOTH_R[0], root_r, deg, low - 0.05, width,
+               h_low, TOOTH, min(root_r, TOOTH_R[2]), TOOTH_W_OUT)
+        tagged(p, "tooth_%s_upper_%d" % (p.name, n), tooth, p, TOOTH_R[0], root_r, deg, up + 0.05, width,
+               -h_up, TOOTH, min(root_r, TOOTH_R[2]), TOOTH_W_OUT)
+    # The light piston rods slanting up and out of the glands (the ram line, ram_point) to their
+    # eyes, each pinned in a dark lug on the lower lip's corner: the eye and lug are the ram's end.
     for deg in (-RAM_DEG, RAM_DEG):
-        p.box("ancient_enamel", (RAM_LUG[1] - RAM_LUG[0], 0.3, 0.4), loc=polar(sum(RAM_LUG) / 2, deg, z0 + RAM_LUG_Z),
-              rot=(0, 0, math.radians(deg)), color=SAND_DARK)
-        tagged(p, ram_label(deg + (0.0 if side > 0 else 180.0)), p.rod, "ancient_enamel",
-               polar(RAM_R, deg, RAM_BARREL[1] + 0.1), polar(RAM_LUG[0] - 0.05, deg, z0 + RAM_LUG_Z - 0.05), RAM_ROD_R, 8, color=ROD)
+        label = ram_label(deg + (0.0 if side > 0 else 180.0))
+        tagged(p, label, p.rod, "ancient_enamel", ram_point(deg, RAM_SPLIT + RAM_GLAND[0]), ram_point(deg, 1.0),
+               RAM_ROD_R, 8, color=ROD)
+        tagged(p, label, p.box, "ancient_enamel", (RAM_LUG[1] - RAM_LUG[0], 0.45, 0.55),
+               loc=polar(sum(RAM_LUG) / 2, deg, RAM_END[1]), rot=(0, 0, math.radians(deg)), color=SAND_DARK)
     p.cyl("ancient_enamel", 0.1, 0.1, 0.75, 8, loc=(r0 + 0.06, 0.0, z0 + 0.12), rot=(math.pi / 2, 0, 0), color=IRON)
     return finish(p, HINGE, root, rot_z=0.0 if side > 0 else math.pi)
 

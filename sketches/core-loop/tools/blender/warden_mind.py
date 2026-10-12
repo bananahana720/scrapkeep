@@ -29,7 +29,8 @@
 #   sockets WeakPoint on the Lens bone (the big lens's face) and Hardpoint0..2 on the Knuckle
 #           bones (west, east, north on the back of the hand), as bone-attached nodes.
 #   bones   every bone points along -Z with roll 0, so its local axes are the model's axes.
-#   hand    a left hand: palm up, fingers along -Z, the thumb on the -X side (2026-10-11, w13 KF7c).
+#   hand    a right hand: palm up, fingers along -Z, the thumb on the +X side (2026-10-11, w13 KF7c
+#           fix round; KF7c's first pass was a left hand, see FINGERS).
 #
 # Clips are section 5's table, one glTF animation per row, plus the per-finger and per-knuckle
 # variants of chunk_lost and shrug (chunk_lost is the little finger, the first to go) and the
@@ -76,10 +77,8 @@ GRIP_TO_LENS = 6.0  # mind.md section 1: the lens 6 m above the perch
 GRIP_DROP = 2.4  # how far a gripping finger's middle segment hooks down past the perch top
 BUDGET = {"tris": 5000, "verts": 9600, "draws": 32}
 # 2026-10-11 (w13 KF7c): the silhouette check (see "silhouette check" below). The read cameras:
-# (name, eye offset in radii, look_subjects.gd constant and row). SIL_YAW_DEG is the hand's staged
-# yaw in look_harness.gd _warden_bodies (hero_assets.gd turns the Pose node toward the ball's
-# staging point; the probe read 93.70 and 98.53 degrees in two runs, so 96.1).
-SIL_YAW_DEG = 96.1
+# (name, eye offset in radii, look_subjects.gd constant and row). Each looks along -normalize(offset)
+# in the body frame (coordinator ruling at the KF7c fix round: no probed staging yaw).
 SIL_CAMERAS = [
     ("over_shoulder", (0.0, 0.6, 2.0), "WARDEN_BODY_MIND_CAMERAS row 0"),
     ("three_q", (-1.97, 0.42, 1.31), "WARDEN_BODY_MIND_CAMERAS row 3"),
@@ -91,6 +90,7 @@ SIL_FINGER_GAP = 0.5
 SIL_TIP_SPAN = 1.2
 SIL_THUMB_OUT_M = 1.0
 SIL_THUMB_CAMERAS = 2
+SIL_THUMB_RISE = 1.0  # KF7c fix round: the thumb tip over the palm's top along its normal (see silhouette)
 
 # Section 5: name -> (length, blend) in seconds. The extras below repeat a row for the
 # finger or knuckle the loader picks.
@@ -110,10 +110,15 @@ ENAMEL = "petrol"
 IRON = common.mix("charcoal", "petrol", 0.25)
 DUST = common.mix("petrol", "sandstone", 0.35)
 UNDER = common.mix("petrol", "charcoal", 0.4)
-# KF7c: the cuff hangs in the palm's shade with the sun overhead, so KF7b's sandstone-petrol mix
-# rendered as dark as the stalk; it is bone-light now. ancient_enamel multiplies the vertex colour
-# by a 0.66 to 1.0 grey noise (palette.gd painted_texture), so the vertex colour sets the value.
-CUFF = common.mix("bone", "sandstone", 0.25)
+# KF7c fix round: the cuff rendered as dark as the stalk with a bone vertex colour. ancient_enamel
+# does not let the vertex colour set the value: hero_assets.gd material() gives it palette.gd
+# painted_texture (a 0.66 to 1.0 grey multiply) and enamel_wear (a detail layer that MIXES copper
+# rust oxide over up to 85% of the surface in noise patches), so a light vertex colour comes out
+# mottled rust, and in the palm's shade as dark as the stalk. The cuff is now its own "copper" slot
+# (hero_assets.gd SLOTS copper: Palette.COPPER #b77843, no texture, no wear, metal 0.6), a plain
+# light band between dark iron lips on a dark petrol stalk.
+CUFF_SLOT = "copper"
+common.SLOTS.setdefault(CUFF_SLOT, {"color": "copper", "metal": 0.6, "rough": 0.4})
 
 # 2026-10-11 (w13 KF7b): the blind read (decisions.tsv KF8-LOOK) never called this body a hand:
 # its read cameras see the hand from its side, where four fingers of one height and a thumb at
@@ -141,11 +146,17 @@ CUFF = common.mix("bone", "sandstone", 0.25)
 # differ (middle longest), so the four tips step in length as well as in height.
 # Fingers, index to little (thumb side -X): x at the knuckle line, segment lengths, fan and droop
 # (both 0 at rest: the clips' curls start from straight).
+# 2026-10-11 (w13 KF7c fix round): the read directions are now -normalize(offset) with no staging
+# yaw, and the under camera then looks up at the hand from its -X side, 43 degrees up. The left
+# hand's step (little side up on +X) ran against that view: each finger 2.1 m over and 0.55 m up
+# moved only 1.0 m across the frame, a 0.17 m gap. So the hand is mirrored into a right hand: the
+# little finger on -X stands highest, the index on +X lowest, the thumb on +X, and the same step
+# moves each finger 1.8 m across the under frame.
 FINGERS = [
-    ("index", -3.15, (3.2, 2.7, 2.3), 0.0, (0.0, 0.0, 0.0)),
-    ("middle", -1.05, (3.5, 2.95, 2.5), 0.0, (0.0, 0.0, 0.0)),
-    ("ring", 1.05, (3.2, 2.7, 2.3), 0.0, (0.0, 0.0, 0.0)),
-    ("little", 3.15, (2.7, 2.25, 1.95), 0.0, (0.0, 0.0, 0.0)),
+    ("index", 3.15, (3.2, 2.7, 2.3), 0.0, (0.0, 0.0, 0.0)),
+    ("middle", 1.05, (3.5, 2.95, 2.5), 0.0, (0.0, 0.0, 0.0)),
+    ("ring", -1.05, (3.2, 2.7, 2.3), 0.0, (0.0, 0.0, 0.0)),
+    ("little", -3.15, (2.7, 2.25, 1.95), 0.0, (0.0, 0.0, 0.0)),
 ]
 FINGER_ORDER = ["little", "ring", "middle", "index"]  # the order chunks put them out
 KNUCKLE_Z = -3.2
@@ -155,12 +166,13 @@ JOINT_R = FINGER_H / 2 + 0.05  # the joint drums, proud of the finger
 GRIP_Y = 4.114  # the little finger's root top: the perch grip (PERCH_LENS_OFFSET_Y 6.086 - 6 + 1.6 - 5.8 = -4.114)
 FINGER_STEP = 0.55  # each finger's root over its thumb-side neighbour's
 ROOT_Y = [GRIP_Y - JOINT_R - FINGER_STEP * (3 - i) for i in range(4)]
-PALM_ROLL = math.atan2(FINGER_STEP, FINGERS[1][1] - FINGERS[0][1])  # the knuckle line's roll, about -Z
+PALM_ROLL = math.atan(FINGER_STEP / (FINGERS[1][1] - FINGERS[0][1]))  # the knuckle line's roll, about -Z
 PALM_Y0 = 3.12  # the palm's middle plane at x = 0
-# The opposed thumb: from the thenar pad at the heel it throws out to the -X side and up past the
-# palm's plane, its tip back toward the wrist, so every read camera sees it clear of the palm.
+# The opposed thumb: from the thenar pad at the heel it throws out to the +X side and up past the
+# palm's plane, its tip back toward the wrist, so the read cameras see it clear of the palm and
+# its tip stands over 1 m above the palm along the palm's normal (SIL_THUMB_RISE).
 THUMB = {"w": 0.75, "h": 0.55,
-         "pts": [(-2.0, 3.2, 1.6), (-2.75, 3.5, 2.6), (-3.15, 3.72, 3.6), (-3.25, 3.78, 4.45)]}
+         "pts": [(2.0, 3.2, 1.6), (2.8, 3.55, 2.6), (3.25, 3.8, 3.6), (3.4, 3.9, 4.45)]}
 def palm_back_y(x, hh=0.32):
     """The palm's back (its underside in the hang) at x, for a row of half thickness hh."""
     return PALM_Y0 + x * math.tan(PALM_ROLL) - hh / math.cos(PALM_ROLL)
@@ -288,7 +300,7 @@ def build_body():
     # top, a cuff (a lighter band with an iron lip) and a narrow wrist neck that flares into the
     # heel of the hand, so the stalk reads as the arm the hand belongs to.
     p.on("Hand", p.cyl, "ancient_enamel", 1.25, 1.12, 0.8, 12, loc=B((0, 0.4, 0)), color=ENAMEL)
-    p.on("Hand", p.cyl, "ancient_enamel", 1.42, 1.42, 0.62, 12, loc=B((0, 1.1, 0)), color=CUFF)
+    p.on("Hand", p.cyl, CUFF_SLOT, 1.42, 1.42, 0.62, 12, loc=B((0, 1.1, 0)))
     for y in (0.8, 1.4):
         p.on("Hand", p.cyl, "ancient_enamel", 1.55, 1.55, 0.12, 12, loc=B((0, y, 0)), color=IRON)
     p.on("Hand", p.cyl, "ancient_enamel", 0.98, 1.08, 0.6, 12, loc=B((0, 1.76, 0)), color=ENAMEL)
@@ -306,9 +318,9 @@ def build_body():
     def top_y(x, hh):
         return PALM_Y0 + x * math.tan(PALM_ROLL) + hh / math.cos(PALM_ROLL)
 
-    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((-1.9, top_y(-1.9, 0.42) - 0.1, 1.3)), scale=(0.85, 1.4, 0.4),
+    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((1.9, top_y(1.9, 0.42) - 0.1, 1.3)), scale=(0.85, 1.4, 0.4),
          rot=tilt, color=ENAMEL)
-    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((1.8, top_y(1.8, 0.42) - 0.1, 1.6)), scale=(0.7, 1.0, 0.35),
+    p.on("Palm", p.ico, "ancient_enamel", 1.0, 1, loc=B((-1.8, top_y(-1.8, 0.42) - 0.1, 1.6)), scale=(0.7, 1.0, 0.35),
          rot=tilt, color=ENAMEL)
     p.on("Palm", p.ring, "ancient_enamel", 1.2, 1.55, 0.18, 12, loc=B((0, top_y(0, 0.36) - 0.03, 0.2)), rot=tilt,
          color=IRON)
@@ -366,7 +378,8 @@ def build_body():
     for i, (name, ya, yb, r) in enumerate(STALK):
         bones.append((name, (0.0, ya, 0.0), parent))
         parent = name
-        p.on(name, p.cyl, "ancient_enamel", r, r * 0.9, ya - yb, 10, loc=B((0, (ya + yb) / 2, 0)), color=ENAMEL)
+        # KF7c fix round: dark iron sleeves, so the copper cuff above them reads as the light band.
+        p.on(name, p.cyl, "ancient_enamel", r, r * 0.9, ya - yb, 10, loc=B((0, (ya + yb) / 2, 0)), color=IRON)
         for yy in (ya - 0.25, yb + 0.25):
             p.on(name, p.cyl, "ancient_enamel", r * 1.12, r * 1.12, 0.22, 10, loc=B((0, yy, 0)), color=IRON)
         if i > 0:
@@ -501,7 +514,7 @@ def scale(out, name, s):
     out[name] = (rot, loc, Vector((scl.x * sv.x, scl.y * sv.z, scl.z * sv.y)))
 
 
-SPLAY = [0.01, 0.005, -0.005, -0.015]  # extra fan about +Y, index (-X) to little; KF7c halved it: the
+SPLAY = [-0.01, -0.005, 0.005, 0.015]  # extra fan about +Y, index (+X) to little; KF7c halved it: the
 # outer fingers now sit 3.15 m out, and a full splay would carry their tips past |x| 3.8
 CURL_SHUT = (1.2, 1.35, 1.15)
 # A lost finger's fold: the middle segment pitches down, then both swing inward (toward the
@@ -619,24 +632,24 @@ def pose(clip, t):
         for fi in range(4):
             curl_finger(out, fi, tuple(a * f for a in CURL_SHUT))
         for s, a in enumerate((0.5, 0.6, 0.5)):
-            turn(out, "Thumb_%d" % s, (0, 1, 0), -a * f)
+            turn(out, "Thumb_%d" % s, (0, 1, 0), a * f)  # KF7c fix round: mirrored, the thumb is on +X
     elif clip == "glide":
         for fi in range(4):
             wave = math.sin(math.tau * t + fi * 0.6)
             turn(out, "Finger%d_0" % fi, (0, 1, 0), SPLAY[fi])
             sway(out, fi, (-0.03 + 0.025 * wave, -0.02 + 0.015 * wave, 0.01 * wave))
         turn(out, "Lens", (1, 0, 0), 0.25 + 0.05 * math.sin(math.tau * t))
-        turn(out, "Hand", (0, 0, 1), 0.025 * math.sin(math.tau * t))
+        turn(out, "Hand", (0, 0, 1), -0.025 * math.sin(math.tau * t))
     elif clip == "land":
         opened = bump(t, 0.0, 0.7)
         clamp = ease((t - 0.45) / 0.55)
         for fi in range(4):
             turn(out, "Finger%d_0" % fi, (0, 1, 0), SPLAY[fi] * opened)
             curl_finger(out, fi, (-0.04 * opened + 0.75 * clamp, -0.02 * opened + 0.9 * clamp, 0.7 * clamp))
-        turn(out, "Thumb_0", (0, 1, 0), -0.35 * clamp)
+        turn(out, "Thumb_0", (0, 1, 0), 0.35 * clamp)
     elif clip == "knocked_down":
         r = ease(t)
-        turn(out, "Hand", (0, 0, 1), math.pi * r)
+        turn(out, "Hand", (0, 0, 1), -math.pi * r)  # KF7c fix round: mirrored with the hand
         turn(out, "Hand", (1, 0, 0), 0.5 * math.sin(math.pi * t))
         scale(out, "Lens", 1 + 0.3 * ease((t - 0.6) / 0.4))
         for fi in range(4):
@@ -644,7 +657,7 @@ def pose(clip, t):
     elif clip == "final_quiet":
         c = ease(t / 0.6)
         for s, a in enumerate((0.5, 0.7, 0.6)):
-            turn(out, "Thumb_%d" % s, (0, 1, 0), -a * c)
+            turn(out, "Thumb_%d" % s, (0, 1, 0), a * c)
         shut = ease((t - 0.4) / 0.6)
         scale(out, "LensIris", (max(0.02, 1 - shut), max(0.02, 1 - shut), 1))
         for k in range(5):
@@ -932,12 +945,10 @@ def check(path, body, arm, actions):
 # body's outline from the read cameras. This check measures that on the rest-pose mesh and fails
 # the build, so geometry is tuned against a number and a regression fails here, not in a read.
 # The read directions copy sketches/core-loop/tools/look_subjects.gd (WARDEN_BODY_CAMERAS /
-# WARDEN_BODY_MIND_CAMERAS: eye offset in radii from the warden_bounds centre). Those offsets are
-# world-fixed, and look_harness.gd _warden_bodies stages each body turned by its runtime yaw
-# (measured with a probe in two KF7c runs; SIL_YAW_DEG below), so each offset is turned into the
-# body frame by -yaw. An orthographic projection along the view direction stands in for the
-# harness's perspective at about two radii. Thresholds are fixed by the KF7c packet; never lower
-# them to pass a candidate.
+# WARDEN_BODY_MIND_CAMERAS: eye offset in radii from the warden_bounds centre), and the view
+# direction is -normalize(offset) in the body frame. An orthographic projection along the view
+# direction stands in for the harness's perspective at about two radii. Thresholds are fixed by the
+# KF7c packet; never lower them to pass a candidate (raising one to hold a gain is allowed).
 
 
 def _sub(a, b):
@@ -957,12 +968,9 @@ def _unit(a):
     return (a[0] / n, a[1] / n, a[2] / n)
 
 
-def sil_axes(offset, yaw_deg):
-    """(view, up, right) in the body's Godot frame for a world eye offset and the body's yaw."""
-    c, s = math.cos(math.radians(yaw_deg)), math.sin(math.radians(yaw_deg))
-    x, y, z = offset
-    body = (x * c - z * s, y, x * s + z * c)  # Basis(UP, -yaw) * offset
-    view = _unit((-body[0], -body[1], -body[2]))
+def sil_axes(offset):
+    """(view, up, right) in the body's Godot frame for an eye offset: view = -normalize(offset)."""
+    view = _unit((-offset[0], -offset[1], -offset[2]))
     up0 = (0.0, 1.0, 0.0) if abs(view[1]) <= 0.9 else (0.0, 0.0, -1.0)
     up = _unit(_sub(up0, tuple(view[i] * _dot(up0, view) for i in range(3))))
     return view, up, _cross(up, view)
@@ -1051,10 +1059,10 @@ def silhouette(body):
     fails = []
     axes = {}
     for name, off, src in SIL_CAMERAS:
-        axes[name] = sil_axes(off, SIL_YAW_DEG)
+        axes[name] = sil_axes(off)
         view = axes[name][0]
-        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s yaw %.1f view_body=(%.3f, %.3f, %.3f)"
-              % (name, off[0], off[1], off[2], src, SIL_YAW_DEG, view[0], view[1], view[2]))
+        print("CHECK silhouette_dir %s offset=(%.3f, %.3f, %.3f) from look_subjects.gd %s view=(%.3f, %.3f, %.3f)"
+              % (name, off[0], off[1], off[2], src, view[0], view[1], view[2]))
     fingers = [[p for p, g in zip(pts, groups) if g.startswith("Finger%d_" % fi)] for fi in range(len(FINGERS))]
     thumb = [p for p, g in zip(pts, groups) if g.startswith("Thumb")]
     palm_fingers = [p for p, g in zip(pts, groups) if g == "Palm" or g.startswith("Knuckle") or g.startswith("Finger")]
@@ -1086,6 +1094,17 @@ def silhouette(body):
     if not sil_say(good >= SIL_THUMB_CAMERAS, "mind", "all", "thumb", "cameras(outside_m>=%.1f)" % SIL_THUMB_OUT_M,
                    good, ">=%d of %d" % (SIL_THUMB_CAMERAS, len(SIL_CAMERAS))):
         fails.append("thumb")
+    # 2026-10-11 (w13 KF7c fix round): the outline metric above passed a thumb laid flat on the
+    # palm's middle plane (verifier mutation D: outside_m 2.09/2.04/2.11, splayed sideways past the
+    # palm's edge), so it never tested the rise. The thumb tip must stand clear above the palm along
+    # the palm's normal: the highest Thumb_2 vertex over the highest Palm vertex (plate and pads).
+    normal = (-math.sin(PALM_ROLL), math.cos(PALM_ROLL), 0.0)
+    origin = (0.0, PALM_Y0, 0.0)
+    tip = [p for p, g in zip(pts, groups) if g == "Thumb_2"]
+    palm = [p for p, g in zip(pts, groups) if g == "Palm"]
+    rise = max(_dot(_sub(p, origin), normal) for p in tip) - max(_dot(_sub(p, origin), normal) for p in palm)
+    if not sil_say(rise >= SIL_THUMB_RISE, "mind", "3d", "thumb", "rise_m", rise, ">=%.1f" % SIL_THUMB_RISE):
+        fails.append("thumb rise")
     return fails
 
 
