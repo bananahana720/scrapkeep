@@ -109,7 +109,7 @@ D drop-in [-150, -690]
 
 The three activities, signposted from the drop-in: the domes camp (`enemy_camp`, today's chaser pack and the named `hot_rivets` pay, `map_spillway.gd:98`), the rim cache (`cracked_cache`) and the bench altar (`ambush_altar`). Rules from `activities.gd:29-47`. The camp is also the first waymark: lines pass its point within 12 m, and its ring starts only inside 8 m (`activities.gd:31`), so the fight is a choice made at speed.
 
-## 5. `park_rows` (134 rows, shipped greybox 2026-10-11)
+## 5. `park_rows` (135 rows, shipped greybox 2026-10-11, density fix 2026-10-12)
 
 The shipped rows are in `src/world/park/park_dam.json`; this table follows that file. Every non-ground row carries `greybox:<element>` (R10). Heights are metres above the base plain; `size` is [length along the facing, height, width].
 
@@ -119,6 +119,7 @@ The shipped rows are in `src/world/park/park_dam.json`; this table follows that 
 - Solid rows stamp their real shape: `service_ledge` and `lobber_ledge` 24 m plateaus (the lift climbs the lobber ledge, and the gallery sits on the service ledge), `cliff_rooms_west`, `pipeline_bridge`, `canal_lips` and `crest_rail` ridges, and `east_abutment` a ramp rising 16 m toward the dam (a plateau cut the `crest_line` route).
 - Each kicker keeps its kick in its `_ramp` ground row, as before KB9, and carries a 0 m plateau stamp of its own, so no wedge stands on the ramp. A flat-based wedge on the 14 degree canyon descent stood 28 degrees off the slope, and Rivet bounced off `apron_kicker` on 2 of 8 seeds. The kick height is the `_ramp` row's height.
 - Four anchor fields are pulled back off the domes shelf, so their posts stand at least 21 m from every line: `hoodoo_25`, `saguaro_6`, `saguaro_22` and `hoodoo_23`. The stage test pins 15 m.
+- The cut left the strip south of the drop bare, and `park_density_test` measured 96.4 m at (-328, -800) with 16 open nodes over 80 m. `saguaro_26` (2026-10-12) fills it: 380 m east to west by 70 m at [-290, -755], covering x -480 to -100 and z -790 to -720, so its posts stand at least 30 m south of the drop and of every line out of it. The density worst is now 62.0 m (near `hoodoo_23`), with no node over 80 m. A row's `size` is [length along its facing, height, width across], so at yaw 0 the first number runs north to south.
 
 | Group | Row | Element / landform / society | Stamp | At, size, yaw | Verb, ride fact | Note |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -196,7 +197,7 @@ The shipped rows are in `src/world/park/park_dam.json`; this table follows that 
 | The toe | `gate_row_apron` | bank / dam_face / dam_era | bowl | [0, 540], [30, 2, 60], 0 | bank, `ride_bowl` |  |
 | The toe | `crest_rail` | rail / dam_face / dam_era | ridge | [0, 655], [300, 1, 4], 90 | grind, `ride_grapple_line` | routes `crest_line` |
 | Filler | `dome_1` to `dome_25` | bank / slickrock / none | spire | 40 by 16 by 40 each | bank, `ride_hop` | the rollers and anchor faces of the shelf |
-| Filler | 36 hoodoo fields, saguaro stands and hoodoo stacks | anchor_field or ground / hoodoo_field, saguaro_stand | none, or spire for a stack | fields 320 by 320 (four cut back off the domes shelf: `hoodoo_25` 60 by 320 at [-60, -750], `saguaro_6` 320 by 80 at [-470, -640], `saguaro_22` 320 by 160 at [230, -700], `hoodoo_23` 320 by 190 at [245, -420]), stacks 26 by 9 by 26 | swing, roll | the density rows of the open country (PARK.md section 8) |
+| Filler | 37 hoodoo fields, saguaro stands and hoodoo stacks | anchor_field or ground / hoodoo_field, saguaro_stand | none, or spire for a stack | fields 320 by 320 (four cut back off the domes shelf, size as length north to south by width east to west: `hoodoo_25` 60 by 320 at [-60, -750], `saguaro_6` 320 by 80 at [-470, -640], `saguaro_22` 320 by 160 at [230, -700], `hoodoo_23` 320 by 190 at [245, -420]; and `saguaro_26` 70 by 380 at [-290, -755], the strip south of the drop), stacks 26 by 9 by 26 | swing, roll | the density rows of the open country (PARK.md section 8) |
 
 ## 6. `event_rows` (6 rows)
 
@@ -250,12 +251,12 @@ Measured 2026-10-11 on the shipped greybox, KB9 head (8 seeds per line through `
 | Sable | shelf A loop, west wash, west (tunnel, bucket, pool) | 1.65 | 27.6, 17.1, 17.6 | 62.6 (65.1) | 53.8 | 0.25 |
 | Rivet | shelf B, upper slot, centre (incline, apron) | 1.32 | 38.3, 29.6, 13.5 | 81.8 (82.3) | 42.6 | 0.16 |
 | Kest | shelf C, corkscrew, east (bridge, bench) | 1.34 | 30.4, 30.6, 22.4 | 83.8 (86.0) | 31.6 | 0.28 |
-| Tarn | shelf B, upper slot, west (cliff rooms, viga, ledge) | 1.38 | 31.6, 26.6, 16.3 | 74.7 (76.1) | 39.6 | 0.22 |
-| Tally | shelf C, west wash, plunge pool | 1.32 | 31.9, 31.3, 17.3 | 81.0 (82.3) | 44.4 | 0.17 |
+| Tarn | shelf B, upper slot, west (tunnel, bucket, pool; the waypoints in the lines file) | 1.38 | 31.6, 26.6, 16.3 | 74.7 (76.1) | 39.6 | 0.22 |
+| Tally | shelf C, west wash, plunge pool | 1.32 | 31.9, 31.3, 17.2 | 81.1 (82.3) | 44.6 | 0.16 |
 | Cannon | shelf C, corkscrew, crest | 1.45 | 29.5, 29.5, 25.3 | 84.2 (85.7) | 36.5 | 0.17 |
-| Floor line | shelf B, upper slot, centre, no contraption | 1.32 | 38.7, 31.4, 12.5 | 82.7 (83.9) | 43.6 | 0.11 |
+| Floor line | shelf B, upper slot, west (tunnel, bucket, pool), no contraption | 1.38 | 38.7, 31.4, 15.9 | 86.0 (87.2) | 42.7 | 0.11 |
 
-Every line reached the Warden on 8 of 8 seeds, and every pilot band passes on all six pilots with no dead stop on any seed (the KB9 head, where the rows are placed at runtime and their ride sensors fire: 5 to 7 distinct ride facts per line). The floor line's median is 1.01 times Rivet's (band at most 2.0) with no dead stop.
+Every line reached the Warden on 8 of 8 seeds, and every pilot band passes on all six pilots with no dead stop on any seed (the KB9 head, where the rows are placed at runtime and their ride sensors fire: 5 to 7 distinct ride facts per line). The floor line's median is 1.05 times Rivet's (band at most 2.0) with no dead stop. Re-measured 2026-10-12 after `saguaro_26` and the floor line's re-cut onto the bucket flight; the floor line's airborne share (0.115) stays under the pilots' 0.12 band, and whether that band judges the floor line is open for a ruling (three other floor cuts and the band each missed are in the traversal page).
 
 Three line re-cuts on the KB9 head, each from a traced seed. Sable's line goes straight at `domes_camp` from [-60, -450]: at 40 m/s she passed 16.6 m from the camp and looped for 75 s to come back within the bot's 12 m. Her east turn on the shelf loop moves to [-25, -555], short of `domes_fin_east`. Her wash entry point moves onto the wash axis at [-137, -190]. Cannon's descent turns east at [120, 285] and [145, 350], so she lands east of `powerhouse_stair` and clear of the `rim_zip` head, and her bench points ([150, 410], [156, 470]) keep 10 m off the `canal_lips` ridge.
 
@@ -273,7 +274,7 @@ The shipped pilot lines (`tools/park_lines/park_dam.json`):
     "tally": {"waypoints": ["drop_in", [-150, -630], [20, -650], [95, -560], [-5, -450], "domes_camp", [-58, -372], [-90, -310], [-140, -220], [-110, -60], [-65, 60], [-15, 130], "the_eye", [-12, 250], [-30, 285], [-45, 360], [-55, 450], [-80, 505], [-45, 545], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}},
     "cannon": {"waypoints": ["drop_in", [-150, -630], [20, -650], [95, -560], [-5, -450], "domes_camp", [-58, -372], [-90, -310], [-20, -240], [12, -150], [20, 0], [18, 90], [8, 130], "the_eye", [15, 250], [65, 285], [120, 285], [145, 350], [150, 410], [156, 470], [170, 540], [100, 560], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.12, 0.45]}}
   },
-  "floor": {"waypoints": ["drop_in", [-30, -650], [-65, -555], [-250, -530], [-130, -450], "domes_camp", [-85, -385], [-95, -330], [-90, -310], [-80, -220], [-55, -60], [-30, 60], [-8, 130], "the_eye", [-12, 250], [-30, 285], [-45, 330], [-40, 410], [-25, 450], [-17, 480], [-5, 520], "landmark"]}
+  "floor": {"waypoints": ["drop_in", [-30, -650], [-65, -555], [-250, -530], [-130, -450], "domes_camp", [-85, -385], [-95, -330], [-90, -310], [-80, -220], [-55, -60], [-30, 60], [-8, 130], "the_eye", [-15, 250], [-65, 285], [-100, 315], [-109, 410], [-100, 445], [-90, 480], [-45, 530], "landmark"]}
 }
 ```
 
@@ -351,7 +352,7 @@ Draft text for the lore pass, in the tone of `SOUND-STORY.md:212`. Fragment ids 
 
 ## 13. The park file
 
-Shipped 2026-10-11 as `src/world/park/park_dam.json` and re-cut the same day for KB9's runtime placement (section 5) (134 park rows, 6 event rows, 5 homes, 9 contraptions, 3 activity rows), baked to `assets/park/park_dam/` with its graph. The draft JSON that stood here is retired; sections 5 to 8 follow the shipped file. Measured pockets (`assets/park/park_dam/graph.json`, PARK.md 2.12):
+Shipped 2026-10-11 as `src/world/park/park_dam.json` and re-cut the same day for KB9's runtime placement (section 5), with `saguaro_26` added 2026-10-12 for the density rule (135 park rows, 6 event rows, 5 homes, 9 contraptions, 3 activity rows), baked to `assets/park/park_dam/` with its graph. The draft JSON that stood here is retired; sections 5 to 8 follow the shipped file. Measured pockets (`assets/park/park_dam/graph.json`, PARK.md 2.12):
 
 | Pocket | Role | Door | door_m | detour_m | d_spawn | d_landmark | sight_ok | pay.rarities |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -515,6 +516,7 @@ The shipped park file:
   {"id": "hoodoo_23", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [245, -420], "y": null, "size": [320, 2, 190], "yaw_deg": 0, "verb": "swing", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "saguaro_24", "element": "anchor_field", "landform": "saguaro_stand", "society": "none", "at": [170, -140], "y": null, "size": [320, 2, 320], "yaw_deg": 0, "verb": "swing", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_25", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [-60, -750], "y": null, "size": [60, 2, 320], "yaw_deg": 0, "verb": "swing", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "saguaro_26", "element": "anchor_field", "landform": "saguaro_stand", "society": "none", "at": [-290, -755], "y": null, "size": [70, 2, 380], "yaw_deg": 0, "verb": "swing", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_stack_1", "element": "ground", "landform": "hoodoo_field", "society": "none", "at": [260, -560], "y": null, "size": [26, 9, 26], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_stack_2", "element": "ground", "landform": "hoodoo_field", "society": "none", "at": [330, -450], "y": null, "size": [26, 9, 26], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_stack_3", "element": "ground", "landform": "hoodoo_field", "society": "none", "at": [420, -620], "y": null, "size": [26, 9, 26], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
