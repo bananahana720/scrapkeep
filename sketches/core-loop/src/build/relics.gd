@@ -22,7 +22,7 @@ const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn"
 # Rivet's kit rows; Tarn, Tally and the remembered cannon have their own rows in each world.
 const RIVET := ["runner_gunner"]
 const SUFFIX := {AbilityState.WEAPON: "_weapon", AbilityState.MOVEMENT: "_move",
-	AbilityState.SPECIAL: "_special", AbilityState.SMASH: "_smash"}
+	AbilityState.SPECIAL: "_special", AbilityState.SMASH: "_smash", AbilityState.LINE: "_line"}
 
 const ROWS := {
 	"crater_heart": {"name": "Crater Heart", "text": "Smash spends the special for a crater",
@@ -65,8 +65,8 @@ const ROWS := {
 	"spare_cell": {"name": "Spare Cell", "text": "Stock a second detonation charge",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 1,
 		"part": "gen:charge:relic:kinetic:on_smash", "world": 2},
-	"pit_coil": {"name": "Pit Coil", "text": "Smash spends the special for a crater",
-		"pilots": ["pylon_engineer"], "slot": AbilityState.SMASH, "swap": "crater_slam",
+	"pit_coil": {"name": "Pit Coil", "text": "Bank Shot recharges 30% faster",
+		"pilots": ["pylon_engineer"], "class_id": "pylon_engineer", "stack_rule": "capped", "slot": AbilityState.LINE, "cooldown": 0.7,
 		"part": "gen:charge:relic:frost:timed", "world": 2},
 	"spare_spring": {"name": "Spare Spring", "text": "Stock a second overdrive sprint",
 		"pilots": RIVET, "slot": AbilityState.MOVEMENT, "charges": 1,
@@ -102,8 +102,8 @@ const ROWS := {
 	"crown_cell": {"name": "Crown Cell", "text": "Stock two more detonation charges",
 		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "charges": 2,
 		"part": "gen:defense:relic:arc:on_damage_taken", "world": 3},
-	"storm_crater": {"name": "Storm Crater", "text": "Smash cashes the special into a crater",
-		"pilots": ["pylon_engineer"], "slot": AbilityState.SMASH, "swap": "crater_slam",
+	"storm_crater": {"name": "Storm Crater", "text": "Stock a second Bank Shot",
+		"pilots": ["pylon_engineer"], "class_id": "pylon_engineer", "stack_rule": "capped", "slot": AbilityState.LINE, "charges": 1,
 		"part": "gen:utility:relic:arc:on_pickup", "world": 3},
 	"tailwind_spring": {"name": "Tailwind Spring", "text": "Overdrive sprint recharges 40% faster",
 		"pilots": RIVET, "slot": AbilityState.MOVEMENT, "cooldown": 0.6,
@@ -198,7 +198,7 @@ static func _kit_slot(pilot: String, slot: String) -> String:
 	if def == null:
 		return ""
 	return {AbilityState.WEAPON: def.weapon_id, AbilityState.MOVEMENT: def.movement_id,
-		AbilityState.SPECIAL: def.special_id, AbilityState.SMASH: def.smash_id}.get(slot, "")
+		AbilityState.SPECIAL: def.special_id, AbilityState.SMASH: def.smash_id, AbilityState.LINE: def.line_id}.get(slot, "")
 
 
 # Problems with the table, one string each; empty when it is sound.

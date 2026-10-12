@@ -143,6 +143,11 @@ const MOTIFS := {
 const CLASS_MOTIFS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 
 
+static func family_note(family: String) -> int:
+	var index := preload("res://src/boss/mind_attacks.gd").FAMILIES.find(family)
+	return int(MOTIFS["cannon"]["cells"][index][1]) if index >= 0 else -1
+
+
 static func motif(id: String) -> Dictionary:
 	return MOTIFS.get(id, {})
 

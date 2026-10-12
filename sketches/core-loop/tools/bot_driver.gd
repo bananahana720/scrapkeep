@@ -1575,6 +1575,16 @@ func _note_shred(target: Node3D, delta: float) -> void:
 # frozen ball), so a bite counts only when it can land.
 func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
+	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
+	if _cast_phase == "await_smash":
+		_cast_phase = ""
+	if _smash_pending():
+		if _cast_phase == "":
+			# Keep the haul against a closed guard; bank off the paid open-core hit.
+			_cast_slot = 3
+			_cast_phase = "await_smash"
+	elif bank_shot and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
+		_cast(3)
 	_harpoon_commit = false
 	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > LINE_REACH else _off_line + delta
 	# The reticle may reach scenery before the press is consumed. Let that line
@@ -1593,14 +1603,20 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			and game.player._brake_was_held)
 		return
 	_harpoon_held = false
+	if game.player.abilities.id_of(AbilityState.LINE) == "cable_charge" and target.get("role") == "hull" and not Augments.anchor_line(target):
+		var radius = target.get("radius")
+		var passing: float = Augments.MIN_ROPE + game.player.tuning.RADIUS + (float(radius) if radius != null else 0.0)
+		if game.player.ball_position().distance_to(target.global_position) <= passing:
+			return
 	var swallowed: bool = game.player.frozen() or kit.slingshot.charging
 	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
 	if special != null and special.charging:
 		swallowed = true
 	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
 			and _off_line > DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
-		# The planned bite: slot 3 loads on this tick, so the bite carries the line skill.
-		_cast(3)
+		# A movement exit waits for the haul; other line skills load on the bite.
+		if not bank_shot:
+			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
 		_count("harpoon_bites")
@@ -1612,6 +1628,23 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 				_chain_second = second
 				_chain_rose = false
 				source.press["jump_pressed"] = true
+
+
+func _smash_pending() -> bool:
+	var kit = game.player.kit
+	if game.player.abilities.id_of(AbilityState.LINE) != "bank_shot" \
+			or not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
+		return false
+	var guarded: bool = kit.anchor_body.has_method("posture") and kit.anchor_body.has_method("staggered")
+	return not (kit.line_state == Augments.LINE_SMASH and (not guarded or kit.anchor_body.staggered()))
+
+
+func _await_smash_holds() -> bool:
+	var target: Node3D = _fight_target if is_instance_valid(_fight_target) else _anchor_target
+	if _smash_pending() and not _anchor_warden(target):
+		return true
+	_cast_phase = ""
+	return false
 
 
 func _clear_chain_hand() -> void:
@@ -2376,6 +2409,8 @@ func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
 # as the old one-tick special press did). False when the slot does not read ready on the bar,
 # a cast is already in hand, or a set piece runs.
 func _cast(slot: int, hold_seconds := 0.0) -> bool:
+	if _cast_phase == "await_smash": _await_smash_holds()
+	if slot == 3 and game.player.abilities.id_of(AbilityState.LINE) == "bank_shot" and source.press.get("harpoon_released", false): return false
 	if _cast_phase != "" or _set_piece_up() or slot < 2 or slot > AbilityState.BAR.size():
 		return false
 	if _bar_state(slot) != AbilityState.READY or (slot == 3 and _line_loaded()):
@@ -2457,6 +2492,7 @@ func _set_piece_up() -> bool:
 # ULT_TRAVERSE_FAR ahead with the way clear. The set piece flies where the camera looks, and
 # every policy is already looking at its target or along its way.
 func _ultimate_hands(fight: Node3D) -> void:
+	if _cast_phase == "await_smash": _await_smash_holds()
 	if _ult_wait > 0.0 or _set_piece_up() or _cast_phase != "":
 		return
 	if String(game.player.abilities.ultimate().get("state", "")) != AbilityState.READY:

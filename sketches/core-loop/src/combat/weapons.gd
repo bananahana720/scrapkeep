@@ -160,6 +160,19 @@ const PLATE_DAMAGE_MAX := 34.0
 const RUSH_REACH := 14.0
 const RUSH_DAMAGE := 30.0
 const CANNON_KNOCK := EventKinds.IMPACT["cannon"]["knock"]
+const LANE_CHARGE_DAMAGE := 28.0
+const LANE_CHARGE_PAST := 12.0
+const LANE_CHARGE_WARN := 0.1
+const LANE_CHARGE_LIVE := 0.3
+const ZONE_DAMAGE := 12.0
+const ZONE_REACH := 26.0
+const CALL_CAP := 12
+const VOID_DROP := 12.0
+const APEX_CAP := 20.0
+const CREEP_AHEAD_BEATS := 2
+const MORTAR_BEATS := 6
+const MORTAR_REACH := 0.5
+const RECITAL_SECONDS := 6.0
 
 
 static func base(weapon_id: String) -> Resource:

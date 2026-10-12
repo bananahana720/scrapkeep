@@ -23,7 +23,9 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
+const Augments := preload("res://src/movement/augments.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
+const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
@@ -349,10 +351,12 @@ func setup(ctx_ref) -> void:
 	_line_skills = {
 		"line_reel": {"on_body": _line_reel_body, "on_world": _reel_burst, "geometry": _line_reel_geometry},
 		# --- P-C Sable line skill ---
+		"bank_shot": {"on_body": _bank_body, "on_world": _bank_world, "geometry": _bank_geometry},
 		# --- end Sable ---
 		# --- P-C Rivet line skill ---
 		# --- end Rivet ---
 		# --- P-C Kest line skill ---
+		"cable_charge": KestKit.line_row(self),
 		# --- end Kest ---
 		# --- P-C Tarn line skill ---
 		"claw_drag": preload("res://src/combat/tarn_claw.gd").line_row(self),
@@ -361,13 +365,14 @@ func setup(ctx_ref) -> void:
 		"link_clips": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
 		# --- end Tally ---
 		# --- P-C Cannon line skill ---
+		"cannon_lane_charge": {"on_body": _cannon_line_body, "on_world": _cannon_line_world, "geometry": _cannon_line_geometry},
 		# --- end Cannon ---
 	}
 	ctx.player.line_load_of = line_load
 	# The set piece (SKILL-BAR section 4) and the shared placeholder every pilot carries until
 	# wave P-C: paths line then arc, a volley of the pilot's own weapon per beat, the default
 	# landing. A pilot's own row goes in its marked block in ultimate.gd's _ult_rows.
-	ultimate = Ultimate.new()
+	ultimate = KestKit.new()
 	add_child(ultimate)
 	ultimate.setup(ctx, self)
 	ultimate.register("ult_default", {"tech": _ult_volley, "peak": _ult_peak, "landing": _ult_landing})
@@ -1508,7 +1513,7 @@ func _flat_aim() -> Vector3:
 # Sable: the gauge stands in for speed in the discharge curve, and the bank counts if
 # you are mounted and it is bigger.
 func _discharge_speed(f: float) -> float:
-	var speed := f * Weapons.DISCHARGE_FULL_SPEED
+	var speed := maxf(f * Weapons.DISCHARGE_FULL_SPEED, 0.75 * ctx.player.state.velocity.length())
 	if ctx.player.kit.mounted:
 		speed = maxf(speed, ctx.player.kit.mount_banked)
 	return speed
@@ -1599,16 +1604,23 @@ func _cannon_ground(p: Vector3) -> float:
 
 
 func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: float, damage: float, source: String,
-		expose := false) -> Dictionary:
+		expose := false, overrides := {}) -> Dictionary:
 	_cannon_count += 1
 	var seed: int = _cannon_count * 7919 + ctx.run.stage
 	var phase := _cannon_phase()
 	var descriptors: Array = MindAttacks.commit(family, seed, target, centre, phase, radius)
 	var entry := {"family": family, "hazards": [], "damage": damage, "source": source, "struck": {}, "expose": expose,
-		"verb": "", "window": 0.0, "seed": seed, "target": target, "centre": centre, "radius": radius, "phase": phase}
+		"verb": "", "window": 0.0, "seed": seed, "target": target, "centre": centre, "radius": radius, "phase": phase, "options": overrides, "noted": false, "born": _clock}
 	for d in descriptors:
 		d["id"] = "cannon_%s_%d" % [String(d["id"]).trim_prefix("mind_"), _cannon_count]
+		for key in ["warn", "live", "from", "dir", "ahead", "band"]:
+			if overrides.has(key):
+				d[key] = overrides[key]
 		var h = MindAttacks.build(d)
+		# The one-second floor belongs to hostile hazards. Friendly cable and beat calls
+		# use the committed warn, including zero for the last landing-beat call.
+		if overrides.has("warn"):
+			h.warn_seconds = maxf(0.0, float(overrides["warn"]))
 		h.color = ClassDef.CANNON_COLOR
 		h.ground = _cannon_ground
 		ctx.root.add_child(h)
@@ -1621,6 +1633,11 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 
 
 func _step_cannon(delta: float) -> void:
+	_step_cannon_exposure()
+	if ctx.player.abilities.selected == AbilityState.LINE and ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge" and ctx.player.kit.hooked:
+		ctx.player.indicator.set_shape(AbilityState.LINE, _cannon_line_geometry(1.0))
+	elif ctx.player.abilities.id_of(AbilityState.LINE) == "cannon_lane_charge":
+		ctx.player.indicator.clear(AbilityState.LINE)
 	if _cannon.is_empty():
 		return
 	var enemies := get_tree().get_nodes_in_group("enemy")
@@ -1630,7 +1647,16 @@ func _step_cannon(delta: float) -> void:
 		for h in entry["hazards"]:
 			if not is_instance_valid(h):
 				continue
-			h.step(delta)
+			var options: Dictionary = entry["options"]
+			if options.has("live_at"):
+				h.age = maxf(0.0, h.warn_seconds + _clock - float(options["live_at"]))
+				h.step(0.0)
+			else:
+				h.step(delta)
+			if h.is_live() and not entry["noted"]:
+				entry["noted"] = true
+				entry["live_clock"] = _clock
+				_cannon_note(entry)
 			if not h.is_done():
 				done = false
 			if h.is_live():
@@ -1649,18 +1675,36 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		var id: int = enemy.get_instance_id()
-		if entry["struck"].has(id) or not h.contains(enemy.global_position):
+		if entry["struck"].has(id) or (enemy != entry["options"].get("forced") and not h.contains(enemy.global_position)):
 			continue
 		entry["struck"][id] = true
 		var push: Vector3 = h.heading if h.shape == MindAttacks.Hazard.Shape.LANE else enemy.global_position - h.centre
-		_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "",
-			entry["source"])
+		var options: Dictionary = entry["options"]
+		if options.has("budget"):
+			var dealt := _cannon_set_piece_hit(enemy, float(entry["damage"]), h.centre, false, false, options["budget"])
+			var record: Dictionary = options["record"]
+			if entry["struck"].size() == 1:
+				record["zone_hits"] = int(record.get("zone_hits", 0)) + 1
+			record["volley_hits"] = int(record.get("volley_hits", 0)) + 1
+			record["damage"] = float(record.get("damage", 0.0)) + dealt
+		else:
+			_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "", entry["source"])
+		if not entry.get("recital_checked", false):
+			entry["recital_checked"] = true
+			_cannon_recital(entry["family"], enemy.global_position)
+			if options.has("discovery"):
+				_discover("cannon_lane_charge", enemy.global_position)
 		if entry["expose"] and is_instance_valid(enemy) and not enemy.is_dead():
-			_exposed[id] = {"until": _clock + float(entry["window"]), "verb": entry["verb"]}
+			_cannon_expose(enemy, float(entry["window"]), entry["verb"])
 
 
 # Every cannon Hazard leaves the tree now and is freed at the end of the frame.
 func _free_cannon() -> void:
+	_recital_index = 0
+	_recital_at = -INF
+	for row in _exposed.values():
+		if is_instance_valid(row.get("mark")):
+			row["mark"].queue_free()
 	for entry in _cannon:
 		for h in entry["hazards"]:
 			if is_instance_valid(h):
@@ -1731,6 +1775,166 @@ func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 			target = enemy.global_position
 	_commit_cannon("rush", target, landing, Weapons.RUSH_REACH, Weapons.RUSH_DAMAGE * clampf(strength, 0.5, 1.5),
 		"drop_or_slam")
+
+
+# --- PC-CANNON: the cable lane and the set-piece zones --------------------------------
+const CannonAugments := preload("res://src/movement/augments.gd")
+var _recital_index := 0
+var _recital_at := -INF
+static var _exposure_mesh: ArrayMesh
+static var _exposure_material: ShaderMaterial
+
+
+func _cannon_audio():
+	var presentation = ctx.root.get("presentation")
+	return presentation.audio if presentation != null else null
+
+
+func _cannon_note(entry: Dictionary) -> void:
+	var audio = _cannon_audio()
+	if audio != null:
+		var kind: String = {"weapon": "cannon_weapon", "line": "cannon_line_live", "drop_or_slam": "cannon_smash"}.get(entry["source"], "cannon_live")
+		if entry["family"] == "split_lane" and entry["source"] == "special" and not entry["options"].has("budget"):
+			kind = "cannon_recoil"
+		audio.cannon_family(entry["family"], false, kind)
+
+
+func _cannon_line_geometry(fraction: float) -> Dictionary:
+	var kit = ctx.player.kit
+	var ball: Vector3 = ctx.player.ball_position()
+	var from := _ground_under(ball)
+	var dir := _flat_aim()
+	var ahead := Weapons.CANNON_LANE_REACH - MindAttacks.LANE_HALF
+	if kit.hooked and kit.on_body:
+		dir = Vector3(kit.anchor.x - ball.x, 0.0, kit.anchor.z - ball.z).normalized()
+		if dir.length() < 0.01:
+			dir = _flat_aim()
+		ahead = Vector2(kit.anchor.x - ball.x, kit.anchor.z - ball.z).length() + Weapons.LANE_CHARGE_PAST
+	elif kit.hooked:
+		var floor = _cannon_floor(kit.anchor)
+		if floor != null:
+			from = floor
+			var normal: Vector3 = kit.anchor_normal
+			if absf(normal.y) < 0.7 and Vector2(normal.x, normal.z).length() > 0.01:
+				dir = Vector3(normal.x, 0.0, normal.z).normalized()
+		else:
+			dir = Vector3(kit.anchor.x - ball.x, 0.0, kit.anchor.z - ball.z).normalized()
+			if dir.length() < 0.01:
+				dir = _flat_aim()
+	return ctx.player.yours({"kind": "line", "from": from, "to": from + dir * ahead,
+		"full_to": from + dir * ahead, "width": MindAttacks.LANE_HALF * 2.0, "fill": fraction})
+
+
+func _cannon_line_body(target: Node3D, fraction: float, mult: float) -> void:
+	_cannon_line_fire(fraction, mult, target)
+
+
+func _cannon_line_world(_anchor: Vector3, fraction: float, mult: float) -> void:
+	_cannon_line_fire(fraction, mult, null)
+
+
+func _cannon_line_fire(fraction: float, mult: float, target: Node3D) -> void:
+	var shape := _cannon_line_geometry(fraction)
+	var from: Vector3 = shape["from"]
+	var to: Vector3 = shape["to"]
+	_commit_cannon("lane", to, from, from.distance_to(to) + MindAttacks.LANE_HALF,
+		Weapons.LANE_CHARGE_DAMAGE * mult, "line", false,
+		{"warn": Weapons.LANE_CHARGE_WARN, "live": Weapons.LANE_CHARGE_LIVE,
+		"from": from, "dir": (to - from).normalized(), "ahead": from.distance_to(to), "forced": target,
+		"discovery": "cannon_lane_charge"})
+	var audio = _cannon_audio()
+	if audio != null:
+		audio.cannon_line(ctx.player.chain.combo)
+
+
+# A call needs a real floor. Unlike _floor_at this never substitutes the terrain sample
+# when a ray misses, so a gap cannot silently become a zone.
+func _cannon_floor(at: Vector3):
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.1,
+		at - Vector3.UP * Weapons.VOID_DROP, CannonAugments.WORLD_MASK))
+	return hit["position"] if not hit.is_empty() and (hit["normal"] as Vector3).y >= 0.7 else null
+
+
+func _cannon_recital(family: String, at: Vector3) -> void:
+	if _clock - _recital_at > Weapons.RECITAL_SECONDS:
+		_recital_index = 0
+	if family == MindAttacks.FAMILIES[_recital_index]:
+		if _recital_index == 0:
+			_recital_at = _clock
+		_recital_index += 1
+	elif family == "lane":
+		_recital_at = _clock
+		_recital_index = 1
+	else:
+		_recital_index = 0
+	if _recital_index == MindAttacks.FAMILIES.size():
+		_recital_index = 0
+		_discover("cannon_recital", at)
+		var audio = _cannon_audio()
+		if audio != null:
+			audio.cannon_motif("cannon_recital", true)
+
+
+func _cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: bool, mortar: bool, budget: Dictionary) -> float:
+	if enemy.has_method("_apply_posture") and enemy.has_method("staggered"):
+		if landing and enemy.staggered():
+			return _ult_hit(enemy, "ultimate", damage, at, true)
+		var judged: Dictionary = enemy.judge_hit("slam" if landing else "cannon",
+			damage if landing else damage * Ultimate.WARDEN_VOLLEY, landing, 0)
+		var id := enemy.get_instance_id()
+		var spent := float(budget.get(id, 0.0))
+		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.WARDEN_POSTURE_CAP - spent))
+		judged["shatter"] = false
+		judged["crack"] = false
+		budget[id] = spent + float(judged["gain"])
+		enemy._apply_posture(judged)
+		effects.spark(enemy.global_position + Vector3.UP, Palette.SLATE)
+		return 0.0
+	return _ult_hit(enemy, "slam" if mortar and landing else "ultimate", damage, at, landing)
+
+
+func _cannon_expose(enemy: Node3D, window: float, verb: String) -> void:
+	var id := enemy.get_instance_id()
+	var mark: MeshInstance3D = enemy.get_node_or_null("CannonExposure")
+	if mark == null:
+		if _exposure_mesh == null:
+			var surface := SurfaceTool.new()
+			surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+			for i in 24:
+				if i % 6 == 0:
+					continue
+				var a := TAU * i / 24.0
+				var b := TAU * (i + 0.8) / 24.0
+				for p in [Vector2(a, 1.1), Vector2(b, 1.1), Vector2(a, 1.25),
+					Vector2(b, 1.1), Vector2(b, 1.25), Vector2(a, 1.25)]:
+					surface.add_vertex(Vector3(cos(p.x) * p.y, 0.12, sin(p.x) * p.y))
+			_exposure_mesh = surface.commit()
+			_exposure_material = ShaderMaterial.new()
+			var shader := Shader.new()
+			shader.code = "shader_type spatial; render_mode unshaded, cull_disabled; uniform vec4 tint : source_color; instance uniform float left = 1.0; void fragment(){ ALBEDO = tint.rgb; ALPHA = left; }"
+			_exposure_material.shader = shader
+			_exposure_material.set_shader_parameter("tint", Palette.ANCIENT)
+			_exposure_mesh.surface_set_material(0, _exposure_material)
+		mark = MeshInstance3D.new()
+		mark.name = "CannonExposure"
+		mark.mesh = _exposure_mesh
+		enemy.add_child(mark)
+	mark.set_instance_shader_parameter("left", 1.0)
+	_exposed[id] = {"until": _clock + window, "verb": verb, "window": window, "mark": mark}
+
+
+func _step_cannon_exposure() -> void:
+	for id in _exposed.keys():
+		var row: Dictionary = _exposed[id]
+		var left := float(row["until"]) - _clock
+		var mark = row.get("mark")
+		if left <= 0.0 or not is_instance_valid(instance_from_id(id)):
+			if is_instance_valid(mark):
+				mark.queue_free()
+			_exposed.erase(id)
+		elif is_instance_valid(mark):
+			mark.set_instance_shader_parameter("left", left / float(row["window"]))
 
 
 # --- The line skill (design-v3/SKILL-BAR.md section 3) --------------------------------
@@ -1837,7 +2041,7 @@ func _fire_line_skill(id: String, fraction: float) -> void:
 		return
 	var kit = ctx.player.kit
 	var mult := float(ctx.player.chain.multiplier())
-	var target: Node3D = kit.anchor_body if kit.on_body and is_instance_valid(kit.anchor_body) else null
+	var target: Node3D = kit.anchor_body if kit.on_body and is_instance_valid(kit.anchor_body) and not (id == "bank_shot" and Augments.anchor_line(kit.anchor_body)) else null
 	var at: Vector3 = kit.anchor
 	var on := "body" if target != null else "world"
 	var prev_source := _forced_source
@@ -2536,17 +2740,30 @@ func _step_tally_cards() -> void:
 func _line_geometry(f: float) -> Dictionary:
 	var from := _ground_under(ctx.player.ball_position())
 	var length := AbilityState.Gauge.scaled(f, Weapons.LINE_MIN, Weapons.LINE_MAX)
-	return ctx.player.yours({"kind": "line", "from": from, "to": from + _flat_aim() * length, "width": Weapons.LINE_WIDTH,
+	var shape: Dictionary = ctx.player.yours({"kind": "line", "from": from, "to": from + _flat_aim() * length, "width": Weapons.LINE_WIDTH,
 		"full_to": from + _flat_aim() * Weapons.LINE_MAX, "fill": f})
+	var points: Array = []
+	for charge in _caught_line(shape):
+		points.append(charge["pos"])
+	shape["caught"] = points
+	shape["bonus"] = 1.0 + Weapons.LINE_PER_CHARGE * mini(points.size(), Weapons.LINE_MAX_CAUGHT)
+	ctx.player.indicator.set_shape("kest_caught", ctx.player.yours({"kind": "marks", "points": points}))
+	return shape
+
+
+func _caught_line(shape: Dictionary) -> Array:
+	var live: Array = sticky.charges.duplicate()
+	if ultimate != null:
+		live.append_array(ultimate.caught_charges())
+	return live.filter(func(c): return not c.get("_inert", false) and in_line(shape["from"], shape["to"], shape["width"], c["pos"]))
 
 
 # Kest's detonation line: every live charge in the line goes off early, then the line
 # itself hits, +25% per charge caught up to three. A shot out of the cloak crits.
 func _fire_line(f: float, shape: Dictionary) -> void:
 	var caught := []
-	for charge in sticky.charges.duplicate():
-		if in_line(shape["from"], shape["to"], shape["width"], charge["pos"]):
-			caught.append(sticky.take(charge))
+	for charge in _caught_line(shape):
+		caught.append(sticky.take(charge) if sticky.charges.has(charge) else ultimate.take_charge(charge))
 	var bonus := 1.0 + Weapons.LINE_PER_CHARGE * mini(caught.size(), Weapons.LINE_MAX_CAUGHT)
 	var damage := AbilityState.Gauge.scaled(f, Weapons.LINE_DAMAGE_MIN, Weapons.LINE_DAMAGE_MAX) * bonus \
 		* _damage_mod(Weapons.STICKY_CHARGE) * _cloak_shot()
@@ -2578,6 +2795,8 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 # The pylon's opening burst: planting fires the special free when its row says so
 # (Sable's detonation gauge). Siege Plate lets it reach everything in range.
 func _on_mounted(at: Vector3, banked_speed: float) -> void:
+	if ultimate != null and ultimate.active() and ultimate._id == "outpost":
+		return
 	if ctx.run.class_def == null or not ctx.flow.in_play():
 		return
 	var abilities = ctx.player.abilities
@@ -2784,19 +3003,24 @@ func _detonate(charge: Dictionary) -> void:
 			dealt *= _knob("sticky_breach")
 		if _marks.get(enemy.get_instance_id(), -1.0) > _clock:
 			dealt *= Weapons.MARK_BONUS
-		_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"],
-			"", charge.get("_source", "weapon"))
+		if charge.has("_kest_cast"):
+			ultimate.blast_hit(charge, enemy, dealt, at)
+		else:
+			_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"],
+				"", charge.get("_source", "weapon"))
 	effects.ring(at, radius, ClassDef.KEST_COLOR)
 	ctx.events.sticky_detonated.emit(at, charge["crit"])
 	_rocket_jump(at)
 	_start_cloak()
 	if _knob("sticky_chain") > 0.0:
 		# A nested detonation can already have taken a charge from this snapshot (F001).
-		for other in sticky.charges.duplicate():
-			if not sticky.charges.has(other):
+		var live: Array = sticky.charges.duplicate()
+		live.append_array(ultimate.caught_charges())
+		for other in live:
+			if other.get("_inert", false) or (not sticky.charges.has(other) and not ultimate.caught_charges().has(other)):
 				continue
 			if (other["pos"] as Vector3).distance_to(at) <= _knob("sticky_chain"):
-				_detonate(sticky.take(other))
+				_detonate(sticky.take(other) if sticky.charges.has(other) else ultimate.take_charge(other))
 
 
 # Kest's rocket jump: Space held inside your own blast throws you away from it, harder
@@ -3376,3 +3600,31 @@ static func _signal_argc(obj: Object, kind: String) -> int:
 		if sig["name"] == kind:
 			return sig["args"].size()
 	return 0
+
+
+# --- PC-SABLE Bank Shot ---------------------------------------------------------------
+func _bank_body(target: Node3D, _fraction: float, mult: float) -> void:
+	var launch: Dictionary = ctx.player.bank_geometry()
+	var damage := 10.0 * mult * (0.5 if _target_class(target) == "boss" else 1.0)
+	if _target_class(target) != "boss" and target.has_method("knock"):
+		target.knock(-(launch["dir"] as Vector3), 12.0)
+	if target.has_method("flash"):
+		target.flash()
+	strike(target, "arc", damage, "", "special")
+	_bank_world(ctx.player.kit.anchor, _fraction, mult)
+
+
+func _bank_world(_anchor: Vector3, _fraction: float, _mult: float) -> void:
+	var kit = ctx.player.kit
+	var stake = kit.anchor_body
+	var switched: bool = is_instance_valid(stake) and stake.is_in_group(Augments.STAKE_GROUP)
+	var learned: bool = ctx.codex != null and ctx.codex.known("loaded_line")
+	ctx.player.bank_shot()
+	if learned:
+		_discover("bank_shot", _anchor)
+		if switched:
+			_discover("switchback", _anchor)
+
+
+func _bank_geometry(_fraction: float) -> Dictionary:
+	return ctx.player.bank_geometry()

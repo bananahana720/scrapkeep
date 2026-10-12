@@ -48,6 +48,8 @@ const AIM_CAST := 90.0
 const ASSIST_RINGS := [0.34, 0.67, 1.0]
 const ASSIST_SPOKES := 16
 const WORLD_MASK := 1
+const STAKE_MASK := 128
+const STAKE_GROUP := "sable_stake"
 
 const MIN_ROPE := 2.5
 # A body joins this group to be a harpoon anchor (PARK.md section 7): its line rides as a
@@ -366,7 +368,7 @@ static func commit_smash(kit, tuning, velocity: Vector3) -> void:
 # stagger on an anchor line.
 static func haul_open(kit) -> bool:
 	var body = kit.anchor_body
-	return not (kit.on_body and anchor_line(body)) or body.staggered()
+	return not (kit.on_body and anchor_line(body)) or (body.has_method("staggered") and body.staggered())
 
 
 static func no_aim() -> Dictionary:
@@ -384,7 +386,7 @@ static func grapple_target(space: PhysicsDirectSpaceState3D, from: Vector3, forw
 	var centre := _hook_ray(space, from, forward, ball, reach, mask, walkable)
 	if not centre.is_empty():
 		var body = centre["collider"]
-		if mask != WORLD_MASK and body is Node3D and body.is_in_group("enemy"):
+		if mask != WORLD_MASK and body is Node3D and (body.is_in_group("enemy") or body.is_in_group(STAKE_GROUP)):
 			return {"state": AIM_BODY, "point": centre["position"], "normal": centre["normal"], "body": body}
 		return {"state": AIM_REACH, "point": centre["position"], "normal": centre["normal"]}
 	if assist_deg <= 0.0:
@@ -442,7 +444,7 @@ static func _hook_ray(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vect
 		return {}
 	if hit["collider"] is Node3D and (hit["collider"] as Node3D).is_in_group("enemy"):
 		return hit if hookable_body(hit["collider"]) else {}
-	if not walkable and (hit["normal"] as Vector3).y > WALKABLE_Y:
+	if not walkable and (hit["normal"] as Vector3).y > WALKABLE_Y and not (hit["collider"] as Node3D).is_in_group(STAKE_GROUP):
 		return {}
 	return hit
 
@@ -591,7 +593,7 @@ static func _mount(kit, state, tuning, intent, aim: Basis, body_state, step: flo
 			kit.facts.append(["gauge_released", ["slingshot", gauge.fired_fraction]])
 			body_state.linear_velocity = kit.dismount_velocity
 			return false
-		kit.slingshot_aim = {"dir": eject_direction(kit.mount_normal, aim),
+		kit.slingshot_aim = {"dir": mount_exit_direction(kit.mount_normal, aim),
 			"speed": _slingshot_shown(kit, tuning, aim, gauge.fraction()), "fill": gauge.fraction()}
 		_pin(body_state, kit.mount_point)
 		return true
@@ -631,7 +633,7 @@ static func _dismount(kit, velocity: Vector3) -> void:
 static func _slingshot(kit, tuning, aim: Basis, fraction := 0.0) -> Vector3:
 	var speed := maxf(tuning.f("jump_speed"), kit.mount_banked * tuning.f("slingshot_keep") + tuning.f("slingshot_boost"))
 	speed *= AbilityState.Gauge.scaled(fraction, 1.0, SLINGSHOT_FULL)
-	return eject_direction(kit.mount_normal, aim) * speed
+	return mount_exit_direction(kit.mount_normal, aim) * speed
 
 
 # The speed the aim cone shows: the launch's, mass bonus included, spending nothing.
@@ -851,3 +853,31 @@ static func _flat_forward(aim: Basis, velocity: Vector3) -> Vector3:
 		return dir.normalized()
 	var flat := Vector3(velocity.x, 0.0, velocity.z)
 	return flat.normalized() if flat.length_squared() > 0.0001 else Vector3.FORWARD
+
+
+# PC-SABLE: one preview and exit calculation, without spending the shared Mass-S grant.
+static func bank_exit(v_in: float, anchor_to_ball: Vector3, aim: Basis, kit) -> Vector3:
+	var speed := maxf(v_in, minf(LAUNCH_CEILING, maxf(v_in, 13.0) * 1.25 + 4.0))
+	return eject_direction(anchor_to_ball, aim) * (speed + mass_room(kit, speed))
+
+
+static func mount_exit_direction(normal: Vector3, aim: Basis) -> Vector3:
+	if normal.y < WALKABLE_Y:
+		return eject_direction(normal, aim)
+	var flat := Vector3(-aim.z.x, 0.0, -aim.z.z)
+	flat = flat.normalized() if flat.length_squared() > 0.001 else Vector3.FORWARD
+	return flat * cos(deg_to_rad(12.0)) + Vector3.UP * sin(deg_to_rad(12.0))
+
+
+static func mount_outpost(kit, state, at: Vector3, normal: Vector3, speed: float) -> void:
+	kit.mounted = true
+	kit.mount_banked = speed
+	kit.mount_normal = normal
+	kit.mount_face = at
+	kit.mount_point = at + normal * MOUNT_OFFSET
+	kit.mount_planted = false
+	kit.slamming = false
+	kit.plant_time = 0.0
+	kit.gliding = false
+	kit.sprinting = false
+	state.air_actions = 1

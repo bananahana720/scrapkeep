@@ -178,10 +178,19 @@ const ENTRIES := [
 		"text": "Press Q while an enemy holds you: the hold breaks as the set piece starts.",
 	},
 	# --- P-C Sable entries ---
+	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + slot 3", "text": "Pick 3 and click while a line stands: whip round the anchor and leave toward your aim, faster than you came."},
+	{"id": "cable_run", "name": "Cable Run", "hint": "Everything she drives into the air is somewhere to hook.", "clue": "a full ring + Q", "text": "Q rides a cable and drives a stake on every beat. The stakes hold a line for six seconds after landing."},
+	{"id": "switchback", "name": "Switchback", "hint": "Your own stakes hold a line as well as any wall.", "clue": "a standing stake + Bank Shot", "text": "Bank Shot off a stake your Cable Run left behind."},
+	{"id": "sable_cable_runs", "name": "Cable Runner", "hint": "A good route is worth repeating.", "clue": "three Cable Run landings in one run", "text": "Land three Cable Runs in one run to earn Cable Stitch."},
 	# --- end Sable ---
 	# --- P-C Rivet entries ---
 	# --- end Rivet ---
 	# --- P-C Kest entries ---
+	{"id": "kest_cable_charge", "name": "Cable Charge", "hint": "Your line can carry more than you.", "clue": "3 + a click while hooked, or just before the bite", "text": "Pick 3 and click: a charge runs down your line and sets on what the hook bit. Let go and it blows. With no line out, the next bite carries it."},
+	{"id": "kest_windhover", "name": "Windhover", "hint": "There. Give it a moment.", "clue": "a full ring + Q + open sky over where you aim", "text": "Q lobs you up over where you aim. You hang there for two beats while your mortar shells the ground below, then you stoop straight down onto it."},
+	{"id": "kest_blast_vault", "name": "Blast Vault", "hint": "The wall you blow can throw you.", "clue": "a Cable Charge on a wall + let go close + Space held", "text": "Charge a wall through your line, reel in, and let go within a few metres holding Space. The blast throws you up and away, and your chain keeps its grace."},
+	{"id": "kest_homecoming", "name": "Homecoming", "hint": "The wind knows your feathers.", "clue": "Kest + the Highdraft", "text": "Fly Kest into her home roosts in world three."},
+	{"id": "kest_tick_tick_boom", "name": "Tick, Tick, Boom", "hint": "Watch the whole pack before you commit.", "clue": "Windhover + eight different machines", "text": "Strike eight different machines with the charges and landing of one Windhover."},
 	# --- end Kest ---
 	# --- P-C Tarn entries ---
 	{"id": "tarn_claw_drag", "name": "Claw Drag", "hint": "Why go to them when the line can bring them?",
@@ -204,6 +213,14 @@ const ENTRIES := [
 		"clue": "twenty settled clips + Plate Return + one run", "text": "Settle twenty clips with Plate Return in one run to earn the Eyeshade."},
 	# --- end Tally ---
 	# --- P-C Cannon entries ---
+	{"id": "cannon_lane_charge", "name": "Lane Charge", "hint": "The cable already shows where it goes.", "clue": "a standing line + 3", "text": "Press 3 while the harpoon holds something. The cable becomes a lane that fires through the enemy and twelve metres on, or out of a wall. Chains make it hit harder."},
+	{"id": "cannon_fire_mission", "name": "Fire Mission", "hint": "A gun can fire itself.", "clue": "a full ring + Q + open ground ahead", "text": "Q fires you along an arc. Each beat calls a family below you. Every call lands on the same beat as you."},
+	{"id": "cannon_creeping_barrage", "name": "Creeping Barrage", "hint": "Some fire walks ahead of you.", "clue": "a line + the barrage", "text": "Ride a line. Every beat lays a lane across your path one beat before you reach it."},
+	{"id": "cannon_plate_mortar", "name": "Plate Mortar", "hint": "Brace them from above.", "clue": "a high lob + plates + the landing", "text": "The lob drops plates. Your slam landing hits every exposed enemy at 1.4 times."},
+	{"id": "cannon_recital", "name": "Recital", "hint": "The gun hums four notes when it is happy.", "clue": "lane, split, rush, plate", "text": "Land the four families in the order the Cannon hums them and the tune plays whole."},
+	{"id": "cannon_time_on_target", "name": "Time on Target", "hint": "Everything at once.", "clue": "Fire Mission + a crowd", "text": "Every shell you called landed on the same beat, on eight of them."},
+	{"id": "cannon_old_tune", "name": "Old Tune", "hint": "It got your tune wrong all fight.", "clue": "the Mind + its own gun", "text": "The Mind played your tune back wrong. Its own gun played it right."},
+	{"id": "mind_quiet_gun", "name": "The Quiet Gun", "hint": "One of its guns never fired.", "clue": "the Mind's rim, listening", "text": "A gun on the rim never fired. It learned one note each time the Mind showed a new attack."},
 	# --- end Cannon ---
 ]
 
@@ -212,6 +229,12 @@ const ENTRIES := [
 # whose code fires it. tests/codex_coverage_test.gd reads this to prove every kind that can
 # spawn has a trick that can fire.
 const DETECTORS := {
+	# --- P-C Sable detectors ---
+	"bank_shot": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"switchback": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"cable_run": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"sable_cable_runs": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	# --- end Sable ---
 	# --- P-C Tarn detectors ---
 	"tarn_claw_drag": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
 	"tarn_redjaw_rend": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
@@ -251,6 +274,21 @@ const DETECTORS := {
 	"set_piece_core": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"set_piece_cash_in": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"set_piece_breakout": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	# --- P-C Cannon detectors ---
+	"cannon_lane_charge": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"cannon_fire_mission": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_creeping_barrage": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_plate_mortar": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_recital": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"cannon_time_on_target": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_old_tune": {"kind": "", "script": "res://src/boss/mind.gd"},
+	"mind_quiet_gun": {"kind": "", "script": "res://src/boss/mind.gd"},
+	# --- end Cannon ---
+	"kest_cable_charge": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
+	"kest_windhover": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
+	"kest_blast_vault": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
+	"kest_homecoming": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
+	"kest_tick_tick_boom": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
 }
 
 

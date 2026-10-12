@@ -7,6 +7,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Stakes := preload("res://src/combat/stakes.gd")
 
 # The set piece on Q (design-v3/SKILL-BAR.md section 4). The meter's one writer: it listens
 # to the bus for the sources of section 4 and pays them into `meter`, which the ability
@@ -76,6 +77,9 @@ var rail_query := Callable()
 # ultimate_id -> row (see the header). P-C fills its own marked block.
 var _ult_rows := {
 	# --- P-C Sable ultimate ---
+	"cable_run": {"tech": _sable_tech, "peak": _sable_peak, "landing": _sable_landing, "release": _sable_release},
+	"ball_lightning": {"tech": _lightning_tech, "peak": _lightning_peak, "landing": _lightning_landing, "release": _sable_release},
+	"outpost": {"tech": _sable_tech, "peak": _sable_peak, "landing": _outpost_landing, "release": _sable_release},
 	# --- end Sable ---
 	# --- P-C Rivet ultimate ---
 	# --- end Rivet ---
@@ -109,6 +113,9 @@ var _ult_rows := {
 		"landing": func(at, heft, chain): return combat.tally_landing("plate_flywheel", at, heft, chain)},
 	# --- end Tally ---
 	# --- P-C Cannon ultimate ---
+	"cannon_fire_mission": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
+	"cannon_creeping_barrage": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
+	"cannon_plate_mortar": {"target": _cannon_mortar_target, "tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
 	# --- end Cannon ---
 }
 # The last plan started, as drawn. Read only outside.
@@ -143,6 +150,11 @@ var _record_fill := 0.0
 func setup(ctx_ref, combat_ref) -> void:
 	ctx = ctx_ref
 	combat = combat_ref
+	stakes = Stakes.new()
+	ctx.root.add_child(stakes)
+	stakes.setup(ctx, combat, self)
+	ctx.events.run_started.connect(func(_class_id: String): _sable_runs = 0)
+	ctx.events.dismounted.connect(_outpost_depart)
 	name = "Ultimate"
 	ctx.player.abilities.meter = meter
 	ctx.player.set_piece_phase = Callable(self, "phase")
@@ -151,6 +163,7 @@ func setup(ctx_ref, combat_ref) -> void:
 	ctx.run.defend_hook = Callable(self, "defend")
 	ctx.run.ride_hook = Callable(self, "active")
 	var ev = ctx.events
+	ev.ultimate_started.connect(_cannon_started)
 	ev.enemy_struck.connect(_on_struck)
 	ev.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _feed("smash", ctx.player.chain.multiplier()))
 	ev.line_state_changed.connect(func(state: String, target: Node3D, _at: Vector3, _cause: String):
@@ -189,6 +202,7 @@ func active() -> bool:
 
 
 func _on_stage_entered(_stage: int, retry: bool) -> void:
+	_outpost_encore = false
 	_abort("stage")
 	if retry:
 		meter.restore_entry()
@@ -315,6 +329,7 @@ func _knob(knob: String, fallback):
 func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 	var row := _row()
 	var heft := _heft_index()
+	var reach: float = ARC_REACH[heft] + (10.0 if _ult_id() == "ball_lightning" else 0.0)
 	var kit = ctx.player.kit
 	var found := {}
 	var custom: Dictionary = _ult_rows.get(_ult_id(), {})
@@ -324,7 +339,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 	# plans another row's order (a variant preview, a test).
 	var order: Array = paths if not paths.is_empty() else row.get("paths", ["line", "rail", "arc"])
 	var harpoon: Dictionary = aim.get("harpoon", kit.aim)
-	var point = _aim_point(aim, ARC_REACH[heft] + RAIL_SEARCH)
+	var point = _aim_point(aim, reach + RAIL_SEARCH)
 	# The row's order decides: a row that lists arc before line takes the arc even with a
 	# line standing (section 4, "unless the pilot's sheet reorders paths").
 	for path in order:
@@ -340,8 +355,8 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 			var rail: Dictionary = rail_query.call(point)
 			if not rail.is_empty() and (rail["entry"] as Vector3).distance_to(point) <= RAIL_SEARCH:
 				found = {"path": "rail", "to": rail.get("to", rail["entry"]), "entry": rail["entry"]}
-		elif path == "arc" and point != null and _ground_hit(aim, ARC_REACH[heft]) != null:
-			found = {"path": "arc", "to": _ground_hit(aim, ARC_REACH[heft])}
+		elif path == "arc" and point != null and _ground_hit(aim, reach) != null:
+			found = {"path": "arc", "to": _ground_hit(aim, reach)}
 	if found.is_empty():
 		found = {"path": "hop", "to": ball}
 	var mode: String = found["path"]
@@ -434,6 +449,12 @@ func start(p: Dictionary) -> void:
 	if p.is_empty() or not meter.spend():
 		return
 	_id = _ult_id()
+	if _sable():
+		stakes.begin()
+		ctx.player.kit.mounted = false
+		_lightning_peaks = 0
+		_outpost_encore = false
+		_outpost_second = false
 	_plan = p
 	last_plan = p
 	meter.locked = true
@@ -455,6 +476,9 @@ func start(p: Dictionary) -> void:
 	_record = {"id": _id, "path": p["path"], "seconds": snappedf(float(p["seconds"]), 0.001), "heft_class": _heft_index() + 1,
 		"volley_hits": 0, "landing_hits": 0, "damage": 0.0, "bailed": false, "recalled": false,
 		"fill_seconds": snappedf(_record_fill, 0.01)}
+	if _sable():
+		_record["stakes"] = 0
+		_record["stakes_hooked"] = 0
 	ctx.run.set_meta("ultimate_record", _record)
 	_fill_since = _clock
 	ctx.events.ultimate_started.emit(_id, String(p["path"]), p["from"], p["to"], float(p["seconds"]))
@@ -486,10 +510,13 @@ func bail() -> void:
 	if _phase != FLIGHT:
 		return
 	_record["bailed"] = true
+	if _sable():
+		stakes.arm()
 	_end("bail", false)
 
 
 func _abort(reason: String) -> void:
+	_outpost_encore = false
 	if _phase == IDLE:
 		return
 	# Already landed: the recovery just ends; there is nothing left to cancel.
@@ -584,6 +611,8 @@ func _carrier(from: Vector3, leg: Dictionary):
 		var g := GRAVITY
 		if String(leg["mode"]) == "hop":
 			g = 8.0 * HOP_HEIGHT / (seconds * seconds)
+		if _id.begins_with("cannon_"):
+			g = minf(g, 8.0 * Weapons.APEX_CAP / (seconds * seconds))
 		ride.gravity = g
 		ride.velocity = flat / seconds + Vector3.UP * ((to.y - from.y + 0.5 * g * seconds * seconds) / seconds)
 	return ride
@@ -598,14 +627,22 @@ func _fly(delta: float) -> void:
 		return
 	_leg_time += delta
 	_beat_clock += delta
-	while _beat_clock >= _beat_len and _beat < _beats:
+	var beat_tolerance := 0.00001 if _sable() else 0.0
+	while _beat_clock + beat_tolerance >= _beat_len and _beat < _beats:
 		_beat_clock -= _beat_len
 		_beat += 1
 		_volley()
 		if not _peaked and _beat >= ceili(_beats / 2.0):
 			_peaked = true
 			_peak(player.ball_position())
-	var v = _ride.step(delta)
+	var v = null
+	if _sable() or _id.begins_with("cannon_"):
+		# RideRail normally releases 40 ms early; a stake route holds until its final beat.
+		_ride.time += delta
+		if _ride.time < _ride.flight:
+			v = _ride.velocity_at(_ride.time)
+	else:
+		v = _ride.step(delta)
 	if v == null:
 		_land(_ride.target)
 		return
@@ -638,16 +675,19 @@ func _land(at: Vector3) -> void:
 	var leg: Dictionary = legs[_leg]
 	_leg += 1
 	# ult_encore: a second leg if a target sits within 30 m of the landing.
-	if _leg == legs.size() and _knob("ult_encore", false):
+	if _leg == legs.size() and _knob("ult_encore", false) and (not _sable() or (_leg == 1 and _id != "outpost")) and not (_id.begins_with("cannon_") and _cannon_encore):
 		var next = _encore_target(at)
 		if next != null:
-			legs.append({"mode": "arc", "to": next, "beats": _beats, "seconds": _beats * _beat_len, "strike": true})
+			legs.append({"mode": "arc", "to": next, "beats": 2 if _sable() else _beats, "seconds": (2 if _sable() else _beats) * _beat_len, "strike": true})
 	if bool(leg.get("strike", true)):
 		_strike(at)
 	if _leg < legs.size():
 		_begin_flight()
 		return
 	var release: Vector3 = _ride.release_velocity() if _ride != null else Vector3.ZERO
+	var row: Dictionary = _ult_rows.get(_id, {})
+	if row.has("release"):
+		release = row["release"].call(at, release)
 	_ride = null
 	ctx.player.set_velocity_now(release, "ultimate")
 	_phase = RECOVER
@@ -666,6 +706,12 @@ func _strike(at: Vector3) -> void:
 	_record["landing_hits"] = int(_record.get("landing_hits", 0)) + int(result[0])
 	_record["damage"] = snappedf(float(_record.get("damage", 0.0)) + float(result[1]), 0.01)
 	ctx.events.ultimate_landed.emit(_id, at, int(result[0]), float(result[1]))
+	if _id == "cable_run" and _leg >= (_plan.get("legs", []) as Array).size():
+		_sable_runs += 1
+		if ctx.codex != null and ctx.codex.known("set_piece"):
+			combat._discover("cable_run", at)
+		if _sable_runs >= 3:
+			combat._discover("sable_cable_runs", at)
 	combat._discover("set_piece", at)
 	if chain_links >= 3:
 		combat._discover("set_piece_cash_in", at)
@@ -714,3 +760,309 @@ func warden_posture(warden: Node3D, result: Dictionary) -> void:
 	result["crack"] = false
 	_posture_spent[id] = spent + gain
 	warden._apply_posture(result)
+
+
+# --- PC-SABLE: cable route, arc rain and a mounted outpost -----------------------------
+var stakes
+var _sable_runs := 0
+var _lightning_peaks := 0
+var _outpost_encore := false
+var _outpost_at := Vector3.ZERO
+var _outpost_second := false
+var _outpost_until := 0.0
+
+
+func _sable() -> bool:
+	return _id in ["cable_run", "ball_lightning", "outpost"]
+
+
+func _sable_tech(beat: int, ball: Vector3, _aim: Vector3, heft_mult: float) -> int:
+	return stakes.beat(beat, ball, heft_mult)
+
+
+func _sable_peak(_at: Vector3) -> void:
+	_record["volley_hits"] = int(_record.get("volley_hits", 0)) + stakes.relay()
+
+
+func _sable_damage(at: Vector3, radius: float, damage: float, limit := 64, landing := true) -> Array:
+	combat.effects.ring(at, radius, Palette.ARC)
+	var hits := 0
+	var dealt := 0.0
+	for enemy in combat._nearest_list(at, radius, limit):
+		dealt += combat._ult_hit(enemy, "arc", damage, at, landing)
+		hits += 1
+	return [hits, dealt]
+
+
+func _sable_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
+	stakes.plant(at)
+	stakes.arm()
+	return _sable_damage(at, landing_radius(), LANDING_DAMAGE * heft_mult * chain_mult * (0.5 if _leg > 1 else 1.0))
+
+
+func _lightning_tech(beat: int, ball: Vector3, _aim: Vector3, heft_mult: float) -> int:
+	var space := _space()
+	if space == null:
+		return 0
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(ball, ball + Vector3.DOWN * 40.0, Augments.WORLD_MASK))
+	if hit.is_empty():
+		return 0
+	stakes._note("rain", beat)
+	return int(_sable_damage(hit["position"], 6.0, 12.0 * heft_mult, volley_targets(), false)[0])
+
+
+func _lightning_peak(at: Vector3) -> void:
+	_lightning_peaks += 1
+	var burst := Weapons.burst(20.0)
+	var result := _sable_damage(at, float(burst["radius"]) + float(_knob("ult_radius", 0.0)),
+		float(burst["damage"]) * HEFT_MULT[_heft_index()], int(burst["targets"]) + int(_knob("ult_volley", 0)), false)
+	_record["volley_hits"] = int(_record.get("volley_hits", 0)) + int(result[0])
+
+
+func _lightning_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
+	ctx.player._tag_faces(at)
+	ctx.player.state.air_actions = 1
+	return _sable_damage(at, landing_radius() + 3.0, LANDING_DAMAGE * heft_mult * chain_mult * (0.5 if _leg > 1 else 1.0))
+
+
+func _outpost_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
+	if _outpost_second:
+		return _sable_damage(at, landing_radius(), LANDING_DAMAGE * heft_mult * chain_mult * 0.5)
+	stakes.plant(at)
+	stakes.arm()
+	stakes.start_sentries(_beat_len, heft_mult)
+	var speed := _sable_flight_speed()
+	var burst := Weapons.burst(speed)
+	var result := _sable_damage(at, float(burst["radius"]) + float(_knob("ult_radius", 0.0)),
+		float(burst["damage"]) * heft_mult * chain_mult, int(burst["targets"]))
+	combat.last_burst = burst.duplicate()
+	combat.last_burst["at"] = at
+	combat.last_burst["hit"] = int(result[0])
+	combat.last_burst["kind"] = "turret"
+	ctx.events.special_used.emit("detonation_gauge", at)
+	_outpost_at = at
+	_outpost_until = _clock + Stakes.SENTRY_SECONDS
+	_outpost_encore = bool(_knob("ult_encore", false))
+	return result
+
+
+func _sable_normal(at: Vector3) -> Vector3:
+	var space := _space()
+	if space != null:
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.5, at + Vector3.DOWN * 3.0, Augments.WORLD_MASK))
+		if not hit.is_empty():
+			return hit["normal"]
+		var from: Vector3 = _plan.get("from", at + Vector3.UP)
+		var direction := (at - from).normalized()
+		hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(at - direction * 2.0, at + direction * 2.0, Augments.WORLD_MASK))
+		if not hit.is_empty():
+			return hit["normal"]
+	return Vector3.UP
+
+
+func _sable_flight_speed() -> float:
+	return _ride.velocity.length() if _ride != null else FLIGHT_SPEED
+
+
+func _sable_release(at: Vector3, release: Vector3) -> Vector3:
+	var player = ctx.player
+	if _id == "ball_lightning":
+		return Vector3(release.x, 8.0, release.z)
+	var normal := _sable_normal(at)
+	var speed := _sable_flight_speed()
+	if _id == "outpost" and not _outpost_second:
+		Augments.mount_outpost(player.kit, player.state, at, normal, speed)
+		ctx.events.mounted.emit(at, speed)
+		return Vector3.ZERO
+	var blazing: float = player.tuning.f("cruise") * 1.9 + 0.5
+	var exit := clampf((speed * 0.85 + 6.0) * 1.3, blazing, 45.0)
+	exit += Augments.mass_spend(player.kit, exit)
+	var launch := Augments.mount_exit_direction(normal, player.drive_basis) * exit
+	ctx.events.dismounted.emit(launch)
+	return launch
+
+
+func _outpost_depart(velocity: Vector3) -> void:
+	if not _outpost_encore or _clock > _outpost_until or velocity.length() < 0.1:
+		return
+	_outpost_encore = false
+	var target = _encore_target(_outpost_at)
+	if target == null:
+		return
+	_outpost_second = true
+	_id = "outpost"
+	meter.locked = true
+	_leg = 0
+	_peaked = true
+	_offset = 0.0
+	var seconds := 2.0 * _beat_len
+	_plan = {"from": ctx.player.ball_position(), "to": target, "path": "arc",
+		"legs": [{"mode": "arc", "to": target, "beats": 2, "seconds": seconds, "strike": true}]}
+	_draw_path(_plan)
+	_begin_flight()
+
+
+# --- PC-CANNON: calls keep their original clock even after a bail or collision ----------
+var _cannon_id := ""
+var _cannon_due := -1.0
+var _cannon_calls := 0
+var _cannon_cursor := 0
+var _cannon_budget := {}
+var _cannon_peak_done := false
+var _cannon_encore := false
+var _cannon_record := {}
+
+
+func _cannon_started(id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float) -> void:
+	if not id.begins_with("cannon_"):
+		return
+	_cannon_id = id
+	_cannon_due = -1.0
+	_cannon_calls = 0
+	_cannon_cursor = 0
+	_cannon_budget = _posture_spent
+	_cannon_peak_done = false
+	_cannon_encore = false
+	_cannon_record = _record
+	_cannon_record["zones"] = 0
+	_cannon_record["zone_hits"] = 0
+
+
+func _cannon_mortar_target(_ball: Vector3, aim: Dictionary) -> Dictionary:
+	var ground = _ground_hit(aim, ARC_REACH[_heft_index()] * Weapons.MORTAR_REACH)
+	return {"path": "arc", "to": ground} if ground != null else {"path": "hop", "to": ctx.player.ball_position()}
+
+
+# Subtract the carrier's deliberate arc height before probing the floor: twelve metres
+# means a missing island below the flight's ground path, rather than the lob's own apex.
+func _cannon_projection(ball: Vector3) -> Vector3:
+	if _ride != null and _ride.mode == RideRail.ARC:
+		var t := clampf(_ride.time, 0.0, _ride.flight)
+		ball.y -= 0.5 * _ride.gravity * t * (_ride.flight - t)
+	return ball
+
+
+func _cannon_target(centre: Vector3, aim: Vector3, reach: float) -> Vector3:
+	var found := centre + Vector3(aim.x, 0.0, aim.z).normalized() * 8.0
+	var best := reach
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		var to: Vector3 = enemy.global_position - centre
+		var flat := Vector3(to.x, 0.0, to.z)
+		var sight: Vector3 = enemy.global_position - ctx.player.ball_position()
+		if flat.length() <= best and (aim.length() < 0.01 or sight.length() < 0.01 or aim.angle_to(sight) <= deg_to_rad(VOLLEY_BIAS_DEG)):
+			best = flat.length()
+			found = enemy.global_position
+	return found
+
+
+func _cannon_call(family: String, at: Vector3, target: Vector3, due: float, heft: float, options := {}) -> bool:
+	var cap := Weapons.CALL_CAP if _cannon_peak_done else Weapons.CALL_CAP - 4
+	if _cannon_calls >= cap:
+		return false
+	var floor = combat._cannon_floor(at)
+	if floor == null:
+		return false
+	var overrides := {"warn": maxf(0.0, due - combat._clock), "live_at": due,
+		"budget": _cannon_budget, "record": _cannon_record}
+	overrides.merge(options, true)
+	combat._commit_cannon(family, target, floor, Weapons.ZONE_REACH, Weapons.ZONE_DAMAGE * heft,
+		"special", family == "plate", overrides)
+	_cannon_calls += 1
+	_cannon_record["zones"] = int(_cannon_record.get("zones", 0)) + 1
+	var audio = combat._cannon_audio()
+	if audio != null:
+		audio.cannon_family(family, false, "cannon_call")
+	return true
+
+
+func _cannon_tech(beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
+	if beat >= _beats:
+		return 0
+	if _cannon_due < 0.0:
+		_cannon_due = combat._clock + maxf(0.0, float(_plan["legs"][_leg]["seconds"]) - _leg_time)
+	var centre := _cannon_projection(ball)
+	var middle := ceili(_beats / 2.0)
+	if _cannon_id == "cannon_fire_mission":
+		if beat == middle:
+			return 0
+		var family: String = preload("res://src/boss/mind_attacks.gd").FAMILIES[_cannon_cursor % 4]
+		_cannon_cursor += 1
+		_cannon_call(family, centre, _cannon_target(centre, aim, Weapons.ZONE_REACH), _cannon_due, heft)
+	elif _cannon_id == "cannon_creeping_barrage":
+		var velocity: Vector3 = _ride.velocity_at(_ride.time) if _ride != null else ctx.player.planar_velocity()
+		velocity.y = 0.0
+		var ahead := centre + velocity * Weapons.CREEP_AHEAD_BEATS * _beat_len
+		var side := Vector3.UP.cross(velocity.normalized())
+		if side.length() < 0.01:
+			side = Vector3.RIGHT
+		for i in 1 + int(_knob("ult_volley", 0)):
+			var at := ahead + velocity.normalized() * 6.0 * i
+			_cannon_call("lane", at - side * 12.2, at + side * 12.2, combat._clock + _beat_len, heft)
+	else:
+		for i in 1 + int(_knob("ult_volley", 0)):
+			var target := _cannon_target(centre, aim, 16.0)
+			if i > 0:
+				target = centre * 2.0 - target
+			_cannon_call("plate", centre, target, combat._clock + _beat_len, heft)
+	return 0
+
+
+func _cannon_peak(_at: Vector3) -> void:
+	_cannon_peak_done = true
+	var heft: float = HEFT_MULT[_heft_index()]
+	var at: Vector3 = _plan["legs"][_leg]["to"]
+	if _cannon_id == "cannon_fire_mission":
+		for family in preload("res://src/boss/mind_attacks.gd").FAMILIES:
+			_cannon_call(family, at, _cannon_target(at, ctx.aim_forward(), Weapons.ZONE_REACH), _cannon_due, heft)
+	elif _cannon_id == "cannon_creeping_barrage":
+		var ball := _cannon_projection(ctx.player.ball_position())
+		_cannon_call("split_lane", ball, ball + _ride.heading * 10.0, combat._clock + _beat_len, heft)
+	else:
+		var target := _cannon_target(at, ctx.aim_forward(), 16.0)
+		var radius := Vector2(target.x - at.x, target.z - at.z).length()
+		var half := preload("res://src/boss/mind_attacks.gd").RUSH_HALF_BAND + float(_knob("ult_radius", 0.0))
+		_cannon_call("rush", at, target, _cannon_due, heft, {"band": Vector2(maxf(0.0, radius - half), minf(Weapons.ZONE_REACH, radius + half))})
+
+
+func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
+	combat._step_cannon(0.0)
+	var mortar := _cannon_id == "cannon_plate_mortar"
+	var hits := 0
+	var damage := 0.0
+	var scale := 0.5 if _cannon_encore else 1.0
+	combat.effects.ring(at, landing_radius(), Palette.ANCIENT)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()) or enemy.global_position.distance_to(at) > landing_radius():
+			continue
+		damage += combat._cannon_set_piece_hit(enemy, LANDING_DAMAGE * heft * chain * scale, at, true, mortar, _cannon_budget)
+		hits += 1
+	var discovery := _cannon_id
+	# B6's framework card gets the first landing. The pilot card waits for a later one.
+	if ctx.codex != null and ctx.codex.known("set_piece"):
+		match discovery:
+			"cannon_fire_mission":
+				combat._discover("cannon_fire_mission", at)
+			"cannon_creeping_barrage":
+				combat._discover("cannon_creeping_barrage", at)
+			"cannon_plate_mortar":
+				combat._discover("cannon_plate_mortar", at)
+	if _cannon_id == "cannon_fire_mission" and hits >= 8:
+		combat._discover("cannon_time_on_target", at)
+	if _cannon_id == "cannon_creeping_barrage":
+		var heading: Vector3 = _ride.heading if _ride != null else Vector3.FORWARD
+		_cannon_call("lane", at, at + heading * 24.4, combat._clock + _beat_len, heft)
+	# The framework appended the encore before calling landing. Its second leg is four
+	# beats, carries this variant's tech and lands at half damage; never append a third.
+	if _leg < _plan["legs"].size():
+		var leg: Dictionary = _plan["legs"][_leg]
+		leg["mode"] = "line" if _cannon_id == "cannon_creeping_barrage" else "arc"
+		leg["beats"] = 4
+		leg["seconds"] = 4.0 * _beat_len
+		_cannon_encore = true
+		_cannon_due = -1.0
+		_cannon_calls = 0
+		_cannon_peak_done = false
+		_peaked = false
+	return [hits, damage]

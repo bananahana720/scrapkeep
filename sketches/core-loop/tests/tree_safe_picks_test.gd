@@ -367,6 +367,8 @@ func _tally_rows() -> void:
 
 
 func _cannon_rows() -> void:
+	# 2026-10-12 (PC-CANNON): world-one bans knobs/swaps; later picks use the shared safety rule.
+	# Expected: 60 checks, including the planted Cannon world-one knob.
 	var cannon := UpgradeTree.nodes("remembered_cannon")
 	var ids := cannon.map(func(n): return String(n["id"]))
 	var own := ids.all(func(i): return i.begins_with("c_"))
@@ -379,8 +381,10 @@ func _cannon_rows() -> void:
 		"%d world-one nodes, first %s, shared with other pilots %s" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared])
 	var weapon := String(ClassDef.by_id("remembered_cannon").weapon_id)
 	var bad := []
-	for n in cannon:
-		var ok: bool = not n.has("knob") and not n.has("swap")
+	var allowed := func(n: Dictionary, world_one: bool, earlier: Array) -> bool:
+		var ok: bool = not world_one or (not n.has("knob") and not n.has("swap"))
+		if not world_one and (n.has("knob") or n.has("swap")):
+			ok = ok and UpgradeTree.safe_pick_problems("remembered_cannon", n, earlier).is_empty()
 		var pattern: Dictionary = n.get("pattern", {})
 		var shapes_bolts := false
 		for key in pattern:
@@ -401,10 +405,18 @@ func _cannon_rows() -> void:
 					volley = volley or String(p["do"]) == "volley"
 			ok = ok and volley
 		ok = ok and (Icons.IDS.has(n["icon"]) or Icons.EXTRA.has(n["icon"]))
-		if not ok:
-			bad.append(n["id"])
+		return ok
+	for i in cannon.size():
+		if not allowed.call(cannon[i], false, _earlier(cannon, i)):
+			bad.append(cannon[i]["id"])
+	for i in UpgradeTree.WORLD_ONE_SIZE:
+		if not allowed.call(profile[i], true, _earlier(profile, i)):
+			bad.append("%s (world one)" % profile[i]["id"])
 	_report("Cannon rulings", bad.is_empty(),
-		"no knob or swap; patterns on %s only; no damage mul above 1.0; no range_m; non-rate rows under a volley; known icons; bad %s" % [weapon, bad])
+		"world-one bans knobs/swaps; later picks safe; patterns on %s only; no damage mul above 1.0; no range_m; non-rate rows under a volley; known icons; bad %s" % [weapon, bad])
+	var planted: Dictionary = profile[0].duplicate(true)
+	planted["knob"] = {"ult_beats": 3.0}
+	_report("Cannon planted world-one knob rejected", not allowed.call(planted, true, []), "world-one knob must remain banned")
 	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Cannon world-one cards", cards_ok, "%s" % [first_six])

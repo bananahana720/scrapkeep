@@ -50,10 +50,12 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	# Each pilot's line-skill and ultimate pictures, ab_<pilot>_line and ab_<pilot>_ult (SKILL-BAR
 	# sections 3 and 4), one marked block per pilot (section 12, item 4).
 	# --- P-C Sable icons ---
+	"ab_sable_line": "launch", "ab_sable_ult": "turret",
 	# --- end Sable ---
 	# --- P-C Rivet icons ---
 	# --- end Rivet ---
 	# --- P-C Kest icons ---
+	"ab_kest_line": "ab_kest_line", "ab_kest_ult": "ab_kest_ult",
 	# --- end Kest ---
 	# --- P-C Tarn icons ---
 	"ab_tarn_line": "hook", "ab_tarn_ult": "cross",
@@ -62,6 +64,8 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	"ab_tally_line": "hook", "ab_tally_ult": "square",
 	# --- end Tally ---
 	# --- P-C Cannon icons ---
+	"ab_cannon_line": "lane",
+	"ab_cannon_ult": "burst_ring",
 	# --- end Cannon ---
 }
 
