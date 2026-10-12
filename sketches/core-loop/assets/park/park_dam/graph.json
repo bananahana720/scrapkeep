@@ -2,7 +2,7 @@
   "bake_sha256": "f63ab9ef29e7bf121004cc949b0d0e1d5d9d6b2e6c225b9410cb6dbc9b64b442",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1302924,
+  "bytes": 1314562,
   "edges": 314009,
   "first_failed": "",
   "flags": {
@@ -15,7 +15,7 @@
   },
   "full_visit_m": 2316,
   "full_visit_ratio": "1.713",
-  "graph_sha256": "985c9813a315cf41e1d90ae0a74bc19acb266d653e9b207925f5f388e6e5620e",
+  "graph_sha256": "441031fd7cbdc0159ba7738852b5bcadb5146a4283135af3e8292e658107e24d",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2375,
@@ -178,5 +178,361 @@
       "value": 1.713
     }
   ],
-  "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"
+  "tool_sha256": "c23975a50d02465e1e3c767455665712caa356e254ab6192ee819a7b3edee9f6",
+  "zones": {
+    "anchors": [
+      {
+        "cost": 1394.6,
+        "d_landmark": 153.8,
+        "name": "east_abutment",
+        "on_route": false,
+        "rank": 1,
+        "viable": true
+      },
+      {
+        "cost": 1341.9,
+        "d_landmark": 63.7,
+        "name": "pool_pillar",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1330.3,
+        "d_landmark": 189.9,
+        "name": "service_ledge",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 1309.4,
+        "d_landmark": 128.9,
+        "name": "powerhouse",
+        "on_route": false,
+        "rank": 3,
+        "viable": true
+      },
+      {
+        "cost": 1297.0,
+        "d_landmark": 24.1,
+        "name": "gate_row_apron",
+        "on_route": true,
+        "rank": 0,
+        "viable": true
+      },
+      {
+        "cost": 1296.5,
+        "d_landmark": 142.5,
+        "name": "pool_rock",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1249.4,
+        "d_landmark": 238.2,
+        "name": "lobber_ledge",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1089.3,
+        "d_landmark": 165.8,
+        "name": "incline_spine",
+        "on_route": true,
+        "rank": 0,
+        "viable": true
+      },
+      {
+        "cost": 1059.3,
+        "d_landmark": 413.6,
+        "name": "east_rim_bench",
+        "on_route": false,
+        "rank": 4,
+        "viable": true
+      },
+      {
+        "cost": 939.9,
+        "d_landmark": 378.1,
+        "name": "west_rim_bench",
+        "on_route": false,
+        "rank": 5,
+        "viable": true
+      },
+      {
+        "cost": 928.6,
+        "d_landmark": 616.5,
+        "name": "shelf_sag_corner_4",
+        "on_route": false,
+        "rank": 6,
+        "viable": true
+      },
+      {
+        "cost": 909.2,
+        "d_landmark": 446.3,
+        "name": "eye_fin_east",
+        "on_route": false,
+        "rank": 7,
+        "viable": true
+      },
+      {
+        "cost": 896.0,
+        "d_landmark": 415.6,
+        "name": "the_eye",
+        "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 889.4,
+        "d_landmark": 446.4,
+        "name": "eye_fin_west",
+        "on_route": false,
+        "rank": 8,
+        "viable": true
+      },
+      {
+        "cost": 801.2,
+        "d_landmark": 623.0,
+        "name": "shelf_sag_corner_3",
+        "on_route": false,
+        "rank": 9,
+        "viable": true
+      },
+      {
+        "cost": 773.1,
+        "d_landmark": 1331.8,
+        "name": "hoodoo_stack_6",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 721.0,
+        "d_landmark": 1144.5,
+        "name": "hoodoo_stack_5",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 698.6,
+        "d_landmark": 840.0,
+        "name": "hoodoo_stack_7",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 695.7,
+        "d_landmark": 905.0,
+        "name": "hoodoo_stack_10",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 603.6,
+        "d_landmark": 1001.4,
+        "name": "hoodoo_stack_4",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 576.0,
+        "d_landmark": 1117.6,
+        "name": "hoodoo_stack_9",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 571.1,
+        "d_landmark": 1167.3,
+        "name": "hoodoo_stack_2",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 535.5,
+        "d_landmark": 523.0,
+        "name": "slot_fin_far",
+        "on_route": false,
+        "rank": 10,
+        "viable": true
+      },
+      {
+        "cost": 499.7,
+        "d_landmark": 1491.8,
+        "name": "hoodoo_stack_11",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 474.7,
+        "d_landmark": 555.3,
+        "name": "wash_fin_west",
+        "on_route": false,
+        "rank": 11,
+        "viable": true
+      },
+      {
+        "cost": 455.9,
+        "d_landmark": 1254.1,
+        "name": "hoodoo_stack_1",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 428.9,
+        "d_landmark": 1322.0,
+        "name": "hoodoo_stack_8",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 408.6,
+        "d_landmark": 927.0,
+        "name": "shelf_lip_ramp",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 391.7,
+        "d_landmark": 930.4,
+        "name": "dome_25",
+        "on_route": true,
+        "rank": 0,
+        "viable": true
+      },
+      {
+        "cost": 354.7,
+        "d_landmark": 965.4,
+        "name": "dome_24",
+        "on_route": false,
+        "rank": 12,
+        "viable": true
+      },
+      {
+        "cost": 339.4,
+        "d_landmark": 989.7,
+        "name": "dome_23",
+        "on_route": false,
+        "rank": 13,
+        "viable": true
+      },
+      {
+        "cost": 301.1,
+        "d_landmark": 1172.8,
+        "name": "dome_8",
+        "on_route": false,
+        "rank": 14,
+        "viable": true
+      },
+      {
+        "cost": 295.2,
+        "d_landmark": 1070.5,
+        "name": "dome_20",
+        "on_route": false,
+        "rank": 15,
+        "viable": true
+      },
+      {
+        "cost": 226.2,
+        "d_landmark": 1225.5,
+        "name": "dome_7",
+        "on_route": false,
+        "rank": 16,
+        "viable": true
+      },
+      {
+        "cost": 214.6,
+        "d_landmark": 1119.4,
+        "name": "domes_kicker_ramp",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 204.1,
+        "d_landmark": 1118.4,
+        "name": "dome_19",
+        "on_route": true,
+        "rank": 0,
+        "viable": true
+      },
+      {
+        "cost": 172.9,
+        "d_landmark": 1140.9,
+        "name": "dome_18",
+        "on_route": false,
+        "rank": 17,
+        "viable": true
+      },
+      {
+        "cost": 136.0,
+        "d_landmark": 1388.0,
+        "name": "dome_12",
+        "on_route": false,
+        "rank": 18,
+        "viable": true
+      },
+      {
+        "cost": 100.8,
+        "d_landmark": 1213.1,
+        "name": "dome_5",
+        "on_route": true,
+        "rank": 0,
+        "viable": true
+      },
+      {
+        "cost": 70.3,
+        "d_landmark": 1361.4,
+        "name": "dome_1",
+        "on_route": false,
+        "rank": 19,
+        "viable": true
+      },
+      {
+        "cost": 63.4,
+        "d_landmark": 1310.7,
+        "name": "dome_2",
+        "on_route": false,
+        "rank": 20,
+        "viable": true
+      },
+      {
+        "cost": 0.0,
+        "d_landmark": 1323.7,
+        "name": "top_shelf_deck",
+        "on_route": true,
+        "rank": 0,
+        "viable": true
+      }
+    ],
+    "count": 99,
+    "crossings": {
+      "drop": 24,
+      "ride": 11,
+      "walk": 144
+    },
+    "hidden": [
+      {
+        "count": 2,
+        "id": "gallery_valve",
+        "zones": [
+          "river_canyon",
+          "service_ledge"
+        ]
+      }
+    ]
+  }
 }
