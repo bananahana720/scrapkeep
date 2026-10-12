@@ -1,7 +1,9 @@
 extends SceneTree
 
 # 2026-10-11 (PC-TARN ruling 1): world-one alone bans knobs/swaps; depths 3/4 require safe picks.
-# Expected: 59 checks, including a planted world-one knob through Tarn's ruling predicate.
+# 2026-10-11 (PC-TALLY): the same ruling for Tally, with a planted world-one swap.
+# Expected: 60 checks, including a planted world-one knob through Tarn's ruling predicate and a
+# planted world-one swap through Tally's.
 
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -325,19 +327,40 @@ func _tally_rows() -> void:
 			shared.append_array(UpgradeTree.TREES[other].filter(func(n): return n["id"] in ids).map(func(n): return n["id"]))
 	_report("Tally's own tree", own and profile.size() == 30 and profile[0]["id"] == "tl_audit_stamp" and shared.is_empty(),
 		"%d world-one nodes, first %s, shared with other pilots %s" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared])
+	# 2026-10-11 (PC-TALLY, design-v3/pilots/tally.md section 3): as Tarn's ruling, world one alone
+	# bans knobs and swaps. Depth 3 may swap Q to Audit Trail or Flywheel Throw and depth 4 may turn
+	# one ult_ knob, each a safe pick; no pattern anywhere. Measured: the 8 depth-3 and 16 depth-4
+	# nodes carry those ops and pass; a planted world-one swap is rejected.
 	var actions := ["blast", "air", "grant_move", "grant_special", "refund_move", "refund_special"]
-	var bad := []
-	for n in tally:
-		var ok: bool = not n.has("knob") and not n.has("swap") and not n.has("pattern")
+	var variants := ["plate_audit", "plate_flywheel"]
+	var knobs := ["ult_encore", "ult_beats", "ult_radius", "ult_volley", "ult_settle"]
+	var allowed := func(n: Dictionary, world_one: bool, earlier: Array) -> bool:
+		var ok: bool = not n.has("pattern")
+		ok = ok and (not world_one or (not n.has("knob") and not n.has("swap")))
+		for slot in n.get("swap", {}):
+			ok = ok and slot == AbilityState.ULTIMATE and String(n["swap"][slot]) in variants
+		for knob in n.get("knob", {}):
+			ok = ok and String(knob) in knobs
+		if n.has("knob") or n.has("swap"):
+			ok = ok and UpgradeTree.safe_pick_problems("tally", n, earlier).is_empty()
 		for p in n.get("proc", []):
 			ok = ok and String(p["do"]) in actions
 			ok = ok and not (String(p["do"]) == "blast" and String(p["on"]) in UpgradeTree.DAMAGE_FACTS)
 		ok = ok and (Icons.IDS.has(n["icon"]) or Icons.EXTRA.has(n["icon"]))
-		if not ok:
-			bad.append(n["id"])
+		return ok
+	var bad := []
+	for i in tally.size():
+		if not allowed.call(tally[i], false, _earlier(tally, i)):
+			bad.append(tally[i]["id"])
+	for i in UpgradeTree.WORLD_ONE_SIZE:
+		if not allowed.call(profile[i], true, _earlier(profile, i)):
+			bad.append("%s (world one)" % profile[i]["id"])
 	var depth_two := tally.slice(2, 6).map(func(n): return String(n["name"]))
 	_report("Tally rulings", bad.is_empty() and depth_two == ["Through Feed", "Line Feed", "Spring Vent", "Corner Plate"],
-		"no knob, swap or pattern; procs only %s; no blast on a damage fact; known icons; bad %s; depth 2 %s" % [actions, bad, depth_two])
+		"world one bans knobs and swaps; depth 3 swaps Q to %s, depth 4 turns %s, each safe; procs only %s; no blast on a damage fact; known icons; bad %s; depth 2 %s" % [variants, knobs, actions, bad, depth_two])
+	var planted: Dictionary = profile[0].duplicate(true)
+	planted["swap"] = {AbilityState.ULTIMATE: "plate_audit"}
+	_report("Tally planted world-one swap rejected", not allowed.call(planted, true, []), "world-one swap must remain banned")
 	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Tally world-one cards", cards_ok, "%s" % [first_six])
