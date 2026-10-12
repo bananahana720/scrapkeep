@@ -959,7 +959,6 @@ func _balance_aim_ready() -> bool:
 	if bool(sight["on_enemy"]) and bool(aim["valid"]) and _player.abilities.selected == AbilityState.WEAPON \
 			and _player.abilities.ready(AbilityState.WEAPON) and _combat._cooldown <= 0.0:
 		return true
-	_aim_at((_record["t"] as Node3D).global_position)
 	return false
 
 
