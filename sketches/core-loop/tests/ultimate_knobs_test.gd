@@ -8,7 +8,7 @@ class PlayerFixture extends RefCounted:
 
 	var tree := UpgradeTree.new()
 	var abilities := {"ultimate_id": "ult_default"}
-	var kit := {"aim": {}}
+	var kit := {"aim": {}, "hooked": false}
 
 
 	func ball_position() -> Vector3:
