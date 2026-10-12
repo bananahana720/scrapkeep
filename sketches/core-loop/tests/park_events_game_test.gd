@@ -16,6 +16,7 @@ var flood_surface_seen := false
 var flood_material_seen := false
 var flood_max_depth := 0.0
 var flash_checked := false
+var flash_expected_depth := 0.0
 
 
 func _initialize() -> void:
@@ -33,7 +34,7 @@ func _frames(count: int) -> void:
 				flood_material_seen = flood_material_seen or game.ctx.terrain.material_at(state.at).get("material") == "water"
 				flood_max_depth = maxf(flood_max_depth, float(state.depth_m))
 			var flash: Dictionary = handlers.natural.active.get("west_wash_flash_flood", {})
-			if not flash_checked and flash.get("water") != null and float(flash.depth_m) >= ParkSchema.MAX_EVENT_WATER_M - 0.0001:
+			if not flash_checked and flash.get("water") != null and float(flash.depth_m) >= flash_expected_depth - 0.0001:
 				flash_checked = true
 				_check_flash_surface(flash)
 
@@ -113,6 +114,8 @@ func _run() -> void:
 	game.flow.choose_class(1)
 	await _frames(4)
 	t.eq("real Game uses park_dam", game.ctx.terrain.map().title, "park_dam")
+	var flash_row: Dictionary = game.ctx.terrain.map().park.event_rows.filter(func(row): return row.id == "west_wash_flash_flood")[0]
+	flash_expected_depth = minf(float(flash_row.effect.depth_m), ParkSchema.MAX_EVENT_WATER_M)
 	game.player.set_frozen(true)
 	Engine.time_scale = 10.0
 	for block in 120:
