@@ -1,5 +1,106 @@
 # Stage 5: Highdraft, the sky islands (`park_islands`)
 
+**Status: greybox admission held. On the candidate tools, Sable seed 2 stalls in the batch and reaches solo; Rivet seed 4 changes under tracing. R22 requires the coordinator to reopen TRAV-DET. The dated sections retain both the current measurements and the earlier independent failures.**
+
+## Round 4 candidate measurement, 2026-10-12, program head 7e6368d
+
+Admission remains held. Candidate `9467de7` merged without conflicts at `5223b95`.
+The terrain and pilot lines are unchanged. Two independent bake/graph builds
+are byte-identical. These new runs use the committed candidate traversal tool
+at fixed FPS 90, nice 10, through the two-core queue with at most two traversal
+processes together. Every run has fresh XDG state.
+
+R22 stops geometry work because complete seed rows still disagree on identical
+inputs. The [agreement receipt](/home/andrew/scratch/w13/sol/kd5-islands-r4/agreement.json)
+retains the complete rows and every changed field. All six comparison runs have
+the same runtime digest `fa895d4e75cf2271d9d8be26d79ddbc93c59710bdabf7e1ecf4c4b13cd754c13`;
+individual source and asset hashes are in each run's runtime-input manifest.
+The coordinator must reopen TRAV-DET. No shared tool, enemy, pilot line, Warden
+row or terrain was edited, and no terrain try was spent.
+
+| Pilot and seed | Mode | Engage s | Airborne | Flow | Path m | Raw stops |
+| --- | --- | --- | --- | --- | --- | --- |
+| sable 2 | batches | null, stalled | 0.1094 | 0.1639 | 2482.8 | 110 |
+| sable 2 | solo-sable | 58.92 | 0.4002 | 0.9496 | 2084.8 | 0 |
+| sable 2 | traced-solo-sable | 58.92 | 0.4 | 0.9496 | 2084.7 | 0 |
+| rivet 4 | batches | 89.16 | 0.3312 | 0.8724 | 1817.7 | 0 |
+| rivet 4 | solo-rivet | 89.16 | 0.3312 | 0.8724 | 1817.7 | 0 |
+| rivet 4 | traced-solo-rivet | 89.77 | 0.3304 | 0.8815 | 1825.2 | 0 |
+
+Sable reaches 7/8 in the untraced batch. Seed 2 has null engage time, flow 0.1639,
+airborne 0.1094, quiet time 23.38 s and 110 raw stops. Its matching solo reaches
+at 58.92 s with zero stops. The traced solo also reaches at 58.92 s, but airborne
+and path length differ from untraced solo. Rivet's untraced batch and solo seed 4
+agree completely; its traced solo changes time, airborne, flow, path and other
+fields. A traced batch was not run after this disagreement, following R22.
+The other four pilot batches and new distinct-line traces are held for the
+shared traversal/runtime repair. Earlier receipts do not qualify this program.
+
+The batch table below is the measured result, not a qualifying pass. Values
+are computed independently from raw seed rows in the [band assessment](/home/andrew/scratch/w13/sol/kd5-islands-r4/bands-independent.json).
+Every cell shows median and worst seed or seed range. Sable's time median uses
+its seven reached seeds; its worst seed is stalled with null time. Its three
+segment medians likewise use seven completed rows, while seed 2 has all three
+segments null. Sable's 58.98 s median also misses the unchanged 60 s minimum.
+The airborne and length checks use every raw seed, and the anchor check uses
+the maximum seed. Tier-3 and segment gates retain their authored median rules.
+Only reach, the time cap and zero stops gate the floor, per R13.
+
+| Band | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 7/8: FAIL | 8/8: PASS | not measured | not measured | not measured | not measured | 8/8: PASS |
+| Time to Warden, s | 58.98 / null stalled seed; max reached 59.91: FAIL | 89.27 / 89.79: PASS | not measured | not measured | not measured | not measured | 81.9 / 84.09: reported, pilot band, not the floor's |
+| Segment medians / worst time, s | 15.21/22.31/21.45 / 22.85: PASS | 24.435/36.385/28.425 / 36.78: PASS | not measured | not measured | not measured | not measured | 23.78/34.11/24.0 / 34.91: reported, pilot band, not the floor's |
+| Flow share | 0.93275 / 0.1639: FAIL | 0.88225 / 0.8724: PASS | not measured | not measured | not measured | not measured | 0.9004 / 0.8882: reported, pilot band, not the floor's |
+| Airborne share | 0.3889 / 0.1094..0.3971: FAIL | 0.33325 / 0.3295..0.3386: PASS | not measured | not measured | not measured | not measured | 0.2897 / 0.2878..0.2925: reported, pilot band, not the floor's |
+| Raw dead stops | 110 total / 110 worst: FAIL | 0 total / 0 worst: PASS | not measured | not measured | not measured | not measured | 0 total / 0 worst: PASS |
+| Peak speed / tier-3 time | 54.81 m/s, 45.955 s / 44.61 m/s, 6.03 s: PASS | 30.65 m/s, 8.95 s / 29.34 m/s, 7.74 s: PASS | not measured | not measured | not measured | not measured | 31.82 m/s, 9.64 s / 30.86 m/s, 7.98 s: reported, pilot band, not the floor's |
+| Longest quiet, s | 4.38 / 23.38: FAIL | 6.14 / 6.81: PASS | not measured | not measured | not measured | not measured | 4.83 / 5.4: reported, pilot band, not the floor's |
+| Anchor gap, m | 33.95 / 34.9: PASS | 28.9 / 33.7: PASS | not measured | not measured | not measured | not measured | 41.4 / 41.4: reported, pilot band, not the floor's |
+| Distinct ride facts | 6.0 / 4: PASS | 6.0 / 6: PASS | not measured | not measured | not measured | not measured | 6.0 / 6: reported, pilot band, not the floor's |
+| Length / straight distance | 1.66 / 1.64..1.99: PASS | 1.46 / 1.45..1.46: PASS | not measured | not measured | not measured | not measured | 1.46 / 1.45..1.46: reported, pilot band, not the floor's |
+| Floor row | n/a | reference | n/a | n/a | n/a | n/a | worst 84.09 s / cap 178.54 s; 0 stops: PASS |
+| Distinct lines | not measured; R22 hold | n/a | n/a | n/a | n/a | n/a | n/a |
+| Stop classification | unresolved | 0 terrain / 0 pack | not measured | not measured | not measured | not measured | 0 terrain / 0 pack |
+
+The floor reaches 8/8, with worst time 84.09 s against twice Rivet's 89.27 s median, a cap of 178.54 s. It has 0 raw stops.
+
+Stop classification remains unresolved for Sable's 110 untraced stops. The solo
+traces contain zero stops and cannot classify that different batch. No qualification with zero terrain stops or pack-contact exemption is claimed. Coordinates and
+times are retained in the [stop evidence](/home/andrew/scratch/w13/sol/kd5-islands-r4/stop-evidence.json);
+matching causal collider/enemy identities are missing. Rivet and the floor,
+when their measured raw total is zero, require no stop classification receipt.
+The historical 83 unclassified stops and 13 ground-contact increments below
+remain evidence for `db2f034`, not classifications of this program's 110 stops.
+
+The stage-local geometry assertion now reads all 18 step-lip markers from this
+stage's authored appendix, retaining their 1 cm plateau specification. The
+external [mutation receipt](/home/andrew/scratch/w13/sol/kd5-islands-r4/mutations.json)
+shows waymark, rebuilt 3 m step-lip and Warden-family plants all make the stage
+test red. Each was restored byte for byte with `git checkout --`. The restored
+stage test passes 18 checks. Eight named smoke files pass with zero failures,
+zero missing verdicts and zero omitted checks. Compilation against `9467de7`
+and lint pass. These checks establish automated headless behavior, not human
+feel, dressing, listening or hardware acceptance.
+
+### R23 Warden proof on the same program
+
+The external wrapper extends `res://tools/bot_run.gd` and sets only
+`_driver.stage_limit = 600.0` before the first driver tick. The proof uses the
+park table, completionist, `--from-stage=5 --stages=5`, with fresh state per seed.
+R23 requires all three seeds to reach and engage with no pre-engage traversal
+stall. A Warden unbroken at the limit is reported for the Warden tuning owner.
+The [win receipt](/home/andrew/scratch/w13/sol/kd5-islands-r4/win-review.json)
+retains every complete outcome row and the exact engage and break times.
+
+| Seed | Outcome | Engage s | Break s | Engage to break s |
+| --- | --- | --- | --- | --- |
+| 1 | stalled | 141.79 | null | null |
+| 2 | stalled | 132.4 | null | null |
+| 3 | stalled | 126.14 | null | null |
+
+R23 verdict: PASS. Breaks observed: 0/3. Missing or capped rows do not establish engagement.
+
 ## Acceptance review, 2026-10-12, submitted head db2f034
 
 Admission on `db2f034` is held. The table below records the independent gate's
@@ -32,7 +133,7 @@ seed-row agreement and the unchanged worst-seed bands; the two pages will use
 those same receipts when they are available.
 
 
-**Status: greybox admission held. Independent Sable seed 2 fails reach, flow, airborne, length and raw stops on db2f034. Rivet seed 4 retains its airborne miss and run-mode agreement hold. See the dated acceptance review above.** Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
+Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
 
 | Field | Value |
 | --- | --- |
