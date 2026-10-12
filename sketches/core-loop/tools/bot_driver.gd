@@ -2643,16 +2643,20 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 # Tally's reader runs a card per press, not while held: the hands turn a held trigger into one
 # press every CARD_PRESS_GAP seconds. Since the skill bar her reader holds one card (Balance Due)
 # on slot 1 and the bays are gone, so there is no bay to keep loaded. Slots 2 and 3 and Q go
-# through the shared hands; Q also fires when her gather plate lies within TALLY_PLATE_REACH
-# with TALLY_PLATE_CROWD enemies within TALLY_PLATE_RADIUS of it (pilots/tally.md section 9).
+# through the shared hands; slot 2 also plants a plate when TALLY_PLATE_CROWD ordinary enemies
+# stand within TALLY_GATHER_RADIUS of a valid aim point, and Q also fires when her gather plate
+# lies within TALLY_PLATE_REACH with TALLY_PLATE_CROWD enemies within TALLY_PLATE_RADIUS of it
+# (pilots/tally.md section 9).
 const TALLY_PLATE_REACH := 45.0
 const TALLY_PLATE_CROWD := 3
 const TALLY_PLATE_RADIUS := 6.0
+const TALLY_GATHER_RADIUS := 12.0
 
 
 func _card_hands() -> void:
 	if game.player.abilities.cap(AbilityState.WEAPON, "cards", null) == null:
 		return
+	_tally_gather_hands()
 	_tally_plate_hands()
 	if not source.hold.get("fire_held", false):
 		return
@@ -2660,6 +2664,22 @@ func _card_hands() -> void:
 	if ticks - _card_press_tick >= int(ceil(CARD_PRESS_GAP * Engine.physics_ticks_per_second)):
 		source.press["fire_pressed"] = true
 		_card_press_tick = ticks
+
+
+func _tally_gather_hands() -> void:
+	var combat = game.get("combat")
+	if combat == null or _cast_phase != "" or _set_piece_up() or not combat.has_method("_card_aim"):
+		return
+	var aim: Dictionary = combat._card_aim()
+	if not aim["valid"]:
+		return
+	var ordinary := 0
+	for node in game.get_tree().get_nodes_in_group("enemy"):
+		if node is Node3D and is_instance_valid(node) and not (node.has_method("is_dead") and node.is_dead()) \
+				and combat._ordinary(node) and node.global_position.distance_to(aim["point"]) <= TALLY_GATHER_RADIUS:
+			ordinary += 1
+	if ordinary >= TALLY_PLATE_CROWD:
+		_cast(2)
 
 
 func _tally_plate_hands() -> void:
