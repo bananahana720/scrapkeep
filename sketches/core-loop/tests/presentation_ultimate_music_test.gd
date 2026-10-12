@@ -171,16 +171,16 @@ func _run() -> void:
 # 2026-10-11 (PC-KEST): Kest's motif stinger, low root and eighth-note roll join B3's cases.
 func _kest_music() -> void:
 	var bank = load("res://src/presentation/sfx_bank.gd")
-	_t.eq("Kest peak motif is 62, 57, 53", bank.kest_score("kest_raid_stinger").map(func(e): return e[1]), [62, 57, 53])
-	_t.eq("Kest touchdown boom is low root 50", bank.kest_score("kest_raid_boom")[0][1], 50)
+	_t.eq("Kest peak motif is 62, 57, 53", bank.kest_score("raid_kest_stinger").map(func(e): return e[1]), [62, 57, 53])
+	_t.eq("Kest touchdown boom is low root 50", bank.kest_score("raid_kest_boom")[0][1], 50)
 	var engine: MusicEngine = _audio.engine
 	_game.events.ultimate_started.emit("windhover", "arc", Vector3.ZERO, Vector3(30.0, 0.0, 0.0), 3.0)
 	_game.events.ultimate_peak.emit("windhover", Vector3(30.0, 14.0, 0.0))
-	var peak: Array = _audio.cue_log.filter(func(c): return c[0] == "ultimate_peak" and c[1] == "kest_raid_stinger")
+	var peak: Array = _audio.cue_log.filter(func(c): return c[0] == "ultimate_peak" and c[1] == "raid_kest_stinger")
 	_t.check("Kest peak stinger uses the real music grid", peak.size() == 1 and peak[0][2] == "beat")
 	var touchdown := engine.clock
 	_game.events.ultimate_landed.emit("windhover", Vector3(30.0, 0.0, 0.0), 8, 600.0)
-	var boom: Array = _audio.cue_log.filter(func(c): return c[1] == "kest_raid_boom")
+	var boom: Array = _audio.cue_log.filter(func(c): return c[1] == "raid_kest_boom")
 	_t.check("Kest boom falls within one beat of touchdown", boom.size() == 1 and boom[0][3] >= touchdown and boom[0][3] - touchdown <= engine.beat_len())
 	var eighth := engine.beat_len() / 2
 	var roll := []

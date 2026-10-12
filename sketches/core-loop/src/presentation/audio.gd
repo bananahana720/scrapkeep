@@ -100,8 +100,8 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "p
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer"]
 # --- P-C Kest sounds ---
-const KEST_SOUNDS := ["kest_cable_fizz", "kest_cable_set", "kest_cable_blast", "kest_raid_tick",
-	"kest_tick_62", "kest_tick_57", "kest_tick_53", "kest_raid_stinger", "kest_raid_boom", "kest_raid_roll"]
+const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
+	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
 # --- end Kest ---
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
@@ -1755,15 +1755,15 @@ func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vecto
 
 func _on_ultimate_peak(id: String, _at: Vector3) -> void:
 	on_beat("ultimate_peak", -6.0 if id in ["windhover", "air_raid", "minelayer"] else 0.0,
-		false, 1, "kest_raid_stinger" if id in ["windhover", "air_raid", "minelayer"] else "")
+		false, 1, "raid_kest_stinger" if id in ["windhover", "air_raid", "minelayer"] else "")
 
 
 func kest_roll(note: int) -> int:
-	var sound := "kest_tick_%d" % note
+	var sound := "tick_kest_%d" % note
 	var eighth := maxi(1, engine.beat_len() / 2)
 	var at := engine.clock + posmod(eighth - posmod(engine.clock - engine.grid_origin, eighth), eighth)
 	engine.schedule_stinger_at(sound, at, -6.0)
-	cue_log.append(["kest_raid_roll", sound, "eighth", at, 1.0])
+	cue_log.append(["raid_kest_roll", sound, "eighth", at, 1.0])
 	return at
 
 
@@ -1772,7 +1772,7 @@ func kest_roll(note: int) -> int:
 func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) -> void:
 	play("ultimate_landed")
 	if _id in ["windhover", "air_raid", "minelayer"]:
-		on_beat("ultimate_landed", -6.0, false, 1, "kest_raid_boom")
+		on_beat("ultimate_landed", -6.0, false, 1, "raid_kest_boom")
 	if _ult_armed:
 		var touchdown := engine.clock
 		var at := engine.drop_now(4, 0.85, {}, -1, {"ult": false})

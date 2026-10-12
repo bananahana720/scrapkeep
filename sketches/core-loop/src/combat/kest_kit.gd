@@ -128,7 +128,7 @@ func _cable(at: Vector3, rider: Node3D) -> void:
 	cable["_body"] = rider
 	cable["_start"] = ctx.player.ball_position()
 	cable["_fuse"] = BODY_FUSE if rider != null else WALL_FUSE
-	_sound("kest_cable_fizz", false, pow(2.0, float(maxi(ctx.player.chain.combo - 1, 0)) / 12.0))
+	_sound("cable_kest_fizz", false, pow(2.0, float(maxi(ctx.player.chain.combo - 1, 0)) / 12.0))
 	if travel <= 0.0:
 		_set_cable()
 	ctx.player.indicator.set_shape("kest_cable", cable_geometry(1.0))
@@ -140,7 +140,7 @@ func _set_cable() -> void:
 	cable["damage"] = CABLE_DAMAGE * ctx.player.chain.multiplier()
 	cable["fuse"] = cable["_fuse"]
 	cable["_set"] = true
-	_sound("kest_cable_set")
+	_sound("cable_kest_set")
 
 
 func cable_geometry(_fraction: float) -> Dictionary:
@@ -326,7 +326,7 @@ func tech(_beat_number: int, ball: Vector3, aim: Vector3, heft_mult: float) -> i
 			var angle := TAU * i / count
 			group.append(_drop(spot + Vector3(cos(angle), 0.0, sin(angle)) * 3.0, 12.0 * heft_mult, 2.5))
 		_groups.append(group)
-		_sound("kest_raid_tick")
+		_sound("raid_kest_tick")
 		return 0
 	var picks: Array = []
 	var b: Vector3 = _plan["to"]
@@ -343,12 +343,12 @@ func tech(_beat_number: int, ball: Vector3, aim: Vector3, heft_mult: float) -> i
 	for pick in targets:
 		_shell(ball, pick[1].global_position, heft_mult)
 	volley_log.append({"beat": _total_beat, "targets": targets.size(), "centre": b})
-	_sound("kest_tick_%d" % NOTES[posmod(_total_beat - 1, NOTES.size())])
+	_sound("tick_kest_%d" % NOTES[posmod(_total_beat - 1, NOTES.size())])
 	return 0
 
 
 func _shell(ball: Vector3, at: Vector3, mult: float) -> void:
-	var charge: Dictionary = payloads.throw(ball, at, 12.0 * mult, 3.0, 0.6, false)
+	var charge: Dictionary = payloads.throw(ball, at, 12.0 * mult, 3.0, 0.6, false, Sticky.CONTACT_REACH, combat._clock)
 	_tag(charge)
 	combat.effects.ring(at, 3.0, ClassDef.KEST_COLOR)
 
@@ -382,7 +382,7 @@ func _drop_mines(ball: Vector3, mult: float) -> void:
 		var at: Vector3 = combat._floor_at(ball) + Vector3(1.5 * (i - 0.5) if count == 2 else 0.0, 0.0, 0.0)
 		_mines.append(_drop(at, 10.0 * mult, 2.5))
 		_bound_mines()
-	_sound("kest_raid_tick")
+	_sound("raid_kest_tick")
 
 
 func _bound_mines() -> void:
@@ -467,7 +467,7 @@ func _detonate_payload(charge: Dictionary) -> void:
 	if charge.get("_cable", false):
 		cable = {}
 		ctx.player.indicator.clear("kest_cable")
-		_sound("kest_cable_blast")
+		_sound("cable_kest_blast")
 
 
 func _hold_cloak() -> void:

@@ -122,9 +122,9 @@ const TRIM_DB := {
 	# --- P-C Rivet sounds ---
 	# --- end Rivet ---
 	# --- P-C Kest sounds ---
-	"kest_cable_fizz": -12.0, "kest_cable_set": -9.0, "kest_cable_blast": -3.0,
-	"kest_raid_tick": -12.0, "kest_tick_62": -12.0, "kest_tick_57": -12.0, "kest_tick_53": -12.0,
-	"kest_raid_stinger": -3.0, "kest_raid_boom": -2.0, "kest_raid_roll": -9.0,
+	"cable_kest_fizz": -12.0, "cable_kest_set": -9.0, "cable_kest_blast": -3.0,
+	"raid_kest_tick": -12.0, "tick_kest_62": -12.0, "tick_kest_57": -12.0, "tick_kest_53": -12.0,
+	"raid_kest_stinger": -3.0, "raid_kest_boom": -2.0, "raid_kest_roll": -9.0,
 	# --- end Kest ---
 	# --- P-C Tarn sounds ---
 	# --- end Tarn ---
@@ -270,8 +270,8 @@ static func bake_all(ids: Array) -> void:
 
 
 static func _bake(id: String) -> PackedFloat32Array:
-	if id.begins_with("kest_cable_") or id.begins_with("kest_raid_") or id.begins_with("kest_tick_"):
-		if id == "kest_cable_fizz":
+	if id.begins_with("cable_kest_") or id.begins_with("raid_kest_") or id.begins_with("tick_kest_"):
+		if id == "cable_kest_fizz":
 			return _mix([[_noise(0.5, 1800.0, 4800.0, 4.0), 0, 0.6], [_tone(0.5, _hz(62), _hz(63), "sine", 4.0), 0, 0.4]])
 		return Synth.render_score(kest_score(id), 0.7)
 	match id:
@@ -1254,13 +1254,13 @@ static func _motif_score(id: String, at: int, instrument: String, gain: float, o
 
 
 static func kest_score(id: String) -> Array:
-	if id == "kest_raid_stinger" or id == "kest_raid_roll":
+	if id == "raid_kest_stinger" or id == "raid_kest_roll":
 		return _motif_score("kest", 0, "tom", 0.85).slice(0, 3)
-	if id == "kest_raid_boom" or id == "kest_cable_blast":
+	if id == "raid_kest_boom" or id == "cable_kest_blast":
 		return [[0, 50, 4, "tom", 0.85], [0, 50, 4, "sub", 0.65]]
 	var note := 62
-	if id.begins_with("kest_tick_"):
-		note = int(id.trim_prefix("kest_tick_"))
+	if id.begins_with("tick_kest_"):
+		note = int(id.trim_prefix("tick_kest_"))
 	return [[0, note, 1, "tom", 0.6]]
 
 
