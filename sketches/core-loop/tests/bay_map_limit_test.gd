@@ -68,6 +68,20 @@ func _run() -> void:
 		_check("park deck fits inside z edge %s" % z, _dock(Vector3(0.0, 0.0, z), Vector3.RIGHT))
 	for z in [rect.position.y + Bay.DECK_V - 1.0, rect.end.y - Bay.DECK_V + 1.0]:
 		_check("park deck crossing z edge %s fails" % z, not _dock(Vector3(0.0, 0.0, z), Vector3.RIGHT))
+	var failed_park := ParkMap.new("user://bay_map_limit_missing.json")
+	_check("failed park load retains inherited rectangle", not failed_park.ok and failed_park.play_rect == Rect2(-150.0, -150.0, 300.0, 300.0))
+	_check_fallback("failed park load", failed_park)
+	var undeclared_park := ParkMap.new()
+	undeclared_park.park.erase("play_rect")
+	_check_fallback("park without declared play_rect", undeclared_park)
+	for invalid_rect in [Rect2(), Rect2(-800.0, -800.0, 0.0, 1600.0), Rect2(-800.0, -800.0, 1600.0, 0.0), Rect2(-800.0, -800.0, -1.0, 1600.0)]:
+		var empty_park := ParkMap.new()
+		empty_park.play_rect = invalid_rect
+		_check_fallback("empty or nonpositive rectangle %s" % invalid_rect, empty_park)
+	for invalid_rect in [Rect2(-INF, -800.0, INF, 1600.0), Rect2(-800.0, -800.0, INF, 1600.0), Rect2(-800.0, NAN, 1600.0, 1600.0), Rect2(-800.0, -800.0, 1600.0, NAN)]:
+		var nonfinite_park := ParkMap.new()
+		nonfinite_park.play_rect = invalid_rect
+		_check_fallback("non-finite rectangle %s" % invalid_rect, nonfinite_park)
 	_terrain.active_map = Terrain.map_named("spillway", 1)
 	_check("returning to legacy resets the limit", not _dock(Vector3(300.0, 0.0, 0.0)))
 	_world.bay.undock()
@@ -84,3 +98,13 @@ func _dock(at: Vector3, facing := Vector3.FORWARD) -> bool:
 	_world.bay.undock()
 	_world._on_reward_offered([{"at": at, "facing": facing}])
 	return _world.bay.docked
+
+
+func _check_fallback(label: String, park: RefCounted) -> void:
+	for axis in [Vector3.RIGHT, Vector3.BACK]:
+		for sign_value in [-1.0, 1.0]:
+			_check("%s: 184 m passes on %s" % [label, axis * sign_value], Bay._on_map(axis * sign_value * 184.0, park))
+			_check("%s: 185 m stays strict on %s" % [label, axis * sign_value], not Bay._on_map(axis * sign_value * 185.0, park))
+			_check("%s: 186 m fails on %s" % [label, axis * sign_value], not Bay._on_map(axis * sign_value * 186.0, park))
+	_terrain.active_map = park
+	_check("%s: fallback dock at x 160 m passes through reward callback" % label, _dock(Vector3(160.0, 0.0, 0.0)))
