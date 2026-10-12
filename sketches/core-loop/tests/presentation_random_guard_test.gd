@@ -12,7 +12,10 @@ func _initialize() -> void:
 	# If an unexpected script error aborts initialization, the pending exit still fails closed.
 	quit(1)
 	var t := T.new("presentation_random_guard_test")
-	var base := OS.get_environment("TMPDIR").path_join("guard-%d-%d" % [OS.get_process_id(), RandomNumberGenerator.new().randi()])
+	var scratch := OS.get_environment("TMPDIR")
+	if scratch.is_empty():
+		scratch = ProjectSettings.globalize_path("res://../../artifacts/local/determinism")
+	var base := scratch.path_join("guard-%d-%d" % [OS.get_process_id(), RandomNumberGenerator.new().randi()])
 	var fingerprints := []
 	var sample := {}
 	for field in FIELDS:
