@@ -2461,13 +2461,13 @@ func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) 
 # --- P-C Tally audio ---
 # Notes are baked at their written pitch, then transposed together into the live key.
 # The four bank recipes carry the paper punch and bell independently of cog_tick.
-const TALLY_SOUNDS := {"plate": "tally_plate", "clip": "tally_clip", "stroke": "tally_stroke", "settle": "tally_settle"}
+const TALLY_SOUNDS := {"plate": "plate_tally", "clip": "clip_tally", "stroke": "stroke_tally", "settle": "settle_tally"}
 const TALLY_CUES := {
-	"tally_plate": {"kind": "slot_cast", "sound": "tally_plate", "steps": [-12]},
-	"tally_clip": {"kind": "line_skill_fired", "sound": "tally_clip", "steps": [0, 2, 3]},
-	"tally_stroke": {"kind": "ultimate_peak", "sound": "tally_stroke", "steps": [0, 2, 3, 5]},
-	"tally_total": {"kind": "ultimate_landed", "sound": "tally_stroke", "steps": [12]},
-	"tally_settle": {"kind": "ultimate_landed", "sound": "tally_settle", "steps": [0, 3, 5, 7, 10, 12, 15, 17, 19, 22]},
+	"tally_plate": {"kind": "slot_cast", "sound": "plate_tally", "steps": [-12]},
+	"tally_clip": {"kind": "line_skill_fired", "sound": "clip_tally", "steps": [0, 2, 3]},
+	"tally_stroke": {"kind": "ultimate_peak", "sound": "stroke_tally", "steps": [0, 2, 3, 5]},
+	"tally_total": {"kind": "ultimate_landed", "sound": "stroke_tally", "steps": [12]},
+	"tally_settle": {"kind": "ultimate_landed", "sound": "settle_tally", "steps": [0, 3, 5, 7, 10, 12, 15, 17, 19, 22]},
 }
 const TALLY_PIECES := ["plate_return", "plate_audit", "plate_flywheel"]
 const TALLY_SIXTEENTHS := 4.0

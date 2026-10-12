@@ -145,7 +145,7 @@ const ROWS := {
 	"ach_tally_eyeshade": {"name": "Eyeshade", "text": "Settle twenty clips with Plate Return in one run.", "on": "synergy_discovered",
 		"where": {"synergy_id": "tally_eyeshade"}, "count": 1, "reward": {"cosmetic": "outfit_tally_eyeshade"}},
 	"ach_tally_books_balanced": {"name": "Books Balanced", "text": "Settle six clips with one landing.", "hidden": true, "on": "synergy_discovered",
-		"where": {"synergy_id": "tally_books_balanced"}, "count": 1, "beat": "The books balance on the drop.", "reward": {"cosmetic": "shell_tally_abacus"}},
+		"where": {"synergy_id": "tally_books_balanced"}, "count": 1, "reward": {"cosmetic": "shell_tally_abacus"}},
 	# --- end tally ---
 	# --- remembered_cannon (the Cannon): P-C Cannon adds its grant rows here ---
 	"ach_cannon_recital": {"name": "Recital", "text": "Land the four families in the order the gun hums.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_recital"}, "count": 1, "hidden": true, "reward": {"cosmetic": "trail_cannon_recital"}},

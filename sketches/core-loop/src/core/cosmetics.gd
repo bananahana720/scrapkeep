@@ -94,7 +94,7 @@ const ROWS := {
 	# Ledger cream tape, a mulberry eyeshade with a copper rim, a copper abacus lattice; never brass.
 	"trail_tally_punch_tape": {"slot": "trail", "pilot": "tally", "name": "Punch Tape", "starter": false, "tint": Color("f7f1e3"), "asset": "trail_tally_punch_tape"},
 	"outfit_tally_eyeshade": {"slot": "outfit", "pilot": "tally", "name": "Eyeshade", "starter": false, "tint": Color("7a3b5c"), "asset": "outfit_tally_eyeshade"},
-	"shell_tally_abacus": {"slot": "shell", "pilot": "tally", "name": "Abacus Lattice", "starter": false, "tint": Color("b77843"), "asset": "shell_tally_abacus"},
+	"shell_tally_abacus": {"slot": "shell", "pilot": "tally", "name": "Abacus Lattice", "starter": false, "tint": Color("7a3b5c"), "asset": "shell_tally_abacus"},
 	# --- end tally ---
 	# --- remembered_cannon (the Cannon): P-C Cannon adds its rows here ---
 	"trail_cannon_recital": {"slot": "trail", "pilot": "remembered_cannon", "name": "Recital", "starter": false, "tint": Color("6fb3a6"), "asset": "trail_cannon_recital"},

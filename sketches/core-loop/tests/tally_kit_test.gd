@@ -152,7 +152,7 @@ func _check_cues() -> void:
 	for cue in ["tally_plate", "tally_clip", "tally_stroke", "tally_settle"]:
 		var row: Dictionary = Audio.TALLY_CUES[cue]
 		var sound := String(row["sound"])
-		_t.check(cue + " resolves to its own bank recipe", sound == cue and Bank.has_recipe(sound)
+		_t.check(cue + " resolves to its own bank recipe", sound == cue.trim_prefix("tally_") + "_tally" and Bank.has_recipe(sound)
 			and not Bank.samples(sound).is_empty() and Bank.samples(sound) != Bank.samples("cog_tick"))
 		audio.cue_log.clear()
 		audio._tally_cue(cue, 0)

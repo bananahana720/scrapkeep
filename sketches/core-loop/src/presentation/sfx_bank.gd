@@ -130,8 +130,8 @@ const TRIM_DB := {
 	# --- P-C Tarn sounds ---
 	# --- end Tarn ---
 	# --- P-C Tally sounds ---
-	"tally_plate": CAUSE_NOTE_DB, "tally_clip": CAUSE_NOTE_DB,
-	"tally_stroke": CAUSE_NOTE_DB, "tally_settle": CAUSE_NOTE_DB,
+	"plate_tally": CAUSE_NOTE_DB, "clip_tally": CAUSE_NOTE_DB,
+	"stroke_tally": CAUSE_NOTE_DB, "settle_tally": CAUSE_NOTE_DB,
 	# --- end Tally ---
 	# --- P-C Cannon sounds ---
 	# --- end Cannon ---
@@ -273,7 +273,7 @@ static func bake_all(ids: Array) -> void:
 
 
 static func _bake(id: String) -> PackedFloat32Array:
-	if id in ["tally_plate", "tally_clip", "tally_stroke", "tally_settle"]:
+	if id in ["plate_tally", "clip_tally", "stroke_tally", "settle_tally"]:
 		return tally_recipe(id)
 	if id.begins_with("cable_kest_") or id.begins_with("raid_kest_") or id.begins_with("tick_kest_"):
 		if id == "cable_kest_fizz":
@@ -1307,15 +1307,15 @@ static func _motif_score(id: String, at: int, instrument: String, gain: float, o
 # A dry paper punch under ledger keys; the total adds a small till bell.
 static func tally_recipe(id: String, midi := -1, total := false) -> PackedFloat32Array:
 	if midi < 0:
-		midi = 50 if id == "tally_plate" else 62
+		midi = 50 if id == "plate_tally" else 62
 	var score: Array = [[0, midi, 1, "keys", 0.8]]
-	if id == "tally_plate":
+	if id == "plate_tally":
 		score.append([0, midi + 12, 2, "bell", 0.25])
 	elif total:
 		score.append([0, midi, 3, "bell", 0.35])
-	elif id == "tally_stroke":
+	elif id == "stroke_tally":
 		score.append([0, midi, 1, "beep", 0.2])
-	elif id == "tally_settle":
+	elif id == "settle_tally":
 		score.append([0, midi, 1, "bell", 0.2])
 	var punch := _mix([[_noise(0.018, 2600.0, 900.0, 180.0), 0, 0.7],
 		[_tone(0.025, _hz(midi + 12), _hz(midi), "sine", 100.0), 0, 0.25]])
