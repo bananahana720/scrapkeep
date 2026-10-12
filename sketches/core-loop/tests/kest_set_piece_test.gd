@@ -96,6 +96,7 @@ func _cases() -> void:
 		_t.check("stoop hits eight enemies class %d" % heft, _ult._record["landing_hits"] == 8)
 		_t.check("cloak runs 1.5 seconds after landing class %d" % heft, _combat.cloak_left > 1.20 and _combat.cloak_left <= 1.5)
 		_t.eq("satchel count matches targets class %d" % heft, _ult.kest_cage_state()["satchel_bands"], Kest.minis_per_throw(heft))
+		await _flush_cards()
 		for enemy in enemies:
 			enemy.free()
 	_t.check("eight distinct targets earn Tick, Tick, Boom", _game.ctx.codex.known("kest_tick_tick_boom"))
@@ -201,6 +202,7 @@ func _cases() -> void:
 	_ult.homecoming(2)
 	_t.check("world two does not grant Homecoming", not _game.ctx.codex.known("kest_homecoming"))
 	_ult.homecoming(3)
+	await _flush_cards()
 	_t.check("Kest entering world three discovers Homecoming", _game.ctx.codex.known("kest_homecoming"))
 	_machinery()
 	floor.free()

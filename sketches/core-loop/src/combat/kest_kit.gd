@@ -36,6 +36,8 @@ var _banked_speed := 0.0
 var _exit_heading := Vector3.FORWARD
 var _landed_at := -INF
 var _last_throw := -INF
+var _cards_pending := {}
+var _last_discovery_frame := -1
 
 
 static func line_row(combat_ref) -> Dictionary:
@@ -62,18 +64,20 @@ func register_kest() -> void:
 		if id == "cable_charge":
 			_loaded_cable = false)
 	ctx.events.line_skill_fired.connect(func(id: String, _body: Node3D, at: Vector3, _on: String):
-		if id == "cable_charge" and (not cable.get("_loaded", false) or ctx.codex.known("loaded_line")):
-			combat._discover("kest_cable_charge", at))
+		if id == "cable_charge":
+			_queue_discover("kest_cable_charge", at, "loaded_line" if cable.get("_loaded", false) else ""))
 	ctx.events.ultimate_landed.connect(func(id: String, at: Vector3, _hits: int, _damage: float):
-		if id == "windhover" and ctx.codex.known("set_piece"):
-			combat._discover("kest_windhover", at))
+		if id == "windhover":
+			_queue_discover("kest_windhover", at, "set_piece"))
 	ctx.events.line_state_changed.connect(func(state: String, _body: Node3D, _at: Vector3, _cause: String):
 		if state in ["let_go", "broke"]:
 			_end_cable())
 	ctx.events.harpoon_smashed.connect(func(_body: Node3D, _at: Vector3, _speed: float): _end_cable())
 	ctx.events.rocket_jumped.connect(func(at: Vector3, _speed: float):
 		if _cable_burst:
-			combat._discover("kest_blast_vault", at))
+			_queue_discover("kest_blast_vault", at))
+	ctx.events.synergy_discovered.connect(func(_id: String, _category: String, _first: bool):
+		_last_discovery_frame = Engine.get_physics_frames())
 	ctx.events.world_entered.connect(homecoming)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear_payloads())
 	ctx.events.player_died.connect(clear_payloads)
@@ -96,7 +100,25 @@ func volley_targets() -> int:
 
 func homecoming(world: int) -> void:
 	if world == 3 and ctx.run.class_def != null and ctx.run.class_def.id == "demolitions_caster":
-		combat._discover("kest_homecoming", ctx.player.ball_position())
+		_queue_discover("kest_homecoming", ctx.player.ball_position())
+
+
+func _queue_discover(id: String, at: Vector3, framework := "") -> void:
+	if not combat.discovered.has(id) and not _cards_pending.has(id):
+		_cards_pending[id] = {"at": at, "frame": Engine.get_physics_frames(), "framework": framework}
+
+
+func flush_discoveries() -> void:
+	var frame := Engine.get_physics_frames()
+	if frame <= _last_discovery_frame:
+		return
+	for id in _cards_pending.keys():
+		var row: Dictionary = _cards_pending[id]
+		if frame <= int(row["frame"]) or (row["framework"] != "" and not ctx.codex.known(row["framework"])):
+			continue
+		_cards_pending.erase(id)
+		combat._discover(id, row["at"])
+		break
 
 
 func clear_payloads() -> void:
@@ -109,6 +131,7 @@ func clear_payloads() -> void:
 	_mines = []
 	_rolls = []
 	_cast = {}
+	_cards_pending = {}
 	ctx.player.indicator.clear("kest_caught")
 	ctx.player.indicator.clear("kest_cable")
 
@@ -455,7 +478,7 @@ func _note_target(enemy: Node3D, cast: Dictionary) -> void:
 
 func _check_grant(cast: Dictionary, at: Vector3) -> void:
 	if cast.get("id", "") == "windhover" and cast.get("landed", false) and cast["targets"].size() >= 8 and ctx.codex.known("set_piece"):
-		combat._discover("kest_tick_tick_boom", at)
+		_queue_discover("kest_tick_tick_boom", at, "set_piece")
 
 
 func blast_hit(charge: Dictionary, enemy: Node3D, damage: float, at: Vector3) -> float:
@@ -509,6 +532,7 @@ func step(delta: float) -> void:
 
 
 func _step_payloads(delta: float) -> void:
+	flush_discoveries()
 	if not cable.is_empty() and payloads.charges.has(cable):
 		if not ctx.player.kit.hooked:
 			_end_cable()
@@ -531,11 +555,7 @@ func _step_payloads(delta: float) -> void:
 		_rolls.erase(roll)
 	for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group("enemy")):
 		_detonate_payload(c)
-	# Loaded casts cannot publish their pilot card on the same tick as Loaded Line.
-	if ctx.codex.known("loaded_line") and combat.last_line.get("id", "") == "cable_charge":
-		combat._discover("kest_cable_charge", combat.last_line["at"])
-	if ctx.codex.known("set_piece") and _id == "windhover" and _cast.get("landed", false):
-		combat._discover("kest_windhover", ctx.player.ball_position())
+	if _id == "windhover" and _cast.get("landed", false):
 		_check_grant(_cast, ctx.player.ball_position())
 
 

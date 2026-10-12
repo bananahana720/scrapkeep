@@ -16,7 +16,7 @@ const Codex := preload("res://src/core/codex.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const T := preload("res://tests/support/t.gd")
 const DT := 1.0 / 60.0
-const EXPECTED_CHECKS := 59
+const EXPECTED_CHECKS := 60
 
 var _t
 var _game
@@ -27,6 +27,7 @@ var _source := Intent.Scripted.new()
 var _rockets: Array = []
 var _blasts: Array = []
 var _ends: Array = []
+var _card_events: Array = []
 
 
 func _initialize() -> void:
@@ -67,6 +68,12 @@ func _tick(fields := {}, dt := DT) -> void:
 func _cast() -> void:
 	_tick({"slot_pick": 2, "fire_pressed": true, "fire_held": true})
 	_tick({"fire_released": true})
+
+
+func _flush_cards(frames := 3) -> void:
+	for i in frames:
+		await physics_frame
+		_ult.flush_discoveries()
 
 
 func _fresh() -> void:
@@ -111,6 +118,8 @@ func _run() -> void:
 	_ult.set_physics_process(false)
 	_game.events.rocket_jumped.connect(func(at: Vector3, speed: float): _rockets.append([at, speed]))
 	_game.events.sticky_detonated.connect(func(at: Vector3, crit: bool): _blasts.append([at, crit]))
+	_game.events.synergy_discovered.connect(func(id: String, _category: String, _first: bool):
+		_card_events.append([id, Engine.get_physics_frames()]))
 	_game.events.line_state_changed.connect(func(state: String, _body: Node3D, _at: Vector3, _cause: String):
 		if state == "chain_ended":
 			_ends.append(state))
@@ -149,6 +158,7 @@ func _cases() -> void:
 	_player.chain.combo = 3
 	_cast()
 	_t.near("30 m cable takes 0.5 s", _ult.cable["_duration"], 0.5)
+	await _flush_cards()
 	_t.check("direct Cable Charge opens its card", _game.ctx.codex.known("kest_cable_charge"))
 	_t.check("cable is inert in travel", not _ult.cable.get("_set", false) and is_inf(_ult.cable["arm"]))
 	_ult._step_payloads(0.49)
@@ -187,6 +197,7 @@ func _cases() -> void:
 	_ult._step_payloads(DT)
 	_t.eq("wall let-go blasts once", _blasts.size(), 1)
 	_t.check("Space at 3 m emits rocket jump 22 to 30", _rockets.size() == 1 and _rockets[0][1] >= 22.0 and _rockets[0][1] <= 30.0)
+	await _flush_cards()
 	_t.check("Blast Vault discovery fired from this blast", _game.ctx.codex.known("kest_blast_vault"))
 
 	_fresh()
@@ -202,6 +213,11 @@ func _cases() -> void:
 	body.free()
 
 	_fresh()
+	_combat.discovered.erase("kest_cable_charge")
+	_combat.discovered.erase("loaded_line")
+	_game.ctx.codex._run_seen.erase("kest_cable_charge")
+	_game.ctx.codex._run_seen.erase("loaded_line")
+	_card_events.clear()
 	_cast()
 	_t.eq("unhooked cast loads Cable Charge", _combat.line_load()["id"], "cable_charge")
 	_tick({}, 3.85)
@@ -211,6 +227,10 @@ func _cases() -> void:
 	_t.eq("bite at 3.9 seconds fires onto the body", _combat.last_line["on"], "body")
 	_t.check("a loaded bite sets on arrival without travel", _ult.cable.get("_set", false) and _ult.cable["_duration"] == 0.0)
 	_t.check("loaded bite opens the framework card first", _game.ctx.codex.known("loaded_line"))
+	await _flush_cards()
+	var cards: Array = _card_events.filter(func(c): return c[0] in ["loaded_line", "kest_cable_charge"])
+	_t.check("framework and pilot cards occupy different physics frames", cards.size() == 2 and cards[0][0] == "loaded_line"
+		and cards[1][0] == "kest_cable_charge" and cards[1][1] > cards[0][1], "cards %s" % [cards])
 	body.free()
 	_fresh()
 	_cast()
