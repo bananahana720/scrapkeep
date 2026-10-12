@@ -3461,6 +3461,7 @@ func _spec_for(kind: String) -> Dictionary:
 				if map is ParkMap and map.ok:
 					w.merge(map.warden_spec(), true)
 					w["reach"] = map.reach_m
+					w["park_landmark"] = true
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}

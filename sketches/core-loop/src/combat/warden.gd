@@ -188,8 +188,11 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	weight = 1000.0
 	radius = RADIUS
 	half_height = HALF_HEIGHT
-	# Clamped to the mast base: sits on the ground under the point it was given.
-	global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
+	if spec.get("park_landmark", false) and spec.has("anchor"):
+		var anchor: Array = spec["anchor"]
+		global_position = Vector3(float(anchor[0]), float(anchor[1]), float(anchor[2]))
+	else:
+		global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
 	home = global_position
 	_build_body()
 
