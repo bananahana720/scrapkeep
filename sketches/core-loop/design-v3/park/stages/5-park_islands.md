@@ -1,6 +1,38 @@
 # Stage 5: Highdraft, the sky islands (`park_islands`)
 
-**Status: greybox admission held. Rivet seed 4 misses the batch airborne band and the fixed tool gives different solo and traced results. Warden proof passes 3/3 with exits. Dressing is a separate unit.** Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
+## Acceptance review, 2026-10-12, submitted head db2f034
+
+Admission on `db2f034` is held. The table below records the independent gate's
+untraced Sable batch and the original Rivet miss. The round-3 table remains an
+**earlier writer pass**, with its Rivet failure, rather than current acceptance.
+
+| Active acceptance evidence on db2f034 | Sable | Rivet |
+| --- | --- | --- |
+| Reach | **FAIL: 7/8**, seed 2 stalled | 8/8 |
+| Seed 2 engage time | **FAIL: null**, stalled | n/a |
+| Flow minimum | **FAIL: 0.3064** | earlier writer table |
+| Airborne minimum | **FAIL: 0.165** | **FAIL: 0.2482**, seed 4 |
+| Length maximum | **FAIL: 2.79** | earlier writer table |
+| Dead stops | **FAIL: 83 raw stops**, unclassified | 0 in earlier writer batch |
+| Stop qualification | classification unresolved; zero terrain unqualified | batch/solo/trace agreement held |
+
+The [independent untraced batch](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-recovery/sable.json)
+and [mode comparison](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-mode-comparison.json)
+show why the earlier Sable pass cannot qualify this head. The differing traced
+batch has 13 ground-contact increments, with Ground/Tiles contacts and no enemy
+contact in the preceding 90 ticks. Its [stop receipt](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-batch-trace-stops.json)
+cannot classify the 83 untraced stops or supply a matching solo trace.
+
+Rivet's batch/solo/traced-solo airborne values remain 0.2482/0.3070/0.3107.
+The favorable repeat at 0.2517 does not replace the original miss. The
+[round-3 writer report](/tmp/claude-1000/w13-sol/kd5-islands-r3/REPORT.md)
+retains that disagreement. Coordinator ruling R22 authorizes measurement with
+the candidate's imported TRAV-DET repair. Qualification requires new complete
+seed-row agreement and the unchanged worst-seed bands; the two pages will use
+those same receipts when they are available.
+
+
+**Status: greybox admission held. Independent Sable seed 2 fails reach, flow, airborne, length and raw stops on db2f034. Rivet seed 4 retains its airborne miss and run-mode agreement hold. See the dated acceptance review above.** Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
 
 | Field | Value |
 | --- | --- |
@@ -521,7 +553,7 @@ The unit report retains prior failed runs, the bounded reworks and the final acc
 The dressed pass starts only after the whole greybox list passes. No recipe coverage, draws,
 triangles, stills or human acceptance is claimed for this greybox.
 
-**Round 3 fixed-tool traversal, 2026-10-12.**
+**Earlier writer pass: round 3 fixed-tool traversal, 2026-10-12.**
 
 | Band | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
 | --- | --- | --- | --- | --- | --- | --- | --- |

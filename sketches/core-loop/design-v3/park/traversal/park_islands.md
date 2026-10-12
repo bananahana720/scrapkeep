@@ -1,6 +1,38 @@
 # park_islands traversal
 
-## Greybox round 3, 2026-10-12, program head 56fce8f
+## Acceptance review, 2026-10-12, submitted head db2f034
+
+Admission on `db2f034` is held. The table below records the independent gate's
+untraced Sable batch and the original Rivet miss. The round-3 table remains an
+**earlier writer pass**, with its Rivet failure, rather than current acceptance.
+
+| Active acceptance evidence on db2f034 | Sable | Rivet |
+| --- | --- | --- |
+| Reach | **FAIL: 7/8**, seed 2 stalled | 8/8 |
+| Seed 2 engage time | **FAIL: null**, stalled | n/a |
+| Flow minimum | **FAIL: 0.3064** | earlier writer table |
+| Airborne minimum | **FAIL: 0.165** | **FAIL: 0.2482**, seed 4 |
+| Length maximum | **FAIL: 2.79** | earlier writer table |
+| Dead stops | **FAIL: 83 raw stops**, unclassified | 0 in earlier writer batch |
+| Stop qualification | classification unresolved; zero terrain unqualified | batch/solo/trace agreement held |
+
+The [independent untraced batch](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-recovery/sable.json)
+and [mode comparison](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-mode-comparison.json)
+show why the earlier Sable pass cannot qualify this head. The differing traced
+batch has 13 ground-contact increments, with Ground/Tiles contacts and no enemy
+contact in the preceding 90 ticks. Its [stop receipt](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-batch-trace-stops.json)
+cannot classify the 83 untraced stops or supply a matching solo trace.
+
+Rivet's batch/solo/traced-solo airborne values remain 0.2482/0.3070/0.3107.
+The favorable repeat at 0.2517 does not replace the original miss. The
+[round-3 writer report](/tmp/claude-1000/w13-sol/kd5-islands-r3/REPORT.md)
+retains that disagreement. Coordinator ruling R22 authorizes measurement with
+the candidate's imported TRAV-DET repair. Qualification requires new complete
+seed-row agreement and the unchanged worst-seed bands; the two pages will use
+those same receipts when they are available.
+
+
+## Earlier writer pass: greybox round 3, 2026-10-12, program head 56fce8f
 
 Verdict: FAIL, evidence level 4. These receipts use the merged candidate
 560d177 and the external TRAV-DET traversal tool, SHA-256
