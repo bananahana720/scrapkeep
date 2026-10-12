@@ -2484,28 +2484,29 @@ func _on_rivet_line_drive(id: String, _target: Node3D, _at: Vector3, on: String)
 	var kit = spawner.get_node_or_null("RivetKit") if spawner != null else null
 	var cue: Dictionary = kit.last_cue if kit != null else {}
 	var notes: Array = Harmony.motif_notes(RIVET_LINE["motif"])
+	var pitch := Harmony.ratio(live_key())
+	# Playback lasts 1 / pitch of the stored buffer time. Physical offsets divide by that ratio.
+	var duration_ratio := 1.0 / pitch
 	if on == "body":
 		var steps := maxi(0, int(ctx.player.chain.combo) - 1)
-		var samples := Synth.buffer(Synth.seconds(0.9))
+		var samples := Synth.buffer(Synth.seconds(0.9 / duration_ratio))
 		Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[0]) + steps)), 0, 0.7)
 		var snare := _rivet_snare(steps)
-		Synth.add_into(samples, snare, Synth.seconds(float(cue.get("delay", 0.0))), 0.5)
-		Synth.add_into(samples, snare, Synth.seconds(float(cue.get("delay", 0.0)) + 0.03), 0.35)
-		var pitch := Harmony.ratio(live_key())
+		Synth.add_into(samples, snare, Synth.seconds(float(cue.get("delay", 0.0)) / duration_ratio), 0.5)
+		Synth.add_into(samples, snare, Synth.seconds((float(cue.get("delay", 0.0)) + 0.03) / duration_ratio), 0.35)
 		if _admit("line_skill_fired", RIVET_LINE["punch"], pitch):
 			_start("line_skill_fired", RIVET_LINE["punch"], Synth.to_wav(Synth.normalize(samples)),
 				SfxBank.trim_db(RIVET_LINE["punch"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
 		return
 	var seconds := float(cue.get("seconds", 0.0))
-	var samples := Synth.buffer(Synth.seconds(seconds + 0.5))
-	var step: float = RIVET_LINE["roll_step"]
+	var samples := Synth.buffer(Synth.seconds((seconds + 0.5) / duration_ratio))
+	var step: float = RIVET_LINE["roll_step"] / duration_ratio
 	var tick := 0.0
-	while tick < seconds:
+	while tick < seconds / duration_ratio:
 		Synth.add_into(samples, Synth.hat(false), Synth.seconds(tick), 0.35)
 		tick += step
-	Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[notes.size() - 1]))), Synth.seconds(seconds), 0.8)
-	var key := Harmony.ratio(live_key())
-	if _admit("line_skill_fired", RIVET_LINE["arrive"], key):
+	Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[notes.size() - 1]))), Synth.seconds(seconds / duration_ratio), 0.8)
+	if _admit("line_skill_fired", RIVET_LINE["arrive"], pitch):
 		_start("line_skill_fired", RIVET_LINE["arrive"], Synth.to_wav(Synth.normalize(samples)),
-			SfxBank.trim_db(RIVET_LINE["arrive"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], key, "SFX")
+			SfxBank.trim_db(RIVET_LINE["arrive"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
 # --- end Rivet ---
