@@ -510,7 +510,8 @@ func _park_capacity(candidate: Dictionary) -> bool:
 			if state.weather and state.row.kind != "clear" and candidate.row.kind != "clear":
 				return false
 		elif not state.weather:
-			ground += int(_park_ground(state.row))
+			var settled := float(state.row.live_s) == 0.0 and float(state.live_elapsed_s) >= maxf(0.0, float(state.row.effect.get("fill_s", 0.0)))
+			ground += int(_park_ground(state.row) and not settled)
 			family += int(state.row.family == candidate.row.family)
 	if candidate.weather:
 		return true
