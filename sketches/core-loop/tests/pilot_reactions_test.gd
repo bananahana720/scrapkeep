@@ -78,8 +78,24 @@ func check_table_rule(animator: AnimationPlayer, stem: String) -> void:
 	check("probe: removing the file removes the table", not Trigger.has_table(stem, dir))
 
 
+# Godot's scene importer strips a "_loop" suffix from animation names when name suffixes are on, so
+# idle_loop would import as idle (PE-RIVET and PE-CANNON round 2, 2026-10-11). Every pilot GLB's
+# import keeps names as exported and sets each roster _loop clip to loop explicitly.
+func check_import_keeps_loop_names(class_id: String) -> void:
+	var settings := ConfigFile.new()
+	var path: String = Hero.PILOTS[class_id] + ".import"
+	check(class_id + " import settings load", settings.load(path) == OK)
+	check(class_id + " import keeps _loop names (nodes/use_name_suffixes=false)", settings.get_value("params", "nodes/use_name_suffixes", true) == false)
+	var animations: Dictionary = settings.get_value("params", "_subresources", {}).get("animations", {})
+	for clip in Trigger.required_clips(true):
+		if String(clip).ends_with("_loop"):
+			var mode: int = animations.get(clip, {}).get("settings/loop_mode", Animation.LOOP_NONE)
+			check("%s import loops %s" % [class_id, clip], mode == Animation.LOOP_LINEAR)
+
+
 func check_assets() -> void:
 	for class_id in Hero.PILOTS:
+		check_import_keeps_loop_names(class_id)
 		var pilot: Node = load(Hero.PILOTS[class_id]).instantiate()
 		var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 		check(class_id + " has AnimationPlayer", animator != null)
