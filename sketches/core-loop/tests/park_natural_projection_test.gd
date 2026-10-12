@@ -78,7 +78,7 @@ func _triangle_probes(node: Node3D, probes: Array[Vector2], rendered: Array) -> 
 		if child is Node3D:
 			_triangle_probes(child, probes, rendered)
 
-func _check_surface(label: String, node: Node3D, site: Dictionary, water := false) -> void:
+func _surface_stats(node: Node3D, site: Dictionary) -> Dictionary:
 	var bins := {}
 	_triangles(node, bins)
 	var half := Vector2(float(site.size[2]), float(site.size[0])) * 0.5
@@ -100,21 +100,52 @@ func _check_surface(label: String, node: Node3D, site: Dictionary, water := fals
 	var worst := INF
 	var deepest := -INF
 	for point in rendered:
-		var depth: float = float(point[1]) - game.ctx.terrain.height(float(point[0]), float(point[2]))
+		var depth: float = float(point[1]) - _ground(float(point[0]), float(point[2]))
 		worst = minf(worst, depth)
 		deepest = maxf(deepest, depth)
 	for point in probes:
 		for y in _heights(bins, point):
-			var depth: float = y - game.ctx.terrain.height(point.x, point.y)
+			var depth: float = y - _ground(point.x, point.y)
 			worst = minf(worst, depth)
 			deepest = maxf(deepest, depth)
 			count += 1
-	t.check(label + " dense 1 m rendered triangle probes exist", count > 0, str(count))
-	t.check(label + " vertical clearance", deepest <= Schema.MAX_EVENT_WATER_M + 0.0001 if water else worst >= 0.1499, "min=%s max=%s points=%s" % [worst, deepest, count])
-	if site.id == "west_wash" and not water:
+	return {"count": count, "min": worst, "max": deepest, "bins": bins}
+
+func _ground(x: float, z: float) -> float:
+	var terrain = game.ctx.terrain
+	return terrain._floor(terrain.stage - 1, x, z)
+
+func _valid_surface(kind: String, stats: Dictionary) -> bool:
+	# Red contract: the inherited overlay branch wrongly applies the water ceiling.
+	return stats.max <= Schema.MAX_EVENT_WATER_M + 0.0001 if kind in ["water", "overlay"] else stats.min >= 0.1499
+
+func _check_surface(label: String, node: Node3D, site: Dictionary, kind := "marker") -> void:
+	var stats := _surface_stats(node, site)
+	t.check(label + " dense 1 m rendered triangle probes exist", stats.count > 0, str(stats.count))
+	t.check(label + " vertical clearance", _valid_surface(kind, stats), "min=%s max=%s points=%s" % [stats.min, stats.max, stats.count])
+	if site.id == "west_wash" and kind == "marker":
 		var point := Vector2(-77.996602, -69.957024)
-		var ys := _heights(bins, point)
-		t.check(label + " reported long-edge point stays above terrain", not ys.is_empty() and ys.all(func(y): return y >= game.ctx.terrain.height(point.x, point.y) + 0.1499), str(ys))
+		var ys := _heights(stats.bins, point)
+		t.check(label + " reported long-edge point stays above terrain", not ys.is_empty() and ys.all(func(y): return y >= _ground(point.x, point.y) + 0.1499), str(ys))
+
+func _overlay_controls(handler) -> void:
+	var record: Dictionary = handler._prepared.projection_slump
+	var entry: Dictionary = handler._overlay_map.swaps[record.swap]
+	var body: Node3D = record.overlay
+	body.position = entry.home
+	body.visible = true
+	body.position.y -= 1.0
+	var buried := _surface_stats(body, record.site)
+	t.check("buried terrain-overlay control is rejected", buried.count > 0 and not _valid_surface("overlay", buried), str([buried.min, buried.max]))
+	body.position.y += 1.0 + Schema.MAX_EVENT_WATER_M + 1.0
+	var tall := _surface_stats(body, record.site)
+	t.check("valid terrain overlay above water cap is accepted", tall.count > 0 and tall.min > Schema.MAX_EVENT_WATER_M and _valid_surface("overlay", tall), str([tall.min, tall.max]))
+	body.position = entry.home
+	handler._install_surface(record.swap, entry.target)
+	_check_surface("real park_dam test-only slump completed overlay", body, record.site, "overlay")
+	body.position += Vector3.DOWN * 5000.0
+	body.visible = false
+
 
 func _run() -> void:
 	game = Game.new()
@@ -125,6 +156,13 @@ func _run() -> void:
 	game.flow.force_warden = false
 	game.player.source = Intent.Scripted.new()
 	game.flow.press_start()
+	var park: Dictionary = game.ctx.terrain.maps[0].park
+	var row: Dictionary = park.event_rows[0].duplicate(true)
+	row.merge({"id": "projection_slump", "kind": "collapse", "trigger": {"on": "clock_tier", "value": 4},
+		"telegraph": {"lead_s": 6.0, "form": "ground_slump", "on_bar": false},
+		"effect": {"depth_m": 20.0, "fill_s": 4.0, "swap": "projection_slump_ramp",
+			"face": {"at": [-70.0, -60.0], "size": [20.0, 20.0, 20.0], "yaw_deg": 0.0}}}, true)
+	park.event_rows.append(row)
 	game.flow.choose_class(1)
 	await physics_frame
 	await physics_frame
@@ -157,15 +195,16 @@ func _run() -> void:
 			view.mesh = prepared.water_surface.mesh
 			handler.add_child(view)
 			view.position.y = minf(float(row.effect.depth_m), Schema.MAX_EVENT_WATER_M)
-			_check_surface(row.id + " water", view, prepared.site, true)
+			_check_surface(row.id + " water", view, prepared.site, "water")
 			view.free()
 		if prepared.overlay != null:
 			var home: Vector3 = prepared.overlay.position
 			prepared.overlay.position = handler._overlay_map.swaps[prepared.swap].home
 			prepared.overlay.visible = true
-			_check_surface(row.id + " overlay", prepared.overlay, prepared.site, true)
+			_check_surface(row.id + " overlay", prepared.overlay, prepared.site, "overlay")
 			prepared.overlay.position = home
 			prepared.overlay.visible = false
+	_overlay_controls(handler)
 	var source := FileAccess.get_file_as_string("res://src/world/events/natural.gd")
 	var pattern := RegEx.new()
 	pattern.compile("(?:ArrayMesh|SphereMesh|BoxMesh|TorusMesh|PlaneMesh|ImmediateMesh|CylinderMesh|PrismMesh)\\.new\\(|LocalMesh\\.")
