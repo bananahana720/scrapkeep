@@ -69,6 +69,54 @@ const passingRunner = async (step) => ({
       : "tool completed\n",
 });
 
+test("nightly launches bot-tier tests with their smoke marker caps", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "nightly-marker-test-"));
+  const sources = {
+    "ordinary.gd": "extends SceneTree\n",
+    "solo.gd": "# smoke: solo timeout=300s\n",
+    "bots.gd": "# smoke: bots timeout=900s\n",
+    "bots_max.gd": "# smoke: bots timeout=2400s\n",
+    "bots_default.gd": "# smoke: bots\n",
+  };
+  try {
+    mkdirSync(path.join(directory, "tests"));
+    for (const [name, source] of Object.entries(sources))
+      writeFileSync(path.join(directory, "tests", name), source);
+    const options = parseArgs(["--runs", "1"]);
+    const plan = buildPlan(options, {
+      directory,
+      scripts: Object.keys(sources).map((name) => `res://tests/${name}`),
+      baseline: {},
+      outDir: directory,
+      imported: true,
+    }).filter((step) => step.kind === "test");
+    assert.equal(plan.find((step) => step.script === "res://tests/bots.gd").timeout_ms, 900_000);
+    const launches = {};
+    await runNightly(options, {
+      plan,
+      git,
+      startedAt,
+      outDir: directory,
+      runner: async (step, timeoutMs) => {
+        assert.equal(step.solo, step.script !== "res://tests/ordinary.gd");
+        launches[path.basename(step.script)] = timeoutMs;
+        return passingRunner(step);
+      },
+      readArtifacts: () => ({}),
+      log: () => {},
+    });
+    assert.deepEqual(launches, {
+      "ordinary.gd": 180_000,
+      "solo.gd": 300_000,
+      "bots.gd": 900_000,
+      "bots_max.gd": 1_800_000,
+      "bots_default.gd": 1_200_000,
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 async function fixture(fn) {
   const outDir = mkdtempSync(path.join(os.tmpdir(), "sketch-nightly-test-"));
   try {
