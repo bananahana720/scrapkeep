@@ -36,6 +36,7 @@ func _fresh(line_id: String) -> void:
 	_player.abilities.snap_back("test")
 	_player._fire_latched = false
 	_player._brake_was_held = false
+	_player.bank_last = {}
 	_player.set_velocity_now(Vector3.RIGHT * 20.0)
 	_player.state.grounded = true
 	_game.combat._line_load = {}
@@ -112,7 +113,7 @@ func _run() -> void:
 	_t.check("Bank Shot leaves the committed haul standing", _player.kit.hooked and not _player._bank_pending.is_empty())
 	_t.check("real landing consumes the committed line", _player._begin_landing(target))
 	_player._finish_landing(target, 20.0)
-	_t.check("landing pays the deferred Bank Shot exit", _player._bank_pending.is_empty() and _player.kit.line_end == "bank")
+	_t.check("landing pays the deferred Bank Shot exit", _player._bank_pending.is_empty() and not _player.bank_last.is_empty())
 	_fresh("bank_shot")
 	_player.grapple_to(target.global_position, Vector3.LEFT, target)
 	_hand(target)
