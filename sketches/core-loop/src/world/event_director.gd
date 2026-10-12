@@ -7,6 +7,7 @@ const HoldRelay := preload("res://src/world/hold_relay.gd")
 const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
 const TerrainEvent := preload("res://src/world/terrain_event.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # The event director for one stage (TADR-010): pure, stepped with a delta, drawing
@@ -596,44 +597,24 @@ func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: D
 	if state.weather:
 		return true
 	var site: Dictionary = _park_sites[state.row.site]
-	var centre := Vector2(float(site.at[0]), float(site.at[1]))
-	var yaw := deg_to_rad(float(site.yaw_deg))
-	var half := Vector2(float(site.size[0]), float(site.size[2])).abs() * 0.5
+	var half := ParkMap.footprint_half_extents(site)
 	if state.row.effect.has("footprint_m"):
 		var footprint = state.row.effect.footprint_m
 		half = (footprint if footprint is Vector2 else Vector2(float(footprint[0]), float(footprint[1]))).abs() * 0.5
-	var point := (Vector2(ball.x, ball.z) - centre).rotated(yaw)
-	if _park_rising(state) and context.grounded and absf(point.x) <= half.x and absf(point.y) <= half.y:
+	var point := Vector2(ball.x, ball.z)
+	if _park_rising(state) and context.grounded and ParkMap.footprint_contains(site, point, 0.0, Vector2.INF, half):
 		return false
 	if not _park_ground(state.row):
 		return true
-	var end := point + Vector2(velocity.x, velocity.z).rotated(yaw) * PARK_TRAVEL_S
+	var end := point + Vector2(velocity.x, velocity.z) * PARK_TRAVEL_S
 	var margin := maxf(0.0, float(state.row.hold_clear_m))
-	if _park_segment_hits(point, end, half + Vector2.ONE * margin):
+	if ParkMap.footprint_contains(site, point, margin, end, half):
 		return false
 	if state.row.family in ParkSchema.ARRIVAL_FAMILIES and state.row.route_change.opens.is_empty():
 		for line in context.get("pilot_lines", _park_pilot_lines):
 			for i in range(1, line.size()):
-				if _park_segment_hits((line[i - 1] - centre).rotated(yaw), (line[i] - centre).rotated(yaw), half + Vector2.ONE * PARK_CORRIDOR_M):
+				if ParkMap.footprint_contains(site, line[i - 1], PARK_CORRIDOR_M, line[i], half):
 					return false
-	return true
-
-
-static func _park_segment_hits(a: Vector2, b: Vector2, half: Vector2) -> bool:
-	var enter := 0.0
-	var leave := 1.0
-	for axis in 2:
-		var delta: float = b[axis] - a[axis]
-		if absf(delta) < 0.00000001:
-			if absf(a[axis]) > half[axis]:
-				return false
-		else:
-			var near: float = (-half[axis] - a[axis]) / delta
-			var far: float = (half[axis] - a[axis]) / delta
-			enter = maxf(enter, minf(near, far))
-			leave = minf(leave, maxf(near, far))
-			if enter > leave:
-				return false
 	return true
 
 
