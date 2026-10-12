@@ -224,19 +224,10 @@ func _process(_delta: float) -> bool:
 
 func _spawn(job: Dictionary) -> void:
 	var cell: Dictionary = _cells[job["cell"]]
-	var arm := arm_named(job["arm"])
-	# Each invocation owns its data folder (the parent's process id is in the path) and each job its own
-	# folder under it, which is removed once the run is recorded.
+	# Each job owns an isolated result and state folder.
 	var home := _sweep_dir.path_join("job%d" % job["n"])
 	DirAccess.make_dir_recursive_absolute(home)
-	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
-			"--script", "res://tools/posture_sweep.gd", "--", "--arm=" + String(job["arm"]), "--run-seed=%d" % job["seed"],
-			"--plating=%s" % cell["plating"], "--curve=%s" % cell["curve"], "--shatter=%s" % cell["ram_shatters"],
-			"--cap=%s" % _cap, "--result=" + home.path_join("result.tsv"), "--home=" + home])
-	if _settings.get("gate", "0") == "1":
-		args.append("--gate=1")
-	if float(arm["mass"]) > 0.0:
-		args.append("--start-mass=%d" % int(arm["mass"]))
+	var args := child_args(_settings, job, cell, _cap, home)
 	var previous := {}
 	for kind in ["DATA", "CONFIG", "CACHE"]:
 		var key: String = "XDG_%s_HOME" % kind
@@ -252,6 +243,19 @@ func _spawn(job: Dictionary) -> void:
 	job["home"] = home
 	job["started"] = Time.get_ticks_msec()
 	_running.append(job)
+
+
+static func child_args(settings: Dictionary, job: Dictionary, cell: Dictionary, cap: float, home: String) -> PackedStringArray:
+	var arm := arm_named(job["arm"])
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+			"--script", "res://tools/posture_sweep.gd", "--", "--arm=" + String(job["arm"]), "--run-seed=%d" % job["seed"],
+			"--plating=%s" % cell["plating"], "--curve=%s" % cell["curve"], "--shatter=%s" % cell["ram_shatters"],
+			"--cap=%s" % cap, "--result=" + home.path_join("result.tsv"), "--home=" + home])
+	if settings.get("gate", "0") == "1":
+		args.append("--gate=1")
+	if float(arm["mass"]) > 0.0:
+		args.append("--start-mass=%d" % int(arm["mass"]))
+	return args
 
 
 func _reap(run: Dictionary, timed_out: bool) -> void:
