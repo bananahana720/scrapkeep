@@ -1,10 +1,11 @@
 extends "res://tests/kest_kit_test.gd"
 
 # 2026-10-11 (PC-KEST): fixed-step carrier, payload and posture integration.
-# Expected 53 checks, including count guard. The bot suite separately runs real physics.
-const EXPECTED_SET_PIECE_CHECKS := 53
+# Expected 59 checks, including count guard. The bot suite separately runs real physics.
+const EXPECTED_SET_PIECE_CHECKS := 59
 const Kest := preload("res://src/combat/kest_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 var _peak_modes: Array = []
 var _cloak_breaks: Array = []
@@ -201,4 +202,32 @@ func _cases() -> void:
 	_t.check("world two does not grant Homecoming", not _game.ctx.codex.known("kest_homecoming"))
 	_ult.homecoming(3)
 	_t.check("Kest entering world three discovers Homecoming", _game.ctx.codex.known("kest_homecoming"))
+	_machinery()
 	floor.free()
+
+
+func _machinery() -> void:
+	var painter := HeroAssets.new()
+	var model := (load("res://assets/models/world_one/shell_kest.glb") as PackedScene).instantiate()
+	root.add_child(model)
+	painter.paint(model, {"class": ClassDef.KEST_COLOR})
+	var pod := model.find_child("Pod", true, false) as Node3D
+	var mortar := pod.get_node("WeaponRing/Mortar") as MeshInstance3D
+	var ring := pod.get_node("WeaponRing") as MeshInstance3D
+	var rest := mortar.position
+	var state := {"mortar_pitch": PI / 4.0, "mortar_recoil": 0.08, "lit_count": 4, "heft_class": 5,
+		"fuse_glow": 1.0, "fuse_boost": true, "fuse_blink": false}
+	painter.apply_kest_state(pod, state)
+	_t.near("delivered Mortar pitches on the shared state", mortar.rotation.x, -PI / 4.0)
+	_t.near("delivered Mortar recoils 0.08 m", mortar.position.z - rest.z, 0.08)
+	_t.eq("UV2 satchel shader reads lit count", ring.get_instance_shader_parameter("lit_count"), 4)
+	_t.eq("UV2 satchel shader reads heft gate", ring.get_instance_shader_parameter("heft_class"), 5)
+	var before: int = painter.kest_band_material(Color.WHITE).get_instance_id()
+	painter.apply_kest_state(pod, state)
+	_t.eq("satchel material is cached across repeated reads", painter.kest_band_material(Color.WHITE).get_instance_id(), before)
+	var forbidden := model.find_children("*", "Light3D", true, false).size()
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		forbidden += 1 if mi.material_override != null else 0
+	_t.eq("machinery adds no lights or per-instance material override", forbidden, 0)
+	model.free()
+	painter.free()

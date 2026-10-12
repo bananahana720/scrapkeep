@@ -1,6 +1,7 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const WARDEN_BASE := "res://assets/models/warden_clamp_base.glb"
@@ -557,19 +558,105 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 			var side := -1.0 if vane_name == "VaneL" else 1.0
 			vane.rotation.z = lerpf(vane.rotation.z, -side * open * PI * 0.5, 1.0 - exp(-VANE_RATE * delta))
 	if not kest.is_empty():
-		for node_name in ["MortarL", "MortarR"]:
-			var mortar := pod.find_child(node_name, true, false) as Node3D
-			if mortar != null:
-				if not mortar.has_meta("kest_rest"):
-					mortar.set_meta("kest_rest", mortar.position)
-				mortar.position = mortar.get_meta("kest_rest") + Vector3.BACK * float(kest["mortar_recoil"])
-				mortar.rotation.x = -float(kest["mortar_pitch"])
-		for node_name in ["SatchelBands", "FuseTips"]:
-			var device := pod.find_child(node_name, true, false) as MeshInstance3D
-			if device != null:
-				device.set_instance_shader_parameter("lit_count", int(kest["lit_count"]))
-				device.set_instance_shader_parameter("fuse_glow", float(kest["fuse_glow"]))
+		var paint_tint: Color = rec.get("shell", {}).get("tints", {}).get("paint", Color.WHITE)
+		apply_kest_state(pod, kest, paint_tint)
 	steer_weapon_ring(pod, _aim_of(v), delta)
+
+
+func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE) -> void:
+	var ring := pod.get_node_or_null("WeaponRing") as MeshInstance3D
+	if ring != null:
+		for i in ring.mesh.get_surface_count():
+			if slot_of(ring.mesh, i) == "paint":
+				ring.set_surface_override_material(i, kest_band_material(paint_tint))
+		ring.set_instance_shader_parameter("lit_count", int(state["lit_count"]))
+		ring.set_instance_shader_parameter("heft_class", int(state["heft_class"]))
+	var mortar := pod.get_node_or_null("WeaponRing/Mortar") as MeshInstance3D
+	if mortar != null:
+		if not mortar.has_meta("kest_rest"):
+			mortar.set_meta("kest_rest", mortar.position)
+		mortar.position = mortar.get_meta("kest_rest") + Vector3.BACK * float(state["mortar_recoil"])
+		mortar.rotation.x = -float(state["mortar_pitch"])
+		for i in mortar.mesh.get_surface_count():
+			if slot_of(mortar.mesh, i) == "class_accent":
+				mortar.set_surface_override_material(i, kest_fuse_material(bool(state["fuse_boost"])))
+		mortar.set_instance_shader_parameter("fuse_glow", float(state["fuse_glow"]))
+		mortar.set_instance_shader_parameter("fuse_loaded", bool(state["fuse_blink"]))
+
+
+func kest_band_material(tint: Color) -> ShaderMaterial:
+	var key := "kest_bands:" + tint.to_html()
+	if _materials.has(key):
+		return _materials[key]
+	var base := material("paint", tint) as StandardMaterial3D
+	var mat := ShaderMaterial.new()
+	var shader := Shader.new()
+	# PD-KEST stores band index in UV2.x and the fourth satchel's class gate in UV2.y.
+	shader.code = """shader_type spatial;
+render_mode cull_back, diffuse_burley, specular_schlick_ggx;
+uniform vec4 paint_tint : source_color = vec4(1.0);
+uniform vec4 class_color : source_color = vec4(1.0);
+uniform sampler2D plate_texture : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+instance uniform int lit_count = 0;
+instance uniform int heft_class = 1;
+varying vec3 local_pos;
+varying vec3 local_normal;
+void vertex() {
+	local_pos = VERTEX;
+	local_normal = NORMAL;
+}
+void fragment() {
+	if (UV2.y > float(heft_class) + 0.1) { discard; }
+	vec3 weights = abs(normalize(local_normal));
+	weights /= max(weights.x + weights.y + weights.z, 0.001);
+	vec3 p = local_pos / 1.5;
+	vec3 plate = texture(plate_texture, p.yz).rgb * weights.x
+		+ texture(plate_texture, p.xz).rgb * weights.y
+		+ texture(plate_texture, p.xy).rgb * weights.z;
+	ALBEDO = COLOR.rgb * paint_tint.rgb * plate;
+	ROUGHNESS = 0.8;
+	if (UV2.x > 0.5) {
+		bool lit = UV2.x <= float(lit_count) + 0.1;
+		ALBEDO *= lit ? 1.0 : 0.35;
+		EMISSION = lit ? class_color.rgb * 0.5 : vec3(0.0);
+	}
+}
+"""
+	mat.shader = shader
+	mat.resource_name = "kest_bands"
+	mat.set_shader_parameter("paint_tint", base.albedo_color)
+	mat.set_shader_parameter("plate_texture", base.albedo_texture)
+	mat.set_shader_parameter("class_color", ClassDef.KEST_COLOR)
+	_materials[key] = mat
+	return mat
+
+
+func kest_fuse_material(bright: bool) -> ShaderMaterial:
+	var key := "kest_fuse_ready" if bright else "kest_fuse"
+	if _materials.has(key):
+		return _materials[key]
+	var mat := ShaderMaterial.new()
+	var shader := Shader.new()
+	shader.code = """shader_type spatial;
+uniform vec4 class_color : source_color = vec4(1.0);
+uniform float strength = 0.5;
+instance uniform float fuse_glow = 0.2;
+instance uniform bool fuse_loaded = false;
+varying float tip_side;
+void vertex() { tip_side = VERTEX.x; }
+void fragment() {
+	ALBEDO = class_color.rgb;
+	ROUGHNESS = 0.5;
+	float glow = fuse_loaded && tip_side < 0.0 ? 0.0 : fuse_glow;
+	EMISSION = class_color.rgb * strength * glow;
+}
+"""
+	mat.shader = shader
+	mat.resource_name = key
+	mat.set_shader_parameter("class_color", ClassDef.KEST_COLOR)
+	mat.set_shader_parameter("strength", READY_EMIT if bright else 0.5)
+	_materials[key] = mat
+	return mat
 
 
 # Hoberman gimbal (ROSTER-LOOK section 2): the rings show the lattice's turn against the upright
@@ -1015,6 +1102,11 @@ func _glow_rec(rec: Dictionary, on: bool) -> int:
 				elif not on and current == lit:
 					mi.set_surface_override_material(i, calm)
 					swapped += 1
+				elif current != null and current.resource_name in ["kest_fuse", "kest_fuse_ready"]:
+					var fuse := kest_fuse_material(on)
+					if current != fuse:
+						mi.set_surface_override_material(i, fuse)
+						swapped += 1
 	return swapped
 
 

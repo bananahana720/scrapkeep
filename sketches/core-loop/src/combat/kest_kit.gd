@@ -557,9 +557,13 @@ func kest_cage_state() -> Dictionary:
 	var bands := volley_targets()
 	var age := _clock - _last_throw
 	var recovering := _clock - _landed_at
-	return {"vent_angle": PI * 0.5 if gliding or riding else (PI / 6.0 if ready else 0.0),
-		"fuse_glow": 0.0 if ctx.player.kit.cloaked and not riding else (1.0 if ready or riding else 0.2),
-		"fuse_blink": not combat.line_load().is_empty(), "smoke": ctx.player.kit.cloaked,
+	var loaded: bool = not combat.line_load().is_empty() and not ready and not riding
+	var glow := 1.0 if riding else (0.8 + 0.2 * sin(_clock * TAU) if ready else (1.0 if posmod(int(_clock * 4.0), 2) == 0 else 0.0) if loaded else 0.2)
+	if ctx.player.kit.cloaked and not riding:
+		glow = 0.0
+	return {"heft_class": _heft_index() + 1, "vent_angle": PI * 0.5 if gliding or riding else (PI / 6.0 if ready else 0.0),
+		"fuse_glow": glow, "fuse_boost": ready or riding,
+		"fuse_blink": loaded, "smoke": ctx.player.kit.cloaked,
 		"mortar_pitch": PI / 4.0 if riding else (PI / 9.0 if ready else 0.0),
 		"mortar_recoil": 0.08 * maxf(0.0, 1.0 - age / 0.12), "satchel_bands": bands,
 		"lit_count": maxi(0, bands - posmod(_total_beat, bands)) if riding else (bands if ready else roundi(bands * clampf(recovering / 0.4, 0.0, 1.0)) if recovering < 0.4 else 0)}
