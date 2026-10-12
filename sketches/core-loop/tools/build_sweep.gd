@@ -24,8 +24,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 #          per pick, one class per build in turn: the share of builds reaching 3 or more
 #          distinct tags, tag pairs with no specified outcome, parts one offer shows twice
 #          (a structural invariant, gated at zero) and parts a run's offers show again
-#          (the comps measure, compared with REPEAT_TARGET_PER_10K; gated only when
-#          WITHIN_RUN_GATED is true).
+#          (the comps measure, compared with REPEAT_TARGET_PER_10K; report-only by ruling).
 #
 # Exit 0 when the arm printed nonzero rows and found no problem, else 1. Evidence limit:
 # a numbers model; time to kill reads the stat as a damage bonus on a fixed dummy, not
@@ -41,15 +40,30 @@ const COMPOSE_BUILDS := 10000
 const BUILD_SIZE := 6
 const OFFER_SIZE := 2
 # The comps targets (comps/isaac/items-and-synergies.md:89): at least 30% of builds reach
-# 3 or more tags; a run's offers repeat a part at most once per 10,000 draws.
+# 3 or more tags; the report target is at most one within-run repeat per 10,000 draws.
 const TAG3_TARGET := 0.30
 const REPEAT_TARGET_PER_10K := 1.0
-# Within-run repeats are report-only until the owner rules (SR4 fix round, 2026-10-11):
-# Parts.roll weights a shown part down rather than excluding it, and stacking families
-# want copies, so seed 1 measures about 568 per 10,000 draws against the target of 1.
-# Flip to true to gate them; compose_problems then fails the arm.
-const WITHIN_RUN_GATED := false
+# SR4 round 3 ruling 1 (2026-10-11): stacking families want copies, so within-run
+# repeats are report-only. In-offer duplicates remain a structural invariant at zero.
 const EPS := 1e-6
+# SR4 round 3 ruling 2 (2026-10-11): these tag pairs are declared independent;
+# none has a Synergies.ROWS row or TAG_RULES rule. Include same-tag pairs because
+# different held parts can share a tag. SI4 moves this table beside the synergy rows
+# when the shot bits land. A pair absent from all three tables stays unspecified.
+const INDEPENDENT_PAIRS := [
+	["frost", "frost"], ["frost", "kinetic"], ["frost", "split"], ["frost", "spiral"],
+	["frost", "chain"], ["frost", "anchor"], ["frost", "speed"],
+	["arc", "arc"], ["arc", "kinetic"], ["arc", "split"], ["arc", "spiral"],
+	["arc", "chain"], ["arc", "speed"],
+	["kinetic", "kinetic"], ["kinetic", "spiral"], ["kinetic", "chain"],
+	["kinetic", "anchor"], ["kinetic", "mass"],
+	["split", "split"], ["split", "spiral"], ["split", "anchor"],
+	["split", "speed"], ["split", "mass"],
+	["spiral", "spiral"], ["spiral", "anchor"], ["spiral", "mass"],
+	["chain", "chain"], ["chain", "anchor"], ["chain", "speed"], ["chain", "mass"],
+	["anchor", "anchor"], ["anchor", "speed"], ["anchor", "mass"],
+	["speed", "speed"], ["speed", "mass"], ["mass", "mass"],
+]
 # Families the pool may not use yet get one synthetic probe each, so every family runs.
 const PROBES := {
 	"probe_linear": {"stack": "linear", "cap": 0.0, "per": 0.1},
@@ -219,10 +233,9 @@ static func print_stack_table(rows: Array) -> void:
 		print(line)
 
 
-# The outcome a tag pair resolves to: "named:<id>", "rule:<id>", "independent" (two
-# known tags with no row: each part acts alone, the documented default in
-# synergies.gd's header), or "" when a tag is outside PartDef.TAGS and nothing can say.
-static func pair_outcome(a: String, b: String) -> String:
+# A declared outcome: "named:<id>", "rule:<id>", "independent", or "" for an
+# unknown tag or undeclared pair. The override lets the test remove a known pair.
+static func pair_outcome(a: String, b: String, independent_pairs: Array = INDEPENDENT_PAIRS) -> String:
 	if not a in PartDef.TAGS or not b in PartDef.TAGS:
 		return ""
 	for key in Synergies.ROWS:
@@ -233,17 +246,20 @@ static func pair_outcome(a: String, b: String) -> String:
 		var tags: Array = Synergies.TAG_RULES[key]["tags"]
 		if (tags[0] == a and tags[1] == b) or (tags[0] == b and tags[1] == a):
 			return "rule:" + key
-	return "independent"
+	for tags in independent_pairs:
+		if (tags[0] == a and tags[1] == b) or (tags[0] == b and tags[1] == a):
+			return "independent"
+	return ""
 
 
 # Tag pairs across two different held parts whose outcome is unspecified.
-static func unspecified_pairs(tag_sets: Array) -> int:
+static func unspecified_pairs(tag_sets: Array, independent_pairs: Array = INDEPENDENT_PAIRS) -> int:
 	var count := 0
 	for i in tag_sets.size():
 		for j in range(i + 1, tag_sets.size()):
 			for a in tag_sets[i]:
 				for b in tag_sets[j]:
-					if pair_outcome(String(a), String(b)) == "":
+					if pair_outcome(String(a), String(b), independent_pairs) == "":
 						count += 1
 	return count
 
@@ -340,7 +356,7 @@ static func compose_arm(run_seed: int, builds: int) -> Dictionary:
 	}
 
 
-static func compose_problems(stats: Dictionary, gate_within_run: bool = WITHIN_RUN_GATED) -> Array:
+static func compose_problems(stats: Dictionary) -> Array:
 	var out: Array = []
 	if stats["tag3_share"] < TAG3_TARGET:
 		out.append("%.1f%% of builds reach 3+ tags, under %d%%" % [100.0 * stats["tag3_share"], int(TAG3_TARGET * 100)])
@@ -348,9 +364,6 @@ static func compose_problems(stats: Dictionary, gate_within_run: bool = WITHIN_R
 		out.append("%d unspecified tag pairs" % stats["unspecified_pairs"])
 	if stats["offer_repeats"] > 0:
 		out.append("%d parts shown twice in one offer" % stats["offer_repeats"])
-	if gate_within_run and stats["run_repeats_per_10k"] > REPEAT_TARGET_PER_10K:
-		out.append("%.2f within-run repeats per 10,000 draws, over %.0f"
-			% [stats["run_repeats_per_10k"], REPEAT_TARGET_PER_10K])
 	return out
 
 
@@ -360,5 +373,5 @@ static func print_compose_table(stats: Dictionary) -> void:
 			stats["distinct_tag_sets"], stats["unspecified_pairs"], stats["offer_repeats"], stats["repeats_per_10k"],
 			stats["run_repeats"], stats["run_repeats_per_10k"], REPEAT_TARGET_PER_10K,
 			"over target" if stats["run_repeats_per_10k"] > REPEAT_TARGET_PER_10K else "within target",
-			"gated" if WITHIN_RUN_GATED else "report-only pending owner ruling",
+			"report-only by ruling",
 			stats["held_copies"], stats["empty_offers"], stats["outcomes"]])
