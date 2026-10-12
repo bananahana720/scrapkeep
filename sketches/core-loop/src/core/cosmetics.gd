@@ -24,7 +24,7 @@ const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
-const PENDING_ART := ["trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell"]
+const PENDING_ART := ["trail_tally_punch_tape", "outfit_tally_eyeshade", "shell_tally_abacus", "trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell"]
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -85,6 +85,10 @@ const ROWS := {
 	"outfit_tarn_steady_cap": {"slot": "outfit", "pilot": "tarn", "name": "Steady Cap", "starter": false, "tint": Color("d2c5a5"), "asset": "outfit_tarn_steady_cap"},
 	# --- end tarn ---
 	# --- tally (Tally): P-C Tally adds its rows here ---
+	# Ledger cream tape, a mulberry eyeshade with a copper rim, a copper abacus lattice; never brass.
+	"trail_tally_punch_tape": {"slot": "trail", "pilot": "tally", "name": "Punch Tape", "starter": false, "tint": Color("f7f1e3"), "asset": "trail_tally_punch_tape"},
+	"outfit_tally_eyeshade": {"slot": "outfit", "pilot": "tally", "name": "Eyeshade", "starter": false, "tint": Color("7a3b5c"), "asset": "outfit_tally_eyeshade"},
+	"shell_tally_abacus": {"slot": "shell", "pilot": "tally", "name": "Abacus Lattice", "starter": false, "tint": Color("b77843"), "asset": "shell_tally_abacus"},
 	# --- end tally ---
 	# --- remembered_cannon (the Cannon): P-C Cannon adds its rows here ---
 	# --- end remembered_cannon ---

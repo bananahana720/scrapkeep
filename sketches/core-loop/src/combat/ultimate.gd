@@ -93,6 +93,20 @@ var _ult_rows := {
 		"landing": func(at, heft, chain): return combat.get_node("TarnClaw").landing("vice_leap", at, heft, chain)},
 	# --- end Tarn ---
 	# --- P-C Tally ultimate ---
+	# pilots/tally.md section 3; combat.gd's Tally block holds the rows' code and the
+	# tally_books_balanced detection (the landing counts its settles there).
+	"plate_return": {"target": func(ball, aim): return combat.tally_target("plate_return", ball, aim),
+		"tech": func(beat, ball, aim, mult): return combat.tally_tech("plate_return", beat, ball, aim, mult),
+		"peak": func(at): combat.tally_peak("plate_return", at),
+		"landing": func(at, heft, chain): return combat.tally_landing("plate_return", at, heft, chain)},
+	"plate_audit": {"target": func(ball, aim): return combat.tally_target("plate_audit", ball, aim),
+		"tech": func(beat, ball, aim, mult): return combat.tally_tech("plate_audit", beat, ball, aim, mult),
+		"peak": func(at): combat.tally_peak("plate_audit", at),
+		"landing": func(at, heft, chain): return combat.tally_landing("plate_audit", at, heft, chain)},
+	"plate_flywheel": {"target": func(ball, aim): return combat.tally_target("plate_flywheel", ball, aim),
+		"tech": func(beat, ball, aim, mult): return combat.tally_tech("plate_flywheel", beat, ball, aim, mult),
+		"peak": func(at): combat.tally_peak("plate_flywheel", at),
+		"landing": func(at, heft, chain): return combat.tally_landing("plate_flywheel", at, heft, chain)},
 	# --- end Tally ---
 	# --- P-C Cannon ultimate ---
 	# --- end Cannon ---

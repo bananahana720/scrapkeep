@@ -130,6 +130,12 @@ const ROWS := {
 		"where": {"synergy_id": "tarn_hold_still"}, "count": 1, "beat": "Hold still. The machine, I mean.", "reward": {"cosmetic": "outfit_tarn_steady_cap"}},
 	# --- end tarn ---
 	# --- tally (Tally): P-C Tally adds its grant rows here ---
+	"ach_tally_punch_tape": {"name": "Punch Tape", "text": "Fire the ledger clip ten times in one stage.", "on": "synergy_discovered",
+		"where": {"synergy_id": "tally_punch_tape"}, "count": 1, "reward": {"cosmetic": "trail_tally_punch_tape"}},
+	"ach_tally_eyeshade": {"name": "Eyeshade", "text": "Settle twenty clips with Plate Return in one run.", "on": "synergy_discovered",
+		"where": {"synergy_id": "tally_eyeshade"}, "count": 1, "reward": {"cosmetic": "outfit_tally_eyeshade"}},
+	"ach_tally_books_balanced": {"name": "Books Balanced", "text": "Settle six clips with one landing.", "hidden": true, "on": "synergy_discovered",
+		"where": {"synergy_id": "tally_books_balanced"}, "count": 1, "beat": "The books balance on the drop.", "reward": {"cosmetic": "shell_tally_abacus"}},
 	# --- end tally ---
 	# --- remembered_cannon (the Cannon): P-C Cannon adds its grant rows here ---
 	# --- end remembered_cannon ---

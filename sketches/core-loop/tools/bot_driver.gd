@@ -2642,16 +2642,40 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 
 # Tally's reader runs a card per press, not while held: the hands turn a held trigger into one
 # press every CARD_PRESS_GAP seconds. Since the skill bar her reader holds one card (Balance Due)
-# on slot 1 and the bays are gone, so there is no bay to keep loaded.
+# on slot 1 and the bays are gone, so there is no bay to keep loaded. Slots 2 and 3 and Q go
+# through the shared hands; Q also fires when her gather plate lies within TALLY_PLATE_REACH
+# with TALLY_PLATE_CROWD enemies within TALLY_PLATE_RADIUS of it (pilots/tally.md section 9).
+const TALLY_PLATE_REACH := 45.0
+const TALLY_PLATE_CROWD := 3
+const TALLY_PLATE_RADIUS := 6.0
+
+
 func _card_hands() -> void:
 	if game.player.abilities.cap(AbilityState.WEAPON, "cards", null) == null:
 		return
+	_tally_plate_hands()
 	if not source.hold.get("fire_held", false):
 		return
 	source.hold.erase("fire_held")
 	if ticks - _card_press_tick >= int(ceil(CARD_PRESS_GAP * Engine.physics_ticks_per_second)):
 		source.press["fire_pressed"] = true
 		_card_press_tick = ticks
+
+
+func _tally_plate_hands() -> void:
+	var combat = game.get("combat")
+	if combat == null or _ult_wait > 0.0 or _set_piece_up() or _cast_phase != "":
+		return
+	if String(game.player.abilities.ultimate().get("state", "")) != AbilityState.READY:
+		return
+	var plate: Dictionary = combat.get("plate") if combat.get("plate") != null else {}
+	if plate.is_empty() or game.player.ball_position().distance_to(plate["at"]) > TALLY_PLATE_REACH:
+		return
+	if _enemies_within(plate["at"], TALLY_PLATE_RADIUS) < TALLY_PLATE_CROWD:
+		return
+	source.press["ultimate_pressed"] = true
+	_ult_wait = ULT_RETRY
+	_totals["ult_presses"] = int(_totals["ult_presses"]) + 1
 
 
 # A wall (a face steeper than WALL_TILT) within WALL_REACH on the way is rolled around:
