@@ -323,9 +323,7 @@ func _alpha_terrain_cost_fixture() -> void:
 	await physics_frame
 	_piece("foundry_cutter", Vector3(-0.456, 0.0, 0.89).normalized())
 	_tech("foundry_cutter", 4, reach_aim)
-	var started := Time.get_ticks_usec()
 	_combat.ultimate._peak(_player.ball_position())
-	print("alpha Reach peak commitment us=", Time.get_ticks_usec() - started)
 	_t.eq("captured alpha Reach peak commits through one selector", _kit.selected_shapes.size(), 1)
 	_t.check("captured alpha Reach peak draws the committed volume", _kit.volume_indicator.shapes.get("rivet_scar", {}) == _kit.selected_shapes[0])
 	var indicator = _kit.volume_indicator
@@ -333,9 +331,7 @@ func _alpha_terrain_cost_fixture() -> void:
 	var changes := [0]
 	var changed := func(): changes[0] += 1
 	indicator._tris.changed.connect(changed)
-	started = Time.get_ticks_usec()
 	indicator._process(0.0)
-	print("alpha Reach unchanged draw us=", Time.get_ticks_usec() - started)
 	_t.eq("captured alpha frozen volume does not rebuild its mesh", changes[0], 0)
 	indicator._tris.changed.disconnect(changed)
 	await _fresh()
@@ -357,9 +353,7 @@ func _alpha_terrain_cost_fixture() -> void:
 	front.set_physics_process(false)
 	_t.check("captured bowl front target has an independent clear ray", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(arena_at, front.global_position, 1)).is_empty())
 	var health_before: float = front.hp
-	started = Time.get_ticks_usec()
 	_combat.ultimate._strike(_player.ball_position())
-	print("alpha bowl landing commitment us=", Time.get_ticks_usec() - started)
 	_t.eq("captured alpha bowl landing commits through one selector", _kit.selected_shapes.size(), 1)
 	_t.check("captured alpha bowl landing retains exposed volume", not (_kit.selected_shapes[0]["cells"] as Array).is_empty())
 	_t.eq("captured alpha bowl landing hits the exposed target exactly once", [snappedf(health_before - float(front.hp), 0.01), _hits(front).size()], [Ultimate.LANDING_DAMAGE * Ultimate.HEFT_MULT[2], 1])
