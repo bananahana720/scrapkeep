@@ -59,6 +59,8 @@ class Images(unittest.TestCase):
                     return image
                 scope = renderer_functions()
                 scope['bpy'] = SimpleNamespace(data=SimpleNamespace(images=SimpleNamespace(load=read, remove=removed.append)))
+                scope['np'] = SimpleNamespace(float32=float, empty=lambda count, dtype: SimpleNamespace(
+                    reshape=lambda *shape: shape))
                 with self.assertRaisesRegex(RuntimeError, str(path)):
                     scope['load'](path)
                 if kind in ('empty_image', 'wrong_size', 'no_pixels'):
