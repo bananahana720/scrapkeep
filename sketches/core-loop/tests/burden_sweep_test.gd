@@ -31,14 +31,20 @@ class FixedTarget extends Node3D:
 class StrikeRecorder extends Node:
 	var hits := 0
 	var kinds: Array = []
+	var build
 
 	func strike(enemy: Node3D, kind: String, damage: float) -> void:
 		enemy.damage += damage
 		hits += 1
 		kinds.append(kind)
+		build._on_struck_trigger(enemy, kind, damage)
 
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
 	var payouts: Array = []
 	for id in Parts.ids():
 		if Parts.def(id).effect.get("do", "") == "burden_payout":
@@ -78,12 +84,14 @@ func _measure(held: Array, proc := 1.0, refresh_before: Array = []) -> Dictionar
 	root.add_child(target)
 	root.add_child(recorder)
 	build.ctx = {"spawner": recorder}
+	recorder.build = build
 	build.sheet = BuildSheet.from_parts(held)
 	var effects := ItemEffects.new(build)
 	effects.refresh(refresh_before)
 	effects.refresh(held)
 	var hit: float = BASE_HIT * build.sheet.mod("weapon_damage")
 	var bus := Triggers.Bus.new()
+	build.bus = bus
 	bus.post(Triggers.Commitment.new(Triggers.Kind.ON_HIT, "line", proc, Vector3.ZERO, target, hit))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9000
@@ -166,6 +174,11 @@ func _edges(id: String, d: Resource) -> void:
 		for i in 10:
 			repeated.append(cost)
 		_t.near("ten copies of %s count as ten burdens" % cost, _measure(repeated)["bonus"], s["bonus"], 0.000001)
+	var rule: String = d.stack_rule
+	d.stack_rule = "linear"
+	var uncapped := _measure(held)
+	d.stack_rule = rule
+	_t.check("positive control: a linear payout breaks the cap", uncapped["bonus"] >= d.stack_cap, str(uncapped["bonus"]))
 
 
 func _card(id: String, d: Resource) -> void:

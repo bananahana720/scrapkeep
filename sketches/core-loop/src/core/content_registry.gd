@@ -70,6 +70,7 @@ const TABLES := {
 
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
+# 2026-10-11, sg5-burden-sweep: parts.rows adds the capped Load Dividend payout.
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "028b78afb8c873159c19c8128f52c513d1e5e29d54ec952a858fe486945d8275",  # 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
 	"cosmetics.ROWS": "26e34e89d31537480501baf914721349d737fe04d233bedd3bc33b1f5a8e0283",  # 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): Downbeat trail, Curtain Call decal tile 9, Till Bell companion skin, all pending art; was c0f10ab8, P-R7: delivered decal mask ids, trails and SPIL-9 paints
@@ -97,7 +98,7 @@ const GOLDEN_HASHES := {
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned
 	"boss.codex_entries.WAKING": "6b6074ef43fd2de4eb04f2c60d971eb7922d6e152e532b9b94454a8e017f60ea",
 	"boss.codex_entries.MIND": "6acfd19449f8802b806ba76093fe15bd0c938c0a2f110230d9d38a5cbd004d87",
-	"parts.rows": "374d860be797b340774f2529139aeb4f5f115420cab91c33298533ddc16cfb7b",  # 2026-10-08 (wave 11 GP-parts): six new parts and four synergies
+	"parts.rows": "ef735e5336f2a7e6fea4b12c9a4cd3936368accdb48fca9e3de8f117fca5b486",  # SG5: was 374d860be797b340774f2529139aeb4f5f115420cab91c33298533ddc16cfb7b (wave 11 GP-parts)
 	"item_gen.RARITY": "abc72c1edec3fe06f0acffa49bab184750d7edb905317f93e66b8a9910bdb2c5",  # 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 8a6773cc
 }
 
