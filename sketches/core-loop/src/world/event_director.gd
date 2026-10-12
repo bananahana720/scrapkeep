@@ -511,7 +511,11 @@ func _park_capacity(candidate: Dictionary) -> bool:
 			if state.weather and state.row.kind != "clear" and candidate.row.kind != "clear":
 				return false
 		elif not state.weather:
-			var progress_s: float = state.collapse_s if state.row.kind == "collapse" else state.live_elapsed_s
+			var progress_s: float = state.live_elapsed_s
+			if state.row.kind == "collapse":
+				progress_s = state.collapse_s
+			elif state.row.kind != "drain" and (state.row.kind in ["flood_fill", "flash_flood"] or state.row.effect.get("material") == "water"):
+				progress_s = state.rise_s
 			var settled := float(state.row.live_s) == 0.0 and progress_s >= maxf(0.0, float(state.row.effect.get("fill_s", 0.0)))
 			ground += int(_park_ground(state.row) and not settled)
 			family += int(state.row.family == candidate.row.family)
