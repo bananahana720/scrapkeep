@@ -43,11 +43,12 @@ class WaterClock:
 class WaterView:
 	extends Flood
 	var site := {}
+	var geometry := {}
 	var surface: WaterSurface
 	var query_xz := Vector2.ZERO
 	func in_basin(point: Vector3) -> bool:
 		query_xz = Vector2(point.x, point.z)
-		return visible and ParkMap.footprint_contains(site, Vector2(point.x, point.z))
+		return visible and ParkMap.footprint_contains(geometry.site, query_xz, 0.0, Vector2.INF, geometry.half)
 	func surface_y() -> float:
 		return surface.height(query_xz) + cycle.metres
 	func render() -> void:
@@ -147,9 +148,14 @@ func setup(world_ref) -> void:
 			continue
 		var site: Dictionary = _sites[row.site]
 		var at := _at(site)
-		var record := {"site": site, "at": at, "overlay": null}
+		var geometry := {"site": site, "at": at, "half": ParkMap.footprint_half_extents(site),
+			"yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": maxf(0.0, float(row.effect.get("strike_m", 0.0)))}
+		if row.kind == "lightning":
+			geometry.half = Vector2.ONE * geometry.strike_m
+			geometry.yaw = 0.0
+		var record := {"site": site, "at": at, "geometry": geometry, "overlay": null}
 		if row.kind in ["flood_fill", "drain", "flash_flood"]:
-			record.water_surface = _prepare_water(site)
+			record.water_surface = _prepare_water(geometry)
 		if row.kind in ["cave_in", "collapse", "impact"]:
 			_prepare_overlay(row, record)
 		_prepared[row.id] = record
@@ -173,7 +179,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 		"telegraph":
 			var state: Dictionary = _prepared[row.id].duplicate()
 			state.merge({"phase": "telegraph", "hit": false, "elapsed_s": 0.0, "depth_m": 0.0,
-				"water": null, "mark": _mark(row, ctx.at), "announced_s": ctx.clock_s}, true)
+				"water": null, "mark": _mark(row, state.geometry), "announced_s": ctx.clock_s}, true)
 			active[row.id] = state
 		"land":
 			var state: Dictionary = active[row.id]
@@ -212,6 +218,7 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	add_child(water)
 	water.setup()
 	water.site = state.site
+	water.geometry = state.geometry
 	water.cycle = WaterClock.new()
 	var depth := minf(ParkSchema.MAX_EVENT_WATER_M, maxf(0.0, float(row.effect.get("depth_m", 0.0))))
 	state.start_depth_m = depth if row.kind == "drain" else 0.0
@@ -220,7 +227,7 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 			state.start_depth_m = existing.cycle.metres
 	state.depth_m = state.start_depth_m
 	water.cycle.metres = state.depth_m
-	var half := ParkMap.footprint_half_extents(state.site)
+	var half: Vector2 = state.geometry.half
 	var centre := Vector2(state.at.x, state.at.z)
 	water.configure({"centre": centre, "radius": half.length(), "plane_centre": centre,
 		"plane_size": half * 2.0, "depth": depth}, state.at.y, state.at)
@@ -235,11 +242,11 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	_water_field.refresh()
 
 
-func _prepare_water(site: Dictionary) -> WaterSurface:
+func _prepare_water(geometry: Dictionary) -> WaterSurface:
 	var surface := WaterSurface.new()
-	var half := ParkMap.footprint_half_extents(site)
-	var centre := Vector2(float(site.at[0]), float(site.at[1]))
-	var yaw := deg_to_rad(float(site.yaw_deg))
+	var half: Vector2 = geometry.half
+	var centre := Vector2(geometry.at.x, geometry.at.z)
+	var yaw: float = geometry.yaw
 	var low := Vector2.INF
 	var high := -Vector2.INF
 	for corner in [Vector2(-half.x, -half.y), Vector2(half.x, -half.y), half, Vector2(-half.x, half.y)]:
@@ -338,10 +345,10 @@ func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
 		_overlay_map.source = _original_map
 		world.terrain.maps[world.terrain.stage - 1] = _overlay_map
 	var site: Dictionary = record.site
-	var half := ParkMap.footprint_half_extents(site)
+	var half: Vector2 = record.geometry.half
 	var radius := minf(half.x, half.y)
 	var at: Vector3 = record.at
-	var yaw := deg_to_rad(float(site.yaw_deg))
+	var yaw: float = record.geometry.yaw
 	var terrain = world.terrain
 	var kind: String = row.kind
 	# Collider vertices and terrain.height use this identical surface function.
@@ -396,8 +403,9 @@ func _set_overlay(row: Dictionary, changed: bool) -> void:
 func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 	if row.kind not in ["impact", "lightning"] or state.hit:
 		return
-	var radius := maxf(0.0, float(row.effect.get("strike_m", 0.0)))
-	if Vector2(ctx.ball.x - state.at.x, ctx.ball.z - state.at.z).length() > radius or absf(ctx.ball.y - state.at.y) > radius:
+	var radius: float = state.geometry.strike_m
+	var at: Vector3 = state.geometry.at
+	if Vector2(ctx.ball.x - at.x, ctx.ball.z - at.z).length() > radius or absf(ctx.ball.y - at.y) > radius:
 		return
 	state.hit = true
 	var amount := maxi(0, ceili(float(row.effect.get("damage", 0.0))))
@@ -408,39 +416,72 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 		world.ctx.player.set_velocity_now(velocity, "natural_event")
 
 
-func _mark(row: Dictionary, at: Vector3, landed := false) -> Node3D:
+func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var mark := Node3D.new()
 	add_child(mark)
-	mark.position = at + Vector3.UP * 0.15
+	mark.position = geometry.at + Vector3.UP * 0.15
+	mark.rotation.y = geometry.yaw
 	var form: String = row.telegraph.form
 	var spec: Dictionary = Kinds.world_row(world.events.PARK_LAND_FACTS[form] if landed else form)
-	var half := ParkMap.footprint_half_extents(_sites[row.site])
+	var half: Vector2 = geometry.half
 	var mesh := MeshInstance3D.new()
 	if spec.shape == "burst":
 		var shape := SphereMesh.new()
-		shape.radius = minf(half.x, half.y) * 0.25
-		shape.height = shape.radius * 2.0
+		shape.radius = 1.0
+		shape.height = 2.0
 		mesh.mesh = shape
+		mesh.scale = Vector3(half.x, 0.3, half.y)
 	elif spec.shape == "cross":
 		var shape := BoxMesh.new()
 		shape.size = Vector3(half.x * 2.0, 0.1, 0.3)
 		mesh.mesh = shape
 		var other := MeshInstance3D.new()
-		other.mesh = shape
-		other.rotation.y = PI * 0.5
+		var other_shape := BoxMesh.new()
+		other_shape.size = Vector3(0.3, 0.1, half.y * 2.0)
+		other.mesh = other_shape
 		other.material_override = Palette.unshaded(spec.color)
 		mark.add_child(other)
 	elif spec.shape == "wave":
 		mesh.mesh = _wave_mesh(half)
 	else:
 		var shape := TorusMesh.new()
-		shape.inner_radius = maxf(0.1, minf(half.x, half.y) - 0.3)
-		shape.outer_radius = minf(half.x, half.y)
+		shape.inner_radius = 0.97
+		shape.outer_radius = 1.0
 		mesh.mesh = shape
-		mesh.scale.y = 0.05
+		mesh.scale = Vector3(half.x, 0.05, half.y)
 	mesh.material_override = Palette.unshaded(spec.color)
 	mark.add_child(mesh)
+	if row.kind != "lightning":
+		var boundary := Node3D.new()
+		boundary.name = "Footprint"
+		mark.add_child(boundary)
+		var outline := MeshInstance3D.new()
+		outline.mesh = _footprint_mesh(geometry)
+		outline.material_override = Palette.unshaded(spec.color)
+		boundary.add_child(outline)
 	return mark
+
+
+func _footprint_mesh(geometry: Dictionary) -> ArrayMesh:
+	var half: Vector2 = geometry.half
+	var vertices := PackedVector3Array()
+	var indices := PackedInt32Array()
+	for inset in [0.0, 0.3]:
+		var edge: Vector2 = (half - Vector2.ONE * float(inset)).max(Vector2.ZERO)
+		for corner in [Vector2(-edge.x, -edge.y), Vector2(edge.x, -edge.y), edge, Vector2(-edge.x, edge.y)]:
+			var point: Vector2 = corner.rotated(-float(geometry.yaw)) + Vector2(geometry.at.x, geometry.at.z)
+			var y: float = world.terrain.height(point.x, point.y) - geometry.at.y
+			vertices.append(Vector3(corner.x, y, corner.y))
+	for k in 4:
+		var next := (k + 1) % 4
+		indices.append_array([k, next, k + 4, next, next + 4, k + 4])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
 func _wave_mesh(half: Vector2) -> ArrayMesh:
@@ -465,7 +506,7 @@ func _wave_mesh(half: Vector2) -> ArrayMesh:
 
 func _show_landing(row: Dictionary, state: Dictionary) -> void:
 	state.mark.free()
-	state.mark = _mark(row, state.at, true)
+	state.mark = _mark(row, state.geometry, true)
 
 
 func _on_world_sound(kind: String, at: Vector3) -> void:
