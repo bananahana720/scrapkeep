@@ -380,7 +380,12 @@ test("a dead pid slot is reclaimed without waiting", async () => {
 
 // Rule: a sandboxed runner records a namespace pid that answers EPERM on the
 // host; only the claim's heartbeat mtime decides liveness.
-test("a fresh unkillable-pid claim holds its slot", async () => {
+test("a fresh unkillable-pid claim holds its slot", async (t) => {
+  const kill = process.kill.bind(process);
+  t.mock.method(process, "kill", (pid, signal) => {
+    if (pid === 1 && signal === 0) throw Object.assign(new Error("fixture EPERM"), { code: "EPERM" });
+    return kill(pid, signal);
+  });
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-young-"));
   try {
     assert.throws(() => process.kill(1, 0), { code: "EPERM" });
@@ -404,7 +409,12 @@ test("a fresh unkillable-pid claim holds its slot", async () => {
   }
 });
 
-test("a stale unkillable-pid claim is reclaimed at once", async () => {
+test("a stale unkillable-pid claim is reclaimed at once", async (t) => {
+  const kill = process.kill.bind(process);
+  t.mock.method(process, "kill", (pid, signal) => {
+    if (pid === 1 && signal === 0) throw Object.assign(new Error("fixture EPERM"), { code: "EPERM" });
+    return kill(pid, signal);
+  });
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-slot-"));
   let lease;
   try {

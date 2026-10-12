@@ -53,27 +53,38 @@ export function testScripts(directory) {
 // tests cannot push the measurement over its cap. Only the head of the file is read, so
 // a mention further down (or in a string) does not opt a test in.
 const SOLO_MARKER = /^#\s*smoke:\s*solo\b/;
+const BOT_MARKER = /^#\s*smoke:\s*bots\b/;
 const MARKER_LINES = 5;
 
 // A whole-run test that legitimately outgrows the cap declares a longer one in the same
 // head comment ("# smoke: solo timeout=300s"). It can only raise the cap, never past 360 s.
 const TIMEOUT_MARKER = /^#\s*smoke:.*\btimeout=(\d+)s\b/;
 const MAX_TIMEOUT_MS = 360_000;
+// Whole-run bot proofs have a separate tier and always use the solo phase.
+const MAX_BOT_TIMEOUT_MS = 1_800_000;
+const BOT_TIMEOUT_MS = 1_200_000;
+
+export function isBot(source) {
+  return source
+    .split("\n", MARKER_LINES)
+    .some((line) => BOT_MARKER.test(line.replace(/\r$/, "")));
+}
 
 export function testTimeoutMs(source) {
+  const bots = isBot(source);
   for (const line of source.split("\n", MARKER_LINES)) {
     const match = TIMEOUT_MARKER.exec(line.replace(/\r$/, ""));
     if (match) {
-      return Math.min(MAX_TIMEOUT_MS, Math.max(TIMEOUT_MS, Number(match[1]) * 1000));
+      return Math.min(bots ? MAX_BOT_TIMEOUT_MS : MAX_TIMEOUT_MS, Math.max(TIMEOUT_MS, Number(match[1]) * 1000));
     }
   }
-  return TIMEOUT_MS;
+  return bots ? BOT_TIMEOUT_MS : TIMEOUT_MS;
 }
 
 export function isSolo(source) {
   return source
     .split("\n", MARKER_LINES)
-    .some((line) => SOLO_MARKER.test(line.replace(/\r$/, "")));
+    .some((line) => SOLO_MARKER.test(line.replace(/\r$/, "")) || BOT_MARKER.test(line.replace(/\r$/, "")));
 }
 
 export function isSoloScript(directory, script) {
@@ -151,7 +162,7 @@ export function splitFlags(text) {
 }
 
 export function parseArgs(argv, env = {}) {
-  const options = { sketches: [], tests: [], flags: null, receipt: null, strict: false };
+  const options = { sketches: [], tests: [], flags: null, receipt: null, strict: false, bots: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--sketch" && argv[i + 1]) options.sketches.push(argv[++i]);
@@ -159,10 +170,11 @@ export function parseArgs(argv, env = {}) {
     else if (arg === "--flags" && argv[i + 1] !== undefined) options.flags = argv[++i];
     else if (arg === "--receipt" && argv[i + 1]) options.receipt = argv[++i];
     else if (arg === "--strict-verdict") options.strict = true;
+    else if (arg === "--bots") options.bots = true;
   }
   options.flags = splitFlags(options.flags ?? env.SMOKE_FLAGS);
   options.named = options.tests.length > 0;
-  options.receipt ??= options.named ? "named" : "smoke";
+  options.receipt ??= options.named ? "named" : options.bots ? "bots" : "smoke";
   return options;
 }
 
@@ -409,8 +421,8 @@ export function runPasses(results) {
 
 // A gate runs the shipping defaults, so it takes no launch flags from anywhere.
 export function gateFlagsError(options) {
-  if (options.receipt === "gate" && options.flags.length > 0) {
-    return "sketch:smoke: a gate run (--receipt gate) refuses launch flags from --flags or SMOKE_FLAGS because a gate runs the shipping defaults";
+  if (["gate", "gate-bots"].includes(options.receipt) && options.flags.length > 0) {
+    return `sketch:smoke: a gate run (--receipt ${options.receipt}) refuses launch flags from --flags or SMOKE_FLAGS because a gate runs the shipping defaults`;
   }
   return null;
 }
@@ -428,7 +440,7 @@ export function emitReceipt(receipt, write = writeReceipt, log = console.log) {
   }
 }
 
-export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results }) {
+export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results, botTierNotRun = [] }) {
   const rows = results.map((result) => ({
     label: result.label,
     ok: result.ok,
@@ -468,6 +480,7 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     wall_ms: wallMs,
     stems,
     results: rows,
+    bot_tier_not_run: botTierNotRun,
     totals,
     ok: totals.failed === 0,
   };
@@ -581,17 +594,29 @@ async function main() {
     return;
   }
   const named = options.named;
+  const botTierNotRun = [];
   const plans = sketches.map((directory) => {
-    const scripts = named ? selectTests(testScripts(directory), options.tests) : testScripts(directory);
+    const selected = named ? selectTests(testScripts(directory), options.tests) : testScripts(directory);
+    const scripts = selected.filter((script) => {
+      const bots = isBot(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"));
+      if (options.bots) return bots;
+      if (named || !bots) return true;
+      botTierNotRun.push(path.posix.basename(script));
+      return false;
+    });
     return { directory, scripts };
   });
   if (named && plans[0].scripts.length === 0) {
     console.error(noMatchMessage(path.basename(plans[0].directory), options.tests));
     process.exit(2);
   }
+  if (options.bots && plans.every((plan) => plan.scripts.length === 0)) {
+    console.error("sketch:smoke found no bot-tier tests in the selected sketches");
+    process.exit(2);
+  }
   const waited = await acquireMachine();
   if (waited > 0) console.log(`sketch:smoke waited ${(waited / 1000).toFixed(0)}s for the machine`);
-  const width = named ? Math.min(NAMED_WIDTH, jobCount()) : jobCount();
+  const width = options.bots ? 1 : named ? Math.min(NAMED_WIDTH, jobCount()) : jobCount();
   const startedAt = new Date().toISOString();
   const started = Date.now();
   const results = [];
@@ -603,7 +628,7 @@ async function main() {
     const base = ["--headless", "--path", directory];
     const quarantine = readQuarantine(directory);
     results.push(runSync({ label: `${name} import`, args: [...base, "--import"] }));
-    if (!named) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
+    if (!named && !options.bots) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
       const timeoutMs = testTimeoutMs(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"));
@@ -621,6 +646,10 @@ async function main() {
   console.log(`slowest ${slowest.length}:`);
   for (const result of slowest) console.log(`  ${(result.ms / 1000).toFixed(1)}s ${result.label}`);
   const skipped = results.filter((result) => result.skips.length > 0);
+  if (!named && !options.bots) {
+    console.log(`bot tier: ${botTierNotRun.length} not run (npm run sketch:bots)`);
+    for (const name of botTierNotRun) console.log(`  ${name}`);
+  }
   console.log(`skipped ${skipped.length} (passed without running every check; not a failure):`);
   for (const result of skipped) {
     console.log(`  ${result.label}`);
@@ -656,6 +685,7 @@ async function main() {
     wallMs: Date.now() - started,
     stems: Object.fromEntries(sketches.map((directory) => [path.relative(root, directory), countStems(directory)])),
     results,
+    botTierNotRun,
   });
   const receiptFailure = emitReceipt(receipt);
   process.exit(receiptFailure ?? (ok ? 0 : 1));
