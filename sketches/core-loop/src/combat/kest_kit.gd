@@ -81,6 +81,7 @@ func register_kest() -> void:
 		_last_discovery_frame = Engine.get_physics_frames())
 	ctx.events.world_entered.connect(homecoming)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear_payloads())
+	ctx.events.run_ended.connect(func(_won: bool): clear_payloads())
 	ctx.events.player_died.connect(clear_payloads)
 	ctx.events.run_started.connect(func(_class_id: String):
 		clear_payloads()
