@@ -192,8 +192,12 @@ SIL_APPROACH = ("over_shoulder", "three_q")
 SIL_RAM_OUT_M = 0.5  # KF7c round 3: raised from 0.4 to hold the level rams (three_q 0.570 and 0.603)
 SIL_RAM_OUT_FRAC = 0.3
 SIL_RAM_COUNT = 2
-SIL_RAM_MIN_Y = 4.0  # KF7c round 3: a ram's lowest vertex, metres over the base (7d87f33: 0.075, red)
-SIL_RAM_STROKE_DEG = 20.0  # KF7c round 3: a ram's axis against its jaw's stroke (7d87f33: 30.3, red)
+# 2026-10-11: concept B replaced the level rams, owner ruling 2026-10-11.
+SIL_RAM_BASE_Z = 2.0
+SIL_RAM_DIAMETER_RATIO = 2.0
+SIL_RAM_EXTENSION_RATIO = 2.0
+SIL_RAM_EYE_ERROR = 0.05
+RAM_RIG = []
 SIL_TOOTH_OUT_M = 0.5
 SIL_TOOTH_COUNT = 4
 # KF7c round 3 note: the 3D tooth height line (SIL_TOOTH_MIN_H) guards the teeth's size: the outline
@@ -530,25 +534,61 @@ def _jaw_standoff(pts, labels, faces, jaw):
     return worst
 
 
-def _ram_stroke_angle(points):
-    """Degrees between a ram's axis (the centroid of its innermost 30% of radial extent to that of its
-    outermost 30%) and the stroke of its outer end: the direction that point moves as its jaw leans
-    out about its hinge line (the jaw is rigid: the line through HINGE along the jaw frame's Y, the
-    jaw being JawR on the +X side, JawL on the -X side). Godot frame; unsigned."""
-    rs = [math.hypot(p[0], p[2]) for p in points]
-    lo, hi = min(rs), max(rs)
+def ram_world(rig, key):
+    obj, point = rig[key]
+    return obj.matrix_world @ Vector(point)
 
-    def centroid(sel):
-        return tuple(sum(p[i] for p in sel) / len(sel) for i in range(3))
 
-    ci = centroid([p for p, r in zip(points, rs) if r <= lo + 0.3 * (hi - lo)])
-    co = centroid([p for p, r in zip(points, rs) if r >= hi - 0.3 * (hi - lo)])
-    axis = _unit(_sub(co, ci))
-    a = 0.0 if co[0] >= 0.0 else math.pi  # the Blender bearing of its jaw's middle
-    hinge = (JAW_R[1] * math.cos(a), JAW_Z[0], -JAW_R[1] * math.sin(a))
-    tangent = (-math.sin(a), 0.0, -math.cos(a))
-    stroke = _unit(_cross(tangent, _sub(co, hinge)))
-    return math.degrees(math.acos(min(1.0, abs(_dot(axis, stroke)))))
+def ram_checks(root):
+    """Fixed pins, cylinder proportions and jaw-following motion, sampled at each baked frame."""
+    fails = []
+    snapshot = rest(root)
+    objs = {o.name: o for o in common.tree(root)}
+    moving = [clip for clip in CLIPS if any(n in controls(clip) for n in ("JawL", "JawR"))]
+    for rig in RAM_RIG:
+        label = rig["label"]
+        base = ram_world(rig, "base")
+        for metric, value, ok, want in (
+            ("base_pin_z_m", base.z, base.z >= SIL_RAM_BASE_Z, ">=2.0"),
+            ("base_on_clamp", int(rig["on_clamp"]), rig["on_clamp"], "=1 lower ring ear"),
+            ("barrel_rod_diameter_ratio", rig["barrel_r"] / rig["rod_r"],
+             rig["barrel_r"] / rig["rod_r"] >= SIL_RAM_DIAMETER_RATIO, ">=2.0"),
+        ):
+            if not sil_say(ok, "reactor", "3d", label, metric, value, want):
+                fails.append(label + " " + metric)
+        axis = (ram_world(rig, "mouth") - base).normalized()
+        closed = (ram_world(rig, "eye") - ram_world(rig, "mouth")).dot(axis) - rig["eye_r"]
+        max_eye = max_axis = 0.0
+        samples = 0
+        opened = 0.0
+        for clip in moving:
+            frames = max(10, int(round(CLIPS[clip][0] * FPS)))
+            for f in range(frames + 1):
+                reset_pose(root, snapshot)
+                pose(clip, f / frames, objs, snapshot)
+                bpy.context.view_layer.update()
+                eye, lug = ram_world(rig, "eye"), ram_world(rig, "lug")
+                b, mouth = ram_world(rig, "base"), ram_world(rig, "mouth")
+                axis = (mouth - b).normalized()
+                max_eye = max(max_eye, (eye - lug).length)
+                max_axis = max(max_axis, (eye - b).cross(axis).length)
+                samples += 1
+                if clip == "active" and f == frames:
+                    opened = (eye - mouth).dot(axis) - rig["eye_r"]
+        ratio = opened / closed if closed > 0 else 0.0
+        print("CHECK ram_motion %s rest_exposed_m=%.4f active_exposed_m=%.4f samples=%d clips=%s" %
+              (label, closed, opened, samples, ",".join(moving)))
+        for metric, value, ok, want in (
+            ("active_rest_exposed_ratio", ratio, closed > 0 and ratio >= SIL_RAM_EXTENSION_RATIO, ">=2.0"),
+            ("eye_lug_error_m", max_eye, max_eye <= SIL_RAM_EYE_ERROR, "<=0.05 every jaw frame"),
+            ("barrel_axis_eye_error_m", max_axis, max_axis <= SIL_RAM_EYE_ERROR, "<=0.05 every jaw frame"),
+        ):
+            if not sil_say(ok, "reactor", "animation", label, metric, value, want):
+                fails.append(label + " " + metric)
+        reset_pose(root, snapshot)
+    if len(RAM_RIG) != 2:
+        fails.append("exactly two jaw rams required")
+    return fails
 
 
 def silhouette(root):
@@ -586,26 +626,15 @@ def silhouette(root):
     # under, and no ram on any camera, which the ram threshold also failed to predict; coordinator
     # ruling 4 drops the ram read for the alpha (a gap for Andrew), and ruling 3 turns a camera-
     # dependent line that disagrees with the read into info. The thresholds above are unchanged.
-    sil_info("reactor", best_ram[1], "rams", "count(outside_m>=%.1f,outside_frac>=%.1f)" % (SIL_RAM_OUT_M, SIL_RAM_OUT_FRAC),
-             best_ram[0], ">=%d on over_shoulder or three_q" % SIL_RAM_COUNT,
-             "KF7c round 4, ram read dropped for the alpha, coordinator ruling 4")
+    if not sil_say(best_ram[0] >= SIL_RAM_COUNT, "reactor", best_ram[1], "rams",
+                   "count(outside_m>=%.1f,outside_frac>=%.1f)" % (SIL_RAM_OUT_M, SIL_RAM_OUT_FRAC),
+                   best_ram[0], ">=%d on over_shoulder or three_q" % SIL_RAM_COUNT):
+        fails.append("ram camera count")
     sil_info("reactor", best_tooth[1], "teeth", "count(outside_m>=%.1f)" % SIL_TOOTH_OUT_M, best_tooth[0],
              ">=%d on over_shoulder or three_q" % SIL_TOOTH_COUNT,
              "KF7c round 4, jaw read at 7d87f33 came from under (count there %d), look5 read decides"
              % tooth_counts.get("under", 0))
-    # 2026-10-11 (w13 KF7c round 3): the outline count above passed the 7d87f33 rams, which read as
-    # legs. Two 3D lines hold the new form: every ram stands clear of the ground (its lowest vertex
-    # over SIL_RAM_MIN_Y, so no ram runs down toward the ground plane), and each ram's axis lies within
-    # SIL_RAM_STROKE_DEG of its jaw's stroke (the way its outer end moves when the jaw leans about
-    # HINGE), so the body's ram and the jaw lean it drives share one line. Both read the mesh.
-    for ram in rams:
-        low = min(p[1] for p in by_label[ram])
-        if not sil_say(low >= SIL_RAM_MIN_Y, "reactor", "3d", ram, "min_y_m", low, ">=%.1f" % SIL_RAM_MIN_Y):
-            fails.append(ram + " low")
-        angle = _ram_stroke_angle(by_label[ram])
-        if not sil_say(angle <= SIL_RAM_STROKE_DEG, "reactor", "3d", ram, "stroke_angle_deg", angle,
-                       "<=%.1f" % SIL_RAM_STROKE_DEG):
-            fails.append(ram + " stroke")
+    fails.extend(ram_checks(root))
     rows = {}
     for t in teeth:
         ys = [p[1] for p in by_label[t]]
@@ -872,6 +901,17 @@ def build():
     hardpoint(root)
     seam_ring(root)
     bpy.context.view_layer.update()
+    RAM_RIG.clear()
+    for side in (1, -1):
+        barrel = bpy.data.objects["Drum"]
+        j = bpy.data.objects["JawR" if side > 0 else "JawL"]
+        RAM_RIG.append({"label": ram_label(0 if side > 0 else 180),
+                        "base": (barrel, ram_point(RAM_BARREL[side][0], side)),
+                        "mouth": (barrel, ram_point(RAM_BARREL[side][1] + RAM_GLAND[0], side)),
+                        "eye": (j, ram_point(RAM_EYE_X) - HINGE),
+                        "lug": (j, ram_point(RAM_EYE_X) - HINGE),
+                        "on_clamp": False, "barrel_r": RAM_BARREL_R, "rod_r": RAM_ROD_R,
+                        "eye_r": RAM_EYE_R})
     return root
 
 
