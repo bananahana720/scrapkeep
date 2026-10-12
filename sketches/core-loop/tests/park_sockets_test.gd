@@ -163,7 +163,14 @@ func _opening_counts(graph, records: Array) -> Array:
 func _opening_fixture(sockets: GDScript, count: int) -> Dictionary:
 	if count == 5:
 		var layout: Dictionary = sockets.template(17)
-		var split: Dictionary = layout["sockets"].pop_front()
+		var split := {}
+		for socket in layout["sockets"]:
+			if socket["id"] == "route_0":
+				split = socket
+				break
+		if split.is_empty():
+			return layout
+		layout["sockets"].erase(split)
 		for i in 2:
 			var record: Dictionary = split.duplicate(true)
 			record["id"] = "split_%d" % i
