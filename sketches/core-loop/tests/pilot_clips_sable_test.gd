@@ -2,8 +2,10 @@ extends SceneTree
 
 # PILOT-CLIPS 7.2 items 1-11, using delivered clips and the real game bus.
 # 57 asset checks, 3 base, 33 rest shots, 2 filters, 17 ultimate, 8 slam,
-# 5 ready queue, 4 controls, 1 machinery, 2 velocity, 5 preview, 1 count = 138.
-const EXPECTED := 138
+# 2026-10-12: explicit story targets have no named physical contact. Add two checks
+# for declared contact or the documented 40-percent control-throw fallback.
+# 5 ready queue, 6 controls, 1 machinery, 2 velocity, 5 preview, 1 count = 140.
+const EXPECTED := 140
 const CLASS_ID := "pylon_engineer"
 const Game := preload("res://src/game.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -172,7 +174,10 @@ func _controls(hero, rec: Dictionary, events) -> void:
 			events.slot_cast.emit("special", "arc_discharge", Vector3.ZERO)
 		else:
 			events.line_skill_fired.emit("bank_shot", null, Vector3.ZERO, "enemy")
-		var seconds := (float(contact.get("frame", 1)) - 1.0) / 30.0
+		var resolved: Dictionary = hero._contact_of(rec, clip)
+		var seconds := float(resolved.get("seconds", 0.0))
+		var expected_seconds: float = (float(contact.frame) - 1.0) / 30.0 if contact.has("frame") else 0.4 * rec.animator.get_animation(clip).length
+		_t.check(clip + " resolves declared contact or documented fallback", String(resolved.get("control", "")) == control and is_equal_approx(seconds, expected_seconds))
 		rec.mecha.step(seconds + 0.05)
 		_t.check(clip + " real control moves or records its absence", (node != null and absf(node.rotation_degrees.x - before) > Mecha.LEVER_DEG * 0.5) or (node == null and "SKIP control " + control in rec.mecha.skip_lines))
 		var pod := Trigger.fixture_pod(["Control." + control])
