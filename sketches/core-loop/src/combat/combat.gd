@@ -3115,6 +3115,12 @@ func _spec_for(kind: String) -> Dictionary:
 			var w := warden_spec(stage)
 			w["stage"] = stage
 			w["reach"] = float(ctx.flow.stage_def().get("beacon_radius", 30.0))
+			if ctx.stages == preload("res://src/core/park_defs.gd"):
+				const ParkMap := preload("res://src/world/park/park_map.gd")
+				var map = ctx.terrain.map()
+				if map is ParkMap and map.ok:
+					w.merge(map.warden_spec(), true)
+					w["reach"] = map.reach_m
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}

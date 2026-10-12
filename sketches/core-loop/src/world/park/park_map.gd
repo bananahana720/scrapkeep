@@ -39,6 +39,10 @@ func _init(park_path := FIXTURE) -> void:
 	ok = true
 
 
+func warden_spec() -> Dictionary:
+	return park["landmark"]["warden"].duplicate(true) if ok else {}
+
+
 func _fill() -> void:
 	title = String(park["map"])
 	time_of_day = String(park["time_of_day"])
