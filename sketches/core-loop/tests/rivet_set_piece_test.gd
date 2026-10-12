@@ -11,14 +11,17 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 60
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 67
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
+# 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
+# :356), so its discovery is gone; the three Rivet cards now open in the codex after their
+# framework card, Line True on the tenth punch; the Breach Skid reads player_ball's skid cone.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 60
+	_expected_checks = 67
 	super._initialize()
 
 
@@ -62,6 +65,13 @@ func _damage(enemy: Node3D) -> Array:
 
 func _knob(name: String, value) -> void:
 	_player.tree._knobs[name] = value
+
+
+# Steps the kit's card queue on real physics ticks, as its _physics_process would.
+func _step_cards(ticks: int) -> void:
+	for i in ticks:
+		await physics_frame
+		_kit._step_cards()
 
 
 func _run() -> void:
@@ -124,6 +134,9 @@ func _run() -> void:
 	_game.events.ultimate_landed.disconnect(on_landed)
 	var paid: float = float(landed[0][1]) / maxf(1.0, float(landed[0][0])) / 60.0 if landed.size() == 1 else -1.0
 	_t.near("class I cone reaches 9 m", _kit.breach_reach(), 9.0)
+	_t.check("the skid cone keeps the Shockwave Skid's 10 m and 1.5 m by default",
+		PlayerBall.in_skid_cone(Vector3(9.9, 0.0, 0.0), Vector3.RIGHT) and not PlayerBall.in_skid_cone(Vector3(10.1, 0.0, 0.0), Vector3.RIGHT)
+		and PlayerBall.in_skid_cone(Vector3(-1.4, 0.0, 0.0), Vector3.RIGHT) and not PlayerBall.in_skid_cone(Vector3(-1.6, 0.0, 0.0), Vector3.RIGHT))
 	# The landing's own scrap raises heft after the strike, so the punch is read at the strike's slam rate.
 	var at_strike := func(rows: Array): return rows.map(func(row): return snappedf(float(row[2]) * slam_rate, 0.01))
 	_t.eq("ahead and inside the ring are hit", [at_strike.call(_hits(ahead)), at_strike.call(_hits(behind_close))], [[snappedf(60.0 * paid, 0.01)], [snappedf(60.0 * paid, 0.01)]])
@@ -265,22 +278,60 @@ func _run() -> void:
 	for x in [-1.0, 1.5, 3.0]:
 		_enemy("chaser", x, 1.0)
 	_tech("foundry_cutter", 1)
+	var six := []
+	var on_six := func(id: String, _at: Vector3, count: int, _dealt: float): six.append([id, count])
+	_game.events.ultimate_landed.connect(on_six)
 	ult._strike(_player.ball_position())
-	_t.check("a landing on six queues Full Breach", _kit._cards.has("rivet_full_breach"), str(_kit._cards.keys()))
+	_game.events.ultimate_landed.disconnect(on_six)
+	_t.check("a Foundry Cutter landing on six reports six hits, which Full Breach reads", six.size() == 1 and six[0][0] == "foundry_cutter" and int(six[0][1]) >= 6, str(six))
 	_t.check("a beam that cut three queues the Foundry Cutter card", _kit._cards.has("rivet_foundry_cutter"))
 	_kit._shrugs = 0
 	for i in Kit.SHRUG_HITS:
 		_game.events.cc_ignored.emit("test")
 	_t.check("the 30th ignored hit queues Shrugged Off", _kit._cards.has("rivet_shrugged"))
-	var ids := ["rivet_line_drive", "rivet_foundry_cutter", "rivet_line_true", "rivet_shrugged", "rivet_full_breach"]
+	# The Line Drive card: the pin that follows a punch, on a second machine.
+	var puncher := _enemy("chaser", 20.0)
+	var pinned := _enemy("chaser", 22.0)
+	_kit.last_punch = {"id": puncher.get_instance_id(), "clock": _kit._clock, "punch": 1.0, "dir": Vector3.RIGHT}
+	_game.events.enemy_pinned.emit(pinned, 1.0)
+	_t.check("the pin after a punch queues the Line Drive card", _kit._cards.has("rivet_line_drive"))
+	# B6's rule: a pilot card waits for the framework card it extends, then opens once. The
+	# framework's own landing above opened set_piece; nothing here has opened loaded_line.
+	await _step_cards(4)
+	var log: Array = _combat.discovery_log
+	_t.check("Line Drive waits for loaded_line; Foundry Cutter opens after set_piece",
+		not _combat.discovered.has("rivet_line_drive") and _combat.discovered.has("rivet_shrugged")
+		and log.has("set_piece") and log.find("set_piece") < log.find("rivet_foundry_cutter"), str(log))
+	_combat._discover("loaded_line", _player.ball_position())
+	await _step_cards(8)
+	_kit.last_punch = {"id": puncher.get_instance_id(), "clock": _kit._clock, "punch": 1.0, "dir": Vector3.RIGHT}
+	_game.events.enemy_pinned.emit(pinned, 1.0)
+	await _step_cards(4)
+	_t.check("then each opens in the codex exactly once", ["rivet_line_drive", "rivet_foundry_cutter", "rivet_shrugged"].all(func(id): return log.count(id) == 1)
+		and _kit._cards.is_empty(), "%s left %s" % [log, _kit._cards.keys()])
+	# Line True: ten Line Drive punches landed in one stage.
+	var target := _enemy("chaser", 6.0)
+	for i in Kit.LINE_TRUE_PUNCHES - 1:
+		_kit._punch(target, 10.0, 1.0, Vector3.RIGHT)
+	await _step_cards(4)
+	_t.check("nine punches do not open Line True", not _combat.discovered.has("rivet_line_true") and not _kit._cards.has("rivet_line_true"))
+	_kit._punch(target, 10.0, 1.0, Vector3.RIGHT)
+	await _step_cards(4)
+	_t.check("the tenth punch opens Line True once", log.count("rivet_line_true") == 1, str(log))
+	var ids := ["rivet_line_drive", "rivet_foundry_cutter", "rivet_line_true", "rivet_shrugged"]
 	_t.check("each card is declared with a kit detector", ids.all(func(id): return CodexEntries.ids().has(id) and CodexEntries.DETECTORS[id]["script"] == "res://src/combat/rivet_kit.gd"))
-	var grants := {"ach_rivet_line_true": "trail_rivet_swarf", "ach_rivet_shrugged": "outfit_rivet_hood", "ach_rivet_full_breach": "shell_rivet_calibrated"}
+	var grants := {"ach_rivet_line_true": "trail_rivet_swarf", "ach_rivet_shrugged": "outfit_rivet_hood"}
 	var grants_ok := true
 	for id in grants:
 		var row: Dictionary = Achievements.row(id)
 		grants_ok = grants_ok and row.get("on") == "synergy_discovered" and not row["where"].has("first_time") \
 			and Achievements.reward_of(id).get("cosmetic", "") == grants[id]
-	_t.check("three grants on named discoveries pay the three items", grants_ok)
+	_t.check("two grants on named discoveries pay two items", grants_ok)
+	var breach: Dictionary = Achievements.row("ach_rivet_full_breach")
+	_t.check("Full Breach grants on one base Foundry Cutter landing of six machines",
+		breach.get("on") == "ultimate_landed" and breach.get("where") == {"ultimate_id": "foundry_cutter"} and breach.get("at_least") == {"hits": 6}
+		and int(breach.get("count", 0)) == 1 and Achievements.reward_of("ach_rivet_full_breach").get("cosmetic", "") == "shell_rivet_calibrated", str(breach))
+	grants["ach_rivet_full_breach"] = "shell_rivet_calibrated"
 	_t.check("the items wait for their art", grants.values().all(func(id): return Cosmetics.PENDING_ART.has(id)))
 	_t.check("both line cues are keyed and read the Rivet motif", Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["punch"]) and Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["arrive"])
 		and Audio.RIVET_LINE["motif"] == ClassDef.by_id("runner_gunner").motif)

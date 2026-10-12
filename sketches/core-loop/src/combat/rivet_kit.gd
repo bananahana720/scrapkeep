@@ -17,10 +17,10 @@ const Palette := preload("res://src/core/palette.gd")
 const SET_PIECES := ["foundry_cutter", "prism_cutter", "juggernaut_drive"]
 const BEAM_PIECES := ["foundry_cutter", "prism_cutter"]
 # Discoveries (section 8; CUSTOMIZE section 3 change 3): ten punches landed in one stage, thirty
-# ignored holds and knocks in one run, one set piece landing on six machines, a beam cutting three.
+# ignored holds and knocks in one run, a beam cutting three. Full Breach is no discovery: its
+# grant reads ultimate_landed's hits for foundry_cutter (CUSTOMIZE.md:356, :412).
 const LINE_TRUE_PUNCHES := 10
 const SHRUG_HITS := 30
-const FULL_BREACH_HITS := 6
 const CUTTER_CARD_CUTS := 3
 # A pin this soon after a punch is that punch's pin (enemy_pinned names only the victim).
 const PIN_WINDOW := 1.5
@@ -460,13 +460,10 @@ func breach_reach() -> float:
 	return Weapons.BREACH_REACH_SCALE * float(Ultimate.LANDING_RADIUS[_class() - 1]) + float(_knob("ult_radius", 0.0))
 
 
+# The Breach Skid's cone is the Shockwave Skid's (player_ball.gd in_skid_cone) at the breach
+# reach plus the machine's hull, with the 2.5 m ring.
 func in_breach(at: Vector3, heading: Vector3, enemy: Node3D) -> bool:
-	var to := _flat(enemy.global_position - at)
-	if to.length() <= Weapons.BREACH_INNER:
-		return true
-	if to.length() - combat._hull(enemy) > breach_reach():
-		return false
-	return to.normalized().dot(heading) >= PlayerBall.SKID_CONE
+	return PlayerBall.in_skid_cone(enemy.global_position - at, heading, breach_reach() + combat._hull(enemy), Weapons.BREACH_INNER)
 
 
 # The Breach Skid: no plant. A forward cone along the path's heading hits for 60 x heft x chain,
@@ -503,8 +500,6 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	ctx.player.abilities.grant(AbilityState.MOVEMENT, Weapons.BREACH_SPRINT)
 	if id == "juggernaut_drive":
 		ctx.player.grant_immunity(Ultimate.RECOVER_SECONDS + Weapons.DRIVE_IMMUNE)
-	if hits >= FULL_BREACH_HITS:
-		_discover("rivet_full_breach", "set_piece", at)
 	if id in BEAM_PIECES and _cut.size() >= CUTTER_CARD_CUTS:
 		_discover("rivet_foundry_cutter", "set_piece", at)
 	_clear_piece()

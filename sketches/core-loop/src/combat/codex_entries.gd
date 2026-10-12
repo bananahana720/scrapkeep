@@ -188,8 +188,6 @@ const ENTRIES := [
 		"clue": "ten Line Drive punches + one stage", "text": "Land ten Line Drive punches in one stage to earn the Swarf Curl."},
 	{"id": "rivet_shrugged", "name": "Shrugged Off", "hint": "Crowd control is fuel.",
 		"clue": "Rivet + thirty ignored holds and knocks + one run", "text": "Shrug off thirty holds and knocks in one run to earn the Welding Hood."},
-	{"id": "rivet_full_breach", "name": "Full Breach", "hint": "One cut, six machines.",
-		"clue": "a Rivet set piece + six machines in the skid", "text": "Land one Rivet set piece on six machines to earn the Calibrated shell."},
 	# --- end Rivet ---
 	# --- P-C Kest entries ---
 	# --- end Kest ---
@@ -219,7 +217,6 @@ const DETECTORS := {
 	"rivet_foundry_cutter": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
 	"rivet_line_true": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
 	"rivet_shrugged": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
-	"rivet_full_breach": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
 	# --- end Rivet ---
 	# --- P-C Tarn detectors ---
 	"tarn_claw_drag": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},

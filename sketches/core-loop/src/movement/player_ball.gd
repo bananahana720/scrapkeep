@@ -44,6 +44,8 @@ const FACE_TAG_RAYS := 16
 # pays back this much sprint recharge.
 const SKID_REACH := 10.0
 const SKID_CONE := 0.35
+# Inside this the skid hits whatever the heading (the ring around the ball).
+const SKID_INNER := 1.5
 const SKID_REFUND := 0.5
 # Tarn's rend turns the slam's outward shove into an inward pull this strong, so the
 # crowd lands in claw reach.
@@ -1118,23 +1120,33 @@ func _tick_face_tags(delta: float) -> void:
 	face_tags = face_tags.filter(func(tag): return tag["left"] > 0.0)
 
 
-# Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit.
-func _skid_push(at: Vector3, strength: float) -> int:
+# Rivet's skid knocks what is ahead of the ball forward and refunds sprint per hit. reach and
+# inner default to the Shockwave Skid's; the Breach Skid (rivet_kit.gd) reads the same cone
+# through in_skid_cone at 1.5 x the class landing radius and a 2.5 m ring.
+func _skid_push(at: Vector3, strength: float, reach := SKID_REACH, inner := SKID_INNER) -> int:
 	var ahead := planar_velocity()
 	ahead = ahead.normalized() if ahead.length() > 0.5 else Vector3.FORWARD
 	var hits := 0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		var to: Vector3 = enemy.global_position - at
 		to.y = 0.0
-		if to.length() > SKID_REACH or (to.length() > 1.5 and to.normalized().dot(ahead) < SKID_CONE):
+		if not in_skid_cone(to, ahead, reach, inner):
 			continue
-		var falloff := 1.0 - to.length() / SKID_REACH
+		var falloff := 1.0 - to.length() / reach
 		enemy.knock(ahead + Vector3.UP * 0.3, Augments.SLAM_KNOCK * strength * falloff * tree.knob("skid_pins"))
 		enemy.flash()
 		struck.emit(enemy, SLAM, Augments.SLAM_KNOCK * strength * falloff)
 		abilities.refund(AbilityState.MOVEMENT, SKID_REFUND)
 		hits += 1
 	return hits
+
+
+# The skid's cone: within reach and inside the inner ring, or within reach and ahead.
+static func in_skid_cone(to: Vector3, ahead: Vector3, reach := SKID_REACH, inner := SKID_INNER) -> bool:
+	var flat := Vector3(to.x, 0.0, to.z)
+	if flat.length() > reach:
+		return false
+	return flat.length() <= inner or flat.normalized().dot(ahead) >= SKID_CONE
 
 
 # The vault and slingshot aim cones and the arc slam's face tags, in the class colour.

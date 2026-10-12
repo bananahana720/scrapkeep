@@ -1,4 +1,9 @@
 extends SceneTree
+# 2026-10-11 (PC-RIVET, pending a coordinator ruling: SCOPE amendment attributed to B2, or a B2
+# follow-up): slot 3 wears its line row's own picture, read from AbilityState (Rivet's
+# ab_rivet_line; Sable and Kest still the shared reel), and the five pictures must be distinct.
+# Was Icons.REEL for every pilot, which B2 did not generalize (P-UNITS 0.4 item 6). Measured:
+# Rivet's bar reads ab_rivet_weapon, ab_rivet_special, ab_rivet_line, ab_rivet_move, ab_rivet_smash.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -6,11 +11,6 @@ const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
-
-# 2026-10-11 (PC-RIVET, design-v3/pilots/rivet.md section 9): slot 3 wears its line row's own
-# picture, read from AbilityState (Rivet's ab_rivet_line; Sable and Kest still the shared reel),
-# and the five pictures must be distinct. Was Icons.REEL for every pilot. Measured: Rivet's bar
-# reads ab_rivet_weapon, ab_rivet_special, ab_rivet_line, ab_rivet_move, ab_rivet_smash.
 
 # The ability bar reads W3's published slots (player.abilities.slots()) through the UI's
 # normaliser (CONTRACTS, Ability slots):

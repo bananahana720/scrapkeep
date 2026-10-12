@@ -1,4 +1,9 @@
 extends SceneTree
+# 2026-10-11 (PC-RIVET, pending a coordinator ruling on SCOPE): "all" skips the four rows whose
+# detector is rivet_kit.gd (rivet_line_drive, rivet_foundry_cutter, rivet_line_true and
+# rivet_shrugged). They need Rivet's line skill or set piece, which this staging does not run;
+# rivet_set_piece_test opens each in the codex after its framework card. Measured: without the
+# skip, "all" lists those four as undiscovered. The Tarn rows are left to the coordinator.
 # F6 2026-10-04: magnet_break and the Warden cap stomp are gone with the plating fight.
 
 const Game := preload("res://src/game.gd")
@@ -340,11 +345,8 @@ func _warden_tricks() -> void:
 		# this staging does not run; tests/discovery_skill_bar_test.gd opens each on its trigger.
 		if id in ["loaded_line", "set_piece", "set_piece_core", "set_piece_cash_in", "set_piece_breakout"]:
 			continue
-		# 2026-10-11 (PC-RIVET): a pilot kit's rows (DETECTORS naming a pilot kit script, today
-		# rivet_kit.gd and tarn_claw.gd) need that pilot's line skill or set piece, which this
-		# staging does not run; rivet_kit_test, rivet_set_piece_test and the Tarn tests open each.
-		# Measured on base 4ae242b: the four tarn_* rows were never discovered here, so "all" failed.
-		if String(CodexEntries.DETECTORS.get(id, {}).get("script", "")) in ["res://src/combat/rivet_kit.gd", "res://src/combat/tarn_claw.gd"]:
+		# 2026-10-11 (PC-RIVET): Rivet's kit rows; see the header.
+		if String(CodexEntries.DETECTORS.get(id, {}).get("script", "")) == "res://src/combat/rivet_kit.gd":
 			continue
 		# 2026-10-04 (wave 9): detector-pending entries declare a hint but no enemy fires them yet.
 		if CodexEntries.DETECTOR_PENDING.has(id):

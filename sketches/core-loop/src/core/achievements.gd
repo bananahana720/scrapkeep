@@ -122,8 +122,8 @@ const ROWS := {
 		"where": {"synergy_id": "rivet_line_true"}, "count": 1, "reward": {"cosmetic": "trail_rivet_swarf"}},
 	"ach_rivet_shrugged": {"name": "Shrugged Off", "text": "Shrug off thirty holds and knocks in one run.", "on": "synergy_discovered",
 		"where": {"synergy_id": "rivet_shrugged"}, "count": 1, "reward": {"cosmetic": "outfit_rivet_hood"}},
-	"ach_rivet_full_breach": {"name": "Full Breach", "text": "Land one set piece on six machines.", "on": "synergy_discovered",
-		"where": {"synergy_id": "rivet_full_breach"}, "count": 1, "reward": {"cosmetic": "shell_rivet_calibrated"}},
+	"ach_rivet_full_breach": {"name": "Full Breach", "text": "Land one Foundry Cutter on six machines.", "on": "ultimate_landed",
+		"where": {"ultimate_id": "foundry_cutter"}, "at_least": {"hits": 6}, "count": 1, "reward": {"cosmetic": "shell_rivet_calibrated"}},
 	# --- end runner_gunner ---
 	# --- demolitions_caster (Kest): P-C Kest adds its grant rows here ---
 	# --- end demolitions_caster ---
