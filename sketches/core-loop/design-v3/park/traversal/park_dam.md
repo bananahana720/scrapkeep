@@ -1,5 +1,44 @@
 # park_dam traversal receipts
 
+## 2026-10-12: round 3 final greybox
+
+Measured on greybox head `3e58f96c803861f485af09416449b09c8f741fd4` with the SHA256-verified TRAV-DET export, eight seeds per line at fixed 90 FPS, through the CPU queue at nice 10. All 56 batch rows are complete. Final documentary commits preserve these runtime inputs. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r3/final-sweep/`. Verdict: PASS+NOTES, evidence level 4. The anchor gap uses the worst seed. The floor is judged by its own row; other floor cells are reported.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS |
+| time_to_warden_s | 63.48 (worst 64.99), PASS | 80.9 (worst 80.93), PASS | 80.22 (worst 86.87), PASS | 74.195 (worst 75.7), PASS | 80.565 (worst 84.15), PASS | 84.69 (worst 84.82), PASS | 86.57 (worst 86.57), reported, pilot band, not the floor's |
+| segment_s | 27.53, 17.24, 18.7 (worst 29.05), PASS | 38.16, 29.26, 13.48 (worst 38.41), PASS | 30.08, 30.89, 19.24 (worst 30.89), PASS | 31.6, 26.2, 16.2 (worst 33.09), PASS | 32.31, 31.23, 16.74 (worst 33.15), PASS | 29.51, 29.22, 25.94 (worst 30.53), PASS | 39.01, 31.84, 15.7 (worst 39.27), reported, pilot band, not the floor's |
+| flow_share | 0.9276 (worst 0.9241), PASS | 0.8445 (worst 0.8354), PASS | 0.7691 (worst 0.7311), PASS | 0.9673 (worst 0.9433), PASS | 0.7901 (worst 0.689), PASS | 0.9273 (worst 0.9003), PASS | 0.7684 (worst 0.7684), reported, pilot band, not the floor's |
+| airborne_share | 0.2143 (worst 0.2143, 0.278), PASS | 0.1633 (worst 0.1633, 0.1697), PASS | 0.3 (worst 0.2048, 0.3242), PASS | 0.2128 (worst 0.2081, 0.2219), PASS | 0.1636 (worst 0.1509, 0.1681), PASS | 0.1889 (worst 0.1577, 0.1889), PASS | 0.1162 (worst 0.1082, 0.1162), reported, pilot band, not the floor's |
+| dead_stops | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS |
+| peak_speed_mps | 52.66 (worst 52.66); tier3 median 47.31 s, PASS | 42.55 (worst 42.49); tier3 median 10.16 s, PASS | 28.29 (worst 28.03); tier3 median 13.52 s, PASS | 39.7 (worst 38.5); tier3 median 12.825 s, PASS | 44.36 (worst 43.98); tier3 median 8.8 s, PASS | 35.74 (worst 35.74); tier3 median 12.44 s, PASS | 42.99 (worst 42.47); tier3 median 11.67 s, reported, pilot band, not the floor's |
+| quiet_max_s | 8.41 (worst 8.41), PASS | 12.14 (worst 12.14), PASS | 11.8 (worst 12.31), PASS | 10.5 (worst 10.84), PASS | 12.275 (worst 13.27), PASS | 10.91 (worst 11.59), PASS | 12.53 (worst 12.58), reported, pilot band, not the floor's |
+| max_anchor_gap_m | 36.4 (worst 36.4), PASS | 33.2 (worst 33.2), PASS | 36.8 (worst 36.8), PASS | 35.6 (worst 35.6), PASS | 33.7 (worst 33.7), PASS | 35 (worst 35), PASS | 33.1 (worst 33.1), reported, pilot band, not the floor's |
+| distinct_verbs | 5 (worst 5), PASS | 6 (worst 6), PASS | 7 (worst 7), PASS | 6 (worst 6), PASS | 6 (worst 6), PASS | 6 (worst 6), PASS | 5 (worst 5), reported, pilot band, not the floor's |
+| length_ratio | 1.65 (worst 1.63, 1.69), PASS | 1.33 (worst 1.32, 1.33), PASS | 1.34 (worst 1.34, 1.35), PASS | 1.38 (worst 1.38, 1.38), PASS | 1.32 (worst 1.32, 1.33), PASS | 1.45 (worst 1.45, 1.45), PASS | 1.38 (worst 1.38, 1.38), reported, pilot band, not the floor's |
+| floor | - | - | - | - | - | - | 86.57 (worst 86.57); cap 161.8 s, PASS |
+| distinct_lines | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | - |
+
+| Line | time_to_warden_s: max | segment_s: max | flow_share: min | airborne_share: both | dead_stops: max | peak_speed_mps: min | tier3_s: min | quiet_max_s: max | max_anchor_gap_m: max | distinct_ride_facts: min | length_ratio: both |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 64.99 (seed 3) | 29.05 (seed 4) | 0.9241 (seed 3) | 0.2143 (seed 1,5,6,7,8) / 0.278 (seed 4) | 0 (seed 1,2,3,4,5,6,7,8) | 52.66 (seed 1,5,6,7,8) | 47.18 (seed 3) | 8.41 (seed 1,5,6,7,8) | 36.4 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,5,6,7,8) | 1.63 (seed 2) / 1.69 (seed 3) |
+| rivet | 80.93 (seed 4) | 38.41 (seed 4) | 0.8354 (seed 4) | 0.1633 (seed 1,2,3,5,6,7,8) / 0.1697 (seed 4) | 0 (seed 1,2,3,4,5,6,7,8) | 42.49 (seed 4) | 10.16 (seed 1,2,3,5,6,7,8) | 12.14 (seed 1,2,3,5,6,7,8) | 33.2 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.32 (seed 4) / 1.33 (seed 1,2,3,5,6,7,8) |
+| kest | 86.87 (seed 3) | 30.89 (seed 1,5,6,7,8) | 0.7311 (seed 3) | 0.2048 (seed 4) / 0.3242 (seed 3) | 0 (seed 1,2,3,4,5,6,7,8) | 28.03 (seed 3) | 2.97 (seed 3) | 12.31 (seed 3) | 36.8 (seed 1,2,3,4,5,6,7,8) | 7 (seed 1,2,3,4,5,6,7,8) | 1.34 (seed 1,3,5,6,7,8) / 1.35 (seed 2,4) |
+| tarn | 75.7 (seed 6) | 33.09 (seed 6) | 0.9433 (seed 6) | 0.2081 (seed 6) / 0.2219 (seed 2,3,4) | 0 (seed 1,2,3,4,5,6,7,8) | 38.5 (seed 2,3,4) | 12.62 (seed 1,5,7,8) | 10.84 (seed 6) | 35.6 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+| tally | 84.15 (seed 7) | 33.15 (seed 7) | 0.689 (seed 7) | 0.1509 (seed 7) / 0.1681 (seed 1,3) | 0 (seed 1,2,3,4,5,6,7,8) | 43.98 (seed 1,3) | 8.73 (seed 5) | 13.27 (seed 7) | 33.7 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.32 (seed 1,2,3,4,5,6,8) / 1.33 (seed 7) |
+| cannon | 84.82 (seed 3) | 30.53 (seed 3) | 0.9003 (seed 3) | 0.1577 (seed 2) / 0.1889 (seed 1,5,6,7,8) | 0 (seed 1,2,3,4,5,6,7,8) | 35.74 (seed 1,5,6,7,8) | 12.44 (seed 1,5,6,7,8) | 11.59 (seed 3) | 35 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,5,6,7,8) | 1.45 (seed 1,2,3,4,5,6,7,8) / 1.45 (seed 1,2,3,4,5,6,7,8) |
+| floor | 86.57 (seed 1,2,3,5,7,8) | 39.27 (seed 6) | 0.7684 (seed 1,2,3,5,7,8) | 0.1082 (seed 4) / 0.1162 (seed 1,2,3,5,7,8) | 0 (seed 1,2,3,4,5,6,7,8) | 42.47 (seed 4) | 11.47 (seed 4) | 12.58 (seed 6) | 33.1 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+
+Terrain stops: 0 on all 56 rows. Pack stops: 0 on all 56 rows. No stop was excluded or waived.
+
+| Stop classification | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Terrain stops | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed |
+| Pack stops | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed |
+
+The first bounded canyon repair moves the existing `cliff_rooms_west` ledge from [-190,330] to [-165,330]. Sable seed 4 reproduces the initial 62.9 m gap solo with identical input hashes and identical summary values. On the repaired head its batch gap is 36.4 m. No new hook rock, recipe chain or pilot line was added.
+
 ## 2026-10-12: merged-kit baseline
 
 Measured on merged head `cd3a9bf`, which contains candidate `6710ac0` and admitted greybox `f58699e`. The park file is unchanged from the admitted greybox, SHA256 `99ce445c21b848f486e5d487c021895d3d6a2039cdf4736324d12fd55de20a4e`; its graph was rebuilt with the candidate's tool before these runs. Evidence: `/tmp/claude-1000/w13-sol/kd1-dam-r1/merged-baseline/`, seven lines, eight seeds each, one Godot process at a time at nice 10. This table separates the kit merge's effect from the subsequent anchor repair and dressed geometry.
@@ -32,7 +71,7 @@ The following tables retain the earlier measured numbers. Their headers identify
 
 The bands are PARK.md section 8. Each line ran 8 seeds (1 to 8) through `tools/traversal_line.gd -- --table=park --stage=1` at `--fixed-fps 90`; the waypoints are `tools/park_lines/park_dam.json`. Each cell gives the median, the worst seed in brackets, and pass or miss.
 
-## Greybox fix round, 2026-10-12 (current)
+## Greybox fix round, 2026-10-12 (superseded by round 3)
 
 Measured on the shipped park file (`park_sha256` 99ce445c in `assets/park/park_dam/graph.json`) with the tool on head 1b2cb49 plus this round's working tree. Two changes since the 2026-10-11 pass. First, `saguaro_26` fills the bare strip south of the drop (the density rule). Second, the floor line's last stretch now takes the bucket flight (spillway tunnel, `outlet_bucket` kicker, plunge pool) in place of the centre incline. All seven lines ran again, one process at a time, at a 1-minute load of 10 to 31.
 

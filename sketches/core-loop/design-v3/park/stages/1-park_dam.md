@@ -109,7 +109,7 @@ D drop-in [-150, -690]
 
 The three activities, signposted from the drop-in: the domes camp (`enemy_camp`, today's chaser pack and the named `hot_rivets` pay, `map_spillway.gd:98`), the rim cache (`cracked_cache`) and the bench altar (`ambush_altar`). Rules from `activities.gd:29-47`. The camp is also the first waymark: lines pass its point within 12 m, and its ring starts only inside 8 m (`activities.gd:31`), so the fight is a choice made at speed.
 
-## 5. `park_rows` (135 rows, shipped greybox 2026-10-11, density fix 2026-10-12)
+## 5. `park_rows` (136 rows, greybox round 3, 2026-10-12)
 
 The shipped rows are in `src/world/park/park_dam.json`; this table follows that file. Every non-ground row carries `greybox:<element>` (R10). Heights are metres above the base plain; `size` is [length along the facing, height, width].
 
@@ -165,7 +165,7 @@ The shipped rows are in `src/world/park/park_dam.json`; this table follows that 
 | West: rim, tunnel, ledges | `spillway_tunnel` | tunnel / spillway_tunnel / dam_era | wash | [-150, 330], [200, 4, 60], 0 | drop, `ride_drop` | home `outlet_brutes`; routes `pool_floor`, `pool_rim`, `bucket_flight`; `dam_era_tunnel_gauge` |
 | West: rim, tunnel, ledges | `outlet_bucket` | kicker / spillway_tunnel / dam_era | plateau | [-100, 445], [16, 0, 24], 15 | launch, `kicker_launch` | routes `pool_floor`, `pool_rim`, `bucket_flight` |
 | West: rim, tunnel, ledges | `outlet_bucket_ramp` | ground / spillway_tunnel / dam_era | ramp | [-100, 445], [16, 4, 24], 195 | roll |  |
-| West: rim, tunnel, ledges | `cliff_rooms_west` | elevated_line / cliff_dwelling / ancestral_puebloan | ridge | [-190, 330], [160, 8, 16], 0 | roll, `ride_ledge` | routes `ledge_line`; `ref_cliff_rooms` |
+| West: rim, tunnel, ledges | `cliff_rooms_west` | elevated_line / cliff_dwelling / ancestral_puebloan | ridge | [-165, 330], [160, 8, 16], 0 | roll, `ride_ledge` | routes `ledge_line`; `ref_cliff_rooms` |
 | West: rim, tunnel, ledges | `viga_span` | anchor_field / cliff_dwelling / ancestral_puebloan | none | [-190, 425], [30, 4, 16], 0 | swing | routes `ledge_line`; `ref_viga_beams` |
 | West: rim, tunnel, ledges | `service_ledge` | ledge / mesa_rim / dam_era | plateau | [-180, 520], [90, 24, 30], 0 | roll, `ride_ledge` | routes `ledge_line`, `pool_rim`, `ledge_drop`; `dam_era_ledge_stencil` |
 | West: rim, tunnel, ledges | `lobber_ledge` | ledge / mesa_rim / dam_era | plateau | [-185, 455], [30, 24, 26], 0 | roll, `ride_ledge` | home `ledge_lobbers` |
@@ -198,6 +198,7 @@ The shipped rows are in `src/world/park/park_dam.json`; this table follows that 
 | The toe | `crest_rail` | rail / dam_face / dam_era | ridge | [0, 655], [300, 1, 4], 90 | grind, `ride_grapple_line` | routes `crest_line` |
 | Filler | `dome_1` to `dome_25` | bank / slickrock / none | spire | 40 by 16 by 40 each | bank, `ride_hop` | the rollers and anchor faces of the shelf |
 | Filler | 37 hoodoo fields, saguaro stands and hoodoo stacks | anchor_field or ground / hoodoo_field, saguaro_stand | none, or spire for a stack | fields 320 by 320 (four cut back off the domes shelf, size as length north to south by width east to west: `hoodoo_25` 60 by 320 at [-60, -750], `saguaro_6` 320 by 80 at [-470, -640], `saguaro_22` 320 by 160 at [230, -700], `hoodoo_23` 320 by 190 at [245, -420]; and `saguaro_26` 70 by 380 at [-290, -755], the strip south of the drop), stacks 26 by 9 by 26 | swing, roll | the density rows of the open country (PARK.md section 8) |
+| Shelf run-out | `sable_shelf_runout_anchor` | anchor_field / saguaro_stand / none | none | [-100, -236], [8, 18, 8], 0 | swing | round-2 greybox anchor retained |
 
 ## 6. `event_rows` (6 rows)
 
@@ -209,6 +210,8 @@ The shipped rows are in `src/world/park/park_dam.json`; this table follows that 
 | `east_bench_dropship` | fleet, `fleet_landing` | `east_bench_flats` | clock_tier 1 | 10 s `fleet_inbound` | vessel dropship, home dropship_winches, footprint_m [36, 16] | closes none, opens `dropship_ramp` |
 | `toe_vents_wake` | ancient, `machine_eruption` | `toe_vent_pits` | clock_tier 2 | 8 s `ancient_stirring` | miniboss reactor_relic, swap vent_pit_lip | closes none, opens none |
 | `powerhouse_boiler` | industrial, `boiler_burst` | `powerhouse` | warden_phase chunk_2 | 5 s `boiler_pressure` | hazard steam_cone, hazard_m [24, 10], damage 6.0, swap powerhouse_roof_ramp | closes `powerhouse_floor`, opens `roof_ramp_line` |
+
+`toe_vent_pits` moved 25 m east to [190, 430] in round 3. Its 50 by 50 m footprint has 10.448 m of clearance from Cannon, the nearest pilot or floor corridor. `park_events_test.gd` requires `toe_vents_wake` to announce, telegraph and land once with all seven corridors present.
 
 Both floods hold 1.2 m of water, the depth a ball rolls out of (PARK.md section 2.4), so the pool and the wash slow a ball and never trap it. `dome_lightning` waits for tier 3, which exists only with veto item 16 (PARK.md:588). World 1 fields no deflector.
 
@@ -244,21 +247,40 @@ Since the ledges are 24 m plateaus (section 5), `service_lift` stands at the foo
 
 ## 9. Traversal lines
 
-Measured 2026-10-12 on merged head `cd3a9bf`, containing candidate `6710ac0` and admitted greybox `f58699e` (8 seeds per line through `tools/traversal_line.gd`, `--table=park --stage=1`). The waypoints are in `tools/park_lines/park_dam.json`; the full band table, median and worst seed per band, is `design-v3/park/traversal/park_dam.md`. Four waymarks: `drop_in`, `domes_camp`, `the_eye`, `landmark`. Straight distance drop-in to engage centre: 1274 m.
+Measured on greybox head `3e58f96c803861f485af09416449b09c8f741fd4` with the SHA256-verified TRAV-DET export, eight seeds per line at fixed 90 FPS, through the CPU queue at nice 10. All 56 batch rows are complete. Final documentary commits preserve these runtime inputs. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r3/final-sweep/`. Verdict: PASS+NOTES, evidence level 4. The anchor gap uses the worst seed. The floor is judged by its own row; other floor cells are reported.
 
-| Line | Route after the domes | Length ratio (1.3 to 2.0) | Segment medians s (12 to 45) | Drop-in to Warden s, median (worst) (60 to 120, none over 150) | Peak m/s, median | Airborne share |
-| --- | --- | --- | --- | --- | --- | --- |
-| Sable | shelf A loop, west wash, west (tunnel, bucket, pool) | 1.640 | 27.65, 17.12, 17.31 | 62.03 (66.86) | 54.12 | 0.2486 |
-| Rivet | shelf B, upper slot, centre (incline, apron) | 1.325 | 38.29, 29.59, 13.49 | 81.83 (82.29) | 42.62 | 0.1633 |
-| Kest | shelf C, corkscrew, east (bridge, bench) | 1.340 | 30.37, 30.55, 22.38 | 83.75 (86.02) | 31.65 | 0.2832 |
-| Tarn | shelf B, upper slot, west (tunnel, bucket, pool; the waypoints in the lines file) | 1.380 | 31.63, 26.62, 16.31 | 74.72 (76.10) | 39.59 | 0.2158 |
-| Tally | shelf C, west wash, plunge pool | 1.320 | 31.94, 31.26, 17.17 | 81.07 (82.30) | 44.58 | 0.1643 |
-| Cannon | shelf C, corkscrew, crest | 1.450 | 29.54, 29.60, 25.21 | 84.39 (85.07) | 36.67 | 0.1751 |
-| Floor line | shelf B, upper slot, west (tunnel, bucket, pool), no contraption | 1.380 | 38.70, 31.42, 15.85 | 85.98 (87.16) | 42.70 | 0.1148 |
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS |
+| time_to_warden_s | 63.48 (worst 64.99), PASS | 80.9 (worst 80.93), PASS | 80.22 (worst 86.87), PASS | 74.195 (worst 75.7), PASS | 80.565 (worst 84.15), PASS | 84.69 (worst 84.82), PASS | 86.57 (worst 86.57), reported, pilot band, not the floor's |
+| segment_s | 27.53, 17.24, 18.7 (worst 29.05), PASS | 38.16, 29.26, 13.48 (worst 38.41), PASS | 30.08, 30.89, 19.24 (worst 30.89), PASS | 31.6, 26.2, 16.2 (worst 33.09), PASS | 32.31, 31.23, 16.74 (worst 33.15), PASS | 29.51, 29.22, 25.94 (worst 30.53), PASS | 39.01, 31.84, 15.7 (worst 39.27), reported, pilot band, not the floor's |
+| flow_share | 0.9276 (worst 0.9241), PASS | 0.8445 (worst 0.8354), PASS | 0.7691 (worst 0.7311), PASS | 0.9673 (worst 0.9433), PASS | 0.7901 (worst 0.689), PASS | 0.9273 (worst 0.9003), PASS | 0.7684 (worst 0.7684), reported, pilot band, not the floor's |
+| airborne_share | 0.2143 (worst 0.2143, 0.278), PASS | 0.1633 (worst 0.1633, 0.1697), PASS | 0.3 (worst 0.2048, 0.3242), PASS | 0.2128 (worst 0.2081, 0.2219), PASS | 0.1636 (worst 0.1509, 0.1681), PASS | 0.1889 (worst 0.1577, 0.1889), PASS | 0.1162 (worst 0.1082, 0.1162), reported, pilot band, not the floor's |
+| dead_stops | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS |
+| peak_speed_mps | 52.66 (worst 52.66); tier3 median 47.31 s, PASS | 42.55 (worst 42.49); tier3 median 10.16 s, PASS | 28.29 (worst 28.03); tier3 median 13.52 s, PASS | 39.7 (worst 38.5); tier3 median 12.825 s, PASS | 44.36 (worst 43.98); tier3 median 8.8 s, PASS | 35.74 (worst 35.74); tier3 median 12.44 s, PASS | 42.99 (worst 42.47); tier3 median 11.67 s, reported, pilot band, not the floor's |
+| quiet_max_s | 8.41 (worst 8.41), PASS | 12.14 (worst 12.14), PASS | 11.8 (worst 12.31), PASS | 10.5 (worst 10.84), PASS | 12.275 (worst 13.27), PASS | 10.91 (worst 11.59), PASS | 12.53 (worst 12.58), reported, pilot band, not the floor's |
+| max_anchor_gap_m | 36.4 (worst 36.4), PASS | 33.2 (worst 33.2), PASS | 36.8 (worst 36.8), PASS | 35.6 (worst 35.6), PASS | 33.7 (worst 33.7), PASS | 35 (worst 35), PASS | 33.1 (worst 33.1), reported, pilot band, not the floor's |
+| distinct_verbs | 5 (worst 5), PASS | 6 (worst 6), PASS | 7 (worst 7), PASS | 6 (worst 6), PASS | 6 (worst 6), PASS | 6 (worst 6), PASS | 5 (worst 5), reported, pilot band, not the floor's |
+| length_ratio | 1.65 (worst 1.63, 1.69), PASS | 1.33 (worst 1.32, 1.33), PASS | 1.34 (worst 1.34, 1.35), PASS | 1.38 (worst 1.38, 1.38), PASS | 1.32 (worst 1.32, 1.33), PASS | 1.45 (worst 1.45, 1.45), PASS | 1.38 (worst 1.38, 1.38), reported, pilot band, not the floor's |
+| floor | - | - | - | - | - | - | 86.57 (worst 86.57); cap 161.8 s, PASS |
+| distinct_lines | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | - |
 
-All seven lines reached the Warden on all eight seeds with zero dead stops. The six pilot lines meet every band except Sable's worst-seed anchor gap: 45.3 m on seed 7 against the 40 m limit. Her median is 36.4 m, which the tool marks inside, but ruling 14 judges every seed. The floor line passes its own row: median 85.98 s, worst 87.16 s, cap 163.67 s from twice Rivet's median, zero dead stops on every seed. Its airborne share and other pilot measures are reported, pilot band, not the floor's, per ruling 13. Evidence: `/tmp/claude-1000/w13-sol/kd1-dam-r1/merged-baseline/`.
+| Line | time_to_warden_s: max | segment_s: max | flow_share: min | airborne_share: both | dead_stops: max | peak_speed_mps: min | tier3_s: min | quiet_max_s: max | max_anchor_gap_m: max | distinct_ride_facts: min | length_ratio: both |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 64.99 (seed 3) | 29.05 (seed 4) | 0.9241 (seed 3) | 0.2143 (seed 1,5,6,7,8) / 0.278 (seed 4) | 0 (seed 1,2,3,4,5,6,7,8) | 52.66 (seed 1,5,6,7,8) | 47.18 (seed 3) | 8.41 (seed 1,5,6,7,8) | 36.4 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,5,6,7,8) | 1.63 (seed 2) / 1.69 (seed 3) |
+| rivet | 80.93 (seed 4) | 38.41 (seed 4) | 0.8354 (seed 4) | 0.1633 (seed 1,2,3,5,6,7,8) / 0.1697 (seed 4) | 0 (seed 1,2,3,4,5,6,7,8) | 42.49 (seed 4) | 10.16 (seed 1,2,3,5,6,7,8) | 12.14 (seed 1,2,3,5,6,7,8) | 33.2 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.32 (seed 4) / 1.33 (seed 1,2,3,5,6,7,8) |
+| kest | 86.87 (seed 3) | 30.89 (seed 1,5,6,7,8) | 0.7311 (seed 3) | 0.2048 (seed 4) / 0.3242 (seed 3) | 0 (seed 1,2,3,4,5,6,7,8) | 28.03 (seed 3) | 2.97 (seed 3) | 12.31 (seed 3) | 36.8 (seed 1,2,3,4,5,6,7,8) | 7 (seed 1,2,3,4,5,6,7,8) | 1.34 (seed 1,3,5,6,7,8) / 1.35 (seed 2,4) |
+| tarn | 75.7 (seed 6) | 33.09 (seed 6) | 0.9433 (seed 6) | 0.2081 (seed 6) / 0.2219 (seed 2,3,4) | 0 (seed 1,2,3,4,5,6,7,8) | 38.5 (seed 2,3,4) | 12.62 (seed 1,5,7,8) | 10.84 (seed 6) | 35.6 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+| tally | 84.15 (seed 7) | 33.15 (seed 7) | 0.689 (seed 7) | 0.1509 (seed 7) / 0.1681 (seed 1,3) | 0 (seed 1,2,3,4,5,6,7,8) | 43.98 (seed 1,3) | 8.73 (seed 5) | 13.27 (seed 7) | 33.7 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.32 (seed 1,2,3,4,5,6,8) / 1.33 (seed 7) |
+| cannon | 84.82 (seed 3) | 30.53 (seed 3) | 0.9003 (seed 3) | 0.1577 (seed 2) / 0.1889 (seed 1,5,6,7,8) | 0 (seed 1,2,3,4,5,6,7,8) | 35.74 (seed 1,5,6,7,8) | 12.44 (seed 1,5,6,7,8) | 11.59 (seed 3) | 35 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,5,6,7,8) | 1.45 (seed 1,2,3,4,5,6,7,8) / 1.45 (seed 1,2,3,4,5,6,7,8) |
+| floor | 86.57 (seed 1,2,3,5,7,8) | 39.27 (seed 6) | 0.7684 (seed 1,2,3,5,7,8) | 0.1082 (seed 4) / 0.1162 (seed 1,2,3,5,7,8) | 0 (seed 1,2,3,4,5,6,7,8) | 42.47 (seed 4) | 11.47 (seed 4) | 12.58 (seed 6) | 33.1 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
 
-The all-six seed-1 trace comparison finds four mutually distinct lines, Sable, Rivet, Kest and Tally. Rivet/Tarn and Kest/Cannon share more than half their ticks within 8 m and do not count separately. An isolated seed-7 diagnostic reads 36.4 m and reproduces the batch's first-seed trajectory, so it does not reproduce the batch's failed seed. The anchor repair needs a batch-context diagnostic. The one-hour alignment/repair phase ended before that repair or the dressed pass was completed.
+Terrain stops: 0 on all 56 rows. Pack stops: 0 on all 56 rows. No stop was excluded or waived.
+
+| Stop classification | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Terrain stops | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed |
+| Pack stops | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed |
 
 Three line re-cuts on the KB9 head, each from a traced seed. Sable's line goes straight at `domes_camp` from [-60, -450]: at 40 m/s she passed 16.6 m from the camp and looped for 75 s to come back within the bot's 12 m. Her east turn on the shelf loop moves to [-25, -555], short of `domes_fin_east`. Her wash entry point moves onto the wash axis at [-137, -190]. Cannon's descent turns east at [120, 285] and [145, 350], so she lands east of `powerhouse_stair` and clear of the `rim_zip` head, and her bench points ([150, 410], [156, 470]) keep 10 m off the `canal_lips` ridge.
 
@@ -354,16 +376,16 @@ Draft text for the lore pass, in the tone of `SOUND-STORY.md:212`. Fragment ids 
 
 ## 13. The park file
 
-Shipped 2026-10-11 as `src/world/park/park_dam.json` and re-cut the same day for KB9's runtime placement (section 5), with `saguaro_26` added 2026-10-12 for the density rule (135 park rows, 6 event rows, 5 homes, 9 contraptions, 3 activity rows), baked to `assets/park/park_dam/` with its graph. The draft JSON that stood here is retired; sections 5 to 8 follow the shipped file. Measured pockets (`assets/park/park_dam/graph.json`, PARK.md 2.12):
+Shipped 2026-10-11 as `src/world/park/park_dam.json` and re-cut the same day for KB9's runtime placement (section 5), with `saguaro_26` added 2026-10-12 for the density rule (136 park rows, 6 event rows, 5 homes, 9 contraptions, 3 activity rows), baked to `assets/park/park_dam/` with its graph. The draft JSON that stood here is retired; sections 5 to 8 follow the shipped file. Measured pockets (`assets/park/park_dam/graph.json`, PARK.md 2.12):
 
-| Pocket | Role | Door | door_m | detour_m | d_spawn | d_landmark | sight_ok | pay.rarities |
+| Pocket | Role | Door | door_m | detour_m | d_spawn | d_beacon | sight_ok | pay.rarities |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `domes_camp`, enemy camp | on-line camp (waymark, R2) | [-48, -392] | 0 | 0 | 344 | 1016 | yes | common (named `hot_rivets`) |
-| `rim_cache`, cracked cache | reward | [-208, 304] | 307 | 307 | 1065 | 424 | yes | rare |
-| `bench_altar`, ambush altar | risk | [208, 248] | 251 | 251 | 1137 | 454 | yes | common, rare |
-| `gallery_valve`, valve | hidden | [-168, 544] | 250 | 268 | 1394 | 196 | yes | none (a contraption) |
+| domes_camp | online | [-48, -392] | 0 | 0 | 344 | 1016 | True | ['common'] |
+| rim_cache | reward | [-208, 304] | 307 | 307 | 1065 | 410 | True | ['rare'] |
+| bench_altar | risk | [208, 248] | 251 | 251 | 1137 | 454 | True | ['common', 'rare'] |
+| gallery_valve | hidden | [-168, 544] | 250 | 268 | 1394 | 196 | True | [] |
 
-Spawn to beacon by path is 1352 m, in the farthest quarter (13.2 percent of open nodes are farther). All 16 routes connect; no breaches. The `gallery_valve` door now sits at [-167, 545] on the east edge of the 24 m service ledge, facing the plunge pool: at [-185, 545] on the ledge top no line node saw it (the graph's sight breach), and at the east edge the line along the toe sees it. It stays clear of the plunge-pool flood site (87 m) and the `ledge_lobbers` home on `lobber_ledge` (92 m); every pocket's clear ring is clear (R3). The way in is the lift up the lobber ledge (section 8). Rim cache's detour (307 m) is larger than the altar's (251 m), as 2.12 asks; the graph's reward_ratio target (1.5, reported, not gated) reads 0.84.
+The graph has no breaches, `beacon_ok=true` and `spawn.run=true`. Spawn to beacon is 1352 m by path. All pocket clear rings are clear. The round-3 ledge move changes rim-cache beacon distance to 410 m. Reported targets: reward_ratio 0.841, full_visit_ratio 1.694.
 
 The shipped park file:
 
@@ -468,7 +490,7 @@ The shipped park file:
   {"id": "spillway_tunnel", "element": "tunnel", "landform": "spillway_tunnel", "society": "dam_era", "at": [-150, 330], "y": null, "size": [200, 4, 60], "yaw_deg": 0, "verb": "drop", "ride_fact": "ride_drop", "home": "outlet_brutes", "recipe": "greybox:tunnel", "stamp": "wash", "hole": false, "budget": "park_large", "routes": ["pool_floor", "pool_rim", "bucket_flight"], "fragment": "dam_era_tunnel_gauge"},
   {"id": "outlet_bucket", "element": "kicker", "landform": "spillway_tunnel", "society": "dam_era", "at": [-100, 445], "y": null, "size": [16, 0, 24], "yaw_deg": 15, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "detail", "routes": ["pool_floor", "pool_rim", "bucket_flight"], "fragment": ""},
   {"id": "outlet_bucket_ramp", "element": "ground", "landform": "spillway_tunnel", "society": "dam_era", "at": [-100, 445], "y": null, "size": [16, 4, 24], "yaw_deg": 195, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "cliff_rooms_west", "element": "elevated_line", "landform": "cliff_dwelling", "society": "ancestral_puebloan", "at": [-190, 330], "y": null, "size": [160, 8, 16], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:elevated_line", "stamp": "ridge", "hole": false, "budget": "landform", "routes": ["ledge_line"], "fragment": "ref_cliff_rooms"},
+  {"id": "cliff_rooms_west", "element": "elevated_line", "landform": "cliff_dwelling", "society": "ancestral_puebloan", "at": [-165, 330], "y": null, "size": [160, 8, 16], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:elevated_line", "stamp": "ridge", "hole": false, "budget": "landform", "routes": ["ledge_line"], "fragment": "ref_cliff_rooms"},
   {"id": "viga_span", "element": "anchor_field", "landform": "cliff_dwelling", "society": "ancestral_puebloan", "at": [-190, 425], "y": null, "size": [30, 4, 16], "yaw_deg": 0, "verb": "swing", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": ["ledge_line"], "fragment": "ref_viga_beams"},
   {"id": "service_ledge", "element": "ledge", "landform": "mesa_rim", "society": "dam_era", "at": [-180, 520], "y": null, "size": [90, 24, 30], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:ledge", "stamp": "plateau", "hole": false, "budget": "landform", "routes": ["ledge_line", "pool_rim", "ledge_drop"], "fragment": "dam_era_ledge_stencil"},
   {"id": "lobber_ledge", "element": "ledge", "landform": "mesa_rim", "society": "dam_era", "at": [-185, 455], "y": null, "size": [30, 24, 26], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "ledge_lobbers", "recipe": "greybox:ledge", "stamp": "plateau", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
@@ -530,7 +552,8 @@ The shipped park file:
   {"id": "hoodoo_stack_9", "element": "ground", "landform": "hoodoo_field", "society": "none", "at": [-560, -300], "y": null, "size": [26, 9, 26], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_stack_10", "element": "ground", "landform": "hoodoo_field", "society": "none", "at": [-480, -120], "y": null, "size": [26, 9, 26], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "hoodoo_stack_11", "element": "ground", "landform": "hoodoo_field", "society": "none", "at": [-640, -640], "y": null, "size": [26, 9, 26], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "east_rim_bench", "element": "bank", "landform": "mesa_rim", "society": "none", "at": [235, 260], "y": null, "size": [160, 4, 60], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "bowl", "hole": false, "budget": "detail", "routes": [], "fragment": ""}
+  {"id": "east_rim_bench", "element": "bank", "landform": "mesa_rim", "society": "none", "at": [235, 260], "y": null, "size": [160, 4, 60], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "bowl", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "sable_shelf_runout_anchor", "element": "anchor_field", "landform": "saguaro_stand", "society": "none", "at": [-100.0, -236.0], "y": null, "size": [8.0, 18.0, 8.0], "yaw_deg": 0, "verb": "swing", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""}
  ],
  "event_rows": [
   {"id": "plunge_pool_flood", "kind": "flood_fill", "family": "natural", "site": "plunge_pool", "trigger": {"on": "clock_tier", "value": 1}, "weight": 1.0, "telegraph": {"lead_s": 6.0, "form": "flood_rising", "on_bar": true}, "live_s": 35.0, "effect": {"depth_m": 1.2, "fill_s": 10.0, "material": "water"}, "route_change": {"closes": ["pool_floor"], "opens": ["pool_rim"]}, "hold_clear_m": 12.0, "cooldown_s": 90.0, "once": false, "music_cue": {"telegraph": "riser_natural", "land": "drop_flood"}},
