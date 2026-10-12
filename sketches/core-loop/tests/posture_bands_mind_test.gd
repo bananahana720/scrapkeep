@@ -1,10 +1,7 @@
 # smoke: solo timeout=360s (nine stage-5 bot runs in child processes at once; a loaded machine slows them)
-# KNOWN RED (2026-10-11, wave 13 KF4 fix round): the two band checks ("grown breaks it in 25 to 45 s",
-# "small takes at least twice grown's time") fail on stage 5 and stay gating on purpose. Verifier receipt
-# artifacts/local/receipts/named-8fb7ff58fe13-2026-10-11T08-38-56-121Z.json: grown 46.5 s, small/grown 1.40.
-# The miss is in the stage-5 plating and health (alpha_defs.gd), outside this unit's scope: with no driver
-# the ratio is already 1.89. Awaiting a coordinator or owner ruling: a stage-5 tuning unit, then re-measure
-# and re-pin, or a QUARANTINE.tsv row (coordinator-owned). The pins and the camper check pass.
+# KNOWN RED (2026-10-11, wave 13 KF-BOT): the two band checks ("grown breaks it in 25 to 45 s", "small takes at
+# least twice grown's time") fail on stage 5 with the anchor on and stay gating on purpose; the pins are [report]
+# prints (header below). Owner tuning call; the test keeps its QUARANTINE.tsv row.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -22,16 +19,15 @@ const T := preload("res://tests/support/t.gd")
 # Warden given the kind's driver (src/combat/warden_mind.gd). A fight runs from the later of the
 # bot's turn and its first contact to the break (posture_sweep.gd measure); a run that never
 # breaks counts as the cap. Bands: grown median 25 to 45 s, small median at least twice grown's,
-# the camper never breaks it; the measured medians are pinned below with the 10 percent tolerance.
-# The Warden is not made a harpoon anchor here: with "harpoon_anchor" on, Ctrl hauls are gated to
-# the stagger and the bot breaks no Warden in 150 s with or without the tilt (2026-10-11, 9 of 9
-# runs capped both ways; posture_bands_test.gd's 2026-10-10 header saw the same stall), so the
-# anchor's own effect on the band waits on the bot (rerun 2026-10-11 fix round, KF4_BANDS_ANCHOR=1: every
-# run that reported, 4 of 9, capped at 150 s unbroken; the other 5 hit the 330 s child cap on a loaded
-# machine). This is a named deviation from mind.md section 7 "the sweep runs with the mechanism on": the
-# latch, drag and throw half of under_island is not in the measured band. KF4_BANDS_ANCHOR=1 and KF4_BANDS_DRIVER=0 in
-# the environment rerun those arms. The alpha stage-5 Warden stands on the ground until KD5 and
-# KF8 hang it under the island, so this is the tilt on the ground, not the mounted fight.
+# the camper never breaks it; the measured medians are pinned below with the 10 percent tolerance
+# when three sweeps agree, else printed.
+# The Warden is a harpoon anchor here by default (KF-BOT, 2026-10-11): the bot's latch arm
+# (tools/bot_driver.gd _anchor_fight) fights it, so Ctrl hauls only in the stagger and every chunk comes from a
+# haul (the alpha rows set ram_shatters false). KF4_BANDS_ANCHOR=0 in the environment reruns the anchor-off arms
+# (the KF4 measurement below), KF4_BANDS_DRIVER=0 the no-driver arms. The alpha stage-5 Warden stands on the
+# ground until KD5 and KF8 hang it under the island, so this is the tilt on the ground, not the mounted fight:
+# the hand is never out of ram reach, so the latch arm only bites in the stagger (the jump beside the open point),
+# and the latch, drag and throw half of under_island is still not in the measured band.
 
 const SEEDS := [0, 1, 2]
 const PILOTS := {0: "pylon_engineer", 1: "runner_gunner", 2: "demolitions_caster"}
@@ -40,13 +36,22 @@ const ARMS := {"small": {"policy": "skipper", "mass": 0}, "grown": {"policy": "s
 const STAGE := 5
 const CAP_S := 150.0
 const DRIVER_PATH := "res://src/combat/warden_mind.gd"
-# Pins (median fight seconds over the three seeds), measured with the tilt live:
-# 2026-10-11 (wave 13 KF4): measured 66.4 / 49.4 s (small/grown 1.34) with the tilt; the same arms with
-# no driver measured 78.6 / 41.5 s (1.89). The band misses both ways (grown over 45 s with the tilt, small
-# under twice grown with and without it), so the stage-5 numbers need a tuning call, not this unit's dials
-# (the tilt angle is fixed at 10 degrees, and the lens height means nothing on the ground).
-const EXPECT_SMALL_S := 66.4
-const EXPECT_GROWN_S := 49.4
+# Pins (median fight seconds over the three seeds):
+# 2026-10-11 (wave 13 KF-BOT, anchor on, base b2c6fa3 plus the latch arm): three sweeps on a loaded machine (load 38 to
+# 75); per seed small / grown / camper:
+#   sweep 1: small [150 (cap), 149.92, 150 (cap)] median 150.0; grown [122.19, 87.20, 121.41] median 121.4; camper all cap
+#   sweep 2: small [137.52, 126.02, 112.46] median 126.0; grown [107.90, 87.48, 111.72] median 107.9; camper all cap
+#   sweep 3: small [150 (cap), 150 (cap), 150 (cap)] median 150.0; grown [97.41, 94.88, 150 (cap)] median 97.4; camper all cap
+# The sweeps do not agree within 10 percent (grown 97.4 to 121.4 s, small 126.0 to 150 s), so no median is pinned
+# and the two pin checks are [report] prints (the KF2b pattern, posture_bands_reactor_test.gd). With the anchor on
+# the band misses further than without it: the body-line smash between staggers is gone. A stage-5 probe at 20 percent
+# lower plating and health (136 / 1000 against 170 / 1250, one sweep, not committed) gave grown 68.5 s of [85.82,
+# 68.47, 54.83] and small 150 s of [132.10, 150 (cap), 150 (cap)]: the ratio passes but grown stays over 45 s, so no
+# tune inside 20 percent reaches the band.
+# 2026-10-11 (wave 13 KF4, anchor off): measured 66.4 / 49.4 s (small/grown 1.34) with the tilt; the same arms with
+# no driver measured 78.6 / 41.5 s (1.89).
+const EXPECT_SMALL_S := 0.0
+const EXPECT_GROWN_S := 0.0
 const TOLERANCE := 0.10
 
 var _settings := {}
@@ -84,7 +89,7 @@ func _parent() -> void:
 			var home := folder.path_join("%s-%d" % [arm, run_seed])
 			DirAccess.make_dir_recursive_absolute(home)
 			var args := ["--arm=" + arm, "--run-seed=%d" % run_seed, "--result=" + home.path_join("result.tsv"), "--home=" + home,
-				"--anchor=%s" % OS.get_environment("KF4_BANDS_ANCHOR") if OS.has_environment("KF4_BANDS_ANCHOR") else "--anchor=0",
+				"--anchor=%s" % OS.get_environment("KF4_BANDS_ANCHOR") if OS.has_environment("KF4_BANDS_ANCHOR") else "--anchor=1",
 				"--driver=%s" % OS.get_environment("KF4_BANDS_DRIVER") if OS.has_environment("KF4_BANDS_DRIVER") else "--driver=1"]
 			if int(ARMS[arm]["mass"]) > 0:
 				args.append("--start-mass=%d" % int(ARMS[arm]["mass"]))
@@ -130,10 +135,17 @@ func _parent() -> void:
 	t.check("small takes at least twice grown's time (median)", grown > 0.0 and small >= 2.0 * grown,
 		"small %.1f s, grown %.1f s, ratio %.2f" % [small, grown, small / grown if grown > 0.0 else 0.0])
 	t.eq("the camper never breaks it", broke.get("camper", -1), 0)
-	t.check("small median within 10 percent of the pin", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
-		"small %.1f s, pin %.1f s" % [small, EXPECT_SMALL_S])
-	t.check("grown median within 10 percent of the pin", absf(grown - EXPECT_GROWN_S) <= TOLERANCE * EXPECT_GROWN_S,
-		"grown %.1f s, pin %.1f s" % [grown, EXPECT_GROWN_S])
+	# No pin while the sweeps disagree by more than TOLERANCE (header): the medians print for the record.
+	if EXPECT_SMALL_S > 0.0:
+		t.check("small median within 10 percent of the pin", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
+			"small %.1f s, pin %.1f s" % [small, EXPECT_SMALL_S])
+	else:
+		print("[report] small median %.1f s (unpinned)" % small)
+	if EXPECT_GROWN_S > 0.0:
+		t.check("grown median within 10 percent of the pin", absf(grown - EXPECT_GROWN_S) <= TOLERANCE * EXPECT_GROWN_S,
+			"grown %.1f s, pin %.1f s" % [grown, EXPECT_GROWN_S])
+	else:
+		print("[report] grown median %.1f s (unpinned)" % grown)
 	if t.failures == 0:
 		PostureSweep._remove_tree(folder)
 	quit(t.verdict())
@@ -192,7 +204,7 @@ func _attach() -> void:
 	var warden = _game.flow.warden
 	if not is_instance_valid(warden):
 		return
-	if String(_settings.get("anchor", "0")) == "1":
+	if String(_settings.get("anchor", "1")) == "1":
 		warden.set_harpoon_anchor(true)
 	var script = load(DRIVER_PATH) if ResourceLoader.exists(DRIVER_PATH) and String(_settings.get("driver", "1")) != "0" else null
 	if script != null:

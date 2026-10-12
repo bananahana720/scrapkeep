@@ -52,8 +52,15 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 25 to 45 s and the camper still never breaks it; the slice row and the sweep table are unchanged. The
 # live small/grown ratio is 1.94, under the sweep table's 2.0 band (checked on the table, see below);
 # was 66.6 / 32.3.
-const EXPECT_SMALL_S := 59.8
-const EXPECT_GROWN_S := 30.9
+# 2026-10-11 (wave 13 SQ1, the pack telegraph record): re-pinned to the measured medians 50.7 / 31.3 on the
+# merged tree 405c517. Attributed: the candidate just before SQ1 (2d3bdce) measures 59.1 / 32.3 and passes these
+# pins. SQ1 gives all 22 pack kinds a shared 0.75 s recovery after an attack (the chaser's 0.9 drops to 0.75, the
+# lobber and swarm gain one), so the slice Warden's adds ease off after each attack and the small ball breaks it
+# sooner. Grown stays inside 25 to 45 s and the camper still never breaks it; the slice row and the sweep table
+# are unchanged. The live small/grown ratio falls from 1.83 to 1.62, further under the sweep table's 2.0 band:
+# an owner tuning item (docs/decisions.tsv, 2026-10-11 SQ1 rows); was 59.8 / 30.9.
+const EXPECT_SMALL_S := 50.7
+const EXPECT_GROWN_S := 31.3
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 

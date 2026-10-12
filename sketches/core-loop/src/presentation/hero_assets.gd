@@ -67,6 +67,11 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
+const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
+# One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
+const PILOT_TABLES := "res://src/presentation/clips/%s.json"
+# The movement chip's signals kick both pedals (PILOT-CLIPS section 5), by argument count.
+const MECHA_PEDAL_EVENTS := {"dashed": 1, "boosted": 1, "blink_used": 2, "sprint_started": 1, "rocket_jumped": 2}
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
@@ -169,6 +174,9 @@ var _tucked: Array[MeshInstance3D] = []
 var _warned := {}
 var _reaction_clock := 0.0
 var _reaction_connections: Array = []
+var _pilot_tables := {}
+# The last pressure_changed value, for the machinery rows that read pressure.
+var _pressure := 0.0
 
 
 static func topper_name(rarity: String) -> String:
@@ -479,6 +487,7 @@ func _process(delta: float) -> void:
 			continue
 		_fit(rec)
 		_steer_pod(rec, player, delta)
+		_step_mecha(rec, player, delta)
 	_tuck_chunks()
 	for key in _wardens.keys():
 		var rec: Dictionary = _wardens[key]
@@ -1152,27 +1161,38 @@ func fit_companion_skin(model: Node3D, id: String) -> Array:
 
 
 # --- cosmetic pilot reactions ------------------------------------------------------
+#
+# design-v3/PILOT-CLIPS.md sections 1.1 and 3. A row's clip cuts in over a strictly lower
+# priority; when a clip ends the pilot goes back to a base loop (idle_loop, or ult_ride_loop
+# while the set piece holds the ride) instead of a bone reset. A GLB without idle_loop keeps
+# the old stop and reset and warns once per pilot. Code moves the mecha (mecha_motion.gd).
 
 func _fit_pilot(rec: Dictionary) -> void:
+	rec["mecha"] = MechaMotion.new(rec.pod, rec.core, rec["class"], Array(_pilot_table(rec["class"]).get("machinery", [])))
 	var fitted := fit_pilot_into(rec.pod, rec["class"], rec.player.class_color())
 	if fitted.is_empty():
 		return
 	var pilot: Node3D = fitted.pilot
-	var animator: AnimationPlayer = fitted.animator
+	var animator = fitted.get("animator")
 	rec["animator"] = animator
 	rec["pilot"] = pilot
 	rec["reaction"] = ""
 	rec["priority"] = -1
 	rec["cooldowns"] = {}
-	if animator != null:
+	rec["queued"] = {}
+	rec["base"] = ""
+	rec["blend"] = 0.0
+	# Trap 1: a pilot GLB without an AnimationPlayer has nothing to seat.
+	if animator is AnimationPlayer:
 		animator.animation_finished.connect(_pilot_finished.bind(rec.player.get_instance_id(), animator))
-		_seat_pilot(rec)
+		_to_base(rec)
 
 
 # Seats the class's animated pilot in a pod: hides the shell's embedded placeholder pilot,
 # adds the pilot glb as "AnimatedPilot" and paints it in the class colour. The game's
 # _fit_pilot and the class card's preview both call it. Returns {pilot, animator}, or {}
-# when the class has no pilot or its scene is unavailable.
+# when the class has no pilot or its scene is unavailable; animator is null when the GLB
+# carries no AnimationPlayer.
 func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:
 	if not PILOTS.has(class_id):
 		return {}
@@ -1189,17 +1209,51 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 	return {"pilot": pilot, "animator": animator}
 
 
+# The pilot's pose table (src/presentation/clips/<pilot>.json, PILOT-CLIPS section 4.3), or {}
+# while the pilot has none. The stem comes from the PILOTS glb name.
+func _pilot_table(class_id: String) -> Dictionary:
+	if _pilot_tables.has(class_id):
+		return _pilot_tables[class_id]
+	var table := {}
+	var stem := String(PILOTS.get(class_id, "")).get_file().trim_prefix("pilot_").trim_suffix("_anim.glb")
+	var path := PILOT_TABLES % stem
+	if stem != "" and FileAccess.file_exists(path):
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if parsed is Dictionary:
+			table = parsed
+		else:
+			_warn_once("pilot_table:" + class_id, "hero_assets: pose table %s does not parse; no contact frames or machinery" % path)
+	_pilot_tables[class_id] = table
+	return table
+
+
 func _connect_pilot_events() -> void:
 	if ctx == null or ctx.events == null or not _reaction_connections.is_empty():
 		return
+	# Trap 2: ultimate_started carries five arguments.
+	var handlers := [_pilot_event_0, _pilot_event_1, _pilot_event_2, _pilot_event_3, _pilot_event_4, _pilot_event_5]
 	for info in ctx.events.get_signal_list():
 		var event := String(info.name)
-		if not PilotReactions.ROWS.has(event) or PilotReactions.ROWS[event].get("pending", false):
+		if PilotReactions.rows_for(event).is_empty():
 			continue
-		var handlers := [_pilot_event_0, _pilot_event_1, _pilot_event_2, _pilot_event_3, _pilot_event_4]
+		if info.args.size() >= handlers.size():
+			_warn_once("pilot_event:" + event, "hero_assets: %s carries %d arguments; no pilot handler" % [event, info.args.size()])
+			continue
 		var callback: Callable = handlers[info.args.size()].bind(event)
 		ctx.events.connect(event, callback)
 		_reaction_connections.append({"bus": ctx.events, "event": event, "callback": callback})
+	var mecha_events := {"shot_fired": _mecha_event.bind("shot").unbind(3),
+		"ultimate_started": _mecha_event.bind("ultimate_started").unbind(5),
+		"ultimate_landed": _mecha_event.bind("ultimate_ended").unbind(4),
+		"ultimate_cancelled": _mecha_event.bind("ultimate_ended").unbind(3),
+		"landed": _mecha_event.bind("landed").unbind(1),
+		"pressure_changed": _on_pressure_changed}
+	for event in MECHA_PEDAL_EVENTS:
+		mecha_events[event] = _mecha_event.bind("kick").unbind(MECHA_PEDAL_EVENTS[event])
+	for event in mecha_events:
+		if ctx.events.has_signal(event):
+			ctx.events.connect(event, mecha_events[event])
+			_reaction_connections.append({"bus": ctx.events, "event": event, "callback": mecha_events[event]})
 
 
 func _pilot_event_0(event: String) -> void:
@@ -1222,57 +1276,242 @@ func _pilot_event_4(a, b, c, d, event: String) -> void:
 	_on_pilot_event(event, [a, b, c, d])
 
 
+func _pilot_event_5(a, b, c, d, e, event: String) -> void:
+	_on_pilot_event(event, [a, b, c, d, e])
+
+
 func _on_pilot_event(event: String, args: Array) -> void:
 	for rec in _players.values():
 		if is_instance_valid(rec.player):
 			react(rec.player, event, args)
 
 
-# Returns acceptance for tests and capture tools. Never writes to the player.
+# Returns acceptance for tests and capture tools. Never writes to the player. `event` is a bus
+# signal: the first of its rows whose argument filter passes decides.
 func react(player: Node, event: String, args: Array = []) -> bool:
-	if not PilotReactions.ROWS.has(event):
-		return false
-	var row: Dictionary = PilotReactions.ROWS[event]
-	if row.get("pending", false):
-		return false
-	if row.has("near_arg") and (args.size() <= row.near_arg or args[row.near_arg] != true):
-		return false
+	var ids := PilotReactions.rows_for(event)
+	if ids.is_empty() and PilotReactions.ROWS.has(event):
+		ids = [event]
+	for row_id in ids:
+		var row: Dictionary = PilotReactions.ROWS[row_id]
+		if row.get("pending", false) or not PilotReactions.arg_matches(row, args):
+			continue
+		return _react_row(player, row)
+	return false
+
+
+func _react_row(player: Node, row: Dictionary) -> bool:
 	var rec := shell_of(player)
 	if rec.is_empty() or not is_instance_valid(rec.get("animator")):
 		return false
 	var clip := PilotReactions.clip_for(row, rec["class"])
 	var animator: AnimationPlayer = rec.animator
-	if not animator.has_animation(clip) or _reaction_clock < float(rec.cooldowns.get(clip, 0.0)):
+	if not animator.has_animation(clip):
+		_note_clip(clip, true)
 		return false
-	if rec.reaction != "" and int(row.priority) <= int(rec.priority):
+	if _reaction_clock < float(rec.cooldowns.get(clip, 0.0)):
 		return false
-	rec.reaction = clip
-	rec.priority = row.priority
+	if int(row.priority) <= int(rec.priority):
+		_offer_queue(rec, row, clip)
+		return false
 	rec.cooldowns[clip] = _reaction_clock + float(row.cooldown)
-	# No blend on impact: the authored recoil must be visible in its first frames.
-	animator.play(clip, 0.0)
-	animator.advance(0.0)
+	_start_reaction(rec, clip, int(row.priority), float(row.get("blend", 0.0)))
+	return true
+
+
+# Section 3 rule 3: a queue row that lost on priority waits in the one slot when the playing
+# clip has at most its row's seconds left and the set piece is idle. A later queued row of at
+# least the held priority replaces it.
+func _offer_queue(rec: Dictionary, row: Dictionary, clip: String) -> void:
+	if not row.has("queue") or rec.reaction == "" or _riding(rec):
+		return
+	var animator: AnimationPlayer = rec.animator
+	if animator.current_animation_length - animator.current_animation_position > float(row.queue):
+		return
+	var held: Dictionary = rec.queued
+	if not held.is_empty() and int(held.priority) > int(row.priority):
+		return
+	rec.queued = {"clip": clip, "priority": int(row.priority), "blend": float(row.get("blend", 0.0)),
+		"cooldown": float(row.cooldown)}
+
+
+# Impact clips cut in with no blend so the authored recoil shows in its first frames; status
+# clips ease in by their row's blend.
+func _start_reaction(rec: Dictionary, clip: String, priority: int, blend: float, apply := true) -> void:
+	rec.reaction = clip
+	rec.priority = priority
+	rec.base = ""
+	_play(rec, clip, blend, apply)
+	var mecha = rec.get("mecha")
+	if mecha != null and clip in MechaMotion.CAST_CLIPS:
+		var contact := _contact_of(rec, clip)
+		if not contact.is_empty():
+			mecha.cast(clip, contact.control, contact.seconds)
 	# A worn outfit's clip with the same name plays on the same trigger (Rivet's hood snaps down).
 	var pilot_node = rec.get("pilot")
 	if pilot_node != null and is_instance_valid(pilot_node):
 		for outfit_player in pilot_node.find_children("OutfitAnimator", "AnimationPlayer", true, false):
 			if outfit_player.has_animation(clip):
-				outfit_player.play(clip, 0.0)
-	return true
+				outfit_player.play(clip, blend)
 
 
-func _pilot_finished(_clip: StringName, player_id: int, animator: AnimationPlayer) -> void:
+func _play(rec: Dictionary, clip: String, blend: float, apply := true) -> void:
+	var animator: AnimationPlayer = rec.animator
+	animator.play(clip, blend)
+	if apply:
+		animator.advance(0.0)
+	rec.blend = blend
+	_note_clip(clip)
+
+
+# The cast's control and its contact time: the pose table's contact (frame E at 30 fps), else
+# the class's bank control at 40 percent of the clip (PILOT-CLIPS section 10), warned once.
+func _contact_of(rec: Dictionary, clip: String) -> Dictionary:
+	var table := _pilot_table(rec["class"])
+	var contact: Dictionary = table.get("clips", {}).get(clip, {}).get("contact", {})
+	if contact.has("control") and contact.has("frame"):
+		var fps := float(table.get("fps", 30))
+		return {"control": String(contact.control), "seconds": maxf(0.0, (float(contact.frame) - 1.0) / fps)}
+	var control := MechaMotion.cast_control(rec["class"], clip)
+	if control == "":
+		return {}
+	_warn_once("contact:%s:%s" % [rec["class"], clip], "hero_assets: pilot %s has no pose-table contact for %s; the control throws at 40 percent" % [rec["class"], clip])
+	return {"control": control, "seconds": 0.4 * rec.animator.get_animation(clip).length}
+
+
+func _pilot_finished(clip: StringName, player_id: int, animator: AnimationPlayer) -> void:
 	var rec: Dictionary = _players.get(player_id, {})
-	if not rec.is_empty() and rec.animator == animator:
-		_seat_pilot(rec)
+	if rec.is_empty() or rec.animator != animator:
+		return
+	var riding := _riding(rec)
+	# Section 3 rule 2: a ride pose never snaps to rest.
+	if String(clip) in PilotReactions.ENDS_ON_RIDE and not riding and animator.has_animation(PilotReactions.RECOVER.clip):
+		rec.queued = {}
+		_start_reaction(rec, PilotReactions.RECOVER.clip, int(PilotReactions.RECOVER.priority), 0.0, false)
+		return
+	var held: Dictionary = rec.queued
+	rec.queued = {}
+	if not held.is_empty() and not riding and animator.has_animation(held.clip) \
+			and _reaction_clock >= float(rec.cooldowns.get(held.clip, 0.0)):
+		rec.cooldowns[held.clip] = _reaction_clock + float(held.cooldown)
+		_start_reaction(rec, held.clip, int(held.priority), float(held.blend), false)
+		return
+	_to_base(rec)
 
 
-func _seat_pilot(rec: Dictionary) -> void:
-	rec.animator.stop()
+# Section 3 rule 1: the base loop from frame 0 with a 0.1 s blend, ult_ride_loop while the set
+# piece holds the ride, else idle_loop. Without the loop (today's GLBs): stop, reset every bone
+# to rest, and warn once per pilot.
+func _to_base(rec: Dictionary) -> void:
+	rec.reaction = ""
+	rec.queued = {}
+	var animator = rec.get("animator")
+	if not is_instance_valid(animator):
+		rec.priority = -1
+		return
+	var base: Dictionary = PilotReactions.BASES.flight if _riding(rec) else PilotReactions.BASES.idle
+	if not animator.has_animation(base.clip):
+		base = PilotReactions.BASES.idle
+	if animator.has_animation(base.clip):
+		rec.base = base.clip
+		rec.priority = int(base.priority)
+		if animator.current_animation != base.clip or not animator.is_playing():
+			_play(rec, base.clip, PilotReactions.BASE_BLEND, false)
+		return
+	_warn_once("pilot_base:" + String(rec["class"]), "hero_assets: pilot %s has no %s; seating by stop and reset" % [rec["class"], base.clip])
+	rec.base = ""
+	rec.priority = -1
+	animator.stop()
 	for skeleton in rec.pilot.find_children("*", "Skeleton3D", true, false):
 		skeleton.reset_bone_poses()
-	rec.reaction = ""
-	rec.priority = -1
+
+
+# The set piece phase from the router's injected callable (SKILL-BAR section 7), else idle.
+func _set_piece_phase(rec: Dictionary) -> String:
+	var player = rec.get("player")
+	if not is_instance_valid(player):
+		return "idle"
+	var phase = player.get("set_piece_phase")
+	if phase is Callable and (phase as Callable).is_valid():
+		return String(phase.call())
+	return "idle"
+
+
+func _riding(rec: Dictionary) -> bool:
+	return _set_piece_phase(rec) in PilotReactions.RIDE_PHASES
+
+
+# The run's pilot_clips row (run_log.gd): plays by clip and refusals for a clip the GLB lacks.
+func _note_clip(clip: String, missing := false) -> void:
+	var run = ctx.get("run") if ctx != null else null
+	if run == null:
+		return
+	var row: Dictionary = run.get_meta("pilot_clips", {})
+	if row.is_empty():
+		row = {"played": {}, "missing": 0}
+		run.set_meta("pilot_clips", row)
+	if missing:
+		row["missing"] = int(row.get("missing", 0)) + 1
+	else:
+		var played: Dictionary = row.get("played", {})
+		played[clip] = int(played.get(clip, 0)) + 1
+		row["played"] = played
+
+
+# --- mecha motion (mecha_motion.gd) ------------------------------------------------------
+
+func _mecha_event(what: String) -> void:
+	for rec in _players.values():
+		var mecha = rec.get("mecha")
+		if mecha == null or not is_instance_valid(rec.player):
+			continue
+		match what:
+			"shot":
+				mecha.shot()
+			"kick":
+				mecha.kick()
+			"ultimate_started":
+				mecha.ultimate_started()
+			"ultimate_ended":
+				mecha.ultimate_ended()
+			"landed":
+				mecha.landed()
+
+
+func _on_pressure_changed(pressure: float) -> void:
+	_pressure = pressure
+
+
+func _step_mecha(rec: Dictionary, player, delta: float) -> void:
+	var mecha = rec.get("mecha")
+	if mecha == null:
+		return
+	mecha.step(delta, _mecha_facts(rec, player) if mecha.needs_facts() else {})
+
+
+# The facts the machinery rows read (mecha_motion.gd FACTS), only for a pilot that has rows.
+func _mecha_facts(rec: Dictionary, player) -> Dictionary:
+	var velocity: Vector3 = player.state.velocity if player.get("state") != null else Vector3.ZERO
+	var facts := {"pressure": _pressure, "set_piece_phase": _set_piece_phase(rec), "heft_class": _run_heft_class(),
+		"aim": _aim_of(velocity)}
+	var kit = player.get("kit")
+	if kit != null:
+		facts["gliding"] = kit.get("gliding") == true
+		facts["cloaked"] = kit.get("cloaked") == true
+	var abilities = player.get("abilities")
+	if abilities != null:
+		facts["selected_slot"] = String(abilities.get("selected")) if abilities.get("selected") != null else ""
+		var meter = abilities.get("meter")
+		if meter != null:
+			facts["meter_fill"] = float(meter.fraction())
+		var ready := {}
+		for slot in ["weapon", "special", "line"]:
+			ready[slot] = bool(abilities.ready(slot))
+		facts["slot_ready"] = ready
+	var spawner = ctx.get("spawner") if ctx != null else null
+	if spawner != null and spawner.has_method("line_load"):
+		facts["line_load"] = 0.0 if (spawner.line_load() as Dictionary).is_empty() else 1.0
+	return facts
 
 
 # --- accretion chunks --------------------------------------------------------------

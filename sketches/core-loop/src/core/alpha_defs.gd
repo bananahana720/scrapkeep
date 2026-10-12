@@ -23,22 +23,24 @@ const COUNT := 6
 # The named synergies this table keeps. Any other synergy and every unnamed tag rule is out.
 const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
 
-# The eighteen parts every source on this table offers, and the only ones. The five shown
+# The nineteen parts every source on this table offers, and the only ones. The five shown
 # parts of the kept synergies, one carrier of each hidden tag they need (kinetic, speed, mass;
 # arc comes from arc_coil, and the class mods carry it for the pylon pilot), the two class
 # mods, and three heavy hitters so the shelf has a rare tier. Wave 11 GP2 adds one part per
 # verb the pool barely touched (roll, harpoon, boost, special, jump, haul); Live Line and Drop
 # Weight are the second ingredients of the Storm Mast and Grounding Spike evolutions. A
 # synergy completes from this list for every pilot. Generated recipes and milestone parts are out.
+# 2026-10-11 (alpha wave 13 SG5): Load Dividend joins the normal parts as the burden payout.
 const PARTS := [
 	"double_feed", "focus_lens", "spiral_wave", "cross_split", "arc_coil",
 	"hot_rivets", "loose_trigger", "rivet_plating",
 	"pylon_capacitor", "runner_overclock",
 	"sunforged_core", "gatling_heart",
 	"grip_tread", "live_line", "vent_baffle", "spare_cell", "spring_shims", "drop_weight",
+	"load_dividend",
 ]
 
-# SG4 burden parts: a second list beside PARTS, so the 18-part loot list (build_synergy_test pins
+# SG4 burden parts: a second list beside PARTS, so the normal loot list (build_synergy_test pins
 # its size and a touch verb on every entry) is unchanged. Never offered by a pool
 # (Parts.offer_pool skips them); in play so a pocket's pay.named can name one.
 const BURDEN_PARTS := ["cracked_plating", "thin_pickings", "slack_coil"]
