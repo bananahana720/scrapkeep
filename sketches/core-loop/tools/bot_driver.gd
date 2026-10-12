@@ -1578,14 +1578,13 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
 	if _cast_phase == "await_smash":
 		_cast_phase = ""
-	if bank_shot and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
-		var guarded: bool = kit.anchor_body.has_method("posture") and kit.anchor_body.has_method("staggered")
-		if kit.line_state == Augments.LINE_SMASH and (not guarded or kit.anchor_body.staggered()):
-			_cast(3)
-		elif _cast_phase == "":
+	if _smash_pending():
+		if _cast_phase == "":
 			# Keep the haul against a closed guard; bank off the paid open-core hit.
 			_cast_slot = 3
 			_cast_phase = "await_smash"
+	elif bank_shot and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
+		_cast(3)
 	_harpoon_commit = false
 	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > LINE_REACH else _off_line + delta
 	# The reticle may reach scenery before the press is consumed. Let that line
@@ -1626,12 +1625,18 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 				source.press["jump_pressed"] = true
 
 
-func _await_smash_holds() -> bool:
+func _smash_pending() -> bool:
 	var kit = game.player.kit
+	if game.player.abilities.id_of(AbilityState.LINE) != "bank_shot" \
+			or not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
+		return false
+	var guarded: bool = kit.anchor_body.has_method("posture") and kit.anchor_body.has_method("staggered")
+	return not (kit.line_state == Augments.LINE_SMASH and (not guarded or kit.anchor_body.staggered()))
+
+
+func _await_smash_holds() -> bool:
 	var target: Node3D = _fight_target if is_instance_valid(_fight_target) else _anchor_target
-	if game.player.abilities.id_of(AbilityState.LINE) == "bank_shot" \
-			and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body) \
-			and kit.line_state != Augments.LINE_SMASH and not _anchor_warden(target):
+	if _smash_pending() and not _anchor_warden(target):
 		return true
 	_cast_phase = ""
 	return false
@@ -2400,6 +2405,7 @@ func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
 # a cast is already in hand, or a set piece runs.
 func _cast(slot: int, hold_seconds := 0.0) -> bool:
 	if _cast_phase == "await_smash": _await_smash_holds()
+	if slot == 3 and game.player.abilities.id_of(AbilityState.LINE) == "bank_shot" and source.press.get("harpoon_released", false): return false
 	if _cast_phase != "" or _set_piece_up() or slot < 2 or slot > AbilityState.BAR.size():
 		return false
 	if _bar_state(slot) != AbilityState.READY or (slot == 3 and _line_loaded()):

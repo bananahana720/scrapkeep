@@ -1031,7 +1031,7 @@ func _connect_all(events) -> void:
 			cannon_motif("cannon_peak", false, false, 12)
 		else:
 			var sound := String(SABLE_SOUNDS["sable_peak"]) if id in ["cable_run", "ball_lightning", "outpost"] else ""
-			on_beat("ultimate_peak", 0.0, false, 1, sound))
+			on_beat("ultimate_peak", PRIORITY_DB[Rows.priority("ultimate_peak")] if sound != "" else 0.0, false, 1, sound))
 	events.ultimate_landed.connect(_on_ultimate_landed)
 	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
 	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
