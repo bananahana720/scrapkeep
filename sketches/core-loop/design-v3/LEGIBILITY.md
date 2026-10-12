@@ -67,32 +67,32 @@ The pattern cue carries the class for a colour-blind player. At the 150 m read d
 
 **Telegraph timing.** A boss hazard warns for at least 1.0 s (`src/boss/hazard.gd:19`). Pack kinds set their own warning, 0.5 to 1.4 s today: seven sit under 1.0 s (bola thrower 0.5, chaser 0.6, line cutter 0.6, kite drone 0.8, swatter 0.8, deflector 0.9, lamp swarm 0.9; for example `src/combat/bola_thrower.gd:34`, `src/combat/chaser.gd:12`), and the longest is the mind hand at 1.4 (`src/combat/mind_hand.gd:26`). A charge longer than 3 s belongs to a Warden or a miniboss. Warning time is a per-kind choice read against these numbers, never derived from an attack's size or damage. The warn sound, the wind-up pose and the floor fill start on the same tick, and damage comes only from the committed telegraph, only inside its live window (`src/combat/telegraph.gd:6-10`). Feedback is bounded: camera shake never exceeds the active camera row's `shake_cap` (1.2, and 0.6 in a Warden fight, `chase_camera.gd:27-29`), and hitstop stays inside its row's clamp (`juice.gd:355`). `tests/telegraph_timing_test.gd` holds each line for the Warden kinds from wave 13; the pack kinds' rows join it in the next wave.
 
-**Pack telegraph record (SQ1).** Every pack-kind attack has one row in `src/combat/telegraph_record.gd`: pre-shoot, recovery, cooldown, radius, marker class and band class. The marker class is read from the committed geometry: a **circle** for an area (a ring, or a swatter's wedge), a **line** for a lunge or a lane, **text** for a delayed hit (no pack kind draws one yet). The band class is read from the attack type: an **area burst** (a ring or a wave, 0.25 to 0.5 s), a **projectile** (0.75 s) or a **ray** (a lane, 1 to 2.5 s); these are Roboquest's bands as starts (`comps/roboquest/enemies-and-telegraphs.md:59`). A pre-shoot outside its band stays where it is with a reason logged in its row; none sits under the 0.4 s reaction floor, and no warn moved to fit a band. Ordinary attacks end in one recovery, 0.75 s standing still (`TelegraphRecord.RECOVERY`, read by `counter.gd`); the chaser, lobber and swarm remnant keep their own clocks for now (`OWN_CLOCK`), and Warden attacks are on `WARDEN_EXCEPTIONS`. `tests/telegraph_timing_pack_test.gd` measures this list over 50 solo spawns per kind (lead at least 0.4 s, telegraph and damage areas overlapping at least 95 percent); `tests/pack_telegraph_record_test.gd` holds it equal to the record.
+**Pack telegraph record (SQ1).** Every pack-kind attack has one row in `src/combat/telegraph_record.gd`: pre-shoot, recovery, cooldown, radius, marker class and band class. The marker class is read from the committed geometry: a **circle** for an area (a ring, or a swatter's wedge), a **line** for a lunge or a lane, **text** for a delayed hit (no pack kind draws one yet). The band class is read from the attack type: an **area burst** (a ring or a wave, 0.25 to 0.5 s), a **projectile** (0.75 s) or a **ray** (a lane, 1 to 2.5 s); these are Roboquest's bands as starts (`comps/roboquest/enemies-and-telegraphs.md:59`). A pre-shoot outside its band stays where it is with a reason logged in its row; none sits under the 0.4 s reaction floor, and no warn moved to fit a band. All 22 pack kinds read `TelegraphRecord.RECOVERY` for a 0.75 s standing tail with no new warning or attack. Counter attacks recover after their live phase, the chaser after its lunge, the lobber after shell release, and a free swarm remnant after its dive. Warden attacks, including Hive guard dives, keep their timing on `WARDEN_EXCEPTIONS`. `tests/telegraph_timing_pack_test.gd` measures this list over 50 solo spawns per kind (lead at least 0.4 s, telegraph and damage areas overlapping at least 95 percent); `tests/pack_telegraph_record_test.gd` holds it equal to the record and measures each kind's recovery before and after.
 
-| Attack | Kind | Marker | Band | Pre-shoot (s) | Band read |
-| --- | --- | --- | --- | --- | --- |
-| E01 | `chaser` | line | ray | 0.60 | logged: a lunge, one roll leaves the lane |
-| E02 | `lobber` | circle | projectile | 1.90 | logged: the ring stands for the shell's whole arc |
-| E05 | `mag_trapper` | circle | area_burst | 1.10 | logged: a hold |
-| E06 | `hooker` | line | ray | 1.00 | in band |
-| E07 | `netcaster` | circle | area_burst | 1.20 | logged: a hold |
-| E08 | `bola_thrower` | circle | projectile | 0.50 | logged: the bola still flies 1.3 s to its ring |
-| E09 | `plated_brute` | circle | area_burst | 1.10 | logged: no interrupt, the read replaces it |
-| E10 | `deflector` | line | ray | 0.90 | logged: a brace that turns the ball |
-| E11 | `winch_drone` | line | ray | 1.00 | in band |
-| E12 | `gyro_jammer` | circle | area_burst | 1.00 | logged: a hold |
-| E13 | `swatter` | circle | area_burst | 0.80 | logged: a hold |
-| E14 | `ramp_flipper` | circle | area_burst | 1.00 | logged: a hold |
-| E15 | `catch_trap` | circle | area_burst | 1.00 | logged: a hold |
-| E16 | `reactor_relic` | circle | area_burst | 2.40 | logged: no interrupt, a 5 s crater |
-| E17 | `swarm_remnant` | line | ray | 1.20 | in band |
-| E18 | `mind_hand` | line | ray | 1.40 | in band |
-| E19 | `burrower` | line | ray | 1.00 | in band |
-| E20 | `drill_crew` | circle | area_burst | 1.20 | logged: no interrupt |
-| E21 | `lamp_swarm` | circle | area_burst | 0.90 | logged: a wave whose front runs outward |
-| E22 | `line_cutter` | circle | projectile | 0.60 | logged: the cutter still flies 1.1 s to its ring |
-| E23 | `anchor_crew` | line | ray | 1.00 | in band |
-| E24 | `kite_drone` | circle | area_burst | 0.80 | logged: no interrupt, then a 0.7 s dive |
+| Attack | Kind | Marker | Band | Pre-shoot (s) | Band read | Recovery (s) |
+| --- | --- | --- | --- | --- | --- | --- |
+| E01 | `chaser` | line | ray | 0.60 | logged: a lunge, one roll leaves the lane | 0.75 |
+| E02 | `lobber` | circle | projectile | 1.90 | logged: the ring stands for the shell's whole arc | 0.75 |
+| E05 | `mag_trapper` | circle | area_burst | 1.10 | logged: a hold | 0.75 |
+| E06 | `hooker` | line | ray | 1.00 | in band | 0.75 |
+| E07 | `netcaster` | circle | area_burst | 1.20 | logged: a hold | 0.75 |
+| E08 | `bola_thrower` | circle | projectile | 0.50 | logged: the bola still flies 1.3 s to its ring | 0.75 |
+| E09 | `plated_brute` | circle | area_burst | 1.10 | logged: no interrupt, the read replaces it | 0.75 |
+| E10 | `deflector` | line | ray | 0.90 | logged: a brace that turns the ball | 0.75 |
+| E11 | `winch_drone` | line | ray | 1.00 | in band | 0.75 |
+| E12 | `gyro_jammer` | circle | area_burst | 1.00 | logged: a hold | 0.75 |
+| E13 | `swatter` | circle | area_burst | 0.80 | logged: a hold | 0.75 |
+| E14 | `ramp_flipper` | circle | area_burst | 1.00 | logged: a hold | 0.75 |
+| E15 | `catch_trap` | circle | area_burst | 1.00 | logged: a hold | 0.75 |
+| E16 | `reactor_relic` | circle | area_burst | 2.40 | logged: no interrupt, a 5 s crater | 0.75 |
+| E17 | `swarm_remnant` | line | ray | 1.20 | in band | 0.75 |
+| E18 | `mind_hand` | line | ray | 1.40 | in band | 0.75 |
+| E19 | `burrower` | line | ray | 1.00 | in band | 0.75 |
+| E20 | `drill_crew` | circle | area_burst | 1.20 | logged: no interrupt | 0.75 |
+| E21 | `lamp_swarm` | circle | area_burst | 0.90 | logged: a wave whose front runs outward | 0.75 |
+| E22 | `line_cutter` | circle | projectile | 0.60 | logged: the cutter still flies 1.1 s to its ring | 0.75 |
+| E23 | `anchor_crew` | line | ray | 1.00 | in band | 0.75 |
+| E24 | `kite_drone` | circle | area_burst | 0.80 | logged: no interrupt, then a 0.7 s dive | 0.75 |
 
 ## 3. The harpoon
 

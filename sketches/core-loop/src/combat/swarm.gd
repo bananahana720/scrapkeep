@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 
 # One swarm-remnant formation (DESIGN-V2 section 10, drones): many identical flat
 # drones that are nothing alone and a threat in formation. The formation is the state,
@@ -55,6 +56,8 @@ var dives := 0
 var locks := 0
 # Whether this dive has stung already: a rack is one threat, so it hurts once.
 var stung := false
+var recovery_seconds := TelegraphRecord.RECOVERY
+var recover_left := 0.0
 var last_scatter_at := Vector3.ZERO
 
 var _frame := -1
@@ -95,6 +98,10 @@ func following() -> bool:
 	return state == State.SCATTERED
 
 
+func recovering() -> bool:
+	return recover_left > 0.0
+
+
 # A rack recovering from a dive, or scattered and following, flies high over the ball,
 # so it never ploughs into it; it comes down to strike height to form up and dive.
 func flying_high() -> bool:
@@ -107,6 +114,8 @@ func lane() -> Node3D:
 
 # A drone's slot in the rack: row r counts back from the apex, which points at the ball.
 func slot(index: int) -> Vector3:
+	if recovering() and index < drones.size() and is_instance_valid(drones[index]):
+		return drones[index].global_position
 	var side := facing.cross(Vector3.UP).normalized()
 	var i := index
 	var row := 0
@@ -123,6 +132,10 @@ func step(delta: float, ball: Vector3, ball_speed: float) -> void:
 	if frame == _frame:
 		return
 	_frame = frame
+	if recovering():
+		recover_left = maxf(0.0, recover_left - delta)
+		_rest = maxf(0.0, _rest - delta)
+		return
 	t += delta
 	_rest = maxf(0.0, _rest - delta)
 	var to_ball := Vector3(ball.x - centre.x, 0.0, ball.z - centre.z)
@@ -185,6 +198,8 @@ func end_dive() -> void:
 
 
 func _reform() -> void:
+	# Hive guard dives retain the Warden clock; only free pack swarms share recovery.
+	recover_left = recovery_seconds if state == State.DIVING and home == null else 0.0
 	_clear_lane()
 	state = State.FORMING
 	t = 0.0

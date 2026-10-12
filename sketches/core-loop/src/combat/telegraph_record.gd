@@ -14,8 +14,8 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 #   lobber's shell flight (its floor ring commits at release); the swarm's lock.
 #   tests/telegraph_timing_pack_test.gd measures it over 50 solo spawns per kind.
 # - recovery: the vulnerable tail after the attack ends. Every ordinary attack reads the one
-#   value RECOVERY (counter.gd's recovery_seconds); an own-clock kind (OWN_CLOCK) keeps its
-#   own and says why. Warden attacks are on WARDEN_EXCEPTIONS.
+#   value RECOVERY, including chaser, lobber and free swarm remnant attacks. Warden attacks
+#   are on WARDEN_EXCEPTIONS.
 # - cooldown: seconds after the recovery before the unit may warn again. A counter.gd kind's
 #   recovery stands inside its rest_seconds, so cooldown = rest_seconds - RECOVERY and the
 #   attack cadence is unchanged.
@@ -97,15 +97,6 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": "A dive that no knock interrupts: the mark lamp paints the spot 0.8 s before the 0.7 s dive."},
 }
 
-# Pack kinds outside counter.gd keep their own recovery. Each is a gap for a later unit: the
-# files that own the clock are outside SQ1's SCOPE.
-const OWN_CLOCK := {
-	"chaser": "chaser.gd runs its own lunge machine with RECOVER 0.9 s, outside counter.gd; the shared value needs a chaser.gd edit.",
-	"lobber": "lobber.gd's cycle has no recovery tail (a 0.28 s pose only), outside counter.gd; the shared value needs a lobber.gd edit.",
-	"swarm_remnant": "swarm.gd owns the formation, which re-forms after a dive (REST 2.0 s) instead of standing open; the shared value needs a swarm.gd edit.",
-}
-const OWN_RECOVERY := {"chaser": 0.9, "lobber": 0.0, "swarm_remnant": 0.0}
-
 # Warden attacks keep their own timing (KF2 to KF4 report each one's charge, recovery and
 # cooldown in tests/telegraph_timing_<kind>_test.gd; decisions.tsv 486c). Keyed by the
 # ATTACK_ROWS id, or "<family>:<attack>" for a driver attack with no row of its own.
@@ -136,9 +127,9 @@ static func row_of(kind: String) -> Dictionary:
 	return ROWS.get(id_of(kind), {})
 
 
-# The recovery a kind's attack ends in: the shared value, or an own-clock kind's own.
-static func recovery(kind: String) -> float:
-	return float(OWN_RECOVERY.get(kind, RECOVERY))
+# Every pack-kind attack ends in the shared recovery.
+static func recovery(_kind: String) -> float:
+	return RECOVERY
 
 
 static func cooldown(kind: String) -> float:
