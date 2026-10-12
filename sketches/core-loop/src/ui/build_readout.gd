@@ -7,6 +7,47 @@ const ItemEffects := preload("res://src/build/item_effects.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
+const STAT_WORDS := {
+	"ability_charges": "Ability charges", "air_control": "Air steering", "air_jumps": "Air jumps",
+	"arm_hit.bonus": "Next hit damage", "bonus_scrap.chance": "Extra scrap chance",
+	"brace.share": "Impact protection", "burst.chance": "Burst chance", "charge_count": "Charge releases",
+	"charges.movement": "Movement charges", "charges.smash": "Smash charges",
+	"charges.special": "Special charges", "charges.weapon": "Weapon charges",
+	"cloak_extend.seconds": "Extra cloak time", "cloak_seconds": "Cloak time",
+	"cogs_price": "Cog prices", "cooldown.special": "Special cooldown", "cooldown_scale": "Movement cooldown",
+	"cruise": "Cruising speed", "damage_reduction.per": "Damage resistance", "damage_taken": "Incoming damage",
+	"dash.speed": "Dash speed", "dash_element": "Dash element", "dash_impulse": "Dash force",
+	"dial.shatter_damage": "Shatter damage", "discovery_state": "Discoveries", "domino.chance": "Domino chance",
+	"drive_accel": "Acceleration", "drone.chance": "Drone chance", "echo_release.chance": "Echo chance",
+	"elapsed_seconds": "Elapsed time", "extra_hit.chance": "Extra hit chance", "glide_gravity": "Glide fall rate",
+	"heal_back.chance": "Healing chance", "hit_damage": "Hit damage", "hp": "Current health",
+	"hp_per_mass": "Health per scrap mass", "hp_per_mass.per": "Health per scrap mass", "impact_force": "Impact force",
+	"jump_speed": "Jump speed", "kill_count": "Kills", "kill_scrap": "Scrap per kill",
+	"last_word.bonus": "Low health hit damage", "magnet": "Scrap pickup reach", "magnet_reach": "Scrap pickup reach",
+	"mass": "Scrap mass", "max_hp": "Maximum health", "max_hp_bonus": "Extra maximum health",
+	"movement_charges": "Movement charges", "movement_cooldown": "Movement cooldown",
+	"overcharge.damage": "Overcharge damage", "part_count": "Fitted parts",
+	"pattern.chain_arc": "Chain arcs", "pattern.cross_split": "Cross splits", "pattern.fan_spread": "Fan spreads",
+	"pattern.helix_drill": "Helix drills", "pattern.spiral_wave": "Spiral waves",
+	"pin_bonus.bonus": "Extra pin damage", "pin_chain.count": "Extra pin links", "pin_count": "Pin links",
+	"pin_damage": "Pin damage", "pin_speed": "Pin speed", "planar_speed": "Rolling speed",
+	"price_scale": "Shop prices", "price_scale.per": "Shop discount", "proc_coefficient": "Trigger strength",
+	"punch": "Added hit damage", "ram_damage": "Ram damage", "rebound_count": "Rebounds",
+	"rebound_speed": "Rebound speed", "rebound_strike.mult": "Rebound hit damage", "reel_speed": "Reel speed",
+	"release_damage": "Release damage", "resistance": "Damage resistance", "return_arc.share": "Returned damage",
+	"roll_on_water_element": "Water roll element", "rope_range": "Harpoon reach",
+	"scrap_burst.chance": "Scrap burst chance", "scrap_mass": "Collected scrap mass", "shot_element": "Shot element",
+	"slam_element": "Slam element", "slam_speed": "Slam speed", "slingshot_boost": "Slingshot speed",
+	"slingshot_keep": "Slingshot carry", "slot_cooldown.per": "Ability cooldown reduction",
+	"smash_charges": "Smash charges", "special_charges": "Special charges", "special_cooldown": "Special cooldown",
+	"speed.gain": "Rolling speed gain", "speed_tier": "Speed tier", "target_distance": "Target distance",
+	"turret_damage": "Turret damage", "vault_charges": "Vault charges", "vault_charges.count": "Extra vault charges",
+	"vault_cooldown": "Vault cooldown", "vault_cooldown.per": "Vault cooldown reduction",
+	"vault_cooldown_scale": "Vault cooldown", "vault_count": "Vaults", "weapon_charges": "Weapon charges",
+	"weapon_damage": "Weapon damage", "weapon_range": "Weapon reach", "weapon_rate": "Weapon firing rate",
+	"zap.chance": "Zap chance",
+}
+
 var _data := {}
 var _popup: PopupPanel
 var _rows: VBoxContainer
@@ -76,7 +117,9 @@ func show_build(held: Array) -> void:
 		_rows.remove_child(child)
 		child.queue_free()
 	for key in _data["pools"]:
-		_line(_data["pools"][key]["text"])
+		var words: String = _data["pools"][key]["text"]
+		if words != "":
+			_line(words)
 	for row in _data["parts"]:
 		_line(row["text"])
 	if _data["parts"].is_empty():
@@ -142,7 +185,7 @@ static func describe(held: Array) -> Dictionary:
 		var layer_name := "weapon-local" if d.layer == "local" else "player-global"
 		var words := "%s x%d · %s · %s%s" % [d.display_name, n, layer_name, cap, " (at cap)" if at_cap else ""]
 		if d.layer == "global":
-			words += "\nReads: " + ", ".join(d.reads).replace("_", " ")
+			words += "\nReads: " + ", ".join(d.reads.map(_stat_words))
 		words += "\n" + d.text
 		for bonus in bonuses:
 			words += "\n" + bonus["text"]
@@ -160,9 +203,16 @@ static func _pool(out: Dictionary, key: String, pool: String, total: float, cap 
 	elif pool == "additive" and total >= 0.0:
 		shown = "+" + shown
 	var limit := String.num(cap * 100.0, 2) + "%" if percent else String.num(cap, 4)
-	var words := "%s · %s · total %s · %s" % [key.replace("_", " "), pool, shown,
+	var words := "%s · %s · total %s · %s" % [_stat_words(key), pool, shown,
 		"cap " + limit if cap >= 0.0 else "no cap"]
+	var neutral := 1.0 if pool == "multiplying" else 0.0
+	if is_equal_approx(total, neutral):
+		words = ""
 	out[key] = {"pool": pool, "total": total, "cap": cap, "text": words}
+
+
+static func _stat_words(key: String) -> String:
+	return STAT_WORDS.get(key, key)
 
 
 static func _cap(d: Resource) -> String:

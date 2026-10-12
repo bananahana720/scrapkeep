@@ -146,11 +146,10 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.needs = row.get("needs", "")
 	def.shop_only = row.get("shop_only", false)
 	def.reads = row.get("reads", def._read_stats())
-	var weapon_only: bool = def.family in ["weapon", "pattern"] and def.trigger == "" \
-		and def.elements.is_empty() and def.charges.is_empty() and def.effect.is_empty() \
-		and def.cooldown_scale == 1.0 and def.magnet == 1.0 and def.kill_scrap == 1.0 and def.max_hp_bonus == 0.0 \
-		and def.mods.keys().all(func(key): return String(key).begins_with("weapon_"))
-	def.layer = row.get("layer", "local" if weapon_only else "global")
+	var player_global: bool = def.max_hp_bonus != 0.0 or not def.effect.is_empty() \
+		or not def.charges.is_empty() or def.trigger != "" or def.magnet != 1.0 \
+		or def.cooldown_scale != 1.0 or def.kill_scrap != 1.0
+	def.layer = row.get("layer", "global" if player_global else "local")
 	return def
 
 
