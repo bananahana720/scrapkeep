@@ -79,7 +79,7 @@ const ROWS := {
 	"shell_sable_felt": {"slot": "shell", "pilot": "pylon_engineer", "name": "Felt Rig", "starter": false, "tint": Color("8c8577"), "asset": "shell_sable_felt"},
 	# --- end pylon_engineer ---
 	# --- runner_gunner (Rivet): P-C Rivet adds its rows here ---
-	"trail_rivet_swarf": {"slot": "trail", "pilot": "runner_gunner", "name": "Swarf Curl", "starter": false, "tint": Color("926036"), "asset": "trail_rivet_swarf"},
+	"trail_rivet_swarf": {"slot": "trail", "pilot": "runner_gunner", "name": "Swarf Curl", "starter": false, "tint": Color("ae7240"), "asset": "trail_rivet_swarf"},
 	"outfit_rivet_hood": {"slot": "outfit", "pilot": "runner_gunner", "name": "Welding Hood", "starter": false, "tint": Color("d2c5a5"), "asset": "outfit_rivet_hood"},
 	"shell_rivet_calibrated": {"slot": "shell", "pilot": "runner_gunner", "name": "Calibrated", "starter": false, "tint": Color("d2c5a5"), "asset": "shell_rivet_calibrated"},
 	# --- end runner_gunner ---
