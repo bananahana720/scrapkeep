@@ -20,8 +20,8 @@ const SEED := 8008
 const OPS := 1000
 const STEP := 1.0 / 60.0
 const LIMIT := 30.0
-# 2026-10-12 SR8: 166 checks measured before four external payload destruction checks.
-const EXPECTED_CHECKS := 170
+# 2026-10-12 SR8 round 2: 170 existing checks plus 46 charge exit/idempotence checks.
+const EXPECTED_CHECKS := 216
 # The lab rows, pinned here so a drift in Devices.ROWS fails the test instead of moving the
 # expectation with it. Change a value here only together with its start value in devices.gd
 # (comps/ror2/companions.md). sticky's cap is Kest's kit knob default (Weapons.STICKY_MAX_LIVE).
@@ -68,6 +68,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_recall_pure()
 	_check_live_minis()
 	_check_live_thrown()
+	_check_external_charge_exit()
 	_check_live_sentry()
 	_check_live_recall()
 	_check_live_kit_payloads()
@@ -311,6 +312,54 @@ func _check_live_thrown() -> void:
 		_t.eq("thrown cap is the kit's sticky_max_live", _devices().cap("sticky"), knob)
 	_t.eq("ten throws hold the cap", _combat.sticky.live().size(), _devices().cap("sticky"))
 	_combat.sticky.clear()
+
+
+# External destruction must release ordinary charges too, before their next step. Test
+# both freeing the node and leaving the tree, then repeat take() beside a live survivor.
+func _check_external_charge_exit() -> void:
+	if _devices() == null:
+		return
+	_as_class("demolitions_caster")
+	var manager = _combat.sticky
+	var at: Vector3 = _game.player.ball_position()
+	for mini in [false, true]:
+		var kind := "mini" if mini else "sticky"
+		for freed in [true, false]:
+			var label := "%s external %s" % [kind, "free" if freed else "exit"]
+			var charge: Dictionary = manager.drop(at, 0.0, 1.0, 99.0, 99.0) if mini \
+				else manager.throw(at, at, 0.0, 1.0, 99.0, false)
+			var survivor: Dictionary = manager.drop(at, 0.0, 1.0, 99.0, 99.0) if mini \
+				else manager.throw(at, at, 0.0, 1.0, 99.0, false)
+			var id := int(charge["device_id"])
+			var node: Node3D = charge["node"]
+			_t.eq("%s starts with two slots" % label, _devices().count(kind), 2)
+			if freed:
+				node.free()
+			else:
+				manager.remove_child(node)
+			_t.eq("%s immediately releases its slot" % label, _devices().count(kind), 1)
+			_t.eq("%s removes its ledger id" % label, _devices().kind_of(id), "")
+			_t.eq("%s immediately leaves the manager" % label, manager.charges.has(charge), false)
+			_t.eq("%s next step returns no detonation" % label, manager.step(STEP, null, []), [])
+			_t.eq("%s next step preserves only the survivor" % label, manager.charges, [survivor])
+			manager.take(charge)
+			manager.take(charge)
+			_t.eq("%s repeated take preserves the other slot" % label, _devices().count(kind), 1)
+			_t.eq("%s repeated take preserves the manager" % label, manager.charges, [survivor])
+			_t.eq("%s does not create refill debt" % label, _devices().refilling(kind), 0)
+			if not freed:
+				node.free()
+			manager.clear()
+			_t.eq("%s survivor cleanup releases its slot" % label, _devices().count(kind), 0)
+		# take() releases first; the later tree-exit signal must be a no-op too.
+		var taken: Dictionary = manager.drop(at, 0.0, 1.0, 99.0, 99.0) if mini \
+			else manager.throw(at, at, 0.0, 1.0, 99.0, false)
+		var taken_node: Node3D = taken["node"]
+		manager.take(taken)
+		_t.eq("%s take releases before node exit" % kind, _devices().count(kind), 0)
+		taken_node.free()
+		_t.eq("%s take then exit keeps zero slots" % kind, _devices().count(kind), 0)
+		_t.eq("%s take then exit keeps manager empty" % kind, manager.charges, [])
 
 
 # Live Sentry Post: one turret per dismount, replaced by the next; it expires on its knob;
