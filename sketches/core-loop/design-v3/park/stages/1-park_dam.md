@@ -98,7 +98,7 @@ E plunge_pool_flood [-85, 515]
 E west_wash_flash_flood [-165, -65]
 E dome_lightning [-110, -520]
 E east_bench_dropship [300, 380]
-E toe_vents_wake [140, 440]
+E toe_vents_wake [190, 430]
 E powerhouse_boiler [120, 505]
 B bay dock [0, 467]
 G gate row [0, 528]
@@ -191,7 +191,7 @@ The shipped rows are in `src/world/park/park_dam.json`; this table follows that 
 | The toe | `powerhouse` | ledge / dam_face / dam_era | plateau | [120, 515], [60, 20, 40], 0 | roll, `ride_ledge` | home `powerhouse_trappers`; routes `powerhouse_floor`, `roof_ramp_line`; `dam_era_powerhouse_log` |
 | The toe | `powerhouse_stair` | ground / dam_face / dam_era | ramp | [120, 455], [60, 20, 16], 180 | roll | routes `powerhouse_floor`, `roof_ramp_line` |
 | The toe | `powerhouse_roof_ramp` | bank / dam_face / dam_era | bowl | [92, 515], [60, 2, 16], 0 | bank, `ride_bowl` | routes `roof_ramp_line` |
-| The toe | `toe_vent_pits` | bowl / dam_face / ancient | bowl | [165, 430], [50, 3, 50], 0 | bank, `ride_bowl` | `ancient_vent_plate` |
+| The toe | `toe_vent_pits` | bowl / dam_face / ancient | bowl | [190, 430], [50, 3, 50], 0 | bank, `ride_bowl` | `ancient_vent_plate` |
 | The toe | `dam_face_quarter` | bank / dam_face / dam_era | ramp | [0, 627.5], [25, 30, 400], 180 | bank, `ride_bowl` | routes `face`, `powerhouse_floor`, `roof_ramp_line` |
 | The toe | `gate_piers` | anchor_field / dam_face / dam_era | none | [0, 605], [10, 8, 44], 0 | swing | routes `face`, `powerhouse_floor`, `roof_ramp_line` |
 | The toe | `gate_row_apron` | bank / dam_face / dam_era | bowl | [0, 540], [30, 2, 60], 0 | bank, `ride_bowl` |  |
@@ -488,7 +488,7 @@ The shipped park file:
   {"id": "powerhouse", "element": "ledge", "landform": "dam_face", "society": "dam_era", "at": [120, 515], "y": null, "size": [60, 20, 40], "yaw_deg": 0, "verb": "roll", "ride_fact": "ride_ledge", "home": "powerhouse_trappers", "recipe": "greybox:ledge", "stamp": "plateau", "hole": false, "budget": "landform", "routes": ["powerhouse_floor", "roof_ramp_line"], "fragment": "dam_era_powerhouse_log"},
   {"id": "powerhouse_stair", "element": "ground", "landform": "dam_face", "society": "dam_era", "at": [120, 455], "y": null, "size": [60, 20, 16], "yaw_deg": 180, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["powerhouse_floor", "roof_ramp_line"], "fragment": ""},
   {"id": "powerhouse_roof_ramp", "element": "bank", "landform": "dam_face", "society": "dam_era", "at": [92, 515], "y": null, "size": [60, 2, 16], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "bowl", "hole": false, "budget": "detail", "routes": ["roof_ramp_line"], "fragment": ""},
-  {"id": "toe_vent_pits", "element": "bowl", "landform": "dam_face", "society": "ancient", "at": [165, 430], "y": null, "size": [50, 3, 50], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bowl", "stamp": "bowl", "hole": false, "budget": "detail", "routes": [], "fragment": "ancient_vent_plate"},
+  {"id": "toe_vent_pits", "element": "bowl", "landform": "dam_face", "society": "ancient", "at": [190, 430], "y": null, "size": [50, 3, 50], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bowl", "stamp": "bowl", "hole": false, "budget": "detail", "routes": [], "fragment": "ancient_vent_plate"},
   {"id": "dam_face_quarter", "element": "bank", "landform": "dam_face", "society": "dam_era", "at": [0, 627.5], "y": null, "size": [25, 30, 400], "yaw_deg": 180, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ramp", "hole": false, "budget": "landform", "routes": ["face", "powerhouse_floor", "roof_ramp_line"], "fragment": ""},
   {"id": "gate_piers", "element": "anchor_field", "landform": "dam_face", "society": "dam_era", "at": [0, 605], "y": null, "size": [10, 8, 44], "yaw_deg": 0, "verb": "swing", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": ["face", "powerhouse_floor", "roof_ramp_line"], "fragment": ""},
   {"id": "gate_row_apron", "element": "bank", "landform": "dam_face", "society": "dam_era", "at": [0, 540], "y": null, "size": [30, 2, 60], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "bowl", "hole": false, "budget": "detail", "routes": [], "fragment": ""},

@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "abeabb775efd3074cd0867481b0805a8d06a4aadc7b516649a0ea7aa7b611d10",
+  "bake_sha256": "84d8a26eaa2db1c5602c74adf964791ed0c7ea8dfcbd2bc06099fc2f82a5eb11",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1313503,
-  "edges": 314009,
+  "bytes": 1312390,
+  "edges": 314008,
   "first_failed": "",
   "flags": {
     "deck": 0,
     "door_ok": 40018,
     "line": 294,
     "open": 40401,
-    "sight_ok": 8469,
+    "sight_ok": 8472,
     "under": 0
   },
   "full_visit_m": 2316,
   "full_visit_ratio": "1.713",
-  "graph_sha256": "95818e0a62de6c1835adc71f1149917bd9156c7a7e1b464ee147c3a73dca04f3",
+  "graph_sha256": "c6abc8aa0967ed349ece5cbe69d851e81e2f1d3419cc9e23a94a78cd4d222778",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2375,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "0f19c1ed49cb96a476365d4d32a31daf69efdaccedfffc975b18cc40a423eeed",
+  "park_sha256": "be2069caf14637d7e716be610a573b39b10c49fddae1cee5a463f4b40f18c368",
   "pockets": [
     {
       "clear_ring": [],
@@ -182,7 +182,7 @@
   "zones": {
     "anchors": [
       {
-        "cost": 1394.6,
+        "cost": 1394.3,
         "d_landmark": 153.8,
         "name": "east_abutment",
         "on_route": false,
@@ -522,7 +522,7 @@
     "crossings": {
       "drop": 24,
       "ride": 11,
-      "walk": 144
+      "walk": 145
     },
     "hidden": [
       {
