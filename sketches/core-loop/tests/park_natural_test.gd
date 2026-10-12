@@ -245,6 +245,7 @@ func _terrain_overlap() -> void:
 	var before_visible := before.visible
 	var probe := Vector2(4, 8).rotated(-deg_to_rad(30.0))
 	var prior_height: float = w.terrain.height(probe.x, probe.y)
+	var expected_live_height := 1.5 + 2.0 * (8.0 + 10.0) / 20.0
 	t.near("shared swap starts on the authored before height", prior_height, 1.5)
 	t.check("shared swap prepares one collider for both rows", handler._prepared[first.id].overlay == handler._prepared[second.id].overlay)
 	for i in 53:
@@ -259,14 +260,14 @@ func _terrain_overlap() -> void:
 	t.check("first terrain owner ends while the second stays live", not handler.active.has(first.id) and handler.active.has(second.id))
 	t.check("second terrain owner retains visible overlay", overlay.visible and not before.visible)
 	t.check("second terrain owner retains after membership", w.terrain.overlays.has("rubble_ramp_after"), str(w.terrain.overlays))
-	t.check("second terrain owner retains committed height", w.terrain.height(probe.x, probe.y) > prior_height)
+	t.near("second terrain owner retains committed height", w.terrain.height(probe.x, probe.y), expected_live_height)
 	await physics_frame
 	await physics_frame
 	var query := PhysicsRayQueryParameters3D.create(Vector3(probe.x, 100, probe.y), Vector3(probe.x, -100, probe.y))
 	var hit: Dictionary = w.get_world_3d().direct_space_state.intersect_ray(query)
 	t.check("second terrain owner retains the real collider", hit.get("collider") == overlay, str(hit))
 	if not hit.is_empty():
-		t.near("second owner ray and height agree", hit.position.y, w.terrain.height(probe.x, probe.y), 0.001)
+		t.near("second owner ray agrees with the independent ramp", hit.position.y, expected_live_height, 0.001)
 	for i in 300:
 		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 2})
 	t.check("final terrain owner restores overlay membership", w.terrain.overlays == ["rubble_ramp_before"], str(w.terrain.overlays))
