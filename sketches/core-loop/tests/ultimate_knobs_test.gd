@@ -39,7 +39,7 @@ var _t := T.new("ultimate_knobs_test")
 func _initialize() -> void:
 	var player := PlayerFixture.new()
 	var fixture_tree := GDScript.new()
-	fixture_tree.source_code = UpgradeTree.source_code.replace("const TREES :=", "static var TREES :=")
+	fixture_tree.source_code = FileAccess.get_file_as_string("res://src/core/upgrade_tree.gd").replace("const TREES :=", "static var TREES :=")
 	if not _t.eq("fixture tree compiles", fixture_tree.reload(), OK):
 		quit(_t.verdict())
 		return

@@ -257,7 +257,7 @@ func _slot_fixtures() -> void:
 	var variant := "fixture_ultimate_growth"
 	var foreign := "fixture_foreign_ultimate"
 	var fixture_tree := GDScript.new()
-	fixture_tree.source_code = UpgradeTree.source_code.replace("const AbilityState :=", "static var AbilityState :=")
+	fixture_tree.source_code = FileAccess.get_file_as_string("res://src/core/upgrade_tree.gd").replace("const AbilityState :=", "static var AbilityState :=")
 	var compiled := fixture_tree.reload()
 	_report("ultimate fixture compiles", compiled == OK, str(compiled))
 	if compiled != OK:
