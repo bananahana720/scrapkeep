@@ -11,7 +11,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 195
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 198
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -24,12 +24,13 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # 2026-10-12 (PC-RIVET r5): 86 -> 148, ten real shape dispatches, independent height,
 # terrain and kit-constant expectations, selected geometry versus rendered vertices,
 # and the unchanged centre-based wave limits and Breach Skid inner ring.
-# 2026-10-12 (PC-RIVET r6): 148 -> 195, narrow-wall shadows, terrain formats and exposed-hull controls.
+# 2026-10-12 (PC-RIVET r6): 148 -> 198, narrow-wall shadows, terrain formats, exposed hulls
+# and a real-stage dispatch so the normal terrain commitment must complete within smoke's cap.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 195
+	_expected_checks = 198
 	super._initialize()
 
 
@@ -292,6 +293,17 @@ func _terrain_shadow_fixture() -> void:
 		_t.eq("outer hull hit once, wall=%s" % wall_present, _damage(outer_hull), [Weapons.FULL_CUT_DAMAGE])
 		if wall != null:
 			wall.queue_free()
+	await _fresh()
+	_player.reset_to(_game.ctx.terrain.spawn_point(1))
+	await physics_frame
+	await physics_frame
+	var stage_origin: Vector3 = _player.ball_position()
+	_t.check("real stage spawn has an independently clear upward ray", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(stage_origin, stage_origin + Vector3.UP * 5.0, 1)).is_empty())
+	_piece("foundry_cutter")
+	_tech("foundry_cutter", 4)
+	_combat.ultimate._peak(_player.ball_position())
+	_t.eq("real stage Full Cut completes one selector commitment", _kit.selected_shapes.size(), 1)
+	_t.check("real stage Full Cut retains exposed drawn volume", not _kit.volume_indicator.shapes.get("rivet_scar", {}).is_empty())
 	await _fresh()
 
 
