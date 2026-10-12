@@ -202,6 +202,7 @@ func _run() -> void:
 	_geometry_boundaries()
 	await _terrain_overlap()
 	await _collapse_contract()
+	_collapse_face_clearance()
 	t.check("all seven kinds tested", t.checks >= 50, str(t.checks))
 	quit(t.verdict())
 
@@ -404,5 +405,23 @@ func _collapse_contract() -> void:
 			t.near("collapse authored progress %s ray agrees" % fraction, hit.position.y, expected, 0.001)
 		t.near("collapse lower tread intact at %s" % fraction, w.terrain.height(low.x, 0), low.y)
 		t.near("collapse upper tread intact at %s" % fraction, w.terrain.height(high.x, 0), high.y)
+	handler.release()
+	w.free()
+
+
+func _collapse_face_clearance() -> void:
+	var row := _row("collapse", "ground_slump")
+	row.effect.face = {"at": [30, 0], "size": [20, 20, 10], "yaw_deg": 0}
+	var fixture := _fixture(row)
+	var w = fixture[0]
+	var handler = fixture[1]
+	var facts := []
+	for i in 80:
+		facts.append_array(w.events.advance(0.1, Vector3(30, 20, 0), Vector3.ZERO, {"clock_tier": 1, "grounded": true}))
+	t.eq("separate face footprint holds landing where original site is clear", facts.filter(func(f): return f.kind == "started").size(), 0)
+	t.eq("handler consumes the same separate face as director", handler._prepared[row.id].geometry.site.at, row.effect.face.at)
+	for i in 10:
+		facts.append_array(w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true}))
+	t.eq("separate face lands after clearance", facts.filter(func(f): return f.kind == "started").size(), 1)
 	handler.release()
 	w.free()
