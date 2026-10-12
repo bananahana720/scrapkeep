@@ -111,7 +111,8 @@ func run(t) -> void:
 			collisions.append([fact, shared])
 	var ultimate: Dictionary = event_script.call("weigh", "ultimate_landed", {})
 	var vault: Dictionary = event_script.call("weigh", "enemy_killed", {"kind": "vault"})
-	var audio_constants := Audio.get_script_constant_map()
+	var audio_script: Script = Audio
+	var audio_constants := audio_script.get_script_constant_map()
 	t.check("vault kill cue constant", audio_constants.has("VAULT_KILL_SOUND") and Bank.has_recipe(String(audio_constants.get("VAULT_KILL_SOUND", ""))), "audio.gd owns the vault kill cue")
 	var shared_cues := [ultimate.sound].filter(func(id): return id != "" and id in [vault.sound, audio_constants.get("VAULT_KILL_SOUND", "")])
 	if not shared_cues.is_empty():
