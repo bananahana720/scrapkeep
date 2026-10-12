@@ -110,6 +110,40 @@ static func facing(yaw_deg: float) -> Vector3:
 	return Vector3(d.x, 0.0, d.y)
 
 
+# PARK size is [length, height, width]; place_greybox runs length along local +Z.
+static func footprint_half_extents(row: Dictionary) -> Vector2:
+	return Vector2(float(row["size"][2]), float(row["size"][0])).abs() * 0.5
+
+
+# Closed rectangle in world XZ. An optional endpoint checks the whole segment;
+# explicit event footprints supply their already-resolved local X/Z half-extents.
+static func footprint_contains(row: Dictionary, world_xz: Vector2, margin := 0.0,
+		end_xz := Vector2.INF, half_extents := Vector2.INF) -> bool:
+	var half := footprint_half_extents(row) if half_extents == Vector2.INF else half_extents
+	half += Vector2.ONE * maxf(0.0, margin)
+	var centre := _v2(row["at"])
+	var yaw := deg_to_rad(float(row["yaw_deg"]))
+	var point := (world_xz - centre).rotated(yaw)
+	if end_xz == Vector2.INF:
+		return absf(point.x) <= half.x and absf(point.y) <= half.y
+	var end := (end_xz - centre).rotated(yaw)
+	var enter := 0.0
+	var leave := 1.0
+	for axis in 2:
+		var delta: float = end[axis] - point[axis]
+		if absf(delta) < 0.00000001:
+			if absf(point[axis]) > half[axis]:
+				return false
+		else:
+			var near: float = (-half[axis] - point[axis]) / delta
+			var far: float = (half[axis] - point[axis]) / delta
+			enter = maxf(enter, minf(near, far))
+			leave = minf(leave, maxf(near, far))
+			if enter > leave:
+				return false
+	return true
+
+
 static func _footprint(row: Dictionary) -> Dictionary:
 	return {"id": row["id"], "at": _v2(row["at"]), "size": Vector2(float(row["size"][0]), float(row["size"][2])),
 		"yaw": deg_to_rad(float(row["yaw_deg"]))}

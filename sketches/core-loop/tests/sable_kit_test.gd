@@ -217,6 +217,9 @@ func _other_pilot_beats() -> void:
 	for id in ["ult_default", "plate_return"]:
 		var ult := Ultimate.new()
 		ult.ctx = _game.ctx
+		# 2026-10-12, PC-TALLY merge 80634ba: plate_return now has Tally's volley row, which calls
+		# into combat; wire the game's combat as the game does (ultimate.gd:152).
+		ult.combat = _combat
 		ult._id = id
 		ult._beat_len = 1.0
 		ult._beats = 4
