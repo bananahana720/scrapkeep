@@ -152,6 +152,7 @@ func _run() -> void:
 	_t.check("quiet gun appears in the Highdraft", _ending_gun_visible)
 	_t.check("quiet gun answers at eight seconds", absf(_ending_cannon_answer - 8.0) <= 60.0 / 172.0, str(_ending_cannon_answer))
 	_t.eq("ending answers only once", _game.presentation.audio.cannon_log.filter(func(row): return row["kind"] == "ending_cannon").size(), 1)
+	_crater_release_checks()
 	_skip_checks()
 	await _resume_world_check()
 	_finish()
@@ -180,6 +181,30 @@ func _before_sequence(won: bool) -> void:
 		and reloaded.has_cosmetic("paint_kest_dusk") and tombstone.get("ended", false) \
 		and line.get("outcome") == "won" and _game.run.over \
 		and not is_instance_valid(_game.screens.ending_sequence)
+
+
+func _crater_release_checks() -> void:
+	for action in ["free", "skip", "cancel"]:
+		var seq := Sequence.new()
+		_game.screens.add_child(seq)
+		seq.start(_game)
+		seq.set_process(false)
+		var paths: Array = seq._crater_paths()
+		var requests = seq.get("_crater_requests")
+		_t.check("KC10 %s fixture requests crater loads before credits" % action,
+			not paths.is_empty() and seq.phase == "flyover")
+		if action == "free":
+			seq.free()
+		else:
+			seq.call(action)
+		_t.check("KC10 %s before credits clears tracked requests" % action,
+			requests is Array and requests.is_empty())
+		for path in paths:
+			var status := ResourceLoader.load_threaded_get_status(path)
+			_t.eq("KC10 %s leaves no threaded task for %s" % [action, path],
+				status, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE)
+		if action != "free":
+			seq.free()
 
 
 func _skip_checks() -> void:
