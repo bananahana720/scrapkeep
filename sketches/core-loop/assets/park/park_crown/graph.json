@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "9763442ddbdf1699fe30818bf430a9727b9f1f79326c9165a081845cf45333ba",
+  "bake_sha256": "7a73456d1c4244a1341030c74a219f9e5a142c52afafe2f7bb692d6dfc072365",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 979424,
-  "edges": 320927,
+  "bytes": 980645,
+  "edges": 320827,
   "first_failed": "",
   "flags": {
     "deck": 627,
     "door_ok": 39506,
     "line": 384,
     "open": 40650,
-    "sight_ok": 8945,
+    "sight_ok": 8932,
     "under": 0
   },
   "full_visit_m": 1780,
   "full_visit_ratio": "1.441",
-  "graph_sha256": "bbff8db214d1a9acf58b2c7c0211b0a02909d25326b6f0389efcc8f555c51388",
+  "graph_sha256": "c090dcb81ca5b63e6cda558b52b242c5b55849430cfab827a37bb4b45fffde42",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
   "nodes": 41028,
-  "park_sha256": "262d2990469f7de67a62230e987757804f36c6fca4b3707cf6641b32921e3282",
+  "park_sha256": "9b460a571660dcc7427c565e35ae6f491458de7faa391a7dd10e34f448ee390f",
   "pockets": [
     {
       "clear_ring": [],
@@ -239,7 +239,7 @@
         "viable": true
       },
       {
-        "cost": 843.1,
+        "cost": 843.7,
         "d_landmark": 505.9,
         "name": "gauntlet_toe",
         "on_route": false,
@@ -263,7 +263,7 @@
         "viable": false
       },
       {
-        "cost": 735.2,
+        "cost": 735.8,
         "d_landmark": 609.3,
         "name": "east_ribs",
         "on_route": false,
@@ -284,14 +284,6 @@
         "name": "turnstone_scree",
         "on_route": false,
         "rank": 6,
-        "viable": true
-      },
-      {
-        "cost": 459.2,
-        "d_landmark": 587.0,
-        "name": "meander",
-        "on_route": false,
-        "rank": 7,
         "viable": true
       },
       {
@@ -319,11 +311,11 @@
         "viable": true
       }
     ],
-    "count": 43,
+    "count": 44,
     "crossings": {
       "drop": 21,
       "ride": 7,
-      "walk": 49
+      "walk": 52
     },
     "hidden": [
       {
