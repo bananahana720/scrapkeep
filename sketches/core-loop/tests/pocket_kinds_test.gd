@@ -43,7 +43,7 @@ func _run() -> void:
 		var index := args.find("--only")
 		if index + 1 < args.size():
 			only = args[index + 1]
-		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay"]:
+		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay", "marks"]:
 			t.check("valid control selection", false, str(args))
 			quit(t.verdict())
 			return
@@ -90,6 +90,8 @@ func _run() -> void:
 		await _hazards()
 		await _marks()
 		await _exit()
+	elif only == "marks":
+		await _marks()
 	elif only == "pay":
 		await _authored_pay()
 	elif only == "cues":
@@ -108,7 +110,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 11, "admission": 3, "cues": 3, "pay": 3}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 11, "admission": 3, "cues": 3, "pay": 3, "marks": 5}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -493,7 +495,13 @@ func _marks() -> void:
 	for stage in STAGES:
 		var g = graphs[stage]
 		var pool: Array = acts.mark_candidates(g)
-		var far_cutoff: float = acts.mark_far_m(g)
+		var farthest := 0.0
+		for node in g.node_count():
+			var distance: float = g.d_spawn_node(node)
+			if (g.flags(node) & Graph.DOOR_OK) != 0 and is_finite(distance):
+				farthest = maxf(farthest, distance)
+		var far_cutoff: float = farthest / 2.0
+		print("independent far-half oracle: %s cutoff=%.3f m; objective-fit nodes with finite spawn paths" % [stage, far_cutoff])
 		var distance_cache := {}
 		var reach_cache := {}
 		for seed_value in 1000:
