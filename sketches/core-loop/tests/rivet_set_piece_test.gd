@@ -398,7 +398,7 @@ func _cylinder_terrain_fixture() -> void:
 	_game.add_child(wall)
 	wall.global_position = origin + Vector3.RIGHT * distance
 	var front := _enemy("chaser", 5.0)
-	var covered := _enemy("chaser", 8.0)
+	var covered := _enemy("chaser", 9.0)
 	var exposed := _enemy("chaser", 8.0, 1.6)
 	for enemy in [front, covered, exposed]:
 		enemy.set_physics_process(false)
@@ -407,9 +407,9 @@ func _cylinder_terrain_fixture() -> void:
 	# A ray tangent to the circle has this slope. Perpendicular distance to that
 	# tangent independently qualifies the whole-hull negative and exposed-hull positive.
 	var slope := radius / sqrt(distance * distance - radius * radius)
-	var whole_clearance := slope * 8.0 / sqrt(1.0 + slope * slope)
+	var whole_clearance := slope * 9.0 / sqrt(1.0 + slope * slope)
 	var edge_clearance := (slope * 8.0 - 1.6) / sqrt(1.0 + slope * slope)
-	_t.check("cylinder independently covers the whole rear hull", whole_clearance > _combat._hull(covered) and 8.0 - _combat._hull(covered) > distance + radius)
+	_t.check("cylinder independently covers the whole rear hull", whole_clearance > _combat._hull(covered) and 9.0 - _combat._hull(covered) > distance + radius)
 	_t.check("cylinder front target has an independent clear ray", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, front.global_position, 1)).is_empty())
 	_t.check("cylinder rear target has an independent blocked ray", not _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin, covered.global_position, 1)).is_empty())
 	_t.check("cylinder boundary hull independently exposes an edge", edge_clearance > 0.0 and edge_clearance < _combat._hull(exposed))
