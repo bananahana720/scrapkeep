@@ -116,8 +116,12 @@ func _ground(x: float, z: float) -> float:
 	return terrain._floor(terrain.stage - 1, x, z)
 
 func _valid_surface(kind: String, stats: Dictionary) -> bool:
-	# Red contract: the inherited overlay branch wrongly applies the water ceiling.
-	return stats.max <= Schema.MAX_EVENT_WATER_M + 0.0001 if kind in ["water", "overlay"] else stats.min >= 0.1499
+	match kind:
+		"water":
+			return stats.max <= Schema.MAX_EVENT_WATER_M + 0.0001
+		"overlay":
+			return stats.min >= -0.0001
+	return stats.min >= 0.1499
 
 func _check_surface(label: String, node: Node3D, site: Dictionary, kind := "marker") -> void:
 	var stats := _surface_stats(node, site)
