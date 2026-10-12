@@ -502,7 +502,13 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		ctx.player.grant_immunity(Ultimate.RECOVER_SECONDS + Weapons.DRIVE_IMMUNE)
 	if id in BEAM_PIECES and _cut.size() >= CUTTER_CARD_CUTS:
 		_discover("rivet_foundry_cutter", "set_piece", at)
-	_clear_piece()
+	var more: bool = combat.ultimate != null and combat.ultimate._leg < (combat.ultimate._plan["legs"] as Array).size()
+	if more:
+		_rammed = {}
+		_cut = {}
+		_shoulder = 0.0
+	else:
+		_clear_piece()
 	return [hits, dealt]
 
 
