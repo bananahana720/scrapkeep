@@ -181,7 +181,7 @@ RAM_CLEVIS = (2.36, 2.88, 0.3)  # the lug block under the eye: inner and outer X
 # -normalize(offset) in the body frame (coordinator ruling at the KF7c fix round: no probed staging
 # yaw; a read direction tuned until the body passes is not a read). KF7c round 3: the offsets are
 # world axes; the check turns them into the body frame by look_subjects.gd WARDEN_BODY_STAGE_YAW,
-# read from that file at build time, the yaw look_harness stages and asserts (see sil_cameras).
+# read from that file at build time, per camera, the yaw look_harness measures and asserts (see sil_cameras).
 SIL_CAMERAS = [
     ("over_shoulder", (0.0, 0.6, 2.0), "WARDEN_BODY_CAMERAS row 0"),
     ("three_q", (-1.97, 0.42, 1.31), "WARDEN_BODY_CAMERAS row 3"),
@@ -388,26 +388,34 @@ def sil_part_outside(part_pts, outline_pts, axes):
     return max(d), sum(1 for x in d if x > 1e-6) / len(d)
 
 
-# 2026-10-11 (w13 KF7c round 3): one frame for this check and the render. The read cameras' eye
-# offsets are world axes, and look_harness stages the body at look_subjects.gd
-# WARDEN_BODY_STAGE_YAW, so the check reads that yaw from the same file at build time and turns each
-# offset into the body frame by it (no copied or probed yaw). SIL_CAMERAS stays the readable copy:
-# a row that drifts from look_subjects.gd fails the build.
+# 2026-10-11 (w13 KF7c round 4): the game frame for this check and the render. The read cameras' eye
+# offsets are world axes. In the game the body turns to the ball and the player's camera sits behind
+# the ball, so look_harness stages the ball at its default spot and measures the yaw the body settles
+# to per camera (look_harness _check_stage_yaw); that measured yaw is look_subjects.gd
+# WARDEN_BODY_STAGE_YAW[subject][camera] (round 3 forced yaw 0 with a 40 m ball and lost the hand
+# read). The check reads it from that file at build time and turns each camera's offset into the
+# body frame by it (no copied or probed yaw). SIL_CAMERAS stays the readable copy of the rows: a row
+# that drifts from look_subjects.gd, or a camera without a yaw entry, fails the build.
 LOOK_SUBJECTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "look_subjects.gd")
 
 
 def sil_frame(subject, const):
-    """(stage yaw in degrees or None, {camera: world eye offset}) from look_subjects.gd."""
+    """({camera: stage yaw in degrees}, {camera: world eye offset}) from look_subjects.gd."""
     with open(LOOK_SUBJECTS) as f:
         text = f.read()
-    m = re.search(r"const WARDEN_BODY_STAGE_YAW := \{([^}]*)\}", text)
-    yaws = {k: float(v) for k, v in re.findall(r'"(\w+)":\s*(-?[0-9.]+)', m.group(1))} if m else {}
+    yaws = {}
+    start = text.find("const WARDEN_BODY_STAGE_YAW := {")
+    if start >= 0:
+        block = text[start:text.index("}}", start) + 2]
+        for subj, body in re.findall(r'"(\w+)":\s*\{([^}]*)\}', block):
+            if subj == subject:
+                yaws = {k: float(v) for k, v in re.findall(r'"(\w+)":\s*(-?[0-9.]+)', body)}
     start = text.find("const %s := [" % const)
     rows = {}
     if start >= 0:
         block = text[start:text.index("]]", start) + 2]
         rows = {k: tuple(float(x) for x in v.split(",")) for k, v in re.findall(r'\["(\w+)", Vector3\(([^)]*)\)', block)}
-    return yaws.get(subject), rows
+    return yaws, rows
 
 
 def sil_turn(v, deg):
@@ -419,14 +427,14 @@ def sil_turn(v, deg):
 def sil_cameras(subject, const, fails):
     """[(name, body-frame offset)] for SIL_CAMERAS, a CHECK line each; a missing stage yaw or a copy
     that drifts from look_subjects.gd appends to fails."""
-    yaw, rows = sil_frame(subject, const)
-    print("CHECK silhouette_stage_yaw %s %s from look_subjects.gd WARDEN_BODY_STAGE_YAW" % (subject, yaw))
-    if yaw is None:
-        print("SILHOUETTE FAIL %s frame stage_yaw missing wants a WARDEN_BODY_STAGE_YAW row" % subject)
-        fails.append("stage yaw")
-        yaw = 0.0
+    yaws, rows = sil_frame(subject, const)
     out = []
     for name, off, src in SIL_CAMERAS:
+        yaw = yaws.get(name)
+        if yaw is None:
+            print("SILHOUETTE FAIL %s frame %s stage_yaw missing wants a WARDEN_BODY_STAGE_YAW entry" % (subject, name))
+            fails.append("stage yaw " + name)
+            yaw = 0.0
         live = rows.get(name)
         if live is None or max(abs(a - b) for a, b in zip(live, off)) >= 1e-6:
             print("SILHOUETTE FAIL %s frame %s offset=%s wants look_subjects.gd %s %s" % (subject, name, off, const, live))
@@ -437,6 +445,12 @@ def sil_cameras(subject, const, fails):
               % (name, off[0], off[1], off[2], src, yaw, view[0], view[1], view[2]))
         out.append((name, body))
     return out
+
+
+def sil_info(body, camera, part, metric, value, want, why):
+    """A review aid: prints a SILHOUETTE info line and never fails the build (KF7c round 4)."""
+    print("SILHOUETTE info %s %s %s %s=%.3f wants %s (review aid: %s)" % (body, camera, part, metric, value, want, why))
+    return True
 
 
 def sil_say(ok, body, camera, part, metric, value, want):
@@ -551,7 +565,8 @@ def silhouette(root):
     for p, l in zip(pts, labels):
         by_label.setdefault(l, []).append(p)
     best_ram = best_tooth = (-1, "")
-    for cam in SIL_APPROACH:
+    tooth_counts = {}
+    for cam in [c[0] for c in SIL_CAMERAS]:
         good_rams = good_teeth = 0
         for part in rams + teeth:
             outline = [p for p, l in zip(pts, labels) if l != part]
@@ -561,12 +576,23 @@ def silhouette(root):
                 good_rams += 1
             if part.startswith("tooth_") and out_m >= SIL_TOOTH_OUT_M:
                 good_teeth += 1
-        best_ram = max(best_ram, (good_rams, cam))
-        best_tooth = max(best_tooth, (good_teeth, cam))
-    if not sil_say(best_ram[0] >= SIL_RAM_COUNT, "reactor", best_ram[1], "rams",
-                   "count(outside_m>=%.1f,outside_frac>=%.1f)" % (SIL_RAM_OUT_M, SIL_RAM_OUT_FRAC), best_ram[0],
-                   ">=%d on over_shoulder or three_q" % SIL_RAM_COUNT):
-        fails.append("rams")
+        tooth_counts[cam] = good_teeth
+        if cam in SIL_APPROACH:
+            best_ram = max(best_ram, (good_rams, cam))
+            best_tooth = max(best_tooth, (good_teeth, cam))
+    # 2026-10-11 (w13 KF7c round 4): the outline counts below are review aids at the game frame. At
+    # the measured staging yaw (look_subjects.gd WARDEN_BODY_STAGE_YAW) the ram count is 0 on both
+    # approach cameras and the tooth count 1 (three_q). The blind read at 7d87f33 found a jaw on
+    # under, and no ram on any camera, which the ram threshold also failed to predict; coordinator
+    # ruling 4 drops the ram read for the alpha (a gap for Andrew), and ruling 3 turns a camera-
+    # dependent line that disagrees with the read into info. The thresholds above are unchanged.
+    sil_info("reactor", best_ram[1], "rams", "count(outside_m>=%.1f,outside_frac>=%.1f)" % (SIL_RAM_OUT_M, SIL_RAM_OUT_FRAC),
+             best_ram[0], ">=%d on over_shoulder or three_q" % SIL_RAM_COUNT,
+             "KF7c round 4, ram read dropped for the alpha, coordinator ruling 4")
+    sil_info("reactor", best_tooth[1], "teeth", "count(outside_m>=%.1f)" % SIL_TOOTH_OUT_M, best_tooth[0],
+             ">=%d on over_shoulder or three_q" % SIL_TOOTH_COUNT,
+             "KF7c round 4, jaw read at 7d87f33 came from under (count there %d), look5 read decides"
+             % tooth_counts.get("under", 0))
     # 2026-10-11 (w13 KF7c round 3): the outline count above passed the 7d87f33 rams, which read as
     # legs. Two 3D lines hold the new form: every ram stands clear of the ground (its lowest vertex
     # over SIL_RAM_MIN_Y, so no ram runs down toward the ground plane), and each ram's axis lies within
@@ -580,10 +606,6 @@ def silhouette(root):
         if not sil_say(angle <= SIL_RAM_STROKE_DEG, "reactor", "3d", ram, "stroke_angle_deg", angle,
                        "<=%.1f" % SIL_RAM_STROKE_DEG):
             fails.append(ram + " stroke")
-    if not sil_say(best_tooth[0] >= SIL_TOOTH_COUNT, "reactor", best_tooth[1], "teeth",
-                   "count(outside_m>=%.1f)" % SIL_TOOTH_OUT_M, best_tooth[0],
-                   ">=%d on over_shoulder or three_q" % SIL_TOOTH_COUNT):
-        fails.append("teeth")
     rows = {}
     for t in teeth:
         ys = [p[1] for p in by_label[t]]
