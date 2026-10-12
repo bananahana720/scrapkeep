@@ -386,6 +386,8 @@ func _phase_matches(s, phase: String, audio, since: int, count: int) -> bool:
 
 
 func _cues() -> void:
+	acts._on_stage_entered(game.run.stage, true)
+	acts.clear()
 	var shared := true
 	var valid_markers := 0
 	var completions := []
