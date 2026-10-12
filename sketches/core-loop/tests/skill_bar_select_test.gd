@@ -109,8 +109,9 @@ func _run() -> void:
 	_game.events.slot_cast.connect(func(slot: String, _id: String, _at: Vector3): _casts.append(slot))
 	_game.events.special_used.connect(func(_id: String, _at: Vector3): _specials += 1)
 	_player.set_physics_process(false)
+	# 2026-10-12: Sable's kit merge (9000ca2) made Bank Shot her line skill; was line_reel.
 	_t.eq("setup: Sable's bar", [_abilities().id_of("weapon"), _abilities().id_of("special"), _abilities().id_of("line")],
-		["arc_caster", "detonation_gauge", "line_reel"])
+		["arc_caster", "detonation_gauge", "bank_shot"])
 
 	# 1. Home at the start.
 	_fresh()
