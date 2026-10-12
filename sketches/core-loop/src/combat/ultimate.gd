@@ -95,6 +95,9 @@ var _ult_rows := {
 	# --- P-C Tally ultimate ---
 	# --- end Tally ---
 	# --- P-C Cannon ultimate ---
+	"cannon_fire_mission": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
+	"cannon_creeping_barrage": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
+	"cannon_plate_mortar": {"target": _cannon_mortar_target, "tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
 	# --- end Cannon ---
 }
 # The last plan started, as drawn. Read only outside.
@@ -137,6 +140,7 @@ func setup(ctx_ref, combat_ref) -> void:
 	ctx.run.defend_hook = Callable(self, "defend")
 	ctx.run.ride_hook = Callable(self, "active")
 	var ev = ctx.events
+	ev.ultimate_started.connect(_cannon_started)
 	ev.enemy_struck.connect(_on_struck)
 	ev.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _feed("smash", ctx.player.chain.multiplier()))
 	ev.line_state_changed.connect(func(state: String, target: Node3D, _at: Vector3, _cause: String):
@@ -570,6 +574,8 @@ func _carrier(from: Vector3, leg: Dictionary):
 		var g := GRAVITY
 		if String(leg["mode"]) == "hop":
 			g = 8.0 * HOP_HEIGHT / (seconds * seconds)
+		if _id.begins_with("cannon_"):
+			g = minf(g, 8.0 * Weapons.APEX_CAP / (seconds * seconds))
 		ride.gravity = g
 		ride.velocity = flat / seconds + Vector3.UP * ((to.y - from.y + 0.5 * g * seconds * seconds) / seconds)
 	return ride
@@ -591,7 +597,14 @@ func _fly(delta: float) -> void:
 		if not _peaked and _beat >= ceili(_beats / 2.0):
 			_peaked = true
 			_peak(player.ball_position())
-	var v = _ride.step(delta)
+	var v
+	if _id.begins_with("cannon_"):
+		# RideRail normally releases 40 ms early. Time-on-target needs the whole
+		# declared flight, so the Cannon keeps it until its committed landing beat.
+		_ride.time += delta
+		v = _ride.velocity_at(_ride.time) if _ride.time < _ride.flight else null
+	else:
+		v = _ride.step(delta)
 	if v == null:
 		_land(_ride.target)
 		return
@@ -624,7 +637,7 @@ func _land(at: Vector3) -> void:
 	var leg: Dictionary = legs[_leg]
 	_leg += 1
 	# ult_encore: a second leg if a target sits within 30 m of the landing.
-	if _leg == legs.size() and _knob("ult_encore", false):
+	if _leg == legs.size() and _knob("ult_encore", false) and not (_id.begins_with("cannon_") and _cannon_encore):
 		var next = _encore_target(at)
 		if next != null:
 			legs.append({"mode": "arc", "to": next, "beats": _beats, "seconds": _beats * _beat_len, "strike": true})
@@ -700,3 +713,169 @@ func warden_posture(warden: Node3D, result: Dictionary) -> void:
 	result["crack"] = false
 	_posture_spent[id] = spent + gain
 	warden._apply_posture(result)
+
+
+# --- PC-CANNON: calls keep their original clock even after a bail or collision ----------
+var _cannon_id := ""
+var _cannon_due := -1.0
+var _cannon_calls := 0
+var _cannon_cursor := 0
+var _cannon_budget := {}
+var _cannon_peak_done := false
+var _cannon_encore := false
+var _cannon_record := {}
+
+
+func _cannon_started(id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float) -> void:
+	if not id.begins_with("cannon_"):
+		return
+	_cannon_id = id
+	_cannon_due = -1.0
+	_cannon_calls = 0
+	_cannon_cursor = 0
+	_cannon_budget = _posture_spent
+	_cannon_peak_done = false
+	_cannon_encore = false
+	_cannon_record = _record
+	_cannon_record["zones"] = 0
+	_cannon_record["zone_hits"] = 0
+
+
+func _cannon_mortar_target(_ball: Vector3, aim: Dictionary) -> Dictionary:
+	var ground = _ground_hit(aim, ARC_REACH[_heft_index()] * Weapons.MORTAR_REACH)
+	return {"path": "arc", "to": ground} if ground != null else {"path": "hop", "to": ctx.player.ball_position()}
+
+
+# Subtract the carrier's deliberate arc height before probing the floor: twelve metres
+# means a missing island below the flight's ground path, rather than the lob's own apex.
+func _cannon_projection(ball: Vector3) -> Vector3:
+	if _ride != null and _ride.mode == RideRail.ARC:
+		var t := clampf(_ride.time, 0.0, _ride.flight)
+		ball.y -= 0.5 * _ride.gravity * t * (_ride.flight - t)
+	return ball
+
+
+func _cannon_target(centre: Vector3, aim: Vector3, reach: float) -> Vector3:
+	var found := centre + Vector3(aim.x, 0.0, aim.z).normalized() * 8.0
+	var best := reach
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		var to: Vector3 = enemy.global_position - centre
+		var flat := Vector3(to.x, 0.0, to.z)
+		var sight: Vector3 = enemy.global_position - ctx.player.ball_position()
+		if flat.length() <= best and (aim.length() < 0.01 or sight.length() < 0.01 or aim.angle_to(sight) <= deg_to_rad(VOLLEY_BIAS_DEG)):
+			best = flat.length()
+			found = enemy.global_position
+	return found
+
+
+func _cannon_call(family: String, at: Vector3, target: Vector3, due: float, heft: float, options := {}) -> bool:
+	var cap := Weapons.CALL_CAP if _cannon_peak_done else Weapons.CALL_CAP - 4
+	if _cannon_calls >= cap:
+		return false
+	var floor = combat._cannon_floor(at)
+	if floor == null:
+		return false
+	var overrides := {"warn": maxf(0.0, due - combat._clock), "live_at": due,
+		"budget": _cannon_budget, "record": _cannon_record}
+	overrides.merge(options, true)
+	combat._commit_cannon(family, target, floor, Weapons.ZONE_REACH, Weapons.ZONE_DAMAGE * heft,
+		"special", family == "plate", overrides)
+	_cannon_calls += 1
+	_cannon_record["zones"] = int(_cannon_record.get("zones", 0)) + 1
+	var audio = combat._cannon_audio()
+	if audio != null:
+		audio.cannon_family(family, false, "cannon_call")
+	return true
+
+
+func _cannon_tech(beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
+	if beat >= _beats:
+		return 0
+	if _cannon_due < 0.0:
+		_cannon_due = combat._clock + maxf(0.0, float(_plan["legs"][_leg]["seconds"]) - _leg_time)
+	var centre := _cannon_projection(ball)
+	var middle := ceili(_beats / 2.0)
+	if _cannon_id == "cannon_fire_mission":
+		if beat == middle:
+			return 0
+		var family: String = preload("res://src/boss/mind_attacks.gd").FAMILIES[_cannon_cursor % 4]
+		_cannon_cursor += 1
+		_cannon_call(family, centre, _cannon_target(centre, aim, Weapons.ZONE_REACH), _cannon_due, heft)
+	elif _cannon_id == "cannon_creeping_barrage":
+		var velocity: Vector3 = _ride.velocity_at(_ride.time) if _ride != null else ctx.player.planar_velocity()
+		velocity.y = 0.0
+		var ahead := centre + velocity * Weapons.CREEP_AHEAD_BEATS * _beat_len
+		var side := Vector3.UP.cross(velocity.normalized())
+		if side.length() < 0.01:
+			side = Vector3.RIGHT
+		for i in 1 + int(_knob("ult_volley", 0)):
+			var at := ahead + velocity.normalized() * 6.0 * i
+			_cannon_call("lane", at - side * 12.2, at + side * 12.2, combat._clock + _beat_len, heft)
+	else:
+		for i in 1 + int(_knob("ult_volley", 0)):
+			var target := _cannon_target(centre, aim, 16.0)
+			if i > 0:
+				target = centre * 2.0 - target
+			_cannon_call("plate", centre, target, combat._clock + _beat_len, heft)
+	return 0
+
+
+func _cannon_peak(_at: Vector3) -> void:
+	_cannon_peak_done = true
+	var heft: float = HEFT_MULT[_heft_index()]
+	var at: Vector3 = _plan["legs"][_leg]["to"]
+	if _cannon_id == "cannon_fire_mission":
+		for family in preload("res://src/boss/mind_attacks.gd").FAMILIES:
+			_cannon_call(family, at, _cannon_target(at, ctx.aim_forward(), Weapons.ZONE_REACH), _cannon_due, heft)
+	elif _cannon_id == "cannon_creeping_barrage":
+		var ball := _cannon_projection(ctx.player.ball_position())
+		_cannon_call("split_lane", ball, ball + _ride.heading * 10.0, combat._clock + _beat_len, heft)
+	else:
+		var target := _cannon_target(at, ctx.aim_forward(), 16.0)
+		var radius := Vector2(target.x - at.x, target.z - at.z).length()
+		var half := preload("res://src/boss/mind_attacks.gd").RUSH_HALF_BAND + float(_knob("ult_radius", 0.0))
+		_cannon_call("rush", at, target, _cannon_due, heft, {"band": Vector2(maxf(0.0, radius - half), minf(Weapons.ZONE_REACH, radius + half))})
+
+
+func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
+	combat._step_cannon(0.0)
+	var mortar := _cannon_id == "cannon_plate_mortar"
+	var hits := 0
+	var damage := 0.0
+	var scale := 0.5 if _cannon_encore else 1.0
+	combat.effects.ring(at, landing_radius(), Palette.ANCIENT)
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()) or enemy.global_position.distance_to(at) > landing_radius():
+			continue
+		damage += combat._cannon_set_piece_hit(enemy, LANDING_DAMAGE * heft * chain * scale, at, true, mortar, _cannon_budget)
+		hits += 1
+	var discovery := _cannon_id
+	# B6's framework card gets the first landing. The pilot card waits for a later one.
+	if ctx.codex != null and ctx.codex.known("set_piece"):
+		match discovery:
+			"cannon_fire_mission":
+				combat._discover("cannon_fire_mission", at)
+			"cannon_creeping_barrage":
+				combat._discover("cannon_creeping_barrage", at)
+			"cannon_plate_mortar":
+				combat._discover("cannon_plate_mortar", at)
+	if _cannon_id == "cannon_fire_mission" and hits >= 8:
+		combat._discover("cannon_time_on_target", at)
+	if _cannon_id == "cannon_creeping_barrage":
+		var heading: Vector3 = _ride.heading if _ride != null else Vector3.FORWARD
+		_cannon_call("lane", at, at + heading * 24.4, combat._clock + _beat_len, heft)
+	# The framework appended the encore before calling landing. Its second leg is four
+	# beats, carries this variant's tech and lands at half damage; never append a third.
+	if _leg < _plan["legs"].size():
+		var leg: Dictionary = _plan["legs"][_leg]
+		leg["mode"] = "line" if _cannon_id == "cannon_creeping_barrage" else "arc"
+		leg["beats"] = 4
+		leg["seconds"] = 4.0 * _beat_len
+		_cannon_encore = true
+		_cannon_due = -1.0
+		_cannon_calls = 0
+		_cannon_peak_done = false
+		_peaked = false
+	return [hits, damage]

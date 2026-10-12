@@ -44,6 +44,7 @@ var _lens_placed := false
 
 
 static func attach(owner_module):
+	preload("res://src/presentation/quiet_gun.gd").attach(owner_module)
 	var base_scene := BossModel.load_scene(base_path)
 	var kit_scene := BossModel.load_scene(kit_path)
 	if base_scene == null or kit_scene == null or not _has_parts(base_scene, BASE_PARTS) or not _has_parts(kit_scene, KIT_PARTS):

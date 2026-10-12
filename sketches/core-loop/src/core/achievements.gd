@@ -132,6 +132,9 @@ const ROWS := {
 	# --- tally (Tally): P-C Tally adds its grant rows here ---
 	# --- end tally ---
 	# --- remembered_cannon (the Cannon): P-C Cannon adds its grant rows here ---
+	"ach_cannon_recital": {"name": "Recital", "text": "Land the four families in the order the gun hums.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_recital"}, "count": 1, "hidden": true, "reward": {"cosmetic": "trail_cannon_recital"}},
+	"ach_cannon_time_on_target": {"name": "Time on Target", "text": "Land a Fire Mission on eight enemies at once.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_time_on_target"}, "count": 1, "reward": {"cosmetic": "paint_cannon_lens"}},
+	"ach_cannon_old_tune": {"name": "Old Tune", "text": "Quiet the Mind with its own gun.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_old_tune"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_cannon_choir"}},
 	# --- end remembered_cannon ---
 }
 

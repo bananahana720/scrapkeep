@@ -144,6 +144,10 @@ const ABILITIES := {
 	# --- P-C Tally rows ------------------------------------------------------------------
 	# --- end Tally ---
 	# --- P-C Cannon rows -----------------------------------------------------------------
+	"cannon_lane_charge": {"icon": "ab_cannon_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "family": "lane"},
+	"cannon_fire_mission": {"icon": "ab_cannon_ult", "paths": ["arc", "line", "rail"], "beats": 0},
+	"cannon_creeping_barrage": {"icon": "ab_cannon_ult", "paths": ["line", "rail", "arc"], "beats": 0, "variant_of": "cannon_fire_mission"},
+	"cannon_plate_mortar": {"icon": "ab_cannon_ult", "paths": ["arc"], "beats": 6, "variant_of": "cannon_fire_mission"},
 	# --- end Cannon ---
 }
 const ICON_DIR := "res://assets/icons/"
