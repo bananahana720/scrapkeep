@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Director := preload("res://src/world/director.gd")
+const Cards := preload("res://src/world/director_cards.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Alpha := preload("res://src/core/alpha_defs.gd")
 const Stage := preload("res://src/core/stage_defs.gd")
@@ -76,20 +77,24 @@ func _cards() -> void:
 	_t.near("elite costs its multiplier", d.credit_pack_cost(Park.ELITE.kinds, true), normal * cards.ELITE_MULTIPLIER)
 	_t.check("unknown kinds never receive a fallback price", not is_finite(d.credit_pack_cost(["unpriced"])))
 	_t.check("stage_cap rejects an oversized kind group", not is_finite(d.credit_pack_cost(["chaser", "chaser", "chaser", "chaser", "chaser"])))
-	_t.near("prices do not scale with dial", d.credit_pack_cost(Park.PACKS[0].kinds), 5.0)
+	var expected_price := 0.0
+	for kind in Park.PACKS[0].kinds:
+		expected_price += cards.CARDS[kind].cost
+	_t.near("prices do not scale with dial", d.credit_pack_cost(Park.PACKS[0].kinds), expected_price)
 	d.stage_time = 1800.0
 	d.spike = true
-	_t.near("prices still fixed at highest dial", d.credit_pack_cost(Park.PACKS[0].kinds), 5.0)
+	_t.near("prices still fixed at highest dial", d.credit_pack_cost(Park.PACKS[0].kinds), expected_price)
 	var free = _director(8, {}, "credit")
 	free.advance(120.0, 0)
 	_t.check("credit also schedules unauthored arrivals", not free.arrivals.is_empty() and free.get("credits_spent") > 0.0)
 	free.stage_time = 0.0
+	var target_share: float = free.lobber_share()
 	var lobbers := 0
 	for draw in 2000:
 		var pack: Dictionary = free._draw_credit()
 		lobbers += int(pack.id == "lobber")
 		free._last_pack_id = pack.id
-	_t.check("unauthored kind weights preserve the tier-zero lobber share", absf(float(lobbers) / 2000.0 - 0.15) <= 0.03, "lobbers=%d/2000 target=0.15 tolerance=0.03" % lobbers)
+	_t.check("unauthored kind weights preserve the tier-zero lobber share", absf(float(lobbers) / 2000.0 - target_share) <= 0.03, "lobbers=%d/2000 target=%s tolerance=0.03" % [lobbers, target_share])
 
 
 func _boundaries() -> void:
@@ -139,12 +144,16 @@ func _boundaries() -> void:
 	partial.play_rect = park.play_rect
 	partial.break_home("culvert_chasers")
 	partial._next_pack = Park.PACKS[0]
-	partial.set("credits", 5.0)
+	var full_price := 0.0
+	for kind in Park.PACKS[0].kinds:
+		full_price += Cards.CARDS[kind].cost
+	var placed_price: float = Cards.CARDS["lobber"].cost
+	partial.set("credits", full_price)
 	partial.advance(0.0, 0, at)
-	_t.check("only queued members are charged after home break", partial.get("credits_spent") == 2.0 and partial.arrivals.size() == 1 and partial.packs[0].kinds == ["lobber"])
+	_t.check("only queued members are charged after home break", partial.get("credits_spent") == placed_price and partial.arrivals.size() == 1 and partial.packs[0].kinds == ["lobber"])
 	partial._next_pack = {"id": "stopped", "kinds": ["chaser"]}
 	partial.advance(0.0, 0, at)
-	_t.check("zero placed members spend nothing and retain the draw", partial.get("credits_spent") == 2.0 and partial._next_pack.id == "stopped")
+	_t.check("zero placed members spend nothing and retain the draw", partial.get("credits_spent") == placed_price and partial._next_pack.id == "stopped")
 
 
 func _calibration() -> void:
