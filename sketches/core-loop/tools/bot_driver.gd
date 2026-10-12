@@ -1576,10 +1576,16 @@ func _note_shred(target: Node3D, delta: float) -> void:
 func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
 	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
+	if _cast_phase == "await_smash":
+		_cast_phase = ""
 	if bank_shot and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
 		var guarded: bool = kit.anchor_body.has_method("posture") and kit.anchor_body.has_method("staggered")
 		if kit.line_state == Augments.LINE_SMASH and (not guarded or kit.anchor_body.staggered()):
 			_cast(3)
+		elif _cast_phase == "":
+			# Keep the haul against a closed guard; bank off the paid open-core hit.
+			_cast_slot = 3
+			_cast_phase = "await_smash"
 	_harpoon_commit = false
 	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > LINE_REACH else _off_line + delta
 	# The reticle may reach scenery before the press is consumed. Let that line
@@ -1618,6 +1624,17 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 				_chain_second = second
 				_chain_rose = false
 				source.press["jump_pressed"] = true
+
+
+func _await_smash_holds() -> bool:
+	var kit = game.player.kit
+	var target: Node3D = _fight_target if is_instance_valid(_fight_target) else _anchor_target
+	if game.player.abilities.id_of(AbilityState.LINE) == "bank_shot" \
+			and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body) \
+			and kit.line_state != Augments.LINE_SMASH and not _anchor_warden(target):
+		return true
+	_cast_phase = ""
+	return false
 
 
 func _clear_chain_hand() -> void:
@@ -2382,6 +2399,7 @@ func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
 # as the old one-tick special press did). False when the slot does not read ready on the bar,
 # a cast is already in hand, or a set piece runs.
 func _cast(slot: int, hold_seconds := 0.0) -> bool:
+	if _cast_phase == "await_smash": _await_smash_holds()
 	if _cast_phase != "" or _set_piece_up() or slot < 2 or slot > AbilityState.BAR.size():
 		return false
 	if _bar_state(slot) != AbilityState.READY or (slot == 3 and _line_loaded()):
@@ -2437,7 +2455,6 @@ func _cast_hands() -> void:
 # Slot 3 while a body line stands on an enemy within LINE_CAST_REACH. The load before a planned
 # bite is cast from _harpoon_hand, on the bite's own tick.
 func _line_hands() -> void:
-	if game.player.abilities.id_of(AbilityState.LINE) == "bank_shot": return
 	var kit = game.player.kit
 	if not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
 		return
@@ -2464,6 +2481,7 @@ func _set_piece_up() -> bool:
 # ULT_TRAVERSE_FAR ahead with the way clear. The set piece flies where the camera looks, and
 # every policy is already looking at its target or along its way.
 func _ultimate_hands(fight: Node3D) -> void:
+	if _cast_phase == "await_smash": _await_smash_holds()
 	if _ult_wait > 0.0 or _set_piece_up() or _cast_phase != "":
 		return
 	if String(game.player.abilities.ultimate().get("state", "")) != AbilityState.READY:
