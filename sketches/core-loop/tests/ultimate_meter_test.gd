@@ -1,5 +1,7 @@
 extends SceneTree
 
+# 2026-10-11 (PC-TARN ruling 2): contact gets a rate budget; 30 checks including the contact stream.
+
 const T := preload("res://tests/support/t.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -192,6 +194,17 @@ func _initialize() -> void:
 		m.tick(0.1, SpeedTier.CRUISE)
 	_link(m, 11, 6)
 	_t.near("28 the same enemy pays again once the gap has passed", m.value, 8.0)
+
+	m.reset()
+	var contact_cap = m.get("CONTACT_RATE_CAP")
+	var contact_burst = m.get("CONTACT_BURST")
+	var contact_seconds := 60.0
+	for i in int(contact_seconds * 2.0):
+		m.tick(0.5, SpeedTier.CRUISE)
+		m.add("contact")
+	_t.check("29 two contacts per second stay within the contact rate plus burst", contact_cap != null and contact_burst != null
+		and m.value <= float(contact_cap) * contact_seconds + float(contact_burst) + 0.0001,
+		"%.3f points over %.1f s, cap %s, burst %s" % [m.value, contact_seconds, contact_cap, contact_burst])
 
 	quit(_t.verdict())
 
