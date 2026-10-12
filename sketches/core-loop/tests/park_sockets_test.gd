@@ -7,7 +7,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const MODULE := "res://src/world/park/sockets.gd"
 const Recipes := preload("res://src/world/park/park_recipes.gd")
-const EXPECTED_CHECKS := 41
+# 2026-10-12: round 2 opening fixtures raise the measured count from 41 to 50.
+const EXPECTED_CHECKS := 50
 var t := T.new("park_sockets_test")
 
 
@@ -21,6 +22,12 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	var sockets: GDScript = load(MODULE)
+	for arg in OS.get_cmdline_user_args():
+		if arg == "--fixture=openings":
+			_opening_controls(sockets)
+			t.eq("opening fixture check count", t.checks + 1, 11)
+			quit(t.verdict())
+			return
 	var layout: Dictionary = sockets.template(17)
 	var graph = layout["graph"]
 	var original: PackedByteArray = graph.to_bytes()
@@ -29,7 +36,8 @@ func _run() -> void:
 	t.check("socket stage builds", made["ok"], str(made["errors"]))
 	t.check("input graph is preserved", graph.to_bytes() == original)
 	t.eq("seeded build repeats", sockets.signature(sockets.stage(layout, 17, "sockets")), sockets.signature(made))
-	t.check("every zone has 2 to 4 authored openings", made["openings_ok"])
+	t.check("every zone has 2 to 4 authored openings", _opening_counts(graph, layout["sockets"]).all(func(n): return n >= 2 and n <= 4))
+	_opening_controls(sockets)
 	t.eq("every selected anchor has one open socket", made["one_socket"], made["pocket_count"])
 	t.check("guaranteed pockets are off the route", made["off_route"])
 	t.check("all fillers are off the shortest route", made["fillers_off_route"])
@@ -123,3 +131,50 @@ func _run() -> void:
 	t.check("control: changed success and re-roll numbers fail the gate", not sockets.gate(weak).is_empty())
 	t.eq("the test ran its stated check count", t.checks + 1, EXPECTED_CHECKS)
 	quit(t.verdict())
+
+
+func _opening_counts(graph, records: Array) -> Array:
+	var counts := []
+	counts.resize(graph.zone_count())
+	counts.fill(0)
+	for socket in records:
+		counts[socket["a"]] += 1
+		counts[socket["b"]] += 1
+	return counts
+
+
+func _opening_fixture(sockets: GDScript, count: int) -> Dictionary:
+	if count == 5:
+		var layout: Dictionary = sockets.template(17)
+		var split: Dictionary = layout["sockets"].pop_front()
+		for i in 2:
+			var record: Dictionary = split.duplicate(true)
+			record["id"] = "split_%d" % i
+			record["links"] = split["links"].slice(i * 2, i * 2 + 2)
+			layout["sockets"].append(record)
+		return layout
+	var builder = sockets.LabBuilder.new()
+	builder.zone(0, true)
+	builder.zone(1, false)
+	for i in count:
+		builder.node(i * 16, 0, 0, sockets.Graph.OPEN)
+		builder.node(i * 16, 8, 1, sockets.Graph.OPEN)
+		builder.link_at(i * 16, 0, i * 16, 8)
+		builder.socket("boundary_%d" % i, 0, 1, [[i * 16, 0, i * 16, 8]],
+			sockets._filler("boundary_%d" % i, [i * 16, 4], [4, 8, 4]), true)
+	return {"graph": builder.finish(), "sockets": builder.sockets, "pocket_zones": []}
+
+
+func _opening_controls(sockets: GDScript) -> void:
+	for count in [2, 4]:
+		var valid := _opening_fixture(sockets, count)
+		t.eq("boundary fixture has exactly %d openings per zone" % count, _opening_counts(valid["graph"], valid["sockets"]), [count, count])
+		t.eq("boundary %d openings validates" % count, sockets.validate(valid["graph"], valid["sockets"]), [])
+	for count in [1, 5]:
+		var invalid := _opening_fixture(sockets, count)
+		var counts := _opening_counts(invalid["graph"], invalid["sockets"])
+		t.eq("invalid fixture reaches exactly %d openings" % count, counts.max(), count)
+		var expected := ["zone route_0 has 1 openings, expected 2 to 4", "zone landform_1 has 1 openings, expected 2 to 4"] if count == 1 else ["zone route_1 has 5 openings, expected 2 to 4"]
+		t.eq("otherwise valid %d-opening fixture fails only the opening range" % count, sockets.validate(invalid["graph"], invalid["sockets"]), expected)
+		if count == 5:
+			t.eq("five openings also reject stage construction for the range", sockets.stage(invalid, 1, "sockets")["errors"], expected)
