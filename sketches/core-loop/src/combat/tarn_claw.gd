@@ -30,6 +30,7 @@ var _dragged := {}
 var _holds := 0
 var _entry_holds := 0
 var _cards := {}
+var _card_frame := -1
 var _piece := ""
 var _previous := Vector3.ZERO
 var _last_beat := 0
@@ -72,6 +73,8 @@ func setup(owner) -> void:
 			_last_beat = 0)
 	ctx.events.ultimate_cancelled.connect(func(_id: String, _reason: String, _refund: bool): _clear_piece())
 	ctx.events.hold_broken.connect(_hold_broken)
+	ctx.events.synergy_discovered.connect(func(_id: String, _category: String, _first: bool):
+		_card_frame = Engine.get_physics_frames())
 
 
 static func tow_limit(heft_class: int) -> float:
@@ -179,14 +182,17 @@ func step(delta: float) -> void:
 	for id in _cards.keys():
 		var entry: Dictionary = _cards[id]
 		var codex = combat._codex()
-		if codex != null and codex.known(entry["after"]):
+		var frame := Engine.get_physics_frames()
+		if frame > _card_frame and frame > int(entry["queued"]) and codex != null and codex.known(entry["after"]):
 			combat._discover(id, entry["at"])
 			_cards.erase(id)
+			_card_frame = frame
+			break
 
 
 func _discover(id: String, after: String, at: Vector3) -> void:
 	# Framework cards take their own tick. A pilot's card follows on a later physics tick.
-	_cards[id] = {"after": after, "at": at}
+	_cards[id] = {"after": after, "at": at, "queued": Engine.get_physics_frames()}
 
 
 func _step_drag(delta: float) -> void:

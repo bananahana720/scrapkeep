@@ -1,5 +1,7 @@
 extends "res://tests/tarn_claw_drag_test.gd"
 
+# 2026-10-11 (PC-TARN): three timing/threshold checks extend the expected count from 50 to 53.
+
 const Enemy := preload("res://src/combat/enemy.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Profile := preload("res://src/core/profile.gd")
@@ -8,14 +10,14 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 
-# PC-TARN, 2026-10-11. Expected: 50 checks including the count assertion.
+# PC-TARN, 2026-10-11. Expected: 53 checks including the count assertion.
 # Shares the real-game fixture, never the drag test's cases. Rows are called through the
 # framework dispatch; throws use CharacterBody3D collision motion. Grants save/reload.
 
 
 func _initialize() -> void:
 	_t = T.new("tarn_set_piece_test")
-	_expected_checks = 50
+	_expected_checks = 53
 	super._initialize()
 
 
@@ -182,7 +184,10 @@ func _grants() -> void:
 		progress.rows[id] = Achievements.row(id)
 	progress.setup(_game.events, null, store, func(): return 50.0, _game.ctx.codex)
 	var found: Array = []
-	_game.events.synergy_discovered.connect(func(id: String, _category: String, _first: bool): found.append(id))
+	var frames: Array = []
+	_game.events.synergy_discovered.connect(func(id: String, _category: String, _first: bool):
+		found.append(id)
+		frames.append([id, Engine.get_physics_frames()]))
 	var codex = _game.ctx.codex
 	codex.mark_discovered("loaded_line")
 	codex.mark_discovered("set_piece")
@@ -191,6 +196,8 @@ func _grants() -> void:
 		var light := _enemy("chaser", 3.0)
 		_cast(light)
 		await _drag_for(0.15)
+		if i == 8:
+			_t.check("nine distinct drags do not grant the trail", not store.earned("ach_tarn_dragged"))
 		_player.kit.drop_line("reset")
 		_player.kit.rewind_left = 0.0
 		_player.abilities.refill()
@@ -208,10 +215,12 @@ func _grants() -> void:
 	var enemy := _enemy("chaser", 3.0)
 	_claw.tow.append(enemy)
 	_land("redjaw_rend", ball)
+	await physics_frame
 	_claw.step(DT)
 	_piece("redjaw_rend", ball, ball)
 	_claw.tow.append(enemy)
 	_land("redjaw_rend", ball)
+	await physics_frame
 	_claw.step(DT)
 	_t.eq("Redjaw Rend codex opens once", found.count("tarn_redjaw_rend"), 1)
 	_player.abilities.ultimate_id = "redjaw_rend"
@@ -224,8 +233,16 @@ func _grants() -> void:
 		_combat.fleet.holds.catch(enemy, "net", ["jump"])
 		ult.start(ult.plan(ball, {"origin": ball, "forward": Vector3.UP, "harpoon": {"state": 0}}))
 		ult.recall()
+	await physics_frame
 	_claw.step(DT)
 	_t.eq("three Q breaks fire hidden discovery", found.count("tarn_hold_still"), 1)
+	var pilot_frames: Array = frames.filter(func(row): return String(row[0]).begins_with("tarn_")).map(func(row): return row[1])
+	var unique_frames := {}
+	for frame in pilot_frames:
+		unique_frames[frame] = true
+	_t.check("pilot cards never share a discovery tick", pilot_frames.size() == unique_frames.size())
+	var framework_frames: Array = frames.filter(func(row): return row[0] in ["loaded_line", "set_piece", "set_piece_breakout"]).map(func(row): return row[1])
+	_t.check("pilot cards follow the framework on a later tick", pilot_frames.all(func(frame): return not framework_frames.has(frame)))
 	_t.check("all three grants earned", grant_ids.all(func(id): return store.earned(id)))
 	var items := ["trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap"]
 	_t.check("all three looks unlocked", items.all(func(id): return store.has_cosmetic(id)))

@@ -72,6 +72,9 @@ func _fresh() -> void:
 		enemy.remove_from_group("enemy")
 		enemy.queue_free()
 	_claw._clear()
+	_claw._cards.clear()
+	_claw._dragged.clear()
+	_claw._holds = 0
 	_combat.ultimate._phase = "idle"
 	_combat.ultimate.meter.locked = false
 	_player.kit.drop_line("reset")
