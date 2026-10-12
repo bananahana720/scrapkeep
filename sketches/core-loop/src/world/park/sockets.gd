@@ -128,7 +128,8 @@ static func stage(layout: Dictionary, seed_value: int, arm: String) -> Dictionar
 	var errors: Array = plan["errors"].duplicate()
 	var out := {"ok": false, "errors": errors, "closed": [], "fillers": [], "pockets": [],
 		"pocket_count": 0, "one_socket": 0, "off_route": true, "fillers_off_route": true,
-		"openings_ok": errors.is_empty(), "reachable": false, "shortest_m": INF, "full_visit_ratio": INF}
+		"openings_ok": errors.is_empty(), "reachable": false, "shortest_m": INF,
+		"complete_placement": false, "full_visit_ratio": INF, "partial_visit_ratio": INF}
 	if not errors.is_empty():
 		return out
 	if not ["fixed", "sockets"].has(arm):
@@ -209,15 +210,20 @@ static func stage(layout: Dictionary, seed_value: int, arm: String) -> Dictionar
 		out["off_route"] = out["off_route"] and graph.flags(door) & (Graph.LINE | Graph.WARDEN) == 0
 		out["reachable"] = out["reachable"] and graph.d_from[door] < INF and graph.d_land[door] < INF
 	out["pocket_count"] = out["pockets"].size()
-	if out["pocket_count"] != wanted.size():
+	out["complete_placement"] = out["pocket_count"] == wanted.size()
+	if not out["complete_placement"]:
 		errors.append("fixed openings do not supply every requested anchor")
 	if not out["reachable"]:
 		errors.append("a pocket cannot be visited and left")
 	if not out["off_route"]:
 		errors.append("a guaranteed pocket sits on the shortest route")
 	var visit := _full_visit(graph, out["pockets"])
-	out["full_visit_ratio"] = visit / out["shortest_m"] if out["shortest_m"] > 0.0 and out["shortest_m"] < INF else INF
-	if out["full_visit_ratio"] > VISIT_MAX:
+	var ratio: float = visit / out["shortest_m"] if out["shortest_m"] > 0.0 and out["shortest_m"] < INF else INF
+	if out["complete_placement"]:
+		out["full_visit_ratio"] = ratio
+	else:
+		out["partial_visit_ratio"] = ratio
+	if out["complete_placement"] and out["full_visit_ratio"] > VISIT_MAX:
 		errors.append("full visit exceeds 3.0")
 	out["ok"] = errors.is_empty()
 	return out
@@ -472,29 +478,40 @@ class LabBuilder:
 
 static func signature(stage_rows: Dictionary) -> String:
 	return JSON.stringify({"closed": stage_rows["closed"], "fillers": stage_rows["fillers"],
-		"pockets": stage_rows["pockets"], "ratio": stage_rows["full_visit_ratio"]}, "", true)
+		"pockets": stage_rows["pockets"], "complete_placement": stage_rows["complete_placement"],
+		"full_visit_ratio": stage_rows["full_visit_ratio"], "partial_visit_ratio": stage_rows["partial_visit_ratio"]}, "", true)
+
+
+static func _record_draw(stats: Dictionary, made: Dictionary, requested: int, seed_value: int) -> void:
+	stats["successes"] += 1 if made["ok"] else 0
+	stats["rerolls"] += 0 if made["ok"] else 1
+	stats["count_ok"] += 1 if made["pocket_count"] >= POCKET_MIN and made["pocket_count"] <= POCKET_MAX else 0
+	stats["off_route"] += 1 if made["off_route"] and made["pocket_count"] > 0 else 0
+	stats["complete"] += 1 if made["complete_placement"] else 0
+	stats["incomplete"] += 0 if made["complete_placement"] else 1
+	if made["complete_placement"]:
+		stats["visit_ok"] += 1 if made["full_visit_ratio"] <= VISIT_MAX else 0
+		stats["max_ratio"] = maxf(stats["max_ratio"], made["full_visit_ratio"])
+	stats["fillers_off_route"] += 1 if made["fillers_off_route"] else 0
+	stats["rows"].append({"seed": seed_value, "pockets": made["pocket_count"], "requested": requested,
+		"reroll": not made["ok"], "complete_placement": made["complete_placement"],
+		"full_visit_ratio": made["full_visit_ratio"] if made["complete_placement"] else null,
+		"partial_visit_ratio": made["partial_visit_ratio"] if not made["complete_placement"] else null,
+		"shortest_m": made["shortest_m"], "fillers": made["fillers"].size(), "off_route": made["off_route"],
+		"fillers_off_route": made["fillers_off_route"], "errors": made["errors"]})
 
 
 static func sweep(seeds := SEEDS) -> Dictionary:
 	var result := {"errors": [], "ok": false}
 	for arm in ["fixed", "sockets"]:
 		result[arm] = {"seeds": seeds, "successes": 0, "rerolls": 0, "count_ok": 0,
-			"off_route": 0, "visit_ok": 0, "fillers_off_route": 0, "max_ratio": 0.0, "rows": []}
+			"off_route": 0, "visit_ok": 0, "complete": 0, "incomplete": 0,
+			"fillers_off_route": 0, "max_ratio": 0.0, "rows": []}
 	for seed_value in range(1, seeds + 1):
 		var layout := template(seed_value)
 		for arm in ["fixed", "sockets"]:
 			var made := stage(layout, seed_value, arm)
-			var stats: Dictionary = result[arm]
-			stats["successes"] += 1 if made["ok"] else 0
-			stats["rerolls"] += 0 if made["ok"] else 1
-			stats["count_ok"] += 1 if made["pocket_count"] >= POCKET_MIN and made["pocket_count"] <= POCKET_MAX else 0
-			stats["off_route"] += 1 if made["off_route"] and made["pocket_count"] > 0 else 0
-			stats["visit_ok"] += 1 if made["full_visit_ratio"] <= VISIT_MAX else 0
-			stats["fillers_off_route"] += 1 if made["fillers_off_route"] else 0
-			stats["max_ratio"] = maxf(stats["max_ratio"], made["full_visit_ratio"])
-			stats["rows"].append({"seed": seed_value, "pockets": made["pocket_count"], "requested": layout["pocket_zones"].size(),
-				"reroll": not made["ok"], "full_visit_ratio": made["full_visit_ratio"], "shortest_m": made["shortest_m"],
-				"fillers": made["fillers"].size(), "off_route": made["off_route"], "fillers_off_route": made["fillers_off_route"], "errors": made["errors"]})
+			_record_draw(result[arm], made, layout["pocket_zones"].size(), seed_value)
 	for arm in ["fixed", "sockets"]:
 		result[arm]["success_share"] = float(result[arm]["successes"]) / maxf(seeds, 1)
 		result[arm]["reroll_share"] = float(result[arm]["rerolls"]) / maxf(seeds, 1)
@@ -546,9 +563,9 @@ static func report(result: Dictionary) -> String:
 	var lines := PackedStringArray(["sockets lab: paired 8 m open-route templates, fixed connector masks against adaptive closures"])
 	for arm in ["fixed", "sockets"]:
 		var s: Dictionary = result[arm]
-		lines.append("%s: %d seeds; all-criteria success %.1f%% (socket minimum 95%%); pockets 3..8 %d/%d; guaranteed off-route %d/%d; re-roll %.1f%% (socket under 10%%); full visit <=3.0 %d/%d, maximum %.3f; fillers off-route %d/%d" % [
+		lines.append("%s: %d seeds; all-criteria success %.1f%% (socket minimum 95%%); pockets 3..8 %d/%d; guaranteed off-route %d/%d; re-roll %.1f%% (socket under 10%%); complete draws %d, incomplete draws %d; full visit <=3.0 %d/%d complete draws, maximum %.3f; fillers off-route %d/%d" % [
 			arm, s["seeds"], 100.0 * s["success_share"], s["count_ok"], s["seeds"], s["off_route"], s["seeds"],
-			100.0 * s["reroll_share"], s["visit_ok"], s["seeds"], s["max_ratio"], s["fillers_off_route"], s["seeds"]])
+			100.0 * s["reroll_share"], s["complete"], s["incomplete"], s["visit_ok"], s["complete"], s["max_ratio"], s["fillers_off_route"], s["seeds"]])
 	lines.append("socket re-roll %.1f%% <= half fixed %.1f%%: %s" % [100.0 * result["sockets"]["reroll_share"],
 		50.0 * result["fixed"]["reroll_share"], "PASS" if result["sockets"]["reroll_share"] <= result["fixed"]["reroll_share"] * FIXED_SHARE_MAX else "FAIL"])
 	lines.append("socket gate: %s %s" % ["PASS" if result["ok"] else "FAIL", str(result["errors"])])
