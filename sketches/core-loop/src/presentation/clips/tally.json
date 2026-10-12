@@ -383,10 +383,8 @@
       "loop": false,
       "from": "rest",
       "to": "rest",
-      "ease": "smooth",
-      "planted": [
-        "L"
-      ],
+      "ease": "linear",
+      "planted": [],
       "source": {
         "sheet": "design-v3/pilots/tally.md",
         "row": "class_up"
@@ -395,22 +393,29 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "Both paws begin at the driving grips."
+          "note": "Both paws rest at the driving grips."
         },
         {
-          "frame": 8,
+          "frame": 9,
           "torso": {
             "height": 1.015,
             "pitch": 2
           },
           "head": {
-            "pitch": 1
+            "pitch": 6
           },
           "hand.R": {
             "at": [
-              0.34,
+              0.05,
               0.25,
-              0.22
+              0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.05,
+              0.25,
+              0.3
             ]
           },
           "wrist.R": [
@@ -418,7 +423,12 @@
             0,
             -12
           ],
-          "note": "The right paw raises an imaginary fresh page toward the camera."
+          "wrist.L": [
+            0,
+            0,
+            12
+          ],
+          "note": "Both paws hold a fresh page together in front of the face."
         },
         {
           "frame": 13,
@@ -427,13 +437,20 @@
             "pitch": 2
           },
           "head": {
-            "pitch": 1
+            "pitch": 6
           },
           "hand.R": {
             "at": [
-              0.34,
+              0.05,
               0.25,
-              0.22
+              0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.05,
+              0.25,
+              0.3
             ]
           },
           "wrist.R": [
@@ -441,13 +458,18 @@
             0,
             -12
           ],
-          "note": "The right paw holds the page-display pose."
+          "wrist.L": [
+            0,
+            0,
+            12
+          ],
+          "note": "The page stays facing the camera for five frames."
         },
         {
           "frame": 18,
           "torso": {
             "height": 0.96,
-            "pitch": -9
+            "pitch": -10
           },
           "head": {
             "pitch": -6
@@ -455,24 +477,27 @@
           "ears": 10,
           "hand.R": {
             "at": [
-              0.32,
+              0.29,
               0.43,
               -0.24
             ]
           },
-          "wrist.R": [
-            0,
-            0,
-            0
-          ],
+          "hand.L": {
+            "at": [
+              0.19,
+              0.43,
+              -0.24
+            ]
+          },
           "curl.R": -30,
-          "note": "The right paw stamps down above the fixed right knee."
+          "curl.L": -30,
+          "note": "Both paws drop linearly onto the right knee to stamp the page."
         },
         {
-          "frame": 21,
+          "frame": 22,
           "torso": {
             "height": 0.96,
-            "pitch": -9
+            "pitch": -10
           },
           "head": {
             "pitch": -6
@@ -480,38 +505,33 @@
           "ears": 10,
           "hand.R": {
             "at": [
-              0.32,
+              0.29,
+              0.43,
+              -0.24
+            ]
+          },
+          "hand.L": {
+            "at": [
+              0.19,
               0.43,
               -0.24
             ]
           },
           "curl.R": -30,
-          "note": "The right paw holds the low knee-stamp pose."
-        },
-        {
-          "frame": 26,
-          "torso": {
-            "height": 0.99,
-            "pitch": -2
-          },
-          "head": {
-            "pitch": -1
-          },
-          "hand.R": {
-            "at": [
-              0.32,
-              0.4,
-              -0.04
-            ]
-          },
-          "note": "The right paw rises from the knee toward its yoke."
+          "curl.L": -30,
+          "note": "Both paws hold the knee stamp for five frames."
         },
         {
           "frame": 31,
           "pose": "rest",
-          "note": "Both paws finish at the driving grips."
+          "note": "Both paws rest at the driving grips."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 9,
+        "contact": 18,
+        "peak": 13
+      }
     },
     "cast_special": {
       "end": 16,
@@ -637,7 +657,12 @@
           "pose": "rest",
           "note": "Both paws finish at the driving grips."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 4,
+        "contact": 6,
+        "peak": 8
+      }
     },
     "cast_line": {
       "end": 16,
@@ -664,6 +689,21 @@
           "note": "Both paws begin at the driving grips."
         },
         {
+          "frame": 2,
+          "hand.R": {
+            "control": "CardTab.2",
+            "offset": [
+              0,
+              0,
+              0.08
+            ]
+          },
+          "torso": {
+            "pitch": 2
+          },
+          "note": "The right paw rises 0.08 m above the slot-3 tab before the fast punch."
+        },
+        {
           "frame": 4,
           "torso": {
             "pitch": -3,
@@ -687,7 +727,7 @@
           "frame": 5,
           "torso": {
             "height": 0.97,
-            "pitch": -7,
+            "pitch": -9,
             "yaw": 2
           },
           "head": {
@@ -699,7 +739,7 @@
             "offset": [
               0,
               0,
-              -0.045
+              -0.06
             ]
           },
           "curl.R": -30,
@@ -720,12 +760,12 @@
             "control": "CardTab.2",
             "offset": [
               0,
-              -0.06,
-              0
+              -0.1,
+              0.03
             ]
           },
           "curl.R": -30,
-          "note": "The right paw makes the first ticker-tape tug."
+          "note": "First ticker-tape tug lifts the paw above the ring line and back by 0.10 m."
         },
         {
           "frame": 9,
@@ -763,40 +803,47 @@
             "control": "CardTab.2",
             "offset": [
               0,
-              -0.06,
-              0
+              -0.1,
+              0.03
             ]
           },
           "curl.R": -30,
-          "note": "The right paw makes the second ticker-tape tug."
+          "note": "Second ticker-tape tug lifts the paw above the ring line and back by 0.10 m."
         },
         {
-          "frame": 13,
+          "frame": 14,
           "torso": {
-            "pitch": -2,
-            "yaw": 1
+            "height": 0.98,
+            "pitch": -4,
+            "yaw": 2
           },
           "head": {
-            "pitch": -2,
-            "yaw": 2
+            "pitch": -3,
+            "yaw": 3
           },
           "hand.R": {
             "control": "CardTab.2",
             "offset": [
               0,
-              0,
-              0.025
+              -0.1,
+              0.03
             ]
           },
-          "curl.R": -10,
-          "note": "The right paw loosens its hold above the tab."
+          "curl.R": -30,
+          "note": "The second tug holds above the tab for four frames."
         },
         {
           "frame": 16,
           "pose": "rest",
           "note": "Both paws finish at the driving grips."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 2,
+        "contact": 4,
+        "peak": 7,
+        "second_peak": 11
+      }
     },
     "ult_ready": {
       "end": 25,
@@ -864,7 +911,7 @@
         {
           "frame": 11,
           "head": {
-            "pitch": -2
+            "pitch": -3
           },
           "hand.R": {
             "at": [
@@ -880,109 +927,111 @@
               0.08
             ]
           },
+          "curl.R": -40,
+          "curl.L": -40,
+          "note": "Both paws hold the knuckle crack at the chest for four frames."
+        },
+        {
+          "frame": 12,
+          "head": {
+            "pitch": -10
+          },
+          "hand.R": {
+            "at": [
+              0,
+              0.25,
+              0.34
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L"
+          },
           "wrist.R": [
             0,
             0,
-            -15
+            0
           ],
-          "wrist.L": [
-            0,
-            0,
-            15
-          ],
-          "curl.R": -40,
-          "curl.L": -40,
-          "note": "The wrists counter-rotate through the crack."
+          "note": "The right paw crosses the forehead at the head midline, elbow kept away from the ear."
         },
         {
           "frame": 15,
           "head": {
-            "pitch": -2
+            "pitch": -10
           },
           "hand.R": {
             "at": [
-              0.31,
-              0.19,
-              0.3
+              0,
+              0.25,
+              0.34
             ]
           },
           "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
+            "control": "Grip.L"
           },
           "wrist.R": [
             0,
             0,
-            -15
+            0
           ],
-          "note": "The right paw rises beside the brow for the visor mime."
+          "note": "The right paw holds the brow while the head nods down ten degrees."
         },
         {
           "frame": 18,
           "head": {
-            "pitch": -4
+            "pitch": -12
           },
           "goggles": -30,
           "hand.R": {
             "at": [
-              0.31,
-              0.2,
-              0.19
+              0,
+              0.29,
+              0.2
             ]
           },
           "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
+            "control": "Grip.L"
           },
           "wrist.R": [
             0,
             0,
-            -15
+            0
           ],
-          "note": "The right paw pulls down beside the face."
+          "note": "The right paw pulls the visor down across the face midline with a twelve-degree head nod."
         },
         {
           "frame": 21,
           "head": {
-            "pitch": -4
+            "pitch": -12
           },
           "goggles": -30,
           "hand.R": {
             "at": [
-              0.31,
-              0.2,
-              0.19
+              0,
+              0.29,
+              0.2
             ]
           },
           "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
+            "control": "Grip.L"
           },
           "wrist.R": [
             0,
             0,
-            -15
+            0
           ],
-          "note": "The right paw holds the lowered visor gesture."
+          "note": "The right paw holds the lowered visor for four frames."
         },
         {
           "frame": 25,
           "pose": "rest",
           "note": "Both paws finish at the driving grips."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 8,
+        "contact": 18,
+        "peak": 12
+      }
     },
     "ult_windup": {
       "end": 11,
@@ -1462,10 +1511,7 @@
       "from": "rest",
       "to": "rest",
       "ease": "linear",
-      "planted": [
-        "R",
-        "L"
-      ],
+      "planted": [],
       "contact": {
         "frame": 6,
         "hand": "R",
@@ -1479,107 +1525,106 @@
         {
           "frame": 1,
           "pose": "rest",
-          "note": "Both paws begin at the driving grips."
+          "note": "Both paws rest at the driving grips."
         },
         {
           "frame": 3,
           "torso": {
             "height": 1.015,
-            "pitch": 3
+            "pitch": 6
           },
           "head": {
             "pitch": 2
           },
           "hand.R": {
-            "control": "Grip.R"
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0.12
+            ]
           },
           "hand.L": {
-            "control": "Grip.L"
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0.12
+            ]
           },
-          "note": "The torso lifts in anticipation while both paws stay on the yokes."
-        },
-        {
-          "frame": 5,
-          "torso": {
-            "height": 0.99,
-            "pitch": -3
-          },
-          "head": {
-            "pitch": -2
-          },
-          "hand.R": {
-            "control": "Grip.R"
-          },
-          "hand.L": {
-            "control": "Grip.L"
-          },
-          "curl.R": -25,
-          "curl.L": -25,
-          "note": "Both paws return to the yoke contact points."
+          "note": "Both paws rise 0.12 m above the yokes before the downward stamp."
         },
         {
           "frame": 6,
           "torso": {
-            "height": 0.94,
-            "pitch": -11
+            "height": 0.96,
+            "pitch": -12
           },
           "head": {
             "pitch": -6
           },
           "ears": 12,
           "hand.R": {
-            "control": "Grip.R"
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              -0.008
+            ]
           },
           "hand.L": {
-            "control": "Grip.L"
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              -0.06
+            ]
           },
           "curl.R": -35,
           "curl.L": -35,
-          "note": "The torso snaps down and both paws curl against the planted yokes like a stamp."
+          "note": "Both paws drive below the grips; the right stays within 10 mm of its unchanged contact control."
         },
         {
-          "frame": 8,
+          "frame": 9,
           "torso": {
-            "height": 0.94,
-            "pitch": -11
+            "height": 0.96,
+            "pitch": -12
           },
           "head": {
             "pitch": -6
           },
           "ears": 12,
           "hand.R": {
-            "control": "Grip.R"
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              -0.008
+            ]
           },
           "hand.L": {
-            "control": "Grip.L"
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              -0.06
+            ]
           },
           "curl.R": -35,
           "curl.L": -35,
-          "note": "Both paws hold the planted yokes through the low stamp pose."
-        },
-        {
-          "frame": 11,
-          "torso": {
-            "height": 0.98,
-            "pitch": -3
-          },
-          "head": {
-            "pitch": -2
-          },
-          "hand.R": {
-            "control": "Grip.R"
-          },
-          "hand.L": {
-            "control": "Grip.L"
-          },
-          "note": "The torso rises while both paws retain their driving grips."
+          "note": "Both paws hold the low stamp for four frames."
         },
         {
           "frame": 15,
           "pose": "rest",
-          "note": "Both paws finish at the driving grips."
+          "note": "Both paws rest at the driving grips."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 3,
+        "contact": 6,
+        "peak": 6
+      }
     },
     "unlock": {
       "end": 91,
@@ -1601,115 +1646,159 @@
         {
           "frame": 10,
           "root": [
-            -0.1,
-            -0.04,
-            0
-          ],
-          "head": {
-            "yaw": 8
-          },
-          "hand.R": {
-            "at": [
-              0.34,
-              0.25,
-              0.13
-            ]
-          },
-          "wrist.R": [
             0,
             0,
-            -15
-          ],
-          "curl.R": -15,
-          "note": "The seated root shifts sideways for an entrance mime."
-        },
-        {
-          "frame": 22,
-          "root": [
-            -0.1,
-            -0.04,
-            0
-          ],
-          "head": {
-            "yaw": 8
-          },
-          "hand.R": {
-            "at": [
-              0.34,
-              0.25,
-              0.13
-            ]
-          },
-          "wrist.R": [
-            0,
-            0,
-            -15
-          ],
-          "curl.R": -15,
-          "note": "The right paw holds an imaginary pen during the seated approach."
-        },
-        {
-          "frame": 34,
-          "root": [
-            -0.06,
-            -0.02,
-            0.012
+            0.045
           ],
           "torso": {
-            "height": 1.015,
-            "pitch": -3
+            "pitch": -3,
+            "height": 1
           },
           "head": {
             "pitch": -2
           },
           "hand.R": {
             "at": [
-              0.32,
-              0.24,
-              0.15
+              0.5,
+              -0.011,
+              -0.15
             ]
           },
           "hand.L": {
-            "at": [
-              -0.39,
-              0.32,
-              0.01
-            ]
+            "control": "Grip.L"
           },
-          "wrist.R": [
-            0,
-            0,
-            -15
-          ],
-          "curl.R": -15,
-          "note": "The seated body shuffles inward toward the seat centre."
+          "note": "The right paw braces on the right seat-frame tie while the root rises 0.045 m."
         },
         {
-          "frame": 43,
+          "frame": 22,
+          "root": [
+            0,
+            0,
+            0.045
+          ],
+          "torso": {
+            "pitch": -3,
+            "height": 1
+          },
+          "head": {
+            "pitch": -2
+          },
+          "hand.R": {
+            "at": [
+              0.5,
+              -0.011,
+              -0.15
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L"
+          },
+          "note": "The right paw braces on the right seat-frame tie while the root rises 0.045 m."
+        },
+        {
+          "frame": 26,
+          "root": [
+            0,
+            0,
+            0.045
+          ],
+          "torso": {
+            "pitch": -3,
+            "height": 1
+          },
+          "head": {
+            "pitch": -2
+          },
+          "hand.R": {
+            "at": [
+              0.5,
+              -0.011,
+              -0.15
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L"
+          },
+          "note": "The right paw holds the seat-frame brace during the raised-root pause."
+        },
+        {
+          "frame": 34,
           "root": [
             0,
             0,
             0
           ],
+          "torso": {
+            "pitch": -5,
+            "height": 0.98
+          },
+          "head": {
+            "pitch": -2
+          },
+          "hand.R": {
+            "at": [
+              0.5,
+              -0.011,
+              -0.15
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L"
+          },
+          "note": "The right paw holds the seat-frame tie while the root settles onto the seat."
+        },
+        {
+          "frame": 38,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "pitch": -5,
+            "height": 0.98
+          },
+          "head": {
+            "pitch": -2
+          },
+          "hand.R": {
+            "at": [
+              0.5,
+              -0.011,
+              -0.15
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L"
+          },
+          "note": "The right paw holds the seat-frame tie while the root settles onto the seat."
+        },
+        {
+          "frame": 48,
+          "torso": {
+            "height": 1.015,
+            "pitch": 2
+          },
           "head": {
             "pitch": -3
           },
           "hand.R": {
             "at": [
               0.32,
-              0.26,
-              0.14
+              0.28,
+              0.2
             ]
           },
           "hand.L": {
-            "at": [
-              -0.38,
-              0.33,
-              0.02
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
             ]
           },
-          "curl.R": -15,
-          "note": "The seated root settles at the seat centre."
+          "curl.R": -30,
+          "note": "The right paw rises for the third-leaf stamp and holds before the tap."
         },
         {
           "frame": 52,
@@ -1795,61 +1884,16 @@
           "note": "The right paw holds the third-leaf stamp pose."
         },
         {
-          "frame": 76,
-          "torso": {
-            "height": 1.01,
-            "pitch": 2
-          },
-          "head": {
-            "yaw": 12
-          },
-          "ears": -4,
-          "hand.R": {
-            "at": [
-              0.32,
-              0.38,
-              0.02
-            ]
-          },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "note": "The head turns toward the drums for their spin-up beat."
-        },
-        {
-          "frame": 84,
-          "head": {
-            "yaw": 4
-          },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "note": "The right paw settles as the head returns forward."
-        },
-        {
           "frame": 91,
           "pose": "rest",
           "note": "Both paws finish at the seated driving grips."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 22,
+        "contact": 34,
+        "peak": 52
+      }
     }
   },
   "machinery": [
@@ -2074,7 +2118,6 @@
         "rate": 5.555555555555555
       },
       "source": "design-v3/pilots/tally.md:261",
-      "missing_node": true,
       "note": "Inactive missing layer holder. MOTIONS has no per-class threshold or asymmetric in/out overshoot; P-D owns the layer transition."
     },
     {
@@ -2086,7 +2129,6 @@
         "rate": 5.555555555555555
       },
       "source": "design-v3/pilots/tally.md:262",
-      "missing_node": true,
       "note": "Inactive missing layer holder. MOTIONS has no per-class threshold or asymmetric in/out overshoot; P-D owns the layer transition."
     },
     {
@@ -2098,7 +2140,6 @@
         "rate": 5.555555555555555
       },
       "source": "design-v3/pilots/tally.md:263",
-      "missing_node": true,
       "note": "Inactive missing layer holder. MOTIONS has no per-class threshold or asymmetric in/out overshoot; P-D owns the layer transition."
     },
     {
@@ -2110,7 +2151,6 @@
         "rate": 5.555555555555555
       },
       "source": "design-v3/pilots/tally.md:264",
-      "missing_node": true,
       "note": "Inactive missing layer holder. MOTIONS has no per-class threshold or asymmetric in/out overshoot; P-D owns the layer transition."
     }
   ]
