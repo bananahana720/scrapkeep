@@ -312,6 +312,7 @@ class Sampler:
 		var contacts: Array = []
 		for body in player._rigid.get_colliding_bodies():
 			contacts.append(_contact_path(body))
+		contacts.sort()
 		var velocity: Vector3 = player.state.velocity
 		trace.append({
 			"tick": traversal.ticks, "time": snappedf(game.run.stage_time, 0.001),
@@ -731,6 +732,7 @@ var _seeds: Array[int] = []
 var _pilot := ""
 var _routes := {}
 var _index := -1
+var _next_pending := false
 var _game
 var _driver
 var _sampler: Sampler
@@ -830,6 +832,9 @@ func _next() -> void:
 
 
 func _physics_process(delta: float) -> bool:
+	if _next_pending:
+		_next_pending = false
+		_next()
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
@@ -866,7 +871,9 @@ func _physics_process(delta: float) -> bool:
 				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["distinct_ride_facts"], run["length_ratio"], run["progress_m"], run["dead_stop_at"]])
 	_game.free()
 	_game = null
-	_next()
+	# Match a fresh process: start the driver before the new camera's first render update.
+	Engine.time_scale = 1.0
+	_next_pending = true
 	return false
 
 

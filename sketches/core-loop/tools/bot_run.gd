@@ -43,6 +43,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 var _settings := {}
 var _seeds: Array[int] = []
 var _index := -1
+var _next_pending := false
 var _game
 var _driver
 var _started_msec := 0
@@ -118,6 +119,9 @@ func _next() -> void:
 
 
 func _physics_process(delta: float) -> bool:
+	if _next_pending:
+		_next_pending = false
+		_next()
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
@@ -167,7 +171,9 @@ func _physics_process(delta: float) -> bool:
 	_game.free()
 	_game = null
 	_tick_trace = null
-	_next()
+	# Match a fresh process: start the driver before the new camera's first render update.
+	Engine.time_scale = 1.0
+	_next_pending = true
 	return false
 
 
