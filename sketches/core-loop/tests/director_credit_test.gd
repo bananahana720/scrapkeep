@@ -12,16 +12,17 @@ const T := preload("res://tests/support/t.gd")
 # rate on park stage 1 at tiers 0 and 2 (within 10 percent); credits spent within 5 percent of the
 # income integral over 30 stepped minutes on 20 seeds, with never more than HARD_CAP enemies alive;
 # and card prices for every authored pack. Health stays on the stage threat (checked in _check_health).
-# Expected check count: 16. The test fails on any other count.
+# Expected check count: 22. The test fails on any other count.
 
 const H := 1.0 / 30.0
 const CALIBRATE_SECONDS := 600.0
 const SWEEP_SECONDS := 1800.0
 const SEEDS := 20
+const CAP_SECONDS := 300.0
 const LIFETIME := 20.0
 const CALIBRATE_TOLERANCE := 0.10
 const SPEND_TOLERANCE := 0.05
-const EXPECTED_CHECKS := 16
+const EXPECTED_CHECKS := 22
 
 var _t := T.new("director_credit_test")
 
@@ -32,6 +33,7 @@ func _initialize() -> void:
 	_check_cards()
 	_check_calibration()
 	_check_conservation()
+	_check_hard_cap()
 	_check_health()
 	if _t.checks != EXPECTED_CHECKS:
 		print("director_credit_test: FAIL (%d checks, expected %d)" % [_t.checks, EXPECTED_CHECKS])
@@ -145,11 +147,45 @@ func _check_conservation() -> void:
 		"peak alive %d of cap %d" % [max_alive, Director.HARD_CAP])
 
 
-func _check_health() -> void:
-	var d := _park_director(7, "credit")
+#  The cap is reached at the top tier with a spiked, heavy ball: 24 alive, never more, with the bank
+# kept full so only the cap can hold a pack. The check fails if the cap never reaches HARD_CAP.
+func _check_hard_cap() -> void:
+	var d := _park_director(11, "credit")
 	d.threat = 1.5
-	var at_start: float = d.hp_scale()
-	for i in int(300.0 / H):
-		d.advance(H, 0)
-	_t.near("health from stage threat only in credit mode", d.hp_scale(), at_start, 0.000001)
-	_t.near("health equals the threat", d.hp_scale(), 1.5, 0.000001)
+	d.spike = true
+	d.heft_class = 3
+	d.stage_time = 90.0
+	_t.eq("cap reaches HARD_CAP at the top tier, spiked, heavy ball", d.cap(), Director.HARD_CAP)
+	var recent: Array[float] = []
+	var now := 0.0
+	var peak := 0
+	var over := false
+	for i in int(CAP_SECONDS / H):
+		now += H
+		while not recent.is_empty() and recent[0] < now - LIFETIME:
+			recent.pop_front()
+		d.credits = Director.CREDIT_BANK
+		for spawn in d.advance(H, recent.size(), Vector2.ZERO):
+			recent.append(now)
+		peak = maxi(peak, recent.size())
+		over = over or recent.size() + d.arrivals.size() > Director.HARD_CAP
+	_t.check("alive plus pending never exceeds HARD_CAP, and the cap is reached",
+		not over and peak >= Director.HARD_CAP - 4,
+		"peak alive %d of cap %d" % [peak, Director.HARD_CAP])
+
+
+# Health reads the stage threat after credits were spent, at tier 0 and at the spiked top tier. The
+# planted control: income differs from the threat, so a hp_scale that read income would fail the equality.
+func _check_health() -> void:
+	for start in [0.0, 90.0]:
+		var d := _park_director(7, "credit")
+		d.threat = 1.5
+		d.spike = start > 0.0
+		d.stage_time = start
+		for i in int(300.0 / H):
+			d.advance(H, 0)
+		_t.check("credits were spent before the health read (start %d s)" % int(start), d.credit_spent > 0.0)
+		_t.near("health equals the threat after credit spend, effective tier %d" % d.effective_tier(),
+			d.hp_scale(), 1.5, 0.000001)
+		_t.check("planted control: income differs from the threat", absf(d.income() - d.threat) > 0.1,
+			"income %.3f, threat %.2f" % [d.income(), d.threat])
