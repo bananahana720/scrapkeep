@@ -16,7 +16,7 @@ const Codex := preload("res://src/core/codex.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const T := preload("res://tests/support/t.gd")
 const DT := 1.0 / 60.0
-const EXPECTED_CHECKS := 58
+const EXPECTED_CHECKS := 59
 
 var _t
 var _game
@@ -299,7 +299,8 @@ func _grants() -> void:
 	var again := Profile.new(profile.path)
 	_t.check("earned items reload from the saved profile", again.load_profile() and items.all(func(id): return again.has_cosmetic(id)))
 	_t.check("grants do not require a first-ever discovery", ids.all(func(id): return not Achievements.ROWS["ach_" + id].get("where", {}).has("first_time")))
-	_t.check("undelivered looks are pending art", items.all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("undelivered trail and outfit are pending art", items.slice(0, 2).all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("delivered Roost Frame is live", not Cosmetics.is_pending("shell_kest_roost") and FileAccess.file_exists("res://assets/models/world_one/shell_kest_roost.glb"))
 	progress.free()
 	codex.free()
 	events.free()
