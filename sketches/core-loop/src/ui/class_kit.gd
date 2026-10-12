@@ -59,6 +59,7 @@ const WORDS := {
 	"tradeoff_demolitions_caster": "Delayed blasts, needs fuse timing.",
 	# --- end Kest ---
 	# --- P-C Tarn words ---
+	"claw_drag": "claw drag", "redjaw_rend": "redjaw rend", "rake_run": "rake run", "vice_leap": "vice leap",
 	"tradeoff_tarn": "Heavy claws, must fight close.",
 	# --- end Tarn ---
 	# --- P-C Tally words ---

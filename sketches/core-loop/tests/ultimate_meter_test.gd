@@ -1,5 +1,7 @@
 extends SceneTree
 
+# 2026-10-11 (PC-TARN ruling 2): contact gets a rate budget; 32 checks including the contact stream and the pinned cap and burst.
+
 const T := preload("res://tests/support/t.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -192,6 +194,21 @@ func _initialize() -> void:
 		m.tick(0.1, SpeedTier.CRUISE)
 	_link(m, 11, 6)
 	_t.near("28 the same enemy pays again once the gap has passed", m.value, 8.0)
+
+	m.reset()
+	var contact_cap = m.get("CONTACT_RATE_CAP")
+	var contact_burst = m.get("CONTACT_BURST")
+	var contact_seconds := 60.0
+	for i in int(contact_seconds * 2.0):
+		m.tick(0.5, SpeedTier.CRUISE)
+		m.add("contact")
+	_t.check("29 two contacts per second stay within the contact rate plus burst", contact_cap != null and contact_burst != null
+		and m.value <= float(contact_cap) * contact_seconds + float(contact_burst) + 0.0001,
+		"%.3f points over %.1f s, cap %s, burst %s" % [m.value, contact_seconds, contact_cap, contact_burst])
+	# PC-TARN ruling values (2026-10-11), chosen against the skill-bar pacing run. Check 29 holds for any
+	# cap, so these pin the numbers; re-pin with a new pacing receipt.
+	_t.near("30 contact cap is the PC-TARN ruling value", float(contact_cap) if contact_cap != null else -1.0, 0.14)
+	_t.near("31 contact burst is the PC-TARN ruling value", float(contact_burst) if contact_burst != null else -1.0, 2.0)
 
 	quit(_t.verdict())
 
