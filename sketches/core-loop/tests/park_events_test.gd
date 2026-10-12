@@ -25,6 +25,7 @@ func _initialize() -> void:
 		_leads()
 		_warning_grammar()
 		_clearance()
+		_water_lifetime()
 		_overlap()
 		_held_announcements()
 		_corridors()
@@ -184,6 +185,47 @@ func _clearance() -> void:
 		_step(d, H, ball)
 	_check("water pauses mid-fill", water_checks.under == 0 and water_checks.safe > 0 and water_checks.depth, "rise hooks under grounded ball=%d; safe=%d; depth cap=%s" % [water_checks.under, water_checks.safe, water_checks.depth])
 	_check(LABELS[2], not bad and started and water_checks.under == 0 and water_checks.safe > 0 and water_checks.depth, "clearance, projected travel, mid-fill grounding and 1.2 m water cap")
+
+
+func _water_lifetime() -> void:
+	for release_s in [10.0, 24.0]:
+		var row := _row("water_lifetime", "flood_fill", "natural", 5.0)
+		row.hold_clear_m = 0.0
+		row.effect = {"depth_m": 1.2, "fill_s": 10.0, "material": "water"}
+		row.live_s = 20.0
+		var d = _director([row])
+		var starts := []
+		var ends := []
+		var hooks := {"unsafe": 0, "end": 0, "last_rise": -1.0, "resume_rise": -1.0}
+		d.register_family("natural", func(action, _r, ctx):
+			if action == "end":
+				hooks.end += 1
+			if action == "step":
+				hooks.unsafe += int(ctx.grounded and ctx.ball == Vector3(0, 1, 0) and ctx.rise_s < 10.0)
+				if not starts.is_empty():
+					var elapsed: float = ctx.clock_s - starts[0].time_s
+					if elapsed < 1.0 - 0.000001:
+						hooks.last_rise = ctx.rise_s
+					elif elapsed >= release_s - 0.000001 and hooks.resume_rise < 0.0:
+						hooks.resume_rise = ctx.rise_s)
+		for i in 900:
+			var now := (i + 1) * H
+			var held: bool = not starts.is_empty() and now >= starts[0].time_s + 1.0 - 0.000001 and now < starts[0].time_s + release_s - 0.000001
+			for f in _step(d, H, Vector3(0, 1, 0) if held else FAR):
+				if f.kind == "started":
+					starts.append(f)
+				if f.kind == "ended":
+					ends.append(f)
+		var expected := -1.0
+		if starts.size() == 1:
+			expected = float(starts[0].time_s) + maxf(float(row.live_s), release_s)
+		var ok: bool = starts.size() == 1 and ends.size() == 1 and hooks.end == 1 and hooks.unsafe == 0
+		if ends.size() == 1:
+			ok = ok and ends[0].time_s >= expected - 0.000001 and ends[0].time_s <= expected + H + 0.000001
+		if release_s < float(row.live_s):
+			ok = ok and hooks.last_rise >= 0.0 and absf(hooks.resume_rise - hooks.last_rise - H) < 0.000001
+		_check("water lifetime release %.0f s" % release_s, ok,
+			"starts=%s ends=%s expected=%.3f unsafe_hooks=%d end_hooks=%d fill_before=%.3f fill_after=%.3f" % [starts.map(func(f): return f.time_s), ends.map(func(f): return f.time_s), expected, hooks.unsafe, hooks.end, hooks.last_rise, hooks.resume_rise])
 
 
 func _overlap() -> void:
