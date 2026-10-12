@@ -174,11 +174,11 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 		"land":
 			var state: Dictionary = active[row.id]
 			state.phase = "land"
-			_show_landing(row, state)
 			if row.kind in ["flood_fill", "drain", "flash_flood"]:
 				_land_water(row, state)
 			if state.overlay != null:
 				_set_overlay(row, true)
+			_show_landing(row, state)
 			_hazard(row, state, ctx)
 		"step":
 			var state: Dictionary = active[row.id]
@@ -320,6 +320,10 @@ func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(),
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_NORMAL] = normals
+	var colors := PackedColorArray()
+	colors.resize(vertices.size())
+	colors.fill(Palette.SANDSTONE)
+	arrays[Mesh.ARRAY_COLOR] = colors
 	var indices := PackedInt32Array()
 	for k in vertices.size():
 		indices.append(k)
