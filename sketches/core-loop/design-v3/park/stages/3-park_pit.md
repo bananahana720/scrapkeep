@@ -1,6 +1,6 @@
 # The Dig: the open pit (`park_pit`, stage 3)
 
-Storyboard and table draft for stage 3, the first zone of world 2. Unit K-W2, wave 13, 10 October 2026. Status: **draft for Andrew's click approval** of board `park-3-park_pit`. Nothing here is built. Every number is a starting value to tune in play unless it cites code.
+Stage 3, the first zone of world 2. Unit KD3, wave 13. The greybox is built from `src/world/park/park_pit.json`; measurements and acceptance limits are recorded below and in `traversal/park_pit.md`. The storyboard remains a reference for the coordinator's stills and Andrew's visual verdict. Values described as starts or predictions remain unmeasured.
 
 Read with [PARK.md](../../PARK.md) (the tables and bands), [TADR-011](../../../../../adr/TADR-011-park-terrain-and-warden-kinds.md) (the decision) and the Warden kind sheet [wardens/swarm.md](../../wardens/swarm.md). Paths are under `sketches/core-loop/` unless they start with `adr/`, `docs/` or `BIBLE.md`.
 
@@ -74,17 +74,17 @@ Legend, exact positions (x, z in metres):
 | Mark | What | Where |
 | --- | --- | --- |
 | `*` | drop-in, on the spoil dump top, y +55, heading 15 degrees | (-560, -770) |
-| CANAL | `canal_lip`, waymark 2 | (-380, -470) on the canal line |
+| CANAL | `canal_lip`, waymark 2 | (-356, -501) on the canal line |
 | RAMP | `rim_haul_ramp`, plateau to bench 1 over the rim | (-300, -330) to (-140, -215) |
 | CACHE | `cache_lip`, the cracked cache, the reward pocket (KD3 fix round: on the north-east rim at the foot of spoil heap 14, off every pilot line; waymark 3 is `switchback_camp`) | (296, -320) |
 | HEADFRAME | landmark and Warden, beacon | (0, 255) |
 | GATE, BAY | gate slot, bay dock | (60, 280), (60, 300) |
-| Homes | tailings burrowers; adit drill crews; winze lamp swarms; barge drill crew (dormant) | (380, -20); (215, 30); (-200, 40); (-230, 200) |
+| Homes | tailings burrowers; adit drill crews; winze lamp swarms; barge drill crew (dormant) | (337.5, 110); (292.5, 120); (-337.5, -20); (-337.5, 250) |
 | Contraptions | incline skip (0, -225) to (0, 10); tipple lift (20, 262); sump geyser (-70, 128); rim zip (60, -298) to (150, -178); adit valve (94, -374); sealed portal (262.5, 400); dust devils (400, -60) and (-30, 160) |
-| Activities | cracked cache `cache_lip`; enemy camp `switchback_camp_site`; ambush altar `bench3_altar` (KD3, was `bench4_altar`) | (296, -320); (180, -160); (-112, -80) |
+| Activities | cracked cache `cache_lip`; enemy camp `switchback_camp_site`; ambush altar `bench3_altar` (KD3, was `bench4_altar`) | (296, -320); (180, -160); (-110, -84) |
 | Rescue | Kest's cage (needs a schema key, section 14) | (-150, 110), bench 4 west, facing +x |
 
-The three activities are signposted from the drop-in: the cache sits on the north-east rim at the foot of a spoil heap, with a clear sight line from the stage line (`park_graph.gd` sight_ok), the camp's smoke rises on the north-east bench in view of the dump top, and the altar is a lit ring on bench 4 seen across the pit (altar lighting follows VX8: no hazard stripes on it, `git show 364e1e6`).
+The three activities are signposted from the drop-in: the cache sits on the north-east rim at the foot of a spoil heap, with a clear sight line from the stage line (`park_graph.gd` sight_ok), the camp's smoke rises on the north-east bench in view of the dump top, and the altar is a lit ring on bench 3 north seen across the pit (altar lighting follows VX8: no hazard stripes on it, `git show 364e1e6`).
 
 ## 4. `park_rows` draft
 
@@ -329,7 +329,7 @@ Board id `park-3-park_pit`. PARK.md section 6.1 panels in brackets. The pilot ba
 
 1. **Waymark 3 is `switchback_camp`.** It is the camp's ground row; R2 lets the on-line camp sit on a waymark.
 2. **The cache moved off the line, then off every pilot line (fix round).** `cache_lip` is at (296, -320) on the north-east rim at the foot of spoil heap 14 (site `spoil_heap_14`), a rare-only reward with a graph detour of 241 m (door_m 241, sight_ok yes, d_spawn 1,063 m, d_landmark 716 m, 228 m from the valve door). Its first place, (312, -16) on bench 2 east, sat 25 m from the east branch's conveyor cable, so half the pilot lines passed it for nothing; now the nearest pilot-line point is 225 m away by graph path (a probe that seeds a graph search from every pilot and floor waypoint segment) and about 170 m in a straight line (Sable's (300, -150)). Reaching it is a choice: leave the rim road or the camp east along the rim. Beat 6's "smash the cache on the way past" no longer holds (journey amendment).
-3. **The altar moved and was renamed.** `bench4_altar` became `bench3_altar` at (-112, -80) on bench 3 north, a risk with a detour of 216 m, inside PARK.md 2.12 and smaller than the reward's.
+3. **The altar moved and was renamed.** `bench4_altar` became `bench3_altar` at (-110, -84) on bench 3 north, a risk with a detour of 216 m, inside PARK.md 2.12 and smaller than the reward's.
 4. **The valve moved to the north rim.** `adit_valve` sits on `adit_back_door` at (88, -368), the hidden pocket. Its tell is the `back_door_portal` row, plus the gauge.
 5. **`sealed_portal` moved off the eruption site.** It is at (262.5, 400), decorative (R3).
 6. **`eruption_lip` has its own kicker row (R6).**
