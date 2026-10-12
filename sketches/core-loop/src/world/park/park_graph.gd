@@ -438,6 +438,7 @@ func search(sources: PackedInt32Array, reverse := false, cutoff := INF, stop_at 
 	var o := roff if reverse else off
 	var e_to := rto if reverse else to
 	var e_len := rlength if reverse else length
+	var rounded := PackedFloat32Array([0.0])
 	while not _hn.is_empty():
 		var d := _hd[0]
 		var a := _hn[0]
@@ -448,7 +449,8 @@ func search(sources: PackedInt32Array, reverse := false, cutoff := INF, stop_at 
 			break
 		for e in range(o[a], o[a + 1]):
 			var b := e_to[e]
-			var nd := d + e_len[e]
+			rounded[0] = d + e_len[e]
+			var nd := rounded[0]
 			if nd < dist[b]:
 				dist[b] = nd
 				_push(nd, b)
@@ -472,6 +474,7 @@ func search_prev(source: int) -> Dictionary:
 	_hn = PackedInt32Array()
 	dist[source] = 0.0
 	_push(0.0, source)
+	var rounded := PackedFloat32Array([0.0])
 	while not _hn.is_empty():
 		var d := _hd[0]
 		var a := _hn[0]
@@ -480,7 +483,8 @@ func search_prev(source: int) -> Dictionary:
 			continue
 		for e in range(off[a], off[a + 1]):
 			var b := to[e]
-			var nd := d + length[e]
+			rounded[0] = d + length[e]
+			var nd := rounded[0]
 			if nd < dist[b] or (nd == dist[b] and a < prev[b]):
 				dist[b] = nd
 				prev[b] = a
