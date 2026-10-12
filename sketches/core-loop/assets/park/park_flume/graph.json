@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "38ce76a3d589fe5cd3c8d8afc4e2bc4b631647410da596acb5af5f63d11fb7f2",
+  "bake_sha256": "13043ad658423ab57dfad618ef22e1a6ec3221508882ac556149e283f8391b0d",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 951112,
-  "edges": 316701,
+  "bytes": 1046726,
+  "edges": 315488,
   "first_failed": "",
   "flags": {
-    "deck": 371,
+    "deck": 363,
     "door_ok": 39992,
-    "line": 286,
-    "open": 40601,
-    "sight_ok": 10821,
+    "line": 283,
+    "open": 40598,
+    "sight_ok": 10681,
     "under": 0
   },
-  "full_visit_m": 1788,
-  "full_visit_ratio": "1.271",
-  "graph_sha256": "1feded5de376cd5189530447677c499228a20f67d5b9a14df24ec20410341178",
+  "full_visit_m": 1789,
+  "full_visit_ratio": "1.273",
+  "graph_sha256": "a645cbc907dc7b0a7db3e328069dd7a12dcf343b882de81e15fc2a2bad7fc534",
   "line_errors": [],
   "line_path_nodes": 132,
-  "longest_est_m": 2499,
+  "longest_est_m": 2508,
   "map": "park_flume",
-  "nodes": 40772,
-  "park_sha256": "ff31aa5ebe6a4823e1704a4432332886585e700b0f3e82d1b4f2abb21253af91",
+  "nodes": 40764,
+  "park_sha256": "7cb8fbd9cc6225b76e35fb2493be4eee579ff8c38162b823e75ab1653e0d2be4",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,7 +52,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 732,
+      "d_landmark": 730,
       "d_spawn": 754,
       "detour_m": 226,
       "door_at": [
@@ -107,14 +107,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 913,
+      "d_landmark": 911,
       "d_spawn": 561,
       "detour_m": 102,
       "door_at": [
         -152,
         -248
       ],
-      "door_m": 102,
+      "door_m": 107,
       "flags": [
         "open",
         "door_ok",
@@ -131,8 +131,8 @@
       "site": "butte_gap"
     }
   ],
-  "reward_ratio": "0.536",
-  "ride_edges": 17,
+  "reward_ratio": "0.537",
+  "ride_edges": 15,
   "routes": {
     "annex_ramp_line": [],
     "bench_run": [],
@@ -153,13 +153,13 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1407,
-    "farther_share": "0.069",
+    "d_landmark": 1405,
+    "farther_share": "0.070",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1407,
-  "spawn_beacon_share": "0.563",
+  "spawn_beacon_m": 1405,
+  "spawn_beacon_share": "0.560",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -169,13 +169,13 @@
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.536
+      "value": 0.537
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.271
+      "value": 1.273
     }
   ],
   "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"

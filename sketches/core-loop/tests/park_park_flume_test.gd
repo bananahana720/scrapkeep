@@ -2,7 +2,7 @@ extends SceneTree
 
 # Stage 2, park_flume (design-v3/park/stages/2-park_flume.md, K-UNITS KD2): the stage's own pins.
 #
-# Pinned on the committed file (greybox pass, 2026-10-11):
+# Pinned on the committed file (greybox pass, 2026-10-11; fix round 2026-10-11: the pour-channel pin):
 #   freshness  the bake (tools/park_bake.gd) and the graph (tools/park_graph.gd) of
 #              src/world/park/park_flume.json are fresh: the hashes in bake.json and graph.json
 #              match the park file, the tools and the outputs.
@@ -13,15 +13,16 @@ extends SceneTree
 #              bench_bounty the risk (common or rare), weir_valve the hidden valve; the valve's
 #              codex id is flume_weir_cache (coordinator ruling R5).
 #   landmark   penstock_tower, beacon [230, 480]; the Warden row is the reactor kind on the flume
-#              mounting with harpoon_anchor true (reactor.md section 3).
+#              mounting with harpoon_anchor true (reactor.md section 3); the pour channel's deck
+#              top is the anchor's height (the relic clamps onto the channel, reactor.md 3.2).
 #   lines      every named waypoint of tools/park_lines/park_flume.json resolves on the park
 #              file (drop_in, landmark, a waymark, a park row or an activity), every line ends at
 #              the landmark, and the six pilots and the floor line are present.
 #
 # Planted: a copy of the park with butte_gap and siphon_camp swapped in the waymarks, the valve's
-# codex id back on the draft's reach_pressure_cache and the Warden on a crown mounting breaks
-# the pins (three failures named); the same copy written to user:// is stale against the
-# committed bake.
+# codex id back on the draft's reach_pressure_cache, the Warden on a crown mounting and the pour
+# channel back up at y 18 breaks the pins (four failures named); the same copy written to user://
+# is stale against the committed bake.
 
 const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
@@ -105,9 +106,12 @@ func _run() -> void:
 		if String(c["id"]) == "weir_valve":
 			c["codex"]["id"] = "reach_pressure_cache"
 	plant["landmark"]["warden"]["mounting"] = "crown"
+	for r in plant["park_rows"]:
+		if String(r["id"]) == "pour_channel":
+			r["y"] = 18.0
 	var planted := pin_failures(plant)
 	print("[planted] %s" % "; ".join(planted))
-	t.check("planted copy breaks three pins", planted.size() == 3, "%d: %s" % [planted.size(), "; ".join(planted)])
+	t.check("planted copy breaks four pins", planted.size() == 4, "%d: %s" % [planted.size(), "; ".join(planted)])
 	var f := FileAccess.open(PLANT_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(plant, " "))
 	f.close()
@@ -181,6 +185,13 @@ static func pin_failures(park: Dictionary) -> Array:
 	for k in WARDEN:
 		if w.get(k) != WARDEN[k]:
 			out.append("warden %s %s, want %s" % [k, w.get(k), WARDEN[k]])
+	# The relic clamps onto the pour channel (reactor.md section 3.2): the channel's deck top is the anchor's height.
+	var deck := INF
+	for r in park["park_rows"]:
+		if String(r["id"]) == "pour_channel" and r.get("y") != null:
+			deck = float(r["y"]) + float(r["size"][1])
+	if not is_equal_approx(deck, float(w["anchor"][1])):
+		out.append("pour_channel deck top %s, want the warden anchor's %s" % [deck, w["anchor"][1]])
 	var acts := {}
 	for a in park["activity_rows"]:
 		acts[String(a["id"])] = a
