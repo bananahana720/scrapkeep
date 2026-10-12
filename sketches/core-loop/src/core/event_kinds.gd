@@ -1025,7 +1025,7 @@ const WORLD_ROWS := {
 	"flood_landed": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "slam_boom", "sound_next": "flood_drop", "hud": "", "objective": "", "priority": 2},
 	"fleet_inbound": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "fleet_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"fleet_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "fleet_anvil_brass_drop", "hud": "", "objective": "", "priority": 2},
-	"ancient_stirring": {"group": "event", "color": ANCIENT_LIGHT, "shape": "ring", "sound": "threat_whistle", "sound_next": "ancient_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"ancient_stirring": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "ancient_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"ancient_erupted": {"group": "event", "color": ANCIENT_LIGHT, "shape": "burst", "sound": "slam_boom", "sound_next": "ancient_family_drop", "hud": "", "objective": "", "priority": 2},
 	"boiler_pressure": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "boiler_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"boiler_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "steam_whistle_percussion_drop", "hud": "", "objective": "", "priority": 2},
