@@ -314,6 +314,8 @@ class Sampler:
 			contacts.append(_contact_path(body))
 		contacts.sort()
 		var velocity: Vector3 = player.state.velocity
+		var aim_origin: Vector3 = game.ctx.aim_origin()
+		var aim_forward: Vector3 = game.ctx.aim_forward()
 		trace.append({
 			"tick": traversal.ticks, "time": snappedf(game.run.stage_time, 0.001),
 			"at": [snappedf(ball.x, 0.01), snappedf(ball.y, 0.01), snappedf(ball.z, 0.01)],
@@ -321,6 +323,10 @@ class Sampler:
 			"planar_speed": snappedf(player.planar_velocity().length(), 0.01), "tier": player.speed_tier(),
 			"grounded": grounded, "contacts": contacts, "dead_stops": traversal.dead_stops,
 			"frozen": player.frozen(), "mounted": player.kit.mounted, "state": game.flow.state_name(),
+			"camera_rng": str(game.camera._shake_rng.state),
+			"camera_pitch_bias": game.camera._pitch_bias, "camera_spring_length": game.camera.arm.spring_length,
+			"aim_origin": [aim_origin.x, aim_origin.y, aim_origin.z],
+			"aim_forward": [aim_forward.x, aim_forward.y, aim_forward.z],
 		})
 
 	# Godot's generated node names include a process-wide serial. Sibling indices preserve
