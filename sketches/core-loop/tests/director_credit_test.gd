@@ -120,7 +120,8 @@ func _boundaries() -> void:
 	d.stage_time = 90.0
 	d.advance(30.0, d.cap())
 	_t.check("cap binds: no income or purchase", d.get("credits_accrued") == 0.0 and d.get("credits_spent") == 0.0)
-	d.set("credits", 1000.0)
+	d.set("credits", Cards.CARDS["chaser"].cost)
+	d._next_pack = {"id": "reserved_singleton", "kinds": ["chaser"]}
 	d.threat = 100.0
 	d.advance(H, 23)
 	_t.eq("pending fixture creates exactly one future arrival", d.arrivals.size(), 1)
@@ -135,6 +136,7 @@ func _boundaries() -> void:
 	var transition = _director(12, Park.of(1), "credit")
 	transition.threat = 100.0
 	transition.credits = Cards.CARDS["chaser"].cost
+	transition._next_pack = {"id": "due_singleton", "kinds": ["chaser"]}
 	transition.advance(0.0, 23)
 	_t.eq("due fixture creates exactly one reserved arrival", transition.arrivals.size(), 1)
 	var transition_spent: float = transition.credits_spent
