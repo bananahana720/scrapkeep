@@ -252,7 +252,7 @@ func _build(id: String, at: Vector2, spec := {}) -> Site:
 	# PARK.md 2.12: the park row authors the pay ladder (rarities, or a named part that wins when the
 	# table offers it). Scrap, source and where stay the rule's own, so the heft pace never moves.
 	for key in ["rarities", "named"]:
-		if spec_pay.has(key) and not s.rule.has("bundle"):
+		if spec_pay.has(key):
 			s.rule["pay"][key] = spec_pay[key]
 	s.name = "Activity_" + id
 	add_child(s)
@@ -381,10 +381,9 @@ func _build_pocket(s: Site, spec: Dictionary) -> void:
 	s.view.word.text = String(s.rule.cue.word)
 	s.tier_label = Label3D.new()
 	s.tier_label.name = "RewardTier"
-	s.tier_label.text = "%s — Tier %d (%d %s parts)" % [s.rule.cue.word, stand_odds(s).tier, s.rule.pay.parts, s.rule.pay.rarities[0]]
+	_show_reward(s)
 	s.tier_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	s.tier_label.position = Vector3.UP * ActivityView.WORD_HEIGHT
-	s.tier_label.modulate = ItemGen.RARITY[s.rule.pay.rarities[0]].color
 	s.add_child(s.tier_label)
 	if "hazard" in s.rule.bundle:
 		_build_hazard(s)
@@ -409,6 +408,12 @@ func _build_pocket(s: Site, spec: Dictionary) -> void:
 		s.add_child(marker)
 		marker.global_position = target
 		s.target_views.append(marker)
+
+
+func _show_reward(s: Site) -> void:
+	var shown := stand_odds(s)
+	s.tier_label.text = "%s — Tier %d (%s)" % [s.rule.cue.word, shown.tier, shown.reward_text]
+	s.tier_label.modulate = ItemGen.RARITY[shown.reward_rarity].color
 
 
 func step_pocket(s: Site, delta: float, ball: Vector3) -> void:
@@ -538,6 +543,13 @@ func _pocket_roll(s: Site, suffix: String, count := 1) -> Array:
 	return Parts.roll(rng, pay_table(s).rarities, ctx.run.class_id(), ctx.run.parts, count)
 
 
+func _reward_parts(s: Site, suffix: String) -> Array:
+	var table := pay_table(s)
+	if table.named != "":
+		return [table.named]
+	return _pocket_roll(s, suffix, int(s.rule.pay.parts))
+
+
 func _heal(s: Site) -> void:
 	if s.heal_paid or not "heal" in s.rule.get("bundle", []):
 		return
@@ -604,6 +616,7 @@ func _begin_round(s: Site) -> void:
 	s.round_credits = (float(s.rule.base) + float(s.rule.step) * (s.round - 1)) * s.difficulty
 	s.awaiting_round = true
 	s.fog.begin(s.round)
+	_show_reward(s)
 
 
 func _pay_round(s: Site) -> void:
@@ -611,12 +624,11 @@ func _pay_round(s: Site) -> void:
 	s.heal_paid = false
 	_heal(s)
 	ctx.run.add_cogs(roundi(s.round_credits))
-	var picks := _pocket_roll(s, "round_%d" % s.round)
-	var part := String(picks[0]) if not picks.is_empty() else ""
+	var picks := _reward_parts(s, "round_%d" % s.round)
 	var pickup := ActivityView.gem(String(s.rule.cue.view))
 	s.add_child(pickup)
 	pickup.global_position = s.fog.committed.safe_at
-	s.round_rewards.append({"pickup": pickup, "part": part, "inside": _touches(ctx.player.ball_position(), pickup.global_position)})
+	s.round_rewards.append({"pickup": pickup, "parts": picks, "inside": _touches(ctx.player.ball_position(), pickup.global_position)})
 	s.round_payments += 1
 	_cue(s, "clear")
 
@@ -625,7 +637,8 @@ func _watch_round_pickups(s: Site, ball: Vector3) -> void:
 	for reward in s.round_rewards.duplicate():
 		var now := _touches(ball, reward.pickup.global_position)
 		if now and not reward.inside:
-			ctx.run.add_part(reward.part, String(s.rule.pay.source))
+			for part in reward.parts:
+				ctx.run.add_part(part, String(s.rule.pay.source))
 			_pay_scrap(s, reward.pickup.global_position)
 			reward.pickup.queue_free()
 			s.round_rewards.erase(reward)
@@ -809,8 +822,22 @@ func stand_odds(s: Site) -> Dictionary:
 			else OddsReadout.odds_for(table["rarities"], ctx.run.class_id())
 	var result := {"named": table["named"], "rarities": table["rarities"], "odds": odds, "text": OddsReadout.text(odds)}
 	if s.rule.has("bundle"):
-		result["tier"] = int(s.rule.pay.tier)
-		result["parts"] = int(s.rule.pay.parts)
+		var suffix := "round_%d" % maxi(1, s.round) if s.id == "round_arena" else "clear"
+		var picks := _reward_parts(s, suffix)
+		var rung := 0
+		var descriptions := []
+		var rarity := "common"
+		for part in picks:
+			var part_rarity := Parts.rarity_of(part)
+			if int(ItemGen.RARITY[part_rarity].rung) >= rung:
+				rung = int(ItemGen.RARITY[part_rarity].rung)
+				rarity = part_rarity
+			if not part_rarity in descriptions:
+				descriptions.append(part_rarity)
+		result["tier"] = picks.size() + rung
+		result["parts"] = picks.size()
+		result["reward_rarity"] = rarity
+		result["reward_text"] = String(table.named) if table.named != "" else "%d %s parts" % [picks.size(), "/".join(descriptions)]
 	return result
 
 func _finish(s: Site, at: Vector3) -> void:
@@ -835,6 +862,8 @@ func _finish(s: Site, at: Vector3) -> void:
 	var table := pay_table(s)
 	if table["named"] != "":
 		s.pickup_part = table["named"]
+		if s.rule.has("bundle"):
+			s.pickup_parts = [s.pickup_part]
 	else:
 		if s.rule.has("bundle"):
 			s.pickup_parts = _pocket_roll(s, "clear", int(s.rule.pay.parts))

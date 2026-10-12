@@ -218,21 +218,22 @@ func _authored_pay() -> void:
 	var grants := 0
 	for stage in STAGES:
 		for kind in KINDS:
-			for override in [{}, {"rarities": ["common"]}, {"rarities": ["rare"]}, {"named": "hot_rivets", "rarities": ["rare"]}]:
-				var admitted := _admitted(stage, kind, 0, false, override)
+			for fixture in [{"row": 0, "pay": {}}, {"row": 1, "pay": {}}, {"row": 2, "pay": {}}, {"row": 0, "pay": {"rarities": ["common"]}}, {"row": 0, "pay": {"rarities": ["rare"]}}, {"row": 0, "pay": {"named": "hot_rivets", "rarities": ["rare"]}}]:
+				var admitted := _admitted(stage, kind, fixture.row, false, fixture.pay)
 				if admitted.is_empty():
 					correct = false
 					continue
-				var s = admitted[0]
-				var pay: Dictionary = admitted[1].pay
-				var named := String(pay.get("named", ""))
-				var rarity := Parts.rarity_of(named) if named != "" else String(pay.rarities[0])
-				var count := 1 if named != "" else int(Activities.RULES[kind].pay.parts)
-				var tier := count + (0 if rarity == "common" else 1)
-				correct = correct and acts.stand_odds(s).tier == tier and s.tier_label.text.contains("Tier %d" % tier)
-				correct = correct and s.tier_label.text.contains(named if named != "" else rarity)
+				var spec: Dictionary = admitted[1].duplicate(true)
+				spec.graph = graphs[stage]
+				acts.clear()
 				for seed_value in 20:
 					game.ctx.rng.seed = 700 + seed_value
+					var s = _site(kind, spec.at, spec)
+					var pay: Dictionary = spec.pay
+					var named := String(pay.get("named", ""))
+					var count := 1 if named != "" else int(Activities.RULES[kind].pay.parts)
+					var shown: int = acts.stand_odds(s).tier
+					var label: String = s.tier_label.text
 					var before := paid.size()
 					if kind == "round_arena":
 						s.round = 1
@@ -246,15 +247,17 @@ func _authored_pay() -> void:
 						s.inside_pickup = false
 						acts._watch_pickup(s, s.pickup.global_position)
 					var taken: Array = paid.slice(before)
-					correct = correct and taken.size() == count and taken.all(func(part): return Parts.rarity_of(part) == rarity and (named == "" or part == named))
+					var paid_tier := taken.size()
+					if taken.any(func(part): return Parts.rarity_of(part) == "rare"):
+						paid_tier += 1
+					correct = correct and shown == paid_tier and label.contains("Tier %d" % paid_tier)
+					correct = correct and taken.size() == count and taken.all(func(part): return part == named if named != "" else Parts.rarity_of(part) in pay.rarities)
+					correct = correct and label.contains(named) if named != "" else correct and taken.all(func(part): return label.contains(Parts.rarity_of(part)))
 					grants += taken.size()
 					cases += 1
-					s.done = false
-					s.pickup_taken = false
-					s.heal_paid = false
-				acts.clear()
+					acts.clear()
 				await physics_frame
-	t.check("authored pay overrides default bundles over 20 seeds", correct and cases == 1120, "%d/1120 cases, %d actual grants; both parks x seven kinds x authored/common/rare/named x 20 seeds; shown tier from resolved payout" % [cases, grants])
+	t.check("authored pay overrides default bundles over 20 seeds", correct and cases == 1680, "%d/1680 cases, %d actual grants; both parks x seven kinds x three authored rows plus common/rare/named x 20 seeds; shown tier from resolved payout" % [cases, grants])
 
 
 func _combat() -> void:
