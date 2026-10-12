@@ -1,6 +1,75 @@
 # Traversal: stage 6, the crown (`park_crown`)
 
-## Current result, 12 October 2026
+## Round 2 on the final geometry, 12 October 2026
+
+FAIL. Runtime head `3614577b2f3863f26463cc220c1c45187afbebdd`. Final documentation commit is named in the round report.
+Untraced eight-seed batches: 7/7. Warden breaks: 3/3. Evidence level 4, automated native play. The greybox is not admitted when any batch band misses. Dressing has not started.
+Evidence: `/home/andrew/scratch/w13/sol/kd6-crown-r2`. Tool SHA256 f013f06048853958072dbe3dbcb70d17d040c33b393cfe5b1cc1d0dca02ca2c2. All runtime inputs remain byte-identical to 3614577.
+Judge bands from the untraced batch under the standing coordinator ruling. Every reproduced solo uses the same fixed export and 90 Hz; its input-equality comparison is in determinism.json. No pre-3614577 traversal result is reused for acceptance. The floor uses the final-head Rivet reference and is gated only by its own row.
+
+Cells: median (worst seed where the band judges it), verdict.
+
+| Measure | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; reported, pilot band, not the floor's |
+| time_to_warden_s | 65.49 (66.75); PASS | 72.48 (72.86); PASS | 69.925 (71.38); PASS | 83.61 (85.03); PASS | 82.67 (84.23); PASS | 80.66 (82.56); PASS | 60.01 (63.34); reported, pilot band, not the floor's |
+| segment_s | 17.71 / 17.74 / 29.8 (29.795); PASS | 16.57 / 39.31 / 16.68 (39.315); PASS | 16.28 / 19.65 / 34.2 (34.2); PASS | 15.01 / 36.89 / 31.47 (36.885); PASS | 16.82 / 38.45 / 27.08 (38.455); PASS | 15.93 / 38.31 / 26.77 (38.305); PASS | 21.13 / 22.09 / 16.75 (22.09); reported, pilot band, not the floor's |
+| flow_share | 0.9469 (0.9448); PASS | 0.8783 (0.8751); PASS | 0.8709 (0.8386); PASS | 0.9517 (0.9071); PASS | 0.8217 (0.8031); PASS | 0.9226 (0.9043); PASS | 0.9315 (0.9117); reported, pilot band, not the floor's |
+| airborne_share | 0.231; MISS | 0.2974; PASS | 0.236; MISS | 0.2074; MISS | 0.3486; PASS | 0.3611; PASS | 0.1431; reported, pilot band, not the floor's |
+| dead_stops | 0 (0); PASS | 0 (0); PASS | 0 (0); PASS | 0 (1); MISS | 0 (0); PASS | 0 (0); PASS | 0 (0); reported, pilot band, not the floor's |
+| peak_speed_mps | 54.85 (54.02); PASS | 43.72 (43.18); PASS | 39.055 (39.05); PASS | 42.375 (38.53); PASS | 44.62 (43.37); PASS | 42.75 (38.04); PASS | 43.72 (43.03); reported, pilot band, not the floor's |
+| tier3_s | 39.21; PASS | 14.61; PASS | 7.945; PASS | 8.41; PASS | 8.41; PASS | 8.665; PASS | 18.43; reported, pilot band, not the floor's |
+| quiet_max_s | 7.69 (8.3); PASS | 6.43 (6.6); PASS | 4.89 (6.06); PASS | 5.51 (5.82); PASS | 5.8 (6.86); PASS | 10.545 (10.76); PASS | 6.14 (6.14); reported, pilot band, not the floor's |
+| max_anchor_gap_m | 44.7 (72.1); MISS | 36.05 (37.1); PASS | 26.2 (31.2); PASS | 21.45 (23.8); PASS | 36.7 (36.8); PASS | 36.25 (37.2); PASS | 102.2 (102.2); reported, pilot band, not the floor's |
+| distinct_verbs | 5 (5); PASS | 5 (5); PASS | 4 (4); PASS | 4 (4); PASS | 5 (5); PASS | 5 (5); PASS | 4 (4); reported, pilot band, not the floor's |
+| length_ratio | 1.63; PASS | 1.32; PASS | 1.35; PASS | 1.63; PASS | 1.42; PASS | 1.45; PASS | 1.22; reported, pilot band, not the floor's |
+| Distinct lines, at least 3 | 3 mutually distinct lines; PASS | | | | | | |
+| Floor own row: all seeds reach, time within 2 x reference median, zero stops on every seed | | | | | | | 60.01 s, limit 144.96 s; PASS |
+
+
+Distinctness compares every x/z tick within 8 m in both directions and takes the worst shared fraction over eight same-seed pairs. Sable/Tarn/Cannon form the passing witness: worst pair fractions 0.457035, 0.181152 and 0.243782, all below 0.5. This proves at least three lines, rather than the maximum over all six. The four-pilot comparison and per-seed fractions are retained in distinct-lines.json.
+
+### Stop classification
+
+| Line | Seed | Batch [x,z] | Batch time s | Solo classification | Enemy kind | Exempt | Trace |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| tarn | 1 | [11.3, -596.4] | 7.58 | enemy contact; kind unavailable | unavailable | False | /home/andrew/scratch/w13/sol/kd6-crown-r2/resume-solo-tarn-1/tarn-seed-1-trace.json |
+
+Raw batch stops remain counted. Solo enemy contacts lack the enemy kind needed for an exemption. A non-reproducing stop remains unresolved. See stop-classification.json for contacts and velocities.
+
+### Win proof under the 600 s wrapper
+
+win.gd extends res://tools/bot_run.gd and sets driver.stage_limit=600.0 before its first tick, changing nothing else. Fresh single-seed processes run serially through one eight-core CPU allocation and an overall 1800 s cap. Commands and any capped retry are in commands.ndjson. The classes below are the actual seed-selected classes.
+
+The first three-seed batch hit the 1800 s wall cap after seeds 1 and 2 completed. Its seed 3 is excluded. Seed 3 below comes from a fresh single-seed retry under the same 600 s wrapper and a separate 1800 s outer cap.
+
+```sh
+python /home/andrew/scratch/w13/sol/kd6-crown-r2/run.py command resume-win /tmp/claude-1000/w13-s/cpu_queue.sh --cores 8 --name kd6-resume-win -- timeout --signal=TERM --kill-after=10s 1800s nice -n 10 python /home/andrew/scratch/w13/sol/kd6-crown-r2/wins.py resume-win
+```
+
+Retry command:
+
+```sh
+python /home/andrew/scratch/w13/sol/kd6-crown-r2/run.py command resume-win-retry /tmp/claude-1000/w13-s/cpu_queue.sh --cores 8 --name kd6-resume-win-retry -- timeout --signal=TERM --kill-after=10s 1800s nice -n 10 python /home/andrew/scratch/w13/sol/kd6-crown-r2/win_retry.py 3
+```
+
+| Seed | Class | Engaged s | Broken s | Engage to break s | Warden damage | After break / outcome |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | runner_gunner | 123.42 | 187.59 | 64.17 | {"ram": 700.0, "slam": 700.0} | stalled; state=gates; exit_s=600.0 |
+| 2 | demolitions_caster | 137.15 | 160.23 | 23.08 | {"ram": 700.0, "slam": 700.0} | stalled; state=gates; exit_s=600.01 |
+| 3 | tarn | 140.67 | 215.84 | 75.17 | {"ram": 700.0, "slam": 700.0} | stalled; state=gates; exit_s=600.01 |
+
+```jsonl
+{"boss":null,"class":"runner_gunner","game_seconds":603.2,"outcome":"stalled","play_s":599.99,"policy":"completionist","profile":"","reaction_s":0.25,"run_id":"1791828531-267844","seed":1,"slot_casts":{"line":7,"special":64},"stage_reached":6,"stages":[{"cap_hits":0,"cores":[],"evasions":0,"events_joined":[],"exit_s":0.0,"hits":0,"hp_lost":0.0,"magnet_stuns":0,"max_hp":100.0,"parts":[],"plants":0,"plate_slams":0,"punch_short_s":0.0,"slingshots":0,"specials":0,"stage":1,"stuck_detours":0,"thermal_rides":0,"vault_tried":false,"warden_broken_s":null,"warden_engaged_s":null,"warden_fight_s":null,"waypoints":0},{"activities_entered":["cracked_cache","hauler_bounty","enemy_camp"],"activities_finished":["enemy_camp"],"cap_hits":0,"chain_ends_ground":26.0,"chain_ends_paid":5.0,"cores":[],"evasions":192.0,"events_joined":[],"exit_s":600.0,"harpoon_bites":68.0,"hit_sources":{"kite_drone":9.0,"plated_brute":60.0,"warden":20.0},"hits":8.0,"hp_lost":89.0,"magnet_stuns":0,"max_hp":100.0,"parts":["activity_camp:rivet_plating"],"plants":0,"plate_slams":0,"punch_short_s":124.78,"shred_peak":0.0,"slingshots":0,"slot_casts_line":7.0,"slot_casts_special":64.0,"specials":64.0,"stage":6,"stall_state":"gates","stuck_detours":0,"thermal_rides":0,"ultimates":3.0,"vault_tried":false,"wall_turns":50.2333333333386,"warden_broken_s":187.59,"warden_damage":{"ram":700.0,"slam":700.0},"warden_engaged_s":123.42,"warden_fight_heft":1.282,"warden_fight_s":40.0,"waypoints":0}],"ticks":54288,"ult_fill_s":[142.86,27.08,236.35],"ult_presses":3,"ult_sources":{"blazing":3.27,"chain_link":6.0,"contact":31.63,"fast":43.85,"kill":75.0,"near_miss":31.63,"shatter":24.0,"smash":115.26,"stagger":32.94},"ult_sources_first_fill":{"blazing":3.15,"contact":10.21,"fast":31.79,"kill":10.0,"near_miss":8.91,"smash":35.0,"stagger":0.94},"ultimates":3,"wall_seconds":734.96}
+{"boss":null,"class":"demolitions_caster","game_seconds":602.09,"outcome":"stalled","play_s":600.0,"policy":"completionist","profile":"","reaction_s":0.25,"run_id":"1791829288-278285","seed":2,"slot_casts":{"line":3,"special":62},"stage_reached":6,"stages":[{"cap_hits":0,"cores":[],"evasions":0,"events_joined":[],"exit_s":0.0,"hits":0,"hp_lost":0.0,"magnet_stuns":0,"max_hp":100.0,"parts":[],"plants":0,"plate_slams":0,"punch_short_s":0.0,"slingshots":0,"specials":0,"stage":1,"stuck_detours":0,"thermal_rides":0,"vault_tried":false,"warden_broken_s":null,"warden_engaged_s":null,"warden_fight_s":null,"waypoints":0},{"activities_entered":["cracked_cache","hauler_bounty","enemy_camp"],"activities_finished":["enemy_camp"],"cap_hits":0,"chain_ends_dry_fire":1.0,"chain_ends_ground":2.0,"chain_ends_paid":9.0,"cores":[],"evasions":188.0,"events_joined":[],"exit_s":600.01,"harpoon_bites":290.0,"hit_sources":{"plated_brute":24.0},"hits":2.0,"hp_lost":24.0,"magnet_stuns":0,"max_hp":100.0,"parts":["activity_camp:rivet_plating"],"plants":0,"plate_slams":0,"punch_short_s":82.52,"shred_peak":0.0,"slingshots":0,"slot_casts_line":3.0,"slot_casts_special":62.0,"specials":62.0,"stage":6,"stall_state":"gates","stuck_detours":0,"thermal_rides":0,"ultimates":2.0,"vault_tried":false,"wall_turns":48.3888888888939,"warden_broken_s":160.23,"warden_damage":{"ram":700.0,"slam":700.0},"warden_engaged_s":137.15,"warden_fight_heft":1.24,"warden_fight_s":40.0,"waypoints":0}],"ticks":54188,"ult_fill_s":[148.55,215.48],"ult_presses":2,"ult_sources":{"blazing":4.15,"chain_link":14.0,"contact":29.1,"fast":32.51,"kill":36.0,"near_miss":26.16,"shatter":36.0,"smash":40.0,"stagger":31.3},"ult_sources_first_fill":{"blazing":3.63,"chain_link":6.0,"contact":7.35,"fast":23.54,"kill":11.0,"near_miss":6.18,"shatter":12.0,"smash":15.0,"stagger":15.3},"ultimates":2,"wall_seconds":610.07}
+{"boss":null,"class":"tarn","game_seconds":603.96,"outcome":"stalled","play_s":600.0,"policy":"completionist","profile":"","reaction_s":0.25,"run_id":"1791830450-834637","seed":3,"slot_casts":{"line":9,"special":69},"stage_reached":6,"stages":[{"cap_hits":0,"cores":[],"evasions":0,"events_joined":[],"exit_s":0.0,"hits":0,"hp_lost":0.0,"magnet_stuns":0,"max_hp":100.0,"parts":[],"plants":0,"plate_slams":0,"punch_short_s":0.0,"slingshots":0,"specials":0,"stage":1,"stuck_detours":0,"thermal_rides":0,"vault_tried":false,"warden_broken_s":null,"warden_engaged_s":null,"warden_fight_s":null,"waypoints":0},{"activities_entered":["cracked_cache","hauler_bounty","enemy_camp"],"activities_finished":["enemy_camp"],"cap_hits":0,"chain_ends_ground":23.0,"chain_ends_paid":8.0,"chain_releases":1.0,"cores":[],"evasions":275.0,"events_joined":[],"exit_s":600.01,"harpoon_bites":145.0,"hit_sources":{"plated_brute":24.0},"hits":2.0,"hp_lost":24.0,"magnet_stuns":0,"max_hp":100.0,"parts":["activity_camp:rivet_plating"],"plants":0,"plate_slams":0,"punch_short_s":118.03,"shred_peak":0.0,"slingshots":0,"slot_casts_line":9.0,"slot_casts_special":69.0,"specials":69.0,"stage":6,"stall_state":"gates","stuck_detours":0,"thermal_rides":0,"ultimates":4.0,"vault_tried":false,"wall_turns":35.8222222222253,"warden_broken_s":215.84,"warden_damage":{"ram":700.0,"slam":700.0},"warden_engaged_s":140.67,"warden_fight_heft":1.0,"warden_fight_s":40.0,"waypoints":0}],"ticks":54356,"ult_fill_s":[152.11,34.92,20.89,275.83],"ult_presses":4,"ult_sources":{"blazing":7.94,"chain_link":12.13,"contact":56.92,"fast":86.44,"kill":66.0,"near_miss":32.6,"shatter":24.0,"smash":109.68,"stagger":48.0},"ult_sources_first_fill":{"blazing":4.07,"contact":10.6,"fast":43.08,"kill":5.0,"near_miss":10.5,"smash":26.75},"ultimates":4,"wall_seconds":725.06}
+```
+
+The live Warden is the base mind/choir encounter with no spires driver and a 30 m ring. KF8-WIRE owns the shared seam; these wins do not qualify the authored harpoon-enabled spires mounting or 120 m live ring. The graph independently passes its authored 120 m disc and spawn rules, and the active-map dock probe passes.
+
+## Earlier traversal receipts, superseded
+
+## Round 1 result, superseded
 
 FAIL. The greybox is not admitted and the dressed pass has not started. These native automated measurements do not establish human feel.
 

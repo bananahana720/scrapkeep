@@ -1,6 +1,6 @@
 # Stage 6: Highdraft, the crown (`park_crown`)
 
-**Status: greybox round 2 candidate, 12 October 2026; awaiting coordinator admission.** The source file, bake and graph are built. Sections 5 to 9 describe the current authored rows. The current traversal receipts and win proof are in `design-v3/park/traversal/park_crown.md`. The approved storyboard and original appendix remain design history. The live spawner on the aligned base does not read the park Warden row: its anchor flag is false, its mind driver is null, and its engage radius is 30 m while the park declares 120 m. The shared KF8-WIRE unit owns that mismatch. Round 2 uses the fixed traversal export, with the beacon graph judged from the authored 120 m ring.
+**Status: greybox round 2 candidate, 12 October 2026; not admitted.** The source file, bake and graph are built. Sections 5 to 9 describe the current authored rows. The current traversal receipts and win proof are in `design-v3/park/traversal/park_crown.md`. The approved storyboard and original appendix remain design history. The live spawner on the aligned base does not read the park Warden row: its anchor flag is false, its mind driver is null, and its engage radius is 30 m while the park declares 120 m. The shared KF8-WIRE unit owns that mismatch. Round 2 uses the fixed traversal export, with the beacon graph judged from the authored 120 m ring.
 
 | Field | Value |
 | --- | --- |
@@ -220,8 +220,6 @@ The west cable approach fields are narrowed to one local anchor each: sentinel_3
 
 The meander retains its 10 m wash depth and uses a local 6 m bowl cut at [132,-293] to ease the east crossing. This preserves its anchor faces after the shallow whole-wash attempt caused a 74.1 m gap. The signal wire starts at [-245,12,285] to capture the traced approach height and lands at [-140,5,455], leaving a banking turn to the unchanged [-100,430] waypoint before the Crown.
 
-The meander wash is 6 m deep after Rivet seed4 reproduced a terrain stop at its east lip. The signal wire lands at [-140,5,455], leaving a banking turn to the unchanged [-100,430] waypoint before the Crown.
-
 ## 6. Current event rows
 
 | id | kind / family | site | trigger | lead / live / clear m | effect | closes / opens |
@@ -257,7 +255,7 @@ The meander wash is 6 m deep after Rivet seed4 reproduced a terrain stop at its 
 | shelf_wire | cable | gauntlet_shelf | (primitive) | {"from":[80,24.0,120],"to":[165,7.3,300],"radius":4.5,"floor":18.0} |
 | gauntlet_balloon_lift | lift | gauntlet_west | lift_platform | {"at":[330,90],"radius":5.0,"rise":90.0,"charge":3.5,"offset":0.0} |
 | shelf_cannon | launcher | gauntlet_shelf | cannon | {"style":"cannon","at":[165,300],"radius":4.0,"target":[30,-9.0,425],"floor":30.0,"min_flight":3.2,"charge":2.5} |
-| meander_wall | hidden | [88,-160] | 625 | 672 | 72 | 72 | true | [] |
+| meander_wall | cracked_wall | meander_bend | (primitive) | {"at":[84,-160],"size":[12,6,1.4],"turn":90.0} |
 | needle_barge | barge | needles | barge | {"a":[-210,120,140],"b":[-130,120,220],"size":[14,2,14],"travel":8.0,"dwell":3.0,"offset":0.0} |
 
 `gauntlet_tether` still passes through the Gauntlet West butte and needs a dressed-pass repair. The shelf bots use the cable landing, not the cannon mouth. The current shelf cannon target is [30,-9,425]. The Fleet collector is at [145,470], y 64, outside the engage disc. Its full deck footprint starts at x130. The shelf approach kicker moves to [110,350] and sits on the baked ground; sentinel_48 keeps [30,385] with 30 m physical posts and no ground stamp. The Warden row, pilot lines, ring radius and acceptance bands are unchanged.
@@ -330,6 +328,32 @@ Every pilot line sits inside PARK.md's ratio band of 1.3 to 2.0 (PARK.md:466). T
 }
 ```
 
+
+
+
+### Measured round 2 result
+
+FAIL, automated native evidence level 4. All seven untraced eight-seed batches and solo reproduction are recorded in [the traversal page](../traversal/park_crown.md). The runtime inputs are those of 3614577. Warden breaks: 3/3 under the 600 s wrapper. The authored beacon and spawn graph rules pass; the live Warden mounting and 120 m ring remain KF8-WIRE's shared follow-up.
+
+Cells: median (worst seed where the band judges it), verdict.
+
+| Measure | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; reported, pilot band, not the floor's |
+| time_to_warden_s | 65.49 (66.75); PASS | 72.48 (72.86); PASS | 69.925 (71.38); PASS | 83.61 (85.03); PASS | 82.67 (84.23); PASS | 80.66 (82.56); PASS | 60.01 (63.34); reported, pilot band, not the floor's |
+| segment_s | 17.71 / 17.74 / 29.8 (29.795); PASS | 16.57 / 39.31 / 16.68 (39.315); PASS | 16.28 / 19.65 / 34.2 (34.2); PASS | 15.01 / 36.89 / 31.47 (36.885); PASS | 16.82 / 38.45 / 27.08 (38.455); PASS | 15.93 / 38.31 / 26.77 (38.305); PASS | 21.13 / 22.09 / 16.75 (22.09); reported, pilot band, not the floor's |
+| flow_share | 0.9469 (0.9448); PASS | 0.8783 (0.8751); PASS | 0.8709 (0.8386); PASS | 0.9517 (0.9071); PASS | 0.8217 (0.8031); PASS | 0.9226 (0.9043); PASS | 0.9315 (0.9117); reported, pilot band, not the floor's |
+| airborne_share | 0.231; MISS | 0.2974; PASS | 0.236; MISS | 0.2074; MISS | 0.3486; PASS | 0.3611; PASS | 0.1431; reported, pilot band, not the floor's |
+| dead_stops | 0 (0); PASS | 0 (0); PASS | 0 (0); PASS | 0 (1); MISS | 0 (0); PASS | 0 (0); PASS | 0 (0); reported, pilot band, not the floor's |
+| peak_speed_mps | 54.85 (54.02); PASS | 43.72 (43.18); PASS | 39.055 (39.05); PASS | 42.375 (38.53); PASS | 44.62 (43.37); PASS | 42.75 (38.04); PASS | 43.72 (43.03); reported, pilot band, not the floor's |
+| tier3_s | 39.21; PASS | 14.61; PASS | 7.945; PASS | 8.41; PASS | 8.41; PASS | 8.665; PASS | 18.43; reported, pilot band, not the floor's |
+| quiet_max_s | 7.69 (8.3); PASS | 6.43 (6.6); PASS | 4.89 (6.06); PASS | 5.51 (5.82); PASS | 5.8 (6.86); PASS | 10.545 (10.76); PASS | 6.14 (6.14); reported, pilot band, not the floor's |
+| max_anchor_gap_m | 44.7 (72.1); MISS | 36.05 (37.1); PASS | 26.2 (31.2); PASS | 21.45 (23.8); PASS | 36.7 (36.8); PASS | 36.25 (37.2); PASS | 102.2 (102.2); reported, pilot band, not the floor's |
+| distinct_verbs | 5 (5); PASS | 5 (5); PASS | 4 (4); PASS | 4 (4); PASS | 5 (5); PASS | 5 (5); PASS | 4 (4); reported, pilot band, not the floor's |
+| length_ratio | 1.63; PASS | 1.32; PASS | 1.35; PASS | 1.63; PASS | 1.42; PASS | 1.45; PASS | 1.22; reported, pilot band, not the floor's |
+| Distinct lines, at least 3 | 3 mutually distinct lines; PASS | | | | | | |
+| Floor own row: all seeds reach, time within 2 x reference median, zero stops on every seed | | | | | | | 60.01 s, limit 144.96 s; PASS |
+
 ## 11. The music arc
 
 The stage keeps today's music: theme 2 with the `highdraft_crown` ACE set (`src/core/alpha_defs.gd:111`; `src/presentation/music_rows.gd:13`). The arc follows the gem rules: keep the core, escalate on game-state thresholds, add layers and never swap them, and land the payoff on the gameplay moment (G11, `src/presentation/MUSIC-GEMS.md`). The storm is the stage's drummer: every lightning strike lands on a downbeat as a drop. The Mind never enters the band (`SOUND-STORY.md:280`).
@@ -387,7 +411,7 @@ Today's 3-2 lore lines (`src/core/lore_rows.gd:291-299`, "Tie your tools before 
 | The world 3 Warden band, 24.5 to 128 s | `tests/alpha_posture_bands_w23_test.gd:26-27` |
 | The Mind boss and its arena | `src/boss/mind.gd` (its own choir Warden, `:58`) |
 
-What changes: the map id (`highdraft_crown` to `park_crown`), the heading (today toward the middle island, `src/world/map_highdraft_crown.gd:52`; the park runs +z), the time of day, and `beacon_radius` 30 becomes the landmark's `reach_m` 120. The Warden stops being a clamp at a beacon and starts flying.
+The shipped greybox changes the map id to `park_crown`, the heading to +z and the authored time of day to dusk. The authored Warden requests the spires mounting and `reach_m` 120. The runtime on this candidate still uses the base mind/choir Warden and 30 m ring. KF8-WIRE owns the mounting and ring connection; these measurements do not qualify the flying-hand mechanism.
 
 **Tests to re-pin, each with a dated header.**
 
@@ -395,7 +419,7 @@ What changes: the map id (`highdraft_crown` to `park_crown`), the heading (today
 | --- | --- | --- |
 | `tests/highdraft_crown_zone_test.gd` | slots, the net deck, islands at least NET_H + 24 (`:11`) | replaced by `tests/park_park_crown_test.gd` (KD6, shipped 11 October 2026: bake and graph freshness, waymark order, pocket roles and pay, the landmark and Warden rows, the toppled route, the lines file) |
 | `tests/park_table_test.gd` | valid map type for each landed park file | fixed upstream at 1f09581; the named smoke checks this candidate without a KD6 edit |
-| `tests/crown_warden_bot_test.gd` | the skipper breaks the stage 6 choir Warden (`:10`) | re-measured on `spires`: the Warden now moves |
+| `tests/crown_warden_bot_test.gd` | the skipper breaks the stage 6 choir Warden (`:10`) | pending KF8-WIRE: this candidate measures the base mind/choir encounter |
 | `tests/warden_mind_brace_test.gd` | the hand's brace is bounded (`:8`) | unchanged rule; add a case with the hand in flight |
 | `tests/warden_variants_test.gd` | variants reach the Warden (`:7`) | `choir` stays on stage 6 only |
 | `tests/alpha_posture_bands_w23_test.gd` | stage 6 inside the world 3 band | re-measured. PARK.md:444 lists stages 2, 3 and 5; the spires mounting changes stage 6's fight too, so add it |
