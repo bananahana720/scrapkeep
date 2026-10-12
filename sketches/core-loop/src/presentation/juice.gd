@@ -565,7 +565,7 @@ func _on_player_hit(amount: float, source: String) -> void:
 	var row := EventKinds.juice("player_hit")
 	hook_log.append(["edge_flash", "player_hit"])
 	squash(float(row["squash"]), Vector3.ZERO)
-	# The number and the flash take one colour from DamageNumbers: rust from a monster, sand from the world.
+	# The number and the flash keep the player_hit juice row's HAZARD for either source.
 	var team := DamageNumbers.team_of_source(source)
 	if number_sink.is_valid():
 		number_sink.call("player", amount, player.ball_position() + Vector3.UP * 1.4, "kinetic", team, false)
@@ -575,7 +575,7 @@ func _on_player_hit(amount: float, source: String) -> void:
 	var last: Dictionary = ctx.spawner.get("last_player_hit") if ctx.spawner != null and ctx.spawner.get("last_player_hit") != null else {}
 	if not last.is_empty() and Engine.get_physics_frames() - int(last.get("frame", -100)) <= 2:
 		from = last["from"]
-	vfx.edge_flash(_screen_direction(from), DamageNumbers.effect_colour("kinetic", team),float(row["edge_alpha"]) * clampf(0.6 + amount / 25.0, 0.6, 1.0), float(row["edge_s"]))
+	vfx.edge_flash(_screen_direction(from), DamageNumbers.effect_colour("kinetic", team), float(row["edge_alpha"]) * clampf(0.6 + amount / 25.0, 0.6, 1.0), float(row["edge_s"]))
 
 
 # Where a world point sits from the screen's centre, as a unit 2D direction (x right, y

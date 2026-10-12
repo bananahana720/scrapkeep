@@ -20,9 +20,8 @@ const TEAMS := ["player", "monster", "neutral"]
 
 # Team "player" is damage the player's side deals, so the type colour reads (the element
 # colours of part_gained; kinetic is the enemy_struck burst's own copper). "monster" is damage
-# the player takes, rust whatever the type; "neutral" is the world's (a hazard), sand.
+# the player takes; "neutral" is the world's. Both keep the player_hit juice row's HAZARD.
 const PLAYER_COLOURS := {"kinetic": Palette.COPPER, "frost": Palette.ANCIENT, "arc": Palette.ARC}
-const TEAM_COLOURS := {"monster": Palette.RUST, "neutral": Palette.SAND}
 
 # A strike kind that is not kinetic names its element; everything else is the ball's weight.
 const KIND_TYPES := {"arc": "arc", "frost": "frost"}
@@ -44,12 +43,17 @@ static func type_of_kind(kind: String) -> String:
 	return KIND_TYPES.get(kind, "kinetic")
 
 
+static func team_colours() -> Dictionary:
+	var colour: Color = EventKinds.juice("player_hit")["color"]
+	return {"monster": colour, "neutral": colour}
+
+
 static func effect_colour(type: String, team: String, crit := false) -> Color:
 	if team == "player":
 		if crit:
 			return EventKinds.juice("enemy_struck")["crit"]["color"]
 		return PLAYER_COLOURS.get(type, Palette.COPPER)
-	return TEAM_COLOURS.get(team, Palette.SAND)
+	return team_colours().get(team, EventKinds.juice("player_hit")["color"])
 
 
 # The team of a hit the player takes: the world's when nothing dealt it.
