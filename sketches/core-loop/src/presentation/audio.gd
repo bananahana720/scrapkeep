@@ -99,6 +99,10 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "p
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer"]
+# --- P-C Kest sounds ---
+const KEST_SOUNDS := ["kest_cable_fizz", "kest_cable_set", "kest_cable_blast", "kest_raid_tick",
+	"kest_tick_62", "kest_tick_57", "kest_tick_53", "kest_raid_stinger", "kest_raid_boom", "kest_raid_roll"]
+# --- end Kest ---
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
 # row's sound, a shattered chunk plays its row's sound over a low hit.
@@ -828,7 +832,7 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	var sound: String = sound_override if sound_override != "" else Rows.sound(kind, cue_context())
 	if not _admit(kind, sound, pitch):
 		return false
-	if sound in KEYED_SOUNDS:
+	if sound in KEYED_SOUNDS or sound in KEST_SOUNDS:
 		pitch *= Harmony.ratio(live_key())
 	_start(kind, sound, SfxBank.stream(sound), SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)] + db, pitch, bus)
 	if Rows.priority(kind) >= 2:
@@ -1018,7 +1022,7 @@ func _connect_all(events) -> void:
 	events.run_started.connect(func(_class_id: String): _set_ult_lift(false))
 	events.ultimate_ready.connect(_on_ultimate_ready)
 	events.ultimate_started.connect(_on_ultimate_started)
-	events.ultimate_peak.connect(func(_id: String, _at: Vector3): on_beat("ultimate_peak"))
+	events.ultimate_peak.connect(_on_ultimate_peak)
 	events.ultimate_landed.connect(_on_ultimate_landed)
 	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
 	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
@@ -1749,10 +1753,26 @@ func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vecto
 	engine.start_build(seconds, true)
 
 
+func _on_ultimate_peak(id: String, _at: Vector3) -> void:
+	on_beat("ultimate_peak", -6.0 if id in ["windhover", "air_raid", "minelayer"] else 0.0,
+		false, 1, "kest_raid_stinger" if id in ["windhover", "air_raid", "minelayer"] else "")
+
+
+func kest_roll(note: int) -> int:
+	var sound := "kest_tick_%d" % note
+	var eighth := maxi(1, engine.beat_len() / 2)
+	var at := engine.clock + posmod(eighth - posmod(engine.clock - engine.grid_origin, eighth), eighth)
+	engine.schedule_stinger_at(sound, at, -6.0)
+	cue_log.append(["kest_raid_roll", sound, "eighth", at, 1.0])
+	return at
+
+
 # The landing is the drop, on the next beat, never more than one beat after touchdown; the
 # lift releases with it (the meter is empty).
 func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) -> void:
 	play("ultimate_landed")
+	if _id in ["windhover", "air_raid", "minelayer"]:
+		on_beat("ultimate_landed", -6.0, false, 1, "kest_raid_boom")
 	if _ult_armed:
 		var touchdown := engine.clock
 		var at := engine.drop_now(4, 0.85, {}, -1, {"ult": false})

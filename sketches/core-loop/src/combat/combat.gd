@@ -24,6 +24,7 @@ const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
+const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
@@ -345,10 +346,11 @@ func setup(ctx_ref) -> void:
 	# The set piece (SKILL-BAR section 4) and the shared placeholder every pilot carries until
 	# wave P-C: paths line then arc, a volley of the pilot's own weapon per beat, the default
 	# landing. A pilot's own row goes in its marked block in ultimate.gd's _ult_rows.
-	ultimate = Ultimate.new()
+	ultimate = KestKit.new()
 	add_child(ultimate)
 	ultimate.setup(ctx, self)
 	ultimate.register("ult_default", {"tech": _ult_volley, "peak": _ult_peak, "landing": _ult_landing})
+	ultimate.register_kest()
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(_anchor: Vector3): _bite_load())
@@ -2197,17 +2199,30 @@ func _fire_plate_return(f: float, shape: Dictionary) -> void:
 func _line_geometry(f: float) -> Dictionary:
 	var from := _ground_under(ctx.player.ball_position())
 	var length := AbilityState.Gauge.scaled(f, Weapons.LINE_MIN, Weapons.LINE_MAX)
-	return ctx.player.yours({"kind": "line", "from": from, "to": from + _flat_aim() * length, "width": Weapons.LINE_WIDTH,
+	var shape: Dictionary = ctx.player.yours({"kind": "line", "from": from, "to": from + _flat_aim() * length, "width": Weapons.LINE_WIDTH,
 		"full_to": from + _flat_aim() * Weapons.LINE_MAX, "fill": f})
+	var points: Array = []
+	for charge in _caught_line(shape):
+		points.append(charge["pos"])
+	shape["caught"] = points
+	shape["bonus"] = 1.0 + Weapons.LINE_PER_CHARGE * mini(points.size(), Weapons.LINE_MAX_CAUGHT)
+	ctx.player.indicator.set_shape("kest_caught", ctx.player.yours({"kind": "marks", "points": points}))
+	return shape
+
+
+func _caught_line(shape: Dictionary) -> Array:
+	var live: Array = sticky.charges.duplicate()
+	if ultimate != null:
+		live.append_array(ultimate.caught_charges())
+	return live.filter(func(c): return not c.get("_inert", false) and in_line(shape["from"], shape["to"], shape["width"], c["pos"]))
 
 
 # Kest's detonation line: every live charge in the line goes off early, then the line
 # itself hits, +25% per charge caught up to three. A shot out of the cloak crits.
 func _fire_line(f: float, shape: Dictionary) -> void:
 	var caught := []
-	for charge in sticky.charges.duplicate():
-		if in_line(shape["from"], shape["to"], shape["width"], charge["pos"]):
-			caught.append(sticky.take(charge))
+	for charge in _caught_line(shape):
+		caught.append(sticky.take(charge) if sticky.charges.has(charge) else ultimate.take_charge(charge))
 	var bonus := 1.0 + Weapons.LINE_PER_CHARGE * mini(caught.size(), Weapons.LINE_MAX_CAUGHT)
 	var damage := AbilityState.Gauge.scaled(f, Weapons.LINE_DAMAGE_MIN, Weapons.LINE_DAMAGE_MAX) * bonus \
 		* _damage_mod(Weapons.STICKY_CHARGE) * _cloak_shot()
@@ -2445,19 +2460,24 @@ func _detonate(charge: Dictionary) -> void:
 			dealt *= _knob("sticky_breach")
 		if _marks.get(enemy.get_instance_id(), -1.0) > _clock:
 			dealt *= Weapons.MARK_BONUS
-		_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"],
-			"", charge.get("_source", "weapon"))
+		if charge.has("_kest_cast"):
+			ultimate.blast_hit(charge, enemy, dealt, at)
+		else:
+			_hit(enemy, "sticky", dealt, enemy.global_position - at, Weapons.BASE[Weapons.STICKY_CHARGE]["knock"],
+				"", charge.get("_source", "weapon"))
 	effects.ring(at, radius, ClassDef.KEST_COLOR)
 	ctx.events.sticky_detonated.emit(at, charge["crit"])
 	_rocket_jump(at)
 	_start_cloak()
 	if _knob("sticky_chain") > 0.0:
 		# A nested detonation can already have taken a charge from this snapshot (F001).
-		for other in sticky.charges.duplicate():
-			if not sticky.charges.has(other):
+		var live: Array = sticky.charges.duplicate()
+		live.append_array(ultimate.caught_charges())
+		for other in live:
+			if other.get("_inert", false) or (not sticky.charges.has(other) and not ultimate.caught_charges().has(other)):
 				continue
 			if (other["pos"] as Vector3).distance_to(at) <= _knob("sticky_chain"):
-				_detonate(sticky.take(other))
+				_detonate(sticky.take(other) if sticky.charges.has(other) else ultimate.take_charge(other))
 
 
 # Kest's rocket jump: Space held inside your own blast throws you away from it, harder

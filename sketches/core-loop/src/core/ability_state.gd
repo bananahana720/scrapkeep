@@ -134,6 +134,10 @@ const ABILITIES := {
 	# --- P-C Rivet rows ------------------------------------------------------------------
 	# --- end Rivet ---
 	# --- P-C Kest rows -------------------------------------------------------------------
+	"cable_charge": {"icon": "ab_kest_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"windhover": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "hold_beats": 2},
+	"air_raid": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "windhover"},
+	"minelayer": {"icon": "ab_kest_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "windhover"},
 	# --- end Kest ---
 	# --- P-C Tarn rows -------------------------------------------------------------------
 	# --- end Tarn ---

@@ -547,11 +547,28 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	sync_lattice(core, player.roll_node())
 	var open := 1.0 if player.kit.gliding else 0.0
+	var kest := {}
+	if rec["class"] == "demolitions_caster" and ctx != null and ctx.spawner != null and ctx.spawner.get("ultimate") != null:
+		kest = ctx.spawner.ultimate.kest_cage_state()
+		open = float(kest["vent_angle"]) / (PI * 0.5)
 	for vane_name in ["VaneL", "VaneR"]:
 		var vane := pod.get_node_or_null(vane_name) as Node3D
 		if vane != null:
 			var side := -1.0 if vane_name == "VaneL" else 1.0
 			vane.rotation.z = lerpf(vane.rotation.z, -side * open * PI * 0.5, 1.0 - exp(-VANE_RATE * delta))
+	if not kest.is_empty():
+		for node_name in ["MortarL", "MortarR"]:
+			var mortar := pod.find_child(node_name, true, false) as Node3D
+			if mortar != null:
+				if not mortar.has_meta("kest_rest"):
+					mortar.set_meta("kest_rest", mortar.position)
+				mortar.position = mortar.get_meta("kest_rest") + Vector3.BACK * float(kest["mortar_recoil"])
+				mortar.rotation.x = -float(kest["mortar_pitch"])
+		for node_name in ["SatchelBands", "FuseTips"]:
+			var device := pod.find_child(node_name, true, false) as MeshInstance3D
+			if device != null:
+				device.set_instance_shader_parameter("lit_count", int(kest["lit_count"]))
+				device.set_instance_shader_parameter("fuse_glow", float(kest["fuse_glow"]))
 	steer_weapon_ring(pod, _aim_of(v), delta)
 
 

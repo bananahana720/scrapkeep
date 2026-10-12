@@ -54,6 +54,8 @@ const WORDS := {
 	# --- P-C Rivet words ---
 	# --- end Rivet ---
 	# --- P-C Kest words ---
+	"cable_charge": "cable charge", "windhover": "windhover",
+	"air_raid": "air raid", "minelayer": "minelayer",
 	# --- end Kest ---
 	# --- P-C Tarn words ---
 	# --- end Tarn ---
