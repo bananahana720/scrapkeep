@@ -103,10 +103,12 @@ func _rig(scene: Node) -> void:
 	var player := scene.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	var clips: Array = Array(player.get_animation_list()) if player != null else []
 	clips.erase("RESET")
-	var wanted := CLIPS.keys()
+	var wanted := ["drop_land", "big_cheer", "wince", "slump", "phew", "brace", "heave",
+		"idle_loop", "ult_ride_loop", "class_up", "cast_special", "cast_line", "ult_ready",
+		"ult_windup", "ult_strike", "ult_recover", "smash", "unlock"]
 	clips.sort()
 	wanted.sort()
-	_t.check("exact seven clips", clips == wanted, "got %s; expected %s" % [clips, wanted])
+	_t.check("exact 18 clips", clips == wanted, "got %s; expected %s" % [clips, wanted])
 	if player == null or skeleton == null:
 		return
 	_t.check("rig scale", scene.scale.is_equal_approx(Vector3.ONE) and skeleton.scale.is_equal_approx(Vector3.ONE), "scale 1")
@@ -129,7 +131,8 @@ func _rig(scene: Node) -> void:
 			continue
 		var animation := player.get_animation(clip)
 		_t.near("duration " + clip, animation.length, CLIPS[clip], .001)
-		_t.eq("one shot " + clip, animation.loop_mode, Animation.LOOP_NONE)
+		_t.check("loops only for _loop names", clips.all(func(name):
+			return (player.get_animation(name).loop_mode == Animation.LOOP_LINEAR) == String(name).ends_with("_loop")))
 		player.play(clip)
 		for time in [0.0, animation.length]:
 			player.seek(time, true)

@@ -1,0 +1,1928 @@
+{
+  "schema": "pilot-clips-v1",
+  "pilot": "tarn",
+  "fps": 30,
+  "rig": "pilot-v1",
+  "torso_scale": true,
+  "controls": "tools/blender/shell_tarn.py:CONTROLS",
+  "anchors": {
+    "rest": "bind",
+    "ride": {
+      "torso": {
+        "height": 0.96,
+        "pitch": -10
+      },
+      "head": {
+        "pitch": -8
+      },
+      "hand.R": {
+        "control": "LapBar.R",
+        "offset": [
+          0,
+          -0.08916,
+          0.08218
+        ]
+      },
+      "hand.L": {
+        "control": "LapBar.L",
+        "offset": [
+          0,
+          -0.08916,
+          0.08218
+        ]
+      }
+    }
+  },
+  "clips": {
+    "idle_loop": {
+      "end": 127,
+      "loop": true,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "idle_loop"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both paws begin at the bind-pose yokes."
+        },
+        {
+          "frame": 16,
+          "curl.R": -4,
+          "tail": 4,
+          "note": "The right fingertip uncurls beside its yoke."
+        },
+        {
+          "frame": 31,
+          "hand.R": {
+            "at": [
+              0.335,
+              0.396,
+              0.04
+            ]
+          },
+          "curl.R": -12,
+          "tail": 8,
+          "note": "The right fingertip tests a short latch motion beside the yoke."
+        },
+        {
+          "frame": 39,
+          "hand.R": {
+            "at": [
+              0.33,
+              0.398,
+              0.044
+            ]
+          },
+          "curl.R": -5,
+          "ears": 12,
+          "tail": 10,
+          "note": "Both ears turn outward once."
+        },
+        {
+          "frame": 49,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "tail": 12,
+          "note": "The right paw settles back against its yoke."
+        },
+        {
+          "frame": 64,
+          "tail": 14,
+          "note": "The tail reaches the right end of its sway."
+        },
+        {
+          "frame": 85,
+          "tail": -12,
+          "note": "The tail crosses to the left side."
+        },
+        {
+          "frame": 106,
+          "tail": -4,
+          "note": "The tail eases back toward centre."
+        },
+        {
+          "frame": 127,
+          "pose": "rest",
+          "note": "Both paws finish at the bind-pose yokes."
+        }
+      ]
+    },
+    "ult_ride_loop": {
+      "end": 43,
+      "loop": true,
+      "from": "ride",
+      "to": "ride",
+      "ease": "smooth",
+      "planted": [
+        "R",
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "ult_ride_loop"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "ride",
+          "note": "Both paws hold the hauled-back lap bar."
+        },
+        {
+          "frame": 11,
+          "torso": {
+            "height": 0.975,
+            "pitch": -9
+          },
+          "head": {
+            "pitch": -7
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "shoulder": {
+            "lift": 0.006
+          },
+          "tail": 4,
+          "note": "The shoulders rise slightly against the lap bar."
+        },
+        {
+          "frame": 22,
+          "torso": {
+            "height": 0.955,
+            "pitch": -11
+          },
+          "head": {
+            "pitch": -9
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "tail": -4,
+          "note": "The seated torso settles into the next cable grip."
+        },
+        {
+          "frame": 33,
+          "torso": {
+            "height": 0.965,
+            "pitch": -9
+          },
+          "head": {
+            "pitch": -7
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "tail": 2,
+          "note": "The head levels slightly while both paws stay on the bar."
+        },
+        {
+          "frame": 43,
+          "pose": "ride",
+          "note": "Both paws hold the hauled-back lap bar."
+        }
+      ]
+    },
+    "class_up": {
+      "end": 37,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [
+        "R",
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "class_up"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both paws begin at the yokes."
+        },
+        {
+          "frame": 7,
+          "torso": {
+            "height": 0.985,
+            "pitch": -3
+          },
+          "shoulder": {
+            "lift": 0.018
+          },
+          "head": {
+            "pitch": -2
+          },
+          "note": "Both shoulders lift at the start of the roll."
+        },
+        {
+          "frame": 13,
+          "torso": {
+            "height": 1.015,
+            "pitch": 4
+          },
+          "shoulder": {
+            "lift": 0.025
+          },
+          "head": {
+            "pitch": 1
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -12,
+          "curl.L": -12,
+          "note": "Both shoulders roll back against the held yokes."
+        },
+        {
+          "frame": 19,
+          "torso": {
+            "height": 0.98,
+            "pitch": -5
+          },
+          "shoulder": {
+            "lift": 0.008
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -22,
+          "curl.L": -22,
+          "note": "Both paws flex around the fixed yokes as the shoulders roll inward."
+        },
+        {
+          "frame": 28,
+          "torso": {
+            "height": 1.005,
+            "pitch": 1
+          },
+          "shoulder": {
+            "lift": -0.004
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -5,
+          "curl.L": -5,
+          "note": "Both shoulders lower after the single flex."
+        },
+        {
+          "frame": 37,
+          "pose": "rest",
+          "note": "Both shoulders return to seated bind pose."
+        }
+      ]
+    },
+    "cast_special": {
+      "end": 22,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "cast_special"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "The right paw begins on its yoke."
+        },
+        {
+          "frame": 4,
+          "torso": {
+            "yaw": 3,
+            "pitch": -2
+          },
+          "hand.R": {
+            "at": [
+              0.42,
+              0.37,
+              0.015
+            ]
+          },
+          "note": "The right paw lifts clear of the yoke toward the bank."
+        },
+        {
+          "frame": 7,
+          "torso": {
+            "yaw": 5,
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -16,
+          "note": "The right paw closes around the clamp lever knob."
+        },
+        {
+          "frame": 10,
+          "torso": {
+            "height": 0.98,
+            "pitch": 3,
+            "yaw": 4
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              -0.08,
+              0.02
+            ]
+          },
+          "curl.R": -24,
+          "note": "The right paw throws the clamp lever back."
+        },
+        {
+          "frame": 13,
+          "torso": {
+            "height": 0.99,
+            "pitch": 2,
+            "yaw": 3
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              -0.08,
+              0.02
+            ]
+          },
+          "curl.R": -20,
+          "note": "The right paw holds the lever at the end of its throw."
+        },
+        {
+          "frame": 17,
+          "torso": {
+            "yaw": 2
+          },
+          "hand.R": {
+            "at": [
+              0.4,
+              0.32,
+              0.025
+            ]
+          },
+          "note": "The right paw lifts off the lever toward the yoke."
+        },
+        {
+          "frame": 22,
+          "pose": "rest",
+          "note": "The right paw returns to its yoke."
+        }
+      ],
+      "contact": {
+        "frame": 7,
+        "hand": "R",
+        "control": "ClampLever"
+      }
+    },
+    "cast_line": {
+      "end": 25,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "cast_line"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "The right paw begins on its yoke."
+        },
+        {
+          "frame": 4,
+          "torso": {
+            "yaw": 5,
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -16,
+          "note": "The right paw reaches down to the drum lever knob."
+        },
+        {
+          "frame": 7,
+          "torso": {
+            "height": 0.98,
+            "pitch": 4,
+            "yaw": 4
+          },
+          "head": {
+            "pitch": -2
+          },
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              0,
+              -0.08,
+              0.02
+            ]
+          },
+          "curl.R": -22,
+          "note": "The right paw finishes the first haul."
+        },
+        {
+          "frame": 11,
+          "torso": {
+            "yaw": 5,
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -16,
+          "note": "The right paw pushes the lever forward for the second haul."
+        },
+        {
+          "frame": 15,
+          "torso": {
+            "height": 0.975,
+            "pitch": 5,
+            "yaw": 4
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              0,
+              -0.08,
+              0.02
+            ]
+          },
+          "curl.R": -22,
+          "note": "The right paw finishes the second haul."
+        },
+        {
+          "frame": 18,
+          "torso": {
+            "height": 0.99,
+            "pitch": 2,
+            "yaw": 3
+          },
+          "hand.R": {
+            "control": "DrumLever",
+            "offset": [
+              0,
+              -0.08,
+              0.02
+            ]
+          },
+          "curl.R": -16,
+          "note": "The right paw holds the second haul briefly."
+        },
+        {
+          "frame": 21,
+          "torso": {
+            "yaw": 2
+          },
+          "hand.R": {
+            "at": [
+              0.4,
+              0.3,
+              0.015
+            ]
+          },
+          "note": "The right paw leaves the drum lever for the yoke."
+        },
+        {
+          "frame": 25,
+          "pose": "rest",
+          "note": "The right paw rests on its yoke again."
+        }
+      ],
+      "contact": {
+        "frame": 4,
+        "hand": "R",
+        "control": "DrumLever"
+      }
+    },
+    "ult_ready": {
+      "end": 19,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "ult_ready"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both paws begin on the yokes."
+        },
+        {
+          "frame": 5,
+          "head": {
+            "pitch": -6
+          },
+          "hand.R": {
+            "at": [
+              0.42,
+              0.37,
+              0.015
+            ]
+          },
+          "note": "The chin lowers into one measured nod."
+        },
+        {
+          "frame": 9,
+          "head": {
+            "pitch": -4
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -6,
+          "note": "The right fingertip taps the clamp lever knob."
+        },
+        {
+          "frame": 13,
+          "hand.R": {
+            "at": [
+              0.29,
+              0.31,
+              -0.11
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.32,
+              -0.08
+            ]
+          },
+          "note": "The chin levels as both paws move toward the lap bar."
+        },
+        {
+          "frame": 16,
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "note": "Both paws rest briefly on the copper lap bar."
+        },
+        {
+          "frame": 19,
+          "pose": "rest",
+          "note": "Both paws return to the yokes for the idle hand-off."
+        }
+      ]
+    },
+    "ult_windup": {
+      "end": 11,
+      "loop": false,
+      "from": "rest",
+      "to": "ride",
+      "ease": "smooth",
+      "planted": [],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "ult_windup"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both paws begin on the yokes."
+        },
+        {
+          "frame": 3,
+          "torso": {
+            "height": 0.99,
+            "pitch": -3
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.24,
+              0.34,
+              -0.08
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.24,
+              0.34,
+              -0.08
+            ]
+          },
+          "note": "Both paws reach down toward the lap bar."
+        },
+        {
+          "frame": 5,
+          "torso": {
+            "height": 0.98,
+            "pitch": -6
+          },
+          "head": {
+            "pitch": -5
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -12,
+          "curl.L": -12,
+          "note": "Both paws close around the copper lap bar."
+        },
+        {
+          "frame": 8,
+          "torso": {
+            "height": 0.965,
+            "pitch": -9
+          },
+          "head": {
+            "pitch": -7
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.067,
+              0.062
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.067,
+              0.062
+            ]
+          },
+          "curl.R": -16,
+          "curl.L": -16,
+          "note": "Both paws haul the lap bar toward the seated torso."
+        },
+        {
+          "frame": 11,
+          "pose": "ride",
+          "note": "The head stays down over the fully hauled lap bar."
+        }
+      ]
+    },
+    "ult_strike": {
+      "end": 19,
+      "loop": false,
+      "from": "ride",
+      "to": "ride",
+      "ease": "linear",
+      "planted": [
+        "R",
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "ult_strike"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "ride",
+          "note": "Both paws begin on the hauled-back lap bar."
+        },
+        {
+          "frame": 4,
+          "torso": {
+            "height": 0.945,
+            "pitch": -13,
+            "yaw": 7,
+            "roll": -3
+          },
+          "head": {
+            "pitch": -9,
+            "yaw": 3
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "curl.R": -22,
+          "curl.L": -22,
+          "note": "The seated torso leans into the ring spin."
+        },
+        {
+          "frame": 7,
+          "torso": {
+            "height": 0.94,
+            "pitch": -14,
+            "yaw": 10,
+            "roll": -4
+          },
+          "head": {
+            "pitch": -10,
+            "yaw": 4
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "curl.R": -28,
+          "curl.L": -28,
+          "note": "Both paws lock the lap bar at the peak of the spin."
+        },
+        {
+          "frame": 12,
+          "torso": {
+            "height": 0.95,
+            "pitch": -12,
+            "yaw": 4,
+            "roll": -1
+          },
+          "head": {
+            "pitch": -9,
+            "yaw": 2
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "curl.R": -14,
+          "curl.L": -14,
+          "note": "The torso unwinds while the lap bar stays back."
+        },
+        {
+          "frame": 19,
+          "pose": "ride",
+          "note": "Both paws retain the hauled-back lap bar after the spin."
+        }
+      ]
+    },
+    "ult_recover": {
+      "end": 25,
+      "loop": false,
+      "from": "ride",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "ult_recover"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "ride",
+          "note": "Both paws begin on the hauled-back lap bar."
+        },
+        {
+          "frame": 4,
+          "torso": {
+            "height": 0.935,
+            "pitch": -12
+          },
+          "head": {
+            "pitch": -10
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.08916,
+              0.08218
+            ]
+          },
+          "shoulder": {
+            "lift": -0.006
+          },
+          "note": "The seated torso sinks into the landing settle."
+        },
+        {
+          "frame": 7,
+          "torso": {
+            "height": 0.96,
+            "pitch": -8
+          },
+          "head": {
+            "pitch": -7
+          },
+          "shoulder": {
+            "lift": -0.004
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              -0.035,
+              0.032
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              -0.035,
+              0.032
+            ]
+          },
+          "note": "The lap bar moves forward beneath both paws."
+        },
+        {
+          "frame": 9,
+          "torso": {
+            "height": 0.98,
+            "pitch": -5
+          },
+          "head": {
+            "pitch": -4
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "note": "The lap bar reaches its neutral position as play control returns."
+        },
+        {
+          "frame": 14,
+          "torso": {
+            "height": 0.97,
+            "pitch": -3
+          },
+          "head": {
+            "pitch": -3
+          },
+          "shoulder": {
+            "lift": -0.009
+          },
+          "hand.R": {
+            "at": [
+              0.24,
+              0.34,
+              -0.04
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.24,
+              0.34,
+              -0.04
+            ]
+          },
+          "note": "The shoulders descend through the long exhale."
+        },
+        {
+          "frame": 19,
+          "torso": {
+            "height": 0.995,
+            "pitch": 2
+          },
+          "shoulder": {
+            "lift": 0.007
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "note": "Both shoulders rise slightly in a small finishing roll."
+        },
+        {
+          "frame": 25,
+          "pose": "rest",
+          "note": "Both paws settle on the yokes in seated bind pose."
+        }
+      ]
+    },
+    "smash": {
+      "end": 19,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "linear",
+      "planted": [],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "smash"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both paws begin around their yokes."
+        },
+        {
+          "frame": 3,
+          "torso": {
+            "height": 0.985,
+            "pitch": -3
+          },
+          "head": {
+            "pitch": -2
+          },
+          "shoulder": {
+            "lift": 0.01
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -14,
+          "curl.L": -14,
+          "note": "Both shoulders brace for the inward pull."
+        },
+        {
+          "frame": 6,
+          "torso": {
+            "height": 0.97,
+            "pitch": 5
+          },
+          "head": {
+            "pitch": -3
+          },
+          "shoulder": {
+            "lift": 0.015
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.12,
+              0.05
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              -0.12,
+              0.05
+            ]
+          },
+          "curl.R": -26,
+          "curl.L": -26,
+          "note": "Both paws pull the yokes toward the chest."
+        },
+        {
+          "frame": 9,
+          "torso": {
+            "height": 0.97,
+            "pitch": 4
+          },
+          "head": {
+            "pitch": -3
+          },
+          "shoulder": {
+            "lift": 0.012
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.12,
+              0.05
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              -0.12,
+              0.05
+            ]
+          },
+          "curl.R": -22,
+          "curl.L": -22,
+          "note": "Both paws hold the yokes close to the chest."
+        },
+        {
+          "frame": 14,
+          "torso": {
+            "height": 0.99,
+            "pitch": 1
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.05,
+              0.02
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              -0.05,
+              0.02
+            ]
+          },
+          "curl.R": -8,
+          "curl.L": -8,
+          "note": "Both paws ease the yokes forward again."
+        },
+        {
+          "frame": 19,
+          "pose": "rest",
+          "note": "Both yoke grips return to bind-pose hand positions."
+        }
+      ],
+      "contact": {
+        "frame": 3,
+        "hand": "R",
+        "control": "Grip.R"
+      }
+    },
+    "unlock": {
+      "end": 91,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [],
+      "source": {
+        "sheet": "design-v3/pilots/tarn.md",
+        "row": "unlock"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Tarn begins in seated bind pose."
+        },
+        {
+          "frame": 7,
+          "root": [
+            -0.24,
+            -0.12,
+            0.09
+          ],
+          "torso": {
+            "height": 0.99,
+            "pitch": -4
+          },
+          "head": {
+            "pitch": -4
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.28,
+              0.02
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.32,
+              0.3,
+              -0.06
+            ]
+          },
+          "curl.R": -18,
+          "note": "The seated body lifts toward the side of the pod."
+        },
+        {
+          "frame": 19,
+          "root": [
+            -0.16,
+            -0.07,
+            0.06
+          ],
+          "torso": {
+            "height": 0.98,
+            "pitch": -6
+          },
+          "head": {
+            "pitch": -5
+          },
+          "hand.R": {
+            "at": [
+              0.25,
+              0.28,
+              -0.015
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.32,
+              0.3,
+              -0.06
+            ]
+          },
+          "curl.R": -18,
+          "note": "The seated body slides inward toward the cockpit centre."
+        },
+        {
+          "frame": 31,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "height": 0.96,
+            "pitch": -4
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.27,
+              0.3,
+              -0.03
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -18,
+          "note": "The seated body settles onto the pod centre."
+        },
+        {
+          "frame": 43,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "height": 0.985,
+            "pitch": -5,
+            "yaw": 5
+          },
+          "head": {
+            "pitch": -5,
+            "yaw": 4
+          },
+          "hand.R": {
+            "at": [
+              0.4,
+              0.22,
+              -0.2
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -18,
+          "note": "The right paw lowers a held-claw gesture beside the seat."
+        },
+        {
+          "frame": 49,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "pitch": -3,
+            "yaw": 4
+          },
+          "head": {
+            "pitch": -4,
+            "yaw": 3
+          },
+          "hand.R": {
+            "at": [
+              0.4,
+              0.22,
+              -0.2
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "note": "The right paw opens at the end of the set-down gesture."
+        },
+        {
+          "frame": 58,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "yaw": 4
+          },
+          "hand.R": {
+            "at": [
+              0.46,
+              0.29,
+              -0.06
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "note": "The right paw rises toward the clamp lever."
+        },
+        {
+          "frame": 64,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "yaw": 3
+          },
+          "hand.R": {
+            "control": "ClampLever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -6,
+          "note": "The right fingertip taps the clamp lever knob."
+        },
+        {
+          "frame": 73,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "head": {
+            "pitch": -7
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "note": "The chin lowers for one quiet nod."
+        },
+        {
+          "frame": 82,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "head": {
+            "pitch": -2
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "note": "The chin rises to finish the nod."
+        },
+        {
+          "frame": 91,
+          "pose": "rest",
+          "note": "Tarn finishes in seated bind pose."
+        }
+      ]
+    }
+  },
+  "machinery": [
+    {
+      "node": "Blade.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "y",
+        "deg": 35,
+        "throw_s": 0.12,
+        "return_s": 0.18
+      },
+      "source": "design-v3/pilots/tarn.md:295",
+      "note": "Swing through one claw sweep per volley, mirrored about each blade root."
+    },
+    {
+      "node": "Blade.R",
+      "fact": "set_piece_phase",
+      "motion": "turn",
+      "start": {
+        "axis": "y",
+        "deg": 70,
+        "rate": 12,
+        "phases": [
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/tarn.md:295",
+      "note": "Hold out to this side during Rake Run flight; return on landing or cancellation."
+    },
+    {
+      "node": "Blade.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "y",
+        "deg": -35,
+        "throw_s": 0.12,
+        "return_s": 0.18
+      },
+      "source": "design-v3/pilots/tarn.md:295",
+      "note": "Swing through one claw sweep per volley, mirrored about each blade root."
+    },
+    {
+      "node": "Blade.L",
+      "fact": "set_piece_phase",
+      "motion": "turn",
+      "start": {
+        "axis": "y",
+        "deg": -70,
+        "rate": 12,
+        "phases": [
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/tarn.md:295",
+      "note": "Hold out to this side during Rake Run flight; return on landing or cancellation."
+    },
+    {
+      "node": "WeaponRing",
+      "fact": "aim",
+      "motion": "aim",
+      "start": {
+        "rate": 14
+      },
+      "source": "design-v3/pilots/tarn.md:295",
+      "note": "Yaw the level weapon ring toward the aim direction."
+    },
+    {
+      "node": "WeaponRing",
+      "fact": "set_piece_phase",
+      "motion": "slide",
+      "start": {
+        "axis": "y",
+        "m": 0,
+        "rate": 12,
+        "phases": [
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/tarn.md:295",
+      "note": "Fixed row: set_piece_phase has no peak pulse. Aim owns ring yaw; a full peak turn waits for coordinator event context."
+    },
+    {
+      "node": "ClawPivot.R",
+      "fact": "aim",
+      "motion": "aim",
+      "start": {
+        "rate": 14
+      },
+      "source": "design-v3/pilots/tarn.md:296",
+      "note": "Aim alignment only. The available aim fact has no Shift pulse or aim-side selector."
+    },
+    {
+      "node": "ClawPivot.R",
+      "fact": "meter_fill",
+      "motion": "turn",
+      "start": {
+        "axis": "y",
+        "deg": 32,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:296",
+      "note": "Uses the existing ultimate meter scalar. It is not the special-slot clamp gauge or a cast snap."
+    },
+    {
+      "node": "ClawPivot.R",
+      "fact": "line_load",
+      "motion": "slide",
+      "start": {
+        "axis": "z",
+        "m": -0.18,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:296",
+      "note": "Both sockets extend while the line is loaded; line_load has no cable side or bite pulse."
+    },
+    {
+      "node": "ClawPivot.R",
+      "fact": "set_piece_phase",
+      "motion": "turn",
+      "start": {
+        "axis": "z",
+        "deg": 25,
+        "rate": 12,
+        "phases": [
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/tarn.md:296",
+      "note": "Opposed held grip during flight. Alternating beat grips need a beat clock outside this vocabulary."
+    },
+    {
+      "node": "ClawPivot.R",
+      "fact": "heft_class",
+      "motion": "slide",
+      "start": {
+        "axis": "x",
+        "m": 0.1,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:316",
+      "note": "Continuous class I-to-V reach adds 0.10 m; exact class-II plateau requires P-D class layers."
+    },
+    {
+      "node": "ClawPivot.L",
+      "fact": "aim",
+      "motion": "aim",
+      "start": {
+        "rate": 14
+      },
+      "source": "design-v3/pilots/tarn.md:296",
+      "note": "Aim alignment only. The available aim fact has no Shift pulse or aim-side selector."
+    },
+    {
+      "node": "ClawPivot.L",
+      "fact": "meter_fill",
+      "motion": "turn",
+      "start": {
+        "axis": "y",
+        "deg": -32,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:296",
+      "note": "Uses the existing ultimate meter scalar. It is not the special-slot clamp gauge or a cast snap."
+    },
+    {
+      "node": "ClawPivot.L",
+      "fact": "line_load",
+      "motion": "slide",
+      "start": {
+        "axis": "z",
+        "m": -0.18,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:296",
+      "note": "Both sockets extend while the line is loaded; line_load has no cable side or bite pulse."
+    },
+    {
+      "node": "ClawPivot.L",
+      "fact": "set_piece_phase",
+      "motion": "turn",
+      "start": {
+        "axis": "z",
+        "deg": -25,
+        "rate": 12,
+        "phases": [
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/tarn.md:296",
+      "note": "Opposed held grip during flight. Alternating beat grips need a beat clock outside this vocabulary."
+    },
+    {
+      "node": "ClawPivot.L",
+      "fact": "heft_class",
+      "motion": "slide",
+      "start": {
+        "axis": "x",
+        "m": -0.1,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:316",
+      "note": "Continuous class I-to-V reach adds 0.10 m; exact class-II plateau requires P-D class layers."
+    },
+    {
+      "node": "PullDrum",
+      "fact": "line_load",
+      "motion": "spin",
+      "start": {
+        "axis": "x",
+        "deg_s": 360
+      },
+      "source": "design-v3/pilots/tarn.md:297",
+      "note": "Line-load winding only. Reversal and Shift are not represented by the line_load fact."
+    },
+    {
+      "node": "HeftC2",
+      "fact": "heft_class",
+      "motion": "grow",
+      "start": {
+        "scale": 1.2,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:298,306-314",
+      "note": "Absent from the shell GLB; hero_assets creates this holder at fit. Class scalar scales it by up to 1.2; layer visibility and in/out overshoot remain owned by the existing heft driver."
+    },
+    {
+      "node": "HeftC3",
+      "fact": "heft_class",
+      "motion": "grow",
+      "start": {
+        "scale": 1.2,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:298,306-314",
+      "note": "Absent from the shell GLB; hero_assets creates this holder at fit. Class scalar scales it by up to 1.2; layer visibility and in/out overshoot remain owned by the existing heft driver."
+    },
+    {
+      "node": "HeftC4",
+      "fact": "heft_class",
+      "motion": "grow",
+      "start": {
+        "scale": 1.2,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:298,306-314",
+      "note": "Absent from the shell GLB; hero_assets creates this holder at fit. Class scalar scales it by up to 1.2; layer visibility and in/out overshoot remain owned by the existing heft driver."
+    },
+    {
+      "node": "HeftC5",
+      "fact": "heft_class",
+      "motion": "grow",
+      "start": {
+        "scale": 1.2,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:298,306-314",
+      "note": "Absent from the shell GLB; hero_assets creates this holder at fit. Class scalar scales it by up to 1.2; layer visibility and in/out overshoot remain owned by the existing heft driver."
+    },
+    {
+      "node": "Control.Trigger",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": 12,
+        "throw_s": 0.06,
+        "return_s": 0.06
+      },
+      "source": "design-v3/pilots/tarn.md:299",
+      "note": "Same 12-degree squeeze as the shared shot driver; the driver owns the 0.12 s rate limit."
+    },
+    {
+      "node": "Control.ClampLever",
+      "fact": "slot_ready",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": 0,
+        "rate": 12,
+        "slot": 2
+      },
+      "source": "design-v3/pilots/tarn.md:299",
+      "note": "Fixed row: slot_ready is not a cast. The shared cast driver reads contact frame 7 and throws 35 degrees in 0.08 s, returning in 0.25 s."
+    },
+    {
+      "node": "Control.DrumLever",
+      "fact": "line_load",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": 0,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:299",
+      "note": "Fixed row: line_load is not a bite. The shared cast driver throws at frame 4; the pilot has two hauls, but the driver exposes one control throw."
+    },
+    {
+      "node": "Control.LapBar",
+      "fact": "set_piece_phase",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": 0,
+        "rate": 12,
+        "phases": [
+          "windup",
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/tarn.md:299",
+      "note": "Fixed row: the shared ultimate driver owns the -25-degree held haul and 0.25 s return without a competing scalar writer."
+    },
+    {
+      "node": "RendContact",
+      "fact": "set_piece_phase",
+      "motion": "slide",
+      "start": {
+        "axis": "y",
+        "m": 0,
+        "rate": 12,
+        "phases": [
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/tarn.md:300",
+      "note": "Fixed socket, no translation. Its shipped position owns rend contact."
+    },
+    {
+      "node": "ClawTip.R",
+      "fact": "heft_class",
+      "motion": "slide",
+      "start": {
+        "axis": "x",
+        "m": 0.1,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:296,308-316",
+      "note": "Socket reach adds 0.10 m across class I-to-V; visible jaws are separate meshes and require P-D parenting."
+    },
+    {
+      "node": "ClawTip.L",
+      "fact": "heft_class",
+      "motion": "slide",
+      "start": {
+        "axis": "x",
+        "m": -0.1,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:296,308-316",
+      "note": "Socket reach adds 0.10 m across class I-to-V; visible jaws are separate meshes and require P-D parenting."
+    },
+    {
+      "node": "PullExit",
+      "fact": "line_load",
+      "motion": "slide",
+      "start": {
+        "axis": "y",
+        "m": 0,
+        "rate": 12
+      },
+      "source": "design-v3/pilots/tarn.md:297",
+      "note": "Fixed cable mouth, no translation. Its shipped position owns cable origin."
+    }
+  ]
+}
