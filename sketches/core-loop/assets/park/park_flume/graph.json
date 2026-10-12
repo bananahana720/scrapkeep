@@ -1,8 +1,8 @@
 {
-  "bake_sha256": "3be70a52dbe2b289cb19ab21af52846622c9d95e78821d87bdf4610908c95108",
+  "bake_sha256": "b4fcfa1aa20155e0b2272fa64986850c79ef9d6d2dfd654e464b84d4ef9ecf88",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1092789,
+  "bytes": 1095120,
   "edges": 319771,
   "first_failed": "",
   "flags": {
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 1771,
   "full_visit_ratio": "1.252",
-  "graph_sha256": "910d5211bd1a049cb93037f7badab80e5ae33330dd5cd7c91dbe4007decdea2d",
+  "graph_sha256": "aee08ded680dbc514ac8bc2a53815a15ecd3ad57d6e9dfc166df72e1a30c8c41",
   "line_errors": [],
   "line_path_nodes": 125,
-  "longest_est_m": 2494,
+  "longest_est_m": 2495,
   "map": "park_flume",
   "nodes": 41151,
-  "park_sha256": "955a832d5e265625922ccdb1df5f0921fb602169aa16ddc55bc30e373a9086da",
+  "park_sha256": "faf3e753cea225519ce463c6ca9a33856252450927bff9ffab935dbd543db18c",
   "pockets": [
     {
       "clear_ring": [],
@@ -80,7 +80,7 @@
     {
       "clear_ring": [],
       "d_landmark": 415,
-      "d_spawn": 1128,
+      "d_spawn": 1130,
       "detour_m": 171,
       "door_at": [
         -120,
@@ -615,7 +615,7 @@
       },
       {
         "cost": 273.8,
-        "d_landmark": 1263.7,
+        "d_landmark": 1263.8,
         "name": "crew_ledges",
         "on_route": false,
         "rank": 12,
@@ -718,11 +718,11 @@
         "viable": false
       }
     ],
-    "count": 152,
+    "count": 153,
     "crossings": {
       "drop": 48,
       "ride": 78,
-      "walk": 223
+      "walk": 225
     },
     "hidden": [
       {

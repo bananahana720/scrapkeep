@@ -113,9 +113,9 @@ The three activities: the siphon camp (`enemy_camp` with today's Reach lobber pa
 
 **The exit to Brindle.** After the break, the reward gates stand on the bluff lip outside the drum's east doors at x 300, facing +x over the lower gorge, and the bay docks 61 m behind them over the drum (`bay.gd:37-41`, `143-153`), so `bay_dock.at` is [239, 480]. The launch throws the ball out of the east doors and across the gorge. Stage 2 is the world's last stage, so when the launch flight ends (`LAUNCH_FLIGHT` 0.6 s, `flow.gd:23`), `_finish_stage` calls `enter_boss` with the ball's velocity instead of advancing (`flow.gd:667-673`, `456-473`), and Brindle's module places the ball in the Slag Bowl (`boss.gd:15-17`). The arena stays small and authored (PARK.md:381). The park only points at it: from the bend overlook and the bluff, a smoke column and a furnace glow stand on the eastern horizon past the lower gorge, the launch arc aims at them, and the Requisition's anvil enters the music on the last chunk (section 10).
 
-## 5. `park_rows` (214 rows, continuation 2026-10-12)
+## 5. `park_rows` (215 rows, continuation 2026-10-12)
 
-The shipped file is `src/world/park/park_flume.json`; the bake and the stage graph are under `assets/park/park_flume/` (KD2). The rows contain 136 authored rides and structures, 52 rock outcrops and 26 shallow washes. The continuation rides and piers are listed below. Rows with recipes are placed in play by `ParkRecipes.build_placed`. Stamped greyboxes use the terrain collider; raised pieces use their placed colliders. Ride rows publish facts through sensors.
+The shipped file is `src/world/park/park_flume.json`; the bake and the stage graph are under `assets/park/park_flume/` (KD2). The rows contain 137 authored rides and structures, 52 rock outcrops and 26 shallow washes. The continuation rides and piers are listed below. Rows with recipes are placed in play by `ParkRecipes.build_placed`. Stamped greyboxes use the terrain collider; raised pieces use their placed colliders. Ride rows publish facts through sensors.
 
 **The low country falls continuously.** The graph precision fix at `3fd07ae` permits the graded low terrace. It stays at +24 m above the northern datum through z -381.5, then falls to zero at z 220 along 601.5 m. The other two northern terraces retain their 15 m steps, the siphon scarp retains its 15 m lift, and the weir mesa retains its 40 m rise. The split falls between bake samples so the additive stamps do not overlap on a sampled boundary.
 
@@ -321,7 +321,7 @@ The `ref_` texts need a fact check before they ship.
 
 ## 13. The shipped park file
 
-The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026-10-12, 214 park rows) and the lines are `tools/park_lines/park_flume.json`; the stage test `tests/park_park_flume_test.gd` pins them. Changes from the draft:
+The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026-10-12, 215 park rows) and the lines are `tools/park_lines/park_flume.json`; the stage test `tests/park_park_flume_test.gd` pins them. Changes from the draft:
 
 - Removed `cliff_rooms` and `viga_beams`; added the crew camp (`crew_ledges`, `crane_booms`), the three terraces, `bend_rim_ledge`, `drum_lip_kicker` and sized filler rows (no tiled saguaro grid).
 - Removed `bend_far_rim`: the bend cache moved onto `bend_rim_ledge` [42, -142] beside the rim line.
@@ -333,7 +333,7 @@ The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `siphon_camp` | online | [-24, 176] | 0 | 0 | 1002 | 414 | True | common |
 | `bend_cache` | reward | [40, -144] | 227 | 227 | 753 | 714 | True | rare |
-| `bench_bounty` | risk | [-120, 336] | 171 | 171 | 1128 | 415 | True | common, rare |
+| `bench_bounty` | risk | [-120, 336] | 171 | 171 | 1130 | 415 | True | common, rare |
 | `weir_valve` | hidden | [-152, -248] | 99 | 99 | 558 | 906 | True | the cache |
 
 The graph reports `reward_ratio` 0.532 against its starting target of at least 1.5. This reading is reported, not gated.
@@ -584,7 +584,8 @@ The park file, verbatim (park_schema_test reads this block):
   {"id": "siphon_bench_pier", "element": "grind_line", "landform": "flume", "society": "dam_era", "at": [-55, 200], "y": null, "size": [24, 28, 20], "yaw_deg": 0, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench_coping_kicker", "element": "kicker", "landform": "slickrock", "society": "dam_era", "at": [-5, 438], "y": 2, "size": [8, 3, 24], "yaw_deg": 88, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "forecourt_pad_kicker", "element": "kicker", "landform": "penstock", "society": "dam_era", "at": [62, 419], "y": 0, "size": [8, 3, 20], "yaw_deg": 57, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "bench_coping_pier", "element": "grind_line", "landform": "slickrock", "society": "dam_era", "at": [50, 470], "y": null, "size": [16, 28, 8], "yaw_deg": 90, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
+  {"id": "bench_coping_pier", "element": "grind_line", "landform": "slickrock", "society": "dam_era", "at": [50, 470], "y": null, "size": [16, 28, 8], "yaw_deg": 90, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "siphon_approach_bank", "element": "bank", "landform": "slickrock", "society": "none", "at": [-135, 149], "y": null, "size": [100, 6, 56], "yaw_deg": 76, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
  ],
  "event_rows": [
   {"id": "hollow_trestle_collapse", "kind": "collapse", "family": "natural", "site": "trestle_hollow", "trigger": {"on": "clock_tier", "value": 2}, "weight": 1.0, "telegraph": {"lead_s": 6.0, "form": "trestle_groan", "on_bar": true}, "live_s": 0.0, "effect": {"swap": "trestle_ramp"}, "route_change": {"closes": ["flume_mid"], "opens": ["trestle_ramp_line"]}, "hold_clear_m": 20.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_natural", "land": "drop_collapse"}},
