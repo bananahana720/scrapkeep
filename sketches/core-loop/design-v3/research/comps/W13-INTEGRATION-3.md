@@ -559,13 +559,13 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 ### SQ15 Closable sockets
 
 - **GOAL.** Each zone has 2 to 4 openings and a stage builder closes unused ones with a filler landform off the shortest route, a pocket anchor keeping exactly one.
-- **SCOPE.** `src/world/park/sockets.gd` (new), `tools/park_graph.gd` (a `--sockets` arm), `tests/park_sockets_test.gd` (new).
+- **SCOPE.** `src/world/park/sockets.gd` (new), `tools/park_sockets.gd` (the `--sockets` laboratory, isolated from graph freshness by the coordinator's 2026-10-12 ruling), `tests/park_sockets_test.gd` (new).
 - **CONTEXT.** KC0's `greybox:` placement (`K-UNITS.md:155`); `design-v3/PARK.md:138`, `:350`; `comps/roboquest/stage-anatomy.md:125`.
 - **ACCEPTANCE.** 1,000 seeded stages per arm, fixed entrances against closable sockets: on at least 95% of socket seeds, pocket count 3 to 8, no guaranteed pocket on the shortest route, re-roll under 10% and at most half the fixed rate, full-visit ratio at most 3.0; every filler sits off the shortest route.
-- **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'park_sockets_test' --test 'park_zones_test'` (2 files); the `--sockets` arm, 1,000 seeds.
+- **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'park_sockets_test' --test 'park_zones_test'` (2 files); `tools/park_sockets.gd -- --sockets=1000`, 1,000 seeds per arm.
 - **TIMEBOX.** 3 h.
 - **FORBIDDEN.** Editing a stage's park file.
-- **Depends on.** SQ13, KC0. **Shares files with.** `park_graph.gd` (after SQ13).
+- **Depends on.** SQ13, KC0. **Shares files with.** None; `tools/park_sockets.gd` preloads the socket laboratory without changing the graph baker.
 
 ### SQ12 Pocket library
 
@@ -1235,7 +1235,8 @@ Every arm is report-first in its own unit and gates from the unit's merge; the p
 | Weapon envelope, attachments | SQ10, SQ11 | Envelope spreads; perk share within 15 percent |
 | Offer weights, levels, late offer, start pick | SQ19, SG15, SG8, SG9 | 200 draws or starts per pilot |
 | Visible odds | SG13 | 10,000 draws per table against shown weights |
-| Zones, sockets, pocket draw | SQ13, SQ15, SQ14 (`tools/park_graph.gd`) | 1,000 seeded jitters or stages |
+| Zones, pocket draw | SQ13, SQ14 (`tools/park_graph.gd`) | 1,000 seeded jitters or stages |
+| Closable sockets | SQ15 (`tools/park_sockets.gd -- --sockets=1000`) | 1,000 seeded stages per arm |
 | Graph checks | SR15; KD1 to KD6 (paste 4f) | `beacon_ok`; reward-to-objective ratio and full-visit ratio, reported by SR15 and gated per stage by its KD unit |
 | Shop price to income | SG16 (`tools/shop_model.gd`) | 3 worlds, 20 seeds; price, income and ratio per stage, report only |
 | Pocket library entry | SQ12 | Idle and dodger entries per pocket |
@@ -1312,7 +1313,7 @@ Four lanes. P is `P-UNITS.md`'s pilot lane, K is `K-UNITS.md`'s park lane, S is 
 | `src/combat/combat.gd` | B3, B6, SR7, the PC units, SR1, SG1 |
 | `src/world/director.gd` | KE6, KE9, SQ14, SG11 |
 | `src/world/director_cards.gd` | KE9, SR10, SG10, SG6 |
-| `tools/park_graph.gd` | KB8, SR15, SQ13, SQ15, SQ14 |
+| `tools/park_graph.gd` | KB8, SR15, SQ13, SQ14 |
 | `src/core/profile.gd` | SG12, SR12, SG10 |
 | `src/core/run_state.gd` | SG9, SR12, SI1 |
 | `src/core/ability_state.gd` | B3, SQ6, the PC units, SR3 |
