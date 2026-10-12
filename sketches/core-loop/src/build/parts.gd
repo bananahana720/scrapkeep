@@ -58,6 +58,13 @@ const CATALOGUE := {
 	"magnet_spool": {"name": "Magnet Spool", "verb": "Pull scrap from farther", "text": "scrap magnet reaches 50% further",
 		"icon": "utility", "rarity": "common", "tier": 1, "family": "stat", "tags": ["mass"],
 		"magnet": 1.5},
+	# W13 SR9: a copy tightens the Hold the Relay ring and speeds its charge. The numbers
+	# under "relay" are read by hold_relay.gd tuned(); a capped stack of three copies. The
+	# seam keeps it out of every offer until the director wires the relay (follow-up).
+	"relay_convergence": {"name": "Relay Convergence", "verb": "Tighten on the relay", "pitch": "Ring pulls in, charge quickens",
+		"text": "Tighter relay ring, faster charge", "icon": "utility",
+		"rarity": "common", "tier": 1, "family": "stat", "tags": ["arc"], "needs": "relay.convergence",
+		"stack": "capped", "cap": 3, "relay": {"radius_div": 2.0, "charge_per": 0.3}},
 	# Wave 11 GP2: one part for each verb the alpha pool barely touched (roll, harpoon, boost,
 	# jump, haul; special is the rare Spare Cell). Each changes how its verb feels through one
 	# tuning knob and adds no key. "touches" is the Bindings verb, "pitch" the shelf's three words.
@@ -81,12 +88,6 @@ const CATALOGUE := {
 		"text": "+15% slam speed", "icon": "mobility",
 		"rarity": "common", "tier": 1, "family": "mobility", "tags": ["mass"],
 		"mods": {"slam_speed": 1.15}},
-	# W13 SR9: a copy tightens the Hold the Relay ring and speeds its charge. The numbers
-	# under "relay" are read by hold_relay.gd tuned(); a capped stack of three copies.
-	"relay_convergence": {"name": "Relay Convergence", "verb": "Tighten on the relay", "pitch": "Ring pulls in, charge quickens",
-		"text": "Tighter relay ring, faster charge", "icon": "utility",
-		"rarity": "common", "tier": 1, "family": "stat", "tags": ["arc"],
-		"stack": "capped", "cap": 3, "relay": {"radius_div": 2.0, "charge_per": 0.3}},
 
 	# Uncommon: gates and fabricators. Punch, a pattern or an element on every row.
 	"slag_rounds": {"name": "Slag Rounds", "verb": "Shots land heavy", "text": "+10 punch, +25% weapon damage",
