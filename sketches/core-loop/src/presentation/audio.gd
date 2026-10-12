@@ -2284,7 +2284,7 @@ func _cannon_answer(_habit: String, _icon: String) -> void:
 	if _motif != "cannon":
 		return
 	var quote := SfxBank.stream("mind_cannon")
-	var delay: float = quote.get_length() + float(engine.beat_len()) / Harmony.RATE
+	var delay: float = quote.get_length() / Harmony.ratio(live_key()) + float(engine.beat_len()) / Harmony.RATE
 	_cannon_cue("cannon_answer", Harmony.motif_notes("cannon"), -10.0, delay, false)
 
 

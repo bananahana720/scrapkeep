@@ -774,7 +774,7 @@ func _cannon_call(family: String, at: Vector3, target: Vector3, due: float, heft
 	combat._commit_cannon(family, target, floor, Weapons.ZONE_REACH, Weapons.ZONE_DAMAGE * heft,
 		"special", family == "plate", overrides)
 	_cannon_calls += 1
-	_cannon_record["zones"] = _cannon_calls
+	_cannon_record["zones"] = int(_cannon_record.get("zones", 0)) + 1
 	var audio = combat._cannon_audio()
 	if audio != null:
 		audio.cannon_family(family, false, "cannon_call")
@@ -863,5 +863,7 @@ func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
 		leg["seconds"] = 4.0 * _beat_len
 		_cannon_encore = true
 		_cannon_due = -1.0
+		_cannon_calls = 0
+		_cannon_peak_done = false
 		_peaked = false
 	return [hits, damage]

@@ -81,7 +81,7 @@ func _cases() -> void:
 	audio._motif = "cannon"
 	_game.events.mind_adapted.emit("slam", "ab_cannon_smash")
 	var due: float = audio._cannon_queue.back()["due"]
-	var wait: float = SfxBank.stream("mind_cannon").get_length() + float(audio.engine.beat_len()) / Harmony.RATE
+	var wait: float = SfxBank.stream("mind_cannon").get_length() / Harmony.ratio(audio.live_key()) + float(audio.engine.beat_len()) / Harmony.RATE
 	_t.near("answer follows the whole quote plus one beat", due - audio.clock, wait)
 	audio.clock = due - 0.001
 	audio._step_cannon_cues()
