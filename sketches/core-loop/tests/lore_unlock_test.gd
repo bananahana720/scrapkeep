@@ -1,3 +1,4 @@
+# 2026-10-12 FIXTURE-ADAPT: 50e4a6a added codex profile reads; the scene-free flow has no saved profile.
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
@@ -23,6 +24,7 @@ class Table:
 
 class Ctx:
 	var stages := Table.new()
+	var profile = null
 
 class FakeFlow:
 	var ctx := Ctx.new()
