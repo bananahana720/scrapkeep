@@ -421,7 +421,7 @@ func _variant_cases() -> void:
 	_t.check("Flywheel Throw throws its plate at the densest knot", _combat._fly_plates.size() == 1
 		and _flat(_combat._fly_plates[0]["at"]).distance_to(_flat(knot[0].global_position)) < 2.0, str(_combat._fly_plates))
 	_t.eq("a knot plate clips three", made, Weapons.FLY_KNOT_CLIPS)
-	_ult._ult_rows["plate_flywheel"]["peak"].call(ball, 1.0)
+	_ult._ult_rows["plate_flywheel"]["peak"].call(ball)
 	_t.near("Flywheel peak plate pull ring equals its landing radius including bonus", float(_combat.plate["radius"]), _ult.landing_radius() + Weapons.FLY_LANDING_BONUS)
 	var edge := _enemy("chaser", _ult.landing_radius() + 1.0)
 	var base_hit := _land("plate_return", ball)
