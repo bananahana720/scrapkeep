@@ -1,6 +1,6 @@
 # Stage 5: Highdraft, the sky islands (`park_islands`)
 
-**Status: greybox candidate, awaiting the coordinator's gate and Andrew's play.** Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
+**Status: partial greybox. Native acceptance fails Kest's stop and worst-seed anchor bands and Tally's peak-speed band. The dressed pass is not started.** Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
 
 | Field | Value |
 | --- | --- |
