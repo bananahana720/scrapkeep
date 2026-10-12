@@ -21,7 +21,7 @@ func _warning(state: Dictionary) -> void:
 		var point: Vector3 = crack.global_transform * vertex
 		low = low.min(point)
 		high = high.max(point)
-	var park: Dictionary = game.ctx.terrain.map().park
+	var park: Dictionary = game.world.event_families.natural._original_map.park
 	var row: Dictionary = park.event_rows.filter(func(r): return r.id == "tailings_slump")[0]
 	var width := float(Kinds.world_row(row.telegraph.form).crack_width_m)
 	# The fixture's independent face is 374..376; KD3 owns its bench centre and width.
