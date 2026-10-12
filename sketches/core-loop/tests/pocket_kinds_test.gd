@@ -38,7 +38,6 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var began := Time.get_ticks_msec()
 	var args := OS.get_cmdline_user_args()
 	if "--only" in args:
 		var index := args.find("--only")
@@ -59,27 +58,16 @@ func _run() -> void:
 		graphs[id] = Graph.read("res://assets/park/%s/graph.bin" % id)
 	if only == "":
 		_admission()
-		print("suite phase _admission elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		_ladder()
-		print("suite phase _ladder elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _authored_pay()
-		print("suite phase _authored_pay elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _combat()
-		print("suite phase _combat elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		_objectives()
-		print("suite phase _objectives elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		_rounds()
-		print("suite phase _rounds elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		_cues()
-		print("suite phase _cues elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _ambush()
-		print("suite phase _ambush elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _hazards()
-		print("suite phase _hazards elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _marks()
-		print("suite phase _marks elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _exit()
-		print("suite phase _exit elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 	elif only == "combat_cues":
 		await _combat()
 		_rounds()
