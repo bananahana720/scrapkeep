@@ -893,7 +893,6 @@ def ram_columns(root):
     """One rigidly skinned mesh keeps the four moving pieces to one draw."""
     RAM_RIG.clear()
     RAM_MEASURES.clear()
-    common.SLOTS["hydraulic"] = {"vc": True, "metal": 0.65, "rough": 0.24}
     mount = Part("RamMounts")
     measured(mount, "clamp_ring", mount.ring, "ancient_enamel", 2.38, 3.12, 0.18, 12,
              loc=(0, 0, 2.45), color=IRON)
@@ -927,19 +926,19 @@ def ram_columns(root):
             return faces
 
         barrel_name, rod_name = label + "_barrel", label + "_rod"
-        piece(barrel_name, moving.beam, "hydraulic", base, base + axis * RAM_BASE_NECK, 0.32, color=COPPER_DARK)
-        smooth(piece(barrel_name, moving.rod, "hydraulic", base + axis * RAM_BASE_NECK,
+        piece(barrel_name, moving.beam, "ancient_enamel", base, base + axis * RAM_BASE_NECK, 0.32, color=COPPER_DARK)
+        smooth(piece(barrel_name, moving.rod, "ancient_enamel", base + axis * RAM_BASE_NECK,
                      base + axis * (RAM_BASE_NECK + RAM_BARREL_LENGTH), RAM_BARREL_R, 8,
                      color=COPPER_DARK, measure=label + "_barrel"))
-        piece(barrel_name, moving.rod, "hydraulic", base + axis * (RAM_MOUTH - RAM_GLAND_LENGTH),
+        piece(barrel_name, moving.rod, "ancient_enamel", base + axis * (RAM_MOUTH - RAM_GLAND_LENGTH),
               base + axis * RAM_MOUTH, RAM_GLAND_R, 10, color=TOOTH)
         for offset in (-0.20, 0.20):
-            piece(barrel_name, moving.cyl, "hydraulic", 0.28, 0.28, 0.10, 8,
-                  loc=base + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=COPPER_DARK)
-        smooth(piece(rod_name, moving.rod, "hydraulic", eye - axis * 1.95,
+            piece(barrel_name, moving.cyl, "ancient_enamel", 0.28, 0.28, 0.10, 8,
+                  loc=base + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=TOOTH)
+        smooth(piece(rod_name, moving.rod, "ancient_enamel", eye - axis * 1.95,
                      eye - axis * RAM_EYE_R, RAM_ROD_R, 10, color=ROD, measure=label + "_rod"))
         for offset in (-0.20, 0.20):
-            piece(rod_name, moving.cyl, "hydraulic", RAM_EYE_R, RAM_EYE_R, 0.10, 8,
+            piece(rod_name, moving.cyl, "ancient_enamel", RAM_EYE_R, RAM_EYE_R, 0.10, 8,
                   loc=eye + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=TOOTH)
         records.append((label, side, base, eye, axis, barrel_name, rod_name, foot))
     mounts = finish(mount, (0, 0, 0), root)
