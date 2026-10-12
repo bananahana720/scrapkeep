@@ -52,6 +52,25 @@ func _heights(bins: Dictionary, point: Vector2) -> Array:
 			heights.append(a.y + u * (tri[1].y - a.y) + v * (tri[2].y - a.y))
 	return heights
 
+func _triangle_probes(node: Node3D, probes: Array[Vector2]) -> void:
+	if node is MeshInstance3D and node.visible:
+		var arrays: Array = node.mesh.surface_get_arrays(0)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		if indices.is_empty():
+			for k in vertices.size():
+				indices.append(k)
+		for k in range(0, indices.size(), 3):
+			var centre := Vector3.ZERO
+			for index in [indices[k], indices[k + 1], indices[k + 2]]:
+				var point: Vector3 = node.global_transform * vertices[index]
+				centre += point / 3.0
+				probes.append(Vector2(point.x, point.z))
+			probes.append(Vector2(centre.x, centre.z))
+	for child in node.get_children():
+		if child is Node3D:
+			_triangle_probes(child, probes)
+
 func _check_surface(label: String, node: Node3D, site: Dictionary, water := false) -> void:
 	var bins := {}
 	_triangles(node, bins)
@@ -59,6 +78,7 @@ func _check_surface(label: String, node: Node3D, site: Dictionary, water := fals
 	var centre := Vector2(float(site.at[0]), float(site.at[1]))
 	var yaw := deg_to_rad(float(site.yaw_deg))
 	var probes: Array[Vector2] = []
+	_triangle_probes(node, probes)
 	for z in range(ceili(-half.y), floori(half.y) + 1):
 		for x in range(ceili(-half.x), floori(half.x) + 1):
 			probes.append(Vector2(x, z).rotated(-yaw) + centre)
