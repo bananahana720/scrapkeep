@@ -175,7 +175,9 @@ func _physics_process(_delta: float) -> bool:
 		d.stage_time = 1000.0
 		_check("legacy time tiers stay capped at two", d.tier() == 2, str(d.tier()))
 		_game.queue_free()
-		print("director_homes_test: PASS" if _failures == 0 else "director_homes_test: FAIL (%d)" % _failures)
+		if _failures > 0:
+			print("director_homes_test failure count: %d" % _failures)
+		print("director_homes_test: PASS" if _failures == 0 else "director_homes_test: FAIL")
 		quit(0 if _failures == 0 else 1)
 		return true
 	return false
