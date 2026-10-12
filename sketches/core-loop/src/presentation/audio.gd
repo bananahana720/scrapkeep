@@ -2467,7 +2467,7 @@ func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) 
 # The four bank recipes carry the paper punch and bell independently of cog_tick.
 const TALLY_SOUNDS := {"plate": "plate_tally", "clip": "clip_tally", "stroke": "stroke_tally", "settle": "settle_tally"}
 const TALLY_CUES := {
-	"tally_plate": {"kind": "slot_cast", "sound": "plate_tally", "steps": [-12]},
+	"tally_plate": {"kind": "special_used", "sound": "plate_tally", "steps": [-12]},
 	"tally_clip": {"kind": "line_skill_fired", "sound": "clip_tally", "steps": [0, 2, 3]},
 	"tally_stroke": {"kind": "ultimate_peak", "sound": "stroke_tally", "steps": [0, 2, 3, 5]},
 	"tally_total": {"kind": "ultimate_landed", "sound": "stroke_tally", "steps": [12]},
@@ -2483,7 +2483,7 @@ var _tally_streams := {}
 
 
 func _wire_tally(events) -> void:
-	events.slot_cast.connect(func(_slot: String, id: String, _at: Vector3):
+	events.special_used.connect(func(id: String, _at: Vector3):
 		if id == "gather_plate":
 			_tally_cue("tally_plate", 0))
 	events.line_skill_fired.connect(func(id: String, _target: Node3D, _at: Vector3, _on: String):
