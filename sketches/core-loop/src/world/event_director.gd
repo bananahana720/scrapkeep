@@ -360,7 +360,7 @@ func end_all() -> Array:
 
 # Park families implement behaviour through one callable: (action, row, context).
 # Actions are telegraph, land, step and end. The engine owns facts and scheduling;
-# hooks receive copies, and a zero-live_s arrival stays live until finish_row().
+# hooks receive copies, and a zero-live_s event stays live until stage teardown.
 func register_family(family: String, handler: Callable) -> void:
 	_park_families[family] = handler
 
@@ -383,7 +383,7 @@ func notify_warden_phase(phase: String) -> void:
 func finish_row(id: String) -> Array:
 	var facts := []
 	for state in _park_states:
-		if state.row.id == id and state.phase == LIVE and _park_can_end(state):
+		if state.row.id == id and state.phase == LIVE and (state.weather or float(state.row.live_s) > 0.0) and _park_can_end(state):
 			_park_end(state, facts)
 	return facts
 
