@@ -1,3 +1,5 @@
+# 2026-10-12 FIXTURE-ADAPT: eb9cbd7 replaced shell growth with the Hoberman lattice (ROSTER-LOOK section 5).
+# ROSTER-LOOK: "`SHELL_PER_CLASS` goes to 0.0 for Hoberman shells, because the panels now carry the growth read."
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -8,7 +10,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 # parts, not the scrap wallet. After add_scrap(120) and a 40-scrap purchase, the chunk
 # count is not lower and heft is higher. After lose_scrap(30) the chunk count drops and
 # the lost chunks fly off. With mass and parts restored, the shell redraw is
-# idempotent. The shell grows a step per heft class while the collider stays 1 m. A
+# idempotent. The Hoberman shell keeps its scale while the collider stays 1 m. A
 # Warden's scrap lands in a line along the ball's heading.
 
 var _game
@@ -115,7 +117,7 @@ func _check_shell() -> void:
 		if child is CollisionShape3D:
 			shape = child
 	var radius: float = (shape.shape as SphereShape3D).radius
-	_report("shell grows, collider stays", big > small and run.heft_class() >= 3 and is_equal_approx(radius, Tuning.RADIUS),
+	_report("Hoberman shell scale stays fixed, collider stays", is_equal_approx(big, small) and run.heft_class() >= 3 and is_equal_approx(radius, Tuning.RADIUS),
 		"heft class %d: shell scale %.2f -> %.2f; collider radius %.2f m" % [run.heft_class(), small, big, radius])
 
 

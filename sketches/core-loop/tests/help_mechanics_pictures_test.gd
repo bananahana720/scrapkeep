@@ -1,6 +1,9 @@
+# 2026-10-12 FIXTURE-ADAPT: ba3deab added skill-bar controls; keep the controls page inside its 40-word limit.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
+const FieldNotes := preload("res://src/ui/field_notes.gd")
 const MechanicsDiagram := preload("res://src/ui/mechanics_diagram.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
@@ -23,7 +26,20 @@ func _run() -> void:
 	var help = game.screens._help
 	game.screens._content.modulate.a = 1.0
 	_t.check("controls open first", help.diagram.visible and not help._mechanics.visible)
-	_t.check("controls page fits 40 words", WordBudget.count(game.screens).hud <= 40)
+	var controls_words: Dictionary = WordBudget.count(game.screens)
+	_t.check("controls page fits 40 words", controls_words.hud <= 40, "%d words: %s" % [controls_words.hud, controls_words.items])
+	var expected_keys := []
+	for row in FieldNotes.CONTROLS:
+		if row.has("caps") and row.has("short"):
+			expected_keys.append_array(row["caps"])
+	var shown_keys: Array = help.diagram.shown_keys()
+	expected_keys.sort()
+	shown_keys.sort()
+	_t.eq("controls retain every binding", shown_keys, expected_keys)
+	for key in shown_keys:
+		if key in ["key_a", "key_s", "key_d", "key_2", "key_3"]:
+			continue
+		_t.check("controls keep action on " + key, help.diagram.label_of(key) != "" or ControlsDiagram.ARROWS.has(key))
 	help.page_button.pressed.emit()
 	await process_frame
 	_t.check("pictures replace controls", not help.diagram.visible and help._mechanics.visible and help.page_button.text == "Controls")

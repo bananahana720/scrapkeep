@@ -99,6 +99,8 @@ var metrics := {}
 # world (0 in one saved before that was wired) is recomputed on resume. flow seeds `companion`
 # from the profile at a run's start.
 var run_seed := 0
+# Bot runner only; normal play keeps the clock-based identity.
+var run_seed_override = null
 var world := 0
 # The spend wallet (CG1): shop, fabricator, sell and refund move cogs and nothing else.
 # Damage, theft, wear and mass recovery never touch it; only add_cogs and spend_cogs do.
@@ -166,6 +168,10 @@ func _on_warden_engaged(index: int) -> void:
 var class_rewarded := 1
 
 
+func _unix_time() -> float:
+	return Time.get_unix_time_from_system()
+
+
 func begin(chosen_class: Resource) -> void:
 	class_def = chosen_class
 	stage = 1
@@ -178,7 +184,10 @@ func begin(chosen_class: Resource) -> void:
 	class_rewarded = 1
 	_stage_starts = {}
 	# The suffix also seeds device luck; presentation must never choose it.
-	run_id = "%d-%06d" % [int(Time.get_unix_time_from_system()), _id_rng.randi() % 1000000]
+	if run_seed_override != null:
+		run_id = "bot-%d" % int(run_seed_override)
+	else:
+		run_id = "%d-%06d" % [int(_unix_time()), _id_rng.randi() % 1000000]
 	# Derived from the run id so it draws nothing from the global RNG.
 	run_seed = hash(run_id)
 	world = 0
