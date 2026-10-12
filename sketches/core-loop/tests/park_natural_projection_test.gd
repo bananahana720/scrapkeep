@@ -157,12 +157,12 @@ func _run() -> void:
 	game.player.source = Intent.Scripted.new()
 	game.flow.press_start()
 	var park: Dictionary = game.ctx.terrain.maps[0].park
-	var row: Dictionary = park.event_rows[0].duplicate(true)
-	row.merge({"id": "projection_slump", "kind": "collapse", "trigger": {"on": "clock_tier", "value": 4},
+	var fixture_row: Dictionary = park.event_fixture_rows[0].duplicate(true)
+	fixture_row.merge({"id": "projection_slump", "kind": "collapse", "trigger": {"on": "clock_tier", "value": 4},
 		"telegraph": {"lead_s": 6.0, "form": "ground_slump", "on_bar": false},
 		"effect": {"depth_m": 20.0, "fill_s": 4.0, "swap": "projection_slump_ramp",
 			"face": {"at": [-70.0, -60.0], "size": [20.0, 20.0, 20.0], "yaw_deg": 0.0}}}, true)
-	park.event_rows.append(row)
+	park.event_fixture_rows.append(fixture_row)
 	game.flow.choose_class(1)
 	await physics_frame
 	await physics_frame
