@@ -286,6 +286,16 @@ func settle_run_tallies(run_id: String) -> bool:
 	return true
 
 
+func settle_previous_run_tallies() -> bool:
+	var changed := false
+	for stat_name in _doc["stats"]:
+		var key := String(stat_name)
+		if key.begins_with(RUN_TALLY_PREFIX):
+			var run_id := key.substr(RUN_TALLY_PREFIX.length(), key.rfind(".") - RUN_TALLY_PREFIX.length())
+			changed = settle_run_tallies(run_id) or changed
+	return changed
+
+
 func _remember_run_tallies() -> void:
 	_loaded_tally_prefixes = {}
 	for stat_name in _doc["stats"]:

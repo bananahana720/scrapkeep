@@ -353,7 +353,8 @@ func append_line(path: String, text: String) -> bool:
 			if profile != null:
 				var changed: bool = profile.record_run_tallies(run.run_id, totals)
 				var settled := false
-				if line.get("outcome", "") in ["won", "dead", "lost", "abandoned"]:
+				var outcome := String(line.get("outcome", ""))
+				if outcome in ["won", "died", "lost"] and (outcome != "died" or run.over):
 					settled = profile.settle_run_tallies(run.run_id)
 				if profile.can_save and (changed or settled or not profile.last_error.is_empty()) and not profile.save():
 					last_error = "run tallies not saved: %s" % profile.last_error

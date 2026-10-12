@@ -278,7 +278,7 @@ func _check_quit_reload() -> void:
 			_t.check("SR12 new run settled totals survive reload", profile.load_profile() and _has_no_run_tallies(profile) and _same_tallies(_profile_tallies(profile), tallies))
 		else:
 			_t.check("SR12 quit reload retains resumable high-water marks", _same_tallies(profile.run_tallies(run_id), tallies))
-			_t.eq("SR12 quit reload leaves lifetime base unsettled", _profile_tallies(profile, Profile.RUN_TALLY_BASE), _zero_tallies())
+			_t.check("SR12 quit reload leaves lifetime base unsettled", _same_tallies(_profile_tallies(profile, Profile.RUN_TALLY_BASE), _zero_tallies()))
 			_t.check("SR12 logbook lifetime totals include quit run once", _same_tallies(_profile_tallies(profile), tallies))
 			_t.check("SR12 repeated profile reload keeps quit totals once", profile.load_profile() and _same_tallies(_profile_tallies(profile), tallies))
 		_game.free()
