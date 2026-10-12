@@ -14,6 +14,8 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 
 const SCHEMA := 4
 const RUN_TALLY_KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
+const RUN_TALLY_PREFIX := "run_tallies."
+const RUN_TALLY_BASE := "run_tally_base."
 
 # From-version to the method that returns the document one version up.
 const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2", 3: "_migrate_3"}
@@ -153,6 +155,10 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	for stat_name in stats:
 		if not out["stats"].has(stat_name) or stats[stat_name] > out["stats"][stat_name]:
 			out["stats"][stat_name] = stats[stat_name]
+	# Run snapshots merge by max, but distinct runs contribute additively.
+	for key in RUN_TALLY_KEYS:
+		if out["stats"].has(RUN_TALLY_BASE + key):
+			out["stats"][key] = float(out["stats"][RUN_TALLY_BASE + key]) + _run_contributions(out["stats"], key)
 	var worn: Dictionary = theirs.get("equipped", {})
 	for slot in worn:
 		if not out["equipped"].has(slot):
@@ -233,7 +239,7 @@ func set_stat(stat_name: String, value: float) -> void:
 func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
 	if run_id.is_empty() or totals.size() != RUN_TALLY_KEYS.size():
 		return false
-	var prefix := "run_tallies.%s." % run_id
+	var prefix := RUN_TALLY_PREFIX + run_id + "."
 	for key in RUN_TALLY_KEYS:
 		var value = totals.get(key)
 		if not (value is int or value is float) or not is_finite(value) or value < 0.0:
@@ -244,19 +250,32 @@ func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
 			return false
 	var changed := false
 	for key in RUN_TALLY_KEYS:
+		changed = changed or float(totals[key]) > stat(prefix + key)
+	if not changed:
+		return false
+	for key in RUN_TALLY_KEYS:
+		if not _doc["stats"].has(RUN_TALLY_BASE + key):
+			set_stat(RUN_TALLY_BASE + key, stat(key) - _run_contributions(_doc["stats"], key))
 		var value := float(totals[key])
 		var delta := value - stat(prefix + key)
 		if delta > 0.0:
 			add_stat(key, delta)
 			set_stat(prefix + key, value)
-			changed = true
 	return changed
+
+
+static func _run_contributions(stats: Dictionary, key: String) -> float:
+	var total := 0.0
+	for stat_name in stats:
+		if String(stat_name).begins_with(RUN_TALLY_PREFIX) and String(stat_name).ends_with("." + key):
+			total += float(stats[stat_name])
+	return total
 
 
 func run_tallies(run_id: String) -> Dictionary:
 	var totals := {}
 	for key in RUN_TALLY_KEYS:
-		totals[key] = stat("run_tallies.%s.%s" % [run_id, key])
+		totals[key] = stat(RUN_TALLY_PREFIX + run_id + "." + key)
 	return totals
 
 
