@@ -291,3 +291,66 @@ Dead-stop sites by seed:
 | 3 | 140.04 | 180.96 | 40.92 | 800.0 | entered Brindle; reached phase 2; boss_stalled at boss time 420.01 s |
 
 The reactor runs without its park mounting until KF8-WIRE. No mounting or driver workaround was applied. The eight-file smoke, compile, lint and byte-determinism checks pass on unchanged game inputs. `graph.json` has `beacon_ok true` and `spawn.run true`. This is real headless physics, with no GPU, listening or human-feel verdict. Missing enemy-kind fields and the floor replay gap remain explicit follow-ups. The distinct-line proof is not supplied by this export and is reported, not gated.
+
+## Round 4, candidate TRAV-DET, 2026-10-12
+
+**Round-4 greybox verdict: FAIL.** Completed final-geometry summaries cover 40/56 seed rows. Missing summaries and incomplete live runs remain pending, not passes. Candidate baseline Rivet-5, Sable-4, Tally-5 and floor-1 all reproduced solo with identical inputs under R24. Current-head replay equality is PASS. Each measured table cell comes from the final population, with per-seed bounds judged from the worst seed. No band, pilot line, kit or shared tool changed in this round.
+
+**Measured round 4, 2026-10-12.** Geometry head `7838cffbf84d61dca1c0b448082e93467f3d4ae7`; candidate `b1cc003`; tool SHA256 `902da5cd3879fcc555f6ccc83a83548479d7f318d6e7783738baad4e5d2fbfe6`. Evidence `/home/andrew/scratch/w13/sol/kd2-flume-r4/final-population`, input manifests and commands.ndjson in the same round folder. R24 replaces the old export with the candidate tool. The table gives median/worst, or ranges where the band is bounded. The floor gates only its reach, time cap and zero terrain stops. Historical writer and gate measurements remain in the traversal page.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden, 8/8 | 8 / 8 seeds pass | 8 / 8 seeds pass | pending | 8 / 8 seeds pass | 8 / 8 seeds pass | pending | 8 / 8 seeds pass |
+| Time s, median 60–120; worst ≤150 | 63.73 / 64.8 pass | 96.055 / 98.71 pass | pending | 79.59 / 80.69 pass | 91.395 / 93.43 pass | pending | 96.77 / 98.42, reported, pilot band, not the floor's |
+| Segments s, medians 12–45 | [21.66, 21.56, 20.51] / 22.08 pass | [26.99, 35.9, 33.315] / 36.62 pass | pending | [23.08, 26.01, 30.49] / 30.49 pass | [26.985, 30.355, 34.495] / 35.36 pass | pending | [27.975, 30.585, 38.2] / 38.97, reported, pilot band, not the floor's |
+| Flow, median ≥.70; worst ≥.60 | 0.9262 / 0.9212 pass | 0.76255 / 0.7445 pass | pending | 0.9584 / 0.9146 pass | 0.72405 / 0.6119 pass | pending | 0.5791 / 0.5594, reported, pilot band, not the floor's |
+| Airborne, median .12–.45 | 0.238 / [0.238, 0.2602] pass | 0.1221 / [0.1098, 0.1315] pass | pending | 0.1638 / [0.1638, 0.1725] pass | 0.1256 / [0.124, 0.1301] pass | pending | 0.11945 / [0.1129, 0.1234], reported, pilot band, not the floor's |
+| Terrain or unclassified stops, every seed 0 | 0 / 0 pass | 0 / 0 pass | pending | 0 / 0 pass | 0 / 0 pass | pending | 0 / 0 pass |
+| Peak m/s / tier-3 s, worst peak ≥26.6; median time ≥3 | [54.02, 45.69] / [54.02, 45.69] pass | [36.345, 8.37] / [32.76, 7.77] pass | pending | [35.48, 9.37] / [33.28, 8.71] pass | [36.41, 8.36] / [34.4, 8.14] pass | pending | [36.285, 8.11] / [34.12, 7.94], reported, pilot band, not the floor's |
+| Quiet s, worst ≤20 | 7.74 / 8.03 pass | 11.69 / 12.15 pass | pending | 8.86 / 8.88 pass | 15.12 / 16.53 pass | pending | 12.515 / 12.78, reported, pilot band, not the floor's |
+| Anchor gap m, worst ≤40 | 30.2 / 49.8 MISS | 30.7 / 32.6 pass | pending | 28.1 / 33.4 pass | 32.8 / 35.4 pass | pending | 32.3 / 39.5, reported, pilot band, not the floor's |
+| Ride facts, at least 3 | 5 / 5 pass | 5 / 5 pass | pending | 5 / 5 pass | 5 / 5 pass | pending | 5 / 5, reported, pilot band, not the floor's |
+| Length ratio, median 1.3–2.0 | 1.51 / [1.51, 1.54] pass | 1.43 / [1.43, 1.44] pass | pending | 1.36 / [1.36, 1.36] pass | 1.335 / [1.33, 1.34] pass | pending | 1.35 / [1.35, 1.36], reported, pilot band, not the floor's |
+| Floor, ≤2× Rivet median; 0 terrain stops | not applicable | not applicable | pending | not applicable | not applicable | pending | 96.77 / max 98.42; cap 192.11 pass |
+| Distinct lines, reported | not supplied by fixed tool; not gated | not supplied by fixed tool; not gated | pending | not supplied by fixed tool; not gated | not supplied by fixed tool; not gated | pending | not supplied by fixed tool; not gated |
+| Pack dead stops, classified separately | 0 | 0 | pending | 0 | 0 | pending | 0 |
+
+Dead-stop sites by seed:
+
+- None in the 40 completed summary rows; unmeasured rows remain pending.
+
+### Stop classification
+
+All 40 completed final summary rows have zero raw stops; unmeasured rows remain pending. The candidate baseline had zero raw stops in 56/56 rows. The old Kest-2, Tally-3 and Cannon-2 exemptions are retired; no anonymous enemy contact is exempted. Floor seed 1 has zero stops in candidate baseline and matching solo. The old gate receipt remains classified as terrain. The R26 third siphon-bank repair was not used. The final bench grade is a separate site.
+
+The independent round-3 gate classified floor seed 1 as terrain at 50.303 s, [-189.34,20.43,142.24], from its matching ground-only trace. Receipt: /tmp/claude-1000/w13-cgate/kd2-flume-r3/floor-solo1-trace-replay.json.
+
+### Win proof under R23
+
+The wrapper extends tools/bot_run.gd and only sets stage_limit to 600.0 while driver ticks are zero. KF8-WIRE mounts the reactor Warden at its authored anchor. The coordinator R23 criterion requires all three seeds to engage without a traversal stall; a fight that lasts the remaining stage limit belongs to Warden tuning.
+
+| Seed | Engage s | Break s | Engage to break s | Outcome |
+| --- | --- | --- | --- | --- |
+| 1 | 116.39 | None | None | stalled / beacon |
+| 2 | 117.43 | None | None | stalled / beacon |
+| 3 | 143.06 | None | None | stalled / beacon |
+
+R23 engage proof PASS. Raw receipts `/home/andrew/scratch/w13/sol/kd2-flume-r4/win-seed-*/bots.ndjson`. No Warden tuning or placement workaround was applied.
+
+### Tarn journey probe, reported under R27
+
+R27 keeps the bench line as the measured Tarn traversal for this round. That ruling does not amend the approved journey. A separate eight-seed probe steers from the siphon through [20,225], the entry kicker at [40,255], and along the last reach. Waypoints are in the round folder, never tools/park_lines. A reach counts only with ground contact on Park_flume_head_reach/Collider, within the authored 8 m-wide deck footprint and at its 25 m deck height. The coordinator owns the journey decision and text. No geometry was changed for the claw-up.
+
+| Seed | Last reach reached | Reach s | To Warden s | Stops |
+| --- | --- | --- | --- | --- |
+| 1 | False | None | 74.42 | [{"at": [112.7, 355.1], "time": 64.5}] |
+| 2 | False | None | 76.04 | [{"at": [113.5, 353.8], "time": 65.63}] |
+| 3 | False | None | 73.74 | [{"at": [110.6, 351.6], "time": 63.76}] |
+| 4 | False | None | 76.04 | [{"at": [113.5, 353.8], "time": 65.63}] |
+| 5 | False | None | 72.87 | [] |
+| 6 | False | None | 72.87 | [] |
+| 7 | False | None | 74.42 | [{"at": [112.7, 355.1], "time": 64.5}] |
+| 8 | False | None | 72.87 | [] |
+
+Receipts `/home/andrew/scratch/w13/sol/kd2-flume-r4/journey-probe/tarn-seed-*-trace.json`; per-seed results `/home/andrew/scratch/w13/sol/kd2-flume-r4/journey-rows.json`.
+
