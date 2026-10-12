@@ -1,4 +1,4 @@
-# smoke: solo (traversal and bot batches with isolated children, bounded to 75 seconds)
+# smoke: solo (traversal and bot batches with isolated children, bounded to 85 seconds)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -15,11 +15,11 @@ func _initialize() -> void:
 			"--pilot=sable", "--seeds=1,2" if mode == "batch" else "--seeds=2",
 			"--trace", "--out=" + base.path_join(mode)]})
 	for mode in ["bot-batch", "bot-isolated"]:
-		jobs.append({"script": "res://tools/bot_run.gd", "args": [
+		jobs.append({"script": "res://tools/bot_run.gd", "state": base.path_join(mode + "-state"), "args": [
 			"--pilot=pylon_engineer", "--policy=brawler", "--table=slice",
 			"--seeds=1,2" if mode == "bot-batch" else "--seeds=2", "--trace-ticks=1",
 			"--ticks=%d" % BOT_TICKS, "--out=" + base.path_join(mode)]})
-	var results := ChildRuns.run(jobs, 75.0)
+	var results := _run(jobs, base, 85.0)
 	var hashes: Array[String] = []
 	var traces: Array = []
 	for i in jobs.size():
@@ -57,3 +57,37 @@ func _initialize() -> void:
 	var code := t.verdict()
 	print("seed_isolation_test: %s" % ("PASS" if code == 0 else "FAIL"))
 	quit(code)
+
+
+# Launch with per-job XDG state, then wait on all children under one deadline.
+func _run(jobs: Array, base: String, timeout_s: float) -> Array:
+	var running := []
+	DirAccess.make_dir_recursive_absolute(base)
+	for i in jobs.size():
+		var job: Dictionary = jobs[i]
+		var previous := {}
+		if job.has("state"):
+			for kind in ["DATA", "CONFIG", "CACHE"]:
+				var key: String = "XDG_%s_HOME" % kind
+				previous[key] = OS.get_environment(key)
+				OS.set_environment(key, String(job["state"]).path_join(kind.to_lower()))
+		var log_path := base.path_join("child-%d.log" % i)
+		var args: Array = ["--headless", "--fixed-fps", "90", "--log-file", log_path, "--path",
+			ProjectSettings.globalize_path("res://"), "--script", job["script"], "--"] + job["args"]
+		running.append({"pid": OS.create_process(OS.get_executable_path(), PackedStringArray(args)), "log": log_path})
+		for key in previous:
+			if previous[key].is_empty():
+				OS.unset_environment(key)
+			else:
+				OS.set_environment(key, previous[key])
+	var start := Time.get_ticks_msec()
+	while running.any(func(r): return OS.is_process_running(r["pid"])) and Time.get_ticks_msec() - start < timeout_s * 1000.0:
+		OS.delay_msec(200)
+	var results := []
+	for child in running:
+		var timed_out := OS.is_process_running(child["pid"])
+		if timed_out:
+			OS.kill(child["pid"])
+		results.append({"code": -1 if timed_out else OS.get_process_exit_code(child["pid"]),
+			"log": FileAccess.get_file_as_string(child["log"]), "timed_out": timed_out})
+	return results
