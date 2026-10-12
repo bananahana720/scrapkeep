@@ -182,6 +182,11 @@ const ENTRIES := [
 	# --- P-C Rivet entries ---
 	# --- end Rivet ---
 	# --- P-C Kest entries ---
+	{"id": "kest_cable_charge", "name": "Cable Charge", "hint": "Your line can carry more than you.", "clue": "3 + a click while hooked, or just before the bite", "text": "Pick 3 and click: a charge runs down your line and sets on what the hook bit. Let go and it blows. With no line out, the next bite carries it."},
+	{"id": "kest_windhover", "name": "Windhover", "hint": "There. Give it a moment.", "clue": "a full ring + Q + open sky over where you aim", "text": "Q lobs you up over where you aim. You hang there for two beats while your mortar shells the ground below, then you stoop straight down onto it."},
+	{"id": "kest_blast_vault", "name": "Blast Vault", "hint": "The wall you blow can throw you.", "clue": "a Cable Charge on a wall + let go close + Space held", "text": "Charge a wall through your line, reel in, and let go within a few metres holding Space. The blast throws you up and away, and your chain keeps its grace."},
+	{"id": "kest_homecoming", "name": "Homecoming", "hint": "The wind knows your feathers.", "clue": "Kest + the Highdraft", "text": "Fly Kest into her home roosts in world three."},
+	{"id": "kest_tick_tick_boom", "name": "Tick, Tick, Boom", "hint": "Watch the whole pack before you commit.", "clue": "Windhover + eight different machines", "text": "Strike eight different machines with the charges and landing of one Windhover."},
 	# --- end Kest ---
 	# --- P-C Tarn entries ---
 	{"id": "tarn_claw_drag", "name": "Claw Drag", "hint": "Why go to them when the line can bring them?",
@@ -255,6 +260,11 @@ const DETECTORS := {
 	"cannon_old_tune": {"kind": "", "script": "res://src/boss/mind.gd"},
 	"mind_quiet_gun": {"kind": "", "script": "res://src/boss/mind.gd"},
 	# --- end Cannon ---
+	"kest_cable_charge": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
+	"kest_windhover": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
+	"kest_blast_vault": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
+	"kest_homecoming": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
+	"kest_tick_tick_boom": {"kind": "", "script": "res://src/combat/kest_kit.gd"},
 }
 
 

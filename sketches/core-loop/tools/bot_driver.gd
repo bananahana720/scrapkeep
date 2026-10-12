@@ -1593,6 +1593,11 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			and game.player._brake_was_held)
 		return
 	_harpoon_held = false
+	if game.player.abilities.id_of(AbilityState.LINE) == "cable_charge" and target.get("role") == "hull" and not Augments.anchor_line(target):
+		var radius = target.get("radius")
+		var passing: float = Augments.MIN_ROPE + game.player.tuning.RADIUS + (float(radius) if radius != null else 0.0)
+		if game.player.ball_position().distance_to(target.global_position) <= passing:
+			return
 	var swallowed: bool = game.player.frozen() or kit.slingshot.charging
 	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
 	if special != null and special.charging:

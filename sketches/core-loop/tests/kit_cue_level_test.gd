@@ -215,6 +215,21 @@ func _kit_calls(def: Resource) -> void:
 				_audio.call(name, def.motif + "_recital")
 				_extra_paths += 1
 				_path(def.id, "special_used", true, name)
+			"cue":
+				# A pilot's own cue entry (kind, sound, grid), as Kest's kit calls it: its first
+				# listed sound plays now, its second on the beat grid.
+				var audio_script: Script = Audio
+				var sounds: Array = audio_script.get_script_constant_map().get(def.motif.to_upper() + "_SOUNDS", [])
+				for i in mini(2, sounds.size()):
+					_begin()
+					_audio.call(name, "line_skill_fired", String(sounds[i]), "now" if i == 0 else "beat")
+					_extra_paths += 1
+					_path(def.id, "line_skill_fired", true, name + " " + String(sounds[i]))
+			"roll":
+				_begin()
+				_audio.call(name, 62)
+				_extra_paths += 1
+				_path(def.id, "ultimate_peak", true, name + " 62")
 			_:
 				_extra_paths += 1
 				_begin()

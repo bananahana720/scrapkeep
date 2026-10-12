@@ -104,7 +104,7 @@ static func all() -> Array[Resource]:
 			"synergy_hooks": PackedStringArray(["on_sprint_start", "on_blast_release", "on_cc_ignored"])}),
 		make({"id": "demolitions_caster", "display_name": "Kest", "role": "Demolitions caster", "species": "bird",
 			"pitch": "Vanish in your own smoke, then drop a line of fire where they least expect it.",
-			"weapon_id": "sticky_charge", "movement_id": "smoke_blink", "special_id": "detonation_line", "smash_id": "demo_slam", "line_id": "line_reel", "ultimate_id": "ult_default",
+			"weapon_id": "sticky_charge", "movement_id": "smoke_blink", "special_id": "detonation_line", "smash_id": "demo_slam", "line_id": "cable_charge", "ultimate_id": "windhover",
 			"color": KEST_COLOR, "shape": "burst", "motif": "kest", "sound": "slam_boom",
 			"bible_home": "Fuse, directed casting and local pressure",
 			"unlock": {"by": "rescue:dig", "label": "Dig out whoever keeps knocking behind the wall."},
