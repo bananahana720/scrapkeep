@@ -493,7 +493,7 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	mesh.set_meta("shape", spec.shape)
 	var shapes := []
 	var offset := Callable()
-	if spec.shape == "dust_crack":
+	if spec.get("pattern", "") == "dust_crack":
 		mesh.name = "DustCurtain"
 		shapes = [_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)]
 		offset = func(local, _base): return float(spec.dust_height_m) * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)

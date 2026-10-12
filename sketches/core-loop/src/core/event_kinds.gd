@@ -1021,8 +1021,8 @@ const ANCIENT_LIGHT := Palette.ANCIENT
 const WORLD_ROWS := {
 	# PARK section 5: hostile warnings fall with a pure tone; landed forms keep
 	# the same family's colour. Priority is consumed by the existing audio grammar.
-	"ground_slump": {"group": "event", "color": Palette.HAZARD, "shape": "dust_crack", "dust_height_m": 3.0, "crack_width_m": 0.3, "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 2},
-	"ground_slump_landed": {"group": "event", "color": Palette.HAZARD, "shape": "dust_crack", "dust_height_m": 3.0, "crack_width_m": 0.3, "sound": "slam_boom", "sound_next": "rockfall_boom", "hud": "", "objective": "", "priority": 2},
+	"ground_slump": {"group": "event", "color": Palette.HAZARD, "shape": "bar", "pattern": "dust_crack", "dust_height_m": 3.0, "crack_width_m": 0.3, "sound": "threat_tick", "sound_next": "rock_grind_dust_hiss", "hud": "", "objective": "", "priority": 2},
+	"ground_slump_landed": {"group": "event", "color": Palette.HAZARD, "shape": "bar", "pattern": "dust_crack", "dust_height_m": 3.0, "crack_width_m": 0.3, "sound": "slam_boom", "sound_next": "rockfall_boom", "hud": "", "objective": "", "priority": 2},
 	"flood_rising": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "threat_whistle", "sound_next": "flood_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"flood_landed": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "slam_boom", "sound_next": "flood_drop", "hud": "", "objective": "", "priority": 2},
 	"fleet_inbound": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "fleet_falling_pure", "hud": "", "objective": "", "priority": 2},
