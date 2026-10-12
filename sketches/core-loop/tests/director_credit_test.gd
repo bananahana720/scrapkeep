@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_CHECKS := 754
+const EXPECTED_CHECKS := 1114
 
 var _t := T.new("director_credit_test")
 
@@ -34,6 +34,7 @@ func _initialize() -> void:
 	_calibration()
 	_cap_income_sweep()
 	_sweeps()
+	_held_crowd_sweep()
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
 
@@ -247,3 +248,49 @@ func _cap_income_sweep() -> void:
 			earned > 0.0 and error <= 0.05, "income=%.5f spent=%.5f error_pct=%.5f" % [earned, spent, error * 100.0])
 		_t.near("cap accounting seed %d independent income integral" % seed_value, earned, integral, 0.00001)
 		_t.near("cap accounting seed %d balance conserved" % seed_value, earned - spent, d.credits, 0.00001)
+
+
+func _held_crowd_sweep() -> void:
+	for seed_value in SEEDS:
+		for row in Park.DEFS:
+			var d = _director(seed_value, row, "credit")
+			d.heft_class = 50
+			d.spike = true
+			var live: Array[float] = []
+			var integral := 0.0
+			var held_income := 0.0
+			var held_integral := 0.0
+			var held_balance := 0.0
+			var held_spent := 0.0
+			var release_spawns := 0
+			var steady_spawns := 0
+			for step in int(SECONDS / H):
+				var time := step * H
+				if time == 900.0:
+					held_income = d.credits_accrued
+					held_integral = integral
+					held_balance = d.credits
+					held_spent = d.credits_spent
+				for death in live.duplicate():
+					if death <= time:
+						live.erase(death)
+				var reserved: int = live.size() + d.arrivals.size()
+				var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.MAX_TIME_TIERS) + Director.SPIKE_TIERS
+				if reserved < 24:
+					integral += H * Cards.I0 * (1.0 + Cards.K * dial)
+				var due: Array = d.advance(H, live.size())
+				for _spawn in due:
+					live.append(maxf(900.0, time + 18.0 + seed_value % 7))
+				if time >= 900.0 and time < 960.0:
+					release_spawns += due.size()
+				if time >= 1200.0:
+					steady_spawns += due.size()
+			_t.check("hold seed %d stage %d accumulation agrees with integral and balance" % [seed_value, row.stage],
+				held_balance > 0.0 and absf(held_income - held_integral) <= 0.00001
+				and absf(held_income - held_spent - held_balance) <= 0.00001,
+				"income=%.5f integral=%.5f spent=%.5f balance=%.5f" % [held_income, held_integral, held_spent, held_balance])
+			_t.near("hold seed %d stage %d independent income integral" % [seed_value, row.stage], d.credits_accrued, integral, 0.00001)
+			_t.near("hold seed %d stage %d balance conserved" % [seed_value, row.stage], d.credits_accrued - d.credits_spent, d.credits, 0.00001)
+			var steady_per_min := float(steady_spawns) / 10.0
+			var ratio := float(release_spawns) / steady_per_min if steady_per_min > 0.0 else INF
+			print("HOLD seed=%d stage=%d release_900_960_spawns=%d steady_1200_1800_spawns=%d steady_per_min=%.5f flood_ratio=%.5f" % [seed_value, row.stage, release_spawns, steady_spawns, steady_per_min, ratio])
