@@ -7,8 +7,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const MODULE := "res://src/world/park/sockets.gd"
 const Recipes := preload("res://src/world/park/park_recipes.gd")
-# 2026-10-12: round 2 opening fixtures raise the measured count from 41 to 50.
-const EXPECTED_CHECKS := 50
+# 2026-10-12: round 2 opening/accounting fixtures raise the count from 41 to 65.
+const EXPECTED_CHECKS := 65
 var t := T.new("park_sockets_test")
 
 
@@ -23,6 +23,11 @@ func _run() -> void:
 		return
 	var sockets: GDScript = load(MODULE)
 	for arg in OS.get_cmdline_user_args():
+		if arg == "--fixture=accounting":
+			_accounting_controls(sockets)
+			t.eq("accounting fixture check count", t.checks + 1, 18)
+			quit(t.verdict())
+			return
 		if arg == "--fixture=openings":
 			_opening_controls(sockets)
 			t.eq("opening fixture check count", t.checks + 1, 11)
@@ -125,10 +130,7 @@ func _run() -> void:
 	t.eq("every socket seed has only route-safe fillers", swept["sockets"]["fillers_off_route"], 1000)
 	t.eq("each arm retains a per-stage metric row", [swept["fixed"]["rows"].size(), swept["sockets"]["rows"].size()], [1000, 1000])
 	t.check("the comparison gate passes", swept["ok"], str(swept["errors"]))
-	var weak: Dictionary = swept.duplicate(true)
-	weak["sockets"]["success_share"] = 0.94
-	weak["sockets"]["reroll_share"] = 0.11
-	t.check("control: changed success and re-roll numbers fail the gate", not sockets.gate(weak).is_empty())
+	_accounting_controls(sockets)
 	t.eq("the test ran its stated check count", t.checks + 1, EXPECTED_CHECKS)
 	quit(t.verdict())
 
@@ -178,3 +180,34 @@ func _opening_controls(sockets: GDScript) -> void:
 		t.eq("otherwise valid %d-opening fixture fails only the opening range" % count, sockets.validate(invalid["graph"], invalid["sockets"]), expected)
 		if count == 5:
 			t.eq("five openings also reject stage construction for the range", sockets.stage(invalid, 1, "sockets")["errors"], expected)
+
+
+func _arm_fixture(failed: int) -> Dictionary:
+	var arm := {"seeds": 100, "successes": 100 - failed, "rerolls": failed,
+		"success_share": float(100 - failed) / 100, "reroll_share": float(failed) / 100,
+		"count_ok": 100, "off_route": 100, "visit_ok": 100, "fillers_off_route": 100, "rows": []}
+	for seed_value in range(1, 101):
+		arm["rows"].append({"seed": seed_value, "reroll": seed_value <= failed})
+	return arm
+
+
+func _accounting_controls(sockets: GDScript) -> void:
+	var clean := {"fixed": _arm_fixture(20), "sockets": _arm_fixture(0)}
+	t.eq("control: consistent accounting passes", sockets.gate(clean), [])
+	for arm in ["fixed", "sockets"]:
+		for field in ["rerolls", "successes", "success_share", "reroll_share"]:
+			var inconsistent: Dictionary = clean.duplicate(true)
+			inconsistent[arm][field] += 1 if field in ["rerolls", "successes"] else 0.01
+			t.check("control: %s %s must match rows" % [arm, field], sockets.gate(inconsistent).has("%s %s disagrees with rows" % [arm, field]))
+		var short_rows: Dictionary = clean.duplicate(true)
+		short_rows[arm]["rows"].pop_back()
+		t.check("control: %s row count must match seeds" % arm, sockets.gate(short_rows).has("%s row count disagrees with seeds" % arm))
+		var wrong_seed: Dictionary = clean.duplicate(true)
+		wrong_seed[arm]["rows"][1]["seed"] = 1
+		t.check("control: %s seed identity must be exact" % arm, sockets.gate(wrong_seed).has("%s rows must identify seeds 1 through 100 exactly" % arm))
+	var boundary := {"fixed": _arm_fixture(20), "sockets": _arm_fixture(10)}
+	t.check("control: exactly 10 percent fails the strict rate boundary", sockets.gate(boundary).has("socket re-roll rate is not under 10%"))
+	var above_half := {"fixed": _arm_fixture(6), "sockets": _arm_fixture(4)}
+	t.eq("control: a rate above half fixed fails independently", sockets.gate(above_half), ["socket re-roll rate exceeds half the fixed rate"])
+	var equal_half := {"fixed": _arm_fixture(8), "sockets": _arm_fixture(4)}
+	t.eq("control: exactly half fixed passes", sockets.gate(equal_half), [])
