@@ -38,6 +38,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	var began := Time.get_ticks_msec()
 	var args := OS.get_cmdline_user_args()
 	if "--only" in args:
 		var index := args.find("--only")
@@ -53,43 +54,32 @@ func _run() -> void:
 		t.eq("red-first expected check count", t.checks, 1)
 		quit(t.verdict())
 		return
-	game = Game.new()
-	game.test_mode = true
-	game.table = "alpha"
-	root.add_child(game)
-	while game.flow == null:
-		await physics_frame
-	game.player.source = Intent.Scripted.new()
-	game.world.set_physics_process(false)
-	game.flow.set_physics_process(false)
-	acts = game.world.activities
-	acts.set_physics_process(false)
-	game.flow.press_start()
-	game.flow.choose_class(0)
-	await physics_frame
-	print("pocket context: run_id=%s class=%s" % [game.run.run_id, game.run.class_id()])
-	acts.clear()
-	game.run.set_max_hp(99999.0)
-	game.events.enemy_killed.connect(func(kind, _at, _scrap):
-		if kind == "warden":
-			warden_kills += 1)
-	game.events.part_gained.connect(func(id, source):
-		if source.begins_with("pocket_"):
-			paid.append(id))
+	await _boot_game()
 	for id in STAGES:
 		graphs[id] = Graph.read("res://assets/park/%s/graph.bin" % id)
 	if only == "":
 		_admission()
+		print("suite phase _admission elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		_ladder()
+		print("suite phase _ladder elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _authored_pay()
+		print("suite phase _authored_pay elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _combat()
+		print("suite phase _combat elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		_objectives()
+		print("suite phase _objectives elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		_rounds()
+		print("suite phase _rounds elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		_cues()
+		print("suite phase _cues elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _ambush()
+		print("suite phase _ambush elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _hazards()
+		print("suite phase _hazards elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _marks()
+		print("suite phase _marks elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 		await _exit()
+		print("suite phase _exit elapsed_s=%.3f" % ((Time.get_ticks_msec() - began) / 1000.0))
 	elif only == "combat_cues":
 		await _combat()
 		_rounds()
@@ -122,6 +112,32 @@ func _run() -> void:
 		print("failed check: " + failure)
 	game.free()
 	quit(t.verdict())
+
+
+func _boot_game() -> void:
+	game = Game.new()
+	game.test_mode = true
+	game.table = "alpha"
+	root.add_child(game)
+	while game.flow == null:
+		await physics_frame
+	game.player.source = Intent.Scripted.new()
+	game.world.set_physics_process(false)
+	game.flow.set_physics_process(false)
+	acts = game.world.activities
+	acts.set_physics_process(false)
+	game.flow.press_start()
+	game.flow.choose_class(0)
+	await physics_frame
+	print("pocket context: run_id=%s class=%s" % [game.run.run_id, game.run.class_id()])
+	acts.clear()
+	game.run.set_max_hp(99999.0)
+	game.events.enemy_killed.connect(func(kind, _at, _scrap):
+		if kind == "warden":
+			warden_kills += 1)
+	game.events.part_gained.connect(func(id, source):
+		if source.begins_with("pocket_"):
+			paid.append(id))
 
 
 func _site(kind: String, at := Vector2(100, 100), extra := {}):
@@ -178,6 +194,7 @@ func _admission() -> void:
 
 
 func _ladder() -> void:
+	var held: Array = game.run.parts.duplicate()
 	var rise := true
 	var equals_paid := true
 	var shown := true
@@ -214,10 +231,13 @@ func _ladder() -> void:
 					var before := paid.size()
 					acts._watch_pickup(s, s.global_position)
 					equals_paid = equals_paid and paid.slice(before) == bundle
+					equals_paid = equals_paid and bundle.all(func(part): return game.run.part_count(part) - held.count(part) >= bundle.count(part))
 					grants += paid.size() - before
+					game.run.parts.assign(held)
 					checks += 1
 					s.done = false
 					s.pickup_taken = false
+				game.ctx.build.recompute()
 				count += 1
 		print("tier-rise stage file: %s; %d sites x four kinds x 20 seeds" % [path, data.activity_rows.size()])
 		acts.clear()
@@ -227,6 +247,7 @@ func _ladder() -> void:
 
 
 func _authored_pay() -> void:
+	var held: Array = game.run.parts.duplicate()
 	var correct := true
 	var cases := 0
 	var grants := 0
@@ -263,6 +284,7 @@ func _authored_pay() -> void:
 						s.inside_pickup = false
 						acts._watch_pickup(s, s.pickup.global_position)
 					var taken: Array = paid.slice(before)
+					correct = correct and taken.all(func(part): return game.run.part_count(part) - held.count(part) >= taken.count(part))
 					var paid_tier := taken.size()
 					if taken.any(func(part): return Parts.rarity_of(part) == "rare"):
 						paid_tier += 1
@@ -270,8 +292,10 @@ func _authored_pay() -> void:
 					correct = correct and taken.size() == count and taken.all(func(part): return part == named if named != "" else Parts.rarity_of(part) in pay.rarities)
 					correct = correct and label.contains(named) if named != "" else correct and taken.all(func(part): return label.contains(Parts.rarity_of(part)))
 					grants += taken.size()
+					game.run.parts.assign(held)
 					cases += 1
 					acts.clear()
+				game.ctx.build.recompute()
 				await physics_frame
 	t.check("authored pay overrides default bundles over 20 seeds", correct and cases == 1680, "%d/1680 cases, %d actual grants; both parks x seven kinds x three authored rows plus common/rare/named x 20 seeds; shown tier from resolved payout" % [cases, grants])
 
@@ -571,26 +595,38 @@ func _marks() -> void:
 	acts.clear()
 
 
-func _seal_stage() -> bool:
+func _seal_stage(reusable = null) -> bool:
 	var flow = game.flow
-	if is_instance_valid(flow.warden):
+	if is_instance_valid(flow.warden) and flow.warden != reusable:
 		flow.warden.queue_free()
 	flow.state = flow.STAGE
 	flow.sealed = true
-	game.beacon.place(game.beacon.global_position, game.beacon.duration, game.beacon.radius)
-	flow.warden = flow._spawn_warden()
+	game.beacon.place(game.ctx.terrain.beacon_point(game.run.stage), game.beacon.duration, game.beacon.radius)
+	flow.warden = reusable if is_instance_valid(reusable) else flow._spawn_warden()
+	if is_instance_valid(reusable):
+		reusable.hp = reusable.max_hp
+		reusable._dead = false
 	if not is_instance_valid(flow.warden):
 		return false
 	flow._warden_at = flow.warden.global_position
 	return flow.warden.kind == "warden" and game.ctx.spawner.integrity_of(flow.warden) > 0.0 and flow.sealed and game.beacon.sealed
 
 
-func _break_stage() -> void:
-	game.flow.warden._die()
+func _break_stage(reuse := false) -> void:
+	if reuse:
+		var warden = game.flow.warden
+		warden.hp = 0.0
+		warden._dead = true
+		game.run.record_kill("warden", warden.global_position, 0)
+	else:
+		game.flow.warden._die()
 	acts._physics_process(H)
 
 
 func _exit() -> void:
+	if only == "":
+		game.free()
+		await _boot_game()
 	var before := warden_kills
 	var open := true
 	var opened := 0
@@ -600,19 +636,22 @@ func _exit() -> void:
 	game.player.active_body().freeze = true
 	for stage in STAGES:
 		game.ctx.terrain.maps[index] = ParkMap.new("res://src/world/park/%s.json" % stage)
+		var reusable = game.flow._spawn_warden()
+		reusable.set_physics_process(false)
 		for seed_value in 1000:
 			game.ctx.rng.seed = seed_value
 			var s = _site("scattered_marks", Vector2(100, 100), {"graph": graphs[stage]})
 			game.player.active_body().global_position = Vector3(-700, 0, -700)
-			var was_sealed := _seal_stage()
-			_break_stage()
+			var was_sealed := _seal_stage(reusable)
+			_break_stage(true)
 			var this_open: bool = was_sealed and game.flow.state == game.flow.GATES and not game.flow.sealed and not game.beacon.sealed and s.marks_taken == 0
 			open = open and this_open
 			opened += int(this_open)
 			acts.clear()
 			if seed_value % 20 == 19:
 				await physics_frame
-		print("ordinary exit path: %s; 1000 freshly sealed stages, valid Warden killed, zero marks" % stage)
+		reusable.queue_free()
+		print("ordinary exit path: %s; 1000 freshly sealed stages; real Warden reset alive, killed through RunState, zero marks" % stage)
 	t.check("exit-opens-with-zero-marks in 100 percent", open and opened == 2000, "%d/2000 normal Warden-death exits with no mark taken" % opened)
 	t.check("seeded exits use ordinary stage Warden deaths", warden_kills - before == 2000, "%d/2000 Warden kill facts across both parks" % (warden_kills - before))
 	for kind in KINDS:
