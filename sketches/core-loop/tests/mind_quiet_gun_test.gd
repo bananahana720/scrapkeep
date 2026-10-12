@@ -97,7 +97,7 @@ func _cases() -> void:
 	audio._step_cannon_cues()
 	_t.eq("answer never interrupts the quote", audio.cannon_log.size(), 0)
 	audio.clock = due
-	audio._last_start["mind_cannon"] = Time.get_ticks_msec() - audio.MIN_GAP_MS["mind_cannon"]
+	audio._last_start.erase("mind_cannon")
 	audio._step_cannon_cues()
 	_t.eq("one answer after the quote", audio.cannon_log.size(), 1)
 	_t.eq("the answer is the right motif", audio.cannon_log.back()["notes"], [59, 64, 67, 74])
