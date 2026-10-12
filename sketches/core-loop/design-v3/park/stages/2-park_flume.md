@@ -113,7 +113,7 @@ The three activities: the siphon camp (`enemy_camp` with today's Reach lobber pa
 
 **The exit to Brindle.** After the break, the reward gates stand on the bluff lip outside the drum's east doors at x 300, facing +x over the lower gorge, and the bay docks 61 m behind them over the drum (`bay.gd:37-41`, `143-153`), so `bay_dock.at` is [239, 480]. The launch throws the ball out of the east doors and across the gorge. Stage 2 is the world's last stage, so when the launch flight ends (`LAUNCH_FLIGHT` 0.6 s, `flow.gd:23`), `_finish_stage` calls `enter_boss` with the ball's velocity instead of advancing (`flow.gd:667-673`, `456-473`), and Brindle's module places the ball in the Slag Bowl (`boss.gd:15-17`). The arena stays small and authored (PARK.md:381). The park only points at it: from the bend overlook and the bluff, a smoke column and a furnace glow stand on the eastern horizon past the lower gorge, the launch arc aims at them, and the Requisition's anvil enters the music on the last chunk (section 10).
 
-## 5. `park_rows` (215 rows, continuation 2026-10-12)
+## 5. `park_rows` (216 rows, continuation 2026-10-12)
 
 The shipped file is `src/world/park/park_flume.json`; the bake and the stage graph are under `assets/park/park_flume/` (KD2). The rows contain 137 authored rides and structures, 52 rock outcrops and 26 shallow washes. The continuation rides and piers are listed below. Rows with recipes are placed in play by `ParkRecipes.build_placed`. Stamped greyboxes use the terrain collider; raised pieces use their placed colliders. Ride rows publish facts through sensors.
 
@@ -170,6 +170,8 @@ The gap span's base is y 61, keeping its entry below the turn's ground before th
 `turnout_kicker` now sits at [-177, 142], base y 31, 30×8×18 m. Its low entry stays below the hollow floor and its exit meets the south-end ground. `bend_return_wash` is 50 m wide. The head flume begins 32 m farther down its heading, clearing the Cannon's siphon crossing. Rock outcrops `bend_outcrop_5`, `bench_outcrop_4` and `bluff_outcrop_7` sit at [153, 12], [-30, 390] and [50, 385], outside the fixed collision sites.
 
 The siphon approach bank remains at [-135, 149], yaw 76. Round 3 first reduced its 6 m rise to 2 m: Tally seed 5 cleared its terrain stop, but the eight-seed flow median fell to 0.6941. The second and last repair restores the 6 m rise and broadens the bank from 100×56 to 132×104 m, spreading the grade while retaining downhill carry. The final fixed-tool population determines the bands.
+
+The round-4 bench exit grade is a stamped bank, 125×3×80 m, at [-91, 345], yaw -15. It fills the low wash floor before its exit and tapers towards the run-out, reducing the climb seen in Tally seed 5. It adds no recipe collider. This is the first of two permitted repairs at this site. The siphon approach bank is unchanged. The unchanged pilot lines and final population decide its acceptance.
 
 ## 6. `event_rows` (5 rows)
 
@@ -370,7 +372,7 @@ The park file, verbatim (park_schema_test reads this block):
   {"id": "wasteway_wall", "from": "the_siphon", "to": "landmark", "via": ["wasteway_wall_line", "drum_forecourt", "head_house_drum"]},
   {"id": "rim_lower", "from": "the_siphon", "to": "landmark", "via": ["bluff_rim", "head_house_drum"]},
   {"id": "forecourt_entry", "from": "drum_forecourt", "to": "landmark", "via": ["drum_forecourt", "head_house_drum"]},
-  {"id": "bench_run", "from": "the_siphon", "to": "landmark", "via": ["bench_run_wash", "bench_lip_bank", "drum_forecourt", "head_house_drum"]},
+  {"id": "bench_run", "from": "the_siphon", "to": "landmark", "via": ["bench_run_wash", "bench_exit_grade", "bench_lip_bank", "drum_forecourt", "head_house_drum"]},
   {"id": "annex_ramp_line", "from": "drum_forecourt", "to": "landmark", "via": ["heat_exchanger_annex", "head_house_drum"]},
   {"id": "warden_exit", "from": "landmark", "to": "gate_lip", "via": ["drum_lip_kicker", "head_house_trusses", "head_house_drum"]}
  ],
@@ -589,7 +591,8 @@ The park file, verbatim (park_schema_test reads this block):
   {"id": "bench_coping_kicker", "element": "kicker", "landform": "slickrock", "society": "dam_era", "at": [-5, 438], "y": 2, "size": [8, 3, 24], "yaw_deg": 88, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "forecourt_pad_kicker", "element": "kicker", "landform": "penstock", "society": "dam_era", "at": [62, 419], "y": 0, "size": [8, 3, 20], "yaw_deg": 57, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "bench_coping_pier", "element": "grind_line", "landform": "slickrock", "society": "dam_era", "at": [50, 470], "y": null, "size": [16, 28, 8], "yaw_deg": 90, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "siphon_approach_bank", "element": "bank", "landform": "slickrock", "society": "none", "at": [-135, 149], "y": null, "size": [132, 6, 104], "yaw_deg": 76, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
+  {"id": "siphon_approach_bank", "element": "bank", "landform": "slickrock", "society": "none", "at": [-135, 149], "y": null, "size": [132, 6, 104], "yaw_deg": 76, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ridge", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "bench_exit_grade", "element": "bank", "landform": "slickrock", "society": "none", "at": [-91, 345], "y": null, "size": [125, 3, 80], "yaw_deg": -15, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "", "stamp": "ridge", "hole": false, "budget": "landform", "routes": ["bench_run"], "fragment": ""}
  ],
  "event_rows": [
   {"id": "hollow_trestle_collapse", "kind": "collapse", "family": "natural", "site": "trestle_hollow", "trigger": {"on": "clock_tier", "value": 2}, "weight": 1.0, "telegraph": {"lead_s": 6.0, "form": "trestle_groan", "on_bar": true}, "live_s": 0.0, "effect": {"swap": "trestle_ramp"}, "route_change": {"closes": ["flume_mid"], "opens": ["trestle_ramp_line"]}, "hold_clear_m": 20.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_natural", "land": "drop_collapse"}},
