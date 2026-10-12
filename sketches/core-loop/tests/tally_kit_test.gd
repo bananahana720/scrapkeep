@@ -27,7 +27,9 @@ const T := preload("res://tests/support/t.gd")
 # Q now (tests/tally_set_piece_test.gd). Measured 2026-10-11 on 4ae242b plus this unit:
 # 83 checks including the count assertion (was 59 checks, no count assertion). A gather pick
 # inside its cooldown is refused as verb_failed("select", "cooling") by the router.
-const EXPECTED_CHECKS := 83
+# Re-pinned 2026-10-12 (PC-TALLY fix round): Balance Due now strikes through _ledger_hit, so a
+# boss takes half of it as tally.md:377 asks; one new check. Measured 84 checks (was 83).
+const EXPECTED_CHECKS := 84
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -650,6 +652,14 @@ func _check_warden_arc() -> void:
 	var boss_took := hp_before - float(boss.hp)
 	_t.check("an arc on a boss deals half", plain > 0.0 and absf(boss_took - plain * 0.5) <= plain * 0.05,
 		"plain %.2f boss %.2f" % [plain, boss_took])
+	# Balance Due on a boss deals half of its plain damage (tally.md:377).
+	_set_charges(1)
+	hp_before = float(boss.hp)
+	var cast: bool = _combat._run_balance(boss.global_position, true)
+	var due: float = float(_combat.last_card.get("damage", 0.0))
+	boss_took = hp_before - float(boss.hp)
+	_t.check("Balance Due on a boss deals half", cast and due > 0.0 and absf(boss_took - due * 0.5) <= due * 0.05,
+		"due %.2f boss %.2f" % [due, boss_took])
 
 
 # A boss piece as the set-piece tests build one: a plain enemy whose kind the roster calls a boss.

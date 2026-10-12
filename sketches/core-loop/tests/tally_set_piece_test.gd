@@ -12,6 +12,8 @@ const Progress := preload("res://src/core/progress.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const PartDef := preload("res://src/build/part_def.gd")
+const Triggers := preload("res://src/build/triggers.gd")
 const T := preload("res://tests/support/t.gd")
 
 # PC-TALLY, 2026-10-11 (design-v3/pilots/tally.md sections 3, 7, 8, 9). Plate Return and its two
@@ -20,7 +22,11 @@ const T := preload("res://tests/support/t.gd")
 # bosses, Audit Trail, Flywheel Throw, each depth-4 knob, the tree swaps and the world-2 offer,
 # and the three grants. Rows are called through ultimate.gd's _ult_rows, as the framework does.
 # Measured 2026-10-11 on 4ae242b plus this unit: 63 checks including the count assertion.
-const EXPECTED_CHECKS := 63
+# Re-pinned 2026-10-12 (PC-TALLY fix round): the P-C stacking and movement rules (P-UNITS.md
+# wave P-C, comps rows 7, 8 and 24) gain their own checks: 30 nodes, MAX_CHAIN_DEPTH 1, no
+# unsafe growth, nodes 6 to 29 capped with class_id tally (24), every movement node Tally's
+# own (11 movers), and a 20-copy sweep per depth-4 leaf (16). Measured 107 checks (was 63).
+const EXPECTED_CHECKS := 107
 const DT := 1.0 / 60.0
 const SHELF := Vector3(-45.0, 122.0, 6.0)
 
@@ -193,6 +199,7 @@ func _run() -> void:
 	await _variant_cases()
 	await _knob_cases()
 	_tree_cases()
+	_stack_cases()
 	await _grants()
 	_finish()
 
@@ -490,6 +497,59 @@ func _tree_cases() -> void:
 			seen += 1
 	_t.check("every world-2 offer is one Audit Trail and one Flywheel Throw", pairs_ok and seen == 4, "routes %d" % seen)
 	_t.eq("the tree has no problems", UpgradeTree.problems("tally"), [])
+
+
+# --- stacking and movement (P-UNITS wave P-C common rules, comps rows 7, 8 and 24) ----------------
+# Every depth-3 and depth-4 node this unit rewrote (indices 6 to 29) is capped and Tally's own; a
+# node that touches a movement knob (a movement charge or cooldown, or a surge or air-jump proc)
+# carries class_id "tally"; chains stay at depth 1; 1 to 20 more picks of a held leaf or its
+# depth-3 parent change nothing.
+
+const MOVE_PROCS := ["refund_move", "grant_move", "air"]
+
+
+func _moves(n: Dictionary) -> bool:
+	if n.get("charges", {}).has(AbilityState.MOVEMENT) or n.get("cooldown", {}).has(AbilityState.MOVEMENT):
+		return true
+	return n.get("proc", []).any(func(p): return MOVE_PROCS.has(String(p.get("do", ""))))
+
+
+func _stack_cases() -> void:
+	var nodes: Array = UpgradeTree.nodes("tally")
+	_t.eq("tally keeps 30 nodes", nodes.size(), 30)
+	_t.eq("proc chain cap remains one", Triggers.MAX_CHAIN_DEPTH, 1)
+	_t.eq("tally has no unsafe growth route", UpgradeTree.safe_growth_problems("tally"), [])
+	var movers: Array = []
+	var stray: Array = []
+	for i in range(6, 30):
+		var n: Dictionary = nodes[i]
+		_t.check("%s capped and pilot local" % n["id"],
+			n.get("stack_rule") in PartDef.STACK_RULES and n["stack_rule"] == "capped" and n.get("class_id") == "tally",
+			"stack_rule %s class_id %s" % [n.get("stack_rule"), n.get("class_id")])
+		if _moves(n):
+			movers.append(n["id"])
+			if n.get("class_id") != "tally":
+				stray.append(n["id"])
+	_t.check("every movement node carries class_id tally", movers.size() >= 10 and stray.is_empty(),
+		"movers %d stray %s" % [movers.size(), stray])
+	for i in range(14, 30):
+		var leaf: Dictionary = nodes[i]
+		var tree := UpgradeTree.new()
+		tree.max_depth = 4
+		tree.reset("tally")
+		tree.allowed = 4
+		var route := UpgradeTree.path_to("tally", leaf["id"])
+		var live := true
+		for id in route:
+			live = tree.pick(id) and live
+		var knob: String = leaf["knob"].keys()[0]
+		var before := [tree.path(), tree.knob(knob)]
+		var refused := 0
+		for copies in range(1, 21):
+			if not tree.pick(leaf["id"]) and not tree.pick(route[2]) and before == [tree.path(), tree.knob(knob)]:
+				refused += 1
+		_t.check("%s route picks, and 20 more copies stay capped" % leaf["id"], live and route.size() == 4 and refused == 20,
+			"live %s route %d refused %d" % [live, route.size(), refused])
 
 
 # --- the three grants and her codex rows --------------------------------------------------------

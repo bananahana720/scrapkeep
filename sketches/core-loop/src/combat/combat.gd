@@ -2130,7 +2130,7 @@ func _run_balance(point: Vector3, valid: bool) -> bool:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.is_dead() or not in_ring(point, Weapons.BALANCE_RADIUS, enemy):
 			continue
-		_hit(enemy, "ledger", damage, enemy.global_position - point, Weapons.LEDGER_KNOCK, "", "weapon")
+		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, "weapon")
 		hits += 1
 	effects.ring(point, Weapons.BALANCE_RADIUS, ClassDef.TALLY_COLOR)
 	last_card["hits"] = hits
