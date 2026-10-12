@@ -1,5 +1,8 @@
 extends SceneTree
 
+# 2026-10-11 (PC-TARN): case a reads six kit ids after Claw Drag and Redjaw Rend replace the placeholders.
+# 2026-10-11 (PC-TARN ruling 3): loaded casts wait for a bite before line_skill_fired; expected 33 checks.
+
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -42,6 +45,7 @@ func _physics_process(_delta: float) -> bool:
 		_boot()
 		return false
 	if _index >= _steps.size():
+		_t.eq("expected check count", _t.checks + 1, 33)
 		quit(_t.verdict())
 		return true
 	var step: Array = _steps[_index]
@@ -84,6 +88,7 @@ func _boot() -> void:
 		[_rend_start, 1, _check_rend],
 		[_clamp_kill_start, 1, _check_clamp_kill],
 		[_noop, 1, _check_attempt_clear],
+		[_noop, 1, _check_line_event],
 	]
 
 
@@ -151,12 +156,12 @@ func _struck_by(id: int, kind: String, from := 0) -> Array:
 
 func _check_row() -> void:
 	var def: Resource = ClassDef.by_id("tarn")
-	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id]
-	_t.eq("tarn ability ids", ids, ["claw_sweep", "claw_pull", "clamp", "rend_slam"])
+	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id, def.line_id, def.ultimate_id]
+	_t.eq("tarn ability ids", ids, ["claw_sweep", "claw_pull", "clamp", "rend_slam", "claw_drag", "redjaw_rend"])
 	_t.eq("tarn species", def.species, "tiger")
 	var text := "%s %s %s %s %s %s %s %s %s %s %s" % [def.display_name, def.role, def.species, def.pitch, def.bible_home,
 		def.synergy_hooks, ids, def.color, def.shape, def.motif, def.sound]
-	_t.check("no placeholder in the row", not text.to_lower().contains("placeholder"), text)
+	_t.check("no placeholder in the row", not text.to_lower().contains("placeholder") and not ids.has("line_reel") and not ids.has("ult_default"), text)
 	_t.check("every ability row exists", ids.all(func(id): return AbilityState.ABILITIES.has(id)), str(ids))
 	_t.eq("tarn is not a starter", def.starter, false)
 	_t.eq("brindle_routed unlocks tarn", Achievements.ROWS["brindle_routed"]["reward"].get("pilot", ""), "tarn")
@@ -387,6 +392,41 @@ func _check_attempt_clear() -> void:
 	_combat._start_attempt()
 	_t.check("an attempt clears the clamp and exposure maps", _combat._clamped.is_empty() and _combat._exposed.is_empty(),
 		"clamped %d, exposed %d" % [_combat._clamped.size(), _combat._exposed.size()])
+
+
+func _check_line_event() -> void:
+	_as_class("tarn")
+	_player.kit.drop_line("test")
+	_player.kit.rewind_left = 0.0
+	_combat._line_load = {}
+	_combat._bite_pending = false
+	var casts := []
+	var fired := []
+	var cast_listener := func(slot: String, id: String, _at: Vector3): casts.append([slot, id])
+	var fire_listener := func(id: String, target: Node3D, at: Vector3, on: String):
+		fired.append([id, target.get_instance_id() if target != null else 0, at, on, not _combat.get_node("TarnClaw").drag.is_empty()])
+	_game.events.slot_cast.connect(cast_listener)
+	_game.events.line_skill_fired.connect(fire_listener)
+	_player.intent.clear()
+	_player.intent.slot_pick = 2
+	_player.intent.fire_pressed = true
+	_player.intent.fire_held = true
+	_player._route_slots(0.0)
+	_combat._step_line(_player.intent, 0.0)
+	_t.check("loading Claw Drag casts line without firing", casts == [["line", "claw_drag"]]
+		and fired.is_empty() and not _combat.line_load().is_empty(), "casts %s, fired %s" % [casts, fired])
+	_player.intent.clear()
+	_combat._step_line(_player.intent, 3.99)
+	_t.check("waiting load emits no line fire", fired.is_empty() and not _combat.line_load().is_empty())
+	var target := _spawn("chaser", _ball_flat() + _aim_flat() * 20.0)
+	var at: Vector3 = target.global_position
+	_player.grapple_to(at, Vector3.UP, target)
+	_combat._step_line(_player.intent, 0.0)
+	_t.eq("bite fires Claw Drag after its callback starts the drag", fired, [["claw_drag", target.get_instance_id(), at, "body", true]])
+	_combat._step_line(_player.intent, 0.0)
+	_t.check("the consumed load fires once", fired.size() == 1 and _combat.line_load().is_empty())
+	_game.events.slot_cast.disconnect(cast_listener)
+	_game.events.line_skill_fired.disconnect(fire_listener)
 
 
 # Strikes are kept by instance id, so a chaser the sweep kills can still be counted.

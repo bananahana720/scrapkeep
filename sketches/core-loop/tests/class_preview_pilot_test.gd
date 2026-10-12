@@ -4,11 +4,17 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const T := preload("res://tests/support/t.gd")
+const Trigger := preload("res://tests/support/pilot_clip_trigger.gd")
 
 # The class card's preview seats the same animated pilot the game does: for every row
 # with a hero shell, an "AnimatedPilot" under the preview Pod instanced from
 # HeroAssets.PILOTS[id] (checked by its scene_file_path), and the shell's embedded
 # "Pilot" placeholder hidden the way hide_placeholder hides it.
+#
+# Two checks added 2026-10-11 (PE-0, PILOT-CLIPS sections 1.4 and 3 rule 9), on synthetic clips
+# because today's GLBs carry neither: the preview pilot plays idle_loop when the GLB has it, and
+# under --profile=sitting the first focus of a launch plays unlock, then idle_loop, and a second
+# focus plays nothing new.
 
 const SABLE_PILOT := "res://assets/models/pilot_sable_anim.glb"
 
@@ -23,6 +29,7 @@ func _init() -> void:
 		rows += 1
 		_check_row(def)
 	_t.check("rows with shells", rows >= 5, "%d rows" % rows)
+	_check_clips()
 	quit(_t.verdict())
 
 
@@ -57,4 +64,32 @@ func _check_row(def: Resource) -> void:
 			if gi.layers == 0:
 				own_hidden.append(str(gi.get_path()))
 	_t.eq(def.id + " animated pilot visible", own_hidden, [])
+	preview.free()
+
+
+func _check_clips() -> void:
+	var preview := ClassPreview.new(ClassDef.by_id("pylon_engineer"))
+	var animator: AnimationPlayer = preview._animator
+	if animator == null:
+		_t.check("preview pilot has an animator", false)
+		preview.free()
+		return
+	var seated_still := not animator.is_playing()
+	Trigger.add_synthetic_clips(animator, "pylon_engineer")
+	_t.check("preview plays idle_loop when the GLB has it (seated still before)",
+		seated_still and preview.seat_pilot() == "idle_loop" and animator.is_playing() and animator.current_animation == "idle_loop")
+	preview.sitting = true
+	preview.open = 1.0
+	preview.track_focus()
+	var first := preview.last_focus_clip
+	var first_playing := animator.current_animation
+	animator.advance(animator.current_animation_length + 0.01)
+	var after := animator.current_animation
+	preview.open = 0.0
+	preview.track_focus()
+	preview.open = 1.0
+	preview.track_focus()
+	_t.check("sitting: first focus plays unlock, then idle_loop; a second focus does not",
+		first == "unlock" and first_playing == "unlock" and after == "idle_loop" and preview.last_focus_clip == "",
+		"first %s playing %s after %s second %s" % [first, first_playing, after, preview.last_focus_clip])
 	preview.free()

@@ -1,5 +1,6 @@
 # smoke: solo (sequence construction wall-clock budget)
 extends SceneTree
+# 2026-10-11 (PC-CANNON): keep the existing ending checks and add the quiet-gun answer.
 
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
@@ -16,6 +17,8 @@ var _game
 var _ended := 0
 var _earned: Array[String] = []
 var _saved_before_sequence := false
+var _ending_cannon_answer := -1.0
+var _ending_gun_visible := false
 
 
 func _initialize() -> void:
@@ -87,6 +90,10 @@ func _run() -> void:
 			seen_phases.append(seq.phase)
 		if seq.phase == "copy" and not seen_lines.has(seq._copy.text):
 			seen_lines.append(seq._copy.text)
+		if seq.world_index == 2 and seq.phase != "credits":
+			_ending_gun_visible = _ending_gun_visible or (is_instance_valid(seq.quiet_gun) and seq.quiet_gun.visible)
+			if seq.cannon_answered:
+				_ending_cannon_answer = seq.cannon_answer_at
 		if seq.phase != "credits":
 			crew_visible[seq.world_index] = crew_visible[seq.world_index] and \
 				_in_frame(seq.camera, seq.shell.global_position) and _in_frame(seq.camera, seq.companion.global_position)
@@ -109,6 +116,9 @@ func _run() -> void:
 	_t.eq("END-3 summary data unchanged", _game.run.summary(), summary)
 	for row in source_roots:
 		_t.check("live terrain remains parked", row[0].transform == row[1] and row[0].visible == row[2])
+	_t.check("quiet gun appears in the Highdraft", _ending_gun_visible)
+	_t.check("quiet gun answers at eight seconds", absf(_ending_cannon_answer - 8.0) <= 60.0 / 172.0, str(_ending_cannon_answer))
+	_t.eq("ending answers only once", _game.presentation.audio.cannon_log.filter(func(row): return row["kind"] == "ending_cannon").size(), 1)
 	_skip_checks()
 	await _resume_world_check()
 	_finish()

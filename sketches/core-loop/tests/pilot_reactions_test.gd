@@ -1,5 +1,17 @@
 extends SceneTree
 
+# Re-pinned 2026-10-11 (PE-0b): table existence selects 18 or seven clips for each pilot.
+# Re-pinned 2026-10-11 (PE-0, design-v3/PILOT-CLIPS.md section 8): the rows now name the eleven
+# new clips, which today's GLBs lack, so the asset check follows the roster instead of the rows: a
+# pilot whose src/presentation/clips/<pilot>.json exists carries all 18 roster clips, one without
+# carries the seven kept ones. Fix round 2026-10-11: the table fact is the file's existence (the
+# same file hero_assets.gd reads), not a roster flag; six new checks: the roster carries no flag,
+# and a positive control with a probe table under user:// requires 18 and fails a seven-clip GLB. Loops are allowed only for names ending in _loop. After a one-shot the base
+# loop idle_loop plays when the GLB has it, else the animator is stopped (the transitional branch;
+# PE-INT removes it once all six carry 18). A row may name its bus signal under "signal", so the
+# bus check reads signal_of(). The check count changes with the row and clip counts.
+
+const Trigger := preload("res://tests/support/pilot_clip_trigger.gd")
 const Game := preload("res://src/game.gd")
 const Hero := preload("res://src/presentation/hero_assets.gd")
 const Reactions := preload("res://src/presentation/pilot_reactions.gd")
@@ -10,6 +22,7 @@ var failures := 0
 var game
 var ticks := 0
 var policy_only := false
+var probed := false
 
 
 func check(label: String, condition: bool) -> void:
@@ -23,7 +36,7 @@ func _initialize() -> void:
 	var bus_names: Array = GameEvents.signal_names()
 	for event in Reactions.ROWS:
 		check(event + " carries no pending flag", not Reactions.ROWS[event].has("pending"))
-		check(event + " names a signal on the bus", bus_names.has(event))
+		check(event + " names a signal on the bus", bus_names.has(Reactions.signal_of(event)))
 	if not policy_only:
 		check_assets()
 	else:
@@ -33,8 +46,56 @@ func _initialize() -> void:
 	root.add_child(game)
 
 
+
+# The table fact has one source, the file. The roster carries no flag, and a probe table written
+# under user:// (never res://, which parallel tests read) flips the rule for a seven-clip GLB.
+func check_table_rule(animator: AnimationPlayer, stem: String) -> void:
+	var flagged := []
+	for name in Trigger.roster().get("pilots", {}):
+		if Trigger.roster()["pilots"][name].has("has_table"):
+			flagged.append(name)
+	check("roster.json carries no has_table flag " + str(flagged), flagged.is_empty())
+	check("probe: a missing pilot table reads as absent", not Trigger.has_table("__missing_pilot_table__"))
+	var dir := "user://pilot-clips-table-probe"
+	DirAccess.make_dir_recursive_absolute(dir)
+	var probe := FileAccess.open(dir.path_join(stem + ".json"), FileAccess.WRITE)
+	probe.store_string("{}")
+	probe.close()
+	var with_table := Trigger.has_table(stem, dir)
+	check("probe: " + stem + " with a pose table file reads as having one", with_table)
+	check("probe: a pose table requires 18 clips", Trigger.required_clips(with_table).size() == 18)
+	# A seven-clip animator built from the GLB's kept clips, so the probe holds after a pilot unit
+	# ships its 18-clip GLB.
+	var seven := AnimationPlayer.new()
+	var library := AnimationLibrary.new()
+	for clip in Trigger.required_clips(false):
+		if animator.has_animation(clip):
+			library.add_animation(clip, animator.get_animation(clip))
+	seven.add_animation_library("", library)
+	check("probe: a seven-clip GLB fails with a pose table (11 missing)", Trigger.missing_clips(seven, with_table).size() == 11)
+	seven.free()
+	DirAccess.remove_absolute(dir.path_join(stem + ".json"))
+	check("probe: removing the file removes the table", not Trigger.has_table(stem, dir))
+
+
+# Godot's scene importer strips a "_loop" suffix from animation names when name suffixes are on, so
+# idle_loop would import as idle (PE-RIVET and PE-CANNON round 2, 2026-10-11). Every pilot GLB's
+# import keeps names as exported and sets each roster _loop clip to loop explicitly.
+func check_import_keeps_loop_names(class_id: String) -> void:
+	var settings := ConfigFile.new()
+	var path: String = Hero.PILOTS[class_id] + ".import"
+	check(class_id + " import settings load", settings.load(path) == OK)
+	check(class_id + " import keeps _loop names (nodes/use_name_suffixes=false)", settings.get_value("params", "nodes/use_name_suffixes", true) == false)
+	var animations: Dictionary = settings.get_value("params", "_subresources", {}).get("animations", {})
+	for clip in Trigger.required_clips(true):
+		if String(clip).ends_with("_loop"):
+			var mode: int = animations.get(clip, {}).get("settings/loop_mode", Animation.LOOP_NONE)
+			check("%s import loops %s" % [class_id, clip], mode == Animation.LOOP_LINEAR)
+
+
 func check_assets() -> void:
 	for class_id in Hero.PILOTS:
+		check_import_keeps_loop_names(class_id)
 		var pilot: Node = load(Hero.PILOTS[class_id]).instantiate()
 		var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 		check(class_id + " has AnimationPlayer", animator != null)
@@ -42,14 +103,22 @@ func check_assets() -> void:
 			pilot.free()
 			continue
 		root.add_child(pilot)
-		for event in Reactions.ROWS:
-			var clip := Reactions.clip_for(Reactions.ROWS[event], class_id)
-			check("%s / %s -> %s exists (including pending rows)" % [class_id, event, clip], animator.has_animation(clip))
+		var stem := Trigger.stem_of(class_id)
+		check(class_id + " has a roster row", stem != "")
+		if not probed:
+			probed = true
+			check_table_rule(animator, stem)
+		var has_table := Trigger.has_table(stem)
+		var required: Array = Trigger.required_clips(has_table)
+		check("%s carries %d roster clips (pose table %s)" % [class_id, required.size(), "present" if has_table else "absent"], required.size() == (18 if has_table else 7))
+		for clip in required:
+			check("%s / %s exists" % [class_id, clip], animator.has_animation(clip))
 		for clip in animator.get_animation_list():
 			if clip == "RESET":
 				continue
 			var animation := animator.get_animation(clip)
-			check("%s / %s does not loop" % [class_id, clip], animation.loop_mode == Animation.LOOP_NONE)
+			var loops := animation.loop_mode != Animation.LOOP_NONE
+			check("%s / %s loops only as a _loop name" % [class_id, clip], loops == String(clip).ends_with("_loop"))
 			var bone_tracks_only := true
 			for track in animation.get_track_count():
 				var path := animation.track_get_path(track)
@@ -128,7 +197,10 @@ func run_policy() -> void:
 		check(class_id + " unknown event cannot fire", not hero.react(player, "not_an_event"))
 		check(class_id + " near miss starts", hero.react(player, "near_miss"))
 		finish(rec)
-		check(class_id + " clip finishes seated", rec.reaction == "" and not animator.is_playing())
+		if animator.has_animation("idle_loop"):
+			check(class_id + " clip hands back to idle_loop", rec.reaction == "" and animator.is_playing() and animator.current_animation == "idle_loop")
+		else:
+			check(class_id + " clip finishes seated (no idle_loop yet)", rec.reaction == "" and not animator.is_playing())
 		check(class_id + " shared cooldown blocks hold_broken after near_miss", not hero.react(player, "hold_broken"))
 		hero._process(4.01)
 		check(class_id + " cooldown expires", hero.react(player, "near_miss"))

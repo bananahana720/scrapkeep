@@ -57,6 +57,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 
 func exit_arena() -> void:
 	if is_instance_valid(_arena_dress):
+		_arena_dress.release_lights()
 		remove_child(_arena_dress)
 		_arena_dress.queue_free()
 	_arena_dress = null

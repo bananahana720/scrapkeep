@@ -8,6 +8,8 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const BuildReadout := preload("res://src/ui/build_readout.gd")
 
 # One side of an upgrade pick. The middle is the ability bar's own slot: the node's ab_
 # glyph on a rounded square with one notch per depth along its top edge and the key it
@@ -20,7 +22,7 @@ const SLOT := 88.0
 const SLOT_KEY_H := 24.0
 const NOTCH := 9.0
 const WIDTH := 340.0
-const HEIGHT := 300.0
+const HEIGHT := 390.0
 
 var node := {}
 var key := ""
@@ -29,10 +31,11 @@ var color := Palette.SAND
 var _name: Label
 var _effect: Label
 var _set_piece: Label
+var _depth_table: Button
 var _lift := 0.0
 
 
-func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES) -> void:
+func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES, pilot := "") -> void:
 	node = node_row
 	key = key_id
 	color = class_color
@@ -61,10 +64,15 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	_effect = _text(WorldOneCards.effect_line(node, world_one, shell), 18, Palette.SAND)
 	box.add_child(_effect)
 	# The set-piece line, dimmer than the effect so the effect stays the brighter line.
-	var piece := WorldOneCards.set_piece_line(node, set_piece_table)
+	var piece := WorldOneCards.set_piece_line(node, set_piece_table, pilot)
 	_set_piece = _text(piece, 16, Color(Palette.SAND, 0.85))
 	_set_piece.visible = piece != ""
 	box.add_child(_set_piece)
+	_depth_table = BuildReadout.new()
+	_depth_table.text = "Build · World/depth: " + " · ".join(depth_rows().map(func(row): return "%d/%d" % [row["world"], row["depth"]]))
+	_depth_table.add_theme_font_override("font", UiFonts.bold())
+	_depth_table.add_theme_font_size_override("font_size", 14)
+	box.add_child(_depth_table)
 	mouse_entered.connect(func():
 		if not disabled:
 			grab_focus())
@@ -92,6 +100,22 @@ func set_piece_text() -> String:
 
 func set_piece_visible() -> bool:
 	return _set_piece.visible
+
+
+static func depth_rows() -> Array:
+	var rows: Array = []
+	var world := 1
+	while true:
+		var depth := UpgradeTree.depth_cap(world)
+		rows.append({"world": world, "depth": depth})
+		if depth == UpgradeTree.DEPTHS:
+			break
+		world += 1
+	return rows
+
+
+func depth_text() -> String:
+	return _depth_table.text
 
 
 func node_id() -> String:

@@ -82,6 +82,7 @@ var ticks := 0
 var failures := 0
 var _anchors := {}
 var _pins := {}
+var _yaw_probe := {}
 
 
 func _initialize() -> void:
@@ -609,6 +610,7 @@ func _shoot(subject: String, extra := {}) -> void:
 	for shot in row["cameras"]:
 		var v := Subjects.resolve(subject, shot, _anchors)
 		var ball := {"in_frame": false, "bbox": []}
+		var settled := _check_stage_yaw(subject, String(shot[0]))
 		var started := Time.get_ticks_msec()
 		if not ui:
 			cam.global_position = v["eye"]
@@ -638,7 +640,7 @@ func _shoot(subject: String, extra := {}) -> void:
 		var dead := is_dead(m, Subjects.dead_limits(subject))
 		recs.append({"id": shot[0], "eye": [v["eye"].x, v["eye"].y, v["eye"].z], "target": [v["target"].x, v["target"].y, v["target"].z], "fov": v["fov"],
 			"file": String(shot[0]) + ".png", "sha256": FileAccess.get_sha256(png), "metrics": m, "dead": dead, "ball": ball,
-			"wall_ms": Time.get_ticks_msec() - started})
+			"wall_ms": Time.get_ticks_msec() - started, "stage_yaw": settled})
 		if dead:
 			printerr("DEAD frame %s/%s black=%.3f sky=%.3f" % [subject, shot[0], m["black"], m["sky"]])
 	var doc := {"tool": "look_harness.gd", "subject": subject, "group": row["group"], "stage": row["stage"], "class": class_index, "kind": row["kind"],
@@ -901,6 +903,11 @@ func _warden_bodies() -> void:
 		for j in made.size():
 			made[j].visible = j == i
 		var w: Node3D = made[i]
+		# 2026-10-11 (w13 KF7c round 4): the body keeps the yaw it settled to turning to the ball at its
+		# default spot (the game frame); _shoot measures it per camera against WARDEN_BODY_STAGE_YAW.
+		_yaw_probe = {rows[i][0]: [w, rows[i][1]]} if Subjects.WARDEN_BODY_STAGE_YAW.has(rows[i][0]) else {}
+		if _yaw_probe.size() > 0:
+			await _settle_yaw(w, rows[i][1], b)
 		var centre: Vector3 = w.global_position + (Vector3.DOWN * 4.0 if rows[i][1] == "mind" else Vector3.ZERO)
 		_anchor("warden", centre, w)
 		var bx := subject_bounds(game.presentation.hero_assets.warden_of(w).get("body", w))
@@ -910,6 +917,61 @@ func _warden_bodies() -> void:
 			printerr("look_harness: %s is not dressed in its body (clamp kit shown)" % rows[i][0])
 			failures += 1
 		await _shoot(rows[i][0], {"family": rows[i][1], "mounting": rows[i][3], "body": dressed})
+		_yaw_probe = {}
+
+
+# 2026-10-11 (w13 KF7c round 4): put the ball back at its default spot b (the previous subject's last
+# camera leaves it elsewhere, and the bodies turn to it while the tree runs between subjects, which
+# made the yaw depend on the run's subject order) and wait until the body's yaw holds still for 10
+# physics frames: the reactor's jaws turn at a rate (warden_look _turn_jaws) and converge slowly,
+# the mind turns at once. The settled yaw is the one WARDEN_BODY_STAGE_YAW records.
+func _settle_yaw(w: Node3D, kind: String, b: Vector3) -> void:
+	var pbody: RigidBody3D = game.player.body()
+	pbody.freeze = true
+	pbody.global_position = b
+	_ball_root().global_position = b
+	var prev := INF
+	var still := 0
+	for k in 1500:
+		await physics_frame
+		var y := _body_yaw(w, kind)
+		still = still + 1 if absf(angle_difference(deg_to_rad(y), deg_to_rad(prev))) < deg_to_rad(0.002) else 0
+		prev = y
+		if still >= 10:
+			break
+
+
+# 2026-10-11 (w13 KF7c round 4): the game frame. The reactor and the mind turn to the ball at runtime
+# (hero_assets _update_warden_body: the reactor's +X; _hold_mind: the Pose's -Z) and the read cameras
+# stage the ball as the player's camera does (default spot, WARDEN_BODY_BALL rows), so the body's yaw
+# is whatever that staging settles it to. WARDEN_BODY_STAGE_YAW holds the measured value per camera;
+# the recipes' silhouette checks turn each read direction by it. A camera whose settled yaw is more
+# than 0.5 degree off its constant (or missing) fails the run: the check would score another frame.
+func _check_stage_yaw(subject: String, shot: String) -> Dictionary:
+	if not _yaw_probe.has(subject):
+		return {}
+	var w: Node3D = _yaw_probe[subject][0]
+	var got := _body_yaw(w, String(_yaw_probe[subject][1]))
+	var table: Dictionary = Subjects.WARDEN_BODY_STAGE_YAW[subject]
+	var want := float(table.get(shot, INF))
+	var off := rad_to_deg(absf(angle_difference(deg_to_rad(got), deg_to_rad(want)))) if table.has(shot) else INF
+	print("look_harness: %s %s stage_yaw=%.3f want=%s off=%s (look_subjects.gd WARDEN_BODY_STAGE_YAW)" % [subject, shot, got, str(want), str(off)])
+	if not off <= 0.5:
+		printerr("look_harness: %s %s settled at yaw %.3f, constant %s: the silhouette check scores another frame" % [subject, shot, got, str(want)])
+		failures += 1
+	return {"stage_yaw": snappedf(got, 0.001), "stage_yaw_want": want}
+
+
+# The yaw (degrees) of the node that carries the body recipe's frame: its -Z's heading in world.
+func _body_yaw(w: Node3D, kind: String) -> float:
+	var rec: Dictionary = game.presentation.hero_assets.warden_of(w)
+	var node = rec.get("body", null)
+	if kind == "mind" and node != null:
+		node = (node as Node3D).find_child("Pose", true, false)
+	if node == null:
+		return INF
+	var f: Vector3 = (node as Node3D).global_basis * Vector3(0, 0, -1)
+	return rad_to_deg(atan2(-f.x, -f.z))
 
 
 func _spawn_devices(b: Vector3) -> Dictionary:

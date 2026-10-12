@@ -63,8 +63,16 @@ func _initialize() -> void:
 	_check("park terrain maps", terrain.maps.size() == 6, "%d maps" % terrain.maps.size())
 	var dam = terrain.maps[0]
 	_check("stage 1 is a park map", dam is ParkMap and dam.ok and dam.title == "park_dam", "title %s" % dam.title)
+	# 2026-10-12 (W13 coordinator): a stage whose park file has landed must build from it as a valid
+	# ParkMap; the rest stand on their old map. Was "stages 2 to 6 stand on their old map", which
+	# every KD stage turned red by design when its file landed (KD2, KD3 gates).
 	for i in range(1, 6):
-		_check("stage %d stands on its old map" % (i + 1), not (terrain.maps[i] is ParkMap), "until its park file lands")
+		var path := "res://src/world/park/%s.json" % IDS[i]
+		if FileAccess.file_exists(path):
+			var m = terrain.maps[i]
+			_check("stage %d builds from its park file" % (i + 1), m is ParkMap and m.ok and m.title == IDS[i], "%s landed" % IDS[i])
+		else:
+			_check("stage %d stands on its old map" % (i + 1), not (terrain.maps[i] is ParkMap), "until its park file lands")
 
 	_game = Game.new()
 	_game.test_mode = true
