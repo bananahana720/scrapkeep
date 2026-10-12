@@ -105,7 +105,9 @@ func _loot_parity() -> void:
 	var digest := text.sha256_text()
 	_check("loot", not "riveted_shell" in text, "riveted_shell absent from ids, rows, pools and 50 rolls")
 	print("[loot digest] ids %d rows %d sha256 %s" % [Parts.ids().size(), Parts.rows().size(), digest])
-	_check("loot parity", digest == "a443c521830c8c6a85bd87e6c153c1b451adac1644056a8f8b4787d5a7ade3fe", "digest matches the GP5 pin (2026-10-08: six new parts and four synergies changed ids, rows and offer pools; RR1 pin was e65c5020)")
+	# 2026-10-12 SR9 merge: relay_convergence adds one id and one row (98 and 98); it waits on the
+	# relay.convergence seam, so pools and rolls are unchanged. Was a443c521 (GP5, 2026-10-08).
+	_check("loot parity", digest == "f45eadc3eca9e5ff01a2a735ae0cb33418cf7e65fa928b16649447f5cb4d4d06", "digest matches the SR9 pin (2026-10-12: one seam-gated part added; GP5 pin was a443c521, RR1 pin was e65c5020)")
 
 
 func _preview() -> void:

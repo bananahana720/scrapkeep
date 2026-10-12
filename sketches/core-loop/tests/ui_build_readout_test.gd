@@ -14,6 +14,8 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const EXPECTED_LAYERS := {
 	# 2026-10-11 SG3 merge: SG5's load_dividend (trigger on_hit, effect burden_payout) is player-global.
 	"load_dividend": "global",
+	# 2026-10-12 SR9 merge: relay_convergence tunes the hold relay's ring and charge, player-global.
+	"relay_convergence": "global",
 	"hot_rivets": "local", "loose_trigger": "local", "long_barrel": "local",
 	"long_spool": "global", "tread_plating": "global", "boost_coil": "global",
 	"dash_vane": "global", "rivet_plating": "global", "magnet_spool": "global",
