@@ -8,14 +8,19 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Kit := preload("res://src/combat/rivet_kit.gd")
 const T := preload("res://tests/support/t.gd")
+const Bank := preload("res://src/presentation/sfx_bank.gd")
+const AudioRows := preload("res://src/presentation/rows.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 39 checks,
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 45 checks,
+# 2026-10-12 (PC-RIVET round 3): arrival preview, early cues, shared guard feedback and cue gain/key.
 # including the count assertion, so an empty or short run fails. Real game and router, scripted
 # calm shelf with no AI attacks; the kit is stepped by hand so every number is read on its tick.
 const DT := 1.0 / 60.0
 const SHELF := Vector3(-45.0, 122.0, 6.0)
 var _t := T.new("rivet_kit_test")
-var _expected_checks := 39
+var _expected_checks := 45
 var _game
 var _player
 var _combat
@@ -174,6 +179,9 @@ func _finish() -> void:
 
 func _run() -> void:
 	await _boot()
+	var audio = _game.presentation.audio
+	audio.bake_now()
+	audio.engine.key = 3
 	var def: Resource = ClassDef.by_id("runner_gunner")
 	_t.check("class row names line_drive and foundry_cutter", def.line_id == "line_drive" and def.ultimate_id == "foundry_cutter", "%s %s" % [def.line_id, def.ultimate_id])
 	_t.eq("slot 3 is Line Drive", _player.abilities.id_of("line"), "line_drive")
@@ -256,7 +264,17 @@ func _run() -> void:
 	await _fresh()
 	_player.body().freeze = false
 	var anchor: Vector3 = _player.ball_position() + Vector3(30.0, 0.0, 0.0)
-	_cast(null, anchor)
+	_player.grapple_to(anchor, Vector3.LEFT, null)
+	_tick({"slot_pick": 2})
+	_kit.step(0.0)
+	var arrival: Dictionary = _player.indicator.shapes.get("rivet_arrival", {})
+	_t.check("world preview draws the arrival ring at the committed haul stop", arrival.get("kind") == "ring" and arrival.get("centre") == _kit.haul_stop(anchor) and float(arrival.get("radius", 0.0)) > 0.0)
+	audio.cue_log.clear()
+	audio.engine.key = 3
+	_tick({"fire_pressed": true, "fire_held": true})
+	_tick({"fire_released": true}, 0.0)
+	var haul_cues: Array = audio.cue_log.filter(func(row): return row[1] == "rivet_line_arrive" and row[2] == "now")
+	_t.check("haul cue uses trim plus priority in the live key", haul_cues.size() == 1 and is_equal_approx(float(haul_cues[0][5]), Bank.trim_db("rivet_line_arrive") + audio.PRIORITY_DB[AudioRows.priority("line_skill_fired")]) and is_equal_approx(float(haul_cues[0][4]), Harmony.ratio(audio.live_key())), str(haul_cues))
 	_t.eq("a world cast fires once, as a haul", _fired, [["line_drive", "world"]])
 	_t.check("the haul is running", not _kit.haul.is_empty())
 	var v: Vector3 = _player.state.velocity
@@ -298,6 +316,23 @@ func _run() -> void:
 	_cast()
 	_tick({}, 4.01)
 	_t.eq("the load expires at 4.01 s", _combat.line_load(), {})
+	_kit.last_cue = {"on": "world", "seconds": 4.0}
+	_kit.on_body(null, 1.0, 1.0)
+	_t.eq("a dead target refreshes the body cue", _kit.last_cue, {"on": "body", "delay": 0.0})
+	_kit.last_cue = {"on": "body", "delay": 4.0}
+	_kit.on_world(_player.ball_position(), 1.0, 1.0)
+	_t.eq("an already-arrived haul refreshes the world cue", _kit.last_cue, {"on": "world", "seconds": 0.0})
+
+	await _fresh()
+	a = _enemy("chaser", 15.0)
+	for i in 5:
+		_player.chain.link(true, false)
+	audio.cue_log.clear()
+	audio._last_start.clear()
+	audio.engine.key = 3
+	_cast(a)
+	var body_cues: Array = audio.cue_log.filter(func(row): return row[1] == "rivet_line_punch" and row[2] == "now")
+	_t.check("a chained punch cue uses trim plus priority in the live key", body_cues.size() == 1 and is_equal_approx(float(body_cues[0][5]), Bank.trim_db("rivet_line_punch") + audio.PRIORITY_DB[AudioRows.priority("line_skill_fired")]) and is_equal_approx(float(body_cues[0][4]), Harmony.ratio(audio.live_key())), str(body_cues))
 
 	# A Warden's closed guard takes posture only, capped, and never moves; a boss takes half.
 	await _fresh()
@@ -305,9 +340,20 @@ func _run() -> void:
 	warden.set_physics_process(false)
 	var before: Vector3 = warden.global_position
 	var posture: float = warden.posture()
+	var vfx = _game.presentation.vfx
+	var glances: int = int(vfx.spawned.get("strike_deflected", 0))
+	var contacts := []
+	var on_contact := func(enemy: Node3D, kind: String, punch: float, plating: float): contacts.append([enemy, kind, punch, plating])
+	_game.events.strike_deflected.connect(on_contact)
+	audio.cue_log.clear()
+	audio._last_start.clear()
 	_player.state.velocity = Vector3(40.0, 0.0, 0.0)
 	_cast(warden)
 	_kit.step(0.2)
+	_game.events.strike_deflected.disconnect(on_contact)
+	var clanks: Array = audio.cue_log.filter(func(row): return row[0] == "strike_deflected" and row[1] == EventKinds.state_row("glancing")["sound"] and row[2] == "now")
+	var sparks: Array = vfx._glyphs.filter(func(row): return float(row["t"]) == 0.0 and row["color"] == EventKinds.state_color("glancing") and row["node"].mesh == vfx._meshes["burst"] and row["node"].global_position.is_equal_approx(warden.global_position + Vector3.UP * 0.6))
+	_t.check("one closed-guard contact logs the shared clank and slate sparks", contacts.size() == 1 and contacts[0][0] == warden and contacts[0][1] == "ram" and clanks.size() == 1 and int(vfx.spawned.get("strike_deflected", 0)) == glances + 1 and sparks.size() == 1 and is_equal_approx(float(clanks[0][5]), Bank.trim_db("clank") + audio.PRIORITY_DB[AudioRows.priority("strike_deflected")]), "%s cues=%s sparks=%d" % [contacts, clanks, sparks.size()])
 	_t.check("a closed guard takes 12 posture at most", warden.posture() - posture > 0.0 and warden.posture() - posture <= Weapons.LINE_WARDEN_POSTURE + 0.001,
 		str(warden.posture() - posture))
 	_t.eq("the Warden never moves", warden.global_position, before)

@@ -73,6 +73,10 @@ const SET_PIECE_LINES := {
 	"prism_cutter": "Your cutter splits three ways through a prism.",
 	"juggernaut_drive": "Q drives you through them. No beam.",
 	"ult_pins": "Q's landing throws machines twice as hard.",
+	"runner_gunner:ult_beats": "Q cuts or drives two beats longer.",
+	"runner_gunner:ult_volley": "Q cuts more or rams a wider corridor.",
+	"runner_gunner:ult_radius": "Q's landing skids two metres wider.",
+	"runner_gunner:ult_encore": "Q can cut or drive an encore.",
 	# --- end Rivet ---
 	# --- P-C Kest set piece lines ---
 	# --- end Kest ---

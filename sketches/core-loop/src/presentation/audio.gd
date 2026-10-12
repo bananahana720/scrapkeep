@@ -2466,20 +2466,32 @@ func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) 
 
 
 # --- P-C Rivet line_drive ---
+func _rivet_snare(steps: int) -> PackedFloat32Array:
+	var source := Synth.snare()
+	var ratio := Harmony.ratio(steps)
+	var samples := Synth.buffer(ceili(source.size() / ratio))
+	for i in samples.size():
+		var at := minf(i * ratio, source.size() - 1)
+		var lo := floori(at)
+		samples[i] = lerpf(source[lo], source[mini(lo + 1, source.size() - 1)], at - lo)
+	return Synth.declick(samples)
+
+
 func _on_rivet_line_drive(id: String, _target: Node3D, _at: Vector3, on: String) -> void:
-	if id != "line_drive" or ctx == null or ctx.spawner == null:
+	if id != "line_drive" or ctx == null:
 		return
-	var kit = ctx.spawner.get_node_or_null("RivetKit")
-	if kit == null:
-		return
-	var cue: Dictionary = kit.last_cue
+	var spawner = ctx.get("spawner")
+	var kit = spawner.get_node_or_null("RivetKit") if spawner != null else null
+	var cue: Dictionary = kit.last_cue if kit != null else {}
 	var notes: Array = Harmony.motif_notes(RIVET_LINE["motif"])
 	if on == "body":
+		var steps := maxi(0, int(ctx.player.chain.combo) - 1)
 		var samples := Synth.buffer(Synth.seconds(0.9))
-		Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[0]))), 0, 0.7)
-		Synth.add_into(samples, Synth.snare(), Synth.seconds(float(cue.get("delay", 0.0))), 0.5)
-		Synth.add_into(samples, Synth.snare(), Synth.seconds(float(cue.get("delay", 0.0)) + 0.03), 0.35)
-		var pitch := Harmony.ratio(live_key()) * pow(2.0, maxf(0.0, float(ctx.player.chain.combo - 1)) / 12.0)
+		Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[0]) + steps)), 0, 0.7)
+		var snare := _rivet_snare(steps)
+		Synth.add_into(samples, snare, Synth.seconds(float(cue.get("delay", 0.0))), 0.5)
+		Synth.add_into(samples, snare, Synth.seconds(float(cue.get("delay", 0.0)) + 0.03), 0.35)
+		var pitch := Harmony.ratio(live_key())
 		if _admit("line_skill_fired", RIVET_LINE["punch"], pitch):
 			_start("line_skill_fired", RIVET_LINE["punch"], Synth.to_wav(Synth.normalize(samples)),
 				SfxBank.trim_db(RIVET_LINE["punch"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")

@@ -171,6 +171,7 @@ func geometry(_fraction: float) -> Dictionary:
 
 
 func on_body(target: Node3D, _fraction: float, mult: float) -> void:
+	last_cue = {"on": "body", "delay": 0.0}
 	if not _alive(target):
 		return
 	var delay: float = ctx.player.ball_position().distance_to(target.global_position) / Weapons.LINE_PULSE_SPEED
@@ -180,6 +181,7 @@ func on_body(target: Node3D, _fraction: float, mult: float) -> void:
 
 
 func on_world(anchor: Vector3, _fraction: float, _mult: float) -> void:
+	last_cue = {"on": "world", "seconds": 0.0}
 	var player = ctx.player
 	var ball: Vector3 = player.ball_position()
 	var stop := haul_stop(anchor)
@@ -231,7 +233,8 @@ func _punch(target: Node3D, force: float, mult: float, dir: Vector3) -> void:
 		if not target.staggered():
 			result["gain"] = minf(float(result.get("gain", 0.0)), Weapons.LINE_WARDEN_POSTURE)
 			result["crack"] = false
-			combat.effects.spark(target.global_position + Vector3.UP, Palette.SLATE)
+			# The shared glance fact drives both the slate burst and the low clank.
+			ctx.events.strike_deflected.emit(target, "ram", float(result["punch"]), float(result["plating"]))
 		target._apply_posture(result)
 	elif _boss(target):
 		combat.strike(target, "ram", ram_force(punch * Ultimate.BOSS_MULT), "", "special")
@@ -280,8 +283,13 @@ func _step_preview() -> void:
 	if _rivet() and haul.is_empty() and player.abilities.selected == AbilityState.LINE and kit.hooked \
 			and player.abilities.id_of(AbilityState.LINE) == "line_drive":
 		player.indicator.set_shape("rivet_line", geometry(1.0))
+		if not kit.on_body:
+			player.indicator.set_shape("rivet_arrival", player.yours({"kind": "ring", "centre": haul_stop(kit.anchor), "radius": player.tuning.RADIUS}))
+		else:
+			player.indicator.clear("rivet_arrival")
 	else:
 		player.indicator.clear("rivet_line")
+		player.indicator.clear("rivet_arrival")
 
 
 func _on_cc_ignored(_kind: String) -> void:
@@ -625,5 +633,5 @@ func _clear() -> void:
 	_clear_piece()
 	_scar_left = 0.0
 	if ctx != null:
-		for layer in ["rivet_line", "rivet_haul", "rivet_scar", "rivet_breach"]:
+		for layer in ["rivet_line", "rivet_arrival", "rivet_haul", "rivet_scar", "rivet_breach"]:
 			ctx.player.indicator.clear(layer)

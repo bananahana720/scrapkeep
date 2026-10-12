@@ -11,7 +11,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 74
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 75
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -23,7 +23,7 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 74
+	_expected_checks = 75
 	super._initialize()
 
 
@@ -303,6 +303,10 @@ func _run() -> void:
 	_t.check("stack sweep: 1 to 20 copies keep ult_pins capped at 2.0, no proc chain", sweep_ok)
 	_t.eq("set-piece card lines", [WorldOneCards.set_piece_line(nodes[6]), WorldOneCards.set_piece_line(nodes[17])],
 		[WorldOneCards.SET_PIECE_LINES["prism_cutter"], WorldOneCards.SET_PIECE_LINES["ult_pins"]])
+	_t.check("Rivet's depth-4 cards use his own cut, drive and skid wording", nodes.slice(14).all(func(n):
+		var card_line := WorldOneCards.set_piece_line(n, WorldOneCards.SET_PIECE_LINES, "runner_gunner")
+		var knobs: Array = n["knob"].keys().filter(func(k): return String(k).begins_with("ult_"))
+		return card_line == WorldOneCards.SET_PIECE_LINES.get("runner_gunner:" + String(knobs[0]), WorldOneCards.SET_PIECE_LINES.get(knobs[0], "")) and card_line != ""))
 
 	# Cards and grants: the discoveries are declared, detected in the kit and pay the three items.
 	await _fresh()
