@@ -1583,7 +1583,7 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			# Keep the haul against a closed guard; bank off the paid open-core hit.
 			_cast_slot = 3
 			_cast_phase = "await_smash"
-	elif bank_shot and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
+	elif _bank_eligible():
 		_cast(3)
 	_harpoon_commit = false
 	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > LINE_REACH else _off_line + delta
@@ -1630,10 +1630,15 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 				source.press["jump_pressed"] = true
 
 
+func _bank_eligible() -> bool:
+	var kit = game.player.kit
+	return game.player.abilities.id_of(AbilityState.LINE) == "bank_shot" \
+		and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body)
+
+
 func _smash_pending() -> bool:
 	var kit = game.player.kit
-	if game.player.abilities.id_of(AbilityState.LINE) != "bank_shot" \
-			or not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
+	if not _bank_eligible():
 		return false
 	var guarded: bool = kit.anchor_body.has_method("posture") and kit.anchor_body.has_method("staggered")
 	return not (kit.line_state == Augments.LINE_SMASH and (not guarded or kit.anchor_body.staggered()))
