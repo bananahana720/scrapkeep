@@ -1222,7 +1222,7 @@
         },
         {
           "frame": 8,
-          "note": "Both paws clap together at chest height to slam the book shut.",
+          "note": "Both paws turn inward and meet at chest height for the book slam.",
           "torso": {
             "pitch": -8,
             "height": 0.98
@@ -1232,14 +1232,14 @@
           },
           "hand.R": {
             "at": [
-              0.075,
+              0.04,
               0.4,
               0.12
             ]
           },
           "hand.L": {
             "at": [
-              -0.075,
+              -0.04,
               0.4,
               0.12
             ]
@@ -1247,19 +1247,19 @@
           "wrist.R": [
             0,
             0,
-            -20
+            20
           ],
           "wrist.L": [
             0,
             0,
-            20
+            -20
           ],
           "curl.R": -30,
           "curl.L": -30
         },
         {
           "frame": 11,
-          "note": "Hold the both-paw book clap for four frames.",
+          "note": "Hold the closed both-paw book clap for four frames.",
           "torso": {
             "pitch": -8,
             "height": 0.98
@@ -1269,14 +1269,14 @@
           },
           "hand.R": {
             "at": [
-              0.075,
+              0.04,
               0.4,
               0.12
             ]
           },
           "hand.L": {
             "at": [
-              -0.075,
+              -0.04,
               0.4,
               0.12
             ]
@@ -1284,12 +1284,12 @@
           "wrist.R": [
             0,
             0,
-            -20
+            20
           ],
           "wrist.L": [
             0,
             0,
-            20
+            -20
           ],
           "curl.R": -30,
           "curl.L": -30
