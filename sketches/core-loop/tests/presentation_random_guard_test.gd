@@ -28,12 +28,10 @@ func _initialize() -> void:
 			var key: String = "XDG_%s_HOME" % kind
 			previous[key] = OS.get_environment(key)
 			OS.set_environment(key, folder.path_join(kind.to_lower()))
-		var child_start := Time.get_ticks_msec()
 		var results := ChildRuns.run([{"script": "res://tests/trees/presentation_random_child.gd", "args": [
 			"--out=" + folder, "--policy=completionist", "--seeds=11", "--pilot=remembered_cannon",
 			"--from-stage=4", "--trace-ticks=1", "--ticks=%d" % TICKS,
 			"--presentation-draws=%d" % (17 if arm == 1 else 0)]}], 65.0)
-		print("guard child arm %d wall %.3f s" % [arm, (Time.get_ticks_msec() - child_start) / 1000.0])
 		for key in previous:
 			if previous[key].is_empty():
 				OS.unset_environment(key)
