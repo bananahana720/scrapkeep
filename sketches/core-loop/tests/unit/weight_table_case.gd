@@ -194,7 +194,7 @@ func _harpoon_smash_frame() -> Dictionary:
 	for cue in audio.cue_log:
 		if cue[2] == "now":
 			counts[cue[1]] = int(counts.get(cue[1], 0)) + 1
-	var ok: bool = frame == Engine.get_process_frames() and counts.values().all(func(n): return n == 1) and counts.get(Rows.sound("slammed"), 0) == 1 and counts.get("womp", 0) == 1
+	var ok: bool = frame == Engine.get_process_frames() and counts.size() == 3 and counts.get("smash_crack", 0) == 1 and counts.values().all(func(n): return n == 1) and counts.get(Rows.sound("slammed"), 0) == 1 and counts.get("womp", 0) == 1
 	var result := {"ok": ok, "counts": counts, "cue_log": audio.cue_log.duplicate(true)}
 	audio.free()
 	events.free()
