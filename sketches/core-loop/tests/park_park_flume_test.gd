@@ -17,7 +17,7 @@ extends SceneTree
 #              top is the anchor's height (the relic clamps onto the channel, reactor.md 3.2).
 #   dock       a cradle within 3 m of the gate ground height and a deck clear at 0 or 18 m lift.
 #              --plant-dock inserts a blocking collider before that check, making it fail.
-#              bay.gd's legacy map limit is a separate shared-code blocker, printed below.
+#              cradle and deck use the active park boundary, including a boundary control.
 #   lines      every named waypoint of tools/park_lines/park_flume.json resolves on the park
 #              file (drop_in, landmark, a waymark, a park row or an activity), every line ends at
 #              the landmark, and the six pilots and the floor line are present.
@@ -169,20 +169,23 @@ func dock_site_pins() -> void:
 		half = maxf(half, absf((Vector3(at.x, 0, at.y) - centre).dot(side)) + 4.0)
 	var mid := centre - facing * (Bay.BACK + Bay.DECK_U)
 	var top := -INF
-	var footprint_on_park := true
+	var footprint_on_park := deck_on_map(mid, facing, side, terrain.map())
 	for du in [-Bay.DECK_U, 0.0, Bay.DECK_U]:
 		for dv in [-Bay.DECK_V, 0.0, Bay.DECK_V]:
 			var p: Vector3 = mid + facing * du + side * dv
-			footprint_on_park = footprint_on_park and absf(p.x) < 800.0 and absf(p.z) < 800.0
 			top = maxf(top, terrain.height(p.x, p.z))
-	t.check("dock deck footprint is fully on the 1600 m park", footprint_on_park)
+	t.check("dock deck footprint is fully on the active park", footprint_on_park)
+	var outside_centre := Vector3(700.0, centre.y, 480.0)
+	var outside_mid := outside_centre - facing * (Bay.BACK + Bay.DECK_U)
+	t.check("boundary control inside 800 m but outside play_rect rejects the dock",
+		not deck_on_map(outside_mid, facing, side, terrain.map()))
 	var level := false
 	for s in [1.0, -1.0]:
 		var cradle: Vector3 = centre + side * s * (half + Bay.CRADLE_SIDE)
 		var delta: float = absf(terrain.height(cradle.x, cradle.z) - terrain.height(centre.x, centre.z))
-		level = level or delta <= 3.0
-		print("[dock site] cradle %s height delta %.3f legacy on_map %s" % [cradle, delta, Bay._on_map(cradle)])
-	t.check("dock cradle is within 3 m of the gate ground height", level)
+		level = level or (Bay._on_map(cradle, terrain.map()) and delta <= 3.0)
+		print("[dock site] cradle %s height delta %.3f park on_map %s" % [cradle, delta, Bay._on_map(cradle, terrain.map())])
+	t.check("dock cradle is on the active park within 3 m of the gate ground height", level)
 	var deck := Vector3(mid.x, top + Bay.LIFT, mid.z)
 	bay.facing = facing
 	var space := holder.get_world_3d().direct_space_state
@@ -208,6 +211,15 @@ func dock_site_pins() -> void:
 	print("[planted dock] level-and-clearance pin %s" % ("GREEN" if planted_clear else "RED"))
 	t.check("a planted collider blocks both allowed dock lifts", not planted_clear)
 	holder.free()
+
+
+static func deck_on_map(mid: Vector3, facing: Vector3, side: Vector3, map: RefCounted) -> bool:
+	for du in [-Bay.DECK_U, 0.0, Bay.DECK_U]:
+		for dv in [-Bay.DECK_V, 0.0, Bay.DECK_V]:
+			var p: Vector3 = mid + facing * du + side * dv
+			if not Bay._on_map(p, map):
+				return false
+	return true
 
 
 # PARK.md 2.12 on graph.json's pocket rows (distances by path on the stage graph, rulings R1 and R2):
