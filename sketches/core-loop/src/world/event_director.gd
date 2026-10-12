@@ -339,7 +339,7 @@ func end_all() -> Array:
 	var facts := []
 	if not _park.is_empty():
 		for state in _park_states:
-			if state.phase == LIVE:
+			if state.phase in [ANNOUNCED, LIVE]:
 				_park_end(state, facts)
 			state.phase = DONE
 		return facts
