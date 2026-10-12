@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "fcd37be3bf3fd0bcbb473527d82f9eda7491e7cc8f4e10db3f8fafe97ccc2008",
+  "bake_sha256": "3cf772dbdadd18b035d7ee070c5b94df90abcd9f91d41b5d37cabc6fccb041d6",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1316536,
-  "edges": 314294,
+  "bytes": 1316473,
+  "edges": 314251,
   "first_failed": "",
   "flags": {
     "deck": 0,
-    "door_ok": 39988,
-    "line": 294,
+    "door_ok": 39990,
+    "line": 292,
     "open": 40401,
-    "sight_ok": 8757,
+    "sight_ok": 8711,
     "under": 0
   },
   "full_visit_m": 2316,
   "full_visit_ratio": "1.716",
-  "graph_sha256": "47bb7e34003323868d4c1a4b45207e9f19fba57a692016eea455e4cfad4ff396",
+  "graph_sha256": "c1a4445d89166f79299dea15ebf2ce0b86f9270bf386d8ce106704f6a78c0a20",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2371,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "6b81025276440ade9bd42a53f08f54c0b46ea678381e4e75b8b50fe28be086c5",
+  "park_sha256": "f0d15dda9a7f81c6f7445e0f7317ebb8bffb6e36c6c67851dbe3789090facf04",
   "pockets": [
     {
       "clear_ring": [],
@@ -222,7 +222,7 @@
         "viable": true
       },
       {
-        "cost": 1294.4,
+        "cost": 1294.5,
         "d_landmark": 142.5,
         "name": "pool_rock",
         "on_route": false,
@@ -238,17 +238,9 @@
         "viable": false
       },
       {
-        "cost": 1087.3,
-        "d_landmark": 165.8,
-        "name": "incline_spine_terrain",
-        "on_route": true,
-        "rank": 0,
-        "viable": true
-      },
-      {
-        "cost": 1068.5,
-        "d_landmark": 298.5,
-        "name": "eye_chute_west",
+        "cost": 1060.5,
+        "d_landmark": 287.8,
+        "name": "eye_fall_spire_east",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -319,7 +311,7 @@
       },
       {
         "cost": 695.7,
-        "d_landmark": 903.2,
+        "d_landmark": 903.6,
         "name": "hoodoo_stack_10",
         "on_route": false,
         "rank": 0,
@@ -335,7 +327,7 @@
       },
       {
         "cost": 576.0,
-        "d_landmark": 1115.8,
+        "d_landmark": 1116.2,
         "name": "hoodoo_stack_9",
         "on_route": false,
         "rank": 0,
@@ -359,7 +351,7 @@
       },
       {
         "cost": 499.7,
-        "d_landmark": 1490.0,
+        "d_landmark": 1490.4,
         "name": "hoodoo_stack_11",
         "on_route": false,
         "rank": 0,
@@ -383,7 +375,7 @@
       },
       {
         "cost": 428.9,
-        "d_landmark": 1320.3,
+        "d_landmark": 1320.7,
         "name": "hoodoo_stack_8",
         "on_route": false,
         "rank": 0,
@@ -510,9 +502,9 @@
         "viable": true
       }
     ],
-    "count": 140,
+    "count": 141,
     "crossings": {
-      "drop": 42,
+      "drop": 45,
       "ride": 12,
       "walk": 247
     },
