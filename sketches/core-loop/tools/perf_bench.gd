@@ -642,10 +642,22 @@ static func _pct(sorted: Array, q: float) -> float:
 	return sorted[mini(int(floor(q * (sorted.size() - 1) + 0.5)), sorted.size() - 1)]
 
 
+# The commit the run measured, for the JSON's base_sha. Empty when git cannot answer.
+static func _git_head() -> String:
+	var out: Array = []
+	var code := OS.execute("git", ["-C", ProjectSettings.globalize_path("res://"), "rev-parse", "HEAD"], out)
+	if code != 0 or out.is_empty():
+		return ""
+	return String(out[0]).strip_edges()
+
+
 func _finish() -> void:
 	if _phase == "finished":
 		return
 	_phase = "finished"
+	var base_sha := _git_head()
+	if base_sha == "":
+		_errors.append("base sha unavailable (git rev-parse HEAD failed)")
 	if _samples.size() != RECORD_FRAMES:
 		_errors.append("recorded %d of %d frames" % [_samples.size(), RECORD_FRAMES])
 	if not _load_ok:
@@ -673,6 +685,7 @@ func _finish() -> void:
 	ablations.sort()
 	var info := {
 		"tool": "perf_bench", "scene": _scene_id, "table": _table, "scene_def": SCENES[_scene_id], "ablations": ablations,
+		"base_sha": base_sha,
 		"errors": _errors, "valid": _errors.is_empty(),
 		"godot": Engine.get_version_info()["string"], "display": DisplayServer.get_name(),
 		"adapter": RenderingServer.get_video_adapter_name(),
