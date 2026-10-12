@@ -363,7 +363,8 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 							_ref(issues, name, id, "knob", knob, Trees.KNOBS)
 					"swap", "charges", "cooldown":
 						for slot in node.get(op, {}):
-							_ref(issues, name, id, "slot", slot, AbilityState.SLOTS)
+							# A swap may replace Q's ultimate; charges and cooldowns stay on the five bar slots.
+							_ref(issues, name, id, "slot", slot, AbilityState.SWAPPABLE if op == "swap" else AbilityState.SLOTS)
 							if op == "swap":
 								_ref(issues, name, id, "ability", node[op][slot], AbilityState.ABILITIES)
 							elif not _type_matches(node[op][slot], NUMBER) or node[op][slot] <= 0:
