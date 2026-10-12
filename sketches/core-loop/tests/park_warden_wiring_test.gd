@@ -186,6 +186,9 @@ func _run() -> void:
 		_exercise_copy(game, probe_path, 1)
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(probe_path))
 	var moving: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ParkMap.FIXTURE))
+	moving["map"] = "park_crown"
+	for home in moving["home_rows"]:
+		home["reinforce"]["pack"] = "elite"
 	moving["landmark"]["warden"].merge({"family": "mind", "mounting": "spires",
 		"harpoon_anchor": true, "anchor": [0, 22, 590],
 		"path": [[0, 22, 590], [18, 30, 600], [-12, 24, 570]]}, true)
