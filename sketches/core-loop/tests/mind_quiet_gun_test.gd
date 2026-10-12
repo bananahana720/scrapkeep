@@ -1,6 +1,7 @@
 extends "res://tests/cannon_ultimate_test.gd"
 # 2026-10-12 (PC-CANNON): the answer must follow a non-zero live music key.
 # 2026-10-12 (PC-CANNON): answer trim derives from mind_adapted's bank sound and priority.
+# 2026-10-12 (PC-CANNON): stepping the quote clock also expires its wall-clock admission gap.
 # 2026-10-11 (PC-CANNON): real Mind death, fallback, arena cleanup, notes and settle-once grants.
 const EXPECTED_QUIET_CHECKS := 50
 const Mind := preload("res://src/boss/mind.gd")
@@ -96,6 +97,7 @@ func _cases() -> void:
 	audio._step_cannon_cues()
 	_t.eq("answer never interrupts the quote", audio.cannon_log.size(), 0)
 	audio.clock = due
+	audio._last_start["mind_cannon"] = Time.get_ticks_msec() - audio.MIN_GAP_MS["mind_cannon"]
 	audio._step_cannon_cues()
 	_t.eq("one answer after the quote", audio.cannon_log.size(), 1)
 	_t.eq("the answer is the right motif", audio.cannon_log.back()["notes"], [59, 64, 67, 74])
