@@ -208,7 +208,7 @@ The defaults hold (SKILL-BAR.md:301-310). Cannon notes:
 - **The peak's plate** exposes a Warden as the special does. Exposure multiplies damage, never posture.
 - **Brindle, the Waking, the Mind:** x0.5, phase windows untouched, the brace pose and the "nope" glyph.
 - **Warden as anchor (wave K-F):** a `line` path may end on a Warden. Fire Mission tries the arc first; Creeping Barrage rides the Warden's line first.
-- **Check:** `alpha_posture_bands_test` must keep the grown band at 25 s or more with the Cannon (SKILL-BAR.md:645).
+- **Check:** with the Cannon, each grown Warden must break at 25 s or more (SKILL-BAR.md:645), measured by the Cannon `tools/bot_run.gd` rows in section 10; `alpha_posture_bands_test` does not sample the Cannon.
 
 ### 3.4 The mecha and the music moment
 
@@ -575,7 +575,7 @@ Headless proofs that fail loud, in the style of `tests/cannon_kit_test.gd` (the 
 - The three cosmetics validate and each grants once from its discovery.
 - `tests/cannon_kit_test.gd` steps a to j pass unchanged; every test in section 9 passes or is re-pinned with a dated header.
 - `bot_six_remembered_cannon_test` wins world one with at least one Lane Charge and one Fire Mission per winning run.
-- `alpha_posture_bands_test` keeps the grown band at 25 s or more with the Cannon.
+- With the Cannon, each grown Warden breaks at 25 s or more after its turn: `tools/bot_run.gd -- --policy=skipper --seeds=6 --pilot=remembered_cannon --table=alpha --from-stage=3 --until=4`, then `--from-stage=5`. `alpha_posture_bands_test` does not sample the Cannon (gate note, 2026-10-12). First measured at merge: 27.54 s and 31.04 s.
 - `git diff --name-status` shows only the SCOPE files.
 
 **VERIFY:** `tools/coordinator/compile_check.sh`; `node scripts/sketch-lint.mjs --sketch core-loop`; the section 9 tests by name, each reporting a nonzero case count; `npm run sketch:smoke -- --sketch core-loop`. Automated play does not establish feel: the sitting judges whether time on target lands as a drop and whether the quiet gun is heard.

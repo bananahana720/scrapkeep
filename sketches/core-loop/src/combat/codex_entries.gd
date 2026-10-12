@@ -200,6 +200,14 @@ const ENTRIES := [
 	# --- P-C Tally entries ---
 	# --- end Tally ---
 	# --- P-C Cannon entries ---
+	{"id": "cannon_lane_charge", "name": "Lane Charge", "hint": "The cable already shows where it goes.", "clue": "a standing line + 3", "text": "Press 3 while the harpoon holds something. The cable becomes a lane that fires through the enemy and twelve metres on, or out of a wall. Chains make it hit harder."},
+	{"id": "cannon_fire_mission", "name": "Fire Mission", "hint": "A gun can fire itself.", "clue": "a full ring + Q + open ground ahead", "text": "Q fires you along an arc. Each beat calls a family below you. Every call lands on the same beat as you."},
+	{"id": "cannon_creeping_barrage", "name": "Creeping Barrage", "hint": "Some fire walks ahead of you.", "clue": "a line + the barrage", "text": "Ride a line. Every beat lays a lane across your path one beat before you reach it."},
+	{"id": "cannon_plate_mortar", "name": "Plate Mortar", "hint": "Brace them from above.", "clue": "a high lob + plates + the landing", "text": "The lob drops plates. Your slam landing hits every exposed enemy at 1.4 times."},
+	{"id": "cannon_recital", "name": "Recital", "hint": "The gun hums four notes when it is happy.", "clue": "lane, split, rush, plate", "text": "Land the four families in the order the Cannon hums them and the tune plays whole."},
+	{"id": "cannon_time_on_target", "name": "Time on Target", "hint": "Everything at once.", "clue": "Fire Mission + a crowd", "text": "Every shell you called landed on the same beat, on eight of them."},
+	{"id": "cannon_old_tune", "name": "Old Tune", "hint": "It got your tune wrong all fight.", "clue": "the Mind + its own gun", "text": "The Mind played your tune back wrong. Its own gun played it right."},
+	{"id": "mind_quiet_gun", "name": "The Quiet Gun", "hint": "One of its guns never fired.", "clue": "the Mind's rim, listening", "text": "A gun on the rim never fired. It learned one note each time the Mind showed a new attack."},
 	# --- end Cannon ---
 ]
 
@@ -247,6 +255,16 @@ const DETECTORS := {
 	"set_piece_core": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"set_piece_cash_in": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"set_piece_breakout": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	# --- P-C Cannon detectors ---
+	"cannon_lane_charge": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"cannon_fire_mission": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_creeping_barrage": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_plate_mortar": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_recital": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"cannon_time_on_target": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_old_tune": {"kind": "", "script": "res://src/boss/mind.gd"},
+	"mind_quiet_gun": {"kind": "", "script": "res://src/boss/mind.gd"},
+	# --- end Cannon ---
 }
 
 
