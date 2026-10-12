@@ -29,6 +29,8 @@ const SAME_FRAME_PAIRS := [
 	["enemy_struck", "enemy_killed"],
 	["slammed", "harpoon_smashed"], ["slammed", "line:smash_lands"],
 	["ultimate_landed", "vault_kill"],
+	["arc_slammed", "line:smash_lands"], ["skid_smashed", "line:smash_lands"],
+	["demo_slammed", "line:smash_lands"],
 ]
 
 class AudioCtx:
