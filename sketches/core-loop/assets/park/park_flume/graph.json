@@ -1,31 +1,31 @@
 {
-  "bake_sha256": "cba5b0ee75755f4823856762817aaefcf684a264b92d33ef97dd526dc374b7c4",
+  "bake_sha256": "80f9fe9341596e39fb41750736c843cd7334b563a49288532dfed4363858afbe",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1084898,
+  "bytes": 1084794,
   "edges": 318935,
   "first_failed": "",
   "flags": {
     "deck": 666,
-    "door_ok": 40281,
-    "line": 289,
+    "door_ok": 40267,
+    "line": 322,
     "open": 40903,
-    "sight_ok": 10646,
+    "sight_ok": 10644,
     "under": 0
   },
   "full_visit_m": 1786,
-  "full_visit_ratio": "1.272",
-  "graph_sha256": "a0e8eac76125b3174db755a37f3ca9828617dbd71a6c90cebced511af7718446",
+  "full_visit_ratio": "1.263",
+  "graph_sha256": "f36d0aa1bfe0f9f10c30ec1dc89a2d377005e84ae3ca8eff80dc419defff9caf",
   "line_errors": [],
-  "line_path_nodes": 129,
+  "line_path_nodes": 125,
   "longest_est_m": 2508,
   "map": "park_flume",
   "nodes": 41067,
-  "park_sha256": "633024d40b14e0f9f5b7bd3e137f44e6739cf36d5e12491f31b5a2e20c0d8dec",
+  "park_sha256": "c04e26b46951a93c1c3bf4f53a88916fb7443f850f1c82b6973eb91e259420a2",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 424,
+      "d_landmark": 429,
       "d_spawn": 986,
       "detour_m": 0,
       "door_at": [
@@ -81,12 +81,12 @@
       "clear_ring": [],
       "d_landmark": 415,
       "d_spawn": 1136,
-      "detour_m": 197,
+      "detour_m": 175,
       "door_at": [
         -120,
         336
       ],
-      "door_m": 197,
+      "door_m": 175,
       "flags": [
         "open",
         "door_ok",
@@ -107,7 +107,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 908,
+      "d_landmark": 917,
       "d_spawn": 561,
       "detour_m": 102,
       "door_at": [
@@ -131,7 +131,7 @@
       "site": "butte_gap"
     }
   ],
-  "reward_ratio": "0.537",
+  "reward_ratio": "0.533",
   "ride_edges": 169,
   "routes": {
     "annex_ramp_line": [],
@@ -153,13 +153,13 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1404,
-    "farther_share": "0.069",
+    "d_landmark": 1414,
+    "farther_share": "0.066",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1404,
-  "spawn_beacon_share": "0.560",
+  "spawn_beacon_m": 1414,
+  "spawn_beacon_share": "0.564",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -169,16 +169,16 @@
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.537
+      "value": 0.533
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.272
+      "value": 1.263
     }
   ],
-  "tool_sha256": "c23975a50d02465e1e3c767455665712caa356e254ab6192ee819a7b3edee9f6",
+  "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
   "zones": {
     "anchors": [
       {
@@ -198,7 +198,7 @@
         "viable": true
       },
       {
-        "cost": 1456.0,
+        "cost": 1462.8,
         "d_landmark": 64.6,
         "name": "head_house_trusses",
         "on_route": false,
@@ -318,6 +318,14 @@
         "viable": false
       },
       {
+        "cost": 1144.0,
+        "d_landmark": 68.5,
+        "name": "flume_head_reach",
+        "on_route": false,
+        "rank": 9,
+        "viable": true
+      },
+      {
         "cost": 1139.8,
         "d_landmark": 287.1,
         "name": "bluff_ride_pier_8",
@@ -330,15 +338,7 @@
         "d_landmark": 1351.7,
         "name": "canal_wash_2",
         "on_route": false,
-        "rank": 9,
-        "viable": true
-      },
-      {
-        "cost": 1080.3,
-        "d_landmark": 68.5,
-        "name": "flume_head_reach",
-        "on_route": true,
-        "rank": 0,
+        "rank": 10,
         "viable": true
       },
       {
@@ -354,16 +354,8 @@
         "d_landmark": 85.9,
         "name": "bluff_rim",
         "on_route": false,
-        "rank": 10,
+        "rank": 11,
         "viable": true
-      },
-      {
-        "cost": 1033.9,
-        "d_landmark": 359.3,
-        "name": "flume_entry_kicker",
-        "on_route": true,
-        "rank": 0,
-        "viable": false
       },
       {
         "cost": 1030.5,
@@ -375,7 +367,7 @@
       },
       {
         "cost": 1002.2,
-        "d_landmark": 410.6,
+        "d_landmark": 412.8,
         "name": "siphon_ride_pier_2",
         "on_route": false,
         "rank": 0,
@@ -386,7 +378,7 @@
         "d_landmark": 909.6,
         "name": "fields_wash_2",
         "on_route": false,
-        "rank": 11,
+        "rank": 12,
         "viable": true
       },
       {
@@ -415,7 +407,7 @@
       },
       {
         "cost": 738.6,
-        "d_landmark": 735.1,
+        "d_landmark": 739.0,
         "name": "bend_zip_pier_11",
         "on_route": false,
         "rank": 0,
@@ -423,7 +415,7 @@
       },
       {
         "cost": 726.9,
-        "d_landmark": 740.6,
+        "d_landmark": 748.9,
         "name": "bend_zip_pier_9",
         "on_route": false,
         "rank": 0,
@@ -431,7 +423,7 @@
       },
       {
         "cost": 715.4,
-        "d_landmark": 753.5,
+        "d_landmark": 762.0,
         "name": "bend_zip_pier_7",
         "on_route": false,
         "rank": 0,
@@ -455,7 +447,7 @@
       },
       {
         "cost": 662.1,
-        "d_landmark": 805.6,
+        "d_landmark": 811.2,
         "name": "bend_zip_pier_10",
         "on_route": false,
         "rank": 0,
@@ -463,7 +455,7 @@
       },
       {
         "cost": 651.9,
-        "d_landmark": 817.4,
+        "d_landmark": 825.6,
         "name": "bend_zip_pier_8",
         "on_route": false,
         "rank": 0,
@@ -471,7 +463,7 @@
       },
       {
         "cost": 642.9,
-        "d_landmark": 826.9,
+        "d_landmark": 835.5,
         "name": "bend_zip_pier_6",
         "on_route": false,
         "rank": 0,
@@ -479,7 +471,7 @@
       },
       {
         "cost": 628.7,
-        "d_landmark": 840.1,
+        "d_landmark": 848.7,
         "name": "bend_zip_pier_4",
         "on_route": false,
         "rank": 0,
@@ -487,7 +479,7 @@
       },
       {
         "cost": 621.6,
-        "d_landmark": 834.7,
+        "d_landmark": 843.3,
         "name": "rim_road_kicker",
         "on_route": false,
         "rank": 0,
@@ -495,7 +487,7 @@
       },
       {
         "cost": 587.5,
-        "d_landmark": 457.4,
+        "d_landmark": 464.8,
         "name": "flume_hollow_reach",
         "on_route": true,
         "rank": 0,
@@ -506,7 +498,7 @@
         "d_landmark": 965.7,
         "name": "canal_wash_6",
         "on_route": false,
-        "rank": 12,
+        "rank": 13,
         "viable": true
       },
       {
@@ -514,7 +506,7 @@
         "d_landmark": 973.2,
         "name": "fields_wash_1",
         "on_route": false,
-        "rank": 13,
+        "rank": 14,
         "viable": true
       },
       {
@@ -522,12 +514,12 @@
         "d_landmark": 1045.8,
         "name": "canal_wash_4",
         "on_route": false,
-        "rank": 14,
+        "rank": 15,
         "viable": true
       },
       {
         "cost": 477.0,
-        "d_landmark": 985.7,
+        "d_landmark": 995.7,
         "name": "flume_ride_pier_30",
         "on_route": false,
         "rank": 0,
@@ -535,7 +527,7 @@
       },
       {
         "cost": 469.5,
-        "d_landmark": 980.9,
+        "d_landmark": 990.9,
         "name": "flume_ride_pier_33",
         "on_route": false,
         "rank": 0,
@@ -543,7 +535,7 @@
       },
       {
         "cost": 452.2,
-        "d_landmark": 998.3,
+        "d_landmark": 1008.3,
         "name": "flume_ride_pier_31",
         "on_route": false,
         "rank": 0,
@@ -551,7 +543,7 @@
       },
       {
         "cost": 438.7,
-        "d_landmark": 1022.4,
+        "d_landmark": 1032.4,
         "name": "main_canal_kicker",
         "on_route": false,
         "rank": 0,
@@ -567,7 +559,7 @@
       },
       {
         "cost": 427.2,
-        "d_landmark": 1062.8,
+        "d_landmark": 1063.1,
         "name": "flume_ride_pier_24",
         "on_route": false,
         "rank": 0,
@@ -578,12 +570,12 @@
         "d_landmark": 1166.0,
         "name": "canal_wash_3",
         "on_route": false,
-        "rank": 15,
+        "rank": 16,
         "viable": true
       },
       {
         "cost": 414.5,
-        "d_landmark": 1043.0,
+        "d_landmark": 1053.0,
         "name": "flume_ride_pier_27",
         "on_route": false,
         "rank": 0,
@@ -594,7 +586,7 @@
         "d_landmark": 1246.1,
         "name": "canal_wash_1",
         "on_route": false,
-        "rank": 16,
+        "rank": 17,
         "viable": true
       },
       {
@@ -602,12 +594,12 @@
         "d_landmark": 821.1,
         "name": "field_bank_4",
         "on_route": false,
-        "rank": 17,
+        "rank": 18,
         "viable": true
       },
       {
         "cost": 366.3,
-        "d_landmark": 1119.2,
+        "d_landmark": 1123.0,
         "name": "flume_ride_pier_21",
         "on_route": false,
         "rank": 0,
@@ -631,7 +623,7 @@
       },
       {
         "cost": 344.7,
-        "d_landmark": 1146.5,
+        "d_landmark": 1149.7,
         "name": "flume_ride_pier_16",
         "on_route": false,
         "rank": 0,
@@ -639,7 +631,7 @@
       },
       {
         "cost": 321.0,
-        "d_landmark": 1164.4,
+        "d_landmark": 1168.2,
         "name": "flume_ride_pier_14",
         "on_route": false,
         "rank": 0,
@@ -647,7 +639,7 @@
       },
       {
         "cost": 297.6,
-        "d_landmark": 1171.6,
+        "d_landmark": 1181.6,
         "name": "flume_ride_pier_12",
         "on_route": false,
         "rank": 0,
@@ -658,12 +650,12 @@
         "d_landmark": 1277.9,
         "name": "crew_ledges",
         "on_route": false,
-        "rank": 18,
+        "rank": 19,
         "viable": true
       },
       {
         "cost": 261.2,
-        "d_landmark": 1199.9,
+        "d_landmark": 1209.9,
         "name": "flume_ride_pier_9",
         "on_route": false,
         "rank": 0,
@@ -671,7 +663,7 @@
       },
       {
         "cost": 250.3,
-        "d_landmark": 1238.9,
+        "d_landmark": 1248.9,
         "name": "flume_ride_pier_10",
         "on_route": false,
         "rank": 0,
@@ -679,7 +671,7 @@
       },
       {
         "cost": 233.9,
-        "d_landmark": 1217.5,
+        "d_landmark": 1227.5,
         "name": "flume_ride_pier_7",
         "on_route": false,
         "rank": 0,
@@ -687,7 +679,7 @@
       },
       {
         "cost": 215.1,
-        "d_landmark": 1266.9,
+        "d_landmark": 1276.9,
         "name": "flume_ride_pier_8",
         "on_route": false,
         "rank": 0,
@@ -695,7 +687,7 @@
       },
       {
         "cost": 191.4,
-        "d_landmark": 1284.9,
+        "d_landmark": 1294.9,
         "name": "flume_ride_pier_6",
         "on_route": false,
         "rank": 0,
@@ -703,7 +695,7 @@
       },
       {
         "cost": 143.8,
-        "d_landmark": 1257.2,
+        "d_landmark": 1267.2,
         "name": "mesa_entry_kicker",
         "on_route": true,
         "rank": 0,
@@ -711,15 +703,15 @@
       },
       {
         "cost": 143.2,
-        "d_landmark": 1316.9,
+        "d_landmark": 1326.9,
         "name": "mesa_spill",
         "on_route": false,
-        "rank": 19,
+        "rank": 20,
         "viable": true
       },
       {
         "cost": 138.5,
-        "d_landmark": 1266.0,
+        "d_landmark": 1276.0,
         "name": "flume_ride_pier_2",
         "on_route": false,
         "rank": 0,
@@ -727,10 +719,10 @@
       },
       {
         "cost": 126.6,
-        "d_landmark": 1460.8,
+        "d_landmark": 1470.8,
         "name": "weir_pond",
         "on_route": false,
-        "rank": 20,
+        "rank": 21,
         "viable": true
       },
       {
@@ -738,12 +730,12 @@
         "d_landmark": 1161.2,
         "name": "flume_weir_reach",
         "on_route": false,
-        "rank": 21,
+        "rank": 22,
         "viable": true
       },
       {
         "cost": 33.9,
-        "d_landmark": 1390.4,
+        "d_landmark": 1400.4,
         "name": "weir_gatehouse",
         "on_route": false,
         "rank": 0,
@@ -751,7 +743,7 @@
       },
       {
         "cost": 0.0,
-        "d_landmark": 1385.1,
+        "d_landmark": 1395.1,
         "name": "weir_deck",
         "on_route": true,
         "rank": 0,
@@ -760,9 +752,9 @@
     ],
     "count": 141,
     "crossings": {
-      "drop": 39,
+      "drop": 40,
       "ride": 89,
-      "walk": 191
+      "walk": 192
     },
     "hidden": [
       {
