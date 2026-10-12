@@ -1,4 +1,4 @@
-# 2026-10-11 (PC-SABLE): Pin 65 checks after adding bank grace, mounted exits and completed-run grants.
+# 2026-10-11 (PC-SABLE round 2): Pin 67 checks with non-Sable ultimate beat boundaries.
 extends SceneTree
 # PC-SABLE: real router, harpoon, combat, grants and immutable world-one fixtures.
 # Expected check count is pinned below; missing cases fail.
@@ -17,8 +17,9 @@ const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
+const Ultimate := preload("res://src/combat/ultimate.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 65
+const EXPECTED_CHECKS := 67
 const DT := 1.0 / 60.0
 var _t := T.new("sable_kit_test")
 var _game
@@ -201,8 +202,24 @@ func _run() -> void:
 	_t.eq("plant stays free", [_special, _player.abilities.slot("special").charges], [["detonation_gauge"], charge])
 	_tree()
 	_grants(enemy)
+	_other_pilot_beats()
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
+
+
+func _other_pilot_beats() -> void:
+	for id in ["ult_default", "plate_return"]:
+		var ult := Ultimate.new()
+		ult.ctx = _game.ctx
+		ult._id = id
+		ult._beat_len = 1.0
+		ult._beats = 4
+		ult._beat_clock = 1.0 - 0.000005
+		var at: Vector3 = _player.ball_position()
+		ult._ride = ult._carrier(at, {"to": at + Vector3.FORWARD * 10.0, "seconds": 3.0, "mode": "line"})
+		ult._fly(0.0)
+		_t.eq("%s keeps its original beat boundary" % id, ult._beat, 0)
+		ult.free()
 
 
 func _tree() -> void:

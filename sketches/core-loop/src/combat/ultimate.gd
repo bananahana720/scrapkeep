@@ -598,7 +598,8 @@ func _fly(delta: float) -> void:
 		return
 	_leg_time += delta
 	_beat_clock += delta
-	while _beat_clock + 0.00001 >= _beat_len and _beat < _beats:
+	var beat_tolerance := 0.00001 if _sable() else 0.0
+	while _beat_clock + beat_tolerance >= _beat_len and _beat < _beats:
 		_beat_clock -= _beat_len
 		_beat += 1
 		_volley()
