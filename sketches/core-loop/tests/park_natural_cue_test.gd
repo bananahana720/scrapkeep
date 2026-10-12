@@ -12,6 +12,12 @@ func _run() -> void:
 	var cases := []
 	for k in KINDS.size():
 		cases.append(_row(KINDS[k], FORMS[k]))
+	var alternate := _row("cave_in", "ancient_stirring")
+	alternate.id = "alternate_cave_in"
+	cases.append(alternate)
+	var alternate_water := _row("flash_flood", "lightning_charge")
+	alternate_water.id = "alternate_flash_flood"
+	cases.append(alternate_water)
 	for family in [["fleet", "fleet_landing", "fleet_inbound"], ["ancient", "machine_eruption", "ancient_stirring"], ["industrial", "boiler_burst", "boiler_pressure"]]:
 		var row := _row(family[1], family[2])
 		row.family = family[0]
@@ -25,6 +31,9 @@ func _run() -> void:
 		audio.engine.key = LIVE_KEY
 		audio.cue_log.clear()
 		var phases := []
+		var legacy_count: int = w.events.terrain.size()
+		if row.family == "natural":
+			t.eq(row.id + " avoids legacy fixed terrain presentation", legacy_count, 0)
 		for i in 93:
 			for fact in w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true}):
 				if fact.kind != "world":
@@ -32,6 +41,8 @@ func _run() -> void:
 				audio._last_start.clear()
 				w.ctx.events.world_fact.emit(fact.fact, fact.at)
 				phases.append(fact)
+				if row.family == "natural":
+					_check_mark(row.id + " " + fact.phase, handler.active[row.id].mark, EventKinds.world_row(fact.fact))
 		t.eq(kind + " both cue phases", phases.size(), 2)
 		var cues: Array = audio.cue_log.filter(func(c): return c[0] == "world_fact" and c[2] == "now")
 		t.eq(kind + " one sound per phase", cues.size(), 2)
@@ -46,5 +57,30 @@ func _run() -> void:
 		t.check(kind + " releases sound listener", not w.ctx.events.world_fact.is_connected(Callable(handler, "_on_world_sound")))
 		t.check(kind + " restores original listener", original.is_valid() and w.ctx.events.world_fact.is_connected(original))
 		w.free()
-	t.eq("seven natural and three shared family cue paths checked", t.checks + 1, 101)
+	t.check("seven natural, alternate forms and shared family cue paths checked", cases.size() == 12)
 	quit(t.verdict())
+
+
+func _check_mark(label: String, mark: Node3D, spec: Dictionary) -> void:
+	var meshes := mark.get_children().filter(func(child): return child is MeshInstance3D)
+	var shape_ok := not meshes.is_empty()
+	var color_ok := shape_ok
+	for mesh: MeshInstance3D in meshes:
+		var material := mesh.material_override as StandardMaterial3D
+		color_ok = color_ok and material != null and material.albedo_color == spec.color
+		match spec.shape:
+			"wave":
+				shape_ok = shape_ok and mesh.mesh is ArrayMesh
+				if mesh.mesh is ArrayMesh:
+					var vertices: PackedVector3Array = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+					var low := INF
+					var high := -INF
+					for vertex in vertices:
+						low = minf(low, vertex.y)
+						high = maxf(high, vertex.y)
+					shape_ok = shape_ok and high - low > 0.05
+			"cross": shape_ok = shape_ok and mesh.mesh is BoxMesh and meshes.size() == 2
+			"burst": shape_ok = shape_ok and mesh.mesh is SphereMesh
+			"ring": shape_ok = shape_ok and mesh.mesh is TorusMesh
+	t.check(label + " actual mesh follows WORLD_ROWS shape " + spec.shape, shape_ok)
+	t.check(label + " actual material follows WORLD_ROWS color", color_ok)
