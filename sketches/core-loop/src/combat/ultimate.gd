@@ -73,6 +73,7 @@ var beat_seconds := Callable()
 # A world rail entry near a point: Callable(point) -> {entry, to} or {}; the world wires it
 # when it has rails. Unwired, no rail path is offered.
 var rail_query := Callable()
+const CANNON_CONTACT_METER_SCALE := 0.5
 # ultimate_id -> row (see the header). P-C fills its own marked block.
 var _ult_rows := {
 	# --- P-C Sable ultimate ---
@@ -86,9 +87,9 @@ var _ult_rows := {
 	# --- P-C Tally ultimate ---
 	# --- end Tally ---
 	# --- P-C Cannon ultimate ---
-	"cannon_fire_mission": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
-	"cannon_creeping_barrage": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
-	"cannon_plate_mortar": {"target": _cannon_mortar_target, "tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing},
+	"cannon_fire_mission": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing, "contact_meter_scale": CANNON_CONTACT_METER_SCALE},
+	"cannon_creeping_barrage": {"tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing, "contact_meter_scale": CANNON_CONTACT_METER_SCALE},
+	"cannon_plate_mortar": {"target": _cannon_mortar_target, "tech": _cannon_tech, "peak": _cannon_peak, "landing": _cannon_landing, "contact_meter_scale": CANNON_CONTACT_METER_SCALE},
 	# --- end Cannon ---
 }
 # The last plan started, as drawn. Read only outside.
@@ -217,7 +218,7 @@ func _on_struck(enemy: Node3D, kind: String, _force: float) -> void:
 		if _clock - float(_contact_at.get(id, -INF)) < CONTACT_GAP:
 			return
 		_contact_at[id] = _clock
-		_feed("contact")
+		_feed("contact", float(_ult_rows.get(_ult_id(), {}).get("contact_meter_scale", 1.0)))
 	elif Weapons.BASE.has(kind):
 		_feed("weapon")
 
