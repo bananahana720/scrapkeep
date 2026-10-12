@@ -25,6 +25,7 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const Director := preload("res://src/world/event_director.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const MAP := "park_dam"
 const PARK := "res://src/world/park/park_dam.json"
@@ -100,6 +101,12 @@ func _run() -> void:
 			closed_cells.node_flags[eye_cell] &= ~ParkGraph.OPEN
 	var open_misses := pins(park, lines, graph, closed_cells)
 	t.check("planted Eye OPEN bit fails its graph assertion", open_misses.any(func(miss): return String(miss).begins_with("the_eye graph OPEN:")), str(open_misses))
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "training_wall_east":
+			row["size"][0] = 65.0
+	var wall_misses := pins(planted, lines, graph, cells)
+	t.check("planted old wall tip fails Kest landing clearance", wall_misses.any(func(miss): return String(miss).begins_with("training_wall_east Kest landing clearance:")), str(wall_misses))
 	quit(t.verdict())
 
 
@@ -168,6 +175,9 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary, cells: 
 	# KB9 runtime: no unstamped greybox box, and no anchor post near a line.
 	var places := {}
 	for row in park.get("park_rows", []):
+		# Kest seed 4, merged round-5 trace ticks 7580..7583: ground-only wall-tip strike.
+		if row["id"] == "training_wall_east" and ParkMap.footprint_contains(row, Vector2(54.66, 531.65), Tuning.RADIUS, Vector2(54.37, 531.97)):
+			out.append("training_wall_east Kest landing clearance: wall footprint meets the recorded ball-radius approach at [54.66,531.65] to [54.37,531.97]")
 		var recipe := String(row.get("recipe", ""))
 		if recipe.begins_with(ParkRecipes.GREYBOX) and not UNSTAMPED_OK.has(row["element"]) and String(row.get("stamp", "")) == "":
 			out.append("%s is a greybox %s with no stamp: KB9 builds it as a solid box" % [row["id"], row["element"]])
