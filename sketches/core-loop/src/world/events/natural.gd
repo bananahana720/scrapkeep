@@ -63,7 +63,10 @@ class WaterSurface:
 	var cells := {}
 	func height(point: Vector2) -> float:
 		var cell := Vector2i(floori(point.x / ParkTerrain.STEP), floori(point.y / ParkTerrain.STEP))
-		for k in cells.get(cell, []):
+		var faces: Array = []
+		for delta in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.UP, Vector2i(-1, -1)]:
+			faces.append_array(cells.get(cell + delta, []))
+		for k in faces:
 			var a := vertices[k]
 			var b := Vector2(vertices[k + 1].x - a.x, vertices[k + 1].z - a.z)
 			var c := Vector2(vertices[k + 2].x - a.x, vertices[k + 2].z - a.z)
@@ -303,6 +306,12 @@ func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(),
 						for point: Vector2 in [clipped[0], clipped[k], clipped[k + 1]]:
 							var f := (point - a) / ParkTerrain.STEP
 							var y: float = heights[0] + (heights[1] - heights[0]) * f.x + (heights[2] - heights[0]) * f.y if triangle[0] == a else heights[3] + (heights[2] - heights[3]) * (1.0 - f.x) + (heights[1] - heights[3]) * (1.0 - f.y)
+							if not water:
+								y = maxf(y, world.terrain.height(point.x, point.y))
+								if _overlay_map != null:
+									for id in world.terrain.overlays:
+										if _overlay_map.profiles.has(id):
+											y = maxf(y, _overlay_map.profiles[id].surface.height(point))
 							if offset.is_valid():
 								y += maxf(0.0, float(offset.call((point - centre).rotated(yaw), y)))
 							face.append(Vector3(point.x, y, point.y))
