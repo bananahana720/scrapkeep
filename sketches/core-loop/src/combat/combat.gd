@@ -2963,10 +2963,18 @@ func _tick_sentry(delta: float) -> void:
 func _step_devices(delta: float) -> void:
 	if not _sentry.is_empty():
 		devices.move(int(_sentry.get("id", 0)), _sentry["at"])
+	for charge in ultimate.caught_charges():
+		devices.move(int(charge.get("device_id", 0)), charge["pos"])
+	for stake in ultimate.stakes.nodes:
+		devices.move(stake.device_id, stake.global_position)
 	for gone in devices.step(delta, ctx.player.ball_position()):
 		if gone["kind"] == Devices.SENTRY:
 			if int(_sentry.get("id", 0)) == int(gone["id"]):
 				_sentry = {}
+		elif gone["kind"] == Devices.SABLE_STAKE:
+			ultimate.stakes.recall(int(gone["id"]))
+		elif gone["kind"] in [Devices.KEST_MINE, Devices.KEST_RAID]:
+			ultimate.payloads.recall(int(gone["id"]))
 		else:
 			sticky.recall(int(gone["id"]))
 

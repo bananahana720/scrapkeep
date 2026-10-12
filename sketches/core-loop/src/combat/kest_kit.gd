@@ -4,6 +4,7 @@ extends "res://src/combat/ultimate.gd"
 # Kest supplies those legs here; every other pilot retains Ultimate's runner.
 const Sticky := preload("res://src/combat/sticky.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Devices := preload("res://src/core/devices.gd")
 
 const IDS := ["windhover", "air_raid", "minelayer"]
 const CABLE_SPEED := 60.0
@@ -13,8 +14,8 @@ const BODY_FUSE := 2.0
 const WALL_FUSE := 6.0
 const HOVER_HEIGHT := 14.0
 const HOVER_RADIUS := 15.0
-const MINE_CAP := 10
-const MINE_FUSE := 6.0
+const MINE_CAP := Devices.KEST_MINE_CAP
+const MINE_FUSE := Devices.ROWS[Devices.KEST_MINE]["lifetime"]
 const MINE_REACH := 2.0
 const NOTES := [62, 57, 53]
 
@@ -125,6 +126,8 @@ func flush_discoveries() -> void:
 
 func clear_payloads() -> void:
 	if payloads != null:
+		for charge in payloads.charges:
+			combat.devices.remove(int(charge.get("device_id", 0)))
 		payloads.clear()
 	cable = {}
 	_loaded_cable = false
@@ -194,7 +197,7 @@ func _end_cable() -> void:
 			# A cable ending during travel still pays once at its committed anchor.
 			c["pos"] = c["_anchor"]
 			c["damage"] = CABLE_DAMAGE * ctx.player.chain.multiplier()
-		_detonate_payload(payloads.take(c))
+		_detonate_payload(_take_payload(c))
 
 
 func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
@@ -405,7 +408,20 @@ func _tag(charge: Dictionary) -> void:
 
 
 func _drop(at: Vector3, damage: float, radius: float) -> Dictionary:
+	var kind := Devices.KEST_MINE if _id == "minelayer" else Devices.KEST_RAID
+	var placed: Dictionary = combat.devices.deploy(kind, at)
+	for id in placed["evicted"]:
+		for old in payloads.charges.duplicate():
+			if int(old.get("device_id", 0)) != int(id):
+				continue
+			if kind == Devices.KEST_MINE:
+				_detonate_payload(_take_payload(old))
+			else:
+				_take_payload(old)
+	if int(placed["id"]) == 0:
+		return {}
 	var c: Dictionary = payloads.drop(at, damage, radius, INF, INF, MINE_REACH, combat._clock)
+	c["device_id"] = int(placed["id"])
 	_tag(c)
 	c["_inert"] = true
 	return c
@@ -425,7 +441,7 @@ func _bound_mines() -> void:
 	while _mines.size() > MINE_CAP:
 		var oldest: Dictionary = _mines.pop_front()
 		oldest["_inert"] = false
-		_detonate_payload(payloads.take(oldest))
+		_detonate_payload(_take_payload(oldest))
 
 
 func peak(at: Vector3) -> void:
@@ -460,7 +476,7 @@ func landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	if _id == "air_raid":
 		if payloads.charges.has(_heavy):
 			_heavy["_inert"] = false
-			_detonate_payload(payloads.take(_heavy))
+			_detonate_payload(_take_payload(_heavy))
 		var eighth := _beat_len * 0.5
 		var first := (floorf(RECOVER_SECONDS / eighth) + 1.0) * eighth
 		for i in _groups.size():
@@ -515,7 +531,7 @@ func _end(reason: String, refunded: bool) -> void:
 	if _id in IDS:
 		for c in payloads.charges.duplicate():
 			if c.get("_inert", false):
-				payloads.take(c)
+				_take_payload(c)
 		_groups = []
 		_mines = []
 		combat.cloak_left = Weapons.CLOAK_SECONDS
@@ -548,13 +564,14 @@ func _step_payloads(delta: float) -> void:
 		for c in roll["group"]:
 			if payloads.charges.has(c):
 				c["_inert"] = false
-				_detonate_payload(payloads.take(c))
+				_detonate_payload(_take_payload(c))
 		roll_log.append({"at": roll["at"], "index": roll["index"]})
 		var audio = ctx.root.presentation.audio if ctx.root.get("presentation") != null else null
 		if audio != null:
 			audio.kest_roll(NOTES[posmod(roll_log.size() - 1, NOTES.size())])
 		_rolls.erase(roll)
 	for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group("enemy")):
+		combat.devices.remove(int(c.get("device_id", 0)))
 		_detonate_payload(c)
 	if _id == "windhover" and _cast.get("landed", false):
 		_check_grant(_cast, ctx.player.ball_position())
@@ -568,7 +585,12 @@ func take_charge(c: Dictionary) -> Dictionary:
 	if c == cable:
 		cable = {}
 		ctx.player.indicator.clear("kest_cable")
-	return payloads.take(c)
+	return _take_payload(c)
+
+
+func _take_payload(charge: Dictionary) -> Dictionary:
+	combat.devices.remove(int(charge.get("device_id", 0)))
+	return payloads.take(charge)
 
 
 func kest_cage_state() -> Dictionary:

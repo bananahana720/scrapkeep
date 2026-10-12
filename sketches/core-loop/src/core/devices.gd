@@ -4,7 +4,8 @@ const Weapons := preload("res://src/combat/weapons.gd")
 
 # Device caps (SR8, BIBLE.md "Devices and one main companion"). A quick autonomous device
 # is something a pilot leaves in the world to act on its own: Kest's thrown sticky charges
-# and dropped mini charges (sticky.gd), Sable's Sentry Post (combat.gd). Each kind has one
+# and dropped mini charges (sticky.gd), ultimate mines and raid charges (kest_kit.gd),
+# Sable's Sentry Post (combat.gd) and Outpost stakes (stakes.gd). Each kind has one
 # row: a cap on how many stand at once, a refill time before a slot a device left comes
 # back, and a leash: a device further than leash_m from its owner for recall_after s is
 # recalled, leaving without acting. A destroyed, expired or recalled device leaves the
@@ -19,6 +20,11 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # a spawner refill, recall by the leash and removal on destruction. The numbers below are
 # Scrapkeep start values for the lab, not RoR2's.
 
+# Start value (BIBLE.md:568 leaves capacity open): retain the landed Kest weapon default.
+const STICKY_CAP := Weapons.STICKY_MAX_LIVE
+# Start value (BIBLE.md:568 leaves resource rules open): these quick devices reuse their
+# slot immediately; the weapon/special cooldown and ultimate meter still gate deployment.
+const QUICK_REFILL := 0.0
 # Start value (comps/ror2/companions.md, mines "else 4"): minis stand at most this many;
 # above one demo slam's widest scatter (Demo Expert's mini_count 5) so a slam is never cut.
 const MINI_CAP := 8
@@ -28,25 +34,48 @@ const SENTRY_CAP := 1
 # Start value (comps/ror2/companions.md, the 30 s spawner, shortened for a quick device):
 # seconds before an expired, destroyed or recalled sentry's slot comes back.
 const SENTRY_REFILL := 2.0
+# Start value (BIBLE.md:568; landed kest_kit.gd MINE_CAP): retain ten Minelayer mines.
+const KEST_MINE_CAP := 10
+# Start value (BIBLE.md:568; comps/ror2/companions.md per-kind slot shape): a bounded
+# carpet of 64 keeps a default nine-beat, four-charge Air Raid plus its heavy charge.
+const KEST_RAID_CAP := 64
+# Start value (BIBLE.md:568; landed stakes.gd CAP): retain eleven route anchors/sentries.
+const SABLE_STAKE_CAP := 11
+# Start value (BIBLE.md:568; landed kest_kit.gd MINE_FUSE): six seconds after landing.
+const KEST_MINE_LIFETIME := 6.0
+# Start value (BIBLE.md:568; landed stakes.gd LIFE): six seconds after arming at landing.
+const SABLE_STAKE_LIFETIME := 6.0
+# Start value (BIBLE.md:568; landed stakes.gd SENTRY_SECONDS): four seconds of turret fire.
+const SABLE_SENTRY_SECONDS := 4.0
 # Start value (comps/ror2/companions.md, the 400-unit leash and 10 s wait, scaled to
 # Scrapkeep): twice the sentry's reach (Weapons.SENTRY_REACH), past which a device can no
 # longer help where its owner is, held for DEVICE_RECALL s.
 const DEVICE_LEASH := 60.0
+# Start value (BIBLE.md:568; comps/ror2/companions.md leash delay): recall after one
+# continuous second beyond the range; independent of SR7's following companion leash.
 const DEVICE_RECALL := 1.0
 
 const STICKY := "sticky"
 const MINI := "mini"
 const SENTRY := "sentry"
-const KINDS := [STICKY, MINI, SENTRY]
+const KEST_MINE := "kest_mine"
+const KEST_RAID := "kest_raid"
+const SABLE_STAKE := "sable_stake"
+const KINDS := [STICKY, MINI, SENTRY, KEST_MINE, KEST_RAID, SABLE_STAKE]
 const REASONS := ["destroyed", "expired", "recalled", "evicted"]
 
 # cap_knob names the kit knob that sets the cap live (combat calls set_cap); the row's
 # cap is the knob's default. Thrown charges keep Kest's own cap and refill at once.
 const ROWS := {
-	STICKY: {"cap": Weapons.STICKY_MAX_LIVE, "cap_knob": "sticky_max_live", "refill": 0.0,
+	STICKY: {"cap": STICKY_CAP, "cap_knob": "sticky_max_live", "refill": QUICK_REFILL,
 		"leash_m": DEVICE_LEASH, "recall_after": DEVICE_RECALL},
-	MINI: {"cap": MINI_CAP, "refill": 0.0, "leash_m": DEVICE_LEASH, "recall_after": DEVICE_RECALL},
+	MINI: {"cap": MINI_CAP, "refill": QUICK_REFILL, "leash_m": DEVICE_LEASH, "recall_after": DEVICE_RECALL},
 	SENTRY: {"cap": SENTRY_CAP, "refill": SENTRY_REFILL, "leash_m": DEVICE_LEASH, "recall_after": DEVICE_RECALL},
+	KEST_MINE: {"cap": KEST_MINE_CAP, "refill": QUICK_REFILL, "leash_m": DEVICE_LEASH,
+		"recall_after": DEVICE_RECALL, "lifetime": KEST_MINE_LIFETIME},
+	KEST_RAID: {"cap": KEST_RAID_CAP, "refill": QUICK_REFILL, "leash_m": DEVICE_LEASH, "recall_after": DEVICE_RECALL},
+	SABLE_STAKE: {"cap": SABLE_STAKE_CAP, "refill": QUICK_REFILL, "leash_m": DEVICE_LEASH,
+		"recall_after": DEVICE_RECALL, "lifetime": SABLE_STAKE_LIFETIME, "sentry_seconds": SABLE_SENTRY_SECONDS},
 }
 
 # kind -> [{id, at, far}], oldest first.
