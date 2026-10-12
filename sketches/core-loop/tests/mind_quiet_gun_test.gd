@@ -1,6 +1,7 @@
 extends "res://tests/cannon_ultimate_test.gd"
+# 2026-10-12 (PC-CANNON): the answer must follow a non-zero live music key.
 # 2026-10-11 (PC-CANNON): real Mind death, fallback, arena cleanup, notes and settle-once grants.
-const EXPECTED_QUIET_CHECKS := 46
+const EXPECTED_QUIET_CHECKS := 47
 const Mind := preload("res://src/boss/mind.gd")
 const QuietGun := preload("res://src/presentation/quiet_gun.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -83,6 +84,8 @@ func _cases() -> void:
 	audio._cannon_queue.clear()
 	audio.cannon_log.clear()
 	audio._motif = "cannon"
+	audio.bake_now()
+	audio.engine.key = 3
 	_game.events.mind_adapted.emit("slam", "ab_cannon_smash")
 	var due: float = audio._cannon_queue.back()["due"]
 	var wait: float = SfxBank.stream("mind_cannon").get_length() / Harmony.ratio(audio.live_key()) + float(audio.engine.beat_len()) / Harmony.RATE
@@ -95,6 +98,7 @@ func _cases() -> void:
 	_t.eq("one answer after the quote", audio.cannon_log.size(), 1)
 	_t.eq("the answer is the right motif", audio.cannon_log.back()["notes"], [59, 64, 67, 74])
 	_t.near("answer trim", audio.cannon_log.back()["db"], -10.0)
+	_t.near("Cannon answer follows the live key", audio.cue_log.back()[4], Harmony.ratio(3))
 	audio._cannon_threat_at = audio.clock
 	var beat_delay: float = float(audio.engine.next_beat() - audio.engine.clock) / Harmony.RATE
 	_t.check("a fresh warning moves the quiet note one beat", audio._cannon_beat_delay() >= beat_delay + float(audio.engine.beat_len()) / Harmony.RATE - 0.0001)
