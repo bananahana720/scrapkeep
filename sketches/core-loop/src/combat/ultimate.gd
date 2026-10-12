@@ -754,8 +754,8 @@ func _cannon_target(centre: Vector3, aim: Vector3, reach: float) -> Vector3:
 			continue
 		var to: Vector3 = enemy.global_position - centre
 		var flat := Vector3(to.x, 0.0, to.z)
-		var heading := Vector3(aim.x, 0.0, aim.z)
-		if flat.length() <= best and (heading.length() < 0.01 or flat.length() < 0.01 or heading.angle_to(flat) <= deg_to_rad(VOLLEY_BIAS_DEG)):
+		var sight: Vector3 = enemy.global_position - ctx.player.ball_position()
+		if flat.length() <= best and (aim.length() < 0.01 or sight.length() < 0.01 or aim.angle_to(sight) <= deg_to_rad(VOLLEY_BIAS_DEG)):
 			best = flat.length()
 			found = enemy.global_position
 	return found
