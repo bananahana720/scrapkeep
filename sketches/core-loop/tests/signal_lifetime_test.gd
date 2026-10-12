@@ -137,20 +137,40 @@ func _audio(loose: bool) -> void:
 func _owner_exit() -> void:
 	var events := Events.new()
 	var owner := Node.new()
+	var other_owner := Node.new()
 	root.add_child(owner)
-	var calls := [0]
+	root.add_child(other_owner)
+	var calls := [0, 0, 0]
 	var callback := func(_reason: String):
 		calls[0] += 1
 		owner.set_meta("heard", true)
+	var second_callback := func(_reason: String):
+		calls[1] += 1
+		owner.set_meta("heard_second", true)
+	var other_callback := func(_reason: String):
+		calls[2] += 1
+		other_owner.set_meta("heard", true)
 	SignalLifetime.listen(owner, events.stage_content_cleared, callback)
 	SignalLifetime.listen(owner, events.stage_content_cleared, callback)
+	SignalLifetime.listen(owner, events.stage_content_cleared, second_callback)
+	SignalLifetime.listen(other_owner, events.stage_content_cleared, other_callback)
 	events.stage_content_cleared.emit("alive")
-	_report("helper keeps one live connection", calls[0] == 1, "calls=%d want=1" % calls[0])
+	_report("helper keeps three distinct listeners", calls == [1, 1, 1] and events.stage_content_cleared.get_connections().size() == 3,
+		"calls=%s want=[1, 1, 1] connections=%d want=3" % [calls, events.stage_content_cleared.get_connections().size()])
 	root.remove_child(owner)
+	_report("owner exit disconnects only its two callbacks",
+		not events.stage_content_cleared.is_connected(callback) and not events.stage_content_cleared.is_connected(second_callback)
+		and events.stage_content_cleared.is_connected(other_callback),
+		"first=%s second=%s other=%s want=false,false,true" % [events.stage_content_cleared.is_connected(callback), events.stage_content_cleared.is_connected(second_callback), events.stage_content_cleared.is_connected(other_callback)])
 	events.stage_content_cleared.emit("detached")
-	_report("owner exits before it is freed", calls[0] == 1 and events.stage_content_cleared.get_connections().is_empty(),
-		"calls=%d connections=%d" % [calls[0], events.stage_content_cleared.get_connections().size()])
+	_report("other owner listener still fires", calls == [1, 1, 2], "calls=%s want=[1, 1, 2]" % [calls])
 	owner.free()
+	root.remove_child(other_owner)
+	_report("second owner exit disconnects its callback", not events.stage_content_cleared.is_connected(other_callback),
+		"other=%s want=false" % events.stage_content_cleared.is_connected(other_callback))
+	events.stage_content_cleared.emit("both detached")
+	_report("both owners stop receiving after exit", calls == [1, 1, 2], "calls=%s want=[1, 1, 2]" % [calls])
+	other_owner.free()
 	events.free()
 	events = Events.new()
 	owner = Node.new()
