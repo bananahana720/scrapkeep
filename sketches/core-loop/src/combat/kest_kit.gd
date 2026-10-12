@@ -81,7 +81,9 @@ func register_kest() -> void:
 	ctx.events.world_entered.connect(homecoming)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear_payloads())
 	ctx.events.player_died.connect(clear_payloads)
-	ctx.events.run_started.connect(func(_class_id: String): clear_payloads())
+	ctx.events.run_started.connect(func(_class_id: String):
+		clear_payloads()
+		_cards_pending = {})
 
 
 static func targets_for_class(heft_class: int) -> int:
@@ -131,7 +133,6 @@ func clear_payloads() -> void:
 	_mines = []
 	_rolls = []
 	_cast = {}
-	_cards_pending = {}
 	ctx.player.indicator.clear("kest_caught")
 	ctx.player.indicator.clear("kest_cable")
 
@@ -523,6 +524,7 @@ func _end(reason: String, refunded: bool) -> void:
 
 func step(delta: float) -> void:
 	if payloads != null:
+		flush_discoveries()
 		if ctx.flow.in_play():
 			_step_payloads(delta)
 		var gauge = ctx.player.abilities.gauge("special")
@@ -532,7 +534,6 @@ func step(delta: float) -> void:
 
 
 func _step_payloads(delta: float) -> void:
-	flush_discoveries()
 	if not cable.is_empty() and payloads.charges.has(cable):
 		if not ctx.player.kit.hooked:
 			_end_cable()

@@ -79,6 +79,7 @@ func _flush_cards(frames := 3) -> void:
 func _fresh() -> void:
 	_ult._abort("stage")
 	_ult.clear_payloads()
+	_ult._cards_pending = {}
 	_ult._id = ""
 	_combat.sticky.clear()
 	_player.kit.drop_line("reset")
@@ -197,6 +198,7 @@ func _cases() -> void:
 	_ult._step_payloads(DT)
 	_t.eq("wall let-go blasts once", _blasts.size(), 1)
 	_t.check("Space at 3 m emits rocket jump 22 to 30", _rockets.size() == 1 and _rockets[0][1] >= 22.0 and _rockets[0][1] <= 30.0)
+	_ult.clear_payloads()
 	await _flush_cards()
 	_t.check("Blast Vault discovery fired from this blast", _game.ctx.codex.known("kest_blast_vault"))
 
