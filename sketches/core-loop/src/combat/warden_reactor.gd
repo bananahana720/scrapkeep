@@ -155,7 +155,19 @@ func _ride(warden, delta: float) -> void:
 	var planar := Vector3(v.x, 0.0, v.z)
 	var closing := -planar.dot(sheet_dir)
 	var core: float = warden.family_point_at().y
-	if not in_sheet(warden, ball) or closing < RIDE_MIN_SPEED or ball.y >= core:
+	var mounted: bool = warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face"
+	if mounted:
+		var point: Vector3 = warden.family_point_at()
+		var touching: bool = in_sheet(warden, ball) and closing >= RIDE_MIN_SPEED \
+				and ball.distance_to(point) <= warden.FAMILY_POINT_RADIUS + Tuning.RADIUS
+		var paid: bool = warden.get_meta("reactor_sheet_contact", false)
+		warden.set_meta("reactor_sheet_contact", touching)
+		if touching:
+			if not paid and target.has_method("_on_enemy_touched"):
+				target._on_enemy_touched(warden, (ball - point).normalized())
+			riding = false
+			return
+	if not in_sheet(warden, ball) or closing < RIDE_MIN_SPEED or (not mounted and ball.y >= core):
 		riding = false
 		return
 	if not riding:
@@ -168,8 +180,8 @@ func _ride(warden, delta: float) -> void:
 	var flat := Vector3(ball.x - warden.home.x, 0.0, ball.z - warden.home.z)
 	var along := flat.dot(sheet_dir)
 	var height := _profile(warden, ball, along)
-	# The profile's climb rate at this closing speed, plus a pull onto it; never a push down
-	# (gravity does that), so a ball that jumps off the water keeps its own arc.
+	# Follow the sheet's climb rate and height. The mounted ride hands its velocity to the
+	# next solver step; an inverse-delta force here feeds back a stale body velocity.
 	var t := clampf((along - SHEET_TOP) / (SHEET_RUN - SHEET_TOP), 0.0, 1.0)
 	var rise := 0.0
 	if along > SHEET_TOP:
@@ -183,7 +195,11 @@ func _ride(warden, delta: float) -> void:
 	var speed := planar.length()
 	if speed > 0.01 and speed < _entry_speed:
 		push = planar / speed * (_entry_speed - speed) / delta
-	target.add_external_accel(Vector3(push.x, maxf(up, 0.0), push.z))
+	if mounted and target.has_method("set_velocity_now"):
+		var held: Vector3 = planar.normalized() * maxf(speed, _entry_speed)
+		target.set_velocity_now(Vector3(held.x, want_vy, held.z))
+	else:
+		target.add_external_accel(Vector3(push.x, maxf(up, 0.0), push.z))
 
 
 # A plain water slab over the footprint, in the ride colour; collides with nothing.
