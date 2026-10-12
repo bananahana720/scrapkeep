@@ -1,6 +1,6 @@
 # The Dig: the sinkhole (`park_sinkhole`, stage 4)
 
-Stage 4 greybox round 2, 12 October 2026. Fresh deterministic measurements give 0 terrain stops and 0 classified pack stops across 56 runs. The win proof and check receipts are in the round-2 writer report. Dressing remains a separate unit.
+Stage 4 greybox round 3, 12 October 2026. Round 2 failed determinism qualification and omitted a reproduced Tally enemy stop. The candidate tool still fails the Sable batch/solo prerequisite. Section 9 records both results and the input-equality receipt. Dressing remains a separate unit.
 
 Read with [PARK.md](../../PARK.md) (the tables and bands), [TADR-011](../../../../../adr/TADR-011-park-terrain-and-warden-kinds.md) (the decision), the Warden kind sheet [wardens/swarm.md](../../wardens/swarm.md) and the stage 3 page [3-park_pit.md](3-park_pit.md), which defines bench, winze, collar and waymark. Paths are under `sketches/core-loop/` unless they start with `adr/`, `docs/` or `BIBLE.md`.
 
@@ -17,7 +17,7 @@ Terms used once and kept: a **lava tube** is a cave a lava river left when its c
 | Weather | cave mist always; a monsoon cell from clock tier 2 |
 | Landmark | the sinkhole, 250 m across and 120 m deep at (0, 350), open to the sky, with a uranium-glass green (#9dff3c) light column 140 m tall (PARK.md:377) |
 | Park | 1.6 km square; a basalt plateau with a cinder cone in the north, cut by lava tubes, mine drifts and flooded caverns |
-| Lines | Six pilot paths 1974.8 to 2209.7 m, Warden arrival medians 69.96 to 103.11 s; floor 2030.7 m, 100.36 s (section 9) |
+| Historical round-2 lines, unqualified | Six pilot paths 1974.8 to 2209.7 m, Warden arrival medians 69.96 to 103.11 s; floor 2030.7 m, 100.36 s (section 9) |
 | Roof share | 50% or more of every measured line runs under a roof (PARK.md:583 asks for 40%) |
 | Draft size | 29 row families that expand to 60 park rows, 5 events, 5 homes, 8 contraptions, 2 weather rows, 3 activities, 17 routes |
 
@@ -189,7 +189,7 @@ Five rows, all four families, as shipped in `src/world/park/park_sinkhole.json` 
 
 Advantage and counter text is in each row of the park file. `drift_drill_crews` moved from `east_drift_2` to `east_drift_3`, the drift's straight stretch on the shipped polyline. Every pack is the stage's own (`alpha_defs.gd:96-99`) or the director's ancient pack for the stage's ancient, `swarm_remnant` (`alpha_defs.gd:92`).
 
-**The runtime does not read `home_rows` on the selected head.** The line encounters come from the director, which starts at 4 s and places 60% of spawns 60 to 90 m ahead within 35 degrees of the heading (`src/world/director.gd`). The older allocation-sensitive floor diagnostic is historical. In the deterministic round-2 baseline the floor has zero stops on every seed; all seven Sable stops touch only the baked ground. Moving the stamped edge wall outward addresses those terrain contacts. The selected measurements and stop classification are in section 9 and the traversal table.
+**Historical round-2 runtime.** It did not read `home_rows`. The line encounters come from the director, which starts at 4 s and places 60% of spawns 60 to 90 m ahead within 35 degrees of the heading (`src/world/director.gd`). The older allocation-sensitive floor diagnostic is historical. In the unqualified round-2 baseline the floor has zero stops on every seed; all seven Sable stops touch only the baked ground. Moving the stamped edge wall outward addresses those terrain contacts. The current merged runtime reads homes through KE6. Section 9 and the traversal table own the current measurements and stop classification.
 
 ## 7. `contraption_rows` (shipped)
 
@@ -255,7 +255,17 @@ Both rows carry `handling: "none"`. The monsoon changes the view and the sound: 
 
 Every line passes `drop_in`, `tube_mouth`, `great_room` and `landmark` in order. The pilot lines remain byte-identical to the round-1 baseline. Kest takes the channel's right wall and Tarn its left wall over the last six points.
 
-**Round 2, deterministic measurements after the wall move.** The only geometry change moves `lava_channel_post_19i` from (-167.7,-498.0) to (-160.3,-494.9), 8.023 m outward. Its 20 m plateau stamp made the seven traced baseline stops. Seven untraced eight-seed batches use the exported TRAV-DET tool on the candidate-aligned greybox. They give 0 terrain stops and 0 classified pack stops across 56 runs. Each stop has a solo traced rerun that agrees with its untraced result. The stage-wide distinct-lines band remains unqualified: Rivet and Kest traced batches differ from their untraced results under the required exported tool. The pilot rows and floor row pass. The 13-band table and stop classes are in [the traversal table](../traversal/park_sinkhole.md). The floor is judged only on Warden arrival and dead stops; its other metrics are reported.
+Round 2 failed determinism qualification. The gate measured Sable seed 7 at 69.96 s and 6300 ticks in the {1,7} batch, versus 69.84 s and 6289 ticks alone, with ten differing result fields. Rivet, Kest and Tarn traced/untraced results also differed. Those measurements and the older tables are historical evidence, not current qualification.
+
+The same gate reproduced one Tally seed-1 pack stop at [-621.2, -700.3], 7.10 s. Contact was lamp_swarm from deep_crew, placed by the director at 5.022 s through world.gd:505 and combat.gd:488. The [saved equality receipt](/home/andrew/scratch/w13/cgate/kd4-sinkhole-r2/provenance-review.json) shows complete result equality between the batch, plain solo and observer solo. Ruling 20 exempts this demonstrated enemy contact from the terrain dead-stop band. It does not repair the broader measuring-tool disagreement.
+
+```text
+traversal_line: tally seed 1 -> engaged, flow share 0.863, dead stops 1, anchor gap 14.0 m, to Warden 97.12 s, path 2057.8 m, rides ["kicker_launch", "ride_grapple_line", "ride_chute"], uphill 51.9 m
+```
+
+Round 3 merges candidate b1cc003, including TRAV-DET 9467de7, KE6 84b17e6 and REWARD-PARK 13e7967. The round-3 prerequisite failed again: Sable seed 7 takes 69.13 s and 6225 ticks in the {1,7} batch, versus 69.19 s and 6231 ticks alone. Ten result fields differ. [The input-equality receipt](/home/andrew/scratch/w13/sol/kd4-sinkhole-r3/input-equality.json) confirms identical stage inputs and unchanged runtime sources. [The result comparison](/home/andrew/scratch/w13/sol/kd4-sinkhole-r3/sable-agreement.json) lists every difference. Ruling 24 stops qualification here and returns TRAV-DET to the coordinator. The seven eight-seed batches and distinct-lines captures were not started. There is no qualified current table or floor cap. No geometry or pilot line changes are made for the historical pack stop.
+
+### Historical round-2 writer table, superseded
 
 | Line | Class | Path median | Ratio median | Warden median / worst | Segment medians | Route |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -379,7 +389,7 @@ The west roof cave-in, frame 4 of the draft, fires at 45 s off every measured li
 7. The lines share the lava channel for nearly half their length, so Kest rides its right wall where it runs straight and Tarn its left wall over the channel's last six points, from (-190, -479) to the tube mouth (fix round: Rivet's left-wall points cost it about 3 s over the first segment once the posts were built, a 45.5 s median against the 45 s band, so Rivet now rides the middle). On the lines file's polylines Rivet, Kest and Tarn are mutually distinct (at most 0.41 of a line's 2 m samples within 8 m of another's). Offsetting Sable too put it into the channel's edge posts at the bends, so Sable keeps the middle.
 8. Traced dead stops removed by moving rows, not bands: the tube-mouth fork pillar `main_tube_upper_fill_25` to (17, -309) and the bend post `main_tube_upper_post_2i` to (30, -305.5), off the inside of Sable's line; `west_breakthrough_10` shortened to 20 m at (-45, 283.5), so a ball leaving the main lower tube onto the ring lands on flat ground, not across that wash's bank.
 9. Win proof (fix round, 2026-10-12): the completionist bot breaks the swarm brood and clears the stage on all three seeds (`bot_run.gd --policy=completionist --seeds=1,2,3 --table=park --from-stage=4 --stages=4`): engaged at 122.2, 125.1 and 113.0 s, broken at 166.8, 181.9 and 172.5 s, outcome `stages_done`. Before the fix it stalled at its 240 s limit because its straight approach from the great room wedged on the filler island at the ring (0, 255) for two minutes; those fillers are gone (section 4). It enters all three pockets and finishes only the camp: `tools/bot_driver.gd:178` gives each pocket 40 s from the first frame it is the target, and the bot targets the cache from the drop-in, 760 m away (traced seed 2: `activity cracked_cache runup` from t=2 s at (-667, -760), dropped at t=41 s at (-224, -552)), then chases the bounty's brute from the upper tubes until t=80 s. The pockets are reachable (graph routes `east_chamber_spur` and `west_chamber_spur` connected); the bot's clock, not the chambers, ends them. The skipper bot also breaks the brood on all three seeds (greybox round).
-10. Round 2 supersedes the allocation-sensitive round-1 seed table with the exported deterministic traversal tool. The fresh batch measures 0 terrain stops and 0 classified pack stops across 56 runs. Solo traces classify the stops by contact. The traversal table records the current metrics, runtime line separation and pack follow-ups; dressing remains a separate unit.
+10. Round 2 failed determinism qualification. Section 9 records the omitted Tally pack contact and the merged-head replacement measurements. Earlier tables are historical evidence; dressing remains separate.
 
 ## Appendix: the shipped park file
 

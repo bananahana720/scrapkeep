@@ -1,8 +1,8 @@
 # Traversal bands: park_sinkhole (stage 4)
 
-PARK.md section 8 bands, measured with `tools/traversal_line.gd` (KB7, with KB7b's park ride-fact set and graph access) on the park table, stage 4, seeds 1 to 8 per line, `--fixed-fps 90`. Each pass has its own dated table (R8). The coordinator's index is TRAVERSAL-PARK.md.
+Round 3 is blocked by failed Sable batch/solo result equality on the merged candidate tool. All tables before the round-3 section are historical and superseded. Round 2 failed determinism qualification, as disclosed below.
 
-## Greybox pass, fix round, 2026-10-12 (KD4, on 3f6a780 over b0e4490)
+## Historical greybox pass, fix round, 2026-10-12 (KD4, on 3f6a780 over b0e4490)
 
 Park file `src/world/park/park_sinkhole.json`, lines `tools/park_lines/park_sinkhole.json`, bake and graph in `assets/park/park_sinkhole/` (this commit). This table replaces the greybox table of 2026-10-11, which came from `--trace` runs: on this head a traced run and an untraced run of the same seed can differ (seed 1 of the floor line: 0 dead stops traced, 2 untraced, at the same place), because the director's enemies are sensitive to what else the process allocates. Every number below is from the brief's command with no `--trace`; traced runs are diagnostics only.
 
@@ -136,7 +136,7 @@ Dead stops and reach, per line:
 - largest mutually distinct set: 3 ['rivet', 'kest', 'tarn']
 
 
-## Sol continuation, 2026-10-12
+## Historical Sol continuation, 2026-10-12
 
 Selected geometry restores the exact merged-baseline park bytes. The complete 56-run merged baseline is the selected artifact's traversal receipt. Two passage reworks were tested and discarded because they stopped more Sable seeds. No traced run enters these tables. The distinct-lines tick measurement remains unavailable in the untraced tool.
 
@@ -220,7 +220,7 @@ Stop coordinates from untraced runs:
 
 Only Sable was remeasured on this discarded geometry. The other lines are not measured in this table.
 
-## Sol round 2, 2026-10-12
+## Historical Sol round 2, 2026-10-12
 
 ### Baseline before the wall move
 
@@ -282,4 +282,16 @@ Values are median / worst seed. Median-defined bands retain the PARK.md median r
 | --- | --- | --- | --- | --- | --- |
 | all | 1 to 8 | - | - | none | zero raw dead stops across the selected 56 runs |
 
-Earlier tables remain historical receipts. This round's merged-head batch table and traced classifications own the current verdict. No dressed pass was started.
+The round-2 writer tables above are superseded and unqualified. The gate found an omitted Tally pack stop, differing medians and failed result equality. The correction below records that evidence.
+
+## Round-2 gate correction and round-3 qualification
+
+Round 2 failed determinism qualification. The gate measured Sable seed 7 at 69.96 s and 6300 ticks in the {1,7} batch, versus 69.84 s and 6289 ticks alone, with ten differing result fields. Rivet, Kest and Tarn traced/untraced results also differed. Those measurements and the older tables are historical evidence, not current qualification.
+
+The same gate reproduced one Tally seed-1 pack stop at [-621.2, -700.3], 7.10 s. Contact was lamp_swarm from deep_crew, placed by the director at 5.022 s through world.gd:505 and combat.gd:488. The [saved equality receipt](/home/andrew/scratch/w13/cgate/kd4-sinkhole-r2/provenance-review.json) shows complete result equality between the batch, plain solo and observer solo. Ruling 20 exempts this demonstrated enemy contact from the terrain dead-stop band. It does not repair the broader measuring-tool disagreement.
+
+```text
+traversal_line: tally seed 1 -> engaged, flow share 0.863, dead stops 1, anchor gap 14.0 m, to Warden 97.12 s, path 2057.8 m, rides ["kicker_launch", "ride_grapple_line", "ride_chute"], uphill 51.9 m
+```
+
+Round 3 merges candidate b1cc003, including TRAV-DET 9467de7, KE6 84b17e6 and REWARD-PARK 13e7967. The round-3 prerequisite failed again: Sable seed 7 takes 69.13 s and 6225 ticks in the {1,7} batch, versus 69.19 s and 6231 ticks alone. Ten result fields differ. [The input-equality receipt](/home/andrew/scratch/w13/sol/kd4-sinkhole-r3/input-equality.json) confirms identical stage inputs and unchanged runtime sources. [The result comparison](/home/andrew/scratch/w13/sol/kd4-sinkhole-r3/sable-agreement.json) lists every difference. Ruling 24 stops qualification here and returns TRAV-DET to the coordinator. The seven eight-seed batches and distinct-lines captures were not started. There is no qualified current table or floor cap. No geometry or pilot line changes are made for the historical pack stop.
