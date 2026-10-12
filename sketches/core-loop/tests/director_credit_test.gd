@@ -201,8 +201,7 @@ func _sweeps() -> void:
 						integral += H * cards.I0 * (1.0 + cards.K * dial)
 					var due: Array = d.advance(H, live.size())
 					for _spawn in due:
-						# Hold the first crowd until minute 15, then run a deterministic lifetime arm.
-						live.append(maxf(900.0, time + 18.0 + seed_value % 7))
+						live.append(time + 18.0 + seed_value % 7)
 					peak = maxi(peak, live.size())
 					max_reserved = maxi(max_reserved, live.size() + d.arrivals.size())
 				_t.check("seed %d stage %d %s hard cap 24 including rings" % [seed_value, row.stage, mode], max_reserved <= 24, "peak=%d reserved=%d" % [peak, max_reserved])
