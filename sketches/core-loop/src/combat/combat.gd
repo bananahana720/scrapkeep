@@ -2625,7 +2625,7 @@ func _densest_knot(ball: Vector3):
 
 # The peak: the plate goes home. A plate lands at B (or her plate at B grows) with the landing
 # radius and pulls until the landing.
-func tally_peak(_id: String, at: Vector3) -> void:
+func tally_peak(id: String, at: Vector3) -> void:
 	var legs: Array = ultimate._plan.get("legs", [])
 	var b: Vector3 = legs.back()["to"] if not legs.is_empty() else at
 	var left := -float(ultimate._leg_time)
@@ -2634,7 +2634,7 @@ func tally_peak(_id: String, at: Vector3) -> void:
 	if plate.is_empty() or _flat_gap(plate["at"], b) > 1.0:
 		plate = {"at": _floor_at(b + Vector3.UP), "until": 0.0}
 		_gather_tick = 0.0
-	plate["radius"] = ultimate.landing_radius()
+	plate["radius"] = ultimate.landing_radius() + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
 	plate["until"] = _clock + maxf(left, 0.0) + Weapons.GATHER_TICK
 	effects.ring(plate["at"], float(plate["radius"]), ClassDef.TALLY_COLOR)
 
