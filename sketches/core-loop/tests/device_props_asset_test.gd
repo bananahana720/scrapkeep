@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for b200529.
+# interact.gd SHA256 aef96a7a9ddf81bfb96ba96b7bef9cac836da62eaa1548add9f162976c60347a -> 52023d69247026b37e2ddbf86c4a91f28bb619f78232c4aa968143322f023087; stake-device dispatch.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -256,7 +258,7 @@ const SOURCE_PINS := {
 const INHERITED_PINS := {
 	"device": "4d3fd93f28a96ecdf01e95f0a1750673057bdd79c00ba1956a65e972d6fce056",
 	"interactables": "1a00f5262fff3af0a20ca0e35e6a70e50075d2cfeb6eab0b80b6533a98fd206a",
-	"interact": "aef96a7a9ddf81bfb96ba96b7bef9cac836da62eaa1548add9f162976c60347a",
+	"interact": "52023d69247026b37e2ddbf86c4a91f28bb619f78232c4aa968143322f023087",
 }
 
 

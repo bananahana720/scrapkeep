@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for d6e89a9.
+# Tally special-slot icon ab_tally_special -> ab_tally_gather; the gather_plate declaration.
 extends SceneTree
 
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -16,13 +18,19 @@ const Indicator := preload("res://src/movement/indicator.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const T := preload("res://tests/support/t.gd")
 
-# Tally's presentation: ledger cream and brass, punched program cards, and a
-# count of four followed by a struck total. Card pitches follow the count intervals.
-
+# Tally's presentation: ledger cream, punched program cards, and a count of four followed by
+# a struck total. Card pitches follow the count intervals.
+# Re-pinned 2026-10-11 for wave P-C unit PC-TALLY (design-v3/pilots/tally.md section 10,
+# A2-CRITIC lore fix): her icons were pinned to brass #d9b44a, Brindle's colour on friendly gear;
+# all nine now carry ledger cream #e6d9b8 and no brass. The special slot reads ab_tally_gather
+# (Gather Plate is slot 2), and ICON_SLOTS gains the line (ab_tally_line) and ult (ab_tally_ult)
+# icons. Measured on 4ae242b plus this unit: 79 checks, registry 70 ids.
 const SHELL := "res://assets/models/world_one/shell_tally.glb"
 const PILOT := "res://assets/models/pilot_tally_anim.glb"
-const SLOTS := ["weapon", "move", "special", "smash"]
-const ICON_SLOTS := ["weapon", "move", "special", "smash", "gather", "link", "balance"]
+const SLOTS := ["weapon", "move", "gather", "smash"]
+const ICON_SLOTS := ["weapon", "move", "special", "smash", "gather", "link", "balance", "line", "ult"]
+const LEDGER_CREAM := "#e6d9b8"
+const BRASS := "#d9b44a"
 const CUES := ["tally_balance_due", "tally_ready", "tally_break", "mind_tally"]
 
 var _t := T.new("tally_look_test")
@@ -197,7 +205,8 @@ func _check_icons() -> void:
 			if svg == other[1]:
 				copies.append(other[0])
 		_t.check(id + " drawn", FileAccess.file_exists(path) and svg != "" and copies.is_empty(), "%s exists; matching borrowed files %s" % [path, copies])
-		_t.check(id + " palette", svg.contains("#d9b44a") and not svg.contains("#e5a044") and not svg.contains("#8bf0d3"), "brass accent, no amber or mint")
+		_t.check(id + " palette", svg.contains(LEDGER_CREAM) and not svg.to_lower().contains(BRASS) and not svg.contains("#e5a044")
+			and not svg.contains("#8bf0d3"), "ledger cream accent, no brass, amber or mint")
 		var tex := Icons.texture(id)
 		_t.check(id + " registered", Icons.EXTRA.has(id) and tex != null and tex.get_width() > 0 and Icons.from_file(id),
 			"in Icons.EXTRA, loads from its file")

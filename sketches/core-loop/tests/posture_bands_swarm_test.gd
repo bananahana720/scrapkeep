@@ -1,4 +1,5 @@
-# smoke: solo timeout=900s (24 bot runs on stage 3 in child processes at once, each cut at RUN_CAP_S; a loaded machine slows them)
+# smoke: bots timeout=770s (24 bot runs on stage 3 in child processes at once, each cut at RUN_CAP_S)
+# 2026-10-12, W13 smoke triage: completed in 510.708 s alone with its fixed bands still red; 1.5x rounded up to 10 s is 770 s, beyond the ordinary 360 s cap.
 extends "res://tools/bot_run.gd"
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
