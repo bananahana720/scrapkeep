@@ -25,7 +25,7 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 86
+	_expected_checks = 141
 	super._initialize()
 
 
@@ -82,8 +82,75 @@ func _step_cards(ticks: int) -> void:
 		_kit._step_cards()
 
 
+func _shape_dispatch_fixture() -> void:
+	var paths: Array = _kit.shape_paths()
+	var expected := ["foundry_cutter/tech", "foundry_cutter/peak", "foundry_cutter/landing",
+		"prism_cutter/tech", "prism_cutter/peak", "prism_cutter/landing",
+		"juggernaut_drive/tech", "juggernaut_drive/peak", "juggernaut_drive/landing", "juggernaut_drive/drive_step"]
+	_t.eq("shape dispatch count guard", paths.size(), 10)
+	_t.eq("every registered shape dispatch has an independent fixture", paths.map(func(p): return p["id"] + "/" + p["entry"]), expected)
+	for path in paths:
+		await _fresh()
+		var id: String = path["id"]
+		var entry: String = path["entry"]
+		var label := id + "/" + entry
+		_piece(id)
+		var wave := id == "juggernaut_drive" and entry == "tech"
+		var ram := entry == "drive_step" or (id == "juggernaut_drive" and entry == "peak")
+		var inside := _enemy("chaser", 2.0 if ram else 5.0, 4.0 if wave else 0.0)
+		var above := _enemy("chaser", 2.0 if ram else 5.0, 4.0 if wave else 0.0)
+		above.global_position += Vector3.UP * 100.0
+		var covered := _enemy("chaser", 3.5 if ram else 8.0, 4.0 if wave else 0.0)
+		for enemy in [inside, above, covered]:
+			enemy.set_physics_process(false)
+		var wall := StaticBody3D.new()
+		wall.collision_layer = 1
+		var collision := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = Vector3(0.5, 30.0, 30.0)
+		collision.shape = box
+		wall.add_child(collision)
+		_game.add_child(wall)
+		var wall_x := 2.8 if ram else 6.5
+		wall.global_position = _player.ball_position() + Vector3.RIGHT * wall_x
+		_game.camera.set_physics_process(false)
+		_game.camera.cam.get_parent().global_position = _player.ball_position()
+		_game.camera.cam.global_basis = Basis.looking_at(Vector3.RIGHT)
+		await physics_frame
+		await physics_frame
+		match entry:
+			"tech":
+				_tech(id, 1)
+			"peak":
+				_combat.ultimate._peak(_player.ball_position())
+				if ram:
+					_kit.drive_step(_player.ball_position())
+			"landing":
+				_combat.ultimate._strike(_player.ball_position())
+			"drive_step":
+				_kit.drive_step(_player.ball_position())
+			_:
+				_t.check(label + " known entry", false)
+		var touched := func(enemy): return enemy._knock.length() > 0.01 if wave else not _hits(enemy).is_empty()
+		_t.check(label + " inside target hit", touched.call(inside))
+		_t.check(label + " vertically outside target missed", not touched.call(above))
+		_t.check(label + " terrain-covered target missed", not touched.call(covered))
+		var selected = _kit.get("selected_shapes")
+		_t.check(label + " dispatch called the selector", selected is Array and not selected.is_empty())
+		var drawn: Array = _player.indicator.shapes.values().filter(func(s): return s.has("rivet_shape"))
+		_t.check(label + " visual consumes the selected record", selected is Array and not drawn.is_empty() and drawn.all(func(s): return selected.has(s)))
+		if id == "foundry_cutter" and entry == "peak":
+			var scar: Dictionary = _player.indicator.shapes.get("rivet_scar", {})
+			_t.near("Full Cut drawn width equals the independent kit constant", float(scar.get("width", -1.0)), Weapons.FULL_CUT_WIDTH)
+			_t.near("Full Cut drawn angle equals the independent kit constant", float(scar.get("half_angle", -1.0)), deg_to_rad(Weapons.FULL_CUT_DEG * 0.5))
+			_t.check("Full Cut committed centre stops at the independent wall face", scar.has("centre_endpoint") and absf((scar["centre_endpoint"] as Vector3).x - _player.ball_position().x - (wall_x - 0.25)) < 0.001)
+		wall.queue_free()
+	await _fresh()
+
+
 func _run() -> void:
 	await _boot()
+	await _shape_dispatch_fixture()
 	var ult = _combat.ultimate
 	_t.check("three rows register tech, peak and landing", Kit.SET_PIECES.all(func(id): return ult._ult_rows.has(id) and ult._ult_rows[id].keys() == ["tech", "peak", "landing"]))
 

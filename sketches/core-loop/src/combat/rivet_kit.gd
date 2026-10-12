@@ -17,6 +17,11 @@ const Palette := preload("res://src/core/palette.gd")
 
 const SET_PIECES := ["foundry_cutter", "prism_cutter", "juggernaut_drive"]
 const BEAM_PIECES := ["foundry_cutter", "prism_cutter"]
+const SHAPE_DISPATCH := {
+	"foundry_cutter": ["tech", "peak", "landing"],
+	"prism_cutter": ["tech", "peak", "landing"],
+	"juggernaut_drive": ["tech", "peak", "landing", "drive_step"],
+}
 # Discoveries (section 8; CUSTOMIZE section 3 change 3): ten punches landed in one stage, thirty
 # ignored holds and knocks in one run, a beam cutting three. Full Breach is no discovery: its
 # grant reads ultimate_landed's hits for foundry_cutter (CUSTOMIZE.md:356, :412).
@@ -38,6 +43,14 @@ var haul := {}
 var last_cue := {}
 var last_punch := {}
 var beam_shapes: Array = []
+
+
+static func shape_paths() -> Array:
+	var paths: Array = []
+	for id in SHAPE_DISPATCH:
+		for entry in SHAPE_DISPATCH[id]:
+			paths.append({"id": id, "entry": entry})
+	return paths
 # The aim the last beat read (ctx.aim_forward() on that tick); the peak, which gets only a
 # point, cuts along it.
 var _last_aim := Vector3.ZERO
