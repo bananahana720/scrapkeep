@@ -20,8 +20,8 @@ const SEED := 8008
 const OPS := 1000
 const STEP := 1.0 / 60.0
 const LIMIT := 30.0
-# 2026-10-12 SR8 round 2: 170 existing checks plus 46 charge exit/idempotence checks.
-const EXPECTED_CHECKS := 216
+# 2026-10-12 SR8 round 3: 216 existing checks plus 128 run-end lifecycle checks.
+const EXPECTED_CHECKS := 344
 # The lab rows, pinned here so a drift in Devices.ROWS fails the test instead of moving the
 # expectation with it. Change a value here only together with its start value in devices.gd
 # (comps/ror2/companions.md). sticky's cap is Kest's kit knob default (Weapons.STICKY_MAX_LIVE).
@@ -74,6 +74,7 @@ func _physics_process(_delta: float) -> bool:
 	_check_live_kit_payloads()
 	_check_live_stakes()
 	_check_cleared()
+	_check_run_ended()
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
 	return true
@@ -524,3 +525,87 @@ func _check_cleared() -> void:
 	for kind in _rows():
 		left += _devices().count(kind) + _devices().refilling(kind)
 	_t.eq("a new attempt clears every device and slot", left, 0)
+
+
+# End the run directly with every kind live. Landed payloads must leave even when
+# the inherited ultimate abort returns from IDLE or only ends RECOVER.
+func _check_run_ended() -> void:
+	var ult = _combat.ultimate
+	var stakes = ult.stakes
+	stakes.set_physics_process(false)
+	var booms := [0]
+	var stages := [0]
+	var hear := func(_at: Vector3, _crit: bool): booms[0] += 1
+	var stage_clear := func(_reason: String): stages[0] += 1
+	_game.events.sticky_detonated.connect(hear)
+	_game.events.stage_content_cleared.connect(stage_clear)
+	for phase in [ult.IDLE, ult.RECOVER]:
+		var label := "run end %s" % ["IDLE" if phase == ult.IDLE else "RECOVER"]
+		_combat.sticky.clear()
+		ult.clear_payloads()
+		stakes.fold()
+		_devices().clear()
+		_as_class("pylon_engineer")
+		_game.player.tree._knobs["sentry"] = 4.0
+		_game.player.kit.mount_face = _game.player.ball_position()
+		_combat._on_dismounted_sentry(Vector3.ZERO)
+		_as_class("demolitions_caster")
+		var at: Vector3 = _game.player.ball_position()
+		var sticky: Dictionary = _combat.sticky.throw(at, at, 0.0, 1.0, 99.0, false)
+		var mini: Dictionary = _combat.sticky.drop(at, 0.0, 1.0, 99.0, 99.0)
+		ult._id = "minelayer"
+		var mine: Dictionary = ult._drop(at, 0.0, 1.0)
+		ult._id = "air_raid"
+		var raid: Dictionary = ult._drop(at, 0.0, 1.0)
+		# _drop creates flight payloads; landing makes these persistent, armed payloads.
+		for charge in [mine, raid]:
+			charge["_inert"] = false
+			charge["fuse"] = 6.0
+		var stake = stakes.plant(at)
+		stakes.arm()
+		var ids := {"sticky": int(sticky["device_id"]), "mini": int(mini["device_id"]),
+			"sentry": int(_combat._sentry["id"]), "kest_mine": int(mine["device_id"]),
+			"kest_raid": int(raid["device_id"]), "sable_stake": int(stake.device_id)}
+		var nodes := [sticky["node"], mini["node"], mine["node"], raid["node"], stake]
+		for kind in LAB_ROWS:
+			_t.eq("%s starts with live %s" % [label, kind], _devices().count(kind), 1)
+			_t.eq("%s starts with registered %s" % [label, kind], _devices().kind_of(ids[kind]), kind)
+		_t.check("%s starts with all physical nodes in the tree" % label,
+			nodes.all(func(node): return is_instance_valid(node) and node.is_inside_tree()))
+		_t.eq("%s starts with two landed payloads" % label, ult.payloads.charges.size(), 2)
+		ult._id = "minelayer"
+		ult._phase = phase
+		_t.eq("%s starts in the intended ultimate phase" % label, ult._phase, phase)
+		booms[0] = 0
+		stages[0] = 0
+		_game.events.run_ended.emit(phase == ult.RECOVER)
+		_t.eq("%s never emits stage clear" % label, stages[0], 0)
+		_check_run_end_empty(label + " immediate", ids, booms[0])
+		_game.events.run_ended.emit(phase == ult.RECOVER)
+		# clear() queues deletion. Force those later exits now, after repeated cleanup.
+		for node in nodes:
+			if is_instance_valid(node):
+				node.free()
+		_t.eq("%s next sticky step returns no detonation" % label, _combat.sticky.step(STEP, null, []), [])
+		ult._step_payloads(STEP)
+		stakes.step(STEP)
+		_combat._step_devices(STEP)
+		_combat._tick_sentry(STEP)
+		_check_run_end_empty(label + " repeated and node exits", ids, booms[0])
+		_t.eq("%s repeated cleanup never emits stage clear" % label, stages[0], 0)
+	_game.events.sticky_detonated.disconnect(hear)
+	_game.events.stage_content_cleared.disconnect(stage_clear)
+	ult._id = ""
+	stakes.set_physics_process(true)
+
+
+func _check_run_end_empty(label: String, ids: Dictionary, booms: int) -> void:
+	_t.eq("%s sticky manager empty" % label, _combat.sticky.charges, [])
+	_t.eq("%s payload manager empty" % label, _combat.ultimate.payloads.charges, [])
+	_t.eq("%s stake manager empty" % label, _combat.ultimate.stakes.nodes.size(), 0)
+	_t.eq("%s sentry manager empty" % label, _combat._sentry, {})
+	for kind in LAB_ROWS:
+		_t.eq("%s %s live count zero" % [label, kind], _devices().count(kind), 0)
+		_t.eq("%s %s refill count zero" % [label, kind], _devices().refilling(kind), 0)
+		_t.eq("%s %s ledger id absent" % [label, kind], _devices().kind_of(ids[kind]), "")
+	_t.eq("%s never detonates" % label, booms, 0)
