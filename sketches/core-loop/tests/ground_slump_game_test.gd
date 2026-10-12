@@ -142,7 +142,7 @@ func _sample_geometry(state: Dictionary, label: String, elapsed: float) -> void:
 	var progress := clampf(elapsed / fill_s, 0.0, 1.0)
 	for point in points:
 		var original := low_tread + collapse_depth * clampf((point.x - 374.0) / 2.0, 0.0, 1.0)
-		var ramp := low_tread + collapse_depth * (point.x - 354.0) / (376.0 - 354.0)
+		var ramp: float = low_tread + collapse_depth * (point.x - 354.0) / (376.0 - 354.0)
 		var expected := lerpf(original, ramp, progress)
 		t.near(label + " independent height at " + str(point), game.ctx.terrain.height(point.x, point.y), expected)
 		var matching := []
@@ -180,7 +180,7 @@ func _geometry(state: Dictionary) -> void:
 		_sample_geometry(state, "elapsed %s" % target, float(dstate.live_elapsed_s))
 		await physics_frame
 		var ray := PhysicsRayQueryParameters3D.create(Vector3(366, low_tread + collapse_depth + 10, 110), Vector3(366, low_tread - 10, 110))
-		var hit := game.get_world_3d().direct_space_state.intersect_ray(ray)
+		var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(ray)
 		var expected := low_tread + collapse_depth * (366.0 - 354.0) / 22.0 * clampf(float(dstate.live_elapsed_s) / fill_s, 0.0, 1.0)
 		t.check("elapsed %s real physics ray hits" % target, not hit.is_empty())
 		if not hit.is_empty(): t.near("elapsed %s real ray matches independent ramp" % target, hit.position.y, expected, 0.001)
