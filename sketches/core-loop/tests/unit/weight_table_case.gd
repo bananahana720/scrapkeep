@@ -46,7 +46,7 @@ func run(t) -> void:
 	t.check("baked register and length order", _body_order(measurements), str(measurements))
 	var db_ok := true
 	for key in CLASSES:
-		db_ok = db_ok and _record(key).get("body_db", -1.0) == 0.0
+		db_ok = db_ok and _record(key).get("body_db", -1.0) == 0.0 and is_equal_approx(_record(key).body_ratio, pow(2.0, float(weights[key].body_st) / 12.0))
 	t.check("body layers use db zero", db_ok, "bank priority trims remain in charge")
 	var bad := coverage(facts, weights)
 	t.eq("weighted coverage", bad, [])
@@ -149,7 +149,7 @@ func _body_measurements(weights: Dictionary) -> Array:
 		if not Bank.has_recipe(id):
 			return []
 		var samples := Bank.samples(id)
-		var ratio := pow(2.0, float(row.get("body_st", 0.0)) / 12.0)
+		var ratio := float(_record(key).body_ratio)
 		var crosses := 0
 		for i in range(1, samples.size()):
 			if (samples[i - 1] < 0.0) != (samples[i] < 0.0):

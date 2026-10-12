@@ -106,8 +106,8 @@ const ROWS := {
 	"rocket_jumped": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "boost_whoosh", "sound_next": "kest_blast_lift", "hud": "", "objective": "", "priority": 1},
 	"blink_used": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "dash_whoosh", "sound_next": "kest_blink_thump", "hud": "", "objective": "", "priority": 1},
 	"arc_slammed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "zap_hum", "sound_next": "sable_root_fifth", "hud": "", "objective": "", "priority": 1},
-	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "slam_boom", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
-	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
+	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "clank", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
+	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "reactor_erupt", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
 	# v2 W7 enemies. Danger is HAZARD; a break, tenacity and the shield vault are yours,
 	# so they wear bone here and the class colour where they draw (holds.gd). A hold's
 	# loop and a pack's motif depend on who holds or arrives: `sound` is the stand-in and
@@ -187,9 +187,7 @@ const ROWS := {
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list. The skill-bar signals wait for wave P-B's HUD and
 # ultimate units (design-v3/SKILL-BAR.md section 10), which wire their listeners.
-const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window",
-	"slot_selected", "slot_cast", "line_skill_loaded", "line_skill_fired", "line_skill_expired",
-	"ultimate_ready", "ultimate_started", "ultimate_peak", "ultimate_landed", "ultimate_cancelled"]
+const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window", "slot_selected", "slot_cast", "line_skill_fired", "line_skill_expired"]
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,
@@ -299,6 +297,181 @@ const STOP_WINDOW_MS := 300
 const STOP_WINDOW_BUDGET_MS := 60.0
 const STOP_BUDGET_MS := 100.0
 const STOP_PER_EXTRA_HIT_MS := 2.0
+
+# One weight record feeds impact visuals, camera and sound. Stop words delegate to
+# Juice.stop_ms_for; body pitch changes register and length, never loudness.
+const WEIGHT := {
+	"none": {"stop_ms": 0.0, "shake": 0.0, "kick": 0.0, "punch_fov": 0.0, "fx_scale": 0.8, "body": "", "body_st": 0.0},
+	"hit": {"stop_ms": "hit", "shake": 0.1, "kick": 0.1, "punch_fov": 0.0, "fx_scale": 1.0, "body": "", "body_st": 0.0},
+	"heavy": {"stop_ms": "heavy", "shake": 0.3, "kick": 0.45, "punch_fov": -4.0, "fx_scale": 1.4, "body": "womp", "body_st": 0.0},
+	"massive": {"stop_ms": 55.0, "shake": 0.4, "kick": 0.6, "punch_fov": -6.0, "fx_scale": 1.9, "body": "chunk_low", "body_st": -12.0},
+	"climax": {"stop_ms": 60.0, "shake": 0.5, "kick": 0.6, "punch_fov": 9.0, "fx_scale": 2.5, "body": "chunk_low", "body_st": -17.0},
+}
+
+# Empty visual uses ROWS or the fact's FxLibrary effects. The posture sub-fact uses
+# an existing spark spec. Sound overrides stay here when a paired fact shares ROWS.
+const WEIGHTED := {
+	"enemy_struck": {"rule": "strike", "allegiance": "player", "visual": ""},
+	"enemy_killed": {"rule": "death_parts", "allegiance": "player", "visual": ""},
+	"gauge_released": {"rule": "gauge", "allegiance": "player", "visual": ""},
+	"player_hit": {"rule": "amount", "allegiance": "hostile", "visual": ""},
+	"posture_changed": {"rule": "posture", "allegiance": "player", "visual": "spark_core"},
+	"posture_break": {"class": "massive", "allegiance": "player", "visual": "spark_core"},
+	"ultimate_landed": {"class": "massive", "allegiance": "player", "visual": "", "sound": "vault_drop"},
+	"boss_defeated": {"class": "climax", "allegiance": "player", "visual": ""},
+	"boss_weak_point_hit": {"class": "heavy", "allegiance": "player", "visual": ""},
+	"player_died": {"class": "massive", "allegiance": "hostile", "visual": ""},
+	"slammed": {"class": "heavy", "allegiance": "player", "visual": ""},
+	"sticky_detonated": {"class": "heavy", "allegiance": "player", "visual": ""},
+	"enemy_rebounded": {"class": "heavy", "allegiance": "player", "visual": ""},
+	"cloak_broken": {"class": "hit", "allegiance": "player", "visual": ""},
+	"hold_broken": {"class": "hit", "allegiance": "player", "visual": ""},
+	"swarm_scattered": {"class": "hit", "allegiance": "player", "visual": ""},
+	"enemy_pinned": {"class": "hit", "allegiance": "player", "visual": ""},
+	"arc_slammed": {"class": "none", "allegiance": "player", "visual": ""},
+	"skid_smashed": {"class": "none", "allegiance": "player", "visual": ""},
+	"demo_slammed": {"class": "none", "allegiance": "player", "visual": ""},
+	"cloak_started": {"class": "none", "allegiance": "player", "visual": ""},
+	"sprint_started": {"class": "none", "allegiance": "motion", "visual": ""},
+	"cc_ignored": {"class": "none", "allegiance": "player", "visual": ""},
+	"blink_used": {"class": "none", "allegiance": "motion", "visual": ""},
+	"vault_kicked": {"class": "none", "allegiance": "motion", "visual": ""},
+}
+
+const WEIGHT_EXEMPT := {
+	"achievement_earned": "Reward and economy ladders own the cue; rewards never stop time.",
+	"activity_done": "World, interaction and activity rows own their contextual glyph and sound.",
+	"ambush_ended": "World, interaction and activity rows own their contextual glyph and sound.",
+	"bay_entered": "World, interaction and activity rows own their contextual glyph and sound.",
+	"bay_left": "World, interaction and activity rows own their contextual glyph and sound.",
+	"beacon_charge_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"beacon_unsealed": "The beacon is a reward with no stop; the breaking strike is posture_break.",
+	"bet_resolved": "World, interaction and activity rows own their contextual glyph and sound.",
+	"boosted": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"boss_arena_entered": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"boss_attack_telegraphed": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
+	"boss_phase_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"cause_armed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"cause_fired": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"cogs_collected": "Reward and economy ladders own the cue; rewards never stop time.",
+	"core_gained": "Reward and economy ladders own the cue; rewards never stop time.",
+	"dashed": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"dismounted": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"element_resolved": "World, interaction and activity rows own their contextual glyph and sound.",
+	"enemy_spawned": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"event_announced": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"event_ended": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"event_progress": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"event_started": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"flow_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"gauge_cancelled": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"gauge_charging": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"grapple_fired": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"grapple_released": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"harpoon_bit": "Latch feedback owns its dedicated stop and glyph; damage is weighted through enemy_struck.",
+	"harpoon_smashed": "Harpoon contact owns its latch glyph; damage is weighted through enemy_struck.",
+	"heft_class_changed": "Reward and economy ladders own the cue; rewards never stop time.",
+	"heft_class_dropped": "Reward and economy ladders own the cue; rewards never stop time.",
+	"hold_ended": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
+	"hold_started": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
+	"interact_armed": "World, interaction and activity rows own their contextual glyph and sound.",
+	"interact_fired": "World, interaction and activity rows own their contextual glyph and sound.",
+	"interaction_found": "World, interaction and activity rows own their contextual glyph and sound.",
+	"jumped": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"landed": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"launched": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"line_skill_loaded": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"line_state_changed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"milestone_won": "Reward and economy ladders own the cue; rewards never stop time.",
+	"mind_adapted": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
+	"mounted": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"near_miss": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"pack_arrived": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
+	"part_gained": "Reward and economy ladders own the cue; rewards never stop time.",
+	"pressure_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"rescue_completed": "Reward and economy ladders own the cue; rewards never stop time.",
+	"reward_chosen": "Reward and economy ladders own the cue; rewards never stop time.",
+	"reward_offered": "Reward and economy ladders own the cue; rewards never stop time.",
+	"rocket_jumped": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"run_ended": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"run_started": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"scrap_collected": "Reward and economy ladders own the cue; rewards never stop time.",
+	"scrap_lost": "Reward and economy ladders own the cue; rewards never stop time.",
+	"shield_vaulted": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
+	"shot_fired": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"special_used": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"stage_cleared": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"stage_content_cleared": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"stage_entered": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"strike_deflected": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"synergy_discovered": "Reward and economy ladders own the cue; rewards never stop time.",
+	"tenacity_gained": "Reward and economy ladders own the cue; rewards never stop time.",
+	"threat_rose": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"tree_offered": "Reward and economy ladders own the cue; rewards never stop time.",
+	"tree_picked": "Reward and economy ladders own the cue; rewards never stop time.",
+	"ultimate_cancelled": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"ultimate_peak": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"ultimate_ready": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"ultimate_started": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"vent_charging": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
+	"vent_erupted": "Hostile floor eruption owns its danger geometry and reactor cue; it never shakes, kicks or stops the screen.",
+	"verb_failed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"warden_engaged": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"weak_point_opened": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
+	"world_entered": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"world_fact": "World, interaction and activity rows own their contextual glyph and sound.",
+}
+
+
+# args are values, not actors: kind, damage/force, crit, fraction, amount,
+# staggered, chunks_lost and optional strength. The caller detects posture edges.
+static func weigh(fact: String, args: Dictionary = {}) -> Dictionary:
+	var entry: Dictionary = WEIGHTED.get(fact, {})
+	var weight := String(entry.get("class", "none"))
+	var strength := 1.0
+	var damage := maxf(float(args.get("damage", args.get("force", 0.0))), 0.0)
+	match String(entry.get("rule", "")):
+		"strike":
+			weight = String(impact(String(args.get("kind", "")))["stop"])
+			strength = damage / 30.0
+		"death_parts":
+			var kind := String(args.get("kind", ""))
+			var windup = load("res://src/presentation/windup_rows.gd")
+			var parts := int(windup.ROWS.get(kind, {}).get("death", {}).get("parts", 4))
+			weight = "climax" if kind == "warden" else ("massive" if parts >= 8 else ("heavy" if parts >= 5 else "hit"))
+		"gauge":
+			strength = float(args.get("fraction", 0.0))
+			weight = "heavy" if strength >= 1.0 else "hit"
+		"amount":
+			var amount := float(args.get("amount", 0.0))
+			weight = "massive" if amount >= 20.0 else ("heavy" if amount >= 10.0 else "hit")
+			strength = amount / 25.0
+		"posture":
+			var lost := maxi(int(args.get("chunks_lost", 0)), 0)
+			weight = "massive" if bool(args.get("staggered", false)) else ("heavy" if lost > 0 else "none")
+			if lost > 0:
+				var posture = load("res://src/combat/boss_posture.gd")
+				strength = float(lost) / posture.CHUNKS
+	strength = clampf(float(args.get("strength", strength)), 0.0, 1.0)
+	var profile: Dictionary = WEIGHT[weight]
+	var allegiance := String(entry.get("allegiance", "motion" if String(ROWS.get(fact, {}).get("group", "")) == "movement" or fact == "launched" else "reward"))
+	var stop := 0.0
+	if profile.stop_ms is String:
+		var juice_script = load("res://src/presentation/juice.gd")
+		stop = juice_script.stop_ms_for(damage, bool(args.get("crit", false)), profile.stop_ms == "heavy")
+	else:
+		stop = float(profile.stop_ms)
+	var rows_script = load("res://src/presentation/rows.gd")
+	return {
+		"fact": fact, "weight": weight, "allegiance": allegiance, "strength": strength,
+		"stop_ms": stop if allegiance == "player" else 0.0,
+		"shake": 0.0 if allegiance == "hostile" else float(profile.shake) * strength,
+		"kick": 0.0 if allegiance == "hostile" else float(profile.kick) * strength,
+		"punch_fov": float(profile.punch_fov) * strength, "fx_scale": float(profile.fx_scale),
+		"body": String(profile.body), "body_ratio": pow(2.0, float(profile.body_st) / 12.0), "body_db": 0.0,
+		"visual": String(entry.get("visual", "")), "sound": String(entry.get("sound", rows_script.sound(fact))),
+	}
+
 
 
 static func juice(kind: String) -> Dictionary:
