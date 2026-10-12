@@ -1,9 +1,10 @@
-# smoke: solo (traversal and bot batches with isolated children, bounded to 85 seconds)
+# smoke: solo timeout=360s (eight fresh fixture processes plus bot replay)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
 const BOT_TICKS := 30
+const TRAVERSAL_TICKS := 180
 
 
 func _initialize() -> void:
@@ -13,8 +14,9 @@ func _initialize() -> void:
 	var jobs := []
 	for mode in ["batch", "isolated"]:
 		jobs.append({"script": "res://tools/traversal_line.gd", "args": [
-			"--pilot=sable", "--seeds=1,2" if mode == "batch" else "--seeds=2",
-			"--trace", "--out=" + base.path_join(mode)]})
+			"--table=park", "--stage=0", "--pilot=sable",
+			"--seeds=1,2,3,4,5,6,7,8" if mode == "batch" else "--seeds=8",
+			"--ticks=%d" % TRAVERSAL_TICKS, "--trace", "--out=" + base.path_join(mode)]})
 	for mode in ["bot-batch", "bot-isolated"]:
 		var launcher := base.path_join(mode + ".gd")
 		var file := FileAccess.open(launcher, FileAccess.WRITE)
@@ -24,7 +26,7 @@ func _initialize() -> void:
 			"--pilot=pylon_engineer", "--policy=brawler", "--table=slice",
 			"--seeds=1,2" if mode == "bot-batch" else "--seeds=2", "--trace-ticks=1",
 			"--ticks=%d" % BOT_TICKS, "--out=" + base.path_join(mode)]})
-	var results := ChildRuns.run(jobs, 85.0)
+	var results := ChildRuns.run(jobs, 340.0)
 	var hashes: Array[String] = []
 	var traces: Array = []
 	for i in jobs.size():
@@ -33,7 +35,7 @@ func _initialize() -> void:
 		t.check("child %d completed" % i, result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
 			"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], errors])
 		var mode: String = ["batch", "isolated", "bot-batch", "bot-isolated"][i]
-		var path := base.path_join(mode).path_join("sable-seed-2-trace.json" if i < 2 else "trace-2.ndjson")
+		var path := base.path_join(mode).path_join("sable-seed-8-trace.json" if i < 2 else "trace-2.ndjson")
 		var source := FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
 		var ticks: Array = []
 		if i < 2:
@@ -42,10 +44,19 @@ func _initialize() -> void:
 		else:
 			for line in source.split("\n", false):
 				ticks.append(JSON.parse_string(line))
-		t.check("child %d measured run" % i, ticks.size() > 100 if i < 2 else ticks.size() == BOT_TICKS,
+		t.check("child %d measured run" % i, ticks.size() == TRAVERSAL_TICKS if i < 2 else ticks.size() == BOT_TICKS,
 			"%d ticks" % ticks.size())
 		traces.append(ticks)
 		hashes.append(JSON.stringify(ticks).sha256_text())
+	var batch := _runs(base.path_join("batch/sable.json"))
+	var solo := _runs(base.path_join("isolated/sable.json"))
+	var eighth: Dictionary = batch[7] if batch.size() == 8 else {}
+	var alone: Dictionary = solo[0] if solo.size() == 1 else {}
+	t.check("position eight has a byte-identical full result to solo", not eighth.is_empty() and JSON.stringify(eighth) == JSON.stringify(alone),
+		"batch %s, solo %s; evidence %s" % [JSON.stringify(eighth).sha256_text(), JSON.stringify(alone).sha256_text(), base])
+	for i in 8:
+		var rows := _runs(base.path_join("batch/children/%d-seed-%d/sable.json" % [i + 1, i + 1]))
+		t.check("position %d ran one seed in its own child" % (i + 1), rows.size() == 1 and int(rows[0].get("seed", -1)) == i + 1)
 	for offset in [0, 2]:
 		var first := 0
 		var a: Array = traces[offset]
@@ -56,7 +67,7 @@ func _initialize() -> void:
 				break
 		if first == 0 and a.size() != b.size():
 			first = mini(a.size(), b.size()) + 1
-		t.check("%s second seed repeats every tick" % ("traversal" if offset == 0 else "bot"),
+		t.check("%s second seed repeats every tick" % ("traversal position eight" if offset == 0 else "bot"),
 			not a.is_empty() and hashes[offset] == hashes[offset + 1],
 			"batch %s, isolated %s, first differing tick %d; evidence %s" % [hashes[offset], hashes[offset + 1], first, base])
 	var code := t.verdict()
@@ -79,3 +90,8 @@ func _initialize() -> void:
 		print(String(chunk).strip_edges())
 	quit(code)
 """ % [JSON.stringify(state_dir), JSON.stringify(ProjectSettings.globalize_path("res://"))]
+
+
+func _runs(path: String) -> Array:
+	var doc = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else null
+	return doc.get("runs", []) if doc is Dictionary else []

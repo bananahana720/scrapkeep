@@ -176,6 +176,20 @@ func aim_origin() -> Vector3:
 	return (cam.get_parent() as Node3D).global_position
 
 
+# global_position fills Node3D's lazy global-transform cache. Observing the spring
+# mount before gameplay reads it changed Arch traversal results (TRAV-DET2).
+# Compose pose copies for diagnostics without requesting any global transforms.
+func peek_aim_origin() -> Vector3:
+	var mount := cam.get_parent() as Node3D
+	var at := mount.position
+	var node := mount.get_parent_node_3d()
+	while node != null:
+		var basis := Basis.from_euler(node.rotation, node.rotation_order).scaled_local(node.scale)
+		at = basis * at + node.position
+		node = node.get_parent_node_3d()
+	return at
+
+
 func aim_forward() -> Vector3:
 	return -cam.global_basis.z
 
