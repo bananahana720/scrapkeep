@@ -1,5 +1,7 @@
+# 2026-10-12 FIXTURE-ADAPT: 69db888 moved pack recovery to TelegraphRecord.RECOVERY.
 extends SceneTree
 
+const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const Game := preload("res://src/game.gd")
 
 # C10 limits. The asset: 1,200 T / 5 D ceiling for the whole moving assembly, opaque, inside the
@@ -18,7 +20,7 @@ const CORE_RADIUS := 1.0
 const CORE_HALF_HEIGHT := 1.5
 const BASE_CONSTS := {
 	"SPEED": 4.8, "LUNGE_RANGE": 10.0, "WINDUP": 0.6, "LUNGE_TIME": 0.34, "LUNGE_LENGTH": 11.0,
-	"LUNGE_WIDTH": 2.8, "RECOVER": 0.9, "REST": 0.8, "DAMAGE": 9.0, "SHOVE": 6.0, "INTERRUPT": 10.0,
+	"LUNGE_WIDTH": 2.8, "RECOVER": TelegraphRecord.RECOVERY, "REST": 0.8, "DAMAGE": 9.0, "SHOVE": 6.0, "INTERRUPT": 10.0,
 	"HP": 60.0, "SCRAP": 3,
 }
 var failures := 0
