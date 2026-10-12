@@ -70,6 +70,13 @@ func _initialize() -> void:
 		printerr("bot_run: unknown --pilot=%s; use pylon_engineer, runner_gunner, demolitions_caster, tarn, tally or remembered_cannon" % _settings["pilot"])
 		quit(2)
 		return
+	# KE9: --director=interval|credit sets the spawn director's mode for every director in this process.
+	if _settings.has("director") and String(_settings["director"]) not in ["interval", "credit"]:
+		printerr("bot_run: unknown --director=%s; use interval or credit" % _settings["director"])
+		quit(2)
+		return
+	if _settings.has("director"):
+		load("res://src/world/director.gd").mode_override = String(_settings["director"])
 	_out = _absolute(_settings["out"])
 	DirAccess.make_dir_recursive_absolute(_out)
 	for part in String(_settings.get("seeds", "1")).split(",", false):

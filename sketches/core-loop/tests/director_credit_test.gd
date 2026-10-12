@@ -47,6 +47,10 @@ func _park_director(seed_value: int, mode: String) -> Director:
 	d.use_row(row, "")
 	d.threat = float(row["threat"])
 	d.play_rect = Rect2(-1000.0, -1000.0, 2000.0, 2000.0)
+	# The world's _author_director wiring: the park table's packs and elite reach the director.
+	d.authored = ParkDefs.packs()
+	d.elite = ParkDefs.elite()
+	d.elite_arrival = ParkDefs.elite_arrival()
 	d.mode = mode
 	return d
 
@@ -105,12 +109,13 @@ func _check_calibration() -> void:
 		var credit_rate := _packs_per_minute(_park_director(1, "credit"), tier, CALIBRATE_SECONDS)
 		var gap := absf(credit_rate - interval_rate) / maxf(interval_rate, 0.0001)
 		_t.check("tier %d credit rate within 10 percent of today's interval rate" % tier,
-			gap <= CALIBRATE_TOLERANCE,
+			gap <= CALIBRATE_TOLERANCE and interval_rate > 0.0 and credit_rate > 0.0,
 			"interval %.2f, credit %.2f packs per minute, gap %.3f" % [interval_rate, credit_rate, gap])
 
 
 func _check_conservation() -> void:
 	var worst_gap := 0.0
+	var least_spent := INF
 	var max_alive := 0
 	var identity_ok := true
 	var steps := int(SWEEP_SECONDS / H)
@@ -128,11 +133,13 @@ func _check_conservation() -> void:
 			max_alive = maxi(max_alive, recent.size())
 		var income: float = d.credit_income
 		var spent: float = d.credit_spent
+		least_spent = minf(least_spent, spent)
 		worst_gap = maxf(worst_gap, absf(income - spent) / maxf(income, 0.0001))
 		if absf(spent + d.credits + d.credit_overflow - income) > 0.000001:
 			identity_ok = false
 	_t.check("credits spent within 5 percent of the income integral, 20 seeds, 30 minutes",
-		worst_gap <= SPEND_TOLERANCE, "worst gap %.4f" % worst_gap)
+		worst_gap <= SPEND_TOLERANCE and least_spent > 0.0,
+		"worst gap %.4f, least spent %.1f credits" % [worst_gap, least_spent])
 	_t.check("spent, balance and overflow add up to the income integral", identity_ok)
 	_t.check("never more than HARD_CAP alive", max_alive <= Director.HARD_CAP,
 		"peak alive %d of cap %d" % [max_alive, Director.HARD_CAP])

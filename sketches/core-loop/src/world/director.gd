@@ -44,6 +44,7 @@ enum { CHASER, LOBBER }
 
 const Roster := preload("res://src/combat/roster.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const DirectorCards := preload("res://src/world/director_cards.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
@@ -110,6 +111,17 @@ const BREATH := {
 	"gentle": {"pack_scale": 0.85, "interval_scale": 1.15, "elite_rate": 0.8, "posture_curve": 1.0, "boss_phase_scale": 0.9},
 }
 
+# KE9 credit mode (park tables): authored arrivals wait for their card's price in credits. Income
+# per second is CREDIT_I0 * (1 + CREDIT_K * effective_tier()) and nothing else (no threat, no
+# pressure row). The balance holds at most CREDIT_BANK; the rest is overflow, counted, not spent.
+# I0 and K are calibrated against today's interval rate on park stage 1 (tests/director_credit_test.gd).
+const CREDIT_I0 := 0.66
+const CREDIT_K := 0.14
+const CREDIT_BANK := 8.0
+# `--director=interval|credit` (tools/bot_run.gd) sets this for every director in the process;
+# "" leaves each table its own mode. Park ids run credit, alpha ids interval.
+static var mode_override := ""
+
 var stage_time := 0.0
 var spike := false
 # The stage's threat dial from stage_defs.gd: more enemies alive, arriving sooner, and
@@ -159,6 +171,13 @@ var _corridors
 var _home_sites := {}
 var _forward_homes: Array[Dictionary] = []
 var _stopped_kinds := {}
+# KE9: "interval" (the clock, every alpha table) or "credit" (park tables), set by use_row().
+var mode := "interval"
+var credits := 0.0
+var credit_income := 0.0
+var credit_spent := 0.0
+var credit_overflow := 0.0
+var _credit_pending := {}
 
 
 func _init(seed_value := 20260922) -> void:
@@ -185,6 +204,11 @@ func cap() -> int:
 
 func interval() -> float:
 	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale"))
+
+
+# KE9: credits per second in credit mode.
+func income() -> float:
+	return CREDIT_I0 * (1.0 + CREDIT_K * float(effective_tier()))
 
 
 func lobber_share() -> float:
@@ -228,6 +252,9 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 			if (a["at"] as Vector2).distance_to(ball) >= MIN_GAP and not _kind_stopped(a["kind"]):
 				due.append({"kind": a["kind"], "at": a["at"]})
 	if paused:
+		return due
+	if mode == "credit" and not authored.is_empty():
+		_credit_step(delta, alive_count + due.size(), ball, velocity, forward)
 		return due
 	_timer -= delta
 	while _timer <= 0.0:
@@ -312,6 +339,45 @@ func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vec
 	_arrivals_made += 1
 
 
+# KE9: credit mode's authored arrival. The next pack waits until the cap has room for all of it and
+# the balance covers its card; the spawn spot and placement are the timer path's, and a price is paid
+# only for a pack that lands.
+func _credit_step(delta: float, committed: int, ball: Vector2, velocity: Vector2, forward: Vector2) -> void:
+	_credit_refill(delta)
+	if _credit_pending.is_empty():
+		_credit_pending = _draw_authored()
+	var kinds: Array = _credit_pending["kinds"]
+	var elite_pack: bool = _credit_pending == elite
+	var cost := DirectorCards.cost_of(_credit_pending, elite_pack)
+	if cap() - (committed + arrivals.size()) < kinds.size() or credits < cost:
+		return
+	var at := spawn_spot(ball, velocity, forward)
+	if at == Vector2.INF:
+		return
+	var queued := _place_pack(at, kinds, ball)
+	if _park_map != null and queued == 0:
+		return
+	credits -= cost
+	credit_spent += cost
+	packs.append({"id": _credit_pending["id"], "kinds": kinds.duplicate(), "tests": ""})
+	_last_was_elite = elite_pack
+	if not elite_pack:
+		_last_pack_id = _credit_pending["id"]
+	_credit_pending = {}
+	_arrivals_made += 1
+
+
+# KE9: income for one step; the part above the bank is counted as overflow, so the ledger closes:
+# spent + balance + overflow == income.
+func _credit_refill(delta: float) -> void:
+	var gain := income() * delta
+	credit_income += gain
+	credits += gain
+	if credits > CREDIT_BANK:
+		credit_overflow += credits - CREDIT_BANK
+		credits = CREDIT_BANK
+
+
 func _draw_authored() -> Dictionary:
 	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 == elite_arrival:
 		return elite
@@ -339,6 +405,9 @@ func use_row(row: Dictionary, breath_option := "") -> void:
 
 
 func _read_homes(map_id: String) -> void:
+	mode = "credit" if map_id.begins_with("park_") else "interval"
+	if mode_override != "":
+		mode = mode_override
 	homes.clear()
 	_home_sites.clear()
 	_stopped_kinds.clear()
