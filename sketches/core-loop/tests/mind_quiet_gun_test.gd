@@ -1,7 +1,8 @@
 extends "res://tests/cannon_ultimate_test.gd"
 # 2026-10-12 (PC-CANNON): the answer must follow a non-zero live music key.
+# 2026-10-12 (PC-CANNON): answer trim derives from mind_adapted's bank sound and priority.
 # 2026-10-11 (PC-CANNON): real Mind death, fallback, arena cleanup, notes and settle-once grants.
-const EXPECTED_QUIET_CHECKS := 47
+const EXPECTED_QUIET_CHECKS := 50
 const Mind := preload("res://src/boss/mind.gd")
 const QuietGun := preload("res://src/presentation/quiet_gun.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -10,6 +11,7 @@ const Achievements := preload("res://src/core/achievements.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const Rows := preload("res://src/presentation/rows.gd")
 
 
 func _expected_checks() -> int:
@@ -97,8 +99,17 @@ func _cases() -> void:
 	audio._step_cannon_cues()
 	_t.eq("one answer after the quote", audio.cannon_log.size(), 1)
 	_t.eq("the answer is the right motif", audio.cannon_log.back()["notes"], [59, 64, 67, 74])
-	_t.near("answer trim", audio.cannon_log.back()["db"], -10.0)
+	var answer_sound := Rows.sound("mind_adapted", {"motif": "cannon"})
+	_t.near("answer trim", audio.cannon_log.back()["db"], SfxBank.trim_db(answer_sound) + audio.PRIORITY_DB[Rows.priority("mind_adapted")])
 	_t.near("Cannon answer follows the live key", audio.cue_log.back()[4], Harmony.ratio(3))
+	_t.eq("answer dresses the Mind adaptation fact", audio.cue_log.back()[0], "mind_adapted")
+	var cues: Dictionary = audio.get_script().get_script_constant_map().get("CANNON_CUES", {})
+	_t.check("Cannon cue table has no absolute db rows", not cues.is_empty() and cues.values().all(func(row): return not row.has("db")), str(cues))
+	var cue_count: int = audio.cue_log.size()
+	audio.sound_ready = false
+	audio.cannon_line(1)
+	_t.check("Cannon uses shared admission while the bank is cold", audio.cue_log.size() == cue_count + 1 and audio.cue_log.back()[2] == "skip")
+	audio.sound_ready = true
 	audio._cannon_threat_at = audio.clock
 	var beat_delay: float = float(audio.engine.next_beat() - audio.engine.clock) / Harmony.RATE
 	_t.check("a fresh warning moves the quiet note one beat", audio._cannon_beat_delay() >= beat_delay + float(audio.engine.beat_len()) / Harmony.RATE - 0.0001)

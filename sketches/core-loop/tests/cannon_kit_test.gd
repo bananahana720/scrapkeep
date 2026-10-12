@@ -1,5 +1,6 @@
 extends SceneTree
 # 2026-10-11 (PC-CANNON): preserve steps a-j and exercise Lane Charge through the slot router.
+# 2026-10-12 (PC-CANNON): a loaded line sounds once at the bite, never while loading.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -525,9 +526,13 @@ func _line_world_checks() -> void:
 	_t.eq("post Lane Charge never applies reel burst", _player.body().linear_velocity, before)
 	kit.drop_line()
 	_player.abilities.refill()
+	var audio = _game.presentation.audio
+	audio.cannon_log.clear()
 	_combat._cast_line("cannon_lane_charge", 1.0)
 	_t.eq("no line loads Lane Charge", _combat.line_load()["id"], "cannon_lane_charge")
+	_t.eq("loaded Lane Charge has no line cue before the bite", audio.cannon_log.filter(func(row): return row["kind"] == "cannon_line").size(), 0)
 	var target := _target(_ball_flat() + _aim_flat() * 8.0)
 	_player.grapple_to(target.global_position, Vector3.UP, target)
 	_combat._step_line(_player.intent, 0.0)
 	_t.check("a loaded bite fires Lane Charge", _combat.line_load().is_empty() and not _combat._cannon.is_empty())
+	_t.eq("loaded Lane Charge has exactly one line cue after the bite", audio.cannon_log.filter(func(row): return row["kind"] == "cannon_line").size(), 1)
