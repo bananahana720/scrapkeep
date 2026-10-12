@@ -1,5 +1,38 @@
 # park_dam traversal receipts
 
+## 2026-10-12: dressed sweep
+
+Measured on dressed source head `3469382fee4d5bdaf1dd6e392136c80f3a04cd11`, after merging `1fb07b1`. Evidence: `/tmp/claude-1000/w13-sol/kd1-dam-r2/receipt-final/`. Each line runs seeds 1 to 8 in one process through the CPU queue at nice 10. The floor starts after Rivet so it reads that sweep's median. Verdict: **FAIL**. These are headless runtime measurements; rendered appearance and human feel remain open.
+
+Cells give medians and worst values. Anchor gaps use the worst seed, regardless of the tool's median verdict. Every non-gated floor cell is reported. The companion table identifies the seeds at both ends of every reported range.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | pending | pending | pending | 8 (worst -), PASS |
+| time_to_warden_s | 60.215 (worst 63.61), PASS | 82.165 (worst 84.25), PASS | 80.78 (worst 83.89), PASS | pending | pending | pending | 86.12 (worst 86.88), reported, pilot band, not the floor's |
+| segment_s | 27.65, 15.62, 17.09 (worst 29.71), PASS | 38.29, 29.91, 13.76 (worst 39.38), PASS | 30.37, 30.78, 18.18 (worst 33.22), PASS | pending | pending | pending | 38.7, 31.52, 15.87 (worst 39.62), reported, pilot band, not the floor's |
+| flow_share | 0.9599 (worst 0.9469), PASS | 0.8347 (worst 0.7938), PASS | 0.7543 (worst 0.7011), PASS | pending | pending | pending | 0.7798 (worst 0.7447), reported, pilot band, not the floor's |
+| airborne_share | 0.2524 (worst 0.226, 0.2733), PASS | 0.1711 (worst 0.1627, 0.1813), PASS | 0.2306 (worst 0.185, 0.2778), PASS | pending | pending | pending | 0.1155 (worst 0.1082, 0.1192), reported, pilot band, not the floor's |
+| dead_stops | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | pending | pending | pending | 0 (worst 0), PASS |
+| peak_speed_mps | 53.865 (worst 52.01); tier3 median 48.875 s, PASS | 42.895 (worst 41.73); tier3 median 9.78 s, PASS | 33.39 (worst 31.46); tier3 median 10.91 s, PASS | pending | pending | pending | 42.78 (worst 42.23); tier3 median 11.315 s, reported, pilot band, not the floor's |
+| quiet_max_s | 8.25 (worst 8.41), PASS | 12.215 (worst 13), PASS | 11.8 (worst 12.13), PASS | pending | pending | pending | 12.255 (worst 12.82), reported, pilot band, not the floor's |
+| max_anchor_gap_m | 36.4 (worst 59.8), MISS | 33.2 (worst 35.9), PASS | 36.8 (worst 36.8), PASS | pending | pending | pending | 33.1 (worst 33.1), reported, pilot band, not the floor's |
+| distinct_verbs | 5.5 (worst 5), PASS | 6 (worst 6), PASS | 7 (worst 6), PASS | pending | pending | pending | 5 (worst 5), reported, pilot band, not the floor's |
+| length_ratio | 1.67 (worst 1.66, 1.71), PASS | 1.32 (worst 1.31, 1.32), PASS | 1.35 (worst 1.34, 1.36), PASS | pending | pending | pending | 1.38 (worst 1.38, 1.38), reported, pilot band, not the floor's |
+| floor | - | - | - | pending | pending | pending | 86.12 (worst 86.88); cap 164.33 s, PASS |
+| distinct_lines | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | - |
+
+Worst values and seed identities:
+
+| Line | time_to_warden_s: max | segment_s: max | flow_share: min | airborne_share: both | dead_stops: max | peak_speed_mps: min | tier3_s: min | quiet_max_s: max | max_anchor_gap_m: max | distinct_ride_facts: min | length_ratio: both |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 63.61 (seed 4) | 29.71 (seed 4) | 0.9469 (seed 1) | 0.226 (seed 4) / 0.2733 (seed 3) | 0 (seed 1,2,3,4,5,6,7,8) | 52.01 (seed 1) | 48.29 (seed 3) | 8.41 (seed 1) | 59.8 (seed 1) | 5 (seed 1,4,7,8) | 1.66 (seed 5,6) / 1.71 (seed 4) |
+| rivet | 84.25 (seed 3) | 39.38 (seed 4) | 0.7938 (seed 4) | 0.1627 (seed 3) / 0.1813 (seed 2) | 0 (seed 1,2,3,4,5,6,7,8) | 41.73 (seed 8) | 7.89 (seed 8) | 13 (seed 4) | 35.9 (seed 2) | 6 (seed 1,2,3,4,5,6,7,8) | 1.31 (seed 4,7) / 1.32 (seed 1,2,3,5,6,8) |
+| kest | 83.89 (seed 3) | 33.22 (seed 5,8) | 0.7011 (seed 5) | 0.185 (seed 5) / 0.2778 (seed 1) | 0 (seed 1,2,3,4,5,6,7,8) | 31.46 (seed 1) | 5.93 (seed 3) | 12.13 (seed 3) | 36.8 (seed 1,2,3,4,5,6,7,8) | 6 (seed 2,4,7) | 1.34 (seed 2,4,7) / 1.36 (seed 3,6) |
+| floor | 86.88 (seed 3) | 39.62 (seed 7) | 0.7447 (seed 7) | 0.1082 (seed 8) / 0.1192 (seed 6) | 0 (seed 1,2,3,4,5,6,7,8) | 42.23 (seed 3) | 11.19 (seed 4) | 12.82 (seed 7) | 33.1 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+
+Failed acceptance cells: `[["sweep", "incomplete", 4, 7], ["sable", "max_anchor_gap_m", 36.4, 59.8]]`.
+
 ## 2026-10-12: merged-kit baseline
 
 Measured on merged head `cd3a9bf`, which contains candidate `6710ac0` and admitted greybox `f58699e`. The park file is unchanged from the admitted greybox, SHA256 `99ce445c21b848f486e5d487c021895d3d6a2039cdf4736324d12fd55de20a4e`; its graph was rebuilt with the candidate's tool before these runs. Evidence: `/tmp/claude-1000/w13-sol/kd1-dam-r1/merged-baseline/`, seven lines, eight seeds each, one Godot process at a time at nice 10. This table separates the kit merge's effect from the subsequent anchor repair and dressed geometry.

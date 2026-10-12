@@ -1,6 +1,6 @@
 # Stage 1, `park_dam`: Spillway: the dam
 
-World 1, Spillway Works. Warden kind `reactor` on the `dam_face` mounting, variant `""`. Time of day `dawn`. Storyboard board id `park-1-park_dam`. Status: dressed candidate under automated qualification (2026-10-12). Andrew's visual and play verdict remains open.
+World 1, Spillway Works. Warden kind `reactor` on the `dam_face` mounting, variant `""`. Time of day `dawn`. Storyboard board id `park-1-park_dam`. Status: dressed candidate; automated qualification FAIL (2026-10-12). Andrew's visual and play verdict remains open.
 
 This page follows the park schema in `design-v3/PARK.md` section 2 and `adr/TADR-011-park-terrain-and-warden-kinds.md`. Section 13 mirrors the shipped park file. The graph, recipe bounds and automated traversal qualify that file; they do not establish its rendered look or human feel.
 
@@ -282,19 +282,32 @@ The baked ledges are 24 m plateaus beneath the native recipe pieces (section 5),
 
 ## 9. Traversal lines
 
-Dressed geometry candidate `4ded90b`, after merging `1fb07b1`. Final eight-seed receipts are pending. The anchor repair was qualified on `cacaba8`; its nearby-line reruns are in `/tmp/claude-1000/w13-sol/kd1-dam-r2/anchor-try1/`. The historical table below is the merged-kit baseline until the final sweep fills it.
+Measured on dressed source head `3469382fee4d5bdaf1dd6e392136c80f3a04cd11`, after merging `1fb07b1`. Evidence: `/tmp/claude-1000/w13-sol/kd1-dam-r2/receipt-final/`. Each line runs seeds 1 to 8 in one process through the CPU queue at nice 10. The floor starts after Rivet so it reads that sweep's median. Verdict: **FAIL**. These are headless runtime measurements; rendered appearance and human feel remain open.
 
-| Line | Route after the domes | Length ratio (1.3 to 2.0) | Segment medians s (12 to 45) | Drop-in to Warden s, median (worst) (60 to 120, none over 150) | Peak m/s, median | Airborne share |
-| --- | --- | --- | --- | --- | --- | --- |
-| Sable | shelf A loop, west wash, west (tunnel, bucket, pool) | 1.640 | 27.65, 17.12, 17.31 | 62.03 (66.86) | 54.12 | 0.2486 |
-| Rivet | shelf B, upper slot, centre (incline, apron) | 1.325 | 38.29, 29.59, 13.49 | 81.83 (82.29) | 42.62 | 0.1633 |
-| Kest | shelf C, corkscrew, east (bridge, bench) | 1.340 | 30.37, 30.55, 22.38 | 83.75 (86.02) | 31.65 | 0.2832 |
-| Tarn | shelf B, upper slot, west (tunnel, bucket, pool; the waypoints in the lines file) | 1.380 | 31.63, 26.62, 16.31 | 74.72 (76.10) | 39.59 | 0.2158 |
-| Tally | shelf C, west wash, plunge pool | 1.320 | 31.94, 31.26, 17.17 | 81.07 (82.30) | 44.58 | 0.1643 |
-| Cannon | shelf C, corkscrew, crest | 1.450 | 29.54, 29.60, 25.21 | 84.39 (85.07) | 36.67 | 0.1751 |
-| Floor line | shelf B, upper slot, west (tunnel, bucket, pool), no contraption | 1.380 | 38.70, 31.42, 15.85 | 85.98 (87.16) | 42.70 | 0.1148 |
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | pending | pending | pending | 8 (worst -), PASS |
+| time_to_warden_s | 60.215 (worst 63.61), PASS | 82.165 (worst 84.25), PASS | 80.78 (worst 83.89), PASS | pending | pending | pending | 86.12 (worst 86.88), reported, pilot band, not the floor's |
+| segment_s | 27.65, 15.62, 17.09 (worst 29.71), PASS | 38.29, 29.91, 13.76 (worst 39.38), PASS | 30.37, 30.78, 18.18 (worst 33.22), PASS | pending | pending | pending | 38.7, 31.52, 15.87 (worst 39.62), reported, pilot band, not the floor's |
+| flow_share | 0.9599 (worst 0.9469), PASS | 0.8347 (worst 0.7938), PASS | 0.7543 (worst 0.7011), PASS | pending | pending | pending | 0.7798 (worst 0.7447), reported, pilot band, not the floor's |
+| airborne_share | 0.2524 (worst 0.226, 0.2733), PASS | 0.1711 (worst 0.1627, 0.1813), PASS | 0.2306 (worst 0.185, 0.2778), PASS | pending | pending | pending | 0.1155 (worst 0.1082, 0.1192), reported, pilot band, not the floor's |
+| dead_stops | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | pending | pending | pending | 0 (worst 0), PASS |
+| peak_speed_mps | 53.865 (worst 52.01); tier3 median 48.875 s, PASS | 42.895 (worst 41.73); tier3 median 9.78 s, PASS | 33.39 (worst 31.46); tier3 median 10.91 s, PASS | pending | pending | pending | 42.78 (worst 42.23); tier3 median 11.315 s, reported, pilot band, not the floor's |
+| quiet_max_s | 8.25 (worst 8.41), PASS | 12.215 (worst 13), PASS | 11.8 (worst 12.13), PASS | pending | pending | pending | 12.255 (worst 12.82), reported, pilot band, not the floor's |
+| max_anchor_gap_m | 36.4 (worst 59.8), MISS | 33.2 (worst 35.9), PASS | 36.8 (worst 36.8), PASS | pending | pending | pending | 33.1 (worst 33.1), reported, pilot band, not the floor's |
+| distinct_verbs | 5.5 (worst 5), PASS | 6 (worst 6), PASS | 7 (worst 6), PASS | pending | pending | pending | 5 (worst 5), reported, pilot band, not the floor's |
+| length_ratio | 1.67 (worst 1.66, 1.71), PASS | 1.32 (worst 1.31, 1.32), PASS | 1.35 (worst 1.34, 1.36), PASS | pending | pending | pending | 1.38 (worst 1.38, 1.38), reported, pilot band, not the floor's |
+| floor | - | - | - | pending | pending | pending | 86.12 (worst 86.88); cap 164.33 s, PASS |
+| distinct_lines | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | - |
 
-The baseline table above predates dressing. The final sweep must pass every pilot band, using worst seeds for per-seed limits. The floor is judged by its own row only. The batch anchor repair passed on all eight Sable seeds, with a worst gap of 36.4 m and zero dead stops. The shared process-history defect belongs to TRAV-DET; isolated seed runs do not qualify this stage.
+| Line | time_to_warden_s: max | segment_s: max | flow_share: min | airborne_share: both | dead_stops: max | peak_speed_mps: min | tier3_s: min | quiet_max_s: max | max_anchor_gap_m: max | distinct_ride_facts: min | length_ratio: both |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 63.61 (seed 4) | 29.71 (seed 4) | 0.9469 (seed 1) | 0.226 (seed 4) / 0.2733 (seed 3) | 0 (seed 1,2,3,4,5,6,7,8) | 52.01 (seed 1) | 48.29 (seed 3) | 8.41 (seed 1) | 59.8 (seed 1) | 5 (seed 1,4,7,8) | 1.66 (seed 5,6) / 1.71 (seed 4) |
+| rivet | 84.25 (seed 3) | 39.38 (seed 4) | 0.7938 (seed 4) | 0.1627 (seed 3) / 0.1813 (seed 2) | 0 (seed 1,2,3,4,5,6,7,8) | 41.73 (seed 8) | 7.89 (seed 8) | 13 (seed 4) | 35.9 (seed 2) | 6 (seed 1,2,3,4,5,6,7,8) | 1.31 (seed 4,7) / 1.32 (seed 1,2,3,5,6,8) |
+| kest | 83.89 (seed 3) | 33.22 (seed 5,8) | 0.7011 (seed 5) | 0.185 (seed 5) / 0.2778 (seed 1) | 0 (seed 1,2,3,4,5,6,7,8) | 31.46 (seed 1) | 5.93 (seed 3) | 12.13 (seed 3) | 36.8 (seed 1,2,3,4,5,6,7,8) | 6 (seed 2,4,7) | 1.34 (seed 2,4,7) / 1.36 (seed 3,6) |
+| floor | 86.88 (seed 3) | 39.62 (seed 7) | 0.7447 (seed 7) | 0.1082 (seed 8) / 0.1192 (seed 6) | 0 (seed 1,2,3,4,5,6,7,8) | 42.23 (seed 3) | 11.19 (seed 4) | 12.82 (seed 7) | 33.1 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+
+Initial shelf repair on `cacaba8`: 45.3 m to 36.4 m, all eight batch seeds, zero dead stops. The added row is `sable_shelf_runout_anchor`. The final dressed Sable gap is 59.8 m. Dressed repairs also touch the native ledge support, both `eye_fall_spire` rows, `canyon_hook_spire`, `eye_chute_west` and `pool_rock`. The temporary `canyon_hook_fin` is removed. The shared process-history defect is owned by TRAV-DET; this head does not carry its fix. No pack stop is excluded from the dead-stop band.
 
 Three line re-cuts on the KB9 head, each from a traced seed. Sable's line goes straight at `domes_camp` from [-60, -450]: at 40 m/s she passed 16.6 m from the camp and looped for 75 s to come back within the bot's 12 m. Her east turn on the shelf loop moves to [-25, -555], short of `domes_fin_east`. Her wash entry point moves onto the wash axis at [-137, -190]. Cannon's descent turns east at [120, 285] and [145, 350], so she lands east of `powerhouse_stair` and clear of the `rim_zip` head, and her bench points ([150, 410], [156, 470]) keep 10 m off the `canal_lips` ridge.
 
@@ -390,7 +403,7 @@ Draft text for the lore pass, in the tone of `SOUND-STORY.md:212`. Fragment ids 
 
 ## 13. The park file
 
-Dressed candidate measured on `4ded90b`. The file has 177 park rows, 6 events, 5 homes, 9 contraptions and 3 activities. Bake and graph are committed under `assets/park/park_dam/`. The Warden remains reactor / dam_face / harpoon_anchor, and the two floods remain 1.2 m.
+Dressed source measured on `3469382fee4d5bdaf1dd6e392136c80f3a04cd11`. The file has 177 park rows, 6 events, 5 homes, 9 contraptions and 3 activities. Bake and graph are committed under `assets/park/park_dam/`. The Warden remains reactor / dam_face / harpoon_anchor, and the two floods remain 1.2 m.
 
 | Pocket | Role | Door | door_m | detour_m | d_spawn | d_landmark | sight_ok | pay.rarities |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
