@@ -391,6 +391,32 @@
           "note": "Both paws begin at the twin yokes."
         },
         {
+          "frame": 5,
+          "torso": {
+            "yaw": 10
+          },
+          "head": {
+            "yaw": 12
+          },
+          "hand.R": {
+            "at": [
+              0.25,
+              -0.1,
+              0.04
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "tool.R": -20,
+          "note": "The existing one-paw reach behind the seat begins its held anticipation."
+        },
+        {
           "frame": 6,
           "torso": {
             "yaw": 10
@@ -417,6 +443,32 @@
           "note": "The right paw reaches around the seat back toward the wrench rack."
         },
         {
+          "frame": 9,
+          "torso": {
+            "yaw": 10
+          },
+          "head": {
+            "yaw": 12
+          },
+          "hand.R": {
+            "at": [
+              0.25,
+              -0.1,
+              0.04
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "tool.R": -20,
+          "note": "The existing backward reach holds before the quarter turn."
+        },
+        {
           "frame": 11,
           "torso": {
             "yaw": 14
@@ -441,10 +493,10 @@
           },
           "wrist.R": [
             0,
-            0,
+            90,
             0
           ],
-          "note": "The right paw meets the outer rack wrench head."
+          "note": "The right paw holds the reached-back rack wrench head with the wrist rolled 90 degrees, showing the quarter turn."
         },
         {
           "frame": 17,
@@ -474,8 +526,7 @@
             90,
             0
           ],
-          "tool.R": 0,
-          "note": "The right wrist turns its single carried wrench through a quarter turn."
+          "note": "The wrench head and 90-degree wrist roll remain held at the rack."
         },
         {
           "frame": 23,
@@ -484,13 +535,13 @@
             "yaw": 3
           },
           "head": {
-            "pitch": -10
+            "pitch": -15
           },
           "hand.R": {
             "at": [
-              0.3,
-              0.31,
-              0.05
+              0.22,
+              0.12,
+              0.04
             ]
           },
           "hand.L": {
@@ -502,7 +553,34 @@
             ]
           },
           "tool.R": -10,
-          "note": "Her chin dips in a short nod as the right paw returns forward."
+          "note": "A clear 15-degree head dip with the wrench paw back at the chest, separate from any two-paw pull."
+        },
+        {
+          "frame": 26,
+          "torso": {
+            "pitch": -2,
+            "yaw": 3
+          },
+          "head": {
+            "pitch": -15
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.12,
+              0.04
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "tool.R": -10,
+          "note": "The chest-level paw and 15-degree nod hold as a distinct release beat."
         },
         {
           "frame": 31,
@@ -536,6 +614,35 @@
           "note": "Both paws begin at the twin yokes."
         },
         {
+          "frame": 2,
+          "torso": {
+            "pitch": -3,
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "GaugeLever",
+            "offset": [
+              0,
+              0.04,
+              0.25
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "ears": 20,
+          "tool.R": -35,
+          "note": "The accepted one-paw gauge-lever reach begins its held anticipation."
+        },
+        {
           "frame": 4,
           "torso": {
             "pitch": -3,
@@ -563,6 +670,35 @@
           "ears": 20,
           "tool.R": -35,
           "note": "The right paw lifts just above the gauge lever knob."
+        },
+        {
+          "frame": 5,
+          "torso": {
+            "pitch": -3,
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "GaugeLever",
+            "offset": [
+              0,
+              0.04,
+              0.25
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "ears": 20,
+          "tool.R": -35,
+          "note": "The gauge-lever anticipation remains held before the slap."
         },
         {
           "frame": 7,
@@ -597,19 +733,19 @@
         {
           "frame": 10,
           "torso": {
-            "height": 0.97,
-            "pitch": -6,
-            "yaw": -6
+            "height": 0.96,
+            "pitch": -8,
+            "yaw": -8
           },
           "head": {
-            "pitch": -4
+            "pitch": -5
           },
           "hand.R": {
             "control": "GaugeLever",
             "offset": [
               0,
-              0.04,
-              0.18
+              0,
+              0
             ]
           },
           "hand.L": {
@@ -620,9 +756,9 @@
               0
             ]
           },
-          "ears": 30,
+          "ears": 38,
           "tool.R": -35,
-          "note": "The right paw lifts off the gauge lever after the slap as the lever completes its throw."
+          "note": "The gauge-lever contact holds with the ears pinned back."
         },
         {
           "frame": 14,
@@ -648,6 +784,31 @@
           "ears": 12,
           "tool.R": -10,
           "note": "The right paw withdraws toward its yoke."
+        },
+        {
+          "frame": 15,
+          "torso": {
+            "pitch": -2,
+            "yaw": -2
+          },
+          "hand.R": {
+            "at": [
+              0.38,
+              0.36,
+              0.03
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "ears": 12,
+          "tool.R": -10,
+          "note": "The accepted withdrawal toward the yoke holds before rest."
         },
         {
           "frame": 19,
@@ -679,43 +840,99 @@
           "note": "Both paws begin at separate yokes."
         },
         {
-          "frame": 3,
+          "frame": 2,
           "torso": {
-            "pitch": -4,
-            "yaw": -12
+            "pitch": 2,
+            "roll": 4
           },
           "head": {
-            "yaw": -8
+            "yaw": 8
           },
           "hand.R": {
             "control": "SpoolBrake",
             "offset": [
-              0.02,
-              0.06,
-              0.23
+              0,
+              0.12,
+              0.04
             ]
           },
           "hand.L": {
             "control": "SpoolBrake",
             "offset": [
-              -0.1,
-              0.06,
-              0.23
+              -0.4,
+              0.12,
+              0.04
             ]
           },
           "tool.R": -30,
-          "note": "Both paws reach across to the spool brake in the right-hand bank."
+          "note": "The two-paw right-bank reach begins its four-frame anticipation hold. The left paw takes the reachable inner right-bank end, 400 mm inward from the control centre."
+        },
+        {
+          "frame": 3,
+          "torso": {
+            "pitch": 2,
+            "roll": 4
+          },
+          "head": {
+            "yaw": 8
+          },
+          "hand.R": {
+            "control": "SpoolBrake",
+            "offset": [
+              0,
+              0.12,
+              0.04
+            ]
+          },
+          "hand.L": {
+            "control": "SpoolBrake",
+            "offset": [
+              -0.4,
+              0.12,
+              0.04
+            ]
+          },
+          "tool.R": -30,
+          "note": "Both paws reach the right-bank spool brake forward of its bite position; the body prepares one backward haul. The left paw takes the reachable inner right-bank end, 400 mm inward from the control centre."
+        },
+        {
+          "frame": 5,
+          "torso": {
+            "pitch": 2,
+            "roll": 4
+          },
+          "head": {
+            "yaw": 8
+          },
+          "hand.R": {
+            "control": "SpoolBrake",
+            "offset": [
+              0,
+              0.12,
+              0.04
+            ]
+          },
+          "hand.L": {
+            "control": "SpoolBrake",
+            "offset": [
+              -0.4,
+              0.12,
+              0.04
+            ]
+          },
+          "tool.R": -30,
+          "note": "Both paws remain forward at the right-bank brake before the backward haul. The left paw takes the reachable inner right-bank end, 400 mm inward from the control centre."
         },
         {
           "frame": 6,
           "torso": {
             "height": 0.97,
-            "pitch": -6,
-            "yaw": -14
+            "pitch": 24,
+            "roll": 24
           },
           "head": {
-            "pitch": -3,
-            "yaw": -10
+            "pitch": 3,
+            "yaw": 8
           },
           "hand.R": {
             "control": "SpoolBrake",
@@ -728,73 +945,111 @@
           "hand.L": {
             "control": "SpoolBrake",
             "offset": [
-              -0.1,
+              -0.38,
               0,
               0
             ]
           },
           "ears": 22,
           "tool.R": -30,
-          "note": "At frame 6 after the Bank Shot bite, the right paw meets the brake handle centre while the left paw holds its inward side."
+          "note": "Both paws haul backward 120 mm to the right-bank brake at the frame-6 bite; both spine bones lean back and right together. The left paw holds the inner bank 380 mm inward; spine_01 and spine_02 each pitch and roll about 11 to 13 degrees.",
+          "tail": -16
         },
         {
           "frame": 9,
           "torso": {
-            "height": 0.94,
-            "pitch": 7,
-            "yaw": -12,
-            "roll": -8
+            "height": 0.97,
+            "pitch": 24,
+            "roll": 24
           },
           "head": {
             "pitch": 3,
-            "yaw": -8
+            "yaw": 8
           },
           "hand.R": {
             "control": "SpoolBrake",
             "offset": [
               0.0,
-              0.04,
-              0.18
+              0,
+              0
             ]
           },
           "hand.L": {
             "control": "SpoolBrake",
             "offset": [
-              -0.1,
-              0.04,
-              0.18
+              -0.38,
+              0,
+              0
             ]
           },
-          "ears": 28,
-          "tail": -16,
+          "ears": 22,
           "tool.R": -30,
-          "note": "Both paws haul the brake while the seated torso leans into the whip."
+          "note": "The paws and backward-right torso lean hold together after the bite. The left paw holds the inner bank 380 mm inward; spine_01 and spine_02 each pitch and roll about 11 to 13 degrees.",
+          "tail": -16
         },
         {
           "frame": 12,
           "torso": {
-            "pitch": 2,
-            "yaw": -4,
-            "roll": -3
+            "height": 0.97,
+            "pitch": 24,
+            "roll": 24
+          },
+          "head": {
+            "pitch": 3,
+            "yaw": 8
           },
           "hand.R": {
-            "at": [
-              0.36,
-              0.34,
-              0.02
+            "control": "SpoolBrake",
+            "offset": [
+              0.0,
+              0,
+              0
             ]
           },
           "hand.L": {
-            "at": [
-              -0.2,
-              0.32,
-              0.03
+            "control": "SpoolBrake",
+            "offset": [
+              -0.38,
+              0,
+              0
             ]
           },
-          "ears": 10,
-          "tail": -6,
-          "tool.R": -10,
-          "note": "Both paws release the brake and separate toward their yokes."
+          "ears": 22,
+          "tool.R": -30,
+          "note": "Release beat: hold the same two-paw right-bank haul and torso lean before returning to the separate yokes. The left paw holds the inner bank 380 mm inward; spine_01 and spine_02 each pitch and roll about 11 to 13 degrees.",
+          "tail": -16
+        },
+        {
+          "frame": 13,
+          "torso": {
+            "height": 0.97,
+            "pitch": 24,
+            "roll": 24
+          },
+          "head": {
+            "pitch": 3,
+            "yaw": 8
+          },
+          "hand.R": {
+            "control": "SpoolBrake",
+            "offset": [
+              0.0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "SpoolBrake",
+            "offset": [
+              -0.38,
+              0,
+              0
+            ]
+          },
+          "ears": 22,
+          "tool.R": -30,
+          "note": "The backward-right haul remains held for one last frame. The left paw holds the inner bank 380 mm inward; spine_01 and spine_02 each pitch and roll about 11 to 13 degrees.",
+          "tail": -16
         },
         {
           "frame": 16,
@@ -872,6 +1127,34 @@
           "note": "The left paw reaches behind the seat toward the full wrench rack."
         },
         {
+          "frame": 13,
+          "torso": {
+            "yaw": -10
+          },
+          "head": {
+            "yaw": -28,
+            "roll": 10
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              -0.14,
+              0.02
+            ]
+          },
+          "jaw": -4,
+          "ears": -10,
+          "note": "The sidelong grin and left-paw reach to the full rack hold before the tap."
+        },
+        {
           "frame": 14,
           "torso": {
             "yaw": -12
@@ -900,6 +1183,34 @@
           "note": "The left paw taps the outer wrench head on the rack."
         },
         {
+          "frame": 17,
+          "torso": {
+            "yaw": -12
+          },
+          "head": {
+            "yaw": -28,
+            "roll": 10
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.0825,
+              -0.258,
+              -0.082
+            ]
+          },
+          "jaw": -4,
+          "ears": -10,
+          "note": "The left-paw tap on the full rack holds, opposite the wrench-head quarter turn."
+        },
+        {
           "frame": 19,
           "torso": {
             "yaw": -4
@@ -926,6 +1237,34 @@
           "jaw": -2,
           "ears": -3,
           "note": "The left paw returns forward while her head straightens."
+        },
+        {
+          "frame": 22,
+          "torso": {
+            "yaw": -4
+          },
+          "head": {
+            "yaw": -12,
+            "roll": 4
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.3,
+              0.27,
+              0.06
+            ]
+          },
+          "jaw": -2,
+          "ears": -3,
+          "note": "The paw-return release beat holds as her head straightens."
         },
         {
           "frame": 25,
@@ -1335,7 +1674,7 @@
           "note": "Both paws begin at the twin yokes."
         },
         {
-          "frame": 3,
+          "frame": 2,
           "torso": {
             "pitch": 3
           },
@@ -1347,7 +1686,7 @@
             "offset": [
               0,
               0,
-              0.1
+              0.26
             ]
           },
           "hand.L": {
@@ -1360,16 +1699,72 @@
           },
           "ears": 16,
           "tool.R": -35,
-          "note": "The right paw lifts above the seat-frame contact stand-in."
+          "note": "The raised-paw anticipation begins its four-frame hold above the rail stand-in."
+        },
+        {
+          "frame": 3,
+          "torso": {
+            "pitch": 3
+          },
+          "head": {
+            "pitch": 2
+          },
+          "hand.R": {
+            "control": "SeatFrame",
+            "offset": [
+              0,
+              0,
+              0.26
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "ears": 16,
+          "tool.R": -35,
+          "note": "The wrench paw rises 260 mm directly above the seat-frame stand-in, with no torso twist."
+        },
+        {
+          "frame": 5,
+          "torso": {
+            "pitch": 3
+          },
+          "head": {
+            "pitch": 2
+          },
+          "hand.R": {
+            "control": "SeatFrame",
+            "offset": [
+              0,
+              0,
+              0.26
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "ears": 16,
+          "tool.R": -35,
+          "note": "The paw remains vertically above SeatFrame before the slam."
         },
         {
           "frame": 6,
           "torso": {
-            "height": 0.92,
-            "pitch": -12
+            "height": 0.94,
+            "pitch": -5
           },
           "head": {
-            "pitch": -6
+            "pitch": -5
           },
           "hand.R": {
             "control": "SeatFrame",
@@ -1390,23 +1785,23 @@
           "ears": 32,
           "tail": -18,
           "tool.R": -35,
-          "note": "The right paw slams down on the grip-position seat-frame stand-in."
+          "note": "The wrench paw drives straight down 260 mm onto the SeatFrame stand-in beside the right hip; spine and head compress without a sideways twist."
         },
         {
           "frame": 9,
           "torso": {
-            "height": 0.95,
-            "pitch": -6
+            "height": 0.94,
+            "pitch": -5
           },
           "head": {
-            "yaw": -32,
-            "pitch": 5
+            "pitch": -5
           },
           "hand.R": {
-            "at": [
-              0.34,
-              0.37,
-              0.06
+            "control": "SeatFrame",
+            "offset": [
+              0,
+              0,
+              0
             ]
           },
           "hand.L": {
@@ -1417,22 +1812,23 @@
               0
             ]
           },
-          "ears": 8,
-          "tail": 12,
-          "tool.R": -15,
-          "note": "Her head snaps toward an anatomical-right proxy for the brightest tagged face."
+          "ears": 32,
+          "tail": -18,
+          "tool.R": -35,
+          "note": "The paw holds the contact after the straight downward strike."
         },
         {
           "frame": 14,
           "torso": {
+            "height": 0.97,
             "pitch": -2
           },
           "head": {
-            "yaw": -14,
-            "pitch": 2
+            "yaw": -32,
+            "pitch": 0
           },
           "hand.R": {
-            "control": "Grip.R",
+            "control": "SeatFrame",
             "offset": [
               0,
               0,
@@ -1447,8 +1843,41 @@
               0
             ]
           },
+          "ears": -18,
           "tail": 4,
-          "note": "Both paws hold the yokes while her head turns back toward the nose."
+          "tool.R": -35,
+          "note": "A separate 32-degree head snap toward the tagged-face proxy, ears forward; the right paw stays on SeatFrame."
+        },
+        {
+          "frame": 17,
+          "torso": {
+            "height": 0.97,
+            "pitch": -2
+          },
+          "head": {
+            "yaw": -32,
+            "pitch": 0
+          },
+          "hand.R": {
+            "control": "SeatFrame",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "ears": -18,
+          "tail": 4,
+          "tool.R": -35,
+          "note": "The sideward head snap and forward ears hold while the paw stays on the rail stand-in."
         },
         {
           "frame": 19,
@@ -1480,7 +1909,7 @@
           "note": "The required first anchor is exact seated rest."
         },
         {
-          "frame": 5,
+          "frame": 6,
           "root": [
             0,
             0,
@@ -1495,25 +1924,124 @@
           },
           "hand.R": {
             "at": [
-              0.3,
-              0.28,
-              0.53
+              0.12,
+              0.14,
+              0.73
             ]
           },
           "hand.L": {
             "at": [
-              -0.3,
-              0.28,
-              0.53
+              -0.12,
+              0.14,
+              0.73
             ]
           },
           "ears": 16,
           "tail": -10,
           "tool.R": -20,
-          "note": "The seated root rises smoothly from rest over four frames before the descent; the rest anchor takes precedence over an offscreen arrival."
+          "note": "The root rises visibly above the seat with both paws near the raised cap."
+        },
+        {
+          "frame": 9,
+          "root": [
+            0,
+            0,
+            0.42
+          ],
+          "torso": {
+            "height": 0.98,
+            "pitch": -3
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.12,
+              0.14,
+              0.73
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.12,
+              0.14,
+              0.73
+            ]
+          },
+          "ears": 16,
+          "tail": -10,
+          "tool.R": -20,
+          "note": "The elevated root and two-paw cap pose hold before the sampled drop apex."
         },
         {
           "frame": 10,
+          "root": [
+            0,
+            0,
+            0.42
+          ],
+          "torso": {
+            "height": 0.98,
+            "pitch": -3
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.12,
+              0.14,
+              0.73
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.12,
+              0.14,
+              0.73
+            ]
+          },
+          "ears": 16,
+          "tail": -10,
+          "tool.R": -20,
+          "note": "The root holds a head-height 420 mm above the seat on the sampled anticipation frame, with both paws at the raised cap brim."
+        },
+        {
+          "frame": 13,
+          "root": [
+            0,
+            0,
+            0.42
+          ],
+          "torso": {
+            "height": 0.98,
+            "pitch": -3
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.12,
+              0.14,
+              0.73
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.12,
+              0.14,
+              0.73
+            ]
+          },
+          "ears": 16,
+          "tail": -10,
+          "tool.R": -20,
+          "note": "The sampled drop apex holds for four frames before descent."
+        },
+        {
+          "frame": 20,
           "root": [
             0,
             0,
@@ -1546,40 +2074,7 @@
           "ears": 30,
           "tail": 12,
           "tool.R": -20,
-          "note": "The root reaches the seat and the torso compresses on arrival."
-        },
-        {
-          "frame": 15,
-          "root": [
-            0,
-            0,
-            0
-          ],
-          "torso": {
-            "height": 1.02,
-            "pitch": 2
-          },
-          "head": {
-            "pitch": 1
-          },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "at": [
-              -0.12,
-              0.14,
-              0.31
-            ]
-          },
-          "ears": 8,
-          "tail": 4,
-          "note": "The left paw rises to the cap brim as the seated torso rebounds."
+          "note": "The root drops into the seat by frame 20; the seated torso compresses on arrival."
         },
         {
           "frame": 23,
@@ -1589,14 +2084,13 @@
             0
           ],
           "head": {
-            "pitch": -5
+            "pitch": -12
           },
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.12,
+              0.14,
+              0.28
             ]
           },
           "hand.L": {
@@ -1607,37 +2101,34 @@
             ]
           },
           "ears": 6,
-          "note": "The left paw pulls downward along the cap brim."
+          "note": "Both paws pull the cap brim down together with a clear head dip, after the drop."
         },
         {
-          "frame": 30,
+          "frame": 27,
           "root": [
             0,
             0,
             0
           ],
-          "torso": {
-            "pitch": -3
-          },
           "head": {
-            "pitch": -8
+            "pitch": -12
           },
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.12,
+              0.14,
+              0.28
             ]
           },
           "hand.L": {
             "at": [
-              -0.1,
-              0.16,
-              0.04
+              -0.12,
+              0.14,
+              0.28
             ]
           },
-          "note": "The left paw reaches the chest strap."
+          "ears": 6,
+          "note": "Both paws and the dipped head hold the cap-brim pull."
         },
         {
           "frame": 39,
@@ -1662,9 +2153,9 @@
           },
           "hand.L": {
             "at": [
-              -0.17,
-              0.2,
-              -0.02
+              0.18,
+              0.16,
+              0.02
             ]
           },
           "wrist.L": [
@@ -1672,7 +2163,7 @@
             0,
             0
           ],
-          "note": "The left paw makes a short downward-outward tug along the strap."
+          "note": "The left paw cinches the strap across the chest, a separate cross-body beat after the cap pull."
         },
         {
           "frame": 48,
@@ -1705,6 +2196,38 @@
           },
           "ears": -6,
           "note": "The left paw checks the outer rack wrench while her head turns back."
+        },
+        {
+          "frame": 51,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "yaw": -10
+          },
+          "head": {
+            "yaw": -26,
+            "pitch": -4
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.0825,
+              -0.258,
+              -0.082
+            ]
+          },
+          "ears": -6,
+          "note": "The rack-check turn holds as a separate last beat."
         },
         {
           "frame": 58,
