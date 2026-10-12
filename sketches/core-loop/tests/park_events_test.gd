@@ -248,15 +248,36 @@ func _lifecycle() -> void:
 			if f.kind == "ended":
 				last_end = d.stage_time
 	_check("row cooldown", starts >= 3 and good, "%d repeats after independent 4 s cooldown" % starts)
-	r.once = true
-	r.live_s = 0.0
-	d = _director([r])
-	var persistent := false
-	for i in 500:
-		for f in _step(d):
-			persistent = persistent or f.kind == "started"
-	var ended: Array = d.finish_row("repeat")
-	_check("persistent row finish and cleanup", persistent and ended.size() == 1 and ended[0].kind == "ended" and d.end_all().is_empty(), str(ended))
+	var arrival := _row("persistent", "fleet_landing", "fleet")
+	arrival.live_s = 0.0
+	arrival.route_change = {"closes": ["main"], "opens": ["bypass"]}
+	var rival := _row("rival", "fleet_landing", "fleet")
+	rival.trigger.value = 2
+	var dependent := _row("dependent", "lightning", "natural")
+	dependent.trigger.value = 2
+	dependent.route_change.closes = ["main"]
+	var map := Map.new()
+	map.park = {"map": "fixture", "event_rows": [arrival, rival, dependent], "weather_rows": [],
+		"park_rows": [{"id": "site", "at": [0, 0], "y": 0, "size": [20, 2, 20], "yaw_deg": 0}],
+		"routes": [{"id": "main", "from": "drop_in", "to": "landmark"}, {"id": "bypass", "from": "drop_in", "to": "landmark"}]}
+	d = Director.new(891, {}, map, 14.0, func(_x, _z): return 0.0)
+	var facts := []
+	var hooks := []
+	d.register_family("fleet", func(action, row_data, _ctx): hooks.append([action, row_data.id]))
+	for i in 300:
+		facts.append_array(_step(d, H, FAR, Vector3.ZERO, {"clock_tier": 1}))
+	var early_end: Array = d.finish_row("persistent")
+	facts.append_array(early_end)
+	for i in 600:
+		facts.append_array(_step(d, H, FAR, Vector3.ZERO, {"clock_tier": 2}))
+	var persistent_starts := facts.filter(func(f): return f.kind == "started").map(func(f): return f.id)
+	var endings := facts.filter(func(f): return f.kind == "ended" and f.id == "persistent")
+	var teardown: Array = d.end_all()
+	var cleanup := teardown.filter(func(f): return f.kind == "ended" and f.id == "persistent")
+	_check("persistent row holds routes and capacity until teardown", early_end.is_empty() and endings.is_empty()
+		and persistent_starts.has("persistent") and persistent_starts.has("dependent") and not persistent_starts.has("rival")
+		and cleanup.size() == 1 and hooks.count(["end", "persistent"]) == 1 and d.end_all().is_empty(),
+		"starts=%s early_end=%s teardown=%s" % [persistent_starts, early_end, teardown.map(func(f): return f.id)])
 
 
 func _weather() -> void:
