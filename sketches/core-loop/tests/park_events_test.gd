@@ -30,6 +30,7 @@ func _initialize() -> void:
 		_held_announcements()
 		_corridors()
 		_lifecycle()
+		_teardown_announcements()
 		_weather()
 		_ending_safety()
 	print("park_events_test: PASS" if _failures == 0 else "park_events_test: FAIL")
@@ -394,10 +395,50 @@ func _lifecycle() -> void:
 	var endings := facts.filter(func(f): return f.kind == "ended" and f.id == "persistent")
 	var teardown: Array = d.end_all()
 	var cleanup := teardown.filter(func(f): return f.kind == "ended" and f.id == "persistent")
+	var rival_cleanup := teardown.filter(func(f): return f.kind == "ended" and f.id == "rival")
+	var hooks_after_teardown := hooks.size()
+	var second_teardown: Array = d.end_all()
 	_check("persistent row holds routes and capacity until teardown", early_end.is_empty() and endings.is_empty()
 		and persistent_starts.has("persistent") and persistent_starts.has("dependent") and not persistent_starts.has("rival")
-		and cleanup.size() == 1 and hooks.count(["end", "persistent"]) == 1 and d.end_all().is_empty(),
+		and cleanup.size() == 1 and hooks.count(["end", "persistent"]) == 1 and second_teardown.is_empty(),
 		"starts=%s early_end=%s teardown=%s" % [persistent_starts, early_end, teardown.map(func(f): return f.id)])
+	_check("teardown closes capacity-blocked announcement", facts.filter(func(f): return f.kind == "announced" and f.id == "rival").size() == 1
+		and rival_cleanup.size() == 1 and hooks.count(["telegraph", "rival"]) == 1 and hooks.count(["end", "rival"]) == 1
+		and hooks.count(["land", "rival"]) == 0 and not persistent_starts.has("rival")
+		and second_teardown.is_empty() and hooks.size() == hooks_after_teardown,
+		"rival ended=%d end_hooks=%d land_hooks=%d second_facts=%d" % [rival_cleanup.size(), hooks.count(["end", "rival"]), hooks.count(["land", "rival"]), second_teardown.size()])
+
+
+func _teardown_announcements() -> void:
+	var held := _row("held_teardown")
+	held.route_change = {"closes": ["main"], "opens": ["unused"]}
+	var silent := _row("never_announced")
+	silent.trigger.value = 5
+	var d = _director([held, silent])
+	var hooks := []
+	d.register_family("natural", func(action, row_data, _ctx): hooks.append([action, row_data.id]))
+	var facts := []
+	for i in 300:
+		facts.append_array(_step(d, H, Vector3(0, 1, 0)))
+	var teardown: Array = d.end_all()
+	var hook_count := hooks.size()
+	var second: Array = d.end_all()
+	var after := []
+	for i in 300:
+		after.append_array(_step(d))
+	var announcements := facts.filter(func(f): return f.kind == "announced" and f.id == held.id)
+	var starts := facts.filter(func(f): return f.kind == "started")
+	var lands := facts.filter(func(f): return f.kind == "world" and f.get("phase") == "land")
+	var ok: bool = announcements.size() == 1 and starts.is_empty() and lands.is_empty() and teardown.size() == 1
+	if teardown.size() == 1:
+		ok = ok and teardown[0].kind == "ended" and teardown[0].id == held.id and teardown[0].outcome == "passed"
+		ok = ok and teardown[0].family == "natural" and absf(teardown[0].time_s - 300 * H) < 0.000001 and teardown[0].row == held
+	ok = ok and hooks.count(["telegraph", held.id]) == 1 and hooks.count(["end", held.id]) == 1
+	ok = ok and hooks.count(["land", held.id]) == 0 and hooks.size() == hook_count
+	ok = ok and facts.filter(func(f): return f.id == silent.id).is_empty() and hooks.filter(func(h): return h[1] == silent.id).is_empty()
+	ok = ok and second.is_empty() and after.is_empty()
+	_check("teardown cancels held announcement once", ok,
+		"announced=%d starts=%d landing_facts=%d teardown=%s hooks=%s second_facts=%d after_facts=%d" % [announcements.size(), starts.size(), lands.size(), teardown.map(func(f): return f.id), hooks, second.size(), after.size()])
 
 
 func _weather() -> void:
