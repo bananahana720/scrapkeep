@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "d0eabb7c31b6c224a9151b05236ef3683f7ac4006dded2d25a00b2d728127b1a",
+  "bake_sha256": "67f902583c35621a1367dd53981f6dd918a162476cbc79ce8611110c8b5f7bf0",
   "beacon_ok": false,
   "breaches": [],
-  "bytes": 1106243,
-  "edges": 314056,
+  "bytes": 1113854,
+  "edges": 315002,
   "first_failed": "beacon_ok",
   "flags": {
-    "deck": 12,
-    "door_ok": 39925,
-    "line": 340,
-    "open": 40404,
-    "sight_ok": 10150,
-    "under": 0
+    "deck": 84,
+    "door_ok": 39961,
+    "line": 342,
+    "open": 40454,
+    "sight_ok": 10160,
+    "under": 22
   },
   "full_visit_m": 2041,
   "full_visit_ratio": "1.588",
-  "graph_sha256": "ff5cdc690312fb0d5341a5af3716010435cc3f0e194b3905fa2c2fa336f0a76a",
+  "graph_sha256": "02c3fff6df963bc8b7aea78ee274a646f1a4106a8a3f786a978610ce98025f29",
   "line_errors": [],
-  "line_path_nodes": 112,
+  "line_path_nodes": 118,
   "longest_est_m": 2651,
   "map": "park_pit",
-  "nodes": 40413,
-  "park_sha256": "7a98f8b04e3ecfc504b267c7e923f784d6db72d30d98ec778e5a4e73178c050b",
+  "nodes": 40485,
+  "park_sha256": "8bacf6ec4917f8fed2db93d077016eb8f1a6edcdc0fd1ffcab91b41a2b33bdee",
   "pockets": [
     {
       "clear_ring": [],
@@ -132,7 +132,7 @@
     }
   ],
   "reward_ratio": "0.702",
-  "ride_edges": 17,
+  "ride_edges": 18,
   "routes": {
     "barge_ramp": [],
     "bench_dive": [],
@@ -144,7 +144,9 @@
     "floor_bowl": [],
     "hoist_roof_line": [],
     "hoist_yard": [],
-    "main": [],
+    "main": [
+      "dump_wash_1 -> dump_wash_2: no path"
+    ],
     "north_dive": [],
     "north_plateau": [],
     "rim_zip_line": [],
@@ -210,23 +212,15 @@
         "viable": true
       },
       {
-        "cost": 1585.1,
-        "d_landmark": 640.7,
-        "name": "south_wash",
-        "on_route": false,
-        "rank": 4,
-        "viable": true
-      },
-      {
-        "cost": 1518.8,
-        "d_landmark": 435.1,
+        "cost": 1507.5,
+        "d_landmark": 425.7,
         "name": "winze_east",
         "on_route": false,
         "rank": 0,
         "viable": false
       },
       {
-        "cost": 1498.3,
+        "cost": 1490.3,
         "d_landmark": 286.7,
         "name": "deep_adit",
         "on_route": false,
@@ -234,7 +228,7 @@
         "viable": false
       },
       {
-        "cost": 1468.1,
+        "cost": 1465.5,
         "d_landmark": 233.1,
         "name": "eruption_lip",
         "on_route": false,
@@ -245,6 +239,22 @@
         "cost": 1433.3,
         "d_landmark": 625.7,
         "name": "slickrock_9",
+        "on_route": false,
+        "rank": 4,
+        "viable": true
+      },
+      {
+        "cost": 1406.0,
+        "d_landmark": 340.1,
+        "name": "east_dive",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1376.0,
+        "d_landmark": 364.1,
+        "name": "tailings_bench_east",
         "on_route": false,
         "rank": 5,
         "viable": true
@@ -258,7 +268,7 @@
         "viable": false
       },
       {
-        "cost": 1318.1,
+        "cost": 1314.7,
         "d_landmark": 177.1,
         "name": "east_dive_3_windrow_1",
         "on_route": false,
@@ -266,8 +276,8 @@
         "viable": false
       },
       {
-        "cost": 1297.5,
-        "d_landmark": 299.8,
+        "cost": 1305.5,
+        "d_landmark": 306.4,
         "name": "east_dive_2",
         "on_route": false,
         "rank": 0,
@@ -282,12 +292,20 @@
         "viable": false
       },
       {
-        "cost": 1274.4,
-        "d_landmark": 194.8,
+        "cost": 1279.0,
+        "d_landmark": 198.2,
         "name": "east_dive_3",
         "on_route": false,
         "rank": 0,
         "viable": false
+      },
+      {
+        "cost": 1251.1,
+        "d_landmark": 1211.8,
+        "name": "ne_mesa",
+        "on_route": false,
+        "rank": 6,
+        "viable": true
       },
       {
         "cost": 1232.9,
@@ -306,20 +324,20 @@
         "viable": false
       },
       {
-        "cost": 1205.5,
-        "d_landmark": 219.8,
-        "name": "east_dive_3_windrow_2",
+        "cost": 1216.0,
+        "d_landmark": 491.1,
+        "name": "bench2_east_bank",
         "on_route": false,
         "rank": 0,
         "viable": false
       },
       {
-        "cost": 1146.5,
-        "d_landmark": 194.8,
-        "name": "haul_road_west_4",
+        "cost": 1202.7,
+        "d_landmark": 219.8,
+        "name": "east_dive_3_windrow_2",
         "on_route": false,
-        "rank": 6,
-        "viable": true
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 1136.6,
@@ -343,14 +361,6 @@
         "name": "barge_apron",
         "on_route": false,
         "rank": 7,
-        "viable": true
-      },
-      {
-        "cost": 1099.8,
-        "d_landmark": 312.5,
-        "name": "haul_road_west_3",
-        "on_route": false,
-        "rank": 8,
         "viable": true
       },
       {
@@ -378,11 +388,11 @@
         "viable": false
       },
       {
-        "cost": 1062.8,
-        "d_landmark": 483.9,
+        "cost": 1070.8,
+        "d_landmark": 487.2,
         "name": "bench2_camp_lane",
         "on_route": false,
-        "rank": 9,
+        "rank": 8,
         "viable": true
       },
       {
@@ -446,16 +456,16 @@
         "d_landmark": 670.5,
         "name": "spoil_heap_14",
         "on_route": false,
-        "rank": 10,
+        "rank": 9,
         "viable": true
       },
       {
-        "cost": 898.4,
-        "d_landmark": 449.6,
-        "name": "haul_road_west_2",
+        "cost": 914.4,
+        "d_landmark": 355.0,
+        "name": "conveyor_gallery",
         "on_route": false,
-        "rank": 11,
-        "viable": true
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 883.0,
@@ -466,16 +476,8 @@
         "viable": false
       },
       {
-        "cost": 874.4,
-        "d_landmark": 338.4,
-        "name": "conveyor_gallery",
-        "on_route": false,
-        "rank": 12,
-        "viable": true
-      },
-      {
-        "cost": 864.9,
-        "d_landmark": 485.0,
+        "cost": 853.6,
+        "d_landmark": 481.7,
         "name": "winze_west",
         "on_route": false,
         "rank": 0,
@@ -490,20 +492,20 @@
         "viable": false
       },
       {
+        "cost": 845.9,
+        "d_landmark": 462.4,
+        "name": "bench2_north_lane",
+        "on_route": false,
+        "rank": 10,
+        "viable": true
+      },
+      {
         "cost": 838.8,
         "d_landmark": 446.7,
         "name": "west_dive",
         "on_route": false,
         "rank": 0,
         "viable": false
-      },
-      {
-        "cost": 834.8,
-        "d_landmark": 462.4,
-        "name": "bench2_north_lane",
-        "on_route": false,
-        "rank": 13,
-        "viable": true
       },
       {
         "cost": 806.3,
@@ -514,6 +516,14 @@
         "viable": false
       },
       {
+        "cost": 792.0,
+        "d_landmark": 974.3,
+        "name": "leach_pads",
+        "on_route": false,
+        "rank": 11,
+        "viable": true
+      },
+      {
         "cost": 766.3,
         "d_landmark": 534.2,
         "name": "north_dive_windrow_1",
@@ -522,11 +532,11 @@
         "viable": false
       },
       {
-        "cost": 757.9,
+        "cost": 757.6,
         "d_landmark": 548.0,
         "name": "bench1_haul_lane",
         "on_route": false,
-        "rank": 14,
+        "rank": 12,
         "viable": true
       },
       {
@@ -538,11 +548,11 @@
         "viable": false
       },
       {
-        "cost": 718.1,
-        "d_landmark": 625.5,
+        "cost": 714.8,
+        "d_landmark": 617.5,
         "name": "rim_road_lane_2",
         "on_route": false,
-        "rank": 15,
+        "rank": 13,
         "viable": true
       },
       {
@@ -554,43 +564,27 @@
         "viable": false
       },
       {
-        "cost": 693.6,
-        "d_landmark": 607.5,
-        "name": "haul_road_west_1",
-        "on_route": false,
-        "rank": 16,
-        "viable": true
-      },
-      {
         "cost": 670.4,
         "d_landmark": 755.2,
         "name": "slickrock_2",
         "on_route": false,
-        "rank": 17,
+        "rank": 14,
         "viable": true
       },
       {
         "cost": 614.6,
         "d_landmark": 737.5,
         "name": "spoil_heap_13",
-        "on_route": true,
-        "rank": 0,
+        "on_route": false,
+        "rank": 15,
         "viable": true
       },
       {
         "cost": 606.5,
-        "d_landmark": 659.2,
+        "d_landmark": 657.8,
         "name": "rim_road_lane_1",
         "on_route": false,
-        "rank": 18,
-        "viable": true
-      },
-      {
-        "cost": 577.7,
-        "d_landmark": 839.6,
-        "name": "leach_pads",
-        "on_route": false,
-        "rank": 19,
+        "rank": 16,
         "viable": true
       },
       {
@@ -598,7 +592,7 @@
         "d_landmark": 832.4,
         "name": "slickrock_8",
         "on_route": false,
-        "rank": 20,
+        "rank": 17,
         "viable": true
       },
       {
@@ -606,7 +600,7 @@
         "d_landmark": 848.0,
         "name": "slickrock_11",
         "on_route": false,
-        "rank": 21,
+        "rank": 18,
         "viable": true
       },
       {
@@ -614,7 +608,7 @@
         "d_landmark": 760.9,
         "name": "slickrock_15",
         "on_route": false,
-        "rank": 22,
+        "rank": 19,
         "viable": true
       },
       {
@@ -622,8 +616,16 @@
         "d_landmark": 978.4,
         "name": "slickrock_21",
         "on_route": false,
-        "rank": 23,
+        "rank": 20,
         "viable": true
+      },
+      {
+        "cost": 309.2,
+        "d_landmark": 985.5,
+        "name": "dump_wash_2_terrain",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 295.8,
@@ -638,7 +640,7 @@
         "d_landmark": 1021.6,
         "name": "slickrock_4",
         "on_route": false,
-        "rank": 24,
+        "rank": 21,
         "viable": true
       },
       {
@@ -646,7 +648,7 @@
         "d_landmark": 987.7,
         "name": "slickrock_12",
         "on_route": false,
-        "rank": 25,
+        "rank": 22,
         "viable": true
       },
       {
@@ -654,7 +656,7 @@
         "d_landmark": 1189.5,
         "name": "slickrock_20",
         "on_route": false,
-        "rank": 26,
+        "rank": 23,
         "viable": true
       },
       {
@@ -662,7 +664,15 @@
         "d_landmark": 1155.8,
         "name": "slickrock_5",
         "on_route": false,
-        "rank": 27,
+        "rank": 24,
+        "viable": true
+      },
+      {
+        "cost": 91.7,
+        "d_landmark": 1150.5,
+        "name": "spoil_dump",
+        "on_route": false,
+        "rank": 25,
         "viable": true
       },
       {
@@ -682,11 +692,11 @@
         "viable": false
       }
     ],
-    "count": 103,
+    "count": 118,
     "crossings": {
-      "drop": 32,
-      "ride": 16,
-      "walk": 111
+      "drop": 45,
+      "ride": 15,
+      "walk": 125
     },
     "hidden": [
       {
