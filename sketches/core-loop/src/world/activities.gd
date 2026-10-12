@@ -384,7 +384,7 @@ func _finish(s: Site, at: Vector3) -> void:
 	if pay.has("named"):
 		var named := String(pay["named"])
 		# A named part the table does not offer (not in ctx.stages.part_in_play) rolls like any other pay.
-		if Parts.rows().has(named) and ctx.stages.part_in_play(named):
+		if (Parts.rows().has(named) or Parts.is_burden(named)) and ctx.stages.part_in_play(named):
 			s.pickup_part = named
 		else:
 			s.pickup_part = _roll(s.id, pay.get("rarities", ["common"]))

@@ -15,10 +15,8 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 #     the words resolved from the part's own numbers, and the part is a pure downside;
 #   - offer_pool for all six pilots and every rarity returns zero burdens, as do rolls and
 #     hotwire_offer; the alpha parts list names the burdens so a pocket's pay.named is in play;
-#   - a pocket row's pay.named pays the burden (asserted). activities.gd:387 gates on
-#     Parts.rows().has(named), which a burden is deliberately not in (the loot digest pin in
-#     hotwire_shell_offer_test would move), so this check stays red until the coordinator rules
-#     the one-line change to Parts.has(named) in activities.gd (outside SG4 scope);
+#   - a pocket row's pay.named pays the burden through the authored-row-or-burden rule;
+#     burdens stay out of rows(), preserving the loot digest pin;
 #   - one hot-wired part in world one, the per-world cap from world 2;
 #   - burden sweep step 1: a dummy build holds 0 to 10 burdens against a fixed target; damage
 #     per second and damage taken print per count, and 5 burdens survive the fixed scripted
