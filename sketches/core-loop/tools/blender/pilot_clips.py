@@ -249,6 +249,11 @@ def selftest():
     baseline = folder / 'baseline.glb'
     export(arm, baseline)
     table = synthetic_table(pilot)
+    beat = table['clips']['cast_special']['keys'][1]
+    beat.update({'hand.R': {'control': 'Grip.R', 'offset': [0, -.01, .01]},
+                 'hand.L': {'at': [-.32, .40, .05]}, 'wrist.R': [10, 0, 5], 'goggles': 12})
+    table['clips']['cast_special']['planted'] = ['L']
+    print('PILOT_CLIPS_BUILD_SELFTEST: hand-control-offset, hand-at, wrist, planted, goggles')
     original = verifier.pose_table
     verifier.pose_table = lambda name: table if name == pilot else original(name)
     try:

@@ -493,6 +493,17 @@ def seed(clean, out, defect):
         mesh_node = next(i for i, n in enumerate(doc['nodes']) if 'mesh' in n)
         sampler = next(c['sampler'] for c in anim['channels'] if c['target']['path'] == 'translation')
         anim['channels'].append({'sampler': sampler, 'target': {'node': mesh_node, 'path': 'translation'}})
+    elif defect in ('planted', 'contact'):
+        anim = anims['cast_special' if defect == 'planted' else 'cast_line']
+        channel = next(c for c in anim['channels'] if c['target']['path'] == 'translation'
+                       and doc['nodes'][c['target']['node']]['name'] == 'hand.R')
+        sampler = anim['samplers'][channel['sampler']]
+        rest = values(doc, binary, sampler['output'])[0]
+        end = clip_span(doc, anim)[1]
+        time = end / 2 if defect == 'planted' else 5 / FPS
+        sampler['input'] = append_accessor(doc, binary, [(0,), (time,), (end,)], 'SCALAR')
+        shifted = (rest[0] + (.005 if defect == 'planted' else .015), *rest[1:])
+        sampler['output'] = append_accessor(doc, binary, [rest, shifted, rest], 'VEC3')
     write_glb(out, doc, binary)
     return out
 
@@ -503,15 +514,52 @@ def selftest():
     folder = Path(tempfile.mkdtemp(prefix='pilot-clips-selftest-'))
     clean = synthetic(base, pilot, folder / 'clean.glb')
     ok = True
+    table = {'clips': {'cast_special': {'planted': ['R']},
+                       'cast_line': {'contact': {'frame': 6, 'hand': 'R', 'control': 'Grip.R'}}}}
+    original = pose_table
+    globals()['pose_table'] = lambda name: table if name == pilot else original(name)
     for defect in ('missing', 'seam', 'kept', 'nonbone'):
         glb = seed(clean, folder / ('%s.glb' % defect), defect)
         passed, line, _ = verify(pilot, glb, base, has_table=True)
         print(line.replace('PILOT_CLIPS: FAIL %s:' % pilot, 'PILOT_CLIPS: FAIL selftest-%s:' % defect)
               if not passed else 'PILOT_CLIPS: SELFTEST MISSED %s (%s)' % (defect, line))
         ok = ok and not passed
+    for defect, check in (('planted', 13), ('contact', 14)):
+        glb = seed(clean, folder / ('%s.glb' % defect), defect)
+        passed, line, _ = verify(pilot, glb, base, has_table=True)
+        caught = not passed and 'check %d:' % check in line
+        print('PILOT_CLIPS_SELFTEST %s: %s (%s)' % (defect, 'FAIL caught' if caught else 'MISSED', line))
+        ok = ok and caught
+    import bpy
+    from mathutils import Vector
+    sys.path.insert(0, str(HERE))
+    import pilot_kest_poses
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=str(SKETCH / roster()['pilots']['kest']['glb']))
+    arm = next(o for o in bpy.context.scene.objects if o.type == 'ARMATURE')
+    for track in arm.animation_data.nla_tracks:
+        track.mute = True
+    arm.animation_data.action = None
+    pilot_kest_poses.pose(arm, 12)
+    hand = arm.pose.bones['hand.R']
+    matrix = hand.matrix.copy()
+    tip = matrix @ hand.bone.matrix_local.inverted() @ pilot_kest_poses.FEATHER_TIP
+    matrix.translation += pilot_kest_poses.contact(arm) - tip + Vector((.006, 0, 0))
+    hand.matrix = matrix
+    bpy.context.view_layer.update()
+    caught = False
+    try:
+        check_preen(arm)
+    except Failure as error:
+        caught = 'check 17:' in str(error)
+        print('PILOT_CLIPS_SELFTEST preen-6mm: FAIL caught (%s)' % error)
+    except NameError:
+        print('PILOT_CLIPS_SELFTEST preen-6mm: MISSED (check 17 absent)')
+    ok = ok and caught
     passed, line, info = verify(pilot, clean, base, has_table=True)
     print(line.replace('PASS %s' % pilot, 'PASS selftest-clean'))
     ok = ok and passed
+    globals()['pose_table'] = original
     (folder / 'clean-verify.json').write_text(json.dumps(info, indent=2, default=str) + '\n')
     print('PILOT_CLIPS_SELFTEST: %s (%s)' % ('PASS' if ok else 'FAIL', folder))
     return ok
