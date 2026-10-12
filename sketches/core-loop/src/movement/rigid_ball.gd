@@ -99,6 +99,7 @@ func _physics_process(_delta: float) -> void:
 
 
 func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/movement/rigid_ball.gd::_integrate_forces")
 	if _pending_position != null:
 		body_state.transform = Transform3D(body_state.transform.basis, _pending_position)
 		_pending_position = null
