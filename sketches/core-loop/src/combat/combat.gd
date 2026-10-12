@@ -2353,8 +2353,9 @@ func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float
 	return made
 
 
-# Up to `count` live enemies within VOLLEY_RADIUS of the ball, those within VOLLEY_BIAS_DEG of
-# the reticle first, then nearest.
+# Up to `count` live enemies within VOLLEY_RADIUS of the ball: those not yet clipped this ride
+# first, so the clips grow beat by beat up to the cap; then those within VOLLEY_BIAS_DEG of the
+# reticle; then nearest.
 func _volley_picks(ball: Vector3, aim: Vector3, count: int) -> Array:
 	var picks: Array = []
 	var bias := deg_to_rad(Ultimate.VOLLEY_BIAS_DEG)
@@ -2363,7 +2364,8 @@ func _volley_picks(ball: Vector3, aim: Vector3, count: int) -> Array:
 		if to.length() > Ultimate.VOLLEY_RADIUS:
 			continue
 		var biased: bool = aim.length() > 0.01 and to.length() > 0.01 and aim.angle_to(to) <= bias
-		picks.append([(0.0 if biased else 100.0) + to.length(), enemy])
+		var owed: bool = ride_clips.has(enemy.get_instance_id())
+		picks.append([(1000.0 if owed else 0.0) + (0.0 if biased else 100.0) + to.length(), enemy])
 	picks.sort_custom(func(a, b): return a[0] < b[0])
 	return picks.slice(0, count).map(func(entry): return entry[1])
 

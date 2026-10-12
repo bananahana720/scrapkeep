@@ -10,18 +10,24 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
 
-# Tally's program-card kit through the real game (calm, stage 1): the class row, pressure
-# that time never refills, bay selection, Gather, an invalid aim, Link and its arc,
-# Balance Due's speed scaling, the pressure restores, no Warden shatter from a card, the
-# flywheel surge, plate return, the special echo re-checking the plate and the stamp landing.
-# Re-pinned 2026-10-10 for the skill bar (design-v3/SKILL-BAR.md section 1, "Tally's deck,
-# re-cut", wave P-B unit B1): the bays retired. Balance due is slot 1's card (left click at
-# home), gather plate is slot 2's tap (2 then click) and link clips is slot 3's line skill (3
-# then click loads it, the next bite on an enemy clips it as the first clip), all from the
-# reader's one pressure pool. A gather tap at the sky and a cast on an empty pool spend
-# nothing and answer verb_failed. Plate return is off her kit until wave P-C; its row stays,
-# so the plate-return and echo steps swap it into slot 2 and keep driving special_pressed
-# directly, the kit-test path the router leaves working.
+# Tally's kit through the real game (calm, stage 1): the class row, pressure that time never
+# refills, the bar, Gather Plate, an invalid aim, a dry slot-1 press, the ledger clip, Balance
+# Due's speed scaling, the pressure restores, no Warden shatter from a card or an arc, the
+# flywheel surge and the stamp landing.
+# Re-pinned 2026-10-10 for the skill bar (design-v3/SKILL-BAR.md section 1, wave P-B unit B1).
+# Re-pinned 2026-10-11 for wave P-C unit PC-TALLY (design-v3/pilots/tally.md sections 2, 9, 10):
+# Gather Plate leaves the pressure pool for its own 6.0 s cooldown, the ledger clip (slot 3)
+# pays 1 pressure per clip on its own 8.0 s cooldown, a dry slot-1 press answers
+# verb_failed("fire", "cooling"), pressing slot 3 with no line only loads (line_skill_loaded
+# once, no line_skill_fired) and the bite fires it exactly once, the bite inside 4.0 s clips and
+# the load expires by 4.01 s, a world latch plants a clip post that clips the first 3 passers
+# within 4 m plus the reel burst, the arc pays the chain multiplier stored at the cast, an arc
+# fills a Warden's posture and never takes a chunk, a boss takes half, and the surge pays 1
+# pressure to the cap (A2-CRITIC). The bay, plate-return and echo cases retired: Plate Return is
+# Q now (tests/tally_set_piece_test.gd). Measured 2026-10-11 on 4ae242b plus this unit:
+# 83 checks including the count assertion (was 59 checks, no count assertion). A gather pick
+# inside its cooldown is refused as verb_failed("select", "cooling") by the router.
+const EXPECTED_CHECKS := 83
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -37,6 +43,9 @@ var _struck: Array = []
 var _shots: Array = []
 var _dashed := 0
 var _fails: Array = []
+var _loaded: Array = []
+var _fired: Array = []
+var _expired: Array = []
 
 
 func _initialize() -> void:
@@ -52,6 +61,7 @@ func _physics_process(_delta: float) -> bool:
 		_boot()
 		return false
 	if _index >= _steps.size():
+		_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 		quit(_t.verdict())
 		return true
 	var step: Array = _steps[_index]
@@ -79,24 +89,34 @@ func _boot() -> void:
 	_game.events.shot_fired.connect(func(weapon_id: String, _from: Vector3, _to: Vector3): _shots.append(weapon_id))
 	_game.events.dashed.connect(func(_dir: Vector3): _dashed += 1)
 	_game.events.verb_failed.connect(func(verb: String, reason: String, _at: Vector3): _fails.append([verb, reason]))
+	_game.events.line_skill_loaded.connect(func(id: String, seconds: float): _loaded.append([id, seconds]))
+	_game.events.line_skill_fired.connect(func(id: String, _target: Node3D, _at: Vector3, on: String): _fired.append([id, on]))
+	_game.events.line_skill_expired.connect(func(id: String): _expired.append(id))
 	var tps := Engine.physics_ticks_per_second
 	_steps = [
 		[_noop, 1, _check_row],
 		[_pressure_start, 1, _pressure_spend],
 		[_noop, 5 * tps, _check_pressure],
-		[_bay_start, 2, _check_bay],
+		[_bar_start, 2, _check_bar],
+		[_noop, 1, _check_cooldowns],
 		[_gather_start, 2, _gather_planted],
 		[_noop, tps, _check_gather],
+		[_noop, 1, _gather_again_press],
+		[_noop, 2, _check_gather_again],
 		# The camera takes a new pitch on the next tick, so each aimed press waits one step.
 		[_invalid_start, 2, _invalid_press],
 		[_noop, 2, _check_invalid],
 		[_invalid_tap_start, 2, _invalid_tap_press],
 		[_noop, 2, _check_invalid_tap],
-		[_empty_pool_start, 2, _empty_pool_press],
-		[_noop, 2, _check_empty_pool],
+		[_dry_start, 2, _dry_press],
+		[_noop, 2, _check_dry],
 		[_link_start, 2, _link_press],
 		[_noop, 2, _link_bite],
 		[_noop, 2, _check_link],
+		[_clip_start, 1, _check_clip_direct],
+		[_post_start, 1, _check_post],
+		[_load_start, 1, _check_load_timing],
+		[_warden_arc_start, 1, _check_warden_arc],
 		[_balance_start, 2, _balance_press],
 		[_noop, 2, _balance_rest],
 		[_noop, tps, _balance_fast],
@@ -109,17 +129,8 @@ func _boot() -> void:
 		[_warden_start, 2, _check_warden],
 		[_surge_start, 4, _noop, _keep_travel],
 		[_surge_press, 2, _check_surge],
-		[_plate_none_start, 3, _check_plate_none],
-		[_plate_start, int(0.6 * tps), _plate_release],
-		[_noop, 3, _check_plate],
-		[_plate_expire_start, int(0.6 * tps), _plate_release],
-		[_noop, 3, _check_plate_expired],
-		[_echo_start, int(0.6 * tps), _plate_release],
-		[_noop, 3, _check_echo_armed],
-		[_noop, int(0.7 * tps), _check_echo_stale],
-		[_echo_start, int(0.6 * tps), _plate_release],
-		[_noop, 3, _check_echo_live_armed],
-		[_noop, int(0.7 * tps), _check_echo_live],
+		[_surge_cap_start, 4, _noop, _keep_travel],
+		[_surge_press, 2, _check_surge_cap],
 		[_noop, 1, _check_shift_burst],
 		[_stamp_start, 1, _check_stamp],
 	]
@@ -139,8 +150,13 @@ func _as_class(id: String) -> void:
 	var at: Vector3 = _game.ctx.terrain.spawn_point(1)
 	_player.reset_to(at)
 	_player.body().global_position = at
+	_player.kit.drop_line("reset")
+	_player.kit.rewind_left = 0.0
+	_player.chain.reset()
 	_player.abilities.refill()
 	_combat._reset_cards()
+	_combat._line_load = {}
+	_combat._bite_pending = false
 	_combat._cooldown = 0.0
 	_game.camera.snap(Vector3(0.0, 0.0, -1.0))
 	_game.camera.pitch = 0.0
@@ -162,6 +178,13 @@ func _spawn(kind: String, flat: Vector3) -> Node3D:
 func _tough(enemy: Node3D) -> Node3D:
 	enemy.max_hp = 100000.0
 	enemy.hp = 100000.0
+	return enemy
+
+
+# A scripted body that stands still for direct calls: no AI, no physics.
+func _still(enemy: Node3D) -> Node3D:
+	_tough(enemy)
+	enemy.set_physics_process(false)
 	return enemy
 
 
@@ -192,12 +215,9 @@ func _struck_by(id: int, kind: String, from := 0) -> Array:
 	return _struck.slice(from).filter(func(s): return s[0] == id and s[1] == kind)
 
 
-func _knock_toward(enemy: Node3D, toward: Vector3) -> float:
-	var knock: Vector3 = _planar(enemy.get("_knock"))
-	var inward := _planar(toward - enemy.global_position)
-	if knock.length() < 0.01 or inward.length() < 0.01:
-		return 0.0
-	return knock.normalized().dot(inward.normalized())
+func _arc_force(enemy: Node3D, from: int) -> float:
+	var hits := _struck_by(enemy.get_instance_id(), "ledger", from)
+	return float(hits[0][2]) if not hits.is_empty() else -1.0
 
 
 # Pitches the camera so the aim ray meets `point` (the stage-1 spawn faces a rise).
@@ -207,27 +227,30 @@ func _aim_at(point: Vector3) -> void:
 	_game.camera.pitch = atan2(point.y - origin.y, flat)
 
 
-# The old bay numbers, now bar picks: 0 gather plate (pick 2, click), 1 link clips (pick 3,
-# click), 2 balance due (click at home).
-func _press_card(card_bay: int) -> void:
-	if card_bay == 2:
+# Bar presses: slot 1 is a click at home; slot 2 (index 1) and slot 3 (index 2) pick, then click.
+func _press_slot(index: int) -> void:
+	if index == 0:
 		_source.press = {"fire_pressed": true}
 		return
-	_source.press = {"slot_pick": card_bay + 1, "fire_pressed": true}
+	_source.press = {"slot_pick": index, "fire_pressed": true}
 
 
-# Plate return is off Tally's kit until wave P-C; these steps put its row in slot 2.
-func _as_plate_return() -> void:
-	_as_class("tally")
-	_player.abilities.swap(AbilityState.SPECIAL, "plate_return")
+# Three still chasers in a row ahead, 2 m apart (the spawn faces a rise, so 3 m steps put the
+# third past LINK_NEIGHBOUR_REACH in 3D), and a fourth outside the clip ring.
+func _clip_row() -> Array:
+	var aim := _aim_flat()
+	var row: Array = []
+	for i in 3:
+		row.append(_still(_spawn("chaser", _ball_flat() + aim * (10.0 + 2.0 * i))))
+	return row
 
 
 # --- a. the row --------------------------------------------------------------------------
 
 func _check_row() -> void:
 	var def: Resource = ClassDef.by_id("tally")
-	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id, def.line_id]
-	_t.eq("tally ability ids", ids, ["ledger_reader", "flywheel_surge", "gather_plate", "stamp_slam", "link_clips"])
+	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id, def.line_id, def.ultimate_id]
+	_t.eq("tally ability ids", ids, ["ledger_reader", "flywheel_surge", "gather_plate", "stamp_slam", "link_clips", "plate_return"])
 	_t.eq("tally species", def.species, "pack rat")
 	var text := "%s %s %s %s %s %s %s %s %s %s %s" % [def.display_name, def.role, def.species, def.pitch, def.bible_home,
 		def.synergy_hooks, ids, def.color, def.shape, def.motif, def.sound]
@@ -241,6 +264,8 @@ func _check_row() -> void:
 		preload("res://src/core/cosmetics.gd").ids()), [])
 	var paint: Dictionary = preload("res://src/core/cosmetics.gd").row("paint_tally_cream")
 	_t.check("tally owns a starter paint", paint.get("pilot", "") == "tally" and paint.get("starter", false) == true, str(paint))
+	_t.check("the PLATE_RETURN_ gauge constants retired", not (Weapons as Script).get_script_constant_map().keys().any(
+		func(k): return String(k).begins_with("PLATE_RETURN_")))
 
 
 # --- b. pressure ---------------------------------------------------------------------------
@@ -261,22 +286,42 @@ func _check_pressure() -> void:
 	_t.eq("a stage refill fills pressure", _charges(), 3)
 
 
-# --- c. bays ----------------------------------------------------------------------------
+# --- c. the bar ----------------------------------------------------------------------------
 
-func _bay_start() -> void:
+func _bar_start() -> void:
 	_as_class("tally")
 	_source.press = {"slot_pick": 1}
 
 
-func _check_bay() -> void:
+func _check_bar() -> void:
 	var ab = _player.abilities
-	_t.eq("the bar: balance due on 1, gather plate on 2, link clips on 3",
-		[ab.cap(AbilityState.WEAPON, "cards", []), ab.id_of(AbilityState.SPECIAL), ab.id_of(AbilityState.LINE)],
-		[["balance_due"], "gather_plate", "link_clips"])
-	_t.eq("slots 2 and 3 spend slot 1's pressure", [ab.pool_of(AbilityState.SPECIAL), ab.pool_of(AbilityState.LINE)],
-		[AbilityState.WEAPON, AbilityState.WEAPON])
+	_t.eq("the bar: balance due on 1, gather plate on 2, ledger clip on 3, plate return on Q",
+		[ab.cap(AbilityState.WEAPON, "cards", []), ab.id_of(AbilityState.SPECIAL), ab.id_of(AbilityState.LINE), ab.ultimate_id],
+		[["balance_due"], "gather_plate", "link_clips", "plate_return"])
+	_t.eq("slots 2 and 3 pay from their own charge, not slot 1's pressure",
+		[ab.pool_of(AbilityState.SPECIAL), ab.pool_of(AbilityState.LINE)], [AbilityState.SPECIAL, AbilityState.LINE])
 	_t.eq("the weapon slot shows balance due", ab.slot(AbilityState.WEAPON).icon, "ab_tally_balance")
+	_t.eq("slot icons: gather and the ledger line", [ab.slot(AbilityState.SPECIAL).icon, ab.slot(AbilityState.LINE).icon],
+		["ab_tally_gather", "ab_tally_line"])
 	_t.eq("2 picks gather and costs no pressure", [ab.selected, _charges()], [AbilityState.SPECIAL, 3])
+
+
+# Gather Plate refuses a pick for 6.0 s after a cast; the ledger clip for 8.0 s.
+func _check_cooldowns() -> void:
+	var ab = _player.abilities
+	_t.eq("cooldowns 6.0 and 8.0", [ab.cooldown_of(AbilityState.SPECIAL), ab.cooldown_of(AbilityState.LINE)], [6.0, 8.0])
+	ab.refill()
+	ab.spend(AbilityState.SPECIAL)
+	ab.spend(AbilityState.LINE)
+	ab.tick(5.99)
+	var mid := [ab.ready(AbilityState.SPECIAL), ab.ready(AbilityState.LINE)]
+	ab.tick(0.02)
+	var six := [ab.ready(AbilityState.SPECIAL), ab.ready(AbilityState.LINE)]
+	ab.tick(2.0)
+	var eight := [ab.ready(AbilityState.SPECIAL), ab.ready(AbilityState.LINE)]
+	_t.eq("gather back at 6.0 s, the clip at 8.0 s", [mid, six, eight], [[false, false], [true, false], [true, true]])
+	_t.eq("neither cast spent pressure", _charges(), 3)
+	ab.refill()
 
 
 # --- d. Gather ---------------------------------------------------------------------------
@@ -284,12 +329,13 @@ func _check_bay() -> void:
 func _gather_start() -> void:
 	_as_class("tally")
 	_record = {"from": _struck.size()}
-	_press_card(0)
+	_press_slot(1)
 
 
 func _gather_planted() -> void:
 	_t.check("gather plants the plate", not _combat.plate.is_empty(), str(_combat.plate))
-	_t.eq("gather costs one pressure", _charges(), 2)
+	_t.eq("gather costs no pressure", _charges(), 3)
+	_t.eq("gather spends slot 2's own charge", _player.abilities.ready(AbilityState.SPECIAL), false)
 	_t.eq("the gather tap snaps the pick home", _player.abilities.selected, AbilityState.WEAPON)
 	if _combat.plate.is_empty():
 		return
@@ -328,6 +374,20 @@ func _check_gather() -> void:
 		"knocks %d -> %d" % [_record["boss_knocks"], boss.knocks])
 
 
+# A second tap inside the 6 s cooldown: refused, the first plate stays.
+func _gather_again_press() -> void:
+	_fails.clear()
+	_record["plate"] = _combat.plate.duplicate()
+	_press_slot(1)
+
+
+func _check_gather_again() -> void:
+	# The pick is refused, so the click stays on slot 1 (Balance Due may fire there).
+	_t.eq("a gather pick inside its cooldown is refused (cooling) and keeps the plate",
+		[_fails.has(["select", "cooling"]), _combat.plate.get("until"), _player.abilities.selected],
+		[true, _record["plate"].get("until"), AbilityState.WEAPON])
+
+
 # --- e. an invalid aim -----------------------------------------------------------------
 
 func _invalid_start() -> void:
@@ -337,7 +397,7 @@ func _invalid_start() -> void:
 
 func _invalid_press() -> void:
 	_record = {"cooldown": _combat._cooldown}
-	_press_card(2)
+	_press_slot(0)
 
 
 func _check_invalid() -> void:
@@ -355,65 +415,78 @@ func _invalid_tap_start() -> void:
 
 func _invalid_tap_press() -> void:
 	_fails.clear()
-	_press_card(0)
+	_press_slot(1)
 
 
 func _check_invalid_tap() -> void:
 	_t.eq("a gather tap at the sky spends nothing and answers no_target",
-		[_charges(), _fails.has(["fire", "no_target"]), _player.abilities.selected, _combat.plate.is_empty()],
-		[3, true, AbilityState.SPECIAL, true])
+		[_charges(), _fails.has(["fire", "no_target"]), _player.abilities.selected, _combat.plate.is_empty(),
+			_player.abilities.ready(AbilityState.SPECIAL)],
+		[3, true, AbilityState.SPECIAL, true, true])
 	_game.camera.pitch = 0.0
 
 
-# Slot 1 empties the shared pool while 2 is picked: the cast is refused.
-func _empty_pool_start() -> void:
+# --- f. a dry slot-1 press ------------------------------------------------------------------
+
+func _dry_start() -> void:
 	_as_class("tally")
-	_source.press = {"slot_pick": 1}
+	var target := _tough(_spawn("chaser", _ball_flat() + _aim_flat() * 10.0))
+	_record = {"t": target}
+	_aim_at(target.global_position)
 
 
-func _empty_pool_press() -> void:
+func _dry_press() -> void:
 	_fails.clear()
 	_set_charges(0)
-	_source.press = {"fire_pressed": true}
+	_record["from"] = _struck.size()
+	_press_slot(0)
 
 
-func _check_empty_pool() -> void:
-	_t.eq("a cast on an empty pool is refused (cooling)", [_fails.has(["fire", "cooling"]), _combat.plate.is_empty(), _charges()],
-		[true, true, 0])
+func _check_dry() -> void:
+	var target: Node3D = _record["t"]
+	_t.eq("a dry slot-1 press answers cooling, strikes nothing and spends nothing",
+		[_fails.has(["fire", "cooling"]), _struck_by(target.get_instance_id(), "ledger", _record["from"]).size(), _charges()],
+		[true, 0, 0])
 
 
-# --- f. Link and its arc --------------------------------------------------------------
+# --- g. the ledger clip through the router ----------------------------------------------------
 
 func _link_start() -> void:
 	_as_class("tally")
-	var aim := _aim_flat()
 	_record = {}
+	var row := _clip_row()
 	for i in 3:
-		# 2 m apart, not 3: the stage-1 spawn faces a steep rise, and 3 m steps put the
-		# third chaser past LINK_NEIGHBOUR_REACH in 3D.
-		var enemy := _tough(_spawn("chaser", _ball_flat() + aim * (10.0 + 2.0 * i)))
-		_record["c%d" % i] = enemy
-		_record["c%d_id" % i] = enemy.get_instance_id()
+		_record["c%d" % i] = row[i]
+		_record["c%d_id" % i] = row[i].get_instance_id()
 	_aim_at((_record["c0"] as Node3D).global_position)
+	_loaded.clear()
+	_fired.clear()
 
 
 func _link_press() -> void:
-	_press_card(1)
+	_set_charges(0)
+	_press_slot(2)
 
 
-# 3 then click loaded link clips; the next bite on c0 carries it.
+# 3 then click with no line loads the clip; the next bite on c0 fires it.
 func _link_bite() -> void:
-	_record["loaded"] = String(_combat.line_load().get("id", ""))
+	_record["loaded"] = _loaded.duplicate()
+	_record["fired_at_load"] = _fired.size()
 	_record["pressure"] = _charges()
+	_record["line_ready"] = _player.abilities.ready(AbilityState.LINE)
 	var c0: Node3D = _record["c0"]
 	_player.grapple_to(c0.global_position, Vector3.UP, c0)
 
 
 func _check_link() -> void:
-	_t.eq("3 then click loads link clips and spends one pressure", [_record["loaded"], _record["pressure"]], ["link_clips", 2])
+	_t.eq("3 then click only loads: line_skill_loaded once, nothing fired, no pressure",
+		[_record["loaded"], _record["fired_at_load"], _record["pressure"]], [[["link_clips", 4.0]], 0, 0])
+	_t.eq("the load spends slot 3's own charge", _record["line_ready"], false)
+	_t.eq("the bite fires line_skill_fired exactly once, on the body", _fired, [["link_clips", "body"]])
 	_player.release_grapple()
 	var ids: Array = _combat.link_group.get("ids", [])
-	_t.check("link clips three", ids.size() == 3 and ids.has(_record["c0_id"]), "group %s" % [_combat.link_group])
+	_t.check("the ledger clip clips three", ids.size() == 3 and ids.has(_record["c0_id"]), "group %s" % [_combat.link_group])
+	_t.eq("three clips pay three pressure", _charges(), 3)
 	var from := _struck.size()
 	_combat.strike(_record["c0"], "ram", 30.0)
 	var arcs := [_struck_by(_record["c1_id"], "ledger", from).size(), _struck_by(_record["c2_id"], "ledger", from).size()]
@@ -424,18 +497,187 @@ func _check_link() -> void:
 	_t.eq("a second hit arcs nothing", _struck.slice(from).filter(func(s): return s[1] == "ledger").size(), 0)
 
 
-# --- g. Balance Due -------------------------------------------------------------------
+# --- h. the clip, called directly: the cap and the stored chain multiplier --------------------
+
+func _clip_start() -> void:
+	_as_class("tally")
+	_record = {"row": _clip_row()}
+
+
+func _clip_once(combo: int, charges: int) -> float:
+	var row: Array = _record["row"]
+	_player.kit.drop_line("reset")
+	_player.grapple_to(row[0].global_position, Vector3.UP, row[0])
+	_player.chain.combo = combo
+	_set_charges(charges)
+	_combat._fire_line_skill("link_clips", 1.0)
+	_player.release_grapple()
+	var from := _struck.size()
+	_combat.strike(row[0], "ram", 30.0)
+	return _arc_force(row[1], from)
+
+
+func _check_clip_direct() -> void:
+	var plain := _clip_once(1, 2)
+	_t.eq("three clips from 2 pressure stop at the cap", _charges(), 3)
+	_t.near("the group stores the multiplier at the cast", float(_combat.link_group.get("mult", 0.0)), 1.0)
+	var linked := _clip_once(3, 0)
+	_t.near("a chain of 3 stores x1.6", float(_combat.link_group.get("mult", 0.0)), 1.6)
+	_t.check("the arc pays the stored multiplier", plain > 0.0 and absf(linked / plain - 1.6) < 0.01,
+		"plain %.2f linked %.2f" % [plain, linked])
+	_player.chain.combo = 1
+	_combat._link_from(_record["row"][0])
+	_player.chain.reset()
+	var from := _struck.size()
+	_combat.strike(_record["row"][0], "ram", 30.0)
+	_t.near("an arc never falls under the floor", _arc_force(_record["row"][1], from),
+		maxf(Weapons.LINK_ARC_MIN, 30.0 * Weapons.LINK_ARC_SHARE))
+
+
+# --- i. the clip post on a world latch -------------------------------------------------------
+
+func _post_start() -> void:
+	_as_class("tally")
+
+
+func _check_post() -> void:
+	var aim := _aim_flat()
+	var side := aim.cross(Vector3.UP).normalized()
+	var anchor: Vector3 = _combat._floor_at(_player.ball_position() + aim * 12.0 + Vector3.UP * 4.0)
+	_player.grapple_to(anchor, Vector3.UP, null)
+	var body: RigidBody3D = _player.body()
+	body.linear_velocity = Vector3.ZERO
+	_set_charges(0)
+	_fired.clear()
+	_combat._fire_line_skill("link_clips", 1.0)
+	var burst := body.linear_velocity.dot((anchor - body.global_position).normalized())
+	_t.near("a world latch adds the reel burst toward the anchor", burst, _combat.REEL_BURST, 0.1)
+	_t.eq("a world latch plants the clip post", [_fired, _combat.clip_post.is_empty()], [[["link_clips", "world"]], false])
+	var inside: Array = []
+	for offset in [side * 1.0, -side * 1.5, aim * 1.0, -aim * 2.0]:
+		inside.append(_still(_spawn("chaser", _planar(anchor) + offset)))
+	var outside := _still(_spawn("chaser", _planar(anchor) + side * 8.0))
+	_combat._step_clip_post()
+	var ids: Array = _combat.link_group.get("ids", [])
+	_t.eq("the post clips the first three passers and pays three", [ids.size(), _charges()], [Weapons.CLIP_POST_MAX, 3])
+	_t.check("the post never clips outside its ring", not ids.has(outside.get_instance_id()))
+	_t.check("a full post closes", _combat.clip_post.is_empty(), str(_combat.clip_post))
+	# A fresh post that runs out its 4 s clips nothing after.
+	_clear_enemies()
+	_combat._link_clips_world(anchor, 1.0, 1.0)
+	_combat._clock += Weapons.CLIP_POST_SECONDS + 0.01
+	var late := _still(_spawn("chaser", _planar(anchor) + side * 1.0))
+	_combat._step_clip_post()
+	_t.check("a post past 4 s clips nothing", not (_combat.link_group.get("ids", []) as Array).has(late.get_instance_id())
+		and _combat.clip_post.is_empty())
+	_player.kit.drop_line("reset")
+
+
+# --- j. the load: a bite inside 4.0 s clips; the load expires by 4.01 s ----------------------
+
+func _load_start() -> void:
+	_as_class("tally")
+	_record = {"row": _clip_row()}
+
+
+func _check_load_timing() -> void:
+	var intent = _player.intent
+	intent.clear()
+	_loaded.clear()
+	_fired.clear()
+	_expired.clear()
+	_combat._cast_line("link_clips", 1.0)
+	_t.near("the load lasts 4.0 s", float(_combat.line_load().get("left", 0.0)), 4.0)
+	_combat._step_line(intent, 3.99)
+	var row: Array = _record["row"]
+	_player.grapple_to(row[0].global_position, Vector3.UP, row[0])
+	_combat._step_line(intent, 0.0)
+	_t.eq("a bite at 3.99 s clips", [_fired, (_combat.link_group.get("ids", []) as Array).size()], [[["link_clips", "body"]], 3])
+	_player.kit.drop_line("reset")
+	_player.abilities.refill()
+	_fired.clear()
+	_combat._cast_line("link_clips", 1.0)
+	_combat._step_line(intent, 4.01)
+	_t.eq("the load expires by 4.01 s", [_combat.line_load().is_empty(), _expired, _fired], [true, ["link_clips"], []])
+
+
+# --- k. arcs and a Warden: posture only, never a chunk; a boss takes half ------------------------
+
+func _warden_arc_start() -> void:
+	_as_class("tally")
+	var aim := _aim_flat()
+	_record = {"c": _still(_spawn("chaser", _ball_flat() + aim * 10.0)),
+		"w": _spawn("warden", _ball_flat() + aim * 14.0),
+		"d": _still(_spawn("chaser", _ball_flat() + aim * 12.0))}
+
+
+func _group(enemies: Array) -> void:
+	_combat.link_group = {"ids": enemies.map(func(e): return e.get_instance_id()), "until": _combat._clock + 4.0,
+		"spent": false, "mult": 1.0}
+
+
+func _check_warden_arc() -> void:
+	var c: Node3D = _record["c"]
+	var w: Node3D = _record["w"]
+	var posture = w.get("_posture")
+	if posture == null:
+		_t.check("warden spawned with posture", false, "no posture")
+		return
+	var before: float = w.posture()
+	_group([c, w])
+	var from := _struck.size()
+	_combat.strike(c, "ram", 30.0)
+	_t.check("an arc fills a closed Warden's posture", w.posture() > before, "posture %.2f -> %.2f" % [before, w.posture()])
+	posture.staggered = true
+	posture.stagger_left = 5.0
+	posture.ram_shatters = true
+	var chunks: int = w.chunks_left()
+	_group([c, w])
+	_combat.strike(c, "ram", 30.0)
+	_t.eq("an arc never takes a chunk from an open core", w.chunks_left(), chunks)
+	_t.check("both arcs reached the warden", _struck_by(w.get_instance_id(), "ledger", from).size() >= 1)
+	# A boss takes half of every Tally source.
+	var boss := _boss(_player.ball_position() + _aim_flat() * 16.0)
+	var d: Node3D = _record["d"]
+	_group([c, d])
+	from = _struck.size()
+	_combat.strike(c, "ram", 30.0)
+	var plain := _arc_force(d, from)
+	_group([c, boss])
+	from = _struck.size()
+	var hp_before: float = float(boss.hp)
+	_combat.strike(c, "ram", 30.0)
+	var boss_took := hp_before - float(boss.hp)
+	_t.check("an arc on a boss deals half", plain > 0.0 and absf(boss_took - plain * 0.5) <= plain * 0.05,
+		"plain %.2f boss %.2f" % [plain, boss_took])
+
+
+# A boss piece as the set-piece tests build one: a plain enemy whose kind the roster calls a boss.
+func _boss(at: Vector3) -> Node3D:
+	var enemy: Node3D = preload("res://src/combat/enemy.gd").new()
+	enemy.kind = "brindle_hull"
+	enemy.weight = 1.0
+	enemy.hp = 10000.0
+	enemy.max_hp = 10000.0
+	_game.add_child(enemy)
+	enemy.add_to_group("enemy")
+	enemy.global_position = at
+	enemy.set_physics_process(false)
+	return enemy
+
+
+# --- l. Balance Due -------------------------------------------------------------------
 
 func _balance_start() -> void:
 	_as_class("tally")
-	var target := _tough(_spawn("chaser", _ball_flat() + _aim_flat() * 10.0))
+	var target := _still(_spawn("chaser", _ball_flat() + _aim_flat() * 10.0))
 	_record = {"t": target, "t_id": target.get_instance_id(), "from": _struck.size()}
 	_aim_at(target.global_position)
 
 
 func _balance_press() -> void:
 	_record["from"] = _struck.size()
-	_press_card(2)
+	_press_slot(0)
 
 
 func _balance_force(from: int) -> float:
@@ -445,6 +687,7 @@ func _balance_force(from: int) -> float:
 
 func _balance_rest() -> void:
 	_record["a"] = _balance_force(_record["from"])
+	_t.eq("balance due spends one pressure", _charges(), 2)
 
 
 func _balance_fast() -> void:
@@ -458,7 +701,7 @@ func _balance_fast() -> void:
 
 func _balance_fast_press() -> void:
 	_record["speed"] = _player.planar_velocity().length()
-	_press_card(2)
+	_press_slot(0)
 
 
 func _check_balance() -> void:
@@ -469,7 +712,7 @@ func _check_balance() -> void:
 		"at rest %.2f, at %.1f m/s %.2f, gain %.2f, want %.2f" % [a, _record["speed"], b, b - a, want])
 
 
-# --- h. restores ------------------------------------------------------------------------
+# --- m. restores ------------------------------------------------------------------------
 
 func _restore_start() -> void:
 	_as_class("tally")
@@ -510,7 +753,7 @@ func _check_roll() -> void:
 	_t.eq("rolling past PRESSURE_ROLL_S at cruise restores one", _charges(), 2)
 
 
-# --- i. no Warden shatter from a card ----------------------------------------------------
+# --- n. no Warden shatter from a card ----------------------------------------------------
 
 func _warden_start() -> void:
 	_as_class("tally")
@@ -542,13 +785,14 @@ func _check_warden() -> void:
 		"chunks %d -> %d" % [before, warden.chunks_left()])
 
 
-# --- j. the flywheel surge ----------------------------------------------------------------
+# --- o. the flywheel surge ----------------------------------------------------------------
 
 func _surge_start() -> void:
 	_as_class("tally")
 	_clear_enemies()
 	var travel := _aim_flat().cross(Vector3.UP).normalized()
-	_record = {"travel": travel, "pressure": _charges()}
+	_record = {"travel": travel}
+	_set_charges(1)
 	_keep_travel()
 
 
@@ -569,103 +813,17 @@ func _check_surge() -> void:
 	var along := _planar(_player.state.velocity).dot(_record["travel"])
 	_t.check("surge drives along the travel", along >= floor_speed * 0.95, "along %.1f, floor %.1f" % [along, floor_speed])
 	_t.eq("surge publishes dashed once", _dashed, 1)
-	_t.eq("surge costs no pressure", _charges(), _record["pressure"])
+	_t.eq("surge pays one pressure", _charges(), int(_record["pressure"]) + Weapons.SURGE_PRESSURE)
 	_t.check("surge spends the movement slot", not _player.abilities.ready(AbilityState.MOVEMENT), "movement still ready")
 
 
-# --- k. plate return ----------------------------------------------------------------------
-
-func _plate_none_start() -> void:
-	_as_plate_return()
-	_source.press = {"special_pressed": true}
-	_source.hold = {"special_held": true}
+func _surge_cap_start() -> void:
+	_surge_start()
+	_set_charges(3)
 
 
-func _check_plate_none() -> void:
-	_source.hold = {}
-	var gauge = _player.abilities.gauge(AbilityState.SPECIAL)
-	_t.check("no plate, no gauge", not gauge.charging and _player.abilities.ready(AbilityState.SPECIAL),
-		"charging %s ready %s" % [gauge.charging, _player.abilities.ready(AbilityState.SPECIAL)])
-
-
-func _plate_start() -> void:
-	_as_plate_return()
-	var aim := _aim_flat()
-	var ground: Vector3 = _combat._floor_at(_player.ball_position() + aim * 6.0 + Vector3.UP)
-	_combat.plate = {"at": ground, "until": _combat._clock + 4.0}
-	var target := _tough(_spawn("chaser", _ball_flat() + aim * 3.0))
-	_record = {"t": target, "t_id": target.get_instance_id(), "from": _struck.size(),
-		"special_before": float(_combat._ledger["by_source"].get("special", 0.0))}
-	_source.press = {"special_pressed": true}
-	_source.hold = {"special_held": true}
-
-
-func _plate_release() -> void:
-	_source.hold = {}
-
-
-func _check_plate() -> void:
-	var target: Node3D = _record["t"]
-	var gain := float(_combat._ledger["by_source"].get("special", 0.0)) - float(_record["special_before"])
-	_t.check("plate return strikes the chaser as a special", not _struck_by(_record["t_id"], "ledger", _record["from"]).is_empty()
-			and gain > 0.0 and _combat.last_burst.get("kind", "") == "plate_return",
-		"ledger strikes %d, special gain %.2f, last burst %s" % [_struck_by(_record["t_id"], "ledger", _record["from"]).size(), gain,
-			_combat.last_burst.get("kind", "")])
-	_t.check("plate return pulls toward the ball", _knock_toward(target, _player.ball_position()) > 0.5,
-		"knock dot %.2f" % _knock_toward(target, _player.ball_position()))
-	_t.check("the plate is back in the reader", _combat.plate.is_empty(), str(_combat.plate))
-
-
-# The plate expires while the gauge fills: the release spends nothing and returns nothing.
-func _plate_expire_start() -> void:
-	_plate_start()
-	_combat.plate["until"] = _combat._clock + 0.2
-	_combat.last_burst = {}
-
-
-func _check_plate_expired() -> void:
-	_t.check("an expired plate spends no special", _player.abilities.ready(AbilityState.SPECIAL)
-			and _combat.last_burst.get("kind", "") != "plate_return" and _struck_by(_record["t_id"], "ledger", _record["from"]).is_empty(),
-		"ready %s last burst %s strikes %d" % [_player.abilities.ready(AbilityState.SPECIAL), _combat.last_burst.get("kind", ""),
-			_struck_by(_record["t_id"], "ledger", _record["from"]).size()])
-
-
-# --- the special echo re-checks the plate ---------------------------------------------------
-
-func _echo_start() -> void:
-	_plate_start()
-	_player.tree._knobs["special_echo"] = 0.5
-	_record["plate_at"] = _combat.plate["at"]
-
-
-func _check_echo_armed() -> void:
-	_t.check("the echo arms on a plate return", _combat.last_burst.get("kind", "") == "plate_return" and _combat.plate.is_empty()
-			and not _combat._echo.is_empty(),
-		"last burst %s, plate %s, echo %s" % [_combat.last_burst.get("kind", ""), str(_combat.plate), str(_combat._echo.keys())])
-	_record["burst_at"] = _combat.last_burst["at"]
-
-
-# The plate is spent, so the echo's can() is false when it comes due and nothing fires (a stale echo would fire from the ball).
-func _check_echo_stale() -> void:
-	var at: Vector3 = _combat.last_burst["at"]
-	_t.check("a stale echo does not fire", _combat._echo.is_empty() and at.is_equal_approx(_record["burst_at"]),
-		"burst at %s, first burst at %s, ball %s" % [str(at), str(_record["burst_at"]), str(_player.ball_position())])
-
-
-func _check_echo_live_armed() -> void:
-	_t.check("the echo arms again", not _combat._echo.is_empty() and _combat.plate.is_empty(),
-		"echo %s, plate %s" % [str(_combat._echo.keys()), str(_combat.plate)])
-	var p2: Vector3 = _combat._floor_at(_player.ball_position() + _aim_flat() * 4.0 + Vector3.UP)
-	_combat.plate = {"at": p2, "until": _combat._clock + 4.0}
-	_record["p2"] = p2
-
-
-func _check_echo_live() -> void:
-	var at: Vector3 = _combat.last_burst.get("at", Vector3.INF)
-	_t.check("a live plate still echoes", _combat.last_burst.get("kind", "") == "plate_return" and at.is_equal_approx(_record["p2"])
-			and _combat.plate.is_empty(),
-		"burst at %s, new plate %s, plate left %s" % [str(at), str(_record["p2"]), str(_combat.plate)])
-	_player.tree._knobs.erase("special_echo")
+func _check_surge_cap() -> void:
+	_t.eq("a surge on full pressure stays at the cap", [_dashed, _charges()], [1, 3])
 
 
 # --- Shift from the keyboard path ----------------------------------------------------------
@@ -682,7 +840,7 @@ func _check_shift_burst() -> void:
 		_player.intent.clear()
 
 
-# --- l. the stamp ------------------------------------------------------------------------
+# --- p. the stamp ------------------------------------------------------------------------
 
 func _stamp_start() -> void:
 	_as_class("tally")
@@ -703,4 +861,3 @@ func _check_stamp() -> void:
 	_set_charges(0)
 	_player._on_slammed(at, 30.0, 1.0)
 	_t.eq("one stamped contact restores one, with no plain slam point on top", _charges(), 1)
-
