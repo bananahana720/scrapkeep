@@ -275,7 +275,7 @@ Values are median / worst seed. Median-defined bands retain the PARK.md median r
 | Distinct ride facts | 5 / 5; PASS | 6 / 6; PASS | 5 / 5; PASS | 4 / 4; PASS | 6 / 6; PASS | 5 / 5; PASS | 5 / 5; reported, pilot band, not the floor's |
 | Length / straight distance | 1.69 / 1.68..1.72; PASS | 1.65 / 1.64..1.65; PASS | 1.59 / 1.59..1.61; PASS | 1.635 / 1.63..1.64; PASS | 1.57 / 1.57..1.57; PASS | 1.51 / 1.51..1.51; PASS | 1.55 / 1.55..1.55; reported, pilot band, not the floor's |
 | Floor row | stage floor row | stage floor row | stage floor row | stage floor row | stage floor row | stage floor row | 100.365 / 102.84; cap 190.525; fastest-pilot cap 139.92; PASS |
-| Distinct lines | not measured | not measured | not measured | not measured | not measured | not measured | stage band |
+| Distinct lines | unqualified: trace/untraced mismatch; no eight-seed comparison | unqualified: trace/untraced mismatch; no eight-seed comparison | unqualified: trace/untraced mismatch; no eight-seed comparison | unqualified: trace/untraced mismatch; no eight-seed comparison | unqualified: trace/untraced mismatch; no eight-seed comparison | unqualified: trace/untraced mismatch; no eight-seed comparison | stage band |
 | Pack stops | 0 total | 0 total | 0 total | 0 total | 0 total | 0 total | 0 total |
 
 | Pilot | Seed | Coordinates [x,z] | Time, s | Class | Contact and spawn evidence |
