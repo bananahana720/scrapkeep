@@ -40,7 +40,8 @@ const T := preload("res://tests/support/t.gd")
 # 2026-10-12 (PC-TALLY round 5, coordinator ruling): four real-input plate counts and
 # four event/aim waits raise the measured count from 93 to 101.
 # 2026-10-12 (PC-TALLY round 6): readiness observes without steering, 101 to 102.
-const EXPECTED_CHECKS := 102
+# 2026-10-12 (PC-TALLY round 6): wait begins before setup, 102 to 103.
+const EXPECTED_CHECKS := 103
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -60,6 +61,7 @@ var _loaded: Array = []
 var _fired: Array = []
 var _expired: Array = []
 var _aim_frame := -1
+var _wait_start_frame := -1
 
 
 func _initialize() -> void:
@@ -741,6 +743,7 @@ func _boss(at: Vector3) -> Node3D:
 # --- l. Balance Due -------------------------------------------------------------------
 
 func _balance_start() -> void:
+	_t.eq("Balance Due wait starts before setup", _wait_start_frame, Engine.get_physics_frames())
 	_as_class("tally")
 	var target := _still(_spawn("chaser", _ball_flat() + _aim_flat() * 10.0))
 	_record = {"t": target, "t_id": target.get_instance_id(), "from": _struck.size()}
