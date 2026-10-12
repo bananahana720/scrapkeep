@@ -61,6 +61,14 @@ func _run() -> void:
 	_t.eq("END-3 first_win announced once", _earned.count("first_win"), 1)
 	_t.eq("END-3 Mind announced once", _earned.count("mind_quieted"), 1)
 	_t.check("visuals have no bodies, areas or collision shapes", _physics_free(seq.viewport))
+	# KC10 (2026-10-12): the crater_ending bowl is the credits' set, in the ending's own viewport, never a stage.
+	var crater_start = seq.get("crater")
+	_t.check("KC10 crater set is built in the ending viewport", crater_start != null and seq.viewport.is_ancestor_of(crater_start))
+	var crater_outside_stages := crater_start != null
+	for stage in seq.stages:
+		crater_outside_stages = crater_outside_stages and not _game.ctx.terrain.geometry_root(stage).is_ancestor_of(crater_start)
+	_t.check("KC10 crater set is never inside a stage", crater_outside_stages)
+	_t.eq("KC10 total stays 54 seconds", Sequence.TOTAL_SECONDS, 54.0)
 	_t.check("pilot shell has real model", not seq.shell.find_children("HeroCore", "Node3D", true, false).is_empty())
 	_t.check("SPIL-9 has meshes", not seq.companion.find_children("*", "MeshInstance3D", true, false).is_empty())
 	if await _capture(seq):
@@ -80,6 +88,10 @@ func _run() -> void:
 	var positions := {}
 	var crew_visible := [true, true, true]
 	var camera_moves := [false, false, false]
+	var crater_seen := false
+	var worlds_hidden := true
+	var bowl_in_frame := false
+	var credit_heights := []
 	var frames := 0
 	while is_instance_valid(_game.screens.ending_sequence) and frames < 1800:
 		frames += 1
@@ -100,8 +112,18 @@ func _run() -> void:
 			if positions.has(seq.world_index) and positions[seq.world_index].distance_to(seq.camera.position) > 0.01:
 				camera_moves[seq.world_index] = true
 			positions[seq.world_index] = seq.camera.position
+		else:
+			var crater = seq.get("crater")
+			crater_seen = crater_seen or (crater != null and crater.visible)
+			worlds_hidden = worlds_hidden and seq.worlds.all(func(w): return not w.visible)
+			bowl_in_frame = bowl_in_frame or _in_frame(seq.camera, Vector3.ZERO)
+			credit_heights.append(seq.camera.position.y)
 		await process_frame
 	Engine.time_scale = 1.0
+	_t.check("KC10 crater set shows in the credits", crater_seen)
+	_t.check("KC10 credits hide the Highdraft worlds", worlds_hidden)
+	_t.check("KC10 credits camera has the bowl centre in frame", bowl_in_frame)
+	_t.check("KC10 camera drops over the rim through the credits", credit_heights.size() > 1 and credit_heights[0] > credit_heights.back(), str(credit_heights.slice(0, 3)))
 	_t.eq("END-1 all fly-overs play automatically", seen_worlds, [0, 1, 2])
 	_t.eq("END-1 phases play automatically", seen_phases, ["flyover", "copy", "credits"])
 	var lines: Array = []
