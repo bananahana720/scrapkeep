@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_CHECKS := 674
+const EXPECTED_CHECKS := 754
 
 var _t := T.new("director_credit_test")
 
@@ -32,6 +32,7 @@ func _initialize() -> void:
 	_cards()
 	_boundaries()
 	_calibration()
+	_cap_income_sweep()
 	_sweeps()
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
@@ -210,3 +211,37 @@ func _sweeps() -> void:
 					_t.near("seed %d stage %d independent income integral" % [seed_value, row.stage], earned, integral, 0.00001)
 					_t.near("seed %d stage %d balance conserved" % [seed_value, row.stage], earned - spent, d.get("credits"), 0.00001)
 				print("PEAK seed=%d stage=%d mode=%s alive=%d reserved=%d seconds=%d" % [seed_value, row.stage, mode, peak, max_reserved, SECONDS])
+
+
+func _cap_income_sweep() -> void:
+	# A four-member pack fills 24 exactly, isolating cap binding from retained-pack room.
+	for seed_value in SEEDS:
+		var d = _director(seed_value, Park.of(1), "credit")
+		d.authored = [Park.PACKS[0]]
+		d.elite = {}
+		d.elite_arrival = 0
+		d.heft_class = 50
+		d.spike = true
+		var live: Array[float] = []
+		var integral := 0.0
+		var peak_reserved := 0
+		for step in int(SECONDS / H):
+			var time := step * H
+			for death in live.duplicate():
+				if death <= time:
+					live.erase(death)
+			var reserved: int = live.size() + d.arrivals.size()
+			var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.MAX_TIME_TIERS) + Director.SPIKE_TIERS
+			if reserved < 24:
+				integral += H * Cards.I0 * (1.0 + Cards.K * dial)
+			for _spawn in d.advance(H, live.size()):
+				live.append(maxf(900.0, time + 18.0 + seed_value % 7))
+			peak_reserved = maxi(peak_reserved, live.size() + d.arrivals.size())
+		var earned: float = d.credits_accrued
+		var spent: float = d.credits_spent
+		var error := absf(spent - earned) / maxf(earned, 0.0001)
+		_t.check("cap accounting seed %d hard cap reached and respected" % seed_value, peak_reserved == 24)
+		_t.check("cap accounting seed %d spending within 5 percent of accrued income" % seed_value,
+			earned > 0.0 and error <= 0.05, "income=%.5f spent=%.5f error_pct=%.5f" % [earned, spent, error * 100.0])
+		_t.near("cap accounting seed %d independent income integral" % seed_value, earned, integral, 0.00001)
+		_t.near("cap accounting seed %d balance conserved" % seed_value, earned - spent, d.credits, 0.00001)
