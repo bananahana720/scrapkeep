@@ -19,6 +19,7 @@ var _home := {}
 var _sites := {}
 var _lines := []
 var _stopped := ""
+var _held := {}
 
 
 func _initialize() -> void:
@@ -62,10 +63,53 @@ func _physics_process(_delta: float) -> bool:
 		_game.player.body().freeze = true
 		d.stage_time = 90.0
 		_place_ball()
-		_phase = 1
+		d.arrivals.clear()
+		d.packs.clear()
+		d._arrivals_made = d.elite_arrival - 1
+		d._next_pack = {}
+		d._last_pack_id = "held-history"
+		d._last_was_elite = false
+		d._pack_seq = 0
+		d._timer = 0.0
+		_held = {"arrivals_made": d.elite_arrival - 1, "pack_seq": 0,
+			"last_pack_id": "held-history", "last_was_elite": false}
+		_phase = 5
 		_ticks = 0
 		return false
 	_place_ball()
+	if _phase == 5:
+		if _ticks < 3:
+			d._timer = 0.0
+			return false
+		_check("unavailable elite retains its arrival slot", d.arrivals.is_empty() and d.packs.is_empty()
+			and d._arrivals_made == _held.arrivals_made and d._pack_seq == _held.pack_seq
+			and d._last_pack_id == _held.last_pack_id and d._last_was_elite == _held.last_was_elite
+			and d._next_pack == d.elite,
+			"queued=%d packs=%d arrivals_made=%d seq=%d next=%s" % [d.arrivals.size(), d.packs.size(), d._arrivals_made, d._pack_seq, d._next_pack])
+		_ball = _game.ctx.terrain.map().beacon
+		_place_ball()
+		d._rng.seed = 913
+		d._timer = 0.0
+		_phase = 6
+		_ticks = 0
+		return false
+	if _phase == 6:
+		var queued_kinds := []
+		for arrival in d.arrivals:
+			queued_kinds.append(Director.KIND_NAMES[arrival.kind])
+			_check_corridor(arrival.at)
+		_check("retained elite schedules on corridor-safe ring fallback",
+			queued_kinds == ["plated_brute", "winch_drone"] and d.packs.size() == 1
+			and d.packs[0].id == "elite" and d._arrivals_made == _held.arrivals_made + 1
+			and d._pack_seq == _held.pack_seq + 1 and d._next_pack.is_empty()
+			and d._last_was_elite and d._last_pack_id == _held.last_pack_id, str(queued_kinds))
+		_game.flow.enter_stage(1, Vector3.ZERO, false)
+		d = _game.world.director
+		d.stage_time = 90.0
+		_ball = _window_ball(_sites[_home.site])
+		_phase = 1
+		_ticks = 0
+		return false
 	if _phase in [1, 2, 3]:
 		for a in d.arrivals:
 			if a.left < Director.ARRIVAL - 0.00001:
