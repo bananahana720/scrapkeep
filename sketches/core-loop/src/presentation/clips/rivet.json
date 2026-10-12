@@ -875,6 +875,7 @@
           "neck": {
             "drop": -0.003
           },
+          "goggles": -8,
           "curl.R": -8,
           "curl.L": -8,
           "note": "Both claws leave the yokes toward the lap bar."
@@ -907,6 +908,7 @@
           "neck": {
             "drop": -0.006
           },
+          "goggles": -4,
           "curl.R": -15,
           "curl.L": -15,
           "note": "Both claws hover just above the lap-bar hand points."
@@ -2049,37 +2051,5 @@
       "note": "Slam this chevron panel layer into its assigned gaps on class gain and fling it out on class loss; layer holder is absent from the inspected base recipe.",
       "limitation": "P-D owns layer holder visibility and 0.18 s in / 1.2 overshoot / 0.45 s out. heft_fill is metadata until a layer shader consumes it."
     }
-  ],
-  "control_points": {
-    "Grip.L": [
-      -0.32,
-      0.4,
-      0.05
-    ],
-    "Grip.R": [
-      0.32,
-      0.4,
-      0.05
-    ],
-    "LapBar.L": [
-      -0.14,
-      0.28,
-      -0.17
-    ],
-    "LapBar.R": [
-      0.14,
-      0.28,
-      -0.17
-    ],
-    "Lever": [
-      0.52,
-      0.3,
-      -0.27
-    ],
-    "WinchLever": [
-      0.52,
-      0.18,
-      -0.27
-    ]
-  }
+  ]
 }
