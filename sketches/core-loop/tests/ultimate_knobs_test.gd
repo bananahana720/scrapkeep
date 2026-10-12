@@ -6,7 +6,7 @@ const T := preload("res://tests/support/t.gd")
 
 class PlayerFixture extends RefCounted:
 
-	var tree := UpgradeTree.new()
+	var tree
 	var abilities := {"ultimate_id": "ult_default"}
 	var kit := {"aim": {}, "hooked": false}
 
@@ -38,6 +38,13 @@ var _t := T.new("ultimate_knobs_test")
 
 func _initialize() -> void:
 	var player := PlayerFixture.new()
+	var fixture_tree := GDScript.new()
+	fixture_tree.source_code = UpgradeTree.source_code.replace("const TREES :=", "static var TREES :=")
+	if not _t.eq("fixture tree compiles", fixture_tree.reload(), OK):
+		quit(_t.verdict())
+		return
+	fixture_tree.TREES = UpgradeTree.TREES.duplicate(true)
+	player.tree = fixture_tree.new()
 	var ult := LandingFixture.new()
 	ult.ctx = {"player": player, "run": RefCounted.new(), "root": null}
 	root.add_child(ult)
@@ -50,7 +57,7 @@ func _initialize() -> void:
 	var defaults := {"ult_beats": 0, "ult_encore": false, "ult_radius": 0.0, "ult_volley": 0}
 	var unchanged := {"ult_beats": Ultimate.NO_MUSIC_BEATS, "ult_encore": false,
 		"ult_radius": Ultimate.LANDING_RADIUS[0], "ult_volley": Ultimate.VOLLEY_TARGETS}
-	var list := UpgradeTree.nodes("pylon_engineer")
+	var list: Array = fixture_tree.nodes("pylon_engineer")
 	var original: Dictionary = list[0]
 	for knob in values:
 		player.tree.reset("pylon_engineer")
@@ -62,7 +69,7 @@ func _initialize() -> void:
 		fixture["key"] = "ultimate"
 		fixture["knob"] = {knob: values[knob]}
 		list[0] = fixture
-		var issues := UpgradeTree.problems("pylon_engineer")
+		var issues: Array = fixture_tree.problems("pylon_engineer")
 		_t.check("%s validates" % knob, issues.is_empty(), str(issues))
 		if not UpgradeTree.KNOBS.has(knob):
 			list[0] = original

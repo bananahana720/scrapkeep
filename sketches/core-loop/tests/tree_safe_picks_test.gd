@@ -7,6 +7,15 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Relics := preload("res://src/build/relics.gd")
 
+class AbilityFixture extends RefCounted:
+
+
+	const SWAPPABLE := AbilityState.SWAPPABLE
+	const SLOTS := AbilityState.SLOTS
+	const ULTIMATE := AbilityState.ULTIMATE
+	const COOLDOWN_FLOOR := AbilityState.COOLDOWN_FLOOR
+	static var ABILITIES := AbilityState.ABILITIES.duplicate(true)
+
 # Rule: four safe growth picks cannot replace an ability, disable it, lower a knob's
 # default, or undo an earlier pick. Validate all 180 distinct nodes (six pilots' own trees).
 # Tarn's nodes and relics are also checked for dead offers (STRATEGY-SPINE.md:175).
@@ -247,16 +256,23 @@ func _slot_fixtures() -> void:
 		{"key": "line", "swap": {"line": "link_clips"}}, kit), "existing line row differs from the held line_reel")
 	var variant := "fixture_ultimate_growth"
 	var foreign := "fixture_foreign_ultimate"
-	AbilityState.ABILITIES[variant] = {"cooldown": 0.0, "variant_of": kit["ultimate"]}
-	AbilityState.ABILITIES[foreign] = {"cooldown": 0.0}
+	var fixture_tree := GDScript.new()
+	fixture_tree.source_code = UpgradeTree.source_code.replace("const AbilityState :=", "static var AbilityState :=")
+	var compiled := fixture_tree.reload()
+	_report("ultimate fixture compiles", compiled == OK, str(compiled))
+	if compiled != OK:
+		return
+	fixture_tree.AbilityState = AbilityFixture
+	AbilityFixture.ABILITIES[variant] = {"cooldown": 0.0, "variant_of": kit["ultimate"]}
+	AbilityFixture.ABILITIES[foreign] = {"cooldown": 0.0}
 	var growth := {"key": "ultimate", "swap": {"ultimate": variant}}
 	var replacement := {"key": "ultimate", "swap": {"ultimate": foreign}}
-	var issues := UpgradeTree.safe_pick_problems(pilot, growth)
+	var issues: Array = fixture_tree.safe_pick_problems(pilot, growth)
 	_report("ultimate variant is growth", issues.is_empty() and _op_live(pilot, growth, kit), str(issues))
 	_report("foreign ultimate is dead", not _op_live(pilot, replacement, kit)
-		and not UpgradeTree.safe_pick_problems(pilot, replacement).is_empty(), "fixture row has no variant_of relationship")
-	AbilityState.ABILITIES.erase(variant)
-	AbilityState.ABILITIES.erase(foreign)
+		and not fixture_tree.safe_pick_problems(pilot, replacement).is_empty(), "fixture row has no variant_of relationship")
+	AbilityFixture.ABILITIES.erase(variant)
+	AbilityFixture.ABILITIES.erase(foreign)
 
 
 func _tarn_rows() -> void:
