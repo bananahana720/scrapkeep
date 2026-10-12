@@ -16,7 +16,8 @@ const Codex := preload("res://src/core/codex.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const T := preload("res://tests/support/t.gd")
 const DT := 1.0 / 60.0
-const EXPECTED_CHECKS := 60
+# 2026-10-11 (PC-KEST): prove load presses stay quiet until the line skill bites.
+const EXPECTED_CHECKS := 64
 
 var _t
 var _game
@@ -28,6 +29,7 @@ var _rockets: Array = []
 var _blasts: Array = []
 var _ends: Array = []
 var _card_events: Array = []
+var _line_fired: Array = []
 
 
 func _initialize() -> void:
@@ -99,6 +101,7 @@ func _fresh() -> void:
 	_rockets.clear()
 	_blasts.clear()
 	_ends.clear()
+	_line_fired.clear()
 	_player.intent.clear()
 
 
@@ -119,6 +122,8 @@ func _run() -> void:
 	_ult.set_physics_process(false)
 	_game.events.rocket_jumped.connect(func(at: Vector3, speed: float): _rockets.append([at, speed]))
 	_game.events.sticky_detonated.connect(func(at: Vector3, crit: bool): _blasts.append([at, crit]))
+	_game.events.line_skill_fired.connect(func(id: String, body: Node3D, at: Vector3, on: String):
+		_line_fired.append([id, body, at, on]))
 	_game.events.synergy_discovered.connect(func(id: String, _category: String, _first: bool):
 		_card_events.append([id, Engine.get_physics_frames()]))
 	_game.events.line_state_changed.connect(func(state: String, _body: Node3D, _at: Vector3, _cause: String):
@@ -222,11 +227,15 @@ func _cases() -> void:
 	_card_events.clear()
 	_cast()
 	_t.eq("unhooked cast loads Cable Charge", _combat.line_load()["id"], "cable_charge")
+	_t.eq("load press emits no line-skill bite", _line_fired.size(), 0)
 	_tick({}, 3.85)
 	body = _enemy(_player.ball_position() + Vector3.RIGHT * 30.0)
 	_player.grapple_to(body.global_position, Vector3.UP, body)
 	_tick()
 	_t.eq("bite at 3.9 seconds fires onto the body", _combat.last_line["on"], "body")
+	_t.eq("loaded bite emits exactly one cast-motion event", _line_fired.size(), 1)
+	_t.check("cast-motion event names the biting Cable Charge", _line_fired[0][0] == "cable_charge"
+		and _line_fired[0][1] == body and _line_fired[0][2] == _player.kit.anchor and _line_fired[0][3] == "body")
 	_t.check("a loaded bite sets on arrival without travel", _ult.cable.get("_set", false) and _ult.cable["_duration"] == 0.0)
 	_t.check("loaded bite opens the framework card first", _game.ctx.codex.known("loaded_line"))
 	await _flush_cards()
@@ -242,6 +251,7 @@ func _cases() -> void:
 	_player.grapple_to(body.global_position, Vector3.UP, body)
 	_tick()
 	_t.check("expired load places no charge", _ult.cable.is_empty())
+	_t.eq("expired load emits no cast-motion event", _line_fired.size(), 0)
 	body.free()
 
 	_fresh()
