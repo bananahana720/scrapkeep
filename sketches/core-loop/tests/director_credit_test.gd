@@ -9,7 +9,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_CHECKS := 627
+const EXPECTED_CHECKS := 628
 
 var _t := T.new("director_credit_test")
 
@@ -79,6 +79,13 @@ func _cards() -> void:
 	var free = _director(8, {}, "credit")
 	free.advance(120.0, 0)
 	_t.check("credit also schedules unauthored arrivals", not free.arrivals.is_empty() and free.get("credits_spent") > 0.0)
+	free.stage_time = 0.0
+	var lobbers := 0
+	for draw in 2000:
+		var pack: Dictionary = free._draw_credit()
+		lobbers += int(pack.id == "lobber")
+		free._last_pack_id = pack.id
+	_t.check("unauthored kind weights preserve the tier-zero lobber share", absf(float(lobbers) / 2000.0 - 0.15) <= 0.03, "lobbers=%d/2000 target=0.15 tolerance=0.03" % lobbers)
 
 
 func _boundaries() -> void:
