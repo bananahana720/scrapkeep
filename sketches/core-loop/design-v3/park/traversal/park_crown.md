@@ -2,7 +2,30 @@
 
 The 13 bands of PARK.md section 8, per pilot and the floor line, from `tools/traversal_line.gd` (KB7) on the park table, stage 6, seeds 1 to 8, one process per line at a time. Each cell is the median, then the worst seed where the band names one, then pass or miss. The band numbers are PARK.md's; nothing here changes them (coordinator ruling R8).
 
-## Greybox pass, 11 October 2026 (KD6)
+## Greybox pass on the KB9 head, 11 October 2026 (KD6 continuation)
+
+Measured at commit 1ec7f92 plus this unit's working edits (each summary's `commit` field), park file sha256 `ef7a0f3c…`: the committed file `782c8b23…` differs from it only by the 59 `slickrock_field_*` rows (no recipe, no stamp), and its ground.bin and surface.bin are byte-identical, so the ride is the same. KB9 places the rows at runtime and the ride sensors fire (`ride_chute`, `kicker_launch`, `ride_grapple_line`, `ride_bowl`, `ride_drop` in the run logs), so the distinct-verbs counts do not rest on `lift_fired`, `crater_ride` or `wall_crumbled`. Same command per line as below, seeds 1 to 8, one process at a time; load 20 to 87 on 32 threads (tick-counted measures, wall time only). Cells: median (worst seed), the tool's verdict. Tally and the Cannon were measured on the cut before the last re-cut of their lines (21:21); their committed lines are not yet measured. The floor's time, airborne and length rows are pilot bands, not judged on the floor; its own band is the floor row.
+
+| band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached the Warden, 8 of 8 | 8 pass | 8 pass | 8 pass | 8 pass | 8 pass | 8 pass | 8 pass |
+| time_to_warden_s, median 60 to 120, no seed over 150 | 85.3 (92.8) pass | 73.6 (74.1) pass | 68.8 (72.7) pass | 82.7 (85.0) pass | 87.4 (91.1) pass | 83.3 (86.3) pass | 57.4 (57.7) not judged |
+| segment_s medians 12 to 45 | 12.7 / 45.5 / 26.7 MISS | 16.5 / 39.1 / 17.8 pass | 16.2 / 20.3 / 32.4 pass | 15.0 / 36.6 / 31.0 pass | 16.8 / 40.5 / 30.4 pass | 15.9 / 36.7 / 30.2 pass | 17.6 / 21.9 / 17.9 pass |
+| flow_share, median at least 0.70, no seed under 0.60 | 0.89 (0.86) pass | 0.89 (0.87) pass | 0.94 (0.76) pass | 0.95 (0.91) pass | 0.79 (0.75) pass | 0.90 (0.82) pass | 0.91 (0.88) pass |
+| airborne_share 0.25 to 0.60 (stage 6) | 0.35 pass | 0.30 pass | 0.35 pass | 0.29 pass | 0.19 MISS | 0.37 pass | 0.18 not judged |
+| dead stops 0 on every seed | 5 (6) MISS | 0 (0) pass | 0 (0) pass | 0 (1) MISS | 1.5 (3) MISS | 1 (2) MISS | 0 (1) MISS |
+| peak_speed_mps at least 26.6 every seed | 56.2 (48.4) pass | 44.0 (43.2) pass | 39.8 (39.0) pass | 42.7 (38.6) pass | 43.9 (42.4) pass | 40.9 (38.0) pass | 44.4 (43.6) pass |
+| tier3_s median at least 3 | 49.2 pass | 9.9 pass | 7.7 pass | 8.1 pass | 8.3 pass | 8.4 pass | 12.0 pass |
+| quiet_max_s at most 20 | 7.9 (8.2) pass | 6.5 (6.9) pass | 5.2 (5.9) pass | 5.5 (5.7) pass | 6.3 (7.8) pass | 7.3 (11.3) pass | 5.1 (5.7) pass |
+| max anchor gap at most 40 m (tool judges the median) | 88.1 (88.6) MISS | 37.7 (40.8) pass | 40.0 (43.5) pass | 36.3 (45.0) pass | 37.3 (44.0) pass | 42.1 (45.8) MISS | 32.7 (36.4) pass |
+| distinct ride facts at least 3 | 6 (5) pass | 5 (5) pass | 5 (4) pass | 5 (5) pass | 5 (5) pass | 5 (5) pass | 4 (4) pass |
+| length / straight 1.3 to 2.0 | 2.02 MISS | 1.32 pass | 1.35 pass | 1.61 pass | 1.55 pass | 1.46 pass | 1.15 not judged |
+| progress (graph) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) |
+| floor: reaches the Warden within 2.0 times Rivet's median (147.2 s), 0 dead stops | | | | | | | reaches in 57.4 s; 1 dead stop on 1 seed: MISS |
+
+Result: Rivet and Kest meet every judged band; Sable (re-cut, dead stops, 88 m gap, length 2.02), Tarn (one dead stop on one seed), Tally (airborne 0.19, dead stops), the Cannon (dead stops, gap 42 m) and the floor (one dead stop) miss. The greybox pass is not admitted on traversal.
+
+## Greybox pass, 11 October 2026 (KD6, first run, pre-KB9, superseded)
 
 Measured on `src/world/park/park_crown.json` sha256 `de386d8e6cc308381a5929934aef331561b7ce0b3b03790db36138278b80d1a1`, its committed bake and graph, base `5f2139b`. Lines from `tools/park_lines/park_crown.json`. Command per line: `godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/traversal_line.gd -- --table=park --stage=6 --pilot=<key> --seeds=1,2,3,4,5,6,7,8 --out=<dir>`, and `--floor` for the floor line (Rivet rolling, Rivet's median as the reference). The machine ran at load 40 to 90 of 32 threads; the measures are tick-counted, so load changes wall time only.
 
