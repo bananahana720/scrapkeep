@@ -37,7 +37,7 @@ const SCRATCH := "user://park_zones_test"
 const TOOL := "res://tools/park_graph.gd"
 const LOADER := "res://src/world/park/park_graph.gd"
 const BAKE_TOOL := "res://tools/park_bake.gd"
-const EXPECTED_CHECKS := 55
+const EXPECTED_CHECKS := 59
 
 var t := T.new("park_zones_test")
 
@@ -287,6 +287,11 @@ func _planted(tool: GDScript, bake: GDScript, loader: GDScript, park: Dictionary
 	rows.append(_row("nook_b_west", [-720.5, 400], [39, 6, 40], -90, "ramp"))
 	rows.append(_row("nook_b_east", [-579.5, 400], [39, 6, 40], 90, "ramp"))
 	rows.append(_row("corner_wall", [750, 750], [160, 200, 20], -45, "plateau"))
+	var border_controls := [
+		_hidden_control("junction_hidden", [-700, 670]),
+		_hidden_control("mid_zone_hidden", [-650, 650]),
+	]
+	planted["contraption_rows"].append_array(border_controls)
 	var path := SCRATCH + "/planted.json"
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	f.store_buffer(JSON.stringify(planted, " ").to_utf8_buffer())
@@ -317,6 +322,20 @@ func _planted(tool: GDScript, bake: GDScript, loader: GDScript, park: Dictionary
 	var open_zones := _names_with_kind(zones, "open")
 	t.eq("the diagonal wall splits the open ground in two", open_zones, ["open", "open.2"])
 	t.eq("the corner piece is out of the spawn's reach", by_name["open.2"]["d_spawn"], -1.0)
+	# Measure each planted hidden row using the baked planted graph, with that row as the
+	# park's one hidden pocket. Both rows are saved in planted.json under user://.
+	for control in border_controls:
+		var measured_park := planted.duplicate(true)
+		measured_park["contraption_rows"] = measured_park["contraption_rows"].filter(func(c): return not tool.HIDDEN_KINDS.has(c["kind"]))
+		measured_park["contraption_rows"].append(control)
+		var border: Array = tool.hidden_border(graph, measured_park)
+		print("planted footprint %s: %s" % [control["id"], str(border)])
+		var junction: bool = control["id"] == "junction_hidden"
+		t.eq("control: %s borders its footprint's zones" % control["id"], border[0]["zones"],
+			["nook_a", "nook_a_ramp", "open"] if junction else ["nook_a"])
+		var misses: Array = tool.zone_gate(drawn, border)
+		t.eq("control: %s %s the border gate" % [control["id"], "passes" if junction else "fails"], misses,
+			[] if junction else ["hidden pocket mid_zone_hidden borders 1 zones"])
 
 
 func _names_with_kind(zones: Array, kind: String) -> Array:
@@ -339,3 +358,8 @@ func _row(id: String, at: Array, size: Array, yaw: float, stamp: String) -> Dict
 	return {"id": id, "element": "ground", "landform": "slickrock", "society": "none", "at": at, "y": null,
 		"size": size, "yaw_deg": yaw, "verb": "roll", "ride_fact": "", "home": "", "recipe": "",
 		"stamp": stamp, "hole": false, "budget": "landform", "routes": [], "fragment": ""}
+
+
+func _hidden_control(id: String, at: Array) -> Dictionary:
+	return {"id": id, "kind": "cracked_wall", "site": "nook_a", "recipe": "", "at": at,
+		"cache": {"at": at.duplicate()}, "size": [12, 6, 1.4], "turn": 0.0, "break_at_cruise": true}
