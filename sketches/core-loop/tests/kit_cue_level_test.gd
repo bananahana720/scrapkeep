@@ -84,7 +84,9 @@ func _initialize() -> void:
 	_check("mixer selection is nonempty", _cue_count > 0, str(_cue_count))
 	var expected := EXPECTED_CHECKS + CHECKS_PER_PATH * _extra_paths
 	_check("exact check count", _checks + 1 == expected, "%d expected, %d actual, %d extra paths" % [expected, _checks + 1, _extra_paths])
-	print("kit_cue_level_test: classes=%d cues=%d checks=%d expected=%d -> %s" % [classes.size(), _cue_count, _checks, expected, "PASS" if _failures == 0 else "FAIL (%d)" % _failures])
+	print("kit_cue_level_test counts: classes=%d cues=%d checks=%d expected=%d" % [classes.size(), _cue_count, _checks, expected])
+	# CONTRACTS.md: the run ends on "NAME: PASS" or "NAME: FAIL", which the smoke runner reads.
+	print("kit_cue_level_test: PASS (%d checks)" % _checks if _failures == 0 else "kit_cue_level_test: FAIL (%d of %d checks)" % [_failures, _checks])
 	_audio.free()
 	_events.free()
 	quit(0 if _failures == 0 else 1)
