@@ -21,6 +21,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+const Director := preload("res://src/world/event_director.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 const MAP := "park_dam"
@@ -83,6 +85,12 @@ func _run() -> void:
 	bad_lines = lines.duplicate(true)
 	bad_lines["pilots"]["sable"]["waypoints"].insert(1, [-600, -600])
 	t.check("planted line through an anchor field turns the pins red", not pins(park, bad_lines, graph).is_empty())
+	planted = park.duplicate(true)
+	for row in planted["park_rows"]:
+		if row["id"] == "toe_vent_pits":
+			row["at"] = [180, 430]
+	var vent_misses := pins(planted, lines, graph)
+	t.check("planted vent corner fails corridor clearance", vent_misses.any(func(miss): return String(miss).begins_with("toe_vents_wake corridor clearance:")), str(vent_misses))
 	quit(t.verdict())
 
 
@@ -155,12 +163,22 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Arra
 		if recipe.begins_with(ParkRecipes.GREYBOX) and not UNSTAMPED_OK.has(row["element"]) and String(row.get("stamp", "")) == "":
 			out.append("%s is a greybox %s with no stamp: KB9 builds it as a solid box" % [row["id"], row["element"]])
 		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
-	for row in park.get("activity_rows", []):
+	for row in park.get("activity_rows", []) + park.get("contraption_rows", []):
 		places[String(row["id"])] = Vector2(float(row["at"][0]), float(row["at"][1]))
 	if park.has("spawn"):
 		places["drop_in"] = Vector2(float(park["spawn"]["at"][0]), float(park["spawn"]["at"][1]))
 	if beacon.size() == 2:
 		places["landmark"] = Vector2(float(beacon[0]), float(beacon[1]))
+	var vent_site := {}
+	var site_id := ""
+	for event in park.get("event_rows", []):
+		if event.get("id") == "toe_vents_wake":
+			site_id = String(event.get("site", ""))
+	for row in park.get("park_rows", []):
+		if row.get("id") == site_id:
+			vent_site = row
+	if vent_site.is_empty():
+		out.append("toe_vents_wake corridor clearance: event site %s is missing" % site_id)
 	var zones := ParkRecipes.clear_zones(park)
 	var posts := PackedVector2Array()
 	for row in park.get("park_rows", []):
@@ -177,6 +195,8 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Arra
 		for i in range(1, pts.size()):
 			var a: Vector2 = pts[i - 1]
 			var ab: Vector2 = pts[i] - a
+			if not vent_site.is_empty() and ParkMap.footprint_contains(vent_site, a, Director.PARK_CORRIDOR_M, pts[i]):
+				out.append("toe_vents_wake corridor clearance: %s segment %d %s to %s intersects complete footprint within %s m" % [key, i, a, pts[i], Director.PARK_CORRIDOR_M])
 			for p in posts:
 				var u := clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
 				near = minf(near, p.distance_to(a + ab * u))
