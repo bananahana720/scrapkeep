@@ -66,7 +66,7 @@ static func make(pilot: String):
 		scene.free()
 	if housing == null:
 		var greybox := MeshInstance3D.new()
-		greybox.mesh = _cylinder("housing", 0.32, 1.6, Color("6fb3a6"))
+		greybox.mesh = _cylinder("housing", 0.32, 1.6, Palette.VERDIGRIS)
 		greybox.rotation.x = PI * 0.5
 		housing = greybox
 	housing.name = "BarrelHousing"

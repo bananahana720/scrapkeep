@@ -1,6 +1,6 @@
 extends "res://tests/cannon_ultimate_test.gd"
-# 2026-10-11 (PC-CANNON): the real Mind death handler, prop, notes and settle-once grants.
-const EXPECTED_QUIET_CHECKS := 44
+# 2026-10-11 (PC-CANNON): real Mind death, Old Verdigris fallback, notes and settle-once grants.
+const EXPECTED_QUIET_CHECKS := 45
 const Mind := preload("res://src/boss/mind.gd")
 const QuietGun := preload("res://src/presentation/quiet_gun.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -38,6 +38,7 @@ func _cases() -> void:
 	var gun = QuietGun.attach(mind)
 	gun.set_physics_process(false)
 	_t.check("quiet gun is visual only", _safe(gun))
+	_t.eq("fallback housing wears Old Verdigris", gun.barrel.get_node("BarrelHousing").mesh.material.albedo_color, Palette.VERDIGRIS)
 	gun.step(0.0)
 	_t.eq("gun waits for the intro", gun.lit, 0)
 	mind.clock = 3.0
