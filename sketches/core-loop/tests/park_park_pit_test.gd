@@ -11,6 +11,7 @@ extends SceneTree
 # swapped waymark order fails the order pin, a waypoint off the play square fails to resolve. K-UNITS KD3,
 # greybox pass, 2026-10-11. Fix round, 2026-10-11: the reward pocket stands at least 150 m in a straight line from
 # every pilot and floor line, and the Kest line crosses dust_devil_floor's column; each has its planted control.
+# Fix round, 2026-10-12: named waypoints receive the numeric-point checks; a moved canal_lip pins the bounds error.
 
 const T := preload("res://tests/support/t.gd")
 
@@ -25,7 +26,7 @@ const LOADER := "res://src/world/park/park_graph.gd"
 const WAYMARKS := ["drop_in", "canal_lip", "switchback_camp", "landmark"]
 const ROLES := {"cache_lip": "reward", "switchback_camp_site": "online", "bench3_altar": "risk", "adit_valve": "hidden"}
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
-const HALF := 800.0
+const Graph := preload("res://src/world/park/park_graph.gd")
 # The reward's least straight distance from any measured line (KD3 fix round): PARK.md 2.12's detour floor, 150 m.
 const REWARD_CLEAR_M := 150.0
 
@@ -66,6 +67,12 @@ func _run() -> void:
 	t.check("planted: a swapped waymark order fails the sable line", not _resolve(graph, swapped, lines["pilots"]["sable"]).is_empty())
 	var off := {"waypoints": ["drop_in", [900.0, 0.0], "canal_lip", "switchback_camp", "landmark"]}
 	t.check("planted: a waypoint off the play square fails to resolve", not _resolve(graph, park, off).is_empty())
+	var off_named := park.duplicate(true)
+	for row in off_named["park_rows"]:
+		if row["id"] == "canal_lip":
+			row["at"] = [900.0, 0.0]
+	t.eq("planted: a named canal_lip off the play square returns the bounds error",
+			_resolve(graph, off_named, {"waypoints": WAYMARKS}), ["canal_lip is off the play square"])
 
 	# Freshness: the committed bake and graph match park_pit.json byte for byte.
 	t.eq("committed bake is fresh", bake.freshness(PARK, BAKED), [])
@@ -174,21 +181,35 @@ func _off_lines(park: Dictionary, lines: Dictionary, p: Vector2) -> float:
 func _resolve(graph, park: Dictionary, line: Dictionary) -> Array:
 	var out := []
 	var named := []
-	var open_bit := 1
+	var rows := {}
+	for row in park["park_rows"]:
+		rows[row["id"]] = row
 	for point in line["waypoints"]:
+		var at: Array
 		if point is String:
+			named.append(point)
 			if not park["waymarks"].has(point):
 				out.append("%s is no waymark" % point)
-			named.append(point)
-			continue
-		var p := Vector2(float(point[0]), float(point[1]))
-		if absf(p.x) > HALF or absf(p.y) > HALF:
+				continue
+			if point == "drop_in":
+				at = park["spawn"]["at"]
+			elif point == "landmark":
+				at = park["landmark"]["beacon"]
+			elif rows.has(point):
+				at = rows[point]["at"]
+			else:
+				out.append("%s has no park row" % point)
+				continue
+		else:
+			at = point
+		var p := Vector2(float(at[0]), float(at[1]))
+		if absf(p.x) > Graph.HALF_M or absf(p.y) > Graph.HALF_M:
 			out.append("%s is off the play square" % str(point))
 			continue
 		var n: int = graph.nearest(p)
-		if graph.flags(n) & open_bit == 0:
+		if graph.flags(n) & Graph.OPEN == 0:
 			out.append("%s is on no open node" % str(point))
-		elif graph.d_landmark_node(n) == INF:
+		elif not is_finite(graph.d_landmark_node(n)):
 			out.append("%s has no path to the beacon" % str(point))
 	if named != park["waymarks"]:
 		out.append("waymarks named %s" % str(named))
