@@ -703,6 +703,13 @@ func _collider_faces(shape: Shape3D) -> Array:
 		var mesh := BoxMesh.new()
 		mesh.size = shape.size
 		triangles = mesh.get_faces()
+	elif shape is CylinderShape3D:
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = shape.radius
+		mesh.bottom_radius = shape.radius
+		mesh.height = shape.height
+		mesh.radial_segments = Indicator.SEGMENTS
+		triangles = mesh.get_faces()
 	elif shape is ConcavePolygonShape3D:
 		triangles = shape.get_faces()
 	else:
