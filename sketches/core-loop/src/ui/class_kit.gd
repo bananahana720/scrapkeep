@@ -56,6 +56,7 @@ const WORDS := {
 	# --- P-C Kest words ---
 	# --- end Kest ---
 	# --- P-C Tarn words ---
+	"claw_drag": "claw drag", "redjaw_rend": "redjaw rend", "rake_run": "rake run", "vice_leap": "vice leap",
 	# --- end Tarn ---
 	# --- P-C Tally words ---
 	# --- end Tally ---

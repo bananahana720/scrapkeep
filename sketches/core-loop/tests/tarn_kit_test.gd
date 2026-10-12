@@ -1,5 +1,7 @@
 extends SceneTree
 
+# 2026-10-11 (PC-TARN): case a reads six kit ids after Claw Drag and Redjaw Rend replace the placeholders.
+
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -151,12 +153,12 @@ func _struck_by(id: int, kind: String, from := 0) -> Array:
 
 func _check_row() -> void:
 	var def: Resource = ClassDef.by_id("tarn")
-	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id]
-	_t.eq("tarn ability ids", ids, ["claw_sweep", "claw_pull", "clamp", "rend_slam"])
+	var ids := [def.weapon_id, def.movement_id, def.special_id, def.smash_id, def.line_id, def.ultimate_id]
+	_t.eq("tarn ability ids", ids, ["claw_sweep", "claw_pull", "clamp", "rend_slam", "claw_drag", "redjaw_rend"])
 	_t.eq("tarn species", def.species, "tiger")
 	var text := "%s %s %s %s %s %s %s %s %s %s %s" % [def.display_name, def.role, def.species, def.pitch, def.bible_home,
 		def.synergy_hooks, ids, def.color, def.shape, def.motif, def.sound]
-	_t.check("no placeholder in the row", not text.to_lower().contains("placeholder"), text)
+	_t.check("no placeholder in the row", not text.to_lower().contains("placeholder") and not ids.has("line_reel") and not ids.has("ult_default"), text)
 	_t.check("every ability row exists", ids.all(func(id): return AbilityState.ABILITIES.has(id)), str(ids))
 	_t.eq("tarn is not a starter", def.starter, false)
 	_t.eq("brindle_routed unlocks tarn", Achievements.ROWS["brindle_routed"]["reward"].get("pilot", ""), "tarn")
