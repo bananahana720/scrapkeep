@@ -22,6 +22,13 @@ extends SceneTree
 #
 #   godot --headless --path sketches/core-loop --script res://tools/park_graph.gd -- --map=park_test
 #
+# Zones (SQ13). graph.bin also carries the landform zones and their crossings, and graph.json a
+# zones block: the counts, the anchors ranked by path distance and the hidden pocket's border
+# (rules in src/world/park/park_graph.gd). `--jitter` (or `--jitter=<seeds>`, 1,000 by default)
+# adds the guaranteed-pocket draw over that many seeds, prints it against its thresholds and exits
+# 1 when the two costliest anchors take under 95% of seeds, the re-roll rate passes 20% or the
+# hidden pocket borders fewer than 3 zones. It is slow, so a bake leaves it off.
+#
 # Rules, each a starting value (PARK.md 2.11):
 #   Ground edge  8-neighbours on the 8 m lattice. a -> b exists when the highest of the four 2 m
 #                vertices from a toward b (b included) is at most CLIMB_M above a, so a wall
@@ -121,9 +128,14 @@ const PAY_FAR := ["rare"]
 
 func _initialize() -> void:
 	var map_id := ""
+	var jitter_seeds := 0
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--map="):
 			map_id = arg.trim_prefix("--map=")
+		elif arg == "--jitter":
+			jitter_seeds = JITTER_SEEDS
+		elif arg.begins_with("--jitter="):
+			jitter_seeds = int(arg.trim_prefix("--jitter="))
 	if map_id.is_empty():
 		printerr("park_graph: pass --map=<map_id>")
 		quit(2)
@@ -142,6 +154,20 @@ func _initialize() -> void:
 		printerr("park_graph: %s" % "\n".join(result["errors"]))
 		quit(1)
 		return
+	if jitter_seeds > 0:
+		# The jitter needs the graph as the loader reads it, zones included.
+		var graph = ParkGraph.read(dir + "/graph.bin")
+		var park: Dictionary = ParkSchema.load_park(park_path)["data"]
+		var drawn := jitter(graph, jitter_seeds)
+		print(jitter_text(drawn))
+		var border := hidden_border(graph, park)
+		var border_ok := not border.is_empty()
+		for h in border:
+			border_ok = border_ok and h["count"] >= HIDDEN_ZONES_MIN
+		if drawn["top2_share"] < JITTER_TOP2_MIN or drawn["reroll_share"] > REROLL_MAX or not border_ok:
+			printerr("park_graph: zone anchors are out of target")
+			quit(1)
+			return
 	quit(0)
 
 
@@ -297,8 +323,233 @@ class Builder:
 			var f: int = g.node_flags[n]
 			if f & ParkGraph.OPEN != 0 and f & (ParkGraph.LINE | ParkGraph.GUARDED | ParkGraph.WARDEN) == 0:
 				g.node_flags[n] = f | ParkGraph.DOOR_OK
+		_zones()
 		if sight:
 			_sight()
+
+	# --- Zones (SQ13; the rules are in src/world/park/park_graph.gd) ---
+
+	# Cuts the nodes into zones and joins them by crossings. Labels first: a deck row's lattice is
+	# its row; a ground node inside landform rows takes the one with the smallest footprint (the
+	# later row on a tie); any other ground node is open ground. A zone is one connected piece of
+	# one label (ground edges only, either way), so a wall across the plain makes two open zones
+	# and a landform cut in two by another row makes two zones of it. A piece under
+	# ZONE_FRAGMENT_NODES that is not the largest piece of its label joins the zone it shares most
+	# edges with. Zones are numbered by their lowest node.
+	func _zones() -> void:
+		var n := g.node_count()
+		var lattice := SIDE * SIDE
+		var label := PackedInt32Array()
+		label.resize(n)
+		label.fill(-1)
+		var area := PackedFloat32Array()
+		area.resize(n)
+		area.fill(INF)
+		var square := (2.0 * HALF) * (2.0 * HALF)
+		for k in rows.size():
+			var row: Dictionary = rows[k]
+			if row["y"] != null or row["element"] == "anchor_field":
+				continue
+			var f := Stamps.frame(row)
+			var a: float = f["length"] * f["width"]
+			if a >= ParkGraph.ZONE_BACKGROUND_SHARE * square:
+				continue
+			for o in g.inside_nodes(f):
+				if a <= area[o]:
+					area[o] = a
+					label[o] = k
+		var open_label := rows.size()
+		for o in n:
+			if o >= lattice:
+				label[o] = g.node_rows[o]
+			elif label[o] < 0:
+				label[o] = open_label
+		# Union by lowest node index: a piece's root is its lowest node.
+		var parent := PackedInt32Array()
+		parent.resize(n)
+		for o in n:
+			parent[o] = o
+		for a in n:
+			for e in range(g.off[a], g.off[a + 1]):
+				var b := g.to[e]
+				if g.ride[e] < 0 and label[a] == label[b]:
+					var ra := _root(parent, a)
+					var rb := _root(parent, b)
+					if ra != rb:
+						parent[maxi(ra, rb)] = mini(ra, rb)
+		_merge_fragments(parent, label)
+		g.node_zone = PackedInt32Array()
+		g.node_zone.resize(n)
+		var zone_of_root := {}
+		var zone_label := []
+		var zone_nodes := []
+		for o in n:
+			var r := _root(parent, o)
+			if not zone_of_root.has(r):
+				zone_of_root[r] = zone_label.size()
+				zone_label.append(label[r])
+				zone_nodes.append(PackedInt32Array())
+			g.node_zone[o] = zone_of_root[r]
+			zone_nodes[zone_of_root[r]].append(o)
+		var made := {}
+		var table := []
+		for z in zone_label.size():
+			var lab: int = zone_label[z]
+			var zone_name := "open"
+			var kind := "open"
+			var row_id := ""
+			if lab < rows.size():
+				row_id = String(rows[lab]["id"])
+				zone_name = row_id
+				kind = "deck" if rows[lab]["y"] != null else ("under" if rows[lab]["hole"] else "landform")
+			made[zone_name] = int(made.get(zone_name, 0)) + 1
+			if made[zone_name] > 1:
+				zone_name = "%s.%d" % [zone_name, made[zone_name]]
+			var count: int = zone_nodes[z].size()
+			var sx := 0.0
+			var sz := 0.0
+			var line := false
+			var warden := false
+			var doors := 0
+			var d_spawn := INF
+			var d_land := INF
+			for o in zone_nodes[z]:
+				sx += g.px[o]
+				sz += g.pz[o]
+				var fl: int = g.node_flags[o]
+				line = line or fl & ParkGraph.LINE != 0
+				warden = warden or fl & ParkGraph.WARDEN != 0
+				if fl & ParkGraph.DOOR_OK != 0:
+					doors += 1
+				d_spawn = minf(d_spawn, g.d_from[o])
+				d_land = minf(d_land, g.d_land[o])
+			table.append({"id": z, "name": zone_name, "kind": kind, "row": row_id, "nodes": count,
+				"cx": snappedf(sx / count, 0.1), "cz": snappedf(sz / count, 0.1), "line": line, "warden": warden,
+				"door_ok": doors, "d_spawn": snappedf(d_spawn, 0.01) if d_spawn < INF else -1.0,
+				"d_landmark": snappedf(d_land, 0.01) if d_land < INF else -1.0,
+				"degree": 0, "openings": 0, "drops": 0, "entrances": [], "exits": []})
+		# Crossings: ground edges counted per ordered zone pair, ride edges per row.
+		var zc: int = zone_label.size()
+		var ground := {}
+		var rides := {}
+		for a in n:
+			var za: int = g.node_zone[a]
+			for e in range(g.off[a], g.off[a + 1]):
+				var zb: int = g.node_zone[g.to[e]]
+				if za == zb:
+					continue
+				if g.ride[e] >= 0:
+					var rk := "%d,%d,%d" % [za, zb, g.ride[e]]
+					rides[rk] = int(rides.get(rk, 0)) + 1
+				else:
+					var gk := za * zc + zb
+					ground[gk] = int(ground.get(gk, 0)) + 1
+		var crossings := []
+		var unordered := {}
+		for gk in ground:
+			unordered[mini(gk / zc, gk % zc) * zc + maxi(gk / zc, gk % zc)] = true
+		var pair_keys := unordered.keys()
+		pair_keys.sort()
+		for pk in pair_keys:
+			var lo: int = pk / zc
+			var hi: int = pk % zc
+			var f: int = int(ground.get(lo * zc + hi, 0))
+			var b: int = int(ground.get(hi * zc + lo, 0))
+			if mini(f, b) >= ParkGraph.ZONE_MIN_LINKS:
+				crossings.append({"a": lo, "b": hi, "kind": "walk", "row": "", "links": mini(f, b)})
+			elif maxi(f, b) >= ParkGraph.ZONE_MIN_LINKS:
+				if f >= b:
+					crossings.append({"a": lo, "b": hi, "kind": "drop", "row": "", "links": f})
+				else:
+					crossings.append({"a": hi, "b": lo, "kind": "drop", "row": "", "links": b})
+		var ride_keys := rides.keys()
+		ride_keys.sort()
+		var ride_list := []
+		for rk in ride_keys:
+			var parts: PackedStringArray = String(rk).split(",")
+			ride_list.append({"a": int(parts[0]), "b": int(parts[1]), "kind": "ride", "row": g.names[int(parts[2])], "links": rides[rk]})
+		ride_list.sort_custom(func(x, y): return [x["a"], x["b"], x["row"]] < [y["a"], y["b"], y["row"]])
+		crossings.append_array(ride_list)
+		var entering := []
+		var leaving := []
+		for z in table.size():
+			entering.append({})
+			leaving.append({})
+		for c in crossings:
+			var ca: int = c["a"]
+			var cb: int = c["b"]
+			if c["kind"] == "drop":
+				table[ca]["drops"] += 1
+				table[cb]["drops"] += 1
+			else:
+				table[ca]["openings"] += 1
+				table[cb]["openings"] += 1
+			leaving[ca][cb] = true
+			entering[cb][ca] = true
+			if c["kind"] == "walk":
+				leaving[cb][ca] = true
+				entering[ca][cb] = true
+		for z in table.size():
+			var into: Array = entering[z].keys()
+			into.sort()
+			var out: Array = leaving[z].keys()
+			out.sort()
+			table[z]["entrances"] = into
+			table[z]["exits"] = out
+			table[z]["degree"] = into.size()
+		g.zone_table = table
+		g.crossing_table = crossings
+
+	# A piece under ZONE_FRAGMENT_NODES that is not the largest piece of its label joins the piece
+	# it shares most ground edges with (the lower root on a tie). Pieces go in node order, so a
+	# fragment that borders only another fragment follows it.
+	func _merge_fragments(parent: PackedInt32Array, label: PackedInt32Array) -> void:
+		var n := parent.size()
+		var size := {}
+		var best := {}
+		for o in n:
+			var r := _root(parent, o)
+			size[r] = int(size.get(r, 0)) + 1
+		for r in size:
+			var lab: int = label[r]
+			if not best.has(lab) or size[r] > size[best[lab]] or (size[r] == size[best[lab]] and r < best[lab]):
+				best[lab] = r
+		var members := {}
+		for o in n:
+			var r := _root(parent, o)
+			if size[r] < ParkGraph.ZONE_FRAGMENT_NODES and best[label[r]] != r:
+				if not members.has(r):
+					members[r] = PackedInt32Array()
+				members[r].append(o)
+		var roots := members.keys()
+		roots.sort()
+		for r in roots:
+			var links := {}
+			for o in members[r]:
+				for e in range(g.off[o], g.off[o + 1]):
+					var t := _root(parent, g.to[e])
+					if t != r:
+						links[t] = int(links.get(t, 0)) + 1
+				for e in range(g.roff[o], g.roff[o + 1]):
+					var t := _root(parent, g.rto[e])
+					if t != r:
+						links[t] = int(links.get(t, 0)) + 1
+			var target := -1
+			for t in links:
+				if target < 0 or links[t] > links[target] or (links[t] == links[target] and t < target):
+					target = t
+			if target >= 0:
+				parent[r] = target
+
+	static func _root(parent: PackedInt32Array, o: int) -> int:
+		var r := o
+		while parent[r] != r:
+			r = parent[r]
+		while parent[o] != r:
+			var next := parent[o]
+			parent[o] = r
+			o = next
+		return r
 
 	# Vertex heights: the ground, or on a hole cell the under.bin floor.
 	func _heights() -> void:
@@ -955,10 +1206,7 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 			"site": String(act["site"]), "at": act["at"], "pay_at": act["at"], "pay_rarities": pay["rarities"], "pay_named": pay["named"]})
 	# The hidden pocket: the first valve or cracked_wall that seals a cache (the stage 1 draft's
 	# gallery_valve shape), else the first valve or cracked_wall.
-	var hidden := {}
-	for c in park["contraption_rows"]:
-		if HIDDEN_KINDS.has(c["kind"]) and (hidden.is_empty() or (c.has("cache") and not hidden.has("cache"))):
-			hidden = c
+	var hidden := _hidden_row(park)
 	if not hidden.is_empty():
 		var at: Array = hidden["door"]["at"] if hidden.has("door") else hidden["at"]
 		var pay_at: Array = hidden["cache"]["at"] if hidden.get("cache") is Dictionary and hidden["cache"].has("at") else at
@@ -1064,6 +1312,16 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 	]
 	return {"rows": rows, "breaches": breaches, "beacon_d_spawn": beacon_d, "full_visit_m": full, "full_visit_ratio": ratio,
 		"reward_ratio": reward_ratio, "targets": targets}
+
+
+# The hidden pocket's contraption row: the first valve or cracked_wall that seals a cache, else the
+# first valve or cracked_wall; {} when there is none.
+static func _hidden_row(park: Dictionary) -> Dictionary:
+	var hidden := {}
+	for c in park["contraption_rows"]:
+		if HIDDEN_KINDS.has(c["kind"]) and (hidden.is_empty() or (c.has("cache") and not hidden.has("cache"))):
+			hidden = c
+	return hidden
 
 
 # The median spawn-to-pocket path over the spawn-to-beacon path, across the off-line pockets
@@ -1275,6 +1533,7 @@ static func ruling(graph, park: Dictionary, built: Dictionary) -> Dictionary:
 		"pockets": pocket_rows, "breaches": pocket["breaches"],
 		"full_visit_m": _json_m(pocket["full_visit_m"]), "full_visit_ratio": ratio,
 		"reward_ratio": reward, "beacon_ok": stage["beacon"]["ok"], "targets": targets,
+		"zones": zone_summary(graph, park),
 	}
 
 
@@ -1366,7 +1625,150 @@ static func report_text(info: Dictionary) -> String:
 	var full := _cell(info["full_visit_m"])
 	lines.append("full visit: spawn through every pocket door to the beacon %s over spawn to beacon: full_visit_ratio %s (start target at most 3.0, reported)" % [
 		full if full == "unreachable" else full + " m", info["full_visit_ratio"]])
+	if info.has("zones"):
+		lines.append(zone_text(info["zones"]))
 	lines.append("")
 	lines.append("beacon_ok: %s" % ("yes" if info["beacon_ok"] else "NO: the beacon is not on an objective-fit node"))
 	lines.append(pocket_table({"rows": info["pockets"], "breaches": info["breaches"], "targets": info["targets"]}))
 	return "\n".join(lines)
+
+
+# --- Zone anchors, the hidden-pocket border and the guaranteed-pocket jitter (SQ13) ---
+#
+# The jitter models the draw the pocket unit (SQ14) makes. The two guaranteed pockets, reward and
+# risk, go to the two costliest anchors off the route (rank 1 and 2 of graph.anchors()). Each
+# door is drawn at random among the anchor's door_ok nodes that also keep the pocket rules a node
+# can keep alone: at least DOOR_SPAWN_M from the spawn and DOOR_BEACON_M from the beacon by path.
+# A draw whose two doors are less than DOOR_DOOR_M apart by path (the shorter way) is a re-roll;
+# a pair gets JITTER_DRAWS draws before the draw falls back to the next pair of anchors, costliest
+# first. Per seed: `top2` when the first pair places, `reroll` when its first draw fails.
+const JITTER_SEEDS := 1000
+const JITTER_TOP2_MIN := 0.95
+const REROLL_MAX := 0.20
+const JITTER_DRAWS := 8
+# comps/isaac/floor-generation.md:107 (c): a hidden pocket borders at least 3 zones. The border is
+# every zone with a node within HIDDEN_BORDER_M (twice the clear ring) of the pocket's door or
+# pay point; a start value.
+const HIDDEN_ZONES_MIN := 3
+const HIDDEN_BORDER_M := 80.0
+
+
+# The door_ok nodes of an anchor a guaranteed pocket may stand on.
+static func anchor_doors(graph, zone: int) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for o in graph.zone_door_nodes(zone):
+		if graph.d_from[o] >= DOOR_SPAWN_M and graph.d_land[o] >= DOOR_BEACON_M:
+			out.append(o)
+	return out
+
+
+# opts: "anchors" (an anchors() list to draw from), "door_door_m", "draws".
+static func jitter(graph, seeds := JITTER_SEEDS, opts := {}) -> Dictionary:
+	var ranked := []
+	for a in opts.get("anchors", graph.anchors()):
+		if a["rank"] > 0:
+			var doors := anchor_doors(graph, a["zone"])
+			if not doors.is_empty():
+				ranked.append({"name": a["name"], "zone": a["zone"], "doors": doors})
+	var door_door: float = opts.get("door_door_m", DOOR_DOOR_M)
+	var draws: int = opts.get("draws", JITTER_DRAWS)
+	var pairs := []
+	for j in range(1, ranked.size()):
+		for i in j:
+			pairs.append([i, j])
+	var apart := {}
+	var rng := RandomNumberGenerator.new()
+	var top2 := 0
+	var placed := 0
+	var rerolled := 0
+	for s in range(1, seeds + 1):
+		rng.seed = s
+		var first_failed := pairs.is_empty()
+		var done := false
+		for p in pairs:
+			for attempt in draws:
+				var a: int = ranked[p[0]]["doors"][rng.randi() % ranked[p[0]]["doors"].size()]
+				var b: int = ranked[p[1]]["doors"][rng.randi() % ranked[p[1]]["doors"].size()]
+				if _doors_apart(graph, a, b, door_door, apart):
+					done = true
+					break
+				if p == pairs[0] and attempt == 0:
+					first_failed = true
+			if done:
+				placed += 1
+				if p == pairs[0]:
+					top2 += 1
+				break
+		if first_failed:
+			rerolled += 1
+	var names := []
+	for a in ranked:
+		names.append(a["name"])
+	return {"seeds": seeds, "anchors": names, "placed": placed, "top2": top2, "top2_share": float(top2) / maxf(1.0, seeds),
+		"rerolls": rerolled, "reroll_share": float(rerolled) / maxf(1.0, seeds)}
+
+
+static func _doors_apart(graph, a: int, b: int, metres: float, cache: Dictionary) -> bool:
+	if graph.position(a).distance_to(graph.position(b)) >= metres:
+		return true
+	var key: int = mini(a, b) * graph.node_count() + maxi(a, b)
+	if not cache.has(key):
+		cache[key] = minf(graph.path_m(a, b), graph.path_m(b, a))
+	return cache[key] >= metres
+
+
+# The zones round the hidden pocket: {"id", "zones": names, "count"}, [] when the park has none.
+# The pocket is the one pockets() reads; its door and its pay point both count.
+static func hidden_border(graph, park: Dictionary, ring_m := HIDDEN_BORDER_M) -> Array:
+	var hidden := _hidden_row(park)
+	if hidden.is_empty():
+		return []
+	var index := Index.new(graph, park)
+	var door: Array = hidden["door"]["at"] if hidden.has("door") else hidden["at"]
+	var pay: Array = hidden["cache"]["at"] if hidden.get("cache") is Dictionary and hidden["cache"].has("at") else door
+	var seen := {}
+	for at in [door, pay]:
+		var p := Vector2(float(at[0]), float(at[1]))
+		var found: PackedInt32Array = graph.disc_nodes(p, ring_m)
+		for o in range(SIDE * SIDE, graph.node_count()):
+			if Vector2(graph.px[o], graph.pz[o]).distance_to(p) <= ring_m:
+				found.append(o)
+		for o in found:
+			seen[graph.zone_of(o)] = true
+	var names := []
+	for z in seen:
+		names.append(graph.zones()[z]["name"])
+	names.sort()
+	return [{"id": String(hidden["id"]), "zones": names, "count": names.size()}]
+
+
+# graph.json's zones block: counts, the anchor list and the hidden pocket's border.
+static func zone_summary(graph, park: Dictionary) -> Dictionary:
+	var crossings := {"walk": 0, "ride": 0, "drop": 0}
+	for c in graph.crossings():
+		crossings[c["kind"]] += 1
+	var anchors := []
+	for a in graph.anchors():
+		anchors.append({"name": a["name"], "cost": snappedf(a["cost"], 0.1), "d_landmark": snappedf(a["d_landmark"], 0.1),
+			"on_route": a["on_route"], "viable": a["viable"], "rank": a["rank"]})
+	return {"count": graph.zone_count(), "crossings": crossings, "anchors": anchors, "hidden": hidden_border(graph, park)}
+
+
+static func zone_text(zones: Dictionary) -> String:
+	var lines := PackedStringArray()
+	lines.append("")
+	lines.append("zones: %d, crossings: %d walk, %d ride, %d drop" % [zones["count"], zones["crossings"]["walk"], zones["crossings"]["ride"], zones["crossings"]["drop"]])
+	for a in zones["anchors"]:
+		lines.append("anchor %s: cost %s m from the spawn, %s m from the beacon, %s, rank %s" % [a["name"], a["cost"], a["d_landmark"],
+			"on the route" if a["on_route"] else "off the route" if a["viable"] else "off the route, too few doors", a["rank"] if a["rank"] > 0 else "-"])
+	for h in zones["hidden"]:
+		lines.append("hidden pocket %s borders %d zones (%s), at least %d wanted: %s" % [h["id"], h["count"], ", ".join(h["zones"]), HIDDEN_ZONES_MIN,
+			"in target" if h["count"] >= HIDDEN_ZONES_MIN else "OUT OF TARGET"])
+	return "\n".join(lines)
+
+
+static func jitter_text(result: Dictionary) -> String:
+	return "jitter over %d seeds, anchors %s: guaranteed pockets at the two costliest anchors on %.1f%% of seeds (at least %.0f%%: %s), re-roll rate %.1f%% (at most %.0f%%: %s)" % [
+		result["seeds"], ", ".join(result["anchors"]), 100.0 * result["top2_share"], 100.0 * JITTER_TOP2_MIN,
+		"in target" if result["top2_share"] >= JITTER_TOP2_MIN else "OUT OF TARGET", 100.0 * result["reroll_share"], 100.0 * REROLL_MAX,
+		"in target" if result["reroll_share"] <= REROLL_MAX else "OUT OF TARGET"]

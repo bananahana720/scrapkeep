@@ -20,9 +20,9 @@ extends SceneTree
 # pockets (reward and risk) draw their doors among the door_ok nodes of the two costliest anchors
 # off the route over 1,000 seeded jitters and sit there on at least 95% of seeds, the re-roll rate
 # is at most 20%, and the hidden pocket borders at least 3 zones. The fixture has two anchors far
-# apart, so its jitter is robust by construction; the controls show the checks can fail: doors
-# forced 1,000,000 m apart send every draw to a re-roll and none to the top pair, and a hidden
-# pocket seen through a 20 m ring borders fewer than 3 zones.
+# apart, so its jitter is robust by construction; the controls show the checks can fail: both
+# doors drawn from the one anchor, one draw each, often land under 200 m apart and miss both
+# thresholds, and a hidden pocket seen through a 20 m ring borders fewer than 3 zones.
 #
 # Planted park (written to user:// and baked there, the fixture file is never edited): a nook of
 # one ramp far from the route is the costliest anchor and takes rank 1, a nook of two ramps is
@@ -37,7 +37,7 @@ const SCRATCH := "user://park_zones_test"
 const TOOL := "res://tools/park_graph.gd"
 const LOADER := "res://src/world/park/park_graph.gd"
 const BAKE_TOOL := "res://tools/park_bake.gd"
-const EXPECTED_CHECKS := 53
+const EXPECTED_CHECKS := 48
 
 var t := T.new("park_zones_test")
 
@@ -224,9 +224,18 @@ func _acceptance(tool: GDScript, graph, park: Dictionary) -> void:
 	t.check("the re-roll rate is at most 20%", drawn["reroll_share"] <= 0.20, "%.1f%%" % (100.0 * drawn["reroll_share"]))
 	t.eq("every seed places the guaranteed pockets", drawn["placed"], 1000)
 	t.eq("the jitter is repeatable", tool.jitter(graph, 1000), drawn)
-	var forced: Dictionary = tool.jitter(graph, 1000, {"door_door_m": 1000000.0})
-	t.check("control: doors forced apart miss the top pair", forced["top2_share"] < 0.95, "%.1f%%" % (100.0 * forced["top2_share"]))
-	t.check("control: doors forced apart re-roll on every seed", forced["reroll_share"] > 0.20, "%.1f%%" % (100.0 * forced["reroll_share"]))
+	# Control: both guaranteed pockets drawn from the bench, one draw each, so two doors often fall
+	# under 200 m apart.
+	var twins := []
+	for a in graph.anchors():
+		if a["name"] == "bench":
+			var twin: Dictionary = a.duplicate()
+			twin["name"] = "bench_twin"
+			twin["rank"] = 2
+			twins = [a, twin]
+	var forced: Dictionary = tool.jitter(graph, 1000, {"anchors": twins, "draws": 1})
+	t.check("control: two pockets in one anchor miss the top pair on over 5% of seeds", forced["top2_share"] < 0.95, "%.1f%%" % (100.0 * forced["top2_share"]))
+	t.check("control: two pockets in one anchor re-roll on over 20% of seeds", forced["reroll_share"] > 0.20, "%.1f%%" % (100.0 * forced["reroll_share"]))
 	var border: Array = tool.hidden_border(graph, park)
 	t.eq("the fixture has one hidden pocket, tube_wall", [border.size(), border[0]["id"]], [1, "tube_wall"])
 	t.check("the hidden pocket borders at least 3 zones", border[0]["count"] >= 3, str(border[0]["zones"]))
@@ -240,11 +249,11 @@ func _planted(tool: GDScript, bake: GDScript, loader: GDScript, park: Dictionary
 	var planted := park.duplicate(true)
 	var rows: Array = planted["park_rows"]
 	rows.append(_row("nook_a", [-650, 650], [100, 6, 100], 0, "plateau"))
-	rows.append(_row("nook_a_ramp", [-719.5, 650], [39, 6, 40], -90, "ramp"))
+	rows.append(_row("nook_a_ramp", [-720.5, 650], [39, 6, 40], -90, "ramp"))
 	rows.append(_row("nook_b", [-650, 400], [100, 6, 100], 0, "plateau"))
-	rows.append(_row("nook_b_west", [-719.5, 400], [39, 6, 40], -90, "ramp"))
-	rows.append(_row("nook_b_east", [-580.5, 400], [39, 6, 40], 90, "ramp"))
-	rows.append(_row("corner_wall", [750, 750], [160, 200, 20], 45, "plateau"))
+	rows.append(_row("nook_b_west", [-720.5, 400], [39, 6, 40], -90, "ramp"))
+	rows.append(_row("nook_b_east", [-579.5, 400], [39, 6, 40], 90, "ramp"))
+	rows.append(_row("corner_wall", [750, 750], [160, 200, 20], -45, "plateau"))
 	var path := SCRATCH + "/planted.json"
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	f.store_buffer(JSON.stringify(planted, " ").to_utf8_buffer())
