@@ -219,3 +219,67 @@ Stop coordinates from untraced runs:
 - sable: seed 1: [-173.1, -392.2] at 21.89 s; seed 2: [18.9, -159.9] at 37.44 s; seed 4: [-166.2, -404.9] at 21.99 s; seed 5: [-172.8, -395.8] at 21.9 s; seed 5: [-175.4, -390.3] at 22.53 s
 
 Only Sable was remeasured on this discarded geometry. The other lines are not measured in this table.
+
+## Sol round 2, 2026-10-12
+
+### Baseline before the wall move
+
+Fresh merged-head measurements use the exported TRAV-DET traversal tool, SHA256 `f013f06048853958072dbe3dbcb70d17d040c33b393cfe5b1cc1d0dca02ca2c2`, at `/tmp/claude-1000/w13-sol/kd4-sinkhole-r2/traversal_line_travdet.gd`. The committed tool is unchanged. Seven untraced batches each contain seeds 1 to 8. Solo traces classify every stop and are checked against the complete untraced result.
+
+Values are median / worst seed. Median-defined bands retain the PARK.md median rule; worst-seed limits are checked separately. Anchor gaps use the worst seed, never the median. Terrain stops count against the stage. Pack stops appear in the separate row below.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS |
+| Time to Warden, s | 69.78 / 69.78; PASS | 101.13 / 103.71; PASS | 97.6 / 97.6; PASS | 93.82 / 95.53; PASS | 96.2 / 98.26; PASS | 90.185 / 92.33; PASS | 100.395 / 103.16; judged in floor row |
+| Segment medians, s | 31.67 / 16.5 / 21.6 / 33.2; PASS | 41.75 / 30.92 / 28.98 / 42.73; PASS | 43.29 / 26.92 / 27.38 / 44.06; PASS | 41.46 / 28.59 / 23.96 / 42.23; PASS | 42.86 / 25.33 / 28.17 / 44.07; PASS | 42.34 / 21.47 / 26.29 / 42.79; PASS | 43.92 / 27.11 / 29.1 / 46.11; reported, pilot band, not the floor's |
+| Flow share | 0.9105 / 0.9105; PASS | 0.887 / 0.8491; PASS | 0.8338 / 0.8338; PASS | 0.9442 / 0.9429; PASS | 0.9117 / 0.8758; PASS | 0.9714 / 0.9685; PASS | 0.8747 / 0.8552; reported, pilot band, not the floor's |
+| Airborne share | 0.3711 / 0.3711..0.425; PASS | 0.1679 / 0.1626..0.1764; PASS | 0.207 / 0.199..0.207; PASS | 0.2174 / 0.2096..0.2345; PASS | 0.1708 / 0.1614..0.1715; PASS | 0.192 / 0.1641..0.1999; PASS | 0.1581 / 0.1524..0.1698; reported, pilot band, not the floor's |
+| Terrain dead stops | 1 / 1; MISS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS |
+| Peak speed, m/s; tier-3 time, s | 54.08 / 53.82; tier 3 51.96 / 50; PASS | 33.775 / 33.51; tier 3 13.91 / 13.11; PASS | 29.55 / 29.55; tier 3 10.8 / 8.97; PASS | 31.95 / 31.62; tier 3 12.355 / 11.8; PASS | 33.16 / 32.95; tier 3 13 / 12.72; PASS | 32.32 / 31.96; tier 3 11.97 / 11.22; PASS | 33.21 / 32.39; tier 3 12.92 / 12.14; reported, pilot band, not the floor's |
+| Quiet stretch, s | 5.5 / 6.16; PASS | 10.46 / 10.54; PASS | 8.99 / 10.06; PASS | 10.37 / 11.24; PASS | 9.66 / 10.23; PASS | 7.93 / 10.34; PASS | 9.72 / 12.12; reported, pilot band, not the floor's |
+| Anchor gap, m | 13 / 19.2; PASS | 13.7 / 14.9; PASS | 13.2 / 26; PASS | 11.1 / 11.8; PASS | 14.05 / 14.4; PASS | 13.6 / 14.2; PASS | 17.2 / 27.8; reported, pilot band, not the floor's |
+| Distinct ride facts | 5 / 5; PASS | 6 / 6; PASS | 5 / 5; PASS | 4 / 4; PASS | 6 / 5; PASS | 5 / 5; PASS | 5 / 5; reported, pilot band, not the floor's |
+| Length / straight distance | 1.7 / 1.7..1.7; PASS | 1.65 / 1.64..1.65; PASS | 1.59 / 1.59..1.59; PASS | 1.63 / 1.63..1.64; PASS | 1.57 / 1.57..1.57; PASS | 1.51 / 1.51..1.51; PASS | 1.55 / 1.55..1.56; reported, pilot band, not the floor's |
+| Floor row | stage floor row | stage floor row | stage floor row | stage floor row | stage floor row | stage floor row | 100.395 / 103.16; cap 190.02; fastest-pilot cap 139.56; PASS |
+| Distinct lines | not measured | not measured | not measured | not measured | not measured | not measured | stage band |
+| Pack stops | 0 total | 0 total | 0 total | 0 total | 0 total | 0 total | 0 total |
+
+| Pilot | Seed | Coordinates [x,z] | Time, s | Class | Contact and spawn evidence |
+| --- | --- | --- | --- | --- | --- |
+| sable | 1 | [-171.0, -502.9] | 19.59 | terrain | only Ground/Tiles/Tile3_1; 19.578 to 19.589 s, 24.01 to 10.58 m/s; post_19i plateau stamp adds 20 m at grid cells (-172,-500),(-170,-500) |
+| sable | 2 | [-171.0, -502.9] | 19.59 | terrain | only Ground/Tiles/Tile3_1; 19.578 to 19.589 s, 24.01 to 10.58 m/s; post_19i plateau stamp adds 20 m at grid cells (-172,-500),(-170,-500) |
+| sable | 4 | [-171.0, -502.9] | 19.59 | terrain | only Ground/Tiles/Tile3_1; 19.578 to 19.589 s, 24.01 to 10.58 m/s; post_19i plateau stamp adds 20 m at grid cells (-172,-500),(-170,-500) |
+| sable | 5 | [-171.0, -502.9] | 19.59 | terrain | only Ground/Tiles/Tile3_1; 19.578 to 19.589 s, 24.01 to 10.58 m/s; post_19i plateau stamp adds 20 m at grid cells (-172,-500),(-170,-500) |
+| sable | 6 | [-171.0, -502.9] | 19.59 | terrain | only Ground/Tiles/Tile3_1; 19.578 to 19.589 s, 24.01 to 10.58 m/s; post_19i plateau stamp adds 20 m at grid cells (-172,-500),(-170,-500) |
+| sable | 7 | [-171.0, -502.9] | 19.59 | terrain | only Ground/Tiles/Tile3_1; 19.578 to 19.589 s, 24.01 to 10.58 m/s; post_19i plateau stamp adds 20 m at grid cells (-172,-500),(-170,-500) |
+| sable | 8 | [-171.0, -502.9] | 19.59 | terrain | only Ground/Tiles/Tile3_1; 19.578 to 19.589 s, 24.01 to 10.58 m/s; post_19i plateau stamp adds 20 m at grid cells (-172,-500),(-170,-500) |
+
+### Selected wall rework
+
+Fresh merged-head measurements use the exported TRAV-DET traversal tool, SHA256 `f013f06048853958072dbe3dbcb70d17d040c33b393cfe5b1cc1d0dca02ca2c2`, at `/tmp/claude-1000/w13-sol/kd4-sinkhole-r2/traversal_line_travdet.gd`. The committed tool is unchanged. Seven untraced batches each contain seeds 1 to 8. Solo traces classify every stop and are checked against the complete untraced result.
+
+Values are median / worst seed. Median-defined bands retain the PARK.md median rule; worst-seed limits are checked separately. Anchor gaps use the worst seed, never the median. Terrain stops count against the stage. Pack stops appear in the separate row below.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS | 8 / 8/8; PASS |
+| Time to Warden, s | 69.96 / 70.84; PASS | 103.105 / 104.57; PASS | 96.9 / 99.33; PASS | 94.105 / 95.17; PASS | 96.42 / 99.12; PASS | 90.49 / 91.81; PASS | 100.365 / 102.84; judged in floor row |
+| Segment medians, s | 32.92 / 16.9 / 20.12 / 33.34; PASS | 41.94 / 31.57 / 29.14 / 42.82; PASS | 43.27 / 27.08 / 26.49 / 43.81; PASS | 41.52 / 28.7 / 24.02 / 41.99; PASS | 42.97 / 25.62 / 28.22 / 44.09; PASS | 42.27 / 21.44 / 26.87 / 42.71; PASS | 44.33 / 26.87 / 29.49 / 46.3; reported, pilot band, not the floor's |
+| Flow share | 0.9237 / 0.9073; PASS | 0.8629 / 0.8371; PASS | 0.87 / 0.8233; PASS | 0.9541 / 0.9353; PASS | 0.9102 / 0.8609; PASS | 0.9735 / 0.9625; PASS | 0.8787 / 0.8586; reported, pilot band, not the floor's |
+| Airborne share | 0.4071 / 0.3808..0.4152; PASS | 0.1682 / 0.158..0.1716; PASS | 0.2078 / 0.2051..0.2218; PASS | 0.225 / 0.2012..0.2282; PASS | 0.1656 / 0.153..0.1678; PASS | 0.1954 / 0.1716..0.1959; PASS | 0.1587 / 0.1579..0.1615; reported, pilot band, not the floor's |
+| Terrain dead stops | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS |
+| Peak speed, m/s; tier-3 time, s | 54.08 / 53.82; tier 3 50.54 / 49.8; PASS | 33.775 / 33.51; tier 3 14.07 / 13.13; PASS | 29.55 / 29.55; tier 3 10.76 / 9.22; PASS | 31.95 / 31.19; tier 3 12.2 / 11.49; PASS | 33.16 / 32.95; tier 3 13.01 / 12.76; PASS | 32.32 / 31.96; tier 3 12.06 / 11.22; PASS | 33.21 / 32.39; tier 3 13.02 / 12.47; reported, pilot band, not the floor's |
+| Quiet stretch, s | 6.67 / 6.67; PASS | 10.56 / 12.16; PASS | 8.99 / 9.88; PASS | 10.46 / 11.07; PASS | 9.115 / 10.8; PASS | 8.205 / 10.32; PASS | 9.26 / 12.71; reported, pilot band, not the floor's |
+| Anchor gap, m | 12.1 / 18.8; PASS | 13.75 / 14.6; PASS | 20.75 / 28; PASS | 10.6 / 11.5; PASS | 13.9 / 14.1; PASS | 27.4 / 27.6; PASS | 13.8 / 17.4; reported, pilot band, not the floor's |
+| Distinct ride facts | 5 / 5; PASS | 6 / 6; PASS | 5 / 5; PASS | 4 / 4; PASS | 6 / 6; PASS | 5 / 5; PASS | 5 / 5; reported, pilot band, not the floor's |
+| Length / straight distance | 1.69 / 1.68..1.72; PASS | 1.65 / 1.64..1.65; PASS | 1.59 / 1.59..1.61; PASS | 1.635 / 1.63..1.64; PASS | 1.57 / 1.57..1.57; PASS | 1.51 / 1.51..1.51; PASS | 1.55 / 1.55..1.55; reported, pilot band, not the floor's |
+| Floor row | stage floor row | stage floor row | stage floor row | stage floor row | stage floor row | stage floor row | 100.365 / 102.84; cap 190.525; fastest-pilot cap 139.92; PASS |
+| Distinct lines | not measured | not measured | not measured | not measured | not measured | not measured | stage band |
+| Pack stops | 0 total | 0 total | 0 total | 0 total | 0 total | 0 total | 0 total |
+
+| Pilot | Seed | Coordinates [x,z] | Time, s | Class | Contact and spawn evidence |
+| --- | --- | --- | --- | --- | --- |
+| all | 1 to 8 | - | - | none | zero raw dead stops across the selected 56 runs |
+
+Earlier tables remain historical receipts. This round's merged-head batch table and traced classifications own the current verdict. No dressed pass was started.
