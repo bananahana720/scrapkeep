@@ -25,6 +25,7 @@ func _initialize() -> void:
 		_clearance()
 		_overlap()
 		_held_announcements()
+		_corridors()
 		_lifecycle()
 		_weather()
 		_ending_safety()
@@ -258,6 +259,42 @@ func _held_announcements() -> void:
 	_check("held announcements do not reserve live capacity", announced.has("held_a") and announced.has("held_b")
 		and announced.has("clear") and starts == ["clear"] and land == ["clear"],
 		"announced=%s starts=%s land=%s" % [announced.keys(), starts, land])
+
+
+func _corridors() -> void:
+	for spec in [["fleet_landing", "fleet"], ["machine_eruption", "ancient"]]:
+		# The 40 x 8 footprint ends at z=4. Its 8 m corridor reaches z=12.
+		# At yaw 90 the long side instead reaches world z=20, plus the 8 m corridor.
+		for fixture in [["margin held", 0, 10.0, false, false], ["clear", 0, 13.0, false, true],
+			["alternate", 0, 10.0, true, true], ["yaw held", 90, 20.0, false, false],
+			["yaw clear", 90, 29.0, false, true], ["yaw alternate", 90, 20.0, true, true]]:
+			var row := _row("corridor", spec[0], spec[1])
+			row.effect.footprint_m = [40, 8]
+			row.live_s = 0.0
+			if fixture[3]:
+				row.route_change = {"closes": ["main"], "opens": ["bypass"]}
+			var map := Map.new()
+			map.park = {"map": "fixture", "event_rows": [row], "weather_rows": [],
+				"park_rows": [{"id": "site", "at": [0, 0], "y": 0, "size": [100, 2, 100], "yaw_deg": fixture[1]}],
+				"routes": [{"id": "main", "from": "drop_in", "to": "landmark"}, {"id": "bypass", "from": "drop_in", "to": "landmark"}]}
+			var d = Director.new(891, {}, map, 14.0, func(_x, _z): return 0.0)
+			var land := []
+			d.register_family(spec[1], func(action, _r, _ctx):
+				if action == "land":
+					land.append(action))
+			var announced := 0
+			var started := 0
+			var landing_world := 0
+			var lines := [[Vector2(-50, fixture[2]), Vector2(50, fixture[2])]]
+			for i in 400:
+				for f in _step(d, H, FAR, Vector3.ZERO, {"pilot_lines": lines}):
+					announced += int(f.kind == "announced")
+					started += int(f.kind == "started")
+					landing_world += int(f.kind == "world" and f.get("phase") == "land")
+			var expected := int(fixture[4])
+			_check("pilot corridor %s %s" % [spec[1], fixture[0]], announced == 1 and started == expected
+				and landing_world == expected and land.size() == expected,
+				"yaw=%s line z=%s announced=%d started=%d landing_world=%d land_hooks=%d expected=%d" % [fixture[1], fixture[2], announced, started, landing_world, land.size(), expected])
 
 
 func _lifecycle() -> void:
