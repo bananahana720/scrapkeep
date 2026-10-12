@@ -102,7 +102,9 @@ func _landmark(park: Dictionary) -> Array:
 func _ruling(info: Dictionary) -> Array:
 	var out := []
 	if not (info.get("breaches", [1]) as Array).is_empty():
-		out.append("breaches %s" % info.get("breaches"))
+		out.append("breaches %s" % [info.get("breaches")])
+	if info.get("beacon_ok") != true:
+		out.append("beacon_ok %s" % [info.get("beacon_ok")])
 	var routes: Dictionary = info.get("routes", {})
 	if routes.size() != 13:
 		out.append("%d routes, want 13" % routes.size())
