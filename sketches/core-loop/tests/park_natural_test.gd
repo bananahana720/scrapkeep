@@ -134,9 +134,16 @@ func _run() -> void:
 				t.near(kind + " rendered surface agrees", state.water.surface_y(), depth)
 				t.eq(kind + " water never brakes", state.water.external_accel(Vector3.ZERO, Vector3(17, 0, 9)), Vector3.ZERO)
 		elif kind != "lightning":
-			var probe := Vector2(2.5, 0).rotated(-deg_to_rad(30.0)) if kind == "impact" else Vector2.ZERO
+			var probe := Vector2(2.37, 0.19).rotated(-deg_to_rad(30.0)) if kind == "impact" else Vector2.ZERO
 			t.check(kind + " uses live terrain overlay", w.terrain.overlays.has("rubble_ramp_after") and w.terrain.height(probe.x, probe.y) > 0.0, str(w.terrain.overlays))
 			t.check(kind + " prebuilt collider lands", state.get("overlay") != null and state.overlay.visible)
+			await physics_frame
+			await physics_frame
+			var query := PhysicsRayQueryParameters3D.create(Vector3(probe.x, 100, probe.y), Vector3(probe.x, -100, probe.y))
+			var hit: Dictionary = w.get_world_3d().direct_space_state.intersect_ray(query)
+			t.check(kind + " real collider ray hits", hit.get("collider") == state.get("overlay"), str(hit))
+			if not hit.is_empty():
+				t.near(kind + " collider and terrain height agree", hit.position.y, w.terrain.height(probe.x, probe.y), 0.001)
 		if kind in ["impact", "lightning"]:
 			var before: Vector3 = w.ctx.player.state.velocity
 			w.events.advance(0.1, Vector3(0, 1, 0), before, {"clock_tier": 1, "grounded": true})
