@@ -213,9 +213,11 @@ func _check_pack_spread() -> void:
 			continue
 		var same := true
 		for i in expected.size():
-			same = same and points[i].distance_to(expected[i]) < 0.0001
+			var actual_offset: Vector2 = points[i] - points[0]
+			var expected_offset: Vector2 = expected[i] - expected[0]
+			same = same and actual_offset.distance_to(expected_offset) < 0.0001
 		matches = matches or same
-	_check("home group keeps original offsets when footprint permits", fits and matches)
+	_check("home group keeps original relative offsets when footprint permits", fits and matches)
 
 
 func _place_ball() -> void:

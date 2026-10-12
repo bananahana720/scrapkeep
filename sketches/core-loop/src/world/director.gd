@@ -259,6 +259,8 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> int:
 	var queued := 0
 	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
 	var side := Vector2(-heading.y, heading.x)
+	var home_spots := _home_pack_spots(kinds, ball, side) if _park_map != null and not _forward_homes.is_empty() else {}
+	var assigned: Array[Vector2] = []
 	for i in kinds.size():
 		var kind := KIND_NAMES.find(kinds[i])
 		if kind == -1:
@@ -278,15 +280,11 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> int:
 			if _kind_stopped(kind):
 				continue
 			if not _forward_homes.is_empty():
-				spot = Vector2.INF
-				for home in _forward_homes:
-					if home.enemy == kinds[i]:
-						spot = _home_spot(home, ball)
-						if spot != Vector2.INF:
-							break
-			if spot == Vector2.INF or not _park_safe(spot) or spot.distance_to(ball) < MIN_GAP:
+				spot = home_spots.get(i, Vector2.INF)
+			if spot == Vector2.INF or not _park_safe(spot) or spot.distance_to(ball) < MIN_GAP or not _pack_gap(spot, assigned):
 				continue
 		arrivals.append({"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq})
+		assigned.append(spot)
 		queued += 1
 	if _park_map == null or queued > 0:
 		_pack_seq += 1
@@ -423,13 +421,67 @@ func _window_homes(ball: Vector2) -> Array[Dictionary]:
 	return out
 
 
-func _home_spot(home: Dictionary, ball: Vector2) -> Vector2:
+
+func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2) -> Dictionary:
+	var spots := {}
+	var assigned: Array[Vector2] = []
+	for home in _forward_homes:
+		var indices: Array[int] = []
+		for i in kinds.size():
+			var kind := KIND_NAMES.find(kinds[i])
+			if not spots.has(i) and kinds[i] == home.enemy and kind >= 0 and Roster.built(kinds[i]) and not _kind_stopped(kind):
+				indices.append(i)
+		if indices.is_empty():
+			continue
+		var site: Dictionary = _home_sites[home.site]
+		var half: Vector2 = _park_map.footprint_half_extents(site)
+		var group := {}
+		for attempt in TRIES * 4:
+			var offset := Vector2.ZERO if attempt == 0 else Vector2(_rng.randf_range(-half.x, half.x), _rng.randf_range(-half.y, half.y))
+			var anchor := _home_at(home) + offset.rotated(-deg_to_rad(float(site.yaw_deg)))
+			var occupied := assigned.duplicate()
+			group.clear()
+			for i in indices:
+				var spot := anchor + side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
+				if not _home_point_safe(site, spot, ball, occupied):
+					break
+				group[i] = spot
+				occupied.append(spot)
+			if group.size() == indices.size():
+				break
+		if group.size() == indices.size():
+			for i in indices:
+				spots[i] = group[i]
+				assigned.append(group[i])
+		else:
+			for i in indices:
+				var offset := side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
+				var spot := _home_spot(home, ball, offset, assigned)
+				if spot != Vector2.INF:
+					spots[i] = spot
+					assigned.append(spot)
+	return spots
+
+
+func _pack_gap(spot: Vector2, assigned: Array[Vector2]) -> bool:
+	for other in assigned:
+		if spot.distance_to(other) < PACK_SPREAD - 0.0001:
+			return false
+	return true
+
+
+func _home_point_safe(site: Dictionary, spot: Vector2, ball: Vector2, assigned: Array[Vector2]) -> bool:
+	return play_rect.has_point(spot) and _park_map.footprint_contains(site, spot) and _ahead(spot, ball) \
+		and spot.distance_to(ball) >= MIN_GAP and _park_safe(spot) and _pack_gap(spot, assigned)
+
+
+func _home_spot(home: Dictionary, ball: Vector2, preferred := Vector2.ZERO, assigned: Array[Vector2] = []) -> Vector2:
 	var site: Dictionary = _home_sites[home.site]
 	var half: Vector2 = _park_map.footprint_half_extents(site)
 	for i in TRIES * 4:
 		var offset := Vector2.ZERO if i == 0 else Vector2(_rng.randf_range(-half.x, half.x), _rng.randf_range(-half.y, half.y))
-		var spot := _home_at(home) + offset.rotated(-deg_to_rad(float(site.yaw_deg)))
-		if play_rect.has_point(spot) and _ahead(spot, ball) and spot.distance_to(ball) >= MIN_GAP and _park_safe(spot):
+		var spot := _home_at(home) + preferred + offset.rotated(-deg_to_rad(float(site.yaw_deg)))
+		if _home_point_safe(site, spot, ball, assigned):
 			return spot
 	return Vector2.INF
 
