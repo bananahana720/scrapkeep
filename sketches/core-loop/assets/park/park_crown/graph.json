@@ -1,29 +1,31 @@
 {
-  "bake_sha256": "8987d306183554cb4075dea0b5377b5a85015136ec98a3f042544c3736791ef2",
+  "bake_sha256": "22b049b3ad8518d70b543391a98b507d87d78e6eb0475a0458f1ee59fc171161",
+  "beacon_ok": false,
   "breaches": [],
-  "bytes": 889390,
-  "edges": 317654,
+  "bytes": 907039,
+  "edges": 321584,
+  "first_failed": "beacon_ok",
   "flags": {
-    "deck": 411,
-    "door_ok": 39295,
-    "line": 408,
-    "open": 40472,
-    "sight_ok": 8185,
+    "deck": 657,
+    "door_ok": 39508,
+    "line": 427,
+    "open": 40709,
+    "sight_ok": 8453,
     "under": 0
   },
   "full_visit_m": 1777,
-  "full_visit_ratio": "1.437",
-  "graph_sha256": "f8203b44e44409b419815ba3bdf0516c0b0df0af891cbbe13a8f7deb841fa678",
+  "full_visit_ratio": "1.440",
+  "graph_sha256": "e340bd2e7ccae18dd3f7700396e8f1e177c0faea9653d0a930db3700f1dfc2f0",
   "line_errors": [],
-  "line_path_nodes": 145,
+  "line_path_nodes": 150,
   "longest_est_m": 2477,
   "map": "park_crown",
-  "nodes": 40812,
-  "park_sha256": "4d5960cda2544d98bfef8dc124d3ee4a10e9f6a19caf5ddb3074bc2de922c84d",
+  "nodes": 41058,
+  "park_sha256": "782c8b238c117658e61bafd2afe62db0e3acfa64a15e69663fa6f921965e1e01",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 597,
+      "d_landmark": 595,
       "d_spawn": 639,
       "detour_m": 0,
       "door_at": [
@@ -50,14 +52,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 880,
-      "d_spawn": 552,
-      "detour_m": 231,
+      "d_landmark": 877,
+      "d_spawn": 555,
+      "detour_m": 239,
       "door_at": [
         -232,
         -304
       ],
-      "door_m": 231,
+      "door_m": 239,
       "flags": [
         "open",
         "door_ok",
@@ -77,14 +79,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 525,
-      "d_spawn": 867,
-      "detour_m": 199,
+      "d_landmark": 523,
+      "d_spawn": 863,
+      "detour_m": 191,
       "door_at": [
         200,
         32
       ],
-      "door_m": 199,
+      "door_m": 191,
       "flags": [
         "open",
         "door_ok",
@@ -105,14 +107,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 672,
-      "d_spawn": 629,
-      "detour_m": 80,
+      "d_landmark": 670,
+      "d_spawn": 625,
+      "detour_m": 72,
       "door_at": [
         88,
         -160
       ],
-      "door_m": 80,
+      "door_m": 72,
       "flags": [
         "open",
         "door_ok",
@@ -129,7 +131,8 @@
       "site": "meander_bend"
     }
   ],
-  "ride_edges": 12,
+  "reward_ratio": "0.507",
+  "ride_edges": 13,
   "routes": {
     "east": [],
     "gauntlet": [],
@@ -151,11 +154,29 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1236,
-    "farther_share": "0.147",
-    "ok": true
+    "d_landmark": -1,
+    "farther_share": "0.000",
+    "ok": false,
+    "run": false
   },
-  "spawn_beacon_m": 1236,
-  "spawn_beacon_share": "0.499",
-  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+  "spawn_beacon_m": 1234,
+  "spawn_beacon_share": "0.498",
+  "stage_checked": [
+    "beacon_ok"
+  ],
+  "targets": [
+    {
+      "name": "reward_ratio",
+      "ok": false,
+      "target": "at least 1.5",
+      "value": 0.507
+    },
+    {
+      "name": "full_visit_ratio",
+      "ok": true,
+      "target": "at most 3.0",
+      "value": 1.44
+    }
+  ],
+  "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"
 }

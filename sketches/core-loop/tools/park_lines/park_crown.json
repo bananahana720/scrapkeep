@@ -2,12 +2,12 @@
  "map": "park_crown",
  "stage": 6,
  "pilots": {
-  "sable": {"waypoints": ["drop_in", [0, -560], [0, -415], "turnstone", [-60, -310], [-200, -249], [-290, -215], [-262, -146], [-180, -30], [-50, -30], [-10, 5], "split_spire", [0, 62], [40, 80], [75, 95], [270, 150], [305, 250], [300, 410], [180, 440], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "rivet": {"waypoints": ["drop_in", [0, -560], [0, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [0, 150], [0, 280], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "kest": {"waypoints": ["drop_in", [0, -560], [0, -415], "turnstone", [60, -290], [110, -240], [110, -130], [90, -70], [40, 0], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "tarn": {"waypoints": ["drop_in", [0, -560], [0, -415], "turnstone", [-60, -310], [-200, -249], [-290, -215], [-262, -146], [-180, -30], [-50, -30], [-10, 5], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "tally": {"waypoints": ["drop_in", [0, -560], [0, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [0, 62], [40, 80], [75, 95], [270, 150], [305, 250], [300, 410], [180, 440], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "cannon": {"waypoints": ["drop_in", [0, -560], [0, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [80, 120], [165, 300], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}}
+  "sable": {"waypoints": ["drop_in", [8, -690], [-40, -650], [-40, -560], [-8, -480], [8, -415], "turnstone", [-60, -310], [-200, -249], [-290, -215], [-262, -146], [-180, -30], [-50, -30], [-10, 5], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "rivet": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [8, 150], [8, 280], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "kest": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [60, -290], [110, -240], [110, -130], [90, -70], [40, 0], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "tarn": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [-60, -310], [-200, -249], [-290, -215], [-262, -146], [-180, -30], [-50, -30], [-10, 5], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "tally": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [80, 120], [165, 300], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
+  "cannon": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [80, 120], [165, 300], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}}
  },
- "floor": {"waypoints": ["drop_in", [0, -560], [0, -415], "turnstone", [60, -290], [110, -240], [110, -130], [90, -70], [40, 0], "split_spire", [0, 150], [0, 280], "landmark"]}
+ "floor": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [60, -290], [110, -240], [110, -130], [90, -70], [40, 0], "split_spire", [8, 150], [8, 280], "landmark"]}
 }

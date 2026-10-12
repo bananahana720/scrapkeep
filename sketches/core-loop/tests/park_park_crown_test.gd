@@ -2,12 +2,26 @@ extends SceneTree
 
 # Stage 6, park_crown (design-v3/park/stages/6-park_crown.md, K-UNITS KD6): the stage's own pins.
 #
-# Pinned on the committed file (greybox pass, 2026-10-11):
+# Pinned on the committed file (greybox pass, 2026-10-11, re-pinned on the KB9 head b0e4490):
 #   freshness  the bake (tools/park_bake.gd) and the graph (tools/park_graph.gd) of
 #              src/world/park/park_crown.json are fresh: the hashes in bake.json and graph.json
 #              match the park file, the tools and the outputs.
 #   ruling     graph.json has no line errors and no pocket breaches, every route is connected
-#              through its via rows, and the spawn sits in the farthest quarter.
+#              through its via rows, and the spawn sits in the farthest quarter: spawn_check is
+#              called on graph.bin directly, because the graph tool runs the spawn rule only after
+#              SR15's beacon rule, which this stage's Warden bowl does not meet (the spires
+#              mounting puts perch spires, a 12 m bowl and the collector catwalk inside reach_m;
+#              its reasons are printed as [beacon_ok], reported, not gated here).
+#   placement  KB9 places every row whose recipe is not "": every park row carries
+#              greybox:<element> (ruling R10) except five left unplaced: the group rows
+#              perch_spires, needles, hoodoo_forest and split_spire (each member spire is a row of
+#              its own; a group's 20 m post lattice has no lane through it, walled Kest's needles
+#              line at [-135, 105], stopped Rivet at the split spire's edge post [27, 25] and would
+#              fill the Warden bowl) and spire_top_ramp (the strike's swap
+#              target; no runtime swap yet), plus the 59 slickrock_field_* ground-cover rows
+#              (no recipe, no stamp: they build nothing and keep park_density_test's 80 m rule;
+#              2026-10-11, restored after their removal failed that rule). No reversed-ramp
+#              "_rise" row is left (a kicker's wedge is its own ramp), and no kicker is stamped.
 #   waymarks   drop_in, turnstone, split_spire, landmark, in that order; the Turnstone is a
 #              landform waymark, not a pocket (coordinator ruling R7, PARK.md 2.12).
 #   pockets    camp_signal is the on-line camp on the bajada (pays rivet_plating, common),
@@ -22,12 +36,14 @@ extends SceneTree
 #              at drop_in and ends at the landmark, and the six pilots and the floor are present.
 #
 # Planted: a copy of the park with turnstone and split_spire swapped in the waymarks, the Warden
-# on the island mounting and the strike opening nothing breaks the pins (three failures named);
+# on the island mounting, the strike opening nothing and the meander left unplaced breaks the pins
+# (four failures named);
 # the same copy written to user:// is stale against the committed bake.
 
 const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
+const GraphLoader := preload("res://src/world/park/park_graph.gd")
 
 const PARK_PATH := "res://src/world/park/park_crown.json"
 const BAKE_DIR := "res://assets/park/park_crown"
@@ -48,6 +64,8 @@ const STRIKE := "split_spire_strike"
 const TOPPLED := ["toppled", "last_toppled"]
 const SWAP_ROW := "spire_top_ramp"
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
+const UNPLACED := ["perch_spires", "needles", "hoodoo_forest", "split_spire", "spire_top_ramp"]
+const FIELD_PREFIX := "slickrock_field_"    # the 59 ground-cover fields: unplaced, unstamped
 
 var t := T.new("park_park_crown_test")
 
@@ -75,7 +93,12 @@ func _run() -> void:
 			if not info["routes"][id].is_empty():
 				broken.append("%s: %s" % [id, info["routes"][id]])
 		t.check("every route connected", broken.is_empty() and info["routes"].size() == park["routes"].size(), "; ".join(broken))
-		t.check("spawn in the farthest quarter", bool(info["spawn"]["ok"]), str(info["spawn"]))
+		var graph = GraphLoader.read(BAKE_DIR + "/graph.bin")
+		if t.check("graph.bin loads", graph != null):
+			var spawn: Dictionary = GraphTool.spawn_check(graph, park)
+			t.check("spawn in the farthest quarter", bool(spawn["ok"]), str(spawn))
+			var beacon: Dictionary = GraphTool.beacon_check(graph, park)
+			print("[beacon_ok] %s (reported, not gated): %s" % ["yes" if beacon["ok"] else "no", "; ".join(beacon["reasons"])])
 		var by_id := {}
 		for p in info["pockets"]:
 			by_id[String(p["id"])] = p
@@ -107,9 +130,12 @@ func _run() -> void:
 	for e in plant["event_rows"]:
 		if String(e["id"]) == STRIKE:
 			e["route_change"]["opens"] = []
+	for r in plant["park_rows"]:
+		if String(r["id"]) == "meander":
+			r["recipe"] = ""
 	var planted := pin_failures(plant)
 	print("[planted] %s" % "; ".join(planted))
-	t.check("planted copy breaks three pins", planted.size() == 3, "%d: %s" % [planted.size(), "; ".join(planted)])
+	t.check("planted copy breaks four pins", planted.size() == 4, "%d: %s" % [planted.size(), "; ".join(planted)])
 	var f := FileAccess.open(PLANT_PATH, FileAccess.WRITE)
 	f.store_string(JSON.stringify(plant, " "))
 	f.close()
@@ -138,7 +164,18 @@ static func pin_failures(park: Dictionary) -> Array:
 		out.append("%s opens %s, want %s" % [STRIKE, opens, TOPPLED])
 	var rows := {}
 	for r in park["park_rows"]:
-		rows[String(r["id"])] = true
+		var id := String(r["id"])
+		rows[id] = true
+		var recipe := String(r["recipe"])
+		if UNPLACED.has(id) or id.begins_with(FIELD_PREFIX):
+			if recipe != "":
+				out.append("%s carries recipe %s, want none (left unplaced)" % [id, recipe])
+		elif recipe != "greybox:" + String(r["element"]):
+			out.append("%s carries recipe %s, want greybox:%s" % [id, recipe, r["element"]])
+		if id.ends_with("_rise"):
+			out.append("reversed-ramp row %s is back" % id)
+		if String(r["element"]) == "kicker" and String(r["stamp"]) != "":
+			out.append("kicker %s is stamped %s" % [id, r["stamp"]])
 	for id in ["turnstone", "split_spire", SWAP_ROW]:
 		if not rows.has(id):
 			out.append("park row %s missing" % id)
