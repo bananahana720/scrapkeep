@@ -151,7 +151,8 @@ func _from_live_home(arrival: Dictionary, homes: Array) -> bool:
 			continue
 		var site: Dictionary = _sites[home.site]
 		var ahead: float = _graph.d_landmark(_ball) - _graph.d_landmark(_at(site))
-		if ahead >= 60.0 and ahead <= 250.0 and ParkMap.footprint_contains(site, arrival.at):
+		var point_ahead: float = _graph.d_landmark(_ball) - _graph.d_landmark(arrival.at)
+		if ahead >= 60.0 and ahead <= 250.0 and ParkMap.footprint_contains(site, arrival.at) and point_ahead >= 60.0 and point_ahead <= 250.0:
 			return true
 	return false
 
@@ -201,6 +202,14 @@ func _legacy_ring(d, park: bool) -> void:
 			# Park fallback rejects unsafe ring points; outside corridors it keeps today's ring.
 			if park:
 				_check_corridor(actual)
+				var point := {"at": [expected.x, expected.y], "size": [0.0, 0.0, 0.0], "yaw_deg": 0.0}
+				var expected_clear := true
+				for line in _lines:
+					for j in range(1, line.size()):
+						expected_clear = expected_clear and not ParkMap.footprint_contains(point, line[j - 1], CLEARANCE, line[j])
+				if expected_clear:
+					different += int(var_to_bytes(actual) != var_to_bytes(expected))
+				_check("fallback stays on today's ring", actual.distance_to(ball) >= 45.0 and actual.distance_to(ball) <= 90.01)
 				if actual != expected:
 					rng.state = d._rng.state
 			else:
