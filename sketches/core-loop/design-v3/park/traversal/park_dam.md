@@ -1,10 +1,61 @@
 # park_dam traversal receipts
 
+## 2026-10-12: round 4 final greybox
+
+Measured on the runtime inputs of merged head `1c3ef9f79b96afabcd418f14ff9eb6f0e832d486` using the committed candidate `tools/traversal_line.gd`, fixed 90 FPS, eight seeds per line, through the CPU queue at nice 10. All 56 rows are complete. Runtime hashes match the final branch; later commits change tests and pages only. This round supersedes earlier measurements. Verdict: FAIL, evidence level 4. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r4/final-sweep/`. The floor is judged by its own row, using Rivet's median as the reference.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reached_warden | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS | 8 (worst -), PASS |
+| time_to_warden_s | 63.48 (worst 64.99), PASS | 80.9 (worst 80.93), PASS | 80.22 (worst 87.48), PASS | 73.87 (worst 75.7), PASS | 80.27 (worst 80.86), PASS | 84.69 (worst 84.82), PASS | 86.57 (worst 86.57), reported, pilot band, not the floor's |
+| segment_s | 27.53, 17.24, 18.7 (worst 28.51), PASS | 38.16, 29.26, 13.48 (worst 38.41), PASS | 30.08, 30.89, 19.24 (worst 31.26), PASS | 31.56, 26.13, 16.17 (worst 33.09), PASS | 32.31, 31.23, 16.71 (worst 32.46), PASS | 29.51, 29.22, 25.94 (worst 30.53), PASS | 39.01, 31.84, 15.7 (worst 39.27), reported, pilot band, not the floor's |
+| flow_share | 0.9276 (worst 0.9241), PASS | 0.8445 (worst 0.8354), PASS | 0.7691 (worst 0.7311), PASS | 0.9687 (worst 0.9433), PASS | 0.8156 (worst 0.7646), PASS | 0.9273 (worst 0.9003), PASS | 0.7684 (worst 0.7684), reported, pilot band, not the floor's |
+| airborne_share | 0.2143 (worst 0.2143, 0.2598), PASS | 0.1633 (worst 0.1633, 0.1697), PASS | 0.3 (worst 0.2125, 0.3281), PASS | 0.2128 (worst 0.2081, 0.2219), PASS | 0.1636 (worst 0.1636, 0.1681), PASS | 0.1889 (worst 0.1717, 0.1889), PASS | 0.1162 (worst 0.1082, 0.1162), reported, pilot band, not the floor's |
+| dead_stops | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 1), MISS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS | 0 (worst 0), PASS |
+| peak_speed_mps | 52.66 (worst 52.66); tier3 median 47.31 s, PASS | 42.55 (worst 42.49); tier3 median 10.16 s, PASS | 28.29 (worst 27.5); tier3 median 13.52 s, PASS | 39.7 (worst 38.5); tier3 median 12.62 s, PASS | 44.36 (worst 43.98); tier3 median 8.8 s, PASS | 35.74 (worst 35.74); tier3 median 12.44 s, PASS | 42.99 (worst 42.47); tier3 median 11.67 s, reported, pilot band, not the floor's |
+| quiet_max_s | 8.41 (worst 8.41), PASS | 12.14 (worst 12.14), PASS | 11.8 (worst 12.31), PASS | 10.5 (worst 10.84), PASS | 12.06 (worst 12.49), PASS | 10.91 (worst 11.82), PASS | 12.53 (worst 12.58), reported, pilot band, not the floor's |
+| max_anchor_gap_m | 36.4 (worst 36.4), PASS | 33.2 (worst 33.2), PASS | 36.8 (worst 36.8), PASS | 35.6 (worst 35.6), PASS | 33.7 (worst 33.7), PASS | 35 (worst 35), PASS | 33.1 (worst 33.1), reported, pilot band, not the floor's |
+| distinct_verbs | 5 (worst 5), PASS | 6 (worst 6), PASS | 7 (worst 7), PASS | 6 (worst 6), PASS | 6 (worst 6), PASS | 6 (worst 6), PASS | 5 (worst 5), reported, pilot band, not the floor's |
+| length_ratio | 1.65 (worst 1.65, 1.69), PASS | 1.33 (worst 1.32, 1.33), PASS | 1.34 (worst 1.34, 1.35), PASS | 1.38 (worst 1.38, 1.38), PASS | 1.32 (worst 1.32, 1.32), PASS | 1.45 (worst 1.45, 1.45), PASS | 1.38 (worst 1.38, 1.38), reported, pilot band, not the floor's |
+| floor | - | - | - | - | - | - | 86.57 (worst 86.57); cap 161.8 s, PASS |
+| distinct_lines | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | 4 mutually distinct, PASS | - |
+
+| Line | time_to_warden_s: max | segment_s: max | flow_share: min | airborne_share: both | dead_stops: max | peak_speed_mps: min | tier3_s: min | quiet_max_s: max | max_anchor_gap_m: max | distinct_ride_facts: min | length_ratio: both |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| sable | 64.99 (seed 3) | 28.51 (seed 3) | 0.9241 (seed 3) | 0.2143 (seed 1,2,4,5,6,7,8) / 0.2598 (seed 3) | 0 (seed 1,2,3,4,5,6,7,8) | 52.66 (seed 1,2,4,5,6,7,8) | 47.18 (seed 3) | 8.41 (seed 1,2,4,5,6,7,8) | 36.4 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,4,5,6,7,8) | 1.65 (seed 1,2,4,5,6,7,8) / 1.69 (seed 3) |
+| rivet | 80.93 (seed 4) | 38.41 (seed 4) | 0.8354 (seed 4) | 0.1633 (seed 1,2,3,5,6,7,8) / 0.1697 (seed 4) | 0 (seed 1,2,3,4,5,6,7,8) | 42.49 (seed 4) | 10.16 (seed 1,2,3,5,6,7,8) | 12.14 (seed 1,2,3,5,6,7,8) | 33.2 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.32 (seed 4) / 1.33 (seed 1,2,3,5,6,7,8) |
+| kest | 87.48 (seed 4) | 31.26 (seed 4) | 0.7311 (seed 3) | 0.2125 (seed 2) / 0.3281 (seed 4) | 1 (seed 4) | 27.5 (seed 4) | 2.93 (seed 4) | 12.31 (seed 3) | 36.8 (seed 1,2,3,4,5,6,7,8) | 7 (seed 1,2,3,4,5,6,7,8) | 1.34 (seed 1,3,4,5,6,7,8) / 1.35 (seed 2) |
+| tarn | 75.7 (seed 6) | 33.09 (seed 6) | 0.9433 (seed 6) | 0.2081 (seed 6) / 0.2219 (seed 3,4) | 0 (seed 1,2,3,4,5,6,7,8) | 38.5 (seed 3,4) | 12.62 (seed 1,2,5,7,8) | 10.84 (seed 6) | 35.6 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+| tally | 80.86 (seed 3) | 32.46 (seed 3) | 0.7646 (seed 3) | 0.1636 (seed 1,2,4,5,6,7,8) / 0.1681 (seed 3) | 0 (seed 1,2,3,4,5,6,7,8) | 43.98 (seed 3) | 8.8 (seed 1,2,4,5,6,7,8) | 12.49 (seed 3) | 33.7 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,3,4,5,6,7,8) | 1.32 (seed 1,2,3,4,5,6,7,8) / 1.32 (seed 1,2,3,4,5,6,7,8) |
+| cannon | 84.82 (seed 3) | 30.53 (seed 3) | 0.9003 (seed 3) | 0.1717 (seed 3) / 0.1889 (seed 1,2,5,6,7,8) | 0 (seed 1,2,3,4,5,6,7,8) | 35.74 (seed 1,2,5,6,7,8) | 12.44 (seed 1,2,5,6,7,8) | 11.82 (seed 4) | 35 (seed 1,2,3,4,5,6,7,8) | 6 (seed 1,2,5,6,7,8) | 1.45 (seed 1,2,3,4,5,6,7,8) / 1.45 (seed 1,2,3,4,5,6,7,8) |
+| floor | 86.57 (seed 1,2,3,5,7,8) | 39.27 (seed 6) | 0.7684 (seed 1,2,3,5,7,8) | 0.1082 (seed 4) / 0.1162 (seed 1,2,3,5,7,8) | 0 (seed 1,2,3,4,5,6,7,8) | 42.47 (seed 4) | 11.47 (seed 4) | 12.58 (seed 6) | 33.1 (seed 1,2,3,4,5,6,7,8) | 5 (seed 1,2,3,4,5,6,7,8) | 1.38 (seed 1,2,3,4,5,6,7,8) / 1.38 (seed 1,2,3,4,5,6,7,8) |
+
+Raw stops: 1 on 56 rows. Terrain stops: 1. Pack stops: 0.
+
+kest seed 4: terrain stop at 84.224 s, [54.37, 0.94, 531.97]. Trace contacts at the stop: ['/root/Game/Stage1/Ground/Tiles/Tile5_8']. Enemy contacts in the preceding 90 ticks: []. The probe matches 7583 ticks through the stop, full trace equality=True. An unattributed stop counts as terrain under ruling 25; this does not claim a particular obstructing row. Evidence: stop-trace/, stop-probe/, stop-classification.json.
+
+| Stop classification | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Terrain stops | 0 on every seed | 0 on every seed | 1 at seed 4, 84.224 s | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed |
+| Pack stops | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed | 0 on every seed |
+
+The six seed-1 solo summaries, Sable seed 4 and Kest seed 4 match their batch rows with identical runtime inputs. The traced seed-1 runs establish distinct lines by comparing XYZ tick positions in both directions.
+
+### Mounted reactor win proof
+
+| Seed | Outcome | Engage s | Break s | Engage to break s | Damage | After break |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | stalled | 169.07 | None | None | {'runner': 54.2, 'slam': 379.2, 'stomp': 54.2} | stage 1, exit 600.0 s |
+| 2 | stages_done | 163.39 | 372.68 | 209.29 | {'ram': 81.3, 'slam': 487.6, 'stomp': 81.3} | stage 2, exit 380.58 s |
+| 3 | stalled | 157.49 | None | None | {'ram': 81.3, 'slam': 325.1, 'stomp': 81.3} | stage 1, exit 600.01 s |
+
+The scratch wrapper sets the stage limit to 600 s before every driver tick. The mounted reactor fights from its authored dam-face anchor. All seeds must reach and engage under ruling 23; fight-duration tuning belongs to WT-PARK. No `get_rid` error appeared.
+
 ## 2026-10-12: authorized ledge exception
 
 The coordinator authorized `cliff_rooms_west` at [-165,330] as this stage's one ledge repair. The pre-repair Sable seed-4 run reproduced a 62.9 m anchor gap. The graph comparison records 314008 edges for the vent-only counterfactual and 314061 edges with the ledge repair. That difference is authorized under `kd-round-common.md` step 2; the vent-only restriction does not govern the final candidate. Round 4 retains both coordinate changes and rebuilds with the merged candidate tools. Fresh round-4 measurements supersede the round-3 acceptance table below.
 
-## 2026-10-12: round 3 final greybox
+## 2026-10-12: round 3 greybox, superseded by round 4
 
 Measured on greybox head `3e58f96c803861f485af09416449b09c8f741fd4` with the SHA256-verified TRAV-DET export, eight seeds per line at fixed 90 FPS, through the CPU queue at nice 10. All 56 batch rows are complete. Final documentary commits preserve these runtime inputs. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r3/final-sweep/`. Verdict: PASS+NOTES, evidence level 4. The anchor gap uses the worst seed. The floor is judged by its own row; other floor cells are reported.
 
