@@ -431,6 +431,67 @@ def sil_say(ok, body, camera, part, metric, value, want):
 # silhouette() drops the attribute again before export.
 TAGS = []
 SIL_LAYER = "sil"
+RAM_MEASURE_LAYER = "ram_measure"
+RAM_MEASURES = []
+
+
+def measured(part, label, fn, *args, **kwargs):
+    layer = part.bm.verts.layers.int.get(RAM_MEASURE_LAYER) or part.bm.verts.layers.int.new(RAM_MEASURE_LAYER)
+    faces = fn(*args, **kwargs)
+    if label not in RAM_MEASURES:
+        RAM_MEASURES.append(label)
+    for face in faces:
+        for vertex in face.verts:
+            vertex[layer] = RAM_MEASURES.index(label) + 1
+    return faces
+
+
+def measured_points(root):
+    points = {}
+    for obj in common.tree(root):
+        if obj.type != "MESH":
+            continue
+        codes = obj.data.attributes.get(RAM_MEASURE_LAYER)
+        if codes is None:
+            continue
+        for vertex in obj.data.vertices:
+            code = codes.data[vertex.index].value
+            if code:
+                points.setdefault(RAM_MEASURES[code - 1], []).append(obj.matrix_world @ vertex.co)
+    return points
+
+
+def bounds_gap(a, b):
+    if not a or not b:
+        return math.inf
+    gaps = [max(0.0, min(p[k] for p in a) - max(p[k] for p in b),
+                min(p[k] for p in b) - max(p[k] for p in a)) for k in range(3)]
+    return math.sqrt(sum(gap * gap for gap in gaps))
+
+
+def radial_extent(points, origin, axis):
+    return max(((point - origin).cross(axis).length for point in points), default=0.0)
+
+
+def material_slot_checks(root):
+    path = os.path.join(common.SKETCH, "src", "presentation", "hero_assets.gd")
+    with open(path) as source:
+        text = source.read()
+    block = re.search(r"^const SLOTS\s*:=\s*\{(.*?)^\}", text, re.MULTILINE | re.DOTALL)
+    slots = set(re.findall(r'^\s*"([^"\n]+)"\s*:', block[1], re.MULTILINE)) if block else set()
+    fails = []
+    if not sil_say(bool(slots), "reactor", "runtime", "SLOTS", "parsed_keys", len(slots), ">0 from hero_assets.gd"):
+        fails.append("runtime SLOTS parse")
+    for obj in common.tree(root):
+        if obj.type != "MESH":
+            continue
+        for index in sorted({poly.material_index for poly in obj.data.polygons}):
+            material = obj.data.materials[index]
+            slot = material.name if material else "<missing>"
+            if not sil_say(slot in slots, "reactor", "runtime", obj.name + "/" + slot,
+                           "material_slot_known", int(slot in slots), "=1 in hero_assets.gd SLOTS"):
+                fails.append(obj.name + " material slot " + slot)
+    return fails
 
 
 def tagged(part, label, fn, *a, **kw):
@@ -509,15 +570,22 @@ def ram_checks(root):
     fails = []
     snapshot = rest(root)
     objs = {o.name: o for o in common.tree(root)}
+    points = measured_points(root)
     moving = [clip for clip in CLIPS if any(n in controls(clip) for n in ("JawL", "JawR"))]
     for rig in RAM_RIG:
         label = rig["label"]
         base = ram_world(rig, "base")
+        barrel_r = radial_extent(points.get(label + "_barrel", []), base, rig["rest_axis"])
+        rod_r = radial_extent(points.get(label + "_rod", []), base, rig["rest_axis"])
+        diameter_ratio = barrel_r / rod_r if rod_r > 0 else 0.0
+        seat_gap = bounds_gap(points.get(label + "_base_clevis", []), points.get("clamp_ring", []))
+        print("CHECK ram_mesh %s barrel_r_m=%.4f rod_r_m=%.4f clamp_gap_m=%.4f" %
+              (label, barrel_r, rod_r, seat_gap))
         for metric, value, ok, want in (
             ("base_pin_z_m", base.z, base.z >= SIL_RAM_BASE_Z, ">=2.0"),
-            ("base_on_clamp", int(rig["on_clamp"]), rig["on_clamp"], "=1 lower ring ear"),
-            ("barrel_rod_diameter_ratio", rig["barrel_r"] / rig["rod_r"],
-             rig["barrel_r"] / rig["rod_r"] >= SIL_RAM_DIAMETER_RATIO, ">=2.0"),
+            ("base_on_clamp", int(seat_gap <= 0.05), seat_gap <= 0.05, "=1 built bounds gap<=0.05m"),
+            ("barrel_rod_diameter_ratio", diameter_ratio,
+             diameter_ratio >= SIL_RAM_DIAMETER_RATIO, ">=2.0"),
         ):
             if not sil_say(ok, "reactor", "3d", label, metric, value, want):
                 fails.append(label + " " + metric)
@@ -566,7 +634,7 @@ def silhouette(root):
     for o in common.tree(root):
         if o.type == "MESH" and o.data.attributes.get(SIL_LAYER) is not None:
             o.data.attributes.remove(o.data.attributes[SIL_LAYER])
-    fails = []
+    fails = material_slot_checks(root)
     axes = {name: sil_axes(off) for name, off in sil_cameras("warden_body_reactor", "WARDEN_BODY_CAMERAS", fails)}
     rams = sorted(set(l for l in labels if l.startswith("ram")))
     teeth = sorted(set(l for l in labels if l.startswith("tooth_")))
@@ -600,6 +668,9 @@ def silhouette(root):
              "KF7c round 4, jaw read at 7d87f33 came from under (count there %d), look5 read decides"
              % tooth_counts.get("under", 0))
     fails.extend(ram_checks(root))
+    for obj in common.tree(root):
+        if obj.type == "MESH" and obj.data.attributes.get(RAM_MEASURE_LAYER) is not None:
+            obj.data.attributes.remove(obj.data.attributes[RAM_MEASURE_LAYER])
     rows = {}
     for t in teeth:
         ys = [p[1] for p in by_label[t]]
@@ -821,9 +892,11 @@ def seam_ring(root):
 def ram_columns(root):
     """One rigidly skinned mesh keeps the four moving pieces to one draw."""
     RAM_RIG.clear()
+    RAM_MEASURES.clear()
     common.SLOTS["hydraulic"] = {"vc": True, "metal": 0.65, "rough": 0.24}
     mount = Part("RamMounts")
-    mount.ring("ancient_enamel", 2.38, 3.12, 0.18, 12, loc=(0, 0, 2.45), color=IRON)
+    measured(mount, "clamp_ring", mount.ring, "ancient_enamel", 2.38, 3.12, 0.18, 12,
+             loc=(0, 0, 2.45), color=IRON)
     moving = Part("JawRams")
     layer = moving.bm.verts.layers.int.new("ram_bone")
     bones = []
@@ -834,14 +907,20 @@ def ram_columns(root):
         eye = Vector((side * RAM_LUG.x, side * RAM_LUG.y, RAM_LUG.z))
         axis = (eye - base).normalized()
         foot = polar(2.92, math.degrees(math.atan2(base.y, base.x)), 2.55)
-        tagged(mount, label, mount.beam, "ancient_enamel", foot, base, 0.40, 0.38, color=SAND_DARK)
-        tagged(mount, label, mount.cyl, "ancient_enamel", 0.16, 0.16, 0.72, 8, loc=base,
+        measured(mount, label + "_base_clevis", tagged, mount, label, mount.beam,
+                 "ancient_enamel", foot, base, 0.40, 0.38, color=SAND_DARK)
+        measured(mount, label + "_base_clevis", tagged, mount, label, mount.cyl,
+                 "ancient_enamel", 0.16, 0.16, 0.72, 8, loc=base,
                rot=(math.pi / 2, 0, 0), color=TOOTH)
 
         def piece(bone_name, fn, *args, **kwargs):
+            measure = kwargs.pop("measure", None)
             if bone_name not in bones:
                 bones.append(bone_name)
-            faces = tagged(moving, label, fn, *args, **kwargs)
+            if measure:
+                faces = measured(moving, measure, tagged, moving, label, fn, *args, **kwargs)
+            else:
+                faces = tagged(moving, label, fn, *args, **kwargs)
             for face in faces:
                 for vertex in face.verts:
                     vertex[layer] = bones.index(bone_name) + 1
@@ -850,14 +929,15 @@ def ram_columns(root):
         barrel_name, rod_name = label + "_barrel", label + "_rod"
         piece(barrel_name, moving.beam, "hydraulic", base, base + axis * RAM_BASE_NECK, 0.32, color=COPPER_DARK)
         smooth(piece(barrel_name, moving.rod, "hydraulic", base + axis * RAM_BASE_NECK,
-                     base + axis * (RAM_BASE_NECK + RAM_BARREL_LENGTH), RAM_BARREL_R, 8, color=COPPER_DARK))
+                     base + axis * (RAM_BASE_NECK + RAM_BARREL_LENGTH), RAM_BARREL_R, 8,
+                     color=COPPER_DARK, measure=label + "_barrel"))
         piece(barrel_name, moving.rod, "hydraulic", base + axis * (RAM_MOUTH - RAM_GLAND_LENGTH),
               base + axis * RAM_MOUTH, RAM_GLAND_R, 10, color=TOOTH)
         for offset in (-0.20, 0.20):
             piece(barrel_name, moving.cyl, "hydraulic", 0.28, 0.28, 0.10, 8,
                   loc=base + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=COPPER_DARK)
         smooth(piece(rod_name, moving.rod, "hydraulic", eye - axis * 1.95,
-                     eye - axis * RAM_EYE_R, RAM_ROD_R, 10, color=ROD))
+                     eye - axis * RAM_EYE_R, RAM_ROD_R, 10, color=ROD, measure=label + "_rod"))
         for offset in (-0.20, 0.20):
             piece(rod_name, moving.cyl, "hydraulic", RAM_EYE_R, RAM_EYE_R, 0.10, 8,
                   loc=eye + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=TOOTH)
@@ -894,9 +974,7 @@ def ram_columns(root):
                         "barrel": barrel, "rod": rod, "rest_axis": axis,
                         "barrel_rest": barrel.bone.matrix_local.copy(),
                         "rod_rest": rod.bone.matrix_local.copy(),
-                        "on_clamp": mounts.parent == root and abs(foot.z - 2.55) < 1e-6
-                        and 2.38 <= math.hypot(foot.x, foot.y) <= 3.12,
-                        "barrel_r": RAM_BARREL_R, "rod_r": RAM_ROD_R, "eye_r": RAM_EYE_R})
+                        "eye_r": RAM_EYE_R})
     solve_rams()
 
 
