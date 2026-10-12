@@ -82,6 +82,20 @@ var _rest_at := Vector3.ZERO
 var _follow := Vector3.ZERO
 var _time := 0.0
 var _painter
+var _animator: AnimationPlayer
+var _focused := false
+# The clip the last first-focus started ("" when none), for tests and tools.
+var last_focus_clip := ""
+# Where the once-per-profile unlock is recorded (ui_profile.gd); resolved from the game when unset.
+var ui_profile = null
+# --profile=sitting: the unlock plays on the first focus of every launch instead.
+var sitting := false
+const IDLE_CLIP := "idle_loop"
+const UNLOCK_CLIP := "unlock"
+const UNLOCK_SEEN := "unlock_clip_"
+const BASE_BLEND := 0.1
+# Classes whose unlock played this launch under --profile=sitting.
+static var _sitting_unlocks := {}
 
 
 func _init(class_def: Resource = null, size_hint := Vector2(380.0, 260.0)) -> void:
@@ -224,16 +238,92 @@ func _tints() -> Dictionary:
 
 
 # The game's pilot for this class (hero_assets.gd fit_pilot_into), seated the way
-# gameplay seats it between reactions: animator stopped, bones at rest pose.
+# gameplay seats it between reactions (seat_pilot).
 func _fit_pilot() -> void:
 	var fitted: Dictionary = _painter.fit_pilot_into(_pod, def.id, def.color)
 	if fitted.is_empty():
 		return
 	_pilot = fitted.pilot
-	if fitted.animator != null:
-		fitted.animator.stop()
-		for skeleton in _pilot.find_children("*", "Skeleton3D", true, false):
-			skeleton.reset_bone_poses()
+	_animator = fitted.get("animator")
+	seat_pilot()
+
+
+# PILOT-CLIPS section 3 rule 9: the card shows a living pilot, idle_loop from its first frame
+# (the same still as before) when the GLB has it; else animator stopped, bones at rest pose.
+# Returns the clip now playing, or "".
+func seat_pilot() -> String:
+	if _animator == null or _pilot == null:
+		return ""
+	if _animator.has_animation(IDLE_CLIP):
+		if _animator.current_animation != IDLE_CLIP or not _animator.is_playing():
+			_animator.play(IDLE_CLIP, BASE_BLEND if _animator.is_playing() else 0.0)
+			_animator.advance(0.0)
+		return IDLE_CLIP
+	_animator.stop()
+	for skeleton in _pilot.find_children("*", "Skeleton3D", true, false):
+		skeleton.reset_bone_poses()
+	return ""
+
+
+# PILOT-CLIPS section 1.4: the first focus after the pilot unlocks plays unlock, once per
+# profile (ui_profile seen/mark_seen, id unlock_clip_<class>), or once per launch under
+# --profile=sitting; then the pilot goes back to idle_loop. Returns the clip it started, or "".
+func focus_clip() -> String:
+	if _animator == null or _pilot == null or def == null or not _animator.has_animation(UNLOCK_CLIP) or not _unlock_due():
+		return ""
+	_animator.play(UNLOCK_CLIP, 0.0)
+	_animator.advance(0.0)
+	if not _animator.animation_finished.is_connected(_on_clip_finished):
+		_animator.animation_finished.connect(_on_clip_finished)
+	return UNLOCK_CLIP
+
+
+# The card opening (open past half, as playing() reads it) is a focus; each opening asks once.
+func track_focus() -> void:
+	if playing() and not _focused:
+		_focused = true
+		last_focus_clip = focus_clip()
+	elif not playing():
+		_focused = false
+
+
+func _on_clip_finished(_clip: StringName) -> void:
+	seat_pilot()
+
+
+func _unlock_due() -> bool:
+	_resolve_launch()
+	var node := get_parent()
+	while node != null:
+		if node.get("locked") == true:
+			return false
+		node = node.get_parent()
+	if sitting:
+		if _sitting_unlocks.has(def.id):
+			return false
+		_sitting_unlocks[def.id] = true
+		return true
+	if ui_profile == null:
+		return false
+	var seen_id: String = UNLOCK_SEEN + String(def.id)
+	if ui_profile.seen(seen_id):
+		return false
+	ui_profile.mark_seen(seen_id)
+	return true
+
+
+# The launch's tuning and the HUD's profile, from the game above the card, unless set already.
+func _resolve_launch() -> void:
+	var node := get_parent()
+	while node != null:
+		var tuning = node.get("tuning")
+		if tuning != null and tuning.has_method("sitting"):
+			sitting = sitting or tuning.sitting()
+			var hud = node.get("hud")
+			if ui_profile == null and hud != null and hud.get("profile") != null:
+				ui_profile = hud.profile
+			return
+		node = node.get_parent()
 
 
 func _build_primitive_shell() -> void:
@@ -328,6 +418,7 @@ func _process(delta: float) -> void:
 	if ball == null:
 		return
 	_time += delta
+	track_focus()
 	if playing():
 		clock += delta
 	else:

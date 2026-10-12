@@ -296,6 +296,7 @@ func frozen() -> bool:
 
 
 func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
+	_bank_pending = {}
 	state.reset()
 	kit.clear_runtime()
 	chain.clear_active()
@@ -317,6 +318,41 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 func set_velocity_now(velocity: Vector3, cause := "launched") -> void:
 	cut_line(cause)
 	_rigid.set_velocity_now(velocity)
+
+
+# PC-SABLE: the hand-off bypasses RMB's Coil Hook fling. A committed smash keeps its
+# pivot until the paid contact publishes harpoon_smashed.
+var _bank_pending := {}
+var bank_last := {}
+var _bank_logging_deferred := false
+
+
+func bank_geometry() -> Dictionary:
+	var at := ball_position()
+	var launch := Augments.bank_exit(state.velocity.length(), at - kit.anchor, drive_basis, kit)
+	return yours({"kind": "cone", "apex": at, "dir": launch.normalized(),
+		"length": AIM_CONE_LENGTH * (1.0 + launch.length() / Augments.LAUNCH_CEILING),
+		"half_angle": AIM_CONE_HALF, "speed": launch.length()})
+
+
+func bank_shot() -> void:
+	if kit.line_state == Augments.LINE_SMASH:
+		_bank_pending = {"anchor": kit.anchor}
+		return
+	_bank_release(kit.anchor)
+
+
+func _bank_release(anchor: Vector3) -> void:
+	var incoming := state.velocity.length()
+	var base := maxf(incoming, minf(Augments.LAUNCH_CEILING, maxf(incoming, 13.0) * 1.25 + 4.0))
+	var launch := Augments.bank_exit(incoming, ball_position() - anchor, drive_basis, kit)
+	Augments.mass_spend(kit, base)
+	bank_last = {"entry": incoming, "exit": launch.length(), "dir": launch.normalized(), "pending_log": _bank_logging_deferred}
+	kit.mounted = false
+	kit.slingshot.cancel()
+	set_velocity_now(launch, "bank")
+	chain.let_go()
+	events.dismounted.emit(launch)
 
 
 # The set piece's landing pays the chain as a paid smash does: returns the multiplier and
@@ -434,7 +470,7 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		if body.has_method("flash"):
 			body.flash()
 		events.harpoon_bit.emit(body, point)
-	_publish_chain(chain.link(body != null, state.grounded), body, point)
+	_publish_chain(chain.link(body != null and not (body.is_in_group(Augments.STAKE_GROUP)), state.grounded), body, point)
 
 
 func release_grapple() -> void:
@@ -763,12 +799,14 @@ func _tick_chain(delta: float) -> void:
 
 # Publishes how the line that stood has ended: a let-go or a break with its cause. A landing,
 # a reset or the set piece's own cut (cause "ultimate") publishes nothing here.
-const QUIET_ENDS := ["landed", "reset", "ultimate", ""]
+const QUIET_ENDS := ["landed", "reset", "ultimate", "bank", ""]
 
 
 func _publish_end() -> void:
 	_line_standing = false
 	var end: String = kit.line_end
+	if end != "landed":
+		_bank_pending = {}
 	kit.line_end = ""
 	if not end in QUIET_ENDS:
 		chain.let_go()
@@ -1139,6 +1177,10 @@ func _skid_push(at: Vector3, strength: float) -> int:
 
 # The vault and slingshot aim cones and the arc slam's face tags, in the class colour.
 func _update_aim_cones(at: Vector3) -> void:
+	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) == "bank_shot" and kit.hooked:
+		indicator.set_shape("bank", bank_geometry())
+	else:
+		indicator.clear("bank")
 	if not kit.vault_aim.is_empty():
 		indicator.set_shape("vault", yours({"kind": "cone", "apex": at, "dir": kit.vault_aim["dir"],
 			"length": AIM_CONE_LENGTH, "half_angle": AIM_CONE_HALF}))
@@ -1267,6 +1309,12 @@ func _finish_landing(enemy: Node3D, closing: float) -> void:
 	_on_slammed(ball_position(), closing, 1.0)
 	var landed_on: Node3D = enemy if is_instance_valid(enemy) else null
 	events.harpoon_smashed.emit(landed_on, ball_position(), closing)
+	if not _bank_pending.is_empty():
+		var anchor: Vector3 = _bank_pending["anchor"]
+		_bank_pending = {}
+		_bank_logging_deferred = true
+		_bank_release(anchor)
+		_bank_logging_deferred = false
 	_emit_line("smash_lands", landed_on, ball_position(), "", LANDS_HOLD)
 	_landing_mult = 1.0
 

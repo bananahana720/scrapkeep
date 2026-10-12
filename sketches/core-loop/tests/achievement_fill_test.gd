@@ -8,6 +8,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
+const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
 
 # Every achievement pays a reward, and every earned paint has exactly one earner (alpha wave 14).
 #   F1 the table sizes: 16 achievements, 18 paints, no empty reward;
@@ -65,8 +66,11 @@ func _tables() -> void:
 	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows and
 	# their three items; was 36 and 38.
 	# Re-pinned 2026-10-11 (w13 SG12, merge): the four ach_meta_* between-run option grants; was 39.
-	_t.eq("F1 forty-three achievements", Achievements.ids().size(), 43)
-	_t.eq("F1 forty-one cosmetics", Cosmetics.ids().size(), 41)
+	# 2026-10-12 (W13 coordinator): the pins hold the shared rows; each P-C kit's rows sit in its
+	# marked block and its own tests count them (tests/support/pilot_blocks.gd). Was the total,
+	# which every kit merge broke (49 and 47 on 19b3656).
+	_t.eq("F1 forty-three achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 43)
+	_t.eq("F1 forty-one cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 41)
 	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty())
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 

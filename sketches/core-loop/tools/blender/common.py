@@ -54,6 +54,7 @@ SLOTS = {
     "fleet_paint": {"color": "oxide", "rough": 0.8},
     "requisition_tag": {"color": "brass", "metal": 0.5, "rough": 0.4},
     "ancient_enamel": {"vc": True, "rough": 0.55},
+    "hydraulic": {"vc": True, "metal": 0.4, "rough": 0.35},
     "ancient_light": {"color": "ancient", "emit": 3.0, "rough": 0.3},
     "rarity": {"color": "bone", "emit": 1.2, "rough": 0.5},
 }

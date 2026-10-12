@@ -1,3 +1,4 @@
+# 2026-10-11 (PC-SABLE): later-world Sable caches offer Bank Shot relics independently of world-one slots.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -56,6 +57,8 @@ func _report(label: String, ok: bool, detail: String) -> void:
 
 func _check_table() -> void:
 	_report("validator", Relics.validate().is_empty(), "table problems: %s" % [Relics.validate()])
+	_report("world 2 Bank Shot recharge", Relics.row("pit_coil")["world"] == 2 and Relics.slot_of("pit_coil") == AbilityState.LINE, "Pit Coil")
+	_report("world 3 Bank Shot stock", Relics.row("storm_crater")["world"] == 3 and Relics.slot_of("storm_crater") == AbilityState.LINE, "Storm Crater")
 	var parts := {}
 	for id in Relics.ids():
 		parts[Relics.part_of(id)] = true
