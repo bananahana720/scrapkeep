@@ -294,11 +294,14 @@ func _mesh_vertices(node: Node3D) -> Array[Vector3]:
 	return points
 
 
-func _footprint_mark(label: String, mark: Node3D, half: Vector2, yaw: float) -> void:
+func _footprint_mark(label: String, mark: Node3D, half: Vector2, yaw: float, terrain = null) -> void:
 	var low := Vector2.INF
 	var high := -Vector2.INF
 	var corners := [false, false, false, false]
+	var clearance := INF
 	for point in _mesh_vertices(mark):
+		if terrain != null:
+			clearance = minf(clearance, point.y - terrain.height(point.x, point.z))
 		var local := Vector2(point.x, point.z).rotated(yaw)
 		low = low.min(local)
 		high = high.max(local)
@@ -310,6 +313,8 @@ func _footprint_mark(label: String, mark: Node3D, half: Vector2, yaw: float) -> 
 	t.near(label + " warning local min Z", low.y, -half.y)
 	t.near(label + " warning local max Z", high.y, half.y)
 	t.check(label + " warning includes all rectangular corners", corners.all(func(found): return found), str(corners))
+	if terrain != null:
+		t.check(label + " terrain clearance", clearance >= 0.1499, str(clearance))
 
 
 func _geometry_boundaries() -> void:
@@ -325,6 +330,7 @@ func _geometry_boundaries() -> void:
 		for i in 75:
 			w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1})
 		var state: Dictionary = handler.active[kind]
+		_footprint_mark(kind + " landing", state.mark, half, yaw, w.terrain)
 		var inside := (half * 0.95).rotated(-yaw)
 		var outside := Vector2(half.x + 0.1, half.y * 0.95).rotated(-yaw)
 		if kind == "flood_fill":
