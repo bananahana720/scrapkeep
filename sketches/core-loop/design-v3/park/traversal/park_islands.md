@@ -1,5 +1,127 @@
 # park_islands traversal
 
+## Greybox round 3, 2026-10-12, program head 56fce8f
+
+Verdict: FAIL, evidence level 4. These receipts use the merged candidate
+560d177 and the external TRAV-DET traversal tool, SHA-256
+`f013f06048853958072dbe3dbcb70d17d040c33b393cfe5b1cc1d0dca02ca2c2`.
+All seven lines ran untraced, eight seeds per batch, at fixed FPS 90 and nice 10
+through the two-core CPU queue, at most two lines together. The summaries are in
+`/tmp/claude-1000/w13-sol/kd5-islands-r3/final-untraced/`.
+
+Every cell reports the median and worst seed or seed range. Admission uses the
+worst column, including the anchor cap and the airborne and length ranges. Each
+segment's worst time and every tier-3 minimum are shown beside their median;
+the tier-3 gate remains the authored median gate. The floor uses its own row,
+with every seed checked against twice Rivet's median time. Its other values are
+reported as pilot bands, not floor gates.
+
+| Band | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass |
+| Time to Warden, s | 60.92 / 61.88: pass | 95.84 / 96.87: pass | 78.6 / 85.1: pass | 85.75 / 85.81: pass | 75.065 / 76.86: pass | 86.575 / 86.62: pass | 88.93 / 90.34: reported, pilot band, not the floor's |
+| Segment medians, s | 15.21/22.31/23.53 / 23.81: pass | 24.43/36.39/34.7 / 36.78: pass | 22.63/23.62/32.21 / 33.97: pass | 22.58/31.6/31.62 / 31.74: pass | 24.81/17.98/31.95 / 32.82: pass | 23.07/32.02/31.38 / 32.17: pass | 23.78/34.11/31.03 / 34.91: reported, pilot band, not the floor's |
+| Flow share | 0.9363 / 0.9324: pass | 0.8594 / 0.8456: pass | 0.9036 / 0.7952: pass | 0.963 / 0.9562: pass | 0.9705 / 0.9383: pass | 0.9909 / 0.9804: pass | 0.8582 / 0.8582: reported, pilot band, not the floor's |
+| Airborne share | 0.3878 / 0.3747..0.4019: pass | 0.3116 / 0.2482..0.3156: MISS | 0.3497 / 0.3192..0.3516: pass | 0.2808 / 0.2801..0.2843: pass | 0.3096 / 0.3043..0.3157: pass | 0.3304 / 0.3293..0.3385: pass | 0.2694 / 0.2689..0.2734: reported, pilot band, not the floor's |
+| Dead stops | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass |
+| Peak speed / tier-3 time | 54.915 m/s, 47.91 s / 54.29 m/s, 47.39 s: pass | 30.53 m/s, 8.99 s / 29.34 m/s, 7.74 s: pass | 30.01 m/s, 8.22 s / 27.12 m/s, 3.57 s: pass | 30.55 m/s, 10.595 s / 30.55 m/s, 10.59 s: pass | 27.065 m/s, 5.89 s / 26.86 m/s, 5.33 s: pass | 28.86 m/s, 8.965 s / 27.86 m/s, 5.21 s: pass | 31.82 m/s, 9.64 s / 30.86 m/s, 7.98 s: reported, pilot band, not the floor's |
+| Longest quiet, s | 4.38 / 4.38: pass | 7.505 / 7.71: pass | 6.37 / 6.51: pass | 5.91 / 6.53: pass | 6.115 / 6.53: pass | 6.23 / 6.36: pass | 8.01 / 8.01: reported, pilot band, not the floor's |
+| Anchor gap, m | 33.95 / 34.9: pass | 25.3 / 33.7: pass | 21.7 / 27.4: pass | 19.05 / 22.0: pass | 17.6 / 20.4: pass | 22.8 / 30.5: pass | 41.4 / 41.4: reported, pilot band, not the floor's |
+| Distinct ride facts | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: reported, pilot band, not the floor's |
+| Length / straight distance | 1.73 / 1.71..1.74: pass | 1.54 / 1.54..1.55: pass | 1.44 / 1.44..1.47: pass | 1.61 / 1.61..1.62: pass | 1.33 / 1.33..1.34: pass | 1.57 / 1.57..1.58: pass | 1.54 / 1.54..1.54: reported, pilot band, not the floor's |
+| Floor row | n/a | reference | n/a | n/a | n/a | n/a | 88.93 s / cap 191.68 s, stops 0: pass |
+| Distinct lines | sable, kest, tarn: pass | n/a | n/a | n/a | n/a | n/a | n/a |
+| Stop classification | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack |
+
+Each cell is median / worst seed. Anchor gap uses the maximum seed, per ruling 14. Peak and tier-3 time share the PARK.md row. The airborne and length cells show the seed range beside the median. The floor uses its own row only, with Rivet as the shipped tool reference.
+
+Progress is measured on the fixed graph reader and reported separately: sable 20.94 m/s; rivet 13.38 m/s; kest 16.225 m/s; tarn 14.875 m/s; tally 16.99 m/s; cannon 14.735 m/s; floor 14.42 m/s.
+
+sable: 8 seed rows, stops [].
+
+rivet: 8 seed rows, stops [].
+
+kest: 8 seed rows, stops [].
+
+tarn: 8 seed rows, stops [].
+
+tally: 8 seed rows, stops [].
+
+cannon: 8 seed rows, stops [].
+
+floor: 8 seed rows, stops [].
+
+
+Three distinct lines were measured separately with the same fixed tool and
+eight seeds per line. The directed spatial overlap results are in
+`/tmp/claude-1000/w13-sol/kd5-islands-r3/distinct-traces-distinct-lines.json`. These traces establish the
+reported spatial result for their runs; they do not repair the failed seed-row
+agreement. Receipts are in `/tmp/claude-1000/w13-sol/kd5-islands-r3/distinct-traces/`.
+
+## Measurement hold
+
+Rivet seed 4's batch airborne share is 0.2482, below the 0.25 floor. Its solo
+value is 0.3070 and its traced solo value is 0.3107 on the same unchanged program
+and external tool. Time, peak speed, anchor gap and tier-3 time differ too.
+The fixed tool therefore does not meet its promised batch/solo/trace equality
+on this head. The admission table retains the batch miss, not a rounded or
+substituted solo value. Ruling 21 prevents geometry rework from this unreproduced
+miss. No terrain, pilot line, enemy or shared tool was changed.
+
+A repeated untraced batch changes four of eight Rivet seed rows; seed 4's
+airborne share becomes 0.2517. The favorable repeat does not replace the original
+batch in the admission table. Both raw batches and the comparison are retained.
+
+| Run mode | Airborne share | Time to engage s | Anchor gap m | Peak m/s | Tier-3 s | Dead stops |
+| --- | --- | --- | --- | --- | --- | --- |
+| batch | 0.2482 | 92.67 | 23.1 | 30.38 | 11.04 | 0 |
+| solo | 0.307 | 96.59 | 33.7 | 30.92 | 8.87 | 0 |
+| traced solo | 0.3107 | 95.45 | 27.4 | 30.75 | 8.29 | 0 |
+
+
+## Mind Warden proof on the same program head
+
+Completionist seeds 1 to 3 use `--table=park --from-stage=5 --stages=5` through
+the external wrapper extending `res://tools/bot_run.gd`. The wrapper sets only
+the driver's `stage_limit` to 600.0 after construction, before its first tick;
+each seed log records `ticks=0`. Seeds run as separate invocations because the
+committed multi-seed runner launches `res://tools/bot_run.gd` directly and would
+bypass the wrapper. All three invocations share the requested eight-core queue
+grant and 1800 s wall cap. The mounting remains mind, under_island, anchored.
+
+| Seed | Outcome | Stage reached | Engage s | Break s | Engage to break s | Warden damage | After break |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | stages_done | 6 | 143.43 | 260.74 | 117.31 | {'ram': 1250.0} | entered stage 6; stages_done |
+| 2 | stages_done | 6 | 138.85 | 236.58 | 97.73 | {'ram': 781.3, 'slam': 156.3, 'stomp': 312.5} | entered stage 6; stages_done |
+| 3 | stages_done | 6 | 130.47 | 196.88 | 66.41 | {'ram': 625.0, 'slam': 625.0} | entered stage 6; stages_done |
+
+
+The full outcome rows are quoted in `/tmp/claude-1000/w13-sol/kd5-islands-r3/REPORT.md` and retained exactly in
+`/tmp/claude-1000/w13-sol/kd5-islands-r3/win-rows.ndjson`. R11 is retired; no anchored-Warden stall exception is
+claimed. No terrain rework was needed for the old Kest stop/anchor miss or the
+old Tally peak miss on the merged head with the fixed tool.
+
+## Verification and limits
+
+The eight named smoke files, compile check against 560d177, lint, rebuild identity
+and freshness positive control together pass.
+Two fresh shipped-tool rebuilds reproduce all eight retained outputs byte for
+byte. The stage test exercises planted failures for its pins; the external
+freshness plant and restoration are retained in the round report. The writer's
+tools diff against the merge commit is empty. Exact commands, exit codes and
+source fingerprints are in `/tmp/claude-1000/w13-sol/kd5-islands-r3/commands.ndjson`.
+
+These receipts establish headless game behavior. Human feel, visuals, listening
+and physical hardware remain unqualified. Dressing is a separate later unit.
+
+## Earlier rounds, archived
+
+The text below predates TRAV-DET and the current candidate. It is historical;
+its carried-state seeds and R11 exception do not qualify this round.
+
+~~~~~~text
+# park_islands traversal
+
 ## Greybox continuation, 2026-10-12, program head d6923b0
 
 Verdict: FAIL, evidence level 4. Seven lines, eight seeds each, measured on one
@@ -131,3 +253,4 @@ Notes on this pass.
 - The anchor gap band is judged on the median, which passes everywhere. Kest's worst seed is 44.1 m and the floor's 40.4 m.
 - The machine load ran 30 to 166 during the pass. The bands come from fixed-fps simulation and are not timing-gated.
 ~~~~
+~~~~~~

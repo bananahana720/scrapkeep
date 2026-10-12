@@ -1,6 +1,6 @@
 # Stage 5: Highdraft, the sky islands (`park_islands`)
 
-**Status: partial greybox. Native acceptance fails Kest's stop and worst-seed anchor bands and Tally's peak-speed band. The dressed pass is not started.** Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
+**Status: greybox admission held. Rivet seed 4 misses the batch airborne band and the fixed tool gives different solo and traced results. Warden proof passes 3/3 with exits. Dressing is a separate unit.** Unit KD5, wave 13, continued 12 October 2026. The park file, bake and graph are built. The dressed pass has not started. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
 
 | Field | Value |
 | --- | --- |
@@ -431,6 +431,19 @@ What changes: the map id (`highdraft` to `park_islands`), the heading (today -z,
 
 **Fix round (2026-10-12).** The stage test's header is re-dated; its PARK.md 2.12 distances now come from tools/park_graph.gd's own constants (SIGHT_M, DOOR_SPAWN_M, DOOR_BEACON_M, DOOR_DOOR_M, DETOUR_MIN_M, DETOUR_MAX_M) instead of copied literals, and its graph-ruling pin (no breach, `beacon_ok`, 13 routes connected, the spawn rule passing) holds on the shipped file. `tests/park_table_test.gd` now accepts a valid ParkMap for stage 5 when its park file is present, from the candidate fix 1f09581. It remains a shared test outside this unit's write scope.
 
+**Round 3 verification, 2026-10-12.** The candidate merge brings BAY-LIMIT,
+so the bay uses this park's real dock bounds. Completionist seeds 1 to 3 measure
+the unchanged mind Warden through a 600 s stage-limit wrapper. Engage-to-break
+seconds and exact outcome rows are in the round report; the table below records
+what follows each break. The old 240 s/R11 exception is retired.
+
+| Seed | Outcome | Stage reached | Engage s | Break s | Engage to break s | Warden damage | After break |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | stages_done | 6 | 143.43 | 260.74 | 117.31 | {'ram': 1250.0} | entered stage 6; stages_done |
+| 2 | stages_done | 6 | 138.85 | 236.58 | 97.73 | {'ram': 781.3, 'slam': 156.3, 'stomp': 312.5} | entered stage 6; stages_done |
+| 3 | stages_done | 6 | 130.47 | 196.88 | 66.41 | {'ram': 625.0, 'slam': 625.0} | entered stage 6; stages_done |
+
+
 ## 14. Storyboard frames
 
 Seven frames, in play order. Panels p1 to p6 of the stage board map onto frames 1 to 6; frame 7 is a spare for the exit.
@@ -507,6 +520,43 @@ Current traversal bands and all seed misses are in `design-v3/park/traversal/par
 The unit report retains prior failed runs, the bounded reworks and the final acceptance result.
 The dressed pass starts only after the whole greybox list passes. No recipe coverage, draws,
 triangles, stills or human acceptance is claimed for this greybox.
+
+**Round 3 fixed-tool traversal, 2026-10-12.**
+
+| Band | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass | 8 / n/a: pass |
+| Time to Warden, s | 60.92 / 61.88: pass | 95.84 / 96.87: pass | 78.6 / 85.1: pass | 85.75 / 85.81: pass | 75.065 / 76.86: pass | 86.575 / 86.62: pass | 88.93 / 90.34: reported, pilot band, not the floor's |
+| Segment medians, s | 15.21/22.31/23.53 / 23.81: pass | 24.43/36.39/34.7 / 36.78: pass | 22.63/23.62/32.21 / 33.97: pass | 22.58/31.6/31.62 / 31.74: pass | 24.81/17.98/31.95 / 32.82: pass | 23.07/32.02/31.38 / 32.17: pass | 23.78/34.11/31.03 / 34.91: reported, pilot band, not the floor's |
+| Flow share | 0.9363 / 0.9324: pass | 0.8594 / 0.8456: pass | 0.9036 / 0.7952: pass | 0.963 / 0.9562: pass | 0.9705 / 0.9383: pass | 0.9909 / 0.9804: pass | 0.8582 / 0.8582: reported, pilot band, not the floor's |
+| Airborne share | 0.3878 / 0.3747..0.4019: pass | 0.3116 / 0.2482..0.3156: MISS | 0.3497 / 0.3192..0.3516: pass | 0.2808 / 0.2801..0.2843: pass | 0.3096 / 0.3043..0.3157: pass | 0.3304 / 0.3293..0.3385: pass | 0.2694 / 0.2689..0.2734: reported, pilot band, not the floor's |
+| Dead stops | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass | 0.0 / 0.0: pass |
+| Peak speed / tier-3 time | 54.915 m/s, 47.91 s / 54.29 m/s, 47.39 s: pass | 30.53 m/s, 8.99 s / 29.34 m/s, 7.74 s: pass | 30.01 m/s, 8.22 s / 27.12 m/s, 3.57 s: pass | 30.55 m/s, 10.595 s / 30.55 m/s, 10.59 s: pass | 27.065 m/s, 5.89 s / 26.86 m/s, 5.33 s: pass | 28.86 m/s, 8.965 s / 27.86 m/s, 5.21 s: pass | 31.82 m/s, 9.64 s / 30.86 m/s, 7.98 s: reported, pilot band, not the floor's |
+| Longest quiet, s | 4.38 / 4.38: pass | 7.505 / 7.71: pass | 6.37 / 6.51: pass | 5.91 / 6.53: pass | 6.115 / 6.53: pass | 6.23 / 6.36: pass | 8.01 / 8.01: reported, pilot band, not the floor's |
+| Anchor gap, m | 33.95 / 34.9: pass | 25.3 / 33.7: pass | 21.7 / 27.4: pass | 19.05 / 22.0: pass | 17.6 / 20.4: pass | 22.8 / 30.5: pass | 41.4 / 41.4: reported, pilot band, not the floor's |
+| Distinct ride facts | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: pass | 6.0 / 6.0: reported, pilot band, not the floor's |
+| Length / straight distance | 1.73 / 1.71..1.74: pass | 1.54 / 1.54..1.55: pass | 1.44 / 1.44..1.47: pass | 1.61 / 1.61..1.62: pass | 1.33 / 1.33..1.34: pass | 1.57 / 1.57..1.58: pass | 1.54 / 1.54..1.54: reported, pilot band, not the floor's |
+| Floor row | n/a | reference | n/a | n/a | n/a | n/a | 88.93 s / cap 191.68 s, stops 0: pass |
+| Distinct lines | sable, kest, tarn: pass | n/a | n/a | n/a | n/a | n/a | n/a |
+| Stop classification | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack | 0 terrain / 0 pack |
+
+Each cell is median / worst seed. Anchor gap uses the maximum seed, per ruling 14. Peak and tier-3 time share the PARK.md row. The airborne and length cells show the seed range beside the median. The floor uses its own row only, with Rivet as the shipped tool reference.
+
+Progress is measured on the fixed graph reader and reported separately: sable 20.94 m/s; rivet 13.38 m/s; kest 16.225 m/s; tarn 14.875 m/s; tally 16.99 m/s; cannon 14.735 m/s; floor 14.42 m/s.
+
+sable: 8 seed rows, stops [].
+
+rivet: 8 seed rows, stops [].
+
+kest: 8 seed rows, stops [].
+
+tarn: 8 seed rows, stops [].
+
+tally: 8 seed rows, stops [].
+
+cannon: 8 seed rows, stops [].
+
+floor: 8 seed rows, stops [].
 
 ## Appendix: the park file as shipped
 
