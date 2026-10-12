@@ -60,6 +60,10 @@ const WORDS := {
 	# --- P-C Tally words ---
 	# --- end Tally ---
 	# --- P-C Cannon words ---
+	"cannon_lane_charge": "lane charge",
+	"cannon_fire_mission": "fire mission",
+	"cannon_creeping_barrage": "creeping barrage",
+	"cannon_plate_mortar": "plate mortar",
 	# --- end Cannon ---
 }
 

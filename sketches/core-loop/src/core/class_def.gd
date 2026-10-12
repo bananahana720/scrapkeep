@@ -126,7 +126,7 @@ static func all() -> Array[Resource]:
 			"synergy_hooks": PackedStringArray(["on_card_run", "on_link_arc", "on_stamp_contact"])}),
 		make({"id": "remembered_cannon", "display_name": "Cannon", "role": "Boss-mirror cannon", "species": "rebuilt ancient",
 			"pitch": "The Mind's own guns, remembered. Call a lane, cut a split behind you, plate what you hit, ring the ground when you land.",
-			"weapon_id": "cannon_lane", "movement_id": "cannon_recoil", "special_id": "cannon_plate", "smash_id": "cannon_rush", "line_id": "line_reel", "ultimate_id": "ult_default",
+			"weapon_id": "cannon_lane", "movement_id": "cannon_recoil", "special_id": "cannon_plate", "smash_id": "cannon_rush", "line_id": "cannon_lane_charge", "ultimate_id": "cannon_fire_mission",
 			"color": CANNON_COLOR, "shape": "lane", "motif": "cannon", "sound": "launch_roar",
 			"bible_home": "Remembered cannon, the Mind's four families",
 			"unlock": {"by": "boss:mind", "label": "Quiet the Mind. One of its guns remembers you."},

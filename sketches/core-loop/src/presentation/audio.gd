@@ -452,6 +452,7 @@ func _poly_player(bus: String, node_name: String) -> AudioStreamPlayer:
 
 func _process(delta: float) -> void:
 	clock += delta
+	_step_cannon_cues()
 	if not sound_ready:
 		if _poll_bake():
 			_on_ready()
@@ -969,6 +970,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 # --- Facts --------------------------------------------------------------------------
 
 func _connect_all(events) -> void:
+	_wire_cannon(events)
 	events.run_started.connect(func(class_id: String):
 		_heft_class = 1
 		_hull_seen = 0.0
@@ -1018,7 +1020,11 @@ func _connect_all(events) -> void:
 	events.run_started.connect(func(_class_id: String): _set_ult_lift(false))
 	events.ultimate_ready.connect(_on_ultimate_ready)
 	events.ultimate_started.connect(_on_ultimate_started)
-	events.ultimate_peak.connect(func(_id: String, _at: Vector3): on_beat("ultimate_peak"))
+	events.ultimate_peak.connect(func(id: String, _at: Vector3):
+		if id.begins_with("cannon_"):
+			cannon_motif("cannon_peak", -6.0, false, false, 12)
+		else:
+			on_beat("ultimate_peak"))
 	events.ultimate_landed.connect(_on_ultimate_landed)
 	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
 	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
@@ -1753,6 +1759,8 @@ func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vecto
 # lift releases with it (the meter is empty).
 func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) -> void:
 	play("ultimate_landed")
+	if _id.begins_with("cannon_"):
+		cannon_motif("cannon_landing", -6.0, false, true)
 	if _ult_armed:
 		var touchdown := engine.clock
 		var at := engine.drop_now(4, 0.85, {}, -1, {"ult": false})
@@ -2230,3 +2238,83 @@ func _show_mixer() -> void:
 		_overlay.text = "Music %d%%  (- =)    Effects %d%%  ([ ])    M mutes" % [roundi(volumes["Music"] * 100.0), roundi(volumes["SFX"] * 100.0)]
 	_overlay.visible = true
 	_overlay_until = Time.get_ticks_msec() + 1600
+
+
+# --- P-C Cannon cues -------------------------------------------------------------------
+var cannon_log: Array = []
+var _cannon_queue: Array = []
+var _cannon_threat_at := -INF
+static var _cannon_streams := {}
+
+
+func _wire_cannon(events) -> void:
+	events.mind_adapted.connect(_cannon_answer)
+	events.boss_attack_telegraphed.connect(func(_id: String, _warn: float): _cannon_threat_at = clock)
+	events.run_started.connect(func(_id: String): _cannon_queue.clear())
+
+
+func _cannon_beat_delay() -> float:
+	var delay := float(engine.next_beat() - engine.clock) / Harmony.RATE
+	if clock - _cannon_threat_at <= 0.2:
+		delay += float(engine.beat_len()) / Harmony.RATE
+	return maxf(0.0, delay)
+
+
+func cannon_family(family: String, onbeat := false, kind := "cannon_live") -> void:
+	var note := Harmony.family_note(family)
+	if note < 0:
+		return
+	_cannon_cue(kind, [note], -12.0 if onbeat else -14.0, _cannon_beat_delay() if onbeat else 0.0)
+
+
+func cannon_line(combo: int) -> void:
+	var notes := Harmony.motif_notes("cannon")
+	if combo < 5:
+		_cannon_cue("cannon_line", [notes[clampi(combo - 1, 0, 3)]], -14.0)
+	else:
+		_cannon_cue("cannon_line", notes, -14.0, 0.0, false)
+
+
+func cannon_motif(kind: String, db := -6.0, onbeat := false, chord := false, octave := 0) -> void:
+	var notes := Harmony.motif_notes("cannon").map(func(note): return int(note) + octave)
+	_cannon_cue(kind, notes, db, _cannon_beat_delay() if onbeat else 0.0, chord)
+
+
+func _cannon_answer(_habit: String, _icon: String) -> void:
+	if _motif != "cannon":
+		return
+	var quote := SfxBank.stream("mind_cannon")
+	var delay: float = quote.get_length() + float(engine.beat_len()) / Harmony.RATE
+	_cannon_cue("cannon_answer", Harmony.motif_notes("cannon"), -10.0, delay, false)
+
+
+func _cannon_cue(kind: String, notes: Array, db: float, delay := 0.0, chord := true) -> void:
+	var row := {"kind": kind, "notes": notes, "db": db, "due": clock + delay, "chord": chord}
+	if delay > 0.0:
+		_cannon_queue.append(row)
+	else:
+		_cannon_play(row)
+
+
+func _cannon_play(row: Dictionary) -> void:
+	var notes: Array = row["notes"]
+	var key := "%s:%s" % [str(notes), row["chord"]]
+	cannon_log.append({"kind": row["kind"], "notes": notes.duplicate(), "at": clock, "due": row["due"], "db": row["db"], "chord": row["chord"]})
+	if not sound_ready:
+		return
+	if not _cannon_streams.has(key):
+		var buf := Synth.buffer(Synth.seconds(2.6) + Harmony.STEP * notes.size())
+		for i in notes.size():
+			Synth.add_into(buf, Synth.note("chime", int(notes[i])), 0 if row["chord"] else i * Harmony.STEP, 0.7 / sqrt(float(notes.size())))
+		_cannon_streams[key] = Synth.to_wav(buf)
+	_start(row["kind"], "cannon:" + key, _cannon_streams[key], float(row["db"]), 1.0, "SFX")
+
+
+func _step_cannon_cues() -> void:
+	var waiting: Array = []
+	for row in _cannon_queue:
+		if clock + 0.000001 >= float(row["due"]):
+			_cannon_play(row)
+		else:
+			waiting.append(row)
+	_cannon_queue = waiting

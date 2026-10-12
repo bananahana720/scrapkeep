@@ -53,6 +53,9 @@ var _credits_band: ColorRect
 var _cut: ColorRect
 var _at := Vector3.ZERO
 var _dig_deep := false
+var quiet_gun: Node3D
+var cannon_answered := false
+var cannon_answer_at := -1.0
 
 
 func start(game_ref) -> void:
@@ -324,6 +327,11 @@ func _dress_world(holder: Node3D, stage: int, world: int) -> void:
 
 
 func _build_crew() -> void:
+	if game.run.class_def == null or game.run.class_def.id != "remembered_cannon":
+		quiet_gun = preload("res://src/presentation/quiet_gun.gd").make("")
+		_scene.add_child(quiet_gun)
+		quiet_gun.ending_ready()
+		quiet_gun.visible = false
 	shell = Node3D.new()
 	shell.name = "PilotShell"
 	_scene.add_child(shell)
@@ -380,6 +388,12 @@ func advance(delta: float) -> void:
 		_cut.color.a = 0.0
 		return
 	var local := fmod(elapsed, WORLD_SECONDS)
+	if world_index == 2 and local >= 8.0 and not cannon_answered:
+		cannon_answered = true
+		cannon_answer_at = local
+		var audio = game.presentation.audio
+		if audio != null:
+			audio.cannon_motif("ending_cannon", -6.0, true)
 	phase = "flyover" if local < ESTABLISH_SECONDS else "copy"
 	var lines: Array = Worlds.ENDING.log[int(Worlds.ROWS[world_index].id)]
 	var line := mini(int(maxf(0.0, local - ESTABLISH_SECONDS) / LINE_SECONDS), lines.size() - 1)
@@ -431,6 +445,9 @@ func _enter_world(index: int) -> void:
 			spot = Vector2(63.0, 184.0) if _dig_deep else Vector2(-27.0, 178.0)
 		_at = Vector3(spot.x, float(map.sample(spot.x, spot.y)[0]) + 2.0, spot.y)
 	camera.fov = 46.0 if _dig_deep else 48.0
+	if quiet_gun != null:
+		quiet_gun.visible = index == 2
+		quiet_gun.position = _at + Vector3(-3.0, -0.8, -0.5)
 	shell.position = _at
 	companion.position = _at + Vector3(3.0, -0.8, -0.5)
 	_world_label.text = "%s\n%s" % [Worlds.ENDING.title, Worlds.ROWS[index].name]

@@ -24,7 +24,7 @@ const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
-const PENDING_ART := ["trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell"]
+const PENDING_ART := ["trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_cannon_recital", "shell_cannon_choir"]
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -84,6 +84,9 @@ const ROWS := {
 	# --- tally (Tally): P-C Tally adds its rows here ---
 	# --- end tally ---
 	# --- remembered_cannon (the Cannon): P-C Cannon adds its rows here ---
+	"trail_cannon_recital": {"slot": "trail", "pilot": "remembered_cannon", "name": "Recital", "starter": false, "tint": Color("6fb3a6"), "asset": "trail_cannon_recital"},
+	"paint_cannon_lens": {"slot": "paint", "pilot": "remembered_cannon", "name": "Lens Glass", "starter": false, "tint": Color("d4f2b0")},
+	"shell_cannon_choir": {"slot": "shell", "pilot": "remembered_cannon", "name": "Choir Barrel", "starter": false, "tint": Color("6fb3a6"), "asset": "shell_cannon_choir"},
 	# --- end remembered_cannon ---
 }
 
