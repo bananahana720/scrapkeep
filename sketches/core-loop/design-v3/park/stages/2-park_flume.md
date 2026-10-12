@@ -113,9 +113,9 @@ The three activities: the siphon camp (`enemy_camp` with today's Reach lobber pa
 
 **The exit to Brindle.** After the break, the reward gates stand on the bluff lip outside the drum's east doors at x 300, facing +x over the lower gorge, and the bay docks 61 m behind them over the drum (`bay.gd:37-41`, `143-153`), so `bay_dock.at` is [239, 480]. The launch throws the ball out of the east doors and across the gorge. Stage 2 is the world's last stage, so when the launch flight ends (`LAUNCH_FLIGHT` 0.6 s, `flow.gd:23`), `_finish_stage` calls `enter_boss` with the ball's velocity instead of advancing (`flow.gd:667-673`, `456-473`), and Brindle's module places the ball in the Slag Bowl (`boss.gd:15-17`). The arena stays small and authored (PARK.md:381). The park only points at it: from the bend overlook and the bluff, a smoke column and a furnace glow stand on the eastern horizon past the lower gorge, the launch arc aims at them, and the Requisition's anvil enters the music on the last chunk (section 10).
 
-## 5. `park_rows` (225 rows, continuation 2026-10-12)
+## 5. `park_rows` (226 rows, continuation 2026-10-12)
 
-The shipped file is `src/world/park/park_flume.json`; the bake and the stage graph are under `assets/park/park_flume/` (KD2). The rows contain 147 authored rides and structures, 52 rock outcrops and 26 shallow washes. The continuation rides and piers are listed below. On this head every row with a recipe is built in play with its collider and ride sensor (`terrain.gd:218-220` calls `ParkRecipes.build_placed`), so the rows are what the traversal bot rides and hooks.
+The shipped file is `src/world/park/park_flume.json`; the bake and the stage graph are under `assets/park/park_flume/` (KD2). The rows contain 148 authored rides and structures, 52 rock outcrops and 26 shallow washes. The continuation rides and piers are listed below. On this head every row with a recipe is built in play with its collider and ride sensor (`terrain.gd:218-220` calls `ParkRecipes.build_placed`), so the rows are what the traversal bot rides and hooks.
 
 **The canvas is three flat terraces, not one ramp.** The draft's 112 m fall as one tilted plane made `tools/park_graph.gd` never finish: on a tilted plane every lattice edge has its own irrational length and the line search (`search_prev`, float32 distances in `src/world/park/park_graph.gd`) re-pushed one node 300 000 times. Flat terraces with sheer steps settle like the fixture, and each step is a drop the lines ride. Heights: the ground north of z -380 is +15, north of z -150 another +15, north of z 220 another +24; the siphon scarp adds 15 m above its edge and the weir mesa 40 m.
 
@@ -159,6 +159,7 @@ The piers are placed solids with ride sensors. Their 12×4 m footprints sit besi
 | `mesa_entry_kicker` | 1 | kicker, `kicker_launch`, `greybox:kicker` | [-470, -495], base y 109, 24×3×20 m |
 | `tally_field_kicker` | 1 | kicker, `kicker_launch`, `greybox:kicker` | [-195, 80], base y 36, 24×4×18 m; ends the field quiet stretch |
 | `rim_flow_drop` | 1 | drop, `ride_drop`, `greybox:drop` | [-85, -130], base y 39, 438×15×36 m; a descending rim ride |
+| `flume_entry_kicker` | 1 | kicker, `kicker_launch`, `greybox:kicker` | [20, 211], 18×4×10 m; the authored entry onto the shortened raised head reach |
 
 `turnout_kicker` now sits at [-177, 142], base y 31, 30×8×18 m. Its low entry stays below the hollow floor and its exit meets the south-end ground. `bend_return_wash` is 50 m wide. The head flume begins 32 m farther down its heading, clearing the Cannon's siphon crossing. Rock outcrops `bend_outcrop_5`, `bench_outcrop_4` and `bluff_outcrop_7` sit at [153, 12], [-30, 390] and [70, 389], outside the fixed collision sites.
 
@@ -326,12 +327,12 @@ The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026
 
 | Pocket | Role | Door [x, z] | door_m | detour_m | d_spawn | d_landmark | sight_ok | pay |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `siphon_camp` | online | [-24, 176] | 0 | 0 | 986 | 429 | True | common |
+| `siphon_camp` | online | [-24, 176] | 0 | 0 | 986 | 424 | True | common |
 | `bend_cache` | reward | [40, -144] | 222 | 222 | 754 | 725 | True | rare |
-| `bench_bounty` | risk | [-120, 336] | 175 | 175 | 1136 | 415 | True | common, rare |
-| `weir_valve` | hidden | [-152, -248] | 107 | 102 | 561 | 915 | True | the cache |
+| `bench_bounty` | risk | [-120, 336] | 197 | 197 | 1136 | 415 | True | common, rare |
+| `weir_valve` | hidden | [-152, -248] | 107 | 102 | 561 | 907 | True | the cache |
 
-The graph reports `reward_ratio` 0.533 against its starting target of at least 1.5. This reading is reported, not gated.
+The graph reports `reward_ratio` 0.537 against its starting target of at least 1.5. This reading is reported, not gated.
 
 The authored gates at [300, 480] exceed `bay.gd`'s legacy ±185 m dock-search limit. The stage's dock pin checks its level cradle and collider clearance at both permitted lifts; the runtime search remains blocked until the coordinator resolves that limit.
 
@@ -356,7 +357,7 @@ The park file, verbatim (park_schema_test reads this block):
   {"id": "hollow_run", "from": "butte_gap", "to": "the_siphon", "via": ["trestle_hollow"]},
   {"id": "trestle_ramp_line", "from": "butte_gap", "to": "the_siphon", "via": ["flume_hollow_reach", "trestle_hollow"]},
   {"id": "rim_mid", "from": "butte_gap", "to": "the_siphon", "via": ["rim_road", "rim_flow_drop", "bend_overlook"]},
-  {"id": "flume_lower", "from": "the_siphon", "to": "landmark", "via": ["flume_head_reach", "pour_channel", "head_house_drum"]},
+  {"id": "flume_lower", "from": "the_siphon", "to": "landmark", "via": ["flume_entry_kicker", "flume_head_reach", "pour_channel", "head_house_drum"]},
   {"id": "canal_lower", "from": "the_siphon", "to": "landmark", "via": ["wasteway_chute", "drum_forecourt", "head_house_drum"]},
   {"id": "wasteway_wall", "from": "the_siphon", "to": "landmark", "via": ["wasteway_wall_line", "drum_forecourt", "head_house_drum"]},
   {"id": "rim_lower", "from": "the_siphon", "to": "landmark", "via": ["bluff_rim", "head_house_drum"]},
@@ -407,7 +408,7 @@ The park file, verbatim (park_schema_test reads this block):
   {"id": "head_house_drum", "element": "terrace", "landform": "penstock", "society": "dam_era", "at": [230, 480], "y": null, "size": [80, 14, 80], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:terrace", "stamp": "terrace", "hole": false, "budget": "landform", "routes": ["flume_lower", "rim_lower", "forecourt_entry", "annex_ramp_line", "canal_lower", "wasteway_wall", "warden_exit", "bench_run"], "fragment": "dam_era_headhouse_log"},
   {"id": "heat_exchanger_annex", "element": "ledge", "landform": "penstock", "society": "dam_era", "at": [185, 525], "y": null, "size": [40, 14, 24], "yaw_deg": 35, "verb": "roll", "ride_fact": "ride_ledge", "home": "", "recipe": "greybox:ledge", "stamp": "", "hole": false, "budget": "detail", "routes": ["annex_ramp_line"], "fragment": "dam_era_annex_dial"},
   {"id": "head_house_trusses", "element": "anchor_field", "landform": "penstock", "society": "dam_era", "at": [284, 480], "y": 16.0, "size": [48, 14, 20], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": ["warden_exit"], "fragment": ""},
-  {"id": "drum_lip_kicker", "element": "kicker", "landform": "penstock", "society": "dam_era", "at": [254, 480], "y": null, "size": [28, 14, 34], "yaw_deg": 90, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": ["warden_exit"], "fragment": ""},
+  {"id": "drum_lip_kicker", "element": "kicker", "landform": "penstock", "society": "dam_era", "at": [253, 480], "y": null, "size": [28, 14, 34], "yaw_deg": 90, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": ["warden_exit"], "fragment": ""},
   {"id": "gate_lip", "element": "ground", "landform": "penstock", "society": "dam_era", "at": [292, 480], "y": null, "size": [40, 2, 70], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": ["warden_exit"], "fragment": ""},
   {"id": "bench_run_wash", "element": "half_pipe", "landform": "slickrock", "society": "none", "at": [-80, 305], "y": null, "size": [190, 4, 30], "yaw_deg": -15, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:half_pipe", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["bench_run"], "fragment": ""},
   {"id": "bench_lip_bank", "element": "bank", "landform": "slickrock", "society": "none", "at": [20, 438], "y": null, "size": [230, 2, 30], "yaw_deg": 88, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:bank", "stamp": "ridge", "hole": false, "budget": "landform", "routes": ["bench_run"], "fragment": ""},
@@ -590,7 +591,8 @@ The park file, verbatim (park_schema_test reads this block):
   {"id": "siphon_ride_pier_4", "element": "grind_line", "landform": "flume", "society": "dam_era", "at": [39.3, 199.5], "y": null, "size": [12, 32, 4], "yaw_deg": 20.6, "verb": "grind", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:grind_line", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "mesa_entry_kicker", "element": "kicker", "landform": "mesa_rim", "society": "dam_era", "at": [-470, -495], "y": 109.0, "size": [24, 3, 20], "yaw_deg": 0, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "tally_field_kicker", "element": "kicker", "landform": "dry_wash", "society": "dam_era", "at": [-195, 80], "y": 36.0, "size": [24, 4, 18], "yaw_deg": 35, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "rim_flow_drop", "element": "drop", "landform": "mesa_rim", "society": "dam_era", "at": [-85, -130], "y": 39.0, "size": [438, 15, 36], "yaw_deg": 63, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "", "hole": false, "budget": "landform", "routes": ["rim_mid"], "fragment": ""}
+  {"id": "rim_flow_drop", "element": "drop", "landform": "mesa_rim", "society": "dam_era", "at": [-85, -130], "y": 39.0, "size": [438, 15, 36], "yaw_deg": 63, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "", "hole": false, "budget": "landform", "routes": ["rim_mid"], "fragment": ""},
+  {"id": "flume_entry_kicker", "element": "kicker", "landform": "flume", "society": "dam_era", "at": [20, 211], "y": null, "size": [18, 4, 10], "yaw_deg": 39.1, "verb": "launch", "ride_fact": "kicker_launch", "home": "", "recipe": "greybox:kicker", "stamp": "", "hole": false, "budget": "detail", "routes": ["flume_lower"], "fragment": ""}
  ],
  "event_rows": [
   {"id": "hollow_trestle_collapse", "kind": "collapse", "family": "natural", "site": "trestle_hollow", "trigger": {"on": "clock_tier", "value": 2}, "weight": 1.0, "telegraph": {"lead_s": 6.0, "form": "trestle_groan", "on_bar": true}, "live_s": 0.0, "effect": {"swap": "trestle_ramp"}, "route_change": {"closes": ["flume_mid"], "opens": ["trestle_ramp_line"]}, "hold_clear_m": 20.0, "cooldown_s": 0.0, "once": true, "music_cue": {"telegraph": "riser_natural", "land": "drop_collapse"}},
