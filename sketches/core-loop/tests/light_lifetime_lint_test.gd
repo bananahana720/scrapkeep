@@ -1,4 +1,4 @@
-# smoke: solo (boots the alpha table and walks stage 1, a stage change, the first boss and the Dig)
+# smoke: solo (boots alpha and walks stages, the first boss, the Dig and two Waking entries)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -6,6 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
+const Harness := preload("res://tests/doubles/module_harness.gd")
 
 # The stage-freed light rule (wave 9 cage light, wave 11 cache light, SEEDS:113): a Light3D freed
 # with a node a stage change frees made Godot 4.7.2 Forward+ segfault on the next boss entry, GPU
@@ -107,6 +108,45 @@ func _run() -> void:
 	_t.check("the lamp pool lights the lamps nearest the ball", lamps.any(func(l): return l.visible))
 	_game.flow.enter_stage(_game.ctx.stages.first_of(2) + 1, Vector3.ZERO, false)
 	await _check("Dig stage change")
+	await _waking_lifetime()
 	_t.check("the walk saw lights", _seen.size() >= 3, "%d lights" % _seen.size())
 	_game.free()
 	quit(_t.verdict())
+
+
+func _waking_lifetime() -> void:
+	Harness.enter_world(_game, 2)
+	await _check("Dig to the Waking")
+	var mod = Harness.module(_game, 2)
+	if not _t.check("Waking arena dressing builds for the lifetime walk", mod._arena_dress != null):
+		return
+	var lights := _waking_lights()
+	_t.eq("Waking makes all 50 arena lights", lights.size(), 50)
+	var ids := lights.map(func(light): return light.get_instance_id())
+	mod.exit_arena()
+	await _check("Waking exit preserves every light")
+	for id in ids:
+		var light = instance_from_id(id)
+		if _t.check("Waking light survives exit", light != null, str(id)):
+			_t.check("Waking light is dark outside its arena", not light.visible and is_zero_approx(light.light_energy), str(light.name))
+	Preset.apply("low")
+	for id in ids:
+		var light = instance_from_id(id)
+		if light != null:
+			_t.check("preset change keeps inactive Waking light dark", not light.visible and is_zero_approx(light.light_energy), str(light.name))
+	Harness.enter_world(_game, 2)
+	await _check("second Waking entry")
+	var reused := _waking_lights()
+	_t.eq("second Waking entry has no extra lights", reused.size(), ids.size())
+	for light in reused:
+		_t.check("second Waking entry reuses the same light", ids.has(light.get_instance_id()), str(light.name))
+		_t.check("second Waking entry relights its light", light.visible and light.light_energy > 0.0, str(light.name))
+	Harness.module(_game, 2).exit_arena()
+	await _check("second Waking exit")
+	Preset.apply("high")
+
+
+func _waking_lights() -> Array:
+	return _game.find_children("*", "Light3D", true, false).filter(func(light):
+		return (light.name == "ReactorBounce" or light.name == "CoreKey"
+			or String(light.name).begins_with("RimPool") or String(light.name).begins_with("LampPool")))
