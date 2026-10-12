@@ -96,6 +96,7 @@ const FLANK_RANGE := Vector2(45.0, 70.0)
 const MIN_GAP := 25.0
 const SLOW := 3.0
 const TRIES := 8
+const HOME_WINDOW := Vector2(60.0, 250.0)
 # Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
 # elite pack again; never two elites in a row.
 const ELITE_REPEAT := 0.1
@@ -151,6 +152,13 @@ var _arrivals_made := 0
 var _next_pack := {}
 var _last_pack_id := ""
 var _last_was_elite := false
+var homes: Array[Dictionary] = []
+var _park_map
+var _park_graph
+var _corridors
+var _home_sites := {}
+var _forward_homes: Array[Dictionary] = []
+var _stopped_kinds := {}
 
 
 func _init(seed_value := 20260922) -> void:
@@ -217,7 +225,7 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 	for a in arrivals.duplicate():
 		if a["left"] <= 0.0:
 			arrivals.erase(a)
-			if (a["at"] as Vector2).distance_to(ball) >= MIN_GAP:
+			if (a["at"] as Vector2).distance_to(ball) >= MIN_GAP and not _kind_stopped(a["kind"]):
 				due.append({"kind": a["kind"], "at": a["at"]})
 	if paused:
 		return due
@@ -236,7 +244,11 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 		var weight := reinforcement_weight()
 		var pack := compose() if weight > 0.0 and room >= 2 and _rng.randf() < weight else []
 		if pack.is_empty():
-			arrivals.append({"kind": LOBBER if _rng.randf() < lobber_share() else CHASER, "at": at, "left": ARRIVAL})
+			var kind := LOBBER if _rng.randf() < lobber_share() else CHASER
+			if _park_map == null:
+				arrivals.append({"kind": kind, "at": at, "left": ARRIVAL})
+			else:
+				_place_pack(at, [KIND_NAMES[kind]], ball)
 			continue
 		_place_pack(at, pack, ball)
 	return due
@@ -261,6 +273,18 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2) -> void:
 		var spot: Vector2 = at + side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
 		spot.x = clampf(spot.x, play_rect.position.x, play_rect.end.x)
 		spot.y = clampf(spot.y, play_rect.position.y, play_rect.end.y)
+		if _park_map != null:
+			if _kind_stopped(kind):
+				continue
+			if not _forward_homes.is_empty():
+				spot = Vector2.INF
+				for home in _forward_homes:
+					if home.enemy == kinds[i]:
+						spot = _home_spot(home, ball)
+						if spot != Vector2.INF:
+							break
+			if spot == Vector2.INF or not _park_safe(spot) or spot.distance_to(ball) < MIN_GAP:
+				continue
 		arrivals.append({"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq})
 	_pack_seq += 1
 
@@ -307,6 +331,111 @@ func use_row(row: Dictionary, breath_option := "") -> void:
 		_row = {"unlock_base": int(row["unlock_base"]), "ancient": String(row["ancient"])}
 	pressure_row = row.get("pressure", {})
 	breath = breath_option
+	_read_homes(String(row.get("map", "")))
+
+
+func _read_homes(map_id: String) -> void:
+	homes.clear()
+	_home_sites.clear()
+	_stopped_kinds.clear()
+	_forward_homes.clear()
+	_park_map = null
+	_park_graph = null
+	_corridors = null
+	var path := "res://src/world/park/%s.json" % map_id
+	if not map_id.begins_with("park_") or not FileAccess.file_exists(path):
+		return
+	# Runtime loads avoid the schema's preload of Director forming a cycle.
+	var map_script = load("res://src/world/park/park_map.gd")
+	var map = map_script.new(path)
+	if not map.ok:
+		return
+	_park_map = map
+	for row in map.park.park_rows:
+		_home_sites[row.id] = row
+	for row in map.park.home_rows:
+		var home: Dictionary = row.duplicate(true)
+		home.broken = false
+		homes.append(home)
+	var graph_path := "res://assets/park/%s/graph.bin" % map_id
+	if FileAccess.file_exists(graph_path):
+		_park_graph = load("res://src/world/park/park_graph.gd").read(graph_path)
+	# KE1 owns both the pilot-line reader and the corridor clearance.
+	_corridors = load("res://src/world/event_director.gd").new(0, {}, map, 0.0, Callable())
+
+
+func home_live(id: String) -> bool:
+	for home in homes:
+		if home.id == id:
+			return not home.broken and not home.dormant
+	return false
+
+
+func break_home(id: String) -> bool:
+	for home in homes:
+		if home.id != id or home.broken:
+			continue
+		home.broken = true
+		if home.stops_kind:
+			_stopped_kinds[home.enemy] = true
+			for arrival in arrivals.duplicate():
+				if _kind_stopped(arrival.kind):
+					arrivals.erase(arrival)
+		return true
+	return false
+
+
+func activate_home(id: String) -> bool:
+	for home in homes:
+		if home.id == id and not home.broken:
+			home.dormant = false
+			return true
+	return false
+
+
+func _kind_stopped(kind: int) -> bool:
+	return _stopped_kinds.has(KIND_NAMES[kind])
+
+
+func _home_at(home: Dictionary) -> Vector2:
+	var at: Array = _home_sites[home.site].at
+	return Vector2(float(at[0]), float(at[1]))
+
+
+func _ahead(at: Vector2, ball: Vector2) -> bool:
+	if _park_graph == null:
+		return false
+	var ahead: float = _park_graph.d_landmark(ball) - _park_graph.d_landmark(at)
+	return is_finite(ahead) and ahead >= HOME_WINDOW.x and ahead <= HOME_WINDOW.y
+
+
+func _window_homes(ball: Vector2) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for home in homes:
+		if home_live(home.id) and not _stopped_kinds.has(home.enemy) and _ahead(_home_at(home), ball):
+			out.append(home)
+	return out
+
+
+func _home_spot(home: Dictionary, ball: Vector2) -> Vector2:
+	var site: Dictionary = _home_sites[home.site]
+	var half: Vector2 = _park_map.footprint_half_extents(site)
+	for i in TRIES * 4:
+		var offset := Vector2.ZERO if i == 0 else Vector2(_rng.randf_range(-half.x, half.x), _rng.randf_range(-half.y, half.y))
+		var spot := _home_at(home) + offset.rotated(-deg_to_rad(float(site.yaw_deg)))
+		if play_rect.has_point(spot) and _ahead(spot, ball) and spot.distance_to(ball) >= MIN_GAP and _park_safe(spot):
+			return spot
+	return Vector2.INF
+
+
+func _park_safe(spot: Vector2) -> bool:
+	for line in _corridors._park_pilot_lines:
+		for i in range(1, line.size()):
+			# A point footprint uses ParkMap's same segment/margin predicate as KE1.
+			var point := {"at": [spot.x, spot.y], "size": [0.0, 0.0, 0.0], "yaw_deg": 0.0}
+			if _park_map.footprint_contains(point, line[i - 1], _corridors.PARK_CORRIDOR_M, line[i]):
+				return false
+	return true
 
 
 # One pressure key's multiplier: the stage row's times the Breath row's, 1.0 where either is silent.
@@ -423,6 +552,14 @@ func compose() -> Array:
 
 
 func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
+	if _park_map != null:
+		_forward_homes = _window_homes(ball)
+		if not _forward_homes.is_empty():
+			for home in _forward_homes:
+				var at := _home_spot(home, ball)
+				if at != Vector2.INF:
+					return at
+			return Vector2.INF
 	var heading := velocity.normalized() if velocity.length() > SLOW else forward.normalized()
 	var ahead := _rng.randf() < AHEAD_SHARE
 	for i in TRIES:
@@ -437,6 +574,6 @@ func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
 		var spot := ball + heading.rotated(angle) * dist
 		spot.x = clampf(spot.x, play_rect.position.x, play_rect.end.x)
 		spot.y = clampf(spot.y, play_rect.position.y, play_rect.end.y)
-		if spot.distance_to(ball) >= MIN_GAP:
+		if spot.distance_to(ball) >= MIN_GAP and (_park_map == null or _park_safe(spot)):
 			return spot
 	return Vector2.INF
