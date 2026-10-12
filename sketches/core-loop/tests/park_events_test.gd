@@ -26,6 +26,7 @@ func _initialize() -> void:
 		_overlap()
 		_lifecycle()
 		_weather()
+		_ending_safety()
 	print("park_events_test: PASS" if _failures == 0 else "park_events_test: FAIL")
 	quit(0 if _failures == 0 else 1)
 
@@ -120,6 +121,7 @@ func _leads() -> void:
 				if cues.size() == 2:
 					ok = ok and cues[0].fact == r.telegraph.form and not Kinds.world_row(cues[0].fact).is_empty() and not Kinds.world_row(cues[1].fact).is_empty()
 					ok = ok and cues[0].music_cue == r.music_cue.telegraph and cues[1].music_cue == r.music_cue.land
+					ok = ok and cues[0].get("phase") == "telegraph" and cues[1].get("phase") == "land"
 				if hook_log.size() >= 2:
 					ok = ok and hook_log[0][0] == "telegraph" and hook_log[1][0] == "land" and hook_log[1][1] >= aligned - 0.000001
 				good = good and ok
@@ -275,6 +277,61 @@ func _weather() -> void:
 		ok = starts[0].time_s - announces[0].time_s >= 4.0 - 0.000001 and announces[1].time_s - ends[0].time_s >= 5.0 - 0.000001
 		ok = ok and log[0][2].handling == "none" and log[0][2].event_odds.test == 2.5
 	_check("weather row scheduler", ok, "%d announcements, %d starts, %d ends, hook retains fog/sky/sound/music/odds/handling" % [announces.size(), starts.size(), ends.size()])
+	w.trigger = {"on": "always"}
+	w.lead_s = 0.0
+	w.live_s = 100.0
+	w.event_odds.test = 0.0
+	d = _director([_row("test")], [w])
+	var suppressed := true
+	var weather_live := false
+	for i in 1000:
+		for f in _step(d, H, FAR, Vector3.ZERO, {"clock_tier": 0 if i < 5 else 4}):
+			weather_live = weather_live or (f.kind == "started" and f.id == "monsoon")
+			suppressed = suppressed and not (f.kind == "announced" and f.id == "test")
+	_check("weather odds applied", weather_live and suppressed, "a live weather multiplier of zero suppresses the named event")
+
+
+func _ending_safety() -> void:
+	var row := _row("restore")
+	row.live_s = 1.0
+	var d = _director([row])
+	var ended := false
+	var early := false
+	for i in 300:
+		var ball := Vector3(21, 1, 0) if i >= 110 and i < 200 else FAR
+		for f in _step(d, H, ball):
+			if f.kind == "ended":
+				ended = true
+				early = early or i < 200
+	_check("restoration waits for clearance", ended and not early, "duration ends at 6.05 s, ball inside clearance until 10 s")
+	# The only bypass is a live opening. It may not expire while a second row
+	# still closes the original edge, even though removing either alone is safe.
+	var opening := _row("open", "lightning", "natural", 3.0)
+	opening.route_change.opens = ["bypass"]
+	opening.live_s = 10.0
+	var closing := _row("close", "lightning", "natural", 3.0)
+	closing.trigger.value = 2
+	closing.route_change.closes = ["main"]
+	closing.live_s = 20.0
+	var map := Map.new()
+	map.park = {"map": "fixture", "event_rows": [opening, closing], "weather_rows": [],
+		"park_rows": [{"id": "site", "at": [0, 0], "y": 0, "size": [20, 2, 20], "yaw_deg": 0}],
+		"routes": [{"id": "main", "from": "drop_in", "to": "landmark", "via": []}, {"id": "bypass", "from": "drop_in", "to": "landmark", "via": []}]}
+	d = Director.new(891, {}, map, 14.0, func(_x, _z): return 0.0)
+	var live := {}
+	var connected := true
+	var completed := false
+	var closure_seen := false
+	for i in 800:
+		for f in _step(d, H, FAR, Vector3.ZERO, {"clock_tier": 1 if i < 75 else 2}):
+			if f.kind == "started":
+				live[f.id] = true
+				closure_seen = closure_seen or f.id == "close"
+			if f.kind == "ended":
+				live.erase(f.id)
+				completed = completed or f.id == "open"
+			connected = connected and (not live.has("close") or live.has("open"))
+	_check("restoration keeps a route", connected and completed and closure_seen and live.is_empty(), "opening held until the independent main closure expires")
 
 
 func _check(label: String, ok: bool, detail: String) -> void:

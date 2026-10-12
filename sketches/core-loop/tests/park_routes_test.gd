@@ -111,7 +111,8 @@ func _stepped_facts(park: Dictionary) -> void:
 		var phases: Array = ["engaged", "stagger", "chunk_1", "chunk_2", "chunk_3"] if i % 800 == 0 else []
 		if i % 2000 == 200:
 			phases.append("broken")
-		for f in d.call("advance", 0.1, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 4, "warden_phases": phases, "grounded": true}):
+		# Route evidence isolates graph changes from the separate pilot corridor hold.
+		for f in d.call("advance", 0.1, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 4, "warden_phases": phases, "grounded": true, "pilot_lines": []}):
 			_observe(f, park, live, started, bad)
 	for f in d.end_all():
 		_observe(f, park, live, started, bad)
@@ -155,7 +156,7 @@ func _adversarial_route() -> void:
 	var started := false
 	for i in 1000:
 		for f in d.call("advance", 0.1, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 4, "grounded": true}):
-			started = started or f.kind == "started"
+			started = started or (f.kind == "started" and f.get("family") != "weather")
 	_check("unsafe route held", not started and land.is_empty(), "no land callback or start fact for a route cut")
 
 
