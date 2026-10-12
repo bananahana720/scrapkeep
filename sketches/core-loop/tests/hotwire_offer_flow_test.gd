@@ -8,7 +8,7 @@ const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
 
 # Unit HW1: the hot-wired Fit / Recycle offer after Warden I and Spark Tread (BUILD-SYSTEMS.md,
 # Two hot-wired parts, H2), on the real Game.
-#   - The offer opens once, on the first beacon_unsealed of the run, not on Warden II.
+#   - The offer opens once per world, on the first beacon_unsealed, not on Warden II.
 #   - Recycle pays the stated cogs once; a second Recycle and a later Fit do nothing.
 #   - Fit adds a striped gate holding the part and changes run.parts only when that gate is
 #     taken; a second Fit does nothing.
@@ -112,6 +112,35 @@ func _take_checks() -> void:
 	build.gates.chosen.emit("riveted_shell")
 	_check("taken through the gate", before == 0 and run.parts.count("riveted_shell") == 1 and build._hotwire_gate_ids().is_empty(),
 		"riveted_shell held %d -> %d, parts %s" % [before, run.parts.count("riveted_shell"), run.parts])
+
+
+func _world_checks() -> void:
+	var build = _game.build
+	var run = _game.ctx.run
+	run.parts.erase("spark_tread")
+	_check("world-one fixture holds one hot-wired part", run.world == 1 and run.parts.has("riveted_shell")
+		and not run.parts.has("spark_tread"), "world %d, parts %s" % [run.world, run.parts])
+	var before: int = _offers
+	_game.events.beacon_unsealed.emit(1)
+	_check("world one cannot offer a second hot-wired part", _offers == before, "offers %d" % _offers)
+	run.world = 2
+	_game.events.beacon_unsealed.emit(1)
+	var pending: Dictionary = build.hotwire_pending()
+	_check("world two offers a second hot-wired part", _offers == before + 1 and pending["state"] == "open"
+		and pending["part_id"] == "spark_tread", "world %d, offers %d, pending %s" % [run.world, _offers, pending])
+	var fitted: bool = build.hotwire_fit()
+	_check("world-two fit waits for the gate", fitted and build._hotwire_gate_ids() == ["spark_tread"]
+		and not run.parts.has("spark_tread"), "fitted %s, gates %s, parts %s" % [fitted, build._hotwire_gate_ids(), run.parts])
+	build.gates.chosen.emit("spark_tread")
+	_check("world two takes both hot-wired parts through gates", run.parts.count("riveted_shell") == 1
+		and run.parts.count("spark_tread") == 1 and build._hotwire_gate_ids().is_empty(), "parts %s" % [run.parts])
+	_game.events.beacon_unsealed.emit(2)
+	_check("world two offers only once", _offers == before + 1, "offers %d" % _offers)
+	build._on_run_started("")
+	build._hotwire_restore()
+	_game.events.beacon_unsealed.emit(1)
+	_check("world-two spent offer survives restore", _offers == before + 1
+		and build.hotwire_pending()["state"] == "fit", "offers %d, pending %s" % [_offers, build.hotwire_pending()])
 
 
 func _tread_setup() -> void:
@@ -293,6 +322,7 @@ func _physics_process(delta: float) -> bool:
 				_check("off at zero mass", _game.build.tread_fires == 2, "fires %d at mass 0" % _game.build.tread_fires)
 				_wear_checks()
 				_take_checks()
+				_world_checks()
 				_phase = "resume"
 				_retry_checks.call_deferred()
 				return false

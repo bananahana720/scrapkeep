@@ -29,7 +29,7 @@ const EFFECTS := {
 	"vault_cooldown": "per", "vault_charges": "count", "dash": "speed", "return_arc": "share",
 	"damage_reduction": "per", "heal_back": "chance", "brace": "share", "hp_per_mass": "per", "floor_hp": "",
 	"bonus_scrap": "chance", "ping": "", "price_scale": "per", "perk": "", "drone": "chance",
-	"slot_cooldown": "per", "overcharge": "damage",
+	"slot_cooldown": "per", "overcharge": "damage", "burden_payout": "per",
 }
 const PASSIVE_EFFECTS := ["slot_cooldown", "damage_reduction", "price_scale", "hp_per_mass", "perk", "ballast",
 	"vault_cooldown", "vault_charges"]
@@ -39,6 +39,7 @@ const PING_RADIUS := 9.0
 var build
 # id -> copies held.
 var copies := {}
+var burden_count := 0
 # kind -> [{id, def, copies, index}], in the order the items were first taken.
 var by_kind := {}
 var timed: Array = []
@@ -92,8 +93,11 @@ static func stacked(d: Resource, key: String, n: int) -> float:
 
 func refresh(held: Array) -> void:
 	copies = {}
+	burden_count = 0
 	var order: Array = []
 	for part_id in held:
+		if Parts.is_burden(part_id):
+			burden_count += 1
 		if not copies.has(part_id):
 			order.append(part_id)
 		copies[part_id] = copies.get(part_id, 0) + 1
@@ -147,6 +151,12 @@ func refresh(held: Array) -> void:
 		var list: Array = by_kind.get(kind, [])
 		list.append(entry)
 		by_kind[kind] = list
+
+
+# All payout copies share one asymptote; the count includes repeated burden parts.
+# Scale the ceiling curve rather than clamp it, so every finite count stays below the cap.
+func burden_payout(d: Resource, n: int) -> float:
+	return d.stack_cap * PartDef.Stacking.value(d.stack_rule, float(d.effect["per"]), burden_count * n, 0.0)
 
 
 # Charges and cooldowns onto the ball's ability state. A raised cap arrives stocked:
@@ -272,6 +282,14 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 	var ctx = build.ctx
 	var element: String = fx.get("element", d.element)
 	match fx.get("do", ""):
+		"burden_payout":
+			var bonus := burden_payout(d, int(copies.get(id, 0)))
+			var weapon_scale: float = build.sheet.mod("weapon_damage")
+			if bonus <= 0.0 or weapon_scale <= 0.0 or c.amount <= 0.0 or not is_instance_valid(c.enemy):
+				return false
+			# The commitment is already weapon-scaled; item_hit applies that scale once.
+			build.item_hit(c.enemy, c.amount * bonus / weapon_scale, element)
+			return true
 		"zap":
 			var from: Vector3 = c.enemy.global_position if is_instance_valid(c.enemy) else c.at
 			var near: Array = build.enemies_near(from, fx.get("reach", 10.0), 2)

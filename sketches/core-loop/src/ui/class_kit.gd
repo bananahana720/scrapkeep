@@ -51,16 +51,22 @@ const WORDS := {
 	"boost": "boost",
 	# --- P-C Sable words ---
 	"bank_shot": "bank shot", "cable_run": "cable run", "ball_lightning": "ball lightning", "outpost": "outpost",
+	"tradeoff_pylon_engineer": "Strong anchors, needs a surface.",
 	# --- end Sable ---
 	# --- P-C Rivet words ---
+	"tradeoff_runner_gunner": "Ignores knockback, still takes damage.",
 	# --- end Rivet ---
 	# --- P-C Kest words ---
+	"tradeoff_demolitions_caster": "Delayed blasts, needs fuse timing.",
 	# --- end Kest ---
 	# --- P-C Tarn words ---
+	"tradeoff_tarn": "Heavy claws, must fight close.",
 	# --- end Tarn ---
 	# --- P-C Tally words ---
+	"tradeoff_tally": "Linked payoff, needs pressure from rolling.",
 	# --- end Tally ---
 	# --- P-C Cannon words ---
+	"tradeoff_remembered_cannon": "Long lanes, needs enemies lined up.",
 	# --- end Cannon ---
 }
 
@@ -173,3 +179,7 @@ static func difficulty(def) -> int:
 
 static func role_line(def) -> String:
 	return "%s · %s" % [def.role, def.species] if def.species != "" else String(def.role)
+
+
+static func tradeoff(def) -> String:
+	return WORDS.get("tradeoff_" + String(def.id), "") if def != null else ""

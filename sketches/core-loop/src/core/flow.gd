@@ -245,6 +245,8 @@ func _begin_run(chosen: Resource) -> void:
 	_world = 0
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
+	if ctx.profile != null and ctx.profile.settle_previous_run_tallies() and ctx.profile.can_save and not ctx.profile.save():
+		warn_once("profile_tally_save", "flow: earlier run tallies not saved: %s" % ctx.profile.last_error)
 	run_won = false
 	ctx.run.begin(chosen)
 	_seed_companion()

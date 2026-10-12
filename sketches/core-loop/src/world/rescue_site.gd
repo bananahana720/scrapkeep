@@ -7,6 +7,8 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const MODEL := "res://assets/models/world_one/rescue_cage.glb"
 const REQUIRED := ["CageFrame", "CageGate", "CageLatch", "CageSeat"]
 const PILOT_QUESTS := {"rivet": "runner_gunner", "dig": "demolitions_caster"}
+const UNLOCK_CLIP := "unlock"
+const IDLE_CLIP := "idle_loop"
 static var model_path := MODEL
 static var _shared := {}
 static var _warned := {}
@@ -43,6 +45,10 @@ class Cage extends "res://src/world/device.gd":
 	var _signal: StandardMaterial3D
 	var _animator: AnimationPlayer
 	var _pose := ""
+	# True once the lock was seen breaking, so a spent cage was freed in front of the player
+	# (not rebuilt spent on a retry): the pilot plays unlock (PILOT-CLIPS section 1.4) instead of
+	# big_cheer when its GLB has it, then idle_loop. tick() stays as pinned.
+	var _freed_now := false
 
 	func _init() -> void:
 		family = "ally"
@@ -117,6 +123,13 @@ class Cage extends "res://src/world/device.gd":
 			var fitted := assets.fit_pilot_into(_pilot, class_id, Interactables.color(family))
 			_animator = fitted.get("animator")
 			assets.free()
+			if _animator != null:
+				_animator.animation_finished.connect(_on_pilot_clip_done)
+
+	func _on_pilot_clip_done(clip: StringName) -> void:
+		if String(clip) == UNLOCK_CLIP and _animator.has_animation(IDLE_CLIP):
+			_pose = IDLE_CLIP
+			_animator.play(IDLE_CLIP, 0.1)
 
 	func _build_freed_walls() -> void:
 		var steel := Palette.solid(Palette.CHARCOAL)
@@ -168,7 +181,11 @@ class Cage extends "res://src/world/device.gd":
 		if _pilot != null:
 			_pilot.position = Vector3(0.0, 1.6, 2.1) if spent else Vector3(0.0, 1.25 + (0.25 if breaking else 0.0), -0.25)
 			_pilot.rotation.y = PI + (0.2 * sin(fill * TAU) if breaking else 0.0)
+		if breaking:
+			_freed_now = true
 		var pose := "big_cheer" if spent else ("heave" if breaking else "slump")
+		if spent and _freed_now and _animator != null and _animator.has_animation(UNLOCK_CLIP):
+			pose = UNLOCK_CLIP if _pose != IDLE_CLIP else IDLE_CLIP
 		if pose != _pose and _animator != null and _animator.has_animation(pose):
 			_pose = pose
 			_animator.play(pose)
