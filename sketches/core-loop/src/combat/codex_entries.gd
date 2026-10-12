@@ -189,6 +189,14 @@ const ENTRIES := [
 	{"id": "kest_tick_tick_boom", "name": "Tick, Tick, Boom", "hint": "Watch the whole pack before you commit.", "clue": "Windhover + eight different machines", "text": "Strike eight different machines with the charges and landing of one Windhover."},
 	# --- end Kest ---
 	# --- P-C Tarn entries ---
+	{"id": "tarn_claw_drag", "name": "Claw Drag", "hint": "Why go to them when the line can bring them?",
+		"clue": "a bitten enemy + 3 + a click", "text": "3 sends a claw down the cable. Light machines arrive clamped in claw reach. Too heavy, and you climb it instead. On a wall it rips a slab loose."},
+	{"id": "tarn_redjaw_rend", "name": "Redjaw Rend", "hint": "A full ring and a line to ride. Take company.",
+		"clue": "a full ring + Q + enemies near the line", "text": "Q climbs claw over claw, snatching and towing nearby machines. The catch lands with you, rent and clamped. A heavier ball tows heavier machines."},
+	{"id": "tarn_dragged", "name": "Ten in the Claws", "hint": "Bring the workshop to your teeth.",
+		"clue": "ten different machines + claw drag + one stage", "text": "Drag ten machines into claw reach in one stage to earn Claw Marks."},
+	{"id": "tarn_hold_still", "name": "Hold Still", "hint": "The machine, I mean.",
+		"clue": "three hostile holds + Redjaw Rend + one run", "text": "Break three hostile holds with Redjaw Rend in one run to earn the Steady Cap."},
 	# --- end Tarn ---
 	# --- P-C Tally entries ---
 	# --- end Tally ---
@@ -201,6 +209,12 @@ const ENTRIES := [
 # whose code fires it. tests/codex_coverage_test.gd reads this to prove every kind that can
 # spawn has a trick that can fire.
 const DETECTORS := {
+	# --- P-C Tarn detectors ---
+	"tarn_claw_drag": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
+	"tarn_redjaw_rend": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
+	"tarn_dragged": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
+	"tarn_hold_still": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
+	# --- end Tarn ---
 	"shell_return": {"kind": "lobber", "script": "res://src/combat/combat.gd"},
 	"counter_ram": {"kind": "chaser", "script": "res://src/combat/combat.gd"},
 	"chain": {"kind": "", "script": "res://src/combat/combat.gd"},

@@ -337,6 +337,7 @@ func setup(ctx_ref) -> void:
 		"cable_charge": KestKit.line_row(self),
 		# --- end Kest ---
 		# --- P-C Tarn line skill ---
+		"claw_drag": preload("res://src/combat/tarn_claw.gd").line_row(self),
 		# --- end Tarn ---
 		# --- P-C Tally line skill ---
 		# --- end Tally ---

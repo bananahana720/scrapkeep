@@ -156,6 +156,8 @@ const SLOTS := {
 	# Hoberman hubs, pivot pins, studs and the lap bar: its own slot so an equipped paint never
 	# tints copper (ROSTER-LOOK section 6).
 	"copper": {"color": Palette.COPPER, "metal": 0.6, "rough": 0.4},
+	# KF7d round 4: hydraulic rams keep their vertex colours without paint or wear.
+	"hydraulic": {"color": Color.WHITE, "vertex": true, "metal": 0.4, "rough": 0.35},
 	# Warden mantle working throat: hazard, lit by the Warden's charge_fraction (see _update_mantle).
 	"mantle_tool": {"color": Palette.HAZARD, "emit": 0.0, "rough": 0.5},
 	"rarity": {"from": "rarity", "emit": 1.4, "rough": 0.5},

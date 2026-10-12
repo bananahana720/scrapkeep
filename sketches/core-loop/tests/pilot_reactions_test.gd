@@ -1,5 +1,6 @@
 extends SceneTree
 
+# Re-pinned 2026-10-11 (PE-0b): table existence selects 18 or seven clips for each pilot.
 # Re-pinned 2026-10-11 (PE-0, design-v3/PILOT-CLIPS.md section 8): the rows now name the eleven
 # new clips, which today's GLBs lack, so the asset check follows the roster instead of the rows: a
 # pilot whose src/presentation/clips/<pilot>.json exists carries all 18 roster clips, one without
@@ -54,7 +55,7 @@ func check_table_rule(animator: AnimationPlayer, stem: String) -> void:
 		if Trigger.roster()["pilots"][name].has("has_table"):
 			flagged.append(name)
 	check("roster.json carries no has_table flag " + str(flagged), flagged.is_empty())
-	check(stem + " has no pose table in res:// today", not Trigger.has_table(stem))
+	check("probe: a missing pilot table reads as absent", not Trigger.has_table("__missing_pilot_table__"))
 	var dir := "user://pilot-clips-table-probe"
 	DirAccess.make_dir_recursive_absolute(dir)
 	var probe := FileAccess.open(dir.path_join(stem + ".json"), FileAccess.WRITE)
@@ -77,8 +78,24 @@ func check_table_rule(animator: AnimationPlayer, stem: String) -> void:
 	check("probe: removing the file removes the table", not Trigger.has_table(stem, dir))
 
 
+# Godot's scene importer strips a "_loop" suffix from animation names when name suffixes are on, so
+# idle_loop would import as idle (PE-RIVET and PE-CANNON round 2, 2026-10-11). Every pilot GLB's
+# import keeps names as exported and sets each roster _loop clip to loop explicitly.
+func check_import_keeps_loop_names(class_id: String) -> void:
+	var settings := ConfigFile.new()
+	var path: String = Hero.PILOTS[class_id] + ".import"
+	check(class_id + " import settings load", settings.load(path) == OK)
+	check(class_id + " import keeps _loop names (nodes/use_name_suffixes=false)", settings.get_value("params", "nodes/use_name_suffixes", true) == false)
+	var animations: Dictionary = settings.get_value("params", "_subresources", {}).get("animations", {})
+	for clip in Trigger.required_clips(true):
+		if String(clip).ends_with("_loop"):
+			var mode: int = animations.get(clip, {}).get("settings/loop_mode", Animation.LOOP_NONE)
+			check("%s import loops %s" % [class_id, clip], mode == Animation.LOOP_LINEAR)
+
+
 func check_assets() -> void:
 	for class_id in Hero.PILOTS:
+		check_import_keeps_loop_names(class_id)
 		var pilot: Node = load(Hero.PILOTS[class_id]).instantiate()
 		var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 		check(class_id + " has AnimationPlayer", animator != null)

@@ -125,6 +125,12 @@ const ROWS := {
 	"ach_kest_tick_tick_boom": {"name": "Tick, Tick, Boom", "text": "Strike eight machines with one Windhover.", "on": "synergy_discovered", "where": {"synergy_id": "kest_tick_tick_boom"}, "count": 1, "reward": {"cosmetic": "shell_kest_roost"}},
 	# --- end demolitions_caster ---
 	# --- tarn (Tarn): P-C Tarn adds its grant rows here ---
+	"ach_tarn_dragged": {"name": "Ten Dragged", "text": "Drag ten machines into your claws in one stage.", "on": "synergy_discovered",
+		"where": {"synergy_id": "tarn_dragged"}, "count": 1, "reward": {"cosmetic": "trail_tarn_claw_marks"}},
+	"ach_tarn_six_at_once": {"name": "Six at Once", "text": "Land Redjaw Rend on six machines at once.", "on": "ultimate_landed",
+		"where": {"ultimate_id": "redjaw_rend"}, "at_least": {"hits": 6}, "count": 1, "reward": {"cosmetic": "shell_tarn_redjaw_teeth"}},
+	"ach_tarn_hold_still": {"name": "Hold Still", "text": "Break a hold with Redjaw Rend three times.", "hidden": true, "on": "synergy_discovered",
+		"where": {"synergy_id": "tarn_hold_still"}, "count": 1, "beat": "Hold still. The machine, I mean.", "reward": {"cosmetic": "outfit_tarn_steady_cap"}},
 	# --- end tarn ---
 	# --- tally (Tally): P-C Tally adds its grant rows here ---
 	# --- end tally ---
