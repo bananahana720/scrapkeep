@@ -37,6 +37,10 @@ var _parts := {}
 var _materials := {}
 var _reactor_light: OmniLight3D
 var _core_key: SpotLight3D
+var _light_pool: Node3D
+var _dress_lights := []
+var _floor_pools := []
+var _light_values := {}
 
 
 static func attach(owner_module):
@@ -133,6 +137,11 @@ func _load_parts(path: String) -> bool:
 
 
 func _build() -> void:
+	_light_pool = module.ctx.root.get_node_or_null("WakingLightPool") as Node3D
+	if _light_pool == null:
+		_light_pool = Node3D.new()
+		_light_pool.name = "WakingLightPool"
+		module.ctx.root.add_child(_light_pool)
 	_floor(module.pad, "PitDressing")
 	for k in module._floor_bodies:
 		_floor(module._floor_bodies[k], "FloorDressing")
@@ -151,33 +160,78 @@ func _build() -> void:
 			_put(wall_batches, file, Transform3D(Basis(Vector3.UP, angle).scaled(scale_), at))
 	_flush(walls, wall_batches)
 	_works()
-	_reactor_light = OmniLight3D.new()
-	_reactor_light.name = "ReactorBounce"
+	_reactor_light = _light_pool.get_node_or_null("ReactorBounce") as OmniLight3D
+	if _reactor_light == null:
+		_reactor_light = OmniLight3D.new()
+		_reactor_light.name = "ReactorBounce"
+		_light_pool.add_child(_reactor_light)
+	_reactor_light.reparent(self, false)
 	_reactor_light.light_color = Color("91b4ce")
 	_reactor_light.light_energy = LIGHTS.reactor.energy
 	_reactor_light.omni_range = LIGHTS.reactor.range
 	_reactor_light.shadow_enabled = false
-	add_child(_reactor_light)
-	_core_key = SpotLight3D.new()
-	_core_key.name = "CoreKey"
+	_core_key = _light_pool.get_node_or_null("CoreKey") as SpotLight3D
+	if _core_key == null:
+		_core_key = SpotLight3D.new()
+		_core_key.name = "CoreKey"
+		_light_pool.add_child(_core_key)
+	_core_key.reparent(self, false)
 	_core_key.light_color = WorldLook.ARENAS.waking.key
 	_core_key.light_energy = LIGHTS.core_key.energy
 	_core_key.spot_range = LIGHTS.core_key.range
 	_core_key.spot_angle = LIGHTS.core_key.angle
 	_core_key.shadow_enabled = true
-	add_child(_core_key)
 	_follow_reactor()
 	var lights := []
 	for light in find_children("*", "Light3D", true, false):
-		lights.append({"object": light, "values": {"light_energy": light.light_energy}})
+		_dress_lights.append(light)
+		lights.append(_lighting_entry(light))
 	for body in [module.pad] + module._floor_bodies.values():
 		for light in body.find_children("RimPool*", "OmniLight3D", true, false):
-			lights.append({"object": light, "values": {"light_energy": light.light_energy}})
+			lights.append(_lighting_entry(light))
 	for light in module.ctx.root.find_children("*", "DirectionalLight3D", true, false):
 		lights.append({"object": light, "values": {"visible": false}})
 	var look: Dictionary = WorldLook.ARENAS.waking
 	GraphicsPreset.set_lighting(self, module.ctx.terrain.environment,
 		WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air), lights, "arena")
+
+
+# The preset baseline is dark; the active arena alone supplies energy and visibility.
+func _lighting_entry(light: Light3D) -> Dictionary:
+	var values := {"light_energy": light.light_energy, "visible": true}
+	_light_values[light.get_instance_id()] = values
+	light.light_energy = 0.0
+	light.visible = false
+	return {"object": light, "values": values}
+
+
+func _darken(light: Light3D) -> void:
+	var values: Dictionary = _light_values.get(light.get_instance_id(), {})
+	values["light_energy"] = 0.0
+	values["visible"] = false
+	light.light_energy = 0.0
+	light.visible = false
+
+
+# Return borrowed lights before the arena or a floor can destroy its children.
+func release_lights() -> void:
+	GraphicsPreset.release_lighting(get_instance_id())
+	for pools in _floor_pools:
+		_retire_floor(pools)
+	for light: Light3D in _dress_lights:
+		_darken(light)
+		light.reparent(_light_pool, false)
+	_floor_pools.clear()
+	_dress_lights.clear()
+
+
+func _retire_floor(pools: Node3D) -> void:
+	if not is_instance_valid(_light_pool) or pools.get_parent() == _light_pool:
+		return
+	for light: Light3D in pools.get_children():
+		_darken(light)
+	pools.name = pools.get_meta("pool_name")
+	pools.reparent(_light_pool, false)
 
 
 func _floor(body: StaticBody3D, node_name: String) -> void:
@@ -190,21 +244,30 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 	for child in body.get_children():
 		if child is MeshInstance3D:
 			child.material_override = _materials["floor"]
-	var pools := Node3D.new()
+	var pools := _light_pool.get_node_or_null(String(body.name)) as Node3D
+	if pools == null:
+		pools = Node3D.new()
+		pools.name = body.name
+		pools.set_meta("pool_name", String(body.name))
+		_light_pool.add_child(pools)
+	pools.reparent(body, false)
 	pools.name = "FloorLights"
 	pools.position.y = skin.position.y
-	body.add_child(pools)
+	_floor_pools.append(pools)
+	body.tree_exiting.connect(_retire_floor.bind(pools), CONNECT_ONE_SHOT)
 	for i in 4:
 		var angle := i * TAU / 4.0 + PI / 4.0
-		var light := OmniLight3D.new()
-		light.name = "RimPool%d" % i
+		var light := pools.get_node_or_null("RimPool%d" % i) as OmniLight3D
+		if light == null:
+			light = OmniLight3D.new()
+			light.name = "RimPool%d" % i
+			pools.add_child(light)
 		var pool: Dictionary = LIGHTS.rim_pool
 		light.position = Vector3(sin(angle) * pool.radius, pool.height, cos(angle) * pool.radius)
 		light.light_color = WorldLook.ARENAS.waking.floor_accent
 		light.light_energy = pool.energy
 		light.omni_range = pool.range
 		light.shadow_enabled = false
-		pools.add_child(light)
 
 
 func _works() -> void:
@@ -221,14 +284,18 @@ func _works() -> void:
 			for link in 3:
 				_put(batches, "lamp_curve_module.glb", Transform3D(basis, wall) * Transform3D(Basis.IDENTITY, Vector3((link - 1) * 3.0, 0, 0)))
 			# One pool per line; deeper machinery recedes through the same fog as the cut faces.
-			var light := OmniLight3D.new()
-			light.name = "LampPool%d_%d" % [tier, line]
+			var light_name := "LampPool%d_%d" % [tier, line]
+			var light := _light_pool.get_node_or_null(light_name) as OmniLight3D
+			if light == null:
+				light = OmniLight3D.new()
+				light.name = light_name
+				_light_pool.add_child(light)
+			light.reparent(works, false)
 			light.light_color = DigScenery.LAMP_LIGHT
 			light.light_energy = LIGHTS.lamp_pool.energy
 			light.omni_range = LIGHTS.lamp_pool.range
 			light.shadow_enabled = false
 			light.position = wall + basis * Vector3(0, -1.0, -1.0)
-			works.add_child(light)
 			var foot := Vector3(sin(angle) * (WALL_RADIUS - 4.2), y - 5.0, cos(angle) * (WALL_RADIUS - 4.2))
 			_put(batches, "strut_bent.glb" if line % 3 == 0 else "strut_tall.glb", Transform3D(basis.scaled(Vector3.ONE * 1.4), foot))
 			if line % 2 == 0:

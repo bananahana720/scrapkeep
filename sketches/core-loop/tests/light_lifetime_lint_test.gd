@@ -123,6 +123,9 @@ func _waking_lifetime() -> void:
 	var lights := _waking_lights()
 	_t.eq("Waking makes all 50 arena lights", lights.size(), 50)
 	var ids := lights.map(func(light): return light.get_instance_id())
+	mod._dropping = 1
+	mod._drop_left = 0.0
+	await _check("Waking floor drop preserves every light")
 	mod.exit_arena()
 	await _check("Waking exit preserves every light")
 	for id in ids:

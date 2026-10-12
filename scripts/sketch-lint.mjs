@@ -144,7 +144,7 @@ export const LIGHT_OWNERS = {
   "src/world/map_gorge.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },
   "src/world/map_reach.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },
   "src/world/terrain.gd": { sites: 1, owner: "the world sun, session-lived" },
-  "src/presentation/arena_waking_dress.gd": { sites: 4, owner: "ArenaWakingDress, freed by boss/waking.gd exit_arena: stage-freed", open: true },
+  "src/presentation/arena_waking_dress.gd": { sites: 4, owner: "WakingLightPool under ctx.root, session-lived; lent to the arena and floors, darkened and returned before exit or drop" },
 };
 
 const lightNew = /\b(?:Omni|Spot|Directional)Light3D\.new\(/;
