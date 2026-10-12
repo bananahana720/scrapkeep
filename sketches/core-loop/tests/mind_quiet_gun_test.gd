@@ -102,7 +102,7 @@ func _cases() -> void:
 	var answer_sound := Rows.sound("mind_adapted", {"motif": "cannon"})
 	_t.near("answer trim", audio.cannon_log.back()["db"], SfxBank.trim_db(answer_sound) + audio.PRIORITY_DB[Rows.priority("mind_adapted")])
 	_t.near("Cannon answer follows the live key", audio.cue_log.back()[4], Harmony.ratio(3))
-	_t.eq("answer dresses the Mind adaptation fact", audio.cue_log.back()[0], "mind_adapted")
+	_t.check("answer dresses the Mind adaptation fact", audio.cue_log.back()[0] == "mind_adapted" and audio.cue_log.back()[1] == answer_sound and audio.cue_log.back()[2] == "now", str(audio.cue_log.back()))
 	var cues: Dictionary = audio.get_script().get_script_constant_map().get("CANNON_CUES", {})
 	_t.check("Cannon cue table has no absolute db rows", not cues.is_empty() and cues.values().all(func(row): return not row.has("db")), str(cues))
 	var cue_count: int = audio.cue_log.size()

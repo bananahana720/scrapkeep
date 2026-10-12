@@ -1630,7 +1630,7 @@ func _step_cannon(delta: float) -> void:
 			if h.is_live() and not entry["noted"]:
 				entry["noted"] = true
 				entry["live_clock"] = _clock
-				_cannon_note(entry["family"])
+				_cannon_note(entry)
 			if not h.is_done():
 				done = false
 			if h.is_live():
@@ -1764,10 +1764,13 @@ func _cannon_audio():
 	return presentation.audio if presentation != null else null
 
 
-func _cannon_note(family: String) -> void:
+func _cannon_note(entry: Dictionary) -> void:
 	var audio = _cannon_audio()
 	if audio != null:
-		audio.cannon_family(family)
+		var kind: String = {"weapon": "cannon_weapon", "line": "cannon_line_live", "drop_or_slam": "cannon_smash"}.get(entry["source"], "cannon_live")
+		if entry["family"] == "split_lane" and entry["source"] == "special" and not entry["options"].has("budget"):
+			kind = "cannon_recoil"
+		audio.cannon_family(entry["family"], false, kind)
 
 
 func _cannon_line_geometry(fraction: float) -> Dictionary:
@@ -1844,7 +1847,7 @@ func _cannon_recital(family: String, at: Vector3) -> void:
 		_discover("cannon_recital", at)
 		var audio = _cannon_audio()
 		if audio != null:
-			audio.cannon_motif("cannon_recital", -6.0, true)
+			audio.cannon_motif("cannon_recital", true)
 
 
 func _cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: bool, mortar: bool, budget: Dictionary) -> float:

@@ -393,7 +393,7 @@ func advance(delta: float) -> void:
 		cannon_answer_at = local
 		var audio = game.presentation.audio
 		if audio != null:
-			audio.cannon_motif("ending_cannon", -6.0, true)
+			audio.cannon_motif("ending_cannon", true)
 	phase = "flyover" if local < ESTABLISH_SECONDS else "copy"
 	var lines: Array = Worlds.ENDING.log[int(Worlds.ROWS[world_index].id)]
 	var line := mini(int(maxf(0.0, local - ESTABLISH_SECONDS) / LINE_SECONDS), lines.size() - 1)

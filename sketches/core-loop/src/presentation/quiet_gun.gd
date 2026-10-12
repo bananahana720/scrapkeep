@@ -151,7 +151,7 @@ func fall() -> void:
 	notes.append(Harmony.motif_notes("cannon"))
 	var audio = _audio()
 	if audio != null:
-		audio.cannon_motif("mind_quiet_gun_fall", -6.0, true)
+		audio.cannon_motif("mind_quiet_gun_fall", true)
 
 
 func ending_ready() -> void:
