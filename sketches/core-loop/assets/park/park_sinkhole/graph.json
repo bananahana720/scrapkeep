@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "2b2919c167f16e8e2fd1e0d343ce72d4cc760170e97ac6dd3527ff403a62d66d",
+  "bake_sha256": "4a686660ba0bdbaae6986afacac5863334b17d9e90b6e62a85fa17bfca37d459",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 943059,
-  "edges": 315291,
+  "bytes": 942720,
+  "edges": 315290,
   "first_failed": "",
   "flags": {
     "deck": 55,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 1909,
   "full_visit_ratio": "1.363",
-  "graph_sha256": "b4ea05ba23cefd5e4239939aa583f89b420afd38d0dfba159a47dbbd497b3d7f",
+  "graph_sha256": "5bd132e8123ec9b302e696bf62f1d5ce1ae9024cf2505db9aa6666fea690bf18",
   "line_errors": [],
   "line_path_nodes": 175,
   "longest_est_m": 2038,
   "map": "park_sinkhole",
   "nodes": 40456,
-  "park_sha256": "fd111f76248eaedfd5dc9dd16871d6487380c9af9e7ef78e19c143da8611c2f9",
+  "park_sha256": "70c2ef83f0f21cc3f65cd981117f3a9b2488ae7521c8256a982c84485864d406",
   "pockets": [
     {
       "clear_ring": [],
@@ -248,11 +248,11 @@
         "viable": false
       }
     ],
-    "count": 152,
+    "count": 151,
     "crossings": {
       "drop": 22,
       "ride": 45,
-      "walk": 376
+      "walk": 374
     },
     "hidden": [
       {

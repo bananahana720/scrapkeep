@@ -134,3 +134,88 @@ Dead stops and reach, per line:
 - pair tarn-cannon: within 8 m 0.42 -> distinct
 - pair tally-cannon: within 8 m 0.55 -> same
 - largest mutually distinct set: 3 ['rivet', 'kest', 'tarn']
+
+
+## Sol continuation, 2026-10-12
+
+Selected geometry restores the exact merged-baseline park bytes. The complete 56-run merged baseline is the selected artifact's traversal receipt. Two passage reworks were tested and discarded because they stopped more Sable seeds. No traced run enters these tables. The distinct-lines tick measurement remains unavailable in the untraced tool.
+
+### Selected merged baseline
+
+Values are median / worst seed. Segment cells list the three segment medians and the worst seed's longest segment. All source runs are untraced. Anchor gap uses the worst seed. Peak includes median tier-3 seconds.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 8 / -; PASS | 8 / -; PASS | 8 / -; PASS | 8 / -; PASS | 8 / -; PASS | 8 / -; PASS | 8 / -; PASS |
+| Time to Warden, s | 66.67 / 71.08; PASS | 102.365 / 104.13; PASS | 97.48 / 99.56; PASS | 94.175 / 94.68; PASS | 97.66 / 100; PASS | 89.935 / 91.54; PASS | 100.37 / 101.2; judged in floor row |
+| Segment medians, s | 29.39 / 16.39 / 19.97 / 33.41; PASS | 42.5 / 31.15 / 29.05 / 43.27; PASS | 44.24 / 26.57 / 26.35 / 45.44; PASS | 41.3 / 28.61 / 23.82 / 41.68; PASS | 44.18 / 25.36 / 28.19 / 46.94; PASS | 42.33 / 21.38 / 26.29 / 42.64; PASS | 43.95 / 27.17 / 29.27 / 44.91; reported, pilot band, not the floor's |
+| Flow share | 0.946 / 0.925; PASS | 0.878 / 0.859; PASS | 0.887 / 0.839; PASS | 0.958 / 0.94; PASS | 0.902 / 0.87; PASS | 0.971 / 0.966; PASS | 0.885 / 0.862; reported, pilot band, not the floor's |
+| Airborne share | 0.412 / 0.3886..0.4518; PASS | 0.167 / 0.1581..0.1702; PASS | 0.208 / 0.2028..0.2206; PASS | 0.221 / 0.2101..0.2315; PASS | 0.162 / 0.1545..0.1709; PASS | 0.189 / 0.1751..0.1959; PASS | 0.16 / 0.1478..0.1645; reported, pilot band, not the floor's |
+| Dead stops | 0 / 1; MISS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS | 0 / 0; PASS |
+| Peak speed, m/s; tier-3 time, s | 54.24 / 53.14; tier 3 52.22; PASS | 33.685 / 32.77; tier 3 13.505; PASS | 29.905 / 28.38; tier 3 9.02; PASS | 32.025 / 31.47; tier 3 12.63; PASS | 33.12 / 31.55; tier 3 12.83; PASS | 32.09 / 31.92; tier 3 12.3; PASS | 33.07 / 32.49; tier 3 12.945; reported, pilot band, not the floor's |
+| Quiet stretch, s | 6.125 / 7.17; PASS | 10.485 / 10.97; PASS | 10.11 / 10.92; PASS | 10.45 / 11.37; PASS | 8.87 / 12.34; PASS | 8.955 / 10.48; PASS | 9.305 / 11.92; reported, pilot band, not the floor's |
+| Anchor gap, m | 20.65 / 30.4; PASS | 14.05 / 14.6; PASS | 14.3 / 17.2; PASS | 10.75 / 11.3; PASS | 13.7 / 14.7; PASS | 21.25 / 28.6; PASS | 14.75 / 17.4; reported, pilot band, not the floor's |
+| Distinct ride facts | 5 / 5; PASS | 6 / 6; PASS | 5 / 5; PASS | 4 / 4; PASS | 6 / 5; PASS | 5 / 5; PASS | 5 / 5; reported, pilot band, not the floor's |
+| Length / straight distance | 1.66 / 1.63..1.73; PASS | 1.645 / 1.64..1.65; PASS | 1.59 / 1.59..1.60; PASS | 1.64 / 1.63..1.65; PASS | 1.57 / 1.56..1.58; PASS | 1.51 / 1.51..1.52; PASS | 1.55 / 1.55..1.56; reported, pilot band, not the floor's |
+| Floor row | stage floor row | stage floor row | stage floor row | stage floor row | stage floor row | stage floor row | 100.37 / 101.2; cap 204.73; PASS |
+| Distinct lines | not measured in untraced tool | not measured in untraced tool | not measured in untraced tool | not measured in untraced tool | not measured in untraced tool | not measured in untraced tool | not measured in untraced tool |
+
+Stop coordinates from untraced runs:
+- sable: seed 7: [-203.3, -450.4] at 21.19 s
+- rivet: none
+- kest: none
+- tarn: none
+- tally: none
+- cannon: none
+- floor: none
+
+
+### Discarded wider bend
+
+Values are median / worst seed. Segment cells list the three segment medians and the worst seed's longest segment. All source runs are untraced. Anchor gap uses the worst seed. Peak includes median tier-3 seconds.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 8 / -; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Time to Warden, s | 68.155 / 73.91; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Segment medians, s | 31.29 / 17.58 / 20.13 / 32.5; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Flow share | 0.926 / 0.907; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Airborne share | 0.391 / 0.3549..0.4202; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Dead stops | 1 / 1; MISS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Peak speed, m/s; tier-3 time, s | 54.24 / 53.14; tier 3 50.065; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Quiet stretch, s | 6.435 / 8.33; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Anchor gap, m | 15.8 / 23.4; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Distinct ride facts | 5 / 5; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Length / straight distance | 1.695 / 1.65..1.72; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Floor row | stage floor row | not measured | not measured | not measured | not measured | not measured | not measured |
+| Distinct lines | not measured in untraced tool | not measured | not measured | not measured | not measured | not measured | not measured |
+
+Stop coordinates from untraced runs:
+- sable: seed 1: [-174.9, -390.9] at 22.4 s; seed 2: [18.6, -162.4] at 42.64 s; seed 4: [-177.4, -383.8] at 22.13 s; seed 5: [-170.4, -396.8] at 22.07 s; seed 6: [-176.9, -384.5] at 22.4 s
+
+Only Sable was remeasured on this discarded geometry. The other lines are not measured in this table.
+
+### Discarded short kicker
+
+Values are median / worst seed. Segment cells list the three segment medians and the worst seed's longest segment. All source runs are untraced. Anchor gap uses the worst seed. Peak includes median tier-3 seconds.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden | 8 / -; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Time to Warden, s | 67.925 / 68.76; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Segment medians, s | 29.05 / 17.81 / 19.7 / 31.67; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Flow share | 0.923 / 0.909; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Airborne share | 0.413 / 0.3952..0.4361; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Dead stops | 0.5 / 2; MISS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Peak speed, m/s; tier-3 time, s | 54.24 / 53.14; tier 3 50.41; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Quiet stretch, s | 5.835 / 6.94; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Anchor gap, m | 17.9 / 22.7; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Distinct ride facts | 5 / 5; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Length / straight distance | 1.65 / 1.63..1.69; PASS | not measured | not measured | not measured | not measured | not measured | not measured |
+| Floor row | stage floor row | not measured | not measured | not measured | not measured | not measured | not measured |
+| Distinct lines | not measured in untraced tool | not measured | not measured | not measured | not measured | not measured | not measured |
+
+Stop coordinates from untraced runs:
+- sable: seed 1: [-173.1, -392.2] at 21.89 s; seed 2: [18.9, -159.9] at 37.44 s; seed 4: [-166.2, -404.9] at 21.99 s; seed 5: [-172.8, -395.8] at 21.9 s; seed 5: [-175.4, -390.3] at 22.53 s
+
+Only Sable was remeasured on this discarded geometry. The other lines are not measured in this table.
