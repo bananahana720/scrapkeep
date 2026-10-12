@@ -2,6 +2,7 @@ extends SceneTree
 
 const Director := preload("res://src/world/event_director.gd")
 const Kinds := preload("res://src/core/event_kinds.gd")
+const Palette := preload("res://src/core/palette.gd")
 const H := 0.05
 const BAR := 240.0 / 172.0
 const FAR := Vector3(1000.0, 1.0, 1000.0)
@@ -22,6 +23,7 @@ func _initialize() -> void:
 	else:
 		_triggers()
 		_leads()
+		_warning_grammar()
 		_clearance()
 		_overlap()
 		_held_announcements()
@@ -131,6 +133,15 @@ func _leads() -> void:
 				if not ok:
 					details.append("%s lead %.1f bar %s: announce %.3f land %.3f expected %.3f" % [spec[0], lead, on_bar, announced, landed, aligned])
 	_check(LABELS[1], good and count == 20, "%d schedules; %s" % [count, details])
+
+
+func _warning_grammar() -> void:
+	var bad := []
+	for form in ["flood_rising", "fleet_inbound", "ancient_stirring", "boiler_pressure", "lightning_charge"]:
+		var row: Dictionary = Kinds.world_row(form)
+		if row.get("color") != Palette.HAZARD or row.get("sound") != "threat_whistle" or row.get("priority") != 2 or not str(row.get("sound_next", "")).ends_with("falling_pure"):
+			bad.append(form)
+	_check("hostile telegraph colour and sound grammar", bad.is_empty(), "five WORLD_ROWS warnings use Palette.HAZARD, threat_whistle, priority 2 and falling_pure; mismatches=%s" % [bad])
 
 
 func _clearance() -> void:
