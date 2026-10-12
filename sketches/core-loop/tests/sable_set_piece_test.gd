@@ -8,7 +8,7 @@ const Harpoon := preload("res://src/movement/harpoon.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 38
+const EXPECTED_CHECKS := 39
 const BEAT := 60.0 / 172.0
 var _t := T.new("sable_set_piece_test")
 var _game
@@ -93,6 +93,7 @@ func _run() -> void:
 	_t.check("every beat callback within one sixteenth", _stakes.beat_log.all(func(row): return absf(float(row["time"]) - float(row["expected"])) <= BEAT / 4.0))
 	var note_log: Array = _game.presentation.audio.sable_note_log.filter(func(row): return row["kind"] == "stake")
 	_t.eq("one actual audio note decision per stake beat", note_log.size(), _stakes.beat_log.size())
+	_t.check("Sable peak resolves her motif stinger", _game.presentation.audio.cue_log.any(func(row): return row[0] == "ultimate_peak" and row[1] == "sable_arpeggio"))
 	_t.check("stake geometry has no lights or per-instance material", _stakes.nodes.all(func(n): return n.find_children("*", "Light3D", true, false).is_empty() and n.find_children("*", "MeshInstance3D", true, false).all(func(mesh): return mesh.material_override == null)))
 	_t.check("blazing exit in range", _release.length() >= 27.1 - 0.001 and _release.length() <= 45.001, str(_release))
 	_t.near("flat exit tips up twelve degrees", rad_to_deg(asin(_release.normalized().y)), 12.0, 2.0)

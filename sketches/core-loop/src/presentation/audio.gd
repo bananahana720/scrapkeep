@@ -1018,7 +1018,9 @@ func _connect_all(events) -> void:
 	events.run_started.connect(func(_class_id: String): _set_ult_lift(false))
 	events.ultimate_ready.connect(_on_ultimate_ready)
 	events.ultimate_started.connect(_on_ultimate_started)
-	events.ultimate_peak.connect(func(_id: String, _at: Vector3): on_beat("ultimate_peak"))
+	events.ultimate_peak.connect(func(id: String, _at: Vector3):
+		var sound := String(SABLE_SOUNDS["sable_peak"]) if id in ["cable_run", "ball_lightning", "outpost"] else ""
+		on_beat("ultimate_peak", 0.0, false, 1, sound))
 	events.ultimate_landed.connect(_on_ultimate_landed)
 	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
 	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
