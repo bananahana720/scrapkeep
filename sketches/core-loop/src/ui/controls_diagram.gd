@@ -67,8 +67,12 @@ static func entries(class_def) -> Dictionary:
 		if not (row.has("caps") and row.has("short")):
 			continue
 		var caps: Array = row["caps"]
+		var short: String = row["short"]
+		short = short.replace("use / ride", "use/ride").replace("hold retry", "hold-retry")
 		for i in caps.size():
-			out[caps[i]] = {"label": row["short"] if i == 0 else "", "icon": "", "tone": Color(Palette.SAND, 0.8),
+			# The direction arrow carries drive; the other keys keep their action tag.
+			var label := short if i == 0 and not (short == "drive" and ARROWS.has(caps[i])) else ""
+			out[caps[i]] = {"label": label, "icon": "", "tone": Color(Palette.SAND, 0.8),
 				"lit": false, "extra": "", "extra_icon": ""}
 	if class_def == null:
 		return out
