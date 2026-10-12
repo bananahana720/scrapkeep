@@ -14,7 +14,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 219
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 223
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -34,11 +34,14 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # frozen draw reuse and independent positive damage/terrain controls.
 # 2026-10-12 (PC-RIVET r7): 206 -> 219, actual cylinder ray/shadow controls and the
 # captured bowl peak, whose terrain extractor previously discarded the whole volume.
+# 2026-10-12 (FU-RIVET-SHADOW): 219 -> 223, the empty-shadow subtraction asserted directly
+# (cone meets the cell, cell wholly in front of the contact plane, one part, original geometry),
+# and the class-V fixture mass read from RunState.HEFT_CLASS_AT[4] and HEFT_PER_MASS.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 219
+	_expected_checks = 223
 	super._initialize()
 
 
@@ -381,6 +384,44 @@ func _alpha_terrain_cost_fixture() -> void:
 	await _fresh()
 
 
+# FU-RIVET-SHADOW: the empty-shadow case. The silhouette cone meets the cell, but the whole
+# cell lies in front of the terrain contact plane, so the full shadow intersection is empty
+# and the cell must come back whole. Built from its own geometry, not the kit's cell helpers.
+func _empty_shadow_fixture() -> void:
+	var origin := Vector3.ZERO
+	var wall := [Vector3(6.5, -1.0, -1.0), Vector3(6.5, 1.0, -1.0), Vector3(6.5, 1.0, 1.0), Vector3(6.5, -1.0, 1.0)]
+	var centre := Vector3(6.5, 0.0, 0.0)
+	var shadow: Array = []
+	for i in wall.size():
+		var normal: Vector3 = (wall[i] - origin).cross(wall[(i + 1) % wall.size()] - origin).normalized()
+		if normal.dot(centre - origin) > 0.0:
+			normal = -normal
+		shadow.append({"at": origin, "normal": normal, "terrain": true})
+	var contact := {"at": wall[0], "normal": Vector3.LEFT, "terrain": true, "solid": true}
+	shadow.append(contact)
+	var lo := Vector3(2.0, -0.5, -0.5)
+	var hi := Vector3(5.0, 0.5, 0.5)
+	var a := Vector3(2.0, -0.5, -0.5)
+	var b := Vector3(2.0, 0.5, -0.5)
+	var c := Vector3(2.0, 0.5, 0.5)
+	var d := Vector3(2.0, -0.5, 0.5)
+	var e := Vector3(5.0, -0.5, -0.5)
+	var f := Vector3(5.0, 0.5, -0.5)
+	var g := Vector3(5.0, 0.5, 0.5)
+	var h := Vector3(5.0, -0.5, 0.5)
+	var faces: Array = [[a, b, c, d], [e, f, g, h], [a, e, h, d], [b, f, g, c], [a, e, f, b], [d, h, g, c]]
+	var corners: Array = [a, b, c, d, e, f, g, h]
+	var cell := {"faces": faces, "planes": [], "vertices": corners, "bounds": AABB(lo, hi - lo)}
+	var cone_meets := shadow.slice(0, 4).all(func(plane): return (((lo + hi) * 0.5) - plane["at"]).dot(plane["normal"]) <= 0.0)
+	var in_front := corners.all(func(v): return (v - contact["at"]).dot(contact["normal"]) > 0.0)
+	_t.check("empty shadow fixture: silhouette cone meets the cell and the whole cell is in front of the contact", cone_meets and in_front, "%s %s" % [cone_meets, in_front])
+	var parts: Array = _kit._subtract_shadow(cell, shadow)
+	_t.eq("empty shadow leaves exactly one part", parts.size(), 1)
+	var kept: Dictionary = parts[0] if parts.size() == 1 else {}
+	_t.eq("empty shadow keeps the cell's original faces", kept.get("faces", []), faces)
+	_t.eq("empty shadow keeps the cell's original vertices", kept.get("vertices", []), corners)
+
+
 func _cylinder_terrain_fixture() -> void:
 	await _fresh()
 	_piece("foundry_cutter")
@@ -431,6 +472,7 @@ func _run() -> void:
 	await _alpha_terrain_cost_fixture()
 	await _cylinder_terrain_fixture()
 	await _shape_dispatch_fixture()
+	_empty_shadow_fixture()
 	await _terrain_shadow_fixture()
 	var ult = _combat.ultimate
 	_t.check("three rows register tech, peak and landing", Kit.SET_PIECES.all(func(id): return ult._ult_rows.has(id) and ult._ult_rows[id].keys() == ["tech", "peak", "landing"]))
@@ -566,7 +608,7 @@ func _run() -> void:
 	_knob("ult_radius", 0.0)
 
 	# Class V: the beam is 1.0 m and the cone 15 m.
-	_game.run.mass = (4.7 - 1.0) * 450.0
+	_game.run.mass = (float(RunState.HEFT_CLASS_AT[4]) - 1.0) / RunState.HEFT_PER_MASS + 0.01
 	_t.eq("fixture is heft class V", _game.run.heft_class(), 5)
 	_t.check("class V beam 1.0 m, cone 15 m", is_equal_approx(_kit.beam_width("foundry_cutter"), 1.0) and is_equal_approx(_kit.breach_reach(), 15.0),
 		"%s %s" % [_kit.beam_width("foundry_cutter"), _kit.breach_reach()])
