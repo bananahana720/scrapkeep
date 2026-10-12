@@ -1,5 +1,9 @@
 # park_dam traversal receipts
 
+## 2026-10-12: Eye OPEN history exception
+
+ddd2be0 added the Eye OPEN control and guard together. The final guards work, but the committed-red order was not met for that commit. The coordinator accepted an explicit exception for round 5: the retained pre-fix scratch red receipts and final mutation evidence stand in for a committed red. Existing commits and mutation receipts remain intact; this exception does not authorize history rewriting or waive the new changes' red-first requirement. Evidence: `/home/andrew/scratch/w13/cgate/kd1-dam-r4/red-history.json`, `f3-parent-state.log`, and `/home/andrew/scratch/w13/sol/kd1-dam-r4/f3-red.log`. The round-4 report's blanket claim that all findings were fixed did not establish the required committed order.
+
 ## 2026-10-12: round 4 final greybox
 
 Measured on the runtime inputs of merged head `1c3ef9f79b96afabcd418f14ff9eb6f0e832d486` using the committed candidate `tools/traversal_line.gd`, fixed 90 FPS, eight seeds per line, through the CPU queue at nice 10. All 56 rows are complete. Runtime hashes match the final branch; later commits change tests and pages only. This round supersedes earlier measurements. Verdict: FAIL, evidence level 4. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r4/final-sweep/`. The floor is judged by its own row, using Rivet's median as the reference.
