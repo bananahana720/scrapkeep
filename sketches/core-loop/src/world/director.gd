@@ -334,7 +334,7 @@ func _draw_credit() -> Dictionary:
 			var ancient := _ancient()
 			choices.append({"id": ancient, "kinds": [ancient], "tests": "ancient"})
 			weights[ancient] = share * ANCIENT_SHARE
-	var pool := choices.filter(func(p: Dictionary) -> bool: return p.id != _last_pack_id)
+	var pool := choices if authored.is_empty() else choices.filter(func(p: Dictionary) -> bool: return p.id != _last_pack_id)
 	if pool.is_empty():
 		pool = choices
 	var total := 0.0
