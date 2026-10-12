@@ -20,8 +20,8 @@ const SEED := 8008
 const OPS := 1000
 const STEP := 1.0 / 60.0
 const LIMIT := 30.0
-# 2026-10-12 SR8: six lab rows, kit lifecycle fixtures and an exact-count guard.
-const EXPECTED_CHECKS := 166
+# 2026-10-12 SR8: 166 checks measured before four external payload destruction checks.
+const EXPECTED_CHECKS := 170
 # The lab rows, pinned here so a drift in Devices.ROWS fails the test instead of moving the
 # expectation with it. Change a value here only together with its start value in devices.gd
 # (comps/ror2/companions.md). sticky's cap is Kest's kit knob default (Weapons.STICKY_MAX_LIVE).
@@ -406,14 +406,18 @@ func _check_live_kit_payloads() -> void:
 		_t.eq("%s does not spend normal mini slots" % kind, _devices().count("mini"), 0)
 		ult.take_charge(ult.payloads.charges[0])
 		_t.eq("%s destroyed payload leaves immediately" % kind, _devices().count(kind), cap - 1)
+		var destroyed: Dictionary = ult.payloads.charges[0]
+		destroyed["node"].free()
+		_t.eq("%s external destruction leaves the count" % kind, _devices().count(kind), cap - 2)
+		_t.eq("%s external destruction leaves the manager" % kind, ult.payloads.charges.has(destroyed), false)
 		var charge: Dictionary = ult.payloads.charges[0]
 		charge["pos"] = owner + Vector3.RIGHT * 65.0
 		booms[0] = 0
 		_combat._step_devices(0.99)
-		_t.eq("%s stays before recall deadline" % kind, _devices().count(kind), cap - 1)
+		_t.eq("%s stays before recall deadline" % kind, _devices().count(kind), cap - 2)
 		_combat._step_devices(0.01)
 		_t.eq("%s recalled payload leaves the world" % kind, ult.payloads.charges.has(charge), false)
-		_t.eq("%s recalled payload leaves the count" % kind, _devices().count(kind), cap - 2)
+		_t.eq("%s recalled payload leaves the count" % kind, _devices().count(kind), cap - 3)
 		_t.eq("%s recall never detonates" % kind, booms[0], 0)
 		ult.clear_payloads()
 		_t.eq("%s clear releases every slot" % kind, _devices().count(kind), 0)
