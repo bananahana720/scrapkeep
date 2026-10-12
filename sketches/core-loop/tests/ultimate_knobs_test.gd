@@ -37,6 +37,10 @@ var _t := T.new("ultimate_knobs_test")
 
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
 	var player := PlayerFixture.new()
 	var fixture_tree := GDScript.new()
 	fixture_tree.source_code = FileAccess.get_file_as_string("res://src/core/upgrade_tree.gd").replace("const TREES :=", "static var TREES :=")
