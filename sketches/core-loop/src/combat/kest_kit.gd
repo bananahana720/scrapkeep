@@ -263,7 +263,7 @@ func _fly(delta: float) -> void:
 		_total_beat += 1
 		if _id != "windhover" or String(leg["mode"]) != "line":
 			_volley()
-		var peak_now: bool = String(leg["mode"]) == "hold" if _id == "windhover" else _beat >= ceili(_beats / 2.0)
+		var peak_now: bool = String(leg["mode"]) == "hold" if _id == "windhover" and _plan.has("hover") else _beat >= ceili(_beats / 2.0)
 		if not _peaked and peak_now:
 			_peaked = true
 			_peak(ball)

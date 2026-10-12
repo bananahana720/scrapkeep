@@ -1,8 +1,8 @@
 extends "res://tests/kest_kit_test.gd"
 
 # 2026-10-11 (PC-KEST): fixed-step carrier, payload and posture integration.
-# Expected 51 checks, including count guard. The bot suite separately runs real physics.
-const EXPECTED_SET_PIECE_CHECKS := 51
+# Expected 53 checks, including count guard. The bot suite separately runs real physics.
+const EXPECTED_SET_PIECE_CHECKS := 53
 const Kest := preload("res://src/combat/kest_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
@@ -108,6 +108,14 @@ func _cases() -> void:
 	_t.eq("standing line still launches on an arc", standing["path"], "arc")
 	_t.eq("standing enemy anchor chooses B", standing["to"], body.global_position)
 	body.free()
+	_fresh()
+	_player.body().global_position = home
+	var fallback: Dictionary = _ult.plan(home, {"origin": home + Vector3.UP, "forward": Vector3.UP, "harpoon": {"state": 0}})
+	_t.eq("no destination preserves the framework hop", fallback["path"], "hop")
+	_peak_modes.clear()
+	_begin("windhover", fallback)
+	_ride_out()
+	_t.eq("fallback hop still fires its peak", _peak_modes, ["hop"])
 
 	_fresh()
 	_player.body().global_position = home
