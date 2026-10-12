@@ -278,7 +278,7 @@ func _authored_pay() -> void:
 						paid_tier += 1
 					correct = correct and shown == paid_tier and label.contains("Tier %d" % paid_tier)
 					correct = correct and taken.size() == count and taken.all(func(part): return part == named if named != "" else Parts.rarity_of(part) in pay.rarities)
-					correct = correct and label.contains(named) if named != "" else correct and taken.all(func(part): return label.contains(Parts.rarity_of(part)))
+					correct = correct and label.contains(Parts.display_name(named)) if named != "" else correct and taken.all(func(part): return label.contains(Parts.rarity_of(part)))
 					grants += taken.size()
 					game.run.parts.assign(held)
 					cases += 1
