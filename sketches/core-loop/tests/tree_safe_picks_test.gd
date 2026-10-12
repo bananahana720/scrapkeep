@@ -1,5 +1,8 @@
 extends SceneTree
 
+# 2026-10-11 (PC-TARN ruling 1): world-one alone bans knobs/swaps; depths 3/4 require safe picks.
+# Expected: 59 checks, including a planted world-one knob through Tarn's ruling predicate.
+
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -287,15 +290,25 @@ func _tarn_rows() -> void:
 	_report("Tarn's own tree", own and profile.size() == 30 and profile[0]["id"] == "t_long_claw" and shared.is_empty(),
 		"%d world-one nodes, first %s, %d shared with Rivet" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared.size()])
 	var bad := []
-	for n in tarn:
-		var ok: bool = not n.has("knob") and not n.has("swap")
+	var allowed := func(n: Dictionary, world_one: bool, earlier: Array) -> bool:
+		var ok: bool = not world_one or (not n.has("knob") and not n.has("swap"))
+		if not world_one and (n.has("knob") or n.has("swap")):
+			ok = ok and UpgradeTree.safe_pick_problems("tarn", n, earlier).is_empty()
 		for weapon in n.get("pattern", {}):
 			ok = ok and weapon == "claw_sweep" and float(n["pattern"][weapon].get("mul", {}).get("damage", 1.0)) <= 1.0
 		ok = ok and not String(n["effect"]).to_lower().contains("plating")
 		ok = ok and (Icons.IDS.has(n["icon"]) or Icons.EXTRA.has(n["icon"]))
-		if not ok:
-			bad.append(n["id"])
-	_report("Tarn rulings", bad.is_empty(), "no knob, swap, non-claw pattern, damage gain, plating claim or unknown icon; bad %s" % [bad])
+		return ok
+	for i in tarn.size():
+		if not allowed.call(tarn[i], false, _earlier(tarn, i)):
+			bad.append(tarn[i]["id"])
+	for i in UpgradeTree.WORLD_ONE_SIZE:
+		if not allowed.call(profile[i], true, _earlier(profile, i)):
+			bad.append("%s (world one)" % profile[i]["id"])
+	_report("Tarn rulings", bad.is_empty(), "world-one bans knobs/swaps; later picks safe; claw-only, no damage gain, plating or unknown icon; bad %s" % [bad])
+	var planted: Dictionary = profile[0].duplicate(true)
+	planted["knob"] = {"ult_beats": 3.0}
+	_report("Tarn planted world-one knob rejected", not allowed.call(planted, true, []), "world-one knob must remain banned")
 	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Tarn world-one cards", cards_ok, "%s" % [first_six])
