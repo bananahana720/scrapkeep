@@ -180,6 +180,16 @@ const ENTRIES := [
 	# --- P-C Sable entries ---
 	# --- end Sable ---
 	# --- P-C Rivet entries ---
+	{"id": "rivet_line_drive", "name": "Line Drive", "hint": "The cable carries more than you.",
+		"clue": "Rivet + slot 3 + a line on a machine", "text": "Pick 3 and click with a line on a machine: the winch kicks force down the cable and throws it into whatever stands behind. On a wall, the winch hauls you in and nothing can hold you. With no line, the next bite carries it."},
+	{"id": "rivet_foundry_cutter", "name": "Foundry Cutter", "hint": "Measured twice. Firing once.",
+		"clue": "Rivet + a full ring + Q", "text": "Q drives you from here to where you aim. The lens cuts wherever you look, on every beat. The middle beat sweeps wide. The landing skids on, and you keep the speed."},
+	{"id": "rivet_line_true", "name": "Line True", "hint": "Ten straight answers.",
+		"clue": "ten Line Drive punches + one stage", "text": "Land ten Line Drive punches in one stage to earn the Swarf Curl."},
+	{"id": "rivet_shrugged", "name": "Shrugged Off", "hint": "Crowd control is fuel.",
+		"clue": "Rivet + thirty ignored holds and knocks + one run", "text": "Shrug off thirty holds and knocks in one run to earn the Welding Hood."},
+	{"id": "rivet_full_breach", "name": "Full Breach", "hint": "One cut, six machines.",
+		"clue": "a Rivet set piece + six machines in the skid", "text": "Land one Rivet set piece on six machines to earn the Calibrated shell."},
 	# --- end Rivet ---
 	# --- P-C Kest entries ---
 	# --- end Kest ---
@@ -204,6 +214,13 @@ const ENTRIES := [
 # whose code fires it. tests/codex_coverage_test.gd reads this to prove every kind that can
 # spawn has a trick that can fire.
 const DETECTORS := {
+	# --- P-C Rivet detectors ---
+	"rivet_line_drive": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
+	"rivet_foundry_cutter": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
+	"rivet_line_true": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
+	"rivet_shrugged": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
+	"rivet_full_breach": {"kind": "", "script": "res://src/combat/rivet_kit.gd"},
+	# --- end Rivet ---
 	# --- P-C Tarn detectors ---
 	"tarn_claw_drag": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},
 	"tarn_redjaw_rend": {"kind": "", "script": "res://src/combat/tarn_claw.gd"},

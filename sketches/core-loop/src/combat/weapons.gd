@@ -66,6 +66,71 @@ const OVERDRIVE_RATE := 1.6
 # A tap is the blast above; a full gauge scales radius, damage and knock by this.
 const OVERDRIVE_FULL := 1.5
 
+# --- PC-RIVET constants (design-v3/pilots/rivet.md sections 2.3 and 3; all start values) ---
+# Line Drive. The punch: a copper pulse runs down the cable at LINE_PULSE_SPEED and strikes the
+# latched machine as a ram at max(LINE_PUNCH_FLOOR, LINE_PUNCH_SHARE x the ball's planar speed),
+# throwing it LINE_PUNCH_KNOCK along the cable. The haul: the winch drags the ball to the anchor
+# at the ball's speed or LINE_HAUL_SPEED, whichever is higher, and crowd control slides off for
+# the haul plus LINE_HAUL_GRACE. A closed Warden guard takes at most LINE_WARDEN_POSTURE.
+const LINE_PULSE_SPEED := 150.0
+const LINE_PUNCH_SHARE := 0.6
+const LINE_PUNCH_FLOOR := 8.0
+const LINE_PUNCH_KNOCK := OVERDRIVE_KNOCK
+const LINE_HAUL_SPEED := 24.0
+const LINE_HAUL_GRACE := 0.3
+const LINE_WARDEN_POSTURE := 12.0
+# Foundry Cutter: one beam on the reticle ray, CUTTER_LENGTH long, CUTTER_WIDTH by heft class
+# I to V, cutting CUTTER_PIERCE machines a beat for CUTTER_DAMAGE x the heft multiplier, clamped
+# CUTTER_CLAMP_DEG off the travel heading. The middle beat is Full Cut: FULL_CUT_WIDTH wide,
+# FULL_CUT_DEG swept, FULL_CUT_REACH out, FULL_CUT_DAMAGE once per machine, no pierce cap.
+const CUTTER_LENGTH := 40.0
+const CUTTER_WIDTH := [0.6, 0.7, 0.8, 0.9, 1.0]
+const CUTTER_PIERCE := 3
+const CUTTER_DAMAGE := 12.0
+const CUTTER_CLAMP_DEG := 60.0
+const FULL_CUT_WIDTH := 2.5
+const FULL_CUT_DEG := 90.0
+const FULL_CUT_REACH := 30.0
+const FULL_CUT_DAMAGE := 18.0
+const FULL_CUT_SCAR := 1.5
+# The Breach Skid landing: a forward cone BREACH_REACH_SCALE x the class landing radius, plus
+# everything within BREACH_INNER of the ball; it hands back BREACH_SPRINT sprint charges.
+const BREACH_REACH_SCALE := 1.5
+const BREACH_INNER := 2.5
+const BREACH_SPRINT := 1
+# Prism Cutter: PRISM_BEAMS beams PRISM_SPREAD_DEG apart, each PRISM_LENGTH long, PRISM_WIDTH
+# wide at class I plus PRISM_WIDTH_STEP a class, PRISM_PIERCE machines a beat for PRISM_DAMAGE.
+# Its peak, Focus: one PRISM_FOCUS_WIDTH beam, CUTTER_LENGTH long, PRISM_FOCUS_DAMAGE to up to
+# PRISM_FOCUS_PIERCE machines.
+const PRISM_BEAMS := 3
+const PRISM_SPREAD_DEG := 15.0
+const PRISM_LENGTH := 30.0
+const PRISM_WIDTH := 0.5
+const PRISM_WIDTH_STEP := 0.1
+const PRISM_PIERCE := 2
+const PRISM_DAMAGE := 8.0
+const PRISM_FOCUS_WIDTH := 1.5
+const PRISM_FOCUS_DAMAGE := 30.0
+const PRISM_FOCUS_PIERCE := 6
+# Juggernaut Drive: the ball rams every machine whose hull passes within DRIVE_REACH of its
+# centre once per flight for DRIVE_DAMAGE x heft x DRIVE_RAM_MULT, knock DRIVE_KNOCK half outward
+# and half forward. Each beat a bow wave throws machines DRIVE_WAVE_NEAR to DRIVE_WAVE_FAR beside
+# the path ahead outward at DRIVE_WAVE_KNOCK x falloff, no damage. Its peak, Shoulder: the
+# corridor is DRIVE_SHOULDER_REACH for one beat and rams deal DRIVE_SHOULDER_MULT. Crowd control
+# slides off for DRIVE_IMMUNE s after the recovery.
+const DRIVE_REACH := 3.0
+const DRIVE_DAMAGE := 30.0
+const DRIVE_RAM_MULT := 1.25
+const DRIVE_KNOCK := OVERDRIVE_KNOCK
+const DRIVE_WAVE_NEAR := 3.0
+const DRIVE_WAVE_FAR := 8.0
+const DRIVE_WAVE_AHEAD := 10.0
+const DRIVE_WAVE_KNOCK := 20.0
+const DRIVE_SHOULDER_REACH := 5.0
+const DRIVE_SHOULDER_MULT := 2.0
+const DRIVE_IMMUNE := 2.0
+# --- end PC-RIVET constants ---
+
 # The pylon discharge (engineer special, and the turret's opening burst on a plant):
 # power comes from speed. Planting banks your arrival speed; F discharges on the move
 # from your current speed, or from the bank while mounted.

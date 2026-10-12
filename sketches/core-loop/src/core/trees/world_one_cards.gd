@@ -61,6 +61,10 @@ const SET_PIECE_LINES := {
 	# --- P-C Sable set piece lines ---
 	# --- end Sable ---
 	# --- P-C Rivet set piece lines ---
+	"foundry_cutter": "Q drives a measured cut to your aim.",
+	"prism_cutter": "Your cutter splits three ways through a prism.",
+	"juggernaut_drive": "Q drives you through them. No beam.",
+	"ult_pins": "Q's landing throws machines twice as hard.",
 	# --- end Rivet ---
 	# --- P-C Kest set piece lines ---
 	# --- end Kest ---

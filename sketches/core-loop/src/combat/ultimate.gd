@@ -78,6 +78,15 @@ var _ult_rows := {
 	# --- P-C Sable ultimate ---
 	# --- end Sable ---
 	# --- P-C Rivet ultimate ---
+	"foundry_cutter": {"tech": func(beat, ball, aim, mult): return combat.get_node("RivetKit").tech("foundry_cutter", beat, ball, aim, mult),
+		"peak": func(at): combat.get_node("RivetKit").peak("foundry_cutter", at),
+		"landing": func(at, heft, chain): return combat.get_node("RivetKit").landing("foundry_cutter", at, heft, chain)},
+	"prism_cutter": {"tech": func(beat, ball, aim, mult): return combat.get_node("RivetKit").tech("prism_cutter", beat, ball, aim, mult),
+		"peak": func(at): combat.get_node("RivetKit").peak("prism_cutter", at),
+		"landing": func(at, heft, chain): return combat.get_node("RivetKit").landing("prism_cutter", at, heft, chain)},
+	"juggernaut_drive": {"tech": func(beat, ball, aim, mult): return combat.get_node("RivetKit").tech("juggernaut_drive", beat, ball, aim, mult),
+		"peak": func(at): combat.get_node("RivetKit").peak("juggernaut_drive", at),
+		"landing": func(at, heft, chain): return combat.get_node("RivetKit").landing("juggernaut_drive", at, heft, chain)},
 	# --- end Rivet ---
 	# --- P-C Kest ultimate ---
 	# --- end Kest ---

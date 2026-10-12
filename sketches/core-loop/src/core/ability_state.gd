@@ -132,6 +132,10 @@ const ABILITIES := {
 	# --- P-C Sable rows (line skill, ultimate, depth-3 variants) -------------------------
 	# --- end Sable ---
 	# --- P-C Rivet rows ------------------------------------------------------------------
+	"line_drive": {"icon": "ab_rivet_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"foundry_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
+	"prism_cutter": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter"},
+	"juggernaut_drive": {"icon": "ab_rivet_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "foundry_cutter"},
 	# --- end Rivet ---
 	# --- P-C Kest rows -------------------------------------------------------------------
 	# --- end Kest ---

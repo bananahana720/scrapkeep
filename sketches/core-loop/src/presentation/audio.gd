@@ -88,6 +88,7 @@ const LANDING_FALLBACK_MS := 2000
 const LAUNCH_BUILD_SECONDS := 1.6
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
 const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+	"rivet_line_punch", "rivet_line_arrive",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
 	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
@@ -106,6 +107,13 @@ const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tic
 const LINE_CLAW_DRAG := {"sound": "line_claw_drag", "ratchet": "clank", "motif": "tarn", "step_seconds": 0.1}
 var _line_claw_stream: AudioStreamWAV
 # --- end Tarn ---
+# --- P-C Rivet audio ---
+# Line Drive (design-v3/pilots/rivet.md section 2.3, Sound). The punch: one clav stab on the
+# motif's hammered note as the pulse leaves, a snare flam when it lands (the kit's pulse delay),
+# one semitone up per chain link. The haul: a closed-hat roll for the haul's length, landing the
+# motif's fourth on arrival. Both read the kit's last_cue, so the cue and the act share one record.
+const RIVET_LINE := {"punch": "rivet_line_punch", "arrive": "rivet_line_arrive", "motif": "rivet", "roll_step": 0.0625}
+# --- end Rivet ---
 const POSTURE_QUARTER := 25.0
 const POSTURE_PHRASE := 0
 const SHATTER_LOW := "chunk_low"
@@ -1027,6 +1035,7 @@ func _connect_all(events) -> void:
 	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
 	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
 	events.line_skill_fired.connect(_on_tarn_claw_drag)
+	events.line_skill_fired.connect(_on_rivet_line_drive)
 	_wire_ultimate_beat()
 	wire_optional()
 	_wire_armor()
@@ -2255,3 +2264,37 @@ func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) 
 	if _admit("line_skill_fired", "line_claw_drag", pitch):
 		_start("line_skill_fired", "line_claw_drag", _line_claw_stream, SfxBank.trim_db("line_claw_drag") + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
 # --- end Tarn ---
+
+
+# --- P-C Rivet line_drive ---
+func _on_rivet_line_drive(id: String, _target: Node3D, _at: Vector3, on: String) -> void:
+	if id != "line_drive" or ctx == null or ctx.spawner == null:
+		return
+	var kit = ctx.spawner.get_node_or_null("RivetKit")
+	if kit == null:
+		return
+	var cue: Dictionary = kit.last_cue
+	var notes: Array = Harmony.motif_notes(RIVET_LINE["motif"])
+	if on == "body":
+		var samples := Synth.buffer(Synth.seconds(0.9))
+		Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[0]))), 0, 0.7)
+		Synth.add_into(samples, Synth.snare(), Synth.seconds(float(cue.get("delay", 0.0))), 0.5)
+		Synth.add_into(samples, Synth.snare(), Synth.seconds(float(cue.get("delay", 0.0)) + 0.03), 0.35)
+		var pitch := Harmony.ratio(live_key()) * pow(2.0, maxf(0.0, float(ctx.player.chain.combo - 1)) / 12.0)
+		if _admit("line_skill_fired", RIVET_LINE["punch"], pitch):
+			_start("line_skill_fired", RIVET_LINE["punch"], Synth.to_wav(Synth.normalize(samples)),
+				SfxBank.trim_db(RIVET_LINE["punch"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
+		return
+	var seconds := float(cue.get("seconds", 0.0))
+	var samples := Synth.buffer(Synth.seconds(seconds + 0.5))
+	var step: float = RIVET_LINE["roll_step"]
+	var tick := 0.0
+	while tick < seconds:
+		Synth.add_into(samples, Synth.hat(false), Synth.seconds(tick), 0.35)
+		tick += step
+	Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[notes.size() - 1]))), Synth.seconds(seconds), 0.8)
+	var key := Harmony.ratio(live_key())
+	if _admit("line_skill_fired", RIVET_LINE["arrive"], key):
+		_start("line_skill_fired", RIVET_LINE["arrive"], Synth.to_wav(Synth.normalize(samples)),
+			SfxBank.trim_db(RIVET_LINE["arrive"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], key, "SFX")
+# --- end Rivet ---

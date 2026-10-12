@@ -84,6 +84,8 @@ const KNOBS := {
 	# --- P-C Sable knob ---
 	# --- end Sable ---
 	# --- P-C Rivet knob ---
+	# Rivet's own: the Breach Skid (and the Juggernaut Drive's rams) throw this many times as hard.
+	"ult_pins": {"default": 1.0},
 	# --- end Rivet ---
 	# --- P-C Kest knob ---
 	# --- end Kest ---

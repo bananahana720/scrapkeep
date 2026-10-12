@@ -331,6 +331,7 @@ func setup(ctx_ref) -> void:
 		# --- P-C Sable line skill ---
 		# --- end Sable ---
 		# --- P-C Rivet line skill ---
+		"line_drive": preload("res://src/combat/rivet_kit.gd").line_row(self),
 		# --- end Rivet ---
 		# --- P-C Kest line skill ---
 		# --- end Kest ---

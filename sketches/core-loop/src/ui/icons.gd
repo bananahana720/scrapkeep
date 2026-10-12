@@ -52,6 +52,7 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	# --- P-C Sable icons ---
 	# --- end Sable ---
 	# --- P-C Rivet icons ---
+	"ab_rivet_line": "chevron_right", "ab_rivet_ult": "target",
 	# --- end Rivet ---
 	# --- P-C Kest icons ---
 	# --- end Kest ---
