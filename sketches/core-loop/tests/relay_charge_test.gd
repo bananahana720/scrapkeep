@@ -2,6 +2,7 @@ extends SceneTree
 
 const HoldRelay := preload("res://src/world/hold_relay.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Items := preload("res://src/build/items.gd")
 
 # SR9 relay charge rule (W13-INTEGRATION-3.md, SR9; comps/ror2/events-and-objectives.md:116).
 # The opt-in hold relay charges by a data rule: charge rate is share^s, where share is the
@@ -17,12 +18,14 @@ const Parts := preload("res://src/build/parts.gd")
 #     T / (1 + 0.3 x count), each within 1%.
 # (e) count 4 gives exactly the count 3 numbers.
 # (f) the convergence row is a capped stack of three in the parts catalogue.
+# (g) the convergence row is never offered until its seam relay.convergence is set.
 
 const ROW_ID := "relay_convergence"
+const SEAM := "relay.convergence"
 const SEEDS := 100
 const LIVING := 4
 const TOLERANCE := 0.01
-const EXPECTED_REPORTS := 7
+const EXPECTED_REPORTS := 8
 const DT := 1.0 / 60.0
 const INSIDE := Vector3(0.0, 0.0, 0.0)
 const OUTSIDE := Vector3(100.0, 0.0, 100.0)
@@ -38,6 +41,7 @@ func _initialize() -> void:
 	_check_convergence_counts()
 	_check_count_four()
 	_check_row_cap()
+	_check_seam_gate()
 	if _reports != EXPECTED_REPORTS:
 		_failures += 1
 		print("FAIL report count: %d of %d checks reported (a check died mid-way)" % [_reports, EXPECTED_REPORTS])
@@ -159,3 +163,14 @@ func _check_row_cap() -> void:
 	var ok: bool = d != null and d.stack_rule == "capped" and is_equal_approx(d.stack_cap, 3.0)
 	var detail := "missing row" if d == null else "stack %s, cap %s" % [d.stack_rule, d.stack_cap]
 	_report("convergence row is capped at three", ok, detail)
+
+
+func _check_seam_gate() -> void:
+	var saved: Dictionary = Parts.seams.duplicate()
+	Parts.seams = {}
+	var hidden: bool = not ROW_ID in Parts.offer_pool(Items.KEST, ["common"])
+	Parts.seams = {SEAM: true}
+	var shown: bool = ROW_ID in Parts.offer_pool(Items.KEST, ["common"])
+	Parts.seams = saved
+	_report("convergence row waits on its seam", hidden and shown,
+		"not offered with no seam: %s; offered once %s is set: %s" % [hidden, SEAM, shown])
