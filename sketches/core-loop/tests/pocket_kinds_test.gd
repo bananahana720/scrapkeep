@@ -12,7 +12,7 @@ const Schema := preload("res://src/world/park/park_schema.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const KINDS := ["movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
 const STAGES := ["park_dam", "park_test"]
-const EXPECTED_CHECKS := 32
+const EXPECTED_CHECKS := 33
 const H := 1.0 / 60.0
 
 class Checks extends "res://tests/support/t.gd":
@@ -43,7 +43,7 @@ func _run() -> void:
 		var index := args.find("--only")
 		if index + 1 < args.size():
 			only = args[index + 1]
-		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay", "marks"]:
+		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay", "marks", "rounds"]:
 			t.check("valid control selection", false, str(args))
 			quit(t.verdict())
 			return
@@ -90,6 +90,8 @@ func _run() -> void:
 		await _hazards()
 		await _marks()
 		await _exit()
+	elif only == "rounds":
+		_rounds()
 	elif only == "marks":
 		await _marks()
 	elif only == "pay":
@@ -110,7 +112,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 11, "admission": 3, "cues": 3, "pay": 3, "marks": 5}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 12, "admission": 3, "cues": 3, "pay": 3, "marks": 5, "rounds": 8}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -315,41 +317,57 @@ func _objectives() -> void:
 
 
 func _rounds() -> void:
-	var s = _site("round_arena", Vector2(100, 100), {"difficulty": 100.0})
+	var owner: Dictionary = Activities.RULES.round_arena
+	var floor_s: float = Schema._lead_floor({"family": "natural", "kind": "lightning", "effect": {}})
 	var formula := true
 	var additions := true
 	var lead := true
-	var pay_count := 0
+	var visible := true
+	var payments := true
 	var clear_has_no_bonus := true
-	var granted_before := paid.size()
-	var cogs_before: int = game.run.cogs
-	var announced := -1.0
-	for round_index in 3:
-		acts.step_pocket(s, H, s.global_position)
-		announced = s.fog.director.stage_time
-		while not s.fog.active:
+	var times := []
+	for difficulty in [float(owner.difficulty_cap) / 2.0, float(owner.difficulty_cap) * 10.0]:
+		var s = _site("round_arena", Vector2(100, 100), {"difficulty": difficulty})
+		var pay_count := 0
+		var granted_before := paid.size()
+		var cogs_before: int = game.run.cogs
+		var capped: float = maxf(1.0, minf(difficulty, float(owner.difficulty_cap)))
+		for round_index in int(owner.rounds):
 			acts.step_pocket(s, H, s.global_position)
-		lead = lead and s.fog.director.stage_time - announced >= 3.0 - 0.000001
-		var want := (12.0 + 6.0 * round_index) * 3.0
-		formula = formula and absf(s.round_credits - want) / want <= 0.01 and s.pack.size() == int(want / 6.0)
-		var seen := {}
-		for enemy in s.pack:
-			seen[String(enemy.kind)] = true
-		additions = additions and s.round_elements.size() == round_index + 1 and seen.keys() == s.round_elements
-		var wallet_before_clear: int = game.run.cogs
-		_kill(s.pack)
-		acts.step_pocket(s, H, s.global_position)
-		clear_has_no_bonus = clear_has_no_bonus and game.run.cogs == wallet_before_clear
-		for reward in s.round_rewards.duplicate():
-			reward.inside = false
-			acts._watch_round_pickups(s, reward.pickup.global_position)
-		pay_count += 1
-	t.check("round credits formula within 1 percent with D capped", formula, "(12 + 6 x (round - 1)) x min(D,3); three rounds")
-	t.check("each round adds exactly one element", additions and s.round_elements == ["chaser", "lobber", "plated_brute"], str(s.round_elements))
-	t.check("pay events equal round count", s.round_payments == pay_count and pay_count == 3 and s.done and paid.size() - granted_before == 3 and game.run.cogs - cogs_before == pay_count * Activities.PAY_SCRAP, "payments=%d grants=%d cogs=%d expected=%d done=%s" % [s.round_payments, paid.size() - granted_before, game.run.cogs - cogs_before, pay_count * Activities.PAY_SCRAP, s.done])
+			var announced_at := -1.0
+			var saw_geometry := false
+			while not s.fog.active:
+				if s.fog.announced and announced_at < 0.0:
+					announced_at = s.fog.director.stage_time
+					saw_geometry = is_instance_valid(s.fog._safe_view) and s.fog._safe_view.is_visible_in_tree() and s.fog._safe_view.get_child_count() > 0 and s.fog._safe_view.global_position == s.fog.committed.safe_at and Activities._alive(s.pack) == 0
+				acts.step_pocket(s, H, s.global_position)
+			var spawn_at: float = s.fog.director.stage_time
+			visible = visible and s.fog.announced and saw_geometry
+			lead = lead and announced_at >= 0.0 and spawn_at - announced_at >= floor_s - 0.000001
+			var want: float = (float(owner.base) + float(owner.step) * round_index) * capped
+			formula = formula and absf(s.round_credits - want) / want <= 0.01 and s.pack.size() == floori(want / float(owner.enemy_credit))
+			times.append({"D": difficulty, "round": round_index + 1, "announced_s": announced_at, "spawn_s": spawn_at, "lead_floor_s": floor_s, "geometry_before_spawn": saw_geometry, "credits": s.round_credits, "expected_credits": want})
+			var seen := {}
+			for enemy in s.pack:
+				seen[String(enemy.kind)] = true
+			additions = additions and s.round_elements == owner.elements.slice(0, round_index + 1) and seen.keys() == s.round_elements
+			var wallet_before_clear: int = game.run.cogs
+			_kill(s.pack)
+			acts.step_pocket(s, H, s.global_position)
+			clear_has_no_bonus = clear_has_no_bonus and game.run.cogs == wallet_before_clear
+			for reward in s.round_rewards.duplicate():
+				reward.inside = false
+				acts._watch_round_pickups(s, reward.pickup.global_position)
+				pay_count += 1
+		payments = payments and s.round_payments == pay_count and pay_count == int(owner.rounds) and s.done and paid.size() - granted_before == pay_count and game.run.cogs - cogs_before == pay_count * Activities.PAY_SCRAP
+		acts.clear()
+	print("round announcement and spawn timeline: " + JSON.stringify(times))
+	t.check("round credits formula within 1 percent with D capped", formula and times.size() == 2 * int(owner.rounds), "below-cap and above-cap D; owning RULES base=%s step=%s cap=%s enemy_credit=%s; threshold 1 percent" % [owner.base, owner.step, owner.difficulty_cap, owner.enemy_credit])
+	t.check("each round adds exactly one element", additions, "actual spawned archetypes match one new owner element per round at both difficulties")
+	t.check("pay events equal round count", payments, "each difficulty: collected reward count = owner rounds; actual part grants and wallet = collected count x PAY_SCRAP")
 	t.check("round clear adds no bonus cogs before collection", clear_has_no_bonus, "encounter credits fund spawns only; wallet rises on collected rewards")
-	t.check("safe zone announced at least natural family lead", lead, "all three safe zones announced at least 3 s before spawn")
-	acts.clear()
+	t.check("safe zone announced at least natural family lead", lead, "actual announcement-to-spawn intervals >= owner family floor %.3f s" % floor_s)
+	t.check("safe zone announcement is visible before activation", visible, "six actual telegraphs set announced and expose committed safe-disc geometry before fog or enemies activate")
 
 
 func _phase_matches(s, phase: String, audio, since: int, count: int) -> bool:
