@@ -403,6 +403,40 @@
           ]
         },
         {
+          "frame": 14,
+          "note": "Both paws lift above the page before the hard downward stamp; the left paw leaves the yoke visibly.",
+          "torso": {
+            "height": 1.02,
+            "pitch": 8,
+            "roll": -6
+          },
+          "head": {
+            "pitch": 6
+          },
+          "hand.R": {
+            "at": [
+              0.18,
+              0.36,
+              0.23
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.18,
+              0.36,
+              0.23
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            0
+          ],
+          "shoulder": {
+            "lift": 0.025
+          }
+        },
+        {
           "frame": 18,
           "note": "Both shoulders drop hard onto a raised page plane above the ring; knee story relocated for visibility.",
           "torso": {
