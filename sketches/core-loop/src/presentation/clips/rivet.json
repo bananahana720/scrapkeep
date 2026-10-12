@@ -1,0 +1,2085 @@
+{
+  "schema": "pilot-clips-v1",
+  "pilot": "rivet",
+  "fps": 30,
+  "rig": "pilot-v1",
+  "torso_scale": true,
+  "controls": "tools/blender/shell_base.py:CONTROLS + LAP_HANDS; tools/blender/world_one/shell_rivet.py:BANK",
+  "anchors": {
+    "rest": "bind",
+    "ride": {
+      "torso": {
+        "height": 0.97,
+        "pitch": -10,
+        "yaw": 0,
+        "roll": 0
+      },
+      "head": {
+        "pitch": -6,
+        "yaw": 0,
+        "roll": 0
+      },
+      "neck": {
+        "drop": -0.008
+      },
+      "hand.R": {
+        "control": "LapBar.R",
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      "hand.L": {
+        "control": "LapBar.L",
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      },
+      "curl.R": -25,
+      "curl.L": -25
+    }
+  },
+  "clips": {
+    "idle_loop": {
+      "end": 127,
+      "loop": true,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "idle_loop"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both claws rest on the yokes."
+        },
+        {
+          "frame": 19,
+          "head": {
+            "yaw": 0
+          },
+          "note": "The head remains centred before the first tick."
+        },
+        {
+          "frame": 20,
+          "head": {
+            "yaw": -2
+          },
+          "note": "The head ticks two degrees to the right."
+        },
+        {
+          "frame": 39,
+          "head": {
+            "yaw": -2
+          },
+          "note": "The head holds the first measured step."
+        },
+        {
+          "frame": 40,
+          "head": {
+            "yaw": -4
+          },
+          "note": "The head ticks to four degrees right."
+        },
+        {
+          "frame": 59,
+          "head": {
+            "yaw": -4
+          },
+          "note": "The head holds the second measured step."
+        },
+        {
+          "frame": 60,
+          "head": {
+            "yaw": -6
+          },
+          "note": "The head ticks to six degrees right."
+        },
+        {
+          "frame": 78,
+          "head": {
+            "yaw": 0
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0.016
+            ]
+          },
+          "note": "The right claw lifts above the dial beside its yoke."
+        },
+        {
+          "frame": 81,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0.015,
+              -0.005
+            ]
+          },
+          "curl.R": -10,
+          "note": "The right claw lands its first dial tap."
+        },
+        {
+          "frame": 87,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0.016
+            ]
+          },
+          "note": "The right claw lifts for its second tap."
+        },
+        {
+          "frame": 90,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0.015,
+              -0.005
+            ]
+          },
+          "curl.R": -10,
+          "note": "The right claw lands its second dial tap."
+        },
+        {
+          "frame": 127,
+          "pose": "rest",
+          "note": "Both claws return to the bind grips."
+        }
+      ]
+    },
+    "ult_ride_loop": {
+      "end": 43,
+      "loop": true,
+      "from": "ride",
+      "to": "ride",
+      "ease": "smooth",
+      "planted": [
+        "R",
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "ult_windup",
+        "contract": "design-v3/PILOT-CLIPS.md:1.1,1.3"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "Both claws hold the copper lap bar."
+        },
+        {
+          "frame": 12,
+          "torso": {
+            "height": 0.965,
+            "pitch": -11,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -7,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -28,
+          "curl.L": -28,
+          "note": "The seated torso compresses slightly behind the sight."
+        },
+        {
+          "frame": 22,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": -2,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "The head makes a two-degree correction toward the right."
+        },
+        {
+          "frame": 33,
+          "torso": {
+            "height": 0.975,
+            "pitch": -9,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -5,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "The head recentres without releasing the bar."
+        },
+        {
+          "frame": 43,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "Both claws retain the opening lap-bar grip."
+        }
+      ]
+    },
+    "class_up": {
+      "end": 37,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [
+        "R",
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "class_up"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both claws rest on their yokes."
+        },
+        {
+          "frame": 5,
+          "head": {
+            "pitch": 2
+          },
+          "note": "The chin rises slightly before the visor opens."
+        },
+        {
+          "frame": 7,
+          "goggles": 65,
+          "head": {
+            "pitch": 2
+          },
+          "note": "The visor flips clear of the eyes."
+        },
+        {
+          "frame": 22,
+          "goggles": 65,
+          "head": {
+            "pitch": 2
+          },
+          "note": "The eyes remain exposed for fifteen frames."
+        },
+        {
+          "frame": 24,
+          "goggles": 0,
+          "head": {
+            "pitch": 2
+          },
+          "note": "The visor snaps back over the eyes."
+        },
+        {
+          "frame": 29,
+          "head": {
+            "pitch": -10
+          },
+          "note": "The head makes one firm downward nod."
+        },
+        {
+          "frame": 33,
+          "head": {
+            "pitch": -3
+          },
+          "note": "The chin rises from the nod."
+        },
+        {
+          "frame": 37,
+          "pose": "rest",
+          "note": "The head returns to its bind angle."
+        }
+      ]
+    },
+    "cast_special": {
+      "end": 19,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "linear",
+      "planted": [],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "cast_special"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both claws sit on the yokes."
+        },
+        {
+          "frame": 4,
+          "hand.R": {
+            "control": "Lever",
+            "offset": [
+              0,
+              0,
+              0.07
+            ]
+          },
+          "hand.L": {
+            "control": "Lever",
+            "offset": [
+              -0.08,
+              0,
+              0.07
+            ]
+          },
+          "curl.R": -12,
+          "curl.L": -12,
+          "torso": {
+            "yaw": -12,
+            "pitch": 2
+          },
+          "note": "Both claws rise over the slot-2 lever."
+        },
+        {
+          "frame": 7,
+          "hand.R": {
+            "control": "Lever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Lever",
+            "offset": [
+              -0.08,
+              0,
+              0
+            ]
+          },
+          "curl.R": -35,
+          "curl.L": -35,
+          "torso": {
+            "height": 0.96,
+            "yaw": -12,
+            "pitch": 5
+          },
+          "shoulder": {
+            "lift": 0.012
+          },
+          "note": "Both claws meet the slot-2 lever cap."
+        },
+        {
+          "frame": 9,
+          "hand.R": {
+            "control": "Lever",
+            "offset": [
+              0,
+              0.035,
+              -0.045
+            ]
+          },
+          "hand.L": {
+            "control": "Lever",
+            "offset": [
+              -0.08,
+              0.035,
+              -0.045
+            ]
+          },
+          "curl.R": -45,
+          "curl.L": -45,
+          "torso": {
+            "height": 0.94,
+            "yaw": -12,
+            "pitch": 7
+          },
+          "shoulder": {
+            "lift": -0.008
+          },
+          "head": {
+            "pitch": -4
+          },
+          "note": "Both claws drive the lever down against the seat brace."
+        },
+        {
+          "frame": 12,
+          "hand.R": {
+            "control": "Lever",
+            "offset": [
+              0,
+              0.035,
+              -0.045
+            ]
+          },
+          "hand.L": {
+            "control": "Lever",
+            "offset": [
+              -0.08,
+              0.035,
+              -0.045
+            ]
+          },
+          "curl.R": -45,
+          "curl.L": -45,
+          "torso": {
+            "height": 0.96,
+            "yaw": -10,
+            "pitch": 5
+          },
+          "shoulder": {
+            "lift": -0.008
+          },
+          "note": "Both claws hold the lever at the bottom of its throw."
+        },
+        {
+          "frame": 16,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.02,
+              0.025
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              -0.02,
+              0.025
+            ]
+          },
+          "torso": {
+            "yaw": -3,
+            "pitch": 1
+          },
+          "curl.R": -10,
+          "curl.L": -10,
+          "note": "Both claws approach their separate yokes."
+        },
+        {
+          "frame": 19,
+          "pose": "rest",
+          "note": "Both claws settle onto the bind grips."
+        }
+      ],
+      "contact": {
+        "frame": 7,
+        "hand": "R",
+        "control": "Lever"
+      }
+    },
+    "cast_line": {
+      "end": 16,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "linear",
+      "planted": [
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "cast_line"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "The right claw rests on its yoke."
+        },
+        {
+          "frame": 3,
+          "hand.R": {
+            "control": "WinchLever",
+            "offset": [
+              0,
+              0.02,
+              0.04
+            ]
+          },
+          "torso": {
+            "yaw": -5
+          },
+          "curl.R": -12,
+          "note": "The right claw reaches above the winch lever."
+        },
+        {
+          "frame": 5,
+          "hand.R": {
+            "control": "WinchLever",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -40,
+          "torso": {
+            "yaw": -6
+          },
+          "note": "Line bite contact: the right claw closes on the winch lever; this clip plays only on line_skill_fired."
+        },
+        {
+          "frame": 7,
+          "hand.R": {
+            "control": "WinchLever",
+            "offset": [
+              0,
+              -0.07,
+              0.02
+            ]
+          },
+          "curl.R": -50,
+          "torso": {
+            "pitch": 5,
+            "yaw": -6
+          },
+          "head": {
+            "pitch": 2
+          },
+          "note": "The right claw yanks the lever toward the seat."
+        },
+        {
+          "frame": 10,
+          "hand.R": {
+            "control": "WinchLever",
+            "offset": [
+              0,
+              -0.07,
+              0.02
+            ]
+          },
+          "curl.R": -45,
+          "torso": {
+            "height": 0.96,
+            "pitch": -12,
+            "yaw": -3
+          },
+          "head": {
+            "pitch": -5
+          },
+          "note": "The pull flows into a forward seated lean."
+        },
+        {
+          "frame": 13,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.015,
+              0.02
+            ]
+          },
+          "torso": {
+            "pitch": -3
+          },
+          "curl.R": -12,
+          "note": "The right claw approaches its yoke after the pull."
+        },
+        {
+          "frame": 16,
+          "pose": "rest",
+          "note": "The right claw returns to its bind grip."
+        }
+      ],
+      "contact": {
+        "frame": 5,
+        "hand": "R",
+        "control": "WinchLever"
+      }
+    },
+    "ult_ready": {
+      "end": 25,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "ult_ready"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "The visor stays lowered over the eyes."
+        },
+        {
+          "frame": 4,
+          "hand.R": {
+            "at": [
+              0.14,
+              0.22,
+              0.27
+            ]
+          },
+          "curl.R": -12,
+          "note": "The right claw lifts beside the visor rim."
+        },
+        {
+          "frame": 6,
+          "hand.R": {
+            "at": [
+              0.12,
+              0.24,
+              0.23
+            ]
+          },
+          "curl.R": -20,
+          "note": "The right claw makes its first tap on the visor rim."
+        },
+        {
+          "frame": 9,
+          "hand.R": {
+            "at": [
+              0.14,
+              0.22,
+              0.27
+            ]
+          },
+          "curl.R": -12,
+          "note": "The right claw lifts clear of the rim."
+        },
+        {
+          "frame": 11,
+          "hand.R": {
+            "at": [
+              0.12,
+              0.24,
+              0.23
+            ]
+          },
+          "curl.R": -20,
+          "note": "The right claw makes its second visor tap."
+        },
+        {
+          "frame": 16,
+          "head": {
+            "pitch": -5
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.3,
+              0.14
+            ]
+          },
+          "curl.R": -8,
+          "note": "The head gives a small downward nod."
+        },
+        {
+          "frame": 21,
+          "head": {
+            "pitch": -1
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.01,
+              0.01
+            ]
+          },
+          "note": "The right claw nears the yoke after the nod."
+        },
+        {
+          "frame": 25,
+          "pose": "rest",
+          "note": "The claw and head return to bind."
+        }
+      ]
+    },
+    "ult_windup": {
+      "end": 11,
+      "loop": false,
+      "from": "rest",
+      "to": "ride",
+      "ease": "smooth",
+      "planted": [],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "ult_windup"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both claws sit on the yokes."
+        },
+        {
+          "frame": 3,
+          "hand.R": {
+            "at": [
+              0.26,
+              0.36,
+              -0.015
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.26,
+              0.36,
+              -0.015
+            ]
+          },
+          "torso": {
+            "height": 0.99,
+            "pitch": -3
+          },
+          "head": {
+            "pitch": -2
+          },
+          "neck": {
+            "drop": -0.003
+          },
+          "curl.R": -8,
+          "curl.L": -8,
+          "note": "Both claws leave the yokes toward the lap bar."
+        },
+        {
+          "frame": 6,
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0.025
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0.025
+            ]
+          },
+          "torso": {
+            "height": 0.98,
+            "pitch": -7
+          },
+          "head": {
+            "pitch": -5
+          },
+          "neck": {
+            "drop": -0.006
+          },
+          "curl.R": -15,
+          "curl.L": -15,
+          "note": "Both claws hover just above the lap-bar hand points."
+        },
+        {
+          "frame": 9,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "The lowered head sights between the two bar grips."
+        },
+        {
+          "frame": 11,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "Both claws finish locked on the lap bar."
+        }
+      ]
+    },
+    "ult_strike": {
+      "end": 19,
+      "loop": false,
+      "from": "ride",
+      "to": "ride",
+      "ease": "linear",
+      "planted": [
+        "R",
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "ult_strike"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "Both claws retain the ride grip."
+        },
+        {
+          "frame": 3,
+          "torso": {
+            "height": 0.97,
+            "pitch": -11,
+            "yaw": 15,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 30,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -35,
+          "curl.L": -35,
+          "note": "The head and shoulders face the left edge of the sweep."
+        },
+        {
+          "frame": 7,
+          "torso": {
+            "height": 0.97,
+            "pitch": -12,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -7,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -40,
+          "curl.L": -40,
+          "note": "The shoulders cross the centre of the beam sweep."
+        },
+        {
+          "frame": 11,
+          "torso": {
+            "height": 0.97,
+            "pitch": -11,
+            "yaw": -15,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": -30,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -35,
+          "curl.L": -35,
+          "note": "The head and shoulders reach the right edge of the sweep."
+        },
+        {
+          "frame": 15,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": -5,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": -8,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -30,
+          "curl.L": -30,
+          "note": "The head recentres while both claws hold the bar."
+        },
+        {
+          "frame": 19,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "The torso settles into the opening ride pose."
+        }
+      ]
+    },
+    "ult_recover": {
+      "end": 22,
+      "loop": false,
+      "from": "ride",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "ult_recover"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "torso": {
+            "height": 0.97,
+            "pitch": -10,
+            "yaw": 0,
+            "roll": 0
+          },
+          "head": {
+            "pitch": -6,
+            "yaw": 0,
+            "roll": 0
+          },
+          "neck": {
+            "drop": -0.008
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "Both claws begin on the lap bar."
+        },
+        {
+          "frame": 4,
+          "torso": {
+            "height": 0.99,
+            "pitch": 3
+          },
+          "head": {
+            "pitch": -2
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
+              0.03
+            ]
+          },
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0.03
+            ]
+          },
+          "curl.R": -10,
+          "curl.L": -10,
+          "note": "The torso sits back as both claws release the bar."
+        },
+        {
+          "frame": 8,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "torso": {
+            "pitch": 2
+          },
+          "note": "Both claws settle onto their yokes."
+        },
+        {
+          "frame": 12,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0.02
+            ]
+          },
+          "note": "The right claw lifts above the dial beside its yoke."
+        },
+        {
+          "frame": 14,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0.015,
+              -0.005
+            ]
+          },
+          "curl.R": -12,
+          "head": {
+            "pitch": -3
+          },
+          "note": "The right claw gives the dial one measured tap."
+        },
+        {
+          "frame": 18,
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0.008
+            ]
+          },
+          "head": {
+            "pitch": -1
+          },
+          "note": "The right claw withdraws from the dial to the yoke."
+        },
+        {
+          "frame": 22,
+          "pose": "rest",
+          "note": "Both claws finish in the seated bind pose."
+        }
+      ]
+    },
+    "smash": {
+      "end": 22,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "linear",
+      "planted": [
+        "R",
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "smash"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "Both claws start planted on the yokes."
+        },
+        {
+          "frame": 4,
+          "torso": {
+            "roll": 8,
+            "pitch": -3,
+            "height": 0.98
+          },
+          "head": {
+            "roll": -3,
+            "pitch": -2
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -25,
+          "curl.L": -25,
+          "note": "The seated torso begins leaning into the right-hand skid."
+        },
+        {
+          "frame": 7,
+          "torso": {
+            "roll": 16,
+            "pitch": -6,
+            "height": 0.96
+          },
+          "head": {
+            "roll": -5,
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -45,
+          "curl.L": -45,
+          "note": "The torso commits to the bend with both claws braced."
+        },
+        {
+          "frame": 10,
+          "torso": {
+            "roll": 16,
+            "pitch": -6,
+            "height": 0.96
+          },
+          "head": {
+            "roll": -5,
+            "pitch": -3
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -45,
+          "curl.L": -45,
+          "note": "Both claws keep their yokes through the sideways skid."
+        },
+        {
+          "frame": 16,
+          "torso": {
+            "roll": 6,
+            "pitch": -2,
+            "height": 0.99
+          },
+          "head": {
+            "roll": -2,
+            "pitch": -1
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "curl.R": -18,
+          "curl.L": -18,
+          "note": "The torso rises toward centre while both claws stay planted."
+        },
+        {
+          "frame": 22,
+          "pose": "rest",
+          "note": "The seated torso returns to bind over the yokes."
+        }
+      ],
+      "contact": {
+        "frame": 7,
+        "hand": "R",
+        "control": "Grip.R"
+      }
+    },
+    "unlock": {
+      "end": 73,
+      "loop": false,
+      "from": "rest",
+      "to": "rest",
+      "ease": "smooth",
+      "planted": [
+        "L"
+      ],
+      "source": {
+        "sheet": "design-v3/pilots/rivet.md",
+        "row": "unlock"
+      },
+      "keys": [
+        {
+          "frame": 1,
+          "pose": "rest",
+          "note": "The pilot sits motionless inside the cage.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 13,
+          "pose": "rest",
+          "note": "Both claws remain still while the latch is inspected.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 21,
+          "head": {
+            "yaw": -10,
+            "pitch": -3
+          },
+          "note": "The head turns toward the latch on the right.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 27,
+          "head": {
+            "yaw": -10,
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.18,
+              0.47,
+              0.18
+            ]
+          },
+          "curl.R": 12,
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "note": "The open calliper claw reaches around the latch.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 39,
+          "head": {
+            "yaw": -10,
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.18,
+              0.47,
+              0.18
+            ]
+          },
+          "curl.R": -32,
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "note": "The calliper claw closes to measure the latch width.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 47,
+          "head": {
+            "yaw": -10,
+            "pitch": -10
+          },
+          "hand.R": {
+            "at": [
+              0.18,
+              0.47,
+              0.18
+            ]
+          },
+          "curl.R": -32,
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "note": "The head gives one exact nod over the measured latch.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 54,
+          "head": {
+            "yaw": -6,
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.18,
+              0.47,
+              0.18
+            ]
+          },
+          "curl.R": 8,
+          "wrist.R": [
+            0,
+            0,
+            -15
+          ],
+          "note": "The claw opens as the measured latch gives.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 60,
+          "goggles": 55,
+          "head": {
+            "yaw": -3
+          },
+          "hand.R": {
+            "at": [
+              0.26,
+              0.4,
+              0.12
+            ]
+          },
+          "curl.R": -8,
+          "note": "The visor lifts while the claw withdraws from the latch.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 66,
+          "goggles": 55,
+          "note": "The exposed eyes face forward with the claw back on its yoke.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 69,
+          "goggles": 0,
+          "note": "The visor closes over the eyes.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 73,
+          "pose": "rest",
+          "note": "Both claws finish on the yokes in the seated bind pose.",
+          "root": [
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  },
+  "machinery": [
+    {
+      "node": "Drill",
+      "fact": "meter_fill",
+      "motion": "spin",
+      "start": {
+        "axis": "y",
+        "deg_s": 180.0
+      },
+      "source": "design-v3/pilots/rivet.md:257 (section 3 item 8 at 135)",
+      "note": "At a full ultimate meter, turn the cone about local +Y at the ready speed; phase motion takes precedence.",
+      "limitation": "Current spin scales with meter_fill and is additive with the phase row. Full-meter threshold and phase precedence need shared-driver support.",
+      "missing_node": false
+    },
+    {
+      "node": "Drill",
+      "fact": "set_piece_phase",
+      "motion": "spin",
+      "start": {
+        "axis": "y",
+        "deg_s": 2880.0,
+        "phases": [
+          "windup",
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/rivet.md:257 (section 3 item 8 at 135)",
+      "note": "Spin up about local +Y during wind-up, hold full speed through flight and peak, then spin down on landing or cancellation; never bore the ground.",
+      "limitation": "Current spin reaches 8 revolutions/s during windup and flight without a ramp. A 0.35 s spin-up and 0.6 s spin-down need shared-driver support.",
+      "missing_node": false
+    },
+    {
+      "node": "DrillTip",
+      "fact": "set_piece_phase",
+      "motion": "param",
+      "start": {
+        "param": "ultimate_fill",
+        "scale": 1.0,
+        "phases": [
+          "windup",
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/rivet.md:257,263 (section 3 item 8 at 135)",
+      "note": "Raise lens emission during wind-up and flight, flash at peak, then return to the unlit lens; the beam originates at this empty.",
+      "limitation": "DrillTip is an empty, not GeometryInstance3D. This param requires P-D lens geometry and a shader consuming ultimate_fill; peak flash is deferred.",
+      "missing_node": false
+    },
+    {
+      "node": "Fin.L",
+      "fact": "set_piece_phase",
+      "motion": "turn",
+      "start": {
+        "axis": "z",
+        "deg": 10.0,
+        "rate": 12.0,
+        "phases": [
+          "peak"
+        ]
+      },
+      "source": "design-v3/pilots/rivet.md:258",
+      "missing_node": true,
+      "note": "Open the left half of the cooling-fin V only at peak and fold it flat afterward; requires a separate fin node.",
+      "limitation": "Fin.L is fused into Core; P-D must separate it. The runtime phase is flight at the ultimate_peak signal, so a peak-only row needs shared-driver support."
+    },
+    {
+      "node": "Fin.R",
+      "fact": "set_piece_phase",
+      "motion": "turn",
+      "start": {
+        "axis": "z",
+        "deg": -10.0,
+        "rate": 12.0,
+        "phases": [
+          "peak"
+        ]
+      },
+      "source": "design-v3/pilots/rivet.md:258",
+      "missing_node": true,
+      "note": "Open the right half of the cooling-fin V only at peak and fold it flat afterward; requires a separate fin node.",
+      "limitation": "Fin.R is fused into Core; P-D must separate it. The runtime phase is flight at the ultimate_peak signal, so a peak-only row needs shared-driver support."
+    },
+    {
+      "node": "Exhaust.L",
+      "fact": "meter_fill",
+      "motion": "param",
+      "start": {
+        "param": "ready_fill",
+        "scale": 1.0
+      },
+      "source": "design-v3/pilots/rivet.md:259,263 (section 3 item 8 at 135)",
+      "note": "Breathe copper at the exhaust mouth when the ultimate meter is full; active set-piece emission takes precedence.",
+      "limitation": "Exhaust.L is an empty. P-D emission geometry and ready_fill shader are required; 1 Hz breathing is not implemented by the current param driver.",
+      "missing_node": false
+    },
+    {
+      "node": "Exhaust.L",
+      "fact": "set_piece_phase",
+      "motion": "param",
+      "start": {
+        "param": "ultimate_fill",
+        "scale": 1.0,
+        "phases": [
+          "windup",
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/rivet.md:259,263 (section 3 item 8 at 135)",
+      "note": "Keep the exhaust mouth lit during the set piece and give one emission puff on landing; the stack stays fixed.",
+      "limitation": "Exhaust.L emission geometry and ultimate_fill shader are required; landing puff is deferred.",
+      "missing_node": false
+    },
+    {
+      "node": "Exhaust.L",
+      "fact": "line_load",
+      "motion": "param",
+      "start": {
+        "param": "haul_fill",
+        "scale": 0.0
+      },
+      "source": "design-v3/pilots/rivet.md:259",
+      "note": "Light the exhaust mouth during an active world-anchor haul, then extinguish it; a loaded line alone must not light it.",
+      "limitation": "Disabled with scale 0: line_load means a loaded skill, not an active haul. Preserve a dark mouth until a shared driver reads the existing haul state.",
+      "missing_node": false
+    },
+    {
+      "node": "Exhaust.R",
+      "fact": "meter_fill",
+      "motion": "param",
+      "start": {
+        "param": "ready_fill",
+        "scale": 1.0
+      },
+      "source": "design-v3/pilots/rivet.md:259,263 (section 3 item 8 at 135)",
+      "note": "Breathe copper at the exhaust mouth when the ultimate meter is full; active set-piece emission takes precedence.",
+      "limitation": "Exhaust.R is an empty. P-D emission geometry and ready_fill shader are required; 1 Hz breathing is not implemented by the current param driver.",
+      "missing_node": false
+    },
+    {
+      "node": "Exhaust.R",
+      "fact": "set_piece_phase",
+      "motion": "param",
+      "start": {
+        "param": "ultimate_fill",
+        "scale": 1.0,
+        "phases": [
+          "windup",
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/rivet.md:259,263 (section 3 item 8 at 135)",
+      "note": "Keep the exhaust mouth lit during the set piece and give one emission puff on landing; the stack stays fixed.",
+      "limitation": "Exhaust.R emission geometry and ultimate_fill shader are required; landing puff is deferred.",
+      "missing_node": false
+    },
+    {
+      "node": "Exhaust.R",
+      "fact": "line_load",
+      "motion": "param",
+      "start": {
+        "param": "haul_fill",
+        "scale": 0.0
+      },
+      "source": "design-v3/pilots/rivet.md:259",
+      "note": "Light the exhaust mouth during an active world-anchor haul, then extinguish it; a loaded line alone must not light it.",
+      "limitation": "Disabled with scale 0: line_load means a loaded skill, not an active haul. Preserve a dark mouth until a shared driver reads the existing haul state.",
+      "missing_node": false
+    },
+    {
+      "node": "WeaponRing",
+      "fact": "aim",
+      "motion": "aim",
+      "start": {
+        "rate": 14.0
+      },
+      "source": "design-v3/pilots/rivet.md:251,260",
+      "note": "Keep the ring level and yaw it to the live aim so both barrels remain parallel to the committed beam.",
+      "missing_node": false
+    },
+    {
+      "node": "Control.Trigger",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "x",
+        "deg": 0.0,
+        "throw_s": 0.06,
+        "return_s": 0.06
+      },
+      "source": "design-v3/pilots/rivet.md:261,263",
+      "note": "Squeeze the yoke trigger once per permitted shot pulse, then release.",
+      "limitation": "Zero duplicate throw: MechaMotion.shot owns the 12-degree squeeze, 0.06 s return and 0.12 s limit. A second machinery pulse would overwrite it.",
+      "missing_node": false
+    },
+    {
+      "node": "Control.Lever",
+      "fact": "slot_ready",
+      "motion": "turn",
+      "start": {
+        "slot": "special",
+        "axis": "x",
+        "deg": 0.0,
+        "rate": 12.0
+      },
+      "source": "design-v3/pilots/rivet.md:261,263",
+      "note": "Special-slot consumption drives the slot-2 lever throw at cast_special.contact; readiness alone must not throw it. Return after the throw.",
+      "limitation": "Zero readiness rotation: the real slot_cast special row calls MechaMotion.cast at cast_special.contact, with 35 degrees, 0.08 s throw and 0.25 s return.",
+      "missing_node": false
+    },
+    {
+      "node": "Control.WinchLever",
+      "fact": "slot_ready",
+      "motion": "turn",
+      "start": {
+        "slot": "line",
+        "axis": "x",
+        "deg": 0.0,
+        "rate": 12.0
+      },
+      "source": "design-v3/pilots/rivet.md:261,263",
+      "note": "Line-slot consumption drives the slot-3 winch-lever pull at cast_line.contact; readiness alone must not throw it. Return after the pull.",
+      "limitation": "Zero readiness rotation: line_skill_fired calls MechaMotion.cast at cast_line.contact. slot_cast line never plays a clip or throws the lever.",
+      "missing_node": false
+    },
+    {
+      "node": "Control.LapBar",
+      "fact": "set_piece_phase",
+      "motion": "turn",
+      "start": {
+        "axis": "x",
+        "deg": 0.0,
+        "rate": 12.0,
+        "phases": [
+          "windup",
+          "flight"
+        ]
+      },
+      "source": "design-v3/pilots/rivet.md:261",
+      "note": "Haul the two-handed copper lap bar back during wind-up and retain it through flight; return on landing or cancellation.",
+      "limitation": "Zero duplicate rotation: MechaMotion.ultimate_started/ultimate_ended owns the held -25-degree bar throw. A machinery turn would compete with it.",
+      "missing_node": false
+    },
+    {
+      "node": "Drill",
+      "fact": "heft_class",
+      "motion": "param",
+      "start": {
+        "param": "extra_steps",
+        "scale": 2.0
+      },
+      "source": "design-v3/pilots/rivet.md:271,275",
+      "note": "Use the three-step cone at class I and the five-step heavy form at class V; intermediate classes retain the base cone until their layer specifies otherwise.",
+      "limitation": "Extra cone steps require P-D heft geometry. Current Drill mesh has no extra_steps shader; this param cannot change topology.",
+      "missing_node": false
+    },
+    {
+      "node": "DrillTip",
+      "fact": "heft_class",
+      "motion": "grow",
+      "start": {
+        "scale": 1.6666666666666667,
+        "rate": 12.0
+      },
+      "source": "design-v3/pilots/rivet.md:275,277",
+      "note": "Grow the lens diameter with the heft layer; the corresponding beam width uses the same class fact.",
+      "limitation": "Diameter ratio is 0.20/0.12. DrillTip is an empty; scaling it cannot enlarge the fused lens geometry. P-D must supply scalable lens geometry.",
+      "missing_node": false
+    },
+    {
+      "node": "HeftC2",
+      "fact": "heft_class",
+      "motion": "param",
+      "start": {
+        "param": "heft_fill",
+        "scale": 1.0
+      },
+      "source": "design-v3/pilots/rivet.md:267,272",
+      "missing_node": true,
+      "note": "Slam this chevron panel layer into its assigned gaps on class gain and fling it out on class loss; layer holder is absent from the inspected base recipe.",
+      "limitation": "P-D owns layer holder visibility and 0.18 s in / 1.2 overshoot / 0.45 s out. heft_fill is metadata until a layer shader consumes it."
+    },
+    {
+      "node": "HeftC3",
+      "fact": "heft_class",
+      "motion": "param",
+      "start": {
+        "param": "heft_fill",
+        "scale": 1.0
+      },
+      "source": "design-v3/pilots/rivet.md:267,273",
+      "missing_node": true,
+      "note": "Slam this chevron panel layer into its assigned gaps on class gain and fling it out on class loss; layer holder is absent from the inspected base recipe.",
+      "limitation": "P-D owns layer holder visibility and 0.18 s in / 1.2 overshoot / 0.45 s out. heft_fill is metadata until a layer shader consumes it."
+    },
+    {
+      "node": "HeftC4",
+      "fact": "heft_class",
+      "motion": "param",
+      "start": {
+        "param": "heft_fill",
+        "scale": 1.0
+      },
+      "source": "design-v3/pilots/rivet.md:267,274",
+      "missing_node": true,
+      "note": "Slam this chevron panel layer into its assigned gaps on class gain and fling it out on class loss; layer holder is absent from the inspected base recipe.",
+      "limitation": "P-D owns layer holder visibility and 0.18 s in / 1.2 overshoot / 0.45 s out. heft_fill is metadata until a layer shader consumes it."
+    },
+    {
+      "node": "HeftC5",
+      "fact": "heft_class",
+      "motion": "param",
+      "start": {
+        "param": "heft_fill",
+        "scale": 1.0
+      },
+      "source": "design-v3/pilots/rivet.md:267,275",
+      "missing_node": true,
+      "note": "Slam this chevron panel layer into its assigned gaps on class gain and fling it out on class loss; layer holder is absent from the inspected base recipe.",
+      "limitation": "P-D owns layer holder visibility and 0.18 s in / 1.2 overshoot / 0.45 s out. heft_fill is metadata until a layer shader consumes it."
+    }
+  ],
+  "control_points": {
+    "Grip.L": [
+      -0.32,
+      0.4,
+      0.05
+    ],
+    "Grip.R": [
+      0.32,
+      0.4,
+      0.05
+    ],
+    "LapBar.L": [
+      -0.14,
+      0.28,
+      -0.17
+    ],
+    "LapBar.R": [
+      0.14,
+      0.28,
+      -0.17
+    ],
+    "Lever": [
+      0.52,
+      0.3,
+      -0.27
+    ],
+    "WinchLever": [
+      0.52,
+      0.18,
+      -0.27
+    ]
+  }
+}

@@ -192,8 +192,9 @@ func _ready(hero, rec: Dictionary, events) -> void:
 
 
 func _card() -> void:
-	var dir := "user://rivet-clip-test-%d" % Time.get_ticks_usec()
+	var dir := "user://rivet-clip-test"
 	DirAccess.make_dir_recursive_absolute(dir)
+	DirAccess.remove_absolute(dir.path_join(Profile.FILE))
 	var profile := Profile.new(dir)
 	var card := Preview.new(ClassDef.by_id(CLASS_ID))
 	card.ui_profile = profile
