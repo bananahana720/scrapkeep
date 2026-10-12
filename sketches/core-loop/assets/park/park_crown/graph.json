@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "89acbfc394b0db0736c1201c2d2982a5c73796f62a559610095828e9671578c0",
+  "bake_sha256": "87c595a388a31e379ed4ebf2052f2253ead293639a1df2b5def92c2f6e5c0fcb",
   "beacon_ok": false,
   "breaches": [],
-  "bytes": 914801,
-  "edges": 321481,
+  "bytes": 914853,
+  "edges": 321472,
   "first_failed": "beacon_ok",
   "flags": {
     "deck": 657,
     "door_ok": 39508,
     "line": 427,
     "open": 40709,
-    "sight_ok": 8448,
+    "sight_ok": 8445,
     "under": 0
   },
   "full_visit_m": 1777,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "cb0fecb037bad8753a79c4a795b3fcb9988753b852f1f3bf2e90b479ec39b3f0",
+  "graph_sha256": "a5262d04b32f1aabbd610877663289ae06af49842c9f577a98e9bd83a53199f4",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2477,
   "map": "park_crown",
   "nodes": 41058,
-  "park_sha256": "48d2ce48f95f76a8258df581713317180689efea975ecc640eb5a993769ad609",
+  "park_sha256": "f866858994608e6525d7c0aa6b682f51301704eb4bccb90ed97f1c0ed8e5c29a",
   "pockets": [
     {
       "clear_ring": [],
