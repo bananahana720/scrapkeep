@@ -24,8 +24,8 @@ const WEAPON_BURST := 0.5
 const NEAR_MISS_RATE_CAP := 0.05
 const NEAR_MISS_BURST := 4.0
 # 2026-10-11 (PC-TARN ruling 2): contact budget from 32 round-2 pacing records;
-# 0.20 points/s holding one contact predicts Tarn camper 200.14 s, completionist 83.61 s.
-const CONTACT_RATE_CAP := 0.20
+# 0.14 points/s holding one contact predicts Tarn camper 228.09 s, completionist 88.12 s.
+const CONTACT_RATE_CAP := 0.14
 const CONTACT_BURST := 2.0
 # 2026-10-11 (w13 B3b): a chain link on one enemy pays at most once per this many seconds.
 const CHAIN_LINK_GAP := 1.0
