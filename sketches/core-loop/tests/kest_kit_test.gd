@@ -1,6 +1,6 @@
 extends SceneTree
 
-# 2026-10-11 (PC-KEST): real router, line payload, preview, tree and earned grants.
+# 2026-10-11 (PC-KEST round 3): reload pin 12 to 14 seconds after the contact cap changed fight timing; bands unchanged.
 # Expected count includes the final count assertion; an incomplete case run fails.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -16,8 +16,8 @@ const Codex := preload("res://src/core/codex.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const T := preload("res://tests/support/t.gd")
 const DT := 1.0 / 60.0
-# 2026-10-11 (PC-KEST): quiet loads, bite events and the tuned twelve-second reload.
-const EXPECTED_CHECKS := 66
+# 2026-10-11 (PC-KEST): quiet loads, bite events and the fourteen-second reload, including a twelve-second guard.
+const EXPECTED_CHECKS := 67
 
 var _t
 var _game
@@ -142,7 +142,9 @@ func _cases() -> void:
 	_player.abilities.tick(8.0)
 	_t.check("Cable Charge is still cooling at the former eight-second reload", not _player.abilities.ready("line"))
 	_player.abilities.tick(4.0)
-	_t.check("Cable Charge reloads at twelve seconds", _player.abilities.ready("line"))
+	_t.check("Cable Charge is still cooling at the round-two twelve-second reload", not _player.abilities.ready("line"))
+	_player.abilities.tick(2.0)
+	_t.check("Cable Charge reloads at fourteen seconds", _player.abilities.ready("line"))
 	var lane: Dictionary = _combat._line_geometry(1.0)
 	var from: Vector3 = lane["from"]
 	var dir: Vector3 = (lane["to"] - from).normalized()
