@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "84d8a26eaa2db1c5602c74adf964791ed0c7ea8dfcbd2bc06099fc2f82a5eb11",
+  "bake_sha256": "c140ff1f68f6b0bd3f7a011fbf365b46cfee25d9e626112629cea2a163cb62b8",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1312390,
-  "edges": 314008,
+  "bytes": 1312687,
+  "edges": 314061,
   "first_failed": "",
   "flags": {
     "deck": 0,
     "door_ok": 40018,
     "line": 294,
     "open": 40401,
-    "sight_ok": 8472,
+    "sight_ok": 8443,
     "under": 0
   },
-  "full_visit_m": 2316,
-  "full_visit_ratio": "1.713",
-  "graph_sha256": "c6abc8aa0967ed349ece5cbe69d851e81e2f1d3419cc9e23a94a78cd4d222778",
+  "full_visit_m": 2289,
+  "full_visit_ratio": "1.694",
+  "graph_sha256": "a70b62d2f18184012516617d9f088f682e0561be6973f9238e67021472c77c4b",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2375,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "be2069caf14637d7e716be610a573b39b10c49fddae1cee5a463f4b40f18c368",
+  "park_sha256": "92e4badada56b8b72dac21d0042152f62f1692d3a1f5cb3eb183dedf249651dc",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,7 +52,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 424,
+      "d_landmark": 410,
       "d_spawn": 1065,
       "detour_m": 307,
       "door_at": [
@@ -67,7 +67,7 @@
       ],
       "id": "rim_cache",
       "kind": "cracked_cache",
-      "nearest_door": 421,
+      "nearest_door": 394,
       "nearest_door_id": "gallery_valve",
       "pay_named": "",
       "pay_rarities": [
@@ -94,7 +94,7 @@
       ],
       "id": "bench_altar",
       "kind": "ambush_altar",
-      "nearest_door": 561,
+      "nearest_door": 560,
       "nearest_door_id": "rim_cache",
       "pay_named": "",
       "pay_rarities": [
@@ -122,7 +122,7 @@
       ],
       "id": "gallery_valve",
       "kind": "valve",
-      "nearest_door": 421,
+      "nearest_door": 394,
       "nearest_door_id": "rim_cache",
       "pay_named": "",
       "pay_rarities": [],
@@ -175,7 +175,7 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.713
+      "value": 1.694
     }
   ],
   "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
@@ -254,8 +254,16 @@
         "viable": true
       },
       {
+        "cost": 1041.2,
+        "d_landmark": 235.9,
+        "name": "cliff_rooms_west",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 939.9,
-        "d_landmark": 378.1,
+        "d_landmark": 375.4,
         "name": "west_rim_bench",
         "on_route": false,
         "rank": 5,
@@ -295,7 +303,7 @@
       },
       {
         "cost": 801.2,
-        "d_landmark": 623.0,
+        "d_landmark": 609.0,
         "name": "shelf_sag_corner_3",
         "on_route": false,
         "rank": 9,
@@ -327,7 +335,7 @@
       },
       {
         "cost": 695.7,
-        "d_landmark": 905.0,
+        "d_landmark": 905.9,
         "name": "hoodoo_stack_10",
         "on_route": false,
         "rank": 0,
@@ -343,7 +351,7 @@
       },
       {
         "cost": 576.0,
-        "d_landmark": 1117.6,
+        "d_landmark": 1118.5,
         "name": "hoodoo_stack_9",
         "on_route": false,
         "rank": 0,
@@ -367,7 +375,7 @@
       },
       {
         "cost": 499.7,
-        "d_landmark": 1491.8,
+        "d_landmark": 1492.7,
         "name": "hoodoo_stack_11",
         "on_route": false,
         "rank": 0,
@@ -391,7 +399,7 @@
       },
       {
         "cost": 428.9,
-        "d_landmark": 1322.0,
+        "d_landmark": 1323.0,
         "name": "hoodoo_stack_8",
         "on_route": false,
         "rank": 0,
@@ -522,7 +530,7 @@
     "crossings": {
       "drop": 24,
       "ride": 11,
-      "walk": 145
+      "walk": 144
     },
     "hidden": [
       {
