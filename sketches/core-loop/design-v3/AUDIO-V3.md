@@ -208,6 +208,7 @@ Authored impact cues, coordinator ruling 2026-10-11. All three are procedural, f
 
 | Cue | Register and instrument | Fact and timing | Length | Bank trim |
 | --- | --- | --- | --- | --- |
+| `core_slam` | Neutral 105-to-55 Hz planted-mass sweep, rounded attack, short FM knock and dust | `slammed`, on the impact frame; harpoon smash adds one crack | 0.90 s | -1 dB, equal to `slam_boom` |
 | `ultimate_land` | D sub-bass dropping an octave under a bright, short Dm7 FM stab; class-neutral, with the pilot carried by the class body layer | `ultimate_landed`, on the impact frame | 1.25 s | -1 dB, equal to `slam_boom` |
 | `kest_demo_knock` | Dry low knock, then three ticking pips on D6, F6, A6, one per mini charge | `demo_slammed`, knock on the frame, pips at 110, 210, 310 ms | 0.4 s | -4 dB |
 | `rivet_skid_plate` | Short metal scrape into one low plate thunk; still, then exact | `skid_smashed`, scrape on the frame, plate at 55 ms | 0.405 s | -4 dB |

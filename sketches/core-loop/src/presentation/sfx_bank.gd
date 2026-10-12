@@ -50,7 +50,7 @@ const WORLD_STEPS := [0, -5, 5]
 const TRIM_DB := {
 	"ui_tick": -14.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
-	"ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
+	"core_slam": -1.0, "ultimate_land": -1.0, "kest_demo_knock": -4.0, "rivet_skid_plate": -4.0,
 	"pylon_plant": -3.0, "pylon_eject": -4.0, "enemy_arrive": -9.0, "hit_thwack": -5.0,
 	"weapon_zap": -15.0, "special_fire": -4.0, "kill_pop": -7.0, "hurt": -3.0,
 	"death": 0.0, "scrap_tick": -10.0, "cog_tick": -10.0, "part_get": -3.0, "beacon_hum": -12.0,
@@ -281,6 +281,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.2, 95.0, 42.0, "sine", 20.0), 0, 1.0], [_noise(0.05, 800.0, 400.0, 60.0), 0, 0.4]])
 		"slam_boom":
 			return _slam()
+		"core_slam":
+			return _core_slam()
 		"ultimate_land":
 			return _ultimate_land()
 		"kest_demo_knock":
@@ -906,6 +908,13 @@ static func _slam() -> PackedFloat32Array:
 		phase += TAU * f * Synth.INV_RATE
 		buf[i] = tanh(2.2 * sin(phase)) * exp(-t * 4.5)
 	return _mix([[buf, 0, 1.0], [_noise(0.3, 1200.0, 200.0, 12.0), 0, 0.8], [_cut(Synth.crash(), 0.8), 0, 0.25]], true)
+
+
+static func _core_slam() -> PackedFloat32Array:
+	# Neutral planted mass: a 105-to-55 Hz sweep with a rounded attack, not Kest's bomb.
+	return _mix([[_tone(0.9, 105.0, 55.0, "sine", 2.2), 0, 1.0],
+		[_fm(0.12, 165.0, 1.41, 1.2, 22.0), Synth.seconds(0.004), 0.18],
+		[_noise(0.09, 950.0, 280.0, 30.0, 0.006), 0, 0.22]], true)
 
 
 static func _ultimate_land() -> PackedFloat32Array:

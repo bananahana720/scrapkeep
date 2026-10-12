@@ -59,7 +59,7 @@ const ROWS := {
 	"boosted": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "boost_whoosh", "hud": "", "objective": "", "priority": 1},
 	"dashed": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "dash_whoosh", "hud": "", "objective": "", "priority": 1},
 	"landed": {"group": "movement", "color": Palette.SANDSTONE, "shape": "ring", "sound": "land_thud", "hud": "", "objective": "", "priority": 1},
-	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "smash_crack", "hud": "", "objective": "", "priority": 1},
+	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "core_slam", "hud": "", "objective": "", "priority": 1},
 	"grapple_fired": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
 	"grapple_released": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "grapple_release", "hud": "", "objective": "", "priority": 1},
 	"mounted": {"group": "movement", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
@@ -187,7 +187,7 @@ const ROWS := {
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list. The skill-bar signals wait for wave P-B's HUD and
 # ultimate units (design-v3/SKILL-BAR.md section 10), which wire their listeners.
-const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window", "slot_selected", "slot_cast", "line_skill_fired", "line_skill_expired"]
+const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window", "slot_selected", "slot_cast", "line_skill_expired"]
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,
@@ -339,6 +339,7 @@ const WEIGHTED := {
 }
 
 const WEIGHT_EXEMPT := {
+	"line_skill_fired": "The line skill's bite; its landed strike is enemy_struck.",
 	"achievement_earned": "Reward and economy ladders own the cue; rewards never stop time.",
 	"activity_done": "World, interaction and activity rows own their contextual glyph and sound.",
 	"ambush_ended": "World, interaction and activity rows own their contextual glyph and sound.",

@@ -100,7 +100,7 @@ const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tic
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
-	"ultimate_land", "kest_demo_knock", "rivet_skid_plate"]
+	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate"]
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
 # row's sound, a shattered chunk plays its row's sound over a low hit.
@@ -1277,7 +1277,7 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, cause: String)
 				_chain_bite_ms = -100000.0
 			return
 		"smash_lands":
-			if _recent_ms("slam_boom") > MIN_GAP_MS["slam_boom"]:
+			if _recent_ms(Rows.sound("slammed")) > 60:
 				_grammar_cue("harpoon_smashed", sound)
 			_grammar_cue("harpoon_smashed", "smash_crack")
 			return

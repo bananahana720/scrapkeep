@@ -24,6 +24,8 @@ const STINGER_CAP := 1.2
 # own instrument), so it is a background hum's length, not a stinger's.
 const HUM_CAP := 2.5
 const CUES := {
+	# 2026-10-12 WEIGHT-1: core_slam preserves the shared slam body without a pilot voice.
+	"core_slam": 1.2,
 	# 2026-10-11 WEIGHT-1: authored impact cues replace three borrowed voices.
 	"ultimate_land": 1.6, "kest_demo_knock": 0.6, "rivet_skid_plate": 0.5,
 	"bet_roll": STINGER_CAP, "bet_clunk": STINGER_CAP, "bet_crack": STINGER_CAP, "bet_refusal": STINGER_CAP,
@@ -34,7 +36,7 @@ const CUES := {
 	"return_launch_arpeggio": STINGER_CAP, "lift_hiss": 1.5, "crater_hold": 1.5,
 }
 # Every pitched AU2 id: it must carry KEYED_SOUNDS, so a Warden lift transposes it.
-const KEYED := ["ultimate_land", "kest_demo_knock", "rivet_skid_plate", "bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet",
+const KEYED := ["core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate", "bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet",
 	"ally_hum_kest", "ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet",
 	"near_miss_whip_kest", "kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold"]
 # The one AU2 id known to be engine-managed (music_engine.gd calls samples_at with an
