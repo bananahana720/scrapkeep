@@ -951,7 +951,7 @@
         },
         {
           "frame": 8,
-          "note": "First haul: right forearm pulls back toward chest, torso leans back.",
+          "note": "First haul: right forearm pulls back toward chest, torso leans back. Paw stays below the shoulder origin.",
           "torso": {
             "pitch": 16
           },
@@ -960,14 +960,14 @@
             "offset": [
               -0.04,
               -0.17,
-              0.22
+              0.18
             ]
           },
           "curl.R": -24
         },
         {
           "frame": 11,
-          "note": "First haul: right forearm pulls back toward chest, torso leans back. Hold this beat.",
+          "note": "First haul: right forearm pulls back toward chest, torso leans back. Paw stays below the shoulder origin. Hold this beat.",
           "torso": {
             "pitch": 16
           },
@@ -976,7 +976,7 @@
             "offset": [
               -0.04,
               -0.17,
-              0.22
+              0.18
             ]
           },
           "curl.R": -24
@@ -999,7 +999,7 @@
         },
         {
           "frame": 16,
-          "note": "Second haul: right forearm pulls back toward chest again, torso leans back.",
+          "note": "Second haul: right forearm pulls back toward chest again, torso leans back. Paw stays below the shoulder origin.",
           "torso": {
             "pitch": 16
           },
@@ -1008,14 +1008,14 @@
             "offset": [
               -0.04,
               -0.17,
-              0.22
+              0.18
             ]
           },
           "curl.R": -24
         },
         {
           "frame": 19,
-          "note": "Second haul: right forearm pulls back toward chest again, torso leans back. Hold this beat.",
+          "note": "Second haul: right forearm pulls back toward chest again, torso leans back. Paw stays below the shoulder origin. Hold this beat.",
           "torso": {
             "pitch": 16
           },
@@ -1024,7 +1024,7 @@
             "offset": [
               -0.04,
               -0.17,
-              0.22
+              0.18
             ]
           },
           "curl.R": -24
