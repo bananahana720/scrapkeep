@@ -1,7 +1,7 @@
 extends SceneTree
 
 const MusicRows := preload("res://src/presentation/music_rows.gd")
-const Engine := preload("res://src/presentation/music_engine.gd")
+const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Audio := preload("res://src/presentation/audio.gd")
@@ -17,11 +17,12 @@ var _announcements := {}
 var _starts := {}
 
 func _initialize() -> void:
-	var constants: Dictionary = MusicRows.get_script_constant_map()
+	var row_script: Script = MusicRows
+	var constants: Dictionary = row_script.get_script_constant_map()
 	var cues: Dictionary = constants.get("CUES", {})
 	for id in IDS:
 		_check(id + " row exists", cues.has(id), str(cues.get(id, {})))
-	var e = Engine.new()
+	var e = MusicEngine.new()
 	if not e.has_method("park_cue") or not MusicRows.new().has_method("cue"):
 		_check("timing key and timbre hooks", false, "park_cue/cue absent")
 		_finish()
@@ -41,7 +42,7 @@ func _fixture_checks() -> void:
 		var signature := str([row.voice, row.notes, row.get("accent", ""), row.get("sound", "")])
 		_check(family + " measurable family distinctness", not signature in signatures, signature)
 		signatures.append(signature)
-		var e = Engine.new()
+		var e = MusicEngine.new()
 		e.key = 3
 		e.band_muted = true
 		e.call("park_cue", id, LEAD, 0, {}, Audio.PRIORITY_DB[Rows.priority("event_announced")])
