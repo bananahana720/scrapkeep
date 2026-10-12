@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_CHECKS := 1114
+const EXPECTED_CHECKS := 1122
 
 var _t := T.new("director_credit_test")
 
@@ -123,10 +123,26 @@ func _boundaries() -> void:
 	d.set("credits", 1000.0)
 	d.threat = 100.0
 	d.advance(H, 23)
-	_t.check("pending arrivals reserve room at hard cap", d.arrivals.size() <= 1)
+	_t.eq("pending fixture creates exactly one future arrival", d.arrivals.size(), 1)
+	_t.check("pending fixture arrival is still in the future", d.arrivals.size() == 1 and d.arrivals[0].left > H)
 	var spent: float = d.get("credits_spent")
+	var accrued: float = d.get("credits_accrued")
+	d.advance(H, 23)
+	_t.near("live plus reserved cap accrues no income", d.credits_accrued, accrued)
+	_t.near("live plus reserved cap spends nothing", d.credits_spent, spent)
 	d.advance(H, 24)
 	_t.near("external cap never spends more", d.get("credits_spent"), spent)
+	var transition = _director(12, Park.of(1), "credit")
+	transition.threat = 100.0
+	transition.credits = Cards.CARDS["chaser"].cost
+	transition.advance(0.0, 23)
+	_t.eq("due fixture creates exactly one reserved arrival", transition.arrivals.size(), 1)
+	var transition_spent: float = transition.credits_spent
+	var due_now: Array = transition.advance(Director.ARRIVAL, 23)
+	_t.eq("reserved arrival becomes exactly one due spawn", due_now.size(), 1)
+	_t.check("due transition leaves no pending arrivals", transition.arrivals.is_empty())
+	_t.near("live plus due cap accrues no income", transition.credits_accrued, 0.0)
+	_t.near("live plus due cap spends nothing", transition.credits_spent, transition_spent)
 	var held = _director(11, Park.of(1), "credit")
 	held._next_pack = Park.PACKS[1]
 	held.credits = 1000.0
