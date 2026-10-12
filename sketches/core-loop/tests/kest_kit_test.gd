@@ -1,6 +1,6 @@
 extends SceneTree
 
-# 2026-10-12 (PC-KEST round 4): quiet slot_cast check; reload remains fourteen seconds.
+# 2026-10-12 (PC-KEST round 4): quiet slot_cast and hull-only hand checks; reload remains fourteen seconds.
 # 2026-10-11 (PC-KEST round 3): reload pin 12 to 14 seconds after the contact cap changed fight timing; bands unchanged.
 # Expected count includes the final count assertion; an incomplete case run fails.
 const Game := preload("res://src/game.gd")
@@ -20,7 +20,13 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DT := 1.0 / 60.0
 # 2026-10-11 (PC-KEST): quiet loads, bite events and the fourteen-second reload, including a twelve-second guard.
-const EXPECTED_CHECKS := 70
+const EXPECTED_CHECKS := 71
+
+class HandHull:
+	extends Node3D
+	var radius := 1.0
+	var role := "hull"
+
 
 var _t
 var _game
@@ -358,7 +364,14 @@ func _hand_snapshot(pilot: String, condition: String) -> Dictionary:
 	var driver := BotDriver.new(_game, "skipper", 2)
 	driver._off_line = 99.0
 	driver._note = {"stage": 1}
-	var target := _enemy(_player.ball_position() + Vector3.RIGHT * (2.0 if condition == "near" else 20.0))
+	var at: Vector3 = _player.ball_position() + Vector3.RIGHT * (2.0 if condition in ["near", "near_enemy"] else 20.0)
+	var target: Node3D
+	if pilot == "demolitions_caster" and condition != "near_enemy":
+		target = HandHull.new()
+		root.add_child(target)
+		target.global_position = at
+	else:
+		target = _enemy(at)
 	_player.kit.aim = {"body": target}
 	_player.state.grounded = condition != "air"
 	_player._brake_was_held = condition == "latched_brake"
@@ -393,6 +406,8 @@ func _hand_snapshot(pilot: String, condition: String) -> Dictionary:
 func _bot_hand_cases() -> void:
 	var near := _hand_snapshot("demolitions_caster", "near")
 	_t.check("Cable Charge hand waits outside the body's passing radius", not near["press"].get("harpoon_pressed", false), str(near))
+	var ordinary := _hand_snapshot("demolitions_caster", "near_enemy")
+	_t.check("Cable Charge keeps the ordinary enemy bite hand", ordinary["press"].get("harpoon_pressed", false), str(ordinary))
 	var far := _hand_snapshot("demolitions_caster", "far")
 	_t.check("Cable Charge hand still bites and casts on a valid runup", far["press"].get("harpoon_pressed", false)
 		and far["cast_slot"] == 3 and far["cast_phase"] == "click", str(far))
