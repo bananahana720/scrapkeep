@@ -1656,7 +1656,8 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 		if options.has("budget"):
 			var dealt := _cannon_set_piece_hit(enemy, float(entry["damage"]), h.centre, false, false, options["budget"])
 			var record: Dictionary = options["record"]
-			record["zone_hits"] = int(record.get("zone_hits", 0)) + 1
+			if entry["struck"].size() == 1:
+				record["zone_hits"] = int(record.get("zone_hits", 0)) + 1
 			record["volley_hits"] = int(record.get("volley_hits", 0)) + 1
 			record["damage"] = float(record.get("damage", 0.0)) + dealt
 		else:
