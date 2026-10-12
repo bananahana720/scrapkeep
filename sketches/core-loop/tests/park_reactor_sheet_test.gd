@@ -10,18 +10,23 @@ var t = T.new("park_reactor_sheet_test")
 var game
 class Floor extends RefCounted:
 	func height(_x: float,_z: float) -> float: return 0.0
+class Body extends RefCounted:
+	var linear_velocity:=Vector3.ZERO
+	func set_velocity_now(v: Vector3) -> void: linear_velocity=v
 class Ball extends RefCounted:
 	signal struck(enemy: Node3D, kind: String, force: float)
 	var at := Vector3.ZERO
-	var linear_velocity := Vector3.ZERO
+	var rigid:=Body.new()
+	var line_cuts:=0
 	var tuning = null
 	var kit = null
 	var accel := Vector3.ZERO
 	func ball_position() -> Vector3: return at
-	func body(): return self
+	func body(): return rigid
+	func set_velocity_now(_v: Vector3) -> void: line_cuts+=1
 	func add_external_accel(a: Vector3) -> void: accel+=a
 	func _on_enemy_touched(enemy: Node3D, _normal: Vector3) -> void:
-		struck.emit(enemy,"ram",Vector2(linear_velocity.x,linear_velocity.z).length())
+		struck.emit(enemy,"ram",Vector2(rigid.linear_velocity.x,rigid.linear_velocity.z).length())
 class Mount extends Node3D:
 	const FAMILY_POINT_RADIUS=Warden.FAMILY_POINT_RADIUS
 	var spec := {"park_landmark":true}
@@ -40,7 +45,7 @@ func _run() -> void:
 	d.sheet_left=Reactor.SHEET_SECONDS
 	d.sheet_dir=Vector3.FORWARD
 	m.target.at=m.family_point_at()+d.sheet_dir*Tuning.RADIUS
-	m.target.linear_velocity=-d.sheet_dir*Reactor.RIDE_MIN_SPEED
+	m.target.rigid.linear_velocity=-d.sheet_dir*Reactor.RIDE_MIN_SPEED
 	var hits=[]
 	m.target.struck.connect(func(e,k,f): hits.append([e,k,f]))
 	d._ride(m,1.0/Engine.physics_ticks_per_second)
@@ -69,6 +74,13 @@ func _run() -> void:
 	hits.clear()
 	d._ride(m,1.0/Engine.physics_ticks_per_second)
 	t.eq("a dry sheet never pays a contact",hits.size(),0)
+	d.sheet_left=Reactor.SHEET_SECONDS
+	m.target.at=m.home+d.sheet_dir*(Reactor.SHEET_RUN-Tuning.RADIUS)
+	m.target.at.y=Tuning.RADIUS
+	m.target.rigid.linear_velocity=-d.sheet_dir*Reactor.RIDE_MIN_SPEED
+	d._ride(m,1.0/Engine.physics_ticks_per_second)
+	t.eq("guiding the sheet preserves a held anchor line",m.target.line_cuts,0)
+	t.check("sheet guidance commits its vertical velocity to the body",m.target.rigid.linear_velocity.y>0.0,str(m.target.rigid.linear_velocity))
 	m.free()
 	game=Game.new()
 	game.test_mode=true
