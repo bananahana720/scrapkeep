@@ -40,19 +40,22 @@ func _heights(bins: Dictionary, point: Vector2) -> Array:
 	var heights := []
 	for tri in bins.get(Vector2i(floori(point.x / 2.0), floori(point.y / 2.0)), []):
 		var a: Vector3 = tri[0]
-		var b := Vector2(tri[1].x - a.x, tri[1].z - a.z)
-		var c := Vector2(tri[2].x - a.x, tri[2].z - a.z)
-		var offset := point - Vector2(a.x, a.z)
-		var determinant := b.cross(c)
+		var bx: float = float(tri[1].x) - float(a.x)
+		var bz: float = float(tri[1].z) - float(a.z)
+		var cx: float = float(tri[2].x) - float(a.x)
+		var cz: float = float(tri[2].z) - float(a.z)
+		var dx: float = float(point.x) - float(a.x)
+		var dz: float = float(point.y) - float(a.z)
+		var determinant := bx * cz - bz * cx
 		if absf(determinant) < 0.0000001:
 			continue
-		var u := offset.cross(c) / determinant
-		var v := b.cross(offset) / determinant
+		var u := (dx * cz - dz * cx) / determinant
+		var v := (bx * dz - bz * dx) / determinant
 		if u >= -0.00001 and v >= -0.00001 and u + v <= 1.00001:
-			heights.append(a.y + u * (tri[1].y - a.y) + v * (tri[2].y - a.y))
+			heights.append(float(a.y) + u * (float(tri[1].y) - float(a.y)) + v * (float(tri[2].y) - float(a.y)))
 	return heights
 
-func _triangle_probes(node: Node3D, probes: Array[Vector2], rendered: Array[Vector3]) -> void:
+func _triangle_probes(node: Node3D, probes: Array[Vector2], rendered: Array) -> void:
 	if node is MeshInstance3D and node.visible:
 		var arrays: Array = node.mesh.surface_get_arrays(0)
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -61,13 +64,15 @@ func _triangle_probes(node: Node3D, probes: Array[Vector2], rendered: Array[Vect
 			for k in vertices.size():
 				indices.append(k)
 		for k in range(0, indices.size(), 3):
-			var centre := Vector3.ZERO
+			var centre := [0.0, 0.0, 0.0]
 			for index in [indices[k], indices[k + 1], indices[k + 2]]:
 				var point: Vector3 = node.global_transform * vertices[index]
-				centre += point / 3.0
+				centre[0] += float(point.x) / 3.0
+				centre[1] += float(point.y) / 3.0
+				centre[2] += float(point.z) / 3.0
 				probes.append(Vector2(point.x, point.z))
-				rendered.append(point)
-			probes.append(Vector2(centre.x, centre.z))
+				rendered.append([float(point.x), float(point.y), float(point.z)])
+			probes.append(Vector2(centre[0], centre[2]))
 			rendered.append(centre)
 	for child in node.get_children():
 		if child is Node3D:
@@ -80,7 +85,7 @@ func _check_surface(label: String, node: Node3D, site: Dictionary, water := fals
 	var centre := Vector2(float(site.at[0]), float(site.at[1]))
 	var yaw := deg_to_rad(float(site.yaw_deg))
 	var probes: Array[Vector2] = []
-	var rendered: Array[Vector3] = []
+	var rendered: Array = []
 	_triangle_probes(node, probes, rendered)
 	for z in range(ceili(-half.y), floori(half.y) + 1):
 		for x in range(ceili(-half.x), floori(half.x) + 1):
@@ -95,7 +100,7 @@ func _check_surface(label: String, node: Node3D, site: Dictionary, water := fals
 	var worst := INF
 	var deepest := -INF
 	for point in rendered:
-		var depth: float = point.y - game.ctx.terrain.height(point.x, point.z)
+		var depth: float = float(point[1]) - game.ctx.terrain.height(float(point[0]), float(point[2]))
 		worst = minf(worst, depth)
 		deepest = maxf(deepest, depth)
 	for point in probes:
