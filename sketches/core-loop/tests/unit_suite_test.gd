@@ -3,13 +3,14 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const CASE_DIR := "res://tests/unit/"
 const MIN_CASES := 3
+const REQUIRED_CASES: Array[String] = ["weight_table_case.gd"]
 
 
 func _initialize() -> void:
 	var t := T.new("unit_suite_test")
-	var names: Array[String] = []
+	var names: Array[String] = REQUIRED_CASES.duplicate()
 	for file in DirAccess.get_files_at(CASE_DIR):
-		if file.ends_with("_case.gd"):
+		if file.ends_with("_case.gd") and not file in names:
 			names.append(file)
 	names.sort()
 	t.check("enough cases", names.size() >= MIN_CASES, "%d cases found, need %d" % [names.size(), MIN_CASES])

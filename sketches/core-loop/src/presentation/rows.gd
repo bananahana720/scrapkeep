@@ -108,6 +108,7 @@ static func _named_by_rows() -> Array:
 	for table in [EventKinds.ROWS, EventKinds.UI_ROWS, EventKinds.LOOT_ROWS]:
 		for kind in table:
 			named.append(String(table[kind].get("sound_next", "")))
+			named.append(String(table[kind].get("sound", "")))
 	return named
 
 
