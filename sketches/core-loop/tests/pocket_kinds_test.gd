@@ -436,6 +436,7 @@ func _ambush() -> void:
 				route_hits += int((graphs.park_test.flags(graphs.park_test.nearest(e.global_position)) & Graph.LINE) != 0)
 			_kill(s.pack)
 			acts.step_pocket(s, H, s.global_position)
+		_break_stage()
 		clears += int(s.done and game.flow.state == game.flow.GATES and not game.flow.sealed and not game.beacon.sealed)
 		acts.clear()
 		await physics_frame
@@ -545,26 +546,40 @@ func _seal_stage() -> bool:
 	return flow.warden.kind == "warden" and game.ctx.spawner.integrity_of(flow.warden) > 0.0 and flow.sealed and game.beacon.sealed
 
 
+func _break_stage() -> void:
+	game.flow.warden._die()
+	acts._physics_process(H)
+
+
 func _exit() -> void:
 	var before := warden_kills
 	var open := true
 	var opened := 0
-	for seed_value in 1000:
-		game.ctx.rng.seed = seed_value
-		var s = _site("scattered_marks", Vector2(100, 100), {"graph": graphs.park_test})
-		game.flow._unseal()
-		acts.step_pocket(s, H, Vector3(-700, 0, -700))
-		var this_open: bool = game.flow.state == game.flow.GATES and not game.flow.sealed and s.marks_taken == 0
-		open = open and this_open
-		opened += int(this_open)
-		acts.clear()
-		if seed_value % 20 == 19:
-			await physics_frame
-	t.check("exit-opens-with-zero-marks in 100 percent", open and opened == 1000, "%d/1000 real flow unseals with no mark taken" % opened)
+	var index: int = game.ctx.terrain.stage - 1
+	var previous = game.ctx.terrain.maps[index]
+	game.player.set_physics_process(false)
+	game.player.active_body().freeze = true
+	for stage in STAGES:
+		game.ctx.terrain.maps[index] = ParkMap.new("res://src/world/park/%s.json" % stage)
+		for seed_value in 1000:
+			game.ctx.rng.seed = seed_value
+			var s = _site("scattered_marks", Vector2(100, 100), {"graph": graphs[stage]})
+			game.player.active_body().global_position = Vector3(-700, 0, -700)
+			var was_sealed := _seal_stage()
+			_break_stage()
+			var this_open: bool = was_sealed and game.flow.state == game.flow.GATES and not game.flow.sealed and not game.beacon.sealed and s.marks_taken == 0
+			open = open and this_open
+			opened += int(this_open)
+			acts.clear()
+			if seed_value % 20 == 19:
+				await physics_frame
+		print("ordinary exit path: %s; 1000 freshly sealed stages, valid Warden killed, zero marks" % stage)
+	t.check("exit-opens-with-zero-marks in 100 percent", open and opened == 2000, "%d/2000 normal Warden-death exits with no mark taken" % opened)
 	t.check("seeded exits use ordinary stage Warden deaths", warden_kills - before == 2000, "%d/2000 Warden kill facts across both parks" % (warden_kills - before))
 	for kind in KINDS:
 		_site(kind, Vector2(100, 100), {"graph": graphs.park_test})
-	game.flow._unseal()
-	acts._physics_process(H)
-	t.check("exit opens with every pocket untouched", game.flow.state == game.flow.GATES and not game.flow.sealed and acts.sites.all(func(s): return not s.done), "all seven optional kinds remain unfinished")
+	var was_sealed := _seal_stage()
+	_break_stage()
+	t.check("exit opens with every pocket untouched", was_sealed and game.flow.state == game.flow.GATES and not game.flow.sealed and not game.beacon.sealed and acts.sites.all(func(s): return not s.done and s.marks_taken == 0), "all seven optional kinds remain unfinished after ordinary Warden death and activity processing")
+	game.ctx.terrain.maps[index] = previous
 	acts.clear()
