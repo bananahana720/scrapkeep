@@ -461,6 +461,26 @@ def measured_points(root):
     return points
 
 
+def measured_ram_colors(root):
+    mesh = next(obj.data for obj in common.tree(root) if obj.name == "JawRams")
+    codes = mesh.attributes.get(RAM_MEASURE_LAYER)
+    colors = mesh.color_attributes.get("Color")
+    if codes is None or colors is None:
+        return {}
+    per_vertex = {}
+    for loop in mesh.loops:
+        rgb = colors.data[loop.index].color[:3]
+        per_vertex.setdefault(loop.vertex_index, []).append(rgb)
+    groups = {}
+    for index, samples in per_vertex.items():
+        code = codes.data[index].value
+        if code:
+            rgb = tuple(sum(sample[k] for sample in samples) / len(samples) for k in range(3))
+            groups.setdefault(RAM_MEASURES[code - 1], []).append(rgb)
+    return {label: tuple(sum(rgb[k] for rgb in samples) / len(samples) for k in range(3))
+            for label, samples in groups.items()}
+
+
 def bounds_gap(a, b):
     if not a or not b:
         return math.inf
@@ -571,6 +591,10 @@ def ram_checks(root):
     snapshot = rest(root)
     objs = {o.name: o for o in common.tree(root)}
     points = measured_points(root)
+    colors = measured_ram_colors(root)
+    sandstone = Vector(common.to_linear(common.srgb(common.HEX["sandstone"])))
+    bone = Vector(common.to_linear(common.srgb(common.HEX["bone"])))
+    luma = Vector((0.2126, 0.7152, 0.0722))
     moving = [clip for clip in CLIPS if any(n in controls(clip) for n in ("JawL", "JawR"))]
     for rig in RAM_RIG:
         label = rig["label"]
@@ -581,6 +605,19 @@ def ram_checks(root):
         seat_gap = bounds_gap(points.get(label + "_base_clevis", []), points.get("clamp_ring", []))
         print("CHECK ram_mesh %s barrel_r_m=%.4f rod_r_m=%.4f clamp_gap_m=%.4f" %
               (label, barrel_r, rod_r, seat_gap))
+        barrel_rgb = Vector(colors.get(label + "_barrel", (0, 0, 0)))
+        rod_rgb = Vector(colors.get(label + "_rod", (0, 0, 0)))
+        barrel_luma, rod_luma = barrel_rgb.dot(luma), rod_rgb.dot(luma)
+        sand_distance, bone_distance = (rod_rgb - sandstone).length, (rod_rgb - bone).length
+        contrast_ok = (label + "_barrel" in colors and label + "_rod" in colors
+                       and rod_luma - barrel_luma >= 0.45
+                       and sand_distance >= 0.15 and bone_distance >= 0.15)
+        if not sil_say(contrast_ok, "reactor", "3d", label, "ram_value_contrast",
+                       rod_luma - barrel_luma,
+                       ">=0.45 sandstone_distance>=0.15 bone_distance>=0.15 "
+                       "barrel_luma=%.6f rod_luma=%.6f sandstone_distance=%.6f bone_distance=%.6f" %
+                       (barrel_luma, rod_luma, sand_distance, bone_distance)):
+            fails.append(label + " ram_value_contrast")
         for metric, value, ok, want in (
             ("base_pin_z_m", base.z, base.z >= SIL_RAM_BASE_Z, ">=2.0"),
             ("base_on_clamp", int(seat_gap <= 0.05), seat_gap <= 0.05, "=1 built bounds gap<=0.05m"),
