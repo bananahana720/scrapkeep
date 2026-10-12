@@ -8,9 +8,21 @@ const Fx := preload("res://src/presentation/fx_library.gd")
 const Events := preload("res://src/core/game_events.gd")
 const Windup := preload("res://src/presentation/windup_rows.gd")
 const Posture := preload("res://src/combat/boss_posture.gd")
+const Audio := preload("res://src/presentation/audio.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const Palette := preload("res://src/core/palette.gd")
 const CLASSES := ["none", "hit", "heavy", "massive", "climax"]
 const FIELDS := ["stop_ms", "shake", "kick", "punch_fov", "fx_scale", "body", "body_st"]
-const EXPECTED_CHECKS := 24
+const EXPECTED_CHECKS := 31
+const OWNER := {
+	"enemy_struck": "neutral", "enemy_killed": "neutral", "gauge_released": "neutral",
+	"posture_changed": "neutral", "posture_break": "neutral", "ultimate_landed": "neutral",
+	"boss_defeated": "neutral", "boss_weak_point_hit": "neutral", "slammed": "neutral",
+	"sticky_detonated": "demolitions_caster", "enemy_rebounded": "neutral",
+	"cloak_broken": "demolitions_caster", "hold_broken": "neutral", "swarm_scattered": "neutral",
+	"enemy_pinned": "neutral", "arc_slammed": "pylon_engineer", "skid_smashed": "runner_gunner",
+	"demo_slammed": "demolitions_caster", "cloak_started": "demolitions_caster", "cc_ignored": "runner_gunner",
+}
 var event_script: Script = EventKinds
 const PRESENTATION := ["juice", "vfx", "audio"]
 const RULES := ["strike", "death_parts", "amount", "gauge", "posture"]
@@ -56,6 +68,14 @@ func run(t) -> void:
 		if facts[fact].has("sound") or record.sound != Rows.sound(fact):
 			sound_drift.append(fact)
 	t.eq("weighted sound matches Rows", sound_drift, [])
+	t.eq("player weighted owner coverage", facts.keys().filter(func(fact): return facts[fact].allegiance == "player" and not OWNER.has(fact)), [])
+	var identity := _identity_errors(facts)
+	t.eq("player cue hostile identity", identity.hostile, [])
+	t.eq("player cue class identity", identity.voiced, [])
+	var audibility := _audibility_errors(facts)
+	t.eq("massive and climax cue audibility", audibility.weight, [])
+	t.eq("player cue onset at most 20 ms", audibility.onset, [])
+	t.eq("trimmed cue peak ceiling", audibility.ceiling, [])
 	var listeners := connected_signals()
 	var uncovered := uncovered_listeners(listeners, facts, exemptions)
 	t.eq("presentation listener coverage", uncovered, [])
@@ -91,7 +111,9 @@ func run(t) -> void:
 			collisions.append([fact, shared])
 	var ultimate: Dictionary = event_script.call("weigh", "ultimate_landed", {})
 	var vault: Dictionary = event_script.call("weigh", "enemy_killed", {"kind": "vault"})
-	var shared_cues := [ultimate.sound].filter(func(id): return id != "" and id in [vault.sound, "vault_drop"])
+	var audio_constants := Audio.get_script_constant_map()
+	t.check("vault kill cue constant", audio_constants.has("VAULT_KILL_SOUND") and Bank.has_recipe(String(audio_constants.get("VAULT_KILL_SOUND", ""))), "audio.gd owns the vault kill cue")
+	var shared_cues := [ultimate.sound].filter(func(id): return id != "" and id in [vault.sound, audio_constants.get("VAULT_KILL_SOUND", "")])
 	if not shared_cues.is_empty():
 		collisions.append(["ultimate_landed", "enemy_killed: vault", shared_cues])
 	t.eq("same frame sound collision", collisions, [])
@@ -175,11 +197,65 @@ func _measure(id: String, ratio := 1.0) -> Dictionary:
 	if samples.is_empty():
 		return {}
 	var crosses := 0
+	var peak := 0.0
+	var sum_squares := 0.0
+	var onset_ms := INF
+	var gain := db_to_linear(Bank.trim_db(id))
+	for i in samples.size():
+		var sample := samples[i] * gain
+		peak = maxf(peak, absf(sample))
+		sum_squares += sample * sample
+		if onset_ms == INF and absf(sample) > db_to_linear(-30.0):
+			onset_ms = 1000.0 * i / Bank.RATE / ratio
 	for i in range(1, samples.size()):
 		if (samples[i - 1] < 0.0) != (samples[i] < 0.0):
 			crosses += 1
 	var seconds := float(samples.size()) / Bank.RATE / ratio
-	return {"zcr": crosses / seconds, "seconds": seconds}
+	return {"zcr": crosses / seconds, "seconds": seconds, "peak_db": linear_to_db(peak),
+		"rms_db": linear_to_db(sqrt(sum_squares / samples.size())), "onset_ms": onset_ms}
+
+
+func _identity_errors(facts: Dictionary) -> Dictionary:
+	var hostile := []
+	var voiced := []
+	var hostile_cues := []
+	for fact in EventKinds.ROWS:
+		if facts.get(fact, {}).get("allegiance", "") == "hostile" or EventKinds.ROWS[fact].color == Palette.HAZARD:
+			hostile_cues.append(Rows.sound(fact))
+	for fact in facts:
+		if facts[fact].allegiance != "player":
+			continue
+		var cue := Rows.sound(fact)
+		if cue != "" and cue in hostile_cues:
+			hostile.append([fact, cue])
+		var voices := []
+		for pilot in ClassDef.all():
+			if cue.ends_with("_" + pilot.motif) or cue == pilot.sound or cue.begins_with(pilot.id + "_") or cue.begins_with(pilot.motif + "_"):
+				voices.append(pilot.id)
+		if voices.is_empty() and ["ally_", "mind_", "near_miss_whip_"].any(func(prefix): return cue.begins_with(prefix)):
+			voices.append("unknown")
+		var owner := String(OWNER.get(fact, "neutral"))
+		if not voices.is_empty() and (owner == "neutral" or voices.any(func(voice): return voice != owner)):
+			voiced.append([fact, cue, owner, voices])
+	return {"hostile": hostile, "voiced": voiced}
+
+
+func _audibility_errors(facts: Dictionary) -> Dictionary:
+	var weight := []
+	var onset := []
+	var ceiling := []
+	var floor_db: float = _measure("slam_boom").peak_db - 6.0
+	for fact in facts:
+		var cue := Rows.sound(fact)
+		var measured := _measure(cue)
+		var classes: Array = [facts[fact].get("class", "")] if facts[fact].has("class") else _rule_classes(String(facts[fact].get("rule", "")))
+		if classes.any(func(key): return key in ["massive", "climax"]) and (measured.is_empty() or measured.peak_db < floor_db):
+			weight.append([fact, cue, measured.get("peak_db", -INF), floor_db])
+		if facts[fact].allegiance == "player" and (measured.is_empty() or measured.onset_ms > 20.0):
+			onset.append([fact, cue, measured.get("onset_ms", INF)])
+		if not measured.is_empty() and measured.peak_db > -0.5:
+			ceiling.append([fact, cue, measured.peak_db])
+	return {"weight": weight, "onset": onset, "ceiling": ceiling}
 
 
 func _body_order(measurements: Array) -> bool:
