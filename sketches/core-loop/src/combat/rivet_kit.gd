@@ -12,6 +12,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
+const Hitscan := preload("res://src/combat/hitscan.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 const SET_PIECES := ["foundry_cutter", "prism_cutter", "juggernaut_drive"]
@@ -314,10 +315,11 @@ func beam_dir(aim: Vector3, heading := Vector3.ZERO) -> Vector3:
 	var h := _flat(heading if heading != Vector3.ZERO else _heading()).normalized()
 	var flat := _flat(aim)
 	if flat.length() < 0.001:
-		return h
+		return aim.normalized() if aim.length_squared() > 0.0001 else h
 	var angle := h.signed_angle_to(flat.normalized(), Vector3.UP)
 	var limit := deg_to_rad(Weapons.CUTTER_CLAMP_DEG)
-	return h.rotated(Vector3.UP, clampf(angle, -limit, limit))
+	var unit := aim.normalized()
+	return h.rotated(Vector3.UP, clampf(angle, -limit, limit)) * Vector2(unit.x, unit.z).length() + Vector3.UP * unit.y
 
 
 func beam_width(id: String) -> float:
@@ -326,27 +328,44 @@ func beam_width(id: String) -> float:
 	return float(Weapons.CUTTER_WIDTH[_class() - 1])
 
 
-# Machines on the beam, nearest first: the hull within the half-width and the length. A beam is
-# precise (the reticle is the beam), so it takes no hit-test forgiveness.
-func on_beam(from: Vector3, dir: Vector3, length: float, width: float) -> Array:
+func _beam_aim(from: Vector3, aim: Vector3, reach: float) -> Vector3:
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	var resolved := Hitscan.aim(space, ctx.aim_origin(), aim, from, reach)
+	var toward: Vector3 = resolved["point"] - from
+	return beam_dir(toward if toward.length_squared() > 0.0001 else aim)
+
+
+func _commit_beam(from: Vector3, dir: Vector3, length: float, width: float) -> Dictionary:
+	var endpoint := from + dir * length
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	var cover := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, endpoint, Hitscan.WORLD))
+	if not cover.is_empty():
+		endpoint = cover["position"]
+	return ctx.player.yours({"origin": from, "direction": dir, "endpoint": endpoint, "width": width,
+		"kind": "line", "from": from, "to": endpoint, "full_to": endpoint, "fill": 1.0})
+
+
+# Drawing and hull selection consume the same world-clipped, three-dimensional beam.
+func on_beam(beam: Dictionary) -> Array:
+	var from: Vector3 = beam["origin"]
+	var dir: Vector3 = beam["direction"]
+	var length: float = from.distance_to(beam["endpoint"])
 	var picks: Array = []
 	for enemy in _enemies():
-		var to := _flat(enemy.global_position - from)
+		var to: Vector3 = enemy.global_position - from
 		var hull: float = combat._hull(enemy)
 		var along := to.dot(dir)
-		var side := absf(to.dot(Vector3(-dir.z, 0.0, dir.x)))
-		if along >= -hull and along - hull <= length and side - hull <= width * 0.5:
+		var side := (to - dir * along).length()
+		if along >= -hull and along - hull <= length and side - hull <= float(beam["width"]) * 0.5:
 			picks.append([along, enemy])
 	picks.sort_custom(func(a, b): return a[0] < b[0])
 	return picks.map(func(p): return p[1])
 
 
-func _draw_beam(index: int, from: Vector3, dir: Vector3, length: float, width: float) -> void:
-	var to := from + dir * length
-	var shape: Dictionary = ctx.player.yours({"kind": "line", "from": from, "to": to, "full_to": to, "width": width, "fill": 1.0})
-	beam_shapes.append(shape)
-	ctx.player.indicator.set_shape("rivet_beam_%d" % index, shape)
-	combat.effects.arc(from + Vector3.UP * 0.5, to + Vector3.UP * 0.5, ctx.player.class_color())
+func _draw_beam(index: int, beam: Dictionary) -> void:
+	beam_shapes.append(beam)
+	ctx.player.indicator.set_shape("rivet_beam_%d" % index, beam)
+	combat.effects.arc(beam["origin"], beam["endpoint"], ctx.player.class_color())
 
 
 func _clear_beams() -> void:
@@ -383,17 +402,19 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 	var extra := int(_knob("ult_volley", 0))
 	var hits := 0
 	if id == "prism_cutter":
-		var centre := beam_dir(aim)
+		var centre := _beam_aim(ball, aim, Weapons.PRISM_LENGTH)
 		for i in Weapons.PRISM_BEAMS:
 			var dir := centre.rotated(Vector3.UP, deg_to_rad(Weapons.PRISM_SPREAD_DEG * float(i - 1)))
-			_draw_beam(i, ball, dir, Weapons.PRISM_LENGTH, beam_width(id))
-			for enemy in on_beam(ball, dir, Weapons.PRISM_LENGTH, beam_width(id)).slice(0, Weapons.PRISM_PIERCE + extra):
+			var beam := _commit_beam(ball, dir, Weapons.PRISM_LENGTH, beam_width(id))
+			_draw_beam(i, beam)
+			for enemy in on_beam(beam).slice(0, Weapons.PRISM_PIERCE + extra):
 				_beam_hit(enemy, Weapons.PRISM_DAMAGE * heft, ball)
 				hits += 1
 		return hits
-	var d := beam_dir(aim)
-	_draw_beam(0, ball, d, Weapons.CUTTER_LENGTH, beam_width(id))
-	for enemy in on_beam(ball, d, Weapons.CUTTER_LENGTH, beam_width(id)).slice(0, Weapons.CUTTER_PIERCE + extra):
+	var d := _beam_aim(ball, aim, Weapons.CUTTER_LENGTH)
+	var beam := _commit_beam(ball, d, Weapons.CUTTER_LENGTH, beam_width(id))
+	_draw_beam(0, beam)
+	for enemy in on_beam(beam).slice(0, Weapons.CUTTER_PIERCE + extra):
 		_beam_hit(enemy, Weapons.CUTTER_DAMAGE * heft, ball)
 		hits += 1
 	return hits
@@ -427,9 +448,10 @@ func peak(id: String, at: Vector3) -> void:
 		_shoulder = ult._beat_len if ult._beat_len > 0.0 else 0.35
 		return
 	if id == "prism_cutter":
-		var d := beam_dir(_peak_aim())
-		_draw_beam(0, at, d, Weapons.CUTTER_LENGTH, Weapons.PRISM_FOCUS_WIDTH)
-		for enemy in on_beam(at, d, Weapons.CUTTER_LENGTH, Weapons.PRISM_FOCUS_WIDTH).slice(0, Weapons.PRISM_FOCUS_PIERCE):
+		var d := _beam_aim(at, _peak_aim(), Weapons.CUTTER_LENGTH)
+		var beam := _commit_beam(at, d, Weapons.CUTTER_LENGTH, Weapons.PRISM_FOCUS_WIDTH)
+		_draw_beam(0, beam)
+		for enemy in on_beam(beam).slice(0, Weapons.PRISM_FOCUS_PIERCE):
 			_beam_hit(enemy, Weapons.PRISM_FOCUS_DAMAGE * heft, at)
 			hits += 1
 	else:
