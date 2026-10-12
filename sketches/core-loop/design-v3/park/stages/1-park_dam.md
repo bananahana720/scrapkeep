@@ -244,19 +244,21 @@ Since the ledges are 24 m plateaus (section 5), `service_lift` stands at the foo
 
 ## 9. Traversal lines
 
-Measured 2026-10-11 on the shipped greybox, KB9 head (8 seeds per line through `tools/traversal_line.gd`, `--table=park --stage=1`). The waypoints are in `tools/park_lines/park_dam.json`; the full band table, median and worst seed per band, is `design-v3/park/traversal/park_dam.md`. Four waymarks: `drop_in`, `domes_camp`, `the_eye`, `landmark`. Straight distance drop-in to engage centre: 1274 m.
+Measured 2026-10-12 on merged head `cd3a9bf`, containing candidate `6710ac0` and admitted greybox `f58699e` (8 seeds per line through `tools/traversal_line.gd`, `--table=park --stage=1`). The waypoints are in `tools/park_lines/park_dam.json`; the full band table, median and worst seed per band, is `design-v3/park/traversal/park_dam.md`. Four waymarks: `drop_in`, `domes_camp`, `the_eye`, `landmark`. Straight distance drop-in to engage centre: 1274 m.
 
 | Line | Route after the domes | Length ratio (1.3 to 2.0) | Segment medians s (12 to 45) | Drop-in to Warden s, median (worst) (60 to 120, none over 150) | Peak m/s, median | Airborne share |
 | --- | --- | --- | --- | --- | --- | --- |
-| Sable | shelf A loop, west wash, west (tunnel, bucket, pool) | 1.65 | 27.6, 17.1, 17.6 | 62.6 (65.1) | 53.8 | 0.25 |
-| Rivet | shelf B, upper slot, centre (incline, apron) | 1.32 | 38.3, 29.6, 13.5 | 81.8 (82.3) | 42.6 | 0.16 |
-| Kest | shelf C, corkscrew, east (bridge, bench) | 1.34 | 30.4, 30.6, 22.4 | 83.8 (86.0) | 31.6 | 0.28 |
-| Tarn | shelf B, upper slot, west (tunnel, bucket, pool; the waypoints in the lines file) | 1.38 | 31.6, 26.6, 16.3 | 74.7 (76.1) | 39.6 | 0.22 |
-| Tally | shelf C, west wash, plunge pool | 1.32 | 31.9, 31.3, 17.2 | 81.1 (82.3) | 44.6 | 0.16 |
-| Cannon | shelf C, corkscrew, crest | 1.45 | 29.5, 29.5, 25.3 | 84.2 (85.7) | 36.5 | 0.17 |
-| Floor line | shelf B, upper slot, west (tunnel, bucket, pool), no contraption | 1.38 | 38.7, 31.4, 15.9 | 86.0 (87.2) | 42.7 | 0.11 |
+| Sable | shelf A loop, west wash, west (tunnel, bucket, pool) | 1.640 | 27.65, 17.12, 17.31 | 62.03 (66.86) | 54.12 | 0.2486 |
+| Rivet | shelf B, upper slot, centre (incline, apron) | 1.325 | 38.29, 29.59, 13.49 | 81.83 (82.29) | 42.62 | 0.1633 |
+| Kest | shelf C, corkscrew, east (bridge, bench) | 1.340 | 30.37, 30.55, 22.38 | 83.75 (86.02) | 31.65 | 0.2832 |
+| Tarn | shelf B, upper slot, west (tunnel, bucket, pool; the waypoints in the lines file) | 1.380 | 31.63, 26.62, 16.31 | 74.72 (76.10) | 39.59 | 0.2158 |
+| Tally | shelf C, west wash, plunge pool | 1.320 | 31.94, 31.26, 17.17 | 81.07 (82.30) | 44.58 | 0.1643 |
+| Cannon | shelf C, corkscrew, crest | 1.450 | 29.54, 29.60, 25.21 | 84.39 (85.07) | 36.67 | 0.1751 |
+| Floor line | shelf B, upper slot, west (tunnel, bucket, pool), no contraption | 1.380 | 38.70, 31.42, 15.85 | 85.98 (87.16) | 42.70 | 0.1148 |
 
-Every line reached the Warden on 8 of 8 seeds, and every pilot band passes on all six pilots with no dead stop on any seed (the KB9 head, where the rows are placed at runtime and their ride sensors fire: 5 to 7 distinct ride facts per line). The floor line's median is 1.05 times Rivet's (band at most 2.0) with no dead stop. Re-measured 2026-10-12 after `saguaro_26` and the floor line's re-cut onto the bucket flight; the floor line's airborne share (0.115) stays under the pilots' 0.12 band, and whether that band judges the floor line is open for a ruling (three other floor cuts and the band each missed are in the traversal page).
+All seven lines reached the Warden on all eight seeds with zero dead stops. The six pilot lines meet every band except Sable's worst-seed anchor gap: 45.3 m on seed 7 against the 40 m limit. Her median is 36.4 m, which the tool marks inside, but ruling 14 judges every seed. The floor line passes its own row: median 85.98 s, worst 87.16 s, cap 163.67 s from twice Rivet's median, zero dead stops on every seed. Its airborne share and other pilot measures are reported, pilot band, not the floor's, per ruling 13. Evidence: `/tmp/claude-1000/w13-sol/kd1-dam-r1/merged-baseline/`.
+
+The all-six seed-1 trace comparison finds four mutually distinct lines, Sable, Rivet, Kest and Tally. Rivet/Tarn and Kest/Cannon share more than half their ticks within 8 m and do not count separately. An isolated seed-7 diagnostic reads 36.4 m and reproduces the batch's first-seed trajectory, so it does not reproduce the batch's failed seed. The anchor repair needs a batch-context diagnostic. The one-hour alignment/repair phase ended before that repair or the dressed pass was completed.
 
 Three line re-cuts on the KB9 head, each from a traced seed. Sable's line goes straight at `domes_camp` from [-60, -450]: at 40 m/s she passed 16.6 m from the camp and looped for 75 s to come back within the bot's 12 m. Her east turn on the shelf loop moves to [-25, -555], short of `domes_fin_east`. Her wash entry point moves onto the wash axis at [-137, -190]. Cannon's descent turns east at [120, 285] and [145, 350], so she lands east of `powerhouse_stair` and clear of the `rim_zip` head, and her bench points ([150, 410], [156, 470]) keep 10 m off the `canal_lips` ridge.
 
