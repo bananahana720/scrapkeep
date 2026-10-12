@@ -1881,8 +1881,9 @@ func _cannon_expose(enemy: Node3D, window: float, verb: String) -> void:
 			_exposure_mesh = surface.commit()
 			_exposure_material = ShaderMaterial.new()
 			var shader := Shader.new()
-			shader.code = "shader_type spatial; render_mode unshaded, cull_disabled; instance uniform float left = 1.0; void fragment(){ ALBEDO = vec3(0.6157, 1.0, 0.2353); ALPHA = left; }"
+			shader.code = "shader_type spatial; render_mode unshaded, cull_disabled; uniform vec4 tint : source_color; instance uniform float left = 1.0; void fragment(){ ALBEDO = tint.rgb; ALPHA = left; }"
 			_exposure_material.shader = shader
+			_exposure_material.set_shader_parameter("tint", Palette.ANCIENT)
 			_exposure_mesh.surface_set_material(0, _exposure_material)
 		mark = MeshInstance3D.new()
 		mark.name = "CannonExposure"
