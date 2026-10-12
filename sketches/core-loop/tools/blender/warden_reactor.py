@@ -87,8 +87,8 @@ COPPER = "copper"
 SAND = common.mix("sandstone", "petrol", 0.22)
 SAND_DARK = common.mix("sandstone", "charcoal", 0.45)
 TOOTH = common.mix("sandstone", "bone", 0.35)  # the lightest value on the body: teeth over the dark jacket
-ROD = "bone"  # KF7c round 3: the ram's piston rod, polished, the lightest value on the ram
-COPPER_DARK = common.mix("copper", "charcoal", 0.6)  # KF7c round 3: the ram's fat barrel, dark under its rod
+ROD = "bone"
+COPPER_DARK = common.mix("copper", "charcoal", 0.6)
 DUST = common.mix("petrol", "sandstone", 0.3)
 
 # 2026-10-11 (w13 KF7c): the drum is slimmer (core 2.42, jacket ribs and bands to 2.62) so the
@@ -132,50 +132,19 @@ CAGE_BASE = 6.3
 CAGE_R = 1.45
 CAGE_TOP = 7.9
 HINGE = Vector((JAW_R[1], 0.0, JAW_Z[0]))
-# 2026-10-11 (w13 KF7b fix round): the second read still found no ram: the barrels stood in
-# front of a pedestal as wide as their own circle, copper on dark enamel in the skirt's shade,
-# and the rods were dark. Now the pedestal is a narrow stem, so each ram stands free with
-# ground showing between it and the stem; the barrel is a thick copper cylinder on a sandstone
-# clevis foot, and a bright steel rod rises out of it into the jaw's lug. The rams sit 45
-# degrees round from each jaw's middle, so the over_shoulder read camera sees two in profile.
-# 2026-10-11 (w13 KF7c): KF7b's rams sat inside the drum's outline and in its shade. Now the stem
-# is r 1.25 to 1.1, the barrels are fatter (r 0.4, out to 2.78) and stand from the ground to 1.55
-# m under a light gland collar, and the light rod slants out of the gland past the drum's edge to
-# a lug under the jaw (outer face r 3.5): from the side the barrel stands clear of the stem.
-# 2026-10-11 (w13 KF7c fix round): the gate read the upright barrels as copper legs on the ground,
-# and the diagonal pistons that replaced them read as "angled legs", "short legs", "stubby feet" in
-# the third blind read: a part that runs from the drum down toward the ground reads as a leg.
-# 2026-10-11 (w13 KF7c round 3): the rams point the way they strike. The reactor has no ram attack
-# (src/combat: no ram or piston strike); its rams' only stroke is the jaw lean, the stagger's
-# 'active' clip here and warden_look.gd JAW_OPEN_DEGREES 14: each jaw turns about its bottom
-# outer edge (HINGE, a line along the jaw's local Y) and every point of its crown moves straight
-# out along the jaw's local +X, level. So each jaw has one level ram along its local +X, over the
-# crown at one corner: a fat dark copper barrel on a post standing on the drum's top rim, a light
-# gland collar at the barrel's mouth, the thin light rod out of it (2.47 to 1 in diameter) to a
-# light eye pinned on a dark clevis rising from the jaw's crown. The barrel and post are the
-# Drum's; the rod, eye and lug are the jaw's, so on the lean the rod slides out of the gland along
-# the ram's own axis. JawR's ram rides its front corner (Godot +Z) and JawL's its back corner (the
-# jaw frame turned a half turn): from the three_q read camera both stand past the body's left and
-# right edges, and from over_shoulder they lie side on over the drum. A ram on the jaw's middle
-# bearing was tried first: from over_shoulder its eye stood over the upper middle fang and took
-# that fang's outline (teeth count 2 of 4). Nothing of a ram stands under 6.5 m.
-PED_R = (1.0, 1.1)  # the pedestal stem's bottom and top radius
-RAM_Z = 7.6  # the ram's axis height, over the jaw crown (6.9)
-RAM_SIDE = 2.2  # the ram's offset from the jaw's middle plane, toward JawR's front (jaw frame -Y)
-# Per side (1 JawR, -1 JawL), along the jaw frame's X: the barrel's inner end and its mouth, and
-# the rod's inner end. JawR's ram rides the front, where it crosses the drum's front to the middle
-# and its rod runs back inside the barrel past the full lean's 1.26 m stroke. JawL's rides the back,
-# where its barrel must stay 0.95 m off the back stack's axis (Stack0, Godot z -2.5), so it is
-# shorter and its rod shows 0.36 m out of the gland at the full lean.
-RAM_BARREL = {1: (-0.6, 1.3), -1: (0.95, 1.75)}
-RAM_ROD_IN = {1: 0.1, -1: 1.0}
-RAM_BARREL_R = 0.42
-RAM_GLAND = (0.15, 0.48)  # the gland collar's length past the barrel's mouth and its radius
-RAM_EYE_X = 2.62  # the eye's centre along X: its far corner is r 3.74 at RAM_SIDE
-RAM_ROD_R = 0.17
-RAM_EYE_R = 0.26  # the eye's radius; its pin runs along the jaw's Y, 0.38 m long
-RAM_POST_X = {1: 0.35, -1: 1.3}  # the barrel's post, standing on the drum's top rim
-RAM_CLEVIS = (2.36, 2.88, 0.3)  # the lug block under the eye: inner and outer X, width along Y
+# 2026-10-11 (KF7d): concept B, exposed columns on raised lower-clamp ears.
+PED_R = (1.0, 1.1)
+RAM_BASE = Vector((0.70, 2.94, 4.17))
+RAM_LUG = Vector((2.63, 2.21, 6.68))
+RAM_BARREL_LENGTH = 1.9
+RAM_BARREL_R = 0.475
+RAM_ROD_R = 0.23
+RAM_BASE_NECK = 0.25
+RAM_GLAND_LENGTH = 0.15
+RAM_GLAND_R = 0.52
+RAM_EYE_R = 0.25
+RAM_MOUTH = RAM_BASE_NECK + RAM_BARREL_LENGTH + RAM_GLAND_LENGTH
+
 # 2026-10-11 (w13 KF7c): the silhouette check (see "silhouette check" below).
 # The read cameras: (name, eye offset in radii, look_subjects.gd constant and row). Each looks along
 # -normalize(offset) in the body frame (coordinator ruling at the KF7c fix round: no probed staging
@@ -278,12 +247,6 @@ def finish(part, origin, parent, rot_z=None):
 def polar(r, deg, z):
     a = math.radians(deg)
     return Vector((r * math.cos(a), r * math.sin(a), z))
-
-
-def ram_point(x, side=1):
-    """A point on a ram's level axis, x along the jaw frame's X (side 1: JawR, -1: JawL, the jaw
-    frame turned a half turn)."""
-    return Vector((side * x, -side * RAM_SIDE, RAM_Z))
 
 
 # --- silhouette check (w13 KF7c) -----------------------------------------------------------
@@ -536,6 +499,8 @@ def _jaw_standoff(pts, labels, faces, jaw):
 
 def ram_world(rig, key):
     obj, point = rig[key]
+    if isinstance(obj, bpy.types.PoseBone):
+        return obj.id_data.matrix_world @ obj.matrix @ Vector(point)
     return obj.matrix_world @ Vector(point)
 
 
@@ -558,7 +523,7 @@ def ram_checks(root):
                 fails.append(label + " " + metric)
         axis = (ram_world(rig, "mouth") - base).normalized()
         closed = (ram_world(rig, "eye") - ram_world(rig, "mouth")).dot(axis) - rig["eye_r"]
-        max_eye = max_axis = 0.0
+        max_eye = max_axis = max_rod_axis = max_base = 0.0
         samples = 0
         opened = 0.0
         for clip in moving:
@@ -572,6 +537,8 @@ def ram_checks(root):
                 axis = (mouth - b).normalized()
                 max_eye = max(max_eye, (eye - lug).length)
                 max_axis = max(max_axis, (eye - b).cross(axis).length)
+                max_rod_axis = max(max_rod_axis, (ram_world(rig, "rod_inner") - b).cross(axis).length)
+                max_base = max(max_base, (b - rig["barrel"].matrix.translation).length)
                 samples += 1
                 if clip == "active" and f == frames:
                     opened = (eye - mouth).dot(axis) - rig["eye_r"]
@@ -582,6 +549,8 @@ def ram_checks(root):
             ("active_rest_exposed_ratio", ratio, closed > 0 and ratio >= SIL_RAM_EXTENSION_RATIO, ">=2.0"),
             ("eye_lug_error_m", max_eye, max_eye <= SIL_RAM_EYE_ERROR, "<=0.05 every jaw frame"),
             ("barrel_axis_eye_error_m", max_axis, max_axis <= SIL_RAM_EYE_ERROR, "<=0.05 every jaw frame"),
+            ("rod_axis_error_m", max_rod_axis, max_rod_axis <= SIL_RAM_EYE_ERROR, "<=0.05 every jaw frame"),
+            ("barrel_base_pin_error_m", max_base, max_base <= SIL_RAM_EYE_ERROR, "<=0.05 every jaw frame"),
         ):
             if not sil_say(ok, "reactor", "animation", label, metric, value, want):
                 fails.append(label + " " + metric)
@@ -620,12 +589,8 @@ def silhouette(root):
         if cam in SIL_APPROACH:
             best_ram = max(best_ram, (good_rams, cam))
             best_tooth = max(best_tooth, (good_teeth, cam))
-    # 2026-10-11 (w13 KF7c round 4): the outline counts below are review aids at the game frame. At
-    # the measured staging yaw (look_subjects.gd WARDEN_BODY_STAGE_YAW) the ram count is 0 on both
-    # approach cameras and the tooth count 1 (three_q). The blind read at 7d87f33 found a jaw on
-    # under, and no ram on any camera, which the ram threshold also failed to predict; coordinator
-    # ruling 4 drops the ram read for the alpha (a gap for Andrew), and ruling 3 turns a camera-
-    # dependent line that disagrees with the read into info. The thresholds above are unchanged.
+    # 2026-10-11: concept B restores the failing ram count. The KF7c round-4 tooth
+    # count remains a review aid; its blind read came from the under camera.
     if not sil_say(best_ram[0] >= SIL_RAM_COUNT, "reactor", best_ram[1], "rams",
                    "count(outside_m>=%.1f,outside_frac>=%.1f)" % (SIL_RAM_OUT_M, SIL_RAM_OUT_FRAC),
                    best_ram[0], ">=%d on over_shoulder or three_q" % SIL_RAM_COUNT):
@@ -660,21 +625,6 @@ def drum(root):
     p = Part("Drum")
     # Pedestal: a narrow stem; everything under 2 m stays inside r = 2.8.
     p.cyl("ancient_enamel", PED_R[0], PED_R[1], 2.0, 16, loc=(0, 0, 1.0), color=ENAMEL)
-    # KF7c round 3: each jaw's ram barrel, level over the crown at a corner (see RAM_Z): a dark
-    # iron post on the drum's top band, the fat dark copper barrel on it with a dark iron band at
-    # its mouth, and the light gland collar (the rod, eye and lug are the jaw's).
-    for side, jaw_deg in ((1, 0.0), (-1, 180.0)):
-        label = ram_label(jaw_deg)
-        x0, x1 = RAM_BARREL[side]
-        post = ram_point(RAM_POST_X[side], side)
-        p.box("ancient_enamel", (0.3, 0.3, RAM_Z - DRUM_Z[1]), loc=(post.x, post.y, (RAM_Z + DRUM_Z[1]) / 2),
-              color=IRON)
-        tagged(p, label, p.rod, "ancient_enamel", ram_point(x0, side), ram_point(x1, side), RAM_BARREL_R, 10,
-               color=COPPER_DARK)
-        tagged(p, label, p.rod, "ancient_enamel", ram_point(x1 - 0.12, side), ram_point(x1, side),
-               RAM_BARREL_R + 0.03, 10, color=IRON)
-        tagged(p, label, p.rod, "ancient_enamel", ram_point(x1, side), ram_point(x1 + RAM_GLAND[0], side),
-               RAM_GLAND[1], 10, color=TOOTH)
     p.ring("rubber", PED_R[1] - 0.05, PED_R[1] + 0.14, 0.18, 16, loc=(0, 0, 1.5))
     # Skirt flares above 2 m from the stem to the drum, an overhang the jaws' lower mandibles
     # stand clear of.
@@ -794,14 +744,8 @@ def jaw(root, side):
     """One cast jaw, modelled in the +X frame and turned to its side.
 
     2026-10-11 (w13 KF7b): the KF8-LOOK blind read saw these jaws as a tapered skirt and their
-    copper rods as thin pipes: from the read cameras a 72 degree jaw sat on the drum's
-    outline, light sandstone against light ground. So each jaw now wraps 100 degrees of the
-    drum, where its sandstone lies over the dark jacket, as a toothed lower mandible under
-    the drum's lower band and an upper one over its top edge, joined by the spine outside;
-    the teeth (light, triangular, gaps of dark jacket between them) bite into the drum, and
-    the mandible's ledge breaks the drum's outline at the side. A lug under the lower
-    mandible carries the ram's piston rod, which rises out of its copper barrel on the base
-    when the jaw leans open (the barrel is the Drum's).
+    copper rods as thin pipes: the jaws now wrap 100 degrees of the drum, with
+    sandstone lips and light fangs over the dark jacket.
     2026-10-11 (w13 KF7c fix round): now two lips that close at the corners round a lens-shaped
     maw, three fangs per lip (see LIP_H and TEETH), the rams' lugs on the corners."""
     p = Part("JawR" if side > 0 else "JawL")
@@ -820,18 +764,12 @@ def jaw(root, side):
                h_low, TOOTH, min(root_r, TOOTH_R[2]), TOOTH_W_OUT)
         tagged(p, "tooth_%s_upper_%d" % (p.name, n), tooth, p, TOOTH_R[0], root_r, deg, up + 0.05, width,
                -h_up, TOOTH, min(root_r, TOOTH_R[2]), TOOTH_W_OUT)
-    # KF7c round 3: the ram's moving half (see RAM_Z), modelled in JawR's frame: the light rod
-    # out of the Drum's gland, its light eye on a pin along Y, and a dark clevis block rising from
-    # the crown under the eye (no cheek in front of the eye, so the side view shows the eye's ring).
     label = ram_label(0.0 if side > 0 else 180.0)
-    tagged(p, label, p.rod, "ancient_enamel", ram_point(RAM_ROD_IN[side]), ram_point(RAM_EYE_X), RAM_ROD_R, 8,
-           color=ROD)
-    tagged(p, label, p.cyl, "ancient_enamel", RAM_EYE_R, RAM_EYE_R, 0.38, 10, loc=ram_point(RAM_EYE_X),
+    bearing = math.atan2(RAM_LUG.y, RAM_LUG.x)
+    seat = Vector((3.08 * math.cos(bearing), 3.08 * math.sin(bearing), RAM_LUG.z - 0.18))
+    tagged(p, label, p.beam, "ancient_enamel", seat, RAM_LUG, 0.46, 0.42, color=SAND_DARK)
+    tagged(p, label, p.cyl, "ancient_enamel", 0.15, 0.15, 0.66, 8, loc=RAM_LUG,
            rot=(math.pi / 2, 0, 0), color=TOOTH)
-    lug_z0 = z1 - 0.2
-    lug_z1 = RAM_Z - RAM_EYE_R + 0.05
-    tagged(p, label, p.box, "ancient_enamel", (RAM_CLEVIS[1] - RAM_CLEVIS[0], RAM_CLEVIS[2], lug_z1 - lug_z0),
-           loc=(sum(RAM_CLEVIS[:2]) / 2, -RAM_SIDE, (lug_z0 + lug_z1) / 2), color=SAND_DARK)
     p.cyl("ancient_enamel", 0.1, 0.1, 0.75, 8, loc=(r0 + 0.06, 0.0, z0 + 0.12), rot=(math.pi / 2, 0, 0), color=IRON)
     return finish(p, HINGE, root, rot_z=0.0 if side > 0 else math.pi)
 
@@ -880,6 +818,101 @@ def seam_ring(root):
     return finish(p, (0, 0, 1.5), root)
 
 
+def ram_columns(root):
+    """One rigidly skinned mesh keeps the four moving pieces to one draw."""
+    RAM_RIG.clear()
+    common.SLOTS["hydraulic"] = {"vc": True, "metal": 0.65, "rough": 0.24}
+    mount = Part("RamMounts")
+    mount.ring("ancient_enamel", 2.38, 3.12, 0.18, 12, loc=(0, 0, 2.45), color=IRON)
+    moving = Part("JawRams")
+    layer = moving.bm.verts.layers.int.new("ram_bone")
+    bones = []
+    records = []
+    for side in (1, -1):
+        label = ram_label(0 if side > 0 else 180)
+        base = Vector((side * RAM_BASE.x, side * RAM_BASE.y, RAM_BASE.z))
+        eye = Vector((side * RAM_LUG.x, side * RAM_LUG.y, RAM_LUG.z))
+        axis = (eye - base).normalized()
+        foot = polar(2.92, math.degrees(math.atan2(base.y, base.x)), 2.55)
+        tagged(mount, label, mount.beam, "ancient_enamel", foot, base, 0.40, 0.38, color=SAND_DARK)
+        tagged(mount, label, mount.cyl, "ancient_enamel", 0.16, 0.16, 0.72, 8, loc=base,
+               rot=(math.pi / 2, 0, 0), color=TOOTH)
+
+        def piece(bone_name, fn, *args, **kwargs):
+            if bone_name not in bones:
+                bones.append(bone_name)
+            faces = tagged(moving, label, fn, *args, **kwargs)
+            for face in faces:
+                for vertex in face.verts:
+                    vertex[layer] = bones.index(bone_name) + 1
+            return faces
+
+        barrel_name, rod_name = label + "_barrel", label + "_rod"
+        piece(barrel_name, moving.beam, "hydraulic", base, base + axis * RAM_BASE_NECK, 0.32, color=COPPER_DARK)
+        smooth(piece(barrel_name, moving.rod, "hydraulic", base + axis * RAM_BASE_NECK,
+                     base + axis * (RAM_BASE_NECK + RAM_BARREL_LENGTH), RAM_BARREL_R, 8, color=COPPER_DARK))
+        piece(barrel_name, moving.rod, "hydraulic", base + axis * (RAM_MOUTH - RAM_GLAND_LENGTH),
+              base + axis * RAM_MOUTH, RAM_GLAND_R, 10, color=TOOTH)
+        for offset in (-0.20, 0.20):
+            piece(barrel_name, moving.cyl, "hydraulic", 0.28, 0.28, 0.10, 8,
+                  loc=base + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=COPPER_DARK)
+        smooth(piece(rod_name, moving.rod, "hydraulic", eye - axis * 1.95,
+                     eye - axis * RAM_EYE_R, RAM_ROD_R, 10, color=ROD))
+        for offset in (-0.20, 0.20):
+            piece(rod_name, moving.cyl, "hydraulic", RAM_EYE_R, RAM_EYE_R, 0.10, 8,
+                  loc=eye + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=TOOTH)
+        records.append((label, side, base, eye, axis, barrel_name, rod_name, foot))
+    mounts = finish(mount, (0, 0, 0), root)
+    mesh = finish(moving, (0, 0, 0), root)
+    codes = mesh.data.attributes["ram_bone"]
+    for i, name in enumerate(bones):
+        group = mesh.vertex_groups.new(name=name)
+        group.add([v.index for v in mesh.data.vertices if codes.data[v.index].value == i + 1], 1.0, "REPLACE")
+    mesh.data.attributes.remove(codes)
+    arm = bpy.data.objects.new("RamRig", bpy.data.armatures.new("RamRig"))
+    bpy.context.scene.collection.objects.link(arm)
+    arm.parent = root
+    arm["world_origin"] = [0, 0, 0]
+    bpy.context.view_layer.objects.active = arm
+    arm.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    for label, side, base, eye, axis, bn, rn, foot in records:
+        for name, head in ((bn, base), (rn, eye)):
+            bone = arm.data.edit_bones.new(name)
+            bone.head, bone.tail = head, head + axis
+    bpy.ops.object.mode_set(mode="OBJECT")
+    arm.select_set(False)
+    mod = mesh.modifiers.new("Rigid ram pieces", "ARMATURE")
+    mod.object = arm
+    for label, side, base, eye, axis, bn, rn, foot in records:
+        barrel, rod = arm.pose.bones[bn], arm.pose.bones[rn]
+        barrel.rotation_mode = rod.rotation_mode = "QUATERNION"
+        jaw_obj = bpy.data.objects["JawR" if side > 0 else "JawL"]
+        RAM_RIG.append({"label": label, "base": (mounts, base),
+                        "mouth": (barrel, (0, RAM_MOUTH, 0)), "eye": (rod, (0, 0, 0)),
+                        "lug": (jaw_obj, RAM_LUG - HINGE), "rod_inner": (rod, (0, -1.95, 0)),
+                        "barrel": barrel, "rod": rod, "rest_axis": axis,
+                        "barrel_rest": barrel.bone.matrix_local.copy(),
+                        "rod_rest": rod.bone.matrix_local.copy(),
+                        "on_clamp": mounts.parent == root and abs(foot.z - 2.55) < 1e-6
+                        and 2.38 <= math.hypot(foot.x, foot.y) <= 3.12,
+                        "barrel_r": RAM_BARREL_R, "rod_r": RAM_ROD_R, "eye_r": RAM_EYE_R})
+    solve_rams()
+
+
+def solve_rams():
+    bpy.context.view_layer.update()
+    for rig in RAM_RIG:
+        base, eye = ram_world(rig, "base"), ram_world(rig, "lug")
+        axis = (eye - base).normalized()
+        delta = rig["rest_axis"].rotation_difference(axis).to_matrix().to_4x4()
+        for name, target in (("barrel", base), ("rod", eye)):
+            mat = delta @ rig[name + "_rest"]
+            mat.translation = target
+            rig[name].matrix = mat
+    bpy.context.view_layer.update()
+
+
 def build():
     common.reset()
     del TAGS[:]
@@ -901,17 +934,7 @@ def build():
     hardpoint(root)
     seam_ring(root)
     bpy.context.view_layer.update()
-    RAM_RIG.clear()
-    for side in (1, -1):
-        barrel = bpy.data.objects["Drum"]
-        j = bpy.data.objects["JawR" if side > 0 else "JawL"]
-        RAM_RIG.append({"label": ram_label(0 if side > 0 else 180),
-                        "base": (barrel, ram_point(RAM_BARREL[side][0], side)),
-                        "mouth": (barrel, ram_point(RAM_BARREL[side][1] + RAM_GLAND[0], side)),
-                        "eye": (j, ram_point(RAM_EYE_X) - HINGE),
-                        "lug": (j, ram_point(RAM_EYE_X) - HINGE),
-                        "on_clamp": False, "barrel_r": RAM_BARREL_R, "rod_r": RAM_ROD_R,
-                        "eye_r": RAM_EYE_R})
+    ram_columns(root)
     return root
 
 
@@ -936,7 +959,7 @@ def controls(clip):
     if clip == "pulse":
         return stacks + ["SteamRing"]
     if clip == "active":
-        return ["JawL", "JawR", "CageL", "CageR", "WeakPoint"]
+        return ["JawL", "JawR", "CageL", "CageR", "WeakPoint", "RamRig"]
     if clip.startswith("chunk_lost"):
         return ["Jacket%d" % (int(clip[-1]) if clip[-1].isdigit() else 0)]
     if clip == "shrug":
@@ -1011,6 +1034,10 @@ def pose(clip, t, objs, rest):
             objs["Stack%d" % k].location.z -= 0.15 * u
         objs["WeakPoint"].scale = rest["WeakPoint"][2] * (1.0 - 0.4 * smoothstep((t - 0.9) / 0.1))
 
+    if any(n in controls(clip) for n in ("JawL", "JawR")):
+        solve_rams()
+
+
 
 def rest(root):
     return {o.name: (o.location.copy(), o.rotation_euler.copy(), o.scale.copy()) for o in common.tree(root)}
@@ -1019,6 +1046,7 @@ def rest(root):
 def reset_pose(root, snapshot):
     for o in common.tree(root):
         o.location, o.rotation_euler, o.scale = snapshot[o.name]
+    solve_rams()
     bpy.context.view_layer.update()
 
 
@@ -1038,8 +1066,13 @@ def animate(root, snapshot):
             o.animation_data.action = act
             for f in range(frames + 1):
                 pose(clip, f / frames, objs, snapshot)
-                for path in ("location", "rotation_euler", "scale"):
-                    o.keyframe_insert(data_path=path, frame=1 + f, group=name)
+                if name == "RamRig":
+                    for bone in o.pose.bones:
+                        for path in ("location", "rotation_quaternion", "scale"):
+                            bone.keyframe_insert(data_path=path, frame=1 + f, group=bone.name)
+                else:
+                    for path in ("location", "rotation_euler", "scale"):
+                        o.keyframe_insert(data_path=path, frame=1 + f, group=name)
             for layer in act.layers:
                 for strip in layer.strips:
                     for bag in strip.channelbags:
