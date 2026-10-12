@@ -1,8 +1,39 @@
 # Traversal table: park_dam (world 1, stage 1)
 
-The bands are PARK.md section 8. Each line ran 8 seeds (1 to 8) through `tools/traversal_line.gd -- --table=park --stage=1` at `--fixed-fps 90`; the waypoints are `tools/park_lines/park_dam.json`. Each cell gives the median, the worst seed in brackets, and pass or miss.
+The bands are PARK.md section 8. Each line ran 8 seeds (1 to 8) through `tools/traversal_line.gd -- --table=park --stage=1` at `--fixed-fps 90`; the waypoints are `tools/park_lines/park_dam.json`. The reached row gives the seed count. Other cells give the median, the worst seed and the result.
 
-## Greybox fix round, 2026-10-12 (current)
+## Greybox integration, 2026-10-12 (current)
+
+Measured on merged and rebuilt head `7994fc005b1ce377404e4134f861c7c3ad6e041e` with candidate `6710ac0` tools and park SHA-256 `99ce445c21b848f486e5d487c021895d3d6a2039cdf4736324d12fd55de20a4e`. The admitted greybox is `f58699e`; the merge is `ffc4eb2` and the SQ13 graph rebuild is `7994fc0`. All seven lines ran untraced on seeds 1 to 8, at nice 10, one process at a time. Raw seed rows and command logs are in `/tmp/claude-1000/w13-sol/kd1-int-r1/`. The later traversal-page commit changes only this report; stage inputs and rebuilt assets remain identical to the measured head.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached the Warden (8 of 8) | 8 of 8 (worst seed reached), pass | 8 of 8 (worst seed reached), pass | 8 of 8 (worst seed reached), pass | 8 of 8 (worst seed reached), pass | 8 of 8 (worst seed reached), pass | 8 of 8 (worst seed reached), pass | 8 of 8 (worst seed reached), pass |
+| Time to Warden, s (median 60 to 120, no seed over 150) | 62.03 (worst 66.86), pass | 81.835 (worst 82.29), pass | 83.755 (worst 86.02), pass | 74.72 (worst 76.1), pass | 81.07 (worst 82.3), pass | 84.39 (worst 85.07), pass | 85.98 (worst 87.16), reported, pilot band, not the floor's |
+| Segment medians, s (each 12 to 45) | 27.65/17.12/17.31 (worst 29.71), pass | 38.29/29.59/13.49 (worst 39.38), pass | 30.37/30.55/22.38 (worst 30.89), pass | 31.63/26.62/16.31 (worst 33.18), pass | 31.94/31.26/17.17 (worst 33.56), pass | 29.54/29.6/25.21 (worst 30.84), pass | 38.7/31.42/15.85 (worst 39.62), reported, pilot band, not the floor's |
+| Flow share (median at least 0.70, no seed under 0.60) | 0.939 (worst 0.92), pass | 0.8348 (worst 0.7978), pass | 0.7681 (worst 0.7012), pass | 0.9673 (worst 0.9432), pass | 0.7601 (worst 0.6945), pass | 0.9286 (worst 0.9), pass | 0.7817 (worst 0.7468), reported, pilot band, not the floor's |
+| Airborne share (median 0.12 to 0.45) | 0.2486 (worst 0.2153..0.2756), pass | 0.1633 (worst 0.1589..0.1746), pass | 0.2832 (worst 0.206..0.3263), pass | 0.2158 (worst 0.2111..0.2318), pass | 0.1643 (worst 0.1566..0.1695), pass | 0.1751 (worst 0.163..0.1916), pass | 0.1148 (worst 0.1051..0.1207), reported, pilot band, not the floor's |
+| Dead stops (0 every seed) | 0 (worst 0), pass | 0 (worst 0), pass | 0 (worst 0), pass | 0 (worst 0), pass | 0 (worst 0), pass | 0 (worst 0), pass | 0 (worst 0), pass |
+| Peak speed, m/s (26.6 every seed) | 54.115 (worst 52.66), pass | 42.625 (worst 42.28), pass | 31.65 (worst 27.61), pass | 39.595 (worst 38.06), pass | 44.58 (worst 43.61), pass | 36.67 (worst 35.18), pass | 42.7 (worst 42.18), reported, pilot band, not the floor's |
+| Blazing tier, s (median at least 3) | 47.525 (worst 46.56), pass | 10.325 (worst 9.69), pass | 5.935 (worst 2.52), pass | 12.995 (worst 12.62), pass | 8.9 (worst 8.81), pass | 12.155 (worst 11.2), pass | 11.44 (worst 11.32), reported, pilot band, not the floor's |
+| Quiet stretch, s (at most 20) | 8.25 (worst 8.41), pass | 12.215 (worst 13), pass | 11.8 (worst 12.13), pass | 10.515 (worst 10.88), pass | 12.345 (worst 13.3), pass | 10.91 (worst 11.59), pass | 12.255 (worst 12.82), reported, pilot band, not the floor's |
+| Max anchor gap, m (at most 40 every seed) | 36.4 (worst 45.3), MISS, reported; dressed writer owns fix | 33.2 (worst 33.2), pass | 36.8 (worst 36.8), pass | 35.6 (worst 35.6), pass | 33.7 (worst 38.8), pass | 35 (worst 35), pass | 33.1 (worst 33.1), reported, pilot band, not the floor's |
+| Distinct ride facts, PARK.md section 4 set (at least 3) | 5.5 (worst 5), pass | 6 (worst 6), pass | 7 (worst 7), pass | 6 (worst 6), pass | 6 (worst 6), pass | 6.5 (worst 6), pass | 5 (worst 5), reported, pilot band, not the floor's |
+| Length ratio (1.3 to 2.0) | 1.64 (worst 1.63..1.7), pass | 1.325 (worst 1.32..1.33), pass | 1.34 (worst 1.33..1.36), pass | 1.38 (worst 1.38..1.39), pass | 1.32 (worst 1.31..1.33), pass | 1.45 (worst 1.44..1.45), pass | 1.38 (worst 1.38..1.38), reported, pilot band, not the floor's |
+| Floor line (at most 2.0 times Rivet median, 0 dead stops) | - | - | - | - | - | - | median 85.98 s (worst 87.16), Rivet median 81.835 s, cap 163.67 s, ratio 1.0507, dead stops 0, pass |
+| Distinct lines (at least 3 across the six pilots) | 4 mutually distinct (sable, rivet, kest, tally), seed 1, all ticks, pass | (stage) | (stage) | (stage) | (stage) | (stage) | (stage) |
+| Progress, m/s of d_landmark (reported, no band) | 21.3 | 16.125 | 15.78 | 17.64 | 16.295 | 15.6 | 15.33 |
+
+Notes:
+
+- The floor line is judged by its own row only, per `kd-common-r-add.md` item 13. Other floor measures are reported. The airborne cell reads "reported, pilot band, not the floor's".
+- Max anchor gap is judged from the worst seed, per item 14, even though the tool's `inside` flag judges its median. Sable's measured worst is 45.3 m on seed 7 against 40 m. The dressed writer owns that fix; no park row was changed during integration.
+- The segment row reports each segment's median and the largest segment time on any seed. Airborne share and length ratio report each seed's range where the tool leaves the worst column null. Blazing tier reports its smallest seed duration beside the gated median.
+- Automated measurements judge the bots on this head. They do not establish human feel, rendered appearance, audio or hardware performance.
+
+## Greybox fix round, 2026-10-12 (superseded by integration)
+
+The floor ruling is recorded above. The earlier measurements and alternative cuts below are retained.
 
 Measured on the shipped park file (`park_sha256` 99ce445c in `assets/park/park_dam/graph.json`) with the tool on head 1b2cb49 plus this round's working tree. Two changes since the 2026-10-11 pass. First, `saguaro_26` fills the bare strip south of the drop (the density rule). Second, the floor line's last stretch now takes the bucket flight (spillway tunnel, `outlet_bucket` kicker, plunge pool) in place of the centre incline. All seven lines ran again, one process at a time, at a 1-minute load of 10 to 31.
 
@@ -12,7 +43,7 @@ Measured on the shipped park file (`park_sha256` 99ce445c in `assets/park/park_d
 | Time to Warden, s (median 60 to 120, no seed over 150) | 62.62 (worst 65.09), pass | 81.835 (worst 82.29), pass | 83.755 (worst 86.02), pass | 74.72 (worst 76.1), pass | 81.07 (worst 82.3), pass | 84.25 (worst 85.69), pass | 85.98 (worst 87.16), pass |
 | Segment medians, s (each 12 to 45) | 27.65/17.08/17.63 (worst 27.65), pass | 38.29/29.59/13.49 (worst 38.29), pass | 30.37/30.55/22.38 (worst 30.65), pass | 31.63/26.62/16.31 (worst 31.63), pass | 31.94/31.26/17.17 (worst 32.27), pass | 29.54/29.48/25.28 (worst 29.735), pass | 38.7/31.42/15.85 (worst 38.7), pass |
 | Flow share (median 0.70, no seed under 0.60) | 0.9362 (worst 0.9305), pass | 0.8348 (worst 0.7978), pass | 0.7681 (worst 0.7012), pass | 0.9673 (worst 0.9432), pass | 0.7601 (worst 0.6945), pass | 0.9345 (worst 0.9), pass | 0.7817 (worst 0.7468), pass |
-| Airborne share (0.12 to 0.45) | 0.2453, pass | 0.1633, pass | 0.2832, pass | 0.2158, pass | 0.1643, pass | 0.1704, pass | 0.1148, MISS (open, see notes) |
+| Airborne share (0.12 to 0.45) | 0.2453, pass | 0.1633, pass | 0.2832, pass | 0.2158, pass | 0.1643, pass | 0.1704, pass | 0.1148, reported, pilot band, not the floor's |
 | Dead stops (0 every seed) | 0.0 (worst 0.0), pass | 0.0 (worst 0.0), pass | 0.0 (worst 0.0), pass | 0.0 (worst 0.0), pass | 0.0 (worst 0.0), pass | 0.0 (worst 0.0), pass | 0.0 (worst 0.0), pass |
 | Peak speed, m/s (26.6 every seed) | 53.835 (worst 52.58), pass | 42.625 (worst 42.28), pass | 31.65 (worst 27.61), pass | 39.595 (worst 38.06), pass | 44.58 (worst 43.61), pass | 36.545 (worst 35.54), pass | 42.7 (worst 42.18), pass |
 | Blazing tier, s (median at least 3) | 47.37, pass | 10.325, pass | 5.935, pass | 12.995, pass | 8.9, pass | 12.665, pass | 11.44, pass |
