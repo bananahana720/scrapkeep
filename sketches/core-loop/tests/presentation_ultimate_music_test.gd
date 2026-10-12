@@ -228,7 +228,7 @@ func _kest_cue_contract() -> void:
 			var wanted = bank.samples_at(sound, _audio.engine.step_len, _audio.live_key(), _audio.engine.theme)
 			var voices: Array = _audio.engine._voices.filter(func(v): return v.to_stinger and v.buf == wanted)
 			keyed = keyed and voices.size() >= 1
-			leveled = leveled and voices.size() >= 1 and absf(voices[0].gl - cos(PI * 0.25) * 1.41 * db_to_linear(gain)) < 0.0001
+			leveled = leveled and voices.size() >= 1 and absf(voices[0].gl - db_to_linear(gain)) < 0.0001
 		else:
 			keyed = false
 			leveled = false

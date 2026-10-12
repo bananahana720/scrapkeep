@@ -1761,17 +1761,33 @@ func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vecto
 
 
 func _on_ultimate_peak(id: String, _at: Vector3) -> void:
-	on_beat("ultimate_peak", -6.0 if id in ["windhover", "air_raid", "minelayer"] else 0.0,
-		false, 1, "raid_kest_stinger" if id in ["windhover", "air_raid", "minelayer"] else "")
+	if id in ["windhover", "air_raid", "minelayer"]:
+		kest_cue("ultimate_peak", "raid_kest_stinger")
+	else:
+		on_beat("ultimate_peak")
+
+
+func kest_cue(kind: String, sound: String, grid := "beat", pitch := 1.0) -> int:
+	var keyed_pitch := pitch * Harmony.ratio(live_key())
+	if not _admit(kind, sound, keyed_pitch):
+		return -1
+	var priority_db: float = PRIORITY_DB[Rows.priority(kind)]
+	var gain: float = SfxBank.trim_db(sound) + priority_db
+	if grid == "now":
+		_start(kind, sound, SfxBank.stream(sound), gain, keyed_pitch, "SFX")
+		return engine.clock
+	var at := engine.next_beat()
+	if grid == "eighth":
+		var eighth := maxi(1, engine.beat_len() / 2)
+		at = engine.clock + posmod(eighth - posmod(engine.clock - engine.grid_origin, eighth), eighth)
+	engine.schedule_stinger_at(sound, at, priority_db)
+	_duck(0.6, float(at - engine.clock + SfxBank.STINGER_BEATS.get(sound, 1) * engine.beat_len()) / Harmony.RATE)
+	cue_log.append([kind, sound, grid, at, keyed_pitch, gain])
+	return at
 
 
 func kest_roll(note: int) -> int:
-	var sound := "tick_kest_%d" % note
-	var eighth := maxi(1, engine.beat_len() / 2)
-	var at := engine.clock + posmod(eighth - posmod(engine.clock - engine.grid_origin, eighth), eighth)
-	engine.schedule_stinger_at(sound, at, -6.0)
-	cue_log.append(["raid_kest_roll", sound, "eighth", at, 1.0])
-	return at
+	return kest_cue("ultimate_peak", "tick_kest_%d" % note, "eighth")
 
 
 # The landing is the drop, on the next beat, never more than one beat after touchdown; the
@@ -1779,7 +1795,7 @@ func kest_roll(note: int) -> int:
 func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) -> void:
 	play("ultimate_landed")
 	if _id in ["windhover", "air_raid", "minelayer"]:
-		on_beat("ultimate_landed", -6.0, false, 1, "raid_kest_boom")
+		kest_cue("ultimate_landed", "raid_kest_boom")
 	if _ult_armed:
 		var touchdown := engine.clock
 		var at := engine.drop_now(4, 0.85, {}, -1, {"ult": false})

@@ -594,7 +594,5 @@ func _sound(sound: String, grid := true, pitch := 1.0) -> void:
 	var audio = ctx.root.presentation.audio if ctx.root.get("presentation") != null else null
 	if audio == null:
 		return
-	if grid:
-		audio.on_beat("ultimate_peak", -6.0 if ctx.player.kit.cloaked else 0.0, false, 1, sound)
-	else:
-		audio.play("line_skill_fired", -6.0 if ctx.player.kit.cloaked else 0.0, pitch, "SFX", sound)
+	var kind := "line_skill_fired" if sound.begins_with("cable_") else "ultimate_peak"
+	audio.kest_cue(kind, sound, "beat" if grid else "now", pitch)
