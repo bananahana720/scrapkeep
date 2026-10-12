@@ -411,7 +411,7 @@ func _build_park(park: Dictionary, height: Callable) -> void:
 func _park_state(row: Dictionary, weather: bool) -> Dictionary:
 	return {"row": row, "weather": weather, "phase": WAITING, "ready_s": 0.0,
 		"due_s": 0.0, "holding": false, "pending": 0, "live_elapsed_s": 0.0,
-		"rise_s": 0.0, "context": {}}
+		"rise_s": 0.0, "collapse_s": 0.0, "context": {}}
 
 
 func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dictionary, facts: Array) -> void:
@@ -439,6 +439,7 @@ func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dict
 		state.phase = LIVE
 		state.live_elapsed_s = 0.0
 		state.rise_s = 0.0
+		state.collapse_s = 0.0
 		_park_hook("land", state, ctx)
 		if not state.weather:
 			facts.append(_park_world(state, PARK_LAND_FACTS[state.row.telegraph.form], "land"))
@@ -510,7 +511,8 @@ func _park_capacity(candidate: Dictionary) -> bool:
 			if state.weather and state.row.kind != "clear" and candidate.row.kind != "clear":
 				return false
 		elif not state.weather:
-			var settled := float(state.row.live_s) == 0.0 and float(state.live_elapsed_s) >= maxf(0.0, float(state.row.effect.get("fill_s", 0.0)))
+			var progress_s: float = state.collapse_s if state.row.kind == "collapse" else state.live_elapsed_s
+			var settled := float(state.row.live_s) == 0.0 and progress_s >= maxf(0.0, float(state.row.effect.get("fill_s", 0.0)))
 			ground += int(_park_ground(state.row) and not settled)
 			family += int(state.row.family == candidate.row.family)
 	if candidate.weather:
@@ -532,7 +534,7 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 		return
 	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
 	state.live_elapsed_s += dt
-	if not state.weather and _park_rising(state) and not _park_clear(state, ball, velocity, ctx):
+	if not state.weather and (_park_rising(state) or _park_collapsing(state)) and not _park_clear(state, ball, velocity, ctx):
 		return
 	var step_ctx := ctx.duplicate(true)
 	step_ctx.delta_s = dt
@@ -540,10 +542,16 @@ func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: V
 	_park_hook("step", state, step_ctx)
 	if state.phase != LIVE:
 		return
+	if not state.weather and state.row.kind == "collapse":
+		state.collapse_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.collapse_s) + dt)
 	if not state.weather and _park_rising(state):
 		state.rise_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.rise_s) + dt)
 	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001 and _park_can_end(state):
 		_park_end(state, facts)
+
+
+static func _park_collapsing(state: Dictionary) -> bool:
+	return state.row.kind == "collapse" and state.collapse_s < float(state.row.effect.get("fill_s", 0.0))
 
 
 static func _park_rising(state: Dictionary) -> bool:

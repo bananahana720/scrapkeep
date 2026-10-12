@@ -29,8 +29,8 @@ func _geometry(state: Dictionary) -> void:
 		t.eq("real ball predicted velocity case %s" % predicted, game.player.state.velocity, velocity)
 		await _advance_for(dstate, fill_s + 0.5)
 		t.near("unsafe collapse pauses transformation time case %s" % predicted, float(state.elapsed_s), elapsed)
-		t.eq("unsafe collapse keeps rendered vertices case %s" % predicted, state.overlay.get_child(0).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX], vertices)
-		t.eq("unsafe collapse retains collider object case %s" % predicted, state.overlay.get_child(1).shape, shape)
+		t.check("unsafe collapse keeps rendered vertices case %s" % predicted, state.overlay.get_child(0).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] == vertices)
+		t.check("unsafe collapse retains collider object case %s" % predicted, state.overlay.get_child(1).shape == shape)
 		t.near("unsafe collapse retains height query case %s" % predicted, game.ctx.terrain.height(366, 110), height)
 		t.check("unsafe permanent collapse retains capacity case %s" % predicted, not _capacity_available(dstate))
 		game.player._rigid.global_position = safe_position
@@ -42,7 +42,7 @@ func _geometry(state: Dictionary) -> void:
 		_sample_geometry(state, "resumed safe collapse case %s" % predicted, partial)
 		t.near("resumed collapse uses only safe elapsed case %s" % predicted, float(state.elapsed_s), partial)
 	# Finish by safe elapsed, after the two held intervals exceeded authored duration.
-	await _advance_for(dstate, fill_s - partial)
+	await _advance_for(dstate, fill_s - partial + 1.0 / Engine.physics_ticks_per_second)
 	_sample_geometry(state, "completed after clearance holds", fill_s)
 	t.check("completed permanent collapse releases capacity", _capacity_available(dstate))
 	t.eq("completed permanent collapse stays LIVE", dstate.phase, Director.LIVE)
