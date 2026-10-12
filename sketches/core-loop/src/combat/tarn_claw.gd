@@ -184,7 +184,7 @@ func step(delta: float) -> void:
 			_cards.erase(id)
 
 
-func _card(id: String, after: String, at: Vector3) -> void:
+func _discover(id: String, after: String, at: Vector3) -> void:
 	# Framework cards take their own tick. A pilot's card follows on a later physics tick.
 	_cards[id] = {"after": after, "at": at}
 
@@ -233,10 +233,10 @@ func _step_drag(delta: float) -> void:
 		target._knock = Vector3(0.0, push.y, 0.0)
 		combat._hit(target, "claw", DRAG_DAMAGE * mult, flat, 0.0, "", "special")
 		_mark(target, DRAG_MARK)
-		_card("tarn_claw_drag", "loaded_line", target.global_position)
+		_discover("tarn_claw_drag", "loaded_line", target.global_position)
 		_dragged[target.get_instance_id()] = true
 		if _dragged.size() >= 10:
-			_card("tarn_dragged", "loaded_line", target.global_position)
+			_discover("tarn_dragged", "loaded_line", target.global_position)
 		_stop_drag()
 		return
 	_pull(target, to, DRAG_SPEED)
@@ -372,7 +372,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		_mark(enemy, 4.0 if id == "vice_leap" else 3.0)
 		hits += 1
 	if id == "redjaw_rend" and had_tow:
-		_card("tarn_redjaw_rend", "set_piece", at)
+		_discover("tarn_redjaw_rend", "set_piece", at)
 	if id == "rake_run":
 		combat._boost(3.0)
 	_clear_piece()
@@ -430,7 +430,7 @@ func _hold_broken(_kind: String, method: String) -> void:
 		return
 	_holds += 1
 	if _holds >= 3:
-		_card("tarn_hold_still", "set_piece_breakout", ctx.player.ball_position())
+		_discover("tarn_hold_still", "set_piece_breakout", ctx.player.ball_position())
 
 
 func _clear_piece() -> void:
