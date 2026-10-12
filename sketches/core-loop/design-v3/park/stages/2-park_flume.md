@@ -193,48 +193,46 @@ The winch drone is the flume's natural enemy: it is the one kind whose threat is
 
 ## 9. Traversal lines
 
-Four waymarks: `drop_in`, `butte_gap`, `siphon_camp`, `landmark`. The lines are `tools/park_lines/park_flume.json`, re-cut against the baked stage (2026-10-11): every line now enters the butte gap north of the west butte, leaves the hollow by its open south end, and Kest and the Cannon pass north of the weir valve's door. Four distinct lines: the flume and trebuchet (Sable), the hollow (Rivet, Tarn, Kest, the floor line), the fields (Tally) and the rim with the bend zip (the Cannon).
+Four waymarks: `drop_in`, `butte_gap`, `siphon_camp`, `landmark`. The lines are `tools/park_lines/park_flume.json` (KD2 fix round, 2026-10-11). Segment 1 (drop-in to the butte gap): Sable takes the flume reaches off the weir; the other five and the floor line take the mesa ramp and the rim road. Segment 2 (gap to the siphon): Rivet and Kest the rim road and the bend, the Cannon the bend zip at [50, -170], Tarn and the floor line the trebuchet side and the hollow, Tally the trebuchet side then east across the fields, Sable the canal. Segment 3 (siphon to the drum): Sable, Rivet, Tarn and the floor line the bench and the forecourt, Kest the bluff, Tally the bench then the forecourt pads, the Cannon the forecourt geyser.
 
 | Line | Waypoints |
 | --- | --- |
-| Sable | drop_in [-520, -600] [-390, -570] [-280, -560] [-150, -470] [-160, -330] butte_gap [-320, -100] [-205, 20] [-110, 40] [-20, 170] siphon_camp [-150, 300] [-60, 420] [140, 420] [230, 480] landmark |
-| Rivet | drop_in [-500, -550] [-470, -460] [-470, -340] [-330, -310] butte_gap [-320, -100] [-230, 0] [-200, 90] [-150, 150] [-20, 170] siphon_camp [80, 260] [0, 360] [130, 420] [230, 480] landmark |
-| Kest | drop_in [-500, -550] [-470, -460] [-470, -340] [-330, -310] butte_gap [-320, -100] [-230, 0] [-200, 90] [-150, 150] [-20, 170] siphon_camp [140, 200] [290, 300] [300, 420] [230, 480] landmark |
-| Tarn | drop_in [-560, -540] [-640, -460] [-600, -400] [-520, -270] [-330, -300] butte_gap [-320, -100] [-230, 0] [-200, 90] [-150, 150] [-20, 170] siphon_camp [-110, 290] [0, 390] [140, 420] [230, 480] landmark |
-| Tally | drop_in [-500, -550] [-470, -460] [-470, -340] [-330, -310] butte_gap [-320, -100] [-205, 20] [-290, 100] [-150, 170] [-20, 170] siphon_camp [80, 260] [0, 360] [130, 420] [230, 480] landmark |
-| The Cannon | drop_in [-500, -550] [-470, -460] [-470, -340] [-330, -310] butte_gap [-250, -160] [-140, -165] [50, -170] [120, -40] [40, 100] [-20, 170] siphon_camp [140, 200] [100, 330] [140, 400] [230, 480] landmark |
-| Floor line | drop_in [-500, -550] [-470, -460] [-470, -340] [-330, -310] butte_gap [-320, -100] [-230, 0] [-200, 90] [-150, 150] [-20, 170] siphon_camp [80, 260] [0, 360] [130, 420] [230, 480] landmark |
+| Sable | drop_in [-430, -615] [-369, -595] [-300, -586] [-225, -530] [-151, -472] [-180, -415] [-215, -350] [-250, -265] butte_gap [-240, -163] [-212, -100] [-200, -50] [-188, 0] [-176, 50] [-164, 100] [-142, 140] [-100, 158] siphon_camp [-30, 228] [-80, 290] [-100, 370] [-95, 425] [-20, 437] [60, 440] [130, 440] [170, 440] [205, 450] landmark |
+| Rivet | drop_in [-456, -560] [-466, -470] [-470, -420] [-470, -330] [-430, -288] [-360, -268] butte_gap [-220, -199] [-120, -148] [-20, -97] [60, -56] [110, -31] [125, 0] [90, 62] [30, 114] siphon_camp [-30, 228] [-80, 290] [-100, 370] [-95, 425] [-20, 437] [60, 440] [130, 440] [170, 440] [205, 450] landmark |
+| Kest | drop_in [-456, -560] [-466, -470] [-470, -420] [-470, -330] [-430, -288] [-360, -268] butte_gap [-220, -199] [-120, -148] [-20, -97] [50, -60] [110, -25] [110, 45] [40, 100] siphon_camp [20, 212] [60, 220] [120, 270] [180, 320] [240, 370] [278, 402] [258, 430] landmark |
+| Tarn | drop_in [-456, -560] [-466, -470] [-470, -420] [-470, -330] [-430, -288] [-360, -268] butte_gap [-300, -152] [-326, -85] [-298, -35] [-270, 15] [-242, 65] [-214, 115] [-200, 140] [-110, 155] siphon_camp [-30, 228] [-80, 290] [-100, 370] [-95, 425] [-20, 437] [60, 440] [130, 440] [170, 440] [205, 450] landmark |
+| Tally | drop_in [-456, -560] [-466, -470] [-470, -420] [-470, -330] [-430, -288] [-360, -268] butte_gap [-300, -152] [-326, -85] [-298, -35] [-270, 15] [-242, 65] [-195, 70] [-164, 100] [-142, 140] [-100, 158] siphon_camp [-15, 235] [-60, 300] [-100, 375] [-50, 420] [20, 392] [78, 430] [130, 445] [200, 445] landmark |
+| The Cannon | drop_in [-456, -560] [-466, -470] [-470, -420] [-470, -330] [-430, -288] [-360, -268] butte_gap [-220, -205] [-130, -180] [-40, -172] [50, -170] [120, -40] [100, 20] [40, 100] siphon_camp [-5, 215] [40, 235] [95, 290] [125, 340] [120, 390] [160, 425] [215, 455] landmark |
+| Floor line | drop_in [-456, -560] [-466, -470] [-470, -420] [-470, -330] [-430, -288] [-360, -268] butte_gap [-300, -152] [-326, -85] [-298, -35] [-270, 15] [-242, 65] [-214, 115] [-200, 140] [-110, 155] siphon_camp [-30, 228] [-80, 290] [-100, 370] [-95, 425] [-20, 437] [60, 440] [130, 440] [170, 440] [205, 450] landmark |
 
-**Measured** (KB7 `tools/traversal_line.gd`, 8 seeds, greybox pass; medians and worst seed). The full table with every band is `design-v3/park/traversal/park_flume.md`.
+**Measured** (KB7 `tools/traversal_line.gd`, 8 seeds, `--fixed-fps 90`, on commit b2da61d (park file, bake and graph; the lines file unchanged since); median / worst seed). Machine load average 20 to 71 during the runs (three runs started after the 10 minute load wait). The full table, with the dead-stop sites and the distinct-lines matrix, is `design-v3/park/traversal/park_flume.md`.
 
 | Band | sable | rivet | kest | tarn | tally | cannon | floor |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| reached Warden (8 of 8) | 8 of 8 pass | 8 of 8 pass | 8 of 8 pass | 8 of 8 pass | 8 of 8 pass | 8 of 8 pass | 8 of 8 pass |
-| time to Warden s (median 60-120, none over 150) | 62.25 / 64.46 pass | 90.77 / 94.85 pass | 84.845 / 88.45 pass | 89.82 / 91.07 pass | 98.115 / 100.01 pass | 96.975 / 98.68 pass | 91.335 / 96.82 pass |
-| segment s (medians 12-45) | [26.42, 14.22, 22.04] / 26.42 pass | [31.6, 28.23, 30.62] / 31.87 pass | [28.68, 26.4, 30.04] / 30.035 pass | [37.45, 24.29, 27.71] / 37.455 pass | [31.79, 37.28, 28.84] / 37.275 pass | [29.43, 39.9, 27.93] / 39.9 pass | [32.03, 28.48, 31] / 32.25 pass |
-| flow share (median >= 0.70, none under 0.60) | 0.949 / 0.943 pass | 0.739 / 0.668 pass | 0.686 / 0.576 MISS | 0.945 / 0.931 pass | 0.732 / 0.693 pass | 0.88 / 0.867 pass | 0.684 / 0.617 MISS |
-| airborne share (0.12-0.45) | 0.265 / None pass | 0.171 / None pass | 0.192 / None pass | 0.201 / None pass | 0.162 / None pass | 0.217 / None pass | 0.17 / None pass |
-| dead stops (0) | 0 / 0 pass | 0 / 0 pass | 0 / 1 MISS | 0 / 0 pass | 0 / 0 pass | 0 / 1 MISS | 0 / 0 pass |
-| peak m/s (>= blazing on every seed) | 51.705 / 51.39 pass | 32.48 / 31.06 pass | 31.57 / 30 pass | 30 / 24.44 MISS | 31.445 / 31.27 pass | 30.245 / 29.59 pass | 32.14 / 30 pass |
-| tier-3 s (median >= 3) | 49.3 / None pass | 10.42 / None pass | 10.385 / None pass | 10.185 / None pass | 10.305 / None pass | 8.405 / None pass | 10.485 / None pass |
-| quiet max s (<= 20) | 6.69 / 6.69 pass | 6.69 / 6.69 pass | 6.69 / 6.69 pass | 6.69 / 6.69 pass | 6.69 / 6.69 pass | 6.69 / 6.69 pass | 6.69 / 6.69 pass |
-| anchor gap m (<= 40) | 599.55 / 641.9 MISS | 548.6 / 555.1 MISS | 545.25 / 561 MISS | 547.4 / 551 MISS | 679.9 / 685.3 MISS | 312.95 / 322.1 MISS | 545.85 / 551.3 MISS |
-| distinct ride facts (>= 3) | 1 / 1 MISS | 1 / 1 MISS | 1 / 1 MISS | 1 / 1 MISS | 1 / 1 MISS | 2 / 1 MISS | 1 / 1 MISS |
-| length ratio (1.3-2.0) | 1.64 / None pass | 1.37 / None pass | 1.4 / None pass | 1.56 / None pass | 1.475 / None pass | 1.55 / None pass | 1.37 / None pass |
+| reached Warden (every seed) | 8 / - pass | 8 / - pass | 8 / - pass | 8 / - pass | 8 / - pass | 8 / - pass | 8 / - pass |
+| time to Warden s (median 60-120, none over 150) | 61.925 / 63.33 pass | 104.595 / 105.18 pass | 90.26 / 91.27 pass | 85.905 / 89.33 pass | 98.49 / 100.94 pass | 87.345 / 89.7 pass | 100.65 / 104.5 pass |
+| segment s (each median 12-45) | [24.86, 15.96, 20.81] / 24.855 pass | [27.05, 43.57, 34.2] / 43.57 pass | [25.37, 39.13, 25.59] / 39.125 pass | [24.28, 32.76, 29.02] / 32.76 pass | [26.63, 33.29, 38.56] / 38.56 pass | [24.84, 39.06, 23.44] / 39.065 pass | [27.42, 36.5, 36.28] / 36.75 pass |
+| flow share (median >= 0.70, none under 0.60) | 0.9177 / 0.895 pass | 0.7256 / 0.6902 pass | 0.6382 / 0.6024 MISS | 0.8782 / 0.843 pass | 0.6088 / 0.5746 MISS | 0.9296 / 0.9231 pass | 0.5976 / 0.5695 MISS |
+| airborne share (0.12-0.45) | 0.2309 / - pass | 0.13 / - pass | 0.1638 / - pass | 0.1639 / - pass | 0.1519 / - pass | 0.2609 / - pass | 0.1225 / - pass |
+| dead stops (0 on every seed) | 0 / 1 MISS | 2 / 2 MISS | 0 / 1 MISS | 2.5 / 7 MISS | 3 / 5 MISS | 1 / 2 MISS | 1.5 / 2 MISS |
+| peak m/s (>= 26.6 blazing on every seed) | 54.595 / 53.79 pass | 35.025 / 32.56 pass | 30.705 / 28.85 pass | 32.38 / 31.7 pass | 35.83 / 33.17 pass | 33.93 / 31.59 pass | 35.365 / 34.3 pass |
+| tier-3 s (median >= 3) | 42.975 / - pass | 8.085 / - pass | 7.155 / - pass | 9 / - pass | 8.495 / - pass | 12.345 / - pass | 8.305 / - pass |
+| quiet max s (<= 20) | 10.325 / 13.22 pass | 14.195 / 15.7 pass | 16.505 / 17.17 pass | 13.8 / 13.91 pass | 17.925 / 20.59 pass | 18.475 / 19.6 pass | 16.4 / 17.24 pass |
+| anchor gap m (<= 40) | 51.65 / 94.7 MISS | 25.65 / 34.7 pass | 61.25 / 68.5 MISS | 32 / 34.5 pass | 22.4 / 24.5 pass | 218.15 / 233.8 MISS | 31.4 / 33.7 pass |
+| distinct ride facts (>= 3) | 4 / 4 pass | 5 / 5 pass | 4 / 4 pass | 5 / 5 pass | 5 / 5 pass | 5 / 4 pass | 5 / 5 pass |
+| length ratio (1.3-2.0) | 1.47 / - pass | 1.44 / - pass | 1.34 / - pass | 1.375 / - pass | 1.35 / - pass | 1.44 / - pass | 1.355 / - pass |
 | progress m/s | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) | not measured (KB7b) |
 
-Floor band `floor` (reaches the Warden in at most 2.0 times rivet's median time, 0 dead stops): median 91.335, worst 181.54, pass
-
-**Two bands miss on every line, and neither is a row problem** (the other misses, Kest and the Cannon's single dead stops at the mesa ramp's foot, Kest's and the floor line's flow share and Tarn's worst-seed peak, are listed in the traversal file). On this head no park row is built in play: `ParkRecipes.place` has no caller (only the bake's height stamps, the contraptions and the Warden reach the stage), so the greybox rows' ride sensors never fire and their faces are not there to hook. The countable ride facts left are a cable (`ride_grapple_line`) and a thermal (gliders only); `lift_fired` drops out at KB7b. The anchor gap reads only the terrain's steep faces. Both bands are re-measured when the rows are placed (follow-up).
+**Bands outside on this head** (row misses, open at the timebox; every park row with a recipe is built in play, `terrain.gd:218-220`, so these are row problems, not tool artifacts): flow share (median >= 0.70, none under 0.60); dead stops (0 on every seed); anchor gap m (<= 40). Details per line are in the traversal file.
 
 **Tricks each line offers** (`class_def.gd:87-122`):
 
-- **Sable**: the flume line from the weir, the trebuchet's throw off the gap into the hollow, then the bench side of the siphon.
-- **Rivet**: the mesa ramp, the canal to the gap, the hollow end to end, the wasteway; every straight is a sprint lane.
-- **Kest**: Rivet's way to the siphon, then east along the bluff and into the drum from the east.
-- **Tarn**: the crew camp: off the mesa's south-west shoulder past the bunk ledges, round the ramp's foot to the gap.
-- **Tally**: the trebuchet into the hollow, west across the fields and back east to the siphon.
-- **The Cannon**: the rim: the rim road, the bend zip, back down to the siphon, the forecourt geyser into the drum.
+- **Sable**: the flume reaches off the weir, the canal past the trebuchet side, the bench, the forecourt.
+- **Rivet**: the mesa ramp and rim road, the bend on the rim, the bench finish; every straight is a sprint lane.
+- **Kest**: Rivet's rim and bend, then east along the bluff into the drum.
+- **Tarn**: the mesa ramp, the trebuchet side of the gap, the hollow end to end, the bench.
+- **Tally**: the trebuchet side, east across the fields to the siphon, the bench and the forecourt pads.
+- **The Cannon**: the rim road, the bend zip, the forecourt geyser into the drum.
 
 ## 10. Music arc
 
