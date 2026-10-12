@@ -55,6 +55,7 @@ var _fails: Array = []
 var _loaded: Array = []
 var _fired: Array = []
 var _expired: Array = []
+var _aim_frame := -1
 
 
 func _initialize() -> void:
@@ -68,6 +69,8 @@ func _physics_process(_delta: float) -> bool:
 		return false
 	if not _booted:
 		_boot()
+		return false
+	if Engine.get_process_frames() <= _aim_frame:
 		return false
 	if _index >= _steps.size():
 		_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
@@ -195,7 +198,7 @@ func _as_class(id: String) -> void:
 	_combat._bite_pending = false
 	_combat._cooldown = 0.0
 	_game.camera.snap(Vector3(0.0, 0.0, -1.0))
-	_game.camera.pitch = 0.0
+	_stage_pitch(0.0)
 
 
 func _clear_enemies() -> void:
@@ -257,16 +260,20 @@ func _arc_force(enemy: Node3D, from: int) -> float:
 
 
 # Pitches the camera so the aim ray meets `point` (the stage-1 spawn faces a rise).
+# Wait for the actual camera render callback, rather than counting physics catch-up ticks.
+func _stage_pitch(value: float) -> void:
+	_game.camera.pitch = value
+	_aim_frame = Engine.get_process_frames()
+
+
 func _aim_at(point: Vector3) -> void:
 	var origin: Vector3 = _game.ctx.aim_origin()
 	var flat := _planar(point - origin).length()
-	_game.camera.pitch = atan2(point.y - origin.y, flat)
+	_stage_pitch(atan2(point.y - origin.y, flat))
 
 
 # Bar presses: slot 1 is a click at home; slot 2 (index 1) and slot 3 (index 2) pick, then click.
 func _press_slot(index: int) -> void:
-	# Physics catch-up can precede the render frame that commits a new camera pitch.
-	_game.camera._process(0.0)
 	if index == 0:
 		_source.press = {"fire_pressed": true}
 		return
@@ -430,7 +437,7 @@ func _check_gather_again() -> void:
 
 func _invalid_start() -> void:
 	_as_class("tally")
-	_game.camera.pitch = 1.2
+	_stage_pitch(1.2)
 
 
 func _invalid_press() -> void:
@@ -442,13 +449,13 @@ func _check_invalid() -> void:
 	_t.eq("an aim at the sky spends nothing", _charges(), 3)
 	_t.check("an aim at the sky starts no recovery", _combat._cooldown <= float(_record["cooldown"]),
 		"cooldown %.2f" % _combat._cooldown)
-	_game.camera.pitch = 0.0
+	_stage_pitch(0.0)
 
 
 # A gather tap at the sky: refused, nothing spent, the pick kept.
 func _invalid_tap_start() -> void:
 	_as_class("tally")
-	_game.camera.pitch = 1.2
+	_stage_pitch(1.2)
 
 
 func _invalid_tap_press() -> void:
@@ -461,7 +468,7 @@ func _check_invalid_tap() -> void:
 		[_charges(), _fails.has(["fire", "no_target"]), _player.abilities.selected, _combat.plate.is_empty(),
 			_player.abilities.ready(AbilityState.SPECIAL)],
 		[3, true, AbilityState.SPECIAL, true, true])
-	_game.camera.pitch = 0.0
+	_stage_pitch(0.0)
 
 
 # --- f. a dry slot-1 press ------------------------------------------------------------------
