@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Stage 4, park_sinkhole (design-v3/park/stages/4-park_sinkhole.md, K-UNITS KD4). Pinned
-# 2026-10-11, greybox pass. The committed bake and graph are fresh for the park file; the
+# 2026-10-12, merged greybox continuation. The committed bake and graph are fresh for the park file; the
 # waymarks run drop_in, tube_mouth, great_room, landmark; the graph's pocket table names one
 # pocket per role with the ids this stage ships and no breach; the landmark carries the swarm
 # brood on the sinkhole mounting; every pilot line and the floor line start at drop_in, pass the
@@ -75,6 +75,12 @@ func _run() -> void:
 			r["recipe"] = ""
 			break
 	t.check("plant: an anchor field with no recipe fails", not pins(p5, graph, lines).is_empty())
+	var g2: Dictionary = graph.duplicate(true)
+	g2["beacon_ok"] = false
+	t.check("plant: an unqualified beacon fails", not pins(park, g2, lines).is_empty())
+	var g3: Dictionary = graph.duplicate(true)
+	g3["spawn"]["run"] = false
+	t.check("plant: an unqualified spawn run fails", not pins(park, g3, lines).is_empty())
 	quit(t.verdict())
 
 
@@ -111,6 +117,10 @@ static func pins(park: Dictionary, graph: Dictionary, lines: Dictionary) -> Arra
 		out.append("graph breaches %s" % str(graph["breaches"]))
 	if not graph.get("spawn", {}).get("ok", false):
 		out.append("the spawn is not in the farthest quarter")
+	if not graph.get("beacon_ok", false):
+		out.append("the beacon is not qualified")
+	if not graph.get("spawn", {}).get("run", false):
+		out.append("the spawn run is not qualified")
 	for route in graph.get("routes", {}):
 		if not (graph["routes"][route] as Array).is_empty():
 			out.append("route %s does not connect" % route)
