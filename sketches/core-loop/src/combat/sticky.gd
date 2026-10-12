@@ -106,10 +106,8 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> Arr
 
 # A charge leaves the world (it went off, was caught or cleared): it leaves the count.
 func take(charge: Dictionary) -> Dictionary:
-	charges.erase(charge)
+	_forget(charge)
 	_free(charge)
-	if ledger != null:
-		ledger.remove(int(charge.get("device_id", 0)), "destroyed")
 	return charge
 
 
@@ -117,7 +115,7 @@ func take(charge: Dictionary) -> Dictionary:
 func recall(device_id: int) -> bool:
 	for charge in charges:
 		if int(charge.get("device_id", 0)) == device_id:
-			charges.erase(charge)
+			_forget(charge)
 			_free(charge)
 			return true
 	return false
@@ -129,8 +127,18 @@ func clear() -> void:
 	_evicted = []
 
 
+# take() and tree exit can both run for the same charge. Forget its id before release.
+func _forget(charge: Dictionary) -> void:
+	charges.erase(charge)
+	if ledger != null:
+		var id := int(charge.get("device_id", 0))
+		charge.erase("device_id")
+		if id > 0:
+			ledger.remove(id, "destroyed")
+
+
 func _free(charge: Dictionary) -> void:
-	var node: Node3D = charge.get("node")
+	var node = charge.get("node")
 	if is_instance_valid(node):
 		node.queue_free()
 
@@ -188,4 +196,6 @@ func _add(charge: Dictionary) -> Dictionary:
 	node.global_position = charge["pos"]
 	charge["node"] = node
 	charges.append(charge)
+	if ledger != null:
+		node.tree_exiting.connect(func(): _forget(charge))
 	return charge
