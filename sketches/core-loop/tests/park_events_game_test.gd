@@ -152,7 +152,10 @@ func _run() -> void:
 				if warden.chunks_left() <= 3 - chunk:
 					break
 				Engine.time_scale = 10.0
-				await _frames(45)
+				for tick in 600:
+					if not warden.staggered():
+						break
+					await _frames(1)
 				Engine.time_scale = 1.0
 				t.check("real Warden closes cracked stagger before the next cycle", not warden.staggered(), "stagger left %s" % warden.stagger_left())
 		t.eq("real combat loses two Warden chunks", warden.chunks_left(), 2)
