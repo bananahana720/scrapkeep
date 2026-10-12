@@ -370,7 +370,7 @@ The west roof cave-in, frame 4 of the draft, fires at 45 s off every measured li
 6. Cross-stage fact 2 (one gate slot in world 2 against two arches) is reported, not changed.
 7. The lines share the lava channel for nearly half their length, so Rivet rides its left wall and Kest its right wall where it runs straight; on the ball traces Sable, Rivet and Tarn (and Rivet, Kest and Tarn) are distinct on all 8 seeds. Offsetting Sable too put it into the channel's edge posts at the bends, so Sable keeps the middle.
 8. Traced dead stops removed by moving rows, not bands: the tube-mouth fork pillar `main_tube_upper_fill_25` to (17, -309) and the bend post `main_tube_upper_post_2i` to (30, -305.5), off the inside of Sable's line; `west_breakthrough_10` shortened to 20 m at (-45, 283.5), so a ball leaving the main lower tube onto the ring lands on flat ground, not across that wash's bank.
-9. Win proof: the completionist bot stalls at its fixed 240 s stage limit (`tools/bot_driver.gd:74`) on this 2 km stage after entering all three pockets; seed 1 engaged the Warden at 222 s. A follow-up asks for a stage-limit flag on `bot_run.gd` for the park table.
+9. Win proof: the completionist bot stalls at its fixed 240 s stage limit (`tools/bot_driver.gd:74`) on this 2 km stage after entering all three pockets; seed 1 engaged the Warden at 222 s. A follow-up asks for a stage-limit flag on `bot_run.gd` for the park table. The skipper bot, which goes straight for the Warden, breaks the swarm brood on all three seeds (engaged at 66 to 82 s, broken at 106 to 131 s) and clears the stage.
 
 ## Appendix: the shipped park file
 
