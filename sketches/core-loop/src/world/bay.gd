@@ -6,6 +6,7 @@ const RideRail := preload("res://src/world/ride_rail.gd")
 const BayLap := preload("res://src/world/bay_lap.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 
 # Moss's workshop bay (DESIGN-V2 sections 12 and 15): a hover barge that docks over the
@@ -67,6 +68,7 @@ const PINS := [Vector2(7.0, -5.0), Vector2(8.0, -5.8), Vector2(8.0, -4.2), Vecto
 const PIN_RESET := 3.0
 const FALL_OFF := 6.0
 const PARK := Vector3(0.0, -2000.0, 0.0)
+# Legacy bay.gd docking boundary inside terrain.gd's 200 m half-width.
 const MAP_LIMIT := 185.0
 
 var docked := false
@@ -119,7 +121,7 @@ func setup(g: float, cruise_speed: float) -> void:
 
 # Docks behind and above the gate row the offers describe. Returns false when no spot
 # fits inside the map, and the bay simply stays away this time.
-func dock(offers: Array, height: Callable, space: PhysicsDirectSpaceState3D) -> bool:
+func dock(offers: Array, height: Callable, space: PhysicsDirectSpaceState3D, map: RefCounted = null) -> bool:
 	if offers.is_empty() or inside:
 		if inside and not offers.is_empty():
 			_aim_exit(offers)
@@ -138,7 +140,7 @@ func dock(offers: Array, height: Callable, space: PhysicsDirectSpaceState3D) -> 
 	for s in [1.0, -1.0]:
 		var cradle: Vector3 = centre + side * s * (half + CRADLE_SIDE)
 		var ground_y: float = height.call(cradle.x, cradle.z)
-		if absf(ground_y - float(height.call(centre.x, centre.z))) > 3.0 or not _on_map(cradle):
+		if absf(ground_y - float(height.call(centre.x, centre.z))) > 3.0 or not _on_map(cradle, map):
 			continue
 		var mid := centre - facing * (BACK + DECK_U)
 		var top := -INF
@@ -146,7 +148,7 @@ func dock(offers: Array, height: Callable, space: PhysicsDirectSpaceState3D) -> 
 		for du in [-DECK_U, 0.0, DECK_U]:
 			for dv in [-DECK_V, 0.0, DECK_V]:
 				var p: Vector3 = mid + facing * du + side * dv
-				inside_map = inside_map and _on_map(p)
+				inside_map = inside_map and _on_map(p, map)
 				top = maxf(top, height.call(p.x, p.z))
 		if not inside_map:
 			continue
@@ -187,7 +189,11 @@ func _aim_exit(offers: Array) -> void:
 	exit_target = gate - facing * EXIT_LEAD + Vector3.UP * 1.0
 
 
-static func _on_map(p: Vector3) -> bool:
+static func _on_map(p: Vector3, map: RefCounted = null) -> bool:
+	if map is ParkMap:
+		# park_map.gd reads this playable rectangle from the active park JSON's play_rect.
+		var rect: Rect2 = map.play_rect
+		return p.x > rect.position.x and p.x < rect.end.x and p.z > rect.position.y and p.z < rect.end.y
 	return absf(p.x) < MAP_LIMIT and absf(p.z) < MAP_LIMIT
 
 
