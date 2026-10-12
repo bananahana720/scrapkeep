@@ -111,7 +111,7 @@ static func all() -> Array[Resource]:
 			"synergy_hooks": PackedStringArray(["on_cloak_crit", "on_rocket_jump", "on_chain_detonation"])}),
 		make({"id": "tarn", "display_name": "Tarn", "role": "Claw bruiser", "species": "tiger",
 			"pitch": "Plant a claw and pull yourself into the fight. Clamp what is close, then rend it with heavy sweeps.",
-			"weapon_id": "claw_sweep", "movement_id": "claw_pull", "special_id": "clamp", "smash_id": "rend_slam", "line_id": "line_reel", "ultimate_id": "ult_default",
+			"weapon_id": "claw_sweep", "movement_id": "claw_pull", "special_id": "clamp", "smash_id": "rend_slam", "line_id": "claw_drag", "ultimate_id": "redjaw_rend",
 			"color": TARN_COLOR, "shape": "cross", "motif": "tarn", "sound": "clank",
 			"bible_home": "Tarn, articulated claw melee",
 			"unlock": {"by": "boss:brindle", "label": "Rout Brindle. Somebody signs on the day he falls."},

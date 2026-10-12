@@ -87,7 +87,7 @@ const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
 	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
@@ -102,6 +102,10 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "p
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
 # row's sound, a shattered chunk plays its row's sound over a low hit.
+# --- P-C Tarn audio ---
+const LINE_CLAW_DRAG := {"sound": "line_claw_drag", "ratchet": "clank", "motif": "tarn", "step_seconds": 0.1}
+var _line_claw_stream: AudioStreamWAV
+# --- end Tarn ---
 const POSTURE_QUARTER := 25.0
 const POSTURE_PHRASE := 0
 const SHATTER_LOW := "chunk_low"
@@ -1031,6 +1035,7 @@ func _connect_all(events) -> void:
 		if _sable_bank_wait:
 			_sable_bank_wait = false
 			_sable_bank_sound())
+	events.line_skill_fired.connect(_on_tarn_claw_drag)
 	_wire_ultimate_beat()
 	wire_optional()
 	_wire_armor()
@@ -2275,3 +2280,21 @@ func sable_note(kind: String, number: int) -> void:
 			engine.schedule_stinger_at(SfxBank.cause_note_id(midi), at)
 		else:
 			_grammar_cue("ultimate_peak", SfxBank.cause_note_id(midi), "SFX", Harmony.ratio(live_key()))
+# --- P-C Tarn line_claw_drag ---
+func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) -> void:
+	if id != "claw_drag":
+		return
+	if _line_claw_stream == null:
+		var notes: Array = Harmony.motif_notes(LINE_CLAW_DRAG["motif"])
+		var step: float = LINE_CLAW_DRAG["step_seconds"]
+		var samples := Synth.buffer(Synth.seconds(0.9))
+		Synth.add_into(samples, SfxBank.samples(LINE_CLAW_DRAG["ratchet"]), 0, 0.5)
+		for i in notes.size():
+			var note := Synth.note("reese", int(notes[i]))
+			var duration := Synth.seconds(0.45 if i == notes.size() - 1 else 0.1)
+			Synth.add_into(samples, Synth.declick(note.slice(0, duration)), Synth.seconds(step * (i + 1)), 0.65)
+		_line_claw_stream = Synth.to_wav(Synth.normalize(samples))
+	var pitch := Harmony.ratio(live_key()) * pow(2.0, maxf(0.0, float(ctx.player.chain.combo - 1)) / 12.0)
+	if _admit("line_skill_fired", "line_claw_drag", pitch):
+		_start("line_skill_fired", "line_claw_drag", _line_claw_stream, SfxBank.trim_db("line_claw_drag") + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
+# --- end Tarn ---

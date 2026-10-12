@@ -24,7 +24,7 @@ const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
-const PENDING_ART := ["trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_sable_cable", "decal_sable_spool", "shell_sable_felt"]
+const PENDING_ART := ["trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_sable_cable", "decal_sable_spool", "shell_sable_felt"]
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -83,6 +83,9 @@ const ROWS := {
 	# --- demolitions_caster (Kest): P-C Kest adds its rows here ---
 	# --- end demolitions_caster ---
 	# --- tarn (Tarn): P-C Tarn adds its rows here ---
+	"trail_tarn_claw_marks": {"slot": "trail", "pilot": "tarn", "name": "Claw Marks", "starter": false, "tint": Color("d2c5a5"), "asset": "trail_tarn_claw_marks"},
+	"shell_tarn_redjaw_teeth": {"slot": "shell", "pilot": "tarn", "name": "Redjaw Teeth", "starter": false, "tint": Color("d2c5a5"), "asset": "shell_tarn_redjaw_teeth"},
+	"outfit_tarn_steady_cap": {"slot": "outfit", "pilot": "tarn", "name": "Steady Cap", "starter": false, "tint": Color("d2c5a5"), "asset": "outfit_tarn_steady_cap"},
 	# --- end tarn ---
 	# --- tally (Tally): P-C Tally adds its rows here ---
 	# --- end tally ---
