@@ -112,7 +112,7 @@ func _check_run(spawner, run, profile) -> void:
 	run.damage(99999.0, "test")
 	var at_death: Dictionary = run.tallies()
 	var open_profile := Profile.new(profile.path)
-	var open_entrance := run.to_entrance_doc()
+	var open_entrance: Dictionary = run.to_entrance_doc()
 	open_entrance.erase("run_tallies")
 	var resumed := RunState.new(null, 123)
 	var resumed_ok := open_profile.load_profile() and resumed.from_entrance_doc(open_entrance)
