@@ -13,14 +13,58 @@ const AudioRows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 45 checks,
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 50 checks,
 # 2026-10-12 (PC-RIVET round 3): arrival preview, early cues, shared guard feedback and cue gain/key.
+# 2026-10-12 (PC-RIVET r4): 45 -> 50, inspect actual PCM cue offsets and duration at key 3.
 # including the count assertion, so an empty or short run fails. Real game and router, scripted
 # calm shelf with no AI attacks; the kit is stepped by hand so every number is read on its tick.
 const DT := 1.0 / 60.0
 const SHELF := Vector3(-45.0, 122.0, 6.0)
+class TimingAudio:
+	extends "res://src/presentation/audio.gd"
+	var played: Array = []
+
+	func _start(kind: String, sound: String, stream: AudioStream, volume: float, pitch: float, bus: String) -> void:
+		played.append({"stream": stream, "pitch": pitch})
+		super._start(kind, sound, stream, volume, pitch, bus)
+
+
+# Read the first nonzero PCM sample after an instrument's silent gap. Convert the
+# sample position through the pitch actually passed to playback, into physical seconds.
+func _sound_time(played: Dictionary, after_seconds: float) -> float:
+	var wav: AudioStreamWAV = played["stream"]
+	for i in range(int(after_seconds * wav.mix_rate), wav.data.size() / 2):
+		if wav.data.decode_s16(i * 2) != 0:
+			return float(i) / (wav.mix_rate * float(played["pitch"]))
+	return -1.0
+
+
+func _cue_timing() -> void:
+	var audio := TimingAudio.new()
+	audio.ctx = _game.ctx
+	audio.engine = _game.presentation.audio.engine
+	audio.engine.key = 3
+	audio.sound_ready = true
+	var pitch := Harmony.ratio(audio.live_key())
+	_kit.last_cue = {"on": "body", "delay": 0.6}
+	audio._on_rivet_line_drive("line_drive", null, Vector3.ZERO, "body")
+	var punch: Dictionary = audio.played.back()
+	_t.near("the snare starts at the recorded delay in the live key", _sound_time(punch, 0.5), float(_kit.last_cue["delay"]), 0.002)
+	var punch_wav: AudioStreamWAV = punch["stream"]
+	_t.near("the punch buffer keeps its physical duration", float(punch_wav.data.size()) / (2.0 * punch_wav.mix_rate * pitch), 0.9, 0.0001)
+	_kit.last_cue = {"on": "world", "seconds": 1.0}
+	audio._on_rivet_line_drive("line_drive", null, Vector3.ZERO, "world")
+	var arrive: Dictionary = audio.played.back()
+	_t.near("the hat roll interval survives the live key", _sound_time(arrive, 0.055), float(audio.RIVET_LINE["roll_step"]), 0.002)
+	var last_hat_end: float = (float(_kit.last_cue["seconds"]) - float(audio.RIVET_LINE["roll_step"])) * pitch + 0.05
+	_t.near("the final clav starts at the recorded arrival in the live key", _sound_time(arrive, last_hat_end), float(_kit.last_cue["seconds"]), 0.002)
+	var arrive_wav: AudioStreamWAV = arrive["stream"]
+	_t.near("the arrival buffer keeps its physical duration", float(arrive_wav.data.size()) / (2.0 * arrive_wav.mix_rate * pitch), float(_kit.last_cue["seconds"]) + 0.5, 0.0001)
+	audio.free()
+
+
 var _t := T.new("rivet_kit_test")
-var _expected_checks := 45
+var _expected_checks := 50
 var _game
 var _player
 var _combat
@@ -372,4 +416,5 @@ func _run() -> void:
 	var committed: Dictionary = _combat.last_committed.get("geometry", {})
 	_t.check("slot 2 draws and commits the same 12 m ring", not ring.is_empty() and ring == committed and is_equal_approx(float(ring["radius"]), Weapons.OVERDRIVE_RADIUS),
 		"%s" % ring.get("radius", -1.0))
+	_cue_timing()
 	_finish()
