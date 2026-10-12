@@ -1,10 +1,10 @@
 extends "res://tests/kest_kit_test.gd"
 
-# 2026-10-12 (PC-KEST round 4): the shared runner adds two Cable Charge bot-hand fixtures.
+# 2026-10-12 (PC-KEST round 4): the shared runner adds three Cable Charge bot-hand fixtures.
 
 # 2026-10-11 (PC-KEST): fixed-step carrier, payload and posture integration.
-# Expected 61 checks, including count guard. The bot suite separately runs real physics.
-const EXPECTED_SET_PIECE_CHECKS := 61
+# Expected 62 checks, including count guard. The bot suite separately runs real physics.
+const EXPECTED_SET_PIECE_CHECKS := 62
 const Kest := preload("res://src/combat/kest_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
