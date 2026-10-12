@@ -66,6 +66,12 @@ func _run() -> void:
 	t.check("planted: a swapped waymark order fails the sable line", not _resolve(graph, swapped, lines["pilots"]["sable"]).is_empty())
 	var off := {"waypoints": ["drop_in", [900.0, 0.0], "canal_lip", "switchback_camp", "landmark"]}
 	t.check("planted: a waypoint off the play square fails to resolve", not _resolve(graph, park, off).is_empty())
+	var off_named := park.duplicate(true)
+	for row in off_named["park_rows"]:
+		if row["id"] == "canal_lip":
+			row["at"] = [900.0, 0.0]
+	t.eq("planted: a named canal_lip off the play square returns the bounds error",
+			_resolve(graph, off_named, {"waypoints": WAYMARKS}), ["canal_lip is off the play square"])
 
 	# Freshness: the committed bake and graph match park_pit.json byte for byte.
 	t.eq("committed bake is fresh", bake.freshness(PARK, BAKED), [])
