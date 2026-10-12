@@ -11,7 +11,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 190
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 195
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -24,12 +24,12 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # 2026-10-12 (PC-RIVET r5): 86 -> 148, ten real shape dispatches, independent height,
 # terrain and kit-constant expectations, selected geometry versus rendered vertices,
 # and the unchanged centre-based wave limits and Breach Skid inner ring.
-# 2026-10-12 (PC-RIVET r6): 148 -> 190, narrow-wall shadows, terrain formats and exposed-hull controls.
+# 2026-10-12 (PC-RIVET r6): 148 -> 195, narrow-wall shadows, terrain formats and exposed-hull controls.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 190
+	_expected_checks = 195
 	super._initialize()
 
 
@@ -266,6 +266,32 @@ func _terrain_shadow_fixture() -> void:
 	_tech("foundry_cutter", 4)
 	_combat.ultimate._peak(_player.ball_position())
 	_t.eq("exposed boundary hull hit exactly once", _damage(exposed), [Weapons.FULL_CUT_DAMAGE])
+	# A narrow wall beyond the sweep may constrain hull forgiveness only in its silhouette.
+	for wall_present in [false, true]:
+		await _fresh()
+		_piece("foundry_cutter")
+		var outer_hull := _enemy("chaser", 30.5, 4.0)
+		outer_hull.set_physics_process(false)
+		var wall: StaticBody3D = null
+		if wall_present:
+			wall = StaticBody3D.new()
+			wall.collision_layer = 1
+			var collision := CollisionShape3D.new()
+			var box := BoxShape3D.new()
+			box.size = Vector3(0.5, 30.0, 2.6)
+			collision.shape = box
+			wall.add_child(collision)
+			_game.add_child(wall)
+			wall.global_position = _player.ball_position() + Vector3.RIGHT * 30.5
+			_t.check("outer hull independently intersects reach", sqrt(30.5 * 30.5 + 4.0 * 4.0) - Weapons.FULL_CUT_REACH < _combat._hull(outer_hull))
+		await physics_frame
+		await physics_frame
+		_t.check("outer hull ray clear, wall=%s" % wall_present, _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(_player.ball_position(), outer_hull.global_position, 1)).is_empty())
+		_tech("foundry_cutter", 4)
+		_combat.ultimate._peak(_player.ball_position())
+		_t.eq("outer hull hit once, wall=%s" % wall_present, _damage(outer_hull), [Weapons.FULL_CUT_DAMAGE])
+		if wall != null:
+			wall.queue_free()
 	await _fresh()
 
 
