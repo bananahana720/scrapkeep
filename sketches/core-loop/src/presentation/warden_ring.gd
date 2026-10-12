@@ -149,7 +149,6 @@ func crack_visible() -> bool:
 
 
 func _process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/warden_ring.gd::_process")
 	_sync()
 
 

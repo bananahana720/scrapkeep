@@ -55,7 +55,6 @@ func _open(index: int) -> bool:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/tree_crumb.gd::_process")
 	_clock += delta
 	queue_redraw()
 

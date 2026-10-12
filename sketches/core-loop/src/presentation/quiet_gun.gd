@@ -99,7 +99,6 @@ static func attach(owner):
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/quiet_gun.gd::_physics_process")
 	if module == null:
 		return
 	if not is_instance_valid(module) or not is_instance_valid(module.pad):

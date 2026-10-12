@@ -1235,7 +1235,6 @@ class Flash:
 		tint("fill", Color(_tone, FLASH_ALPHA))
 
 	func _process(delta: float) -> void:
-		var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/threat_grammar.gd::_process")
 		_age += delta
 		if _age >= FLASH_SECONDS:
 			queue_free()

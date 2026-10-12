@@ -184,7 +184,6 @@ func _on_flow_changed(flow_state: String) -> void:
 # --- The tick ------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/boss/boss.gd::_physics_process")
 	if active() and ctx.flow.state_name() == "boss":
 		advance(delta)
 

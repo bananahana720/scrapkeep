@@ -391,7 +391,6 @@ static func _topper(rarity: String, mat: Material) -> MeshInstance3D:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/build/reward_gates.gd::_process")
 	if offers.is_empty():
 		return
 	_spin += delta * 1.8

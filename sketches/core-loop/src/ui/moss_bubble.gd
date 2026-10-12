@@ -330,7 +330,6 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/moss_bubble.gd::_process")
 	if not _intro_queue.is_empty() and not visible:
 		_flush_intro()
 	if not visible:

@@ -195,7 +195,6 @@ func _first_shell(from: Vector3, to: Vector3, bolt_radius: float, shells: Array)
 
 
 func _process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/bolts.gd::_process")
 	var count := _bolts.size()
 	_multimesh.visible_instance_count = count
 	if count == 0:

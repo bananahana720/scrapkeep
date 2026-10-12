@@ -71,7 +71,6 @@ class TalkButton extends Button:
 		return Keycap.words("key_t")
 
 	func _process(_delta: float) -> void:
-		var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/workshop.gd::_process")
 		queue_redraw()
 
 	func _draw() -> void:
@@ -413,7 +412,6 @@ static func babble_beat(record: Dictionary) -> int:
 # ---- Per frame ----
 
 func _process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/workshop.gd::_process")
 	if _held:
 		_enforce_hold()
 	var s = shop()

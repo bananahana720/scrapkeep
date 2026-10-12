@@ -251,7 +251,6 @@ func _mesh_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, m
 
 
 func _physics_process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/world/activities.gd::_physics_process")
 	if ctx == null or not ctx.flow.in_stage():
 		return
 	if _pending_stage and ctx.spawner != null and not ctx.calm:

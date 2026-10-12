@@ -177,7 +177,6 @@ func hold_fraction() -> float:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/world/interact.gd::_physics_process")
 	if ctx == null or not ctx.flow.in_stage():
 		_hold = {}
 		target = null

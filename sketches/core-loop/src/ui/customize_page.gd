@@ -964,7 +964,6 @@ func _on_resize() -> void:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/customize_page.gd::_process")
 	if not is_visible_in_tree():
 		return
 	if not reduced_motion and not _dragging and _pivot != null:

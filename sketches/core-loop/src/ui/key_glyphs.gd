@@ -359,7 +359,6 @@ func drawn_words() -> PackedStringArray:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/key_glyphs.gd::_physics_process")
 	if game == null:
 		return
 	if not game.flow.in_play():
@@ -401,7 +400,6 @@ func _placements() -> Array:
 
 
 func _process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/key_glyphs.gd::_process")
 	var now := _placements()
 	if now != _placed:
 		_placed = now

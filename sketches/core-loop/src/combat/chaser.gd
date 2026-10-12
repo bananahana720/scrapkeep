@@ -115,7 +115,6 @@ func state_name() -> String:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/chaser.gd::_physics_process")
 	_update_flash(delta)
 	_cue_step(delta)
 	if not _in_play() or target == null:

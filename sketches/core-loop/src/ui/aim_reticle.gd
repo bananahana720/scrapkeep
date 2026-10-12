@@ -67,7 +67,6 @@ func reading() -> Dictionary:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/aim_reticle.gd::_process")
 	step(delta)
 	queue_redraw()
 

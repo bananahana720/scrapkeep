@@ -92,14 +92,12 @@ func teleport(to: Vector3, new_velocity: Vector3) -> void:
 # A teleport must not be drawn as a streak from the old spot. The node only receives the
 # new transform after this callback, so the reset is repeated on the following ticks.
 func _physics_process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/movement/rigid_ball.gd::_physics_process")
 	if _settle_interpolation > 0:
 		_settle_interpolation -= 1
 		reset_physics_interpolation()
 
 
 func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/movement/rigid_ball.gd::_integrate_forces")
 	if _pending_position != null:
 		body_state.transform = Transform3D(body_state.transform.basis, _pending_position)
 		_pending_position = null

@@ -107,7 +107,6 @@ static func style(shape: Dictionary, now: float) -> Dictionary:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/movement/indicator.gd::_process")
 	if _tris == null:
 		return
 	for layer in _collapsing.keys():

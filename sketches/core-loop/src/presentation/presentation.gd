@@ -157,7 +157,6 @@ func _show_windup(enemy: Node, facts: Dictionary) -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/presentation.gd::_physics_process")
 	if ctx == null or not ctx.flow.in_play():
 		_windup_states.clear()
 		return

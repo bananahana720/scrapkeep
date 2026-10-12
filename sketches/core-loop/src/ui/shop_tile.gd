@@ -67,7 +67,6 @@ func drawn_words() -> PackedStringArray:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/shop_tile.gd::_process")
 	_lift = move_toward(_lift, 1.0 if has_focus() or is_hovered() else 0.0, delta * 8.0)
 	queue_redraw()
 

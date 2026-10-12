@@ -302,7 +302,6 @@ func _on_warden_engaged(stage: int) -> void:
 
 # One sample per tick the stage clock moved, so a paused or frozen game adds none.
 func _physics_process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/core/run_log.gd::_physics_process")
 	if not _measuring or not is_instance_valid(player) or run == null:
 		return
 	if run.stage_time <= _stage_clock:

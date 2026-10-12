@@ -287,7 +287,6 @@ func _refund(kick: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/holds.gd::_physics_process")
 	if ctx == null:
 		return
 	_clock += delta
@@ -335,7 +334,6 @@ func _grant_tenacity() -> void:
 
 
 func _process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/holds.gd::_process")
 	if player == null:
 		return
 	var ball: Vector3 = player.shown_position()

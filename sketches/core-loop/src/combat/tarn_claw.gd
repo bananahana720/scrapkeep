@@ -171,7 +171,6 @@ func _stop_drag() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/tarn_claw.gd::_physics_process")
 	if ctx == null or ctx.flow == null or not ctx.flow.in_play():
 		return
 	step(delta)

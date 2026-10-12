@@ -60,7 +60,6 @@ func setup(tuning_ref) -> void:
 
 
 func _process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/tuning_panel.gd::_process")
 	if not visible or tuning == null:
 		return
 	for key in _rows:

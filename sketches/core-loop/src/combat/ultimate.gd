@@ -524,7 +524,6 @@ func _end(reason: String, refunded: bool) -> void:
 # --- The ride ---------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/ultimate.gd::_physics_process")
 	if ctx == null or ctx.run.class_def == null:
 		return
 	step(delta)

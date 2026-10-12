@@ -108,7 +108,6 @@ func _resize() -> void:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/title_stage.gd::_process")
 	_clock += delta
 	_frame()
 	companion.position = COMPANION_AT + Vector3(0.0, sin(_clock * 1.25) * 0.09, 0.0)

@@ -94,7 +94,6 @@ func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/boss/mind_dress.gd::_physics_process")
 	if module == null or not is_instance_valid(module):
 		queue_free()
 		return

@@ -149,7 +149,6 @@ func clear_landing() -> void:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/world/launch.gd::_process")
 	if _pad.visible:
 		_pad_time -= delta
 		if _pad_time <= 0.0:

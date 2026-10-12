@@ -190,5 +190,4 @@ func knock(_direction: Vector3, _force: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/vault.gd::_physics_process")
 	_update_flash(delta)

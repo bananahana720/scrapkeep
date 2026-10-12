@@ -256,7 +256,6 @@ static func vault_text(plating: float) -> String:
 
 
 func _process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/world/event_view.gd::_process")
 	if director == null:
 		return
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.008)

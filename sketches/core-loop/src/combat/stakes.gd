@@ -195,7 +195,6 @@ func start_sentries(beat_seconds: float, heft_mult: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/stakes.gd::_physics_process")
 	step(delta)
 
 

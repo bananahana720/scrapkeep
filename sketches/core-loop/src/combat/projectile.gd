@@ -115,7 +115,6 @@ func bat() -> bool:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/projectile.gd::_physics_process")
 	if live.is_valid() and not live.call():
 		return
 	_age = minf(_age + delta, flight)

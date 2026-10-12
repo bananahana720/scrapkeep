@@ -172,7 +172,6 @@ func _on_fired(id: String, target: Node3D, at: Vector3) -> void:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/why_callout.gd::_process")
 	step(delta)
 
 

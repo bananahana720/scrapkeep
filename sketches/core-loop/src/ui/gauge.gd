@@ -62,7 +62,6 @@ func drawn_words() -> PackedStringArray:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/gauge.gd::_process")
 	_clock += delta
 	if warn:
 		queue_redraw()

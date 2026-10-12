@@ -149,7 +149,6 @@ func shown_extent() -> Vector2:
 
 
 func _process(_delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/world_prompt.gd::_process")
 	if visible:
 		queue_redraw()
 

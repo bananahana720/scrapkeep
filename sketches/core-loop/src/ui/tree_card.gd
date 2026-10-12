@@ -141,7 +141,6 @@ func _text(value: String, font_size: int, tint: Color) -> Label:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/tree_card.gd::_process")
 	var up := 1.0 if (is_hovered() or has_focus()) and not disabled else 0.0
 	_lift = move_toward(_lift, up, delta * 8.0)
 	queue_redraw()

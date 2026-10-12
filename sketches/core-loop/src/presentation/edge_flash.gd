@@ -41,7 +41,6 @@ func weight(edge: Vector2) -> float:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/edge_flash.gd::_process")
 	if _left <= 0.0:
 		return
 	_left = maxf(0.0, _left - delta)

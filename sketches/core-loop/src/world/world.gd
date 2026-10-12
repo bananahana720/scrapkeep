@@ -295,7 +295,6 @@ func _mark_landing(stage: int, retry: bool) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/world/world.gd::_physics_process")
 	if ctx == null or events == null or not ctx.flow.in_stage():
 		return
 	var player = ctx.player
@@ -489,7 +488,6 @@ func director_alive() -> int:
 
 
 func _step_director(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("director")
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
 	director.heft_class = ctx.run.heft_class()
 	var alive := director_alive()

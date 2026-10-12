@@ -26,7 +26,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
 # writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
 # diagnostic run. --fixed-fps 90 makes one frame one physics tick, faster than real time.
-# --bot-profile=1 writes exclusive callback timings and sampled Performance monitors.
+# --bot-profile=1 writes runner/tick timings and sampled Performance monitors.
 # --bot-audit=1 writes full-precision committed bus events with stable object tokens.
 # --bot-no-mix=1 skips sample arithmetic while retaining music transport.
 # --bot-no-pilot-tracks=1 skips pilot bone sampling, retaining playback and signals.

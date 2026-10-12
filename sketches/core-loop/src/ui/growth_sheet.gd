@@ -43,7 +43,6 @@ func drawn_words() -> PackedStringArray:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/growth_sheet.gd::_process")
 	if is_visible_in_tree():
 		clock += delta
 		queue_redraw()

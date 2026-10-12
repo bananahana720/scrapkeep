@@ -366,7 +366,6 @@ func _build_halo(synergy_id: String) -> Node3D:
 
 
 func _process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/build/accretion.gd::_process")
 	var i := _flung.size() - 1
 	while i >= 0:
 		var fx: Dictionary = _flung[i]

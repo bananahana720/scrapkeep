@@ -79,7 +79,6 @@ func exit_arena() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/boss/stub_boss.gd::_physics_process")
 	if active():
 		clock += delta
 		ctx.flow.boss_plating = live_plating()

@@ -159,7 +159,6 @@ static func _throw(death_style: String, out: Vector3, throw: Vector3) -> Vector3
 
 
 func _physics_process(delta: float) -> void:
-	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/enemy_motion.gd::_physics_process")
 	t += delta
 	var fade := clampf(t / seconds, 0.0, 1.0)
 	for piece in _pieces:
