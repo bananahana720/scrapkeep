@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for 24cc872.
+# Sable slot 3 line_reel -> bank_shot.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -110,7 +112,7 @@ func _run() -> void:
 	_game.events.special_used.connect(func(_id: String, _at: Vector3): _specials += 1)
 	_player.set_physics_process(false)
 	_t.eq("setup: Sable's bar", [_abilities().id_of("weapon"), _abilities().id_of("special"), _abilities().id_of("line")],
-		["arc_caster", "detonation_gauge", "line_reel"])
+		["arc_caster", "detonation_gauge", "bank_shot"])
 
 	# 1. Home at the start.
 	_fresh()
