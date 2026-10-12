@@ -103,8 +103,26 @@ static func _frame(row: Dictionary) -> Dictionary:
 	return frame
 
 
-static func _safe(graph, row: Dictionary) -> bool:
+static func _shortest_links(graph) -> Array:
+	var path: Dictionary = graph.search_prev(graph.spawn_node)
+	var links := []
+	var node: int = graph.beacon_node
+	while node != graph.spawn_node:
+		var previous: int = path["prev"][node]
+		if previous < 0:
+			break
+		links.append([previous, node])
+		node = previous
+	return links
+
+
+static func _safe(graph, row: Dictionary, shortest: Array = []) -> bool:
 	var frame := _frame(row)
+	if shortest.is_empty():
+		shortest = _shortest_links(graph)
+	for link in shortest:
+		if _intersects(frame, graph.position(link[0]), graph.position(link[1])):
+			return false
 	for a in graph.node_count():
 		if graph.flags(a) & (Graph.LINE | Graph.WARDEN) != 0:
 			if Stamps.inside(frame, graph.px[a], graph.pz[a]):
@@ -233,6 +251,7 @@ static func _compile(base, sockets: Array) -> Dictionary:
 	var plan := {"errors": validate(base, sockets), "sockets": {}}
 	if not plan["errors"].is_empty():
 		return plan
+	var shortest := _shortest_links(base)
 	for socket in sockets:
 		var blocked := {}
 		var frame := _frame(socket["filler"])
@@ -242,7 +261,7 @@ static func _compile(base, sockets: Array) -> Dictionary:
 				var b: int = base.to[e]
 				if _intersects(frame, base.position(a), base.position(b)):
 					blocked[_key(a, b, base.node_count())] = true
-		plan["sockets"][socket["id"]] = {"safe": _safe(base, socket["filler"]), "blocked": blocked}
+		plan["sockets"][socket["id"]] = {"safe": _safe(base, socket["filler"], shortest), "blocked": blocked}
 	return plan
 
 
