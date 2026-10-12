@@ -1175,8 +1175,8 @@ static func stage_checks(graph, park: Dictionary) -> Dictionary:
 
 
 # The four pockets (PARK.md 2.12): roles, door nodes, distances and breaches.
-static func pockets(graph, park: Dictionary) -> Dictionary:
-	var index := Index.new(graph, park)
+# rows_only returns the same pocket selection before the node and distance evaluation.
+static func pockets(graph, park: Dictionary, rows_only := false) -> Dictionary:
 	var rows := []
 	var breaches := []
 	var waymarks: Array = park["waymarks"]
@@ -1210,6 +1210,9 @@ static func pockets(graph, park: Dictionary) -> Dictionary:
 		rows.append({"id": String(hidden["id"]), "role": "hidden", "kind": String(hidden["kind"]),
 			"site": String(hidden["site"]), "at": at, "pay_at": pay_at, "pay_rarities": [], "pay_named": ""})
 
+	if rows_only:
+		return {"rows": rows}
+	var index := Index.new(graph, park)
 	var roles := []
 	for row in rows:
 		roles.append(row["role"])
@@ -1755,7 +1758,7 @@ static func hidden_border(graph, park: Dictionary) -> Array:
 		by_id[String(row["id"])] = row
 	var out := []
 	var zones: Array = graph.zones()
-	for pocket in pockets(graph, park)["rows"]:
+	for pocket in pockets(graph, park, true)["rows"]:
 		if pocket["role"] != "hidden":
 			continue
 		var hidden: Dictionary = by_id[pocket["id"]]

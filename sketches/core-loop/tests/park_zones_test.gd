@@ -37,7 +37,7 @@ const SCRATCH := "user://park_zones_test"
 const TOOL := "res://tools/park_graph.gd"
 const LOADER := "res://src/world/park/park_graph.gd"
 const BAKE_TOOL := "res://tools/park_bake.gd"
-const EXPECTED_CHECKS := 61
+const EXPECTED_CHECKS := 62
 
 var t := T.new("park_zones_test")
 
@@ -260,6 +260,12 @@ func _acceptance(tool: GDScript, graph, park: Dictionary) -> void:
 	var mirror: Dictionary = tool.jitter(graph, 50, {"anchors": flipped})
 	t.check("control: ranks running cheapest first make order_ok false", not mirror["order_ok"])
 	var border: Array = tool.hidden_border(graph, park)
+	var reported_ids := []
+	for pocket in tool.pockets(graph, park)["rows"]:
+		if pocket["role"] == "hidden":
+			reported_ids.append(pocket["id"])
+	t.eq("the border measures every hidden pocket in the full pocket report",
+		border.map(func(h): return h["id"]), reported_ids)
 	# The CLI gate, called as the CLI calls it. The fixture remains authored in place.
 	t.eq("the fixture border gate truthfully reports its one-zone pocket", tool.zone_gate(drawn, border),
 		["hidden pocket tube_wall borders 1 zones"])
