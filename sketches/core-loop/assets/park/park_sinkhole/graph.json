@@ -1,25 +1,27 @@
 {
-  "bake_sha256": "b241394c6e833683113f88447f039189bc07d7ebd9e3ffa19fdcb44c1aca47fc",
+  "bake_sha256": "ace15cbeedf4086f4f3ccb43be0c3c06c3c901633c01710c05e2115b2d7bcfbd",
+  "beacon_ok": true,
   "breaches": [],
-  "bytes": 925034,
-  "edges": 315231,
+  "bytes": 925514,
+  "edges": 315233,
+  "first_failed": "",
   "flags": {
     "deck": 55,
-    "door_ok": 39920,
-    "line": 410,
+    "door_ok": 39919,
+    "line": 411,
     "open": 40456,
-    "sight_ok": 9691,
+    "sight_ok": 9683,
     "under": 0
   },
   "full_visit_m": 1909,
   "full_visit_ratio": "1.363",
-  "graph_sha256": "de66bcb098ea7210598a7c3960d0b97789df67a35bd5dc510680822b15ada852",
+  "graph_sha256": "eae2de32f4a82258ff65cb3169c4ba6d28147c3f35d51a143736f03d542ac8a9",
   "line_errors": [],
   "line_path_nodes": 175,
   "longest_est_m": 2038,
   "map": "park_sinkhole",
   "nodes": 40456,
-  "park_sha256": "bb3d008ddaf6b7f94b6f7c65546ecb8e35e81bf1437483e0301a7e3e8701f69b",
+  "park_sha256": "758b542699b5c4e7e2895339d61b62038a5362ab97314a14f260f8c6ba7ab2bb",
   "pockets": [
     {
       "clear_ring": [],
@@ -129,6 +131,7 @@
       "site": "crosscut_drift"
     }
   ],
+  "reward_ratio": "0.835",
   "ride_edges": 57,
   "routes": {
     "bore_shaft": [],
@@ -162,9 +165,28 @@
   "spawn": {
     "d_landmark": 1401,
     "farther_share": "0.008",
-    "ok": true
+    "ok": true,
+    "run": true
   },
   "spawn_beacon_m": 1401,
   "spawn_beacon_share": "0.687",
-  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+  "stage_checked": [
+    "beacon_ok",
+    "spawn"
+  ],
+  "targets": [
+    {
+      "name": "reward_ratio",
+      "ok": false,
+      "target": "at least 1.5",
+      "value": 0.835
+    },
+    {
+      "name": "full_visit_ratio",
+      "ok": true,
+      "target": "at most 3.0",
+      "value": 1.363
+    }
+  ],
+  "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"
 }
