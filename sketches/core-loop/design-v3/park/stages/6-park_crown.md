@@ -1,6 +1,6 @@
 # Stage 6: Highdraft, the crown (`park_crown`)
 
-**Status: greybox round 2 candidate, 12 October 2026; not admitted.** The source file, bake and graph are built. Sections 5 to 9 describe the current authored rows. The current traversal receipts and win proof are in `design-v3/park/traversal/park_crown.md`. The approved storyboard and original appendix remain design history. The live spawner on the aligned base does not read the park Warden row: its anchor flag is false, its mind driver is null, and its engage radius is 30 m while the park declares 120 m. The shared KF8-WIRE unit owns that mismatch. Round 2 uses the fixed traversal export, with the beacon graph judged from the authored 120 m ring.
+**Status: greybox round 3, blocked by traversal repeatability.** The source file, bake and graph are built. Sections 5 to 9 describe the current authored rows. The current traversal receipts and win proof are in `design-v3/park/traversal/park_crown.md`. The approved storyboard and original appendix remain design history. The live spawner on the aligned base does not read the park Warden row: its anchor flag is false, its mind driver is null, and its engage radius is 30 m while the park declares 120 m. The shared KF8-WIRE unit owns that mismatch. Round 2 uses the fixed traversal export, with the beacon graph judged from the authored 120 m ring.
 
 | Field | Value |
 | --- | --- |
@@ -211,7 +211,7 @@ The reward pay detour is 239 m and the risk pay detour is 191 m. The graph lists
 
 The balanced rock stays at [-34,-322] for Sable's anchor cover. Tarn's first west waypoint is restored to [-60,-310]. The south route through [-60,-360] regressed its dead stops and anchor gaps and was discarded after the second site rework. `sentinel_42` is a narrow stamped spire at [45,-365], and `sentinel_11` is at [78.5,-372], south of Cannon's new meander-lip route. `sentinel_6` rises to 40 m beside the high drop exit, `sentinel_15` to 30 m beside the east-fan return, and `sentinel_41` stays at [40,-255] and rises to 40 m. Moving it into the departure lane obstructed Rivet, so its footprint was restored. These are measured against the fresh traversal sweep.
 
-Five group/swap rows remain unplaced: `perch_spires`, `needles`, `hoodoo_forest`, `split_spire` and `spire_top_ramp`. Member spires have individual rows; the group post fields obstructed lanes in the earlier pass. The swap row has no runtime swap yet. The 59 `slickrock_field_*` rows still have neither recipe nor stamp. They satisfy the density test by footprint and build no scenery. These are unresolved dressed-pass items, not rendered coverage.
+Five group/swap rows remain unplaced: `perch_spires`, `needles`, `hoodoo_forest`, `split_spire` and `spire_top_ramp`. Member spires have individual rows; the group post fields obstructed lanes in the earlier pass. The swap row has no runtime swap yet. The 59 metadata-only coverage rows are replaced by 106 geometry-producing greybox patches. The native loader builds 5,538 physical posts. The patches clear the fixed pilot and gate corridors by 24 m and the pocket and cradle sites by 44 m. Effective density measures 62.264095 m worst using the owner's 80 m limit. The metadata-preserving empty-row mutation fails at 200.0 m after a fresh bake and graph. Traversal preservation remains unqualified because the shared tool is not repeatable.
 
 
 Round 2 regrades the bowl under ruling 15. Its stamp diameter is 600 m, depth 12 m; perch_spire_1 to perch_spire_3 keep their coordinates and use 23.73 m physical posts without ground stamps, placing their tops near 12 m. The collector and shelf approach kicker are outside the disc. Sentinel_48 restores centre-line anchor cover inside the disc without changing its floor height. The regenerated graph records no roofed or deck nodes inside the 120 m ring. Both gate cradles pass the active ParkMap bounds and height checks; the live bay dock succeeds. The coordinator retired the round-1 no-map probe under the round-3 ruling. Its red log remains history. The replacement derives both cradles from the authored gate slots, passes the active ParkMap and requires both cradles with AND, plus live docking.
@@ -255,7 +255,7 @@ The meander retains its 10 m wash depth and uses a local 6 m bowl cut at [132,-2
 | shelf_wire | cable | gauntlet_shelf | (primitive) | {"from":[80,24.0,120],"to":[165,7.3,300],"radius":4.5,"floor":18.0} |
 | gauntlet_balloon_lift | lift | gauntlet_west | lift_platform | {"at":[330,90],"radius":5.0,"rise":90.0,"charge":3.5,"offset":0.0} |
 | shelf_cannon | launcher | gauntlet_shelf | cannon | {"style":"cannon","at":[165,300],"radius":4.0,"target":[30,-9.0,425],"floor":30.0,"min_flight":3.2,"charge":2.5} |
-| meander_wall | cracked_wall | meander_bend | (primitive) | {"at":[84,-160],"size":[12,6,1.4],"turn":90.0} |
+| meander_wall | hidden | [88,-160] | 625 | 672 | 72 | 72 | true | [] |
 | needle_barge | barge | needles | barge | {"a":[-210,120,140],"b":[-130,120,220],"size":[14,2,14],"travel":8.0,"dwell":3.0,"offset":0.0} |
 
 `gauntlet_tether` still passes through the Gauntlet West butte and needs a dressed-pass repair. The shelf bots use the cable landing, not the cannon mouth. The current shelf cannon target is [30,-9,425]. The Fleet collector is at [145,470], y 64, outside the engage disc. Its full deck footprint starts at x130. The shelf approach kicker moves to [110,350] and sits on the baked ground; sentinel_48 keeps [30,385] with 30 m physical posts and no ground stamp. The Warden row, pilot lines, ring radius and acceptance bands are unchanged.
@@ -331,28 +331,32 @@ Every pilot line sits inside PARK.md's ratio band of 1.3 to 2.0 (PARK.md:466). T
 
 
 
-### Measured round 2 result
+### Measured round 3 result
 
-FAIL, automated native evidence level 4. All seven untraced eight-seed batches and solo reproduction are recorded in [the traversal page](../traversal/park_crown.md). The runtime inputs are those of 3614577. Warden breaks: 3/3 under the 600 s wrapper. The authored beacon and spawn graph rules pass; the live Warden mounting and 120 m ring remain KF8-WIRE's shared follow-up.
+BLOCKED. Automated native evidence level 4. Geometry measurement head `b6b5cdb`. Completed final eight-seed batches: 6/7. Pending cells are FIX.
 
-Cells: median (worst seed where the band judges it), verdict.
+The candidate carries TRAV-DET, KE6, KF8-WIRE and REWARD-PARK from the clean merge `103facb49985d8f717198e3decef9ed30ab797aa` of `d8e5077`. The merged traversal tool still fails repeatability with equal head and recorded input hashes. Kest seed 1 records one stop in the batch and none in either solo mode. Tarn seed 1's trace agrees with the batch, while its untraced solo differs by 1.47 s and other core metrics. `baseline-repeatability.json` and `runtime-equality.json` retain the comparisons and source identity. Ruling 24 blocks traversal tuning and stage admission. No threshold, pilot line, kit, Warden row or shared tool was changed.
+
+Evidence folder: `/home/andrew/scratch/w13/sol/kd6-crown-r3`. Every current measured table below comes from this round's final runs. Numeric IN cells remain unqualified while repeatability is unresolved.
+
+Cells are independently recomputed medians, with the worst seed where the rule uses it. IN means numerically inside the band; it does not qualify admission while repeatability is blocked.
 
 | Measure | Sable | Rivet | Kest | Tarn | Tally | Cannon | Floor |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| reached_warden | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; PASS | 8; reported, pilot band, not the floor's |
-| time_to_warden_s | 65.49 (66.75); PASS | 72.48 (72.86); PASS | 69.925 (71.38); PASS | 83.61 (85.03); PASS | 82.67 (84.23); PASS | 80.66 (82.56); PASS | 60.01 (63.34); reported, pilot band, not the floor's |
-| segment_s | 17.71 / 17.74 / 29.8 (29.795); PASS | 16.57 / 39.31 / 16.68 (39.315); PASS | 16.28 / 19.65 / 34.2 (34.2); PASS | 15.01 / 36.89 / 31.47 (36.885); PASS | 16.82 / 38.45 / 27.08 (38.455); PASS | 15.93 / 38.31 / 26.77 (38.305); PASS | 21.13 / 22.09 / 16.75 (22.09); reported, pilot band, not the floor's |
-| flow_share | 0.9469 (0.9448); PASS | 0.8783 (0.8751); PASS | 0.8709 (0.8386); PASS | 0.9517 (0.9071); PASS | 0.8217 (0.8031); PASS | 0.9226 (0.9043); PASS | 0.9315 (0.9117); reported, pilot band, not the floor's |
-| airborne_share | 0.231; MISS | 0.2974; PASS | 0.236; MISS | 0.2074; MISS | 0.3486; PASS | 0.3611; PASS | 0.1431; reported, pilot band, not the floor's |
-| dead_stops | 0 (0); PASS | 0 (0); PASS | 0 (0); PASS | 0 (1); MISS | 0 (0); PASS | 0 (0); PASS | 0 (0); reported, pilot band, not the floor's |
-| peak_speed_mps | 54.85 (54.02); PASS | 43.72 (43.18); PASS | 39.055 (39.05); PASS | 42.375 (38.53); PASS | 44.62 (43.37); PASS | 42.75 (38.04); PASS | 43.72 (43.03); reported, pilot band, not the floor's |
-| tier3_s | 39.21; PASS | 14.61; PASS | 7.945; PASS | 8.41; PASS | 8.41; PASS | 8.665; PASS | 18.43; reported, pilot band, not the floor's |
-| quiet_max_s | 7.69 (8.3); PASS | 6.43 (6.6); PASS | 4.89 (6.06); PASS | 5.51 (5.82); PASS | 5.8 (6.86); PASS | 10.545 (10.76); PASS | 6.14 (6.14); reported, pilot band, not the floor's |
-| max_anchor_gap_m | 44.7 (72.1); MISS | 36.05 (37.1); PASS | 26.2 (31.2); PASS | 21.45 (23.8); PASS | 36.7 (36.8); PASS | 36.25 (37.2); PASS | 102.2 (102.2); reported, pilot band, not the floor's |
-| distinct_verbs | 5 (5); PASS | 5 (5); PASS | 4 (4); PASS | 4 (4); PASS | 5 (5); PASS | 5 (5); PASS | 4 (4); reported, pilot band, not the floor's |
-| length_ratio | 1.63; PASS | 1.32; PASS | 1.35; PASS | 1.63; PASS | 1.42; PASS | 1.45; PASS | 1.22; reported, pilot band, not the floor's |
-| Distinct lines, at least 3 | 3 mutually distinct lines; PASS | | | | | | |
-| Floor own row: all seeds reach, time within 2 x reference median, zero stops on every seed | | | | | | | 60.01 s, limit 144.96 s; PASS |
+| reached_warden | 8; IN | 8; IN | 8; IN | 8; IN | 8; IN | 8; IN | pending; FIX |
+| time_to_warden_s | 57.4 (59.57); MISS | 69.3 (69.8); IN | 64.63 (65.05); IN | 78.81 (79.26); IN | 77.03 (78.11); IN | 76.01 (77.4); IN | pending; FIX |
+| segment_s | 17.71 / 17.74 / 21.93; IN | 16.57 / 39.12 / 13.6; IN | 16.28 / 19.7 / 28.805; IN | 15.01 / 37.035 / 26.59; IN | 16.8 / 38.41 / 21.81; IN | 15.81 / 38.41 / 22.445; IN | pending; FIX |
+| flow_share | 0.9642 (0.9552); IN | 0.8805 (0.8686); IN | 0.8713 (0.8639); IN | 0.94795 (0.9447); IN | 0.8201 (0.778); IN | 0.92225 (0.8959); IN | pending; FIX |
+| airborne_share | 0.2635; IN | 0.3087; IN | 0.25495; IN | 0.2205; MISS | 0.3754; IN | 0.3802; IN | pending; FIX |
+| dead_stops | 0 (0); IN | 0 (0); IN | 0 (0); IN | 0 (0); IN | 0 (1); MISS | 0 (0); IN | pending; FIX |
+| peak_speed_mps | 54.85 (53.96); IN | 43.72 (43.72); IN | 39.055 (39.05); IN | 42.35 (41.9); IN | 44.62 (43.75); IN | 42.75 (37.94); IN | pending; FIX |
+| tier3_s | 37.1; IN | 11.53; IN | 7.92; IN | 8.43; IN | 8.51; IN | 8.67; IN | pending; FIX |
+| quiet_max_s | 7.69 (7.69); IN | 6.43 (6.43); IN | 4.52 (5.39); IN | 5.505 (5.52); IN | 5.8 (6.27); IN | 10.66 (10.76); IN | pending; FIX |
+| max_anchor_gap_m | 44.7 (44.7); MISS | 35.8 (37.9); IN | 25 (31.2); IN | 23.75 (23.8); IN | 36.8 (39); IN | 35.9 (37); IN | pending; FIX |
+| distinct_verbs | 5 (5); IN | 5 (5); IN | 4 (4); IN | 4 (4); IN | 5 (5); IN | 5 (5); IN | pending; FIX |
+| length_ratio | 1.48; IN | 1.25; MISS | 1.27; MISS | 1.54; IN | 1.34; IN | 1.38; IN | pending; FIX |
+| Distinct lines, at least 3 | pending final eight-seed tick witness; FIX | | | | | | |
+| Floor own row | | | | | | | pending; FIX |
 
 ## 11. The music arc
 
@@ -579,7 +583,7 @@ p1_overhead is plotted from this park file by `tools/park_plot.py`, not generate
 
 ## Validation source snapshot, 12 October 2026
 
-The earlier appendix is the original storyboard draft. This snapshot is the shipped round-2 source. The line snapshot expands the stage-6 airborne band for the page validator; the live line file derives it from stage 6.
+The appendix above is the original storyboard draft. This snapshot is the shipped round-3 source; the lines remain unchanged.
 
 ```json
 {
@@ -740,65 +744,112 @@ The earlier appendix is the original storyboard draft. This snapshot is the ship
   {"id": "sentinel_53", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [95, 70], "y": null, "size": [56, 14, 56], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "sentinel_54", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [255, 185], "y": null, "size": [16, 14, 16], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "sentinel_55", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [110, 425], "y": null, "size": [56, 14, 56], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, -700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, -500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_3", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, -300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_4", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, -100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_5", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, 100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_6", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, 300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_7", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, 500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_8", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, 700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_9", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, -700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_10", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, -500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_11", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, -300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_12", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, -100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_13", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, 100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_14", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, 300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_15", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, 500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_16", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, 700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_17", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, -700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_18", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, -500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_19", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, -300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_20", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, 100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_21", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, 300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_22", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, 500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_23", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, 700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_24", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-100.0, -700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_25", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-100.0, -500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_26", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-100.0, -300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_27", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-100.0, 500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_28", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-100.0, 700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_29", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [100.0, -700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_30", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [100.0, -500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_31", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [100.0, -300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_32", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [100.0, 100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_33", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [100.0, 300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_34", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [100.0, 500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_35", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [100.0, 700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_36", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, -700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_37", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, -500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_38", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, -300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_39", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, -100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_40", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, 100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_41", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, 300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_42", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, 500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_43", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, 700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_44", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, -700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_45", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, -500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_46", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, -300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_47", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, -100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_48", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, 100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_49", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, 300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_50", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, 500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_51", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, 700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_52", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, -700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_53", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, -500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_54", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, -300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_55", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, -100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_56", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, 100.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_57", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, 300.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_58", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, 500.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
-  {"id": "slickrock_field_59", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, 700.0], "y": null, "size": [200, 2, 200], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, -700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, -500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_3", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, -300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_4", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, -100.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_5", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, 100.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_6", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, 300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_7", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, 500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_8", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-700.0, 700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_9", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, -700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_10", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, -500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_11", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, -300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_12", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, -100.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_13", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, 100.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_14", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, 300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_15", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, 500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_16", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-500.0, 700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_17", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, -700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_18", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, -500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_19", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-357.0, -300.0], "y": null, "size": [200.0, 2, 86.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_19_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-305.0, -322.9], "y": null, "size": [154.2, 2, 18.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_19_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-287.0, -326.3], "y": null, "size": [147.4, 2, 18.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_19_clear_3", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-238.0, -375.0], "y": null, "size": [50.0, 2, 76.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_20", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-315.0, 100.0], "y": null, "size": [200.0, 2, 170.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_20_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-223.5, 96.5], "y": null, "size": [193.0, 2, 13.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_20_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-210.5, 88.0], "y": null, "size": [176.0, 2, 13.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_21", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-334.5, 300.0], "y": null, "size": [200.0, 2, 131.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_21_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-262.5, 222.0], "y": null, "size": [44.0, 2, 13.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_21_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-262.5, 362.55555555555554], "y": null, "size": [74.88888888888891, 2, 13.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_21_clear_3", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-249.5, 213.5], "y": null, "size": [27.0, 2, 13.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_22", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, 500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_23", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-300.0, 700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_24", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-132.0, -700.0], "y": null, "size": [200.0, 2, 136.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_24_clear_4", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-24.0, -757.0], "y": null, "size": [86.0, 2, 16.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_25", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-112.0, -500.0], "y": null, "size": [200.0, 2, 176.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_26", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-174.0, -349.57142857142856], "y": null, "size": [100.85714285714283, 2, 20.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_26_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-170.0, -212.5], "y": null, "size": [25.0, 2, 12.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_26_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-154.0, -353.92857142857144], "y": null, "size": [92.14285714285717, 2, 20.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_26_clear_3", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-150.0, -216.85714285714286], "y": null, "size": [33.71428571428572, 2, 12.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_26_clear_4", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-134.0, -358.2857142857143], "y": null, "size": [83.42857142857144, 2, 20.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_26_clear_5", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-130.0, -221.21428571428572], "y": null, "size": [42.428571428571445, 2, 12.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_26_clear_6", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-116.85714285714286, -362.6428571428571], "y": null, "size": [74.71428571428572, 2, 14.285714285714278], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_26_clear_7", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-194.0, -375.0], "y": null, "size": [50.0, 2, 12.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-30.0, 423.0], "y": null, "size": [46.0, 2, 12.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-42.666666666666664, 419.66666666666663], "y": null, "size": [39.333333333333314, 2, 13.333333333333329], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-56.0, 411.33333333333337], "y": null, "size": [22.666666666666686, 2, 13.333333333333343], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_3", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-56.0, 552.0], "y": null, "size": [96.0, 2, 13.333333333333343], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_4", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-69.33333333333334, 552.0], "y": null, "size": [96.0, 2, 13.333333333333329], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_5", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-84.05555555555556, 552.0], "y": null, "size": [96.0, 2, 16.111111111111114], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_6", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-117.33333333333334, 535.3333333333334], "y": null, "size": [129.33333333333331, 2, 13.333333333333329], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_7", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-180.38888888888889, 502.83333333333337], "y": null, "size": [194.33333333333331, 2, 16.111111111111143], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_8", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-164.27777777777777, 510.8888888888889], "y": null, "size": [178.22222222222223, 2, 16.111111111111086], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_9", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-148.16666666666669, 518.9444444444445], "y": null, "size": [162.1111111111111, 2, 16.111111111111114], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_27_clear_10", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-132.22222222222223, 527.0], "y": null, "size": [146.0, 2, 15.7777777777778], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_28", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-139.0, 700.0], "y": null, "size": [200.0, 2, 122.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_28_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-61.0, 613.0], "y": null, "size": [26.0, 2, 34.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_28_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [-39.0, 757.0], "y": null, "size": [86.0, 2, 78.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_29", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [160.0, -700.0], "y": null, "size": [200.0, 2, 80.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_29_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [111.2, -756.0], "y": null, "size": [88.0, 2, 17.599999999999994], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_29_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [93.6, -760.0], "y": null, "size": [80.0, 2, 17.60000000000001], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_29_clear_4", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [56.8, -768.0], "y": null, "size": [64.0, 2, 14.399999999999999], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_30", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [160.0, -500.0], "y": null, "size": [200.0, 2, 80.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_30_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [112.0, -482.0], "y": null, "size": [164.0, 2, 16.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_31", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [186.5, -364.5], "y": null, "size": [71.0, 2, 15.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_31_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [141.5, -387.0], "y": null, "size": [26.0, 2, 15.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_31_clear_3", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [120.0, -387.0], "y": null, "size": [26.0, 2, 16.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_31_clear_4", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [101.0, -387.0], "y": null, "size": [26.0, 2, 22.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_31_clear_5", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [79.0, -387.0], "y": null, "size": [26.0, 2, 22.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_31_clear_6", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [76.66666666666667, -210.0], "y": null, "size": [12.0, 2, 14.666666666666657], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_32", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [96.0, 44.8], "y": null, "size": [70.4, 2, 16.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_33", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [43.5, 281.75], "y": null, "size": [163.5, 2, 15.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_33_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [58.5, 273.5], "y": null, "size": [147.0, 2, 15.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_33_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [187.0, 300.0], "y": null, "size": [200.0, 2, 26.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_34", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [157.0, 500.0], "y": null, "size": [200.0, 2, 86.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_34_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [106.5, 505.75], "y": null, "size": [188.5, 2, 15.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_34_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [91.5, 514.0], "y": null, "size": [172.0, 2, 15.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_34_clear_3", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [76.5, 522.25], "y": null, "size": [155.5, 2, 15.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_34_clear_4", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [61.5, 530.5], "y": null, "size": [139.0, 2, 15.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_35", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [139.0, 700.0], "y": null, "size": [200.0, 2, 122.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_35_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [61.0, 613.0], "y": null, "size": [26.0, 2, 34.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_35_clear_2", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [44.0, 757.0], "y": null, "size": [86.0, 2, 68], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_36", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, -700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_37", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, -500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_38", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [319.5, -300.0], "y": null, "size": [200.0, 2, 161.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_39", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [327.0, -100.0], "y": null, "size": [200.0, 2, 146.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_39_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [208.25, -29.0], "y": null, "size": [30.0, 2, 16.5], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_40", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [322.0, 100.0], "y": null, "size": [200.0, 2, 156.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_40_clear_1", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [222.0, 137.0], "y": null, "size": [126.0, 2, 44.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_41", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, 300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_42", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, 500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_43", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [300.0, 700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_44", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, -700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_45", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, -500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_46", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, -300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_47", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, -100.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_48", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, 100.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_49", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, 300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_50", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, 500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_51", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [500.0, 700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_52", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, -700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_53", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, -500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_54", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, -300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_55", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, -100.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_56", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, 100.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_57", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, 300.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_58", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, 500.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
+  {"id": "slickrock_field_59", "element": "anchor_field", "landform": "slickrock", "society": "none", "at": [700.0, 700.0], "y": null, "size": [200.0, 2, 200.0], "yaw_deg": 0, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:anchor_field", "stamp": "", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "turnstone_east_anchor", "element": "anchor_field", "landform": "hoodoo_field", "society": "none", "at": [130, -350], "y": null, "size": [18, 30, 18], "yaw_deg": 0, "verb": "swing", "ride_fact": "ride_grapple_line", "home": "", "recipe": "greybox:anchor_field", "stamp": "spire", "hole": false, "budget": "detail", "routes": [], "fragment": ""},
   {"id": "crown_exit_bank", "element": "ground", "landform": "slickrock", "society": "none", "at": [0, 625], "y": null, "size": [70, 30, 300], "yaw_deg": 180, "verb": "roll", "ride_fact": "", "home": "", "recipe": "greybox:ground", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "meander_lip_cut", "element": "ground", "landform": "slickrock", "society": "none", "at": [132, -293], "y": null, "size": [40, 6, 40], "yaw_deg": 0, "verb": "bank", "ride_fact": "ride_bowl", "home": "", "recipe": "greybox:ground", "stamp": "bowl", "hole": false, "budget": "landform", "routes": [], "fragment": ""}
@@ -849,436 +900,13 @@ The earlier appendix is the original storyboard draft. This snapshot is the ship
  "map": "park_crown",
  "stage": 6,
  "pilots": {
-  "sable": {
-   "waypoints": [
-    "drop_in",
-    [
-     8,
-     -690
-    ],
-    [
-     -40,
-     -650
-    ],
-    [
-     40,
-     -610
-    ],
-    [
-     8,
-     -560
-    ],
-    [
-     8,
-     -415
-    ],
-    "turnstone",
-    [
-     -30,
-     -280
-    ],
-    [
-     -95,
-     -150
-    ],
-    [
-     -130,
-     -90
-    ],
-    [
-     -140,
-     -40
-    ],
-    [
-     -50,
-     -30
-    ],
-    [
-     -10,
-     5
-    ],
-    "split_spire",
-    [
-     -120,
-     100
-    ],
-    [
-     -135,
-     175
-    ],
-    [
-     -180,
-     200
-    ],
-    [
-     -245,
-     285
-    ],
-    [
-     -100,
-     430
-    ],
-    [
-     -60,
-     480
-    ],
-    "landmark"
-   ],
-   "bar": {
-    "band": "PARK.md section 8",
-    "airborne_share": [
-     0.25,
-     0.6
-    ]
-   }
-  },
-  "rivet": {
-   "waypoints": [
-    "drop_in",
-    [
-     8,
-     -560
-    ],
-    [
-     8,
-     -415
-    ],
-    "turnstone",
-    [
-     110,
-     -305
-    ],
-    [
-     170,
-     -290
-    ],
-    [
-     230,
-     -110
-    ],
-    [
-     140,
-     -40
-    ],
-    [
-     40,
-     -8
-    ],
-    "split_spire",
-    [
-     8,
-     150
-    ],
-    [
-     8,
-     280
-    ],
-    "landmark"
-   ],
-   "bar": {
-    "band": "PARK.md section 8",
-    "airborne_share": [
-     0.25,
-     0.6
-    ]
-   }
-  },
-  "kest": {
-   "waypoints": [
-    "drop_in",
-    [
-     8,
-     -560
-    ],
-    [
-     8,
-     -415
-    ],
-    "turnstone",
-    [
-     60,
-     -290
-    ],
-    [
-     110,
-     -240
-    ],
-    [
-     110,
-     -130
-    ],
-    [
-     90,
-     -70
-    ],
-    [
-     40,
-     0
-    ],
-    "split_spire",
-    [
-     -120,
-     100
-    ],
-    [
-     -135,
-     175
-    ],
-    [
-     -180,
-     200
-    ],
-    [
-     -245,
-     285
-    ],
-    [
-     -100,
-     430
-    ],
-    [
-     -60,
-     480
-    ],
-    "landmark"
-   ],
-   "bar": {
-    "band": "PARK.md section 8",
-    "airborne_share": [
-     0.25,
-     0.6
-    ]
-   }
-  },
-  "tarn": {
-   "waypoints": [
-    "drop_in",
-    [
-     8,
-     -560
-    ],
-    [
-     8,
-     -415
-    ],
-    "turnstone",
-    [
-     -60,
-     -310
-    ],
-    [
-     -200,
-     -249
-    ],
-    [
-     -290,
-     -215
-    ],
-    [
-     -262,
-     -146
-    ],
-    [
-     -180,
-     -30
-    ],
-    [
-     -50,
-     -30
-    ],
-    [
-     -10,
-     5
-    ],
-    "split_spire",
-    [
-     -120,
-     100
-    ],
-    [
-     -135,
-     175
-    ],
-    [
-     -180,
-     200
-    ],
-    [
-     -245,
-     285
-    ],
-    [
-     -100,
-     430
-    ],
-    [
-     -60,
-     480
-    ],
-    "landmark"
-   ],
-   "bar": {
-    "band": "PARK.md section 8",
-    "airborne_share": [
-     0.25,
-     0.6
-    ]
-   }
-  },
-  "tally": {
-   "waypoints": [
-    "drop_in",
-    [
-     8,
-     -560
-    ],
-    [
-     8,
-     -415
-    ],
-    "turnstone",
-    [
-     110,
-     -305
-    ],
-    [
-     170,
-     -290
-    ],
-    [
-     230,
-     -110
-    ],
-    [
-     140,
-     -40
-    ],
-    [
-     40,
-     -8
-    ],
-    "split_spire",
-    [
-     80,
-     120
-    ],
-    [
-     150,
-     305
-    ],
-    "landmark"
-   ],
-   "bar": {
-    "band": "PARK.md section 8",
-    "airborne_share": [
-     0.25,
-     0.6
-    ]
-   }
-  },
-  "cannon": {
-   "waypoints": [
-    "drop_in",
-    [
-     8,
-     -560
-    ],
-    [
-     8,
-     -415
-    ],
-    "turnstone",
-    [
-     110,
-     -350
-    ],
-    [
-     170,
-     -290
-    ],
-    [
-     230,
-     -110
-    ],
-    [
-     140,
-     -40
-    ],
-    [
-     40,
-     -8
-    ],
-    "split_spire",
-    [
-     80,
-     120
-    ],
-    [
-     150,
-     305
-    ],
-    "landmark"
-   ],
-   "bar": {
-    "band": "PARK.md section 8",
-    "airborne_share": [
-     0.25,
-     0.6
-    ]
-   }
-  }
+  "sable": {"waypoints": ["drop_in", [8, -690], [-40, -650], [40, -610], [8, -560], [8, -415], "turnstone", [-30, -280], [-95, -150], [-130, -90], [-140, -40], [-50, -30], [-10, 5], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "rivet": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [8, 150], [8, 280], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "kest": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [60, -290], [110, -240], [110, -130], [90, -70], [40, 0], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "tarn": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [-60, -310], [-200, -249], [-290, -215], [-262, -146], [-180, -30], [-50, -30], [-10, 5], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "tally": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [80, 120], [150, 305], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "cannon": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -350], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [80, 120], [150, 305], "landmark"], "bar": {"band": "PARK.md section 8"}}
  },
- "floor": {
-  "waypoints": [
-   "drop_in",
-   [
-    96,
-    -680
-   ],
-   [
-    96,
-    -600
-   ],
-   [
-    16,
-    -540
-   ],
-   [
-    8,
-    -415
-   ],
-   "turnstone",
-   [
-    60,
-    -290
-   ],
-   [
-    110,
-    -240
-   ],
-   [
-    110,
-    -130
-   ],
-   [
-    90,
-    -70
-   ],
-   [
-    40,
-    0
-   ],
-   "split_spire",
-   [
-    8,
-    150
-   ],
-   [
-    8,
-    280
-   ],
-   "landmark"
-  ]
- }
+ "floor": {"waypoints": ["drop_in", [96, -680], [96, -600], [16, -540], [8, -415], "turnstone", [60, -290], [110, -240], [110, -130], [90, -70], [40, 0], "split_spire", [8, 150], [8, 280], "landmark"]}
 }
 ```
