@@ -2646,6 +2646,8 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var radius: float = ultimate.landing_radius() + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
 	var amount: float = Ultimate.LANDING_DAMAGE * heft * chain
 	effects.ring(at, radius, ClassDef.TALLY_COLOR)
+	if not link_group.is_empty():
+		link_group["spent"] = true
 	var struck := {}
 	var hits := 0
 	var dealt := 0.0
