@@ -160,12 +160,9 @@ func _initialize() -> void:
 		var park: Dictionary = ParkSchema.load_park(park_path)["data"]
 		var drawn := jitter(graph, jitter_seeds)
 		print(jitter_text(drawn))
-		var border := hidden_border(graph, park)
-		var border_ok := not border.is_empty()
-		for h in border:
-			border_ok = border_ok and h["count"] >= HIDDEN_ZONES_MIN
-		if drawn["top2_share"] < JITTER_TOP2_MIN or drawn["reroll_share"] > REROLL_MAX or not border_ok:
-			printerr("park_graph: zone anchors are out of target")
+		var misses := zone_gate(drawn, hidden_border(graph, park))
+		if not misses.is_empty():
+			printerr("park_graph: zone anchors are out of target: %s" % "; ".join(misses))
 			quit(1)
 			return
 	quit(0)
@@ -1664,12 +1661,29 @@ static func anchor_doors(graph, zone: int) -> PackedInt32Array:
 
 # opts: "anchors" (an anchors() list to draw from), "door_door_m", "draws".
 static func jitter(graph, seeds := JITTER_SEEDS, opts := {}) -> Dictionary:
+	# The order comes from the cost, never from the order or the rank anchors() hands back: the
+	# pair this measures is the viable off-route anchors with doors, costliest first, ties by
+	# zone id. A wrong sort or rank in anchors() then shows as order_ok false.
+	var given: Array = opts.get("anchors", graph.anchors())
 	var ranked := []
-	for a in opts.get("anchors", graph.anchors()):
-		if a["rank"] > 0:
+	for a in given:
+		if not a["on_route"] and a["viable"]:
 			var doors := anchor_doors(graph, a["zone"])
 			if not doors.is_empty():
-				ranked.append({"name": a["name"], "zone": a["zone"], "doors": doors})
+				ranked.append({"name": a["name"], "zone": a["zone"], "cost": a["cost"], "doors": doors})
+	ranked.sort_custom(func(a, b): return a["cost"] > b["cost"] or (a["cost"] == b["cost"] and a["zone"] < b["zone"]))
+	var by_rank := []
+	for a in given:
+		if a["rank"] > 0:
+			by_rank.append(a)
+	by_rank.sort_custom(func(a, b): return a["rank"] < b["rank"])
+	var rank_names := []
+	for a in by_rank:
+		rank_names.append(a["name"])
+	var cost_names := []
+	for a in ranked:
+		cost_names.append(a["name"])
+	var order_ok: bool = rank_names == cost_names
 	var door_door: float = opts.get("door_door_m", DOOR_DOOR_M)
 	var draws: int = opts.get("draws", JITTER_DRAWS)
 	var pairs := []
@@ -1705,7 +1719,24 @@ static func jitter(graph, seeds := JITTER_SEEDS, opts := {}) -> Dictionary:
 	for a in ranked:
 		names.append(a["name"])
 	return {"seeds": seeds, "anchors": names, "placed": placed, "top2": top2, "top2_share": float(top2) / maxf(1.0, seeds),
-		"rerolls": rerolled, "reroll_share": float(rerolled) / maxf(1.0, seeds)}
+		"order_ok": order_ok, "rerolls": rerolled, "reroll_share": float(rerolled) / maxf(1.0, seeds)}
+
+
+# The --jitter gate: the reasons the zone anchors are out of target, [] when they are in.
+static func zone_gate(drawn: Dictionary, border: Array) -> Array:
+	var misses := []
+	if not drawn["order_ok"]:
+		misses.append("the anchor ranks do not run costliest first")
+	if drawn["top2_share"] < JITTER_TOP2_MIN:
+		misses.append("the top pair holds on %.1f%% of seeds" % (100.0 * drawn["top2_share"]))
+	if drawn["reroll_share"] > REROLL_MAX:
+		misses.append("the re-roll rate is %.1f%%" % (100.0 * drawn["reroll_share"]))
+	if border.is_empty():
+		misses.append("the park has no hidden pocket to border")
+	for h in border:
+		if h["count"] < HIDDEN_ZONES_MIN:
+			misses.append("hidden pocket %s borders %d zones" % [h["id"], h["count"]])
+	return misses
 
 
 static func _doors_apart(graph, a: int, b: int, metres: float, cache: Dictionary) -> bool:

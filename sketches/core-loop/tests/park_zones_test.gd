@@ -37,7 +37,7 @@ const SCRATCH := "user://park_zones_test"
 const TOOL := "res://tools/park_graph.gd"
 const LOADER := "res://src/world/park/park_graph.gd"
 const BAKE_TOOL := "res://tools/park_bake.gd"
-const EXPECTED_CHECKS := 48
+const EXPECTED_CHECKS := 55
 
 var t := T.new("park_zones_test")
 
@@ -236,7 +236,40 @@ func _acceptance(tool: GDScript, graph, park: Dictionary) -> void:
 	var forced: Dictionary = tool.jitter(graph, 1000, {"anchors": twins, "draws": 1})
 	t.check("control: two pockets in one anchor miss the top pair on over 5% of seeds", forced["top2_share"] < 0.95, "%.1f%%" % (100.0 * forced["top2_share"]))
 	t.check("control: two pockets in one anchor re-roll on over 20% of seeds", forced["reroll_share"] > 0.20, "%.1f%%" % (100.0 * forced["reroll_share"]))
+	# The pair is measured against the zones table, not against anchors(): the viable off-route
+	# anchors with doors, by d_spawn descending, ties by zone id.
+	var want := []
+	var table: Array = graph.zones()
+	for z in table:
+		if z["degree"] == 1 and z["d_spawn"] >= 0.0 and not (z["line"] or z["warden"]) and z["door_ok"] >= graph.ANCHOR_MIN_DOOR_NODES and not tool.anchor_doors(graph, z["id"]).is_empty():
+			want.append(z)
+	want.sort_custom(func(a, b): return a["d_spawn"] > b["d_spawn"] or (a["d_spawn"] == b["d_spawn"] and a["id"] < b["id"]))
+	var want_names := []
+	for z in want:
+		want_names.append(z["name"])
+	t.eq("the jitter draws from the zones table's costliest anchors, costliest first", drawn["anchors"], want_names)
+	t.check("the anchor ranks agree with the cost order", drawn["order_ok"])
+	# Control: a reversed rank order is caught.
+	var flipped: Array = graph.anchors()
+	var top_rank := 0
+	for a in flipped:
+		top_rank = maxi(top_rank, a["rank"])
+	for a in flipped:
+		if a["rank"] > 0:
+			a["rank"] = top_rank + 1 - a["rank"]
+	var mirror: Dictionary = tool.jitter(graph, 50, {"anchors": flipped})
+	t.check("control: ranks running cheapest first make order_ok false", not mirror["order_ok"])
 	var border: Array = tool.hidden_border(graph, park)
+	# The CLI gate, called as the CLI calls it.
+	t.eq("the gate passes on the fixture's measured numbers", tool.zone_gate(drawn, border), [])
+	var narrow_gate: Array = tool.zone_gate(drawn, tool.hidden_border(graph, park, 20.0))
+	t.check("control: the gate fails a hidden pocket bordering fewer than 3 zones", narrow_gate.size() == 1 and narrow_gate[0].contains("borders"), str(narrow_gate))
+	t.check("control: the gate fails a park with no hidden pocket", not tool.zone_gate(drawn, []).is_empty())
+	var weak := drawn.duplicate()
+	weak["top2_share"] = 0.94
+	weak["reroll_share"] = 0.21
+	weak["order_ok"] = false
+	t.eq("control: the gate names the rank order, the top pair and the re-roll rate", tool.zone_gate(weak, border).size(), 3)
 	t.eq("the fixture has one hidden pocket, tube_wall", [border.size(), border[0]["id"]], [1, "tube_wall"])
 	t.check("the hidden pocket borders at least 3 zones", border[0]["count"] >= 3, str(border[0]["zones"]))
 	var narrow: Array = tool.hidden_border(graph, park, 20.0)
