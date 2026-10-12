@@ -149,15 +149,15 @@ func _token_live(pilot: String, token: String, kit: Dictionary) -> bool:
 	return pairs.any(func(pr): return kit[pr[0]] == pr[1])
 
 
-func _op_live(pilot: String, n: Dictionary, kit: Dictionary) -> bool:
+func _op_live(pilot: String, n: Dictionary, kit: Dictionary, rows: Dictionary = AbilityState.ABILITIES) -> bool:
 	for slot in n.get("swap", {}):
 		if n["swap"][slot] != kit[slot]:
 			return true
 	for op in ["charges", "cooldown"]:
 		for slot in n.get(op, {}):
-			if float(AbilityState.ABILITIES[kit[slot]]["cooldown"]) > 0.0:
+			if float(rows[kit[slot]]["cooldown"]) > 0.0:
 				return true
-	var row: Dictionary = AbilityState.ABILITIES[kit["weapon"]]
+	var row: Dictionary = rows[kit["weapon"]]
 	for w in n.get("pattern", {}):
 		if w == row.get("pattern", kit["weapon"]) or w == row.get("mounted", ""):
 			return true
@@ -268,8 +268,8 @@ func _slot_fixtures() -> void:
 	var growth := {"key": "ultimate", "swap": {"ultimate": variant}}
 	var replacement := {"key": "ultimate", "swap": {"ultimate": foreign}}
 	var issues: Array = fixture_tree.safe_pick_problems(pilot, growth)
-	_report("ultimate variant is growth", issues.is_empty() and _op_live(pilot, growth, kit), str(issues))
-	_report("foreign ultimate is dead", not _op_live(pilot, replacement, kit)
+	_report("ultimate variant is growth", issues.is_empty() and _op_live(pilot, growth, kit, AbilityFixture.ABILITIES), str(issues))
+	_report("foreign ultimate is dead", not _op_live(pilot, replacement, kit, AbilityFixture.ABILITIES)
 		and not fixture_tree.safe_pick_problems(pilot, replacement).is_empty(), "fixture row has no variant_of relationship")
 	AbilityFixture.ABILITIES.erase(variant)
 	AbilityFixture.ABILITIES.erase(foreign)
