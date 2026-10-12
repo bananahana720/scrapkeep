@@ -130,9 +130,9 @@ func setup(ctx_ref, combat_ref) -> void:
 	var ev = ctx.events
 	ev.enemy_struck.connect(_on_struck)
 	ev.harpoon_smashed.connect(func(_enemy: Node3D, _at: Vector3, _speed: float): _feed("smash", ctx.player.chain.multiplier()))
-	ev.line_state_changed.connect(func(state: String, _target: Node3D, _at: Vector3, _cause: String):
-		if state == "chain_link" and ctx.player.chain.combo > 1:
-			_feed("chain_link"))
+	ev.line_state_changed.connect(func(state: String, target: Node3D, _at: Vector3, _cause: String):
+		if state == "chain_link":
+			_feed_link(target))
 	ev.near_miss.connect(func(_kind: String, _at: Vector3): _feed("near_miss"))
 	ev.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): _feed("kill"))
 	ev.posture_changed.connect(_on_posture)
@@ -180,6 +180,14 @@ func _feed(source: String, amount := 1.0) -> void:
 	if not _fills():
 		return
 	if meter.add(source, amount) > 0.0:
+		_check_full()
+
+
+# A harpoon link beyond a chain's first pays once per enemy per UltimateMeter.CHAIN_LINK_GAP
+# (UltimateMeter.chain_link).
+func _feed_link(target: Node3D) -> void:
+	var id := target.get_instance_id() if is_instance_valid(target) else 0
+	if meter.chain_link(id, int(ctx.player.chain.combo), _fills()) > 0.0:
 		_check_full()
 
 
