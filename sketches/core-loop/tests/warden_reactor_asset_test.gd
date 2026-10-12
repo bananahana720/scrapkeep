@@ -11,6 +11,7 @@ extends SceneTree
 
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const GLB := "res://assets/models/warden_reactor.glb"
 const REGISTRY := "res://assets/registry.json"
 const BUDGETS := "res://tools/asset_budgets.json"
@@ -33,6 +34,7 @@ const CLIPS := {
 const SEAMS := ["SeamV0", "SeamV1", "SeamV2", "SeamV3", "StackGlow0", "StackGlow1", "StackGlow2", "SeamRing"]
 
 var failures := 0
+var checks := 0
 
 
 func _initialize() -> void:
@@ -40,13 +42,14 @@ func _initialize() -> void:
 
 
 func check(label: String, ok: bool) -> void:
+	checks += 1
 	print("[%s] %s" % [label, "PASS" if ok else "FAIL"])
 	if not ok:
 		failures += 1
 
 
 func finish() -> void:
-	print("warden_reactor_asset_test: %s" % ("PASS" if failures == 0 else "FAIL"))
+	print("warden_reactor_asset_test: %s (%d checks)" % ["PASS" if failures == 0 else "FAIL", checks])
 	quit(0 if failures == 0 else 1)
 
 
@@ -69,12 +72,33 @@ func _run() -> void:
 	check_collider(body)
 	check_point(body)
 	check_budget(body)
+	check_ram_materials(body)
 	body.free()
 	finish()
 
 
 func check_lights(body: Node3D) -> void:
 	check("no light node in the GLB", body.find_children("*", "Light3D", true, false).is_empty())
+
+
+func check_ram_materials(body: Node3D) -> void:
+	# KF7d round 4: six checks cover the runtime paint and the shipped ram slots.
+	var hero := HeroAssets.new()
+	var hydraulic: StandardMaterial3D = hero.material("hydraulic") if HeroAssets.SLOTS.has("hydraulic") else null
+	check("hydraulic runtime material exists", hydraulic != null)
+	check("hydraulic has no wear layer", hydraulic != null and not hydraulic.detail_enabled)
+	check("hydraulic has no painted texture", hydraulic != null and hydraulic.albedo_texture == null)
+	check("hydraulic uses vertex colour", hydraulic != null and hydraulic.vertex_color_use_as_albedo)
+	var enamel := hero.material("ancient_enamel") as StandardMaterial3D
+	check("ancient_enamel positive control has wear layer", enamel != null and enamel.detail_enabled)
+	var rams := body.find_child("JawRams", true, false) as MeshInstance3D
+	var hydraulic_only := rams != null and rams.mesh != null and rams.mesh.get_surface_count() > 0
+	if hydraulic_only:
+		for surface in rams.mesh.get_surface_count():
+			var mat := rams.mesh.surface_get_material(surface)
+			hydraulic_only = hydraulic_only and mat != null and mat.resource_name == "hydraulic"
+	check("every JawRams primitive uses hydraulic", hydraulic_only)
+	hero.free()
 
 
 func moved_nodes(anim: Animation) -> Dictionary:

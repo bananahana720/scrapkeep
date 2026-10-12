@@ -38,8 +38,17 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # 2.37, campers [120, 120, 120]. Sweep 3, direct, load average about 40: small [73.44, 77.83, 120.00 capped]
 # median 77.8, grown [32.80, 50.29, 18.91] median 32.8, ratio 2.37, campers [120, 120, 120]. Small seed 2
 # hitting the cap is why "small breaks it in every run" is a [report] line, not a check.
-const EXPECT_SMALL_S := 77.8
-const EXPECT_GROWN_S := 32.8
+# 2026-10-11 (w13 KF-BOT fix round, coordinator ruling 4): re-pinned on the w13 base b2c6fa3, which already
+# measured under the old pins (the B4 adapter merge 49f9a0a moved posture_bands_test's small pin the same way;
+# inference). The reactor is not an anchor here, so the latch arm's gate leaves this fight on the old path: head
+# and base give the same distribution. Three direct sweeps each, head and base side by side, load 22 to 47:
+# head small [55.60, 70.97, 62.05] / [59.31, 70.97, 53.53] / [59.31, 70.97, 56.13], medians 62.0 / 59.3 / 59.3;
+# grown [35.76, 47.47, 22.77] / [35.77, 47.47, 22.77] / [35.77, 47.47, 22.77], median 35.8 each; campers 120.
+# Base small medians 59.3 / 55.6 / 59.3, grown 35.8 each. Small seed 0 and seed 2 vary run to run (55.6 or 59.3;
+# 53.5 to 62.1). The ratio band, small at least twice grown, fails on head and base alike at 1.55 to 1.74: that
+# is the band, not a pin, so it stays a red check for the coordinator (no row: QUARANTINE.tsv is at its cap).
+const EXPECT_SMALL_S := 59.3
+const EXPECT_GROWN_S := 35.8
 const TOLERANCE := 0.10
 const WALL_S := 330.0
 

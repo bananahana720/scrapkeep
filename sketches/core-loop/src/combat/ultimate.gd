@@ -83,6 +83,15 @@ var _ult_rows := {
 	# --- P-C Kest ultimate ---
 	# --- end Kest ---
 	# --- P-C Tarn ultimate ---
+	"redjaw_rend": {"tech": func(beat, ball, aim, mult): return combat.get_node("TarnClaw").tech("redjaw_rend", beat, ball, aim, mult),
+		"peak": func(at): combat.get_node("TarnClaw").peak("redjaw_rend", at),
+		"landing": func(at, heft, chain): return combat.get_node("TarnClaw").landing("redjaw_rend", at, heft, chain)},
+	"rake_run": {"tech": func(beat, ball, aim, mult): return combat.get_node("TarnClaw").tech("rake_run", beat, ball, aim, mult),
+		"peak": func(at): combat.get_node("TarnClaw").peak("rake_run", at),
+		"landing": func(at, heft, chain): return combat.get_node("TarnClaw").landing("rake_run", at, heft, chain)},
+	"vice_leap": {"tech": func(beat, ball, aim, mult): return combat.get_node("TarnClaw").tech("vice_leap", beat, ball, aim, mult),
+		"peak": func(at): combat.get_node("TarnClaw").peak("vice_leap", at),
+		"landing": func(at, heft, chain): return combat.get_node("TarnClaw").landing("vice_leap", at, heft, chain)},
 	# --- end Tarn ---
 	# --- P-C Tally ultimate ---
 	# --- end Tally ---

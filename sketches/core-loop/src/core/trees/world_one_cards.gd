@@ -65,6 +65,13 @@ const SET_PIECE_LINES := {
 	# --- P-C Kest set piece lines ---
 	# --- end Kest ---
 	# --- P-C Tarn set piece lines ---
+	"redjaw_rend": "Climb the line, tow them, rend.",
+	"rake_run": "Rake both sides, then sweep faster.",
+	"vice_leap": "Hurl the catch, leap into the vice.",
+	"ult_beats": "Q lasts two beats longer.",
+	"ult_volley": "Q rakes wider or grabs more.",
+	"ult_radius": "Q lands two metres wider.",
+	"ult_encore": "Q can rend a second landing.",
 	# --- end Tarn ---
 	# --- P-C Tally set piece lines ---
 	# --- end Tally ---

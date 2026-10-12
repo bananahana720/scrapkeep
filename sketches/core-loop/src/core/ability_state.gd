@@ -136,6 +136,10 @@ const ABILITIES := {
 	# --- P-C Kest rows -------------------------------------------------------------------
 	# --- end Kest ---
 	# --- P-C Tarn rows -------------------------------------------------------------------
+	"claw_drag": {"icon": "ab_tarn_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"redjaw_rend": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
+	"rake_run": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "redjaw_rend"},
+	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend"},
 	# --- end Tarn ---
 	# --- P-C Tally rows ------------------------------------------------------------------
 	# --- end Tally ---
