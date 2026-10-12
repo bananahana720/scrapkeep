@@ -2,7 +2,7 @@ extends SceneTree
 
 # Stage 6, park_crown (design-v3/park/stages/6-park_crown.md, K-UNITS KD6): the stage's own pins.
 #
-# Pinned on the greybox candidate, 2026-10-12, after alignment with 6710ac0:
+# Pinned on greybox round 2, 2026-10-12, after alignment with 560d177:
 #   freshness  the bake (tools/park_bake.gd) and the graph (tools/park_graph.gd) of
 #              src/world/park/park_crown.json are fresh: the hashes in bake.json and graph.json
 #              match the park file, the tools and the outputs.
@@ -117,6 +117,17 @@ func _run() -> void:
 
 	var fails := pin_failures(park)
 	t.check("the stage's pins hold on the committed file", fails.is_empty(), "; ".join(fails))
+	t.eq("the authored engage ring stays 120 m", float(park["landmark"]["reach_m"]), 120.0)
+	var by_row := {}
+	for row in park["park_rows"]:
+		by_row[String(row["id"])] = row
+	var perches_ok := true
+	var path: Array = park["landmark"]["warden"]["path"]
+	for i in range(3):
+		var perch: Dictionary = by_row["perch_spire_%d" % (i + 1)]
+		perches_ok = perches_ok and perch["at"] == [path[i][0], path[i][2]] and String(perch["stamp"]) == ""
+	t.check("the three physical perches retain the Warden path without raising the fight floor", perches_ok)
+	t.eq("the bowl keeps its 12 m depth", float(by_row["crown_bowl"]["size"][1]), 12.0)
 
 	var lines = JSON.parse_string(FileAccess.get_file_as_string(LINES_PATH))
 	if t.check("the lines file parses", lines is Dictionary):

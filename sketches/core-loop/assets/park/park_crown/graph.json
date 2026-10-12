@@ -1,31 +1,31 @@
 {
-  "bake_sha256": "87d3f564cb7659cf744fe5441d5b01bef1d1bd12ecdda8591b158701c086e6ee",
-  "beacon_ok": false,
+  "bake_sha256": "0900208224c8b0d9a7f59822f688a3736d0ef70f95b68f166ae946b378a39a68",
+  "beacon_ok": true,
   "breaches": [],
-  "bytes": 914189,
-  "edges": 321473,
-  "first_failed": "beacon_ok",
+  "bytes": 984205,
+  "edges": 321204,
+  "first_failed": "",
   "flags": {
-    "deck": 657,
-    "door_ok": 39508,
-    "line": 427,
-    "open": 40709,
-    "sight_ok": 8447,
+    "deck": 642,
+    "door_ok": 39513,
+    "line": 384,
+    "open": 40657,
+    "sight_ok": 8710,
     "under": 0
   },
-  "full_visit_m": 1777,
-  "full_visit_ratio": "1.440",
-  "graph_sha256": "23529ee7d6a80010925fbe9479eb81b6338f33ecc586e7a4e1c0cdb5b52a42fb",
+  "full_visit_m": 1780,
+  "full_visit_ratio": "1.441",
+  "graph_sha256": "d66743d0f10975a7980753d2d5c305ecabb4dcb29fc5cf692dcbc42bd9e6fd58",
   "line_errors": [],
   "line_path_nodes": 150,
-  "longest_est_m": 2477,
+  "longest_est_m": 2478,
   "map": "park_crown",
-  "nodes": 41058,
-  "park_sha256": "3ed6441d1dd2a44e0d9809c8645548431b0ec854002f1b81420537b7c7d43183",
+  "nodes": 41043,
+  "park_sha256": "6e9dc26eaa61f2640de3557e090234aedc8e0e233cf8a3af03f1f371c3fc458a",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 595,
+      "d_landmark": 596,
       "d_spawn": 639,
       "detour_m": 0,
       "door_at": [
@@ -52,7 +52,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 877,
+      "d_landmark": 879,
       "d_spawn": 555,
       "detour_m": 239,
       "door_at": [
@@ -79,7 +79,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 523,
+      "d_landmark": 525,
       "d_spawn": 863,
       "detour_m": 191,
       "door_at": [
@@ -107,7 +107,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 670,
+      "d_landmark": 672,
       "d_spawn": 625,
       "detour_m": 72,
       "door_at": [
@@ -131,7 +131,7 @@
       "site": "meander_bend"
     }
   ],
-  "reward_ratio": "0.507",
+  "reward_ratio": "0.506",
   "ride_edges": 13,
   "routes": {
     "east": [],
@@ -154,100 +154,101 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": -1,
-    "farther_share": "0.000",
-    "ok": false,
-    "run": false
+    "d_landmark": 1235,
+    "farther_share": "0.147",
+    "ok": true,
+    "run": true
   },
-  "spawn_beacon_m": 1234,
+  "spawn_beacon_m": 1235,
   "spawn_beacon_share": "0.498",
   "stage_checked": [
-    "beacon_ok"
+    "beacon_ok",
+    "spawn"
   ],
   "targets": [
     {
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.507
+      "value": 0.506
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.44
+      "value": 1.441
     }
   ],
-  "tool_sha256": "c23975a50d02465e1e3c767455665712caa356e254ab6192ee819a7b3edee9f6",
+  "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
   "zones": {
     "anchors": [
       {
-        "cost": 1398.9,
-        "d_landmark": 99.8,
-        "name": "crown_collector",
-        "on_route": true,
-        "rank": 0,
-        "viable": false
-      },
-      {
-        "cost": 1299.9,
-        "d_landmark": 251.2,
-        "name": "gauntlet_shelf",
+        "cost": 1391.5,
+        "d_landmark": 143.3,
+        "name": "crown_apron",
         "on_route": false,
         "rank": 1,
         "viable": true
       },
       {
-        "cost": 1274.5,
-        "d_landmark": 271.9,
+        "cost": 1299.9,
+        "d_landmark": 251.3,
+        "name": "gauntlet_shelf",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 1274.6,
+        "d_landmark": 271.4,
         "name": "kick_nlast_9",
         "on_route": false,
         "rank": 0,
         "viable": false
       },
       {
-        "cost": 1182.3,
-        "d_landmark": 161.8,
+        "cost": 1183.2,
+        "d_landmark": 161.2,
         "name": "kick_wlast_12",
         "on_route": false,
         "rank": 0,
         "viable": false
       },
       {
-        "cost": 1083.1,
-        "d_landmark": 296.6,
-        "name": "kick_wlast_10",
+        "cost": 1140.4,
+        "d_landmark": 252.9,
+        "name": "kick_wlast_11",
         "on_route": false,
         "rank": 0,
         "viable": false
       },
       {
-        "cost": 1041.2,
-        "d_landmark": 169.8,
+        "cost": 1131.9,
+        "d_landmark": 158.4,
+        "name": "kick_slast_14",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1041.7,
+        "d_landmark": 172.9,
         "name": "crown_ramp",
         "on_route": true,
         "rank": 0,
         "viable": true
       },
       {
-        "cost": 931.6,
-        "d_landmark": 285.6,
-        "name": "kick_clast_6",
-        "on_route": true,
-        "rank": 0,
-        "viable": false
-      },
-      {
         "cost": 843.1,
-        "d_landmark": 503.4,
+        "d_landmark": 505.9,
         "name": "gauntlet_toe",
         "on_route": false,
-        "rank": 2,
+        "rank": 3,
         "viable": true
       },
       {
         "cost": 832.1,
-        "d_landmark": 370.1,
+        "d_landmark": 370.7,
         "name": "spire_top_ramp",
         "on_route": true,
         "rank": 0,
@@ -255,7 +256,7 @@
       },
       {
         "cost": 742.9,
-        "d_landmark": 521.8,
+        "d_landmark": 524.4,
         "name": "kick_wmid_5",
         "on_route": false,
         "rank": 0,
@@ -263,39 +264,39 @@
       },
       {
         "cost": 735.2,
-        "d_landmark": 606.8,
+        "d_landmark": 609.3,
         "name": "east_ribs",
-        "on_route": false,
-        "rank": 3,
-        "viable": true
-      },
-      {
-        "cost": 636.6,
-        "d_landmark": 421.8,
-        "name": "meander_bend",
         "on_route": false,
         "rank": 4,
         "viable": true
       },
       {
-        "cost": 537.2,
-        "d_landmark": 860.6,
-        "name": "turnstone_scree",
+        "cost": 636.6,
+        "d_landmark": 424.0,
+        "name": "meander_bend",
         "on_route": false,
         "rank": 5,
         "viable": true
       },
       {
-        "cost": 459.3,
-        "d_landmark": 584.5,
-        "name": "meander",
+        "cost": 537.2,
+        "d_landmark": 863.1,
+        "name": "turnstone_scree",
         "on_route": false,
         "rank": 6,
         "viable": true
       },
       {
+        "cost": 459.3,
+        "d_landmark": 587.0,
+        "name": "meander",
+        "on_route": false,
+        "rank": 7,
+        "viable": true
+      },
+      {
         "cost": 411.6,
-        "d_landmark": 788.6,
+        "d_landmark": 789.1,
         "name": "turnstone",
         "on_route": true,
         "rank": 0,
@@ -303,7 +304,7 @@
       },
       {
         "cost": 373.1,
-        "d_landmark": 838.0,
+        "d_landmark": 838.6,
         "name": "bajada_lip",
         "on_route": true,
         "rank": 0,
@@ -311,18 +312,18 @@
       },
       {
         "cost": 0.0,
-        "d_landmark": 1079.5,
+        "d_landmark": 1080.1,
         "name": "watch_butte_crest",
         "on_route": true,
         "rank": 0,
         "viable": true
       }
     ],
-    "count": 41,
+    "count": 42,
     "crossings": {
-      "drop": 17,
+      "drop": 21,
       "ride": 8,
-      "walk": 45
+      "walk": 48
     },
     "hidden": [
       {
