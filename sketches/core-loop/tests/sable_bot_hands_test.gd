@@ -1,4 +1,4 @@
-# 2026-10-12 (PC-SABLE round 4): Pin 28 checks for bite, haul and Bank Shot's guard window.
+# 2026-10-12 (PC-SABLE round 5): Pin 39 checks for guard windows and retargeted casts.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -6,7 +6,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 28
+const EXPECTED_CHECKS := 39
 const DT := 1.0 / 90.0
 
 var _t := T.new("sable_bot_hands_test")
@@ -147,10 +147,46 @@ func _run() -> void:
 	_hand(target)
 	_t.eq("a cut clears the waiting cast", _driver._cast_phase, "")
 	_t.check("a special can cast after the cut", _driver._cast(2))
-	for id in ["line_reel", "claw_drag", "link_clips"]:
+	for id in ["line_reel", "claw_drag", "link_clips", "cable_charge"]:
 		_fresh(id)
 		_player.kit.aim = {"state": Augments.AIM_BODY, "body": target, "point": target.global_position, "normal": Vector3.LEFT}
 		_hand(target)
 		_t.check("%s still loads slot 3 on its planned bite" % id, _player.intent.line_pressed and _player.intent.harpoon_pressed)
+	_retarget_casts(target, guard)
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
+
+
+func _retarget(body: Node3D, guard: Node3D) -> void:
+	_fresh("bank_shot")
+	guard.harpoon_anchor = true
+	guard._posture.staggered = false
+	guard._posture.stagger_left = 0.0
+	_player.grapple_to(body.global_position, Vector3.LEFT, body)
+	_hand(body)
+	_t.check("retarget fixture leaves the body haul outside LINE_SMASH", _player.kit.hooked and _player.kit.on_body and _player.kit.line_state != Augments.LINE_SMASH)
+	_driver._anchor_fight(guard, false, DT)
+	_t.check("anchor Warden becomes the fight target", _driver._anchor_target == guard)
+
+
+func _retarget_casts(body: Node3D, guard: Node3D) -> void:
+	_retarget(body, guard)
+	_t.check("slot 2 remains available after retarget", _driver._cast(2))
+	_retarget(body, guard)
+	_player.kit.drop_line("retarget")
+	_player.kit.rewind_left = 0.0
+	_player.grapple_to(guard.global_position, Vector3.LEFT, guard)
+	Augments.commit_smash(_player.kit, _player.tuning, _player.state.velocity)
+	guard._posture.staggered = true
+	guard._posture.stagger_left = 3.0
+	_hand(guard)
+	_t.check("later open-core smash permits slot 3 after retarget", _player.intent.line_pressed)
+	_consume()
+	_t.eq("retarget Bank Shot casts on the later smash", _casts, [Augments.LINE_SMASH])
+	_retarget(body, guard)
+	guard._posture.staggered = true
+	guard._posture.stagger_left = 3.0
+	_player.abilities.meter.value = _player.abilities.meter.CAP
+	_player.abilities.meter.locked = false
+	_driver._ultimate_hands(guard)
+	_t.check("Q remains available on the open core after retarget", _driver.source.press.get("ultimate_pressed", false))
