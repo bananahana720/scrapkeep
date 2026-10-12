@@ -5,6 +5,8 @@ const Activities := preload("res://src/world/activities.gd")
 const Graph := preload("res://src/world/park/park_graph.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
+const Rows := preload("res://src/core/event_kinds.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const Schema := preload("res://src/world/park/park_schema.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -40,7 +42,7 @@ func _run() -> void:
 		var index := args.find("--only")
 		if index + 1 < args.size():
 			only = args[index + 1]
-		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission"]:
+		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues"]:
 			t.check("valid control selection", false, str(args))
 			quit(t.verdict())
 			return
@@ -83,6 +85,8 @@ func _run() -> void:
 		await _hazards()
 		await _marks()
 		await _exit()
+	elif only == "cues":
+		_cues()
 	elif only == "admission":
 		_admission()
 	elif only == "ladder":
@@ -97,7 +101,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 10, "admission": 3}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 10, "admission": 3, "cues": 3}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -281,20 +285,75 @@ func _rounds() -> void:
 	acts.clear()
 
 
+func _phase_matches(s, phase: String, audio, since: int, count: int) -> bool:
+	var key := String(s.rule.cue[phase])
+	var row := Rows.row(key)
+	var cues: Array = audio.cue_log.slice(since).filter(func(c): return c[0] == key)
+	return cues.size() == count and cues.all(func(c): return c[1] == row.sound) and s.phase_view.get_child(0).material_override.albedo_color == row.color
+
+
 func _cues() -> void:
 	var shared := true
+	var valid_markers := 0
+	var completions := []
+	var listener := func(id, _at): completions.append(id)
+	game.events.activity_done.connect(listener)
 	var audio = game.presentation.audio
+	var markers := EdgeMarkers.new()
+	markers.setup(game)
 	for kind in KINDS:
+		game.flow.state = game.flow.STAGE
 		var s = _site(kind, Vector2(100, 100), {"graph": graphs.park_test})
-		for phase in ["telegraph", "clear", "pay"]:
-			audio._last_start.clear()
-			acts._cue(s, phase)
-			var key := String(s.rule.cue[phase])
-			var row := preload("res://src/core/event_kinds.gd").row(key)
-			shared = shared and s.phase_view.get_child(0).material_override.albedo_color == row.color
-			shared = shared and not audio.cue_log.is_empty() and audio.cue_log.back()[0] == key and audio.cue_log.back()[1] == row.sound
+		var targets: Array = markers.targets().filter(func(target): return target.has("activity"))
+		valid_markers += int(targets.size() == 1 and targets[0].activity == s.rule.cue.view and EdgeMarkers.marker_color(targets[0]) == Rows.activity_color(s.rule.cue.view))
+		audio._last_start.clear()
+		var since: int = audio.cue_log.size()
+		acts.step_pocket(s, H, s.targets[0] if kind == "scattered_marks" else s.global_position)
+		shared = shared and _phase_matches(s, "telegraph", audio, since, 1)
+		var clear_count := 0
+		var pay_count := 0
+		var clear_since: int = audio.cue_log.size()
+		match kind:
+			"movement_course", "objective_limit", "scattered_marks":
+				for target in s.targets:
+					acts.step_pocket(s, H, target)
+				clear_count = 1
+			"arena", "elite_arena":
+				_kill(s.pack)
+				acts.step_pocket(s, H, s.global_position)
+				clear_count = 1
+			"ambush":
+				for wave in 3:
+					_kill(s.pack)
+					acts.step_pocket(s, H, s.global_position)
+				clear_count = 1
+			"round_arena":
+				for round_index in int(s.rule.rounds):
+					while s.awaiting_round:
+						acts.step_pocket(s, H, s.global_position)
+					audio._last_start.clear()
+					_kill(s.pack)
+					acts.step_pocket(s, H, s.global_position)
+					clear_count += 1
+		shared = shared and s.done and _phase_matches(s, "clear", audio, clear_since, clear_count)
+		shared = shared and audio.cue_log.slice(clear_since).all(func(c): return c[0] != "activity_done")
+		audio._last_start.clear()
+		since = audio.cue_log.size()
+		if kind == "round_arena":
+			for reward in s.round_rewards.duplicate():
+				audio._last_start.clear()
+				reward.inside = false
+				acts._watch_round_pickups(s, reward.pickup.global_position)
+				pay_count += 1
+		else:
+			s.inside_pickup = false
+			acts._watch_pickup(s, s.pickup.global_position)
+			pay_count = 1
+		shared = shared and _phase_matches(s, "pay", audio, since, pay_count)
 		acts.clear()
-	t.check("sight and sound consume each kind's shared cue record", shared, "seven kinds x telegraph, clear and pay: 21 constructed glyph materials and audio log sounds")
+	game.events.activity_done.disconnect(listener)
+	markers.free()
+	t.check("sight and sound consume each kind's shared cue record", shared and valid_markers == 7 and completions.size() == 7, "%d/7 real marker targets; actual start, clear, pickup; exactly one shared clear per completion and no legacy cue; gameplay facts=%d" % [valid_markers, completions.size()])
 
 
 func _ambush() -> void:
