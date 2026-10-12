@@ -1576,16 +1576,10 @@ func _note_shred(target: Node3D, delta: float) -> void:
 func _harpoon_hand(target: Node3D, delta: float) -> void:
 	var kit = game.player.kit
 	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
-	if _cast_phase == "await_smash":
-		_cast_phase = ""
 	if bank_shot and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
 		var guarded: bool = kit.anchor_body.has_method("posture") and kit.anchor_body.has_method("staggered")
 		if kit.line_state == Augments.LINE_SMASH and (not guarded or kit.anchor_body.staggered()):
 			_cast(3)
-		elif _cast_phase == "":
-			# Keep the haul against a closed guard; bank off the paid open-core hit.
-			_cast_slot = 3
-			_cast_phase = "await_smash"
 	_harpoon_commit = false
 	_off_line = 0.0 if _flat(game.player.ball_position(), target.global_position) > LINE_REACH else _off_line + delta
 	# The reticle may reach scenery before the press is consumed. Let that line
@@ -2443,6 +2437,7 @@ func _cast_hands() -> void:
 # Slot 3 while a body line stands on an enemy within LINE_CAST_REACH. The load before a planned
 # bite is cast from _harpoon_hand, on the bite's own tick.
 func _line_hands() -> void:
+	if game.player.abilities.id_of(AbilityState.LINE) == "bank_shot": return
 	var kit = game.player.kit
 	if not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
 		return
