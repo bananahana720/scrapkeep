@@ -35,14 +35,12 @@ const PIN_WINDOW := 1.5
 const ARROW_LENGTH := 6.0
 
 class VolumeIndicator extends Indicator:
-	var source
-
-	func _process(delta: float) -> void:
-		shapes = {}
-		for layer in source.shapes:
-			if source.shapes[layer].get("kind", "") == "rivet_volume":
-				shapes[layer] = source.shapes[layer]
-		super._process(delta)
+	func set_shape(layer: String, shape: Dictionary) -> void:
+		if (shape["cells"] as Array).all(func(cell): return (cell["faces"] as Array).is_empty()):
+			clear(layer)
+			last_shape[layer] = shape
+			return
+		super.set_shape(layer, shape)
 
 	func _draw(shape: Dictionary, now: float) -> void:
 		_anchor = shape["origin"]
@@ -110,7 +108,6 @@ func setup(owner) -> void:
 	combat = owner
 	ctx = owner.ctx
 	volume_indicator = VolumeIndicator.new()
-	volume_indicator.source = ctx.player.indicator
 	add_child(volume_indicator)
 	process_physics_priority = 10
 	ctx.events.run_started.connect(func(_pilot: String):
@@ -571,7 +568,7 @@ func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, wi
 
 
 func _draw_shape(layer: String, shape: Dictionary) -> void:
-	ctx.player.indicator.set_shape(layer, shape)
+	volume_indicator.set_shape(layer, shape)
 
 
 func _draw_beam(index: int, beam: Dictionary) -> void:
@@ -753,8 +750,8 @@ func _step_piece(delta: float) -> void:
 	if _scar_left > 0.0:
 		_scar_left -= delta
 		if _scar_left <= 0.0:
-			ctx.player.indicator.clear("rivet_scar")
-			ctx.player.indicator.clear("rivet_breach")
+			volume_indicator.clear("rivet_scar")
+			volume_indicator.clear("rivet_breach")
 	if _piece != "juggernaut_drive" or combat.ultimate == null or combat.ultimate.phase() != Ultimate.FLIGHT:
 		return
 	drive_step(ctx.player.ball_position())
@@ -857,8 +854,8 @@ func _clear_piece() -> void:
 	_release_exceptions()
 	if ctx != null:
 		_clear_beams()
-		ctx.player.indicator.clear("rivet_wave")
-		ctx.player.indicator.clear("rivet_ram")
+		volume_indicator.clear("rivet_wave")
+		volume_indicator.clear("rivet_ram")
 
 
 func _clear() -> void:
@@ -872,3 +869,4 @@ func _clear() -> void:
 	if ctx != null:
 		for layer in ["rivet_line", "rivet_arrival", "rivet_haul", "rivet_scar", "rivet_breach", "rivet_wave", "rivet_ram"]:
 			ctx.player.indicator.clear(layer)
+			volume_indicator.clear(layer)

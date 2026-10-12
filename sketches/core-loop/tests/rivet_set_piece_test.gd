@@ -11,7 +11,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 147
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 148
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -21,7 +21,7 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # Closed Warden guards remain collidable; a staggered core may be passed.
 # 2026-10-12 (PC-RIVET r4): 75 -> 86, elevated/covered beam fixtures, camera parallax,
 # re-closed guard and independent Breach Skid damage expectation, coordinator rulings.
-# 2026-10-12 (PC-RIVET r5): 86 -> 147, ten real shape dispatches, independent height,
+# 2026-10-12 (PC-RIVET r5): 86 -> 148, ten real shape dispatches, independent height,
 # terrain and kit-constant expectations, selected geometry versus rendered vertices,
 # and the unchanged centre-based wave limits and Breach Skid inner ring.
 
@@ -144,10 +144,10 @@ func _shape_dispatch_fixture() -> void:
 		_t.check(label + " terrain-covered target missed", not touched.call(covered))
 		var selected = _kit.get("selected_shapes")
 		_t.check(label + " dispatch called the selector", selected is Array and not selected.is_empty())
-		var drawn: Array = _player.indicator.shapes.values().filter(func(s): return s.has("rivet_shape"))
+		var drawn: Array = (_player.indicator.shapes.values() + _kit.volume_indicator.shapes.values()).filter(func(s): return s.has("rivet_shape"))
 		_t.check(label + " visual consumes the selected record", selected is Array and not drawn.is_empty() and drawn.all(func(s): return selected.has(s)))
 		if id == "foundry_cutter" and entry == "peak":
-			var scar: Dictionary = _player.indicator.shapes.get("rivet_scar", {})
+			var scar: Dictionary = _kit.volume_indicator.shapes.get("rivet_scar", {})
 			_t.near("Full Cut drawn width equals the independent kit constant", float(scar.get("width", -1.0)), Weapons.FULL_CUT_WIDTH)
 			_t.near("Full Cut drawn angle equals the independent kit constant", float(scar.get("half_angle", -1.0)), deg_to_rad(Weapons.FULL_CUT_DEG * 0.5))
 			_t.check("Full Cut committed centre stops at the independent wall face", scar.has("centre_endpoint") and absf((scar["centre_endpoint"] as Vector3).x - _player.ball_position().x - (wall_x - 0.25)) < 0.001)
@@ -157,7 +157,7 @@ func _shape_dispatch_fixture() -> void:
 					vertices.append_array(face)
 			var origin: Vector3 = _player.ball_position()
 			_t.check("Full Cut drawn volume stays inside independent height and terrain limits", not vertices.is_empty() and vertices.all(func(v): return absf(v.y - origin.y) <= Weapons.FULL_CUT_WIDTH * 0.5 + 0.001 and v.x - origin.x <= wall_x - 0.25 + 0.001))
-			var indicator = _player.indicator
+			var indicator = _kit.volume_indicator
 			var other_shapes: Dictionary = indicator.shapes
 			indicator.shapes = {"rivet_scar": scar}
 			_kit.volume_indicator._process(0.0)
@@ -286,7 +286,7 @@ func _run() -> void:
 	var hits: int = _kit.full_cut(ball, Vector3.RIGHT, 1.0)
 	_t.eq("Full Cut sweeps both sides of the aim", [_damage(left), _damage(right)], [[18.0], [18.0]])
 	_t.check("and nothing outside 90 degrees", _hits(wide).is_empty() and hits == 2, str(hits))
-	_t.check("the scar is drawn", _player.indicator.shapes.has("rivet_scar"))
+	_t.check("the scar is drawn", _kit.volume_indicator.shapes.has("rivet_scar"))
 
 	# The Breach Skid: the forward cone at 1.5 x the class radius and the 2.5 m ring.
 	await _fresh()
