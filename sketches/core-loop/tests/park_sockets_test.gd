@@ -7,8 +7,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const MODULE := "res://src/world/park/sockets.gd"
 const Recipes := preload("res://src/world/park/park_recipes.gd")
-# 2026-10-12: round 2 opening/accounting fixtures raise the count from 41 to 65.
-const EXPECTED_CHECKS := 65
+# 2026-10-12: round 2 opening/accounting/visit fixtures raise the count from 41 to 79.
+const EXPECTED_CHECKS := 79
 var t := T.new("park_sockets_test")
 
 
@@ -23,6 +23,11 @@ func _run() -> void:
 		return
 	var sockets: GDScript = load(MODULE)
 	for arg in OS.get_cmdline_user_args():
+		if arg == "--fixture=visits":
+			_visit_controls(sockets)
+			t.eq("visit fixture check count", t.checks + 1, 16)
+			quit(t.verdict())
+			return
 		if arg == "--fixture=accounting":
 			_accounting_controls(sockets)
 			t.eq("accounting fixture check count", t.checks + 1, 18)
@@ -131,6 +136,7 @@ func _run() -> void:
 	t.eq("each arm retains a per-stage metric row", [swept["fixed"]["rows"].size(), swept["sockets"]["rows"].size()], [1000, 1000])
 	t.check("the comparison gate passes", swept["ok"], str(swept["errors"]))
 	_accounting_controls(sockets)
+	_visit_controls(sockets)
 	t.eq("the test ran its stated check count", t.checks + 1, EXPECTED_CHECKS)
 	quit(t.verdict())
 
@@ -211,3 +217,32 @@ func _accounting_controls(sockets: GDScript) -> void:
 	t.eq("control: a rate above half fixed fails independently", sockets.gate(above_half), ["socket re-roll rate exceeds half the fixed rate"])
 	var equal_half := {"fixed": _arm_fixture(8), "sockets": _arm_fixture(4)}
 	t.eq("control: exactly half fixed passes", sockets.gate(equal_half), [])
+
+
+func _visit_controls(sockets: GDScript) -> void:
+	var layout: Dictionary = sockets.template(17)
+	for socket in layout["sockets"]:
+		socket["fixed_open"] = true
+	var zero: Dictionary = sockets.stage(layout, 17, "fixed")
+	t.check("control: zero placed pockets fail a valid request", not zero["ok"])
+	t.eq("control: the failed draw placed zero pockets", zero["pocket_count"], 0)
+	t.eq("control: zero pockets do not complete the request", zero.get("complete_placement"), false)
+	t.eq("control: a failed zero-pocket tour is not a full visit", zero["full_visit_ratio"], INF)
+	t.eq("control: the zero-pocket partial tour is explicitly separate", zero.get("partial_visit_ratio"), 1.0)
+	var complete: Dictionary = sockets.stage(layout, 17, "sockets")
+	t.eq("control: the adaptive draw completes the same request", complete.get("complete_placement"), true)
+	var result: Dictionary = sockets.sweep(0)
+	var stats: Dictionary = result["fixed"]
+	t.check("draw accounting is shared with the arm", sockets.has_method("_record_draw"))
+	if sockets.has_method("_record_draw"):
+		sockets._record_draw(stats, zero, layout["pocket_zones"].size(), 17)
+	t.eq("control: zero pockets add no full-visit success", stats["visit_ok"], 0)
+	t.eq("control: the failed placement counts as incomplete", stats.get("incomplete"), 1)
+	t.eq("control: the failed placement adds no complete draw", stats.get("complete"), 0)
+	t.eq("control: the partial ratio cannot raise the full-visit maximum", stats["max_ratio"], 0.0)
+	var row: Dictionary = stats["rows"][0] if not stats["rows"].is_empty() else {}
+	t.eq("control: partial row has explicit completion and tour labels", [row.get("complete_placement"), row.get("full_visit_ratio"), row.get("partial_visit_ratio")], [false, null, 1.0])
+	t.check("incomplete draws are printed separately", sockets.report(result).contains("incomplete draws 1"))
+	if sockets.has_method("_record_draw"):
+		sockets._record_draw(stats, complete, layout["pocket_zones"].size(), 18)
+	t.eq("control: only the complete draw adds a full-visit success", [stats["visit_ok"], stats.get("complete"), stats.get("incomplete")], [1, 1, 1])
