@@ -20,6 +20,8 @@ const SEED := 8008
 const OPS := 1000
 const STEP := 1.0 / 60.0
 const LIMIT := 30.0
+# 2026-10-12 SR8: six lab rows, kit lifecycle fixtures and an exact-count guard.
+const EXPECTED_CHECKS := 166
 # The lab rows, pinned here so a drift in Devices.ROWS fails the test instead of moving the
 # expectation with it. Change a value here only together with its start value in devices.gd
 # (comps/ror2/companions.md). sticky's cap is Kest's kit knob default (Weapons.STICKY_MAX_LIVE).
@@ -27,6 +29,9 @@ const LAB_ROWS := {
 	"sticky": {"cap": 3, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
 	"mini": {"cap": 8, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
 	"sentry": {"cap": 1, "refill": 2.0, "leash_m": 60.0, "recall_after": 1.0},
+	"kest_mine": {"cap": 10, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
+	"kest_raid": {"cap": 64, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
+	"sable_stake": {"cap": 11, "refill": 0.0, "leash_m": 60.0, "recall_after": 1.0},
 }
 
 var _t := T.new("device_caps_test")
@@ -65,7 +70,10 @@ func _physics_process(_delta: float) -> bool:
 	_check_live_thrown()
 	_check_live_sentry()
 	_check_live_recall()
+	_check_live_kit_payloads()
+	_check_live_stakes()
 	_check_cleared()
+	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
 	return true
 
@@ -147,6 +155,9 @@ func _check_cap_pure() -> void:
 	for kind in rows:
 		ids[kind] = []
 		worst[kind] = 0
+		for i in int(rows[kind]["cap"]):
+			ids[kind].append(ledger.deploy(kind, Vector3.ZERO)["id"])
+		worst[kind] = ledger.count(kind)
 	for i in OPS:
 		var kind: String = rows.keys()[rng.randi_range(0, rows.size() - 1)]
 		var roll := rng.randi_range(0, 9)
@@ -367,6 +378,87 @@ func _check_live_recall() -> void:
 	_t.near("live mini recall matches the row", t, float(mini_row["recall_after"]), STEP + 0.0001)
 	_t.eq("a recalled mini does not go off", booms[0], 0)
 	_t.eq("recalled mini leaves the count", _devices().count("mini"), 0)
+
+
+func _check_live_kit_payloads() -> void:
+	_as_class("demolitions_caster")
+	var ult = _combat.ultimate
+	var owner: Vector3 = _game.player.ball_position()
+	var booms := [0]
+	var hear := func(_at: Vector3, _crit: bool): booms[0] += 1
+	_game.events.sticky_detonated.connect(hear)
+	for pair in [["minelayer", "kest_mine"], ["air_raid", "kest_raid"]]:
+		ult.clear_payloads()
+		ult._id = pair[0]
+		var kind: String = pair[1]
+		var cap: int = LAB_ROWS[kind]["cap"]
+		var over := 0
+		var mismatches := 0
+		for i in cap * 3:
+			ult._drop(owner + Vector3.RIGHT * 5.0, 0.0, 0.0)
+			if ult.payloads.charges.size() > cap:
+				over += 1
+			if _devices().count(kind) != ult.payloads.charges.size():
+				mismatches += 1
+		_t.eq("%s live count never exceeds its cap" % kind, over, 0)
+		_t.eq("%s ledger equals live payloads" % kind, mismatches, 0)
+		_t.eq("%s fills its own kind" % kind, _devices().count(kind), cap)
+		_t.eq("%s does not spend normal mini slots" % kind, _devices().count("mini"), 0)
+		ult.take_charge(ult.payloads.charges[0])
+		_t.eq("%s destroyed payload leaves immediately" % kind, _devices().count(kind), cap - 1)
+		var charge: Dictionary = ult.payloads.charges[0]
+		charge["pos"] = owner + Vector3.RIGHT * 65.0
+		booms[0] = 0
+		_combat._step_devices(0.99)
+		_t.eq("%s stays before recall deadline" % kind, _devices().count(kind), cap - 1)
+		_combat._step_devices(0.01)
+		_t.eq("%s recalled payload leaves the world" % kind, ult.payloads.charges.has(charge), false)
+		_t.eq("%s recalled payload leaves the count" % kind, _devices().count(kind), cap - 2)
+		_t.eq("%s recall never detonates" % kind, booms[0], 0)
+		ult.clear_payloads()
+		_t.eq("%s clear releases every slot" % kind, _devices().count(kind), 0)
+	_game.events.sticky_detonated.disconnect(hear)
+	ult._id = ""
+
+
+func _check_live_stakes() -> void:
+	_as_class("pylon_engineer")
+	var stakes = _combat.ultimate.stakes
+	stakes.set_physics_process(false)
+	stakes.fold()
+	var kind := "sable_stake"
+	var cap: int = LAB_ROWS[kind]["cap"]
+	var owner: Vector3 = _game.player.ball_position()
+	var over := 0
+	var mismatches := 0
+	for i in cap * 3:
+		stakes.plant(owner + Vector3.RIGHT * 5.0)
+		if stakes.nodes.size() > cap:
+			over += 1
+		if _devices().count(kind) != stakes.nodes.size():
+			mismatches += 1
+	_t.eq("stakes never exceed the table cap", over, 0)
+	_t.eq("stake ledger matches physical stakes", mismatches, 0)
+	_t.eq("stakes fill their own kind", _devices().count(kind), cap)
+	stakes.nodes[0].free()
+	_t.eq("external stake destruction leaves the count", _devices().count(kind), cap - 1)
+	_t.eq("external stake destruction leaves the manager", stakes.nodes.size(), cap - 1)
+	var stake = stakes.nodes[0]
+	stake.global_position = owner + Vector3.RIGHT * 65.0
+	_combat._step_devices(0.99)
+	_t.eq("stake stays before recall deadline", _devices().count(kind), cap - 1)
+	_combat._step_devices(0.01)
+	_t.eq("recalled stake leaves the manager", stakes.nodes.has(stake), false)
+	_t.eq("recalled stake leaves the count", _devices().count(kind), cap - 2)
+	stakes.arm()
+	stakes.step(5.99)
+	_t.eq("stakes survive before authored lifetime", _devices().count(kind), cap - 2)
+	stakes.step(0.01)
+	_t.eq("expired stakes leave every slot", _devices().count(kind), 0)
+	stakes.plant(owner)
+	stakes.fold()
+	_t.eq("fold releases stake slots", _devices().count(kind), 0)
+	stakes.set_physics_process(true)
 
 
 # The ledger is per attempt: a new attempt starts every kind empty with no slot refilling.
