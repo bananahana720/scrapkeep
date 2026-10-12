@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "7c1f4dc321baccaa9df1a9c999d4798a9c671eb4e1dc28de579ea358b505d1d2",
+  "bake_sha256": "fcd37be3bf3fd0bcbb473527d82f9eda7491e7cc8f4e10db3f8fafe97ccc2008",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1316901,
-  "edges": 314261,
+  "bytes": 1316536,
+  "edges": 314294,
   "first_failed": "",
   "flags": {
     "deck": 0,
     "door_ok": 39988,
     "line": 294,
     "open": 40401,
-    "sight_ok": 8748,
+    "sight_ok": 8757,
     "under": 0
   },
   "full_visit_m": 2316,
   "full_visit_ratio": "1.716",
-  "graph_sha256": "1ee96c7195a80cad5fafca1fcdf553a5c94ad1cf0c146339660fe166e588bbb8",
+  "graph_sha256": "47bb7e34003323868d4c1a4b45207e9f19fba57a692016eea455e4cfad4ff396",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2371,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "b59c45130895a76680e12f05eda341bfc3483ea47f2a12ce1b48ab17f7e343a1",
+  "park_sha256": "6b81025276440ade9bd42a53f08f54c0b46ea678381e4e75b8b50fe28be086c5",
   "pockets": [
     {
       "clear_ring": [],
@@ -244,6 +244,14 @@
         "on_route": true,
         "rank": 0,
         "viable": true
+      },
+      {
+        "cost": 1068.5,
+        "d_landmark": 298.5,
+        "name": "eye_chute_west",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 928.6,
@@ -502,11 +510,11 @@
         "viable": true
       }
     ],
-    "count": 141,
+    "count": 140,
     "crossings": {
       "drop": 42,
       "ride": 12,
-      "walk": 248
+      "walk": 247
     },
     "hidden": [
       {
