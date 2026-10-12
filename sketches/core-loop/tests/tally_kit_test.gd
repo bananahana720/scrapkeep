@@ -39,7 +39,8 @@ const T := preload("res://tests/support/t.gd")
 # 2026-10-12 (PC-TALLY round 3): direct notes isolate the background bank transposition.
 # 2026-10-12 (PC-TALLY round 5, coordinator ruling): four real-input plate counts and
 # four event/aim waits raise the measured count from 93 to 101.
-const EXPECTED_CHECKS := 101
+# 2026-10-12 (PC-TALLY round 6): readiness observes without steering, 101 to 102.
+const EXPECTED_CHECKS := 102
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -743,6 +744,12 @@ func _balance_start() -> void:
 	_as_class("tally")
 	var target := _still(_spawn("chaser", _ball_flat() + _aim_flat() * 10.0))
 	_record = {"t": target, "t_id": target.get_instance_id(), "from": _struck.size()}
+	var before := [false, _game.camera.pitch, _aim_frame]
+	var cooldown: float = _combat._cooldown
+	_combat._cooldown = 1.0
+	var ready := _balance_aim_ready()
+	_t.eq("Balance Due readiness observes without steering", [ready, _game.camera.pitch, _aim_frame], before)
+	_combat._cooldown = cooldown
 	_aim_at(target.global_position)
 
 
