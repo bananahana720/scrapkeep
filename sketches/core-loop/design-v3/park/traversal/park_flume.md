@@ -249,3 +249,43 @@ Progress from the fresh stage graph, reported:
 **Round-2 greybox verdict: FAIL, timebox closed.** The stock untraced final population completed 30 of 56 runs: Sable, Rivet and Kest eight each, Tarn six, and Tally, Cannon and floor unrun. All completed runs recorded zero dead stops. Kest seed 2 flow is 0.5394 against the per-seed minimum 0.60; seed 3 anchor gap is 50.3 m against 40 m. The current distinct-line proof and win proof remain unrun. The dressed prerequisite was not met. Partial Tarn console results remain diagnostic, without an eight-seed summary. See `/tmp/claude-1000/w13-sol/kd2-flume-r2/REPORT.md` and `carry-population/inputs.json` for the version-bound evidence.
 
 The cutoff was 15:51:38 UTC; captured session 47094 stopped at 15:51:45 UTC with exit 130 through the tool call. No matching runner or Godot process remained. Gameplay hashes stayed identical; the closing commit changes only these evidence pages.
+
+## Round3 greybox, fixed TRAV-DET, 2026-10-12
+
+**Round-3 greybox verdict: FAIL.** All 56 final-geometry seed rows are complete with the fixed TRAV-DET export. The three completionist seeds break the Warden under the 600 s wrapper. Rivet misses airborne share and Tally misses flow, with the exact values in the table below. The floor's raw seed-1 stop remains unclassified: its untraced solo matches the batch, but both traced solos differ, including a later trace without another owned traversal. Kest seed 2, Tally seed 3 and Cannon seed 2 have confirmed pack contacts, separate from terrain. The export does not record enemy kind. No dressed pass was started. The bank received two bounded repairs, ending at 132×6×104 m, centre [-135,149], yaw 76. No third repair at that site was attempted.
+
+**Measured round 3, 2026-10-12.** Geometry/code head `c9f24835d43005265aa05554d712110dc541a525`. Evidence `/tmp/claude-1000/w13-sol/kd2-flume-r3/bank2-clean-population`. All seven lines have eight seeds. Five unchanged complete batches are retained with matching input hashes. Kest and Cannon were repeated under the two-line cap after an earlier concurrency breach. No prior-geometry summary is used. Cells give median/worst, with ranges for bounded measures. Quiet and anchor limits use the worst seed. Floor measures are reported except its own time/stop rule. The table and raw-stop classification appear in `design-v3/park/traversal/park_flume.md` and `/tmp/claude-1000/w13-sol/kd2-flume-r3/REPORT.md`.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden, 8/8 | 8 / 8 seeds pass | 8 / 8 seeds pass | 8 / 8 seeds pass | 8 / 8 seeds pass | 8 / 8 seeds pass | 8 / 8 seeds pass | 8 / 8 seeds pass |
+| Time s, median 60–120; worst ≤150 | 63.09 / 63.63 pass | 96.37 / 98.15 pass | 86.03 / 91.96 pass | 78.54 / 82.59 pass | 92.365 / 94.7 pass | 82.015 / 84.15 pass | 96.305 / 97.58, reported, pilot band, not the floor's |
+| Segments s, medians 12–45 | [21.66, 21.54, 20.21] / 22.62 pass | [27.26, 36.23, 33.07] / 36.62 pass | [25.59, 35.19, 25.03] / 37.7 pass | [23.08, 26.01, 29.44] / 29.87 pass | [27.615, 30.74, 34.23] / 35.47 pass | [25.66, 36.865, 19.13] / 38.57 pass | [27.915, 31.055, 36.815] / 38.14, reported, pilot band, not the floor's |
+| Flow, median ≥.70; worst ≥.60 | 0.927 / 0.9255 pass | 0.7606 / 0.7189 pass | 0.7161 / 0.6301 pass | 0.9697 / 0.9286 pass | 0.6918 / 0.5984 MISS | 0.9383 / 0.911 pass | 0.5871 / 0.5538, reported, pilot band, not the floor's |
+| Airborne, median .12–.45 | 0.236 / [0.2209, 0.2601] pass | 0.1198 / [0.1123, 0.1308] MISS | 0.1603 / [0.1498, 0.1668] pass | 0.1645 / [0.1591, 0.1645] pass | 0.1277 / [0.1185, 0.1355] pass | 0.1635 / [0.1337, 0.1752] pass | 0.1142 / [0.1076, 0.1226], reported, pilot band, not the floor's |
+| Terrain or unclassified stops, every seed 0 | 0 / 0 pass | 0 / 0 pass | 0 / 0 pass | 0 / 0 pass | 0 / 0 pass | 0 / 0 pass | 0 / 1 MISS |
+| Peak m/s / tier-3 s, worst peak ≥26.6; median time ≥3 | [54.02, 46.11] / [52.11, 45.52] pass | [35.925, 8.085] / [32.76, 7.77] pass | [31.675, 6.965] / [31.19, 4.12] pass | [35.48, 9.29] / [33.17, 6.42] pass | [35.26, 8.36] / [33.22, 6.87] pass | [32.79, 11.51] / [31.64, 8.4] pass | [35.9, 8.185] / [33.14, 7.93], reported, pilot band, not the floor's |
+| Quiet s, worst ≤20 | 7.81 / 8.03 pass | 11.64 / 12.19 pass | 17.61 / 17.96 pass | 8.76 / 9.5 pass | 13.785 / 14.61 pass | 12.74 / 13.88 pass | 12.5 / 12.69, reported, pilot band, not the floor's |
+| Anchor gap m, worst ≤40 | 28.6 / 32.3 pass | 26.2 / 30.1 pass | 20.4 / 27.7 pass | 27.2 / 33.1 pass | 32.8 / 35.4 pass | 19.7 / 29.2 pass | 31.2 / 34.1, reported, pilot band, not the floor's |
+| Ride facts, at least 3 | 5 / 5 pass | 5 / 5 pass | 4 / 4 pass | 5 / 5 pass | 5 / 5 pass | 4 / 4 pass | 5 / 5, reported, pilot band, not the floor's |
+| Length ratio, median 1.3–2.0 | 1.52 / [1.51, 1.53] pass | 1.43 / [1.43, 1.43] pass | 1.325 / [1.32, 1.35] pass | 1.35 / [1.35, 1.36] pass | 1.335 / [1.33, 1.34] pass | 1.34 / [1.32, 1.37] pass | 1.35 / [1.35, 1.36], reported, pilot band, not the floor's |
+| Floor, ≤2× Rivet median; 0 terrain stops | not applicable | not applicable | not applicable | not applicable | not applicable | not applicable | 96.305 / max 97.58; cap 192.74 MISS |
+| Distinct lines, reported | not supplied by fixed tool; not gated | not supplied by fixed tool; not gated | not supplied by fixed tool; not gated | not supplied by fixed tool; not gated | not supplied by fixed tool; not gated | not supplied by fixed tool; not gated | not supplied by fixed tool; not gated |
+| Pack dead stops, classified separately | 0 | 0 | seed 2, t 50.367, [49.11, 29.19, -59.58], kind not recorded | 0 | seed 3, t 49.889, [-148.14, 20.74, 129.0], kind not recorded | seed 2, t 49.167, [114.9, 26.85, -48.42], kind not recorded | classification pending |
+
+Dead-stop sites by seed:
+
+- kest seed 2: [{"at": [49.1, -59.6], "time": 50.37}]
+- tally seed 3: [{"at": [-148.1, 129.0], "time": 49.89}]
+- cannon seed 2: [{"at": [114.9, -48.4], "time": 49.17}]
+- floor seed 1: [{"at": [-189.3, 142.2], "time": 50.3}]
+
+### Win proof
+
+| Seed | Engaged s | Broken s | Fight s | Damage | After break |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 118.83 | 154.94 | 36.11 | 800.0 | gate approach stall; no stage clear or Brindle entry |
+| 2 | 116.34 | 177.82 | 61.48 | 800.0 | gate approach stall; no stage clear or Brindle entry |
+| 3 | 140.04 | 180.96 | 40.92 | 800.0 | entered Brindle; reached phase 2; boss_stalled at boss time 420.01 s |
+
+The reactor runs without its park mounting until KF8-WIRE. No mounting or driver workaround was applied. The eight-file smoke, compile, lint and byte-determinism checks pass on unchanged game inputs. `graph.json` has `beacon_ok true` and `spawn.run true`. This is real headless physics, with no GPU, listening or human-feel verdict. Missing enemy-kind fields and the floor replay gap remain explicit follow-ups. The distinct-line proof is not supplied by this export and is reported, not gated.
