@@ -1306,6 +1306,14 @@ static func _motif_score(id: String, at: int, instrument: String, gain: float, o
 
 # A dry paper punch under ledger keys; the total adds a small till bell.
 static func tally_recipe(id: String, midi := -1, total := false) -> PackedFloat32Array:
+	var direct := midi >= 0
+	var saved := []
+	if direct:
+		_lock.lock()
+		saved = [Synth.score_step, Synth.score_transpose, _shift]
+		Synth.score_step = Harmony.STEP
+		Synth.score_transpose = 0
+		_shift = 0
 	if midi < 0:
 		midi = 50 if id == "plate_tally" else 62
 	var score: Array = [[0, midi, 1, "keys", 0.8]]
@@ -1319,7 +1327,13 @@ static func tally_recipe(id: String, midi := -1, total := false) -> PackedFloat3
 		score.append([0, midi, 1, "bell", 0.2])
 	var punch := _mix([[_noise(0.018, 2600.0, 900.0, 180.0), 0, 0.7],
 		[_tone(0.025, _hz(midi + 12), _hz(midi), "sine", 100.0), 0, 0.25]])
-	return Synth.normalize(_mix([[Synth.render_score(score, 0.7), 0, 1.0], [punch, 0, 0.4]]), 0.9)
+	var rendered := Synth.normalize(_mix([[Synth.render_score(score, 0.7), 0, 1.0], [punch, 0, 0.4]]), 0.9)
+	if direct:
+		Synth.score_step = int(saved[0])
+		Synth.score_transpose = int(saved[1])
+		_shift = int(saved[2])
+		_lock.unlock()
+	return rendered
 
 
 static func kest_score(id: String) -> Array:

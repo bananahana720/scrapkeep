@@ -100,7 +100,11 @@ const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tic
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
-	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate"]
+	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
+	# --- P-C Tally keyed sounds ---
+	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
+	# --- end Tally ---
+]
 # --- P-C Kest sounds ---
 const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
 	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
