@@ -1,4 +1,4 @@
-# 2026-10-11 (PC-SABLE round 2): Pin 69 checks with non-Sable ultimate beat boundaries.
+# 2026-10-12 (PC-SABLE round 5): Pin 89 checks including final audio levels and live-key pitch.
 extends SceneTree
 # PC-SABLE: real router, harpoon, combat, grants and immutable world-one fixtures.
 # Expected check count is pinned below; missing cases fail.
@@ -18,8 +18,13 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
+const Audio := preload("res://src/presentation/audio.gd")
+const Rows := preload("res://src/presentation/rows.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
+const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 69
+const EXPECTED_CHECKS := 89
 const DT := 1.0 / 60.0
 var _t := T.new("sable_kit_test")
 var _game
@@ -203,6 +208,7 @@ func _run() -> void:
 	_tree()
 	_grants(enemy)
 	_other_pilot_beats()
+	_audio_levels()
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
 
@@ -306,3 +312,53 @@ func _grants(enemy: Node3D) -> void:
 	_t.check("all three grants survive save", ["trail_sable_cable", "decal_sable_spool", "shell_sable_felt"].all(func(id): return reload.has_cosmetic(id)))
 	_t.check("Felt Rig stays pending until its art lands", Cosmetics.is_pending("shell_sable_felt"))
 	listener.free()
+
+
+func _audio_levels() -> void:
+	var audio := Audio.new()
+	audio.setup(_game.ctx)
+	audio.bake_now()
+	audio.engine.grid = null
+	audio.engine.key = 5
+	_player.set_velocity_now(Vector3.RIGHT * 22.5)
+	_player.chain.combo = 3
+	for mode in [MusicEngine.PLAY, MusicEngine.IDLE]:
+		audio.engine.mode = mode
+		audio._last_start.clear()
+		audio.cue_log.clear()
+		audio._sable_bank_sound()
+		for sound in [Audio.SABLE_SOUNDS["sable_ratchet"], Audio.SABLE_SOUNDS["sable_bank"]]:
+			var cues: Array = audio.cue_log.filter(func(c): return c[1] == sound and c[2] == "now")
+			_t.eq("mode %d %s sounds once" % [mode, sound], cues.size(), 1)
+			var cue: Array = cues[0] if not cues.is_empty() else ["", "", "", 0, 0.0, 0.0]
+			_t.near("mode %d %s final row level" % [mode, sound], cue[5], SfxBank.trim_db(sound) + Audio.PRIORITY_DB[Rows.priority("line_skill_fired")])
+			var shape := Harmony.ratio(12.0 * clampf(_player.state.velocity.length() / 45.0, 0.0, 1.0) + mini(5, maxi(0, _player.chain.combo - 1))) if sound == Audio.SABLE_SOUNDS["sable_bank"] else 1.0
+			_t.near("mode %d %s final live-key pitch" % [mode, sound], cue[4], shape * Harmony.ratio(audio.live_key()))
+		audio._last_start.clear()
+		audio.cue_log.clear()
+		audio.engine._actions.clear()
+		audio.engine._voices.clear()
+		var sound := SfxBank.cause_note_id(Audio.SABLE_NOTES[0])
+		audio.sable_note("cable", 1)
+		var level: float = SfxBank.trim_db(sound) + Audio.PRIORITY_DB[Rows.priority("ultimate_peak")]
+		if mode == MusicEngine.PLAY:
+			var actions: Array = audio.engine._actions.filter(func(a): return a.get("id", "") == sound)
+			_t.eq("PLAY set-piece note schedules once", actions.size(), 1)
+			audio.engine.clock = audio.engine.next_beat()
+			audio.engine._run_due()
+			var voices: Array = audio.engine._voices
+			_t.near("PLAY set-piece note final row level", linear_to_db(voices[-1].gl) if not voices.is_empty() else 0.0, level)
+			_t.check("PLAY note renders the live-key ratio into its samples", not voices.is_empty() and voices[-1].buf == SfxBank.samples_at(sound, audio.engine.step_len, audio.live_key(), audio.engine.theme) and voices[-1].buf != SfxBank.samples_at(sound, audio.engine.step_len, 0, audio.engine.theme))
+		else:
+			var cues: Array = audio.cue_log.filter(func(c): return c[1] == sound and c[2] == "now")
+			_t.eq("non-PLAY set-piece note sounds once", cues.size(), 1)
+			var cue: Array = cues[0] if not cues.is_empty() else ["", "", "", 0, 0.0, 0.0]
+			_t.near("non-PLAY set-piece note final row level", cue[5], level)
+			_t.near("non-PLAY set-piece note live-key pitch", cue[4], Harmony.ratio(audio.live_key()))
+		audio.sound_ready = false
+		var pending := audio.engine.pending_actions()
+		var played := audio.cue_log.size()
+		audio.sable_note("cable", 2)
+		_t.check("mode %d unready bank refuses the note" % mode, audio.engine.pending_actions() == pending and audio.cue_log.size() == played)
+		audio.sound_ready = true
+	audio.free()
