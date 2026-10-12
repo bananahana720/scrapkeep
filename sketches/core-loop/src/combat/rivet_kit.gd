@@ -384,6 +384,13 @@ func select(shape: Dictionary) -> Array:
 
 func _in_shape(shape: Dictionary, point: Vector3, hull: float) -> bool:
 	var to: Vector3 = point - (shape["origin"] as Vector3)
+	if not shape.get("hull_forgiveness", true):
+		hull = 0.0
+	if shape.get("strict_angle", false):
+		var up: Vector3 = shape["up"]
+		var planar := to - up * to.dot(up)
+		if planar.length() > float(shape["inner"]) and planar.normalized().dot(shape["direction"]) < cos(float(shape["half_angle"])):
+			return false
 	if shape["kind"] == "line":
 		var dir: Vector3 = shape["direction"]
 		var along := to.dot(dir)
@@ -534,7 +541,7 @@ func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, wi
 			cells.append(_commit_cell(origin, [origin, origin + a * inner, origin + b * inner], up, inner, margin))
 	var centre := _commit_beam(origin, dir, reach, width)
 	return ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": origin, "direction": dir,
-		"length": reach, "half_angle": half, "width": width, "cells": cells, "centre_endpoint": centre["endpoint"]})
+		"length": reach, "half_angle": half, "width": width, "inner": inner, "up": up, "cells": cells, "centre_endpoint": centre["endpoint"]})
 
 
 func _draw_shape(layer: String, shape: Dictionary) -> void:
@@ -610,7 +617,7 @@ func _bow_wave(ball: Vector3) -> int:
 		var near: Vector3 = side * Weapons.DRIVE_WAVE_NEAR * sign
 		var far: Vector3 = side * Weapons.DRIVE_WAVE_FAR * sign
 		cells.append(_commit_cell(ball, [ball + near, ball + far, ball + far + heading * Weapons.DRIVE_WAVE_AHEAD, ball + near + heading * Weapons.DRIVE_WAVE_AHEAD], Vector3.UP, ctx.player.tuning.RADIUS, margin))
-	var shape: Dictionary = ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": ball, "cells": cells})
+	var shape: Dictionary = ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": ball, "cells": cells, "hull_forgiveness": false})
 	_draw_shape("rivet_wave", shape)
 	var thrown := 0
 	for enemy in select(shape):
@@ -678,6 +685,7 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var hits := 0
 	var dealt := 0.0
 	var shape := _commit_sector(at, heading, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
+	shape["strict_angle"] = true
 	for enemy in select(shape):
 		var damage: float = Ultimate.LANDING_DAMAGE * heft * chain
 		if _warden(enemy) or _boss(enemy):

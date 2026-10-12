@@ -11,7 +11,7 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 145
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 147
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
@@ -21,8 +21,9 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # Closed Warden guards remain collidable; a staggered core may be passed.
 # 2026-10-12 (PC-RIVET r4): 75 -> 86, elevated/covered beam fixtures, camera parallax,
 # re-closed guard and independent Breach Skid damage expectation, coordinator rulings.
-# 2026-10-12 (PC-RIVET r5): 86 -> 145, ten real shape dispatches, independent height,
-# terrain and kit-constant expectations, and selected geometry versus rendered vertices.
+# 2026-10-12 (PC-RIVET r5): 86 -> 147, ten real shape dispatches, independent height,
+# terrain and kit-constant expectations, selected geometry versus rendered vertices,
+# and the unchanged centre-based wave limits and Breach Skid inner ring.
 
 
 func _initialize() -> void:
