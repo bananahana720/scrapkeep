@@ -81,7 +81,7 @@ func _row(kind: String, form: String) -> Dictionary:
 		"music_cue": {"telegraph": "riser_natural", "land": "drop_natural"}}
 
 
-func _fixture(row: Dictionary, sound := false, more_rows: Array = []) -> Array:
+func _fixture(row: Dictionary, sound := false, more_rows: Array = [], site_override: Dictionary = {}) -> Array:
 	var w := World.new()
 	root.add_child(w)
 	w.ctx.root = w
@@ -98,6 +98,7 @@ func _fixture(row: Dictionary, sound := false, more_rows: Array = []) -> Array:
 	map.park = {"map": "fixture", "park_rows": [{"id": "site", "at": [0, 0], "y": 0,
 		"size": [20, 2, 10], "yaw_deg": 30}], "event_rows": [row] + more_rows, "weather_rows": [],
 		"routes": [{"id": "main", "from": "drop_in", "to": "landmark"}]}
+	map.park.park_rows[0].merge(site_override, true)
 	w.terrain.maps = [map]
 	w.events = Director.new(823, {}, map, 14.0, Callable(w.terrain, "height"))
 	var script: Script = load("res://src/world/events/natural.gd")
@@ -170,6 +171,7 @@ func _run() -> void:
 		handler.release()
 		w.free()
 	_water_lifecycle()
+	_geometry_boundaries()
 	t.check("all seven kinds tested", t.checks >= 50, str(t.checks))
 	quit(t.verdict())
 
@@ -204,5 +206,78 @@ func _water_lifecycle() -> void:
 	w.terrain.flood.in_basin(Vector3.ZERO)
 	t.check("drain end restores the prior live water", state.water.visible)
 	t.near("restored water material uses its surface", w.terrain.flood.surface_y(), ParkSchema.MAX_EVENT_WATER_M)
+	handler.release()
+	w.free()
+
+
+func _mesh_vertices(node: Node3D) -> Array[Vector3]:
+	var points: Array[Vector3] = []
+	if node is MeshInstance3D:
+		for vertex in node.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+			points.append(node.global_transform * vertex)
+	for child in node.get_children():
+		if child is Node3D:
+			points.append_array(_mesh_vertices(child))
+	return points
+
+
+func _footprint_mark(label: String, mark: Node3D, half: Vector2, yaw: float) -> void:
+	var low := Vector2.INF
+	var high := -Vector2.INF
+	var corners := [false, false, false, false]
+	for point in _mesh_vertices(mark):
+		var local := Vector2(point.x, point.z).rotated(yaw)
+		low = low.min(local)
+		high = high.max(local)
+		for k in 4:
+			var expected := Vector2(half.x if k % 2 else -half.x, half.y if k / 2 else -half.y)
+			corners[k] = corners[k] or local.distance_to(expected) < 0.0001
+	t.near(label + " warning local min X", low.x, -half.x)
+	t.near(label + " warning local max X", high.x, half.x)
+	t.near(label + " warning local min Z", low.y, -half.y)
+	t.near(label + " warning local max Z", high.y, half.y)
+	t.check(label + " warning includes all rectangular corners", corners.all(func(found): return found), str(corners))
+
+
+func _geometry_boundaries() -> void:
+	var half := Vector2(5, 10)
+	var yaw := deg_to_rad(30.0)
+	for kind in ["flood_fill", "collapse"]:
+		var row := _row(kind, "flood_rising" if kind == "flood_fill" else "cave_in_crumble")
+		var fixture := _fixture(row)
+		var w = fixture[0]
+		var handler = fixture[1]
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1})
+		_footprint_mark(kind, handler.active[kind].mark, half, yaw)
+		for i in 75:
+			w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1})
+		var state: Dictionary = handler.active[kind]
+		var inside := (half * 0.95).rotated(-yaw)
+		var outside := Vector2(half.x + 0.1, half.y * 0.95).rotated(-yaw)
+		if kind == "flood_fill":
+			t.check("rotated water wets the long-axis corner", state.water.in_basin(Vector3(inside.x, 0, inside.y)))
+			t.check("rotated water excludes outside the width", not state.water.in_basin(Vector3(outside.x, 0, outside.y)))
+		else:
+			t.check("rotated terrain changes the long-axis corner", w.terrain.height(inside.x, inside.y) > 0.0)
+			t.near("rotated terrain excludes outside the width", w.terrain.height(outside.x, outside.y), 0.0)
+		handler.release()
+		w.free()
+	var lightning := _row("lightning", "lightning_charge")
+	var fixture := _fixture(lightning, false, [], {"size": [260, 2, 240]})
+	var w = fixture[0]
+	var handler = fixture[1]
+	w.events.advance(0.1, FAR * 10.0, Vector3.ZERO, {"clock_tier": 1})
+	var points := _mesh_vertices(handler.active.lightning.mark)
+	var extent := Vector2.ZERO
+	for point in points:
+		extent = extent.max(Vector2(absf(point.x), absf(point.z)))
+	t.near("lightning warning X follows requested strike radius", extent.x, float(lightning.effect.strike_m))
+	t.near("lightning warning Z follows requested strike radius", extent.y, float(lightning.effect.strike_m))
+	for i in 52:
+		w.events.advance(0.1, FAR * 10.0, Vector3.ZERO, {"clock_tier": 1})
+	w.events.advance(0.1, Vector3(float(lightning.effect.strike_m) + 0.01, 0, 0), Vector3.ZERO, {"clock_tier": 1})
+	t.eq("lightning outside strike radius preserves armour", w.ctx.run.mass, 20)
+	w.events.advance(0.1, Vector3(float(lightning.effect.strike_m) - 0.01, 0, 0), Vector3.ZERO, {"clock_tier": 1})
+	t.eq("lightning inside strike radius costs authored armour", w.ctx.run.mass, 20 - ceili(float(lightning.effect.damage)))
 	handler.release()
 	w.free()
