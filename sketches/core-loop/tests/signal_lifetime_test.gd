@@ -6,6 +6,7 @@ const Swarm := preload("res://src/combat/warden_swarm.gd")
 const Game := preload("res://src/game.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 
 class Fleet extends RefCounted:
 	var bus
@@ -15,6 +16,7 @@ class Fleet extends RefCounted:
 class Warden extends Node:
 	var fleet
 	var target = null
+	var world_root: Node
 
 class ShellAssets extends HeroAssets:
 	func _addon(_path: String) -> Node3D:
@@ -46,6 +48,9 @@ func _report(label: String, ok: bool, detail: String) -> void:
 func _on_clear(_reason := "") -> void:
 	_named += 1
 
+func _on_bound(_reason: String, _tag: String) -> void:
+	_named += 1
+
 func _audio(loose: bool) -> void:
 	var events := Events.new()
 	_first = 0
@@ -72,10 +77,62 @@ func _audio(loose: bool) -> void:
 	Audio._listen(events, "stage_content_cleared", _on_clear, loose)
 	Audio._listen(events, "stage_content_cleared", _on_clear, loose)
 	Audio._listen(events, "stage_content_cleared", _on_clear)
+	Audio._listen(events, "stage_content_cleared", _on_clear.unbind(1))
 	events.stage_content_cleared.emit("arena")
 	_report("named method dedupes loose=%s" % loose, _named == 1 and events.get_signal_connection_list("stage_content_cleared").size() == 1,
 		"calls=%d connections=%d want=1" % [_named, events.get_signal_connection_list("stage_content_cleared").size()])
 	events.free()
+	events = Events.new()
+	_first = 0
+	_second = 0
+	var same_name_first := func _on_clear(_reason = ""): _first += 1
+	var same_name_second := func _on_clear(_reason = ""): _second += 1
+	Audio._listen(events, "stage_content_cleared", same_name_first)
+	Audio._listen(events, "stage_content_cleared", same_name_first, true)
+	Audio._listen(events, "stage_content_cleared", same_name_second, true)
+	events.stage_content_cleared.emit("arena")
+	_report("named lambdas keep identity across loose", _first == 1 and _second == 1 and events.get_signal_connection_list("stage_content_cleared").size() == 2,
+		"first=%d second=%d connections=%d want=2" % [_first, _second, events.get_signal_connection_list("stage_content_cleared").size()])
+	_named = 0
+	Audio._listen(events, "stage_content_cleared", _on_clear)
+	events.stage_content_cleared.emit("arena")
+	_report("named lambda differs from named method", _named == 1 and _first == 2 and _second == 2 and events.get_signal_connection_list("stage_content_cleared").size() == 3,
+		"method calls=%d connections=%d want=3" % [_named, events.get_signal_connection_list("stage_content_cleared").size()])
+	events.free()
+	events = Events.new()
+	_named = 0
+	Audio._listen(events, "stage_content_cleared", _on_bound.bind("first"))
+	Audio._listen(events, "stage_content_cleared", _on_bound.bind("second"))
+	events.stage_content_cleared.emit("arena")
+	_report("bound named method keeps method dedupe", _named == 1 and events.get_signal_connection_list("stage_content_cleared").size() == 1,
+		"calls=%d connections=%d want=1" % [_named, events.get_signal_connection_list("stage_content_cleared").size()])
+	events.free()
+
+func _owner_exit() -> void:
+	var events := Events.new()
+	var owner := Node.new()
+	root.add_child(owner)
+	var calls := [0]
+	var callback := func(_reason: String):
+		calls[0] += 1
+		owner.set_meta("heard", true)
+	SignalLifetime.listen(owner, events.stage_content_cleared, callback)
+	SignalLifetime.listen(owner, events.stage_content_cleared, callback)
+	events.stage_content_cleared.emit("alive")
+	_report("helper keeps one live connection", calls[0] == 1, "calls=%d want=1" % calls[0])
+	root.remove_child(owner)
+	events.stage_content_cleared.emit("detached")
+	_report("owner exits before it is freed", calls[0] == 1 and events.stage_content_cleared.get_connections().is_empty(),
+		"calls=%d connections=%d" % [calls[0], events.stage_content_cleared.get_connections().size()])
+	owner.free()
+	events.free()
+	events = Events.new()
+	owner = Node.new()
+	root.add_child(owner)
+	SignalLifetime.listen(owner, events.stage_content_cleared, func(_reason: String): pass)
+	events.free()
+	owner.free()
+	_report("bus may free before owner", true, "owner cleanup emitted after bus free")
 
 func _swarm() -> void:
 	var events := Events.new()
@@ -114,6 +171,26 @@ func _shell_ring() -> void:
 	ball.free()
 	assets.free()
 
+func _swarm_slab() -> void:
+	var warden := Warden.new()
+	root.add_child(warden)
+	var driver := Swarm.new()
+	driver._build_slab(warden)
+	var slab: Node = driver._slab
+	_report("swarm slab fixture", slab != null and warden.tree_exiting.get_connections().size() == 1, "pool floor listens to Warden exit")
+	slab.free()
+	_report("freed pool floor disconnects", warden.tree_exiting.get_connections().is_empty(),
+		"remaining=%d want=0" % warden.tree_exiting.get_connections().size())
+	warden.free()
+	warden = Warden.new()
+	root.add_child(warden)
+	driver = Swarm.new()
+	driver._build_slab(warden)
+	slab = driver._slab
+	warden.free()
+	await process_frame
+	_report("Warden exit still frees live pool floor", not is_instance_valid(slab), "floor cleanup retained")
+
 func _mind_body() -> void:
 	var game := Game.new()
 	game.test_mode = true
@@ -148,8 +225,16 @@ func _mind_body() -> void:
 func _run() -> void:
 	_audio(false)
 	_audio(true)
+	if "--audio-only" in OS.get_cmdline_user_args():
+		_finish()
+		return
 	_swarm()
+	_owner_exit()
 	_shell_ring()
+	await _swarm_slab()
 	await _mind_body()
+	_finish()
+
+func _finish() -> void:
 	print("signal_lifetime_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

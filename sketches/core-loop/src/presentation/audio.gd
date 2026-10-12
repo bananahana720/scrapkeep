@@ -1200,11 +1200,28 @@ static func _listen(events: Object, signal_name: String, callable: Callable, loo
 				argc = (info["args"] as Array).size()
 		if argc > 0:
 			target = callable.unbind(argc)
-	for connection in events.get_signal_connection_list(signal_name):
-		if connection["callable"].get_object() == callable.get_object() and connection["callable"].get_method() == callable.get_method():
-			return true
+	# Signal identity also recognises the same lambda through an unbind wrapper.
+	if events.is_connected(signal_name, target):
+		return true
+	if _named_listener(callable):
+		for connection in events.get_signal_connection_list(signal_name):
+			var connected: Callable = connection["callable"]
+			if _named_listener(connected) and connected.get_object() == callable.get_object() and connected.get_method() == callable.get_method():
+				return true
 	events.connect(signal_name, target)
 	return true
+
+
+# bind/unbind make named methods custom too; reconstruction excludes even a named lambda.
+static func _named_listener(callable: Callable) -> bool:
+	var named := Callable(callable.get_object(), callable.get_method())
+	var bound := callable.get_bound_arguments()
+	if not bound.is_empty():
+		named = named.bindv(bound)
+	var unbound := callable.get_unbound_arguments_count()
+	if unbound > 0:
+		named = named.unbind(unbound)
+	return callable == named
 
 
 # --- The harpoon line and the synergy motifs ------------------------------------------

@@ -1,6 +1,7 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
+const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
@@ -969,7 +970,7 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 					layer_ring.get_parent().remove_child(layer_ring)
 					ring_holder.add_child(layer_ring)
 					base_ring.add_child(ring_holder)
-					pod_holder.visibility_changed.connect(func(): ring_holder.visible = pod_holder.visible)
+					SignalLifetime.listen(ring_holder, pod_holder.visibility_changed, func(): ring_holder.visible = pod_holder.visible)
 					ring_holders.append([pod_holder, ring_holder])
 		for holder in [core_holder, pod_holder]:
 			holder.visible = false
@@ -1923,8 +1924,8 @@ func _dress_warden_body(warden) -> void:
 		(p as AnimationPlayer).mixer_applied.connect(_hold_body.bind(id))
 	(rec.players[0] as AnimationPlayer).animation_finished.connect(_body_clip_finished.bind(id))
 	if kind == "mind" and warden.mount_driver != null and warden.mount_driver.has_signal("took_off"):
-		warden.mount_driver.took_off.connect(func(_a: int, _b: int): _play_body(rec, ["takeoff", "glide"]))
-		warden.mount_driver.landed.connect(func(_p: int): _play_body(rec, ["land"]))
+		SignalLifetime.listen(warden, warden.mount_driver.took_off, func(_a: int, _b: int): _play_body(rec, ["takeoff", "glide"]))
+		SignalLifetime.listen(warden, warden.mount_driver.landed, func(_p: int): _play_body(rec, ["land"]))
 	_wardens[id] = rec
 	warden.tree_exiting.connect(_forget_warden.bind(id), CONNECT_ONE_SHOT)
 	_play_body(rec, ["idle"])
