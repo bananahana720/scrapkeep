@@ -213,3 +213,39 @@ Progress from the fresh stage graph, reported:
 - tally: median 14.57 m/s, worst 14.57 m/s.
 - cannon: median 15.47 m/s, worst 15.47 m/s.
 - floor: median 13.84 m/s, worst 13.84 m/s.
+
+## Continuation carry-population, 2026-10-12
+
+Source head `53283b50be494f9a2409b0499f2b06d283f0eeed`; evidence `/tmp/claude-1000/w13-sol/kd2-flume-r2/carry-population`. Seeds per line: {"sable": 8, "rivet": 8, "kest": 8, "tarn": 0, "tally": 0, "cannon": 0, "floor": 0}. Mixed counts or fewer than eight seeds are diagnostic and do not qualify acceptance. Per-seed limits use the worst column, including quiet time and anchor gap. Floor measures are reported except its own time-and-stop rule.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden, 8/8 | 8 / 8 seeds pass | 8 / 8 seeds pass | 8 / 8 seeds pass | pending | pending | pending | pending |
+| Time s, median 60–120; worst ≤150 | 62.685 / 63.45 pass | 96.065 / 99.57 pass | 86.19 / 93.21 pass | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Segments s, medians 12–45 | [21.63, 20.7, 19.695] / 22.36 pass | [27.55, 35.49, 32.85] / 37.29 pass | [25.665, 34.795, 25.27] / 38 pass | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Flow, median ≥.70; worst ≥.60; floor reported | 0.9355 / 0.9315 pass | 0.7519 / 0.7215 pass | 0.7005 / 0.5394 MISS | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Airborne, median .12–.45 | 0.246 / [0.2365, 0.2743] pass | 0.1217 / [0.1139, 0.1299] pass | 0.1573 / [0.1424, 0.1672] pass | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Dead stops, every seed 0 | 0 / 0 pass | 0 / 0 pass | 0 / 0 pass | pending | pending | pending | pending |
+| Peak m/s / tier-3 s, worst peak ≥26.6; median time ≥3 | [54.915, 46.715] / [54.6, 45.23] pass | [36.025, 8.225] / [32.01, 7.59] pass | [31.515, 6.785] / [31.19, 4.04] pass | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Quiet s, worst ≤20 | 7.78 / 8.04 pass | 11.7 / 12.19 pass | 17.53 / 19.3 pass | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Anchor gap m, worst ≤40 | 28.2 / 32.2 pass | 27.9 / 30.1 pass | 22.35 / 50.3 MISS | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Ride facts, at least 3 | 5 / 4 pass | 5 / 5 pass | 4 / 4 pass | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Length ratio, median 1.3–2.0 | 1.51 / [1.49, 1.52] pass | 1.43 / [1.43, 1.43] pass | 1.33 / [1.32, 1.35] pass | pending | pending | pending | pending, reported, pilot band, not the floor's |
+| Floor, ≤2× Rivet median; 0 stops | not applicable | not applicable | not applicable | pending | pending | pending | pending |
+| Distinct lines, at least 3 | 0 / stage not measured | 0 / stage not measured | 0 / stage not measured | pending | pending | pending | pending, reported, pilot band, not the floor's |
+
+Distinct-line proof: not measured on these inputs.
+
+
+Dead-stop sites by seed:
+
+
+Progress from the fresh stage graph, reported:
+
+- sable: median 21.995 m/s, worst 21.59 m/s.
+- rivet: median 14.42 m/s, worst 13.9 m/s.
+- kest: median 16.095 m/s, worst 14.88 m/s.
+
+**Round-2 greybox verdict: FAIL, timebox closed.** The stock untraced final population completed 30 of 56 runs: Sable, Rivet and Kest eight each, Tarn six, and Tally, Cannon and floor unrun. All completed runs recorded zero dead stops. Kest seed 2 flow is 0.5394 against the per-seed minimum 0.60; seed 3 anchor gap is 50.3 m against 40 m. The current distinct-line proof and win proof remain unrun. The dressed prerequisite was not met. Partial Tarn console results remain diagnostic, without an eight-seed summary. See `/tmp/claude-1000/w13-sol/kd2-flume-r2/REPORT.md` and `carry-population/inputs.json` for the version-bound evidence.
+
+The cutoff was 15:51:38 UTC; captured session 47094 stopped at 15:51:45 UTC with exit 130 through the tool call. No matching runner or Godot process remained. Gameplay hashes stayed identical; the closing commit changes only these evidence pages.
