@@ -46,5 +46,11 @@ func _initialize() -> void:
 				"floor %.2f, ball %.2f, body %.2f" % [floor_y, ball_y, float(ANCHOR[1])])
 	t.check("park_dam bake is fresh", ParkBake.freshness(PARK, BAKED).is_empty())
 	t.check("park_dam graph is fresh", GraphTool.freshness(PARK, BAKED, BAKED).is_empty())
+	for name in DirAccess.get_files_at("res://src/world/park"):
+		if not name.ends_with(".json") or name == "park_dam.json":
+			continue
+		var other: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/" + name))
+		t.check("the reactor approach stays out of " + name,
+			other.get("park_rows", []).all(func(row): return row.id != APPROACH))
 	t.eq("the pulse ring is still 30m", Warden.DEFAULT_REACH, 30.0)
 	quit(t.verdict())
