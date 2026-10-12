@@ -28,6 +28,10 @@ extends SceneTree
 # adds the guaranteed-pocket draw over that many seeds, prints it against its thresholds and exits
 # 1 when the two costliest anchors take under 95% of seeds, the re-roll rate passes 20% or the
 # hidden pocket borders fewer than 3 zones. It is slow, so a bake leaves it off.
+# `--sockets[=<seeds>]` runs SQ15's paired seeded laboratory without a map bake. Optional
+# `--sockets-out=<path>` writes both arms' per-stage metrics. It gates the 95% success,
+# 3..8 pockets, off-route guarantee, <10% and <=half-fixed re-roll, <=3.0 full visit and
+# every-filler-off-route criteria. These laboratory layouts are not the six authored parks.
 #
 # Rules, each a starting value (PARK.md 2.11):
 #   Ground edge  8-neighbours on the 8 m lattice. a -> b exists when the highest of the four 2 m
@@ -62,6 +66,7 @@ const Stamps := preload("res://src/world/park/park_stamps.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Sockets := preload("res://src/world/park/sockets.gd")
 
 const TOOL_FILES := ["res://tools/park_graph.gd", "res://src/world/park/park_graph.gd"]
 const PARK_DIR := "res://src/world/park"
@@ -129,6 +134,9 @@ const PAY_FAR := ["rare"]
 func _initialize() -> void:
 	var map_id := ""
 	var jitter_seeds := 0
+	var socket_seeds := 0
+	var socket_arm := false
+	var socket_out := ""
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--map="):
 			map_id = arg.trim_prefix("--map=")
@@ -136,6 +144,29 @@ func _initialize() -> void:
 			jitter_seeds = JITTER_SEEDS
 		elif arg.begins_with("--jitter="):
 			jitter_seeds = int(arg.trim_prefix("--jitter="))
+		elif arg == "--sockets" or arg.begins_with("--sockets="):
+			socket_arm = true
+			socket_seeds = Sockets.SEEDS if arg == "--sockets" else int(arg.trim_prefix("--sockets="))
+		elif arg.begins_with("--sockets-out="):
+			socket_out = arg.trim_prefix("--sockets-out=")
+	if socket_arm:
+		if socket_seeds <= 0 or not map_id.is_empty():
+			printerr("park_graph: --sockets[=<positive seeds>] measures paired lab templates; omit --map")
+			quit(2)
+			return
+		var started := Time.get_ticks_usec()
+		var comparison := Sockets.sweep(socket_seeds)
+		print(Sockets.report(comparison))
+		print("sockets wall time: %.3f s" % ((Time.get_ticks_usec() - started) / 1000000.0))
+		if not socket_out.is_empty():
+			var file := FileAccess.open(socket_out, FileAccess.WRITE)
+			if file == null:
+				printerr("park_graph: cannot write socket metrics to %s" % socket_out)
+				quit(1)
+				return
+			file.store_string(JSON.stringify(comparison, "\t", true) + "\n")
+		quit(0 if comparison["ok"] else 1)
+		return
 	if map_id.is_empty():
 		printerr("park_graph: pass --map=<map_id>")
 		quit(2)
