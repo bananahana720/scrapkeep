@@ -26,7 +26,7 @@ const BURDEN_PAYOUT_CAP := 0.75
 const BURDEN_PAYOUT_SLOPE := 0.25
 
 const CATALOGUE := {
-	"load_dividend": {"name": "Load Dividend", "verb": "Make burdens pay", "text": "Burden hit bonus; %d%% cap" % roundi(BURDEN_PAYOUT_CAP * 100.0),
+	"load_dividend": {"touches": "fire", "name": "Load Dividend", "verb": "Make burdens pay", "text": "Burden hit bonus; %d%% cap" % roundi(BURDEN_PAYOUT_CAP * 100.0),
 		"rarity": "rare", "tier": 2, "family": "weapon", "tags": ["mass"], "icon": "damage",
 		"trigger": "on_hit", "stack": "hyperbolic", "cap": BURDEN_PAYOUT_CAP,
 		"effect": {"do": "burden_payout", "per": BURDEN_PAYOUT_SLOPE}},
