@@ -3,9 +3,10 @@ extends Node3D
 const Augments := preload("res://src/movement/augments.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
-const LIFE := 6.0
-const CAP := 11
-const SENTRY_SECONDS := 4.0
+const Devices := preload("res://src/core/devices.gd")
+const LIFE := Devices.ROWS[Devices.SABLE_STAKE]["lifetime"]
+const CAP := Devices.SABLE_STAKE_CAP
+const SENTRY_SECONDS := Devices.ROWS[Devices.SABLE_STAKE]["sentry_seconds"]
 const SENTRY_REACH := 30.0
 
 class Stake:
@@ -13,6 +14,7 @@ class Stake:
 	var left := LIFE
 	var armed := false
 	var serial := 0
+	var device_id := 0
 
 	func anchor_point(_hit: Vector3, _from := Vector3.ZERO) -> Vector3:
 		return global_position
@@ -60,11 +62,8 @@ func setup(ctx_ref, combat_ref, ultimate_ref) -> void:
 
 
 func fold() -> void:
-	for stake in nodes:
-		if is_instance_valid(stake):
-			stake.collision_layer = 0
-			stake.queue_free()
-	nodes.clear()
+	for stake in nodes.duplicate():
+		_remove(stake)
 	_sentry_left = 0.0
 	_sentry_clock = 0.0
 
@@ -78,11 +77,14 @@ func begin() -> void:
 
 
 func plant(at: Vector3) -> Stake:
-	while nodes.size() >= CAP:
-		var old: Stake = nodes.pop_front()
-		old.collision_layer = 0
-		old.queue_free()
+	var placed: Dictionary = combat.devices.deploy(Devices.SABLE_STAKE, at)
+	for id in placed["evicted"]:
+		recall(int(id))
+	if int(placed["id"]) == 0:
+		return null
 	var stake := Stake.new()
+	stake.device_id = int(placed["id"])
+	stake.tree_exiting.connect(func(): _forget(stake))
 	_counter += 1
 	stake.serial = _counter
 	stake.name = "Stake%d" % _counter
@@ -121,6 +123,24 @@ func plant(at: Vector3) -> Stake:
 	planted += 1
 	ultimate._record["stakes"] = planted
 	return stake
+
+
+func _forget(stake: Stake) -> void:
+	combat.devices.remove(stake.device_id)
+	nodes.erase(stake)
+
+
+func _remove(stake: Stake) -> void:
+	_forget(stake)
+	stake.collision_layer = 0
+	stake.queue_free()
+
+
+func recall(device_id: int) -> void:
+	for stake in nodes:
+		if stake.device_id == device_id:
+			_remove(stake)
+			return
 
 
 # Flight stakes start their six-second anchor life together at landing; a bail arms
@@ -186,9 +206,7 @@ func step(delta: float) -> void:
 		stake.left -= delta
 		stake.scale = Vector3.ONE * (0.85 + 0.15 * clampf(stake.left / LIFE, 0.0, 1.0))
 		if stake.left <= 0.0:
-			stake.collision_layer = 0
-			stake.queue_free()
-			nodes.remove_at(i)
+			_remove(stake)
 	if _sentry_left <= 0.0:
 		return
 	_sentry_clock += minf(delta, _sentry_left)
