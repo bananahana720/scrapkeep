@@ -606,6 +606,8 @@ func _subtract_shadow(cell: Dictionary, shadow: Array, hull_boundary := false) -
 			lit.append(outside)
 		remaining = _clip_cell(remaining, {"at": plane["at"], "normal": plane["normal"], "terrain": true, "solid": solid})
 		if (remaining["faces"] as Array).is_empty():
+			if not hull_boundary:
+				return [cell]
 			break
 	return lit
 
