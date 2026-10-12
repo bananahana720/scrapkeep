@@ -223,11 +223,12 @@ func _recovery(kind: String) -> Dictionary:
 	var positions := {}
 	var drift := 0.0
 	var warned_inside := false
+	var ball_hold := _ball_at
 	var out := {"skip": "no recover in %d frames" % FRAME_LIMIT}
 	for f in FRAME_LIMIT:
 		await physics_frame
 		if f % 60 == 59:
-			_game.player.reset_to(_ball_at)
+			_game.player.reset_to(ball_hold)
 		if not is_instance_valid(enemy):
 			out = {"skip": "unit gone"}
 			break
@@ -237,6 +238,9 @@ func _recovery(kind: String) -> Dictionary:
 					ended = Engine.get_physics_frames()
 				diving = swarm.state == Swarm.State.DIVING
 			for p in _phases:
+				if enemy is Chaser and p[1] == "strike":
+					ball_hold = _ball_at + Vector3(0.0, 0.0, 8.0)
+					_game.player.reset_to(ball_hold)
 				if swarm == null and p[1] == "recover":
 					ended = int(p[0])
 			if ended >= 0:
