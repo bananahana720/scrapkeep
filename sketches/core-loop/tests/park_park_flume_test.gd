@@ -2,7 +2,7 @@ extends SceneTree
 
 # Stage 2, park_flume (design-v3/park/stages/2-park_flume.md, K-UNITS KD2): the stage's own pins.
 #
-# Pinned on the committed file (greybox pass, 2026-10-11; fix round 2026-10-11: the pour-channel pin):
+# Pinned on the committed file (greybox continuation, 2026-10-12; includes dock level and clearance):
 #   freshness  the bake (tools/park_bake.gd) and the graph (tools/park_graph.gd) of
 #              src/world/park/park_flume.json are fresh: the hashes in bake.json and graph.json
 #              match the park file, the tools and the outputs.
@@ -15,6 +15,9 @@ extends SceneTree
 #   landmark   penstock_tower, beacon [230, 480]; the Warden row is the reactor kind on the flume
 #              mounting with harpoon_anchor true (reactor.md section 3); the pour channel's deck
 #              top is the anchor's height (the relic clamps onto the channel, reactor.md 3.2).
+#   dock       a cradle within 3 m of the gate ground height and a deck clear at 0 or 18 m lift.
+#              --plant-dock inserts a blocking collider before that check, making it fail.
+#              bay.gd's legacy map limit is a separate shared-code blocker, printed below.
 #   lines      every named waypoint of tools/park_lines/park_flume.json resolves on the park
 #              file (drop_in, landmark, a waymark, a park row or an activity), every line ends at
 #              the landmark, and the six pilots and the floor line are present.
@@ -27,6 +30,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
+const Terrain := preload("res://src/world/terrain.gd")
+const Bay := preload("res://src/world/bay.gd")
 
 const MAP := "park_flume"
 const PARK_PATH := "res://src/world/park/park_flume.json"
@@ -132,7 +137,77 @@ func _run() -> void:
 	var planted_rules := pocket_rule_failures(rows)
 	print("[planted rules] %s" % "; ".join(planted_rules))
 	t.check("planted pocket rows break the 2.12 rules", planted_rules.size() >= 3, "%d: %s" % [planted_rules.size(), "; ".join(planted_rules)])
+	await dock_site_pins()
 	quit(t.verdict())
+
+
+func dock_site_pins() -> void:
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var camera := Camera3D.new()
+	holder.add_child(camera)
+	camera.make_current()
+	var terrain = Terrain.new({"DEFS": [{"stage": 1, "world": 1, "map": MAP}]})
+	terrain.build(holder)
+	terrain.use(1)
+	var bay := Bay.new()
+	holder.add_child(bay)
+	bay.setup(24.0, 14.0)
+	await physics_frame
+	await physics_frame
+	var slots: Array = terrain.map().gate_slots
+	var centre := Vector3.ZERO
+	for slot in slots:
+		var at: Vector2 = slot["at"]
+		centre += Vector3(at.x, terrain.height(at.x, at.y), at.y)
+	centre /= slots.size()
+	var facing: Vector3 = slots[0]["facing"]
+	var side := facing.cross(Vector3.UP).normalized()
+	var half := 0.0
+	for slot in slots:
+		var at: Vector2 = slot["at"]
+		half = maxf(half, absf((Vector3(at.x, 0, at.y) - centre).dot(side)) + 4.0)
+	var mid := centre - facing * (Bay.BACK + Bay.DECK_U)
+	var top := -INF
+	var footprint_on_park := true
+	for du in [-Bay.DECK_U, 0.0, Bay.DECK_U]:
+		for dv in [-Bay.DECK_V, 0.0, Bay.DECK_V]:
+			var p: Vector3 = mid + facing * du + side * dv
+			footprint_on_park = footprint_on_park and absf(p.x) < 800.0 and absf(p.z) < 800.0
+			top = maxf(top, terrain.height(p.x, p.z))
+	t.check("dock deck footprint is fully on the 1600 m park", footprint_on_park)
+	var level := false
+	for s in [1.0, -1.0]:
+		var cradle: Vector3 = centre + side * s * (half + Bay.CRADLE_SIDE)
+		var delta: float = absf(terrain.height(cradle.x, cradle.z) - terrain.height(centre.x, centre.z))
+		level = level or delta <= 3.0
+		print("[dock site] cradle %s height delta %.3f legacy on_map %s" % [cradle, delta, Bay._on_map(cradle)])
+	t.check("dock cradle is within 3 m of the gate ground height", level)
+	var deck := Vector3(mid.x, top + Bay.LIFT, mid.z)
+	bay.facing = facing
+	var space := holder.get_world_3d().direct_space_state
+	var plant := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(Bay.DECK_U * 2.0, 50.0, Bay.DECK_V * 2.0)
+	shape.shape = box
+	plant.add_child(shape)
+	if "--plant-dock" in OS.get_cmdline_user_args():
+		holder.add_child(plant)
+		plant.global_position = deck + Vector3.UP * 9.0
+		await physics_frame
+		await physics_frame
+	var clear := not bay._blocked(space, deck) or not bay._blocked(space, deck + Vector3.UP * 18.0)
+	t.check("dock deck is clear at an allowed lift", clear, "deck %s; bay.gd collision query at 0 or 18 m" % deck)
+	if plant.get_parent() == null:
+		holder.add_child(plant)
+		plant.global_position = deck + Vector3.UP * 9.0
+		await physics_frame
+		await physics_frame
+	var planted_clear := not bay._blocked(space, deck) or not bay._blocked(space, deck + Vector3.UP * 18.0)
+	print("[planted dock] level-and-clearance pin %s" % ("GREEN" if planted_clear else "RED"))
+	t.check("a planted collider blocks both allowed dock lifts", not planted_clear)
+	holder.free()
 
 
 # PARK.md 2.12 on graph.json's pocket rows (distances by path on the stage graph, rulings R1 and R2):

@@ -11,12 +11,12 @@ Measured on commit b2da61d (park file, bake and graph; the lines file unchanged 
 | reached Warden (every seed) | 8 / - pass | 8 / - pass | 8 / - pass | 8 / - pass | 8 / - pass | 8 / - pass | 8 / - pass |
 | time to Warden s (median 60-120, none over 150) | 61.925 / 63.33 pass | 104.595 / 105.18 pass | 90.26 / 91.27 pass | 85.905 / 89.33 pass | 98.49 / 100.94 pass | 87.345 / 89.7 pass | 100.65 / 104.5 pass |
 | segment s (each median 12-45) | [24.86, 15.96, 20.81] / 24.855 pass | [27.05, 43.57, 34.2] / 43.57 pass | [25.37, 39.13, 25.59] / 39.125 pass | [24.28, 32.76, 29.02] / 32.76 pass | [26.63, 33.29, 38.56] / 38.56 pass | [24.84, 39.06, 23.44] / 39.065 pass | [27.42, 36.5, 36.28] / 36.75 pass |
-| flow share (median >= 0.70, none under 0.60) | 0.9177 / 0.895 pass | 0.7256 / 0.6902 pass | 0.6382 / 0.6024 MISS | 0.8782 / 0.843 pass | 0.6088 / 0.5746 MISS | 0.9296 / 0.9231 pass | 0.5976 / 0.5695 MISS |
+| flow share (median >= 0.70, none under 0.60) | 0.9177 / 0.895 pass | 0.7256 / 0.6902 pass | 0.6382 / 0.6024 MISS | 0.8782 / 0.843 pass | 0.6088 / 0.5746 MISS | 0.9296 / 0.9231 pass | 0.5976 / 0.5695 reported |
 | airborne share (0.12-0.45) | 0.2309 / - pass | 0.13 / - pass | 0.1638 / - pass | 0.1639 / - pass | 0.1519 / - pass | 0.2609 / - pass | 0.1225 / - pass |
 | dead stops (0 on every seed) | 0 / 1 MISS | 2 / 2 MISS | 0 / 1 MISS | 2.5 / 7 MISS | 3 / 5 MISS | 1 / 2 MISS | 1.5 / 2 MISS |
 | peak m/s (>= 26.6 blazing on every seed) | 54.595 / 53.79 pass | 35.025 / 32.56 pass | 30.705 / 28.85 pass | 32.38 / 31.7 pass | 35.83 / 33.17 pass | 33.93 / 31.59 pass | 35.365 / 34.3 pass |
 | tier-3 s (median >= 3) | 42.975 / - pass | 8.085 / - pass | 7.155 / - pass | 9 / - pass | 8.495 / - pass | 12.345 / - pass | 8.305 / - pass |
-| quiet max s (<= 20) | 10.325 / 13.22 pass | 14.195 / 15.7 pass | 16.505 / 17.17 pass | 13.8 / 13.91 pass | 17.925 / 20.59 pass | 18.475 / 19.6 pass | 16.4 / 17.24 pass |
+| quiet max s (<= 20) | 10.325 / 13.22 pass | 14.195 / 15.7 pass | 16.505 / 17.17 pass | 13.8 / 13.91 pass | 17.925 / 20.59 MISS | 18.475 / 19.6 pass | 16.4 / 17.24 pass |
 | anchor gap m (<= 40) | 51.65 / 94.7 MISS | 25.65 / 34.7 pass | 61.25 / 68.5 MISS | 32 / 34.5 pass | 22.4 / 24.5 pass | 218.15 / 233.8 MISS | 31.4 / 33.7 pass |
 | distinct ride facts (>= 3) | 4 / 4 pass | 5 / 5 pass | 4 / 4 pass | 5 / 5 pass | 5 / 5 pass | 5 / 4 pass | 5 / 5 pass |
 | length ratio (1.3-2.0) | 1.47 / - pass | 1.44 / - pass | 1.34 / - pass | 1.375 / - pass | 1.35 / - pass | 1.44 / - pass | 1.355 / - pass |
@@ -58,3 +58,61 @@ Shared share (ticks of row line within 8 m of column line), seed 1:
 
 largest set of mutually distinct lines: 4 ['sable', 'rivet', 'tally', 'cannon']
 ```
+
+## Continuation baseline-alignment, 2026-10-12
+
+Source head `01afdeb0ebde5da40013d049de1728fa13132c9c`; evidence `/tmp/claude-1000/w13-sol/kd2-flume-r1/baseline-alignment`. Seeds per line: {"sable": 8, "rivet": 8, "kest": 8, "tarn": 1, "tally": 1, "cannon": 1, "floor": 1}. Mixed counts or fewer than eight seeds are diagnostic and do not qualify acceptance. Per-seed limits use the worst column, including quiet time and anchor gap. Floor flow is reported.
+
+| Band | sable | rivet | kest | tarn | tally | cannon | floor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reached Warden, 8/8 | 8 / 8 seeds pass | 8 / 8 seeds pass | 8 / 8 seeds pass | 1 / 1 seeds MISS | 1 / 1 seeds MISS | 1 / 1 seeds MISS | 1 / 1 seeds MISS |
+| Time s, median 60–120; worst ≤150 | 62.07 / 64.05 pass | 104.235 / 105.18 pass | 90.26 / 91.27 pass | 88.12 / 88.12 pass | 97.92 / 97.92 pass | 88.63 / 88.63 pass | 101 / 101 pass |
+| Segments s, medians 12–45 | [24.815, 15.745, 20.62] / 25.63 pass | [27.045, 43.57, 34.205] / 43.9 pass | [25.365, 39.125, 25.59] / 40.46 pass | [24.32, 34.6, 29.19] / 34.6 pass | [25.94, 33.44, 38.53] / 38.53 pass | [26.09, 39.09, 23.43] / 39.09 pass | [27.43, 37, 36.56] / 37 pass |
+| Flow, median ≥.70; worst ≥.60; floor reported | 0.9178 / 0.8935 pass | 0.7256 / 0.6937 pass | 0.6381 / 0.6024 MISS | 0.8774 / 0.8774 pass | 0.6128 / 0.6128 MISS | 0.8946 / 0.8946 pass | 0.5914 / 0.5914 reported |
+| Airborne, median .12–.45 | 0.2348 / [0.2253, 0.2631] pass | 0.1285 / [0.122, 0.141] pass | 0.1638 / [0.1564, 0.1685] pass | 0.1651 / [0.1651, 0.1651] pass | 0.1463 / [0.1463, 0.1463] pass | 0.1913 / [0.1913, 0.1913] pass | 0.1217 / [0.1217, 0.1217] pass |
+| Dead stops, every seed 0 | 0 / 1 MISS | 2 / 2 MISS | 0 / 1 MISS | 4 / 4 MISS | 3 / 3 MISS | 2 / 2 MISS | 1 / 1 MISS |
+| Peak m/s / tier-3 s, worst peak ≥26.6; median time ≥3 | [54.835, 43.52] / [51.87, 40.46] pass | [35.025, 8.055] / [32.56, 7.69] pass | [30.705, 7.155] / [28.85, 4.79] pass | [32.41, 8.97] / [32.41, 8.97] pass | [35.77, 8.1] / [35.77, 8.1] pass | [33.08, 12.03] / [33.08, 12.03] pass | [35.21, 7.86] / [35.21, 7.86] pass |
+| Quiet s, worst ≤20 | 10.285 / 13.2 pass | 14.195 / 15.7 pass | 16.505 / 17.17 pass | 13.81 / 13.81 pass | 17.16 / 17.16 pass | 20.14 / 20.14 MISS | 17.11 / 17.11 pass |
+| Anchor gap m, worst ≤40 | 49.55 / 81.3 MISS | 25.75 / 34.7 pass | 61.25 / 68.5 MISS | 34.5 / 34.5 pass | 24.5 / 24.5 pass | 174.8 / 174.8 MISS | 29.6 / 29.6 pass |
+| Ride facts, at least 3 | 4 / 4 pass | 5 / 5 pass | 4 / 4 pass | 5 / 5 pass | 5 / 5 pass | 5 / 5 pass | 5 / 5 pass |
+| Length ratio, median 1.3–2.0 | 1.475 / [1.45, 1.5] pass | 1.44 / [1.44, 1.45] pass | 1.34 / [1.33, 1.35] pass | 1.38 / [1.38, 1.38] pass | 1.35 / [1.35, 1.35] pass | 1.42 / [1.42, 1.42] pass | 1.36 / [1.36, 1.36] pass |
+| Floor, ≤2× Rivet median; 0 stops | not applicable | not applicable | not applicable | not applicable | not applicable | not applicable | 101 / max 101; cap 208.47 MISS |
+| Distinct lines, at least 3 | 4 / stage pass | 4 / stage pass | 4 / stage pass | 4 / stage pass | 4 / stage pass | 4 / stage pass | 4 / stage pass |
+
+Distinct seed-1 lines: 4 sable, rivet, tally, cannon.
+
+| Shared fraction | sable | rivet | kest | tarn | tally | cannon |
+| --- | --- | --- | --- | --- | --- | --- |
+| sable | 1.000 | 0.252 | 0.081 | 0.304 | 0.207 | 0.087 |
+| rivet | 0.276 | 1.000 | 0.647 | 0.578 | 0.364 | 0.413 |
+| kest | 0.064 | 0.706 | 1.000 | 0.309 | 0.309 | 0.444 |
+| tarn | 0.359 | 0.582 | 0.301 | 1.000 | 0.632 | 0.326 |
+| tally | 0.272 | 0.392 | 0.294 | 0.652 | 1.000 | 0.318 |
+| cannon | 0.075 | 0.468 | 0.445 | 0.349 | 0.339 | 1.000 |
+
+Dead-stop sites by seed:
+
+- sable seed 2: [{"at": [-156.1, -425.7], "time": 15.28}]
+- rivet seed 1: [{"at": [122.6, 1.2], "time": 54.17}]
+- rivet seed 2: [{"at": [-467.5, -460.1], "time": 14.01}, {"at": [120.6, 1.3], "time": 56.64}]
+- rivet seed 3: [{"at": [123.9, 1.3], "time": 55.9}, {"at": [123.0, 0.2], "time": 56.45}]
+- rivet seed 4: [{"at": [120.6, 1.3], "time": 55.91}, {"at": [118.8, 0.2], "time": 56.46}]
+- rivet seed 5: [{"at": [122.5, 1.3], "time": 55.98}]
+- rivet seed 6: [{"at": [122.2, 1.3], "time": 56.12}]
+- rivet seed 7: [{"at": [121.6, 1.3], "time": 55.64}, {"at": [120.5, 0.2], "time": 56.19}]
+- rivet seed 8: [{"at": [121.5, 1.3], "time": 55.31}, {"at": [120.2, 0.4], "time": 55.83}]
+- kest seed 5: [{"at": [89.9, 32.6], "time": 53.16}]
+- tarn seed 1: [{"at": [-160.2, 143.4], "time": 46.42}, {"at": [-160.2, 143.4], "time": 47.1}, {"at": [-160.5, 145.0], "time": 50.22}, {"at": [-163.0, 144.9], "time": 51.11}]
+- tally seed 1: [{"at": [-44.4, 414.1], "time": 78.59}, {"at": [-42.4, 415.5], "time": 79.24}, {"at": [39.4, 408.1], "time": 85.99}]
+- cannon seed 1: [{"at": [18.7, 221.8], "time": 70.05}, {"at": [19.0, 221.1], "time": 70.16}]
+- floor seed 1: [{"at": [-160.6, 146.8], "time": 55.09}]
+
+Progress from the fresh stage graph, reported:
+
+- sable: median 22.035 m/s, worst 21.24 m/s.
+- rivet: median 13.2 m/s, worst 13.07 m/s.
+- kest: median 15.265 m/s, worst 15.13 m/s.
+- tarn: median 15.6 m/s, worst 15.6 m/s.
+- tally: median 14.03 m/s, worst 14.03 m/s.
+- cannon: median 15.12 m/s, worst 15.12 m/s.
+- floor: median 13.61 m/s, worst 13.61 m/s.
