@@ -47,7 +47,7 @@ python /home/andrew/scratch/w13/sol/kd6-crown-r3/win_queued.py
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | runner_gunner | 115.86 | 466.24 | 350.38 | {"ram": 350.0, "slam": 700.0, "stomp": 350.0} | stalled; gates |
 | 2 | demolitions_caster | 116.25 | 431.56 | 315.31 | {"ram": 525.0, "slam": 700.0, "stomp": 175.0} | stalled; gates |
-| 3 | pending | pending | pending | pending | pending | pending; FIX |
+| 3 | tarn | 160.8 | pending | pending | {"ram": 350.0, "slam": 175.0, "stomp": 175.0} | stalled; beacon |
 
 ## Geometry checks
 
