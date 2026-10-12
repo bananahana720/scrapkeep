@@ -59,7 +59,7 @@ const ROWS := {
 	"boosted": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "boost_whoosh", "hud": "", "objective": "", "priority": 1},
 	"dashed": {"group": "movement", "color": Palette.AMBER, "shape": "arrow", "sound": "dash_whoosh", "hud": "", "objective": "", "priority": 1},
 	"landed": {"group": "movement", "color": Palette.SANDSTONE, "shape": "ring", "sound": "land_thud", "hud": "", "objective": "", "priority": 1},
-	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "slam_boom", "hud": "", "objective": "", "priority": 1},
+	"slammed": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "smash_crack", "hud": "", "objective": "", "priority": 1},
 	"grapple_fired": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "diamond", "sound": "grapple_clink", "hud": "", "objective": "", "priority": 1},
 	"grapple_released": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "grapple_release", "hud": "", "objective": "", "priority": 1},
 	"mounted": {"group": "movement", "color": Palette.AMBER, "shape": "square", "sound": "pylon_plant", "hud": "", "objective": "", "priority": 1},
@@ -92,14 +92,14 @@ const ROWS := {
 	# motif_* cues resolve through the class row's motif id. Sable's two discharges
 	# differ by ear: the gauge release is gauge_released (the motif resolved), the free
 	# plant discharge rides mounted (the plant clack and the motif's first notes).
-	"enemy_rebounded": {"group": "combat", "color": Palette.SAND, "shape": "chevron", "sound": "clank", "sound_next": "rebound_spring_snap", "hud": "", "objective": "", "priority": 1},
+	"enemy_rebounded": {"group": "combat", "color": Palette.SAND, "shape": "chevron", "sound": "shell_spring", "sound_next": "rebound_spring_snap", "hud": "", "objective": "", "priority": 1},
 	"enemy_pinned": {"group": "combat", "color": Palette.COPPER, "shape": "burst", "sound": "hit_thwack", "sound_next": "pin_double_thwack", "hud": "", "objective": "", "priority": 1},
 	"vault_kicked": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "pylon_eject", "sound_next": "sable_octave_leap", "hud": "", "objective": "", "priority": 1},
 	"gauge_charging": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "beacon_hum", "sound_next": "motif_accumulate", "hud": "", "objective": "", "priority": 1},
 	"gauge_released": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "sound_next": "motif_release", "hud": "", "objective": "", "priority": 1},
 	"gauge_cancelled": {"group": "combat", "color": Palette.SAND, "shape": "cross", "sound": "ui_tick", "sound_next": "gauge_dry_click", "hud": "", "objective": "", "priority": 1},
 	"sprint_started": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "rivet_hat_roll", "hud": "", "objective": "", "priority": 1},
-	"cc_ignored": {"group": "combat", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "clank", "sound_next": "rivet_cymbal_choke", "hud": "", "objective": "", "priority": 1},
+	"cc_ignored": {"group": "combat", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "tenacity_choke", "sound_next": "rivet_cymbal_choke", "hud": "", "objective": "", "priority": 1},
 	"cloak_started": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "stage_fade", "sound_next": "kest_muffled_thump", "hud": "", "objective": "", "priority": 1},
 	"cloak_broken": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "shatter", "sound_next": "kest_snare_crack", "hud": "", "objective": "", "priority": 1},
 	"sticky_detonated": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "slam_boom", "sound_next": "kest_kick_thump", "hud": "", "objective": "", "priority": 1},
@@ -167,7 +167,7 @@ const ROWS := {
 	"drop_landed": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"missed_drop": {"group": "movement", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"evolution_fired": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
-	"posture_changed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"posture_changed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "drop_landing", "hud": "", "objective": "", "priority": 0},
 	# The skill bar and the ultimate (design-v3/SKILL-BAR.md section 7). `sound` is a baked id
 	# standing in; `sound_next` names the new cue the ultimate unit bakes. Live mint is "your
 	# verb works now" (LEGIBILITY.md:23); a pick and a cast are neutral bone, since the bar
@@ -902,6 +902,8 @@ static func activity_color(id: String) -> Color:
 # class row's ready pulse (<motif>_ready, resolved in rows.gd), so the ready swell plays
 # the class's tune (SOUND-STORY section 7, W1).
 const UI_ROWS := {
+	# A presentation sub-fact of posture_changed, not another bus signal.
+	"posture_break": {"group": "combat", "color": Palette.SAND, "shape": "burst", "sound": "drop_landing", "hud": "", "objective": "", "priority": 1},
 	"ability_ready": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "class_motif", "hud": "", "objective": "", "priority": 1},
 	"ability_cooling": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "ring", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"ability_active": {"group": "combat", "color": Palette.SAND, "shape": "star", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
