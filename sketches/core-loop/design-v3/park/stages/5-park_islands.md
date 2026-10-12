@@ -186,7 +186,7 @@ Row notes:
 
 **Shipped (KD5 greybox, 2026-10-11): how the greybox file differs from this table.** The shipped file is generated, not hand-edited, and the appendix holds it whole. Its ground is a stepped fall line, not the mesa-and-net silhouette above: park-wide `ground` shelves set each band's floor, 1,120 m `drop` ramps with sheer north edges make the steps (the Lookout steps, the Run steps, the Fin fan steps, the landing step, the Anvil steps and the carve steps), and spire-stamped `anchor_field` rows (the cairns and the hoodoo posts, about 280 of them) stand 24 m or more off every planned line and 14 m or more off every measured ball trace as the harpoon anchors. The named rows of this table keep their ids, routes, ride facts and fragments. KB9 places every row at runtime, so two shapes changed in this unit: a greybox row with no stamp stood as a flat box of its size on the ground under its centre, proud of the steps (a 2 m slab on `east_ribs`, a 10 m block for `ore_adit`), so those marker rows now carry a 1 cm `plateau` stamp, which replaces the box and keeps the ride sensor; and the step lips (`*_step_lip_*`, 1,120 m `kicker` rows on the steps' own sheer edges) became markers the same way, because their wedges met a fast ball face-on (Rivet fell from 19.8 to 7 m/s on `carve_step_lip_7`). `lookout_lip` and `fin_nose_kicker` keep their wedges. The mesa silhouette, the net deck at 60 m and the island read are the dressed pass's job (section 16).
 
-**Fix round (2026-10-12).** Every 1,120 m sheet row (shelves, drops, lips, the stamped bands) now runs the full 1,600 m square at x 0, so the margins outside the play rect are stage ground instead of a 115 to 270 m drop to y 0; PARK.md section 8's density and sight tests read the whole square (worst open node was 404.5 m from a row, sight share 0.751). `isle_apron` is a `terrace` row (one 6 m bench cut, no ride sensor) and the arena rows changed as section 2 says. `tram_head` is the mesa-rim station ledge of the KD5 note: a `ledge` with a 3 m `plateau` stamp, 30 m square at [118, -398], one climb step over the Saddle (the 22 m spire it was had no path from the Saddle, so route `east` broke). Removed: `isle_post_1` to `_4`, `_7`, `_8` (spires inside the flat beacon disc) and `hoodoo_post_283`, `_284` (Sable met them leaving the tramway). Added: `isle_post_9`, `_10` (16 m spires on the carve's last shelf at [-100, 398] and [100, 398]), `hoodoo_post_287` at [235, -72], `keel_rib_w`, `keel_rib_e`; `isle_post_5`, `_6` stand 30 m. The park file has 404 rows.
+**Fix round (2026-10-12).** Every 1,120 m sheet row (shelves, drops, lips, the stamped bands) now runs the full 1,600 m square at x 0, so the margins outside the play rect are stage ground instead of a 115 to 270 m drop to y 0; PARK.md section 8's density and sight tests read the whole square (worst open node was 404.5 m from a row, sight share 0.751). `isle_apron` is a `terrace` row (one 6 m bench cut, no ride sensor) and the arena rows changed as section 2 says. `tram_head` is the mesa-rim station ledge of the KD5 note: a `ledge` with a 3 m `plateau` stamp, 30 m square at [118, -398], one climb step over the Saddle (the 22 m spire it was had no path from the Saddle, so route `east` broke). Removed: `isle_post_1` to `_4`, `_7`, `_8` (spires inside the flat beacon disc) and `hoodoo_post_283`, `_284` (Sable met them leaving the tramway). Added: `isle_post_9`, `_10` (16 m spires on the carve's last shelf at [-100, 398] and [100, 398]), `hoodoo_post_287` at [235, -72], `keel_rib_w`, `keel_rib_e`; `isle_post_5`, `_6` stand 30 m. The park file has 405 rows.
 
 ## 5. Routes, waymarks and activities
 
@@ -194,10 +194,10 @@ Row notes:
 
 | Route | From | To | Via |
 | --- | --- | --- | --- |
-| `main` | drop_in | landmark | lookout_mesa, lookout_lip, slickrock_run, saddle, twin_fins, fin_chute, fin_nose_kicker, net_deck, anvil_rock, net_post_run, net_bowl |
+| `main` | drop_in | landmark | lookout_mesa, lookout_lip, slickrock_run, run_turn_wash, saddle, twin_fins, fin_chute, fin_nose_kicker, net_deck, anvil_rock, net_post_run, net_bowl |
 | `west` | drop_in | landmark | lookout_mesa, lookout_lip, lookout_stair, saddle, west_shelf, hoodoo_garden, mooring_mesa, mooring_pad_ramp, net_deck, anvil_rock, west_wing, cloud_wash_west, knuckle_w, net_bowl |
 | `east` | drop_in | landmark | lookout_mesa, lookout_lip, east_ribs, saddle, tram_head, ore_bench, ore_adit, ore_chute, anvil_rock, east_wing, cloud_wash_east, knuckle_e, net_bowl |
-| `slab` | drop_in | landmark | lookout_mesa, lookout_lip, slickrock_run, saddle, twin_fins, net_deck, anvil_rock, net_bowl |
+| `slab` | drop_in | landmark | lookout_mesa, lookout_lip, slickrock_run, run_turn_wash, saddle, twin_fins, net_deck, anvil_rock, net_bowl |
 | `envelope` | drop_in | landmark | lookout_mesa, lookout_lip, lookout_stair, saddle, west_shelf, mooring_mesa, net_deck, anvil_rock, net_bowl |
 | `fan_chute` | saddle | anvil_rock | saddle, twin_fins, fin_chute, fin_nose_kicker, net_deck, anvil_rock |
 | `fan_west` | saddle | anvil_rock | saddle, west_shelf, hoodoo_garden, mooring_mesa, mooring_pad_ramp, net_deck, anvil_rock |
@@ -485,19 +485,21 @@ Graph ruling: beacon_ok True, spawn.run True, spawn.ok True, farther_share 0.135
 
 | Pocket | Role | Graph door [x,z] | d_spawn | d_beacon | door_m | detour_m | sight_ok | Clear ring | Nearest door | Pay |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| camp_anvil | online | [0, 104] | 856 | 451 | 0 | 0 | True | [] | -1 | common / rivet_plating |
-| cache_east_wing | reward | [208, 240] | 1073 | 389 | 208 | 208 | True | [] | 318 | rare |
+| camp_anvil | online | [0, 104] | 857 | 451 | 0 | 0 | True | [] | -1 | common / rivet_plating |
+| cache_east_wing | reward | [208, 240] | 1074 | 389 | 208 | 208 | True | [] | 318 | rare |
 | bounty_ore_bench | risk | [184, -56] | 757 | 685 | 184 | 184 | True | [] | 318 | common, rare |
 | saddle_seam | hidden | [232, -416] | 408 | 1073 | 235 | 240 | True | [] | 390 |  |
 
-Spawn to beacon 1305 m by path. Reward ratio 0.580 against the reported 1.5 target; full_visit_ratio 1.313 against 3.0. The reward-ratio miss is reported, not gated.
+Spawn to beacon 1306 m by path. Reward ratio 0.580 against the reported 1.5 target; full_visit_ratio 1.313 against 3.0. The reward-ratio miss is reported, not gated.
 
 The cache moved off Kest's east-wing path to [210,236]. Its nearby hoodoo post moved
 from [204,241] to [280,241] to clear the door's ray. The Anvil's third artificial step
 was reduced from 2.5 m to 0.01 m after Sable's trace showed a ground contact halving
 speed during a return turn across z84. The main Anvil slope and named waymark remain.
-The Run's third artificial step was also reduced from 4 m to 0.01 m for Kest's
-turn. Three hoodoo posts beside the Anvil-to-east-tether flight were raised from
+The Run's third step keeps its original 4 m height after a global reduction
+gave Sable an excessive anchor gap. A local 60 by 40 m wash at [-60,-516] is
+the second Run rework, on the main and slab routes, confined to Kest's turn.
+Three hoodoo posts beside the Anvil-to-east-tether flight were raised from
 10 m to 30 m after the diagnostic sampler located 52 m and 69 m anchor gaps above
 the short posts. These are geometry reworks; the acceptance bands are unchanged.
 
@@ -521,10 +523,10 @@ triangles, stills or human acceptance is claimed for this greybox.
  "landmark": {"id": "hanging_isle", "kind": "sky_island", "at": [0, 520], "size": [180, 318, 180], "yaw_deg": 0, "recipe": "landmark_sky_island", "budget": "hero_landmark", "sight_top": [0, 400, 520], "sight_share": 0.85, "beacon": [0, 530], "reach_m": 120, "warden": {"mounting": "under_island", "anchor": [0, 80, 520], "path": [], "hardpoints": 3, "family": "mind", "harpoon_anchor": true}, "bay_dock": {"at": [0, 650], "facing_deg": 0}, "gate_slots": [{"at": [-20, 720], "facing_deg": 0}, {"at": [0, 720], "facing_deg": 0}, {"at": [20, 720], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "ancient_keel_grip"},
  "waymarks": ["drop_in", "saddle", "anvil_rock", "landmark"],
  "routes": [
-  {"id": "main", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_lip", "slickrock_run", "saddle", "twin_fins", "fin_chute", "fin_nose_kicker", "net_deck", "anvil_rock", "net_post_run", "net_bowl"]},
+  {"id": "main", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_lip", "slickrock_run", "run_turn_wash", "saddle", "twin_fins", "fin_chute", "fin_nose_kicker", "net_deck", "anvil_rock", "net_post_run", "net_bowl"]},
   {"id": "west", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_lip", "lookout_stair", "saddle", "west_shelf", "hoodoo_garden", "mooring_mesa", "mooring_pad_ramp", "net_deck", "anvil_rock", "west_wing", "cloud_wash_west", "knuckle_w", "net_bowl"]},
   {"id": "east", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_lip", "east_ribs", "saddle", "tram_head", "ore_bench", "ore_adit", "ore_chute", "anvil_rock", "east_wing", "cloud_wash_east", "knuckle_e", "net_bowl"]},
-  {"id": "slab", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_lip", "slickrock_run", "saddle", "twin_fins", "net_deck", "anvil_rock", "net_bowl"]},
+  {"id": "slab", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_lip", "slickrock_run", "run_turn_wash", "saddle", "twin_fins", "net_deck", "anvil_rock", "net_bowl"]},
   {"id": "envelope", "from": "drop_in", "to": "landmark", "via": ["lookout_mesa", "lookout_lip", "lookout_stair", "saddle", "west_shelf", "mooring_mesa", "net_deck", "anvil_rock", "net_bowl"]},
   {"id": "fan_chute", "from": "saddle", "to": "anvil_rock", "via": ["saddle", "twin_fins", "fin_chute", "fin_nose_kicker", "net_deck", "anvil_rock"]},
   {"id": "fan_west", "from": "saddle", "to": "anvil_rock", "via": ["saddle", "west_shelf", "hoodoo_garden", "mooring_mesa", "mooring_pad_ramp", "net_deck", "anvil_rock"]},
@@ -570,7 +572,8 @@ triangles, stills or human acceptance is claimed for this greybox.
   {"id": "run_step_lip_1", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -570.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_2", "element": "drop", "landform": "slickrock", "society": "none", "at": [0, -548.0], "y": null, "size": [32.0, 4, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_lip_2", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -538.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
-  {"id": "run_step_3", "element": "drop", "landform": "slickrock", "society": "none", "at": [0, -516.0], "y": null, "size": [32.0, 0.01, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "run_step_3", "element": "drop", "landform": "slickrock", "society": "none", "at": [0, -516.0], "y": null, "size": [32.0, 4, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
+  {"id": "run_turn_wash", "element": "flow_line", "landform": "slickrock", "society": "none", "at": [-60, -516], "y": null, "size": [60, 4, 40], "yaw_deg": 0, "verb": "pump", "ride_fact": "ride_chute", "home": "", "recipe": "greybox:flow_line", "stamp": "wash", "hole": false, "budget": "landform", "routes": ["main", "slab"], "fragment": ""},
   {"id": "run_step_lip_3", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -506.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_4", "element": "drop", "landform": "slickrock", "society": "none", "at": [0, -484.0], "y": null, "size": [32.0, 4, 1600], "yaw_deg": 180, "verb": "drop", "ride_fact": "ride_drop", "home": "", "recipe": "greybox:drop", "stamp": "ramp", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
   {"id": "run_step_lip_4", "element": "kicker", "landform": "slickrock", "society": "none", "at": [0, -474.0], "y": null, "size": [12, 0.01, 1600], "yaw_deg": 0, "verb": "launch", "ride_fact": "ride_hop", "home": "", "recipe": "greybox:kicker", "stamp": "plateau", "hole": false, "budget": "landform", "routes": [], "fragment": ""},
