@@ -1579,10 +1579,11 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	if _cast_phase == "await_smash":
 		_cast_phase = ""
 	if bank_shot and kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
-		if kit.line_state == Augments.LINE_SMASH:
+		var guarded: bool = kit.anchor_body.has_method("posture") and kit.anchor_body.has_method("staggered")
+		if kit.line_state == Augments.LINE_SMASH and (not guarded or kit.anchor_body.staggered()):
 			_cast(3)
 		elif _cast_phase == "":
-			# Reserve the line cast so _line_hands cannot bank before Ctrl is consumed.
+			# Keep the haul against a closed guard; bank off the paid open-core hit.
 			_cast_slot = 3
 			_cast_phase = "await_smash"
 	_harpoon_commit = false
