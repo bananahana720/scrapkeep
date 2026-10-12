@@ -101,6 +101,12 @@ func _stepped_facts(park: Dictionary) -> void:
 		return
 	var live := {}
 	var started := {}
+	var announced := {}
+	var landing_world := {}
+	var land_hooks := []
+	d.register_family("ancient", func(action, row, _ctx):
+		if action == "land":
+			land_hooks.append(row.id))
 	var bad := []
 	for i in 10000:
 		# A zero-duration arrival stays live until its family reports completion.
@@ -113,15 +119,26 @@ func _stepped_facts(park: Dictionary) -> void:
 			phases.append("broken")
 		# Route evidence isolates graph changes from the separate pilot corridor hold.
 		for f in d.call("advance", 0.1, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 4, "warden_phases": phases, "grounded": true, "pilot_lines": []}):
+			if f.kind == "announced":
+				announced[f.id] = true
+			if f.kind == "world" and f.get("phase") == "land":
+				landing_world[f.id] = true
 			_observe(f, park, live, started, bad)
 	for f in d.end_all():
 		_observe(f, park, live, started, bad)
 	var missing := []
+	# Coordinator ruling 2026-10-12: toe_vents_wake holds on real lines; stage fix owed by KD1.
+	var expected_holds := ["toe_vents_wake"] if park.map == "park_dam" else []
+	var held_ok := true
 	for row in park.event_rows:
+		if row.id in expected_holds:
+			held_ok = held_ok and announced.has(row.id) and not started.has(row.id) and not landing_world.has(row.id) and not land_hooks.has(row.id)
+			continue
 		if not started.has(row.id):
 			missing.append(row.id)
-	_check(park.map + " route after every event fact", bad.is_empty() and missing.is_empty() and not started.is_empty(),
-		"starts=%s missing=%s disconnected=%s" % [started.keys(), missing, bad])
+	_check(park.map + " expected authored corridor holds", held_ok, "expected=%s announced=%s landed=%s land_hooks=%s" % [expected_holds, announced.keys(), landing_world.keys(), land_hooks])
+	_check(park.map + " route after every event fact", bad.is_empty() and missing.is_empty() and not started.is_empty() and held_ok,
+		"starts=%s expected_holds=%s missing=%s disconnected=%s" % [started.keys(), expected_holds, missing, bad])
 
 
 func _observe(f: Dictionary, park: Dictionary, live: Dictionary, started: Dictionary, bad: Array) -> void:
