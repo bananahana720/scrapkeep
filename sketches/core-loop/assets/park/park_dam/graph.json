@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "ee4a5ea98de1153501f6edc50d6079133a1671fd374f0aab4b943c812088c9e7",
+  "bake_sha256": "7c1f4dc321baccaa9df1a9c999d4798a9c671eb4e1dc28de579ea358b505d1d2",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1316987,
-  "edges": 314129,
+  "bytes": 1316901,
+  "edges": 314261,
   "first_failed": "",
   "flags": {
     "deck": 0,
     "door_ok": 39988,
     "line": 294,
     "open": 40401,
-    "sight_ok": 8598,
+    "sight_ok": 8748,
     "under": 0
   },
   "full_visit_m": 2316,
   "full_visit_ratio": "1.716",
-  "graph_sha256": "4dd982f74ef2dbf955fd542663779bdf94059ce8a15566d9509b75e14c4b49ae",
+  "graph_sha256": "1ee96c7195a80cad5fafca1fcdf553a5c94ad1cf0c146339660fe166e588bbb8",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2371,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "5d8b7c84c4b612e28f7a25be2e7ceb31e2109dbdb796b5bbec7c6077b61f4867",
+  "park_sha256": "b59c45130895a76680e12f05eda341bfc3483ea47f2a12ce1b48ab17f7e343a1",
   "pockets": [
     {
       "clear_ring": [],
@@ -109,12 +109,12 @@
       "clear_ring": [],
       "d_landmark": 196,
       "d_spawn": 1392,
-      "detour_m": 268,
+      "detour_m": 259,
       "door_at": [
         -168,
         544
       ],
-      "door_m": 250,
+      "door_m": 241,
       "flags": [
         "open",
         "door_ok",
@@ -222,7 +222,7 @@
         "viable": true
       },
       {
-        "cost": 1294.5,
+        "cost": 1294.4,
         "d_landmark": 142.5,
         "name": "pool_rock",
         "on_route": false,
@@ -502,11 +502,11 @@
         "viable": true
       }
     ],
-    "count": 142,
+    "count": 141,
     "crossings": {
-      "drop": 43,
+      "drop": 42,
       "ride": 12,
-      "walk": 250
+      "walk": 248
     },
     "hidden": [
       {
