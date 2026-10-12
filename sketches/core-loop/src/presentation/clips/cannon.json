@@ -9,10 +9,13 @@
     "rest": "bind",
     "ride": {
       "torso": {
-        "pitch": -10
+        "pitch": -28
       },
       "head": {
-        "pitch": 6
+        "pitch": -15
+      },
+      "neck": {
+        "drop": -0.025
       },
       "hand.R": {
         "control": "LapBar.R",
@@ -154,93 +157,42 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "ride",
-          "note": "Both paddles hold the lap bar in the tucked seat pose."
+          "note": "Both paddles brace the lap bar, spine flexed 28 degrees and muzzle tucked 15 degrees.",
+          "pose": "ride"
         },
         {
           "frame": 12,
+          "note": "The braced spine rocks two degrees farther forward; both paddles remain on the bar.",
+          "pose": "ride",
           "torso": {
-            "pitch": -12
-          },
-          "head": {
-            "pitch": 6
-          },
-          "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "note": "The casting hinges two degrees farther into the seat."
+            "pitch": -30
+          }
         },
         {
           "frame": 22,
-          "torso": {
-            "pitch": -10
-          },
+          "note": "The muzzle eases two degrees up within the crouched ride anchor.",
+          "pose": "ride",
           "head": {
-            "pitch": 8
-          },
-          "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "note": "The head lifts two degrees while both paddles hold the bar."
+            "pitch": -13
+          }
         },
         {
           "frame": 33,
+          "note": "The spine eases one degree back within the held tuck.",
+          "pose": "ride",
           "torso": {
-            "pitch": -9
-          },
-          "head": {
-            "pitch": 6
-          },
-          "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "note": "The casting eases one degree out of its tuck."
+            "pitch": -27
+          }
         },
         {
           "frame": 43,
-          "pose": "ride",
-          "note": "Both paddles hold the bar at the original ride pose."
+          "note": "The braced ride pose closes the loop exactly.",
+          "pose": "ride"
         }
-      ]
+      ],
+      "beats": {
+        "peak": 12
+      }
     },
     "class_up": {
       "end": 28,
@@ -258,34 +210,89 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both paddles rest on the yokes."
+          "note": "Both paddles start on their yokes.",
+          "pose": "rest"
+        },
+        {
+          "frame": 3,
+          "note": "The right paddle is visibly raised 16 cm over the right yoke, clear of the lever bank.",
+          "torso": {
+            "pitch": 5
+          },
+          "head": {
+            "pitch": 2
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.02,
+              0.16
+            ]
+          }
+        },
+        {
+          "frame": 4,
+          "note": "The right paddle is visibly raised 16 cm over the right yoke, clear of the lever bank.",
+          "torso": {
+            "pitch": 5
+          },
+          "head": {
+            "pitch": 2
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.02,
+              0.16
+            ]
+          }
         },
         {
           "frame": 5,
+          "note": "The right paddle is visibly raised 16 cm over the right yoke, clear of the lever bank.",
           "torso": {
-            "pitch": 2
+            "pitch": 5
           },
           "head": {
-            "pitch": 3
+            "pitch": 2
           },
           "hand.R": {
             "control": "Grip.R",
             "offset": [
               0,
-              -0.025,
-              0.06
+              -0.02,
+              0.16
             ]
+          }
+        },
+        {
+          "frame": 6,
+          "note": "The right paddle is visibly raised 16 cm over the right yoke, clear of the lever bank.",
+          "torso": {
+            "pitch": 5
           },
-          "note": "The right paddle rises above its yoke for a pat."
+          "head": {
+            "pitch": 2
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              -0.02,
+              0.16
+            ]
+          }
         },
         {
           "frame": 9,
+          "note": "The right paddle pats its yoke while the spine straightens into a proud upright beat.",
           "torso": {
-            "pitch": -2
+            "pitch": 12
           },
           "head": {
-            "pitch": 2
+            "pitch": 5
           },
           "hand.R": {
             "control": "Grip.R",
@@ -294,16 +301,106 @@
               0,
               0
             ]
+          }
+        },
+        {
+          "frame": 10,
+          "note": "The right paddle pats its yoke while the spine straightens into a proud upright beat.",
+          "torso": {
+            "pitch": 12
           },
-          "note": "The right paddle pats the top of its yoke."
+          "head": {
+            "pitch": 5
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 11,
+          "note": "The right paddle pats its yoke while the spine straightens into a proud upright beat.",
+          "torso": {
+            "pitch": 12
+          },
+          "head": {
+            "pitch": 5
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 12,
+          "note": "The right paddle pats its yoke while the spine straightens into a proud upright beat.",
+          "torso": {
+            "pitch": 12
+          },
+          "head": {
+            "pitch": 5
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
         },
         {
           "frame": 14,
+          "note": "The right paddle lifts for a second short yoke pat; the casting remains upright.",
           "torso": {
-            "pitch": 1
+            "pitch": 12
           },
           "head": {
-            "pitch": 6
+            "pitch": 5
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0.11
+            ]
+          }
+        },
+        {
+          "frame": 17,
+          "note": "The right paddle lifts for a second short yoke pat; the casting remains upright.",
+          "torso": {
+            "pitch": 12
+          },
+          "head": {
+            "pitch": 5
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0.11
+            ]
+          }
+        },
+        {
+          "frame": 18,
+          "note": "The second yoke pat lands without moving to the central controls.",
+          "torso": {
+            "pitch": 12
+          },
+          "head": {
+            "pitch": 5
           },
           "hand.R": {
             "control": "Grip.R",
@@ -312,22 +409,92 @@
               0,
               0
             ]
-          },
-          "note": "The right paddle rests on the yoke while the head stays lifted."
+          }
         },
         {
           "frame": 21,
+          "note": "The second yoke pat lands without moving to the central controls.",
+          "torso": {
+            "pitch": 12
+          },
+          "head": {
+            "pitch": 5
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 24,
+          "note": "The paddle stays at the yoke as the proud posture eases back.",
+          "torso": {
+            "pitch": 3
+          },
           "head": {
             "pitch": 2
           },
-          "note": "The head lowers toward its driving angle."
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 25,
+          "note": "The paddle stays at the yoke as the proud posture eases back.",
+          "torso": {
+            "pitch": 3
+          },
+          "head": {
+            "pitch": 2
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 27,
+          "note": "The paddle stays at the yoke as the proud posture eases back.",
+          "torso": {
+            "pitch": 3
+          },
+          "head": {
+            "pitch": 2
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
         },
         {
           "frame": 28,
-          "pose": "rest",
-          "note": "Both paddles return to the seated bind pose."
+          "note": "Both paddles and the casting return to bind rest.",
+          "pose": "rest"
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 6,
+        "contact": 9,
+        "peak": 12,
+        "release": 24
+      }
     },
     "cast_special": {
       "end": 19,
@@ -345,78 +512,12 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both paddles rest on the yokes."
+          "note": "Both paddles start on the yokes, mouth closed.",
+          "pose": "rest"
         },
         {
-          "frame": 4,
-          "torso": {
-            "yaw": -6
-          },
-          "head": {
-            "pitch": -3,
-            "yaw": -6
-          },
-          "hand.R": {
-            "control": "PlateCrank",
-            "offset": [
-              0,
-              -0.06,
-              0.06
-            ]
-          },
-          "note": "The right paddle approaches the plate crank from above."
-        },
-        {
-          "frame": 6,
-          "torso": {
-            "yaw": -6
-          },
-          "head": {
-            "pitch": -6,
-            "yaw": -6
-          },
-          "hand.R": {
-            "control": "PlateCrank",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "wrist.R": [
-            0,
-            0,
-            0
-          ],
-          "note": "The right paddle meets the plate-crank contact point."
-        },
-        {
-          "frame": 7,
-          "torso": {
-            "yaw": -6
-          },
-          "head": {
-            "pitch": -10,
-            "yaw": -6
-          },
-          "hand.R": {
-            "control": "PlateCrank",
-            "offset": [
-              0,
-              -0.04,
-              -0.04
-            ]
-          },
-          "wrist.R": [
-            90,
-            0,
-            0
-          ],
-          "note": "The right wrist turns through ninety degrees around the crank axis."
-        },
-        {
-          "frame": 9,
+          "frame": 2,
+          "note": "The right paddle approaches the crank from its outboard side, muzzle already pointing down.",
           "torso": {
             "yaw": -6
           },
@@ -427,46 +528,260 @@
           "hand.R": {
             "control": "PlateCrank",
             "offset": [
+              0.035,
               0,
-              0,
-              -0.08
+              0.11
             ]
-          },
-          "wrist.R": [
-            180,
-            0,
-            0
-          ],
-          "note": "The right wrist completes the half-turn below the crank contact point."
+          }
         },
         {
-          "frame": 12,
+          "frame": 3,
+          "note": "The right paddle approaches the crank from its outboard side, muzzle already pointing down.",
           "torso": {
-            "yaw": -3
+            "yaw": -6
           },
           "head": {
-            "pitch": -6,
-            "yaw": -3
+            "pitch": -12,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0.035,
+              0,
+              0.11
+            ]
+          }
+        },
+        {
+          "frame": 4,
+          "note": "The right paddle approaches the crank from its outboard side, muzzle already pointing down.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -12,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0.035,
+              0,
+              0.11
+            ]
+          }
+        },
+        {
+          "frame": 5,
+          "note": "The right paddle approaches the crank from its outboard side, muzzle already pointing down.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -12,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0.035,
+              0,
+              0.11
+            ]
+          }
+        },
+        {
+          "frame": 6,
+          "note": "The right paddle meets the crank beside the right yoke, with no head lift or mouth opening.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -16,
+            "yaw": -6
           },
           "hand.R": {
             "control": "PlateCrank",
             "offset": [
               0,
-              -0.06,
-              0.02
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 7,
+          "note": "The right paddle meets the crank beside the right yoke, with no head lift or mouth opening.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -16,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 8,
+          "note": "The right paddle meets the crank beside the right yoke, with no head lift or mouth opening.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -16,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 9,
+          "note": "The right paddle meets the crank beside the right yoke, with no head lift or mouth opening.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -16,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 10,
+          "note": "The paddle sweeps the crank rim around its X axis; the muzzle drops along the cone.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -24,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0,
+              0.05196152422706631,
+              0.029999999999999992
             ]
           },
           "wrist.R": [
-            90,
+            0,
             0,
             0
-          ],
-          "note": "The right paddle withdraws from the crank."
+          ]
+        },
+        {
+          "frame": 11,
+          "note": "The paddle sweeps the crank rim around its X axis; the muzzle drops along the cone.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -24,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0,
+              0.05196152422706632,
+              0.08999999999999998
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 12,
+          "note": "The paddle sweeps the crank rim around its X axis; the muzzle drops along the cone.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -24,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0,
+              7.347880794884118e-18,
+              0.12
+            ]
+          },
+          "wrist.R": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 13,
+          "note": "The paddle holds the top of the completed half turn; the muzzle remains lowered.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -24,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0,
+              0,
+              0.12
+            ]
+          }
+        },
+        {
+          "frame": 15,
+          "note": "The paddle holds the top of the completed half turn; the muzzle remains lowered.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "pitch": -24,
+            "yaw": -6
+          },
+          "hand.R": {
+            "control": "PlateCrank",
+            "offset": [
+              0,
+              0,
+              0.12
+            ]
+          }
         },
         {
           "frame": 16,
+          "note": "The paddle withdraws toward the right yoke after the rotary throw.",
           "head": {
-            "pitch": -2
+            "pitch": -4
           },
           "hand.R": {
             "control": "Grip.R",
@@ -475,19 +790,39 @@
               0,
               0
             ]
+          }
+        },
+        {
+          "frame": 18,
+          "note": "The paddle withdraws toward the right yoke after the rotary throw.",
+          "head": {
+            "pitch": -4
           },
-          "note": "The right paddle reaches its yoke again."
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
         },
         {
           "frame": 19,
-          "pose": "rest",
-          "note": "Both paddles rest on the yokes after the crank turn."
+          "note": "Both paddles and the closed muzzle return to rest.",
+          "pose": "rest"
         }
       ],
       "contact": {
         "frame": 6,
         "hand": "R",
         "control": "PlateCrank"
+      },
+      "beats": {
+        "anticipation": 5,
+        "contact": 6,
+        "peak": 12,
+        "release": 16
       }
     },
     "cast_line": {
@@ -495,7 +830,7 @@
       "loop": false,
       "from": "rest",
       "to": "rest",
-      "ease": "smooth",
+      "ease": "linear",
       "planted": [
         "L"
       ],
@@ -506,36 +841,35 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both paddles rest on the yokes."
+          "note": "Both paddles start on the yokes before the fast cable slap.",
+          "pose": "rest"
         },
         {
-          "frame": 4,
+          "frame": 2,
+          "note": "The right paddle draws to the outside of the cable clamp, below the crank approach.",
           "torso": {
-            "yaw": -6
+            "yaw": -4
           },
           "head": {
-            "yaw": -10
+            "yaw": -8
           },
           "hand.R": {
             "control": "CableClamp",
             "offset": [
-              0,
-              -0.035,
-              0.065
+              0.06,
+              -0.04,
+              0.09
             ]
-          },
-          "note": "The right paddle rises above the cable-clamp contact point."
+          }
         },
         {
-          "frame": 6,
+          "frame": 3,
+          "note": "A single right-paddle hit holds the cable clamp for four frames; the muzzle snaps toward the cable.",
           "torso": {
-            "pitch": -3,
-            "yaw": -6
+            "yaw": -10
           },
           "head": {
-            "pitch": -5,
-            "yaw": -10
+            "yaw": -35
           },
           "hand.R": {
             "control": "CableClamp",
@@ -544,63 +878,177 @@
               0,
               0
             ]
-          },
-          "note": "The right paddle slaps the cable-clamp contact point."
+          }
         },
         {
-          "frame": 8,
+          "frame": 4,
+          "note": "A single right-paddle hit holds the cable clamp for four frames; the muzzle snaps toward the cable.",
           "torso": {
-            "pitch": -3,
-            "yaw": -6
+            "yaw": -10
           },
           "head": {
-            "pitch": -5,
-            "yaw": -10
+            "yaw": -35
           },
           "hand.R": {
             "control": "CableClamp",
             "offset": [
               0,
-              0.04,
-              -0.04
+              0,
+              0
             ]
+          }
+        },
+        {
+          "frame": 5,
+          "note": "A single right-paddle hit holds the cable clamp for four frames; the muzzle snaps toward the cable.",
+          "torso": {
+            "yaw": -10
           },
-          "wrist.R": [
-            -20,
-            0,
-            0
-          ],
-          "note": "The right paddle follows the clamp lever downward."
+          "head": {
+            "yaw": -35
+          },
+          "hand.R": {
+            "control": "CableClamp",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 6,
+          "note": "A single right-paddle hit holds the cable clamp for four frames; the muzzle snaps toward the cable.",
+          "torso": {
+            "yaw": -10
+          },
+          "head": {
+            "yaw": -35
+          },
+          "hand.R": {
+            "control": "CableClamp",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 7,
+          "note": "The right paddle rebounds clear of the clamp by frame seven; the muzzle holds the cable-side snap.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "yaw": -25
+          },
+          "hand.R": {
+            "at": [
+              0.56,
+              0.04,
+              -0.12
+            ]
+          }
+        },
+        {
+          "frame": 8,
+          "note": "The right paddle rebounds clear of the clamp by frame seven; the muzzle holds the cable-side snap.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "yaw": -25
+          },
+          "hand.R": {
+            "at": [
+              0.56,
+              0.04,
+              -0.12
+            ]
+          }
+        },
+        {
+          "frame": 9,
+          "note": "The right paddle rebounds clear of the clamp by frame seven; the muzzle holds the cable-side snap.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "yaw": -25
+          },
+          "hand.R": {
+            "at": [
+              0.56,
+              0.04,
+              -0.12
+            ]
+          }
+        },
+        {
+          "frame": 10,
+          "note": "The right paddle rebounds clear of the clamp by frame seven; the muzzle holds the cable-side snap.",
+          "torso": {
+            "yaw": -6
+          },
+          "head": {
+            "yaw": -25
+          },
+          "hand.R": {
+            "at": [
+              0.56,
+              0.04,
+              -0.12
+            ]
+          }
         },
         {
           "frame": 11,
-          "torso": {
-            "yaw": -2
-          },
+          "note": "The right paddle returns to its yoke after the one slap.",
           "head": {
-            "yaw": -4
+            "yaw": -8
           },
           "hand.R": {
             "control": "Grip.R",
             "offset": [
               0,
-              -0.03,
-              0.035
+              0,
+              0
             ]
+          }
+        },
+        {
+          "frame": 12,
+          "note": "The right paddle returns to its yoke after the one slap.",
+          "head": {
+            "yaw": -8
           },
-          "note": "The right paddle returns toward its yoke."
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
         },
         {
           "frame": 15,
-          "pose": "rest",
-          "note": "Both paddles rest on the yokes after the slap."
+          "note": "Both paddles rest on the yokes again.",
+          "pose": "rest"
         }
       ],
       "contact": {
-        "frame": 6,
+        "frame": 3,
         "hand": "R",
         "control": "CableClamp",
-        "note": "The reaction starts on line_skill_fired, the bite; frame 6 is the paddle clamp contact."
+        "note": "2026-10-12 ruling: one slap at frames 3-6 after the bite; paddle clear by frame 7."
+      },
+      "beats": {
+        "anticipation": 2,
+        "contact": 3,
+        "peak": 6,
+        "release": 7
       }
     },
     "ult_ready": {
@@ -620,50 +1068,126 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "The muzzle-head points forward at seated rest."
+          "note": "The head starts level and both paddles remain on the yokes.",
+          "pose": "rest"
+        },
+        {
+          "frame": 2,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 3,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
         },
         {
           "frame": 4,
-          "head": {
-            "pitch": 8
-          },
-          "note": "The muzzle-head lifts eight degrees."
-        },
-        {
-          "frame": 9,
-          "head": {
-            "pitch": 10
-          },
-          "note": "The muzzle-head holds ten degrees above rest."
-        },
-        {
-          "frame": 14,
-          "head": {
-            "pitch": 10
-          },
-          "note": "The muzzle-head remains raised at ten degrees."
-        },
-        {
-          "frame": 19,
-          "head": {
-            "pitch": 8
-          },
-          "note": "The muzzle-head lowers to eight degrees above rest."
-        },
-        {
-          "frame": 22,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
           "head": {
             "pitch": 4
-          },
-          "note": "The muzzle-head lowers to four degrees above rest."
+          }
+        },
+        {
+          "frame": 5,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 6,
+          "note": "The muzzle returns level between motif nods.",
+          "head": {
+            "pitch": 0
+          }
+        },
+        {
+          "frame": 7,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 10,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 11,
+          "note": "The muzzle returns level between motif nods.",
+          "head": {
+            "pitch": 0
+          }
+        },
+        {
+          "frame": 12,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 15,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 16,
+          "note": "The muzzle returns level between motif nods.",
+          "head": {
+            "pitch": 0
+          }
+        },
+        {
+          "frame": 17,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 18,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 20,
+          "note": "A four-degree head nod carries one motif beat; the lenses and paddles stay static.",
+          "head": {
+            "pitch": 4
+          }
+        },
+        {
+          "frame": 21,
+          "note": "The muzzle returns level between motif nods.",
+          "head": {
+            "pitch": 0
+          }
         },
         {
           "frame": 25,
-          "pose": "rest",
-          "note": "The muzzle-head returns to its driving angle."
+          "note": "Four nods complete and the casting returns to rest.",
+          "pose": "rest"
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 2,
+        "contact": 7,
+        "peak": 17,
+        "release": 21
+      }
     },
     "ult_windup": {
       "end": 11,
@@ -679,46 +1203,80 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both paddles rest on the yokes before the tuck."
+          "note": "The casting starts at seated rest before the tuck.",
+          "pose": "rest"
         },
         {
-          "frame": 4,
+          "frame": 2,
+          "note": "Spine and neck fold forward and down as both paddles descend toward the lap bar.",
           "torso": {
-            "pitch": -4
+            "pitch": -14
           },
           "head": {
-            "pitch": 3
+            "pitch": -10
+          },
+          "neck": {
+            "drop": -0.015
           },
           "hand.R": {
             "at": [
-              0.26,
-              0.34,
-              -0.03
+              0.25,
+              0.3,
+              -0.08
             ]
           },
           "hand.L": {
             "at": [
-              -0.26,
-              0.34,
-              -0.03
+              -0.25,
+              0.3,
+              -0.08
             ]
-          },
-          "note": "Both paddles descend toward the lap bar."
+          }
         },
         {
-          "frame": 7,
+          "frame": 5,
+          "note": "Spine and neck fold forward and down as both paddles descend toward the lap bar.",
           "torso": {
-            "pitch": -8
+            "pitch": -14
           },
           "head": {
-            "pitch": 5
+            "pitch": -10
+          },
+          "neck": {
+            "drop": -0.015
+          },
+          "hand.R": {
+            "at": [
+              0.25,
+              0.3,
+              -0.08
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.25,
+              0.3,
+              -0.08
+            ]
+          }
+        },
+        {
+          "frame": 6,
+          "note": "The casting reaches its deep tuck while the paddles close the last centimetres to the bar.",
+          "torso": {
+            "pitch": -25
+          },
+          "head": {
+            "pitch": -14
+          },
+          "neck": {
+            "drop": -0.025
           },
           "hand.R": {
             "control": "LapBar.R",
             "offset": [
               0,
-              0.02,
+              0,
               0.02
             ]
           },
@@ -726,23 +1284,67 @@
             "control": "LapBar.L",
             "offset": [
               0,
-              0.02,
+              0,
+              0.02
+            ]
+          }
+        },
+        {
+          "frame": 7,
+          "note": "The casting reaches its deep tuck while the paddles close the last centimetres to the bar.",
+          "torso": {
+            "pitch": -25
+          },
+          "head": {
+            "pitch": -14
+          },
+          "neck": {
+            "drop": -0.025
+          },
+          "hand.R": {
+            "control": "LapBar.R",
+            "offset": [
+              0,
+              0,
               0.02
             ]
           },
-          "note": "Both paddles approach the lap bar from twenty millimetres above."
+          "hand.L": {
+            "control": "LapBar.L",
+            "offset": [
+              0,
+              0,
+              0.02
+            ]
+          }
+        },
+        {
+          "frame": 8,
+          "note": "The crouched pilot grips the lap bar and holds the ride anchor for four frames.",
+          "pose": "ride"
         },
         {
           "frame": 9,
-          "pose": "ride",
-          "note": "Both paddles grip the lap bar with the casting tucked."
+          "note": "The crouched pilot grips the lap bar and holds the ride anchor for four frames.",
+          "pose": "ride"
+        },
+        {
+          "frame": 10,
+          "note": "The crouched pilot grips the lap bar and holds the ride anchor for four frames.",
+          "pose": "ride"
         },
         {
           "frame": 11,
-          "pose": "ride",
-          "note": "Both paddles hold the ride pose before flight."
+          "note": "The crouched pilot grips the lap bar and holds the ride anchor for four frames.",
+          "pose": "ride"
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 2,
+        "contact": 8,
+        "peak": 8,
+        "release": 11
+      }
     },
     "ult_strike": {
       "end": 16,
@@ -764,7 +1366,7 @@
         {
           "frame": 4,
           "torso": {
-            "pitch": -10
+            "pitch": -28
           },
           "head": {
             "pitch": -12
@@ -783,15 +1385,18 @@
               -0.02
             ]
           },
-          "note": "Both paddles open away from the lap bar."
+          "note": "Both paddles open away from the lap bar.",
+          "neck": {
+            "drop": -0.025
+          }
         },
         {
           "frame": 7,
           "torso": {
-            "pitch": -8
+            "pitch": -28
           },
           "head": {
-            "pitch": -82
+            "pitch": -62
           },
           "hand.R": {
             "at": [
@@ -807,15 +1412,18 @@
               0.12
             ]
           },
-          "note": "The muzzle-head points straight down between the spread paddles."
+          "note": "The tucked spine and head total ninety degrees down, paddles spread off the bar.",
+          "neck": {
+            "drop": -0.025
+          }
         },
         {
-          "frame": 9,
+          "frame": 10,
           "torso": {
-            "pitch": -8
+            "pitch": -28
           },
           "head": {
-            "pitch": -82
+            "pitch": -62
           },
           "hand.R": {
             "at": [
@@ -831,12 +1439,15 @@
               0.12
             ]
           },
-          "note": "Both paddles remain wide while the muzzle-head points down."
+          "note": "The tucked spine and head total ninety degrees down, paddles spread off the bar.",
+          "neck": {
+            "drop": -0.025
+          }
         },
         {
           "frame": 12,
           "torso": {
-            "pitch": -10
+            "pitch": -28
           },
           "head": {
             "pitch": 6
@@ -857,14 +1468,23 @@
               0
             ]
           },
-          "note": "Both paddles return to the lap bar."
+          "note": "Both paddles return to the lap bar.",
+          "neck": {
+            "drop": -0.025
+          }
         },
         {
           "frame": 16,
           "pose": "ride",
           "note": "Both paddles hold the tucked ride pose again."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 4,
+        "contact": 7,
+        "peak": 7,
+        "release": 12
+      }
     },
     "ult_recover": {
       "end": 19,
@@ -942,7 +1562,7 @@
           "note": "Both paddles twist outward clear of the lap bar."
         },
         {
-          "frame": 10,
+          "frame": 9,
           "torso": {
             "pitch": -2
           },
@@ -965,15 +1585,49 @@
           },
           "wrist.R": [
             0,
-            -20,
-            -15
+            25,
+            25
           ],
           "wrist.L": [
             0,
-            20,
-            15
+            -25,
+            -25
           ],
-          "note": "Both paddles twist inward during the shake."
+          "note": "Both wrists shake outward as recovery straightens the casting."
+        },
+        {
+          "frame": 11,
+          "torso": {
+            "pitch": -2
+          },
+          "head": {
+            "pitch": 1
+          },
+          "hand.R": {
+            "at": [
+              0.35,
+              0.25,
+              -0.01
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.35,
+              0.25,
+              -0.01
+            ]
+          },
+          "wrist.R": [
+            0,
+            -25,
+            -25
+          ],
+          "wrist.L": [
+            0,
+            25,
+            25
+          ],
+          "note": "Both wrists reverse their small shake while the hands remain clear of the bar."
         },
         {
           "frame": 13,
@@ -982,29 +1636,29 @@
           },
           "hand.R": {
             "at": [
-              0.33,
-              0.34,
-              0.04
+              0.35,
+              0.25,
+              -0.01
             ]
           },
           "hand.L": {
             "at": [
-              -0.33,
-              0.34,
-              0.04
+              -0.35,
+              0.25,
+              -0.01
             ]
           },
           "wrist.R": [
             0,
-            12,
-            0
+            15,
+            15
           ],
           "wrist.L": [
             0,
-            -12,
-            0
+            -15,
+            -15
           ],
-          "note": "Both paddles make a smaller outward shake near the yokes."
+          "note": "Both wrists make a smaller final shake before returning to the yokes."
         },
         {
           "frame": 16,
@@ -1034,7 +1688,13 @@
           "pose": "rest",
           "note": "The muzzle-head is level in the seated bind pose."
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 4,
+        "contact": 7,
+        "peak": 11,
+        "release": 16
+      }
     },
     "smash": {
       "end": 18,
@@ -1043,7 +1703,7 @@
       "to": "rest",
       "ease": "linear",
       "planted": [
-        "L"
+        "R"
       ],
       "source": {
         "sheet": "design-v3/pilots/cannon.md",
@@ -1052,89 +1712,232 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both paddles rest on the yokes before the slam."
+          "note": "Both paddles start at rest before the seat-frame slap.",
+          "pose": "rest"
+        },
+        {
+          "frame": 2,
+          "note": "The left paddle rises over the outboard seat support, separate from the right-hand cast paths.",
+          "torso": {
+            "pitch": 4
+          },
+          "head": {
+            "pitch": 0
+          },
+          "hand.L": {
+            "at": [
+              -0.36,
+              0.26,
+              -0.07
+            ]
+          }
+        },
+        {
+          "frame": 3,
+          "note": "The left paddle rises over the outboard seat support, separate from the right-hand cast paths.",
+          "torso": {
+            "pitch": 4
+          },
+          "head": {
+            "pitch": 0
+          },
+          "hand.L": {
+            "at": [
+              -0.36,
+              0.26,
+              -0.07
+            ]
+          }
+        },
+        {
+          "frame": 4,
+          "note": "The left paddle rises over the outboard seat support, separate from the right-hand cast paths.",
+          "torso": {
+            "pitch": 4
+          },
+          "head": {
+            "pitch": 0
+          },
+          "hand.L": {
+            "at": [
+              -0.36,
+              0.26,
+              -0.07
+            ]
+          }
         },
         {
           "frame": 5,
+          "note": "The left paddle rises over the outboard seat support, separate from the right-hand cast paths.",
           "torso": {
-            "pitch": 3
+            "pitch": 4
           },
           "head": {
-            "pitch": 2
+            "pitch": 0
           },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              -0.04,
-              0.06
+          "hand.L": {
+            "at": [
+              -0.36,
+              0.26,
+              -0.07
             ]
-          },
-          "note": "The right paddle lifts for the seat-frame slap."
+          }
         },
         {
           "frame": 8,
+          "note": "The left paddle slaps the seat support below and outside the copper lap-bar line; muzzle down.",
           "torso": {
-            "pitch": -6
+            "pitch": -8
           },
           "head": {
-            "pitch": -14
+            "pitch": -22
           },
-          "hand.R": {
+          "hand.L": {
             "at": [
-              0.32,
-              0.4,
-              0.05
+              -0.32,
+              0.3,
+              -0.36
             ]
+          }
+        },
+        {
+          "frame": 9,
+          "note": "The left paddle slaps the seat support below and outside the copper lap-bar line; muzzle down.",
+          "torso": {
+            "pitch": -8
           },
-          "note": "The right paddle hits the grip-position stand-in for the seat frame."
+          "head": {
+            "pitch": -22
+          },
+          "hand.L": {
+            "at": [
+              -0.32,
+              0.3,
+              -0.36
+            ]
+          }
         },
         {
           "frame": 10,
+          "note": "The left paddle slaps the seat support below and outside the copper lap-bar line; muzzle down.",
           "torso": {
-            "pitch": -6
+            "pitch": -8
           },
           "head": {
-            "pitch": -14
+            "pitch": -22
           },
-          "hand.R": {
+          "hand.L": {
             "at": [
-              0.32,
-              0.4,
-              0.05
+              -0.32,
+              0.3,
+              -0.36
             ]
-          },
-          "note": "The right paddle holds the seat-frame stand-in through the downstroke."
+          }
         },
         {
-          "frame": 13,
+          "frame": 11,
+          "note": "The left paddle slaps the seat support below and outside the copper lap-bar line; muzzle down.",
+          "torso": {
+            "pitch": -8
+          },
+          "head": {
+            "pitch": -22
+          },
+          "hand.L": {
+            "at": [
+              -0.32,
+              0.3,
+              -0.36
+            ]
+          }
+        },
+        {
+          "frame": 12,
+          "note": "The left paddle rebounds promptly above the seat frame.",
           "torso": {
             "pitch": -2
           },
           "head": {
-            "pitch": -4
+            "pitch": -6
           },
-          "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              -0.02,
-              0.04
+          "hand.L": {
+            "at": [
+              -0.37,
+              0.28,
+              -0.1
             ]
+          }
+        },
+        {
+          "frame": 13,
+          "note": "The left paddle rebounds promptly above the seat frame.",
+          "torso": {
+            "pitch": -2
           },
-          "note": "The right paddle rebounds above its yoke."
+          "head": {
+            "pitch": -6
+          },
+          "hand.L": {
+            "at": [
+              -0.37,
+              0.28,
+              -0.1
+            ]
+          }
+        },
+        {
+          "frame": 14,
+          "note": "The left paddle rebounds promptly above the seat frame.",
+          "torso": {
+            "pitch": -2
+          },
+          "head": {
+            "pitch": -6
+          },
+          "hand.L": {
+            "at": [
+              -0.37,
+              0.28,
+              -0.1
+            ]
+          }
+        },
+        {
+          "frame": 15,
+          "note": "The left paddle rebounds promptly above the seat frame.",
+          "torso": {
+            "pitch": -2
+          },
+          "head": {
+            "pitch": -6
+          },
+          "hand.L": {
+            "at": [
+              -0.37,
+              0.28,
+              -0.1
+            ]
+          }
         },
         {
           "frame": 18,
-          "pose": "rest",
-          "note": "Both paddles return to the seated driving pose."
+          "note": "Both paddles return to their yokes at rest.",
+          "pose": "rest"
         }
       ],
-      "contact": {
+      "beats": {
+        "anticipation": 5,
+        "contact": 8,
+        "peak": 8,
+        "release": 12
+      },
+      "story_contact": {
         "frame": 8,
-        "hand": "R",
-        "control": "Grip.R"
+        "hands": [
+          "L"
+        ],
+        "target": "seat frame",
+        "note": "The seat support has no Control.* node; this is body contact, with no machinery throw."
       }
     },
     "unlock": {
@@ -1151,43 +1954,456 @@
       "keys": [
         {
           "frame": 1,
+          "note": "The casting starts at bind rest, before rising above the empty seat.",
           "pose": "rest",
           "root": [
             0,
             0,
             0
-          ],
-          "note": "The casting starts at seated bind rest before the ceremonial lift and settling."
+          ]
         },
         {
-          "frame": 12,
+          "frame": 5,
+          "note": "The casting is visibly fifteen centimetres above the seat, both paddles braced on its side rails.",
           "root": [
             0,
             0,
-            0.09
+            0.15
           ],
-          "note": "The casting lifts nine centimetres for the ceremony, then settles into the seat."
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 6,
+          "note": "The casting is visibly fifteen centimetres above the seat, both paddles braced on its side rails.",
+          "root": [
+            0,
+            0,
+            0.15
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 7,
+          "note": "The casting is visibly fifteen centimetres above the seat, both paddles braced on its side rails.",
+          "root": [
+            0,
+            0,
+            0.15
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 8,
+          "note": "The casting is visibly fifteen centimetres above the seat, both paddles braced on its side rails.",
+          "root": [
+            0,
+            0,
+            0.15
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 9,
+          "note": "The casting is visibly fifteen centimetres above the seat, both paddles braced on its side rails.",
+          "root": [
+            0,
+            0,
+            0.15
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 12,
+          "note": "One of four lattice steps settles the casting toward the seat; both paddles stay on the seat rails.",
+          "root": [
+            0,
+            0,
+            0.12
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 16,
+          "note": "One of four lattice steps settles the casting toward the seat; both paddles stay on the seat rails.",
+          "root": [
+            0,
+            0,
+            0.12
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
         },
         {
           "frame": 22,
+          "note": "One of four lattice steps settles the casting toward the seat; both paddles stay on the seat rails.",
+          "root": [
+            0,
+            0,
+            0.08
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 26,
+          "note": "One of four lattice steps settles the casting toward the seat; both paddles stay on the seat rails.",
+          "root": [
+            0,
+            0,
+            0.08
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 33,
+          "note": "One of four lattice steps settles the casting toward the seat; both paddles stay on the seat rails.",
           "root": [
             0,
             0,
             0.04
           ],
-          "note": "The casting descends to four centimetres above the seat."
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
         },
         {
-          "frame": 33,
+          "frame": 37,
+          "note": "One of four lattice steps settles the casting toward the seat; both paddles stay on the seat rails.",
+          "root": [
+            0,
+            0,
+            0.04
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 43,
+          "note": "One of four lattice steps settles the casting toward the seat; both paddles stay on the seat rails.",
           "root": [
             0,
             0,
             0
           ],
-          "note": "The casting settles onto the cockpit seat."
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
         },
         {
-          "frame": 43,
+          "frame": 47,
+          "note": "One of four lattice steps settles the casting toward the seat; both paddles stay on the seat rails.",
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "pitch": -10
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "at": [
+              0.22,
+              0.02,
+              -0.3
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.22,
+              0.02,
+              -0.3
+            ]
+          }
+        },
+        {
+          "frame": 54,
+          "note": "Seated now, the casting sits proudly upright and holds a forward look down the barrel.",
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "pitch": 14
+          },
+          "head": {
+            "pitch": -14
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 64,
+          "note": "Seated now, the casting sits proudly upright and holds a forward look down the barrel.",
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "pitch": 14
+          },
+          "head": {
+            "pitch": -14
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 75,
+          "note": "The held barrel look eases back to the driving posture.",
           "root": [
             0,
             0,
@@ -1197,60 +2413,73 @@
             "pitch": 3
           },
           "head": {
-            "pitch": 8
+            "pitch": -3
           },
-          "note": "The casting sits upright with its muzzle-head raised."
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
         },
         {
-          "frame": 54,
+          "frame": 79,
+          "note": "The held barrel look eases back to the driving posture.",
           "root": [
             0,
             0,
             0
           ],
           "torso": {
-            "pitch": 2
+            "pitch": 3
           },
           "head": {
-            "pitch": -6
+            "pitch": -3
           },
-          "note": "The muzzle-head tips toward the barrel."
-        },
-        {
-          "frame": 64,
-          "root": [
-            0,
-            0,
-            0
-          ],
-          "head": {
-            "pitch": -6
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
           },
-          "note": "The muzzle-head holds its look down the barrel."
-        },
-        {
-          "frame": 75,
-          "root": [
-            0,
-            0,
-            0
-          ],
-          "head": {
-            "pitch": -4
-          },
-          "note": "The muzzle-head eases toward its driving angle."
+          "hand.L": {
+            "control": "Grip.L",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          }
         },
         {
           "frame": 85,
+          "note": "The ceremony ends at the original rest anchor.",
           "pose": "rest",
           "root": [
             0,
             0,
             0
-          ],
-          "note": "The casting sits at the bind position with both paddles on the yokes."
+          ]
         }
-      ]
+      ],
+      "beats": {
+        "anticipation": 5,
+        "contact": 43,
+        "peak": 54,
+        "release": 75
+      }
     }
   },
   "machinery": [
