@@ -35,6 +35,14 @@ const PIN_WINDOW := 1.5
 const ARROW_LENGTH := 6.0
 
 class VolumeIndicator extends Indicator:
+	var _drawn_shapes := {}
+
+	func _process(delta: float) -> void:
+		if shapes == _drawn_shapes and _collapsing.is_empty():
+			return
+		super._process(delta)
+		_drawn_shapes = shapes.duplicate()
+
 	func set_shape(layer: String, shape: Dictionary) -> void:
 		if (shape["cells"] as Array).all(func(cell): return (cell["faces"] as Array).is_empty()):
 			clear(layer)
@@ -503,15 +511,24 @@ func _clip_faces(faces: Array, at: Vector3, normal: Vector3) -> Array:
 			var b: Vector3 = face[(i + 1) % face.size()]
 			var da := (a - at).dot(normal)
 			var db := (b - at).dot(normal)
-			if da <= 0.0001:
+			# Use the same coplanar classification for keeping vertices and crossing edges.
+			da = 0.0 if absf(da) <= 0.0001 else da
+			db = 0.0 if absf(db) <= 0.0001 else db
+			if da <= 0.0:
 				polygon.append(a)
-			if (da < 0.0) != (db < 0.0):
+			if (da <= 0.0) != (db <= 0.0):
 				var cross := a.lerp(b, da / (da - db))
 				polygon.append(cross)
 				if not rim.any(func(v): return v.is_equal_approx(cross)):
 					rim.append(cross)
-		if polygon.size() >= 3:
-			clipped.append(polygon)
+		var boundary: Array = []
+		for vertex in polygon:
+			if boundary.is_empty() or not (boundary.back() as Vector3).is_equal_approx(vertex):
+				boundary.append(vertex)
+		if boundary.size() > 1 and (boundary[0] as Vector3).is_equal_approx(boundary.back()):
+			boundary.pop_back()
+		if boundary.size() >= 3:
+			clipped.append(boundary)
 	if rim.size() >= 3:
 		var centre := Vector3.ZERO
 		for v in rim:
@@ -731,7 +748,11 @@ func _commit_terrain(origin: Vector3, cells: Array, shadows: Array) -> Array:
 					continue
 				var transform := collider.global_transform * collider.shape_owner_get_transform(owner)
 				for i in collider.shape_owner_get_shape_count(owner):
-					var faces := _collider_faces(collider.shape_owner_get_shape(owner, i))
+					var terrain_shape: Shape3D = collider.shape_owner_get_shape(owner, i)
+					var shape_bounds: AABB = transform * terrain_shape.get_debug_mesh().get_aabb()
+					if not bounds.grow(0.0001).intersects(shape_bounds):
+						continue
+					var faces := _collider_faces(terrain_shape)
 					if faces.is_empty():
 						return []
 					for local_face in faces:

@@ -356,12 +356,13 @@ func _alpha_terrain_cost_fixture() -> void:
 	front.global_position = arena_at + arena_heading * 4.0
 	front.set_physics_process(false)
 	_t.check("captured bowl front target has an independent clear ray", _game.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(arena_at, front.global_position, 1)).is_empty())
+	var health_before: float = front.hp
 	started = Time.get_ticks_usec()
 	_combat.ultimate._strike(_player.ball_position())
 	print("alpha bowl landing commitment us=", Time.get_ticks_usec() - started)
 	_t.eq("captured alpha bowl landing commits through one selector", _kit.selected_shapes.size(), 1)
 	_t.check("captured alpha bowl landing retains exposed volume", not (_kit.selected_shapes[0]["cells"] as Array).is_empty())
-	_t.eq("captured alpha bowl landing hits the exposed target exactly once", _damage(front), [Ultimate.LANDING_DAMAGE * Ultimate.HEFT_MULT[2]])
+	_t.eq("captured alpha bowl landing hits the exposed target exactly once", [snappedf(health_before - float(front.hp), 0.01), _hits(front).size()], [Ultimate.LANDING_DAMAGE * Ultimate.HEFT_MULT[2], 1])
 	_game.run.mass = prior_mass
 	arena.queue_free()
 	_game.ctx.terrain.use(1)
