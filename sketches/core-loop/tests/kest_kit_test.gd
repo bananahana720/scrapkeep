@@ -1,5 +1,6 @@
 extends SceneTree
 
+# 2026-10-12 (PC-KEST round 4): quiet slot_cast check; reload remains fourteen seconds.
 # 2026-10-11 (PC-KEST round 3): reload pin 12 to 14 seconds after the contact cap changed fight timing; bands unchanged.
 # Expected count includes the final count assertion; an incomplete case run fails.
 const Game := preload("res://src/game.gd")
@@ -15,9 +16,11 @@ const Events := preload("res://src/core/game_events.gd")
 const Codex := preload("res://src/core/codex.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const T := preload("res://tests/support/t.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
+const Augments := preload("res://src/movement/augments.gd")
 const DT := 1.0 / 60.0
 # 2026-10-11 (PC-KEST): quiet loads, bite events and the fourteen-second reload, including a twelve-second guard.
-const EXPECTED_CHECKS := 67
+const EXPECTED_CHECKS := 70
 
 var _t
 var _game
@@ -130,6 +133,7 @@ func _run() -> void:
 		if state == "chain_ended":
 			_ends.append(state))
 	await _cases()
+	_bot_hand_cases()
 	_t.eq("expected check count", _t.checks + 1, _expected())
 	_game.free()
 	quit(_t.verdict())
@@ -232,7 +236,10 @@ func _cases() -> void:
 	_game.ctx.codex._run_seen.erase("kest_cable_charge")
 	_game.ctx.codex._run_seen.erase("loaded_line")
 	_card_events.clear()
+	var audio = _game.presentation.audio
+	var cue_start: int = audio.cue_log.size()
 	_cast()
+	_t.eq("slot_cast on load plays no cue", audio.cue_log.slice(cue_start).filter(func(c): return c[0] == "slot_cast").size(), 0)
 	_t.eq("unhooked cast loads Cable Charge", _combat.line_load()["id"], "cable_charge")
 	_t.eq("load press emits no line-skill bite", _line_fired.size(), 0)
 	_tick({}, 3.85)
@@ -343,3 +350,52 @@ func _grants() -> void:
 	progress.free()
 	codex.free()
 	events.free()
+
+
+func _hand_snapshot(pilot: String, condition: String) -> Dictionary:
+	_fresh()
+	_player.abilities.fit(ClassDef.by_id(pilot))
+	var driver := BotDriver.new(_game, "skipper", 2)
+	driver._off_line = 99.0
+	driver._note = {"stage": 1}
+	var target := _enemy(_player.ball_position() + Vector3.RIGHT * (2.0 if condition == "near" else 20.0))
+	_player.kit.aim = {"body": target}
+	_player.state.grounded = condition != "air"
+	_player._brake_was_held = condition == "latched_brake"
+	_player.set_frozen(condition == "frozen")
+	_player.kit.slingshot.charging = condition == "slingshot"
+	var special = _player.abilities.gauge(AbilityState.SPECIAL)
+	if special != null:
+		special.charging = condition == "special"
+	if condition == "rewind":
+		_player.kit.rewind_left = 1.0
+	if condition == "memory":
+		driver._off_line = 0.0
+	if condition == "world":
+		_player.grapple_to(target.global_position, Vector3.UP, null)
+	if condition in ["latched", "latched_brake", "smash"]:
+		_player.grapple_to(target.global_position, Vector3.UP, target)
+		if condition == "smash":
+			_player.kit.line_state = Augments.LINE_SMASH
+	driver._harpoon_hand(target, DT)
+	var result := {"pilot": pilot, "condition": condition, "press": driver.source.press.duplicate(),
+		"held": driver._harpoon_held, "commit": driver._harpoon_commit,
+		"cast_slot": driver._cast_slot, "cast_phase": driver._cast_phase, "note": driver._note.duplicate()}
+	_player.set_frozen(false)
+	_player.kit.slingshot.charging = false
+	if special != null:
+		special.charging = false
+	_player.kit.drop_line("reset")
+	target.free()
+	return result
+
+
+func _bot_hand_cases() -> void:
+	var near := _hand_snapshot("demolitions_caster", "near")
+	_t.check("Cable Charge hand waits outside the body's passing radius", not near["press"].get("harpoon_pressed", false), str(near))
+	var far := _hand_snapshot("demolitions_caster", "far")
+	_t.check("Cable Charge hand still bites and casts on a valid runup", far["press"].get("harpoon_pressed", false)
+		and far["cast_slot"] == 3 and far["cast_phase"] == "click", str(far))
+	for pilot in ["pylon_engineer", "runner_gunner", "tarn", "tally", "remembered_cannon"]:
+		for condition in ["near", "far", "air", "frozen", "slingshot", "special", "rewind", "memory", "world", "latched", "latched_brake", "smash"]:
+			print("COHORT " + JSON.stringify(_hand_snapshot(pilot, condition)))

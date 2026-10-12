@@ -1,5 +1,7 @@
 extends SceneTree
 
+# 2026-10-12 (PC-KEST round 4): every Kest cue uses live-key admission and row gain.
+
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
@@ -164,6 +166,7 @@ func _run() -> void:
 	_t.check("18 a retry to a full entry value brings back a lift the death cancel cleared", cleared and ult.meter.full() and engine.ultimate_lift,
 		"cleared %s, meter %.1f, lift %s" % [cleared, ult.meter.value, engine.ultimate_lift])
 	_kest_music()
+	_kest_cue_contract()
 	_game.free()
 	quit(_t.verdict())
 
@@ -189,3 +192,47 @@ func _kest_music() -> void:
 		engine.render(eighth)
 	_t.check("Kest roll groups sound on successive eighths", roll[1] - roll[0] == eighth and roll[2] - roll[1] == eighth
 		and posmod(roll[0] - engine.grid_origin, eighth) == 0, "samples %s" % [roll])
+
+
+func _kest_cue_contract() -> void:
+	var bank = load("res://src/presentation/sfx_bank.gd")
+	var rows = load("res://src/presentation/rows.gd")
+	_audio.engine._set_key(3)
+	var keyed := true
+	var leveled := true
+	var admitted := true
+	var details := []
+	for sound in _audio.KEST_SOUNDS:
+		_audio._last_start.erase(sound)
+		var kind := "line_skill_fired" if sound.begins_with("cable_") else "ultimate_peak"
+		_audio.engine._voices.clear()
+		var before: int = _audio.cue_log.size()
+		if sound.begins_with("tick_kest_"):
+			_audio.kest_roll(int(sound.get_slice("_", 2)))
+		elif sound == "raid_kest_boom":
+			kind = "ultimate_landed"
+			_audio._on_ultimate_landed("windhover", Vector3.ZERO, 0, 0.0)
+		elif sound == "raid_kest_stinger":
+			_audio._on_ultimate_peak("windhover", Vector3.ZERO)
+		else:
+			_game.player.kit.cloaked = true
+			_game.combat.ultimate._sound(sound, not sound.begins_with("cable_"))
+		var emitted: Array = _audio.cue_log.slice(before).filter(func(c): return c[1] == sound)
+		var gain: float = bank.trim_db(sound) + _audio.PRIORITY_DB[rows.priority(kind)]
+		if emitted.size() == 1 and emitted[0][2] == "now":
+			keyed = keyed and absf(float(emitted[0][4]) - Harmony.ratio(_audio.live_key())) < 0.0001
+			leveled = leveled and absf(float(emitted[0][5]) - gain) < 0.0001
+		elif emitted.size() == 1:
+			var at: int = emitted[0][3]
+			_audio.engine.render(maxi(at - _audio.engine.clock, 0) + 1)
+			var wanted = bank.samples_at(sound, _audio.engine.step_len, _audio.live_key(), _audio.engine.theme)
+			var voices: Array = _audio.engine._voices.filter(func(v): return v.to_stinger and v.buf == wanted)
+			keyed = keyed and voices.size() >= 1
+			leveled = leveled and voices.size() >= 1 and absf(voices[0].gl - cos(PI * 0.25) * 1.41 * db_to_linear(gain)) < 0.0001
+		else:
+			keyed = false
+			leveled = false
+		admitted = admitted and _audio._last_start.has(sound)
+		details.append([sound, emitted])
+	_t.check("Every Kest cue follows the live key", keyed, str(details))
+	_t.check("Every Kest cue uses trim plus row priority through admission", leveled and admitted, str(details))
