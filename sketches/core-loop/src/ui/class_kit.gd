@@ -54,6 +54,7 @@ const WORDS := {
 	"tradeoff_pylon_engineer": "Strong anchors, needs a surface.",
 	# --- end Sable ---
 	# --- P-C Rivet words ---
+	"line_drive": "line drive", "foundry_cutter": "foundry cutter", "prism_cutter": "prism cutter", "juggernaut_drive": "juggernaut drive",
 	"tradeoff_runner_gunner": "Ignores knockback, still takes damage.",
 	# --- end Rivet ---
 	# --- P-C Kest words ---
