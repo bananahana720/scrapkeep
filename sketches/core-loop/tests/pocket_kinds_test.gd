@@ -242,6 +242,8 @@ func _authored_pay() -> void:
 					var count := 1 if named != "" else int(Activities.RULES[kind].pay.parts)
 					var shown: int = acts.stand_odds(s).tier
 					var label: String = s.tier_label.text
+					if fixture.row == 2:
+						game.ctx.rng.seed += 10000
 					var before := paid.size()
 					if kind == "round_arena":
 						s.round = 1
