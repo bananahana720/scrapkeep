@@ -334,6 +334,7 @@ func setup(ctx_ref) -> void:
 		# --- P-C Rivet line skill ---
 		# --- end Rivet ---
 		# --- P-C Kest line skill ---
+		"cable_charge": KestKit.line_row(self),
 		# --- end Kest ---
 		# --- P-C Tarn line skill ---
 		# --- end Tarn ---
@@ -350,7 +351,6 @@ func setup(ctx_ref) -> void:
 	add_child(ultimate)
 	ultimate.setup(ctx, self)
 	ultimate.register("ult_default", {"tech": _ult_volley, "peak": _ult_peak, "landing": _ult_landing})
-	ultimate.register_kest()
 	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
 	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(_anchor: Vector3): _bite_load())

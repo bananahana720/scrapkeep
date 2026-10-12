@@ -38,11 +38,21 @@ var _landed_at := -INF
 var _last_throw := -INF
 
 
+static func line_row(combat_ref) -> Dictionary:
+	return {"on_body": func(body: Node3D, fraction: float, mult: float): combat_ref.ultimate.cable_body(body, fraction, mult),
+		"on_world": func(at: Vector3, fraction: float, mult: float): combat_ref.ultimate.cable_world(at, fraction, mult),
+		"geometry": func(fraction: float): return combat_ref.ultimate.cable_geometry(fraction)}
+
+
+func setup(ctx_ref, combat_ref) -> void:
+	super.setup(ctx_ref, combat_ref)
+	register_kest()
+
+
 func register_kest() -> void:
 	payloads = Sticky.new()
 	payloads.name = "KestPayloads"
 	add_child(payloads)
-	combat._line_skills["cable_charge"] = {"on_body": cable_body, "on_world": cable_world, "geometry": cable_geometry}
 	for id in IDS:
 		register(id, {"tech": tech, "peak": peak, "landing": landing})
 	ctx.events.line_skill_loaded.connect(func(id: String, _seconds: float):
@@ -138,6 +148,7 @@ func _set_cable() -> void:
 	cable["pos"] = cable["_anchor"]
 	cable["rider"] = cable["_body"]
 	cable["damage"] = CABLE_DAMAGE * ctx.player.chain.multiplier()
+	cable["born"] = combat._clock
 	cable["fuse"] = cable["_fuse"]
 	cable["_set"] = true
 	_sound("cable_kest_set")
@@ -179,7 +190,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 		p["flight"] = count * each
 		p["seconds"] = WINDUP_SECONDS + p["flight"]
 		p["legs"] = [{"mode": "arc", "to": p["to"], "beats": count, "seconds": count * each, "strike": true}]
-	if id == "windhover":
+	if id == "windhover" and p["path"] != "hop":
 		var b: Vector3 = p["to"]
 		var h := b + Vector3.UP * HOVER_HEIGHT
 		var each := float(p["flight"]) / int(p["beats"])
@@ -533,6 +544,9 @@ func caught_charges() -> Array:
 
 
 func take_charge(c: Dictionary) -> Dictionary:
+	if c == cable:
+		cable = {}
+		ctx.player.indicator.clear("kest_cable")
 	return payloads.take(c)
 
 
