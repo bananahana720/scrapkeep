@@ -1,7 +1,7 @@
 extends SceneTree
-# 2026-10-11 (PC-CANNON): real nodes on a deterministic floor exercise the delayed call clock.
+# 2026-10-11 (PC-CANNON): real nodes exercise the delayed call clock and the full reticle cone.
 # EXPECTED_CHECKS includes the count guard. Every check must run.
-const EXPECTED_CHECKS := 42
+const EXPECTED_CHECKS := 44
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -163,6 +163,8 @@ func _cases() -> void:
 	p["legs"][0]["beats"] = 7
 	p["legs"][0]["seconds"] = p["flight"]
 	var foe := _enemy(target + Vector3.UP)
+	_t.eq("sky reticle rejects the ground target", _ult._cannon_target(HOME, Vector3.UP, 26.0), HOME)
+	_t.eq("pitched reticle selects its target", _ult._cannon_target(HOME, (foe.global_position - HOME).normalized(), 26.0), foe.global_position)
 	_ult.start(p)
 	_finish_ride()
 	_t.eq("one landing", _landed.size(), 1)
