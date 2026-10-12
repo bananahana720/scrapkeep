@@ -21,6 +21,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const Director := preload("res://src/world/event_director.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
@@ -61,41 +62,49 @@ func _run() -> void:
 	t.check("committed stage graph is fresh", stale_graph.is_empty(), str(stale_graph))
 	t.check("KD0's stand-in park_dam_stage1.json is deleted", not FileAccess.file_exists(STAND_IN))
 
-	var misses := pins(park, lines, graph)
+	var cells = ParkGraph.read(BAKED + "/graph.bin")
+	var misses := pins(park, lines, graph, cells)
 	t.check("stage pins hold", misses.is_empty(), "\n".join(misses))
 
 	# Plants: each change must turn the pins red.
 	var planted: Dictionary = park.duplicate(true)
 	planted["landmark"]["warden"]["family"] = "swarm"
-	t.check("planted Warden family turns the pins red", not pins(planted, lines, graph).is_empty())
+	t.check("planted Warden family turns the pins red", not pins(planted, lines, graph, cells).is_empty())
 	planted = park.duplicate(true)
 	planted["waymarks"] = ["drop_in", "the_eye", "domes_camp", "landmark"]
-	t.check("planted waymark swap turns the pins red", not pins(planted, lines, graph).is_empty())
+	t.check("planted waymark swap turns the pins red", not pins(planted, lines, graph, cells).is_empty())
 	var bad_lines: Dictionary = lines.duplicate(true)
 	bad_lines["pilots"]["rivet"]["waypoints"].insert(2, "no_such_row")
-	t.check("planted unknown waypoint turns the pins red", not pins(park, bad_lines, graph).is_empty())
+	t.check("planted unknown waypoint turns the pins red", not pins(park, bad_lines, graph, cells).is_empty())
 	var bad_graph: Dictionary = graph.duplicate(true)
 	bad_graph["pockets"][0]["role"] = "extra"
-	t.check("planted pocket role turns the pins red", not pins(park, lines, bad_graph).is_empty())
+	t.check("planted pocket role turns the pins red", not pins(park, lines, bad_graph, cells).is_empty())
 	planted = park.duplicate(true)
 	for row in planted["park_rows"]:
 		if row["id"] == "slickrock_domes":
 			row["stamp"] = ""
-	t.check("planted unstamped greybox row turns the pins red", not pins(planted, lines, graph).is_empty())
+	t.check("planted unstamped greybox row turns the pins red", not pins(planted, lines, graph, cells).is_empty())
 	bad_lines = lines.duplicate(true)
 	bad_lines["pilots"]["sable"]["waypoints"].insert(1, [-600, -600])
-	t.check("planted line through an anchor field turns the pins red", not pins(park, bad_lines, graph).is_empty())
+	t.check("planted line through an anchor field turns the pins red", not pins(park, bad_lines, graph, cells).is_empty())
 	planted = park.duplicate(true)
 	for row in planted["park_rows"]:
 		if row["id"] == "toe_vent_pits":
 			row["at"] = [180, 430]
-	var vent_misses := pins(planted, lines, graph)
+	var vent_misses := pins(planted, lines, graph, cells)
 	t.check("planted vent corner fails corridor clearance", vent_misses.any(func(miss): return String(miss).begins_with("toe_vents_wake corridor clearance:")), str(vent_misses))
+	var closed_cells = ParkGraph.read(BAKED + "/graph.bin")
+	for row in park["park_rows"]:
+		if row["id"] == "the_eye":
+			var eye_cell: int = closed_cells.nearest(Vector2(row["at"][0], row["at"][1]))
+			closed_cells.node_flags[eye_cell] &= ~ParkGraph.OPEN
+	var open_misses := pins(park, lines, graph, closed_cells)
+	t.check("planted Eye OPEN bit fails its graph assertion", open_misses.any(func(miss): return String(miss).begins_with("the_eye graph OPEN:")), str(open_misses))
 	quit(t.verdict())
 
 
 # Every stage fact this test pins; [] when all hold, else one line per miss.
-static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Array:
+static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary, cells: ParkGraph) -> Array:
 	var out := []
 	if park.get("map") != MAP:
 		out.append("map is %s, want %s" % [park.get("map"), MAP])
@@ -170,6 +179,14 @@ static func pins(park: Dictionary, lines: Dictionary, graph: Dictionary) -> Arra
 		places["drop_in"] = Vector2(float(park["spawn"]["at"][0]), float(park["spawn"]["at"][1]))
 	if beacon.size() == 2:
 		places["landmark"] = Vector2(float(beacon[0]), float(beacon[1]))
+	if cells == null or not places.has("the_eye"):
+		out.append("the_eye graph OPEN: committed graph or authored coordinate is missing")
+	else:
+		var eye_cell: int = cells.nearest(places["the_eye"])
+		if eye_cell < 0 or eye_cell >= cells.node_count():
+			out.append("the_eye graph OPEN: authored coordinate %s has no cell" % places["the_eye"])
+		elif cells.flags(eye_cell) & ParkGraph.OPEN == 0:
+			out.append("the_eye graph OPEN: resolved cell %d at %s lacks OPEN" % [eye_cell, places["the_eye"]])
 	var vent_site := {}
 	var site_id := ""
 	for event in park.get("event_rows", []):
