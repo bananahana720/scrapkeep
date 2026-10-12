@@ -96,11 +96,7 @@ signal stage_freed(index: int)
 func _init(table = StageDefs) -> void:
 	for row in table.DEFS:
 		var id := String(row["map"])
-		if id.begins_with("park_"):
-			maps.append(_park_map(id, int(row["stage"])))
-		else:
-			assert(MAPS.has(id), "terrain: stage %s names an unknown map '%s'" % [row["stage"], id])
-			maps.append(MAPS[id].new())
+		maps.append(map_named(id, int(row["stage"])))
 		_is_park.append(maps[-1] is ParkMap)
 		_worlds.append(int(row.get("world", 1)))
 		_roots.append(null)
@@ -111,7 +107,14 @@ func _init(table = StageDefs) -> void:
 		_threaded.append(false)
 
 
-func _park_map(id: String, stage_number: int) -> RefCounted:
+static func map_named(id: String, stage_number: int) -> RefCounted:
+	if id.begins_with("park_"):
+		return _park_map(id, stage_number)
+	assert(MAPS.has(id), "terrain: stage %s names an unknown map '%s'" % [stage_number, id])
+	return MAPS[id].new()
+
+
+static func _park_map(id: String, stage_number: int) -> RefCounted:
 	for pattern in PARK_FILES:
 		var path: String = pattern % id
 		if FileAccess.file_exists(path):
@@ -119,7 +122,7 @@ func _park_map(id: String, stage_number: int) -> RefCounted:
 			assert(park.ok, "terrain: %s fails the park schema: %s" % [path, str(park.errors)])
 			return park
 	var old: String = StageDefs.DEFS[clampi(stage_number, 1, StageDefs.COUNT) - 1]["map"]
-	return MAPS[old].new()
+	return map_named(old, stage_number)
 
 
 func map() -> RefCounted:

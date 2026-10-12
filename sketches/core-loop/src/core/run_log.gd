@@ -145,6 +145,7 @@ var _posture_wardens := {}
 var _posture_open := {}
 # A line skill load is waiting for its bite: the next line_skill_fired is that bite.
 var _line_waiting := false
+var _bank_gains: Array = []
 
 
 func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
@@ -181,6 +182,8 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 		_line_waiting = true
 		_count_line("loaded"))
 	events.line_skill_fired.connect(func(_id: String, _target: Node3D, _at: Vector3, _on: String):
+		if _id == "bank_shot" and player.kit.line_state != 2:
+			_bank_gain()
 		_count_line("load_bitten" if _line_waiting else "on_line")
 		_line_waiting = false)
 	events.line_skill_expired.connect(func(_id: String):
@@ -191,9 +194,14 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 			(_record["ultimates"] as Array).append(_ultimate_row()))
 	events.ultimate_landed.connect(func(_id: String, _at: Vector3, _hits: int, _damage: float): _close_ultimate())
 	events.ultimate_cancelled.connect(func(_id: String, _reason: String, _refunded: bool): _close_ultimate())
+	events.dismounted.connect(func(_v: Vector3):
+		if player.bank_last.get("pending_log", false):
+			player.bank_last["pending_log"] = false
+			_bank_gain())
 
 
 func _on_run_started(class_id: String) -> void:
+	_bank_gains.clear()
 	_stages = {}
 	_in_arena = false
 	_phase = 0
@@ -201,11 +209,13 @@ func _on_run_started(class_id: String) -> void:
 	_posture_wardens = {}
 	_posture_open = {}
 	run.set_meta("boss_attacks", {})
+	# PE-0: the pilot clip router writes plays by clip and missing-clip refusals here (hero_assets.gd).
+	run.set_meta("pilot_clips", {"played": {}, "missing": 0})
 	_record = {"run_id": run.run_id, "class": class_id, "table": _table_id(), "outcome": "running", "brindle_phase_reached": null,
 		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0,
 		"chains": [], "best_combo": 0, "misses": 0, "smash_damage": 0.0, "smash_damage_by_fight": [],
 		"slot_casts": {"special": 0, "line": 0}, "snaps": {}, "picks": 0,
-		"line_skill": {"on_line": 0, "loaded": 0, "load_bitten": 0, "load_expired": 0}, "ultimates": []}
+		"line_skill": {"on_line": 0, "loaded": 0, "load_bitten": 0, "load_expired": 0, "bank_gain_mps": 0.0}, "ultimates": []}
 	_line_waiting = false
 	_fight_open = false
 	_smash_base = -1.0
@@ -559,6 +569,9 @@ func _write(outcome: String) -> void:
 	# W18: the Mind's attack commitments by family (mind.gd _commit_attack), so a soak reads
 	# which families it used without codex rows (dodged only) or damage sources (landed only).
 	line["boss_attacks"] = run.get_meta("boss_attacks", {})
+	# PE-0 (PILOT-CLIPS section 7.3): clips the pilot played by name, and refusals for a clip the
+	# GLB lacks. PE-INT's bot run expects smash and drop_land played and missing at 0.
+	line["pilot_clips"] = (run.get_meta("pilot_clips", {"played": {}, "missing": 0}) as Dictionary).duplicate(true)
 	# The ultimate meter's points by source this run (SKILL-BAR section 7, meter_points).
 	var meter = player.abilities.get("meter") if player != null and player.get("abilities") != null else null
 	line["meter_points"] = (meter.sources as Dictionary).duplicate() if meter != null else {}
@@ -575,3 +588,13 @@ func _write(outcome: String) -> void:
 	_dirty = false
 	if codex.append_line(storage_dir.path_join(LOG_FILE), JSON.stringify(line)):
 		records_written += 1
+
+
+func _bank_gain() -> void:
+	if _record.is_empty() or player.bank_last.is_empty():
+		return
+	_bank_gains.append(float(player.bank_last["exit"]) - float(player.bank_last["entry"]))
+	var values := _bank_gains.duplicate()
+	values.sort()
+	var n := values.size()
+	_record["line_skill"]["bank_gain_mps"] = snappedf(float(values[n / 2]) if n % 2 == 1 else (float(values[n / 2 - 1]) + float(values[n / 2])) * 0.5, 0.01)

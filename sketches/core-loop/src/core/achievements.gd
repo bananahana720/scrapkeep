@@ -36,6 +36,10 @@ const MIN_ROWS := 8
 # Pilot ids a row may reward before their ClassDef row exists. The save records the unlock;
 # the card appears when the row lands, and that unit removes the id here.
 const PENDING_PILOTS := []
+# 2026-10-11 (PC-SABLE): preserve the twelve pre-wave lifetime grants; new grants fit one run.
+const GRANDFATHERED := ["kills_100", "kills_1000", "ach_d7_ink_stitch", "ach_d7_plum_curl",
+	"ach_d7_forge_chips", "ach_d7_snail_shell", "ach_d7_thimble", "ach_d7_paw", "ach_d7_seashell",
+	"ach_d7_forge_blue", "ach_d7_ember_plum", "ach_d7_dusk_pink"]
 
 const ROWS := {
 	"warden_broken": {"name": "Warden Breaker", "text": "Break your first Warden.", "on": "beacon_unsealed",
@@ -116,16 +120,31 @@ const ROWS := {
 	"ach_meta_pocket_tint": {"name": "Fresh Eyes", "text": "Discover three new synergies.", "on": "synergy_discovered",
 		"where": {"first_time": true}, "count": 3, "reward": {"option": "pocket_tint"}},
 	# --- pylon_engineer (Sable): P-C Sable adds its grant rows here ---
+	"ach_sable_cable_runs": {"name": "Cable Runner", "text": "Land three Cable Runs in one run.", "on": "synergy_discovered", "where": {"synergy_id": "sable_cable_runs"}, "count": 1, "reward": {"cosmetic": "trail_sable_cable"}},
+	"ach_sable_parting_shot": {"name": "Parting Shot", "text": "Kill a machine within a second of a pylon slingshot.", "on": "synergy_discovered", "where": {"synergy_id": "parting_shot"}, "count": 1, "reward": {"cosmetic": "decal_sable_spool"}},
+	"ach_sable_switchback": {"name": "Switchback", "text": "Bank Shot off a stake your Cable Run left.", "on": "synergy_discovered", "where": {"synergy_id": "switchback"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_sable_felt"}},
 	# --- end pylon_engineer ---
 	# --- runner_gunner (Rivet): P-C Rivet adds its grant rows here ---
 	# --- end runner_gunner ---
 	# --- demolitions_caster (Kest): P-C Kest adds its grant rows here ---
+	"ach_kest_blast_vault": {"name": "Blast Vault", "text": "Let your own Cable Charge throw you clear.", "hidden": true, "on": "synergy_discovered", "where": {"synergy_id": "kest_blast_vault"}, "count": 1, "reward": {"cosmetic": "trail_kest_fuse_smoke"}},
+	"ach_kest_homecoming": {"name": "Homecoming", "text": "Fly Kest into the Highdraft.", "on": "synergy_discovered", "where": {"synergy_id": "kest_homecoming"}, "count": 1, "reward": {"cosmetic": "outfit_kest_rigger"}},
+	"ach_kest_tick_tick_boom": {"name": "Tick, Tick, Boom", "text": "Strike eight machines with one Windhover.", "on": "synergy_discovered", "where": {"synergy_id": "kest_tick_tick_boom"}, "count": 1, "reward": {"cosmetic": "shell_kest_roost"}},
 	# --- end demolitions_caster ---
 	# --- tarn (Tarn): P-C Tarn adds its grant rows here ---
+	"ach_tarn_dragged": {"name": "Ten Dragged", "text": "Drag ten machines into your claws in one stage.", "on": "synergy_discovered",
+		"where": {"synergy_id": "tarn_dragged"}, "count": 1, "reward": {"cosmetic": "trail_tarn_claw_marks"}},
+	"ach_tarn_six_at_once": {"name": "Six at Once", "text": "Land Redjaw Rend on six machines at once.", "on": "ultimate_landed",
+		"where": {"ultimate_id": "redjaw_rend"}, "at_least": {"hits": 6}, "count": 1, "reward": {"cosmetic": "shell_tarn_redjaw_teeth"}},
+	"ach_tarn_hold_still": {"name": "Hold Still", "text": "Break a hold with Redjaw Rend three times.", "hidden": true, "on": "synergy_discovered",
+		"where": {"synergy_id": "tarn_hold_still"}, "count": 1, "reward": {"cosmetic": "outfit_tarn_steady_cap"}},
 	# --- end tarn ---
 	# --- tally (Tally): P-C Tally adds its grant rows here ---
 	# --- end tally ---
 	# --- remembered_cannon (the Cannon): P-C Cannon adds its grant rows here ---
+	"ach_cannon_recital": {"name": "Recital", "text": "Land the four families in the order the gun hums.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_recital"}, "count": 1, "hidden": true, "reward": {"cosmetic": "trail_cannon_recital"}},
+	"ach_cannon_time_on_target": {"name": "Time on Target", "text": "Land a Fire Mission on eight enemies at once.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_time_on_target"}, "count": 1, "reward": {"cosmetic": "paint_cannon_lens"}},
+	"ach_cannon_old_tune": {"name": "Old Tune", "text": "Quiet the Mind with its own gun.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_old_tune"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_cannon_choir"}},
 	# --- end remembered_cannon ---
 }
 
@@ -239,6 +258,8 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 			problems.append("%s: sum %s is not an argument of %s" % [id, r["sum"], on])
 		if not (r.get("count", 0) is int) or int(r.get("count", 0)) < 1:
 			problems.append("%s: count must be an integer of at least 1" % id)
+		if int(r.get("count", 0)) > 10 and not id in GRANDFATHERED:
+			problems.append("%s: new grants must have count at most 10" % id)
 		if r.has("need") and not (SUMMARY_KEYS.has(r["need"]) or EVALUATOR_KEYS.has(r["need"])):
 			problems.append("%s: need %s is not a summary key, class, won or world" % [id, r.get("need")])
 		for bound in ["min", "max"]:

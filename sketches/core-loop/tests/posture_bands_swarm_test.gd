@@ -20,8 +20,10 @@ const T := preload("res://tests/support/t.gd")
 # the medians and the pins compare real fight lengths, not the cap.
 # The band (the common contract): grown median 25 to 45 s, small median at least twice grown,
 # the camper never breaks it. swarm.md section 7's mechanism check rides with it: at least half
-# the grown seeds land a stagger during a low dwell (the hive under LOW_DWELL_M). Its second
-# check, one finish from a latch, needs a latching bot (KF1/KF8) and is not here yet.
+# the grown seeds land a stagger during a low dwell (the hive under LOW_DWELL_M). Its second check,
+# one finish from a latch, is on since the bot's latch arm (KF-BOT, 2026-10-11; tools/bot_driver.gd
+# _anchor_fight): at least one grown seed takes a chunk with a haul from a line on a hardpoint inside a
+# stagger (the stage note's latch_chunks).
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster"]
 const SEED_COUNT := 8
@@ -35,22 +37,26 @@ const RUN_CAP_S := 300.0
 const TURN_S := 30.0
 const LOW_DWELL_M := 0.01
 const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
-# 2026-10-11 (w13 KF3 kf3-swarm fix round, base 28fe659 plus warden_swarm.gd): measured with the hoist
-# live, eight seeds, cut at RUN_CAP_S 300 s: grown 151.71 s of [148.01, 137.38, 141.71, 156.21, 142.22,
-# 151.71, 155.65, 164.72]; small 234.84 s of [300 (cap), 168.52, 208.05, 234.84, 300 (cap), 232.61,
-# 300 (cap), 217.03]; the camper never breaks it. A second run on a loaded machine gave grown 151.71 s again
-# and small 211.39 s of [300, 168.52, 202.28, 221.61, 211.39, 190.30, 300, 171.84]: the small arm moves
-# between runs, so its pin is the two runs' midpoint, 223.12 s, which holds both inside 10 percent. Every grown seed staggered the hive in a low dwell
-# (2 to 4 times each); the camper's [0, 0, 1, 0, 0, 2, 0, 0] shows the check can read zero.
-# THESE PINS ARE NOT THE BAND. They guard the measured fight against drift; the two band checks stay
-# red (grown 151.71 s against 25 to 45 s, small/grown 1.55 against 2). The hive is out of ram reach
-# 8 s in every 12 and posture drains after 3 s without gain (boss_posture.gd), so the skipper, which
-# never latches, leaks its posture each high dwell. The contract's 25 to 45 s and swarm.md's own
-# prediction (60 to 85 s, swarm.md:177) disagree, and 151.71 s is outside the sheet's world band too
-# (24.5 to 128 s, swarm.md:180). Waiting on the coordinator's ruling: restate the band for a latching
-# bot, accept a longer headframe band on the record, or shorten the out-of-reach window.
-const EXPECT_SMALL_S := 223.12
-const EXPECT_GROWN_S := 151.71
+# 2026-10-11 (w13 KF-BOT, base b2c6fa3 plus the bot's latch arm, tools/bot_driver.gd _anchor_fight): re-measured
+# with the latch arm on, eight seeds, cut at RUN_CAP_S 300 s, three sweeps on a loaded machine (load 46 to 60), all
+# three identical: grown 118.32 s of [139.63, 93.86, 105.69, 131.11, 98.16, 151.46, 117.9, 118.32]; small 164.03 s
+# of [164.03, 121.54, 158.93, 210.52, 169.36, 148.18, 179.94, 138.2]; the camper never breaks it. Low-dwell staggers
+# per grown seed [4, 4, 4, 3, 2, 3, 2, 3]; finishes from a latch per grown seed [2, 4, 4, 3, 4, 4, 4, 4] (camper all
+# 0). The three sweeps agree within 10 percent, so both medians are pinned. Before the latch arm (KF3 fix round):
+# grown 151.71 s, small 223.12 s.
+# 2026-10-11 (KF-BOT fix round, coordinator ruling 3): a fourth sweep, direct, load 20 to 45, gave the same 24
+# fights to the hundredth and prints the hand's counts per seed. Grown: latches [42, 31, 31, 46, 32, 43, 33, 35],
+# ride s [70.2, 45.6, 54.1, 78.8, 51.9, 76.2, 57.5, 55.8], line shots [354, 712, 87, 399, 809, 126, 287, 878],
+# chunks from a haul [2, 4, 4, 3, 4, 4, 4, 4], drop break on seeds 0, 4, 7. The hand latches, rides, fires and
+# finishes as swarm.md section 4 describes, so the miss is the mechanism's tuning, not the hand: owner call.
+# THESE PINS ARE NOT THE BAND. The two band checks stay red: grown 118.32 s against 25 to 45 s, small/grown 1.39
+# against 2. The latch arm keeps posture from draining through the high dwell (shots from the line) and finishes
+# every stagger with a haul (the alpha rows set ram_shatters false, so a ram never takes a chunk), but posture still
+# fills only from rams in the 4 s low dwell and about 1.5 a second from the line, so a chunk costs two to three
+# hoist cycles. Owner tuning call (no stage-3 tune is in KF-BOT's scope): restate the headframe band near the
+# sheet's own prediction (60 to 85 s, swarm.md:177), raise line-shot posture on an anchor, or shorten the high dwell.
+const EXPECT_SMALL_S := 164.03
+const EXPECT_GROWN_S := 118.32
 const TOLERANCE := 0.10
 
 var _child := false
@@ -85,6 +91,7 @@ func _initialize() -> void:
 	var results := ChildRuns.run(jobs, 900.0)
 	var fights := {}
 	var low_staggers := {}
+	var latch_finishes := {}
 	for i in results.size():
 		var arm: String = names[i][0]
 		var run_seed: int = names[i][1]
@@ -105,6 +112,14 @@ func _initialize() -> void:
 		if not low_staggers.has(arm):
 			low_staggers[arm] = []
 		low_staggers[arm].append(heights.filter(func(h): return float(h) < LOW_DWELL_M).size())
+		if not latch_finishes.has(arm):
+			latch_finishes[arm] = []
+		latch_finishes[arm].append(_latch_chunks(record))
+		var note := _stage_note(record)
+		print("swarm latch arm %s seed %d: latches %d, ride %.1f s, shots from the line %d, hauls %d, chunks from a haul %d, drop hauls %d, drop chunks %d, drop break %s, fight %.2f s" % [
+			arm, run_seed, int(note.get("latch_bites", 0)), float(note.get("latch_ride_s", 0.0)), int(note.get("latch_shots", 0)),
+			int(note.get("latch_hauls", 0)), int(note.get("latch_chunks", 0)), int(note.get("drop_hauls", 0)), int(note.get("drop_chunks", 0)),
+			note.get("drop_break", false) == true, fights[arm].back()])
 	var grown: float = _median(fights.get("grown", []))
 	var small: float = _median(fights.get("small", []))
 	var camper_broke: int = fights.get("camper", []).filter(func(s): return s < RUN_CAP_S).size()
@@ -117,6 +132,11 @@ func _initialize() -> void:
 		[SEED_COUNT, SEED_COUNT, SEED_COUNT])
 	t.check("half the grown seeds stagger the hive in a low dwell", grown_low * 2 >= SEED_COUNT,
 		"%d of %d grown seeds, per seed %s" % [grown_low, SEED_COUNT, low_staggers.get("grown", [])])
+	print("swarm finishes from a latch per seed: small %s, grown %s, camper %s" % [latch_finishes.get("small", []),
+		latch_finishes.get("grown", []), latch_finishes.get("camper", [])])
+	var grown_latched: int = latch_finishes.get("grown", []).filter(func(n): return n > 0).size()
+	t.check("one finish from a latch", grown_latched >= 1,
+		"%d of %d grown seeds took a chunk with a haul from a latch, per seed %s" % [grown_latched, SEED_COUNT, latch_finishes.get("grown", [])])
 	t.check("grown breaks the hive in 25 to 45 s", grown >= GROWN_BAND_S.x and grown <= GROWN_BAND_S.y, "grown median %.2f s" % grown)
 	t.check("small takes at least twice grown's time", grown > 0.0 and small >= SMALL_FACTOR * grown, "small %.2f s, grown %.2f s" % [small, grown])
 	t.eq("the camper never breaks it", camper_broke, 0)
@@ -179,6 +199,19 @@ func _record(out: String) -> Dictionary:
 	var lines := FileAccess.get_file_as_string(path).split("\n", false)
 	var record = JSON.parse_string(lines[0]) if not lines.is_empty() else null
 	return record if record is Dictionary else {}
+
+
+# Chunks the bot took with a haul from a line on a hardpoint inside a stagger (bot_driver.gd _watch_haul).
+func _latch_chunks(record: Dictionary) -> int:
+	return int(_stage_note(record).get("latch_chunks", 0))
+
+
+# The bot's note for the stage under test (bot_driver.gd _anchor_fight's counts ride in it).
+func _stage_note(record: Dictionary) -> Dictionary:
+	for note in record.get("stages", []):
+		if int(note.get("stage", 0)) == STAGE:
+			return note
+	return {}
 
 
 func _fight(record: Dictionary) -> float:

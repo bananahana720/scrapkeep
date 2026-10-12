@@ -1,11 +1,23 @@
 extends SceneTree
 
+# 2026-10-11 (PC-TARN ruling 1): world-one alone bans knobs/swaps; depths 3/4 require safe picks.
+# Expected: 59 checks, including a planted world-one knob through Tarn's ruling predicate.
+
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Relics := preload("res://src/build/relics.gd")
+
+class AbilityFixture extends RefCounted:
+
+
+	const SWAPPABLE := AbilityState.SWAPPABLE
+	const SLOTS := AbilityState.SLOTS
+	const ULTIMATE := AbilityState.ULTIMATE
+	const COOLDOWN_FLOOR := AbilityState.COOLDOWN_FLOOR
+	static var ABILITIES := AbilityState.ABILITIES.duplicate(true)
 
 # Rule: four safe growth picks cannot replace an ability, disable it, lower a knob's
 # default, or undo an earlier pick. Validate all 180 distinct nodes (six pilots' own trees).
@@ -103,10 +115,11 @@ const KIT_AGNOSTIC_ON := ["special_used", "slammed", "dashed", "hold_broken"]
 
 func _class_kit(pilot: String) -> Dictionary:
 	var def: Resource = ClassDef.by_id(pilot)
-	return {"weapon": def.weapon_id, "movement": def.movement_id, "special": def.special_id, "smash": def.smash_id}
+	return {"weapon": def.weapon_id, "movement": def.movement_id, "special": def.special_id, "smash": def.smash_id,
+		"line": def.line_id, "ultimate": def.ultimate_id}
 
 
-# The class row's four ids with the swaps of every earlier node on the route applied.
+# The class row's six ids with the swaps of every earlier node on the route applied.
 func _kit_before(pilot: String, node_id: String, world_one: bool) -> Dictionary:
 	var kit := _class_kit(pilot)
 	var path := UpgradeTree.path_to(pilot, node_id, world_one)
@@ -139,15 +152,18 @@ func _token_live(pilot: String, token: String, kit: Dictionary) -> bool:
 	return pairs.any(func(pr): return kit[pr[0]] == pr[1])
 
 
-func _op_live(pilot: String, n: Dictionary, kit: Dictionary) -> bool:
+func _op_live(pilot: String, n: Dictionary, kit: Dictionary, rows: Dictionary = AbilityState.ABILITIES) -> bool:
 	for slot in n.get("swap", {}):
-		if n["swap"][slot] != kit[slot]:
+		var replacement = n["swap"][slot]
+		if slot == AbilityState.ULTIMATE and String(rows.get(replacement, {}).get("variant_of", "")) != String(kit[slot]):
+			continue
+		if replacement != kit[slot]:
 			return true
 	for op in ["charges", "cooldown"]:
 		for slot in n.get(op, {}):
-			if float(AbilityState.ABILITIES[kit[slot]]["cooldown"]) > 0.0:
+			if float(rows[kit[slot]]["cooldown"]) > 0.0:
 				return true
-	var row: Dictionary = AbilityState.ABILITIES[kit["weapon"]]
+	var row: Dictionary = rows[kit["weapon"]]
 	for w in n.get("pattern", {}):
 		if w == row.get("pattern", kit["weapon"]) or w == row.get("mounted", ""):
 			return true
@@ -194,6 +210,7 @@ func _dead_offers() -> void:
 
 
 func _fixtures() -> void:
+	_slot_fixtures()
 	var tarn_kit := _class_kit("tarn")
 	var laser_kit := tarn_kit.duplicate()
 	laser_kit["weapon"] = "rapid_laser"
@@ -232,6 +249,38 @@ func _fixtures() -> void:
 		{"knob": {"mount_reach": NAN}}).is_empty(), "NaN cannot evade comparison")
 
 
+func _slot_fixtures() -> void:
+	for def in ClassDef.all():
+		var kit := _class_kit(def.id)
+		_report("%s six-slot kit" % def.display_name, kit.keys() == UpgradeTree.KEYS
+			and kit["line"] == def.line_id and kit["ultimate"] == def.ultimate_id, str(kit))
+	var pilot := "tarn"
+	var kit := _class_kit(pilot)
+	_report("own line knob is live", _op_live(pilot,
+		{"key": "line", "knob": {"tarn_only_fixture": 1.0}}, kit), "fixture token owned by this pilot")
+	_report("line swap is live", "line" in AbilityState.SWAPPABLE and _op_live(pilot,
+		{"key": "line", "swap": {"line": "link_clips"}}, kit), "existing line row differs from the held line_reel")
+	var variant := "fixture_ultimate_growth"
+	var foreign := "fixture_foreign_ultimate"
+	var fixture_tree := GDScript.new()
+	fixture_tree.source_code = FileAccess.get_file_as_string("res://src/core/upgrade_tree.gd").replace("const AbilityState :=", "static var AbilityState: Variant =")
+	var compiled := fixture_tree.reload()
+	_report("ultimate fixture compiles", compiled == OK, str(compiled))
+	if compiled != OK:
+		return
+	fixture_tree.AbilityState = AbilityFixture
+	AbilityFixture.ABILITIES[variant] = {"cooldown": 0.0, "variant_of": kit["ultimate"]}
+	AbilityFixture.ABILITIES[foreign] = {"cooldown": 0.0}
+	var growth := {"key": "ultimate", "swap": {"ultimate": variant}}
+	var replacement := {"key": "ultimate", "swap": {"ultimate": foreign}}
+	var issues: Array = fixture_tree.safe_pick_problems(pilot, growth)
+	_report("ultimate variant is growth", issues.is_empty() and _op_live(pilot, growth, kit, AbilityFixture.ABILITIES), str(issues))
+	_report("foreign ultimate is dead", not _op_live(pilot, replacement, kit, AbilityFixture.ABILITIES)
+		and not fixture_tree.safe_pick_problems(pilot, replacement).is_empty(), "fixture row has no variant_of relationship")
+	AbilityFixture.ABILITIES.erase(variant)
+	AbilityFixture.ABILITIES.erase(foreign)
+
+
 func _tarn_rows() -> void:
 	var tarn := UpgradeTree.nodes("tarn")
 	var ids := tarn.map(func(n): return String(n["id"]))
@@ -241,15 +290,25 @@ func _tarn_rows() -> void:
 	_report("Tarn's own tree", own and profile.size() == 30 and profile[0]["id"] == "t_long_claw" and shared.is_empty(),
 		"%d world-one nodes, first %s, %d shared with Rivet" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared.size()])
 	var bad := []
-	for n in tarn:
-		var ok: bool = not n.has("knob") and not n.has("swap")
+	var allowed := func(n: Dictionary, world_one: bool, earlier: Array) -> bool:
+		var ok: bool = not world_one or (not n.has("knob") and not n.has("swap"))
+		if not world_one and (n.has("knob") or n.has("swap")):
+			ok = ok and UpgradeTree.safe_pick_problems("tarn", n, earlier).is_empty()
 		for weapon in n.get("pattern", {}):
 			ok = ok and weapon == "claw_sweep" and float(n["pattern"][weapon].get("mul", {}).get("damage", 1.0)) <= 1.0
 		ok = ok and not String(n["effect"]).to_lower().contains("plating")
 		ok = ok and (Icons.IDS.has(n["icon"]) or Icons.EXTRA.has(n["icon"]))
-		if not ok:
-			bad.append(n["id"])
-	_report("Tarn rulings", bad.is_empty(), "no knob, swap, non-claw pattern, damage gain, plating claim or unknown icon; bad %s" % [bad])
+		return ok
+	for i in tarn.size():
+		if not allowed.call(tarn[i], false, _earlier(tarn, i)):
+			bad.append(tarn[i]["id"])
+	for i in UpgradeTree.WORLD_ONE_SIZE:
+		if not allowed.call(profile[i], true, _earlier(profile, i)):
+			bad.append("%s (world one)" % profile[i]["id"])
+	_report("Tarn rulings", bad.is_empty(), "world-one bans knobs/swaps; later picks safe; claw-only, no damage gain, plating or unknown icon; bad %s" % [bad])
+	var planted: Dictionary = profile[0].duplicate(true)
+	planted["knob"] = {"ult_beats": 3.0}
+	_report("Tarn planted world-one knob rejected", not allowed.call(planted, true, []), "world-one knob must remain banned")
 	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Tarn world-one cards", cards_ok, "%s" % [first_six])
@@ -285,6 +344,8 @@ func _tally_rows() -> void:
 
 
 func _cannon_rows() -> void:
+	# 2026-10-12 (PC-CANNON): world-one bans knobs/swaps; later picks use the shared safety rule.
+	# Expected: 60 checks, including the planted Cannon world-one knob.
 	var cannon := UpgradeTree.nodes("remembered_cannon")
 	var ids := cannon.map(func(n): return String(n["id"]))
 	var own := ids.all(func(i): return i.begins_with("c_"))
@@ -297,8 +358,10 @@ func _cannon_rows() -> void:
 		"%d world-one nodes, first %s, shared with other pilots %s" % [profile.size(), profile[0]["id"] if not profile.is_empty() else "-", shared])
 	var weapon := String(ClassDef.by_id("remembered_cannon").weapon_id)
 	var bad := []
-	for n in cannon:
-		var ok: bool = not n.has("knob") and not n.has("swap")
+	var allowed := func(n: Dictionary, world_one: bool, earlier: Array) -> bool:
+		var ok: bool = not world_one or (not n.has("knob") and not n.has("swap"))
+		if not world_one and (n.has("knob") or n.has("swap")):
+			ok = ok and UpgradeTree.safe_pick_problems("remembered_cannon", n, earlier).is_empty()
 		var pattern: Dictionary = n.get("pattern", {})
 		var shapes_bolts := false
 		for key in pattern:
@@ -319,10 +382,18 @@ func _cannon_rows() -> void:
 					volley = volley or String(p["do"]) == "volley"
 			ok = ok and volley
 		ok = ok and (Icons.IDS.has(n["icon"]) or Icons.EXTRA.has(n["icon"]))
-		if not ok:
-			bad.append(n["id"])
+		return ok
+	for i in cannon.size():
+		if not allowed.call(cannon[i], false, _earlier(cannon, i)):
+			bad.append(cannon[i]["id"])
+	for i in UpgradeTree.WORLD_ONE_SIZE:
+		if not allowed.call(profile[i], true, _earlier(profile, i)):
+			bad.append("%s (world one)" % profile[i]["id"])
 	_report("Cannon rulings", bad.is_empty(),
-		"no knob or swap; patterns on %s only; no damage mul above 1.0; no range_m; non-rate rows under a volley; known icons; bad %s" % [weapon, bad])
+		"world-one bans knobs/swaps; later picks safe; patterns on %s only; no damage mul above 1.0; no range_m; non-rate rows under a volley; known icons; bad %s" % [weapon, bad])
+	var planted: Dictionary = profile[0].duplicate(true)
+	planted["knob"] = {"ult_beats": 3.0}
+	_report("Cannon planted world-one knob rejected", not allowed.call(planted, true, []), "world-one knob must remain banned")
 	var first_six := ids.slice(0, UpgradeTree.WORLD_ONE_SIZE)
 	var cards_ok: bool = first_six.size() == 6 and first_six.all(func(i): return WorldOneCards.has_row(i) and not WorldOneCards.UNFITTED_ROWS.has(i))
 	_report("Cannon world-one cards", cards_ok, "%s" % [first_six])

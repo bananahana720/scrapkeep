@@ -27,6 +27,7 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const PartName := preload("res://src/ui/part_name.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
+const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const HotwireScreen := preload("res://src/ui/hotwire_screen.gd")
 const Companion := preload("res://src/core/companion.gd")
 
@@ -190,6 +191,8 @@ const ARMOR_PEAK_FLOOR := 100.0
 var _armor: Control
 var _cogs: CogChip
 var chain_counter: Control
+# SR6: floating damage numbers, one layer over the world (presentation/damage_numbers.gd).
+var damage_numbers: Control
 var _armor_flash := 0.0
 var _armor_peak := ARMOR_PEAK_FLOOR
 # The companion pip, left of the armour gauge: the escape charge read from run.companion,
@@ -264,6 +267,12 @@ func setup(game_ref) -> void:
 	add_child(_cogs)
 	chain_counter = ChainCounter.new()
 	add_child(chain_counter)
+	damage_numbers = DamageNumbers.new()
+	damage_numbers.project = _project_to_screen
+	add_child(damage_numbers)
+	# Juice raises the numbers from the hits it draws, so a number and its effect agree.
+	if game.presentation != null and game.presentation.get("juice") != null:
+		game.presentation.juice.number_sink = Callable(damage_numbers, "add")
 	_companion = TextureRect.new()
 	_companion.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_companion.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -675,9 +684,18 @@ func _screen_size() -> Vector2:
 	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1600.0, 900.0)
 
 
+# Where a world point sits on screen, null behind the camera (the damage-number layer's projector).
+func _project_to_screen(at: Vector3) -> Variant:
+	var cam: Camera3D = game.camera.cam
+	if cam.is_position_behind(at):
+		return null
+	return cam.unproject_position(at)
+
+
 # Puts every piece in its band for a screen of this size (screen_regions.gd).
 func layout(size: Vector2) -> void:
 	_laid_out = size
+	damage_numbers.size = size
 	_laid_pieces = _piece_sizes()
 	layout_runs += 1
 	var top := ScreenRegions.rect("top", size)
@@ -888,13 +906,14 @@ func _process(delta: float) -> void:
 	if size != _laid_out:
 		layout(size)
 	_step_toast(delta)
+	damage_numbers.step(delta)
 	_step_ach(delta)
 	_step_lore(delta)
 
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, edge_markers, why_callout, hotwire_screen]:
+	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, edge_markers, why_callout, hotwire_screen, damage_numbers]:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing
