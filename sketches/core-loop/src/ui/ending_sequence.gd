@@ -67,6 +67,9 @@ var quiet_gun: Node3D
 var crater: Node3D
 var cannon_answered := false
 var cannon_answer_at := -1.0
+var _crater_placed := false
+# Holds the threaded-loaded crater scenes so the cache keeps them for the placement on the credits roll.
+var _crater_files: Array = []
 
 
 func start(game_ref) -> void:
@@ -246,18 +249,49 @@ func _build_worlds() -> void:
 		holder.visible = false
 
 
-# KC10: Meteor Crater is the credits' set only. It is placed in this viewport's own scene, never in a stage's terrain,
-# and its -col collider is stripped: the sequence stays physics free (the test's _physics_free check).
+# KC10: Meteor Crater is the credits' set only. Its holder sits in this viewport's own scene, never in a stage's terrain.
+# start() only requests the GLBs on a thread, so the timed prepare window stays free of the bowl's load; the bowl is
+# placed on the first credits frame after the load finishes, and its -col collider is stripped so the sequence stays
+# physics free (the test's _physics_free check).
 func _build_crater() -> void:
-	var placed := ParkRecipes.place(CRATER_ROW, _scene, Callable(), Callable())
+	crater = Node3D.new()
+	crater.name = "MeteorCrater"
+	crater.visible = false
+	_scene.add_child(crater)
+	for path in _crater_paths():
+		ResourceLoader.load_threaded_request(path)
+
+
+func _crater_paths() -> Array:
+	var parts := ParkRecipes.paths(String(CRATER_ROW["recipe"]), String(CRATER_ROW["budget"]))
+	var out: Array = [parts["base"]]
+	out.append_array(parts["shells"])
+	return out.filter(func(path): return ResourceLoader.exists(path))
+
+
+# True once the bowl is placed. Returns false while a crater GLB is still loading, so the roll shows the sky a little longer.
+func _place_crater() -> bool:
+	if _crater_placed:
+		return true
+	var paths := _crater_paths()
+	for path in paths:
+		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return false
+	_crater_placed = true
+	for path in paths:
+		var status := ResourceLoader.load_threaded_get_status(path)
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			_crater_files.append(ResourceLoader.load_threaded_get(path))
+		else:
+			push_warning("ending_sequence: crater_ending GLB %s did not load (status %d)" % [path, status])
+	var placed := ParkRecipes.place(CRATER_ROW, crater, Callable(), Callable())
 	if placed == null:
 		push_warning("ending_sequence: crater_ending placed nothing; the credits roll over the sky")
-		return
+		return true
 	for body in placed.find_children("Collider", "StaticBody3D", true, false):
 		body.get_parent().remove_child(body)
 		body.free()
-	placed.visible = false
-	crater = placed
+	return true
 
 
 # The Highdraft's ground mesh is the catch floor: an orange and blue grid under the
@@ -453,6 +487,7 @@ func _show_crater(p: float) -> void:
 		holder.visible = false
 	if crater == null:
 		return
+	_place_crater()
 	crater.visible = true
 	var drop := smoothstep(0.0, 1.0, clampf(p, 0.0, 1.0))
 	camera.position = CRATER_CAM_FROM.lerp(CRATER_CAM_TO, drop)
