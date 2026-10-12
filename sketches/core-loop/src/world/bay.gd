@@ -190,10 +190,11 @@ func _aim_exit(offers: Array) -> void:
 
 
 static func _on_map(p: Vector3, map: RefCounted = null) -> bool:
-	if map is ParkMap:
+	if map is ParkMap and map.ok and map.park.has("play_rect"):
 		# park_map.gd reads this playable rectangle from the active park JSON's play_rect.
 		var rect: Rect2 = map.play_rect
-		return p.x > rect.position.x and p.x < rect.end.x and p.z > rect.position.y and p.z < rect.end.y
+		if rect.position.is_finite() and rect.size.is_finite() and rect.end.is_finite() and rect.size.x > 0.0 and rect.size.y > 0.0:
+			return p.x > rect.position.x and p.x < rect.end.x and p.z > rect.position.y and p.z < rect.end.y
 	return absf(p.x) < MAP_LIMIT and absf(p.z) < MAP_LIMIT
 
 
