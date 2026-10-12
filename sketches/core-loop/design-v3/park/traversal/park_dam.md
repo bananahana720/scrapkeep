@@ -1,5 +1,9 @@
 # park_dam traversal receipts
 
+## 2026-10-12: authorized ledge exception
+
+The coordinator authorized `cliff_rooms_west` at [-165,330] as this stage's one ledge repair. The pre-repair Sable seed-4 run reproduced a 62.9 m anchor gap. The graph comparison records 314008 edges for the vent-only counterfactual and 314061 edges with the ledge repair. That difference is authorized under `kd-round-common.md` step 2; the vent-only restriction does not govern the final candidate. Round 4 retains both coordinate changes and rebuilds with the merged candidate tools. Fresh round-4 measurements supersede the round-3 acceptance table below.
+
 ## 2026-10-12: round 3 final greybox
 
 Measured on greybox head `3e58f96c803861f485af09416449b09c8f741fd4` with the SHA256-verified TRAV-DET export, eight seeds per line at fixed 90 FPS, through the CPU queue at nice 10. All 56 batch rows are complete. Final documentary commits preserve these runtime inputs. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r3/final-sweep/`. Verdict: PASS+NOTES, evidence level 4. The anchor gap uses the worst seed. The floor is judged by its own row; other floor cells are reported.
