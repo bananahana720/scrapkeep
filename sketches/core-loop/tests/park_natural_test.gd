@@ -80,7 +80,7 @@ func _row(kind: String, form: String) -> Dictionary:
 		"music_cue": {"telegraph": "riser_natural", "land": "drop_natural"}}
 
 
-func _fixture(row: Dictionary, sound := false) -> Array:
+func _fixture(row: Dictionary, sound := false, more_rows: Array = []) -> Array:
 	var w := World.new()
 	root.add_child(w)
 	w.ctx.root = w
@@ -95,7 +95,7 @@ func _fixture(row: Dictionary, sound := false) -> Array:
 		w.presentation.audio.bake_now()
 	var map := ParkMap.new()
 	map.park = {"map": "fixture", "park_rows": [{"id": "site", "at": [0, 0], "y": 0,
-		"size": [20, 2, 10], "yaw_deg": 30}], "event_rows": [row], "weather_rows": [],
+		"size": [20, 2, 10], "yaw_deg": 30}], "event_rows": [row] + more_rows, "weather_rows": [],
 		"routes": [{"id": "main", "from": "drop_in", "to": "landmark"}]}
 	w.terrain.maps = [map]
 	w.events = Director.new(823, {}, map, 14.0, Callable(w.terrain, "height"))
@@ -167,5 +167,40 @@ func _run() -> void:
 		t.check(kind + " end removes effects", handler.active.is_empty() and w.terrain.overlays.is_empty())
 		handler.release()
 		w.free()
+	_water_lifecycle()
 	t.check("all seven kinds tested", t.checks >= 50, str(t.checks))
 	quit(t.verdict())
+
+
+func _water_lifecycle() -> void:
+	var fill := _row("flood_fill", "flood_rising")
+	fill.live_s = 60.0
+	var drain := _row("drain", "flood_rising")
+	drain.trigger.value = 2
+	drain.live_s = 5.0
+	var fixture := _fixture(fill, false, [drain])
+	var w = fixture[0]
+	var handler = fixture[1]
+	for i in 53:
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true})
+	var state: Dictionary = handler.active.flood_fill
+	var held: float = state.depth_m
+	for i in 21:
+		w.events.advance(0.1, Vector3(0, 1, 0), Vector3.ZERO, {"clock_tier": 1, "grounded": true})
+	t.near("grounded ball holds real water rise", state.depth_m, held)
+	t.near("grounded hold also holds the renderer", state.water.surface_y(), held)
+	for i in 25:
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1, "grounded": true})
+	t.near("water rise resumes after clearance", state.depth_m, 1.2)
+	for i in 80:
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 2, "grounded": true})
+	var inside: bool = w.terrain.flood.in_basin(Vector3.ZERO)
+	t.check("drain keeps one committed surface", inside and not state.water.visible)
+	t.near("drain lowers the existing flooded site", w.terrain.flood.surface_y(), 0.0)
+	for i in 40:
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 2, "grounded": true})
+	w.terrain.flood.in_basin(Vector3.ZERO)
+	t.check("drain end restores the prior live water", state.water.visible)
+	t.near("restored water material uses its surface", w.terrain.flood.surface_y(), 1.2)
+	handler.release()
+	w.free()
