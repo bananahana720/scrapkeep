@@ -27,7 +27,7 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 145
+	_expected_checks = 147
 	super._initialize()
 
 
@@ -179,6 +179,20 @@ func _shape_dispatch_fixture() -> void:
 			_t.check("Full Cut rendered fill matches the selection snapshot", not expected_vertices.is_empty() and rendered.size() == expected_vertices.size() and max_error < 0.001, "%d rendered, %d selected vertices, max error %s" % [rendered.size(), expected_vertices.size(), max_error])
 			indicator.shapes = other_shapes
 		wall.queue_free()
+	await _fresh()
+	_piece("juggernaut_drive")
+	var near_wave := _enemy("chaser", 5.0, Weapons.DRIVE_WAVE_NEAR - 0.1)
+	var far_wave := _enemy("chaser", 5.0, Weapons.DRIVE_WAVE_FAR + 0.1)
+	near_wave.set_physics_process(false)
+	far_wave.set_physics_process(false)
+	_tech("juggernaut_drive", 1)
+	_t.check("bow wave keeps its centre-based near and far limits", near_wave._knock.length() < 0.01 and far_wave._knock.length() < 0.01)
+	await _fresh()
+	_piece("foundry_cutter")
+	var past_inner := _enemy("chaser", -Weapons.BREACH_INNER - 0.1)
+	past_inner.set_physics_process(false)
+	_combat.ultimate._strike(_player.ball_position())
+	_t.check("Breach Skid inner ring keeps its centre-based radius", _hits(past_inner).is_empty())
 	await _fresh()
 
 
