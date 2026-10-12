@@ -158,9 +158,10 @@ func _combat() -> void:
 		acts.step_pocket(s, H, s.global_position)
 		if s.started:
 			arrivals += 1
+			var members: Array = s.pack.duplicate()
 			s.brute._die()
 			await physics_frame
-			vanished = vanished and Activities._alive(s.pack) == 0 and s.done
+			vanished = vanished and Activities._alive(members) == 0 and Activities._alive(s.pack) == 0 and s.done
 	t.check("elite death leaves zero pocket enemies within 1 s", vanished and arrivals == 3, "one physics frame after death; three accepted elites")
 	t.eq("elite arrivals per stage capped at three", arrivals, 3)
 	acts.clear()
@@ -202,7 +203,7 @@ func _rounds() -> void:
 		announced = s.fog.director.stage_time
 		while not s.fog.active:
 			acts.step_pocket(s, H, s.global_position)
-		lead = lead and s.fog.director.stage_time - announced >= 3.0 - H
+		lead = lead and s.fog.director.stage_time - announced >= 3.0 - 0.000001
 		var want := (12.0 + 6.0 * round_index) * 3.0
 		formula = formula and absf(s.round_credits - want) / want <= 0.01 and s.pack.size() == int(want / 6.0)
 		var seen := {}
