@@ -1,5 +1,7 @@
 extends "res://src/combat/enemy.gd"
 
+const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
+
 # The chaser runs you down and lunges. The lunge is committed: at wind-up it lays a
 # lane on the ground from where it stands toward where you are, and only that lane
 # can hurt you, only while it is lunging down it. Roll off the lane, jump it, or hit
@@ -13,7 +15,7 @@ const WINDUP := 0.6
 const LUNGE_TIME := 0.34
 const LUNGE_LENGTH := 11.0
 const LUNGE_WIDTH := 2.8
-const RECOVER := 0.9
+const RECOVER := TelegraphRecord.RECOVERY
 const REST := 0.8
 const DAMAGE := 9.0
 const SHOVE := 6.0
