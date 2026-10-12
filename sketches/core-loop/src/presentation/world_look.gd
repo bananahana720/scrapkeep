@@ -112,9 +112,15 @@ static func time_row(stage: int) -> Dictionary:
 
 
 # The world row with the stage's time of day laid over it: sun, and the ambient colour and energy.
+# A dome world (underground) has no daylight to vary, so its energy and sun energy stay at the
+# world row; the time of day moves only the sun's direction and colour and the ambient colour there.
 static func stage_look(stage: int, world: int) -> Dictionary:
-	var look := row(world).duplicate()
+	var base := row(world)
+	var look := base.duplicate()
 	look.merge(time_row(stage), true)
+	if base.get("sky") == "dome":
+		look.energy = base.energy
+		look.sun_energy = base.sun_energy
 	return look
 
 

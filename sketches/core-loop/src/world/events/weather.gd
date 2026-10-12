@@ -1,69 +1,37 @@
 extends RefCounted
 
-# Weather rows (KE7; PARK.md section 6; the six stage pages' weather_rows). The module owns a row's
-# cycle (announce, lead, live, gap, then the next announce), the fog, sky and sound a row carries,
-# and the fog it writes to the environment. A weather row's handling is "none" (ParkSchema rejects
-# anything else), so nothing here reads or writes ball tuning or physics.
+# Weather rows (KE7; PARK.md section 6; the six stage pages' weather_rows). The event director owns
+# the schedule (announce, lead, live, gap) and calls this family's hook on each weather row's
+# telegraph, land (the row goes live), step and end actions. This module writes the row's fog to
+# the environment when it goes live, restores the fog it found when the row ends, and keeps the
+# row's sky tint and cloud amount for the presentation to read. A weather row's handling is "none"
+# (ParkSchema rejects anything else), so nothing here reads or writes ball tuning or physics.
 
 const WorldLook := preload("res://src/presentation/world_look.gd")
 
-const EPS := 0.0001
+var current := {}
+var _env: Environment
+var _saved := {}
 
 
-# One row's cycle. step returns the event this tick: "announced" when the lead starts, "started"
-# when the row goes live, "ended" when the live window closes, or "" for no event. An "always" row
-# is live from its first tick and never cycles. armed is the row's trigger state for this tick.
-class Cycle extends RefCounted:
-	const WAIT := 0
-	const LEAD := 1
-	const LIVE := 2
-	const GAP := 3
+func _init(env: Environment) -> void:
+	_env = env
 
-	var _row: Dictionary
-	var _always := false
-	var _phase := WAIT
-	var _t := 0.0
 
-	func _init(row: Dictionary) -> void:
-		_row = row
-		_always = row.get("trigger", {}).get("on") == "always"
-
-	func is_live() -> bool:
-		return _phase == LIVE
-
-	func step(delta: float, armed: bool) -> String:
-		if _always:
-			if _phase != LIVE:
-				_phase = LIVE
-				return "started"
-			return ""
-		match _phase:
-			WAIT:
-				if armed:
-					_begin(LEAD)
-					return "announced"
-			LEAD:
-				_t += delta
-				if _t >= float(_row.lead_s) - EPS:
-					_begin(LIVE)
-					return "started"
-			LIVE:
-				_t += delta
-				if _t >= float(_row.live_s) - EPS:
-					_begin(GAP)
-					return "ended"
-			GAP:
-				_t += delta
-				if _t >= float(_row.gap_s) - EPS:
-					_begin(WAIT)
-					if armed:
-						_begin(LEAD)
-						return "announced"
-		return ""
-
-	func _begin(phase: int) -> void:
-		_phase = phase
-		_t = 0.0
+# Director family handler: (action, row, ctx). Only land and end write anything.
+func hook(action: String, row: Dictionary, _ctx: Dictionary) -> void:
+	if _env == null:
+		return
+	match action:
+		"land":
+			_saved = _fog_state(_env)
+			apply(_env, row)
+			current = look(row)
+		"end":
+			if not _saved.is_empty():
+				_restore_fog(_env, _saved)
+			_saved = {}
+			current = {}
 
 
 # The look a row carries: fog density and colour from the row, the sky id with its tint and
@@ -89,3 +57,13 @@ static func apply(env: Environment, row: Dictionary) -> void:
 	env.fog_enabled = true
 	env.fog_density = values.fog_density
 	env.fog_light_color = values.fog_color
+
+
+static func _fog_state(env: Environment) -> Dictionary:
+	return {"enabled": env.fog_enabled, "density": env.fog_density, "color": env.fog_light_color}
+
+
+static func _restore_fog(env: Environment, saved: Dictionary) -> void:
+	env.fog_enabled = saved.enabled
+	env.fog_density = saved.density
+	env.fog_light_color = saved.color
