@@ -253,6 +253,9 @@ static func child_args(settings: Dictionary, job: Dictionary, cell: Dictionary, 
 			"--cap=%s" % cap, "--result=" + home.path_join("result.tsv"), "--home=" + home])
 	if settings.get("gate", "0") == "1":
 		args.append("--gate=1")
+	for key in BotOptions.FAST_FLAGS:
+		if settings.has(key):
+			args.append("--%s=%s" % [key, settings[key]])
 	if float(arm["mass"]) > 0.0:
 		args.append("--start-mass=%d" % int(arm["mass"]))
 	return args
