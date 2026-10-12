@@ -3,6 +3,9 @@ extends SceneTree
 const Audio := preload("res://src/presentation/audio.gd")
 const Events := preload("res://src/core/game_events.gd")
 const Swarm := preload("res://src/combat/warden_swarm.gd")
+const Game := preload("res://src/game.gd")
+const WardenScript := preload("res://src/combat/warden.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 
 class Fleet extends RefCounted:
 	var bus
@@ -12,6 +15,20 @@ class Fleet extends RefCounted:
 class Warden extends Node:
 	var fleet
 	var target = null
+
+class ShellAssets extends HeroAssets:
+	func _addon(_path: String) -> Node3D:
+		var shell := Node3D.new()
+		var core := Node3D.new()
+		core.name = "Core"
+		shell.add_child(core)
+		var pod := Node3D.new()
+		pod.name = "Pod"
+		shell.add_child(pod)
+		var ring := Node3D.new()
+		ring.name = "WeaponRing"
+		pod.add_child(ring)
+		return shell
 
 var _failures := 0
 var _first := 0
@@ -77,9 +94,62 @@ func _swarm() -> void:
 	events.enemy_struck.emit(null, "weapon", 1.0)
 	events.free()
 
+func _shell_ring() -> void:
+	var assets := ShellAssets.new()
+	root.add_child(assets)
+	var ball := Node3D.new()
+	root.add_child(ball)
+	var rec: Dictionary = assets.fit_shell_into(ball, "runner_gunner", "", 2, {})
+	var pod: Node3D = rec.get("pod")
+	var holder: Node3D = pod.get_node_or_null("HeftC2") if pod != null else null
+	var ring: Node3D = pod.get_node_or_null("WeaponRing/HeftC2") if pod != null else null
+	_report("shell ring fixture", holder != null and ring != null, "fit_shell_into creates layer and weapon ring")
+	if holder != null and ring != null:
+		holder.visible = false
+		_report("ring follows layer while alive", not ring.visible, "visibility listener ran")
+		ring.free()
+		_report("freed shell ring disconnects", holder.visibility_changed.get_connections().is_empty(),
+			"remaining=%d want=0" % holder.visibility_changed.get_connections().size())
+		holder.visible = true
+	ball.free()
+	assets.free()
+
+func _mind_body() -> void:
+	var game := Game.new()
+	game.test_mode = true
+	game.table = "alpha"
+	root.add_child(game)
+	while game.flow == null:
+		await physics_frame
+	game.ctx.calm = true
+	var warden := WardenScript.new()
+	game.add_child(warden)
+	warden.setup(game.player, game.ctx.terrain, game, func(): return true, 1.0,
+		{"kind": "warden", "family": "mind", "stage": 6, "variant": "choir", "harpoon_anchor": true, "fleet": game.combat.fleet})
+	warden.set_physics_process(false)
+	await process_frame
+	var assets = game.presentation.hero_assets
+	assets._dress_warden(warden)
+	var driver = warden.mount_driver
+	_report("Mind body fixture", driver != null and driver.took_off.get_connections().size() == 1 and driver.landed.get_connections().size() == 1,
+		"real body has takeoff and landing listeners")
+	driver.took_off.emit(0, 1)
+	driver.landed.emit(1)
+	warden.free()
+	await process_frame
+	_report("freed Mind body disconnects takeoff", driver.took_off.get_connections().is_empty(),
+		"remaining=%d want=0" % driver.took_off.get_connections().size())
+	_report("freed Mind body disconnects landing", driver.landed.get_connections().is_empty(),
+		"remaining=%d want=0" % driver.landed.get_connections().size())
+	driver.took_off.emit(0, 1)
+	driver.landed.emit(1)
+	game.free()
+
 func _run() -> void:
 	_audio(false)
 	_audio(true)
 	_swarm()
+	_shell_ring()
+	await _mind_body()
 	print("signal_lifetime_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
