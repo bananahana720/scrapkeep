@@ -79,7 +79,7 @@ func _run() -> void:
 			if not info["routes"][id].is_empty():
 				broken.append("%s: %s" % [id, info["routes"][id]])
 		t.check("every route connected", broken.is_empty() and info["routes"].size() == park["routes"].size(), "; ".join(broken))
-		t.check("spawn in the farthest quarter", bool(info["spawn"]["ok"]), str(info["spawn"]))
+		t.check("spawn in the farthest quarter", bool(info["spawn"]["ok"]) and bool(info["spawn"]["run"]), str(info["spawn"]))
 		t.check("the beacon is on an objective-fit node (beacon_ok, SR15)", bool(info.get("beacon_ok", false)) and String(info.get("first_failed", "x")) == "",
 			"beacon_ok %s, first_failed %s" % [info.get("beacon_ok"), info.get("first_failed")])
 		var by_id := {}

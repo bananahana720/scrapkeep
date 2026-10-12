@@ -14,8 +14,8 @@
     "under_fallback": 0
   },
   "files": {
-    "apron.bin": "f5a152cf352300f79f00e55aa7670043238039c0d22b7220b8a8f61dbb40e73f",
-    "ground.bin": "9cc54e73cb565519a20acb8fd071504ba214067adee7c02cabb5d1253b5da862",
+    "apron.bin": "fc34a864773de34858a3716431eb549959aa5e1b46c170b46fdc3849f745b94a",
+    "ground.bin": "73e9fd4191e7eb64312956653ee1d6be5fba6cad7821f05fa2e8eac7e216a6fb",
     "holes.bin": "3d00ed86b663cd1b8ac82b105257cd109412f92dca442048532439f920a7f645",
     "surface.bin": "01c4e91293cb913f8821c335db58bb000e0e9145fea66ca709bf49f20b95abf7",
     "under.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -48,11 +48,11 @@
     "step_m": 2.0
   },
   "height": {
-    "max": 154.0,
+    "max": 147.715713500977,
     "min": -95.0
   },
   "map": "park_flume",
-  "park_sha256": "c04e26b46951a93c1c3bf4f53a88916fb7443f850f1c82b6973eb91e259420a2",
+  "park_sha256": "955a832d5e265625922ccdb1df5f0921fb602169aa16ddc55bc30e373a9086da",
   "schema": "scrapkeep-park-bake/1",
   "tool_sha256": "046e7258338a8bcca754c4ca23cb0cf963098dfc29cf88aaa46601fbb4e363c2"
 }
