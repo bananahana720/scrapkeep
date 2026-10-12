@@ -1,3 +1,4 @@
+# 2026-10-12 FIXTURE-ADAPT: 000763f added Windhover; Kest's sheet :23 calls her "a hovering mortar".
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

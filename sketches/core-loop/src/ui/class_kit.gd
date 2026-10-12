@@ -57,7 +57,7 @@ const WORDS := {
 	"tradeoff_runner_gunner": "Ignores knockback, still takes damage.",
 	# --- end Rivet ---
 	# --- P-C Kest words ---
-	"cable_charge": "cable charge", "windhover": "windhover",
+	"cable_charge": "cable charge", "windhover": "hovering mortar",
 	"air_raid": "air raid", "minelayer": "minelayer",
 	"tradeoff_demolitions_caster": "Delayed blasts, needs fuse timing.",
 	# --- end Kest ---
