@@ -10,7 +10,7 @@ const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 const PAGE := "res://src/ui/logbook_page.gd"
 const KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
-const EXPECTED_CHECKS := 43
+const EXPECTED_CHECKS := 48
 
 # A full three-stage flow, as spine_run_log_test uses, with combat and boss doubles.
 class ScriptedGame extends Game:
@@ -60,6 +60,7 @@ func _run() -> void:
 	_game.flow.choose_class(1)
 	_check_page(codex, profile)
 	_check_run(spawner, run, profile)
+	_check_tally_merge()
 	_t.eq("SR12 expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	_game.free()
 	quit(_t.verdict())
@@ -184,3 +185,21 @@ func _same_tallies(got, want: Dictionary) -> bool:
 		if not (value is int or value is float) or not is_finite(value) or float(value) != float(want[key]):
 			return false
 	return true
+
+
+func _check_tally_merge() -> void:
+	var path: String = _game.storage_dir.path_join("tally-merge.json")
+	var base := Profile.new(path)
+	base.load_profile()
+	base.set_stat("kills", 7.0)
+	base.set_stat("time", 4.0)
+	_t.check("SR12 prior lifetime stats save", base.save(), base.last_error)
+	var a := Profile.new(path)
+	var b := Profile.new(path)
+	_t.check("SR12 stale tally writers load same generation", a.load_profile() and b.load_profile())
+	_t.check("SR12 distinct runs accept their snapshots", a.record_run_tallies("merge_a", {"stages_cleared": 1, "time": 2.0, "kills": 3, "deaths": 0, "wardens_seen": 1}) and b.record_run_tallies("merge_b", {"stages_cleared": 1, "time": 3.0, "kills": 5, "deaths": 1, "wardens_seen": 1}))
+	_t.check("SR12 stale tally writers both save", a.save() and b.save(), b.last_error)
+	var merged := Profile.new(path)
+	var loaded := merged.load_profile()
+	_t.check("SR12 merged tallies retain both runs and prior stats", loaded and merged.stat("kills") == 15.0 and merged.stat("time") == 9.0 and merged.stat("stages_cleared") == 2.0 and merged.stat("deaths") == 1.0 and merged.stat("wardens_seen") == 2.0,
+		"kills %s, time %s, stages %s" % [merged.stat("kills"), merged.stat("time"), merged.stat("stages_cleared")])
