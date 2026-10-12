@@ -1,4 +1,5 @@
 # 2026-10-12 FIXTURE-ADAPT: 69db888 moved pack recovery to TelegraphRecord.RECOVERY.
+# 2026-10-12 R6: LEGIBILITY.md:70 requires "a 0.75 s standing tail"; :74 pins chaser recovery to 0.75 s.
 extends SceneTree
 
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
@@ -18,6 +19,7 @@ const PART_SURFACES := {
 }
 const CORE_RADIUS := 1.0
 const CORE_HALF_HEIGHT := 1.5
+const DESIGN_RECOVERY := 0.75
 const BASE_CONSTS := {
 	"SPEED": 4.8, "LUNGE_RANGE": 10.0, "WINDUP": 0.6, "LUNGE_TIME": 0.34, "LUNGE_LENGTH": 11.0,
 	"LUNGE_WIDTH": 2.8, "RECOVER": TelegraphRecord.RECOVERY, "REST": 0.8, "DAMAGE": 9.0, "SHOVE": 6.0, "INTERRUPT": 10.0,
@@ -72,6 +74,7 @@ func _measure(node: Node) -> Dictionary:
 
 
 func _run() -> void:
+	_check(TelegraphRecord.RECOVERY == DESIGN_RECOVERY, "shared pack recovery matches LEGIBILITY 0.75 s design pin")
 	var packed := load("res://assets/models/world_one/enemy_chaser.glb") as PackedScene
 	_check(packed != null, "enemy_chaser.glb loads")
 	if packed == null:
