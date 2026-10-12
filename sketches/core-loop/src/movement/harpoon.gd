@@ -26,7 +26,7 @@ static func target(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array
 	if not locked.is_empty():
 		return locked
 	return Augments.grapple_target(space, from, forward, ball, reach, assist,
-		Augments.WORLD_MASK | Augments.ENEMY_MASK, false)
+		Augments.WORLD_MASK | Augments.ENEMY_MASK | Augments.STAKE_MASK, false)
 
 
 static func _lock(kit, tuning, space: PhysicsDirectSpaceState3D, enemies: Array, from: Vector3,

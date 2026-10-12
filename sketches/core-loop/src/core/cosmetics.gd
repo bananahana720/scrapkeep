@@ -24,7 +24,7 @@ const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
-const PENDING_ART := ["trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_cannon_recital", "shell_cannon_choir", "trail_kest_fuse_smoke", "outfit_kest_rigger"]
+const PENDING_ART := ["trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_cannon_recital", "shell_cannon_choir", "trail_kest_fuse_smoke", "outfit_kest_rigger", "trail_sable_cable", "decal_sable_spool", "shell_sable_felt"]
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -74,6 +74,9 @@ const ROWS := {
 	"decal_curtain_call": {"slot": "decal", "pilot": "", "name": "Curtain Call", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_curtain_call_mask.png", "mask": 9},
 	"companion_skin_till_bell": {"slot": "companion_skin", "pilot": "", "name": "Till Bell", "starter": false, "tint": Color("8a5a3a"), "asset": "companion_skin_till_bell"},
 	# --- pylon_engineer (Sable): P-C Sable adds its rows here ---
+	"trail_sable_cable": {"slot": "trail", "pilot": "pylon_engineer", "name": "Cable Stitch", "starter": false, "tint": Color("8bf0d3"), "asset": "trail_sable_cable"},
+	"decal_sable_spool": {"slot": "decal", "pilot": "pylon_engineer", "name": "Spool and Wrench", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_sable_spool_mask.png", "mask": 8},
+	"shell_sable_felt": {"slot": "shell", "pilot": "pylon_engineer", "name": "Felt Rig", "starter": false, "tint": Color("8c8577"), "asset": "shell_sable_felt"},
 	# --- end pylon_engineer ---
 	# --- runner_gunner (Rivet): P-C Rivet adds its rows here ---
 	# --- end runner_gunner ---

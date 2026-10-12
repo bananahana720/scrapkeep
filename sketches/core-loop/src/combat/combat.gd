@@ -23,6 +23,7 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
 const NearMiss := preload("res://src/combat/near_miss.gd")
+const Augments := preload("res://src/movement/augments.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
@@ -330,6 +331,7 @@ func setup(ctx_ref) -> void:
 		"line_reel": {"on_body": _line_reel_body, "on_world": _reel_burst, "geometry": _line_reel_geometry},
 		"link_clips": {"on_body": _link_clips_body, "on_world": _reel_burst, "geometry": _line_reel_geometry},
 		# --- P-C Sable line skill ---
+		"bank_shot": {"on_body": _bank_body, "on_world": _bank_world, "geometry": _bank_geometry},
 		# --- end Sable ---
 		# --- P-C Rivet line skill ---
 		# --- end Rivet ---
@@ -1489,7 +1491,7 @@ func _flat_aim() -> Vector3:
 # Sable: the gauge stands in for speed in the discharge curve, and the bank counts if
 # you are mounted and it is bigger.
 func _discharge_speed(f: float) -> float:
-	var speed := f * Weapons.DISCHARGE_FULL_SPEED
+	var speed := maxf(f * Weapons.DISCHARGE_FULL_SPEED, 0.75 * ctx.player.state.velocity.length())
 	if ctx.player.kit.mounted:
 		speed = maxf(speed, ctx.player.kit.mount_banked)
 	return speed
@@ -2017,7 +2019,7 @@ func _fire_line_skill(id: String, fraction: float) -> void:
 		return
 	var kit = ctx.player.kit
 	var mult := float(ctx.player.chain.multiplier())
-	var target: Node3D = kit.anchor_body if kit.on_body and is_instance_valid(kit.anchor_body) else null
+	var target: Node3D = kit.anchor_body if kit.on_body and is_instance_valid(kit.anchor_body) and not (id == "bank_shot" and Augments.anchor_line(kit.anchor_body)) else null
 	var at: Vector3 = kit.anchor
 	var on := "body" if target != null else "world"
 	var prev_source := _forced_source
@@ -2455,6 +2457,8 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 # The pylon's opening burst: planting fires the special free when its row says so
 # (Sable's detonation gauge). Siege Plate lets it reach everything in range.
 func _on_mounted(at: Vector3, banked_speed: float) -> void:
+	if ultimate != null and ultimate.active() and ultimate._id == "outpost":
+		return
 	if ctx.run.class_def == null or not ctx.flow.in_play():
 		return
 	var abilities = ctx.player.abilities
@@ -3258,3 +3262,31 @@ static func _signal_argc(obj: Object, kind: String) -> int:
 		if sig["name"] == kind:
 			return sig["args"].size()
 	return 0
+
+
+# --- PC-SABLE Bank Shot ---------------------------------------------------------------
+func _bank_body(target: Node3D, _fraction: float, mult: float) -> void:
+	var launch: Dictionary = ctx.player.bank_geometry()
+	var damage := 10.0 * mult * (0.5 if _target_class(target) == "boss" else 1.0)
+	if _target_class(target) != "boss" and target.has_method("knock"):
+		target.knock(-(launch["dir"] as Vector3), 12.0)
+	if target.has_method("flash"):
+		target.flash()
+	strike(target, "arc", damage, "", "special")
+	_bank_world(ctx.player.kit.anchor, _fraction, mult)
+
+
+func _bank_world(_anchor: Vector3, _fraction: float, _mult: float) -> void:
+	var kit = ctx.player.kit
+	var stake = kit.anchor_body
+	var switched: bool = is_instance_valid(stake) and stake.is_in_group(Augments.STAKE_GROUP)
+	var learned: bool = ctx.codex != null and ctx.codex.known("loaded_line")
+	ctx.player.bank_shot()
+	if learned:
+		_discover("bank_shot", _anchor)
+		if switched:
+			_discover("switchback", _anchor)
+
+
+func _bank_geometry(_fraction: float) -> Dictionary:
+	return ctx.player.bank_geometry()

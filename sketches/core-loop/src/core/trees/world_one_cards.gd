@@ -59,6 +59,8 @@ const ROWS := {
 # edits nothing else in this table.
 const SET_PIECE_LINES := {
 	# --- P-C Sable set piece lines ---
+	"ball_lightning": "Set piece: Ball Lightning",
+	"outpost": "Set piece: Outpost",
 	# --- end Sable ---
 	# --- P-C Rivet set piece lines ---
 	# --- end Rivet ---

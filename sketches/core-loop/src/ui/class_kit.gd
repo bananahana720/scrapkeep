@@ -50,6 +50,7 @@ const WORDS := {
 	"harpoon": "harpoon line",
 	"boost": "boost",
 	# --- P-C Sable words ---
+	"bank_shot": "bank shot", "cable_run": "cable run", "ball_lightning": "ball lightning", "outpost": "outpost",
 	"tradeoff_pylon_engineer": "Strong anchors, needs a surface.",
 	# --- end Sable ---
 	# --- P-C Rivet words ---

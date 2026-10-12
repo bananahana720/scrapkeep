@@ -66,8 +66,15 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # harpoon longer. Grown stays inside 25 to 45 s and the camper still never breaks it; the slice row and the sweep
 # table are unchanged. The live small/grown ratio is 1.45, further under the sweep table's 2.0 band: the same owner
 # tuning item; was 50.7 / 31.3.
-const EXPECT_SMALL_S := 50.0
-const EXPECT_GROWN_S := 34.5
+# 2026-10-12 (wave 13 PC-KEST and PC-SABLE kit merges): re-pinned to the measured medians 52.7 / 27.1 on the Sable
+# merge over 1e5433e (queued 4-core run). Attributed per seed at level 4: Rivet's rows (seed 1) hold at 67.37 / 34.54;
+# Kest's kit (seed 2, merged at 1e5433e) moves grown 43.14 -> 27.01 and small 42.15 -> 52.72 (b75c65d sweep, the
+# PC-SABLE round 7 gate); Sable's kit (seed 0) moves grown 31.28 -> 27.12 and small 49.95 -> 51.42. Two of three pilots now break the grown
+# Warden faster with their own kits, so the median of three moves from Rivet's row to Sable's. Grown stays inside
+# 25 to 45 s and the camper still never breaks it; the slice row and the sweep table are unchanged. The live
+# small/grown ratio is 1.94, under the sweep table's 2.0 band: the same owner tuning item; was 50.0 / 34.5.
+const EXPECT_SMALL_S := 52.7
+const EXPECT_GROWN_S := 27.1
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
