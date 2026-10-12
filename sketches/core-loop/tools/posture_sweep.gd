@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const BotOptions := preload("res://tools/bot_options.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -105,6 +106,7 @@ class Table extends RefCounted:
 
 
 var _settings := {}
+var _bot_options
 var _cap := 240.0
 var _parent := false
 var _done := false
@@ -137,6 +139,7 @@ var _counter_serial := 0
 func _initialize() -> void:
 	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
+	_bot_options = BotOptions.new(_settings, self)
 	_cap = float(_settings.get("cap", "240"))
 	if _settings.has("arm"):
 		_begin_child()
@@ -230,6 +233,8 @@ func _spawn(job: Dictionary) -> void:
 			"--script", "res://tools/posture_sweep.gd", "--", "--arm=" + String(job["arm"]), "--run-seed=%d" % job["seed"],
 			"--plating=%s" % cell["plating"], "--curve=%s" % cell["curve"], "--shatter=%s" % cell["ram_shatters"],
 			"--cap=%s" % _cap, "--result=" + home.path_join("result.tsv"), "--home=" + home])
+	if _settings.get("gate", "0") == "1":
+		args.append("--gate=1")
 	if float(arm["mass"]) > 0.0:
 		args.append("--start-mass=%d" % int(arm["mass"]))
 	var previous := {}
@@ -436,6 +441,7 @@ func _physics_process(_delta: float) -> bool:
 		_driver.stage_limit = _cap * 4.0
 		_driver.fight_limit = _cap
 		_game.presentation.audio.bake_now()
+		_bot_options.apply_audio(_game.presentation.audio)
 		_game.events.enemy_struck.connect(_on_struck)
 		_driver.start()
 		return false

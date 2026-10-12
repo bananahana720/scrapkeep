@@ -4,10 +4,7 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
-const UNREAD_VISUALS := [
-	"res://src/presentation/warden_ring.gd",
-	"res://src/presentation/set_dressing.gd", "res://src/presentation/vfx.gd"
-]
+const BotOptions := preload("res://tools/bot_options.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
@@ -32,6 +29,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # --bot-no-pilot-tracks=1 skips pilot bone sampling, retaining playback and signals.
 # --bot-no-visuals=1 skips selected unread idle callbacks only
 # on the headless display. Camera, HUD, hit-stop and collision work remain active.
+# --gate=1 enables all three switches, unless individually overridden with =0.
 # --chain-hand=0 turns off the explorer's two-hook hand (bot_driver's control switch).
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
@@ -64,13 +62,14 @@ var _results: Array[Dictionary] = []
 var _tick_trace: FileAccess
 var _scrap_serial := 0
 var _counter_serial := 0
-var _pilot_tracks_skipped := 0
+var _bot_options
 var _allocation_noise: Array[RefCounted] = []
 
 
 func _initialize() -> void:
 	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
+	_bot_options = BotOptions.new(_settings, self)
 	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
 	if BotProfile.enabled:
 		root.add_child(BotProfile.EndMarker.new(BotProfile))
@@ -198,8 +197,7 @@ func _physics_process(delta: float) -> bool:
 		if _settings.get("bot-audit", "0") == "1":
 			_audit = BotAudit.new()
 			_audit.setup(_game.events, _driver, _out.path_join("events-%d.ndjson" % _seeds[_index]))
-		if _settings.get("bot-no-mix", "0") == "1" and DisplayServer.get_name() == "headless":
-			_game.presentation.audio.engine.bot_skip_samples = true
+		_bot_options.apply_audio(_game.presentation.audio)
 		_driver.start(resume)
 		if _settings.has("from-stage") and not resume and int(_settings["from-stage"]) != 1:
 			_game.flow.enter_stage(int(_settings["from-stage"]), Vector3.ZERO, false)
@@ -233,7 +231,7 @@ func _physics_process(delta: float) -> bool:
 	_audit = null
 	_game.free()
 	if _settings.get("bot-no-pilot-tracks", "0") == "1":
-		print("bot_run: %d cosmetic pilot tracks disabled; playback retained" % _pilot_tracks_skipped)
+		print("bot_run: %d cosmetic pilot tracks disabled; playback retained" % _bot_options.pilot_tracks_skipped)
 	_game = null
 	_tick_trace = null
 	_next()
@@ -245,14 +243,6 @@ static func _vector(v: Vector3) -> Array:
 
 
 func _on_node_added(node: Node) -> void:
-	if _settings.get("bot-no-pilot-tracks", "0") == "1" and DisplayServer.get_name() == "headless" and node is AnimationPlayer:
-		_disable_pilot_tracks(node)
-		_disable_pilot_tracks.call_deferred(node)
-	if _settings.get("bot-no-visuals", "0") == "1" and DisplayServer.get_name() == "headless":
-		var script = node.get_script()
-		if script != null and script.resource_path in UNREAD_VISUALS:
-			node.set_process(false)
-			node.set_process.call_deferred(false)
 	if _game == null or _game.build == null:
 		return
 	if "_strafe" in node:
@@ -303,19 +293,3 @@ func _process(_delta: float) -> bool:
 	if BotProfile.enabled:
 		BotProfile.idle_begin()
 	return false
-
-
-func _disable_pilot_tracks(animator: AnimationPlayer) -> void:
-	if not is_instance_valid(animator):
-		return
-	var parent := animator.get_parent()
-	while parent != null and parent.name != "AnimatedPilot":
-		parent = parent.get_parent()
-	if parent == null:
-		return
-	for id in animator.get_animation_list():
-		var animation := animator.get_animation(id)
-		for track in animation.get_track_count():
-			if animation.track_get_type(track) in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D, Animation.TYPE_SCALE_3D, Animation.TYPE_BLEND_SHAPE] and animation.track_is_enabled(track):
-				_pilot_tracks_skipped += 1
-				animation.track_set_enabled(track, false)
