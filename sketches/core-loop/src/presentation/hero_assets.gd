@@ -1377,8 +1377,10 @@ func _contact_of(rec: Dictionary, clip: String) -> Dictionary:
 	var control := MechaMotion.cast_control(rec["class"], clip)
 	if control == "":
 		return {}
-	_warn_once("contact:%s:%s" % [rec["class"], clip], "hero_assets: pilot %s has no pose-table contact for %s; the control throws at 40 percent" % [rec["class"], clip])
-	return {"control": control, "seconds": 0.4 * rec.animator.get_animation(clip).length}
+	var pilot := String(PILOTS.get(rec["class"], "")).get_file().trim_prefix("pilot_").trim_suffix("_anim.glb")
+	var seconds: float = 0.4 * rec.animator.get_animation(clip).length
+	_warn_once("contact:%s:%s" % [rec["class"], clip], "hero_assets: pilot %s class %s has no pose-table contact for %s in %s; control %s falls back to %.3fs at 40 percent" % [pilot, rec["class"], clip, PILOT_TABLES % pilot, control, seconds])
+	return {"control": control, "seconds": seconds}
 
 
 func _pilot_finished(clip: StringName, player_id: int, animator: AnimationPlayer) -> void:
