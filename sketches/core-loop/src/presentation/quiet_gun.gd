@@ -6,6 +6,7 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 
 const HOUSING := "res://assets/models/world_one/shell_cannon.glb"
+static var housing_path := HOUSING
 const FALL_SECONDS := 0.6
 var module
 var barrel: Node3D
@@ -58,8 +59,8 @@ static func make(pilot: String):
 	gun.add_child(gun.barrel)
 	gun.barrel.position.y = 0.7
 	var housing: Node3D
-	if ResourceLoader.exists(HOUSING):
-		var scene: Node = load(HOUSING).instantiate()
+	if ResourceLoader.exists(housing_path):
+		var scene: Node = load(housing_path).instantiate()
 		var source := scene.find_child("BarrelHousing", true, false)
 		if source != null:
 			housing = source.duplicate()

@@ -35,7 +35,10 @@ func _cases() -> void:
 	mind.add_child(mind.pad)
 	mind.pad.global_position = HOME
 	mind.state = mind.FIGHT
+	var housing_path := QuietGun.housing_path
+	QuietGun.housing_path = "res://tests/no_quiet_gun_housing.glb"
 	var gun = QuietGun.attach(mind)
+	QuietGun.housing_path = housing_path
 	gun.set_physics_process(false)
 	_t.check("quiet gun is visual only", _safe(gun))
 	_t.eq("fallback housing wears Old Verdigris", gun.barrel.get_node("BarrelHousing").mesh.material.albedo_color, Palette.VERDIGRIS)
