@@ -9,7 +9,8 @@ extends SceneTree
 # pilots and the floor, each line from drop_in through the waymarks in order to landmark, each point on an open
 # graph node with a finite path to the beacon. Three planted controls run first: a moved row turns the bake stale, a
 # swapped waymark order fails the order pin, a waypoint off the play square fails to resolve. K-UNITS KD3,
-# greybox pass, 2026-10-11.
+# greybox pass, 2026-10-11. Fix round, 2026-10-11: the reward pocket stands at least 150 m in a straight line from
+# every pilot and floor line, and the Kest line crosses dust_devil_floor's column; each has its planted control.
 
 const T := preload("res://tests/support/t.gd")
 
@@ -25,6 +26,8 @@ const WAYMARKS := ["drop_in", "canal_lip", "switchback_camp", "landmark"]
 const ROLES := {"cache_lip": "reward", "switchback_camp_site": "online", "bench3_altar": "risk", "adit_valve": "hidden"}
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 const HALF := 800.0
+# The reward's least straight distance from any measured line (KD3 fix round): PARK.md 2.12's detour floor, 150 m.
+const REWARD_CLEAR_M := 150.0
 
 var t := T.new("park_park_pit_test")
 
@@ -102,7 +105,68 @@ func _run() -> void:
 	for pilot in PILOTS:
 		t.eq("%s line resolves" % pilot, _resolve(graph, park, lines["pilots"][pilot]), [])
 	t.eq("floor line resolves", _resolve(graph, park, lines["floor"]), [])
+
+	# Fix round (2026-10-11): the reward is a detour off every pilot line, not a pass on one, and Kest's line rides the
+	# floor thermal. Planted first: the cache back at its greybox place beside the east conveyor, the thermal back at
+	# its draft place off the Kest line.
+	var cache: Array = _activity(park, "cache_lip")["at"]
+	var thermal: Dictionary = _contraption(park, "dust_devil_floor")
+	t.check("planted: the cache at (312, -20) sits within %d m of a pilot line" % REWARD_CLEAR_M,
+			_off_lines(park, lines, Vector2(312.0, -20.0)) < REWARD_CLEAR_M)
+	t.check("planted: a thermal at (80, 100) is off the kest line",
+			_line_distance(park, lines["pilots"]["kest"], Vector2(80.0, 100.0)) > float(thermal["radius"]))
+	var clear := _off_lines(park, lines, Vector2(float(cache[0]), float(cache[1])))
+	t.check("cache_lip at least %d m from every pilot and floor line" % REWARD_CLEAR_M, clear >= REWARD_CLEAR_M, "%.1f m" % clear)
+	var at: Array = thermal["at"]
+	var kest := _line_distance(park, lines["pilots"]["kest"], Vector2(float(at[0]), float(at[1])))
+	t.check("the kest line crosses dust_devil_floor's column", kest <= float(thermal["radius"]), "%.1f m from its centre" % kest)
 	quit(t.verdict())
+
+
+func _activity(park: Dictionary, id: String) -> Dictionary:
+	for row in park["activity_rows"]:
+		if row["id"] == id:
+			return row
+	return {}
+
+
+func _contraption(park: Dictionary, id: String) -> Dictionary:
+	for row in park["contraption_rows"]:
+		if row["id"] == id:
+			return row
+	return {}
+
+
+# A line's points on the ground plane: waymark ids resolve to the spawn, a park row's at, or the landmark.
+func _points(park: Dictionary, line: Dictionary) -> Array:
+	var rows := {}
+	for row in park["park_rows"]:
+		rows[row["id"]] = row
+	var out := []
+	for point in line["waypoints"]:
+		if point is String:
+			var at: Array = park["spawn"]["at"] if point == "drop_in" else (park["landmark"]["at"] if point == "landmark" else rows[point]["at"])
+			out.append(Vector2(float(at[0]), float(at[1])))
+		else:
+			out.append(Vector2(float(point[0]), float(point[1])))
+	return out
+
+
+# The straight distance from p to the nearest segment of one line.
+func _line_distance(park: Dictionary, line: Dictionary, p: Vector2) -> float:
+	var pts := _points(park, line)
+	var best := INF
+	for i in range(pts.size() - 1):
+		best = minf(best, p.distance_to(Geometry2D.get_closest_point_to_segment(p, pts[i], pts[i + 1])))
+	return best
+
+
+# The straight distance from p to the nearest of the six pilot lines and the floor line.
+func _off_lines(park: Dictionary, lines: Dictionary, p: Vector2) -> float:
+	var best := _line_distance(park, lines["floor"], p)
+	for pilot in PILOTS:
+		best = minf(best, _line_distance(park, lines["pilots"][pilot], p))
+	return best
 
 
 # Errors for one line: waymark ids in order from drop_in to landmark, every point inside the play square on an open

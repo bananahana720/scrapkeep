@@ -1,36 +1,38 @@
 {
-  "bake_sha256": "03ef1ceaa6615ec84bf4035fc776120b2c3c3f62a25138fd0c32ab113b01457d",
+  "bake_sha256": "d0eabb7c31b6c224a9151b05236ef3683f7ac4006dded2d25a00b2d728127b1a",
+  "beacon_ok": false,
   "breaches": [],
-  "bytes": 1093958,
-  "edges": 314051,
+  "bytes": 1093463,
+  "edges": 314056,
+  "first_failed": "beacon_ok",
   "flags": {
     "deck": 12,
-    "door_ok": 39924,
-    "line": 339,
+    "door_ok": 39925,
+    "line": 340,
     "open": 40404,
-    "sight_ok": 10129,
+    "sight_ok": 10150,
     "under": 0
   },
-  "full_visit_m": 2210,
-  "full_visit_ratio": "1.719",
-  "graph_sha256": "c773d2cff55091a7d71dcc054c23b440b0d470c741d3e2ecd3af2391a2fd4e7c",
+  "full_visit_m": 2041,
+  "full_visit_ratio": "1.588",
+  "graph_sha256": "f86220aacceb633463ec295875da8628f8763bd60b73c386e377a5c9ef3ef623",
   "line_errors": [],
   "line_path_nodes": 112,
   "longest_est_m": 2651,
   "map": "park_pit",
   "nodes": 40413,
-  "park_sha256": "4f073ef23e12a00c5e8fea3e8f3ded1102cf0865a8965c3cbe7cd0492227233c",
+  "park_sha256": "7a98f8b04e3ecfc504b267c7e923f784d6db72d30d98ec778e5a4e73178c050b",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 462,
-      "d_spawn": 1265,
-      "detour_m": 238,
+      "d_landmark": 716,
+      "d_spawn": 1063,
+      "detour_m": 241,
       "door_at": [
-        312,
-        -16
+        296,
+        -320
       ],
-      "door_m": 238,
+      "door_m": 241,
       "flags": [
         "open",
         "door_ok",
@@ -38,15 +40,15 @@
       ],
       "id": "cache_lip",
       "kind": "cracked_cache",
-      "nearest_door": 462,
-      "nearest_door_id": "bench3_altar",
+      "nearest_door": 228,
+      "nearest_door_id": "adit_valve",
       "pay_named": "",
       "pay_rarities": [
         "rare"
       ],
       "role": "reward",
       "sight_ok": true,
-      "site": "pit"
+      "site": "spoil_heap_14"
     },
     {
       "clear_ring": [],
@@ -120,8 +122,8 @@
       ],
       "id": "adit_valve",
       "kind": "valve",
-      "nearest_door": 409,
-      "nearest_door_id": "bench3_altar",
+      "nearest_door": 228,
+      "nearest_door_id": "cache_lip",
       "pay_named": "",
       "pay_rarities": [],
       "role": "hidden",
@@ -129,6 +131,7 @@
       "site": "adit_back_door"
     }
   ],
+  "reward_ratio": "0.702",
   "ride_edges": 17,
   "routes": {
     "barge_ramp": [],
@@ -155,11 +158,29 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1286,
-    "farther_share": "0.017",
-    "ok": true
+    "d_landmark": -1,
+    "farther_share": "0.000",
+    "ok": false,
+    "run": false
   },
   "spawn_beacon_m": 1286,
   "spawn_beacon_share": "0.485",
-  "tool_sha256": "efb6eb99b481163bf289cccba929a750d42e4d29c64ebe8c08f9c469765af4d9"
+  "stage_checked": [
+    "beacon_ok"
+  ],
+  "targets": [
+    {
+      "name": "reward_ratio",
+      "ok": false,
+      "target": "at least 1.5",
+      "value": 0.702
+    },
+    {
+      "name": "full_visit_ratio",
+      "ok": true,
+      "target": "at most 3.0",
+      "value": 1.588
+    }
+  ],
+  "tool_sha256": "9148324dff11acd2fa11e787a70f366f9ffe8c7558c0b1a1cff42dc61aa30984"
 }
