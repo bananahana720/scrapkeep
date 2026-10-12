@@ -782,6 +782,8 @@ func _cannon_call(family: String, at: Vector3, target: Vector3, due: float, heft
 
 
 func _cannon_tech(beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
+	if beat >= _beats:
+		return 0
 	if _cannon_due < 0.0:
 		_cannon_due = combat._clock + maxf(0.0, float(_plan["legs"][_leg]["seconds"]) - _leg_time)
 	var centre := _cannon_projection(ball)

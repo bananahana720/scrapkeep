@@ -1,5 +1,5 @@
 extends SceneTree
-# 2026-10-11 (PC-CANNON): real nodes exercise call/drop timing and the full reticle cone.
+# 2026-10-11 (PC-CANNON): flight-only calls, touchdown drop timing and the full reticle cone.
 # EXPECTED_CHECKS includes the count guard. Every check must run.
 const EXPECTED_CHECKS := 46
 const Game := preload("res://src/game.gd")
@@ -172,7 +172,7 @@ func _cases() -> void:
 	_finish_ride()
 	_t.eq("one landing", _landed.size(), 1)
 	var calls: int = _ult._cannon_calls
-	_t.check("call cap", calls > 4 and calls <= Weapons.CALL_CAP, str(calls))
+	_t.check("seven beats make nine calls under the cap", calls == 9 and calls <= Weapons.CALL_CAP, str(calls))
 	var audio = _game.presentation.audio
 	var notes: Array = audio.cannon_log.filter(func(row): return row["kind"] == "cannon_call").map(func(row): return row["notes"][0])
 	_t.eq("first three families in order", notes.slice(0, 3), [59, 64, 67])
