@@ -71,6 +71,13 @@ func _pure_checks() -> void:
 		"enemy_struck burst colour equals the kinetic/player number colour")
 	_report("team reads apart", DamageNumbers.effect_colour("kinetic", "player") != DamageNumbers.effect_colour("kinetic", "monster"),
 		"the same type reads differently for player and monster")
+	var taken_mismatches := 0
+	for type in DamageNumbers.TYPES:
+		for team in ["monster", "neutral"]:
+			if DamageNumbers.effect_colour(type, team) != EventKinds.juice("player_hit")["color"]:
+				taken_mismatches += 1
+	_report("hit-taken row", taken_mismatches == 0,
+		"6 hit-taken type/team pairs: %d mismatches against the player_hit juice colour" % taken_mismatches)
 	_report("kind map", DamageNumbers.type_of_kind("arc") == "arc" and DamageNumbers.type_of_kind("ram") == "kinetic",
 		"arc strike -> arc, ram -> kinetic")
 
@@ -168,6 +175,7 @@ func _live_colour_checks(layer) -> void:
 	juice.vfx = rec
 	var cases := 0
 	var mismatches := 0
+	var taken_row_mismatches := 0
 	var detail := ""
 	# kind, crit by size, crit by weak point
 	for kind in ["burst", "arc", "frost"]:
@@ -198,8 +206,12 @@ func _live_colour_checks(layer) -> void:
 		if shown_taken.size() != 1 or rec.flash_tint.size() != 1 or shown_taken[0]["color"] != rec.flash_tint[0]:
 			mismatches += 1
 			detail += " taken/%s" % source
+		if shown_taken.size() != 1 or rec.flash_tint.size() != 1 or shown_taken[0]["color"] != EventKinds.juice("player_hit")["color"] or rec.flash_tint[0] != EventKinds.juice("player_hit")["color"]:
+			taken_row_mismatches += 1
 	juice.vfx = real_vfx
 	juice.resolve_of = real_resolve
 	juice.plating_of = real_plating
 	_report("live colour agreement", cases == 11 and mismatches == 0,
 		"%d live events (3 strike kinds x plain, size crit, weak-point crit, 2 hits taken): %d number/effect colour mismatches%s" % [cases, mismatches, detail])
+	_report("live hit-taken row", taken_row_mismatches == 0,
+		"2 recorded hit-taken events: %d number/flash mismatches against the player_hit juice colour" % taken_row_mismatches)
