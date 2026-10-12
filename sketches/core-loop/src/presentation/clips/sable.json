@@ -786,7 +786,7 @@
           "note": "The right paw withdraws toward its yoke."
         },
         {
-          "frame": 15,
+          "frame": 17,
           "torso": {
             "pitch": -2,
             "yaw": -2
@@ -1676,7 +1676,7 @@
         {
           "frame": 2,
           "torso": {
-            "pitch": 3
+            "pitch": -4
           },
           "head": {
             "pitch": 2
@@ -1686,7 +1686,7 @@
             "offset": [
               0,
               0,
-              0.26
+              0.16
             ]
           },
           "hand.L": {
@@ -1704,7 +1704,7 @@
         {
           "frame": 3,
           "torso": {
-            "pitch": 3
+            "pitch": -4
           },
           "head": {
             "pitch": 2
@@ -1714,7 +1714,7 @@
             "offset": [
               0,
               0,
-              0.26
+              0.16
             ]
           },
           "hand.L": {
@@ -1727,12 +1727,12 @@
           },
           "ears": 16,
           "tool.R": -35,
-          "note": "The wrench paw rises 260 mm directly above the seat-frame stand-in, with no torso twist."
+          "note": "The wrench paw rises 160 mm directly above the seat-frame stand-in, with no torso twist."
         },
         {
           "frame": 5,
           "torso": {
-            "pitch": 3
+            "pitch": -4
           },
           "head": {
             "pitch": 2
@@ -1742,7 +1742,7 @@
             "offset": [
               0,
               0,
-              0.26
+              0.16
             ]
           },
           "hand.L": {
@@ -1785,7 +1785,7 @@
           "ears": 32,
           "tail": -18,
           "tool.R": -35,
-          "note": "The wrench paw drives straight down 260 mm onto the SeatFrame stand-in beside the right hip; spine and head compress without a sideways twist."
+          "note": "The wrench paw drives straight down 160 mm onto the SeatFrame stand-in beside the right hip; spine and head compress without a sideways twist."
         },
         {
           "frame": 9,
@@ -1942,6 +1942,39 @@
           "note": "The root rises visibly above the seat with both paws near the raised cap."
         },
         {
+          "frame": 8,
+          "root": [
+            0,
+            0,
+            0.42
+          ],
+          "torso": {
+            "height": 0.98,
+            "pitch": -3
+          },
+          "head": {
+            "pitch": -3
+          },
+          "hand.R": {
+            "at": [
+              0.12,
+              0.14,
+              0.73
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.12,
+              0.14,
+              0.73
+            ]
+          },
+          "ears": 16,
+          "tail": -10,
+          "tool.R": -20,
+          "note": "The raised root and cap pose hold on the way to the sampled apex."
+        },
+        {
           "frame": 9,
           "root": [
             0,
@@ -2041,7 +2074,7 @@
           "note": "The sampled drop apex holds for four frames before descent."
         },
         {
-          "frame": 20,
+          "frame": 19,
           "root": [
             0,
             0,
@@ -2074,7 +2107,43 @@
           "ears": 30,
           "tail": 12,
           "tool.R": -20,
-          "note": "The root drops into the seat by frame 20; the seated torso compresses on arrival."
+          "note": "The root drops into the seat by frame 19, then holds the arrival compression through frame 22."
+        },
+        {
+          "frame": 22,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "height": 0.86,
+            "pitch": -12
+          },
+          "head": {
+            "pitch": -9
+          },
+          "neck": {
+            "drop": -0.01
+          },
+          "hand.R": {
+            "at": [
+              0.3,
+              0.3,
+              0.05
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.3,
+              0.3,
+              0.05
+            ]
+          },
+          "ears": 30,
+          "tail": 12,
+          "tool.R": -20,
+          "note": "The root stays seated with the arrival compression held for four frames."
         },
         {
           "frame": 23,
@@ -2129,6 +2198,41 @@
           },
           "ears": 6,
           "note": "Both paws and the dipped head hold the cap-brim pull."
+        },
+        {
+          "frame": 35,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "pitch": -5
+          },
+          "head": {
+            "pitch": -8
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "at": [
+              0.18,
+              0.16,
+              0.02
+            ]
+          },
+          "wrist.L": [
+            -20,
+            0,
+            0
+          ],
+          "note": "The left paw pulls across the chest and holds the cinched strap before the rack check."
         },
         {
           "frame": 39,
@@ -2258,6 +2362,36 @@
             ]
           },
           "note": "The left paw returns from the rack toward its yoke."
+        },
+        {
+          "frame": 65,
+          "root": [
+            0,
+            0,
+            0
+          ],
+          "torso": {
+            "yaw": -3
+          },
+          "head": {
+            "yaw": -8
+          },
+          "hand.R": {
+            "control": "Grip.R",
+            "offset": [
+              0,
+              0,
+              0
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.29,
+              0.28,
+              0.04
+            ]
+          },
+          "note": "The final paw-return pose holds before the exact rest anchor."
         },
         {
           "frame": 73,
