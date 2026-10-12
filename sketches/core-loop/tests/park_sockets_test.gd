@@ -7,8 +7,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const MODULE := "res://src/world/park/sockets.gd"
 const Recipes := preload("res://src/world/park/park_recipes.gd")
-# 2026-10-12: round 2 opening/accounting/visit fixtures raise the count from 41 to 79.
-const EXPECTED_CHECKS := 79
+# 2026-10-12: round 2 opening/accounting/visit/route fixtures raise the count from 41 to 82.
+const EXPECTED_CHECKS := 82
 var t := T.new("park_sockets_test")
 
 
@@ -23,6 +23,11 @@ func _run() -> void:
 		return
 	var sockets: GDScript = load(MODULE)
 	for arg in OS.get_cmdline_user_args():
+		if arg == "--fixture=route-zone":
+			_route_zone_control(sockets)
+			t.eq("route-zone fixture check count", t.checks + 1, 6)
+			quit(t.verdict())
+			return
 		if arg == "--fixture=visits":
 			_visit_controls(sockets)
 			t.eq("visit fixture check count", t.checks + 1, 16)
@@ -100,9 +105,7 @@ func _run() -> void:
 		if layout["pocket_zones"].has(socket["a"]):
 			socket["filler"]["size"] = [4000, 8, 4000]
 	t.check("control: fillers across the route cannot be closed", not sockets.stage(poisoned, 17, "sockets")["ok"])
-	var crowded: Dictionary = layout.duplicate(true)
-	crowded["pocket_zones"] = [graph.zone_of(graph.spawn_node)]
-	t.check("control: a route zone cannot be a guaranteed pocket", not sockets.stage(crowded, 17, "sockets")["ok"])
+	_route_zone_control(sockets)
 	var empty: Dictionary = layout.duplicate(true)
 	empty["pocket_zones"] = []
 	t.check("control: an empty placement fails", not sockets.stage(empty, 17, "sockets")["ok"])
@@ -246,3 +249,20 @@ func _visit_controls(sockets: GDScript) -> void:
 	if sockets.has_method("_record_draw"):
 		sockets._record_draw(stats, complete, layout["pocket_zones"].size(), 18)
 	t.eq("control: only the complete draw adds a full-visit success", [stats["visit_ok"], stats.get("complete"), stats.get("incomplete")], [1, 1, 1])
+
+
+func _route_zone_control(sockets: GDScript) -> void:
+	var crowded: Dictionary = sockets.template(17)
+	var graph = crowded["graph"]
+	crowded["pocket_zones"][0] = graph.zone_of(graph.spawn_node)
+	for node in graph.zone_nodes(graph.zone_of(graph.spawn_node)):
+		graph.node_flags[node] |= sockets.Graph.DOOR_OK
+	var wanted: Array = crowded["pocket_zones"]
+	t.check("route-zone control keeps a valid pocket count", wanted.size() >= 3 and wanted.size() <= 8)
+	var distinct := {}
+	for z in wanted:
+		distinct[z] = true
+	t.eq("route-zone control keeps distinct valid zone ids", distinct.size(), wanted.size())
+	t.check("route-zone control ids belong to the graph", wanted.all(func(z): return z >= 0 and z < graph.zone_count()))
+	t.eq("control: route zone fails for its specific reason", sockets.stage(crowded, 17, "sockets")["errors"],
+		["zone %s cannot hold a guaranteed pocket" % graph.zones()[graph.zone_of(graph.spawn_node)]["name"]])
