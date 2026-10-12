@@ -37,6 +37,9 @@ var haul := {}
 var last_cue := {}
 var last_punch := {}
 var beam_shapes: Array = []
+# The aim the last beat read (ctx.aim_forward() on that tick); the peak, which gets only a
+# point, cuts along it.
+var _last_aim := Vector3.ZERO
 var _clock := 0.0
 var _piece := ""
 var _cut := {}
@@ -315,13 +318,17 @@ func beam_width(id: String) -> float:
 	return float(Weapons.CUTTER_WIDTH[_class() - 1])
 
 
-# Machines on the beam, nearest first.
-func _on_beam(from: Vector3, dir: Vector3, length: float, width: float) -> Array:
-	var to := from + dir * length
+# Machines on the beam, nearest first: the hull within the half-width and the length. A beam is
+# precise (the reticle is the beam), so it takes no hit-test forgiveness.
+func on_beam(from: Vector3, dir: Vector3, length: float, width: float) -> Array:
 	var picks: Array = []
 	for enemy in _enemies():
-		if combat.in_line(from, to, width, enemy.global_position, combat._hull(enemy)):
-			picks.append([_flat(enemy.global_position - from).length(), enemy])
+		var to := _flat(enemy.global_position - from)
+		var hull: float = combat._hull(enemy)
+		var along := to.dot(dir)
+		var side := absf(to.dot(Vector3(-dir.z, 0.0, dir.x)))
+		if along >= -hull and along - hull <= length and side - hull <= width * 0.5:
+			picks.append([along, enemy])
 	picks.sort_custom(func(a, b): return a[0] < b[0])
 	return picks.map(func(p): return p[1])
 
@@ -359,6 +366,7 @@ func _peak_beat(beat: int) -> bool:
 
 func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 	_clear_beams()
+	_last_aim = aim
 	if id == "juggernaut_drive":
 		return _bow_wave(ball)
 	# The middle beat is the peak's alone: it cuts there, once.
@@ -371,13 +379,13 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 		for i in Weapons.PRISM_BEAMS:
 			var dir := centre.rotated(Vector3.UP, deg_to_rad(Weapons.PRISM_SPREAD_DEG * float(i - 1)))
 			_draw_beam(i, ball, dir, Weapons.PRISM_LENGTH, beam_width(id))
-			for enemy in _on_beam(ball, dir, Weapons.PRISM_LENGTH, beam_width(id)).slice(0, Weapons.PRISM_PIERCE + extra):
+			for enemy in on_beam(ball, dir, Weapons.PRISM_LENGTH, beam_width(id)).slice(0, Weapons.PRISM_PIERCE + extra):
 				_beam_hit(enemy, Weapons.PRISM_DAMAGE * heft, ball)
 				hits += 1
 		return hits
 	var d := beam_dir(aim)
 	_draw_beam(0, ball, d, Weapons.CUTTER_LENGTH, beam_width(id))
-	for enemy in _on_beam(ball, d, Weapons.CUTTER_LENGTH, beam_width(id)).slice(0, Weapons.CUTTER_PIERCE + extra):
+	for enemy in on_beam(ball, d, Weapons.CUTTER_LENGTH, beam_width(id)).slice(0, Weapons.CUTTER_PIERCE + extra):
 		_beam_hit(enemy, Weapons.CUTTER_DAMAGE * heft, ball)
 		hits += 1
 	return hits
@@ -411,15 +419,19 @@ func peak(id: String, at: Vector3) -> void:
 		_shoulder = ult._beat_len if ult._beat_len > 0.0 else 0.35
 		return
 	if id == "prism_cutter":
-		var d := beam_dir(ctx.aim_forward())
+		var d := beam_dir(_peak_aim())
 		_draw_beam(0, at, d, Weapons.CUTTER_LENGTH, Weapons.PRISM_FOCUS_WIDTH)
-		for enemy in _on_beam(at, d, Weapons.CUTTER_LENGTH, Weapons.PRISM_FOCUS_WIDTH).slice(0, Weapons.PRISM_FOCUS_PIERCE):
+		for enemy in on_beam(at, d, Weapons.CUTTER_LENGTH, Weapons.PRISM_FOCUS_WIDTH).slice(0, Weapons.PRISM_FOCUS_PIERCE):
 			_beam_hit(enemy, Weapons.PRISM_FOCUS_DAMAGE * heft, at)
 			hits += 1
 	else:
-		hits = full_cut(at, beam_dir(ctx.aim_forward()), heft)
+		hits = full_cut(at, beam_dir(_peak_aim()), heft)
 	if combat.ultimate != null and not combat.ultimate._record.is_empty():
 		combat.ultimate._record["volley_hits"] = int(combat.ultimate._record.get("volley_hits", 0)) + hits
+
+
+func _peak_aim() -> Vector3:
+	return _last_aim if _last_aim != Vector3.ZERO else ctx.aim_forward()
 
 
 # Full Cut: the beam widens and sweeps FULL_CUT_DEG, half to each side of the aim, out to
@@ -594,6 +606,7 @@ func step(delta: float) -> void:
 
 func _clear_piece() -> void:
 	_piece = ""
+	_last_aim = Vector3.ZERO
 	_cut = {}
 	_rammed = {}
 	_shoulder = 0.0

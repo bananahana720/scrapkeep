@@ -5,6 +5,12 @@ const Intent := preload("res://src/movement/intent.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+
+# 2026-10-11 (PC-RIVET, design-v3/pilots/rivet.md section 9): slot 3 wears its line row's own
+# picture, read from AbilityState (Rivet's ab_rivet_line; Sable and Kest still the shared reel),
+# and the five pictures must be distinct. Was Icons.REEL for every pilot. Measured: Rivet's bar
+# reads ab_rivet_weapon, ab_rivet_special, ab_rivet_line, ab_rivet_move, ab_rivet_smash.
 
 # The ability bar reads W3's published slots (player.abilities.slots()) through the UI's
 # normaliser (CONTRACTS, Ability slots):
@@ -62,8 +68,12 @@ func _physics_process(_delta: float) -> bool:
 			if _wait == 20:
 				var list: Array = _adapter.slots(_game)
 				var pilot: String = PILOTS[_class]
-				var want := ["ab_%s_weapon" % pilot, "ab_%s_special" % pilot, Icons.REEL, "ab_%s_move" % pilot, "ab_%s_smash" % pilot]
-				_report("%s slots" % pilot, AbilitySlots.valid(list) and _field(list, "icon") == want and _field(list, "key") == KEYS
+				var line_icon := String(AbilityState.ABILITIES[_game.player.abilities.id_of("line")]["icon"])
+				var want := ["ab_%s_weapon" % pilot, "ab_%s_special" % pilot, line_icon, "ab_%s_move" % pilot, "ab_%s_smash" % pilot]
+				var distinct := {}
+				for id in want:
+					distinct[id] = true
+				_report("%s slots" % pilot, AbilitySlots.valid(list) and distinct.size() == 5 and _field(list, "icon") == want and _field(list, "key") == KEYS
 						and _field(list, "slot") == ["weapon", "special", "line", "movement", "smash"] and _field(list, "number") == [1, 2, 3, 0, 0]
 						and want.all(func(id): return Icons.has(id) or Icons.EXTRA.has(id)),
 					"ids %s icons %s keys %s states %s" % [_field(list, "id"), _field(list, "icon"), _field(list, "key"), _field(list, "state")])

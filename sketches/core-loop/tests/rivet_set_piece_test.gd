@@ -1,0 +1,287 @@
+extends "res://tests/rivet_kit_test.gd"
+
+const Ultimate := preload("res://src/combat/ultimate.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const RivetTree := preload("res://src/core/trees/rivet.gd")
+const PlayerBall := preload("res://src/movement/player_ball.gd")
+const RideRail := preload("res://src/world/ride_rail.gd")
+const Achievements := preload("res://src/core/achievements.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
+const CodexEntries := preload("res://src/combat/codex_entries.gd")
+const Audio := preload("res://src/presentation/audio.gd")
+const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
+
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 60
+# checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
+# Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
+
+
+func _initialize() -> void:
+	_t = T.new("rivet_set_piece_test")
+	_expected_checks = 60
+	super._initialize()
+
+
+func _piece(id: String, heading := Vector3.RIGHT, release := 20.0) -> void:
+	var ult = _combat.ultimate
+	var from: Vector3 = _player.ball_position()
+	var to: Vector3 = from + heading * 25.0
+	_player.abilities.ultimate_id = id
+	ult._id = id
+	ult._plan = {"path": "line", "from": from, "to": to, "flight": 2.4, "seconds": 2.75, "beats": 7,
+		"legs": [{"mode": "line", "to": to, "seconds": 2.4, "beats": 7, "strike": true}]}
+	ult.last_plan = ult._plan
+	ult._leg = 0
+	ult._beats = 7
+	ult._beat_len = 2.4 / 7.0
+	ult._peaked = false
+	ult._phase = "flight"
+	ult._posture_spent = {}
+	ult._record = {"volley_hits": 0}
+	var ride = RideRail.new()
+	ride.mode = RideRail.ARC
+	ride.origin = from
+	ride.target = to
+	ride.heading = heading
+	ride.release_speed = release
+	ride.velocity = heading * release + Vector3.UP * 6.0
+	ride.flight = 2.4
+	ride.time = 2.0
+	ride.active = true
+	ult._ride = ride
+	_game.events.ultimate_started.emit(id, "line", from, to, 2.75)
+
+
+func _tech(id: String, beat: int, aim := Vector3.RIGHT) -> int:
+	return int(_combat.ultimate._ult_rows[id]["tech"].call(beat, _player.ball_position(), aim, 1.0))
+
+
+func _damage(enemy: Node3D) -> Array:
+	return _hits(enemy).map(func(row): return snappedf(_punch_of(row), 0.01))
+
+
+func _knob(name: String, value) -> void:
+	_player.tree._knobs[name] = value
+
+
+func _run() -> void:
+	await _boot()
+	var ult = _combat.ultimate
+	_t.check("three rows register tech, peak and landing", Kit.SET_PIECES.all(func(id): return ult._ult_rows.has(id) and ult._ult_rows[id].keys() == ["tech", "peak", "landing"]))
+
+	# The beam: the reticle ray, 40 m, the class width, three a beat, on beats only.
+	_piece("foundry_cutter")
+	var on_ray := _enemy("chaser", 10.0)
+	var off_ray := _enemy("chaser", 10.0, 3.0)
+	var too_far := _enemy("chaser", 42.5)
+	_t.eq("a beat cuts the machine on the ray", _tech("foundry_cutter", 1), 1)
+	_t.eq("12 x heft on the ray", _damage(on_ray), [12.0])
+	_t.check("nothing off the class width or past 40 m", _hits(off_ray).is_empty() and _hits(too_far).is_empty())
+	_t.near("class I beam is 0.6 m", _kit.beam_width("foundry_cutter"), 0.6)
+	_t.eq("the beam does not knock", Vector3(on_ray._knock.x, 0.0, on_ray._knock.z).length() < 0.01, true)
+	await _fresh()
+	_piece("foundry_cutter")
+	var line := []
+	for x in [6.0, 9.0, 12.0, 15.0, 18.0]:
+		line.append(_enemy("chaser", x))
+	_t.eq("at most three a beat", _tech("foundry_cutter", 1), 3)
+	_t.check("nearest first", not _hits(line[0]).is_empty() and not _hits(line[2]).is_empty() and _hits(line[3]).is_empty())
+	_t.eq("the middle beat is the peak's, not a cut", _tech("foundry_cutter", 4), 0)
+	_t.near("aim 90 degrees off the heading clamps to 60", rad_to_deg(Vector3.RIGHT.angle_to(_kit.beam_dir(Vector3.FORWARD, Vector3.RIGHT))), 60.0, 0.01)
+	_knob("ult_volley", 1)
+	_struck.clear()
+	_t.eq("ult_volley cuts a fourth", _tech("foundry_cutter", 2), 4)
+	_knob("ult_volley", 0)
+
+	# Full Cut: 90 degrees once, 18 x heft, out to 30 m.
+	await _fresh()
+	_piece("foundry_cutter")
+	var ball: Vector3 = _player.ball_position()
+	var left := _enemy("chaser", 20.0 * cos(deg_to_rad(35.0)), 20.0 * sin(deg_to_rad(35.0)))
+	var right := _enemy("chaser", 20.0 * cos(deg_to_rad(35.0)), -20.0 * sin(deg_to_rad(35.0)))
+	var wide := _enemy("chaser", 20.0 * cos(deg_to_rad(80.0)), 20.0 * sin(deg_to_rad(80.0)))
+	var hits: int = _kit.full_cut(ball, Vector3.RIGHT, 1.0)
+	_t.eq("Full Cut sweeps both sides of the aim", [_damage(left), _damage(right)], [[18.0], [18.0]])
+	_t.check("and nothing outside 90 degrees", _hits(wide).is_empty() and hits == 2, str(hits))
+	_t.check("the scar is drawn", _player.indicator.shapes.has("rivet_scar"))
+
+	# The Breach Skid: the forward cone at 1.5 x the class radius and the 2.5 m ring.
+	await _fresh()
+	_piece("foundry_cutter")
+	var ahead := _enemy("chaser", 8.0)
+	var behind_close := _enemy("chaser", -2.0)
+	var behind := _enemy("chaser", -6.0)
+	var past := _enemy("chaser", 11.5)
+	for i in 3:
+		_player.chain.link(true, false)
+	_player.abilities.spend("movement")
+	var charges: int = _player.abilities.slot("movement").charges
+	var landed := []
+	var slam_rate: float = _combat.punch_of("slam", 1.0)
+	var on_landed := func(_id: String, _at: Vector3, count: int, dealt: float): landed.append([count, dealt])
+	_game.events.ultimate_landed.connect(on_landed)
+	ult._strike(_player.ball_position())
+	_game.events.ultimate_landed.disconnect(on_landed)
+	var paid: float = float(landed[0][1]) / maxf(1.0, float(landed[0][0])) / 60.0 if landed.size() == 1 else -1.0
+	_t.near("class I cone reaches 9 m", _kit.breach_reach(), 9.0)
+	# The landing's own scrap raises heft after the strike, so the punch is read at the strike's slam rate.
+	var at_strike := func(rows: Array): return rows.map(func(row): return snappedf(float(row[2]) * slam_rate, 0.01))
+	_t.eq("ahead and inside the ring are hit", [at_strike.call(_hits(ahead)), at_strike.call(_hits(behind_close))], [[snappedf(60.0 * paid, 0.01)], [snappedf(60.0 * paid, 0.01)]])
+	_t.check("behind and past the reach are not", _hits(behind).is_empty() and _hits(past).is_empty() and int(landed[0][0]) == 2)
+	_t.check("the landing pays the chain multiplier", paid > 1.0, str(paid))
+	_t.eq("the landing ends the chain", _player.chain.combo, 0)
+	var release: Vector3 = ult._ride.release_velocity()
+	_t.check("the exit is flat along the heading at the banked speed", release.is_equal_approx(Vector3.RIGHT * 20.0), str(release))
+	_t.eq("the landing grants one sprint charge", _player.abilities.slot("movement").charges, charges + 1)
+	var thrown := Vector3(ahead._knock.x, 0.0, ahead._knock.z)
+	_t.check("the skid throws forward", thrown.length() > 0.1 and rad_to_deg(thrown.angle_to(Vector3.RIGHT)) <= 1.0, str(ahead._knock))
+	var base_knock := thrown.length()
+	await _fresh()
+	_piece("foundry_cutter")
+	ahead = _enemy("chaser", 8.0)
+	_knob("ult_pins", 2.0)
+	ult._strike(_player.ball_position())
+	_t.near("ult_pins throws twice as hard", Vector3(ahead._knock.x, 0.0, ahead._knock.z).length() / base_knock, 2.0, 0.05)
+	_knob("ult_pins", 1.0)
+	_knob("ult_radius", 2.0)
+	_t.near("ult_radius adds 2 m to the reach", _kit.breach_reach(), 11.0)
+	_knob("ult_radius", 0.0)
+
+	# Class V: the beam is 1.0 m and the cone 15 m.
+	_game.run.mass = (4.7 - 1.0) * 450.0
+	_t.eq("fixture is heft class V", _game.run.heft_class(), 5)
+	_t.check("class V beam 1.0 m, cone 15 m", is_equal_approx(_kit.beam_width("foundry_cutter"), 1.0) and is_equal_approx(_kit.breach_reach(), 15.0),
+		"%s %s" % [_kit.beam_width("foundry_cutter"), _kit.breach_reach()])
+	_game.run.mass = 0.0
+
+	# Wardens: an open core in the cone shatters; a closed guard takes 45 posture at most.
+	await _fresh()
+	_piece("foundry_cutter")
+	var warden := _enemy("warden", 6.0)
+	warden.set_physics_process(false)
+	for i in 6:
+		_tech("foundry_cutter", 1 + (i % 3))
+	ult._strike(_player.ball_position())
+	_t.check("a closed guard takes 45 posture at most", warden.posture() <= Ultimate.WARDEN_POSTURE_CAP + 0.001 and warden.posture() > 0.0, str(warden.posture()))
+	await _fresh()
+	_piece("foundry_cutter")
+	warden = _enemy("warden", 6.0)
+	warden.set_physics_process(false)
+	warden._posture.staggered = true
+	var chunks: int = warden.chunks_left()
+	ult._strike(_player.ball_position())
+	_t.check("an open core in the cone shatters", warden.chunks_left() < chunks, "%d -> %d" % [chunks, warden.chunks_left()])
+	await _fresh()
+	_piece("foundry_cutter")
+	var boss := _boss(10.0)
+	_tech("foundry_cutter", 1)
+	_t.eq("a boss takes x0.5 from the beam", _damage(boss), [6.0])
+
+	# Prism Cutter: three beams 15 degrees apart, two a beam; Focus is one 1.5 m beam for 30.
+	await _fresh()
+	_piece("prism_cutter")
+	_tech("prism_cutter", 1)
+	var dirs: Array = _kit.beam_shapes.map(func(s): return ((s["to"] as Vector3) - (s["from"] as Vector3)).normalized())
+	_t.eq("Prism draws three beams", dirs.size(), 3)
+	_t.check("15 degrees apart", dirs.size() == 3 and absf(rad_to_deg(dirs[0].angle_to(dirs[1])) - 15.0) < 0.01 and absf(rad_to_deg(dirs[1].angle_to(dirs[2])) - 15.0) < 0.01)
+	await _fresh()
+	_piece("prism_cutter")
+	line = []
+	for x in [21.0, 24.0, 27.0]:
+		line.append(_enemy("chaser", x))
+	_t.eq("each prism beam cuts two", _tech("prism_cutter", 1), 2)
+	_t.eq("prism beams deal 8 x heft", _damage(line[0]), [8.0])
+	_struck.clear()
+	ult._peak(_player.ball_position())
+	_t.eq("Focus cuts 30 x heft", _damage(line[2]), [30.0])
+
+	# Juggernaut Drive: each machine rammed once, the bow wave throws outward, no collisions.
+	await _fresh()
+	_piece("juggernaut_drive")
+	var rammed := _enemy("chaser", 1.5)
+	var beside := _enemy("chaser", 4.0, 5.0)
+	_t.eq("the bow wave throws one beside the path", _tech("juggernaut_drive", 1), 1)
+	_t.check("outward, away from the path", beside._knock.z > 0.1 and beside._knock.z > absf(beside._knock.x), str(beside._knock))
+	_t.eq("the bow wave deals no damage", _hits(beside), [])
+	_kit.drive_step(_player.ball_position())
+	_kit.drive_step(_player.ball_position())
+	_t.eq("each machine is rammed once", _damage(rammed), [snappedf(30.0 * 1.25, 0.01)])
+	_t.check("machine collisions are off for the flight", _player.body().get_collision_exceptions().has(rammed))
+	_knob("ult_volley", 1)
+	_t.near("ult_volley widens the corridor 1 m", _kit.drive_reach(), 4.0)
+	_knob("ult_volley", 0)
+	ult._peak(_player.ball_position())
+	_t.near("Shoulder widens the corridor to 5 m", _kit.drive_reach(), 5.0)
+	ult._strike(_player.ball_position())
+	_t.check("crowd control slides off 2.0 s past the recovery", _player.immune_left >= Ultimate.RECOVER_SECONDS + 2.0 - 0.001, str(_player.immune_left))
+	_t.check("the collisions come back after the landing", _player.body().get_collision_exceptions().is_empty())
+
+	# ult_beats: two more beats in the plan.
+	await _fresh()
+	_combat.ultimate._phase = "idle"
+	var plain: int = ult.plan(_player.ball_position(), {})["beats"]
+	_knob("ult_beats", 2)
+	_t.eq("ult_beats adds two beats", int(ult.plan(_player.ball_position(), {})["beats"]) - plain, 2)
+	_knob("ult_beats", 0)
+
+	# The tree: depth 3 swaps, one of each per pair; depth 4 knobs; movement stays with Rivet.
+	var nodes: Array = RivetTree.NODES
+	var pairs_ok := true
+	for i in range(2, 6):
+		var kids := [nodes[2 * i + 2].get("swap", {}).get("ultimate", ""), nodes[2 * i + 3].get("swap", {}).get("ultimate", "")]
+		kids.sort()
+		pairs_ok = pairs_ok and kids == ["juggernaut_drive", "prism_cutter"]
+	_t.check("every world-2 pair offers one Prism and one Juggernaut", pairs_ok)
+	var a := AbilityState.new()
+	a.fit(ClassDef.by_id("runner_gunner"))
+	UpgradeTree.apply_pick(a, nodes[6])
+	var b := AbilityState.new()
+	b.fit(ClassDef.by_id("runner_gunner"))
+	UpgradeTree.apply_pick(b, nodes[7])
+	_t.eq("r_crossfire and r_magnet_blast swap Q", [nodes[6]["id"], a.ultimate_id, nodes[7]["id"], b.ultimate_id],
+		["r_crossfire", "prism_cutter", "r_magnet_blast", "juggernaut_drive"])
+	_t.check("every depth-4 node turns one ultimate knob", nodes.slice(14).all(func(n): return n.get("knob", {}).keys().filter(func(k): return String(k).begins_with("ult_")).size() == 1))
+	_t.eq("depths 1 and 2 carry no ultimate op", nodes.slice(0, 6).filter(func(n): return n.has("swap") and n["swap"].has("ultimate") or n.get("knob", {}).keys().any(func(k): return String(k).begins_with("ult_"))), [])
+	_t.check("every changed node stays with Rivet (class_id, capped)", nodes.slice(6).all(func(n): return n.get("class_id", "") == "runner_gunner" and n.get("stack_rule", "") == "capped"))
+	_t.eq("the tree is sound", UpgradeTree.problems("runner_gunner"), [])
+	var tree := UpgradeTree.new()
+	tree.reset("runner_gunner")
+	var sweep_ok := true
+	for copies in range(1, 21):
+		tree.picks = []
+		for c in copies:
+			tree.picks.append("r_demolisher")
+		tree._resolve()
+		sweep_ok = sweep_ok and float(tree.knob("ult_pins")) == 2.0 and tree.procs().is_empty()
+	_t.check("stack sweep: 1 to 20 copies keep ult_pins capped at 2.0, no proc chain", sweep_ok)
+	_t.eq("set-piece card lines", [WorldOneCards.set_piece_line(nodes[6]), WorldOneCards.set_piece_line(nodes[17])],
+		[WorldOneCards.SET_PIECE_LINES["prism_cutter"], WorldOneCards.SET_PIECE_LINES["ult_pins"]])
+
+	# Cards and grants: the discoveries are declared, detected in the kit and pay the three items.
+	await _fresh()
+	_piece("foundry_cutter")
+	for x in [5.0, 7.0, 9.0]:
+		_enemy("chaser", x)
+	for x in [-1.0, 1.5, 3.0]:
+		_enemy("chaser", x, 1.0)
+	_tech("foundry_cutter", 1)
+	ult._strike(_player.ball_position())
+	_t.check("a landing on six queues Full Breach", _kit._cards.has("rivet_full_breach"), str(_kit._cards.keys()))
+	_t.check("a beam that cut three queues the Foundry Cutter card", _kit._cards.has("rivet_foundry_cutter"))
+	_kit._shrugs = 0
+	for i in Kit.SHRUG_HITS:
+		_game.events.cc_ignored.emit("test")
+	_t.check("the 30th ignored hit queues Shrugged Off", _kit._cards.has("rivet_shrugged"))
+	var ids := ["rivet_line_drive", "rivet_foundry_cutter", "rivet_line_true", "rivet_shrugged", "rivet_full_breach"]
+	_t.check("each card is declared with a kit detector", ids.all(func(id): return CodexEntries.ids().has(id) and CodexEntries.DETECTORS[id]["script"] == "res://src/combat/rivet_kit.gd"))
+	var grants := {"ach_rivet_line_true": "trail_rivet_swarf", "ach_rivet_shrugged": "outfit_rivet_hood", "ach_rivet_full_breach": "shell_rivet_calibrated"}
+	var grants_ok := true
+	for id in grants:
+		var row: Dictionary = Achievements.row(id)
+		grants_ok = grants_ok and row.get("on") == "synergy_discovered" and not row["where"].has("first_time") \
+			and Achievements.reward_of(id).get("cosmetic", "") == grants[id]
+	_t.check("three grants on named discoveries pay the three items", grants_ok)
+	_t.check("the items wait for their art", grants.values().all(func(id): return Cosmetics.PENDING_ART.has(id)))
+	_t.check("both line cues are keyed and read the Rivet motif", Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["punch"]) and Audio.KEYED_SOUNDS.has(Audio.RIVET_LINE["arrive"])
+		and Audio.RIVET_LINE["motif"] == ClassDef.by_id("runner_gunner").motif)
+	_finish()
