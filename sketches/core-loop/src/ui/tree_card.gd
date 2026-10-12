@@ -35,7 +35,7 @@ var _depth_table: Button
 var _lift := 0.0
 
 
-func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES) -> void:
+func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth := 1, world_one := false, shell := false, set_piece_table := WorldOneCards.SET_PIECE_LINES, pilot := "") -> void:
 	node = node_row
 	key = key_id
 	color = class_color
@@ -64,7 +64,7 @@ func _init(node_row := {}, key_id := "", class_color := Palette.SAND, node_depth
 	_effect = _text(WorldOneCards.effect_line(node, world_one, shell), 18, Palette.SAND)
 	box.add_child(_effect)
 	# The set-piece line, dimmer than the effect so the effect stays the brighter line.
-	var piece := WorldOneCards.set_piece_line(node, set_piece_table)
+	var piece := WorldOneCards.set_piece_line(node, set_piece_table, pilot)
 	_set_piece = _text(piece, 16, Color(Palette.SAND, 0.85))
 	_set_piece.visible = piece != ""
 	box.add_child(_set_piece)
