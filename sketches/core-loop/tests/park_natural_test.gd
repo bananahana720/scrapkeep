@@ -6,6 +6,7 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const T := preload("res://tests/support/t.gd")
 const Events := preload("res://src/core/game_events.gd")
 const Audio := preload("res://src/presentation/audio.gd")
+const LocalMesh := preload("res://src/world/local_mesh.gd")
 const KINDS := ["flood_fill", "drain", "cave_in", "collapse", "impact", "flash_flood", "lightning"]
 const FORMS := ["flood_rising", "flood_rising", "cave_in_crumble", "cave_in_crumble", "impact_incoming", "flood_rising", "lightning_charge"]
 const FAR := Vector3(100, 1, 100)
@@ -40,6 +41,9 @@ class Terrain:
 	var stage := 1
 	var flood = null
 	var overlays: Array[String] = []
+	var geometry: Node3D
+	func geometry_root(_stage: int) -> Node3D:
+		return geometry
 	func map():
 		return maps[stage - 1]
 	func height(x: float, z: float) -> float:
@@ -47,6 +51,14 @@ class Terrain:
 		for id in overlays:
 			h = maxf(h, map().overlay_height(id, x, z, 0.0))
 		return h
+
+
+class FixtureMap:
+	extends ParkMap
+	func overlay_height(id: String, x: float, z: float, ground: float) -> float:
+		if id == "rubble_ramp_before" and ParkMap.footprint_contains(park.park_rows[0], Vector2(x, z)):
+			return 1.5
+		return super.overlay_height(id, x, z, ground)
 
 class World:
 	extends Node3D
@@ -81,7 +93,7 @@ func _row(kind: String, form: String) -> Dictionary:
 		"music_cue": {"telegraph": "riser_natural", "land": "drop_natural"}}
 
 
-func _fixture(row: Dictionary, sound := false, more_rows: Array = [], site_override: Dictionary = {}) -> Array:
+func _fixture(row: Dictionary, sound := false, more_rows: Array = [], site_override: Dictionary = {}, with_before := false) -> Array:
 	var w := World.new()
 	root.add_child(w)
 	w.ctx.root = w
@@ -94,12 +106,18 @@ func _fixture(row: Dictionary, sound := false, more_rows: Array = [], site_overr
 		w.presentation.add_child(w.presentation.audio)
 		w.presentation.audio.setup(w.ctx)
 		w.presentation.audio.bake_now()
-	var map := ParkMap.new()
+	var map := FixtureMap.new()
 	map.park = {"map": "fixture", "park_rows": [{"id": "site", "at": [0, 0], "y": 0,
 		"size": [20, 2, 10], "yaw_deg": 30}], "event_rows": [row] + more_rows, "weather_rows": [],
 		"routes": [{"id": "main", "from": "drop_in", "to": "landmark"}]}
 	map.park.park_rows[0].merge(site_override, true)
 	w.terrain.maps = [map]
+	w.terrain.geometry = w
+	if with_before:
+		w.terrain.overlays.append("rubble_ramp_before")
+		var body := LocalMesh.grid(w, "Park_site", Vector2(10, 20), 1.0,
+			func(_x, _z): return 1.5, func(_x, _z): return Color.WHITE)
+		body.rotation.y = deg_to_rad(30.0)
 	w.events = Director.new(823, {}, map, 14.0, Callable(w.terrain, "height"))
 	var script: Script = load("res://src/world/events/natural.gd")
 	var handler = script.new()
@@ -172,6 +190,7 @@ func _run() -> void:
 		w.free()
 	_water_lifecycle()
 	_geometry_boundaries()
+	await _terrain_overlap()
 	t.check("all seven kinds tested", t.checks >= 50, str(t.checks))
 	quit(t.verdict())
 
@@ -206,6 +225,59 @@ func _water_lifecycle() -> void:
 	w.terrain.flood.in_basin(Vector3.ZERO)
 	t.check("drain end restores the prior live water", state.water.visible)
 	t.near("restored water material uses its surface", w.terrain.flood.surface_y(), ParkSchema.MAX_EVENT_WATER_M)
+	handler.release()
+	w.free()
+
+
+func _terrain_overlap() -> void:
+	var first := _row("collapse", "cave_in_crumble")
+	first.id = "collapse_first"
+	first.live_s = 12.0
+	var second := first.duplicate(true)
+	second.id = "collapse_second"
+	second.trigger.value = 2
+	second.live_s = 30.0
+	var fixture := _fixture(first, false, [second], {}, true)
+	var w = fixture[0]
+	var handler = fixture[1]
+	var before: Node3D = w.find_child("Park_site", true, false)
+	var before_position := before.position
+	var before_visible := before.visible
+	var probe := Vector2(4, 8).rotated(-deg_to_rad(30.0))
+	var prior_height: float = w.terrain.height(probe.x, probe.y)
+	t.near("shared swap starts on the authored before height", prior_height, 1.5)
+	t.check("shared swap prepares one collider for both rows", handler._prepared[first.id].overlay == handler._prepared[second.id].overlay)
+	for i in 53:
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 1})
+	for i in 80:
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 2})
+	var overlay: Node3D = handler._prepared[second.id].overlay
+	t.check("shared swap has both live rows", handler.active.has(first.id) and handler.active.has(second.id))
+	t.check("shared swap displaces before membership while live", not w.terrain.overlays.has("rubble_ramp_before"))
+	for i in 60:
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 2})
+	t.check("first terrain owner ends while the second stays live", not handler.active.has(first.id) and handler.active.has(second.id))
+	t.check("second terrain owner retains visible overlay", overlay.visible and not before.visible)
+	t.check("second terrain owner retains after membership", w.terrain.overlays.has("rubble_ramp_after"), str(w.terrain.overlays))
+	t.check("second terrain owner retains committed height", w.terrain.height(probe.x, probe.y) > prior_height)
+	await physics_frame
+	await physics_frame
+	var query := PhysicsRayQueryParameters3D.create(Vector3(probe.x, 100, probe.y), Vector3(probe.x, -100, probe.y))
+	var hit: Dictionary = w.get_world_3d().direct_space_state.intersect_ray(query)
+	t.check("second terrain owner retains the real collider", hit.get("collider") == overlay, str(hit))
+	if not hit.is_empty():
+		t.near("second owner ray and height agree", hit.position.y, w.terrain.height(probe.x, probe.y), 0.001)
+	for i in 300:
+		w.events.advance(0.1, FAR, Vector3.ZERO, {"clock_tier": 2})
+	t.check("final terrain owner restores overlay membership", w.terrain.overlays == ["rubble_ramp_before"], str(w.terrain.overlays))
+	t.check("final terrain owner restores before visibility and position", before.visible == before_visible and before.position == before_position and not overlay.visible)
+	t.near("final terrain owner restores the prior height", w.terrain.height(probe.x, probe.y), prior_height)
+	await physics_frame
+	await physics_frame
+	hit = w.get_world_3d().direct_space_state.intersect_ray(query)
+	t.check("final terrain owner restores the prior collider", hit.get("collider") == before, str(hit))
+	if not hit.is_empty():
+		t.near("restored collider and prior height agree", hit.position.y, prior_height, 0.001)
 	handler.release()
 	w.free()
 
