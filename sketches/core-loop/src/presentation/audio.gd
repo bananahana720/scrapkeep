@@ -1744,7 +1744,9 @@ func _on_ultimate_ready(_id: String) -> void:
 # holds through the flight and hands over on the landing's beat, as a Warden launch does.
 func _on_ultimate_started(_id: String, _path: String, _from: Vector3, _to: Vector3, seconds: float) -> void:
 	play("ultimate_started")
-	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == _boss_track():
+	if not sound_ready or engine.mode != MusicEngine.PLAY:
+		return
+	if engine.track == _boss_track() and not _id.begins_with("cannon_"):
 		return
 	_ult_armed = true
 	if ace_playing() and ace.mode == "piece":
@@ -1763,7 +1765,13 @@ func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) 
 		cannon_motif("cannon_landing", -6.0, false, true)
 	if _ult_armed:
 		var touchdown := engine.clock
-		var at := engine.drop_now(4, 0.85, {}, -1, {"ult": false})
+		var at: int
+		if _id.begins_with("cannon_"):
+			# Time on target shares touchdown; waiting for the next beat separates the shells from the drop.
+			at = touchdown
+			engine._add_action(at, {"type": "drop", "bars": 4, "weight": 0.85, "then": {}, "theme": -1, "set": {"ult": false}})
+		else:
+			at = engine.drop_now(4, 0.85, {}, -1, {"ult": false})
 		drop_log.append([touchdown, at])
 		if _ace_flight:
 			_ace_flight = false

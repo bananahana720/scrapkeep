@@ -1,7 +1,7 @@
 extends SceneTree
-# 2026-10-11 (PC-CANNON): real nodes exercise the delayed call clock and the full reticle cone.
+# 2026-10-11 (PC-CANNON): real nodes exercise call/drop timing and the full reticle cone.
 # EXPECTED_CHECKS includes the count guard. Every check must run.
-const EXPECTED_CHECKS := 44
+const EXPECTED_CHECKS := 46
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -166,6 +166,9 @@ func _cases() -> void:
 	_t.eq("sky reticle rejects the ground target", _ult._cannon_target(HOME, Vector3.UP, 26.0), HOME)
 	_t.eq("pitched reticle selects its target", _ult._cannon_target(HOME, (foe.global_position - HOME).normalized(), 26.0), foe.global_position)
 	_ult.start(p)
+	_game.presentation.audio.engine.mode = _game.presentation.audio.engine.PLAY
+	_game.presentation.audio.engine.render(Harmony.BEAT / 2 + 111)
+	_game.presentation.audio._ult_armed = true
 	_finish_ride()
 	_t.eq("one landing", _landed.size(), 1)
 	var calls: int = _ult._cannon_calls
@@ -179,6 +182,10 @@ func _cases() -> void:
 	var chord: Array = audio.cannon_log.filter(func(row): return row["kind"] == "cannon_landing")
 	_t.eq("landing chord is all four motif notes", chord.back()["notes"], [59, 64, 67, 74])
 	_t.check("landing is one chord", chord.back()["chord"])
+	var drop: Array = audio.drop_log.back()
+	_t.check("the music drop shares touchdown within one tick", absf(float(drop[1] - drop[0])) <= float(Harmony.RATE) / Engine.physics_ticks_per_second, str(drop))
+	audio.engine.render(64)
+	_t.check("the engine plays the touchdown drop", audio.engine.in_drop() and not audio.engine.building())
 
 	await _reset()
 	_ult.start(p)
