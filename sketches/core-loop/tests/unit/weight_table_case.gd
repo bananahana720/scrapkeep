@@ -10,7 +10,7 @@ const Windup := preload("res://src/presentation/windup_rows.gd")
 const Posture := preload("res://src/combat/boss_posture.gd")
 const CLASSES := ["none", "hit", "heavy", "massive", "climax"]
 const FIELDS := ["stop_ms", "shake", "kick", "punch_fov", "fx_scale", "body", "body_st"]
-const EXPECTED_CHECKS := 22
+const EXPECTED_CHECKS := 23
 var event_script: Script = EventKinds
 const PRESENTATION := ["juice", "vfx", "audio"]
 const RULES := ["strike", "death_parts", "amount", "gauge", "posture"]
@@ -50,6 +50,12 @@ func run(t) -> void:
 	t.check("body layers use db zero", db_ok, "bank priority trims remain in charge")
 	var bad := coverage(facts, weights)
 	t.eq("weighted coverage", bad, [])
+	var sound_drift := []
+	for fact in facts:
+		var record: Dictionary = event_script.call("weigh", fact, {})
+		if record.sound != Rows.sound(fact):
+			sound_drift.append(fact)
+	t.eq("weighted sound matches Rows", sound_drift, [])
 	var listeners := connected_signals()
 	var uncovered := uncovered_listeners(listeners, facts, exemptions)
 	t.eq("presentation listener coverage", uncovered, [])
@@ -83,6 +89,11 @@ func run(t) -> void:
 		var shared := _bank_ids(slam).filter(func(id): return id in _bank_ids(other))
 		if not shared.is_empty():
 			collisions.append([fact, shared])
+	var ultimate: Dictionary = event_script.call("weigh", "ultimate_landed", {})
+	var vault: Dictionary = event_script.call("weigh", "enemy_killed", {"kind": "vault"})
+	var shared_cues := [ultimate.sound].filter(func(id): return id != "" and id in [vault.sound, "vault_drop"])
+	if not shared_cues.is_empty():
+		collisions.append(["ultimate_landed", "enemy_killed: vault", shared_cues])
 	t.eq("same frame sound collision", collisions, [])
 	t.eq("class rule boundaries", _rule_errors(), [])
 	var bounded := true
