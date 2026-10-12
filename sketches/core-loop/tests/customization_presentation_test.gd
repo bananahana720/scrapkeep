@@ -1,10 +1,13 @@
 # 2026-10-12 FIXTURE-ADAPT: eb9cbd7 made the shell three-surface; a967dd8 moved decals to the seat-back plate.
+# 2026-10-12 R3: CUSTOMIZE.md:29 says "never the tumbling Core lattice"; :458 requires panel/ring fallback.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Customize := preload("res://src/ui/customize_page.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("customization_presentation_test")
@@ -61,19 +64,23 @@ func _run() -> void:
 	var core_surfaces: int = core_mesh.mesh.get_surface_count()
 	_t.eq("Hoberman shell main mesh has three surfaces", core_surfaces, 3)
 	view._process(0.016)
-	var decal := core_mesh.get_active_material(0) as ShaderMaterial
-	_t.check("CUS-6 decal composed on rolling shell", decal != null and decal.resource_name == "DecalMask" and decal.get_shader_parameter("decal_mask") == load("res://assets/cosmetics/decals/decal_fern_mask.png"))
+	var ring: MeshInstance3D = rec["pod"].get_node("WeaponRing")
+	var ring_paint := -1
+	for surface in ring.mesh.get_surface_count():
+		if ring.mesh.surface_get_material(surface).resource_name == "paint":
+			ring_paint = surface
+	var decal := ring.get_active_material(ring_paint) as ShaderMaterial
+	_t.check("CUS-6 missing plate uses the ring paint surface", decal != null and decal.resource_name == "DecalMask" and decal.get_shader_parameter("decal_mask") == load("res://assets/cosmetics/decals/decal_fern_mask.png"))
 	_t.eq("decal adds no geometry or draw", core_mesh.mesh.get_surface_count(), core_surfaces)
-	_check_core("CUS-6 decal respects every shell material", core_materials, decal)
-	_t.check("decal leaves pod and pilot materials alone", _materials(view, rec["pod"]) == pod_materials)
+	_check_core("CUS-6 every Core surface keeps its original material", core_materials)
+	_check_fallback(view, rec["pod"], pod_materials, decal)
 	_t.check("CUS-6 today's paint still tints shell enamel", _has_paint(view, rec["pod"], Cosmetics.row("paint_any_night")["tint"]))
 	_t.eq("cosmetics leave run summary unchanged", JSON.stringify(_game.run.summary()), gameplay_before)
 	_t.eq("cosmetics leave physics mass unchanged", _game.player.body().mass, ball_mass)
-	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md sections 2 and 9): the decal lands on the Pod's
-	# DecalPlate when the shell has one and on Core paint/glass otherwise; refits reuse materials.
+	# The delivered plate is an empty mount; a mesh probe exercises its per-surface material contract.
 	view._decal["key"] = "-"
 	view._process(0.016)
-	_t.check("B5 a refit reuses the cached decal material", core_mesh.get_active_material(0) == decal)
+	_t.check("B5 a refit reuses the cached decal material", ring.get_active_material(ring_paint) == decal)
 	var plate_mount: Node3D = rec["pod"].find_child("DecalPlate", true, false)
 	if not _t.check("Hoberman shell supplies the seat-back DecalPlate mount", plate_mount != null):
 		_game.free()
@@ -90,6 +97,7 @@ func _run() -> void:
 	for surface in core_mesh.mesh.get_surface_count():
 		_t.check("B5 plate decal surface %d" % surface, plate.get_active_material(surface) == plate_mat)
 	_check_core("B5 with a plate, Core keeps every original material", core_materials)
+	_t.check("B5 with a plate, every pod surface is restored", _materials(view, rec["pod"]).slice(0, pod_materials.size()) == pod_materials)
 	view._decal["key"] = "-"
 	view._process(0.016)
 	for surface in plate.mesh.get_surface_count():
@@ -98,7 +106,10 @@ func _run() -> void:
 	plate.free()
 	view._decal["key"] = "-"
 	view._process(0.016)
-	_check_core("B5 without a plate the decal returns to Core, same material", core_materials, decal)
+	_check_core("B5 without a plate, Core keeps every original material", core_materials)
+	_check_fallback(view, rec["pod"], pod_materials, decal)
+	_t.check("B5 missing plate reuses the ring material", ring.get_active_material(ring_paint) == decal)
+	_check_pilot_fallbacks(view, hero, view.effective(pilot, "decal"))
 
 	var body = _game.presentation.get_node("CompanionBody")
 	_t.eq("seat real SPIL-9 for run", body.seat_for_capture("primer_coil", "ram_prow"), "")
@@ -177,6 +188,7 @@ func _run() -> void:
 	view._process(0.04)
 	_t.eq("CUS-5 missing trail clears nodes", view._cards.size(), 0)
 	_check_core("CUS-5 missing decal restores every original material", core_materials)
+	_t.check("CUS-5 missing decal restores every pod surface", _materials(view, rec["pod"]) == pod_materials)
 	_t.check("CUS-5 missing companion paint restores mesh", companion_meshes[0].mesh == source_mesh)
 	view._process(0.04)
 	_t.eq("CUS-5 one warning per absent asset in play", view.resolver._warned.size(), 3)
@@ -187,6 +199,8 @@ func _run() -> void:
 func _materials(view, node: Node) -> Array:
 	var out := []
 	for mesh in view._meshes(node):
+		if mesh.name == "DecalSurfaceProbe":
+			continue
 		for surface in mesh.mesh.get_surface_count():
 			out.append(mesh.get_active_material(surface))
 	return out
@@ -199,12 +213,56 @@ func _has_paint(view, node: Node, tint: Color) -> bool:
 	return false
 
 
-func _check_core(label: String, originals: Array, decal: Material = null) -> void:
+func _check_core(label: String, originals: Array) -> void:
 	for saved in originals:
 		var mesh: MeshInstance3D = saved["mesh"]
 		var surface: int = saved["surface"]
 		var original: Material = saved["material"]
-		var takes_decal := original != null and original.resource_name in ["glass", "paint"]
-		var want: Material = decal if decal != null and takes_decal else original
-		_t.check("%s %s surface %d" % [label, mesh.name, surface], mesh.get_active_material(surface) == want,
-			"original %s, decal eligible %s" % [original.resource_name if original != null else "null", takes_decal])
+		_t.check("%s %s surface %d" % [label, mesh.name, surface], mesh.get_active_material(surface) == original)
+
+
+func _check_fallback(view, pod: Node, originals: Array, decal: Material) -> void:
+	var index := 0
+	var eligible := 0
+	for mesh in view._meshes(pod):
+		for surface in mesh.mesh.get_surface_count():
+			var original: Material = originals[index]
+			var placement: bool = mesh.name == "WeaponRing" or (mesh.name == "Pod" and String(mesh.get_parent().name) in ["HeftC2", "HeftC3", "HeftC4", "HeftC5"])
+			var takes_decal: bool = placement and mesh.mesh.surface_get_material(surface).resource_name == "paint"
+			var want: Material = decal if takes_decal else original
+			_t.check("fallback %s surface %d only panel/ring paint changes" % [mesh.name, surface], mesh.get_active_material(surface) == want)
+			eligible += 1 if takes_decal else 0
+			index += 1
+	_t.check("delivered shell has eligible ring paint", eligible > 0)
+
+
+func _check_pilot_fallbacks(view, hero, row: Dictionary) -> void:
+	for def in ClassDef.all():
+		var holder := Node3D.new()
+		root.add_child(holder)
+		var shell: Dictionary = hero.fit_shell_into(holder, def.id, "", 5, {})
+		var cosmetic := CosmeticPresentation.new()
+		var originals := []
+		for mesh in view._meshes(shell["core"]):
+			for surface in mesh.mesh.get_surface_count():
+				originals.append({"mesh": mesh, "surface": surface, "material": mesh.get_active_material(surface)})
+		var pod_originals := _materials(view, shell["pod"])
+		var ring: MeshInstance3D = shell["pod"].get_node("WeaponRing")
+		var paint_surface := -1
+		for surface in ring.mesh.get_surface_count():
+			if ring.mesh.surface_get_material(surface).resource_name == "paint":
+				paint_surface = surface
+		_t.check("%s has identifiable ring paint" % def.id, paint_surface >= 0)
+		cosmetic._apply_decal(shell, row)
+		var decal := ring.get_active_material(paint_surface) as ShaderMaterial
+		_t.check("%s real missing plate reaches ring" % def.id, decal != null and decal.resource_name == "DecalMask")
+		_check_core("%s Core unchanged" % def.id, originals)
+		_check_fallback(view, shell["pod"], pod_originals, decal)
+		cosmetic._decal["key"] = "-"
+		cosmetic._apply_decal(shell, row)
+		_t.check("%s cached ring refit" % def.id, ring.get_active_material(paint_surface) == decal)
+		cosmetic._apply_decal(shell, {})
+		_check_core("%s Core restored" % def.id, originals)
+		_t.check("%s every pod surface restored" % def.id, _materials(view, shell["pod"]) == pod_originals)
+		cosmetic.free()
+		holder.free()
