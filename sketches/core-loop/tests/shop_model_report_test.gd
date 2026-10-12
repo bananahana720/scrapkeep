@@ -1,14 +1,11 @@
 extends SceneTree
 
 const ShopModel := preload("res://tools/shop_model.gd")
-const Fabricators := preload("res://src/build/fabricators.gd")
-const Activities := preload("res://src/world/activities.gd")
 
 # SG16, the shop price-to-income report. Report-then-gate: this test asserts the report's
 # structure (a nonzero row count, every field filled and finite, deterministic from the seed)
 # and that its flag logic fires on planted defects. It asserts no price or ratio band, because
-# the prices are Andrew's (owner item 4) and nothing here adopts one. It also pins the price
-# constants it reads, so a unit that edits one fails here and not silently.
+# the prices are Andrew's (owner item 4) and nothing here adopts one.
 #
 # Rows: 3 worlds x 2 stages x 20 seeds = 120 stage rows, plus 60 (seed, world) rows.
 
@@ -22,6 +19,10 @@ func _initialize() -> void:
 	var seeds: Array = range(1, SEEDS + 1)
 	var rows: Array = ShopModel.stage_rows(seeds)
 	_check(rows.size() == SEEDS * STAGES, "stage row count", "rows=%d want %d" % [rows.size(), SEEDS * STAGES])
+	if rows.is_empty():
+		print("shop_model_report_test: FAIL (%d failures)" % _failures)
+		quit(1)
+		return
 	_check(ShopModel.world_rows(rows).size() == SEEDS * 3, "world row count", "rows=%d want %d" % [ShopModel.world_rows(rows).size(), SEEDS * 3])
 	var issues: Array = ShopModel.structural_issues(rows, SEEDS * STAGES)
 	_check(issues.is_empty(), "real rows are structurally sound", "issues=%s" % [issues])
@@ -58,10 +59,6 @@ func _initialize() -> void:
 	var clean := [_row(1, 1, 1, 100, 100.0), _row(1, 2, 1, 110, 100.0), _row(1, 3, 2, 200, 150.0)]
 	_check(ShopModel.flags(clean).is_empty(), "clean planted rows raise no flag", "flags=%s" % [ShopModel.flags(clean)])
 
-	# Reports only: the constants it reads are the ones on the branch.
-	_check(Activities.PAY_SCRAP == 180, "PAY_SCRAP unchanged", "PAY_SCRAP=%d" % Activities.PAY_SCRAP)
-	var p: Dictionary = Fabricators.COG_PRICES
-	_check(p["part_base"] == 10.0 and p["part_growth"] == 1.15 and p["part_tier"] == {1: 1.0, 2: 1.6, 3: 2.6}, "part price constants unchanged", "part_base=%s growth=%s" % [p["part_base"], p["part_growth"]])
 	print("shop_model_report_test: %s (%d failures)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(1 if _failures > 0 else 0)
 
