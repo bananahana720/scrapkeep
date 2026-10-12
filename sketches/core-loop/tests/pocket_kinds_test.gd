@@ -43,7 +43,7 @@ func _run() -> void:
 		var index := args.find("--only")
 		if index + 1 < args.size():
 			only = args[index + 1]
-		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay", "marks", "rounds"]:
+		if not only in ["ladder", "ambush", "hazards", "exit", "recovery", "admission", "cues", "pay", "marks", "rounds", "combat_cues"]:
 			t.check("valid control selection", false, str(args))
 			quit(t.verdict())
 			return
@@ -90,6 +90,10 @@ func _run() -> void:
 		await _hazards()
 		await _marks()
 		await _exit()
+	elif only == "combat_cues":
+		await _combat()
+		_rounds()
+		_cues()
 	elif only == "rounds":
 		_rounds()
 	elif only == "marks":
@@ -112,7 +116,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 12, "admission": 3, "cues": 3, "pay": 3, "marks": 5, "rounds": 8}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 12, "admission": 3, "cues": 3, "pay": 3, "marks": 5, "rounds": 8, "combat_cues": 13}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -197,6 +201,8 @@ func _ladder() -> void:
 				shown = shown and s.tier_label.text.contains("Tier %d" % tier)
 				for seed_value in 20:
 					game.ctx.rng.seed = 100 + seed_value
+					s = _site(kind, admitted[1].at, admitted[1])
+					shown = shown and s.tier_label.text.contains("Tier %d" % tier)
 					acts._finish(s, s.global_position)
 					var bundle: Array = s.pickup_parts.duplicate()
 					var expected_rarity := "common" if kind == "movement_course" else "rare"
@@ -376,7 +382,7 @@ func _phase_matches(s, phase: String, audio, since: int, count: int) -> bool:
 	var key := String(s.rule.cue[phase])
 	var row := Rows.row(key)
 	var cues: Array = audio.cue_log.slice(since).filter(func(c): return c[0] == key)
-	return cues.size() == count and cues.all(func(c): return c[1] == row.sound) and s.phase_view.get_child(0).material_override.albedo_color == row.color
+	return cues.size() == count and cues.all(func(c): return c[1] == row.sound) and is_instance_valid(s.phase_view) and s.phase_view.get_child(0).material_override.albedo_color == row.color
 
 
 func _cues() -> void:
@@ -434,8 +440,11 @@ func _cues() -> void:
 				pay_count += 1
 		else:
 			s.inside_pickup = false
-			acts._watch_pickup(s, s.pickup.global_position)
-			pay_count = 1
+			if s.pickup != null:
+				acts._watch_pickup(s, s.pickup.global_position)
+				pay_count = 1
+			else:
+				shared = false
 		shared = shared and _phase_matches(s, "pay", audio, since, pay_count)
 		acts.clear()
 	game.events.activity_done.disconnect(listener)

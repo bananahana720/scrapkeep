@@ -144,6 +144,7 @@ class Site extends Node3D:
 	var pickup: Node3D
 	var pickup_part := ""
 	var pickup_parts: Array = []
+	var reward_parts: Array = []
 	var cap: Node3D
 	var pickup_taken := false
 	var inside_pickup := true
@@ -411,6 +412,8 @@ func _build_pocket(s: Site, spec: Dictionary) -> void:
 
 
 func _show_reward(s: Site) -> void:
+	var suffix := "round_%d" % maxi(1, s.round) if s.id == "round_arena" else "clear"
+	s.reward_parts = _reward_parts(s, suffix)
 	var shown := stand_odds(s)
 	s.tier_label.text = "%s — Tier %d (%s)" % [s.rule.cue.word, shown.tier, shown.reward_text]
 	s.tier_label.modulate = ItemGen.RARITY[shown.reward_rarity].color
@@ -623,7 +626,7 @@ func _pay_round(s: Site) -> void:
 	s.fog.stop()
 	s.heal_paid = false
 	_heal(s)
-	var picks := _reward_parts(s, "round_%d" % s.round)
+	var picks: Array = s.reward_parts.duplicate()
 	var pickup := ActivityView.gem(String(s.rule.cue.view))
 	s.add_child(pickup)
 	pickup.global_position = s.fog.committed.safe_at
@@ -821,8 +824,7 @@ func stand_odds(s: Site) -> Dictionary:
 			else OddsReadout.odds_for(table["rarities"], ctx.run.class_id())
 	var result := {"named": table["named"], "rarities": table["rarities"], "odds": odds, "text": OddsReadout.text(odds)}
 	if s.rule.has("bundle"):
-		var suffix := "round_%d" % maxi(1, s.round) if s.id == "round_arena" else "clear"
-		var picks := _reward_parts(s, suffix)
+		var picks: Array = s.reward_parts
 		var rung := 0
 		var descriptions := []
 		var rarity := "common"
@@ -865,7 +867,7 @@ func _finish(s: Site, at: Vector3) -> void:
 			s.pickup_parts = [s.pickup_part]
 	else:
 		if s.rule.has("bundle"):
-			s.pickup_parts = _pocket_roll(s, "clear", int(s.rule.pay.parts))
+			s.pickup_parts = s.reward_parts.duplicate()
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
 		else:
 			s.pickup_part = _roll(s.id, table["rarities"])
