@@ -74,7 +74,9 @@ func _cards() -> void:
 			var price: float = d.credit_pack_cost(pack.kinds, pack == row.elite)
 			_t.check("park stage %d pack %s has a finite positive explicit price" % [row.stage, pack.id],
 				is_finite(price) and price > 0.0, "kinds=%s price=%s" % [pack.kinds, price])
-	var normal: float = d.credit_pack_cost(Park.ELITE.kinds, false)
+	var normal := 0.0
+	for kind in Park.ELITE.kinds:
+		normal += cards.CARDS[kind].cost
 	_t.near("elite costs its multiplier", d.credit_pack_cost(Park.ELITE.kinds, true), normal * cards.ELITE_MULTIPLIER)
 	_t.check("unknown kinds never receive a fallback price", not is_finite(d.credit_pack_cost(["unpriced"])))
 	_t.check("stage_cap rejects an oversized kind group", not is_finite(d.credit_pack_cost(["chaser", "chaser", "chaser", "chaser", "chaser"])))
