@@ -15,6 +15,7 @@ var forms := []
 var flood_surface_seen := false
 var flood_material_seen := false
 var flood_max_depth := 0.0
+var flash_checked := false
 
 
 func _initialize() -> void:
@@ -31,6 +32,69 @@ func _frames(count: int) -> void:
 				flood_surface_seen = true
 				flood_material_seen = flood_material_seen or game.ctx.terrain.material_at(state.at).get("material") == "water"
 				flood_max_depth = maxf(flood_max_depth, float(state.depth_m))
+			var flash: Dictionary = handlers.natural.active.get("west_wash_flash_flood", {})
+			if not flash_checked and flash.get("water") != null and float(flash.depth_m) >= ParkSchema.MAX_EVENT_WATER_M - 0.0001:
+				flash_checked = true
+				_check_flash_surface(flash)
+
+
+func _mesh_triangles(water) -> Array:
+	var mesh: Mesh = water._plane.mesh
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var triangles := []
+	for k in range(0, indices.size(), 3):
+		triangles.append([water._plane.global_transform * vertices[indices[k]],
+			water._plane.global_transform * vertices[indices[k + 1]], water._plane.global_transform * vertices[indices[k + 2]]])
+	return triangles
+
+
+func _mesh_y(triangles: Array, point: Vector2) -> float:
+	for triangle in triangles:
+		var a: Vector3 = triangle[0]
+		var b: Vector3 = triangle[1]
+		var c: Vector3 = triangle[2]
+		var edge_b := Vector2(b.x - a.x, b.z - a.z)
+		var edge_c := Vector2(c.x - a.x, c.z - a.z)
+		var offset := point - Vector2(a.x, a.z)
+		var determinant := edge_b.cross(edge_c)
+		if absf(determinant) < 0.0000001:
+			continue
+		var u := offset.cross(edge_c) / determinant
+		var v := edge_b.cross(offset) / determinant
+		if u >= -0.00001 and v >= -0.00001 and u + v <= 1.00001:
+			return a.y + u * (b.y - a.y) + v * (c.y - a.y)
+	return -INF
+
+
+func _check_flash_surface(state: Dictionary) -> void:
+	var triangles := _mesh_triangles(state.water)
+	var row: Dictionary = game.ctx.terrain.map().park.event_rows.filter(func(r): return r.id == "west_wash_flash_flood")[0]
+	var expected_depth := minf(float(row.effect.depth_m), ParkSchema.MAX_EVENT_WATER_M)
+	var terrain = game.ctx.terrain
+	var max_depth := -INF
+	for triangle in triangles:
+		for vertex in triangle + [(triangle[0] + triangle[1] + triangle[2]) / 3.0]:
+			max_depth = maxf(max_depth, vertex.y - terrain.height(vertex.x, vertex.z))
+	t.check("real west_wash rendered local depth stays within schema cap", max_depth <= ParkSchema.MAX_EVENT_WATER_M + 0.0001, "maximum local depth %s" % max_depth)
+	var regression := Vector2(-63, 74)
+	t.near("real west_wash depth at (-63, 74) follows its capped request", _mesh_y(triangles, regression) - terrain.height(regression.x, regression.y), expected_depth)
+	var half := Vector2(float(state.site.size[2]), float(state.site.size[0])) * 0.5
+	var centre := Vector2(float(state.site.at[0]), float(state.site.at[1]))
+	var checked := 0
+	var agrees := true
+	var bounded := true
+	for j in 17:
+		for i in 5:
+			var point := Vector2(lerpf(-half.x, half.x, (i + 0.5) / 5.0), lerpf(-half.y, half.y, (j + 0.5) / 17.0)).rotated(-deg_to_rad(float(state.site.yaw_deg))) + centre
+			var y := _mesh_y(triangles, point)
+			bounded = bounded and is_finite(y) and y - terrain.height(point.x, point.y) <= ParkSchema.MAX_EVENT_WATER_M + 0.0001
+			var material: Dictionary = terrain.material_at(Vector3(point.x, y, point.y))
+			agrees = agrees and material.get("material") == "water" and absf(float(material.surface_y) - y) <= 0.0001
+			checked += 1
+	t.check("real west_wash footprint samples obey local depth cap", bounded and checked == 85, str(checked))
+	t.check("real west_wash material queries agree with the rendered triangles", agrees)
 
 
 func _run() -> void:
@@ -58,6 +122,7 @@ func _run() -> void:
 	t.check("clock_tier flood ends through the game loop", ended.has("plunge_pool_flood"), str(ended))
 	t.check("real flood uses a live water surface", flood_surface_seen)
 	t.check("real terrain resolves the flood as water", flood_material_seen)
+	t.check("real clock_tier west_wash flash flood reaches full fill", flash_checked)
 	var flood_row: Dictionary = game.ctx.terrain.map().park.event_rows.filter(func(row): return row.id == "plunge_pool_flood")[0]
 	var expected_depth := minf(float(flood_row.effect.depth_m), ParkSchema.MAX_EVENT_WATER_M)
 	t.near("real flood reaches its capped requested depth", flood_max_depth, expected_depth)
