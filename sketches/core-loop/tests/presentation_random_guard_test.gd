@@ -1,4 +1,6 @@
 # smoke: solo
+# 2026-10-12 FIXTURE-ADAPT: 5f95fb5 parsed a killed child's truncated JSON into Dictionary and never quit.
+# 2026-10-12 R2/m6: malformed child records are skipped safely and fail trace integrity with a verdict.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -8,9 +10,18 @@ const FIELDS := ["position", "velocity", "scrap", "enemies", "warden_integrity",
 
 
 func _initialize() -> void:
+	# If an unexpected script error aborts initialization, the pending exit still fails closed.
+	quit(1)
 	var t := T.new("presentation_random_guard_test")
-	var base := ProjectSettings.globalize_path("res://../../artifacts/local/determinism/guard-%d-%d" % [OS.get_process_id(), RandomNumberGenerator.new().randi()])
+	var scratch := OS.get_environment("TMPDIR")
+	if scratch.is_empty():
+		scratch = ProjectSettings.globalize_path("res://../../artifacts/local/determinism")
+	var base := scratch.path_join("guard-%d-%d" % [OS.get_process_id(), RandomNumberGenerator.new().randi()])
 	var fingerprints := []
+	var sample := {}
+	for field in FIELDS:
+		sample[field] = []
+	t.eq("truncated final JSON record is skipped", _trace_rows(JSON.stringify(sample) + "\n{\"position\":", "parser probe").size(), 1)
 	for arm in 2:
 		var folder := base.path_join(str(arm))
 		var previous := {}
@@ -31,13 +42,12 @@ func _initialize() -> void:
 		var errors: Array = ChildRuns.summary(result)["errors"]
 		t.check("arm %d completed" % arm, result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
 			"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], errors])
-		var rows := FileAccess.get_file_as_string(folder.path_join("trace-11.ndjson")).split("\n", false)
+		var rows := _trace_rows(FileAccess.get_file_as_string(folder.path_join("trace-11.ndjson")), "arm %d" % arm, t)
 		t.eq("arm %d fixed ticks" % arm, rows.size(), TICKS)
 		var fingerprint := []
 		var enemies_seen := false
 		var warden_seen := false
-		for line in rows:
-			var row: Dictionary = JSON.parse_string(line)
+		for row in rows:
 			var state := {}
 			for field in FIELDS:
 				state[field] = row[field]
@@ -58,3 +68,25 @@ func _compare(t, label: String, a: Array, b: Array) -> void:
 			first = i + 1
 			break
 	t.check(label, not a.is_empty() and a == b, "first differing tick %d" % first)
+
+
+func _trace_rows(text: String, label: String, t = null) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var invalid := 0
+	var lines := text.split("\n", false)
+	for i in lines.size():
+		var parser := JSON.new()
+		var error := parser.parse(lines[i])
+		var parsed = parser.data
+		if error != OK or not parsed is Dictionary:
+			invalid += 1
+			print("guard skipped invalid JSON record %d/%d in %s: %s" % [i + 1, lines.size(), label, parser.get_error_message()])
+			continue
+		if not FIELDS.all(func(field): return parsed.has(field)) or not parsed["enemies"] is Array or not parsed["warden_integrity"] is Array:
+			invalid += 1
+			print("guard skipped incomplete state record %d/%d in %s" % [i + 1, lines.size(), label])
+			continue
+		out.append(parsed)
+	if t != null:
+		t.eq("%s trace has no malformed records" % label, invalid, 0)
+	return out
