@@ -347,10 +347,8 @@ func _show_landing(row: Dictionary, state: Dictionary) -> void:
 
 
 func _on_world_sound(kind: String, at: Vector3) -> void:
-	var natural := false
-	for spec in KINDS.values():
-		natural = natural or kind == spec.form or kind == spec.land
-	if not natural:
+	var cues: Dictionary = world.events.PARK_LAND_FACTS
+	if not cues.has(kind) and not cues.values().has(kind):
 		_world_sound.call(kind, at)
 		return
 	var entry: Dictionary = Kinds.world_row(kind)
