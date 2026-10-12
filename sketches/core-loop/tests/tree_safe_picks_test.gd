@@ -103,10 +103,11 @@ const KIT_AGNOSTIC_ON := ["special_used", "slammed", "dashed", "hold_broken"]
 
 func _class_kit(pilot: String) -> Dictionary:
 	var def: Resource = ClassDef.by_id(pilot)
-	return {"weapon": def.weapon_id, "movement": def.movement_id, "special": def.special_id, "smash": def.smash_id}
+	return {"weapon": def.weapon_id, "movement": def.movement_id, "special": def.special_id, "smash": def.smash_id,
+		"line": def.line_id, "ultimate": def.ultimate_id}
 
 
-# The class row's four ids with the swaps of every earlier node on the route applied.
+# The class row's six ids with the swaps of every earlier node on the route applied.
 func _kit_before(pilot: String, node_id: String, world_one: bool) -> Dictionary:
 	var kit := _class_kit(pilot)
 	var path := UpgradeTree.path_to(pilot, node_id, world_one)
@@ -194,6 +195,7 @@ func _dead_offers() -> void:
 
 
 func _fixtures() -> void:
+	_slot_fixtures()
 	var tarn_kit := _class_kit("tarn")
 	var laser_kit := tarn_kit.duplicate()
 	laser_kit["weapon"] = "rapid_laser"
@@ -230,6 +232,31 @@ func _fixtures() -> void:
 		{"knob": {"mount_reach": "two"}}).is_empty(), "string cannot disguise a lower number")
 	_report("finite number checked", not UpgradeTree.safe_pick_problems(pilot,
 		{"knob": {"mount_reach": NAN}}).is_empty(), "NaN cannot evade comparison")
+
+
+func _slot_fixtures() -> void:
+	for def in ClassDef.all():
+		var kit := _class_kit(def.id)
+		_report("%s six-slot kit" % def.display_name, kit.keys() == UpgradeTree.KEYS
+			and kit["line"] == def.line_id and kit["ultimate"] == def.ultimate_id, str(kit))
+	var pilot := "tarn"
+	var kit := _class_kit(pilot)
+	_report("own line knob is live", _op_live(pilot,
+		{"key": "line", "knob": {"tarn_only_fixture": 1.0}}, kit), "fixture token owned by this pilot")
+	_report("line swap is live", "line" in AbilityState.SWAPPABLE and _op_live(pilot,
+		{"key": "line", "swap": {"line": "link_clips"}}, kit), "existing line row differs from the held line_reel")
+	var variant := "fixture_ultimate_growth"
+	var foreign := "fixture_foreign_ultimate"
+	AbilityState.ABILITIES[variant] = {"cooldown": 0.0, "variant_of": kit["ultimate"]}
+	AbilityState.ABILITIES[foreign] = {"cooldown": 0.0}
+	var growth := {"key": "ultimate", "swap": {"ultimate": variant}}
+	var replacement := {"key": "ultimate", "swap": {"ultimate": foreign}}
+	var issues := UpgradeTree.safe_pick_problems(pilot, growth)
+	_report("ultimate variant is growth", issues.is_empty() and _op_live(pilot, growth, kit), str(issues))
+	_report("foreign ultimate is dead", not _op_live(pilot, replacement, kit)
+		and not UpgradeTree.safe_pick_problems(pilot, replacement).is_empty(), "fixture row has no variant_of relationship")
+	AbilityState.ABILITIES.erase(variant)
+	AbilityState.ABILITIES.erase(foreign)
 
 
 func _tarn_rows() -> void:
