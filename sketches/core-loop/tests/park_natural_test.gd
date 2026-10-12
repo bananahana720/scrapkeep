@@ -3,6 +3,8 @@ extends SceneTree
 const Director := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const T := preload("res://tests/support/t.gd")
+const Events := preload("res://src/core/game_events.gd")
+const Audio := preload("res://src/presentation/audio.gd")
 const KINDS := ["flood_fill", "drain", "cave_in", "collapse", "impact", "flash_flood", "lightning"]
 const FORMS := ["flood_rising", "flood_rising", "cave_in_crumble", "cave_in_crumble", "impact_incoming", "flood_rising", "lightning_charge"]
 const FAR := Vector3(100, 1, 100)
@@ -10,6 +12,8 @@ const FAR := Vector3(100, 1, 100)
 class Player:
 	extends RefCounted
 	var state := {"velocity": Vector3(17, -2, 9), "grounded": true}
+	var chain := {"combo": 1}
+	var kit := {"line_state": 0}
 	func set_velocity_now(v: Vector3, _cause := "") -> void:
 		state.velocity = v
 
@@ -26,6 +30,8 @@ class Context:
 	var player := Player.new()
 	var run := Run.new()
 	var root: Node3D
+	var events: Node
+	var spawner = null
 
 class Terrain:
 	extends RefCounted
@@ -48,6 +54,11 @@ class World:
 	var events
 	var flood = null
 	var terrain_view = null
+	var presentation: Node
+
+class Presentation:
+	extends Node
+	var audio
 
 var t := T.new("park_natural_test")
 
@@ -69,10 +80,19 @@ func _row(kind: String, form: String) -> Dictionary:
 		"music_cue": {"telegraph": "riser_natural", "land": "drop_natural"}}
 
 
-func _fixture(row: Dictionary) -> Array:
+func _fixture(row: Dictionary, sound := false) -> Array:
 	var w := World.new()
 	root.add_child(w)
 	w.ctx.root = w
+	if sound:
+		w.ctx.events = Events.new()
+		w.add_child(w.ctx.events)
+		w.presentation = Presentation.new()
+		w.add_child(w.presentation)
+		w.presentation.audio = Audio.new()
+		w.presentation.add_child(w.presentation.audio)
+		w.presentation.audio.setup(w.ctx)
+		w.presentation.audio.bake_now()
 	var map := ParkMap.new()
 	map.park = {"map": "fixture", "park_rows": [{"id": "site", "at": [0, 0], "y": 0,
 		"size": [20, 2, 10], "yaw_deg": 30}], "event_rows": [row], "weather_rows": [],
@@ -114,7 +134,8 @@ func _run() -> void:
 				t.near(kind + " rendered surface agrees", state.water.surface_y(), depth)
 				t.eq(kind + " water never brakes", state.water.external_accel(Vector3.ZERO, Vector3(17, 0, 9)), Vector3.ZERO)
 		elif kind != "lightning":
-			t.check(kind + " uses live terrain overlay", w.terrain.overlays.has("rubble_ramp_after") and w.terrain.height(0, 0) > 0.0, str(w.terrain.overlays))
+			var probe := Vector2(2.5, 0).rotated(-deg_to_rad(30.0)) if kind == "impact" else Vector2.ZERO
+			t.check(kind + " uses live terrain overlay", w.terrain.overlays.has("rubble_ramp_after") and w.terrain.height(probe.x, probe.y) > 0.0, str(w.terrain.overlays))
 			t.check(kind + " prebuilt collider lands", state.get("overlay") != null and state.overlay.visible)
 		if kind in ["impact", "lightning"]:
 			var before: Vector3 = w.ctx.player.state.velocity
