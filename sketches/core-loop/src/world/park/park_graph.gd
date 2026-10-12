@@ -18,12 +18,45 @@ extends RefCounted
 #
 # Flags are this graph's own bits; none are copied from any game (research/comps/
 # pocket-placement.md:58).
+#
+# Zones (SQ13, version 2). The stage is also cut into landform zones, the coarse grain beside the
+# 8 m nodes (research/comps/pocket-placement.md:49: zones decide the story of the stage, nodes
+# decide the physics). Every node belongs to exactly one zone: zone_of(n), never -1 in a version 2
+# file. A zone is one connected piece of one landform: a park row's footprint (the smallest
+# footprint wins where rows overlap), a deck row's lattice, or the open ground between landforms
+# (one zone per connected piece, so a wall across the plain makes two). Anchor_field rows are
+# furniture and the one background row that covers most of the square is the open ground; neither
+# makes a zone of its own. A piece under ZONE_FRAGMENT_NODES that is not the largest of its
+# landform joins the zone it shares most edges with. tools/park_graph.gd bakes the zones and their
+# crossings into graph.bin; zones(), crossings() and anchors() read them.
+#
+# A crossing joins two zones in one move: `walk` is a ground boundary walkable both ways (at
+# least ZONE_MIN_LINKS node links each way), `ride` is one ride edge row (a kicker, a cable, a
+# lift) from one zone to the other, `drop` is a ground boundary walkable one way only (a ledge
+# edge, at least ZONE_MIN_LINKS links), from the higher zone to the lower. A zone's entrances are
+# the zones that reach it in one move (walk either way, ride in, drop in); a way out is not an
+# entrance. `degree` is the entrance count. An anchor is a zone of degree 1: one way in, the
+# analog of a dead end (comps pocket-placement.md step 3).
+#
+# Zone record (zones()): id, name, kind (landform, deck, under, open), row ("" for open), nodes,
+# cx and cz (mean position, 0.1 m), line (holds a line node), warden (holds a warden-ring node),
+# door_ok (door_ok node count), d_spawn and d_landmark (the least path metres over the zone's
+# nodes, the entry cost; -1 when unreachable), degree, entrances and exits (zone ids, ascending),
+# openings (walk plus ride crossings touching the zone: the gaps a filler could close), drops
+# (drop crossings touching it).
+# Crossing record (crossings()): a, b, kind, row ("" unless ride), links; a ride and a drop run
+# from a to b, a walk is listed with a < b.
+# Anchor record (anchors()): zone, name, cost (the zone's d_spawn), d_landmark, on_route (the zone
+# holds a line or warden node), viable (door_nodes at least ANCHOR_MIN_DOOR_NODES), door_nodes,
+# rank (1 for the costliest viable off-route anchor, 0 for an anchor that is on the route or has
+# too few door nodes).
 
 const Stamps := preload("res://src/world/park/park_stamps.gd")
 
 const SCHEMA := "scrapkeep-park-graph/1"
 const MAGIC := "SKPG"
-const VERSION := 1
+const VERSION := 2
+const MIN_VERSION := 1
 
 const HALF_M := 800.0
 const STEP_M := 8.0
@@ -38,6 +71,11 @@ const DOOR_OK := 16
 const SIGHT_OK := 32
 const UNDER := 64
 const DECK := 128
+# Zones (SQ13), start values.
+const ZONE_MIN_LINKS := 2
+const ZONE_BACKGROUND_SHARE := 0.5
+const ZONE_FRAGMENT_NODES := 16
+const ANCHOR_MIN_DOOR_NODES := 16
 const FLAG_NAMES := {OPEN: "open", LINE: "line", GUARDED: "guarded", WARDEN: "warden",
 	DOOR_OK: "door_ok", SIGHT_OK: "sight_ok", UNDER: "under", DECK: "deck"}
 
@@ -58,6 +96,10 @@ var d_land := PackedFloat32Array()
 var d_from := PackedFloat32Array()
 var spawn_node := -1
 var beacon_node := -1
+var node_zone := PackedInt32Array()
+var zone_table := []
+var crossing_table := []
+var _members := []
 # The search heap, (distance, node) pairs, ordered by distance then node.
 var _hd := PackedFloat32Array()
 var _hn := PackedInt32Array()
@@ -80,7 +122,10 @@ static func read(path: String):
 static func from_bytes(bytes: PackedByteArray):
 	var s := StreamPeerBuffer.new()
 	s.data_array = bytes
-	if bytes.size() < 24 or s.get_data(4)[1].get_string_from_ascii() != MAGIC or s.get_u32() != VERSION:
+	if bytes.size() < 24 or s.get_data(4)[1].get_string_from_ascii() != MAGIC:
+		return null
+	var version := s.get_u32()
+	if version < MIN_VERSION or version > VERSION:
 		return null
 	var g = new()
 	var nodes := s.get_u32()
@@ -103,6 +148,14 @@ static func from_bytes(bytes: PackedByteArray):
 	g.ride = _ints(s, edges)
 	if g.off[nodes] != edges:
 		return null
+	if version >= 2:
+		g.node_zone = _ints(s, nodes)
+		var blob: String = s.get_data(s.get_u32())[1].get_string_from_utf8()
+		var parsed = JSON.parse_string(blob)
+		if not parsed is Dictionary:
+			return null
+		g.zone_table = _normalize_zones(parsed.get("zones", []))
+		g.crossing_table = _normalize_crossings(parsed.get("crossings", []))
 	g.reverse()
 	return g
 
@@ -132,7 +185,37 @@ func to_bytes() -> PackedByteArray:
 	s.put_data(to.to_byte_array())
 	s.put_data(length.to_byte_array())
 	s.put_data(ride.to_byte_array())
+	s.put_data(node_zone.to_byte_array())
+	var blob := JSON.stringify({"zones": zone_table, "crossings": crossing_table}, "", true).to_utf8_buffer()
+	s.put_u32(blob.size())
+	s.put_data(blob)
 	return s.data_array
+
+
+# JSON reads every number as a float: the zone tables hold ints, restored here.
+static func _normalize_zones(raw: Array) -> Array:
+	var out := []
+	for z in raw:
+		var r: Dictionary = z.duplicate()
+		for key in ["id", "nodes", "door_ok", "degree", "openings", "drops"]:
+			r[key] = int(r[key])
+		for key in ["entrances", "exits"]:
+			var ids := []
+			for k in r[key]:
+				ids.append(int(k))
+			r[key] = ids
+		out.append(r)
+	return out
+
+
+static func _normalize_crossings(raw: Array) -> Array:
+	var out := []
+	for c in raw:
+		var r: Dictionary = c.duplicate()
+		for key in ["a", "b", "links"]:
+			r[key] = int(r[key])
+		out.append(r)
+	return out
 
 
 static func _floats(s: StreamPeerBuffer, n: int) -> PackedFloat32Array:
@@ -190,6 +273,72 @@ func flag_names(node: int) -> PackedStringArray:
 	for bit in [OPEN, LINE, GUARDED, WARDEN, DOOR_OK, SIGHT_OK, UNDER, DECK]:
 		if node_flags[node] & bit != 0:
 			out.append(FLAG_NAMES[bit])
+	return out
+
+
+# --- Zones (SQ13) ---
+
+func zones() -> Array:
+	return zone_table
+
+
+func crossings() -> Array:
+	return crossing_table
+
+
+func zone_count() -> int:
+	return zone_table.size()
+
+
+# The zone of a node, -1 when the file has no zones (a version 1 graph).
+func zone_of(node: int) -> int:
+	return node_zone[node] if node < node_zone.size() else -1
+
+
+# The id of the zone with this name, -1 for none.
+func zone_named(zone_name: String) -> int:
+	for z in zone_table:
+		if z["name"] == zone_name:
+			return z["id"]
+	return -1
+
+
+# The nodes of a zone in node order.
+func zone_nodes(zone: int) -> PackedInt32Array:
+	if _members.is_empty():
+		for k in zone_table.size():
+			_members.append(PackedInt32Array())
+		for n in node_zone.size():
+			if node_zone[n] >= 0:
+				_members[node_zone[n]].append(n)
+	return _members[zone]
+
+
+# The door_ok nodes of a zone, in node order.
+func zone_door_nodes(zone: int) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for n in zone_nodes(zone):
+		if node_flags[n] & DOOR_OK != 0:
+			out.append(n)
+	return out
+
+
+# Every zone of degree 1 that the spawn reaches, the costliest (greatest d_spawn) first, ties to
+# the lower zone id. rank counts the off-route anchors with a door_ok node from 1; an anchor on
+# the route or without a door has rank 0.
+func anchors() -> Array:
+	var out := []
+	for z in zone_table:
+		if z["degree"] != 1 or z["d_spawn"] < 0.0:
+			continue
+		out.append({"zone": z["id"], "name": z["name"], "cost": z["d_spawn"], "d_landmark": z["d_landmark"],
+			"on_route": z["line"] or z["warden"], "viable": z["door_ok"] >= ANCHOR_MIN_DOOR_NODES, "door_nodes": z["door_ok"], "rank": 0})
+	out.sort_custom(func(a, b): return a["cost"] > b["cost"] or (a["cost"] == b["cost"] and a["zone"] < b["zone"]))
+	var rank := 0
+	for a in out:
+		if not a["on_route"] and a["viable"]:
+			rank += 1
+			a["rank"] = rank
 	return out
 
 

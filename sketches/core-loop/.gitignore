@@ -4,3 +4,5 @@
 assets/music_ace/**/*.ogg
 assets/music_ace/.gdignore
 !assets/textures/*.webp.import
+# Pilot animation GLBs keep their _loop clip names: name suffixes off, loop clips set (PE round 2, 2026-10-11).
+!assets/models/pilot_*_anim.glb.import

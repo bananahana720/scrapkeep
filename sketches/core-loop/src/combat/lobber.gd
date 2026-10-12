@@ -1,5 +1,7 @@
 extends "res://src/combat/enemy.gd"
 
+const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
+
 # The lobber stands and shells. Its job is to make a predictable line expensive: its
 # muzzle glows for TELEGRAPH seconds, then it commits a landing ring LEAD of the way
 # along your held line (half the ball's FLIGHT travel, DESIGN-NOTES rule 12), and the
@@ -23,6 +25,8 @@ signal released(ring: Dictionary)
 var shots := 0
 # The wind-up, 0 to 1: the value the muzzle glow is drawn from and the attack facts read.
 var charge := 0.0
+var recovery_seconds := TelegraphRecord.RECOVERY
+var recover_left := 0.0
 
 var _clock := 0.0
 var _muzzle: MeshInstance3D
@@ -124,6 +128,10 @@ func muzzle_point() -> Vector3:
 	return global_position + Vector3.UP * 2.6
 
 
+func recovering() -> bool:
+	return recover_left > 0.0
+
+
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_move(delta, Vector3.ZERO)
@@ -136,6 +144,10 @@ func _physics_process(delta: float) -> void:
 		_show_charge(0.0)
 		return
 	_clock += delta
+	if recovering():
+		recover_left = maxf(0.0, recover_left - delta)
+		_show_charge(0.0)
+		return
 	_show_charge(clampf((_clock - (CYCLE - TELEGRAPH)) / TELEGRAPH, 0.0, 1.0))
 	if _clock < CYCLE:
 		return
@@ -148,6 +160,7 @@ func _physics_process(delta: float) -> void:
 	# _show_charge(0) retains the bulb's original release behavior. The body reaches
 	# its full e02_tube_raise pose on this same frame, before either release signal.
 	_pose(1.0)
+	recover_left = recovery_seconds
 	fired.emit(muzzle_point(), landing, FLIGHT)
 	released.emit(_shell_ring())
 

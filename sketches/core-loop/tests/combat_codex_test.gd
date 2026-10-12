@@ -4,6 +4,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
+const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
 
 # Combat's "enemy" codex entries: complete as data (id, category, name, hint, clue,
 # text, owner, participants), and each one detected by combat's own code when the
@@ -335,7 +336,12 @@ func _warden_tricks() -> void:
 	_game.player.chain.combo = 0
 	var all_found := true
 	var pending_ok := true
+	var pilot_rows := PilotBlocks.ids("res://src/combat/codex_entries.gd")
 	for id in CodexEntries.ids():
+		# 2026-10-12 (W13 coordinator): P-C kit rows (marked blocks in codex_entries.gd) need a
+		# pilot's kit, which this staging does not equip; each pilot's kit tests open its own.
+		if id in pilot_rows:
+			continue
 		# 2026-10-10 (wave 13, B6): the five skill bar rows need an ultimate and a loaded bite, which
 		# this staging does not run; tests/discovery_skill_bar_test.gd opens each on its trigger.
 		if id in ["loaded_line", "set_piece", "set_piece_core", "set_piece_cash_in", "set_piece_breakout"]:

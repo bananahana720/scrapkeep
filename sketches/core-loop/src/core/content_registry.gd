@@ -71,16 +71,17 @@ const TABLES := {
 
 # 2026-10-04, T5, base b927aec. Sorted dictionary keys; array order and Variant types count.
 # 2026-10-04, alpha wave 8 roster-world-rows: event_kinds.ATTACK_ROWS and windup_rows.ROWS re-pinned for the reserved E19-E24 rows.
+# 2026-10-11, sg5-burden-sweep: parts.rows adds the capped Load Dividend payout.
 const GOLDEN_HASHES := {
-	"achievements.ROWS": "9f88aba2f6fe18ae2243942d6a9e13a6d1d384b9d87a07642cecbfd4a4254296",  # 2026-10-11 (w13 SG12 sg12-meta-options): four ach_meta_* grant rows paying {"option": <node>}; was 028b78af, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
-	"cosmetics.ROWS": "26e34e89d31537480501baf914721349d737fe04d233bedd3bc33b1f5a8e0283",  # 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): Downbeat trail, Curtain Call decal tile 9, Till Bell companion skin, all pending art; was c0f10ab8, P-R7: delivered decal mask ids, trails and SPIL-9 paints
-	"event_kinds.ROWS": "c374e25980772cfb6cff9af3f4297012ce0ffeb284f651b57974dd7ef6c412db",  # 2026-10-11 (w13 skill-bar step 1, 7b7e2aa): ultimate_* rows, re-pinned by the coordinator at the systems wave A merge; was 1326ff10, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 3e903494, 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
+	"achievements.ROWS": "570a2db4381813fa31f0196e0003a23611d57a702cda8f54805b89dc7308e4a7",  # 2026-10-12 W13 coordinator: Tarn's Hold Still grant drops its story beat (beats are pilot-unlock rows only; the quip stays in its codex hint); was 965c2d1a, 2026-10-12 W13 coordinator: PC-SABLE round 7 (0ad68fa) merged onto Kest and the Cannon; was a75de886, 2026-10-12 W13 coordinator: PC-KEST round 4 (ef725b8) merged onto the Cannon kit; was 78c3807d, 2026-10-12 PC-CANNON merge (5e18183): Cannon kit rows; was d584902d, 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 9f88aba2, 2026-10-11 (w13 SG12 sg12-meta-options): four ach_meta_* grant rows paying {"option": <node>}; was 028b78af, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
+	"cosmetics.ROWS": "2e0409f8332fd501adaaa72d4442c9297dbbd58c2c54998bde83066eb74d7612",  # 2026-10-12 W13 coordinator: PC-SABLE round 7 (0ad68fa) merged onto Kest and the Cannon; was f3f9a84a, 2026-10-12 W13 coordinator: PC-KEST round 4 (ef725b8) merged onto the Cannon kit; was 0f1a4488, 2026-10-12 PC-CANNON merge (5e18183): Cannon kit rows; was 1148576f, 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 26e34e89, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): Downbeat trail, Curtain Call decal tile 9, Till Bell companion skin, all pending art; was c0f10ab8, P-R7: delivered decal mask ids, trails and SPIL-9 paints
+	"event_kinds.ROWS": "469030a8fa09701c52e929b1a2802ae344b283029388d2046698ccb012cd77b7",  # 2026-10-12 (w13 WEIGHT-1 c4e428c): authored core_slam on slammed, ultimate_land on ultimate_landed, vault and harpoon cue rows, re-pinned by the coordinator at merge; was c374e259, 2026-10-11 (w13 skill-bar step 1, 7b7e2aa): ultimate_* rows, re-pinned by the coordinator at the systems wave A merge; was 1326ff10, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 3e903494, 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "46bbae449dcbf221e448793a0fd550feaa80fa41b79efc741500806e361d4d86",
 	"event_kinds.CAUSE_ROWS": "9d20bee7f3e2a23dd09db3c08ab99e3fa0aab0f99d4373ef3398fff8601e0812",
 	"event_kinds.ACTIVITY_ROWS": "3b128af84df85ddccc150f1d6f5847b194a39dd1625cd0c8a1d2c2c3b4ae2607",
 	"event_kinds.LOOT_ROWS": "1d99aa491419dc9a8bbd2da1cfd747d991c3848e5cf01e7cc8e099698d8b3b6e",
-	"event_kinds.UI_ROWS": "75718127f4df1ed6f33f49cc77a138d67b218261a4d0ee919dc8ac4a0591d97e",  # 2026-10-11 (w13 SQ6 cooldown refunds): cooldown_refunded row; was f8c0f271, 2026-10-08 (alpha wave 11 GP4 escape corridor): escape_acted row; was c6a2047c (wave 13 companion cues)
+	"event_kinds.UI_ROWS": "80f4cdd77f869f3e71aa7a7a6b2890c6ec709a5ba32659399f31ec68cd6f76e2",  # 2026-10-12 (w13 WEIGHT-1 c4e428c): posture_break sub-fact row; was 75718127, 2026-10-11 (w13 SQ6 cooldown refunds): cooldown_refunded row; was f8c0f271, 2026-10-08 (alpha wave 11 GP4 escape corridor): escape_acted row; was c6a2047c (wave 13 companion cues)
 	"event_kinds.WORLD_ROWS": "4422c95c868ea7d49427ef2b437a0bf7b384d9919c8b3ad6d0d6f17da1760a5c",  # 2026-10-11 (w13 KF2 and KF3, re-pinned by the coordinator at the Warden mechanism merges): ride_sheet, hoist_ride, pool_swell rows; was f3da5b1a, 2026-10-10 (w13 KC0 park placement): ride_bowl, ride_drop, ride_ledge, ride_hop rows; was 7284c545, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 686afd81, 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4c42883e13ae6f919cf964e32c88ca1a4e26e9eec054a4118870ff30c426098b",
@@ -91,14 +92,14 @@ const GOLDEN_HASHES := {
 	"lore_rows.ROWS": "e19ddad31b36bb6462e736c355c11a0370ad547ec7343302016dc494643ef054",  # 2026-10-08 (wave 10 ST6): Dig and Highdraft lore take the approved sample lines; was 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "f9e1cca796c86aa8044002aee416b6999ab8554aab078fc87545d8f59a3ec7ea",
 	"windup_rows.ROWS": "a38f788e68affd8fb5c71c0ff4e0f0883cbeac1eac85a4bb8d7c45a9ae62cfc8",  # 2026-10-08 (wave 10 GP6 and AU2): idle, death and wind-up cue fields per kind
-	"upgrade_tree.TREES": "55786d60308e54612ab34205749dc173d281016e2222e047b26e1ea2ed8629f9",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
+	"upgrade_tree.TREES": "034688e25fe62c3a5984856496572bbfa7b4108551c4301511692ad329a6f448",  # 2026-10-12 W13 coordinator: PC-SABLE round 7 (0ad68fa) merged onto Kest and the Cannon; was 41980464, 2026-10-12 W13 coordinator: PC-KEST round 4 (ef725b8) merged onto the Cannon kit; was ac75dc7b, 2026-10-12 PC-CANNON merge (5e18183): Cannon kit rows; was 10a325b3, 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 55786d60, 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
 	"upgrade_tree.WORLD_ONE_NODES": "d649afcb0e003763c8fc9488a275f44ddfc2049ca02963fa078c8c8f887df7a8",  # 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
-	"combat.codex_entries.ENTRIES": "310d6ec7fe5ec359bd5ef08f7b8090a70774ebf52c2ce300d722c78b2f7fd6e6",  # 2026-10-11 (w13 B6): the five skill-bar discovery entries on top of the ST4 set
+	"combat.codex_entries.ENTRIES": "9109b70fb4612c36bcaeffb04383b9e96043cdb8afc9a2c4279b0d9bd97b5dd9",  # 2026-10-12 W13 coordinator: PC-SABLE round 7 (0ad68fa) merged onto Kest and the Cannon; was ecb4665f, 2026-10-12 W13 coordinator: PC-KEST round 4 (ef725b8) merged onto the Cannon kit; was 124ebddf, 2026-10-12 PC-CANNON merge (5e18183): Cannon kit rows; was 64a0d1d4, 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 310d6ec7, 2026-10-11 (w13 B6): the five skill-bar discovery entries on top of the ST4 set
 	"boss.codex_entries.ENTRIES": "af05664d7996e33b627540ccdcfb68e2639bced90ef24adb219023a105843b88",
 	# 2026-10-05 (alpha wave 14 w13-followups): Waking and Mind codex rows pinned
 	"boss.codex_entries.WAKING": "6b6074ef43fd2de4eb04f2c60d971eb7922d6e152e532b9b94454a8e017f60ea",
 	"boss.codex_entries.MIND": "6acfd19449f8802b806ba76093fe15bd0c938c0a2f110230d9d38a5cbd004d87",
-	"parts.rows": "374d860be797b340774f2529139aeb4f5f115420cab91c33298533ddc16cfb7b",  # 2026-10-08 (wave 11 GP-parts): six new parts and four synergies
+	"parts.rows": "488ede3fb6288d8fccb614c2d39875f3e02362750076593325033fe00adc1e76",  # SG5 round 3, 2026-10-11 (load_dividend touches fire): was ef735e5336f2a7e6fea4b12c9a4cd3936368accdb48fca9e3de8f117fca5b486 (SG5 round 1), before that 374d860be797b340774f2529139aeb4f5f115420cab91c33298533ddc16cfb7b (wave 11 GP-parts)
 	"item_gen.RARITY": "abc72c1edec3fe06f0acffa49bab184750d7edb905317f93e66b8a9910bdb2c5",  # 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 8a6773cc
 }
 
@@ -362,7 +363,8 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 							_ref(issues, name, id, "knob", knob, Trees.KNOBS)
 					"swap", "charges", "cooldown":
 						for slot in node.get(op, {}):
-							_ref(issues, name, id, "slot", slot, AbilityState.SLOTS)
+							# A swap may replace Q's ultimate; charges and cooldowns stay on the five bar slots.
+							_ref(issues, name, id, "slot", slot, AbilityState.SWAPPABLE if op == "swap" else AbilityState.SLOTS)
 							if op == "swap":
 								_ref(issues, name, id, "ability", node[op][slot], AbilityState.ABILITIES)
 							elif not _type_matches(node[op][slot], NUMBER) or node[op][slot] <= 0:

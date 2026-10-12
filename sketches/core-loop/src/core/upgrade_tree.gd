@@ -75,6 +75,10 @@ const KNOBS := {
 	"blink_cut": {"default": false}, "smoke_cloud": {"default": 0.0}, "sticky_ride": {"default": false},
 	"mark_burst": {"default": false}, "line_charges": {"default": 0}, "cloak_free_blink": {"default": false},
 	"cloak_hold_fast": {"default": false},
+	"ult_beats": {"default": 0},
+	"ult_encore": {"default": false},
+	"ult_radius": {"default": 0.0},
+	"ult_volley": {"default": 0},
 	# The shared ultimate knobs (ult_encore, ult_beats, ult_radius, ult_volley) are B3's. A pilot
 	# may own at most one ult_<word> knob, in its own block (SKILL-BAR section 12, item 4).
 	# --- P-C Sable knob ---

@@ -196,18 +196,20 @@ Until P-C, B1 gives every pilot but Tally one shared placeholder row, `line_reel
 | weapon hit | `enemy_struck` with kind from a weapon | 0.25 each | 0.4 points per second from weapon hits |
 | contact: ram, stomp, slam strike | `enemy_struck` with a contact kind | 2.0 each | once per enemy per 0.5 s |
 | harpoon smash landing | `harpoon_smashed` | 5.0 times `chain.multiplier()` | none |
-| chain link on an enemy beyond the first | `line_state_changed("chain_link")` | 2.0 each | none |
-| near miss | `near_miss` (`game_events.gd:144`) | 4.0 each | the watch's own grace |
+| chain link on an enemy beyond the first | `line_state_changed("chain_link")` | 2.0 each | once per enemy per 1.0 s |
+| near miss | `near_miss` (`game_events.gd:144`) | 4.0 each | the watch's own grace; 0.05 points per second from near misses, holding one (4.0) |
 | kill | `enemy_killed` | 1.0 each | none |
 | Warden stagger | `posture_changed` with `staggered` rising | 8.0 | once per stagger |
 | Warden chunk shatter | the chunk-shatter event | 12.0 | once per chunk |
 | speed, fast tier | `player.state.tier` (`src/movement/speed_tier.gd:5-8`) | 0.5 per second | none |
 | speed, blazing tier | same | 1.2 per second | none |
 
+2026-10-11 (w13 B3b): near misses got a rate limit (0.05 points per second, holding 4.0) and a chain link pays once per enemy per 1.0 s, because B4's bot measured the camper's median first fill at 41.1 s over seeds 1 to 16 (69 to 95 of its first 100 points from near misses) and Tally's lost Brindle fights earned 852 to 2719 chain-link points a run biting one boss; measured after: camper median 183.3 s, completionist 63.6 s (was 54.3 s), Tally and Sable skipper seeds 1 to 4 won 4 of 4 each under the 330 s child cap, and the Cannon won 4 of 4 uncapped (game time 402 to 447 s) but was undecided under the cap at wave load (coordinator wording at merge; the capped Cannon run is owed at wave close with the load under 32).
+
 - Cap 100 points (start). No decay. Taking damage costs nothing. Overflow is lost.
 - The meter starts at 0 each run and carries across stages and worlds. A retry restores its stage-entry value.
 - It does not fill during a set piece, in the bay, or during a ceremony.
-- Target fill times, checked by bots in B4: a chaining player 45 to 60 s of play, an average fight 75 to 90 s, the hold-fire camper at least 180 s. The weapon limit is what keeps the camper slow.
+- Target fill times, checked by bots in B4: a chaining player 45 to 60 s of play, an average fight 75 to 90 s, the hold-fire camper at least 180 s. The near-miss and weapon limits are what keep the camper slow.
 - **Harmonized with BIBLE.md:400**, which says the ultimate "unlocks through play during world one". The slot is on the bar from the drop, but it starts empty every run, so the first one is earned by playing. No separate unlock gate.
 
 ### Ready cue: one fact, every layer
@@ -516,8 +518,8 @@ Every value is **start**, to tune in play.
 | meter | weapon hit, rate limit | 0.25 each, 0.4 per s |
 | meter | contact | 2.0 each, once per enemy per 0.5 s |
 | meter | harpoon smash | 5.0 x chain multiplier |
-| meter | chain link past the first | 2.0 |
-| meter | near miss | 4.0 |
+| meter | chain link past the first | 2.0, once per enemy per 1.0 s |
+| meter | near miss, rate limit | 4.0, 0.05 per s holding 4.0 |
 | meter | kill | 1.0 |
 | meter | stagger, chunk shatter | 8.0, 12.0 |
 | meter | speed: fast, blazing | 0.5 per s, 1.2 per s |
@@ -543,6 +545,8 @@ Every value is **start**, to tune in play.
 | HUD | ULTIMATE word | first 3 ready states per profile |
 | pause | quit hold | X for 0.6 s |
 | bots | pick-to-click gap (traversal policy) | 0.1 s |
+
+2026-10-11 (w13 B3b): the near-miss row gained its rate limit (0.05 per s holding 4.0) and the chain-link row its per-enemy gap (1.0 s); measured after: camper median first fill 183.3 s (was 41.1 s), completionist 63.6 s (was 54.3 s), over seeds 1 to 16.
 
 ## 10. Implementation map for wave P-B
 

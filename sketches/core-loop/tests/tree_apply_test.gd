@@ -1,3 +1,4 @@
+# smoke: solo timeout=300s (every node of every pilot tree in the real game; about 190 s alone, 2026-10-12)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -146,8 +147,10 @@ func _node_applies_and_reverts(def, n: Dictionary) -> String:
 	var path := UpgradeTree.path_to(def.id, n["id"])
 	var abilities = _player.abilities
 	for slot in n.get("swap", {}):
-		if abilities.id_of(slot) != n["swap"][slot]:
-			return "slot %s holds %s" % [slot, abilities.id_of(slot)]
+		# Q's ultimate is not a bar slot: apply_pick writes it to ultimate_id, as _is_plain reads it.
+		var held: String = abilities.ultimate_id if slot == AbilityState.ULTIMATE else abilities.id_of(slot)
+		if held != n["swap"][slot]:
+			return "slot %s holds %s" % [slot, held]
 	for slot in n.get("charges", {}):
 		var extra := 0
 		for id in path:
