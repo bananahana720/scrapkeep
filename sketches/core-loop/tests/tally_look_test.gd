@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for d6e89a9.
+# Tally special-slot icon ab_tally_special -> ab_tally_gather; the gather_plate declaration.
 extends SceneTree
 
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -21,7 +23,7 @@ const T := preload("res://tests/support/t.gd")
 
 const SHELL := "res://assets/models/world_one/shell_tally.glb"
 const PILOT := "res://assets/models/pilot_tally_anim.glb"
-const SLOTS := ["weapon", "move", "special", "smash"]
+const SLOTS := ["weapon", "move", "gather", "smash"]
 const ICON_SLOTS := ["weapon", "move", "special", "smash", "gather", "link", "balance"]
 const CUES := ["tally_balance_due", "tally_ready", "tally_break", "mind_tally"]
 

@@ -1019,6 +1019,18 @@ static func reward_row(tier: String) -> Dictionary:
 # charge whistle rises, the impact's falls (SOUND-STORY section 7, W6 must).
 const ANCIENT_LIGHT := Palette.ANCIENT
 const WORLD_ROWS := {
+	# PARK section 5: hostile warnings fall with a pure tone; landed forms keep
+	# the same family's colour. Priority is consumed by the existing audio grammar.
+	"flood_rising": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "threat_whistle", "sound_next": "flood_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"flood_landed": {"group": "event", "color": Palette.HAZARD, "shape": "wave", "sound": "slam_boom", "sound_next": "flood_drop", "hud": "", "objective": "", "priority": 2},
+	"fleet_inbound": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "fleet_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"fleet_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "fleet_anvil_brass_drop", "hud": "", "objective": "", "priority": 2},
+	"ancient_stirring": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "ancient_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"ancient_erupted": {"group": "event", "color": ANCIENT_LIGHT, "shape": "burst", "sound": "slam_boom", "sound_next": "ancient_family_drop", "hud": "", "objective": "", "priority": 2},
+	"boiler_pressure": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "boiler_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"boiler_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "steam_whistle_percussion_drop", "hud": "", "objective": "", "priority": 2},
+	"lightning_charge": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "lightning_falling_pure", "hud": "", "objective": "", "priority": 2},
+	"lightning_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "lightning_strike", "hud": "", "objective": "", "priority": 2},
 	# The shell's resolved air factor moved (Build.shell_air_changed): one fact for S4, K5 and R6. The ring on the
 	# hero pod, its colour and the released-spring sound read this row; direction is the ring's motion and the pitch.
 	"shell_air_shift": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "shell_spring", "hud": "", "objective": "", "priority": 1},

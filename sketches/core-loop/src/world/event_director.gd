@@ -6,6 +6,9 @@ const SurgeRun := preload("res://src/world/surge_run.gd")
 const HoldRelay := preload("res://src/world/hold_relay.gd")
 const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
 const TerrainEvent := preload("res://src/world/terrain_event.gd")
+const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 # The event director for one stage (TADR-010): pure, stepped with a delta, drawing
 # from its own seeded stream. It composes the ambient events (the flood, the dust
@@ -43,6 +46,18 @@ const SURGE_MINIBOSS_THREAT := 2.0
 const SURGE_MINIBOSS_AT := 0.5
 # A live event reports its progress when it has moved at least this far.
 const PROGRESS_STEP := 0.01
+const PARK_QUIET_S := 20.0
+const PARK_TRAVEL_S := 2.0
+const PARK_CORRIDOR_M := 8.0
+const PARK_BAR_S := 240.0 / 172.0
+const PARK_GROUND_CAP := 2
+const PARK_FAMILY_CAP := 1
+const PARK_LAND_FACTS := {
+	"flood_rising": "flood_landed", "fleet_inbound": "fleet_landed",
+	"ancient_stirring": "ancient_erupted", "boiler_pressure": "boiler_landed",
+	"lightning_charge": "lightning_landed",
+	"cave_in_crumble": "cave_in_swap", "impact_incoming": "impact_swap",
+}
 
 var rng := RandomNumberGenerator.new()
 var stage_time := 0.0
@@ -55,10 +70,21 @@ var terrain: Array = []
 var _squall_phase := SQUALL_CALM
 var _squall_timer := 0.0
 var _squall_gap := Vector2.ZERO
+var _park := {}
+var _park_states: Array[Dictionary] = []
+var _park_sites := {}
+var _park_pilot_lines: Array = []
+var _park_families := {}
+var _park_height: Callable
+var _park_tier := 0
+var _park_quiet_until := -INF
 
 
 func _init(seed_value: int, def: Dictionary, map, cruise: float, height: Callable) -> void:
 	rng.seed = seed_value
+	if "park" in map and not map.park.is_empty():
+		_build_park(map.park, height)
+		return
 	var mix: Dictionary = def.get("event_mix", {})
 	if mix.is_empty():
 		return
@@ -133,9 +159,12 @@ static func _model(id: String, site: Dictionary, threat: float, cruise: float, h
 			return ScrapStampede.new(site, cruise, height)
 
 
-func advance(delta: float, ball: Vector3, velocity: Vector3) -> Array:
+func advance(delta: float, ball: Vector3, velocity: Vector3, context: Dictionary = {}) -> Array:
 	stage_time += delta
 	var facts := []
+	if not _park.is_empty():
+		_advance_park(delta, ball, velocity, context, facts)
+		return facts
 	_advance_flood(delta, facts)
 	_advance_squall(delta, facts)
 	for offer in offers:
@@ -309,6 +338,12 @@ func offer(id: String) -> Dictionary:
 # do not hang open into the next stage.
 func end_all() -> Array:
 	var facts := []
+	if not _park.is_empty():
+		for state in _park_states:
+			if state.phase in [ANNOUNCED, LIVE]:
+				_park_end(state, facts)
+			state.phase = DONE
+		return facts
 	for o in offers:
 		if o["phase"] == LIVE:
 			o["phase"] = DONE
@@ -322,3 +357,314 @@ func end_all() -> Array:
 			t.phase = TerrainEvent.DONE
 			facts.append({"kind": "ended", "id": t.id, "outcome": "passed"})
 	return facts
+
+
+# Park families implement behaviour through one callable: (action, row, context).
+# Actions are telegraph, land, step and end. The engine owns facts and scheduling;
+# hooks receive copies, and a zero-live_s event stays live until stage teardown.
+func register_family(family: String, handler: Callable) -> void:
+	_park_families[family] = handler
+
+
+func set_clock_tier(effective_tier: int) -> void:
+	_park_tier = effective_tier
+
+
+# Fight phases are pulses, including each stagger. A blocked pulse remains queued
+# for its row; it is consumed on announcement, never remembered as a fight state.
+func notify_warden_phase(phase: String) -> void:
+	if phase == "broken":
+		_park_quiet_until = stage_time + PARK_QUIET_S
+	for state in _park_states:
+		var trigger: Dictionary = state.row.trigger
+		if trigger.get("on") == "warden_phase" and trigger.get("value") == phase:
+			state.pending += 1
+
+
+func finish_row(id: String) -> Array:
+	var facts := []
+	for state in _park_states:
+		if state.row.id == id and state.phase == LIVE and (state.weather or float(state.row.live_s) > 0.0) and _park_can_end(state):
+			_park_end(state, facts)
+	return facts
+
+
+func _build_park(park: Dictionary, height: Callable) -> void:
+	_park = park.duplicate(true)
+	_park_height = height
+	for site in _park.get("park_rows", []):
+		_park_sites[site.id] = site
+	for row in _park.get("event_rows", []):
+		if not _park_sites.has(row.site) or EventKinds.world_row(row.telegraph.form).is_empty() or not PARK_LAND_FACTS.has(row.telegraph.form):
+			push_error("event_director: unsupported park site or form for " + str(row.id))
+			continue
+		if (row.kind in ParkSchema.WATER_KINDS or row.effect.get("material") == "water") and row.effect.has("depth_m"):
+			row.effect.depth_m = minf(float(row.effect.depth_m), ParkSchema.MAX_EVENT_WATER_M)
+		_park_states.append(_park_state(row, false))
+	for row in _park.get("weather_rows", []):
+		_park_states.append(_park_state(row, true))
+	_park_read_lines()
+
+
+func _park_state(row: Dictionary, weather: bool) -> Dictionary:
+	return {"row": row, "weather": weather, "phase": WAITING, "ready_s": 0.0,
+		"due_s": 0.0, "holding": false, "pending": 0, "live_elapsed_s": 0.0,
+		"rise_s": 0.0, "context": {}}
+
+
+func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dictionary, facts: Array) -> void:
+	_park_tier = int(context.get("clock_tier", _park_tier))
+	for phase in context.get("warden_phases", []):
+		notify_warden_phase(phase)
+	var ctx := context.duplicate(true)
+	ctx.merge({"clock_s": stage_time, "ball": ball, "velocity": velocity, "delta_s": delta,
+		"grounded": context.get("grounded", ball.y <= float(_park_height.call(ball.x, ball.z)) + float(context.get("ball_radius_m", 1.2)))}, true)
+	for state in _park_states:
+		state.context = ctx
+		if state.phase == LIVE:
+			_park_step_live(state, delta, ball, velocity, ctx, facts)
+	for state in _park_states:
+		if state.phase != ANNOUNCED or stage_time < state.due_s:
+			continue
+		if stage_time < _park_quiet_until or not _park_capacity(state) or not _park_clear(state, ball, velocity, ctx) or not _park_route_safe(state):
+			state.holding = true
+			continue
+		if state.holding and not state.weather and state.row.telegraph.on_bar:
+			state.due_s = _park_downbeat(stage_time, ctx)
+			state.holding = false
+			if stage_time < state.due_s:
+				continue
+		state.phase = LIVE
+		state.live_elapsed_s = 0.0
+		state.rise_s = 0.0
+		_park_hook("land", state, ctx)
+		if not state.weather:
+			facts.append(_park_world(state, PARK_LAND_FACTS[state.row.telegraph.form], "land"))
+		facts.append(_park_fact(state, "started"))
+	if stage_time < _park_quiet_until:
+		return
+	var candidates := []
+	var total := 0.0
+	for state in _park_states:
+		if state.phase not in [WAITING, COOLDOWN] or stage_time < state.ready_s or not _park_triggered(state):
+			continue
+		var weight := _park_weight(state)
+		if weight > 0.0:
+			total += weight
+			candidates.append([state, weight])
+	if candidates.is_empty():
+		return
+	var pick := rng.randf() * total
+	var selected: Dictionary = candidates[-1][0]
+	for candidate in candidates:
+		pick -= float(candidate[1])
+		if pick < 0.0:
+			selected = candidate[0]
+			break
+	var lead := float(selected.row.lead_s) if selected.weather else maxf(float(selected.row.telegraph.lead_s), ParkSchema._lead_floor(selected.row))
+	selected.phase = ANNOUNCED
+	selected.pending = maxi(0, int(selected.pending) - 1)
+	selected.holding = false
+	selected.due_s = stage_time + lead
+	if not selected.weather and selected.row.telegraph.on_bar:
+		selected.due_s = _park_downbeat(selected.due_s, ctx)
+	_park_hook("telegraph", selected, ctx)
+	var announced := _park_fact(selected, "announced")
+	announced.seconds = selected.due_s - stage_time
+	facts.append(announced)
+	if not selected.weather:
+		facts.append(_park_world(selected, selected.row.telegraph.form, "telegraph"))
+
+
+func _park_triggered(state: Dictionary) -> bool:
+	match state.row.trigger.on:
+		"always": return true
+		"clock_tier": return _park_tier >= int(state.row.trigger.value)
+		"warden_phase": return state.pending > 0
+	return false
+
+
+func _park_weight(state: Dictionary) -> float:
+	if state.weather:
+		return 1.0
+	var weight := float(state.row.weight)
+	for weather in _park_states:
+		if weather.weather and weather.phase == LIVE:
+			weight *= float(weather.row.event_odds.get(state.row.id, 1.0))
+	return weight
+
+
+static func _park_ground(row: Dictionary) -> bool:
+	return row.kind in ParkSchema.GROUND_KINDS or row.family in ParkSchema.ARRIVAL_FAMILIES or str(row.effect.get("swap", "")) != ""
+
+
+func _park_capacity(candidate: Dictionary) -> bool:
+	var ground := int(not candidate.weather and _park_ground(candidate.row))
+	var family := 1
+	for state in _park_states:
+		if state == candidate or state.phase != LIVE:
+			continue
+		if candidate.weather:
+			if state.weather and state.row.kind != "clear" and candidate.row.kind != "clear":
+				return false
+		elif not state.weather:
+			ground += int(_park_ground(state.row))
+			family += int(state.row.family == candidate.row.family)
+	if candidate.weather:
+		return true
+	return ground <= PARK_GROUND_CAP and (candidate.row.family not in ParkSchema.ARRIVAL_FAMILIES or family <= PARK_FAMILY_CAP)
+
+
+static func _park_downbeat(time_s: float, context: Dictionary) -> float:
+	var bar := maxf(0.000001, float(context.get("bar_s", PARK_BAR_S)))
+	var origin := float(context.get("bar_origin_s", 0.0))
+	return origin + ceil((time_s - origin - 0.00000001) / bar) * bar
+
+
+func _park_step_live(state: Dictionary, delta: float, ball: Vector3, velocity: Vector3, ctx: Dictionary, facts: Array) -> void:
+	var live_s := float(state.row.live_s)
+	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001:
+		if _park_can_end(state):
+			_park_end(state, facts)
+		return
+	var dt := minf(delta, maxf(0.0, live_s - float(state.live_elapsed_s))) if live_s > 0.0 else delta
+	state.live_elapsed_s += dt
+	if not state.weather and _park_rising(state) and not _park_clear(state, ball, velocity, ctx):
+		return
+	var step_ctx := ctx.duplicate(true)
+	step_ctx.delta_s = dt
+	step_ctx.rise_s = state.rise_s
+	_park_hook("step", state, step_ctx)
+	if state.phase != LIVE:
+		return
+	if not state.weather and _park_rising(state):
+		state.rise_s = minf(float(state.row.effect.get("fill_s", 0.0)), float(state.rise_s) + dt)
+	if live_s > 0.0 and state.live_elapsed_s >= live_s - 0.00000001 and _park_can_end(state):
+		_park_end(state, facts)
+
+
+static func _park_rising(state: Dictionary) -> bool:
+	return state.row.kind != "drain" and (state.row.kind in ["flood_fill", "flash_flood"] or state.row.effect.get("material") == "water") and state.rise_s < float(state.row.effect.get("fill_s", 0.0))
+
+
+func _park_can_end(state: Dictionary) -> bool:
+	return _park_clear(state, state.context.ball, state.context.velocity, state.context) and _park_route_safe(state, true)
+
+
+func _park_end(state: Dictionary, facts: Array) -> void:
+	state.phase = DONE if not state.weather and state.row.once else COOLDOWN
+	state.ready_s = stage_time + float(state.row.gap_s if state.weather else state.row.cooldown_s)
+	_park_hook("end", state, state.context)
+	var ended := _park_fact(state, "ended")
+	ended.outcome = "passed"
+	facts.append(ended)
+
+
+func _park_hook(action: String, state: Dictionary, context: Dictionary) -> void:
+	var family: String = "weather" if state.weather else state.row.family
+	var handler: Callable = _park_families.get(family, Callable())
+	if handler.is_valid():
+		var ctx := context.duplicate(true)
+		ctx.at = _park_at(state)
+		handler.call(action, state.row.duplicate(true), ctx)
+
+
+func _park_at(state: Dictionary) -> Vector3:
+	if state.weather:
+		return Vector3.ZERO
+	var site: Dictionary = _park_sites[state.row.site]
+	var at := Vector2(float(site.at[0]), float(site.at[1]))
+	return Vector3(at.x, float(site.y) if site.y != null else float(_park_height.call(at.x, at.y)), at.y)
+
+
+func _park_fact(state: Dictionary, kind: String) -> Dictionary:
+	var fact := {"kind": kind, "id": state.row.id, "family": "weather" if state.weather else state.row.family,
+		"event_kind": state.row.kind, "time_s": stage_time, "at": _park_at(state), "row": state.row.duplicate(true)}
+	if not state.weather:
+		fact.route_change = state.row.route_change.duplicate(true)
+	return fact
+
+
+func _park_world(state: Dictionary, form: String, phase: String) -> Dictionary:
+	var fact := _park_fact(state, "world")
+	fact.fact = form
+	fact.phase = phase
+	fact.music_cue = state.row.music_cue[phase]
+	return fact
+
+
+func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: Dictionary) -> bool:
+	if state.weather:
+		return true
+	var site: Dictionary = _park_sites[state.row.site]
+	var half := ParkMap.footprint_half_extents(site)
+	if state.row.effect.has("footprint_m"):
+		var footprint = state.row.effect.footprint_m
+		half = (footprint if footprint is Vector2 else Vector2(float(footprint[0]), float(footprint[1]))).abs() * 0.5
+	var point := Vector2(ball.x, ball.z)
+	if _park_rising(state) and context.grounded and ParkMap.footprint_contains(site, point, 0.0, Vector2.INF, half):
+		return false
+	if not _park_ground(state.row):
+		return true
+	var end := point + Vector2(velocity.x, velocity.z) * PARK_TRAVEL_S
+	var margin := maxf(0.0, float(state.row.hold_clear_m))
+	if ParkMap.footprint_contains(site, point, margin, end, half):
+		return false
+	if state.row.family in ParkSchema.ARRIVAL_FAMILIES and state.row.route_change.opens.is_empty():
+		for line in context.get("pilot_lines", _park_pilot_lines):
+			for i in range(1, line.size()):
+				if ParkMap.footprint_contains(site, line[i - 1], PARK_CORRIDOR_M, line[i], half):
+					return false
+	return true
+
+
+func _park_route_safe(proposed: Dictionary, withdrawing := false) -> bool:
+	var open := {}
+	for route in _park.get("routes", []):
+		open[route.id] = true
+	for row in _park.get("event_rows", []):
+		for id in row.route_change.opens:
+			open[id] = false
+	var changes := []
+	for state in _park_states:
+		if not state.weather and (state.phase == LIVE or state == proposed) and not (withdrawing and state == proposed):
+			changes.append(state.row.route_change)
+	for change in changes:
+		for id in change.opens:
+			open[id] = true
+	for change in changes:
+		for id in change.closes:
+			open[id] = false
+	var reached := {"drop_in": true}
+	var pending := ["drop_in"]
+	while not pending.is_empty():
+		var node: String = pending.pop_back()
+		for route in _park.get("routes", []):
+			if open[route.id] and route.from == node and not reached.has(route.to):
+				reached[route.to] = true
+				pending.append(route.to)
+	return reached.has("landmark")
+
+
+func _park_read_lines() -> void:
+	var path := "res://tools/park_lines/%s.json" % _park.get("map", "")
+	if not FileAccess.file_exists(path):
+		return
+	var read := ParkSchema.read_file(path)
+	for pilot in read.data.get("pilots", {}).values():
+		var points := []
+		for point in pilot.get("waypoints", []):
+			if point is Array:
+				points.append(Vector2(float(point[0]), float(point[1])))
+			elif point == "drop_in":
+				points.append(Vector2(float(_park.spawn.at[0]), float(_park.spawn.at[1])))
+			elif point == "landmark":
+				points.append(Vector2(float(_park.landmark.beacon[0]), float(_park.landmark.beacon[1])))
+			elif _park_sites.has(point):
+				var at: Array = _park_sites[point].at
+				points.append(Vector2(float(at[0]), float(at[1])))
+			else:
+				for activity in _park.get("activity_rows", []):
+					if activity.id == point:
+						points.append(Vector2(float(activity.at[0]), float(activity.at[1])))
+		_park_pilot_lines.append(points)
