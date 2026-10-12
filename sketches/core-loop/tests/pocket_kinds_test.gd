@@ -12,7 +12,7 @@ const Schema := preload("res://src/world/park/park_schema.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const KINDS := ["movement_course", "arena", "elite_arena", "objective_limit", "round_arena", "ambush", "scattered_marks"]
 const STAGES := ["park_dam", "park_test"]
-const EXPECTED_CHECKS := 31
+const EXPECTED_CHECKS := 32
 const H := 1.0 / 60.0
 
 class Checks extends "res://tests/support/t.gd":
@@ -30,6 +30,7 @@ var acts
 var graphs := {}
 var paid := []
 var only := ""
+var warden_kills := 0
 
 
 func _initialize() -> void:
@@ -69,6 +70,9 @@ func _run() -> void:
 	print("pocket context: run_id=%s class=%s" % [game.run.run_id, game.run.class_id()])
 	acts.clear()
 	game.run.set_max_hp(99999.0)
+	game.events.enemy_killed.connect(func(kind, _at, _scrap):
+		if kind == "warden":
+			warden_kills += 1)
 	game.events.part_gained.connect(func(id, source):
 		if source.begins_with("pocket_"):
 			paid.append(id))
@@ -104,7 +108,7 @@ func _run() -> void:
 		game.run.set_max_hp(100.0)
 		await _combat()
 		_rounds()
-	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 4, "recovery": 11, "admission": 3, "cues": 3, "pay": 3}[only]
+	var want: int = {"": EXPECTED_CHECKS, "ladder": 5, "ambush": 5, "hazards": 4, "exit": 5, "recovery": 11, "admission": 3, "cues": 3, "pay": 3}[only]
 	t.eq("expected check count", t.checks, want - 1)
 	for failure in t.failed_labels:
 		print("failed check: " + failure)
@@ -423,6 +427,7 @@ func _ambush() -> void:
 	var clears := 0
 	for seed_value in 20:
 		game.ctx.rng.seed = 500 + seed_value
+		_seal_stage()
 		var s = _site("ambush", Vector2(500, 300), {"graph": graphs.park_test})
 		for wave in 3:
 			acts.step_pocket(s, H, s.global_position)
@@ -431,7 +436,7 @@ func _ambush() -> void:
 				route_hits += int((graphs.park_test.flags(graphs.park_test.nearest(e.global_position)) & Graph.LINE) != 0)
 			_kill(s.pack)
 			acts.step_pocket(s, H, s.global_position)
-		clears += int(s.done)
+		clears += int(s.done and game.flow.state == game.flow.GATES and not game.flow.sealed and not game.beacon.sealed)
 		acts.clear()
 		await physics_frame
 	t.check("ambush three waves of one to five", waves, "20 seeds, 60 waves")
@@ -526,7 +531,22 @@ func _marks() -> void:
 	acts.clear()
 
 
+func _seal_stage() -> bool:
+	var flow = game.flow
+	if is_instance_valid(flow.warden):
+		flow.warden.queue_free()
+	flow.state = flow.STAGE
+	flow.sealed = true
+	game.beacon.place(game.beacon.global_position, game.beacon.duration, game.beacon.radius)
+	flow.warden = flow._spawn_warden()
+	if not is_instance_valid(flow.warden):
+		return false
+	flow._warden_at = flow.warden.global_position
+	return flow.warden.kind == "warden" and game.ctx.spawner.integrity_of(flow.warden) > 0.0 and flow.sealed and game.beacon.sealed
+
+
 func _exit() -> void:
+	var before := warden_kills
 	var open := true
 	var opened := 0
 	for seed_value in 1000:
@@ -541,6 +561,7 @@ func _exit() -> void:
 		if seed_value % 20 == 19:
 			await physics_frame
 	t.check("exit-opens-with-zero-marks in 100 percent", open and opened == 1000, "%d/1000 real flow unseals with no mark taken" % opened)
+	t.check("seeded exits use ordinary stage Warden deaths", warden_kills - before == 2000, "%d/2000 Warden kill facts across both parks" % (warden_kills - before))
 	for kind in KINDS:
 		_site(kind, Vector2(100, 100), {"graph": graphs.park_test})
 	game.flow._unseal()
