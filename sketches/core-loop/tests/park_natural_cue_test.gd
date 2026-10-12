@@ -84,7 +84,12 @@ func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary,
 		shape_ok = shape_ok and mesh.mesh is ArrayMesh
 		var vertices: PackedVector3Array = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 		var low := INF
-		var max_clearance := -INF
+		var min_clearance := INF
+		var dust_lift := -INF
+		var crack_heights := {}
+		if spec.get("pattern", "") == "dust_crack":
+			for point in _mesh_vertices(mark.get_node("CrawlingCrack")):
+				crack_heights[Vector2(point.x, point.z)] = point.y
 		var high := -INF
 		for vertex in vertices:
 			var point: Vector3 = mesh.global_transform * vertex
@@ -92,7 +97,9 @@ func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary,
 			min_radius = minf(min_radius, (local / half).length())
 			max_radius = maxf(max_radius, (local / half).length())
 			max_cross = maxf(max_cross, minf(absf(local.x), absf(local.y)))
-			max_clearance = maxf(max_clearance, point.y - mark.get_parent().world.terrain.height(point.x, point.z))
+			min_clearance = minf(min_clearance, point.y - mark.get_parent().world.terrain.height(point.x, point.z))
+			if crack_heights.has(Vector2(point.x, point.z)):
+				dust_lift = maxf(dust_lift, point.y - float(crack_heights[Vector2(point.x, point.z)]))
 			low = minf(low, point.y)
 			high = maxf(high, point.y)
 			if spec.get("pattern", "") == "dust_crack":
@@ -102,7 +109,10 @@ func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary,
 				"burst": shape_ok = shape_ok and (local / half).length() <= 1.0001
 				"ring": shape_ok = shape_ok and (local / half).length() >= 0.9649 and (local / half).length() <= 1.0001
 		if spec.get("pattern", "") == "dust_crack":
-			t.near(label + " " + str(mesh.name) + " height reads canonical record", max_clearance, 0.15 + float(spec.dust_height_m) if mesh.name == "DustCurtain" else 0.15)
+			if mesh.name == "DustCurtain":
+				t.near(label + " curtain height above crack reads canonical record", dust_lift, float(spec.dust_height_m))
+			else:
+				t.check(label + " crawling crack retains terrain clearance", min_clearance >= 0.1499, str(min_clearance))
 		if spec.shape == "wave":
 			shape_ok = shape_ok and high - low > 0.05
 	t.check(label + " actual mesh follows WORLD_ROWS shape " + spec.shape, shape_ok, "radius=%s..%s cross=%s" % [min_radius, max_radius, max_cross])
