@@ -1,3 +1,4 @@
+# 2026-10-12 FIXTURE-ADAPT: eb9cbd7 made the shell three-surface; a967dd8 moved decals to the seat-back plate.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -44,7 +45,6 @@ func _run() -> void:
 	var ball_mass: float = _game.player.body().mass
 	var rec: Dictionary = hero.shell_of(_game.player)
 	var core_mesh: MeshInstance3D = view._meshes(rec["core"])[0]
-	var glass: Material = core_mesh.get_active_material(0)
 	var pod_materials := _materials(view, rec["pod"])
 	for slot in ["paint", "trail", "decal", "companion_paint"]:
 		var id: String = {"paint": "paint_any_night", "trail": "trail_salt_skip", "decal": "decal_fern", "companion_paint": "companion_paint_night"}[slot]
@@ -54,36 +54,51 @@ func _run() -> void:
 	rec = hero.shell_of(_game.player)
 	core_mesh = view._meshes(rec["core"])[0]
 	pod_materials = _materials(view, rec["pod"])
+	var core_materials := []
+	for mesh in view._meshes(rec["core"]):
+		for surface in mesh.mesh.get_surface_count():
+			core_materials.append({"mesh": mesh, "surface": surface, "material": mesh.get_active_material(surface)})
+	var core_surfaces: int = core_mesh.mesh.get_surface_count()
+	_t.eq("Hoberman shell main mesh has three surfaces", core_surfaces, 3)
 	view._process(0.016)
 	var decal := core_mesh.get_active_material(0) as ShaderMaterial
 	_t.check("CUS-6 decal composed on rolling shell", decal != null and decal.resource_name == "DecalMask" and decal.get_shader_parameter("decal_mask") == load("res://assets/cosmetics/decals/decal_fern_mask.png"))
-	_t.eq("decal adds no geometry or draw", core_mesh.mesh.get_surface_count(), 1)
+	_t.eq("decal adds no geometry or draw", core_mesh.mesh.get_surface_count(), core_surfaces)
+	_check_core("CUS-6 decal respects every shell material", core_materials, decal)
 	_t.check("decal leaves pod and pilot materials alone", _materials(view, rec["pod"]) == pod_materials)
 	_t.check("CUS-6 today's paint still tints shell enamel", _has_paint(view, rec["pod"], Cosmetics.row("paint_any_night")["tint"]))
 	_t.eq("cosmetics leave run summary unchanged", JSON.stringify(_game.run.summary()), gameplay_before)
 	_t.eq("cosmetics leave physics mass unchanged", _game.player.body().mass, ball_mass)
 	# Re-pinned 2026-10-10 (w13 B5, CUSTOMIZE.md sections 2 and 9): the decal lands on the Pod's
-	# DecalPlate when the shell has one and on Core otherwise; two refits reuse one material.
+	# DecalPlate when the shell has one and on Core paint/glass otherwise; refits reuse materials.
 	view._decal["key"] = "-"
 	view._process(0.016)
 	_t.check("B5 a refit reuses the cached decal material", core_mesh.get_active_material(0) == decal)
+	var plate_mount: Node3D = rec["pod"].find_child("DecalPlate", true, false)
+	if not _t.check("Hoberman shell supplies the seat-back DecalPlate mount", plate_mount != null):
+		_game.free()
+		quit(_t.verdict())
+		return
 	var plate := MeshInstance3D.new()
-	plate.name = "DecalPlate"
-	plate.mesh = QuadMesh.new()
-	rec["pod"].add_child(plate)
+	plate.name = "DecalSurfaceProbe"
+	plate.mesh = core_mesh.mesh.duplicate()
+	plate_mount.add_child(plate)
 	view._decal["key"] = "-"
 	view._process(0.016)
 	var plate_mat := plate.get_active_material(0) as ShaderMaterial
 	_t.check("B5 decal lands on DecalPlate when it exists", plate_mat != null and plate_mat.resource_name == "DecalMask" and plate_mat.get_shader_parameter("decal_mask") == load("res://assets/cosmetics/decals/decal_fern_mask.png"))
-	_t.check("B5 with a plate, Core keeps its glass", core_mesh.get_active_material(0) == glass)
+	for surface in core_mesh.mesh.get_surface_count():
+		_t.check("B5 plate decal surface %d" % surface, plate.get_active_material(surface) == plate_mat)
+	_check_core("B5 with a plate, Core keeps every original material", core_materials)
 	view._decal["key"] = "-"
 	view._process(0.016)
-	_t.check("B5 a plate refit reuses its cached material", plate.get_active_material(0) == plate_mat)
-	rec["pod"].remove_child(plate)
+	for surface in plate.mesh.get_surface_count():
+		_t.check("B5 a plate refit reuses surface %d material" % surface, plate.get_active_material(surface) == plate_mat)
+	plate_mount.remove_child(plate)
 	plate.free()
 	view._decal["key"] = "-"
 	view._process(0.016)
-	_t.check("B5 without a plate the decal returns to Core, same material", core_mesh.get_active_material(0) == decal)
+	_check_core("B5 without a plate the decal returns to Core, same material", core_materials, decal)
 
 	var body = _game.presentation.get_node("CompanionBody")
 	_t.eq("seat real SPIL-9 for run", body.seat_for_capture("primer_coil", "ram_prow"), "")
@@ -161,7 +176,7 @@ func _run() -> void:
 	view.assets = {}
 	view._process(0.04)
 	_t.eq("CUS-5 missing trail clears nodes", view._cards.size(), 0)
-	_t.check("CUS-5 missing decal restores glass", core_mesh.get_active_material(0) == glass)
+	_check_core("CUS-5 missing decal restores every original material", core_materials)
 	_t.check("CUS-5 missing companion paint restores mesh", companion_meshes[0].mesh == source_mesh)
 	view._process(0.04)
 	_t.eq("CUS-5 one warning per absent asset in play", view.resolver._warned.size(), 3)
@@ -182,3 +197,14 @@ func _has_paint(view, node: Node, tint: Color) -> bool:
 		if mat is StandardMaterial3D and mat.resource_name == "paint":
 			return mat.albedo_color.is_equal_approx(Color(tint.r * 1.2, tint.g * 1.2, tint.b * 1.2))
 	return false
+
+
+func _check_core(label: String, originals: Array, decal: Material = null) -> void:
+	for saved in originals:
+		var mesh: MeshInstance3D = saved["mesh"]
+		var surface: int = saved["surface"]
+		var original: Material = saved["material"]
+		var takes_decal := original != null and original.resource_name in ["glass", "paint"]
+		var want: Material = decal if decal != null and takes_decal else original
+		_t.check("%s %s surface %d" % [label, mesh.name, surface], mesh.get_active_material(surface) == want,
+			"original %s, decal eligible %s" % [original.resource_name if original != null else "null", takes_decal])
