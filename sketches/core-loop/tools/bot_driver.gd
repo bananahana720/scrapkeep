@@ -92,6 +92,29 @@ const CHARGE_CLOSE := 3.8
 const HARPOON_FLOOR := 30.0
 const LINE_REACH := 50.0
 const DROP_MEMORY := 6.0
+# The latch arm on a harpoon-anchor Warden (_anchor_fight): a bite within LATCH_REACH of the body
+# (inside the 45 m rope), the body reads hung when it stands more than HUNG_ABOVE over the ground
+# under it and rising or falling past ANCHOR_MOVING m/s; from the ground the ball waits for a hung
+# body at LATCH_STANDOFF times its height out (the camera looks up at most about 30 degrees). The drop
+# hauls from DROP_ABOVE over the open point; a line staggered below it waits DROP_WAIT for the
+# brake-drop to carry the ball over, then hauls from where it hangs. The bot rides the drop on its
+# line rather than releasing first (wardens/swarm.md section 4: a latched ball rides the brake-drop
+# onto the queen), and any height over the open point counts as above it (DROP_ABOVE 0).
+const LATCH_REACH := 40.0
+const HUNG_ABOVE := 5.0
+const ANCHOR_MOVING := 2.0
+const LATCH_STANDOFF := 1.6
+const LATCH_STANDOFF_MAX := 30.0
+const DROP_ABOVE := 0.0
+const DROP_WAIT := 0.6
+# Off the line in a stagger the ball jumps for the drop within DROP_JUMP_REACH of the open point.
+const DROP_JUMP_REACH := 8.0
+# With the posture bar at LINE_FINISH or more the ball takes the line instead of the ram, from
+# LINE_FINISH_STANDOFF out, so the stagger the shots from the line open finds it hanging and the
+# drop follows (swarm.md section 4: the high dwell is the latch window and the brake-drop carries
+# a hanging ball onto the open queen).
+const LINE_FINISH := 80.0
+const LINE_FINISH_STANDOFF := 12.0
 const RUNUP := 24.0
 const RUNUP_SECONDS := 3.2
 # A runup stays on the target's shelf: the ground RUNUP_EDGE past the runup point may sit at
@@ -322,6 +345,22 @@ var _chain_phase := ""
 var _chain_first: Node3D = null
 var _chain_second: Node3D = null
 var _chain_rose := false
+# The latch arm (_anchor_fight): the anchor Warden's last height, its vertical speed as the
+# ball sees it, whether the ball was on its line last tick, how long a staggered line has hung
+# below the open point, the haul made in this stagger (and whether from over the open point)
+# with the chunks it found, and whether this stagger's jump for the drop is spent.
+var _anchor_target: Node3D = null
+var _anchor_last_y := INF
+var _anchor_vy := 0.0
+var _anchor_lined := false
+var _anchor_below := 0.0
+var _haul_made := false
+var _haul_above := false
+var _haul_pressed_above := false
+var _haul_chunks := -1
+var _drop_jumped := false
+var _anchor_chunks_seen := -1
+var _anchor_seen_hung := false
 # Seconds since the ball was last beyond the drop line of its fight target.
 var _off_line := 0.0
 var _out: Array[Dictionary] = []
@@ -396,6 +435,14 @@ func start(resume := false) -> void:
 		_punch_seen = float(game.flow.punch_now()))
 	events.beacon_unsealed.connect(func(_s: int):
 		_note_set("warden_broken_s", snappedf(game.run.stage_time, 0.01))
+		# The latch arm's haul broke it: a haul in the breaking stagger, a drop when from over the open point.
+		if _haul_made:
+			_count("latch_chunks")
+			_note_set("latch_break", true)
+			if _haul_above:
+				_count("drop_chunks")
+				_note_set("drop_break", true)
+			_haul_made = false
 		if _warden_hp_at >= 0.0:
 			_settle_warden_damage(0.0))
 	events.event_started.connect(func(id: String):
@@ -406,6 +453,10 @@ func start(resume := false) -> void:
 	events.player_hit.connect(_on_player_hit)
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.special_used.connect(func(_id: String, _at: Vector3): _count("specials"))
+	events.shot_fired.connect(func(_weapon: String, _from: Vector3, _to: Vector3):
+		var kit = game.player.kit
+		if kit.hooked and kit.on_body and _anchor_warden(kit.anchor_body):
+			_count("latch_shots"))
 	_connect_optional("slot_cast", func(slot: String, _id: String, _at: Vector3): _on_slot_cast(slot))
 	_connect_optional("ultimate_started", func(_id: String, _path: String, _from: Vector3, _to: Vector3, _s: float): _on_ultimate_started())
 	_connect_optional("ultimate_ready", func(_id: String): _on_ultimate_ready())
@@ -518,6 +569,10 @@ func tick(delta: float) -> bool:
 		var b: Vector3 = game.player.ball_position()
 		print("  trace t=%.0f stage %d %s goal=%s ball=(%.0f, %.0f, %.0f) speed=%.1f hp=%.0f heft=%.2f punch=%.0f" % [game.run.stage_time,
 			game.run.stage, state, _goal, b.x, b.y, b.z, game.player.planar_velocity().length(), game.run.hp, game.run.heft(), flow.punch_now()])
+	if trace and is_instance_valid(_anchor_target) and ticks % (Engine.physics_ticks_per_second * 2) == 0:
+		print("    anchor y=%.1f vy=%.1f staggered=%s chunks=%d posture=%.0f; line hooked=%s on_body=%s state=%s" % [
+			_anchor_target.global_position.y, _anchor_vy, _anchor_target.staggered(), _anchor_target.chunks_left(),
+			_anchor_target.posture(), game.player.kit.hooked, game.player.kit.on_body, game.player.kit.line_state])
 	if trace and state == "boss" and ticks % (Engine.physics_ticks_per_second * 2) == 0:
 		var boss = _boss()
 		if boss != null and is_instance_valid(boss.get("arena")) and boss.get("ship") != null:
@@ -1286,6 +1341,14 @@ func _fight(target: Node3D, delta: float) -> void:
 	if short:
 		_count("punch_short_s", delta)
 	_note_shred(target, delta)
+	if _anchor_warden(target):
+		_anchor_fight(target, short, delta)
+		return
+	_ground_fight(target, short, delta)
+
+
+# The fight on the ground: the caps loop when punch is short of a caps Warden, else ram laps.
+func _ground_fight(target: Node3D, short: bool, delta: float) -> void:
 	var caps: bool = target.has_method("cap_points") and not (target.cap_points() as Array).is_empty()
 	if caps and short:
 		_goal = "caps %s" % target.get("kind")
@@ -1293,6 +1356,200 @@ func _fight(target: Node3D, delta: float) -> void:
 		return
 	_goal = "fight %s %s%s" % [target.get("kind"), _fight_phase, " short" if short else ""]
 	_ram_laps(target, _aim_node(target, short), delta)
+
+
+# --- the latch arm (unit KF-BOT; wardens/swarm.md, mind.md and reactor.md section 4) -----------
+# Against a Warden that is a harpoon anchor the fight is two jobs. While the body stands in ram
+# reach it is the ground fight (_ground_fight; _ram_laps leaves the body-line smash hand out, since
+# the anchor refuses a haul outside the stagger). While the body is hung out of reach (the swarm's
+# hive rising or at its high dwell) the ball bites a hardpoint from the ground or the air, rides the
+# line with the harpoon held (the winch down to the anchor's minimum rope) and fires its weapon at
+# the body. A shrug or a snip cuts the line and the ball keeps its velocity, so the hand only bites
+# again when a window is open; the hive's stop throws the ball and it bites again from the air. When
+# the body is back down and still, the line lets go and the ground fight resumes, unless the posture
+# bar reads LINE_FINISH or more: then the ball takes the line from where it stands and fires from it,
+# so the stagger opens with it hanging (the high dwell's latch window, swarm.md section 4).
+# In a stagger every hardpoint holds and Ctrl hauls (Augments.haul_open), and a haul's smash on the
+# open point always takes a chunk. A ball on the line over the open point hauls at once: the drop
+# finisher (the swarm's brake-drop carries a hanging ball over the dropped queen). One below it
+# waits DROP_WAIT for the drop to carry it over, then hauls from where it hangs. Off the line the
+# ball rams the open point and jumps beside it once per stagger; over the point in the air it bites
+# and hauls, the drop again, and back on the ground it bites from there and hauls.
+# It reads what a player sees: the body's position and motion, the line, the stagger and the open point.
+func _anchor_warden(target) -> bool:
+	return target != null and is_instance_valid(target) and target.get("harpoon_anchor") == true
+
+
+func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
+	var kit = game.player.kit
+	var ball: Vector3 = game.player.ball_position()
+	var at: Vector3 = target.global_position
+	if target != _anchor_target:
+		_anchor_target = target
+		_anchor_last_y = at.y
+		_anchor_lined = false
+		_anchor_below = 0.0
+		_haul_made = false
+		_haul_pressed_above = false
+		_drop_jumped = false
+		_anchor_seen_hung = false
+	_anchor_vy = (at.y - _anchor_last_y) / maxf(delta, 0.0001)
+	_anchor_last_y = at.y
+	var staggered: bool = target.staggered()
+	_anchor_seen_hung = _anchor_seen_hung or _anchor_hung(target)
+	_watch_haul(target, staggered)
+	var lined: bool = kit.hooked and kit.on_body and kit.anchor_body == target
+	if lined and not _anchor_lined:
+		_count("latch_bites")
+		if not game.player.state.grounded:
+			_count("latch_bites_air")
+	_anchor_lined = lined
+	if lined:
+		_anchor_ride(target, staggered, ball, delta)
+		return
+	_anchor_below = 0.0
+	if kit.hooked:
+		# A line on anything else (the reticle reached scenery first): let it go.
+		source.press["harpoon_released"] = true
+	if staggered:
+		_anchor_open(target, short, ball, delta)
+		return
+	var finish := _line_finish(target)
+	if not _anchor_hung(target) and not finish:
+		_ground_fight(target, short, delta)
+		return
+	_goal = "latch %s%s" % [target.get("kind"), " finish" if finish else ""]
+	if not kit.hooked:
+		_anchor_bite(target, ball)
+	# From the ground the camera looks up about 30 degrees at most: wait out from under the body.
+	var away := Vector3(ball.x - at.x, 0.0, ball.z - at.z)
+	if away.length() < 0.5:
+		away = Vector3.FORWARD
+	var standoff := clampf((at.y - ball.y) * LATCH_STANDOFF, LINE_FINISH_STANDOFF if finish else 0.0, LATCH_STANDOFF_MAX)
+	_act(at + away.normalized() * standoff, target, delta, target)
+
+
+# Whether the posture bar is high enough that the stagger should open with the ball on the line.
+# Only on a mounting the ball has seen carry the body out of ram reach: a body that never leaves the
+# ground (the alpha stage-5 hand before KD5 hangs it) staggers on the ram, and the line would only
+# trade rams for shots.
+func _line_finish(target: Node3D) -> bool:
+	return _anchor_seen_hung and target.has_method("posture") and float(target.posture()) >= LINE_FINISH
+
+
+# Whether the anchor's body is out of ram reach: rising, or standing HUNG_ABOVE over the ground
+# under it and not on its way down.
+func _anchor_hung(target: Node3D) -> bool:
+	var at: Vector3 = target.global_position
+	var floor_y: float = _ground_point(at.x, at.z).y - 1.0
+	return _anchor_vy > ANCHOR_MOVING or (at.y - floor_y > HUNG_ABOVE and _anchor_vy > -ANCHOR_MOVING)
+
+
+# The bite on a hardpoint, from the ground or the air, when the reticle holds the body in reach.
+# Withheld where the player discards the press, as _harpoon_hand withholds it.
+func _anchor_bite(target: Node3D, ball: Vector3) -> void:
+	var kit = game.player.kit
+	var swallowed: bool = game.player.frozen() or kit.slingshot.charging
+	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
+	if special != null and special.charging:
+		swallowed = true
+	if swallowed or kit.rewind_left > 0.0 or kit.aim.get("body") != target or ball.distance_to(target.global_position) > LATCH_REACH:
+		return
+	_cast(3)
+	source.press["harpoon_pressed"] = true
+	_harpoon_held = true
+	_count("latch_presses")
+
+
+# The open point off the line: ram it (a fast ram shatters too) and jump beside it once per
+# stagger (the air jump at the top when still short of it); in the air over it, bite (the drop);
+# past the top of the air jump still short of it, or landed again, bite from there.
+func _anchor_open(target: Node3D, short: bool, ball: Vector3, delta: float) -> void:
+	var point := _open_point(target)
+	var grounded: bool = game.player.state.grounded
+	var spent: bool = _drop_jumped and not grounded and game.player.state.air_actions <= 0 and game.player.state.velocity.y < 0.0
+	var bite := (not grounded and ball.y > point.y + DROP_ABOVE) or spent or (grounded and _drop_jumped)
+	_ground_fight(target, short, delta)
+	_goal = "drop climb"
+	if bite:
+		_anchor_bite(target, ball)
+	elif grounded and _flat(ball, point) < DROP_JUMP_REACH and game.player.verb_ready("jump"):
+		source.press["jump_pressed"] = true
+		_drop_jumped = true
+	elif not grounded and _drop_jumped and game.player.state.velocity.y < 1.0 and game.player.state.air_actions > 0:
+		# Short of the point at the top of the jump: the air jump.
+		source.press["jump_pressed"] = true
+
+
+func _open_point(target: Node3D) -> Vector3:
+	return target.family_point_at() if target.has_method("family_point_at") else target.global_position
+
+
+# On the line: hold it, fire at the body, let go when the body is back down and still. In the
+# stagger, haul: at once from over the open point (the drop), else after DROP_WAIT.
+func _anchor_ride(target: Node3D, staggered: bool, ball: Vector3, delta: float) -> void:
+	var kit = game.player.kit
+	_count("latch_ride_s", delta)
+	_harpoon_held = true
+	if staggered:
+		var point := _open_point(target)
+		var above := ball.y > point.y + DROP_ABOVE
+		if kit.line_state == Augments.LINE_SMASH:
+			_goal = "haul"
+			_harpoon_commit = true
+			# A haul counts once the kit has committed it (Augments.haul_open let the Ctrl press
+			# through), not when the hand decides to press: a break in a stagger the bot only
+			# meant to haul is not a finish from the line (KF-BOT fix round, mutation b).
+			if not _haul_made:
+				_haul_made = true
+				_haul_above = _haul_pressed_above
+				_haul_chunks = int(target.chunks_left())
+				_count("latch_hauls")
+				if _haul_above:
+					_count("drop_hauls")
+				if trace:
+					print("    haul t=%.2f above=%s ball=%s point=%s stagger_left=%.2f" % [game.run.stage_time, _haul_above, ball,
+						point, target.stagger_left()])
+		elif above or _anchor_below > DROP_WAIT:
+			_goal = "drop" if above else "haul from below"
+			# A fresh Ctrl press: one that hit-stop swallowed comes up for a tick and goes again.
+			_harpoon_commit = not game.player._brake_was_held
+			_haul_pressed_above = above
+		else:
+			_goal = "drop wait"
+			_anchor_below += delta
+		_act(point, target, delta, target, false)
+		return
+	_anchor_below = 0.0
+	if not _anchor_hung(target) and _anchor_vy > -ANCHOR_MOVING and not _line_finish(target):
+		_goal = "latch let go"
+		source.press["harpoon_released"] = true
+		_harpoon_held = false
+		_ground_fight(target, _punch_seen < _plating(target), delta)
+		return
+	_goal = "ride %s" % target.get("kind")
+	_act(target.global_position, target, delta, target)
+
+
+# A haul is the finish when the stagger it was made in loses a chunk (or the Warden breaks, the
+# beacon_unsealed handler in start()); a drop when it was made from over the open point. A
+# stagger's end clears it and the stagger's jump.
+func _watch_haul(target: Node3D, staggered: bool) -> void:
+	# A shatter ends the stagger on its frame, so the chunk is read before the stagger's end clears the haul.
+	var left := int(target.chunks_left())
+	if trace and _anchor_chunks_seen >= 0 and left < _anchor_chunks_seen:
+		print("    chunk t=%.2f left=%d haul=%s above=%s line=%s" % [game.run.stage_time, left, _haul_made, _haul_above,
+			game.player.kit.line_state])
+	_anchor_chunks_seen = left
+	if _haul_made and left < _haul_chunks:
+		_count("latch_chunks", float(_haul_chunks - left))
+		if _haul_above:
+			_count("drop_chunks", float(_haul_chunks - left))
+		_haul_chunks = left
+	if not staggered:
+		_haul_made = false
+		_haul_pressed_above = false
+		_drop_jumped = false
 
 
 # How far the fight stripped the Warden: the peak share of its plating shred away, and
@@ -1439,7 +1696,10 @@ func _explorer_chain(delta: float) -> void:
 
 
 func _ram_laps(target: Node3D, aim, delta: float) -> void:
-	_harpoon_hand(target, delta)
+	# An anchor Warden's line is the latch arm's (_anchor_fight); the body-line smash hand
+	# would bite it from the floor and hold a haul the anchor refuses outside the stagger.
+	if not _anchor_warden(target):
+		_harpoon_hand(target, delta)
 	var ball: Vector3 = game.player.ball_position()
 	var at: Vector3 = target.global_position
 	var distance := _flat(ball, at)

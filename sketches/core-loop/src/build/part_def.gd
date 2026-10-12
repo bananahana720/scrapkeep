@@ -51,9 +51,18 @@ const TAGS := ["frost", "arc", "kinetic", "split", "spiral", "chain", "anchor", 
 # v2 W4 loot (DESIGN-V2 section 7, I2 section 4). trigger is "" (passive) or one of the
 # twelve Triggers.NAMES. proc_coeff multiplies the source's base_proc. stack_rule says
 # how copies add: linear, hyperbolic (1 - 1/(1 + a x), for anything that could reach
-# 100%) or capped (copies past stack_cap add nothing). icon_category is the cat_ family
+# 100%), capped (copies past stack_cap add nothing) or spike (the rare big jump: one
+# copy's value times SPIKE_GROWTH^n - 1, never past SPIKE_MAX_MULTIPLE times one copy;
+# stack_cap, when set, is a lower multiple ceiling). icon_category is the cat_ family
 # glyph; element is the el_ glyph ("" for none).
-const STACK_RULES := ["linear", "hyperbolic", "capped"]
+const STACK_RULES := ["linear", "hyperbolic", "capped", "spike"]
+# SR4 start values (comps/ror2/items-and-stacking.md:85 and :96): a spike family exists
+# for the big-jump feel, but it is always capped (the proposed 8x of one copy) and the
+# pool holds at most one spike part per tier. tools/build_sweep.gd and
+# tests/stack_sweep_test.gd hold both rules.
+const SPIKE_MAX_MULTIPLE := 8.0
+const SPIKE_GROWTH := 2.0
+const SPIKES_PER_TIER := 1
 const ICON_CATEGORIES := ["damage", "mobility", "defense", "utility", "charge", "transform"]
 @export var trigger := ""
 @export var proc_coeff := 1.0
@@ -130,14 +139,37 @@ func stacked(per_copy: float, copies: int) -> float:
 	return Stacking.value(stack_rule, per_copy, copies, stack_cap)
 
 
-# The three stacking curves as one pure function, so the catalogue, the sheet and the
+# The pool rule for the spike family: no spike row capped above SPIKE_MAX_MULTIPLE, and
+# at most SPIKES_PER_TIER spike rows per tier. Returns one line per problem; [] is clean.
+static func spike_problems(defs: Array) -> Array:
+	var out: Array = []
+	var per_tier := {}
+	for d in defs:
+		if d == null or d.stack_rule != "spike":
+			continue
+		if d.stack_cap > SPIKE_MAX_MULTIPLE:
+			out.append("%s spike cap %sx over %sx" % [d.id, d.stack_cap, SPIKE_MAX_MULTIPLE])
+		per_tier[d.tier] = per_tier.get(d.tier, []) + [d.id]
+	for tier in per_tier:
+		if per_tier[tier].size() > SPIKES_PER_TIER:
+			out.append("tier %d holds %d spike parts %s" % [tier, per_tier[tier].size(), per_tier[tier]])
+	return out
+
+
+# The four stacking curves as one pure function, so the catalogue, the sheet and the
 # fuzzer all read the same numbers. For linear and capped rows stack_cap counts copies
 # (0 means no ceiling on a linear row); for a hyperbolic row it is the value ceiling,
-# below 1, that the curve may never pass.
+# below 1, that the curve may never pass; for a spike row it is a multiple of one copy,
+# and 0 or anything above SPIKE_MAX_MULTIPLE reads as SPIKE_MAX_MULTIPLE, so no spike
+# is ever uncapped.
 class Stacking:
 	static func value(rule: String, per_copy: float, copies: int, cap: float) -> float:
 		if copies <= 0:
 			return 0.0
+		if rule == "spike":
+			var ceiling := SPIKE_MAX_MULTIPLE if cap < 1.0 or cap > SPIKE_MAX_MULTIPLE else cap
+			var multiple := pow(SPIKE_GROWTH, mini(copies, 16)) - 1.0
+			return per_copy * minf(multiple, ceiling)
 		if rule == "hyperbolic":
 			var v := 1.0 - 1.0 / (1.0 + per_copy * copies)
 			return minf(v, cap) if cap > 0.0 else v
