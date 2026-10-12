@@ -3047,7 +3047,11 @@ static func _signal_argc(obj: Object, kind: String) -> int:
 func _bank_body(target: Node3D, _fraction: float, mult: float) -> void:
 	var launch: Dictionary = ctx.player.bank_geometry()
 	var damage := 10.0 * mult * (0.5 if _target_class(target) == "boss" else 1.0)
-	_hit(target, "arc", damage, -(launch["dir"] as Vector3), 0.0 if _target_class(target) == "boss" else 12.0, "", "special")
+	if _target_class(target) != "boss" and target.has_method("knock"):
+		target.knock(-(launch["dir"] as Vector3), 12.0)
+	if target.has_method("flash"):
+		target.flash()
+	strike(target, "arc", damage, "", "special")
 	_bank_world(ctx.player.kit.anchor, _fraction, mult)
 
 

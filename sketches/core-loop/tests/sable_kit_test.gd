@@ -17,7 +17,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 60
+const EXPECTED_CHECKS := 65
 const DT := 1.0 / 60.0
 var _t := T.new("sable_kit_test")
 var _game
@@ -143,9 +143,16 @@ func _run() -> void:
 	_player.chain.combo = 3
 	var hp: float = enemy.hp
 	var mult: float = _player.chain.multiplier()
+	enemy._knock = Vector3.ZERO
+	var exit: Dictionary = _player.bank_geometry()
 	_cast()
 	_t.near("body pivot damage scales by chain", hp - enemy.hp, 10.0 * mult, 0.01)
 	_t.near("body exit", _player.state.velocity.length(), 29.0, 0.01)
+	var knock: Vector3 = Vector3(enemy._knock.x, 0.0, enemy._knock.z)
+	var away: Vector3 = -(exit["dir"] as Vector3)
+	away.y = 0.0
+	_t.check("pivot knock points opposite the exit", knock.normalized().dot(away.normalized()) > 0.99)
+	_t.near("pivot knock is twelve divided by enemy weight", knock.length(), 12.0 / enemy.weight * away.length(), 0.01)
 	_fresh()
 	_player.tree._knobs["grapple_fling"] = 10.0
 	_wall()
@@ -183,6 +190,11 @@ func _run() -> void:
 	_t.eq("gauge returns home", _player.abilities.selected, "weapon")
 	_fresh(30.0)
 	_t.near("live tap discharge", _combat._discharge_speed(0.0), 22.5)
+	_fresh()
+	_wall()
+	_player.kit.mounted = true
+	_cast()
+	_t.check("Bank Shot releases a mounted Sable", not _player.kit.mounted and _player.state.velocity.length() > 20.0)
 	var charge: int = _player.abilities.slot("special").charges
 	_game.events.mounted.emit(_player.ball_position(), 18.0)
 	_t.eq("plant stays free", [_special, _player.abilities.slot("special").charges], [["detonation_gauge"], charge])
@@ -234,6 +246,7 @@ func _grants(enemy: Node3D) -> void:
 	rows["planted_11"] = {"name": "Too Many", "text": "This new count must fail.", "on": "enemy_killed", "count": 11, "reward": {}}
 	_t.check("new count 11 fails validation", Achievements.validate(rows, Achievements.bus_signals(), pilots, Cosmetics.ids()).any(func(p): return "planted_11: new grants" in p))
 	_t.eq("all grandfathered ids are explicit", Achievements.GRANDFATHERED.size(), 12)
+	_t.check("every legacy count above ten is listed by id", Achievements.ROWS.keys().all(func(id): return int(Achievements.ROWS[id]["count"]) <= 10 or id in Achievements.GRANDFATHERED))
 	var profile := Profile.new("user://sable-grants-%d.json" % OS.get_process_id())
 	profile.load_profile()
 	var listener := Progress.new()
@@ -254,8 +267,15 @@ func _grants(enemy: Node3D) -> void:
 	_t.check("a kill after Bank Shot detects Parting Shot", _game.ctx.codex.known("parting_shot"))
 	var ult = _combat.ultimate
 	ult._id = "cable_run"
+	ult._leg = 1
 	ult._plan = {"from": _player.ball_position(), "legs": [{"strike": true}]}
 	ult._record = {"id": "cable_run", "landing_hits": 0, "damage": 0.0}
+	ult._plan["legs"].append({"strike": true})
+	ult._leg = 1
+	ult._strike(_player.ball_position() + Vector3.RIGHT * 100.0)
+	_t.eq("an encore's first leg does not count a completed Cable Run", ult._sable_runs, 0)
+	ult._plan["legs"].pop_back()
+	ult._leg = 1
 	for i in 3:
 		ult._strike(_player.ball_position() + Vector3.RIGHT * 100.0)
 	_t.check("three real landing callbacks detect Cable Runner", _game.ctx.codex.known("sable_cable_runs"))

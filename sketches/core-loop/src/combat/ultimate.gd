@@ -676,7 +676,7 @@ func _strike(at: Vector3) -> void:
 	_record["landing_hits"] = int(_record.get("landing_hits", 0)) + int(result[0])
 	_record["damage"] = snappedf(float(_record.get("damage", 0.0)) + float(result[1]), 0.01)
 	ctx.events.ultimate_landed.emit(_id, at, int(result[0]), float(result[1]))
-	if _id == "cable_run":
+	if _id == "cable_run" and _leg >= (_plan.get("legs", []) as Array).size():
 		_sable_runs += 1
 		if ctx.codex != null and ctx.codex.known("set_piece"):
 			combat._discover("cable_run", at)

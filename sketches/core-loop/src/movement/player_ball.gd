@@ -348,6 +348,8 @@ func _bank_release(anchor: Vector3) -> void:
 	var launch := Augments.bank_exit(incoming, ball_position() - anchor, drive_basis, kit)
 	Augments.mass_spend(kit, base)
 	bank_last = {"entry": incoming, "exit": launch.length(), "dir": launch.normalized(), "pending_log": _bank_logging_deferred}
+	kit.mounted = false
+	kit.slingshot.cancel()
 	set_velocity_now(launch, "bank")
 	chain.let_go()
 	events.dismounted.emit(launch)
