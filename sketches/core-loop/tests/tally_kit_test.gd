@@ -10,6 +10,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
+const Synth := preload("res://src/presentation/synth.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const T := preload("res://tests/support/t.gd")
@@ -34,7 +35,8 @@ const T := preload("res://tests/support/t.gd")
 # Re-pinned 2026-10-12 (PC-TALLY fix round): Balance Due now strikes through _ledger_hit, so a
 # boss takes half of it as tally.md:377 asks; one new check. Measured 84 checks (was 83).
 # 2026-10-12 (PC-TALLY round 3): four owned bank recipes and their admitted levels/keys.
-const EXPECTED_CHECKS := 92
+# 2026-10-12 (PC-TALLY round 3): direct notes isolate the background bank transposition.
+const EXPECTED_CHECKS := 93
 
 var _t := T.new("tally_kit_test")
 var _game
@@ -160,6 +162,13 @@ func _check_cues() -> void:
 		_t.check(cue + " admitted at trim plus priority in the live key", notes.size() == 1
 			and is_equal_approx(float(notes[0][5]), Bank.trim_db(sound) + Audio.PRIORITY_DB[Rows.priority(String(row["kind"]))])
 			and is_equal_approx(float(notes[0][4]), Harmony.ratio(audio.live_key())), str(notes))
+	var clean := Bank.tally_recipe("clip_tally", 62)
+	var old_transpose := Synth.score_transpose
+	Synth.score_transpose = 3
+	var shifted := Bank.tally_recipe("clip_tally", 62)
+	var restored := Synth.score_transpose
+	Synth.score_transpose = old_transpose
+	_t.check("direct Tally notes isolate and restore the background bank transpose", clean == shifted and restored == 3)
 	audio.free()
 
 
