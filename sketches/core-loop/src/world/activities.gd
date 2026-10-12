@@ -623,7 +623,6 @@ func _pay_round(s: Site) -> void:
 	s.fog.stop()
 	s.heal_paid = false
 	_heal(s)
-	ctx.run.add_cogs(roundi(s.round_credits))
 	var picks := _reward_parts(s, "round_%d" % s.round)
 	var pickup := ActivityView.gem(String(s.rule.cue.view))
 	s.add_child(pickup)
