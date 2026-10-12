@@ -1,0 +1,210 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Director := preload("res://src/world/director.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
+const Graph := preload("res://src/world/park/park_graph.gd")
+const CLEARANCE := EventDirector.PARK_CORRIDOR_M
+
+var _game
+var _graph
+var _ticks := 0
+var _phase := 0
+var _failures := 0
+var _observed := 0
+var _violations := 0
+var _ball := Vector2.ZERO
+var _home := {}
+var _sites := {}
+var _lines := []
+var _stopped := ""
+
+
+func _initialize() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	_game.table = "park"
+	root.add_child(_game)
+	_graph = Graph.read("res://assets/park/park_dam/graph.bin")
+
+
+func _check(label: String, ok: bool, detail := "") -> void:
+	_failures += int(not ok)
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
+
+
+func _at(row: Dictionary) -> Vector2:
+	return Vector2(float(row.at[0]), float(row.at[1]))
+
+
+func _physics_process(_delta: float) -> bool:
+	if _game.flow == null:
+		return false
+	if _ticks == 0:
+		_game.ctx.calm = true
+		_game.flow.press_start()
+		_game.flow.choose_class(0)
+	_ticks += 1
+	if _ticks < 20:
+		return false
+	var d = _game.world.director
+	if _phase == 0:
+		var map = _game.ctx.terrain.map()
+		_check("real Game uses park_dam", map is ParkMap and map.title == "park_dam")
+		for site in map.park.park_rows:
+			_sites[site.id] = site
+		_lines = _game.world.events._park_pilot_lines
+		_check("KE1 pilot lines present", not _lines.is_empty(), "%d lines" % _lines.size())
+		_home = map.park.home_rows[0]
+		_ball = _window_ball(_sites[_home.site])
+		_check("real graph forward fixture", _ball != Vector2.INF, str(_ball))
+		_game.player.body().freeze = true
+		d.stage_time = 90.0
+		_place_ball()
+		_phase = 1
+		_ticks = 0
+		return false
+	_place_ball()
+	if _phase in [1, 2, 3]:
+		for a in d.arrivals:
+			if a.left < Director.ARRIVAL - 0.00001:
+				continue
+			_observed += 1
+			if _phase == 1:
+				_violations += int(not _from_live_home(a, _game.ctx.terrain.map().park.home_rows))
+			elif _phase == 2:
+				_violations += int(Director.KIND_NAMES[a.kind] == _stopped)
+			_check_corridor(a.at)
+		# Keep normal Game stepping, but make enough scheduled arrivals to test every pack.
+		d._timer = 0.0
+		if _ticks < 180:
+			return false
+		if _phase == 1:
+			_check("forward-window arrivals use live home rows", _observed > 0 and _violations == 0,
+				"%d arrivals, %d wrong homes/window/kinds" % [_observed, _violations])
+			_check("break transition exists on live Game director", d.has_method("break_home"))
+			if d.has_method("break_home"):
+				d.break_home(_home.id)
+			_stopped = _home.enemy
+			# Near the landmark all homes are behind: exercise suppression on ring fallback too.
+			_ball = _game.ctx.terrain.map().beacon
+			d.arrivals.clear()
+			_phase = 2
+		elif _phase == 2:
+			_check("broken home's kind never arrives again", _observed > 0 and _violations == 0,
+				"%d later arrivals, %d stopped-kind violations" % [_observed, _violations])
+			_phase = 3
+			_legacy_ring(d, true)
+		elif _phase == 3:
+			_check("fallback Game arrivals exercised", _observed > 0, str(_observed))
+			_game.flow.enter_stage(1, Vector3.ZERO, false)
+			d = _game.world.director
+			_check("stage entry resets broken homes", not d.has_method("home_live") or d.home_live(_home.id))
+			_game.queue_free()
+			_game = Game.new()
+			_game.test_mode = true
+			_game.table = "alpha"
+			root.add_child(_game)
+			_phase = 4
+		_observed = 0
+		_violations = 0
+		_ticks = 0
+		return false
+	if _phase == 4:
+		if _ticks == 1:
+			_game.ctx.calm = true
+			_game.flow.press_start()
+			_game.flow.choose_class(0)
+		if _ticks < 20:
+			return false
+		d = _game.world.director
+		_legacy_ring(d, false)
+		d.stage_time = 1000.0
+		_check("legacy time tiers stay capped at two", d.tier() == 2, str(d.tier()))
+		_game.queue_free()
+		print("director_homes_test: PASS" if _failures == 0 else "director_homes_test: FAIL (%d)" % _failures)
+		quit(0 if _failures == 0 else 1)
+		return true
+	return false
+
+
+func _place_ball() -> void:
+	var body = _game.player.body()
+	body.global_position = _game.ctx.terrain.drop_point(_ball.x, _ball.y, 2.4)
+	_game.player.state.velocity = Vector3.ZERO
+
+
+func _window_ball(site: Dictionary) -> Vector2:
+	var home_d: float = _graph.d_landmark(_at(site))
+	for n in _graph.px.size():
+		var p := Vector2(_graph.px[n], _graph.pz[n])
+		var ahead: float = _graph.d_landmark_node(n) - home_d
+		if ahead >= 120.0 and ahead <= 180.0 and p.distance_to(_at(site)) < 200.0:
+			return p
+	return Vector2.INF
+
+
+func _from_live_home(arrival: Dictionary, homes: Array) -> bool:
+	for home in homes:
+		if home.dormant or home.enemy != Director.KIND_NAMES[arrival.kind]:
+			continue
+		var site: Dictionary = _sites[home.site]
+		var ahead: float = _graph.d_landmark(_ball) - _graph.d_landmark(_at(site))
+		if ahead >= 60.0 and ahead <= 250.0 and ParkMap.footprint_contains(site, arrival.at):
+			return true
+	return false
+
+
+func _check_corridor(at: Vector2) -> void:
+	var clear := true
+	for line in _lines:
+		for i in range(1, line.size()):
+			clear = clear and Geometry2D.get_closest_point_to_segment(at, line[i - 1], line[i]).distance_to(at) > CLEARANCE
+	_check("arrival outside every pilot corridor", clear, str(at))
+
+
+# Frozen independent pre-KE6 ring algorithm. Comparing serialized Vector2 values
+# catches float changes as well as a changed range or RNG draw order.
+func _old_ring(rng: RandomNumberGenerator, rect: Rect2, ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
+	var heading := velocity.normalized() if velocity.length() > 3.0 else forward.normalized()
+	var ahead := rng.randf() < 0.6
+	for i in 8:
+		var angle: float
+		var dist: float
+		if ahead:
+			angle = rng.randf_range(-0.6108652, 0.6108652)
+			dist = rng.randf_range(60.0, 90.0)
+		else:
+			angle = rng.randf_range(0.6108652, PI) * (1.0 if rng.randf() < 0.5 else -1.0)
+			dist = rng.randf_range(45.0, 70.0)
+		var spot := ball + heading.rotated(angle) * dist
+		spot.x = clampf(spot.x, rect.position.x, rect.end.x)
+		spot.y = clampf(spot.y, rect.position.y, rect.end.y)
+		if spot.distance_to(ball) >= 25.0:
+			return spot
+	return Vector2.INF
+
+
+func _legacy_ring(d, park: bool) -> void:
+	var count := 0
+	var different := 0
+	for seed_value in [1, 2, 3, 4, 913]:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_value
+		d._rng.seed = seed_value
+		for i in 100:
+			var ball := _ball if park else Vector2(0, 0)
+			var v := Vector2(0, 20) if i % 2 == 0 else Vector2.ZERO
+			var expected := _old_ring(rng, d.play_rect, ball, v, Vector2.DOWN)
+			var actual: Vector2 = d.spawn_spot(ball, v, Vector2.DOWN)
+			# Park fallback rejects unsafe ring points; outside corridors it keeps today's ring.
+			if park:
+				_check_corridor(actual)
+				if actual != expected:
+					rng.state = d._rng.state
+			else:
+				different += int(var_to_bytes(actual) != var_to_bytes(expected))
+			count += 1
+	_check("ring fallback exercised" if park else "legacy arrival points byte-identical to today's ring",
+		count == 500 and different == 0, "%d seeds/points, %d differing bytes" % [count, different])
