@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "b572e10d4e88684b8a86bf44f38ff09f91a4f07830462818eb2e4c752243d184",
+  "bake_sha256": "8e6f1d2605a5e7c7be9ca77df6161ee9564cec0ce32607156751a23413e60075",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1320324,
-  "edges": 314524,
+  "bytes": 1321009,
+  "edges": 314559,
   "first_failed": "",
   "flags": {
     "deck": 28,
     "door_ok": 40006,
     "line": 304,
     "open": 40429,
-    "sight_ok": 8504,
+    "sight_ok": 8527,
     "under": 0
   },
   "full_visit_m": 2316,
   "full_visit_ratio": "1.721",
-  "graph_sha256": "8c928dc774c1f0e9c85e984282dd2dfdc7ca16c6c475e8d212f02bb3ac3a5e00",
+  "graph_sha256": "6c962b168aec219daf08936374aabcb467b1f7415bba3e43cbb6c293072571dc",
   "line_errors": [],
   "line_path_nodes": 160,
   "longest_est_m": 2371,
   "map": "park_dam",
   "nodes": 40429,
-  "park_sha256": "742cf3c52ed60690fa9ddab7bda2130b9752e8243db1a7a66c8a71381c435ea3",
+  "park_sha256": "2a93d5260cd835a85854b31acb6ea88c6423da7cdb2fa10368a0c1ca3f9ebb58",
   "pockets": [
     {
       "clear_ring": [],
@@ -222,8 +222,8 @@
         "viable": true
       },
       {
-        "cost": 1290.9,
-        "d_landmark": 142.5,
+        "cost": 1291.0,
+        "d_landmark": 142.8,
         "name": "pool_rock",
         "on_route": false,
         "rank": 0,
@@ -250,14 +250,6 @@
         "d_landmark": 121.6,
         "name": "apron_kicker_ramp",
         "on_route": true,
-        "rank": 0,
-        "viable": false
-      },
-      {
-        "cost": 1130.6,
-        "d_landmark": 210.5,
-        "name": "canyon_hook_fin",
-        "on_route": false,
         "rank": 0,
         "viable": false
       },
@@ -550,9 +542,9 @@
         "viable": true
       }
     ],
-    "count": 143,
+    "count": 142,
     "crossings": {
-      "drop": 50,
+      "drop": 47,
       "ride": 12,
       "walk": 247
     },
