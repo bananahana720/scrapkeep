@@ -125,6 +125,7 @@ func _seats() -> Array:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/companion_body.gd::_process")
 	if ctx == null or ctx.player == null:
 		return
 	var seats := _seats()

@@ -436,6 +436,7 @@ func phase() -> String:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/reward_ceremony.gd::_process")
 	var now := int(now_ms.call())
 	view.now = now
 	_calm_left = WhyCallout.calm_left_after(_calm_left, delta, get_tree())

@@ -308,6 +308,7 @@ func step(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/ability_bar.gd::_process")
 	step(delta)
 
 

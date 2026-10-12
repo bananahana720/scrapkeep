@@ -557,6 +557,7 @@ func _fade(show: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/pause_menu.gd::_process")
 	if not _open:
 		_quit_down = false
 		_quit_held = 0.0

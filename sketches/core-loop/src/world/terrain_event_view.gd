@@ -95,6 +95,7 @@ func _build(model) -> Dictionary:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/world/terrain_event_view.gd::_process")
 	for e in _entries:
 		_draw(e, delta)
 

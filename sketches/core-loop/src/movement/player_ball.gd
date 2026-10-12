@@ -488,6 +488,7 @@ func grapple_range() -> float:
 
 
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/movement/player_ball.gd::_physics_process")
 	source.poll(intent)
 	_route_slots(delta)
 	abilities.movement_key = _burst_key()
@@ -913,6 +914,7 @@ func _fling() -> void:
 
 
 func _process(_delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/movement/player_ball.gd::_process")
 	var shown := shown_transform()
 	_visual_root.global_position = shown.origin
 	_visual_root.global_basis = Basis.IDENTITY

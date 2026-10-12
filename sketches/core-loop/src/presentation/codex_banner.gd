@@ -308,6 +308,7 @@ func _next() -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/codex_banner.gd::_process")
 	_calm_left = WhyCallout.calm_left_after(_calm_left, delta, get_tree() if is_inside_tree() else null)
 	if _started_ms < 0:
 		_next()

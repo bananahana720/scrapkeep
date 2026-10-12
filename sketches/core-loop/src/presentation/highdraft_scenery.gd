@@ -931,6 +931,7 @@ class Updater extends Node3D:
 	var fx: Node3D
 
 	func _process(delta: float) -> void:
+		var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/highdraft_scenery.gd::_process")
 		if not is_visible_in_tree():
 			return
 		var cam := get_viewport().get_camera_3d()

@@ -643,6 +643,7 @@ func _build_trail() -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/vfx.gd::_process")
 	if player == null:
 		return
 	_clock += delta

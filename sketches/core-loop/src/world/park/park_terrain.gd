@@ -168,6 +168,7 @@ func _exit_tree() -> void:
 
 
 func _process(_delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/world/park/park_terrain.gd::_process")
 	var t0 := Time.get_ticks_usec()
 	if _last_frame_usec > 0:
 		frame_usec_max = maxi(frame_usec_max, t0 - _last_frame_usec)

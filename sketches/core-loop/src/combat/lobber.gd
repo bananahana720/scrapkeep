@@ -133,6 +133,7 @@ func recovering() -> bool:
 
 
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/lobber.gd::_physics_process")
 	_update_flash(delta)
 	_move(delta, Vector3.ZERO)
 	if not _in_play() or target == null or not is_on_floor():

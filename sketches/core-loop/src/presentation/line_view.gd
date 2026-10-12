@@ -129,6 +129,7 @@ static func _material(over := false) -> StandardMaterial3D:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/line_view.gd::_process")
 	step(delta)
 
 

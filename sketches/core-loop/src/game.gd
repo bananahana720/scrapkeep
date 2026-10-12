@@ -290,6 +290,7 @@ func _exit_tree() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/game.gd::_physics_process")
 	# The listener joins the bus after the first frame, once the scene is built, so a test that
 	# builds its own Progress on this bus in its first frame hears each fact once.
 	if not _progress_ready:
@@ -302,6 +303,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/game.gd::_process")
 	summary_guard_left = maxf(0.0, summary_guard_left - delta)
 	if test_mode:
 		return

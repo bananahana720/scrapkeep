@@ -34,6 +34,7 @@ func setup(ctx_ref, vfx_ref) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/status_marks.gd::_physics_process")
 	_clock += delta
 
 

@@ -228,6 +228,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/hotwire_screen.gd::_process")
 	if game == null:
 		return
 	_wire()

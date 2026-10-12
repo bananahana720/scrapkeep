@@ -1096,6 +1096,7 @@ func _step_armor(ball: Vector3, delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/build/build.gd::_physics_process")
 	if ctx == null or not ctx.flow.in_play():
 		return
 	if not _declared:

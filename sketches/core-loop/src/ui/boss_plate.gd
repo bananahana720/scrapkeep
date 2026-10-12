@@ -159,6 +159,7 @@ func _on_deflected(enemy: Node3D, _kind: String, _punch: float, _plating: float)
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/boss_plate.gd::_process")
 	advance(delta)
 	active()
 	queue_redraw()

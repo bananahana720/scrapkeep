@@ -166,6 +166,7 @@ func _roam(to_ball: Vector3) -> Vector3:
 # --- The loop -------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/counter.gd::_physics_process")
 	_update_flash(delta)
 	if not _in_play() or target == null:
 		_idle(delta)

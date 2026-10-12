@@ -363,6 +363,7 @@ func _zap_zone(zone: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/build/element_field.gd::_process")
 	_flicker += delta
 	for slab in _slabs:
 		var mat: StandardMaterial3D = slab["material"]

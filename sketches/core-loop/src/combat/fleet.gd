@@ -208,6 +208,7 @@ func build_read() -> Dictionary:
 
 
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/fleet.gd::_physics_process")
 	if ctx == null:
 		return
 	habits.tick(delta)

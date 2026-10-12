@@ -259,6 +259,7 @@ static func _detail(text: String) -> String:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/build/fabricators.gd::_process")
 	for fab in _fabs:
 		var glyph: MeshInstance3D = fab["glyph"]
 		glyph.rotate_y(delta * 2.2)

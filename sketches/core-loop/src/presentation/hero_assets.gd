@@ -481,6 +481,7 @@ func _fit(rec: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/hero_assets.gd::_process")
 	_reaction_clock += delta
 	for key in _players.keys():
 		var rec: Dictionary = _players[key]

@@ -54,6 +54,7 @@ func drawn_words() -> PackedStringArray:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/heft_dial.gd::_process")
 	needle = lerpf(needle, target(), 1.0 - exp(-SWING * delta))
 	_flash = maxf(0.0, _flash - delta)
 	queue_redraw()

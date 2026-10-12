@@ -55,6 +55,7 @@ func offer(id: String) -> void:
 
 
 func _process(_delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/callouts.gd::_process")
 	if game == null:
 		return
 	var playing: bool = game.flow.in_play()

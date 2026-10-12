@@ -461,6 +461,7 @@ func _poly_player(bus: String, node_name: String) -> AudioStreamPlayer:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/audio.gd::_process")
 	clock += delta
 	_step_cannon_cues()
 	if not sound_ready:

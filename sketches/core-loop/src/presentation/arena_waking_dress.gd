@@ -330,6 +330,7 @@ func _flush(parent: Node3D, batches: Dictionary) -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/arena_waking_dress.gd::_physics_process")
 	_follow_reactor()
 
 

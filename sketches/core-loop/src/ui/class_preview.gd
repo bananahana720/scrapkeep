@@ -415,6 +415,7 @@ func _build_props() -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/class_preview.gd::_process")
 	if ball == null:
 		return
 	_time += delta

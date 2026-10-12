@@ -264,6 +264,7 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/world/contraptions.gd::_process")
 	for p in _puffs.duplicate():
 		p["left"] -= delta
 		var f: float = 1.0 - p["left"] / PUFF_SECONDS

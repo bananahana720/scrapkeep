@@ -429,6 +429,7 @@ func _build_streaks(map) -> void:
 	streaks.material_override.set_shader_parameter("opacity", 0.018)
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/set_dressing.gd::_process")
 	visible = _active and ctx.flow.in_play()
 	if not visible:
 		return

@@ -79,6 +79,7 @@ func effective(pilot: String, slot: String) -> Dictionary:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/cosmetic_presentation.gd::_process")
 	if ctx == null or ctx.player == null:
 		return
 	var rec: Dictionary = hero.shell_of(ctx.player)

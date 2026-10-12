@@ -900,6 +900,7 @@ static func free_spot(want: Rect2, placed: Array[Rect2], band: Rect2) -> Rect2:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/hud.gd::_process")
 	if game == null:
 		return
 	var size := _screen_size()
@@ -1012,6 +1013,7 @@ func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
 # Simulated time: the tally of a build's trying and the part name's 1.2 s run on the physics
 # tick, never the wall clock.
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/hud.gd::_physics_process")
 	if game == null:
 		return
 	if _engaged:

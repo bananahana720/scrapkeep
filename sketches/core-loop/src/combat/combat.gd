@@ -1092,6 +1092,7 @@ func discharge_preview(speed: float) -> Dictionary:
 # --- The tick -----------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/combat.gd::_physics_process")
 	if ctx == null:
 		return
 	var playing: bool = ctx.flow.in_play()

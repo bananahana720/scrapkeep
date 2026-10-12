@@ -181,6 +181,7 @@ class LampPool extends Node3D:
 			_lights.append(light)
 
 	func _process(delta: float) -> void:
+		var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/world_look.gd::_process")
 		_wait -= delta
 		if _wait > 0.0 or not is_visible_in_tree():
 			return

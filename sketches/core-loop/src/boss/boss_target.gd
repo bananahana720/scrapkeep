@@ -186,6 +186,7 @@ func telegraph() -> Node3D:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/boss/boss_target.gd::_process")
 	if _flash <= 0.0:
 		return
 	_flash -= delta

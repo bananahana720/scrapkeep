@@ -648,6 +648,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/class_card.gd::_process")
 	_shake = maxf(0.0, _shake - delta)
 	rotation = sin(_shake * 70.0) * 0.035 * (_shake / SHAKE)
 	openness = move_toward(openness, 1.0 if is_open() else 0.0, delta * RATE * (0.35 + openness))

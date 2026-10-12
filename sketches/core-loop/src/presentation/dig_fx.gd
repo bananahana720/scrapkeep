@@ -176,6 +176,7 @@ static func _burst_count(kind: String) -> int:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/dig_fx.gd::_process")
 	if _frozen or not available or not active:
 		return
 	_clock += delta

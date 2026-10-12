@@ -788,6 +788,7 @@ func _screen() -> Vector2:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/screens.gd::_process")
 	_guard = maxf(0.0, _guard - delta)
 	if ending_open():
 		game.summary_guard_left = maxf(game.summary_guard_left, game.SUMMARY_GUARD)

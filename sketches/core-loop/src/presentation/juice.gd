@@ -255,6 +255,7 @@ func _on_slammed(_at: Vector3, strength: float, _flatness: float) -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/presentation/juice.gd::_process")
 	if player == null:
 		return
 	# The springs run on scaled time, so a hit-stop freezes the squash mid-frame too.

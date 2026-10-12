@@ -2,6 +2,12 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
+const BotProfile := preload("res://tools/bot_profile.gd")
+const BotAudit := preload("res://tools/bot_audit.gd")
+const UNREAD_VISUALS := [
+	"res://src/presentation/warden_ring.gd",
+	"res://src/presentation/set_dressing.gd", "res://src/presentation/vfx.gd"
+]
 const SimClock := preload("res://src/core/sim_clock.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
@@ -20,6 +26,12 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
 # writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
 # diagnostic run. --fixed-fps 90 makes one frame one physics tick, faster than real time.
+# --bot-profile=1 writes exclusive callback timings and sampled Performance monitors.
+# --bot-audit=1 writes full-precision committed bus events with stable object tokens.
+# --bot-no-mix=1 skips sample arithmetic while retaining music transport.
+# --bot-no-pilot-tracks=1 skips pilot bone sampling, retaining playback and signals.
+# --bot-no-visuals=1 skips selected unread idle callbacks only
+# on the headless display. Camera, HUD, hit-stop and collision work remain active.
 # --chain-hand=0 turns off the explorer's two-hook hand (bot_driver's control switch).
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
@@ -40,6 +52,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # completed audio bake, and physics-tick hit-stop gates (src/core/sim_clock.gd).
 # Replay evidence is specific to the checked machine, build, policy and table.
 
+var _audit
 var _settings := {}
 var _seeds: Array[int] = []
 var _index := -1
@@ -51,12 +64,16 @@ var _results: Array[Dictionary] = []
 var _tick_trace: FileAccess
 var _scrap_serial := 0
 var _counter_serial := 0
+var _pilot_tracks_skipped := 0
 var _allocation_noise: Array[RefCounted] = []
 
 
 func _initialize() -> void:
 	SimClock.ticks = true
 	_settings = _parse(OS.get_cmdline_user_args())
+	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
+	if BotProfile.enabled:
+		root.add_child(BotProfile.EndMarker.new(BotProfile))
 	# The repeat test perturbs object IDs without touching policy, seed or physics.
 	for i in int(_settings.get("allocation-noise", "0")):
 		_allocation_noise.append(RefCounted.new())
@@ -155,6 +172,9 @@ func _next() -> void:
 
 
 func _physics_process(delta: float) -> bool:
+	if BotProfile.enabled:
+		BotProfile.begin_tick()
+	var _bot_scope = BotProfile.scope("bot_driver")
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
@@ -174,6 +194,11 @@ func _physics_process(delta: float) -> bool:
 		if _settings.has("from-stage"):
 			var entrance: Dictionary = _game.flow.saved_run()
 			resume = int(entrance.get("stage", 0)) == int(_settings["from-stage"])
+		if _settings.get("bot-audit", "0") == "1":
+			_audit = BotAudit.new()
+			_audit.setup(_game.events, _driver, _out.path_join("events-%d.ndjson" % _seeds[_index]))
+		if _settings.get("bot-no-mix", "0") == "1" and DisplayServer.get_name() == "headless":
+			_game.presentation.audio.engine.bot_skip_samples = true
 		_driver.start(resume)
 		if _settings.has("from-stage") and not resume and int(_settings["from-stage"]) != 1:
 			_game.flow.enter_stage(int(_settings["from-stage"]), Vector3.ZERO, false)
@@ -201,7 +226,13 @@ func _physics_process(delta: float) -> bool:
 	print("bot_run: %s seed %d (%s) -> %s at stage %d, %d ticks (%.1f s game), %.1f s wall"
 		% [record["policy"], record["seed"], record["class"], record["outcome"], record["stage_reached"],
 			record["ticks"], record["game_seconds"], wall])
+	if BotProfile.enabled:
+		_bot_scope = null
+		BotProfile.finish(_out.path_join("profile-%d.json" % _seeds[_index]))
+	_audit = null
 	_game.free()
+	if _settings.get("bot-no-pilot-tracks", "0") == "1":
+		print("bot_run: %d cosmetic pilot tracks disabled; playback retained" % _pilot_tracks_skipped)
 	_game = null
 	_tick_trace = null
 	_next()
@@ -213,6 +244,14 @@ static func _vector(v: Vector3) -> Array:
 
 
 func _on_node_added(node: Node) -> void:
+	if _settings.get("bot-no-pilot-tracks", "0") == "1" and DisplayServer.get_name() == "headless" and node is AnimationPlayer:
+		_disable_pilot_tracks(node)
+		_disable_pilot_tracks.call_deferred(node)
+	if _settings.get("bot-no-visuals", "0") == "1" and DisplayServer.get_name() == "headless":
+		var script = node.get_script()
+		if script != null and script.resource_path in UNREAD_VISUALS:
+			node.set_process(false)
+			node.set_process.call_deferred(false)
 	if _game == null or _game.build == null:
 		return
 	if "_strafe" in node:
@@ -257,3 +296,25 @@ func _finish() -> void:
 		total += float(r["wall_seconds"])
 	print("bot_run: %d run(s) written to %s, %.1f s wall in runs" % [_results.size(), ProjectSettings.globalize_path(_out), total])
 	quit(0)
+
+
+func _process(_delta: float) -> bool:
+	if BotProfile.enabled:
+		BotProfile.idle_begin()
+	return false
+
+
+func _disable_pilot_tracks(animator: AnimationPlayer) -> void:
+	if not is_instance_valid(animator):
+		return
+	var parent := animator.get_parent()
+	while parent != null and parent.name != "AnimatedPilot":
+		parent = parent.get_parent()
+	if parent == null:
+		return
+	for id in animator.get_animation_list():
+		var animation := animator.get_animation(id)
+		for track in animation.get_track_count():
+			if animation.track_get_type(track) in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D, Animation.TYPE_SCALE_3D, Animation.TYPE_BLEND_SHAPE] and animation.track_is_enabled(track):
+				_pilot_tracks_skipped += 1
+				animation.track_set_enabled(track, false)

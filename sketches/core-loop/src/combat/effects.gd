@@ -61,6 +61,7 @@ func clear() -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/combat/effects.gd::_process")
 	_mesh.clear_surfaces()
 	_arcs = _age(_arcs, delta)
 	_rings = _age(_rings, delta)

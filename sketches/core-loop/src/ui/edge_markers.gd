@@ -253,6 +253,7 @@ static func _on_edge(view: Rect2, centre: Vector2, dir: Vector2) -> Vector2:
 
 
 func _process(_delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/ui/edge_markers.gd::_process")
 	if game == null:
 		return
 	note_pockets(get_viewport_rect().size)

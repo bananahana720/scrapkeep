@@ -208,6 +208,7 @@ func shake(amount: float, time := 0.4) -> void:
 
 
 func _process(delta: float) -> void:
+	var _bot_scope = preload("res://tools/bot_profile.gd").scope("src/movement/chase_camera.gd::_process")
 	if target == null:
 		return
 	var velocity: Vector3 = target.state.velocity
