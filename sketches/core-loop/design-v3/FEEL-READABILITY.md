@@ -459,3 +459,40 @@ Row numbers use coordinator `ROADMAP.md` at `494cd44`. Rows 5 and 6 are owned he
 | Spike frame time | 6 Readability; 10 Performance contribution | 240 live frames/scene, p99 ≤ 16.7 ms at 1080p; no capture overhead in sample, no claim of full performance qualification |
 | Final native performance | 10 Performance | Coordinator's separate 120 s traversal/combat/boss runs, each p99 ≤ 16.7 ms, quiet GPU on Andrew's PC |
 | Integration and feel verdict | 11 Robustness; 12 Hand-off | Coordinator smoke on admitted candidate, source-hash-bound evidence, Andrew launches and plays; automation never substitutes for his verdict |
+
+## Weight classes (owner direction, 2026-10-11)
+
+`EventKinds.WEIGHT` owns impact weight. `EventKinds.WEIGHTED` gives each fact a class or an argument rule, an allegiance and a visual. `EventKinds.weigh(fact, args)` returns the shared record for hit-stop, shake, camera, VFX and sound. Presentation must consume that record together. Impact must never hide a telegraph or change a ring's measured reach.
+
+Start values; `EventKinds.WEIGHT` is authoritative.
+
+| Class | Stop, ms | Shake | Kick, m | FOV punch, degrees | FX scale | Body and pitch |
+| --- | --- | --- | --- | --- | --- | --- |
+| none | 0 | 0 | 0 | 0 | 0.8 | none |
+| hit | `Juice.stop_ms_for(damage)` | 0.1 | 0.1 | 0 | 1.0 | none |
+| heavy | `Juice.stop_ms_for(damage, crit, true)` | 0.3 | 0.45 | -4 | 1.4 | `womp`, 0 semitones |
+| massive | 55 | 0.4 | 0.6 | -6 | 1.9 | `chunk_low`, -12 semitones |
+| climax | 60 | 0.5 | 0.6 | +9 | 2.5 | `chunk_low`, -17 semitones |
+
+Hit and heavy stops read the existing damage band through `Juice.stop_ms_for`. Non-critical damage at 0, 10, 30 and 60 strictly orders all five stops. The strike's `IMPACT.stop` selects its class. Its shake must remain within half to one-and-a-half times that class's shake, with none fixed at zero. Record strength stays in 0..1 and scales shake, kick and FOV punch. FX scale changes particle count and glyph thickness, never damage or telegraph geometry.
+
+| Allegiance | Clamp |
+| --- | --- |
+| player | The class can request stop, shake and kick. The existing strike whitelist and stop budgets still decide whether a stop lands. |
+| motion | Stop is zero. |
+| hostile | Stop, shake and kick are zero, including damage taken and player death. |
+| reward | Stop is zero. |
+
+Heavier means lower and longer, never louder. Every body layer plays at db 0 through the existing bank and priority trims. The baked `womp` is 0.62 seconds and `chunk_low` is 0.55 seconds at its original pitch. Lowering `chunk_low` by 12 and 17 semitones gives massive and climax longer playback and strictly lower zero-crossing rates than heavy. No new recipe is needed. Listening acceptance still belongs to Andrew.
+
+Class slams must keep distinct bank ids on the frame they share with `slammed`. Three authored cues replace the borrowed voices (coordinator ruling, 2026-10-11):
+
+- `ultimate_landed` uses `ultimate_land`: a class-neutral sub-bass drop under a short Dm7 stab, 1.25 seconds. The class body layer carries the pilot.
+- `demo_slammed` uses `kest_demo_knock`: a dry knock followed by three ticking pips, one per mini charge, 0.4 seconds.
+- `skid_smashed` uses `rivet_skid_plate`: a short metal scrape into one heavy plate thunk, 0.405 seconds.
+
+Each primary cue lives in `EventKinds.ROWS` and resolves through `Rows.sound`; `WEIGHTED` holds no sound override. The existing `sound_next` ids `kest_falling_triad` and `rivet_snare_flam` stay reserved. The ultimate keeps its cue distinct from a vault kill's `Audio.VAULT_KILL_SOUND` on the same frame. At unshifted playback, `ultimate_land` measures 110.4 zero crossings per second over 1.25 seconds, below and longer than the live shared slam cue returned by `Rows.sound("slammed")`. Both have the same -1 dB bank trim. Andrew's listening verdict on the authored cues remains open. The harpoon smash guard follows `Rows.sound("slammed")`, so a smash plays that cue once, one womp and one crack on its impact frame.
+
+The universal ownership and audibility checks also cover the existing shared facts. Neutral `slammed` uses the authored `core_slam`, a 105-to-55 Hz sweep with a rounded attack and sustained mass; neutral `enemy_rebounded` uses `shell_spring`; Rivet's `cc_ignored` uses `tenacity_choke`. Their primary cues carry no other pilot's voice. `posture_changed` and its presentation sub-fact `posture_break` use the shared `drop_landing`; the sub-fact lives in `UI_ROWS` because it is not a bus signal. `kill_pop` has a -7 dB trim, the minimum correction needed to stay within 6 dB of `slam_boom` when the kill rule resolves to massive or climax. The rebound, ignored-control and posture bindings use existing recipes. Their listening effect still needs Andrew's verdict.
+
+Owner default: the Warden-break freeze rides the player's `posture_break` strike, and `beacon_unsealed` stays a reward with no stop. Andrew may veto this default and amend this page.

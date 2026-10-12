@@ -925,7 +925,7 @@ Every block inherits `K-UNITS.md`'s shared rules (`K-UNITS.md:5-16`): own worktr
 
 - **GOAL.** A read-only logbook page shows every codex entry's status, and run tallies feed the profile.
 - **SCOPE.** `src/ui/logbook_page.gd` (new), `src/core/codex.gd` (a status per entry; the `seen` list is the only prompt, `:36-44`, `:142-150`), `src/core/profile.gd` (tally keys), `src/core/run_state.gd` (run tallies), `tests/logbook_test.gd` (new).
-- **CONTEXT.** `BIBLE.md:527`, `:576`; `src/core/achievements.gd:50-53`; B5's schema 4 `seen` list (`P-UNITS.md:191`).
+- **CONTEXT.** `BIBLE.md:527`, `:576-586` (582: a quit before zone completion replays the entrance; 584: reloading cannot duplicate completed rewards; 586: permanent discoveries survive defeat; citation corrected 2026-10-11 at the SR12 merge); `src/core/achievements.gd:50-53`; B5's schema 4 `seen` list (`P-UNITS.md:191`).
 - **ACCEPTANCE.** Every registered entry resolves to a status and opening one clears its marker; a scripted full run's tallies (stages cleared, time, kills, deaths, Wardens seen) equal its run log; the profile round-trips.
 - **VERIFY.** Base checks; `npm run sketch:smoke -- --sketch core-loop --test 'logbook_test' --test 'codex_coverage_test' --test 'profile_store_test'` (3 files).
 - **TIMEBOX.** 3 h.

@@ -40,6 +40,8 @@ Each file has one skin. Preserve animated nonuniform scales, which carry the squ
 
 The tail, crest, jaw and tool extend Rivet's original 20-bone schema. `curl.R/L` remain available for claws or finger-like details. Bones inherit full scale. Every mesh vertex has one rigid weight. All rest bone axes use a short +Y tail, so pose-table XYZ rotations have consistent meaning.
 
+The clip builder accepts optional `pelvis` angles as `{"pitch": degrees, "roll": degrees, "yaw": degrees}`, with the same XYZ axes as `torso`. It rotates the whole seated chain about the pelvis head without translating that head or `root`. Torso angles still split across the two spine bones. The pelvis rotates before the hand solver runs, so planted hands keep their Pod-space targets. Missing pelvis angles are zero; a table without `pelvis` follows the existing build route. The clip verifier applies the spine's 6-degree loop cap to the pelvis and retains its position, clearance and contact checks.
+
 ## Reproduce
 
 Run from the clone root with Blender 5.2.2, Python/Pillow and ffmpeg. These commands use cached ImageGen sheets and do not call a provider or git.

@@ -58,13 +58,26 @@ const ROWS := {
 # marked block per pilot; each P-C unit fills its own, one line a key in the voice of ROWS, and
 # edits nothing else in this table.
 const SET_PIECE_LINES := {
+	# Shared lines for the framework knobs (every pilot's depth-4 nodes set the same values);
+	# a pilot overrides one as "<class_id>:<knob>" in its own block.
+	"ult_beats": "Q lasts two beats longer.",
+	"ult_volley": "Q strikes one more each beat.",
+	"ult_radius": "Q lands two metres wider.",
+	"ult_encore": "Q can land a second time.",
 	# --- P-C Sable set piece lines ---
+	"ball_lightning": "Set piece: Ball Lightning",
+	"outpost": "Set piece: Outpost",
 	# --- end Sable ---
 	# --- P-C Rivet set piece lines ---
 	# --- end Rivet ---
 	# --- P-C Kest set piece lines ---
 	# --- end Kest ---
 	# --- P-C Tarn set piece lines ---
+	"redjaw_rend": "Climb the line, tow them, rend.",
+	"rake_run": "Rake both sides, then sweep faster.",
+	"vice_leap": "Hurl the catch, leap into the vice.",
+	"tarn:ult_volley": "Q rakes wider or grabs more.",
+	"tarn:ult_encore": "Q can rend a second landing.",
 	# --- end Tarn ---
 	# --- P-C Tally set piece lines ---
 	# --- end Tally ---
@@ -97,9 +110,10 @@ static func effect_line(node: Dictionary, world_one: bool, shell: bool) -> Strin
 	return String(node.get("effect", ""))
 
 
-# The set piece line for a node: its swapped-in ultimate id first, then any ult_ knob it sets.
+# The set piece line for a node: its swapped-in ultimate id first, then any ult_ knob it sets,
+# read as "<pilot>:<knob>" (the class id the card is offered to) before the shared knob line.
 # "" when none is seeded. Independent of the world-one flag.
-static func set_piece_line(node: Dictionary, table: Dictionary = SET_PIECE_LINES) -> String:
+static func set_piece_line(node: Dictionary, table: Dictionary = SET_PIECE_LINES, pilot := "") -> String:
 	var swap = node.get("swap", {})
 	if swap is Dictionary and swap.has("ultimate"):
 		var id := String(swap["ultimate"])
@@ -108,6 +122,10 @@ static func set_piece_line(node: Dictionary, table: Dictionary = SET_PIECE_LINES
 	var knob = node.get("knob", {})
 	if knob is Dictionary:
 		for k in knob:
-			if String(k).begins_with("ult_") and table.has(String(k)):
+			if not String(k).begins_with("ult_"):
+				continue
+			if table.has(pilot + ":" + String(k)):
+				return String(table[pilot + ":" + String(k)])
+			if table.has(String(k)):
 				return String(table[String(k)])
 	return ""

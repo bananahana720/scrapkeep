@@ -20,7 +20,16 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 # pattern levels and punch add. A stage-1 build is modest and a late one absurd
 # (build_parts_test measures it); combat caps what is drawn.
 
+# SG5 start values, comps/gunfire/scrolls-and-synergies.md:86 and comps/README.md row 7:
+# payout approaches this share of the triggering hit; copies steepen, never raise the cap.
+const BURDEN_PAYOUT_CAP := 0.75
+const BURDEN_PAYOUT_SLOPE := 0.25
+
 const CATALOGUE := {
+	"load_dividend": {"touches": "fire", "name": "Load Dividend", "verb": "Make burdens pay", "text": "Burden hit bonus; %d%% cap" % roundi(BURDEN_PAYOUT_CAP * 100.0),
+		"rarity": "rare", "tier": 2, "family": "weapon", "tags": ["mass"], "icon": "damage",
+		"trigger": "on_hit", "stack": "hyperbolic", "cap": BURDEN_PAYOUT_CAP,
+		"effect": {"do": "burden_payout", "per": BURDEN_PAYOUT_SLOPE}},
 	# Common: gate fodder. Only these may be plain percentages.
 	"hot_rivets": {"touches": "fire", "name": "Hot Rivets", "verb": "Hit harder", "text": "+4 punch, +12% weapon damage",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["kinetic"], "punch": 4.0,
@@ -184,6 +193,16 @@ const GENERATED_SHARE := 0.25
 # here equips a part: build.gd offers one after Warden I as a Fit / Recycle choice. Recycle pays
 # recycle_commons common-part recycle values (BUILD-SYSTEMS.md: two for H1, three for H2).
 # Spark Tread needs armour mode too: its cost is rolling wear, which only armour mode takes.
+# Burden start values (SG4; comps/gunfire/scrolls-and-synergies.md:86 sweep of 0 to 10 burdens,
+# survival bar in burden_parts_test): each burden is a small pure cost, so ten stay a felt
+# downside and not a trap. One named place, never spread across the rows.
+const BURDEN_HP := 4.0
+const BURDEN_SCRAP_LOSS := 0.05
+const BURDEN_MAGNET_LOSS := 0.10
+# Hot-wired parts held at once (SG4): one in world one, as before; from world 2 more than one.
+# A start value. Burdens never count against it.
+const HOTWIRE_CAP_WORLD_ONE := 1
+const HOTWIRE_CAP_LATER := 2
 const HOTWIRED := {
 	"riveted_shell": {"name": "Riveted Shell", "tags": ["mass"], "needs_armor": true, "recycle_commons": 2,
 		"label": "{armor} armour. Air steering \u2212{steer}%.",
@@ -193,6 +212,23 @@ const HOTWIRED := {
 		"label": "Big signature hits. {wear} rolling wear.",
 		"upside": {"icon": "cat_damage", "words": "+{bonus}% signature hit"},
 		"downside": {"icon": "cat_defense", "words": "{wear_x}x rolling wear"}},
+	# Burden parts (SG4, comps/gunfire/scrolls-and-synergies.md:86): rare, a pure stated downside, no
+	# upside side. Not loot: only a visible optional pocket's pay.named pays one. "part" is the
+	# part's own row (row(), def() and has() find it there; rows() never lists it, so no shelf,
+	# gate or tree offer can roll it); "{hp}", "{scrap}" and "{magnet}" are resolved from that row
+	# by burden_cost(), so the words follow the numbers.
+	"cracked_plating": {"name": "Cracked Plating", "tags": ["mass"], "burden": true, "recycle_commons": 1,
+		"label": "Pure cost: {hp} max health.",
+		"downside": {"icon": "cat_defense", "words": "−{hp} max health"},
+		"part": {"verb": "Carry the crack", "family": "stat", "max_hp_bonus": -BURDEN_HP}},
+	"thin_pickings": {"name": "Thin Pickings", "tags": ["anchor"], "burden": true, "recycle_commons": 1,
+		"label": "Pure cost: {scrap}% scrap per kill.",
+		"downside": {"icon": "cat_utility", "words": "−{scrap}% kill scrap"},
+		"part": {"verb": "Leave scraps behind", "family": "stat", "kill_scrap": 1.0 - BURDEN_SCRAP_LOSS}},
+	"slack_coil": {"name": "Slack Coil", "tags": ["arc"], "burden": true, "recycle_commons": 1,
+		"label": "Pure cost: {magnet}% magnet reach.",
+		"downside": {"icon": "cat_utility", "words": "−{magnet}% magnet reach"},
+		"part": {"verb": "Let the pull go slack", "family": "stat", "magnet": 1.0 - BURDEN_MAGNET_LOSS}},
 }
 # One common part's recycle value in cogs (design-v3/research/economy/ECONOMY.md, Cogs: recycling).
 const RECYCLE_COMMON := 10
@@ -258,6 +294,8 @@ static func row(part_id: String) -> Dictionary:
 		return authored
 	if EVOLVED.has(part_id):
 		return _settled(EVOLVED[part_id])
+	if is_burden(part_id):
+		return _settled(_burden_spec(part_id))
 	var generated := ItemGen.generated_row(part_id)
 	return _settled(generated) if not generated.is_empty() else generated
 
@@ -272,7 +310,7 @@ static func def(part_id: String) -> Resource:
 
 
 static func has(part_id: String) -> bool:
-	return rows().has(part_id) or EVOLVED.has(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
+	return rows().has(part_id) or EVOLVED.has(part_id) or is_burden(part_id) or ItemGen.is_generated(part_id) and not ItemGen.parse(part_id).is_empty()
 
 
 # The authored pool, catalogue first. Generated recipes are unbounded and not listed.
@@ -287,17 +325,64 @@ static func hotwired(part_id: String) -> Dictionary:
 
 # The hot-wired parts an offer may show. A part that needs armour mode (Riveted Shell is a
 # pure downside without it, DESIGN-NOTES H1) is left out when armor_mode is false. At most
-# one hot-wired part is held, so nothing is offered once one is. Pure: read armor_mode from
-# tuning.armor() or RunState.armor_mode.
-static func hotwire_offer(armor_mode: bool, held: Array = []) -> Array:
-	if held.any(func(key): return HOTWIRED.has(key)):
+# one hot-wired part is held in world one and hotwire_cap(world) from world 2, so nothing is
+# offered once the cap is held; a held copy is never offered again. A burden is never offered
+# here (a pocket's pay.named is its only door) and never counts against the cap. Pure: read
+# armor_mode from tuning.armor() or RunState.armor_mode, world from RunState.world.
+static func hotwire_offer(armor_mode: bool, held: Array = [], world := 1) -> Array:
+	var held_count := held.filter(func(key): return HOTWIRED.has(key) and not is_burden(key)).size()
+	if held_count >= hotwire_cap(world):
 		return []
 	var out: Array = []
 	for key in HOTWIRED:
+		if is_burden(key) or key in held:
+			continue
 		if HOTWIRED[key].get("needs_armor", false) and not armor_mode:
 			continue
 		out.append(key)
 	return out
+
+
+# How many hot-wired parts a pilot may hold in this world: one in world one, more from world 2.
+static func hotwire_cap(world: int) -> int:
+	return HOTWIRE_CAP_WORLD_ONE if world <= 1 else HOTWIRE_CAP_LATER
+
+
+static func is_burden(part_id: String) -> bool:
+	return bool(HOTWIRED.get(part_id, {}).get("burden", false))
+
+
+# The burden ids, in row order.
+static func burdens() -> Array:
+	return HOTWIRED.keys().filter(func(key): return is_burden(key))
+
+
+# A burden's shown cost: one icon and at most three words, the numbers read from its own part
+# row. {} for an id that is not a burden.
+static func burden_cost(part_id: String) -> Dictionary:
+	if not is_burden(part_id):
+		return {}
+	var cost: Dictionary = HOTWIRED[part_id]["downside"]
+	return {"icon": cost["icon"], "words": _burden_fill(cost["words"], HOTWIRED[part_id]["part"])}
+
+
+static func _burden_fill(text: String, part: Dictionary) -> String:
+	return text.replace("{hp}", str(int(round(-float(part.get("max_hp_bonus", 0.0)))))) \
+		.replace("{scrap}", str(int(round((1.0 - float(part.get("kill_scrap", 1.0))) * 100.0)))) \
+		.replace("{magnet}", str(int(round((1.0 - float(part.get("magnet", 1.0))) * 100.0))))
+
+
+# A burden's part row: its authored fields, rare, with the shown label as its text.
+static func _burden_spec(part_id: String) -> Dictionary:
+	var hot: Dictionary = HOTWIRED[part_id]
+	var spec: Dictionary = hot["part"].duplicate(true)
+	spec["name"] = hot["name"]
+	spec["tags"] = hot["tags"]
+	spec["rarity"] = "rare"
+	spec["tier"] = 1
+	spec["icon"] = String(hot["downside"]["icon"]).trim_prefix("cat_")
+	spec["text"] = _burden_fill(hot["label"], hot["part"])
+	return spec
 
 
 # Cogs a hot-wired part recycles for; 0 for an id that is not hot-wired.
@@ -405,6 +490,8 @@ static func offer_pool(class_id: String, rarities: Array) -> Array:
 	for key in all:
 		var r: Dictionary = all[key]
 		if listed and not Synergies.table.part_in_play(key):
+			continue
+		if is_burden(key):
 			continue
 		if not r["rarity"] in rarities or r.get("shop_only", false) or not seam_met(r.get("needs", "")):
 			continue

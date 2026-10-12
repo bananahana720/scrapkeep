@@ -1,6 +1,7 @@
 extends "res://src/combat/enemy.gd"
 
 const Roster := preload("res://src/combat/roster.gd")
+const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 
 # What every Fleet reinforcement shares (DESIGN-V2 section 10): an animal crew with its
 # anti-ball tool as the biggest shape, and one loop, roam -> warn -> live -> rest.
@@ -16,6 +17,10 @@ const Roster := preload("res://src/combat/roster.gd")
 #   for how hard that hit must be; the Warden keeps its own posture break.
 # - A hold the player breaks by their own action ends the live phase for good: the pit
 #   shatters, the net tears, the cable snaps. It never re-catches on the next tick.
+# - An attack that ran its live phase ends in recovery (BIBLE "A committed attack means
+#   what it shows": prepare, commit, execute, recover): for recovery_seconds, the one value
+#   every ordinary attack reads from telegraph_record.gd, the unit stands where it struck
+#   and starts nothing. The recovery runs inside rest_seconds, so the cadence is unchanged.
 #
 # Subclasses set the dials in _configure(), build the tool in _build_tool(), commit the
 # telegraph in _commit() and run the mechanic in _live(delta) -> bool (false ends it).
@@ -61,6 +66,10 @@ var impact_resist := 1.0
 # combat.gd's Ram Prow guard), and a pack kind must still take the prow shove.
 var stun_left := 0.0
 var staggers := 0
+# The vulnerable tail after an attack (W13-INTEGRATION-3 SQ1): the shared record value, and
+# the seconds of it left. Not a phase of its own: state_name() still reads "roam".
+var recovery_seconds := TelegraphRecord.RECOVERY
+var recover_left := 0.0
 
 var _t := 0.0
 var _rest := 0.0
@@ -98,6 +107,10 @@ func interrupt_speed() -> float:
 
 func stunned() -> bool:
 	return stun_left > 0.0
+
+
+func recovering() -> bool:
+	return recover_left > 0.0
 
 
 # --- Subclass hooks -------------------------------------------------------------------
@@ -163,8 +176,10 @@ func _physics_process(delta: float) -> void:
 	match phase:
 		Phase.ROAM:
 			_rest -= delta
-			_move(delta, Vector3.ZERO if stunned() else _roam(to_ball))
-			if not stunned() and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(to_ball):
+			var open := recovering()
+			recover_left = maxf(0.0, recover_left - delta)
+			_move(delta, Vector3.ZERO if stunned() or open else _roam(to_ball))
+			if not stunned() and not open and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(to_ball):
 				_warn(to_ball)
 		Phase.WARN:
 			_move(delta, Vector3.ZERO)
@@ -248,6 +263,8 @@ func _stagger() -> void:
 
 
 func _end() -> void:
+	# Only an attack that went live recovers; a broken or empty warning does not.
+	recover_left = recovery_seconds if phase == Phase.LIVE else 0.0
 	_facts_end(false)
 	if holds != null and holds.held(self):
 		holds.release(self, "expired")

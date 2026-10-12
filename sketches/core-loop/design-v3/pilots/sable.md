@@ -299,7 +299,7 @@ All clips run on the shared 25-bone `pilot-v1` rig at 30 fps, through the `anim_
 
 | Clip | Length | Trigger | Pose story |
 | --- | --- | --- | --- |
-| `idle_loop` | 4.0 s loop | none; the default | She leans toward her chosen exit while her eyes track the nearest enemy (`BIBLE.md:283`). Ears flick at 1.3 s and 3.1 s; one paw taps the spool brake lever in the bank beside the right yoke. |
+| `idle_loop` | 4.2 s loop (127 frames, 12 beats, PILOT-CLIPS.md:118-122) | none; the default | She leans toward her chosen exit while her eyes track the nearest enemy (`BIBLE.md:283`). Ears flick at 1.3 s and 3.1 s; one paw taps the spool brake lever in the bank beside the right yoke. |
 | `class_up` | 1.0 s | `heft_class_changed` | She reaches back to the rack and gives one wrench a quarter turn, then a short nod. |
 | `cast_special` | 0.6 s | `slot_cast` with slot `special` | She slaps the gauge lever (`GaugeLever`, "2: Arc discharge") in the bank beside the right yoke, ears pinned back. |
 | `cast_line` | 0.5 s | `line_skill_fired` | Both paws haul the spool brake (`SpoolBrake`, "3: Bank Shot") in the bank beside the right yoke, the body leaning into the whip. |

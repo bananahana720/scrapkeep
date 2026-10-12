@@ -76,6 +76,9 @@ var _pulses := {}
 var _last_state := {}
 var _shown: Array = []
 var _was_pulsing := false
+var _refund_pending := {}
+var _refund_flashes := {}
+var _refund_count := 0
 
 
 func _init() -> void:
@@ -179,6 +182,46 @@ func pulse_left(id: String) -> float:
 	return _pulses.get(id, 0.0)
 
 
+func cooldown_refunded(record: Dictionary) -> void:
+	if record.get("kind", "") != "cooldown_refunded":
+		return
+	var slot := String(record.get("slot", ""))
+	if not slots.any(func(entry): return slot_name(entry) == slot):
+		return
+	_refund_pending[slot] = int(_refund_pending.get(slot, 0)) + 1
+
+
+func refund_flash_count() -> int:
+	return _refund_count
+
+
+func refund_flash_left(slot: String) -> float:
+	return _refund_flashes.get(slot, 0.0)
+
+
+func _step_refunds(delta: float) -> void:
+	var was_flashing := not _refund_flashes.is_empty()
+	var hud := get_parent()
+	var game = hud.get("game") if hud != null else null
+	if game != null and game.player != null:
+		for record in game.player.abilities.drain_refunds():
+			cooldown_refunded(record)
+	for slot in _refund_flashes.keys():
+		_refund_flashes[slot] = maxf(0.0, float(_refund_flashes[slot]) - delta)
+		if _refund_flashes[slot] <= 0.0:
+			_refund_flashes.erase(slot)
+	for slot in _refund_pending.keys():
+		if refund_flash_left(slot) > 0.0:
+			continue
+		_refund_flashes[slot] = PULSE_SECONDS
+		_refund_count += 1
+		_refund_pending[slot] -= 1
+		if _refund_pending[slot] <= 0:
+			_refund_pending.erase(slot)
+	if not _refund_flashes.is_empty() or was_flashing:
+		queue_redraw()
+
+
 # A pick the ball refused: the slot shakes and flashes slate for SHAKE_TIME.
 func refuse(slot: String) -> void:
 	_refusals[slot] = SHAKE_TIME
@@ -233,6 +276,7 @@ func slot_look(entry: Dictionary) -> Dictionary:
 
 
 func step(delta: float) -> void:
+	_step_refunds(delta)
 	_clock += delta
 	for id in _pulses.keys():
 		_pulses[id] = maxf(0.0, _pulses[id] - delta)
@@ -326,6 +370,11 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 	frame.set_border_width_all({"ready": 3, "active": 3, "cooling": 1, "unavailable": 1}[state])
 	frame.set_corner_radius_all(radius)
 	draw_style_box(frame, rect)
+	var refund_left := refund_flash_left(name)
+	if refund_left > 0.0:
+		var row: Dictionary = EventKinds.UI_ROWS["cooldown_refunded"]
+		var refund_color := Color(row["color"], refund_left / PULSE_SECONDS)
+		draw_texture_rect(Icons.shape(row["shape"]), rect.grow(-rect.size.x * 0.2), false, refund_color)
 	if look["doubled"]:
 		var outer := StyleBoxFlat.new()
 		outer.draw_center = false
