@@ -201,6 +201,8 @@ func _snapshot(delta: float) -> Dictionary:
 		"velocity": _vector(_game.player.body().linear_velocity), "hp": _game.run.hp,
 		"mass": _game.run.mass, "scrap": _game.run.scrap, "caught": caught,
 		"bot_rng": str(_driver.rng.state), "run_rng": str(_game.ctx.rng.state),
+		"camera_rng": str(_game.camera._shake_rng.state),
+		"aim_origin": _vector(_game.ctx.aim_origin()), "aim_forward": _vector(_game.ctx.aim_forward()),
 		"yaw": _game.camera.yaw, "pitch": _game.camera.pitch, "enemies": enemies}
 
 
