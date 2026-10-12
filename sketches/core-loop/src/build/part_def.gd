@@ -80,6 +80,33 @@ const ICON_CATEGORIES := ["damage", "mobility", "defense", "utility", "charge", 
 @export var needs := ""
 # Sold only by Moss (a charge cell), never rolled by a gate, fabricator or vault.
 @export var shop_only := false
+@export var layer := "global"
+@export var reads: Array = []
+
+# SG3, comps/gunfire/scrolls-and-synergies.md:54. These name existing inputs;
+# they do not grant eligibility or change a part's effect.
+const TRIGGER_READS := {
+	"on_hit": "hit_damage", "on_kill": "kill_count", "on_smash": "impact_force",
+	"on_rebound": "rebound_speed", "on_vault": "vault_count", "on_charge_release": "charge_count",
+	"on_cloak_break": "cloak_seconds", "on_land": "impact_force", "on_speed_tier_up": "speed_tier",
+	"on_pickup": "scrap_mass", "on_damage_taken": "damage_taken", "timed": "elapsed_seconds",
+}
+const EFFECT_READS := {
+	"damage_reduction": ["damage_taken"], "heal_back": ["damage_taken", "max_hp"],
+	"brace": ["damage_taken", "impact_force"], "floor_hp": ["hp", "max_hp"],
+	"hp_per_mass": ["mass", "max_hp"], "price_scale": ["cogs_price"],
+	"speed": ["planar_speed"], "dash": ["planar_speed"], "air_jump": ["air_jumps"],
+	"ballast": ["mass", "ram_damage"], "rebound_strike": ["weapon_damage"],
+	"extra_hit": ["hit_damage", "proc_coefficient"], "last_word": ["hp", "max_hp", "hit_damage"],
+	"arm_hit": ["hit_damage"], "pin_bonus": ["pin_damage"], "pin_chain": ["pin_count"],
+	"rebound_crit": ["rebound_count", "hit_damage"], "relaunch_pin": ["pin_speed"],
+	"return_arc": ["damage_taken", "target_distance"], "bonus_scrap": ["kill_scrap"],
+	"scrap_burst": ["scrap_mass", "target_distance"], "echo_release": ["release_damage"],
+	"overcharge": ["release_damage", "ability_charges"], "cloak_extend": ["cloak_seconds"],
+	"domino": ["pin_speed", "target_distance"], "drone": ["magnet_reach"],
+	"ping": ["target_distance"], "perk": ["discovery_state"],
+	"zap": ["proc_coefficient", "target_distance"], "burst": ["proc_coefficient", "target_distance"],
+}
 
 
 # The cat_ glyph a row gets from its family when it names none (I2: weapon is damage,
@@ -118,7 +145,46 @@ static func from_row(row_id: String, row: Dictionary) -> Resource:
 	def.charges = row.get("charges", {})
 	def.needs = row.get("needs", "")
 	def.shop_only = row.get("shop_only", false)
+	def.reads = row.get("reads", def._read_stats())
+	var weapon_only: bool = def.family in ["weapon", "pattern"] and def.trigger == "" \
+		and def.elements.is_empty() and def.charges.is_empty() and def.effect.is_empty() \
+		and def.cooldown_scale == 1.0 and def.magnet == 1.0 and def.kill_scrap == 1.0 and def.max_hp_bonus == 0.0 \
+		and def.mods.keys().all(func(key): return String(key).begins_with("weapon_"))
+	def.layer = row.get("layer", "local" if weapon_only else "global")
 	return def
+
+
+func _read_stats() -> Array:
+	var out: Array = mods.keys()
+	if punch != 0.0 or not patterns.is_empty():
+		out.append("weapon_damage")
+	if cooldown_scale != 1.0:
+		out.append("movement_cooldown")
+	if magnet != 1.0:
+		out.append("magnet_reach")
+	if kill_scrap != 1.0:
+		out.append("kill_scrap")
+	if max_hp_bonus != 0.0:
+		out.append("max_hp")
+	for slot in charges:
+		out.append(slot + "_charges")
+	for action in elements:
+		out.append(action + "_element")
+	if TRIGGER_READS.has(trigger):
+		out.append(TRIGGER_READS[trigger])
+	var effect_id: String = effect.get("do", "")
+	out.append_array(EFFECT_READS.get(effect_id, []))
+	if effect_id in ["grant_charge", "slot_cooldown"]:
+		out.append(String(effect.get("slot", "special")) + ("_charges" if effect_id == "grant_charge" else "_cooldown"))
+	if effect_id in ["vault_charges", "vault_cooldown"]:
+		out.append(effect_id)
+	if out.is_empty():
+		out.append("part_count")
+	var unique: Array = []
+	for stat in out:
+		if not stat in unique:
+			unique.append(stat)
+	return unique
 
 
 # True when the part only scales numbers: no punch, pattern, element or behaviour. Only
