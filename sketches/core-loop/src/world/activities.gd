@@ -383,7 +383,7 @@ func pay_table(s: Site) -> Dictionary:
 	var pay: Dictionary = s.rule["pay"]
 	if pay.has("named"):
 		var named := String(pay["named"])
-		if Parts.rows().has(named) and ctx.stages.part_in_play(named):
+		if (Parts.rows().has(named) or Parts.is_burden(named)) and ctx.stages.part_in_play(named):
 			return {"named": named, "rarities": [Parts.rarity_of(named)]}
 	return {"named": "", "rarities": ItemGen.resolve_rarities(pay.get("rarities", ["common"]))}
 
