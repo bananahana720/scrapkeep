@@ -135,8 +135,12 @@ func _run() -> void:
 			prepared.overlay.position = home
 			prepared.overlay.visible = false
 	var source := FileAccess.get_file_as_string("res://src/world/events/natural.gd")
-	var builders := source.count(".add_surface_from_arrays(") + source.count("LocalMesh.grid(")
-	t.eq("one surface builder owns every natural surface", builders, 1)
-	t.check("terrain projection helper owns the builder", source.contains("func _project_surface("))
+	var pattern := RegEx.new()
+	pattern.compile("(?:ArrayMesh|SphereMesh|BoxMesh|TorusMesh|PlaneMesh|ImmediateMesh|CylinderMesh|PrismMesh)\\.new\\(|LocalMesh\\.")
+	var builders := pattern.search_all(source)
+	t.eq("one surface builder owns every natural surface", builders.size(), 1)
+	var start := source.find("func _project_surface(")
+	var end := source.find("\n\nfunc ", start + 1)
+	t.check("terrain projection helper owns every builder", start >= 0 and builders.all(func(found): return found.get_start() > start and found.get_start() < end))
 	game.free()
 	quit(t.verdict())
