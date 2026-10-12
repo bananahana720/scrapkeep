@@ -10,7 +10,7 @@ const Windup := preload("res://src/presentation/windup_rows.gd")
 const Posture := preload("res://src/combat/boss_posture.gd")
 const CLASSES := ["none", "hit", "heavy", "massive", "climax"]
 const FIELDS := ["stop_ms", "shake", "kick", "punch_fov", "fx_scale", "body", "body_st"]
-const EXPECTED_CHECKS := 23
+const EXPECTED_CHECKS := 24
 var event_script: Script = EventKinds
 const PRESENTATION := ["juice", "vfx", "audio"]
 const RULES := ["strike", "death_parts", "amount", "gauge", "posture"]
@@ -53,7 +53,7 @@ func run(t) -> void:
 	var sound_drift := []
 	for fact in facts:
 		var record: Dictionary = event_script.call("weigh", fact, {})
-		if record.sound != Rows.sound(fact):
+		if facts[fact].has("sound") or record.sound != Rows.sound(fact):
 			sound_drift.append(fact)
 	t.eq("weighted sound matches Rows", sound_drift, [])
 	var listeners := connected_signals()
@@ -95,6 +95,9 @@ func run(t) -> void:
 	if not shared_cues.is_empty():
 		collisions.append(["ultimate_landed", "enemy_killed: vault", shared_cues])
 	t.eq("same frame sound collision", collisions, [])
+	var slam_cue := _measure(slam.sound)
+	var ultimate_cue := _measure(ultimate.sound)
+	t.check("ultimate cue lower and longer than heavy slam", not ultimate_cue.is_empty() and not slam_cue.is_empty() and ultimate_cue.zcr < slam_cue.zcr and ultimate_cue.seconds >= slam_cue.seconds, str([slam_cue, ultimate_cue]))
 	t.eq("class rule boundaries", _rule_errors(), [])
 	var bounded := true
 	for strength in [-1.0, 0.0, 0.5, 1.0, 2.0]:
@@ -159,15 +162,24 @@ func _body_measurements(weights: Dictionary) -> Array:
 		var id := String(row.get("body", ""))
 		if not Bank.has_recipe(id):
 			return []
-		var samples := Bank.samples(id)
-		var ratio := float(_record(key).body_ratio)
-		var crosses := 0
-		for i in range(1, samples.size()):
-			if (samples[i - 1] < 0.0) != (samples[i] < 0.0):
-				crosses += 1
-		var seconds := float(samples.size()) / Bank.RATE / ratio
-		out.append({"class": key, "zcr": crosses / seconds, "seconds": seconds})
+		var measured := _measure(id, float(_record(key).body_ratio))
+		measured["class"] = key
+		out.append(measured)
 	return out
+
+
+func _measure(id: String, ratio := 1.0) -> Dictionary:
+	if not Bank.has_recipe(id):
+		return {}
+	var samples := Bank.samples(id)
+	if samples.is_empty():
+		return {}
+	var crosses := 0
+	for i in range(1, samples.size()):
+		if (samples[i - 1] < 0.0) != (samples[i] < 0.0):
+			crosses += 1
+	var seconds := float(samples.size()) / Bank.RATE / ratio
+	return {"zcr": crosses / seconds, "seconds": seconds}
 
 
 func _body_order(measurements: Array) -> bool:
