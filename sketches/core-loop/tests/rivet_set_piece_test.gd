@@ -122,6 +122,8 @@ func _shape_dispatch_fixture() -> void:
 			"tech":
 				_tech(id, 1)
 			"peak":
+				if id in Kit.BEAM_PIECES:
+					_tech(id, 4)
 				_combat.ultimate._peak(_player.ball_position())
 				if ram:
 					_kit.drive_step(_player.ball_position())
