@@ -1023,6 +1023,8 @@ func _connect_all(events) -> void:
 	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
 	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
 	events.line_skill_fired.connect(_sable_bank)
+	events.stage_content_cleared.connect(func(_reason: String): _sable_bank_wait = false)
+	events.player_died.connect(func(): _sable_bank_wait = false)
 	events.dismounted.connect(func(_v: Vector3):
 		if _sable_bank_wait:
 			_sable_bank_wait = false

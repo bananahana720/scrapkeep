@@ -200,6 +200,12 @@ const ENTRIES := [
 # whose code fires it. tests/codex_coverage_test.gd reads this to prove every kind that can
 # spawn has a trick that can fire.
 const DETECTORS := {
+	# --- P-C Sable detectors ---
+	"bank_shot": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"switchback": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"cable_run": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"sable_cable_runs": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	# --- end Sable ---
 	"shell_return": {"kind": "lobber", "script": "res://src/combat/combat.gd"},
 	"counter_ram": {"kind": "chaser", "script": "res://src/combat/combat.gd"},
 	"chain": {"kind": "", "script": "res://src/combat/combat.gd"},

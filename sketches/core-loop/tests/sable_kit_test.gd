@@ -17,7 +17,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Progress := preload("res://src/core/progress.gd")
 const T := preload("res://tests/support/t.gd")
-const EXPECTED_CHECKS := 59
+const EXPECTED_CHECKS := 60
 const DT := 1.0 / 60.0
 var _t := T.new("sable_kit_test")
 var _game
@@ -115,6 +115,7 @@ func _run() -> void:
 	_player._publish_line(0.0)
 	_t.eq("no broke event", _lines.filter(func(r): return r[0] == "broke"), [])
 	_t.eq("chain unchanged", _player.chain.combo, before)
+	_t.near("bank keeps the chain airtime grace", _player.chain.grace_left, 0.8)
 	_t.near("Parting Shot timer resets", _combat._since_slingshot, 0.0)
 	_t.near("run log keeps bank gain", _game.ctx.run_log._record["line_skill"].get("bank_gain_mps", -1), 9.0, 0.01)
 	_fresh(40.0)

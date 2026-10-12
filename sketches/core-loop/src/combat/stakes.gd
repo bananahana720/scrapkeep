@@ -133,7 +133,7 @@ func arm() -> void:
 
 func _on_hooked(_at: Vector3) -> void:
 	var stake = ctx.player.kit.anchor_body
-	if not is_instance_valid(stake) or not nodes.has(stake):
+	if not is_instance_valid(stake) or not stake is Stake or not nodes.has(stake):
 		return
 	hooked += 1
 	ultimate._record["stakes_hooked"] = hooked
