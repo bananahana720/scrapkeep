@@ -1,0 +1,158 @@
+extends SceneTree
+
+const T := preload("res://tests/support/t.gd")
+const Game := preload("res://src/game.gd")
+const RunState := preload("res://src/core/run_state.gd")
+const Profile := preload("res://src/core/profile.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const RunLog := preload("res://src/core/run_log.gd")
+const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
+const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
+const PAGE := "res://src/ui/logbook_page.gd"
+const KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
+const EXPECTED_CHECKS := 36
+
+# A full three-stage flow, as spine_run_log_test uses, with combat and boss doubles.
+class ScriptedGame extends Game:
+	func _chosen_table():
+		return preload("res://tests/doubles/two_world_defs.gd").FirstWorld
+
+var _t := T.new("logbook_test")
+var _game
+var _expected := {"stages_cleared": 0, "time": 0.0, "kills": 0, "deaths": 0, "wardens_seen": 0}
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	_game = ScriptedGame.new()
+	_game.test_mode = true
+	root.add_child(_game)
+	await process_frame
+	var codex = _game.codex
+	var run = _game.run
+	var profile = _game.ctx.profile
+	var ready := _t.check("SR12 codex status API exists", codex.has_method("status") and codex.has_method("open_entry"))
+	ready = _t.check("SR12 run tally API exists", run.has_method("tallies")) and ready
+	ready = _t.check("SR12 profile tally API exists", profile.has_method("record_run_tallies")) and ready
+	ready = _t.check("SR12 logbook page exists", FileAccess.file_exists(PAGE)) and ready
+	if not ready:
+		_game.free()
+		quit(_t.verdict())
+		return
+	var spawner := SpawnerDouble.new()
+	_game.add_child(spawner)
+	spawner.setup(_game.ctx)
+	_game.ctx.spawner = spawner
+	var boss := BossDouble.new()
+	_game.add_child(boss)
+	boss.setup(_game.ctx)
+	_game.ctx.calm = true
+	_game.flow.force_warden = true
+	_game.player.source = Intent.Scripted.new()
+	_game.events.stage_cleared.connect(func(_stage: int): _expected["stages_cleared"] += 1)
+	_game.events.warden_engaged.connect(func(_stage: int): _expected["wardens_seen"] += 1)
+	_game.events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): _expected["kills"] += 1)
+	_game.events.player_died.connect(func(): _expected["deaths"] += 1)
+	_game.flow.press_start()
+	_game.flow.choose_class(1)
+	_check_page(codex, profile)
+	_check_run(spawner, run, profile)
+	_t.eq("SR12 expected check count", _t.checks + 1, EXPECTED_CHECKS)
+	_game.free()
+	quit(_t.verdict())
+
+
+func _check_page(codex, profile) -> void:
+	var entries: Array = codex.entries()
+	_t.check("SR12 registered entries nonempty", entries.size() > 50, "%d registered entries" % entries.size())
+	var resolved := true
+	for entry in entries:
+		resolved = resolved and entry.has("status") and entry["status"] == codex.status(entry["id"], profile) and entry["status"] == "unencountered"
+	_t.check("SR12 every registered entry resolves to status", resolved, "%d entries" % entries.size())
+	_t.eq("SR12 absent entry has no status", codex.status("not_registered", profile), "none")
+	var id: String = entries[0]["id"]
+	var before: Dictionary = profile._doc.duplicate(true)
+	_t.check("SR12 unencountered entry cannot be marked viewed", not codex.open_entry(id, profile) and profile._doc == before)
+	codex.mark_discovered(id)
+	_t.eq("SR12 discovery is new until viewed", codex.status(id, profile), "new")
+	var page = load(PAGE).new()
+	root.add_child(page)
+	page.refresh(codex, profile)
+	_t.eq("SR12 page contains every registered entry", page.rows.size(), entries.size())
+	_t.check("SR12 refresh does not mark entries viewed", not profile.is_seen(id))
+	_t.check("SR12 page shows status and marker", page.rows[id].text.contains("New") and page.rows[id].text.contains(entries[0]["name"]))
+	before = profile._doc.duplicate(true)
+	var scrap_before: int = _game.run.scrap
+	page.rows[id].pressed.emit()
+	_t.check("SR12 opening clears only the seen marker", profile.is_seen(id) and codex.status(id, profile) == "available")
+	var after: Dictionary = profile._doc.duplicate(true)
+	after["seen"] = before["seen"]
+	after["generation"] = before["generation"]
+	_t.check("SR12 opening grants nothing", after == before and _game.run.scrap == scrap_before)
+	_t.check("SR12 opened row clears its visible marker", page.rows[id].text.contains("Available") and not page.rows[id].text.contains("New"))
+	_t.check("SR12 opening displays the known entry text", page.detail.text.contains(entries[0]["name"]) and page.detail.text.contains(entries[0]["text"]))
+	_t.check("SR12 repeat open is idempotent", not codex.open_entry(id, profile) and profile.seen_ids().count(id) == 1)
+	var reload := Profile.new(profile.path)
+	_t.check("SR12 viewed marker round-trips", reload.load_profile() and reload.is_seen(id) and codex.status(id, reload) == "available")
+	page.free()
+
+
+func _check_run(spawner, run, profile) -> void:
+	_advance(run, 2.25)
+	spawner.strike(_game.flow.warden, "arc", 99999.0)
+	run.record_kill("chaser", Vector3.ZERO, 0)
+	run.damage(99999.0, "test")
+	var at_death: Dictionary = run.tallies()
+	_game.flow.retry_stage()
+	_t.eq("SR12 retry retains cumulative tallies", run.tallies(), at_death)
+	_t.check("SR12 tally kills survive combat checkpoint rewind", int(run.tallies()["kills"]) > run.kills)
+	for stage in range(1, _game.flow.final_stage() + 1):
+		_t.eq("SR12 scripted flow reaches stage %d" % stage, run.stage, stage)
+		_advance(run, float(stage) + 0.125)
+		spawner.strike(_game.flow.warden, "arc", 99999.0)
+		_game.flow._finish_stage()
+		if _game.flow.state_name() == "boss":
+			_game.ctx.boss.defeat()
+			_game.flow.physics_step(_game.flow.VICTORY_SECONDS + 1.0)
+	_t.check("SR12 scripted full run ends won", run.over and _game.flow.run_won)
+	var tallies: Dictionary = run.tallies()
+	_t.eq("SR12 five run tallies equal independent signal ledger", tallies, _expected)
+	var lines := FileAccess.get_file_as_string(_game.storage_dir.path_join(RunLog.LOG_FILE)).strip_edges().split("\n", false)
+	_t.eq("SR12 death and end each write a run log", lines.size(), 2)
+	var record: Dictionary = JSON.parse_string(lines[-1]) if not lines.is_empty() else {}
+	_t.check("SR12 actual run log tallies match run", record.get("tallies") == tallies and record.get("outcome") == "won", JSON.stringify(record.get("tallies")))
+	var stages: Array = record.get("stages", [])
+	var logged_deaths := 0
+	var logged_clears := 0
+	for row in stages:
+		logged_deaths += row["deaths"].size()
+		logged_clears += 1 if row["heft_at_exit"] != null else 0
+	_t.check("SR12 existing stage log agrees with clears and deaths", logged_clears == tallies["stages_cleared"] and logged_deaths == tallies["deaths"])
+	var stored := {}
+	for key in KEYS:
+		stored[key] = profile.stat(key)
+	_t.eq("SR12 profile receives cumulative tallies once", stored, tallies)
+	_t.check("SR12 repeated tally settlement changes nothing", not profile.record_run_tallies(run.run_id, tallies) and profile.stat("kills") == tallies["kills"])
+	var reload := Profile.new(profile.path)
+	_t.check("SR12 tallied profile reloads", reload.load_profile(), reload.last_error)
+	var saved := {}
+	for key in KEYS:
+		saved[key] = reload.stat(key)
+	_t.eq("SR12 all five profile tallies round-trip", saved, tallies)
+	var entrance: Dictionary = run.to_entrance_doc()
+	var restored := RunState.new(null, 123)
+	_t.check("SR12 entrance tallies survive JSON round-trip", restored.from_entrance_doc(JSON.parse_string(JSON.stringify(entrance))) and restored.tallies() == tallies)
+	var invalid := tallies.duplicate()
+	invalid["time"] = NAN
+	var before: Dictionary = profile._doc.duplicate(true)
+	_t.check("SR12 nonfinite tally rejected atomically", not profile.record_run_tallies("bad", invalid) and profile._doc == before)
+	_game.flow.new_run()
+	_t.eq("SR12 new run clears tallies", run.tallies(), {"stages_cleared": 0, "time": 0.0, "kills": 0, "deaths": 0, "wardens_seen": 0})
+
+
+func _advance(run, seconds: float) -> void:
+	run.advance(seconds)
+	_expected["time"] += seconds
