@@ -90,7 +90,9 @@ func _run() -> void:
 		await physics_frame
 		var live: Dictionary = game.world.event_families.natural.active.get("tailings_slump", {})
 		if live.get("phase", "") == "telegraph":
-			_warning(live)
+			await process_frame
+			if live.phase == "telegraph":
+				_warning(live)
 		if started.has("tailings_slump"):
 			break
 	Engine.time_scale = 1.0

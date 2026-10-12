@@ -2,6 +2,7 @@ extends Node3D
 
 const Kinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
@@ -125,8 +126,7 @@ class OverlayMap:
 		var p: Dictionary = profiles[id]
 		if not ParkMap.footprint_contains(p.site, Vector2(x, z)):
 			return -INF
-		var local := (Vector2(x, z) - Vector2(float(p.site.at[0]), float(p.site.at[1]))).rotated(deg_to_rad(float(p.site.yaw_deg)))
-		return float(p.height.call(local.x, local.y))
+		return p.surface.height(Vector2(x, z))
 
 
 func setup(world_ref) -> void:
@@ -139,7 +139,7 @@ func setup(world_ref) -> void:
 	for row in _original_map.park.event_rows:
 		if row.family != "natural" or not KINDS.has(row.kind):
 			continue
-		var site: Dictionary = _sites[row.site]
+		var site: Dictionary = NaturalFootprint.resolve(row, _sites[row.site])
 		var at := _at(site)
 		var geometry := {"site": site, "at": at, "half": ParkMap.footprint_half_extents(site),
 			"yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": maxf(0.0, float(row.effect.get("strike_m", 0.0)))}
@@ -181,6 +181,8 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				_land_water(row, state)
 			if state.overlay != null:
 				_set_overlay(row, true)
+				if row.kind == "collapse" and float(row.effect.fill_s) <= 0.0:
+					_advance_collapse(row, 1.0)
 			_show_landing(row, state)
 			_hazard(row, state, ctx)
 		"step":
@@ -195,6 +197,9 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				state.depth_m = lerpf(float(state.start_depth_m), 0.0 if row.kind == "drain" else depth, fraction)
 				state.water.cycle.metres = state.depth_m
 				state.water.render()
+			if row.kind == "collapse":
+				var fill_s := maxf(0.0, float(row.effect.fill_s))
+				_advance_collapse(row, clampf(state.elapsed_s / fill_s, 0.0, 1.0) if fill_s > 0.0 else 1.0)
 			_hazard(row, state, ctx)
 		"end":
 			_end(row)
@@ -265,65 +270,79 @@ func _prepare_water(geometry: Dictionary) -> WaterSurface:
 
 # Clip each shape to the terrain's actual 2 m triangles before projecting. The resulting
 # triangles, including their interiors, share terrain.gd's b-c diagonal and interpolation.
-func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(), water := false) -> WaterSurface:
+func _project_surface(geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: WaterSurface = null) -> WaterSurface:
 	var surface := WaterSurface.new()
 	var centre := Vector2(geometry.at.x, geometry.at.z)
 	var yaw: float = geometry.yaw
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
-	for shape: Array in shapes:
-		var polygon := shape.map(func(p): return p.rotated(-yaw) + centre)
-		var low := Vector2.INF
-		var high := -Vector2.INF
-		for point: Vector2 in polygon:
-			low = low.min(point)
-			high = high.max(point)
-		for j in range(floori(low.y / ParkTerrain.STEP), floori(high.y / ParkTerrain.STEP) + 1):
-			for i in range(floori(low.x / ParkTerrain.STEP), floori(high.x / ParkTerrain.STEP) + 1):
-				var cell := Vector2i(i, j)
-				var a := Vector2(i, j) * ParkTerrain.STEP
-				var b := a + Vector2.RIGHT * ParkTerrain.STEP
-				var c := a + Vector2.DOWN * ParkTerrain.STEP
-				var d := a + Vector2.ONE * ParkTerrain.STEP
-				var heights := PackedFloat64Array()
-				for point in [a, b, c, d]:
-					var y: float = _water_ground(point) if water else world.terrain.height(point.x, point.y)
-					if not water and "_heights" in world.terrain:
-						y = maxf(y, world.terrain._grid_height(world.terrain._heights[world.terrain.stage - 1], point.x, point.y))
-					heights.append(y)
-				if water and "_holes" in world.terrain:
-					var terrain = world.terrain
-					var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], a.x + ParkTerrain.STEP * 0.5, a.y + ParkTerrain.STEP * 0.5)
-					if not is_nan(floor_y):
-						for k in 4:
-							heights[k] = minf(heights[k], floor_y)
-				for triangle in [[a, b, c], [b, d, c]]:
-					var clipped: Array = polygon
-					for edge in 3:
-						clipped = _clip_edge(clipped, triangle[edge], triangle[(edge + 1) % 3])
-					for k in range(1, clipped.size() - 1):
-						var face := PackedVector3Array()
-						for point: Vector2 in [clipped[0], clipped[k], clipped[k + 1]]:
-							var f := (point - a) / ParkTerrain.STEP
-							var y: float = heights[0] + (heights[1] - heights[0]) * f.x + (heights[2] - heights[0]) * f.y if triangle[0] == a else heights[3] + (heights[2] - heights[3]) * (1.0 - f.x) + (heights[1] - heights[3]) * (1.0 - f.y)
-							if not water:
-								y = maxf(y, world.terrain.height(point.x, point.y))
-								if _overlay_map != null:
-									for id in world.terrain.overlays:
-										if _overlay_map.profiles.has(id):
-											y = maxf(y, _overlay_map.profiles[id].surface.height(point))
-							if offset.is_valid():
-								y += maxf(0.0, float(offset.call((point - centre).rotated(yaw), y)))
-							face.append(Vector3(point.x, y, point.y))
-						var normal := (face[2] - face[0]).cross(face[1] - face[0])
-						if normal.length_squared() < 0.00000001:
-							continue
-						if not surface.cells.has(cell):
-							surface.cells[cell] = []
-						surface.cells[cell].append(vertices.size())
-						vertices.append_array(face)
-						normal = normal.normalized()
-						normals.append_array([normal, normal, normal])
+	if geometry.has("source_surface"):
+		var start: WaterSurface = geometry.source_surface
+		var target: WaterSurface = geometry.target_surface
+		surface.cells = start.cells
+		for k in start.vertices.size():
+			vertices.append(start.vertices[k].lerp(target.vertices[k], float(geometry.progress)))
+		for k in range(0, vertices.size(), 3):
+			var normal := (vertices[k + 2] - vertices[k]).cross(vertices[k + 1] - vertices[k]).normalized()
+			normals.append_array([normal, normal, normal])
+	else:
+		for shape: Array in shapes:
+			var polygon := shape.map(func(p): return p.rotated(-yaw) + centre)
+			var low := Vector2.INF
+			var high := -Vector2.INF
+			for point: Vector2 in polygon:
+				low = low.min(point)
+				high = high.max(point)
+			for j in range(floori(low.y / ParkTerrain.STEP), floori(high.y / ParkTerrain.STEP) + 1):
+				for i in range(floori(low.x / ParkTerrain.STEP), floori(high.x / ParkTerrain.STEP) + 1):
+					var cell := Vector2i(i, j)
+					var a := Vector2(i, j) * ParkTerrain.STEP
+					var b := a + Vector2.RIGHT * ParkTerrain.STEP
+					var c := a + Vector2.DOWN * ParkTerrain.STEP
+					var d := a + Vector2.ONE * ParkTerrain.STEP
+					var heights := PackedFloat64Array()
+					for point in [a, b, c, d]:
+						var y: float = _water_ground(point) if water else world.terrain.height(point.x, point.y)
+						if baseline == null and not water and "_heights" in world.terrain:
+							y = maxf(y, world.terrain._grid_height(world.terrain._heights[world.terrain.stage - 1], point.x, point.y))
+						heights.append(y)
+					if water and "_holes" in world.terrain:
+						var terrain = world.terrain
+						var floor_y := ParkTerrain.hole_floor(terrain._holes[terrain.stage - 1], terrain._under[terrain.stage - 1], a.x + ParkTerrain.STEP * 0.5, a.y + ParkTerrain.STEP * 0.5)
+						if not is_nan(floor_y):
+							for k in 4:
+								heights[k] = minf(heights[k], floor_y)
+					for triangle in [[a, b, c], [b, d, c]]:
+						var clipped: Array = polygon
+						for edge in 3:
+							clipped = _clip_edge(clipped, triangle[edge], triangle[(edge + 1) % 3])
+						for k in range(1, clipped.size() - 1):
+							var face := PackedVector3Array()
+							for point: Vector2 in [clipped[0], clipped[k], clipped[k + 1]]:
+								var f := (point - a) / ParkTerrain.STEP
+								var y: float = heights[0] + (heights[1] - heights[0]) * f.x + (heights[2] - heights[0]) * f.y if triangle[0] == a else heights[3] + (heights[2] - heights[3]) * (1.0 - f.x) + (heights[1] - heights[3]) * (1.0 - f.y)
+								if baseline != null:
+									y = baseline.height(point)
+								elif not water:
+									y = maxf(y, world.terrain.height(point.x, point.y))
+									if _overlay_map != null:
+										for id in world.terrain.overlays:
+											if _overlay_map.profiles.has(id):
+												y = maxf(y, _overlay_map.profiles[id].surface.height(point))
+								if geometry.has("marker_surface"):
+									y = maxf(y, geometry.marker_surface.height(point))
+								if offset.is_valid():
+									y += maxf(0.0, float(offset.call((point - centre).rotated(yaw), y)))
+								face.append(Vector3(point.x, y, point.y))
+							var normal := (face[2] - face[0]).cross(face[1] - face[0])
+							if normal.length_squared() < 0.00000001:
+								continue
+							if not surface.cells.has(cell):
+								surface.cells[cell] = []
+							surface.cells[cell].append(vertices.size())
+							vertices.append_array(face)
+							normal = normal.normalized()
+							normals.append_array([normal, normal, normal])
 	surface.vertices = vertices
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -403,13 +422,9 @@ func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
 		var base: float = terrain.height(world_xz.x, world_xz.y)
 		if kind == "impact":
 			return base + maxf(0.0, Gorge.crater_profile(Vector2(x, z).length() * Gorge.CRATER_OUT / radius))
-		if kind == "collapse":
-			return base + 2.0 * clampf((z + half.y) / (2.0 * half.y), 0.0, 1.0)
 		return base + Gorge.rubble_profile(Vector2(x, z).length() * Gorge.RUBBLE_RADIUS / radius)
 	var surface := _project_surface(record.geometry, [_rectangle(-half, half)],
-		func(local, base): return float(height.call(local.x, local.y)) - base)
-	var sampled := func(x: float, z: float) -> float:
-		return surface.height(Vector2(x, z).rotated(-yaw) + Vector2(at.x, at.z))
+		Callable() if kind == "collapse" else func(local, base): return float(height.call(local.x, local.y)) - base)
 	var body := StaticBody3D.new()
 	body.name = "Natural_" + row.id
 	var view := MeshInstance3D.new()
@@ -425,12 +440,48 @@ func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
 		before = world.terrain.geometry_root(world.terrain.stage).find_child("Park_" + str(row.site), true, false) as Node3D
 	_overlay_map.swaps[id] = {"body": body, "home": body.position, "before": before,
 		"before_home": before.position if is_instance_valid(before) else Vector3.ZERO,
-		"before_visible": before.visible if is_instance_valid(before) else false, "owners": {}}
-	_overlay_map.profiles[id + "_after"] = {"site": site, "height": sampled, "surface": surface}
+		"before_visible": before.visible if is_instance_valid(before) else false, "owners": {},
+		"baseline": surface, "geometry": record.geometry, "progress": 0.0, "collapse": kind == "collapse"}
+	if kind == "collapse":
+		_overlay_map.swaps[id].target = _collapse_target(row, record.geometry, surface)
+	_overlay_map.profiles[id + "_after"] = {"site": site, "surface": surface}
 	body.position += Vector3.DOWN * Gorge.SWAP_PARK
 	body.visible = false
 	record.overlay = body
 	record.swap = id
+
+
+func _collapse_target(row: Dictionary, geometry: Dictionary, baseline: WaterSurface) -> WaterSurface:
+	var half: Vector2 = geometry.half
+	var centre := Vector2(geometry.at.x, geometry.at.z)
+	var yaw: float = geometry.yaw
+	var depth_m := maxf(0.0, float(row.effect.depth_m))
+	var offset := func(local: Vector2, base: float) -> float:
+		var top := Vector2(half.x, local.y).rotated(-yaw) + centre
+		var upper: float = baseline.height(top)
+		var ramp := upper - depth_m * (half.x - local.x) / (2.0 * half.x)
+		return maxf(0.0, ramp - base)
+	return _project_surface(geometry, [_rectangle(-half, half)], offset, false, baseline)
+
+
+func _advance_collapse(row: Dictionary, progress: float) -> void:
+	var id: String = _prepared[row.id].swap
+	var entry: Dictionary = _overlay_map.swaps[id]
+	if progress <= float(entry.progress):
+		return
+	entry.progress = progress
+	var geometry: Dictionary = entry.geometry.duplicate()
+	geometry.source_surface = entry.baseline
+	geometry.target_surface = entry.target
+	geometry.progress = progress
+	_install_surface(id, _project_surface(geometry, []))
+
+
+func _install_surface(id: String, surface: WaterSurface) -> void:
+	var body: StaticBody3D = _overlay_map.swaps[id].body
+	body.get_child(0).mesh = surface.mesh
+	body.get_child(1).shape = surface.mesh.create_trimesh_shape()
+	_overlay_map.profiles[id + "_after"].surface = surface
 
 
 func _set_overlay(row: Dictionary, changed: bool) -> void:
@@ -458,6 +509,9 @@ func _set_overlay(row: Dictionary, changed: bool) -> void:
 		if not entry.owners.is_empty():
 			return
 		_overlay_map.apply_swap(id, false)
+		entry.progress = 0.0
+		if entry.get("collapse", false):
+			_install_surface(id, entry.baseline)
 		if not entry.had_after:
 			overlays.erase(id + "_after")
 		if entry.before_index >= 0 and not overlays.has(id + "_before"):
@@ -481,6 +535,9 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
+	if landed and row.kind == "collapse":
+		geometry = geometry.duplicate()
+		geometry.marker_surface = _overlay_map.swaps[_prepared[row.id].swap].target
 	var mark := Node3D.new()
 	mark.set_meta("row_id", row.id)
 	add_child(mark)
@@ -496,10 +553,11 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	if spec.get("pattern", "") == "dust_crack":
 		mesh.name = "DustCurtain"
 		shapes = [_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), half)]
-		offset = func(local, _base): return float(spec.dust_height_m) * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)
+		var initial := 1.0 if landed else 0.001
+		offset = func(local, _base): return float(spec.dust_height_m) * initial * clampf((local.x - half.x + float(spec.crack_width_m)) / float(spec.crack_width_m), 0.0, 1.0)
 		var crack := MeshInstance3D.new()
 		crack.name = "CrawlingCrack"
-		crack.mesh = _project_surface(geometry, shapes).mesh
+		crack.mesh = _project_surface(geometry, [_rectangle(Vector2(half.x - float(spec.crack_width_m), -half.y), Vector2(half.x, lerpf(-half.y, half.y, initial)))]).mesh
 		crack.material_override = Palette.unshaded(spec.color)
 		mark.add_child(crack)
 	elif spec.shape == "cross":

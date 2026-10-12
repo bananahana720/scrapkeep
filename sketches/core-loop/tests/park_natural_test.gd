@@ -166,7 +166,11 @@ func _run() -> void:
 				t.eq(kind + " water never brakes", state.water.external_accel(Vector3.ZERO, Vector3(17, 0, 9)), Vector3.ZERO)
 		elif kind != "lightning":
 			var probe := Vector2(2.37, 0.19).rotated(-deg_to_rad(30.0)) if kind == "impact" else Vector2.ZERO
-			t.check(kind + " uses live terrain overlay", w.terrain.overlays.has("rubble_ramp_after") and w.terrain.height(probe.x, probe.y) > 0.0, str(w.terrain.overlays))
+			if kind == "collapse":
+				t.check("collapse lands on original bench with overlay active", w.terrain.overlays.has("rubble_ramp_after"))
+				t.near("collapse first landing retains original height", w.terrain.height(probe.x, probe.y), w.terrain.ground(probe.x, probe.y))
+			else:
+				t.check(kind + " uses live terrain overlay", w.terrain.overlays.has("rubble_ramp_after") and w.terrain.height(probe.x, probe.y) > 0.0, str(w.terrain.overlays))
 			t.check(kind + " prebuilt collider lands", state.get("overlay") != null and state.overlay.visible)
 			await physics_frame
 			await physics_frame

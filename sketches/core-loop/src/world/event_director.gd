@@ -7,6 +7,7 @@ const HoldRelay := preload("res://src/world/hold_relay.gd")
 const ScrapStampede := preload("res://src/world/scrap_stampede.gd")
 const TerrainEvent := preload("res://src/world/terrain_event.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
@@ -573,7 +574,7 @@ func _park_hook(action: String, state: Dictionary, context: Dictionary) -> void:
 func _park_at(state: Dictionary) -> Vector3:
 	if state.weather:
 		return Vector3.ZERO
-	var site: Dictionary = _park_sites[state.row.site]
+	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
 	var at := Vector2(float(site.at[0]), float(site.at[1]))
 	return Vector3(at.x, float(site.y) if site.y != null else float(_park_height.call(at.x, at.y)), at.y)
 
@@ -597,7 +598,7 @@ func _park_world(state: Dictionary, form: String, phase: String) -> Dictionary:
 func _park_clear(state: Dictionary, ball: Vector3, velocity: Vector3, context: Dictionary) -> bool:
 	if state.weather:
 		return true
-	var site: Dictionary = _park_sites[state.row.site]
+	var site: Dictionary = NaturalFootprint.resolve(state.row, _park_sites[state.row.site])
 	var half := ParkMap.footprint_half_extents(site)
 	if state.row.effect.has("footprint_m"):
 		var footprint = state.row.effect.footprint_m
