@@ -831,6 +831,7 @@ func _cannon_peak(_at: Vector3) -> void:
 
 
 func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
+	combat._step_cannon(0.0)
 	var mortar := _cannon_id == "cannon_plate_mortar"
 	var hits := 0
 	var damage := 0.0

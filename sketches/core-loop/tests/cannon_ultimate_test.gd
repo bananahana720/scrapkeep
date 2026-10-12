@@ -1,7 +1,7 @@
 extends SceneTree
-# 2026-10-11 (PC-CANNON): flight-only calls, touchdown drop timing and the full reticle cone.
+# 2026-10-11 (PC-CANNON): landing snapshots must include the zones for roster damage comparison.
 # EXPECTED_CHECKS includes the count guard. Every check must run.
-const EXPECTED_CHECKS := 46
+const EXPECTED_CHECKS := 48
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -179,6 +179,9 @@ func _cases() -> void:
 	_t.eq("middle beat calls the four families", notes.slice(3, 7), [59, 64, 67, 74])
 	_t.check("every called hazard has one shared live time", _live.size() >= calls and _live.values().all(func(at): return absf(float(at) - float(_landed[0][4])) <= DT + 0.0001), str([_live.values(), _landed]))
 	_t.check("zone run-log fields", _ult._record.has("zones") and _ult._record.has("zone_hits") and _ult._record["zone_hits"] > 0 and _ult._record["zone_hits"] <= _ult._record["zones"], str(_ult._record))
+	var logged: Dictionary = _game.run_log._record["ultimates"].back()
+	_t.eq("landing snapshot includes zone hits", logged.get("zone_hits", 0), _ult._record["zone_hits"])
+	_t.near("landing snapshot includes zone damage", float(logged["damage"]), float(_ult._record["damage"]), 0.01)
 	var chord: Array = audio.cannon_log.filter(func(row): return row["kind"] == "cannon_landing")
 	_t.eq("landing chord is all four motif notes", chord.back()["notes"], [59, 64, 67, 74])
 	_t.check("landing is one chord", chord.back()["chord"])
