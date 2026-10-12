@@ -53,6 +53,7 @@ const PARK_BAR_S := 240.0 / 172.0
 const PARK_GROUND_CAP := 2
 const PARK_FAMILY_CAP := 1
 const PARK_LAND_FACTS := {
+	"ground_slump": "ground_slump_landed",
 	"flood_rising": "flood_landed", "fleet_inbound": "fleet_landed",
 	"ancient_stirring": "ancient_erupted", "boiler_pressure": "boiler_landed",
 	"lightning_charge": "lightning_landed",

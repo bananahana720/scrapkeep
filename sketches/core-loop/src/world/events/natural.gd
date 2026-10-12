@@ -207,6 +207,21 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 			_end(row)
 
 
+func _process(_delta: float) -> void:
+	for state in active.values():
+		if state.phase != "telegraph":
+			continue
+		var dust = state.mark.get_node_or_null("DustCurtain")
+		var crack = state.mark.get_node_or_null("CrawlingCrack")
+		if dust == null or crack == null:
+			continue
+		var row: Dictionary = _original_map.park.event_rows.filter(func(r): return r.id == state.mark.get_meta("row_id"))[0]
+		var progress := clampf((world.events.stage_time - float(state.announced_s)) / float(row.telegraph.lead_s), 0.001, 1.0)
+		dust.scale.y = progress
+		crack.scale.z = progress
+		crack.position.z = -float(state.geometry.half.y) * (1.0 - progress)
+
+
 func _at(site: Dictionary) -> Vector3:
 	var x := float(site.at[0])
 	var z := float(site.at[1])
@@ -444,6 +459,7 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var mark := Node3D.new()
+	mark.set_meta("row_id", row.id)
 	add_child(mark)
 	mark.position = geometry.at + Vector3.UP * 0.15
 	mark.rotation.y = geometry.yaw
@@ -451,7 +467,21 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var spec: Dictionary = Kinds.world_row(world.events.PARK_LAND_FACTS[form] if landed else form)
 	var half: Vector2 = geometry.half
 	var mesh := MeshInstance3D.new()
-	if spec.shape == "burst":
+	if spec.shape == "dust_crack":
+		mesh.name = "DustCurtain"
+		var curtain := BoxMesh.new()
+		curtain.size = Vector3(float(spec.crack_width_m), float(spec.dust_height_m), half.y * 2.0)
+		mesh.mesh = curtain
+		mesh.position = Vector3(half.x, float(spec.dust_height_m) * 0.5, 0.0)
+		var crack := MeshInstance3D.new()
+		crack.name = "CrawlingCrack"
+		var strip := BoxMesh.new()
+		strip.size = Vector3(float(spec.crack_width_m), 0.1, half.y * 2.0)
+		crack.mesh = strip
+		crack.position.x = half.x
+		crack.material_override = Palette.unshaded(spec.color)
+		mark.add_child(crack)
+	elif spec.shape == "burst":
 		var shape := SphereMesh.new()
 		shape.radius = 1.0
 		shape.height = 2.0
