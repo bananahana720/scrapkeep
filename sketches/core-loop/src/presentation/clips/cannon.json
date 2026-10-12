@@ -52,91 +52,136 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "rest",
-          "note": "Both paddles rest on the twin yokes."
+          "note": "Both paddles begin on the twin yokes at rest.",
+          "pose": "rest"
+        },
+        {
+          "frame": 15,
+          "note": "The right paddle holds a fifteen-millimetre lift over its yoke before the two-beat tap.",
+          "hand.R": {
+            "at": [
+              0.32,
+              0.4,
+              0.065
+            ]
+          }
         },
         {
           "frame": 18,
+          "note": "The right paddle holds a fifteen-millimetre lift over its yoke before the two-beat tap.",
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0.015
+            "at": [
+              0.32,
+              0.4,
+              0.065
             ]
-          },
-          "note": "The right paddle lifts 15 mm above its yoke."
+          }
+        },
+        {
+          "frame": 19,
+          "note": "The right paddle rests on the yoke after the tap.",
+          "pose": "rest"
         },
         {
           "frame": 22,
-          "pose": "rest",
-          "note": "The right paddle taps its yoke on beat two."
+          "note": "The right paddle rests on the yoke after the tap.",
+          "pose": "rest"
         },
         {
-          "frame": 27,
-          "pose": "rest",
-          "note": "The right paddle remains on its yoke after the tap."
+          "frame": 36,
+          "note": "The right paddle holds a fifteen-millimetre lift over its yoke before the two-beat tap.",
+          "hand.R": {
+            "at": [
+              0.32,
+              0.4,
+              0.065
+            ]
+          }
         },
         {
           "frame": 39,
+          "note": "The right paddle holds a fifteen-millimetre lift over its yoke before the two-beat tap.",
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0.015
+            "at": [
+              0.32,
+              0.4,
+              0.065
             ]
-          },
-          "note": "The right paddle lifts 15 mm for the second tap."
+          }
+        },
+        {
+          "frame": 40,
+          "note": "The right paddle rests on the yoke after the tap.",
+          "pose": "rest"
         },
         {
           "frame": 43,
-          "pose": "rest",
-          "note": "The right paddle taps its yoke on beat four."
+          "note": "The right paddle rests on the yoke after the tap.",
+          "pose": "rest"
         },
         {
-          "frame": 48,
-          "pose": "rest",
-          "note": "The right paddle rests against its yoke between taps."
+          "frame": 57,
+          "note": "The right paddle holds a fifteen-millimetre lift over its yoke before the two-beat tap.",
+          "hand.R": {
+            "at": [
+              0.32,
+              0.4,
+              0.065
+            ]
+          }
         },
         {
           "frame": 60,
+          "note": "The right paddle holds a fifteen-millimetre lift over its yoke before the two-beat tap.",
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0.015
+            "at": [
+              0.32,
+              0.4,
+              0.065
             ]
-          },
-          "note": "The right paddle lifts 15 mm for the third tap."
+          }
+        },
+        {
+          "frame": 61,
+          "note": "The right paddle rests on the yoke after the tap.",
+          "pose": "rest"
         },
         {
           "frame": 64,
-          "pose": "rest",
-          "note": "The right paddle taps its yoke on beat six."
+          "note": "The right paddle rests on the yoke after the tap.",
+          "pose": "rest"
         },
         {
-          "frame": 69,
-          "pose": "rest",
-          "note": "The right paddle stays on its yoke after beat six."
+          "frame": 78,
+          "note": "The right paddle holds a fifteen-millimetre lift over its yoke before the two-beat tap.",
+          "hand.R": {
+            "at": [
+              0.32,
+              0.4,
+              0.065
+            ]
+          }
         },
         {
           "frame": 81,
+          "note": "The right paddle holds a fifteen-millimetre lift over its yoke before the two-beat tap.",
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0.015
+            "at": [
+              0.32,
+              0.4,
+              0.065
             ]
-          },
-          "note": "The right paddle lifts 15 mm for the final tap."
+          }
+        },
+        {
+          "frame": 82,
+          "note": "The right paddle rests on the yoke after the tap.",
+          "pose": "rest"
         },
         {
           "frame": 85,
-          "pose": "rest",
-          "note": "The right paddle taps its yoke on beat eight."
+          "note": "The right paddle rests on the yoke after the tap.",
+          "pose": "rest"
         }
       ],
       "beats": {
@@ -166,7 +211,20 @@
           "pose": "ride"
         },
         {
+          "frame": 4,
+          "note": "Both paddles brace the lap bar, spine flexed 28 degrees and muzzle tucked 15 degrees.",
+          "pose": "ride"
+        },
+        {
           "frame": 12,
+          "note": "The braced spine rocks two degrees farther forward; both paddles remain on the bar.",
+          "pose": "ride",
+          "torso": {
+            "pitch": -30
+          }
+        },
+        {
+          "frame": 15,
           "note": "The braced spine rocks two degrees farther forward; both paddles remain on the bar.",
           "pose": "ride",
           "torso": {
@@ -182,7 +240,23 @@
           }
         },
         {
+          "frame": 25,
+          "note": "The muzzle eases two degrees up within the crouched ride anchor.",
+          "pose": "ride",
+          "head": {
+            "pitch": -13
+          }
+        },
+        {
           "frame": 33,
+          "note": "The spine eases one degree back within the held tuck.",
+          "pose": "ride",
+          "torso": {
+            "pitch": -27
+          }
+        },
+        {
+          "frame": 36,
           "note": "The spine eases one degree back within the held tuck.",
           "pose": "ride",
           "torso": {
@@ -1391,16 +1465,20 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "ride",
-          "note": "Both paddles hold the lap bar at the apex."
+          "note": "Both paddles begin on the lap bar at the apex.",
+          "pose": "ride"
         },
         {
-          "frame": 4,
+          "frame": 2,
+          "note": "Both paddles open visibly away from the lap bar before the apex strike.",
           "torso": {
             "pitch": -28
           },
           "head": {
             "pitch": -12
+          },
+          "neck": {
+            "drop": -0.025
           },
           "hand.R": {
             "at": [
@@ -1415,19 +1493,46 @@
               0.18,
               -0.02
             ]
-          },
-          "note": "Both paddles open away from the lap bar.",
-          "neck": {
-            "drop": -0.025
           }
         },
         {
-          "frame": 7,
+          "frame": 5,
+          "note": "Both paddles open visibly away from the lap bar before the apex strike.",
+          "torso": {
+            "pitch": -28
+          },
+          "head": {
+            "pitch": -12
+          },
+          "neck": {
+            "drop": -0.025
+          },
+          "hand.R": {
+            "at": [
+              0.32,
+              0.18,
+              -0.02
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.32,
+              0.18,
+              -0.02
+            ]
+          }
+        },
+        {
+          "frame": 6,
+          "note": "Both paddles spread wide as the muzzle pitches straight down at the apex.",
           "torso": {
             "pitch": -28
           },
           "head": {
             "pitch": -62
+          },
+          "neck": {
+            "drop": -0.025
           },
           "hand.R": {
             "at": [
@@ -1442,79 +1547,84 @@
               0.1,
               0.12
             ]
+          }
+        },
+        {
+          "frame": 9,
+          "note": "Both paddles spread wide as the muzzle pitches straight down at the apex.",
+          "torso": {
+            "pitch": -28
           },
-          "note": "The tucked spine and head total ninety degrees down, paddles spread off the bar.",
+          "head": {
+            "pitch": -62
+          },
           "neck": {
             "drop": -0.025
+          },
+          "hand.R": {
+            "at": [
+              0.48,
+              0.1,
+              0.12
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.48,
+              0.1,
+              0.12
+            ]
           }
         },
         {
           "frame": 10,
-          "torso": {
-            "pitch": -28
-          },
-          "head": {
-            "pitch": -62
-          },
-          "hand.R": {
-            "at": [
-              0.48,
-              0.1,
-              0.12
-            ]
-          },
-          "hand.L": {
-            "at": [
-              -0.48,
-              0.1,
-              0.12
-            ]
-          },
-          "note": "The tucked spine and head total ninety degrees down, paddles spread off the bar.",
-          "neck": {
-            "drop": -0.025
-          }
-        },
-        {
-          "frame": 12,
+          "note": "Both paddles return to the lap bar after the apex strike.",
           "torso": {
             "pitch": -28
           },
           "head": {
             "pitch": 6
           },
-          "hand.R": {
-            "control": "LapBar.R",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "hand.L": {
-            "control": "LapBar.L",
-            "offset": [
-              0,
-              0,
-              0
-            ]
-          },
-          "note": "Both paddles return to the lap bar.",
           "neck": {
             "drop": -0.025
+          },
+          "hand.R": {
+            "control": "LapBar.R"
+          },
+          "hand.L": {
+            "control": "LapBar.L"
+          }
+        },
+        {
+          "frame": 13,
+          "note": "Both paddles return to the lap bar after the apex strike.",
+          "torso": {
+            "pitch": -28
+          },
+          "head": {
+            "pitch": 6
+          },
+          "neck": {
+            "drop": -0.025
+          },
+          "hand.R": {
+            "control": "LapBar.R"
+          },
+          "hand.L": {
+            "control": "LapBar.L"
           }
         },
         {
           "frame": 16,
-          "pose": "ride",
-          "note": "Both paddles hold the tucked ride pose again."
+          "note": "Both paddles hold the original ride anchor again.",
+          "pose": "ride"
         }
       ],
       "beats": {
-        "anticipation": 4,
-        "contact": 7,
-        "peak": 7,
-        "release": 12
+        "anticipation": 2,
+        "contact": 6,
+        "peak": 6,
+        "release": 10
       }
     },
     "ult_recover": {
@@ -1531,11 +1641,12 @@
       "keys": [
         {
           "frame": 1,
-          "pose": "ride",
-          "note": "Both paddles hold the lap bar as recovery starts."
+          "note": "Both paddles begin on the lap bar as recovery starts.",
+          "pose": "ride"
         },
         {
-          "frame": 4,
+          "frame": 2,
+          "note": "Both paddles release upward over the front rim as the spine comes out of the tuck.",
           "torso": {
             "pitch": -6
           },
@@ -1555,11 +1666,35 @@
               0.38,
               0.1
             ]
-          },
-          "note": "Both paddles pass above the front rim before returning to the fixed lap-bar anchor."
+          }
         },
         {
-          "frame": 7,
+          "frame": 5,
+          "note": "Both paddles release upward over the front rim as the spine comes out of the tuck.",
+          "torso": {
+            "pitch": -6
+          },
+          "head": {
+            "pitch": 4
+          },
+          "hand.R": {
+            "at": [
+              0.25,
+              0.38,
+              0.1
+            ]
+          },
+          "hand.L": {
+            "at": [
+              -0.25,
+              0.38,
+              0.1
+            ]
+          }
+        },
+        {
+          "frame": 6,
+          "note": "Both paddles hold an outward wrist shake clear of the lap bar.",
           "torso": {
             "pitch": -3
           },
@@ -1582,23 +1717,23 @@
           },
           "wrist.R": [
             0,
-            20,
-            15
+            25,
+            25
           ],
           "wrist.L": [
             0,
-            -20,
-            -15
-          ],
-          "note": "Both paddles twist outward clear of the lap bar."
+            -25,
+            -25
+          ]
         },
         {
           "frame": 9,
+          "note": "Both paddles hold an outward wrist shake clear of the lap bar.",
           "torso": {
-            "pitch": -2
+            "pitch": -3
           },
           "head": {
-            "pitch": 1
+            "pitch": 2
           },
           "hand.R": {
             "at": [
@@ -1623,11 +1758,11 @@
             0,
             -25,
             -25
-          ],
-          "note": "Both wrists shake outward as recovery straightens the casting."
+          ]
         },
         {
-          "frame": 11,
+          "frame": 10,
+          "note": "Both paddles reverse their wrist shake before returning to the yokes.",
           "torso": {
             "pitch": -2
           },
@@ -1657,13 +1792,16 @@
             0,
             25,
             25
-          ],
-          "note": "Both wrists reverse their small shake while the hands remain clear of the bar."
+          ]
         },
         {
           "frame": 13,
+          "note": "Both paddles reverse their wrist shake before returning to the yokes.",
           "torso": {
-            "pitch": -1
+            "pitch": -2
+          },
+          "head": {
+            "pitch": 1
           },
           "hand.R": {
             "at": [
@@ -1681,49 +1819,67 @@
           },
           "wrist.R": [
             0,
-            15,
-            15
+            -25,
+            -25
           ],
           "wrist.L": [
             0,
-            -15,
-            -15
-          ],
-          "note": "Both wrists make a smaller final shake before returning to the yokes."
+            25,
+            25
+          ]
         },
         {
           "frame": 16,
+          "note": "Both paddles settle back onto their driving yokes.",
           "torso": {
             "pitch": -1
           },
           "hand.R": {
-            "control": "Grip.R",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              0.32,
+              0.4,
+              0.05
             ]
           },
           "hand.L": {
-            "control": "Grip.L",
-            "offset": [
-              0,
-              0,
-              0
+            "at": [
+              -0.32,
+              0.4,
+              0.05
+            ]
+          }
+        },
+        {
+          "frame": 18,
+          "note": "Both paddles settle back onto their driving yokes.",
+          "torso": {
+            "pitch": -1
+          },
+          "hand.R": {
+            "at": [
+              0.32,
+              0.4,
+              0.05
             ]
           },
-          "note": "Both paddles meet their yokes as the casting levels."
+          "hand.L": {
+            "at": [
+              -0.32,
+              0.4,
+              0.05
+            ]
+          }
         },
         {
           "frame": 19,
-          "pose": "rest",
-          "note": "The muzzle-head is level in the seated bind pose."
+          "note": "The casting returns to seated bind rest.",
+          "pose": "rest"
         }
       ],
       "beats": {
-        "anticipation": 4,
-        "contact": 7,
-        "peak": 11,
+        "anticipation": 2,
+        "contact": 6,
+        "peak": 10,
         "release": 16
       }
     },
