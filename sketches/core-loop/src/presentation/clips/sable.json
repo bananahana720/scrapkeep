@@ -578,8 +578,8 @@
             "control": "GaugeLever",
             "offset": [
               0,
-              0.04,
-              0.18
+              0,
+              0
             ]
           },
           "hand.L": {
@@ -592,7 +592,7 @@
           },
           "ears": 38,
           "tool.R": -35,
-          "note": "The right paw slaps the gauge lever with both ears pinned back."
+          "note": "The right paw slaps the gauge lever centre at contact with both ears pinned back."
         },
         {
           "frame": 10,
@@ -622,7 +622,7 @@
           },
           "ears": 30,
           "tool.R": -35,
-          "note": "The right paw remains against the lever for the throw."
+          "note": "The right paw lifts off the gauge lever after the slap as the lever completes its throw."
         },
         {
           "frame": 14,
@@ -721,21 +721,21 @@
             "control": "SpoolBrake",
             "offset": [
               0.0,
-              0.04,
-              0.18
+              0,
+              0
             ]
           },
           "hand.L": {
             "control": "SpoolBrake",
             "offset": [
               -0.1,
-              0.04,
-              0.18
+              0,
+              0
             ]
           },
           "ears": 22,
           "tool.R": -30,
-          "note": "At the Bank Shot bite contact, the right paw meets the brake handle centre while the left paw holds its inward side."
+          "note": "At frame 6 after the Bank Shot bite, the right paw meets the brake handle centre while the left paw holds its inward side."
         },
         {
           "frame": 9,
