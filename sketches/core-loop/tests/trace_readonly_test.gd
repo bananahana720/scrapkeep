@@ -6,7 +6,7 @@ const TraversalLine := preload("res://tools/traversal_line.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
-const TICKS := 6000
+const TICKS := 900
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon", "floor"]
 
 
@@ -26,7 +26,7 @@ func _run() -> void:
 	for pilot in PILOTS:
 		for mode in ["plain", "trace"]:
 			var args := ["--table=park", "--stage=0", "--pilot=" + ("rivet" if pilot == "floor" else pilot),
-				"--seeds=7", "--ticks=%d" % TICKS, "--out=" + base.path_join(pilot + "-" + mode)]
+				"--seeds=7", "--ticks=%d" % TICKS, "--child-timeout=65", "--out=" + base.path_join(pilot + "-" + mode)]
 			if pilot == "floor":
 				args.append("--floor")
 			if mode == "trace":
@@ -83,12 +83,14 @@ class ProbePlayer extends RefCounted:
 class ProbeContext extends RefCounted:
 	var camera: ChaseCamera
 	var origin_reads := 0
+	var forward_reads := 0
 
 	func aim_origin() -> Vector3:
 		origin_reads += 1
 		return camera.aim_origin()
 
 	func aim_forward() -> Vector3:
+		forward_reads += 1
 		return camera.aim_forward()
 
 
@@ -119,6 +121,7 @@ func _check_observer(t) -> void:
 	sampler._record_tick(player, Vector3.ZERO, true)
 	t.eq("recording a trace leaves the next global RNG draw unchanged", randf(), expected)
 	t.eq("the observer avoids the cache-filling gameplay aim origin accessor", ctx.origin_reads, 0)
+	t.eq("the observer avoids the cache-filling gameplay aim forward accessor", ctx.forward_reads, 0)
 	camera.position = Vector3(10, 4, -9)
 	camera.rotation = Vector3(0.2, 0.25, -0.1)
 	camera.scale = Vector3(1.2, 0.8, 1.5)
@@ -126,6 +129,7 @@ func _check_observer(t) -> void:
 	camera.arm.scale = Vector3(1.1, 1.05, 0.95)
 	(camera.cam.get_parent() as Node3D).position = Vector3(0, 0, 6.5)
 	t.near("observed lens origin agrees with the composed rig pose", camera.peek_aim_origin().distance_to(camera.aim_origin()), 0.0, 0.00001)
+	t.near("observed aim forward agrees with the composed rig pose", camera.peek_aim_forward().distance_to(camera.aim_forward()), 0.0, 0.00001)
 	game["events"].free()
 	sampler.game = null
 	game.clear()

@@ -194,6 +194,16 @@ func aim_forward() -> Vector3:
 	return -cam.global_basis.z
 
 
+# The forward observer likewise avoids cam.global_basis and its transform-cache write.
+func peek_aim_forward() -> Vector3:
+	var basis := Basis.IDENTITY
+	var node: Node3D = cam
+	while node != null:
+		basis = Basis.from_euler(node.rotation, node.rotation_order).scaled_local(node.scale) * basis
+		node = node.get_parent_node_3d()
+	return -basis.z
+
+
 # Adds degrees of field of view that bleed away over time seconds.
 func _comfort_scale() -> float:
 	return 0.0 if reduced_motion else motion_scale

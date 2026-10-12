@@ -23,8 +23,8 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 # failed child is INCONCLUSIVE, excluded from runs, and makes the parent exit 3.
 # Each child writes under <out>/children/<position>-seed-<seed>; trace files are
 # also copied beside the unchanged per-pilot summary for existing consumers.
-# Trace aim origins use chase_camera.peek_aim_origin: the gameplay accessor
-# materializes a lazy engine transform cache and is unsafe for an observer.
+# Trace aim uses chase_camera.peek_aim_origin/peek_aim_forward: the gameplay
+# accessors materialize lazy engine transform caches and are unsafe for an observer.
 #
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
@@ -324,7 +324,7 @@ class Sampler:
 		contacts.sort()
 		var velocity: Vector3 = player.state.velocity
 		var aim_origin: Vector3 = game.camera.peek_aim_origin()
-		var aim_forward: Vector3 = game.ctx.aim_forward()
+		var aim_forward: Vector3 = game.camera.peek_aim_forward()
 		trace.append({
 			"tick": traversal.ticks, "time": snappedf(game.run.stage_time, 0.001),
 			"at": [snappedf(ball.x, 0.01), snappedf(ball.y, 0.01), snappedf(ball.z, 0.01)],
