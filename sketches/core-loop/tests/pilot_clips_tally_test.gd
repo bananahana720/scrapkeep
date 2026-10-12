@@ -109,6 +109,8 @@ func _run() -> void:
 	_rest_end(rec)
 	_control(game, hero, player, rec)
 	_reset(hero, rec)
+	player.body().linear_velocity = Vector3(2.0, -1.0, 3.0)
+	player.state.velocity = Vector3(-4.0, 0.5, 2.0)
 	var body_velocity: Vector3 = player.body().linear_velocity
 	var state_velocity: Vector3 = player.state.velocity
 	events.line_skill_fired.emit("link_clips", null, Vector3.ZERO, "enemy")
@@ -117,7 +119,7 @@ func _run() -> void:
 	_t.eq("clip leaves state velocity unchanged", player.state.velocity, state_velocity)
 	_rest_end(rec)
 	_preview()
-	_t.check("machinery vocabulary accepted", rec.mecha.skip_lines.filter(func(line): return String(line).begins_with("SKIP machinery")).is_empty())
+	_t.check("all 21 machinery rows accepted", rec.mecha._rows.size() == 21 and rec.mecha.skip_lines.filter(func(line): return String(line).begins_with("SKIP machinery")).is_empty())
 	_done(game)
 
 

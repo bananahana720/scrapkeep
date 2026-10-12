@@ -173,7 +173,7 @@ func _pilot(pilot: Node, document: Dictionary) -> void:
 	var clips: Array = Array(player.get_animation_list()) if player != null else []
 	clips.erase("RESET")
 	clips.sort()
-	var expected_clips := CLIPS.keys()
+	var expected_clips := preload("res://tests/support/pilot_clip_trigger.gd").required_clips(true)
 	expected_clips.sort()
 	_check("seven named clips", clips == expected_clips,
 		"expected %s; imported %s" % [expected_clips, clips])
@@ -184,7 +184,7 @@ func _pilot(pilot: Node, document: Dictionary) -> void:
 		var animation := player.get_animation(name)
 		_check("duration " + name, absf(animation.length - CLIPS[name]) < 0.001,
 			"%.6f seconds" % animation.length)
-		_check("one-shot " + name, animation.loop_mode == Animation.LOOP_NONE)
+		_check("loop suffix " + name, (animation.loop_mode != Animation.LOOP_NONE) == String(name).ends_with("_loop"))
 		for time in [0.0, animation.length]:
 			player.play(name)
 			player.seek(time, true)
