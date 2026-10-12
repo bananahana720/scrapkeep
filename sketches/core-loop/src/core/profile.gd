@@ -13,6 +13,9 @@ extends RefCounted
 const SafeStore := preload("res://src/core/safe_store.gd")
 
 const SCHEMA := 4
+const RUN_TALLY_KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
+const RUN_TALLY_PREFIX := "run_tallies."
+const RUN_TALLY_BASE := "run_tally_base."
 
 # From-version to the method that returns the document one version up.
 const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2", 3: "_migrate_3"}
@@ -44,6 +47,9 @@ var _on_disk := false
 var _loaded_generation := 0
 var _backup_path := ""
 var _backup_bytes := PackedByteArray()
+var _loaded_tally_prefixes := {}
+var _pending_tally_settlements := {}
+var _last_closed_tally_run := ""
 
 
 func _init(file_path := "user://profile.json") -> void:
@@ -61,6 +67,9 @@ func load_profile() -> bool:
 	_loaded_generation = 0
 	_backup_path = ""
 	_backup_bytes = PackedByteArray()
+	_loaded_tally_prefixes = {}
+	_pending_tally_settlements = {}
+	_last_closed_tally_run = ""
 	var read := _read()
 	if read["state"] == "missing":
 		return true
@@ -71,6 +80,7 @@ func load_profile() -> bool:
 	_doc = read["doc"]
 	_on_disk = true
 	_loaded_generation = int(_doc["generation"])
+	_remember_run_tallies()
 	if read["from_version"] < SCHEMA:
 		_backup_path = "%s.v%d" % [path, read["from_version"]]
 		_backup_bytes = read["bytes"]
@@ -92,6 +102,7 @@ func save() -> bool:
 		last_error = "not saving: %s changed since it was loaded and cannot be read (%s)" % [path, read["why"]]
 		return false
 	if read["state"] == "ok" and (not _on_disk or int(read["doc"]["generation"]) != _loaded_generation):
+		_discard_compacted_tallies(next["stats"], read["doc"]["stats"])
 		next = merge(next, read["doc"])
 		if backup_path.is_empty() and read["from_version"] < SCHEMA:
 			backup_path = "%s.v%d" % [path, read["from_version"]]
@@ -103,6 +114,7 @@ func save() -> bool:
 			return false
 		_backup_path = ""
 		_backup_bytes = PackedByteArray()
+	_compact_run_tallies(next["stats"])
 	next["generation"] = int(next["generation"]) + 1
 	var err := SafeStore.write_atomic(path, JSON.stringify(next, "  ", true, true))
 	if err != OK:
@@ -111,6 +123,10 @@ func save() -> bool:
 	_doc = next
 	_on_disk = true
 	_loaded_generation = int(next["generation"])
+	_remember_run_tallies()
+	if not _pending_tally_settlements.is_empty():
+		_last_closed_tally_run = _pending_tally_settlements.keys().back()
+		_pending_tally_settlements.clear()
 	last_error = ""
 	return true
 
@@ -152,6 +168,10 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	for stat_name in stats:
 		if not out["stats"].has(stat_name) or stats[stat_name] > out["stats"][stat_name]:
 			out["stats"][stat_name] = stats[stat_name]
+	# Run snapshots merge by max, but distinct runs contribute additively.
+	for key in RUN_TALLY_KEYS:
+		if out["stats"].has(RUN_TALLY_BASE + key):
+			out["stats"][key] = float(out["stats"][RUN_TALLY_BASE + key]) + _run_contributions(out["stats"], key)
 	var worn: Dictionary = theirs.get("equipped", {})
 	for slot in worn:
 		if not out["equipped"].has(slot):
@@ -224,6 +244,106 @@ func add_stat(stat_name: String, amount := 1.0) -> void:
 
 func set_stat(stat_name: String, value: float) -> void:
 	_doc["stats"][stat_name] = value
+
+
+# Cumulative run snapshots pay only the delta since this run's last logged snapshot.
+# The existing stats map carries the high-water marks, so a death, end or replayed
+# record cannot count the same kills or time twice. No grant rows consume these keys.
+func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
+	if run_id.is_empty() or totals.size() != RUN_TALLY_KEYS.size():
+		return false
+	if run_id == _last_closed_tally_run or _pending_tally_settlements.has(run_id):
+		return false
+	var prefix := RUN_TALLY_PREFIX + run_id + "."
+	for key in RUN_TALLY_KEYS:
+		var value = totals.get(key)
+		if not (value is int or value is float) or not is_finite(value) or value < 0.0:
+			return false
+		if key != "time" and value != floorf(value):
+			return false
+		if value < stat(prefix + key) or not is_finite(stat(key) + value - stat(prefix + key)):
+			return false
+	var changed := false
+	for key in RUN_TALLY_KEYS:
+		changed = changed or float(totals[key]) > stat(prefix + key)
+	if not changed:
+		return false
+	for key in RUN_TALLY_KEYS:
+		if not _doc["stats"].has(RUN_TALLY_BASE + key):
+			set_stat(RUN_TALLY_BASE + key, stat(key) - _run_contributions(_doc["stats"], key))
+		var value := float(totals[key])
+		var delta := value - stat(prefix + key)
+		if delta > 0.0:
+			add_stat(key, delta)
+			set_stat(prefix + key, value)
+	return changed
+
+
+func settle_run_tallies(run_id: String) -> bool:
+	if run_id.is_empty() or run_id == _last_closed_tally_run or _pending_tally_settlements.has(run_id):
+		return false
+	_pending_tally_settlements[run_id] = true
+	return true
+
+
+func settle_previous_run_tallies() -> bool:
+	var changed := false
+	for stat_name in _doc["stats"]:
+		var key := String(stat_name)
+		if key.begins_with(RUN_TALLY_PREFIX):
+			var run_id := key.substr(RUN_TALLY_PREFIX.length(), key.rfind(".") - RUN_TALLY_PREFIX.length())
+			changed = settle_run_tallies(run_id) or changed
+	return changed
+
+
+func _remember_run_tallies() -> void:
+	_loaded_tally_prefixes = {}
+	for stat_name in _doc["stats"]:
+		if String(stat_name).begins_with(RUN_TALLY_PREFIX):
+			_loaded_tally_prefixes[String(stat_name).substr(0, String(stat_name).rfind(".") + 1)] = true
+
+
+func _discard_compacted_tallies(stats: Dictionary, saved: Dictionary) -> void:
+	# A newer save folded these loaded contributions into its base. A stale writer
+	# must not bring their per-run keys back, even if its snapshot advanced afterward.
+	for prefix in _loaded_tally_prefixes:
+		var still_open := false
+		for key in RUN_TALLY_KEYS:
+			still_open = still_open or saved.has(prefix + key)
+		if not still_open:
+			for key in RUN_TALLY_KEYS:
+				stats.erase(prefix + key)
+
+
+func _compact_run_tallies(stats: Dictionary) -> void:
+	if _pending_tally_settlements.is_empty():
+		return
+	for run_id in _pending_tally_settlements:
+		var prefix: String = RUN_TALLY_PREFIX + run_id + "."
+		for key in RUN_TALLY_KEYS:
+			var base: String = RUN_TALLY_BASE + key
+			if not stats.has(base):
+				stats[base] = float(stats.get(key, 0.0)) - _run_contributions(stats, key)
+			stats[base] += float(stats.get(prefix + key, 0.0))
+			stats.erase(prefix + key)
+	for key in RUN_TALLY_KEYS:
+		if stats.has(RUN_TALLY_BASE + key):
+			stats[key] = float(stats[RUN_TALLY_BASE + key]) + _run_contributions(stats, key)
+
+
+static func _run_contributions(stats: Dictionary, key: String) -> float:
+	var total := 0.0
+	for stat_name in stats:
+		if String(stat_name).begins_with(RUN_TALLY_PREFIX) and String(stat_name).ends_with("." + key):
+			total += float(stats[stat_name])
+	return total
+
+
+func run_tallies(run_id: String) -> Dictionary:
+	var totals := {}
+	for key in RUN_TALLY_KEYS:
+		totals[key] = stat(RUN_TALLY_PREFIX + run_id + "." + key)
+	return totals
 
 
 func last_pilot() -> String:
