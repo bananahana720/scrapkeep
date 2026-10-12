@@ -1,5 +1,6 @@
 # smoke: solo
 # 2026-10-12 FIXTURE-ADAPT: 5f95fb5 parsed a killed child's truncated JSON into Dictionary and never quit.
+# 2026-10-12 R2/m6: malformed child records are skipped safely and fail trace integrity with a verdict.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -41,7 +42,7 @@ func _initialize() -> void:
 		var errors: Array = ChildRuns.summary(result)["errors"]
 		t.check("arm %d completed" % arm, result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
 			"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], errors])
-		var rows := _trace_rows(FileAccess.get_file_as_string(folder.path_join("trace-11.ndjson")), "arm %d" % arm)
+		var rows := _trace_rows(FileAccess.get_file_as_string(folder.path_join("trace-11.ndjson")), "arm %d" % arm, t)
 		t.eq("arm %d fixed ticks" % arm, rows.size(), TICKS)
 		var fingerprint := []
 		var enemies_seen := false
@@ -69,18 +70,23 @@ func _compare(t, label: String, a: Array, b: Array) -> void:
 	t.check(label, not a.is_empty() and a == b, "first differing tick %d" % first)
 
 
-func _trace_rows(text: String, label: String) -> Array[Dictionary]:
+func _trace_rows(text: String, label: String, t = null) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	var invalid := 0
 	var lines := text.split("\n", false)
 	for i in lines.size():
 		var parser := JSON.new()
 		var error := parser.parse(lines[i])
 		var parsed = parser.data
 		if error != OK or not parsed is Dictionary:
+			invalid += 1
 			print("guard skipped invalid JSON record %d/%d in %s: %s" % [i + 1, lines.size(), label, parser.get_error_message()])
 			continue
 		if not FIELDS.all(func(field): return parsed.has(field)) or not parsed["enemies"] is Array or not parsed["warden_integrity"] is Array:
+			invalid += 1
 			print("guard skipped incomplete state record %d/%d in %s" % [i + 1, lines.size(), label])
 			continue
 		out.append(parsed)
+	if t != null:
+		t.eq("%s trace has no malformed records" % label, invalid, 0)
 	return out
