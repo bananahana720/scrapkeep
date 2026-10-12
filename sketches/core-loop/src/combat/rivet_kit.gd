@@ -422,20 +422,41 @@ func _in_shape(shape: Dictionary, point: Vector3, hull: float) -> bool:
 			return false
 		return along >= -hull and along - hull <= (shape["endpoint"] as Vector3).distance_to(shape["origin"]) and side - hull <= float(shape["width"]) * 0.5
 	for cell in shape["cells"]:
-		var inside := true
-		var blocked := false
-		for plane in cell["planes"]:
-			if (point - (plane["at"] as Vector3)).dot(plane["normal"]) > 0.0001:
-				inside = false
-				blocked = blocked or bool(plane.get("solid", false))
-		if blocked or (cell["faces"] as Array).is_empty():
-			continue
-		if inside:
+		if _cell_intersects(cell, point, 0.0):
 			return true
-		for face in cell["faces"]:
-			for i in range(1, face.size() - 1):
-				if point.distance_squared_to(_closest_triangle(point, face[0], face[i], face[i + 1])) <= hull * hull:
-					return true
+		if hull <= 0.0 or not _cell_intersects(cell, point, hull):
+			continue
+		var parts: Array = [cell]
+		for shadow in shape.get("shadows", []):
+			var contact: Dictionary = shadow.back()
+			if (point - (contact["at"] as Vector3)).dot(contact["normal"]) >= -0.0001:
+				continue
+			var exposed: Array = []
+			for part in parts:
+				exposed.append_array(_subtract_shadow(part, shadow, true))
+			parts = exposed
+			if parts.is_empty():
+				break
+		if parts.any(func(part): return _cell_intersects(part, point, hull)):
+			return true
+	return false
+
+
+func _cell_intersects(cell: Dictionary, point: Vector3, hull: float) -> bool:
+	if (cell["faces"] as Array).is_empty():
+		return false
+	var inside := true
+	for plane in cell["planes"]:
+		if (point - (plane["at"] as Vector3)).dot(plane["normal"]) > 0.0001:
+			if plane.get("solid", false):
+				return false
+			inside = false
+	if inside:
+		return true
+	for face in cell["faces"]:
+		for i in range(1, face.size() - 1):
+			if point.distance_squared_to(_closest_triangle(point, face[0], face[i], face[i + 1])) <= hull * hull:
+				return true
 	return false
 
 
@@ -520,41 +541,73 @@ func _commit_cell(polygon: Array, up: Vector3, half_height: float) -> Dictionary
 		if normal.dot(centre - (face[0] as Vector3)) > 0.0:
 			normal = -normal
 		planes.append({"at": face[0], "normal": normal, "terrain": false})
-	return {"faces": faces, "planes": planes}
+	return _pack_cell(faces, planes)
+
+
+func _pack_cell(faces: Array, planes: Array) -> Dictionary:
+	var unique := {}
+	for face in faces:
+		for vertex in face:
+			unique[vertex] = true
+	var vertices: Array = unique.keys()
+	var bounds := AABB()
+	if not vertices.is_empty():
+		bounds = AABB(vertices[0], Vector3.ZERO)
+		for vertex in vertices:
+			bounds = bounds.expand(vertex)
+	return {"faces": faces, "planes": planes, "vertices": vertices, "bounds": bounds}
+
+
+func _bounds_distance(bounds: AABB, plane: Dictionary) -> Vector2:
+	var normal: Vector3 = plane["normal"]
+	var centre: float = (bounds.get_center() - plane["at"]).dot(normal)
+	var extent := bounds.size * 0.5
+	var radius := absf(normal.x) * extent.x + absf(normal.y) * extent.y + absf(normal.z) * extent.z
+	return Vector2(centre - radius, centre + radius)
 
 
 func _clip_cell(cell: Dictionary, plane: Dictionary) -> Dictionary:
 	var low := INF
 	var high := -INF
-	for face in cell["faces"]:
-		for vertex in face:
+	var interval := _bounds_distance(cell["bounds"], plane)
+	if interval.x >= -0.0001 or interval.y <= 0.0001:
+		low = interval.x
+		high = interval.y
+	else:
+		for vertex in cell["vertices"]:
 			var distance: float = (vertex - plane["at"]).dot(plane["normal"])
 			low = minf(low, distance)
 			high = maxf(high, distance)
 	# A coplanar remnant has no volume and must not become a hull-forgiveness face.
 	if low >= -0.0001:
-		return {"faces": [], "planes": []}
+		return _pack_cell([], [])
 	if high <= 0.0001:
-		return {"faces": cell["faces"], "planes": cell["planes"] + [plane]} if plane.get("solid", false) else cell
-	return {"faces": _clip_faces(cell["faces"], plane["at"], plane["normal"]), "planes": cell["planes"] + [plane]}
+		if plane.get("solid", false):
+			var constrained := cell.duplicate()
+			constrained["planes"] = cell["planes"] + [plane]
+			return constrained
+		return cell
+	return _pack_cell(_clip_faces(cell["faces"], plane["at"], plane["normal"]), cell["planes"] + [plane])
 
 
 # Subtract a convex shadow, retaining disjoint convex parts outside its half-spaces.
-func _subtract_shadow(cell: Dictionary, shadow: Array) -> Array:
-	for plane in shadow:
-		if not plane.get("solid", false) and (cell["faces"] as Array).all(func(face): return face.all(func(v): return (v - plane["at"]).dot(plane["normal"]) >= -0.0001)):
+func _subtract_shadow(cell: Dictionary, shadow: Array, hull_boundary := false) -> Array:
+	# Drawn volume stops at terrain first. Hull forgiveness also needs the silhouette caps.
+	var planes: Array = shadow if hull_boundary else [shadow.back()] + shadow.slice(0, shadow.size() - 1)
+	for plane in planes:
+		if (not hull_boundary or not plane.get("solid", false)) and (_bounds_distance(cell["bounds"], plane).x >= -0.0001 or (cell["vertices"] as Array).all(func(v): return (v - plane["at"]).dot(plane["normal"]) >= -0.0001)):
 			return [cell]
 	var lit: Array = []
 	var remaining := cell
-	for plane in shadow:
-		var outside := _clip_cell(remaining, {"at": plane["at"], "normal": -plane["normal"], "terrain": true, "solid": plane.get("solid", false)})
+	for plane in planes:
+		var solid: bool = hull_boundary and bool(plane.get("solid", false))
+		var outside := _clip_cell(remaining, {"at": plane["at"], "normal": -plane["normal"], "terrain": true, "solid": solid})
 		if not (outside["faces"] as Array).is_empty():
 			lit.append(outside)
-		remaining = _clip_cell(remaining, plane)
+		remaining = _clip_cell(remaining, {"at": plane["at"], "normal": plane["normal"], "terrain": true, "solid": solid})
 		if (remaining["faces"] as Array).is_empty():
 			break
 	return lit
-
 
 func _face_shadow(origin: Vector3, face: Array) -> Array:
 	var centre := Vector3.ZERO
@@ -643,7 +696,7 @@ func _collider_faces(shape: Shape3D) -> Array:
 
 # Discover actual terrain faces across the whole volume, not sparse rays in each cell.
 # Include the hull margin in the query so forgiveness cannot reach uncommitted cover.
-func _commit_terrain(origin: Vector3, cells: Array) -> Array:
+func _commit_terrain(origin: Vector3, cells: Array, shadows: Array) -> Array:
 	var bounds := AABB(origin, Vector3.ZERO)
 	for cell in cells:
 		for face in cell["faces"]:
@@ -689,6 +742,7 @@ func _commit_terrain(origin: Vector3, cells: Array) -> Array:
 						var shadow := _face_shadow(origin, face)
 						if shadow.is_empty():
 							continue
+						shadows.append(shadow)
 						var lit: Array = []
 						for cell in cells:
 							lit.append_array(_subtract_shadow(cell, shadow))
@@ -702,6 +756,7 @@ func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, wi
 		side = Vector3.RIGHT
 	var up := side.cross(dir).normalized()
 	var cells: Array = []
+	var shadows: Array = []
 	var segments: int = ctx.player.indicator.SEGMENTS
 	for i in segments:
 		var a := dir.rotated(up, lerpf(-half, half, float(i) / segments))
@@ -715,10 +770,10 @@ func _commit_sector(origin: Vector3, dir: Vector3, reach: float, half: float, wi
 			var a := dir.rotated(up, TAU * float(i) / segments)
 			var b := dir.rotated(up, TAU * float(i + 1) / segments)
 			cells.append(_commit_cell([origin, origin + a * inner, origin + b * inner], up, inner))
-	cells = _commit_terrain(origin, cells)
+	cells = _commit_terrain(origin, cells, shadows)
 	var centre := _commit_beam(origin, dir, reach, width)
 	return ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": origin, "direction": dir,
-		"length": reach, "half_angle": half, "width": width, "inner": inner, "up": up, "cells": cells, "centre_endpoint": centre["endpoint"]})
+		"length": reach, "half_angle": half, "width": width, "inner": inner, "up": up, "cells": cells, "shadows": shadows, "centre_endpoint": centre["endpoint"]})
 
 
 func _draw_shape(layer: String, shape: Dictionary) -> void:
@@ -789,12 +844,13 @@ func _bow_wave(ball: Vector3) -> int:
 	var heading := _flat(_heading()).normalized()
 	var side := Vector3(-heading.z, 0.0, heading.x)
 	var cells: Array = []
+	var shadows: Array = []
 	for sign in [-1.0, 1.0]:
 		var near: Vector3 = side * Weapons.DRIVE_WAVE_NEAR * sign
 		var far: Vector3 = side * Weapons.DRIVE_WAVE_FAR * sign
 		cells.append(_commit_cell([ball + near, ball + far, ball + far + heading * Weapons.DRIVE_WAVE_AHEAD, ball + near + heading * Weapons.DRIVE_WAVE_AHEAD], Vector3.UP, ctx.player.tuning.RADIUS))
-	cells = _commit_terrain(ball, cells)
-	var shape: Dictionary = ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": ball, "cells": cells, "hull_forgiveness": false})
+	cells = _commit_terrain(ball, cells, shadows)
+	var shape: Dictionary = ctx.player.yours({"kind": "rivet_volume", "rivet_shape": true, "origin": ball, "cells": cells, "shadows": shadows, "hull_forgiveness": false})
 	_draw_shape("rivet_wave", shape)
 	var thrown := 0
 	for enemy in select(shape):
