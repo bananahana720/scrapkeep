@@ -1,8 +1,8 @@
 {
-  "bake_sha256": "0bb96a0d11e98c48105cf8f53c57247f7da5ebd3ade1497560a2b909abc03a39",
+  "bake_sha256": "fb4a917527989aa3e3981336a2865b339376faf8312ef6023b1bde91c62aea55",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1317241,
+  "bytes": 1317236,
   "edges": 314223,
   "first_failed": "",
   "flags": {
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 2316,
   "full_visit_ratio": "1.716",
-  "graph_sha256": "192a70779fc8bb794b27b981ec2aa7515b89159e7ab418d9cc37faa14ee8c4c6",
+  "graph_sha256": "b905ace4b752ed9f778756cbaded3488001c7dcc8bfe58eaf9932662ae055253",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2371,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "8a19b2a121d97f5811a9b2fd4f69c20753008693be56f1d4fa84121de8a2c1c9",
+  "park_sha256": "64495bdffa7644c4454790518d1639c41a34d9ab5c8e16bc3471da18bef36050",
   "pockets": [
     {
       "clear_ring": [],
@@ -234,6 +234,14 @@
         "d_landmark": 238.2,
         "name": "lobber_ledge_terrain",
         "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
+        "cost": 1209.8,
+        "d_landmark": 121.6,
+        "name": "apron_kicker_ramp",
+        "on_route": true,
         "rank": 0,
         "viable": false
       },
@@ -520,9 +528,9 @@
     ],
     "count": 142,
     "crossings": {
-      "drop": 44,
+      "drop": 43,
       "ride": 12,
-      "walk": 249
+      "walk": 248
     },
     "hidden": [
       {
