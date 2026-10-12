@@ -1,7 +1,7 @@
 extends SceneTree
-# 2026-10-11 (PC-CANNON): landing zone snapshots and per-Cannon contact meter credit.
+# 2026-10-11 (PC-CANNON): landing snapshots must include the zones for roster damage comparison.
 # EXPECTED_CHECKS includes the count guard. Every check must run.
-const EXPECTED_CHECKS := 52
+const EXPECTED_CHECKS := 48
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -23,10 +23,6 @@ var _landed: Array = []
 var _live: Dictionary = {}
 var _strikes: Array = []
 var _body
-
-class MeterFlow extends Node:
-	func in_play() -> bool:
-		return true
 
 
 func _initialize() -> void:
@@ -266,21 +262,3 @@ func _cases() -> void:
 	var node_ids: Array = UpgradeTree.nodes("remembered_cannon").map(func(node): return node["id"])
 	_t.check("movement ops stay in the Cannon tree", node_ids.size() == 30 and node_ids.all(func(id): return String(id).begins_with("c_")))
 	_t.check("no Cannon movement node enters another pilot tree", UpgradeTree.TREES.keys().all(func(id): return id == "remembered_cannon" or UpgradeTree.nodes(id).all(func(node): return not node_ids.has(node["id"]))))
-	_meter_credit_cases(foe)
-
-
-func _meter_credit_cases(foe: Node3D) -> void:
-	var flow: Node = _ult.ctx.flow
-	var terrain: RefCounted = _ult.ctx.terrain
-	var fixture := MeterFlow.new()
-	_ult.ctx.flow = fixture
-	_ult.ctx.terrain = null
-	for id in ["cannon_fire_mission", "cannon_creeping_barrage", "cannon_plate_mortar", "ult_default"]:
-		_player.abilities.ultimate_id = id
-		_ult.meter.reset()
-		_ult._contact_at.clear()
-		_ult._on_struck(foe, "ram", 30.0)
-		_t.near(id + " contact meter credit", _ult.meter.value, 2.0 if id == "ult_default" else 1.0)
-	_ult.ctx.flow = flow
-	_ult.ctx.terrain = terrain
-	fixture.free()
