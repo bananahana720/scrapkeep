@@ -102,12 +102,12 @@ func _check_mark(label: String, mark: Node3D, spec: Dictionary, row: Dictionary,
 			max_radius = maxf(max_radius, (local / half).length())
 			max_cross = maxf(max_cross, minf(absf(local.x), absf(local.y)))
 			min_clearance = minf(min_clearance, point.y - mark.get_parent().world.terrain.height(point.x, point.z))
-			if crack_heights.has(Vector2(point.x, point.z)):
-				dust_lift = maxf(dust_lift, point.y - float(crack_heights[Vector2(point.x, point.z)]))
+			dust_lift = maxf(dust_lift, point.y - mark.get_parent().world.terrain.height(point.x, point.z) - 0.15)
 			low = minf(low, point.y)
 			high = maxf(high, point.y)
 			if spec.get("pattern", "") == "dust_crack":
-				shape_ok = shape_ok and local.x >= half.x - float(spec.crack_width_m) - 0.0001 and local.x <= half.x + 0.0001 and absf(local.y) <= half.y + 0.0001
+				var edge := 3.0 if mesh.name == "CrawlingCrack" else half.x
+				shape_ok = shape_ok and local.x >= edge - float(spec.crack_width_m) - 0.0001 and local.x <= edge + 0.0001 and absf(local.y) <= half.y + 0.0001
 			match spec.shape:
 				"cross": shape_ok = shape_ok and (absf(local.x) <= 0.1501 or absf(local.y) <= 0.1501)
 				"burst": shape_ok = shape_ok and (local / half).length() <= 1.0001
