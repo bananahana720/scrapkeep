@@ -59,6 +59,14 @@ class WaterField:
 	extends RefCounted
 	var surfaces: Array = []
 	var _surface_y := -INF
+	func refresh() -> void:
+		var top := {}
+		for water in surfaces:
+			water.visible = false
+			top[water.site.id] = water
+		for water in top.values():
+			water.visible = true
+			water.render()
 	func in_basin(point: Vector3) -> bool:
 		_surface_y = -INF
 		for water in surfaces:
@@ -182,7 +190,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				var elapsed: float = state.elapsed_s if row.kind == "drain" else float(ctx.rise_s) + float(ctx.delta_s)
 				var fraction := clampf(elapsed / fill_s, 0.0, 1.0) if fill_s > 0.0 else 1.0
 				var depth := minf(ParkSchema.MAX_EVENT_WATER_M, maxf(0.0, float(row.effect.get("depth_m", 0.0))))
-				state.depth_m = lerpf(depth, 0.0, fraction) if row.kind == "drain" else depth * fraction
+				state.depth_m = lerpf(float(state.start_depth_m), 0.0 if row.kind == "drain" else depth, fraction)
 				state.water.cycle.metres = state.depth_m
 				state.water.render()
 			_hazard(row, state, ctx)
@@ -203,7 +211,11 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	water.site = state.site
 	water.cycle = WaterClock.new()
 	var depth := minf(ParkSchema.MAX_EVENT_WATER_M, maxf(0.0, float(row.effect.get("depth_m", 0.0))))
-	state.depth_m = depth if row.kind == "drain" else 0.0
+	state.start_depth_m = depth if row.kind == "drain" else 0.0
+	for existing in _water_field.surfaces:
+		if existing.site.id == state.site.id and existing.visible:
+			state.start_depth_m = clampf(existing.surface_y() - state.at.y, 0.0, ParkSchema.MAX_EVENT_WATER_M)
+	state.depth_m = state.start_depth_m
 	water.cycle.metres = state.depth_m
 	var half := ParkMap.footprint_half_extents(state.site)
 	var centre := Vector2(state.at.x, state.at.z)
@@ -215,6 +227,7 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	water.render()
 	state.water = water
 	_water_field.surfaces.append(water)
+	_water_field.refresh()
 
 
 func _prepare_overlay(row: Dictionary, record: Dictionary) -> void:
@@ -363,6 +376,7 @@ func _end(row: Dictionary) -> void:
 	if state.water != null:
 		_water_field.surfaces.erase(state.water)
 		state.water.free()
+		_water_field.refresh()
 	if state.overlay != null:
 		_set_overlay(row, false)
 	if state.model != null:
