@@ -9,7 +9,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_CHECKS := 632
+const EXPECTED_CHECKS := 674
 
 var _t := T.new("director_credit_test")
 
@@ -56,18 +56,22 @@ func _cards() -> void:
 	if not ResourceLoader.exists(path):
 		return
 	var cards = load(path)
-	var all_explicit := true
 	for kind in Director.KIND_NAMES:
 		var card: Dictionary = cards.CARDS.get(kind, {})
-		all_explicit = all_explicit and card.has("cost") and card.has("weight") and card.has("stage_cap")
-		all_explicit = all_explicit and int(card.get("cost", 0)) > 0 and float(card.get("weight", 0)) > 0.0
-	_t.check("all 22 supported kinds have explicit positive cards", all_explicit and cards.CARDS.size() == 22)
+		var cost := float(card.get("cost", 0))
+		var weight := float(card.get("weight", 0))
+		var stage_cap = card.get("stage_cap", 0)
+		var singleton: float = cards.cost([kind])
+		_t.check("supported kind %s has a purchasable explicit card" % kind,
+			cards.CARDS.size() == 22 and is_finite(cost) and cost > 0.0 and is_finite(weight) and weight > 0.0
+			and typeof(stage_cap) == TYPE_INT and stage_cap > 0 and is_finite(singleton) and singleton > 0.0,
+			"cost=%s weight=%s stage_cap=%s singleton=%s" % [cost, weight, stage_cap, singleton])
 	var d = _director(7, Park.of(1), "credit")
-	var covered := true
 	for row in Park.DEFS:
 		for pack in row.packs + [row.elite]:
-			covered = covered and d.credit_pack_cost(pack.kinds, pack == row.elite) > 0.0
-	_t.check("every park pack and elite has a positive explicit price", covered)
+			var price: float = d.credit_pack_cost(pack.kinds, pack == row.elite)
+			_t.check("park stage %d pack %s has a finite positive explicit price" % [row.stage, pack.id],
+				is_finite(price) and price > 0.0, "kinds=%s price=%s" % [pack.kinds, price])
 	var normal: float = d.credit_pack_cost(Park.ELITE.kinds, false)
 	_t.near("elite costs its multiplier", d.credit_pack_cost(Park.ELITE.kinds, true), normal * cards.ELITE_MULTIPLIER)
 	_t.check("unknown kinds never receive a fallback price", not is_finite(d.credit_pack_cost(["unpriced"])))
