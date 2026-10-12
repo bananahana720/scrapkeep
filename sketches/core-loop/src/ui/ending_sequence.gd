@@ -70,6 +70,7 @@ var cannon_answer_at := -1.0
 var _crater_placed := false
 # Holds the threaded-loaded crater scenes so the cache keeps them for the placement on the credits roll.
 var _crater_files: Array = []
+var _crater_requests: Array[String] = []
 
 
 func start(game_ref) -> void:
@@ -259,7 +260,11 @@ func _build_crater() -> void:
 	crater.visible = false
 	_scene.add_child(crater)
 	for path in _crater_paths():
-		ResourceLoader.load_threaded_request(path)
+		var error := ResourceLoader.load_threaded_request(path)
+		if error == OK:
+			_crater_requests.append(path)
+		else:
+			push_warning("ending_sequence: crater_ending GLB %s request failed (error %d)" % [path, error])
 
 
 func _crater_paths() -> Array:
@@ -273,17 +278,19 @@ func _crater_paths() -> Array:
 func _place_crater() -> bool:
 	if _crater_placed:
 		return true
-	var paths := _crater_paths()
-	for path in paths:
+	for path in _crater_requests:
 		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			return false
 	_crater_placed = true
-	for path in paths:
+	for path in _crater_requests:
 		var status := ResourceLoader.load_threaded_get_status(path)
 		if status == ResourceLoader.THREAD_LOAD_LOADED:
 			_crater_files.append(ResourceLoader.load_threaded_get(path))
 		else:
 			push_warning("ending_sequence: crater_ending GLB %s did not load (status %d)" % [path, status])
+			if status != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				ResourceLoader.load_threaded_get(path)
+	_crater_requests.clear()
 	var placed := ParkRecipes.place(CRATER_ROW, crater, Callable(), Callable())
 	if placed == null:
 		push_warning("ending_sequence: crater_ending placed nothing; the credits roll over the sky")
@@ -292,6 +299,19 @@ func _place_crater() -> bool:
 		body.get_parent().remove_child(body)
 		body.free()
 	return true
+
+
+func _release_crater_requests() -> void:
+	for path in _crater_requests:
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			# Collection joins an unfinished load and releases its threaded request.
+			ResourceLoader.load_threaded_get(path)
+	_crater_requests.clear()
+	_crater_files.clear()
+
+
+func _exit_tree() -> void:
+	_release_crater_requests()
 
 
 # The Highdraft's ground mesh is the catch floor: an orange and blue grid under the
@@ -554,6 +574,7 @@ func skip() -> void:
 
 func cancel() -> void:
 	active = false
+	_release_crater_requests()
 	visible = false
 	if viewport != null:
 		viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
