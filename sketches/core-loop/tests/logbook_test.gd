@@ -6,12 +6,13 @@ const RunState := preload("res://src/core/run_state.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const RunLog := preload("res://src/core/run_log.gd")
+const RunStore := preload("res://src/core/run_store.gd")
 const SpawnerDouble := preload("res://tests/doubles/spine_spawner_double.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const PAGE := "res://src/ui/logbook_page.gd"
 const KEYS := Profile.RUN_TALLY_KEYS
-const EXPECTED_CHECKS := 65
+const EXPECTED_CHECKS := 91
 
 # A full three-stage flow, as spine_run_log_test uses, with combat and boss doubles.
 class ScriptedGame extends Game:
@@ -65,8 +66,9 @@ func _run() -> void:
 	_check_page(codex, profile)
 	_check_run(spawner, run, profile)
 	_check_tally_merge()
-	_t.eq("SR12 expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	_game.free()
+	await _check_quit_reload()
+	_t.eq("SR12 expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
 
 
@@ -202,7 +204,8 @@ func _check_run(spawner, run, profile) -> void:
 	run.advance(1.5)
 	_game.run_log.abandon_open_run()
 	_t.check("SR12 abandoned run feeds profile", profile.stat("kills") == tallies["kills"] + 1 and profile.stat("time") == tallies["time"] + 1.5)
-	_t.check("SR12 abandoned second run leaves no per-run profile keys", _has_no_run_tallies(profile))
+	_game.flow.new_run()
+	_t.check("SR12 replaced second run leaves no per-run profile keys", _has_no_run_tallies(profile))
 	var doc_before: Dictionary = profile._doc.duplicate(true)
 	_t.check("SR12 stale snapshot cannot reduce totals", not profile.record_run_tallies(run.run_id, _zero_tallies()) and profile._doc == doc_before)
 	_t.check("SR12 second run saves and reloads", reload.load_profile() and reload.stat("kills") == tallies["kills"] + 1 and reload.stat("time") == tallies["time"] + 1.5)
@@ -214,6 +217,78 @@ func _check_run(spawner, run, profile) -> void:
 	expected_lifetime["kills"] += 1
 	expected_lifetime["time"] += 1.5
 	_t.check("SR12 terminal base holds all lifetime contributions", _same_tallies(folded, expected_lifetime))
+
+
+func _check_quit_reload() -> void:
+	for action in ["continue", "new", "view"]:
+		_game = ScriptedGame.new()
+		_game.test_mode = true
+		root.add_child(_game)
+		await process_frame
+		_game.ctx.calm = true
+		_game.player.source = Intent.Scripted.new()
+		var flow = _game.flow
+		var run = _game.run
+		var profile = _game.ctx.profile
+		flow.store = RunStore.new(_game.storage_dir.path_join("quit-entrance.json"))
+		flow.press_start()
+		flow.choose_class(1)
+		run.record_kill("chaser", Vector3.ZERO, 0)
+		run.record_kill("chaser", Vector3.ZERO, 0)
+		run.advance(2.5)
+		_game.events.warden_engaged.emit(1)
+		_game.events.stage_cleared.emit(1)
+		flow.enter_stage(2, Vector3.ZERO, false)
+		var entrance: Dictionary = flow.store.load()
+		_t.check("SR12 %s saves entrance with completed-stage tallies" % action,
+			entrance.get("run_tallies", {}).get("kills") == 2 and entrance.get("run_tallies", {}).get("stages_cleared") == 1)
+		run.record_kill("chaser", Vector3.ZERO, 0)
+		run.advance(1.25)
+		var tallies: Dictionary = run.tallies()
+		var run_id: String = run.run_id
+		_t.eq("SR12 %s quit snapshot" % action, tallies,
+			{"stages_cleared": 1, "time": 3.75, "kills": 3, "deaths": 0, "wardens_seen": 1})
+		_game.run_log._exit_tree()
+		var lines := FileAccess.get_file_as_string(_game.storage_dir.path_join(RunLog.LOG_FILE)).strip_edges().split("\n", false)
+		var record: Dictionary = JSON.parse_string(lines[-1]) if not lines.is_empty() else {}
+		_t.check("SR12 %s quit writes abandoned snapshot" % action,
+			record.get("outcome") == "abandoned" and _same_tallies(record.get("tallies"), tallies))
+		var reloaded := Profile.new(profile.path)
+		_t.check("SR12 %s quit profile reloads from disk" % action, reloaded.load_profile(), reloaded.last_error)
+		_game.ctx.profile = reloaded
+		profile = reloaded
+		if action == "continue":
+			flow._set_state(flow.TITLE)
+			_t.check("SR12 Continue restores the same saved run", flow.resume_run() and run.run_id == run_id and run.stage == 2)
+			run.damage(99999.0, "quit-continue-test")
+			tallies["deaths"] += 1
+			_t.eq("SR12 Continue reconciles all five tallies before death", run.tallies(), tallies)
+			_t.eq("SR12 quit Continue death counts kills once", profile.stat("kills"), tallies["kills"])
+			_t.eq("SR12 quit Continue death counts stages once", profile.stat("stages_cleared"), tallies["stages_cleared"])
+			_t.check("SR12 quit Continue death lifetime totals count once", _same_tallies(_profile_tallies(profile), tallies))
+		elif action == "new":
+			var older := _zero_tallies()
+			older["kills"] = 2
+			_t.check("SR12 another earlier run retains per-run keys", profile.record_run_tallies("earlier_quit", older) and profile.save())
+			flow.new_run()
+			tallies["kills"] += 2
+			_t.check("SR12 new run replaces saved entrance", run.run_id != run_id and flow.store.load().get("run_id") == run.run_id)
+			_t.check("SR12 new run removes every earlier per-run key", _has_no_run_tallies(profile))
+			_t.check("SR12 new run folds quit contributions into base once", _same_tallies(_profile_tallies(profile, Profile.RUN_TALLY_BASE), tallies))
+			_t.check("SR12 new run settled totals survive reload", profile.load_profile() and _has_no_run_tallies(profile) and _same_tallies(_profile_tallies(profile), tallies))
+		else:
+			_t.check("SR12 quit reload retains resumable high-water marks", _same_tallies(profile.run_tallies(run_id), tallies))
+			_t.eq("SR12 quit reload leaves lifetime base unsettled", _profile_tallies(profile, Profile.RUN_TALLY_BASE), _zero_tallies())
+			_t.check("SR12 logbook lifetime totals include quit run once", _same_tallies(_profile_tallies(profile), tallies))
+			_t.check("SR12 repeated profile reload keeps quit totals once", profile.load_profile() and _same_tallies(_profile_tallies(profile), tallies))
+		_game.free()
+
+
+func _profile_tallies(profile, prefix := "") -> Dictionary:
+	var totals := {}
+	for key in KEYS:
+		totals[key] = profile.stat(prefix + key)
+	return totals
 
 
 func _advance(run, seconds: float) -> void:
