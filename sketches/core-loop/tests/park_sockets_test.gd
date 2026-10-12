@@ -7,8 +7,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const MODULE := "res://src/world/park/sockets.gd"
 const Recipes := preload("res://src/world/park/park_recipes.gd")
-# 2026-10-12: round 2 opening/accounting/visit/route fixtures raise the count from 41 to 82.
-const EXPECTED_CHECKS := 82
+# 2026-10-12: round 2 fixtures raise EXPECTED_CHECKS from 41 to 89.
+const EXPECTED_CHECKS := 89
 var t := T.new("park_sockets_test")
 
 
@@ -23,6 +23,11 @@ func _run() -> void:
 		return
 	var sockets: GDScript = load(MODULE)
 	for arg in OS.get_cmdline_user_args():
+		if arg == "--fixture=shortest":
+			_shortest_control(sockets)
+			t.eq("shortest-route fixture check count", t.checks + 1, 9)
+			quit(t.verdict())
+			return
 		if arg == "--fixture=route-zone":
 			_route_zone_control(sockets)
 			t.eq("route-zone fixture check count", t.checks + 1, 6)
@@ -140,6 +145,7 @@ func _run() -> void:
 	t.check("the comparison gate passes", swept["ok"], str(swept["errors"]))
 	_accounting_controls(sockets)
 	_visit_controls(sockets)
+	_shortest_control(sockets)
 	t.eq("the test ran its stated check count", t.checks + 1, EXPECTED_CHECKS)
 	quit(t.verdict())
 
@@ -266,3 +272,51 @@ func _route_zone_control(sockets: GDScript) -> void:
 	t.check("route-zone control ids belong to the graph", wanted.all(func(z): return z >= 0 and z < graph.zone_count()))
 	t.eq("control: route zone fails for its specific reason", sockets.stage(crowded, 17, "sockets")["errors"],
 		["zone %s cannot hold a guaranteed pocket" % graph.zones()[graph.zone_of(graph.spawn_node)]["name"]])
+
+
+func _shortest_control(sockets: GDScript) -> void:
+	var layout: Dictionary = sockets.template(17)
+	var graph = layout["graph"]
+	# The authored waymark line follows the upper lane. The canonical shortest path
+	# drops to the unflagged lower lane first; either lane costs the same total distance.
+	for node in graph.node_count():
+		if graph.pz[node] == 0:
+			graph.node_flags[node] &= ~sockets.Graph.LINE
+	graph.spawn_node = 1
+	graph.d_from = graph.search(PackedInt32Array([graph.spawn_node]))
+	graph.d_land = graph.search(PackedInt32Array([graph.beacon_node]), true)
+	sockets._zone_table(graph)
+	var target: Dictionary
+	for socket in layout["sockets"]:
+		socket["fixed_open"] = socket["id"] != "pocket_0_0"
+		if not socket["fixed_open"]:
+			target = socket
+	target["filler"]["size"] = [48, 8, 16]
+	t.eq("shortest-route fixture otherwise validates", sockets.validate(graph, layout["sockets"]), [])
+	var path: Dictionary = graph.search_prev(graph.spawn_node)
+	var node: int = graph.beacon_node
+	var blocked := {}
+	var intersects_unflagged := false
+	var uses_waymark := false
+	var waymark := -1
+	for i in graph.node_count():
+		if graph.pz[i] == -8 and graph.px[i] == target["filler"]["at"][0] - 4:
+			waymark = i
+	var frame: Dictionary = sockets._frame(target["filler"])
+	while node != graph.spawn_node:
+		var previous: int = path["prev"][node]
+		uses_waymark = uses_waymark or node == waymark
+		if sockets._intersects(frame, graph.position(previous), graph.position(node)):
+			intersects_unflagged = graph.flags(previous) & sockets.Graph.LINE == 0 and graph.flags(node) & sockets.Graph.LINE == 0
+		node = previous
+	t.check("filler crosses the canonical unflagged shortest geometry", intersects_unflagged)
+	t.check("the authored LINE waymark differs from the canonical shortest route", waymark >= 0 and not uses_waymark and graph.flags(waymark) & sockets.Graph.LINE != 0)
+	t.near("the authored waymark gives an equal-length alternative", graph.d_from[waymark] + graph.d_land[waymark], graph.d_from[graph.beacon_node])
+	for a in graph.node_count():
+		for e in range(graph.off[a], graph.off[a + 1]):
+			if sockets._intersects(frame, graph.position(a), graph.position(graph.to[e])):
+				blocked[a * graph.node_count() + graph.to[e]] = true
+	var remaining = sockets._overlay(graph, blocked)
+	t.near("crossing that shortest geometry leaves the same shortest distance", remaining.d_from[graph.beacon_node], graph.d_from[graph.beacon_node])
+	t.check("control: a filler crossing shortest geometry is unsafe", not sockets._safe(graph, target["filler"]))
+	t.eq("control: construction rejects the crossing even with an equal alternative", sockets.stage(layout, 17, "fixed")["errors"], ["filler pocket_0_0 crosses the protected route"])
