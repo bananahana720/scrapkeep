@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for ea699dc.
+# freed pilot clip big_cheer -> unlock in the PE-0 rescue action; cage geometry and timing pins stay.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -76,7 +78,7 @@ func _cage_check(cage, pilot_file: String) -> void:
 	var freed_gate := cage.find_child("CageGate", true, false) as MeshInstance3D
 	_check(cage.spent and not cage._bars.visible and freed_gate != null
 		and absf(cage._freed_wall.rotation.x) > deg_to_rad(60.0)
-		and cage._animator != null and cage._animator.assigned_animation == "big_cheer",
+		and cage._animator != null and cage._animator.assigned_animation == "unlock",
 		"freed folds the exit wall and pilot cheers")
 	_check(rescued.count(cage.quest) == 1, "rescue event emitted once")
 	cage.fire()

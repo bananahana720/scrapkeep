@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for 24cc872 and 000763f.
+# shared Icons.REEL for every line slot -> Sable ab_sable_line, Kest ab_kest_line; Rivet keeps Icons.REEL.
 extends SceneTree
 # 2026-10-11 (PC-RIVET, pending a coordinator ruling: SCOPE amendment attributed to B2, or a B2
 # follow-up): slot 3 wears its line row's own picture, read from AbilityState (Rivet's

@@ -42,7 +42,7 @@ const ROWS := {
 	"tl_through_feed": "Every hit winds your next surge closer.",
 	"tl_line_feed": "Harpoon smashes throw a second shockwave.",
 	"tl_spring_vent": "Each surge hands back your air jump.",
-	"tl_corner_plate": "Every plate return hands back a surge.",
+	"tl_corner_plate": "Every gather plate hands back a surge.",
 	# Remembered cannon, C1 to C6.
 	"c_quick_lane": "Call lanes a quarter faster.",
 	"c_brace_kick": "Every plate hands back a recoil kick.",
@@ -88,6 +88,10 @@ const SET_PIECE_LINES := {
 	"tarn:ult_encore": "Q can rend a second landing.",
 	# --- end Tarn ---
 	# --- P-C Tally set piece lines ---
+	"plate_return": "Ride home. Every clip settles on landing.",
+	"plate_audit": "Audit Trail: stamp what you steer over.",
+	"plate_flywheel": "Flywheel Throw: launch, gather, collect.",
+	"ult_settle": "Clips settle for more on landing.",
 	# --- end Tally ---
 	# --- P-C Cannon set piece lines ---
 	# --- end Cannon ---

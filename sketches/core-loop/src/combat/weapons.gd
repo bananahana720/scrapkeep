@@ -158,8 +158,8 @@ const CLAMP_SECONDS_MIN := 1.5
 const CLAMP_SECONDS_MAX := 3.0
 const CLAMP_BONUS := 1.5
 const CLAMP_KNOCK := EventKinds.IMPACT["clamp"]["knock"]
-# Tally's program cards: a press runs the selected bay's card at the aim point within
-# CARD_REACH and costs one pressure; CARD_RECOVERY is the pause before the next run.
+# Tally's program cards: a slot-1 press runs Balance Due at the aim point within CARD_REACH and
+# costs one pressure; CARD_RECOVERY is the pause before the next run. CARDS keeps each card's icon.
 const CARDS := {"gather_plate": {"icon": "ab_tally_gather"}, "link_clips": {"icon": "ab_tally_link"},
 	"balance_due": {"icon": "ab_tally_balance"}}
 const CARD_REACH := 30.0
@@ -170,9 +170,9 @@ const GATHER_RADIUS := 4.0
 const GATHER_SECONDS := 4.0
 const GATHER_TICK := 0.2
 const GATHER_KNOCK := 6.0
-# Link: clips the first enemy on the aim ray and its nearest neighbours; the next direct
-# hit on a clip arcs once to each other clip at a share of its force, never under the floor.
-const LINK_AIM_RADIUS := 1.5
+# The ledger clip on a body: the latched enemy and its nearest neighbours within the reach ring;
+# the next direct hit on a clip arcs once to each other clip at a share of its force, never under
+# the floor, times the chain multiplier stored at the cast.
 const LINK_NEIGHBOUR_REACH := 9.0
 const LINK_NEIGHBOURS := 2
 const LINK_SECONDS := 4.0
@@ -185,12 +185,34 @@ const BALANCE_PER_SPEED := 1.2
 const BALANCE_MAX := 56.0
 # Pressure: rolling at cruise or faster refills one charge per PRESSURE_ROLL_S seconds.
 const PRESSURE_ROLL_S := 2.0
-# Plate return: a corridor from the plate toward the ball; the gauge scales its width and damage.
-const PLATE_RETURN_LENGTH := 8.0
-const PLATE_RETURN_HALF_MIN := 1.5
-const PLATE_RETURN_HALF_MAX := 2.5
-const PLATE_RETURN_DAMAGE_MIN := 8.0
-const PLATE_RETURN_DAMAGE_MAX := 16.0
+# The ledger clip (pilots/tally.md sections 2 and 10): each clip pays CLIP_PRESSURE, never past
+# the cap. On a world latch a clip post clips the first CLIP_POST_MAX enemies within
+# CLIP_POST_RADIUS for CLIP_POST_SECONDS. A Flywheel Surge pays SURGE_PRESSURE (A2-CRITIC).
+const CLIP_PRESSURE := 1
+const CLIP_POST_RADIUS := 4.0
+const CLIP_POST_SECONDS := 4.0
+const CLIP_POST_MAX := 3
+const SURGE_PRESSURE := 1
+# Plate Return: each clip outside the landing radius takes SETTLE_SHARE of the strike (the
+# ult_settle knob's default); a ride clips at most CLIP_CAP by heft class I to V. Her plate is B
+# when it lies within rope range and ULT_PLATE_AIM_DEG of the aim.
+const SETTLE_SHARE := 0.4
+const CLIP_CAP := [6, 7, 8, 9, 10]
+const ULT_PLATE_AIM_DEG := 30.0
+# Audit Trail: each beat stamps a ring on ground within AUDIT_GROUND_REACH below the ball.
+const AUDIT_STAMP_RADIUS := 4.0
+const AUDIT_STAMP_KNOCK := 10.0
+const AUDIT_GROUND_REACH := 12.0
+# Flywheel Throw: each beat throws a small plate at the densest knot within FLY_KNOT_SEARCH of the
+# ground track (pulls for FLY_PLATE_SECONDS, clips FLY_KNOT_CLIPS); the landing grows by
+# FLY_LANDING_BONUS, and FLY_PULL_LEAD s before the strike everything within the radius plus
+# FLY_PULL is pulled FLY_PULL inward.
+const FLY_KNOT_SEARCH := 15.0
+const FLY_PLATE_SECONDS := 1.5
+const FLY_KNOT_CLIPS := 3
+const FLY_LANDING_BONUS := 2.0
+const FLY_PULL := 4.0
+const FLY_PULL_LEAD := 0.2
 const LEDGER_KNOCK := EventKinds.IMPACT["ledger"]["knock"]
 # The remembered cannon's numbers: reach, damage and cooldowns only. Every warn, live,
 # half width, band and span comes from mind_attacks.gd, never from here.

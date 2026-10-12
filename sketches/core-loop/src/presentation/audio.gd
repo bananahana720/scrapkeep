@@ -101,7 +101,11 @@ const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tic
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
-	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate"]
+	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
+	# --- P-C Tally keyed sounds ---
+	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
+	# --- end Tally ---
+]
 # --- P-C Kest sounds ---
 const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
 	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
@@ -183,6 +187,7 @@ var _ace_arrival_at := -1
 var _band_fade_start := -1
 # v2 W3 characters: which of CHARACTER_KINDS are already connected.
 var _character_wired := {}
+var _optional_listeners := {}
 # v2 W9: the run's class motif id (class_def motif), from run_started.
 var _motif := ""
 # Moss's babble, baked once per line, beat and key: {"beat|key|text": AudioStreamWAV}.
@@ -483,6 +488,7 @@ func _process(delta: float) -> void:
 		ace.pause_gain = engine.pause_gain
 	_flush_flow()
 	_play_due_notes()
+	_tend_tally()
 	_tend_hum()
 	_follow_warden()
 	_follow_escalation()
@@ -1051,6 +1057,7 @@ func _connect_all(events) -> void:
 			_sable_bank_sound())
 	events.line_skill_fired.connect(_on_tarn_claw_drag)
 	events.line_skill_fired.connect(_on_rivet_line_drive)
+	_wire_tally(events)
 	_wire_ultimate_beat()
 	wire_optional()
 	_wire_armor()
@@ -1061,44 +1068,44 @@ func _connect_all(events) -> void:
 func wire_optional() -> void:
 	var events = ctx.events
 	_wire_armor()
-	_listen(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
-	_listen(events, "heft_class_changed", _on_heft_class)
-	_listen(events, "heft_class_dropped", _on_heft_dropped)
-	_listen(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
-	_listen(events, "strike_deflected", _on_deflected)
-	_listen(events, "posture_changed", _on_posture_changed)
-	_listen(events, "threat_rose", func(tier: int):
+	_listen_optional(events, "beacon_unsealed", func(_stage: int): _flow_queue.append(["unseal"]))
+	_listen_optional(events, "heft_class_changed", _on_heft_class)
+	_listen_optional(events, "heft_class_dropped", _on_heft_dropped)
+	_listen_optional(events, "scrap_lost", func(amount: int, _at: Vector3, _total: int, _cause: String): play("scrap_lost", clampf(amount / 20.0, 0.0, 1.0) * 4.0 - 3.0))
+	_listen_optional(events, "strike_deflected", _on_deflected)
+	_listen_optional(events, "posture_changed", _on_posture_changed)
+	_listen_optional(events, "threat_rose", func(tier: int):
 		on_beat("threat_rose", minf(tier, 3) * 1.0)
 		engine.set_fleet_ticks(tier)
 		if ace_playing():
 			ace.threat_rose(tier))
 	# The reactor relic is the only ancient that colours the band: a tritone pedal
 	# under the sub while its vent charges (DESIGN-V2 section 11 audio rulings).
-	_listen(events, "vent_charging", func(at: Vector3, _seconds: float):
+	_listen_optional(events, "vent_charging", func(at: Vector3, _seconds: float):
 		if _is_warden_at(at):
 			_warden_charging = true
 		play("vent_charging")
 		engine.set_reactor_pedal(true))
-	_listen(events, "vent_erupted", func(at: Vector3):
+	_listen_optional(events, "vent_erupted", func(at: Vector3):
 		if _is_warden_at(at):
 			_warden_charging = false
 		play("vent_erupted")
 		engine.set_reactor_pedal(false))
 	# Moss's lounge is a layer mask over the stage theme, entered and left with the
 	# bay (SOUND-STORY.md section 8).
-	_listen(events, "bay_entered", func(_banked_speed: float):
+	_listen_optional(events, "bay_entered", func(_banked_speed: float):
 		play("bay_entered")
 		engine.set_lounge(true)
 		if ace_playing():
 			ace.set_bay(true))
-	_listen(events, "bay_left", func(_velocity: Vector3):
+	_listen_optional(events, "bay_left", func(_velocity: Vector3):
 		play("bay_left")
 		engine.set_lounge(false)
 		if ace_playing():
 			ace.set_bay(false))
 	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
 	# no row plays nothing, since play() already skips an empty sound override.
-	_listen(events, "world_fact", func(kind: String, _at: Vector3):
+	_listen_optional(events, "world_fact", func(kind: String, _at: Vector3):
 		play("world_fact", 0.0, 1.0, "SFX", Rows.heard(EventKinds.world_row(kind), cue_context())))
 	# The shell's air factor moved (build.gd shell_air_changed): the row's spring, up a fifth on the
 	# rise and down a fourth on the return, so the two read apart without looking.
@@ -1110,47 +1117,47 @@ func wire_optional() -> void:
 		ctx.build.hotwire_offered.connect(_on_hotwire_offered)
 	# v3 interact: each fact in its family's sound register (world/interactables.gd), so
 	# a bet's drum roll, clunk and crack and an altar's anvil and riser come from the row.
-	_listen(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
+	_listen_optional(events, "interact_armed", func(family: String, _id: String, _at: Vector3):
 		play("interact_armed", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound(family, "arm"), cue_context())))
-	_listen(events, "interact_fired", func(family: String, _id: String, _at: Vector3):
+	_listen_optional(events, "interact_fired", func(family: String, _id: String, _at: Vector3):
 		play("interact_fired", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound(family, "fire"), cue_context())))
-	_listen(events, "ambush_ended", func(_id: String, won: bool, _at: Vector3):
+	_listen_optional(events, "ambush_ended", func(_id: String, won: bool, _at: Vector3):
 		play("ambush_ended", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("fight", "won" if won else "lost"), cue_context())))
-	_listen(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
+	_listen_optional(events, "bet_resolved", func(_id: String, won: bool, _stake: int, _at: Vector3):
 		play("bet_resolved", 0.0, 1.0, "SFX", Rows.heard(Interactables.sound("bet", "won" if won else "lost"), cue_context())))
-	_listen(events, "activity_done", func(id: String, _at: Vector3):
+	_listen_optional(events, "activity_done", func(id: String, _at: Vector3):
 		play("activity_done", 0.0, 1.0, "SFX", Rows.heard(EventKinds.activity_row(id), cue_context())))
-	_listen(events, "core_gained", _on_core)
-	_listen(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
-	_listen(events, "synergy_discovered", _on_synergy)
-	_listen(events, "line_state_changed", _on_line_state)
-	_listen(events, "grapple_released", _stop_hum, true)
-	_listen(events, "verb_failed", _on_verb_failed)
-	_listen(events, "cause_armed", _on_cause_armed)
-	_listen(events, "cause_fired", _on_cause_fired)
-	_listen(events, "interaction_found", func(): play("interaction_found"), true)
-	_listen(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
+	_listen_optional(events, "core_gained", _on_core)
+	_listen_optional(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
+	_listen_optional(events, "synergy_discovered", _on_synergy)
+	_listen_optional(events, "line_state_changed", _on_line_state)
+	_listen_optional(events, "grapple_released", _stop_hum, true)
+	_listen_optional(events, "verb_failed", _on_verb_failed)
+	_listen_optional(events, "cause_armed", _on_cause_armed)
+	_listen_optional(events, "cause_fired", _on_cause_fired)
+	_listen_optional(events, "interaction_found", func(): play("interaction_found"), true)
+	_listen_optional(events, "element_resolved", func(_element: String, _material: String, behaviour: String, _at: Vector3):
 		play("element_resolved", 0.0, 1.0, "SFX", Rows.element_sound(behaviour)))
-	_listen(events, "warden_engaged", func(_stage: int):
+	_listen_optional(events, "warden_engaged", func(_stage: int):
 		_begin_boss("warden_engaged", "warden")
 		if ace_playing():
 			ace.commit_warden())
-	_listen(events, "boss_arena_entered", func():
+	_listen_optional(events, "boss_arena_entered", func():
 		_boss_phase = 1
 		_disarm_launch()
 		_begin_boss("boss_arena_entered", _boss_track()), true)
 	var phase_args := _argc(events, "boss_phase_changed")
 	if phase_args >= 1:
-		_listen(events, "boss_phase_changed", _on_boss_phase_with.unbind(phase_args - 1) if phase_args > 1 else _on_boss_phase_with)
+		_listen_optional(events, "boss_phase_changed", _on_boss_phase_with.unbind(phase_args - 1) if phase_args > 1 else _on_boss_phase_with)
 	else:
-		_listen(events, "boss_phase_changed", _on_boss_phase, true)
-	_listen(events, "boss_defeated", func(): _on_boss_defeated(), true)
-	_listen(events, "boss_attack_telegraphed", _on_boss_telegraph)
-	_listen(events, "boss_weak_point_hit", _on_weak_point)
-	_listen(events, "event_progress", _on_event_progress)
+		_listen_optional(events, "boss_phase_changed", _on_boss_phase, true)
+	_listen_optional(events, "boss_defeated", func(): _on_boss_defeated(), true)
+	_listen_optional(events, "boss_attack_telegraphed", _on_boss_telegraph)
+	_listen_optional(events, "boss_weak_point_hit", _on_weak_point)
+	_listen_optional(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
 	# resolves into the arena music instead of a landing.
-	_listen(events, "stage_content_cleared", func(reason: String):
+	_listen_optional(events, "stage_content_cleared", func(reason: String):
 		_disarm_launch()
 		_event_id = ""
 		_chase_lead0 = -1.0
@@ -1169,9 +1176,9 @@ func wire_optional() -> void:
 		play("stage_content_cleared"))
 	# v2 W9: a hold sounds the holding unit's loop, and a pack its faction's arrival (the
 	# Fleet stamp, the reactor tick, the swarm lock, the Mind's quote of your motif).
-	_listen(events, "hold_started", func(kind: String, _at: Vector3):
+	_listen_optional(events, "hold_started", func(kind: String, _at: Vector3):
 		play("hold_started", 0.0, 1.0, "SFX", Rows.sound("hold_started", cue_context().merged({"hold": kind}))))
-	_listen(events, "pack_arrived", func(faction: String, _at: Vector3, _kinds: Array):
+	_listen_optional(events, "pack_arrived", func(faction: String, _at: Vector3, _kinds: Array):
 		play("pack_arrived", 0.0, 1.0, "SFX", Rows.sound("pack_arrived", cue_context().merged({"faction": faction}))))
 	# v2 W3 characters: each class-ability fact plays its event row's sound_next once W5
 	# has baked it (resolved for the run's class), else its stand-in.
@@ -1197,6 +1204,16 @@ func _on_vault_kicked(_at: Vector3, speed: float) -> void:
 	play("vault_kicked", 0.0, Harmony.ratio(12.0 * clampf(speed / Augments.VAULT_CAP, 0.0, 1.0)))
 
 
+# Optional facts have one handler each; reuse its identity when late wiring runs again.
+func _listen_optional(events: Object, signal_name: String, callable: Callable, loose := false) -> bool:
+	if not events.has_signal(signal_name):
+		return false
+	var key := "%d:%s" % [events.get_instance_id(), signal_name]
+	if not _optional_listeners.has(key):
+		_optional_listeners[key] = callable
+	return _listen(events, signal_name, _optional_listeners[key], loose)
+
+
 # Connects once. loose drops whatever arguments the signal carries.
 static func _listen(events: Object, signal_name: String, callable: Callable, loose := false) -> bool:
 	if not events.has_signal(signal_name):
@@ -1209,11 +1226,28 @@ static func _listen(events: Object, signal_name: String, callable: Callable, loo
 				argc = (info["args"] as Array).size()
 		if argc > 0:
 			target = callable.unbind(argc)
-	for connection in events.get_signal_connection_list(signal_name):
-		if connection["callable"].get_object() == callable.get_object() and connection["callable"].get_method() == callable.get_method():
-			return true
+	# Signal identity also recognises the same lambda through an unbind wrapper.
+	if events.is_connected(signal_name, target):
+		return true
+	if _named_listener(callable):
+		for connection in events.get_signal_connection_list(signal_name):
+			var connected: Callable = connection["callable"]
+			if _named_listener(connected) and connected.get_object() == callable.get_object() and connected.get_method() == callable.get_method():
+				return true
 	events.connect(signal_name, target)
 	return true
+
+
+# bind/unbind make named methods custom too; reconstruction excludes even a named lambda.
+static func _named_listener(callable: Callable) -> bool:
+	var named := Callable(callable.get_object(), callable.get_method())
+	var bound := callable.get_bound_arguments()
+	if not bound.is_empty():
+		named = named.bindv(bound)
+	var unbound := callable.get_unbound_arguments_count()
+	if unbound > 0:
+		named = named.unbind(unbound)
+	return callable == named
 
 
 # --- The harpoon line and the synergy motifs ------------------------------------------
@@ -2510,3 +2544,99 @@ func _on_rivet_line_drive(id: String, _target: Node3D, _at: Vector3, on: String)
 		_start("line_skill_fired", RIVET_LINE["arrive"], Synth.to_wav(Synth.normalize(samples)),
 			SfxBank.trim_db(RIVET_LINE["arrive"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
 # --- end Rivet ---
+# --- P-C Tally audio ---
+# Notes are baked at their written pitch, then transposed together into the live key.
+# The four bank recipes carry the paper punch and bell independently of cog_tick.
+const TALLY_SOUNDS := {"plate": "plate_tally", "clip": "clip_tally", "stroke": "stroke_tally", "settle": "settle_tally"}
+const TALLY_CUES := {
+	"tally_plate": {"kind": "special_used", "sound": "plate_tally", "steps": [-12]},
+	"tally_clip": {"kind": "line_skill_fired", "sound": "clip_tally", "steps": [0, 2, 3]},
+	"tally_stroke": {"kind": "ultimate_peak", "sound": "stroke_tally", "steps": [0, 2, 3, 5]},
+	"tally_total": {"kind": "ultimate_landed", "sound": "stroke_tally", "steps": [12]},
+	"tally_settle": {"kind": "ultimate_landed", "sound": "settle_tally", "steps": [0, 3, 5, 7, 10, 12, 15, 17, 19, 22]},
+}
+const TALLY_PIECES := ["plate_return", "plate_audit", "plate_flywheel"]
+const TALLY_SIXTEENTHS := 4.0
+# SOUND-STORY.md:31, the tempo her strokes keep when no music plays.
+const TALLY_HOME_BPM := 172.0
+var _tally_notes: Array = []
+var _tally_beat := -1
+var _tally_streams := {}
+
+
+func _wire_tally(events) -> void:
+	events.special_used.connect(func(id: String, _at: Vector3):
+		if id == "gather_plate":
+			_tally_cue("tally_plate", 0))
+	events.line_skill_fired.connect(func(id: String, _target: Node3D, _at: Vector3, _on: String):
+		if id != "link_clips":
+			return
+		var combat = ctx.get("spawner") if ctx != null else null
+		var clips: int = int(combat.last_card.get("hits", 1)) if combat != null else 1
+		var lift := maxi(0, int(ctx.player.chain.combo) - 1)
+		for i in clampi(clips, 1, TALLY_CUES["tally_clip"]["steps"].size()):
+			_tally_cue("tally_clip", i, lift, i))
+	events.ultimate_peak.connect(func(id: String, _at: Vector3):
+		if id in TALLY_PIECES:
+			for i in TALLY_CUES["tally_stroke"]["steps"].size():
+				_tally_cue("tally_stroke", i, 0, i))
+	events.ultimate_landed.connect(func(id: String, _at: Vector3, _hits: int, _damage: float):
+		if not id in TALLY_PIECES:
+			return
+		_tally_cue("tally_total", 0)
+		var combat = ctx.get("spawner") if ctx != null else null
+		var settles: int = int(combat.tally_last_settle.get("settles", 0)) if combat != null else 0
+		for i in mini(settles, TALLY_CUES["tally_settle"]["steps"].size()):
+			_tally_cue("tally_settle", i, 0, i + 1))
+
+
+# Seconds per sixteenth of the music playing, or of the motif's 172 BPM home with none.
+func _tally_sixteenth() -> float:
+	var bpm: float = engine.bpm() if engine != null and engine.mode == MusicEngine.PLAY else 0.0
+	return 60.0 / (bpm if bpm > 0.0 else TALLY_HOME_BPM) / TALLY_SIXTEENTHS
+
+
+# Queues one note of a TALLY_CUES row: step index `step`, lifted `lift` semitones, `slot`
+# sixteenths from now.
+func _tally_cue(cue: String, step: int, lift := 0, slot := 0) -> void:
+	var row: Dictionary = TALLY_CUES[cue]
+	var steps: Array = row["steps"]
+	var semis: int = int(steps[step % steps.size()]) + lift
+	var note := [clock + slot * _tally_sixteenth(), row["kind"], row["sound"], 62 + semis, cue == "tally_total"]
+	if slot == 0:
+		_tally_play(note)
+	else:
+		_tally_notes.append(note)
+
+
+# Plays due notes, and one ledger stroke per flight beat of her set piece (D, E, F, G, round again).
+func _tend_tally() -> void:
+	var combat = ctx.get("spawner") if ctx != null else null
+	if combat != null and combat.get("ultimate") != null and combat.get("tally_piece") != null:
+		var ult = combat.ultimate
+		if ult.phase() == "flight" and String(combat.tally_piece) != "":
+			if int(ult._beat) != _tally_beat and int(ult._beat) > 0:
+				_tally_cue("tally_stroke", int(ult._beat) - 1)
+			_tally_beat = int(ult._beat)
+		else:
+			_tally_beat = -1
+	var waiting: Array = []
+	for note in _tally_notes:
+		if float(note[0]) > clock:
+			waiting.append(note)
+		else:
+			_tally_play(note)
+	_tally_notes = waiting
+
+
+func _tally_play(note: Array) -> void:
+	var kind := String(note[1])
+	var sound := String(note[2])
+	var pitch := Harmony.ratio(live_key())
+	if not _admit(kind, sound, pitch):
+		return
+	var key := "%s:%d:%s" % [sound, int(note[3]), bool(note[4])]
+	if not _tally_streams.has(key):
+		_tally_streams[key] = Synth.to_wav(SfxBank.tally_recipe(sound, int(note[3]), bool(note[4])))
+	_start(kind, sound, _tally_streams[key], SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority(kind)], pitch, "SFX")
+# --- end Tally ---

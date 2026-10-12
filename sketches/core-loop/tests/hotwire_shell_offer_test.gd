@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for b1679c8.
+# loot SHA256 d85b50b76df695396024904cc3a9245d9fa636352144869cc21c8086c73111e3 -> a443c521830c8c6a85bd87e6c153c1b451adac1644056a8f8b4787d5a7ade3fe; Load Dividend added to the catalogue.
 extends SceneTree
 
 const Parts := preload("res://src/build/parts.gd")
@@ -103,7 +105,7 @@ func _loot_parity() -> void:
 	var digest := text.sha256_text()
 	_check("loot", not "riveted_shell" in text, "riveted_shell absent from ids, rows, pools and 50 rolls")
 	print("[loot digest] ids %d rows %d sha256 %s" % [Parts.ids().size(), Parts.rows().size(), digest])
-	_check("loot parity", digest == "d85b50b76df695396024904cc3a9245d9fa636352144869cc21c8086c73111e3", "digest matches the GP5 pin (2026-10-08: six new parts and four synergies changed ids, rows and offer pools; RR1 pin was e65c5020)")
+	_check("loot parity", digest == "a443c521830c8c6a85bd87e6c153c1b451adac1644056a8f8b4787d5a7ade3fe", "digest matches the GP5 pin (2026-10-08: six new parts and four synergies changed ids, rows and offer pools; RR1 pin was e65c5020)")
 
 
 func _preview() -> void:

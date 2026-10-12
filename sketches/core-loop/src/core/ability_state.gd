@@ -112,14 +112,8 @@ const ABILITIES := {
 	"claw_pull": {"icon": "ab_tarn_move", "cooldown": 3.0, "augments": ["claw_pull"]},
 	"clamp": {"icon": "ab_tarn_special", "cooldown": 6.0, "charge_max": 0.8},
 	"rend_slam": {"icon": "ab_tarn_smash", "cooldown": 0.0, "flavour": "rend"},
-	# Tally's deck re-cut to the bar (SKILL-BAR section 1): balance due on 1, gather plate on 2
-	# (a tap), link clips on 3 (her ledger clip as the line skill), all from one pressure pool.
-	# Plate return stays a row for the tree and P-C; it is off her kit until then.
-	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3},
-	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 0.0, "pool": WEAPON},
-	"link_clips": {"icon": "ab_tally_link", "cooldown": 0.0, "pool": WEAPON, "line": true, "load_seconds": 4.0},
+	# Tally's slot 1, chip rows and smash; her bar and Q rows sit in her P-C block below.
 	"flywheel_surge": {"icon": "ab_tally_move", "cooldown": 4.0, "augments": ["surge"]},
-	"plate_return": {"icon": "ab_tally_special", "cooldown": 6.0, "charge_max": 0.4},
 	"stamp_slam": {"icon": "ab_tally_smash", "cooldown": 0.0, "flavour": "stamp"},
 	"cannon_lane": {"icon": "ab_cannon_weapon", "cooldown": 0.0, "family": "lane"},
 	"cannon_recoil": {"icon": "ab_cannon_move", "cooldown": 3.5, "augments": ["recoil"], "family": "split_lane"},
@@ -155,6 +149,14 @@ const ABILITIES := {
 	"vice_leap": {"icon": "ab_tarn_ult", "cooldown": 0.0, "paths": ["arc", "line", "rail"], "variant_of": "redjaw_rend"},
 	# --- end Tarn ---
 	# --- P-C Tally rows ------------------------------------------------------------------
+	# pilots/tally.md section 3: Balance Due alone spends pressure; Gather Plate and the Ledger
+	# Clip keep their own cooldowns and pay into it; Q's meter is Plate Return's charge.
+	"ledger_reader": {"icon": "ab_tally_weapon", "cooldown": 0.0, "cards": ["balance_due"], "pressure": 3},
+	"gather_plate": {"icon": "ab_tally_gather", "cooldown": 6.0},
+	"link_clips": {"icon": "ab_tally_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"plate_return": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
+	"plate_audit": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "plate_return"},
+	"plate_flywheel": {"icon": "ab_tally_ult", "cooldown": 0.0, "paths": ["arc", "rail", "line"], "variant_of": "plate_return"},
 	# --- end Tally ---
 	# --- P-C Cannon rows -----------------------------------------------------------------
 	"cannon_lane_charge": {"icon": "ab_cannon_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0, "family": "lane"},
