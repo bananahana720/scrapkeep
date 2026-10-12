@@ -24,7 +24,7 @@ const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
 # Row ids whose art has not landed. The page hides them; a grant still records them.
 # The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
-const PENDING_ART := ["trail_tally_punch_tape", "outfit_tally_eyeshade", "shell_tally_abacus", "trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_cannon_recital", "shell_cannon_choir", "trail_kest_fuse_smoke", "outfit_kest_rigger", "trail_sable_cable", "decal_sable_spool", "shell_sable_felt"]
+const PENDING_ART := ["trail_rivet_swarf", "outfit_rivet_hood", "shell_rivet_calibrated", "trail_tally_punch_tape", "outfit_tally_eyeshade", "shell_tally_abacus", "trail_tarn_claw_marks", "shell_tarn_redjaw_teeth", "outfit_tarn_steady_cap", "trail_any_downbeat", "decal_curtain_call", "companion_skin_till_bell", "trail_cannon_recital", "shell_cannon_choir", "trail_kest_fuse_smoke", "outfit_kest_rigger", "trail_sable_cable", "decal_sable_spool", "shell_sable_felt"]
 const ALLOWED := ["slot", "pilot", "name", "starter", "tint", "asset", "mask"]
 const HOSTILE := [Palette.HAZARD, Palette.BRASS]
 const HOSTILE_DISTANCE := 0.2
@@ -79,6 +79,9 @@ const ROWS := {
 	"shell_sable_felt": {"slot": "shell", "pilot": "pylon_engineer", "name": "Felt Rig", "starter": false, "tint": Color("8c8577"), "asset": "shell_sable_felt"},
 	# --- end pylon_engineer ---
 	# --- runner_gunner (Rivet): P-C Rivet adds its rows here ---
+	"trail_rivet_swarf": {"slot": "trail", "pilot": "runner_gunner", "name": "Swarf Curl", "starter": false, "tint": Color("ae7240"), "asset": "trail_rivet_swarf"},
+	"outfit_rivet_hood": {"slot": "outfit", "pilot": "runner_gunner", "name": "Welding Hood", "starter": false, "tint": Color("d2c5a5"), "asset": "outfit_rivet_hood"},
+	"shell_rivet_calibrated": {"slot": "shell", "pilot": "runner_gunner", "name": "Calibrated", "starter": false, "tint": Color("d2c5a5"), "asset": "shell_rivet_calibrated"},
 	# --- end runner_gunner ---
 	# --- demolitions_caster (Kest): P-C Kest adds its rows here ---
 	"trail_kest_fuse_smoke": {"slot": "trail", "pilot": "demolitions_caster", "name": "Fuse Smoke", "starter": false, "tint": Color("8c8577"), "asset": "trail_kest_fuse_smoke"},

@@ -89,6 +89,7 @@ const LANDING_FALLBACK_MS := 2000
 const LAUNCH_BUILD_SECONDS := 1.6
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
 const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+	"rivet_line_punch", "rivet_line_arrive",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
 	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
@@ -116,6 +117,13 @@ const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "
 const LINE_CLAW_DRAG := {"sound": "line_claw_drag", "ratchet": "clank", "motif": "tarn", "step_seconds": 0.1}
 var _line_claw_stream: AudioStreamWAV
 # --- end Tarn ---
+# --- P-C Rivet audio ---
+# Line Drive (design-v3/pilots/rivet.md section 2.3, Sound). The punch: one clav stab on the
+# motif's hammered note as the pulse leaves, a snare flam when it lands (the kit's pulse delay),
+# one semitone up per chain link. The haul: a closed-hat roll for the haul's length, landing the
+# motif's fourth on arrival. Both read the kit's last_cue, so the cue and the act share one record.
+const RIVET_LINE := {"punch": "rivet_line_punch", "arrive": "rivet_line_arrive", "motif": "rivet", "roll_step": 0.0625}
+# --- end Rivet ---
 const POSTURE_QUARTER := 25.0
 const POSTURE_PHRASE := 0
 const SHATTER_LOW := "chunk_low"
@@ -1048,6 +1056,7 @@ func _connect_all(events) -> void:
 			_sable_bank_wait = false
 			_sable_bank_sound())
 	events.line_skill_fired.connect(_on_tarn_claw_drag)
+	events.line_skill_fired.connect(_on_rivet_line_drive)
 	_wire_tally(events)
 	_wire_ultimate_beat()
 	wire_optional()
@@ -2490,6 +2499,51 @@ func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) 
 # --- end Tarn ---
 
 
+# --- P-C Rivet line_drive ---
+func _rivet_snare(steps: int) -> PackedFloat32Array:
+	var source := Synth.snare()
+	var ratio := Harmony.ratio(steps)
+	var samples := Synth.buffer(ceili(source.size() / ratio))
+	for i in samples.size():
+		var at := minf(i * ratio, source.size() - 1)
+		var lo := floori(at)
+		samples[i] = lerpf(source[lo], source[mini(lo + 1, source.size() - 1)], at - lo)
+	return Synth.declick(samples)
+
+
+func _on_rivet_line_drive(id: String, _target: Node3D, _at: Vector3, on: String) -> void:
+	if id != "line_drive" or ctx == null:
+		return
+	var spawner = ctx.get("spawner")
+	var kit = spawner.get_node_or_null("RivetKit") if spawner != null else null
+	var cue: Dictionary = kit.last_cue if kit != null else {}
+	var notes: Array = Harmony.motif_notes(RIVET_LINE["motif"])
+	var pitch := Harmony.ratio(live_key())
+	# Playback lasts 1 / pitch of the stored buffer time. Physical offsets divide by that ratio.
+	var duration_ratio := 1.0 / pitch
+	if on == "body":
+		var steps := maxi(0, int(ctx.player.chain.combo) - 1)
+		var samples := Synth.buffer(Synth.seconds(0.9 / duration_ratio))
+		Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[0]) + steps)), 0, 0.7)
+		var snare := _rivet_snare(steps)
+		Synth.add_into(samples, snare, Synth.seconds(float(cue.get("delay", 0.0)) / duration_ratio), 0.5)
+		Synth.add_into(samples, snare, Synth.seconds((float(cue.get("delay", 0.0)) + 0.03) / duration_ratio), 0.35)
+		if _admit("line_skill_fired", RIVET_LINE["punch"], pitch):
+			_start("line_skill_fired", RIVET_LINE["punch"], Synth.to_wav(Synth.normalize(samples)),
+				SfxBank.trim_db(RIVET_LINE["punch"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
+		return
+	var seconds := float(cue.get("seconds", 0.0))
+	var samples := Synth.buffer(Synth.seconds((seconds + 0.5) / duration_ratio))
+	var step: float = RIVET_LINE["roll_step"] / duration_ratio
+	var tick := 0.0
+	while tick < seconds / duration_ratio:
+		Synth.add_into(samples, Synth.hat(false), Synth.seconds(tick), 0.35)
+		tick += step
+	Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[notes.size() - 1]))), Synth.seconds(seconds / duration_ratio), 0.8)
+	if _admit("line_skill_fired", RIVET_LINE["arrive"], pitch):
+		_start("line_skill_fired", RIVET_LINE["arrive"], Synth.to_wav(Synth.normalize(samples)),
+			SfxBank.trim_db(RIVET_LINE["arrive"]) + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
+# --- end Rivet ---
 # --- P-C Tally audio ---
 # Notes are baked at their written pitch, then transposed together into the live key.
 # The four bank recipes carry the paper punch and bell independently of cog_tick.
