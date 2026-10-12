@@ -231,6 +231,16 @@ const DETECTORS := {
 	"set_piece_core": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"set_piece_cash_in": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"set_piece_breakout": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	# --- P-C Cannon detectors ---
+	"cannon_lane_charge": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"cannon_fire_mission": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_creeping_barrage": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_plate_mortar": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_recital": {"kind": "", "script": "res://src/combat/combat.gd"},
+	"cannon_time_on_target": {"kind": "", "script": "res://src/combat/ultimate.gd"},
+	"cannon_old_tune": {"kind": "", "script": "res://src/boss/mind.gd"},
+	"mind_quiet_gun": {"kind": "", "script": "res://src/boss/mind.gd"},
+	# --- end Cannon ---
 }
 
 

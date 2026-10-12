@@ -1,4 +1,5 @@
 extends SceneTree
+# 2026-10-11 (PC-CANNON): preserve steps a-j and exercise Lane Charge through the slot router.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -57,6 +58,8 @@ func _physics_process(_delta: float) -> bool:
 	if _ticks == 0:
 		(step[0] as Callable).call()
 	_ticks += 1
+	if step[2] == _line_charge_check and _combat._clock - float(_record["at"]) < 0.15:
+		return false
 	if _ticks >= int(step[1]):
 		(step[2] as Callable).call()
 		_index += 1
@@ -95,6 +98,8 @@ func _boot() -> void:
 		[_noop, 1, _check_shift_burst],
 		[_reset_start, 2, _check_reset],
 		[_phase_start, 2, _check_phase],
+		[_line_charge_start, 8, _line_charge_check],
+		[_noop, 1, _line_world_checks],
 	]
 
 
@@ -465,3 +470,64 @@ func _check_phase() -> void:
 	_t.check("a world 3 stage exists", _game.ctx.stages.world_of(_record["world_three"]) == 3, "stage %d" % _record["world_three"])
 	_t.check("a world 3 lane warns LANE_WARN - 0.2", lanes.size() == 1 and is_equal_approx(lanes[0].warn_seconds, MindAttacks.LANE_WARN - 0.2),
 		"lanes %d warn %s" % [lanes.size(), lanes[0].warn_seconds if not lanes.is_empty() else "none"])
+
+
+func _line_charge_start() -> void:
+	_as_class("remembered_cannon")
+	var aim := _aim_flat()
+	var target := _target(_ball_flat() + aim * 10.0)
+	target.global_position.y += 8.0
+	var other := _target(_ball_flat() + aim * 16.0)
+	var at: Vector3 = _player.ball_position() + Vector3.UP * 6.0
+	_player.reset_to(at)
+	_player.body().global_position = at
+	_player.grapple_to(target.global_position, Vector3.UP, target)
+	_record = {"a": target, "b": other, "from": _struck.size(), "combo": _player.chain.combo,
+		"mult": _player.chain.multiplier(), "aim": aim, "at": _combat._clock}
+	_source.press = {"slot_pick": 2, "fire_pressed": true, "fire_held": true}
+
+
+func _line_charge_check() -> void:
+	var entry: Dictionary = _entry("lane")
+	_t.eq("slot 3 is Lane Charge", _player.abilities.id_of(AbilityState.LINE), "cannon_lane_charge")
+	_t.eq("line cast snaps home", _player.abilities.selected, AbilityState.WEAPON)
+	_t.eq("Lane Charge adds no chain link", _player.chain.combo, _record["combo"])
+	_t.check("Lane Charge never grounds the ball", not _player.state.grounded)
+	if not _t.check("Lane Charge committed", not entry.is_empty()):
+		return
+	var h = entry["hazards"][0]
+	_t.near("cable lane warns for one tenth of a second", h.warn_seconds, 0.1)
+	_t.check("cable lane is live within one tick", h.is_live() and float(entry.get("live_clock", INF)) - float(entry["born"]) <= 0.1 + 1.0 / Engine.physics_ticks_per_second, str(entry.get("live_clock")))
+	_t.near("cable lane reaches twelve metres past the bite", h.length, 22.0, 0.05)
+	for target in [_record["a"], _record["b"]]:
+		var strikes := _struck_by(target.get_instance_id(), "cannon", _record["from"])
+		_t.eq("cable target struck once", strikes.size(), 1)
+		if not strikes.is_empty():
+			_t.near("cable damage pays the chain", strikes[0][2], 28.0 * float(_record["mult"]))
+
+
+func _line_world_checks() -> void:
+	_as_class("remembered_cannon")
+	var kit = _player.kit
+	kit.hooked = true
+	kit.on_body = false
+	kit.anchor = _player.ball_position() + _aim_flat() * 5.0 + Vector3.UP * 2.0
+	kit.anchor_normal = Vector3.RIGHT
+	var before: Vector3 = _player.body().linear_velocity
+	_combat._cannon_line_world(kit.anchor, 1.0, 1.0)
+	var h = _combat._cannon.back()["hazards"][0]
+	_t.near("wall Lane Charge follows the normal", h.heading.dot(Vector3.RIGHT), 1.0)
+	_t.eq("wall Lane Charge never applies reel burst", _player.body().linear_velocity, before)
+	kit.anchor_normal = Vector3.UP
+	_combat._cannon_line_world(kit.anchor, 1.0, 1.0)
+	h = _combat._cannon.back()["hazards"][0]
+	_t.near("post Lane Charge follows flat aim", h.heading.dot(_aim_flat()), 1.0)
+	_t.eq("post Lane Charge never applies reel burst", _player.body().linear_velocity, before)
+	kit.drop_line()
+	_player.abilities.refill()
+	_combat._cast_line("cannon_lane_charge", 1.0)
+	_t.eq("no line loads Lane Charge", _combat.line_load()["id"], "cannon_lane_charge")
+	var target := _target(_ball_flat() + _aim_flat() * 8.0)
+	_player.grapple_to(target.global_position, Vector3.UP, target)
+	_combat._step_line(_player.intent, 0.0)
+	_t.check("a loaded bite fires Lane Charge", _combat.line_load().is_empty() and not _combat._cannon.is_empty())

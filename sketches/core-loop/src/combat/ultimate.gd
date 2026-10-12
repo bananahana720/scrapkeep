@@ -588,7 +588,14 @@ func _fly(delta: float) -> void:
 		if not _peaked and _beat >= ceili(_beats / 2.0):
 			_peaked = true
 			_peak(player.ball_position())
-	var v = _ride.step(delta)
+	var v
+	if _id.begins_with("cannon_"):
+		# RideRail normally releases 40 ms early. Time-on-target needs the whole
+		# declared flight, so the Cannon keeps it until its committed landing beat.
+		_ride.time += delta
+		v = _ride.velocity_at(_ride.time) if _ride.time < _ride.flight else null
+	else:
+		v = _ride.step(delta)
 	if v == null:
 		_land(_ride.target)
 		return
@@ -717,7 +724,7 @@ func _cannon_started(id: String, _path: String, _from: Vector3, _to: Vector3, _s
 	_cannon_due = -1.0
 	_cannon_calls = 0
 	_cannon_cursor = 0
-	_cannon_budget = {}
+	_cannon_budget = _posture_spent
 	_cannon_peak_done = false
 	_cannon_encore = false
 	_cannon_record = _record
@@ -776,7 +783,7 @@ func _cannon_call(family: String, at: Vector3, target: Vector3, due: float, heft
 
 func _cannon_tech(beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 	if _cannon_due < 0.0:
-		_cannon_due = combat._clock + (_beats - beat) * _beat_len
+		_cannon_due = combat._clock + maxf(0.0, float(_plan["legs"][_leg]["seconds"]) - _leg_time)
 	var centre := _cannon_projection(ball)
 	var middle := ceili(_beats / 2.0)
 	if _cannon_id == "cannon_fire_mission":
@@ -835,7 +842,13 @@ func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
 	var discovery := _cannon_id
 	# B6's framework card gets the first landing. The pilot card waits for a later one.
 	if ctx.codex != null and ctx.codex.known("set_piece"):
-		combat._discover(discovery, at)
+		match discovery:
+			"cannon_fire_mission":
+				combat._discover("cannon_fire_mission", at)
+			"cannon_creeping_barrage":
+				combat._discover("cannon_creeping_barrage", at)
+			"cannon_plate_mortar":
+				combat._discover("cannon_plate_mortar", at)
 	if _cannon_id == "cannon_fire_mission" and hits >= 8:
 		combat._discover("cannon_time_on_target", at)
 	if _cannon_id == "cannon_creeping_barrage":

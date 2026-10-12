@@ -128,7 +128,7 @@ func _audio():
 func light_next() -> void:
 	if lit >= bands.size():
 		return
-	bands[lit].mesh = _cylinder("live_band", 0.34, 0.055, Palette.ANCIENT, true)
+	bands[lit].mesh = _live_band()
 	var family: String = MindAttacks.FAMILIES[lit]
 	notes.append(Harmony.family_note(family))
 	lit += 1
@@ -150,7 +150,24 @@ func fall() -> void:
 
 func ending_ready() -> void:
 	while lit < bands.size():
-		bands[lit].mesh = _cylinder("live_band", 0.34, 0.055, Palette.ANCIENT, true)
+		bands[lit].mesh = _live_band()
 		lit += 1
 	if plug != null:
 		plug.visible = false
+
+
+static func _live_band() -> ArrayMesh:
+	if not _meshes.has("dashed_band"):
+		var surface := SurfaceTool.new()
+		surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for i in 12:
+			var a := TAU * i / 12.0
+			var b := TAU * (i + 0.55) / 12.0
+			var p := Vector3(cos(a) * 0.34, -0.028, sin(a) * 0.34)
+			var q := Vector3(cos(b) * 0.34, -0.028, sin(b) * 0.34)
+			for v in [p, q, p + Vector3.UP * 0.056, q, q + Vector3.UP * 0.056, p + Vector3.UP * 0.056]:
+				surface.add_vertex(v)
+		var mesh := surface.commit()
+		mesh.surface_set_material(0, _material("dashed_band", Palette.ANCIENT, true))
+		_meshes["dashed_band"] = mesh
+	return _meshes["dashed_band"]

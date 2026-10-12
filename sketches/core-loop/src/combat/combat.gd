@@ -1583,7 +1583,7 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 	var phase := _cannon_phase()
 	var descriptors: Array = MindAttacks.commit(family, seed, target, centre, phase, radius)
 	var entry := {"family": family, "hazards": [], "damage": damage, "source": source, "struck": {}, "expose": expose,
-		"verb": "", "window": 0.0, "seed": seed, "target": target, "centre": centre, "radius": radius, "phase": phase, "options": overrides, "noted": false}
+		"verb": "", "window": 0.0, "seed": seed, "target": target, "centre": centre, "radius": radius, "phase": phase, "options": overrides, "noted": false, "born": _clock}
 	for d in descriptors:
 		d["id"] = "cannon_%s_%d" % [String(d["id"]).trim_prefix("mind_"), _cannon_count]
 		for key in ["warn", "live", "from", "dir", "ahead", "band"]:
@@ -1628,6 +1628,7 @@ func _step_cannon(delta: float) -> void:
 				h.step(delta)
 			if h.is_live() and not entry["noted"]:
 				entry["noted"] = true
+				entry["live_clock"] = _clock
 				_cannon_note(entry["family"])
 			if not h.is_done():
 				done = false
@@ -1664,7 +1665,7 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 			entry["recital_checked"] = true
 			_cannon_recital(entry["family"], enemy.global_position)
 			if options.has("discovery"):
-				_discover(options["discovery"], enemy.global_position)
+				_discover("cannon_lane_charge", enemy.global_position)
 		if entry["expose"] and is_instance_valid(enemy) and not enemy.is_dead():
 			_cannon_expose(enemy, float(entry["window"]), entry["verb"])
 

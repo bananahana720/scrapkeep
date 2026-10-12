@@ -118,7 +118,7 @@ func _publish_posture() -> void:
 
 
 func _on_warden_died(at: Vector3, scrap: int) -> void:
-	if state != DEFEATED:
+	if state == FIGHT:
 		_discover("mind_quiet_gun", at)
 		if ctx.run.class_def != null and ctx.run.class_def.id == "remembered_cannon":
 			_discover("cannon_old_tune", at)
