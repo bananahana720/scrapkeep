@@ -12,7 +12,9 @@ const LIVE_KEY := 3
 const CHECKS_PER_PATH := 3
 # Six table rows: four mandatory paths and one override-coverage check each, plus
 # two controls, population, nonempty and final count checks. Extra paths add three.
-const EXPECTED_CHECKS := 83
+# 2026-10-12, PC-TALLY r4, coordinator ruling: 83 -> 87 base checks,
+# 122 -> 126 measured checks including the Tally settle driver and step coverage.
+const EXPECTED_CHECKS := 87
 const CORE_KINDS := ["line_skill_fired", "special_used", "ultimate_peak", "ultimate_landed"]
 # Shared, non-kit exception: audio.gd:1027 -> on_beat at :966 schedules the generic
 # ultimate_peak/special_fire at bank trim. A kit override never receives this offset.
@@ -22,6 +24,13 @@ class Ctx:
 	extends RefCounted
 	var events: Node
 	var player: RefCounted
+	var spawner: RefCounted
+
+class TallyCombat:
+	extends RefCounted
+	var tally_last_settle := {}
+	var ultimate = null
+	var tally_piece := ""
 
 class Player:
 	extends RefCounted
@@ -74,6 +83,8 @@ func _initialize() -> void:
 			# ability id must sound, including Tarn's claw_drag and Sable's bank_shot.
 			var required: bool = kind != "line_skill_fired" or _line_override(def)
 			_path(def.id, kind, required)
+		if def.id == "tally":
+			_tally_settles(def)
 		_kit_calls(def)
 		_kit_events(def)
 		var missing: Array = []
@@ -234,6 +245,24 @@ func _kit_calls(def: Resource) -> void:
 				_extra_paths += 1
 				_begin()
 				_path(def.id, name, true, "missing driver for registered " + name)
+
+
+func _tally_settles(def: Resource) -> void:
+	_begin()
+	var combat := TallyCombat.new()
+	var ids: Array = []
+	for step in Audio.TALLY_CUES["tally_settle"]["steps"].size():
+		ids.append(step + 1)
+	combat.tally_last_settle = {"at": Vector3.ZERO, "hits": 1, "settles": ids.size(), "ids": ids}
+	_audio.ctx.spawner = combat
+	_events.ultimate_landed.emit(def.ultimate_id, Vector3.ZERO, 1 + ids.size(), 60.0)
+	for note in _audio._tally_notes:
+		_audio.clock = maxf(_audio.clock, float(note[0]))
+	_audio._tend_tally()
+	var settles: Array = _audio.cue_log.filter(func(row): return row[1] == "settle_tally" and row[2] == "now")
+	_check("tally settle steps observed", settles.size() == ids.size(), "%d expected, %d observed" % [ids.size(), settles.size()])
+	_path(def.id, "ultimate_landed", true, "tally_settle")
+	_audio.ctx.spawner = null
 
 
 func _path(class_id: String, kind: String, required: bool, label := "") -> void:
