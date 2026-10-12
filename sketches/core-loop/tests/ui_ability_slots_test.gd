@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for 24cc872 and 000763f.
+# shared Icons.REEL for every line slot -> Sable ab_sable_line, Kest ab_kest_line; Rivet keeps Icons.REEL.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -62,7 +64,7 @@ func _physics_process(_delta: float) -> bool:
 			if _wait == 20:
 				var list: Array = _adapter.slots(_game)
 				var pilot: String = PILOTS[_class]
-				var want := ["ab_%s_weapon" % pilot, "ab_%s_special" % pilot, Icons.REEL, "ab_%s_move" % pilot, "ab_%s_smash" % pilot]
+				var want := ["ab_%s_weapon" % pilot, "ab_%s_special" % pilot, {"sable": "ab_sable_line", "rivet": Icons.REEL, "kest": "ab_kest_line"}[pilot], "ab_%s_move" % pilot, "ab_%s_smash" % pilot]
 				_report("%s slots" % pilot, AbilitySlots.valid(list) and _field(list, "icon") == want and _field(list, "key") == KEYS
 						and _field(list, "slot") == ["weapon", "special", "line", "movement", "smash"] and _field(list, "number") == [1, 2, 3, 0, 0]
 						and want.all(func(id): return Icons.has(id) or Icons.EXTRA.has(id)),

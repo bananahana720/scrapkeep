@@ -311,8 +311,11 @@ class Sampler:
 	func _record_tick(player, ball: Vector3, grounded: bool) -> void:
 		var contacts: Array = []
 		for body in player._rigid.get_colliding_bodies():
-			contacts.append(str(body.get_path()))
+			contacts.append(_contact_path(body))
+		contacts.sort()
 		var velocity: Vector3 = player.state.velocity
+		var aim_origin: Vector3 = game.ctx.aim_origin()
+		var aim_forward: Vector3 = game.ctx.aim_forward()
 		trace.append({
 			"tick": traversal.ticks, "time": snappedf(game.run.stage_time, 0.001),
 			"at": [snappedf(ball.x, 0.01), snappedf(ball.y, 0.01), snappedf(ball.z, 0.01)],
@@ -320,7 +323,22 @@ class Sampler:
 			"planar_speed": snappedf(player.planar_velocity().length(), 0.01), "tier": player.speed_tier(),
 			"grounded": grounded, "contacts": contacts, "dead_stops": traversal.dead_stops,
 			"frozen": player.frozen(), "mounted": player.kit.mounted, "state": game.flow.state_name(),
+			"camera_rng": str(game.camera._shake_rng.state),
+			"camera_pitch_bias": game.camera._pitch_bias, "camera_spring_length": game.camera.arm.spring_length,
+			"aim_origin": [aim_origin.x, aim_origin.y, aim_origin.z],
+			"aim_forward": [aim_forward.x, aim_forward.y, aim_forward.z],
 		})
+
+	# Godot's generated node names include a process-wide serial. Sibling indices preserve
+	# contact identity without putting that serial into an otherwise repeatable trace.
+	func _contact_path(body: Node) -> String:
+		var names: Array[String] = []
+		var node := body
+		while node != null:
+			var label := String(node.name)
+			names.push_front("%s[%d]" % [node.get_class(), node.get_index()] if label.begins_with("@") else label)
+			node = node.get_parent()
+		return "/" + "/".join(names)
 
 	func _anchored(ball: Vector3) -> bool:
 		var reach: float = game.player.grapple_range()
@@ -720,6 +738,7 @@ var _seeds: Array[int] = []
 var _pilot := ""
 var _routes := {}
 var _index := -1
+var _next_pending := false
 var _game
 var _driver
 var _sampler: Sampler
@@ -805,8 +824,13 @@ func _next() -> void:
 		_finish()
 		return
 	Engine.time_scale = 1.0
+	# Freeing Game leaves the viewport's Jolt space and its body allocation history alive.
+	# Keep the old world alive until the viewport has detached its rendering scenario.
+	var _previous_world := root.world_3d
+	root.world_3d = World3D.new()
 	seed(_seeds[_index])
 	_game = Game.new()
+	_game.name = "Game"
 	_game.test_mode = true
 	_game.table = PARK if _park else TABLE
 	root.add_child(_game)
@@ -814,6 +838,9 @@ func _next() -> void:
 
 
 func _physics_process(delta: float) -> bool:
+	if _next_pending:
+		_next_pending = false
+		_next()
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
@@ -850,7 +877,9 @@ func _physics_process(delta: float) -> bool:
 				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["distinct_ride_facts"], run["length_ratio"], run["progress_m"], run["dead_stop_at"]])
 	_game.free()
 	_game = null
-	_next()
+	# Match a fresh process: start the driver before the new camera's first render update.
+	Engine.time_scale = 1.0
+	_next_pending = true
 	return false
 
 

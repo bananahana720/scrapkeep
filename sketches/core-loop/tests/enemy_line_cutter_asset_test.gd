@@ -1,3 +1,5 @@
+# 2026-10-12, W13 smoke triage: class c re-pin for 5b903a3, bbe53ec, 17429d6.
+# counter.gd SHA256 56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca -> 5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554; merged pack stagger, rename and shared-recovery changes.
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -5,7 +7,7 @@ const Cutter := preload("res://src/combat/line_cutter.gd")
 const T := preload("res://tests/support/t.gd")
 const GLB := "res://assets/models/world_three/enemy_line_cutter.glb"
 const GAMEPLAY_HASHES := {"_configure": "795bc13a5e8b56c01f956ee245b69e9e37b7cb387e815941481c669d844119c7", "_wants_attack": "29039745fb49a90fc0340df97791bbce8a39457ebf26045d4a2ee895c4dd8964", "_commit": "9c7b7d6b30f8ec64ae9ff395bed22cb4f7199b2a5053bd5f132761536ab9e7c2", "_warn_progress": "a2b5cadd237634ac87eece61d02998ec5d88646599c2157fa0bbd1b6b1876061", "_go_live": "a887f9155c41b358c2e87592d5186c8baea4f41c37529f59bf2fbb0e26e7aeb1", "_live": "f50d2057b9857b3c7fb428d5c454ee3294a84f1032f410d8bea6f60fb34d0ffd", "_on_end": "501af355811ac1887dc2dca6735c23df7c343b1eecb3044ae5ea798451b7473c", "_rest_disc": "be6103f0498890eba09f9880718efd36de6f401ec2504b715e47a4ff92502d32"}
-const INHERITED_HASHES := {"counter": "56b1e9fd180b0c5c06ba67013011c12a26d6f6f1989cb6c140620334b06f0cca", "enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b"}
+const INHERITED_HASHES := {"counter": "5e3d17ed123286ed2c22808f3051a76d450e56697828d7277cef3b8f0af7c554", "enemy": "b8ddec708fa51e7935b6335bbaa68ea6e679a61e0fa821b034cea865ba5c5c2b"}
 
 var t := T.new("enemy_line_cutter_asset_test")
 var game
