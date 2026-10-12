@@ -20,7 +20,16 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 # pattern levels and punch add. A stage-1 build is modest and a late one absurd
 # (build_parts_test measures it); combat caps what is drawn.
 
+# SG5 start values, comps/gunfire/scrolls-and-synergies.md:86 and comps/README.md row 7:
+# payout approaches this share of the triggering hit; copies steepen, never raise the cap.
+const BURDEN_PAYOUT_CAP := 0.75
+const BURDEN_PAYOUT_SLOPE := 0.25
+
 const CATALOGUE := {
+	"load_dividend": {"touches": "fire", "name": "Load Dividend", "verb": "Make burdens pay", "text": "Burden hit bonus; %d%% cap" % roundi(BURDEN_PAYOUT_CAP * 100.0),
+		"rarity": "rare", "tier": 2, "family": "weapon", "tags": ["mass"], "icon": "damage",
+		"trigger": "on_hit", "stack": "hyperbolic", "cap": BURDEN_PAYOUT_CAP,
+		"effect": {"do": "burden_payout", "per": BURDEN_PAYOUT_SLOPE}},
 	# Common: gate fodder. Only these may be plain percentages.
 	"hot_rivets": {"touches": "fire", "name": "Hot Rivets", "verb": "Hit harder", "text": "+4 punch, +12% weapon damage",
 		"rarity": "common", "tier": 1, "family": "weapon", "tags": ["kinetic"], "punch": 4.0,
