@@ -56,3 +56,14 @@ func run(t) -> void:
 		[impact["runner"]["knock"], impact["arc"]["knock"], impact["turret"]["knock"], impact["sticky"]["knock"], impact["burst"]["knock"],
 			impact["line"]["knock"], impact["overdrive"]["knock"]])
 	t.eq("unknown kind lands plain", EventKinds.impact("no_such_kind")["stop"], "hit")
+
+	var outside_band: Array = []
+	for kind in impact:
+		var row: Dictionary = impact[kind]
+		var weight: String = row["stop"]
+		var center := float(EventKinds.WEIGHT[weight]["shake"])
+		var low := 0.0 if weight == "none" else center * 0.5
+		var high := center * 1.5
+		if float(row["shake"]) < low or float(row["shake"]) > high:
+			outside_band.append(kind)
+	t.eq("impact shake inside weight class band", outside_band, [])
