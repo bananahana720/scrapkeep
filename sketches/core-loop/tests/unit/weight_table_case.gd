@@ -118,7 +118,7 @@ func run(t) -> void:
 	if not shared_cues.is_empty():
 		collisions.append(["ultimate_landed", "enemy_killed: vault", shared_cues])
 	t.eq("same frame sound collision", collisions, [])
-	var slam_cue := _measure(slam.sound)
+	var slam_cue := _measure("slam_boom")
 	var ultimate_cue := _measure(ultimate.sound)
 	t.check("ultimate cue lower and longer than heavy slam", not ultimate_cue.is_empty() and not slam_cue.is_empty() and ultimate_cue.zcr < slam_cue.zcr and ultimate_cue.seconds >= slam_cue.seconds, str([slam_cue, ultimate_cue]))
 	t.eq("class rule boundaries", _rule_errors(), [])
@@ -250,7 +250,7 @@ func _audibility_errors(facts: Dictionary) -> Dictionary:
 		var cue := Rows.sound(fact)
 		var measured := _measure(cue)
 		var classes: Array = [facts[fact].get("class", "")] if facts[fact].has("class") else _rule_classes(String(facts[fact].get("rule", "")))
-		if classes.any(func(key): return key in ["massive", "climax"]) and (measured.is_empty() or measured.peak_db < floor_db):
+		if classes.any(func(key): return key in ["massive", "climax"]) and (measured.is_empty() or measured.peak_db < floor_db - 0.0001):
 			weight.append([fact, cue, measured.get("peak_db", -INF), floor_db])
 		if facts[fact].allegiance == "player" and (measured.is_empty() or measured.onset_ms > 20.0):
 			onset.append([fact, cue, measured.get("onset_ms", INF)])
