@@ -425,7 +425,7 @@ func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dict
 	for state in _park_states:
 		if state.phase != ANNOUNCED or stage_time < state.due_s:
 			continue
-		if stage_time < _park_quiet_until or not _park_capacity(state, false) or not _park_clear(state, ball, velocity, ctx) or not _park_route_safe(state):
+		if stage_time < _park_quiet_until or not _park_capacity(state) or not _park_clear(state, ball, velocity, ctx) or not _park_route_safe(state):
 			state.holding = true
 			continue
 		if state.holding and not state.weather and state.row.telegraph.on_bar:
@@ -445,7 +445,7 @@ func _advance_park(delta: float, ball: Vector3, velocity: Vector3, context: Dict
 	var candidates := []
 	var total := 0.0
 	for state in _park_states:
-		if state.phase not in [WAITING, COOLDOWN] or stage_time < state.ready_s or not _park_triggered(state) or not _park_capacity(state, true):
+		if state.phase not in [WAITING, COOLDOWN] or stage_time < state.ready_s or not _park_triggered(state):
 			continue
 		var weight := _park_weight(state)
 		if weight > 0.0:
@@ -497,11 +497,11 @@ static func _park_ground(row: Dictionary) -> bool:
 	return row.kind in ParkSchema.GROUND_KINDS or row.family in ParkSchema.ARRIVAL_FAMILIES or str(row.effect.get("swap", "")) != ""
 
 
-func _park_capacity(candidate: Dictionary, reserve: bool) -> bool:
+func _park_capacity(candidate: Dictionary) -> bool:
 	var ground := int(not candidate.weather and _park_ground(candidate.row))
 	var family := 1
 	for state in _park_states:
-		if state == candidate or (state.phase != LIVE and not (reserve and state.phase == ANNOUNCED)):
+		if state == candidate or state.phase != LIVE:
 			continue
 		if candidate.weather:
 			if state.weather and state.row.kind != "clear" and candidate.row.kind != "clear":
