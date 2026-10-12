@@ -62,15 +62,18 @@ const WARDEN_BODY_MIND_CAMERAS := [["over_shoulder", Vector3(0, 0.6, 2.0), Vecto
 	["boss_low", Vector3(-2.0, 0.1, 0), Vector3.ZERO, 62.0, "warden_bounds"], ["three_q", Vector3(-1.97, 0.42, 1.31), Vector3.ZERO, 55.0, "warden_bounds"], ["under", Vector3(-1.148, -1.06, 0.074), Vector3.ZERO, 62.0, "warden_bounds"]]
 const WARDEN_BODY_BALL := {"boss_high": Vector3(6.4, 0, 6.4), "boss_low": Vector3(0, 0, 9.0), "under": Vector3(0, 0, 9.0)}
 # 2026-10-11 (w13 KF7c round 4): the game frame for the silhouette check and the render. The body's
-# yaw, in degrees about +Y from its GLB frame to the world, as measured by look_harness
-# _check_stage_yaw per subject and camera (rounded to 0.1 degree) with the ball staged at its default
-# spot (hero_assets turns the reactor's +X and the mind's Pose -Z to it). Measured at 93eb510's
-# tree (harness run kf7c/look4m), committed before any SILHOUETTE line was run at it. The harness
-# fails a camera whose settled yaw is more than 0.5 degree off its entry; warden_reactor.py and
+# yaw, in degrees about +Y from its GLB frame to the world, as look_harness _check_stage_yaw measures
+# it per subject and camera (rounded to 0.1 degree) with the ball at its default spot and the body
+# turned to it (hero_assets turns the reactor's +X and the mind's Pose -Z to the ball): the settled
+# yaw, after _settle_yaw waits for it. Measured before any SILHOUETTE line ran at these values: a
+# first reading taken at the shot's tick (138.8 and 98.5) was a transient (the reactor's jaws turn
+# slowly, and the ball sat wherever the previous subject left it), so it was thrown out, and the
+# settled readings (141.334, 141.335 and 76.759, in two orders of subjects) replaced it. The harness
+# fails a camera whose yaw is more than 0.5 degree off its entry; warden_reactor.py and
 # warden_mind.py read this constant and turn each read direction by its camera's yaw.
 const WARDEN_BODY_STAGE_YAW := {
-	"warden_body_reactor": {"over_shoulder": 138.8, "boss_high": 138.8, "boss_low": 138.8, "three_q": 138.8, "under": 138.8},
-	"warden_body_mind": {"over_shoulder": 98.5, "boss_high": 98.5, "boss_low": 98.5, "three_q": 98.5, "under": 98.5}}
+	"warden_body_reactor": {"over_shoulder": 141.3, "boss_high": 141.3, "boss_low": 141.3, "three_q": 141.3, "under": 141.3},
+	"warden_body_mind": {"over_shoulder": 76.8, "boss_high": 76.8, "boss_low": 76.8, "three_q": 76.8, "under": 76.8}}
 const WARDEN_BODY_BALL_REASON := "the ball stands on the floor beside the body (under: 9 m to the side of the target), off the eye-to-target line, so it stays small"
 
 const SUBJECTS := {

@@ -906,6 +906,8 @@ func _warden_bodies() -> void:
 		# 2026-10-11 (w13 KF7c round 4): the body keeps the yaw it settled to turning to the ball at its
 		# default spot (the game frame); _shoot measures it per camera against WARDEN_BODY_STAGE_YAW.
 		_yaw_probe = {rows[i][0]: [w, rows[i][1]]} if Subjects.WARDEN_BODY_STAGE_YAW.has(rows[i][0]) else {}
+		if _yaw_probe.size() > 0:
+			await _settle_yaw(w, rows[i][1], b)
 		var centre: Vector3 = w.global_position + (Vector3.DOWN * 4.0 if rows[i][1] == "mind" else Vector3.ZERO)
 		_anchor("warden", centre, w)
 		var bx := subject_bounds(game.presentation.hero_assets.warden_of(w).get("body", w))
@@ -916,6 +918,27 @@ func _warden_bodies() -> void:
 			failures += 1
 		await _shoot(rows[i][0], {"family": rows[i][1], "mounting": rows[i][3], "body": dressed})
 		_yaw_probe = {}
+
+
+# 2026-10-11 (w13 KF7c round 4): put the ball back at its default spot b (the previous subject's last
+# camera leaves it elsewhere, and the bodies turn to it while the tree runs between subjects, which
+# made the yaw depend on the run's subject order) and wait until the body's yaw holds still for 10
+# physics frames: the reactor's jaws turn at a rate (warden_look _turn_jaws) and converge slowly,
+# the mind turns at once. The settled yaw is the one WARDEN_BODY_STAGE_YAW records.
+func _settle_yaw(w: Node3D, kind: String, b: Vector3) -> void:
+	var pbody: RigidBody3D = game.player.body()
+	pbody.freeze = true
+	pbody.global_position = b
+	_ball_root().global_position = b
+	var prev := INF
+	var still := 0
+	for k in 1500:
+		await physics_frame
+		var y := _body_yaw(w, kind)
+		still = still + 1 if absf(angle_difference(deg_to_rad(y), deg_to_rad(prev))) < deg_to_rad(0.002) else 0
+		prev = y
+		if still >= 10:
+			break
 
 
 # 2026-10-11 (w13 KF7c round 4): the game frame. The reactor and the mind turn to the ball at runtime
