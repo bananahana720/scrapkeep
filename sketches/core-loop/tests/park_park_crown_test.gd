@@ -43,6 +43,8 @@ const ParkBake := preload("res://tools/park_bake.gd")
 const GraphTool := preload("res://tools/park_graph.gd")
 const GraphLoader := preload("res://src/world/park/park_graph.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const Terrain := preload("res://src/world/terrain.gd")
 
 const PARK_PATH := "res://src/world/park/park_crown.json"
 const BAKE_DIR := "res://assets/park/park_crown"
@@ -64,7 +66,9 @@ const TOPPLED := ["toppled", "last_toppled"]
 const SWAP_ROW := "spire_top_ramp"
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 const UNPLACED := ["perch_spires", "needles", "hoodoo_forest", "split_spire", "spire_top_ramp"]
-const FIELD_PREFIX := "slickrock_field_"    # the 59 ground-cover fields: unplaced, unstamped
+const FIELD_PREFIX := "slickrock_field_"
+const PERCH_XZ := [[0.0, 515.0], [39.0, 447.5], [-39.0, 447.5]]
+const PERCH_TOP_M := 12.0
 
 var t := T.new("park_park_crown_test")
 
@@ -122,14 +126,22 @@ func _run() -> void:
 	var by_row := {}
 	for row in park["park_rows"]:
 		by_row[String(row["id"])] = row
-	var perches_ok := true
 	var clear_zones := ParkRecipes.clear_zones(park)
-	var path: Array = park["landmark"]["warden"]["path"]
-	for i in range(3):
-		var perch: Dictionary = by_row["perch_spire_%d" % (i + 1)]
-		perches_ok = perches_ok and perch["at"] == [path[i][0], path[i][2]] and String(perch["stamp"]) == ""
-		perches_ok = perches_ok and not ParkRecipes.anchor_posts(perch, clear_zones).is_empty()
-	t.check("the three physical perches retain the Warden path without raising the fight floor", perches_ok)
+	var heights := ParkTerrain._read_zstd(BAKE_DIR + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
+	var ground := func(x: float, z: float) -> float: return Terrain._grid_height(heights, x, z)
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var perch_failures := physical_perch_failures(park, holder, ground)
+	t.check("physical perch centres and tops match mind.md's 12 m seats", perch_failures.is_empty(), "; ".join(perch_failures))
+	t.eq("the Warden anchor stays at the first 18 m lens", park["landmark"]["warden"]["anchor"], [0.0, 18.0, 515.0])
+	t.eq("the Warden flight path stays approved", park["landmark"]["warden"]["path"], [[0.0, 18.0, 515.0], [39.0, 18.0, 447.5], [-39.0, 18.0, 447.5]])
+	var tall_perch: Dictionary = park.duplicate(true)
+	for row in tall_perch["park_rows"]:
+		if row["id"] == "perch_spire_1":
+			row["size"][1] += 3.0
+	var tall_failures := physical_perch_failures(tall_perch, holder, ground)
+	t.check("height-only perch mutation breaks physical mounting", not tall_failures.is_empty(), "; ".join(tall_failures))
+	holder.free()
 	var approach: Dictionary = by_row["sentinel_48"]
 	t.check("the centre approach builds anchor posts without raising the fight floor", String(approach["stamp"]) == "" and not ParkRecipes.anchor_posts(approach, clear_zones).is_empty())
 	t.eq("the bowl keeps its 12 m depth", float(by_row["crown_bowl"]["size"][1]), 12.0)
@@ -232,4 +244,30 @@ static func line_failures(park: Dictionary, lines: Dictionary) -> Array:
 			out.append("%s does not end at the landmark" % key)
 		if pts.is_empty() or pts[0] != "drop_in":
 			out.append("%s does not start at drop_in" % key)
+	return out
+
+
+static func physical_perch_failures(park: Dictionary, parent: Node3D, ground: Callable) -> Array:
+	var out := []
+	var zones := ParkRecipes.clear_zones(park)
+	for i in PERCH_XZ.size():
+		var id := "perch_spire_%d" % (i + 1)
+		var rows: Array = park["park_rows"].filter(func(row: Dictionary) -> bool: return row["id"] == id)
+		if rows.size() != 1:
+			out.append("%s missing" % id)
+			continue
+		var row: Dictionary = rows[0]
+		if row["at"] != PERCH_XZ[i] or row["stamp"] != "" or row["recipe"] != "greybox:anchor_field":
+			out.append("%s placement changed" % id)
+		var node := ParkRecipes.place_anchor_field(row, parent, ground, zones)
+		var shapes := node.find_children("*", "CollisionShape3D", true, false)
+		if shapes.size() != 1:
+			out.append("%s has %d posts, want one" % [id, shapes.size()])
+		for shape: CollisionShape3D in shapes:
+			var centre := shape.global_position
+			var top := centre.y + (shape.shape as BoxShape3D).size.y * 0.5
+			print("[physical_perch] %s centre %s top %.6f" % [id, centre, top])
+			if Vector2(centre.x, centre.z).distance_to(Vector2(PERCH_XZ[i][0], PERCH_XZ[i][1])) > 0.01 or absf(top - PERCH_TOP_M) > 0.01:
+				out.append("%s centre %s top %.3f, want %s top %.1f" % [id, centre, top, PERCH_XZ[i], PERCH_TOP_M])
+		node.free()
 	return out
