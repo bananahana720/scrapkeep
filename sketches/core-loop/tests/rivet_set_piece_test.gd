@@ -11,18 +11,19 @@ const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 72
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 3, 7, 8, 9 and 10). Expected: 74
 # checks, including the count assertion. Shares the kit test's real-game fixture, never its cases.
 # Rows are called through the framework's _ult_rows dispatch; the landing through _strike.
 # 2026-10-11 (PC-RIVET fix round): 60 -> 67. Full Breach grants on ultimate_landed (CUSTOMIZE.md
 # :356), so its discovery is gone; the three Rivet cards now open in the codex after their
 # framework card, Line True on the tenth punch; the Breach Skid reads player_ball's skid cone.
 # 2026-10-12 (PC-RIVET round 3): exercise the framework's encore transition and both legs' rams.
+# Closed Warden guards remain collidable; a staggered core may be passed.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
-	_expected_checks = 72
+	_expected_checks = 74
 	super._initialize()
 
 
@@ -251,6 +252,16 @@ func _run() -> void:
 	_knob("ult_encore", false)
 	ult._land(_player.ball_position())
 	_t.check("the last leg releases all Drive state and collisions", _kit._piece == "" and _kit._excepted.is_empty() and _player.body().get_collision_exceptions().is_empty())
+
+	await _fresh()
+	_piece("juggernaut_drive")
+	warden = _enemy("warden", 2.0)
+	warden.set_physics_process(false)
+	_kit.drive_step(_player.ball_position())
+	_t.check("a closed Warden 2 m ahead can block the flight", not warden.staggered() and not _player.body().get_collision_exceptions().has(warden) and not _kit._excepted.has(warden))
+	warden._posture.staggered = true
+	_kit.drive_step(_player.ball_position())
+	_t.check("a staggered Warden may be passed", _player.body().get_collision_exceptions().has(warden) and _kit._excepted.has(warden))
 
 	# ult_beats: two more beats in the plan.
 	await _fresh()
