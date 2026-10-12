@@ -485,6 +485,12 @@ Hit and heavy stops read the existing damage band through `Juice.stop_ms_for`. N
 
 Heavier means lower and longer, never louder. Every body layer plays at db 0 through the existing bank and priority trims. The baked `womp` is 0.62 seconds and `chunk_low` is 0.55 seconds at its original pitch. Lowering `chunk_low` by 12 and 17 semitones gives massive and climax longer playback and strictly lower zero-crossing rates than heavy. No new recipe is needed. Listening acceptance still belongs to Andrew.
 
-Class slams must keep distinct bank ids on the frame they share with `slammed`. The three stand-in swaps are `clank` for `skid_smashed`, `reactor_erupt` for `demo_slammed` and `ally_hum_kest` for `ultimate_landed`. Each sound lives in `EventKinds.ROWS` and resolves through `Rows.sound`; `WEIGHTED` holds no sound override. The ultimate also keeps its cue distinct from a vault kill's `vault_drop` on the same frame. At unshifted playback, `ally_hum_kest` measures 376.75 zero crossings per second over 2.2721 seconds, below and longer than the heavy slam cue's 924.71 crossings per second over 0.85 seconds. Class bodies retain their separate lower-and-longer order. The borrowed Kest phrase is a stand-in for listening review.
+Class slams must keep distinct bank ids on the frame they share with `slammed`. Three authored cues replace the borrowed voices (coordinator ruling, 2026-10-11):
+
+- `ultimate_landed` uses `ultimate_land`: a class-neutral sub-bass drop under a short Dm7 stab, 1.25 seconds. The class body layer carries the pilot.
+- `demo_slammed` uses `kest_demo_knock`: a dry knock followed by three ticking pips, one per mini charge, 0.4 seconds.
+- `skid_smashed` uses `rivet_skid_plate`: a short metal scrape into one heavy plate thunk, 0.405 seconds.
+
+Each primary cue lives in `EventKinds.ROWS` and resolves through `Rows.sound`; `WEIGHTED` holds no sound override. The existing `sound_next` ids `kest_falling_triad` and `rivet_snare_flam` stay reserved. The ultimate keeps its cue distinct from a vault kill's `Audio.VAULT_KILL_SOUND` on the same frame. At unshifted playback, `ultimate_land` measures 110.4 zero crossings per second over 1.25 seconds, below and longer than `slam_boom` at 924.71 crossings per second over 0.85 seconds. Both have the same -1 dB bank trim. Andrew's listening verdict on the three authored cues remains open.
 
 Owner default: the Warden-break freeze rides the player's `posture_break` strike, and `beacon_unsealed` stays a reward with no stop. Andrew may veto this default and amend this page.

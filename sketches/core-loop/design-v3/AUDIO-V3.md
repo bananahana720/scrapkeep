@@ -204,6 +204,14 @@ W11 owns hit-stop, camera kick, kill chains, pickup magnetism and pitch climbs, 
 
 Cues W11 needs baked (the bank recipes are AU2's, §8): `near_miss_whip` (class-resolved), `kill_chain_tier` (a two-note ladder stab per tier, resolved by rung), `pickup_fountain` (the scrap tick's tail lengthened while magnetism runs), `drop_landing` (the reward note plus the spring snap, resolved by segments cut), `door_tick`.
 
+Authored impact cues, coordinator ruling 2026-10-11. All three are procedural, follow the live key and resolve from the fact's primary `ROWS.sound`. The two pilot slams keep their existing `sound_next` ids. Listening acceptance belongs to Andrew.
+
+| Cue | Register and instrument | Fact and timing | Length | Bank trim |
+| --- | --- | --- | --- | --- |
+| `ultimate_land` | D sub-bass dropping an octave under a bright, short Dm7 FM stab; class-neutral, with the pilot carried by the class body layer | `ultimate_landed`, on the impact frame | 1.25 s | -1 dB, equal to `slam_boom` |
+| `kest_demo_knock` | Dry low knock, then three ticking pips on D6, F6, A6, one per mini charge | `demo_slammed`, knock on the frame, pips at 110, 210, 310 ms | 0.4 s | -4 dB |
+| `rivet_skid_plate` | Short metal scrape into one low plate thunk; still, then exact | `skid_smashed`, scrape on the frame, plate at 55 ms | 0.405 s | -4 dB |
+
 ## 6. Moss and the lounge after the Warden
 
 The bay opens off the launch after each break as today, and the lounge is untouched: a layer mask over the stage theme in the live key (SOUND-STORY §8, W5 note 8). Three v3 changes, all additive:

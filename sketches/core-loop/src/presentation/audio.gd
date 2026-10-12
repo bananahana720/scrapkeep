@@ -63,6 +63,7 @@ const MENU_STATES := ["title", "class_select", "summary", "dead"]
 const WEAPON_PITCH := {"arc_caster": -3.0, "rapid_laser": 4.0, "claw_sweep": -5.0, "cannon_lane": -7.0,
 	"gather_plate": 2.0, "link_clips": 3.0, "balance_due": 5.0}
 const VOLUME_STEP := 0.1
+const VAULT_KILL_SOUND := "vault_drop"
 
 # The harpoon line's grammar (design-v3/LEGIBILITY.md sections 3 and 5). Gaps are in seconds on
 # the audio clock, which _process advances by its delta so a test can step it.
@@ -98,7 +99,8 @@ const KEYED_SOUNDS := ["armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "p
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer"]
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
+	"ultimate_land", "kest_demo_knock", "rivet_skid_plate"]
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
 # row's sound, a shattered chunk plays its row's sound over a low hit.
@@ -1614,7 +1616,7 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		_miniboss = null
 	if _kind == "vault":
 		# A small drop, on the moment the vault breaks.
-		play("enemy_killed", 2.0, 1.0, "SFX", "vault_drop")
+		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
 	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
 

@@ -106,8 +106,8 @@ const ROWS := {
 	"rocket_jumped": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "boost_whoosh", "sound_next": "kest_blast_lift", "hud": "", "objective": "", "priority": 1},
 	"blink_used": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "dash_whoosh", "sound_next": "kest_blink_thump", "hud": "", "objective": "", "priority": 1},
 	"arc_slammed": {"group": "movement", "color": ClassDef.SABLE_COLOR, "shape": "ring", "sound": "zap_hum", "sound_next": "sable_root_fifth", "hud": "", "objective": "", "priority": 1},
-	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "clank", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
-	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "reactor_erupt", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
+	"skid_smashed": {"group": "movement", "color": ClassDef.RIVET_COLOR, "shape": "chevron", "sound": "rivet_skid_plate", "sound_next": "rivet_snare_flam", "hud": "", "objective": "", "priority": 1},
+	"demo_slammed": {"group": "movement", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "kest_demo_knock", "sound_next": "kest_falling_triad", "hud": "", "objective": "", "priority": 1},
 	# v2 W7 enemies. Danger is HAZARD; a break, tenacity and the shield vault are yours,
 	# so they wear bone here and the class colour where they draw (holds.gd). A hold's
 	# loop and a pack's motif depend on who holds or arrives: `sound` is the stand-in and
@@ -180,7 +180,7 @@ const ROWS := {
 	"ultimate_ready": {"group": "combat", "color": Palette.ARC, "shape": "ring", "sound": "found_chime", "sound_next": "ultimate_ready", "hud": "", "objective": "", "priority": 1},
 	"ultimate_started": {"group": "combat", "color": Palette.ARC, "shape": "lane", "sound": "launch_roar", "hud": "", "objective": "", "priority": 1},
 	"ultimate_peak": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "sound_next": "motif_stinger", "hud": "", "objective": "", "priority": 1},
-	"ultimate_landed": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "ally_hum_kest", "hud": "", "objective": "", "priority": 1},
+	"ultimate_landed": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "ultimate_land", "hud": "", "objective": "", "priority": 1},
 	"ultimate_cancelled": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
 }
 
