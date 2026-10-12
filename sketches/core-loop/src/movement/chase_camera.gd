@@ -176,35 +176,8 @@ func aim_origin() -> Vector3:
 	return (cam.get_parent() as Node3D).global_position
 
 
-# global_position fills Node3D's lazy global-transform cache. Observing the spring
-# mount before gameplay reads it changed Arch traversal results (TRAV-DET2).
-# Compose pose copies for diagnostics without requesting any global transforms.
-func peek_aim_origin() -> Vector3:
-	return _peek_transform(cam.get_parent() as Node3D).origin
-
-
 func aim_forward() -> Vector3:
 	return -cam.global_basis.z
-
-
-# The forward observer likewise avoids cam.global_basis and its transform-cache write.
-func peek_aim_forward() -> Vector3:
-	return -_peek_transform(cam).basis.z
-
-
-func _peek_transform(node: Node3D) -> Transform3D:
-	var chain: Array[Node3D] = []
-	while node != null:
-		chain.push_front(node)
-		node = node.get_parent_node_3d()
-	var pose := Transform3D.IDENTITY
-	for part in chain:
-		var basis := Basis.from_euler(part.rotation, part.rotation_order).scaled_local(part.scale)
-		pose = pose * Transform3D(basis, part.position)
-		# Camera3D removes inherited scale from its global basis.
-		if part.is_scale_disabled():
-			pose.basis = pose.basis.orthonormalized()
-	return pose
 
 
 # Adds degrees of field of view that bleed away over time seconds.

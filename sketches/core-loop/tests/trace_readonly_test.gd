@@ -4,6 +4,7 @@ extends SceneTree
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
+const Counter := preload("res://src/combat/counter.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const T := preload("res://tests/support/t.gd")
 const TICKS := 900
@@ -17,6 +18,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var t := T.new("trace_readonly_test")
 	_check_observer(t)
+	_check_actor_sides(t)
 	if t.failures > 0:
 		quit(t.verdict())
 		return
@@ -82,15 +84,11 @@ class ProbePlayer extends RefCounted:
 
 class ProbeContext extends RefCounted:
 	var camera: ChaseCamera
-	var origin_reads := 0
-	var forward_reads := 0
 
 	func aim_origin() -> Vector3:
-		origin_reads += 1
 		return camera.aim_origin()
 
 	func aim_forward() -> Vector3:
-		forward_reads += 1
 		return camera.aim_forward()
 
 
@@ -120,18 +118,48 @@ func _check_observer(t) -> void:
 	seed(1234)
 	sampler._record_tick(player, Vector3.ZERO, true)
 	t.eq("recording a trace leaves the next global RNG draw unchanged", randf(), expected)
-	t.eq("the observer avoids the cache-filling gameplay aim origin accessor", ctx.origin_reads, 0)
-	t.eq("the observer avoids the cache-filling gameplay aim forward accessor", ctx.forward_reads, 0)
-	camera.position = Vector3(10, 4, -9)
-	camera.rotation = Vector3(0.2, 0.25, -0.1)
-	camera.scale = Vector3(1.2, 0.8, 1.5)
-	camera.arm.rotation = Vector3(-0.3, 0.15, 0.2)
-	camera.arm.scale = Vector3(1.1, 1.05, 0.95)
-	(camera.cam.get_parent() as Node3D).position = Vector3(0, 0, 6.5)
-	t.near("observed lens origin agrees with the composed rig pose", camera.peek_aim_origin().distance_to(camera.aim_origin()), 0.0, 0.00001)
-	t.near("observed aim forward agrees with the composed rig pose", camera.peek_aim_forward().distance_to(camera.aim_forward()), 0.0, 0.00001)
+
 	game["events"].free()
 	sampler.game = null
 	game.clear()
 	camera.free()
 	player._rigid.free()
+
+
+# The real Counter consumes the metadata in setup. Opposite object IDs form the
+# planted control; retaining unrelated objects changes allocation history only.
+func _check_actor_sides(t) -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var actors: Array = []
+	var noise: Array = []
+	var first = Counter.new()
+	actors.append(first)
+	var opposite = null
+	for i in 16:
+		noise.append(RefCounted.new())
+		var candidate = Counter.new()
+		actors.append(candidate)
+		if candidate.get_instance_id() % 2 != first.get_instance_id() % 2:
+			opposite = candidate
+			break
+	t.check("actor allocation control found opposite object-ID parities", opposite != null)
+	if opposite != null:
+		for actor in [first, opposite]:
+			world.add_child(actor)
+			actor.setup(null, null, world, func(): return false, 1.0)
+		t.check("unseeded Counter setup exposes allocation-dependent opposite directions", first._strafe != opposite._strafe)
+		for actor in [first, opposite]:
+			TraversalLine.replay_side(actor, "bot_strafe", 0, 7)
+			actor.setup(null, null, world, func(): return false, 1.0)
+		t.check("the same seed and spawn order give the real Counter the same direction", first._strafe == opposite._strafe)
+		var scrap_a := Node.new()
+		var scrap_b := Node.new()
+		TraversalLine.replay_side(scrap_a, "bot_side", 0, 7)
+		TraversalLine.replay_side(scrap_b, "bot_side", 0, 7)
+		t.check("scrap side uses the same replay contract", scrap_a.has_meta("bot_side") and scrap_b.has_meta("bot_side") and scrap_a.get_meta("bot_side") == scrap_b.get_meta("bot_side"))
+		scrap_a.free()
+		scrap_b.free()
+	for actor in actors:
+		actor.free()
+	world.free()

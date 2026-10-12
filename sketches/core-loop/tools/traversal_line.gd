@@ -23,8 +23,9 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 # failed child is INCONCLUSIVE, excluded from runs, and makes the parent exit 3.
 # Each child writes under <out>/children/<position>-seed-<seed>; trace files are
 # also copied beside the unchanged per-pilot summary for existing consumers.
-# Trace aim uses chase_camera.peek_aim_origin/peek_aim_forward: the gameplay
-# accessors materialize lazy engine transform caches and are unsafe for an observer.
+# As in bot_run, the audio bake completes before play and actor side choices use
+# seed/spawn order instead of allocator-dependent object IDs. Trace allocation
+# can then only change the diagnostic buffer, not the world it observes.
 #
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
@@ -323,8 +324,8 @@ class Sampler:
 			contacts.append(_contact_path(body))
 		contacts.sort()
 		var velocity: Vector3 = player.state.velocity
-		var aim_origin: Vector3 = game.camera.peek_aim_origin()
-		var aim_forward: Vector3 = game.camera.peek_aim_forward()
+		var aim_origin: Vector3 = game.ctx.aim_origin()
+		var aim_forward: Vector3 = game.ctx.aim_forward()
 		trace.append({
 			"tick": traversal.ticks, "time": snappedf(game.run.stage_time, 0.001),
 			"at": [snappedf(ball.x, 0.01), snappedf(ball.y, 0.01), snappedf(ball.z, 0.01)],
@@ -752,6 +753,8 @@ var _driver
 var _sampler: Sampler
 var _runs: Array = []
 var _inconclusive: Array = []
+var _counter_serial := 0
+var _scrap_serial := 0
 # The park run: the stage number (0 the fixture), its map, the line file, the line and the class key.
 var _park := false
 var _stage := 1
@@ -764,6 +767,7 @@ var _floor := false
 
 func _initialize() -> void:
 	SimClock.ticks = true
+	node_added.connect(_on_node_added)
 	_settings = _parse(OS.get_cmdline_user_args())
 	_pilot = String(_settings.get("pilot", ""))
 	_park = String(_settings.get("table", TABLE)) == PARK
@@ -912,6 +916,7 @@ func _physics_process(delta: float) -> bool:
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
+		_game.presentation.audio.bake_now()
 		_driver = BotDriver.new(_game, "traversal", _seeds[_index])
 		if _park:
 			if not _start_park_driver():
@@ -950,6 +955,23 @@ func _physics_process(delta: float) -> bool:
 	_game = null
 	_finish()
 	return false
+
+
+# This is bot_run's existing replay contract, applied before Counter.setup reads it.
+# Counter's object-ID parity and scrap's side otherwise change with trace allocation.
+static func replay_side(node: Node, key: String, ordinal: int, seed_number: int) -> void:
+	node.set_meta(key, 1.0 if (ordinal + seed_number) % 2 == 0 else -1.0)
+
+
+func _on_node_added(node: Node) -> void:
+	if _game == null or _game.build == null:
+		return
+	if "_strafe" in node:
+		replay_side(node, "bot_strafe", _counter_serial, _seeds[_index])
+		_counter_serial += 1
+	if node.get_parent() == _game.build.scrap:
+		replay_side(node, "bot_side", _scrap_serial, _seeds[_index])
+		_scrap_serial += 1
 
 
 func _start_park_driver() -> bool:
