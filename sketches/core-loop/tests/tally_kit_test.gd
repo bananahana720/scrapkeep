@@ -76,26 +76,39 @@ func _physics_process(_delta: float) -> bool:
 	if not _booted:
 		_boot()
 		return false
-	if Engine.get_process_frames() <= _aim_frame:
-		return false
 	if _index >= _steps.size():
 		_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 		quit(_t.verdict())
 		return true
 	var step: Array = _steps[_index]
-	if _ticks == 0:
-		(step[0] as Callable).call()
-	elif step.size() > 3:
-		(step[3] as Callable).call()
-	_ticks += 1
+	var waiting: bool = step[1] is Callable
+	var started_wait := false
+	if waiting:
+		if _ticks == 0:
+			_wait_start_frame = Engine.get_physics_frames()
+			(step[0] as Callable).call()
+			_ticks = 1
+			started_wait = true
+		if Engine.get_physics_frames() >= _wait_start_frame + 2 * Engine.physics_ticks_per_second:
+			_t.check(String(step[4]), false, _balance_state())
+			quit(_t.verdict())
+			return true
+	if Engine.get_process_frames() <= _aim_frame:
+		return false
 	var complete: bool
-	if step[1] is Callable:
+	if waiting:
+		if not started_wait and step.size() > 3:
+			(step[3] as Callable).call()
 		complete = (step[1] as Callable).call()
-		if not complete and _ticks < 2 * Engine.physics_ticks_per_second:
+		if not complete:
 			return false
-		_t.check(String(step[4]), complete, _balance_state())
-		complete = true
+		_t.check(String(step[4]), true, _balance_state())
 	else:
+		if _ticks == 0:
+			(step[0] as Callable).call()
+		elif step.size() > 3:
+			(step[3] as Callable).call()
+		_ticks += 1
 		complete = _ticks >= int(step[1])
 	if complete:
 		(step[2] as Callable).call()
@@ -970,7 +983,9 @@ func _balance_shot_arrived() -> bool:
 
 
 func _balance_state() -> String:
-	return str({"aim": _combat._card_aim(), "selected": _player.abilities.selected,
+	return str({"wait_start": _wait_start_frame, "physics_frame": Engine.get_physics_frames(),
+		"deadline": _wait_start_frame + 2 * Engine.physics_ticks_per_second,
+		"aim": _combat._card_aim(), "selected": _player.abilities.selected,
 		"ready": _player.abilities.ready(AbilityState.WEAPON), "charges": _charges(),
 		"cooldown": _combat._cooldown, "forward": _game.ctx.aim_forward(),
 		"shots": _shots.slice(_record.get("shots_from", _shots.size())),
