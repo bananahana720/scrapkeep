@@ -1,6 +1,6 @@
 # Stage 6: Highdraft, the crown (`park_crown`)
 
-**Status: greybox shipped in `src/world/park/park_crown.json` (KD6, 11 October 2026).** Sections 5, 8 and 10 carry the shipped placements and the measured numbers; the traversal table is `design-v3/park/traversal/park_crown.md`. Below is the storyboard draft as approved. Unit K-W3, wave 13, 10 October 2026. Nothing here is built. Every number marked "(start)" is a starting value to tune in play. The tables follow TADR-011 and PARK.md section 2 field for field. A schema check and a rough sight check ran on this draft; section 16 says how.
+**Status: greybox candidate, 12 October 2026; not admitted.** The source file, bake and graph are built. Sections 5 to 9 describe the current authored rows. The current traversal receipts and win proof are in `design-v3/park/traversal/park_crown.md`. The approved storyboard and original appendix remain design history. The live spawner on the aligned base does not read the park Warden row: its anchor flag is false, its mind driver is null, and its engage radius is 30 m while the park declares 120 m. The native probe records that mismatch.
 
 | Field | Value |
 | --- | --- |
@@ -180,112 +180,91 @@ Row notes:
 
 | route | via | open at start |
 | --- | --- | --- |
-| `main` | watch_butte, drop_ramp, bajada, turnstone, meander, meander_bend, split_spire, crown_ramp, crown_bowl | yes |
-| `hoodoo` | watch_butte, drop_ramp, bajada, turnstone, hoodoo_forest, split_spire, needles, crown_bowl | yes |
-| `west` | watch_butte, drop_ramp, bajada, turnstone, west_wash, alcove_talus, alcove_ledge, alcove_horns, split_spire, needles, signal_masts, crown_bowl | yes |
-| `east` | watch_butte, drop_ramp, bajada, turnstone, east_wash, east_ribs, split_spire, gauntlet_shelf, crown_bowl | yes |
-| `gauntlet` | watch_butte, drop_ramp, bajada, turnstone, east_wash, split_spire, gauntlet_west, gauntlet_net, gauntlet_shelf, crown_bowl | yes |
-| `toppled` | watch_butte, drop_ramp, bajada, turnstone, meander, meander_bend, split_spire, crown_bowl | no, an event opens it |
+| main | ["watch_butte","drop_ramp","bajada_lip","bajada","turnstone","meander","meander_bend","split_spire","crown_ramp","crown_bowl"] | true |
+| hoodoo | ["watch_butte","drop_ramp","bajada_lip","bajada","turnstone","hoodoo_forest","split_spire","needles","crown_bowl"] | true |
+| west | ["watch_butte","drop_ramp","bajada_lip","bajada","turnstone","west_wash","alcove_talus","alcove_ledge","split_spire","needles","signal_masts","crown_bowl"] | true |
+| east | ["watch_butte","drop_ramp","bajada_lip","bajada","turnstone","east_wash","east_ribs","split_spire","gauntlet_shelf","crown_bowl"] | true |
+| gauntlet | ["watch_butte","drop_ramp","bajada_lip","bajada","turnstone","east_wash","split_spire","gauntlet_west","gauntlet_net","gauntlet_shelf","crown_bowl"] | true |
+| toppled | ["watch_butte","drop_ramp","bajada_lip","bajada","turnstone","meander","meander_bend","split_spire","spire_top_ramp","crown_bowl"] | true |
+| mid_centre | ["meander","meander_bend"] | true |
+| mid_east | ["east_wash","east_ribs"] | true |
+| mid_wash | ["east_wash"] | true |
+| mid_hoodoo | ["hoodoo_forest"] | true |
+| mid_west | ["west_wash","alcove_talus","alcove_ledge"] | true |
+| last_ramp | ["crown_ramp"] | true |
+| last_needles | ["needles"] | true |
+| last_masts | ["needles","signal_masts"] | true |
+| last_shelf | ["gauntlet_shelf"] | true |
+| last_net | ["gauntlet_west","gauntlet_net","gauntlet_shelf"] | true |
+| last_toppled | ["spire_top_ramp"] | true |
 
-Only `meander_flash_flood` closes routes (`main` and `toppled`, both of which run through the meander). `hoodoo`, `west`, `east` and `gauntlet` can never close, so "a route always open" holds under every overlap (PARK.md section 5).
+Waymarks: `drop_in`, `turnstone`, `split_spire`, `landmark`. The Turnstone is a landform waymark; the cache is an off-line reward. `camp_signal` is the on-line bajada camp at [0,-120], `cache_turnstone` is at [-232,-306], and `bounty_gauntlet` is at [200,30]. The graph rounds door positions to its 8 m lattice.
 
-| id | activity | site | at | pack | pay |
-| --- | --- | --- | --- | --- | --- |
-| `camp_signal` | enemy_camp | `bajada` | [0, -120] | line_cutter, line_cutter, kite_drone | {"named": "rivet_plating"} |
-| `cache_turnstone` | cracked_cache | `turnstone_scree` | [-232, -306] | (row default) | {"rarities": ["rare"]} |
-| `bounty_gauntlet` | hauler_bounty | `gauntlet_toe` | [200, 30] | (row default) | {"rarities": ["common", "rare"]} |
-
-Waymarks, in order: `drop_in`, `turnstone`, `split_spire`, `landmark`.
-
-**Shipped greybox (KD6, 11 October 2026; coordinator rulings R1 to R12).** PARK.md 2.12 wins over the draft's pocket placement (R7). The Turnstone is a landform waymark (a `bank` row with the balanced rock `turnstone_rock` beside it), not a pocket. `camp_signal` is the on-line camp, on the bajada at [0, -120], where every line crosses the middle fan. The cache sits in the scree west of the Turnstone (`turnstone_scree`) and the bounty at the Gauntlet's toe (`gauntlet_toe`), both off the line. Measured on the committed bake and graph (`assets/park/park_crown/graph.json`, regenerated in the fix round of 12 October 2026):
-
-| pocket | role | door [x, z] | d_spawn m | d_landmark m | door_m | detour_m | sight_ok | pay |
+| pocket | role | door_at [x,z] | d_spawn m | d_landmark m | door_m | detour_m | sight_ok | pay |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `camp_signal` | on-line | [0, -120] | 639 | 595 | 0 | 0 | yes | rivet_plating (common) |
-| `cache_turnstone` | reward | [-232, -304] | 555 | 877 | 239 | 239 | yes | rare |
-| `bounty_gauntlet` | risk | [200, 32] | 863 | 523 | 191 | 191 | yes | common, rare |
-| `meander_wall` | hidden | [88, -160] | 625 | 670 | 72 | 72 | yes | (wall) |
+| camp_signal | online | [0,-120] | 639 | 595 | 0 | 0 | true | ["common","rivet_plating"] |
+| cache_turnstone | reward | [-232,-304] | 555 | 877 | 239 | 239 | true | ["rare"] |
+| bounty_gauntlet | risk | [200,32] | 863 | 523 | 191 | 191 | true | ["common","rare"] |
+| meander_wall | hidden | [88,-160] | 625 | 670 | 72 | 72 | true | [] |
 
-The rules of 2.12 hold on the graph: every door is at least 240 m by path from the spawn and 320 m from the beacon, the doors are at least 239 m apart, each 40 m ring is clear, the reward's detour (239 m) is larger than the risk's (191 m) and both sit in 150 to 600 m, each door is seen from a line node within 240 m, and no breach is listed. The draft's straight-line sightline margins (4 m and 14 m) are moot on the graph. The spawn is in the farthest quarter (farther share 0.149, want at most 0.25), measured by `spawn_check` directly. The beacon rule SR15 (`beacon_check`, new on the KB9 head) is not met: the spires mounting puts three perch spires, the 12 m bowl and the collector catwalk inside the 120 m engage ring (3 closed nodes, 8 deck nodes, 76 m rise). Flattening the arena would undo the approved mounting, so the file keeps it and the conflict is listed for the coordinator.
+The reward pay detour is 239 m and the risk pay detour is 191 m. The graph lists 0 pocket breaches and 0 line errors. `beacon_ok` is false; `spawn.run` is false. No spires exemption is accepted. The stage test gates both rules.
 
-Routes are those of the table above with the shipped row ids: every full route runs `watch_butte, drop_ramp, bajada_lip, bajada, turnstone`, its middle fan, `split_spire`, its last fan and `crown_bowl`; the `toppled` route's last fan is `last_toppled` (`spire_top_ramp`), which the split spire's strike opens (R6). On the KB9 head the runtime places the `gauntlet_net` deck (a greybox box at 110 m).
+The first collision rework moves `turnstone_rock` to [-55,-355], clear of Tarn's west exit. `sentinel_42` is a narrow stamped spire at [45,-365], and `sentinel_11` is at [78.5,-372], south of Cannon's new meander-lip route. `sentinel_6` rises to 40 m beside the high drop exit, `sentinel_15` to 30 m beside the east-fan return, and `sentinel_41` moves to [40,-285] to cover the Turnstone departure. These are measured against the fresh traversal sweep.
 
-**Line furniture (greybox, re-cut on the KB9 head).** KB9 places every row whose recipe is not empty, so every row carries `greybox:<element>` (R10) and the stamped rows (washes, bowls, ramps, buttes) keep their ride sensors and drop their solids. Five rows stay unplaced on purpose: the group rows `perch_spires`, `needles`, `hoodoo_forest` and `split_spire` (each member spire is its own row; a group's 20 m post lattice has no lane through it, walled the needles line and stopped Rivet on the split spire's edge post) and `spire_top_ramp` (the strike's swap target; the runtime has no swap yet). The slickrock fan carries a kicker about every 95 m of each line (`kick_*`, 22 m long, 6 m rise, 36 m wide): each greybox wedge is its own ramp, seated by `y` 0.2 m under the lowest ground of its footprint, because a wedge set on its centre's height floats a lip of up to 3.4 m on the bajada's cross-slope. The fourteen reversed-ramp `*_rise` rows of the first cut are gone (under a placed wedge they made a 3 m wall). The fifty-nine `slickrock_field_*` rows stay as ground cover with no recipe and no stamp: they build nothing and change no baked byte of ground or surface, and without them park_density_test fails (worst open node 670 m from a row). The 14 m hoodoo sentinels (`sentinel_*`) are anchors two ways: a 16 m stamped spire where it stands clear of the lanes, and a 56 m post field (no stamp) where it sits on a route lane, which lines the lane with posts 24.5 m off its centre every 12 m. Three cables ride the open stretches (`east_wire` over the east wash, `gauntlet_tether` into the Gauntlet gap, `shelf_wire` up to the shelf cannon). The Turnstone, the cache's scree and the bounty's toe are shallow bowl stamps (2 m, 1 m, 1 m), and the alcove talus a 3 m bowl, so none is a box to hit.
+Five group/swap rows remain unplaced: `perch_spires`, `needles`, `hoodoo_forest`, `split_spire` and `spire_top_ramp`. Member spires have individual rows; the group post fields obstructed lanes in the earlier pass. The swap row has no runtime swap yet. The 59 `slickrock_field_*` rows still have neither recipe nor stamp. They satisfy the density test by footprint and build no scenery. These are unresolved dressed-pass items, not rendered coverage.
 
-**Fix round (12 October 2026).** The dead stops and anchor gaps of the first greybox table came from stamped spires on the lines and from bare stretches of the spine. Each move below was found on a replayed trace (the tool's own probe: 12 spokes at three pitches, 45 m rope) and kept only when the eight-seed runs stayed clean:
+## 6. Current event rows
 
-- Moved off the lines: `hoodoo_7` [-120, -115] to [-80, -110] (the `turnstone_wire` throws the ball straight at it), `hoodoo_8` [-140, -95] to [-165, -85], `sentinel_21` [-138.7, -6] to [-100, 12], `sentinel_30` [-56.3, 95] to [-60, 125], `sentinel_35` [-197.7, 366.2] to [-160, 325] (south-east of the `signal_wire`, out of the ground roll from its start), `needle_4` [-150, 195] to [-160, 210] (18 m off the needles leg instead of 10 m).
-- Anchors for the spine: `sentinel_4` moves from [24, -535] to the west side at [-24, -535], because on the east side it stopped Sable's drift at [22, -540]. `sentinel_4` and `sentinel_5` rise from 14 m to 30 m, and two new 30 m stamped hoodoos stand by the drop. `sentinel_57` at [36, -500] covers the drop ramp, where every line ran 45 to 110 m without an anchor. `sentinel_59` at [48, -545] covers the crest's foot. A third, `sentinel_58` at [70, -620], covers the floor line's east crest leg.
-- A post field placed inside a route lane or a footprint loses its posts (`park_recipes.gd` `clear_zones`), so every new anchor is a stamped spire.
-
-## 6. `event_rows` draft
-
-| id | kind (family) | site | trigger | lead s, form | live s | effect | routes | hold m, cooldown s, once | music cue |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `needle_strikes` | lightning (natural) | `needles` | clock_tier 1 | 3, lightning_mark | 20 | strike_m 8.0, damage 6.0 | none | 0, 40, false | riser_natural then drop_lightning |
-| `split_spire_strike` | lightning (natural) | `split_spire` | clock_tier 2 | 6, lightning_mark | 0 | strike_m 10.0, damage 8.0, swap "spire_top_ramp" | opens toppled | 30, 0, true | riser_natural then drop_lightning |
-| `meander_flash_flood` | flash_flood (natural) | `meander` | clock_tier 2 | 7, flood_rising | 30 | depth_m 1.0, fill_s 4.0, material "water" | closes main, toppled | 20, 90, false | riser_natural then drop_flood |
-| `lens_spire_wakes` | machine_eruption (ancient) | `lens_spire` | clock_tier 2 | 9, ancient_stirring | 0 | miniboss "mind_hand", swap "spire_foot_crater" | none | 18, 0, true | riser_mind_quote then drop_mind_wrong |
-| `gauntlet_dropship` | fleet_landing (fleet) | `gauntlet_shelf` | clock_tier 1 | 10, fleet_inbound | 0 | vessel "dropship", home "dropship_cutters", footprint_m [36, 16] | none | 25, 0, true | riser_fleet then drop_fleet_anvil |
-| `collector_burst` | boiler_burst (industrial) | `crown_collector` | warden_phase chunk_2 | 5, boiler_pressure | 8 | hazard "arc_steam_cone", hazard_m [24, 10], damage 6.0, swap "collector_catwalk_ramp" | none | 14, 0, true | riser_industrial then drop_boiler |
-
-What each one looks like in play:
-
-- **`needle_strikes` (natural, from tier 1, repeats).** Three needles at a time light a crackling blue-white mark for 3 s; the bolt lands on the downbeat with an 8 m ring. Windows last 20 s and come back after 40 s. It changes no ground, so it uses the 3 s floor. The needle kites use the glare (their home row says so).
-- **`split_spire_strike` (natural, tier 2, once).** A 6 s mark crawls up the split spire. The bolt shears off its top 40 m, which falls north and lies as a ramp from the spire's foot toward the Crown: the `toppled` route. It waits while you are within 30 m.
-- **`meander_flash_flood` (natural, tier 2, repeats, three times as likely in the cloudburst).** A roar upstream for 7 s, then the gooseneck fills 1 m deep over 4 s and runs for 30 s. It closes the two meander routes and waits while you are within 20 m of the bend, so it never fills on top of you.
-- **`lens_spire_wakes` (ancient, tier 2, weight 0.6).** The lens spire hums a wrong note for 9 s, then a larger Mind's hand bursts from its foot as a miniboss and leaves a crater. The spire's top stays the hands' home; the eruption is the thing under it. It is off every line on purpose.
-- **`gauntlet_dropship` (Fleet, tier 1).** A Fleet dropship crosses the storm for 10 s (Brindle's anvil and brass, PARK.md:310) and lands on the Gauntlet Shelf. Its deck wakes the dormant `dropship_cutters` home. Its ramp is a kicker toward the Crown.
-- **`collector_burst` (industrial, the Warden's second chunk).** The collector's whistle climbs for 5 s, then it blows an arcing steam cone 24 by 10 m for 8 s. Its catwalk falls and leans against the nearest perch spire as a ramp to the perch tops for the rest of the fight. This is stage 6's version of the boiler at the second chunk (PARK.md:383).
-
-Timing. Tiers come every 45 s and stop at 2 today (`src/world/director.gd:83-84`); a spike adds 2 (`director.gd:164-165`). This stage uses no tier 3 or 4. Leads: 3 s for the needle strikes (no ground change), 6 s for the split spire, 7 s for the flood, 9 s for the eruption, 10 s for the dropship, 5 s for the collector. Each meets its floor (PARK.md:311) and rounds up to the next downbeat. Three rows change the ground (split spire, eruption, collector) and the flood fills a channel; the director's cap of two at once holds them apart.
-
-New `WORLD_ROWS` forms this table needs (KE units): `lightning_mark`, `flood_rising`, `fleet_inbound`, `ancient_stirring`, `boiler_pressure`.
-
-## 7. `home_rows` draft
-
-| id | enemy | site (landform) | advantage | counter | reinforce: from tier, every s, max, pack | break: by, hp, scrap | stops kind | dormant |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `mast_cutters` | line_cutter | `signal_masts` (mesa_rim) | The signal wire is the west fan's way into the Crown; cutters on the mast platforms throw across it as you leave the needles. | Drop off the wire early onto the bajada or glide under the arc; the mast feet stand on a 20 m rib, and a ram off the needles' north rim reaches them. | 1, 30, 3, `crown_cut` | ram, 130, 30 | true | false |
-| `gauntlet_anchor_crew` | anchor_crew | `gauntlet_west` (butte) | Winch posts on the butte's rim hook a ball riding the Gauntlet net and reel it onto the deck. | Jump the cable lane before it fills, or ride the balloon lift high and slam the post from above. | 0, 35, 3, `crown_anchor` | slam, 150, 35 | true | false |
-| `needle_kites` | kite_drone | `needles` (spire) | Storm updrafts between the needles hold them above ram reach, and lightning glare hides their dive marks. | Shoot them while they circle, or swing the needles and leave the mark; Kest climbs the same updraft. | 1, 25, 4, `crown_kites` | damage, 170, 30 | true | false |
-| `spire_hands` | mind_hand | `lens_spire` (spire) | A spire top is a lens seat 130 m up: it has read your habit before you arrive. | Arrive on a verb it has not braced; its quote names the habit, so hit the open lens with another. | 2, 45, 2, `crown_hands` | smash, 180, 45 | true | false |
-| `dropship_cutters` | line_cutter | `gauntlet_shelf` (slickrock) | The landed dropship's deck overlooks the shelf where the east lines leave for the Crown. | Its ramp is a kicker toward the Crown: take it at speed and the cutter's arc lands behind you. | 2, 30, 3, `crown_cut` | smash, 160, 40 | false | true |
-
-Four homes use today's stage 6 packs (`src/core/alpha_defs.gd:116-120`). `spire_hands` names a new pack, `crown_hands` (`mind_hand`, `line_cutter`), because no stage 6 pack holds a Mind's hand and PARK.md 2.10 refuses a home whose pack is not in the stage's packs. KD0 adds it to the stage 6 row in `src/core/park_defs.gd`. The director's ancient pack (`src/world/director.gd:25`, `70`) still brings hands from the ring as today.
-
-## 8. `contraption_rows` draft
-
-| id | kind | site | recipe | spec keys (contraptions.gd) |
-| --- | --- | --- | --- | --- |
-| `needle_updraft` | thermal | `needles` | (primitive) | at [-150, 150], radius 6.0, height 200.0 |
-| `crown_updraft` | thermal | `crown_bowl` | (primitive) | at [-80, 500], radius 6.0, height 120.0 |
-| `gauntlet_updraft` | thermal | `gauntlet_west` | (primitive) | at [200, 110], radius 6.0, height 160.0 |
-| `turnstone_wire` | cable | `turnstone` | (primitive) | from [-15, 120, -325], to [-80, 70, -60], radius 4.5, floor 18.0 |
-| `signal_wire` | cable | `signal_masts` | (primitive) | from [-265, 62, 300], to [-100, 20, 430], radius 4.5, floor 18.0 |
-| `gauntlet_balloon_lift` | lift | `gauntlet_west` | lift_platform | at [330, 90], radius 5.0, rise 90.0, charge 3.5, offset 0.0 |
-| `shelf_cannon` | launcher | `gauntlet_shelf` | cannon | style "cannon", at [215, 335], radius 4.0, target [100, 0, 480], floor 30.0, min_flight 3.2, charge 2.5 |
-| `meander_wall` | cracked_wall | `meander_bend` | (primitive) | at [60, -10], size [12, 6, 1.4], turn 0.0 |
-| `needle_barge` | barge | `needles` | barge | a [-210, 120, 140], b [-130, 120, 220], size [14, 2, 14], travel 8.0, dwell 3.0, offset 0.0 |
-
-**Shipped greybox (KD6, 11 October 2026).** The file carries these rows with measured placements, plus three cables. `turnstone_wire` runs [-30, -275] to [-95, -150] over the west wash into the hoodoo forest; `signal_wire` runs [-245, 285] to [-100, 430]; `east_wire` (new) runs [170, -290] to [230, -110] along the east wash; `gauntlet_tether` (new) runs [75, 95] to [270, 150] into the Gauntlet gap; `shelf_wire` (new) runs [80, 120] up to the shelf cannon at [165, 300], which fires at [30, -9, 425] on the bowl's south-east floor (fix round, 12 October 2026: the first target, [60, -8.7, 450], rolled the landing ball into perch spire 2 at [39, 447.5], the Cannon's and Tally's dead stops at [46, 447]). The cracked wall sits in the meander at [84, -160], turned 90 degrees. The needle updraft stands at [-150, 150]. Every endpoint's height is the bake's ground plus 1 to 8 m. The lift and the cannon keep the draft's numbers. Known defect, left for the dressed pass: `gauntlet_tether` runs at 27 m through the Gauntlet West butte (the butte's 140 m top covers the cable's middle, about [170, 122]); a cable ride ignores the rock, so it plays, but it reads wrong. The Fleet collector catwalk (`crown_collector`, a park row) now stands on the Crown's south face at [0, 440], 64 m up; the first cut had it inside the spire at [16, 470].
-
-Thermals are the only wind (PARK.md:188); in this storm they read as rain-lit updrafts. A cable rides one way, `from` to `to`, at an 18 m/s floor (`src/world/contraptions.gd:215-222`). The cracked wall opens only to a hard ram, so the floor line never needs it. The needle barge is a moving rock raft between two needles.
-
-## 9. Weather and the fixed time of day
-
-**Time: `dusk`.** The sun sits 3 degrees above the western horizon, under the storm's anvil, so the buttes' west faces burn orange while the sky above goes violet. Proposed `TIME_ROWS` row for KE7 (start): sun elevation 3 degrees, colour #ff8a5c, energy 0.55, ambient #4a4f7a at 0.5. Lightning adds 0.3 s fills. Today's crown light is the shared Highdraft morning (`src/presentation/world_look.gd:35`); PARK.md veto 2 moves it.
-
-| id | kind | trigger | lead, live, gap s | fog | sky, sound, music layer | event odds |
+| id | kind / family | site | trigger | lead / live / clear m | effect | closes / opens |
 | --- | --- | --- | --- | --- | --- | --- |
-| `dusk_storm` | thunderstorm | always | 0, 0, 0 | 0.004, #6b5a6e | storm_build, storm_bed, (none) | none |
-| `cloudburst` | monsoon | clock_tier 2 | 6, 45, 60 | 0.008, #4a4f63 | storm_build, rain_bed, layer_rain_hats | `meander_flash_flood` x3, `needle_strikes` x1.5 |
+| needle_strikes | lightning / natural | needles | {"on":"clock_tier","value":1} | [3.0,20.0,0.0] | {"strike_m":8.0,"damage":6.0} | {"closes":[],"opens":[]} |
+| split_spire_strike | lightning / natural | split_spire | {"on":"clock_tier","value":2} | [6.0,0.0,30.0] | {"strike_m":10.0,"damage":8.0,"swap":"spire_top_ramp"} | {"closes":[],"opens":["toppled","last_toppled"]} |
+| meander_flash_flood | flash_flood / natural | meander | {"on":"clock_tier","value":2} | [7.0,30.0,20.0] | {"depth_m":1.0,"fill_s":4.0,"material":"water"} | {"closes":["main","toppled","mid_centre"],"opens":[]} |
+| lens_spire_wakes | machine_eruption / ancient | lens_spire | {"on":"clock_tier","value":2} | [9.0,0.0,18.0] | {"miniboss":"mind_hand","swap":"spire_foot_crater"} | {"closes":[],"opens":[]} |
+| gauntlet_dropship | fleet_landing / fleet | gauntlet_shelf | {"on":"clock_tier","value":1} | [10.0,0.0,25.0] | {"vessel":"dropship","home":"dropship_cutters","footprint_m":[36,16]} | {"closes":[],"opens":[]} |
+| collector_burst | boiler_burst / industrial | crown_collector | {"on":"warden_phase","value":"chunk_2"} | [5.0,8.0,14.0] | {"hazard":"arc_steam_cone","hazard_m":[24,10],"damage":6.0,"swap":"collector_catwalk_ramp"} | {"closes":[],"opens":[]} |
 
-**The storm.** The thunderstorm is always on: it is what this stage is. From tier 2 the cloudburst adds rain and lower fog for 45 s, triples the flood's odds and raises the needle strikes' odds by half. Handling never changes (PARK.md 2.7). The beam on the Crown keeps the landmark readable through the rain.
+## 7. Current home rows
+
+| id | enemy / site | reinforce | break | stops kind / dormant |
+| --- | --- | --- | --- | --- |
+| mast_cutters | line_cutter / signal_masts | {"from_tier":1,"every_s":30.0,"max_alive":3,"pack":"crown_cut"} | {"by":"ram","hp":130.0,"scrap":30} | [true,false] |
+| gauntlet_anchor_crew | anchor_crew / gauntlet_west | {"from_tier":0,"every_s":35.0,"max_alive":3,"pack":"crown_anchor"} | {"by":"slam","hp":150.0,"scrap":35} | [true,false] |
+| needle_kites | kite_drone / needles | {"from_tier":1,"every_s":25.0,"max_alive":4,"pack":"crown_kites"} | {"by":"damage","hp":170.0,"scrap":30} | [true,false] |
+| spire_hands | mind_hand / lens_spire | {"from_tier":2,"every_s":45.0,"max_alive":2,"pack":"crown_hands"} | {"by":"smash","hp":180.0,"scrap":45} | [true,false] |
+| dropship_cutters | line_cutter / gauntlet_shelf | {"from_tier":2,"every_s":30.0,"max_alive":3,"pack":"crown_cut"} | {"by":"smash","hp":160.0,"scrap":40} | [false,true] |
+
+## 8. Current contraption rows
+
+| id | kind | site | recipe | parameters |
+| --- | --- | --- | --- | --- |
+| needle_updraft | thermal | needles | (primitive) | {"at":[-150,150],"radius":6.0,"height":200.0} |
+| crown_updraft | thermal | crown_bowl | (primitive) | {"at":[-80,500],"radius":6.0,"height":120.0} |
+| gauntlet_updraft | thermal | gauntlet_west | (primitive) | {"at":[200,110],"radius":6.0,"height":160.0} |
+| turnstone_wire | cable | turnstone | (primitive) | {"from":[-30,67.3,-275],"to":[-95,62.6,-150],"radius":4.5,"floor":18.0} |
+| signal_wire | cable | signal_masts | (primitive) | {"from":[-245,5.9,285],"to":[-100,0.7,430],"radius":4.5,"floor":18.0} |
+| east_wire | cable | east_wash | (primitive) | {"from":[170,56.9,-290],"to":[230,52.2,-110],"radius":4.5,"floor":18.0} |
+| gauntlet_tether | cable | gauntlet_west | (primitive) | {"from":[75,26.8,95],"to":[270,27.7,150],"radius":4.5,"floor":18.0} |
+| shelf_wire | cable | gauntlet_shelf | (primitive) | {"from":[80,24.0,120],"to":[165,7.3,300],"radius":4.5,"floor":18.0} |
+| gauntlet_balloon_lift | lift | gauntlet_west | lift_platform | {"at":[330,90],"radius":5.0,"rise":90.0,"charge":3.5,"offset":0.0} |
+| shelf_cannon | launcher | gauntlet_shelf | cannon | {"style":"cannon","at":[165,300],"radius":4.0,"target":[30,-9.0,425],"floor":30.0,"min_flight":3.2,"charge":2.5} |
+| meander_wall | cracked_wall | meander_bend | (primitive) | {"at":[84,-160],"size":[12,6,1.4],"turn":90.0} |
+| needle_barge | barge | needles | barge | {"a":[-210,120,140],"b":[-130,120,220],"size":[14,2,14],"travel":8.0,"dwell":3.0,"offset":0.0} |
+
+`gauntlet_tether` still passes through the Gauntlet West butte and needs a dressed-pass repair. The shelf bots use the cable landing, not the cannon mouth. The current shelf cannon target is [30,-9,425]. The Fleet collector remains at [0,440], y 64, outside the Crown mesh's axis.
+
+## 9. Authored weather and time of day
+
+The park file declares `dusk`. The native, headless checks below do not qualify the rendered sky, lighting or sound.
+
+| id | kind | trigger | lead / live / gap s | fog | sky / sound / layer | event odds / handling |
+| --- | --- | --- | --- | --- | --- | --- |
+| dusk_storm | thunderstorm | {"on":"always"} | [0.0,0.0,0.0] | {"density":0.004,"color":"#6b5a6e"} | ["storm_build","storm_bed",""] | [{},"none"] |
+| cloudburst | monsoon | {"on":"clock_tier","value":2} | [6.0,45.0,60.0] | {"density":0.008,"color":"#4a4f63"} | ["storm_build","rain_bed","layer_rain_hats"] | [{"meander_flash_flood":3.0,"needle_strikes":1.5},"none"] |
 
 ## 10. Traversal lines
 
-**Shipped lines (KD6, re-cut 11 October 2026 on the KB9 head, re-cut again in the fix round of 12 October 2026; `tools/park_lines/park_crown.json`).** The spawn stands at [8, -720] and every spine waypoint at x = 8, not 0: the park ground's 160 m collision tiles meet along x = 0, and a ball rolling down that seam caught its inner edge (dead stops at [0, 386], [4, -593] and [6, -608]; the fix round's first floor re-cut through [-8, -650] found the seam again at [-2.5, -624]). Every line drops down the Watch Butte's nose and the drop ramp to the Turnstone. Middle fans: centre (the meander), east (`east_wire` along the east wash), west (the west wash, the talus and the alcove) and hoodoo (`turnstone_wire` into the forest, north between the hoodoos, east along the bajada's kicker). Last fans: centre (the crown ramp), needles and masts (`signal_wire`), and shelf (`shelf_wire` towards the shelf cannon, then the ground into the bowl). Sable rides hoodoo then needles, and first swings west and east over the butte top ([-40, -650], [40, -610]), because its straight drop runs under the 12 s segment floor. Rivet rides east then centre, Kest centre then needles, Tarn west then needles, and Tally and the Cannon east then shelf. The floor line runs the butte's east crest at x = 48, then centre and centre. That makes five distinct fan pairs; the band asks for three. In the fix round Sable left the west fan, where it overshot the Turnstone's left turn onto the turnstone wire and rode it backwards: 17 s lost and a 45.5 s middle segment. Tally's and the Cannon's shelf waypoint moved from the cannon's mouth [165, 300] to [150, 305], where the shelf wire drops the ball. Both bots overran the cannon and turned back to its mouth, which caused Tally's dead stops at [163, 308]; neither bot fires the cannon. The Gauntlet fan still carries no pilot line: it runs into the Gauntlet Shelf's sheer 40 m east face, and its last segment ran 52.7 s (see section 15). It stays in the park for players. The measured bands are in `design-v3/park/traversal/park_crown.md`; the draft's estimates below stay as the storyboard's.
+**Current lines, 12 October 2026.** Sable takes hoodoo then needles, Rivet east then centre, Kest centre then needles, Tarn west then needles, and Tally and Cannon east then shelf. Cannon's first east waypoint is [110,-350], south of the meander wall. The floor takes the far east butte crest at x 96, then [16,-540], before returning to the centre line. The source file supplies no duplicate airborne bands; the traversal tool derives the Highdraft band from stage 6. The exact lines are below. Tick-based distinctness is recorded with the traversal sweep; fan names alone do not prove it.
 
 **The flow line.** A skater drops off the Watch Butte's north nose and carves the slickrock S down to the Turnstone. They pass the cache, cut east into the gooseneck and pump it round its bank. Then they swing past the split spire, run straight up the bajada's last stretch and launch the crown ramp into the bowl. That is the `floor` line: 1,291 m with no harpoon and no contraption. The pilot lines take a side fan in the middle or last segment, which gives them length, air and a second verb.
 
@@ -324,21 +303,21 @@ Every pilot line sits inside PARK.md's ratio band of 1.3 to 2.0 (PARK.md:466). T
 | Distinct verbs at least 3 | 4 to 6 per line |
 | Distinct lines at least 3 | Sable, Rivet and Kest share no middle or last fan |
 
-**`tools/park_lines/park_crown.json` draft.** Waypoints are [x, z] or a waymark id.
+**Current `tools/park_lines/park_crown.json`.** Waypoints are [x,z] or a waymark id.
 
 ```json
 {
  "map": "park_crown",
  "stage": 6,
  "pilots": {
-  "sable": {"waypoints": ["drop_in", [-50, -620], [50, -520], [-30, -420], "cache_turnstone", [-60, -240], [-110, -150], [-60, -60], "split_spire", [150, 80], [330, 95], [228, 249], [220, 330], [100, 480], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "rivet": {"waypoints": ["drop_in", [-50, -620], [50, -520], [-30, -420], "cache_turnstone", [180, -260], [300, -150], [240, -50], "split_spire", [-30, 150], [20, 250], [0, 310], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "kest": {"waypoints": ["drop_in", [-50, -620], [50, -520], [-30, -420], "cache_turnstone", [100, -280], [120, -170], [110, -80], [60, -20], "split_spire", [-120, 120], [-180, 200], [-270, 300], [-100, 430], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "tarn": {"waypoints": ["drop_in", [-50, -620], [50, -520], [-30, -420], "cache_turnstone", [-130, -255], [-300, -215], [-167, 13], [-90, 30], "split_spire", [-120, 120], [-180, 200], [-270, 300], [-100, 430], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "tally": {"waypoints": ["drop_in", [-50, -620], [50, -520], [-30, -420], "cache_turnstone", [180, -260], [300, -150], [240, -50], "split_spire", [150, 80], [330, 95], [228, 249], [220, 330], [100, 480], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}},
-  "cannon": {"waypoints": ["drop_in", [-50, -620], [50, -520], [-30, -420], "cache_turnstone", [100, -280], [120, -170], [110, -80], [60, -20], "split_spire", [180, 150], [215, 280], [220, 330], [100, 480], "landmark"], "bar": {"band": "PARK.md section 8", "airborne_share": [0.25, 0.6]}}
+  "sable": {"waypoints": ["drop_in", [8, -690], [-40, -650], [40, -610], [8, -560], [8, -415], "turnstone", [-30, -280], [-95, -150], [-130, -90], [-140, -40], [-50, -30], [-10, 5], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "rivet": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [8, 150], [8, 280], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "kest": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [60, -290], [110, -240], [110, -130], [90, -70], [40, 0], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "tarn": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [-60, -310], [-200, -249], [-290, -215], [-262, -146], [-180, -30], [-50, -30], [-10, 5], "split_spire", [-120, 100], [-135, 175], [-180, 200], [-245, 285], [-100, 430], [-60, 480], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "tally": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -305], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [80, 120], [150, 305], "landmark"], "bar": {"band": "PARK.md section 8"}},
+  "cannon": {"waypoints": ["drop_in", [8, -560], [8, -415], "turnstone", [110, -350], [170, -290], [230, -110], [140, -40], [40, -8], "split_spire", [80, 120], [150, 305], "landmark"], "bar": {"band": "PARK.md section 8"}}
  },
- "floor": {"waypoints": ["drop_in", [-50, -620], [50, -520], [-30, -420], "cache_turnstone", [100, -280], [120, -170], [110, -80], [60, -20], "split_spire", [-30, 150], [20, 250], [0, 310], "landmark"]}
+ "floor": {"waypoints": ["drop_in", [96, -680], [96, -600], [16, -540], [8, -415], "turnstone", [60, -290], [110, -240], [110, -130], [90, -70], [40, 0], "split_spire", [8, 150], [8, 280], "landmark"]}
 }
 ```
 
@@ -406,7 +385,7 @@ What changes: the map id (`highdraft_crown` to `park_crown`), the heading (today
 | Test | What it pins today | After |
 | --- | --- | --- |
 | `tests/highdraft_crown_zone_test.gd` | slots, the net deck, islands at least NET_H + 24 (`:11`) | replaced by `tests/park_park_crown_test.gd` (KD6, shipped 11 October 2026: bake and graph freshness, waymark order, pocket roles and pay, the landmark and Warden rows, the toppled route, the lines file) |
-| `tests/park_table_test.gd` | "stage 6 stands on its old map until its park file lands" (`:67`) | fails once `park_crown.json` lands (KD6); the check flips at integration (a shared test, not edited by KD6) |
+| `tests/park_table_test.gd` | valid map type for each landed park file | fixed upstream at 1f09581; the named smoke checks this candidate without a KD6 edit |
 | `tests/crown_warden_bot_test.gd` | the skipper breaks the stage 6 choir Warden (`:10`) | re-measured on `spires`: the Warden now moves |
 | `tests/warden_mind_brace_test.gd` | the hand's brace is bounded (`:8`) | unchanged rule; add a case with the hand in flight |
 | `tests/warden_variants_test.gd` | variants reach the Warden (`:7`) | `choir` stays on stage 6 only |

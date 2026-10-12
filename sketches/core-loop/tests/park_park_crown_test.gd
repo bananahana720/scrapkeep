@@ -2,16 +2,14 @@ extends SceneTree
 
 # Stage 6, park_crown (design-v3/park/stages/6-park_crown.md, K-UNITS KD6): the stage's own pins.
 #
-# Pinned on the committed file (greybox pass, 2026-10-11, re-pinned on the KB9 head b0e4490):
+# Pinned on the greybox candidate, 2026-10-12, after alignment with 6710ac0:
 #   freshness  the bake (tools/park_bake.gd) and the graph (tools/park_graph.gd) of
 #              src/world/park/park_crown.json are fresh: the hashes in bake.json and graph.json
 #              match the park file, the tools and the outputs.
 #   ruling     graph.json has no line errors and no pocket breaches, every route is connected
-#              through its via rows, and the spawn sits in the farthest quarter: spawn_check is
-#              called on graph.bin directly, because the graph tool runs the spawn rule only after
-#              SR15's beacon rule, which this stage's Warden bowl does not meet (the spires
-#              mounting puts perch spires, a 12 m bowl and the collector catwalk inside reach_m;
-#              its reasons are printed as [beacon_ok], reported, not gated here).
+#              through its via rows. The beacon rule must pass and the ordered spawn rule must
+#              actually run; no spires exemption is accepted. A direct spawn check below also
+#              explains the farthest-quarter value when the earlier beacon rule fails.
 #   placement  KB9 places every row whose recipe is not "": every park row carries
 #              greybox:<element> (ruling R10) except five left unplaced: the group rows
 #              perch_spires, needles, hoodoo_forest and split_spire (each member spire is a row of
@@ -88,6 +86,8 @@ func _run() -> void:
 	if t.check("graph.json parses", info is Dictionary):
 		t.check("no line errors", info["line_errors"].is_empty(), str(info["line_errors"]))
 		t.check("no pocket breaches", info["breaches"].is_empty(), str(info["breaches"]))
+		t.check("beacon rule passes", bool(info["beacon_ok"]), str(info["first_failed"]))
+		t.check("ordered spawn rule actually ran", bool(info["spawn"]["run"]), str(info["spawn"]))
 		var broken := []
 		for id in info["routes"]:
 			if not info["routes"][id].is_empty():
@@ -98,7 +98,7 @@ func _run() -> void:
 			var spawn: Dictionary = GraphTool.spawn_check(graph, park)
 			t.check("spawn in the farthest quarter", bool(spawn["ok"]), str(spawn))
 			var beacon: Dictionary = GraphTool.beacon_check(graph, park)
-			print("[beacon_ok] %s (reported, not gated): %s" % ["yes" if beacon["ok"] else "no", "; ".join(beacon["reasons"])])
+			print("[beacon_ok] %s: %s" % ["yes" if beacon["ok"] else "no", "; ".join(beacon["reasons"])])
 		var by_id := {}
 		for p in info["pockets"]:
 			by_id[String(p["id"])] = p
