@@ -396,6 +396,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.escape_window.connect(func(_seconds: float): _escape_act())
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
+	ctx.events.run_ended.connect(func(_won: bool): _clear_devices())
 	ctx.events.run_started.connect(func(_class_id: String):
 		discovered = {}
 		discovery_log = []
@@ -2964,10 +2965,18 @@ func _tick_sentry(delta: float) -> void:
 func _step_devices(delta: float) -> void:
 	if not _sentry.is_empty():
 		devices.move(int(_sentry.get("id", 0)), _sentry["at"])
+	for charge in ultimate.caught_charges():
+		devices.move(int(charge.get("device_id", 0)), charge["pos"])
+	for stake in ultimate.stakes.nodes:
+		devices.move(stake.device_id, stake.global_position)
 	for gone in devices.step(delta, ctx.player.ball_position()):
 		if gone["kind"] == Devices.SENTRY:
 			if int(_sentry.get("id", 0)) == int(gone["id"]):
 				_sentry = {}
+		elif gone["kind"] == Devices.SABLE_STAKE:
+			ultimate.stakes.recall(int(gone["id"]))
+		elif gone["kind"] in [Devices.KEST_MINE, Devices.KEST_RAID]:
+			ultimate.payloads.recall(int(gone["id"]))
 		else:
 			sticky.recall(int(gone["id"]))
 
@@ -3240,10 +3249,18 @@ func _clear_fight() -> void:
 			node.process_mode = Node.PROCESS_MODE_DISABLED
 			node.queue_free()
 	bolts.clear()
-	sticky.clear()
-	devices.clear()
+	_clear_devices()
 	effects.clear()
 	_free_cannon()
+
+
+func _clear_devices() -> void:
+	sticky.clear()
+	ultimate.clear_payloads()
+	ultimate.stakes.fold()
+	devices.remove(int(_sentry.get("id", 0)))
+	_sentry = {}
+	devices.clear()
 
 
 func _rebuild_patterns() -> void:
