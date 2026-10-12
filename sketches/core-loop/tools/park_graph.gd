@@ -1633,9 +1633,9 @@ static func report_text(info: Dictionary) -> String:
 # --- Zone anchors, the hidden-pocket border and the guaranteed-pocket jitter (SQ13) ---
 #
 # The jitter models the draw the pocket unit (SQ14) makes. The two guaranteed pockets, reward and
-# risk, go to the two costliest anchors off the route (rank 1 and 2 of graph.anchors()). Each
-# door is drawn at random among the anchor's door_ok nodes that also keep the pocket rules a node
-# can keep alone: at least DOOR_SPAWN_M from the spawn and DOOR_BEACON_M from the beacon by path.
+# risk, go to the two costliest viable off-route anchors by cost. order_ok checks anchors()
+# rank against that cost order. Each door is drawn at random among the anchor's door_ok nodes
+# that also keep the pocket rules a node can keep alone: at least DOOR_SPAWN_M from the spawn and DOOR_BEACON_M from the beacon by path.
 # A draw whose two doors are less than DOOR_DOOR_M apart by path (the shorter way) is a re-roll;
 # a pair gets JITTER_DRAWS draws before the draw falls back to the next pair of anchors, costliest
 # first. Per seed: `top2` when the first pair places, `reroll` when its first draw fails.
@@ -1643,11 +1643,8 @@ const JITTER_SEEDS := 1000
 const JITTER_TOP2_MIN := 0.95
 const REROLL_MAX := 0.20
 const JITTER_DRAWS := 8
-# comps/isaac/floor-generation.md:107 (c): a hidden pocket borders at least 3 zones. The border is
-# every zone with a node within HIDDEN_BORDER_M (twice the clear ring) of the pocket's door or
-# pay point; a start value.
+# comps/isaac/floor-generation.md:107 (c): a hidden pocket borders at least 3 zones.
 const HIDDEN_ZONES_MIN := 3
-const HIDDEN_BORDER_M := 80.0
 
 
 # The door_ok nodes of an anchor a guaranteed pocket may stand on.
@@ -1748,29 +1745,46 @@ static func _doors_apart(graph, a: int, b: int, metres: float, cache: Dictionary
 	return cache[key] >= metres
 
 
-# The zones round the hidden pocket: {"id", "zones": names, "count"}, [] when the park has none.
-# The pocket is the one pockets() reads; its door and its pay point both count.
-static func hidden_border(graph, park: Dictionary, ring_m := HIDDEN_BORDER_M) -> Array:
-	var hidden := _hidden_row(park)
-	if hidden.is_empty():
-		return []
-	var index := Index.new(graph, park)
-	var door: Array = hidden["door"]["at"] if hidden.has("door") else hidden["at"]
-	var pay: Array = hidden["cache"]["at"] if hidden.get("cache") is Dictionary and hidden["cache"].has("at") else door
-	var seen := {}
-	for at in [door, pay]:
-		var p := Vector2(float(at[0]), float(at[1]))
-		var found: PackedInt32Array = graph.disc_nodes(p, ring_m)
-		for o in range(SIDE * SIDE, graph.node_count()):
-			if Vector2(graph.px[o], graph.pz[o]).distance_to(p) <= ring_m:
-				found.append(o)
-		for o in found:
-			seen[graph.zone_of(o)] = true
-	var names := []
-	for z in seen:
-		names.append(graph.zones()[z]["name"])
-	names.sort()
-	return [{"id": String(hidden["id"]), "zones": names, "count": names.size()}]
+# W13 coordinator ruling, 2026-10-12: a zone borders a hidden pocket when it holds a graph
+# node within one lattice step (ParkGraph.STEP_M) of the sealed footprint: its wall frame
+# plus its door and cache or pay points. The wall uses the runtime box's X/Z size and Y turn.
+# Measure every hidden pocket reported by pockets(), without a door-radius override.
+static func hidden_border(graph, park: Dictionary) -> Array:
+	var by_id := {}
+	for row in park["contraption_rows"]:
+		by_id[String(row["id"])] = row
+	var out := []
+	var zones: Array = graph.zones()
+	for pocket in pockets(graph, park)["rows"]:
+		if pocket["role"] != "hidden":
+			continue
+		var hidden: Dictionary = by_id[pocket["id"]]
+		var wall: Dictionary = hidden.get("door", hidden)
+		var at: Array = wall["at"]
+		var centre := Vector2(float(at[0]), float(at[1]))
+		var size: Array = wall["size"]
+		var half := Vector2(float(size[0]), float(size[2])) * 0.5
+		var turn: float = wall["turn"]
+		var points := []
+		for point in [pocket["at"], pocket["pay_at"]]:
+			points.append(Vector2(float(point[0]), float(point[1])))
+		var seen := {}
+		for o in graph.node_count():
+			var p := Vector2(graph.px[o], graph.pz[o])
+			# Inverse of the wall's rotation about Y, projected onto the X/Z plane.
+			var local := (p - centre).rotated(turn)
+			var outside := Vector2(maxf(absf(local.x) - half.x, 0.0), maxf(absf(local.y) - half.y, 0.0))
+			var distance := outside.length()
+			for point in points:
+				distance = minf(distance, p.distance_to(point))
+			if distance <= ParkGraph.STEP_M:
+				seen[graph.zone_of(o)] = true
+		var names := []
+		for z in seen:
+			names.append(zones[z]["name"])
+		names.sort()
+		out.append({"id": String(pocket["id"]), "zones": names, "count": names.size()})
+	return out
 
 
 # graph.json's zones block: counts, the anchor list and the hidden pocket's border.

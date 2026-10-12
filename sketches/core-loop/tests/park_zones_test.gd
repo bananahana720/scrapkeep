@@ -19,10 +19,10 @@ extends SceneTree
 # SQ13 ACCEPTANCE, measured here and printed by tools/park_graph.gd --jitter: the guaranteed
 # pockets (reward and risk) draw their doors among the door_ok nodes of the two costliest anchors
 # off the route over 1,000 seeded jitters and sit there on at least 95% of seeds, the re-roll rate
-# is at most 20%, and the hidden pocket borders at least 3 zones. The fixture has two anchors far
-# apart, so its jitter is robust by construction; the controls show the checks can fail: both
-# doors drawn from the one anchor, one draw each, often land under 200 m apart and miss both
-# thresholds, and a hidden pocket seen through a 20 m ring borders fewer than 3 zones.
+# is at most 20%. The fixture's hidden pocket borders only open ground, so its border gate must
+# report OUT OF TARGET. The fixture has two anchors far apart, so its jitter is robust by
+# construction; the twin-anchor control misses both jitter thresholds. Planted hidden pockets
+# at a three-zone junction pass and mid-zone fail under the coordinator's footprint rule.
 #
 # Planted park (written to user:// and baked there, the fixture file is never edited): a nook of
 # one ramp far from the route is the costliest anchor and takes rank 1, a nook of two ramps is
@@ -37,7 +37,7 @@ const SCRATCH := "user://park_zones_test"
 const TOOL := "res://tools/park_graph.gd"
 const LOADER := "res://src/world/park/park_graph.gd"
 const BAKE_TOOL := "res://tools/park_bake.gd"
-const EXPECTED_CHECKS := 59
+const EXPECTED_CHECKS := 61
 
 var t := T.new("park_zones_test")
 
@@ -260,20 +260,23 @@ func _acceptance(tool: GDScript, graph, park: Dictionary) -> void:
 	var mirror: Dictionary = tool.jitter(graph, 50, {"anchors": flipped})
 	t.check("control: ranks running cheapest first make order_ok false", not mirror["order_ok"])
 	var border: Array = tool.hidden_border(graph, park)
-	# The CLI gate, called as the CLI calls it.
-	t.eq("the gate passes on the fixture's measured numbers", tool.zone_gate(drawn, border), [])
-	var narrow_gate: Array = tool.zone_gate(drawn, tool.hidden_border(graph, park, 20.0))
-	t.check("control: the gate fails a hidden pocket bordering fewer than 3 zones", narrow_gate.size() == 1 and narrow_gate[0].contains("borders"), str(narrow_gate))
+	# The CLI gate, called as the CLI calls it. The fixture remains authored in place.
+	t.eq("the fixture border gate truthfully reports its one-zone pocket", tool.zone_gate(drawn, border),
+		["hidden pocket tube_wall borders 1 zones"])
 	t.check("control: the gate fails a park with no hidden pocket", not tool.zone_gate(drawn, []).is_empty())
 	var weak := drawn.duplicate()
 	weak["top2_share"] = 0.94
 	weak["reroll_share"] = 0.21
 	weak["order_ok"] = false
-	t.eq("control: the gate names the rank order, the top pair and the re-roll rate", tool.zone_gate(weak, border).size(), 3)
+	t.eq("control: the gate names the rank order, the top pair, re-roll rate and fixture border", tool.zone_gate(weak, border).size(), 4)
 	t.eq("the fixture has one hidden pocket, tube_wall", [border.size(), border[0]["id"]], [1, "tube_wall"])
-	t.check("the hidden pocket borders at least 3 zones", border[0]["count"] >= 3, str(border[0]["zones"]))
-	var narrow: Array = tool.hidden_border(graph, park, 20.0)
-	t.check("control: seen through a 20 m ring the hidden pocket borders fewer than 3 zones", narrow[0]["count"] < 3, str(narrow[0]["zones"]))
+	t.eq("the fixture footprint borders only open ground", border[0]["zones"], ["open"])
+	t.eq("the fixture footprint zone count is one", border[0]["count"], 1)
+	var summary: Dictionary = tool.zone_summary(graph, park)
+	var text: String = tool.zone_text(summary)
+	print(text)
+	t.check("the fixture report prints OUT OF TARGET with its measured count",
+		text.contains("hidden pocket tube_wall borders 1 zones (open), at least 3 wanted: OUT OF TARGET"))
 
 
 # One planted park: nook_a (one ramp) far from the route, nook_b (two ramps), and a diagonal wall
@@ -291,6 +294,12 @@ func _planted(tool: GDScript, bake: GDScript, loader: GDScript, park: Dictionary
 		_hidden_control("junction_hidden", [-700, 670]),
 		_hidden_control("mid_zone_hidden", [-650, 650]),
 	]
+	# The door and cache stay mid-zone. Only the rotated wall frame reaches the junction.
+	var wall_only: Dictionary = border_controls[1].duplicate(true)
+	wall_only["id"] = "wall_frame_hidden"
+	wall_only["size"] = [48, 6, 120]
+	wall_only["turn"] = PI * 0.5
+	border_controls.append(wall_only)
 	planted["contraption_rows"].append_array(border_controls)
 	var path := SCRATCH + "/planted.json"
 	var f := FileAccess.open(path, FileAccess.WRITE)
@@ -323,14 +332,14 @@ func _planted(tool: GDScript, bake: GDScript, loader: GDScript, park: Dictionary
 	t.eq("the diagonal wall splits the open ground in two", open_zones, ["open", "open.2"])
 	t.eq("the corner piece is out of the spawn's reach", by_name["open.2"]["d_spawn"], -1.0)
 	# Measure each planted hidden row using the baked planted graph, with that row as the
-	# park's one hidden pocket. Both rows are saved in planted.json under user://.
+	# park's one hidden pocket. The rows are saved in planted.json under user://.
 	for control in border_controls:
 		var measured_park := planted.duplicate(true)
 		measured_park["contraption_rows"] = measured_park["contraption_rows"].filter(func(c): return not tool.HIDDEN_KINDS.has(c["kind"]))
 		measured_park["contraption_rows"].append(control)
 		var border: Array = tool.hidden_border(graph, measured_park)
 		print("planted footprint %s: %s" % [control["id"], str(border)])
-		var junction: bool = control["id"] == "junction_hidden"
+		var junction: bool = control["id"] != "mid_zone_hidden"
 		t.eq("control: %s borders its footprint's zones" % control["id"], border[0]["zones"],
 			["nook_a", "nook_a_ramp", "open"] if junction else ["nook_a"])
 		var misses: Array = tool.zone_gate(drawn, border)

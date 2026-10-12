@@ -167,7 +167,7 @@
       "value": 1.624
     }
   ],
-  "tool_sha256": "acf4a9944b9fe9812f8cc9cab22279b2aa10c8803a2b8d59c0f9c4ad85230af2",
+  "tool_sha256": "a7d955180aa994c35181d8a7e0b7f5effb446cf18a3c7002a3049047352e0069",
   "zones": {
     "anchors": [
       {
@@ -235,12 +235,10 @@
     },
     "hidden": [
       {
-        "count": 3,
+        "count": 1,
         "id": "tube_wall",
         "zones": [
-          "apron",
-          "open",
-          "pool"
+          "open"
         ]
       }
     ]
