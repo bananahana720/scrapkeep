@@ -4,7 +4,6 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
-const Warden := preload("res://src/combat/warden.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Measured by entering every alpha and default-table stage on 560d177 before the fix.
@@ -117,7 +116,8 @@ const UNCHANGED := [
 const HARDPOINTS := [Vector3(0.0, 1.6, 0.0), Vector3(2.8, 0.0, 0.0), Vector3(-2.8, 0.0, 0.0)]
 const UNCHANGED_PLACEMENTS := [Vector3(-46, 16.6, -12), Vector3(0, -6.4, 118),
 	Vector3(20, 1.6, 90), Vector3(40, -10.4, 130), Vector3(0, 25.6, -60), Vector3(-20, 37.6, -115)]
-const PARK_FIELDS := ["family", "mounting", "hardpoints", "anchor", "path", "harpoon_anchor"]
+const MOUNTINGS := {"reactor:": "dam_face", "reactor:meltdown": "flume", "swarm:": "headframe",
+	"swarm:brood": "sinkhole", "mind:": "under_island", "mind:choir": "spires"}
 var t := T.new("park_warden_wiring_test")
 
 
@@ -218,8 +218,27 @@ func _run() -> void:
 		w._step_mounting(1.5)
 		_near3("moving landing %d" % leg, w.global_position, finish)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(moving_path))
+	for fixture in [{"family": "reactor", "map": "park_test", "mounting": "flume"},
+		{"family": "swarm", "map": "park_pit", "mounting": "sinkhole"},
+		{"family": "mind", "map": "park_crown", "mounting": "spires"}]:
+		for flag in range(3):
+			var copy: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ParkMap.FIXTURE))
+			copy["map"] = fixture["map"]
+			copy["landmark"]["reach_m"] = 47.0
+			copy["landmark"]["warden"].merge({"family": fixture["family"],
+				"mounting": fixture["mounting"], "hardpoints": flag + 1}, true)
+			if flag < 2:
+				copy["landmark"]["warden"]["harpoon_anchor"] = flag == 0
+			else:
+				copy["landmark"]["warden"].erase("harpoon_anchor")
+			for home in copy["home_rows"]:
+				home["reinforce"]["pack"] = "elite"
+			var path := _write_copy(copy, "%s_flag_%d" % [fixture["family"], flag])
+			_exercise_copy(game, path, 1)
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	game.free()
 	await process_frame
+	print("park_warden_wiring_test checks: %d passed, %d failed" % [t.checks - t.failures, t.failures])
 	print("park_warden_wiring_test: %s" % ("PASS" if t.failures == 0 else "FAIL"))
 	quit(0 if t.failures == 0 else 1)
 
@@ -257,15 +276,15 @@ func _check_park(game, path: String, stage: int) -> void:
 	if not t.check(label + " spawned Warden", is_instance_valid(w)):
 		return
 	t.check(label + " uses loaded park map", game.ctx.terrain.map() is ParkMap and game.ctx.terrain.map().ok)
-	for field in PARK_FIELDS:
-		if expected.has(field):
-			t.eq(label + " spec " + field, w.spec.get(field), expected[field])
+	for field in expected:
+		t.eq(label + " spec " + field, w.spec.get(field), expected[field])
 	if expected.has("anchor"):
 		var anchor := _v3(expected["anchor"])
 		_near3(label + " home", w.home, anchor)
 		_near3(label + " initial world position", w.global_position, anchor)
 	var family: String = expected.get("family", UNCHANGED[stage - 1]["spec"]["family"])
-	var mounting: String = expected.get("mounting", Warden.MOUNTINGS.get(family + ":" + w.variant, ""))
+	var variant: String = expected.get("variant", UNCHANGED[stage - 1]["spec"]["variant"])
+	var mounting: String = expected.get("mounting", MOUNTINGS.get(family + ":" + variant, ""))
 	t.eq(label + " family", w.family, family)
 	t.eq(label + " mounting", w.mounting, mounting)
 	t.eq(label + " hardpoint count", w.hardpoints.size(), int(expected["hardpoints"]))
