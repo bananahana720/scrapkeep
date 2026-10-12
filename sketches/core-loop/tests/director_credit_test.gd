@@ -9,7 +9,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_CHECKS := 628
+const EXPECTED_CHECKS := 632
 
 var _t := T.new("director_credit_test")
 
@@ -114,6 +114,16 @@ func _boundaries() -> void:
 	var spent: float = d.get("credits_spent")
 	d.advance(H, 24)
 	_t.near("external cap never spends more", d.get("credits_spent"), spent)
+	var held = _director(11, Park.of(1), "credit")
+	held._next_pack = Park.PACKS[1]
+	held.credits = 1000.0
+	var balance_before: float = held.credits
+	var expected_income: float = H * Director.Cards.I0 * (1.0 + Director.Cards.K * 0)
+	held.advance(H, held.cap() - 1)
+	_t.near("below cap retained pack earns income despite insufficient whole-pack room", held.credits_accrued, expected_income)
+	_t.near("below cap retained pack adds income to balance", held.credits, balance_before + expected_income)
+	_t.near("below cap retained pack spends nothing", held.credits_spent, 0.0)
+	_t.check("below cap retained whole pack waits without placement", held.arrivals.is_empty() and held._next_pack == Park.PACKS[1])
 	var park = _director(913, Park.of(1), "credit", true)
 	park.play_rect = Rect2(-800, -800, 1600, 1600)
 	var at: Vector2 = park._park_map.beacon
@@ -166,17 +176,13 @@ func _sweeps() -> void:
 					for death in live.duplicate():
 						if death <= time:
 							live.erase(death)
-					var room: int = d.cap() - live.size() - d.arrivals.size()
-					var held_size: int = d._next_pack.get("kinds", []).size()
-					var spent_before: float = d.get("credits_spent")
-					# The credit branch uses the post-step dial. No income while the reservation cap binds.
-					var dial := mini(int((d.stage_time + H) / Director.TIER_SECONDS), Director.MAX_TIME_TIERS) + Director.SPIKE_TIERS
+					# All rings here are valid future enemies, including arrivals due this step.
+					var reserved: int = live.size() + d.arrivals.size()
+					var dial := mini(int((time + H) / Director.TIER_SECONDS), Director.MAX_TIME_TIERS) + Director.SPIKE_TIERS
+					var capacity: int = mini(24, int(round((6 + dial * 2) * row.threat * row.pressure.pack_scale)) + Director.HEFT_CAP_STEP * (50 - 1))
+					if mode == "credit" and not d.paused and reserved < capacity:
+						integral += H * cards.I0 * (1.0 + cards.K * dial)
 					var due: Array = d.advance(H, live.size())
-					if mode == "credit":
-						if held_size == 0 and d.get("credits_spent") == spent_before:
-							held_size = d._next_pack.get("kinds", []).size()
-						if room > 0 and held_size <= room:
-							integral += H * cards.I0 * (1.0 + cards.K * dial)
 					for _spawn in due:
 						# Hold the first crowd until minute 15, then run a deterministic lifetime arm.
 						live.append(maxf(900.0, time + 18.0 + seed_value % 7))
