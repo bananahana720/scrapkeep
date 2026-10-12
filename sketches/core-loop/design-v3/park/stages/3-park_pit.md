@@ -17,8 +17,8 @@ Terms used once and kept: a **bench** is one step of the pit (a flat **tread** y
 | Weather | heat shimmer always; dust devils from clock tier 2 |
 | Landmark | the headframe, 120 m tall, on the pit floor at (0, 255) |
 | Park | 1.6 km square; an open-pit copper mine 900 m across and 100 m deep in its middle |
-| Lines | six pilot lines of 1,571 to 2,059 m, estimated 62 to 69 s; floor line 1,627 m, about 81 s (section 9) |
-| Draft size | 28 row families that expand to 33 park rows, 5 events, 4 homes, 8 contraptions, 2 weather rows, 3 activities, 19 routes |
+| Lines | Six pilot lines, median paths 1583 to 2034 m and median times 61.78 to 100.94 s; floor line 90.41 s (section 9) |
+| Greybox size | 109 park rows, 5 events, 4 homes, 12 contraptions, 2 weather rows, 3 activities, 21 routes |
 
 ## 1. Landform and society layer
 
@@ -146,7 +146,7 @@ Five rows, all four families. Trigger tiers: tier 1 at 45 s, tier 2 at 90 s (`sr
 | `deep_adit_wakes` | machine_eruption, ancient | `deep_adit` | clock tier 3 | 8 s, `ancient_stirring`, on bar | a swarm remnant miniboss bursts from the sealed adit; the portal becomes a lip | closes `deep_adit_floor`, opens `eruption_lip` | `riser_ancient` / `drop_ancient` |
 | `hoist_boiler` | boiler_burst, industrial | `hoist_house` | Warden phase `chunk_2` | 5 s, `boiler_pressure`, on bar | steam cone 24 by 10 m, 6 damage, 8 s; the roof becomes a ramp aimed at the tipple deck | closes `hoist_yard`, opens `hoist_roof_line` | `riser_industrial` / `drop_industrial` |
 
-**Why these.** A direct run (63 to 105 s measured, section 9) sees the slump mid-pit at 45 s and the boiler during the fight; the barge, flood and eruption reward roaming. Against the shipped lines (KD3 greybox, 2026-10-11): the east-branch lines (Sable, Rivet, the Cannon) ride the `tailings_conveyor` cable straight over `tailings_bench_east`, so the slump fires under them and keeps both treads; the barge apron sits 190 m or more off every line; the Kest line passes 12 m from the `floor_sump` footprint's edge at about 90 s, so `sump_flood` (clock tier 2) can be live as it passes (the 1.2 m pool keeps planar speed, PARK.md section 4); the deep adit sits 150 m or more from every line. `deep_adit_wakes` waits for clock tier 3, which needs veto item 16 (`MAX_TIME_TIERS` 4); on this head it does not fire inside a measured run. The boiler is outside the 42 m engage ring (75 m from the collar), so its steam never lands in the fight.
+**Why these.** A direct pilot run (61.78 to 100.94 s measured, section 9) sees the slump mid-pit at 45 s and the boiler during the fight; the barge, flood and eruption reward roaming. Against the shipped lines (KD3 greybox, 2026-10-11): the east-branch lines (Sable, Rivet, the Cannon) ride the `tailings_conveyor` cable straight over `tailings_bench_east`, so the slump fires under them and keeps both treads; the barge apron sits 190 m or more off every line; the Kest line passes 12 m from the `floor_sump` footprint's edge at about 90 s, so `sump_flood` (clock tier 2) can be live as it passes (the 1.2 m pool keeps planar speed, PARK.md section 4); the deep adit sits 150 m or more from every line. `deep_adit_wakes` waits for clock tier 3, which needs veto item 16 (`MAX_TIME_TIERS` 4); on this head it does not fire inside a measured run. The boiler is outside the 42 m engage ring (75 m from the collar), so its steam never lands in the fight.
 
 ## 6. `home_rows` draft
 
@@ -168,16 +168,17 @@ Spec keys are today's (`src/world/contraptions.gd:86-101`; shapes as in `src/wor
 | `incline_skip` | barge, `barge` | `pit` | a (0, -19.4, -225) to b (0, -99.4, 100), 14 m deck, travel 9 s, dwell 3 s | the old ore skip down the north wall: an 80 m descent you can ride instead of diving |
 | `tipple_lift` | lift, `lift_platform` | `tipple_deck` | at (20, 262), radius 4.5, rise 40, charge 3.2 s | pops a ball onto the tipple deck for the drop finisher |
 | `sump_geyser` | launcher (geyser), `geyser_vent` | `floor_sump` | at (-70, 128), target (0, -59.2, 240), floor 16, min flight 2.2 s, charge 3.0 s | a burst dewatering standpipe that throws you onto the tipple deck |
-| `rim_zip` | cable, `""` | `pit` | from (60, 1.5, -298) to (150, -38.5, -178), radius 6, floor 18 | the rim road's downhill grapple line over bench 1 to the camp on bench 2 (the Rivet and Tally lines) |
-| `tailings_conveyor` | cable, `""` | `tailings_bench_east` | from (337, -38.5, -40) to (337, -38.5, 110), radius 6, floor 18 | the bench 2 east conveyor: a 150 m level grapple line over the tailings pond (the east branch) |
-| `bench2_haul_cable` | cable, `""` | `pit` | from (60, -38.5, -150) to (-90, -38.5, -150), radius 6, floor 18 | the bench 2 north haul cable west from the camp (the Kest line) |
-| `skip_cable` | cable, `""` | `pit` | from (175, -38.5, -125) to (120, -78.5, 25), radius 6, floor 18 | a skip cable from the camp down over bench 3 to bench 4 (the Tarn and Tally lines) |
+| `rim_zip` | cable, `""` | `pit` | from (60, 1.5, -298) to (150, -38.5, -178), radius 6, floor 22 | the rim road's downhill grapple line over bench 1 to the camp on bench 2 (the Rivet and Tally lines) |
+| `tailings_conveyor` | cable, `""` | `tailings_bench_east` | from (337, -38.5, -40) to (337, -38.5, 110), radius 6, floor 22 | the bench 2 east conveyor: a 150 m level grapple line over the tailings pond (the east branch) |
+| `bench2_haul_cable` | cable, `""` | `pit` | from (60, -38.5, -150) to (-90, -38.5, -150), radius 6, floor 22 | the bench 2 north haul cable west from the camp (the Kest line) |
+| `skip_cable` | cable, `""` | `pit` | from (175, -38.5, -125) to (120, -78.5, 25), radius 6, floor 22 | a skip cable from the camp down over bench 3 to bench 4 (the Tarn and Tally lines) |
+| `west_winze_cable` | cable, `""` | `pit` | from (-150, -58.5, -25) to (-100, -98.5, 170), radius 6, floor 22 | the Kest line's second west cable, over bench 4 to the floor |
 | `adit_valve` | valve, `gauge` | `adit_back_door` | at (94, -374), door at (88, -368), 10 by 5 by 1 m, turn 2.16 | the hidden pocket: opens the adit's back door on the north rim; its tell is the `back_door_portal` row, an 8 by 6 m timbered portal 18 m behind the gauge |
 | `sealed_portal` | cracked_wall, `""` | `deep_adit` | at (262.5, 400), 12 by 7 by 1.4 m, turn 1.24 | decorative: smash the seal before the eruption to see the green seam early; 70 m off the eruption site (R3) |
 | `dust_devil_east` | thermal, `""` | `tailings_bench_east` | at (400, -60), radius 5, height 62 | a visible dust devil over hot tailings: a lift lane, never a push |
 | `dust_devil_floor` | thermal, `""` | `pit` | at (-30, 160), radius 12, height 60 | Kest's lift on the floor, on his line from the west winze cable to the collar (only a gliding ball rides a thermal, `contraptions.gd:251-253`; at radius 5 a ball at cruise left the column before the glide engaged and no `thermal_ride` fired, so the fix round widened it to 12) |
 
-**Why four cables (KD3).** The greybox pass was cut on a head where the runtime placed no recipe row, so each line rides one cable and drops at least one bench by a kicker lip. Since KB9 (in the fix-round base) a park stage places every row that names a recipe at runtime, and its ride sensor fires on entry (`park_recipes.gd` `_sensor`): the fix-round runs show `ride_chute` (the washes, the haul road), `ride_bowl` (the east bank, the tailings terrace, the collar dish) and `thermal_ride` (Kest) besides the cables and kickers. A row without a recipe is a terrain stamp only and fires nothing. Every bench drop a line takes has a kicker row whose lip sits on the crest, and 60 m crest windrows (3 m safety berms, a real haul-road feature) either side of a 50 m gap, so the harpoon always has a face within its 45 m reach.
+**Why five cables (KD3).** The greybox pass was cut on a head where the runtime placed no recipe row, so each pilot line rides at least one cable and drops a bench by a kicker lip. Since KB9 (in the fix-round base) a park stage places every row that names a recipe at runtime, and its ride sensor fires on entry (`park_recipes.gd` `_sensor`): the fix-round runs show `ride_chute` (the washes, the haul road), `ride_bowl` (the east bank, the tailings terrace, the collar dish) and `thermal_ride` (Kest) besides the cables and kickers. A row without a recipe is a terrain stamp only and fires nothing. Every bench drop a line takes has a kicker row whose lip sits on the crest, and 60 m crest windrows (3 m safety berms, a real haul-road feature) either side of a 50 m gap, so the harpoon always has a face within its 45 m reach.
 
 The dust devils are the weather's dust devils made into marked lanes, as PARK.md section 2.7 asks: wind that moves the ball is always a thermal row, never weather.
 
@@ -196,7 +197,7 @@ Both rows carry `handling: "none"`.
 
 ## 9. Traversal lines
 
-Measured, KD3 greybox fix round (2026-10-11, on the KB9 and KB7b head), `tools/traversal_line.gd --table=park --stage=3`, 8 seeds per line; the full 13-band table is `design-v3/park/traversal/park_pit.md`. Every line passes the waymarks `drop_in`, `canal_lip`, `switchback_camp`, `landmark` in order. Waymark 3 is the enemy camp's ground row (`switchback_camp`, R2), not the cache: the cache moved off the line to keep its PARK.md 2.12 reward detour (section 14). Straight distance from the drop-in to the engage centre is about 1,170 m.
+Measured, KD3 greybox on the merged candidate (2026-10-12), `tools/traversal_line.gd --table=park --stage=3`, 8 seeds per line; the full 13-band table is `design-v3/park/traversal/park_pit.md`. Every line passes the waymarks `drop_in`, `canal_lip`, `switchback_camp`, `landmark` in order. Waymark 3 is the enemy camp's ground row (`switchback_camp`, R2), not the cache: the cache moved off the line to keep its PARK.md 2.12 reward detour (section 14). Straight distance from the drop-in to the engage centre is about 1,170 m.
 
 The lines are three heads and three tails. The shared start is the dump face, the two arroyo washes and the canal. The heads:
 
@@ -210,21 +211,19 @@ The tails:
 - **S, the skip.** The `skip_cable` from the camp over bench 3 to bench 4, then the `floor_dive` lip to the floor.
 - **W, the west winze.** The `bench2_haul_cable` west along bench 2, the `west_dive` lip to bench 3, then the `west_winze_cable` over bench 4 to the floor's west side, and across the floor through `dust_devil_floor` at (-30, 160), which lifts a gliding ball, to the collar. The line's last waypoint before the fix round, (-60, 205), ran into the `hoist_house` box once KB9 placed it (three dead stops at (-39, 181) on the first fix-round run, against an ore pile beside the thermal's first place); the line now passes (-45, 163) and (-15, 157), straight through the thermal's centre.
 
-| Line | Head + tail | Time to Warden, median (s) | Segments, medians (s) | Ratio | Ride facts |
-| --- | --- | --- | --- | --- | --- |
-Fix-round numbers (KB9 and KB7b head, 8 seeds; every band of all six pilot lines passes, and so does the floor line's own band):
+Measured on the merged candidate, 2026-10-12. Eight seeds per completed line; floor flow share is reported only under kd-common-r.md item 4. Full band and worst-seed values are in `traversal/park_pit.md`.
 
 | Line | Head + tail | Time to Warden, median (s) | Segments, medians (s) | Ratio | Ride facts, KB7b set |
 | --- | --- | --- | --- | --- | --- |
-| Sable | A + E | 62.0 | 13.8 / 21.0 / 27.3 | 1.75 | 4 (kicker_launch, ride_bowl, ride_chute, ride_grapple_line) |
-| Rivet | B + E | 100.9 | 18.8 / 38.2 / 44.0 | 1.64 | 4 (the same four) |
-| Kest | A + W | 96.8 | 18.4 / 36.4 / 42.1 | 1.72 | 5 (the four and thermal_ride) |
-| Tarn | C + S | 75.0 | 17.5 / 35.5 / 21.9 | 1.44 | 4 (the same four) |
-| Tally | B + S | 79.7 | 19.4 / 36.7 / 23.8 | 1.35 | 4 (the same four) |
-| The Cannon | C + E | 97.5 | 18.1 / 39.1 / 40.6 | 1.71 | 4 (the same four) |
-| Floor line | A + the S dives, no cable | 90.4 | 19.5 / 39.4 / 31.6 | 1.45 | 4 (the same four) |
+| Sable | A + E | 61.78 | 13.81 / 20.96 / 27.23 | 1.740 | 4 |
+| Rivet | B + E | 100.94 | 18.80 / 38.20 / 43.97 | 1.640 | 4 |
+| Kest | A + W | 96.75 | 18.45 / 36.44 / 42.06 | 1.720 | 5 |
+| Tarn | C + S | 74.95 | 17.46 / 35.50 / 21.94 | 1.440 | 4 |
+| Tally | B + S | 79.72 | 19.45 / 36.72 / 23.75 | 1.355 | 4 |
+| The Cannon | C + E | 97.64 | 18.12 / 39.06 / 40.59 | 1.710 | 4 |
+| Floor line | A + the S dives, no cable | 90.41 | 19.53 / 39.41 / 31.59 | 1.450 | 4 |
 
-**Distinct lines.** Rivet, Kest and Tarn share no head and no tail. The greybox pass measured them pairwise distinct (shares 0.36, 0.37, 0.47 of ticks within 8 m, seed 1), and so were Kest, Tally and the Cannon. The fix round did not re-cut the traces. The pairs that share a head or a tail are not distinct.
+**Distinct lines.** Rivet, Kest and Tarn are pairwise distinct on all eight current traces: every directed share of ticks within 8 m of any point in the other 3D trace is below 0.50. The largest share is 0.4742, Tarn against Kest on seed 6. The comparison uses exact spatial bins, with all neighboring bins searched; the full 24-row receipt is in `traversal/park_pit.md`. This establishes the required three distinct lines across the six pilots.
 
 **Why the berms, windrows and ore piles.** They were cut when the runtime placed no recipe row, so the harpoon's anchors were stamped steep faces only (section 7); they stay, because the stamped rows (no recipe) are still terrain only. The rows that keep every line inside the 40 m anchor band are these:
 
