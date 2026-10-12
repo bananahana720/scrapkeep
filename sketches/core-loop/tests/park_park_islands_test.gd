@@ -30,6 +30,7 @@ const DIR := "res://assets/park/park_islands"
 const LINES := "res://tools/park_lines/park_islands.json"
 const BAKE_TOOL := "res://tools/park_bake.gd"
 const GRAPH_TOOL := "res://tools/park_graph.gd"
+const STAGE_SPEC := "res://design-v3/park/stages/5-park_islands.md"
 
 const WAYMARKS := ["drop_in", "saddle", "anvil_rock", "landmark"]
 const POCKETS := {"online": "camp_anvil", "reward": "cache_east_wing", "risk": "bounty_ore_bench", "hidden": "saddle_seam"}
@@ -60,6 +61,10 @@ func _run() -> void:
 		quit(t.verdict())
 		return
 	var park: Dictionary = read["data"]
+	var spec := _stage_spec()
+	if not t.check("the stage-owned geometry appendix parses", spec.get("map") == MAP):
+		quit(t.verdict())
+		return
 	var info = JSON.parse_string(FileAccess.get_file_as_string(DIR + "/graph.json"))
 	if not t.check("graph.json parses", info is Dictionary):
 		quit(t.verdict())
@@ -71,6 +76,7 @@ func _run() -> void:
 
 	_pin("waymarks", _waymarks(park), _waymarks(_planted(park, "waymarks", ["drop_in", "anvil_rock", "saddle", "landmark"])))
 	_pin("landmark and Warden", _landmark(park), _landmark(_planted_warden(park)))
+	_pin("step-lip marker geometry", _step_lips(park, spec), _step_lips(_planted_step_lip(park), spec))
 	_pin("graph ruling", _ruling(info), _ruling(_planted_ruling(info)))
 	_pin("pocket roles and distances", _pockets(info), _pockets(_planted_pocket(info)))
 	_pin("pilot lines resolve", _lines(lines, park), _lines(_planted_lines(lines), park))
@@ -103,6 +109,49 @@ func _landmark(park: Dictionary) -> Array:
 	if String(warden.get("family", "")) != "mind" or String(warden.get("mounting", "")) != "under_island" \
 			or warden.get("harpoon_anchor") != true:
 		out.append("warden %s" % warden)
+	return out
+
+
+func _stage_spec() -> Dictionary:
+	var source := FileAccess.get_file_as_string(STAGE_SPEC)
+	var appendix := source.find("## Appendix: the park file as shipped")
+	if appendix < 0:
+		return {}
+	var start := source.find("```json\n", appendix)
+	if start < 0:
+		return {}
+	start += "```json\n".length()
+	var end := source.find("```", start)
+	if end < 0:
+		return {}
+	var parsed = JSON.parse_string(source.substr(start, end - start))
+	return parsed if parsed is Dictionary else {}
+
+
+func _step_lips(park: Dictionary, spec: Dictionary) -> Array:
+	var out := []
+	var actual := {}
+	for row in park["park_rows"]:
+		actual[String(row["id"])] = row
+	var expected := {}
+	for row in spec.get("park_rows", []):
+		var id := String(row["id"])
+		if not id.contains("_step_lip_"):
+			continue
+		expected[id] = row
+		if row.get("stamp") != "plateau" or row.get("size", [])[1] != 0.01:
+			out.append("%s specification must remain a 1 cm plateau marker" % id)
+		if not actual.has(id):
+			out.append("missing step-lip marker %s" % id)
+			continue
+		for key in ["at", "y", "size", "yaw_deg", "stamp", "element"]:
+			if actual[id].get(key) != row.get(key):
+				out.append("%s %s is %s, stage specification requires %s" % [id, key, actual[id].get(key), row.get(key)])
+	if not expected.has("carve_step_lip_7"):
+		out.append("stage specification lacks carve_step_lip_7")
+	for id in actual:
+		if String(id).contains("_step_lip_") and not expected.has(id):
+			out.append("step-lip marker %s is absent from the stage specification" % id)
 	return out
 
 
@@ -177,6 +226,14 @@ func _planted(park: Dictionary, key: String, value) -> Dictionary:
 func _planted_warden(park: Dictionary) -> Dictionary:
 	var copy := park.duplicate(true)
 	copy["landmark"]["warden"]["family"] = "reactor"
+	return copy
+
+
+func _planted_step_lip(park: Dictionary) -> Dictionary:
+	var copy := park.duplicate(true)
+	for row in copy["park_rows"]:
+		if row["id"] == "carve_step_lip_7":
+			row["size"][1] += 3.0
 	return copy
 
 
