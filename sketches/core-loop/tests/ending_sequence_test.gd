@@ -89,6 +89,9 @@ func _run() -> void:
 	var crew_visible := [true, true, true]
 	var camera_moves := [false, false, false]
 	var crater_seen := false
+	var crater_placed_seen := false
+	var crater_meshes := 0
+	var crater_physics_free := true
 	var worlds_hidden := true
 	var bowl_in_frame := false
 	var credit_heights := []
@@ -115,12 +118,20 @@ func _run() -> void:
 		else:
 			var crater = seq.get("crater")
 			crater_seen = crater_seen or (crater != null and crater.visible)
+			# KC10 fix round: the bowl must hold real geometry once placed, and stay collider free after placement.
+			if crater != null and seq._crater_placed:
+				crater_placed_seen = true
+				crater_meshes = maxi(crater_meshes, crater.find_children("*", "MeshInstance3D", true, false).size())
+				crater_physics_free = crater_physics_free and _physics_free(seq.viewport)
 			worlds_hidden = worlds_hidden and seq.worlds.all(func(w): return not w.visible)
 			bowl_in_frame = bowl_in_frame or _in_frame(seq.camera, Vector3.ZERO)
 			credit_heights.append(seq.camera.position.y)
 		await process_frame
 	Engine.time_scale = 1.0
 	_t.check("KC10 crater set shows in the credits", crater_seen)
+	_t.check("KC10 crater placed before the credits ended", crater_placed_seen)
+	_t.check("KC10 crater bowl geometry renders in the credits", crater_meshes > 0, "%d mesh nodes" % crater_meshes)
+	_t.check("KC10 crater set stays physics free after placement", crater_physics_free)
 	_t.check("KC10 credits hide the Highdraft worlds", worlds_hidden)
 	_t.check("KC10 credits camera has the bowl centre in frame", bowl_in_frame)
 	_t.check("KC10 camera drops over the rim through the credits", credit_heights.size() > 1 and credit_heights[0] > credit_heights.back(), str(credit_heights.slice(0, 3)))
