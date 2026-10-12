@@ -26,7 +26,8 @@ const T := preload("res://tests/support/t.gd")
 # wave P-C, comps rows 7, 8 and 24) gain their own checks: 30 nodes, MAX_CHAIN_DEPTH 1, no
 # unsafe growth, nodes 6 to 29 capped with class_id tally (24), every movement node Tally's
 # own (11 movers), and a 20-copy sweep per depth-4 leaf (16). Measured 107 checks (was 63).
-const EXPECTED_CHECKS := 107
+# 2026-10-12 (PC-TALLY round 3): live unspent three-clip settle pays once, no arc.
+const EXPECTED_CHECKS := 108
 const DT := 1.0 / 60.0
 const SHELF := Vector3(-45.0, 122.0, 6.0)
 
@@ -322,6 +323,17 @@ func _peak_and_landing_cases() -> void:
 	_combat.ride_clips[lined.get_instance_id()] = true
 	_land("plate_return", ball)
 	_t.eq("a line clip and a ride clip on one enemy settle once", _forces(lined, "ledger"), [24.0])
+
+
+	await _fresh()
+	ball = _player.ball_position()
+	_piece("plate_return", ball, ball)
+	var linked: Array = []
+	for z in [11.0, 13.0, 15.0]:
+		linked.append(_enemy("chaser", 0.0, z))
+	_combat.link_group = {"ids": linked.map(func(e): return e.get_instance_id()), "until": _combat._clock + 4.0, "spent": false, "mult": 1.0}
+	_land("plate_return", ball)
+	_t.eq("a live unspent three-clip group takes one settle each and no arc", linked.map(func(e): return _forces(e, "ledger")), [[24.0], [24.0], [24.0]])
 
 
 # --- Wardens and bosses ----------------------------------------------------------------------
