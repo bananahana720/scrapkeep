@@ -52,7 +52,7 @@ func _heights(bins: Dictionary, point: Vector2) -> Array:
 			heights.append(a.y + u * (tri[1].y - a.y) + v * (tri[2].y - a.y))
 	return heights
 
-func _triangle_probes(node: Node3D, probes: Array[Vector2]) -> void:
+func _triangle_probes(node: Node3D, probes: Array[Vector2], rendered: Array[Vector3]) -> void:
 	if node is MeshInstance3D and node.visible:
 		var arrays: Array = node.mesh.surface_get_arrays(0)
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -66,10 +66,12 @@ func _triangle_probes(node: Node3D, probes: Array[Vector2]) -> void:
 				var point: Vector3 = node.global_transform * vertices[index]
 				centre += point / 3.0
 				probes.append(Vector2(point.x, point.z))
+				rendered.append(point)
 			probes.append(Vector2(centre.x, centre.z))
+			rendered.append(centre)
 	for child in node.get_children():
 		if child is Node3D:
-			_triangle_probes(child, probes)
+			_triangle_probes(child, probes, rendered)
 
 func _check_surface(label: String, node: Node3D, site: Dictionary, water := false) -> void:
 	var bins := {}
@@ -78,7 +80,8 @@ func _check_surface(label: String, node: Node3D, site: Dictionary, water := fals
 	var centre := Vector2(float(site.at[0]), float(site.at[1]))
 	var yaw := deg_to_rad(float(site.yaw_deg))
 	var probes: Array[Vector2] = []
-	_triangle_probes(node, probes)
+	var rendered: Array[Vector3] = []
+	_triangle_probes(node, probes, rendered)
 	for z in range(ceili(-half.y), floori(half.y) + 1):
 		for x in range(ceili(-half.x), floori(half.x) + 1):
 			probes.append(Vector2(x, z).rotated(-yaw) + centre)
@@ -91,6 +94,10 @@ func _check_surface(label: String, node: Node3D, site: Dictionary, water := fals
 	var count := 0
 	var worst := INF
 	var deepest := -INF
+	for point in rendered:
+		var depth: float = point.y - game.ctx.terrain.height(point.x, point.z)
+		worst = minf(worst, depth)
+		deepest = maxf(deepest, depth)
 	for point in probes:
 		for y in _heights(bins, point):
 			var depth: float = y - game.ctx.terrain.height(point.x, point.y)
