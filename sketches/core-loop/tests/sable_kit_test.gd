@@ -1,0 +1,267 @@
+extends SceneTree
+# PC-SABLE: real router, harpoon, combat, grants and immutable world-one fixtures.
+# Expected check count is pinned below; missing cases fail.
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const Augments := preload("res://src/movement/augments.gd")
+const AbilityState := preload("res://src/core/ability_state.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const Sable := preload("res://src/core/trees/sable.gd")
+const Cards := preload("res://src/core/trees/world_one_cards.gd")
+const Relics := preload("res://src/build/relics.gd")
+const PartDef := preload("res://src/build/part_def.gd")
+const Triggers := preload("res://src/build/triggers.gd")
+const Achievements := preload("res://src/core/achievements.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
+const Profile := preload("res://src/core/profile.gd")
+const Progress := preload("res://src/core/progress.gd")
+const T := preload("res://tests/support/t.gd")
+const EXPECTED_CHECKS := 59
+const DT := 1.0 / 60.0
+var _t := T.new("sable_kit_test")
+var _game
+var _player
+var _combat
+var _lines: Array = []
+var _loaded: Array = []
+var _fired: Array = []
+var _expired: Array = []
+var _special: Array = []
+
+
+func _initialize() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+	_run()
+
+
+func _never() -> bool:
+	return false
+
+
+func _fresh(speed := 20.0) -> void:
+	_player.kit.drop_line("reset")
+	_player.kit.rewind_left = 0.0
+	_player.kit.line_end = ""
+	_player.chain.reset()
+	_player.abilities.refill()
+	_player.abilities.snap_back("test")
+	_player._fire_latched = false
+	_player.kit.mass_on = false
+	_player.set_velocity_now(Vector3.RIGHT * speed)
+	_player.drive_basis = Basis.looking_at(Vector3.FORWARD)
+	_combat._line_load = {}
+	_combat._bite_pending = false
+	_loaded.clear()
+	_fired.clear()
+	_expired.clear()
+	_special.clear()
+	_lines.clear()
+
+
+func _tick(fields := {}, delta := DT) -> void:
+	_player.intent.clear()
+	for key in fields:
+		_player.intent.set(key, fields[key])
+	_player._route_slots(delta)
+	_combat._step_special(_player.intent, delta)
+	_combat._step_line(_player.intent, delta)
+
+
+func _cast() -> void:
+	_tick({"slot_pick": 2, "fire_pressed": true, "fire_held": true})
+	_tick({"fire_released": true})
+
+
+func _wall() -> Vector3:
+	var anchor: Vector3 = _player.ball_position() + Vector3(8.0, 3.0, 0.0)
+	_player.grapple_to(anchor, Vector3.LEFT)
+	_player._publish_line(0.0)
+	return anchor
+
+
+func _run() -> void:
+	while _game.flow == null:
+		await physics_frame
+	_game.ctx.calm = true
+	_player = _game.player
+	_player.source = Intent.Scripted.new()
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	_combat = _game.combat
+	for i in 36:
+		await physics_frame
+	_player.set_physics_process(false)
+	_combat.set_physics_process(false)
+	_combat.ultimate.set_physics_process(false)
+	_combat.ultimate.stakes.set_physics_process(false)
+	_game.events.line_state_changed.connect(func(state: String, _target: Node3D, _at: Vector3, cause: String): _lines.append([state, cause]))
+	_game.events.line_skill_loaded.connect(func(id: String, _s: float): _loaded.append(id))
+	_game.events.line_skill_fired.connect(func(id: String, _target: Node3D, _at: Vector3, _on: String): _fired.append(id))
+	_game.events.line_skill_expired.connect(func(id: String): _expired.append(id))
+	_game.events.special_used.connect(func(id: String, _at: Vector3): _special.append(id))
+	_t.eq("Sable's real slots", [_player.abilities.id_of("line"), _player.abilities.ultimate_id], ["bank_shot", "cable_run"])
+	_fresh()
+	var anchor := _wall()
+	var before: int = _player.chain.combo
+	var shape: Dictionary = _player.bank_geometry()
+	_cast()
+	_t.near("world exit", _player.state.velocity.length(), 29.0, 0.5)
+	_t.check("exit cone and cast share their direction", rad_to_deg(_player.state.velocity.angle_to(shape["dir"])) < 1.0)
+	_t.check("exit follows eject_direction", rad_to_deg(_player.state.velocity.angle_to(Augments.eject_direction(_player.ball_position() - anchor, _player.drive_basis))) < 5.0)
+	_t.eq("quiet release", [_player.kit.hooked, _player.kit.line_end], [false, "bank"])
+	_player._publish_line(0.0)
+	_t.eq("no broke event", _lines.filter(func(r): return r[0] == "broke"), [])
+	_t.eq("chain unchanged", _player.chain.combo, before)
+	_t.near("Parting Shot timer resets", _combat._since_slingshot, 0.0)
+	_t.near("run log keeps bank gain", _game.ctx.run_log._record["line_skill"].get("bank_gain_mps", -1), 9.0, 0.01)
+	_fresh(40.0)
+	_wall()
+	_cast()
+	_t.near("bank cap", _player.state.velocity.length(), 45.0, 0.01)
+	_fresh(2.0)
+	_wall()
+	_cast()
+	_t.near("bank floor", _player.state.velocity.length(), 20.25, 0.01)
+	var slows := []
+	for tick in 451:
+		var speed := tick / 10.0
+		var exit := Augments.bank_exit(speed, Vector3.LEFT, Basis.IDENTITY, _player.kit).length()
+		if exit + 0.0001 < speed or exit > 45.0001:
+			slows.append(speed)
+	_t.eq("451-point 0 to 45 sweep never slows and respects cap", slows, [])
+	_t.near("a faster arrival keeps its speed", Augments.bank_exit(60.0, Vector3.LEFT, Basis.IDENTITY, _player.kit).length(), 60.0, 0.001)
+	_fresh()
+	var enemy: Node3D = _combat.spawn_enemy("chaser", _player.ball_position() + Vector3(9.0, 1.0, 0.0))
+	enemy.live = _never
+	enemy.hp = 5000.0
+	enemy.max_hp = 5000.0
+	_player.grapple_to(enemy.global_position, Vector3.LEFT, enemy)
+	_player.chain.combo = 3
+	var hp: float = enemy.hp
+	var mult: float = _player.chain.multiplier()
+	_cast()
+	_t.near("body pivot damage scales by chain", hp - enemy.hp, 10.0 * mult, 0.01)
+	_t.near("body exit", _player.state.velocity.length(), 29.0, 0.01)
+	_fresh()
+	_player.tree._knobs["grapple_fling"] = 10.0
+	_wall()
+	_cast()
+	_t.near("Coil Hook never stacks", _player.state.velocity.length(), 29.0, 0.01)
+	_player.tree._knobs.erase("grapple_fling")
+	_fresh()
+	_cast()
+	_t.eq("no line loads", [_loaded, _fired], [["bank_shot"], []])
+	_tick({}, 3.97)
+	_t.check("load stands at 3.99", not _combat.line_load().is_empty())
+	_wall()
+	_tick({}, 0.0)
+	_t.eq("bite carries the load", _fired, ["bank_shot"])
+	_fresh()
+	_cast()
+	_tick({}, 3.99)
+	_t.eq("load expires at 4.01", [_expired, _combat.line_load()], [["bank_shot"], {}])
+	_fresh()
+	_player.grapple_to(enemy.global_position, Vector3.LEFT, enemy)
+	Augments.commit_smash(_player.kit, _player.tuning, _player.state.velocity)
+	hp = enemy.hp
+	_cast()
+	_t.near("smash pivot arc is immediate", hp - enemy.hp, 10.0, 0.01)
+	_t.check("redirect waits for paid smash", not _player._bank_pending.is_empty() and _player.kit.line_state == Augments.LINE_SMASH)
+	_t.near("smash keeps incoming velocity until contact", _player.state.velocity.length(), 20.0, 0.01)
+	_player._begin_landing(enemy)
+	_player._finish_landing(enemy, 20.0)
+	_t.check("landing pays then redirects", _player._bank_pending.is_empty() and _player.state.velocity.length() >= 29.0 - 0.001)
+	_fresh(0.0)
+	_tick({"slot_pick": 1, "fire_pressed": true, "fire_held": true}, 0.0)
+	_tick({"fire_held": true}, 1.0)
+	_tick({"fire_released": true}, 0.0)
+	_t.eq("slot 2 full discharge", [_combat.last_burst["targets"], _combat.last_burst["radius"], _combat.last_burst["damage"]], [8, 30.0, 70.0])
+	_t.eq("gauge returns home", _player.abilities.selected, "weapon")
+	_fresh(30.0)
+	_t.near("live tap discharge", _combat._discharge_speed(0.0), 22.5)
+	var charge: int = _player.abilities.slot("special").charges
+	_game.events.mounted.emit(_player.ball_position(), 18.0)
+	_t.eq("plant stays free", [_special, _player.abilities.slot("special").charges], [["detonation_gauge"], charge])
+	_tree()
+	_grants(enemy)
+	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
+	quit(_t.verdict())
+
+
+func _tree() -> void:
+	for i in range(6, 14):
+		_t.check("depth 3 swap %d" % i, Sable.NODES[i].get("swap", {}).get("ultimate", "") in ["ball_lightning", "outpost"])
+	var good := true
+	for i in range(6, 14, 2):
+		good = good and Sable.NODES[i]["swap"]["ultimate"] != Sable.NODES[i + 1]["swap"]["ultimate"]
+	_t.check("all depth-3 siblings differ", good)
+	_t.check("retained Face Runner pair differs", Sable.NODES[8]["swap"]["ultimate"] != Sable.NODES[6]["swap"]["ultimate"])
+	good = true
+	for i in range(14, 30):
+		var knobs: Array = Sable.NODES[i].get("knob", {}).keys().filter(func(k): return String(k).begins_with("ult_"))
+		good = good and knobs.size() == 1
+		if i % 2 == 0:
+			var other: Array = Sable.NODES[i + 1].get("knob", {}).keys().filter(func(k): return String(k).begins_with("ult_"))
+			good = good and knobs != other
+	_t.check("every depth-4 leaf has one distinct sibling knob", good)
+	_t.eq("world-one ids", Sable.NODES_WORLD_ONE.slice(0, 6).map(func(n): return n["id"]), ["s_cannonball", "s_beachhead", "s_coil_hook", "s_face_runner", "s_arc_nest", "s_bulwark"])
+	_t.eq("world-one cards stay unchanged", [Cards.ROWS["s_cannonball"], Cards.ROWS["s_face_runner"]], ["Vault kicks discharge. Weight launches farther.", "Vaults restore jumps. Heavy fins steer harder."])
+	_t.eq("one crater relic", Relics.ids().filter(func(id): return Relics.fits(id, "pylon_engineer") and Relics.swap_of(id) == "crater_slam"), ["crater_heart"])
+	_t.eq("two Bank Shot relics", Relics.ids().filter(func(id): return Relics.fits(id, "pylon_engineer") and Relics.slot_of(id) == "line"), ["pit_coil", "storm_crater"])
+	var movement_local := true
+	var stack_rules := true
+	var repeat_safe := true
+	for n in Sable.NODES.slice(6):
+		movement_local = movement_local and n.get("class_id", "") == "pylon_engineer"
+		stack_rules = stack_rules and n.get("stack_rule", "") in PartDef.STACK_RULES
+		for copies in range(1, 21):
+			# Trees select each id once and relics hold one id per slot: capped at one copy.
+			repeat_safe = repeat_safe and PartDef.Stacking.value(n["stack_rule"], 1.0, copies, 1.0) == 1.0
+	_t.check("all changed movement rows are pilot-local", movement_local)
+	_t.check("each changed node declares its stack rule", stack_rules)
+	_t.check("1 to 20 stack sweep stays capped at one", repeat_safe)
+	_t.check("existing proc graph never re-enters and depth is one", UpgradeTree._proc_loop("pylon_engineer", UpgradeTree.path_to("pylon_engineer", "s_bounce_battery")) == "" and Triggers.MAX_CHAIN_DEPTH == 1)
+
+
+func _grants(enemy: Node3D) -> void:
+	var pilots: Array = ClassDef.all().map(func(d): return d.id)
+	_t.eq("grant table validates", Achievements.validate(Achievements.ROWS, Achievements.bus_signals(), pilots, Cosmetics.ids()), [])
+	var rows := Achievements.ROWS.duplicate(true)
+	rows["planted_11"] = {"name": "Too Many", "text": "This new count must fail.", "on": "enemy_killed", "count": 11, "reward": {}}
+	_t.check("new count 11 fails validation", Achievements.validate(rows, Achievements.bus_signals(), pilots, Cosmetics.ids()).any(func(p): return "planted_11: new grants" in p))
+	_t.eq("all grandfathered ids are explicit", Achievements.GRANDFATHERED.size(), 12)
+	var profile := Profile.new("user://sable-grants-%d.json" % OS.get_process_id())
+	profile.load_profile()
+	var listener := Progress.new()
+	listener.rows = {}
+	for id in ["ach_sable_cable_runs", "ach_sable_parting_shot", "ach_sable_switchback"]:
+		listener.rows[id] = Achievements.row(id)
+	listener.setup(_game.events, null, profile, func(): return 1.0)
+	_combat._discover("loaded_line", Vector3.ZERO)
+	_combat._discover("set_piece", Vector3.ZERO)
+	_fresh()
+	var stakes = _combat.ultimate.stakes
+	var stake = stakes.plant(_player.ball_position() + Vector3.RIGHT * 10.0)
+	_player.grapple_to(stake.global_position, Vector3.LEFT, stake)
+	_cast()
+	_t.check("stake Bank Shot detects Switchback", _game.ctx.codex.known("switchback"))
+	enemy.hp = 1.0
+	_combat.strike(enemy, "arc", 50.0, "", "special")
+	_t.check("a kill after Bank Shot detects Parting Shot", _game.ctx.codex.known("parting_shot"))
+	var ult = _combat.ultimate
+	ult._id = "cable_run"
+	ult._plan = {"from": _player.ball_position(), "legs": [{"strike": true}]}
+	ult._record = {"id": "cable_run", "landing_hits": 0, "damage": 0.0}
+	for i in 3:
+		ult._strike(_player.ball_position() + Vector3.RIGHT * 100.0)
+	_t.check("three real landing callbacks detect Cable Runner", _game.ctx.codex.known("sable_cable_runs"))
+	for id in ["ach_sable_cable_runs", "ach_sable_parting_shot", "ach_sable_switchback"]:
+		_t.check("%s earns once" % id, profile.earned(id) and profile.has_cosmetic(Achievements.reward_of(id)["cosmetic"]))
+	var reload := Profile.new(profile.path)
+	reload.load_profile()
+	_t.check("all three grants survive save", ["trail_sable_cable", "decal_sable_spool", "shell_sable_felt"].all(func(id): return reload.has_cosmetic(id)))
+	_t.check("Felt Rig stays pending until its art lands", Cosmetics.is_pending("shell_sable_felt"))
+	listener.free()

@@ -130,6 +130,10 @@ const ABILITIES := {
 	"line_reel": {"icon": "ab_sable_reel", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
 	"ult_default": {"icon": "ab_sable_reel", "cooldown": 0.0, "paths": ["line", "arc"], "beats": 0},
 	# --- P-C Sable rows (line skill, ultimate, depth-3 variants) -------------------------
+	"bank_shot": {"icon": "ab_sable_line", "cooldown": 8.0, "line": true, "load_seconds": 4.0},
+	"cable_run": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"]},
+	"ball_lightning": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["arc"], "variant_of": "cable_run"},
+	"outpost": {"icon": "ab_sable_ult", "cooldown": 0.0, "paths": ["line", "rail", "arc"], "variant_of": "cable_run"},
 	# --- end Sable ---
 	# --- P-C Rivet rows ------------------------------------------------------------------
 	# --- end Rivet ---

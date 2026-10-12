@@ -90,7 +90,7 @@ static func all() -> Array[Resource]:
 	var list: Array[Resource] = [
 		make({"id": "pylon_engineer", "display_name": "Sable", "role": "Pylon engineer", "species": "fox",
 			"pitch": "Plant a beachhead, then launch off it like a cannonball. Grapple, vault off steep faces, mount a pylon and turret.",
-			"weapon_id": "arc_caster", "movement_id": "grapple", "special_id": "detonation_gauge", "smash_id": "arc_slam", "line_id": "line_reel", "ultimate_id": "ult_default",
+			"weapon_id": "arc_caster", "movement_id": "grapple", "special_id": "detonation_gauge", "smash_id": "arc_slam", "line_id": "bank_shot", "ultimate_id": "cable_run",
 			"color": SABLE_COLOR, "shape": "ring", "motif": "sable", "sound": "pylon_plant",
 			"bible_home": "Sable, displacement and traversal",
 			"unlock": {"by": "start", "label": "On the roster since the first shift."},

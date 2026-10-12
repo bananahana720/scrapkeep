@@ -36,6 +36,10 @@ const MIN_ROWS := 8
 # Pilot ids a row may reward before their ClassDef row exists. The save records the unlock;
 # the card appears when the row lands, and that unit removes the id here.
 const PENDING_PILOTS := []
+# 2026-10-11 (PC-SABLE): preserve the twelve pre-wave lifetime grants; new grants fit one run.
+const GRANDFATHERED := ["kills_100", "kills_1000", "ach_d7_ink_stitch", "ach_d7_plum_curl",
+	"ach_d7_forge_chips", "ach_d7_snail_shell", "ach_d7_thimble", "ach_d7_paw", "ach_d7_seashell",
+	"ach_d7_forge_blue", "ach_d7_ember_plum", "ach_d7_dusk_pink"]
 
 const ROWS := {
 	"warden_broken": {"name": "Warden Breaker", "text": "Break your first Warden.", "on": "beacon_unsealed",
@@ -116,6 +120,9 @@ const ROWS := {
 	"ach_meta_pocket_tint": {"name": "Fresh Eyes", "text": "Discover three new synergies.", "on": "synergy_discovered",
 		"where": {"first_time": true}, "count": 3, "reward": {"option": "pocket_tint"}},
 	# --- pylon_engineer (Sable): P-C Sable adds its grant rows here ---
+	"ach_sable_cable_runs": {"name": "Cable Runner", "text": "Land three Cable Runs in one run.", "on": "synergy_discovered", "where": {"synergy_id": "sable_cable_runs"}, "count": 1, "reward": {"cosmetic": "trail_sable_cable"}},
+	"ach_sable_parting_shot": {"name": "Parting Shot", "text": "Kill a machine within a second of a pylon slingshot.", "on": "synergy_discovered", "where": {"synergy_id": "parting_shot"}, "count": 1, "reward": {"cosmetic": "decal_sable_spool"}},
+	"ach_sable_switchback": {"name": "Switchback", "text": "Bank Shot off a stake your Cable Run left.", "on": "synergy_discovered", "where": {"synergy_id": "switchback"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_sable_felt"}},
 	# --- end pylon_engineer ---
 	# --- runner_gunner (Rivet): P-C Rivet adds its grant rows here ---
 	# --- end runner_gunner ---
@@ -239,6 +246,8 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 			problems.append("%s: sum %s is not an argument of %s" % [id, r["sum"], on])
 		if not (r.get("count", 0) is int) or int(r.get("count", 0)) < 1:
 			problems.append("%s: count must be an integer of at least 1" % id)
+		if int(r.get("count", 0)) > 10 and not id in GRANDFATHERED:
+			problems.append("%s: new grants must have count at most 10" % id)
 		if r.has("need") and not (SUMMARY_KEYS.has(r["need"]) or EVALUATOR_KEYS.has(r["need"])):
 			problems.append("%s: need %s is not a summary key, class, won or world" % [id, r.get("need")])
 		for bound in ["min", "max"]:

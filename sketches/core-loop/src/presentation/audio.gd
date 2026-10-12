@@ -1022,6 +1022,11 @@ func _connect_all(events) -> void:
 	events.ultimate_landed.connect(_on_ultimate_landed)
 	events.ultimate_cancelled.connect(_on_ultimate_cancelled)
 	events.line_skill_loaded.connect(func(_id: String, _seconds: float): play("line_skill_loaded"))
+	events.line_skill_fired.connect(_sable_bank)
+	events.dismounted.connect(func(_v: Vector3):
+		if _sable_bank_wait:
+			_sable_bank_wait = false
+			_sable_bank_sound())
 	_wire_ultimate_beat()
 	wire_optional()
 	_wire_armor()
@@ -1694,6 +1699,7 @@ func _wire_ultimate_beat() -> void:
 	var spawner = ctx.get("spawner") if ctx != null else null
 	if spawner == null or spawner.get("ultimate") == null:
 		return
+	spawner.ultimate.stakes.note = sable_note
 	spawner.ultimate.beat_seconds = func() -> float:
 		if not sound_ready or engine.mode != MusicEngine.PLAY:
 			return 0.0
@@ -2230,3 +2236,38 @@ func _show_mixer() -> void:
 		_overlay.text = "Music %d%%  (- =)    Effects %d%%  ([ ])    M mutes" % [roundi(volumes["Music"] * 100.0), roundi(volumes["SFX"] * 100.0)]
 	_overlay.visible = true
 	_overlay_until = Time.get_ticks_msec() + 1600
+
+
+# --- P-C Sable audio ---------------------------------------------------------------
+# Reuse the shipped octave, ratchet and motif recipes at the bank's calibrated levels.
+const SABLE_SOUNDS := {"sable_bank": "vault_rise", "sable_ratchet": "pylon_plant", "sable_peak": "sable_arpeggio"}
+const SABLE_NOTES := [62, 65, 69, 72, 76, 74, 77, 81, 84, 88, 86]
+var sable_note_log: Array = []
+var _sable_bank_wait := false
+
+
+func _sable_bank(id: String, _target: Node3D, _at: Vector3, _on: String) -> void:
+	if id != "bank_shot":
+		return
+	if ctx.player.kit.line_state == Augments.LINE_SMASH:
+		_sable_bank_wait = true
+	else:
+		_sable_bank_sound()
+
+
+func _sable_bank_sound() -> void:
+	var speed: float = ctx.player.state.velocity.length()
+	var pitch := Harmony.ratio(12.0 * clampf(speed / 45.0, 0.0, 1.0) + mini(5, maxi(0, ctx.player.chain.combo - 1)))
+	_grammar_cue("line_skill_fired", SABLE_SOUNDS["sable_ratchet"])
+	_grammar_cue("line_skill_fired", SABLE_SOUNDS["sable_bank"], "SFX", pitch)
+
+
+func sable_note(kind: String, number: int) -> void:
+	var midi: int = 62 if kind in ["rain", "sentry"] else SABLE_NOTES[clampi(number - 1, 0, SABLE_NOTES.size() - 1)]
+	var at := engine.next_beat() if engine.mode == MusicEngine.PLAY else engine.clock
+	sable_note_log.append({"kind": kind, "number": number, "sample": at, "midi": midi})
+	if sound_ready:
+		if engine.mode == MusicEngine.PLAY:
+			engine.schedule_stinger_at(SfxBank.cause_note_id(midi), at)
+		else:
+			_grammar_cue("ultimate_peak", SfxBank.cause_note_id(midi), "SFX", Harmony.ratio(live_key()))
