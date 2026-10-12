@@ -24,6 +24,7 @@ func _initialize() -> void:
 		_leads()
 		_clearance()
 		_overlap()
+		_held_announcements()
 		_lifecycle()
 		_weather()
 		_ending_safety()
@@ -228,6 +229,35 @@ func _overlap() -> void:
 				violations += int(d.stage_time < 2.55 + 20.0 - 0.000001)
 				resumed = true
 	_check("pending landing quiet window", violations == 0 and resumed, "break at 2.55 s, landing deferred until 22.55 s")
+
+
+func _held_announcements() -> void:
+	var held_a := _row("held_a")
+	var held_b := _row("held_b")
+	var clear := _row("clear")
+	clear.site = "clear_site"
+	clear.trigger.value = 2
+	var map := Map.new()
+	map.park = {"map": "fixture", "event_rows": [held_a, held_b, clear], "weather_rows": [],
+		"park_rows": [{"id": "site", "at": [0, 0], "y": 0, "size": [20, 2, 20], "yaw_deg": 0},
+			{"id": "clear_site", "at": [100, 0], "y": 0, "size": [20, 2, 20], "yaw_deg": 0}],
+		"routes": [{"id": "main", "from": "drop_in", "to": "landmark"}]}
+	var d = Director.new(891, {}, map, 14.0, func(_x, _z): return 0.0)
+	var announced := {}
+	var starts := []
+	var land := []
+	d.register_family("natural", func(action, row_data, _ctx):
+		if action == "land":
+			land.append(row_data.id))
+	for i in 600:
+		for f in _step(d, H, Vector3(0, 1, 0), Vector3.ZERO, {"clock_tier": 1 if i < 300 else 2}):
+			if f.kind == "announced":
+				announced[f.id] = d.stage_time
+			if f.kind == "started":
+				starts.append(f.id)
+	_check("held announcements do not reserve live capacity", announced.has("held_a") and announced.has("held_b")
+		and announced.has("clear") and starts == ["clear"] and land == ["clear"],
+		"announced=%s starts=%s land=%s" % [announced.keys(), starts, land])
 
 
 func _lifecycle() -> void:
