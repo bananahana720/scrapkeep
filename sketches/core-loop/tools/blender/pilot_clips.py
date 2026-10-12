@@ -107,6 +107,10 @@ def apply(arm, pose, torso_scale, pilot, planted=None):
         bone.rotation_mode = 'QUATERNION'
         bone.rotation_quaternion = (1, 0, 0, 0)
         bone.scale = (1, 1, 1)
+    if 'pelvis' in pose:
+        pelvis = pose['pelvis']
+        arm.pose.bones['pelvis'].rotation_quaternion = Euler(tuple(
+            math.radians(pelvis.get(axis, 0)) for axis in ('pitch', 'roll', 'yaw'))).to_quaternion()
     torso = pose.get('torso', {})
     for name, share in SPLIT:
         e = Euler((math.radians(torso.get('pitch', 0) * share), math.radians(torso.get('roll', 0) * share),

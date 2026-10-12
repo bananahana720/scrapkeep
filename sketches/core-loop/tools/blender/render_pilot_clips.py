@@ -7,8 +7,8 @@ src/presentation/clips/roster.json), seats the pilot at identity under the shell
 renders from the reimported bytes, as render_pilot_reactions.py does. For each clip it writes
 <clip>.png: row 1 the resting chase camera (7.5-unit arm, 65-degree vertical field of view,
 pitch -0.30, anchor height 0.8, Core visible), row 2 a three-quarter front close-up (2.6 m,
-35 degrees, Core hidden); five cells per row for a one-shot at the pose table's key beats (or
-evenly spaced without a table), six for a loop, each 480 by 384 px with a label band (clip,
+35 degrees, Core hidden); five cells per row at the pose table's distinct beats for every clip
+(or evenly spaced without enough beats), each 480 by 384 px with a label band (clip,
 frame, seconds) drawn by the render stamp. sheet.png holds every rendered clip's chase cell at
 its middle beat. Output: artifacts/local/alpha/push/w13/clips/<pilot>/ (or --out, which must sit under that clips folder).
 
@@ -149,17 +149,34 @@ def action_for(clip):
 
 
 def clip_frames(clip, action, table, loop):
-    """1-based clip frames to show: the pose table's key beats, else evenly spaced."""
+    """Five 1-based cells: collapse held poses and reserve their first contact beat."""
     start, end = action.frame_range
     last = int(round(end - start)) + 1
-    keys = [int(k['frame']) for k in (table or {}).get('clips', {}).get(clip, {}).get('keys', []) if 'frame' in k]
-    count = 6 if loop else 5
-    if len(keys) >= count:
-        picks = [keys[round(i * (len(keys) - 1) / (count - 1))] for i in range(count)]
-        return sorted(set(picks)) if len(set(picks)) == count else picks
-    if loop:
-        return [1 + round(i * (last - 1) / count) for i in range(count)]
-    return [1 + round(i * (last - 1) / (count - 1)) for i in range(count)]
+    definition = (table or {}).get('clips', {}).get(clip, {})
+    contact_frame = definition.get('contact', {}).get('frame')
+    beats = []
+    previous = None
+    for key in sorted(definition.get('keys', []), key=lambda key: key['frame']):
+        pose = {field: value for field, value in key.items() if field not in ('frame', 'note')}
+        if not beats or pose != previous:
+            beats.append({'frame': int(key['frame']), 'contact': False})
+        if key['frame'] == contact_frame or key.get('contact') or 'contact' in key.get('note', '').lower():
+            beats[-1]['contact'] = True
+        previous = pose
+    contact = next((beat['frame'] for beat in beats if beat['contact']), None)
+    count = 5
+    if len(beats) >= count:
+        others = [beat['frame'] for beat in beats if beat['frame'] != contact]
+        remaining = count - (contact is not None)
+        picks = [others[round(i * (len(others) - 1) / (remaining - 1))] for i in range(remaining)]
+        if contact is not None:
+            picks.append(contact)
+    else:
+        picks = [1 + round(i * (last - 1) / (count - 1)) for i in range(count)]
+        if contact is not None and contact not in picks:
+            index = min(range(1, count - 1), key=lambda i: abs(picks[i] - contact))
+            picks[index] = contact
+    return sorted(picks)
 
 
 def chase(cam):
@@ -188,12 +205,25 @@ def render_cell(path, clip, frame):
 
 
 def load(path):
-    image = bpy.data.images.load(str(path))
-    pixels = np.empty(image.size[0] * image.size[1] * 4, dtype=np.float32)
-    image.pixels.foreach_get(pixels)
-    out = pixels.reshape(image.size[1], image.size[0], 4)
-    bpy.data.images.remove(image)
-    return out
+    path = Path(path)
+    image = None
+    try:
+        if not path.is_file() or path.stat().st_size == 0:
+            raise ValueError('missing or empty image file')
+        image = bpy.data.images.load(str(path))
+        size = tuple(image.size)
+        if size != (CELL_W, CELL_H):
+            raise ValueError('image size %s; expected %s' % (size, (CELL_W, CELL_H)))
+        if not image.has_data:
+            raise ValueError('image has no decoded pixels')
+        pixels = np.empty(CELL_W * CELL_H * 4, dtype=np.float32)
+        image.pixels.foreach_get(pixels)
+        return pixels.reshape(CELL_H, CELL_W, 4)
+    except Exception as error:
+        raise RuntimeError('render_pilot_clips: failed cell %s: %s' % (path, error)) from error
+    finally:
+        if image is not None:
+            bpy.data.images.remove(image)
 
 
 def save(path, grid):
