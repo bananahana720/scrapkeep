@@ -100,11 +100,12 @@ func _run() -> void:
 	game.player.reset_to(game.ctx.terrain.drop_point(foot.x,foot.z,Tuning.RADIUS),-driver.sheet_dir*game.player.tuning.f("cruise"))
 	var contacts=[]
 	game.events.enemy_struck.connect(func(enemy,kind,force):
-		if enemy==w and kind in ["ram","stomp","slam"]: contacts.append([kind,force]))
+		if enemy==w and kind in ["ram","stomp","slam"]: contacts.append([kind,force,game.player.ball_position()]))
 	driver.on_pulse(w,false)
 	for i in roundi(driver.SHEET_SECONDS*Engine.physics_ticks_per_second):
 		w._pulse_clock=0.0
 		await physics_frame
-	t.check("cruise from the authored dam apron lands a real contact on the pulse sheet",not contacts.is_empty(),"contacts %s, peak body %s" % [contacts,game.player.ball_position()])
+	t.check("cruise from the authored dam apron lands a real contact on the pulse sheet",not contacts.is_empty(),"contacts %s, final ball %s" % [contacts,game.player.ball_position()])
+	t.check("the applied contact lands at the authored visual core",contacts.any(func(row): return (row[2] as Vector3).distance_to(w.family_point_at())<=w.FAMILY_POINT_RADIUS+Tuning.RADIUS),str(contacts))
 	game.free()
 	quit(t.verdict())
