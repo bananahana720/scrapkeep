@@ -1,0 +1,1638 @@
+{
+  "activity_rows": [
+    {
+      "activity": "enemy_camp",
+      "at": [
+        256.533,
+        -250.0
+      ],
+      "id": "wash_camp",
+      "pack": [
+        "chaser",
+        "chaser",
+        "chaser"
+      ],
+      "pay": {
+        "rarities": [
+          "common"
+        ]
+      },
+      "site": "wash_05"
+    },
+    {
+      "activity": "cracked_cache",
+      "at": [
+        -545,
+        -190
+      ],
+      "id": "west_cache",
+      "pack": [],
+      "pay": {
+        "rarities": [
+          "rare"
+        ]
+      },
+      "site": "mesa_0_1"
+    },
+    {
+      "activity": "ambush_altar",
+      "at": [
+        545,
+        210
+      ],
+      "id": "east_altar",
+      "pack": [],
+      "pay": {
+        "rarities": [
+          "common",
+          "rare"
+        ]
+      },
+      "site": "mesa_2_2"
+    }
+  ],
+  "contraption_rows": [],
+  "event_rows": [
+    {
+      "cooldown_s": 90,
+      "effect": {
+        "depth_m": 2
+      },
+      "family": "natural",
+      "hold_clear_m": 20,
+      "id": "mesa_slough",
+      "kind": "collapse",
+      "live_s": 12,
+      "music_cue": {
+        "land": "drop_flood",
+        "telegraph": "riser_natural"
+      },
+      "once": true,
+      "route_change": {
+        "closes": [],
+        "opens": []
+      },
+      "site": "mesa_0_0",
+      "telegraph": {
+        "form": "cave_dust",
+        "lead_s": 6,
+        "on_bar": true
+      },
+      "trigger": {
+        "on": "clock_tier",
+        "value": 3
+      },
+      "weight": 1
+    },
+    {
+      "cooldown_s": 90,
+      "effect": {
+        "damage": 6,
+        "hazard": "steam_cone",
+        "hazard_m": [
+          16,
+          8
+        ]
+      },
+      "family": "industrial",
+      "hold_clear_m": 20,
+      "id": "vent_burst",
+      "kind": "boiler_burst",
+      "live_s": 12,
+      "music_cue": {
+        "land": "drop_flood",
+        "telegraph": "riser_natural"
+      },
+      "once": true,
+      "route_change": {
+        "closes": [],
+        "opens": []
+      },
+      "site": "mesa_2_2",
+      "telegraph": {
+        "form": "boiler_pressure",
+        "lead_s": 6,
+        "on_bar": true
+      },
+      "trigger": {
+        "on": "clock_tier",
+        "value": 3
+      },
+      "weight": 1
+    }
+  ],
+  "home_rows": [
+    {
+      "advantage": "The wash aims arrivals down a long lunge lane.",
+      "break": {
+        "by": "ram",
+        "hp": 60,
+        "scrap": 12
+      },
+      "counter": "Bank out onto the open bajada and return from the side.",
+      "dormant": false,
+      "enemy": "chaser",
+      "id": "home_4",
+      "landform": "arroyo",
+      "reinforce": {
+        "every_s": 30,
+        "from_tier": 1,
+        "max_alive": 4,
+        "pack": "run_down"
+      },
+      "site": "wash_04",
+      "stops_kind": true
+    },
+    {
+      "advantage": "The wash aims arrivals down a long lunge lane.",
+      "break": {
+        "by": "ram",
+        "hp": 60,
+        "scrap": 12
+      },
+      "counter": "Bank out onto the open bajada and return from the side.",
+      "dormant": false,
+      "enemy": "lobber",
+      "id": "home_9",
+      "landform": "arroyo",
+      "reinforce": {
+        "every_s": 30,
+        "from_tier": 1,
+        "max_alive": 4,
+        "pack": "grounded"
+      },
+      "site": "wash_09",
+      "stops_kind": true
+    },
+    {
+      "advantage": "The wash aims arrivals down a long lunge lane.",
+      "break": {
+        "by": "ram",
+        "hp": 60,
+        "scrap": 12
+      },
+      "counter": "Bank out onto the open bajada and return from the side.",
+      "dormant": false,
+      "enemy": "mag_trapper",
+      "id": "home_14",
+      "landform": "arroyo",
+      "reinforce": {
+        "every_s": 30,
+        "from_tier": 1,
+        "max_alive": 4,
+        "pack": "grounded"
+      },
+      "site": "wash_14",
+      "stops_kind": true
+    }
+  ],
+  "landmark": {
+    "at": [
+      -0.0,
+      680.0
+    ],
+    "bay_dock": {
+      "at": [
+        -0.0,
+        490.0
+      ],
+      "facing_deg": 0
+    },
+    "beacon": [
+      -0.0,
+      590.0
+    ],
+    "budget": "hero_landmark",
+    "fragment": "",
+    "gate_slots": [
+      {
+        "at": [
+          -16.0,
+          530.0
+        ],
+        "facing_deg": 0
+      },
+      {
+        "at": [
+          0.0,
+          530.0
+        ],
+        "facing_deg": 0
+      },
+      {
+        "at": [
+          16.0,
+          530.0
+        ],
+        "facing_deg": 0
+      }
+    ],
+    "id": "survey_spire",
+    "kind": "spire",
+    "light": "ancient_beam",
+    "music": "landmark_hum",
+    "reach_m": 30,
+    "recipe": "landmark_spire",
+    "sight_share": 0.85,
+    "sight_top": [
+      -0.0,
+      220,
+      680.0
+    ],
+    "size": [
+      36,
+      160,
+      36
+    ],
+    "warden": {
+      "anchor": [
+        -0.0,
+        40,
+        590.0
+      ],
+      "family": "reactor",
+      "hardpoints": 3,
+      "harpoon_anchor": true,
+      "mounting": "dam_face",
+      "path": []
+    },
+    "yaw_deg": 0
+  },
+  "map": "park_wgen_s6",
+  "park_rows": [
+    {
+      "at": [
+        0,
+        0
+      ],
+      "budget": "landform",
+      "element": "ground",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "plain",
+      "landform": "slickrock",
+      "recipe": "",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        1600,
+        24,
+        1600
+      ],
+      "society": "none",
+      "stamp": "plateau",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        0,
+        0
+      ],
+      "budget": "landform",
+      "element": "ground",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "bajada",
+      "landform": "slickrock",
+      "recipe": "",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        1600,
+        72.659,
+        1600
+      ],
+      "society": "none",
+      "stamp": "ramp",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        59.647,
+        -650.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_00",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        179.635,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 56.154
+    },
+    {
+      "at": [
+        169.988,
+        -570.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_01",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        165.149,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 51.725
+    },
+    {
+      "at": [
+        254.705,
+        -490.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_02",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        141.025,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 40.384
+    },
+    {
+      "at": [
+        300.901,
+        -410.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_03",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        119.623,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 16.926
+    },
+    {
+      "at": [
+        301.543,
+        -330.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "home_4",
+      "id": "wash_04",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        119.258,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": -16.081
+    },
+    {
+      "at": [
+        256.533,
+        -250.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_05",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        140.323,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": -39.928
+    },
+    {
+      "at": [
+        172.724,
+        -170.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_06",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        164.579,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": -51.524
+    },
+    {
+      "at": [
+        62.875,
+        -90.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_07",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        179.423,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": -56.097
+    },
+    {
+      "at": [
+        -56.291,
+        -10.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_08",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        179.634,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": -56.153
+    },
+    {
+      "at": [
+        -166.632,
+        70.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "home_9",
+      "id": "wash_09",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        165.149,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": -51.725
+    },
+    {
+      "at": [
+        -251.349,
+        150.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_10",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        141.026,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": -40.384
+    },
+    {
+      "at": [
+        -297.546,
+        230.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_11",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        119.622,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": -16.926
+    },
+    {
+      "at": [
+        -298.188,
+        310.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_12",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        119.257,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 16.08
+    },
+    {
+      "at": [
+        -253.178,
+        390.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_13",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        140.323,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 39.928
+    },
+    {
+      "at": [
+        -169.369,
+        470.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "home_14",
+      "id": "wash_14",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        164.579,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 51.524
+    },
+    {
+      "at": [
+        -59.519,
+        550.0
+      ],
+      "budget": "landform",
+      "element": "flow_line",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "wash_15",
+      "landform": "arroyo",
+      "recipe": "greybox:flow_line",
+      "ride_fact": "ride_chute",
+      "routes": [
+        "main"
+      ],
+      "size": [
+        179.423,
+        1.5,
+        64
+      ],
+      "society": "none",
+      "stamp": "wash",
+      "verb": "roll",
+      "y": null,
+      "yaw_deg": 56.097
+    },
+    {
+      "at": [
+        290.012,
+        -290.0
+      ],
+      "budget": "landform",
+      "element": "bowl",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "bowl_5",
+      "landform": "slickrock",
+      "recipe": "greybox:bowl",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        180,
+        2.0,
+        150
+      ],
+      "society": "none",
+      "stamp": "bowl",
+      "verb": "pump",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -217.326,
+        110.0
+      ],
+      "budget": "landform",
+      "element": "bowl",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "bowl_10",
+      "landform": "slickrock",
+      "recipe": "greybox:bowl",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        180,
+        2.0,
+        150
+      ],
+      "society": "none",
+      "stamp": "bowl",
+      "verb": "pump",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        288.728,
+        -450.0
+      ],
+      "budget": "landform",
+      "element": "kicker",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "lip_3",
+      "landform": "mesa_rim",
+      "recipe": "greybox:kicker",
+      "ride_fact": "kicker_launch",
+      "routes": [],
+      "size": [
+        44,
+        2.2,
+        24
+      ],
+      "society": "none",
+      "stamp": "spire",
+      "verb": "launch",
+      "y": null,
+      "yaw_deg": 30.004
+    },
+    {
+      "at": [
+        3.355,
+        -50.0
+      ],
+      "budget": "landform",
+      "element": "kicker",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "lip_8",
+      "landform": "mesa_rim",
+      "recipe": "greybox:kicker",
+      "ride_fact": "kicker_launch",
+      "routes": [],
+      "size": [
+        44,
+        2.2,
+        24
+      ],
+      "society": "none",
+      "stamp": "spire",
+      "verb": "launch",
+      "y": null,
+      "yaw_deg": -56.125
+    },
+    {
+      "at": [
+        -286.657,
+        350.0
+      ],
+      "budget": "landform",
+      "element": "kicker",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "lip_13",
+      "landform": "mesa_rim",
+      "recipe": "greybox:kicker",
+      "ride_fact": "kicker_launch",
+      "routes": [],
+      "size": [
+        44,
+        2.2,
+        24
+      ],
+      "society": "none",
+      "stamp": "spire",
+      "verb": "launch",
+      "y": null,
+      "yaw_deg": 29.363
+    },
+    {
+      "at": [
+        223.054,
+        -210.0
+      ],
+      "budget": "landform",
+      "element": "drop",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "runout_6",
+      "landform": "dry_wash",
+      "recipe": "greybox:drop",
+      "ride_fact": "ride_drop",
+      "routes": [],
+      "size": [
+        100,
+        1.8,
+        90
+      ],
+      "society": "none",
+      "stamp": "bowl",
+      "verb": "drop",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -285.373,
+        190.0
+      ],
+      "budget": "landform",
+      "element": "drop",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "runout_11",
+      "landform": "dry_wash",
+      "recipe": "greybox:drop",
+      "ride_fact": "ride_drop",
+      "routes": [],
+      "size": [
+        100,
+        1.8,
+        90
+      ],
+      "society": "none",
+      "stamp": "bowl",
+      "verb": "drop",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -525.054,
+        -566.686
+      ],
+      "budget": "landform",
+      "element": "bank",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "mesa_0_0",
+      "landform": "mesa_rim",
+      "recipe": "greybox:bank",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        200,
+        49,
+        177
+      ],
+      "society": "none",
+      "stamp": "mesa",
+      "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -617.417,
+        -218.879
+      ],
+      "budget": "landform",
+      "element": "bank",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "mesa_0_1",
+      "landform": "mesa_rim",
+      "recipe": "greybox:bank",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        174,
+        40,
+        181
+      ],
+      "society": "none",
+      "stamp": "mesa",
+      "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -629.701,
+        108.867
+      ],
+      "budget": "landform",
+      "element": "bank",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "mesa_0_2",
+      "landform": "mesa_rim",
+      "recipe": "greybox:bank",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        208,
+        42,
+        173
+      ],
+      "society": "none",
+      "stamp": "mesa",
+      "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -592.61,
+        441.595
+      ],
+      "budget": "landform",
+      "element": "bank",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "mesa_0_3",
+      "landform": "mesa_rim",
+      "recipe": "greybox:bank",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        173,
+        46,
+        181
+      ],
+      "society": "none",
+      "stamp": "mesa",
+      "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        535.573,
+        -542.297
+      ],
+      "budget": "landform",
+      "element": "bank",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "mesa_2_0",
+      "landform": "mesa_rim",
+      "recipe": "greybox:bank",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        194,
+        35,
+        135
+      ],
+      "society": "none",
+      "stamp": "mesa",
+      "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        574.193,
+        -219.65
+      ],
+      "budget": "landform",
+      "element": "bank",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "mesa_2_1",
+      "landform": "mesa_rim",
+      "recipe": "greybox:bank",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        172,
+        39,
+        174
+      ],
+      "society": "none",
+      "stamp": "mesa",
+      "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        548.659,
+        101.565
+      ],
+      "budget": "landform",
+      "element": "bank",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "mesa_2_2",
+      "landform": "mesa_rim",
+      "recipe": "greybox:bank",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        177,
+        28,
+        132
+      ],
+      "society": "none",
+      "stamp": "mesa",
+      "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        549.105,
+        476.2
+      ],
+      "budget": "landform",
+      "element": "bank",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "mesa_2_3",
+      "landform": "mesa_rim",
+      "recipe": "greybox:bank",
+      "ride_fact": "ride_bowl",
+      "routes": [],
+      "size": [
+        186,
+        40,
+        189
+      ],
+      "society": "none",
+      "stamp": "mesa",
+      "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -600,
+        -600
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_0_0",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -200,
+        -600
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_1_0",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        200,
+        -600
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_2_0",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        600,
+        -600
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_3_0",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -600,
+        -200
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_0_1",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -200,
+        -200
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_1_1",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        200,
+        -200
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_2_1",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        600,
+        -200
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_3_1",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -600,
+        200
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_0_2",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -200,
+        200
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_1_2",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        200,
+        200
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_2_2",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        600,
+        200
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_3_2",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -600,
+        600
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_0_3",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -200,
+        600
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_1_3",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        200,
+        600
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_2_3",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        600,
+        600
+      ],
+      "budget": "landform",
+      "element": "anchor_field",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hoodoos_3_3",
+      "landform": "hoodoo_field",
+      "recipe": "greybox:anchor_field",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        380,
+        18,
+        380
+      ],
+      "society": "none",
+      "stamp": "",
+      "verb": "swing",
+      "y": null,
+      "yaw_deg": 0
+    }
+  ],
+  "play_rect": [
+    -780,
+    -780,
+    1560,
+    1560
+  ],
+  "routes": [
+    {
+      "from": "drop_in",
+      "id": "main",
+      "to": "landmark",
+      "via": [
+        "wash_00",
+        "wash_01",
+        "wash_02",
+        "wash_03",
+        "wash_04",
+        "wash_05",
+        "wash_06",
+        "wash_07",
+        "wash_08",
+        "wash_09",
+        "wash_10",
+        "wash_11",
+        "wash_12",
+        "wash_13",
+        "wash_14",
+        "wash_15"
+      ]
+    }
+  ],
+  "schema": "scrapkeep-park/1",
+  "size_m": 1600,
+  "spawn": {
+    "at": [
+      0.0,
+      -690.0
+    ],
+    "heading_deg": 56.154
+  },
+  "time_of_day": "golden",
+  "waymarks": [
+    "drop_in",
+    "wash_05",
+    "wash_10",
+    "landmark"
+  ],
+  "weather_rows": [
+    {
+      "event_odds": {},
+      "fog": {
+        "color": "#c69c73",
+        "density": 0.0005
+      },
+      "gap_s": 0,
+      "handling": "none",
+      "id": "clear",
+      "kind": "clear",
+      "lead_s": 0,
+      "live_s": 0,
+      "music_layer": "",
+      "sky": "clear",
+      "sound": "",
+      "trigger": {
+        "on": "always"
+      }
+    }
+  ]
+}

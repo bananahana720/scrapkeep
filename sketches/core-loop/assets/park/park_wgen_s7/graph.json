@@ -1,0 +1,222 @@
+{
+  "bake_sha256": "7fb638447cb579e03291027598717f659ee7a78192033278ddd4cfe9a8ca402c",
+  "beacon_ok": true,
+  "breaches": [
+    {
+      "action": "fix",
+      "detail": "0 hidden pockets, want 1",
+      "pocket": "park",
+      "rule": "count"
+    },
+    {
+      "action": "move",
+      "detail": "within 40 m of the door: home home_4 (site wash_04)",
+      "pocket": "wash_camp",
+      "rule": "clear_ring"
+    },
+    {
+      "action": "log",
+      "detail": "no clear ray from the door to a line node within 240 m",
+      "pocket": "west_cache",
+      "rule": "sight"
+    },
+    {
+      "action": "log",
+      "detail": "detour unreachable m from the line to the pay point, want 150 to 600",
+      "pocket": "west_cache",
+      "rule": "detour"
+    },
+    {
+      "action": "log",
+      "detail": "no clear ray from the door to a line node within 240 m",
+      "pocket": "east_altar",
+      "rule": "sight"
+    },
+    {
+      "action": "move",
+      "detail": "within 40 m of the door: boiler_burst vent_burst (site mesa_2_2)",
+      "pocket": "east_altar",
+      "rule": "clear_ring"
+    },
+    {
+      "action": "log",
+      "detail": "detour 600 m from the line to the pay point, want 150 to 600",
+      "pocket": "east_altar",
+      "rule": "detour"
+    }
+  ],
+  "bytes": 894484,
+  "edges": 316782,
+  "first_failed": "",
+  "flags": {
+    "deck": 0,
+    "door_ok": 39930,
+    "line": 432,
+    "open": 40401,
+    "sight_ok": 14276,
+    "under": 0
+  },
+  "full_visit_m": -1,
+  "full_visit_ratio": "unreachable",
+  "graph_sha256": "51eb3e810b8f33c4ca85e9dc13c78f6dc08e3b8e1c59da5af864d3398191e4de",
+  "line_errors": [],
+  "line_path_nodes": 161,
+  "longest_est_m": 2362,
+  "map": "park_wgen_s7",
+  "nodes": 40401,
+  "park_sha256": "1f5d692eaac75eb70b2116b6c2129d527f0b3027eae78eb327bc5ed216e78bf6",
+  "pockets": [
+    {
+      "clear_ring": [
+        "home home_4 (site wash_04)"
+      ],
+      "d_landmark": 923,
+      "d_spawn": 523,
+      "detour_m": 34,
+      "door_at": [
+        200,
+        -248
+      ],
+      "door_m": 34,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "wash_camp",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "common"
+      ],
+      "role": "online",
+      "sight_ok": true,
+      "site": "wash_05"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 1030,
+      "d_spawn": -1,
+      "detour_m": -1,
+      "door_at": [
+        -544,
+        -192
+      ],
+      "door_m": -1,
+      "flags": [
+        "open",
+        "door_ok"
+      ],
+      "id": "west_cache",
+      "kind": "cracked_cache",
+      "nearest_door": 1276,
+      "nearest_door_id": "east_altar",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": false,
+      "site": "mesa_0_1"
+    },
+    {
+      "clear_ring": [
+        "boiler_burst vent_burst (site mesa_2_2)"
+      ],
+      "d_landmark": 703,
+      "d_spawn": 1122,
+      "detour_m": 600,
+      "door_at": [
+        544,
+        208
+      ],
+      "door_m": 600,
+      "flags": [
+        "open",
+        "door_ok"
+      ],
+      "id": "east_altar",
+      "kind": "ambush_altar",
+      "nearest_door": 1276,
+      "nearest_door_id": "west_cache",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": false,
+      "site": "mesa_2_2"
+    }
+  ],
+  "reward_ratio": "unreachable",
+  "ride_edges": 0,
+  "routes": {
+    "main": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1281,
+    "farther_share": "0.179",
+    "ok": true,
+    "run": true
+  },
+  "spawn_beacon_m": 1281,
+  "spawn_beacon_share": "0.542",
+  "stage_checked": [
+    "beacon_ok",
+    "spawn"
+  ],
+  "targets": [
+    {
+      "name": "reward_ratio",
+      "ok": false,
+      "target": "at least 1.5",
+      "value": -1.0
+    },
+    {
+      "name": "full_visit_ratio",
+      "ok": false,
+      "target": "at most 3.0",
+      "value": -1.0
+    }
+  ],
+  "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
+  "zones": {
+    "anchors": [
+      {
+        "cost": 1281.2,
+        "d_landmark": 490.2,
+        "name": "mesa_2_3",
+        "on_route": false,
+        "rank": 1,
+        "viable": true
+      },
+      {
+        "cost": 659.4,
+        "d_landmark": 915.6,
+        "name": "mesa_0_1",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 535.0,
+        "d_landmark": 1299.9,
+        "name": "mesa_0_0",
+        "on_route": false,
+        "rank": 3,
+        "viable": true
+      }
+    ],
+    "count": 34,
+    "crossings": {
+      "drop": 5,
+      "ride": 0,
+      "walk": 59
+    },
+    "hidden": []
+  }
+}

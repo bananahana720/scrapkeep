@@ -1,0 +1,204 @@
+{
+  "bake_sha256": "4f54db0e5d564b12f06bc4d30c31854bfcf06483150cda1ac0f2a026d6d52817",
+  "beacon_ok": true,
+  "breaches": [
+    {
+      "action": "fix",
+      "detail": "0 hidden pockets, want 1",
+      "pocket": "park",
+      "rule": "count"
+    },
+    {
+      "action": "move",
+      "detail": "within 40 m of the door: home home_4 (site wash_04)",
+      "pocket": "wash_camp",
+      "rule": "clear_ring"
+    },
+    {
+      "action": "log",
+      "detail": "no clear ray from the door to a line node within 240 m",
+      "pocket": "west_cache",
+      "rule": "sight"
+    },
+    {
+      "action": "log",
+      "detail": "no clear ray from the door to a line node within 240 m",
+      "pocket": "east_altar",
+      "rule": "sight"
+    },
+    {
+      "action": "log",
+      "detail": "detour 600 m from the line to the pay point, want 150 to 600",
+      "pocket": "east_altar",
+      "rule": "detour"
+    },
+    {
+      "action": "log",
+      "detail": "reward detour 435 m is not larger than the risk's 600 m",
+      "pocket": "west_cache",
+      "rule": "detour_order"
+    },
+    {
+      "action": "fix",
+      "detail": "the larger detour (600 m) pays common, rare, want rare only",
+      "pocket": "east_altar",
+      "rule": "pay"
+    }
+  ],
+  "bytes": 899004,
+  "edges": 316794,
+  "first_failed": "",
+  "flags": {
+    "deck": 0,
+    "door_ok": 39921,
+    "line": 441,
+    "open": 40401,
+    "sight_ok": 14591,
+    "under": 0
+  },
+  "full_visit_m": 2814,
+  "full_visit_ratio": "2.196",
+  "graph_sha256": "3bfadeeb3c23e4b23755128fb9142d4b95d7b64b51be61011cc2891551fbc011",
+  "line_errors": [],
+  "line_path_nodes": 163,
+  "longest_est_m": 2381,
+  "map": "park_wgen_s5",
+  "nodes": 40401,
+  "park_sha256": "ad54912d40c6edfa982a78fff5adf38d6aabbce8281fd9025295732a73701267",
+  "pockets": [
+    {
+      "clear_ring": [
+        "home home_4 (site wash_04)"
+      ],
+      "d_landmark": 920,
+      "d_spawn": 520,
+      "detour_m": 31,
+      "door_at": [
+        192,
+        -248
+      ],
+      "door_m": 31,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "wash_camp",
+      "kind": "enemy_camp",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "common"
+      ],
+      "role": "online",
+      "sight_ok": true,
+      "site": "wash_05"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 1010,
+      "d_spawn": 750,
+      "detour_m": 435,
+      "door_at": [
+        -544,
+        -192
+      ],
+      "door_m": 435,
+      "flags": [
+        "open",
+        "door_ok"
+      ],
+      "id": "west_cache",
+      "kind": "cracked_cache",
+      "nearest_door": 1254,
+      "nearest_door_id": "east_altar",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "reward",
+      "sight_ok": false,
+      "site": "mesa_0_1"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 703,
+      "d_spawn": 1122,
+      "detour_m": 600,
+      "door_at": [
+        544,
+        208
+      ],
+      "door_m": 600,
+      "flags": [
+        "open",
+        "door_ok"
+      ],
+      "id": "east_altar",
+      "kind": "ambush_altar",
+      "nearest_door": 1254,
+      "nearest_door_id": "west_cache",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": false,
+      "site": "mesa_2_2"
+    }
+  ],
+  "reward_ratio": "0.730",
+  "ride_edges": 0,
+  "routes": {
+    "main": []
+  },
+  "schema": "scrapkeep-park-graph/1",
+  "spawn": {
+    "d_landmark": 1281,
+    "farther_share": "0.177",
+    "ok": true,
+    "run": true
+  },
+  "spawn_beacon_m": 1281,
+  "spawn_beacon_share": "0.538",
+  "stage_checked": [
+    "beacon_ok",
+    "spawn"
+  ],
+  "targets": [
+    {
+      "name": "reward_ratio",
+      "ok": false,
+      "target": "at least 1.5",
+      "value": 0.73
+    },
+    {
+      "name": "full_visit_ratio",
+      "ok": true,
+      "target": "at most 3.0",
+      "value": 2.196
+    }
+  ],
+  "tool_sha256": "1bbb38dcb7fb9b53ff0d4653f08a444da247a75a738aed0f11cdc366139bd606",
+  "zones": {
+    "anchors": [
+      {
+        "cost": 641.0,
+        "d_landmark": 1227.8,
+        "name": "mesa_0_0",
+        "on_route": false,
+        "rank": 1,
+        "viable": true
+      }
+    ],
+    "count": 34,
+    "crossings": {
+      "drop": 7,
+      "ride": 0,
+      "walk": 58
+    },
+    "hidden": []
+  }
+}

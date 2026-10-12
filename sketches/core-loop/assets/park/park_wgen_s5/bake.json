@@ -1,0 +1,58 @@
+{
+  "cells": {
+    "apron": 1631103,
+    "ground": 641601,
+    "holes": 0,
+    "surface": {
+      "basalt": 0,
+      "concrete": 0,
+      "net": 0,
+      "sand": 25036,
+      "sandstone": 614964,
+      "tailings": 0
+    },
+    "under_fallback": 0
+  },
+  "files": {
+    "apron.bin": "a4b446f0c8ca9a5905845492aa8ed18cee40ceb34a3e1f3cbe124578eda31656",
+    "ground.bin": "b5f606c36336db979c68f4476afecfed2a6ce4bd9136daa7a571aa428e0f48da",
+    "holes.bin": "3d00ed86b663cd1b8ac82b105257cd109412f92dca442048532439f920a7f645",
+    "surface.bin": "72b522784d35363721308b92b2d26ad1c90d62cb966d713de79777f71d19d057",
+    "under.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "grid": {
+    "apron_half_m": 1024,
+    "apron_step_m": 1.0,
+    "cells": 800,
+    "half_m": 800.0,
+    "region_size": 1024,
+    "regions": [
+      [
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1
+      ],
+      [
+        -1,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "side": 801,
+    "step_m": 2.0
+  },
+  "height": {
+    "max": 123.894546508789,
+    "min": 0.0
+  },
+  "map": "park_wgen_s5",
+  "park_sha256": "ad54912d40c6edfa982a78fff5adf38d6aabbce8281fd9025295732a73701267",
+  "schema": "scrapkeep-park-bake/1",
+  "tool_sha256": "046e7258338a8bcca754c4ca23cb0cf963098dfc29cf88aaa46601fbb4e363c2"
+}
