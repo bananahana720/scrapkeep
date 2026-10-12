@@ -14,6 +14,7 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Indicator := preload("res://src/movement/indicator.gd")
 
 const SET_PIECES := ["foundry_cutter", "prism_cutter", "juggernaut_drive"]
 const BEAM_PIECES := ["foundry_cutter", "prism_cutter"]
@@ -33,6 +34,28 @@ const PIN_WINDOW := 1.5
 # The thrown-direction arrow the preview draws from a punched machine (section 2.3).
 const ARROW_LENGTH := 6.0
 
+class VolumeIndicator extends Indicator:
+	var source
+
+	func _process(delta: float) -> void:
+		shapes = {}
+		for layer in source.shapes:
+			if source.shapes[layer].get("kind", "") == "rivet_volume":
+				shapes[layer] = source.shapes[layer]
+		super._process(delta)
+
+	func _draw(shape: Dictionary, now: float) -> void:
+		_anchor = shape["origin"]
+		var look := style(shape, now)
+		for cell in shape["cells"]:
+			for face in cell["faces"]:
+				for i in range(1, face.size() - 1):
+					_triangle(face[0], face[i], face[i + 1], look["fill"])
+				for i in face.size():
+					_ribbon(face[i], face[(i + 1) % face.size()], EDGE, look["edge"])
+
+
+var volume_indicator: VolumeIndicator
 var combat
 var ctx
 # Punches running down the cable: {target, force, mult, dir, left}.
@@ -86,6 +109,9 @@ static func line_row(owner) -> Dictionary:
 func setup(owner) -> void:
 	combat = owner
 	ctx = owner.ctx
+	volume_indicator = VolumeIndicator.new()
+	volume_indicator.source = ctx.player.indicator
+	add_child(volume_indicator)
 	process_physics_priority = 10
 	ctx.events.run_started.connect(func(_pilot: String):
 		_shrugs = 0

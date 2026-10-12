@@ -160,8 +160,8 @@ func _shape_dispatch_fixture() -> void:
 			var indicator = _player.indicator
 			var other_shapes: Dictionary = indicator.shapes
 			indicator.shapes = {"rivet_scar": scar}
-			indicator._process(0.0)
-			var arrays: Array = indicator._tris.surface_get_arrays(0)
+			_kit.volume_indicator._process(0.0)
+			var arrays: Array = _kit.volume_indicator._tris.surface_get_arrays(0)
 			var rendered: Array = []
 			for i in (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
 				if arrays[Mesh.ARRAY_COLOR][i].a < 1.0:
