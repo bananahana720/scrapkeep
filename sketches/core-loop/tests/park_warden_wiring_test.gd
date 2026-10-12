@@ -121,6 +121,18 @@ const PARK_FIELDS := ["family", "mounting", "hardpoints", "anchor", "path", "har
 var t := T.new("park_warden_wiring_test")
 
 
+class PulseTarget extends RefCounted:
+	var kit = null
+	var at := Vector3.ZERO
+	var lifts := 0
+
+	func ball_position() -> Vector3:
+		return at
+
+	func crowd_control(_source: String, _acceleration: Vector3) -> void:
+		lifts += 1
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -269,6 +281,40 @@ func _check_park(game, path: String, stage: int) -> void:
 	t.near(label + " beacon radius", game.flow.beacon.radius, float(mark["reach_m"]))
 	t.near(label + " spec reach", float(w.spec.get("reach", -1.0)), float(mark["reach_m"]))
 	t.near(label + " Warden reach", w.reach, float(mark["reach_m"]))
+	_check_pulse(w, label, 30.0, float(mark["reach_m"]))
+
+
+func _check_pulse(w, label: String, radius: float, engage: float) -> void:
+	var target = w.target
+	var driver = w.mount_driver
+	var fleet = w.fleet
+	var probe := PulseTarget.new()
+	w.target = probe
+	w.mount_driver = null
+	w.fleet = null
+	var outside := (radius + engage) * 0.5 if engage > radius else radius + 1.0
+	probe.at = w.home + Vector3.RIGHT * outside
+	probe.at.y = w.terrain.height(probe.at.x, probe.at.z) + 1.0
+	if engage > radius:
+		t.check(label + " pulse probe inside engage", outside < engage)
+	w._step_pulse(4.0, true)
+	var ring = w.telegraph()
+	if t.check(label + " pulse committed", ring != null):
+		t.near(label + " pulse radius", ring.radius, radius)
+		t.near(label + " pulse drawn radius", float(ring.descriptor()["r_out"]), radius)
+		t.near(label + " core pulse radius", w._core_ring.radius, 6.0)
+	w._step_pulse(2.0, true)
+	t.eq(label + " outside pulse no lift", probe.lifts, 0)
+	t.eq(label + " outside pulse lifted flag", w.last_pulse_lifted, false)
+	probe.at = w.home + Vector3.RIGHT * (radius - 1.0)
+	probe.at.y = w.terrain.height(probe.at.x, probe.at.z) + 1.0
+	w._step_pulse(4.0, true)
+	w._step_pulse(2.0, true)
+	t.eq(label + " inside pulse lift control", probe.lifts, 1)
+	t.eq(label + " inside pulse lifted flag", w.last_pulse_lifted, true)
+	w.target = target
+	w.mount_driver = driver
+	w.fleet = fleet
 
 
 func _check_unchanged(game, stage: int, table: String) -> void:
@@ -289,3 +335,4 @@ func _check_unchanged(game, stage: int, table: String) -> void:
 	t.check(label + " driver unchanged", w.mount_driver == null)
 	_near3(label + " home unchanged", w.home, UNCHANGED_PLACEMENTS[stage - 1])
 	_near3(label + " position unchanged", w.global_position, UNCHANGED_PLACEMENTS[stage - 1])
+	_check_pulse(w, label, float(expected["radius"]), float(expected["spec"]["reach"]))
