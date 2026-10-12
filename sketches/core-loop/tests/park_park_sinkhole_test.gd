@@ -7,7 +7,9 @@ extends SceneTree
 # brood on the sinkhole mounting; every pilot line and the floor line start at drop_in, pass the
 # waymarks in order, end at landmark and name only places the park file has; and the two
 # ride-fact sources the runtime fires on this head (kicker rows and the lava channel's rope fan)
-# are in the file. pins() is run on planted copies too, and each plant must turn it red.
+# are in the file. Fix round 2026-10-11: every row but the ground, the kickers and the stage page's
+# site markers carries a recipe (R10), so it places at runtime. pins() is run on planted copies
+# too, and each plant must turn it red.
 
 const T := preload("res://tests/support/t.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
@@ -21,6 +23,7 @@ const LINES := "res://tools/park_lines/park_sinkhole.json"
 const WAYMARKS := ["drop_in", "tube_mouth", "great_room", "landmark"]
 const POCKETS := {"online": "great_room_camp", "risk": "east_chamber_bounty", "reward": "west_chamber_cache", "hidden": "sealed_crosscut"}
 const PILOTS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
+const RECIPE_LEFT := ["great_room", "east_chamber", "west_chamber", "crosscut_drift", "west_cenote", "sinkhole_walls", "caisson_bowl"]
 
 var t := T.new("park_park_sinkhole_test")
 
@@ -66,6 +69,12 @@ func _run() -> void:
 	var p3: Dictionary = park.duplicate(true)
 	p3["contraption_rows"] = p3["contraption_rows"].filter(func(c): return c["kind"] != "cable" or not String(c["site"]).begins_with("lava_channel"))
 	t.check("plant: no rope fan fails", not pins(p3, graph, lines).is_empty())
+	var p5: Dictionary = park.duplicate(true)
+	for r in p5["park_rows"]:
+		if r["element"] == "anchor_field":
+			r["recipe"] = ""
+			break
+	t.check("plant: an anchor field with no recipe fails", not pins(p5, graph, lines).is_empty())
 	quit(t.verdict())
 
 
@@ -137,4 +146,11 @@ static func pins(park: Dictionary, graph: Dictionary, lines: Dictionary) -> Arra
 	var fan: Array = park["contraption_rows"].filter(func(c): return c["kind"] == "cable" and String(c["site"]).begins_with("lava_channel"))
 	if fan.size() < 4:
 		out.append("%d rope-fan cables on the lava channel, want 4" % fan.size())
+	# R10: every row but the ground carries a recipe, so it places at runtime; the rows left on "" are the
+	# stage page's list (site markers with no stamp and no height, and kickers whose _ramp row's stamp is the lip).
+	for r in park["park_rows"]:
+		if r["element"] == "ground" or r["id"] in RECIPE_LEFT or r["element"] == "kicker":
+			continue
+		if String(r["recipe"]) == "":
+			out.append("row %s (%s) has no recipe" % [r["id"], r["element"]])
 	return out

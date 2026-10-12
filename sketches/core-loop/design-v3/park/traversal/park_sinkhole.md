@@ -2,116 +2,135 @@
 
 PARK.md section 8 bands, measured with `tools/traversal_line.gd` (KB7, with KB7b's park ride-fact set and graph access) on the park table, stage 4, seeds 1 to 8 per line, `--fixed-fps 90`. Each pass has its own dated table (R8). The coordinator's index is TRAVERSAL-PARK.md.
 
-## Greybox pass, 2026-10-11 (KD4 continuation, on b0e4490 with KB9)
+## Greybox pass, fix round, 2026-10-12 (KD4, on 3f6a780 over b0e4490)
 
-Park file `src/world/park/park_sinkhole.json`, lines `tools/park_lines/park_sinkhole.json`, bake and graph in `assets/park/park_sinkhole/` (this commit). An earlier table on this page predated KB9 (no park row placed at runtime, so no ride sensor fired) and is replaced. On this head the runtime places the rows and their sensors fire: every line earns `ride_chute`, `ride_drop` and `ride_bowl` besides `kicker_launch` and `ride_grapple_line`, so the old blocker is gone. KB7b's graph read works: `progress_m` prints a number and no `SCRIPT ERROR` line appears in any run.
+Park file `src/world/park/park_sinkhole.json`, lines `tools/park_lines/park_sinkhole.json`, bake and graph in `assets/park/park_sinkhole/` (this commit). This table replaces the greybox table of 2026-10-11, which came from `--trace` runs: on this head a traced run and an untraced run of the same seed can differ (seed 1 of the floor line: 0 dead stops traced, 2 untraced, at the same place), because the director's enemies are sensitive to what else the process allocates. Every number below is from the brief's command with no `--trace`; traced runs are diagnostics only.
 
-Commands, one process at a time, with the machine's foreground load at or under 32 before each: `godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/traversal_line.gd -- --table=park --stage=4 --pilot=<key> --seeds=1,2,3,4,5,6,7,8 --out=<dir> --trace` for each pilot, and `--floor --ref=sable` for the floor line. Sable, Rivet, Tarn, Tally and the floor are from one round; Kest and the Cannon were re-run after their channel lanes were swapped (the Cannon's lane cost it 0.7 s over the first segment's 45 s band), on the same bake.
+Commands, one process at a time (at nice 10), each started when the 1-minute load was at most 32 or, after 300 s of waiting, the foreground load (runnable threads below nice 10) was at most 32: `godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/traversal_line.gd -- --table=park --stage=4 --pilot=<key> --seeds=1,2,3,4,5,6,7,8 --out=<dir>` for each pilot, and `--floor --ref=sable` for the floor line, in the order Sable, Rivet, Kest, Tarn, Tally, the Cannon, floor.
 
-The tool judges each band on the median and prints the worst seed beside it.
+The tool judges most bands on the median and prints the worst seed beside it. Two bands are judged here on every seed, as PARK.md words them: the anchor gap (at most 40 m, PARK.md:519) on the worst seed, and the floor band (at most 2.0 times Sable's median to the Warden, 0 dead stops on every seed), which the tool leaves unjudged.
 
 | line | band | median | worst seed | result |
 | --- | --- | --- | --- | --- |
 | sable | reached_warden (8 of 8 seeds) | 8 | - | pass |
-| sable | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 67.56 | 71.76 | pass |
-| sable | segment_s (each segment's median 12.0 to 45.0 s) | 29.48 / 17.47 / 20.2 | 29.48 | pass |
-| sable | flow_share (median at least 0.7; no seed under 0.6) | 0.937 | 0.932 | pass |
-| sable | airborne_share (0.12 to 0.45) | 0.404 | - | pass |
-| sable | dead_stops (0 on every seed) | 0 | 0 | pass |
-| sable | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 54.235 | 52.56 | pass |
-| sable | tier3_s (median at least 3.0 s at the blazing tier) | 49.34 | - | pass |
-| sable | quiet_max_s (at most 20.0 s) | 6.76 | 8.04 | pass |
-| sable | max_anchor_gap_m (at most 40.0 m) | 11.05 | 15.1 | pass |
-| sable | distinct_verbs (at least 3 different ride facts) | 5.5 | 5 | pass |
+| sable | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 65.975 | 70.23 | pass |
+| sable | segment_s (each segment's median 12.0 to 45.0 s) | 29.39 / 16.06 / 20.1 | 29.39 | pass |
+| sable | flow_share (median at least 0.7; no seed under 0.6) | 0.939 | 0.927 | pass |
+| sable | airborne_share (0.12 to 0.45) | 0.398 | - | pass |
+| sable | dead_stops (0 on every seed) | 0 | 1 | MISS |
+| sable | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 54.24 | 53.14 | pass |
+| sable | tier3_s (median at least 3.0 s at the blazing tier) | 51.195 | - | pass |
+| sable | quiet_max_s (at most 20.0 s) | 5.68 | 7.34 | pass |
+| sable | max_anchor_gap_m (at most 40.0 m) | 16.15 | 21.7 | pass |
+| sable | distinct_verbs (at least 3 different ride facts) | 5 | 5 | pass |
 | sable | length_ratio (1.3 to 2.0) | 1.665 | - | pass |
 | rivet | reached_warden (8 of 8 seeds) | 8 | - | pass |
-| rivet | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 105.14 | 106.45 | pass |
-| rivet | segment_s (each segment's median 12.0 to 45.0 s) | 44.97 / 30.77 / 28.88 | 44.965 | pass |
-| rivet | flow_share (median at least 0.7; no seed under 0.6) | 0.862 | 0.846 | pass |
-| rivet | airborne_share (0.12 to 0.45) | 0.162 | - | pass |
+| rivet | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 102.695 | 104.49 | pass |
+| rivet | segment_s (each segment's median 12.0 to 45.0 s) | 42.54 / 31.15 / 29.25 | 42.54 | pass |
+| rivet | flow_share (median at least 0.7; no seed under 0.6) | 0.875 | 0.84 | pass |
+| rivet | airborne_share (0.12 to 0.45) | 0.167 | - | pass |
 | rivet | dead_stops (0 on every seed) | 0 | 0 | pass |
-| rivet | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 33.975 | 33.5 | pass |
-| rivet | tier3_s (median at least 3.0 s at the blazing tier) | 12.045 | - | pass |
-| rivet | quiet_max_s (at most 20.0 s) | 10.785 | 11.04 | pass |
-| rivet | max_anchor_gap_m (at most 40.0 m) | 29.5 | 41.4 | pass (median; worst seed over 40 m) |
-| rivet | distinct_verbs (at least 3 different ride facts) | 5 | 5 | pass |
-| rivet | length_ratio (1.3 to 2.0) | 1.66 | - | pass |
+| rivet | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 33.575 | 32.77 | pass |
+| rivet | tier3_s (median at least 3.0 s at the blazing tier) | 13.485 | - | pass |
+| rivet | quiet_max_s (at most 20.0 s) | 10.48 | 10.87 | pass |
+| rivet | max_anchor_gap_m (at most 40.0 m) | 14.15 | 14.6 | pass |
+| rivet | distinct_verbs (at least 3 different ride facts) | 6 | 6 | pass |
+| rivet | length_ratio (1.3 to 2.0) | 1.645 | - | pass |
 | kest | reached_warden (8 of 8 seeds) | 8 | - | pass |
-| kest | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 97.665 | 98.23 | pass |
-| kest | segment_s (each segment's median 12.0 to 45.0 s) | 43.86 / 26.5 / 27.19 | 43.86 | pass |
-| kest | flow_share (median at least 0.7; no seed under 0.6) | 0.858 | 0.817 | pass |
-| kest | airborne_share (0.12 to 0.45) | 0.211 | - | pass |
+| kest | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 97.48 | 99.56 | pass |
+| kest | segment_s (each segment's median 12.0 to 45.0 s) | 44.24 / 26.57 / 26.35 | 44.24 | pass |
+| kest | flow_share (median at least 0.7; no seed under 0.6) | 0.887 | 0.839 | pass |
+| kest | airborne_share (0.12 to 0.45) | 0.208 | - | pass |
 | kest | dead_stops (0 on every seed) | 0 | 0 | pass |
-| kest | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 29.84 | 28.6 | pass |
-| kest | tier3_s (median at least 3.0 s at the blazing tier) | 9.08 | - | pass |
-| kest | quiet_max_s (at most 20.0 s) | 9.81 | 10.3 | pass |
-| kest | max_anchor_gap_m (at most 40.0 m) | 27.4 | 31.7 | pass |
+| kest | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 29.905 | 28.38 | pass |
+| kest | tier3_s (median at least 3.0 s at the blazing tier) | 9.02 | - | pass |
+| kest | quiet_max_s (at most 20.0 s) | 10.11 | 10.92 | pass |
+| kest | max_anchor_gap_m (at most 40.0 m) | 14.3 | 17.2 | pass |
 | kest | distinct_verbs (at least 3 different ride facts) | 5 | 5 | pass |
-| kest | length_ratio (1.3 to 2.0) | 1.6 | - | pass |
+| kest | length_ratio (1.3 to 2.0) | 1.59 | - | pass |
 | tarn | reached_warden (8 of 8 seeds) | 8 | - | pass |
-| tarn | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 93.835 | 95.84 | pass |
-| tarn | segment_s (each segment's median 12.0 to 45.0 s) | 40.71 / 29.35 / 23.84 | 40.71 | pass |
-| tarn | flow_share (median at least 0.7; no seed under 0.6) | 0.955 | 0.942 | pass |
-| tarn | airborne_share (0.12 to 0.45) | 0.213 | - | pass |
+| tarn | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 94.175 | 95.08 | pass |
+| tarn | segment_s (each segment's median 12.0 to 45.0 s) | 41.3 / 28.61 / 24 | 41.295 | pass |
+| tarn | flow_share (median at least 0.7; no seed under 0.6) | 0.958 | 0.942 | pass |
+| tarn | airborne_share (0.12 to 0.45) | 0.221 | - | pass |
 | tarn | dead_stops (0 on every seed) | 0 | 0 | pass |
-| tarn | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 31.975 | 31.54 | pass |
-| tarn | tier3_s (median at least 3.0 s at the blazing tier) | 12.65 | - | pass |
-| tarn | quiet_max_s (at most 20.0 s) | 11.17 | 13.73 | pass |
-| tarn | max_anchor_gap_m (at most 40.0 m) | 8.85 | 9 | pass |
-| tarn | distinct_verbs (at least 3 different ride facts) | 5 | 5 | pass |
+| tarn | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 32.025 | 31.47 | pass |
+| tarn | tier3_s (median at least 3.0 s at the blazing tier) | 12.68 | - | pass |
+| tarn | quiet_max_s (at most 20.0 s) | 10.45 | 11.37 | pass |
+| tarn | max_anchor_gap_m (at most 40.0 m) | 10.95 | 11.5 | pass |
+| tarn | distinct_verbs (at least 3 different ride facts) | 4 | 4 | pass |
 | tarn | length_ratio (1.3 to 2.0) | 1.64 | - | pass |
 | tally | reached_warden (8 of 8 seeds) | 8 | - | pass |
-| tally | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 95.28 | 98.98 | pass |
-| tally | segment_s (each segment's median 12.0 to 45.0 s) | 42 / 25.08 / 28.21 | 42.005 | pass |
-| tally | flow_share (median at least 0.7; no seed under 0.6) | 0.914 | 0.872 | pass |
-| tally | airborne_share (0.12 to 0.45) | 0.167 | - | pass |
-| tally | dead_stops (0 on every seed) | 0 | 0 | pass |
-| tally | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 33.55 | 33.08 | pass |
-| tally | tier3_s (median at least 3.0 s at the blazing tier) | 13.105 | - | pass |
-| tally | quiet_max_s (at most 20.0 s) | 9.445 | 10.48 | pass |
-| tally | max_anchor_gap_m (at most 40.0 m) | 9.1 | 11.3 | pass |
+| tally | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 97.66 | 100.85 | pass |
+| tally | segment_s (each segment's median 12.0 to 45.0 s) | 44.18 / 25.36 / 28.24 | 44.175 | pass |
+| tally | flow_share (median at least 0.7; no seed under 0.6) | 0.902 | 0.87 | pass |
+| tally | airborne_share (0.12 to 0.45) | 0.165 | - | pass |
+| tally | dead_stops (0 on every seed) | 0 | 1 | MISS |
+| tally | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 33.17 | 32.05 | pass |
+| tally | tier3_s (median at least 3.0 s at the blazing tier) | 12.83 | - | pass |
+| tally | quiet_max_s (at most 20.0 s) | 9.24 | 12.34 | pass |
+| tally | max_anchor_gap_m (at most 40.0 m) | 13.75 | 14.6 | pass |
 | tally | distinct_verbs (at least 3 different ride facts) | 6 | 5 | pass |
 | tally | length_ratio (1.3 to 2.0) | 1.57 | - | pass |
 | cannon | reached_warden (8 of 8 seeds) | 8 | - | pass |
-| cannon | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 90.765 | 92.09 | pass |
-| cannon | segment_s (each segment's median 12.0 to 45.0 s) | 42.39 / 21.55 / 26.6 | 42.385 | pass |
-| cannon | flow_share (median at least 0.7; no seed under 0.6) | 0.975 | 0.954 | pass |
-| cannon | airborne_share (0.12 to 0.45) | 0.186 | - | pass |
+| cannon | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 90.545 | 91.86 | pass |
+| cannon | segment_s (each segment's median 12.0 to 45.0 s) | 42.33 / 21.42 / 26.72 | 42.33 | pass |
+| cannon | flow_share (median at least 0.7; no seed under 0.6) | 0.97 | 0.961 | pass |
+| cannon | airborne_share (0.12 to 0.45) | 0.189 | - | pass |
 | cannon | dead_stops (0 on every seed) | 0 | 0 | pass |
-| cannon | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 32.07 | 31.9 | pass |
-| cannon | tier3_s (median at least 3.0 s at the blazing tier) | 12.24 | - | pass |
-| cannon | quiet_max_s (at most 20.0 s) | 8.1 | 9.02 | pass |
-| cannon | max_anchor_gap_m (at most 40.0 m) | 11.9 | 14.7 | pass |
+| cannon | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 32.21 | 31.92 | pass |
+| cannon | tier3_s (median at least 3.0 s at the blazing tier) | 12.27 | - | pass |
+| cannon | quiet_max_s (at most 20.0 s) | 8.34 | 10.48 | pass |
+| cannon | max_anchor_gap_m (at most 40.0 m) | 14.6 | 28.6 | pass |
 | cannon | distinct_verbs (at least 3 different ride facts) | 5 | 5 | pass |
 | cannon | length_ratio (1.3 to 2.0) | 1.51 | - | pass |
 | floor | reached_warden (8 of 8 seeds) | 8 | - | pass |
-| floor | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 98.73 | 99.7 | pass |
-| floor | segment_s (each segment's median 12.0 to 45.0 s) | 42.47 / 27.03 / 29.13 | 42.47 | pass |
-| floor | flow_share (median at least 0.7; no seed under 0.6) | 0.88 | 0.855 | pass |
-| floor | airborne_share (0.12 to 0.45) | 0.161 | - | pass |
+| floor | time_to_warden_s (median 60.0 to 120.0 s; no seed over 150.0 s) | 100.4 | 101.2 | pass |
+| floor | segment_s (each segment's median 12.0 to 45.0 s) | 43.95 / 27.51 / 29.27 | 43.945 | pass |
+| floor | flow_share (median at least 0.7; no seed under 0.6) | 0.878 | 0.862 | pass |
+| floor | airborne_share (0.12 to 0.45) | 0.16 | - | pass |
 | floor | dead_stops (0 on every seed) | 0 | 0 | pass |
-| floor | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 33.76 | 33.68 | pass |
-| floor | tier3_s (median at least 3.0 s at the blazing tier) | 13.17 | - | pass |
-| floor | quiet_max_s (at most 20.0 s) | 9.515 | 13.27 | pass |
-| floor | max_anchor_gap_m (at most 40.0 m) | 9.25 | 13.1 | pass |
+| floor | peak_speed_mps (at least 26.6 m/s (the blazing tier) on every seed) | 33.27 | 32.49 | pass |
+| floor | tier3_s (median at least 3.0 s at the blazing tier) | 12.985 | - | pass |
+| floor | quiet_max_s (at most 20.0 s) | 9.37 | 11.92 | pass |
+| floor | max_anchor_gap_m (at most 40.0 m) | 16.05 | 17.4 | pass |
 | floor | distinct_verbs (at least 3 different ride facts) | 5 | 5 | pass |
 | floor | length_ratio (1.3 to 2.0) | 1.55 | - | pass |
-| floor | floor (reaches the Warden in at most 2.0 times sable's median time, 0 dead stops) | 98.73 | 135.12 | pass |
+| floor | floor (reaches the Warden in at most 2.0 times sable's median time, 0 dead stops) | 100.4 | 101.2 | pass |
 
 Dead stops and reach, per line:
 
-- sable: class pylon_engineer, reached 8 of 8, dead stops none
+- sable: class pylon_engineer, reached 8 of 8, dead stops ['seed 7 at [-203.3, -450.4], 21.2 s']
 - rivet: class runner_gunner, reached 8 of 8, dead stops none
 - kest: class demolitions_caster, reached 8 of 8, dead stops none
 - tarn: class tarn, reached 8 of 8, dead stops none
-- tally: class tally, reached 8 of 8, dead stops none
+- tally: class tally, reached 8 of 8, dead stops ['seed 1 at [-622.2, -699.2], 7.1 s']
 - cannon: class remembered_cannon, reached 8 of 8, dead stops none
 - floor: class runner_gunner, reached 8 of 8, dead stops none
 
-**Distinct lines across the six pilots (at least 3).** The tool does not compute this band, so it is measured on the ball traces of the same runs (`--trace`): two lines are distinct when fewer than half of each line's ticks lie within 8 m in plan of the other's. Sable, Rivet and Tarn are mutually distinct on all 8 seeds (seed 1: Sable and Rivet 0.44, Sable and Tarn 0.45, Rivet and Tarn 0.44), and so are Rivet, Kest and Tarn (0.40, 0.44, 0.43): pass. The lines share the lava channel, so Rivet rides the channel's left wall and Kest its right wall where the channel runs straight and no post stands within 10 m; the others ride its middle.
+**Two misses: one dead stop each on Sable seed 7 and Tally seed 1.** Both are a ball rolling into a director enemy, not into a row. The evidence:
 
-**Notes.**
+- The floor line's stop at (-618.7, -704.0), 7 s after the drop-in, reproduced untraced with a scratch copy of the tool that prints contacts at the stop: the contact was a `CharacterBody3D` enemy 1.8 m away, with two more within 9 m (a pack). The director lands its spawns from 4 s, 60% of them 60 to 90 m ahead of the ball within 35 degrees of its heading (`src/world/director.gd:11-12`, `:86-96`), and on seed 1 that puts the first pack on the channel about 60 m ahead of where the ball is at 4 s. `home_rows` are not read at runtime on this head, so the burrower home on `lava_channel_1` is not the source.
+- The outcome is sensitive to what the process allocates: the same seed traced gives 0 stops, and the scratch tool's prints alone turned Sable seed 7's stop into 0. A row or waypoint change moves the stop to another seed rather than removing it. Measured: Sable's point (-199, -479) moved to (-193, -479) cleared seed 7 and stopped seed 3 at (-169.3, -402.0); Tally's opening at (-655, -714), (-636, -708) cleared seed 1 and stopped seeds 3 and 7. The floor line's opening (-655, -714), (-636, -708) clears all 8 seeds and is the one kept.
+- What would remove the class: the director keeping its ahead spawns off the committed route lanes, or the traversal pilot steering round an enemy on its line. Both are outside this stage (follow-ups).
 
-- Rivet's max anchor gap is 29.5 m median, but seed 7 reads 41.4 m (over 40 m on that one seed); the tool judges the median. Rivet's first segment median is 44.97 s against the 45 s band, the tightest number on the page.
-- The floor line's band is 2.0 times Sable's median (67.56 s), so 135.1 s; its slowest seed took 99.7 s.
-- A dead stop counts any halving of speed in the contact window (`src/core/run_log.gd:108`). The traced fixes this pass: a fork pillar at the tube mouth and a bend post in the main upper tube moved off the inside of the line, the west breakthrough's last wash shortened to 20 m so a ball leaving the main lower tube onto the ring no longer lands across its bank, and the main-upper waypoint re-cut to (-42, -76) where the ball runs. One remaining source is a director enemy on the line: a Kest seed hit a cinder burrower in the channel (contact `CharacterBody3D` in the trace); on the channel's wall lane it no longer meets it.
+**What changed since the 2026-10-11 table.** Every row but the ground, the kickers and seven site markers carries a recipe (R10), so the anchor fields build posts at runtime; Rivet's worst anchor gap fell from 41.4 m (traced) to 14.6 m. Eight fillers closing the ring approach are gone. Rivet's left-wall points cost it about 3 s over the first segment once the posts were built (median 45.48 s against the 45 s band, round t1), so Rivet now rides the channel's middle (42.54 s) and Tarn takes the left wall over the channel's last six points to keep three lines distinct. The floor line enters the channel by its right side.
+
+**Distinct lines across the six pilots (at least 3).** The tool does not compute this band. It is measured on the lines file's polylines, sampled every 2 m: two lines are distinct when fewer than half of each line's samples lie within 8 m in plan of the other's.
+
+- pair sable-rivet: within 8 m 0.54 -> same
+- pair sable-kest: within 8 m 0.65 -> same
+- pair sable-tarn: within 8 m 0.41 -> distinct
+- pair sable-tally: within 8 m 0.77 -> same
+- pair sable-cannon: within 8 m 0.78 -> same
+- pair rivet-kest: within 8 m 0.41 -> distinct
+- pair rivet-tarn: within 8 m 0.39 -> distinct
+- pair rivet-tally: within 8 m 0.76 -> same
+- pair rivet-cannon: within 8 m 0.56 -> same
+- pair kest-tarn: within 8 m 0.30 -> distinct
+- pair kest-tally: within 8 m 0.41 -> distinct
+- pair kest-cannon: within 8 m 0.65 -> same
+- pair tarn-tally: within 8 m 0.39 -> distinct
+- pair tarn-cannon: within 8 m 0.42 -> distinct
+- pair tally-cannon: within 8 m 0.55 -> same
+- largest mutually distinct set: 3 ['rivet', 'kest', 'tarn']

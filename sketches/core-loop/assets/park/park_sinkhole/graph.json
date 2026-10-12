@@ -1,41 +1,41 @@
 {
-  "bake_sha256": "ace15cbeedf4086f4f3ccb43be0c3c06c3c901633c01710c05e2115b2d7bcfbd",
+  "bake_sha256": "4a686660ba0bdbaae6986afacac5863334b17d9e90b6e62a85fa17bfca37d459",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 925514,
-  "edges": 315233,
+  "bytes": 925214,
+  "edges": 315290,
   "first_failed": "",
   "flags": {
     "deck": 55,
-    "door_ok": 39919,
-    "line": 411,
+    "door_ok": 39913,
+    "line": 417,
     "open": 40456,
-    "sight_ok": 9683,
+    "sight_ok": 9690,
     "under": 0
   },
   "full_visit_m": 1909,
   "full_visit_ratio": "1.363",
-  "graph_sha256": "eae2de32f4a82258ff65cb3169c4ba6d28147c3f35d51a143736f03d542ac8a9",
+  "graph_sha256": "04987d9b33fffd9d80b7e4cbd71c14154671fced1d2032dce6f7cdcdc4fa2d97",
   "line_errors": [],
   "line_path_nodes": 175,
   "longest_est_m": 2038,
   "map": "park_sinkhole",
   "nodes": 40456,
-  "park_sha256": "758b542699b5c4e7e2895339d61b62038a5362ab97314a14f260f8c6ba7ab2bb",
+  "park_sha256": "70c2ef83f0f21cc3f65cd981117f3a9b2488ae7521c8256a982c84485864d406",
   "pockets": [
     {
       "clear_ring": [],
-      "d_landmark": 395,
+      "d_landmark": 375,
       "d_spawn": 1040,
-      "detour_m": 4,
+      "detour_m": 0,
       "door_at": [
         0,
         -16
       ],
-      "door_m": 4,
+      "door_m": 0,
       "flags": [
         "open",
-        "door_ok",
+        "line",
         "sight_ok"
       ],
       "id": "great_room_camp",
@@ -54,12 +54,12 @@
       "clear_ring": [],
       "d_landmark": 387,
       "d_spawn": 1213,
-      "detour_m": 196,
+      "detour_m": 164,
       "door_at": [
         176,
         40
       ],
-      "door_m": 196,
+      "door_m": 164,
       "flags": [
         "open",
         "door_ok",
@@ -82,12 +82,12 @@
       "clear_ring": [],
       "d_landmark": 459,
       "d_spawn": 941,
-      "detour_m": 209,
+      "detour_m": 224,
       "door_at": [
         -224,
         -16
       ],
-      "door_m": 209,
+      "door_m": 224,
       "flags": [
         "open",
         "door_ok",
@@ -109,12 +109,12 @@
       "clear_ring": [],
       "d_landmark": 233,
       "d_spawn": 1170,
-      "detour_m": 43,
+      "detour_m": 79,
       "door_at": [
         -80,
         152
       ],
-      "door_m": 43,
+      "door_m": 79,
       "flags": [
         "open",
         "door_ok",
