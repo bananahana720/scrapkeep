@@ -8,9 +8,9 @@ extends SceneTree
 #   band class, pre-shoot at or above the reaction floor, and a pre-shoot outside its class
 #   band only with a logged reason.
 # - The record matches the code: a counter.gd kind's pre-shoot is its warn_seconds and its
-#   cooldown is rest_seconds less the shared recovery; an own-clock kind's numbers are its
-#   own constants, and the own-clock list names why it does not read the shared recovery.
-# - Ordinary attacks read one recovery value: every counter.gd kind's recovery_seconds is
+#   cooldown is rest_seconds less the shared recovery; the three other pack kinds retain
+#   their existing warning and cycle constants.
+# - Ordinary attacks read one recovery value: every pack kind's recovery read is
 #   TelegraphRecord.RECOVERY, and one live attack per kind ends in a recovery that lasts
 #   RECOVERY within one tick, standing still, with no new warning inside it. The report
 #   prints each kind's recovery before (the record's recovery_before) and after (measured).
@@ -138,9 +138,9 @@ func _structure(kinds: Array) -> void:
 		if not _finite(recovery):
 			problems.append("recovery")
 		_test.check(id + " " + kind + " record row", problems.is_empty(), "problems %s" % [problems])
-	for kind in _record.OWN_CLOCK:
-		_test.check(kind + " own-clock reason", kind in kinds and String(_record.OWN_CLOCK[kind]).strip_edges() != "",
-			"%s: %s" % [kind, _record.OWN_CLOCK[kind]])
+	for kind in kinds:
+		_test.check(kind + " record uses shared recovery", absf(_record.recovery(kind) - float(_record.RECOVERY)) < 0.0001,
+			"record %.2f s, shared %.2f s" % [_record.recovery(kind), _record.RECOVERY])
 
 
 # --- The record against the code -------------------------------------------------------
@@ -166,9 +166,9 @@ func _own_numbers(kind: String) -> Dictionary:
 		"chaser":
 			return {"pre_shoot": Chaser.WINDUP, "cooldown": Chaser.REST, "recovery": Chaser.RECOVER}
 		"lobber":
-			return {"pre_shoot": Lobber.FLIGHT, "cooldown": Lobber.CYCLE - Lobber.TELEGRAPH, "recovery": 0.0}
+			return {"pre_shoot": Lobber.FLIGHT, "cooldown": Lobber.CYCLE - Lobber.TELEGRAPH}
 		"swarm_remnant":
-			return {"pre_shoot": Swarm.LOCK_WARN, "cooldown": Swarm.REST, "recovery": 0.0}
+			return {"pre_shoot": Swarm.LOCK_WARN, "cooldown": Swarm.REST}
 	return {}
 
 
@@ -176,17 +176,51 @@ func _on_phase(facts: Dictionary) -> void:
 	_phases.append([Engine.get_physics_frames(), String(facts["phase"])])
 
 
-# One live attack of a counter.gd kind: the recovery measured after it ends.
+func _recovering(enemy, swarm) -> bool:
+	if enemy is Chaser:
+		return enemy.state == Chaser.State.RECOVER
+	var clock = swarm if swarm != null else enemy
+	if clock.has_method("recovering"):
+		return clock.recovering()
+	return false
+
+
+func _recovery_read(enemy, swarm) -> float:
+	if enemy is Chaser:
+		return Chaser.RECOVER
+	var value = (swarm if swarm != null else enemy).get("recovery_seconds")
+	return float(value) if value != null else -1.0
+
+
+func _warning(enemy, swarm) -> bool:
+	if swarm != null:
+		return swarm.state != Swarm.State.FORMING or swarm.lane() != null
+	if enemy is Chaser:
+		return enemy.state != Chaser.State.RECOVER
+	if enemy is Lobber:
+		return enemy.charge > 0.0 or enemy.shots > 1
+	return enemy.phase != Counter.Phase.ROAM
+
+
+# One live attack per pack kind: measure its actual standing tail, including every drone.
 func _recovery(kind: String) -> Dictionary:
 	_phases.clear()
 	var enemy = _spawn(kind)
 	for unit in get_nodes_in_group("enemy"):
 		unit.hp = 1.0e6
 	enemy.attack_phase.connect(_on_phase)
-	enemy._rest = 0.0
+	var swarm = enemy.get("swarm") if kind == "swarm_remnant" else null
+	if enemy is Counter or enemy is Chaser:
+		enemy._rest = 0.0
+	if enemy is Lobber:
+		enemy._clock = Lobber.CYCLE - _tick * 0.5
+	if swarm != null:
+		swarm._rest = 0.0
+		swarm.t = Swarm.FORM_MAX
+	var diving := false
 	var ended := -1
 	var frames := 0
-	var at := Vector3.ZERO
+	var positions := {}
 	var drift := 0.0
 	var warned_inside := false
 	var out := {"skip": "no recover in %d frames" % FRAME_LIMIT}
@@ -198,22 +232,38 @@ func _recovery(kind: String) -> Dictionary:
 			out = {"skip": "unit gone"}
 			break
 		if ended < 0:
+			if swarm != null:
+				if diving and swarm.state == Swarm.State.FORMING:
+					ended = Engine.get_physics_frames()
+				diving = swarm.state == Swarm.State.DIVING
 			for p in _phases:
-				if p[1] == "recover":
+				if swarm == null and p[1] == "recover":
 					ended = int(p[0])
-					at = enemy.global_position
-			if ended >= 0 and enemy.recovering():
-				frames = 1
+			if ended >= 0:
+				for unit in get_nodes_in_group("enemy"):
+					positions[unit] = unit.global_position
+				if _recovering(enemy, swarm):
+					frames = 1
+					# An expired cycle must still be unable to start another attack in the tail.
+					if enemy is Lobber:
+						enemy._clock = Lobber.CYCLE - _tick * 0.5
+					if swarm != null:
+						swarm._rest = 0.0
+						swarm.t = Swarm.FORM_MAX
+				else:
+					out = {"seconds": 0.0, "drift": 0.0, "warned_inside": false, "reads": _recovery_read(enemy, swarm)}
+					break
 			continue
-		if enemy.recovering():
+		if _recovering(enemy, swarm):
 			frames += 1
-			var flat: Vector3 = enemy.global_position - at
-			drift = maxf(drift, Vector2(flat.x, flat.z).length())
-			if enemy.phase != Counter.Phase.ROAM:
+			for unit in positions:
+				var flat: Vector3 = unit.global_position - Vector3(positions[unit])
+				drift = maxf(drift, Vector2(flat.x, flat.z).length())
+			if _warning(enemy, swarm):
 				warned_inside = true
 		else:
 			out = {"seconds": float(frames) * _tick, "drift": drift, "warned_inside": warned_inside,
-				"reads": float(enemy.recovery_seconds)}
+				"reads": _recovery_read(enemy, swarm)}
 			break
 	_clear_field()
 	await physics_frame
@@ -221,19 +271,16 @@ func _recovery(kind: String) -> Dictionary:
 
 
 func _against_code(kinds: Array) -> void:
-	print("kind | attack | clock | pre-shoot record/code | cooldown record/code | recovery before | recovery after (measured) | drift m")
+	print("kind | attack | recovery before s | recovery after (measured) s | shared read s | drift m")
 	for kind in kinds:
 		var id: String = _record.id_of(kind)
 		var row: Dictionary = _record.ROWS.get(id, {})
-		if _record.OWN_CLOCK.has(kind):
+		if kind in ["chaser", "lobber", "swarm_remnant"]:
 			var own := _own_numbers(kind)
 			var ok: bool = not own.is_empty() and absf(float(row.get("pre_shoot", -1.0)) - float(own["pre_shoot"])) < 0.0001 \
-				and absf(float(row.get("cooldown", -1.0)) - float(own["cooldown"])) < 0.0001 \
-				and absf(_record.recovery(kind) - float(own["recovery"])) < 0.0001
-			print("%s | %s | own | %.2f/%.2f | %.2f/%.2f | %.2f | %.2f (own clock) | -" % [kind, id, row.get("pre_shoot", -1.0),
-				own.get("pre_shoot", -1.0), row.get("cooldown", -1.0), own.get("cooldown", -1.0), row.get("recovery_before", -1.0),
-				_record.recovery(kind)])
-			_test.check(kind + " own-clock numbers match the record", ok, "record %s, code %s" % [row, own])
+				and absf(float(row.get("cooldown", -1.0)) - float(own["cooldown"])) < 0.0001
+			_test.check(kind + " existing warn and cycle numbers match the record", ok, "record %s, code %s" % [row, own])
+			await _check_recovery(kind, id, row)
 			continue
 		var probe = _spawn(kind)
 		var is_counter: bool = probe is Counter
@@ -242,7 +289,7 @@ func _against_code(kinds: Array) -> void:
 		var reads: float = float(probe.get("recovery_seconds")) if probe.get("recovery_seconds") != null else -1.0
 		_clear_field()
 		await physics_frame
-		_test.check(kind + " is a counter.gd kind or on the own-clock list", is_counter, "script %s" % kind)
+		_test.check(kind + " is a counter.gd kind", is_counter, "script %s" % kind)
 		if not is_counter:
 			continue
 		_test.check(kind + " pre-shoot is its warn", absf(float(row.get("pre_shoot", -1.0)) - warn) < 0.0001,
@@ -251,16 +298,22 @@ func _against_code(kinds: Array) -> void:
 			"record %.2f, rest_seconds %.2f - recovery %.2f" % [row.get("cooldown", -1.0), rest, _record.RECOVERY])
 		_test.check(kind + " reads the shared recovery", absf(reads - float(_record.RECOVERY)) < 0.0001,
 			"recovery_seconds %.2f, RECOVERY %.2f" % [reads, _record.RECOVERY])
-		var m := await _recovery(kind)
-		if m.has("skip"):
-			_test.check(kind + " recovery measured", false, String(m["skip"]))
-			continue
-		print("%s | %s | counter | %.2f/%.2f | %.2f/%.2f | %.2f | %.3f | %.3f" % [kind, id, row.get("pre_shoot", -1.0), warn,
-			row.get("cooldown", -1.0), rest - float(_record.RECOVERY), row.get("recovery_before", -1.0), m["seconds"], m["drift"]])
-		_test.check(kind + " recovery lasts the shared value", absf(float(m["seconds"]) - float(_record.RECOVERY)) <= _tick + 0.0001,
-			"measured %.3f s, RECOVERY %.2f s, within one tick" % [m["seconds"], _record.RECOVERY])
-		_test.check(kind + " stands still and starts nothing in recovery", float(m["drift"]) <= STILL and not bool(m["warned_inside"]),
-			"drift %.3f m (at most %.2f), warned inside %s" % [m["drift"], STILL, m["warned_inside"]])
+		await _check_recovery(kind, id, row)
+
+
+func _check_recovery(kind: String, id: String, row: Dictionary) -> void:
+	var m := await _recovery(kind)
+	if m.has("skip"):
+		_test.check(kind + " recovery measured", false, String(m["skip"]))
+		return
+	print("%s | %s | recovery before %.2f | after %.3f | read %.2f | drift %.3f" % [kind, id,
+		row.get("recovery_before", -1.0), m["seconds"], m["reads"], m["drift"]])
+	_test.check(kind + " reads the shared recovery", absf(float(m["reads"]) - float(_record.RECOVERY)) < 0.0001,
+		"recovery read %.2f, RECOVERY %.2f" % [m["reads"], _record.RECOVERY])
+	_test.check(kind + " recovery lasts the shared value", absf(float(m["seconds"]) - float(_record.RECOVERY)) <= _tick + 0.0001,
+		"measured %.3f s, RECOVERY %.2f s, within one tick" % [m["seconds"], _record.RECOVERY])
+	_test.check(kind + " stands still and starts nothing in recovery", float(m["seconds"]) > 0.0 and float(m["drift"]) <= STILL and not bool(m["warned_inside"]),
+		"drift %.3f m (at most %.2f), warned inside %s" % [m["drift"], STILL, m["warned_inside"]])
 
 
 # --- Exceptions and LEGIBILITY ---------------------------------------------------------
@@ -294,13 +347,13 @@ func _legibility() -> void:
 		var cells: Array = []
 		for cell in line.split("|"):
 			cells.append(cell.strip_edges().replace("`", ""))
-		if cells.size() >= 6:
-			rows[cells[1]] = {"kind": cells[2], "marker": cells[3], "band": cells[4], "pre_shoot": cells[5]}
+		if cells.size() >= 8:
+			rows[cells[1]] = {"kind": cells[2], "marker": cells[3], "band": cells[4], "pre_shoot": cells[5], "recovery": cells[7]}
 	var mismatched: Array = []
 	for id in _record.ROWS:
 		var row: Dictionary = _record.ROWS[id]
 		var want := {"kind": String(row["kind"]), "marker": String(row["marker"]), "band": String(row["band"]),
-			"pre_shoot": "%.2f" % float(row["pre_shoot"])}
+			"pre_shoot": "%.2f" % float(row["pre_shoot"]), "recovery": "%.2f" % _record.recovery(String(row["kind"]))}
 		if rows.get(id, {}) != want:
 			mismatched.append("%s record %s legibility %s" % [id, want, rows.get(id, "missing")])
 	_test.check("LEGIBILITY section 2 lists every record row", mismatched.is_empty() and rows.size() == _record.ROWS.size(),
