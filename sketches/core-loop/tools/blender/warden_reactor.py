@@ -608,15 +608,17 @@ def ram_checks(root):
         barrel_rgb = Vector(colors.get(label + "_barrel", (0, 0, 0)))
         rod_rgb = Vector(colors.get(label + "_rod", (0, 0, 0)))
         barrel_luma, rod_luma = barrel_rgb.dot(luma), rod_rgb.dot(luma)
+        rod_saturation = max(rod_rgb) - min(rod_rgb)
         sand_distance, bone_distance = (rod_rgb - sandstone).length, (rod_rgb - bone).length
         contrast_ok = (label + "_barrel" in colors and label + "_rod" in colors
                        and rod_luma - barrel_luma >= 0.45
+                       and rod_luma >= 0.6 and rod_saturation <= 0.12
                        and sand_distance >= 0.15 and bone_distance >= 0.15)
         if not sil_say(contrast_ok, "reactor", "3d", label, "ram_value_contrast",
                        rod_luma - barrel_luma,
-                       ">=0.45 sandstone_distance>=0.15 bone_distance>=0.15 "
-                       "barrel_luma=%.6f rod_luma=%.6f sandstone_distance=%.6f bone_distance=%.6f" %
-                       (barrel_luma, rod_luma, sand_distance, bone_distance)):
+                       ">=0.45 rod_luma>=0.6 rod_saturation<=0.12 sandstone_distance>=0.15 bone_distance>=0.15 "
+                       "barrel_luma=%.6f rod_luma=%.6f rod_saturation=%.6f sandstone_distance=%.6f bone_distance=%.6f" %
+                       (barrel_luma, rod_luma, rod_saturation, sand_distance, bone_distance)):
             fails.append(label + " ram_value_contrast")
         for metric, value, ok, want in (
             ("base_pin_z_m", base.z, base.z >= SIL_RAM_BASE_Z, ">=2.0"),
@@ -963,19 +965,19 @@ def ram_columns(root):
             return faces
 
         barrel_name, rod_name = label + "_barrel", label + "_rod"
-        piece(barrel_name, moving.beam, "ancient_enamel", base, base + axis * RAM_BASE_NECK, 0.32, color=common.mix("charcoal", "petrol", 0.1))
-        smooth(piece(barrel_name, moving.rod, "ancient_enamel", base + axis * RAM_BASE_NECK,
+        piece(barrel_name, moving.beam, "hydraulic", base, base + axis * RAM_BASE_NECK, 0.32, color=common.mix("charcoal", "petrol", 0.1))
+        smooth(piece(barrel_name, moving.rod, "hydraulic", base + axis * RAM_BASE_NECK,
                      base + axis * (RAM_BASE_NECK + RAM_BARREL_LENGTH), RAM_BARREL_R, 8,
                      color=common.mix("charcoal", "petrol", 0.1), measure=label + "_barrel"))
-        piece(barrel_name, moving.rod, "ancient_enamel", base + axis * (RAM_MOUTH - RAM_GLAND_LENGTH),
+        piece(barrel_name, moving.rod, "hydraulic", base + axis * (RAM_MOUTH - RAM_GLAND_LENGTH),
               base + axis * RAM_MOUTH, RAM_GLAND_R, 10, color=COPPER)
         for offset in (-0.20, 0.20):
-            piece(barrel_name, moving.cyl, "ancient_enamel", 0.28, 0.28, 0.10, 8,
+            piece(barrel_name, moving.cyl, "hydraulic", 0.28, 0.28, 0.10, 8,
                   loc=base + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=COPPER)
-        smooth(piece(rod_name, moving.rod, "ancient_enamel", eye - axis * 1.95,
+        smooth(piece(rod_name, moving.rod, "hydraulic", eye - axis * 1.95,
                      eye - axis * RAM_EYE_R, RAM_ROD_R, 10, color=ROD_STEEL, measure=label + "_rod"))
         for offset in (-0.20, 0.20):
-            piece(rod_name, moving.cyl, "ancient_enamel", RAM_EYE_R, RAM_EYE_R, 0.10, 8,
+            piece(rod_name, moving.cyl, "hydraulic", RAM_EYE_R, RAM_EYE_R, 0.10, 8,
                   loc=eye + Vector((0, offset, 0)), rot=(math.pi / 2, 0, 0), color=COPPER)
         records.append((label, side, base, eye, axis, barrel_name, rod_name, foot))
     mounts = finish(mount, (0, 0, 0), root)
