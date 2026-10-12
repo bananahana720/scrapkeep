@@ -99,6 +99,8 @@ static func attach(owner):
 
 
 func _physics_process(delta: float) -> void:
+	if module == null:
+		return
 	if not is_instance_valid(module) or not is_instance_valid(module.pad):
 		queue_free()
 		return
