@@ -2269,8 +2269,8 @@ func _sable_bank(id: String, _target: Node3D, _at: Vector3, _on: String) -> void
 func _sable_bank_sound() -> void:
 	var speed: float = ctx.player.state.velocity.length()
 	var pitch := Harmony.ratio(12.0 * clampf(speed / 45.0, 0.0, 1.0) + mini(5, maxi(0, ctx.player.chain.combo - 1)))
-	_grammar_cue("line_skill_fired", SABLE_SOUNDS["sable_ratchet"])
-	_grammar_cue("line_skill_fired", SABLE_SOUNDS["sable_bank"], "SFX", pitch)
+	play("line_skill_fired", 0.0, 1.0, "SFX", SABLE_SOUNDS["sable_ratchet"])
+	play("line_skill_fired", 0.0, pitch, "SFX", SABLE_SOUNDS["sable_bank"])
 
 
 func sable_note(kind: String, number: int) -> void:
@@ -2279,9 +2279,11 @@ func sable_note(kind: String, number: int) -> void:
 	sable_note_log.append({"kind": kind, "number": number, "sample": at, "midi": midi})
 	if sound_ready:
 		if engine.mode == MusicEngine.PLAY:
-			engine.schedule_stinger_at(SfxBank.cause_note_id(midi), at)
+			var id := SfxBank.cause_note_id(midi)
+			if _admit("ultimate_peak", id, 1.0):
+				engine.schedule_stinger_at(id, at, PRIORITY_DB[Rows.priority("ultimate_peak")])
 		else:
-			_grammar_cue("ultimate_peak", SfxBank.cause_note_id(midi), "SFX", Harmony.ratio(live_key()))
+			play("ultimate_peak", 0.0, Harmony.ratio(live_key()), "SFX", SfxBank.cause_note_id(midi))
 # --- P-C Tarn line_claw_drag ---
 func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) -> void:
 	if id != "claw_drag":
