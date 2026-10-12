@@ -236,7 +236,7 @@
     "sight_share": 0.85,
     "sight_top": [
       -0.0,
-      220,
+      187.939,
       680.0
     ],
     "size": [
@@ -332,7 +332,7 @@
       "size": [
         165.42,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -360,7 +360,7 @@
       "size": [
         152.014,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -388,7 +388,7 @@
       "size": [
         132.249,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -416,7 +416,7 @@
       "size": [
         117.369,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -444,7 +444,7 @@
       "size": [
         120.135,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -472,7 +472,7 @@
       "size": [
         137.828,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -500,7 +500,7 @@
       "size": [
         156.682,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -528,7 +528,7 @@
       "size": [
         167.176,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -556,7 +556,7 @@
       "size": [
         165.42,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -584,7 +584,7 @@
       "size": [
         152.014,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -612,7 +612,7 @@
       "size": [
         132.249,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -640,7 +640,7 @@
       "size": [
         117.369,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -668,7 +668,7 @@
       "size": [
         120.135,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -696,7 +696,7 @@
       "size": [
         137.828,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -724,7 +724,7 @@
       "size": [
         156.683,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -752,7 +752,7 @@
       "size": [
         167.176,
         1.5,
-        64
+        36
       ],
       "society": "none",
       "stamp": "wash",
@@ -778,7 +778,7 @@
       "size": [
         180,
         2.0,
-        150
+        44
       ],
       "society": "none",
       "stamp": "bowl",
@@ -804,7 +804,7 @@
       "size": [
         180,
         2.0,
-        150
+        44
       ],
       "society": "none",
       "stamp": "bowl",
@@ -814,29 +814,81 @@
     },
     {
       "at": [
-        239.267,
-        -450.0
+        185.752,
+        -530.0
       ],
       "budget": "landform",
       "element": "kicker",
       "fragment": "",
       "hole": false,
       "home": "",
-      "id": "lip_3",
+      "id": "lip_2",
       "landform": "mesa_rim",
       "recipe": "greybox:kicker",
       "ride_fact": "kicker_launch",
       "routes": [],
       "size": [
-        44,
-        2.2,
-        24
+        80,
+        12,
+        50
       ],
       "society": "none",
       "stamp": "spire",
       "verb": "launch",
       "y": null,
-      "yaw_deg": 23.14
+      "yaw_deg": 40.682
+    },
+    {
+      "at": [
+        254.131,
+        -370.0
+      ],
+      "budget": "landform",
+      "element": "kicker",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "lip_4",
+      "landform": "mesa_rim",
+      "recipe": "greybox:kicker",
+      "ride_fact": "kicker_launch",
+      "routes": [],
+      "size": [
+        80,
+        12,
+        50
+      ],
+      "society": "none",
+      "stamp": "spire",
+      "verb": "launch",
+      "y": null,
+      "yaw_deg": -4.0
+    },
+    {
+      "at": [
+        165.08,
+        -210.0
+      ],
+      "budget": "landform",
+      "element": "kicker",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "lip_6",
+      "landform": "mesa_rim",
+      "recipe": "greybox:kicker",
+      "ride_fact": "kicker_launch",
+      "routes": [],
+      "size": [
+        80,
+        12,
+        50
+      ],
+      "society": "none",
+      "stamp": "spire",
+      "verb": "launch",
+      "y": null,
+      "yaw_deg": -43.785
     },
     {
       "at": [
@@ -854,9 +906,9 @@
       "ride_fact": "kicker_launch",
       "routes": [],
       "size": [
-        44,
-        2.2,
-        24
+        80,
+        12,
+        50
       ],
       "society": "none",
       "stamp": "spire",
@@ -866,29 +918,81 @@
     },
     {
       "at": [
-        -257.314,
-        350.0
+        -214.986,
+        110.0
       ],
       "budget": "landform",
       "element": "kicker",
       "fragment": "",
       "hole": false,
       "home": "",
-      "id": "lip_13",
+      "id": "lip_10",
       "landform": "mesa_rim",
       "recipe": "greybox:kicker",
       "ride_fact": "kicker_launch",
       "routes": [],
       "size": [
-        44,
-        2.2,
-        24
+        80,
+        12,
+        50
       ],
       "society": "none",
       "stamp": "spire",
       "verb": "launch",
       "y": null,
-      "yaw_deg": 29.099
+      "yaw_deg": -40.682
+    },
+    {
+      "at": [
+        -283.365,
+        270.0
+      ],
+      "budget": "landform",
+      "element": "kicker",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "lip_12",
+      "landform": "mesa_rim",
+      "recipe": "greybox:kicker",
+      "ride_fact": "kicker_launch",
+      "routes": [],
+      "size": [
+        80,
+        12,
+        50
+      ],
+      "society": "none",
+      "stamp": "spire",
+      "verb": "launch",
+      "y": null,
+      "yaw_deg": 4.0
+    },
+    {
+      "at": [
+        -194.315,
+        430.0
+      ],
+      "budget": "landform",
+      "element": "kicker",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "lip_14",
+      "landform": "mesa_rim",
+      "recipe": "greybox:kicker",
+      "ride_fact": "kicker_launch",
+      "routes": [],
+      "size": [
+        80,
+        12,
+        50
+      ],
+      "society": "none",
+      "stamp": "spire",
+      "verb": "launch",
+      "y": null,
+      "yaw_deg": 43.785
     },
     {
       "at": [
@@ -908,7 +1012,7 @@
       "size": [
         100,
         1.8,
-        90
+        40
       ],
       "society": "none",
       "stamp": "bowl",
@@ -934,7 +1038,7 @@
       "size": [
         100,
         1.8,
-        90
+        40
       ],
       "society": "none",
       "stamp": "bowl",
@@ -1147,6 +1251,32 @@
       "society": "none",
       "stamp": "mesa",
       "verb": "bank",
+      "y": null,
+      "yaw_deg": 0
+    },
+    {
+      "at": [
+        -0.0,
+        680.0
+      ],
+      "budget": "landform",
+      "element": "ground",
+      "fragment": "",
+      "hole": false,
+      "home": "",
+      "id": "hero_spire",
+      "landform": "spire",
+      "recipe": "",
+      "ride_fact": "",
+      "routes": [],
+      "size": [
+        60,
+        160,
+        60
+      ],
+      "society": "none",
+      "stamp": "spire",
+      "verb": "roll",
       "y": null,
       "yaw_deg": 0
     },

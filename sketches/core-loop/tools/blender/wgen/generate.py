@@ -8,7 +8,6 @@ import sys
 
 import bpy
 from mathutils import Vector
-from mathutils.geometry import interpolate_bezier
 
 
 def write_json(path, value):
@@ -54,11 +53,7 @@ def build(seed, revision):
     obj = bpy.data.objects.new("wash_spine", curve)
     bpy.context.collection.objects.link(obj)
     bpy.context.view_layer.update()
-    sampled = []
-    for a, b in zip(spline.bezier_points, list(spline.bezier_points)[1:]):
-        sampled.extend(interpolate_bezier(a.co, a.handle_right, b.handle_left, b.co, 5)[:-1])
-    sampled.append(spline.bezier_points[-1].co.copy())
-    points = [[round(v.x, 3), round(v.z, 3)] for v in sampled[::4]]
+    points = [[round(p.co.x, 3), round(p.co.z, 3)] for p in spline.bezier_points]
     rows = [row("plain", "ground", "slickrock", [0, 0], [1600, 24, 1600], "plateau"),
             row("bajada", "ground", "slickrock", [0, 0], [1600, round(descent, 3), 1600], "ramp")]
     # The pieces overlap their open ends; the broad floor remains rollable at each join.
@@ -144,9 +139,9 @@ def build(seed, revision):
         if pilot=="floor": lines["floor"]=dict(waypoints=path)
         else: lines["pilots"][pilot]=dict(waypoints=path,bar=dict(band="PARK.md section 8",airborne_share=[.12,.45]))
     return park,lines,dict(seed=seed,revision=revision,amplitude_m=round(amplitude,3),descent_m=round(descent,3),
-                           phase_rad=round(phase,4),blender=bpy.app.version_string,curve_controls=controls,curve_samples=len(sampled),
+                           phase_rad=round(phase,4),blender=bpy.app.version_string,curve_controls=controls,curve_samples=len(points),
                            wash_width_m=wash_width,bowl_width_m=bowl_width,runout_width_m=runout_width,launch_lips=len(lip_indices),
-                           note="Blender Bezier handles and interpolate_bezier place both stamps and bot waypoints.")
+                           note="Blender curve control anchors place both stamps and bot waypoints; handles do not affect this export.")
 
 
 def main():

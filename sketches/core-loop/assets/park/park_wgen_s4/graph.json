@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "abb62baae593999fabf31852f966fb603432f24af2e2ab13fd4ccec27ee7edad",
+  "bake_sha256": "e528e5e5379f9ee06e3d33634fc8544a83d8d04fc4e948e92e0ada9de7bc5d7e",
   "beacon_ok": true,
   "breaches": [
     {
@@ -51,39 +51,39 @@
       "rule": "pay"
     }
   ],
-  "bytes": 896685,
-  "edges": 316780,
+  "bytes": 876852,
+  "edges": 316175,
   "first_failed": "",
   "flags": {
     "deck": 0,
-    "door_ok": 39942,
-    "line": 420,
+    "door_ok": 39905,
+    "line": 459,
     "open": 40401,
-    "sight_ok": 14322,
+    "sight_ok": 14091,
     "under": 0
   },
   "full_visit_m": -1,
   "full_visit_ratio": "unreachable",
-  "graph_sha256": "ef8b5047013d21ebf22cc88e6f89d9fdb5a2ddf02ae68679651bf09c8029a9ea",
+  "graph_sha256": "d4d0159b2ca3aa46b97eacb5549c8228fb09345ab7a9e9ec9dd9728c70778518",
   "line_errors": [],
-  "line_path_nodes": 161,
+  "line_path_nodes": 164,
   "longest_est_m": 2352,
   "map": "park_wgen_s4",
   "nodes": 40401,
-  "park_sha256": "5a64a7d9337a111e93a4d0048a3bdcc2d5498eb3d9bbcf93560b9dd8686cd191",
+  "park_sha256": "8ddfbc56b897f5b5bb5bcdf0d8b96b76032f0eda227c104cbcb74d67078b08d0",
   "pockets": [
     {
       "clear_ring": [
         "home home_4 (site wash_04)"
       ],
-      "d_landmark": 933,
+      "d_landmark": 935,
       "d_spawn": 533,
-      "detour_m": 34,
+      "detour_m": 23,
       "door_at": [
         224,
         -248
       ],
-      "door_m": 34,
+      "door_m": 23,
       "flags": [
         "open",
         "door_ok",
@@ -164,13 +164,13 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1281,
-    "farther_share": "0.178",
+    "d_landmark": 1288,
+    "farther_share": "0.174",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1281,
-  "spawn_beacon_share": "0.544",
+  "spawn_beacon_m": 1288,
+  "spawn_beacon_share": "0.547",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -193,19 +193,27 @@
   "zones": {
     "anchors": [
       {
-        "cost": 950.7,
-        "d_landmark": 685.7,
-        "name": "mesa_2_2",
+        "cost": 1351.8,
+        "d_landmark": 70.8,
+        "name": "hero_spire",
         "on_route": false,
         "rank": 1,
         "viable": true
       },
       {
-        "cost": 881.2,
+        "cost": 950.7,
+        "d_landmark": 685.7,
+        "name": "mesa_2_2",
+        "on_route": false,
+        "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 881.3,
         "d_landmark": 962.1,
         "name": "mesa_2_1",
         "on_route": false,
-        "rank": 2,
+        "rank": 3,
         "viable": true
       },
       {
@@ -213,7 +221,7 @@
         "d_landmark": 980.0,
         "name": "mesa_0_1",
         "on_route": false,
-        "rank": 3,
+        "rank": 4,
         "viable": true
       },
       {
@@ -221,15 +229,15 @@
         "d_landmark": 1255.4,
         "name": "mesa_0_0",
         "on_route": false,
-        "rank": 4,
+        "rank": 5,
         "viable": true
       }
     ],
-    "count": 34,
+    "count": 38,
     "crossings": {
       "drop": 4,
       "ride": 0,
-      "walk": 59
+      "walk": 66
     },
     "hidden": []
   }

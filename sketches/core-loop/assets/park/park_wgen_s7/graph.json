@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "7fb638447cb579e03291027598717f659ee7a78192033278ddd4cfe9a8ca402c",
+  "bake_sha256": "64ec65fa3321789d3d6b94df34f9b0647184d8b4577d49f6bffdbf992615d6e5",
   "beacon_ok": true,
   "breaches": [
     {
@@ -40,31 +40,31 @@
     },
     {
       "action": "log",
-      "detail": "detour 600 m from the line to the pay point, want 150 to 600",
+      "detail": "detour 605 m from the line to the pay point, want 150 to 600",
       "pocket": "east_altar",
       "rule": "detour"
     }
   ],
-  "bytes": 894484,
-  "edges": 316782,
+  "bytes": 875776,
+  "edges": 316178,
   "first_failed": "",
   "flags": {
     "deck": 0,
-    "door_ok": 39930,
-    "line": 432,
+    "door_ok": 39910,
+    "line": 454,
     "open": 40401,
-    "sight_ok": 14276,
+    "sight_ok": 14153,
     "under": 0
   },
   "full_visit_m": -1,
   "full_visit_ratio": "unreachable",
-  "graph_sha256": "51eb3e810b8f33c4ca85e9dc13c78f6dc08e3b8e1c59da5af864d3398191e4de",
+  "graph_sha256": "77cc3a2c613ffb2868f8fc296648160387673db226fff318278776de3a90db67",
   "line_errors": [],
-  "line_path_nodes": 161,
+  "line_path_nodes": 163,
   "longest_est_m": 2362,
   "map": "park_wgen_s7",
   "nodes": 40401,
-  "park_sha256": "1f5d692eaac75eb70b2116b6c2129d527f0b3027eae78eb327bc5ed216e78bf6",
+  "park_sha256": "aa7a6a62ede6cae687866dc2d6d60d31f61783b0eb9382629d830937fa018345",
   "pockets": [
     {
       "clear_ring": [
@@ -127,12 +127,12 @@
       ],
       "d_landmark": 703,
       "d_spawn": 1122,
-      "detour_m": 600,
+      "detour_m": 605,
       "door_at": [
         544,
         208
       ],
-      "door_m": 600,
+      "door_m": 605,
       "flags": [
         "open",
         "door_ok"
@@ -187,19 +187,27 @@
   "zones": {
     "anchors": [
       {
-        "cost": 1281.2,
-        "d_landmark": 490.2,
-        "name": "mesa_2_3",
+        "cost": 1351.6,
+        "d_landmark": 70.8,
+        "name": "hero_spire",
         "on_route": false,
         "rank": 1,
         "viable": true
       },
       {
-        "cost": 659.4,
-        "d_landmark": 915.6,
-        "name": "mesa_0_1",
+        "cost": 1281.2,
+        "d_landmark": 490.2,
+        "name": "mesa_2_3",
         "on_route": false,
         "rank": 2,
+        "viable": true
+      },
+      {
+        "cost": 659.4,
+        "d_landmark": 915.7,
+        "name": "mesa_0_1",
+        "on_route": false,
+        "rank": 3,
         "viable": true
       },
       {
@@ -207,15 +215,15 @@
         "d_landmark": 1299.9,
         "name": "mesa_0_0",
         "on_route": false,
-        "rank": 3,
+        "rank": 4,
         "viable": true
       }
     ],
-    "count": 34,
+    "count": 39,
     "crossings": {
       "drop": 5,
       "ride": 0,
-      "walk": 59
+      "walk": 67
     },
     "hidden": []
   }

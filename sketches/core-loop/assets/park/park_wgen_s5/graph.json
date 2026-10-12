@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "4f54db0e5d564b12f06bc4d30c31854bfcf06483150cda1ac0f2a026d6d52817",
+  "bake_sha256": "25bf2cff7a3eadba21b2e89536cbdc2655a6ad6d7b021ccc8539d1c0bc5acde4",
   "beacon_ok": true,
   "breaches": [
     {
@@ -28,43 +28,43 @@
     },
     {
       "action": "log",
-      "detail": "detour 600 m from the line to the pay point, want 150 to 600",
+      "detail": "detour 609 m from the line to the pay point, want 150 to 600",
       "pocket": "east_altar",
       "rule": "detour"
     },
     {
       "action": "log",
-      "detail": "reward detour 435 m is not larger than the risk's 600 m",
+      "detail": "reward detour 417 m is not larger than the risk's 609 m",
       "pocket": "west_cache",
       "rule": "detour_order"
     },
     {
       "action": "fix",
-      "detail": "the larger detour (600 m) pays common, rare, want rare only",
+      "detail": "the larger detour (609 m) pays common, rare, want rare only",
       "pocket": "east_altar",
       "rule": "pay"
     }
   ],
-  "bytes": 899004,
-  "edges": 316794,
+  "bytes": 881664,
+  "edges": 316187,
   "first_failed": "",
   "flags": {
     "deck": 0,
-    "door_ok": 39921,
-    "line": 441,
+    "door_ok": 39905,
+    "line": 459,
     "open": 40401,
-    "sight_ok": 14591,
+    "sight_ok": 14609,
     "under": 0
   },
-  "full_visit_m": 2814,
+  "full_visit_m": 2815,
   "full_visit_ratio": "2.196",
-  "graph_sha256": "3bfadeeb3c23e4b23755128fb9142d4b95d7b64b51be61011cc2891551fbc011",
+  "graph_sha256": "3653aadef352b9eece76749c469476c8cc9c55a4a51e79bb64a3098e49d3e310",
   "line_errors": [],
-  "line_path_nodes": 163,
+  "line_path_nodes": 170,
   "longest_est_m": 2381,
   "map": "park_wgen_s5",
   "nodes": 40401,
-  "park_sha256": "ad54912d40c6edfa982a78fff5adf38d6aabbce8281fd9025295732a73701267",
+  "park_sha256": "946b1231c2177b6e4e37d2c94ef29536b8a3457543e17b8a3d376202bb3646b4",
   "pockets": [
     {
       "clear_ring": [
@@ -72,12 +72,12 @@
       ],
       "d_landmark": 920,
       "d_spawn": 520,
-      "detour_m": 31,
+      "detour_m": 11,
       "door_at": [
         192,
         -248
       ],
-      "door_m": 31,
+      "door_m": 11,
       "flags": [
         "open",
         "door_ok",
@@ -99,12 +99,12 @@
       "clear_ring": [],
       "d_landmark": 1010,
       "d_spawn": 750,
-      "detour_m": 435,
+      "detour_m": 417,
       "door_at": [
         -544,
         -192
       ],
-      "door_m": 435,
+      "door_m": 417,
       "flags": [
         "open",
         "door_ok"
@@ -125,12 +125,12 @@
       "clear_ring": [],
       "d_landmark": 703,
       "d_spawn": 1122,
-      "detour_m": 600,
+      "detour_m": 609,
       "door_at": [
         544,
         208
       ],
-      "door_m": 600,
+      "door_m": 609,
       "flags": [
         "open",
         "door_ok"
@@ -185,19 +185,27 @@
   "zones": {
     "anchors": [
       {
+        "cost": 1352.2,
+        "d_landmark": 70.8,
+        "name": "hero_spire",
+        "on_route": false,
+        "rank": 1,
+        "viable": true
+      },
+      {
         "cost": 641.0,
         "d_landmark": 1227.8,
         "name": "mesa_0_0",
         "on_route": false,
-        "rank": 1,
+        "rank": 2,
         "viable": true
       }
     ],
-    "count": 34,
+    "count": 39,
     "crossings": {
       "drop": 7,
       "ride": 0,
-      "walk": 58
+      "walk": 65
     },
     "hidden": []
   }

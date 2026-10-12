@@ -7,17 +7,17 @@
       "basalt": 0,
       "concrete": 0,
       "net": 0,
-      "sand": 23592,
-      "sandstone": 616408,
+      "sand": 11372,
+      "sandstone": 628628,
       "tailings": 0
     },
     "under_fallback": 0
   },
   "files": {
     "apron.bin": "a4b446f0c8ca9a5905845492aa8ed18cee40ceb34a3e1f3cbe124578eda31656",
-    "ground.bin": "99b50d8873ecf046f008f87a3438cad592151fd3f49416103651161fa0b63bbd",
+    "ground.bin": "58f72aac89773190344392678080b772b9e3d2f5007700d13fd2d6d3a201849a",
     "holes.bin": "3d00ed86b663cd1b8ac82b105257cd109412f92dca442048532439f920a7f645",
-    "surface.bin": "8d62985be568173d0c282c9baa0f4e31e4cdae0e16a35e8a8521831d7e786551",
+    "surface.bin": "0204e9092de3076687bc6fd68cb56274af30613caff062ae2b71be6981a0c5b0",
     "under.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "grid": {
@@ -48,11 +48,11 @@
     "step_m": 2.0
   },
   "height": {
-    "max": 124.36653137207,
+    "max": 189.306976318359,
     "min": 0.0
   },
   "map": "park_wgen_s3",
-  "park_sha256": "c9f6562258f249370712a0dcb484efa75564bb1622ed8348548cdff216e6d876",
+  "park_sha256": "cc34336a987c80661c331ff4f412a343d5cf349a8238fdc9c446cf91aecc986a",
   "schema": "scrapkeep-park-bake/1",
   "tool_sha256": "046e7258338a8bcca754c4ca23cb0cf963098dfc29cf88aaa46601fbb4e363c2"
 }

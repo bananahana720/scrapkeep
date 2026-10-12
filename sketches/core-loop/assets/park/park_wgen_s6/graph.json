@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "a985a2ab67d3b0dee4cbf4f2339260e56de7ef4f13f972ee87fb911d7382c1f5",
+  "bake_sha256": "4d5d397631aa6bf3ad95b296ba42414853dfa76ec53dd568ff15a5ec4f6fd096",
   "beacon_ok": true,
   "breaches": [
     {
@@ -39,26 +39,26 @@
       "rule": "clear_ring"
     }
   ],
-  "bytes": 904164,
-  "edges": 316088,
+  "bytes": 884994,
+  "edges": 315488,
   "first_failed": "",
   "flags": {
     "deck": 0,
-    "door_ok": 39916,
-    "line": 446,
+    "door_ok": 39898,
+    "line": 466,
     "open": 40401,
-    "sight_ok": 14550,
+    "sight_ok": 14473,
     "under": 0
   },
   "full_visit_m": -1,
   "full_visit_ratio": "unreachable",
-  "graph_sha256": "b663787ec6ef1140b33031f2985edc1b8694ff89668285240a9b5e60f8eefd30",
+  "graph_sha256": "47edda2e8683cb45bb3a2287bf022f6369f692d1a792f80376c1b5471dc6931a",
   "line_errors": [],
-  "line_path_nodes": 164,
+  "line_path_nodes": 169,
   "longest_est_m": 2353,
   "map": "park_wgen_s6",
   "nodes": 40401,
-  "park_sha256": "a3021b46d3c78dae70367629a230970786c0932e26d20c6bb1d89bd3969d0475",
+  "park_sha256": "091a3dcf03d7f1f749cdbb4469005a1686097c2947bb57d83e4374f3b0a80210",
   "pockets": [
     {
       "clear_ring": [
@@ -66,12 +66,12 @@
       ],
       "d_landmark": 947,
       "d_spawn": 547,
-      "detour_m": 31,
+      "detour_m": 39,
       "door_at": [
         256,
         -248
       ],
-      "door_m": 31,
+      "door_m": 39,
       "flags": [
         "open",
         "door_ok",
@@ -105,7 +105,7 @@
       ],
       "id": "west_cache",
       "kind": "cracked_cache",
-      "nearest_door": 1276,
+      "nearest_door": 1277,
       "nearest_door_id": "east_altar",
       "pay_named": "",
       "pay_rarities": [
@@ -121,19 +121,19 @@
       ],
       "d_landmark": 703,
       "d_spawn": 1150,
-      "detour_m": 577,
+      "detour_m": 599,
       "door_at": [
         544,
         208
       ],
-      "door_m": 577,
+      "door_m": 599,
       "flags": [
         "open",
         "door_ok"
       ],
       "id": "east_altar",
       "kind": "ambush_altar",
-      "nearest_door": 1276,
+      "nearest_door": 1277,
       "nearest_door_id": "west_cache",
       "pay_named": "",
       "pay_rarities": [
@@ -152,13 +152,13 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1282,
-    "farther_share": "0.179",
+    "d_landmark": 1297,
+    "farther_share": "0.170",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1282,
-  "spawn_beacon_share": "0.545",
+  "spawn_beacon_m": 1297,
+  "spawn_beacon_share": "0.551",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -181,7 +181,7 @@
   "zones": {
     "anchors": [
       {
-        "cost": 1425.8,
+        "cost": 1425.9,
         "d_landmark": 530.6,
         "name": "mesa_0_3",
         "on_route": false,
@@ -189,19 +189,27 @@
         "viable": true
       },
       {
-        "cost": 1262.1,
-        "d_landmark": 466.8,
-        "name": "mesa_2_3",
+        "cost": 1355.9,
+        "d_landmark": 70.8,
+        "name": "hero_spire",
         "on_route": false,
         "rank": 2,
         "viable": true
       },
       {
-        "cost": 922.1,
-        "d_landmark": 703.7,
-        "name": "mesa_0_2",
+        "cost": 1262.1,
+        "d_landmark": 466.8,
+        "name": "mesa_2_3",
         "on_route": false,
         "rank": 3,
+        "viable": true
+      },
+      {
+        "cost": 922.1,
+        "d_landmark": 703.8,
+        "name": "mesa_0_2",
+        "on_route": false,
+        "rank": 4,
         "viable": true
       },
       {
@@ -209,7 +217,7 @@
         "d_landmark": 948.1,
         "name": "mesa_0_1",
         "on_route": false,
-        "rank": 4,
+        "rank": 5,
         "viable": true
       },
       {
@@ -217,15 +225,15 @@
         "d_landmark": 931.2,
         "name": "mesa_2_1",
         "on_route": false,
-        "rank": 5,
+        "rank": 6,
         "viable": true
       }
     ],
-    "count": 34,
+    "count": 38,
     "crossings": {
       "drop": 3,
       "ride": 0,
-      "walk": 60
+      "walk": 66
     },
     "hidden": []
   }

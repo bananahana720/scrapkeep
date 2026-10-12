@@ -25,7 +25,8 @@ def main():
     for seed in range(args.first, args.last + 1):
         name = f"park_wgen_s{seed}"
         if not args.ride_only:
-            commands = [("gen", ["nice", "-n", "10", "prlimit", "--as=12884901888",
+            # prlimit's -v is --as. L3 treats long resource flags as game flags.
+            commands = [("gen", ["nice", "-n", "10", "prlimit", "-v=12884901888",
                          "/home/andrew/.local/bin/blender", "--background", "--python-exit-code", "1", "--python", str(Path(__file__).with_name("generate.py")),
                          "--", "--seed", str(seed), "--revision", str(args.revision), "--out", str(sketch / f"src/world/park/{name}.json"),
                          "--lines-out", str(sketch / f"tools/park_lines/{name}.json"), "--meta-out", str(args.evidence / f"meta-s{seed}.json")])]
